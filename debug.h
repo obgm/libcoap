@@ -3,6 +3,10 @@
  * (c) 2010 Olaf Bergmann <bergmann@tzi.org>
  */
 
+#ifndef VERSION
+#  define VERSION "0.01"
+#endif
+
 #ifndef debug
 #  ifndef NDEBUG
 #    define debug(...)   fprintf(stdout, __VA_ARGS__)

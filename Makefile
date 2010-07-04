@@ -1,9 +1,10 @@
+PROGRAM:=coap
+VERSION:=0.01
+
 SOURCES:= pdu.c net.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
 HEADERS:=coap.h debug.h pdu.h net.h
 CFLAGS:=-g -Wall -std=c99 # -pedantic  # FIXME: pdu.h contains GCC extensions
-PROGRAM:=coap
-VERSION:=0.01
 DISTDIR=$(PROGRAM)-$(VERSION)
 FILES:=main.c Makefile $(SOURCES) $(HEADERS) 
 LIB:=libcoap.a
@@ -24,7 +25,7 @@ $(LIB):	$(OBJECTS)
 
 # build main.o separately as c99 has no getaddrinfo, so CC will complain
 main.o:	main.c
-	$(CC) -g -Wall -c -o main.o main.c 
+	$(CC) -DVERSION=\"$(VERSION)\" -g -Wall -c -o main.o main.c 
 
 clean:
 	@rm -f $(PROGRAM) main.o $(LIB) $(OBJECTS)
