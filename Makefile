@@ -7,6 +7,9 @@ VERSION:=0.01
 DISTDIR=$(PROGRAM)-$(VERSION)
 FILES:=main.c Makefile $(SOURCES) $(HEADERS) 
 
+# add this for Solaris
+#LDFLAGS:=-lsocket -lnsl
+
 .PHONY: clean distclean
 
 $(PROGRAM):	main.o $(OBJECTS)
