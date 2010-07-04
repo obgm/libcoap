@@ -7,57 +7,117 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/select.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <netinet/in.h>
 
 #include "pdu.h"
+#include "net.h"
 
-#define options_start(p) ((coap_opt_t *) ( (p)->hdr + sizeof ( coap_hdr_t ) ))
+coap_pdu_t *
+coap_new_get( const char *uri ) {
+  coap_pdu_t *pdu;
 
+  if ( !uri || ! ( pdu = coap_new_pdu() ) )
+    return NULL;
+
+  pdu->hdr->type = COAP_MESSAGE_CON;
+  pdu->hdr->code = COAP_REQUEST_GET;
+
+  if ( *uri ) {
+    if ( *uri != '/' )
+      coap_add_option ( pdu, COAP_OPTION_URI_FULL, strlen( uri ), uri );
+    else {
+      ++uri;
+      if ( *uri )
+	coap_add_option ( pdu, COAP_OPTION_URI_PATH, strlen( uri ), uri );
+    }
+  }
+
+  return pdu;
+}
 
 void 
-for_each_option(coap_pdu_t *pdu, 
-		void (*f)(coap_opt_t *, unsigned char, unsigned int, const unsigned char *) ) {
-  unsigned char cnt;
-  coap_opt_t *opt;
-  unsigned char opt_code = 0;
-  
-  if (! pdu )
-    return;
+send_request( coap_context_t  *ctx, coap_pdu_t  *pdu ) {
+  struct addrinfo *res, *ainfo;
+  struct addrinfo hints;
+  int error;
+  struct sockaddr_in6 dst;
 
-  opt = options_start( pdu );
-  for ( cnt = pdu->hdr->optcnt; cnt; --cnt ) {
-    opt_code += opt->delta;
+  memset ((char *)&hints, 0, sizeof(hints));
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_family = AF_INET6;
 
-    if ( opt->length < 15 ) {
-      f ( opt, opt_code, opt->length, opt->shortopt.value );
-      opt += opt->length + 1;
-    } else {
-      f ( opt, opt_code, opt->longopt.length + 15, opt->longopt.value );
-      opt += opt->longopt.length + 16;
+  error = getaddrinfo("ns.tzi.org", "", &hints, &res);
+
+  if (error != 0) {
+    perror("getaddrinfo");
+    exit(1);
+  }
+
+
+  for (ainfo = res; ainfo != NULL; ainfo = ainfo->ai_next) {
+
+    if ( ainfo->ai_family == AF_INET6 ) {
+
+      memset(&dst, 0, sizeof dst );
+      dst.sin6_family = AF_INET6;
+      dst.sin6_port = htons( COAP_DEFAULT_PORT );
+      memcpy( &dst.sin6_addr, ainfo->ai_addr, ainfo->ai_addrlen );
+
+      coap_send_confirmed( ctx, &dst, pdu );
+      return;
     }
   }
 }
 
-void 
-show( coap_opt_t *opt, unsigned char type, unsigned int len, const unsigned char *data ) {
-  printf( "option %d (%d bytes): '%*s'\n", type, len, len, data );
-}
-
 int 
 main(int argc, char **argv) {
-  coap_pdu_t  *pdu = coap_new_pdu();
- 
-  if (! pdu )
+  coap_context_t  *ctx;
+  fd_set readfds;
+  time_t timeout;
+  struct timeval tv;
+  int result;
+  time_t now;
+  coap_sendqueue_t *nextpdu;
+  coap_pdu_t  *pdu;
+
+  ctx = coap_new_context();
+  if ( !ctx )
     return -1;
 
-  coap_add_option ( pdu, 2, 3, "foo" );
-  coap_add_option ( pdu, 12, 16, "1234567890123456" );
-  coap_add_option ( pdu, 13, 15, "123456789012345" );
-  coap_add_option ( pdu, 21, 0, NULL );
-  coap_add_option ( pdu, 33, 2, "ab" );
+  if (! (pdu = coap_new_get( COAP_DEFAULT_URI_WELLKNOWN ) ) )
+    return -1;
 
-  for_each_option ( pdu, show );
+  send_request( ctx, pdu );
 
-  coap_delete_pdu ( pdu );
-  
+  while ( 1 ) {
+    FD_ZERO(&readfds); 
+    FD_SET( ctx->sockfd, &readfds );
+    
+    nextpdu = coap_peek_next( ctx );
+
+    time(&now);
+    while ( nextpdu && nextpdu->t <= now ) {
+      coap_retransmit( ctx, coap_pop_next( ctx ) );
+      nextpdu = coap_peek_next( ctx );
+    }
+
+    tv.tv_usec = 0;
+    tv.tv_sec = nextpdu ? nextpdu->t - now : 0;
+
+    result = select( ctx->sockfd + 1, &readfds, 0, 0, &tv );
+
+    if ( result < 0 ) {		/* error */
+      perror("select");
+    } else if ( result > 0 ) {	/* read from socket */
+      /*      if FD_ISSET( ... ) coap_read( ctx );*/
+    }
+  }
+
+  coap_free_context( ctx );
+
   return 0;
 }
