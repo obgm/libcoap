@@ -1,10 +1,10 @@
-/* coap.h -- CoAP message structure
+/* pdu.h -- CoAP message structure
  *
  * (c) 2010 Olaf Bergmann <bergmann@tzi.org>
  */
 
-#ifndef _COAP_H_
-#define _COAP_H_
+#ifndef _PDU_H_
+#define _PDU_H_
 
 /* pre-defined constants that reflect defaults for CoAP */
 
@@ -14,6 +14,7 @@
 #define COAP_DEFAULT_MAX_AGE          60 /* default maximum object lifetime in seconds */
 #define COAP_MAX_PDU_SIZE           1400 /* maximum size of a CoAP PDU */
 
+#define COAP_DEFAULT_VERSION           1 /* version of CoAP supported */
 #define COAP_DEFAULT_URI_WELLKNOWN "/.wk/r" /* compact form of well-known resources URI */
 
 /* CoAP message types */
@@ -112,7 +113,7 @@ typedef struct {
       unsigned char length:8;	/* length - 15 */
       unsigned char value[0];	/* 15--270 bytes options */
     } longopt;
-  };
+  } optval;
 } coap_opt_t;
 
 typedef struct {
@@ -144,4 +145,4 @@ int coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const
 
 int coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data);
 
-#endif /* _COAP_H_ */
+#endif /* _PDU_H_ */

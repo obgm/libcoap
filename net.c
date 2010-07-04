@@ -10,13 +10,26 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include "debug.h"
 #include "net.h"
+
+#define options_start(p) ((coap_opt_t *) ( (unsigned char *)p->hdr + sizeof ( coap_hdr_t ) ))
+
+#define options_end(p, opt) {			\
+  unsigned char opt_code = 0, cnt;		\
+  *opt = options_start( node->pdu );            \
+  for ( cnt = (p)->hdr->optcnt; cnt; --cnt ) {  \
+    opt_code += (*opt)->delta;			\
+    *opt = (coap_opt_t *)( (unsigned char *)(*opt) + ((*opt)->length < 15 ? (*opt)->length + 1 : (*opt)->optval.longopt.length + 17) ); \
+  } \
+}
 
 /************************************************************************
  ** some functions for debugging
  ************************************************************************/
 
-#define options_start(p) ((coap_opt_t *) ( (unsigned char *)p->hdr + sizeof ( coap_hdr_t ) ))
+#define LONGOPT(opt) (opt).optval.longopt
+#define SHORTOPT(opt) (opt).optval.shortopt
 
 void 
 for_each_option(coap_pdu_t *pdu, 
@@ -33,11 +46,11 @@ for_each_option(coap_pdu_t *pdu,
     opt_code += opt->delta;
 
     if ( opt->length < 15 ) {
-      f ( opt, opt_code, opt->length, opt->shortopt.value );
+      f ( opt, opt_code, opt->length, SHORTOPT(*opt).value );
       opt = (coap_opt_t *)( (unsigned char *)opt + opt->length + 1 );
     } else {
-      f ( opt, opt_code, opt->longopt.length + 15, opt->longopt.value );
-      opt = (coap_opt_t *)( (unsigned char *)opt + opt->longopt.length + 17 );
+      f ( opt, opt_code, LONGOPT(*opt).length + 15, LONGOPT(*opt).value );
+      opt = (coap_opt_t *)( (unsigned char *)opt + LONGOPT(*opt).length + 17 );
     }
   }
 }
@@ -79,8 +92,9 @@ show_pdu( coap_pdu_t *pdu ) {
 /************************************************************************/
 
 int
-coap_insert_node(coap_sendqueue_t **queue, coap_sendqueue_t *node) {
-  coap_sendqueue_t *p, *q;
+coap_insert_node(coap_queue_t **queue, coap_queue_t *node,
+		 int (*order)(coap_queue_t *, coap_queue_t *node) ) {
+  coap_queue_t *p, *q;
   if ( !queue || !node )
     return 0;
     
@@ -92,7 +106,7 @@ coap_insert_node(coap_sendqueue_t **queue, coap_sendqueue_t *node) {
 
   /* replace queue head if PDU's time is less than head's time */
   q = *queue;
-  if ( node->t < q->t ) {
+  if ( order( node, q ) ) {
     node->next = q;
     *queue = node;
     return 1;
@@ -102,7 +116,7 @@ coap_insert_node(coap_sendqueue_t **queue, coap_sendqueue_t *node) {
   do {
     p = q;
     q = q->next;
-  } while ( q && ! (node->t < q->t) );
+  } while ( q && ! order( node, q ) );
   
   /* insert new item */
   node->next = q;
@@ -111,7 +125,7 @@ coap_insert_node(coap_sendqueue_t **queue, coap_sendqueue_t *node) {
 }
 
 int 
-coap_delete_node(coap_sendqueue_t *node) {
+coap_delete_node(coap_queue_t *node) {
   if ( node ) {
     free( node->pdu );
     free( node );  
@@ -119,7 +133,7 @@ coap_delete_node(coap_sendqueue_t *node) {
 }
 
 void
-coap_delete_all(coap_sendqueue_t *queue) {
+coap_delete_all(coap_queue_t *queue) {
   if ( !queue ) 
     return;
 
@@ -128,9 +142,9 @@ coap_delete_all(coap_sendqueue_t *queue) {
 }
 
 
-coap_sendqueue_t *
+coap_queue_t *
 coap_new_node() {
-  coap_sendqueue_t *node = malloc ( sizeof *node );
+  coap_queue_t *node = malloc ( sizeof *node );
   if ( ! node ) {
     perror ("coap_new_node: malloc");
     return NULL;
@@ -140,7 +154,7 @@ coap_new_node() {
   return node;
 }
 
-coap_sendqueue_t *
+coap_queue_t *
 coap_peek_next( coap_context_t *context ) {
   if ( !context || !context->sendqueue )
     return NULL;
@@ -148,9 +162,9 @@ coap_peek_next( coap_context_t *context ) {
   return context->sendqueue;
 }
 
-coap_sendqueue_t *
+coap_queue_t *
 coap_pop_next( coap_context_t *context ) {
-  coap_sendqueue_t *next; 
+  coap_queue_t *next; 
 
   if ( !context || !context->sendqueue )
     return NULL;
@@ -227,17 +241,13 @@ coap_send_impl( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pd
   if ( inet_ntop(dst->sin6_family, &dst->sin6_addr, addr, INET6_ADDRSTRLEN) == 0 ) {
     perror("coap_send_impl: inet_ntop");
   } else {
-    printf("send to [%s]:%d:\n  ",addr,ntohs(dst->sin6_port));
+    debug("send to [%s]:%d:\n  ",addr,ntohs(dst->sin6_port));
   }
   show_pdu( pdu );
 #endif
 
-#if 0
   bytes_written = sendto( context->sockfd, pdu->hdr, pdu->length, 0, 
 			  (const struct sockaddr *)dst, sizeof( *dst ));
-#else
-  bytes_written = 0;
-#endif
   
   if ( free_pdu )
     coap_delete_pdu( pdu );
@@ -258,9 +268,14 @@ coap_send( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pdu_t *
   return coap_send_impl( context, dst, pdu, 1 );
 }
 
+int
+_order_timestamp( coap_queue_t *lhs, coap_queue_t *rhs ) {
+  return lhs && rhs && ( lhs->t < rhs->t );
+}
+  
 coap_tid_t
 coap_send_confirmed( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pdu_t *pdu ) {
-  coap_sendqueue_t *node;
+  coap_queue_t *node;
 
   create_transaction_id( pdu->hdr->id );
 
@@ -274,8 +289,10 @@ coap_send_confirmed( coap_context_t *context, const struct sockaddr_in6 *dst, co
   memcpy( &node->remote, dst, sizeof( struct sockaddr_in6 ) );
   node->pdu = pdu;
 
-  if ( !coap_insert_node( &context->sendqueue, node ) ) {
-    fprintf(stderr, "coap_send_confirmed: cannot ibsert node:into sendqueue\n");
+  if ( !coap_insert_node( &context->sendqueue, node, _order_timestamp ) ) {
+#ifndef NDEBUG
+    fprintf(stderr, "coap_send_confirmed: cannot insert node:into sendqueue\n");
+#endif
     coap_delete_node ( node );
     return COAP_INVALID_TID;
   }
@@ -284,7 +301,7 @@ coap_send_confirmed( coap_context_t *context, const struct sockaddr_in6 *dst, co
 }
 
 coap_tid_t
-coap_retransmit( coap_context_t *context, coap_sendqueue_t *node ) {
+coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
   time_t now;
 
   if ( !context || !node )
@@ -294,21 +311,131 @@ coap_retransmit( coap_context_t *context, coap_sendqueue_t *node ) {
   if ( node->retransmit_cnt < COAP_DEFAULT_MAX_RETRANSMIT ) {
     node->retransmit_cnt++;
     node->t += ( 1 << node->retransmit_cnt );
-    coap_insert_node( &context->sendqueue, node );
+    coap_insert_node( &context->sendqueue, node, _order_timestamp );
 
-#ifndef NDEBUG
-    printf("** retransmission #%d of transaction %d\n",
+    debug("** retransmission #%d of transaction %d\n",
 	   node->retransmit_cnt, node->pdu->hdr->id);
-#endif
+
     return coap_send_impl( context, &node->remote, node->pdu, 0 );
   } 
 
   /* no more retransmissions, remove node from system */
 
-#ifndef NDEBUG
-    printf("** removed transaction %d\n", node->pdu->hdr->id);
-#endif
+  debug("** removed transaction %d\n", node->pdu->hdr->id);
 
   coap_delete_node( node );
   return COAP_INVALID_TID;
 }
+
+int
+_order_transaction_id( coap_queue_t *lhs, coap_queue_t *rhs ) {
+  return lhs && rhs && lhs->pdu && rhs->pdu &&
+    ( lhs->pdu->hdr->id < lhs->pdu->hdr->id );
+}  
+
+int
+coap_read( coap_context_t *ctx ) {
+  static char buf[COAP_MAX_PDU_SIZE];
+  ssize_t bytes_read;
+  static struct sockaddr_in6 src;
+  socklen_t addrsize = sizeof src;
+  coap_queue_t *node;
+  unsigned char cnt;
+  coap_opt_t *opt;
+  unsigned char opt_code = 0;
+
+#ifndef NDEBUG
+  static char addr[INET6_ADDRSTRLEN];
+#endif
+
+  bytes_read = recvfrom( ctx->sockfd, buf, COAP_MAX_PDU_SIZE, 0,
+			 (struct sockaddr *)&src, &addrsize );
+
+  if ( bytes_read < 0 ) {
+    perror("coap_read: recvfrom");
+    return -1;
+  }
+
+  if ( bytes_read < sizeof(coap_hdr_t) || ((coap_hdr_t *)buf)->version != COAP_DEFAULT_VERSION ) {
+#ifndef NDEBUG
+    fprintf(stderr, "coap_read: discarded invalid frame\n" ); 
+#endif
+    return -1;
+  }
+
+  node = coap_new_node();
+  if ( !node ) 
+    return -1;
+
+  node->pdu = coap_new_pdu();
+  if ( !node->pdu ) {
+    coap_delete_node( node );
+    return -1;
+  }
+
+  time( &node->t );
+  memcpy( &node->remote, &src, sizeof( src ) );
+
+  /* "parse" received PDU by filling pdu structure */
+  memcpy( node->pdu->hdr, buf, bytes_read );
+  node->pdu->length = bytes_read;
+  
+  /* finally calculate beginning of data block */
+  options_end( node->pdu, &opt );
+
+  if ( (unsigned char *)node->pdu->hdr + node->pdu->length < (unsigned char *)opt )
+    node->pdu->data = (unsigned char *)node->pdu->hdr + node->pdu->length;
+  else
+    node->pdu->data = (unsigned char *)opt;
+
+  /* and add new node to receive queue */
+  coap_insert_node( &ctx->recvqueue, node, _order_transaction_id );
+  
+#ifndef NDEBUG
+  if ( inet_ntop(src.sin6_family, &src.sin6_addr, addr, INET6_ADDRSTRLEN) == 0 ) {
+    perror("coap_read: inet_ntop");
+  } else {
+    debug("** received from [%s]:%d:\n  ",addr,ntohs(src.sin6_port));
+  }
+  show_pdu( node->pdu );
+#endif
+
+  return 0;
+}
+
+void 
+coap_dispatch( coap_context_t *context ) {
+  coap_queue_t *node;
+
+  if ( !context ) 
+    return;
+
+  while ( context->recvqueue ) {
+    node = context->recvqueue;
+
+    switch ( node->pdu->hdr->type ) {
+    case COAP_MESSAGE_ACK :
+    case COAP_MESSAGE_RST :
+      /* find transaction in sendqueue to stop retransmission */
+      coap_remove_transaction( &context->sendqueue, node->pdu->hdr->id );
+    }
+    
+    /* remove node from recvqueue */
+    context->recvqueue = context->recvqueue->next;
+    node->next = NULL;
+
+    /* pass message to upper layer if a specific handler was registered */
+    if ( context->msg_handler ) 
+      context->msg_handler( context, node, NULL );
+
+    coap_delete_node( node );
+  }
+  
+}
+
+void 
+coap_register_message_handler( coap_context_t *context, coap_message_handler_t handler) {
+  context->msg_handler = (void (*)( void *, coap_queue_t *, void *)) handler;
+}
+
+

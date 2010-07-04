@@ -1,7 +1,13 @@
+/* pdu.c -- CoAP message structure
+ *
+ * (c) 2010 Olaf Bergmann <bergmann@tzi.org>
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "debug.h"
 #include "pdu.h"
 
 
@@ -16,7 +22,7 @@ coap_new_pdu() {
   /* initialize PDU */
   memset(pdu, 0, sizeof(coap_pdu_t) + COAP_MAX_PDU_SIZE );
   pdu->hdr = (coap_hdr_t *) ( (unsigned char *)pdu + sizeof(coap_pdu_t) );
-  pdu->hdr->version = 1;
+  pdu->hdr->version = COAP_DEFAULT_VERSION;
 
   /* data points after the header; when options are added, the data 
      pointer is moved to the back */
@@ -33,6 +39,9 @@ coap_delete_pdu(coap_pdu_t *pdu) {
 
 #define options_start(p) ((coap_opt_t *) ( (unsigned char *)p->hdr + sizeof ( coap_hdr_t ) ))
 
+#define LONGOPT(opt) (opt).optval.longopt
+#define SHORTOPT(opt) (opt).optval.shortopt
+
 int 
 coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const unsigned char *data) {
   unsigned char cnt;
@@ -47,11 +56,13 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
   opt = options_start( pdu );
   for ( cnt = pdu->hdr->optcnt; cnt; --cnt ) {
     opt_code += opt->delta;
-    opt = (coap_opt_t *)( (unsigned char *)opt + (opt->length < 15 ? opt->length + 1 : opt->longopt.length + 17) ); 
+    opt = (coap_opt_t *)( (unsigned char *)opt + (opt->length < 15 ? opt->length + 1 : LONGOPT(*opt).length + 17) ); 
   }
 
   if ( type < opt_code ) {
-    fprintf(stderr, "options not added in correect order\n");
+#ifndef NDEBUG
+    fprintf(stderr, "options not added in correct order\n");
+#endif
     return -1;
   }
 
@@ -61,15 +72,15 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
   
   if ( len < 15 ) {		/* short form */
     opt->length = len;
-    memcpy(opt->shortopt.value, data, len);
+    memcpy(SHORTOPT(*opt).value, data, len);
 
-    pdu->data = (unsigned char *)opt->shortopt.value + len ;
+    pdu->data = (unsigned char *)SHORTOPT(*opt).value + len ;
   } else {			/* extended form */
     opt->length = 15;
-    opt->longopt.length = len - 15;
-    memcpy(opt->longopt.value, data, len);
+    LONGOPT(*opt).length = len - 15;
+    memcpy(LONGOPT(*opt).value, data, len);
 
-    pdu->data = (unsigned char *)opt->longopt.value + len ;
+    pdu->data = (unsigned char *)LONGOPT(*opt).value + len ;
   }
 
   pdu->length = pdu->data - (unsigned char *)pdu->hdr;
@@ -84,7 +95,9 @@ coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
     return 0;
   
   if ( pdu->length + len > COAP_MAX_PDU_SIZE ) {
+#ifndef NDEBUG
     fprintf(stderr, "coap_add_data: cannot add: data too large for PDU\n");
+#endif
     return 0;
   }
 

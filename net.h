@@ -24,32 +24,42 @@ struct coap_listnode {
   coap_pdu_t *pdu;		/* the CoAP PDU to send */
 };
 
-typedef struct coap_listnode coap_sendqueue_t;
+typedef struct coap_listnode coap_queue_t;
 
-/* adds node to given queue, ordered by timestamp */
-int coap_insert_node(coap_sendqueue_t **queue, coap_sendqueue_t *node);
+/* adds node to given queue, ordered by specified order function */
+int coap_insert_node(coap_queue_t **queue, coap_queue_t *node, 
+		     int (*order)(coap_queue_t *, coap_queue_t *node) );
 
 /* destroys specified node */
-int coap_delete_node(coap_sendqueue_t *node);
+int coap_delete_node(coap_queue_t *node);
 
 /* removes all items from given queue and frees the allocated storage */
-void coap_delete_all(coap_sendqueue_t *queue);
+void coap_delete_all(coap_queue_t *queue);
 
 /* creates a new node suitable for adding to the CoAP sendqueue */
-coap_sendqueue_t *coap_new_node();
-
+coap_queue_t *coap_new_node();
 
 /* The CoAP stack's global state is stored in a coap_context_t object */
 typedef struct {
-  coap_sendqueue_t *sendqueue;
+  coap_queue_t *sendqueue, *recvqueue;
   int sockfd;			/* send/receive socket */
+
+  void ( *msg_handler )( void *, coap_queue_t *, void *);
 } coap_context_t;
 
+typedef void (*coap_message_handler_t)( coap_context_t  *, coap_queue_t *, void *);
+
+/** 
+ * Registers a new message handler that is called whenever a new PDU
+ * was received. Note that the transactions are handled on the lower
+ * layer previously to stop retransmissions, e.g. */
+void coap_register_message_handler( coap_context_t *context, coap_message_handler_t handler);
+
 /* Returns the next pdu to send without removing from sendqeue. */
-coap_sendqueue_t *coap_peek_next( coap_context_t *context );
+coap_queue_t *coap_peek_next( coap_context_t *context );
 
 /* Returns the next pdu to send and removes it from the sendqeue. */
-coap_sendqueue_t *coap_pop_next( coap_context_t *context );
+coap_queue_t *coap_pop_next( coap_context_t *context );
 
 /* Creates a new coap_context_t object that will hold the CoAP stack status */
 coap_context_t *coap_new_context();
@@ -72,6 +82,16 @@ coap_tid_t coap_send_confirmed( coap_context_t *context, const struct sockaddr_i
 coap_tid_t coap_send( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pdu_t *pdu );
 
 /* handles retransmissions of confirmable messages */
-coap_tid_t coap_retransmit( coap_context_t *context, coap_sendqueue_t *node );
+coap_tid_t coap_retransmit( coap_context_t *context, coap_queue_t *node );
+
+/**
+ * Reads data from the network and tries to parse as CoAP PDU. On success, 0 is returned
+ * and a new node with the parsed PDU is added to the receive queue in the specified context
+ * object.
+ */
+int coap_read( coap_context_t *context );
+
+/** Dispatches the PDUs from the receive queue in given context. */
+void coap_dispatch( coap_context_t *context );
 
 #endif /* _COAP_NET_H_ */

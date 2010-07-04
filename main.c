@@ -10,12 +10,11 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
-#include "pdu.h"
-#include "net.h"
+#include "coap.h"
 
 coap_pdu_t *
 coap_new_get( const char *uri ) {
@@ -51,7 +50,8 @@ send_request( coap_context_t  *ctx, coap_pdu_t  *pdu ) {
   hints.ai_socktype = SOCK_DGRAM;
   hints.ai_family = AF_INET6;
 
-  error = getaddrinfo("ns.tzi.org", "", &hints, &res);
+  /*  error = getaddrinfo("ns.tzi.org", "", &hints, &res);*/
+  error = getaddrinfo("::1", "", &hints, &res);
 
   if (error != 0) {
     perror("getaddrinfo");
@@ -74,20 +74,61 @@ send_request( coap_context_t  *ctx, coap_pdu_t  *pdu ) {
   }
 }
 
+int
+coap_remove_transaction( coap_queue_t **queue, coap_tid_t id ) {
+  coap_queue_t *p, *q;
+
+  if ( !queue )
+    return 0;
+
+  /* replace queue head if PDU's time is less than head's time */
+    
+  q = *queue;
+  if ( id == q->pdu->hdr->id ) { /* found transaction */
+    *queue = q->next;
+    coap_delete_node( q );
+    debug("*** removed transaction %u\n", id);
+    return 1;
+  }
+
+  /* search transaction to remove (only first occurence will be removed) */
+  do {
+    p = q;
+    q = q->next;
+  } while ( q && id == q->pdu->hdr->id );
+  
+  if ( q ) {			/* found transaction */
+    p->next = q->next;
+    coap_delete_node( q );
+    debug("*** removed transaction %u\n", id);
+    return 1;    
+  }
+
+  return 0;
+  
+}
+
+void 
+message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
+  printf("** process pdu: ");
+  show_pdu( node->pdu );
+}
+
 int 
 main(int argc, char **argv) {
   coap_context_t  *ctx;
   fd_set readfds;
-  time_t timeout;
-  struct timeval tv;
+  struct timeval tv, *timeout;
   int result;
   time_t now;
-  coap_sendqueue_t *nextpdu;
+  coap_queue_t *nextpdu;
   coap_pdu_t  *pdu;
 
   ctx = coap_new_context();
   if ( !ctx )
     return -1;
+
+  coap_register_message_handler( ctx, message_handler );
 
   if (! (pdu = coap_new_get( COAP_DEFAULT_URI_WELLKNOWN ) ) )
     return -1;
@@ -106,15 +147,22 @@ main(int argc, char **argv) {
       nextpdu = coap_peek_next( ctx );
     }
 
-    tv.tv_usec = 0;
-    tv.tv_sec = nextpdu ? nextpdu->t - now : 0;
+    if ( nextpdu ) {	        /* set timeout if there is a pdu to send */
+      tv.tv_usec = 0;
+      tv.tv_sec = nextpdu->t - now;
+      timeout = &tv;
+    } else 
+      timeout = NULL;		/* no timeout otherwise */
 
-    result = select( ctx->sockfd + 1, &readfds, 0, 0, &tv );
-
+    result = select( ctx->sockfd + 1, &readfds, 0, 0, timeout );
+    
     if ( result < 0 ) {		/* error */
       perror("select");
     } else if ( result > 0 ) {	/* read from socket */
-      /*      if FD_ISSET( ... ) coap_read( ctx );*/
+      if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
+	coap_read( ctx );	/* read received data */
+	coap_dispatch( ctx );	/* and dispatch PDUs from receivequeue */
+      }
     }
   }
 
