@@ -89,8 +89,6 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
 
 int 
 coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
-  unsigned int header;
-
   if ( !pdu )
     return 0;
   

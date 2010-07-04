@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "debug.h"
 #include "net.h"
@@ -72,7 +73,7 @@ show_data( coap_pdu_t *pdu ) {
 }
 
 void
-show_pdu( coap_pdu_t *pdu ) {
+coap_show_pdu( coap_pdu_t *pdu ) {
 
   printf("pdu (%d bytes)", pdu->length);
   printf(" v:%d t:%d oc:%d c:%d id:%d", pdu->hdr->version, pdu->hdr->type,
@@ -126,10 +127,13 @@ coap_insert_node(coap_queue_t **queue, coap_queue_t *node,
 
 int 
 coap_delete_node(coap_queue_t *node) {
-  if ( node ) {
-    free( node->pdu );
-    free( node );  
-  }
+  if ( !node ) 
+    return 0;
+
+  free( node->pdu );
+  free( node );  
+
+  return 1;
 }
 
 void
@@ -243,7 +247,7 @@ coap_send_impl( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pd
   } else {
     debug("send to [%s]:%d:\n  ",addr,ntohs(dst->sin6_port));
   }
-  show_pdu( pdu );
+  coap_show_pdu( pdu );
 #endif
 
   bytes_written = sendto( context->sockfd, pdu->hdr, pdu->length, 0, 
@@ -302,8 +306,6 @@ coap_send_confirmed( coap_context_t *context, const struct sockaddr_in6 *dst, co
 
 coap_tid_t
 coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
-  time_t now;
-
   if ( !context || !node )
     return COAP_INVALID_TID;
 
@@ -340,9 +342,7 @@ coap_read( coap_context_t *ctx ) {
   static struct sockaddr_in6 src;
   socklen_t addrsize = sizeof src;
   coap_queue_t *node;
-  unsigned char cnt;
   coap_opt_t *opt;
-  unsigned char opt_code = 0;
 
 #ifndef NDEBUG
   static char addr[INET6_ADDRSTRLEN];
@@ -397,10 +397,44 @@ coap_read( coap_context_t *ctx ) {
   } else {
     debug("** received from [%s]:%d:\n  ",addr,ntohs(src.sin6_port));
   }
-  show_pdu( node->pdu );
+  coap_show_pdu( node->pdu );
 #endif
 
   return 0;
+}
+
+int
+coap_remove_transaction( coap_queue_t **queue, coap_tid_t id ) {
+  coap_queue_t *p, *q;
+
+  if ( !queue )
+    return 0;
+
+  /* replace queue head if PDU's time is less than head's time */
+    
+  q = *queue;
+  if ( id == q->pdu->hdr->id ) { /* found transaction */
+    *queue = q->next;
+    coap_delete_node( q );
+    debug("*** removed transaction %u\n", id);
+    return 1;
+  }
+
+  /* search transaction to remove (only first occurence will be removed) */
+  do {
+    p = q;
+    q = q->next;
+  } while ( q && id == q->pdu->hdr->id );
+  
+  if ( q ) {			/* found transaction */
+    p->next = q->next;
+    coap_delete_node( q );
+    debug("*** removed transaction %u\n", id);
+    return 1;    
+  }
+
+  return 0;
+  
 }
 
 void 

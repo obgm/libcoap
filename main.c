@@ -28,11 +28,11 @@ coap_new_get( const char *uri ) {
 
   if ( *uri ) {
     if ( *uri != '/' )
-      coap_add_option ( pdu, COAP_OPTION_URI_FULL, strlen( uri ), uri );
+      coap_add_option ( pdu, COAP_OPTION_URI_FULL, strlen( uri ), (unsigned char *)uri );
     else {
       ++uri;
       if ( *uri )
-	coap_add_option ( pdu, COAP_OPTION_URI_PATH, strlen( uri ), uri );
+	coap_add_option ( pdu, COAP_OPTION_URI_PATH, strlen( uri ), (unsigned char *)uri );
     }
   }
 
@@ -74,44 +74,12 @@ send_request( coap_context_t  *ctx, coap_pdu_t  *pdu ) {
   }
 }
 
-int
-coap_remove_transaction( coap_queue_t **queue, coap_tid_t id ) {
-  coap_queue_t *p, *q;
-
-  if ( !queue )
-    return 0;
-
-  /* replace queue head if PDU's time is less than head's time */
-    
-  q = *queue;
-  if ( id == q->pdu->hdr->id ) { /* found transaction */
-    *queue = q->next;
-    coap_delete_node( q );
-    debug("*** removed transaction %u\n", id);
-    return 1;
-  }
-
-  /* search transaction to remove (only first occurence will be removed) */
-  do {
-    p = q;
-    q = q->next;
-  } while ( q && id == q->pdu->hdr->id );
-  
-  if ( q ) {			/* found transaction */
-    p->next = q->next;
-    coap_delete_node( q );
-    debug("*** removed transaction %u\n", id);
-    return 1;    
-  }
-
-  return 0;
-  
-}
-
 void 
 message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
+#ifndef NDEBUG
   printf("** process pdu: ");
-  show_pdu( node->pdu );
+  coap_show_pdu( node->pdu );
+#endif
 }
 
 int 

@@ -11,4 +11,10 @@
 #  endif
 #endif
 
+#include "pdu.h"
+
+#ifndef NDEBUG
+extern void coap_show_pdu( coap_pdu_t *);
+#endif
+
 

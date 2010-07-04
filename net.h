@@ -81,7 +81,7 @@ coap_tid_t coap_send_confirmed( coap_context_t *context, const struct sockaddr_i
  */
 coap_tid_t coap_send( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pdu_t *pdu );
 
-/* handles retransmissions of confirmable messages */
+/** Handles retransmissions of confirmable messages */
 coap_tid_t coap_retransmit( coap_context_t *context, coap_queue_t *node );
 
 /**
@@ -90,6 +90,9 @@ coap_tid_t coap_retransmit( coap_context_t *context, coap_queue_t *node );
  * object.
  */
 int coap_read( coap_context_t *context );
+
+/** Removes transaction with specified id from given queue. Returns 0 if not found, 1 otherwise. */
+int coap_remove_transaction( coap_queue_t **queue, coap_tid_t id );
 
 /** Dispatches the PDUs from the receive queue in given context. */
 void coap_dispatch( coap_context_t *context );
