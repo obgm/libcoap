@@ -216,11 +216,22 @@ coap_tid_t
 coap_send_impl( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pdu_t *pdu,
 		int free_pdu ) {
   ssize_t bytes_written;
+#ifndef NDEBUG
+  char addr[INET6_ADDRSTRLEN];/* buffer space for textual represenation of destination address  */
+#endif
 
   if ( !context || !dst || !pdu )
     return COAP_INVALID_TID;
 
+#ifndef NDEBUG
+  if ( inet_ntop(dst->sin6_family, &dst->sin6_addr, addr, INET6_ADDRSTRLEN) == 0 ) {
+    perror("coap_send_impl: inet_ntop");
+  } else {
+    printf("send to [%s]:%d:\n  ",addr,ntohs(dst->sin6_port));
+  }
   show_pdu( pdu );
+#endif
+
 #if 0
   bytes_written = sendto( context->sockfd, pdu->hdr, pdu->length, 0, 
 			  (const struct sockaddr *)dst, sizeof( *dst ));
@@ -252,7 +263,9 @@ coap_send_confirmed( coap_context_t *context, const struct sockaddr_in6 *dst, co
   coap_sendqueue_t *node;
 
   create_transaction_id( pdu->hdr->id );
-  /* TODO: send once, and enter into message queue for retransmission unless retransmission counter is reached */
+
+  /* send once, and enter into message queue for retransmission unless
+   * retransmission counter is reached */
 
   node = coap_new_node();
   time(&node->t);
@@ -283,13 +296,18 @@ coap_retransmit( coap_context_t *context, coap_sendqueue_t *node ) {
     node->t += ( 1 << node->retransmit_cnt );
     coap_insert_node( &context->sendqueue, node );
 
+#ifndef NDEBUG
+    printf("** retransmission #%d of transaction %d\n",
+	   node->retransmit_cnt, node->pdu->hdr->id);
+#endif
     return coap_send_impl( context, &node->remote, node->pdu, 0 );
   } 
 
   /* no more retransmissions, remove node from system */
 
-  printf("removed pdu:\n");
-  show_pdu( node->pdu );
+#ifndef NDEBUG
+    printf("** removed transaction %d\n", node->pdu->hdr->id);
+#endif
 
   coap_delete_node( node );
   return COAP_INVALID_TID;

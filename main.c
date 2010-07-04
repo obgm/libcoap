@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "pdu.h"
 #include "net.h"
@@ -65,7 +66,7 @@ send_request( coap_context_t  *ctx, coap_pdu_t  *pdu ) {
       memset(&dst, 0, sizeof dst );
       dst.sin6_family = AF_INET6;
       dst.sin6_port = htons( COAP_DEFAULT_PORT );
-      memcpy( &dst.sin6_addr, ainfo->ai_addr, ainfo->ai_addrlen );
+      memcpy( &dst.sin6_addr, &((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_addr, ainfo->ai_addrlen );
 
       coap_send_confirmed( ctx, &dst, pdu );
       return;
