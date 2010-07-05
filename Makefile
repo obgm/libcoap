@@ -4,7 +4,7 @@ VERSION:=0.01
 SOURCES:= pdu.c net.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
 HEADERS:=coap.h debug.h pdu.h net.h
-CFLAGS:=-g -Wall -std=c99 # -pedantic  # FIXME: pdu.h contains GCC extensions
+CFLAGS:=-g -Wall -std=c99 -pedantic
 DISTDIR=$(PROGRAM)-$(VERSION)
 FILES:=main.c Makefile $(SOURCES) $(HEADERS) 
 LIB:=libcoap.a

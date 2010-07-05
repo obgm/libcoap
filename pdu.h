@@ -95,26 +95,52 @@ typedef unsigned short coap_tid_t;
 #define COAP_INVALID_TID 0
 
 typedef struct {
-  unsigned char version:2;	/* protocol version */
-  unsigned char type:2;		/* type flag */
-  unsigned char optcnt:4;	/* number of options following the header */
-  unsigned char code:8;	        /* request method (value 1--10) or response code (value 40-255) */
+  unsigned int version:2;	/* protocol version */
+  unsigned int type:2;		/* type flag */
+  unsigned int optcnt:4;	/* number of options following the header */
+  unsigned int code:8;	        /* request method (value 1--10) or response code (value 40-255) */
   coap_tid_t id;		/* transaction id */
 } coap_hdr_t;
 
-typedef struct {
-  unsigned char delta:4;        /* option type (expressed as delta) */
-  unsigned char length:4;	/* number of option bytes (15 indicates extended form) */
-  union {
-    struct {			/* short form, to be used when length < 15 */
-      unsigned char value[0];	/* 0--14 bytes options */
-    } shortopt;
-    struct {			/* extended form, to be used when lengt==15 */
-      unsigned char length:8;	/* length - 15 */
-      unsigned char value[0];	/* 15--270 bytes options */
-    } longopt;
-  } optval;
+typedef union {
+  struct {		        /* short form, to be used when length < 15 */
+    unsigned int delta:4;      /* option type (expressed as delta) */
+    unsigned int length:4;	/* number of option bytes (15 indicates extended form) */
+    unsigned char value[];	/* 0--14 bytes options */
+  } sval;
+  struct {			/* extended form, to be used when lengt==15 */
+    unsigned int delta:4;      /* option type (expressed as delta) */
+    unsigned int flag:4;	/* must be 15! */
+    unsigned int length:8;	/* length - 15 */
+    unsigned char value[];	/* 15--270 bytes options */
+  } lval;
 } coap_opt_t;
+
+
+#define COAP_OPT_SVAL(opt) (opt).sval
+#define COAP_OPT_LVAL(opt) (opt).lval
+#define COAP_OPT_ISEXTENDED(opt) (COAP_OPT_LVAL(opt).flag == 15)
+
+/* these macros should be used to access fields from coap_opt_t */
+#define COAP_OPT_DELTA(opt) COAP_OPT_SVAL(opt).delta
+#define COAP_OPT_SETDELTA(opt,val) COAP_OPT_SVAL(opt).delta = (val)
+
+#define COAP_OPT_LENGTH(opt) \
+  ( COAP_OPT_ISEXTENDED(opt) ? COAP_OPT_LVAL(opt).length + 15 : COAP_OPT_SVAL(opt).length )
+
+#define COAP_OPT_SETLENGTH(opt,val)		\
+  if ( (val) < 15 )				\
+    COAP_OPT_SVAL(opt).length = (val) & 0x0f;	\
+  else {								\
+    COAP_OPT_LVAL(opt).length = ((val) - 15) & 0xff;			\
+    COAP_OPT_LVAL(opt).flag = 15;					\
+  }
+
+#define COAP_OPT_VALUE(opt)						\
+  ( COAP_OPT_ISEXTENDED(opt) ? COAP_OPT_LVAL(opt).value : COAP_OPT_SVAL(opt).value )
+
+/* do not forget to adjust this when coap_opt_t is changed! */
+#define COAP_OPT_SIZE(opt) ( COAP_OPT_LENGTH(opt) + ( COAP_OPT_ISEXTENDED(opt) ? 2: 1 ) )
 
 typedef struct {
   coap_hdr_t *hdr;

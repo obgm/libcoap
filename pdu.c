@@ -39,9 +39,6 @@ coap_delete_pdu(coap_pdu_t *pdu) {
 
 #define options_start(p) ((coap_opt_t *) ( (unsigned char *)p->hdr + sizeof ( coap_hdr_t ) ))
 
-#define LONGOPT(opt) (opt).optval.longopt
-#define SHORTOPT(opt) (opt).optval.shortopt
-
 int 
 coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const unsigned char *data) {
   unsigned char cnt;
@@ -55,8 +52,8 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
   
   opt = options_start( pdu );
   for ( cnt = pdu->hdr->optcnt; cnt; --cnt ) {
-    opt_code += opt->delta;
-    opt = (coap_opt_t *)( (unsigned char *)opt + (opt->length < 15 ? opt->length + 1 : LONGOPT(*opt).length + 17) ); 
+    opt_code += COAP_OPT_DELTA(*opt);
+    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) ); 
   }
 
   if ( type < opt_code ) {
@@ -68,20 +65,11 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
 
   /* create new option after last existing option */
   pdu->hdr->optcnt += 1;
-  opt->delta = type - opt_code;
+  COAP_OPT_SETDELTA( *opt, type - opt_code );
   
-  if ( len < 15 ) {		/* short form */
-    opt->length = len;
-    memcpy(SHORTOPT(*opt).value, data, len);
-
-    pdu->data = (unsigned char *)SHORTOPT(*opt).value + len ;
-  } else {			/* extended form */
-    opt->length = 15;
-    LONGOPT(*opt).length = len - 15;
-    memcpy(LONGOPT(*opt).value, data, len);
-
-    pdu->data = (unsigned char *)LONGOPT(*opt).value + len ;
-  }
+  COAP_OPT_SETLENGTH( *opt, len );
+  memcpy(COAP_OPT_VALUE(*opt), data, len);
+  pdu->data = (unsigned char *)COAP_OPT_VALUE(*opt) + len ;
 
   pdu->length = pdu->data - (unsigned char *)pdu->hdr;
   return len;

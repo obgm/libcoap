@@ -20,17 +20,14 @@
   unsigned char opt_code = 0, cnt;		\
   *opt = options_start( node->pdu );            \
   for ( cnt = (p)->hdr->optcnt; cnt; --cnt ) {  \
-    opt_code += (*opt)->delta;			\
-    *opt = (coap_opt_t *)( (unsigned char *)(*opt) + ((*opt)->length < 15 ? (*opt)->length + 1 : (*opt)->optval.longopt.length + 17) ); \
+    opt_code += COAP_OPT_DELTA(**opt);			\
+    *opt = (coap_opt_t *)( (unsigned char *)(*opt) + COAP_OPT_SIZE(**opt)); \
   } \
 }
 
 /************************************************************************
  ** some functions for debugging
  ************************************************************************/
-
-#define LONGOPT(opt) (opt).optval.longopt
-#define SHORTOPT(opt) (opt).optval.shortopt
 
 void 
 for_each_option(coap_pdu_t *pdu, 
@@ -44,15 +41,10 @@ for_each_option(coap_pdu_t *pdu,
 
   opt = options_start( pdu );
   for ( cnt = pdu->hdr->optcnt; cnt; --cnt ) {
-    opt_code += opt->delta;
+    opt_code += COAP_OPT_DELTA(*opt);
 
-    if ( opt->length < 15 ) {
-      f ( opt, opt_code, opt->length, SHORTOPT(*opt).value );
-      opt = (coap_opt_t *)( (unsigned char *)opt + opt->length + 1 );
-    } else {
-      f ( opt, opt_code, LONGOPT(*opt).length + 15, LONGOPT(*opt).value );
-      opt = (coap_opt_t *)( (unsigned char *)opt + LONGOPT(*opt).length + 17 );
-    }
+    f ( opt, opt_code, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt) );
+    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) );
   }
 }
 
