@@ -1,9 +1,9 @@
 PROGRAM:=coap
 VERSION:=0.01
 
-SOURCES:= pdu.c net.c
+SOURCES:= pdu.c net.c encode.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
-HEADERS:=coap.h debug.h pdu.h net.h
+HEADERS:=coap.h debug.h pdu.h net.h encode.h
 CFLAGS:=-g -Wall -std=c99 -pedantic
 DISTDIR=$(PROGRAM)-$(VERSION)
 FILES:=main.c Makefile $(SOURCES) $(HEADERS) 
