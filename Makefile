@@ -1,5 +1,5 @@
 PROGRAM:=coap
-VERSION:=0.01
+VERSION:=0.02
 
 SOURCES:= pdu.c net.c encode.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
@@ -10,6 +10,7 @@ FILES:=main.c Makefile $(SOURCES) $(HEADERS)
 LIB:=libcoap.a
 LDFLAGS:=-L. -l$(patsubst lib%.a,%,$(LIB))
 ARFLAGS:=cru
+examples:=examples
 
 # add this for Solaris
 #LDFLAGS+=-lsocket -lnsl
@@ -36,5 +37,7 @@ distclean:	clean
 
 dist:
 	test -d $(DISTDIR) || mkdir $(DISTDIR)
+	test -d $(DISTDIR)/$(examples) || mkdir $(DISTDIR)/$(examples)
 	cp $(FILES) $(DISTDIR)
+	$(MAKE) -C $(examples) dist DISTDIR=../$(DISTDIR)/$(examples)
 	tar czf $(DISTDIR).tar.gz $(DISTDIR)
