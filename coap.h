@@ -9,5 +9,6 @@
 #include "debug.h"
 #include "pdu.h"
 #include "net.h"
+#include "encode.h"
 
 #endif /* _COAP_H_ */
