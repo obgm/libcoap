@@ -61,7 +61,7 @@ main(int argc, char **argv) {
   struct timeval tv;
   coap_pdu_t  *pdu;
   struct sockaddr_in6 dst;
-  int hops = 4;
+  int hops = 16;
 
   if ( argc > 1 && strncmp(argv[1], "-h", 2) == 0 ) {
     usage( argv[0] );
@@ -80,7 +80,7 @@ main(int argc, char **argv) {
   if ( IN6_IS_ADDR_MULTICAST(&dst.sin6_addr) ) {
     /* set socket options for multicast */ 
 
-    if ( setsockopt( ctx->sockfd, SOL_SOCKET, IPV6_MULTICAST_HOPS,
+    if ( setsockopt( ctx->sockfd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
 		     (char *)&hops, sizeof(hops) ) < 0 )
       perror("setsockopt: IPV6_MULTICAST_HOPS");
 
