@@ -170,7 +170,7 @@ join( coap_context_t *ctx  ){
   hints.ai_socktype = SOCK_DGRAM;
 
   // Resolve the multicast address
-  getaddrinfo("ff02:2001::1", NULL, &hints, &resmulti);
+  getaddrinfo("ff05:2001::1", NULL, &hints, &resmulti);
 
   for (ainfo = resmulti; ainfo != NULL; ainfo = ainfo->ai_next) {
     if ( ainfo->ai_family == AF_INET6 ) {
