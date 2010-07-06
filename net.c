@@ -176,6 +176,7 @@ coap_new_context() {
   coap_context_t *c = malloc( sizeof( coap_context_t ) );
   struct sockaddr_in6 addr;
   time_t now;
+  int reuse = 1;
 
   srand( getpid() ^ time(&now) );
 
@@ -191,6 +192,9 @@ coap_new_context() {
     perror("coap_new_context: socket");
     goto onerror;
   }
+
+  if ( setsockopt( c->sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse) ) < 0 )
+    perror("setsockopt SO_REUSEADDR");
 
   memset(&addr, 0, sizeof addr );
   addr.sin6_family = AF_INET6;

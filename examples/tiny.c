@@ -54,8 +54,7 @@ main(int argc, char **argv) {
   struct timeval tv;
   coap_pdu_t  *pdu;
   struct sockaddr_in6 dst;
-  int hops = 1, loop = 1;
-  struct ipv6_mreq mreq;
+  int hops = 4;
 
   if ( argc > 1 && strncmp(argv[1], "-h", 2) == 0 ) {
     usage( argv[0] );
@@ -73,21 +72,11 @@ main(int argc, char **argv) {
 
   if ( IN6_IS_ADDR_MULTICAST(&dst.sin6_addr) ) {
     /* set socket options for multicast */ 
-    
+
     if ( setsockopt( ctx->sockfd, SOL_SOCKET, IPV6_MULTICAST_HOPS,
-		     &hops, sizeof(hops) ) < 0 )
+		     (char *)&hops, sizeof(hops) ) < 0 )
       perror("setsockopt: IPV6_MULTICAST_HOPS");
 
-    if ( setsockopt( ctx->sockfd, SOL_SOCKET, IPV6_MULTICAST_LOOP,
-		     &loop, sizeof(loop) ) < 0 )
-      perror("setsockopt: IPV6_MULTICAST_LOOP");
-
-    memcpy( &mreq.ipv6mr_multiaddr, &dst.sin6_addr, sizeof ( dst.sin6_addr ) );
-    mreq.ipv6mr_interface = 0;
-
-    if ( setsockopt( ctx->sockfd, SOL_SOCKET, IPV6_ADD_MEMBERSHIP,
-		     &mreq, sizeof(mreq) ) < 0 )
-      perror("setsockopt: IPV6_ADD_MEMBERSHIP");
   }
 
   while ( 1 ) {

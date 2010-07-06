@@ -144,6 +144,52 @@ usage( const char *program, const char *version) {
 	   program, version, program );
 }
 
+int
+join( coap_context_t *ctx  ){
+  struct ipv6_mreq mreq;
+  struct addrinfo   *reslocal, *resmulti, hints, *ainfo;
+
+  // Get the local wildcard address to bind to (i.e. "::")
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET6;
+  hints.ai_socktype = SOCK_DGRAM;
+
+// Resolve the link-local interface
+  getaddrinfo("::", NULL, &hints, &reslocal);
+
+  for (ainfo = reslocal; ainfo != NULL; ainfo = ainfo->ai_next) {
+    if ( ainfo->ai_family == AF_INET6 ) {
+      mreq.ipv6mr_interface = 
+	      ((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_scope_id;
+      break;
+    }
+  }
+
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET6;
+  hints.ai_socktype = SOCK_DGRAM;
+
+  // Resolve the multicast address
+  getaddrinfo("ff02:2001::1", NULL, &hints, &resmulti);
+
+  for (ainfo = resmulti; ainfo != NULL; ainfo = ainfo->ai_next) {
+    if ( ainfo->ai_family == AF_INET6 ) {
+      // Join the multicast group
+      mreq.ipv6mr_multiaddr = 
+	((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_addr;
+      break;
+    }
+  }
+
+  setsockopt( ctx->sockfd, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP,
+	     (char *)&mreq, sizeof(mreq));
+
+  freeaddrinfo(resmulti);
+  freeaddrinfo(reslocal);
+  
+  return 0;
+}
+
 int 
 main(int argc, char **argv) {
   coap_context_t  *ctx;
@@ -168,6 +214,8 @@ main(int argc, char **argv) {
     usage( argv[0], VERSION );
     exit( 1 );
   }
+
+  join( ctx );
 
   if (! (pdu = coap_new_get( path ) ) )
     return -1;
