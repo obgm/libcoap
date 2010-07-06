@@ -20,6 +20,8 @@ coap_pdu_t *
 make_pdu( unsigned int value ) {
   coap_pdu_t *pdu;
   unsigned char enc;
+  static char buf[20];
+  int len;
 
   if ( ! ( pdu = coap_new_pdu() ) )
     return NULL;
@@ -29,6 +31,11 @@ make_pdu( unsigned int value ) {
   
   enc = COAP_PSEUDOFP_ENCODE(value);
   coap_add_data( pdu, 1, &enc);
+
+  len = snprintf(buf, 20, "%u", COAP_PSEUDOFP_DECODE(enc));
+  if ( len > 0 ) {
+    coap_add_data( pdu, len, buf );
+  }
 
   return pdu;
 }
