@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 #include "debug.h"
 #include "pdu.h"
@@ -23,6 +24,7 @@ coap_new_pdu() {
   memset(pdu, 0, sizeof(coap_pdu_t) + COAP_MAX_PDU_SIZE );
   pdu->hdr = (coap_hdr_t *) ( (unsigned char *)pdu + sizeof(coap_pdu_t) );
   pdu->hdr->version = COAP_DEFAULT_VERSION;
+  pdu->hdr->id = ntohs( COAP_INVALID_TID );
 
   /* data points after the header; when options are added, the data 
      pointer is moved to the back */

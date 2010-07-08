@@ -55,12 +55,12 @@ print_readable( const unsigned char *data, unsigned int len,
 		unsigned char *result, unsigned int buflen ) {
   static unsigned char hex[] = "0123456789ABCDEF";
   unsigned int cnt = 0;
-  while ( len && (cnt < buflen) ) {
+  while ( len && (cnt < buflen-1) ) {
     if ( isprint( *data ) ) {
       *result++ = *data;
       ++cnt;
     } else {
-      if ( cnt+4 < buflen ) {
+      if ( cnt+4 < buflen-1 ) {
 	*result++ = '\\';
 	*result++ = 'x';
 	*result++ = hex[(*data & 0xf0) >> 4];
@@ -72,7 +72,8 @@ print_readable( const unsigned char *data, unsigned int len,
 
     ++data; --len;
   }
-
+  
+  *result = '\0';
   return cnt;
 }
 
@@ -95,8 +96,8 @@ void
 coap_show_pdu( coap_pdu_t *pdu ) {
 
   printf("pdu (%d bytes)", pdu->length);
-  printf(" v:%d t:%d oc:%d c:%d id:%d", pdu->hdr->version, pdu->hdr->type,
-	 pdu->hdr->optcnt, pdu->hdr->code, pdu->hdr->id);
+  printf(" v:%d t:%d oc:%d c:%d id:%u", pdu->hdr->version, pdu->hdr->type,
+	 pdu->hdr->optcnt, pdu->hdr->code, ntohs(pdu->hdr->id));
   if ( pdu->hdr->optcnt ) {
     printf(" o:");
     for_each_option ( pdu, show );
@@ -295,14 +296,15 @@ coap_send_impl( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pd
     return COAP_INVALID_TID;
   }
 
-  return pdu->hdr->id;;
+  return ntohs(pdu->hdr->id);
 }
 
 #define create_transaction_id(T) do { T = (unsigned short)rand(); } while ( T == COAP_INVALID_TID );
 
 coap_tid_t
 coap_send( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pdu_t *pdu ) {
-  create_transaction_id( pdu->hdr->id );
+  if ( ntohs(pdu->hdr->id) == COAP_INVALID_TID )
+    create_transaction_id( pdu->hdr->id );
   return coap_send_impl( context, dst, pdu, 1 );
 }
 
@@ -315,7 +317,8 @@ coap_tid_t
 coap_send_confirmed( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pdu_t *pdu ) {
   coap_queue_t *node;
 
-  create_transaction_id( pdu->hdr->id );
+  if ( ntohs(pdu->hdr->id) == COAP_INVALID_TID )
+    create_transaction_id( pdu->hdr->id );
 
   /* send once, and enter into message queue for retransmission unless
    * retransmission counter is reached */
@@ -350,14 +353,14 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
     coap_insert_node( &context->sendqueue, node, _order_timestamp );
 
     debug("** retransmission #%d of transaction %d\n",
-	   node->retransmit_cnt, node->pdu->hdr->id);
+	  node->retransmit_cnt, ntohs(node->pdu->hdr->id));
 
     return coap_send_impl( context, &node->remote, node->pdu, 0 );
   } 
 
   /* no more retransmissions, remove node from system */
 
-  debug("** removed transaction %d\n", node->pdu->hdr->id);
+  debug("** removed transaction %d\n", ntohs(node->pdu->hdr->id));
 
   coap_delete_node( node );
   return COAP_INVALID_TID;
@@ -450,7 +453,7 @@ coap_remove_transaction( coap_queue_t **queue, coap_tid_t id ) {
   if ( id == q->pdu->hdr->id ) { /* found transaction */
     *queue = q->next;
     coap_delete_node( q );
-    debug("*** removed transaction %u\n", id);
+    debug("*** removed transaction %u\n", ntohs(id));
     return 1;
   }
 
@@ -463,7 +466,7 @@ coap_remove_transaction( coap_queue_t **queue, coap_tid_t id ) {
   if ( q ) {			/* found transaction */
     p->next = q->next;
     coap_delete_node( q );
-    debug("*** removed transaction %u\n", id);
+    debug("*** removed transaction %u\n", ntohs(id));
     return 1;    
   }
 
