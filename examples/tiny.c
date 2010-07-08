@@ -16,11 +16,13 @@
 
 #include "../coap.h"
 
+static coap_tid_t id;
+
 coap_pdu_t *
 make_pdu( unsigned int value ) {
   coap_pdu_t *pdu;
   unsigned char enc;
-  static char buf[20];
+  static unsigned char buf[20];
   int len;
 
   if ( ! ( pdu = coap_new_pdu() ) )
@@ -28,11 +30,12 @@ make_pdu( unsigned int value ) {
 
   pdu->hdr->type = COAP_MESSAGE_NON;
   pdu->hdr->code = COAP_REQUEST_POST;
-  
+  pdu->hdr->id = htons(id++);
+
   enc = COAP_PSEUDOFP_ENCODE(value);
   coap_add_data( pdu, 1, &enc);
 
-  len = snprintf(buf, 20, "%u", COAP_PSEUDOFP_DECODE(enc));
+  len = sprintf((char *)buf, "%u", COAP_PSEUDOFP_DECODE(enc));
   if ( len > 0 ) {
     coap_add_data( pdu, len, buf );
   }
@@ -71,6 +74,7 @@ main(int argc, char **argv) {
   ctx = coap_new_context();
   if ( !ctx )
     return -1;
+  id = rand() & ((1 << (8 * sizeof(coap_tid_t))) - 1);
 
   memset(&dst, 0, sizeof(struct sockaddr_in6 ));
   dst.sin6_family = AF_INET6;
