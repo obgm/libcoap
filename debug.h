@@ -4,12 +4,16 @@
  */
 
 #ifndef VERSION
-#  define VERSION "0.02"
+#  define VERSION "0.03"
 #endif
 
 #ifndef debug
 #  ifndef NDEBUG
-#    define debug(...)   fprintf(stdout, __VA_ARGS__)
+#    ifdef __STRICT_ANSI__
+extern void debug(char *,...);
+#    else
+#      define debug(...)   fprintf(stdout, __VA_ARGS__)
+#    endif
 #  else
 #    define debug(...)
 #  endif

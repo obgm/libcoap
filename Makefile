@@ -1,10 +1,10 @@
 PROGRAM:=coap
-VERSION:=0.02
+VERSION:=0.03
 
 SOURCES:= pdu.c net.c encode.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
 HEADERS:=coap.h debug.h pdu.h net.h encode.h
-CFLAGS:=-g -Wall -std=c99 -pedantic
+CFLAGS:=-g -Wall -ansi -pedantic
 DISTDIR=$(PROGRAM)-$(VERSION)
 FILES:=main.c Makefile $(SOURCES) $(HEADERS) 
 LIB:=libcoap.a

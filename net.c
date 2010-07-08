@@ -3,6 +3,7 @@
  * (c) 2010 Olaf Bergmann <bergmann@tzi.org>
  */
 
+#include <ctype.h>
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
@@ -48,19 +49,45 @@ for_each_option(coap_pdu_t *pdu,
   }
 }
 
+
+unsigned int
+print_readable( const unsigned char *data, unsigned int len, 
+		unsigned char *result, unsigned int buflen ) {
+  static unsigned char hex[] = "0123456789ABCDEF";
+  unsigned int cnt = 0;
+  while ( len && (cnt < buflen) ) {
+    if ( isprint( *data ) ) {
+      *result++ = *data;
+      ++cnt;
+    } else {
+      if ( cnt+4 < buflen ) {
+	*result++ = '\\';
+	*result++ = 'x';
+	*result++ = hex[(*data & 0xf0) >> 4];
+	*result++ = hex[*data & 0x0f ];	
+	cnt += 4;
+      } else 
+	break;
+    }
+
+    ++data; --len;
+  }
+
+  return cnt;
+}
+
 void 
 show( coap_opt_t *opt, unsigned char type, unsigned int len, const unsigned char *data ) {
-  char buf[64];
-  memset(buf, 0, 64);
-  snprintf(buf, len + 1, "%s", data);
+  static unsigned char buf[COAP_MAX_PDU_SIZE];
+  print_readable( data, len, buf, COAP_MAX_PDU_SIZE );
   printf( " %d:'%s'", type, buf );
 }
 
 void 
 show_data( coap_pdu_t *pdu ) {
-  char buf[64];
-  memset(buf, 0, 64);
-  snprintf(buf, (int)( (unsigned char *)pdu->hdr + pdu->length - pdu->data ) + 1, "%s", pdu->data);
+  static unsigned char buf[COAP_MAX_PDU_SIZE];
+  unsigned int len = (int)( (unsigned char *)pdu->hdr + pdu->length - pdu->data ) + 1;
+  print_readable( pdu->data, len, buf, COAP_MAX_PDU_SIZE );
   printf("'%s'", buf);
 }
 
@@ -225,6 +252,17 @@ coap_free_context( coap_context_t *context ) {
   free( context );
 }
 
+#ifdef __STRICT_ANSI__
+#include <stdarg.h>
+void debug(char *format, ...) {
+  va_list ap;
+  
+  va_start(ap, format);	/* bf being the last argument before '...' */
+  vprintf(format, ap);
+  va_end(ap);
+}
+#endif
+
 /* releases space allocated by PDU if free_pdu is set */
 coap_tid_t
 coap_send_impl( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pdu_t *pdu,
@@ -241,7 +279,7 @@ coap_send_impl( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pd
   if ( inet_ntop(dst->sin6_family, &dst->sin6_addr, addr, INET6_ADDRSTRLEN) == 0 ) {
     perror("coap_send_impl: inet_ntop");
   } else {
-    debug("send to [%s]:%d:\n  ",addr,ntohs(dst->sin6_port));
+    printf("send to [%s]:%d:\n  ",addr,ntohs(dst->sin6_port));
   }
   coap_show_pdu( pdu );
 #endif

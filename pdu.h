@@ -94,6 +94,28 @@
 typedef unsigned short coap_tid_t; 
 #define COAP_INVALID_TID 0
 
+#ifndef BYTE_ORDER
+#  if (BSD >= 199103)
+#    include <machine/endian.h>
+#  elif defined(linux) || defined(__linux) || defined(__linux__)
+#    include <endian.h>
+#    define LITTLE_ENDIAN __LITTLE_ENDIAN
+#    define BIG_ENDIAN    __BIG_ENDIAN
+#    define BYTE_ORDER    __BYTE_ORDER
+#  elif defined(sparc)
+#    define LITTLE_ENDIAN 1234
+#    define BIG_ENDIAN    4321
+#    define BYTE_ORDER    BIG_ENDIAN
+#  elif defined(sun386) || defined(i386)
+#    define LITTLE_ENDIAN 1234
+#    define BIG_ENDIAN    4321
+#    define BYTE_ORDER    LITTLE_ENDIAN
+#  else 
+#    error "cannot determine byte order, please set BYTE_ORDER accordingly"
+#  endif
+#endif
+
+#if BYTE_ORDER == BIG_ENDIAN
 typedef struct {
   unsigned int version:2;	/* protocol version */
   unsigned int type:2;		/* type flag */
@@ -101,21 +123,45 @@ typedef struct {
   unsigned int code:8;	        /* request method (value 1--10) or response code (value 40-255) */
   coap_tid_t id;		/* transaction id */
 } coap_hdr_t;
+#elif BYTE_ORDER == LITTLE_ENDIAN
+typedef struct {
+  unsigned int optcnt:4;	/* number of options following the header */
+  unsigned int type:2;		/* type flag */
+  unsigned int version:2;	/* protocol version */
+  unsigned int code:8;	        /* request method (value 1--10) or response code (value 40-255) */
+  coap_tid_t id;		/* transaction id (network byte order!) */
+} coap_hdr_t;
+#endif
 
+#if BYTE_ORDER == BIG_ENDIAN
 typedef union {
   struct {		        /* short form, to be used when length < 15 */
     unsigned int delta:4;      /* option type (expressed as delta) */
     unsigned int length:4;	/* number of option bytes (15 indicates extended form) */
-    unsigned char value[];	/* 0--14 bytes options */
+    /* 0--14 bytes options */
   } sval;
   struct {			/* extended form, to be used when lengt==15 */
     unsigned int delta:4;      /* option type (expressed as delta) */
     unsigned int flag:4;	/* must be 15! */
     unsigned int length:8;	/* length - 15 */
-    unsigned char value[];	/* 15--270 bytes options */
+    /* 15--270 bytes options */
   } lval;
 } coap_opt_t;
-
+#elif BYTE_ORDER == LITTLE_ENDIAN
+typedef union {
+  struct {		        /* short form, to be used when length < 15 */
+    unsigned int length:4;	/* number of option bytes (15 indicates extended form) */
+    unsigned int delta:4;      /* option type (expressed as delta) */
+    /* 0--14 bytes options */
+  } sval;
+  struct {			/* extended form, to be used when lengt==15 */
+    unsigned int flag:4;	/* must be 15! */
+    unsigned int delta:4;      /* option type (expressed as delta) */
+    unsigned int length:8;	/* length - 15 */
+    /* 15--270 bytes options */
+  } lval;
+} coap_opt_t;
+#endif
 
 #define COAP_OPT_SVAL(opt) (opt).sval
 #define COAP_OPT_LVAL(opt) (opt).lval
@@ -137,10 +183,12 @@ typedef union {
   }
 
 #define COAP_OPT_VALUE(opt)						\
-  ( COAP_OPT_ISEXTENDED(opt) ? COAP_OPT_LVAL(opt).value : COAP_OPT_SVAL(opt).value )
+  ( (unsigned char *)&(opt) + ( COAP_OPT_ISEXTENDED(opt) ? 2 : 1 ) )
 
 /* do not forget to adjust this when coap_opt_t is changed! */
 #define COAP_OPT_SIZE(opt) ( COAP_OPT_LENGTH(opt) + ( COAP_OPT_ISEXTENDED(opt) ? 2: 1 ) )
+
+/** Header structure for CoAP PDUs */
 
 typedef struct {
   coap_hdr_t *hdr;

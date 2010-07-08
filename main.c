@@ -181,7 +181,7 @@ join( coap_context_t *ctx  ){
     }
   }
 
-  setsockopt( ctx->sockfd, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP,
+  setsockopt( ctx->sockfd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
 	     (char *)&mreq, sizeof(mreq));
 
   freeaddrinfo(resmulti);
