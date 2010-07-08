@@ -1,6 +1,6 @@
 SOURCES:= tiny.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
-CFLAGS:=-g -O2 -Wall -std=c99 -pedantic
+CFLAGS:=-g -Wall -ansi -pedantic
 DISTDIR?=something
 FILES:=Makefile $(SOURCES)
 LDFLAGS:=-L.. -lcoap
@@ -12,7 +12,7 @@ LDFLAGS:=-L.. -lcoap
 
 all:	tiny
 
-tiny:	tiny.c
+tiny:	tiny.o
 	$(CC) -o $@ $< $(LDFLAGS)
 
 clean:
