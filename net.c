@@ -86,7 +86,7 @@ show( coap_opt_t *opt, unsigned char type, unsigned int len, const unsigned char
 void 
 show_data( coap_pdu_t *pdu ) {
   static unsigned char buf[COAP_MAX_PDU_SIZE];
-  unsigned int len = (int)( (unsigned char *)pdu->hdr + pdu->length - pdu->data ) + 1;
+  unsigned int len = (int)( (unsigned char *)pdu->hdr + pdu->length - pdu->data );
   print_readable( pdu->data, len, buf, COAP_MAX_PDU_SIZE );
   printf("'%s'", buf);
 }
