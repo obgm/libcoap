@@ -71,7 +71,7 @@ main(int argc, char **argv) {
     exit( 1 );
   }
 
-  ctx = coap_new_context();
+  ctx = coap_new_context(0);
   if ( !ctx )
     return -1;
   id = rand() & ((1 << (8 * sizeof(coap_tid_t))) - 1);
