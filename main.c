@@ -6,6 +6,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <sys/select.h>
@@ -139,24 +140,31 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s URI\n"
-	   "where URI can be an absolute or relative coap URI\n",
+	   "usage: %s [-g group] [-p port] URI\n\n"
+	   "\tURI can be an absolute or relative coap URI,\n"
+	   "\t-g group\tjoin the given multicast group\n"
+	   "\t-p port\t\tlisten on specified port\n",
 	   program, version, program );
 }
 
 int
-join( coap_context_t *ctx  ){
+join( coap_context_t *ctx, char *group_name ){
   struct ipv6_mreq mreq;
-  struct addrinfo   *reslocal, *resmulti, hints, *ainfo;
+  struct addrinfo   *reslocal = NULL, *resmulti = NULL, hints, *ainfo;
+  int result = -1;
 
-  // Get the local wildcard address to bind to (i.e. "::")
+  /* we have to resolve the link-local interface to get the interface id */
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET6;
   hints.ai_socktype = SOCK_DGRAM;
 
-// Resolve the link-local interface
-  getaddrinfo("::", NULL, &hints, &reslocal);
+  result = getaddrinfo("::", NULL, &hints, &reslocal);
+  if ( result < 0 ) {
+    perror("join: cannot resolve link-local interface");
+    goto finish;
+  }
 
+  /* get the first suitable interface identifier */
   for (ainfo = reslocal; ainfo != NULL; ainfo = ainfo->ai_next) {
     if ( ainfo->ai_family == AF_INET6 ) {
       mreq.ipv6mr_interface = 
@@ -169,25 +177,32 @@ join( coap_context_t *ctx  ){
   hints.ai_family = AF_INET6;
   hints.ai_socktype = SOCK_DGRAM;
 
-  // Resolve the multicast address
-  getaddrinfo("ff05:2001::1", NULL, &hints, &resmulti);
+  /* resolve the multicast group address */
+  result = getaddrinfo(group_name, NULL, &hints, &resmulti);
+
+  if ( result < 0 ) {
+    perror("join: cannot resolve multicast address");
+    goto finish;
+  }
 
   for (ainfo = resmulti; ainfo != NULL; ainfo = ainfo->ai_next) {
     if ( ainfo->ai_family == AF_INET6 ) {
-      // Join the multicast group
       mreq.ipv6mr_multiaddr = 
 	((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_addr;
       break;
     }
   }
+  
+  result = setsockopt( ctx->sockfd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
+		       (char *)&mreq, sizeof(mreq) );
+  if ( result < 0 ) 
+    perror("join: setsockopt");
 
-  setsockopt( ctx->sockfd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
-	     (char *)&mreq, sizeof(mreq));
-
+ finish:
   freeaddrinfo(resmulti);
   freeaddrinfo(reslocal);
   
-  return 0;
+  return result;
 }
 
 int 
@@ -201,21 +216,38 @@ main(int argc, char **argv) {
   coap_pdu_t  *pdu;
   static char *server = NULL, *path = NULL;
   unsigned short port = COAP_DEFAULT_PORT;
+  int opt;
+  char *group = NULL;
 
-  ctx = coap_new_context();
+  while ((opt = getopt(argc, argv, "g:p:")) != -1) {
+    switch (opt) {
+    case 'g' :
+      group = optarg;
+      break;
+    case 'p' :
+      port = atoi(optarg);
+      break;
+    default:
+      usage( argv[0], VERSION );
+      exit( 1 );
+    }
+  }
+
+  ctx = coap_new_context( port );
   if ( !ctx )
     return -1;
 
   coap_register_message_handler( ctx, message_handler );
 
-  if ( argc > 1 )
-    split_uri( argv[1], &server, &port, &path );
+  if ( optind < argc )
+    split_uri( argv[optind], &server, &port, &path );
   else {
     usage( argv[0], VERSION );
     exit( 1 );
   }
 
-  join( ctx );
+  if ( group )
+    join( ctx, group );
 
   if (! (pdu = coap_new_get( path ) ) )
     return -1;
