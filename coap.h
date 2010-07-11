@@ -10,5 +10,6 @@
 #include "pdu.h"
 #include "net.h"
 #include "encode.h"
+#include "uri.h"
 
 #endif /* _COAP_H_ */
