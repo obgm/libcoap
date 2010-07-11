@@ -15,7 +15,7 @@
 #define COAP_MAX_PDU_SIZE           1400 /* maximum size of a CoAP PDU */
 
 #define COAP_DEFAULT_VERSION           1 /* version of CoAP supported */
-#define COAP_DEFAULT_URI_WELLKNOWN "/.wk/r" /* compact form of well-known resources URI */
+#define COAP_DEFAULT_URI_WELLKNOWN "/.well-known/r" /* compact form of well-known resources URI */
 
 /* CoAP message types */
 
@@ -33,13 +33,19 @@
 
 /* CoAP option types */
 
-#define COAP_OPTION_URI_PATH     1 /* C, String, 1-270 B, "/" */
-#define COAP_OPTION_MAXAGE       2 /* E, Duration, 1 B, 60 Seconds */
-#define COAP_OPTION_URI_FULL     3 /* C, String, 1-270 B, "/" */
-#define COAP_OPTION_ETAG         4 /* E, variable length, 1-4 B, - */
-#define COAP_OPTION_CONTENT_TYPE 5 /* C, 8-bit uint, 1 B, 8 (text/plain) */
+#define COAP_OPTION_CONTENT_TYPE  1 /* C, 8-bit uint, 1 B, 0 (text/plain) */
+#define COAP_OPTION_MAXAGE        2 /* E, variable length, 1--4 B, 60 Seconds */
+#define COAP_OPTION_URI_SCHEME    3 /* C, String, 1-270 B, "coap" */
+#define COAP_OPTION_ETAG          4 /* E, sequence of bytes, 1-4 B, - */
+#define COAP_OPTION_URI_AUTHORITY 5 /* C, String, 1-270 B, "" */
+#define COAP_OPTION_LOCATION      6 /* E, String, 1-270 B, - */
+#define COAP_OPTION_URI_PATH      9 /* C, String, 1-270 B, "" */
 
-/* CoAP result codes */
+/* selected option types from draft-bormann-coap-misc-04 */
+
+#define COAP_OPTION_BLOCK        13 /* C, unsigned integer, 1--3 B, 0 */
+
+/* CoAP result codes (HTTP-Code / 100 * 40 + HTTP-Code % 100) */
 
 #define COAP_RESPONSE_100       40   /* 100 Continue */
 #define COAP_RESPONSE_200       80   /* 200 OK */
@@ -54,9 +60,10 @@
 
 /* CoAP media type encoding */
 
-#define COAP_MEDIATYPE_TEXT_XML                       0 /* text/xml */
-#define COAP_MEDIATYPE_TEXT_CSV                       1 /* text/csv */
-#define COAP_MEDIATYPE_TEXT_HTML                      3 /* text/html */
+#define COAP_MEDIATYPE_TEXT_PLAIN                     0 /* text/plain (UTF-8) */
+#define COAP_MEDIATYPE_TEXT_XML                       1 /* text/xml (UTF-8) */
+#define COAP_MEDIATYPE_TEXT_CSV                       2 /* text/csv (UTF-8) */
+#define COAP_MEDIATYPE_TEXT_HTML                      3 /* text/html (UTF-8) */
 #define COAP_MEDIATYPE_IMAGE_GIF                     21 /* image/gif */
 #define COAP_MEDIATYPE_IMAGE_JPEG                    22 /* image/jpeg */
 #define COAP_MEDIATYPE_IMAGE_PNG                     23 /* image/png */
@@ -75,20 +82,6 @@
 #define COAP_MEDIATYPE_APPLICATION_FASTINFOSET       49 /* application/fastinfoset  */
 #define COAP_MEDIATYPE_APPLICATION_SOAP_FASTINFOSET  50 /* application/soap+fastinfoset  */
 #define COAP_MEDIATYPE_APPLICATION_JSON              51 /* application/json  */
-
-
-#define COAP_MEDIATYPE_TEXT          (1 << 5) /* text */
-#define COAP_MEDIATYPE_IMAGE         (2 << 5) /* image */
-#define COAP_MEDIATYPE_AUDIO         (3 << 5) /* audio */
-#define COAP_MEDIATYPE_VIDEO         (4 << 5) /* video */
-#define COAP_MEDIATYPE_APPLICATION   (5 << 5) /* application */
-
-/* TODO: sub-types */
-
-#define COAP_MEDIA_TEXT_XML    (COAP_MEDIATYPE_TEXT | 0) /* text/xml */
-#define COAP_MEDIA_TEXT_PLAIN  (COAP_MEDIATYPE_TEXT | 1) /* text/plain */
-#define COAP_MEDIA_TEXT_CSV    (COAP_MEDIATYPE_TEXT | 2) /* text/csv */
-#define COAP_MEDIA_TEXT_HTML   (COAP_MEDIATYPE_TEXT | 3) /* text/html */
 
 /* CoAP transaction id */
 typedef unsigned short coap_tid_t; 
@@ -211,6 +204,7 @@ void coap_delete_pdu(coap_pdu_t *);
  */
 
 int coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const unsigned char *data);
+coap_opt_t *coap_check_option(coap_pdu_t *pdu, unsigned char type);
 
 /** 
  * Adds given data to the pdu that is passed as first parameter. Note that the PDU's 

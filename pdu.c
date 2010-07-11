@@ -77,6 +77,32 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
   return len;
 }
 
+coap_opt_t *
+coap_check_option(coap_pdu_t *pdu, unsigned char type) {
+  unsigned char cnt;
+  coap_opt_t *opt;
+  unsigned char opt_code = 0;
+
+  if (!pdu) 
+    return NULL;
+
+  /* get last option from pdu to calculate the delta */
+  
+  opt = options_start( pdu );
+  for ( cnt = pdu->hdr->optcnt; cnt && opt_code < type; --cnt ) {
+    opt_code += COAP_OPT_DELTA(*opt);
+    
+    /* check if current option is the one we are looking for */
+    if (type == opt_code)
+      return opt;		/* yes, return */
+
+    /* goto next option */
+    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) ); 
+  }
+
+  return NULL;
+}
+
 int 
 coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
   if ( !pdu )
