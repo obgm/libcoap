@@ -23,7 +23,7 @@ make_pdu( unsigned int value ) {
   coap_pdu_t *pdu;
   unsigned char enc;
   static unsigned char buf[20];
-  int len;
+  int len, ls;
 
   if ( ! ( pdu = coap_new_pdu() ) )
     return NULL;
@@ -32,10 +32,10 @@ make_pdu( unsigned int value ) {
   pdu->hdr->code = COAP_REQUEST_POST;
   pdu->hdr->id = htons(id++);
 
-  enc = COAP_PSEUDOFP_ENCODE(value);
+  enc = COAP_PSEUDOFP_ENCODE_8_4_DOWN(value,ls);
   coap_add_data( pdu, 1, &enc);
 
-  len = sprintf((char *)buf, "%u", COAP_PSEUDOFP_DECODE(enc));
+  len = sprintf((char *)buf, "%u", COAP_PSEUDOFP_DECODE_8_4(enc));
   if ( len > 0 ) {
     coap_add_data( pdu, len, buf );
   }

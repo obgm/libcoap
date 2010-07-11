@@ -1,6 +1,8 @@
-SOURCES:= tiny.c
+PROGRAMS:=tiny coap-client
+SOURCES:= tiny.c client.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
-CFLAGS:=-g -Wall -ansi -pedantic
+#CFLAGS:=-g -Wall -ansi -pedantic -I..
+CFLAGS:=-g -Wall -I..
 DISTDIR?=something
 FILES:=Makefile $(SOURCES)
 LDFLAGS:=-L.. -lcoap
@@ -10,9 +12,12 @@ LDFLAGS:=-L.. -lcoap
 
 .PHONY: clean distclean
 
-all:	tiny
+all:	$(PROGRAMS)
 
 tiny:	tiny.o
+	$(CC) -o $@ $< $(LDFLAGS)
+
+coap-client: client.o
 	$(CC) -o $@ $< $(LDFLAGS)
 
 clean:
