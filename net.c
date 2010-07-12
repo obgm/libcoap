@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 
 #include "debug.h"
+#include "mem.h"
 #include "net.h"
 
 #define options_start(p) ((coap_opt_t *) ( (unsigned char *)p->hdr + sizeof ( coap_hdr_t ) ))
@@ -150,8 +151,8 @@ coap_delete_node(coap_queue_t *node) {
   if ( !node ) 
     return 0;
 
-  free( node->pdu );
-  free( node );  
+  coap_free( node->pdu );
+  coap_free( node );  
 
   return 1;
 }
@@ -168,7 +169,7 @@ coap_delete_all(coap_queue_t *queue) {
 
 coap_queue_t *
 coap_new_node() {
-  coap_queue_t *node = malloc ( sizeof *node );
+  coap_queue_t *node = coap_malloc ( sizeof *node );
   if ( ! node ) {
     perror ("coap_new_node: malloc");
     return NULL;
@@ -201,7 +202,7 @@ coap_pop_next( coap_context_t *context ) {
 
 coap_context_t *
 coap_new_context(in_port_t port) {
-  coap_context_t *c = malloc( sizeof( coap_context_t ) );
+  coap_context_t *c = coap_malloc( sizeof( coap_context_t ) );
   struct sockaddr_in6 addr;
   time_t now;
   int reuse = 1, need_port = 1;
@@ -250,7 +251,7 @@ coap_new_context(in_port_t port) {
  onerror:
   if ( c->sockfd >= 0 ) 
     close ( c->sockfd );
-  free( c );
+  coap_free( c );
   return NULL;
 }
 
@@ -261,7 +262,7 @@ coap_free_context( coap_context_t *context ) {
 
   coap_delete_all(context->sendqueue);
   close( context->sockfd );
-  free( context );
+  coap_free( context );
 }
 
 #ifdef __STRICT_ANSI__

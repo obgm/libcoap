@@ -9,12 +9,13 @@
 #include <arpa/inet.h>
 
 #include "debug.h"
+#include "mem.h"
 #include "pdu.h"
 
 
 coap_pdu_t *
 coap_new_pdu() {
-  coap_pdu_t *pdu = malloc( sizeof(coap_pdu_t) + COAP_MAX_PDU_SIZE );
+  coap_pdu_t *pdu = coap_malloc( sizeof(coap_pdu_t) + COAP_MAX_PDU_SIZE );
   if (!pdu) {
     perror("new_pdu: malloc");
     return NULL;
@@ -36,7 +37,7 @@ coap_new_pdu() {
 
 void 
 coap_delete_pdu(coap_pdu_t *pdu) {
-  free( pdu );
+  coap_free( pdu );
 }
 
 #define options_start(p) ((coap_opt_t *) ( (unsigned char *)p->hdr + sizeof ( coap_hdr_t ) ))
