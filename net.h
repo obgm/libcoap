@@ -98,4 +98,7 @@ int coap_remove_transaction( coap_queue_t **queue, coap_tid_t id );
 /** Dispatches the PDUs from the receive queue in given context. */
 void coap_dispatch( coap_context_t *context );
 
+/** Returns 1 if there are no messages to send or to dispatch in the context's queues. */
+int coap_can_exit( coap_context_t *context );
+
 #endif /* _COAP_NET_H_ */

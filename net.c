@@ -128,7 +128,7 @@ coap_insert_node(coap_queue_t **queue, coap_queue_t *node,
 
   /* replace queue head if PDU's time is less than head's time */
   q = *queue;
-  if ( order( node, q ) ) {
+  if ( order( node, q ) < 0) {
     node->next = q;
     *queue = node;
     return 1;
@@ -138,7 +138,7 @@ coap_insert_node(coap_queue_t **queue, coap_queue_t *node,
   do {
     p = q;
     q = q->next;
-  } while ( q && ! order( node, q ) );
+  } while ( q && order( node, q ) >= 0 );
   
   /* insert new item */
   node->next = q;
@@ -322,7 +322,7 @@ coap_send( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pdu_t *
 
 int
 _order_timestamp( coap_queue_t *lhs, coap_queue_t *rhs ) {
-  return lhs && rhs && ( lhs->t < rhs->t );
+  return lhs && rhs && ( lhs->t < rhs->t ) ? -1 : 1;
 }
   
 coap_tid_t
@@ -380,8 +380,10 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
 
 int
 _order_transaction_id( coap_queue_t *lhs, coap_queue_t *rhs ) {
-  return lhs && rhs && lhs->pdu && rhs->pdu &&
-    ( lhs->pdu->hdr->id < lhs->pdu->hdr->id );
+  return ( lhs && rhs && lhs->pdu && rhs->pdu &&
+	   ( lhs->pdu->hdr->id < lhs->pdu->hdr->id ) ) 
+    ? -1 
+    : 1;
 }  
 
 int
@@ -521,4 +523,8 @@ coap_register_message_handler( coap_context_t *context, coap_message_handler_t h
   context->msg_handler = (void (*)( void *, coap_queue_t *, void *)) handler;
 }
 
+int 
+coap_can_exit( coap_context_t *context ) {
+  return !context || (context->recvqueue == NULL && context->sendqueue == NULL);
+}
 
