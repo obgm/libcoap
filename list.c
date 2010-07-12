@@ -24,7 +24,7 @@ coap_insert(coap_list_t **queue, coap_list_t *node,
 
   /* replace queue head if new node has to be added before the existing queue head */
   q = *queue;
-  if ( order( node->data, q->data ) ) {
+  if ( order( node->data, q->data ) < 0) {
     node->next = q;
     *queue = node;
     return 1;
@@ -34,7 +34,7 @@ coap_insert(coap_list_t **queue, coap_list_t *node,
   do {
     p = q;
     q = q->next;
-  } while ( q && ! order( node->data, q->data ) );
+  } while ( q && order( node->data, q->data ) >= 0);
   
   /* insert new item */
   node->next = q;
