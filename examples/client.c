@@ -17,6 +17,10 @@
 
 #include "coap.h"
 
+/* Request URI.
+ * TODO: associate the resources with transaction id and make it expireable */
+static coap_uri_t uri;
+
 extern unsigned int
 print_readable( const unsigned char *data, unsigned int len, 
 		unsigned char *result, unsigned int buflen );
@@ -107,10 +111,50 @@ send_request( coap_context_t  *ctx, coap_pdu_t  *pdu, const char *server, unsign
   freeaddrinfo(res);
 }
 
+#define COAP_OPT_BLOCK_LAST(opt) ( COAP_OPT_VALUE(*block) + (COAP_OPT_LENGTH(*block) - 1) )
+#define COAP_OPT_BLOCK_MORE(opt) ( *COAP_OPT_LAST(*block) & 0x08 )
+#define COAP_OPT_BLOCK_SIZE(opt) ( *COAP_OPT_LAST(*block) & 0x07 )
+  
+unsigned int  
+_read_blk_nr(coap_opt_t *opt) {
+  unsigned int i, nr=0;
+  for ( i = COAP_OPT_LENGTH(*opt); i; --i) {
+    nr = (nr << 8) + COAP_OPT_VALUE(*opt)[i-1];
+  }
+  return nr >> 4;
+}
+#define COAP_OPT_BLOCK_NR(opt)   _read_blk_nr(&opt)
+
+
+unsigned int
+decode_var_bytes(unsigned char *buf,unsigned int len) {
+  unsigned int i, n = 0;
+  for (i = 0; i < len; ++i)
+    n = (n << 8) + buf[i]; 
+
+  return n;
+}
+
+unsigned int
+encode_var_bytes(unsigned char *buf, unsigned int val) {
+  int n, i = val >> 1;
+  for (n = 0; i; n++)		/* FIXME: coap_fls() */
+    i >>= 1;
+ 
+  for (i = n / 8 + 1; i; --i) {
+    buf[i-1] = val & 0xff;
+    val >>= 8;
+  }
+
+  return n / 8 + 1;
+}
+
 void 
 message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_pdu_t *pdu = NULL;
   coap_opt_t *block;
+  unsigned int blocknr;
+  unsigned char buf[4];
 
 #ifndef NDEBUG
   printf("** process pdu: ");
@@ -132,22 +176,49 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
   case COAP_RESPONSE_200:
     /* got some data, check if block option is set */
     block = coap_check_option( node->pdu, COAP_OPTION_BLOCK );
-    if ( block && (*COAP_OPT_VALUE(*block) & 0x08) ) { 
-      /* more bit is set */
-      printf("found the M bit, block size is %u, block nr. %u\n",
-	     *COAP_OPT_VALUE(*block) & 0x07, 
-	     (*COAP_OPT_VALUE(*block) & 0xf0) << *COAP_OPT_VALUE(*block) & 0x07);
-      
-      /* FIXME: create pdu with request for next block 
-       * need original uri for this (destination address is node->remote) 
-       * copy transaction id or better not?
-       */      
-
-    }
-    
-    /* need to acknowledge if message was asyncronous */
-    if ( node->pdu->hdr->type == COAP_MESSAGE_CON ) {
-      pdu = new_ack( ctx, node );      
+    if ( !block ) {
+      ;
+    } else {
+      blocknr = decode_var_bytes( COAP_OPT_VALUE(*block), COAP_OPT_LENGTH(*block) );
+      if ( (blocknr & 0x08) ) { 
+	/* more bit is set */
+	printf("found the M bit, block size is %u, block nr. %u\n",
+	       blocknr & 0x07, 
+	       (blocknr & 0xf0) << blocknr & 0x07);
+	
+	/* need to acknowledge if message was asyncronous */
+	if ( node->pdu->hdr->type == COAP_MESSAGE_CON ) {
+	  pdu = new_ack( ctx, node );      
+	  
+	  if ( pdu && coap_send( ctx, &node->remote, pdu ) == COAP_INVALID_TID ) {
+	    debug("message_handler: error sending reponse");
+	    coap_delete_pdu(pdu);
+	    return;
+	  }  
+	}
+	
+	/* FIXME: create pdu with request for next block 
+	 * need original uri for this (destination address is node->remote) 
+	 * copy transaction id or better not?
+	 */      
+	
+	pdu = coap_new_get( &uri );
+	if ( pdu ) {
+	  pdu->hdr->id = node->pdu->hdr->id; /* copy transaction id from response */
+	  
+	  /* FIXME: content type */
+	  
+	/* FIXME: increase number of bytes for block on overflow  */	
+	  coap_add_option ( pdu, COAP_OPTION_BLOCK, 
+			    encode_var_bytes(buf, blocknr + ( 1 << 4) ), buf);
+	  	  
+	  if ( coap_send_confirmed( ctx, &node->remote, pdu ) == COAP_INVALID_TID ) {
+	    debug("message_handler: error sending reponse");
+	    coap_delete_pdu(pdu);
+	  }
+	  return;
+	}      
+      }
     }
     break;
   default:
@@ -252,7 +323,6 @@ main(int argc, char **argv) {
   unsigned short localport = COAP_DEFAULT_PORT, port = COAP_DEFAULT_PORT;
   int opt;
   char *group = NULL;
-  coap_uri_t uri;
 
   while ((opt = getopt(argc, argv, "g:p:")) != -1) {
     switch (opt) {
