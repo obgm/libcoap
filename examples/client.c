@@ -22,9 +22,31 @@ static coap_list_t *optlist = NULL;
  * TODO: associate the resources with transaction id and make it expireable */
 static coap_uri_t uri;
 
+/* reading is done when this flag is set */
+static int ready = 0;
+static FILE *file = NULL;
+
 extern unsigned int
 print_readable( const unsigned char *data, unsigned int len, 
 		unsigned char *result, unsigned int buflen );
+
+int
+append_to_file(const char *filename, const unsigned char *data, size_t len) {
+  size_t written;
+
+  if ( !file && !(file = fopen(filename, "w")) ) {
+    perror("append_to_file: fopen");
+    return -1;
+  }
+    
+  do {
+    written = fwrite(data, 1, len, file);
+    len -= written;
+    data += written;
+  } while ( written && len );
+
+  return 0;
+}
 
 coap_pdu_t *
 new_ack( coap_context_t  *ctx, coap_queue_t *node ) {
@@ -53,18 +75,14 @@ coap_pdu_t *
 coap_new_get( coap_list_t *options ) {
   coap_pdu_t *pdu;
   coap_list_t *opt;
-  static unsigned char buf[201];
+
   if ( ! ( pdu = coap_new_pdu() ) )
     return NULL;
 
   pdu->hdr->type = COAP_MESSAGE_CON;
   pdu->hdr->code = COAP_REQUEST_GET;
 
-  for (opt = optlist; opt; opt = opt->next) {
-    debug("add option %u of length %u\n", COAP_OPTION_KEY(*(coap_option *)opt->data),COAP_OPTION_LENGTH(*(coap_option *)opt->data));
-    buf[print_readable( COAP_OPTION_DATA(*(coap_option *)opt->data), COAP_OPTION_LENGTH(*(coap_option *)opt->data),
-		    buf, 200)]=0;
-    printf("%s\n",buf);
+  for (opt = options; opt; opt = opt->next) {
     coap_add_option( pdu, COAP_OPTION_KEY(*(coap_option *)opt->data), 
 		     COAP_OPTION_LENGTH(*(coap_option *)opt->data), 
 		     COAP_OPTION_DATA(*(coap_option *)opt->data) );
@@ -125,7 +143,6 @@ _read_blk_nr(coap_opt_t *opt) {
 }
 #define COAP_OPT_BLOCK_NR(opt)   _read_blk_nr(&opt)
 
-
 void 
 message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_pdu_t *pdu = NULL;
@@ -133,6 +150,8 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
   unsigned int blocknr;
   unsigned char buf[4];
   coap_list_t *option;
+  unsigned int len;
+  unsigned char *databuf;
 
 #ifndef NDEBUG
   printf("** process pdu: ");
@@ -155,9 +174,17 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
     /* got some data, check if block option is set */
     block = coap_check_option( node->pdu, COAP_OPTION_BLOCK );
     if ( !block ) {
+      /* There is no block option set, just read the data and we are done. */
       ;
     } else {
       blocknr = coap_decode_var_bytes( COAP_OPT_VALUE(*block), COAP_OPT_LENGTH(*block) );
+
+      /* TODO: check if we are looking at the correct block number */
+      if ( coap_get_data( node->pdu, &len, &databuf ) ) {
+	/*path = coap_check_option( node->pdu, COAP_OPTION_URI_PATH );*/
+	append_to_file( "coap.out", databuf, len );
+      }
+
       if ( (blocknr & 0x08) ) { 
 	/* more bit is set */
 	printf("found the M bit, block size is %u, block nr. %u\n",
@@ -189,13 +216,13 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
 
 	  /* add URI components from optlist */
 	  for (option = optlist; option; option = option->next ) {
-	    switch (COAP_OPTION_KEY(*(coap_option *)option)) {
+	    switch (COAP_OPTION_KEY(*(coap_option *)option->data)) {
 	    case COAP_OPTION_URI_SCHEME :
 	    case COAP_OPTION_URI_AUTHORITY :
 	    case COAP_OPTION_URI_PATH :
-	      coap_add_option ( pdu, COAP_OPTION_KEY(*(coap_option *)option), 
-				COAP_OPTION_LENGTH(*(coap_option *)option),
-				COAP_OPTION_DATA(*(coap_option *)option) );
+	      coap_add_option ( pdu, COAP_OPTION_KEY(*(coap_option *)option->data), 
+				COAP_OPTION_LENGTH(*(coap_option *)option->data),
+				COAP_OPTION_DATA(*(coap_option *)option->data) );
 	      break;
 	    default:
 	      ;			/* skip other options */
@@ -214,6 +241,7 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
 	}      
       }
     }
+
     break;
   default:
     /* acknowledge if requested */
@@ -227,6 +255,9 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
     debug("message_handler: error sending reponse");
     coap_delete_pdu(pdu);
   }  
+
+  /* our job is done, we can exit at any time */
+  ready = 1;
 }
 
 void 
@@ -312,9 +343,10 @@ order_opts(void *a, void *b) {
   if (!a || !b)
     return a < b ? -1 : 1;
 
-  return (COAP_OPTION_KEY(*(coap_option *)a) < COAP_OPTION_KEY(*(coap_option *)b))
-    ? -1 
-    : 1;
+  if (COAP_OPTION_KEY(*(coap_option *)a) < COAP_OPTION_KEY(*(coap_option *)b))
+    return -1;
+  
+  return COAP_OPTION_KEY(*(coap_option *)a) == COAP_OPTION_KEY(*(coap_option *)b);
 }
 
 coap_list_t *
@@ -489,7 +521,7 @@ main(int argc, char **argv) {
   /* send request */
   send_request( ctx, pdu, server ? server : "::1", port );
 
-  while ( 1 ) {
+  while ( !ready && !coap_can_exit(ctx) ) {
     FD_ZERO(&readfds); 
     FD_SET( ctx->sockfd, &readfds );
     
@@ -520,6 +552,10 @@ main(int argc, char **argv) {
     }
   }
 
+  if ( file ) {
+    fflush( file );
+    fclose( file );
+  }
   coap_free_context( ctx );
 
   return 0;
