@@ -228,4 +228,11 @@ coap_opt_t *coap_check_option(coap_pdu_t *pdu, unsigned char type);
 
 int coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data);
 
+/**
+ * Retrieves the length and data pointer of specified PDU. Returns 0 on error
+ * or 1 if *len and *data have correct values. Note that these values are
+ * destroyed with the pdu.
+ */
+int coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data);
+
 #endif /* _PDU_H_ */

@@ -120,3 +120,21 @@ coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
   pdu->length += len;
   return 1;
 }
+
+int 
+coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data) {
+  if ( !pdu )
+    return 0;
+
+  if ( pdu->data < (unsigned char *)pdu->hdr + pdu->length ) { 
+    /* pdu contains data */
+
+    *len = (unsigned char *)pdu->hdr + pdu->length - pdu->data;
+    *data = pdu->data;
+  } else {			/* no data, clear everything */
+    *len = 0;
+    *data = NULL;
+  }
+  
+  return 1;
+}
