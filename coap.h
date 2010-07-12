@@ -7,6 +7,8 @@
 #define _COAP_H_
 
 #include "debug.h"
+#include "mem.h"
+#include "list.h"
 #include "pdu.h"
 #include "net.h"
 #include "encode.h"
