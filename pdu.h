@@ -181,6 +181,21 @@ typedef union {
 /* do not forget to adjust this when coap_opt_t is changed! */
 #define COAP_OPT_SIZE(opt) ( COAP_OPT_LENGTH(opt) + ( COAP_OPT_ISEXTENDED(opt) ? 2: 1 ) )
 
+/**
+ * Structures for more convenient handling of options. (To be used with ordered
+ * coap_list_t.) The option's data will be added to the end of the coap_option 
+ * structure (see macro COAP_OPTION_DATA).
+ */
+typedef struct {
+  unsigned short key;		/* the option key (no delta coding) */
+  unsigned int length;
+} coap_option;
+
+#define COAP_OPTION_KEY(option) (option).key
+#define COAP_OPTION_LENGTH(option) (option).length
+#define COAP_OPTION_DATA(option) ((unsigned char *)&(option) + sizeof(coap_option))
+
+
 /** Header structure for CoAP PDUs */
 
 typedef struct {
