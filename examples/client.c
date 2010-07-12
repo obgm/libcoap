@@ -17,6 +17,7 @@
 
 #include "coap.h"
 
+static coap_list_t *optlist = NULL;
 /* Request URI.
  * TODO: associate the resources with transaction id and make it expireable */
 static coap_uri_t uri;
@@ -49,27 +50,26 @@ new_response( coap_context_t  *ctx, coap_queue_t *node, unsigned int code ) {
 }
 
 coap_pdu_t *
-coap_new_get( const coap_uri_t *uri ) {
+coap_new_get( coap_list_t *options ) {
   coap_pdu_t *pdu;
-
+  coap_list_t *opt;
+  static unsigned char buf[201];
   if ( ! ( pdu = coap_new_pdu() ) )
     return NULL;
 
   pdu->hdr->type = COAP_MESSAGE_CON;
   pdu->hdr->code = COAP_REQUEST_GET;
 
-  if (!uri)
-    return pdu;
-
-  if (uri->scheme)
-    coap_add_option ( pdu, COAP_OPTION_URI_SCHEME, strlen(uri->scheme), (unsigned char *)uri->scheme );
-
-  if (uri->na)
-    coap_add_option ( pdu, COAP_OPTION_URI_AUTHORITY, strlen(uri->na), (unsigned char *)uri->na );
-
-  if (uri->path)
-    coap_add_option ( pdu, COAP_OPTION_URI_PATH, strlen(uri->path), (unsigned char *)uri->path );
-
+  for (opt = optlist; opt; opt = opt->next) {
+    debug("add option %u of length %u\n", COAP_OPTION_KEY(*(coap_option *)opt->data),COAP_OPTION_LENGTH(*(coap_option *)opt->data));
+    buf[print_readable( COAP_OPTION_DATA(*(coap_option *)opt->data), COAP_OPTION_LENGTH(*(coap_option *)opt->data),
+		    buf, 200)]=0;
+    printf("%s\n",buf);
+    coap_add_option( pdu, COAP_OPTION_KEY(*(coap_option *)opt->data), 
+		     COAP_OPTION_LENGTH(*(coap_option *)opt->data), 
+		     COAP_OPTION_DATA(*(coap_option *)opt->data) );
+  }
+  
   return pdu;
 }
 
@@ -126,35 +126,13 @@ _read_blk_nr(coap_opt_t *opt) {
 #define COAP_OPT_BLOCK_NR(opt)   _read_blk_nr(&opt)
 
 
-unsigned int
-decode_var_bytes(unsigned char *buf,unsigned int len) {
-  unsigned int i, n = 0;
-  for (i = 0; i < len; ++i)
-    n = (n << 8) + buf[i]; 
-
-  return n;
-}
-
-unsigned int
-encode_var_bytes(unsigned char *buf, unsigned int val) {
-  int n, i = val >> 1;
-  for (n = 0; i; n++)		/* FIXME: coap_fls() */
-    i >>= 1;
- 
-  for (i = n / 8 + 1; i; --i) {
-    buf[i-1] = val & 0xff;
-    val >>= 8;
-  }
-
-  return n / 8 + 1;
-}
-
 void 
 message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_pdu_t *pdu = NULL;
-  coap_opt_t *block;
+  coap_opt_t *block, *ct;
   unsigned int blocknr;
   unsigned char buf[4];
+  coap_list_t *option;
 
 #ifndef NDEBUG
   printf("** process pdu: ");
@@ -179,7 +157,7 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
     if ( !block ) {
       ;
     } else {
-      blocknr = decode_var_bytes( COAP_OPT_VALUE(*block), COAP_OPT_LENGTH(*block) );
+      blocknr = coap_decode_var_bytes( COAP_OPT_VALUE(*block), COAP_OPT_LENGTH(*block) );
       if ( (blocknr & 0x08) ) { 
 	/* more bit is set */
 	printf("found the M bit, block size is %u, block nr. %u\n",
@@ -197,20 +175,36 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
 	  }  
 	}
 	
-	/* FIXME: create pdu with request for next block 
-	 * need original uri for this (destination address is node->remote) 
-	 * copy transaction id or better not?
-	 */      
-	
-	pdu = coap_new_get( &uri );
+	/* create pdu with request for next block */
+	pdu = coap_new_get( NULL ); /* first, create bare PDU w/o any option  */
 	if ( pdu ) {
 	  pdu->hdr->id = node->pdu->hdr->id; /* copy transaction id from response */
 	  
-	  /* FIXME: content type */
+	  /* get content type from response */
+	  ct = coap_check_option( node->pdu, COAP_OPTION_CONTENT_TYPE );
+	  if ( ct ) {
+	    coap_add_option( pdu, COAP_OPTION_CONTENT_TYPE, 
+			     COAP_OPT_LENGTH(*ct),COAP_OPT_VALUE(*ct) );
+	  }
+
+	  /* add URI components from optlist */
+	  for (option = optlist; option; option = option->next ) {
+	    switch (COAP_OPTION_KEY(*(coap_option *)option)) {
+	    case COAP_OPTION_URI_SCHEME :
+	    case COAP_OPTION_URI_AUTHORITY :
+	    case COAP_OPTION_URI_PATH :
+	      coap_add_option ( pdu, COAP_OPTION_KEY(*(coap_option *)option), 
+				COAP_OPTION_LENGTH(*(coap_option *)option),
+				COAP_OPTION_DATA(*(coap_option *)option) );
+	      break;
+	    default:
+	      ;			/* skip other options */
+	    }
+	  }
 	  
-	/* FIXME: increase number of bytes for block on overflow  */	
+	  /* finally add updated block option from response */
 	  coap_add_option ( pdu, COAP_OPTION_BLOCK, 
-			    encode_var_bytes(buf, blocknr + ( 1 << 4) ), buf);
+			    coap_encode_var_bytes(buf, blocknr + ( 1 << 4) ), buf);
 	  	  
 	  if ( coap_send_confirmed( ctx, &node->remote, pdu ) == COAP_INVALID_TID ) {
 	    debug("message_handler: error sending reponse");
@@ -245,8 +239,11 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-g group] [-p port] URI\n\n"
+	   "usage: %s [-b num] [-c type...] [-g group] [-p port] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
+	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
+	   "\t       \t\t(value must be a mulitple of 16 not larger than 2048)\n"
+	   "\t-c type\t\taccepted content type (multiple occurrences allowed)\n"
 	   "\t-g group\tjoin the given multicast group\n"
 	   "\t-p port\t\tlisten on specified port\n",
 	   program, version, program );
@@ -311,6 +308,101 @@ join( coap_context_t *ctx, char *group_name ){
 }
 
 int 
+order_opts(void *a, void *b) {
+  if (!a || !b)
+    return a < b ? -1 : 1;
+
+  return (COAP_OPTION_KEY(*(coap_option *)a) < COAP_OPTION_KEY(*(coap_option *)b))
+    ? -1 
+    : 1;
+}
+
+coap_list_t *
+new_option_node(unsigned short key, unsigned int length, unsigned char *data) {
+  coap_option *option;
+  coap_list_t *node;
+
+  option = coap_malloc(sizeof(coap_option) + length);
+  if ( !option ) 
+    goto error;
+    
+  COAP_OPTION_KEY(*option) = key;
+  COAP_OPTION_LENGTH(*option) = length;
+  memcpy(COAP_OPTION_DATA(*option), data, length);
+  
+  node = coap_new_listnode(option);
+  if ( node ) 
+    return node;
+
+ error:
+  perror("new_option_node: malloc");
+  coap_free( option );
+  return NULL;  
+}
+
+void
+cmdline_content_type(char *arg) {
+  static char *content_types[] = 
+    { "plain", "xml", "csv", "html", "","","","","","","","","","","","","","","","","",
+      "gif", "jpeg", "png", "tiff", "audio", "video", "","","","","","","","","","","","","",
+      "link", "axml", "binary", "rdf", "soap", "atom", "xmpp", "exi",
+      "bxml", "infoset", "json", 0};
+  coap_list_t *node;
+  unsigned char i;
+
+  for (i=0; content_types[i] && strncmp(arg,content_types[i],strlen(arg)) != 0 ; ++i) 
+    ;
+  
+  if ( content_types[i] ) {
+    node = new_option_node(COAP_OPTION_CONTENT_TYPE, 1, (unsigned char *)&i);
+
+
+    if ( node ) 
+      coap_insert( &optlist, node, order_opts );
+
+  } else {
+    fprintf(stderr, "W: unknown content-type '%s'\n",arg);
+  }
+}
+
+void
+cmdline_uri(char *arg) {
+  coap_split_uri( arg, &uri );
+
+  if (uri.scheme)
+    coap_insert( &optlist, new_option_node(COAP_OPTION_URI_SCHEME, 
+					   strlen(uri.scheme), (unsigned char *)uri.scheme),
+					   order_opts);
+
+  if (uri.na)
+    coap_insert( &optlist, new_option_node(COAP_OPTION_URI_AUTHORITY, 
+					   strlen(uri.na), (unsigned char *)uri.na),
+					   order_opts);
+
+  if (uri.path)
+    coap_insert( &optlist, new_option_node(COAP_OPTION_URI_PATH, 
+					   strlen(uri.path), (unsigned char *)uri.path),
+					   order_opts);
+}
+
+void
+cmdline_blocksize(char *arg) {
+  static unsigned char buf[4];	/* hack: temporarily take encoded bytes */
+  unsigned int blocksize = atoi(arg);
+  
+  if ( COAP_MAX_PDU_SIZE < blocksize + sizeof(coap_hdr_t) ) {
+    fprintf(stderr, "W: skipped invalid blocksize\n");
+    return;
+  }
+
+  /* use only last three bits and clear M-bit */
+  blocksize = (coap_fls(blocksize >> 4) - 1) & 0x07; 
+  coap_insert( &optlist, new_option_node(COAP_OPTION_BLOCK, 
+					 coap_encode_var_bytes(buf, blocksize), buf),
+					 order_opts);
+}
+
+int 
 main(int argc, char **argv) {
   coap_context_t  *ctx;
   fd_set readfds;
@@ -324,8 +416,14 @@ main(int argc, char **argv) {
   int opt;
   char *group = NULL;
 
-  while ((opt = getopt(argc, argv, "g:p:")) != -1) {
+  while ((opt = getopt(argc, argv, "b:c:g:p:")) != -1) {
     switch (opt) {
+    case 'b' :
+      cmdline_blocksize(optarg);
+      break;
+    case 'c' :
+      cmdline_content_type(optarg);
+      break;
     case 'g' :
       group = optarg;
       break;
@@ -345,7 +443,7 @@ main(int argc, char **argv) {
   coap_register_message_handler( ctx, message_handler );
 
   if ( optind < argc )
-    coap_split_uri( argv[optind], &uri );
+    cmdline_uri( argv[optind] );
   else {
     usage( argv[0], VERSION );
     exit( 1 );
@@ -354,10 +452,11 @@ main(int argc, char **argv) {
   if ( group )
     join( ctx, group );
 
-  if (! (pdu = coap_new_get( &uri ) ) )
+  if (! (pdu = coap_new_get( optlist ) ) )
     return -1;
 
   /* split server address and port */
+  /* FIXME: get rid of the global URI object somehow */
   server = uri.na;
 
   if (server) {
