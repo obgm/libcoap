@@ -21,7 +21,7 @@
 
 #define COAP_PSEUDOFP_DECODE_8_4(r) (r < HIBIT ? r : (r & MMASK) << (r & EMASK))
 
-#if 0
+#ifndef HAVE_FLS
 /* include this only if fls() is not available */
 extern int coap_fls(unsigned int i);
 #else
