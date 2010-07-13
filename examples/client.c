@@ -175,7 +175,10 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
     block = coap_check_option( node->pdu, COAP_OPTION_BLOCK );
     if ( !block ) {
       /* There is no block option set, just read the data and we are done. */
-      ;
+      if ( coap_get_data( node->pdu, &len, &databuf ) ) {
+	/*path = coap_check_option( node->pdu, COAP_OPTION_URI_PATH );*/
+	append_to_file( "coap.out", databuf, len );
+      }
     } else {
       blocknr = coap_decode_var_bytes( COAP_OPT_VALUE(*block), COAP_OPT_LENGTH(*block) );
 
