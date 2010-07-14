@@ -41,7 +41,8 @@ coap_queue_t *coap_new_node();
 
 /* The CoAP stack's global state is stored in a coap_context_t object */
 typedef struct {
-  coap_queue_t *sendqueue, *recvqueue;
+  coap_list_t *resources, *subscriptions; /* FIXME: make these hash tables */
+  coap_queue_t *sendqueue, *recvqueue; /* FIXME make these coap_list_t */
   int sockfd;			/* send/receive socket */
 
   void ( *msg_handler )( void *, coap_queue_t *, void *);

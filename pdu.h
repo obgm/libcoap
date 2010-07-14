@@ -41,6 +41,10 @@
 #define COAP_OPTION_LOCATION      6 /* E, String, 1-270 B, - */
 #define COAP_OPTION_URI_PATH      9 /* C, String, 1-270 B, "" */
 
+/* option types from draft-hartke-coap-observe-01 */
+
+#define COAP_OPTION_SUBSCRIPTION 10 /* E, Duration, 1 B, 0 */
+
 /* selected option types from draft-bormann-coap-misc-04 */
 
 #define COAP_OPTION_BLOCK        13 /* C, unsigned integer, 1--3 B, 0 */

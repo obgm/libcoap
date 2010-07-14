@@ -352,6 +352,7 @@ order_opts(void *a, void *b) {
   return COAP_OPTION_KEY(*(coap_option *)a) == COAP_OPTION_KEY(*(coap_option *)b);
 }
 
+
 coap_list_t *
 new_option_node(unsigned short key, unsigned int length, unsigned char *data) {
   coap_option *option;
@@ -364,8 +365,10 @@ new_option_node(unsigned short key, unsigned int length, unsigned char *data) {
   COAP_OPTION_KEY(*option) = key;
   COAP_OPTION_LENGTH(*option) = length;
   memcpy(COAP_OPTION_DATA(*option), data, length);
-  
-  node = coap_new_listnode(option);
+
+  /* we can pass NULL here as delete function since option is released automatically  */  
+  node = coap_new_listnode(option, NULL);
+
   if ( node ) 
     return node;
 

@@ -19,4 +19,16 @@ typedef struct {
  */
 int coap_split_uri( char *str, coap_uri_t *uri);
 
+/**
+ * Creates a new coap_uri_t object from the specified URI. Returns the new
+ * object or NULL on error. The memory allocated by the new coap_uri_t 
+ * must be released using coap_free(). */
+coap_uri_t *coap_new_uri( const char *uri);
+
+/** 
+ * Clones the specified coap_uri_t object. Thie function allocates sufficient
+ * memory to hold the coap_uri_t structure and its contents. The object must
+ * be released with coap_free(). */
+coap_uri_t *coap_clone_uri( const coap_uri_t *uri);
+
 #endif /* _COAP_URI_H_ */
