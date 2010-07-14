@@ -3,26 +3,20 @@
  * (c) 2010 Olaf Bergmann <bergmann@tzi.org>
  */
 
+#ifndef _COAP_DEBUG_H_
+#define _COAP_DEBUG_H_
+
 #ifndef VERSION
-#  define VERSION "0.03"
+#  define VERSION "0.04"
 #endif
-
-#ifndef debug
-#  ifndef NDEBUG
-#    ifdef __STRICT_ANSI__
-extern void debug(char *,...);
-#    else
-#      define debug(...)   fprintf(stdout, __VA_ARGS__)
-#    endif
-#  else
-#    define debug(...)
-#  endif
-#endif
-
-#include "pdu.h"
 
 #ifndef NDEBUG
-extern void coap_show_pdu( coap_pdu_t *);
+
+void debug(char *,...);
+
+#include "pdu.h"
+extern void coap_show_pdu(coap_pdu_t *);
+
 #endif
 
-
+#endif /* _COAP_DEBUG_H_ */

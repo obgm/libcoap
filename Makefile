@@ -1,11 +1,14 @@
 PROGRAM:=coap-server
-VERSION:=0.03
+VERSION:=0.04
 
-SOURCES:= pdu.c net.c encode.c uri.c list.c
+prg_sources = main.c
+prg_objects:= $(patsubst %.c, %.o, $(prg_sources))
+prg_headers = 
+SOURCES:= pdu.c net.c debug.c encode.c uri.c list.c subscribe.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
-HEADERS:=coap.h debug.h pdu.h net.h encode.h uri.h list.h mem.h
+HEADERS:=coap.h debug.h pdu.h net.h encode.h uri.h list.h mem.h subscribe.h $(prg_headers)
 CFLAGS:=-g -Wall -ansi -pedantic
-DISTDIR=$(PROGRAM)-$(VERSION)
+DISTDIR=coap-$(VERSION)
 FILES:=main.c Makefile $(SOURCES) $(HEADERS) 
 LIB:=libcoap.a
 LDFLAGS:=-L. -l$(patsubst lib%.a,%,$(LIB))
@@ -17,8 +20,8 @@ examples:=examples
 
 .PHONY: clean distclean .gitignore
 
-$(PROGRAM):	main.o $(LIB)
-	$(CC) -o $@ $< $(LDFLAGS)
+$(PROGRAM):	$(prg_objects) $(LIB)
+	$(CC) -o $@ $(prg_objects) $(LDFLAGS)
 
 $(LIB):	$(OBJECTS)
 	$(AR) $(ARFLAGS) $@ $^ 

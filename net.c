@@ -14,6 +14,7 @@
 
 #include "debug.h"
 #include "mem.h"
+#include "subscribe.h"
 #include "net.h"
 
 #define options_start(p) ((coap_opt_t *) ( (unsigned char *)p->hdr + sizeof ( coap_hdr_t ) ))
@@ -260,21 +261,13 @@ coap_free_context( coap_context_t *context ) {
   if ( !context )
     return;
 
+  coap_delete_all(context->recvqueue);
   coap_delete_all(context->sendqueue);
+  coap_delete_list(context->resources);
+  coap_delete_list(context->subscriptions);
   close( context->sockfd );
   coap_free( context );
 }
-
-#ifdef __STRICT_ANSI__
-#include <stdarg.h>
-void debug(char *format, ...) {
-  va_list ap;
-  
-  va_start(ap, format);	/* bf being the last argument before '...' */
-  vprintf(format, ap);
-  va_end(ap);
-}
-#endif
 
 /* releases space allocated by PDU if free_pdu is set */
 coap_tid_t
