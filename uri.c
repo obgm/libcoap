@@ -7,6 +7,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "mem.h"
 #include "uri.h"
 
 int
@@ -70,7 +71,7 @@ coap_split_uri( char *str, coap_uri_t *uri) {
     return 0;
 
 #if 1
-    uri->path = str;
+  uri->path = *str == '/' ? ++str : str;
 #else
   if (*str != '?')
     uri->path = str++;
@@ -87,4 +88,54 @@ coap_split_uri( char *str, coap_uri_t *uri) {
 #endif
 
   return 0;
+}
+
+#define URI_DATA(uriobj) ((uriobj) + sizeof(coap_uri_t))
+
+coap_uri_t *
+coap_new_uri(const char *uri) {
+  char *result = coap_malloc( strlen(uri) + 1 + sizeof(coap_uri_t) );
+  if ( !result )
+    return NULL;
+  
+  memcpy( URI_DATA(result), uri, strlen(uri) + 1 );
+  
+  coap_split_uri( URI_DATA(result), (coap_uri_t *)result );
+  return (coap_uri_t *)result;
+}
+
+coap_uri_t *
+coap_clone_uri( const coap_uri_t *uri) {
+  unsigned int schemelen, nalen, pathlen;
+  unsigned char *result;
+
+  if ( !uri ) 
+    return  NULL;
+
+  schemelen = uri->scheme ? strlen(uri->scheme) + 1 : 0;
+  nalen     = uri->na ? strlen(uri->na) + 1 : 0;
+  pathlen   = uri->path ? strlen(uri->path) + 1 : 0;
+
+  result = coap_malloc( schemelen + nalen + pathlen + sizeof(coap_uri_t) );
+
+  if ( !result )
+    return NULL;
+
+  memset( result, 0, sizeof(coap_uri_t) );
+  if ( schemelen ) {
+    memcpy( URI_DATA(result), uri->scheme, schemelen );
+    ((coap_uri_t *)result)->scheme = uri->scheme;
+  }
+
+  if ( nalen ) {
+    memcpy( URI_DATA(result) + schemelen, uri->na, nalen );
+    ((coap_uri_t *)result)->na = uri->na;
+  }
+
+  if ( pathlen ) {
+    memcpy( URI_DATA(result) + schemelen + nalen, uri->path, pathlen );
+    ((coap_uri_t *)result)->path = uri->path;
+  }
+
+  return (coap_uri_t *)result;
 }
