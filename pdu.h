@@ -15,7 +15,7 @@
 #define COAP_MAX_PDU_SIZE           1400 /* maximum size of a CoAP PDU */
 
 #define COAP_DEFAULT_VERSION           1 /* version of CoAP supported */
-#define COAP_DEFAULT_URI_WELLKNOWN "/.well-known/r" /* compact form of well-known resources URI */
+#define COAP_DEFAULT_URI_WELLKNOWN ".well-known/r" /* compact form of well-known resources URI */
 
 /* CoAP message types */
 
