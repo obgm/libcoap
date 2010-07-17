@@ -434,7 +434,7 @@ cmdline_blocksize(char *arg) {
   }
 
   /* use only last three bits and clear M-bit */
-  blocksize = (coap_fls(blocksize >> 4) - 1) & 0x07; 
+  blocksize = (coap_fls(blocksize >> 4) - 1) & 0x07;
   coap_insert( &optlist, new_option_node(COAP_OPTION_BLOCK, 
 					 coap_encode_var_bytes(buf, blocksize), buf),
 					 order_opts);
