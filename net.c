@@ -451,7 +451,7 @@ int
 coap_remove_transaction( coap_queue_t **queue, coap_tid_t id ) {
   coap_queue_t *p, *q;
 
-  if ( !queue )
+  if ( !queue || !*queue)
     return 0;
 
   /* replace queue head if PDU's time is less than head's time */
