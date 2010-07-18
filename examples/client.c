@@ -149,7 +149,7 @@ _read_blk_nr(coap_opt_t *opt) {
 void 
 message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_pdu_t *pdu = NULL;
-  coap_opt_t *block, *ct;
+  coap_opt_t *block, *ct, *sub;
   unsigned int blocknr;
   unsigned char buf[4];
   coap_list_t *option;
@@ -250,10 +250,12 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
 
     break;
   default:
-    /* acknowledge if requested */
-    if ( node->pdu->hdr->type == COAP_MESSAGE_CON ) {
-      pdu = new_ack( ctx, node );
-    }
+    ;
+  }
+  
+  /* acknowledge if requested */
+  if ( !pdu && node->pdu->hdr->type == COAP_MESSAGE_CON ) {
+    pdu = new_ack( ctx, node );
   }
 
   finish:
@@ -263,7 +265,12 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
   }  
 
   /* our job is done, we can exit at any time */
-  ready = 1;
+  sub = coap_check_option( node->pdu, COAP_OPTION_SUBSCRIPTION );
+  if ( sub ) {
+    debug("message_handler: Subscription-Lifetime is %d\n", 
+	  COAP_PSEUDOFP_DECODE_8_4(*COAP_OPT_VALUE(*sub)));
+  }
+  ready = !sub || COAP_PSEUDOFP_DECODE_8_4(*COAP_OPT_VALUE(*sub)) == 0;
 }
 
 void 
@@ -276,13 +283,14 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-b num] [-c type...] [-g group] [-p port] URI\n\n"
+	   "usage: %s [-b num] [-g group] [-p port] [-s num] [-t type...] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
 	   "\t       \t\t(value must be a mulitple of 16 not larger than 2048)\n"
-	   "\t-t type\t\taccepted content type (multiple occurrences allowed)\n"
 	   "\t-g group\tjoin the given multicast group\n"
-	   "\t-p port\t\tlisten on specified port\n",
+	   "\t-p port\t\tlisten on specified port\n"
+	   "\t-s duration\t\tsubscribe for given duration [s]\n"
+	   "\t-t type\t\taccepted content type (multiple occurrences allowed)\n",
 	   program, version, program );
 }
 
@@ -443,6 +451,15 @@ cmdline_blocksize(char *arg) {
 					 order_opts);
 }
 
+void
+cmdline_subscribe(char *arg) {
+  unsigned int ls, s;
+  unsigned char duration = COAP_PSEUDOFP_ENCODE_8_4_UP(atoi(arg), ls, s);
+
+  coap_insert( &optlist, new_option_node(COAP_OPTION_SUBSCRIPTION,
+					 1, &duration), order_opts );
+}
+
 method_t
 cmdline_method(char *arg) {
   static char *methods[] = 
@@ -469,7 +486,7 @@ main(int argc, char **argv) {
   int opt;
   char *group = NULL;
 
-  while ((opt = getopt(argc, argv, "b:g:m:p:t:")) != -1) {
+  while ((opt = getopt(argc, argv, "b:g:m:p:s:t:")) != -1) {
     switch (opt) {
     case 'b' :
       cmdline_blocksize(optarg);
@@ -482,6 +499,9 @@ main(int argc, char **argv) {
       break;
     case 'm' :
       method = cmdline_method(optarg);
+      break;
+    case 's' :
+      cmdline_subscribe(optarg);
       break;
     case 't' :
       cmdline_content_type(optarg);
@@ -545,7 +565,7 @@ main(int argc, char **argv) {
   /* send request */
   send_request( ctx, pdu, server ? server : "::1", port );
 
-  while ( !ready && !coap_can_exit(ctx) ) {
+  while ( !(ready && coap_can_exit(ctx)) ) {
     FD_ZERO(&readfds); 
     FD_SET( ctx->sockfd, &readfds );
     

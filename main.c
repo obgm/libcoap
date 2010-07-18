@@ -127,24 +127,6 @@ get_request_uri(coap_pdu_t *pdu, coap_uri_t *result) {
   return 1;
 }
 
-coap_resource_t *
-coap_get_resource(coap_context_t *ctx, coap_uri_t *uri) {
-  coap_list_t *node;
-  coap_key_t key;
-
-  if ( !ctx || !uri ) 
-    return NULL;
-
-  key = coap_uri_hash(uri);
-  /* TODO: use hash table for resources with key to access */
-  for (node = ctx->resources; node; node = node->next) {
-    if ( key == coap_uri_hash(COAP_RESOURCE(node)->uri) )
-      return COAP_RESOURCE(node);
-  }
-
-  return NULL;
-}
-
 #define INDEX "Hi there!"
 
 coap_opt_t *
@@ -177,9 +159,11 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_pdu_t *pdu;
   coap_uri_t uri;
   coap_resource_t *resource;
-  coap_opt_t *block, *ct;
+  coap_opt_t *block, *ct, *sub;
   unsigned int blklen, blk;
   int code, finished = 1;
+  unsigned int ls;
+  unsigned char duration, enc;
   unsigned char mediatype = COAP_MEDIATYPE_ANY;
   static unsigned char buf[COAP_MAX_PDU_SIZE];
   static unsigned char optbuf[4];
@@ -212,7 +196,7 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
 				COAP_OPT_LENGTH(*block));
     blklen = 16 << (blk & 0x07);
   } else {
-    blklen = 64;
+    blklen = 512; /* default block size is set to 512 Bytes locally */
     blk = coap_fls(blklen >> 4) - 1;
   }
 
@@ -242,6 +226,20 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
     if ( mediatype != COAP_MEDIATYPE_ANY ) 
       coap_add_option(pdu, COAP_OPTION_CONTENT_TYPE, 1, &mediatype);
 
+    /* handle subscription if requested */
+    sub = coap_check_option( node->pdu, COAP_OPTION_SUBSCRIPTION );
+    if ( sub ) {
+      duration = COAP_PSEUDOFP_DECODE_8_4(*COAP_OPT_VALUE(*sub));
+      debug("*** add subscription for %d seconds\n", duration);
+      enc = COAP_PSEUDOFP_ENCODE_8_4_DOWN(duration, ls);
+      coap_add_option(pdu, COAP_OPTION_SUBSCRIPTION, 1, &enc);      
+      
+      /* TODO: refresh only if already subscribed */
+      coap_add_subscription(ctx, 
+	    coap_new_subscription(ctx, &uri, &(node->remote), 
+				  time(NULL)+duration));
+    }
+
     /* add a block option when it has been requested explicitly or
      * there is more data available */
     if ( block || !finished ) {
@@ -260,10 +258,6 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   }
 
  ok:
-  /* pdu is set, handle subscription if requested */
-#if 0
-  coap_add_subscription(ctx, coap_new_subscription(ctx, r->uri, &sub1, time(&now)+20));
-#endif
   return pdu;
 }
 
@@ -715,8 +709,6 @@ resource_from_file(coap_uri_t *uri,
 void 
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
-  struct sockaddr_in6 sub1, sub2;
-  time_t now;
 
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
@@ -735,20 +727,6 @@ init_resources(coap_context_t *ctx) {
   r->dirty = 1;
   r->data = resource_lipsum;
   coap_add_resource( ctx, r );
-
-  /* build two subscriptions */
-  sub1.sin6_family = AF_INET6;
-  sub1.sin6_port = htons(12345);;
-
-  inet_pton(AF_INET6, "ff02:1234:dead:7890::1", &sub1.sin6_addr);
-
-  sub2.sin6_family = AF_INET6;
-  sub2.sin6_port = htons(54321);;
-
-  inet_pton(AF_INET6, "ABCD:2001:DEAF::beed", &sub2.sin6_addr);
-
-  coap_add_subscription(ctx, coap_new_subscription(ctx, r->uri, &sub1, time(&now)+20));
-  coap_add_subscription(ctx, coap_new_subscription(ctx, r->uri, &sub2, time(&now)+12));
 
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
