@@ -26,6 +26,9 @@ static coap_uri_t uri;
 static int ready = 0;
 static FILE *file = NULL;
 
+typedef unsigned char method_t;
+method_t method = 0;		/* the method we are using in our requests */
+
 extern unsigned int
 print_readable( const unsigned char *data, unsigned int len, 
 		unsigned char *result, unsigned int buflen );
@@ -72,7 +75,7 @@ new_response( coap_context_t  *ctx, coap_queue_t *node, unsigned int code ) {
 }
 
 coap_pdu_t *
-coap_new_get( coap_list_t *options ) {
+coap_new_request( method_t m, coap_list_t *options ) {
   coap_pdu_t *pdu;
   coap_list_t *opt;
 
@@ -80,7 +83,7 @@ coap_new_get( coap_list_t *options ) {
     return NULL;
 
   pdu->hdr->type = COAP_MESSAGE_CON;
-  pdu->hdr->code = COAP_REQUEST_GET;
+  pdu->hdr->code = m;
 
   for (opt = options; opt; opt = opt->next) {
     coap_add_option( pdu, COAP_OPTION_KEY(*(coap_option *)opt->data), 
@@ -206,7 +209,7 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
 	}
 	
 	/* create pdu with request for next block */
-	pdu = coap_new_get( NULL ); /* first, create bare PDU w/o any option  */
+	pdu = coap_new_request( method, NULL ); /* first, create bare PDU w/o any option  */
 	if ( pdu ) {
 	  pdu->hdr->id = node->pdu->hdr->id; /* copy transaction id from response */
 	  
@@ -277,7 +280,7 @@ usage( const char *program, const char *version) {
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
 	   "\t       \t\t(value must be a mulitple of 16 not larger than 2048)\n"
-	   "\t-c type\t\taccepted content type (multiple occurrences allowed)\n"
+	   "\t-t type\t\taccepted content type (multiple occurrences allowed)\n"
 	   "\t-g group\tjoin the given multicast group\n"
 	   "\t-p port\t\tlisten on specified port\n",
 	   program, version, program );
@@ -440,6 +443,18 @@ cmdline_blocksize(char *arg) {
 					 order_opts);
 }
 
+method_t
+cmdline_method(char *arg) {
+  static char *methods[] = 
+    { 0, "get", "post", "put", "delete", 0};
+  unsigned char i;
+
+  for (i=1; methods[i] && strcasecmp(arg,methods[i]) != 0 ; ++i) 
+    ;
+  
+  return i;	     /* note that we do not prevent illegal methods */
+}
+
 int 
 main(int argc, char **argv) {
   coap_context_t  *ctx;
@@ -454,19 +469,22 @@ main(int argc, char **argv) {
   int opt;
   char *group = NULL;
 
-  while ((opt = getopt(argc, argv, "b:c:g:p:")) != -1) {
+  while ((opt = getopt(argc, argv, "b:g:m:p:t:")) != -1) {
     switch (opt) {
     case 'b' :
       cmdline_blocksize(optarg);
-      break;
-    case 'c' :
-      cmdline_content_type(optarg);
       break;
     case 'g' :
       group = optarg;
       break;
     case 'p' :
       localport = atoi(optarg);
+      break;
+    case 'm' :
+      method = cmdline_method(optarg);
+      break;
+    case 't' :
+      cmdline_content_type(optarg);
       break;
     default:
       usage( argv[0], VERSION );
@@ -490,7 +508,7 @@ main(int argc, char **argv) {
   if ( group )
     join( ctx, group );
 
-  if (! (pdu = coap_new_get( optlist ) ) )
+  if (! (pdu = coap_new_request( method, optlist ) ) )
     return -1;
 
   /* split server address and port */
