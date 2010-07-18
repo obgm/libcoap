@@ -87,6 +87,8 @@
 #define COAP_MEDIATYPE_APPLICATION_SOAP_FASTINFOSET  50 /* application/soap+fastinfoset  */
 #define COAP_MEDIATYPE_APPLICATION_JSON              51 /* application/json  */
 
+#define COAP_MEDIATYPE_ANY                         0xff /* any media type */
+
 /* CoAP transaction id */
 typedef unsigned short coap_tid_t; 
 #define COAP_INVALID_TID 0
