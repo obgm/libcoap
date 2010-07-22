@@ -56,6 +56,12 @@ typedef void (*coap_message_handler_t)( coap_context_t  *, coap_queue_t *, void 
  * layer previously to stop retransmissions, e.g. */
 void coap_register_message_handler( coap_context_t *context, coap_message_handler_t handler);
 
+/** 
+ * Registers a new handler function that is called when a RST message
+ * has been received.
+ */
+void coap_register_error_handler( coap_context_t *context, coap_message_handler_t handler);
+
 /* Returns the next pdu to send without removing from sendqeue. */
 coap_queue_t *coap_peek_next( coap_context_t *context );
 
@@ -95,6 +101,14 @@ int coap_read( coap_context_t *context );
 
 /** Removes transaction with specified id from given queue. Returns 0 if not found, 1 otherwise. */
 int coap_remove_transaction( coap_queue_t **queue, coap_tid_t id );
+
+/**
+ * Retrieves transaction from queue.
+ * @queue The transaction queue to be searched
+ * @id Unique key of the transaction to find.
+ * @return A pointer to the transaction object or NULL if not found
+ */
+coap_queue_t *coap_find_transaction(coap_queue_t *queue, coap_tid_t id);
 
 /** Dispatches the PDUs from the receive queue in given context. */
 void coap_dispatch( coap_context_t *context );

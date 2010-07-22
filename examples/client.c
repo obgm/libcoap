@@ -27,7 +27,7 @@ static int ready = 0;
 static FILE *file = NULL;
 
 typedef unsigned char method_t;
-method_t method = 0;		/* the method we are using in our requests */
+method_t method = 1;		/* the method we are using in our requests */
 
 extern unsigned int
 print_readable( const unsigned char *data, unsigned int len, 
@@ -416,21 +416,21 @@ cmdline_content_type(char *arg) {
 
 void
 cmdline_uri(char *arg) {
-  coap_split_uri( arg, &uri );
+  coap_split_uri((unsigned char *)arg, &uri );
 
-  if (uri.scheme)
+  if (uri.scheme.length)
     coap_insert( &optlist, new_option_node(COAP_OPTION_URI_SCHEME, 
-					   strlen(uri.scheme), (unsigned char *)uri.scheme),
+					   uri.scheme.length, uri.scheme.s),
 					   order_opts);
 
-  if (uri.na)
+  if (uri.na.length)
     coap_insert( &optlist, new_option_node(COAP_OPTION_URI_AUTHORITY, 
-					   strlen(uri.na), (unsigned char *)uri.na),
+					   uri.na.length, uri.na.s),
 					   order_opts);
 
-  if (uri.path)
+  if (uri.path.length)
     coap_insert( &optlist, new_option_node(COAP_OPTION_URI_PATH, 
-					   strlen(uri.path), (unsigned char *)uri.path),
+					   uri.path.length, uri.path.s),
 					   order_opts);
 }
 
@@ -481,7 +481,8 @@ main(int argc, char **argv) {
   time_t now;
   coap_queue_t *nextpdu;
   coap_pdu_t  *pdu;
-  static char *server = NULL, *p;
+  static unsigned char *p;
+  static str server;
   unsigned short localport = COAP_DEFAULT_PORT, port = COAP_DEFAULT_PORT;
   int opt;
   char *group = NULL;
@@ -535,18 +536,19 @@ main(int argc, char **argv) {
   /* FIXME: get rid of the global URI object somehow */
   server = uri.na;
 
-  if (server) {
-    if (*server == '[') {	/* IPv6 address reference */
-      p = ++server;
+  if (server.length) {
+    if (*server.s == '[') {	/* IPv6 address reference */
+      p = ++server.s;
+      --server.length;
       
-      while ( *p && *p != ']' ) 
+      while ( p - server.s < server.length && *p != ']' ) 
 	++p;
 
       if (*p == ']')
 	*p++ = '\0';		/* port starts here */
     } else {			/* IPv4 address or hostname */
-      p = server;
-      while ( *p && *p != ':' ) 
+      p = server.s;
+      while ( p - server.s < server.length && *p != ':' ) 
 	++p;
     }
   
@@ -555,7 +557,7 @@ main(int argc, char **argv) {
       port = 0;
       
       /* set port */
-      while( isdigit(*p) ) {
+      while( p - server.s < server.length && isdigit(*p) ) {
 	port = port * 10 + ( *p - '0' );
 	++p;
       }
@@ -563,7 +565,7 @@ main(int argc, char **argv) {
   }
 
   /* send request */
-  send_request( ctx, pdu, server ? server : "::1", port );
+  send_request( ctx, pdu, server.length ? (char *)server.s : "::1", port );
 
   while ( !(ready && coap_can_exit(ctx)) ) {
     FD_ZERO(&readfds); 

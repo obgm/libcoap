@@ -73,60 +73,6 @@ add_contents( coap_pdu_t *pdu, unsigned int mediatype, unsigned int len, unsigne
   coap_add_data(pdu, len, data);
 }
 
-/* Fills result with URI components that are present in pdu. Returns 0 on error,
- * 1 otherwise. */
-int
-get_request_uri(coap_pdu_t *pdu, coap_uri_t *result) {
-#ifndef FOUND_A_BETTER_WAY_TO_SOLVE_THE_ZERO_TERMINATION_ISSUE
-  static char buf[256]; /* HACK: copy URI to make it 0-terminated */  
-  char *p;
-#endif
-  coap_opt_t *opt;
-
-  if ( !pdu || !result )
-    return 0;
-
-#ifndef FOUND_A_BETTER_WAY_TO_SOLVE_THE_ZERO_TERMINATION_ISSUE
-  memset(result, 0, sizeof(*result));
-
-  p = buf;
-  opt = coap_check_option(pdu, COAP_OPTION_URI_SCHEME);
-  if (opt) {
-    memcpy(p, (char*)COAP_OPT_VALUE(*opt), COAP_OPT_LENGTH(*opt));
-    p[COAP_OPT_LENGTH(*opt)] = '\0';
-    result->scheme = p;
-    p += COAP_OPT_LENGTH(*opt)+1;
-  }
-
-  opt = coap_check_option(pdu, COAP_OPTION_URI_AUTHORITY);
-  if (opt) {
-    memcpy(p, (char*)COAP_OPT_VALUE(*opt), COAP_OPT_LENGTH(*opt));
-    p[COAP_OPT_LENGTH(*opt)] = '\0';
-    result->na = p;
-    p += COAP_OPT_LENGTH(*opt)+1;
-  }
-
-  opt = coap_check_option(pdu, COAP_OPTION_URI_PATH);
-  if (opt) {
-    memcpy(p, (char*)COAP_OPT_VALUE(*opt), COAP_OPT_LENGTH(*opt));
-    p[COAP_OPT_LENGTH(*opt)] = '\0';
-    result->path = p;
-  }
-
-#else
-  opt = coap_check_option(pdu, COAP_OPTION_URI_SCHEME);
-  result->scheme = opt ? (char*)COAP_OPT_VALUE(*opt) : NULL;
-
-  opt = coap_check_option(pdu, COAP_OPTION_URI_AUTHORITY);
-  result->na = opt ? (char*)COAP_OPT_VALUE(*opt) : NULL;
-
-  opt = coap_check_option(pdu, COAP_OPTION_URI_PATH);
-  result->path = opt ? (char*)COAP_OPT_VALUE(*opt) : NULL;
-#endif
-
-  return 1;
-}
-
 #define INDEX "Hi there!"
 
 coap_opt_t *
@@ -168,10 +114,10 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   static unsigned char buf[COAP_MAX_PDU_SIZE];
   static unsigned char optbuf[4];
 
-  if ( !get_request_uri( node->pdu, &uri ) )
+  if ( !coap_get_request_uri( node->pdu, &uri ) )
     return NULL;
 
-  if ( !uri.path ) {
+  if ( !uri.path.length ) {
     pdu = new_response(ctx, node, COAP_RESPONSE_200);
     if ( !pdu )
       return NULL;
@@ -266,13 +212,13 @@ handle_put(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_uri_t uri;
   coap_pdu_t *pdu;
 
-  if ( !get_request_uri( node->pdu, &uri ) )
+  if ( !coap_get_request_uri( node->pdu, &uri ) )
     return NULL;
 
-  if ( !uri.path ) 
+  if ( !uri.path.length ) 
     return NULL;
 
-  if ( strncmp(uri.path, "filestorage", sizeof("filestorage") - 1) == 0 )
+  if ( strncmp((char *)uri.path.s, "filestorage", uri.path.length) == 0 )
     pdu = new_response(ctx, node, COAP_RESPONSE_200);
   else 
     pdu = new_response(ctx, node, COAP_RESPONSE_400); /* better: 401 */
@@ -544,10 +490,8 @@ is_valid(char *prefix, char *path) {
   return 1;
 }
 
-static char resource_buf[20000]; 
-
 int 
-_resource_from_dir(coap_uri_t *uri, 
+_resource_from_dir(char *filename, 
 		   unsigned char *mediatype, unsigned int offset, 
 		   unsigned char *buf, unsigned int *buflen,
 		   int *finished) {
@@ -570,13 +514,13 @@ _resource_from_dir(coap_uri_t *uri,
     return COAP_RESPONSE_415;
   }
 
-  if ( (dir = opendir(uri->path)) == NULL ) {
+  if ( (dir = opendir(filename)) == NULL ) {
     perror("_resource_from_dir: opendir");
     *buflen = 0;
     return COAP_RESPONSE_404;
   }
 
-  overhead = strlen(uri->path) + 10;
+  overhead = strlen(filename) + 10;
 
   errno = 0;
   while ( (dirent = readdir(dir)) ) {
@@ -595,7 +539,7 @@ _resource_from_dir(coap_uri_t *uri,
       offset -= overhead + namelen * 2;
     } else {
       pos += sprintf(resource_buf + pos, "</%s/%s>;n=\"%s\",",
-		     uri->path, dirent->d_name, dirent->d_name);
+		     filename, dirent->d_name, dirent->d_name);
     }
     
     if ( pos > offset + *buflen ) 
@@ -634,17 +578,27 @@ resource_from_file(coap_uri_t *uri,
 		   unsigned char *mediatype, unsigned int offset, 
 		   unsigned char *buf, unsigned int *buflen,
 		   int *finished) {
+  static char filename[FILENAME_MAX+1];
   struct stat statbuf;
   FILE *file;
   int code = COAP_RESPONSE_500;	/* result code */
 
-  if (!uri || !is_valid(FILE_PREFIX, uri->path) ) {
-    fprintf(stderr, "dropped invalid URI '%s'\n", uri ? uri->path : "<NULL>");
+  if (uri) {
+    memcpy(filename, uri->path.s, uri->path.length);
+    filename[uri->path.length] = '\0';
+
+    if (!is_valid(FILE_PREFIX, filename) ) {
+      fprintf(stderr, "dropped invalid URI '%s'\n", filename);
+      code = COAP_RESPONSE_404;
+      goto error;
+    }
+  } else {
+    fprintf(stderr, "dropped NULL URI\n");
     code = COAP_RESPONSE_404;
     goto error;
   }
 
-  if (stat(uri->path, &statbuf) < 0) {
+  if (stat(filename, &statbuf) < 0) {
     perror("resource_from_file: stat");
     code = COAP_RESPONSE_404;
     goto error;
@@ -652,11 +606,11 @@ resource_from_file(coap_uri_t *uri,
 
   if ( S_ISDIR(statbuf.st_mode) ) {
     /* handle directory if mediatype allows */
-    return _resource_from_dir(uri, mediatype, offset, buf, buflen, finished);
+    return _resource_from_dir(filename, mediatype, offset, buf, buflen, finished);
   }
 
   if ( !S_ISREG(statbuf.st_mode) ) {
-    fprintf(stderr,"%s not a regular file, skipped\n", uri->path);
+    fprintf(stderr,"%s not a regular file, skipped\n", filename);
     code = COAP_RESPONSE_404;
     goto error;
   }
@@ -680,7 +634,7 @@ resource_from_file(coap_uri_t *uri,
     goto error;
   }
 
-  file = fopen(uri->path, "r");
+  file = fopen(filename, "r");
   if ( !file ) {
     perror("resource_from_file: fopen");
     code = COAP_RESPONSE_500;
@@ -713,7 +667,7 @@ init_resources(coap_context_t *ctx) {
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
 
-  r->uri = coap_new_uri( "/" COAP_DEFAULT_URI_WELLKNOWN );
+  r->uri = coap_new_uri((const unsigned char *)"/" COAP_DEFAULT_URI_WELLKNOWN );
   r->mediatype = COAP_MEDIATYPE_APPLICATION_LINK_FORMAT;
   r->dirty = 0;
   r->data = resource_wellknown;
@@ -722,7 +676,7 @@ init_resources(coap_context_t *ctx) {
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
 
-  r->uri = coap_new_uri( "/lipsum" );
+  r->uri = coap_new_uri((const unsigned char *) "/lipsum");
   r->mediatype = COAP_MEDIATYPE_TEXT_PLAIN;
   r->dirty = 1;
   r->data = resource_lipsum;
@@ -731,7 +685,7 @@ init_resources(coap_context_t *ctx) {
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
 
-  r->uri = coap_new_uri( "/time" );
+  r->uri = coap_new_uri((const unsigned char *) "/time");
   r->mediatype = COAP_MEDIATYPE_TEXT_XML;
   r->dirty = 0;
   r->data = resource_time;
@@ -740,7 +694,7 @@ init_resources(coap_context_t *ctx) {
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
 
-  r->uri = coap_new_uri( "/filestorage" );
+  r->uri = coap_new_uri((const unsigned char *) "/filestorage");
   r->mediatype = COAP_MEDIATYPE_APPLICATION_LINK_FORMAT;
   r->dirty = 0;
   r->data = resource_from_file;
@@ -749,7 +703,7 @@ init_resources(coap_context_t *ctx) {
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
 
-  r->uri = coap_new_uri( "/filestorage/foo" );
+  r->uri = coap_new_uri((const unsigned char *) "/filestorage/foo");
   r->mediatype = COAP_MEDIATYPE_ANY;
   r->dirty = 0;
   r->data = resource_from_file;

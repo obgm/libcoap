@@ -241,4 +241,15 @@ int coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data);
  */
 int coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data);
 
+#include "uri.h"
+
+/**
+ * Fills the given coap_uri_t object with the request URI components from 
+ * the PDU.
+ * @param pdu the PDU 
+ * @param result the URI object to update
+ * @return 1 if result has been updated, 0 otherwise, i.e. in case of error
+ */
+int coap_get_request_uri(coap_pdu_t *pdu, coap_uri_t *result);
+
 #endif /* _PDU_H_ */

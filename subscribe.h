@@ -80,11 +80,32 @@ coap_subscription_t *coap_new_subscription(coap_context_t *context,
 					   const struct sockaddr_in6 *subscriber,
 					   time_t expiry);
 
-/* Adds the given subsription object to the observer list. */
-coap_key_t coap_add_subscription(coap_context_t *context, coap_subscription_t *);
+/**
+ * Adds the given subsription object to the observer list. 
+ * @param context The CoAP context
+ * @param subscription A new subscription oobject created with coap_new_subscription()
+ * @return A unique hash key for this resource or COAP_INVALID_HASHKEY on error.
+ * The storage allocated for the subscription object is released when it is
+ * removed from the subscription list, unless the function has returned 
+ * COAP_INVALID_HASHKEY. In this case, the storage must be released by the 
+ * caller of this function.
+*/
+coap_key_t coap_add_subscription(coap_context_t *context, 
+				 coap_subscription_t *subscription);
+
+/** 
+ * Removes a subscription from the subscription list stored in context and
+ * releases the storage that was allocated for this subscription.
+ * @param context The CoAP context.
+ * @param haskey The unique key that identifies the subscription to remove. 
+ * @return 1 if a subscription was removed, 0 otherwise.
+ */
+int coap_delete_subscription(coap_context_t *context, 
+			     coap_key_t hashkey);
 
 /** Returns a unique hash for the specified URI or COAP_INVALID_HASHKEY on error. */
 coap_key_t coap_uri_hash(const coap_uri_t *uri);
+
 
 /** Returns a unique hash for the specified subscription or COAP_INVALID_HASHKEY on error. */
 coap_key_t coap_subscription_hash(coap_subscription_t *subscription);

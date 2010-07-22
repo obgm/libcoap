@@ -138,3 +138,24 @@ coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data) {
   
   return 1;
 }
+
+int 
+coap_get_request_uri(coap_pdu_t *pdu, coap_uri_t *result) {
+  coap_opt_t *opt;
+  
+  if (!pdu || !result)
+    return 0;
+
+  memset(result, 0, sizeof(*result));
+
+  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_SCHEME))) 
+    COAP_SET_STR(&result->scheme, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
+
+  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_AUTHORITY))) 
+    COAP_SET_STR(&result->na, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
+
+  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_PATH))) 
+    COAP_SET_STR(&result->path, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
+
+  return result->scheme.length || result->na.length || result->path.length;
+}

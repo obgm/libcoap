@@ -19,8 +19,9 @@ void
 notify(coap_context_t *context, coap_resource_t *res, 
        coap_subscription_t *sub, unsigned int duration, int code) {
   coap_pdu_t *pdu;
-  int ls;
-  unsigned char d;
+  int ls, finished=0;
+  unsigned char d, ct;
+  unsigned int length;
 #ifndef NDEBUG
   char addr[INET6_ADDRSTRLEN];
 #endif
@@ -32,28 +33,38 @@ notify(coap_context_t *context, coap_resource_t *res,
   pdu->hdr->code = code;
 
   /* FIXME: content-type and data (how about block?) */
-  if (res->uri->scheme)
+  if (res->uri->scheme.length)
     coap_add_option ( pdu, COAP_OPTION_URI_SCHEME, 
-		      strlen(res->uri->scheme), 
-		      (unsigned char *)res->uri->scheme );
+		      res->uri->scheme.length, 
+		      res->uri->scheme.s );
 
-  if (res->uri->na)
+  if (res->uri->na.length)
     coap_add_option ( pdu, COAP_OPTION_URI_AUTHORITY, 
-		      strlen(res->uri->na), 
-		      (unsigned char *)res->uri->na );
+		      res->uri->na.length, 
+		      res->uri->na.s );
 
-  if (res->uri->path)
+  if (res->uri->path.length)
     coap_add_option ( pdu, COAP_OPTION_URI_PATH, 
-		      strlen(res->uri->path), 
-		      (unsigned char *)res->uri->path );
+		      res->uri->path.length, 
+		      res->uri->path.s);
   
   d = COAP_PSEUDOFP_ENCODE_8_4_DOWN(duration, ls);
 	      
   coap_add_option ( pdu, COAP_OPTION_SUBSCRIPTION, 1, &d );
+
+  if (res->data) {
+    length = (unsigned char *)pdu->hdr + COAP_MAX_PDU_SIZE - pdu->data;
+    ct = res->mediatype;
+    res->data(res->uri, &ct, 0, pdu->data, &length, &finished);
+    pdu->length += length;
+
+    /* TODO: add block option if not finished */
+    /* TODO: add mediatype */
+  }
 	    
 #ifndef NDEBUG
   if ( inet_ntop(AF_INET6, &(sub->subscriber.sin6_addr), addr, INET6_ADDRSTRLEN) ) {
-    debug("*** notify for %s to [%s]:%d\n", res->uri->path, addr, ntohs(sub->subscriber.sin6_port));
+    debug("*** notify for %s to [%s]:%d\n", res->uri->path.s, addr, ntohs(sub->subscriber.sin6_port));
   }
 #endif
   if ( pdu && coap_send_confirmed(context, 
@@ -134,11 +145,12 @@ coap_check_subscriptions(coap_context_t *context) {
       debug("** removed expired subscription from [%s]:%d\n", addr, ntohs(COAP_SUBSCRIPTION(node)->subscriber.sin6_port));
     }
 #endif
+#if 0
     notify(context, 
 	   coap_get_resource_from_key(context, COAP_SUBSCRIPTION(node)->resource), 
 	   COAP_SUBSCRIPTION(node), 
 	   0, COAP_RESPONSE_400);
-
+#endif
     context->subscriptions = node->next;
     coap_delete(node);
     node = context->subscriptions;
@@ -164,8 +176,8 @@ _hash(coap_key_t init, const char *s) {
 }
 
 coap_key_t 
-_hash2(coap_key_t init, const char *s, unsigned int len) {
-  if ( !s )
+_hash2(coap_key_t init, const unsigned char *s, unsigned int len) {
+  if ( len && !s )
     return COAP_INVALID_HASHKEY;
 
   while ( len-- ) {
@@ -175,9 +187,11 @@ _hash2(coap_key_t init, const char *s, unsigned int len) {
   return init & HMASK;
 }
     
-coap_key_t 
-coap_uri_hash(const coap_uri_t *uri) {
-  return _hash(_hash(_hash( 0, uri->scheme ), uri->na ), uri->path);
+coap_key_t coap_uri_hash(const coap_uri_t *uri) {
+  return uri ? _hash2(_hash2(_hash2(0, uri->scheme.s, uri->scheme.length), 
+			     uri->na.s, uri->na.length ), 
+		      uri->path.s, uri->path.length)
+    : COAP_INVALID_HASHKEY;
 }
 
 coap_key_t 
@@ -258,7 +272,7 @@ coap_subscription_hash(coap_subscription_t *subscription) {
   if ( !subscription )
     return COAP_INVALID_HASHKEY;
 
-  return _hash2( subscription->resource, (char *)&subscription->subscriber, 
+  return _hash2( subscription->resource, (unsigned char *)&subscription->subscriber, 
 		 sizeof(subscription->subscriber) );
 }
 
@@ -278,4 +292,26 @@ coap_add_subscription(coap_context_t *context,
   }
 
   return coap_subscription_hash(subscription); 
+}
+
+int 
+coap_delete_subscription(coap_context_t *context, coap_key_t hashkey) {
+  coap_list_t *prev, *node;
+  
+  node = context->subscriptions;
+  if (COAP_SUBSCRIPTION(node)->resource == hashkey) {
+    context->subscriptions = context->subscriptions->next;
+    coap_delete(node);
+    return 1;
+  }
+
+  for (prev = node, node = context->subscriptions; node; prev = node, node = node->next) {
+    if (COAP_SUBSCRIPTION(node)->resource == hashkey) {
+      prev->next = node->next;
+      coap_delete(node);
+      return 1;
+    }
+  }
+
+  return 0;
 }

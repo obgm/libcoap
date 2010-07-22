@@ -14,6 +14,7 @@
 
 #include "debug.h"
 #include "mem.h"
+#include "str.h"
 #include "subscribe.h"
 #include "net.h"
 
@@ -481,9 +482,53 @@ coap_remove_transaction( coap_queue_t **queue, coap_tid_t id ) {
   
 }
 
+coap_queue_t *
+coap_find_transaction(coap_queue_t *queue, coap_tid_t id) {
+  if ( !queue )
+    return 0;
+
+  for (; queue; queue = queue->next) {
+    if (queue->pdu && queue->pdu->hdr && queue->pdu->hdr->id == id)
+      return queue;
+  }
+  return NULL;
+}    
+
+int 
+coap_remove_subscription(coap_context_t *context,
+			 coap_key_t key, 
+			 struct sockaddr_in6 *subscriber) {
+  coap_list_t *prev, *node;
+
+  if (!context || !subscriber || key == COAP_INVALID_HASHKEY)
+    return 0;
+
+  for (prev = NULL, node = context->subscriptions; node; 
+       prev = node, node = node->next) {
+    if (COAP_SUBSCRIPTION(node)->resource == key) {
+      if (subscriber->sin6_port == COAP_SUBSCRIPTION(node)->subscriber.sin6_port
+	  && memcmp(&subscriber->sin6_addr, 
+		    &COAP_SUBSCRIPTION(node)->subscriber.sin6_addr,
+		    sizeof(struct in6_addr)) == 0) {
+
+	if (!prev) {
+	  context->subscriptions = node->next;
+	  coap_delete(node);
+	} else {
+	  prev->next = node->next;
+	  coap_delete(node);
+	}
+	return 1;
+      }
+    }
+  }
+  return 0;  
+}
+
 void 
 coap_dispatch( coap_context_t *context ) {
-  coap_queue_t *node;
+  coap_queue_t *node, *sent;
+  coap_uri_t uri;
 
   if ( !context ) 
     return;
@@ -493,7 +538,25 @@ coap_dispatch( coap_context_t *context ) {
 
     switch ( node->pdu->hdr->type ) {
     case COAP_MESSAGE_ACK :
+      /* find transaction in sendqueue to stop retransmission */
+      coap_remove_transaction( &context->sendqueue, node->pdu->hdr->id );
+      break;
     case COAP_MESSAGE_RST :
+      /* We have sent something the receiver disliked, so we remove
+       * not only the transaction but also the subscriptions we might
+       * have. */
+
+      fprintf(stderr, "* got RST for transaction %u\n", ntohs(node->pdu->hdr->id) );
+      sent = coap_find_transaction(context->sendqueue, node->pdu->hdr->id);
+      if (sent && coap_get_request_uri(sent->pdu, &uri)) { 
+	/* The easy way: we still have the transaction that has caused
+	* the trouble.*/
+	
+	coap_remove_subscription(context, coap_uri_hash(&uri), &node->remote);
+      } else {
+	/* ?? */
+      }
+
       /* find transaction in sendqueue to stop retransmission */
       coap_remove_transaction( &context->sendqueue, node->pdu->hdr->id );
     }
