@@ -47,9 +47,9 @@ new_ack( coap_context_t  *ctx, coap_queue_t *node ) {
 }
 
 coap_pdu_t *
-new_rst( coap_context_t  *ctx, coap_queue_t *node ) {
+new_rst( coap_context_t  *ctx, coap_queue_t *node, unsigned int code ) {
   coap_pdu_t *pdu;
-  GENERATE_PDU(pdu,COAP_MESSAGE_RST,0,node->pdu->hdr->id);
+  GENERATE_PDU(pdu,COAP_MESSAGE_RST,code,node->pdu->hdr->id);
   return pdu;
 }
 
@@ -248,7 +248,7 @@ message_handler(coap_context_t  *ctx, coap_queue_t *node, void *data) {
     pdu = handle_get(ctx, node, data);
 
     if ( !pdu && node->pdu->hdr->type == COAP_MESSAGE_CON )
-      pdu = new_rst( ctx, node );
+      pdu = new_rst( ctx, node, COAP_RESPONSE_500 );
     break;
   case COAP_REQUEST_PUT:
     pdu = handle_put(ctx, node, data);
@@ -265,10 +265,10 @@ message_handler(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   default:
     if ( node->pdu->hdr->type == COAP_MESSAGE_CON ) {
       if ( node->pdu->hdr->code >= COAP_RESPONSE_100 )
-	pdu = new_rst( ctx, node );
+	pdu = new_rst( ctx, node, COAP_RESPONSE_500 );
       else {
 	debug("request method not implemented: %u\n", node->pdu->hdr->code);
-	pdu = new_response( ctx, node, COAP_RESPONSE_405 );
+	pdu = new_rst( ctx, node, COAP_RESPONSE_405 );
       }
     }
   }
