@@ -47,7 +47,6 @@ dist:
 	test -d $(DISTDIR)/$(examples) || mkdir $(DISTDIR)/$(examples)
 	cp $(FILES) $(DISTDIR)
 	$(MAKE) -C $(examples) dist DISTDIR=../$(DISTDIR)/$(examples)
-	$(MAKE) -C $(doc) dist DISTDIR=../$(DISTDIR)/$(doc)
 	tar czf $(DISTDIR).tar.gz $(DISTDIR)
 
 .gitignore:
