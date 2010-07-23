@@ -686,7 +686,7 @@ init_resources(coap_context_t *ctx) {
     return;
 
   r->uri = coap_new_uri((const unsigned char *) "/time");
-  r->mediatype = COAP_MEDIATYPE_TEXT_XML;
+  r->mediatype = COAP_MEDIATYPE_ANY;
   r->dirty = 0;
   r->data = resource_time;
   coap_add_resource( ctx, r );
