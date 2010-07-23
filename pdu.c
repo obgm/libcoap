@@ -159,3 +159,10 @@ coap_get_request_uri(coap_pdu_t *pdu, coap_uri_t *result) {
 
   return result->scheme.length || result->na.length || result->path.length;
 }
+
+#if 0
+int 
+coap_encode_pdu(coap_pdu_t *pdu) {
+
+}
+#endif

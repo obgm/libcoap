@@ -188,9 +188,7 @@ _hash2(coap_key_t init, const unsigned char *s, unsigned int len) {
 }
     
 coap_key_t coap_uri_hash(const coap_uri_t *uri) {
-  return uri ? _hash2(_hash2(_hash2(0, uri->scheme.s, uri->scheme.length), 
-			     uri->na.s, uri->na.length ), 
-		      uri->path.s, uri->path.length)
+  return uri ? _hash2(0, uri->path.s, uri->path.length)
     : COAP_INVALID_HASHKEY;
 }
 

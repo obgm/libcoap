@@ -6,6 +6,9 @@
 #ifndef _PDU_H_
 #define _PDU_H_
 
+#include "list.h"
+#include "uri.h"
+
 /* pre-defined constants that reflect defaults for CoAP */
 
 #define COAP_DEFAULT_RESPONSE_TIMEOUT  1 /* response timeout in seconds */
@@ -15,6 +18,7 @@
 #define COAP_MAX_PDU_SIZE           1400 /* maximum size of a CoAP PDU */
 
 #define COAP_DEFAULT_VERSION           1 /* version of CoAP supported */
+#define COAP_DEFAULT_SCHEME        "coap" /* the default scheme for CoAP URIs */
 #define COAP_DEFAULT_URI_WELLKNOWN ".well-known/r" /* compact form of well-known resources URI */
 
 /* CoAP message types */
@@ -47,6 +51,7 @@
 
 /* selected option types from draft-bormann-coap-misc-04 */
 
+#define COAP_OPTION_TOKEN        11 /* C, Sequence of Bytes, 1-n B, - */
 #define COAP_OPTION_BLOCK        13 /* C, unsigned integer, 1--3 B, 0 */
 
 /* CoAP result codes (HTTP-Code / 100 * 40 + HTTP-Code % 100) */
@@ -195,20 +200,37 @@ typedef union {
 typedef struct {
   unsigned short key;		/* the option key (no delta coding) */
   unsigned int length;
+#if 0
+  union {
+    unsigned int n;   /* unsigned integer (1--4 bytes) */
+    unsigned char fp; /* pseudo-fp (currently, only (8,4) supported */
+    unsigned char *d; /* date (4--6 bytes) */
+    unsigned char *s; /* string (or sequence of bytes) */
+  } value;
+#endif
 } coap_option;
 
 #define COAP_OPTION_KEY(option) (option).key
 #define COAP_OPTION_LENGTH(option) (option).length
+#if 0
+#define COAP_OPTION_UINT(option) (option).value.n
+#define COAP_OPTION_PSEUDO_FP(option) (option).value.fp
+#define COAP_OPTION_DATE(option) (option).value.d
+#define COAP_OPTION_STRING(option) (option).value.s
+#endif
 #define COAP_OPTION_DATA(option) ((unsigned char *)&(option) + sizeof(coap_option))
-
 
 /** Header structure for CoAP PDUs */
 
 typedef struct {
   coap_hdr_t *hdr;
   unsigned short length;	/* PDU length (including header, options, data)  */
+  coap_list_t *options;		/* parsed options */
   unsigned char *data;		/* payload */
 } coap_pdu_t;
+
+/** Options in coap_pdu_t are accessed with the macro COAP_OPTION. */
+#define COAP_OPTION(node) ((coap_option *)(node)->options)
 
 /** 
  * Creates a new CoAP PDU. The object is created on the heap and must be released
@@ -218,12 +240,15 @@ typedef struct {
 coap_pdu_t *coap_new_pdu();
 void coap_delete_pdu(coap_pdu_t *);
 
+#if 0
+int coap_encode_pdu(coap_pdu_t *);
+#endif
+
 /** 
  * Adds option of given type to pdu that is passed as first parameter. coap_add_option() 
  * destroys the PDU's data, so coap_add_data must be called after all options have been
  * added.
  */
-
 int coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const unsigned char *data);
 coap_opt_t *coap_check_option(coap_pdu_t *pdu, unsigned char type);
 
@@ -231,7 +256,6 @@ coap_opt_t *coap_check_option(coap_pdu_t *pdu, unsigned char type);
  * Adds given data to the pdu that is passed as first parameter. Note that the PDU's 
  * data is destroyed by coap_add_option().
  */
-
 int coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data);
 
 /**
@@ -240,8 +264,6 @@ int coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data);
  * destroyed with the pdu.
  */
 int coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data);
-
-#include "uri.h"
 
 /**
  * Fills the given coap_uri_t object with the request URI components from 
