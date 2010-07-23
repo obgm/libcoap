@@ -14,11 +14,12 @@ LIB:=libcoap.a
 LDFLAGS:=-L. -l$(patsubst lib%.a,%,$(LIB))
 ARFLAGS:=cru
 examples:=examples
+doc:=doc
 
 # add this for Solaris
 #LDFLAGS+=-lsocket -lnsl
 
-.PHONY: clean distclean .gitignore
+.PHONY: clean distclean .gitignore doc
 
 $(PROGRAM):	$(prg_objects) $(LIB)
 	$(CC) -o $@ $(prg_objects) $(LDFLAGS)
@@ -34,6 +35,9 @@ main.o:	main.c
 clean:
 	@rm -f $(PROGRAM) main.o $(LIB) $(OBJECTS)
 
+doc:	
+	$(MAKE) -C doc
+
 distclean:	clean
 	@rm -rf $(DISTDIR)
 	@rm -f *~ $(DISTDIR).tar.gz
@@ -43,6 +47,7 @@ dist:
 	test -d $(DISTDIR)/$(examples) || mkdir $(DISTDIR)/$(examples)
 	cp $(FILES) $(DISTDIR)
 	$(MAKE) -C $(examples) dist DISTDIR=../$(DISTDIR)/$(examples)
+	$(MAKE) -C $(doc) dist DISTDIR=../$(DISTDIR)/$(doc)
 	tar czf $(DISTDIR).tar.gz $(DISTDIR)
 
 .gitignore:
