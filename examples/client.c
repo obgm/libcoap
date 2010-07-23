@@ -418,16 +418,18 @@ void
 cmdline_uri(char *arg) {
   coap_split_uri((unsigned char *)arg, &uri );
 
-  if (uri.scheme.length)
+  if (uri.scheme.length && 
+      (uri.scheme.length != strlen(COAP_DEFAULT_SCHEME)
+       || memcmp(uri.scheme.s, COAP_DEFAULT_SCHEME, uri.scheme.length)))
     coap_insert( &optlist, new_option_node(COAP_OPTION_URI_SCHEME, 
 					   uri.scheme.length, uri.scheme.s),
-					   order_opts);
-
+		 order_opts);
+#if 0  /* need authority only for proxy requests */
   if (uri.na.length)
     coap_insert( &optlist, new_option_node(COAP_OPTION_URI_AUTHORITY, 
 					   uri.na.length, uri.na.s),
-					   order_opts);
-
+		 order_opts);
+#endif
   if (uri.path.length)
     coap_insert( &optlist, new_option_node(COAP_OPTION_URI_PATH, 
 					   uri.path.length, uri.path.s),
