@@ -48,6 +48,7 @@ typedef struct {
   time_t expires;		/* expiry time of subscription */
 
   struct sockaddr_in6 subscriber; /* subscriber's address */
+  str token;			  /* subscription token */
 } coap_subscription_t;
 
 #define COAP_RESOURCE(node) ((coap_resource_t *)(node)->data)
@@ -93,7 +94,22 @@ coap_subscription_t *coap_new_subscription(coap_context_t *context,
 coap_key_t coap_add_subscription(coap_context_t *context, 
 				 coap_subscription_t *subscription);
 
-/** 
+/**
+ * Returns the subscription from subscriber for the resource identified 
+ * by hashkey. When token is not NULL the subscription must have the
+ * same token.
+ * @param context The CoAP context
+ * @param hashkey The unique key that identifies the subscription
+ * @param subscriber The subscriber's transport address
+ * @param token If not NULL, this specifies a token given by the
+ *              subscriber to identify its subscription.
+ * @return The requested subscription object or NULL when not found.
+ */
+coap_subscription_t * coap_find_subscription(coap_context_t *context, 
+					     coap_key_t hashkey,
+					     struct sockaddr_in6 *subscriber,
+					     str *token);
+/**
  * Removes a subscription from the subscription list stored in context and
  * releases the storage that was allocated for this subscription.
  * @param context The CoAP context.
@@ -101,7 +117,8 @@ coap_key_t coap_add_subscription(coap_context_t *context,
  * @return 1 if a subscription was removed, 0 otherwise.
  */
 int coap_delete_subscription(coap_context_t *context, 
-			     coap_key_t hashkey);
+			     coap_key_t hashkey,
+			     struct sockaddr_in6 *subscriber);
 
 /** Returns a unique hash for the specified URI or COAP_INVALID_HASHKEY on error. */
 coap_key_t coap_uri_hash(const coap_uri_t *uri);

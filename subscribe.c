@@ -34,24 +34,30 @@ notify(coap_context_t *context, coap_resource_t *res,
 
   /* FIXME: content-type and data (how about block?) */
   if (res->uri->scheme.length)
-    coap_add_option ( pdu, COAP_OPTION_URI_SCHEME, 
-		      res->uri->scheme.length, 
-		      res->uri->scheme.s );
+    coap_add_option (pdu, COAP_OPTION_URI_SCHEME, 
+		     res->uri->scheme.length, 
+		     res->uri->scheme.s );
 
   if (res->uri->na.length)
-    coap_add_option ( pdu, COAP_OPTION_URI_AUTHORITY, 
-		      res->uri->na.length, 
-		      res->uri->na.s );
+    coap_add_option (pdu, COAP_OPTION_URI_AUTHORITY, 
+		     res->uri->na.length, 
+		     res->uri->na.s );
 
   if (res->uri->path.length)
-    coap_add_option ( pdu, COAP_OPTION_URI_PATH, 
-		      res->uri->path.length, 
-		      res->uri->path.s);
-  
+    coap_add_option (pdu, COAP_OPTION_URI_PATH, 
+		     res->uri->path.length, 
+		     res->uri->path.s);
+
   d = COAP_PSEUDOFP_ENCODE_8_4_DOWN(duration, ls);
 	      
   coap_add_option ( pdu, COAP_OPTION_SUBSCRIPTION, 1, &d );
 
+  if (sub->token.length) {
+    coap_add_option (pdu, COAP_OPTION_TOKEN, 
+		     sub->token.length, 
+		     sub->token.s);    
+  }
+  
   if (res->data) {
     length = (unsigned char *)pdu->hdr + COAP_MAX_PDU_SIZE - pdu->data;
     ct = res->mediatype;
@@ -236,6 +242,8 @@ coap_new_subscription(coap_context_t *context, const coap_uri_t *resource,
   result->expires = expiry;
   memcpy( &result->subscriber, subscriber, sizeof(struct sockaddr_in6) );
 
+  memset(&result->token, 0, sizeof(str));
+
   return result;
 
 }
@@ -292,24 +300,65 @@ coap_add_subscription(coap_context_t *context,
   return coap_subscription_hash(subscription); 
 }
 
-int 
-coap_delete_subscription(coap_context_t *context, coap_key_t hashkey) {
-  coap_list_t *prev, *node;
-  
-  node = context->subscriptions;
-  if (COAP_SUBSCRIPTION(node)->resource == hashkey) {
-    context->subscriptions = context->subscriptions->next;
-    coap_delete(node);
-    return 1;
-  }
+coap_subscription_t *
+coap_find_subscription(coap_context_t *context, 
+		       coap_key_t hashkey,
+		       struct sockaddr_in6 *subscriber,
+		       str *token) {
+  coap_list_t *node;
 
-  for (prev = node, node = context->subscriptions; node; prev = node, node = node->next) {
+  if (!context || !subscriber || hashkey == COAP_INVALID_HASHKEY)
+    return NULL;
+
+  for (node = context->subscriptions; node; node = node->next) {
     if (COAP_SUBSCRIPTION(node)->resource == hashkey) {
-      prev->next = node->next;
-      coap_delete(node);
-      return 1;
+
+      if (token) {	   /* do not proceed if tokens do not match */
+	if (token->length != COAP_SUBSCRIPTION(node)->token.length ||
+	    memcmp(token->s, COAP_SUBSCRIPTION(node)->token.s, 
+		   token->length) != 0)
+	  continue;
+      }
+
+      if (subscriber->sin6_port == COAP_SUBSCRIPTION(node)->subscriber.sin6_port
+	  && memcmp(&subscriber->sin6_addr, 
+		    &COAP_SUBSCRIPTION(node)->subscriber.sin6_addr,
+		    sizeof(struct in6_addr)) == 0)
+	return COAP_SUBSCRIPTION(node);
     }
   }
+  return NULL;  
+}
 
-  return 0;
+int 
+coap_delete_subscription(coap_context_t *context,
+			 coap_key_t key, 
+			 struct sockaddr_in6 *subscriber) {
+  coap_list_t *prev, *node;
+
+  if (!context || !subscriber || key == COAP_INVALID_HASHKEY)
+    return 0;
+
+  for (prev = NULL, node = context->subscriptions; node; 
+       prev = node, node = node->next) {
+    if (COAP_SUBSCRIPTION(node)->resource == key) {
+      if (subscriber->sin6_port == COAP_SUBSCRIPTION(node)->subscriber.sin6_port
+	  && memcmp(&subscriber->sin6_addr, 
+		    &COAP_SUBSCRIPTION(node)->subscriber.sin6_addr,
+		    sizeof(struct in6_addr)) == 0) {
+
+	if (!prev) {
+	  context->subscriptions = node->next;
+	  coap_free(COAP_SUBSCRIPTION(node)->token.s);
+	  coap_delete(node);
+	} else {
+	  prev->next = node->next;
+	  coap_free(COAP_SUBSCRIPTION(node)->token.s);
+	  coap_delete(node);
+	}
+	return 1;
+      }
+    }
+  }
+  return 0;  
 }

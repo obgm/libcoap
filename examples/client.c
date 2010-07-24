@@ -283,14 +283,16 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-b num] [-g group] [-p port] [-s num] [-t type...] URI\n\n"
+	   "usage: %s [-b num] [-g group] [-m method] [-p port] [-s num] [-t type...] [-T string] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
 	   "\t       \t\t(value must be a mulitple of 16 not larger than 2048)\n"
 	   "\t-g group\tjoin the given multicast group\n"
+	   "\t-m method\trequest method (get|put|post|delete)\n"
 	   "\t-p port\t\tlisten on specified port\n"
 	   "\t-s duration\t\tsubscribe for given duration [s]\n"
-	   "\t-t type\t\taccepted content type (multiple occurrences allowed)\n",
+	   "\t-t type\t\taccepted content type (multiple occurrences allowed)\n"
+	   "\t-T token\t\tinclude specified token\n",
 	   program, version, program );
 }
 
@@ -462,6 +464,13 @@ cmdline_subscribe(char *arg) {
 					 1, &duration), order_opts );
 }
 
+void
+cmdline_token(char *arg) {
+  coap_insert( &optlist, new_option_node(COAP_OPTION_TOKEN,
+					 strlen(arg), 
+					 (unsigned char *)arg), order_opts);
+}
+
 method_t
 cmdline_method(char *arg) {
   static char *methods[] = 
@@ -489,7 +498,7 @@ main(int argc, char **argv) {
   int opt;
   char *group = NULL;
 
-  while ((opt = getopt(argc, argv, "b:g:m:p:s:t:")) != -1) {
+  while ((opt = getopt(argc, argv, "b:g:m:p:s:t:T:")) != -1) {
     switch (opt) {
     case 'b' :
       cmdline_blocksize(optarg);
@@ -508,6 +517,9 @@ main(int argc, char **argv) {
       break;
     case 't' :
       cmdline_content_type(optarg);
+      break;
+    case 'T' :
+      cmdline_token(optarg);
       break;
     default:
       usage( argv[0], VERSION );

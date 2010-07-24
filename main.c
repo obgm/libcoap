@@ -105,12 +105,14 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_pdu_t *pdu;
   coap_uri_t uri;
   coap_resource_t *resource;
-  coap_opt_t *block, *ct, *sub;
+  coap_opt_t *block, *ct, *tok, *sub;
+  str token;
   unsigned int blklen, blk;
   int code, finished = 1;
   unsigned int ls;
   unsigned char duration, enc;
   unsigned char mediatype = COAP_MEDIATYPE_ANY;
+  coap_subscription_t *subscription;
   static unsigned char buf[COAP_MAX_PDU_SIZE];
   static unsigned char optbuf[4];
 
@@ -180,10 +182,38 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
       enc = COAP_PSEUDOFP_ENCODE_8_4_DOWN(duration, ls);
       coap_add_option(pdu, COAP_OPTION_SUBSCRIPTION, 1, &enc);      
       
-      /* TODO: refresh only if already subscribed */
-      coap_add_subscription(ctx, 
-	    coap_new_subscription(ctx, &uri, &(node->remote), 
-				  time(NULL)+duration));
+      /* refresh only if already subscribed */
+      token.length = 0;
+      tok = coap_check_option(node->pdu, COAP_OPTION_TOKEN);
+      if (tok) {
+	COAP_SET_STR(&token, COAP_OPT_LENGTH(*tok), COAP_OPT_VALUE(*tok));
+	coap_add_option(pdu, COAP_OPTION_TOKEN, 
+			COAP_OPT_LENGTH(*tok),
+			COAP_OPT_VALUE(*tok));
+      }
+
+      subscription = 
+	coap_find_subscription(ctx, coap_uri_hash(&uri), &(node->remote), 
+			       tok ? &token : NULL);
+
+      if (subscription) {	/* refresh existing subscription */
+	subscription->expires = time(NULL)+duration;
+      } else {			/* add new subscription */
+	subscription = coap_new_subscription(ctx, &uri, &(node->remote), 
+					     time(NULL)+duration);
+	if (subscription) {
+	  if (token.length) {
+	    /* TODO: copy token into subscription->token */
+	    subscription->token.s = (unsigned char *)coap_malloc(token.length);
+	    if (subscription->token.s) {
+	      subscription->token.length = token.length;
+	      memcpy(subscription->token.s, token.s, token.length);
+	    }
+	    /* FIXME: else error? */
+	  }
+	  coap_add_subscription(ctx, subscription);
+	}
+      }
     }
 
     /* add a block option when it has been requested explicitly or

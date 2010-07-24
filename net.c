@@ -494,37 +494,6 @@ coap_find_transaction(coap_queue_t *queue, coap_tid_t id) {
   return NULL;
 }    
 
-int 
-coap_remove_subscription(coap_context_t *context,
-			 coap_key_t key, 
-			 struct sockaddr_in6 *subscriber) {
-  coap_list_t *prev, *node;
-
-  if (!context || !subscriber || key == COAP_INVALID_HASHKEY)
-    return 0;
-
-  for (prev = NULL, node = context->subscriptions; node; 
-       prev = node, node = node->next) {
-    if (COAP_SUBSCRIPTION(node)->resource == key) {
-      if (subscriber->sin6_port == COAP_SUBSCRIPTION(node)->subscriber.sin6_port
-	  && memcmp(&subscriber->sin6_addr, 
-		    &COAP_SUBSCRIPTION(node)->subscriber.sin6_addr,
-		    sizeof(struct in6_addr)) == 0) {
-
-	if (!prev) {
-	  context->subscriptions = node->next;
-	  coap_delete(node);
-	} else {
-	  prev->next = node->next;
-	  coap_delete(node);
-	}
-	return 1;
-      }
-    }
-  }
-  return 0;  
-}
-
 void 
 coap_dispatch( coap_context_t *context ) {
   coap_queue_t *node, *sent;
@@ -552,7 +521,7 @@ coap_dispatch( coap_context_t *context ) {
 	/* The easy way: we still have the transaction that has caused
 	* the trouble.*/
 	
-	coap_remove_subscription(context, coap_uri_hash(&uri), &node->remote);
+	coap_delete_subscription(context, coap_uri_hash(&uri), &node->remote);
       } else {
 	/* ?? */
       }
