@@ -157,7 +157,7 @@ coap_get_request_uri(coap_pdu_t *pdu, coap_uri_t *result) {
   if ((opt = coap_check_option(pdu, COAP_OPTION_URI_PATH))) 
     COAP_SET_STR(&result->path, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
 
-  return result->scheme.length || result->na.length || result->path.length;
+  return 1;
 }
 
 #if 0
