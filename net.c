@@ -84,7 +84,7 @@ void
 show( coap_opt_t *opt, unsigned char type, unsigned int len, const unsigned char *data ) {
   static unsigned char buf[COAP_MAX_PDU_SIZE];
   print_readable( data, len, buf, COAP_MAX_PDU_SIZE );
-  fprintf(stderr, " %d:'%s'", type, buf );
+  printf(" %d:'%s'", type, buf );
 }
 
 void 
@@ -92,25 +92,26 @@ show_data( coap_pdu_t *pdu ) {
   static unsigned char buf[COAP_MAX_PDU_SIZE];
   unsigned int len = (int)( (unsigned char *)pdu->hdr + pdu->length - pdu->data );
   print_readable( pdu->data, len, buf, COAP_MAX_PDU_SIZE );
-  fprintf(stderr,"'%s'", buf);
+  printf("'%s'", buf);
 }
 
 void
 coap_show_pdu( coap_pdu_t *pdu ) {
 
-  fprintf(stderr,"pdu (%d bytes)", pdu->length);
-  fprintf(stderr," v:%d t:%d oc:%d c:%d id:%u", pdu->hdr->version, pdu->hdr->type,
+  printf("pdu (%d bytes)", pdu->length);
+  printf(" v:%d t:%d oc:%d c:%d id:%u", pdu->hdr->version, pdu->hdr->type,
 	 pdu->hdr->optcnt, pdu->hdr->code, ntohs(pdu->hdr->id));
   if ( pdu->hdr->optcnt ) {
-    fprintf(stderr," o:");
+    printf(" o:");
     for_each_option ( pdu, show );
   }
 
   if ( pdu->data < (unsigned char *)pdu->hdr + pdu->length ) {
-    fprintf(stderr,"\n  data:");
+    printf("\n  data:");
     show_data ( pdu );
   }
-  fprintf(stderr,"\n");
+  printf("\n");
+  fflush(stdout);
 }
 
 /************************************************************************/

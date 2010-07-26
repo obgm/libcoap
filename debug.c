@@ -19,9 +19,10 @@ void debug(char *format, ...) {
   tmp = localtime(&now);
 
   if ( strftime(timebuf,sizeof(timebuf), "%b %d %H:%M:%S", tmp) )
-    fprintf(stderr,"%s ", timebuf);
+    printf("%s ", timebuf);
   
   va_start(ap, format);
-  vfprintf(stderr,format, ap);
+  vprintf(format, ap);
   va_end(ap);
+  fflush(stdout);
 }
