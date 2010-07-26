@@ -84,7 +84,7 @@ void
 show( coap_opt_t *opt, unsigned char type, unsigned int len, const unsigned char *data ) {
   static unsigned char buf[COAP_MAX_PDU_SIZE];
   print_readable( data, len, buf, COAP_MAX_PDU_SIZE );
-  printf( " %d:'%s'", type, buf );
+  fprintf(stderr, " %d:'%s'", type, buf );
 }
 
 void 
@@ -92,25 +92,25 @@ show_data( coap_pdu_t *pdu ) {
   static unsigned char buf[COAP_MAX_PDU_SIZE];
   unsigned int len = (int)( (unsigned char *)pdu->hdr + pdu->length - pdu->data );
   print_readable( pdu->data, len, buf, COAP_MAX_PDU_SIZE );
-  printf("'%s'", buf);
+  fprintf(stderr,"'%s'", buf);
 }
 
 void
 coap_show_pdu( coap_pdu_t *pdu ) {
 
-  printf("pdu (%d bytes)", pdu->length);
-  printf(" v:%d t:%d oc:%d c:%d id:%u", pdu->hdr->version, pdu->hdr->type,
+  fprintf(stderr,"pdu (%d bytes)", pdu->length);
+  fprintf(stderr," v:%d t:%d oc:%d c:%d id:%u", pdu->hdr->version, pdu->hdr->type,
 	 pdu->hdr->optcnt, pdu->hdr->code, ntohs(pdu->hdr->id));
   if ( pdu->hdr->optcnt ) {
-    printf(" o:");
+    fprintf(stderr," o:");
     for_each_option ( pdu, show );
   }
 
   if ( pdu->data < (unsigned char *)pdu->hdr + pdu->length ) {
-    printf("\n  data:");
+    fprintf(stderr,"\n  data:");
     show_data ( pdu );
   }
-  printf("\n");
+  fprintf(stderr,"\n");
 }
 
 /************************************************************************/
@@ -286,7 +286,7 @@ coap_send_impl( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pd
   if ( inet_ntop(dst->sin6_family, &dst->sin6_addr, addr, INET6_ADDRSTRLEN) == 0 ) {
     perror("coap_send_impl: inet_ntop");
   } else {
-    printf("send to [%s]:%d:\n  ",addr,ntohs(dst->sin6_port));
+    fprintf(stderr,"send to [%s]:%d:\n  ",addr,ntohs(dst->sin6_port));
   }
   coap_show_pdu( pdu );
 #endif
