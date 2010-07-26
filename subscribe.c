@@ -225,9 +225,32 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
  */
 int
 coap_delete_resource(coap_context_t *context, coap_key_t key) {
-  /* FIXME */
-  return 0;
+  coap_list_t *prev, *node;
+
+  if (!context || key == COAP_INVALID_HASHKEY)
+    return 0;
+
+  for (prev = NULL, node = context->resources; node; 
+       prev = node, node = node->next) {
+    if (coap_uri_hash(COAP_RESOURCE(node)->uri) == key) {
+      debug("removed key %u (%s)\n",key,COAP_RESOURCE(node)->uri->path.s);
+      if (!prev) {
+	context->resources = node->next;
+	/* FIXME: must free? -> current version triggers SIGSEGV */
+	/* coap_free_resource(node); */
+	coap_delete(node);
+      } else {
+	prev->next = node->next;
+	/* FIXME: must free? -> current version triggers SIGSEGV */
+	/* coap_free_resource(node); */
+	coap_delete(node);
+      }
+      return 1;
+    }
+  }
+  return 0;  
 }
+
 coap_subscription_t *
 coap_new_subscription(coap_context_t *context, const coap_uri_t *resource,
 		      const struct sockaddr_in6 *subscriber, time_t expiry) {
