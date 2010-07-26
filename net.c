@@ -305,12 +305,8 @@ coap_send_impl( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pd
   return ntohs(pdu->hdr->id);
 }
 
-#define create_transaction_id(T) do { T = (unsigned short)rand(); } while ( T == COAP_INVALID_TID );
-
 coap_tid_t
 coap_send( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pdu_t *pdu ) {
-  if ( ntohs(pdu->hdr->id) == COAP_INVALID_TID )
-    create_transaction_id( pdu->hdr->id );
   return coap_send_impl( context, dst, pdu, 1 );
 }
 
@@ -322,9 +318,6 @@ _order_timestamp( coap_queue_t *lhs, coap_queue_t *rhs ) {
 coap_tid_t
 coap_send_confirmed( coap_context_t *context, const struct sockaddr_in6 *dst, coap_pdu_t *pdu ) {
   coap_queue_t *node;
-
-  if ( ntohs(pdu->hdr->id) == COAP_INVALID_TID )
-    create_transaction_id( pdu->hdr->id );
 
   /* send once, and enter into message queue for retransmission unless
    * retransmission counter is reached */

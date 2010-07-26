@@ -86,6 +86,7 @@ coap_new_request( method_t m, coap_list_t *options ) {
     return NULL;
 
   pdu->hdr->type = COAP_MESSAGE_CON;
+  pdu->hdr->id = rand();	/* use a random transaction id */
   pdu->hdr->code = m;
 
   for (opt = options; opt; opt = opt->next) {
@@ -95,6 +96,8 @@ coap_new_request( method_t m, coap_list_t *options ) {
   }
   
   if (payload.length) {
+    /* TODO: must handle block */
+
     coap_add_data(pdu, payload.length, payload.s);
   }
 

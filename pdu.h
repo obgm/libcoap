@@ -95,8 +95,9 @@
 #define COAP_MEDIATYPE_ANY                         0xff /* any media type */
 
 /* CoAP transaction id */
-typedef unsigned short coap_tid_t; 
-#define COAP_INVALID_TID 0
+/*typedef unsigned short coap_tid_t; */
+typedef int coap_tid_t; 
+#define COAP_INVALID_TID -1
 
 #ifndef BYTE_ORDER
 #  if (BSD >= 199103)
