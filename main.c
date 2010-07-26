@@ -237,25 +237,54 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   return pdu;
 }
 
+int 
+write_file(char *filename, unsigned char *text, int length) {
+  FILE *file;
+  ssize_t written;
+
+  file = fopen(filename, "w");
+  if ( !file ) {
+    perror("write_file: fopen");
+    return 0;
+  }
+
+  written = fwrite(text, 1, length, file);
+  fclose(file);
+
+  return written;
+}
+
 coap_pdu_t *
 handle_put(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_uri_t uri;
   coap_pdu_t *pdu;
+  coap_resource_t *resource;
+  ssize_t written, length;
+  static char filename[FILENAME_MAX+1];
 
   if ( !coap_get_request_uri( node->pdu, &uri ) )
     return NULL;
 
-  if ( !uri.path.length ) 
+  if ( !(resource = coap_get_resource(ctx, &uri)) )
+    return new_response(ctx, node, COAP_RESPONSE_404);
+
+  if (!resource->writable)
+    return new_response(ctx, node, COAP_RESPONSE_400);
+
+  if ( !(pdu = new_response(ctx, node, COAP_RESPONSE_200)) )
     return NULL;
+  
+  /* create a zero-terminated string */
+  memcpy(filename, uri.path.s, uri.path.length);
+  filename[uri.path.length] = '\0';
 
-  if ( strncmp((char *)uri.path.s, "filestorage", uri.path.length) == 0 )
-    pdu = new_response(ctx, node, COAP_RESPONSE_200);
-  else 
-    pdu = new_response(ctx, node, COAP_RESPONSE_400); /* better: 401 */
+  length = (unsigned char *)node->pdu->hdr + node->pdu->length - node->pdu->data;
+  written = write_file(filename, node->pdu->data, length);
+  
+  if (written < length)
+    return new_response(ctx, node, COAP_RESPONSE_500);
 
-  /* if ( !pdu ) */
-  /*   return NULL; */
-
+  resource->dirty = 1;		/* mark for notification of observers */
   return pdu;
 }
 
@@ -700,6 +729,7 @@ init_resources(coap_context_t *ctx) {
   r->uri = coap_new_uri((const unsigned char *)"/" COAP_DEFAULT_URI_WELLKNOWN );
   r->mediatype = COAP_MEDIATYPE_APPLICATION_LINK_FORMAT;
   r->dirty = 0;
+  r->writable = 0;
   r->data = resource_wellknown;
   coap_add_resource( ctx, r );
 
@@ -709,6 +739,7 @@ init_resources(coap_context_t *ctx) {
   r->uri = coap_new_uri((const unsigned char *) "/lipsum");
   r->mediatype = COAP_MEDIATYPE_TEXT_PLAIN;
   r->dirty = 1;
+  r->writable = 0;
   r->data = resource_lipsum;
   coap_add_resource( ctx, r );
 
@@ -718,12 +749,22 @@ init_resources(coap_context_t *ctx) {
   r->uri = coap_new_uri((const unsigned char *) "/time");
   r->mediatype = COAP_MEDIATYPE_ANY;
   r->dirty = 0;
+  r->writable = 0;
   r->data = resource_time;
   coap_add_resource( ctx, r );
 
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
 
+  r->uri = coap_new_uri((const unsigned char *) "/filestorage");
+  r->mediatype = COAP_MEDIATYPE_ANY;
+  r->dirty = 0;
+  r->writable = 1;
+  r->data = resource_from_file;
+  write_file("filestorage",(unsigned char *)"initial text", 12);
+  coap_add_resource( ctx, r );
+
+#if 0
   r->uri = coap_new_uri((const unsigned char *) "/filestorage");
   r->mediatype = COAP_MEDIATYPE_APPLICATION_LINK_FORMAT;
   r->dirty = 0;
@@ -738,7 +779,7 @@ init_resources(coap_context_t *ctx) {
   r->dirty = 0;
   r->data = resource_from_file;
   coap_add_resource( ctx, r );
-
+#endif
 }
 
 int 

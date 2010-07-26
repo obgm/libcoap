@@ -23,6 +23,7 @@ typedef struct {
   coap_uri_t *uri;		/* unique identifier; memory is released by coap_delete_resource() */
   unsigned char mediatype;	/* media type for resource representation */
   unsigned int dirty:1;		/* set to 1 if resource has changed */
+  unsigned int writable:1;	/* set to 1 if resource can be changed using PUT */
   /* FIXME: cache-control flags */
 
   /** 

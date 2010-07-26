@@ -91,7 +91,6 @@ coap_check_resource_list(coap_context_t *context) {
 
   time(&now);
   for (res = context->resources; res; res = res->next) {
-    COAP_RESOURCE(res)->dirty = (rand() & 0x03) == 3; /* just for testing */
     if ( COAP_RESOURCE(res)->dirty && COAP_RESOURCE(res)->uri ) {
       key = coap_uri_hash( COAP_RESOURCE(res)->uri ) ;
 
