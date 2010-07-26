@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <sys/select.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -24,7 +25,9 @@ static coap_uri_t uri;
 
 /* reading is done when this flag is set */
 static int ready = 0;
-static FILE *file = NULL;
+static FILE *file = NULL;	/* output file name */
+
+static str payload = { 0, NULL }; /* optional payload to send */
 
 typedef unsigned char method_t;
 method_t method = 1;		/* the method we are using in our requests */
@@ -91,6 +94,10 @@ coap_new_request( method_t m, coap_list_t *options ) {
 		     COAP_OPTION_DATA(*(coap_option *)opt->data) );
   }
   
+  if (payload.length) {
+    coap_add_data(pdu, payload.length, payload.s);
+  }
+
   return pdu;
 }
 
@@ -471,6 +478,63 @@ cmdline_token(char *arg) {
 					 (unsigned char *)arg), order_opts);
 }
 
+int
+cmdline_input_from_file(char *filename, str *buf) {
+  FILE *inputfile = NULL;
+  ssize_t len;
+  int result = 1;
+  struct stat statbuf;
+
+  if (!filename || !buf) 
+    return 0; 
+
+  if (filename[0] == '-' && !filename[1]) { /* read from stdin */
+    buf->length = 20000;
+    buf->s = (unsigned char *)coap_malloc(buf->length);
+    if (!buf->s) 
+      return 0;
+
+    inputfile = stdin;
+  } else {
+    /* read from specified input file */
+    if (stat(filename, &statbuf) < 0) {
+      perror("cmdline_input_from_file: stat");
+      return 0;
+    }
+
+    buf->length = statbuf.st_size;
+    buf->s = (unsigned char *)coap_malloc(buf->length);
+    if (!buf->s) 
+      return 0;
+ 
+    inputfile = fopen(filename, "r");
+    if ( !inputfile ) {
+      perror("cmdline_input_from_file: fopen");
+      coap_free(buf->s);
+      return 0;
+    }
+  }
+
+  len = fread(buf->s, 1, buf->length, inputfile);
+  
+  if (len < buf->length) {
+    if (ferror(inputfile) != 0) {
+      perror("cmdline_input_from_file: fread");
+      coap_free(buf->s);
+      buf->length = 0;
+      buf->s = NULL;
+      result = 0;
+    } else {
+      buf->length = len;
+    }
+  } 
+  
+  if (inputfile != stdin)
+    fclose(inputfile);
+
+  return result;
+}
+
 method_t
 cmdline_method(char *arg) {
   static char *methods[] = 
@@ -498,10 +562,13 @@ main(int argc, char **argv) {
   int opt;
   char *group = NULL;
 
-  while ((opt = getopt(argc, argv, "b:g:m:p:s:t:T:")) != -1) {
+  while ((opt = getopt(argc, argv, "b:f:g:m:p:s:t:T:")) != -1) {
     switch (opt) {
     case 'b' :
       cmdline_blocksize(optarg);
+      break;
+    case 'f' :
+      cmdline_input_from_file(optarg,&payload);
       break;
     case 'g' :
       group = optarg;
