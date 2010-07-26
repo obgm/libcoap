@@ -99,13 +99,14 @@ coap_split_uri(unsigned char *str, coap_uri_t *uri) {
 #define URI_DATA(uriobj) ((unsigned char *)(uriobj) + sizeof(coap_uri_t))
 
 coap_uri_t *
-coap_new_uri(const unsigned char *uri) {
-  unsigned char *result = coap_malloc( strlen((char *)uri) + 1 + sizeof(coap_uri_t) );
+coap_new_uri(const unsigned char *uri, unsigned int length) {
+  unsigned char *result = coap_malloc(length + 1 + sizeof(coap_uri_t));
   if ( !result )
     return NULL;
   
-  memcpy( URI_DATA(result), uri, strlen((char*)uri) + 1 );
-  
+  memcpy(URI_DATA(result), uri, length);
+  URI_DATA(result)[length] = '\0'; /* make it zero-terminated */
+
   coap_split_uri( URI_DATA(result), (coap_uri_t *)result );
   return (coap_uri_t *)result;
 }

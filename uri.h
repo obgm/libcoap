@@ -24,8 +24,12 @@ int coap_split_uri(unsigned char *str, coap_uri_t *uri);
 /**
  * Creates a new coap_uri_t object from the specified URI. Returns the new
  * object or NULL on error. The memory allocated by the new coap_uri_t 
- * must be released using coap_free(). */
-coap_uri_t *coap_new_uri(const unsigned char *uri);
+ * must be released using coap_free(). 
+ * @param uri The URI path to copy.
+ * @para length The length of uri.
+ * @return New URI object or NULL on error.
+ */
+coap_uri_t *coap_new_uri(const unsigned char *uri, unsigned int length);
 
 /** 
  * Clones the specified coap_uri_t object. Thie function allocates sufficient
