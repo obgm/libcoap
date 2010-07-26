@@ -605,7 +605,8 @@ resource_wellknown(coap_uri_t *uri,
   static unsigned char resources[] = 
     "</lipsum>;ct=1;n=\"some large text to test buffer sizes (<EOT> marks its end)\","
     "</time>;ct=0,1,41;n=\"server's local time and date\","
-    "</filestorage>;n=\"you can PUT things here\"";
+    "</filestorage>;n=\"you can PUT things here\""
+    "</data-sink/>;n=\"POST files here or DELETE them when created\"";
   size_t maxlen = sizeof(resources) - 1;
   
   *finished = 1;
