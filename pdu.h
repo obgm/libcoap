@@ -126,7 +126,7 @@ typedef struct {
   unsigned int type:2;		/* type flag */
   unsigned int optcnt:4;	/* number of options following the header */
   unsigned int code:8;	        /* request method (value 1--10) or response code (value 40-255) */
-  coap_tid_t id;		/* transaction id */
+  unsigned short id;		/* transaction id */
 } coap_hdr_t;
 #elif BYTE_ORDER == LITTLE_ENDIAN
 typedef struct {
@@ -134,7 +134,7 @@ typedef struct {
   unsigned int type:2;		/* type flag */
   unsigned int version:2;	/* protocol version */
   unsigned int code:8;	        /* request method (value 1--10) or response code (value 40-255) */
-  coap_tid_t id;		/* transaction id (network byte order!) */
+  unsigned short id;		/* transaction id (network byte order!) */
 } coap_hdr_t;
 #endif
 
