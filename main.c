@@ -605,7 +605,7 @@ resource_wellknown(coap_uri_t *uri,
   static unsigned char resources[] = 
     "</lipsum>;ct=1;n=\"some large text to test buffer sizes (<EOT> marks its end)\","
     "</time>;ct=0,1,41;n=\"server's local time and date\","
-    "</filestorage>;n=\"you can PUT things here\""
+    "</filestorage>;n=\"you can PUT things here\","
     "</data-sink/>;n=\"POST files here or DELETE them when created\"";
   size_t maxlen = sizeof(resources) - 1;
   
@@ -929,6 +929,9 @@ init_resources(coap_context_t *ctx) {
   r->data = resource_from_file;
   write_file("filestorage",(unsigned char *)"initial text", 12);
   coap_add_resource( ctx, r );
+
+  if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
+    return;
 
   r->uri = coap_new_uri((const unsigned char *) "/data-sink",
 			sizeof("/data-sink") - 1);
