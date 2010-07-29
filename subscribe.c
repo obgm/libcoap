@@ -20,8 +20,8 @@ notify(coap_context_t *context, coap_resource_t *res,
        coap_subscription_t *sub, unsigned int duration, int code) {
   coap_pdu_t *pdu;
   int ls, finished=0;
-  unsigned char d, ct;
-  unsigned int length;
+  unsigned char ct;
+  unsigned int d, length;
 #ifndef NDEBUG
   char addr[INET6_ADDRSTRLEN];
 #endif
@@ -30,6 +30,7 @@ notify(coap_context_t *context, coap_resource_t *res,
     return;
 
   pdu->hdr->type = COAP_MESSAGE_CON;
+  pdu->hdr->id = rand();	/* use a random transaction id */
   pdu->hdr->code = code;
 
   /* FIXME: content-type and data (how about block?) */
@@ -49,7 +50,7 @@ notify(coap_context_t *context, coap_resource_t *res,
 		     res->uri->path.s);
 
   d = COAP_PSEUDOFP_ENCODE_8_4_DOWN(duration, ls);
-	      
+  
   coap_add_option ( pdu, COAP_OPTION_SUBSCRIPTION, 1, &d );
 
   if (sub->token.length) {

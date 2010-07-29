@@ -162,7 +162,8 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   unsigned int blklen, blk;
   int code, finished = 1;
   unsigned int ls;
-  unsigned char duration, enc;
+  unsigned int duration;
+  unsigned char enc;
   unsigned char mediatype = COAP_MEDIATYPE_ANY;
   coap_subscription_t *subscription;
   static unsigned char buf[COAP_MAX_PDU_SIZE];
@@ -282,7 +283,9 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
      * than one block. For now, we ignore this problem as it can
      * happen only when the block sizes have changed.
      */
-    coap_add_data(pdu, blklen, buf);
+    if (!coap_add_data(pdu, blklen, buf)) {
+      /* FIXME: handle this case -- must send 500 or something */
+    }
   }
 
  ok:
