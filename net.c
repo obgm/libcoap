@@ -55,11 +55,11 @@ for_each_option(coap_pdu_t *pdu,
 
 unsigned int
 print_readable( const unsigned char *data, unsigned int len, 
-		unsigned char *result, unsigned int buflen ) {
+		unsigned char *result, unsigned int buflen, int encode_always ) {
   static unsigned char hex[] = "0123456789ABCDEF";
   unsigned int cnt = 0;
   while ( len && (cnt < buflen-1) ) {
-    if ( isprint( *data ) ) {
+    if ( !encode_always && isprint( *data ) ) {
       *result++ = *data;
       ++cnt;
     } else {
@@ -83,7 +83,7 @@ print_readable( const unsigned char *data, unsigned int len,
 void 
 show( coap_opt_t *opt, unsigned char type, unsigned int len, const unsigned char *data ) {
   static unsigned char buf[COAP_MAX_PDU_SIZE];
-  print_readable( data, len, buf, COAP_MAX_PDU_SIZE );
+  print_readable( data, len, buf, COAP_MAX_PDU_SIZE, 0 );
   printf(" %d:'%s'", type, buf );
 }
 
@@ -91,7 +91,7 @@ void
 show_data( coap_pdu_t *pdu ) {
   static unsigned char buf[COAP_MAX_PDU_SIZE];
   unsigned int len = (int)( (unsigned char *)pdu->hdr + pdu->length - pdu->data );
-  print_readable( pdu->data, len, buf, COAP_MAX_PDU_SIZE );
+  print_readable( pdu->data, len, buf, COAP_MAX_PDU_SIZE, 0 );
   printf("'%s'", buf);
 }
 
