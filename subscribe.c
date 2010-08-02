@@ -20,8 +20,8 @@ notify(coap_context_t *context, coap_resource_t *res,
        coap_subscription_t *sub, unsigned int duration, int code) {
   coap_pdu_t *pdu;
   int ls, finished=0;
-  unsigned char ct;
-  unsigned int d, length;
+  unsigned char ct, d;
+  unsigned int length;
 #ifndef NDEBUG
   char addr[INET6_ADDRSTRLEN];
 #endif
@@ -237,13 +237,11 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
       debug("removed key %u (%s)\n",key,COAP_RESOURCE(node)->uri->path.s);
       if (!prev) {
 	context->resources = node->next;
-	/* FIXME: must free? -> current version triggers SIGSEGV */
-	/* coap_free_resource(node); */
+	coap_free_resource(node);
 	coap_delete(node);
       } else {
 	prev->next = node->next;
-	/* FIXME: must free? -> current version triggers SIGSEGV */
-	/* coap_free_resource(node); */
+	coap_free_resource(node);
 	coap_delete(node);
       }
       return 1;
