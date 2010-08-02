@@ -18,6 +18,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <errno.h>
+#include <signal.h>
 
 #include "subscribe.h"
 #include "coap.h"
@@ -39,6 +40,13 @@
 
 /* temporary storage for dynamic resource representations */
 static char resource_buf[20000]; 
+static int quit = 0;
+
+/* SIGINT handler: set quit to 1 for graceful termination */
+void
+handle_sigint(int signum) {
+  quit = 1;
+}
 
 coap_pdu_t *
 new_ack( coap_context_t  *ctx, coap_queue_t *node ) {
@@ -997,7 +1005,10 @@ main(int argc, char **argv) {
 
   coap_register_message_handler( ctx, message_handler );
   init_resources(ctx);
-  while ( 1 ) {
+
+  signal(SIGINT, handle_sigint);
+
+  while ( !quit ) {
     FD_ZERO(&readfds); 
     FD_SET( ctx->sockfd, &readfds );
     
@@ -1022,7 +1033,8 @@ main(int argc, char **argv) {
     result = select( FD_SETSIZE, &readfds, 0, 0, timeout );
     
     if ( result < 0 ) {		/* error */
-      perror("select");
+      if (errno != EINTR)
+	perror("select");
     } else if ( result > 0 ) {	/* read from socket */
       if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
 	coap_read( ctx );	/* read received data */
