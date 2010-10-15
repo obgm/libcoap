@@ -1,5 +1,5 @@
-PROGRAMS:=tiny coap-client
-SOURCES:= tiny.c client.c
+PROGRAMS:=tiny coap-server coap-client
+SOURCES:= tiny.c client.c server.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
 #CFLAGS:=-g -Wall -ansi -pedantic -I..
 CFLAGS:=-g -Wall -I..
@@ -20,8 +20,11 @@ tiny:	tiny.o
 coap-client: client.o
 	$(CC) -o $@ $< $(LDFLAGS)
 
+coap-server:	server.o
+	$(CC) -o $@ $< $(LDFLAGS)
+
 clean:
-	@rm -f tiny $(OBJECTS)
+	@rm -f $(PROGRAMS) $(OBJECTS)
 
 distclean:	clean
 	@rm -rf $(DISTDIR)
