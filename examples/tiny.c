@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <limits.h>
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -74,7 +75,7 @@ main(int argc, char **argv) {
   ctx = coap_new_context(0);
   if ( !ctx )
     return -1;
-  id = rand() & ((1 << (8 * sizeof(coap_tid_t))) - 1);
+  id = rand() & INT_MAX;
 
   memset(&dst, 0, sizeof(struct sockaddr_in6 ));
   dst.sin6_family = AF_INET6;
