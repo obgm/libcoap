@@ -991,7 +991,7 @@ main(int argc, char **argv) {
       port = atoi(optarg);
       break;
     default:
-      usage( argv[0], VERSION );
+      usage( argv[0], PACKAGE_VERSION );
       exit( 1 );
     }
   }

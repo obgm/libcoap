@@ -1,0 +1,53 @@
+# Makefile for libcoap
+# (c) 2010 Olaf Bergmann <bergmann@tzi.org>
+
+# the library's version
+VERSION:=@PACKAGE_VERSION@
+
+# tools
+@SET_MAKE@
+SHELL = /bin/sh
+MKDIR = mkdir
+
+abs_builddir = @abs_builddir@
+top_builddir = @top_builddir@
+
+# files and flags
+PROGRAMS:=tiny coap-server coap-client
+SOURCES:= tiny.c client.c server.c
+OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
+#CFLAGS:=-g -Wall -ansi -pedantic -I..
+CFLAGS:=-g -Wall -I$(srcdir) @CFLAGS@
+DISTDIR?=$(abs_builddir)/@PACKAGE_TARNAME@-@PACKAGE_VERSION@
+FILES:=Makefile $(SOURCES)
+LDFLAGS:=-L$(top_builddir) -lcoap @LIBS@
+
+.PHONY: clean distclean
+
+.SUFFIXES:
+.SUFFIXES:      .c .o
+
+all:	$(PROGRAMS)
+
+check:	
+	echo DISTDIR: $(DISTDIR)
+	echo top_builddir: $(top_builddir)
+
+tiny:	tiny.o
+	$(CC) -o $@ $< $(LDFLAGS)
+
+coap-client: client.o
+	$(CC) -o $@ $< $(LDFLAGS)
+
+coap-server:	server.o
+	$(CC) -o $@ $< $(LDFLAGS)
+
+clean:
+	@rm -f $(PROGRAMS) $(OBJECTS)
+
+distclean:	clean
+	@rm -rf $(DISTDIR)
+	@rm -f *~ 
+
+dist:
+	cp $(FILES) $(DISTDIR)

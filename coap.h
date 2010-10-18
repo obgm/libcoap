@@ -6,6 +6,7 @@
 #ifndef _COAP_H_
 #define _COAP_H_
 
+#include "config.h"
 #include "debug.h"
 #include "mem.h"
 #include "list.h"

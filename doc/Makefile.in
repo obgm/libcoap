@@ -1,0 +1,29 @@
+# Makefile for libcoap
+# (c) 2010 Olaf Bergmann <bergmann@tzi.org>
+
+# the library's version
+VERSION:=@PACKAGE_VERSION@
+
+# tools
+@SET_MAKE@
+SHELL = /bin/sh
+MKDIR = mkdir
+DOXYGEN= @DOXYGEN@
+
+abs_builddir = @abs_builddir@
+
+DISTDIR?=$(abs_builddir)/@PACKAGE_TARNAME@-@PACKAGE_VERSION@
+FILES:=Makefile html
+
+doc:	Doxyfile
+	$(DOXYGEN) >./doxygen.out 2>&1 
+
+clean:
+	@rm -f html
+
+distclean:	clean
+	@rm -rf $(DISTDIR)
+	@rm -f *~ 
+
+dist:	doc
+	cp -r $(FILES) $(DISTDIR)

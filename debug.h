@@ -6,10 +6,6 @@
 #ifndef _COAP_DEBUG_H_
 #define _COAP_DEBUG_H_
 
-#ifndef VERSION
-#  define VERSION "0.04"
-#endif
-
 #ifndef NDEBUG
 
 void debug(char *,...);

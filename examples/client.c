@@ -592,7 +592,7 @@ main(int argc, char **argv) {
       cmdline_token(optarg);
       break;
     default:
-      usage( argv[0], VERSION );
+      usage( argv[0], PACKAGE_VERSION );
       exit( 1 );
     }
   }
@@ -606,7 +606,7 @@ main(int argc, char **argv) {
   if ( optind < argc )
     cmdline_uri( argv[optind] );
   else {
-    usage( argv[0], VERSION );
+    usage( argv[0], PACKAGE_VERSION );
     exit( 1 );
   }
 
