@@ -26,6 +26,7 @@ MKDIR = mkdir
 
 abs_builddir = @abs_builddir@
 top_builddir = @top_builddir@
+package = @PACKAGE_TARNAME@-@PACKAGE_VERSION@
 
 # files and flags
 SOURCES:= pdu.c net.c debug.c encode.c uri.c list.c subscribe.c str.c
@@ -33,9 +34,9 @@ OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
 HEADERS:=coap.h config.h debug.h pdu.h net.h encode.h uri.h list.h mem.h subscribe.h str.h 
 #CFLAGS:=-g -Wall -ansi -pedantic
 CFLAGS:=-Wall -ansi -pedantic @CFLAGS@
-DISTDIR=$(abs_builddir)/@PACKAGE_TARNAME@-@PACKAGE_VERSION@
-SUBDIRS:=examples
-FILES:=Makefile $(SOURCES) $(HEADERS)
+DISTDIR=$(top_builddir)/$(package)
+SUBDIRS:=examples doc
+FILES:=Makefile.in configure configure.in config.h.in $(SOURCES) $(HEADERS)
 LIB:=libcoap.a
 LDFLAGS:=@LIBS@
 ARFLAGS:=cru
@@ -77,12 +78,13 @@ distclean:	clean
 	@rm -rf $(DISTDIR)
 	@rm -f *~ $(DISTDIR).tar.gz
 
-dist:
+dist:	$(FILES) $(SUBDIRS)
 	test -d $(DISTDIR) || mkdir $(DISTDIR)
-	test -d $(DISTDIR)/$(examples) || mkdir $(DISTDIR)/$(examples)
 	cp $(FILES) $(DISTDIR)
-	$(MAKE) -C $(examples) dist DISTDIR=../$(DISTDIR)/$(examples)
-	tar czf $(DISTDIR).tar.gz $(DISTDIR)
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir dist; \
+	done
+	tar czf $(package).tar.gz $(DISTDIR)
 
 .gitignore:
 	echo "core\n*~\n*.[oa]\n*.gz\n*.cap\n$(PROGRAM)\n$(DISTDIR)\n.gitignore" >$@

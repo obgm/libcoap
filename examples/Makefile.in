@@ -34,8 +34,8 @@ SOURCES:= tiny.c client.c server.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
 #CFLAGS:=-g -Wall -ansi -pedantic -I..
 CFLAGS:=-g -Wall -I$(top_srcdir) @CFLAGS@
-DISTDIR?=$(abs_builddir)/@PACKAGE_TARNAME@-@PACKAGE_VERSION@
-FILES:=Makefile $(SOURCES)
+DISTDIR?=$(top_builddir)/@PACKAGE_TARNAME@-@PACKAGE_VERSION@
+FILES:=Makefile.in $(SOURCES)
 LDFLAGS:=-L$(top_builddir) -lcoap @LIBS@
 
 .PHONY: clean distclean
@@ -65,5 +65,6 @@ distclean:	clean
 	@rm -rf $(DISTDIR)
 	@rm -f *~ 
 
-dist:
-	cp $(FILES) $(DISTDIR)
+dist:	$(FILES)
+	test -d $(DISTDIR)/examples || mkdir $(DISTDIR)/examples
+	cp $(FILES) $(DISTDIR)/examples

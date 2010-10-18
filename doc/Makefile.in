@@ -25,10 +25,10 @@ SHELL = /bin/sh
 MKDIR = mkdir
 DOXYGEN= @DOXYGEN@
 
-abs_builddir = @abs_builddir@
+top_builddir = @top_builddir@
 
-DISTDIR?=$(abs_builddir)/@PACKAGE_TARNAME@-@PACKAGE_VERSION@
-FILES:=Makefile html
+DISTDIR?=$(top_builddir)/@PACKAGE_TARNAME@-@PACKAGE_VERSION@
+FILES:=Makefile.in Doxyfile.in html
 
 doc:	Doxyfile
 	$(DOXYGEN) >./doxygen.out 2>&1 
@@ -41,4 +41,5 @@ distclean:	clean
 	@rm -f *~ 
 
 dist:	doc
-	cp -r $(FILES) $(DISTDIR)
+	test -d $(DISTDIR)/doc || mkdir $(DISTDIR)/doc
+	cp -r $(FILES) $(DISTDIR)/doc
