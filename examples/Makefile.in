@@ -26,13 +26,14 @@ MKDIR = mkdir
 
 abs_builddir = @abs_builddir@
 top_builddir = @top_builddir@
+top_srcdir = @top_srcdir@
 
 # files and flags
 PROGRAMS:=tiny coap-server coap-client
 SOURCES:= tiny.c client.c server.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
 #CFLAGS:=-g -Wall -ansi -pedantic -I..
-CFLAGS:=-g -Wall -I$(srcdir) @CFLAGS@
+CFLAGS:=-g -Wall -I$(top_srcdir) @CFLAGS@
 DISTDIR?=$(abs_builddir)/@PACKAGE_TARNAME@-@PACKAGE_VERSION@
 FILES:=Makefile $(SOURCES)
 LDFLAGS:=-L$(top_builddir) -lcoap @LIBS@
