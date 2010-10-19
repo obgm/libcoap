@@ -34,7 +34,7 @@ doc:	Doxyfile
 	$(DOXYGEN) >./doxygen.out 2>&1 
 
 clean:
-	@rm -f html
+	@rm -rf html
 
 distclean:	clean
 	@rm -rf $(DISTDIR)
