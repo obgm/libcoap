@@ -27,7 +27,6 @@ MKDIR = mkdir
 abs_builddir = @abs_builddir@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-
 # files and flags
 PROGRAMS:=tiny coap-server coap-client
 SOURCES:= tiny.c client.c server.c
@@ -37,6 +36,7 @@ CFLAGS:=-g -Wall -I$(top_srcdir) @CFLAGS@
 DISTDIR?=$(top_builddir)/@PACKAGE_TARNAME@-@PACKAGE_VERSION@
 FILES:=Makefile.in $(SOURCES)
 LDFLAGS:=-L$(top_builddir) -lcoap @LIBS@
+libcoap =$(top_builddir)/libcoap.a
 
 .PHONY: clean distclean
 
@@ -49,13 +49,13 @@ check:
 	echo DISTDIR: $(DISTDIR)
 	echo top_builddir: $(top_builddir)
 
-tiny:	tiny.o
+tiny:	tiny.o $(libcoap)
 	$(CC) -o $@ $< $(LDFLAGS)
 
-coap-client: client.o
+coap-client: client.o $(libcoap)
 	$(CC) -o $@ $< $(LDFLAGS)
 
-coap-server:	server.o
+coap-server:	server.o $(libcoap)
 	$(CC) -o $@ $< $(LDFLAGS)
 
 clean:
