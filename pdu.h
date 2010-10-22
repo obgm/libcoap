@@ -66,6 +66,7 @@
 
 /* selected option types from draft-bormann-coap-misc-04 */
 
+#define COAP_OPTION_ACCEPT        8 /* E  Sequence of Bytes, 1-n B, - */
 #define COAP_OPTION_TOKEN        11 /* C, Sequence of Bytes, 1-n B, - */
 #define COAP_OPTION_BLOCK        13 /* C, unsigned integer, 1--3 B, 0 */
 #define COAP_OPTION_NOOP         14 /* no-op for fenceposting */

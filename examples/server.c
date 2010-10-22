@@ -110,13 +110,18 @@ coap_next_option(coap_pdu_t *pdu, coap_opt_t *opt) {
 
 int
 mediatype_matches(coap_pdu_t *pdu, unsigned char mediatype) {
-  coap_opt_t *ct;
+  coap_opt_t *accept;
+  int t;
 
-  if ( mediatype == COAP_MEDIATYPE_ANY )
+  if ( mediatype == COAP_MEDIATYPE_ANY ||
+       (accept = coap_check_option(pdu, COAP_OPTION_ACCEPT)) == NULL)
     return 1;
 
-  for (ct = coap_check_option(pdu, COAP_OPTION_CONTENT_TYPE); ct; ct = coap_next_option(pdu, ct)) {
-    if ( *COAP_OPT_VALUE(*ct) == mediatype )
+  /* Check the byte sequence in the option value for any occurence of
+   * mediatype. */
+  for (t = 0; t < COAP_OPT_LENGTH(*accept); ++t) {
+    debug("check type: %d == %d\n",COAP_OPT_VALUE(*accept)[t],mediatype);
+    if ( COAP_OPT_VALUE(*accept)[t] == mediatype )
       return 1;
   }
   
@@ -179,7 +184,7 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_pdu_t *pdu;
   coap_uri_t uri;
   coap_resource_t *resource;
-  coap_opt_t *block, *ct, *tok, *sub;
+  coap_opt_t *block, *tok, *sub;
   str token;
   unsigned int blklen, blk;
   int code, finished = 1;
@@ -209,9 +214,11 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
     return new_response(ctx, node, COAP_RESPONSE_404);
 
   /* check if requested mediatypes match */
-  if ( coap_check_option(node->pdu, COAP_OPTION_CONTENT_TYPE) 
-       && !mediatype_matches(node->pdu, resource->mediatype) )
+  if ( coap_check_option(node->pdu, COAP_OPTION_ACCEPT) 
+       && !mediatype_matches(node->pdu, resource->mediatype) ) {
+    debug("media type mismatch\n");
     return new_response(ctx, node, COAP_RESPONSE_415);
+  }
 
   block = coap_check_option(node->pdu, COAP_OPTION_BLOCK);
   if ( block ) {
@@ -226,10 +233,8 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   /* invoke callback function to get data representation of requested
      resource */
   if ( resource->data ) {
-    if ( resource->mediatype == COAP_MEDIATYPE_ANY 
-	 && (ct = coap_check_option(node->pdu, COAP_OPTION_CONTENT_TYPE)) ) {
-      mediatype = *COAP_OPT_VALUE(*ct);
-    }
+    mediatype = resource->mediatype;
+    
     code = resource->data(&uri, &mediatype, 
 			  (blk & ~0x0f) << (blk & 0x07), buf, &blklen, 
 			  &finished);
@@ -334,6 +339,7 @@ write_file(char *filename, unsigned char *text, int length) {
 coap_pdu_t *
 handle_put(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_uri_t uri;
+  coap_opt_t *tok;
   coap_pdu_t *pdu;
   coap_resource_t *resource;
   ssize_t written, length;
@@ -342,6 +348,7 @@ handle_put(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   if ( !coap_get_request_uri( node->pdu, &uri ) )
     return NULL;
 
+  /* we do not want to create the resource if not available */
   if ( !(resource = coap_get_resource(ctx, &uri)) )
     return new_response(ctx, node, COAP_RESPONSE_404);
 
@@ -361,6 +368,8 @@ handle_put(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   if (written < length)
     return new_response(ctx, node, COAP_RESPONSE_500);
 
+  tok = coap_check_option(node->pdu, COAP_OPTION_CONTENT_TYPE);
+  resource->mediatype = tok ? *COAP_OPT_VALUE(*tok) : COAP_MEDIATYPE_ANY;
   resource->dirty = 1;		/* mark for notification of observers */
   return pdu;
 }
@@ -378,14 +387,11 @@ handle_post(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_resource_t *r;
   coap_opt_t *tok;
   ssize_t written, length;
+  int namelen;
+  char name[60];
 
   if ( !coap_get_request_uri( node->pdu, &uri ) )
     return NULL;
-
-  /* TODO: send redirect with new URI when path.s == "data-sink" */
-
-  if ( !is_valid(DATASINK_PREFIX, uri.path.s, uri.path.length) )
-    return new_response(ctx, node, COAP_RESPONSE_400);
 
   /* existing stuff can be handled using put for now */
   if (coap_get_resource(ctx, &uri))
@@ -395,8 +401,17 @@ handle_post(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return new_response(ctx, node, COAP_RESPONSE_500);
 
-  r->uri = coap_new_uri(uri.path.s, uri.path.length);
-  r->mediatype = COAP_MEDIATYPE_ANY;
+  tok = coap_check_option(node->pdu, COAP_OPTION_CONTENT_TYPE);
+
+  /* Create a new resource to store the given contents in the local
+   * file system. We restrict the storage area to DATASINK_PREFIX.
+   */
+  memset(name, 0, sizeof(name));
+  namelen = snprintf(name, sizeof(name)-1, DATASINK_PREFIX "%lu", 
+		     coap_uri_hash(&uri));
+  
+  r->uri = coap_new_uri((unsigned char *)name, namelen);
+  r->mediatype = tok ? *COAP_OPT_VALUE(*tok) : COAP_MEDIATYPE_ANY;
   r->dirty = 1;
   r->writable = 1;
   r->data = resource_from_file;
@@ -415,18 +430,12 @@ handle_post(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   /* create the response */
   pdu = new_response(ctx, node, COAP_RESPONSE_201);
 
-  if (uri.scheme.length)
-    coap_add_option(pdu, COAP_OPTION_URI_SCHEME, 
-		    uri.scheme.length, uri.scheme.s);
+  /* add location header */
+  coap_add_option(pdu, COAP_OPTION_LOCATION, 
+		  namelen, (unsigned char *)name);
 
-  if (uri.na.length)
-    coap_add_option(pdu, COAP_OPTION_URI_AUTHORITY, 
-		    uri.na.length, uri.na.s);
+  /* we do not need the request URI, only a token, if specified */
 
-  if (uri.path.length)
-    coap_add_option(pdu, COAP_OPTION_URI_PATH, 
-		    uri.path.length, uri.path.s);
-    
   tok = coap_check_option(node->pdu, COAP_OPTION_TOKEN);
   if (tok) 
     coap_add_option(pdu, COAP_OPTION_TOKEN, 
@@ -866,19 +875,6 @@ resource_from_file(coap_uri_t *uri,
     goto error;
   } else if ( offset + *buflen > statbuf.st_size )
     *buflen = statbuf.st_size - offset;
-
-
-  switch (*mediatype) {
-  case COAP_MEDIATYPE_ANY :
-    *mediatype = COAP_MEDIATYPE_APPLICATION_OCTET_STREAM;
-    break;
-  case COAP_MEDIATYPE_TEXT_PLAIN:
-  case COAP_MEDIATYPE_APPLICATION_OCTET_STREAM:
-    break;
-  default:
-    code = COAP_RESPONSE_415;
-    goto error;
-  }
 
   file = fopen(filename, "r");
   if ( !file ) {

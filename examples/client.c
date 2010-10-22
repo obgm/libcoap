@@ -108,7 +108,7 @@ coap_new_request( method_t m, coap_list_t *options ) {
 		     COAP_OPTION_LENGTH(*(coap_option *)opt->data), 
 		     COAP_OPTION_DATA(*(coap_option *)opt->data) );
   }
-  
+
   if (payload.length) {
     /* TODO: must handle block */
 
@@ -310,13 +310,15 @@ usage( const char *program, const char *version) {
 	   "usage: %s [-b num] [-g group] [-m method] [-p port] [-s num] [-t type...] [-T string] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
-	   "\t       \t\t(value must be a mulitple of 16 not larger than 2048)\n"
+	   "\t       \t\t(value must be a multiple of 16 not larger than 2048)\n"
+	   "\t-f file\t\tfile to send with PUT/POST (use '-' for STDIN)\n"
 	   "\t-g group\tjoin the given multicast group\n"
 	   "\t-m method\trequest method (get|put|post|delete)\n"
 	   "\t-p port\t\tlisten on specified port\n"
-	   "\t-s duration\t\tsubscribe for given duration [s]\n"
-	   "\t-t type\t\taccepted content type (multiple occurrences allowed)\n"
-	   "\t-T token\t\tinclude specified token\n",
+	   "\t-s duration\tsubscribe for given duration [s]\n"
+	   "\t-A types\taccepted content for GET (comma-separated list)\n"
+	   "\t-t type\t\tcontent type for given resource for PUT/POST\n"
+	   "\t-T token\tinclude specified token\n",
 	   program, version, program );
 }
 
@@ -416,28 +418,41 @@ new_option_node(unsigned short key, unsigned int length, unsigned char *data) {
 }
 
 void
-cmdline_content_type(char *arg) {
+cmdline_content_type(char *arg, unsigned short key) {
   static char *content_types[] = 
     { "plain", "xml", "csv", "html", "","","","","","","","","","","","","","","","","",
       "gif", "jpeg", "png", "tiff", "audio", "video", "","","","","","","","","","","","","",
       "link", "axml", "binary", "rdf", "soap", "atom", "xmpp", "exi",
       "bxml", "infoset", "json", 0};
   coap_list_t *node;
-  unsigned char i;
+  unsigned char i, value[10];
+  int valcnt = 0;
+  char *p, *q = arg;
 
-  for (i=0; content_types[i] && strncmp(arg,content_types[i],strlen(arg)) != 0 ; ++i) 
-    ;
-  
-  if ( content_types[i] ) {
-    node = new_option_node(COAP_OPTION_CONTENT_TYPE, 1, (unsigned char *)&i);
+  while (q && *q) {
+    p = strchr(q, ',');
 
+    for (i=0; content_types[i] && 
+	   strncmp(q,content_types[i], p ? p-q : strlen(q)) != 0 ; 
+	 ++i) 
+      ;
 
-    if ( node ) 
-      coap_insert( &optlist, node, order_opts );
+    if (content_types[i]) {
+      value[valcnt] = i;
+      valcnt++;
+    } else {
+      fprintf(stderr, "W: unknown content-type '%s'\n",arg);
+    }
 
-  } else {
-    fprintf(stderr, "W: unknown content-type '%s'\n",arg);
+    if (!p || key == COAP_OPTION_CONTENT_TYPE)
+      break;
+
+    q = p+1;
   }
+
+  node = new_option_node(key, valcnt, value);
+  if (node) 
+    coap_insert( &optlist, node, order_opts );
 }
 
 void
@@ -579,7 +594,7 @@ main(int argc, char **argv) {
   int opt;
   char *group = NULL;
 
-  while ((opt = getopt(argc, argv, "b:f:g:m:p:s:t:T:")) != -1) {
+  while ((opt = getopt(argc, argv, "b:f:g:m:p:s:t:A:T:")) != -1) {
     switch (opt) {
     case 'b' :
       cmdline_blocksize(optarg);
@@ -599,8 +614,11 @@ main(int argc, char **argv) {
     case 's' :
       cmdline_subscribe(optarg);
       break;
+    case 'A' :
+      cmdline_content_type(optarg,COAP_OPTION_ACCEPT);
+      break;
     case 't' :
-      cmdline_content_type(optarg);
+      cmdline_content_type(optarg,COAP_OPTION_CONTENT_TYPE);
       break;
     case 'T' :
       cmdline_token(optarg);
