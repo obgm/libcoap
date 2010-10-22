@@ -96,7 +96,9 @@ add_contents( coap_pdu_t *pdu, unsigned int mediatype, unsigned int len, unsigne
   coap_add_data(pdu, len, data);
 }
 
-#define INDEX "Hi there!"
+#define INDEX "This is a test server made with libcoap (see http://libcoap.sf.net)\n" \
+   	      "Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n" \
+              "Try to get .well-known/core or POST/PUT data if you like."
 
 coap_opt_t *
 coap_next_option(coap_pdu_t *pdu, coap_opt_t *opt) {
