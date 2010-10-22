@@ -34,7 +34,7 @@
 
 #define COAP_DEFAULT_VERSION           1 /* version of CoAP supported */
 #define COAP_DEFAULT_SCHEME        "coap" /* the default scheme for CoAP URIs */
-#define COAP_DEFAULT_URI_WELLKNOWN ".well-known/r" /* compact form of well-known resources URI */
+#define COAP_DEFAULT_URI_WELLKNOWN ".well-known/core" /* well-known resources URI */
 
 /* CoAP message types */
 
@@ -50,7 +50,7 @@
 #define COAP_REQUEST_PUT       3
 #define COAP_REQUEST_DELETE    4
 
-/* CoAP option types */
+/* CoAP option types (be sure to update check_critical when adding options */
 
 #define COAP_OPTION_CONTENT_TYPE  1 /* C, 8-bit uint, 1 B, 0 (text/plain) */
 #define COAP_OPTION_MAXAGE        2 /* E, variable length, 1--4 B, 60 Seconds */
@@ -68,6 +68,7 @@
 
 #define COAP_OPTION_TOKEN        11 /* C, Sequence of Bytes, 1-n B, - */
 #define COAP_OPTION_BLOCK        13 /* C, unsigned integer, 1--3 B, 0 */
+#define COAP_OPTION_NOOP         14 /* no-op for fenceposting */
 
 /* CoAP result codes (HTTP-Code / 100 * 40 + HTTP-Code % 100) */
 
@@ -246,6 +247,16 @@ int coap_encode_pdu(coap_pdu_t *);
  */
 int coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const unsigned char *data);
 coap_opt_t *coap_check_option(coap_pdu_t *pdu, unsigned char type);
+
+/** 
+ * Checks for critical options that we do not know, as requests
+ * containing unknown critical options must be discarded. The function
+ * returns a pointer to the first unknown critical option in the given
+ * pdu (hence with delta-encoded type) or NULL when no unknown critical
+ * option was found. The return value contains the type code of the
+ * rejected option, or zero if none was found.
+ */
+int coap_check_critical(coap_pdu_t *pdu, coap_opt_t **option);
 
 /** 
  * Adds given data to the pdu that is passed as first parameter. Note that the PDU's 

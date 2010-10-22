@@ -80,7 +80,24 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
     return -1;
   }
 
-  /* create new option after last existing option */
+  /* Create new option after last existing option: First check if we
+   * need fence posts between type and last opt_code (i.e. delta >
+   * 15), and then add actual option.
+   */
+
+  while (type - opt_code > 15) {
+    cnt = opt_code / COAP_OPTION_NOOP;
+
+    /* add fence post */
+    pdu->hdr->optcnt += 1;
+    COAP_OPT_SETLENGTH( *opt, 0 );
+    COAP_OPT_SETDELTA( *opt, (COAP_OPTION_NOOP * (cnt+1)) - opt_code );
+
+    opt_code += COAP_OPT_DELTA(*opt);
+    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) ); 
+  }
+
+  /* here, the actual option is added (delta <= 15) */
   pdu->hdr->optcnt += 1;
   COAP_OPT_SETDELTA( *opt, type - opt_code );
   
@@ -116,6 +133,46 @@ coap_check_option(coap_pdu_t *pdu, unsigned char type) {
   }
 
   return NULL;
+}
+
+int
+coap_check_critical(coap_pdu_t *pdu, coap_opt_t **option) {
+  unsigned char cnt;
+  unsigned char opt_code = 0;
+
+  if (!pdu) 
+    goto success;
+
+  /* get last option from pdu to calculate the delta */
+  
+  *option = options_start( pdu );
+  for ( cnt = pdu->hdr->optcnt; cnt; --cnt ) {
+    opt_code += COAP_OPT_DELTA(**option);
+    
+    /* check if current option is critical */
+    if (opt_code & 0x01) {
+      switch (opt_code) {	/* skip known options */
+      case COAP_OPTION_CONTENT_TYPE :
+      case COAP_OPTION_URI_SCHEME :
+      case COAP_OPTION_URI_AUTHORITY :
+      case COAP_OPTION_URI_PATH :
+      case COAP_OPTION_TOKEN :
+      case COAP_OPTION_BLOCK :
+	break;
+      default:			/* return first unknown critical option */
+	fprintf(stderr, 
+		"coap_check_critical: unknown critical option %d\n", opt_code);
+	return opt_code;
+      }
+    }
+
+    /* goto next option */
+    *option = (coap_opt_t *)( (unsigned char *)*option + COAP_OPT_SIZE(**option) ); 
+  }
+
+ success:
+  *option = NULL;
+  return 0;
 }
 
 int 

@@ -506,12 +506,19 @@ void
 coap_dispatch( coap_context_t *context ) {
   coap_queue_t *node, *sent;
   coap_uri_t uri;
+  coap_opt_t *opt;
+  int type;
+  coap_pdu_t *response;
 
   if ( !context ) 
     return;
 
   while ( context->recvqueue ) {
     node = context->recvqueue;
+
+    /* remove node from recvqueue */
+    context->recvqueue = context->recvqueue->next;
+    node->next = NULL;
 
     switch ( node->pdu->hdr->type ) {
     case COAP_MESSAGE_ACK :
@@ -536,19 +543,46 @@ coap_dispatch( coap_context_t *context ) {
 
       /* find transaction in sendqueue to stop retransmission */
       coap_remove_transaction( &context->sendqueue, node->pdu->hdr->id );
+      break;
+    case COAP_MESSAGE_NON :	/* check for unknown critical options */
+      if ( coap_check_critical(node->pdu, &opt) != 0 ) 
+	goto cleanup;
+      break;
+    case COAP_MESSAGE_CON :	/* check for unknown critical options */
+      /* get type and option */
+      type = coap_check_critical(node->pdu, &opt);
+
+      if ( type != 0 ) {	/* send error response if unknown */
+	response = coap_new_pdu();
+	if (response) {
+	  response->hdr->type = COAP_MESSAGE_RST;
+	  response->hdr->code = COAP_RESPONSE_400;
+	  response->hdr->id = node->pdu->hdr->id;
+
+	  /* add rejected option */
+	  coap_add_option(response, type, 
+			  COAP_OPT_LENGTH(*opt),
+			  COAP_OPT_VALUE(*opt));
+	  
+	  if ( coap_send( context, &node->remote, response ) == 
+	       COAP_INVALID_TID ) {
+	    debug("coap_dispatch: error sending reponse");
+	    coap_delete_pdu(response);
+	  }
+	}	  
+
+	goto cleanup;
+      }
+      break;
     }
     
-    /* remove node from recvqueue */
-    context->recvqueue = context->recvqueue->next;
-    node->next = NULL;
-
     /* pass message to upper layer if a specific handler was registered */
     if ( context->msg_handler ) 
       context->msg_handler( context, node, NULL );
-
+    
+  cleanup:
     coap_delete_node( node );
-  }
-  
+  } 
 }
 
 void 
