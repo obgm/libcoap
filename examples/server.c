@@ -122,7 +122,6 @@ mediatype_matches(coap_pdu_t *pdu, unsigned char mediatype) {
   /* Check the byte sequence in the option value for any occurence of
    * mediatype. */
   for (t = 0; t < COAP_OPT_LENGTH(*accept); ++t) {
-    debug("check type: %d == %d\n",COAP_OPT_VALUE(*accept)[t],mediatype);
     if ( COAP_OPT_VALUE(*accept)[t] == mediatype )
       return 1;
   }
@@ -180,6 +179,16 @@ is_valid(char *prefix, unsigned char *path, unsigned int length) {
 
   return state != DOT && state != DOTDOT;
 }
+
+#ifndef HAVE_STRNLEN
+size_t
+strnlen(const char *p, size_t maxlen) {
+  size_t n;
+  for (n = 0; n < maxlen && p[n]; n++)
+    ;
+  return n;
+} 
+#endif
 
 coap_pdu_t *
 handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
@@ -255,6 +264,18 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
     /* add content-type */
     if ( mediatype != COAP_MEDIATYPE_ANY ) 
       coap_add_option(pdu, COAP_OPTION_CONTENT_TYPE, 1, &mediatype);
+
+    /* set Max-age option unless resource->maxage is zero */
+    if (resource->maxage) {
+      coap_add_option(pdu, COAP_OPTION_MAXAGE, 
+		      coap_encode_var_bytes(optbuf, resource->maxage), optbuf);
+    }
+
+    /* set Etag option unless resource->etag is zero */
+    if (*resource->etag) {
+      coap_add_option(pdu, COAP_OPTION_ETAG, 
+		      strnlen((char *)resource->etag,4), resource->etag);
+    }
 
     /* handle subscription if requested */
     sub = coap_check_option( node->pdu, COAP_OPTION_SUBSCRIPTION );
@@ -345,6 +366,7 @@ handle_put(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_pdu_t *pdu;
   coap_resource_t *resource;
   ssize_t written, length;
+  struct stat statbuf;
   static char filename[FILENAME_MAX+1];
 
   if ( !coap_get_request_uri( node->pdu, &uri ) )
@@ -366,6 +388,14 @@ handle_put(coap_context_t  *ctx, coap_queue_t *node, void *data) {
 
   length = (unsigned char *)node->pdu->hdr + node->pdu->length - node->pdu->data;
   written = write_file(filename, node->pdu->data, length);
+
+  /* set etag from file's modification time (byte-order does not care) */
+  if ( (stat(filename, &statbuf) == 0) && 
+       S_ISREG(statbuf.st_mode) ) {
+    memcpy(resource->etag, &statbuf.st_mtime, sizeof(resource->etag));
+  } else {			/* clear etag */
+    *resource->etag = 0;
+  }
   
   if (written < length)
     return new_response(ctx, node, COAP_RESPONSE_500);
@@ -391,6 +421,7 @@ handle_post(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   ssize_t written, length;
   int namelen;
   char name[60];
+  struct stat statbuf;
 
   if ( !coap_get_request_uri( node->pdu, &uri ) )
     return NULL;
@@ -409,7 +440,7 @@ handle_post(coap_context_t  *ctx, coap_queue_t *node, void *data) {
    * file system. We restrict the storage area to DATASINK_PREFIX.
    */
   memset(name, 0, sizeof(name));
-  namelen = snprintf(name, sizeof(name)-1, DATASINK_PREFIX "%lu", 
+  namelen = snprintf(name, sizeof(name)-1, DATASINK_PREFIX "%lX", 
 		     coap_uri_hash(&uri));
   
   r->uri = coap_new_uri((unsigned char *)name, namelen);
@@ -417,12 +448,20 @@ handle_post(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   r->dirty = 1;
   r->writable = 1;
   r->data = resource_from_file;
-
+  
   /* we know that r->uri.s is zero-terminated */
   length = 
     (unsigned char *)node->pdu->hdr + node->pdu->length - node->pdu->data;
   written = write_file((char *)r->uri->path.s, node->pdu->data, length);
-  
+
+  /* set etag from file's modification time (byte-order does not care) */
+  if ( (stat((char *)r->uri->path.s, &statbuf) == 0) && 
+       S_ISREG(statbuf.st_mode) ) {
+    memcpy(r->etag, &statbuf.st_mtime, sizeof(r->etag));
+  } else {			/* clear etag */
+    *r->etag = 0;
+  }
+
   if (written < length) {
     coap_free(r);
     return new_response(ctx, node, COAP_RESPONSE_500);
@@ -457,18 +496,16 @@ handle_delete(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   if ( !coap_get_request_uri( node->pdu, &uri ) )
     return NULL;
 
-  /* TODO: send redirect with new URI when path.s == "data-sink" */
-
-  if ( !is_valid(DATASINK_PREFIX, uri.path.s, uri.path.length) )
-    return new_response(ctx, node, COAP_RESPONSE_400);
-
-  /* existing stuff can be handled using put for now */
   r = coap_get_resource(ctx, &uri);
   if (!r)
     return new_response(ctx, node, COAP_RESPONSE_404);
   
-  if (!r->writable)
-    return new_response(ctx, node, COAP_RESPONSE_400);
+  if (!r->writable) {
+    debug("tried to remove resource that is read-only\n");
+    pdu = new_response(ctx, node, COAP_RESPONSE_400);
+    coap_add_data(pdu, 9, (unsigned char *)"forbidden");
+    return pdu;
+  }
 
   if (FILENAME_MAX < uri.path.length)
     return new_response(ctx, node, COAP_RESPONSE_500);
@@ -911,6 +948,7 @@ init_resources(coap_context_t *ctx) {
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
 
+  memset(r, 0, sizeof(coap_resource_t));
   r->uri = coap_new_uri((const unsigned char *)"/" COAP_DEFAULT_URI_WELLKNOWN,
 			sizeof(COAP_DEFAULT_URI_WELLKNOWN));
   r->mediatype = COAP_MEDIATYPE_APPLICATION_LINK_FORMAT;
@@ -922,28 +960,33 @@ init_resources(coap_context_t *ctx) {
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
 
+  memset(r, 0, sizeof(coap_resource_t));
   r->uri = coap_new_uri((const unsigned char *) "/lipsum",
 			sizeof("/lipsum") - 1);
   r->mediatype = COAP_MEDIATYPE_TEXT_PLAIN;
   r->dirty = 1;
   r->writable = 0;
   r->data = resource_lipsum;
+  r->maxage = 1209600;		/* two weeks */
   coap_add_resource( ctx, r );
 
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
 
+  memset(r, 0, sizeof(coap_resource_t));
   r->uri = coap_new_uri((const unsigned char *) "/time",
 			sizeof("/time") - 1);
   r->mediatype = COAP_MEDIATYPE_ANY;
   r->dirty = 0;
   r->writable = 0;
   r->data = resource_time;
+  r->maxage = 1;
   coap_add_resource( ctx, r );
 
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
 
+  memset(r, 0, sizeof(coap_resource_t));
   r->uri = coap_new_uri((const unsigned char *) "/filestorage",
 			sizeof("/filestorage") - 1);
   r->mediatype = COAP_MEDIATYPE_ANY;
@@ -956,30 +999,15 @@ init_resources(coap_context_t *ctx) {
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
 
+  memset(r, 0, sizeof(coap_resource_t));
   r->uri = coap_new_uri((const unsigned char *) "/data-sink",
 			sizeof("/data-sink") - 1);
   r->mediatype = COAP_MEDIATYPE_APPLICATION_LINK_FORMAT;
   r->dirty = 0;
-  r->writable = 1;
+  r->writable = 0;
   r->data = resource_from_file;
+  r->maxage = 10;
   coap_add_resource(ctx, r);
-
-#if 0
-  r->uri = coap_new_uri((const unsigned char *) "/filestorage");
-  r->mediatype = COAP_MEDIATYPE_APPLICATION_LINK_FORMAT;
-  r->dirty = 0;
-  r->data = resource_from_file;
-  coap_add_resource( ctx, r );
-
-  if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
-    return;
-
-  r->uri = coap_new_uri((const unsigned char *) "/filestorage/foo");
-  r->mediatype = COAP_MEDIATYPE_ANY;
-  r->dirty = 0;
-  r->data = resource_from_file;
-  coap_add_resource( ctx, r );
-#endif
 }
 
 int 
