@@ -248,16 +248,13 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
   for (prev = NULL, node = context->resources; node; 
        prev = node, node = node->next) {
     if (coap_uri_hash(COAP_RESOURCE(node)->uri) == key) {
-      debug("removed key %u (%s)\n",key,COAP_RESOURCE(node)->uri->path.s);
-      if (!prev) {
+      debug("removed key %lu (%s)\n",key,COAP_RESOURCE(node)->uri->path.s);
+      if (!prev)
 	context->resources = node->next;
-	coap_free_resource(node);
-	coap_delete(node);
-      } else {
+      else
 	prev->next = node->next;
-	coap_free_resource(node);
-	coap_delete(node);
-      }
+
+      coap_delete(node);
       return 1;
     }
   }
