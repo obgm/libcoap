@@ -29,7 +29,8 @@ str *coap_new_string(size_t size) {
     return NULL;
   }
     
-  memset(s, 0, sizeof(str) + size + 1);
+  memset(s, 0, sizeof(str));
+  s->s = ((unsigned char *)s) + sizeof(str);
   return s;
 }
 
