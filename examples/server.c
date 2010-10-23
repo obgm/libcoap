@@ -34,6 +34,12 @@
 #include <errno.h>
 #include <signal.h>
 
+#ifdef HAVE_ASSERT_H
+# include <assert.h>
+#else
+# define assert(x)
+#endif /* HAVE_ASSERT_H */
+
 #include "subscribe.h"
 #include "coap.h"
 
@@ -190,6 +196,14 @@ strnlen(const char *p, size_t maxlen) {
 } 
 #endif
 
+int 
+resource_wellknown(coap_context_t *ctx, coap_resource_t *resource, 
+		   unsigned char *mediatype, unsigned int offset, 
+		   unsigned char *buf, unsigned int *buflen,
+		   int *finished);
+
+#define MIN(x,y) (x) < (y) ? (x) : (y)
+
 coap_pdu_t *
 handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_pdu_t *pdu;
@@ -245,16 +259,26 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
      resource */
   if ( resource->data ) {
     mediatype = resource->mediatype;
-    
+
     code = resource->data(&uri, &mediatype, 
 			  (blk & ~0x0f) << (blk & 0x07), buf, &blklen, 
 			  &finished);
-  } else {			
-    /* no callback available, set code, blklen and finished manually
-       (-> empty payload) */
-    code = COAP_RESPONSE_200;
-    blklen = 0;
-    finished = 1;
+  } else {
+    /* check if the well-known URI was requested */
+    if (memcmp(uri.path.s, COAP_DEFAULT_URI_WELLKNOWN, 
+	       MIN(uri.path.length, sizeof(COAP_DEFAULT_URI_WELLKNOWN) - 1))
+	== 0) {
+      mediatype = resource->mediatype;
+      code = resource_wellknown(ctx, resource, &mediatype,
+				(blk & ~0x0f) << (blk & 0x07), buf, &blklen, 
+				&finished);
+    } else {
+      /* no callback available, set code, blklen and finished manually
+	 (-> empty payload) */
+      code = COAP_RESPONSE_200;
+      blklen = 0;
+      finished = 1;
+    }
   }
 
   if ( !(pdu = new_response(ctx, node, code)) )
@@ -444,6 +468,12 @@ handle_post(coap_context_t  *ctx, coap_queue_t *node, void *data) {
 		     coap_uri_hash(&uri));
   
   r->uri = coap_new_uri((unsigned char *)name, namelen);
+  r->name = coap_new_string(uri.path.length);
+  if (r->name) {
+    r->name->length = uri.path.length;
+    memcpy(r->name->s, uri.path.s, r->name->length);
+  }
+
   r->mediatype = tok ? *COAP_OPT_VALUE(*tok) : COAP_MEDIATYPE_ANY;
   r->dirty = 1;
   r->writable = 1;
@@ -671,17 +701,83 @@ join( coap_context_t *ctx, char *group_name ){
 }
 
 int 
-resource_wellknown(coap_uri_t *uri, 
+print_link(coap_resource_t *resource, unsigned char *buf, size_t buflen) {
+  size_t n = 0;
+
+  assert(resource);
+  assert(buf);
+
+  if (buflen < resource->uri->path.length + 3) 
+    return -1;
+		
+  /* FIXME: calculate maximum length and return if longer than buflen */
+  buf[n++] = '<'; buf[n++] = '/';
+
+  memcpy(buf + n, resource->uri->path.s, resource->uri->path.length);
+
+  n += resource->uri->path.length;
+  buf[n++] = '>';
+
+  if (resource->mediatype != COAP_MEDIATYPE_ANY) {
+    if (buflen - n < 7) 	/* mediatype is at most 3 digits */
+      return -1;
+    n += snprintf((char *)(buf + n), buflen - n, ";ct=%d",
+		  resource->mediatype);
+  }
+
+  if (resource->name) {
+    if (buflen - n < resource->name->length + 5) /* include trailing quote */
+      return -1;
+
+    memcpy(buf + n, ";n=\"", 4);
+    n += 4;
+    memcpy(buf + n, resource->name->s, resource->name->length);
+    n += resource->name->length;
+
+    if (!resource->writable) {
+      if (buflen - n < 12)
+	return -1;
+
+      n += snprintf((char *)(buf + n), buflen - n, " (read-only)");
+    }
+    
+    buf[n++] = '"';
+  }
+
+  return  n;
+}
+
+int 
+resource_wellknown(coap_context_t *ctx,
+		   coap_resource_t *resource, 
 		   unsigned char *mediatype, unsigned int offset, 
 		   unsigned char *buf, unsigned int *buflen,
 		   int *finished) {
-  static unsigned char resources[] = 
-    "</lipsum>;ct=1;n=\"some large text to test buffer sizes (<EOT> marks its end)\","
-    "</time>;ct=0,1,41;n=\"server's local time and date\","
-    "</filestorage>;n=\"you can PUT things here\","
-    "</data-sink/>;n=\"POST files here or DELETE them when created\"";
-  size_t maxlen = sizeof(resources) - 1;
-  
+#define RESOURCE_BUFLEN 4000
+  static unsigned char resources[RESOURCE_BUFLEN];  
+  size_t maxlen = 0;
+  int n;
+  coap_list_t *node;
+
+  assert(ctx); assert(resource);
+
+  /* first, update the link-set */
+  for (node = ctx->resources; node; node = node->next) {
+    n = print_link(COAP_RESOURCE(node), resources + maxlen,
+		   RESOURCE_BUFLEN - maxlen);
+    if (n <= 0) { 			/* error */
+      debug("resource description too long, truncating\n");
+      resources[maxlen] = '\0';
+      break;
+    }      
+    maxlen += n;
+
+    if (node->next) 		/* check if another entry follows */
+      resources[maxlen++] = ',';
+    else 			/* no next, terminate string */
+      resources[maxlen] = '\0';
+  }
+
   *finished = 1;
 
   switch (*mediatype) {
@@ -941,8 +1037,26 @@ resource_from_file(coap_uri_t *uri,
   return code;
 }
 
+#define RESOURCE_SET_URI(r,st) \
+  (r)->uri = coap_new_uri((const unsigned char *)(st), strlen(st));
+
+#define RESOURCE_SET_DESC(r,st) \
+  (r)->name = coap_new_string(strlen(st));	 \
+  if ((r)->name) {				 \
+    (r)->name->length = strlen(st);              \
+    memcpy((r)->name->s, (st), (r)->name->length); \
+  }
+
 void 
 init_resources(coap_context_t *ctx) {
+  static const char *u_lipsum = "/lipsum";
+  static const char *d_lipsum = "some large text to test buffer sizes (<EOT> marks its end)";
+  static const char *u_time = "/time";
+  static const char *d_time = "server's local time and date";
+  static const char *u_file = "/filestorage";
+  static const char *d_file = "a single file, you can PUT things here";
+  static const char *u_data = "/data-sink";
+  static const char *d_data = "POSTed data is stored here";
   coap_resource_t *r;
 
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
@@ -954,15 +1068,14 @@ init_resources(coap_context_t *ctx) {
   r->mediatype = COAP_MEDIATYPE_APPLICATION_LINK_FORMAT;
   r->dirty = 0;
   r->writable = 0;
-  r->data = resource_wellknown;
   coap_add_resource( ctx, r );
 
   if ( !(r = coap_malloc( sizeof(coap_resource_t) ))) 
     return;
 
   memset(r, 0, sizeof(coap_resource_t));
-  r->uri = coap_new_uri((const unsigned char *) "/lipsum",
-			sizeof("/lipsum") - 1);
+  RESOURCE_SET_URI(r,u_lipsum);
+  RESOURCE_SET_DESC(r,d_lipsum);
   r->mediatype = COAP_MEDIATYPE_TEXT_PLAIN;
   r->dirty = 1;
   r->writable = 0;
@@ -974,8 +1087,8 @@ init_resources(coap_context_t *ctx) {
     return;
 
   memset(r, 0, sizeof(coap_resource_t));
-  r->uri = coap_new_uri((const unsigned char *) "/time",
-			sizeof("/time") - 1);
+  RESOURCE_SET_URI(r,u_time);
+  RESOURCE_SET_DESC(r,d_time);
   r->mediatype = COAP_MEDIATYPE_ANY;
   r->dirty = 0;
   r->writable = 0;
@@ -987,8 +1100,8 @@ init_resources(coap_context_t *ctx) {
     return;
 
   memset(r, 0, sizeof(coap_resource_t));
-  r->uri = coap_new_uri((const unsigned char *) "/filestorage",
-			sizeof("/filestorage") - 1);
+  RESOURCE_SET_URI(r,u_file);
+  RESOURCE_SET_DESC(r,d_file);
   r->mediatype = COAP_MEDIATYPE_ANY;
   r->dirty = 0;
   r->writable = 1;
@@ -1000,8 +1113,8 @@ init_resources(coap_context_t *ctx) {
     return;
 
   memset(r, 0, sizeof(coap_resource_t));
-  r->uri = coap_new_uri((const unsigned char *) "/data-sink",
-			sizeof("/data-sink") - 1);
+  RESOURCE_SET_URI(r,u_data);
+  RESOURCE_SET_DESC(r,d_data);
   r->mediatype = COAP_MEDIATYPE_APPLICATION_LINK_FORMAT;
   r->dirty = 0;
   r->writable = 0;
