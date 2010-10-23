@@ -450,9 +450,11 @@ cmdline_content_type(char *arg, unsigned short key) {
     q = p+1;
   }
 
-  node = new_option_node(key, valcnt, value);
-  if (node) 
-    coap_insert( &optlist, node, order_opts );
+  if (valcnt) {
+    node = new_option_node(key, valcnt, value);
+    if (node) 
+      coap_insert( &optlist, node, order_opts );
+  }
 }
 
 void
