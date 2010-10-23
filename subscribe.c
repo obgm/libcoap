@@ -179,8 +179,10 @@ coap_check_subscriptions(coap_context_t *context) {
 
 void
 coap_free_resource(void *res) {
-  if ( res )
-    coap_free( ((coap_resource_t *)res)->uri );
+  if ( res ) {
+    coap_free(((coap_resource_t *)res)->uri);
+    coap_delete_string(((coap_resource_t *)res)->name);
+  }
 }
 						  
 coap_key_t 

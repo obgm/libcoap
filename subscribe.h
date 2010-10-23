@@ -35,6 +35,7 @@ typedef unsigned long coap_key_t;
 
 typedef struct {
   coap_uri_t *uri;		/* unique identifier; memory is released by coap_delete_resource() */
+  str *name;			/* display name of the resource */
   unsigned char mediatype;	/* media type for resource representation */
   unsigned int dirty:1;		/* set to 1 if resource has changed */
   unsigned int writable:1;	/* set to 1 if resource can be changed using PUT */
