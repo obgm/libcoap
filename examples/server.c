@@ -549,10 +549,6 @@ handle_delete(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   /* create the response */  
   pdu = new_response(ctx, node, COAP_RESPONSE_200);
 
-  if (uri.scheme.length)
-    coap_add_option(pdu, COAP_OPTION_URI_SCHEME, 
-		    uri.scheme.length, uri.scheme.s);
-
   if (uri.na.length)
     coap_add_option(pdu, COAP_OPTION_URI_AUTHORITY, 
 		    uri.na.length, uri.na.s);
@@ -565,6 +561,10 @@ handle_delete(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   if (tok) 
     coap_add_option(pdu, COAP_OPTION_TOKEN, 
 		    COAP_OPT_LENGTH(*tok), COAP_OPT_VALUE(*tok));
+
+  if (uri.query.length)
+    coap_add_option(pdu, COAP_OPTION_URI_QUERY, 
+		    uri.query.length, uri.query.s);
 
   coap_delete_resource(ctx, coap_uri_hash(&uri));
 

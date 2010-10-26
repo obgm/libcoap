@@ -153,11 +153,11 @@ coap_check_critical(coap_pdu_t *pdu, coap_opt_t **option) {
     if (opt_code & 0x01) {
       switch (opt_code) {	/* skip known options */
       case COAP_OPTION_CONTENT_TYPE :
-      case COAP_OPTION_URI_SCHEME :
       case COAP_OPTION_URI_AUTHORITY :
       case COAP_OPTION_URI_PATH :
       case COAP_OPTION_TOKEN :
       case COAP_OPTION_BLOCK :
+      case COAP_OPTION_URI_QUERY :
 	break;
       default:			/* return first unknown critical option */
 	fprintf(stderr, 
@@ -219,14 +219,14 @@ coap_get_request_uri(coap_pdu_t *pdu, coap_uri_t *result) {
 
   memset(result, 0, sizeof(*result));
 
-  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_SCHEME))) 
-    COAP_SET_STR(&result->scheme, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
-
   if ((opt = coap_check_option(pdu, COAP_OPTION_URI_AUTHORITY))) 
     COAP_SET_STR(&result->na, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
 
   if ((opt = coap_check_option(pdu, COAP_OPTION_URI_PATH))) 
     COAP_SET_STR(&result->path, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
+
+  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_QUERY))) 
+    COAP_SET_STR(&result->query, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
 
   return 1;
 }

@@ -556,7 +556,7 @@ coap_dispatch( coap_context_t *context ) {
 	response = coap_new_pdu();
 	if (response) {
 	  response->hdr->type = COAP_MESSAGE_RST;
-	  response->hdr->code = COAP_RESPONSE_400;
+	  response->hdr->code = COAP_RESPONSE_X_242;
 	  response->hdr->id = node->pdu->hdr->id;
 
 	  /* add rejected option */

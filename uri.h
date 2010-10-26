@@ -23,9 +23,9 @@
 #include "str.h"
 
 typedef struct {
-  str scheme;	/* URI scheme */
   str na;	/* network authority */
   str path;  	/* path */
+  str query;	/* query part */
 } coap_uri_t;
 
 /**

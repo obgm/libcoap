@@ -22,7 +22,13 @@
 #include <ctype.h>
 
 #include "mem.h"
+#include "debug.h"
+#include "pdu.h"
 #include "uri.h"
+
+#ifndef MIN
+# define MIN(x,y) (x) < (y) ? (x) : (y)
+#endif
 
 int
 coap_split_uri(unsigned char *str, coap_uri_t *uri) {
@@ -40,20 +46,24 @@ coap_split_uri(unsigned char *str, coap_uri_t *uri) {
 
   if ( *p != ':' ) {		/* no scheme, reset p */
     p = str;
-  } else {			/* scheme found, look for network authority */
-    COAP_SET_STR(&uri->scheme, p - str, str);
+  } else {			/* scheme found, check if it is "coap" */
+    if (memcmp(str, COAP_DEFAULT_SCHEME, 
+	       MIN(p - str, sizeof(COAP_DEFAULT_SCHEME) - 1)) != 0) {
+      debug("unknown URI scheme '%s'\n",str);
+      return -1;
+    }
     *p++ = '\0';
+
+    /* look for network authority */
     if ( strncmp( (char *)p, "//", 2 ) == 0 ) { /* have network authority */
       p += 2;
       uri->na.s = p;
 
       /* skip NA and port so that p and str finally point to path */
-      while ( *p && *p != '/' ) 
+      while ( *p && *p != '/' && *p != '?') 
 	++p;
       
       uri->na.length = p - uri->na.s;
-      if ( *p )
-	*p++ = '\0';
 
       str = p;
 #if 0
@@ -78,7 +88,7 @@ coap_split_uri(unsigned char *str, coap_uri_t *uri) {
     } else 
       str = p;			
 
-    /* str now points to the path */
+    /* str now points to the path or query if path is empty*/
   }
 
   /* split path and query */
@@ -86,26 +96,26 @@ coap_split_uri(unsigned char *str, coap_uri_t *uri) {
   if ( *str == '\0' )
     return 0;
 
-#if 1
-  uri->path.s = *str == '/' ? ++str : str;
-  uri->path.length = strlen((char *)uri->path.s);
-#else
-  if (*str != '?')
-    uri->path.s = str++;
+  if (*str != '?') {
+    if (*str == '/')		/* skip leading '/' */
+      *str++ = '\0';
+    uri->path.s = str;
+  }
 
   while (*str && *str != '?')
     str++;
 
   if (*str == '?') {
-    uri->path.length = str - uri->path.s;
     *str++ = '\0';
 
-    if (*str) {			/* we do not want to point query to an empty string */
+    if (*str) {
       uri->query.s = str;
-      uri->query.length = strlen(uri->query.s);
+      uri->query.length = strlen((char *)uri->query.s);
     }
-  }
-#endif
+  } 
+
+  if (uri->path.s)
+    uri->path.length = strlen((char *)uri->path.s);
 
   return 0;
 }
@@ -132,32 +142,33 @@ coap_clone_uri(const coap_uri_t *uri) {
   if ( !uri ) 
     return  NULL;
 
-  result = (coap_uri_t *)coap_malloc( uri->scheme.length + uri->na.length + 
+  result = (coap_uri_t *)coap_malloc( uri->query.length + uri->na.length + 
 				      uri->path.length + sizeof(coap_uri_t) + 1);
 
   if ( !result )
     return NULL;
 
   memset( result, 0, sizeof(coap_uri_t) );
-  if ( uri->scheme.length ) {
-    result->scheme.s = URI_DATA(result);
-    result->scheme.length = uri->scheme.length;
-
-    memcpy(result->scheme.s, uri->scheme.s, uri->scheme.length);
-  }
 
   if ( uri->na.length ) {
-    result->na.s = URI_DATA(result) + uri->scheme.length;
+    result->na.s = URI_DATA(result);
     result->na.length = uri->na.length;
 
     memcpy(result->na.s, uri->na.s, uri->na.length);
   }
 
   if ( uri->path.length ) {
-    result->path.s = URI_DATA(result) + uri->scheme.length + uri->na.length;
+    result->path.s = URI_DATA(result) + uri->na.length;
     result->path.length = uri->path.length;
 
     memcpy(result->path.s, uri->path.s, uri->path.length);
+  }
+
+  if ( uri->query.length ) {
+    result->query.s = URI_DATA(result) + uri->na.length + uri->path.length;
+    result->query.length = uri->query.length;
+
+    memcpy(result->query.s, uri->query.s, uri->query.length);
   }
 
   return result;

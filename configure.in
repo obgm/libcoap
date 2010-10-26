@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 AC_PREREQ([2.67])
-AC_INIT([libcoap], [0.06])
+AC_INIT([libcoap], [0.07])
 AC_CONFIG_SRCDIR([coap.h])
 
 # Checks for programs.

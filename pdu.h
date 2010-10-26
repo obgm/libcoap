@@ -59,6 +59,8 @@
 #define COAP_OPTION_URI_AUTHORITY 5 /* C, String, 1-270 B, "" */
 #define COAP_OPTION_LOCATION      6 /* E, String, 1-270 B, - */
 #define COAP_OPTION_URI_PATH      9 /* C, String, 1-270 B, "" */
+#define COAP_OPTION_TOKEN        11 /* C, Sequence of Bytes, 1-2 B, - */
+#define COAP_OPTION_URI_QUERY    15 /* C, String, 1-270 B, "" */
 
 /* option types from draft-hartke-coap-observe-01 */
 
@@ -67,7 +69,6 @@
 /* selected option types from draft-bormann-coap-misc-04 */
 
 #define COAP_OPTION_ACCEPT        8 /* E  Sequence of Bytes, 1-n B, - */
-#define COAP_OPTION_TOKEN        11 /* C, Sequence of Bytes, 1-n B, - */
 #define COAP_OPTION_BLOCK        13 /* C, unsigned integer, 1--3 B, 0 */
 #define COAP_OPTION_NOOP         14 /* no-op for fenceposting */
 
@@ -82,7 +83,11 @@
 #define COAP_RESPONSE_405      165   /* 405 Method Not Allowed */
 #define COAP_RESPONSE_415      175   /* 415 Unsupported Media Type */
 #define COAP_RESPONSE_500      200   /* 500 Internal Server Error */
+#define COAP_RESPONSE_503      203   /* 503 Service Unavailable */
 #define COAP_RESPONSE_504      204   /* 504 Gateway Timeout */
+#define COAP_RESPONSE_X_240    240   /* Token Option required by server */
+#define COAP_RESPONSE_X_241    241   /* Uri-Authority Option required by server */
+#define COAP_RESPONSE_X_242    242   /* Critical Option not supported */
 
 /* CoAP media type encoding */
 

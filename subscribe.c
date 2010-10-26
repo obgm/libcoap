@@ -48,11 +48,6 @@ notify(coap_context_t *context, coap_resource_t *res,
   pdu->hdr->code = code;
 
   /* FIXME: content-type and data (how about block?) */
-  if (res->uri->scheme.length)
-    coap_add_option (pdu, COAP_OPTION_URI_SCHEME, 
-		     res->uri->scheme.length, 
-		     res->uri->scheme.s );
-
   if (res->uri->na.length)
     coap_add_option (pdu, COAP_OPTION_URI_AUTHORITY, 
 		     res->uri->na.length, 
@@ -73,6 +68,11 @@ notify(coap_context_t *context, coap_resource_t *res,
 		     sub->token.s);    
   }
   
+  if (res->uri->query.length)
+    coap_add_option (pdu, COAP_OPTION_URI_QUERY, 
+		     res->uri->query.length, 
+		     res->uri->query.s );
+
   if (res->data) {
     length = (unsigned char *)pdu->hdr + COAP_MAX_PDU_SIZE - pdu->data;
     ct = res->mediatype;

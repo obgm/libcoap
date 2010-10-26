@@ -247,9 +247,9 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
 	  /* add URI components from optlist */
 	  for (option = optlist; option; option = option->next ) {
 	    switch (COAP_OPTION_KEY(*(coap_option *)option->data)) {
-	    case COAP_OPTION_URI_SCHEME :
 	    case COAP_OPTION_URI_AUTHORITY :
 	    case COAP_OPTION_URI_PATH :
+	    case COAP_OPTION_URI_QUERY :
 	      coap_add_option ( pdu, COAP_OPTION_KEY(*(coap_option *)option->data), 
 				COAP_OPTION_LENGTH(*(coap_option *)option->data),
 				COAP_OPTION_DATA(*(coap_option *)option->data) );
@@ -461,12 +461,6 @@ void
 cmdline_uri(char *arg) {
   coap_split_uri((unsigned char *)arg, &uri );
 
-  if (uri.scheme.length && 
-      (uri.scheme.length != strlen(COAP_DEFAULT_SCHEME)
-       || memcmp(uri.scheme.s, COAP_DEFAULT_SCHEME, uri.scheme.length)))
-    coap_insert( &optlist, new_option_node(COAP_OPTION_URI_SCHEME, 
-					   uri.scheme.length, uri.scheme.s),
-		 order_opts);
 #if 0  /* need authority only for proxy requests */
   if (uri.na.length)
     coap_insert( &optlist, new_option_node(COAP_OPTION_URI_AUTHORITY, 
@@ -476,6 +470,11 @@ cmdline_uri(char *arg) {
   if (uri.path.length)
     coap_insert( &optlist, new_option_node(COAP_OPTION_URI_PATH, 
 					   uri.path.length, uri.path.s),
+					   order_opts);
+
+  if (uri.query.length)
+    coap_insert( &optlist, new_option_node(COAP_OPTION_URI_QUERY, 
+					   uri.query.length, uri.query.s),
 					   order_opts);
 }
 
