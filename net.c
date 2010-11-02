@@ -32,6 +32,8 @@
 #include "subscribe.h"
 #include "net.h"
 
+extern int snprintf(char *str, size_t size, const char *format, ...);
+
 #define options_start(p) ((coap_opt_t *) ( (unsigned char *)p->hdr + sizeof ( coap_hdr_t ) ))
 
 #define options_end(p, opt) {			\
@@ -391,6 +393,7 @@ _order_transaction_id( coap_queue_t *lhs, coap_queue_t *rhs ) {
 int
 coap_read( coap_context_t *ctx ) {
   static char buf[COAP_MAX_PDU_SIZE];
+  static coap_hdr_t *pdu = (coap_hdr_t *)buf;
   ssize_t bytes_read;
   static struct sockaddr_in6 src;
   socklen_t addrsize = sizeof src;
@@ -409,10 +412,13 @@ coap_read( coap_context_t *ctx ) {
     return -1;
   }
 
-  if ( bytes_read < sizeof(coap_hdr_t) || ((coap_hdr_t *)buf)->version != COAP_DEFAULT_VERSION ) {
-#ifndef NDEBUG
-    fprintf(stderr, "coap_read: discarded invalid frame\n" ); 
-#endif
+  if ( bytes_read < sizeof(coap_hdr_t) ) {
+    debug("coap_read: discarded invalid frame\n" ); 
+    return -1;
+  }
+
+  if ( pdu->version != COAP_DEFAULT_VERSION ) {
+    debug("coap_read: unknown protocol version\n" ); 
     return -1;
   }
 
@@ -509,6 +515,9 @@ coap_dispatch( coap_context_t *context ) {
   coap_opt_t *opt;
   int type;
   coap_pdu_t *response;
+  size_t msglen;
+#define MAXMSG 60
+  static unsigned char msg[MAXMSG];
 
   if ( !context ) 
     return;
@@ -559,10 +568,9 @@ coap_dispatch( coap_context_t *context ) {
 	  response->hdr->code = COAP_RESPONSE_X_242;
 	  response->hdr->id = node->pdu->hdr->id;
 
-	  /* add rejected option */
-	  coap_add_option(response, type, 
-			  COAP_OPT_LENGTH(*opt),
-			  COAP_OPT_VALUE(*opt));
+	  /* add rejected option to payload */
+	  msglen = snprintf((char *)msg, MAXMSG-1, "Unknown critical option %d", type);
+	  coap_add_data(response, msglen, msg);
 	  
 	  if ( coap_send( context, &node->remote, response ) == 
 	       COAP_INVALID_TID ) {
