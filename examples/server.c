@@ -233,10 +233,24 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
     goto ok;
   }
 
+  /* add token to any response */
+  token.length = 0;
+  tok = coap_check_option(node->pdu, COAP_OPTION_TOKEN);
+  if (tok) {
+    COAP_SET_STR(&token, COAP_OPT_LENGTH(*tok), COAP_OPT_VALUE(*tok));
+  }
+
   /* any other resource */
   resource = coap_get_resource(ctx, &uri);
-  if ( !resource )
-    return new_response(ctx, node, COAP_RESPONSE_404);
+  if ( !resource ) {
+    pdu = new_response(ctx, node, COAP_RESPONSE_404);
+    if (tok) {
+      coap_add_option(pdu, COAP_OPTION_TOKEN, 
+		      COAP_OPT_LENGTH(*tok),
+		      COAP_OPT_VALUE(*tok));
+    }
+    return pdu;
+  }
 
   /* check if requested mediatypes match */
   if ( coap_check_option(node->pdu, COAP_OPTION_ACCEPT) 
@@ -310,15 +324,6 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
       coap_add_option(pdu, COAP_OPTION_SUBSCRIPTION, 1, &enc);      
       
       /* refresh only if already subscribed */
-      token.length = 0;
-      tok = coap_check_option(node->pdu, COAP_OPTION_TOKEN);
-      if (tok) {
-	COAP_SET_STR(&token, COAP_OPT_LENGTH(*tok), COAP_OPT_VALUE(*tok));
-	coap_add_option(pdu, COAP_OPTION_TOKEN, 
-			COAP_OPT_LENGTH(*tok),
-			COAP_OPT_VALUE(*tok));
-      }
-
       subscription = 
 	coap_find_subscription(ctx, coap_uri_hash(&uri), &(node->remote), 
 			       tok ? &token : NULL);
@@ -343,6 +348,12 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
       }
     }
 
+    if (tok) {
+      coap_add_option(pdu, COAP_OPTION_TOKEN, 
+		      COAP_OPT_LENGTH(*tok),
+		      COAP_OPT_VALUE(*tok));
+    }
+
     /* add a block option when it has been requested explicitly or
      * there is more data available */
     if ( block || !finished ) {
@@ -360,6 +371,10 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
     if (!coap_add_data(pdu, blklen, buf)) {
       /* FIXME: handle this case -- must send 500 or something */
     }
+  } else if (tok) {
+    coap_add_option(pdu, COAP_OPTION_TOKEN, 
+		    COAP_OPT_LENGTH(*tok),
+		    COAP_OPT_VALUE(*tok));
   }
 
  ok:
@@ -941,9 +956,10 @@ _resource_from_dir(char *filename,
 
   closedir(dir);
 
+  /* this happens when the directory is empty */
   if ( pos <= offset ) {
     *buflen = 0;
-    return COAP_RESPONSE_400;
+    return COAP_RESPONSE_200;
   }
 
   if ( (offset < pos) && (pos <= offset + *buflen) ) {
