@@ -36,6 +36,7 @@ static coap_list_t *optlist = NULL;
 /* Request URI.
  * TODO: associate the resources with transaction id and make it expireable */
 static coap_uri_t uri;
+static str proxy = { 0, NULL };
 
 /* reading is done when this flag is set */
 static int ready = 0;
@@ -318,6 +319,7 @@ usage( const char *program, const char *version) {
 	   "\t-s duration\tsubscribe for given duration [s]\n"
 	   "\t-A types\taccepted content for GET (comma-separated list)\n"
 	   "\t-t type\t\tcontent type for given resource for PUT/POST\n"
+	   "\t-P addr[:port]\tuse proxy (automatically adds Uri-Authority option to request)\n"
 	   "\t-T token\tinclude specified token\n",
 	   program, version, program );
 }
@@ -505,6 +507,17 @@ cmdline_subscribe(char *arg) {
 }
 
 void
+cmdline_proxy(char *arg) {
+  proxy.length = strlen(arg);
+  if ( (proxy.s = coap_malloc(proxy.length + 1)) == NULL) {
+    proxy.length = 0;
+    return;
+  }
+
+  memcpy(proxy.s, arg, proxy.length+1);
+}
+
+void
 cmdline_token(char *arg) {
   coap_insert( &optlist, new_option_node(COAP_OPTION_TOKEN,
 					 strlen(arg), 
@@ -595,7 +608,7 @@ main(int argc, char **argv) {
   int opt;
   char *group = NULL;
 
-  while ((opt = getopt(argc, argv, "b:f:g:m:p:s:t:A:T:")) != -1) {
+  while ((opt = getopt(argc, argv, "b:f:g:m:p:s:t:A:P:T:")) != -1) {
     switch (opt) {
     case 'b' :
       cmdline_blocksize(optarg);
@@ -620,6 +633,9 @@ main(int argc, char **argv) {
       break;
     case 't' :
       cmdline_content_type(optarg,COAP_OPTION_CONTENT_TYPE);
+      break;
+    case 'P' :
+      cmdline_proxy(optarg);
       break;
     case 'T' :
       cmdline_token(optarg);
@@ -646,13 +662,20 @@ main(int argc, char **argv) {
   if ( group )
     join( ctx, group );
 
+  /* include authority if proxy is used */
+  if (proxy.length) { 
+    server = proxy;
+    if (uri.na.length)
+      coap_insert( &optlist, new_option_node(COAP_OPTION_URI_AUTHORITY, 
+					     uri.na.length, uri.na.s),
+		   order_opts);
+  } else
+    server = uri.na;
+
   if (! (pdu = coap_new_request( method, optlist ) ) )
     return -1;
 
   /* split server address and port */
-  /* FIXME: get rid of the global URI object somehow */
-  server = uri.na;
-
   if (server.length) {
     if (*server.s == '[') {	/* IPv6 address reference */
       p = ++server.s;
