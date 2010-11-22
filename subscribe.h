@@ -1,18 +1,18 @@
-/* subscribe.h -- subscription handling for CoAP 
+/* subscribe.h -- subscription handling for CoAP
  *                see draft-hartke-coap-observe-01
  *
  * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -41,19 +41,19 @@ typedef struct {
   unsigned int writable:1;	/* set to 1 if resource can be changed using PUT */
 
   /* cache-control */
-  unsigned char etag[4];        /* version identifier for this resource 
+  unsigned char etag[4];        /* version identifier for this resource
 				 * (zero terminated, first byte is zero if not set). */
   unsigned int maxage;		/* maximum cache time (zero means no Max-age option) */
 
-  /** 
+  /**
    * Callback function that copies the resource representation into the provided data
-   * buffer (PDU payload). finished is set to 1 to indicate that this was the last block 
+   * buffer (PDU payload). finished is set to 1 to indicate that this was the last block
    * of buflen data for this resource representation, 0 means that data is not finished
-   * and a subsequent call with offset updated by buflen would yield more data (i.e. 
+   * and a subsequent call with offset updated by buflen would yield more data (i.e.
    * the M-bit of CoAP's block option must be set if offset and buflen are selected
    * accordingly.
-   * When called, buflen must be set to the maximum length of buf that is to be filled 
-   * with the mediatype representation of the resource identified by uri. 
+   * When called, buflen must be set to the maximum length of buf that is to be filled
+   * with the mediatype representation of the resource identified by uri.
    * The mediatype must be set to the requested mediatype of COAP_MEDIATYPE_ANY if
    * none was given. On return, the mediatype will be set to the type that is
    * actually used.
@@ -89,33 +89,33 @@ coap_key_t coap_add_resource(coap_context_t *context, coap_resource_t *);
 
 /**
  * Deletes the resource that is identified by key. Returns 1 if the resource was
- * removed, 0 on error (e.g. if no such resource exists). 
+ * removed, 0 on error (e.g. if no such resource exists).
  */
 int coap_delete_resource(coap_context_t *context, coap_key_t key);
 
 /**
  * Creates a new subscription object filled with the given data. The storage
  * allocated for this object must be released using coap_free(). */
-coap_subscription_t *coap_new_subscription(coap_context_t *context, 
+coap_subscription_t *coap_new_subscription(coap_context_t *context,
 					   const coap_uri_t *resource,
 					   const struct sockaddr_in6 *subscriber,
 					   time_t expiry);
 
 /**
- * Adds the given subsription object to the observer list. 
+ * Adds the given subsription object to the observer list.
  * @param context The CoAP context
  * @param subscription A new subscription oobject created with coap_new_subscription()
  * @return A unique hash key for this resource or COAP_INVALID_HASHKEY on error.
  * The storage allocated for the subscription object is released when it is
- * removed from the subscription list, unless the function has returned 
- * COAP_INVALID_HASHKEY. In this case, the storage must be released by the 
+ * removed from the subscription list, unless the function has returned
+ * COAP_INVALID_HASHKEY. In this case, the storage must be released by the
  * caller of this function.
 */
-coap_key_t coap_add_subscription(coap_context_t *context, 
+coap_key_t coap_add_subscription(coap_context_t *context,
 				 coap_subscription_t *subscription);
 
 /**
- * Returns the subscription from subscriber for the resource identified 
+ * Returns the subscription from subscriber for the resource identified
  * by hashkey. When token is not NULL the subscription must have the
  * same token.
  * @param context The CoAP context
@@ -125,7 +125,7 @@ coap_key_t coap_add_subscription(coap_context_t *context,
  *              subscriber to identify its subscription.
  * @return The requested subscription object or NULL when not found.
  */
-coap_subscription_t * coap_find_subscription(coap_context_t *context, 
+coap_subscription_t * coap_find_subscription(coap_context_t *context,
 					     coap_key_t hashkey,
 					     struct sockaddr_in6 *subscriber,
 					     str *token);
@@ -133,10 +133,10 @@ coap_subscription_t * coap_find_subscription(coap_context_t *context,
  * Removes a subscription from the subscription list stored in context and
  * releases the storage that was allocated for this subscription.
  * @param context The CoAP context.
- * @param haskey The unique key that identifies the subscription to remove. 
+ * @param haskey The unique key that identifies the subscription to remove.
  * @return 1 if a subscription was removed, 0 otherwise.
  */
-int coap_delete_subscription(coap_context_t *context, 
+int coap_delete_subscription(coap_context_t *context,
 			     coap_key_t hashkey,
 			     struct sockaddr_in6 *subscriber);
 

@@ -1,17 +1,17 @@
 /* net.h -- CoAP network interface
  *
  * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -32,7 +32,7 @@ struct coap_listnode {
 
   time_t t;			/* when to send PDU for the next time */
   unsigned char retransmit_cnt;	/* retransmission counter, will be removed when zero */
-  
+
   struct sockaddr_in6 remote;	/* remote address */
 
   coap_pdu_t *pdu;		/* the CoAP PDU to send */
@@ -41,7 +41,7 @@ struct coap_listnode {
 typedef struct coap_listnode coap_queue_t;
 
 /* adds node to given queue, ordered by specified order function */
-int coap_insert_node(coap_queue_t **queue, coap_queue_t *node, 
+int coap_insert_node(coap_queue_t **queue, coap_queue_t *node,
 		     int (*order)(coap_queue_t *, coap_queue_t *node) );
 
 /* destroys specified node */
@@ -64,13 +64,13 @@ typedef struct {
 
 typedef void (*coap_message_handler_t)( coap_context_t  *, coap_queue_t *, void *);
 
-/** 
+/**
  * Registers a new message handler that is called whenever a new PDU
  * was received. Note that the transactions are handled on the lower
  * layer previously to stop retransmissions, e.g. */
 void coap_register_message_handler( coap_context_t *context, coap_message_handler_t handler);
 
-/** 
+/**
  * Registers a new handler function that is called when a RST message
  * has been received.
  */

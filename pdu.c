@@ -1,17 +1,17 @@
 /* pdu.c -- CoAP message structure
  *
  * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -34,14 +34,14 @@ coap_new_pdu() {
     perror("new_pdu: malloc");
     return NULL;
   }
-  
+
   /* initialize PDU */
   memset(pdu, 0, sizeof(coap_pdu_t) + COAP_MAX_PDU_SIZE );
   pdu->hdr = (coap_hdr_t *) ( (unsigned char *)pdu + sizeof(coap_pdu_t) );
   pdu->hdr->version = COAP_DEFAULT_VERSION;
   pdu->hdr->id = ntohs( COAP_INVALID_TID );
 
-  /* data points after the header; when options are added, the data 
+  /* data points after the header; when options are added, the data
      pointer is moved to the back */
   pdu->length = sizeof(coap_hdr_t);
   pdu->data = (unsigned char *)pdu->hdr + pdu->length;
@@ -49,28 +49,28 @@ coap_new_pdu() {
   return pdu;
 }
 
-void 
+void
 coap_delete_pdu(coap_pdu_t *pdu) {
   coap_free( pdu );
 }
 
 #define options_start(p) ((coap_opt_t *) ( (unsigned char *)p->hdr + sizeof ( coap_hdr_t ) ))
 
-int 
+int
 coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const unsigned char *data) {
   unsigned char cnt;
   coap_opt_t *opt;
   unsigned char opt_code = 0;
 
-  if (!pdu) 
+  if (!pdu)
     return -1;
 
   /* get last option from pdu to calculate the delta */
-  
+
   opt = options_start( pdu );
   for ( cnt = pdu->hdr->optcnt; cnt; --cnt ) {
     opt_code += COAP_OPT_DELTA(*opt);
-    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) ); 
+    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) );
   }
 
   if ( type < opt_code ) {
@@ -94,13 +94,13 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
     COAP_OPT_SETDELTA( *opt, (COAP_OPTION_NOOP * (cnt+1)) - opt_code );
 
     opt_code += COAP_OPT_DELTA(*opt);
-    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) ); 
+    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) );
   }
 
   /* here, the actual option is added (delta <= 15) */
   pdu->hdr->optcnt += 1;
   COAP_OPT_SETDELTA( *opt, type - opt_code );
-  
+
   COAP_OPT_SETLENGTH( *opt, len );
   memcpy(COAP_OPT_VALUE(*opt), data, len);
   pdu->data = (unsigned char *)COAP_OPT_VALUE(*opt) + len ;
@@ -115,21 +115,21 @@ coap_check_option(coap_pdu_t *pdu, unsigned char type) {
   coap_opt_t *opt;
   unsigned char opt_code = 0;
 
-  if (!pdu) 
+  if (!pdu)
     return NULL;
 
   /* get last option from pdu to calculate the delta */
-  
+
   opt = options_start( pdu );
   for ( cnt = pdu->hdr->optcnt; cnt && opt_code < type; --cnt ) {
     opt_code += COAP_OPT_DELTA(*opt);
-    
+
     /* check if current option is the one we are looking for */
     if (type == opt_code)
       return opt;		/* yes, return */
 
     /* goto next option */
-    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) ); 
+    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) );
   }
 
   return NULL;
@@ -140,15 +140,15 @@ coap_check_critical(coap_pdu_t *pdu, coap_opt_t **option) {
   unsigned char cnt;
   unsigned char opt_code = 0;
 
-  if (!pdu) 
+  if (!pdu)
     goto success;
 
   /* get last option from pdu to calculate the delta */
-  
+
   *option = options_start( pdu );
   for ( cnt = pdu->hdr->optcnt; cnt; --cnt ) {
     opt_code += COAP_OPT_DELTA(**option);
-    
+
     /* check if current option is critical */
     if (opt_code & 0x01) {
       switch (opt_code) {	/* skip known options */
@@ -160,14 +160,14 @@ coap_check_critical(coap_pdu_t *pdu, coap_opt_t **option) {
       case COAP_OPTION_URI_QUERY :
 	break;
       default:			/* return first unknown critical option */
-	fprintf(stderr, 
+	fprintf(stderr,
 		"coap_check_critical: unknown critical option %d\n", opt_code);
 	return opt_code;
       }
     }
 
     /* goto next option */
-    *option = (coap_opt_t *)( (unsigned char *)*option + COAP_OPT_SIZE(**option) ); 
+    *option = (coap_opt_t *)( (unsigned char *)*option + COAP_OPT_SIZE(**option) );
   }
 
  success:
@@ -175,11 +175,11 @@ coap_check_critical(coap_pdu_t *pdu, coap_opt_t **option) {
   return 0;
 }
 
-int 
+int
 coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
   if ( !pdu )
     return 0;
-  
+
   if ( pdu->length + len > COAP_MAX_PDU_SIZE ) {
 #ifndef NDEBUG
     fprintf(stderr, "coap_add_data: cannot add: data too large for PDU\n");
@@ -192,12 +192,12 @@ coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
   return 1;
 }
 
-int 
+int
 coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data) {
   if ( !pdu )
     return 0;
 
-  if ( pdu->data < (unsigned char *)pdu->hdr + pdu->length ) { 
+  if ( pdu->data < (unsigned char *)pdu->hdr + pdu->length ) {
     /* pdu contains data */
 
     *len = (unsigned char *)pdu->hdr + pdu->length - pdu->data;
@@ -206,33 +206,33 @@ coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data) {
     *len = 0;
     *data = NULL;
   }
-  
+
   return 1;
 }
 
-int 
+int
 coap_get_request_uri(coap_pdu_t *pdu, coap_uri_t *result) {
   coap_opt_t *opt;
-  
+
   if (!pdu || !result)
     return 0;
 
   memset(result, 0, sizeof(*result));
 
-  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_AUTHORITY))) 
+  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_AUTHORITY)))
     COAP_SET_STR(&result->na, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
 
-  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_PATH))) 
+  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_PATH)))
     COAP_SET_STR(&result->path, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
 
-  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_QUERY))) 
+  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_QUERY)))
     COAP_SET_STR(&result->query, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
 
   return 1;
 }
 
 #if 0
-int 
+int
 coap_encode_pdu(coap_pdu_t *pdu) {
 
 }

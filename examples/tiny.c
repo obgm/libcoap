@@ -1,17 +1,17 @@
 /* tiny -- tiny sender
  *
  * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -58,7 +58,7 @@ make_pdu( unsigned int value ) {
   return pdu;
 }
 
-void 
+void
 usage( const char *program ) {
   const char *p;
 
@@ -73,7 +73,7 @@ usage( const char *program ) {
 	   program, program );
 }
 
-int 
+int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
   struct timeval tv;
@@ -97,7 +97,7 @@ main(int argc, char **argv) {
   dst.sin6_port = htons( COAP_DEFAULT_PORT );
 
   if ( IN6_IS_ADDR_MULTICAST(&dst.sin6_addr) ) {
-    /* set socket options for multicast */ 
+    /* set socket options for multicast */
 
     if ( setsockopt( ctx->sockfd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
 		     (char *)&hops, sizeof(hops) ) < 0 )
@@ -106,7 +106,7 @@ main(int argc, char **argv) {
   }
 
   while ( 1 ) {
-    
+
     if (! (pdu = make_pdu( rand() & 0xfff ) ) )
       return -1;
 
@@ -115,7 +115,7 @@ main(int argc, char **argv) {
     tv.tv_sec = 5; tv.tv_usec = 0;
 
     select( 0, 0, 0, 0, &tv );
-    
+
   }
 
   coap_free_context( ctx );

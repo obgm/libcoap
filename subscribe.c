@@ -1,18 +1,18 @@
-/* subscribe.c -- subscription handling for CoAP 
+/* subscribe.c -- subscription handling for CoAP
  *                see draft-hartke-coap-observe-01
  *
  * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -30,7 +30,7 @@
 #define HMASK (ULONG_MAX >> 1)
 
 void
-notify(coap_context_t *context, coap_resource_t *res, 
+notify(coap_context_t *context, coap_resource_t *res,
        coap_subscription_t *sub, unsigned int duration, int code) {
   coap_pdu_t *pdu;
   int ls, finished=0;
@@ -49,28 +49,28 @@ notify(coap_context_t *context, coap_resource_t *res,
 
   /* FIXME: content-type and data (how about block?) */
   if (res->uri->na.length)
-    coap_add_option (pdu, COAP_OPTION_URI_AUTHORITY, 
-		     res->uri->na.length, 
+    coap_add_option (pdu, COAP_OPTION_URI_AUTHORITY,
+		     res->uri->na.length,
 		     res->uri->na.s );
 
   if (res->uri->path.length)
-    coap_add_option (pdu, COAP_OPTION_URI_PATH, 
-		     res->uri->path.length, 
+    coap_add_option (pdu, COAP_OPTION_URI_PATH,
+		     res->uri->path.length,
 		     res->uri->path.s);
 
   d = COAP_PSEUDOFP_ENCODE_8_4_DOWN(duration, ls);
-  
+
   coap_add_option ( pdu, COAP_OPTION_SUBSCRIPTION, 1, &d );
 
   if (sub->token.length) {
-    coap_add_option (pdu, COAP_OPTION_TOKEN, 
-		     sub->token.length, 
-		     sub->token.s);    
+    coap_add_option (pdu, COAP_OPTION_TOKEN,
+		     sub->token.length,
+		     sub->token.s);
   }
-  
+
   if (res->uri->query.length)
-    coap_add_option (pdu, COAP_OPTION_URI_QUERY, 
-		     res->uri->query.length, 
+    coap_add_option (pdu, COAP_OPTION_URI_QUERY,
+		     res->uri->query.length,
 		     res->uri->query.s );
 
   if (res->data) {
@@ -82,26 +82,26 @@ notify(coap_context_t *context, coap_resource_t *res,
     /* TODO: add block option if not finished */
     /* TODO: add mediatype */
   }
-	    
+
 #ifndef NDEBUG
   if ( inet_ntop(AF_INET6, &(sub->subscriber.sin6_addr), addr, INET6_ADDRSTRLEN) ) {
     debug("*** notify for %s to [%s]:%d\n", res->uri->path.s, addr, ntohs(sub->subscriber.sin6_port));
   }
 #endif
-  if ( pdu && coap_send_confirmed(context, 
+  if ( pdu && coap_send_confirmed(context,
 		  &sub->subscriber, pdu ) == COAP_INVALID_TID ) {
     debug("coap_check_resource_list: error sending notification\n");
     coap_delete_pdu(pdu);
-  }  
+  }
 }
 
-void 
+void
 coap_check_resource_list(coap_context_t *context) {
   coap_list_t *res, *sub;
   coap_key_t key;
   time_t now;
 
-  if ( !context || !context->resources /* || !context->subscribers */) 
+  if ( !context || !context->resources /* || !context->subscribers */)
     return;
 
   time(&now);
@@ -113,7 +113,7 @@ coap_check_resource_list(coap_context_t *context) {
       for (sub = context->subscriptions; sub; sub = sub->next) {
 	if ( COAP_SUBSCRIPTION(sub)->resource == key ) {
 	  /* notify subscriber */
-	  notify(context, COAP_RESOURCE(res), COAP_SUBSCRIPTION(sub), 
+	  notify(context, COAP_RESOURCE(res), COAP_SUBSCRIPTION(sub),
 		 COAP_SUBSCRIPTION(sub)->expires - now, COAP_RESPONSE_200);
 	}
 
@@ -135,7 +135,7 @@ coap_get_resource_from_key(coap_context_t *ctx, coap_key_t key) {
 	return COAP_RESOURCE(node);
     }
   }
-  
+
   return NULL;
 }
 
@@ -144,14 +144,14 @@ coap_get_resource(coap_context_t *ctx, coap_uri_t *uri) {
   return uri ? coap_get_resource_from_key(ctx, coap_uri_hash(uri)) : NULL;
 }
 
-void 
+void
 coap_check_subscriptions(coap_context_t *context) {
   time_t now;
   coap_list_t *node;
 #ifndef NDEBUG
   char addr[INET6_ADDRSTRLEN];
 #endif
-  
+
   if ( !context )
     return;
 
@@ -161,14 +161,14 @@ coap_check_subscriptions(coap_context_t *context) {
   while ( node && COAP_SUBSCRIPTION(node)->expires < now ) {
 #ifndef NDEBUG
     if ( inet_ntop(AF_INET6, &(COAP_SUBSCRIPTION(node)->subscriber.sin6_addr), addr, INET6_ADDRSTRLEN) ) {
-      
+
       debug("** removed expired subscription from [%s]:%d\n", addr, ntohs(COAP_SUBSCRIPTION(node)->subscriber.sin6_port));
     }
 #endif
 #if 0
-    notify(context, 
-	   coap_get_resource_from_key(context, COAP_SUBSCRIPTION(node)->resource), 
-	   COAP_SUBSCRIPTION(node), 
+    notify(context,
+	   coap_get_resource_from_key(context, COAP_SUBSCRIPTION(node)->resource),
+	   COAP_SUBSCRIPTION(node),
 	   0, COAP_RESPONSE_400);
 #endif
     context->subscriptions = node->next;
@@ -184,11 +184,11 @@ coap_free_resource(void *res) {
     coap_delete_string(((coap_resource_t *)res)->name);
   }
 }
-						  
-coap_key_t 
+
+coap_key_t
 _hash(coap_key_t init, const char *s) {
   int c;
-  
+
   if ( s )
     while ( (c = *s++) ) {
       init = ((init << 7) + init) + c;
@@ -197,7 +197,7 @@ _hash(coap_key_t init, const char *s) {
   return init & HMASK;
 }
 
-coap_key_t 
+coap_key_t
 _hash2(coap_key_t init, const unsigned char *s, unsigned int len) {
   if ( len && !s )
     return COAP_INVALID_HASHKEY;
@@ -205,16 +205,16 @@ _hash2(coap_key_t init, const unsigned char *s, unsigned int len) {
   while ( len-- ) {
     init = ((init << 7) + init) + *s++;
   }
-  
+
   return init & HMASK;
 }
-    
+
 coap_key_t coap_uri_hash(const coap_uri_t *uri) {
   return uri ? _hash2(0, uri->path.s, uri->path.length)
     : COAP_INVALID_HASHKEY;
 }
 
-coap_key_t 
+coap_key_t
 coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
   coap_list_t *node;
 
@@ -234,11 +234,11 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
 
   return coap_uri_hash( resource->uri );
 }
- 
+
 
 /**
  * Deletes the resource that is identified by key. Returns 1 if the resource was
- * removed, 0 on error (e.g. if no such resource exists). 
+ * removed, 0 on error (e.g. if no such resource exists).
  */
 int
 coap_delete_resource(coap_context_t *context, coap_key_t key) {
@@ -247,7 +247,7 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
   if (!context || key == COAP_INVALID_HASHKEY)
     return 0;
 
-  for (prev = NULL, node = context->resources; node; 
+  for (prev = NULL, node = context->resources; node;
        prev = node, node = node->next) {
     if (coap_uri_hash(COAP_RESOURCE(node)->uri) == key) {
       debug("removed key %lu (%s)\n",key,COAP_RESOURCE(node)->uri->path.s);
@@ -260,7 +260,7 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
       return 1;
     }
   }
-  return 0;  
+  return 0;
 }
 
 coap_subscription_t *
@@ -297,33 +297,33 @@ coap_list_push_first(coap_list_t **list, void *data, void (*delete)(void *) ) {
   }
 
   return node;
-} 
+}
 
 int
 _order_subscription(void *a, void *b) {
-  if ( !a || !b ) 
+  if ( !a || !b )
     return a < b ? -1 : 1;
-  
+
   return ((coap_subscription_t *)a)->expires < ((coap_subscription_t *)b)->expires ? -1 : 1;
 }
 
-coap_key_t 
+coap_key_t
 coap_subscription_hash(coap_subscription_t *subscription) {
   if ( !subscription )
     return COAP_INVALID_HASHKEY;
 
-  return _hash2( subscription->resource, (unsigned char *)&subscription->subscriber, 
+  return _hash2( subscription->resource, (unsigned char *)&subscription->subscriber,
 		 sizeof(subscription->subscriber) );
 }
 
-coap_key_t 
+coap_key_t
 coap_add_subscription(coap_context_t *context,
 		      coap_subscription_t *subscription) {
   coap_list_t *node;
   if ( !context || !subscription )
     return COAP_INVALID_HASHKEY;
-  
-  if ( !(node = coap_new_listnode(subscription, NULL)) ) 
+
+  if ( !(node = coap_new_listnode(subscription, NULL)) )
     return COAP_INVALID_HASHKEY;
 
   if ( !coap_insert(&context->subscriptions, node, _order_subscription ) ) {
@@ -331,11 +331,11 @@ coap_add_subscription(coap_context_t *context,
     return COAP_INVALID_HASHKEY;
   }
 
-  return coap_subscription_hash(subscription); 
+  return coap_subscription_hash(subscription);
 }
 
 coap_subscription_t *
-coap_find_subscription(coap_context_t *context, 
+coap_find_subscription(coap_context_t *context,
 		       coap_key_t hashkey,
 		       struct sockaddr_in6 *subscriber,
 		       str *token) {
@@ -349,35 +349,35 @@ coap_find_subscription(coap_context_t *context,
 
       if (token) {	   /* do not proceed if tokens do not match */
 	if (token->length != COAP_SUBSCRIPTION(node)->token.length ||
-	    memcmp(token->s, COAP_SUBSCRIPTION(node)->token.s, 
+	    memcmp(token->s, COAP_SUBSCRIPTION(node)->token.s,
 		   token->length) != 0)
 	  continue;
       }
 
       if (subscriber->sin6_port == COAP_SUBSCRIPTION(node)->subscriber.sin6_port
-	  && memcmp(&subscriber->sin6_addr, 
+	  && memcmp(&subscriber->sin6_addr,
 		    &COAP_SUBSCRIPTION(node)->subscriber.sin6_addr,
 		    sizeof(struct in6_addr)) == 0)
 	return COAP_SUBSCRIPTION(node);
     }
   }
-  return NULL;  
+  return NULL;
 }
 
-int 
+int
 coap_delete_subscription(coap_context_t *context,
-			 coap_key_t key, 
+			 coap_key_t key,
 			 struct sockaddr_in6 *subscriber) {
   coap_list_t *prev, *node;
 
   if (!context || !subscriber || key == COAP_INVALID_HASHKEY)
     return 0;
 
-  for (prev = NULL, node = context->subscriptions; node; 
+  for (prev = NULL, node = context->subscriptions; node;
        prev = node, node = node->next) {
     if (COAP_SUBSCRIPTION(node)->resource == key) {
       if (subscriber->sin6_port == COAP_SUBSCRIPTION(node)->subscriber.sin6_port
-	  && memcmp(&subscriber->sin6_addr, 
+	  && memcmp(&subscriber->sin6_addr,
 		    &COAP_SUBSCRIPTION(node)->subscriber.sin6_addr,
 		    sizeof(struct in6_addr)) == 0) {
 
@@ -394,5 +394,5 @@ coap_delete_subscription(coap_context_t *context,
       }
     }
   }
-  return 0;  
+  return 0;
 }

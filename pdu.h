@@ -1,17 +1,17 @@
 /* pdu.h -- CoAP message structure
  *
  * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -118,7 +118,7 @@
 
 /* CoAP transaction id */
 /*typedef unsigned short coap_tid_t; */
-typedef int coap_tid_t; 
+typedef int coap_tid_t;
 #define COAP_INVALID_TID -1
 
 #ifdef WORDS_BIGENDIAN
@@ -196,7 +196,7 @@ typedef union {
 
 /**
  * Structures for more convenient handling of options. (To be used with ordered
- * coap_list_t.) The option's data will be added to the end of the coap_option 
+ * coap_list_t.) The option's data will be added to the end of the coap_option
  * structure (see macro COAP_OPTION_DATA).
  */
 typedef struct {
@@ -234,7 +234,7 @@ typedef struct {
 /** Options in coap_pdu_t are accessed with the macro COAP_OPTION. */
 #define COAP_OPTION(node) ((coap_option *)(node)->options)
 
-/** 
+/**
  * Creates a new CoAP PDU. The object is created on the heap and must be released
  * using delete_pdu();
  */
@@ -246,15 +246,15 @@ void coap_delete_pdu(coap_pdu_t *);
 int coap_encode_pdu(coap_pdu_t *);
 #endif
 
-/** 
- * Adds option of given type to pdu that is passed as first parameter. coap_add_option() 
+/**
+ * Adds option of given type to pdu that is passed as first parameter. coap_add_option()
  * destroys the PDU's data, so coap_add_data must be called after all options have been
  * added.
  */
 int coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const unsigned char *data);
 coap_opt_t *coap_check_option(coap_pdu_t *pdu, unsigned char type);
 
-/** 
+/**
  * Checks for critical options that we do not know, as requests
  * containing unknown critical options must be discarded. The function
  * returns a pointer to the first unknown critical option in the given
@@ -264,8 +264,8 @@ coap_opt_t *coap_check_option(coap_pdu_t *pdu, unsigned char type);
  */
 int coap_check_critical(coap_pdu_t *pdu, coap_opt_t **option);
 
-/** 
- * Adds given data to the pdu that is passed as first parameter. Note that the PDU's 
+/**
+ * Adds given data to the pdu that is passed as first parameter. Note that the PDU's
  * data is destroyed by coap_add_option().
  */
 int coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data);
@@ -278,9 +278,9 @@ int coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data);
 int coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data);
 
 /**
- * Fills the given coap_uri_t object with the request URI components from 
+ * Fills the given coap_uri_t object with the request URI components from
  * the PDU.
- * @param pdu the PDU 
+ * @param pdu the PDU
  * @param result the URI object to update
  * @return 1 if result has been updated, 0 otherwise, i.e. in case of error
  */
