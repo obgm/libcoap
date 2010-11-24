@@ -650,8 +650,7 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-g group] [-p port] URI\n\n"
-	   "\tURI can be an absolute or relative coap URI,\n"
+	   "usage: %s [-g group] [-p port]\n\n"
 	   "\t-g group\tjoin the given multicast group\n"
 	   "\t-p port\t\tlisten on specified port\n",
 	   program, version, program );
