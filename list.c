@@ -61,8 +61,8 @@ coap_delete(coap_list_t *node) {
   if ( !node )
     return 0;
 
-  if ( node->delete )
-    node->delete( node->data );
+  if ( node->delete_func )
+    node->delete_func( node->data );
   coap_free( node->data );
   coap_free( node );
 
@@ -79,7 +79,7 @@ coap_delete_list(coap_list_t *queue) {
 }
 
 coap_list_t *
-coap_new_listnode(void *data, void (*delete)(void *) ) {
+coap_new_listnode(void *data, void (*delete_func)(void *) ) {
   coap_list_t *node = coap_malloc( sizeof(coap_list_t) );
   if ( ! node ) {
     perror ("coap_new_listnode: malloc");
@@ -88,7 +88,7 @@ coap_new_listnode(void *data, void (*delete)(void *) ) {
 
   memset(node, 0, sizeof(coap_list_t));
   node->data = data;
-  node->delete = delete;
+  node->delete_func = delete_func;
   return node;
 }
 

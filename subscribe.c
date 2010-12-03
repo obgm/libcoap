@@ -283,9 +283,9 @@ coap_new_subscription(coap_context_t *context, const coap_uri_t *resource,
 }
 
 coap_list_t *
-coap_list_push_first(coap_list_t **list, void *data, void (*delete)(void *) ) {
+coap_list_push_first(coap_list_t **list, void *data, void (*delete_func)(void *) ) {
   coap_list_t *node;
-  node = coap_new_listnode(data, delete);
+  node = coap_new_listnode(data, delete_func);
   if ( !node || !list )
     return NULL;
 

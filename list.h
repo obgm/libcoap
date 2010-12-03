@@ -28,7 +28,7 @@ struct coap_linkedlistnode {
    * Callback function that is called from coap_delete to release
    * additional memory allocated by data Set to NULL if you do not
    * need this. Note that data is free'd automatically. */
-  void (*delete)(void *);
+  void (*delete_func)(void *);
 };
 
 typedef struct coap_linkedlistnode coap_list_t;
@@ -51,6 +51,6 @@ void coap_delete_list(coap_list_t *queue);
  * by data will be released by coap_delete() with the new node. Returns the
  * new list node.
  */
-coap_list_t *coap_new_listnode(void *data, void (*delete)(void *) );
+coap_list_t *coap_new_listnode(void *data, void (*delete_func)(void *) );
 
 #endif /* _COAP_LIST_H_ */
