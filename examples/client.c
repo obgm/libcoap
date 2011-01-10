@@ -133,7 +133,7 @@ send_request( coap_context_t  *ctx, coap_pdu_t  *pdu, const char *server, unsign
   error = getaddrinfo(server, "", &hints, &res);
 
   if (error != 0) {
-    perror("getaddrinfo");
+    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(error));
     exit(1);
   }
 
@@ -337,7 +337,8 @@ join( coap_context_t *ctx, char *group_name ){
 
   result = getaddrinfo("::", NULL, &hints, &reslocal);
   if ( result < 0 ) {
-    perror("join: cannot resolve link-local interface");
+    fprintf(stderr, "join: cannot resolve link-local interface: %s\n", 
+	    gai_strerror(result));
     goto finish;
   }
 
@@ -358,7 +359,8 @@ join( coap_context_t *ctx, char *group_name ){
   result = getaddrinfo(group_name, NULL, &hints, &resmulti);
 
   if ( result < 0 ) {
-    perror("join: cannot resolve multicast address");
+    fprintf(stderr, "join: cannot resolve multicast address: %s\n", 
+	    gai_strerror(result));
     goto finish;
   }
 
@@ -593,6 +595,40 @@ cmdline_method(char *arg) {
   return i;	     /* note that we do not prevent illegal methods */
 }
 
+coap_context_t *
+get_context(const char *node, const char *port) {
+  coap_context_t *ctx = NULL;  
+  int s;
+  struct addrinfo hints;
+  struct addrinfo *result, *rp;
+
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
+  hints.ai_socktype = SOCK_DGRAM; /* Coap uses UDP */
+  hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL;
+  
+  s = getaddrinfo(node, port, &hints, &result);
+  if ( s != 0 ) {
+    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
+    return NULL;
+  } 
+
+  /* iterate through results until success */
+  for (rp = result; rp != NULL; rp = rp->ai_next) {
+    ctx = coap_new_context(rp->ai_addr, rp->ai_addrlen);
+    if (ctx) {
+      /* TODO: output address:port for successful binding */
+      goto finish;
+    }
+  }
+  
+  fprintf(stderr, "no context available for interface '%s'\n", node);
+
+ finish:
+  freeaddrinfo(result);
+  return ctx;
+}
+
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
@@ -604,7 +640,8 @@ main(int argc, char **argv) {
   coap_pdu_t  *pdu;
   static unsigned char *p;
   static str server;
-  unsigned short localport = COAP_DEFAULT_PORT, port = COAP_DEFAULT_PORT;
+  unsigned short port = COAP_DEFAULT_PORT;
+  char port_str[NI_MAXSERV] = "0";
   int opt;
   char *group = NULL;
 
@@ -620,7 +657,8 @@ main(int argc, char **argv) {
       group = optarg;
       break;
     case 'p' :
-      localport = atoi(optarg);
+      strncpy(port_str, optarg, NI_MAXSERV-1);
+      port_str[NI_MAXSERV - 1] = '\0';
       break;
     case 'm' :
       method = cmdline_method(optarg);
@@ -646,7 +684,7 @@ main(int argc, char **argv) {
     }
   }
 
-  ctx = coap_new_context( localport );
+  ctx = get_context("::", port_str);
   if ( !ctx )
     return -1;
 

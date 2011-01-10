@@ -650,7 +650,8 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-g group] [-p port]\n\n"
+	   "usage: %s [-A address] [-g group] [-p port]\n\n"
+	   "\t-A address\tinterface address to bind to\n"
 	   "\t-g group\tjoin the given multicast group\n"
 	   "\t-p port\t\tlisten on specified port\n",
 	   program, version, program );
@@ -1138,6 +1139,40 @@ init_resources(coap_context_t *ctx) {
   coap_add_resource(ctx, r);
 }
 
+coap_context_t *
+get_context(const char *node, const char *port) {
+  coap_context_t *ctx = NULL;  
+  int s;
+  struct addrinfo hints;
+  struct addrinfo *result, *rp;
+
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
+  hints.ai_socktype = SOCK_DGRAM; /* Coap uses UDP */
+  hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL;
+  
+  s = getaddrinfo(node, port, &hints, &result);
+  if ( s != 0 ) {
+    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
+    return NULL;
+  } 
+
+  /* iterate through results until success */
+  for (rp = result; rp != NULL; rp = rp->ai_next) {
+    ctx = coap_new_context(rp->ai_addr, rp->ai_addrlen);
+    if (ctx) {
+      /* TODO: output address:port for successful binding */
+      goto finish;
+    }
+  }
+  
+  fprintf(stderr, "no context available for interface '%s'\n", node);
+
+ finish:
+  freeaddrinfo(result);
+  return ctx;
+}
+
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
@@ -1146,17 +1181,23 @@ main(int argc, char **argv) {
   int result;
   time_t now;
   coap_queue_t *nextpdu;
-  unsigned short port = COAP_DEFAULT_PORT;
+  char addr_str[NI_MAXHOST] = "::";
+  char port_str[NI_MAXSERV] = "61616";
   int opt;
   char *group = NULL;
 
-  while ((opt = getopt(argc, argv, "g:p:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:g:p:")) != -1) {
     switch (opt) {
+    case 'A' :
+      strncpy(addr_str, optarg, NI_MAXHOST-1);
+      addr_str[NI_MAXHOST - 1] = '\0';
+      break;
     case 'g' :
       group = optarg;
       break;
     case 'p' :
-      port = atoi(optarg);
+      strncpy(port_str, optarg, NI_MAXSERV-1);
+      port_str[NI_MAXSERV - 1] = '\0';
       break;
     default:
       usage( argv[0], PACKAGE_VERSION );
@@ -1164,7 +1205,7 @@ main(int argc, char **argv) {
     }
   }
 
-  ctx = coap_new_context( port );
+  ctx = get_context(addr_str, port_str);
   if ( !ctx )
     return -1;
 

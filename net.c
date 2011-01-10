@@ -220,11 +220,15 @@ coap_pop_next( coap_context_t *context ) {
 }
 
 coap_context_t *
-coap_new_context(in_port_t port) {
+coap_new_context(const struct sockaddr *listen_addr, size_t addr_size) {
   coap_context_t *c = coap_malloc( sizeof( coap_context_t ) );
-  struct sockaddr_in6 addr;
   time_t now;
-  int reuse = 1, need_port = 1;
+  int reuse = 1;
+
+  if (!listen_addr) {
+    fprintf(stderr, "no listen address specified\n");
+    return NULL;
+  }
 
   srand( getpid() ^ time(&now) );
 
@@ -235,7 +239,7 @@ coap_new_context(in_port_t port) {
 
   memset(c, 0, sizeof( coap_context_t ) );
 
-  c->sockfd = socket(AF_INET6, SOCK_DGRAM, 0);
+  c->sockfd = socket(listen_addr->sa_family, SOCK_DGRAM, 0);
   if ( c->sockfd < 0 ) {
     perror("coap_new_context: socket");
     goto onerror;
@@ -244,25 +248,9 @@ coap_new_context(in_port_t port) {
   if ( setsockopt( c->sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse) ) < 0 )
     perror("setsockopt SO_REUSEADDR");
 
-  if ( port == 0 ) {
-    port = COAP_DEFAULT_PORT;
-    need_port = 0;
-  }
-
-  memset(&addr, 0, sizeof addr );
-  addr.sin6_family = AF_INET6;
-  addr.sin6_port = htons( port );
-  memcpy( &addr.sin6_addr, &in6addr_any, sizeof addr.sin6_addr );
-
-  if ( bind (c->sockfd, (struct sockaddr *)&addr, sizeof addr) < 0 ) {
-    if (need_port) {
-      perror("coap_new_context: bind");
-      goto onerror;
-    }
-
-    do {
-      addr.sin6_port = htons( ++port );
-    } while (bind (c->sockfd, (struct sockaddr *)&addr, sizeof addr) < 0);
+  if ( bind (c->sockfd, listen_addr, addr_size) < 0 ) {
+    perror("coap_new_context: bind");
+    goto onerror;
   }
 
   return c;

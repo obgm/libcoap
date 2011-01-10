@@ -73,6 +73,40 @@ usage( const char *program ) {
 	   program, program );
 }
 
+coap_context_t *
+get_context(const char *node, const char *port) {
+  coap_context_t *ctx = NULL;  
+  int s;
+  struct addrinfo hints;
+  struct addrinfo *result, *rp;
+
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
+  hints.ai_socktype = SOCK_DGRAM; /* Coap uses UDP */
+  hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL;
+  
+  s = getaddrinfo(node, port, &hints, &result);
+  if ( s != 0 ) {
+    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
+    return NULL;
+  } 
+
+  /* iterate through results until success */
+  for (rp = result; rp != NULL; rp = rp->ai_next) {
+    ctx = coap_new_context(rp->ai_addr, rp->ai_addrlen);
+    if (ctx) {
+      /* TODO: output address:port for successful binding */
+      goto finish;
+    }
+  }
+  
+  fprintf(stderr, "no context available for interface '%s'\n", node);
+
+ finish:
+  freeaddrinfo(result);
+  return ctx;
+}
+
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
@@ -86,9 +120,10 @@ main(int argc, char **argv) {
     exit( 1 );
   }
 
-  ctx = coap_new_context(0);
+  ctx = get_context("::", NULL);
   if ( !ctx )
     return -1;
+
   id = rand() & INT_MAX;
 
   memset(&dst, 0, sizeof(struct sockaddr_in6 ));

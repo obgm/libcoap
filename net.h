@@ -82,9 +82,8 @@ coap_queue_t *coap_peek_next( coap_context_t *context );
 /* Returns the next pdu to send and removes it from the sendqeue. */
 coap_queue_t *coap_pop_next( coap_context_t *context );
 
-/* Creates a new coap_context_t object that will hold the CoAP stack status. If port is
- * set to zero, the next free port will be used as server port, starting with COAP_DEFAULT_PORT.  */
-coap_context_t *coap_new_context(in_port_t port);
+/* Creates a new coap_context_t object that will hold the CoAP stack status.  */
+coap_context_t *coap_new_context(const struct sockaddr *listen_addr, size_t addr_size);
 
 /* CoAP stack context must be released with coap_free_context() */
 void coap_free_context( coap_context_t *context );
