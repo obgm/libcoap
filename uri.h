@@ -1,20 +1,9 @@
 /* uri.h -- helper functions for URI treatment
  *
- * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * This file is part of the CoAP library libcoap. Please see
+ * README for terms of use. 
  */
 
 #ifndef _COAP_URI_H_
@@ -22,18 +11,32 @@
 
 #include "str.h"
 
+/** Representation of parsed URI. Components may be filled from a
+ * string with coap_split_uri() and can be used as input for
+ * option-creation functions. */
 typedef struct {
-  str na;	/* network authority */
-  str path;  	/* path */
-  str query;	/* query part */
+  str host;			/**< host part of the URI */
+  unsigned short port;		/**< The port in host byte order */
+  str path;			/**< Beginning of the first path segment. 
+				   Use coap_split_path() to create Uri-Path options */
+  str query;			/**<  The query part if present */
 } coap_uri_t;
 
-/**
- * Splits given URI into pieces and fills the specified uri object accordingly.
- * URI parts that are not available will be set to NULL in uri. The function
- * returns -1 on error, 0 on success. Note that the passed str will be altered.
+/** 
+ * Parses a given string into URI components. The identified syntactic
+ * components are stored in the result parameter @p uri. Optional URI
+ * components that are not specified will be set to { 0, 0 }, except
+ * for the port which is set to @c COAP_DEFAULT_PORT. This function
+ * returns @p 0 if parsing succeeded, a value less than zero
+ * otherwise.
+ * 
+ * @param str_var The string to split up.
+ * @param len     The actual length of @p str_var
+ * @param uri     The coap_uri_t object to store the result.
+ * @return @c 0 on success, or < 0 on error.
  */
-int coap_split_uri(unsigned char *str, coap_uri_t *uri);
+int
+coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri);
 
 /**
  * Creates a new coap_uri_t object from the specified URI. Returns the new

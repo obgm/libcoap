@@ -1,20 +1,9 @@
 /* uri.c -- helper functions for URI treatment
  *
- * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * This file is part of the CoAP library libcoap. Please see
+ * README for terms of use. 
  */
 
 #include <stdio.h>
@@ -26,46 +15,103 @@
 #include "pdu.h"
 #include "uri.h"
 
-#ifndef MIN
-# define MIN(x,y) (x) < (y) ? (x) : (y)
-#endif
-
 int
-coap_split_uri(unsigned char *str_var, coap_uri_t *uri) {
-  unsigned char *p;
+coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
+  unsigned char *p, *q;
+  int secure = 0, res = 0;
 
-  if ( !str_var || !uri )
+  if (!str_var || !uri)
     return -1;
 
-  memset( uri, 0, sizeof(coap_uri_t) );
+  memset(uri, 0, sizeof(coap_uri_t));
+  uri->port = COAP_DEFAULT_PORT;
 
-  /* find scheme */
+  /* search for scheme */
   p = str_var;
-  while ( isalnum(*p) )
+  if (*p == '/')
+    goto path;
+  
+  q = (unsigned char *)COAP_DEFAULT_SCHEME;
+  while (len && *q && tolower(*p) == *q) {
+    ++p; ++q; --len;
+  }
+  
+  /* If q does not point to the string end marker '\0', the schema
+   * identifier is wrong. */
+  if (*q) {
+    res = -1;
+    goto error;
+  }
+
+  /* There might be an additional 's', indicating the secure version: */
+  if ( len && (secure = tolower(*p) == 's') )
     ++p;
 
-  if ( *p != ':' ) {		/* no scheme, reset p */
-    p = str_var;
-  } else {			/* scheme found, check if it is "coap" */
-    if (memcmp(str_var, COAP_DEFAULT_SCHEME,
-	       MIN(p - str_var, sizeof(COAP_DEFAULT_SCHEME) - 1)) != 0) {
-      debug("unknown URI scheme '%s'\n",str_var);
-      return -1;
+  q = (unsigned char *)"://";
+  while (len && *q && tolower(*p) == *q) {
+    ++p; ++q; --len;
+  }
+
+  if (*q) {
+    res = -2;
+    goto error;
+  }
+
+  /* p points to beginning of Uri-Host */
+  q = p;
+  while (len && *q != ':' && *q != '/' && *q != '?') {
+    *q = tolower(*q);
+    ++q;
+    --len;
+  }
+
+  if (p == q) {
+    res = -3;
+    goto error;
+  }
+
+  COAP_SET_STR(&uri->host, q - p, p);
+
+  /* check for Uri-Port */
+  if (len && *q == ':') {
+    p = ++q;
+    --len;
+    
+    while (len && isdigit(*q)) {
+      ++q;
+      --len;
     }
-    *p++ = '\0';
 
-    /* look for network authority */
-    if ( strncmp( (char *)p, "//", 2 ) == 0 ) { /* have network authority */
-      p += 2;
-      uri->na.s = p;
+    if (p < q) {		/* explicit port number given */
+      int uri_port = 0;
+    
+      while (p < q)
+	uri_port = uri_port * 10 + (*p++ - '0');
 
-      /* skip NA and port so that p and str_var finally point to path */
-      while ( *p && *p != '/' && *p != '?')
-	++p;
+      uri->port = uri_port;
+    } 
+  }
+  
+ path:		 /* at this point, p must point to an absolute path */
 
-      uri->na.length = p - uri->na.s;
+  if (!len)
+    goto end;
+  
+  if (*p == '/') {
+    q = ++p;
+    --len;
 
-      str_var = p;
+    while (len && *q != '?') {
+      ++q;
+      --len;
+    }
+  
+    if (p < q) {
+      COAP_SET_STR(&uri->path, q - p, p);
+      p = q;
+    }
+  }
+
 #if 0
       /* split server address and port */
       if ( *uri->na == '[' ) {	/* IPv6 address reference */
@@ -85,39 +131,19 @@ coap_split_uri(unsigned char *str_var, coap_uri_t *uri) {
 	uri->port = p;
       }
 #endif
-    } else
-      str_var = p;
 
-    /* str_var now points to the path or query if path is empty*/
+  /* Uri_Query */
+  if (len && *p == '?') {
+    ++p;
+    COAP_SET_STR(&uri->query, len, p);
+    len = 0;
   }
 
-  /* split path and query */
-
-  if ( *str_var == '\0' )
-    return 0;
-
-  if (*str_var != '?') {
-    if (*str_var == '/')		/* skip leading '/' */
-      *str_var++ = '\0';
-    uri->path.s = str_var;
-  }
-
-  while (*str_var && *str_var != '?')
-    str_var++;
-
-  if (*str_var == '?') {
-    *str_var++ = '\0';
-
-    if (*str_var) {
-      uri->query.s = str_var;
-      uri->query.length = strlen((char *)uri->query.s);
-    }
-  }
-
-  if (uri->path.s)
-    uri->path.length = strlen((char *)uri->path.s);
-
-  return 0;
+  end:
+  return len ? -1 : 0;
+  
+  error:
+  return res;
 }
 
 #define URI_DATA(uriobj) ((unsigned char *)(uriobj) + sizeof(coap_uri_t))
@@ -131,7 +157,7 @@ coap_new_uri(const unsigned char *uri, unsigned int length) {
   memcpy(URI_DATA(result), uri, length);
   URI_DATA(result)[length] = '\0'; /* make it zero-terminated */
 
-  coap_split_uri( URI_DATA(result), (coap_uri_t *)result );
+  coap_split_uri( URI_DATA(result), length, (coap_uri_t *)result );
   return (coap_uri_t *)result;
 }
 
@@ -142,7 +168,7 @@ coap_clone_uri(const coap_uri_t *uri) {
   if ( !uri )
     return  NULL;
 
-  result = (coap_uri_t *)coap_malloc( uri->query.length + uri->na.length +
+  result = (coap_uri_t *)coap_malloc( uri->query.length + uri->host.length +
 				      uri->path.length + sizeof(coap_uri_t) + 1);
 
   if ( !result )
@@ -150,22 +176,24 @@ coap_clone_uri(const coap_uri_t *uri) {
 
   memset( result, 0, sizeof(coap_uri_t) );
 
-  if ( uri->na.length ) {
-    result->na.s = URI_DATA(result);
-    result->na.length = uri->na.length;
+  result->port = uri->port;
 
-    memcpy(result->na.s, uri->na.s, uri->na.length);
+  if ( uri->host.length ) {
+    result->host.s = URI_DATA(result);
+    result->host.length = uri->host.length;
+
+    memcpy(result->host.s, uri->host.s, uri->host.length);
   }
 
   if ( uri->path.length ) {
-    result->path.s = URI_DATA(result) + uri->na.length;
+    result->path.s = URI_DATA(result) + uri->host.length;
     result->path.length = uri->path.length;
 
     memcpy(result->path.s, uri->path.s, uri->path.length);
   }
 
   if ( uri->query.length ) {
-    result->query.s = URI_DATA(result) + uri->na.length + uri->path.length;
+    result->query.s = URI_DATA(result) + uri->host.length + uri->path.length;
     result->query.length = uri->query.length;
 
     memcpy(result->query.s, uri->query.s, uri->query.length);
