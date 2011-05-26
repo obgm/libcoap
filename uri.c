@@ -59,18 +59,35 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
 
   /* p points to beginning of Uri-Host */
   q = p;
-  while (len && *q != ':' && *q != '/' && *q != '?') {
-    *q = tolower(*q);
-    ++q;
-    --len;
-  }
+  if (len && *p == '[') {	/* IPv6 address reference */
+    ++p;
+    
+    while (len && *q != ']') {
+      ++q; --len;
+    }
 
-  if (p == q) {
-    res = -3;
-    goto error;
-  }
+    if (!len || *q != ']' || p == q) {
+      res = -3;
+      goto error;
+    } 
 
-  COAP_SET_STR(&uri->host, q - p, p);
+    COAP_SET_STR(&uri->host, q - p, p);
+    ++q; --len;
+
+  } else {			/* IPv4 address or FQDN */
+    while (len && *q != ':' && *q != '/' && *q != '?') {
+      *q = tolower(*q);
+      ++q;
+      --len;
+    }
+
+    if (p == q) {
+      res = -3;
+      goto error;
+    }
+
+    COAP_SET_STR(&uri->host, q - p, p);
+  }
 
   /* check for Uri-Port */
   if (len && *q == ':') {
@@ -111,26 +128,6 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
       p = q;
     }
   }
-
-#if 0
-      /* split server address and port */
-      if ( *uri->na == '[' ) {	/* IPv6 address reference */
-	p = ++uri->na;
-
-	while ( *p && *p != ']' )
-	  ++p;
-	*p++ = '\0';
-      } else {			/* IPv4 address or hostname */
-	p = uri->na;
-	while ( *p && *p != ':' )
-	  ++p;
-      }
-
-      if ( *p == ':' ) {	/* handle port */
-	*p++ = '\0';
-	uri->port = p;
-      }
-#endif
 
   /* Uri_Query */
   if (len && *p == '?') {
