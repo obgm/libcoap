@@ -73,7 +73,6 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
 
     COAP_SET_STR(&uri->host, q - p, p);
     ++q; --len;
-
   } else {			/* IPv4 address or FQDN */
     while (len && *q != ':' && *q != '/' && *q != '?') {
       *q = tolower(*q);
@@ -114,8 +113,8 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
   if (!len)
     goto end;
   
-  if (*p == '/') {
-    q = ++p;
+  if (*q == '/') {
+    p = ++q;
     --len;
 
     while (len && *q != '?') {
