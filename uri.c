@@ -28,9 +28,11 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
 
   /* search for scheme */
   p = str_var;
-  if (*p == '/')
+  if (*p == '/') {
+    q = p;
     goto path;
-  
+  }
+
   q = (unsigned char *)COAP_DEFAULT_SCHEME;
   while (len && *q && tolower(*p) == *q) {
     ++p; ++q; --len;
@@ -140,6 +142,160 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
   
   error:
   return res;
+}
+
+/** 
+ * Calculates decimal value from hexadecimal ASCII character given in
+ * @p c. The caller must ensure that @p c actually represents a valid
+ * heaxdecimal character, e.g. with isxdigit(3). 
+ *
+ * @hideinitializer
+ */
+#define hexchar_to_dec(c) ((c) & 0x40 ? ((c) & 0x0F) + 9 : ((c) & 0x0F))
+
+/** 
+ * Decodes percent-encoded characters while copying the string @p seg
+ * of size @p length to @p buf. The caller of this function must
+ * ensure that the percent-encodings are correct (i.e. the character
+ * '%' is always followed by two hex digits. and that @p buf provides
+ * sufficient space to hold the result. This function is supposed to
+ * be called by make_decoded_option() only.
+ * 
+ * @param seg     The segment to decode and copy.
+ * @param length  Length of @p seg.
+ * @param buf     The result buffer.
+ */
+void
+decode_segment(unsigned char *seg, size_t length, unsigned char *buf) {
+
+  while (length--) {
+
+    if (*seg == '%') {
+      *buf = (hexchar_to_dec(seg[1]) << 4) + hexchar_to_dec(seg[2]);
+      
+      seg += 2; length -= 2;
+    } else {
+      *buf = *seg;
+    }
+    
+    ++buf; ++seg;
+  }
+}
+
+/**
+ * Runs through the given path (or query) segment and checks if
+ * percent-encodings are correct. This function returns @c -1 on error
+ * or the length of @p s when decoded.
+ */
+int 
+check_segment(unsigned char *s, size_t length) {
+
+  size_t n = 0;
+
+  while (length) {
+    if (*s == '%') {
+      if (length < 2 || !(isxdigit(s[1]) && isxdigit(s[2])))
+	return -1;
+      
+      s += 2;
+      length -= 2;
+    }
+
+    ++s; ++n; --length;
+  }
+  
+  return n;
+}
+	 
+/** 
+ * Writes a coap option from given string @p s to @p buf. @p s should
+ * point to a (percent-encoded) path or query segment of a coap_uri_t
+ * object.  The created option will have type @c 0, and the length
+ * parameter will be set according to the size of the decoded string.
+ * On success, this function returns the option's size, or a value
+ * less than zero on error. This function must be called from
+ * coap_split_path_impl() only.
+ * 
+ * @param s       The string to decode.
+ * @param length  The size of the percent-encoded string @p s.
+ * @param buf     The buffer to store the new coap option.
+ * @param buflen  The maximum size of @p buf.
+ * 
+ * @return The option's size, or @c -1 on error.
+ */
+int
+make_decoded_option(unsigned char *s, size_t length, 
+		    unsigned char *buf, size_t buflen) {
+  int res;
+
+  res = check_segment(s, length);
+  if (res < 0)
+    return -1;
+
+  if (buflen < sizeof(coap_opt_t) + res) {
+    debug("buffer too small for option\n");
+    return -1;
+  }
+  
+  COAP_OPT_SETDELTA(*(coap_opt_t *)buf, 0);
+  COAP_OPT_SETLENGTH(*(coap_opt_t *)buf, res);
+
+  decode_segment(s, length,
+		 COAP_OPT_VALUE(*(coap_opt_t *)buf));
+
+  return COAP_OPT_SIZE(*(coap_opt_t *)buf);
+}
+
+int
+coap_split_path_impl(unsigned char *s, size_t length, int is_path,
+		     unsigned char *buf, size_t buflen) {
+  unsigned char *p = s;
+  int n = 0, dots = 0;
+  int res;
+
+  if (!length)
+    return 0;
+
+  while (1) {
+    
+    if ((is_path && *p == '/') || *p == '&') {
+      if (!dots || dots > 2 || dots != (p - s)) {
+
+	res = make_decoded_option(s, p - s, buf, buflen);
+	if (res < 0)
+	  goto error;
+	
+	++n;
+	
+	buf += res;
+	buflen -= res;
+      }
+      
+      s = p + 1;
+      dots = 0;
+    } else if (is_path && *p == '.') {
+      ++dots;
+    }
+    
+    ++p;
+    --length;
+    if (!length) {
+      if (!dots || dots > 2 || dots != (p - s)) {
+	if (make_decoded_option(s, p - s, buf, buflen) < 0)
+	  goto error;
+
+	return ++n;
+      } else
+	return n;
+    }
+  }
+  
+  /* never reached */
+
+ error:
+
+  debug("invalid segment in URI\n");
+  return -1;
 }
 
 #define URI_DATA(uriobj) ((unsigned char *)(uriobj) + sizeof(coap_uri_t))

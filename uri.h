@@ -38,6 +38,47 @@ typedef struct {
 int
 coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri);
 
+/** 
+ * Splits the given string into segments. You should call one of the
+ * macros coap_split_path() or coap_split_query() instead.
+ * 
+ * @param s      The string to split. 
+ * @param is_path Set to @c 1 to split path segments, @c 0 for query segments.
+ * @param length The actual length of @p uri.
+ * @param buf    Result buffer for parsed segments. 
+ * @param buflen Maximum length of @p buf.
+ * 
+ * @return The number of segments created or @c -1 on error.
+ */
+int coap_split_path_impl(unsigned char *s, size_t length, int is_path,
+			 unsigned char *buf, size_t buflen);
+
+/** 
+ * Splits the given URI path into segments.
+ * 
+ * @param Path   The path string to split. 
+ * @param Length The actual length of @p Path.
+ * @param Buf    Result buffer for parsed segments. 
+ * @param Buflen Maximum length of @p Buf.
+ * 
+ * @return The number of segments created or @c -1 on error.
+ */
+#define coap_split_path(Path, Length, Buf, Buflen) \
+  coap_split_path_impl((Path), (Length), 1, (Buf), (Buflen))
+
+/** 
+ * Splits the given URI query into segments.
+ * 
+ * @param Query  The query string to split. 
+ * @param Length The actual length of @p Query.
+ * @param Buf    Result buffer for parsed segments. 
+ * @param Buflen Maximum length of @p Buf.
+ * 
+ * @return The number of segments created or @c -1 on error.
+ */
+#define coap_split_query(Query, Length, Buf, Buflen) \
+  coap_split_path_impl((Query), (Length), 0, (Buf), (Buflen))
+
 /**
  * Creates a new coap_uri_t object from the specified URI. Returns the new
  * object or NULL on error. The memory allocated by the new coap_uri_t
