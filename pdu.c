@@ -1,20 +1,9 @@
 /* pdu.c -- CoAP message structure
  *
- * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * This file is part of the CoAP library libcoap. Please see
+ * README for terms of use. 
  */
 
 #include <stdlib.h>
@@ -25,6 +14,8 @@
 #include "debug.h"
 #include "mem.h"
 #include "pdu.h"
+#include "option.h"
+#include "encode.h"
 
 
 coap_pdu_t *
@@ -53,8 +44,6 @@ void
 coap_delete_pdu(coap_pdu_t *pdu) {
   coap_free( pdu );
 }
-
-#define options_start(p) ((coap_opt_t *) ( (unsigned char *)p->hdr + sizeof ( coap_hdr_t ) ))
 
 int
 coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const unsigned char *data) {
@@ -109,72 +98,6 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
   return len;
 }
 
-coap_opt_t *
-coap_check_option(coap_pdu_t *pdu, unsigned char type) {
-  unsigned char cnt;
-  coap_opt_t *opt;
-  unsigned char opt_code = 0;
-
-  if (!pdu)
-    return NULL;
-
-  /* get last option from pdu to calculate the delta */
-
-  opt = options_start( pdu );
-  for ( cnt = pdu->hdr->optcnt; cnt && opt_code < type; --cnt ) {
-    opt_code += COAP_OPT_DELTA(*opt);
-
-    /* check if current option is the one we are looking for */
-    if (type == opt_code)
-      return opt;		/* yes, return */
-
-    /* goto next option */
-    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) );
-  }
-
-  return NULL;
-}
-
-int
-coap_check_critical(coap_pdu_t *pdu, coap_opt_t **option) {
-  unsigned char cnt;
-  unsigned char opt_code = 0;
-
-  if (!pdu)
-    goto success;
-
-  /* get last option from pdu to calculate the delta */
-
-  *option = options_start( pdu );
-  for ( cnt = pdu->hdr->optcnt; cnt; --cnt ) {
-    opt_code += COAP_OPT_DELTA(**option);
-
-    /* check if current option is critical */
-    if (opt_code & 0x01) {
-      switch (opt_code) {	/* skip known options */
-      case COAP_OPTION_CONTENT_TYPE :
-      case COAP_OPTION_URI_AUTHORITY :
-      case COAP_OPTION_URI_PATH :
-      case COAP_OPTION_TOKEN :
-      case COAP_OPTION_BLOCK :
-      case COAP_OPTION_URI_QUERY :
-	break;
-      default:			/* return first unknown critical option */
-	fprintf(stderr,
-		"coap_check_critical: unknown critical option %d\n", opt_code);
-	return opt_code;
-      }
-    }
-
-    /* goto next option */
-    *option = (coap_opt_t *)( (unsigned char *)*option + COAP_OPT_SIZE(**option) );
-  }
-
- success:
-  *option = NULL;
-  return 0;
-}
-
 int
 coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
   if ( !pdu )
@@ -213,27 +136,37 @@ coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data) {
 int
 coap_get_request_uri(coap_pdu_t *pdu, coap_uri_t *result) {
   coap_opt_t *opt;
-
+  coap_opt_iterator_t opt_iter;
+  
   if (!pdu || !result)
     return 0;
 
   memset(result, 0, sizeof(*result));
+    
+  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_HOST, &opt_iter)))
+    COAP_SET_STR(&result->host, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
 
-  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_AUTHORITY)))
-    COAP_SET_STR(&result->na, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
+  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_PORT, &opt_iter)))
+    result->port = 
+      coap_decode_var_bytes(COAP_OPT_VALUE(*opt), COAP_OPT_LENGTH(*opt));
+  else
+    result->port = COAP_DEFAULT_PORT;
 
-  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_PATH)))
-    COAP_SET_STR(&result->path, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
+  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_PATH, &opt_iter))) {
+    result->path.s = COAP_OPT_VALUE(*opt);
+    result->path.length = COAP_OPT_LENGTH(*opt);
 
-  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_QUERY)))
-    COAP_SET_STR(&result->query, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
+    while (coap_option_next(&opt_iter) && opt_iter.type == COAP_OPTION_URI_PATH) 
+      result->path.length += COAP_OPT_SIZE(*opt_iter.option);
+  }
+
+  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_QUERY, &opt_iter))) {
+    result->query.s = COAP_OPT_VALUE(*opt);
+    result->query.length = COAP_OPT_LENGTH(*opt);
+
+    while (coap_option_next(&opt_iter) && opt_iter.type == COAP_OPTION_URI_QUERY) 
+      result->query.length += COAP_OPT_SIZE(*opt_iter.option);
+  }
 
   return 1;
 }
-
-#if 0
-int
-coap_encode_pdu(coap_pdu_t *pdu) {
-
-}
-#endif

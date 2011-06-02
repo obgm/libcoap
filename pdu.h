@@ -1,20 +1,9 @@
 /* pdu.h -- CoAP message structure
  *
- * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * This file is part of the CoAP library libcoap. Please see
+ * README for terms of use. 
  */
 
 #ifndef _PDU_H_
@@ -26,9 +15,9 @@
 
 /* pre-defined constants that reflect defaults for CoAP */
 
-#define COAP_DEFAULT_RESPONSE_TIMEOUT  1 /* response timeout in seconds */
-#define COAP_DEFAULT_MAX_RETRANSMIT    5 /* max number of retransmissions */
-#define COAP_DEFAULT_PORT          61616 /* CoAP default UDP port */
+#define COAP_DEFAULT_RESPONSE_TIMEOUT  2 /* response timeout in seconds */
+#define COAP_DEFAULT_MAX_RETRANSMIT    4 /* max number of retransmissions */
+#define COAP_DEFAULT_PORT           5683 /* CoAP default UDP port */
 #define COAP_DEFAULT_MAX_AGE          60 /* default maximum object lifetime in seconds */
 #define COAP_MAX_PDU_SIZE           1400 /* maximum size of a CoAP PDU */
 
@@ -52,19 +41,21 @@
 
 /* CoAP option types (be sure to update check_critical when adding options */
 
-#define COAP_OPTION_CONTENT_TYPE  1 /* C, 8-bit uint, 1 B, 0 (text/plain) */
+#define COAP_OPTION_CONTENT_TYPE  1 /* C, 8-bit uint, 1-2 B, - */
 #define COAP_OPTION_MAXAGE        2 /* E, variable length, 1--4 B, 60 Seconds */
-#define COAP_OPTION_URI_SCHEME    3 /* C, String, 1-270 B, "coap" */
+#define COAP_OPTION_PROXY_URI     3 /* C, String, 1-270 B, may occur more than once */
 #define COAP_OPTION_ETAG          4 /* E, sequence of bytes, 1-4 B, - */
-#define COAP_OPTION_URI_AUTHORITY 5 /* C, String, 1-270 B, "" */
-#define COAP_OPTION_LOCATION      6 /* E, String, 1-270 B, - */
-#define COAP_OPTION_URI_PATH      9 /* C, String, 1-270 B, "" */
+#define COAP_OPTION_URI_HOST      5 /* C, String, 1-270 B, destination address */
+#define COAP_OPTION_LOCATION_PATH 6 /* E, String, 1-270 B, - */
+#define COAP_OPTION_URI_PORT      7 /* C, String, 1-270 B, destination port */
+#define COAP_OPTION_LOCATION_QUERY 8 /*  */
+#define COAP_OPTION_URI_PATH      9 /* C, String, 1-270 B, - (may occur multiple times) */
 #define COAP_OPTION_TOKEN        11 /* C, Sequence of Bytes, 1-2 B, - */
 #define COAP_OPTION_URI_QUERY    15 /* C, String, 1-270 B, "" */
 
 /* option types from draft-hartke-coap-observe-01 */
 
-#define COAP_OPTION_SUBSCRIPTION 10 /* E, Duration, 1 B, 0 */
+#define COAP_OPTION_SUBSCRIPTION 10 /* E, uint, 0-2 B, - */
 
 /* selected option types from draft-bormann-coap-misc-04 */
 
@@ -72,48 +63,52 @@
 #define COAP_OPTION_BLOCK        13 /* C, unsigned integer, 1--3 B, 0 */
 #define COAP_OPTION_NOOP         14 /* no-op for fenceposting */
 
+#define COAP_MAX_OPT             20 /**< the highest option number we know */
+
 /* CoAP result codes (HTTP-Code / 100 * 40 + HTTP-Code % 100) */
 
-#define COAP_RESPONSE_100       40   /* 100 Continue */
-#define COAP_RESPONSE_200       80   /* 200 OK */
-#define COAP_RESPONSE_201       81   /* 201 Created */
-#define COAP_RESPONSE_304      124   /* 304 Not Modified */
-#define COAP_RESPONSE_400      160   /* 400 Bad Request */
-#define COAP_RESPONSE_404      164   /* 404 Not Found */
-#define COAP_RESPONSE_405      165   /* 405 Method Not Allowed */
-#define COAP_RESPONSE_415      175   /* 415 Unsupported Media Type */
-#define COAP_RESPONSE_500      200   /* 500 Internal Server Error */
-#define COAP_RESPONSE_503      203   /* 503 Service Unavailable */
-#define COAP_RESPONSE_504      204   /* 504 Gateway Timeout */
-#define COAP_RESPONSE_X_240    240   /* Token Option required by server */
-#define COAP_RESPONSE_X_241    241   /* Uri-Authority Option required by server */
-#define COAP_RESPONSE_X_242    242   /* Critical Option not supported */
+/* As of draft-ietf-core-coap-04, response codes are encoded to base
+ * 32, i.e.  the three upper bits determine the response class while
+ * the remaining five fine-grained information specific to that class.
+ */
+#define COAP_RESPONSE_CODE(N) (((N)/100 << 5) | (N)%100)
+
+/* Determines the class of response code C */
+#define COAP_RESPONSE_CLASS(C) (((C) >> 5) & 0xFF)
+
+/* The following definitions exist for backwards compatibility */
+#if 0 /* this does not exist any more */
+#define COAP_RESPONSE_100      40 /* 100 Continue */
+#endif
+#define COAP_RESPONSE_200      COAP_RESPONSE_CODE(200)  /* 2.00 OK */
+#define COAP_RESPONSE_201      COAP_RESPONSE_CODE(201)  /* 2.01 Created */
+#define COAP_RESPONSE_304      COAP_RESPONSE_CODE(203)  /* 2.03 Valid */
+#define COAP_RESPONSE_400      COAP_RESPONSE_CODE(400)  /* 4.00 Bad Request */
+#define COAP_RESPONSE_404      COAP_RESPONSE_CODE(404)  /* 4.04 Not Found */
+#define COAP_RESPONSE_405      COAP_RESPONSE_CODE(405)  /* 4.05 Method Not Allowed */
+#define COAP_RESPONSE_415      COAP_RESPONSE_CODE(415)  /* 4.15 Unsupported Media Type */
+#define COAP_RESPONSE_500      COAP_RESPONSE_CODE(500)  /* 5.00 Internal Server Error */
+#define COAP_RESPONSE_501      COAP_RESPONSE_CODE(501)  /* 5.01 Not Implemented */
+#define COAP_RESPONSE_503      COAP_RESPONSE_CODE(503)  /* 5.03 Service Unavailable */
+#define COAP_RESPONSE_504      COAP_RESPONSE_CODE(504)  /* 5.04 Gateway Timeout */
+#if 0  /* these response codes do not have a valid code any more */
+#  define COAP_RESPONSE_X_240    240   /* Token Option required by server */
+#  define COAP_RESPONSE_X_241    241   /* Uri-Authority Option required by server */
+#endif
+#define COAP_RESPONSE_X_242    COAP_RESPONSE_CODE(402)  /* Critical Option not supported */
 
 /* CoAP media type encoding */
 
 #define COAP_MEDIATYPE_TEXT_PLAIN                     0 /* text/plain (UTF-8) */
-#define COAP_MEDIATYPE_TEXT_XML                       1 /* text/xml (UTF-8) */
-#define COAP_MEDIATYPE_TEXT_CSV                       2 /* text/csv (UTF-8) */
-#define COAP_MEDIATYPE_TEXT_HTML                      3 /* text/html (UTF-8) */
-#define COAP_MEDIATYPE_IMAGE_GIF                     21 /* image/gif */
-#define COAP_MEDIATYPE_IMAGE_JPEG                    22 /* image/jpeg */
-#define COAP_MEDIATYPE_IMAGE_PNG                     23 /* image/png */
-#define COAP_MEDIATYPE_IMAGE_TIFF                    24 /* image/tiff */
-#define COAP_MEDIATYPE_AUDIO_RAW                     25 /* audio/raw */
-#define COAP_MEDIATYPE_VIDEO_RAW                     26 /* video/raw */
 #define COAP_MEDIATYPE_APPLICATION_LINK_FORMAT       40 /* application/link-format */
 #define COAP_MEDIATYPE_APPLICATION_XML               41 /* application/xml */
 #define COAP_MEDIATYPE_APPLICATION_OCTET_STREAM      42 /* application/octet-stream */
 #define COAP_MEDIATYPE_APPLICATION_RDF_XML           43 /* application/rdf+xml */
-#define COAP_MEDIATYPE_APPLICATION_SOAP_XML          44 /* application/soap+xml  */
-#define COAP_MEDIATYPE_APPLICATION_ATOM_XML          45 /* application/atom+xml  */
-#define COAP_MEDIATYPE_APPLICATION_XMPP_XML          46 /* application/xmpp+xml  */
 #define COAP_MEDIATYPE_APPLICATION_EXI               47 /* application/exi  */
-#define COAP_MEDIATYPE_APPLICATION_X_BXML            48 /* application/x-bxml  */
-#define COAP_MEDIATYPE_APPLICATION_FASTINFOSET       49 /* application/fastinfoset  */
-#define COAP_MEDIATYPE_APPLICATION_SOAP_FASTINFOSET  50 /* application/soap+fastinfoset  */
-#define COAP_MEDIATYPE_APPLICATION_JSON              51 /* application/json  */
+#define COAP_MEDIATYPE_APPLICATION_JSON              50 /* application/json  */
 
+/* Note that identifiers for registered media types are in the range 0-65535. We
+ * use an unallocated type here and hope for the best. */
 #define COAP_MEDIATYPE_ANY                         0xff /* any media type */
 
 /* CoAP transaction id */
@@ -139,6 +134,12 @@ typedef struct {
 } coap_hdr_t;
 #endif
 
+#define COAP_MESSAGE_IS_EMPTY(MSG)    ((MSG)->code == 0)
+#define COAP_MESSAGE_IS_REQUEST(MSG)  (!COAP_MESSAGE_IS_EMPTY(MSG)	\
+				       && ((MSG)->code < 32))
+#define COAP_MESSAGE_IS_RESPONSE(MSG) ((MSG)->code >= 64 && (MSG)->code <= 191)
+
+#if 0
 #ifdef WORDS_BIGENDIAN
 typedef union {
   struct {		        /* short form, to be used when length < 15 */
@@ -193,6 +194,7 @@ typedef union {
 
 /* do not forget to adjust this when coap_opt_t is changed! */
 #define COAP_OPT_SIZE(opt) ( COAP_OPT_LENGTH(opt) + ( COAP_OPT_ISEXTENDED(opt) ? 2: 1 ) )
+#endif 
 
 /**
  * Structures for more convenient handling of options. (To be used with ordered
@@ -202,24 +204,10 @@ typedef union {
 typedef struct {
   unsigned short key;		/* the option key (no delta coding) */
   unsigned int length;
-#if 0
-  union {
-    unsigned int n;   /* unsigned integer (1--4 bytes) */
-    unsigned char fp; /* pseudo-fp (currently, only (8,4) supported */
-    unsigned char *d; /* date (4--6 bytes) */
-    unsigned char *s; /* string (or sequence of bytes) */
-  } value;
-#endif
 } coap_option;
 
 #define COAP_OPTION_KEY(option) (option).key
 #define COAP_OPTION_LENGTH(option) (option).length
-#if 0
-#define COAP_OPTION_UINT(option) (option).value.n
-#define COAP_OPTION_PSEUDO_FP(option) (option).value.fp
-#define COAP_OPTION_DATE(option) (option).value.d
-#define COAP_OPTION_STRING(option) (option).value.s
-#endif
 #define COAP_OPTION_DATA(option) ((unsigned char *)&(option) + sizeof(coap_option))
 
 /** Header structure for CoAP PDUs */
@@ -242,27 +230,12 @@ typedef struct {
 coap_pdu_t *coap_new_pdu();
 void coap_delete_pdu(coap_pdu_t *);
 
-#if 0
-int coap_encode_pdu(coap_pdu_t *);
-#endif
-
 /**
  * Adds option of given type to pdu that is passed as first parameter. coap_add_option()
  * destroys the PDU's data, so coap_add_data must be called after all options have been
  * added.
  */
 int coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const unsigned char *data);
-coap_opt_t *coap_check_option(coap_pdu_t *pdu, unsigned char type);
-
-/**
- * Checks for critical options that we do not know, as requests
- * containing unknown critical options must be discarded. The function
- * returns a pointer to the first unknown critical option in the given
- * pdu (hence with delta-encoded type) or NULL when no unknown critical
- * option was found. The return value contains the type code of the
- * rejected option, or zero if none was found.
- */
-int coap_check_critical(coap_pdu_t *pdu, coap_opt_t **option);
 
 /**
  * Adds given data to the pdu that is passed as first parameter. Note that the PDU's

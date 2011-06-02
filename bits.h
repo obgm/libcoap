@@ -19,19 +19,19 @@
 
 /** 
  * Sets the bit @p bit in bit-vector @p vec. This function returns @c
- * 1 if bit was set or @c 0 on error (i.e. when the given bit does
+ * 1 if bit was set or @c -1 on error (i.e. when the given bit does
  * not fit in the vector).
  * 
  * @param vec  The bit-vector to change.
  * @param size The size of @p vec in bytes.
  * @param bit  The bit to set in @p vec.
  * 
- * @return @c 0 if @p bit does not fit into @p vec, @c 1 otherwise.
+ * @return @c -1 if @p bit does not fit into @p vec, @c 1 otherwise.
  */
 inline static int
 bits_setb(uint8_t *vec, size_t size, uint8_t bit) {
-  if (size < (bit >> 3))
-    return 0;
+  if (size <= (bit >> 3))
+    return -1;
 
   *(vec + (bit >> 3)) |= 1 << ((bit & 0x07) - 1);
   return 1;
@@ -39,19 +39,19 @@ bits_setb(uint8_t *vec, size_t size, uint8_t bit) {
 
 /** 
  * Clears the bit @p bit from bit-vector @p vec. This function returns
- * @c 1 if bit was cleared or @c 0 on error (i.e. when the given bit
+ * @c 1 if bit was cleared or @c -1 on error (i.e. when the given bit
  * does not fit in the vector).
  * 
  * @param vec  The bit-vector to change.
  * @param size The size of @p vec in bytes.
  * @param bit  The bit to clear from @p vec.
  * 
- * @return @c 0 if @p bit does not fit into @p vec, @c 1 otherwise.
+ * @return @c -1 if @p bit does not fit into @p vec, @c 1 otherwise.
  */
 inline static int
 bits_clrb(uint8_t *vec, size_t size, uint8_t bit) {
-  if (size < (bit >> 3))
-    return 0;
+  if (size <= (bit >> 3))
+    return -1;
 
   *(vec + (bit >> 3)) &= ~(1 << ((bit & 0x07) - 1));
   return 1;
@@ -69,8 +69,8 @@ bits_clrb(uint8_t *vec, size_t size, uint8_t bit) {
  */
 inline static int
 bits_getb(const uint8_t *vec, size_t size, uint8_t bit) {
-  if (size < (bit >> 3))
-    return 0;
+  if (size <= (bit >> 3))
+    return -1;
 
   return (*(vec + (bit >> 3)) & (1 << ((bit & 0x07) - 1))) != 0;
 }

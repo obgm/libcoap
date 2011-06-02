@@ -13,6 +13,7 @@
 #include "mem.h"
 #include "debug.h"
 #include "pdu.h"
+#include "option.h"
 #include "uri.h"
 
 int
