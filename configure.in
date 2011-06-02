@@ -1,24 +1,13 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 #
-# Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
 #
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# This file is part of the CoAP library libcoap. Please see
+# README for terms of use. 
 
 AC_PREREQ([2.65])
-AC_INIT([libcoap], [0.1.9])
+AC_INIT([libcoap], [0.2.0])
 AC_CONFIG_SRCDIR([coap.h])
 
 # Checks for programs.
@@ -34,6 +23,12 @@ AC_CHECK_LIB([coap], [coap_new_pdu])
 
 AC_SEARCH_LIBS([gethostbyname], [nsl])
 AC_SEARCH_LIBS([socket], [socket])
+
+# configuration options that may change compile flags 
+AC_ARG_WITH(debug,
+  [AS_HELP_STRING([--without-debug],[disable all debug output and assertions])],
+  [CPPFLAGS="${CPPFLAGS} -DNDEBUG"], 
+  [])
 
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h unistd.h])

@@ -105,8 +105,6 @@ coap_new_request( method_t m, coap_list_t *options ) {
 			      buf, BUFSIZE);
 
 	while (res--) {
-	  printf("add option %d\n", COAP_OPTION_KEY(*(coap_option *)opt->data));
-	  
 	  coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)opt->data),
 			  COAP_OPT_LENGTH(*(coap_opt_t *)buf),
 			  COAP_OPT_VALUE(*(coap_opt_t *)buf));
@@ -120,8 +118,6 @@ coap_new_request( method_t m, coap_list_t *options ) {
 			       buf, BUFSIZE);
 
 	while (res--) {
-	  printf("add option %d\n", COAP_OPTION_KEY(*(coap_option *)opt->data));
-	  
 	  coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)opt->data),
 			  COAP_OPT_LENGTH(*(coap_opt_t *)buf),
 			  COAP_OPT_VALUE(*(coap_opt_t *)buf));
@@ -130,7 +126,6 @@ coap_new_request( method_t m, coap_list_t *options ) {
 	}
 	break;
       default:
-	printf("add option %d\n", COAP_OPTION_KEY(*(coap_option *)opt->data));
 	coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)opt->data),
 			COAP_OPTION_LENGTH(*(coap_option *)opt->data),
 			COAP_OPTION_DATA(*(coap_option *)opt->data));
@@ -203,6 +198,7 @@ void
 message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_pdu_t *pdu = NULL;
   coap_opt_t *block, *ct, *sub;
+  coap_opt_iterator_t opt_iter;
   unsigned int blocknr;
   unsigned char buf[4];
   coap_list_t *option;
@@ -230,7 +226,7 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
   switch (node->pdu->hdr->code) {
   case COAP_RESPONSE_200:
     /* got some data, check if block option is set */
-    block = coap_check_option( node->pdu, COAP_OPTION_BLOCK );
+    block = coap_check_option(node->pdu, COAP_OPTION_BLOCK, &opt_iter);
     if ( !block ) {
       /* There is no block option set, just read the data and we are done. */
       if ( coap_get_data( node->pdu, &len, &databuf ) ) {
@@ -273,7 +269,7 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
 	  pdu->hdr->id = node->pdu->hdr->id; /* copy transaction id from response */
 
 	  /* get content type from response */
-	  ct = coap_check_option( node->pdu, COAP_OPTION_CONTENT_TYPE );
+	  ct = coap_check_option(node->pdu, COAP_OPTION_CONTENT_TYPE, &opt_iter);
 	  if ( ct ) {
 	    coap_add_option( pdu, COAP_OPTION_CONTENT_TYPE,
 			     COAP_OPT_LENGTH(*ct),COAP_OPT_VALUE(*ct) );
@@ -331,7 +327,7 @@ message_handler( coap_context_t  *ctx, coap_queue_t *node, void *data) {
   }
 
   /* our job is done, we can exit at any time */
-  sub = coap_check_option( node->pdu, COAP_OPTION_SUBSCRIPTION );
+  sub = coap_check_option(node->pdu, COAP_OPTION_SUBSCRIPTION, &opt_iter);
 #ifndef NDEBUG
   if ( sub ) {
     debug("message_handler: Subscription-Lifetime is %d\n",

@@ -1,21 +1,10 @@
 /* subscribe.c -- subscription handling for CoAP
  *                see draft-hartke-coap-observe-01
  *
- * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * This file is part of the CoAP library libcoap. Please see
+ * README for terms of use. 
  */
 
 #include <stdio.h>
@@ -48,10 +37,10 @@ notify(coap_context_t *context, coap_resource_t *res,
   pdu->hdr->code = code;
 
   /* FIXME: content-type and data (how about block?) */
-  if (res->uri->na.length)
-    coap_add_option (pdu, COAP_OPTION_URI_AUTHORITY,
-		     res->uri->na.length,
-		     res->uri->na.s );
+  if (res->uri->host.length)
+    coap_add_option (pdu, COAP_OPTION_URI_HOST,
+		     res->uri->host.length,
+		     res->uri->host.s );
 
   if (res->uri->path.length)
     coap_add_option (pdu, COAP_OPTION_URI_PATH,
@@ -84,13 +73,18 @@ notify(coap_context_t *context, coap_resource_t *res,
   }
 
 #ifndef NDEBUG
-  if ( inet_ntop(AF_INET6, &(sub->subscriber.sin6_addr), addr, INET6_ADDRSTRLEN) ) {
-    debug("*** notify for %s to [%s]:%d\n", res->uri->path.s, addr, ntohs(sub->subscriber.sin6_port));
+  if ( inet_ntop(sub->subscriber.addr.sa.sa_family, 
+		 &sub->subscriber.addr, addr, sizeof(addr)) ) {
+    debug("*** notify for %s to [%s]\n", res->uri->path.s, addr);
   }
 #endif
-  if ( pdu && coap_send_confirmed(context,
-		  &sub->subscriber, pdu ) == COAP_INVALID_TID ) {
+  if (pdu && coap_send_confirmed(context,
+				 &sub->subscriber.addr.sa,
+				 sub->subscriber.size, pdu) 
+      == COAP_INVALID_TID) {
+#ifndef NDEBUG
     debug("coap_check_resource_list: error sending notification\n");
+#endif
     coap_delete_pdu(pdu);
   }
 }
@@ -160,9 +154,11 @@ coap_check_subscriptions(coap_context_t *context) {
   node = context->subscriptions;
   while ( node && COAP_SUBSCRIPTION(node)->expires < now ) {
 #ifndef NDEBUG
-    if ( inet_ntop(AF_INET6, &(COAP_SUBSCRIPTION(node)->subscriber.sin6_addr), addr, INET6_ADDRSTRLEN) ) {
-
-      debug("** removed expired subscription from [%s]:%d\n", addr, ntohs(COAP_SUBSCRIPTION(node)->subscriber.sin6_port));
+    if (inet_ntop(COAP_SUBSCRIPTION(node)->subscriber.addr.sa.sa_family,
+		  &COAP_SUBSCRIPTION(node)->subscriber.addr,
+		  addr, sizeof(addr))) {
+      
+      debug("** removed expired subscription from [%s]\n", addr);
     }
 #endif
 #if 0
@@ -250,7 +246,9 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
   for (prev = NULL, node = context->resources; node;
        prev = node, node = node->next) {
     if (coap_uri_hash(COAP_RESOURCE(node)->uri) == key) {
+#ifndef NDEBUG
       debug("removed key %lu (%s)\n",key,COAP_RESOURCE(node)->uri->path.s);
+#endif
       if (!prev)
 	context->resources = node->next;
       else
@@ -265,16 +263,16 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
 
 coap_subscription_t *
 coap_new_subscription(coap_context_t *context, const coap_uri_t *resource,
-		      const struct sockaddr_in6 *subscriber, time_t expiry) {
+		      const struct sockaddr *addr, socklen_t addrlen, time_t expiry) {
   coap_subscription_t *result;
 
-  if ( !context || !resource || !subscriber
+  if ( !context || !resource || !addr
        || !(result = coap_malloc(sizeof(coap_subscription_t))))
     return NULL;
 
   result->resource = coap_uri_hash(resource);
   result->expires = expiry;
-  memcpy( &result->subscriber, subscriber, sizeof(struct sockaddr_in6) );
+  memcpy(&result->subscriber.addr.sa, addr, addrlen);
 
   memset(&result->token, 0, sizeof(str));
 
@@ -337,13 +335,18 @@ coap_add_subscription(coap_context_t *context,
 coap_subscription_t *
 coap_find_subscription(coap_context_t *context,
 		       coap_key_t hashkey,
-		       struct sockaddr_in6 *subscriber,
+		       struct sockaddr *addr,
 		       str *token) {
+#if 0
   coap_list_t *node;
+#endif
 
-  if (!context || !subscriber || hashkey == COAP_INVALID_HASHKEY)
+  if (!context || !addr || hashkey == COAP_INVALID_HASHKEY)
     return NULL;
 
+  /* FIXME: I do not like the way subscriptions work right now. To be fixed. */
+
+#if 0
   for (node = context->subscriptions; node; node = node->next) {
     if (COAP_SUBSCRIPTION(node)->resource == hashkey) {
 
@@ -361,18 +364,24 @@ coap_find_subscription(coap_context_t *context,
 	return COAP_SUBSCRIPTION(node);
     }
   }
+#endif
   return NULL;
 }
 
 int
 coap_delete_subscription(coap_context_t *context,
 			 coap_key_t key,
-			 struct sockaddr_in6 *subscriber) {
+			 struct sockaddr *addr) {
+#if 0
   coap_list_t *prev, *node;
+#endif
 
-  if (!context || !subscriber || key == COAP_INVALID_HASHKEY)
+  if (!context || !addr || key == COAP_INVALID_HASHKEY)
     return 0;
 
+  /* FIXME: I do not like the way subscriptions work right now. To be fixed. */
+
+#if 0
   for (prev = NULL, node = context->subscriptions; node;
        prev = node, node = node->next) {
     if (COAP_SUBSCRIPTION(node)->resource == key) {
@@ -394,5 +403,7 @@ coap_delete_subscription(coap_context_t *context,
       }
     }
   }
+#endif
+
   return 0;
 }

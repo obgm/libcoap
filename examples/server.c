@@ -1,21 +1,10 @@
 /* coap -- simple implementation of the Constrained Application Protocol (CoAP)
- *         as defined in draft-ietf-core-coap-01
+ *         as defined in draft-ietf-core-coap
  *
- * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * This file is part of the CoAP library libcoap. Please see
+ * README for terms of use. 
  */
 
 #include <string.h>
@@ -91,12 +80,13 @@ new_response( coap_context_t  *ctx, coap_queue_t *node, unsigned int code ) {
 
 void
 add_contents( coap_pdu_t *pdu, unsigned int mediatype, unsigned int len, unsigned char *data ) {
-  unsigned char ct = COAP_MEDIATYPE_APPLICATION_LINK_FORMAT;
+  unsigned char ct[2];
   if (!pdu)
     return;
 
   /* add content-encoding */
-  coap_add_option(pdu, COAP_OPTION_CONTENT_TYPE, 1, &ct);
+  coap_add_option(pdu, COAP_OPTION_CONTENT_TYPE, 
+		  coap_encode_var_bytes(ct, mediatype), ct);
 
   /* TODO: handle fragmentation (check result code) */
   coap_add_data(pdu, len, data);
@@ -118,19 +108,19 @@ coap_next_option(coap_pdu_t *pdu, coap_opt_t *opt) {
 
 int
 mediatype_matches(coap_pdu_t *pdu, unsigned char mediatype) {
-  coap_opt_t *accept;
-  int t;
+  coap_opt_iterator_t opt_iter;
 
-  if ( mediatype == COAP_MEDIATYPE_ANY ||
-       (accept = coap_check_option(pdu, COAP_OPTION_ACCEPT)) == NULL)
+  /* FIXME: handle Accept.Only vs. Accept.Prefer, see draft-bormann-coap-misc-08 */
+  if (mediatype == COAP_MEDIATYPE_ANY ||
+      coap_check_option(pdu, COAP_OPTION_ACCEPT, &opt_iter) == NULL)
     return 1;
 
-  /* Check the byte sequence in the option value for any occurence of
-   * mediatype. */
-  for (t = 0; t < COAP_OPT_LENGTH(*accept); ++t) {
-    if ( COAP_OPT_VALUE(*accept)[t] == mediatype )
-      return 1;
-  }
+  do {
+    if (coap_decode_var_bytes(COAP_OPT_VALUE(*opt_iter.option), 
+			      COAP_OPT_LENGTH(*opt_iter.option))
+	== mediatype)
+    return 1;
+  } while (coap_option_next(&opt_iter) && opt_iter.type == COAP_OPTION_ACCEPT);
 
   return 0;
 }
@@ -210,6 +200,7 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_uri_t uri;
   coap_resource_t *resource;
   coap_opt_t *block, *tok, *sub;
+  coap_opt_iterator_t opt_iter;
   str token;
   unsigned int blklen, blk;
   int code, finished = 1;
@@ -235,7 +226,7 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
 
   /* add token to any response */
   token.length = 0;
-  tok = coap_check_option(node->pdu, COAP_OPTION_TOKEN);
+  tok = coap_check_option(node->pdu, COAP_OPTION_TOKEN, &opt_iter);
   if (tok) {
     COAP_SET_STR(&token, COAP_OPT_LENGTH(*tok), COAP_OPT_VALUE(*tok));
   }
@@ -253,13 +244,13 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   }
 
   /* check if requested mediatypes match */
-  if ( coap_check_option(node->pdu, COAP_OPTION_ACCEPT)
+  if (coap_check_option(node->pdu, COAP_OPTION_ACCEPT, &opt_iter)
        && !mediatype_matches(node->pdu, resource->mediatype) ) {
     debug("media type mismatch\n");
     return new_response(ctx, node, COAP_RESPONSE_415);
   }
 
-  block = coap_check_option(node->pdu, COAP_OPTION_BLOCK);
+  block = coap_check_option(node->pdu, COAP_OPTION_BLOCK, &opt_iter);
   if ( block ) {
     blk = coap_decode_var_bytes(COAP_OPT_VALUE(*block),
 				COAP_OPT_LENGTH(*block));
@@ -301,7 +292,8 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   if ( blklen > 0 ) {
     /* add content-type */
     if ( mediatype != COAP_MEDIATYPE_ANY )
-      coap_add_option(pdu, COAP_OPTION_CONTENT_TYPE, 1, &mediatype);
+      coap_add_option(pdu, COAP_OPTION_CONTENT_TYPE, 
+		      coap_encode_var_bytes(optbuf, mediatype), optbuf);
 
     /* set Max-age option unless resource->maxage is zero */
     if (resource->maxage) {
@@ -316,7 +308,7 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
     }
 
     /* handle subscription if requested */
-    sub = coap_check_option( node->pdu, COAP_OPTION_SUBSCRIPTION );
+    sub = coap_check_option(node->pdu, COAP_OPTION_SUBSCRIPTION, &opt_iter);
     if ( sub ) {
       duration = COAP_PSEUDOFP_DECODE_8_4(*COAP_OPT_VALUE(*sub));
       debug("*** add subscription for %d seconds\n", duration);
@@ -325,13 +317,16 @@ handle_get(coap_context_t  *ctx, coap_queue_t *node, void *data) {
      
       /* refresh only if already subscribed */
       subscription =
-	coap_find_subscription(ctx, coap_uri_hash(&uri), &(node->remote),
+	coap_find_subscription(ctx, coap_uri_hash(&uri), 
+			       &node->remote.addr.sa, 
 			       tok ? &token : NULL);
 
       if (subscription) {	/* refresh existing subscription */
 	subscription->expires = time(NULL)+duration;
       } else {			/* add new subscription */
-	subscription = coap_new_subscription(ctx, &uri, &(node->remote),
+	subscription = coap_new_subscription(ctx, &uri, 
+					     &node->remote.addr.sa, 
+					     node->remote.size,
 					     time(NULL)+duration);
 	if (subscription) {
 	  if (token.length) {
@@ -402,6 +397,7 @@ coap_pdu_t *
 handle_put(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_uri_t uri;
   coap_opt_t *tok;
+  coap_opt_iterator_t opt_iter;
   coap_pdu_t *pdu;
   coap_resource_t *resource;
   ssize_t written, length;
@@ -439,7 +435,7 @@ handle_put(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   if (written < length)
     return new_response(ctx, node, COAP_RESPONSE_500);
 
-  tok = coap_check_option(node->pdu, COAP_OPTION_CONTENT_TYPE);
+  tok = coap_check_option(node->pdu, COAP_OPTION_CONTENT_TYPE, &opt_iter);
   resource->mediatype = tok ? *COAP_OPT_VALUE(*tok) : COAP_MEDIATYPE_ANY;
   resource->dirty = 1;		/* mark for notification of observers */
   return pdu;
@@ -457,6 +453,7 @@ handle_post(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_pdu_t *pdu;
   coap_resource_t *r;
   coap_opt_t *tok;
+  coap_opt_iterator_t opt_iter;
   ssize_t written, length;
   int namelen;
   char name[60];
@@ -473,7 +470,7 @@ handle_post(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   if ( !(r = coap_malloc( sizeof(coap_resource_t) )))
     return new_response(ctx, node, COAP_RESPONSE_500);
 
-  tok = coap_check_option(node->pdu, COAP_OPTION_CONTENT_TYPE);
+  tok = coap_check_option(node->pdu, COAP_OPTION_CONTENT_TYPE, &opt_iter);
 
   /* Create a new resource to store the given contents in the local
    * file system. We restrict the storage area to DATASINK_PREFIX.
@@ -517,12 +514,12 @@ handle_post(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   pdu = new_response(ctx, node, COAP_RESPONSE_201);
 
   /* add location header */
-  coap_add_option(pdu, COAP_OPTION_LOCATION,
+  coap_add_option(pdu, COAP_OPTION_LOCATION_PATH,
 		  namelen, (unsigned char *)name);
 
   /* we do not need the request URI, only a token, if specified */
 
-  tok = coap_check_option(node->pdu, COAP_OPTION_TOKEN);
+  tok = coap_check_option(node->pdu, COAP_OPTION_TOKEN, &opt_iter);
   if (tok)
     coap_add_option(pdu, COAP_OPTION_TOKEN,
 		    COAP_OPT_LENGTH(*tok), COAP_OPT_VALUE(*tok));
@@ -536,6 +533,7 @@ handle_delete(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   coap_pdu_t *pdu;
   coap_resource_t *r;
   coap_opt_t *tok;
+  coap_opt_iterator_t opt_iter;
   static char filename[FILENAME_MAX+1];
 
   if ( !coap_get_request_uri( node->pdu, &uri ) )
@@ -562,24 +560,12 @@ handle_delete(coap_context_t  *ctx, coap_queue_t *node, void *data) {
   unlink(filename);
 
   /* create the response */
-  pdu = new_response(ctx, node, COAP_RESPONSE_200);
+  pdu = new_response(ctx, node, COAP_RESPONSE_CODE(202));
 
-  if (uri.na.length)
-    coap_add_option(pdu, COAP_OPTION_URI_AUTHORITY,
-		    uri.na.length, uri.na.s);
-
-  if (uri.path.length)
-    coap_add_option(pdu, COAP_OPTION_URI_PATH,
-		    uri.path.length, uri.path.s);
-
-  tok = coap_check_option(node->pdu, COAP_OPTION_TOKEN);
+  tok = coap_check_option(node->pdu, COAP_OPTION_TOKEN, &opt_iter);
   if (tok)
     coap_add_option(pdu, COAP_OPTION_TOKEN,
 		    COAP_OPT_LENGTH(*tok), COAP_OPT_VALUE(*tok));
-
-  if (uri.query.length)
-    coap_add_option(pdu, COAP_OPTION_URI_QUERY,
-		    uri.query.length, uri.query.s);
 
   coap_delete_resource(ctx, coap_uri_hash(&uri));
 
@@ -624,16 +610,16 @@ message_handler(coap_context_t  *ctx, coap_queue_t *node, void *data) {
     break;
   default:
     if ( node->pdu->hdr->type == COAP_MESSAGE_CON ) {
-      if ( node->pdu->hdr->code >= COAP_RESPONSE_100 )
-	pdu = new_rst( ctx, node, COAP_RESPONSE_500 );
-      else {
+      if ( node->pdu->hdr->code < 32 ) { /* it is a request */
 	debug("request method not implemented: %u\n", node->pdu->hdr->code);
 	pdu = new_rst( ctx, node, COAP_RESPONSE_405 );
-      }
+      } else /* it is a response */
+	pdu = new_rst( ctx, node, COAP_RESPONSE_500 );
     }
   }
 
-  if ( pdu && coap_send( ctx, &node->remote, pdu ) == COAP_INVALID_TID ) {
+  if (pdu && coap_send(ctx, &node->remote.addr.sa, node->remote.size, pdu) 
+      == COAP_INVALID_TID) {
     debug("message_handler: error sending reponse");
     coap_delete_pdu(pdu);
   }
@@ -649,7 +635,7 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-	   "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
+	   "(c) 2010,2011 Olaf Bergmann <bergmann@tzi.org>\n\n"
 	   "usage: %s [-A address] [-g group] [-p port]\n\n"
 	   "\t-A address\tinterface address to bind to\n"
 	   "\t-g group\tjoin the given multicast group\n"
@@ -741,11 +727,11 @@ print_link(coap_resource_t *resource, unsigned char *buf, size_t buflen) {
   }
 
   if (resource->name) {
-    if (buflen - n < resource->name->length + 5) /* include trailing quote */
+    if (buflen - n < resource->name->length + 9) /* include trailing quote */
       return -1;
 
-    memcpy(buf + n, ";n=\"", 4);
-    n += 4;
+    memcpy(buf + n, ";title=\"", 8);
+    n += 8;
     memcpy(buf + n, resource->name->s, resource->name->length);
     n += resource->name->length;
 
@@ -758,6 +744,19 @@ print_link(coap_resource_t *resource, unsigned char *buf, size_t buflen) {
 
     buf[n++] = '"';
   }
+
+#if 0
+  if (resource->rt) {
+    if (buflen - n < resource->rt->length + 6) /* include trailing quote */
+      return -1;
+    
+    memcpy(buf + n, ";rt=\"", 5);
+    n += 5;
+    memcpy(buf + n, resource->rt->s, resource->rt->length);
+    n += resource->rt->length;
+    buf[n++] = '"';
+  }
+ #endif
 
   return  n;
 }
@@ -843,7 +842,6 @@ resource_time(coap_uri_t *uri,
     *mediatype = COAP_MEDIATYPE_TEXT_PLAIN;
     maxlen = strftime(resource_buf, sizeof(b), "%b %d %H:%M:%S", tlocal);
     break;
-  case COAP_MEDIATYPE_TEXT_XML :
   case COAP_MEDIATYPE_APPLICATION_XML :
     maxlen = strftime(resource_buf, sizeof(b), "<datetime>\n  <date>%Y-%m-%d</date>\n  <time>%H:%M:%S</time>\n  </tz>%S</tz>\n</datetime>", tlocal);
     break;
@@ -912,8 +910,6 @@ _resource_from_dir(char *filename,
   case COAP_MEDIATYPE_APPLICATION_LINK_FORMAT:
     *mediatype = COAP_MEDIATYPE_APPLICATION_LINK_FORMAT;
     break;
-  /* case COAP_MEDIATYPE_TEXT_PLAIN: */
-  /*   break; */
   default:
     *buflen = 0;
     return COAP_RESPONSE_415;
@@ -1056,6 +1052,7 @@ resource_from_file(coap_uri_t *uri,
 #define RESOURCE_SET_URI(r,st) \
   (r)->uri = coap_new_uri((const unsigned char *)(st), strlen(st));
 
+/** \bug memory leak as the new string is not released by coap_delete() ! */
 #define RESOURCE_SET_DESC(r,st) \
   (r)->name = coap_new_string(strlen(st));	 \
   if ((r)->name) {				 \
@@ -1179,10 +1176,10 @@ main(int argc, char **argv) {
   fd_set readfds;
   struct timeval tv, *timeout;
   int result;
-  time_t now;
+  coap_tick_t now;
   coap_queue_t *nextpdu;
   char addr_str[NI_MAXHOST] = "::";
-  char port_str[NI_MAXSERV] = "61616";
+  char port_str[NI_MAXSERV] = "5683";
   int opt;
   char *group = NULL;
 
@@ -1223,7 +1220,7 @@ main(int argc, char **argv) {
 
     nextpdu = coap_peek_next( ctx );
 
-    time(&now);
+    coap_ticks(&now);
     while ( nextpdu && nextpdu->t <= now ) {
       coap_retransmit( ctx, coap_pop_next( ctx ) );
       nextpdu = coap_peek_next( ctx );
@@ -1231,8 +1228,8 @@ main(int argc, char **argv) {
 
     if ( nextpdu && nextpdu->t <= now + COAP_RESOURCE_CHECK_TIME ) {
       /* set timeout if there is a pdu to send before our automatic timeout occurs */
-      tv.tv_usec = 0;
-      tv.tv_sec = nextpdu->t - now;
+      tv.tv_usec = ((nextpdu->t - now) % COAP_TICKS_PER_SECOND) << 10;
+      tv.tv_sec = (nextpdu->t - now) / COAP_TICKS_PER_SECOND;
       timeout = &tv;
     } else {
       tv.tv_usec = 0;

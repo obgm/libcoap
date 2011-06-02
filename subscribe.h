@@ -1,21 +1,10 @@
 /* subscribe.h -- subscription handling for CoAP
  *                see draft-hartke-coap-observe-01
  *
- * Copyright (C) 2010 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * This file is part of the CoAP library libcoap. Please see
+ * README for terms of use. 
  */
 
 
@@ -67,8 +56,9 @@ typedef struct {
   coap_key_t resource;		/* hash key for subscribed resource */
   time_t expires;		/* expiry time of subscription */
 
-  struct sockaddr_in6 subscriber; /* subscriber's address */
-  str token;			  /* subscription token */
+  coap_address_t subscriber;	/**< subscriber's address */
+
+  str token;			/**< subscription token */
 } coap_subscription_t;
 
 #define COAP_RESOURCE(node) ((coap_resource_t *)(node)->data)
@@ -98,7 +88,8 @@ int coap_delete_resource(coap_context_t *context, coap_key_t key);
  * allocated for this object must be released using coap_free(). */
 coap_subscription_t *coap_new_subscription(coap_context_t *context,
 					   const coap_uri_t *resource,
-					   const struct sockaddr_in6 *subscriber,
+					   const struct sockaddr *subscriber,
+					   socklen_t addrlen,
 					   time_t expiry);
 
 /**
@@ -127,7 +118,7 @@ coap_key_t coap_add_subscription(coap_context_t *context,
  */
 coap_subscription_t * coap_find_subscription(coap_context_t *context,
 					     coap_key_t hashkey,
-					     struct sockaddr_in6 *subscriber,
+					     struct sockaddr *subscriber,
 					     str *token);
 /**
  * Removes a subscription from the subscription list stored in context and
@@ -138,7 +129,7 @@ coap_subscription_t * coap_find_subscription(coap_context_t *context,
  */
 int coap_delete_subscription(coap_context_t *context,
 			     coap_key_t hashkey,
-			     struct sockaddr_in6 *subscriber);
+			     struct sockaddr *subscriber);
 
 /** Returns a unique hash for the specified URI or COAP_INVALID_HASHKEY on error. */
 coap_key_t coap_uri_hash(const coap_uri_t *uri);
