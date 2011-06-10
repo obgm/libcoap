@@ -23,7 +23,7 @@
 
 #define COAP_DEFAULT_VERSION           1 /* version of CoAP supported */
 #define COAP_DEFAULT_SCHEME        "coap" /* the default scheme for CoAP URIs */
-#define COAP_DEFAULT_URI_WELLKNOWN ".well-known/core" /* well-known resources URI */
+#define COAP_DEFAULT_URI_WELLKNOWN ".well-known\004core" /* well-known resources URI */
 
 /* CoAP message types */
 
@@ -138,63 +138,6 @@ typedef struct {
 #define COAP_MESSAGE_IS_REQUEST(MSG)  (!COAP_MESSAGE_IS_EMPTY(MSG)	\
 				       && ((MSG)->code < 32))
 #define COAP_MESSAGE_IS_RESPONSE(MSG) ((MSG)->code >= 64 && (MSG)->code <= 191)
-
-#if 0
-#ifdef WORDS_BIGENDIAN
-typedef union {
-  struct {		        /* short form, to be used when length < 15 */
-    unsigned int delta:4;      /* option type (expressed as delta) */
-    unsigned int length:4;	/* number of option bytes (15 indicates extended form) */
-    /* 0--14 bytes options */
-  } sval;
-  struct {			/* extended form, to be used when lengt==15 */
-    unsigned int delta:4;      /* option type (expressed as delta) */
-    unsigned int flag:4;	/* must be 15! */
-    unsigned int length:8;	/* length - 15 */
-    /* 15--270 bytes options */
-  } lval;
-} coap_opt_t;
-#else
-typedef union {
-  struct {		        /* short form, to be used when length < 15 */
-    unsigned int length:4;	/* number of option bytes (15 indicates extended form) */
-    unsigned int delta:4;      /* option type (expressed as delta) */
-    /* 0--14 bytes options */
-  } sval;
-  struct {			/* extended form, to be used when lengt==15 */
-    unsigned int flag:4;	/* must be 15! */
-    unsigned int delta:4;      /* option type (expressed as delta) */
-    unsigned int length:8;	/* length - 15 */
-    /* 15--270 bytes options */
-  } lval;
-} coap_opt_t;
-#endif
-
-#define COAP_OPT_SVAL(opt) (opt).sval
-#define COAP_OPT_LVAL(opt) (opt).lval
-#define COAP_OPT_ISEXTENDED(opt) (COAP_OPT_LVAL(opt).flag == 15)
-
-/* these macros should be used to access fields from coap_opt_t */
-#define COAP_OPT_DELTA(opt) COAP_OPT_SVAL(opt).delta
-#define COAP_OPT_SETDELTA(opt,val) COAP_OPT_SVAL(opt).delta = (val)
-
-#define COAP_OPT_LENGTH(opt) \
-  ( COAP_OPT_ISEXTENDED(opt) ? COAP_OPT_LVAL(opt).length + 15 : COAP_OPT_SVAL(opt).length )
-
-#define COAP_OPT_SETLENGTH(opt,val)		\
-  if ( (val) < 15 )				\
-    COAP_OPT_SVAL(opt).length = (val) & 0x0f;	\
-  else {								\
-    COAP_OPT_LVAL(opt).length = ((val) - 15) & 0xff;			\
-    COAP_OPT_LVAL(opt).flag = 15;					\
-  }
-
-#define COAP_OPT_VALUE(opt)						\
-  ( (unsigned char *)&(opt) + ( COAP_OPT_ISEXTENDED(opt) ? 2 : 1 ) )
-
-/* do not forget to adjust this when coap_opt_t is changed! */
-#define COAP_OPT_SIZE(opt) ( COAP_OPT_LENGTH(opt) + ( COAP_OPT_ISEXTENDED(opt) ? 2: 1 ) )
-#endif 
 
 /**
  * Structures for more convenient handling of options. (To be used with ordered
