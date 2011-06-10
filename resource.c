@@ -6,7 +6,6 @@
  * README for terms of use. 
  */
 
-#include <stdio.h>
 #include "resource.h"
 
 void
