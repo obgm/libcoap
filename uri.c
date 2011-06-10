@@ -17,7 +17,7 @@
 #include "uri.h"
 
 int
-coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
+coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
   unsigned char *p, *q;
   int secure = 0, res = 0;
 
@@ -303,14 +303,26 @@ coap_split_path_impl(unsigned char *s, size_t length, int is_path,
 
 coap_uri_t *
 coap_new_uri(const unsigned char *uri, unsigned int length) {
-  unsigned char *result = coap_malloc(length + 1 + sizeof(coap_uri_t));
-  if ( !result )
+  unsigned char *result;
+
+  /** 
+   * @bug Some additional storage is needed to split path and query
+   * into segments.  Unfortunately, we do not know in advance, how
+   * many segments we will get. A quick hack is to assume that every
+   * segment will have 4 characters in average and hope for the best.
+   */
+  result = coap_malloc(length + 1 + sizeof(coap_uri_t));
+
+  if (!result)
     return NULL;
 
   memcpy(URI_DATA(result), uri, length);
   URI_DATA(result)[length] = '\0'; /* make it zero-terminated */
 
-  coap_split_uri( URI_DATA(result), length, (coap_uri_t *)result );
+  if (coap_split_uri(URI_DATA(result), length, (coap_uri_t *)result) < 0) {
+    free(result);
+    return NULL;
+  }
   return (coap_uri_t *)result;
 }
 

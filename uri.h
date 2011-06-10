@@ -36,7 +36,7 @@ typedef struct {
  * @return @c 0 on success, or < 0 on error.
  */
 int
-coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri);
+coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri);
 
 /** 
  * Splits the given string into segments. You should call one of the
@@ -86,6 +86,10 @@ int coap_split_path_impl(unsigned char *s, size_t length, int is_path,
  * @param uri The URI path to copy.
  * @para length The length of uri.
  * @return New URI object or NULL on error.
+ *
+ * @depreated This function has inconvenient storage allocation
+ * characteristics to split URI path and query. Better do that
+ * manually.
  */
 coap_uri_t *coap_new_uri(const unsigned char *uri, unsigned int length);
 
