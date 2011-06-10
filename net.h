@@ -56,10 +56,13 @@ void coap_delete_all(coap_queue_t *queue);
 /* creates a new node suitable for adding to the CoAP sendqueue */
 coap_queue_t *coap_new_node();
 
+struct coap_resource_t;
+
 /* The CoAP stack's global state is stored in a coap_context_t object */
 typedef struct {
   coap_opt_filter_t known_options;
-  coap_list_t *resources, *subscriptions; /* FIXME: make these hash tables */
+  struct coap_resource_t *resources; /**< hash table of known resources */
+  coap_list_t *subscriptions; /* FIXME: make these hash tables */
   coap_queue_t *sendqueue, *recvqueue; /* FIXME make these coap_list_t */
   int sockfd;			/* send/receive socket */
 

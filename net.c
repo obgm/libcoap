@@ -19,6 +19,7 @@
 #include "debug.h"
 #include "mem.h"
 #include "str.h"
+#include "resource.h"
 #include "subscribe.h"
 #include "option.h"
 #include "net.h"
@@ -275,12 +276,17 @@ coap_new_context(const struct sockaddr *listen_addr, size_t addr_size) {
 
 void
 coap_free_context( coap_context_t *context ) {
+  coap_resource_t *res, *rtmp;
   if ( !context )
     return;
 
   coap_delete_all(context->recvqueue);
   coap_delete_all(context->sendqueue);
-  coap_delete_list(context->resources);
+
+  HASH_ITER(hh, context->resources, res, rtmp) {
+    free(res);
+  }
+
   coap_delete_list(context->subscriptions);
   close( context->sockfd );
   coap_free( context );
