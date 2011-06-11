@@ -8,22 +8,6 @@
 
 #include "resource.h"
 
-void
-coap_hash_impl(const unsigned char *s, unsigned int len, coap_key_t h) {
-  ssize_t j;
-
-  while (len--) {
-    j = sizeof(coap_key_t)-1;
-  
-    while (j) {
-      h[j] = ((h[j] << 7) | (h[j-1] >> 1)) + h[j];
-      --j;
-    }
-
-    h[0] = (h[0] << 7) + h[0] + *s++;
-  }
-}
-
 int 
 coap_add_resource(coap_context_t *context, 
 		  const unsigned char *s, unsigned int len,
