@@ -10,7 +10,7 @@
 
 void
 coap_hash_impl(const unsigned char *s, unsigned int len, coap_key_t h) {
-  ssize_t j;
+  size_t j;
 
   while (len--) {
     j = sizeof(coap_key_t)-1;
