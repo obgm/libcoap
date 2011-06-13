@@ -11,10 +11,19 @@
 
 #ifndef NDEBUG
 
+#ifndef COAP_DEBUG_FD
+#define COAP_DEBUG_FD stdout
+#endif
+
 void debug(char *,...);
 
 #include "pdu.h"
-extern void coap_show_pdu(coap_pdu_t *);
+void coap_show_pdu(const coap_pdu_t *);
+
+#else
+
+#define debug(...)
+#define coap_show_pdu(x)
 
 #endif
 
