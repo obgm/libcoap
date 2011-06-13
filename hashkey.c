@@ -8,6 +8,9 @@
 
 #include "hashkey.h"
 
+/* Caution: When changing this, update COAP_DEFAULT_WKC_HASHKEY
+ * accordingly (see int coap_hash_path());
+ */
 void
 coap_hash_impl(const unsigned char *s, unsigned int len, coap_key_t h) {
   size_t j;

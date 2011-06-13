@@ -33,6 +33,11 @@ void coap_hash_impl(const unsigned char *s, unsigned int len, coap_key_t h);
 
 #define coap_hash(String,Length,Result) \
   coap_hash_impl((String),(Length),(Result))
+
+/* This is used to control the pre-set hash-keys for resources. */
+#define __COAP_DEFAULT_HASH
+#else
+#undef __COAP_DEFAULT_HASH
 #endif /* coap_hash */
 
 /** 
