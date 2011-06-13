@@ -17,6 +17,9 @@
 #include "option.h"
 #include "net.h"
 #include "encode.h"
+#include "str.h"
 #include "uri.h"
+#include "async.h"
+#include "resource.h"
 
 #endif /* _COAP_H_ */
