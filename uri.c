@@ -6,6 +6,7 @@
  * README for terms of use. 
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -16,8 +17,27 @@
 #include "option.h"
 #include "uri.h"
 
+/** 
+ * A length-safe version of strchr(). This function returns a pointer
+ * to the first occurrence of @p c  in @p s, or @c NULL if not found.
+ * 
+ * @param s   The string to search for @p c.
+ * @param len The length of @p s.
+ * @param c   The character to search.
+ * 
+ * @return A pointer to the first occurence of @p c, or @c NULL 
+ * if not found.
+ */
+static inline unsigned char *
+strnchr(unsigned char *s, size_t len, unsigned char c) {
+  while (len && *s++ != c)
+    --len;
+  
+  return len ? s : NULL;
+}
+
 int
-coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
+coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
   unsigned char *p, *q;
   int secure = 0, res = 0;
 
@@ -167,7 +187,7 @@ coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
  * @param buf     The result buffer.
  */
 void
-decode_segment(unsigned char *seg, size_t length, unsigned char *buf) {
+decode_segment(const unsigned char *seg, size_t length, unsigned char *buf) {
 
   while (length--) {
 
@@ -189,7 +209,7 @@ decode_segment(unsigned char *seg, size_t length, unsigned char *buf) {
  * or the length of @p s when decoded.
  */
 int 
-check_segment(unsigned char *s, size_t length) {
+check_segment(const unsigned char *s, size_t length) {
 
   size_t n = 0;
 
@@ -223,9 +243,12 @@ check_segment(unsigned char *s, size_t length) {
  * @param buflen  The maximum size of @p buf.
  * 
  * @return The option's size, or @c -1 on error.
+ *
+ * @bug This function does not split segments that are bigger than 270
+ * bytes.
  */
 int
-make_decoded_option(unsigned char *s, size_t length, 
+make_decoded_option(const unsigned char *s, size_t length, 
 		    unsigned char *buf, size_t buflen) {
   int res;
 
@@ -238,15 +261,104 @@ make_decoded_option(unsigned char *s, size_t length,
     return -1;
   }
   
-  COAP_OPT_SETDELTA(*(coap_opt_t *)buf, 0);
-  COAP_OPT_SETLENGTH(*(coap_opt_t *)buf, res);
+  COAP_OPT_SETDELTA(buf, 0);
+  COAP_OPT_SETLENGTH(buf, res);
 
-  decode_segment(s, length,
-		 COAP_OPT_VALUE(*(coap_opt_t *)buf));
+  decode_segment(s, length, COAP_OPT_VALUE(buf));
 
-  return COAP_OPT_SIZE(*(coap_opt_t *)buf);
+  return COAP_OPT_SIZE(buf);
 }
 
+
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
+typedef void (*segment_handler_t)(unsigned char *, size_t, void *);
+
+/** 
+ * Splits the given string into segments. You should call one of the
+ * macros coap_split_path() or coap_split_query() instead.
+ * 
+ * @param parse_iter The iterator used for tokenizing.
+ * @param h      A handler that is called with every token.
+ * @param data   Opaque data that is passed to @p h when called.
+ * 
+ * @return The number of characters that have been parsed from @p s.
+ */
+size_t
+coap_split_path_impl(coap_parse_iterator_t *parse_iter,
+		     segment_handler_t h, void *data) {
+  unsigned char *seg;
+  size_t length;
+  
+  assert(parse_iter);
+  assert(h);
+
+  length = parse_iter->n;
+  
+  while ( (seg = coap_parse_next(parse_iter)) ) {
+
+    /* any valid path segment is handled here: */
+    h(seg, parse_iter->segment_length, data);
+  }
+  
+  return length - (parse_iter->n - parse_iter->segment_length);
+}
+
+struct cnt_str {
+  str buf;
+  int n;
+};
+
+void
+write_option(unsigned char *s, size_t len, void *data) {
+  struct cnt_str *state = (struct cnt_str *)data;
+  int res;
+  assert(state);
+
+  /* skip empty segments and those that consist of only one or two dots */
+  if (memcmp(s, "..", min(len,2)) == 0)
+    return;
+  
+  res = make_decoded_option(s, len, state->buf.s, state->buf.length);
+  if (res > 0) {
+    state->buf.s += res;
+    state->buf.length -= res;
+    state->n++;
+  }
+}
+
+int
+coap_split_path(const unsigned char *s, size_t length, 
+		unsigned char *buf, size_t *buflen) {
+  struct cnt_str tmp = { { *buflen, buf }, 0 };
+  coap_parse_iterator_t pi;
+
+  coap_parse_iterator_init((unsigned char *)s, length, 
+			   '/', (unsigned char *)"?#", 2, &pi);
+  coap_split_path_impl(&pi, write_option, &tmp);
+
+  *buflen = tmp.buf.length;
+  return tmp.n;
+}
+
+int
+coap_split_query(const unsigned char *s, size_t length, 
+		unsigned char *buf, size_t *buflen) {
+  struct cnt_str tmp = { { *buflen, buf }, 0 };
+  coap_parse_iterator_t pi;
+
+  coap_parse_iterator_init((unsigned char *)s, length, 
+			   '&', (unsigned char *)"#", 1, &pi);
+
+  coap_split_path_impl(&pi, write_option, &tmp);
+
+  *buflen = tmp.buf.length;
+  return tmp.n;
+}
+
+#if 0
 int
 coap_split_path_impl(unsigned char *s, size_t length, int is_path,
 		     unsigned char *buf, size_t buflen) {
@@ -298,6 +410,7 @@ coap_split_path_impl(unsigned char *s, size_t length, int is_path,
   debug("invalid segment in URI\n");
   return -1;
 }
+#endif
 
 #define URI_DATA(uriobj) ((unsigned char *)(uriobj) + sizeof(coap_uri_t))
 
@@ -305,12 +418,6 @@ coap_uri_t *
 coap_new_uri(const unsigned char *uri, unsigned int length) {
   unsigned char *result;
 
-  /** 
-   * @bug Some additional storage is needed to split path and query
-   * into segments.  Unfortunately, we do not know in advance, how
-   * many segments we will get. A quick hack is to assume that every
-   * segment will have 4 characters in average and hope for the best.
-   */
   result = coap_malloc(length + 1 + sizeof(coap_uri_t));
 
   if (!result)
@@ -366,3 +473,91 @@ coap_clone_uri(const coap_uri_t *uri) {
 
   return result;
 }
+
+/* hash URI path segments */
+
+static inline void
+hash_segment(unsigned char *s, size_t len, void *data) {
+  coap_hash(s, len, *(coap_key_t *)data);
+}
+
+int
+coap_hash_path(const unsigned char *path, size_t len, coap_key_t key) {
+  coap_parse_iterator_t pi;
+
+  if (!path)
+    return 0;
+
+  memset(key, 0, sizeof(coap_key_t));
+
+  coap_parse_iterator_init((unsigned char *)path, len, 
+			   '/', (unsigned char *)"?#", 2, &pi);
+  coap_split_path_impl(&pi, hash_segment, &key);
+
+  return 1;
+}
+
+/* iterator functions */
+
+coap_parse_iterator_t *
+coap_parse_iterator_init(unsigned char *s, size_t n, 
+			 unsigned char separator,
+			 unsigned char *delim, size_t dlen,
+			 coap_parse_iterator_t *pi) {
+  assert(s); 
+  assert(pi);
+  assert(separator);
+
+  if (!s || !n)
+    return NULL;
+
+  pi->separator = separator;
+  pi->delim = delim;
+  pi->dlen = dlen;
+  pi->pos = s;
+  pi->n = n;
+  pi->segment_length = 0;
+
+  return pi;
+}
+
+unsigned char *
+coap_parse_next(coap_parse_iterator_t *pi) {
+  unsigned char *p;
+
+  if (!pi)
+    return NULL;
+
+  /* proceed to the next segment */
+  pi->n -= pi->segment_length;
+  pi->pos += pi->segment_length;
+  pi->segment_length = 0;
+
+  /* last segment? */
+  if (!pi->n || strnchr(pi->delim, pi->dlen, *pi->pos)) {
+    pi->pos = NULL;
+    return NULL;
+  }
+
+  /* skip following separator (the first segment might not have one) */
+  if (*pi->pos == pi->separator) {
+    ++pi->pos;
+    --pi->n;
+  }
+
+  p = pi->pos;
+
+  while (pi->segment_length < pi->n && *p != pi->separator &&
+	 !strnchr(pi->delim, pi->dlen, *p)) {
+    ++p;
+    ++pi->segment_length;
+  }
+
+  if (!pi->n) {
+    pi->pos = NULL;
+    pi->segment_length = 0;
+  }
+
+  return pi->pos;
+}
+

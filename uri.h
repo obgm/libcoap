@@ -9,6 +9,7 @@
 #ifndef _COAP_URI_H_
 #define _COAP_URI_H_
 
+#include "hashkey.h"
 #include "str.h"
 
 /** Representation of parsed URI. Components may be filled from a
@@ -22,6 +23,98 @@ typedef struct {
   str query;			/**<  The query part if present */
 } coap_uri_t;
 
+/**
+ * Creates a new coap_uri_t object from the specified URI. Returns the new
+ * object or NULL on error. The memory allocated by the new coap_uri_t
+ * must be released using coap_free().
+ * @param uri The URI path to copy.
+ * @para length The length of uri.
+ *
+ * @return New URI object or NULL on error.
+ */
+coap_uri_t *coap_new_uri(const unsigned char *uri, unsigned int length);
+
+/**
+ * Clones the specified coap_uri_t object. Thie function allocates sufficient
+ * memory to hold the coap_uri_t structure and its contents. The object must
+ * be released with coap_free(). */
+coap_uri_t *coap_clone_uri(const coap_uri_t *uri);
+
+/** 
+ * Calculates a hash over the given path and stores the result in 
+ * @p key. This function returns @c 0 on error or @c 1 on success.
+ * 
+ * @param path The URI path to generate hash for.
+ * @param len  The length of @p path.
+ * @param key  The output buffer.
+ * 
+ * @return @c 1 if @p key was set, @c 0 otherwise.
+ */
+int coap_hash_path(const unsigned char *path, size_t len, coap_key_t key);
+
+/**
+ * @defgroup uri_parse URI Parsing Functions
+ *
+ * CoAP PDUs contain normalized URIs with their path and query split into
+ * multiple segments. The functions in this module help splitting strings.
+ * @{
+ */
+
+/** 
+ * Iterator to for tokenizing a URI path or query. This structure must
+ * be initialized with coap_parse_iterator_init(). Call
+ * coap_parse_next() to walk through the tokens.
+ *
+ * @code
+ * unsigned char *token;
+ * coap_parse_iterator_t pi;
+ * coap_parse_iterator_init(uri.path.s, uri.path.length, '/', "?#", 2, &pi);
+ *
+ * while ((token = coap_parse_next(&pi))) {
+ *   ... do something with token ...
+ * }
+ * @endcode
+ */
+typedef struct {
+  size_t n;			/**< number of remaining characters in buffer */
+  unsigned char separator;	/**< segment separators */
+  unsigned char *delim; 	/**< delimiters where to split the string */
+  size_t dlen;			/**< length of separator */
+  unsigned char *pos;		/**< current position in buffer */
+  size_t segment_length;	/**< length of current segment */
+} coap_parse_iterator_t;
+
+/** 
+ * Initializes the given iterator @p pi. 
+ * 
+ * @param s         The string to tokenize.
+ * @param n         The length of @p s.
+ * @param separator The separator character that delimits tokens.
+ * @param delim     A set of characters that delimit @s.
+ * @param dlen      The length of @p delim.
+ * @param pi        The iterator object to initialize.
+ * 
+ * @return The initialized iterator object @p pi.
+ */
+coap_parse_iterator_t *
+coap_parse_iterator_init(unsigned char *s, size_t n, 
+			 unsigned char separator,
+			 unsigned char *delim, size_t dlen,
+			 coap_parse_iterator_t *pi);
+
+/** 
+ * Updates the iterator @p pi to point to the next token. This
+ * function returns a pointer to that token or @c NULL if no more
+ * tokens exist. The contents of @p pi will be updated. In particular,
+ * @c pi->segment_length specifies the length of the current token, @c
+ * pi->pos points to its beginning.
+ * 
+ * @param pi The iterator to update.
+ * 
+ * @return The next token or @c NULL if no more tokens exist.
+ */
+unsigned char *coap_parse_next(coap_parse_iterator_t *pi);
+
 /** 
  * Parses a given string into URI components. The identified syntactic
  * components are stored in the result parameter @p uri. Optional URI
@@ -34,69 +127,41 @@ typedef struct {
  * @param len     The actual length of @p str_var
  * @param uri     The coap_uri_t object to store the result.
  * @return @c 0 on success, or < 0 on error.
+ *
+ * @note The host name part will be converted to lower case by this
+ * function.
  */
 int
-coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri);
-
-/** 
- * Splits the given string into segments. You should call one of the
- * macros coap_split_path() or coap_split_query() instead.
- * 
- * @param s      The string to split. 
- * @param is_path Set to @c 1 to split path segments, @c 0 for query segments.
- * @param length The actual length of @p uri.
- * @param buf    Result buffer for parsed segments. 
- * @param buflen Maximum length of @p buf.
- * 
- * @return The number of segments created or @c -1 on error.
- */
-int coap_split_path_impl(unsigned char *s, size_t length, int is_path,
-			 unsigned char *buf, size_t buflen);
+coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri);
 
 /** 
  * Splits the given URI path into segments.
  * 
- * @param Path   The path string to split. 
- * @param Length The actual length of @p Path.
- * @param Buf    Result buffer for parsed segments. 
- * @param Buflen Maximum length of @p Buf.
+ * @param s      The path string to split. 
+ * @param length The actual length of @p s.
+ * @param buf    Result buffer for parsed segments. 
+ * @param buflen Maximum length of @p buf. Will be set to the actual number
+ * of bytes written into buf on success.
  * 
  * @return The number of segments created or @c -1 on error.
  */
-#define coap_split_path(Path, Length, Buf, Buflen) \
-  coap_split_path_impl((Path), (Length), 1, (Buf), (Buflen))
+int coap_split_path(const unsigned char *s, size_t length, 
+		    unsigned char *buf, size_t *buflen);
 
 /** 
  * Splits the given URI query into segments.
  * 
- * @param Query  The query string to split. 
- * @param Length The actual length of @p Query.
- * @param Buf    Result buffer for parsed segments. 
- * @param Buflen Maximum length of @p Buf.
+ * @param s      The query string to split. 
+ * @param length The actual length of @p s.
+ * @param buf    Result buffer for parsed segments. 
+ * @param buflen Maximum length of @p buf. Will be set to the actual number
+ * of bytes written into buf on success.
  * 
  * @return The number of segments created or @c -1 on error.
  */
-#define coap_split_query(Query, Length, Buf, Buflen) \
-  coap_split_path_impl((Query), (Length), 0, (Buf), (Buflen))
+int coap_split_query(const unsigned char *s, size_t length, 
+		     unsigned char *buf, size_t *buflen);
 
-/**
- * Creates a new coap_uri_t object from the specified URI. Returns the new
- * object or NULL on error. The memory allocated by the new coap_uri_t
- * must be released using coap_free().
- * @param uri The URI path to copy.
- * @para length The length of uri.
- * @return New URI object or NULL on error.
- *
- * @depreated This function has inconvenient storage allocation
- * characteristics to split URI path and query. Better do that
- * manually.
- */
-coap_uri_t *coap_new_uri(const unsigned char *uri, unsigned int length);
-
-/**
- * Clones the specified coap_uri_t object. Thie function allocates sufficient
- * memory to hold the coap_uri_t structure and its contents. The object must
- * be released with coap_free(). */
-coap_uri_t *coap_clone_uri(const coap_uri_t *uri);
+/** @} */
 
 #endif /* _COAP_URI_H_ */
