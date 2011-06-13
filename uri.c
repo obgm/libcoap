@@ -476,9 +476,11 @@ coap_clone_uri(const coap_uri_t *uri) {
 
 /* hash URI path segments */
 
+/* The function signature of coap_hash() is different from
+ * segment_handler_t hence we use this wrapper as safe typecast. */
 static inline void
 hash_segment(unsigned char *s, size_t len, void *data) {
-  coap_hash(s, len, *(coap_key_t *)data);
+  coap_hash(s, len, data);
 }
 
 int
@@ -492,7 +494,7 @@ coap_hash_path(const unsigned char *path, size_t len, coap_key_t key) {
 
   coap_parse_iterator_init((unsigned char *)path, len, 
 			   '/', (unsigned char *)"?#", 2, &pi);
-  coap_split_path_impl(&pi, hash_segment, &key);
+  coap_split_path_impl(&pi, hash_segment, key);
 
   return 1;
 }
