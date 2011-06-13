@@ -48,8 +48,8 @@ typedef union {
 } coap_opt_t;
 #endif
 
-#define COAP_OPT_SVAL(opt) (opt).sval
-#define COAP_OPT_LVAL(opt) (opt).lval
+#define COAP_OPT_SVAL(opt) ((coap_opt_t *)(opt))->sval
+#define COAP_OPT_LVAL(opt) ((coap_opt_t *)(opt))->lval
 #define COAP_OPT_ISEXTENDED(opt) (COAP_OPT_LVAL(opt).flag == 15)
 
 /* these macros should be used to access fields from coap_opt_t */
@@ -68,7 +68,7 @@ typedef union {
   }
 
 #define COAP_OPT_VALUE(opt)						\
-  ( (unsigned char *)&(opt) + ( COAP_OPT_ISEXTENDED(opt) ? 2 : 1 ) )
+  ( (unsigned char *)(opt) + ( COAP_OPT_ISEXTENDED(opt) ? 2 : 1 ) )
 
 /* do not forget to adjust this when coap_opt_t is changed! */
 #define COAP_OPT_SIZE(opt) ( COAP_OPT_LENGTH(opt) + ( COAP_OPT_ISEXTENDED(opt) ? 2: 1 ) )
@@ -86,7 +86,7 @@ typedef union {
  * @hideinitializer
  */
 #define options_next(opt) \
-  ((coap_opt_t *)((unsigned char *)(opt) + COAP_OPT_SIZE((*opt))))
+  ((coap_opt_t *)((unsigned char *)(opt) + COAP_OPT_SIZE(opt)))
 
 /**
  * @defgroup opt_filter Option Filters
@@ -102,6 +102,16 @@ typedef unsigned char coap_opt_filter_t[(COAP_MAX_OPT >> 3) + 1];
 
 /** Pre-defined filter that includes all options. */
 extern const coap_opt_filter_t COAP_OPT_ALL;
+
+/** 
+ * Clears filter @p f.
+ * 
+ * @param f The filter to clear.
+ */
+static inline void
+coap_option_filter_clear(coap_opt_filter_t f) {
+  memset(f, 0, sizeof(coap_opt_filter_t));
+}
 
 /** 
  * Sets the corresponding bit for @p type in @p filter. This function

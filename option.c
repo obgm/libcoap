@@ -26,7 +26,7 @@ coap_option_iterator_init(coap_pdu_t *pdu, coap_opt_iterator_t *oi,
   if (pdu->hdr->optcnt) {
     oi->optcnt = pdu->hdr->optcnt;
     oi->option = options_start(pdu);
-    oi->type = COAP_OPT_DELTA(*oi->option);
+    oi->type = COAP_OPT_DELTA(oi->option);
     memcpy(oi->filter, filter, sizeof(coap_opt_filter_t));
     return oi;
   } 
@@ -35,7 +35,7 @@ coap_option_iterator_init(coap_pdu_t *pdu, coap_opt_iterator_t *oi,
 }
 
 #define IS_EMPTY_NOOP(Type,Option) \
-  ((Type) % COAP_OPTION_NOOP == 0 && COAP_OPT_LENGTH(*(Option)) == 0)
+  ((Type) % COAP_OPTION_NOOP == 0 && COAP_OPT_LENGTH(Option) == 0)
 
 coap_opt_t *
 coap_option_next(coap_opt_iterator_t *oi) {
@@ -45,8 +45,8 @@ coap_option_next(coap_opt_iterator_t *oi) {
 
   if (oi->n++) {
     oi->option = options_next(oi->option);
-    oi->type += COAP_OPT_DELTA(*oi->option);
-  }      
+    oi->type += COAP_OPT_DELTA(oi->option);
+  }
   
   /* Skip subsequent options if it is an empty no-op (used for
    * fence-posting) or the filter bit is not set. */
@@ -55,7 +55,7 @@ coap_option_next(coap_opt_iterator_t *oi) {
 	  || coap_option_getb(oi->filter, oi->type) == 0)) {
     oi->n++;
     oi->option = options_next(oi->option);
-    oi->type += COAP_OPT_DELTA(*oi->option);
+    oi->type += COAP_OPT_DELTA(oi->option);
   }
   
   if (oi->n > oi->optcnt)
