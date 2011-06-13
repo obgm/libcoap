@@ -79,8 +79,8 @@ dist:	$(FILES) $(SUBDIRS)
 	tar czf $(package).tar.gz $(DISTDIR)
 
 TAGS:	
-	$(ETAGS) -o $@.new $(HEADERS) 
-	$(ETAGS) -a -o $@.new $(SOURCES) 
+	$(ETAGS) -o $@.new $(SOURCES) 
+	$(ETAGS) -a -o $@.new $(HEADERS) 
 	mv $@.new $@
 
 .gitignore:
