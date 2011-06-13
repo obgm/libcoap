@@ -14,6 +14,10 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
@@ -41,6 +45,22 @@ print_timestamp(char *s, size_t len, coap_tick_t t) {
 }
 
 #endif /* HAVE_TIME_H */
+
+/** 
+ * A length-safe strlen() fake. 
+ * 
+ * @param s      The string to count characters != 0.
+ * @param maxlen The maximum length of @p s.
+ * 
+ * @return The length of @p s.
+ */
+static inline size_t
+strnlen(unsigned char *s, size_t maxlen) {
+  size_t n = 0;
+  while(*s++ && n < maxlen)
+    ++n;
+  return n;
+}
 
 void debug(char *format, ...) {
   static char timebuf[32];
@@ -85,12 +105,67 @@ print_readable( const unsigned char *data, unsigned int len,
   return cnt;
 }
 
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
+size_t
+coap_print_addr(const struct __coap_address_t *addr, unsigned char *buf, size_t len) {
+#ifdef HAVE_ARPA_INET_H
+  const void *addrptr = NULL;
+  in_port_t port;
+  unsigned char *p = buf;
+
+  switch (addr->addr.sa.sa_family) {
+  case AF_INET: 
+    addrptr = &addr->addr.sin.sin_addr;
+    port = ntohs(addr->addr.sin.sin_port);
+    break;
+  case AF_INET6:
+    if (len < 7) /* do not proceed if buffer is even too short for [::]:0 */
+      return 0;
+
+    *p++ = '[';
+
+    addrptr = &addr->addr.sin6.sin6_addr;
+    port = ntohs(addr->addr.sin6.sin6_port);
+
+    break;
+  default:
+    memcpy(buf, "(unknown address type)", min(22, len));
+    return min(22, len);
+  }
+
+  if (inet_ntop(addr->addr.sa.sa_family, addrptr, (char *)p, len) == 0) {
+    perror("coap_print_addr");
+    return 0;
+  }
+
+  p += strnlen(p, len);
+
+  if (addr->addr.sa.sa_family == AF_INET6) {
+    if (p < buf + len) {
+      *p++ = ']';
+    } else 
+      return 0;
+  }
+
+  p += snprintf((char *)p, buf + len - p + 1, ":%d", port);
+
+  return buf + len - p;
+#else
+  /* TODO: output addresses manually */
+#warn "inet_ntop() not available, network addresses will " 
+      "not be included in debug output"
+  return 0;
+#endif
+}
+
 void
 coap_show_pdu(const coap_pdu_t *pdu) {
   unsigned char buf[COAP_MAX_PDU_SIZE]; /* need some space for output creation */
 
-  fprintf(COAP_DEBUG_FD, "pdu (%d bytes)", pdu->length);
-  fprintf(COAP_DEBUG_FD, " v:%d t:%d oc:%d c:%d id:%u", 
+  fprintf(COAP_DEBUG_FD, "v:%d t:%d oc:%d c:%d id:%u", 
 	  pdu->hdr->version, pdu->hdr->type,
 	  pdu->hdr->optcnt, pdu->hdr->code, ntohs(pdu->hdr->id));
 
@@ -112,7 +187,7 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   if (pdu->data < (unsigned char *)pdu->hdr + pdu->length) {
     print_readable(pdu->data, 
 		   (unsigned char *)pdu->hdr + pdu->length - pdu->data, 
-		   buf, COAP_MAX_PDU_SIZE, 0 );
+		   buf, sizeof(buf), 0 );
     fprintf(COAP_DEBUG_FD, " d:%s", buf);
   }
   fprintf(COAP_DEBUG_FD, "\n");

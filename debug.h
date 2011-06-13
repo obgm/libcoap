@@ -20,10 +20,14 @@ void debug(char *,...);
 #include "pdu.h"
 void coap_show_pdu(const coap_pdu_t *);
 
+struct __coap_address_t;
+size_t coap_print_addr(const struct __coap_address_t *, unsigned char *, size_t);
+
 #else
 
 #define debug(...)
 #define coap_show_pdu(x)
+#define coap_print_addr(...)
 
 #endif
 
