@@ -23,7 +23,9 @@
 
 #define COAP_DEFAULT_VERSION           1 /* version of CoAP supported */
 #define COAP_DEFAULT_SCHEME        "coap" /* the default scheme for CoAP URIs */
-#define COAP_DEFAULT_URI_WELLKNOWN ".well-known\004core" /* well-known resources URI */
+
+/** well-known resources URI */
+#define COAP_DEFAULT_URI_WELLKNOWN ".well-known/core"
 
 /* CoAP message types */
 
@@ -156,6 +158,7 @@ typedef struct {
 /** Header structure for CoAP PDUs */
 
 typedef struct {
+  size_t max_size;			/**< allocated storage for options and data */
   coap_hdr_t *hdr;
   unsigned short length;	/* PDU length (including header, options, data)  */
   coap_list_t *options;		/* parsed options */
@@ -165,12 +168,33 @@ typedef struct {
 /** Options in coap_pdu_t are accessed with the macro COAP_OPTION. */
 #define COAP_OPTION(node) ((coap_option *)(node)->options)
 
+/** 
+ * Creates a new CoAP PDU of given @p size (must be large enough to hold the 
+ * basic CoAP message header (coap_hdr_t). The function returns a pointer to
+ * the node coap_pdu_t object on success, or @c NULL on error. The storage
+ * allocated for the result must be released with coap_delete_pdu().
+ * 
+ * @param type The type of the PDU (one of COAP_MESSAGE_CON,
+ *             COAP_MESSAGE_NON, COAP_MESSAGE_ACK, COAP_MESSAGE_RST). 
+ * @param code The message code.
+ * @param id   The message id to set or COAP_INVALID_TID if unknown.
+ * @param size The number of bytes to allocate for the actual message.
+ * 
+ * @return A pointer to the new PDU object or @c NULL on error.
+ */
+coap_pdu_t *
+coap_pdu_init(unsigned char type, unsigned char code, 
+	      unsigned short id, size_t size);
+
 /**
  * Creates a new CoAP PDU. The object is created on the heap and must be released
- * using delete_pdu();
+ * using coap_delete_pdu();
+ * 
+ * @deprecated This function allocates the maximum storage for each
+ * PDU. Use coap_pdu_init() instead. 
  */
-
 coap_pdu_t *coap_new_pdu();
+
 void coap_delete_pdu(coap_pdu_t *);
 
 /**
@@ -193,6 +217,9 @@ int coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data);
  */
 int coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data);
 
+#if 0
+/* I don't think this is needed */
+
 /**
  * Fills the given coap_uri_t object with the request URI components from
  * the PDU.
@@ -201,5 +228,6 @@ int coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data);
  * @return 1 if result has been updated, 0 otherwise, i.e. in case of error
  */
 int coap_get_request_uri(coap_pdu_t *pdu, coap_uri_t *result);
+#endif
 
 #endif /* _PDU_H_ */

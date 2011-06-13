@@ -17,26 +17,42 @@
 #include "option.h"
 #include "encode.h"
 
+coap_pdu_t *
+coap_pdu_init(unsigned char type, unsigned char code, 
+	      unsigned short id, size_t size) {
+  coap_pdu_t *pdu;
+
+  /* Size must be large enough to fit the header. */
+  if (size < sizeof(coap_hdr_t)) 
+    return NULL;
+
+  //size must be large enough for hdr
+  pdu = coap_malloc(sizeof(coap_pdu_t) + size);
+  if (pdu) {
+    memset(pdu, 0, sizeof(coap_pdu_t) + size);
+    pdu->max_size = size;
+    pdu->hdr = (coap_hdr_t *)((unsigned char *)pdu + sizeof(coap_pdu_t));
+    pdu->hdr->version = COAP_DEFAULT_VERSION;
+    pdu->hdr->id = id;
+    pdu->hdr->type = type;
+    pdu->hdr->code = code;
+
+    /* data points after the header; when options are added, the data
+       pointer is moved to the back */
+    pdu->length = sizeof(coap_hdr_t);
+    pdu->data = (unsigned char *)pdu->hdr + pdu->length;
+  }
+  return pdu;
+}
 
 coap_pdu_t *
 coap_new_pdu() {
-  coap_pdu_t *pdu = coap_malloc( sizeof(coap_pdu_t) + COAP_MAX_PDU_SIZE );
-  if (!pdu) {
-    perror("new_pdu: malloc");
-    return NULL;
-  }
+  coap_pdu_t *pdu;
+  
+  pdu = coap_pdu_init(0, 0, ntohs(COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
 
-  /* initialize PDU */
-  memset(pdu, 0, sizeof(coap_pdu_t) + COAP_MAX_PDU_SIZE );
-  pdu->hdr = (coap_hdr_t *) ( (unsigned char *)pdu + sizeof(coap_pdu_t) );
-  pdu->hdr->version = COAP_DEFAULT_VERSION;
-  pdu->hdr->id = ntohs( COAP_INVALID_TID );
-
-  /* data points after the header; when options are added, the data
-     pointer is moved to the back */
-  pdu->length = sizeof(coap_hdr_t);
-  pdu->data = (unsigned char *)pdu->hdr + pdu->length;
-
+  if (!pdu)
+    perror("coap_new_pdu: cannot allocate memory for new PDU");
   return pdu;
 }
 
@@ -47,7 +63,7 @@ coap_delete_pdu(coap_pdu_t *pdu) {
 
 int
 coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const unsigned char *data) {
-  unsigned char cnt;
+  unsigned char cnt, optcnt;
   coap_opt_t *opt;
   unsigned char opt_code = 0;
 
@@ -58,8 +74,8 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
 
   opt = options_start( pdu );
   for ( cnt = pdu->hdr->optcnt; cnt; --cnt ) {
-    opt_code += COAP_OPT_DELTA(*opt);
-    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) );
+    opt_code += COAP_OPT_DELTA(opt);
+    opt = options_next(opt);
   }
 
   if ( type < opt_code ) {
@@ -68,7 +84,8 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
 #endif
     return -1;
   }
-
+  
+  optcnt = pdu->hdr->optcnt;
   /* Create new option after last existing option: First check if we
    * need fence posts between type and last opt_code (i.e. delta >
    * 15), and then add actual option.
@@ -77,23 +94,35 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
   while (type - opt_code > 15) {
     cnt = opt_code / COAP_OPTION_NOOP;
 
-    /* add fence post */
-    pdu->hdr->optcnt += 1;
-    COAP_OPT_SETLENGTH( *opt, 0 );
-    COAP_OPT_SETDELTA( *opt, (COAP_OPTION_NOOP * (cnt+1)) - opt_code );
+    if ((unsigned char *)opt + 1 > (unsigned char *)pdu->hdr + pdu->max_size) {
+      debug("cannot add fencepost option\n");
+      return -1;
+    }
 
-    opt_code += COAP_OPT_DELTA(*opt);
-    opt = (coap_opt_t *)( (unsigned char *)opt + COAP_OPT_SIZE(*opt) );
+    /* add fence post */
+    optcnt += 1;
+    COAP_OPT_SETLENGTH( opt, 0 );
+    COAP_OPT_SETDELTA( opt, (COAP_OPTION_NOOP * (cnt+1)) - opt_code );
+
+    opt_code += COAP_OPT_DELTA(opt);
+    opt = options_next(opt);
+  }
+
+  if ((unsigned char *)opt + len + (len > 14 ? 2 : 1) > 
+      (unsigned char *)pdu->hdr + pdu->max_size) {
+    debug("cannot add option\n");
+    return -1;
   }
 
   /* here, the actual option is added (delta <= 15) */
-  pdu->hdr->optcnt += 1;
-  COAP_OPT_SETDELTA( *opt, type - opt_code );
+  optcnt += 1;
+  COAP_OPT_SETDELTA( opt, type - opt_code );
 
-  COAP_OPT_SETLENGTH( *opt, len );
-  memcpy(COAP_OPT_VALUE(*opt), data, len);
-  pdu->data = (unsigned char *)COAP_OPT_VALUE(*opt) + len ;
+  COAP_OPT_SETLENGTH( opt, len );
+  memcpy(COAP_OPT_VALUE(opt), data, len);
+  pdu->data = (unsigned char *)COAP_OPT_VALUE(opt) + len ;
 
+  pdu->hdr->optcnt = optcnt;
   pdu->length = pdu->data - (unsigned char *)pdu->hdr;
   return len;
 }
@@ -103,7 +132,7 @@ coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
   if ( !pdu )
     return 0;
 
-  if ( pdu->length + len > COAP_MAX_PDU_SIZE ) {
+  if ( pdu->length + len > pdu->max_size ) {
 #ifndef NDEBUG
     fprintf(stderr, "coap_add_data: cannot add: data too large for PDU\n");
 #endif
@@ -133,6 +162,7 @@ coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data) {
   return 1;
 }
 
+#if 0
 int
 coap_get_request_uri(coap_pdu_t *pdu, coap_uri_t *result) {
   coap_opt_t *opt;
@@ -170,3 +200,4 @@ coap_get_request_uri(coap_pdu_t *pdu, coap_uri_t *result) {
 
   return 1;
 }
+#endif
