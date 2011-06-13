@@ -11,6 +11,8 @@
 #include <limits.h>
 #include <arpa/inet.h>
 
+#include "resource.h"
+
 #include "mem.h"
 #include "encode.h"
 #include "debug.h"
@@ -21,6 +23,7 @@
 void
 notify(coap_context_t *context, coap_resource_t *res,
        coap_subscription_t *sub, unsigned int duration, int code) {
+#if 0
   coap_pdu_t *pdu;
   int ls, finished=0;
   unsigned char ct, d;
@@ -87,20 +90,25 @@ notify(coap_context_t *context, coap_resource_t *res,
 #endif
     coap_delete_pdu(pdu);
   }
+#endif
 }
 
 void
 coap_check_resource_list(coap_context_t *context) {
-  coap_list_t *res, *sub;
+  coap_resource_t *res, *tmp;
+  coap_list_t *sub;
   coap_key_t key;
   time_t now;
 
   if ( !context || !context->resources /* || !context->subscribers */)
     return;
 
-  time(&now);
-  for (res = context->resources; res; res = res->next) {
-    if ( COAP_RESOURCE(res)->dirty && COAP_RESOURCE(res)->uri ) {
+  time(&now);			/* FIXME: use coap_ticks() */
+
+  HASH_ITER(hh, context->resources, res, tmp) {
+    if (res->dirty) {
+      debug("FIXME: notify subscribers\n");
+#if 0
       key = coap_uri_hash( COAP_RESOURCE(res)->uri ) ;
 
       /* is subscribed? */
@@ -114,10 +122,12 @@ coap_check_resource_list(coap_context_t *context) {
       }
 
       COAP_RESOURCE(res)->dirty = 0;
+#endif
     }
   }
 }
 
+#if 0
 coap_resource_t *
 coap_get_resource_from_key(coap_context_t *ctx, coap_key_t key) {
   coap_list_t *node;
@@ -125,18 +135,31 @@ coap_get_resource_from_key(coap_context_t *ctx, coap_key_t key) {
   if (ctx) {
     /* TODO: use hash table for resources with key to access */
     for (node = ctx->resources; node; node = node->next) {
-      if ( key == coap_uri_hash(COAP_RESOURCE(node)->uri) )
+      printf("check %ux\n", coap_uri_hash(COAP_RESOURCE(node)->uri));
+      if ( key == coap_uri_hash(COAP_RESOURCE(node)->uri) ) {
+	printf("found\n");
 	return COAP_RESOURCE(node);
+      }
     }
   }
 
+  printf("not found\n");
   return NULL;
 }
 
 coap_resource_t *
 coap_get_resource(coap_context_t *ctx, coap_uri_t *uri) {
+#ifndef NDEBUG
+  int i;
+  printf("search resource %ux", coap_uri_hash(uri));
+  for (i=0; i < uri->path.length; ++i) {
+    printf(" %02x", uri->path.s[i]);
+  }
+  printf("\n");
+#endif
   return uri ? coap_get_resource_from_key(ctx, coap_uri_hash(uri)) : NULL;
 }
+#endif
 
 void
 coap_check_subscriptions(coap_context_t *context) {
@@ -176,62 +199,14 @@ coap_check_subscriptions(coap_context_t *context) {
 void
 coap_free_resource(void *res) {
   if ( res ) {
+#if 0
     coap_free(((coap_resource_t *)res)->uri);
     coap_delete_string(((coap_resource_t *)res)->name);
+#endif
   }
 }
 
-coap_key_t
-_hash(coap_key_t init, const char *s) {
-  int c;
-
-  if ( s )
-    while ( (c = *s++) ) {
-      init = ((init << 7) + init) + c;
-    }
-
-  return init & HMASK;
-}
-
-coap_key_t
-_hash2(coap_key_t init, const unsigned char *s, unsigned int len) {
-  if ( len && !s )
-    return COAP_INVALID_HASHKEY;
-
-  while ( len-- ) {
-    init = ((init << 7) + init) + *s++;
-  }
-
-  return init & HMASK;
-}
-
-coap_key_t coap_uri_hash(const coap_uri_t *uri) {
-  return uri ? _hash2(0, uri->path.s, uri->path.length)
-    : COAP_INVALID_HASHKEY;
-}
-
-coap_key_t
-coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
-  coap_list_t *node;
-
-  if ( !context || !resource )
-    return COAP_INVALID_HASHKEY;
-
-  node = coap_new_listnode(resource, coap_free_resource);
-  if ( !node )
-    return COAP_INVALID_HASHKEY;
-
-  if ( !context->resources ) {
-    context->resources = node;
-  } else {
-    node->next = context->resources;
-    context->resources = node;
-  }
-
-  return coap_uri_hash( resource->uri );
-}
-
-
+#if 0
 /**
  * Deletes the resource that is identified by key. Returns 1 if the resource was
  * removed, 0 on error (e.g. if no such resource exists).
@@ -260,6 +235,7 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
   }
   return 0;
 }
+#endif
 
 coap_subscription_t *
 coap_new_subscription(coap_context_t *context, const coap_uri_t *resource,

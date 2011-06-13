@@ -8,15 +8,19 @@
  */
 
 
+#warning "subscribe.h"
 
 #ifndef _COAP_SUBSCRIBE_H_
 #define _COAP_SUBSCRIBE_H_
 
+#if 0
+#include "uthash.h"
 #include "uri.h"
 #include "list.h"
 #include "pdu.h"
 #include "net.h"
 
+#if 0
 typedef unsigned long coap_key_t;
 
 /** Used to indicate that a hashkey is invalid. */
@@ -24,6 +28,7 @@ typedef unsigned long coap_key_t;
 
 typedef struct {
   coap_uri_t *uri;		/* unique identifier; memory is released by coap_delete_resource() */
+  UT_hash_handle hh;		/**< hash handle (for internal use only) */
   str *name;			/* display name of the resource */
   unsigned char mediatype;	/* media type for resource representation */
   unsigned int dirty:1;		/* set to 1 if resource has changed */
@@ -51,6 +56,7 @@ typedef struct {
    */
   int (*data)(coap_uri_t *uri, unsigned char *mediatype, unsigned int offset, unsigned char *buf, unsigned int *buflen, int *finished);
 } coap_resource_t;
+#endif
 
 typedef struct {
   coap_key_t resource;		/* hash key for subscribed resource */
@@ -70,6 +76,7 @@ void coap_check_resource_list(coap_context_t *context);
 /** Removes expired subscriptions. */
 void coap_check_subscriptions(coap_context_t *context);
 
+#if 0
 /**
  * Adds specified resource to the resource observation list. Returns a
  * unique key for the resource. The alloceted memory is released when
@@ -82,7 +89,7 @@ coap_key_t coap_add_resource(coap_context_t *context, coap_resource_t *);
  * removed, 0 on error (e.g. if no such resource exists).
  */
 int coap_delete_resource(coap_context_t *context, coap_key_t key);
-
+#endif
 /**
  * Creates a new subscription object filled with the given data. The storage
  * allocated for this object must be released using coap_free(). */
@@ -137,11 +144,13 @@ coap_key_t coap_uri_hash(const coap_uri_t *uri);
 
 /** Returns a unique hash for the specified subscription or COAP_INVALID_HASHKEY on error. */
 coap_key_t coap_subscription_hash(coap_subscription_t *subscription);
-
+#if 0
 /** Returns the resource identified by key or NULL if not found. */
 coap_resource_t *coap_get_resource_from_key(coap_context_t *ctx, coap_key_t key);
 
 /** Returns the resource identified by uri or NULL if not found. */
 coap_resource_t *coap_get_resource(coap_context_t *ctx, coap_uri_t *uri);
+#endif
 
+#endif
 #endif /* _COAP_SUBSCRIBE_H_ */

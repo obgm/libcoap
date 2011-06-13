@@ -27,6 +27,11 @@
 /** well-known resources URI */
 #define COAP_DEFAULT_URI_WELLKNOWN ".well-known/core"
 
+#ifdef __COAP_DEFAULT_HASH
+/* pre-calculated hash key for the default well-known URI */
+#define COAP_DEFAULT_WKC_HASHKEY   "\345\130\144\245"
+#endif
+
 /* CoAP message types */
 
 #define COAP_MESSAGE_CON               0 /* confirmable message (requires ACK/RST) */

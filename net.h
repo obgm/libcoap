@@ -9,25 +9,101 @@
 #ifndef _COAP_NET_H_
 #define _COAP_NET_H_
 
+#include "config.h"
+
+#ifdef HAVE_ASSERT_H
+#include <assert.h>
+#else
+#ifndef assert
+#warn "assertions are disabled"
+#  define assert(x)
+#endif
+#endif
+
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <netinet/in.h>
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
 
 #include "option.h"
 #include "pdu.h"
 
+/**
+ * @defgroup clock Clock Handling
+ * Default implementation of internal clock. You should redefine this if
+ * you do not have time() and gettimeofday().
+ * @{
+ */
 typedef unsigned int coap_tick_t; 
 
+#define COAP_TICKS_PER_SECOND 1024
+
+/** Set at startup to initialize the internal clock (time in seconds). */
+extern time_t clock_offset;
+
+#ifndef coap_clock_init
+static inline void
+coap_clock_init_impl(void) {
+#ifdef HAVE_TIME_H
+  clock_offset = time(NULL);
+#else
+#warn "cannot initialize clock"
+  clock_offset = 0;
+#endif
+}
+#define coap_clock_init coap_clock_init_impl
+#endif /* coap_clock_init */
+
+#ifndef coap_ticks
+static inline void
+coap_ticks_impl(coap_tick_t *t) {
+#ifdef HAVE_SYS_TIME_H
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  *t = (tv.tv_sec - clock_offset) * COAP_TICKS_PER_SECOND 
+    + (tv.tv_usec >> 10) % COAP_TICKS_PER_SECOND;
+#else
+#error "clock not implemented"
+#endif
+}
+#define coap_ticks coap_ticks_impl
+#endif /* coap_ticks */
+
+/** @} */
+
 /** multi-purpose address abstraction */
-typedef struct {
+#ifndef coap_address_t
+typedef struct __coap_address_t {
   socklen_t size;		/**< size of addr */
   union {
     struct sockaddr     sa;
+    struct sockaddr_storage st;
     struct sockaddr_in  sin;
     struct sockaddr_in6 sin6;
   } addr;
-} coap_address_t;
+} __coap_address_t;
+
+#define coap_address_t __coap_address_t
+
+/** 
+ * Resets the given coap_address_t object @p addr to its default
+ * values.  In particular, the member size must be initialized to the
+ * available size for storing addresses.
+ * 
+ * @param addr The coap_address_t object to initialize.
+ */
+static inline void
+coap_address_init(coap_address_t *addr) {
+  assert(addr);
+  memset(addr, 0, sizeof(coap_address_t));
+  addr->size = sizeof(struct sockaddr_storage);
+}
+#endif /* coap_address_t */
 
 struct coap_listnode {
   struct coap_listnode *next;
@@ -57,31 +133,41 @@ void coap_delete_all(coap_queue_t *queue);
 coap_queue_t *coap_new_node();
 
 struct coap_resource_t;
+struct coap_context_t;
 
-/* The CoAP stack's global state is stored in a coap_context_t object */
-typedef struct {
+/** Message handler that is used as call-back in coap_context_t */
+typedef void (*coap_error_handler_t)(struct coap_context_t  *, 
+              coap_queue_t *sent, coap_queue_t *rcvd, void *);
+
+/** The CoAP stack's global state is stored in a coap_context_t object */
+typedef struct coap_context_t {
   coap_opt_filter_t known_options;
   struct coap_resource_t *resources; /**< hash table of known resources */
-  coap_list_t *subscriptions; /* FIXME: make these hash tables */
+  /* coap_list_t *subscriptions; /\* FIXME: make these hash tables *\/ */
   coap_queue_t *sendqueue, *recvqueue; /* FIXME make these coap_list_t */
   int sockfd;			/* send/receive socket */
 
-  void ( *msg_handler )( void *, coap_queue_t *, void *);
+  /** This handler is called when an RST message was received. */
+  coap_error_handler_t error_handler;
 } coap_context_t;
 
-typedef void (*coap_message_handler_t)( coap_context_t  *, coap_queue_t *, void *);
-
+#if 0
 /**
  * Registers a new message handler that is called whenever a new PDU
  * was received. Note that the transactions are handled on the lower
  * layer previously to stop retransmissions, e.g. */
 void coap_register_message_handler( coap_context_t *context, coap_message_handler_t handler);
+#endif
 
 /**
  * Registers a new handler function that is called when a RST message
  * has been received.
  */
-void coap_register_error_handler( coap_context_t *context, coap_message_handler_t handler);
+static inline void 
+coap_register_error_handler(coap_context_t *context, 
+			    coap_error_handler_t handler) {
+  context->error_handler = handler;
+}
 
 /** 
  * Registers the option type @p type with the given context object @p
@@ -116,15 +202,33 @@ void coap_free_context( coap_context_t *context );
  *
  * @param context The CoAP context to use.
  * @param dst     The address to send to.
- * @param addrlen The actual length of @p dst
  * @param pdu     The CoAP PDU to send.
  * @return The message id of the sent message or @c COAP_INVALID_TID on error.
  */
-coap_tid_t coap_send_confirmed( coap_context_t *context, 
-				const struct sockaddr *dst, 
-				socklen_t addrlen,
-				coap_pdu_t *pdu );
+coap_tid_t coap_send_confirmed(coap_context_t *context, 
+			       const coap_address_t *dst,
+			       coap_pdu_t *pdu);
 
+/** 
+ * Creates a new RST PDU with specified error @p code. The options
+ * specified by the filter expression @p opts will be copied from the
+ * original request contained in @c node->pdu.  Unless @c
+ * SHORT_ERROR_RESPONSE was defined at build time, the textual reason
+ * phrase for @p code will be added as payload, with Content-Type @c 0.
+ * This function returns a pointer to the new response message, or 
+ * @c NULL on error. The storage allocated for the new message must be
+ * relased with coap_frree(). 
+ * 
+ * @param node Specification of the received (confirmable) request.
+ * @param code The error code to set.
+ * @param opts An option filter that specifies which options to copy
+ *             from the original request in @p node.
+ * 
+ * @return A pointer to the new message or @c NULL on error.
+ */
+coap_pdu_t *coap_new_error_response(coap_queue_t *node, 
+				    unsigned char code, 
+				    coap_opt_filter_t opts);
 /**
  * Sends a non-confirmed CoAP message to given destination. The memory
  * that is allocated by pdu will be released by coap_send(). The
@@ -132,14 +236,12 @@ coap_tid_t coap_send_confirmed( coap_context_t *context,
  *
  * @param context The CoAP context to use.
  * @param dst     The address to send to.
- * @param addrlen The actual length of @p dst
  * @param pdu     The CoAP PDU to send.
  * @return The message id of the sent message or @c COAP_INVALID_TID on error.
  */
-coap_tid_t coap_send( coap_context_t *context, 
-		      const struct sockaddr *dst, 
-		      socklen_t addrlen,
-		      coap_pdu_t *pdu );
+coap_tid_t coap_send(coap_context_t *context, 
+		     const coap_address_t *dst, 
+		     coap_pdu_t *pdu);
 
 /** Handles retransmissions of confirmable messages */
 coap_tid_t coap_retransmit( coap_context_t *context, coap_queue_t *node );
@@ -167,8 +269,6 @@ void coap_dispatch( coap_context_t *context );
 
 /** Returns 1 if there are no messages to send or to dispatch in the context's queues. */
 int coap_can_exit( coap_context_t *context );
-
-#define COAP_TICKS_PER_SECOND 1024
 
 /**
  * Returns the current value of an internal tick counter. The counter
@@ -211,5 +311,43 @@ void coap_ticks(coap_tick_t *);
 int coap_option_check_critical(coap_context_t *ctx, 
 			       coap_pdu_t *pdu,
 			       coap_opt_filter_t unknown);
+
+/** 
+ * @defgroup prng Pseudo Random Numbers
+ * @{
+ */
+
+/**
+ * Fills \p buf with \p len random bytes. This is the default
+ * implementation for prng().  You might want to change prng() to use
+ * a better PRNG on your specific platform.
+ */
+static inline int
+coap_prng_impl(unsigned char *buf, size_t len) {
+  while (len--)
+    *buf++ = rand() & 0xFF;
+  return 1;
+}
+
+#ifndef prng
+/** 
+ * Fills \p Buf with \p Length bytes of random data. 
+ * 
+ * @hideinitializer
+ */
+#define prng(Buf,Length) coap_prng_impl((Buf), (Length))
+#endif
+
+#ifndef prng_init
+/** 
+ * Called by dtls_new_context() to set the PRNG seed. You
+ * may want to re-define this to allow for a better PRNG. 
+ *
+ * @hideinitializer
+ */
+#define prng_init(Value) srand((unsigned long)(Value))
+#endif
+
+/** @} */
 
 #endif /* _COAP_NET_H_ */
