@@ -23,7 +23,7 @@ SOURCES:= pdu.c net.c debug.c encode.c uri.c list.c resource.c hashkey.c \
 	 str.c option.c async.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
 HEADERS:=coap.h config.h debug.h pdu.h net.h encode.h uri.h list.h mem.h \
-	str.h option.h bits.h uthash.h resource.h hashkey.h async.h
+	str.h option.h bits.h uthash.h utlist.h resource.h hashkey.h async.h
 CFLAGS:=-Wall -std=c99 -pedantic @CFLAGS@
 CPPFLAGS:=@CPPFLAGS@
 DISTDIR=$(top_builddir)/$(package)
