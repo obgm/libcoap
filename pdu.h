@@ -83,6 +83,27 @@
 /* Determines the class of response code C */
 #define COAP_RESPONSE_CLASS(C) (((C) >> 5) & 0xFF)
 
+#ifndef SHORT_ERROR_RESPONSE
+/** 
+ * Returns a human-readable response phrase for the specified CoAP
+ * response @p code. This function returns @c NULL if not found.
+ * 
+ * @param code The response code for which the literal phrase should
+ * be retrieved.
+ * 
+ * @return A zero-terminated string describing the error, or @c NULL
+ * if not found.
+ */
+char *coap_response_phrase(unsigned char code);
+
+#define COAP_ERROR_PHRASE_LENGTH 32 /**< maximum length of error phrase */
+
+#else
+#define coap_response_phrase(x) ((char *)NULL)
+
+#define COAP_ERROR_PHRASE_LENGTH 0 /**< maximum length of error phrase */
+#endif /* SHORT_ERROR_RESPONSE */
+
 /* The following definitions exist for backwards compatibility */
 #if 0 /* this does not exist any more */
 #define COAP_RESPONSE_100      40 /* 100 Continue */
@@ -220,7 +241,7 @@ int coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data);
  * or 1 if *len and *data have correct values. Note that these values are
  * destroyed with the pdu.
  */
-int coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data);
+int coap_get_data(coap_pdu_t *pdu, size_t *len, unsigned char **data);
 
 #if 0
 /* I don't think this is needed */

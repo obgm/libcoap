@@ -105,8 +105,10 @@ coap_address_init(coap_address_t *addr) {
 }
 #endif /* coap_address_t */
 
-struct coap_listnode {
-  struct coap_listnode *next;
+struct coap_queue_t;
+
+typedef struct coap_queue_t {
+  struct coap_queue_t *next;
 
   coap_tick_t t;	        /* when to send PDU for the next time */
   unsigned char retransmit_cnt;	/* retransmission counter, will be removed when zero */
@@ -115,13 +117,11 @@ struct coap_listnode {
   coap_address_t remote;	/**< remote address */
 
   coap_pdu_t *pdu;		/**< the CoAP PDU to send */
-};
-
-typedef struct coap_listnode coap_queue_t;
+} coap_queue_t;
 
 /* adds node to given queue, ordered by specified order function */
 int coap_insert_node(coap_queue_t **queue, coap_queue_t *node,
-		     int (*order)(coap_queue_t *, coap_queue_t *node) );
+		     int (*order)(coap_queue_t *, coap_queue_t *node));
 
 /* destroys specified node */
 int coap_delete_node(coap_queue_t *node);
@@ -136,37 +136,34 @@ struct coap_resource_t;
 struct coap_context_t;
 
 /** Message handler that is used as call-back in coap_context_t */
-typedef void (*coap_error_handler_t)(struct coap_context_t  *, 
-              coap_queue_t *sent, coap_queue_t *rcvd, void *);
+typedef void (*coap_response_handler_t)(struct coap_context_t  *, 
+					const coap_tid_t id,
+					const coap_address_t *remote,
+					coap_pdu_t *sent,
+					coap_pdu_t *received);
 
 /** The CoAP stack's global state is stored in a coap_context_t object */
 typedef struct coap_context_t {
   coap_opt_filter_t known_options;
   struct coap_resource_t *resources; /**< hash table of known resources */
   /* coap_list_t *subscriptions; /\* FIXME: make these hash tables *\/ */
-  coap_queue_t *sendqueue, *recvqueue; /* FIXME make these coap_list_t */
+  coap_queue_t *sendqueue, *recvqueue;
   int sockfd;			/* send/receive socket */
 
-  /** This handler is called when an RST message was received. */
-  coap_error_handler_t error_handler;
+  coap_response_handler_t response_handler;
 } coap_context_t;
 
-#if 0
 /**
- * Registers a new message handler that is called whenever a new PDU
- * was received. Note that the transactions are handled on the lower
- * layer previously to stop retransmissions, e.g. */
-void coap_register_message_handler( coap_context_t *context, coap_message_handler_t handler);
-#endif
-
-/**
- * Registers a new handler function that is called when a RST message
- * has been received.
+ * Registers a new message handler that is called whenever a response
+ * was received that matches an ongoing transaction. 
+ * 
+ * @param context The context to register the handler for.
+ * @param handler The response handler to register.
  */
 static inline void 
-coap_register_error_handler(coap_context_t *context, 
-			    coap_error_handler_t handler) {
-  context->error_handler = handler;
+coap_register_response_handler(coap_context_t *context, 
+			       coap_response_handler_t handler) {
+  context->response_handler = handler;
 }
 
 /** 
@@ -253,8 +250,46 @@ coap_tid_t coap_retransmit( coap_context_t *context, coap_queue_t *node );
  */
 int coap_read( coap_context_t *context );
 
-/** Removes transaction with specified id from given queue. Returns 0 if not found, 1 otherwise. */
-int coap_remove_transaction( coap_queue_t **queue, coap_tid_t id );
+/** 
+ * This function removes the element with given @p id from the list
+ * given list. If @p id was found, @p node is updated to point to the
+ * removed element. Note that the storage allocated by @p node is 
+ * @b not released. The caller must do this manually using
+ * coap_delete_node(). This function returns @c 1 if the element with
+ * id @p id was found, @c 0 otherwise. For a return value of @c 0,
+ * the contents of @p node is undefined.
+ * 
+ * @param queue The queue to search for @p id.
+ * @param id    The node id to look for.
+ * @param node  If found, @p node is updated to point to the 
+ *   removed node. You must release the storage pointed to by
+ *   @p node manually.
+ * 
+ * @return @c 1 if @p id was found, @c 0 otherwise.
+ */
+int coap_remove_from_queue(coap_queue_t **queue, 
+			   coap_tid_t id, 
+			   coap_queue_t **node);
+
+/** 
+ * Removes the transaction identified by @p id from given @p queue.
+ * This is a convenience function for coap_remove_from_queue() with
+ * automatic deletion of the removed node.
+ * 
+ * @param queue The queue to search for @p id.
+ * @param id    The transaction id.
+ * 
+ * @return @c 1 if node was found, removed and destroyed, @c 0 otherwise.
+ */
+inline static int
+coap_remove_transaction(coap_queue_t **queue, coap_tid_t id) {
+  coap_queue_t *node;
+  if (!coap_remove_from_queue(queue, id, &node)) 
+    return 0;
+
+  coap_delete_node(node);
+  return 1;
+}
 
 /**
  * Retrieves transaction from queue.

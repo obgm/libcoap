@@ -145,7 +145,7 @@ coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
 }
 
 int
-coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data) {
+coap_get_data(coap_pdu_t *pdu, size_t *len, unsigned char **data) {
   if ( !pdu )
     return 0;
 
@@ -161,6 +161,49 @@ coap_get_data(coap_pdu_t *pdu, unsigned int *len, unsigned char **data) {
 
   return 1;
 }
+
+#ifndef SHORT_ERROR_RESPONSE
+typedef struct {
+  unsigned char code;
+  char *phrase;
+} error_desc_t;
+
+/* if you change anything here, make sure, that the longest string does not 
+ * exceed COAP_ERROR_PHRASE_LENGTH. */
+error_desc_t coap_error[] = {
+  { COAP_RESPONSE_CODE(65),  "2.01 Created" },
+  { COAP_RESPONSE_CODE(66),  "2.02 Deleted" },
+  { COAP_RESPONSE_CODE(67),  "2.03 Valid" },
+  { COAP_RESPONSE_CODE(68),  "2.04 Changed" },
+  { COAP_RESPONSE_CODE(69),  "2.05 Content" },
+  { COAP_RESPONSE_CODE(400), "Bad Request" },
+  { COAP_RESPONSE_CODE(401), "Unauthorized" },
+  { COAP_RESPONSE_CODE(402), "Bad Option" },
+  { COAP_RESPONSE_CODE(403), "Forbidden" },
+  { COAP_RESPONSE_CODE(404), "Not Found" },
+  { COAP_RESPONSE_CODE(405), "Method Not Allowed" },
+  { COAP_RESPONSE_CODE(408), "Request Entity Incomplete" },
+  { COAP_RESPONSE_CODE(413), "Request Entity Too Large" },
+  { COAP_RESPONSE_CODE(415), "Unsupported Media Type" },
+  { COAP_RESPONSE_CODE(500), "Internal Server Error" },
+  { COAP_RESPONSE_CODE(501), "Not Implemented" },
+  { COAP_RESPONSE_CODE(502), "Bad Gateway" },
+  { COAP_RESPONSE_CODE(503), "Service Unavailable" },
+  { COAP_RESPONSE_CODE(504), "Gateway Timeout" },
+  { COAP_RESPONSE_CODE(505), "Proxying Not Supported" },
+  { 0, NULL }			/* end marker */
+};
+
+char *
+coap_response_phrase(unsigned char code) {
+  int i;
+  for (i = 0; coap_error[i].code; ++i) {
+    if (coap_error[i].code == code)
+      return coap_error[i].phrase;
+  }
+  return NULL;
+}
+#endif
 
 #if 0
 int

@@ -151,18 +151,18 @@ int coap_print_link(const coap_resource_t *resource,
 
 /** 
  * Registers the specified @p handler as message handler for the request type
- * @p code. 
+ * @p method 
  * 
  * @param resource The resource for which the handler shall be registered.
- * @param code     The request type to handle.
+ * @param method   The CoAP request method to handle. 
  * @param handler  The handler to register with @p resource.
  */
 static inline void
 coap_register_handler(coap_resource_t *resource, 
-		      unsigned char code, coap_method_handler_t handler) {
+		      unsigned char method, coap_method_handler_t handler) {
   assert(resource);
-  assert(code-1 < sizeof(coap_method_handler_t));
-  resource->handler[code-1] = handler;
+  assert(method-1 < sizeof(coap_method_handler_t));
+  resource->handler[method-1] = handler;
 }
 
 /** 
