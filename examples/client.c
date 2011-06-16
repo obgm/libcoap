@@ -219,7 +219,7 @@ message_handler(struct coap_context_t  *ctx,
   unsigned int blocknr;
   unsigned char buf[4];
   coap_list_t *option;
-  unsigned int len;
+  size_t len;
   unsigned char *databuf;
 
 #ifndef NDEBUG
