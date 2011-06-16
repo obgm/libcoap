@@ -7,7 +7,7 @@
 # README for terms of use. 
 
 AC_PREREQ([2.65])
-AC_INIT([libcoap], [0.2.0])
+AC_INIT([libcoap], [0.6.0])
 AC_CONFIG_SRCDIR([coap.h])
 
 # Checks for programs.
