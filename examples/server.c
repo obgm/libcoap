@@ -321,7 +321,7 @@ get_context(const char *node, const char *port) {
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
   hints.ai_socktype = SOCK_DGRAM; /* Coap uses UDP */
-  hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL;
+  hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST;
   
   s = getaddrinfo(node, port, &hints, &result);
   if ( s != 0 ) {
