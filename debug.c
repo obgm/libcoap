@@ -194,4 +194,6 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   fflush(COAP_DEBUG_FD);
 }
 
+#else
+static inline void placeholder(void) {}
 #endif /* NDEBUG */
