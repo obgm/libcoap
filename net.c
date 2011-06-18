@@ -248,30 +248,47 @@ coap_option_check_critical(coap_context_t *ctx,
   return ok;
 }
 
+/** 
+ * Calculates a unique transaction id from peer's interface address
+ * and port and the message token in @p pdu.
+ * 
+ * @param peer The remote address where the pdu is sent or received from.
+ * @param pdu  The sent or received message.
+ * 
+ * @return 
+ */
+static inline coap_tid_t
+make_transaction_id(const coap_address_t *peer, coap_pdu_t *pdu) {
+  /* FIXME: hash transport address and token instead of id */
+  return ntohs(pdu->hdr->id);
+}
+
 /* releases space allocated by PDU if free_pdu is set */
 coap_tid_t
 coap_send_impl(coap_context_t *context, 
 	       const coap_address_t *dst,
 	       coap_pdu_t *pdu, int free_pdu) {
   ssize_t bytes_written;
+  coap_tid_t id = COAP_INVALID_TID;
 
   if ( !context || !dst || !pdu )
-    return COAP_INVALID_TID;
+    return id;
 
   bytes_written = sendto( context->sockfd, pdu->hdr, pdu->length, 0,
 			  &dst->addr.sa, dst->size);
 
+  if (bytes_written >= 0) {
+    id = make_transaction_id(dst, pdu);
+#ifndef NDEBUG
+  } else {
+    perror("coap_send: sendto");
+#endif
+  }
+
   if ( free_pdu )
     coap_delete_pdu( pdu );
 
-  if ( bytes_written < 0 ) {
-#ifndef NDEBUG
-    perror("coap_send: sendto");
-#endif
-    return COAP_INVALID_TID;
-  }
-
-  return ntohs(pdu->hdr->id);
+  return id;
 }
 
 coap_tid_t
