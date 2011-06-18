@@ -506,12 +506,8 @@ coap_parse_iterator_init(unsigned char *s, size_t n,
 			 unsigned char separator,
 			 unsigned char *delim, size_t dlen,
 			 coap_parse_iterator_t *pi) {
-  assert(s); 
   assert(pi);
   assert(separator);
-
-  if (!s || !n)
-    return NULL;
 
   pi->separator = separator;
   pi->delim = delim;
