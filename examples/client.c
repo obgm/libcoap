@@ -336,7 +336,7 @@ usage( const char *program, const char *version) {
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
 	   "usage: %s [-b num] [-g group] [-m method] [-o file] [-p port] [-s num] \n"
-	   "\t\t[-t type...] [-O num,text] [-T string] URI\n\n"
+	   "\t\t[-t type...] [-v num] [-O num,text] [-T string] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
 	   "\t       \t\t(value must be a multiple of 16 not larger than 2048)\n"
@@ -346,6 +346,7 @@ usage( const char *program, const char *version) {
 	   "\t-o output received data to this file (use '-' for STDOUT)\n"
 	   "\t-p port\t\tlisten on specified port\n"
 	   "\t-s duration\tsubscribe for given duration [s]\n"
+	   "\t-v num\tverbosity level (default: 3)\n"
 	   "\t-A types\taccepted content for GET (comma-separated list)\n"
 	   "\t-t type\t\tcontent type for given resource for PUT/POST\n"
 	   "\t-O num,text\tadd option num with contents text to request\n"
@@ -705,8 +706,9 @@ main(int argc, char **argv) {
   char port_str[NI_MAXSERV] = "0";
   int opt, res;
   char *group = NULL;
+  coap_log_t log_level = LOG_WARN;
 
-  while ((opt = getopt(argc, argv, "b:f:g:m:p:s:t:o:A:O:P:T:")) != -1) {
+  while ((opt = getopt(argc, argv, "b:f:g:m:p:s:t:o:v:A:O:P:T:")) != -1) {
     switch (opt) {
     case 'b' :
       cmdline_blocksize(optarg);
@@ -754,11 +756,16 @@ main(int argc, char **argv) {
     case 'T' :
       cmdline_token(optarg);
       break;
+    case 'v' :
+      log_level = strtol(optarg, NULL, 10);
+      break;
     default:
       usage( argv[0], PACKAGE_VERSION );
       exit( 1 );
     }
   }
+
+  coap_set_log_level(log_level);
 
   ctx = get_context("::", port_str);
   if ( !ctx )
