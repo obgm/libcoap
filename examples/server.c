@@ -39,6 +39,18 @@ static int quit = 0;
 /* changeable clock base (see handle_put_time()) */
 static time_t my_clock_base = 0;
 
+/* These variables are used to mimic long-running tasks that require asynchronous
+ * responses. */
+struct async_t {
+  coap_tick_t t;
+  coap_tid_t id;		/**< transaction id */
+  coap_address_t peer;
+  size_t toklen;
+  unsigned char token[];
+};
+
+static struct async_t *async = NULL;
+
 /* SIGINT handler: set quit to 1 for graceful termination */
 void
 handle_sigint(int signum) {
@@ -50,7 +62,7 @@ handle_sigint(int signum) {
 
 void 
 hnd_get_index(coap_context_t  *ctx, struct coap_resource_t *resource, 
-	      coap_address_t *peer, coap_pdu_t *request) {
+	      coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *token;
   coap_pdu_t *response;
@@ -96,7 +108,7 @@ hnd_get_index(coap_context_t  *ctx, struct coap_resource_t *resource,
 
 void 
 hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource, 
-		  coap_address_t *peer, coap_pdu_t *request) {
+	     coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *token;
   coap_pdu_t *response;
@@ -172,7 +184,7 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 
 void 
 hnd_put_time(coap_context_t  *ctx, struct coap_resource_t *resource, 
-		  coap_address_t *peer, coap_pdu_t *request) {
+	     coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
 
   coap_opt_iterator_t opt_iter;
   coap_opt_t *token;
@@ -232,7 +244,7 @@ hnd_put_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 
 void 
 hnd_delete_time(coap_context_t  *ctx, struct coap_resource_t *resource, 
-		  coap_address_t *peer, coap_pdu_t *request) {
+		  coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
   coap_opt_t *token;
   coap_pdu_t *response;
   coap_opt_iterator_t opt_iter;
@@ -267,11 +279,98 @@ hnd_delete_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   }
 }
 
+void 
+hnd_get_async(coap_context_t  *ctx, struct coap_resource_t *resource, 
+	      coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
+
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *token;
+  size_t size = sizeof(struct async_t);
+  coap_tick_t now;
+  unsigned int delay = 5;
+
+  /* There is already a request being handled asynchronously. Check if
+   * it is the same request. If not, return a 5.03. */
+  if (async) {
+    if (memcmp(&id, &async->id, sizeof(coap_tid_t)) == 0) {
+      coap_send_ack(ctx, peer, request);
+    } else {
+      coap_opt_filter_t f;
+      coap_option_filter_clear(f);
+      coap_send_error(ctx, request, peer, COAP_RESPONSE_CODE(503), f);
+    }
+    return;
+  }  
+
+  /* store information for handling the asynchronous task */
+  token = coap_check_option(request, COAP_OPTION_TOKEN, &opt_iter);
+  if (token)
+    size += COAP_OPT_LENGTH(token);
+  
+  async = (struct async_t *)coap_malloc(size);
+  if (!async) {
+    warn("hnd_get_async: insufficient memory\n");
+    return;
+  }
+  memset(async, 0, size);	/* the easiest way to clean token */
+
+  if (coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter)) {
+    unsigned char *p = COAP_OPT_VALUE(opt_iter.option);
+
+    delay = 0;
+    for (size = COAP_OPT_LENGTH(opt_iter.option); size; --size, ++p)
+      delay = delay * 10 + (*p - '0');
+  }
+  
+  coap_ticks(&now);
+  async->t = now + COAP_TICKS_PER_SECOND * delay;
+  memcpy(&async->id, &id, sizeof(coap_tid_t));
+  memcpy(&async->peer, peer, sizeof(coap_address_t));
+  
+  if (token) {
+    async->toklen = COAP_OPT_LENGTH(opt_iter.option);
+    memcpy(async->token, COAP_OPT_VALUE(opt_iter.option), async->toklen);
+  } 
+}
+
+void 
+check_async(coap_context_t  *ctx, coap_tick_t now) {
+  coap_pdu_t *response;
+  size_t size = sizeof(coap_hdr_t) + 8;
+
+  if (!async || now < async->t) 
+    return;
+
+  size += async->toklen;
+
+  response = coap_pdu_init(COAP_MESSAGE_CON, COAP_RESPONSE_CODE(205), 0, size);
+  if (!response) {
+    debug("check_async: insufficient memory, we'll try later\n");
+    async->t += 15;
+    return;
+  }
+  prng((unsigned char *)&response->hdr->id, 2);
+
+  if (async->toklen)
+    coap_add_option(response, COAP_OPTION_TOKEN, async->toklen, async->token);
+
+  coap_add_data(response, 4, (unsigned char *)"done");
+
+  if (coap_send(ctx, &async->peer, response) == COAP_INVALID_TID) {
+    debug("check_async: cannot send response for message %d\n", 
+	  response->hdr->id);
+    coap_delete_pdu(response);
+  }
+
+  coap_free(async);
+  async = NULL;
+}
+
 void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
-  r = coap_resource_init((unsigned char *)"", 0, 0);
+  r = coap_resource_init(NULL, 0, 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
   coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
@@ -293,6 +392,12 @@ init_resources(coap_context_t *ctx) {
   coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"\"clock\"", 7, 0);
 
   coap_add_resource(ctx, r);
+
+  r = coap_resource_init((unsigned char *)"async", 5, 0);
+  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
+
+  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
+  coap_add_resource(ctx, r);
 }
 
 void
@@ -307,7 +412,8 @@ usage( const char *program, const char *version) {
 	   "(c) 2010,2011 Olaf Bergmann <bergmann@tzi.org>\n\n"
 	   "usage: %s [-A address] [-p port]\n\n"
 	   "\t-A address\tinterface address to bind to\n"
-	   "\t-p port\t\tlisten on specified port\n",
+	   "\t-p port\t\tlisten on specified port\n"
+	   "\t-v num\t\tverbosity level (default: 3)\n",
 	   program, version, program );
 }
 
@@ -356,8 +462,9 @@ main(int argc, char **argv) {
   char addr_str[NI_MAXHOST] = "::";
   char port_str[NI_MAXSERV] = "5683";
   int opt;
+  coap_log_t log_level = LOG_WARN;
 
-  while ((opt = getopt(argc, argv, "A:p:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:p:v:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -367,11 +474,16 @@ main(int argc, char **argv) {
       strncpy(port_str, optarg, NI_MAXSERV-1);
       port_str[NI_MAXSERV - 1] = '\0';
       break;
+    case 'v' :
+      log_level = strtol(optarg, NULL, 10);
+      break;
     default:
       usage( argv[0], PACKAGE_VERSION );
       exit( 1 );
     }
   }
+
+  coap_set_log_level(log_level);
 
   ctx = get_context(addr_str, port_str);
   if (!ctx)
@@ -416,6 +528,9 @@ main(int argc, char **argv) {
     } else {			/* timeout */
       /* coap_check_resource_list( ctx ); */
     }
+
+    /* check if we have to send asynchronous responses */
+    check_async(ctx, now);
   }
 
   coap_free_context( ctx );

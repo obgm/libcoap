@@ -115,6 +115,7 @@ typedef struct coap_queue_t {
   unsigned int timeout;		/* the randomized timeout value */
 
   coap_address_t remote;	/**< remote address */
+  coap_tid_t id;		/**< unique transaction id */
 
   coap_pdu_t *pdu;		/**< the CoAP PDU to send */
 } coap_queue_t;
@@ -137,10 +138,10 @@ struct coap_context_t;
 
 /** Message handler that is used as call-back in coap_context_t */
 typedef void (*coap_response_handler_t)(struct coap_context_t  *, 
-					const coap_tid_t id,
 					const coap_address_t *remote,
 					coap_pdu_t *sent,
-					coap_pdu_t *received);
+					coap_pdu_t *received,
+					const coap_tid_t id);
 
 /** The CoAP stack's global state is stored in a coap_context_t object */
 typedef struct coap_context_t {
@@ -207,23 +208,23 @@ coap_tid_t coap_send_confirmed(coap_context_t *context,
 			       coap_pdu_t *pdu);
 
 /** 
- * Creates a new RST PDU with specified error @p code. The options
+ * Creates a new ACK PDU with specified error @p code. The options
  * specified by the filter expression @p opts will be copied from the
- * original request contained in @c node->pdu.  Unless @c
+ * original request contained in @p request.  Unless @c
  * SHORT_ERROR_RESPONSE was defined at build time, the textual reason
- * phrase for @p code will be added as payload, with Content-Type @c 0.
- * This function returns a pointer to the new response message, or 
+ * phrase for @p code will be added as payload, with Content-Type @c
+ * 0.  This function returns a pointer to the new response message, or
  * @c NULL on error. The storage allocated for the new message must be
- * relased with coap_frree(). 
+ * relased with coap_free().
  * 
- * @param node Specification of the received (confirmable) request.
+ * @param request Specification of the received (confirmable) request.
  * @param code The error code to set.
  * @param opts An option filter that specifies which options to copy
  *             from the original request in @p node.
  * 
  * @return A pointer to the new message or @c NULL on error.
  */
-coap_pdu_t *coap_new_error_response(coap_queue_t *node, 
+coap_pdu_t *coap_new_error_response(coap_pdu_t *request, 
 				    unsigned char code, 
 				    coap_opt_filter_t opts);
 /**
@@ -239,6 +240,54 @@ coap_pdu_t *coap_new_error_response(coap_queue_t *node,
 coap_tid_t coap_send(coap_context_t *context, 
 		     const coap_address_t *dst, 
 		     coap_pdu_t *pdu);
+
+/** 
+ * Sends an error response with code @p code for request @p request to
+ * @p dst.  @p opts will be passed to coap_new_error_response() to
+ * copy marked options from the request. This function returns the
+ * transaction id if the message was sent, or @c COAP_INVALID_TID
+ * otherwise.
+ * 
+ * @param context The context to use.
+ * @param request The original request to respond to.
+ * @param dst     The remote peer that sent the request.
+ * @param code    The reponse code.
+ * @param opts    A filter that specifies the options to copy from the 
+ *                @p request.
+ * 
+ * @return The transaction id if the message was sent, or @c
+ * COAP_INVALID_TID otherwise.
+ */
+coap_tid_t coap_send_error(coap_context_t *context, 
+			   coap_pdu_t *request,
+			   const coap_address_t *dst,
+			   unsigned char code,
+			   coap_opt_filter_t opts);
+/** 
+ * Sends an ACK message with code @c 0 for the specified @p request to
+ * @p dst. This function returns the corresponding transaction id if
+ * the message was sent or @c COAP_INVALID_TID on error.
+ * 
+ * @param context The context to use.
+ * @param dst     The destination address.
+ * @param request The request to be acknowledged.
+ * 
+ * @return The transaction id if ACK was sent or @c COAP_INVALID_TID
+ * on error.
+ */
+static inline coap_tid_t
+coap_send_ack(coap_context_t *context, 
+	      const coap_address_t *dst,
+	      coap_pdu_t *request) {
+  coap_opt_filter_t f;
+
+  if (request && request->hdr->type == COAP_MESSAGE_CON) {
+    coap_option_filter_clear(f);  
+    return coap_send_error(context, request, dst, 0, f);
+  }
+  return COAP_INVALID_TID;
+}
+
 
 /** Handles retransmissions of confirmable messages */
 coap_tid_t coap_retransmit( coap_context_t *context, coap_queue_t *node );

@@ -31,7 +31,8 @@
 
 /** Definition of message handler function (@sa coap_resource_t). */
 typedef void (*coap_method_handler_t)
-  (coap_context_t  *, struct coap_resource_t *, coap_address_t *, coap_pdu_t *);
+  (coap_context_t  *, struct coap_resource_t *, coap_address_t *, coap_pdu_t *,
+   coap_tid_t);
 
 typedef struct coap_attr_t {
   struct coap_attr_t *next;

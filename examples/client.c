@@ -162,7 +162,10 @@ resolve_address(const str *server, struct sockaddr *dst) {
   int error;
 
   memset(addrstr, 0, sizeof(addrstr));
-  memcpy(addrstr, server->s, server->length);
+  if (server->length)
+    memcpy(addrstr, server->s, server->length);
+  else
+    memcpy(addrstr, "localhost", 9);
 
   memset ((char *)&hints, 0, sizeof(hints));
   hints.ai_socktype = SOCK_DGRAM;
@@ -208,10 +211,10 @@ _read_blk_nr(coap_opt_t *opt) {
 
 void
 message_handler(struct coap_context_t  *ctx, 
-		const coap_tid_t id,
 		const coap_address_t *remote, 
 		coap_pdu_t *sent,
-		coap_pdu_t *received) {
+		coap_pdu_t *received,
+		const coap_tid_t id) {
 
   coap_pdu_t *pdu = NULL;
   coap_opt_t *block, *ct, *sub;
@@ -293,11 +296,13 @@ message_handler(struct coap_context_t  *ctx,
 
     /* check if an error was signaled and output payload if so */
     if (COAP_RESPONSE_CLASS(received->hdr->code) >= 4) {
-      char *phrase = coap_response_phrase(received->hdr->code);
       fprintf(stderr, "%d.%02d", 
 	      (received->hdr->code >> 5), received->hdr->code & 0x1F);
-      if (phrase)
-	fprintf(stderr, " %s", phrase);
+      if (coap_get_data(received, &len, &databuf)) {
+      fprintf(stderr, " ");
+	while(len--)
+	  fprintf(stderr, "%c", *databuf++);
+      }
       fprintf(stderr, "\n");
     }
     
@@ -330,7 +335,8 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-b num] [-g group] [-m method] [-o file] [-p port] [-s num] [-t type...] [-T string] URI\n\n"
+	   "usage: %s [-b num] [-g group] [-m method] [-o file] [-p port] [-s num] \n"
+	   "\t\t[-t type...] [-O num,text] [-T string] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
 	   "\t       \t\t(value must be a multiple of 16 not larger than 2048)\n"
@@ -342,6 +348,7 @@ usage( const char *program, const char *version) {
 	   "\t-s duration\tsubscribe for given duration [s]\n"
 	   "\t-A types\taccepted content for GET (comma-separated list)\n"
 	   "\t-t type\t\tcontent type for given resource for PUT/POST\n"
+	   "\t-O num,text\tadd option num with contents text to request\n"
 	   "\t-P addr[:port]\tuse proxy (automatically adds Proxy-Uri option to request)\n"
 	   "\t-T token\tinclude specified token\n",
 	   program, version, program );
@@ -562,6 +569,22 @@ cmdline_token(char *arg) {
 					 (unsigned char *)arg), order_opts);
 }
 
+void
+cmdline_option(char *arg) {
+  unsigned int num = 0;
+
+  while (*arg && *arg != ',') {
+    num = num * 10 + (*arg - '0');
+    ++arg;
+  }
+  if (*arg == ',')
+    ++arg;
+
+  coap_insert( &optlist, new_option_node(num,
+					 strlen(arg),
+					 (unsigned char *)arg), order_opts);
+}
+
 int
 cmdline_input_from_file(char *filename, str *buf) {
   FILE *inputfile = NULL;
@@ -683,7 +706,7 @@ main(int argc, char **argv) {
   int opt, res;
   char *group = NULL;
 
-  while ((opt = getopt(argc, argv, "b:f:g:m:p:s:t:o:A:P:T:")) != -1) {
+  while ((opt = getopt(argc, argv, "b:f:g:m:p:s:t:o:A:O:P:T:")) != -1) {
     switch (opt) {
     case 'b' :
       cmdline_blocksize(optarg);
@@ -721,6 +744,9 @@ main(int argc, char **argv) {
       break;
     case 't' :
       cmdline_content_type(optarg,COAP_OPTION_CONTENT_TYPE);
+      break;
+    case 'O' :
+      cmdline_option(optarg);
       break;
     case 'P' :
       cmdline_proxy(optarg);
