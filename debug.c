@@ -6,10 +6,9 @@
  * README for terms of use. 
  */
 
-#ifndef NDEBUG
-
 #include "config.h"
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -24,6 +23,25 @@
 
 #include "debug.h"
 #include "net.h"
+
+static coap_log_t maxlog = LOG_WARN;	/* default maximum log level */
+
+coap_log_t 
+coap_get_log_level() {
+  return maxlog;
+}
+
+void
+coap_set_log_level(coap_log_t level) {
+  maxlog = level;
+}
+
+/* this array has the same order as the type log_t */
+static char *loglevels[] = {
+  "EMRG", "ALRT", "CRIT", "WARN", "NOTE", "INFO", "DEBG" 
+};
+
+#ifndef NDEBUG
 
 #ifdef HAVE_TIME_H
 
@@ -62,18 +80,27 @@ strnlen(unsigned char *s, size_t maxlen) {
   return n;
 }
 
-void debug(char *format, ...) {
-  static char timebuf[32];
-
+void 
+coap_log(coap_log_t level, char *format, ...) {
+  char timebuf[32];
   coap_tick_t now;
   va_list ap;
+  FILE *log_fd;
+
+  if (maxlog < level)
+    return;
+  
+  log_fd = level <= LOG_CRIT ? COAP_ERR_FD : COAP_DEBUG_FD;
 
   coap_ticks(&now);
   if (print_timestamp(timebuf,sizeof(timebuf), now))
-    fprintf(COAP_DEBUG_FD, "%s ", timebuf);
+    fprintf(log_fd, "%s ", timebuf);
+
+  if (level <= LOG_DEBUG)
+    fprintf(log_fd, "%s ", loglevels[level]);
 
   va_start(ap, format);
-  vfprintf(COAP_DEBUG_FD, format, ap);
+  vfprintf(log_fd, format, ap);
   va_end(ap);
   fflush(stdout);
 }
@@ -194,6 +221,4 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   fflush(COAP_DEBUG_FD);
 }
 
-#else
-static inline void placeholder(void) {}
 #endif /* NDEBUG */
