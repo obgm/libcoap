@@ -248,31 +248,21 @@ coap_option_check_critical(coap_context_t *ctx,
   return ok;
 }
 
-/** 
- * Calculates a unique transaction id from peer's interface address
- * and port and the message token in @p pdu.
- * 
- * @param peer The remote address where the pdu is sent or received from.
- * @param pdu  The sent or received message.
- * 
- * @return 
- */
-static inline coap_tid_t
-make_transaction_id(const coap_address_t *peer, coap_pdu_t *pdu) {
-  /* FIXME: hash transport address and token instead of id */
+void
+  coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu, 
+		      coap_tid_t *id) {
   coap_key_t h;
   coap_opt_iterator_t opt_iter;
 
   memset(h, 0, sizeof(coap_key_t));
   coap_hash((const unsigned char *)&peer->addr.sa, peer->size, h);
 
-  if (coap_check_option(pdu, COAP_OPTION_TOKEN, &opt_iter))
+  if (coap_check_option((coap_pdu_t *)pdu, COAP_OPTION_TOKEN, &opt_iter))
     coap_hash(COAP_OPT_VALUE(opt_iter.option), 
 	      COAP_OPT_LENGTH(opt_iter.option), 
 	      h);
 
-  debug("transaction id: %u\n", ((h[0] << 8) | h[1]) ^ ((h[2] << 8) | h[3]));
-  return ((h[0] << 8) | h[1]) ^ ((h[2] << 8) | h[3]);
+  *id = ((h[0] << 8) | h[1]) ^ ((h[2] << 8) | h[3]);
 }
 
 /* releases space allocated by PDU if free_pdu is set */
@@ -290,11 +280,9 @@ coap_send_impl(coap_context_t *context,
 			  &dst->addr.sa, dst->size);
 
   if (bytes_written >= 0) {
-    id = make_transaction_id(dst, pdu);
-#ifndef NDEBUG
+    coap_transaction_id(dst, pdu, &id);
   } else {
-    perror("coap_send: sendto");
-#endif
+    coap_log(LOG_CRIT, "coap_send: sendto");
   }
 
   if ( free_pdu )
@@ -461,7 +449,7 @@ coap_read( coap_context_t *ctx ) {
   }
 
   /* and add new node to receive queue */
-  node->id = make_transaction_id(&node->remote, node->pdu);
+  coap_transaction_id(&node->remote, node->pdu, &node->id);
   coap_insert_node(&ctx->recvqueue, node, _order_timestamp);
 
 #ifndef NDEBUG
@@ -478,9 +466,6 @@ coap_read( coap_context_t *ctx ) {
   return 0;
 }
 
-/**
- * @bug Need to look at the peer address (and token?)
- */
 int
 coap_remove_from_queue(coap_queue_t **queue, coap_tid_t id, coap_queue_t **node) {
   coap_queue_t *p, *q;

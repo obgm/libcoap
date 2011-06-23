@@ -31,6 +31,11 @@ AC_ARG_WITH(debug,
   [CPPFLAGS="${CPPFLAGS} -DNDEBUG"], 
   [])
 
+AC_ARG_WITH(async,
+  [AS_HELP_STRING([--without-async],[disable handling of asynchronous transactions and observe])],
+  [CPPFLAGS="${CPPFLAGS} -DWITHOUT_ASYNC"], 
+  [])
+
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h time.h unistd.h])
 

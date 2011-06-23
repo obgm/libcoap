@@ -135,6 +135,9 @@ coap_queue_t *coap_new_node();
 
 struct coap_resource_t;
 struct coap_context_t;
+#ifndef WITHOUT_ASYNC
+struct coap_async_state_t;
+#endif
 
 /** Message handler that is used as call-back in coap_context_t */
 typedef void (*coap_response_handler_t)(struct coap_context_t  *, 
@@ -147,9 +150,13 @@ typedef void (*coap_response_handler_t)(struct coap_context_t  *,
 typedef struct coap_context_t {
   coap_opt_filter_t known_options;
   struct coap_resource_t *resources; /**< hash table of known resources */
-  /* coap_list_t *subscriptions; /\* FIXME: make these hash tables *\/ */
+#ifndef WITHOUT_ASYNC
+  /** list of asynchronous transactions */
+  struct coap_async_state_t *async_state;
+#endif
   coap_queue_t *sendqueue, *recvqueue;
   int sockfd;			/* send/receive socket */
+
 
   coap_response_handler_t response_handler;
 } coap_context_t;
@@ -298,6 +305,17 @@ coap_tid_t coap_retransmit( coap_context_t *context, coap_queue_t *node );
  * object.
  */
 int coap_read( coap_context_t *context );
+
+/** 
+ * Calculates a unique transaction id from given arguments @p peer and
+ * @p pdu. The id is returned in @p id.
+ * 
+ * @param peer The remote party who sent @p pdu.
+ * @param pdu  The message that initiated the transaction.
+ * @param id   Set to the new id.
+ */
+void coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu, 
+			 coap_tid_t *id);
 
 /** 
  * This function removes the element with given @p id from the list

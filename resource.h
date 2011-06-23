@@ -53,10 +53,6 @@ typedef struct coap_resource_t {
    */
   coap_method_handler_t handler[4];
 
-#ifndef WITHOUT_ASYNC
-  coap_async_state_t *async_state;
-#endif
-
   UT_hash_handle hh;	/**< hash handle (for internal use only) */
   coap_key_t key;	/**< the actual key bytes for this resource */
 
