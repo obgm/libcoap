@@ -41,8 +41,6 @@ static char *loglevels[] = {
   "EMRG", "ALRT", "CRIT", "WARN", "NOTE", "INFO", "DEBG" 
 };
 
-#ifndef NDEBUG
-
 #ifdef HAVE_TIME_H
 
 static inline size_t
@@ -64,6 +62,8 @@ print_timestamp(char *s, size_t len, coap_tick_t t) {
 
 #endif /* HAVE_TIME_H */
 
+#ifndef NDEBUG
+
 /** 
  * A length-safe strlen() fake. 
  * 
@@ -78,31 +78,6 @@ strnlen(unsigned char *s, size_t maxlen) {
   while(*s++ && n < maxlen)
     ++n;
   return n;
-}
-
-void 
-coap_log(coap_log_t level, char *format, ...) {
-  char timebuf[32];
-  coap_tick_t now;
-  va_list ap;
-  FILE *log_fd;
-
-  if (maxlog < level)
-    return;
-  
-  log_fd = level <= LOG_CRIT ? COAP_ERR_FD : COAP_DEBUG_FD;
-
-  coap_ticks(&now);
-  if (print_timestamp(timebuf,sizeof(timebuf), now))
-    fprintf(log_fd, "%s ", timebuf);
-
-  if (level <= LOG_DEBUG)
-    fprintf(log_fd, "%s ", loglevels[level]);
-
-  va_start(ap, format);
-  vfprintf(log_fd, format, ap);
-  va_end(ap);
-  fflush(stdout);
 }
 
 unsigned int
@@ -222,3 +197,28 @@ coap_show_pdu(const coap_pdu_t *pdu) {
 }
 
 #endif /* NDEBUG */
+
+void 
+coap_log_impl(coap_log_t level, char *format, ...) {
+  char timebuf[32];
+  coap_tick_t now;
+  va_list ap;
+  FILE *log_fd;
+
+  if (maxlog < level)
+    return;
+  
+  log_fd = level <= LOG_CRIT ? COAP_ERR_FD : COAP_DEBUG_FD;
+
+  coap_ticks(&now);
+  if (print_timestamp(timebuf,sizeof(timebuf), now))
+    fprintf(log_fd, "%s ", timebuf);
+
+  if (level <= LOG_DEBUG)
+    fprintf(log_fd, "%s ", loglevels[level]);
+
+  va_start(ap, format);
+  vfprintf(log_fd, format, ap);
+  va_end(ap);
+  fflush(stdout);
+}
