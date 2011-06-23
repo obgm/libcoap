@@ -789,7 +789,7 @@ coap_dispatch( coap_context_t *context ) {
     switch ( rcvd->pdu->hdr->type ) {
     case COAP_MESSAGE_ACK:
       /* find transaction in sendqueue to stop retransmission */
-      coap_remove_from_queue(&context->sendqueue, rcvd->pdu->hdr->id, &sent);
+      coap_remove_from_queue(&context->sendqueue, rcvd->id, &sent);
       if (rcvd->pdu->hdr->code == 0)
 	goto cleanup;
       break;
@@ -802,7 +802,7 @@ coap_dispatch( coap_context_t *context ) {
       coap_log(LOG_ALERT, "got RST for message %u\n", ntohs(rcvd->pdu->hdr->id));
 
       /* find transaction in sendqueue to stop retransmission */
-      coap_remove_from_queue(&context->sendqueue, rcvd->pdu->hdr->id, &sent);
+      coap_remove_from_queue(&context->sendqueue, rcvd->id, &sent);
       break;
 
     case COAP_MESSAGE_NON :	/* check for unknown critical options */
