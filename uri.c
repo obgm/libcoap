@@ -154,6 +154,7 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
   /* Uri_Query */
   if (len && *p == '?') {
     ++p;
+    --len;
     COAP_SET_STR(&uri->query, len, p);
     len = 0;
   }
