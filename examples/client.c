@@ -783,7 +783,12 @@ main(int argc, char **argv) {
   if ( group )
     join( ctx, group );
 
-  server = proxy.length ? proxy : uri.host;
+  if (proxy.length) {
+    server = proxy;
+  } else {
+    server = uri.host;
+    port = uri.port;
+  }
 
   /* resolve destination address where server should be sent */
   res = resolve_address(&server, &dst.addr.sa);
