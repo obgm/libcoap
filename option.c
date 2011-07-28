@@ -55,6 +55,10 @@ coap_option_next(coap_opt_iterator_t *oi) {
 	  || coap_option_getb(oi->filter, oi->type) == 0)) {
     oi->n++;
     oi->option = options_next(oi->option);
+
+    if (oi->n > oi->optcnt)
+      break;
+
     oi->type += COAP_OPT_DELTA(oi->option);
   }
   
