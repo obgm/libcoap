@@ -226,7 +226,7 @@ message_handler(struct coap_context_t  *ctx,
   unsigned char *databuf;
 
 #ifndef NDEBUG
-  debug("** process incoming %d.%02d response:",
+  debug("** process incoming %d.%02d response:\n",
 	(received->hdr->code >> 5), received->hdr->code & 0x1F);
   coap_show_pdu(received);
 #endif
@@ -691,7 +691,7 @@ get_context(const char *node, const char *port) {
 
 int
 main(int argc, char **argv) {
-  coap_context_t  *ctx;
+  coap_context_t  *ctx = NULL;
   coap_address_t dst;
   static char addr[INET6_ADDRSTRLEN];
   void *addrptr = NULL;
@@ -767,21 +767,12 @@ main(int argc, char **argv) {
 
   coap_set_log_level(log_level);
 
-  ctx = get_context("::", port_str);
-  if ( !ctx )
-    return -1;
-
-  coap_register_response_handler(ctx, message_handler);
-
   if ( optind < argc )
     cmdline_uri( argv[optind] );
   else {
     usage( argv[0], PACKAGE_VERSION );
     exit( 1 );
   }
-
-  if ( group )
-    join( ctx, group );
 
   if (proxy.length) {
     server = proxy;
@@ -806,13 +797,32 @@ main(int argc, char **argv) {
   switch (dst.addr.sa.sa_family) {
   case AF_INET: 
     addrptr = &dst.addr.sin.sin_addr;
+
+    /* create context for IPv4 */
+    ctx = get_context("0.0.0.0", port_str);
     break;
   case AF_INET6:
     addrptr = &dst.addr.sin6.sin6_addr;
+
+    /* create context for IPv6 */
+    ctx = get_context("::", port_str);
     break;
   default:
     ;
   }
+
+  if (!ctx) {
+    coap_log(LOG_EMERG, "cannot create context\n");
+    return -1;
+  }
+
+  coap_register_response_handler(ctx, message_handler);
+
+  /* join multicast group if requested at command line */
+  if (group)
+    join(ctx, group);
+
+  /* construct CoAP message */
 
   if (addrptr
       && (inet_ntop(dst.addr.sa.sa_family, addrptr, addr, sizeof(addr)) != 0)

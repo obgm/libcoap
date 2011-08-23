@@ -249,13 +249,29 @@ coap_option_check_critical(coap_context_t *ctx,
 }
 
 void
-  coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu, 
-		      coap_tid_t *id) {
+coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu, 
+		    coap_tid_t *id) {
   coap_key_t h;
   coap_opt_iterator_t opt_iter;
 
   memset(h, 0, sizeof(coap_key_t));
-  coap_hash((const unsigned char *)&peer->addr.sa, peer->size, h);
+
+  /* Compare the complete address structure in case of IPv4. For IPv6,
+   * we need to look at the transport address only. */
+
+  switch (peer->addr.sa.sa_family) {
+  case AF_INET:
+    coap_hash((const unsigned char *)&peer->addr.sa, peer->size, h);
+    break;
+  case AF_INET6:
+    coap_hash((const unsigned char *)&peer->addr.sin6.sin6_port,
+	      sizeof(peer->addr.sin6.sin6_port), h);
+    coap_hash((const unsigned char *)&peer->addr.sin6.sin6_addr,
+	      sizeof(peer->addr.sin6.sin6_addr), h);
+    break;
+  default:
+    return;
+  }
 
   if (coap_check_option((coap_pdu_t *)pdu, COAP_OPTION_TOKEN, &opt_iter))
     coap_hash(COAP_OPT_VALUE(opt_iter.option), 
