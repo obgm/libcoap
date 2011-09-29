@@ -25,7 +25,8 @@ CFLAGS:=-g -Wall @CFLAGS@
 CPPFLAGS:=-I$(top_srcdir) @CPPFLAGS@
 DISTDIR?=$(top_builddir)/@PACKAGE_TARNAME@-@PACKAGE_VERSION@
 FILES:=Makefile.in $(SOURCES)
-LDFLAGS:=-L$(top_builddir) -lcoap @LIBS@
+LDFLAGS:=-L$(top_builddir)
+LDLIBS:=-lcoap @LIBS@
 libcoap =$(top_builddir)/libcoap.a
 
 .PHONY: clean distclean
@@ -43,10 +44,10 @@ tiny:	tiny.o $(libcoap)
 	$(CC) -o $@ $< $(LDFLAGS)
 
 coap-client: client.o $(libcoap)
-	$(CC) -o $@ $< $(LDFLAGS)
+	$(CC) -o $@ $< $(LDFLAGS) $(LDLIBS)
 
 coap-server:	server.o $(libcoap)
-	$(CC) -o $@ $< $(LDFLAGS)
+	$(CC) -o $@ $< $(LDFLAGS) $(LDLIBS)
 
 clean:
 	@rm -f $(PROGRAMS) $(OBJECTS)
