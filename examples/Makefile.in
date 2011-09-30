@@ -17,7 +17,7 @@ abs_builddir = @abs_builddir@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 # files and flags
-PROGRAMS:=coap-server coap-client #tiny
+PROGRAMS:=coap-server coap-client rd #tiny
 SOURCES:= tiny.c client.c server.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
 #CFLAGS:=-g -Wall -ansi -pedantic -I..

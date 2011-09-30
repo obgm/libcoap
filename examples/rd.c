@@ -37,6 +37,9 @@
 
 #define COAP_RESOURCE_CHECK_TIME 2
 
+#define RD_ROOT_STR   ((unsigned char *)"rd")
+#define RD_ROOT_SIZE  2
+
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -50,6 +53,85 @@ handle_sigint(int signum) {
   quit = 1;
 }
 
+#define DUMMY "<coap://[::1]:40000/sensors/light>;rt=\"lux\";ct=0"
+
+void 
+hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource, 
+		 coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *token;
+  coap_pdu_t *response;
+  size_t size = sizeof(coap_hdr_t) + 6 + strlen(DUMMY);
+  int type = (request->hdr->type == COAP_MESSAGE_CON) 
+    ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
+  unsigned char buf[3];
+
+  token = coap_check_option(request, COAP_OPTION_TOKEN, &opt_iter);
+  if (token)
+    size += COAP_OPT_SIZE(token);
+
+  response = coap_pdu_init(type, COAP_RESPONSE_CODE(205), 
+			   request->hdr->id, size);
+
+  if (!response) {
+    debug("cannot create response for message %d\n", request->hdr->id);
+    return;
+  }
+
+  coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
+	  coap_encode_var_bytes(buf, COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf);
+
+  coap_add_option(response, COAP_OPTION_MAXAGE,
+	  coap_encode_var_bytes(buf, 0x2ffff), buf);
+    
+  if (token)
+    coap_add_option(response, COAP_OPTION_TOKEN,
+		    COAP_OPT_LENGTH(token), COAP_OPT_VALUE(token));
+
+  coap_add_data(response, strlen(DUMMY), (unsigned char *)DUMMY);
+
+  if (coap_send(ctx, peer, response) == COAP_INVALID_TID) {
+    debug("hnd_get_rd: cannot send response for message %d\n", 
+	  request->hdr->id);
+    coap_delete_pdu(response);
+  }  
+}
+
+void 
+hnd_delete_resource(coap_context_t  *ctx, struct coap_resource_t *resource, 
+		    coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *token;
+  coap_pdu_t *response;
+  size_t size = sizeof(coap_hdr_t) + 6;
+  int type = (request->hdr->type == COAP_MESSAGE_CON) 
+    ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
+
+  token = coap_check_option(request, COAP_OPTION_TOKEN, &opt_iter);
+  if (token)
+    size += COAP_OPT_SIZE(token);
+
+  coap_delete_resource(ctx, resource->key);
+
+  response = coap_pdu_init(type, COAP_RESPONSE_CODE(202), 
+			   request->hdr->id, size);
+
+  if (!response) {
+    debug("cannot create response for message %d\n", request->hdr->id);
+    return;
+  }
+
+  if (token)
+    coap_add_option(response, COAP_OPTION_TOKEN,
+		    COAP_OPT_LENGTH(token), COAP_OPT_VALUE(token));
+  
+  if (coap_send(ctx, peer, response) == COAP_INVALID_TID) {
+    debug("hnd_get_rd: cannot send response for message %d\n", 
+	  request->hdr->id);
+    coap_delete_pdu(response);
+  }  
+}
+
 void 
 hnd_get_rd(coap_context_t  *ctx, struct coap_resource_t *resource, 
 	      coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
@@ -57,13 +139,9 @@ hnd_get_rd(coap_context_t  *ctx, struct coap_resource_t *resource,
   coap_opt_t *token;
   coap_pdu_t *response;
   size_t size = sizeof(coap_hdr_t) + strlen("FIXME") + 6;
-  int type;
+  int type = (request->hdr->type == COAP_MESSAGE_CON) 
+    ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
   unsigned char buf[3];
-
-  if (request->hdr->type == COAP_MESSAGE_CON)
-    type = COAP_MESSAGE_ACK;
-  else 
-    type = COAP_MESSAGE_NON;
 
   token = coap_check_option(request, COAP_OPTION_TOKEN, &opt_iter);
   if (token)
@@ -96,13 +174,221 @@ hnd_get_rd(coap_context_t  *ctx, struct coap_resource_t *resource,
   }
 }
 
-void 
-hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource, 
-	      coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
+int
+parse_param(unsigned char *search, size_t search_len,
+	    unsigned char *data, size_t data_len, str *result) {
+
+  if (result)
+    memset(result, 0, sizeof(str));
+
+  if (!search_len) 
+    return 0;
+  
+  while (search_len <= data_len) {
+
+    /* handle parameter if found */
+    if (memcmp(search, data, search_len) == 0) {
+      data += search_len;
+      data_len -= search_len;
+
+      /* key is only valid if we are at end of string or delimiter follows */
+      if (!data_len || *data == '=' || *data == '&') {
+	while (data_len && *data != '=') {
+	  ++data; --data_len;
+	}
+      
+	if (data_len > 1 && result) {
+	  /* value begins after '=' */
+	  
+	  result->s = ++data;
+	  while (--data_len && *data != '&') {
+	    ++data; result->length++;
+	  }
+	}
+	
+	return 1;
+      }
+    }
+
+    /* otherwise proceed to next */
+    while (--data_len && *data++ != '&')
+      ;
+  }
+  
+  return 0;
+}
+
+void
+add_source_address(struct coap_resource_t *resource, coap_address_t *peer) {
+  char buf[64];
+  size_t n = 1;
+  
+  buf[0] = '"';
+
+  switch(peer->addr.sa.sa_family) {
+
+  case AF_INET:
+    /* FIXME */
+    break;
+
+  case AF_INET6:
+    n += snprintf(buf + n, sizeof(buf) - n,
+		  "[%02x%02x:%02x%02x:%02x%02x:%02x%02x"	\
+		  ":%02x%02x:%02x%02x:%02x%02x:%02x%02x]",
+		  peer->addr.sin6.sin6_addr.s6_addr[0],
+		  peer->addr.sin6.sin6_addr.s6_addr[1],
+		  peer->addr.sin6.sin6_addr.s6_addr[2],
+		  peer->addr.sin6.sin6_addr.s6_addr[3],
+		  peer->addr.sin6.sin6_addr.s6_addr[4],
+		  peer->addr.sin6.sin6_addr.s6_addr[5],
+		  peer->addr.sin6.sin6_addr.s6_addr[6],
+		  peer->addr.sin6.sin6_addr.s6_addr[7],
+		  peer->addr.sin6.sin6_addr.s6_addr[8],
+		  peer->addr.sin6.sin6_addr.s6_addr[9],
+		  peer->addr.sin6.sin6_addr.s6_addr[10],
+		  peer->addr.sin6.sin6_addr.s6_addr[11],
+		  peer->addr.sin6.sin6_addr.s6_addr[12],
+		  peer->addr.sin6.sin6_addr.s6_addr[13],
+		  peer->addr.sin6.sin6_addr.s6_addr[14],
+		  peer->addr.sin6.sin6_addr.s6_addr[15]);    
+    
+    if (peer->addr.sin6.sin6_port != htons(COAP_DEFAULT_PORT)) {
+      n += 
+	snprintf(buf + n, sizeof(buf) - n, ":%d", peer->addr.sin6.sin6_port);
+    }
+    break;
+  default:
+    ;
+  }
+
+  if (n < sizeof(buf))
+    buf[n++] = '"';
+
+  coap_add_attr(resource, (unsigned char *)"A", 1, (unsigned char *)buf, n, 1);
 }
 
 void 
-hnd_delete_rd(coap_context_t  *ctx, struct coap_resource_t *resource, 
+hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource, 
+	      coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
+  coap_resource_t *r;
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *token, *query;
+  coap_pdu_t *response;
+  size_t size = sizeof(coap_hdr_t);
+  int type = (request->hdr->type == COAP_MESSAGE_CON) 
+    ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
+  unsigned char loc[68];
+  size_t loc_size;
+  str h, ins, rt, lt;		/* store query parameters */
+
+  loc[0] = '/';
+  memcpy(loc+1, RD_ROOT_STR, RD_ROOT_SIZE);
+
+  loc_size = RD_ROOT_SIZE + 1;
+  loc[loc_size++] = '/';
+
+  token = coap_check_option(request, COAP_OPTION_TOKEN, &opt_iter);
+
+  if (token)
+    size += COAP_OPT_SIZE(token);
+
+  /* store query parameters for later use */
+  query = coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter);
+  if (query) {
+    parse_param((unsigned char *)"h", 1, 
+		COAP_OPT_VALUE(query), COAP_OPT_LENGTH(query), &h);
+    parse_param((unsigned char *)"ins", 3, 
+		COAP_OPT_VALUE(query), COAP_OPT_LENGTH(query), &ins);
+    parse_param((unsigned char *)"lt", 2, 
+		COAP_OPT_VALUE(query), COAP_OPT_LENGTH(query), &lt);
+    parse_param((unsigned char *)"rt", 2, 
+		COAP_OPT_VALUE(query), COAP_OPT_LENGTH(query), &rt);
+  } 
+  
+  if (h.length) {		/* client has specified a node name */
+    memcpy(loc + loc_size, h.s, min(h.length, sizeof(loc) - loc_size - 1));
+    loc_size += min(h.length, sizeof(loc) - loc_size - 1);
+
+    if (ins.length && loc_size > 1) {
+      loc[loc_size++] = '-';
+      memcpy((char *)(loc + loc_size), 
+	     ins.s, min(ins.length, sizeof(loc) - loc_size - 1));
+      loc_size += min(ins.length, sizeof(loc) - loc_size - 1);
+    }
+ 
+  } else {			/* generate node identifier */
+    loc_size += 
+      snprintf((char *)(loc + loc_size), sizeof(loc) - loc_size - 1, 
+	       "%x", id);
+    
+    if (loc_size > 1) {
+      if (ins.length) {
+	loc[loc_size++] = '-';
+	memcpy((char *)(loc + loc_size), 
+	       ins.s, min(ins.length, sizeof(loc) - loc_size - 1));
+	loc_size += min(ins.length, sizeof(loc) - loc_size - 1);
+      } else {
+	coap_tick_t now;
+	coap_ticks(&now);
+	
+	loc_size += 
+	  snprintf((char *)(loc + loc_size), sizeof(loc) - loc_size - 1, 
+		   "-%x", now);
+      }
+    }
+  }
+
+  /* TODO:
+   *   - store payload from POST request for retrieval with hnd_get_resource
+   *   - update resource URIs in payload with real URI as seen from here
+   *   - use lt to check expiration
+   *   - updates and etag handling
+   */
+  
+  r = coap_resource_init(loc + 1, loc_size - 1, 1);
+  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
+  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_resource);
+
+  if (ins.s) {
+    /* neglect missing quotes for now... */
+    coap_add_attr(r, (unsigned char *)"ins", 3, ins.s, ins.length, 1);
+  }
+  if (rt.s) {
+    /* neglect missing quotes for now... */
+    coap_add_attr(r, (unsigned char *)"rt", 2, rt.s, rt.length, 1);
+  }
+
+  add_source_address(r, peer);
+
+  coap_add_resource(ctx, r);
+
+
+  /* create response */
+    
+  size += loc_size + 2;   /* add size for location path option */
+  response = coap_pdu_init(type, COAP_RESPONSE_CODE(201), 
+			   request->hdr->id, size);
+
+  if (!response) {
+    debug("cannot create response for message %d\n", request->hdr->id);
+    return;
+  }
+
+  coap_add_option(response, COAP_OPTION_LOCATION_PATH, loc_size, loc);
+
+  if (token)
+    coap_add_option(response, COAP_OPTION_TOKEN,
+		    COAP_OPT_LENGTH(token), COAP_OPT_VALUE(token));
+
+  if (coap_send(ctx, peer, response) == COAP_INVALID_TID) {
+    debug("hnd_get_rd: cannot send response for message %d\n", 
+	  request->hdr->id);
+    coap_delete_pdu(response);
+  }
+}
+
+void 
+hnd_put_rd(coap_context_t  *ctx, struct coap_resource_t *resource, 
 	      coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
 }
 
@@ -110,10 +396,10 @@ void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
-  r = coap_resource_init((unsigned char *)"rd", 2, 0);
+  r = coap_resource_init(RD_ROOT_STR, RD_ROOT_SIZE, 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_rd);
-  coap_register_handler(r, COAP_REQUEST_PUT, hnd_post_rd);
-  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_rd);
+  coap_register_handler(r, COAP_REQUEST_POST, hnd_post_rd);
+  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_rd);
 
   coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"40", 2, 0);
   coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"\"core-rd\"", 9, 0);
