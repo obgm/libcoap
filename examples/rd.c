@@ -83,15 +83,13 @@ handle_sigint(int signum) {
   quit = 1;
 }
 
-#define DUMMY "<coap://[::1]:40000/sensors/light>;rt=\"lux\";ct=0"
-
 void 
 hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource, 
 		 coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *token;
   coap_pdu_t *response;
-  size_t size = sizeof(coap_hdr_t) + 6 + strlen(DUMMY);
+  size_t size = sizeof(coap_hdr_t) + 6;
   int type = (request->hdr->type == COAP_MESSAGE_CON) 
     ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
   rd_t *rd = NULL;
@@ -116,9 +114,9 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
 	  coap_encode_var_bytes(buf, COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf);
 
-  coap_add_option(response, COAP_OPTION_MAXAGE,
-	  coap_encode_var_bytes(buf, 0x2ffff), buf);
-    
+  if (rd && rd->etag_len)
+    coap_add_option(response, COAP_OPTION_ETAG, rd->etag_len, rd->etag);
+
   if (token)
     coap_add_option(response, COAP_OPTION_TOKEN,
 		    COAP_OPT_LENGTH(token), COAP_OPT_VALUE(token));
@@ -181,7 +179,7 @@ hnd_get_rd(coap_context_t  *ctx, struct coap_resource_t *resource,
   coap_opt_iterator_t opt_iter;
   coap_opt_t *token;
   coap_pdu_t *response;
-  size_t size = sizeof(coap_hdr_t) + strlen("FIXME") + 6;
+  size_t size = sizeof(coap_hdr_t) + 6;
   int type = (request->hdr->type == COAP_MESSAGE_CON) 
     ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
   unsigned char buf[3];
@@ -207,8 +205,6 @@ hnd_get_rd(coap_context_t  *ctx, struct coap_resource_t *resource,
   if (token)
     coap_add_option(response, COAP_OPTION_TOKEN,
 		    COAP_OPT_LENGTH(token), COAP_OPT_VALUE(token));
-
-  coap_add_data(response, strlen("FIXME"), (unsigned char *)"FIXME");
 
   if (coap_send(ctx, peer, response) == COAP_INVALID_TID) {
     debug("hnd_get_rd: cannot send response for message %d\n", 
@@ -315,6 +311,8 @@ rd_t *
 make_rd(coap_address_t *peer, coap_pdu_t *pdu) {    
   rd_t *rd;
   unsigned char *data;
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *etag;
 
   rd = rd_new();
   
@@ -331,6 +329,12 @@ make_rd(coap_address_t *peer, coap_pdu_t *pdu) {
       return NULL;
     }
     memcpy(rd->data.s, data, rd->data.length);
+  }
+
+  etag = coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter);
+  if (etag) {
+    rd->etag_len = min(COAP_OPT_LENGTH(etag), sizeof(rd->etag));
+    memcpy(rd->etag, COAP_OPT_VALUE(etag), rd->etag_len);
   }
 
   return rd;
@@ -408,8 +412,6 @@ hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource,
   }
 
   /* TODO:
-   *   - store payload from POST request for retrieval with hnd_get_resource
-   *   - update resource URIs in payload with real URI as seen from here
    *   - use lt to check expiration
    *   - updates and etag handling
    */
