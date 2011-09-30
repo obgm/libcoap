@@ -44,6 +44,36 @@
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+typedef struct rd_t {
+  UT_hash_handle hh;	/**< hash handle (for internal use only) */
+  coap_key_t key;	/**< the actual key bytes for this resource */
+
+  size_t etag_len;		/**< actual length of @c etag */
+  unsigned char etag[8];	/**< ETag for current description */
+
+  str data;			/**< points to the resource description  */
+} rd_t;
+
+rd_t *resources = NULL;
+
+inline rd_t *
+rd_new() {
+  rd_t *rd;
+  rd = (rd_t *)coap_malloc(sizeof(rd_t));
+  if (rd)
+    memset(rd, 0, sizeof(rd_t));
+
+  return rd;
+}	
+
+inline void
+rd_delete(rd_t *rd) {
+  if (rd) {
+    coap_free(rd->data.s);
+    coap_free(rd);
+  }
+}
+
 /* temporary storage for dynamic resource representations */
 static int quit = 0;
 
@@ -64,11 +94,16 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
   size_t size = sizeof(coap_hdr_t) + 6 + strlen(DUMMY);
   int type = (request->hdr->type == COAP_MESSAGE_CON) 
     ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
+  rd_t *rd = NULL;
   unsigned char buf[3];
-
+  
   token = coap_check_option(request, COAP_OPTION_TOKEN, &opt_iter);
   if (token)
     size += COAP_OPT_SIZE(token);
+
+  HASH_FIND(hh, resources, resource->key, sizeof(coap_key_t), rd);
+  if (rd && rd->data.s)
+    size += rd->data.length;
 
   response = coap_pdu_init(type, COAP_RESPONSE_CODE(205), 
 			   request->hdr->id, size);
@@ -88,7 +123,8 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
     coap_add_option(response, COAP_OPTION_TOKEN,
 		    COAP_OPT_LENGTH(token), COAP_OPT_VALUE(token));
 
-  coap_add_data(response, strlen(DUMMY), (unsigned char *)DUMMY);
+  if (rd && rd->data.s)
+    coap_add_data(response, rd->data.length, rd->data.s);
 
   if (coap_send(ctx, peer, response) == COAP_INVALID_TID) {
     debug("hnd_get_rd: cannot send response for message %d\n", 
@@ -106,10 +142,17 @@ hnd_delete_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
   size_t size = sizeof(coap_hdr_t) + 6;
   int type = (request->hdr->type == COAP_MESSAGE_CON) 
     ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
+  rd_t *rd = NULL;
 
   token = coap_check_option(request, COAP_OPTION_TOKEN, &opt_iter);
   if (token)
     size += COAP_OPT_SIZE(token);
+
+  HASH_FIND(hh, resources, resource->key, sizeof(coap_key_t), rd);
+  if (rd) {
+    HASH_DELETE(hh, resources, rd);
+    rd_delete(rd);
+  }
 
   coap_delete_resource(ctx, resource->key);
 
@@ -267,9 +310,35 @@ add_source_address(struct coap_resource_t *resource, coap_address_t *peer) {
   coap_add_attr(resource, (unsigned char *)"A", 1, (unsigned char *)buf, n, 1);
 }
 
+
+rd_t *
+make_rd(coap_address_t *peer, coap_pdu_t *pdu) {    
+  rd_t *rd;
+  unsigned char *data;
+
+  rd = rd_new();
+  
+  if (!rd) {
+    debug("hnd_get_rd: cannot allocate storage for rd\n");
+    return NULL;
+  }
+
+  if (coap_get_data(pdu, &rd->data.length, &data)) {
+    rd->data.s = (unsigned char *)coap_malloc(rd->data.length);
+    if (!rd->data.s) {
+      debug("hnd_get_rd: cannot allocate storage for rd->data\n");
+      rd_delete(rd);
+      return NULL;
+    }
+    memcpy(rd->data.s, data, rd->data.length);
+  }
+
+  return rd;
+}
+
 void 
 hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource, 
-	      coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
+	    coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
   coap_resource_t *r;
   coap_opt_iterator_t opt_iter;
   coap_opt_t *token, *query;
@@ -359,6 +428,17 @@ hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource,
   }
 
   add_source_address(r, peer);
+
+  {
+    rd_t *rd;
+    rd = make_rd(peer, request);
+    if (rd) {
+      coap_hash_path(loc + 1, loc_size - 1, rd->key);
+      HASH_ADD(hh, resources, key, sizeof(coap_key_t), rd);
+    } else {
+      /* FIXME: send error response and delete r */
+    }
+  }
 
   coap_add_resource(ctx, r);
 
