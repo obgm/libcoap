@@ -132,6 +132,79 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
 }
 
 void 
+hnd_put_resource(coap_context_t  *ctx, struct coap_resource_t *resource, 
+	      coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *token, *etag;
+  coap_pdu_t *response;
+  size_t size = sizeof(coap_hdr_t);
+  int type = (request->hdr->type == COAP_MESSAGE_CON) 
+    ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
+  rd_t *rd = NULL;
+  unsigned char code;		/* result code */
+  unsigned char *data;
+  str tmp;
+
+  HASH_FIND(hh, resources, resource->key, sizeof(coap_key_t), rd);
+  if (rd) {
+    /* found resource object, now check Etag */
+    etag = coap_check_option(request, COAP_OPTION_ETAG, &opt_iter);
+    if (!etag || (COAP_OPT_LENGTH(etag) != rd->etag_len)
+	|| memcmp(COAP_OPT_VALUE(etag), rd->etag, rd->etag_len) != 0) {
+      
+      if (coap_get_data(request, &tmp.length, &data)) {
+
+	tmp.s = (unsigned char *)coap_malloc(tmp.length);
+	if (!tmp.s) {
+	  debug("hnd_put_rd: cannot allocate storage for new rd\n");
+	  code = COAP_RESPONSE_CODE(503);
+	  goto finish;
+	}
+
+	coap_free(rd->data.s);
+	rd->data.s = tmp.s;
+	rd->data.length = tmp.length;
+	memcpy(rd->data.s, data, rd->data.length);
+      }
+    }
+
+    if (etag) {
+      rd->etag_len = min(COAP_OPT_LENGTH(etag), sizeof(rd->etag));
+      memcpy(rd->etag, COAP_OPT_VALUE(etag), rd->etag_len);
+    }
+
+    code = COAP_RESPONSE_CODE(204);
+    /* FIXME: update lifetime */
+    
+    } else {
+    
+    code = COAP_RESPONSE_CODE(503);
+  }
+
+  finish:
+  token = coap_check_option(request, COAP_OPTION_TOKEN, &opt_iter);
+  if (token)
+    size += COAP_OPT_SIZE(token);
+
+  response = coap_pdu_init(type, code, request->hdr->id, size);
+
+  if (!response) {
+    debug("cannot create response for message %d\n", request->hdr->id);
+    return;
+  }
+
+  if (token)
+    coap_add_option(response, COAP_OPTION_TOKEN,
+		    COAP_OPT_LENGTH(token), COAP_OPT_VALUE(token));
+
+  if (coap_send(ctx, peer, response) == COAP_INVALID_TID) {
+    debug("hnd_get_rd: cannot send response for message %d\n", 
+	  request->hdr->id);
+    coap_delete_pdu(response);
+  }
+}
+
+void 
 hnd_delete_resource(coap_context_t  *ctx, struct coap_resource_t *resource, 
 		    coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
   coap_opt_iterator_t opt_iter;
@@ -413,11 +486,11 @@ hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource,
 
   /* TODO:
    *   - use lt to check expiration
-   *   - updates and etag handling
    */
   
   r = coap_resource_init(loc + 1, loc_size - 1, 1);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
+  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_resource);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_resource);
 
   if (ins.s) {
@@ -469,11 +542,6 @@ hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource,
   }
 }
 
-void 
-hnd_put_rd(coap_context_t  *ctx, struct coap_resource_t *resource, 
-	      coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
-}
-
 void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
@@ -481,7 +549,6 @@ init_resources(coap_context_t *ctx) {
   r = coap_resource_init(RD_ROOT_STR, RD_ROOT_SIZE, 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_rd);
   coap_register_handler(r, COAP_REQUEST_POST, hnd_post_rd);
-  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_rd);
 
   coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"40", 2, 0);
   coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"\"core-rd\"", 9, 0);
