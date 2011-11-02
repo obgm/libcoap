@@ -33,7 +33,7 @@ bits_setb(uint8_t *vec, size_t size, uint8_t bit) {
   if (size <= (bit >> 3))
     return -1;
 
-  *(vec + (bit >> 3)) |= 1 << (bit & 0x07);
+  *(vec + (bit >> 3)) |= (uint8_t)(1 << (bit & 0x07));
   return 1;
 }
 
@@ -53,7 +53,7 @@ bits_clrb(uint8_t *vec, size_t size, uint8_t bit) {
   if (size <= (bit >> 3))
     return -1;
 
-  *(vec + (bit >> 3)) &= ~(1 << (bit & 0x07));
+  *(vec + (bit >> 3)) &= (uint8_t)(~(1 << (bit & 0x07)));
   return 1;
 }
 

@@ -424,7 +424,7 @@ coap_read( coap_context_t *ctx ) {
     return -1;
   }
 
-  if ( bytes_read < sizeof(coap_hdr_t) ) {
+  if ( (size_t)bytes_read < sizeof(coap_hdr_t) ) {
     debug("coap_read: discarded invalid frame\n" );
     return -1;
   }
@@ -757,9 +757,13 @@ handle_response(coap_context_t *context,
   }
 }
 
-
 static inline int
+#ifdef __GNUC__
+handle_locally(coap_context_t *context __attribute__ ((unused)), 
+	       coap_queue_t *node __attribute__ ((unused))) {
+#else /* not a GCC */
 handle_locally(coap_context_t *context, coap_queue_t *node) {
+#endif /* GCC */
   /* this function can be used to check if node->pdu is really for us */
   return 1;
 }

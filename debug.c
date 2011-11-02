@@ -199,7 +199,7 @@ coap_show_pdu(const coap_pdu_t *pdu) {
 #endif /* NDEBUG */
 
 void 
-coap_log_impl(coap_log_t level, char *format, ...) {
+coap_log_impl(coap_log_t level, const char *format, ...) {
   char timebuf[32];
   coap_tick_t now;
   va_list ap;
@@ -220,5 +220,5 @@ coap_log_impl(coap_log_t level, char *format, ...) {
   va_start(ap, format);
   vfprintf(log_fd, format, ap);
   va_end(ap);
-  fflush(stdout);
+  fflush(log_fd);
 }

@@ -34,7 +34,7 @@ void coap_set_log_level(coap_log_t level);
  * text is output only when @p level is below or equal to the log
  * level that set by coap_set_log_level().
  */
-void coap_log_impl(coap_log_t level, char *format, ...);
+void coap_log_impl(coap_log_t level, const char *format, ...);
 
 #ifndef coap_log
 #define coap_log(...) coap_log_impl(__VA_ARGS__)
