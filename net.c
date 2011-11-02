@@ -505,7 +505,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_tid_t id, coap_queue_t **node)
   do {
     p = q;
     q = q->next;
-  } while ( q && id == q->id );
+  } while ( q && id != q->id );
 
   if ( q ) {			/* found transaction */
     p->next = q->next;
