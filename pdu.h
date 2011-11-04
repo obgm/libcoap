@@ -67,9 +67,13 @@
 
 #define COAP_OPTION_SUBSCRIPTION 10 /* E, uint, 0-2 B, - */
 
+/* selected option types from draft-core-block-04 */
+
+#define COAP_OPTION_BLOCK1       19 /* C, unsigned integer, 1--3 B, 0 */
+#define COAP_OPTION_BLOCK2       17 /* C, unsigned integer, 1--3 B, 0 */
+
 /* selected option types from draft-bormann-coap-misc-04 */
 
-#define COAP_OPTION_BLOCK        13 /* C, unsigned integer, 1--3 B, 0 */
 #define COAP_OPTION_NOOP         14 /* no-op for fenceposting */
 
 #define COAP_MAX_OPT             21 /**< the highest option number we know */
