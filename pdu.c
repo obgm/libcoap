@@ -80,7 +80,7 @@ coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const uns
 
   if ( type < opt_code ) {
 #ifndef NDEBUG
-    fprintf(stderr, "options not added in correct order\n");
+    coap_log(LOG_WARN, "options not added in correct order\n");
 #endif
     return -1;
   }
@@ -134,7 +134,7 @@ coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
 
   if ( pdu->length + len > pdu->max_size ) {
 #ifndef NDEBUG
-    fprintf(stderr, "coap_add_data: cannot add: data too large for PDU\n");
+ coap_log(LOG_WARN, "coap_add_data: cannot add: data too large for PDU\n");
 #endif
     return 0;
   }

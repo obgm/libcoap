@@ -86,7 +86,7 @@ coap_new_node() {
   coap_queue_t *node = coap_malloc ( sizeof *node );
   if ( ! node ) {
 #ifndef NDEBUG
-    perror ("coap_new_node: malloc");
+    coap_log(LOG_WARN, "coap_new_node: malloc");
 #endif
     return NULL;
   }
@@ -140,7 +140,7 @@ coap_new_context(const struct sockaddr *listen_addr, size_t addr_size) {
   int reuse = 1;
 
   if (!listen_addr) {
-    fprintf(stderr, "no listen address specified\n");
+    coap_log(LOG_EMERG, "no listen address specified\n");
     return NULL;
   }
 
@@ -149,7 +149,7 @@ coap_new_context(const struct sockaddr *listen_addr, size_t addr_size) {
 
   if ( !c ) {
 #ifndef NDEBUG
-    perror("coap_init: malloc:");
+    coap_log(LOG_EMERG, "coap_init: malloc:");
 #endif
     return NULL;
   }
@@ -168,20 +168,20 @@ coap_new_context(const struct sockaddr *listen_addr, size_t addr_size) {
   c->sockfd = socket(listen_addr->sa_family, SOCK_DGRAM, 0);
   if ( c->sockfd < 0 ) {
 #ifndef NDEBUG
-    perror("coap_new_context: socket");
+    coap_log(LOG_EMERG, "coap_new_context: socket");
 #endif
     goto onerror;
   }
 
   if ( setsockopt( c->sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse) ) < 0 ) {
 #ifndef NDEBUG
-    perror("setsockopt SO_REUSEADDR");
+    coap_log(LOG_WARN, "setsockopt SO_REUSEADDR");
 #endif
   }
 
   if ( bind (c->sockfd, listen_addr, addr_size) < 0 ) {
 #ifndef NDEBUG
-    perror("coap_new_context: bind");
+    coap_log(LOG_EMERG, "coap_new_context: bind");
 #endif
     goto onerror;
   }
@@ -469,8 +469,8 @@ coap_read( coap_context_t *ctx ) {
   coap_insert_node(&ctx->recvqueue, node, _order_timestamp);
 
 #ifndef NDEBUG
-  {
-    static unsigned char addr[INET6_ADDRSTRLEN+8];
+  if (LOG_DEBUG <= coap_get_log_level()) {
+    unsigned char addr[INET6_ADDRSTRLEN+8];
 
     if (coap_print_addr(&src, addr, sizeof(addr)))
       debug("** received %d bytes from %s:\n", bytes_read, addr);

@@ -241,9 +241,11 @@ message_handler(struct coap_context_t  *ctx,
   unsigned char *databuf;
 
 #ifndef NDEBUG
-  debug("** process incoming %d.%02d response:\n",
-	(received->hdr->code >> 5), received->hdr->code & 0x1F);
-  coap_show_pdu(received);
+  if (LOG_DEBUG <= coap_get_log_level()) {
+    debug("** process incoming %d.%02d response:\n",
+	  (received->hdr->code >> 5), received->hdr->code & 0x1F);
+    coap_show_pdu(received);
+  }
 #endif
 
   /* output the received data, if any */
@@ -879,8 +881,9 @@ main(int argc, char **argv) {
     return -1;
 
 #ifndef NDEBUG
-  {
+  if (LOG_DEBUG <= coap_get_log_level()) {
     unsigned char buf[COAP_MAX_PDU_SIZE];
+    debug("sending CoAP request: ");
     print_readable( (unsigned char *)pdu->hdr, pdu->length, buf, COAP_MAX_PDU_SIZE);
     printf("%s\n",buf);
   }
