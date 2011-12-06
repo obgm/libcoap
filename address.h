@@ -16,8 +16,13 @@
 
 #include "config.h"
 
-#ifndef HAVE_ASSERT_H
-#define assert(x) 
+#ifdef HAVE_ASSERT_H
+#include <assert.h>
+#else
+#ifndef assert
+#warn "assertions are disabled"
+#  define assert(x)
+#endif
 #endif
 
 #include <string.h>
