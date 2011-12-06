@@ -22,7 +22,9 @@
 
 #include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
@@ -31,6 +33,7 @@
 #endif
 
 #include "option.h"
+#include "address.h"
 #include "pdu.h"
 
 /**
@@ -75,35 +78,6 @@ coap_ticks_impl(coap_tick_t *t) {
 #endif /* coap_ticks */
 
 /** @} */
-
-/** multi-purpose address abstraction */
-#ifndef coap_address_t
-typedef struct __coap_address_t {
-  socklen_t size;		/**< size of addr */
-  union {
-    struct sockaddr     sa;
-    struct sockaddr_storage st;
-    struct sockaddr_in  sin;
-    struct sockaddr_in6 sin6;
-  } addr;
-} __coap_address_t;
-
-#define coap_address_t __coap_address_t
-
-/** 
- * Resets the given coap_address_t object @p addr to its default
- * values.  In particular, the member size must be initialized to the
- * available size for storing addresses.
- * 
- * @param addr The coap_address_t object to initialize.
- */
-static inline void
-coap_address_init(coap_address_t *addr) {
-  assert(addr);
-  memset(addr, 0, sizeof(coap_address_t));
-  addr->size = sizeof(struct sockaddr_storage);
-}
-#endif /* coap_address_t */
 
 struct coap_queue_t;
 
