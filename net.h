@@ -34,6 +34,7 @@
 
 #include "option.h"
 #include "address.h"
+#include "prng.h"
 #include "pdu.h"
 
 /**
@@ -387,43 +388,5 @@ void coap_ticks(coap_tick_t *);
 int coap_option_check_critical(coap_context_t *ctx, 
 			       coap_pdu_t *pdu,
 			       coap_opt_filter_t unknown);
-
-/** 
- * @defgroup prng Pseudo Random Numbers
- * @{
- */
-
-/**
- * Fills \p buf with \p len random bytes. This is the default
- * implementation for prng().  You might want to change prng() to use
- * a better PRNG on your specific platform.
- */
-static inline int
-coap_prng_impl(unsigned char *buf, size_t len) {
-  while (len--)
-    *buf++ = rand() & 0xFF;
-  return 1;
-}
-
-#ifndef prng
-/** 
- * Fills \p Buf with \p Length bytes of random data. 
- * 
- * @hideinitializer
- */
-#define prng(Buf,Length) coap_prng_impl((Buf), (Length))
-#endif
-
-#ifndef prng_init
-/** 
- * Called by dtls_new_context() to set the PRNG seed. You
- * may want to re-define this to allow for a better PRNG. 
- *
- * @hideinitializer
- */
-#define prng_init(Value) srand((unsigned long)(Value))
-#endif
-
-/** @} */
 
 #endif /* _COAP_NET_H_ */
