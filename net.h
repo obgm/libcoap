@@ -36,49 +36,7 @@
 #include "address.h"
 #include "prng.h"
 #include "pdu.h"
-
-/**
- * @defgroup clock Clock Handling
- * Default implementation of internal clock. You should redefine this if
- * you do not have time() and gettimeofday().
- * @{
- */
-typedef unsigned int coap_tick_t; 
-
-#define COAP_TICKS_PER_SECOND 1024
-
-/** Set at startup to initialize the internal clock (time in seconds). */
-extern time_t clock_offset;
-
-#ifndef coap_clock_init
-static inline void
-coap_clock_init_impl(void) {
-#ifdef HAVE_TIME_H
-  clock_offset = time(NULL);
-#else
-#warn "cannot initialize clock"
-  clock_offset = 0;
-#endif
-}
-#define coap_clock_init coap_clock_init_impl
-#endif /* coap_clock_init */
-
-#ifndef coap_ticks
-static inline void
-coap_ticks_impl(coap_tick_t *t) {
-#ifdef HAVE_SYS_TIME_H
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  *t = (tv.tv_sec - clock_offset) * COAP_TICKS_PER_SECOND 
-    + (tv.tv_usec >> 10) % COAP_TICKS_PER_SECOND;
-#else
-#error "clock not implemented"
-#endif
-}
-#define coap_ticks coap_ticks_impl
-#endif /* coap_ticks */
-
-/** @} */
+#include "coap_time.h"
 
 struct coap_queue_t;
 
