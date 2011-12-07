@@ -7,6 +7,9 @@
 
 #define WITH_CONTIKI 1
 
+#define DEBUG 0
+#define HAVE_STRNLEN 1
+
 #ifndef BYTE_ORDER
 # ifdef UIP_CONF_BYTE_ORDER
 #  define BYTE_ORDER UIP_CONF_BYTE_ORDER

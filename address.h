@@ -35,12 +35,12 @@
 #include "uip.h"
 
 typedef struct {
-  socklen_t size;
+  unsigned char size;
   uip_ipaddr_t addr;
-  unsigned short rport;
-} __uip_address_t;
+  unsigned short port;
+} __coap_uip_address_t;
 
-#define coap_address_t __uip_address_t
+#define coap_address_t __coap_uip_address_t
 #endif /* WITH_CONTIKI */
 
 /** multi-purpose address abstraction */

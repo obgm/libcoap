@@ -15,7 +15,7 @@
 #include <assert.h>
 #else
 #ifndef assert
-#warn "assertions are disabled"
+#warning "assertions are disabled"
 #  define assert(x)
 #endif
 #endif
@@ -88,8 +88,11 @@ typedef struct coap_context_t {
   struct coap_async_state_t *async_state;
 #endif
   coap_queue_t *sendqueue, *recvqueue;
-  int sockfd;			/* send/receive socket */
-
+#ifndef WITH_CONTIKI
+  int sockfd;			/**< send/receive socket */
+#else /* WITH_CONTIKI */
+  struct uip_udp_conn *conn;	/**< uIP connection object */
+#endif /* WITH_CONTIKI */
 
   coap_response_handler_t response_handler;
 } coap_context_t;
@@ -126,7 +129,7 @@ coap_queue_t *coap_peek_next( coap_context_t *context );
 coap_queue_t *coap_pop_next( coap_context_t *context );
 
 /* Creates a new coap_context_t object that will hold the CoAP stack status.  */
-coap_context_t *coap_new_context(const struct sockaddr *listen_addr, size_t addr_size);
+coap_context_t *coap_new_context(const coap_address_t *listen_addr);
 
 /* CoAP stack context must be released with coap_free_context() */
 void coap_free_context( coap_context_t *context );

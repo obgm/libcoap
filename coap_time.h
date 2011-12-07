@@ -36,7 +36,7 @@ extern clock_time_t clock_offset;
 static inline void
 contiki_clock_init_impl(void) {
   clock_init();
-  offset = clock_time();
+  clock_offset = clock_time();
 }
 
 #define coap_clock_init contiki_clock_init_impl

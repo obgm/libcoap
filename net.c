@@ -12,9 +12,15 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#endif
 
 #include "debug.h"
 #include "mem.h"
@@ -25,7 +31,21 @@
 #include "encode.h"
 #include "net.h"
 
+#ifndef WITH_CONTIKI
+
 time_t clock_offset;
+#else /* WITH_CONTIKI */
+# ifndef DEBUG
+#  define DEBUG DEBUG_PRINT
+# endif /* DEBUG */
+#include "net/uip-debug.h"
+
+clock_time_t clock_offset;
+
+#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
+#define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
+
+#endif /* WITH_CONTIKI */
 
 int
 coap_insert_node(coap_queue_t **queue, coap_queue_t *node,
@@ -135,7 +155,7 @@ is_wkc(coap_key_t k) {
 #endif
 
 coap_context_t *
-coap_new_context(const struct sockaddr *listen_addr, size_t addr_size) {
+coap_new_context(const coap_address_t *listen_addr) {
   coap_context_t *c = coap_malloc( sizeof( coap_context_t ) );
   int reuse = 1;
 
@@ -165,6 +185,7 @@ coap_new_context(const struct sockaddr *listen_addr, size_t addr_size) {
   coap_register_option(c, COAP_OPTION_TOKEN);
   coap_register_option(c, COAP_OPTION_URI_QUERY);
 
+#ifndef WITH_CONTIKI
   c->sockfd = socket(listen_addr->sa_family, SOCK_DGRAM, 0);
   if ( c->sockfd < 0 ) {
 #ifndef NDEBUG
@@ -193,6 +214,13 @@ coap_new_context(const struct sockaddr *listen_addr, size_t addr_size) {
     close ( c->sockfd );
   coap_free( c );
   return NULL;
+
+#else /* WITH_CONTIKI */
+  c->conn = udp_new(NULL, 0, NULL);
+  udp_bind(c->conn, listen_addr->port);
+
+  return c;
+#endif /* WITH_CONTIKI */
 }
 
 void
@@ -209,7 +237,9 @@ coap_free_context( coap_context_t *context ) {
   }
 
   /* coap_delete_list(context->subscriptions); */
+#ifndef WITH_CONTIKI
   close( context->sockfd );
+#endif /* WITH_CONTIKI */
   coap_free( context );
 }
 
@@ -259,6 +289,7 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
   /* Compare the complete address structure in case of IPv4. For IPv6,
    * we need to look at the transport address only. */
 
+#ifndef WITH_CONTIKI
   switch (peer->addr.sa.sa_family) {
   case AF_INET:
     coap_hash((const unsigned char *)&peer->addr.sa, peer->size, h);
@@ -272,6 +303,10 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
   default:
     return;
   }
+#else /* WITH_CONTIKI */
+    coap_hash((const unsigned char *)&peer->port, sizeof(peer->port), h);
+    coap_hash((const unsigned char *)&peer->addr, sizeof(peer->addr), h);  
+#endif /* WITH_CONTIKI */
 
   if (coap_check_option((coap_pdu_t *)pdu, COAP_OPTION_TOKEN, &opt_iter))
     coap_hash(COAP_OPT_VALUE(opt_iter.option), 
@@ -281,6 +316,7 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
   *id = ((h[0] << 8) | h[1]) ^ ((h[2] << 8) | h[3]);
 }
 
+#ifndef WITH_CONTIKI
 /* releases space allocated by PDU if free_pdu is set */
 coap_tid_t
 coap_send_impl(coap_context_t *context, 
@@ -306,6 +342,29 @@ coap_send_impl(coap_context_t *context,
 
   return id;
 }
+#else  /* WITH_CONTIKI */
+/* releases space allocated by PDU if free_pdu is set */
+coap_tid_t
+coap_send_impl(coap_context_t *context, 
+	       const coap_address_t *dst,
+	       coap_pdu_t *pdu, int free_pdu) {
+  coap_tid_t id = COAP_INVALID_TID;
+
+  if ( !context || !dst || !pdu )
+    return id;
+
+  /* FIXME: is there a way to check if send was successful? */
+  uip_udp_packet_sendto(context->conn, pdu->hdr, pdu->length,
+			&dst->addr, dst->port);
+
+  coap_transaction_id(dst, pdu, &id);
+
+  if (free_pdu)
+    coap_delete_pdu(pdu);
+
+  return id;
+}
+#endif /* WITH_CONTIKI */
 
 coap_tid_t 
 coap_send(coap_context_t *context, 
@@ -354,7 +413,7 @@ coap_send_confirmed(coap_context_t *context,
     return COAP_INVALID_TID;
   }
   
-  r = rand();
+  prng((unsigned char *)&r,sizeof(r));
   coap_ticks(&node->t);
 
   /* add randomized RESPONSE_TIMEOUT to determine retransmission timeout */
@@ -384,8 +443,13 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
     node->t += ( node->timeout << node->retransmit_cnt );
     coap_insert_node( &context->sendqueue, node, _order_timestamp );
 
+#ifndef WITH_CONTIKI
     debug("** retransmission #%d of transaction %d\n",
 	  node->retransmit_cnt, ntohs(node->pdu->hdr->id));
+#else /* WITH_CONTIKI */
+    debug("** retransmission #%d of transaction %d\n",
+	  node->retransmit_cnt, uip_ntohs(node->pdu->hdr->id));
+#endif /* WITH_CONTIKI */
     
     node->id = coap_send_impl(context, &node->remote, node->pdu, 0);
     return node->id;
@@ -409,15 +473,39 @@ _order_transaction_id( coap_queue_t *lhs, coap_queue_t *rhs ) {
 
 int
 coap_read( coap_context_t *ctx ) {
+#ifndef WITH_CONTIKI
   static char buf[COAP_MAX_PDU_SIZE];
   static coap_hdr_t *pdu = (coap_hdr_t *)buf;
+#else /* WITH_CONTIKI */
+  static char *buf;
+  static coap_hdr_t *pdu;
+#endif /* WITH_CONTIKI */
   ssize_t bytes_read;
   static coap_address_t src;
   coap_queue_t *node;
 
+#ifdef WITH_CONTIKI
+  buf = uip_appdata;
+  pdu = (coap_hdr_t *)buf;
+#endif /* WITH_CONTIKI */
+
   coap_address_init(&src);
+
+#ifndef WITH_CONTIKI
   bytes_read = recvfrom(ctx->sockfd, buf, sizeof(buf), 0,
 			&src.addr.sa, &src.size);
+#else /* WITH_CONTIKI */
+  if(uip_newdata()) {
+    uip_ipaddr_copy(&src.addr, &UIP_IP_BUF->srcipaddr);
+    src.port = UIP_UDP_BUF->srcport;
+
+    bytes_read = uip_datalen();
+    ((char *)uip_appdata)[uip_datalen()] = 0;
+    PRINTF("Server received message from ");
+    PRINT6ADDR(&src.addr);
+    PRINTF(":%d\n", uip_ntohs(src.port));
+  }
+#endif /* WITH_CONTIKI */
 
   if ( bytes_read < 0 ) {
     warn("coap_read: recvfrom");
@@ -470,6 +558,9 @@ coap_read( coap_context_t *ctx ) {
 
 #ifndef NDEBUG
   if (LOG_DEBUG <= coap_get_log_level()) {
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN 40
+#endif
     unsigned char addr[INET6_ADDRSTRLEN+8];
 
     if (coap_print_addr(&src, addr, sizeof(addr)))
@@ -804,7 +895,11 @@ coap_dispatch( coap_context_t *context ) {
        * not only the transaction but also the subscriptions we might
        * have. */
 
+#ifndef WITH_CONTIKI
       coap_log(LOG_ALERT, "got RST for message %u\n", ntohs(rcvd->pdu->hdr->id));
+#else /* WITH_CONTIKI */
+      coap_log(LOG_ALERT, "got RST for message %u\n", uip_ntohs(rcvd->pdu->hdr->id));
+#endif /* WITH_CONTIKI */
 
       /* find transaction in sendqueue to stop retransmission */
       coap_remove_from_queue(&context->sendqueue, rcvd->id, &sent);

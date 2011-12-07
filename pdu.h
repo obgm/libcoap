@@ -10,7 +10,7 @@
 #define _PDU_H_
 
 #include "config.h"
-#include "list.h"
+#include "coap_list.h"
 #include "uri.h"
 
 /* pre-defined constants that reflect defaults for CoAP */

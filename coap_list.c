@@ -1,4 +1,4 @@
-/* list.c -- CoAP list structures
+/* coap_list.c -- CoAP list structures
  *
  * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -10,7 +10,7 @@
 #include <string.h>
 
 #include "mem.h"
-#include "list.h"
+#include "coap_list.h"
 
 int
 coap_insert(coap_list_t **queue, coap_list_t *node,

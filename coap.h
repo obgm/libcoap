@@ -12,7 +12,7 @@
 #include "config.h"
 #include "debug.h"
 #include "mem.h"
-#include "list.h"
+#include "coap_list.h"
 #include "pdu.h"
 #include "option.h"
 #include "net.h"
