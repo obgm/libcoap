@@ -20,7 +20,9 @@
 # include <assert.h>
 #endif
 
+#ifndef WITH_CONTIKI
 #include "uthash.h"
+#endif /* WITH_CONTIKI */
 #include "hashkey.h"
 #include "async.h"
 #include "str.h"
@@ -51,36 +53,27 @@ typedef struct coap_resource_t {
    */
   coap_method_handler_t handler[4];
 
-  UT_hash_handle hh;	/**< hash handle (for internal use only) */
   coap_key_t key;	/**< the actual key bytes for this resource */
 
   coap_attr_t *link_attr; /**< attributes to be included with the link format */
 
   /**
    * Request URI for this resource. This field will point into the
-   * static memory unless @c copy was set in coap_resource_init(). */
+   * static memory. */
   str uri;
 } coap_resource_t;
 
 /** 
  * Creates a new resource object and initializes the link field to the
- * string of length @p len given in @p link. If @p copy is set to @c
- * 0, only the pointers will be set. If @p copy is set to @c 1, the
- * contents of @p link will be copied to the new object. In either
- * case, the storage occupied by @p link will @b not be released on
- * destruction of this resource. If @p link is not set, this resource
- * will not be included in a link format description created by the default
- * handler for the URI @c .well-known/core.  This function returns the
+ * string of length @p len.  This function returns the
  * new coap_resource_t object.
  * 
  * @param uri  The URI path of the new resource.
  * @param len  The length of @p uri.
- * @param copy Set to @c 1 if you want the @p uri to be copied into
- *             the resource, @c 0 otherwise.
  * 
  * @return A pointer to the new object or @c NULL on error.
  */
-coap_resource_t *coap_resource_init(const unsigned char *uri, size_t len, int copy);
+coap_resource_t *coap_resource_init(const unsigned char *uri, size_t len);
 
 /**
  * Registers the given @p resource for @p context. The resource must
@@ -90,10 +83,7 @@ coap_resource_t *coap_resource_init(const unsigned char *uri, size_t len, int co
  * @param context  The context to use.
  * @param resource The resource to store.
  */
-static inline void
-coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
-  HASH_ADD(hh, context->resources, key, sizeof(coap_key_t), resource);
-}
+void coap_add_resource(coap_context_t *context, coap_resource_t *resource);
 
 /** 
  * Deletes a resource identified by @p key. The storage allocated for
@@ -107,24 +97,22 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
 int coap_delete_resource(coap_context_t *context, coap_key_t key);
 
 /** 
- * Registers a new attribute with the given @p resource. @p name and
- * @p value will be copied when @p copy is set. Otherwise, the
- * attributes str fields will point to @p name and @p val itself.
+ * Registers a new attribute with the given @p resource. As the
+ * attributes str fields will point to @p name and @p val the 
+ * caller must ensure that these pointers are valid during the
+ * attribute's lifetime.
  * 
  * @param resource  The resource to register the attribute with.
  * @param name      The attribute's name.
  * @param nlen      Length of @p name.
  * @param val       The attribute's value or @c NULL if none.
  * @param vlen      Length of @p val if specified.
- * @param copy      If set, a local copy of @p name and @p val will 
- *                  be created.
  *
  * @return A pointer to the new attribute or @c NULL on error.
  */
 coap_attr_t *coap_add_attr(coap_resource_t *resource, 
 			   const unsigned char *name, size_t nlen,
-			   const unsigned char *val, size_t vlen,
-			   int copy);
+			   const unsigned char *val, size_t vlen);
 
 /** 
  * Writes a description of this resource in link-format to given text
@@ -169,13 +157,8 @@ coap_register_handler(coap_resource_t *resource,
  * 
  * @return A pointer to the resource or @c NULL if not found.
  */
-static inline coap_resource_t *
-coap_get_resource_from_key(coap_context_t *context, coap_key_t key) {
-  coap_resource_t *resource;
-
-  HASH_FIND(hh, context->resources, key, sizeof(coap_key_t), resource);
-  return resource;
-}
+coap_resource_t *coap_get_resource_from_key(coap_context_t *context, 
+					    coap_key_t key);
 
 /** 
  * Calculates the hash key for the resource requested by the

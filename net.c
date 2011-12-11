@@ -38,6 +38,8 @@ time_t clock_offset;
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT
 # endif /* DEBUG */
+
+#include "memb.h"
 #include "net/uip-debug.h"
 
 clock_time_t clock_offset;
@@ -45,6 +47,12 @@ clock_time_t clock_offset;
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
 
+void coap_resources_init();
+
+unsigned char initialized = 0;
+coap_context_t the_coap_context;
+
+MEMB(node_storage, coap_queue_t, COAP_PDU_MAXCNT);
 #endif /* WITH_CONTIKI */
 
 int
@@ -86,7 +94,11 @@ coap_delete_node(coap_queue_t *node) {
     return 0;
 
   coap_free( node->pdu );
+#ifndef WITH_CONTIKI
   coap_free( node );
+#else /* WITH_CONTIKI */
+  memb_free(&node_storage, node);
+#endif /* WITH_CONTIKI */
 
   return 1;
 }
@@ -103,7 +115,13 @@ coap_delete_all(coap_queue_t *queue) {
 
 coap_queue_t *
 coap_new_node() {
-  coap_queue_t *node = coap_malloc ( sizeof *node );
+  coap_queue_t *node;
+#ifndef WITH_CONTIKI
+  node = (coap_queue_t *)coap_malloc(sizeof(coap_queue_t));
+#else /* WITH_CONTIKI */
+  node = (coap_queue_t *)memb_alloc(&node_storage);
+#endif /* WITH_CONTIKI */
+
   if ( ! node ) {
 #ifndef NDEBUG
     coap_log(LOG_WARN, "coap_new_node: malloc");
@@ -156,8 +174,15 @@ is_wkc(coap_key_t k) {
 
 coap_context_t *
 coap_new_context(const coap_address_t *listen_addr) {
+#ifndef WITH_CONTIKI
   coap_context_t *c = coap_malloc( sizeof( coap_context_t ) );
   int reuse = 1;
+#else /* WITH_CONTIKI */
+  coap_context_t *c;
+
+  if (initialized)
+    return NULL;
+#endif /* WITH_CONTIKI */
 
   if (!listen_addr) {
     coap_log(LOG_EMERG, "no listen address specified\n");
@@ -167,12 +192,19 @@ coap_new_context(const coap_address_t *listen_addr) {
   coap_clock_init();
   prng_init((unsigned long)listen_addr ^ clock_offset);
 
+#ifndef WITH_CONTIKI
   if ( !c ) {
 #ifndef NDEBUG
     coap_log(LOG_EMERG, "coap_init: malloc:");
 #endif
     return NULL;
   }
+#else /* WITH_CONTIKI */
+  coap_resources_init();
+
+  c = &the_coap_context;
+  initialized = 1;
+#endif /* WITH_CONTIKI */
 
   memset(c, 0, sizeof( coap_context_t ) );
 
@@ -232,15 +264,18 @@ coap_free_context( coap_context_t *context ) {
   coap_delete_all(context->recvqueue);
   coap_delete_all(context->sendqueue);
 
+#ifndef WITH_CONTIKI
   HASH_ITER(hh, context->resources, res, rtmp) {
     free(res);
   }
 
   /* coap_delete_list(context->subscriptions); */
-#ifndef WITH_CONTIKI
   close( context->sockfd );
-#endif /* WITH_CONTIKI */
   coap_free( context );
+#else /* WITH_CONTIKI */
+  memset(&the_coap_context, 0, sizeof(coap_context_t));
+  initialized = 0;
+#endif /* WITH_CONTIKI */
 }
 
 int
@@ -694,6 +729,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
  */
 int
 print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen) {
+#ifndef WITH_CONTIKI
   coap_resource_t *r, *tmp;
   unsigned char *p = buf;
   size_t left, written = 0;
@@ -712,6 +748,9 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen) {
     written += left;
   }
   *buflen = p - buf;
+#else /* WITH_CONTIKI */
+  /* FIXME */
+#endif /* WITH_CONTIKI */
   return 1;
 }
 

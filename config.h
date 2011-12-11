@@ -7,7 +7,21 @@
 
 #define WITH_CONTIKI 1
 
-#define uthash_fatal(msg) return
+/** Number of resources that can be handled by a CoAP server in addition to
+ * @c /.well-known/core */
+#define COAP_MAX_RESOURCES 1
+
+/** Number of attributes that can be handled (should be at least 
+ * @c 2 * COAP_MAX_RESOURCES. to carry the content type and the 
+ * resource type. */
+#define COAP_MAX_ATTRIBUTES 4
+
+/** 
+ * Number of PDUs that can be stored simultaneously. This number
+ * includes both, the PDUs stored for retransmission as well as the
+ * PDUs received.
+ */
+#define COAP_PDU_MAXCNT 2
 
 #define DEBUG 0
 #define HAVE_STRNLEN 1
