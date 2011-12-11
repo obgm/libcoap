@@ -219,14 +219,16 @@ coap_print_addr(const struct __coap_address_t *addr, unsigned char *buf, size_t 
 
 void
 coap_show_pdu(const coap_pdu_t *pdu) {
+#ifndef WITH_CONTIKI
   unsigned char buf[COAP_MAX_PDU_SIZE]; /* need some space for output creation */
 
-#ifndef WITH_CONTIKI
   fprintf(COAP_DEBUG_FD, "v:%d t:%d oc:%d c:%d id:%u", 
 	  pdu->hdr->version, pdu->hdr->type,
 	  pdu->hdr->optcnt, pdu->hdr->code, ntohs(pdu->hdr->id));
 #else /* WITH_CONTIKI */
-  fprintf(COAP_DEBUG_FD, "v:%d t:%d oc:%d c:%d id:%u", 
+  unsigned char buf[80]; /* need some space for output creation */
+
+  PRINTF("v:%d t:%d oc:%d c:%d id:%u", 
 	  pdu->hdr->version, pdu->hdr->type,
 	  pdu->hdr->optcnt, pdu->hdr->code, uip_ntohs(pdu->hdr->id));
 #endif /* WITH_CONTIKI */
@@ -242,7 +244,11 @@ coap_show_pdu(const coap_pdu_t *pdu) {
       if (print_readable(COAP_OPT_VALUE(opt_iter.option), 
 			 COAP_OPT_LENGTH(opt_iter.option), 
 			 buf, sizeof(buf), 0 ))
+#ifndef WITH_CONTIKI
 	fprintf(COAP_DEBUG_FD, " %d:%s", opt_iter.type, buf);
+#else /* WITH_CONTIKI */
+	PRINTF(" %d:%s", opt_iter.type, buf);
+#endif /* WITH_CONTIKI */
     }
   }
   
@@ -250,12 +256,18 @@ coap_show_pdu(const coap_pdu_t *pdu) {
     print_readable(pdu->data, 
 		   (unsigned char *)pdu->hdr + pdu->length - pdu->data, 
 		   buf, sizeof(buf), 0 );
-    fprintf(COAP_DEBUG_FD, " d:%s", buf);
-  }
-  fprintf(COAP_DEBUG_FD, "\n");
 #ifndef WITH_CONTIKI
+    fprintf(COAP_DEBUG_FD, " d:%s", buf);
+#else /* WITH_CONTIKI */
+    PRINTF(" d:%s", buf);
+#endif /* WITH_CONTIKI */
+  }
+#ifndef WITH_CONTIKI
+  fprintf(COAP_DEBUG_FD, "\n");
   fflush(COAP_DEBUG_FD);
-#endif
+#else /* WITH_CONTIKI */
+  PRINTF("\r\n");
+#endif /* WITH_CONTIKI */
 }
 
 #endif /* NDEBUG */
