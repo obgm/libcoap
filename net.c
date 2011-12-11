@@ -475,13 +475,13 @@ int
 coap_read( coap_context_t *ctx ) {
 #ifndef WITH_CONTIKI
   static char buf[COAP_MAX_PDU_SIZE];
-  static coap_hdr_t *pdu = (coap_hdr_t *)buf;
+  coap_hdr_t *pdu = (coap_hdr_t *)buf;
 #else /* WITH_CONTIKI */
-  static char *buf;
-  static coap_hdr_t *pdu;
+  char *buf;
+  coap_hdr_t *pdu;
 #endif /* WITH_CONTIKI */
   ssize_t bytes_read;
-  static coap_address_t src;
+  coap_address_t src;
   coap_queue_t *node;
 
 #ifdef WITH_CONTIKI
