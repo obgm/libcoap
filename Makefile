@@ -25,10 +25,8 @@ endif
 CFLAGS += -ffunction-sections
 LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
 
-CFLAGS += -DUIP_CONF_TCP=0 -DUIP_CONF_BYTE_ORDER=1234
+CFLAGS += -DUIP_CONF_TCP=0 -DSHORT_ERROR_RESPONSE -DNDEBUG
 
 APPS += libcoap 
-
-PROJECT_SOURCEFILES = pdu.c net.c debug.c encode.c uri.c coap_list.c resource.c hashkey.c str.c option.c async.c
 
 include $(CONTIKI)/Makefile.include
