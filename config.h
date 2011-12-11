@@ -7,6 +7,8 @@
 
 #define WITH_CONTIKI 1
 
+#define uthash_fatal(msg) return
+
 #define DEBUG 0
 #define HAVE_STRNLEN 1
 #define HAVE_SNPRINTF 1
