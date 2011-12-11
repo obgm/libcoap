@@ -6,6 +6,8 @@
  * README for terms of use. 
  */
 
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -53,8 +55,10 @@ coap_new_pdu() {
   
   pdu = coap_pdu_init(0, 0, ntohs(COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
 
+#ifndef NDEBUG
   if (!pdu)
-    perror("coap_new_pdu: cannot allocate memory for new PDU");
+    coap_log(LOG_CRIT, "coap_new_pdu: cannot allocate memory for new PDU\n");
+#endif
   return pdu;
 }
 

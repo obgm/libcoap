@@ -8,7 +8,10 @@
 
 #include "config.h"
 
-#include <assert.h>
+#if defined(HAVE_ASSERT_H) && !defined(assert)
+# include <assert.h>
+#endif
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -62,9 +65,14 @@ print_timestamp(char *s, size_t len, coap_tick_t t) {
 
 static inline size_t
 print_timestamp(char *s, size_t len, coap_tick_t t) {
+#ifdef HAVE_SNPRINTF
   return snprintf(s, len, "%u.%03u", 
 		  clock_offset + (t / COAP_TICKS_PER_SECOND), 
 		  t % COAP_TICKS_PER_SECOND);
+#else /* HAVE_SNPRINTF */
+  /* @todo do manual conversion of timestamp */
+  return 0;
+#endif /* HAVE_SNPRINTF */
 }
 
 #endif /* HAVE_TIME_H */
@@ -92,7 +100,7 @@ strnlen(unsigned char *s, size_t maxlen) {
 unsigned int
 print_readable( const unsigned char *data, unsigned int len,
 		unsigned char *result, unsigned int buflen, int encode_always ) {
-  static const unsigned char hex[] = "0123456789ABCDEF";
+  const unsigned char hex[] = "0123456789ABCDEF";
   unsigned int cnt = 0;
   while ( len && (cnt < buflen-1) ) {
     if ( !encode_always && isprint( *data ) ) {
@@ -164,9 +172,47 @@ coap_print_addr(const struct __coap_address_t *addr, unsigned char *buf, size_t 
   p += snprintf((char *)p, buf + len - p + 1, ":%d", port);
 
   return buf + len - p;
-#else
+#else /* HAVE_ARPA_INET_H */
+# if WITH_CONTIKI
+  unsigned char *p = buf;
+  uint8_t i;\
+  uint16_t port;
+#  if WITH_UIP6
+  const unsigned char hex[] = "0123456789ABCDEF";
+
+  if (len < 41)
+    return 0;
+
+  *p++ = '[';
+
+  for (i=0; i < 8; i += 4) {
+    *p++ = hex[(addr->addr.u16[i] & 0xf000) >> 24];
+    *p++ = hex[(addr->addr.u16[i] & 0x0f00) >> 16];
+    *p++ = hex[(addr->addr.u16[i] & 0x00f0) >> 8];
+    *p++ = hex[(addr->addr.u16[i] & 0x000f)];
+    *p++ = ':';
+  }
+  *(p-1) = ']';
+#  else /* WITH_UIP6 */
+#   warning "IPv4 network addresses will not be included in debug output"
+
+  if (len < 21)
+    return 0;
+#  endif /* WITH_UIP6 */
+  if (buf + len - p < 6)
+    return 0;
+
+#ifdef HAVE_SNPRINTF
+  p += snprintf((char *)p, buf + len - p + 1, ":%d", uip_htons(addr->port));
+#else /* HAVE_SNPRINTF */
+  /* @todo manual conversion of port number */
+#endif /* HAVE_SNPRINTF */
+
+  return buf + len - p;
+# else /* WITH_CONTIKI */
   /* TODO: output addresses manually */
-#warning "inet_ntop() not available, network addresses will not be included in debug output"
+#   warning "inet_ntop() not available, network addresses will not be included in debug output"
+# endif /* WITH_CONTIKI */
   return 0;
 #endif
 }
@@ -248,7 +294,7 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
 
   if (maxlog < level)
     return;
-
+  
   coap_ticks(&now);
   if (print_timestamp(timebuf,sizeof(timebuf), now))
     PRINTF("%s ", timebuf);
@@ -257,7 +303,7 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     PRINTF("%s ", loglevels[level]);
 
   va_start(ap, format);
-  vprintf(format, ap);
+  PRINTF(format, ap);
   va_end(ap);
 }
 #endif /* WITH_CONTIKI */

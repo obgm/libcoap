@@ -14,12 +14,10 @@
 #ifndef _COAP_RESOURCE_H_
 #define _COAP_RESOURCE_H_
 
-#ifdef HAVE_ASSERT_H
-#include <assert.h>
-#else
-# ifndef assert
-#  define assert(...) 
-# endif
+#include "config.h"
+
+#if defined(HAVE_ASSERT_H) && !defined(assert)
+# include <assert.h>
 #endif
 
 #include "uthash.h"

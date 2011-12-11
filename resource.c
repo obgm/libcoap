@@ -6,6 +6,7 @@
  * README for terms of use. 
  */
 
+#include "config.h"
 #include "utlist.h"
 #include "debug.h"
 #include "mem.h"
