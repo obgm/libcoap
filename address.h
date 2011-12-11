@@ -34,13 +34,13 @@
 #ifdef WITH_CONTIKI
 #include "uip.h"
 
-typedef struct {
+typedef struct __coap_address_t {
   unsigned char size;
   uip_ipaddr_t addr;
   unsigned short port;
-} __coap_uip_address_t;
+} __coap_address_t;
 
-#define coap_address_t __coap_uip_address_t
+#define coap_address_t __coap_address_t
 #endif /* WITH_CONTIKI */
 
 /** multi-purpose address abstraction */
