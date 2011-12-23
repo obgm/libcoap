@@ -9,8 +9,18 @@ CONTIKI=../..
 WITH_UIP6=1
 UIP_CONF_IPV6=1
 
-ifneq ($(TARGET), minimal-net)
-CFLAGS += -DUIP_CONF_IPV6_RPL=1
+#CFLAGS += -DUIP_CONF_IPV6_RPL=1
+
+ifeq ($(TARGET), minimal-net)
+CFLAGS += -DHAVE_ASSERT_H
+endif
+
+ifeq ($(TARGET), mbxxx)
+CFLAGS += -DUIP_CONF_TCP=0
+endif
+
+ifeq ($(TARGET), redbee-econotag)
+CFLAGS += -DUIP_CONF_TCP=0
 endif
 
 ifneq ($(ROLE),client)
@@ -25,7 +35,7 @@ endif
 CFLAGS += -ffunction-sections
 LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
 
-CFLAGS += -DUIP_CONF_TCP=0 -DSHORT_ERROR_RESPONSE -DNDEBUG
+CFLAGS += -DSHORT_ERROR_RESPONSE -DNDEBUG
 
 APPS += libcoap 
 
