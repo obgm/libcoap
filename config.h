@@ -7,6 +7,8 @@
 
 #define WITH_CONTIKI 1
 
+#define COAP_MAX_PDU_SIZE 64
+
 /** Number of resources that can be handled by a CoAP server in addition to
  * @c /.well-known/core */
 #define COAP_MAX_RESOURCES 1
