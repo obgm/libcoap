@@ -55,6 +55,8 @@ coap_context_t the_coap_context;
 MEMB(node_storage, coap_queue_t, COAP_PDU_MAXCNT);
 #endif /* WITH_CONTIKI */
 
+int print_wellknown(coap_context_t *, unsigned char *, size_t *);
+
 int
 coap_insert_node(coap_queue_t **queue, coap_queue_t *node,
 		 int (*order)(coap_queue_t *, coap_queue_t *node) ) {
@@ -168,6 +170,7 @@ is_wkc(coap_key_t k) {
   if (!initialized) {
     initialized = coap_hash_path((unsigned char *)COAP_DEFAULT_URI_WELLKNOWN, 
 				 sizeof(COAP_DEFAULT_URI_WELLKNOWN) - 1, wkc);
+  }
   return memcmp(k, wkc, sizeof(coap_key_t)) == 0;
 }
 #endif
@@ -257,7 +260,9 @@ coap_new_context(const coap_address_t *listen_addr) {
 
 void
 coap_free_context( coap_context_t *context ) {
+#ifndef WITH_CONTIKI
   coap_resource_t *res, *rtmp;
+#endif /* WITH_CONTIKI */
   if ( !context )
     return;
 
@@ -712,46 +717,6 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
   }
 
   return response;
-}
-
-/** 
- * Prints the names of all known resources to @p buf. This function
- * sets @p buflen to the number of bytes actually written and returns
- * @c 1 on succes. On error, the value in @p buflen is undefined and
- * the return value will be @c 0.
- * 
- * @param context The context with the resource map.
- * @param buf     The buffer to write the result.
- * @param buflen  Must be initialized to the maximum length of @p buf and will be
- *                set to the number of bytes written on return.
- * 
- * @return @c 0 on error or @c 1 on success.
- */
-int
-print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen) {
-#ifndef WITH_CONTIKI
-  coap_resource_t *r, *tmp;
-  unsigned char *p = buf;
-  size_t left, written = 0;
-  HASH_ITER(hh, context->resources, r, tmp) {
-    left = *buflen - written;
-
-    if (left < *buflen) {	/* this is not the first resource  */
-      *p++ = ',';
-      --left;
-    }
-
-    if (!coap_print_link(r, p, &left))
-      return 0;
-    
-    p += left;
-    written += left;
-  }
-  *buflen = p - buf;
-#else /* WITH_CONTIKI */
-  /* FIXME */
-#endif /* WITH_CONTIKI */
-  return 1;
 }
 
 coap_pdu_t *

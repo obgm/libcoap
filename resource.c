@@ -7,6 +7,7 @@
  */
 
 #include "config.h"
+#include "net.h"
 #ifndef WITH_CONTIKI
 #include "utlist.h"
 #endif /* WITH_CONTIKI */
@@ -21,9 +22,58 @@ MEMB(resource_storage, coap_resource_t, COAP_MAX_RESOURCES);
 MEMB(attribute_storage, coap_attr_t, COAP_MAX_ATTRIBUTES);
 #endif /* WITH_CONTIKI */
 
+void
 coap_resources_init() {
   memb_init(&resource_storage);
   memb_init(&attribute_storage);
+}
+
+/** 
+ * Prints the names of all known resources to @p buf. This function
+ * sets @p buflen to the number of bytes actually written and returns
+ * @c 1 on succes. On error, the value in @p buflen is undefined and
+ * the return value will be @c 0.
+ * 
+ * @param context The context with the resource map.
+ * @param buf     The buffer to write the result.
+ * @param buflen  Must be initialized to the maximum length of @p buf and will be
+ *                set to the number of bytes written on return.
+ * 
+ * @return @c 0 on error or @c 1 on success.
+ */
+int
+print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen) {
+  coap_resource_t *r;
+  unsigned char *p = buf;
+  size_t left, written = 0;
+#ifndef WITH_CONTIKI
+  coap_resource_t *tmp;
+
+  HASH_ITER(hh, context->resources, r, tmp) {
+#else /* WITH_CONTIKI */
+  int i;
+
+  r = (coap_resource_t *)resource_storage.mem;
+  for (i = 0; i < resource_storage.num; ++i, ++r) {
+    if (!resource_storage.count[i])
+      continue;
+#endif /* WITH_CONTIKI */
+
+    left = *buflen - written;
+
+    if (left < *buflen) {	/* this is not the first resource  */
+      *p++ = ',';
+      --left;
+    }
+
+    if (!coap_print_link(r, p, &left))
+      return 0;
+    
+    p += left;
+    written += left;
+  }
+  *buflen = p - buf;
+  return 1;
 }
 
 coap_resource_t *
@@ -53,7 +103,6 @@ coap_add_attr(coap_resource_t *resource,
 	      const unsigned char *name, size_t nlen,
 	      const unsigned char *val, size_t vlen) {
   coap_attr_t *attr;
-  size_t size;
 
   if (!resource || !name)
     return NULL;
