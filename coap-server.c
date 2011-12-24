@@ -75,7 +75,7 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   size_t size = sizeof(coap_hdr_t) + 32;
   int type;
   unsigned char buf[2];
-  time_t now;
+  coap_tick_t now;
   coap_tick_t t;
   unsigned char code;
 
@@ -122,12 +122,9 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 	&& memcmp(COAP_OPT_VALUE(opt_iter.option), "ticks",
 		  min(5, COAP_OPT_LENGTH(opt_iter.option))) == 0) {
       /* output ticks */
-#if 0
       response->length += snprintf((char *)response->data, 
 				   response->max_size - response->length,
 				   "%u", (unsigned int)now);
-#endif
-
     } else {			/* @todo: output human-readable time */
     }
   }
