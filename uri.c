@@ -72,9 +72,8 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
   }
 
   /* There might be an additional 's', indicating the secure version: */
-  if (len && (secure = tolower(*p) == 's')) {
-    ++p; --len;
-  }
+  if ( len && (secure = tolower(*p) == 's') )
+    ++p;
 
   q = (unsigned char *)"://";
   while (len && *q && tolower(*p) == *q) {
@@ -158,15 +157,6 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
   }
 
   /* Uri_Query */
-  /* FIXME: split at & sign, parse:
-        query-pattern = search-token [ "*" ]
-        search-token = *search-char
-        search-char = unreserved / pct-encoded
-                    / ":" / "@"   ; from pchar
-                    / "/" / "?"   ; from query
-                    / "!" / "$" / "'" / "(" / ")"
-                    / "+" / "," / ";" / "="  ; from sub-delims
-   */
   if (len && *p == '?') {
     ++p;
     --len;
