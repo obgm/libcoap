@@ -25,7 +25,7 @@
  */
 #define COAP_PDU_MAXCNT 2
 
-#define DEBUG 0
+#define DEBUG DEBUG_PRINT
 #define HAVE_STRNLEN 1
 #define HAVE_SNPRINTF 1
 
