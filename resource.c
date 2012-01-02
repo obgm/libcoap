@@ -107,7 +107,7 @@ coap_add_attr(coap_resource_t *resource,
   if (!resource || !name)
     return NULL;
 
-#ifdef WITH_CONTIKI
+#ifndef WITH_CONTIKI
   attr = (coap_attr_t *)coap_malloc(sizeof(coap_attr_t));
 #else /* WITH_CONTIKI */
   attr = (coap_attr_t *)memb_alloc(&attribute_storage);
