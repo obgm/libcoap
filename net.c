@@ -48,6 +48,7 @@ clock_time_t clock_offset;
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
 
 void coap_resources_init();
+void coap_pdu_resources_init();
 
 unsigned char initialized = 0;
 coap_context_t the_coap_context;
@@ -95,7 +96,7 @@ coap_delete_node(coap_queue_t *node) {
   if ( !node )
     return 0;
 
-  coap_free( node->pdu );
+  coap_delete_pdu(node->pdu);
 #ifndef WITH_CONTIKI
   coap_free( node );
 #else /* WITH_CONTIKI */
@@ -204,6 +205,7 @@ coap_new_context(const coap_address_t *listen_addr) {
   }
 #else /* WITH_CONTIKI */
   coap_resources_init();
+  coap_pdu_resources_init();
 
   c = &the_coap_context;
   initialized = 1;
@@ -520,7 +522,7 @@ coap_read( coap_context_t *ctx ) {
   char *buf;
   coap_hdr_t *pdu;
 #endif /* WITH_CONTIKI */
-  ssize_t bytes_read;
+  ssize_t bytes_read = -1;
   coap_address_t src;
   coap_queue_t *node;
 
@@ -544,7 +546,7 @@ coap_read( coap_context_t *ctx ) {
     PRINTF("Server received message from ");
     PRINT6ADDR(&src.addr);
     PRINTF(":%d\n", uip_ntohs(src.port));
-  }
+  } 
 #endif /* WITH_CONTIKI */
 
   if ( bytes_read < 0 ) {
