@@ -821,7 +821,22 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
   if (h) {
     debug("call custom handler for resource 0x%02x%02x%02x%02x\n", 
 	  key[0], key[1], key[2], key[3]);
-    h(context, resource, &node->remote, node->pdu, node->id);
+    response = coap_pdu_init(node->pdu->hdr->type == COAP_MESSAGE_CON 
+			     ? COAP_MESSAGE_ACK
+			     : COAP_MESSAGE_NON,
+			     0, node->pdu->hdr->id, COAP_MAX_PDU_SIZE);
+    if (response) {
+      h(context, resource, &node->remote, node->pdu, response);
+      if (response->hdr->type != COAP_MESSAGE_NON ||
+	  response->hdr->code >= 64) {
+	if (coap_send(context, &node->remote, response) == COAP_INVALID_TID) {
+	  debug("cannot send response for message %d\n", node->pdu->hdr->id);
+	}
+      }
+      coap_delete_pdu(response);
+    } else {
+      warn("cannot generate response\r\n");
+    }
   } else {
     if (WANT_WKC(node->pdu, key)) {
       debug("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);

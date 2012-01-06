@@ -68,10 +68,9 @@ init_coap() {
 
 void 
 hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource, 
-	     coap_address_t *peer, coap_pdu_t *request, coap_tid_t id) {
+	     coap_address_t *peer, coap_pdu_t *request, coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *token;
-  coap_pdu_t *response;
   size_t size = sizeof(coap_hdr_t) + 32;
   int type;
   unsigned char buf[2];
@@ -84,13 +83,14 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 
   /* if my_clock_base was deleted, we pretend to have no such resource */
   code = my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
-
+#if 0
   if (request->hdr->type == COAP_MESSAGE_CON)
     type = COAP_MESSAGE_ACK;
   else 
     type = COAP_MESSAGE_NON;
-
+#endif
   token = coap_check_option(request, COAP_OPTION_TOKEN, &opt_iter);
+#if 0
   if (token)
     size += COAP_OPT_SIZE(token);
 
@@ -100,7 +100,8 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
     debug("cannot create response for message %d\n", request->hdr->id);
     return;
   }
-
+#endif
+  response->hdr->code = code;
   if (my_clock_base)
     coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
 		    coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
@@ -134,11 +135,13 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 				 "%u", (unsigned int)now);
   }
 
+#if 0
   if (coap_send(ctx, peer, response) == COAP_INVALID_TID) {
     debug("hnd_get_time: cannot send response for message %d\n", 
 	  request->hdr->id);
     coap_delete_pdu(response);
   }
+#endif
 }
 
 void
