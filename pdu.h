@@ -1,6 +1,6 @@
 /* pdu.h -- CoAP message structure
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -59,7 +59,7 @@
 #define COAP_OPTION_URI_PORT      7 /* C, String, 1-270 B, destination port */
 #define COAP_OPTION_LOCATION_QUERY 8 /*  */
 #define COAP_OPTION_URI_PATH      9 /* C, String, 1-270 B, - (may occur multiple times) */
-#define COAP_OPTION_TOKEN        11 /* C, Sequence of Bytes, 1-2 B, - */
+#define COAP_OPTION_TOKEN        11 /* C, Sequence of Bytes, 1-8 B, empty */
 #define COAP_OPTION_ACCEPT       12 /* E, uint,   0-2 B, (none) */
 #define COAP_OPTION_IF_MATCH     13 /* C, opaque, 0-8 B, (none) */
 #define COAP_OPTION_URI_QUERY    15 /* C, String, 1-270 B, "" */
