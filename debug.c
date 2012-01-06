@@ -67,8 +67,8 @@ static inline size_t
 print_timestamp(char *s, size_t len, coap_tick_t t) {
 #ifdef HAVE_SNPRINTF
   return snprintf(s, len, "%u.%03u", 
-		  clock_offset + (t / COAP_TICKS_PER_SECOND), 
-		  t % COAP_TICKS_PER_SECOND);
+		  (unsigned int)(clock_offset + (t / COAP_TICKS_PER_SECOND)), 
+		  (unsigned int)(t % COAP_TICKS_PER_SECOND));
 #else /* HAVE_SNPRINTF */
   /* @todo do manual conversion of timestamp */
   return 0;

@@ -8,6 +8,10 @@
 
 #include "config.h"
 
+#if defined(HAVE_ASSERT_H) && !defined(assert)
+# include <assert.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

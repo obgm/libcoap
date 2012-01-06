@@ -12,7 +12,7 @@ UIP_CONF_IPV6=1
 #CFLAGS += -DUIP_CONF_IPV6_RPL=1
 
 ifeq ($(TARGET), minimal-net)
-CFLAGS += -DHAVE_ASSERT_H
+CFLAGS += -DHAVE_ASSERT_H -DWITH_UIP6=1
 endif
 
 ifeq ($(TARGET), mbxxx)
