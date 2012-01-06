@@ -21,9 +21,16 @@
 /** 
  * Number of PDUs that can be stored simultaneously. This number
  * includes both, the PDUs stored for retransmission as well as the
- * PDUs received.
+ * PDUs received. Beware that choosing a too small value can lead to
+ * many retransmissions to be dealt with.
  */
-#define COAP_PDU_MAXCNT 2
+#define COAP_PDU_MAXCNT 4
+
+/**
+ * Maximum number of subscriptions. Every additional subscriber costs
+ * 36 B.
+ */
+#define COAP_MAX_SUBSCRIBERS 3
 
 #define DEBUG DEBUG_PRINT
 #define HAVE_STRNLEN 1

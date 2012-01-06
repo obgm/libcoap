@@ -542,10 +542,10 @@ coap_read( coap_context_t *ctx ) {
     src.port = UIP_UDP_BUF->srcport;
 
     bytes_read = uip_datalen();
-    ((char *)uip_appdata)[uip_datalen()] = 0;
-    PRINTF("Server received message from ");
+    ((char *)uip_appdata)[bytes_read] = 0;
+    PRINTF("Server received %d bytes from [", (int)bytes_read);
     PRINT6ADDR(&src.addr);
-    PRINTF(":%d\n", uip_ntohs(src.port));
+    PRINTF("]:%d\n", uip_ntohs(src.port));
   } 
 #endif /* WITH_CONTIKI */
 
@@ -605,8 +605,8 @@ coap_read( coap_context_t *ctx ) {
 #endif
     unsigned char addr[INET6_ADDRSTRLEN+8];
 
-    if (coap_print_addr(&src, addr, sizeof(addr)))
-      debug("** received %d bytes from %s:\n", bytes_read, addr);
+    if (coap_print_addr(&src, addr, INET6_ADDRSTRLEN+8))
+      debug("** received %d bytes from %s:\n", (int)bytes_read, addr);
 
     coap_show_pdu( node->pdu );
   }

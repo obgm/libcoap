@@ -1,6 +1,6 @@
 /* resource.c -- generic resource handling
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -8,24 +8,26 @@
 
 #include "config.h"
 #include "net.h"
+#include "debug.h"
+#include "resource.h"
+#include "subscribe.h"
+
 #ifndef WITH_CONTIKI
 #include "utlist.h"
-#endif /* WITH_CONTIKI */
-#include "debug.h"
 #include "mem.h"
-#include "resource.h"
-
-#ifdef WITH_CONTIKI
+#else /* WITH_CONTIKI */
 #include "memb.h"
 
 MEMB(resource_storage, coap_resource_t, COAP_MAX_RESOURCES);
 MEMB(attribute_storage, coap_attr_t, COAP_MAX_ATTRIBUTES);
+MEMB(subscription_storage, coap_subscription_t, COAP_MAX_SUBSCRIBERS);
 #endif /* WITH_CONTIKI */
 
 void
 coap_resources_init() {
   memb_init(&resource_storage);
   memb_init(&attribute_storage);
+  memb_init(&subscription_storage);
 }
 
 /** 
@@ -84,9 +86,19 @@ coap_resource_init(const unsigned char *uri, size_t len) {
   r = (coap_resource_t *)coap_malloc(sizeof(coap_resource_t));
 #else /* WITH_CONTIKI */
   r = (coap_resource_t *)memb_alloc(&resource_storage);
+
 #endif /* WITH_CONTIKI */
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
+
+#ifndef WITH_CONTIKI
+    #warning "no resource list"
+    /* FIXME: initialize r->subscribers */
+#else /* WITH_CONTIKI */
+    LIST_STRUCT_INIT(r, link_attr);
+    LIST_STRUCT_INIT(r, subscribers);
+#endif /* WITH_CONTIKI */
+
     r->uri.s = (unsigned char *)uri;
     r->uri.length = len;
     
@@ -124,8 +136,7 @@ coap_add_attr(coap_resource_t *resource,
 #ifndef WITH_CONTIKI
     LL_PREPEND(resource->link_attr, attr);
 #else /* WITH_CONTIKI */
-    attr->next = resource->link_attr;
-    resource->link_attr = attr;
+    list_add(resource->link_attr, attr);
 #endif /* WITH_CONTIKI */    
   } else {
     debug("coap_add_attr: no memory left\n");
@@ -161,6 +172,7 @@ int
 coap_delete_resource(coap_context_t *context, coap_key_t key) {
   coap_resource_t *resource;
   coap_attr_t *attr;
+  coap_subscription_t *obs;
 
   if (!context)
     return 0;
@@ -179,11 +191,14 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
   coap_free(resource);
 #else /* WITH_CONTIKI */
   /* delete registered attributes */
-  while (resource->link_attr) {
-    attr = resource->link_attr;
-    resource->link_attr = resource->link_attr->next;
+  while ( (attr = list_pop(resource->link_attr)) )
     memb_free(&attribute_storage, attr);
-  } 
+
+  /* delete subscribers */
+  while ( (obs = list_pop(resource->subscribers)) ) {
+    /* FIXME: notify observer that its subscription has been removed */
+    memb_free(&subscription_storage, obs);
+  }
 
   memb_free(&resource_storage, resource);
 #endif /* WITH_CONTIKI */
@@ -234,7 +249,8 @@ coap_print_link(const coap_resource_t *resource,
 #ifndef WITH_CONTIKI
   LL_FOREACH(resource->link_attr, attr) {
 #else /* WITH_CONTIKI */
-  for (attr = resource->link_attr; attr; attr = attr->next) {
+  for (attr = list_head(resource->link_attr); attr; 
+       attr = list_item_next(attr)) {
 #endif /* WITH_CONTIKI */
     written += attr->name.length + 1;
     if (*len < written)
@@ -254,7 +270,92 @@ coap_print_link(const coap_resource_t *resource,
       p += attr->value.length;
     }
   }
+  if (resource->observeable && written + 4 <= *len) {
+    memcpy(p, ";obs", 4);
+    written += 4;
+  }
 
   *len = written;
   return 1;
 }
+
+coap_subscription_t *
+coap_find_observer(coap_resource_t *resource, 
+		       const coap_address_t *peer) {
+  coap_subscription_t *s;
+
+  assert(resource);
+  assert(peer);
+
+  for (s = list_head(resource->subscribers); s; s = list_item_next(s)) {
+    if (memcmp(&s->subscriber, peer, sizeof(coap_address_t)) == 0)
+      return s;
+  }
+
+  return NULL;
+}
+
+coap_subscription_t *
+coap_add_observer(coap_resource_t *resource, 
+		  const coap_address_t *observer,
+		  const unsigned char *token,
+		  size_t token_length) {
+  coap_subscription_t *s;
+  
+  assert(observer);
+
+  /* Check if there is already a subscription for this peer. */
+  s = coap_find_observer(resource, observer);
+
+  /* Found a subscription. We are done if tokens match. */
+  if (s && token_length && s->token_length == token_length && 
+      memcmp(s->token, token, token_length) == 0)
+    return s;
+
+  /* s points to a different subscription, so we have to create
+   * another one. */
+#ifndef WITH_CONTIKI
+  /* FIXME */
+  s = NULL;
+#else /* WITH_CONTIKI */
+  s = memb_alloc(&subscription_storage);
+#endif /* WITH_CONTIKI */
+
+  if (!s)
+    return NULL;
+
+  coap_subscription_init(s);
+  memcpy(&s->subscriber, observer, sizeof(coap_address_t));
+  
+  s->token_length = token_length;
+  if (token_length) {
+    assert(token);
+    assert(token_length <= 8);
+    memcpy(s->token, token, token_length);
+  }
+
+  /* add subscriber to resource */
+#ifndef WITH_CONTIKI
+  /* FIXME */
+#else /* WITH_CONTIKI */
+  list_add(resource->subscribers, s);
+#endif /* WITH_CONTIKI */
+
+  return s;
+}
+
+void
+coap_delete_observer(coap_resource_t *resource, coap_address_t *observer) {
+  coap_subscription_t *s;
+
+  s = coap_find_observer(resource, observer);
+
+  if (s) {
+    list_remove(resource->subscribers, s);
+
+    /* FIXME: notify observer that its subscription has been removed */
+    memb_free(&subscription_storage, s);
+  }
+}
+
+

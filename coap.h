@@ -21,5 +21,6 @@
 #include "uri.h"
 #include "async.h"
 #include "resource.h"
+#include "subscribe.h"
 
 #endif /* _COAP_H_ */

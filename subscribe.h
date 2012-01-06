@@ -1,17 +1,34 @@
 /* subscribe.h -- subscription handling for CoAP
- *                see draft-hartke-coap-observe-01
+ *                see draft-hartke-coap-observe-03
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
  */
 
 
-#warning "subscribe.h"
-
 #ifndef _COAP_SUBSCRIBE_H_
 #define _COAP_SUBSCRIBE_H_
+
+#include "config.h"
+#include "address.h"
+
+/** 
+ * @defgroup observe Resource observation
+ * @{
+ */
+
+/** Subscriber information */
+typedef struct coap_subscription_t {
+  struct coap_subscription_t *next; /**< next element in linked list */
+  coap_address_t subscriber;	    /**< address and port of subscriber */
+
+  size_t token_length;		/**< actual length of token */
+  unsigned char token[8];	/**< token used for subscription */
+} coap_subscription_t;
+
+void coap_subscription_init(coap_subscription_t *);
 
 #if 0
 #include "uthash.h"
@@ -153,4 +170,7 @@ coap_resource_t *coap_get_resource(coap_context_t *ctx, coap_uri_t *uri);
 #endif
 
 #endif
+
+/** @} */
+
 #endif /* _COAP_SUBSCRIBE_H_ */

@@ -22,12 +22,15 @@
 
 #ifndef WITH_CONTIKI
 #include "uthash.h"
+#else /* WITH_CONTIKI */
+#include "list.h"
 #endif /* WITH_CONTIKI */
 #include "hashkey.h"
 #include "async.h"
 #include "str.h"
 #include "pdu.h"
 #include "net.h"
+#include "subscribe.h"
 
 /** Definition of message handler function (@sa coap_resource_t). */
 typedef void (*coap_method_handler_t)
@@ -55,7 +58,14 @@ typedef struct coap_resource_t {
 
   coap_key_t key;	/**< the actual key bytes for this resource */
 
+#ifndef WITH_CONTIKI
   coap_attr_t *link_attr; /**< attributes to be included with the link format */
+  coap_subscription_t *subscribers; /**< list of observers for this resource */
+#else /* WITH_CONTIKI */
+  LIST_STRUCT(link_attr); /**< attributes to be included with the link format */
+  LIST_STRUCT(subscribers); /**< list of observers for this resource */
+#endif /* WITH_CONTIKI */
+
 
   /**
    * Request URI for this resource. This field will point into the
@@ -169,5 +179,49 @@ coap_resource_t *coap_get_resource_from_key(coap_context_t *context,
  * @param request The requesting pdu.
  */
 void coap_hash_request_uri(const coap_pdu_t *request, coap_key_t key);
+
+/** 
+ * @addtogroup observe 
+ */
+
+/**
+ * Adds the specified peer as observer for @p resource. The
+ * subscription is identified by the given @p token. This function
+ * returns the registered subscription information if the @p observer
+ * has been added, or @c NULL on error.
+ *
+ * @param resource The observed resource.
+ * @param observer The remote peer that wants to received status updates.
+ * @param token The token that identifies this subscription.
+ * @param token_length The actual length of @p token. Must be @c 0 when
+ *        @p token is @c NULL.
+ * @return A pointer to the added/updated subscription information or 
+ *        @c NULL on error.
+ */
+coap_subscription_t *coap_add_observer(coap_resource_t *resource, 
+				       const coap_address_t *observer,
+				       const unsigned char *token,
+				       size_t token_length);
+
+/**
+ * Returns a subscription object for given @p peer.
+ *
+ * @param resource The observed resource.
+ * @param peer The address to search for.
+ * @return A valid subscription if exists or @c NULL otherwise.
+ */
+coap_subscription_t *coap_find_observer(coap_resource_t *resource, 
+					const coap_address_t *peer);
+
+/**
+ * Removes any subscription for @p observer from @p resource and releases
+ * the allocated storage.
+ *
+ * @param resource The observed resource.
+ * @param observer The observer's address.
+ */
+void coap_delete_observer(coap_resource_t *resource, 
+			  coap_address_t *observer);
+/** @} */
 
 #endif /* _COAP_RESOURCE_H_ */
