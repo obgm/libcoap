@@ -7,8 +7,17 @@
 # README for terms of use. 
 
 AC_PREREQ([2.65])
-AC_INIT([libcoap], [0.6.0])
+AC_INIT([libcoap], [1.8.0])
 AC_CONFIG_SRCDIR([coap.h])
+
+# First check for Contiki build to quit configure before any other test
+AC_ARG_WITH(contiki,
+  [AS_HELP_STRING([--with-contiki],[build libcoap for the Contiki OS])],
+  [cp -p Makefile.contiki Makefile
+   cp -p config.h.contiki config.h
+   AC_MSG_NOTICE([Contiki build prepared])
+   exit 0], 
+  [])
 
 # Checks for programs.
 AC_PROG_MAKE_SET
