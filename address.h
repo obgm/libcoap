@@ -41,6 +41,12 @@ typedef struct __coap_address_t {
 } __coap_address_t;
 
 #define coap_address_t __coap_address_t
+
+#define _coap_address_equals_impl(A,B)				\
+  ((A)->size == (B)->size					\
+    && (A)->port == (B)->port					\
+   && uip_ipaddr_cmp((A),(B)))
+
 #endif /* WITH_CONTIKI */
 
 /** multi-purpose address abstraction */
@@ -56,6 +62,8 @@ typedef struct __coap_address_t {
 } __coap_address_t;
 
 #define coap_address_t __coap_address_t
+
+/* FIXME: implement _coap_address_equals_impl(a, b);*/
 #endif /* coap_address_t */
 
 /** 
@@ -70,6 +78,12 @@ coap_address_init(coap_address_t *addr) {
   assert(addr);
   memset(addr, 0, sizeof(coap_address_t));
   addr->size = sizeof(addr->addr);
+}
+
+static inline int
+coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
+  assert(a); assert(b);
+  return _coap_address_equals_impl(a, b);
 }
 
 #endif /* _COAP_ADDRESS_H_ */
