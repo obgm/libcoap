@@ -42,6 +42,7 @@ static coap_context_t *coap_context;
 
 /* changeable clock base (see handle_put_time()) */
 static clock_time_t my_clock_base = 0;
+static coap_resource_t *time_resource = NULL; /* just for testing */
 
 PROCESS(coap_server_process, "CoAP server process");
 AUTOSTART_PROCESSES(&coap_server_process);
@@ -68,61 +69,54 @@ init_coap() {
 
 void 
 hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource, 
-	     coap_address_t *peer, coap_pdu_t *request, coap_pdu_t *response) {
+	     coap_address_t *peer, coap_pdu_t *request, str *token, 
+	     coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
-  coap_opt_t *token;
-  size_t size = sizeof(coap_hdr_t) + 32;
-  int type;
   unsigned char buf[2];
   coap_tick_t now;
   coap_tick_t t;
-  unsigned char code;
-
-  /* FIXME: return time, e.g. in human-readable by default and ticks
-   * when query ?ticks is given. */
 
   /* if my_clock_base was deleted, we pretend to have no such resource */
-  code = my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
-#if 0
-  if (request->hdr->type == COAP_MESSAGE_CON)
-    type = COAP_MESSAGE_ACK;
-  else 
-    type = COAP_MESSAGE_NON;
-#endif
-  token = coap_check_option(request, COAP_OPTION_TOKEN, &opt_iter);
-#if 0
-  if (token)
-    size += COAP_OPT_SIZE(token);
+  response->hdr->code = my_clock_base 
+    ? COAP_RESPONSE_CODE(205) 
+    : COAP_RESPONSE_CODE(404);
 
-  response = coap_pdu_init(type, code, request->hdr->id, size);
 
-  if (!response) {
-    debug("cannot create response for message %d\n", request->hdr->id);
-    return;
-  }
-#endif
-  response->hdr->code = code;
   if (my_clock_base)
     coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
 		    coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
 
   coap_add_option(response, COAP_OPTION_MAXAGE,
-	  coap_encode_var_bytes(buf, 0x01), buf);
-    
-  if (token)
-    coap_add_option(response, COAP_OPTION_TOKEN,
-		    COAP_OPT_LENGTH(token), COAP_OPT_VALUE(token));
+		  coap_encode_var_bytes(buf, 0x01), buf);
+  
+  /* Check if subscription was requested. */
+  if (request && 
+      coap_check_option(request, COAP_OPTION_SUBSCRIPTION, &opt_iter) && 
+      coap_add_observer(resource, peer, token->s, token->length)) {
 
-  /* check if subscription was requested */
-  if (resource->observeable &&
-      coap_check_option(request, COAP_OPTION_SUBSCRIPTION, &opt_iter)) {
-    if (token)
-      coap_add_observer(resource, peer, 
-			COAP_OPT_VALUE(token), COAP_OPT_LENGTH(token));
-    else
-      coap_add_observer(resource, peer, NULL, 0);
+    /* add a new observe value */
+    coap_add_option(response, COAP_OPTION_SUBSCRIPTION,
+		    coap_encode_var_bytes(buf, ctx->observe), buf);
+
+    if (token->length)
+      coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
+
+    /* indicate that value is good for at least 30 seconds */
+    coap_add_option(response, COAP_OPTION_MAX_OFE,
+		    coap_encode_var_bytes(buf, 30), buf);
+  } else {
+    coap_add_option(response, COAP_OPTION_SUBSCRIPTION,
+		    coap_encode_var_bytes(buf, ctx->observe), buf);
+
+    if (token->length)
+      coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
+
+    /* indicate that value is good for at least 30 seconds */
+    coap_add_option(response, COAP_OPTION_MAX_OFE,
+		    coap_encode_var_bytes(buf, 30), buf);
   }
 
+  resource->dirty = 1;		/* FIXME: delete this */
   if (my_clock_base) {
 
     /* calculate current time */
@@ -134,14 +128,6 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 				 response->max_size - response->length,
 				 "%u", (unsigned int)now);
   }
-
-#if 0
-  if (coap_send(ctx, peer, response) == COAP_INVALID_TID) {
-    debug("hnd_get_time: cannot send response for message %d\n", 
-	  request->hdr->id);
-    coap_delete_pdu(response);
-  }
-#endif
 }
 
 void
@@ -163,6 +149,7 @@ init_resources(coap_context_t *ctx) {
     goto error;
 
   r->observeable = 1;
+  time_resource = r;
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
 #if 0
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
@@ -189,6 +176,9 @@ init_resources(coap_context_t *ctx) {
   coap_log(LOG_CRIT, "cannot create resource\n");
 }
 
+/* struct etimer notify_timer; */
+struct etimer dirty_timer;
+
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(coap_server_process, ev, data)
 {
@@ -202,11 +192,17 @@ PROCESS_THREAD(coap_server_process, ev, data)
     PROCESS_EXIT();
   }
 
+  /* etimer_set(&notify_timer, 5 * CLOCK_SECOND); */
+  etimer_set(&dirty_timer, 30 * CLOCK_SECOND);
+
   while(1) {
     PROCESS_YIELD();
     if(ev == tcpip_event) {
       coap_read(coap_context);	/* read received data */
       coap_dispatch(coap_context); /* and dispatch PDUs from receivequeue */
+    } else if (ev == PROCESS_EVENT_TIMER && etimer_expired(&dirty_timer)) {
+      time_resource->dirty = 1;
+      etimer_reset(&dirty_timer);
     }
   }
 

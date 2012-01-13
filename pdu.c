@@ -39,6 +39,21 @@ coap_pdu_resources_init() {
 #include "mem.h"
 #endif /* WITH_CONTIKI */
 
+void
+coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
+  assert(pdu);
+
+  memset(pdu, 0, sizeof(coap_pdu_t) + size);
+  pdu->max_size = size;
+  pdu->hdr = (coap_hdr_t *)((unsigned char *)pdu + sizeof(coap_pdu_t));
+  pdu->hdr->version = COAP_DEFAULT_VERSION;
+
+  /* data points after the header; when options are added, the data
+     pointer is moved to the back */
+  pdu->length = sizeof(coap_hdr_t);
+  pdu->data = (unsigned char *)pdu->hdr + pdu->length;
+}
+
 coap_pdu_t *
 coap_pdu_init(unsigned char type, unsigned char code, 
 	      unsigned short id, size_t size) {
@@ -56,18 +71,10 @@ coap_pdu_init(unsigned char type, unsigned char code,
   pdu = (coap_pdu_t *)memb_alloc(&pdu_storage);
 #endif /* WITH_CONTIKI */
   if (pdu) {
-    memset(pdu, 0, sizeof(coap_pdu_t) + size);
-    pdu->max_size = size;
-    pdu->hdr = (coap_hdr_t *)((unsigned char *)pdu + sizeof(coap_pdu_t));
-    pdu->hdr->version = COAP_DEFAULT_VERSION;
+    coap_pdu_clear(pdu, size);
     pdu->hdr->id = id;
     pdu->hdr->type = type;
     pdu->hdr->code = code;
-
-    /* data points after the header; when options are added, the data
-       pointer is moved to the back */
-    pdu->length = sizeof(coap_hdr_t);
-    pdu->data = (unsigned char *)pdu->hdr + pdu->length;
   } 
   return pdu;
 }

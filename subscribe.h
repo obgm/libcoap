@@ -26,6 +26,7 @@ typedef struct coap_subscription_t {
 
   size_t token_length;		/**< actual length of token */
   unsigned char token[8];	/**< token used for subscription */
+  /* @todo CON/NON flag, block size */
 } coap_subscription_t;
 
 void coap_subscription_init(coap_subscription_t *);

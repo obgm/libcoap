@@ -20,6 +20,11 @@
 # include <assert.h>
 #endif
 
+#ifndef COAP_RESOURCE_CHECK_TIME
+/** The interval in seconds to check if resources have changed. */
+#define COAP_RESOURCE_CHECK_TIME 2
+#endif /* COAP_RESOURCE_CHECK_TIME */
+
 #ifndef WITH_CONTIKI
 #include "uthash.h"
 #else /* WITH_CONTIKI */
@@ -35,7 +40,7 @@
 /** Definition of message handler function (@sa coap_resource_t). */
 typedef void (*coap_method_handler_t)
   (coap_context_t  *, struct coap_resource_t *, coap_address_t *, coap_pdu_t *,
-   coap_pdu_t *);
+   str * /* token */, coap_pdu_t * /* response */);
 
 typedef struct coap_attr_t {
   struct coap_attr_t *next;
@@ -222,6 +227,13 @@ coap_subscription_t *coap_find_observer(coap_resource_t *resource,
  */
 void coap_delete_observer(coap_resource_t *resource, 
 			  coap_address_t *observer);
+
+/** 
+ * Checks for all known resources, if they are dirty and notifies
+ * subscribed observers.
+ */
+void coap_check_notify(coap_context_t *context);
+
 /** @} */
 
 #endif /* _COAP_RESOURCE_H_ */

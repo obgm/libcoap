@@ -94,7 +94,24 @@ typedef struct coap_context_t {
   int sockfd;			/**< send/receive socket */
 #else /* WITH_CONTIKI */
   struct uip_udp_conn *conn;	/**< uIP connection object */
+  
+  struct etimer retransmit_timer; /**< fires when the next packet must be sent */
+  struct etimer notify_timer;     /**< used to check resources periodically */
 #endif /* WITH_CONTIKI */
+
+  /**
+   * The last message id that was used is stored in this field.  The
+   * initial value is set by coap_new_context() and is usually a
+   * random value. A new message id can be created with
+   * coap_new_message_id().
+   */ 
+  unsigned short message_id;
+
+  /**
+   * The next value to be used for Observe. This field is global for
+   * all resources and will be updated when notifications are created.
+   */
+  unsigned short observe;
 
   coap_response_handler_t response_handler;
 } coap_context_t;
@@ -132,6 +149,15 @@ coap_queue_t *coap_pop_next( coap_context_t *context );
 
 /* Creates a new coap_context_t object that will hold the CoAP stack status.  */
 coap_context_t *coap_new_context(const coap_address_t *listen_addr);
+
+/** 
+ * Returns a new message id and updates @p context->message_id
+ * accordingly. */
+static inline unsigned short 
+coap_new_message_id(coap_context_t *context) {
+  context->message_id++;
+  return context->message_id;
+}
 
 /* CoAP stack context must be released with coap_free_context() */
 void coap_free_context( coap_context_t *context );
@@ -220,19 +246,10 @@ coap_tid_t coap_send_error(coap_context_t *context,
  * @return The transaction id if ACK was sent or @c COAP_INVALID_TID
  * on error.
  */
-static inline coap_tid_t
+coap_tid_t
 coap_send_ack(coap_context_t *context, 
-	      const coap_address_t *dst,
-	      coap_pdu_t *request) {
-  coap_opt_filter_t f;
-
-  if (request && request->hdr->type == COAP_MESSAGE_CON) {
-    coap_option_filter_clear(f);  
-    return coap_send_error(context, request, dst, 0, f);
-  }
-  return COAP_INVALID_TID;
-}
-
+	      const coap_address_t *dst, 
+	      coap_pdu_t *request);
 
 /** Handles retransmissions of confirmable messages */
 coap_tid_t coap_retransmit( coap_context_t *context, coap_queue_t *node );

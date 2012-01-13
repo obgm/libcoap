@@ -68,6 +68,7 @@
 /* option types from draft-hartke-coap-observe-01 */
 
 #define COAP_OPTION_SUBSCRIPTION 10 /* E, uint, 0-2 B, - */
+#define COAP_OPTION_MAX_OFE      14 /* E, uint, 0-4 B, 0 */
 
 /* selected option types from draft-core-block-04 */
 
@@ -219,6 +220,14 @@ typedef struct {
 coap_pdu_t *
 coap_pdu_init(unsigned char type, unsigned char code, 
 	      unsigned short id, size_t size);
+
+/** 
+ * Clears any contents from @p pdu and resets @c version field, @c
+ * length and @c data pointers. @c max_size is set to @p size, any
+ * other field is set to @c 0. Note that @p pdu must be a valid
+ * pointer to a coap_pdu_t object created e.g. by coap_pdu_init().
+ */
+void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
 
 /**
  * Creates a new CoAP PDU. The object is created on the heap and must be released
