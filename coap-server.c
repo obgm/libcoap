@@ -54,6 +54,31 @@ init_coap() {
   coap_address_init(&listen_addr);
   listen_addr.port = UIP_HTONS(COAP_DEFAULT_PORT);
 
+#ifdef WITH_CONTIKI
+  /* initialize uIP address for SLAAC */
+  uip_ip6addr(&listen_addr.addr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
+  uip_ds6_set_addr_iid(&listen_addr.addr, &uip_lladdr);
+  uip_ds6_addr_add(&listen_addr.addr, 0, ADDR_AUTOCONF);
+
+  uip_debug_lladdr_print(&uip_lladdr);
+  printf("\r\n");
+  uip_debug_ipaddr_print(&listen_addr.addr);
+  printf("\r\n");
+#endif /* WITH_CONTIKI */
+
+#ifdef WITH_CONTIKI
+  printf("tentative address: [%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]:%d\r\n",
+	 listen_addr.addr.u8[0], listen_addr.addr.u8[1], 
+	 listen_addr.addr.u8[2], listen_addr.addr.u8[3], 
+	 listen_addr.addr.u8[4], listen_addr.addr.u8[5], 
+	 listen_addr.addr.u8[6], listen_addr.addr.u8[7], 
+	 listen_addr.addr.u8[8], listen_addr.addr.u8[9], 
+	 listen_addr.addr.u8[10], listen_addr.addr.u8[11], 
+	 listen_addr.addr.u8[12], listen_addr.addr.u8[13], 
+	 listen_addr.addr.u8[14], listen_addr.addr.u8[15] ,
+	 uip_ntohs(listen_addr.port));
+#endif
+
   coap_context = coap_new_context(&listen_addr);
 
   coap_set_log_level(LOG_DEBUG);
@@ -77,14 +102,10 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   coap_tick_t t;
 
   /* if my_clock_base was deleted, we pretend to have no such resource */
-  response->hdr->code = my_clock_base 
-    ? COAP_RESPONSE_CODE(205) 
-    : COAP_RESPONSE_CODE(404);
+  response->hdr->code = COAP_RESPONSE_CODE(205),
 
-
-  if (my_clock_base)
-    coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
-		    coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+  coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
+		  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
 
   coap_add_option(response, COAP_OPTION_MAXAGE,
 		  coap_encode_var_bytes(buf, 0x01), buf);
@@ -116,18 +137,14 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 		    coap_encode_var_bytes(buf, 30), buf);
   }
 
-  resource->dirty = 1;		/* FIXME: delete this */
-  if (my_clock_base) {
-
-    /* calculate current time */
-    coap_ticks(&t);
-    now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
+  /* calculate current time */
+  coap_ticks(&t);
+  now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
     
-    /* output ticks */
-    response->length += snprintf((char *)response->data, 
-				 response->max_size - response->length,
-				 "%u", (unsigned int)now);
-  }
+  /* output ticks */
+  response->length += snprintf((char *)response->data, 
+			       response->max_size - response->length,
+			       "%u", (unsigned int)now);
 }
 
 void
