@@ -339,7 +339,6 @@ void
 coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu, 
 		    coap_tid_t *id) {
   coap_key_t h;
-  coap_opt_iterator_t opt_iter;
 
   memset(h, 0, sizeof(coap_key_t));
 
@@ -365,10 +364,7 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
     coap_hash((const unsigned char *)&peer->addr, sizeof(peer->addr), h);  
 #endif /* WITH_CONTIKI */
 
-  if (coap_check_option((coap_pdu_t *)pdu, COAP_OPTION_TOKEN, &opt_iter))
-    coap_hash(COAP_OPT_VALUE(opt_iter.option), 
-	      COAP_OPT_LENGTH(opt_iter.option), 
-	      h);
+  coap_hash((const unsigned char *)&pdu->hdr->id, sizeof(unsigned short), h);
 
   *id = ((h[0] << 8) | h[1]) ^ ((h[2] << 8) | h[3]);
 }
@@ -517,7 +513,7 @@ coap_send_confirmed(coap_context_t *context,
     PROCESS_CONTEXT_BEGIN(&coap_retransmit_process);
     etimer_set(&context->retransmit_timer, 
 	       now < nextpdu->t ? nextpdu->t - now : 0);
-    printf("retransmit_timer = %d\r\n", now < nextpdu->t ? nextpdu->t - now : 0);
+    printf("retransmit_timer = %ul\r\n", now < nextpdu->t ? nextpdu->t - now : 0);
     PROCESS_CONTEXT_END(&coap_retransmit_process);
   }
 #endif /* WITH_CONTIKI */
@@ -541,10 +537,10 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
     debug("** retransmission #%d of transaction %d\n",
 	  node->retransmit_cnt, ntohs(node->pdu->hdr->id));
 #else /* WITH_CONTIKI */
-    debug("** retransmission #%d of transaction %d\n",
+    debug("** retransmission #%u of transaction %u\n",
 	  node->retransmit_cnt, uip_ntohs(node->pdu->hdr->id));
 #endif /* WITH_CONTIKI */
-    
+
     node->id = coap_send_impl(context, &node->remote, node->pdu, 0);
     return node->id;
   }
