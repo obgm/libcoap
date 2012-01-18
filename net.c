@@ -513,7 +513,6 @@ coap_send_confirmed(coap_context_t *context,
     PROCESS_CONTEXT_BEGIN(&coap_retransmit_process);
     etimer_set(&context->retransmit_timer, 
 	       now < nextpdu->t ? nextpdu->t - now : 0);
-    printf("retransmit_timer = %ul\r\n", now < nextpdu->t ? nextpdu->t - now : 0);
     PROCESS_CONTEXT_END(&coap_retransmit_process);
   }
 #endif /* WITH_CONTIKI */
@@ -1074,8 +1073,6 @@ PROCESS_THREAD(coap_retransmit_process, ev, data)
     if (ev == PROCESS_EVENT_TIMER) {
       if (etimer_expired(&the_coap_context.retransmit_timer)) {
 	
-	debug("retransmit_timer expired\r\n");
-      
 	nextpdu = coap_peek_next(&the_coap_context);
 	
 	coap_ticks(&now);
