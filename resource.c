@@ -388,7 +388,6 @@ coap_check_notify(coap_context_t *context) {
       response = coap_pdu_init(COAP_MESSAGE_CON, 0, 0, COAP_MAX_PDU_SIZE);
       if (response) {
 	coap_subscription_t *obs;
-	coap_tid_t tid;
 	str token;
 
 #ifndef WITH_CONTIKI
@@ -404,17 +403,21 @@ coap_check_notify(coap_context_t *context) {
 
 	coap_pdu_clear(response, response->max_size);
 	response->hdr->id = coap_new_message_id(context);
-	response->hdr->type = COAP_MESSAGE_CON; /* FIXME: flag */
+	if (obs->non && obs->non_cnt < COAP_OBS_MAX_NON)
+	  response->hdr->type = COAP_MESSAGE_NON;
+	else
+	  response->hdr->type = COAP_MESSAGE_CON;
 
 	/* fill with observer-specific data */
 	h(context, r, &obs->subscriber, NULL, &token, response);
 
-	tid = response->hdr->type == COAP_MESSAGE_CON
-	  ? coap_send_confirmed(context, &obs->subscriber, response)
-	  : coap_send(context, &obs->subscriber, response);
-
-	if (tid == COAP_INVALID_TID)
-	  debug("cannot send notification %d\n", response->hdr->id);
+	if (response->hdr->type == COAP_MESSAGE_CON) {
+	  coap_send_confirmed(context, &obs->subscriber, response);
+	  obs->non_cnt = 0;
+	} else {
+	  coap_send(context, &obs->subscriber, response);
+	  obs->non_cnt++;
+	}
       }
       coap_delete_pdu(response);
 
@@ -451,8 +454,13 @@ coap_handle_failed_notify(coap_context_t *context,
 
 	/* FIXME: count failed notifies and remove when
 	 * COAP_MAX_FAILED_NOTIFY is reached */
-	list_remove(r->subscribers, obs);
-	debug("removed observer [%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]:%d\r\n",
+	if (obs->fail_cnt < COAP_OBS_MAX_FAIL)
+	  obs->fail_cnt++;
+	else {
+	  list_remove(r->subscribers, obs);
+	  obs->fail_cnt = 0;
+
+	  debug("removed observer [%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]:%d\r\n",
 	      obs->subscriber.addr.u8[0], obs->subscriber.addr.u8[1], 
 	      obs->subscriber.addr.u8[2], obs->subscriber.addr.u8[3], 
 	      obs->subscriber.addr.u8[4], obs->subscriber.addr.u8[5], 
@@ -463,8 +471,9 @@ coap_handle_failed_notify(coap_context_t *context,
 	      obs->subscriber.addr.u8[14], obs->subscriber.addr.u8[15] ,
 	      uip_ntohs(obs->subscriber.port));
 
-	memb_free(&subscription_storage, obs);
-	goto again;
+	  memb_free(&subscription_storage, obs);
+	  goto again;
+	}
       }
     }
   }

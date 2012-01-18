@@ -979,10 +979,13 @@ coap_dispatch( coap_context_t *context ) {
     case COAP_MESSAGE_ACK:
       /* find transaction in sendqueue to stop retransmission */
       coap_remove_from_queue(&context->sendqueue, rcvd->id, &sent);
-      /* FIXME: if sent code was >= 64 the message might have been a 
-       * notification. Then, we must flag the observer to be alive. */
+
       if (rcvd->pdu->hdr->code == 0)
 	goto cleanup;
+
+      /* FIXME: if sent code was >= 64 the message might have been a 
+       * notification. Then, we must flag the observer to be alive
+       * by setting obs->fail_cnt = 0. */
       break;
 
     case COAP_MESSAGE_RST :
