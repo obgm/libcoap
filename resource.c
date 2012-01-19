@@ -23,6 +23,8 @@ MEMB(attribute_storage, coap_attr_t, COAP_MAX_ATTRIBUTES);
 MEMB(subscription_storage, coap_subscription_t, COAP_MAX_SUBSCRIBERS);
 #endif /* WITH_CONTIKI */
 
+#define min(a,b) ((a) < (b) ? (a) : (b))
+
 void
 coap_resources_init() {
   memb_init(&resource_storage);
@@ -280,35 +282,36 @@ coap_print_link(const coap_resource_t *resource,
 }
 
 coap_subscription_t *
-coap_find_observer(coap_resource_t *resource, const coap_address_t *peer) {
+coap_find_observer(coap_resource_t *resource, const coap_address_t *peer,
+		     const str *token) {
   coap_subscription_t *s;
 
   assert(resource);
   assert(peer);
 
   for (s = list_head(resource->subscribers); s; s = list_item_next(s)) {
-    if (coap_address_equals(&s->subscriber, peer))
+    if (coap_address_equals(&s->subscriber, peer)
+	&& (!token || (token->length == s->token_length 
+		       && memcmp(token->s, s->token, token->length) == 0)))
       return s;
   }
-
+  
   return NULL;
 }
 
 coap_subscription_t *
 coap_add_observer(coap_resource_t *resource, 
 		  const coap_address_t *observer,
-		  const unsigned char *token,
-		  size_t token_length) {
+		  const str *token) {
   coap_subscription_t *s;
   
   assert(observer);
 
   /* Check if there is already a subscription for this peer. */
-  s = coap_find_observer(resource, observer);
+  s = coap_find_observer(resource, observer, token);
 
-  /* Found a subscription. We are done if tokens match. */
-  if (s && token_length && s->token_length == token_length && 
-      memcmp(s->token, token, token_length) == 0)
+  /* We are done if subscription was found. */
+  if (s)
     return s;
 
   /* s points to a different subscription, so we have to create
@@ -326,11 +329,9 @@ coap_add_observer(coap_resource_t *resource,
   coap_subscription_init(s);
   memcpy(&s->subscriber, observer, sizeof(coap_address_t));
   
-  s->token_length = token_length;
-  if (token_length) {
-    assert(token);
-    assert(token_length <= 8);
-    memcpy(s->token, token, token_length);
+  if (token && token->length) {
+    s->token_length = token->length;
+    memcpy(s->token, token->s, min(s->token_length, 8));
   }
 
   /* add subscriber to resource */
@@ -344,10 +345,11 @@ coap_add_observer(coap_resource_t *resource,
 }
 
 void
-coap_delete_observer(coap_resource_t *resource, coap_address_t *observer) {
+  coap_delete_observer(coap_resource_t *resource, coap_address_t *observer,
+		       const str *token) {
   coap_subscription_t *s;
 
-  s = coap_find_observer(resource, observer);
+  s = coap_find_observer(resource, observer, token);
 
   if (s) {
     list_remove(resource->subscribers, s);

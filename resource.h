@@ -205,18 +205,20 @@ void coap_hash_request_uri(const coap_pdu_t *request, coap_key_t key);
  */
 coap_subscription_t *coap_add_observer(coap_resource_t *resource, 
 				       const coap_address_t *observer,
-				       const unsigned char *token,
-				       size_t token_length);
+				       const str *token);
 
 /**
  * Returns a subscription object for given @p peer.
  *
  * @param resource The observed resource.
  * @param peer The address to search for.
+ * @param token The token that identifies this subscription or @c NULL for any
+ *              token.
  * @return A valid subscription if exists or @c NULL otherwise.
  */
 coap_subscription_t *coap_find_observer(coap_resource_t *resource, 
-					const coap_address_t *peer);
+					const coap_address_t *peer,
+					const str *token);
 
 /**
  * Removes any subscription for @p observer from @p resource and releases
@@ -224,9 +226,12 @@ coap_subscription_t *coap_find_observer(coap_resource_t *resource,
  *
  * @param resource The observed resource.
  * @param observer The observer's address.
+ * @param token    The token that identifies this subscription or @c NULL for any
+ *                 token.
  */
 void coap_delete_observer(coap_resource_t *resource, 
-			  coap_address_t *observer);
+			  coap_address_t *observer, 
+			  const str *token);
 
 /** 
  * Checks for all known resources, if they are dirty and notifies

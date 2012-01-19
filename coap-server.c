@@ -113,7 +113,7 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   /* Check if subscription was requested. */
   if (request && 
       coap_check_option(request, COAP_OPTION_SUBSCRIPTION, &opt_iter) && 
-      coap_add_observer(resource, peer, token->s, token->length)) {
+      coap_add_observer(resource, peer, token)) {
 
     /* add a new observe value */
     coap_add_option(response, COAP_OPTION_SUBSCRIPTION,
