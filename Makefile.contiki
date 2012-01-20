@@ -13,6 +13,14 @@ UIP_CONF_IPV6=1
 
 ifeq ($(TARGET), minimal-net)
 CFLAGS += -DHAVE_ASSERT_H -DWITH_UIP6=1
+ifneq ($(ROLE),client)
+	UIP_LLADDR="{0x00,0x06,0x98,0x00,0x02,0x32}"
+	CFLAGS+= -DUIP_CONF_LLADDR=$(UIP_LLADDR)
+else
+	UIP_LLADDR="{0x00,0x06,0x98,0x00,0x02,0x30}"
+	CFLAGS+= -DUDP_CONNECTION_ADDR="fe80::206:98ff:fe00:232" \
+		 -DUIP_CONF_LLADDR=$(UIP_LLADDR)
+endif
 endif
 
 ifeq ($(TARGET), mbxxx)
@@ -21,15 +29,6 @@ endif
 
 ifeq ($(TARGET), redbee-econotag)
 CFLAGS += -DUIP_CONF_TCP=0
-endif
-
-ifneq ($(ROLE),client)
-	UIP_LLADDR="{0x00,0x06,0x98,0x00,0x02,0x32}"
-	CFLAGS+= -DUIP_CONF_LLADDR=$(UIP_LLADDR)
-else
-	UIP_LLADDR="{0x00,0x06,0x98,0x00,0x02,0x30}"
-	CFLAGS+= -DUDP_CONNECTION_ADDR="fe80::206:98ff:fe00:232" \
-		 -DUIP_CONF_LLADDR=$(UIP_LLADDR)
 endif
 
 CFLAGS += -ffunction-sections
