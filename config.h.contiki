@@ -11,7 +11,7 @@
 
 /** Number of resources that can be handled by a CoAP server in addition to
  * @c /.well-known/core */
-#define COAP_MAX_RESOURCES 1
+#define COAP_MAX_RESOURCES 3
 
 /** Number of attributes that can be handled (should be at least 
  * @c 2 * COAP_MAX_RESOURCES. to carry the content type and the 
@@ -31,6 +31,20 @@
  * 36 B.
  */
 #define COAP_MAX_SUBSCRIBERS 3
+
+/**
+ * Number of notifications that may be sent non-confirmable before a
+ * confirmable message is sent to detect if observers are alive. The
+ * maximum allowed value here is @c 15.
+ */
+#define COAP_OBS_MAX_NON   5
+
+/**
+ * Number of confirmable notifications that may fail (i.e. time out
+ * without being ACKed) before an observer is removed. The maximum
+ * value for COAP_OBS_MAX_FAIL is @c 3.
+ */
+#define COAP_OBS_MAX_FAIL  3
 
 #define DEBUG DEBUG_PRINT
 #define HAVE_STRNLEN 1
