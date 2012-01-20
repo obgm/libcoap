@@ -47,6 +47,7 @@ typedef struct coap_queue_t {
   unsigned char retransmit_cnt;	/* retransmission counter, will be removed when zero */
   unsigned int timeout;		/* the randomized timeout value */
 
+  coap_address_t local;		/**< local address */
   coap_address_t remote;	/**< remote address */
   coap_tid_t id;		/**< unique transaction id */
 

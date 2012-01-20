@@ -585,7 +585,7 @@ coap_read( coap_context_t *ctx ) {
   coap_hdr_t *pdu;
 #endif /* WITH_CONTIKI */
   ssize_t bytes_read = -1;
-  coap_address_t src;
+  coap_address_t src, dst;
   coap_queue_t *node;
 
 #ifdef WITH_CONTIKI
@@ -602,6 +602,8 @@ coap_read( coap_context_t *ctx ) {
   if(uip_newdata()) {
     uip_ipaddr_copy(&src.addr, &UIP_IP_BUF->srcipaddr);
     src.port = UIP_UDP_BUF->srcport;
+    uip_ipaddr_copy(&dst.addr, &UIP_IP_BUF->destipaddr);
+    dst.port = UIP_UDP_BUF->destport;
 
     bytes_read = uip_datalen();
     ((char *)uip_appdata)[bytes_read] = 0;
@@ -637,6 +639,7 @@ coap_read( coap_context_t *ctx ) {
   }
 
   coap_ticks( &node->t );
+  memcpy(&node->local, &dst, sizeof(coap_address_t));
   memcpy(&node->remote, &src, sizeof(coap_address_t));
 
   /* "parse" received PDU by filling pdu structure */
@@ -860,14 +863,14 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 
     default: 			/* any other request type */
 
-      debug("unhandled request for unknown resource 0x%02x%02x%02x%02x,"
-	    "return 4.05\n", key[0], key[1], key[2], key[3]);
+      debug("unhandled request for unknown resource 0x%02x%02x%02x%02x\r\n",
+	    key[0], key[1], key[2], key[3]);
+      if (!uip_is_addr_mcast(&node->local.addr))
 	response = coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(405), 
 					   opt_filter);
     }
       
-    if (!response || (coap_send(context, &node->remote, response)
-		      == COAP_INVALID_TID)) {
+    if (coap_send(context, &node->remote, response) == COAP_INVALID_TID) {
       warn("cannot send response for transaction %u\n", node->id);
       coap_delete_pdu(response);
     }
