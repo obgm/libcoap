@@ -427,25 +427,6 @@ coap_send(coap_context_t *context,
 }
 
 coap_tid_t
-coap_send_ack(coap_context_t *context, 
-	      const coap_address_t *dst,
-	      coap_pdu_t *request) {
-  coap_pdu_t *response;
-  coap_tid_t result = COAP_INVALID_TID;
-
-  if (request && request->hdr->type == COAP_MESSAGE_CON) {
-    response = coap_pdu_init(COAP_MESSAGE_ACK, 0, request->hdr->id, 
-			     sizeof(coap_pdu_t)); 
-    if (response) {
-      result = coap_send(context, dst, response);
-      if (result == COAP_INVALID_TID) 
-	coap_delete_pdu(response);
-    }
-  }
-  return result;
-}
-
-coap_tid_t
 coap_send_error(coap_context_t *context, 
 		coap_pdu_t *request,
 		const coap_address_t *dst,
@@ -464,6 +445,25 @@ coap_send_error(coap_context_t *context,
       coap_delete_pdu(response);
   }
   
+  return result;
+}
+
+coap_tid_t
+coap_send_message_type(coap_context_t *context, 
+		       const coap_address_t *dst, 
+		       coap_pdu_t *request,
+		       unsigned char type) {
+  coap_pdu_t *response;
+  coap_tid_t result = COAP_INVALID_TID;
+
+  if (request) {
+    response = coap_pdu_init(type, 0, request->hdr->id, sizeof(coap_pdu_t)); 
+    if (response) {
+      result = coap_send(context, dst, response);
+      if (result == COAP_INVALID_TID) 
+	coap_delete_pdu(response);
+    }
+  }
   return result;
 }
 
@@ -928,15 +928,15 @@ static inline void
 handle_response(coap_context_t *context, 
 		coap_queue_t *sent, coap_queue_t *rcvd) {
   
-  /* send ACK if rcvd is confirmable (i.e. a separate response) */
-  if (rcvd->pdu->hdr->type == COAP_MESSAGE_CON)
-    coap_send_ack(context, &rcvd->remote, rcvd->pdu);
-
-  /* only call response handler when id is valid */
+  /* Call application-specific reponse handler when available.  If
+   * not, we must acknowledge confirmable messages. */
   if (context->response_handler) {
     context->response_handler(context, 
 			      &rcvd->remote, sent ? sent->pdu : NULL, 
 			      rcvd->pdu, rcvd->id);
+  } else {
+    /* send ACK if rcvd is confirmable (i.e. a separate response) */
+    coap_send_ack(context, &rcvd->remote, rcvd->pdu);
   }
 }
 
@@ -1003,7 +1003,7 @@ coap_dispatch( coap_context_t *context ) {
 
       /* @todo remove observer for this resource, if any 
        * get token from sent and try to find a matching resource. Uh!
-       */      
+       */
       break;
 
     case COAP_MESSAGE_NON :	/* check for unknown critical options */
@@ -1014,6 +1014,8 @@ coap_dispatch( coap_context_t *context ) {
     case COAP_MESSAGE_CON :	/* check for unknown critical options */
       if (coap_option_check_critical(context, rcvd->pdu, opt_filter) == 0) {
 
+	/* FIXME: send response only if we have received a request. Otherwise, 
+	 * send RST. */
 	response = 
 	  coap_new_error_response(rcvd->pdu, COAP_RESPONSE_CODE(402), opt_filter);
 

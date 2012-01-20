@@ -98,6 +98,9 @@ message_handler(struct coap_context_t  *ctx,
 		coap_pdu_t *sent,
 		coap_pdu_t *received,
 		const coap_tid_t id) {
+  /* send ACK if received message is confirmable (i.e. a separate response) */
+  coap_send_ack(ctx, remote, received);
+
   debug("** process incoming %d.%02d response:\n",
 	(received->hdr->code >> 5), received->hdr->code & 0x1F);
   coap_show_pdu(received);

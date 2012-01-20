@@ -234,6 +234,23 @@ coap_tid_t coap_send_error(coap_context_t *context,
 			   const coap_address_t *dst,
 			   unsigned char code,
 			   coap_opt_filter_t opts);
+
+/** 
+ * Helper funktion to create and send a message with @p type (usually
+ * ACK or RST).  This function returns @c COAP_INVALID_TID when the
+ * message was not sent, a valid transaction id otherwise.
+ *
+ * @param context The CoAP context.
+ * @param dst Where to send the context.
+ * @param request The request that should be responded to.
+ * @param type Which type to set
+ * @return transaction id on success or @c COAP_INVALID_TID otherwise.
+ */
+coap_tid_t
+coap_send_message_type(coap_context_t *context, 
+		       const coap_address_t *dst, 
+		       coap_pdu_t *request,
+		       unsigned char type);
 /** 
  * Sends an ACK message with code @c 0 for the specified @p request to
  * @p dst. This function returns the corresponding transaction id if
@@ -246,10 +263,34 @@ coap_tid_t coap_send_error(coap_context_t *context,
  * @return The transaction id if ACK was sent or @c COAP_INVALID_TID
  * on error.
  */
-coap_tid_t
+static inline coap_tid_t
 coap_send_ack(coap_context_t *context, 
 	      const coap_address_t *dst, 
-	      coap_pdu_t *request);
+	      coap_pdu_t *request) {
+  if (request && request->hdr->type == COAP_MESSAGE_CON)
+    return coap_send_message_type(context, dst, request, COAP_MESSAGE_ACK);
+  else
+    return COAP_INVALID_TID;
+}
+
+/** 
+ * Sends an RST message with code @c 0 for the specified @p request to
+ * @p dst. This function returns the corresponding transaction id if
+ * the message was sent or @c COAP_INVALID_TID on error.
+ * 
+ * @param context The context to use.
+ * @param dst     The destination address.
+ * @param request The request to be reset.
+ * 
+ * @return The transaction id if RST was sent or @c COAP_INVALID_TID
+ * on error.
+ */
+static inline coap_tid_t
+coap_send_rst(coap_context_t *context, 
+	      const coap_address_t *dst, 
+	      coap_pdu_t *request) {
+  return coap_send_message_type(context, dst, request, COAP_MESSAGE_RST);
+}
 
 /** Handles retransmissions of confirmable messages */
 coap_tid_t coap_retransmit( coap_context_t *context, coap_queue_t *node );
