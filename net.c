@@ -870,7 +870,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 					   opt_filter);
     }
       
-    if (coap_send(context, &node->remote, response) == COAP_INVALID_TID) {
+    if (response && coap_send(context, &node->remote, response) == COAP_INVALID_TID) {
       warn("cannot send response for transaction %u\n", node->id);
       coap_delete_pdu(response);
     }

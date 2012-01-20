@@ -27,7 +27,7 @@
 #ifdef WITH_CONTIKI
 #include "memb.h"
 
-typedef unsigned char _pdu[COAP_MAX_PDU_SIZE];
+typedef unsigned char _pdu[sizeof(coap_pdu_t) + COAP_MAX_PDU_SIZE];
 
 MEMB(pdu_storage, _pdu, COAP_PDU_MAXCNT);
 
