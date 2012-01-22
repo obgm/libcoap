@@ -901,7 +901,8 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 
       h(context, resource, &node->remote, node->pdu, &token, response);
       if (response->hdr->type != COAP_MESSAGE_NON ||
-	  response->hdr->code >= 64) {
+	  (response->hdr->code >= 64 
+	   && !uip_is_addr_mcast(&node->local.addr))) {
 	if (coap_send(context, &node->remote, response) == COAP_INVALID_TID) {
 	  debug("cannot send response for message %d\n", node->pdu->hdr->id);
 	  coap_delete_pdu(response);
