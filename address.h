@@ -20,7 +20,7 @@
 #include <assert.h>
 #else
 #ifndef assert
-#warn "assertions are disabled"
+#warning "assertions are disabled"
 #  define assert(x)
 #endif
 #endif
