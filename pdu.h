@@ -1,6 +1,6 @@
 /* pdu.h -- CoAP message structure
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -10,7 +10,7 @@
 #define _PDU_H_
 
 #include "config.h"
-#include "list.h"
+#include "coap_list.h"
 #include "uri.h"
 
 /* pre-defined constants that reflect defaults for CoAP */
@@ -19,7 +19,9 @@
 #define COAP_DEFAULT_MAX_RETRANSMIT    4 /* max number of retransmissions */
 #define COAP_DEFAULT_PORT           5683 /* CoAP default UDP port */
 #define COAP_DEFAULT_MAX_AGE          60 /* default maximum object lifetime in seconds */
+#ifndef COAP_MAX_PDU_SIZE
 #define COAP_MAX_PDU_SIZE           1400 /* maximum size of a CoAP PDU */
+#endif /* COAP_MAX_PDU_SIZE */
 
 #define COAP_DEFAULT_VERSION           1 /* version of CoAP supported */
 #define COAP_DEFAULT_SCHEME        "coap" /* the default scheme for CoAP URIs */
@@ -57,7 +59,7 @@
 #define COAP_OPTION_URI_PORT      7 /* C, String, 1-270 B, destination port */
 #define COAP_OPTION_LOCATION_QUERY 8 /*  */
 #define COAP_OPTION_URI_PATH      9 /* C, String, 1-270 B, - (may occur multiple times) */
-#define COAP_OPTION_TOKEN        11 /* C, Sequence of Bytes, 1-2 B, - */
+#define COAP_OPTION_TOKEN        11 /* C, Sequence of Bytes, 1-8 B, empty */
 #define COAP_OPTION_ACCEPT       12 /* E, uint,   0-2 B, (none) */
 #define COAP_OPTION_IF_MATCH     13 /* C, opaque, 0-8 B, (none) */
 #define COAP_OPTION_URI_QUERY    15 /* C, String, 1-270 B, "" */
@@ -217,6 +219,14 @@ typedef struct {
 coap_pdu_t *
 coap_pdu_init(unsigned char type, unsigned char code, 
 	      unsigned short id, size_t size);
+
+/** 
+ * Clears any contents from @p pdu and resets @c version field, @c
+ * length and @c data pointers. @c max_size is set to @p size, any
+ * other field is set to @c 0. Note that @p pdu must be a valid
+ * pointer to a coap_pdu_t object created e.g. by coap_pdu_init().
+ */
+void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
 
 /**
  * Creates a new CoAP PDU. The object is created on the heap and must be released

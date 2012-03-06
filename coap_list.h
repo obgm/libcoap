@@ -1,4 +1,4 @@
-/* list.h -- CoAP list structures
+/* coap_list.h -- CoAP list structures
  *
  * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *

@@ -9,7 +9,7 @@
 #ifndef _COAP_ENCODE_H_
 #define _COAP_ENCODE_H_
 
-#if (BSD >= 199103)
+#if (BSD >= 199103) || defined(WITH_CONTIKI)
 # include <string.h>
 #else
 # include <strings.h>

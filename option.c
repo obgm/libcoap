@@ -8,7 +8,12 @@
  */
 
 
-#include <assert.h>
+#include "config.h"
+
+#if defined(HAVE_ASSERT_H) && !defined(assert)
+# include <assert.h>
+#endif
+
 #include <stdio.h>
 
 #include "option.h"

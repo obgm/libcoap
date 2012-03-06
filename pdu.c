@@ -6,42 +6,76 @@
  * README for terms of use. 
  */
 
+#include "config.h"
+
+#if defined(HAVE_ASSERT_H) && !defined(assert)
+# include <assert.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#endif
 
 #include "debug.h"
-#include "mem.h"
 #include "pdu.h"
 #include "option.h"
 #include "encode.h"
+
+#ifdef WITH_CONTIKI
+#include "memb.h"
+
+typedef unsigned char _pdu[sizeof(coap_pdu_t) + COAP_MAX_PDU_SIZE];
+
+MEMB(pdu_storage, _pdu, COAP_PDU_MAXCNT);
+
+void
+coap_pdu_resources_init() {
+  memb_init(&pdu_storage);
+}
+#else /* WITH_CONTIKI */
+#include "mem.h"
+#endif /* WITH_CONTIKI */
+
+void
+coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
+  assert(pdu);
+
+  memset(pdu, 0, sizeof(coap_pdu_t) + size);
+  pdu->max_size = size;
+  pdu->hdr = (coap_hdr_t *)((unsigned char *)pdu + sizeof(coap_pdu_t));
+  pdu->hdr->version = COAP_DEFAULT_VERSION;
+
+  /* data points after the header; when options are added, the data
+     pointer is moved to the back */
+  pdu->length = sizeof(coap_hdr_t);
+  pdu->data = (unsigned char *)pdu->hdr + pdu->length;
+}
 
 coap_pdu_t *
 coap_pdu_init(unsigned char type, unsigned char code, 
 	      unsigned short id, size_t size) {
   coap_pdu_t *pdu;
 
+  assert(size <= COAP_MAX_PDU_SIZE);
   /* Size must be large enough to fit the header. */
-  if (size < sizeof(coap_hdr_t)) 
+  if (size < sizeof(coap_hdr_t) || size > COAP_MAX_PDU_SIZE)
     return NULL;
 
-  //size must be large enough for hdr
+  /* size must be large enough for hdr */
+#ifndef WITH_CONTIKI
   pdu = coap_malloc(sizeof(coap_pdu_t) + size);
+#else /* WITH_CONTIKI */
+  pdu = (coap_pdu_t *)memb_alloc(&pdu_storage);
+#endif /* WITH_CONTIKI */
   if (pdu) {
-    memset(pdu, 0, sizeof(coap_pdu_t) + size);
-    pdu->max_size = size;
-    pdu->hdr = (coap_hdr_t *)((unsigned char *)pdu + sizeof(coap_pdu_t));
-    pdu->hdr->version = COAP_DEFAULT_VERSION;
+    coap_pdu_clear(pdu, size);
     pdu->hdr->id = id;
     pdu->hdr->type = type;
     pdu->hdr->code = code;
-
-    /* data points after the header; when options are added, the data
-       pointer is moved to the back */
-    pdu->length = sizeof(coap_hdr_t);
-    pdu->data = (unsigned char *)pdu->hdr + pdu->length;
-  }
+  } 
   return pdu;
 }
 
@@ -51,14 +85,20 @@ coap_new_pdu() {
   
   pdu = coap_pdu_init(0, 0, ntohs(COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
 
+#ifndef NDEBUG
   if (!pdu)
-    perror("coap_new_pdu: cannot allocate memory for new PDU");
+    coap_log(LOG_CRIT, "coap_new_pdu: cannot allocate memory for new PDU\n");
+#endif
   return pdu;
 }
 
 void
 coap_delete_pdu(coap_pdu_t *pdu) {
+#ifndef WITH_CONTIKI
   coap_free( pdu );
+#else /* WITH_CONTIKI */
+  memb_free(&pdu_storage, pdu);
+#endif /* WITH_CONTIKI */
 }
 
 int

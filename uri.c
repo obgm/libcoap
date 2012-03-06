@@ -1,12 +1,17 @@
 /* uri.c -- helper functions for URI treatment
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
  */
 
-#include <assert.h>
+#include "config.h"
+
+#if defined(HAVE_ASSERT_H) && !defined(assert)
+# include <assert.h>
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>

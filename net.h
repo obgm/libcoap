@@ -15,14 +15,16 @@
 #include <assert.h>
 #else
 #ifndef assert
-#warn "assertions are disabled"
+#warning "assertions are disabled"
 #  define assert(x)
 #endif
 #endif
 
 #include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
@@ -31,79 +33,10 @@
 #endif
 
 #include "option.h"
+#include "address.h"
+#include "prng.h"
 #include "pdu.h"
-
-/**
- * @defgroup clock Clock Handling
- * Default implementation of internal clock. You should redefine this if
- * you do not have time() and gettimeofday().
- * @{
- */
-typedef unsigned int coap_tick_t; 
-
-#define COAP_TICKS_PER_SECOND 1024
-
-/** Set at startup to initialize the internal clock (time in seconds). */
-extern time_t clock_offset;
-
-#ifndef coap_clock_init
-static inline void
-coap_clock_init_impl(void) {
-#ifdef HAVE_TIME_H
-  clock_offset = time(NULL);
-#else
-#warn "cannot initialize clock"
-  clock_offset = 0;
-#endif
-}
-#define coap_clock_init coap_clock_init_impl
-#endif /* coap_clock_init */
-
-#ifndef coap_ticks
-static inline void
-coap_ticks_impl(coap_tick_t *t) {
-#ifdef HAVE_SYS_TIME_H
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  *t = (tv.tv_sec - clock_offset) * COAP_TICKS_PER_SECOND 
-    + (tv.tv_usec >> 10) % COAP_TICKS_PER_SECOND;
-#else
-#error "clock not implemented"
-#endif
-}
-#define coap_ticks coap_ticks_impl
-#endif /* coap_ticks */
-
-/** @} */
-
-/** multi-purpose address abstraction */
-#ifndef coap_address_t
-typedef struct __coap_address_t {
-  socklen_t size;		/**< size of addr */
-  union {
-    struct sockaddr     sa;
-    struct sockaddr_storage st;
-    struct sockaddr_in  sin;
-    struct sockaddr_in6 sin6;
-  } addr;
-} __coap_address_t;
-
-#define coap_address_t __coap_address_t
-
-/** 
- * Resets the given coap_address_t object @p addr to its default
- * values.  In particular, the member size must be initialized to the
- * available size for storing addresses.
- * 
- * @param addr The coap_address_t object to initialize.
- */
-static inline void
-coap_address_init(coap_address_t *addr) {
-  assert(addr);
-  memset(addr, 0, sizeof(coap_address_t));
-  addr->size = sizeof(struct sockaddr_storage);
-}
-#endif /* coap_address_t */
+#include "coap_time.h"
 
 struct coap_queue_t;
 
@@ -114,6 +47,7 @@ typedef struct coap_queue_t {
   unsigned char retransmit_cnt;	/* retransmission counter, will be removed when zero */
   unsigned int timeout;		/* the randomized timeout value */
 
+  coap_address_t local;		/**< local address */
   coap_address_t remote;	/**< remote address */
   coap_tid_t id;		/**< unique transaction id */
 
@@ -149,14 +83,36 @@ typedef void (*coap_response_handler_t)(struct coap_context_t  *,
 /** The CoAP stack's global state is stored in a coap_context_t object */
 typedef struct coap_context_t {
   coap_opt_filter_t known_options;
+#ifndef WITH_CONTIKI
   struct coap_resource_t *resources; /**< hash table of known resources */
+#endif /* WITH_CONTIKI */
 #ifndef WITHOUT_ASYNC
   /** list of asynchronous transactions */
   struct coap_async_state_t *async_state;
-#endif
+#endif /* WITHOUT_ASYNC */
   coap_queue_t *sendqueue, *recvqueue;
-  int sockfd;			/* send/receive socket */
+#ifndef WITH_CONTIKI
+  int sockfd;			/**< send/receive socket */
+#else /* WITH_CONTIKI */
+  struct uip_udp_conn *conn;	/**< uIP connection object */
+  
+  struct etimer retransmit_timer; /**< fires when the next packet must be sent */
+  struct etimer notify_timer;     /**< used to check resources periodically */
+#endif /* WITH_CONTIKI */
 
+  /**
+   * The last message id that was used is stored in this field.  The
+   * initial value is set by coap_new_context() and is usually a
+   * random value. A new message id can be created with
+   * coap_new_message_id().
+   */ 
+  unsigned short message_id;
+
+  /**
+   * The next value to be used for Observe. This field is global for
+   * all resources and will be updated when notifications are created.
+   */
+  unsigned short observe;
 
   coap_response_handler_t response_handler;
 } coap_context_t;
@@ -193,7 +149,16 @@ coap_queue_t *coap_peek_next( coap_context_t *context );
 coap_queue_t *coap_pop_next( coap_context_t *context );
 
 /* Creates a new coap_context_t object that will hold the CoAP stack status.  */
-coap_context_t *coap_new_context(const struct sockaddr *listen_addr, size_t addr_size);
+coap_context_t *coap_new_context(const coap_address_t *listen_addr);
+
+/** 
+ * Returns a new message id and updates @p context->message_id
+ * accordingly. */
+static inline unsigned short 
+coap_new_message_id(coap_context_t *context) {
+  context->message_id++;
+  return context->message_id;
+}
 
 /* CoAP stack context must be released with coap_free_context() */
 void coap_free_context( coap_context_t *context );
@@ -270,6 +235,23 @@ coap_tid_t coap_send_error(coap_context_t *context,
 			   const coap_address_t *dst,
 			   unsigned char code,
 			   coap_opt_filter_t opts);
+
+/** 
+ * Helper funktion to create and send a message with @p type (usually
+ * ACK or RST).  This function returns @c COAP_INVALID_TID when the
+ * message was not sent, a valid transaction id otherwise.
+ *
+ * @param context The CoAP context.
+ * @param dst Where to send the context.
+ * @param request The request that should be responded to.
+ * @param type Which type to set
+ * @return transaction id on success or @c COAP_INVALID_TID otherwise.
+ */
+coap_tid_t
+coap_send_message_type(coap_context_t *context, 
+		       const coap_address_t *dst, 
+		       coap_pdu_t *request,
+		       unsigned char type);
 /** 
  * Sends an ACK message with code @c 0 for the specified @p request to
  * @p dst. This function returns the corresponding transaction id if
@@ -284,17 +266,32 @@ coap_tid_t coap_send_error(coap_context_t *context,
  */
 static inline coap_tid_t
 coap_send_ack(coap_context_t *context, 
-	      const coap_address_t *dst,
+	      const coap_address_t *dst, 
 	      coap_pdu_t *request) {
-  coap_opt_filter_t f;
-
-  if (request && request->hdr->type == COAP_MESSAGE_CON) {
-    coap_option_filter_clear(f);  
-    return coap_send_error(context, request, dst, 0, f);
-  }
-  return COAP_INVALID_TID;
+  if (request && request->hdr->type == COAP_MESSAGE_CON)
+    return coap_send_message_type(context, dst, request, COAP_MESSAGE_ACK);
+  else
+    return COAP_INVALID_TID;
 }
 
+/** 
+ * Sends an RST message with code @c 0 for the specified @p request to
+ * @p dst. This function returns the corresponding transaction id if
+ * the message was sent or @c COAP_INVALID_TID on error.
+ * 
+ * @param context The context to use.
+ * @param dst     The destination address.
+ * @param request The request to be reset.
+ * 
+ * @return The transaction id if RST was sent or @c COAP_INVALID_TID
+ * on error.
+ */
+static inline coap_tid_t
+coap_send_rst(coap_context_t *context, 
+	      const coap_address_t *dst, 
+	      coap_pdu_t *request) {
+  return coap_send_message_type(context, dst, request, COAP_MESSAGE_RST);
+}
 
 /** Handles retransmissions of confirmable messages */
 coap_tid_t coap_retransmit( coap_context_t *context, coap_queue_t *node );
@@ -413,43 +410,5 @@ void coap_ticks(coap_tick_t *);
 int coap_option_check_critical(coap_context_t *ctx, 
 			       coap_pdu_t *pdu,
 			       coap_opt_filter_t unknown);
-
-/** 
- * @defgroup prng Pseudo Random Numbers
- * @{
- */
-
-/**
- * Fills \p buf with \p len random bytes. This is the default
- * implementation for prng().  You might want to change prng() to use
- * a better PRNG on your specific platform.
- */
-static inline int
-coap_prng_impl(unsigned char *buf, size_t len) {
-  while (len--)
-    *buf++ = rand() & 0xFF;
-  return 1;
-}
-
-#ifndef prng
-/** 
- * Fills \p Buf with \p Length bytes of random data. 
- * 
- * @hideinitializer
- */
-#define prng(Buf,Length) coap_prng_impl((Buf), (Length))
-#endif
-
-#ifndef prng_init
-/** 
- * Called by dtls_new_context() to set the PRNG seed. You
- * may want to re-define this to allow for a better PRNG. 
- *
- * @hideinitializer
- */
-#define prng_init(Value) srand((unsigned long)(Value))
-#endif
-
-/** @} */
 
 #endif /* _COAP_NET_H_ */

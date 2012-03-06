@@ -1,4 +1,4 @@
-/* list.c -- CoAP list structures
+/* coap_list.c -- CoAP list structures
  *
  * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -6,11 +6,14 @@
  * README for terms of use. 
  */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <string.h>
 
+#include "debug.h"
 #include "mem.h"
-#include "list.h"
+#include "coap_list.h"
 
 int
 coap_insert(coap_list_t **queue, coap_list_t *node,
@@ -71,7 +74,9 @@ coap_list_t *
 coap_new_listnode(void *data, void (*delete_func)(void *) ) {
   coap_list_t *node = coap_malloc( sizeof(coap_list_t) );
   if ( ! node ) {
-    perror ("coap_new_listnode: malloc");
+#ifndef NDEBUG
+    coap_log(LOG_CRIT, "coap_new_listnode: malloc\n");
+#endif
     return NULL;
   }
 

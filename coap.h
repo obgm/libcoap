@@ -12,7 +12,7 @@
 #include "config.h"
 #include "debug.h"
 #include "mem.h"
-#include "list.h"
+#include "coap_list.h"
 #include "pdu.h"
 #include "option.h"
 #include "net.h"
@@ -21,5 +21,6 @@
 #include "uri.h"
 #include "async.h"
 #include "resource.h"
+#include "subscribe.h"
 
 #endif /* _COAP_H_ */
