@@ -44,8 +44,8 @@ typedef struct __coap_address_t {
 
 #define _coap_address_equals_impl(A,B)				\
   ((A)->size == (B)->size					\
-    && (A)->port == (B)->port					\
-   && uip_ipaddr_cmp((A),(B)))
+   && (A)->port == (B)->port					\
+   && uip_ipaddr_cmp(&((A)->addr),&((B)->addr)))
 
 #endif /* WITH_CONTIKI */
 
