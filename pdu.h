@@ -68,7 +68,6 @@
 /* option types from draft-hartke-coap-observe-01 */
 
 #define COAP_OPTION_SUBSCRIPTION 10 /* E, uint, 0-2 B, - */
-#define COAP_OPTION_MAX_OFE      14 /* E, uint, 0-4 B, 0 */
 
 /* selected option types from draft-core-block-04 */
 

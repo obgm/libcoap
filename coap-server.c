@@ -121,20 +121,12 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 
     if (token->length)
       coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
-
-    /* indicate that value is good for at least 30 seconds */
-    coap_add_option(response, COAP_OPTION_MAX_OFE,
-		    coap_encode_var_bytes(buf, 30), buf);
   } else {
     coap_add_option(response, COAP_OPTION_SUBSCRIPTION,
 		    coap_encode_var_bytes(buf, ctx->observe), buf);
 
     if (token->length)
       coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
-
-    /* indicate that value is good for at least 30 seconds */
-    coap_add_option(response, COAP_OPTION_MAX_OFE,
-		    coap_encode_var_bytes(buf, 30), buf);
   }
 
   /* calculate current time */
