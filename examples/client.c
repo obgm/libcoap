@@ -1,6 +1,6 @@
 /* coap-client -- simple CoAP client
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -354,8 +354,9 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-	   "(c) 2010-2011 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-b num] [-g group] [-m method] [-o file] [-p port] [-s num] \n"
+	   "(c) 2010-2012 Olaf Bergmann <bergmann@tzi.org>\n\n"
+	   "usage: %s [-b num] [-g group] [-m method] [-o file] [-P addr:[port]] \n"
+	   "  [-p port] [-s num] \n"
 	   "\t\t[-t type...] [-v num] [-O num,text] [-T string] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
@@ -709,10 +710,18 @@ get_context(const char *node, const char *port) {
 
   /* iterate through results until success */
   for (rp = result; rp != NULL; rp = rp->ai_next) {
-    ctx = coap_new_context(rp->ai_addr, rp->ai_addrlen);
-    if (ctx) {
-      /* TODO: output address:port for successful binding */
-      goto finish;
+    coap_address_t addr;
+
+    if (rp->ai_addrlen <= sizeof(addr.addr)) {
+      coap_address_init(&addr);
+      addr.size = rp->ai_addrlen;
+      memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
+
+      ctx = coap_new_context(&addr);
+      if (ctx) {
+	/* TODO: output address:port for successful binding */
+	goto finish;
+      }
     }
   }
   
