@@ -44,6 +44,8 @@ method_t method = 1;		/* the method we are using in our requests */
 
 unsigned int blocknr = 0;	/* hold current block option */
 
+unsigned int wait_seconds = 90;	/* default timeout in seconds */
+
 extern unsigned int
 print_readable( const unsigned char *data, unsigned int len,
 		unsigned char *result, unsigned int buflen );
@@ -357,11 +359,13 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010-2012 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-b num] [-g group] [-m method] [-N] [-o file] [-P addr:[port]]\n"
-	   "\t\t[-p port] [-s duration] [-t type...] [-v num] [-O num,text] [-T string] URI\n\n"
+	   "usage: %s [-b num] [-B seconds] [-g group] [-m method] [-N] [-o file]\n"
+	   "\t\t[-P addr:[port]] [-p port] [-s duration] [-t type...] [-v num]\n"
+	   "\t\t[-O num,text] [-T string] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
 	   "\t       \t\t(value must be a multiple of 16 not larger than 1024)\n"
+	   "\t-B seconds\tbreak operation after waiting given seconds (default is 90)\n"
 	   "\t-f file\t\tfile to send with PUT/POST (use '-' for STDIN)\n"
 	   "\t-g group\tjoin the given multicast group\n"
 	   "\t-m method\trequest method (get|put|post|delete), default is 'get'\n"
@@ -741,9 +745,9 @@ main(int argc, char **argv) {
   static char addr[INET6_ADDRSTRLEN];
   void *addrptr = NULL;
   fd_set readfds;
-  struct timeval tv, *timeout;
+  struct timeval tv;
   int result;
-  coap_tick_t now;
+  coap_tick_t now, max_wait;
   coap_queue_t *nextpdu;
   coap_pdu_t  *pdu;
   static str server;
@@ -756,11 +760,14 @@ main(int argc, char **argv) {
 
 #define FLAGS_BLOCK 0x01
 
-  while ((opt = getopt(argc, argv, "Nb:f:g:m:p:s:t:o:v:A:O:P:T:")) != -1) {
+  while ((opt = getopt(argc, argv, "Nb:f:g:m:p:s:t:o:v:A:B:O:P:T:")) != -1) {
     switch (opt) {
     case 'b' :
       if (cmdline_blocksize(optarg))      
 	flags |= FLAGS_BLOCK;
+      break;
+    case 'B' :
+      wait_seconds = atoi(optarg);
       break;
     case 'f' :
       cmdline_input_from_file(optarg,&payload);
@@ -783,7 +790,7 @@ main(int argc, char **argv) {
       break;
     case 'o' :
       output_file.length = strlen(optarg);
-      output_file.s = (unsigned char *)malloc(output_file.length + 1);
+      output_file.s = (unsigned char *)coap_malloc(output_file.length + 1);
       
       if (!output_file.s) {
 	fprintf(stderr, "cannot set output file: insufficient memory\n");
@@ -908,6 +915,10 @@ main(int argc, char **argv) {
   else 
     coap_send(ctx, &dst, pdu);
 
+  coap_ticks(&max_wait);
+  max_wait += wait_seconds * COAP_TICKS_PER_SECOND;
+  debug("timeout is set to %d seconds\n", wait_seconds);
+
   while ( !(ready && coap_can_exit(ctx)) ) {
     FD_ZERO(&readfds);
     FD_SET( ctx->sockfd, &readfds );
@@ -920,14 +931,15 @@ main(int argc, char **argv) {
       nextpdu = coap_peek_next( ctx );
     }
 
-    if ( nextpdu ) {	        /* set timeout if there is a pdu to send */
+    if (nextpdu && nextpdu->t < max_wait) { /* set timeout if there is a pdu to send */
       tv.tv_usec = ((nextpdu->t - now) % COAP_TICKS_PER_SECOND) << 10;
       tv.tv_sec = (nextpdu->t - now) / COAP_TICKS_PER_SECOND;
-      timeout = &tv;
-    } else
-      timeout = NULL;		/* no timeout otherwise */
+    } else {			/* use default timeout otherwise */
+      tv.tv_usec = ((max_wait - now) % COAP_TICKS_PER_SECOND) << 10;;
+      tv.tv_sec = (max_wait - now) / COAP_TICKS_PER_SECOND;
+    }
 
-    result = select( ctx->sockfd + 1, &readfds, 0, 0, timeout );
+    result = select(ctx->sockfd + 1, &readfds, 0, 0, &tv);
 
     if ( result < 0 ) {		/* error */
       perror("select");
@@ -935,6 +947,12 @@ main(int argc, char **argv) {
       if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
 	coap_read( ctx );	/* read received data */
 	coap_dispatch( ctx );	/* and dispatch PDUs from receivequeue */
+      }
+    } else { /* timeout */
+      coap_ticks(&now);
+      if (max_wait <= now) {
+	info("timeout\n");
+	break;
       }
     }
   }
