@@ -37,6 +37,8 @@ static FILE *file = NULL;	/* output file stream */
 
 static str payload = { 0, NULL }; /* optional payload to send */
 
+unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
+
 typedef unsigned char method_t;
 method_t method = 1;		/* the method we are using in our requests */
 
@@ -107,7 +109,7 @@ new_response( coap_context_t  *ctx, coap_queue_t *node, unsigned int code ) {
 }
 
 coap_pdu_t *
-coap_new_request( method_t m, coap_list_t *options ) {
+coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options ) {
   coap_pdu_t *pdu;
   coap_list_t *opt;
   int res;
@@ -119,8 +121,8 @@ coap_new_request( method_t m, coap_list_t *options ) {
   if ( ! ( pdu = coap_new_pdu() ) )
     return NULL;
 
-  pdu->hdr->type = COAP_MESSAGE_CON;
-  pdu->hdr->id = rand();	/* use a random transaction id */
+  pdu->hdr->type = msgtype;
+  pdu->hdr->id = coap_new_message_id(ctx);
   pdu->hdr->code = m;
 
   for (opt = options; opt; opt = opt->next) {
@@ -273,7 +275,7 @@ message_handler(struct coap_context_t  *ctx,
 	       (blocknr & 0xfffff0) >> 4);
 
 	/* create pdu with request for next block */
-	pdu = coap_new_request( method, NULL ); /* first, create bare PDU w/o any option  */
+	pdu = coap_new_request(ctx, method, NULL); /* first, create bare PDU w/o any option  */
 	if ( pdu ) {
 	  pdu->hdr->id = received->hdr->id; /* copy transaction id from response */
 
@@ -355,19 +357,19 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010-2012 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-b num] [-g group] [-m method] [-o file] [-P addr:[port]] \n"
-	   "  [-p port] [-s num] \n"
-	   "\t\t[-t type...] [-v num] [-O num,text] [-T string] URI\n\n"
+	   "usage: %s [-b num] [-g group] [-m method] [-N] [-o file] [-P addr:[port]]\n"
+	   "\t\t[-p port] [-s duration] [-t type...] [-v num] [-O num,text] [-T string] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
-	   "\t       \t\t(value must be a multiple of 16 not larger than 2048)\n"
+	   "\t       \t\t(value must be a multiple of 16 not larger than 1024)\n"
 	   "\t-f file\t\tfile to send with PUT/POST (use '-' for STDIN)\n"
 	   "\t-g group\tjoin the given multicast group\n"
-	   "\t-m method\trequest method (get|put|post|delete)\n"
-	   "\t-o output received data to this file (use '-' for STDOUT)\n"
+	   "\t-m method\trequest method (get|put|post|delete), default is 'get'\n"
+	   "\t-N\t\tsend NON-confirmable message\n"
+	   "\t-o file\t\toutput received data to this file (use '-' for STDOUT)\n"
 	   "\t-p port\t\tlisten on specified port\n"
 	   "\t-s duration\tsubscribe for given duration [s]\n"
-	   "\t-v num\tverbosity level (default: 3)\n"
+	   "\t-v num\t\tverbosity level (default: 3)\n"
 	   "\t-A types\taccepted content for GET (comma-separated list)\n"
 	   "\t-t type\t\tcontent type for given resource for PUT/POST\n"
 	   "\t-O num,text\tadd option num with contents text to request\n"
@@ -754,7 +756,7 @@ main(int argc, char **argv) {
 
 #define FLAGS_BLOCK 0x01
 
-  while ((opt = getopt(argc, argv, "b:f:g:m:p:s:t:o:v:A:O:P:T:")) != -1) {
+  while ((opt = getopt(argc, argv, "Nb:f:g:m:p:s:t:o:v:A:O:P:T:")) != -1) {
     switch (opt) {
     case 'b' :
       if (cmdline_blocksize(optarg))      
@@ -772,6 +774,9 @@ main(int argc, char **argv) {
       break;
     case 'm' :
       method = cmdline_method(optarg);
+      break;
+    case 'N' :
+      msgtype = COAP_MESSAGE_NON;
       break;
     case 's' :
       cmdline_subscribe(optarg);
@@ -886,7 +891,7 @@ main(int argc, char **argv) {
   if (flags & FLAGS_BLOCK)
     set_blocksize();
 
-  if (! (pdu = coap_new_request( method, optlist ) ) )
+  if (! (pdu = coap_new_request(ctx, method, optlist)))
     return -1;
 
 #ifndef NDEBUG
@@ -898,7 +903,10 @@ main(int argc, char **argv) {
   }
 #endif
 
-  coap_send_confirmed(ctx, &dst, pdu);
+  if (pdu->hdr->type == COAP_MESSAGE_CON)
+    coap_send_confirmed(ctx, &dst, pdu);
+  else 
+    coap_send(ctx, &dst, pdu);
 
   while ( !(ready && coap_can_exit(ctx)) ) {
     FD_ZERO(&readfds);
