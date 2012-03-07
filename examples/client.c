@@ -143,6 +143,21 @@ coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options ) {
 
 	buf += COAP_OPT_SIZE(buf);      
       }
+    } else if (COAP_OPTION_KEY(*(coap_option *)opt->data) == 
+	       COAP_OPTION_URI_QUERY) {
+      buflen = BUFSIZE;
+      buf = _buf;
+      res = coap_split_query(COAP_OPTION_DATA(*(coap_option *)opt->data),
+			     COAP_OPTION_LENGTH(*(coap_option *)opt->data),
+			     buf, &buflen);
+      
+      while (res--) {
+	coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)opt->data),
+			COAP_OPT_LENGTH(buf),
+			COAP_OPT_VALUE(buf));
+
+	buf += COAP_OPT_SIZE(buf);      
+      }
     } else { /* any other option is copied literally */
       coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)opt->data),
 		      COAP_OPTION_LENGTH(*(coap_option *)opt->data),
