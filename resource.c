@@ -21,9 +21,6 @@
 MEMB(resource_storage, coap_resource_t, COAP_MAX_RESOURCES);
 MEMB(attribute_storage, coap_attr_t, COAP_MAX_ATTRIBUTES);
 MEMB(subscription_storage, coap_subscription_t, COAP_MAX_SUBSCRIBERS);
-#endif /* WITH_CONTIKI */
-
-#define min(a,b) ((a) < (b) ? (a) : (b))
 
 void
 coap_resources_init() {
@@ -31,6 +28,9 @@ coap_resources_init() {
   memb_init(&attribute_storage);
   memb_init(&subscription_storage);
 }
+#endif /* WITH_CONTIKI */
+
+#define min(a,b) ((a) < (b) ? (a) : (b))
 
 /** 
  * Prints the names of all known resources to @p buf. This function
@@ -93,10 +93,7 @@ coap_resource_init(const unsigned char *uri, size_t len) {
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
 
-#ifndef WITH_CONTIKI
-    #warning "no resource list"
-    /* FIXME: initialize r->subscribers */
-#else /* WITH_CONTIKI */
+#ifdef WITH_CONTIKI
     LIST_STRUCT_INIT(r, link_attr);
     LIST_STRUCT_INIT(r, subscribers);
 #endif /* WITH_CONTIKI */
@@ -174,7 +171,9 @@ int
 coap_delete_resource(coap_context_t *context, coap_key_t key) {
   coap_resource_t *resource;
   coap_attr_t *attr;
+#ifdef WITH_CONTIKI
   coap_subscription_t *obs;
+#endif
 
   if (!context)
     return 0;
@@ -289,7 +288,11 @@ coap_find_observer(coap_resource_t *resource, const coap_address_t *peer,
   assert(resource);
   assert(peer);
 
+#ifndef WITH_CONTIKI
+  LL_FOREACH(resource->subscribers, s) {
+#else /* WITH_CONTIKI */
   for (s = list_head(resource->subscribers); s; s = list_item_next(s)) {
+#endif /* WITH_CONTIKI */
     if (coap_address_equals(&s->subscriber, peer)
 	&& (!token || (token->length == s->token_length 
 		       && memcmp(token->s, s->token, token->length) == 0)))
@@ -317,8 +320,7 @@ coap_add_observer(coap_resource_t *resource,
   /* s points to a different subscription, so we have to create
    * another one. */
 #ifndef WITH_CONTIKI
-  /* FIXME */
-  s = NULL;
+  s = (coap_subscription_t *)coap_malloc(sizeof(coap_subscription_t));
 #else /* WITH_CONTIKI */
   s = memb_alloc(&subscription_storage);
 #endif /* WITH_CONTIKI */
@@ -336,7 +338,7 @@ coap_add_observer(coap_resource_t *resource,
 
   /* add subscriber to resource */
 #ifndef WITH_CONTIKI
-  /* FIXME */
+  LL_PREPEND(resource->subscribers, s);
 #else /* WITH_CONTIKI */
   list_add(resource->subscribers, s);
 #endif /* WITH_CONTIKI */
@@ -352,10 +354,18 @@ void
   s = coap_find_observer(resource, observer, token);
 
   if (s) {
+#ifndef WITH_CONTIKI
+    LL_DELETE(resource->subscribers, s);
+#else /* WITH_CONTIKI */
     list_remove(resource->subscribers, s);
+#endif /* WITH_CONTIKI */
 
     /* FIXME: notify observer that its subscription has been removed */
+#ifndef WITH_CONTIKI
+    coap_free(s);
+#else /* WITH_CONTIKI */
     memb_free(&subscription_storage, s);
+#endif /* WITH_CONTIKI */
   }
 }
 
@@ -394,7 +404,7 @@ coap_check_notify(coap_context_t *context) {
 
 #ifndef WITH_CONTIKI
       /* FIXME: */
-      /* for {obs = r->subscribers; obs; obs = obs->next) { */
+	LL_FOREACH(r->subscribers, obs) {
 #else /* WITH_CONTIKI */
       for (obs = list_head(r->subscribers); obs; obs = list_item_next(obs)) {
 #endif /* WITH_CONTIKI */

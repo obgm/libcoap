@@ -19,6 +19,24 @@
  * @{
  */
 
+#ifndef COAP_OBS_MAX_NON
+/**
+ * Number of notifications that may be sent non-confirmable before a
+ * confirmable message is sent to detect if observers are alive. The
+ * maximum allowed value here is @c 15.
+ */
+#define COAP_OBS_MAX_NON   5
+#endif /* COAP_OBS_MAX_NON */
+
+#ifndef COAP_OBS_MAX_FAIL
+/**
+ * Number of confirmable notifications that may fail (i.e. time out
+ * without being ACKed) before an observer is removed. The maximum
+ * value for COAP_OBS_MAX_FAIL is @c 3.
+ */
+#define COAP_OBS_MAX_FAIL  3
+#endif /* COAP_OBS_MAX_FAIL */
+
 /** Subscriber information */
 typedef struct coap_subscription_t {
   struct coap_subscription_t *next; /**< next element in linked list */
