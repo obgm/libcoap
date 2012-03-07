@@ -794,7 +794,10 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   size_t len;
   unsigned char buf[2];
 
-  resp = coap_pdu_init(COAP_MESSAGE_ACK, COAP_RESPONSE_CODE(205),
+  resp = coap_pdu_init(request->hdr->type == COAP_MESSAGE_CON 
+		       ? COAP_MESSAGE_ACK 
+		       : COAP_MESSAGE_NON,
+		       COAP_RESPONSE_CODE(205),
 		       request->hdr->id, COAP_MAX_PDU_SIZE);
   if (!resp)
     return NULL;
