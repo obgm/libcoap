@@ -1,6 +1,6 @@
 /* net.c -- CoAP network interface
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -231,7 +231,7 @@ coap_new_context(const coap_address_t *listen_addr) {
   coap_register_option(c, COAP_OPTION_URI_QUERY);
 
 #ifndef WITH_CONTIKI
-  c->sockfd = socket(listen_addr->sa_family, SOCK_DGRAM, 0);
+  c->sockfd = socket(listen_addr->addr.sa.sa_family, SOCK_DGRAM, 0);
   if ( c->sockfd < 0 ) {
 #ifndef NDEBUG
     coap_log(LOG_EMERG, "coap_new_context: socket");
@@ -245,7 +245,7 @@ coap_new_context(const coap_address_t *listen_addr) {
 #endif
   }
 
-  if ( bind (c->sockfd, listen_addr, addr_size) < 0 ) {
+  if (bind(c->sockfd, &listen_addr->addr.sa, listen_addr->size) < 0) {
 #ifndef NDEBUG
     coap_log(LOG_EMERG, "coap_new_context: bind");
 #endif
@@ -865,7 +865,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 
       debug("unhandled request for unknown resource 0x%02x%02x%02x%02x\r\n",
 	    key[0], key[1], key[2], key[3]);
-      if (!uip_is_addr_mcast(&node->local.addr))
+      if (!coap_is_mcast(&node->local))
 	response = coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(405), 
 					   opt_filter);
     }
@@ -902,7 +902,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
       h(context, resource, &node->remote, node->pdu, &token, response);
       if (response->hdr->type != COAP_MESSAGE_NON ||
 	  (response->hdr->code >= 64 
-	   && !uip_is_addr_mcast(&node->local.addr))) {
+	   && !coap_is_mcast(&node->local))) {
 	if (coap_send(context, &node->remote, response) == COAP_INVALID_TID) {
 	  debug("cannot send response for message %d\n", node->pdu->hdr->id);
 	  coap_delete_pdu(response);
