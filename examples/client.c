@@ -479,41 +479,64 @@ new_option_node(unsigned short key, unsigned int length, unsigned char *data) {
   return NULL;
 }
 
+typedef struct { 
+  unsigned char code;
+  char *media_type;
+} content_type_t;
+
 void
 cmdline_content_type(char *arg, unsigned short key) {
-  static char *content_types[] =
-    { "plain", "xml", "csv", "html", "","","","","","","","","","","","","","","","","",
-      "gif", "jpeg", "png", "tiff", "audio", "video", "","","","","","","","","","","","","",
-      "link", "axml", "binary", "rdf", "soap", "atom", "xmpp", "exi",
-      "bxml", "infoset", "json", 0};
+  static content_type_t content_types[] = {
+    {  0, "plain" },
+    {  0, "text/plain" },
+    { 40, "link" },
+    { 40, "link-format" },
+    { 40, "application/link-format" },
+    { 41, "xml" },
+    { 42, "binary" },
+    { 42, "octet-stream" },
+    { 42, "application/octet-stream" },
+    { 47, "exi" },
+    { 47, "application/exi" },
+    { 50, "json" },
+    { 50, "application/json" },
+    { 255, NULL }
+  };
   coap_list_t *node;
   unsigned char i, value[10];
   int valcnt = 0;
+  unsigned char buf[2];
   char *p, *q = arg;
 
   while (q && *q) {
     p = strchr(q, ',');
 
-    for (i=0; content_types[i] &&
-	   strncmp(q,content_types[i], p ? p-q : strlen(q)) != 0 ;
-	 ++i)
-      ;
-
-    if (content_types[i]) {
-      value[valcnt] = i;
-      valcnt++;
+    if (isdigit(*q)) {
+      if (p)
+	*p = '\0';
+      value[valcnt++] = atoi(q);
     } else {
-      fprintf(stderr, "W: unknown content-type '%s'\n",arg);
+      for (i=0; content_types[i].media_type &&
+	     strncmp(q,content_types[i].media_type, p ? p-q : strlen(q)) != 0 ;
+	   ++i)
+	;
+      
+      if (content_types[i].media_type) {
+	value[valcnt] = content_types[i].code;
+	valcnt++;
+      } else {
+	warn("W: unknown content-type '%s'\n",arg);
+      }
     }
 
     if (!p || key == COAP_OPTION_CONTENT_TYPE)
       break;
-
+    
     q = p+1;
   }
 
-  if (valcnt) {
-    node = new_option_node(key, valcnt, value);
+  for (i = 0; i < valcnt; ++i) {
+    node = new_option_node(key, coap_encode_var_bytes(buf, value[i]), buf);
     if (node)
       coap_insert( &optlist, node, order_opts );
   }
