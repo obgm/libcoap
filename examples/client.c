@@ -374,10 +374,12 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010-2012 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-b num] [-B seconds] [-g group] [-m method] [-N] [-o file]\n"
+	   "usage: %s [-A type...] [-b num] [-B seconds] [-g group] [-m method] [-N] [-o file]\n"
 	   "\t\t[-P addr:[port]] [-p port] [-s duration] [-t type...] [-v num]\n"
 	   "\t\t[-O num,text] [-T string] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
+	   "\t-A type...\taccepted media types as comma-separated list of\n"
+	   "\t\t\tsymbolic or numeric values\n"
 	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
 	   "\t       \t\t(value must be a multiple of 16 not larger than 1024)\n"
 	   "\t-B seconds\tbreak operation after waiting given seconds (default is 90)\n"
