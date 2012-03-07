@@ -170,7 +170,7 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
 int
 coap_delete_resource(coap_context_t *context, coap_key_t key) {
   coap_resource_t *resource;
-  coap_attr_t *attr;
+  coap_attr_t *attr, *tmp;
 #ifdef WITH_CONTIKI
   coap_subscription_t *obs;
 #endif
@@ -187,7 +187,7 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
   HASH_DELETE(hh, context->resources, resource);
 
   /* delete registered attributes */
-  LL_FOREACH(resource->link_attr, attr) coap_free(attr);
+  LL_FOREACH_SAFE(resource->link_attr, attr, tmp) coap_free(attr);
 
   coap_free(resource);
 #else /* WITH_CONTIKI */
