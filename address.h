@@ -47,7 +47,7 @@ typedef struct __coap_address_t {
    && (A)->port == (B)->port					\
    && uip_ipaddr_cmp(&((A)->addr),&((B)->addr)))
 
-#define _coap_is_mcast_impl(Address) uip_is_addr_mcast(Address)
+#define _coap_is_mcast_impl(Address) uip_is_addr_mcast(&((Address)->addr))
 #endif /* WITH_CONTIKI */
 
 /** multi-purpose address abstraction */
