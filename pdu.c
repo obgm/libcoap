@@ -83,7 +83,11 @@ coap_pdu_t *
 coap_new_pdu() {
   coap_pdu_t *pdu;
   
+#ifndef WITH_CONTIKI
   pdu = coap_pdu_init(0, 0, ntohs(COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
+#else /* WITH_CONTIKI */
+  pdu = coap_pdu_init(0, 0, uip_ntohs(COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
+#endif /* WITH_CONTIKI */
 
 #ifndef NDEBUG
   if (!pdu)
