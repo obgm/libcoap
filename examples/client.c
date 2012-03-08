@@ -267,6 +267,10 @@ message_handler(struct coap_context_t  *ctx,
   }
 #endif
 
+  /* acknowledge received response if confirmable (TODO: check Token) */
+  if (received->hdr->type == COAP_MESSAGE_CON)
+    coap_send_ack(ctx, remote, received);
+
   /* output the received data, if any */
   if (received->hdr->code == COAP_RESPONSE_CODE(205)) { 
     
