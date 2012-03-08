@@ -1,6 +1,6 @@
 /* debug.c -- debug utilities
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -14,6 +14,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 #include <ctype.h>
 
 #ifdef HAVE_ARPA_INET_H
@@ -89,7 +90,7 @@ print_timestamp(char *s, size_t len, coap_tick_t t) {
  * @return The length of @p s.
  */
 static inline size_t
-strnlen(unsigned char *s, size_t maxlen) {
+strnlen(const char *s, size_t maxlen) {
   size_t n = 0;
   while(*s++ && n < maxlen)
     ++n;
@@ -160,7 +161,7 @@ coap_print_addr(const struct __coap_address_t *addr, unsigned char *buf, size_t 
     return 0;
   }
 
-  p += strnlen(p, len);
+  p += strnlen((char *)p, len);
 
   if (addr->addr.sa.sa_family == AF_INET6) {
     if (p < buf + len) {
@@ -175,8 +176,7 @@ coap_print_addr(const struct __coap_address_t *addr, unsigned char *buf, size_t 
 #else /* HAVE_ARPA_INET_H */
 # if WITH_CONTIKI
   unsigned char *p = buf;
-  uint8_t i;\
-  uint16_t port;
+  uint8_t i;
 #  if WITH_UIP6
   const unsigned char hex[] = "0123456789ABCDEF";
 

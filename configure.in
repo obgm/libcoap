@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 #
-# Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
 #
 # This file is part of the CoAP library libcoap. Please see
 # README for terms of use. 
@@ -46,7 +46,7 @@ AC_ARG_WITH(async,
   [])
 
 # Checks for header files.
-AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h time.h unistd.h])
+AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h time.h unistd.h sys/unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
@@ -54,7 +54,8 @@ AC_TYPE_SSIZE_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo strnlen])
+AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo])
+AC_SEARCH_LIBS(strnlen, c)
 
 AC_CONFIG_HEADERS([config.h])
 
