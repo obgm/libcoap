@@ -177,15 +177,13 @@ hnd_get_async(coap_context_t  *ctx, struct coap_resource_t *resource,
 	      coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   unsigned long delay = 5;
+  size_t size;
 
-#if 0
   if (async) {
-    if (async->id != id) {
+    if (async->id != request->hdr->id) {
       coap_opt_filter_t f;
       coap_option_filter_clear(f);
-      coap_send_error(ctx, request, peer, COAP_RESPONSE_CODE(503), f);
-    } else {
-      coap_send_ack(ctx, peer, request);
+      response->hdr->code = COAP_RESPONSE_CODE(503);
     }
     return;
   }
@@ -198,9 +196,9 @@ hnd_get_async(coap_context_t  *ctx, struct coap_resource_t *resource,
       delay = delay * 10 + (*p - '0');
   }
 
-  async = coap_register_async(ctx, peer, request, COAP_ASYNC_SEPARATE,
+  async = coap_register_async(ctx, peer, request, 
+			      COAP_ASYNC_SEPARATE | COAP_ASYNC_CONFIRM,
 			      (void *)(COAP_TICKS_PER_SECOND * delay));
-#endif
 }
 
 void 
@@ -215,7 +213,10 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
 
   size += async->tokenlen;
 
-  response = coap_pdu_init(COAP_MESSAGE_CON, COAP_RESPONSE_CODE(205), 0, size);
+  response = coap_pdu_init(async->flags & COAP_ASYNC_CONFIRM 
+			   ? COAP_MESSAGE_CON
+			   : COAP_MESSAGE_NON,
+			   COAP_RESPONSE_CODE(205), 0, size);
   if (!response) {
     debug("check_async: insufficient memory, we'll try later\n");
     async->appdata = 
