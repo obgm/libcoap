@@ -19,11 +19,12 @@ top_builddir = @top_builddir@
 package = @PACKAGE_TARNAME@-@PACKAGE_VERSION@
 
 # files and flags
-SOURCES:= pdu.c net.c debug.c encode.c uri.c list.c resource.c hashkey.c \
-	 str.c option.c async.c
+SOURCES:= pdu.c net.c debug.c encode.c uri.c coap_list.c resource.c hashkey.c \
+	 str.c option.c async.c subscribe.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
-HEADERS:=coap.h config.h debug.h pdu.h net.h encode.h uri.h list.h mem.h \
-	str.h option.h bits.h uthash.h utlist.h resource.h hashkey.h async.h
+HEADERS:=coap.h config.h debug.h pdu.h net.h encode.h uri.h coap_list.h mem.h \
+	str.h option.h bits.h uthash.h utlist.h resource.h hashkey.h async.h \
+	subscribe.h
 CFLAGS:=-Wall -Wextra -std=c99 -pedantic @CFLAGS@
 CPPFLAGS:=@CPPFLAGS@
 DISTDIR=$(top_builddir)/$(package)
