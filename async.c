@@ -73,13 +73,6 @@ coap_register_async(coap_context_t *context, coap_address_t *peer,
 
   LL_PREPEND(context->async_state, s);
 
-  /* send empty ACK response if request was confirmable */
-  if (flags & COAP_ASYNC_SEPARATE && flags & COAP_ASYNC_CONFIRM) {
-    coap_send_ack(context, peer, request);
-  } else {
-    s->message_id = request->hdr->id;
-  }
-
   return s;
 }
 
