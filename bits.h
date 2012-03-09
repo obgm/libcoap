@@ -15,6 +15,7 @@
 #ifndef _BITS_H_
 #define _BITS_H_
 
+#include <sys/types.h>
 #include <stdint.h>
 
 /** 
