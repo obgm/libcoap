@@ -46,6 +46,8 @@ unsigned int blocknr = 0;	/* hold current block option */
 
 unsigned int wait_seconds = 90;	/* default timeout in seconds */
 
+#define min(a,b) ((a) < (b) ? (a) : (b))
+
 extern unsigned int
 print_readable( const unsigned char *data, unsigned int len,
 		unsigned char *result, unsigned int buflen );
@@ -378,8 +380,8 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010-2012 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-A type...] [-b num] [-B seconds] [-g group] [-m method] [-N] [-o file]\n"
-	   "\t\t[-P addr:[port]] [-p port] [-s duration] [-t type...] [-v num]\n"
+	   "usage: %s [-A type...] [-b num] [-B seconds] [-e text] [-g group] [-m method] [-N]\n"
+	   "\t\t[-o file] [-P addr[:port]] [-p port] [-s duration] [-t type...] [-v num]\n"
 	   "\t\t[-O num,text] [-T string] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-A type...\taccepted media types as comma-separated list of\n"
@@ -387,6 +389,7 @@ usage( const char *program, const char *version) {
 	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
 	   "\t       \t\t(value must be a multiple of 16 not larger than 1024)\n"
 	   "\t-B seconds\tbreak operation after waiting given seconds (default is 90)\n"
+	   "\t-e text\t\tinclude text as payload (use percent-encoding for non-ASCII characters)\n"
 	   "\t-f file\t\tfile to send with PUT/POST (use '-' for STDIN)\n"
 	   "\t-g group\tjoin the given multicast group\n"
 	   "\t-m method\trequest method (get|put|post|delete), default is 'get'\n"
@@ -671,6 +674,26 @@ cmdline_option(char *arg) {
 					 (unsigned char *)arg), order_opts);
 }
 
+extern int  check_segment(const unsigned char *s, size_t length);
+extern void decode_segment(const unsigned char *seg, size_t length, unsigned char *buf);
+
+int
+cmdline_input(char *text, str *buf) {
+  int len;
+  len = check_segment((unsigned char *)text, strlen(text));
+
+  if (len < 0)
+    return 0;
+
+  buf->s = (unsigned char *)coap_malloc(len);
+  if (!buf->s)
+    return 0;
+
+  buf->length = len;
+  decode_segment((unsigned char *)text, strlen(text), buf->s);
+  return 1;
+}
+
 int
 cmdline_input_from_file(char *filename, str *buf) {
   FILE *inputfile = NULL;
@@ -804,7 +827,7 @@ main(int argc, char **argv) {
 
 #define FLAGS_BLOCK 0x01
 
-  while ((opt = getopt(argc, argv, "Nb:f:g:m:p:s:t:o:v:A:B:O:P:T:")) != -1) {
+  while ((opt = getopt(argc, argv, "Nb:e:f:g:m:p:s:t:o:v:A:B:O:P:T:")) != -1) {
     switch (opt) {
     case 'b' :
       if (cmdline_blocksize(optarg))      
@@ -813,8 +836,13 @@ main(int argc, char **argv) {
     case 'B' :
       wait_seconds = atoi(optarg);
       break;
+    case 'e' : 
+      if (!cmdline_input(optarg,&payload))
+	payload.length = 0;     
+      break;
     case 'f' :
-      cmdline_input_from_file(optarg,&payload);
+      if (!cmdline_input_from_file(optarg,&payload))
+	payload.length = 0;
       break;
     case 'g' :
       group = optarg;
