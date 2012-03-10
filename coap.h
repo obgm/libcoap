@@ -1,6 +1,6 @@
 /* coap.h -- main header file for CoAP stack
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -22,5 +22,6 @@
 #include "async.h"
 #include "resource.h"
 #include "subscribe.h"
+#include "block.h"
 
 #endif /* _COAP_H_ */
