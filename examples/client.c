@@ -241,7 +241,7 @@ message_handler(struct coap_context_t  *ctx,
 		const coap_tid_t id) {
 
   coap_pdu_t *pdu = NULL;
-  coap_opt_t *block, *ct, *sub;
+  coap_opt_t *block, *sub;
   coap_opt_iterator_t opt_iter;
   unsigned char buf[4];
   coap_list_t *option;
@@ -294,9 +294,6 @@ message_handler(struct coap_context_t  *ctx,
 	/* create pdu with request for next block */
 	pdu = coap_new_request(ctx, method, NULL); /* first, create bare PDU w/o any option  */
 	if ( pdu ) {
-	  pdu->hdr->id = coap_new_message_id(ctx);
-;
-
 	  /* add URI components from optlist */
 	  for (option = optlist; option; option = option->next ) {
 	    switch (COAP_OPTION_KEY(*(coap_option *)option->data)) {

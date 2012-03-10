@@ -153,11 +153,19 @@ coap_context_t *coap_new_context(const coap_address_t *listen_addr);
 
 /** 
  * Returns a new message id and updates @p context->message_id
- * accordingly. */
+ * accordingly. The message id is returned in network byte order
+ * to make it easier to read in tracing tools. 
+ *
+ * @param context the current coap_context_t object
+ * @return incremented message id in network byte order
+ */
 static inline unsigned short 
 coap_new_message_id(coap_context_t *context) {
-  context->message_id++;
-  return context->message_id;
+#ifndef WITH_CONTIKI
+  return htons(++context->message_id);
+#else /* WITH_CONTIKI */
+  return uip_htons(++context->message_id);
+#endif
 }
 
 /* CoAP stack context must be released with coap_free_context() */
