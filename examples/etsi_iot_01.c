@@ -215,6 +215,46 @@ hnd_put_test(coap_context_t  *ctx, struct coap_resource_t *resource,
 }
 #endif
 
+void 
+hnd_get_query(coap_context_t  *ctx, struct coap_resource_t *resource, 
+	      coap_address_t *peer, coap_pdu_t *request, str *token,
+	      coap_pdu_t *response) {
+  coap_opt_iterator_t opt_iter;
+  coap_opt_filter_t f;
+  coap_opt_t *q;
+  size_t len, L;
+  unsigned char buf[70];
+
+  response->hdr->code = COAP_RESPONSE_CODE(205);
+
+  coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
+	  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+
+  if (token->length)
+    coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
+
+  coap_option_filter_clear(f);
+  coap_option_setb(f, COAP_OPTION_URI_QUERY);
+  
+  coap_option_iterator_init(request, &opt_iter, f);
+  
+  len = 0;
+  while ((len < sizeof(buf)) && (q = coap_option_next(&opt_iter))) {
+    L = min(sizeof(buf) - len, 11);
+    memcpy(buf + len, "Uri-Query: ", L);
+    len += L;
+
+    L = min(sizeof(buf) - len, COAP_OPT_LENGTH(q));
+    memcpy(buf + len, COAP_OPT_VALUE(q), L);
+    len += L;
+    
+    if (len < sizeof(buf))
+      buf[len++] = '\n';
+  }
+  
+  coap_add_data(response, len, buf);
+}
+
 #ifndef WITHOUT_ASYNC
 void 
 hnd_get_async(coap_context_t  *ctx, struct coap_resource_t *resource, 
@@ -351,6 +391,8 @@ init_resources(coap_context_t *ctx) {
 	     sizeof(coap_key_t), test_payload);
   }
 
+  /* TD_COAP_BLOCK_01 
+   * TD_COAP_BLOCK_02 */
   test_payload = make_large("etsi_iot_01_largedata.txt");
   if (!test_payload)
     coap_log(LOG_CRIT, "cannot allocate resource /large\n");
@@ -368,6 +410,34 @@ init_resources(coap_context_t *ctx) {
 	     sizeof(coap_key_t), test_payload);
   }
 
+  /* For TD_COAP_CORE_12 */
+  test_payload = coap_new_payload(20);
+  if (!test_payload)
+    coap_log(LOG_CRIT, "cannot allocate resource /seg1/seg2/seg3\n");
+  else {
+    test_payload->length = 10;
+    memcpy(test_payload->data, "segsegseg!", test_payload->length);
+    /* test_payload->media_type is 0 anyway */
+
+    r = coap_resource_init((unsigned char *)"seg1/seg2/seg3", 14);
+    coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
+
+    coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1);
+    coap_add_resource(ctx, r);
+
+    memcpy(test_payload->resource_key, r->key, sizeof(coap_key_t));
+
+    HASH_ADD(hh, test_resources, resource_key, 
+	     sizeof(coap_key_t), test_payload);
+  }
+
+  /* For TD_COAP_CORE_13 */
+  r = coap_resource_init((unsigned char *)"query", 5);
+  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_query);
+  
+  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1);
+  coap_add_resource(ctx, r);
+  
 #ifndef WITHOUT_ASYNC
   r = coap_resource_init((unsigned char *)"async", 5);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
