@@ -42,7 +42,8 @@ unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirma
 typedef unsigned char method_t;
 method_t method = 1;		/* the method we are using in our requests */
 
-unsigned int blocknr = 0;	/* hold current block option */
+unsigned int blocknr = 0;	/* current block num*/
+unsigned char blockszx = 6;	/* current block szx */
 
 unsigned int wait_seconds = 90;	/* default timeout in seconds */
 
@@ -218,20 +219,6 @@ resolve_address(const str *server, struct sockaddr *dst) {
   return -1;
 }
 
-#define COAP_OPT_BLOCK_LAST(opt) ( COAP_OPT_VALUE(block) + (COAP_OPT_LENGTH(block) - 1) )
-#define COAP_OPT_BLOCK_MORE(opt) ( *COAP_OPT_LAST(block) & 0x08 )
-#define COAP_OPT_BLOCK_SIZE(opt) ( *COAP_OPT_LAST(block) & 0x07 )
-
-unsigned int
-_read_blk_nr(coap_opt_t *opt) {
-  unsigned int i, nr=0;
-  for ( i = COAP_OPT_LENGTH(opt); i; --i) {
-    nr = (nr << 8) + COAP_OPT_VALUE(opt)[i-1];
-  }
-  return nr >> 4;
-}
-#define COAP_OPT_BLOCK_NR(opt)   _read_blk_nr(&opt)
-
 static inline coap_opt_t *
 get_block(coap_pdu_t *pdu, coap_opt_iterator_t *opt_iter) {
   coap_opt_filter_t f;
@@ -260,6 +247,7 @@ message_handler(struct coap_context_t  *ctx,
   coap_list_t *option;
   size_t len;
   unsigned char *databuf;
+  coap_tid_t tid;
 
 #ifndef NDEBUG
   if (LOG_DEBUG <= coap_get_log_level()) {
@@ -269,9 +257,17 @@ message_handler(struct coap_context_t  *ctx,
   }
 #endif
 
-  /* acknowledge received response if confirmable (TODO: check Token) */
-  if (received->hdr->type == COAP_MESSAGE_CON)
+  switch (received->hdr->type) {
+  case COAP_MESSAGE_CON:
+    /* acknowledge received response if confirmable (TODO: check Token) */
     coap_send_ack(ctx, remote, received);
+    break;
+  case COAP_MESSAGE_RST:
+    info("got RST\n");
+    return;
+  default:
+    ;
+  }
 
   /* output the received data, if any */
   if (received->hdr->code == COAP_RESPONSE_CODE(205)) { 
@@ -285,29 +281,21 @@ message_handler(struct coap_context_t  *ctx,
 	append_to_output(databuf, len);
     } else {
       unsigned short blktype = opt_iter.type;
-      blocknr = coap_decode_var_bytes( COAP_OPT_VALUE(block), COAP_OPT_LENGTH(block) );
 
       /* TODO: check if we are looking at the correct block number */
       if (coap_get_data(received, &len, &databuf))
 	append_to_output(databuf, len);
 
-      if ( (blocknr & 0x08) ) {
+      if (COAP_OPT_BLOCK_MORE(block)) {
 	/* more bit is set */
-	printf("found the M bit, block size is %u, block nr. %u\n",
-	       blocknr & 0x07,
-	       (blocknr & 0xfffff0) >> 4);
+	debug("found the M bit, block size is %u, block nr. %u\n",
+	      COAP_OPT_BLOCK_SZX(block), COAP_OPT_BLOCK_NUM(block));
 
 	/* create pdu with request for next block */
 	pdu = coap_new_request(ctx, method, NULL); /* first, create bare PDU w/o any option  */
 	if ( pdu ) {
-	  pdu->hdr->id = received->hdr->id; /* copy transaction id from response */
-
-	  /* get content type from response */
-	  ct = coap_check_option(received, COAP_OPTION_CONTENT_TYPE, &opt_iter);
-	  if ( ct ) {
-	    coap_add_option( pdu, COAP_OPTION_CONTENT_TYPE,
-			     COAP_OPT_LENGTH(ct),COAP_OPT_VALUE(ct) );
-	  }
+	  pdu->hdr->id = coap_new_message_id(ctx);
+;
 
 	  /* add URI components from optlist */
 	  for (option = optlist; option; option = option->next ) {
@@ -325,12 +313,19 @@ message_handler(struct coap_context_t  *ctx,
 	  }
 
 	  /* finally add updated block option from response, clear M bit */
-	  blocknr = (blocknr & 0xfffffff7) + 0x10;
-	  coap_add_option ( pdu, blktype,
-			    coap_encode_var_bytes(buf, blocknr), buf);
+	  /* blocknr = (blocknr & 0xfffffff7) + 0x10; */
+	  debug("query block %d\n", (COAP_OPT_BLOCK_NUM(block) + 1));
+	  coap_add_option(pdu, blktype, coap_encode_var_bytes(buf, 
+	      ((COAP_OPT_BLOCK_NUM(block) + 1) << 4) | 
+              COAP_OPT_BLOCK_SZX(block)), buf);
 
-	  if (coap_send_confirmed(ctx, remote, pdu) == COAP_INVALID_TID) {
-	    debug("message_handler: error sending reponse");
+	  if (received->hdr->type == COAP_MESSAGE_CON)
+	    tid = coap_send_confirmed(ctx, remote, pdu);
+	  else 
+	    tid = coap_send(ctx, remote, pdu);
+
+	  if (tid == COAP_INVALID_TID) {
+	    debug("message_handler: error sending new request");
 	    coap_delete_pdu(pdu);
 	  }
 	  return;
@@ -380,16 +375,19 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010-2012 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-A type...] [-b num] [-B seconds] [-e text] [-g group] [-m method] [-N]\n"
-	   "\t\t[-o file] [-P addr[:port]] [-p port] [-s duration] [-t type...] [-v num]\n"
-	   "\t\t[-O num,text] [-T string] URI\n\n"
+	   "usage: %s [-A type...] [-b [num,]size] [-B seconds] [-e text]\n"
+	   "\t\t[-g group] [-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
+	   "\t\t[-s duration] [-t type...] [-O num,text]\n"
+	   "\t\t[-T string] [-v num] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-A type...\taccepted media types as comma-separated list of\n"
 	   "\t\t\tsymbolic or numeric values\n"
 	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
 	   "\t       \t\t(value must be a multiple of 16 not larger than 1024)\n"
-	   "\t-B seconds\tbreak operation after waiting given seconds (default is 90)\n"
-	   "\t-e text\t\tinclude text as payload (use percent-encoding for non-ASCII characters)\n"
+	   "\t-B seconds\tbreak operation after waiting given seconds\n"
+	   "\t\t\t(default is %d)\n"
+	   "\t-e text\t\tinclude text as payload (use percent-encoding for\n"
+	   "\t\t\tnon-ASCII characters)\n"
 	   "\t-f file\t\tfile to send with PUT/POST (use '-' for STDIN)\n"
 	   "\t-g group\tjoin the given multicast group\n"
 	   "\t-m method\trequest method (get|put|post|delete), default is 'get'\n"
@@ -401,9 +399,10 @@ usage( const char *program, const char *version) {
 	   "\t-A types\taccepted content for GET (comma-separated list)\n"
 	   "\t-t type\t\tcontent type for given resource for PUT/POST\n"
 	   "\t-O num,text\tadd option num with contents text to request\n"
-	   "\t-P addr[:port]\tuse proxy (automatically adds Proxy-Uri option to request)\n"
+	   "\t-P addr[:port]\tuse proxy (automatically adds Proxy-Uri option to\n"
+	   "\t\t\trequest)\n"
 	   "\t-T token\tinclude specified token\n",
-	   program, version, program );
+	   program, version, program, wait_seconds);
 }
 
 int
@@ -602,17 +601,23 @@ cmdline_uri(char *arg) {
 
 int
 cmdline_blocksize(char *arg) {
-  blocknr = atoi(arg);
+  unsigned short size;
 
-  if ( COAP_MAX_PDU_SIZE < blocknr + sizeof(coap_hdr_t) ) {
-    fprintf(stderr, "W: skipped invalid blocksize\n");
-    blocknr = 0;
-    return 0;
-  } else {
-    /* use only last three bits and clear M-bit */
-    blocknr = (coap_fls(blocknr >> 4) - 1) & 0x07;
-    return 1;
+ again:
+  size = 0;
+  while(*arg && *arg != ',')
+    size = size * 10 + (*arg++ - '0');
+  
+  if (*arg == ',') {
+    arg++;
+    blocknr = size;
+    goto again;
   }
+  
+  if (size)
+    blockszx = (coap_fls(size >> 4) - 1) & 0x07;
+
+  return 1;
 }
 
 /* Called after processing the options from the commandline to set 
@@ -622,11 +627,11 @@ set_blocksize() {
   static unsigned char buf[4];	/* hack: temporarily take encoded bytes */
   unsigned short opt;
 
-  if (blocknr && method != COAP_REQUEST_DELETE) {
+  if (method != COAP_REQUEST_DELETE) {
     opt = method == COAP_REQUEST_GET ? COAP_OPTION_BLOCK2 : COAP_OPTION_BLOCK1;
 
     coap_insert(&optlist, new_option_node(opt,
-					  coap_encode_var_bytes(buf, blocknr), buf),
+                coap_encode_var_bytes(buf, (blocknr << 4 | blockszx)), buf),
 		order_opts);
   }
 }
@@ -947,6 +952,7 @@ main(int argc, char **argv) {
     return -1;
   }
 
+  coap_register_option(ctx, COAP_OPTION_BLOCK2);
   coap_register_response_handler(ctx, message_handler);
 
   /* join multicast group if requested at command line */

@@ -43,7 +43,7 @@ _coap_block_num_impl(const coap_opt_t *block_opt) {
 
   if (COAP_OPT_LENGTH(block_opt) > 1)
     num = coap_decode_var_bytes(COAP_OPT_VALUE(block_opt), 
-				COAP_OPT_LENGTH(block_opt) - 2);
+				COAP_OPT_LENGTH(block_opt) - 1);
 
   return (num << 4) | ((*COAP_OPT_BLOCK_LAST(block_opt) & 0xF0) >> 4);
 }
