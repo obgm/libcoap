@@ -50,11 +50,9 @@ typedef struct {
 
 coap_payload_t *test_resources = NULL;
 
-#ifndef WITHOUT_ASYNC
 /* This variable is used to mimic long-running tasks that require
  * asynchronous responses. */
 static coap_async_state_t *async = NULL;
-#endif /* WITHOUT_ASYNC */
 
 /* SIGINT handler: set quit to 1 for graceful termination */
 void
@@ -255,44 +253,56 @@ hnd_get_query(coap_context_t  *ctx, struct coap_resource_t *resource,
   coap_add_data(response, len, buf);
 }
 
-#ifndef WITHOUT_ASYNC
+/* handler for TD_COAP_CORE_16 */
 void 
-hnd_get_async(coap_context_t  *ctx, struct coap_resource_t *resource, 
-	      coap_address_t *peer, coap_pdu_t *request, str *token,
-	      coap_pdu_t *response) {
+hnd_get_separate(coap_context_t  *ctx, struct coap_resource_t *resource, 
+		 coap_address_t *peer, coap_pdu_t *request, str *token,
+		 coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
+  coap_opt_filter_t f;
   unsigned long delay = 5;
 
-#if 0
   if (async) {
-    if (async->id != id) {
+    if (async->id != request->hdr->id) {
       coap_opt_filter_t f;
       coap_option_filter_clear(f);
-      coap_send_error(ctx, request, peer, COAP_RESPONSE_CODE(503), f);
-    } else {
-      coap_send_ack(ctx, peer, request);
+      response->hdr->code = COAP_RESPONSE_CODE(503);
     }
     return;
   }
 
-  if (coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter)) {
-    unsigned char *p = COAP_OPT_VALUE(opt_iter.option);
+  /* search for option delay in query list */
+  coap_option_filter_clear(f);
+  coap_option_setb(f, COAP_OPTION_URI_QUERY);
+  
+  coap_option_iterator_init(request, &opt_iter, f);
+  
+  while (coap_option_next(&opt_iter)) {
+    if (strncmp("delay=", (char *)COAP_OPT_VALUE(opt_iter.option), 6) == 0) {
+      int i;
+      unsigned long d = 0;
+      
+      for (i = 6; i < COAP_OPT_LENGTH(opt_iter.option); ++i)
+	d = d * 10 + COAP_OPT_VALUE(opt_iter.option)[i] - '0';
 
-    delay = 0;
-    for (size = COAP_OPT_LENGTH(opt_iter.option); size; --size, ++p)
-      delay = delay * 10 + (*p - '0');
+      /* don't allow delay to be less than COAP_RESOURCE_CHECK_TIME*/
+      delay = d < COAP_RESOURCE_CHECK_TIME 
+	? COAP_RESOURCE_CHECK_TIME
+	: d;
+      debug("set delay to %lu\n", delay);
+      break;
+    }
   }
 
   async = coap_register_async(ctx, peer, request, COAP_ASYNC_SEPARATE,
 			      (void *)(COAP_TICKS_PER_SECOND * delay));
-#endif
 }
 
 void 
 check_async(coap_context_t  *ctx, coap_tick_t now) {
   coap_pdu_t *response;
   coap_async_state_t *tmp;
-
+  unsigned char buf[2];
   size_t size = sizeof(coap_hdr_t) + 8;
 
   if (!async || now < async->created + (unsigned long)async->appdata) 
@@ -300,7 +310,10 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
 
   size += async->tokenlen;
 
-  response = coap_pdu_init(COAP_MESSAGE_CON, COAP_RESPONSE_CODE(205), 0, size);
+  response = coap_pdu_init(async->flags & COAP_ASYNC_CONFIRM 
+			   ? COAP_MESSAGE_CON
+			   : COAP_MESSAGE_NON, 
+			   COAP_RESPONSE_CODE(205), 0, size);
   if (!response) {
     debug("check_async: insufficient memory, we'll try later\n");
     async->appdata = 
@@ -309,6 +322,9 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
   }
   
   response->hdr->id = coap_new_message_id(ctx);
+
+  coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
+		  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
 
   if (async->tokenlen)
     coap_add_option(response, COAP_OPTION_TOKEN, async->tokenlen, async->token);
@@ -325,7 +341,6 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
   coap_free_async(async);
   async = NULL;
 }
-#endif /* WITHOUT_ASYNC */
 
 coap_payload_t *
 make_large(char *filename) {
@@ -438,13 +453,12 @@ init_resources(coap_context_t *ctx) {
   coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1);
   coap_add_resource(ctx, r);
   
-#ifndef WITHOUT_ASYNC
-  r = coap_resource_init((unsigned char *)"async", 5);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
+  /* For TD_COAP_CORE_16 */
+  r = coap_resource_init((unsigned char *)"separate", 8);
+  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_separate);
 
   coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1);
   coap_add_resource(ctx, r);
-#endif /* WITHOUT_ASYNC */
 }
 
 void
@@ -586,10 +600,8 @@ main(int argc, char **argv) {
       /* coap_check_resource_list( ctx ); */
     }
 
-#ifndef WITHOUT_ASYNC
     /* check if we have to send asynchronous responses */
     check_async(ctx, now);
-#endif /* WITHOUT_ASYNC */
   }
 
   coap_free_context( ctx );
