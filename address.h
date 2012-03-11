@@ -31,6 +31,10 @@
 #include <netinet/in.h>
 #endif
 
+#ifdef HAVE_NETINET_IN_H
+#include <sys/socket.h>
+#endif
+
 #ifdef WITH_CONTIKI
 #include "uip.h"
 
