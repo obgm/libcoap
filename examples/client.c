@@ -244,6 +244,7 @@ message_handler(struct coap_context_t  *ctx,
   coap_opt_t *block, *sub;
   coap_opt_iterator_t opt_iter;
   unsigned char buf[4];
+  coap_list_t *option;
   size_t len;
   unsigned char *databuf;
   coap_tid_t tid;
@@ -293,19 +294,20 @@ message_handler(struct coap_context_t  *ctx,
 	/* create pdu with request for next block */
 	pdu = coap_new_request(ctx, method, NULL); /* first, create bare PDU w/o any option  */
 	if ( pdu ) {
-	  coap_opt_filter_t f;
-	  coap_option_filter_clear(f);
-	  coap_option_setb(f, COAP_OPTION_URI_HOST);
-	  coap_option_setb(f, COAP_OPTION_URI_PORT);
-	  coap_option_setb(f, COAP_OPTION_URI_PATH);
-	  coap_option_setb(f, COAP_OPTION_TOKEN);
-	  coap_option_setb(f, COAP_OPTION_URI_QUERY);
-
-	  coap_option_iterator_init(sent, &opt_iter, f);	  
-	  while (coap_option_next(&opt_iter))
-	    coap_add_option(pdu, opt_iter.type,
-			    COAP_OPT_LENGTH(opt_iter.option),
-			    COAP_OPT_VALUE(opt_iter.option));
+	  /* add URI components from optlist */
+	  for (option = optlist; option; option = option->next ) {
+	    switch (COAP_OPTION_KEY(*(coap_option *)option->data)) {
+	    case COAP_OPTION_URI_HOST :
+	    case COAP_OPTION_URI_PATH :
+	    case COAP_OPTION_URI_QUERY :
+	      coap_add_option ( pdu, COAP_OPTION_KEY(*(coap_option *)option->data),
+				COAP_OPTION_LENGTH(*(coap_option *)option->data),
+				COAP_OPTION_DATA(*(coap_option *)option->data) );
+	      break;
+	    default:
+	      ;			/* skip other options */
+	    }
+	  }
 
 	  /* finally add updated block option from response, clear M bit */
 	  /* blocknr = (blocknr & 0xfffffff7) + 0x10; */
