@@ -12,13 +12,13 @@ Legend:
 Mandatory Tests
 
 [+] TD_COAP_CORE_01 Perform GET transaction (CON mode)
-[-] TD_COAP_CORE_02 Perform POST transaction (CON mode)
-[-] TD_COAP_CORE_03 Perform PUT transaction (CON mode)
-[-] TD_COAP_CORE_04 Perform DELETE transaction (CON mode)
+[+] TD_COAP_CORE_02 Perform POST transaction (CON mode)
+[+] TD_COAP_CORE_03 Perform PUT transaction (CON mode)
+[+] TD_COAP_CORE_04 Perform DELETE transaction (CON mode)
 [+] TD_COAP_CORE_05 Perform GET transaction (NON mode)
-[-] TD_COAP_CORE_06 Perform POST transaction (NON mode)
-[-] TD_COAP_CORE_07 Perform PUT transaction (NON mode)
-[-] TD_COAP_CORE_08 Perform DELETE transaction (NON mode)
+[+] TD_COAP_CORE_06 Perform POST transaction (NON mode)
+[+] TD_COAP_CORE_07 Perform PUT transaction (NON mode)
+[+] TD_COAP_CORE_08 Perform DELETE transaction (NON mode)
 [+] TD_COAP_CORE_09 Perform GET transaction with delayed response (CON mode, no piggyback)
 [+] TD_COAP_CORE_10 Handle request containing Token option
 [+] TD_COAP_CORE_11 Handle request not containing Token option

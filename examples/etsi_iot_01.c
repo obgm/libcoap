@@ -26,7 +26,7 @@
 #include "uthash.h"
 #include "coap.h"
 
-#define COAP_RESOURCE_CHECK_TIME 2
+#define COAP_RESOURCE_CHECK_TIME_SEC  1
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -79,7 +79,24 @@ static inline coap_payload_t *
 coap_find_payload(const coap_key_t key) {
   coap_payload_t *p;
   HASH_FIND(hh, test_resources, key, sizeof(coap_key_t), p);
+  if (p)
+    debug("found payload %x\n", p->resource_key);
   return p;
+}
+
+static inline void
+coap_add_payload(const coap_key_t key, coap_payload_t *payload) {
+  assert(payload);
+  
+  memcpy(payload->resource_key, key, sizeof(coap_key_t));
+  debug("added payload %x\n", payload->resource_key);
+  HASH_ADD(hh, test_resources, resource_key, sizeof(coap_key_t), payload);
+}
+
+static inline void
+coap_delete_payload(coap_payload_t *payload) {
+  HASH_DELETE(hh, test_resources, payload);
+  coap_free(payload);
 }
 
 void 
@@ -122,7 +139,6 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
     return;
   }
 
-  /* if my_clock_base was deleted, we pretend to have no such resource */
   response->hdr->code = COAP_RESPONSE_CODE(205);
 
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
@@ -178,40 +194,90 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
 		(unsigned char *)coap_response_phrase(response->hdr->code));
 }
 
-#if 0
 void 
-hnd_put_test(coap_context_t  *ctx, struct coap_resource_t *resource, 
-	     coap_address_t *peer, coap_pdu_t *request, str *token,
-	     coap_pdu_t *response) {
-  coap_tick_t t;
-  size_t size;
-  unsigned char *data;
+hnd_post_test(coap_context_t  *ctx, struct coap_resource_t *resource, 
+	      coap_address_t *peer, coap_pdu_t *request, str *token,
+	      coap_pdu_t *response) {
 
-  /* FIXME: re-set my_clock_base to clock_offset if my_clock_base == 0
-   * and request is empty. When not empty, set to value in request payload
-   * (insist on query ?ticks). Return Created or Ok.
-   */
-
-  /* if my_clock_base was deleted, we pretend to have no such resource */
-  response->hdr->code = 
-    my_clock_base ? COAP_RESPONSE_CODE(204) : COAP_RESPONSE_CODE(201);
-
-  coap_get_data(request, &size, &data);
-  
-  if (size == 0)		/* re-init */
-    my_clock_base = clock_offset;
-  else {
-    my_clock_base = 0;
-    coap_ticks(&t);
-    while(size--) 
-      my_clock_base = my_clock_base * 10 + *data++;
-    my_clock_base -= t / COAP_TICKS_PER_SECOND;
-  }
-
+  response->hdr->code = COAP_RESPONSE_CODE(201);
   if (token->length)
     coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
+  
+  info("stub POST handler for /test\n");
+
+  return;
+ /* error: */
+ /*  warn("cannot create new resource\n"); */
+ /*  response->hdr->code = COAP_RESPONSE_CODE(500); */
 }
-#endif
+
+void 
+hnd_put_test(coap_context_t  *ctx, struct coap_resource_t *resource, 
+	      coap_address_t *peer, coap_pdu_t *request, str *token,
+	      coap_pdu_t *response) {
+  coap_opt_iterator_t opt_iter;
+  coap_payload_t *payload;
+  size_t len;
+  unsigned char *data;
+
+  response->hdr->code = COAP_RESPONSE_CODE(204);
+  if (token->length)
+    coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
+
+  coap_get_data(request, &len, &data);
+
+  payload = coap_find_payload(resource->key);
+  if (payload && payload->max_data < len) { /* need more storage */
+    coap_delete_payload(payload);
+    payload = NULL;
+    /* bug: when subsequent coap_new_payload() fails, our old contents
+       is gone */
+  }
+
+  if (!payload) {		/* create new payload */
+    payload = coap_new_payload(len);
+    if (!payload)
+      goto error;
+
+    coap_add_payload(resource->key, payload);
+  } 
+  payload->length = len;
+  memcpy(payload->data, data, len);
+
+  if (coap_check_option(request, COAP_OPTION_CONTENT_TYPE, &opt_iter)) {
+    /* set media type given in request */
+    payload->media_type = 
+      coap_decode_var_bytes(COAP_OPT_VALUE(opt_iter.option),
+			    COAP_OPT_LENGTH(opt_iter.option));
+  } else {
+    /* set default value */
+    payload->media_type = COAP_MEDIATYPE_TEXT_PLAIN;
+  }
+  /* FIXME: need to change attribute ct of resource. 
+     To do so, we need dynamic management of the attribute value
+  */
+
+  return;
+ error:
+  warn("cannot modify resource\n");
+  response->hdr->code = COAP_RESPONSE_CODE(500);
+}
+
+void 
+hnd_delete_test(coap_context_t  *ctx, struct coap_resource_t *resource, 
+		coap_address_t *peer, coap_pdu_t *request, str *token,
+		coap_pdu_t *response) {
+  coap_payload_t *payload;
+  payload = coap_find_payload(resource->key);
+
+  if (payload)
+    payload->length = 0;
+
+  response->hdr->code = COAP_RESPONSE_CODE(202);
+  if (token->length)
+    coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
+  
+}
 
 void 
 hnd_get_query(coap_context_t  *ctx, struct coap_resource_t *resource, 
@@ -286,8 +352,8 @@ hnd_get_separate(coap_context_t  *ctx, struct coap_resource_t *resource,
 	d = d * 10 + COAP_OPT_VALUE(opt_iter.option)[i] - '0';
 
       /* don't allow delay to be less than COAP_RESOURCE_CHECK_TIME*/
-      delay = d < COAP_RESOURCE_CHECK_TIME 
-	? COAP_RESOURCE_CHECK_TIME
+      delay = d < COAP_RESOURCE_CHECK_TIME_SEC 
+	? COAP_RESOURCE_CHECK_TIME_SEC
 	: d;
       debug("set delay to %lu\n", delay);
       break;
@@ -391,8 +457,9 @@ init_resources(coap_context_t *ctx) {
 
     r = coap_resource_init((unsigned char *)"test", 4);
     coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
-    /* coap_register_handler(r, COAP_REQUEST_GET, hnd_post_test); */
-    /* coap_register_handler(r, COAP_REQUEST_GET, hnd_put_test); */
+    coap_register_handler(r, COAP_REQUEST_POST, hnd_post_test);
+    coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_test);
+    coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_test);
 
     coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1);
     coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"core#b", 6);
@@ -400,10 +467,7 @@ init_resources(coap_context_t *ctx) {
     coap_add_attr(r, (unsigned char *)"obs", 3, NULL, 0);
 #endif
     coap_add_resource(ctx, r);
-    memcpy(test_payload->resource_key, r->key, sizeof(coap_key_t));
-
-    HASH_ADD(hh, test_resources, resource_key, 
-	     sizeof(coap_key_t), test_payload);
+    coap_add_payload(r->key, test_payload);
   }
 
   /* TD_COAP_BLOCK_01 
@@ -419,10 +483,8 @@ init_resources(coap_context_t *ctx) {
     coap_add_resource(ctx, r);
 
     test_payload->flags |= REQUIRE_ETAG;
-    memcpy(test_payload->resource_key, r->key, sizeof(coap_key_t));
 
-    HASH_ADD(hh, test_resources, resource_key, 
-	     sizeof(coap_key_t), test_payload);
+    coap_add_payload(r->key, test_payload);
   }
 
   /* For TD_COAP_CORE_12 */
@@ -440,10 +502,7 @@ init_resources(coap_context_t *ctx) {
     coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1);
     coap_add_resource(ctx, r);
 
-    memcpy(test_payload->resource_key, r->key, sizeof(coap_key_t));
-
-    HASH_ADD(hh, test_resources, resource_key, 
-	     sizeof(coap_key_t), test_payload);
+    coap_add_payload(r->key, test_payload);
   }
 
   /* For TD_COAP_CORE_13 */
@@ -576,14 +635,14 @@ main(int argc, char **argv) {
       nextpdu = coap_peek_next( ctx );
     }
 
-    if ( nextpdu && nextpdu->t <= now + COAP_RESOURCE_CHECK_TIME ) {
+    if ( nextpdu && nextpdu->t <= now + COAP_RESOURCE_CHECK_TIME_SEC ) {
       /* set timeout if there is a pdu to send before our automatic timeout occurs */
       tv.tv_usec = ((nextpdu->t - now) % COAP_TICKS_PER_SECOND) << 10;
       tv.tv_sec = (nextpdu->t - now) / COAP_TICKS_PER_SECOND;
       timeout = &tv;
     } else {
       tv.tv_usec = 0;
-      tv.tv_sec = COAP_RESOURCE_CHECK_TIME;
+      tv.tv_sec = COAP_RESOURCE_CHECK_TIME_SEC;
       timeout = &tv;
     }
     result = select( FD_SETSIZE, &readfds, 0, 0, timeout );
