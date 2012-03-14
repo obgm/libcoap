@@ -79,8 +79,6 @@ static inline coap_payload_t *
 coap_find_payload(const coap_key_t key) {
   coap_payload_t *p;
   HASH_FIND(hh, test_resources, key, sizeof(coap_key_t), p);
-  if (p)
-    debug("found payload %x\n", p->resource_key);
   return p;
 }
 
@@ -89,7 +87,6 @@ coap_add_payload(const coap_key_t key, coap_payload_t *payload) {
   assert(payload);
   
   memcpy(payload->resource_key, key, sizeof(coap_key_t));
-  debug("added payload %x\n", payload->resource_key);
   HASH_ADD(hh, test_resources, resource_key, sizeof(coap_key_t), payload);
 }
 
