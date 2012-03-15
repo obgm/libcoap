@@ -121,11 +121,10 @@ void
 hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource, 
 		 coap_address_t *peer, coap_pdu_t *request, str *token,
 		 coap_pdu_t *response) {
-  coap_opt_iterator_t opt_iter;
   coap_key_t etag;
   unsigned char buf[2];
   coap_payload_t *test_payload;
-  coap_opt_t *block;
+  coap_block_t block;
 
   test_payload = coap_find_payload(resource->key);
   if (!test_payload) {
@@ -154,8 +153,7 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
   if (request) {
     int res;
 
-    block = coap_check_option(request, COAP_OPTION_BLOCK2, &opt_iter);
-    if (block) {
+    if (coap_get_block(request, COAP_OPTION_BLOCK2, &block)) {
       res = coap_write_block_opt(&block, COAP_OPTION_BLOCK2, response,
 				 test_payload->length);
 
@@ -174,11 +172,19 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
       }
       
       coap_add_block(response, test_payload->length, test_payload->data,
-		     COAP_OPT_BLOCK_NUM(block), COAP_OPT_BLOCK_SZX(block));
+		     block.num, block.szx);
     } else {
-      coap_add_data(response, test_payload->length, test_payload->data);
-    }
-    
+      if (!coap_add_data(response, test_payload->length, test_payload->data)) {
+	/* set initial block size, will be lowered by
+	 * coap_write_block_opt) automatically */
+	block.szx = 6;
+	coap_write_block_opt(&block, COAP_OPTION_BLOCK2, response,
+			     test_payload->length);
+	
+	coap_add_block(response, test_payload->length, test_payload->data,
+		       block.num, block.szx);	
+      }
+    }    
   } else {		      /* this is a notification, block is 0 */
     /* FIXME: need to store block size with subscription */
   }
@@ -272,8 +278,7 @@ hnd_delete_test(coap_context_t  *ctx, struct coap_resource_t *resource,
 
   response->hdr->code = COAP_RESPONSE_CODE(202);
   if (token->length)
-    coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
-  
+    coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);  
 }
 
 void 
