@@ -131,41 +131,9 @@ coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options ) {
   pdu->hdr->code = m;
 
   for (opt = options; opt; opt = opt->next) {
-
-    /* path names shall be split into segments */
-    if (COAP_OPTION_KEY(*(coap_option *)opt->data) == COAP_OPTION_URI_PATH) {
-      buflen = BUFSIZE;
-      res = coap_split_path(COAP_OPTION_DATA(*(coap_option *)opt->data),
-			    COAP_OPTION_LENGTH(*(coap_option *)opt->data),
-			    buf, &buflen);
-      
-      while (res--) {
-	coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)opt->data),
-			COAP_OPT_LENGTH(buf),
-			COAP_OPT_VALUE(buf));
-
-	buf += COAP_OPT_SIZE(buf);      
-      }
-    } else if (COAP_OPTION_KEY(*(coap_option *)opt->data) == 
-	       COAP_OPTION_URI_QUERY) {
-      buflen = BUFSIZE;
-      buf = _buf;
-      res = coap_split_query(COAP_OPTION_DATA(*(coap_option *)opt->data),
-			     COAP_OPTION_LENGTH(*(coap_option *)opt->data),
-			     buf, &buflen);
-      
-      while (res--) {
-	coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)opt->data),
-			COAP_OPT_LENGTH(buf),
-			COAP_OPT_VALUE(buf));
-
-	buf += COAP_OPT_SIZE(buf);      
-      }
-    } else { /* any other option is copied literally */
-      coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)opt->data),
-		      COAP_OPTION_LENGTH(*(coap_option *)opt->data),
-		      COAP_OPTION_DATA(*(coap_option *)opt->data));
-    }
+    coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)opt->data),
+		    COAP_OPTION_LENGTH(*(coap_option *)opt->data),
+		    COAP_OPTION_DATA(*(coap_option *)opt->data));
   }
 
   if (payload.length) {
@@ -298,7 +266,9 @@ message_handler(struct coap_context_t  *ctx,
 	  for (option = optlist; option; option = option->next ) {
 	    switch (COAP_OPTION_KEY(*(coap_option *)option->data)) {
 	    case COAP_OPTION_URI_HOST :
+	    case COAP_OPTION_URI_PORT :
 	    case COAP_OPTION_URI_PATH :
+	    case COAP_OPTION_TOKEN :
 	    case COAP_OPTION_URI_QUERY :
 	      coap_add_option ( pdu, COAP_OPTION_KEY(*(coap_option *)option->data),
 				COAP_OPTION_LENGTH(*(coap_option *)option->data),
@@ -565,6 +535,11 @@ cmdline_content_type(char *arg, unsigned short key) {
 void
 cmdline_uri(char *arg) {
   unsigned char portbuf[2];
+#define BUFSIZE 40
+  unsigned char _buf[BUFSIZE];
+  unsigned char *buf = _buf;
+  size_t buflen;
+  int res;
 
   if (proxy.length) {		/* create Proxy-Uri from argument */
 
@@ -584,15 +559,34 @@ cmdline_uri(char *arg) {
 		   order_opts);    
     }
 
-    if (uri.path.length)
-      coap_insert( &optlist, new_option_node(COAP_OPTION_URI_PATH,
-					     uri.path.length, uri.path.s),
-		   order_opts);
-    
-    if (uri.query.length)
-      coap_insert( &optlist, new_option_node(COAP_OPTION_URI_QUERY,
-					     uri.query.length, uri.query.s),
-		   order_opts);
+    if (uri.path.length) {
+      buflen = BUFSIZE;
+      res = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
+
+      while (res--) {
+	coap_insert(&optlist, new_option_node(COAP_OPTION_URI_PATH,
+					      COAP_OPT_LENGTH(buf),
+					      COAP_OPT_VALUE(buf)),
+		    order_opts);
+
+	buf += COAP_OPT_SIZE(buf);      
+      }
+    }
+
+    if (uri.query.length) {
+      buflen = BUFSIZE;
+      buf = _buf;
+      res = coap_split_query(uri.query.s, uri.query.length, buf, &buflen);
+
+      while (res--) {
+	coap_insert(&optlist, new_option_node(COAP_OPTION_URI_QUERY,
+					      COAP_OPT_LENGTH(buf),
+					      COAP_OPT_VALUE(buf)),
+		    order_opts);
+
+	buf += COAP_OPT_SIZE(buf);      
+      }
+    }
   }
 }
 
