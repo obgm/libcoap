@@ -46,12 +46,19 @@ unsigned int blocknr = 0;	/* current block num*/
 unsigned char blockszx = 6;	/* current block szx */
 
 unsigned int wait_seconds = 90;	/* default timeout in seconds */
+coap_tick_t max_wait;		/* global timeout (changed by set_timeout()) */
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
 extern unsigned int
 print_readable( const unsigned char *data, unsigned int len,
 		unsigned char *result, unsigned int buflen );
+
+void
+set_timeout() {
+  coap_ticks(&max_wait);
+  max_wait += wait_seconds * COAP_TICKS_PER_SECOND;
+}
 
 int
 append_to_output(const unsigned char *data, size_t len) {
@@ -117,11 +124,6 @@ coap_pdu_t *
 coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options ) {
   coap_pdu_t *pdu;
   coap_list_t *opt;
-  int res;
-#define BUFSIZE 40
-  unsigned char _buf[BUFSIZE];
-  unsigned char *buf = _buf;
-  size_t buflen;
 
   if ( ! ( pdu = coap_new_pdu() ) )
     return NULL;
@@ -209,7 +211,7 @@ message_handler(struct coap_context_t  *ctx,
 		const coap_tid_t id) {
 
   coap_pdu_t *pdu = NULL;
-  coap_opt_t *block, *sub;
+  coap_opt_t *block;
   coap_opt_iterator_t opt_iter;
   unsigned char buf[4];
   coap_list_t *option;
@@ -294,7 +296,8 @@ message_handler(struct coap_context_t  *ctx,
 	  if (tid == COAP_INVALID_TID) {
 	    debug("message_handler: error sending new request");
 	    coap_delete_pdu(pdu);
-	  }
+	  } else
+	    set_timeout();
 	  return;
 	}
       }
@@ -317,19 +320,12 @@ message_handler(struct coap_context_t  *ctx,
 
   /* finally send new request, if needed */
   if (pdu && coap_send(ctx, remote, pdu) == COAP_INVALID_TID) {
-    debug("message_handler: error sending reponse");
+    debug("message_handler: error sending response");
     coap_delete_pdu(pdu);
   }
 
   /* our job is done, we can exit at any time */
-  sub = coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter);
-#ifndef NDEBUG
-  if ( sub ) {
-    debug("message_handler: Subscription-Lifetime is %d\n",
-	  COAP_PSEUDOFP_DECODE_8_4(*COAP_OPT_VALUE(sub)));
-  }
-#endif
-  ready = !sub || COAP_PSEUDOFP_DECODE_8_4(*COAP_OPT_VALUE(sub)) == 0;
+  ready = coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter) == NULL;
 }
 
 void
@@ -349,8 +345,10 @@ usage( const char *program, const char *version) {
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-A type...\taccepted media types as comma-separated list of\n"
 	   "\t\t\tsymbolic or numeric values\n"
-	   "\t-b size\t\tblock size to be used in GET/PUT/POST requests\n"
+	   "\t-b [num,]size\tblock size to be used in GET/PUT/POST requests\n"
 	   "\t       \t\t(value must be a multiple of 16 not larger than 1024)\n"
+	   "\t       \t\tIf num is present, the request chain will start at\n"
+	   "\t       \t\tblock num\n"
 	   "\t-B seconds\tbreak operation after waiting given seconds\n"
 	   "\t\t\t(default is %d)\n"
 	   "\t-e text\t\tinclude text as payload (use percent-encoding for\n"
@@ -629,11 +627,8 @@ set_blocksize() {
 
 void
 cmdline_subscribe(char *arg) {
-  unsigned int ls, s;
-  unsigned char duration = COAP_PSEUDOFP_ENCODE_8_4_UP(atoi(arg), ls, s);
-
-  coap_insert( &optlist, new_option_node(COAP_OPTION_SUBSCRIPTION,
-					 1, &duration), order_opts );
+  coap_insert(&optlist, new_option_node(COAP_OPTION_SUBSCRIPTION, 0, NULL),
+	      order_opts);
 }
 
 void
@@ -810,7 +805,7 @@ main(int argc, char **argv) {
   fd_set readfds;
   struct timeval tv;
   int result;
-  coap_tick_t now, max_wait;
+  coap_tick_t now;
   coap_queue_t *nextpdu;
   coap_pdu_t  *pdu;
   static str server;
@@ -984,8 +979,7 @@ main(int argc, char **argv) {
   else 
     coap_send(ctx, &dst, pdu);
 
-  coap_ticks(&max_wait);
-  max_wait += wait_seconds * COAP_TICKS_PER_SECOND;
+  set_timeout();
   debug("timeout is set to %d seconds\n", wait_seconds);
 
   while ( !(ready && coap_can_exit(ctx)) ) {
