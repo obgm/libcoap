@@ -80,6 +80,7 @@ append_to_output(const unsigned char *data, size_t len) {
     len -= written;
     data += written;
   } while ( written && len );
+  fflush(file);
 
   return 0;
 }
