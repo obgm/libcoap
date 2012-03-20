@@ -23,6 +23,10 @@
 
 #include "coap.h"
 
+int flags = 0;
+
+#define FLAGS_BLOCK 0x01
+
 static coap_list_t *optlist = NULL;
 /* Request URI.
  * TODO: associate the resources with transaction id and make it expireable */
@@ -42,8 +46,7 @@ unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirma
 typedef unsigned char method_t;
 method_t method = 1;		/* the method we are using in our requests */
 
-unsigned int blocknr = 0;	/* current block num*/
-unsigned char blockszx = 6;	/* current block szx */
+coap_block_t block = { .num = 0, .m = 0, .szx = 6 };
 
 unsigned int wait_seconds = 90;	/* default timeout in seconds */
 coap_tick_t max_wait;		/* global timeout (changed by set_timeout()) */
@@ -140,9 +143,10 @@ coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options ) {
   }
 
   if (payload.length) {
-    /* TODO: must handle block */
-
-    coap_add_data(pdu, payload.length, payload.s);
+    if ((flags & FLAGS_BLOCK) == 0)
+      coap_add_data(pdu, payload.length, payload.s);
+    else
+      coap_add_block(pdu, payload.length, payload.s, block.num, block.szx);
   }
 
   return pdu;
@@ -204,6 +208,12 @@ get_block(coap_pdu_t *pdu, coap_opt_iterator_t *opt_iter) {
   return coap_option_next(opt_iter);
 }
 
+#define HANDLE_BLOCK1(Pdu)						\
+  ((method == COAP_REQUEST_PUT || method == COAP_REQUEST_POST) &&	\
+   ((flags & FLAGS_BLOCK) == 0) &&					\
+   ((Pdu)->hdr->code == COAP_RESPONSE_CODE(201) ||			\
+    (Pdu)->hdr->code == COAP_RESPONSE_CODE(204)))
+
 void
 message_handler(struct coap_context_t  *ctx, 
 		const coap_address_t *remote, 
@@ -212,7 +222,7 @@ message_handler(struct coap_context_t  *ctx,
 		const coap_tid_t id) {
 
   coap_pdu_t *pdu = NULL;
-  coap_opt_t *block;
+  coap_opt_t *block_opt;
   coap_opt_iterator_t opt_iter;
   unsigned char buf[4];
   coap_list_t *option;
@@ -241,12 +251,12 @@ message_handler(struct coap_context_t  *ctx,
   }
 
   /* output the received data, if any */
-  if (received->hdr->code == COAP_RESPONSE_CODE(205)) { 
+  if (received->hdr->code == COAP_RESPONSE_CODE(205)) {
     
     /* Got some data, check if block option is set. Behavior is undefined if
      * both, Block1 and Block2 are present. */
-    block = get_block(received, &opt_iter);
-    if ( !block ) {
+    block_opt = get_block(received, &opt_iter);
+    if (!block_opt) {
       /* There is no block option set, just read the data and we are done. */
       if (coap_get_data(received, &len, &databuf))
 	append_to_output(databuf, len);
@@ -257,10 +267,10 @@ message_handler(struct coap_context_t  *ctx,
       if (coap_get_data(received, &len, &databuf))
 	append_to_output(databuf, len);
 
-      if (COAP_OPT_BLOCK_MORE(block)) {
+      if (COAP_OPT_BLOCK_MORE(block_opt)) {
 	/* more bit is set */
 	debug("found the M bit, block size is %u, block nr. %u\n",
-	      COAP_OPT_BLOCK_SZX(block), COAP_OPT_BLOCK_NUM(block));
+	      COAP_OPT_BLOCK_SZX(block_opt), COAP_OPT_BLOCK_NUM(block_opt));
 
 	/* create pdu with request for next block */
 	pdu = coap_new_request(ctx, method, NULL); /* first, create bare PDU w/o any option  */
@@ -284,10 +294,10 @@ message_handler(struct coap_context_t  *ctx,
 
 	  /* finally add updated block option from response, clear M bit */
 	  /* blocknr = (blocknr & 0xfffffff7) + 0x10; */
-	  debug("query block %d\n", (COAP_OPT_BLOCK_NUM(block) + 1));
+	  debug("query block %d\n", (COAP_OPT_BLOCK_NUM(block_opt) + 1));
 	  coap_add_option(pdu, blktype, coap_encode_var_bytes(buf, 
-	      ((COAP_OPT_BLOCK_NUM(block) + 1) << 4) | 
-              COAP_OPT_BLOCK_SZX(block)), buf);
+	      ((COAP_OPT_BLOCK_NUM(block_opt) + 1) << 4) | 
+              COAP_OPT_BLOCK_SZX(block_opt)), buf);
 
 	  if (received->hdr->type == COAP_MESSAGE_CON)
 	    tid = coap_send_confirmed(ctx, remote, pdu);
@@ -600,13 +610,14 @@ cmdline_blocksize(char *arg) {
   
   if (*arg == ',') {
     arg++;
-    blocknr = size;
+    block.num = size;
     goto again;
   }
   
   if (size)
-    blockszx = (coap_fls(size >> 4) - 1) & 0x07;
+    block.szx = (coap_fls(size >> 4) - 1) & 0x07;
 
+  flags |= FLAGS_BLOCK;
   return 1;
 }
 
@@ -621,7 +632,7 @@ set_blocksize() {
     opt = method == COAP_REQUEST_GET ? COAP_OPTION_BLOCK2 : COAP_OPTION_BLOCK1;
 
     coap_insert(&optlist, new_option_node(opt,
-                coap_encode_var_bytes(buf, (blocknr << 4 | blockszx)), buf),
+                coap_encode_var_bytes(buf, (block.num << 4 | block.szx)), buf),
 		order_opts);
   }
 }
@@ -815,15 +826,11 @@ main(int argc, char **argv) {
   int opt, res;
   char *group = NULL;
   coap_log_t log_level = LOG_WARN;
-  int flags = 0;
-
-#define FLAGS_BLOCK 0x01
 
   while ((opt = getopt(argc, argv, "Nb:e:f:g:m:p:s:t:o:v:A:B:O:P:T:")) != -1) {
     switch (opt) {
     case 'b' :
-      if (cmdline_blocksize(optarg))      
-	flags |= FLAGS_BLOCK;
+      cmdline_blocksize(optarg);
       break;
     case 'B' :
       wait_seconds = atoi(optarg);
