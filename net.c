@@ -373,6 +373,25 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
   *id = ((h[0] << 8) | h[1]) ^ ((h[2] << 8) | h[3]);
 }
 
+coap_tid_t
+coap_send_ack(coap_context_t *context, 
+	      const coap_address_t *dst,
+	      coap_pdu_t *request) {
+  coap_pdu_t *response;
+  coap_tid_t result = COAP_INVALID_TID;
+  
+  if (request && request->hdr->type == COAP_MESSAGE_CON) {
+    response = coap_pdu_init(COAP_MESSAGE_ACK, 0, request->hdr->id, 
+			     sizeof(coap_pdu_t)); 
+    if (response) {
+      result = coap_send(context, dst, response);
+      if (result == COAP_INVALID_TID) 
+	coap_delete_pdu(response);
+    }
+  }
+  return result;
+}
+
 #ifndef WITH_CONTIKI
 /* releases space allocated by PDU if free_pdu is set */
 coap_tid_t
@@ -653,12 +672,21 @@ coap_read( coap_context_t *ctx ) {
   /* finally calculate beginning of data block */
   {
     coap_opt_t *opt = options_start(node->pdu);
-    unsigned char cnt;
+    unsigned char cnt = node->pdu->hdr->optcnt;
 
     /* Note that we cannot use the official options iterator here as
      * it eats up the fence posts. */
-    for (cnt = node->pdu->hdr->optcnt; cnt; --cnt)
+    while (cnt) {
+      if (node->pdu->hdr->optcnt == COAP_OPT_LONG) {
+	if (*opt == COAP_OPT_END) {
+	  ++opt;
+	  break;
+	}
+      } else {
+	--cnt;
+      }
       opt = options_next(opt);
+    }
 
     node->pdu->data = (unsigned char *)opt;
   }
@@ -780,7 +808,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
       coap_add_option(response, opt_iter.type, 
 		      COAP_OPT_LENGTH(opt_iter.option),
 		      COAP_OPT_VALUE(opt_iter.option));
-    
+
 #if COAP_ERROR_PHRASE_LENGTH > 0
     if (phrase)
       coap_add_data(response, strlen(phrase), (unsigned char *)phrase);

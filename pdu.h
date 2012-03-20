@@ -175,6 +175,11 @@ typedef struct {
 				       && ((MSG)->code < 32))
 #define COAP_MESSAGE_IS_RESPONSE(MSG) ((MSG)->code >= 64 && (MSG)->code <= 191)
 
+#define COAP_OPT_LONG 0x0F	/* OC == 0b1111 indicates that the option list in a
+				 * CoAP message is limited by 0b11110000 marker */
+
+#define COAP_OPT_END 0xF0	/* end marker */
+
 /**
  * Structures for more convenient handling of options. (To be used with ordered
  * coap_list_t.) The option's data will be added to the end of the coap_option
@@ -244,7 +249,7 @@ void coap_delete_pdu(coap_pdu_t *);
  * destroys the PDU's data, so coap_add_data must be called after all options have been
  * added.
  */
-int coap_add_option(coap_pdu_t *pdu, unsigned char type, unsigned int len, const unsigned char *data);
+int coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const unsigned char *data);
 
 /**
  * Adds given data to the pdu that is passed as first parameter. Note that the PDU's

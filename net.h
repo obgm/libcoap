@@ -80,6 +80,12 @@ typedef void (*coap_response_handler_t)(struct coap_context_t  *,
 					coap_pdu_t *received,
 					const coap_tid_t id);
 
+#define COAP_MID_CACHE_SIZE 3
+typedef struct {
+  unsigned char flags[COAP_MID_CACHE_SIZE];
+  coap_key_t item[COAP_MID_CACHE_SIZE];
+} coap_mid_cache_t; 
+
 /** The CoAP stack's global state is stored in a coap_context_t object */
 typedef struct coap_context_t {
   coap_opt_filter_t known_options;
@@ -272,15 +278,9 @@ coap_send_message_type(coap_context_t *context,
  * @return The transaction id if ACK was sent or @c COAP_INVALID_TID
  * on error.
  */
-static inline coap_tid_t
-coap_send_ack(coap_context_t *context, 
-	      const coap_address_t *dst, 
-	      coap_pdu_t *request) {
-  if (request && request->hdr->type == COAP_MESSAGE_CON)
-    return coap_send_message_type(context, dst, request, COAP_MESSAGE_ACK);
-  else
-    return COAP_INVALID_TID;
-}
+coap_tid_t coap_send_ack(coap_context_t *context, 
+			 const coap_address_t *dst, 
+			 coap_pdu_t *request);
 
 /** 
  * Sends an RST message with code @c 0 for the specified @p request to
