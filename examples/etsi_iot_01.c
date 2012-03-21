@@ -50,6 +50,19 @@ typedef struct {
 
 coap_payload_t *test_resources = NULL;
 
+/** 
+ * This structure is used to store URIs for dynamically allocated
+ * resources, usually by POST or PUT.
+ */
+typedef struct {
+  UT_hash_handle hh;
+  coap_key_t resource_key;	/* foreign key that points into resource space */
+  size_t length;		/* length of data */
+  unsigned char data[];		/* the actual contents */
+} coap_dynamic_uri_t;
+
+coap_dynamic_uri_t *test_dynamic_uris = NULL;
+
 /* This variable is used to mimic long-running tasks that require
  * asynchronous responses. */
 static coap_async_state_t *async = NULL;
@@ -83,15 +96,31 @@ coap_find_payload(const coap_key_t key) {
 }
 
 static inline void
-coap_add_payload(const coap_key_t key, coap_payload_t *payload) {
+coap_add_payload(const coap_key_t key, coap_payload_t *payload,
+		 coap_dynamic_uri_t *uri) {
   assert(payload);
   
   memcpy(payload->resource_key, key, sizeof(coap_key_t));
   HASH_ADD(hh, test_resources, resource_key, sizeof(coap_key_t), payload);
+
+  if (uri) {
+    memcpy(uri->resource_key, key, sizeof(coap_key_t));
+    HASH_ADD(hh, test_dynamic_uris, resource_key, sizeof(coap_key_t), uri);
+  }
 }
 
 static inline void
 coap_delete_payload(coap_payload_t *payload) {
+  if (payload) {
+    coap_dynamic_uri_t *uri;
+    HASH_FIND(hh, test_dynamic_uris, 
+	      payload->resource_key, sizeof(coap_key_t), uri);
+    if (uri) {
+      HASH_DELETE(hh, test_dynamic_uris, uri);
+      coap_free(uri);
+    }
+  }
+
   HASH_DELETE(hh, test_resources, payload);
   coap_free(payload);
 }
@@ -197,21 +226,90 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
 		(unsigned char *)coap_response_phrase(response->hdr->code));
 }
 
+/* DELETE handler for dynamic resources created by POST /test */
+void 
+hnd_delete_resource(coap_context_t  *ctx, struct coap_resource_t *resource, 
+		coap_address_t *peer, coap_pdu_t *request, str *token,
+		coap_pdu_t *response) {
+  coap_payload_t *payload;
+
+  payload = coap_find_payload(resource->key);
+
+  if (payload)
+    coap_delete_payload(payload);
+
+  coap_delete_resource(ctx, resource->key);
+
+  response->hdr->code = COAP_RESPONSE_CODE(202);
+  if (token->length)
+    coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);    
+}
+
 void 
 hnd_post_test(coap_context_t  *ctx, struct coap_resource_t *resource, 
 	      coap_address_t *peer, coap_pdu_t *request, str *token,
 	      coap_pdu_t *response) {
+  coap_opt_iterator_t opt_iter;
+  coap_payload_t *test_payload;
+  size_t len;
+  size_t l = 6 + sizeof(void *);
+  coap_dynamic_uri_t *uri;
+  unsigned char *data;
 
-  response->hdr->code = COAP_RESPONSE_CODE(201);
+#define BUFSIZE 20
+  int res;
+  unsigned char _buf[BUFSIZE];
+  unsigned char *buf = _buf;
+  size_t buflen = BUFSIZE;
+
+  coap_get_data(request, &len, &data);
+
+  /* allocate storage for resource and to hold URI */
+  test_payload = coap_new_payload(len);
+  uri = (coap_dynamic_uri_t *)coap_malloc(sizeof(coap_dynamic_uri_t) + l);
+  if (!(test_payload && uri)) {
+    coap_log(LOG_CRIT, "cannot allocate new resource under /test");
+    response->hdr->code = COAP_RESPONSE_CODE(500);    
+    coap_free(test_payload);
+    coap_free(uri);
+  } else {
+    coap_resource_t *r;
+
+    memset(uri, 0, sizeof(coap_dynamic_uri_t));
+    uri->length = snprintf((char *)uri->data, l, "test/%p", test_payload);
+    test_payload->length = len;
+
+    memcpy(test_payload->data, data, len);
+
+    r = coap_resource_init(uri->data, uri->length);
+    coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
+    coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_resource);
+
+    /* set media_type if available */
+    if (coap_check_option(request, COAP_OPTION_CONTENT_TYPE, &opt_iter)) {
+      test_payload->media_type = 
+	coap_decode_var_bytes(COAP_OPT_VALUE(opt_iter.option),
+			      COAP_OPT_LENGTH(opt_iter.option));
+    }
+
+    coap_add_resource(ctx, r);
+    coap_add_payload(r->key, test_payload, uri);
+
+    /* add Location-Path */
+    res = coap_split_path(uri->data, uri->length, buf, &buflen);
+
+    while (res--) {
+      coap_add_option(response, COAP_OPTION_LOCATION_PATH,
+		      COAP_OPT_LENGTH(buf), COAP_OPT_VALUE(buf));
+      
+      buf += COAP_OPT_SIZE(buf);      
+    }
+
+    response->hdr->code = COAP_RESPONSE_CODE(201);
+  }
+
   if (token->length)
-    coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
-  
-  info("stub POST handler for /test\n");
-
-  return;
- /* error: */
- /*  warn("cannot create new resource\n"); */
- /*  response->hdr->code = COAP_RESPONSE_CODE(500); */
+    coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);  
 }
 
 void 
@@ -242,7 +340,7 @@ hnd_put_test(coap_context_t  *ctx, struct coap_resource_t *resource,
     if (!payload)
       goto error;
 
-    coap_add_payload(resource->key, payload);
+    coap_add_payload(resource->key, payload, NULL);
   } 
   payload->length = len;
   memcpy(payload->data, data, len);
@@ -469,7 +567,7 @@ init_resources(coap_context_t *ctx) {
     coap_add_attr(r, (unsigned char *)"obs", 3, NULL, 0);
 #endif
     coap_add_resource(ctx, r);
-    coap_add_payload(r->key, test_payload);
+    coap_add_payload(r->key, test_payload, NULL);
   }
 
   /* TD_COAP_BLOCK_01 
@@ -486,7 +584,7 @@ init_resources(coap_context_t *ctx) {
 
     test_payload->flags |= REQUIRE_ETAG;
 
-    coap_add_payload(r->key, test_payload);
+    coap_add_payload(r->key, test_payload, NULL);
   }
 
   /* For TD_COAP_CORE_12 */
@@ -504,7 +602,7 @@ init_resources(coap_context_t *ctx) {
     coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1);
     coap_add_resource(ctx, r);
 
-    coap_add_payload(r->key, test_payload);
+    coap_add_payload(r->key, test_payload, NULL);
   }
 
   /* For TD_COAP_CORE_13 */
