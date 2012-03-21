@@ -62,7 +62,7 @@ MEMB(node_storage, coap_queue_t, COAP_PDU_MAXCNT);
 PROCESS(coap_retransmit_process, "message retransmit process");
 #endif /* WITH_CONTIKI */
 
-int print_wellknown(coap_context_t *, unsigned char *, size_t *);
+int print_wellknown(coap_context_t *, unsigned char *, size_t *, coap_opt_t *);
 
 void coap_handle_failed_notify(coap_context_t *, const coap_address_t *, 
 			       const str *);
@@ -846,7 +846,8 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   /* set payload of response */
   len = resp->max_size - resp->length;
   
-  if (!print_wellknown(context, resp->data, &len)) {
+  if (!print_wellknown(context, resp->data, &len,
+	       coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter))) {
     debug("print_wellknown failed\n");
     coap_delete_pdu(resp);
     return NULL;

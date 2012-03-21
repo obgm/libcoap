@@ -1,3 +1,7 @@
+2012-03-21  Olaf Bergmann  <bergmann@tzi.org>
+
+	* resource.c (print_wellknown): filtering by attributes
+
 2012-03-19  Olaf Bergmann  <bergmann@tzi.org>
 
 	* pdu.c (coap_add_option): allow more than 15 options.

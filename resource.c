@@ -32,6 +32,17 @@ coap_resources_init() {
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
+int
+match(const str *text, const str *pattern, int match_substring) {
+  assert(text); assert(pattern);
+  
+  if (text->length < pattern->length)
+    return 0;
+
+  return (match_substring || pattern->length == text->length) &&
+    memcmp(text->s, pattern->s, pattern->length) == 0;
+}
+
 /** 
  * Prints the names of all known resources to @p buf. This function
  * sets @p buflen to the number of bytes actually written and returns
@@ -42,26 +53,76 @@ coap_resources_init() {
  * @param buf     The buffer to write the result.
  * @param buflen  Must be initialized to the maximum length of @p buf and will be
  *                set to the number of bytes written on return.
+ * @param query_filter A filter query according to <a href="http://tools.ietf.org/html/draft-ietf-core-link-format-11#section-4.1">Link Format</a>
  * 
  * @return @c 0 on error or @c 1 on success.
  */
 int
-print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen) {
+print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
+		coap_opt_t *query_filter) {
   coap_resource_t *r;
   unsigned char *p = buf;
   size_t left, written = 0;
-#ifndef WITH_CONTIKI
   coap_resource_t *tmp;
+  str resource_param = { 0, NULL }, query_pattern = { 0, NULL };
+  int flags = 0; /* MATCH_SUBSTRING, MATCH_URI */
+#define MATCH_URI       0x01
+#define MATCH_SUBSTRING 0x02
+
+#ifdef WITH_CONTIKI
+  int i;
+#endif /* WITH_CONTIKI */
+
+  /* split query filter, if any */
+  if (query_filter) {
+    resource_param.s = COAP_OPT_VALUE(query_filter);
+    while (resource_param.length < COAP_OPT_LENGTH(query_filter)
+	   && resource_param.s[resource_param.length] != '=')
+      resource_param.length++;
+    
+    if (resource_param.length < COAP_OPT_LENGTH(query_filter)) {
+      if (memcmp(resource_param.s, "uri", resource_param.length) == 0)
+	flags |= MATCH_URI;
+
+      /* rest is query-pattern */
+      query_pattern.s = 
+	COAP_OPT_VALUE(query_filter) + resource_param.length + 1;
+
+      assert((resource_param.length + 1) <= COAP_OPT_LENGTH(query_filter));
+      query_pattern.length = 
+	COAP_OPT_LENGTH(query_filter) - (resource_param.length + 1);
+
+      if (query_pattern.length && 
+	  query_pattern.s[query_pattern.length-1] == '*') {
+	query_pattern.length--;
+	flags |= MATCH_SUBSTRING;
+      }      
+    }
+  }
+
+#ifndef WITH_CONTIKI
 
   HASH_ITER(hh, context->resources, r, tmp) {
 #else /* WITH_CONTIKI */
-  int i;
-
   r = (coap_resource_t *)resource_storage.mem;
   for (i = 0; i < resource_storage.num; ++i, ++r) {
     if (!resource_storage.count[i])
       continue;
 #endif /* WITH_CONTIKI */
+
+    if (resource_param.length) { /* there is a query filter */
+      
+      if (flags & MATCH_URI) {	/* match resource URI */
+	if (!match(&r->uri, &query_pattern, (flags & MATCH_SUBSTRING) != 0))
+	  continue;
+      } else {			/* match attribute */
+	coap_attr_t *attr;
+	attr = coap_find_attr(r, resource_param.s, resource_param.length);
+	if (!(attr && match(&attr->value, &query_pattern, 
+			    (flags & MATCH_SUBSTRING) != 0)))
+	  continue;
+      }
+    }
 
     left = *buflen - written;
 
@@ -142,6 +203,28 @@ coap_add_attr(coap_resource_t *resource,
   }
   
   return attr;
+}
+
+coap_attr_t *
+coap_find_attr(coap_resource_t *resource, 
+	       const unsigned char *name, size_t nlen) {
+  coap_attr_t *attr;
+
+  if (!resource || !name)
+    return NULL;
+
+#ifndef WITH_CONTIKI
+  LL_FOREACH(resource->link_attr, attr) {
+#else /* WITH_CONTIKI */
+  for (attr = list_head(resource->link_attr); attr; 
+       attr = list_item_next(attr)) {
+#endif /* WITH_CONTIKI */    
+    if (attr->name.length == nlen &&
+	memcmp(attr->name.s, name, nlen) == 0)
+      return attr;
+  }
+
+  return NULL;
 }
 
 void
