@@ -562,6 +562,7 @@ init_resources(coap_context_t *ctx) {
     coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_test);
 
     coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1);
+    coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"test", 4);
     coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"core#b", 6);
 #if 0
     coap_add_attr(r, (unsigned char *)"obs", 3, NULL, 0);
@@ -580,6 +581,7 @@ init_resources(coap_context_t *ctx) {
     coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
 
     coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"41", 2);
+    coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"large", 5);
     coap_add_resource(ctx, r);
 
     test_payload->flags |= REQUIRE_ETAG;
@@ -617,6 +619,7 @@ init_resources(coap_context_t *ctx) {
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_separate);
 
   coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1);
+  coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"separate", 8);
   coap_add_resource(ctx, r);
 }
 
