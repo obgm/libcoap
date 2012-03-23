@@ -1,3 +1,8 @@
+2012-03-23  Olaf Bergmann  <bergmann@tzi.org>
+
+	* examples/client.c (clear_obs): clear observation relationship after
+	user-specified duration
+
 2012-03-21  Olaf Bergmann  <bergmann@tzi.org>
 
 	* resource.c (print_wellknown): filtering by attributes
