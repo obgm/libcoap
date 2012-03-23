@@ -257,6 +257,29 @@ get_block(coap_pdu_t *pdu, coap_opt_iterator_t *opt_iter) {
    ((Pdu)->hdr->code == COAP_RESPONSE_CODE(201) ||			\
     (Pdu)->hdr->code == COAP_RESPONSE_CODE(204)))
 
+int
+check_token(coap_pdu_t *received) {
+  coap_opt_iterator_t opt_iter;
+  coap_list_t *option;
+  str token1 = { 0, NULL }, token2 = { 0, NULL };
+
+  if (coap_check_option(received, COAP_OPTION_TOKEN, &opt_iter)) {
+    token1.s = COAP_OPT_VALUE(opt_iter.option);
+    token1.length = COAP_OPT_LENGTH(opt_iter.option);
+  }
+  
+  for (option = optlist; option; option = option->next) {
+    if (COAP_OPTION_KEY(*(coap_option *)option->data) == COAP_OPTION_TOKEN) {
+      token2.s = COAP_OPTION_DATA(*(coap_option *)option->data);
+      token2.length = COAP_OPTION_LENGTH(*(coap_option *)option->data);
+      break;
+    }
+  }
+
+  return token1.length == token2.length &&
+    memcmp(token1.s, token2.s, token1.length) == 0;
+}
+
 void
 message_handler(struct coap_context_t  *ctx, 
 		const coap_address_t *remote, 
@@ -280,6 +303,15 @@ message_handler(struct coap_context_t  *ctx,
     coap_show_pdu(received);
   }
 #endif
+
+  /* check if this is a response to our original request */
+  if (!check_token(received)) {
+    /* drop if this was just some message, or send RST in case of notification */
+    if (!sent && (received->hdr->type == COAP_MESSAGE_CON || 
+		  received->hdr->type == COAP_MESSAGE_NON))
+      coap_send_rst(ctx, remote, received);
+    return;
+  }
 
   switch (received->hdr->type) {
   case COAP_MESSAGE_CON:
