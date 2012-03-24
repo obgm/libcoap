@@ -276,7 +276,7 @@ hnd_post_test(coap_context_t  *ctx, struct coap_resource_t *resource,
     coap_resource_t *r;
 
     memset(uri, 0, sizeof(coap_dynamic_uri_t));
-    uri->length = snprintf((char *)uri->data, l, "test/%p", test_payload);
+    uri->length = min(l, snprintf((char *)uri->data, l, "test/%p", test_payload));
     test_payload->length = len;
 
     memcpy(test_payload->data, data, len);
@@ -368,11 +368,14 @@ void
 hnd_delete_test(coap_context_t  *ctx, struct coap_resource_t *resource, 
 		coap_address_t *peer, coap_pdu_t *request, str *token,
 		coap_pdu_t *response) {
+  /* the ETSI validation tool does not like empty resources... */
+#if 0
   coap_payload_t *payload;
   payload = coap_find_payload(resource->key);
 
   if (payload)
     payload->length = 0;
+#endif
 
   response->hdr->code = COAP_RESPONSE_CODE(202);
   if (token->length)
