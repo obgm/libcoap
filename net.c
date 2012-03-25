@@ -656,10 +656,8 @@ coap_read( coap_context_t *ctx ) {
     return -1;
 
   node->pdu = coap_pdu_init(0, 0, 0, bytes_read);
-  if ( !node->pdu ) {
-    coap_delete_node( node );
-    return -1;
-  }
+  if (!node->pdu)
+    goto error;
 
   coap_ticks( &node->t );
   memcpy(&node->local, &dst, sizeof(coap_address_t));
@@ -676,7 +674,19 @@ coap_read( coap_context_t *ctx ) {
 
     /* Note that we cannot use the official options iterator here as
      * it eats up the fence posts. */
-    while (cnt) {
+    while (cnt && opt) {
+      if ((unsigned char *)node->pdu->hdr + node->pdu->max_size <= opt) {
+	if (node->pdu->hdr->type == COAP_MESSAGE_CON || 
+	    node->pdu->hdr->type == COAP_MESSAGE_NON) {
+	  coap_send_message_type(ctx, &node->remote, node->pdu, 
+				 COAP_MESSAGE_RST);
+	  debug("sent RST on malformed message\n");
+	} else {
+	  debug("dropped malformed message\n");
+	}
+      	goto error;
+      }
+
       if (node->pdu->hdr->optcnt == COAP_OPT_LONG) {
 	if (*opt == COAP_OPT_END) {
 	  ++opt;
@@ -710,6 +720,9 @@ coap_read( coap_context_t *ctx ) {
 #endif
 
   return 0;
+ error:
+  coap_delete_node(node);
+  return -1;
 }
 
 int
