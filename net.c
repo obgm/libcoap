@@ -593,7 +593,7 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
 int
 _order_transaction_id( coap_queue_t *lhs, coap_queue_t *rhs ) {
   return ( lhs && rhs && lhs->pdu && rhs->pdu &&
-	   ( lhs->id < lhs->id ) )
+	   ( lhs->id < rhs->id ) )
     ? -1
     : 1;
 }
