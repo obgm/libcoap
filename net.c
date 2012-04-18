@@ -38,6 +38,16 @@
 #ifndef WITH_CONTIKI
 
 time_t clock_offset;
+
+static inline coap_queue_t *
+coap_malloc_node() {
+  return (coap_queue_t *)coap_malloc(sizeof(coap_queue_t));
+}
+
+static inline void
+coap_free_node(coap_queue_t *node) {
+  coap_free(node);
+}
 #else /* WITH_CONTIKI */
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT
@@ -60,6 +70,16 @@ coap_context_t the_coap_context;
 MEMB(node_storage, coap_queue_t, COAP_PDU_MAXCNT);
 
 PROCESS(coap_retransmit_process, "message retransmit process");
+
+static inline coap_queue_t *
+coap_malloc_node() {
+  return (coap_queue_t *)memb_alloc(&node_storage);
+}
+
+static inline void
+coap_free_node(coap_queue_t *node) {
+  memb_free(&node_storage, node);
+}
 #endif /* WITH_CONTIKI */
 
 int print_wellknown(coap_context_t *, unsigned char *, size_t *, coap_opt_t *);
@@ -106,11 +126,7 @@ coap_delete_node(coap_queue_t *node) {
     return 0;
 
   coap_delete_pdu(node->pdu);
-#ifndef WITH_CONTIKI
-  coap_free( node );
-#else /* WITH_CONTIKI */
-  memb_free(&node_storage, node);
-#endif /* WITH_CONTIKI */
+  coap_free_node(node);
 
   return 1;
 }
@@ -124,15 +140,10 @@ coap_delete_all(coap_queue_t *queue) {
   coap_delete_node( queue );
 }
 
-
 coap_queue_t *
 coap_new_node() {
   coap_queue_t *node;
-#ifndef WITH_CONTIKI
-  node = (coap_queue_t *)coap_malloc(sizeof(coap_queue_t));
-#else /* WITH_CONTIKI */
-  node = (coap_queue_t *)memb_alloc(&node_storage);
-#endif /* WITH_CONTIKI */
+  node = coap_malloc_node();
 
   if ( ! node ) {
 #ifndef NDEBUG
@@ -271,7 +282,9 @@ coap_new_context(const coap_address_t *listen_addr) {
   process_start(&coap_retransmit_process, (char *)c);
 
   PROCESS_CONTEXT_BEGIN(&coap_retransmit_process);
+#ifndef WITHOUT_OBSERVE
   etimer_set(&c->notify_timer, COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND);
+#endif /* WITHOUT_OBSERVE */
   /* the retransmit timer must be initialized to some large value */
   etimer_set(&the_coap_context.retransmit_timer, 0xFFFF);
   PROCESS_CONTEXT_END(&coap_retransmit_process);
@@ -571,6 +584,7 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
 
   debug("** removed transaction %d\n", node->id);
 
+#ifndef WITHOUT_OBSERVE
   /* Check if subscriptions exist that should be canceled after
      COAP_MAX_NOTIFY_FAILURES */
   if (node->pdu->hdr->code >= 64) {
@@ -584,6 +598,7 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
 
     coap_handle_failed_notify(context, &node->remote, &token);
   }
+#endif /* WITHOUT_OBSERVE */
 
   /* And finally delete the node */
   coap_delete_node( node );
@@ -1140,10 +1155,12 @@ PROCESS_THREAD(coap_retransmit_process, ev, data)
 	etimer_set(&the_coap_context.retransmit_timer, 
 		   nextpdu ? nextpdu->t - now : 0xFFFF);
       } 
+#ifndef WITHOUT_OBSERVE
       if (etimer_expired(&the_coap_context.notify_timer)) {
 	coap_check_notify(&the_coap_context);
 	etimer_reset(&the_coap_context.notify_timer);
       }
+#endif /* WITHOUT_OBSERVE */
     }
   }
   

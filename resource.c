@@ -57,22 +57,31 @@ match(const str *text, const str *pattern, int match_substring) {
  * 
  * @return @c 0 on error or @c 1 on success.
  */
+#if defined(__GNUC__) && defined(WITHOUT_QUERY_FILTER)
+int
+print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
+		coap_opt_t *query_filter __attribute__ ((unused))) {
+#else /* not a GCC */
 int
 print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
 		coap_opt_t *query_filter) {
+#endif /* GCC */
   coap_resource_t *r;
   unsigned char *p = buf;
   size_t left, written = 0;
   coap_resource_t *tmp;
+#ifndef WITHOUT_QUERY_FILTER
   str resource_param = { 0, NULL }, query_pattern = { 0, NULL };
   int flags = 0; /* MATCH_SUBSTRING, MATCH_URI */
 #define MATCH_URI       0x01
 #define MATCH_SUBSTRING 0x02
+#endif /* WITHOUT_QUERY_FILTER */
 
 #ifdef WITH_CONTIKI
   int i;
 #endif /* WITH_CONTIKI */
 
+#ifndef WITHOUT_QUERY_FILTER
   /* split query filter, if any */
   if (query_filter) {
     resource_param.s = COAP_OPT_VALUE(query_filter);
@@ -81,7 +90,8 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
       resource_param.length++;
     
     if (resource_param.length < COAP_OPT_LENGTH(query_filter)) {
-      if (memcmp(resource_param.s, "uri", resource_param.length) == 0)
+      if (resource_param.length == 4 && 
+	  memcmp(resource_param.s, "href", 4) == 0)
 	flags |= MATCH_URI;
 
       /* rest is query-pattern */
@@ -99,6 +109,7 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
       }      
     }
   }
+#endif /* WITHOUT_QUERY_FILTER */
 
 #ifndef WITH_CONTIKI
 
@@ -110,6 +121,7 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
       continue;
 #endif /* WITH_CONTIKI */
 
+#ifndef WITHOUT_QUERY_FILTER
     if (resource_param.length) { /* there is a query filter */
       
       if (flags & MATCH_URI) {	/* match resource URI */
@@ -123,6 +135,7 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
 	  continue;
       }
     }
+#endif /* WITHOUT_QUERY_FILTER */
 
     left = *buflen - written;
 
@@ -363,6 +376,7 @@ coap_print_link(const coap_resource_t *resource,
   return 1;
 }
 
+#ifndef WITHOUT_OBSERVE
 coap_subscription_t *
 coap_find_observer(coap_resource_t *resource, const coap_address_t *peer,
 		     const str *token) {
@@ -574,3 +588,5 @@ coap_handle_failed_notify(coap_context_t *context,
   }
 #endif /* WITH_CONTIKI */
 }
+
+#endif /* WITHOUT_NOTIFY */

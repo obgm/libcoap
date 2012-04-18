@@ -17,6 +17,7 @@
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
+#ifndef WITHOUT_BLOCK
 int
 coap_get_block(coap_pdu_t *pdu, unsigned short type, coap_block_t *block) {
   coap_opt_iterator_t opt_iter;
@@ -109,3 +110,4 @@ coap_add_block(coap_pdu_t *pdu, unsigned int len, const unsigned char *data,
 		       min(len - start, (unsigned int)(1 << (block_szx + 4))),
 		       data + start);
 }
+#endif /* WITHOUT_BLOCK  */

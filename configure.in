@@ -7,7 +7,7 @@
 # README for terms of use. 
 
 AC_PREREQ([2.65])
-AC_INIT([libcoap], [1.8.0])
+AC_INIT([libcoap], [2.0.0])
 AC_CONFIG_SRCDIR([coap.h])
 
 # First check for Contiki build to quit configure before any other test
@@ -43,6 +43,21 @@ AC_ARG_WITH(debug,
 AC_ARG_WITH(async,
   [AS_HELP_STRING([--without-async],[disable handling of asynchronous transactions and observe])],
   [CPPFLAGS="${CPPFLAGS} -DWITHOUT_ASYNC"], 
+  [])
+
+AC_ARG_WITH(block,
+  [AS_HELP_STRING([--without-block],[disable block transfer])],
+  [CPPFLAGS="${CPPFLAGS} -DWITHOUT_BLOCK"], 
+  [])
+
+AC_ARG_WITH(observe,
+  [AS_HELP_STRING([--without-observe],[disable resource observation])],
+  [CPPFLAGS="${CPPFLAGS} -DWITHOUT_OBSERVE"], 
+  [])
+
+AC_ARG_WITH(query-filter,
+  [AS_HELP_STRING([--without-query-filter],[disable support for filters on /.well-known/core])],
+  [CPPFLAGS="${CPPFLAGS} -DWITHOUT_QUERY_FILTER"], 
   [])
 
 # Checks for header files.
