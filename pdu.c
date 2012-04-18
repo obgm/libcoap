@@ -123,7 +123,8 @@ coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const un
   opt = options_start(pdu);
   cnt = pdu->hdr->optcnt;
   while ((pdu->hdr->optcnt == COAP_OPT_LONG && opt &&
-	  opt < data + len && *opt != COAP_OPT_END)
+	  opt < ((unsigned char *)pdu->hdr + pdu->max_size) && 
+	  *opt != COAP_OPT_END)
 	 || cnt--) {
     opt_code += COAP_OPT_DELTA(opt);
     opt = options_next(opt);
