@@ -27,7 +27,8 @@ coap_get_block(coap_pdu_t *pdu, unsigned short type, coap_block_t *block) {
 
   if (pdu && coap_check_option(pdu, type, &opt_iter)) {
     block->szx = COAP_OPT_BLOCK_SZX(opt_iter.option);
-    block->m = COAP_OPT_BLOCK_MORE(opt_iter.option);
+    if (COAP_OPT_BLOCK_MORE(opt_iter.option))
+      block->m = 1;
     block->num = COAP_OPT_BLOCK_NUM(opt_iter.option);
 
     return 1;
