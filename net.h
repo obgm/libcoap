@@ -180,9 +180,8 @@ void coap_free_context( coap_context_t *context );
 
 /**
  * Sends a confirmed CoAP message to given destination. The memory
- * that is allocated by pdu will be released by
- * coap_send_confirmed(). The caller must not make any assumption on
- * the lifetime of pdu.
+ * that is allocated by pdu will not be released by
+ * coap_send_confirmed(). The caller must release the memory.
  *
  * @param context The CoAP context to use.
  * @param dst     The address to send to.
@@ -215,8 +214,8 @@ coap_pdu_t *coap_new_error_response(coap_pdu_t *request,
 				    coap_opt_filter_t opts);
 /**
  * Sends a non-confirmed CoAP message to given destination. The memory
- * that is allocated by pdu will be released by coap_send(). The
- * caller must not make any assumption on the lifetime of pdu.
+ * that is allocated by pdu will not be released by coap_send().
+ * The caller must release the memory.
  *
  * @param context The CoAP context to use.
  * @param dst     The address to send to.

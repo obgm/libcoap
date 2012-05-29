@@ -190,7 +190,8 @@ clear_obs(coap_context_t *ctx, const coap_address_t *remote) {
     if (tid == COAP_INVALID_TID) {
       debug("clear_obs: error sending new request");
       coap_delete_pdu(pdu);
-    } 
+    } else if (pdu->hdr->type != COAP_MESSAGE_CON)
+      coap_delete_pdu(pdu);
   }
   return tid;
 }
@@ -387,9 +388,13 @@ message_handler(struct coap_context_t  *ctx,
 
 	  if (tid == COAP_INVALID_TID) {
 	    debug("message_handler: error sending new request");
-	    coap_delete_pdu(pdu);
-	  } else
+            coap_delete_pdu(pdu);
+	  } else {
 	    set_timeout(&max_wait, wait_seconds);
+            if (received->hdr->type != COAP_MESSAGE_CON)
+              coap_delete_pdu(pdu);
+          }
+
 	  return;
 	}
       }
@@ -413,8 +418,8 @@ message_handler(struct coap_context_t  *ctx,
   /* finally send new request, if needed */
   if (pdu && coap_send(ctx, remote, pdu) == COAP_INVALID_TID) {
     debug("message_handler: error sending response");
-    coap_delete_pdu(pdu);
   }
+  coap_delete_pdu(pdu);
 
   /* our job is done, we can exit at any time */
   ready = coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter) == NULL;
@@ -908,6 +913,7 @@ main(int argc, char **argv) {
   int opt, res;
   char *group = NULL;
   coap_log_t log_level = LOG_WARN;
+  coap_tid_t tid = COAP_INVALID_TID;
 
   while ((opt = getopt(argc, argv, "Nb:e:f:g:m:p:s:t:o:v:A:B:O:P:T:")) != -1) {
     switch (opt) {
@@ -1065,9 +1071,12 @@ main(int argc, char **argv) {
 #endif
 
   if (pdu->hdr->type == COAP_MESSAGE_CON)
-    coap_send_confirmed(ctx, &dst, pdu);
+    tid = coap_send_confirmed(ctx, &dst, pdu);
   else 
-    coap_send(ctx, &dst, pdu);
+    tid = coap_send(ctx, &dst, pdu);
+
+  if (pdu->hdr->type != COAP_MESSAGE_CON || tid == COAP_INVALID_TID)
+    coap_delete_pdu(pdu);
 
   set_timeout(&max_wait, wait_seconds);
   debug("timeout is set to %d seconds\n", wait_seconds);

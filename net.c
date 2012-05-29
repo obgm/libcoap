@@ -398,8 +398,7 @@ coap_send_ack(coap_context_t *context,
 			     sizeof(coap_pdu_t)); 
     if (response) {
       result = coap_send(context, dst, response);
-      if (result == COAP_INVALID_TID) 
-	coap_delete_pdu(response);
+      coap_delete_pdu(response);
     }
   }
   return result;
@@ -410,7 +409,7 @@ coap_send_ack(coap_context_t *context,
 coap_tid_t
 coap_send_impl(coap_context_t *context, 
 	       const coap_address_t *dst,
-	       coap_pdu_t *pdu, int free_pdu) {
+	       coap_pdu_t *pdu) {
   ssize_t bytes_written;
   coap_tid_t id = COAP_INVALID_TID;
 
@@ -426,9 +425,6 @@ coap_send_impl(coap_context_t *context,
     coap_log(LOG_CRIT, "coap_send: sendto");
   }
 
-  if ( free_pdu )
-    coap_delete_pdu( pdu );
-
   return id;
 }
 #else  /* WITH_CONTIKI */
@@ -436,7 +432,7 @@ coap_send_impl(coap_context_t *context,
 coap_tid_t
 coap_send_impl(coap_context_t *context, 
 	       const coap_address_t *dst,
-	       coap_pdu_t *pdu, int free_pdu) {
+	       coap_pdu_t *pdu) {
   coap_tid_t id = COAP_INVALID_TID;
 
   if ( !context || !dst || !pdu )
@@ -448,9 +444,6 @@ coap_send_impl(coap_context_t *context,
 
   coap_transaction_id(dst, pdu, &id);
 
-  if (free_pdu)
-    coap_delete_pdu(pdu);
-
   return id;
 }
 #endif /* WITH_CONTIKI */
@@ -459,7 +452,7 @@ coap_tid_t
 coap_send(coap_context_t *context, 
 	  const coap_address_t *dst, 
 	  coap_pdu_t *pdu) {
-  return coap_send_impl(context, dst, pdu, 1);
+  return coap_send_impl(context, dst, pdu);
 }
 
 coap_tid_t
@@ -477,8 +470,7 @@ coap_send_error(coap_context_t *context,
   response = coap_new_error_response(request, code, opts);
   if (response) {
     result = coap_send(context, dst, response);
-    if (result == COAP_INVALID_TID) 
-      coap_delete_pdu(response);
+    coap_delete_pdu(response);
   }
   
   return result;
@@ -496,8 +488,7 @@ coap_send_message_type(coap_context_t *context,
     response = coap_pdu_init(type, 0, request->hdr->id, sizeof(coap_pdu_t)); 
     if (response) {
       result = coap_send(context, dst, response);
-      if (result == COAP_INVALID_TID) 
-	coap_delete_pdu(response);
+      coap_delete_pdu(response);
     }
   }
   return result;
@@ -553,7 +544,7 @@ coap_send_confirmed(coap_context_t *context,
   }
 #endif /* WITH_CONTIKI */
 
-  node->id = coap_send_impl(context, dst, pdu, 0);
+  node->id = coap_send_impl(context, dst, pdu);
   return node->id;
 }
 
@@ -576,7 +567,7 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
 	  node->retransmit_cnt, uip_ntohs(node->pdu->hdr->id));
 #endif /* WITH_CONTIKI */
 
-    node->id = coap_send_impl(context, &node->remote, node->pdu, 0);
+    node->id = coap_send_impl(context, &node->remote, node->pdu);
     return node->id;
   }
 
@@ -936,8 +927,8 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
       
     if (response && coap_send(context, &node->remote, response) == COAP_INVALID_TID) {
       warn("cannot send response for transaction %u\n", node->id);
-      coap_delete_pdu(response);
     }
+    coap_delete_pdu(response);
 
     return;
   }
@@ -969,10 +960,9 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 	   && !coap_is_mcast(&node->local))) {
 	if (coap_send(context, &node->remote, response) == COAP_INVALID_TID) {
 	  debug("cannot send response for message %d\n", node->pdu->hdr->id);
-	  coap_delete_pdu(response);
 	}
-      } else
-	coap_delete_pdu(response);
+      }
+      coap_delete_pdu(response);
     } else {
       warn("cannot generate response\r\n");
     }
@@ -987,8 +977,8 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
     if (!response || (coap_send(context, &node->remote, response)
 		      == COAP_INVALID_TID)) {
       debug("cannot send response for transaction %u\n", node->id);
-      coap_delete_pdu(response);
     }
+    coap_delete_pdu(response);
   }  
 }
 
@@ -1093,8 +1083,8 @@ coap_dispatch( coap_context_t *context ) {
 	  if (coap_send(context, &rcvd->remote, response) 
 	      == COAP_INVALID_TID) {
 	    warn("coap_dispatch: error sending reponse\n");
-	    coap_delete_pdu(response);
 	  }
+          coap_delete_pdu(response);
 	}	 
 	
 	goto cleanup;

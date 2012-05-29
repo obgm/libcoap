@@ -181,8 +181,8 @@ hnd_put_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
   if (coap_send(ctx, peer, response) == COAP_INVALID_TID) {
     debug("hnd_get_rd: cannot send response for message %d\n", 
 	  request->hdr->id);
-    coap_delete_pdu(response);
   }
+  coap_delete_pdu(response);
 #endif
 }
 
