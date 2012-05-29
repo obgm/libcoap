@@ -1095,15 +1095,15 @@ main(int argc, char **argv) {
 
     if (nextpdu && nextpdu->t < min(obs_wait ? obs_wait : max_wait, max_wait)) { 
       /* set timeout if there is a pdu to send */
-      tv.tv_usec = ((nextpdu->t - now) % COAP_TICKS_PER_SECOND) << 10;
+      tv.tv_usec = ((nextpdu->t - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
       tv.tv_sec = (nextpdu->t - now) / COAP_TICKS_PER_SECOND;
     } else {
       /* check if obs_wait fires before max_wait */
       if (obs_wait && obs_wait < max_wait) {
-	tv.tv_usec = ((obs_wait - now) % COAP_TICKS_PER_SECOND) << 10;;
+	tv.tv_usec = ((obs_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
 	tv.tv_sec = (obs_wait - now) / COAP_TICKS_PER_SECOND;	
       } else {
-	tv.tv_usec = ((max_wait - now) % COAP_TICKS_PER_SECOND) << 10;;
+	tv.tv_usec = ((max_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
 	tv.tv_sec = (max_wait - now) / COAP_TICKS_PER_SECOND;
       }
     }
