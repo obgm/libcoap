@@ -79,7 +79,7 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 	     coap_address_t *peer, coap_pdu_t *request, str *token,
 	     coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
-  unsigned char buf[2];
+  unsigned char buf[5];
   time_t now;
   coap_tick_t t;
 
@@ -105,7 +105,8 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
     coap_add_option(response, COAP_OPTION_SUBSCRIPTION, 0, NULL);
   }
   if (resource->dirty == 1)
-    coap_add_option(response, COAP_OPTION_SUBSCRIPTION, 0, NULL);
+    coap_add_option(response, COAP_OPTION_SUBSCRIPTION, 
+		    coap_encode_var_bytes(buf, ctx->observe), buf);
 
     
   if (token->length)
