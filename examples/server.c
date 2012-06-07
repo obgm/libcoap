@@ -286,7 +286,6 @@ init_resources(coap_context_t *ctx) {
   coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1);
   coap_add_attr(r, (unsigned char *)"title", 5, (unsigned char *)"\"Internal Clock\"", 16);
   coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"\"Ticks\"", 7);
-  coap_add_attr(r, (unsigned char *)"obs", 3, NULL, 0);
   r->observeable = 1;
   coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"\"clock\"", 7);
 
