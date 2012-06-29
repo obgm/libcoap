@@ -56,10 +56,6 @@ coap_tick_t obs_wait = 0;	/* timeout for current subscription */
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
-extern unsigned int
-print_readable( const unsigned char *data, unsigned int len,
-		unsigned char *result, unsigned int buflen );
-
 static inline void
 set_timeout(coap_tick_t *timer, const unsigned int seconds) {
   coap_ticks(timer);
@@ -1063,10 +1059,8 @@ main(int argc, char **argv) {
 
 #ifndef NDEBUG
   if (LOG_DEBUG <= coap_get_log_level()) {
-    unsigned char buf[COAP_MAX_PDU_SIZE];
-    debug("sending CoAP request: ");
-    print_readable( (unsigned char *)pdu->hdr, pdu->length, buf, COAP_MAX_PDU_SIZE);
-    printf("%s\n",buf);
+    debug("sending CoAP request:\n");
+    coap_show_pdu(pdu);
   }
 #endif
 
