@@ -198,7 +198,7 @@ resolve_address(const str *server, struct sockaddr *dst) {
   struct addrinfo *res, *ainfo;
   struct addrinfo hints;
   static char addrstr[256];
-  int error;
+  int error, len=-1;
 
   memset(addrstr, 0, sizeof(addrstr));
   if (server->length)
@@ -218,20 +218,20 @@ resolve_address(const str *server, struct sockaddr *dst) {
   }
 
   for (ainfo = res; ainfo != NULL; ainfo = ainfo->ai_next) {
-
     switch (ainfo->ai_family) {
     case AF_INET6:
     case AF_INET:
-
-      memcpy(dst, ainfo->ai_addr, ainfo->ai_addrlen);
-      return ainfo->ai_addrlen;
+      len = ainfo->ai_addrlen;
+      memcpy(dst, ainfo->ai_addr, len);
+      goto finish;
     default:
       ;
     }
   }
 
+ finish:
   freeaddrinfo(res);
-  return -1;
+  return len;
 }
 
 static inline coap_opt_t *
