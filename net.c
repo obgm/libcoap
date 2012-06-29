@@ -512,6 +512,13 @@ coap_send_confirmed(coap_context_t *context,
     debug("coap_send_confirmed: insufficient memory\n");
     return COAP_INVALID_TID;
   }
+
+  node->id = coap_send_impl(context, dst, pdu);
+  if (COAP_INVALID_TID == node->id) {
+    debug("coap_send_confirmed: error sending pdu\n");
+    coap_free_node(node);
+    return COAP_INVALID_TID;
+  }
   
   prng((unsigned char *)&r,sizeof(r));
   coap_ticks(&now);
@@ -544,7 +551,6 @@ coap_send_confirmed(coap_context_t *context,
   }
 #endif /* WITH_CONTIKI */
 
-  node->id = coap_send_impl(context, dst, pdu);
   return node->id;
 }
 
