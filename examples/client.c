@@ -634,12 +634,20 @@ cmdline_uri(char *arg) {
   int res;
 
   if (proxy.length) {		/* create Proxy-Uri from argument */
+    size_t len = strlen(arg);
+    while (len > 270) {
+      coap_insert(&optlist, 
+		  new_option_node(COAP_OPTION_PROXY_URI,
+				  270, (unsigned char *)arg),
+		  order_opts);
+      len -= 270;
+      arg += 270;
+    }
 
-    coap_insert( &optlist, 
-		 new_option_node(COAP_OPTION_PROXY_URI,
-				 strlen(arg), (unsigned char *)arg),
-		 order_opts);
-
+    coap_insert(&optlist, 
+		new_option_node(COAP_OPTION_PROXY_URI,
+				len, (unsigned char *)arg),
+		order_opts);
   } else {			/* split arg into Uri-* options */
     coap_split_uri((unsigned char *)arg, strlen(arg), &uri );
 
