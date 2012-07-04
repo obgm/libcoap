@@ -39,11 +39,11 @@ typedef unsigned char coap_opt_t;
 		  : (*PCHAR(opt) & 0x0f)))
 
 #define COAP_OPT_SETLENGTH(opt,val)					\
-  if ( ((val) & 0xff) < 15 )						\
+  if ((val) < 15)							\
     *PCHAR(opt) = ((*PCHAR(opt) & 0xf0) | ((val) & 0x0f));		\
   else {								\
     *PCHAR(opt) |= 0x0f;						\
-    *(PCHAR(opt) + 1) = ((val) & 0xff) - 15;				\
+    *(PCHAR(opt) + 1) = ((val) - 15) & 0xff;				\
   }
 
 #define COAP_OPT_VALUE(opt)				\
