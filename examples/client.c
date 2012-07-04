@@ -32,6 +32,7 @@ static coap_list_t *optlist = NULL;
  * TODO: associate the resources with transaction id and make it expireable */
 static coap_uri_t uri;
 static str proxy = { 0, NULL };
+static unsigned short proxy_port = COAP_DEFAULT_PORT;
 
 /* reading is done when this flag is set */
 static int ready = 0;
@@ -726,15 +727,37 @@ cmdline_subscribe(char *arg) {
 	      order_opts);
 }
 
-void
+int
 cmdline_proxy(char *arg) {
+  char *proxy_port_str = strrchr((const char *)arg, ':'); /* explicit port ? */
+  if (proxy_port_str) {
+    char *ipv6_delimiter = strrchr((const char *)arg, ']');
+    if (!ipv6_delimiter) {
+      if (proxy_port_str == strchr((const char *)arg, ':')) {
+        /* host:port format - host not in ipv6 hexadecimal string format */
+        *proxy_port_str++ = '\0'; /* split */
+        proxy_port = atoi(proxy_port_str);
+      }
+    } else {
+      arg = strchr((const char *)arg, '[');
+      if (!arg) return 0;
+      arg++;
+      *ipv6_delimiter = '\0'; /* split */
+      if (ipv6_delimiter + 1 == proxy_port_str++) {
+        /* [ipv6 address]:port */
+        proxy_port = atoi(proxy_port_str);
+      }
+    }
+  }
+
   proxy.length = strlen(arg);
   if ( (proxy.s = coap_malloc(proxy.length + 1)) == NULL) {
     proxy.length = 0;
-    return;
+    return 0;
   }
 
   memcpy(proxy.s, arg, proxy.length+1);
+  return 1;
 }
 
 void
@@ -965,7 +988,10 @@ main(int argc, char **argv) {
       cmdline_option(optarg);
       break;
     case 'P' :
-      cmdline_proxy(optarg);
+      if (!cmdline_proxy(optarg)) {
+        fprintf(stderr, "error specifying proxy address\n");
+	exit(-1);
+      }
       break;
     case 'T' :
       cmdline_token(optarg);
@@ -990,6 +1016,7 @@ main(int argc, char **argv) {
 
   if (proxy.length) {
     server = proxy;
+    port = proxy_port;
   } else {
     server = uri.host;
     port = uri.port;
@@ -1039,7 +1066,7 @@ main(int argc, char **argv) {
 
   /* construct CoAP message */
 
-  if (addrptr
+  if (!proxy.length && addrptr
       && (inet_ntop(dst.addr.sa.sa_family, addrptr, addr, sizeof(addr)) != 0)
       && (strlen(addr) != uri.host.length 
 	  || memcmp(addr, uri.host.s, uri.host.length) != 0)) {
