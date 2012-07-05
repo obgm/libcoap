@@ -610,6 +610,20 @@ _order_transaction_id( coap_queue_t *lhs, coap_queue_t *rhs ) {
     : 1;
 }
 
+/** 
+ * Checks if @p opt fits into the message that ends with @p maxpos.
+ * This function returns @c 1 on success, or @c 0 if the option @p opt
+ * would exceed @p maxpos.
+ */
+static inline int
+check_opt_size(coap_opt_t *opt, unsigned char *maxpos) {
+  if (opt && opt < maxpos) {
+    if (((*opt & 0x0f) < 0x0f) || (opt + 1 < maxpos))
+      return opt + COAP_OPT_SIZE(opt) < maxpos;
+  }
+  return 0;
+}
+
 int
 coap_read( coap_context_t *ctx ) {
 #ifndef WITH_CONTIKI
@@ -706,6 +720,12 @@ coap_read( coap_context_t *ctx ) {
 	}
       } else {
 	--cnt;
+      }
+
+      if (cnt &&
+	  !check_opt_size(opt, (unsigned char *)node->pdu->hdr + node->pdu->max_size)) {
+	debug("drop\n");
+	goto error;
       }
       opt = options_next(opt);
     }
