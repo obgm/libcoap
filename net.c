@@ -960,7 +960,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
   }
   
   /* the resource was found, check if there is a registered handler */
-  if ((size_t)node->pdu->hdr->code < 
+  if ((size_t)node->pdu->hdr->code - 1 <
       sizeof(resource->handler)/sizeof(coap_method_handler_t))
     h = resource->handler[node->pdu->hdr->code - 1];
   
