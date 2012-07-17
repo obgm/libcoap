@@ -478,13 +478,20 @@ hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource,
 
   response->hdr->code = COAP_RESPONSE_CODE(201);
 
-  { /* FIXME: ugly hack to add the missing '/' */
-    unsigned char b[72];
-    b[0] = '/';
-    memcpy(b + 1, loc, loc_size);
-    coap_add_option(response, COAP_OPTION_LOCATION_PATH, loc_size + 1, b);
+  { /* split path into segments and add Location-Path options */
+    unsigned char _b[LOCSIZE];
+    unsigned char *b = _b;
+    size_t buflen = sizeof(_b);
+    int nseg;
+    
+    nseg = coap_split_path(loc, loc_size, b, &buflen);
+    while (nseg--) {
+      coap_add_option(response, COAP_OPTION_LOCATION_PATH,
+		      COAP_OPT_LENGTH(b), COAP_OPT_VALUE(b));
+      b += COAP_OPT_SIZE(b);
+    }
   }
-
+  
   if (token->length)
     coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
 }
