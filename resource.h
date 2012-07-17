@@ -42,11 +42,17 @@ typedef void (*coap_method_handler_t)
   (coap_context_t  *, struct coap_resource_t *, coap_address_t *, coap_pdu_t *,
    str * /* token */, coap_pdu_t * /* response */);
 
+#define COAP_ATTR_FLAGS_RELEASE_NAME  0x1
+#define COAP_ATTR_FLAGS_RELEASE_VALUE 0x2
+
 typedef struct coap_attr_t {
   struct coap_attr_t *next;
   str name;
   str value;
+  int flags;
 } coap_attr_t;
+
+#define COAP_RESOURCE_FLAGS_RELEASE_URI 0x1
 
 typedef struct coap_resource_t {
   unsigned int dirty:1;	      /**< set to 1 if resource has changed */
@@ -77,6 +83,8 @@ typedef struct coap_resource_t {
    * Request URI for this resource. This field will point into the
    * static memory. */
   str uri;
+  int flags;
+
 } coap_resource_t;
 
 /** 
@@ -84,12 +92,13 @@ typedef struct coap_resource_t {
  * string of length @p len.  This function returns the
  * new coap_resource_t object.
  * 
- * @param uri  The URI path of the new resource.
- * @param len  The length of @p uri.
+ * @param uri    The URI path of the new resource.
+ * @param len    The length of @p uri.
+ * @param flags  Flags for memory management (in particular release of memory)
  * 
  * @return A pointer to the new object or @c NULL on error.
  */
-coap_resource_t *coap_resource_init(const unsigned char *uri, size_t len);
+coap_resource_t *coap_resource_init(const unsigned char *uri, size_t len, int flags);
 
 /**
  * Registers the given @p resource for @p context. The resource must
@@ -123,12 +132,14 @@ int coap_delete_resource(coap_context_t *context, coap_key_t key);
  * @param nlen      Length of @p name.
  * @param val       The attribute's value or @c NULL if none.
  * @param vlen      Length of @p val if specified.
+ * @param flags     Flags for memory management (in particular release of memory)
  *
  * @return A pointer to the new attribute or @c NULL on error.
  */
-coap_attr_t *coap_add_attr(coap_resource_t *resource, 
-			   const unsigned char *name, size_t nlen,
-			   const unsigned char *val, size_t vlen);
+coap_attr_t *coap_add_attr(coap_resource_t *resource,
+                           const unsigned char *name, size_t nlen,
+                           const unsigned char *val, size_t vlen,
+                           int flags);
 
 /**
  * Returns @p resource's coap_attr_t object with given @p name if
@@ -142,6 +153,14 @@ coap_attr_t *coap_add_attr(coap_resource_t *resource,
  */
 coap_attr_t *coap_find_attr(coap_resource_t *resource, 
 			    const unsigned char *name, size_t nlen);
+
+/** 
+ * Deletes an attribute
+ * 
+ * @param attr  Pointer to a previously created attribute
+ * 
+ */
+void coap_delete_attr(coap_attr_t *attr);
 
 /** 
  * Writes a description of this resource in link-format to given text

@@ -155,7 +155,7 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
 }
 
 coap_resource_t *
-coap_resource_init(const unsigned char *uri, size_t len) {
+coap_resource_init(const unsigned char *uri, size_t len, int flags) {
   coap_resource_t *r;
 
 #ifndef WITH_CONTIKI
@@ -176,6 +176,8 @@ coap_resource_init(const unsigned char *uri, size_t len) {
     r->uri.length = len;
     
     coap_hash_path(r->uri.s, r->uri.length, r->key);
+
+    r->flags = flags;
   } else {
     debug("coap_resource_init: no memory left\n");
   }
@@ -186,7 +188,8 @@ coap_resource_init(const unsigned char *uri, size_t len) {
 coap_attr_t *
 coap_add_attr(coap_resource_t *resource, 
 	      const unsigned char *name, size_t nlen,
-	      const unsigned char *val, size_t vlen) {
+	      const unsigned char *val, size_t vlen,
+              int flags) {
   coap_attr_t *attr;
 
   if (!resource || !name)
@@ -205,12 +208,14 @@ coap_add_attr(coap_resource_t *resource,
     attr->name.s = (unsigned char *)name;
     attr->value.s = (unsigned char *)val;
 
+    attr->flags = flags;
+
     /* add attribute to resource list */
 #ifndef WITH_CONTIKI
     LL_PREPEND(resource->link_attr, attr);
 #else /* WITH_CONTIKI */
     list_add(resource->link_attr, attr);
-#endif /* WITH_CONTIKI */    
+#endif /* WITH_CONTIKI */
   } else {
     debug("coap_add_attr: no memory left\n");
   }
@@ -238,6 +243,17 @@ coap_find_attr(coap_resource_t *resource,
   }
 
   return NULL;
+}
+
+void
+coap_delete_attr(coap_attr_t *attr) {
+  if (!attr)
+    return;
+  if (attr->flags & COAP_ATTR_FLAGS_RELEASE_NAME)
+    coap_free(attr->name.s);
+  if (attr->flags & COAP_ATTR_FLAGS_RELEASE_VALUE)
+    coap_free(attr->value.s);
+  coap_free(attr);
 }
 
 void
@@ -283,7 +299,10 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
   HASH_DELETE(hh, context->resources, resource);
 
   /* delete registered attributes */
-  LL_FOREACH_SAFE(resource->link_attr, attr, tmp) coap_free(attr);
+  LL_FOREACH_SAFE(resource->link_attr, attr, tmp) coap_delete_attr(attr);
+
+  if (resource->flags & COAP_RESOURCE_FLAGS_RELEASE_URI)
+    coap_free(resource->uri.s);
 
   coap_free(resource);
 #else /* WITH_CONTIKI */
