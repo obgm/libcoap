@@ -368,7 +368,7 @@ hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource,
 #define LOCSIZE 68
   unsigned char *loc;
   size_t loc_size;
-  str h, ins, rt, lt;		/* store query parameters */
+  str h = {0, NULL}, ins = {0, NULL}, rt = {0, NULL}, lt = {0, NULL};		/* store query parameters */
   unsigned char *buf;
 
   loc = (unsigned char *)coap_malloc(LOCSIZE);

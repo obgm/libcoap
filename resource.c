@@ -33,13 +33,37 @@ coap_resources_init() {
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
 int
-match(const str *text, const str *pattern, int match_substring) {
+match(const str *text, const str *pattern, int match_prefix, int match_substring) {
   assert(text); assert(pattern);
   
   if (text->length < pattern->length)
     return 0;
 
-  return (match_substring || pattern->length == text->length) &&
+  if (match_substring) {
+    unsigned char *next_token = text->s;
+    size_t remaining_length = text->length;
+    while (remaining_length) {
+      size_t token_length;
+      unsigned char *token = next_token;
+      next_token = memchr(token, ' ', remaining_length);
+
+      if (next_token) {
+        token_length = next_token - token;
+        remaining_length -= (token_length + 1);
+        next_token++;
+      } else {
+        token_length = remaining_length;
+        remaining_length = 0;
+      }
+      
+      if ((match_prefix || pattern->length == token_length) &&
+            memcmp(token, pattern->s, pattern->length) == 0)
+        return 1;
+    }
+    return 0;
+  }
+
+  return (match_prefix || pattern->length == text->length) &&
     memcmp(text->s, pattern->s, pattern->length) == 0;
 }
 
@@ -72,9 +96,15 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
   coap_resource_t *tmp;
 #ifndef WITHOUT_QUERY_FILTER
   str resource_param = { 0, NULL }, query_pattern = { 0, NULL };
-  int flags = 0; /* MATCH_SUBSTRING, MATCH_URI */
+  int flags = 0; /* MATCH_SUBSTRING, MATCH_PREFIX, MATCH_URI */
 #define MATCH_URI       0x01
-#define MATCH_SUBSTRING 0x02
+#define MATCH_PREFIX    0x02
+#define MATCH_SUBSTRING 0x04
+  static str _rt_attributes[] = {
+    {2, (unsigned char *)"rt"},
+    {2, (unsigned char *)"if"},
+    {3, (unsigned char *)"rel"},
+    {0, NULL}};
 #endif /* WITHOUT_QUERY_FILTER */
 
 #ifdef WITH_CONTIKI
@@ -94,6 +124,14 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
 	  memcmp(resource_param.s, "href", 4) == 0)
 	flags |= MATCH_URI;
 
+      for (str *rt_attributes = _rt_attributes; rt_attributes->s; rt_attributes++) {
+        if (resource_param.length == rt_attributes->length && 
+            memcmp(resource_param.s, rt_attributes->s, rt_attributes->length) == 0) {
+          flags |= MATCH_SUBSTRING;
+          break;
+        }
+      }
+
       /* rest is query-pattern */
       query_pattern.s = 
 	COAP_OPT_VALUE(query_filter) + resource_param.length + 1;
@@ -105,7 +143,7 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
       if (query_pattern.length && 
 	  query_pattern.s[query_pattern.length-1] == '*') {
 	query_pattern.length--;
-	flags |= MATCH_SUBSTRING;
+	flags |= MATCH_PREFIX;
       }      
     }
   }
@@ -125,13 +163,22 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
     if (resource_param.length) { /* there is a query filter */
       
       if (flags & MATCH_URI) {	/* match resource URI */
-	if (!match(&r->uri, &query_pattern, (flags & MATCH_SUBSTRING) != 0))
+	if (!match(&r->uri, &query_pattern, (flags & MATCH_PREFIX) != 0, (flags & MATCH_SUBSTRING) != 0))
 	  continue;
       } else {			/* match attribute */
 	coap_attr_t *attr;
+        str unquoted_val;
 	attr = coap_find_attr(r, resource_param.s, resource_param.length);
-	if (!(attr && match(&attr->value, &query_pattern, 
-			    (flags & MATCH_SUBSTRING) != 0)))
+        if (!attr) continue;
+        if (attr->value.s[0] == '"') {          /* if attribute has a quoted value, remove double quotes */
+          unquoted_val.length = attr->value.length - 2;
+          unquoted_val.s = attr->value.s + 1;
+        } else {
+          unquoted_val = attr->value;
+        }
+	if (!(match(&unquoted_val, &query_pattern, 
+                    (flags & MATCH_PREFIX) != 0,
+                    (flags & MATCH_SUBSTRING) != 0)))
 	  continue;
       }
     }
