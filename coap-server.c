@@ -157,7 +157,7 @@ init_resources(coap_context_t *ctx) {
   if (!r)
     goto error;
 
-  r->observeable = 1;
+  r->observable = 1;
   time_resource = r;
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
 #if 0

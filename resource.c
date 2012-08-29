@@ -433,7 +433,7 @@ coap_print_link(const coap_resource_t *resource,
       p += attr->value.length;
     }
   }
-  if (resource->observeable && written + 4 <= *len) {
+  if (resource->observable && written + 4 <= *len) {
     memcpy(p, ";obs", 4);
     written += 4;
   }
@@ -541,7 +541,7 @@ coap_check_notify(coap_context_t *context) {
   coap_resource_t *tmp;
 
   HASH_ITER(hh, context->resources, r, tmp) {
-    if (r->observeable && r->dirty && r->subscribers) {
+    if (r->observable && r->dirty && r->subscribers) {
 #else /* WITH_CONTIKI */
   int i;
   
@@ -550,7 +550,7 @@ coap_check_notify(coap_context_t *context) {
     if (!resource_storage.count[i] )
       continue;
 
-    if (r->observeable && r->dirty && list_head(r->subscribers)) {
+    if (r->observable && r->dirty && list_head(r->subscribers)) {
 #endif /* WITH_CONTIKI */
       coap_method_handler_t h;
       coap_subscription_t *obs;
