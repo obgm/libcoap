@@ -305,7 +305,7 @@ coap_free_context( coap_context_t *context ) {
 
 #ifndef WITH_CONTIKI
   HASH_ITER(hh, context->resources, res, rtmp) {
-    free(res);
+    coap_delete_resource(context, res->key);
   }
 
   /* coap_delete_list(context->subscriptions); */
