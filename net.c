@@ -689,8 +689,23 @@ coap_read( coap_context_t *ctx ) {
   memcpy(&node->local, &dst, sizeof(coap_address_t));
   memcpy(&node->remote, &src, sizeof(coap_address_t));
 
-  /* "parse" received PDU by filling pdu structure */
-  memcpy( node->pdu->hdr, buf, bytes_read );
+  node->pdu->hdr->version = buf[0] >> 6;
+  node->pdu->hdr->type = (buf[0] >> 4) & 0x03;
+  node->pdu->hdr->optcnt = buf[0] & 0x0f;
+  node->pdu->hdr->code = buf[1];
+  node->pdu->hdr->id = ((buf[2] & 0xff) << 8) | (buf[3] & 0xff);
+
+#ifndef NDEBUG  
+  printf("version: %u, type: %u, optcnt:%u, code: %u, id: %u\n",
+	 node->pdu->hdr->version,
+	 node->pdu->hdr->type,
+	 node->pdu->hdr->optcnt,
+	 node->pdu->hdr->code,
+	 node->pdu->hdr->id);
+#endif
+
+  /* append data to pdu structure */
+  memcpy(node->pdu->hdr + 1, buf + 4, bytes_read - 4);
   node->pdu->length = bytes_read;
 
   /* finally calculate beginning of data block */
