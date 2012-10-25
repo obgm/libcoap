@@ -1,3 +1,8 @@
+2012-10-25  Olaf Bergmann  <bergmann@tzi.org>
+
+	* option.c (coap_opt_encode): new function for option encoding
+	with option jumps
+
 2012-03-23  Olaf Bergmann  <bergmann@tzi.org>
 
 	* examples/client.c (clear_obs): clear observation relationship after

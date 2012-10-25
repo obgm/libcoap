@@ -38,6 +38,20 @@ typedef unsigned char coap_opt_t;
 		  ? (*(PCHAR(opt) + 1) + 15)			\
 		  : (*PCHAR(opt) & 0x0f)))
 
+/**
+ * Encodes the option delta, length and value.
+ *
+ * @param opt start of the given option
+ * @param n   maximum length of the option
+ * @param delta the option delta
+ * @param val the value to write
+ * @param length option length
+ * @return the number of bytes that are used to encode the option length
+ *         or @c 0 in case of error.
+ */
+size_t coap_opt_encode(coap_opt_t *opt, size_t n, unsigned char delta,
+		       unsigned char *val, unsigned short len);
+
 #define COAP_OPT_SETLENGTH(opt,val)					\
   if ((val) < 15)							\
     *PCHAR(opt) = ((*PCHAR(opt) & 0xf0) | ((val) & 0x0f));		\
@@ -216,6 +230,23 @@ coap_opt_t *coap_option_next(coap_opt_iterator_t *oi);
 coap_opt_t *coap_check_option(coap_pdu_t *pdu, 
 			      unsigned char type, 
 			      coap_opt_iterator_t *oi);
+
+/**
+ * Encodes option with given @p delta into @p opt. This function returns
+ * the number of bytes written to @p opt or @c 0 on error. This happens
+ * especially when @p opt does not provide sufficient space to store
+ * the option value, delta, and option jumps when required.
+ *
+ * @param opt   The option buffer space where @p val is written
+ * @param n     Maximum length of @p opt.
+ * @param delta The option delta.
+ * @param val   The option value to copy into @p opt.
+ * @param len   The actual length of @p val.
+ * @return The number of bytes that have been written to @p opt or
+ *         @c 0 on error. The return value will always be less than @p n.
+ */
+size_t coap_opt_encode(coap_opt_t *opt, size_t n, unsigned short delta,
+		       unsigned char *val, unsigned short len);
 
 /** @} */
 
