@@ -6,6 +6,7 @@
  * README for terms of use. 
  */
 
+#include <stdio.h>		/* testing only */
 #include "config.h"
 #include "net.h"
 #include "debug.h"
@@ -314,7 +315,7 @@ coap_hash_request_uri(const coap_pdu_t *request, coap_key_t key) {
   coap_option_setb(filter, COAP_OPTION_URI_PATH);
 
   coap_option_iterator_init((coap_pdu_t *)request, &opt_iter, filter);
-  while (coap_option_next(&opt_iter))
+  while (coap_option_next(&opt_iter) && opt_iter.type == COAP_OPTION_URI_PATH)
     coap_hash(COAP_OPT_VALUE(opt_iter.option), 
 	      COAP_OPT_LENGTH(opt_iter.option), key);
 }
