@@ -6,7 +6,6 @@
  * README for terms of use. 
  */
 
-#include <stdio.h>		/* testing only */
 #include "config.h"
 #include "net.h"
 #include "debug.h"
