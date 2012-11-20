@@ -635,9 +635,7 @@ next_option_safe(coap_opt_t **optp, unsigned char *endptr) {
   assert(optp); assert(*optp);
 
   opt = *optp;
-  debug("next_option_safe(%p, %p) (%u bytes)\n", opt, endptr, endptr-opt);
 
-  debug("looking at 0x%02x\n", *opt);
   if (endptr <= opt) {
     debug("opt exceeds endptr\n");
     return 0;
@@ -665,31 +663,24 @@ next_option_safe(coap_opt_t **optp, unsigned char *endptr) {
       return 0;
     }
   }
-  debug("looking at 0x%02x\n", *opt);
 
   length = *opt & 0x0f;
 
   if (length == 15) {		/* extended length spec */
-    debug("length nibble is 15\n");
 
-    while (++opt <= endptr && *opt == 0xff && length < 780) {
-      debug("add 255\n");
+    while (++opt <= endptr && *opt == 0xff && length < 780)
       length += 255;
-    }
 
     if (endptr <= opt)
       return 0;
     
     length += *opt & 0xff;
-    debug("length is %u (opt: %p)\n", length, opt);
   } else
     ++opt;			/* skip option type/length byte */
    
-  debug("looking at 0x%02x (%u bytes left, *endptr-1 is 0x%02x)\n", *opt, endptr-opt, *(endptr-1));
   opt += length;
 
   if (opt <= endptr) {
-    debug("advance opt\n");
     *optp = opt;
     return 1;
   } else {

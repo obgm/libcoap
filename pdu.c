@@ -107,17 +107,14 @@ coap_delete_pdu(coap_pdu_t *pdu) {
 
 int
 coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const unsigned char *data) {
-  size_t optsize, cnt, optcnt;
+  size_t optsize, cnt;
   unsigned short opt_code = 0;
-  unsigned char fence;
   coap_opt_t *opt;
-  size_t old_optcnt;		/* for restoring old values */
-  coap_opt_t *old_opt;
   
   if (!pdu)
     return -1;
 
-  printf("add option %d (%d bytes)\n", type, len);
+  debug("add option %d (%d bytes)\n", type, len);
   /* Get last option from pdu to calculate the delta. For optcnt ==
    * 0x0F, opt will point at the end marker, so the new option will
    * overwrite it.
@@ -131,7 +128,6 @@ coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const un
     opt_code += COAP_OPT_DELTA(opt);
     opt = options_next(opt);
   }
-  printf("behind last option %p\n", opt);
 
   if ((unsigned char *)pdu->hdr + pdu->max_size <= (unsigned char *)opt) {
     debug("illegal option list\n");
@@ -143,7 +139,6 @@ coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const un
     /* need an additional byte to store the end marker */
     optsize--;
   }
-  printf("have %d bytes\n", optsize);
   /* at this point optsize might be zero */
   
   if ( type < opt_code ) {
@@ -154,7 +149,6 @@ coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const un
   }
 
   cnt = coap_opt_encode(opt, optsize, type - opt_code, data, len);
-  debug("encode wrote %u bytes\n",cnt);
 
   if (!cnt) {
     warn("cannot add option %u\n", type);
@@ -176,7 +170,6 @@ coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const un
 
   pdu->data = (unsigned char *)opt;
   pdu->length = pdu->data - (unsigned char *)pdu->hdr;
-  debug("data starts at %p, pdu start is %p (d: %u)\n", pdu->data, pdu->hdr, pdu->data-(unsigned char *)pdu->hdr);
   return len;
 }
 

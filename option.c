@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "option.h"
+#include "debug.h"
 
 const coap_opt_filter_t COAP_OPT_ALL = 
   { 0xff, 0xff, 0xff };	       /* must be sizeof(coap_opt_filter_t) */
@@ -234,7 +235,6 @@ coap_opt_encode(coap_opt_t *opt, size_t maxlen, unsigned short delta,
   size_t l = 1;
   unsigned short n = 0;
 
-  printf("coap_opt_encode(%p, %d, %u, %p, %d)\n", opt, maxlen, delta, val, length);
   /* option length must not exceed 1034 bytes */
   if (length > 1034) {
     warn("coap_opt_encode(): option length must not exceed 1034 bytes\n");
@@ -261,7 +261,6 @@ coap_opt_encode(coap_opt_t *opt, size_t maxlen, unsigned short delta,
     if (maxlen < length + 1)
       return 0;
 
-    printf("encode delta < 15\n");
     goto encode;
   } 
 
@@ -274,7 +273,6 @@ coap_opt_encode(coap_opt_t *opt, size_t maxlen, unsigned short delta,
     l++;		       /* need one additional byte for 0xf1 */
     *opt++ = 0xf1;
 
-    printf("encode delta < 30\n");
     goto encode;
   } 
 
@@ -302,7 +300,6 @@ coap_opt_encode(coap_opt_t *opt, size_t maxlen, unsigned short delta,
     *opt++ = 0xf2;
     *opt++ = n & 0xff;
 
-    printf("encode delta < 2071\n");
     goto encode;
   }
 
@@ -320,7 +317,6 @@ coap_opt_encode(coap_opt_t *opt, size_t maxlen, unsigned short delta,
   *opt++ = (n >> 8) & 0xff;
   *opt++ = n & 0xff;
 
-  printf("encode delta < 65535\n");
  encode:
   assert(length <= 1034);
   assert(length + l <= maxlen);
