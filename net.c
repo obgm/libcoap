@@ -624,6 +624,80 @@ check_opt_size(coap_opt_t *opt, unsigned char *maxpos) {
   return 0;
 }
 
+/**
+ * Advances *optp to next option if still in PDU.
+ */
+static int
+next_option_safe(coap_opt_t **optp, unsigned char *endptr) {
+  size_t length = 0;
+  coap_opt_t *opt; /* local copy to advance optp only when everything is ok */
+
+  assert(optp); assert(*optp);
+
+  opt = *optp;
+  debug("next_option_safe(%p, %p) (%u bytes)\n", opt, endptr, endptr-opt);
+
+  debug("looking at 0x%02x\n", *opt);
+  if (endptr <= opt) {
+    debug("opt exceeds endptr\n");
+    return 0;
+  }
+
+  if ((*opt & 0xf0) == 0xf0) {
+    /* skip option jump and end-of-options */
+    switch (*opt) {
+    case 0xf0:			/* end-of-options, return to caller */
+      debug("unexpected end-of-options marker\n");
+      return 0;
+    case 0xf1:
+    case 0xf2:
+    case 0xf3:
+      if (opt + (*opt & 0x03) < endptr)
+	opt += *opt & 0x03;
+      else {
+	debug("broken option jump\n");
+	return 0;
+      }
+      debug("handled option jump\n");
+      break;			/* proceed with option */
+    default:
+      debug("found unknown special character %02x in option list\n", **optp);
+      return 0;
+    }
+  }
+  debug("looking at 0x%02x\n", *opt);
+
+  length = *opt & 0x0f;
+
+  if (length == 15) {		/* extended length spec */
+    debug("length nibble is 15\n");
+
+    while (++opt <= endptr && *opt == 0xff && length < 780) {
+      debug("add 255\n");
+      length += 255;
+    }
+
+    if (endptr <= opt)
+      return 0;
+    
+    length += *opt & 0xff;
+    debug("length is %u (opt: %p)\n", length, opt);
+  } else
+    ++opt;			/* skip option type/length byte */
+   
+  debug("looking at 0x%02x (%u bytes left, *endptr-1 is 0x%02x)\n", *opt, endptr-opt, *(endptr-1));
+  opt += length;
+
+  if (opt <= endptr) {
+    debug("advance opt\n");
+    *optp = opt;
+    return 1;
+  } else {
+    debug("cannot advance opt (%p), endptr is %p\n", opt, endptr);
+    return 0;
+  }
+}
+
 int
 coap_read( coap_context_t *ctx ) {
 #ifndef WITH_CONTIKI
@@ -708,15 +782,17 @@ coap_read( coap_context_t *ctx ) {
   memcpy(node->pdu->hdr + 1, buf + 4, bytes_read - 4);
   node->pdu->length = bytes_read;
 
-  /* finally calculate beginning of data block */
+  /* Finally calculate beginning of data block and thereby check integrity
+   * of the PDU structure. */
   {
     coap_opt_t *opt = options_start(node->pdu);
     unsigned char cnt = node->pdu->hdr->optcnt;
 
     /* Note that we cannot use the official options iterator here as
-     * it eats up the fence posts. */
+     * it relies on correct options and option jump encoding. */
     while (cnt && opt) {
       if ((unsigned char *)node->pdu->hdr + node->pdu->max_size <= opt) {
+	/* !(node->pdu->hdr->type & 0x02) */
 	if (node->pdu->hdr->type == COAP_MESSAGE_CON || 
 	    node->pdu->hdr->type == COAP_MESSAGE_NON) {
 	  coap_send_message_type(ctx, &node->remote, node->pdu, 
@@ -737,14 +813,14 @@ coap_read( coap_context_t *ctx ) {
 	--cnt;
       }
 
-      if (cnt &&
-	  !check_opt_size(opt, (unsigned char *)node->pdu->hdr + node->pdu->max_size)) {
+      if (!next_option_safe(&opt, (unsigned char *)node->pdu->hdr 
+			    + node->pdu->max_size)) {
 	debug("drop\n");
 	goto error;
       }
-      opt = options_next(opt);
     }
 
+    debug("set data to %p (pdu ends at %p)\n", (unsigned char *)opt, (unsigned char *)node->pdu->hdr + node->pdu->max_size);
     node->pdu->data = (unsigned char *)opt;
   }
 
