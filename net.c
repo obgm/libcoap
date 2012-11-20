@@ -767,16 +767,10 @@ coap_read( coap_context_t *ctx ) {
   node->pdu->hdr->type = (buf[0] >> 4) & 0x03;
   node->pdu->hdr->optcnt = buf[0] & 0x0f;
   node->pdu->hdr->code = buf[1];
-  node->pdu->hdr->id = ((buf[2] & 0xff) << 8) | (buf[3] & 0xff);
 
-#ifndef NDEBUG  
-  printf("version: %u, type: %u, optcnt:%u, code: %u, id: %u\n",
-	 node->pdu->hdr->version,
-	 node->pdu->hdr->type,
-	 node->pdu->hdr->optcnt,
-	 node->pdu->hdr->code,
-	 node->pdu->hdr->id);
-#endif
+  /* Copy message id in network byte order, so we can easily write the
+   * response back to the network. */
+  memcpy(&node->pdu->hdr->id, buf + 2, 2);
 
   /* append data to pdu structure */
   memcpy(node->pdu->hdr + 1, buf + 4, bytes_read - 4);
@@ -1216,8 +1210,11 @@ coap_dispatch( coap_context_t *context ) {
 	handle_request(context, rcvd);
       else if (COAP_MESSAGE_IS_RESPONSE(rcvd->pdu->hdr))
 	handle_response(context, sent, rcvd);
-      else
+      else {
 	debug("dropped message with invalid code\n");
+	coap_send_message_type(context, &rcvd->remote, rcvd->pdu, 
+				 COAP_MESSAGE_RST);
+      }
     }
     
   cleanup:
