@@ -184,7 +184,7 @@ coap_opt_value(coap_opt_t *opt) {
   while (*++p == 0xff && n++ < 3)
     ;
 
-  return p;
+  return ++p;	       /* point to next byte after length indicator */
 }
 
 size_t
@@ -221,9 +221,10 @@ coap_opt_setlength(coap_opt_t *opt, size_t maxlen, size_t length) {
     if (maxlen <= res)
       return 0;
       
-    opt++;
-    memset(opt, 0xff, res);
-    *opt = length & 0xff;
+    memset(opt, 0xff, res-1);
+    opt[res] = length & 0xff;
+
+    ++res;
   }
   
   return res;
