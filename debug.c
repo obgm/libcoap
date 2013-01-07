@@ -232,41 +232,42 @@ coap_print_addr(const struct __coap_address_t *addr, unsigned char *buf, size_t 
 void
 coap_show_pdu(const coap_pdu_t *pdu) {
   unsigned char buf[COAP_MAX_PDU_SIZE]; /* need some space for output creation */
-  int encode = 0;
+  int encode = 0, have_options = 0;
+  coap_opt_iterator_t opt_iter;
 
-  fprintf(COAP_DEBUG_FD, "v:%d t:%d oc:%d c:%d id:%u", 
+  fprintf(COAP_DEBUG_FD, "v:%d t:%d c:%d id:%u", 
 	  pdu->hdr->version, pdu->hdr->type,
-	  pdu->hdr->optcnt, pdu->hdr->code, ntohs(pdu->hdr->id));
+	  pdu->hdr->code, ntohs(pdu->hdr->id));
 
   /* show options, if any */
-  if (pdu->hdr->optcnt) {
-    coap_opt_iterator_t opt_iter;
-    coap_option_iterator_init((coap_pdu_t *)pdu, &opt_iter, COAP_OPT_ALL);
+  coap_option_iterator_init((coap_pdu_t *)pdu, &opt_iter, COAP_OPT_ALL);
 
-    fprintf(COAP_DEBUG_FD, " o: [");
-    while (coap_option_next(&opt_iter)) {
-
-
-      if (opt_iter.type == COAP_OPTION_URI_PATH ||
-	  opt_iter.type == COAP_OPTION_PROXY_URI ||
-	  opt_iter.type == COAP_OPTION_URI_HOST ||
-	  opt_iter.type == COAP_OPTION_LOCATION_PATH ||
-	  opt_iter.type == COAP_OPTION_LOCATION_QUERY ||
-	  opt_iter.type == COAP_OPTION_URI_PATH ||
-	  opt_iter.type == COAP_OPTION_URI_QUERY) {
-	encode = 0;
-      } else {
-	encode = 1;
-      }
-
-      if (print_readable(COAP_OPT_VALUE(opt_iter.option), 
-			 COAP_OPT_LENGTH(opt_iter.option), 
-			 buf, sizeof(buf), encode ))
-	fprintf(COAP_DEBUG_FD, " %d:'%s',", opt_iter.type, buf);
+  while (coap_option_next(&opt_iter)) {
+    if (!have_options) {
+      have_options = 1;
+      fprintf(COAP_DEBUG_FD, " o: [");
     }
 
-    fprintf(COAP_DEBUG_FD, " ]");
+    if (opt_iter.type == COAP_OPTION_URI_PATH ||
+	opt_iter.type == COAP_OPTION_PROXY_URI ||
+	opt_iter.type == COAP_OPTION_URI_HOST ||
+	opt_iter.type == COAP_OPTION_LOCATION_PATH ||
+	opt_iter.type == COAP_OPTION_LOCATION_QUERY ||
+	  opt_iter.type == COAP_OPTION_URI_PATH ||
+	opt_iter.type == COAP_OPTION_URI_QUERY) {
+      encode = 0;
+    } else {
+      encode = 1;
+    }
+    
+    if (print_readable(COAP_OPT_VALUE(opt_iter.option), 
+		       COAP_OPT_LENGTH(opt_iter.option), 
+		       buf, sizeof(buf), encode ))
+      fprintf(COAP_DEBUG_FD, " %d:'%s',", opt_iter.type, buf);
   }
+
+  if (have_options)
+    fprintf(COAP_DEBUG_FD, " ]");
   
   if (pdu->data < (unsigned char *)pdu->hdr + pdu->length) {
     print_readable(pdu->data, 

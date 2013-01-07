@@ -106,70 +106,50 @@ coap_delete_pdu(coap_pdu_t *pdu) {
 }
 
 int
+coap_add_token(coap_pdu_t *pdu, size_t len, const unsigned char *data) {
+  const size_t HEADERLENGTH = len + 4;
+  if (!pdu || len > 8 || pdu->max_size < HEADERLENGTH)
+    return 0;
+
+  pdu->hdr->token_length = len;
+  if (len)
+    memcpy(pdu->hdr->token, data, len);
+  pdu->max_delta = 0;
+  pdu->length = HEADERLENGTH;
+  pdu->data = NULL;
+
+  return 1;
+}
+
+int
 coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const unsigned char *data) {
-  size_t optsize, cnt;
-  unsigned short opt_code = 0;
+  size_t optsize;
   coap_opt_t *opt;
   
   if (!pdu)
     return -1;
 
-  debug("add option %d (%d bytes)\n", type, len);
-  /* Get last option from pdu to calculate the delta. For optcnt ==
-   * 0x0F, opt will point at the end marker, so the new option will
-   * overwrite it.
-   */
-  opt = options_start(pdu);
-  cnt = pdu->hdr->optcnt;
-  while ((pdu->hdr->optcnt == COAP_OPT_LONG && opt &&
-	  opt < ((unsigned char *)pdu->hdr + pdu->max_size) && 
-	  *opt != COAP_OPT_END)
-	 || cnt--) {
-    opt_code += COAP_OPT_DELTA(opt);
-    opt = options_next(opt);
-  }
-
-  if ((unsigned char *)pdu->hdr + pdu->max_size <= (unsigned char *)opt) {
-    debug("illegal option list\n");
+  if (type < pdu->max_delta) {
+    warn("coap_add_option: options are not in correct order\n");
     return -1;
   }
 
-  optsize = (unsigned char *)pdu->hdr + pdu->max_size - opt;
-  if (pdu->hdr->optcnt + 1 >= COAP_OPT_LONG) {
-    /* need an additional byte to store the end marker */
-    optsize--;
-  }
-  /* at this point optsize might be zero */
-  
-  if ( type < opt_code ) {
-#ifndef NDEBUG
-    coap_log(LOG_WARN, "options not added in correct order\n");
-#endif
+  opt = (unsigned char *)pdu->hdr + pdu->length;
+
+  /* encode option and check length */
+  optsize = coap_opt_encode(opt, pdu->max_size - pdu->length, 
+			    type - pdu->max_delta, data, len);
+
+  if (!optsize) {
+    warn("coap_add_option: cannot add option\n");
+    /* error */
     return -1;
+  } else {
+    pdu->max_delta = type;
+    pdu->length += optsize;
+    pdu->data = NULL;
   }
 
-  cnt = coap_opt_encode(opt, optsize, type - opt_code, data, len);
-
-  if (!cnt) {
-    warn("cannot add option %u\n", type);
-    /* nothing has changed in opt, therefore we do not have to restore
-     * optcnt, data, or end-of-options marker */
-    return -1;
-  }
-
-  opt += cnt;			/* advance opt behind the option */
-  pdu->hdr->optcnt++;		/* can we rely on the compiler to trim
-				 * this down to 4 bits? */
-  assert(pdu->hdr->optcnt <= 15);
-
-  if (pdu->hdr->optcnt == COAP_OPT_LONG) {
-    /* Before calling coap_opt_encode(), we have made sure that the
-     * end-of-options marker fits in, so no new check is required. */
-    *opt++ = COAP_OPT_END;
-  }
-
-  pdu->data = (unsigned char *)opt;
-  pdu->length = pdu->data - (unsigned char *)pdu->hdr;
   return len;
 }
 

@@ -625,68 +625,27 @@ check_opt_size(coap_opt_t *opt, unsigned char *maxpos) {
 }
 
 /**
- * Advances *optp to next option if still in PDU.
+ * Advances *optp to next option if still in PDU. This function 
+ * returns the number of bytes opt has been advanced or @c 0
+ * on error.
  */
-static int
-next_option_safe(coap_opt_t **optp, unsigned char *endptr) {
-  size_t length = 0;
-  coap_opt_t *opt; /* local copy to advance optp only when everything is ok */
+static size_t
+next_option_safe(coap_opt_t **optp, size_t *length) {
+  coap_option_t option;
+  size_t optsize;
 
-  assert(optp); assert(*optp);
+  assert(optp); assert(*optp); 
+  assert(length);
 
-  opt = *optp;
+  optsize = coap_opt_parse(*optp, *length, &option);
+  if (optsize) {
+    assert(*length <= optsize);
 
-  if (endptr <= opt) {
-    debug("opt exceeds endptr\n");
-    return 0;
+    *optp += optsize;
+    *length -= optsize;
   }
 
-  if ((*opt & 0xf0) == 0xf0) {
-    /* skip option jump and end-of-options */
-    switch (*opt) {
-    case 0xf0:			/* end-of-options, return to caller */
-      debug("unexpected end-of-options marker\n");
-      return 0;
-    case 0xf1:
-    case 0xf2:
-    case 0xf3:
-      if (opt + (*opt & 0x03) < endptr)
-	opt += *opt & 0x03;
-      else {
-	debug("broken option jump\n");
-	return 0;
-      }
-      debug("handled option jump\n");
-      break;			/* proceed with option */
-    default:
-      debug("found unknown special character %02x in option list\n", **optp);
-      return 0;
-    }
-  }
-
-  length = *opt & 0x0f;
-
-  if (length == 15) {		/* extended length spec */
-
-    while (++opt <= endptr && *opt == 0xff && length < 780)
-      length += 255;
-
-    if (endptr <= opt)
-      return 0;
-    
-    length += *opt & 0xff;
-  } else
-    ++opt;			/* skip option type/length byte */
-   
-  opt += length;
-
-  if (opt <= endptr) {
-    *optp = opt;
-    return 1;
-  } else {
-    debug("cannot advance opt (%p), endptr is %p\n", opt, endptr);
-    return 0;
-  }
+  return optsize;
 }
 
 int
@@ -732,6 +691,7 @@ coap_read( coap_context_t *ctx ) {
     return -1;
   }
 
+  debug("coap_read: sizeof(coap_hdr_t) is %d\n", sizeof(coap_hdr_t));
   if ( (size_t)bytes_read < sizeof(coap_hdr_t) ) {
     debug("coap_read: discarded invalid frame\n" );
     return -1;
@@ -756,57 +716,50 @@ coap_read( coap_context_t *ctx ) {
 
   node->pdu->hdr->version = buf[0] >> 6;
   node->pdu->hdr->type = (buf[0] >> 4) & 0x03;
-  node->pdu->hdr->optcnt = buf[0] & 0x0f;
+  node->pdu->hdr->token_length = buf[0] & 0x0f;
   node->pdu->hdr->code = buf[1];
+
+  if ((size_t)bytes_read < 
+      sizeof(coap_hdr_t) + node->pdu->hdr->token_length) {
+    debug("coap_read: invalid Token\n");
+    return -1;
+  }
 
   /* Copy message id in network byte order, so we can easily write the
    * response back to the network. */
   memcpy(&node->pdu->hdr->id, buf + 2, 2);
 
-  /* append data to pdu structure */
+  /* append data (including the Token) to pdu structure */
   memcpy(node->pdu->hdr + 1, buf + 4, bytes_read - 4);
   node->pdu->length = bytes_read;
 
   /* Finally calculate beginning of data block and thereby check integrity
    * of the PDU structure. */
   {
+    bytes_read -= (node->pdu->hdr->token_length + 4); /* skip header + token */
     coap_opt_t *opt = options_start(node->pdu);
-    unsigned char cnt = node->pdu->hdr->optcnt;
 
-    /* Note that we cannot use the official options iterator here as
-     * it relies on correct options and option jump encoding. */
-    while (cnt && opt) {
-      if ((unsigned char *)node->pdu->hdr + node->pdu->max_size <= opt) {
-	/* !(node->pdu->hdr->type & 0x02) */
-	if (node->pdu->hdr->type == COAP_MESSAGE_CON || 
-	    node->pdu->hdr->type == COAP_MESSAGE_NON) {
-	  coap_send_message_type(ctx, &node->remote, node->pdu, 
-				 COAP_MESSAGE_RST);
-	  debug("sent RST on malformed message\n");
-	} else {
-	  debug("dropped malformed message\n");
+    while (bytes_read) {
+
+      if (*opt == COAP_PAYLOAD_START) {
+	opt++; bytes_read--;
+
+	if (!bytes_read) {
+	  warn("coap_read: message ending in payload start marker dropped\n");
+	  goto error;
 	}
-      	goto error;
+
+	debug("set data to %p (pdu ends at %p)\n", (unsigned char *)opt, 
+	      (unsigned char *)node->pdu->hdr + node->pdu->length);
+	node->pdu->data = (unsigned char *)opt;
+	break;
       }
 
-      if (node->pdu->hdr->optcnt == COAP_OPT_LONG) {
-	if (*opt == COAP_OPT_END) {
-	  ++opt;
-	  break;
-	}
-      } else {
-	--cnt;
-      }
-
-      if (!next_option_safe(&opt, (unsigned char *)node->pdu->hdr 
-			    + node->pdu->max_size)) {
+      if (!next_option_safe(&opt, (size_t *)&bytes_read)) {
 	debug("drop\n");
 	goto error;
       }
     }
-
-    debug("set data to %p (pdu ends at %p)\n", (unsigned char *)opt, (unsigned char *)node->pdu->hdr + node->pdu->max_size);
-    node->pdu->data = (unsigned char *)opt;
   }
 
   /* and add new node to receive queue */
@@ -829,6 +782,7 @@ coap_read( coap_context_t *ctx ) {
 
   return 0;
  error:
+  /* FIXME: send back RST? */
   coap_delete_node(node);
   return -1;
 }

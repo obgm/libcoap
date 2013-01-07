@@ -153,17 +153,19 @@ typedef int coap_tid_t;
 typedef struct {
   unsigned int version:2;	/* protocol version */
   unsigned int type:2;		/* type flag */
-  unsigned int optcnt:4;	/* number of options following the header */
+  unsigned int token_length:4;	/* length of Token */
   unsigned int code:8;	        /* request method (value 1--10) or response code (value 40-255) */
-  unsigned short id;		/* transaction id */
+  unsigned short id;		/* message id */
+  unsigned char token[];	/* the actual token, if any */
 } coap_hdr_t;
 #else
 typedef struct {
-  unsigned int optcnt:4;	/* number of options following the header */
+  unsigned int token_length:4;	/* length of Token */
   unsigned int type:2;		/* type flag */
   unsigned int version:2;	/* protocol version */
   unsigned int code:8;	        /* request method (value 1--10) or response code (value 40-255) */
   unsigned short id;		/* transaction id (network byte order!) */
+  unsigned char token[];	/* the actual token, if any */
 } coap_hdr_t;
 #endif
 
@@ -176,6 +178,8 @@ typedef struct {
 				 * CoAP message is limited by 0b11110000 marker */
 
 #define COAP_OPT_END 0xF0	/* end marker */
+
+#define COAP_PAYLOAD_START 0xFF	/* payload marker */
 
 /**
  * Structures for more convenient handling of options. (To be used with ordered
@@ -194,11 +198,13 @@ typedef struct {
 /** Header structure for CoAP PDUs */
 
 typedef struct {
-  size_t max_size;			/**< allocated storage for options and data */
+  size_t max_size;	/**< allocated storage for options and data */
+
   coap_hdr_t *hdr;
-  unsigned short length;	/* PDU length (including header, options, data)  */
-  coap_list_t *options;		/* parsed options */
-  unsigned char *data;		/* payload */
+  unsigned short max_delta;	/**< highest option number */
+  unsigned short length;	/**< PDU length (including header, options, data)  */
+  coap_list_t *options;		/**< parsed options */
+  unsigned char *data;		/**< payload */
 } coap_pdu_t;
 
 /** Options in coap_pdu_t are accessed with the macro COAP_OPTION. */
@@ -242,11 +248,28 @@ coap_pdu_t *coap_new_pdu();
 void coap_delete_pdu(coap_pdu_t *);
 
 /**
- * Adds option of given type to pdu that is passed as first parameter. coap_add_option()
- * destroys the PDU's data, so coap_add_data must be called after all options have been
- * added.
+ * Adds token of length @p len to @p pdu. Adding the token destroys
+ * any following contents of the pdu. Hence options and data must be
+ * added after coap_add_token() has been called. In @p pdu, length is
+ * set to @p len + @c 4, and max_delta is set to @c 0.  This funtion
+ * returns @c 0 on error or a value greater than zero on success.
+ *
+ * @param pdu  The PDU where the token is to be added.
+ * @param len  The length of the new token.
+ * @param data The token to add.
+ * @return A value greater than zero on success, or @c 0 on error.
  */
-int coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const unsigned char *data);
+int coap_add_token(coap_pdu_t *pdu, size_t len, const unsigned char *data);
+
+/**
+ * Adds option of given type to pdu that is passed as first
+ * parameter. coap_add_option() destroys the PDU's data, so
+ * coap_add_data() must be called after all options have been added.
+ * As coap_add_token() destroys the options following the token,
+ * the token must be added before coap_add_option() is called.
+ */
+int coap_add_option(coap_pdu_t *pdu, unsigned short type, 
+		    unsigned int len, const unsigned char *data);
 
 /**
  * Adds given data to the pdu that is passed as first parameter. Note that the PDU's
