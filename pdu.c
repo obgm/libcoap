@@ -51,7 +51,6 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   /* data points after the header; when options are added, the data
      pointer is moved to the back */
   pdu->length = sizeof(coap_hdr_t);
-  pdu->data = (unsigned char *)pdu->hdr + pdu->length;
 }
 
 coap_pdu_t *
@@ -155,27 +154,30 @@ coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const un
 int
 coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
   assert(pdu);
+  assert(pdu->data == NULL);
 
-  if ( pdu->length + len > pdu->max_size ) {
-#ifndef NDEBUG
- coap_log(LOG_WARN, "coap_add_data: cannot add: data too large for PDU\n");
-#endif
+  if (len == 0)
+    return 1;
+
+  if (pdu->length + len + 1 > pdu->max_size) {
+    warn("coap_add_data: cannot add: data too large for PDU\n");
     return 0;
   }
 
-  memcpy( (unsigned char *)pdu->hdr + pdu->length, data, len );
-  pdu->length += len;
+  pdu->data = (unsigned char *)pdu->hdr + pdu->length;
+  *pdu->data = COAP_PAYLOAD_START;
+  pdu->data++;
+
+  memcpy(pdu->data, data, len);
+  pdu->length += len + 1;
   return 1;
 }
 
 int
 coap_get_data(coap_pdu_t *pdu, size_t *len, unsigned char **data) {
-  if ( !pdu )
-    return 0;
+  assert(pdu);
 
-  if ( pdu->data < (unsigned char *)pdu->hdr + pdu->length ) {
-    /* pdu contains data */
-
+  if (pdu->data) {
     *len = (unsigned char *)pdu->hdr + pdu->length - pdu->data;
     *data = pdu->data;
   } else {			/* no data, clear everything */

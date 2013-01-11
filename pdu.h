@@ -62,9 +62,9 @@
 #define COAP_OPTION_MAXAGE       14 /* E, uint, 0--4 B, 60 Seconds */
 #define COAP_OPTION_URI_QUERY    15 /* C, String, 1-255 B, (none) */
 #define COAP_OPTION_ACCEPT       16 /* E, uint,   0-2 B, (none) */
-#define COAP_OPTION_TOKEN        19 /* C, opaque, 1-8 B, empty */
 #define COAP_OPTION_LOCATION_QUERY 20 /* E, String,   0-255 B, (none) */
 #define COAP_OPTION_PROXY_URI    35 /* C, String, 1-1034 B, (none) */
+#define COAP_OPTION_PROXY_SCHEME 39 /* C, String, 1-255 B, (none) */
 
 /* option types from draft-hartke-coap-observe-07 */
 
@@ -75,7 +75,7 @@
 #define COAP_OPTION_BLOCK2       23 /* C, uint, 0--3 B, (none) */
 #define COAP_OPTION_BLOCK1       27 /* C, uint, 0--3 B, (none) */
 
-#define COAP_MAX_OPT             35 /**< the highest option number we know */
+#define COAP_MAX_OPT             39 /**< the highest option number we know */
 
 /* CoAP result codes (HTTP-Code / 100 * 40 + HTTP-Code % 100) */
 
@@ -287,8 +287,9 @@ size_t coap_add_option(coap_pdu_t *pdu, unsigned short type,
 		       unsigned int len, const unsigned char *data);
 
 /**
- * Adds given data to the pdu that is passed as first parameter. Note that the PDU's
- * data is destroyed by coap_add_option().
+ * Adds given data to the pdu that is passed as first parameter. Note
+ * that the PDU's data is destroyed by coap_add_option(). coap_add_data()
+ * must be called only once per PDU, otherwise the result is undefined.
  */
 int coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data);
 
