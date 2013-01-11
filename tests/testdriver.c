@@ -7,6 +7,7 @@
 
 #include "test_uri.h"
 #include "test_options.h"
+#include "test_pdu.h"
 
 int
 main(int argc, char **argv) {
@@ -18,8 +19,9 @@ main(int argc, char **argv) {
     return -2;
   }
 
-  t_init_uri_tests();
-  t_init_option_tests();
+  /* t_init_uri_tests(); */
+  /* t_init_option_tests(); */
+  t_init_pdu_tests();
 
   CU_basic_set_mode(run_mode);
   result = CU_basic_run_tests();

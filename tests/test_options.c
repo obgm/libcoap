@@ -12,6 +12,10 @@
 #include <coap.h>
 #include "test_options.h"
 
+/************************************************************************
+ ** decoder tests
+ ************************************************************************/
+
 void
 t_parse_option1(void) {
   /* delta == 0, length == 0, value == 0 */
@@ -221,12 +225,125 @@ t_parse_option14(void) {
   CU_ASSERT(option.value == &data[4]);
 }
 
+/************************************************************************
+ ** encoder tests
+ ************************************************************************/
+
+void
+t_encode_option1(void) {
+  char teststr[] = { 0x00 };
+  unsigned char buf[40];
+  size_t result;
+  
+  result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 0, 0);
+  CU_ASSERT(result == sizeof(teststr));
+  
+  CU_ASSERT(memcmp(buf, teststr, result) == 0);
+}
+
+void
+t_encode_option2(void) {
+  char teststr[] = { 0x5d, 0xff };
+  unsigned char buf[40];
+  size_t result;
+  
+  result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 5, 268);
+  CU_ASSERT(result == sizeof(teststr));
+  
+  CU_ASSERT(memcmp(buf, teststr, result) == 0);
+}
+
+void
+t_encode_option3(void) {
+  char teststr[] = { 0xd1, 0x01 };
+  unsigned char buf[40];
+  size_t result;
+  
+  result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 14, 1);
+  CU_ASSERT(result == sizeof(teststr));
+
+  CU_ASSERT(memcmp(buf, teststr, result) == 0);
+}
+
+void
+t_encode_option4(void) {
+  char teststr[] = { 0xdd, 0xff, 0xab };
+  unsigned char buf[40];
+  size_t result;
+  
+  result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 268, 184);
+  CU_ASSERT(result == sizeof(teststr));
+
+  CU_ASSERT(memcmp(buf, teststr, result) == 0);
+}
+
+void
+t_encode_option5(void) {
+  char teststr[] = { 0xed, 0x13, 0x00, 0xff };
+  unsigned char buf[40];
+  size_t result;
+  
+  result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 5133, 268);
+  CU_ASSERT(result == sizeof(teststr));
+
+  CU_ASSERT(memcmp(buf, teststr, result) == 0);
+}
+
+void
+t_encode_option6(void) {
+  char teststr[] = { 0xee, 0xfe, 0xf2, 0xfe, 0xf2 };
+  unsigned char buf[40];
+  size_t result;
+  
+  result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 65535, 65535);
+  CU_ASSERT(result == sizeof(teststr));
+
+  CU_ASSERT(memcmp(buf, teststr, result) == 0);
+}
+
+void
+t_encode_option7(void) {
+  char teststr[] = { 0x35, 'v', 'a', 'l', 'u', 'e' };
+  const size_t valoff = 1;
+  unsigned char buf[40];
+  size_t result;
+  
+  result = coap_opt_encode((coap_opt_t *)buf, sizeof(buf), 3, 
+			   (unsigned char *)teststr + valoff, 
+			   sizeof(teststr) - valoff);
+
+  CU_ASSERT(result == sizeof(teststr));
+
+  CU_ASSERT(memcmp(buf, teststr, result) == 0);
+}
+
+void
+t_encode_option8(void) {
+  /* value does not fit in message buffer */
+  unsigned char buf[40];
+  size_t result;
+  
+  result = coap_opt_encode((coap_opt_t *)buf, 8, 15, 
+			   (unsigned char *)"something", 9);
+
+  CU_ASSERT(result == 0);
+
+  result = coap_opt_encode((coap_opt_t *)buf, 1, 15, 
+			   (unsigned char *)"something", 9);
+
+  CU_ASSERT(result == 0);
+}
+
+/************************************************************************
+ ** initialization 
+ ************************************************************************/
+
 CU_pSuite
 t_init_option_tests(void) {
-  CU_pSuite suite;
+  CU_pSuite suite[2];
 
-  suite = CU_add_suite("option parser", NULL, NULL);
-  if (!suite) {			/* signal error */
+  suite[0] = CU_add_suite("option parser", NULL, NULL);
+  if (!suite[0]) {			/* signal error */
     fprintf(stderr, "W: cannot add option parser test suite (%s)\n", 
 	    CU_get_error_msg());
 
@@ -234,7 +351,7 @@ t_init_option_tests(void) {
   }
 
 #define OPTION_TEST(n,s)						      \
-  if (!CU_add_test(suite, s, t_parse_option##n)) {	      \
+  if (!CU_add_test(suite[0], s, t_parse_option##n)) {	      \
     fprintf(stderr, "W: cannot add option parser test (%s)\n",	      \
 	    CU_get_error_msg());				      \
   }
@@ -254,17 +371,27 @@ t_init_option_tests(void) {
   OPTION_TEST(13, "parse option #13");
   OPTION_TEST(14, "parse option #14");
 
-#if 0
-  if (!CU_add_test(suite, "parse delta", t_parse_delta)) {
-    fprintf(stderr, "W: cannot add option delta test (%s)\n",
+  if ((suite[1] = CU_add_suite("option encoder", NULL, NULL))) {
+#define OPTION_ENCODER_TEST(n,s)			      \
+    if (!CU_add_test(suite[1], s, t_encode_option##n)) {		      \
+      fprintf(stderr, "W: cannot add option encoder test (%s)\n",     \
+	      CU_get_error_msg());				      \
+    }
+
+    OPTION_ENCODER_TEST(1, "encode option #1");
+    OPTION_ENCODER_TEST(2, "encode option #2");
+    OPTION_ENCODER_TEST(3, "encode option #3");
+    OPTION_ENCODER_TEST(4, "encode option #4");
+    OPTION_ENCODER_TEST(5, "encode option #5");
+    OPTION_ENCODER_TEST(6, "encode option #6");
+    OPTION_ENCODER_TEST(7, "encode option #7");
+    OPTION_ENCODER_TEST(8, "encode option #8");
+    
+  } else {
+    fprintf(stderr, "W: cannot add option encoder test suite (%s)\n", 
 	    CU_get_error_msg());
   }
-  
-  if (!CU_add_test(suite, "parse option length", t_parse_length)) {
-    fprintf(stderr, "W: cannot add option length test (%s)\n",
-	    CU_get_error_msg());
-  }
-#endif  
+
   return suite;
 }
 

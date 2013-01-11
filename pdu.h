@@ -248,6 +248,20 @@ coap_pdu_t *coap_new_pdu();
 void coap_delete_pdu(coap_pdu_t *);
 
 /**
+ * Parses @p data into the CoAP PDU structure given in @p result. This
+ * function returns @c 0 on error or a number greater than zero on
+ * success.
+ *
+ * @param data   The raw data to parse as CoAP PDU
+ * @param length The actual size of @p data
+ * @param result The PDU structure to fill. Note that the structure must
+ *               provide space for at least @p length bytes to hold the
+ *               entire CoAP PDU.
+ * @return A value greater than zero on success or @c 0 on error.
+ */
+int coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *result);
+
+/**
  * Adds token of length @p len to @p pdu. Adding the token destroys
  * any following contents of the pdu. Hence options and data must be
  * added after coap_add_token() has been called. In @p pdu, length is
@@ -267,9 +281,10 @@ int coap_add_token(coap_pdu_t *pdu, size_t len, const unsigned char *data);
  * coap_add_data() must be called after all options have been added.
  * As coap_add_token() destroys the options following the token,
  * the token must be added before coap_add_option() is called.
+ * This function returns the number of bytes written or @c 0 on error.
  */
-int coap_add_option(coap_pdu_t *pdu, unsigned short type, 
-		    unsigned int len, const unsigned char *data);
+size_t coap_add_option(coap_pdu_t *pdu, unsigned short type, 
+		       unsigned int len, const unsigned char *data);
 
 /**
  * Adds given data to the pdu that is passed as first parameter. Note that the PDU's

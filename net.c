@@ -624,30 +624,6 @@ check_opt_size(coap_opt_t *opt, unsigned char *maxpos) {
   return 0;
 }
 
-/**
- * Advances *optp to next option if still in PDU. This function 
- * returns the number of bytes opt has been advanced or @c 0
- * on error.
- */
-static size_t
-next_option_safe(coap_opt_t **optp, size_t *length) {
-  coap_option_t option;
-  size_t optsize;
-
-  assert(optp); assert(*optp); 
-  assert(length);
-
-  optsize = coap_opt_parse(*optp, *length, &option);
-  if (optsize) {
-    assert(*length <= optsize);
-
-    *optp += optsize;
-    *length -= optsize;
-  }
-
-  return optsize;
-}
-
 int
 coap_read( coap_context_t *ctx ) {
 #ifndef WITH_CONTIKI
@@ -714,52 +690,9 @@ coap_read( coap_context_t *ctx ) {
   memcpy(&node->local, &dst, sizeof(coap_address_t));
   memcpy(&node->remote, &src, sizeof(coap_address_t));
 
-  node->pdu->hdr->version = buf[0] >> 6;
-  node->pdu->hdr->type = (buf[0] >> 4) & 0x03;
-  node->pdu->hdr->token_length = buf[0] & 0x0f;
-  node->pdu->hdr->code = buf[1];
-
-  if ((size_t)bytes_read < 
-      sizeof(coap_hdr_t) + node->pdu->hdr->token_length) {
-    debug("coap_read: invalid Token\n");
-    return -1;
-  }
-
-  /* Copy message id in network byte order, so we can easily write the
-   * response back to the network. */
-  memcpy(&node->pdu->hdr->id, buf + 2, 2);
-
-  /* append data (including the Token) to pdu structure */
-  memcpy(node->pdu->hdr + 1, buf + 4, bytes_read - 4);
-  node->pdu->length = bytes_read;
-
-  /* Finally calculate beginning of data block and thereby check integrity
-   * of the PDU structure. */
-  {
-    bytes_read -= (node->pdu->hdr->token_length + 4); /* skip header + token */
-    coap_opt_t *opt = options_start(node->pdu);
-
-    while (bytes_read) {
-
-      if (*opt == COAP_PAYLOAD_START) {
-	opt++; bytes_read--;
-
-	if (!bytes_read) {
-	  warn("coap_read: message ending in payload start marker dropped\n");
-	  goto error;
-	}
-
-	debug("set data to %p (pdu ends at %p)\n", (unsigned char *)opt, 
-	      (unsigned char *)node->pdu->hdr + node->pdu->length);
-	node->pdu->data = (unsigned char *)opt;
-	break;
-      }
-
-      if (!next_option_safe(&opt, (size_t *)&bytes_read)) {
-	debug("drop\n");
-	goto error;
-      }
-    }
+  if (!coap_pdu_parse(buf, bytes_read, node->pdu)) {
+    warn("discard malformed PDU");
+    goto error;
   }
 
   /* and add new node to receive queue */
