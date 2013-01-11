@@ -237,13 +237,14 @@ coap_new_context(const coap_address_t *listen_addr) {
   prng((unsigned char *)&c->message_id, sizeof(unsigned short));
 
   /* register the critical options that we know */
-  coap_register_option(c, COAP_OPTION_CONTENT_TYPE);
-  coap_register_option(c, COAP_OPTION_PROXY_URI);
+  coap_register_option(c, COAP_OPTION_IF_MATCH);
   coap_register_option(c, COAP_OPTION_URI_HOST);
+  coap_register_option(c, COAP_OPTION_IF_NONE_MATCH);
   coap_register_option(c, COAP_OPTION_URI_PORT);
   coap_register_option(c, COAP_OPTION_URI_PATH);
-  coap_register_option(c, COAP_OPTION_TOKEN);
   coap_register_option(c, COAP_OPTION_URI_QUERY);
+  coap_register_option(c, COAP_OPTION_PROXY_URI);
+  coap_register_option(c, COAP_OPTION_PROXY_SCHEME);
 
 #ifndef WITH_CONTIKI
   c->sockfd = socket(listen_addr->addr.sa.sa_family, SOCK_DGRAM, 0);
@@ -585,13 +586,10 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
   /* Check if subscriptions exist that should be canceled after
      COAP_MAX_NOTIFY_FAILURES */
   if (node->pdu->hdr->code >= 64) {
-    coap_opt_iterator_t opt_iter;
     str token = { 0, NULL };
 
-    if (coap_check_option(node->pdu, COAP_OPTION_TOKEN, &opt_iter)) {
-      token.length = COAP_OPT_LENGTH(opt_iter.option);
-      token.s = COAP_OPT_VALUE(opt_iter.option);
-    }
+    token.length = node->pdu->hdr->token_length;
+    token.s = node->pdu->hdr->token;
 
     coap_handle_failed_notify(context, &node->remote, &token);
   }
@@ -690,7 +688,7 @@ coap_read( coap_context_t *ctx ) {
   memcpy(&node->local, &dst, sizeof(coap_address_t));
   memcpy(&node->remote, &src, sizeof(coap_address_t));
 
-  if (!coap_pdu_parse(buf, bytes_read, node->pdu)) {
+if (!coap_pdu_parse((unsigned char *)buf, bytes_read, node->pdu)) {
     warn("discard malformed PDU");
     goto error;
   }
@@ -771,16 +769,22 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
 			coap_opt_filter_t opts) {
   coap_opt_iterator_t opt_iter;
   coap_pdu_t *response;
-  size_t size = sizeof(coap_hdr_t) + 4; /* some bytes for fence-post options */
+  size_t size = sizeof(coap_hdr_t) + request->hdr->token_length;
+#if 0
+#if COAP_ERROR_PHRASE_LENGTH > 0
   unsigned char buf[2];
+#endif
+#endif
   int type; 
 
+#if 0
 #if COAP_ERROR_PHRASE_LENGTH > 0
   char *phrase = coap_response_phrase(code);
 
   /* Need some more space for the error phrase and the Content-Type option */
   if (phrase)
     size += strlen(phrase) + 2;
+#endif
 #endif
 
   assert(request);
@@ -794,7 +798,6 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
    * request. We always need the Token, for 4.02 the unknown critical
    * options must be included as well. */
   coap_option_clrb(opts, COAP_OPTION_CONTENT_TYPE); /* we do not want this */
-  coap_option_setb(opts, COAP_OPTION_TOKEN);
 
   coap_option_iterator_init(request, &opt_iter, opts);
 
@@ -804,11 +807,16 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
   /* Now create the response and fill with options and payload data. */
   response = coap_pdu_init(type, code, request->hdr->id, size);
   if (response) {
+#if 0
 #if COAP_ERROR_PHRASE_LENGTH > 0
     if (phrase)
-      coap_add_option(response, COAP_OPTION_CONTENT_TYPE, 
+      coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
 		      coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
 #endif
+#endif
+    /* copy token */
+    memcpy(response->hdr->token, request->hdr->token, 
+	   request->hdr->token_length);
 
     /* copy all options */
     coap_option_iterator_init(request, &opt_iter, opts);
@@ -817,9 +825,11 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
 		      COAP_OPT_LENGTH(opt_iter.option),
 		      COAP_OPT_VALUE(opt_iter.option));
 
+#if 0
 #if COAP_ERROR_PHRASE_LENGTH > 0
     if (phrase)
       coap_add_data(response, strlen(phrase), (unsigned char *)phrase);
+#endif
 #endif
   }
 
@@ -830,7 +840,6 @@ coap_pdu_t *
 wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   coap_pdu_t *resp;
   coap_opt_iterator_t opt_iter;
-  coap_opt_t *token;
   size_t len;
   unsigned char buf[2];
 
@@ -842,14 +851,11 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   if (!resp)
     return NULL;
 
+  memcpy(resp->hdr->token, request->hdr->token, request->hdr->token_length);
+
   /* add Content-Type */
   coap_add_option(resp, COAP_OPTION_CONTENT_TYPE,
      coap_encode_var_bytes(buf, COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf);
-  
-  token = coap_check_option(request, COAP_OPTION_TOKEN, &opt_iter);
-  if (token)
-    coap_add_option(resp, COAP_OPTION_TOKEN, 
-		    COAP_OPT_LENGTH(token), COAP_OPT_VALUE(token));
   
   /* set payload of response */
   len = resp->max_size - resp->length;
@@ -877,7 +883,6 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
   coap_key_t key;
 
   coap_option_filter_clear(opt_filter);
-  coap_option_setb(opt_filter, COAP_OPTION_TOKEN); /* we always need the token */
   
   /* try to find the resource from the request URI */
   coap_hash_request_uri(node->pdu, key);
@@ -935,13 +940,10 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 			     : COAP_MESSAGE_NON,
 			     0, node->pdu->hdr->id, COAP_MAX_PDU_SIZE);
     if (response) {
-      coap_opt_iterator_t opt_iter;
       str token = { 0, NULL };
 
-      if (coap_check_option(node->pdu, COAP_OPTION_TOKEN, &opt_iter)) {
-	token.length = COAP_OPT_LENGTH(opt_iter.option);
-	token.s = COAP_OPT_VALUE(opt_iter.option);
-      }
+      token.length = node->pdu->hdr->token_length;
+      token.s = node->pdu->hdr->token;
 
       h(context, resource, &node->remote, node->pdu, &token, response);
       if (response->hdr->type != COAP_MESSAGE_NON ||
