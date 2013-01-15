@@ -48,8 +48,7 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   pdu->hdr = (coap_hdr_t *)((unsigned char *)pdu + sizeof(coap_pdu_t));
   pdu->hdr->version = COAP_DEFAULT_VERSION;
 
-  /* data points after the header; when options are added, the data
-     pointer is moved to the back */
+  /* data is NULL unless explicitly set by coap_add_data() */
   pdu->length = sizeof(coap_hdr_t);
 }
 
@@ -161,6 +160,7 @@ coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
 
   if (pdu->length + len + 1 > pdu->max_size) {
     warn("coap_add_data: cannot add: data too large for PDU\n");
+    assert(pdu->data == NULL);
     return 0;
   }
 
@@ -176,6 +176,8 @@ coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
 int
 coap_get_data(coap_pdu_t *pdu, size_t *len, unsigned char **data) {
   assert(pdu);
+  assert(len);
+  assert(data);
 
   if (pdu->data) {
     *len = (unsigned char *)pdu->hdr + pdu->length - pdu->data;
@@ -185,7 +187,7 @@ coap_get_data(coap_pdu_t *pdu, size_t *len, unsigned char **data) {
     *data = NULL;
   }
 
-  return 1;
+  return *data != NULL;
 }
 
 #ifndef SHORT_ERROR_RESPONSE
@@ -228,46 +230,6 @@ coap_response_phrase(unsigned char code) {
       return coap_error[i].phrase;
   }
   return NULL;
-}
-#endif
-
-#if 0
-int
-coap_get_request_uri(coap_pdu_t *pdu, coap_uri_t *result) {
-  coap_opt_t *opt;
-  coap_opt_iterator_t opt_iter;
-  
-  if (!pdu || !result)
-    return 0;
-
-  memset(result, 0, sizeof(*result));
-    
-  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_HOST, &opt_iter)))
-    COAP_SET_STR(&result->host, COAP_OPT_LENGTH(*opt), COAP_OPT_VALUE(*opt));
-
-  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_PORT, &opt_iter)))
-    result->port = 
-      coap_decode_var_bytes(COAP_OPT_VALUE(*opt), COAP_OPT_LENGTH(*opt));
-  else
-    result->port = COAP_DEFAULT_PORT;
-
-  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_PATH, &opt_iter))) {
-    result->path.s = COAP_OPT_VALUE(*opt);
-    result->path.length = COAP_OPT_LENGTH(*opt);
-
-    while (coap_option_next(&opt_iter) && opt_iter.type == COAP_OPTION_URI_PATH) 
-      result->path.length += COAP_OPT_SIZE(*opt_iter.option);
-  }
-
-  if ((opt = coap_check_option(pdu, COAP_OPTION_URI_QUERY, &opt_iter))) {
-    result->query.s = COAP_OPT_VALUE(*opt);
-    result->query.length = COAP_OPT_LENGTH(*opt);
-
-    while (coap_option_next(&opt_iter) && opt_iter.type == COAP_OPTION_URI_QUERY) 
-      result->query.length += COAP_OPT_SIZE(*opt_iter.option);
-  }
-
-  return 1;
 }
 #endif
 

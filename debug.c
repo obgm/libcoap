@@ -104,24 +104,21 @@ print_readable( const unsigned char *data, unsigned int len,
   const unsigned char hex[] = "0123456789ABCDEF";
   unsigned int cnt = 0;
 
-  if (len == 0) {
-    *result++ = '\\';
-    *result++ = 'x';
-    *result++ = hex[0];
-    cnt += 3;
-    goto finish;
-  }
+  if (buflen == 0)
+    return 0;
 
-  while ( len && (cnt < buflen-1) ) {
-    if ( !encode_always && isprint( *data ) ) {
+  while (len) {
+    if (!encode_always && isprint(*data)) {
+      if (cnt == buflen)
+	break;
       *result++ = *data;
       ++cnt;
     } else {
-      if ( cnt+4 < buflen-1 ) {
+      if (cnt+4 < buflen) {
 	*result++ = '\\';
 	*result++ = 'x';
 	*result++ = hex[(*data & 0xf0) >> 4];
-	*result++ = hex[*data & 0x0f ];
+	*result++ = hex[*data & 0x0f];
 	cnt += 4;
       } else
 	break;
@@ -129,8 +126,6 @@ print_readable( const unsigned char *data, unsigned int len,
 
     ++data; --len;
   }
-
- finish:
 
   *result = '\0';
   return cnt;

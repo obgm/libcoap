@@ -203,7 +203,6 @@ typedef struct {
   coap_hdr_t *hdr;
   unsigned short max_delta;	/**< highest option number */
   unsigned short length;	/**< PDU length (including header, options, data)  */
-  coap_list_t *options;		/**< parsed options */
   unsigned char *data;		/**< payload */
 } coap_pdu_t;
 
@@ -299,18 +298,5 @@ int coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data);
  * destroyed with the pdu.
  */
 int coap_get_data(coap_pdu_t *pdu, size_t *len, unsigned char **data);
-
-#if 0
-/* I don't think this is needed */
-
-/**
- * Fills the given coap_uri_t object with the request URI components from
- * the PDU.
- * @param pdu the PDU
- * @param result the URI object to update
- * @return 1 if result has been updated, 0 otherwise, i.e. in case of error
- */
-int coap_get_request_uri(coap_pdu_t *pdu, coap_uri_t *result);
-#endif
 
 #endif /* _PDU_H_ */
