@@ -392,6 +392,6 @@ t_init_option_tests(void) {
 	    CU_get_error_msg());
   }
 
-  return suite;
+  return suite[0];
 }
 
