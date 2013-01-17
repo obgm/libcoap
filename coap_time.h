@@ -23,6 +23,26 @@
  * @{
  */
 
+#ifdef WITH_LWIP
+
+typedef int coap_tick_t;
+
+static inline void coap_ticks_impl(coap_tick_t *t)
+{
+	/* FIXME: defunct implementation to make things compile */
+	*t = 0;
+}
+
+static inline void coap_clock_init_impl(void)
+{
+	#warning "cannot initialize clock"
+}
+
+#define coap_clock_init coap_clock_init_impl
+
+#define coap_ticks coap_ticks_impl
+
+#endif
 #ifdef WITH_CONTIKI
 #include "clock.h"
 
@@ -48,14 +68,15 @@ contiki_ticks_impl(coap_tick_t *t) {
 
 #define coap_ticks contiki_ticks_impl
 
-#else /* WITH_CONTIKI */
+#endif /* WITH_CONTIKI */
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
 typedef unsigned int coap_tick_t; 
 
 #define COAP_TICKS_PER_SECOND 1024
 
 /** Set at startup to initialize the internal clock (time in seconds). */
 extern time_t clock_offset;
-#endif
+#endif /* neither contiki nor lwip */
 
 #ifndef coap_clock_init
 static inline void
