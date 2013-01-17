@@ -32,6 +32,10 @@
 #include <sys/time.h>
 #endif
 
+#ifdef WITH_LWIP
+#include <lwip/ip_addr.h>
+#endif
+
 #include "option.h"
 #include "address.h"
 #include "prng.h"
@@ -100,14 +104,21 @@ typedef struct coap_context_t {
    * to sendqueue_basetime. */
   coap_tick_t sendqueue_basetime;
   coap_queue_t *sendqueue, *recvqueue;
-#ifndef WITH_CONTIKI
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
   int sockfd;			/**< send/receive socket */
-#else /* WITH_CONTIKI */
+#endif /* neither contiki nor lwip */
+#ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;	/**< uIP connection object */
   
   struct etimer retransmit_timer; /**< fires when the next packet must be sent */
   struct etimer notify_timer;     /**< used to check resources periodically */
 #endif /* WITH_CONTIKI */
+#ifdef WITH_LWIP
+  struct udp_pcb *pcb; /**< the underlying lwIP UDP PCB */
+  struct pbuf *pending_package; /**< pbuf containing the last received package if not handled yet. This is only used to pass the package from the udp_recv callback into the coap_read function, which frees the pbuf and clears this field. */
+  ip_addr_t pending_address; /**< the address associated with pending_package */
+  u16_t pending_port; /**< the port associated with pending_package */
+#endif /* WITH_LWIP */
 
   /**
    * The last message id that was used is stored in this field.  The

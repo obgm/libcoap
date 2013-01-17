@@ -29,6 +29,11 @@
 #include "endian.h"
 #endif
 
+#ifdef WITH_LWIP
+#include <lwip/pbuf.h>
+#include <lwip/udp.h>
+#endif
+
 #include "debug.h"
 #include "mem.h"
 #include "str.h"
@@ -38,7 +43,7 @@
 #include "encode.h"
 #include "net.h"
 
-#ifndef WITH_CONTIKI
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
 
 time_t clock_offset;
 
@@ -51,7 +56,8 @@ static inline void
 coap_free_node(coap_queue_t *node) {
   coap_free(node);
 }
-#else /* WITH_CONTIKI */
+#endif /* neither contiki nor lwip */
+#ifdef WITH_CONTIKI
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT
 # endif /* DEBUG */
@@ -84,6 +90,29 @@ coap_free_node(coap_queue_t *node) {
   memb_free(&node_storage, node);
 }
 #endif /* WITH_CONTIKI */
+#ifdef WITH_LWIP
+
+/** Callback to udp_recv when using lwIP. Gets called by lwIP on arriving
+ * packages, places a reference in context->pending_package, and calls
+ * coap_read to process the package. Thus, coap_read needs not be called in
+ * lwIP main loops. (When modifying this for thread-like operation, ie. if you
+ * remove the coap_read call from this, make sure that coap_read gets a chance
+ * to run before this callback is entered the next time.)
+ */
+static void received_package(void *arg, struct udp_pcb *upcb, struct pbuf *p, ip_addr_t *addr, u16_t port)
+{
+  struct coap_context_t *context = (coap_context_t *)arg;
+
+  LWIP_ASSERT("pending_package was not cleared.\n", context->pending_package != NULL);
+
+  context->pending_package = p; /* we don't free it, coap_read has to do that */
+  context->pending_address.addr = addr->addr; /* FIXME: this has to become address-type independent, probably there'll be an lwip function for that */
+  context->pending_port = port;
+
+  coap_read(context);
+}
+
+#endif /* WITH_LWIP */
 
 int print_wellknown(coap_context_t *, unsigned char *, size_t *, coap_opt_t *);
 
@@ -206,12 +235,20 @@ is_wkc(coap_key_t k) {
 }
 #endif
 
+#ifdef WITH_LWIP
+void
+coap_init_context(
+  coap_context_t *c,
+#else
 coap_context_t *
-coap_new_context(const coap_address_t *listen_addr) {
-#ifndef WITH_CONTIKI
+coap_new_context(
+#endif
+  const coap_address_t *listen_addr) {
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
   coap_context_t *c = coap_malloc( sizeof( coap_context_t ) );
   int reuse = 1;
-#else /* WITH_CONTIKI */
+#endif /* neither contiki nor lwip */
+#ifdef WITH_CONTIKI
   coap_context_t *c;
 
   if (initialized)
@@ -224,7 +261,11 @@ coap_new_context(const coap_address_t *listen_addr) {
   }
 
   coap_clock_init();
+#ifdef WITH_LWIP
+  prng_init(LWIP_RAND());
+#else /* WITH_LWIP */
   prng_init((unsigned long)listen_addr ^ clock_offset);
+#endif /* WITH_LWIP */
 
 #ifndef WITH_CONTIKI
   if ( !c ) {
@@ -257,7 +298,7 @@ coap_new_context(const coap_address_t *listen_addr) {
   coap_register_option(c, COAP_OPTION_PROXY_URI);
   coap_register_option(c, COAP_OPTION_PROXY_SCHEME);
 
-#ifndef WITH_CONTIKI
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
   c->sockfd = socket(listen_addr->addr.sa.sa_family, SOCK_DGRAM, 0);
   if ( c->sockfd < 0 ) {
 #ifndef NDEBUG
@@ -287,7 +328,8 @@ coap_new_context(const coap_address_t *listen_addr) {
   coap_free( c );
   return NULL;
 
-#else /* WITH_CONTIKI */
+#endif /* neither contiki nor lwip */
+#ifdef WITH_CONTIKI
   c->conn = udp_new(NULL, 0, NULL);
   udp_bind(c->conn, listen_addr->port);
   
@@ -302,10 +344,22 @@ coap_new_context(const coap_address_t *listen_addr) {
   PROCESS_CONTEXT_END(&coap_retransmit_process);
   return c;
 #endif /* WITH_CONTIKI */
+#ifdef WITH_LWIP
+  c->pcb = udp_new();
+  /* hard assert: this is not expected to fail dynamically */
+  LWIP_ASSERT("Failed to allocate PCB for CoAP\n", c->pcb != NULL);
+
+  udp_recv(c->pcb, received_package, (void*)c);
+  udp_bind(c->pcb, &listen_addr->addr, listen_addr->port);
+#endif
 }
 
 void
 coap_free_context( coap_context_t *context ) {
+#ifdef WITH_LWIP
+  /* FIXME */
+  LWIP_ASSERT("We don't free contexts.\n", 0);
+#else /* WITH_LWIP */
 #ifndef WITH_CONTIKI
   coap_resource_t *res;
 #ifndef COAP_RESOURCES_NOHASH
@@ -334,6 +388,7 @@ coap_free_context( coap_context_t *context ) {
   memset(&the_coap_context, 0, sizeof(coap_context_t));
   initialized = 0;
 #endif /* WITH_CONTIKI */
+#endif /* WITH_LWIP */
 }
 
 int
@@ -381,7 +436,7 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
   /* Compare the complete address structure in case of IPv4. For IPv6,
    * we need to look at the transport address only. */
 
-#ifndef WITH_CONTIKI
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
   switch (peer->addr.sa.sa_family) {
   case AF_INET:
     coap_hash((const unsigned char *)&peer->addr.sa, peer->size, h);
@@ -395,10 +450,11 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
   default:
     return;
   }
-#else /* WITH_CONTIKI */
+#else /* neither contiki nor lwip */
+    /* FIXME: with lwip, we can do better */
     coap_hash((const unsigned char *)&peer->port, sizeof(peer->port), h);
     coap_hash((const unsigned char *)&peer->addr, sizeof(peer->addr), h);  
-#endif /* WITH_CONTIKI */
+#endif /* neither contiki nor lwip */
 
   coap_hash((const unsigned char *)&pdu->hdr->id, sizeof(unsigned short), h);
 
@@ -423,7 +479,7 @@ coap_send_ack(coap_context_t *context,
   return result;
 }
 
-#ifndef WITH_CONTIKI
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
 /* releases space allocated by PDU if free_pdu is set */
 coap_tid_t
 coap_send_impl(coap_context_t *context, 
@@ -446,7 +502,8 @@ coap_send_impl(coap_context_t *context,
 
   return id;
 }
-#else  /* WITH_CONTIKI */
+#endif /* neither contiki nor lwip */
+#ifdef WITH_CONTIKI
 /* releases space allocated by PDU if free_pdu is set */
 coap_tid_t
 coap_send_impl(coap_context_t *context, 
@@ -466,6 +523,31 @@ coap_send_impl(coap_context_t *context,
   return id;
 }
 #endif /* WITH_CONTIKI */
+#ifdef WITH_LWIP
+coap_tid_t
+coap_send_impl(coap_context_t *context,
+	       const coap_address_t *dst,
+	       coap_pdu_t *pdu) {
+  coap_tid_t id = COAP_INVALID_TID;
+  struct pbuf *p;
+
+  if ( !context || !dst || !pdu )
+    return id;
+
+  /* FIXME: copying instead of assembling the package as a pbuf */
+  p = pbuf_alloc(PBUF_TRANSPORT, pdu->length, PBUF_RAM);
+  if (p == NULL)
+    return id;
+  pbuf_take(p, pdu->hdr, pdu->length);
+
+  udp_sendto(context->pcb, p,
+			&dst->addr, dst->port);
+
+  coap_transaction_id(dst, pdu, &id);
+
+  return id;
+}
+#endif /* WITH_LWIP */
 
 coap_tid_t 
 coap_send(coap_context_t *context, 
@@ -643,28 +725,34 @@ check_opt_size(coap_opt_t *opt, unsigned char *maxpos) {
 
 int
 coap_read( coap_context_t *ctx ) {
-#ifndef WITH_CONTIKI
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
   static char buf[COAP_MAX_PDU_SIZE];
-  coap_hdr_t *pdu = (coap_hdr_t *)buf;
-#else /* WITH_CONTIKI */
+#else /* neither contiki nor lwip */
   char *buf;
+#endif /* neither contiki nor lwip */
   coap_hdr_t *pdu;
-#endif /* WITH_CONTIKI */
   ssize_t bytes_read = -1;
   coap_address_t src, dst;
   coap_queue_t *node;
 
 #ifdef WITH_CONTIKI
   buf = uip_appdata;
-  pdu = (coap_hdr_t *)buf;
 #endif /* WITH_CONTIKI */
+#ifdef WITH_LWIP
+  LWIP_ASSERT("No package pending\n", ctx->pending_package != NULL);
+  LWIP_ASSERT("Can only deal with contiguous PBUFs for now\n", ctx->pending_package->tot_len == ctx->pending_package->len);
+  buf = ctx->pending_package->payload;
+#endif /* WITH_CONTIKI */
+
+  pdu = (coap_hdr_t *)buf;
 
   coap_address_init(&src);
 
-#ifndef WITH_CONTIKI
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
   bytes_read = recvfrom(ctx->sockfd, buf, sizeof(buf), 0,
 			&src.addr.sa, &src.size);
-#else /* WITH_CONTIKI */
+#endif /* neither contiki nor lwip */
+#ifdef WITH_CONTIKI
   if(uip_newdata()) {
     uip_ipaddr_copy(&src.addr, &UIP_IP_BUF->srcipaddr);
     src.port = UIP_UDP_BUF->srcport;
@@ -678,25 +766,31 @@ coap_read( coap_context_t *ctx ) {
     PRINTF("]:%d\n", uip_ntohs(src.port));
   } 
 #endif /* WITH_CONTIKI */
+#ifdef WITH_LWIP
+  /* FIXME: use lwip address operation functions */
+  src.addr.addr = ctx->pending_address.addr;
+  src.port = ctx->pending_port;
+  bytes_read = ctx->pending_package->tot_len;
+#endif
 
   if ( bytes_read < 0 ) {
     warn("coap_read: recvfrom");
-    return -1;
+    goto error_early;
   }
 
   if ( (size_t)bytes_read < sizeof(coap_hdr_t) ) {
     debug("coap_read: discarded invalid frame\n" );
-    return -1;
+    goto error_early;
   }
 
   if ( pdu->version != COAP_DEFAULT_VERSION ) {
     debug("coap_read: unknown protocol version\n" );
-    return -1;
+    goto error_early;
   }
 
   node = coap_new_node();
   if ( !node )
-    return -1;
+    goto error_early;
 
   node->pdu = coap_pdu_init(0, 0, 0, bytes_read);
   if (!node->pdu)
@@ -729,10 +823,22 @@ if (!coap_pdu_parse((unsigned char *)buf, bytes_read, node->pdu)) {
   }
 #endif
 
+#ifdef WITH_LWIP
+  pbuf_free(ctx->pending_package);
+  ctx->pending_package = NULL;
+#endif
   return 0;
+
  error:
   /* FIXME: send back RST? */
   coap_delete_node(node);
+  /* fall through to error_early */
+ error_early:
+#ifdef WITH_LWIP
+  /* even if there was an error, clean up */
+  pbuf_free(ctx->pending_package);
+  ctx->pending_package = NULL;
+#endif
   return -1;
 }
 

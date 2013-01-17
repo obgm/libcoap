@@ -40,7 +40,8 @@
 
 typedef struct __coap_address_t {
 	unsigned char size;
-	struct ip_addr addr;
+	uint16_t port;
+	ip_addr_t addr;
 } __coap_address_t;
 
 #define coap_address_t __coap_address_t
@@ -48,7 +49,9 @@ typedef struct __coap_address_t {
 /* FIXME oversimplification: just assuming it's an ipv4 address instead of
  * looking up the appropraite lwip function */
 
-#define _coap_address_equals_impl(A, B) ((A)->addr.addr == (B)->addr.addr)
+#define _coap_address_equals_impl(A, B) ((A)->addr.addr == (B)->addr.addr && A->port == B->port)
+
+/* FIXME sure there is something in lwip */
 
 #define _coap_is_mcast_impl(Address) 0
 

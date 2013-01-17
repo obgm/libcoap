@@ -16,4 +16,7 @@
 /* provide what usually resides in arpa/inet.h: ntohs and htons. maybe it'd be a better way to just have an arpa/inet.h compatibility file in lwip? */
 #define HAVE_ENDIAN_H 1
 
+/* FIXME just a quick hack */
+#define COAP_TICKS_PER_SECOND 10
+
 #endif /* _CONFIG_H_ */
