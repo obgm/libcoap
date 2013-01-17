@@ -43,7 +43,9 @@
 #include "encode.h"
 #include "net.h"
 
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#ifndef WITH_CONTIKI
+
+/* FIXME: in lwip, we'll use pbufs later */
 
 time_t clock_offset;
 
@@ -56,7 +58,7 @@ static inline void
 coap_free_node(coap_queue_t *node) {
   coap_free(node);
 }
-#endif /* neither contiki nor lwip */
+#endif /* WITH_CONTIKI */
 #ifdef WITH_CONTIKI
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT

@@ -19,4 +19,7 @@
 /* FIXME just a quick hack */
 #define COAP_TICKS_PER_SECOND 10
 
+/* easy solution for the time being; could also use lwip's pbufs */
+#define HAVE_MALLOC 1
+
 #endif /* _CONFIG_H_ */
