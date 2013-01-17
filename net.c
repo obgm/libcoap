@@ -105,7 +105,7 @@ static void received_package(void *arg, struct udp_pcb *upcb, struct pbuf *p, ip
 {
   struct coap_context_t *context = (coap_context_t *)arg;
 
-  LWIP_ASSERT("pending_package was not cleared.\n", context->pending_package != NULL);
+  LWIP_ASSERT("pending_package was not cleared.", context->pending_package == NULL);
 
   context->pending_package = p; /* we don't free it, coap_read has to do that */
   context->pending_address.addr = addr->addr; /* FIXME: this has to become address-type independent, probably there'll be an lwip function for that */
@@ -349,7 +349,7 @@ coap_new_context(
 #ifdef WITH_LWIP
   c->pcb = udp_new();
   /* hard assert: this is not expected to fail dynamically */
-  LWIP_ASSERT("Failed to allocate PCB for CoAP\n", c->pcb != NULL);
+  LWIP_ASSERT("Failed to allocate PCB for CoAP", c->pcb != NULL);
 
   udp_recv(c->pcb, received_package, (void*)c);
   udp_bind(c->pcb, &listen_addr->addr, listen_addr->port);
@@ -360,7 +360,7 @@ void
 coap_free_context( coap_context_t *context ) {
 #ifdef WITH_LWIP
   /* FIXME */
-  LWIP_ASSERT("We don't free contexts.\n", 0);
+  LWIP_ASSERT("We don't free contexts.", 0);
 #else /* WITH_LWIP */
 #ifndef WITH_CONTIKI
   coap_resource_t *res;
@@ -741,8 +741,8 @@ coap_read( coap_context_t *ctx ) {
   buf = uip_appdata;
 #endif /* WITH_CONTIKI */
 #ifdef WITH_LWIP
-  LWIP_ASSERT("No package pending\n", ctx->pending_package != NULL);
-  LWIP_ASSERT("Can only deal with contiguous PBUFs for now\n", ctx->pending_package->tot_len == ctx->pending_package->len);
+  LWIP_ASSERT("No package pending", ctx->pending_package != NULL);
+  LWIP_ASSERT("Can only deal with contiguous PBUFs for now", ctx->pending_package->tot_len == ctx->pending_package->len);
   buf = ctx->pending_package->payload;
 #endif /* WITH_CONTIKI */
 
