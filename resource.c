@@ -122,6 +122,7 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
     {2, (unsigned char *)"if"},
     {3, (unsigned char *)"rel"},
     {0, NULL}};
+  str *rt_attributes;
 #endif /* WITHOUT_QUERY_FILTER */
 
 #ifdef WITH_CONTIKI
