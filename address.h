@@ -35,6 +35,24 @@
 #include <sys/socket.h>
 #endif
 
+#ifdef WITH_LWIP
+#include <lwip/ip_addr.h>
+
+typedef struct __coap_address_t {
+	unsigned char size;
+	struct ip_addr addr;
+} __coap_address_t;
+
+#define coap_address_t __coap_address_t
+
+/* FIXME oversimplification: just assuming it's an ipv4 address instead of
+ * looking up the appropraite lwip function */
+
+#define _coap_address_equals_impl(A, B) ((A)->addr.addr == (B)->addr.addr)
+
+#define _coap_is_mcast_impl(Address) 0
+
+#endif /* WITH_LWIP */
 #ifdef WITH_CONTIKI
 #include "uip.h"
 
