@@ -544,6 +544,7 @@ coap_send_impl(coap_context_t *context,
 
   udp_sendto(context->pcb, p,
 			&dst->addr, dst->port);
+  pbuf_free(p);
 
   coap_transaction_id(dst, pdu, &id);
 
