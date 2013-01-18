@@ -770,6 +770,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
   coap_pdu_t *response;
   size_t size = sizeof(coap_hdr_t) + request->hdr->token_length;
   int type; 
+  coap_opt_t *option;
 
 #if COAP_ERROR_PHRASE_LENGTH > 0
   char *phrase = coap_response_phrase(code);
@@ -793,8 +794,8 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
 
   coap_option_iterator_init(request, &opt_iter, opts);
 
-  while(coap_option_next(&opt_iter))
-    size += COAP_OPT_SIZE(opt_iter.option);
+  while((option = coap_option_next(&opt_iter)))
+    size += COAP_OPT_SIZE(option);
 
   /* Now create the response and fill with options and payload data. */
   response = coap_pdu_init(type, code, request->hdr->id, size);
@@ -809,10 +810,10 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
 
     /* copy all options */
     coap_option_iterator_init(request, &opt_iter, opts);
-    while(coap_option_next(&opt_iter))
+    while((option = coap_option_next(&opt_iter)))
       coap_add_option(response, opt_iter.type, 
-		      COAP_OPT_LENGTH(opt_iter.option),
-		      COAP_OPT_VALUE(opt_iter.option));
+		      COAP_OPT_LENGTH(option),
+		      COAP_OPT_VALUE(option));
 
 #if COAP_ERROR_PHRASE_LENGTH > 0
     /* note that diagnostic messages do not need a Content-Format option. */
