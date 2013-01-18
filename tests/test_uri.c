@@ -313,6 +313,29 @@ t_parse_uri12(void) {
   }
 }
 
+void
+t_parse_uri13(void) {
+  char teststr[] __attribute__ ((aligned (8))) = { 
+    0x00, 0x00, 0x00, 0x00, 0x80, 0x03, 'f',  'o',
+    'o',  0x3b, '.',  'w',  'e',  'l',  'l',  '-',  
+    'k',  'n',  'o',  'w',  'n',  0x04,  'c', 'o',  
+    'r',  'e'
+  };
+
+  coap_pdu_t pdu = { 
+    .max_size = sizeof(teststr),
+    .hdr = (coap_hdr_t *)teststr,
+    .length = sizeof(teststr)
+  };
+
+  coap_key_t key;
+
+  coap_hash_request_uri(&pdu, key);
+  
+  CU_ASSERT(sizeof(key) == sizeof(COAP_DEFAULT_WKC_HASHKEY) - 1);
+  CU_ASSERT_NSTRING_EQUAL(key, COAP_DEFAULT_WKC_HASHKEY, sizeof(key));
+}
+
 CU_pSuite
 t_init_uri_tests(void) {
   CU_pSuite suite;
@@ -343,6 +366,7 @@ t_init_uri_tests(void) {
   URI_TEST(suite, t_parse_uri10);
   URI_TEST(suite, t_parse_uri11);
   URI_TEST(suite, t_parse_uri12);
+  URI_TEST(suite, t_parse_uri13);
 
   return suite;
 }
