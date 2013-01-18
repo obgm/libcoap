@@ -57,9 +57,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 
   switch(result->delta) {
   case 15:
-    if (*opt == COAP_PAYLOAD_START)
-      debug("found payload marker when expecting option\n");
-    else
+    if (*opt != COAP_PAYLOAD_START)
       debug("ignored reserved option delta 15\n");
     return 0;
   case 14:
@@ -158,7 +156,7 @@ opt_finished(coap_opt_iterator_t *oi) {
 coap_opt_t *
 coap_option_next(coap_opt_iterator_t *oi) {
   coap_option_t option;
-  coap_opt_t *current_opt;
+  coap_opt_t *current_opt = NULL;
   size_t optsize;
   int b;		   /* to store result of coap_option_getb() */
 
@@ -211,14 +209,12 @@ coap_check_option(coap_pdu_t *pdu, unsigned char type,
   coap_opt_filter_t f;
   coap_opt_t *option;
   
-  memset(f, 0, sizeof(coap_opt_filter_t));
+  coap_option_filter_clear(f);
   coap_option_setb(f, type);
 
   coap_option_iterator_init(pdu, oi, f);
 
-  option = coap_option_next(oi);
-
-  return option && oi->type == type ? option : NULL;
+  return coap_option_next(oi);
 }
 
 unsigned short
