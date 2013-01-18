@@ -76,7 +76,8 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 	     coap_address_t *peer, coap_pdu_t *request, str *token,
 	     coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
-  unsigned char buf[5];
+  unsigned char buf[40];
+  size_t len;
   time_t now;
   coap_tick_t t;
 
@@ -117,16 +118,18 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 	&& memcmp(COAP_OPT_VALUE(opt_iter.option), "ticks",
 		  min(5, COAP_OPT_LENGTH(opt_iter.option))) == 0) {
       /* output ticks */
-      response->length += snprintf((char *)response->data, 
-				   response->max_size - response->length,
-				   "%u", (unsigned int)now);
+      len = snprintf((char *)buf, 
+	   min(sizeof(buf), response->max_size - response->length),
+		     "%u", (unsigned int)now);
+      coap_add_data(response, len, buf);
 
     } else {			/* output human-readable time */
       struct tm *tmp;
       tmp = gmtime(&now);
-      response->length += strftime((char *)response->data, 
-				   response->max_size - response->length,
-				   "%b %d %H:%M:%S", tmp);
+      len = strftime((char *)buf, 
+		     min(sizeof(buf), response->max_size - response->length),
+		     "%b %d %H:%M:%S", tmp);
+      coap_add_data(response, len, buf);
     }
   }
 }
@@ -242,13 +245,6 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
   async = NULL;
 }
 #endif /* WITHOUT_ASYNC */
-
-#ifndef WITHOUT_OBSERVE
-void
-check_observe(coap_context_t  *ctx) {
-  coap_check_notify(ctx);
-}
-#endif /* WITHOUT_OBSERVE */
 
 void
 init_resources(coap_context_t *ctx) {
@@ -430,7 +426,7 @@ main(int argc, char **argv) {
 
 #ifndef WITHOUT_OBSERVE
     /* check if we have to send observe notifications */
-    check_observe(ctx);
+    coap_check_notify(ctx);
 #endif /* WITHOUT_OBSERVE */
   }
 
