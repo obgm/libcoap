@@ -1,7 +1,7 @@
 /* coap -- simple implementation of the Constrained Application Protocol (CoAP)
  *         as defined in draft-ietf-core-coap
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -52,7 +52,7 @@ handle_sigint(int signum) {
 }
 
 #define INDEX "This is a test server made with libcoap (see http://libcoap.sf.net)\n" \
-   	      "Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>\n\n"
+   	      "Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>\n\n"
 
 void 
 hnd_get_index(coap_context_t  *ctx, struct coap_resource_t *resource, 
@@ -68,9 +68,6 @@ hnd_get_index(coap_context_t  *ctx, struct coap_resource_t *resource,
   coap_add_option(response, COAP_OPTION_MAXAGE,
 	  coap_encode_var_bytes(buf, 0x2ffff), buf);
     
-  if (token->length)
-    coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
-
   coap_add_data(response, strlen(INDEX), (unsigned char *)INDEX);
 }
 
@@ -90,27 +87,24 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   response->hdr->code = 
     my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
 
+  if (request != NULL &&
+      coap_check_option(request, COAP_OPTION_OBSERVE, &opt_iter)) {
+    coap_add_observer(resource,
+		      peer,
+		      token);
+    coap_add_option(response, COAP_OPTION_OBSERVE, 0, NULL);
+  }
+  if (resource->dirty == 1)
+    coap_add_option(response, COAP_OPTION_OBSERVE, 
+		    coap_encode_var_bytes(buf, ctx->observe), buf);
+
+    
   if (my_clock_base)
-    coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
+    coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
 		    coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
 
   coap_add_option(response, COAP_OPTION_MAXAGE,
 	  coap_encode_var_bytes(buf, 0x01), buf);
-
-  if (request != NULL &&
-      coap_check_option(request, COAP_OPTION_SUBSCRIPTION, &opt_iter)) {
-    coap_add_observer(resource,
-		      peer,
-		      token);
-    coap_add_option(response, COAP_OPTION_SUBSCRIPTION, 0, NULL);
-  }
-  if (resource->dirty == 1)
-    coap_add_option(response, COAP_OPTION_SUBSCRIPTION, 
-		    coap_encode_var_bytes(buf, ctx->observe), buf);
-
-    
-  if (token->length)
-    coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
 
   if (my_clock_base) {
 
@@ -167,9 +161,6 @@ hnd_put_time(coap_context_t  *ctx, struct coap_resource_t *resource,
       my_clock_base = my_clock_base * 10 + *data++;
     my_clock_base -= t / COAP_TICKS_PER_SECOND;
   }
-
-  if (token->length)
-    coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
 }
 
 void 
@@ -180,9 +171,6 @@ hnd_delete_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   
   /* type = request->hdr->type == COAP_MESSAGE_CON  */
   /*   ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON; */
-
-  if (token->length)
-    coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
 }
 
 #ifndef WITHOUT_ASYNC
@@ -226,8 +214,6 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
   if (!async || now < async->created + (unsigned long)async->appdata) 
     return;
 
-  size += async->tokenlen;
-
   response = coap_pdu_init(async->flags & COAP_ASYNC_CONFIRM 
 			   ? COAP_MESSAGE_CON
 			   : COAP_MESSAGE_NON,
@@ -242,7 +228,7 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
   response->hdr->id = coap_new_message_id(ctx);
 
   if (async->tokenlen)
-    coap_add_option(response, COAP_OPTION_TOKEN, async->tokenlen, async->token);
+    coap_add_token(response, async->tokenlen, async->token);
 
   coap_add_data(response, 4, (unsigned char *)"done");
 
