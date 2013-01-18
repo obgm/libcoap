@@ -665,7 +665,6 @@ coap_read( coap_context_t *ctx ) {
     return -1;
   }
 
-  debug("coap_read: sizeof(coap_hdr_t) is %d\n", sizeof(coap_hdr_t));
   if ( (size_t)bytes_read < sizeof(coap_hdr_t) ) {
     debug("coap_read: discarded invalid frame\n" );
     return -1;
@@ -770,21 +769,14 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
   coap_opt_iterator_t opt_iter;
   coap_pdu_t *response;
   size_t size = sizeof(coap_hdr_t) + request->hdr->token_length;
-#if 0
-#if COAP_ERROR_PHRASE_LENGTH > 0
-  unsigned char buf[2];
-#endif
-#endif
   int type; 
 
-#if 0
 #if COAP_ERROR_PHRASE_LENGTH > 0
   char *phrase = coap_response_phrase(code);
 
-  /* Need some more space for the error phrase and the Content-Type option */
+  /* Need some more space for the error phrase */
   if (phrase)
-    size += strlen(phrase) + 2;
-#endif
+    size += strlen(phrase);
 #endif
 
   assert(request);
@@ -807,16 +799,13 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
   /* Now create the response and fill with options and payload data. */
   response = coap_pdu_init(type, code, request->hdr->id, size);
   if (response) {
-#if 0
-#if COAP_ERROR_PHRASE_LENGTH > 0
-    if (phrase)
-      coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
-		      coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
-#endif
-#endif
     /* copy token */
-    memcpy(response->hdr->token, request->hdr->token, 
-	   request->hdr->token_length);
+    if (!coap_add_token(response, request->hdr->token_length, 
+			request->hdr->token)) {
+      debug("cannot add token to error response\n");
+      coap_delete_pdu(response);
+      return NULL;
+    }
 
     /* copy all options */
     coap_option_iterator_init(request, &opt_iter, opts);
@@ -825,11 +814,10 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
 		      COAP_OPT_LENGTH(opt_iter.option),
 		      COAP_OPT_VALUE(opt_iter.option));
 
-#if 0
 #if COAP_ERROR_PHRASE_LENGTH > 0
+    /* note that diagnostic messages do not need a Content-Format option. */
     if (phrase)
       coap_add_data(response, strlen(phrase), (unsigned char *)phrase);
-#endif
 #endif
   }
 
@@ -848,26 +836,55 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
 		       : COAP_MESSAGE_NON,
 		       COAP_RESPONSE_CODE(205),
 		       request->hdr->id, COAP_MAX_PDU_SIZE);
-  if (!resp)
+  if (!resp) {
+    debug("wellknown_response: cannot create PDU\n");
     return NULL;
-
-  memcpy(resp->hdr->token, request->hdr->token, request->hdr->token_length);
-
-  /* add Content-Type */
-  coap_add_option(resp, COAP_OPTION_CONTENT_TYPE,
-     coap_encode_var_bytes(buf, COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf);
+  }
   
-  /* set payload of response */
-  len = resp->max_size - resp->length;
-  
+  if (!coap_add_token(resp, request->hdr->token_length, request->hdr->token)) {
+    debug("wellknown_response: cannot add token\n");
+    goto error;
+  }
+
+  /* Check if there is sufficient space to add Content-Format option 
+   * and data. We do this before adding the Content-Format option to
+   * avoid sending error responses with that option but no actual
+   * content. */
+  if (resp->max_size <= (size_t)resp->length + 3) {
+    debug("wellknown_response: insufficient storage space\n");
+    goto error;
+  }
+
+  /* Add Content-Format. As we have checked for available storage,
+   * nothing should go wrong here. */
+  assert(coap_encode_var_bytes(buf, 
+		    COAP_MEDIATYPE_APPLICATION_LINK_FORMAT) == 1);
+  coap_add_option(resp, COAP_OPTION_CONTENT_FORMAT,
+		  coap_encode_var_bytes(buf, 
+			COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf);
+
+  /* Manually set payload of response to let print_wellknown() write,
+   * into our buffer without copying data. */
+
+  len = resp->max_size - resp->length - 1;
+  resp->data = (unsigned char *)resp->hdr + resp->length;
+  *resp->data = COAP_PAYLOAD_START;
+  resp->data++;
+  resp->length--;
+
   if (!print_wellknown(context, resp->data, &len,
 	       coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter))) {
     debug("print_wellknown failed\n");
-    coap_delete_pdu(resp);
-    return NULL;
+    goto error;
   } 
   
   resp->length += len;
+  return resp;
+
+ error:
+  /* set error code 5.03 and remove all options and data from response */
+  resp->hdr->code = COAP_RESPONSE_CODE(503);
+  resp->length = sizeof(coap_hdr_t) + resp->hdr->token_length;
   return resp;
 }
 
@@ -939,20 +956,23 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 			     ? COAP_MESSAGE_ACK
 			     : COAP_MESSAGE_NON,
 			     0, node->pdu->hdr->id, COAP_MAX_PDU_SIZE);
-    if (response) {
-      str token = { 0, NULL };
+    
+    /* Implementation detail: coap_add_token() immediately returns 0
+       if response == NULL */
+    if (coap_add_token(response, node->pdu->hdr->token_length,
+		       node->pdu->hdr->token)) {
+      str token = { node->pdu->hdr->token_length, node->pdu->hdr->token };
 
-      token.length = node->pdu->hdr->token_length;
-      token.s = node->pdu->hdr->token;
-
-      h(context, resource, &node->remote, node->pdu, &token, response);
+      h(context, resource, &node->remote, 
+	node->pdu, &token, response);
       if (response->hdr->type != COAP_MESSAGE_NON ||
 	  (response->hdr->code >= 64 
 	   && !coap_is_mcast(&node->local))) {
 	if (coap_send(context, &node->remote, response) == COAP_INVALID_TID) {
 	  debug("cannot send response for message %d\n", node->pdu->hdr->id);
-	}
+	  }
       }
+
       coap_delete_pdu(response);
     } else {
       warn("cannot generate response\r\n");
