@@ -117,105 +117,100 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 }
 
 const coap_opt_filter_t COAP_OPT_ALL = 
-  { 0xff, 0xff, 0xff };	       /* must be sizeof(coap_opt_filter_t) */
+  { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }; 
 
 coap_opt_iterator_t *
 coap_option_iterator_init(coap_pdu_t *pdu, coap_opt_iterator_t *oi,
 			  const coap_opt_filter_t filter) {
-  assert(pdu); assert(oi);
+  assert(pdu); 
+  assert(pdu->hdr);
+  assert(oi);
   
   memset(oi, 0, sizeof(coap_opt_iterator_t));
 
-  oi->option = options_start(pdu);
+  oi->option = (unsigned char *)pdu->hdr + sizeof(coap_hdr_t)
+    + pdu->hdr->token_length;
+  if ((unsigned char *)pdu->hdr + pdu->length <= oi->option) {
+    oi->bad = 1;
+    return NULL;
+  }
 
-  if (oi->option) {
-    /* Note that we do not check if options exceed the length of @p
-     * pdu. This must be checked before coap_option_iterator_init() is
-     * called.
-     */
-    oi->length = pdu->length - 
-      ((unsigned char *)oi->option - (unsigned char *)pdu->hdr);
-    oi->type = coap_opt_delta(oi->option);
-    memcpy(oi->filter, filter, sizeof(coap_opt_filter_t));
-    return oi;
-  } 
-  
-  return NULL;
+  assert((sizeof(coap_hdr_t) + pdu->hdr->token_length) <= pdu->length);
+
+  oi->length = pdu->length - (sizeof(coap_hdr_t) + pdu->hdr->token_length);
+  memcpy(oi->filter, filter, sizeof(coap_opt_filter_t));
+  return oi;
 }
 
-#define opt_finished(oi) \
-  ((oi)->length == 0 || *((oi)->option) == COAP_PAYLOAD_START)
+inline int
+opt_finished(coap_opt_iterator_t *oi) {
+  assert(oi);
+
+  if (oi->bad || oi->length == 0 || 
+      !oi->option || *oi->option == COAP_PAYLOAD_START) {
+    oi->bad = 1;
+  }
+
+  return oi->bad;
+}
 
 coap_opt_t *
 coap_option_next(coap_opt_iterator_t *oi) {
+  coap_option_t option;
+  coap_opt_t *current_opt;
+  size_t optsize;
 
   assert(oi);
+
   if (opt_finished(oi))
     return NULL;
 
-  /* proceed to next option */
-  if (oi->n++) {
-    oi->option = options_next(oi->option);
-    if (opt_finished(oi))
+  do {
+    /* oi->option always points to the next option to deliver; as
+     * opt_finished() filters out any bad conditions, we can assume that
+     * oi->option is valid. */
+    current_opt = oi->option;
+    
+    /* Advance internal pointer to next option, skipping any option that
+     * is not included in oi->filter. */
+    optsize = coap_opt_parse(oi->option, oi->length, &option);
+    if (optsize) {
+      assert(optsize <= oi->length);
+      
+      oi->option += optsize;
+      oi->length -= optsize;
+      
+      oi->type += option.delta;
+    } else {			/* current option is malformed */
+      oi->bad = 1;
       return NULL;
-    oi->type += coap_opt_delta(oi->option);
-  }
-  
-  /* Skip subsequent options if the filter bit is not set. */
-  while (oi->option && coap_option_getb(oi->filter, oi->type) == 0) {
-    oi->n++;
-    oi->option = options_next(oi->option);
+    }
+  } while (!coap_option_getb(oi->filter, oi->type));
 
-    if (!oi->option || opt_finished(oi))
-      return NULL;
-
-    oi->type += coap_opt_delta(oi->option);
-  }
-  
-  return oi->option;
+  return current_opt;
 }
 
 coap_opt_t *
 coap_check_option(coap_pdu_t *pdu, unsigned char type, 
 		  coap_opt_iterator_t *oi) {
   coap_opt_filter_t f;
+  coap_opt_t *option;
   
   memset(f, 0, sizeof(coap_opt_filter_t));
   coap_option_setb(f, type);
 
   coap_option_iterator_init(pdu, oi, f);
 
-  coap_option_next(oi);
+  option = coap_option_next(oi);
 
-  return oi->option && oi->type == type ? oi->option : NULL;
+  return option && oi->type == type ? option : NULL;
 }
 
 unsigned short
-coap_opt_check_delta(coap_opt_t *opt, size_t maxlen) {
-  unsigned short n = 0;
-
-  if (!maxlen)			/* need to look at first byte */
-    return 0;
-
-  /* check for option jumps */
-  switch (*opt) {
-  case 0xf1: 
-  case 0xf2: 
-  case 0xf3:
-    n += (*opt & 0x03);
-    break;
-  default:
-    ;
-  }
-  
-  return n < maxlen ? n+1 : 0;
-}
-
-unsigned short
-coap_opt_delta(coap_opt_t *opt) {
+coap_opt_delta(const coap_opt_t *opt) {
   unsigned short n;
 
-  n = *opt & 0xf0;
+  n = (*opt++ & 0xf0) >> 4;
 
   switch (n) {
   case 15: /* error */
@@ -228,8 +223,7 @@ coap_opt_delta(coap_opt_t *opt) {
     /* Handle two-byte value: First, the MSB + 269 is stored as delta value.
      * After that, the option pointer is advanced to the LSB which is handled
      * just like case delta == 13. */
-    n = ((*opt & 0xff) << 8) + 269;
-    ++opt;
+    n = ((*opt++ & 0xff) << 8) + 269;
     /* fall through */
   case 13:
     n += *opt & 0xff;
@@ -241,70 +235,84 @@ coap_opt_delta(coap_opt_t *opt) {
   return n;
 }
 
-/**
- * Skips the bytes that are used to encode an option jump. The caller
- * of this function must ensure that @p opt is still valid afterwards.
- */
-#define COAP_SKIP_OPTION_JUMP(opt)		   \
-  do {						   \
-    switch (*(opt)) {				   \
-    case 0xf1: case 0xf2: case 0xf3:		   \
-      (opt) = PCHAR(opt) + (*(opt) & 0x03);	   \
-      break;                    		   \
-    default:					   \
-      ;						   \
-    }						   \
-  } while (0)
-
 unsigned short
 coap_opt_length(const coap_opt_t *opt) {
   unsigned short length;
 
-  COAP_SKIP_OPTION_JUMP(opt);
-
-  if ((*opt & 0xf0) == 0xf0)	/* not an option -> length is 0 */
+  length = *opt & 0x0f;
+  switch (*opt & 0xf0) {
+  case 0xf0:
+    debug("illegal option delta\n");
     return 0;
+  case 0xe0:
+    ++opt;
+    /* fall through to skip another byte */
+  case 0xd0:
+    ++opt;
+    /* fall through to skip another byte */
+  default:
+    ++opt;
+  }
 
-  if ((*opt & 0x0f) < 15)		/* 0..14 */
-    return *opt & 0x0f;
-  
-  length = 15;
-
-  /* add 255 for each 0xff byte */
-  while (*++opt == 0xff && length < 780)
-    length += 255;
-    
-  return length + (*opt & 0xff);
+  switch (length) {
+  case 0x0f:
+    debug("illegal option length\n");
+    return 0;
+  case 0x0e:
+    length = (*opt++ << 8) + 269;
+    /* fall through */
+  case 0x0d:
+    length += *opt++;
+    break;
+  default:
+    ;
+  }
+  return length;
 }
 
 unsigned char *
 coap_opt_value(coap_opt_t *opt) {
-  unsigned char *p = opt;
-  unsigned char n = 0;
+  size_t ofs = 1;
 
-  COAP_SKIP_OPTION_JUMP(p);
-
-  if ((*p & 0xf0) == 0xf0) /* something we do not know, possibly encoding error */
-    return NULL;
-  
-  if ((*p & 0x0f) < 15)		/* 0..14 */
-    return ++p;
-  
-  while (*++p == 0xff && n++ < 3)
+  switch (*opt & 0xf0) {
+  case 0xf0:
+    debug("illegal option delta\n");
+    return 0;
+  case 0xe0:
+    ++ofs;
+    /* fall through */
+  case 0xd0:
+    ++ofs;
+    break;
+  default:
     ;
+  }
 
-  return p;
+  switch (*opt & 0x0f) {
+  case 0x0f:
+    debug("illegal option length\n");
+    return 0;
+  case 0x0e:
+    ++ofs;
+    /* fall through */
+  case 0x0d:
+    ++ofs;
+    break;
+  default:
+    ;
+  }
+
+  return (unsigned char *)opt + ofs;
 }
 
 size_t
-coap_opt_size(coap_opt_t *opt) {
-  unsigned char *opt_value = coap_opt_value(opt);
-  if (opt_value)
-    return (opt_value + coap_opt_length(opt)) - PCHAR(opt);
-  else
-    return 0;
+coap_opt_size(const coap_opt_t *opt) {
+  coap_option_t option;
+
+  /* we must assume that opt is encoded correctly */
+  return coap_opt_parse(opt, (size_t)-1, &option);
 }
- 
+
 size_t
 coap_opt_setheader(coap_opt_t *opt, size_t maxlen, 
 		   unsigned short delta, size_t length) {

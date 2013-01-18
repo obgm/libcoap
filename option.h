@@ -59,7 +59,7 @@ size_t coap_opt_parse(const coap_opt_t *opt, size_t length,
  *         this function returns @c 0 as options need at least
  *         one byte storage space.
  */
-size_t coap_opt_size(coap_opt_t *opt);
+size_t coap_opt_size(const coap_opt_t *opt);
 
 /** @deprecated { Use coap_opt_size() instead. } */
 #define COAP_OPT_SIZE(opt) coap_opt_size(opt)
@@ -153,7 +153,8 @@ coap_option_getb(const coap_opt_filter_t filter, unsigned char type) {
 /** 
  * Iterator to run through PDU options. This object must be
  * initialized with coap_option_iterator_init(). Call
- * coap_option_next() to walk through the list of options.
+ * coap_option_next() to walk through the list of options until
+ * coap_option_next() returns @c NULL.
  *
  * @code
  * coap_opt_t *option;
@@ -166,11 +167,11 @@ coap_option_getb(const coap_opt_filter_t filter, unsigned char type) {
  * @endcode
  */
 typedef struct {
-  unsigned char n;		/**< number of option @deprecated */
-  unsigned short length;	/**< remaining length of PDU */
+  size_t length;		/**< remaining length of PDU */
   unsigned short type;		/**< decoded option type */
-  coap_opt_filter_t filter;	/**< option filter */
+  unsigned int bad:1;		/**< iterator object is ok if not set */
   coap_opt_t *option;		/**< pointer to the current option */
+  coap_opt_filter_t filter;	/**< option filter */
 } coap_opt_iterator_t;
 
 /** 
@@ -267,19 +268,6 @@ size_t coap_opt_encode(coap_opt_t *opt, size_t n, unsigned short delta,
 		       const unsigned char *val, size_t length);
 
 /**
- * Checks if the delta-coding of the option starting at @p opt fits
- * in @p maxlen. This function returns @c 0 on error or the number
- * of bytes needed to read the delta value.
- *
- * @param opt The option to examine
- * @param maxlen The maximum length of *p opt
- * @return The number of bytes required for the delta value or 
- *         @c 0 on error.
- */
-unsigned short coap_opt_check_delta(coap_opt_t *opt, size_t maxlen);
-
-
-/**
  * Decodes the delta value of the next option. This function returns
  * the number of bytes read or @c 0 on error. The caller of this
  * function must ensure that it does not read over the boundaries
@@ -288,7 +276,7 @@ unsigned short coap_opt_check_delta(coap_opt_t *opt, size_t maxlen);
  * @param opt The option to examine
  * @return The number of bytes read or @c 0 on error.
  */
-unsigned short coap_opt_delta(coap_opt_t *opt);
+unsigned short coap_opt_delta(const coap_opt_t *opt);
 
 /** @deprecated { Use coap_opt_delta() instead. } */
 #define COAP_OPT_DELTA(opt) coap_opt_delta(opt)
@@ -326,7 +314,7 @@ unsigned short coap_opt_length(const coap_opt_t *opt);
 unsigned char *coap_opt_value(coap_opt_t *opt);
 
 /** @deprecated { Use coap_opt_value() instead. } */
-#define COAP_OPT_VALUE(opt) coap_opt_value(opt)
+#define COAP_OPT_VALUE(opt) coap_opt_value((coap_opt_t *)opt)
 
 /** @} */
 
