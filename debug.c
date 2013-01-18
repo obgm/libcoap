@@ -103,8 +103,9 @@ print_readable( const unsigned char *data, unsigned int len,
 		unsigned char *result, unsigned int buflen, int encode_always ) {
   const unsigned char hex[] = "0123456789ABCDEF";
   unsigned int cnt = 0;
+  assert(data || len == 0);
 
-  if (buflen == 0)
+  if (buflen == 0 || len == 0)
     return 0;
 
   while (len) {
@@ -229,6 +230,7 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   unsigned char buf[COAP_MAX_PDU_SIZE]; /* need some space for output creation */
   int encode = 0, have_options = 0;
   coap_opt_iterator_t opt_iter;
+  coap_opt_t *option;
 
   fprintf(COAP_DEBUG_FD, "v:%d t:%d c:%d id:%u", 
 	  pdu->hdr->version, pdu->hdr->type,
@@ -237,10 +239,12 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   /* show options, if any */
   coap_option_iterator_init((coap_pdu_t *)pdu, &opt_iter, COAP_OPT_ALL);
 
-  while (coap_option_next(&opt_iter)) {
+  while ((option = coap_option_next(&opt_iter))) {
     if (!have_options) {
       have_options = 1;
       fprintf(COAP_DEBUG_FD, " o: [");
+    } else {
+      fprintf(COAP_DEBUG_FD, ",");
     }
 
     if (opt_iter.type == COAP_OPTION_URI_PATH ||
@@ -255,16 +259,17 @@ coap_show_pdu(const coap_pdu_t *pdu) {
       encode = 1;
     }
     
-    if (print_readable(COAP_OPT_VALUE(opt_iter.option), 
-		       COAP_OPT_LENGTH(opt_iter.option), 
+    if (print_readable(COAP_OPT_VALUE(option), 
+		       COAP_OPT_LENGTH(option), 
 		       buf, sizeof(buf), encode ))
-      fprintf(COAP_DEBUG_FD, " %d:'%s',", opt_iter.type, buf);
+      fprintf(COAP_DEBUG_FD, " %d:'%s'", opt_iter.type, buf);
   }
 
   if (have_options)
     fprintf(COAP_DEBUG_FD, " ]");
   
-  if (pdu->data < (unsigned char *)pdu->hdr + pdu->length) {
+  if (pdu->data) {
+    assert(pdu->data < (unsigned char *)pdu->hdr + pdu->length);
     print_readable(pdu->data, 
 		   (unsigned char *)pdu->hdr + pdu->length - pdu->data, 
 		   buf, sizeof(buf), 0 );
@@ -287,14 +292,15 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   /* show options, if any */
   if (pdu->hdr->optcnt) {
     coap_opt_iterator_t opt_iter;
+    coap_opt_t *option;
     coap_option_iterator_init((coap_pdu_t *)pdu, &opt_iter, COAP_OPT_ALL);
 
     PRINTF(" o:");
-    while (coap_option_next(&opt_iter)) {
+    while ((option = coap_option_next(&opt_iter))) {
 
-      if (print_readable(COAP_OPT_VALUE(opt_iter.option), 
-			 COAP_OPT_LENGTH(opt_iter.option), 
-			 buf, sizeof(buf), 0 ))
+      if (print_readable(COAP_OPT_VALUE(option), 
+			 COAP_OPT_LENGTH(option), 
+			 buf, sizeof(buf), 0))
 	PRINTF(" %d:%s", opt_iter.type, buf);
     }
   }
