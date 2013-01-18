@@ -68,14 +68,15 @@
 
 /* option types from draft-hartke-coap-observe-07 */
 
-#define COAP_OPTION_SUBSCRIPTION  6 /* E, empty/uint, 0 B/0-2 B, (none) */
+#define COAP_OPTION_OBSERVE       6 /* E, empty/uint, 0 B/0-2 B, (none) */
+#define COAP_OPTION_SUBSCRIPTION  COAP_OPTION_OBSERVE
 
 /* selected option types from draft-core-block-04 */
 
 #define COAP_OPTION_BLOCK2       23 /* C, uint, 0--3 B, (none) */
 #define COAP_OPTION_BLOCK1       27 /* C, uint, 0--3 B, (none) */
 
-#define COAP_MAX_OPT             39 /**< the highest option number we know */
+#define COAP_MAX_OPT             63 /**< the highest option number we know */
 
 /* CoAP result codes (HTTP-Code / 100 * 40 + HTTP-Code % 100) */
 
