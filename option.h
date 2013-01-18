@@ -93,7 +93,7 @@ coap_opt_t *options_start(coap_pdu_t *pdu);
 typedef unsigned char coap_opt_filter_t[(COAP_MAX_OPT >> 3) + 1];
 
 /** Pre-defined filter that includes all options. */
-extern const coap_opt_filter_t COAP_OPT_ALL;
+#define COAP_OPT_ALL NULL
 
 /** 
  * Clears filter @p f.
@@ -170,6 +170,7 @@ typedef struct {
   size_t length;		/**< remaining length of PDU */
   unsigned short type;		/**< decoded option type */
   unsigned int bad:1;		/**< iterator object is ok if not set */
+  unsigned int filtered:1;	/**< denotes whether or not filter is used */
   coap_opt_t *option;		/**< pointer to the current option */
   coap_opt_filter_t filter;	/**< option filter */
 } coap_opt_iterator_t;
