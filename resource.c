@@ -515,8 +515,8 @@ coap_add_observer(coap_resource_t *resource,
 }
 
 void
-  coap_delete_observer(coap_resource_t *resource, coap_address_t *observer,
-		       const str *token) {
+coap_delete_observer(coap_resource_t *resource, coap_address_t *observer,
+		     const str *token) {
   coap_subscription_t *s;
 
   s = coap_find_observer(resource, observer, token);
@@ -576,9 +576,14 @@ coap_check_notify(coap_context_t *context) {
 	/* initialize response */
         response = coap_pdu_init(COAP_MESSAGE_CON, 0, 0, COAP_MAX_PDU_SIZE);
         if (!response) {
-          debug("pdu init failed\n");
+          debug("coap_check_notify: pdu init failed\n");
           continue;
         }
+	if (!coap_add_token(response, obs->token_length, obs->token)) {
+	  debug("coap_check_notify: cannot add token\n");
+	  coap_delete_pdu(response);
+	  continue;
+	}
 
 	token.length = obs->token_length;
 	token.s = obs->token;
