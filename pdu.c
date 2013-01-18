@@ -106,6 +106,7 @@ coap_delete_pdu(coap_pdu_t *pdu) {
 int
 coap_add_token(coap_pdu_t *pdu, size_t len, const unsigned char *data) {
   const size_t HEADERLENGTH = len + 4;
+  /* must allow for pdu == NULL as callers may rely on this */
   if (!pdu || len > 8 || pdu->max_size < HEADERLENGTH)
     return 0;
 
