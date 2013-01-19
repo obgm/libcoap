@@ -213,8 +213,8 @@ coap_resource_t *coap_get_resource_from_key(coap_context_t *context,
  * Uri-Options of @p request.  This function calls coap_hash() for
  * every path segment. 
  * 
- * @param context The context to use.
  * @param request The requesting pdu.
+ * @param key     The resulting hash is stored in @p key
  */
 void coap_hash_request_uri(const coap_pdu_t *request, coap_key_t key);
 
