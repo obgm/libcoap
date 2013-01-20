@@ -39,7 +39,6 @@
 #include <lwip/ip_addr.h>
 
 typedef struct __coap_address_t {
-	unsigned char size;
 	uint16_t port;
 	ip_addr_t addr;
 } __coap_address_t;
@@ -140,7 +139,10 @@ static inline void
 coap_address_init(coap_address_t *addr) {
   assert(addr);
   memset(addr, 0, sizeof(coap_address_t));
+#ifndef WITH_LWIP
+  /* lwip has constandt address sizes and doesn't need the .size part */
   addr->size = sizeof(addr->addr);
+#endif
 }
 
 /**
