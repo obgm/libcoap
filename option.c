@@ -1,7 +1,7 @@
 /*
  * option.c -- helpers for handling options in CoAP PDUs
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2013 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -123,9 +123,9 @@ coap_option_iterator_init(coap_pdu_t *pdu, coap_opt_iterator_t *oi,
   
   memset(oi, 0, sizeof(coap_opt_iterator_t));
 
-  oi->option = (unsigned char *)pdu->hdr + sizeof(coap_hdr_t)
+  oi->next_option = (unsigned char *)pdu->hdr + sizeof(coap_hdr_t)
     + pdu->hdr->token_length;
-  if ((unsigned char *)pdu->hdr + pdu->length <= oi->option) {
+  if ((unsigned char *)pdu->hdr + pdu->length <= oi->next_option) {
     oi->bad = 1;
     return NULL;
   }
@@ -146,7 +146,7 @@ opt_finished(coap_opt_iterator_t *oi) {
   assert(oi);
 
   if (oi->bad || oi->length == 0 || 
-      !oi->option || *oi->option == COAP_PAYLOAD_START) {
+      !oi->next_option || *oi->next_option == COAP_PAYLOAD_START) {
     oi->bad = 1;
   }
 
@@ -169,15 +169,15 @@ coap_option_next(coap_opt_iterator_t *oi) {
     /* oi->option always points to the next option to deliver; as
      * opt_finished() filters out any bad conditions, we can assume that
      * oi->option is valid. */
-    current_opt = oi->option;
+    current_opt = oi->next_option;
     
     /* Advance internal pointer to next option, skipping any option that
      * is not included in oi->filter. */
-    optsize = coap_opt_parse(oi->option, oi->length, &option);
+    optsize = coap_opt_parse(oi->next_option, oi->length, &option);
     if (optsize) {
       assert(optsize <= oi->length);
       
-      oi->option += optsize;
+      oi->next_option += optsize;
       oi->length -= optsize;
       
       oi->type += option.delta;
@@ -207,7 +207,6 @@ coap_opt_t *
 coap_check_option(coap_pdu_t *pdu, unsigned char type, 
 		  coap_opt_iterator_t *oi) {
   coap_opt_filter_t f;
-  coap_opt_t *option;
   
   coap_option_filter_clear(f);
   coap_option_setb(f, type);

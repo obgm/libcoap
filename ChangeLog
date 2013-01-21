@@ -1,3 +1,8 @@
+2013-01-21  Olaf Bergmann  <bergmann@tzi.org>
+
+	* option.h: renamed option field in coap_opt_iterator_t to
+	next_option to detect erroneous use in old code
+
 2013-01-18  Olaf Bergmann  <bergmann@tzi.org>
 
 	* configure.in: new option --with-tests to enable unit tests

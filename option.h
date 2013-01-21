@@ -1,7 +1,7 @@
 /*
  * option.h -- helpers for handling options in CoAP PDUs
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2013 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -171,7 +171,7 @@ typedef struct {
   unsigned short type;		/**< decoded option type */
   unsigned int bad:1;		/**< iterator object is ok if not set */
   unsigned int filtered:1;	/**< denotes whether or not filter is used */
-  coap_opt_t *option;		/**< pointer to the current option */
+  coap_opt_t *next_option;	/**< pointer to the unparsed next option */
   coap_opt_filter_t filter;	/**< option filter */
 } coap_opt_iterator_t;
 

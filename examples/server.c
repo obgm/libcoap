@@ -76,6 +76,7 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 	     coap_address_t *peer, coap_pdu_t *request, str *token,
 	     coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
+  coap_opt_t *option;
   unsigned char buf[40];
   size_t len;
   time_t now;
@@ -114,9 +115,9 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
     now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
     
     if (request != NULL
-	&& coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter)
-	&& memcmp(COAP_OPT_VALUE(opt_iter.option), "ticks",
-		  min(5, COAP_OPT_LENGTH(opt_iter.option))) == 0) {
+	&& (option = coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter))
+	&& memcmp(COAP_OPT_VALUE(option), "ticks",
+		  min(5, COAP_OPT_LENGTH(option))) == 0) {
       /* output ticks */
       len = snprintf((char *)buf, 
 	   min(sizeof(buf), response->max_size - response->length),
@@ -182,6 +183,7 @@ hnd_get_async(coap_context_t  *ctx, struct coap_resource_t *resource,
 	      coap_address_t *peer, coap_pdu_t *request, str *token,
 	      coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
+  coap_opt_t *option;
   unsigned long delay = 5;
   size_t size;
 
@@ -194,11 +196,12 @@ hnd_get_async(coap_context_t  *ctx, struct coap_resource_t *resource,
     return;
   }
 
-  if (coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter)) {
-    unsigned char *p = COAP_OPT_VALUE(opt_iter.option);
+  option = coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter);
+  if (option) {
+    unsigned char *p = COAP_OPT_VALUE(option);
 
     delay = 0;
-    for (size = COAP_OPT_LENGTH(opt_iter.option); size; --size, ++p)
+    for (size = COAP_OPT_LENGTH(option); size; --size, ++p)
       delay = delay * 10 + (*p - '0');
   }
 
