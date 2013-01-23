@@ -20,9 +20,6 @@
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
-#ifdef HAVE_ENDIAN_H
-#include "endian.h"
-#endif
 
 #ifdef HAVE_TIME_H
 #include <time.h>

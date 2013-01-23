@@ -18,9 +18,6 @@
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
-#ifdef HAVE_ENDIAN_H
-#include "endian.h"
-#endif
 
 #include "debug.h"
 #include "pdu.h"
