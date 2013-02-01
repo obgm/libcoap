@@ -867,11 +867,11 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   /* Manually set payload of response to let print_wellknown() write,
    * into our buffer without copying data. */
 
-  len = resp->max_size - resp->length - 1;
   resp->data = (unsigned char *)resp->hdr + resp->length;
   *resp->data = COAP_PAYLOAD_START;
   resp->data++;
-  resp->length--;
+  resp->length++;
+  len = resp->max_size - resp->length;
 
   if (!print_wellknown(context, resp->data, &len,
 	       coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter))) {
