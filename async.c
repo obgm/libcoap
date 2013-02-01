@@ -25,7 +25,6 @@ coap_async_state_t *
 coap_register_async(coap_context_t *context, coap_address_t *peer,
 		    coap_pdu_t *request, unsigned char flags, void *data) {
   coap_async_state_t *s;
-  coap_opt_iterator_t opt_iter;
   coap_tid_t id;
 
   coap_transaction_id(peer, request, &id);
