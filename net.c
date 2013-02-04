@@ -775,9 +775,9 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
 #if COAP_ERROR_PHRASE_LENGTH > 0
   char *phrase = coap_response_phrase(code);
 
-  /* Need some more space for the error phrase */
+  /* Need some more space for the error phrase and payload start marker */
   if (phrase)
-    size += strlen(phrase);
+    size += strlen(phrase) + 1;
 #endif
 
   assert(request);
