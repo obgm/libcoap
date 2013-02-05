@@ -139,6 +139,13 @@ coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options ) {
   pdu->hdr->id = coap_new_message_id(ctx);
   pdu->hdr->code = m;
 
+  pdu->hdr->token_length = the_token.length;
+  if ( !coap_add_token(pdu, the_token.length, the_token.s)) {
+    debug("cannot add token to request\n");
+  }
+
+  coap_show_pdu(pdu);
+
   for (opt = options; opt; opt = opt->next) {
     coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)opt->data),
 		    COAP_OPTION_LENGTH(*(coap_option *)opt->data),
@@ -759,8 +766,8 @@ cmdline_proxy(char *arg) {
 
 inline void
 cmdline_token(char *arg) {
-
   strncpy((char *)the_token.s, arg, min(sizeof(_token_data), strlen(arg)));
+  the_token.length = strlen(arg);
 }
 
 void
