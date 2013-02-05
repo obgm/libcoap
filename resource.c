@@ -100,7 +100,7 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
 #define MATCH_URI       0x01
 #define MATCH_PREFIX    0x02
 #define MATCH_SUBSTRING 0x04
-  static str _rt_attributes[] = {
+  static const str _rt_attributes[] = {
     {2, (unsigned char *)"rt"},
     {2, (unsigned char *)"if"},
     {3, (unsigned char *)"rel"},
@@ -120,11 +120,12 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
       resource_param.length++;
     
     if (resource_param.length < COAP_OPT_LENGTH(query_filter)) {
+      const str *rt_attributes;
       if (resource_param.length == 4 && 
 	  memcmp(resource_param.s, "href", 4) == 0)
 	flags |= MATCH_URI;
 
-      for (str *rt_attributes = _rt_attributes; rt_attributes->s; rt_attributes++) {
+      for (rt_attributes = _rt_attributes; rt_attributes->s; rt_attributes++) {
         if (resource_param.length == rt_attributes->length && 
             memcmp(resource_param.s, rt_attributes->s, rt_attributes->length) == 0) {
           flags |= MATCH_SUBSTRING;
