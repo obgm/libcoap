@@ -84,7 +84,7 @@ $(LIBSO):	$(OBJECTS)
 	$(LD) $(LDSOFLAGS) $(LDFLAGS) -o $@ $^
 
 clean:
-	@rm -f $(PROGRAM) main.o $(LIB) $(OBJECTS)
+	@rm -f $(PROGRAM) main.o $(LIB) $(LIBSO) $(OBJECTS)
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir clean ; \
 	done
