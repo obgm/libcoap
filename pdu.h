@@ -288,6 +288,16 @@ size_t coap_add_option(coap_pdu_t *pdu, unsigned short type,
 		       unsigned int len, const unsigned char *data);
 
 /**
+ * Adds option of given type to pdu that is passed as first
+ * parameter, but does not write a value. It works like coap_add_option with
+ * respect to calling sequence (i.e. after token and before data).
+ * This function returns a memory address to which the option data has to be
+ * written before the PDU can be sent, or @c NULL on error.
+ */
+unsigned char *coap_add_option_later(coap_pdu_t *pdu, unsigned short type,
+		      unsigned int len);
+
+/**
  * Adds given data to the pdu that is passed as first parameter. Note
  * that the PDU's data is destroyed by coap_add_option(). coap_add_data()
  * must be called only once per PDU, otherwise the result is undefined.

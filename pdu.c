@@ -120,6 +120,7 @@ coap_add_token(coap_pdu_t *pdu, size_t len, const unsigned char *data) {
   return 1;
 }
 
+/** @FIXME de-duplicate code with coap_add_option_later */
 size_t
 coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const unsigned char *data) {
   size_t optsize;
@@ -149,6 +150,38 @@ coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const un
   }
 
   return optsize;
+}
+
+/** @FIXME de-duplicate code with coap_add_option */
+unsigned char*
+coap_add_option_later(coap_pdu_t *pdu, unsigned short type, unsigned int len) {
+  size_t optsize;
+  coap_opt_t *opt;
+
+  assert(pdu);
+  pdu->data = NULL;
+
+  if (type < pdu->max_delta) {
+    warn("coap_add_option: options are not in correct order\n");
+    return NULL;
+  }
+
+  opt = (unsigned char *)pdu->hdr + pdu->length;
+
+  /* encode option and check length */
+  optsize = coap_opt_encode(opt, pdu->max_size - pdu->length,
+			    type - pdu->max_delta, NULL, len);
+
+  if (!optsize) {
+    warn("coap_add_option: cannot add option\n");
+    /* error */
+    return NULL;
+  } else {
+    pdu->max_delta = type;
+    pdu->length += optsize;
+  }
+
+  return ((unsigned char*)opt) + optsize - len;
 }
 
 int
