@@ -137,7 +137,7 @@ print_readable( const unsigned char *data, unsigned int len,
 #endif
 
 size_t
-coap_print_addr(const struct __coap_address_t *addr, unsigned char *buf, size_t len) {
+coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t len) {
 #ifdef HAVE_ARPA_INET_H
   const void *addrptr = NULL;
   in_port_t port;

@@ -70,6 +70,10 @@ AC_ARG_WITH(shared,
   [BUILD_SO="BUILD_SO=1"],
   [])
 
+# disambiguate between autoconf generated setups and contiki / lwip setups
+# which use explicit config.h.* files
+CPPFLAGS="${CPPFLAGS} -DWITH_POSIX"
+
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h time.h unistd.h sys/unistd.h])
 

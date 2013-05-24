@@ -39,12 +39,10 @@
 #ifdef WITH_LWIP
 #include <lwip/ip_addr.h>
 
-typedef struct __coap_address_t {
+typedef struct coap_address_t {
 	uint16_t port;
 	ip_addr_t addr;
-} __coap_address_t;
-
-#define coap_address_t __coap_address_t
+} coap_address_t;
 
 /* FIXME oversimplification: just assuming it's an ipv4 address instead of
  * looking up the appropraite lwip function */
@@ -59,13 +57,11 @@ typedef struct __coap_address_t {
 #ifdef WITH_CONTIKI
 #include "uip.h"
 
-typedef struct __coap_address_t {
+typedef struct coap_address_t {
   unsigned char size;
   uip_ipaddr_t addr;
   unsigned short port;
-} __coap_address_t;
-
-#define coap_address_t __coap_address_t
+} coap_address_t;
 
 #define _coap_address_equals_impl(A,B)				\
   ((A)->size == (B)->size					\
@@ -74,10 +70,10 @@ typedef struct __coap_address_t {
 
 #define _coap_is_mcast_impl(Address) uip_is_addr_mcast(&((Address)->addr))
 #endif /* WITH_CONTIKI */
+#ifdef WITH_POSIX
 
 /** multi-purpose address abstraction */
-#ifndef coap_address_t
-typedef struct __coap_address_t {
+typedef struct coap_address_t {
   socklen_t size;		/**< size of addr */
   union {
     struct sockaddr     sa;
@@ -85,9 +81,7 @@ typedef struct __coap_address_t {
     struct sockaddr_in  sin;
     struct sockaddr_in6 sin6;
   } addr;
-} __coap_address_t;
-
-#define coap_address_t __coap_address_t
+} coap_address_t;
 
 static inline int 
 _coap_address_equals_impl(const coap_address_t *a,
@@ -127,7 +121,7 @@ case  AF_INET6:
   }
  return 0;
 }
-#endif /* coap_address_t */
+#endif /* WITH_POSIX */
 
 /** 
  * Resets the given coap_address_t object @p addr to its default
