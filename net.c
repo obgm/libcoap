@@ -40,7 +40,7 @@
 #include "encode.h"
 #include "net.h"
 
-#ifndef WITH_CONTIKI
+#if defined(WITH_POSIX) || defined(WITH_LWIP)
 
 /* FIXME: in lwip, we'll use pbufs later */
 
@@ -55,7 +55,7 @@ static inline void
 coap_free_node(coap_queue_t *node) {
   coap_free(node);
 }
-#endif /* WITH_CONTIKI */
+#endif /* WITH_POSIX || WITH_LWIP */
 #ifdef WITH_CONTIKI
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT
@@ -234,7 +234,7 @@ is_wkc(coap_key_t k) {
 }
 #endif
 
-#ifdef WITH_LWIP
+#ifdef COAP_STATIC_RESOURCES
 void
 coap_init_context(
   coap_context_t *c,
@@ -243,16 +243,18 @@ coap_context_t *
 coap_new_context(
 #endif
   const coap_address_t *listen_addr) {
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#ifndef COAP_STATIC_RESOURCES
+#if defined(WITH_POSIX) || defined(WITH_LWIP)
   coap_context_t *c = coap_malloc( sizeof( coap_context_t ) );
   int reuse = 1;
-#endif /* neither contiki nor lwip */
+#endif /* WITH_POSIX || WITH_LWIP */
 #ifdef WITH_CONTIKI
   coap_context_t *c;
 
   if (initialized)
     return NULL;
 #endif /* WITH_CONTIKI */
+#endif /* not COAP_STATIC_RESOURCES */
 
   if (!listen_addr) {
     coap_log(LOG_EMERG, "no listen address specified\n");
@@ -266,14 +268,15 @@ coap_new_context(
   prng_init((unsigned long)listen_addr ^ clock_offset);
 #endif /* WITH_LWIP */
 
-#ifndef WITH_CONTIKI
+#if !defined(WITH_CONTIKI) && !defined(COAP_STATIC_RESOURCES)
   if ( !c ) {
 #ifndef NDEBUG
     coap_log(LOG_EMERG, "coap_init: malloc:\n");
 #endif
     return NULL;
   }
-#else /* WITH_CONTIKI */
+#endif /* !WITH_CONTIKI && !COAP_STATIC_RESOURCES */
+#ifdef WITH_CONTIKI
   coap_resources_init();
   coap_pdu_resources_init();
 
@@ -297,12 +300,12 @@ coap_new_context(
   coap_register_option(c, COAP_OPTION_PROXY_URI);
   coap_register_option(c, COAP_OPTION_PROXY_SCHEME);
 
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#ifdef WITH_POSIX
   c->sockfd = socket(listen_addr->addr.sa.sa_family, SOCK_DGRAM, 0);
   if ( c->sockfd < 0 ) {
 #ifndef NDEBUG
     coap_log(LOG_EMERG, "coap_new_context: socket\n");
-#endif
+#endif /* WITH_POSIX */
     goto onerror;
   }
 
@@ -327,7 +330,7 @@ coap_new_context(
   coap_free( c );
   return NULL;
 
-#endif /* neither contiki nor lwip */
+#endif /* WITH_POSIX */
 #ifdef WITH_CONTIKI
   c->conn = udp_new(NULL, 0, NULL);
   udp_bind(c->conn, listen_addr->port);
@@ -353,25 +356,22 @@ coap_new_context(
 #endif
 }
 
+#ifndef COAP_STATIC_RESOURCES
 void
 coap_free_context( coap_context_t *context ) {
-#ifdef WITH_LWIP
-  /* FIXME */
-  LWIP_ASSERT("We don't free contexts.", 0);
-#else /* WITH_LWIP */
-#ifndef WITH_CONTIKI
+#ifdef WITH_POSIX
   coap_resource_t *res;
 #ifndef COAP_RESOURCES_NOHASH
   coap_resource_t *rtmp;
 #endif
-#endif /* WITH_CONTIKI */
+#endif /* WITH_POSIX */
   if ( !context )
     return;
 
   coap_delete_all(context->recvqueue);
   coap_delete_all(context->sendqueue);
 
-#ifndef WITH_CONTIKI
+#if defined(WITH_POSIX) || defined(WITH_LWIP)
 #ifdef COAP_RESOURCES_NOHASH
   LL_FOREACH(context->resources, res) {
 #else
@@ -383,12 +383,13 @@ coap_free_context( coap_context_t *context ) {
   /* coap_delete_list(context->subscriptions); */
   close( context->sockfd );
   coap_free( context );
-#else /* WITH_CONTIKI */
+#endif /* WITH_POSIX || WITH_LWIP */
+#ifdef WITH_CONTIKI
   memset(&the_coap_context, 0, sizeof(coap_context_t));
   initialized = 0;
 #endif /* WITH_CONTIKI */
-#endif /* WITH_LWIP */
 }
+#endif /* not COAP_STATIC_RESOURCES */
 
 int
 coap_option_check_critical(coap_context_t *ctx, 
@@ -435,7 +436,7 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
   /* Compare the complete address structure in case of IPv4. For IPv6,
    * we need to look at the transport address only. */
 
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#ifdef WITH_POSIX
   switch (peer->addr.sa.sa_family) {
   case AF_INET:
     coap_hash((const unsigned char *)&peer->addr.sa, peer->size, h);
@@ -449,11 +450,12 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
   default:
     return;
   }
-#else /* neither contiki nor lwip */
+#endif
+#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
     /* FIXME: with lwip, we can do better */
     coap_hash((const unsigned char *)&peer->port, sizeof(peer->port), h);
     coap_hash((const unsigned char *)&peer->addr, sizeof(peer->addr), h);  
-#endif /* neither contiki nor lwip */
+#endif /* WITH_LWIP || WITH_CONTIKI */
 
   coap_hash((const unsigned char *)&pdu->hdr->id, sizeof(unsigned short), h);
 
@@ -478,7 +480,7 @@ coap_send_ack(coap_context_t *context,
   return result;
 }
 
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#ifdef WITH_POSIX
 /* releases space allocated by PDU if free_pdu is set */
 coap_tid_t
 coap_send_impl(coap_context_t *context, 
@@ -501,7 +503,7 @@ coap_send_impl(coap_context_t *context,
 
   return id;
 }
-#endif /* neither contiki nor lwip */
+#endif /* WITH_POSIX */
 #ifdef WITH_CONTIKI
 /* releases space allocated by PDU if free_pdu is set */
 coap_tid_t
@@ -673,13 +675,8 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
     node->t = node->timeout << node->retransmit_cnt;
     coap_insert_node(&context->sendqueue, node);
 
-#ifndef WITH_CONTIKI
     debug("** retransmission #%d of transaction %d\n",
 	  node->retransmit_cnt, ntohs(node->pdu->hdr->id));
-#else /* WITH_CONTIKI */
-    debug("** retransmission #%u of transaction %u\n",
-	  node->retransmit_cnt, uip_ntohs(node->pdu->hdr->id));
-#endif /* WITH_CONTIKI */
 
     node->id = coap_send_impl(context, &node->remote, node->pdu);
     return node->id;
@@ -725,11 +722,12 @@ check_opt_size(coap_opt_t *opt, unsigned char *maxpos) {
 
 int
 coap_read( coap_context_t *ctx ) {
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#ifdef WITH_POSIX
   static char buf[COAP_MAX_PDU_SIZE];
-#else /* neither contiki nor lwip */
+#endif
+#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
   char *buf;
-#endif /* neither contiki nor lwip */
+#endif
   coap_hdr_t *pdu;
   ssize_t bytes_read = -1;
   coap_address_t src, dst;
@@ -742,16 +740,16 @@ coap_read( coap_context_t *ctx ) {
   LWIP_ASSERT("No package pending", ctx->pending_package != NULL);
   LWIP_ASSERT("Can only deal with contiguous PBUFs for now", ctx->pending_package->tot_len == ctx->pending_package->len);
   buf = ctx->pending_package->payload;
-#endif /* WITH_CONTIKI */
+#endif /* WITH_LWIP */
 
   pdu = (coap_hdr_t *)buf;
 
   coap_address_init(&src);
 
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#ifdef WITH_POSIX
   bytes_read = recvfrom(ctx->sockfd, buf, sizeof(buf), 0,
 			&src.addr.sa, &src.size);
-#endif /* neither contiki nor lwip */
+#endif /* WITH_POSIX */
 #ifdef WITH_CONTIKI
   if(uip_newdata()) {
     uip_ipaddr_copy(&src.addr, &UIP_IP_BUF->srcipaddr);
@@ -1317,11 +1315,9 @@ coap_dispatch( coap_context_t *context ) {
        * not only the transaction but also the subscriptions we might
        * have. */
 
-#ifndef WITH_CONTIKI
       coap_log(LOG_ALERT, "got RST for message %u\n", ntohs(rcvd->pdu->hdr->id));
-#else /* WITH_CONTIKI */
-      coap_log(LOG_ALERT, "got RST for message %u\n", uip_ntohs(rcvd->pdu->hdr->id));
-#endif /* WITH_CONTIKI */
+
+      /* find transaction in sendqueue to stop retransmission */
       coap_remove_from_queue(&context->sendqueue, rcvd->id, &sent);
 
       if (sent)

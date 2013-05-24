@@ -17,4 +17,9 @@
 /* FIXME just a quick hack */
 #define COAP_TICKS_PER_SECOND 10
 
+/* with lwIP, it's common to statically allocate the required memory for things
+known to be needed -- but it's optional here (the lwIP port will also run if
+you choose to malloc everything and undef this again) */
+#define COAP_STATIC_RESOURCES
+
 #endif /* _CONFIG_H_ */

@@ -104,9 +104,9 @@ typedef struct coap_context_t {
    * to sendqueue_basetime. */
   coap_tick_t sendqueue_basetime;
   coap_queue_t *sendqueue, *recvqueue;
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#if WITH_POSIX
   int sockfd;			/**< send/receive socket */
-#endif /* neither contiki nor lwip */
+#endif /* WITH_POSIX */
 #ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;	/**< uIP connection object */
   
