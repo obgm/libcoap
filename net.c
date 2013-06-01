@@ -40,9 +40,7 @@
 #include "encode.h"
 #include "net.h"
 
-#if defined(WITH_POSIX) || defined(WITH_LWIP)
-
-/* FIXME: in lwip, we'll use pbufs later */
+#if defined(WITH_POSIX)
 
 time_t clock_offset;
 
@@ -55,7 +53,24 @@ static inline void
 coap_free_node(coap_queue_t *node) {
   coap_free(node);
 }
-#endif /* WITH_POSIX || WITH_LWIP */
+#endif /* WITH_POSIX */
+#ifdef WITH_LWIP
+
+#include <lwip/memp.h>
+
+time_t clock_offset; /* FIXME timing is currently ignored */
+
+static inline coap_queue_t *
+coap_malloc_node() {
+	return (coap_queue_t *)memp_malloc(MEMP_COAP_NODE);
+}
+
+static inline void
+coap_free_node(coap_queue_t *node) {
+	memp_free(MEMP_COAP_NODE, node);
+}
+
+#endif /* WITH_LWIP */
 #ifdef WITH_CONTIKI
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT
