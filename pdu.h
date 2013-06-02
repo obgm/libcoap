@@ -13,6 +13,10 @@
 #include "coap_list.h"
 #include "uri.h"
 
+#ifdef WITH_LWIP
+#include <lwip/pbuf.h>
+#endif
+
 /* pre-defined constants that reflect defaults for CoAP */
 
 #define COAP_DEFAULT_RESPONSE_TIMEOUT  2 /* response timeout in seconds */
@@ -206,6 +210,11 @@ typedef struct {
   unsigned short max_delta;	/**< highest option number */
   unsigned short length;	/**< PDU length (including header, options, data)  */
   unsigned char *data;		/**< payload */
+
+#ifdef WITH_LWIP
+  struct pbuf *pbuf; /**< lwIP PBUF. The allocated coap_pdu_t will always reside inside the pbuf's payload, but the pointer has to be kept because no exact offset can be given. */
+#endif
+
 } coap_pdu_t;
 
 /** Options in coap_pdu_t are accessed with the macro COAP_OPTION. */

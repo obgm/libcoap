@@ -56,6 +56,9 @@ coap_pdu_t *
 coap_pdu_init(unsigned char type, unsigned char code, 
 	      unsigned short id, size_t size) {
   coap_pdu_t *pdu;
+#ifdef WITH_LWIP
+    struct pbuf *p;
+#endif
 
   assert(size <= COAP_MAX_PDU_SIZE);
   /* Size must be large enough to fit the header. */
@@ -63,16 +66,27 @@ coap_pdu_init(unsigned char type, unsigned char code,
     return NULL;
 
   /* size must be large enough for hdr */
-#ifndef WITH_CONTIKI
+#ifdef WITH_POSIX
   pdu = coap_malloc(sizeof(coap_pdu_t) + size);
-#else /* WITH_CONTIKI */
+#endif
+#ifdef WITH_CONTIKI
   pdu = (coap_pdu_t *)memb_alloc(&pdu_storage);
-#endif /* WITH_CONTIKI */
+#endif
+#ifdef WITH_LWIP
+  p = pbuf_alloc(PBUF_TRANSPORT, sizeof(coap_pdu_t) + size, PBUF_RAM);
+  if (p != NULL)
+    pdu = p->payload;
+  else
+    pdu = NULL;
+#endif
   if (pdu) {
     coap_pdu_clear(pdu, size);
     pdu->hdr->id = id;
     pdu->hdr->type = type;
     pdu->hdr->code = code;
+#ifdef WITH_LWIP
+    pdu->pbuf = p;
+#endif
   } 
   return pdu;
 }
@@ -96,11 +110,16 @@ coap_new_pdu() {
 
 void
 coap_delete_pdu(coap_pdu_t *pdu) {
-#ifndef WITH_CONTIKI
+#ifdef WITH_POSIX
   coap_free( pdu );
-#else /* WITH_CONTIKI */
+#endif
+#ifdef WITH_LWIP
+  if (pdu != NULL) /* accepting double free as the other implementation accept that too */
+    pbuf_free(pdu->pbuf);
+#endif
+#ifdef WITH_CONTIKI
   memb_free(&pdu_storage, pdu);
-#endif /* WITH_CONTIKI */
+#endif
 }
 
 int
