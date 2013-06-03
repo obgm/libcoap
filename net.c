@@ -489,9 +489,7 @@ coap_send_ack(coap_context_t *context,
 			     sizeof(coap_pdu_t)); 
     if (response) {
       result = coap_send(context, dst, response);
-#ifndef WITH_LWIP
       coap_delete_pdu(response);
-#endif
     }
   }
   return result;
@@ -549,12 +547,14 @@ coap_send_impl(coap_context_t *context,
   coap_tid_t id = COAP_INVALID_TID;
   struct pbuf *p;
   uint8_t err;
+  char *data_backup;
 
   if ( !context || !dst || !pdu )
   {
-    if (pdu != NULL) pbuf_free(pdu->pbuf);
     return id;
   }
+
+  data_backup = pdu->data;
 
   /* FIXME: we can't check this here with the existing infrastructure, but we
    * should actually check that the pdu is not held by anyone but us */
@@ -577,7 +577,20 @@ coap_send_impl(coap_context_t *context,
 
   udp_sendto(context->pcb, p,
 			&dst->addr, dst->port);
-  pbuf_free(p);
+
+  pbuf_header(p, -42); /* FIXME hack around udp_sendto not restoring; see http://lists.gnu.org/archive/html/lwip-users/2013-06/msg00008.html */
+
+  err = pbuf_header(p, sizeof(coap_pdu_t));
+  LWIP_ASSERT("Cannot undo pbuf_header", err == 0);
+
+  /* restore destroyed pdu data */
+  LWIP_ASSERT("PDU not restored", p->payload == pdu);
+  pdu->max_size = p->tot_len - sizeof(coap_pdu_t); /* reduced after pbuf_realloc */
+  pdu->hdr = p->payload + sizeof(coap_pdu_t);
+  pdu->max_delta = 0; /* won't be used any more */
+  pdu->length = pdu->max_size;
+  pdu->data = data_backup;
+  pdu->pbuf = p;
 
   return id;
 }
@@ -605,9 +618,7 @@ coap_send_error(coap_context_t *context,
   response = coap_new_error_response(request, code, opts);
   if (response) {
     result = coap_send(context, dst, response);
-#ifndef WITH_LWIP
     coap_delete_pdu(response);
-#endif
   }
   
   return result;
@@ -625,9 +636,7 @@ coap_send_message_type(coap_context_t *context,
     response = coap_pdu_init(type, 0, request->hdr->id, sizeof(coap_pdu_t)); 
     if (response) {
       result = coap_send(context, dst, response);
-#ifndef WITH_LWIP
       coap_delete_pdu(response);
-#endif
     }
   }
   return result;
@@ -653,9 +662,6 @@ coap_send_confirmed(coap_context_t *context,
     coap_free_node(node);
     return COAP_INVALID_TID;
   }
-#ifdef WITH_LWIP
-  LWIP_ASSERT("Can't re-use that PDU, failing", 0);
-#endif
   
   prng((unsigned char *)&r,sizeof(r));
 
@@ -1188,9 +1194,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
     if (response && coap_send(context, &node->remote, response) == COAP_INVALID_TID) {
       warn("cannot send response for transaction %u\n", node->id);
     }
-#ifndef WITH_LWIP
     coap_delete_pdu(response);
-#endif
 
     return;
   }
@@ -1224,9 +1228,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 	  }
       }
 
-#ifndef WITH_LWIP
       coap_delete_pdu(response);
-#endif
     } else {
       warn("cannot generate response\r\n");
     }
@@ -1242,9 +1244,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 		      == COAP_INVALID_TID)) {
       debug("cannot send response for transaction %u\n", node->id);
     }
-#ifndef WITH_LWIP
     coap_delete_pdu(response);
-#endif
   }  
 }
 
@@ -1390,9 +1390,7 @@ coap_dispatch( coap_context_t *context ) {
 	      == COAP_INVALID_TID) {
 	    warn("coap_dispatch: error sending reponse\n");
 	  }
-#ifndef WITH_LWIP
           coap_delete_pdu(response);
-#endif
 	}	 
 	
 	goto cleanup;
