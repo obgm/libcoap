@@ -12,6 +12,10 @@
 #include "resource.h"
 #include "subscribe.h"
 
+#ifdef WITH_LWIP
+#include <lwip/memp.h>
+#endif
+
 #ifndef WITH_CONTIKI
 #include "utlist.h"
 #include "mem.h"
@@ -585,7 +589,20 @@ coap_delete_observer(coap_resource_t *resource, const coap_address_t *observer,
   if (s) {
     list_remove(resource->subscribers, s);
 
+<<<<<<< HEAD
     COAP_FREE_TYPE(subscription,s);
+=======
+    /* FIXME: notify observer that its subscription has been removed */
+#ifdef WITH_LWIP
+    memp_free(MEMP_COAP_SUBSCRIBER, s);
+#endif
+#ifdef WITH_POSIX
+    coap_free(s);
+#endif
+#ifdef WITH_CONTIKI
+    memb_free(&subscription_storage, s);
+#endif /* WITH_CONTIKI */
+>>>>>>> use lwip pools for observations
   }
 }
 
