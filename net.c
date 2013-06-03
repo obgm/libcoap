@@ -489,7 +489,9 @@ coap_send_ack(coap_context_t *context,
 			     sizeof(coap_pdu_t)); 
     if (response) {
       result = coap_send(context, dst, response);
+#ifndef WITH_LWIP
       coap_delete_pdu(response);
+#endif
     }
   }
   return result;
@@ -546,21 +548,36 @@ coap_send_impl(coap_context_t *context,
 	       coap_pdu_t *pdu) {
   coap_tid_t id = COAP_INVALID_TID;
   struct pbuf *p;
+  uint8_t err;
 
   if ( !context || !dst || !pdu )
+  {
+    if (pdu != NULL) pbuf_free(pdu->pbuf);
     return id;
+  }
 
-  /* FIXME: copying instead of assembling the package as a pbuf */
-  p = pbuf_alloc(PBUF_TRANSPORT, pdu->length, PBUF_RAM);
-  if (p == NULL)
+  /* FIXME: we can't check this here with the existing infrastructure, but we
+   * should actually check that the pdu is not held by anyone but us */
+  LWIP_ASSERT("The pbuf sent via coap_send must be exclusive to the PDU", pdu->pbuf->ref == 1);
+
+  p = pdu->pbuf;
+  LWIP_ASSERT("The PDU header is not where it is expected", pdu->hdr == p->payload + sizeof(coap_pdu_t));
+
+  err = pbuf_header(p, -sizeof(coap_pdu_t));
+  if (err)
+  {
+    debug("coap_send_impl: pbuf_header failed\n");
+    pbuf_free(p);
     return id;
-  pbuf_take(p, pdu->hdr, pdu->length);
+  }
+
+  coap_transaction_id(dst, pdu, &id);
+
+  pbuf_realloc(p, pdu->length);
 
   udp_sendto(context->pcb, p,
 			&dst->addr, dst->port);
   pbuf_free(p);
-
-  coap_transaction_id(dst, pdu, &id);
 
   return id;
 }
@@ -588,7 +605,9 @@ coap_send_error(coap_context_t *context,
   response = coap_new_error_response(request, code, opts);
   if (response) {
     result = coap_send(context, dst, response);
+#ifndef WITH_LWIP
     coap_delete_pdu(response);
+#endif
   }
   
   return result;
@@ -606,7 +625,9 @@ coap_send_message_type(coap_context_t *context,
     response = coap_pdu_init(type, 0, request->hdr->id, sizeof(coap_pdu_t)); 
     if (response) {
       result = coap_send(context, dst, response);
+#ifndef WITH_LWIP
       coap_delete_pdu(response);
+#endif
     }
   }
   return result;
@@ -632,6 +653,9 @@ coap_send_confirmed(coap_context_t *context,
     coap_free_node(node);
     return COAP_INVALID_TID;
   }
+#ifdef WITH_LWIP
+  LWIP_ASSERT("Can't re-use that PDU, failing", 0);
+#endif
   
   prng((unsigned char *)&r,sizeof(r));
 
@@ -754,6 +778,7 @@ coap_read( coap_context_t *ctx ) {
 #ifdef WITH_LWIP
   LWIP_ASSERT("No package pending", ctx->pending_package != NULL);
   LWIP_ASSERT("Can only deal with contiguous PBUFs for now", ctx->pending_package->tot_len == ctx->pending_package->len);
+  LWIP_ASSERT("coap_read needs to receive an exclusive copy of the incoming pbuf", ctx->pending_package->ref == 1);
   buf = ctx->pending_package->payload;
 #endif /* WITH_LWIP */
 
@@ -1163,7 +1188,9 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
     if (response && coap_send(context, &node->remote, response) == COAP_INVALID_TID) {
       warn("cannot send response for transaction %u\n", node->id);
     }
+#ifndef WITH_LWIP
     coap_delete_pdu(response);
+#endif
 
     return;
   }
@@ -1197,7 +1224,9 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 	  }
       }
 
+#ifndef WITH_LWIP
       coap_delete_pdu(response);
+#endif
     } else {
       warn("cannot generate response\r\n");
     }
@@ -1213,7 +1242,9 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 		      == COAP_INVALID_TID)) {
       debug("cannot send response for transaction %u\n", node->id);
     }
+#ifndef WITH_LWIP
     coap_delete_pdu(response);
+#endif
   }  
 }
 
@@ -1359,7 +1390,9 @@ coap_dispatch( coap_context_t *context ) {
 	      == COAP_INVALID_TID) {
 	    warn("coap_dispatch: error sending reponse\n");
 	  }
+#ifndef WITH_LWIP
           coap_delete_pdu(response);
+#endif
 	}	 
 	
 	goto cleanup;
