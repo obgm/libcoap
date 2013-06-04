@@ -22,4 +22,6 @@ known to be needed -- but it's optional here (the lwIP port will also run if
 you choose to malloc everything and undef this again) */
 #define COAP_STATIC_RESOURCES
 
+#define COAP_RESOURCES_NOHASH
+
 #endif /* _CONFIG_H_ */

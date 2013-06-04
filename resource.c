@@ -589,20 +589,7 @@ coap_delete_observer(coap_resource_t *resource, const coap_address_t *observer,
   if (s) {
     list_remove(resource->subscribers, s);
 
-<<<<<<< HEAD
     COAP_FREE_TYPE(subscription,s);
-=======
-    /* FIXME: notify observer that its subscription has been removed */
-#ifdef WITH_LWIP
-    memp_free(MEMP_COAP_SUBSCRIBER, s);
-#endif
-#ifdef WITH_POSIX
-    coap_free(s);
-#endif
-#ifdef WITH_CONTIKI
-    memb_free(&subscription_storage, s);
-#endif /* WITH_CONTIKI */
->>>>>>> use lwip pools for observations
   }
 }
 
@@ -689,11 +676,17 @@ coap_check_notify(coap_context_t *context) {
 #ifdef COAP_RESOURCES_NOHASH
   LL_FOREACH(context->resources, r) {
 #else
+<<<<<<< HEAD
   coap_resource_t *tmp;
   HASH_ITER(hh, context->resources, r, tmp) {
 #endif
     coap_notify_observers(context, r);
   }
+=======
+  HASH_ITER(hh, context->resources, r, tmp) {
+#endif
+    if (r->observable && r->dirty && r->subscribers) {
+>>>>>>> allow having a resource list instead of a hash
 #else /* WITH_CONTIKI */
   int i;
   
