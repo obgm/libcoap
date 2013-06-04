@@ -71,7 +71,14 @@ typedef struct coap_resource_t {
   coap_key_t key;	/**< the actual key bytes for this resource */
 
 #ifndef WITH_CONTIKI
+#ifdef COAP_RESOURCES_NOHASH
+  struct coap_resource_t *next;
+#else
   UT_hash_handle hh;
+#endif
+#endif /* WITH_CONTIKI */
+
+#ifndef WITH_CONTIKI
   coap_attr_t *link_attr; /**< attributes to be included with the link format */
 #else /* WITH_CONTIKI */
   LIST_STRUCT(link_attr); /**< attributes to be included with the link format */

@@ -108,7 +108,9 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
   coap_resource_t *r;
   unsigned char *p = buf;
   size_t left, written = 0;
+#ifndef COAP_RESOURCES_NOHASH
   coap_resource_t *tmp;
+#endif
 #ifndef WITHOUT_QUERY_FILTER
   str resource_param = { 0, NULL }, query_pattern = { 0, NULL };
   int flags = 0; /* MATCH_SUBSTRING, MATCH_PREFIX, MATCH_URI */
@@ -172,7 +174,11 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
 
 #ifndef WITH_CONTIKI
 
+#ifdef COAP_RESOURCES_NOHASH
+  LL_FOREACH(context->resources, r) {
+#else
   HASH_ITER(hh, context->resources, r, tmp) {
+#endif
 #else /* WITH_CONTIKI */
   r = (coap_resource_t *)resource_storage.mem;
   for (i = 0; i < resource_storage.num; ++i, ++r) {
@@ -343,7 +349,11 @@ coap_hash_request_uri(const coap_pdu_t *request, coap_key_t key) {
 void
 coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
 #ifndef WITH_CONTIKI
+#ifdef COAP_RESOURCES_NOHASH
+  LL_PREPEND(context->resources, resource);
+#else
   HASH_ADD(hh, context->resources, key, sizeof(coap_key_t), resource);
+#endif
 #endif /* WITH_CONTIKI */
 }
 
@@ -364,7 +374,11 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
     return 0;
     
 #ifndef WITH_CONTIKI
+#ifdef COAP_RESOURCES_NOHASH
+  LL_DELETE(context->resources, resource);
+#else
   HASH_DELETE(hh, context->resources, resource);
+#endif
 
   /* delete registered attributes */
   LL_FOREACH_SAFE(resource->link_attr, attr, tmp) coap_delete_attr(attr);
@@ -394,9 +408,20 @@ coap_resource_t *
 coap_get_resource_from_key(coap_context_t *context, coap_key_t key) {
 #ifndef WITH_CONTIKI
   coap_resource_t *resource;
+#ifdef COAP_RESOURCES_NOHASH
+  resource = NULL;
+  LL_FOREACH(context->resources, resource) {
+    /* if you think you can outspart the compiler and speed things up by (eg by
+     * casting to uint32* and comparing alues), increment this counter: 1 */
+    if (memcmp(key, resource->key, sizeof(coap_key_t)) == 0)
+	    return resource;
+  }
+  return NULL;
+#else
   HASH_FIND(hh, context->resources, key, sizeof(coap_key_t), resource);
 
   return resource;
+#endif
 #else /* WITH_CONTIKI */
   int i;
   coap_resource_t *ptr2;
@@ -521,11 +546,16 @@ coap_add_observer(coap_resource_t *resource,
 void
 coap_touch_observer(coap_context_t *context, const coap_address_t *observer,
 		    const str *token) {
-  coap_resource_t *r, *tmp;
+  coap_resource_t *r;
   coap_subscription_t *s;
 
 #ifndef WITH_CONTIKI
-  HASH_ITER(hh, context->resources, r, tmp) {    
+#ifdef COAP_RESOURCES_NOHASH
+  LL_FOREACH(context->resources, r) {
+#else
+  coap_resource_t *tmp;
+  HASH_ITER(hh, context->resources, r, tmp) {
+#endif
     s = coap_find_observer(r, observer, token);
     if (s) {
       s->fail_cnt = 0;
@@ -637,9 +667,13 @@ void
 coap_check_notify(coap_context_t *context) {
   coap_resource_t *r;
 #ifndef WITH_CONTIKI
+
+#ifdef COAP_RESOURCES_NOHASH
+  LL_FOREACH(context->resources, r) {
+#else
   coap_resource_t *tmp;
-  
   HASH_ITER(hh, context->resources, r, tmp) {
+#endif
     coap_notify_observers(context, r);
   }
 #else /* WITH_CONTIKI */
@@ -713,9 +747,13 @@ coap_handle_failed_notify(coap_context_t *context,
   coap_resource_t *r;
 
 #ifndef WITH_CONTIKI
-  coap_resource_t *tmp;
 
+#ifdef COAP_RESOURCES_NOHASH
+  LL_FOREACH(context->resources, r) {
+#else
+  coap_resource_t *tmp;
   HASH_ITER(hh, context->resources, r, tmp) {
+#endif
 	coap_remove_failed_observers(context, r, peer, token);
   }
 #else /* WITH_CONTIKI */

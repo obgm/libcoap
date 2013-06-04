@@ -304,7 +304,10 @@ coap_new_context(const coap_address_t *listen_addr) {
 void
 coap_free_context( coap_context_t *context ) {
 #ifndef WITH_CONTIKI
-  coap_resource_t *res, *rtmp;
+  coap_resource_t *res;
+#ifndef COAP_RESOURCES_NOHASH
+  coap_resource_t *rtmp;
+#endif
 #endif /* WITH_CONTIKI */
   if ( !context )
     return;
@@ -313,7 +316,11 @@ coap_free_context( coap_context_t *context ) {
   coap_delete_all(context->sendqueue);
 
 #ifndef WITH_CONTIKI
+#ifdef COAP_RESOURCES_NOHASH
+  LL_FOREACH(context->resources, res) {
+#else
   HASH_ITER(hh, context->resources, res, rtmp) {
+#endif
     coap_delete_resource(context, res->key);
   }
 
@@ -1122,7 +1129,10 @@ handle_locally(coap_context_t *context, coap_queue_t *node) {
 static void
 coap_handle_rst(coap_context_t *context, const coap_queue_t *sent) {
 #ifndef WITHOUT_OBSERVE
-  coap_resource_t *r, *tmp;
+  coap_resource_t *r;
+#ifndef COAP_RESOURCES_NOHASH
+  coap_resource_t *tmp;
+#endif
   str token = { 0, NULL };
 
   /* remove observer for this resource, if any 
@@ -1132,7 +1142,11 @@ coap_handle_rst(coap_context_t *context, const coap_queue_t *sent) {
   COAP_SET_STR(&token, sent->pdu->hdr->token_length, sent->pdu->hdr->token);
 
 #ifndef WITH_CONTIKI
+#ifdef COAP_RESOURCES_NOHASH
+  LL_FOREACH(context->resources, r) {
+#else
   HASH_ITER(hh, context->resources, r, tmp) {
+#endif
     coap_delete_observer(r, &sent->remote, &token);
     coap_cancel_all_messages(context, &sent->remote, token.s, token.length);
   }
