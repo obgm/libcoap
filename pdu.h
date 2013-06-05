@@ -212,13 +212,34 @@ typedef struct {
   unsigned char *data;		/**< payload */
 
 #ifdef WITH_LWIP
-  struct pbuf *pbuf; /**< lwIP PBUF. The allocated coap_pdu_t will always reside inside the pbuf's payload, but the pointer has to be kept because no exact offset can be given. */
+  struct pbuf *pbuf; /**< lwIP PBUF. The allocated coap_pdu_t will always reside inside the pbuf's payload, but the pointer has to be kept because no exact offset can be given. This field must not be accessed from outside, because the pbuf's reference count is checked to be 1 when the pbuf is assigned to the pdu, and the pbuf stays exclusive to this pdu. */
 #endif
 
 } coap_pdu_t;
 
 /** Options in coap_pdu_t are accessed with the macro COAP_OPTION. */
 #define COAP_OPTION(node) ((coap_option *)(node)->options)
+
+#ifdef WITH_LWIP
+/**
+ * Creates a CoAP PDU from an lwIP @p pbuf, whose reference is passed on to
+ * this function.
+ *
+ * The pbuf is checked for being contiguous, for having enough head space for
+ * the PDU struct (which is located directly in front of the data, overwriting
+ * the old other headers), and for having only one reference. The reference is
+ * stored in the PDU and will be freed when the PDU is freed.
+ *
+ * (For now, these are errors; in future, a new pbuf might be allocated, the
+ * data copied and the passed pbuf freed).
+ *
+ * This behaves like coap_pdu_init(0, 0, 0, pbuf->tot_len), and afterwards
+ * copying the contents of the pbuf to the pdu.
+ *
+ * @return A pointer to the new PDU object or @c NULL on error.
+ */
+coap_pdu_t * coap_pdu_from_pbuf(struct pbuf *pbuf);
+#endif
 
 /** 
  * Creates a new CoAP PDU of given @p size (must be large enough to hold the 

@@ -52,6 +52,31 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   pdu->length = sizeof(coap_hdr_t);
 }
 
+#ifdef WITH_LWIP
+coap_pdu_t *
+coap_pdu_from_pbuf(struct pbuf *pbuf)
+{
+  LWIP_ASSERT("Can only deal with contiguous PBUFs", pbuf->tot_len == pbuf->len);
+  LWIP_ASSERT("coap_read needs to receive an exclusive copy of the incoming pbuf", pbuf->ref == 1);
+
+  char *data = pbuf->payload;
+  coap_pdu_t *result;
+
+  pbuf_header(pbuf, sizeof(coap_pdu_t));
+
+  result = (coap_pdu_t *)pbuf->payload;
+
+  memset(result, 0, sizeof(coap_pdu_t));
+
+  result->max_size = pbuf->tot_len - sizeof(coap_pdu_t);
+  result->length = pbuf->tot_len - sizeof(coap_pdu_t);
+  result->hdr = data;
+  result->pbuf = pbuf;
+
+  return result;
+}
+#endif
+
 coap_pdu_t *
 coap_pdu_init(unsigned char type, unsigned char code, 
 	      unsigned short id, size_t size) {

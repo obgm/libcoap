@@ -558,8 +558,8 @@ coap_send_impl(coap_context_t *context,
   data_backup = pdu->data;
 
   /* FIXME: we can't check this here with the existing infrastructure, but we
-   * should actually check that the pdu is not held by anyone but us */
-  LWIP_ASSERT("The pbuf sent via coap_send must be exclusive to the PDU", pdu->pbuf->ref == 1);
+   * should actually check that the pdu is not held by anyone but us. the
+   * respective pdu is already exclusively owned by the pdu. */
 
   p = pdu->pbuf;
   LWIP_ASSERT("The PDU header is not where it is expected", pdu->hdr == p->payload + sizeof(coap_pdu_t));
@@ -784,8 +784,7 @@ coap_read( coap_context_t *ctx ) {
 #endif /* WITH_CONTIKI */
 #ifdef WITH_LWIP
   LWIP_ASSERT("No package pending", ctx->pending_package != NULL);
-  LWIP_ASSERT("Can only deal with contiguous PBUFs for now", ctx->pending_package->tot_len == ctx->pending_package->len);
-  LWIP_ASSERT("coap_read needs to receive an exclusive copy of the incoming pbuf", ctx->pending_package->ref == 1);
+  LWIP_ASSERT("Can only deal with contiguous PBUFs to read the initial details", ctx->pending_package->tot_len == ctx->pending_package->len);
   buf = ctx->pending_package->payload;
 #endif /* WITH_LWIP */
 
@@ -816,7 +815,7 @@ coap_read( coap_context_t *ctx ) {
   src.addr.addr = ctx->pending_address.addr;
   src.port = ctx->pending_port;
   bytes_read = ctx->pending_package->tot_len;
-#endif
+#endif /* WITH_LWIP */
 
   if ( bytes_read < 0 ) {
     warn("coap_read: recvfrom");
@@ -837,7 +836,12 @@ coap_read( coap_context_t *ctx ) {
   if ( !node )
     goto error_early;
 
+#ifdef WITH_LWIP
+  node->pdu = coap_pdu_from_pbuf(ctx->pending_package);
+  ctx->pending_package = NULL;
+#else
   node->pdu = coap_pdu_init(0, 0, 0, bytes_read);
+#endif
   if (!node->pdu)
     goto error;
 
@@ -868,16 +872,12 @@ if (!coap_pdu_parse((unsigned char *)buf, bytes_read, node->pdu)) {
   }
 #endif
 
-#ifdef WITH_LWIP
-  pbuf_free(ctx->pending_package);
-  ctx->pending_package = NULL;
-#endif
   return 0;
 
  error:
   /* FIXME: send back RST? */
   coap_delete_node(node);
-  /* fall through to error_early */
+  return -1;
  error_early:
 #ifdef WITH_LWIP
   /* even if there was an error, clean up */
