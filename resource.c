@@ -237,12 +237,15 @@ coap_resource_t *
 coap_resource_init(const unsigned char *uri, size_t len, int flags) {
   coap_resource_t *r;
 
-#ifndef WITH_CONTIKI
+#ifdef WITH_POSIX
   r = (coap_resource_t *)coap_malloc(sizeof(coap_resource_t));
-#else /* WITH_CONTIKI */
+#endif
+#ifdef WITH_LWIP
+  r = (coap_resource_t *)memp_malloc(MEMP_COAP_RESOURCE);
+#endif
+#ifdef WITH_CONTIKI
   r = (coap_resource_t *)memb_alloc(&resource_storage);
-
-#endif /* WITH_CONTIKI */
+#endif
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
 
@@ -274,11 +277,15 @@ coap_add_attr(coap_resource_t *resource,
   if (!resource || !name)
     return NULL;
 
-#ifndef WITH_CONTIKI
+#ifdef WITH_POSIX
   attr = (coap_attr_t *)coap_malloc(sizeof(coap_attr_t));
-#else /* WITH_CONTIKI */
+#endif
+#ifdef WITH_LWIP
+  attr = (coap_attr_t *)memp_malloc(MEMP_COAP_RESOURCEATTR);
+#endif
+#ifdef WITH_CONTIKI
   attr = (coap_attr_t *)memb_alloc(&attribute_storage);
-#endif /* WITH_CONTIKI */
+#endif
 
   if (attr) {
     attr->name.length = nlen;
@@ -332,7 +339,15 @@ coap_delete_attr(coap_attr_t *attr) {
     coap_free(attr->name.s);
   if (attr->flags & COAP_ATTR_FLAGS_RELEASE_VALUE)
     coap_free(attr->value.s);
+#ifdef POSIX
   coap_free(attr);
+#endif
+#ifdef WITH_LWIP
+  memp_free(MEMP_COAP_RESOURCEATTR, attr);
+#endif
+#ifdef WITH_CONTIKI
+  /* FIXME it looks like this was never implemented */
+#endif
 }
 
 void
@@ -378,7 +393,7 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
   if (!resource) 
     return 0;
     
-#ifndef WITH_CONTIKI
+#if defined(WITH_POSIX) || defined(WITH_LWIP)
 #ifdef COAP_RESOURCES_NOHASH
   LL_DELETE(context->resources, resource);
 #else
@@ -391,8 +406,13 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
   if (resource->flags & COAP_RESOURCE_FLAGS_RELEASE_URI)
     coap_free(resource->uri.s);
 
+#ifdef WITH_POSIX
   coap_free(resource);
-#else /* WITH_CONTIKI */
+#endif
+#ifdef WITH_LWIP
+  memp_free(MEMP_COAP_RESOURCE, resource);
+#endif
+#else /* not (WITH_POSIX || WITH_LWIP) */
   /* delete registered attributes */
   while ( (attr = list_pop(resource->link_attr)) )
     memb_free(&attribute_storage, attr);
@@ -676,17 +696,11 @@ coap_check_notify(coap_context_t *context) {
 #ifdef COAP_RESOURCES_NOHASH
   LL_FOREACH(context->resources, r) {
 #else
-<<<<<<< HEAD
   coap_resource_t *tmp;
   HASH_ITER(hh, context->resources, r, tmp) {
 #endif
     coap_notify_observers(context, r);
   }
-=======
-  HASH_ITER(hh, context->resources, r, tmp) {
-#endif
-    if (r->observable && r->dirty && r->subscribers) {
->>>>>>> allow having a resource list instead of a hash
 #else /* WITH_CONTIKI */
   int i;
   
