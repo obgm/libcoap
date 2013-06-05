@@ -27,7 +27,11 @@
 #endif /* COAP_RESOURCE_CHECK_TIME */
 
 #ifndef WITH_CONTIKI
-#include "uthash.h"
+#  ifdef COAP_RESOURCES_NOHASH
+#    include "utlist.h"
+#  else
+#    include "uthash.h"
+#  endif
 #else /* WITH_CONTIKI */
 #endif /* WITH_CONTIKI */
 #include "hashkey.h"

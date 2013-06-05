@@ -249,27 +249,22 @@ is_wkc(coap_key_t k) {
 }
 #endif
 
-#ifdef COAP_STATIC_RESOURCES
-void
-coap_init_context(
-  coap_context_t *c,
-#else
 coap_context_t *
 coap_new_context(
-#endif
   const coap_address_t *listen_addr) {
-#ifndef COAP_STATIC_RESOURCES
-#if defined(WITH_POSIX) || defined(WITH_LWIP)
+#ifdef WITH_POSIX
   coap_context_t *c = coap_malloc( sizeof( coap_context_t ) );
   int reuse = 1;
-#endif /* WITH_POSIX || WITH_LWIP */
+#endif /* WITH_POSIX */
+#ifdef WITH_LWIP
+  coap_context_t *c = memp_malloc(MEMP_COAP_CONTEXT);
+#endif /* WITH_LWIP */
 #ifdef WITH_CONTIKI
   coap_context_t *c;
 
   if (initialized)
     return NULL;
 #endif /* WITH_CONTIKI */
-#endif /* not COAP_STATIC_RESOURCES */
 
   if (!listen_addr) {
     coap_log(LOG_EMERG, "no listen address specified\n");
@@ -283,14 +278,14 @@ coap_new_context(
   prng_init((unsigned long)listen_addr ^ clock_offset);
 #endif /* WITH_LWIP */
 
-#if !defined(WITH_CONTIKI) && !defined(COAP_STATIC_RESOURCES)
+#ifndef WITH_CONTIKI
   if ( !c ) {
 #ifndef NDEBUG
     coap_log(LOG_EMERG, "coap_init: malloc:\n");
 #endif
     return NULL;
   }
-#endif /* !WITH_CONTIKI && !COAP_STATIC_RESOURCES */
+#endif /* not WITH_CONTIKI */
 #ifdef WITH_CONTIKI
   coap_resources_init();
   coap_pdu_resources_init();
@@ -368,18 +363,19 @@ coap_new_context(
 
   udp_recv(c->pcb, received_package, (void*)c);
   udp_bind(c->pcb, &listen_addr->addr, listen_addr->port);
+
+  return c;
 #endif
 }
 
-#ifndef COAP_STATIC_RESOURCES
 void
 coap_free_context( coap_context_t *context ) {
-#ifdef WITH_POSIX
+#if defined(WITH_POSIX) || defined(WITH_LWIP)
   coap_resource_t *res;
 #ifndef COAP_RESOURCES_NOHASH
   coap_resource_t *rtmp;
 #endif
-#endif /* WITH_POSIX */
+#endif /* WITH_POSIX || WITH_LWIP */
   if ( !context )
     return;
 
@@ -394,17 +390,22 @@ coap_free_context( coap_context_t *context ) {
 #endif
     coap_delete_resource(context, res->key);
   }
+#endif /* WITH_POSIX || WITH_LWIP */
 
+#ifdef WITH_POSIX
   /* coap_delete_list(context->subscriptions); */
   close( context->sockfd );
   coap_free( context );
-#endif /* WITH_POSIX || WITH_LWIP */
+#endif
+#ifdef WITH_LWIP
+  udp_remove(context->pcb);
+  memp_free(MEMP_COAP_CONTEXT, context);
+#endif
 #ifdef WITH_CONTIKI
   memset(&the_coap_context, 0, sizeof(coap_context_t));
   initialized = 0;
 #endif /* WITH_CONTIKI */
 }
-#endif /* not COAP_STATIC_RESOURCES */
 
 int
 coap_option_check_critical(coap_context_t *ctx, 

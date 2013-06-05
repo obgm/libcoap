@@ -7,6 +7,10 @@
 #include <net.h>
 #include <subscribe.h>
 
+#ifndef MEMP_NUM_COAPCONTEXT
+#define MEMP_NUM_COAPCONTEXT 1
+#endif
+
 #ifndef MEMP_NUM_COAPNODE
 #define MEMP_NUM_COAPNODE 4
 #endif
@@ -15,5 +19,6 @@
 #define MEMP_NUM_COAP_SUBSCRIPTION 4
 #endif
 
+LWIP_MEMPOOL(COAP_CONTEXT, MEMP_NUM_COAPCONTEXT, sizeof(coap_context_t), "COAP_CONTEXT")
 LWIP_MEMPOOL(COAP_NODE, MEMP_NUM_COAPNODE, sizeof(coap_queue_t), "COAP_NODE")
 LWIP_MEMPOOL(COAP_subscription, MEMP_NUM_COAP_SUBSCRIPTION, sizeof(coap_subscription_t), "COAP_subscription")
