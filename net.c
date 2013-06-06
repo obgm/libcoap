@@ -29,6 +29,7 @@
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
 #include <lwip/udp.h>
+#include <lwip/timers.h>
 #endif
 
 #include "debug.h"
@@ -57,6 +58,9 @@ coap_free_node(coap_queue_t *node) {
 #ifdef WITH_LWIP
 
 #include <lwip/memp.h>
+
+static void coap_retransmittimer_execute(void *arg);
+static void coap_retransmittimer_restart(coap_context_t *ctx);
 
 static inline coap_queue_t *
 coap_malloc_node() {
@@ -362,6 +366,8 @@ coap_new_context(
   udp_recv(c->pcb, received_package, (void*)c);
   udp_bind(c->pcb, &listen_addr->addr, listen_addr->port);
 
+  c->timer_configured = 0;
+
   return c;
 #endif
 }
@@ -379,6 +385,11 @@ coap_free_context( coap_context_t *context ) {
 
   coap_delete_all(context->recvqueue);
   coap_delete_all(context->sendqueue);
+
+#ifdef WITH_LWIP
+  context->sendqueue = NULL;
+  coap_retransmittimer_restart(context);
+#endif
 
 #if defined(WITH_POSIX) || defined(WITH_LWIP)
 #ifdef COAP_RESOURCES_NOHASH
@@ -691,6 +702,11 @@ coap_send_confirmed(coap_context_t *context,
 
   coap_insert_node(&context->sendqueue, node);
 
+#ifdef WITH_LWIP
+  if (node == context->sendqueue) /* don't bother with timer stuff if there are earlier retransmits */
+    coap_retransmittimer_restart(context);
+#endif
+
 #ifdef WITH_CONTIKI
   {			    /* (re-)initialize retransmission timer */
     coap_queue_t *nextpdu;
@@ -718,6 +734,10 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
     node->retransmit_cnt++;
     node->t = node->timeout << node->retransmit_cnt;
     coap_insert_node(&context->sendqueue, node);
+#ifdef WITH_LWIP
+    if (node == context->sendqueue) /* don't bother with timer stuff if there are earlier retransmits */
+      coap_retransmittimer_restart(context);
+#endif
 
     debug("** retransmission #%d of transaction %d\n",
 	  node->retransmit_cnt, ntohs(node->pdu->hdr->id));
@@ -1467,3 +1487,63 @@ PROCESS_THREAD(coap_retransmit_process, ev, data)
 /*---------------------------------------------------------------------------*/
 
 #endif /* WITH_CONTIKI */
+
+#ifdef WITH_LWIP
+/* FIXME: retransmits that are not required any more due to incoming packages
+ * do *not* get cleared at the moment, the wakeup when the transmission is due
+ * is silently accepted. this is mainly due to the fact that the required
+ * checks are similar in two places in the code (when receiving ACK and RST)
+ * and that they cause more than one patch chunk, as it must be first checked
+ * whether the sendqueue item to be dropped is the next one pending, and later
+ * the restart function has to be called. nothing insurmountable, but it can
+ * also be implemented when things have stabilized, and the performance
+ * penality is minimal
+ *
+ * also, this completely ignores COAP_RESOURCE_CHECK_TIME.
+ *
+ * last but not least, timer wrapping can destroy this thing, but it seems that
+ * the retransmit insertion is not safe in that respect anyway.
+ * */
+
+static void coap_retransmittimer_execute(void *arg)
+{
+	coap_context_t *ctx = (coap_context_t*)arg;
+	coap_tick_t now;
+	coap_queue_t *nextinqueue;
+
+	ctx->timer_configured = 0;
+
+	coap_ticks(&now);
+
+	nextinqueue = coap_peek_next(ctx);
+	while (nextinqueue != NULL && nextinqueue->t <= now)
+	{
+		coap_retransmit(ctx, coap_pop_next(ctx));
+		nextinqueue = coap_peek_next(ctx);
+	}
+
+	coap_retransmittimer_restart(ctx);
+}
+
+static void coap_retransmittimer_restart(coap_context_t *ctx)
+{
+	coap_tick_t now;
+	coap_tick_t delay;
+
+	if (ctx->timer_configured)
+	{
+		printf("clearing\n");
+		sys_untimeout(coap_retransmittimer_execute, (void*)ctx);
+		ctx->timer_configured = 0;
+	}
+	if (ctx->sendqueue != NULL)
+	{
+		coap_ticks(&now);
+		delay = ctx->sendqueue->t - now;
+		printf("scheduling for %d\n", delay);
+		LWIP_ASSERT("Unrealistically long delay", delay < 60000); /* FIXME first make _order_timestamp work in a way that wraps are not an issue */
+		sys_timeout(delay, coap_retransmittimer_execute, (void*)ctx);
+		ctx->timer_configured = 1;
+	}
+}
+#endif

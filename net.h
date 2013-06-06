@@ -118,6 +118,8 @@ typedef struct coap_context_t {
   struct pbuf *pending_package; /**< pbuf containing the last received package if not handled yet. This is only used to pass the package from the udp_recv callback into the coap_read function, which frees the pbuf and clears this field. */
   ip_addr_t pending_address; /**< the address associated with pending_package */
   u16_t pending_port; /**< the port associated with pending_package */
+
+  uint8_t timer_configured; /**< Set to 1 when a retransmission is scheduled using lwIP timers for this context, otherwise 0. */
 #endif /* WITH_LWIP */
 
   /**
