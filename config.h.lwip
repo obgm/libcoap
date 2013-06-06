@@ -14,9 +14,6 @@
  * building in */
 #define HAVE_STRNLEN 1
 
-/* FIXME just a quick hack */
-#define COAP_TICKS_PER_SECOND 10
-
 #define COAP_RESOURCES_NOHASH
 
 #endif /* _CONFIG_H_ */

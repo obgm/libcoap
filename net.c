@@ -58,8 +58,6 @@ coap_free_node(coap_queue_t *node) {
 
 #include <lwip/memp.h>
 
-time_t clock_offset; /* FIXME timing is currently ignored */
-
 static inline coap_queue_t *
 coap_malloc_node() {
 	return (coap_queue_t *)memp_malloc(MEMP_COAP_NODE);
