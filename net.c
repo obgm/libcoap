@@ -243,6 +243,7 @@ coap_new_context(const coap_address_t *listen_addr) {
   coap_register_option(c, COAP_OPTION_URI_PORT);
   coap_register_option(c, COAP_OPTION_URI_PATH);
   coap_register_option(c, COAP_OPTION_URI_QUERY);
+  coap_register_option(c, COAP_OPTION_ACCEPT);
   coap_register_option(c, COAP_OPTION_PROXY_URI);
   coap_register_option(c, COAP_OPTION_PROXY_SCHEME);
 

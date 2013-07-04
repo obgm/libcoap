@@ -1,3 +1,9 @@
+2013-07-04  Olaf Bergmann  <bergmann@tzi.org>
+
+	* net.c (coap_new_context): register critical Accept option
+
+	* pdu.c: option codes for Accept and Size1 according to coap-18
+
 2013-02-01  Olaf Bergmann  <bergmann@tzi.org>
 
 	* coap_time.h (coap_clock_init_impl): fix invalid preprocessor
