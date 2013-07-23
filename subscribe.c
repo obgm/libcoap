@@ -1,7 +1,7 @@
 /* subscribe.c -- subscription handling for CoAP
- *                see draft-hartke-coap-observe-03
+ *                see draft-ietf-coap-observe-09
  *
- * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 

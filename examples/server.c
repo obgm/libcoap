@@ -39,6 +39,8 @@ static int quit = 0;
 /* changeable clock base (see handle_put_time()) */
 static time_t my_clock_base = 0;
 
+struct coap_resource_t *time_resource = NULL;
+
 #ifndef WITHOUT_ASYNC
 /* This variable is used to mimic long-running tasks that require
  * asynchronous responses. */
@@ -81,6 +83,7 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   size_t len;
   time_t now;
   coap_tick_t t;
+  coap_subscription_t *subscription;
 
   /* FIXME: return time, e.g. in human-readable by default and ticks
    * when query ?ticks is given. */
@@ -91,10 +94,11 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 
   if (request != NULL &&
       coap_check_option(request, COAP_OPTION_OBSERVE, &opt_iter)) {
-    coap_add_observer(resource,
-		      peer,
-		      token);
-    coap_add_option(response, COAP_OPTION_OBSERVE, 0, NULL);
+    subscription = coap_add_observer(resource, peer, token);
+    if (subscription) {
+      subscription->non = request->hdr->type == COAP_MESSAGE_NON;
+      coap_add_option(response, COAP_OPTION_OBSERVE, 0, NULL);
+    }
   }
   if (resource->dirty == 1)
     coap_add_option(response, COAP_OPTION_OBSERVE, 
@@ -275,6 +279,7 @@ init_resources(coap_context_t *ctx) {
   coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"\"clock\"", 7, 0);
 
   coap_add_resource(ctx, r);
+  time_resource = r;
 
 #ifndef WITHOUT_ASYNC
   r = coap_resource_init((unsigned char *)"async", 5, 0);
@@ -419,7 +424,9 @@ main(int argc, char **argv) {
 	coap_dispatch( ctx );	/* and dispatch PDUs from receivequeue */
       }
     } else {			/* timeout */
-      /* coap_check_resource_list( ctx ); */
+      if (time_resource) {
+	time_resource->dirty = 1;
+      }
     }
 
 #ifndef WITHOUT_ASYNC

@@ -1,6 +1,6 @@
 /* resource.c -- generic resource handling
  *
- * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -15,6 +15,11 @@
 #ifndef WITH_CONTIKI
 #include "utlist.h"
 #include "mem.h"
+
+#define COAP_MALLOC_TYPE(Type) \
+  ((coap_##Type##_t *)coap_malloc(sizeof(coap_##Type##_t)))
+#define COAP_FREE_TYPE(Type, Object) coap_free(Object)
+
 #else /* WITH_CONTIKI */
 #include "memb.h"
 
@@ -27,6 +32,16 @@ coap_resources_init() {
   memb_init(&resource_storage);
   memb_init(&attribute_storage);
   memb_init(&subscription_storage);
+}
+
+static inline coap_subscription_t *
+coap_malloc_subscription() {
+  return memb_alloc(&subscription_storage);
+}
+
+static inline void
+coap_free_subscription(coap_subscription_t *subscription) {
+  memb_free(&subscription_storage, subscription);
 }
 #endif /* WITH_CONTIKI */
 
@@ -222,8 +237,8 @@ coap_resource_init(const unsigned char *uri, size_t len, int flags) {
 
 #ifdef WITH_CONTIKI
     LIST_STRUCT_INIT(r, link_attr);
-    LIST_STRUCT_INIT(r, subscribers);
 #endif /* WITH_CONTIKI */
+    LIST_STRUCT_INIT(r, subscribers);
 
     r->uri.s = (unsigned char *)uri;
     r->uri.length = len;
@@ -457,11 +472,7 @@ coap_find_observer(coap_resource_t *resource, const coap_address_t *peer,
   assert(resource);
   assert(peer);
 
-#ifndef WITH_CONTIKI
-  LL_FOREACH(resource->subscribers, s) {
-#else /* WITH_CONTIKI */
   for (s = list_head(resource->subscribers); s; s = list_item_next(s)) {
-#endif /* WITH_CONTIKI */
     if (coap_address_equals(&s->subscriber, peer)
 	&& (!token || (token->length == s->token_length 
 		       && memcmp(token->s, s->token, token->length) == 0)))
@@ -488,11 +499,7 @@ coap_add_observer(coap_resource_t *resource,
 
   /* s points to a different subscription, so we have to create
    * another one. */
-#ifndef WITH_CONTIKI
-  s = (coap_subscription_t *)coap_malloc(sizeof(coap_subscription_t));
-#else /* WITH_CONTIKI */
-  s = memb_alloc(&subscription_storage);
-#endif /* WITH_CONTIKI */
+  s = COAP_MALLOC_TYPE(subscription);
 
   if (!s)
     return NULL;
@@ -506,114 +513,179 @@ coap_add_observer(coap_resource_t *resource,
   }
 
   /* add subscriber to resource */
-#ifndef WITH_CONTIKI
-  LL_PREPEND(resource->subscribers, s);
-#else /* WITH_CONTIKI */
   list_add(resource->subscribers, s);
-#endif /* WITH_CONTIKI */
 
   return s;
 }
 
 void
-coap_delete_observer(coap_resource_t *resource, coap_address_t *observer,
+coap_touch_observer(coap_context_t *context, const coap_address_t *observer,
+		    const str *token) {
+  coap_resource_t *r, *tmp;
+  coap_subscription_t *s;
+
+#ifndef WITH_CONTIKI
+  HASH_ITER(hh, context->resources, r, tmp) {    
+    s = coap_find_observer(r, observer, token);
+    if (s) {
+      s->fail_cnt = 0;
+    }
+  }
+#else /* WITH_CONTIKI */
+  r = (coap_resource_t *)resource_storage.mem;
+  for (i = 0; i < resource_storage.num; ++i, ++r) {
+    if (resource_storage.count[i]) {
+      s = coap_find_observer(r, observer, token);
+      if (s) {
+	s->fail_cnt = 0;
+      }
+    }
+  }
+#endif /* WITH_CONTIKI */
+}
+
+void
+coap_delete_observer(coap_resource_t *resource, const coap_address_t *observer,
 		     const str *token) {
   coap_subscription_t *s;
 
   s = coap_find_observer(resource, observer, token);
 
   if (s) {
-#ifndef WITH_CONTIKI
-    LL_DELETE(resource->subscribers, s);
-#else /* WITH_CONTIKI */
     list_remove(resource->subscribers, s);
-#endif /* WITH_CONTIKI */
 
-    /* FIXME: notify observer that its subscription has been removed */
-#ifndef WITH_CONTIKI
-    coap_free(s);
-#else /* WITH_CONTIKI */
-    memb_free(&subscription_storage, s);
-#endif /* WITH_CONTIKI */
+    COAP_FREE_TYPE(subscription,s);
   }
 }
 
+static void
+coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
+  coap_method_handler_t h;
+  coap_subscription_t *obs;
+  str token;
+  coap_pdu_t *response;
+
+  /* retrieve GET handler, prepare response */
+  h = r->handler[COAP_REQUEST_GET - 1];
+  assert(h);		/* we do not allow subscriptions if no
+			 * GET handler is defined */
+
+  if (r->observable && r->dirty) {
+    for (obs = list_head(r->subscribers); obs; obs = list_item_next(obs)) {
+      coap_tid_t tid = COAP_INVALID_TID;
+      /* initialize response */
+      response = coap_pdu_init(COAP_MESSAGE_CON, 0, 0, COAP_MAX_PDU_SIZE);
+      if (!response) {
+	debug("coap_check_notify: pdu init failed\n");
+	continue;
+      }
+
+      if (!coap_add_token(response, obs->token_length, obs->token)) {
+	debug("coap_check_notify: cannot add token\n");
+	coap_delete_pdu(response);
+	continue;
+      }
+
+      token.length = obs->token_length;
+      token.s = obs->token;
+
+      response->hdr->id = coap_new_message_id(context);
+      if (obs->non && obs->non_cnt < COAP_OBS_MAX_NON) {
+	response->hdr->type = COAP_MESSAGE_NON;
+      } else {
+	response->hdr->type = COAP_MESSAGE_CON;
+      }
+      /* fill with observer-specific data */
+      h(context, r, &obs->subscriber, NULL, &token, response);
+
+      if (response->hdr->type == COAP_MESSAGE_CON) {
+	tid = coap_send_confirmed(context, &obs->subscriber, response);
+	obs->non_cnt = 0;
+      } else {
+	tid = coap_send(context, &obs->subscriber, response);
+	obs->non_cnt++;
+      }
+
+      if (COAP_INVALID_TID == tid || response->hdr->type != COAP_MESSAGE_CON)
+	coap_delete_pdu(response);
+    }
+
+    /* Increment value for next Observe use. */
+    context->observe++;
+  }
+  r->dirty = 0;
+}
 
 void
 coap_check_notify(coap_context_t *context) {
   coap_resource_t *r;
-  coap_pdu_t *response;
 #ifndef WITH_CONTIKI
   coap_resource_t *tmp;
-
+  
   HASH_ITER(hh, context->resources, r, tmp) {
-    if (r->observable && r->dirty && r->subscribers) {
+    coap_notify_observers(context, r);
+  }
 #else /* WITH_CONTIKI */
   int i;
   
   r = (coap_resource_t *)resource_storage.mem;
   for (i = 0; i < resource_storage.num; ++i, ++r) {
-    if (!resource_storage.count[i] )
-      continue;
-
-    if (r->observable && r->dirty && list_head(r->subscribers)) {
-#endif /* WITH_CONTIKI */
-      coap_method_handler_t h;
-      coap_subscription_t *obs;
-      str token;
-
-      /* retrieve GET handler, prepare response */
-      h = r->handler[COAP_REQUEST_GET - 1];
-      assert(h);		/* we do not allow subscriptions if no
-				 * GET handler is defined */
-
-#ifndef WITH_CONTIKI
-      /* FIXME: */
-      LL_FOREACH(r->subscribers, obs) {
-#else /* WITH_CONTIKI */
-      for (obs = list_head(r->subscribers); obs; obs = list_item_next(obs)) {
-#endif /* WITH_CONTIKI */
-        coap_tid_t tid = COAP_INVALID_TID;
-	/* initialize response */
-        response = coap_pdu_init(COAP_MESSAGE_CON, 0, 0, COAP_MAX_PDU_SIZE);
-        if (!response) {
-          debug("coap_check_notify: pdu init failed\n");
-          continue;
-        }
-	if (!coap_add_token(response, obs->token_length, obs->token)) {
-	  debug("coap_check_notify: cannot add token\n");
-	  coap_delete_pdu(response);
-	  continue;
-	}
-
-	token.length = obs->token_length;
-	token.s = obs->token;
-
-	response->hdr->id = coap_new_message_id(context);
-	if (obs->non && obs->non_cnt < COAP_OBS_MAX_NON)
-	  response->hdr->type = COAP_MESSAGE_NON;
-	else
-	  response->hdr->type = COAP_MESSAGE_CON;
-
-	/* fill with observer-specific data */
-	h(context, r, &obs->subscriber, NULL, &token, response);
-
-	if (response->hdr->type == COAP_MESSAGE_CON) {
-	  tid = coap_send_confirmed(context, &obs->subscriber, response);
-	  obs->non_cnt = 0;
-	} else {
-	  tid = coap_send(context, &obs->subscriber, response);
-	  obs->non_cnt++;
-	}
-
-        if (COAP_INVALID_TID == tid || response->hdr->type != COAP_MESSAGE_CON)
-          coap_delete_pdu(response);
-      }
-
-      /* Increment value for next Observe use. */
-      context->observe++;
+    if (resource_storage.count[i]) {
+      coap_notify_observers(context, r);
     }
-    r->dirty = 0;
+  }
+#endif /* WITH_CONTIKI */
+}
+
+/**
+ * Checks the failure counter for (peer, token) and removes peer from
+ * the list of observers for the given resource when COAP_OBS_MAX_FAIL
+ * is reached.
+ *
+ * @param context  The CoAP context to use
+ * @param resource The resource to check for (peer, token)
+ * @param peer     The observer's address
+ * @param token    The token that has been used for subscription.
+ */
+static void
+coap_remove_failed_observers(coap_context_t *context,
+			     coap_resource_t *resource,
+			     const coap_address_t *peer,
+			     const str *token) {
+  coap_subscription_t *obs;
+
+  for (obs = list_head(resource->subscribers); obs; 
+       obs = list_item_next(obs)) {
+    if (coap_address_equals(peer, &obs->subscriber) &&
+	token->length == obs->token_length &&
+	memcmp(token->s, obs->token, token->length) == 0) {
+      
+      /* count failed notifies and remove when
+       * COAP_MAX_FAILED_NOTIFY is reached */
+      if (obs->fail_cnt < COAP_OBS_MAX_FAIL)
+	obs->fail_cnt++;
+      else {
+	list_remove(resource->subscribers, obs);
+	obs->fail_cnt = 0;
+	
+#ifndef NDEBUG
+	if (LOG_DEBUG <= coap_get_log_level()) {
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN 40
+#endif
+	  unsigned char addr[INET6_ADDRSTRLEN+8];
+
+	  if (coap_print_addr(&obs->subscriber, addr, INET6_ADDRSTRLEN+8))
+	    debug("** removed observer %s\n", addr);
+	}
+#endif
+	coap_cancel_all_messages(context, &obs->subscriber, 
+				 obs->token, obs->token_length);
+
+	COAP_FREE_TYPE(subscription, obs);
+      }
+    }
+    break;			/* break loop if observer was found */
   }
 }
 
@@ -622,50 +694,22 @@ coap_handle_failed_notify(coap_context_t *context,
 			  const coap_address_t *peer, 
 			  const str *token) {
   coap_resource_t *r;
-  coap_subscription_t *obs;
 
 #ifndef WITH_CONTIKI
-  ;
+  coap_resource_t *tmp;
+
+  HASH_ITER(hh, context->resources, r, tmp) {
+	coap_remove_failed_observers(context, r, peer, token);
+  }
 #else /* WITH_CONTIKI */
   int i;
   
   r = (coap_resource_t *)resource_storage.mem;
   for (i = 0; i < resource_storage.num; ++i, ++r) {
-    if (!resource_storage.count[i] )
-      continue;
-
-  again:
-    for (obs = list_head(r->subscribers); obs; obs = list_item_next(obs)) {
-      if (coap_address_equals(peer, &obs->subscriber) &&
-	  token->length == obs->token_length &&
-	  memcmp(token->s, obs->token, token->length) == 0) {
-
-	/* FIXME: count failed notifies and remove when
-	 * COAP_MAX_FAILED_NOTIFY is reached */
-	if (obs->fail_cnt < COAP_OBS_MAX_FAIL)
-	  obs->fail_cnt++;
-	else {
-	  list_remove(r->subscribers, obs);
-	  obs->fail_cnt = 0;
-
-	  debug("removed observer [%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]:%d\r\n",
-	      obs->subscriber.addr.u8[0], obs->subscriber.addr.u8[1], 
-	      obs->subscriber.addr.u8[2], obs->subscriber.addr.u8[3], 
-	      obs->subscriber.addr.u8[4], obs->subscriber.addr.u8[5], 
-	      obs->subscriber.addr.u8[6], obs->subscriber.addr.u8[7], 
-	      obs->subscriber.addr.u8[8], obs->subscriber.addr.u8[9], 
-	      obs->subscriber.addr.u8[10], obs->subscriber.addr.u8[11], 
-	      obs->subscriber.addr.u8[12], obs->subscriber.addr.u8[13], 
-	      obs->subscriber.addr.u8[14], obs->subscriber.addr.u8[15] ,
-	      uip_ntohs(obs->subscriber.port));
-
-	  memb_free(&subscription_storage, obs);
-	  goto again;
-	}
-      }
+    if (resource_storage.count[i]) {
+      coap_remove_failed_observers(context, r, peer, token);
     }
   }
 #endif /* WITH_CONTIKI */
 }
-
 #endif /* WITHOUT_NOTIFY */

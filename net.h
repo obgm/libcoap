@@ -118,7 +118,7 @@ typedef struct coap_context_t {
    * The next value to be used for Observe. This field is global for
    * all resources and will be updated when notifications are created.
    */
-  unsigned short observe;
+  unsigned int observe;
 
   coap_response_handler_t response_handler;
 } coap_context_t;
@@ -369,6 +369,20 @@ coap_remove_transaction(coap_queue_t **queue, coap_tid_t id) {
  * @return A pointer to the transaction object or NULL if not found
  */
 coap_queue_t *coap_find_transaction(coap_queue_t *queue, coap_tid_t id);
+
+/**
+ * Cancels all outstanding messages for peer @p dst that have the 
+ * specified token.
+ *
+ * @param context The context in use
+ * @param dst     Destination address of the messages to remove.
+ * @param token   Message token
+ * @param token_length Actual length of @p token 
+ */
+void coap_cancel_all_messages(coap_context_t *context, 
+			      const coap_address_t *dst,
+			      const unsigned char *token,
+			      size_t token_length);
 
 /** Dispatches the PDUs from the receive queue in given context. */
 void coap_dispatch( coap_context_t *context );

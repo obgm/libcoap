@@ -67,9 +67,9 @@
 #define COAP_OPTION_PROXY_SCHEME 39 /* C, String, 1-255 B, (none) */
 #define COAP_OPTION_SIZE1        60 /* E, uint, 0-4 B, (none) */
 
-/* option types from draft-hartke-coap-observe-07 */
+/* option types from draft-ietf-coap-observe-09 */
 
-#define COAP_OPTION_OBSERVE       6 /* E, empty/uint, 0 B/0-2 B, (none) */
+#define COAP_OPTION_OBSERVE       6 /* E, empty/uint, 0 B/0-3 B, (none) */
 #define COAP_OPTION_SUBSCRIPTION  COAP_OPTION_OBSERVE
 
 /* selected option types from draft-core-block-04 */
