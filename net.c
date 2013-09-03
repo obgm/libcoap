@@ -821,6 +821,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
   size_t size = sizeof(coap_hdr_t) + request->hdr->token_length;
   int type; 
   coap_opt_t *option;
+  unsigned short opt_type = 0;	/* used for calculating delta-storage */
 
 #if COAP_ERROR_PHRASE_LENGTH > 0
   char *phrase = coap_response_phrase(code);
@@ -844,8 +845,38 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
 
   coap_option_iterator_init(request, &opt_iter, opts);
 
-  while((option = coap_option_next(&opt_iter)))
-    size += COAP_OPT_SIZE(option);
+  /* Add size of each unknown critical option. As known critical
+     options as well as elective options are not copied, the delta
+     value might grow.
+   */
+  while((option = coap_option_next(&opt_iter))) {
+    unsigned short delta = opt_iter.type - opt_type;
+    /* calculate space required to encode (opt_iter.type - opt_type) */
+    if (delta < 13) {
+      size++;
+    } else if (delta < 269) {
+      size += 2;
+    } else {
+      size += 3;
+    }
+
+    /* add coap_opt_length(option) and the number of additional bytes
+     * required to encode the option length */
+    
+    size += coap_opt_length(option);
+    switch (*option & 0x0f) {
+    case 0x0e:
+      size++;
+      /* fall through */
+    case 0x0d:
+      size++;
+      break;
+    default:
+      ;
+    }
+
+    opt_type = opt_iter.type;
+  }
 
   /* Now create the response and fill with options and payload data. */
   response = coap_pdu_init(type, code, request->hdr->id, size);
