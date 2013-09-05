@@ -18,12 +18,13 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 # files and flags
 PROGRAMS:=testdriver
-SOURCES:= test_uri.c test_options.c test_pdu.c
+SOURCES:= test_uri.c test_options.c test_pdu.c test_error_response.c
+HEADERS:=$(SOURCES:.c=.h)
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
 CFLAGS:=-g -Wall @CFLAGS@
 CPPFLAGS:=-I$(top_srcdir) @CPPFLAGS@
 DISTDIR?=$(top_builddir)/@PACKAGE_TARNAME@-@PACKAGE_VERSION@
-FILES:=Makefile.in testdriver.c test_uri.h test_options.h test_pdu.h $(SOURCES)
+FILES:=Makefile.in testdriver.c $(HEADERS) $(SOURCES)
 LDFLAGS:=-L$(top_builddir)
 LDLIBS:=-lcunit @LIBS@
 libcoap =$(top_builddir)/libcoap.a

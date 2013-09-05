@@ -380,7 +380,7 @@ t_encode_pdu5(void) {
 			   1, (unsigned char *)"\x12");
 
   CU_ASSERT(result == 3);
-  CU_ASSERT(pdu->max_delta == 16);
+  CU_ASSERT(pdu->max_delta == 17);
   CU_ASSERT(pdu->length == 24);
   CU_ASSERT_PTR_NULL(pdu->data);
 

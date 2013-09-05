@@ -8,6 +8,7 @@
 #include "test_uri.h"
 #include "test_options.h"
 #include "test_pdu.h"
+#include "test_error_response.h"
 
 
 int
@@ -23,6 +24,7 @@ main(int argc, char **argv) {
   t_init_uri_tests();
   t_init_option_tests();
   t_init_pdu_tests();
+  t_init_error_response_tests();
 
   CU_basic_set_mode(run_mode);
   result = CU_basic_run_tests();
@@ -38,6 +40,9 @@ main(int argc, char **argv) {
     	 "\t    3. test_uri.c:303  - CU_ASSERT_NSTRING_EQUAL(buf,uricheckbuf,buflen)\n"
          "\t    4. test_uri.c:309  - buflen == sizeof(querycheckbuf)\n"
          "\t    5. test_uri.c:310  - CU_ASSERT_NSTRING_EQUAL(buf,querycheckbuf,buflen)\n");
+  printf("\t- Test: t_error_response8 ... FAILED\n"
+	 "\t    1. test_error_response.c:310  - response->length == sizeof(teststr)\n"
+	 "\t    2. test_error_response.c:316  - memcmp(response->hdr, teststr, sizeof(teststr)) == 0\n");
 
   return result;
 }
