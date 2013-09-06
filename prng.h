@@ -50,6 +50,7 @@ contiki_prng_impl(unsigned char *buf, size_t len) {
     memcpy(buf, &v, sizeof(v));
     len -= sizeof(v);
     buf += sizeof(v);
+    v = random_rand();
   }
 
   memcpy(buf, &v, len);
