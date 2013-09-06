@@ -192,12 +192,14 @@ coap_print_addr(const struct __coap_address_t *addr, unsigned char *buf, size_t 
 
   *p++ = '[';
 
-  for (i=0; i < 8; i += 4) {
-    *p++ = hex[(addr->addr.u16[i] & 0xf000) >> 24];
-    *p++ = hex[(addr->addr.u16[i] & 0x0f00) >> 16];
-    *p++ = hex[(addr->addr.u16[i] & 0x00f0) >> 8];
-    *p++ = hex[(addr->addr.u16[i] & 0x000f)];
-    *p++ = ':';
+  for (i=0; i < 16; i += 2) {
+    if (i) {
+      *p++ = ':';
+    }
+    *p++ = hex[(addr->addr.u8[i] & 0xf0) >> 4];
+    *p++ = hex[(addr->addr.u8[i] & 0x0f)];
+    *p++ = hex[(addr->addr.u8[i+1] & 0xf0) >> 4];
+    *p++ = hex[(addr->addr.u8[i+1] & 0x0f)];
   }
   *(p-1) = ']';
 #  else /* WITH_UIP6 */
