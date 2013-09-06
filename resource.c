@@ -13,10 +13,21 @@
 #include "subscribe.h"
 
 #ifdef WITH_LWIP
-#include <lwip/memp.h>
-#endif
+#include "utlist.h"
+/* mem.h is only needed for the string free calls for
+ * COAP_ATTR_FLAGS_RELEASE_NAME / COAP_ATTR_FLAGS_RELEASE_VALUE /
+ * COAP_RESOURCE_FLAGS_RELEASE_URI. not sure what those lines should actually
+ * do on lwip. */
+#include "mem.h"
 
-#ifndef WITH_CONTIKI
+#include <lwip/memp.h>
+
+#define COAP_MALLOC_TYPE(Type) \
+  ((coap_##Type##_t *)memp_malloc(MEMP_COAP_##Type))
+#define COAP_FREE_TYPE(Type, Object) memp_free(MEMP_COAP_##Type, Object)
+
+#endif
+#ifdef WITH_POSIX
 #include "utlist.h"
 #include "mem.h"
 
@@ -24,7 +35,8 @@
   ((coap_##Type##_t *)coap_malloc(sizeof(coap_##Type##_t)))
 #define COAP_FREE_TYPE(Type, Object) coap_free(Object)
 
-#else /* WITH_CONTIKI */
+#endif /* WITH_POSIX */
+#ifdef WITH_CONTIKI
 #include "memb.h"
 
 MEMB(resource_storage, coap_resource_t, COAP_MAX_RESOURCES);
