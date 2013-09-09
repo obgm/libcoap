@@ -201,7 +201,7 @@ coap_print_addr(const struct __coap_address_t *addr, unsigned char *buf, size_t 
     *p++ = hex[(addr->addr.u8[i+1] & 0xf0) >> 4];
     *p++ = hex[(addr->addr.u8[i+1] & 0x0f)];
   }
-  *(p-1) = ']';
+  *p++ = ']';
 #  else /* WITH_UIP6 */
 #   warning "IPv4 network addresses will not be included in debug output"
 
@@ -217,7 +217,7 @@ coap_print_addr(const struct __coap_address_t *addr, unsigned char *buf, size_t 
   /* @todo manual conversion of port number */
 #endif /* HAVE_SNPRINTF */
 
-  return buf + len - p;
+  return p - buf;
 # else /* WITH_CONTIKI */
   /* TODO: output addresses manually */
 #   warning "inet_ntop() not available, network addresses will not be included in debug output"
