@@ -568,7 +568,7 @@ coap_send_impl(coap_context_t *context,
 
   /* FIXME: we can't check this here with the existing infrastructure, but we
    * should actually check that the pdu is not held by anyone but us. the
-   * respective pdu is already exclusively owned by the pdu. */
+   * respective pbuf is already exclusively owned by the pdu. */
 
   p = pdu->pbuf;
   LWIP_ASSERT("The PDU header is not where it is expected", pdu->hdr == p->payload + sizeof(coap_pdu_t));
@@ -588,7 +588,7 @@ coap_send_impl(coap_context_t *context,
   udp_sendto(context->pcb, p,
 			&dst->addr, dst->port);
 
-  pbuf_header(p, -42); /* FIXME hack around udp_sendto not restoring; see http://lists.gnu.org/archive/html/lwip-users/2013-06/msg00008.html */
+  pbuf_header(p, -(ptrdiff_t)((uint8_t*)pdu - (uint8_t*)p->payload) - sizeof(coap_pdu_t)); /* FIXME hack around udp_sendto not restoring; see http://lists.gnu.org/archive/html/lwip-users/2013-06/msg00008.html. for udp over ip over ethernet, this was -42; as we're doing ppp too, this has to be calculated generically */
 
   err = pbuf_header(p, sizeof(coap_pdu_t));
   LWIP_ASSERT("Cannot undo pbuf_header", err == 0);
