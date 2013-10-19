@@ -59,7 +59,7 @@ coap_pdu_from_pbuf(struct pbuf *pbuf)
   LWIP_ASSERT("Can only deal with contiguous PBUFs", pbuf->tot_len == pbuf->len);
   LWIP_ASSERT("coap_read needs to receive an exclusive copy of the incoming pbuf", pbuf->ref == 1);
 
-  char *data = pbuf->payload;
+  void *data = pbuf->payload;
   coap_pdu_t *result;
 
   pbuf_header(pbuf, sizeof(coap_pdu_t));
