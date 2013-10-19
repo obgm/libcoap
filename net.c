@@ -1502,7 +1502,8 @@ PROCESS_THREAD(coap_retransmit_process, ev, data)
  * also, this completely ignores COAP_RESOURCE_CHECK_TIME.
  *
  * last but not least, timer wrapping can destroy this thing, but it seems that
- * the retransmit insertion is not safe in that respect anyway.
+ * the retransmit insertion is not safe in that respect anyway; see
+ * https://sourceforge.net/p/libcoap/bugs/27/ for details.
  * */
 
 static void coap_retransmittimer_execute(void *arg)
@@ -1528,7 +1529,7 @@ static void coap_retransmittimer_execute(void *arg)
 static void coap_retransmittimer_restart(coap_context_t *ctx)
 {
 	coap_tick_t now;
-	coap_tick_t delay;
+	int32_t delay; /* we know that coap_tick_t is uint32_t on this platform. @todo when the abovementioned bug 27 is resolved, this won't be necessary any more one way or another */
 
 	if (ctx->timer_configured)
 	{
@@ -1540,8 +1541,8 @@ static void coap_retransmittimer_restart(coap_context_t *ctx)
 	{
 		coap_ticks(&now);
 		delay = ctx->sendqueue->t - now;
+		if (delay < 0) delay = 0;
 		printf("scheduling for %d\n", delay);
-		LWIP_ASSERT("Unrealistically long delay", delay < 60000); /* FIXME first make _order_timestamp work in a way that wraps are not an issue */
 		sys_timeout(delay, coap_retransmittimer_execute, (void*)ctx);
 		ctx->timer_configured = 1;
 	}
