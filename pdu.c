@@ -62,7 +62,8 @@ coap_pdu_from_pbuf(struct pbuf *pbuf)
   void *data = pbuf->payload;
   coap_pdu_t *result;
 
-  pbuf_header(pbuf, sizeof(coap_pdu_t));
+  u8_t header_error = pbuf_header(pbuf, sizeof(coap_pdu_t));
+  LWIP_ASSERT("CoAP PDU header does not fit in existing header space", header_error == 0);
 
   result = (coap_pdu_t *)pbuf->payload;
 
@@ -98,11 +99,16 @@ coap_pdu_init(unsigned char type, unsigned char code,
   pdu = (coap_pdu_t *)memb_alloc(&pdu_storage);
 #endif
 #ifdef WITH_LWIP
-  p = pbuf_alloc(PBUF_TRANSPORT, sizeof(coap_pdu_t) + size, PBUF_RAM);
-  if (p != NULL)
+  p = pbuf_alloc(PBUF_TRANSPORT, size, PBUF_RAM);
+  if (p != NULL) {
+    u8_t header_error = pbuf_header(p, sizeof(coap_pdu_t));
+    /* we could catch that case and allocate larger memory in advance, but then
+     * again, we'd run into greater trouble with incoming packages anyway */
+    LWIP_ASSERT("CoAP PDU header does not fit in transport header", header_error == 0);
     pdu = p->payload;
-  else
+  } else {
     pdu = NULL;
+  }
 #endif
   if (pdu) {
     coap_pdu_clear(pdu, size);
