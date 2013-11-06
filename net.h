@@ -54,9 +54,8 @@ typedef struct coap_queue_t {
   coap_pdu_t *pdu;		/**< the CoAP PDU to send */
 } coap_queue_t;
 
-/* adds node to given queue, ordered by specified order function */
-int coap_insert_node(coap_queue_t **queue, coap_queue_t *node,
-		     int (*order)(coap_queue_t *, coap_queue_t *node));
+/* adds node to given queue, ordered by node->t */
+int coap_insert_node(coap_queue_t **queue, coap_queue_t *node);
 
 /* destroys specified node */
 int coap_delete_node(coap_queue_t *node);
@@ -96,6 +95,10 @@ typedef struct coap_context_t {
   /** list of asynchronous transactions */
   struct coap_async_state_t *async_state;
 #endif /* WITHOUT_ASYNC */
+  /**
+   * The time stamp in the first element of the sendqeue is relative
+   * to sendqueue_basetime. */
+  coap_tick_t sendqueue_basetime;
   coap_queue_t *sendqueue, *recvqueue;
 #ifndef WITH_CONTIKI
   int sockfd;			/**< send/receive socket */

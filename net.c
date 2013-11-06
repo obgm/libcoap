@@ -88,8 +88,7 @@ void coap_handle_failed_notify(coap_context_t *, const coap_address_t *,
 			       const str *);
 
 int
-coap_insert_node(coap_queue_t **queue, coap_queue_t *node,
-		 int (*order)(coap_queue_t *, coap_queue_t *node) ) {
+coap_insert_node(coap_queue_t **queue, coap_queue_t *node) {
   coap_queue_t *p, *q;
   if ( !queue || !node )
     return 0;
@@ -102,19 +101,24 @@ coap_insert_node(coap_queue_t **queue, coap_queue_t *node,
 
   /* replace queue head if PDU's time is less than head's time */
   q = *queue;
-  if ( order( node, q ) < 0) {
+  if (node->t < q->t) {
     node->next = q;
     *queue = node;
+    q->t -= node->t;		/* make q->t relative to node->t */
     return 1;
   }
 
   /* search for right place to insert */
   do {
+    node->t -= q->t;		/* make node-> relative to q->t */
     p = q;
     q = q->next;
-  } while ( q && order( node, q ) >= 0 );
+  } while (q && q->t <= node->t);
 
   /* insert new item */
+  if (q) {
+    q->t -= node->t;		/* make q->t relative to node->t */
+  }
   node->next = q;
   p->next = node;
   return 1;
@@ -173,6 +177,9 @@ coap_pop_next( coap_context_t *context ) {
 
   next = context->sendqueue;
   context->sendqueue = context->sendqueue->next;
+  if (context->sendqueue) {
+    context->sendqueue->t += next->t;
+  }
   next->next = NULL;
   return next;
 }
@@ -496,11 +503,6 @@ coap_send_message_type(coap_context_t *context,
   return result;
 }
 
-int
-_order_timestamp( coap_queue_t *lhs, coap_queue_t *rhs ) {
-  return lhs && rhs && ( lhs->t < rhs->t ) ? -1 : 1;
-}
-
 coap_tid_t
 coap_send_confirmed(coap_context_t *context, 
 		    const coap_address_t *dst,
@@ -523,20 +525,34 @@ coap_send_confirmed(coap_context_t *context,
   }
   
   prng((unsigned char *)&r,sizeof(r));
-  coap_ticks(&now);
-  node->t = now;
 
   /* add randomized RESPONSE_TIMEOUT to determine retransmission timeout */
   node->timeout = COAP_DEFAULT_RESPONSE_TIMEOUT * COAP_TICKS_PER_SECOND +
     (COAP_DEFAULT_RESPONSE_TIMEOUT >> 1) *
     ((COAP_TICKS_PER_SECOND * (r & 0xFF)) >> 8);
-  node->t += node->timeout;
 
   memcpy(&node->remote, dst, sizeof(coap_address_t));
   node->pdu = pdu;
 
-  assert(&context->sendqueue);
-  coap_insert_node(&context->sendqueue, node, _order_timestamp);
+  /* Set timer for pdu retransmission. If this is the first element in
+   * the retransmission queue, the base time is set to the current
+   * time and the retransmission time is node->timeout. If there is
+   * already an entry in the sendqueue, we must check if this node is
+   * to be retransmitted earlier. Therefore, node->timeout is first
+   * normalized to the base time and then inserted into the queue with
+   * an adjusted relative time.
+   */
+  coap_ticks(&now);
+  if (context->sendqueue == NULL) {
+    node->t = node->timeout;
+    context->sendqueue_basetime = now;
+  } else {
+    assert(context->sendqueue_basetime <= now);
+    /* make node->t relative to context->sendqueue_basetime */
+    node->t = now + node->timeout - context->sendqueue_basetime;
+  }
+
+  coap_insert_node(&context->sendqueue, node);
 
 #ifdef WITH_CONTIKI
   {			    /* (re-)initialize retransmission timer */
@@ -547,8 +563,7 @@ coap_send_confirmed(coap_context_t *context,
 
     /* must set timer within the context of the retransmit process */
     PROCESS_CONTEXT_BEGIN(&coap_retransmit_process);
-    etimer_set(&context->retransmit_timer, 
-	       now < nextpdu->t ? nextpdu->t - now : 0);
+    etimer_set(&context->retransmit_timer, nextpdu->t);
     PROCESS_CONTEXT_END(&coap_retransmit_process);
   }
 #endif /* WITH_CONTIKI */
@@ -564,8 +579,8 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
   /* re-initialize timeout when maximum number of retransmissions are not reached yet */
   if ( node->retransmit_cnt < COAP_DEFAULT_MAX_RETRANSMIT ) {
     node->retransmit_cnt++;
-    node->t += ( node->timeout << node->retransmit_cnt );
-    coap_insert_node( &context->sendqueue, node, _order_timestamp );
+    node->t = node->timeout << node->retransmit_cnt;
+    coap_insert_node(&context->sendqueue, node);
 
 #ifndef WITH_CONTIKI
     debug("** retransmission #%d of transaction %d\n",
@@ -601,14 +616,6 @@ coap_retransmit( coap_context_t *context, coap_queue_t *node ) {
   /* And finally delete the node */
   coap_delete_node( node );
   return COAP_INVALID_TID;
-}
-
-int
-_order_transaction_id( coap_queue_t *lhs, coap_queue_t *rhs ) {
-  return ( lhs && rhs && lhs->pdu && rhs->pdu &&
-	   ( lhs->id < rhs->id ) )
-    ? -1
-    : 1;
 }
 
 /** 
@@ -697,7 +704,7 @@ if (!coap_pdu_parse((unsigned char *)buf, bytes_read, node->pdu)) {
 
   /* and add new node to receive queue */
   coap_transaction_id(&node->remote, node->pdu, &node->id);
-  coap_insert_node(&ctx->recvqueue, node, _order_timestamp);
+  coap_insert_node(&ctx->recvqueue, node);
 
 #ifndef NDEBUG
   if (LOG_DEBUG <= coap_get_log_level()) {
@@ -732,6 +739,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_tid_t id, coap_queue_t **node)
   if ( id == (*queue)->id ) { /* found transaction */
     *node = *queue;
     *queue = (*queue)->next;
+    (*queue)->t += (*node)->t;	/* adjust relative time of new queue head */
     (*node)->next = NULL;
     /* coap_delete_node( q ); */
     debug("*** removed transaction %u\n", id);
@@ -747,6 +755,9 @@ coap_remove_from_queue(coap_queue_t **queue, coap_tid_t id, coap_queue_t **node)
 
   if ( q ) {			/* found transaction */
     p->next = q->next;
+    if (p->next) {		/* must update relative time of p->next */
+      p->next->t += q->t;
+    }
     q->next = NULL;
     *node = q;
     /* coap_delete_node( q ); */
