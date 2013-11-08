@@ -398,12 +398,12 @@ main(int argc, char **argv) {
     nextpdu = coap_peek_next( ctx );
 
     coap_ticks(&now);
-    while (nextpdu && nextpdu->t <= now - ctx->sendqueue_basetime) {
+    while (nextpdu && coap_time_le(nextpdu->t, now - ctx->sendqueue_basetime)) {
       coap_retransmit( ctx, coap_pop_next( ctx ) );
       nextpdu = coap_peek_next( ctx );
     }
 
-    if ( nextpdu && nextpdu->t <= COAP_RESOURCE_CHECK_TIME ) {
+    if (nextpdu && coap_time_le(nextpdu->t, COAP_RESOURCE_CHECK_TIME)) {
       /* set timeout if there is a pdu to send before our automatic timeout occurs */
       tv.tv_usec = ((nextpdu->t) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
       tv.tv_sec = (nextpdu->t) / COAP_TICKS_PER_SECOND;

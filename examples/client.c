@@ -1112,7 +1112,8 @@ main(int argc, char **argv) {
     nextpdu = coap_peek_next( ctx );
 
     coap_ticks(&now);
-    while (nextpdu && nextpdu->t <= now - ctx->sendqueue_basetime) {
+    while (nextpdu && 
+	   coap_time_le(nextpdu->t, now - ctx->sendqueue_basetime)) {
       coap_retransmit( ctx, coap_pop_next( ctx ));
       nextpdu = coap_peek_next( ctx );
     }
