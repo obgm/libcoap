@@ -101,7 +101,7 @@ coap_insert_node(coap_queue_t **queue, coap_queue_t *node) {
 
   /* replace queue head if PDU's time is less than head's time */
   q = *queue;
-  if (coap_time_lt(node->t, q->t)) {
+  if (node->t < q->t) {
     node->next = q;
     *queue = node;
     q->t -= node->t;		/* make q->t relative to node->t */
@@ -113,7 +113,7 @@ coap_insert_node(coap_queue_t **queue, coap_queue_t *node) {
     node->t -= q->t;		/* make node-> relative to q->t */
     p = q;
     q = q->next;
-  } while (q && coap_time_le(q->t, node->t));
+  } while (q && q->t <= node->t);
 
   /* insert new item */
   if (q) {
@@ -547,7 +547,7 @@ coap_send_confirmed(coap_context_t *context,
     node->t = node->timeout;
     context->sendqueue_basetime = now;
   } else {
-    assert(coap_time_le(context->sendqueue_basetime,now));
+    assert(context->sendqueue_basetime <= now);
     /* make node->t relative to context->sendqueue_basetime */
     node->t = now + node->timeout - context->sendqueue_basetime;
   }
