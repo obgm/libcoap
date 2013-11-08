@@ -28,13 +28,6 @@
 
 typedef clock_time_t coap_tick_t;
 
-/**
- * This data type is used to represent the difference between two
- * clock_tick_t values. This data type must have the same size in
- * memory as coap_tick_t to allow wrapping.
- */
-typedef int coap_tick_diff_t;
-
 #define COAP_TICKS_PER_SECOND CLOCK_SECOND
 
 /** Set at startup to initialize the internal clock (time in seconds). */
@@ -57,13 +50,6 @@ contiki_ticks_impl(coap_tick_t *t) {
 
 #else /* WITH_CONTIKI */
 typedef unsigned int coap_tick_t; 
-
-/**
- * This data type is used to represent the difference between two
- * clock_tick_t values. This data type must have the same size in
- * memory as coap_tick_t to allow wrapping.
- */
-typedef int coap_tick_diff_t;
 
 #define COAP_TICKS_PER_SECOND 1024
 
@@ -102,16 +88,6 @@ coap_ticks_impl(coap_tick_t *t) {
 }
 #define coap_ticks coap_ticks_impl
 #endif /* coap_ticks */
-
-static inline
-int coap_time_lt(coap_tick_t a, coap_tick_t b) {
-  return ((coap_tick_diff_t)(a - b)) < 0;
-}
-
-static inline
-int coap_time_le(coap_tick_t a, coap_tick_t b) {
-  return a == b || coap_time_lt(a,b);
-}
 
 /** @} */
 
