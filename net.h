@@ -1,6 +1,6 @@
 /* net.h -- CoAP network interface
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -43,9 +43,9 @@ struct coap_queue_t;
 typedef struct coap_queue_t {
   struct coap_queue_t *next;
 
-  coap_tick_t t;	        /* when to send PDU for the next time */
-  unsigned char retransmit_cnt;	/* retransmission counter, will be removed when zero */
-  unsigned int timeout;		/* the randomized timeout value */
+  coap_tick_t t;	        /**< when to send PDU for the next time */
+  unsigned char retransmit_cnt;	/**< retransmission counter, will be removed when zero */
+  unsigned int timeout;		/**< the randomized timeout value */
 
   coap_address_t local;		/**< local address */
   coap_address_t remote;	/**< remote address */
@@ -54,16 +54,16 @@ typedef struct coap_queue_t {
   coap_pdu_t *pdu;		/**< the CoAP PDU to send */
 } coap_queue_t;
 
-/* adds node to given queue, ordered by node->t */
+/** Adds node to given queue, ordered by node->t. */
 int coap_insert_node(coap_queue_t **queue, coap_queue_t *node);
 
-/* destroys specified node */
+/** Destroys specified node. */
 int coap_delete_node(coap_queue_t *node);
 
-/* removes all items from given queue and frees the allocated storage */
+/** Removes all items from given queue and frees the allocated storage. */
 void coap_delete_all(coap_queue_t *queue);
 
-/* creates a new node suitable for adding to the CoAP sendqueue */
+/** Creates a new node suitable for adding to the CoAP sendqueue. */
 coap_queue_t *coap_new_node();
 
 struct coap_resource_t;
@@ -151,13 +151,21 @@ coap_register_option(coap_context_t *ctx, unsigned char type) {
   coap_option_setb(ctx->known_options, type);
 }
 
-/* Returns the next pdu to send without removing from sendqeue. */
+
+/**
+ * Set sendqueue_basetime in the given context object @p ctx to @p
+ * now. This function returns the number of elements in the queue
+ * head that have timed out.
+ */
+unsigned int coap_adjust_basetime(coap_context_t *ctx, coap_tick_t now);
+
+/** Returns the next pdu to send without removing from sendqeue. */
 coap_queue_t *coap_peek_next( coap_context_t *context );
 
-/* Returns the next pdu to send and removes it from the sendqeue. */
+/** Returns the next pdu to send and removes it from the sendqeue. */
 coap_queue_t *coap_pop_next( coap_context_t *context );
 
-/* Creates a new coap_context_t object that will hold the CoAP stack status.  */
+/** Creates a new coap_context_t object that will hold the CoAP stack status.  */
 coap_context_t *coap_new_context(const coap_address_t *listen_addr);
 
 /** 
