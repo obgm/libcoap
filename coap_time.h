@@ -1,6 +1,6 @@
 /* coap_time.h -- Clock Handling
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -103,11 +103,19 @@ coap_ticks_impl(coap_tick_t *t) {
 #define coap_ticks coap_ticks_impl
 #endif /* coap_ticks */
 
+/**
+ * Returns @c 1 if and only if @p a is less than @p b where less is
+ * defined on a signed data type.
+ */
 static inline
 int coap_time_lt(coap_tick_t a, coap_tick_t b) {
   return ((coap_tick_diff_t)(a - b)) < 0;
 }
 
+/**
+ * Returns @c 1 if and only if @p a is less than or equal @p b where
+ * less is defined on a signed data type.
+ */
 static inline
 int coap_time_le(coap_tick_t a, coap_tick_t b) {
   return a == b || coap_time_lt(a,b);
