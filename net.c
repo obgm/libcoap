@@ -151,7 +151,7 @@ coap_new_node() {
 
   if ( ! node ) {
 #ifndef NDEBUG
-    coap_log(LOG_WARN, "coap_new_node: malloc");
+    coap_log(LOG_WARN, "coap_new_node: malloc\n");
 #endif
     return NULL;
   }
@@ -226,7 +226,7 @@ coap_new_context(const coap_address_t *listen_addr) {
 #ifndef WITH_CONTIKI
   if ( !c ) {
 #ifndef NDEBUG
-    coap_log(LOG_EMERG, "coap_init: malloc:");
+    coap_log(LOG_EMERG, "coap_init: malloc:\n");
 #endif
     return NULL;
   }
@@ -258,20 +258,20 @@ coap_new_context(const coap_address_t *listen_addr) {
   c->sockfd = socket(listen_addr->addr.sa.sa_family, SOCK_DGRAM, 0);
   if ( c->sockfd < 0 ) {
 #ifndef NDEBUG
-    coap_log(LOG_EMERG, "coap_new_context: socket");
+    coap_log(LOG_EMERG, "coap_new_context: socket\n");
 #endif
     goto onerror;
   }
 
   if ( setsockopt( c->sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse) ) < 0 ) {
 #ifndef NDEBUG
-    coap_log(LOG_WARN, "setsockopt SO_REUSEADDR");
+    coap_log(LOG_WARN, "setsockopt SO_REUSEADDR\n");
 #endif
   }
 
   if (bind(c->sockfd, &listen_addr->addr.sa, listen_addr->size) < 0) {
 #ifndef NDEBUG
-    coap_log(LOG_EMERG, "coap_new_context: bind");
+    coap_log(LOG_EMERG, "coap_new_context: bind\n");
 #endif
     goto onerror;
   }
@@ -431,7 +431,7 @@ coap_send_impl(coap_context_t *context,
   if (bytes_written >= 0) {
     coap_transaction_id(dst, pdu, &id);
   } else {
-    coap_log(LOG_CRIT, "coap_send: sendto");
+    coap_log(LOG_CRIT, "coap_send: sendto\n");
   }
 
   return id;
