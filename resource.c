@@ -570,18 +570,28 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
   assert(h);		/* we do not allow subscriptions if no
 			 * GET handler is defined */
 
-  if (r->observable && r->dirty) {
+  if (r->observable && (r->dirty || r->partiallydirty)) {
+    r->partiallydirty = 0;
     for (obs = list_head(r->subscribers); obs; obs = list_item_next(obs)) {
+      if (r->dirty == 0 && obs->dirty == 0)
+        /* running this resource due to partiallydirty, but this observation's notification was already enqueued */
+        continue;
+
       coap_tid_t tid = COAP_INVALID_TID;
+      obs->dirty = 0;
       /* initialize response */
       response = coap_pdu_init(COAP_MESSAGE_CON, 0, 0, COAP_MAX_PDU_SIZE);
       if (!response) {
-	debug("coap_check_notify: pdu init failed\n");
+        obs->dirty = 1;
+        r->partiallydirty = 1;
+	debug("coap_check_notify: pdu init failed, resource stays partially dirty\n");
 	continue;
       }
 
       if (!coap_add_token(response, obs->token_length, obs->token)) {
-	debug("coap_check_notify: cannot add token\n");
+        obs->dirty = 1;
+        r->partiallydirty = 1;
+	debug("coap_check_notify: cannot add token, resource stays partially dirty\n");
 	coap_delete_pdu(response);
 	continue;
       }
@@ -608,6 +618,13 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
 
       if (COAP_INVALID_TID == tid || response->hdr->type != COAP_MESSAGE_CON)
 	coap_delete_pdu(response);
+      if (COAP_INVALID_TID == tid)
+      {
+	debug("coap_check_notify: sending failed, resource stays partially dirty\n");
+        obs->dirty = 1;
+        r->partiallydirty = 1;
+      }
+
     }
 
     /* Increment value for next Observe use. */

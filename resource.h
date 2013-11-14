@@ -56,6 +56,7 @@ typedef struct coap_attr_t {
 
 typedef struct coap_resource_t {
   unsigned int dirty:1;	      /**< set to 1 if resource has changed */
+  unsigned int partiallydirty:1; /**< set to 1 if some subscribers have not yet been notified of the last change */
   unsigned int observable:1; /**< can be observed */
   unsigned int cacheable:1;   /**< can be cached */
 
