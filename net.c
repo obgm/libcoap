@@ -547,9 +547,8 @@ coap_send_confirmed(coap_context_t *context,
     node->t = node->timeout;
     context->sendqueue_basetime = now;
   } else {
-    assert(context->sendqueue_basetime <= now);
     /* make node->t relative to context->sendqueue_basetime */
-    node->t = now + node->timeout - context->sendqueue_basetime;
+    node->t = (now - context->sendqueue_basetime) + node->timeout;
   }
 
   coap_insert_node(&context->sendqueue, node);
