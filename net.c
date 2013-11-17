@@ -1500,36 +1500,42 @@ PROCESS_THREAD(coap_retransmit_process, ev, data)
  * penality is minimal
  *
  * also, this completely ignores COAP_RESOURCE_CHECK_TIME.
- *
- * last but not least, timer wrapping can destroy this thing, but it seems that
- * the retransmit insertion is not safe in that respect anyway; see
- * https://sourceforge.net/p/libcoap/bugs/27/ for details.
  * */
 
 static void coap_retransmittimer_execute(void *arg)
 {
 	coap_context_t *ctx = (coap_context_t*)arg;
 	coap_tick_t now;
+	coap_tick_t elapsed;
 	coap_queue_t *nextinqueue;
 
 	ctx->timer_configured = 0;
 
 	coap_ticks(&now);
 
+	elapsed = now - ctx->sendqueue_basetime; /* that's positive for sure, and unless we haven't been called for a complete wrapping cycle, did not wrap */
+
 	nextinqueue = coap_peek_next(ctx);
-	while (nextinqueue != NULL && nextinqueue->t <= now)
+	while (nextinqueue != NULL)
 	{
-		coap_retransmit(ctx, coap_pop_next(ctx));
-		nextinqueue = coap_peek_next(ctx);
+		if (nextinqueue->t > elapsed) {
+			nextinqueue->t -= elapsed;
+			break;
+		} else {
+			elapsed -= nextinqueue->t;
+			coap_retransmit(ctx, coap_pop_next(ctx));
+			nextinqueue = coap_peek_next(ctx);
+		}
 	}
+
+	ctx->sendqueue_basetime = now;
 
 	coap_retransmittimer_restart(ctx);
 }
 
 static void coap_retransmittimer_restart(coap_context_t *ctx)
 {
-	coap_tick_t now;
-	int32_t delay; /* we know that coap_tick_t is uint32_t on this platform. @todo when the abovementioned bug 27 is resolved, this won't be necessary any more one way or another */
+	coap_tick_t now, elapsed, delay;
 
 	if (ctx->timer_configured)
 	{
@@ -1540,9 +1546,25 @@ static void coap_retransmittimer_restart(coap_context_t *ctx)
 	if (ctx->sendqueue != NULL)
 	{
 		coap_ticks(&now);
-		delay = ctx->sendqueue->t - now;
-		if (delay < 0) delay = 0;
-		printf("scheduling for %d\n", delay);
+		elapsed = now - ctx->sendqueue_basetime;
+		if (ctx->sendqueue->t >= elapsed) {
+			delay = ctx->sendqueue->t - elapsed;
+		} else {
+			/* a strange situation, but not completely impossible.
+			 *
+			 * this happens, for example, right after
+			 * coap_retransmittimer_execute, when a retransmission
+			 * was *just not yet* due, and the clock ticked before
+			 * our coap_ticks was called.
+			 *
+			 * not trying to retransmit anything now, as it might
+			 * cause uncontrollable recursion; let's just try again
+			 * with the next main loop run.
+			 * */
+			delay = 0;
+		}
+
+		printf("scheduling for %d ticks\n", delay);
 		sys_timeout(delay, coap_retransmittimer_execute, (void*)ctx);
 		ctx->timer_configured = 1;
 	}
