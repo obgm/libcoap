@@ -14,6 +14,14 @@
 #ifndef _COAP_TIME_H_
 #define _COAP_TIME_H_
 
+/*
+** Make sure we can call this stuff from C++.
+*/
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include "config.h"
 
 /**
@@ -115,5 +123,10 @@ coap_ticks_impl(coap_tick_t *t) {
 #endif /* coap_ticks */
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* _COAP_TIME_H_ */

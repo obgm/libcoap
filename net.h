@@ -9,6 +9,10 @@
 #ifndef _COAP_NET_H_
 #define _COAP_NET_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "config.h"
 
 #ifdef HAVE_ASSERT_H
@@ -447,5 +451,12 @@ void coap_ticks(coap_tick_t *);
 int coap_option_check_critical(coap_context_t *ctx, 
 			       coap_pdu_t *pdu,
 			       coap_opt_filter_t unknown);
+
+//coap_context_t *
+//get_context(const char *node, const char *port);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _COAP_NET_H_ */

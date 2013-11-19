@@ -9,6 +9,10 @@
 #ifndef _COAP_H_
 #define _COAP_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "config.h"
 #include "debug.h"
 #include "mem.h"
@@ -23,5 +27,9 @@
 #include "resource.h"
 #include "subscribe.h"
 #include "block.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _COAP_H_ */
