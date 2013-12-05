@@ -776,7 +776,9 @@ coap_remove_from_queue(coap_queue_t **queue, coap_tid_t id, coap_queue_t **node)
   if ( id == (*queue)->id ) { /* found transaction */
     *node = *queue;
     *queue = (*queue)->next;
-    (*queue)->t += (*node)->t;	/* adjust relative time of new queue head */
+    if (*queue) {	  /* adjust relative time of new queue head */
+      (*queue)->t += (*node)->t;
+    }
     (*node)->next = NULL;
     /* coap_delete_node( q ); */
     debug("*** removed transaction %u\n", id);
