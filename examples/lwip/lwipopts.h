@@ -4,7 +4,7 @@
 #define LWIP_SOCKET                     0
 #define LWIP_NETCONN                    0
 
-#define LWIP_USE_CUSTOM_POOLS 1
+#define MEMP_USE_CUSTOM_POOLS 1
 
 
 /* +1 for a missing timeout in the default list i could not yet track down */

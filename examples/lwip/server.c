@@ -43,6 +43,8 @@
 #include "timer.h"
 #include <signal.h>
 
+#include <server-coap.h>
+
 static ip_addr_t ipaddr, netmask, gw;
 
 int
@@ -73,6 +75,8 @@ main(int argc, char **argv)
 
 	/* start applications here */
 
+	server_coap_init();
+
 	printf("Applications started.\n");
 
 
@@ -102,6 +106,8 @@ main(int argc, char **argv)
 		}
 
 		sys_check_timeouts();
+
+		server_coap_poll();
 	}
 
 	return 0;
