@@ -632,13 +632,14 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
   str token;
   coap_pdu_t *response;
 
-  /* retrieve GET handler, prepare response */
-  h = r->handler[COAP_REQUEST_GET - 1];
-  assert(h);		/* we do not allow subscriptions if no
-			 * GET handler is defined */
-
   if (r->observable && (r->dirty || r->partiallydirty)) {
     r->partiallydirty = 0;
+
+    /* retrieve GET handler, prepare response */
+    h = r->handler[COAP_REQUEST_GET - 1];
+    assert(h);		/* we do not allow subscriptions if no
+			 * GET handler is defined */
+    
     for (obs = list_head(r->subscribers); obs; obs = list_item_next(obs)) {
       if (r->dirty == 0 && obs->dirty == 0)
         /* running this resource due to partiallydirty, but this observation's notification was already enqueued */
