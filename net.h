@@ -32,6 +32,10 @@
 #include <sys/time.h>
 #endif
 
+#ifdef WITH_LWIP
+#include <lwip/ip_addr.h>
+#endif
+
 #include "option.h"
 #include "address.h"
 #include "prng.h"
@@ -54,9 +58,8 @@ typedef struct coap_queue_t {
   coap_pdu_t *pdu;		/**< the CoAP PDU to send */
 } coap_queue_t;
 
-/* adds node to given queue, ordered by specified order function */
-int coap_insert_node(coap_queue_t **queue, coap_queue_t *node,
-		     int (*order)(coap_queue_t *, coap_queue_t *node));
+/* adds node to given queue, ordered by node->t */
+int coap_insert_node(coap_queue_t **queue, coap_queue_t *node);
 
 /* destroys specified node */
 int coap_delete_node(coap_queue_t *node);
@@ -90,21 +93,34 @@ typedef struct {
 typedef struct coap_context_t {
   coap_opt_filter_t known_options;
 #ifndef WITH_CONTIKI
-  struct coap_resource_t *resources; /**< hash table of known resources */
+  struct coap_resource_t *resources; /**< hash table or list of known resources */
 #endif /* WITH_CONTIKI */
 #ifndef WITHOUT_ASYNC
   /** list of asynchronous transactions */
   struct coap_async_state_t *async_state;
 #endif /* WITHOUT_ASYNC */
+  /**
+   * The time stamp in the first element of the sendqeue is relative
+   * to sendqueue_basetime. */
+  coap_tick_t sendqueue_basetime;
   coap_queue_t *sendqueue, *recvqueue;
-#ifndef WITH_CONTIKI
+#if WITH_POSIX
   int sockfd;			/**< send/receive socket */
-#else /* WITH_CONTIKI */
+#endif /* WITH_POSIX */
+#ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;	/**< uIP connection object */
   
   struct etimer retransmit_timer; /**< fires when the next packet must be sent */
   struct etimer notify_timer;     /**< used to check resources periodically */
 #endif /* WITH_CONTIKI */
+#ifdef WITH_LWIP
+  struct udp_pcb *pcb; /**< the underlying lwIP UDP PCB */
+  struct pbuf *pending_package; /**< pbuf containing the last received package if not handled yet. This is only used to pass the package from the udp_recv callback into the coap_read function, which frees the pbuf and clears this field. */
+  ip_addr_t pending_address; /**< the address associated with pending_package */
+  u16_t pending_port; /**< the port associated with pending_package */
+
+  uint8_t timer_configured; /**< Set to 1 when a retransmission is scheduled using lwIP timers for this context, otherwise 0. */
+#endif /* WITH_LWIP */
 
   /**
    * The last message id that was used is stored in this field.  The

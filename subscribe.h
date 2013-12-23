@@ -45,6 +45,7 @@ typedef struct coap_subscription_t {
   unsigned int non:1;		/**< send non-confirmable notifies if @c 1  */
   unsigned int non_cnt:4;	/**< up to 15 non-confirmable notifies allowed */
   unsigned int fail_cnt:2;	/**< up to 3 confirmable notifies can fail */
+  unsigned int dirty:1;         /**< set if the notification temporarily could not be sent (in that case, the resource's partiallydirty flag is set too) */
 
   size_t token_length;		/**< actual length of token */
   unsigned char token[8];	/**< token used for subscription */

@@ -13,6 +13,10 @@
 #include "coap_list.h"
 #include "uri.h"
 
+#ifdef WITH_LWIP
+#include <lwip/pbuf.h>
+#endif
+
 /* pre-defined constants that reflect defaults for CoAP */
 
 #define COAP_DEFAULT_RESPONSE_TIMEOUT  2 /* response timeout in seconds */
@@ -206,10 +210,36 @@ typedef struct {
   unsigned short max_delta;	/**< highest option number */
   unsigned short length;	/**< PDU length (including header, options, data)  */
   unsigned char *data;		/**< payload */
+
+#ifdef WITH_LWIP
+  struct pbuf *pbuf; /**< lwIP PBUF. The allocated coap_pdu_t will always reside inside the pbuf's payload, but the pointer has to be kept because no exact offset can be given. This field must not be accessed from outside, because the pbuf's reference count is checked to be 1 when the pbuf is assigned to the pdu, and the pbuf stays exclusive to this pdu. */
+#endif
+
 } coap_pdu_t;
 
 /** Options in coap_pdu_t are accessed with the macro COAP_OPTION. */
 #define COAP_OPTION(node) ((coap_option *)(node)->options)
+
+#ifdef WITH_LWIP
+/**
+ * Creates a CoAP PDU from an lwIP @p pbuf, whose reference is passed on to
+ * this function.
+ *
+ * The pbuf is checked for being contiguous, for having enough head space for
+ * the PDU struct (which is located directly in front of the data, overwriting
+ * the old other headers), and for having only one reference. The reference is
+ * stored in the PDU and will be freed when the PDU is freed.
+ *
+ * (For now, these are errors; in future, a new pbuf might be allocated, the
+ * data copied and the passed pbuf freed).
+ *
+ * This behaves like coap_pdu_init(0, 0, 0, pbuf->tot_len), and afterwards
+ * copying the contents of the pbuf to the pdu.
+ *
+ * @return A pointer to the new PDU object or @c NULL on error.
+ */
+coap_pdu_t * coap_pdu_from_pbuf(struct pbuf *pbuf);
+#endif
 
 /** 
  * Creates a new CoAP PDU of given @p size (must be large enough to hold the 
@@ -286,6 +316,16 @@ int coap_add_token(coap_pdu_t *pdu, size_t len, const unsigned char *data);
  */
 size_t coap_add_option(coap_pdu_t *pdu, unsigned short type, 
 		       unsigned int len, const unsigned char *data);
+
+/**
+ * Adds option of given type to pdu that is passed as first
+ * parameter, but does not write a value. It works like coap_add_option with
+ * respect to calling sequence (i.e. after token and before data).
+ * This function returns a memory address to which the option data has to be
+ * written before the PDU can be sent, or @c NULL on error.
+ */
+unsigned char *coap_add_option_later(coap_pdu_t *pdu, unsigned short type,
+		      unsigned int len);
 
 /**
  * Adds given data to the pdu that is passed as first parameter. Note

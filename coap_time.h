@@ -23,6 +23,30 @@
  * @{
  */
 
+#ifdef WITH_LWIP
+
+#include <stdint.h>
+#include <lwip/sys.h>
+
+/* lwIP provides ms in sys_now */
+#define COAP_TICKS_PER_SECOND 1000
+
+typedef uint32_t coap_tick_t;
+
+static inline void coap_ticks_impl(coap_tick_t *t)
+{
+	*t = sys_now();
+}
+
+static inline void coap_clock_init_impl(void)
+{
+}
+
+#define coap_clock_init coap_clock_init_impl
+
+#define coap_ticks coap_ticks_impl
+
+#endif
 #ifdef WITH_CONTIKI
 #include "clock.h"
 
@@ -48,14 +72,15 @@ contiki_ticks_impl(coap_tick_t *t) {
 
 #define coap_ticks contiki_ticks_impl
 
-#else /* WITH_CONTIKI */
+#endif /* WITH_CONTIKI */
+#ifdef WITH_POSIX
 typedef unsigned int coap_tick_t; 
 
 #define COAP_TICKS_PER_SECOND 1024
 
 /** Set at startup to initialize the internal clock (time in seconds). */
 extern time_t clock_offset;
-#endif
+#endif /* WITH_POSIX */
 
 #ifndef coap_clock_init
 static inline void

@@ -27,7 +27,11 @@
 #endif /* COAP_RESOURCE_CHECK_TIME */
 
 #ifndef WITH_CONTIKI
-#include "uthash.h"
+#  ifdef COAP_RESOURCES_NOHASH
+#    include "utlist.h"
+#  else
+#    include "uthash.h"
+#  endif
 #else /* WITH_CONTIKI */
 #endif /* WITH_CONTIKI */
 #include "hashkey.h"
@@ -56,6 +60,7 @@ typedef struct coap_attr_t {
 
 typedef struct coap_resource_t {
   unsigned int dirty:1;	      /**< set to 1 if resource has changed */
+  unsigned int partiallydirty:1; /**< set to 1 if some subscribers have not yet been notified of the last change */
   unsigned int observable:1; /**< can be observed */
   unsigned int cacheable:1;   /**< can be cached */
 
@@ -70,7 +75,14 @@ typedef struct coap_resource_t {
   coap_key_t key;	/**< the actual key bytes for this resource */
 
 #ifndef WITH_CONTIKI
+#ifdef COAP_RESOURCES_NOHASH
+  struct coap_resource_t *next;
+#else
   UT_hash_handle hh;
+#endif
+#endif /* WITH_CONTIKI */
+
+#ifndef WITH_CONTIKI
   coap_attr_t *link_attr; /**< attributes to be included with the link format */
 #else /* WITH_CONTIKI */
   LIST_STRUCT(link_attr); /**< attributes to be included with the link format */

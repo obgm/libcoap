@@ -89,5 +89,7 @@ typedef int ssize_t;
 # define assert(x)
 #endif
 
+#define ntohs uip_ntohs
+
 #endif /* _CONFIG_H_ */
 
