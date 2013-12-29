@@ -1,3 +1,10 @@
+2013-12-23  Olaf Bergmann  <bergmann@tzi.org>
+
+	* configure.in: merged with LWIP port from chrysn
+	<https://git.gitorious.org/coap-lwip/coap-lwip.git>. This
+	introduces new compiler flags WITH_POSIX and WITH_LWIP to
+	distinguish target platforms.
+
 2013-09-03  Olaf Bergmann  <bergmann@tzi.org>
 
 	* option.h (coap_option_setb): increased size of option type
