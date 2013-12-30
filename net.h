@@ -452,9 +452,6 @@ int coap_option_check_critical(coap_context_t *ctx,
 			       coap_pdu_t *pdu,
 			       coap_opt_filter_t unknown);
 
-//coap_context_t *
-//get_context(const char *node, const char *port);
-
 #ifdef __cplusplus
 }
 #endif
