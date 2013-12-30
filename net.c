@@ -1,6 +1,6 @@
 /* net.c -- CoAP network interface
  *
- * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -199,7 +199,7 @@ coap_new_node() {
 
   if ( ! node ) {
 #ifndef NDEBUG
-    coap_log(LOG_WARN, "coap_new_node: malloc\n");
+    coap_log(LOG_WARNING, "coap_new_node: malloc\n");
 #endif
     return NULL;
   }
@@ -323,7 +323,7 @@ coap_new_context(
 
   if ( setsockopt( c->sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse) ) < 0 ) {
 #ifndef NDEBUG
-    coap_log(LOG_WARN, "setsockopt SO_REUSEADDR\n");
+    coap_log(LOG_WARNING, "setsockopt SO_REUSEADDR\n");
 #endif
   }
 

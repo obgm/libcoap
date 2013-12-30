@@ -934,7 +934,7 @@ main(int argc, char **argv) {
   char port_str[NI_MAXSERV] = "0";
   int opt, res;
   char *group = NULL;
-  coap_log_t log_level = LOG_WARN;
+  coap_log_t log_level = LOG_WARNING;
   coap_tid_t tid = COAP_INVALID_TID;
 
   while ((opt = getopt(argc, argv, "Nb:e:f:g:m:p:s:t:o:v:A:B:O:P:T:")) != -1) {

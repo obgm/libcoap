@@ -625,7 +625,7 @@ main(int argc, char **argv) {
   char port_str[NI_MAXSERV] = "5683";
   char *group = NULL;
   int opt;
-  coap_log_t log_level = LOG_WARN;
+  coap_log_t log_level = LOG_WARNING;
 
   while ((opt = getopt(argc, argv, "A:g:p:v:")) != -1) {
     switch (opt) {

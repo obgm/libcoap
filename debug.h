@@ -19,10 +19,15 @@
 #define COAP_ERR_FD stderr
 #endif
 
+#ifdef HAVE_SYSLOG_H
+#include <syslog.h>
+typedef short coap_log_t;
+#else
 /** Pre-defined log levels akin to what is used in \b syslog. */
-typedef enum { LOG_EMERG=0, LOG_ALERT, LOG_CRIT, LOG_WARN, 
+typedef enum { LOG_EMERG=0, LOG_ALERT, LOG_CRIT, LOG_WARNING, 
        LOG_NOTICE, LOG_INFO, LOG_DEBUG
 } coap_log_t;
+#endif
 
 /** Returns the current log level. */
 coap_log_t coap_get_log_level();
@@ -32,7 +37,7 @@ void coap_set_log_level(coap_log_t level);
 
 /** 
  * Writes the given text to @c COAP_ERR_FD (for @p level <= @c
- * LOG_CRIT) or @c COAP_DEBUG_FD (for @p level >= @c LOG_WARN). The
+ * LOG_CRIT) or @c COAP_DEBUG_FD (for @p level >= @c LOG_WARNING). The
  * text is output only when @p level is below or equal to the log
  * level that set by coap_set_log_level().
  */
@@ -46,7 +51,7 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
 
 /* A set of convenience macros for common log levels. */
 #define info(...) coap_log(LOG_INFO, __VA_ARGS__)
-#define warn(...) coap_log(LOG_WARN, __VA_ARGS__)
+#define warn(...) coap_log(LOG_WARNING, __VA_ARGS__)
 #define debug(...) coap_log(LOG_DEBUG, __VA_ARGS__)
 
 #include "pdu.h"

@@ -35,7 +35,7 @@
 #include "net/uip-debug.h"
 #endif
 
-static coap_log_t maxlog = LOG_WARN;	/* default maximum log level */
+static coap_log_t maxlog = LOG_WARNING;	/* default maximum log level */
 
 coap_log_t 
 coap_get_log_level() {
@@ -49,7 +49,7 @@ coap_set_log_level(coap_log_t level) {
 
 /* this array has the same order as the type log_t */
 static char *loglevels[] = {
-  "EMRG", "ALRT", "CRIT", "WARN", "NOTE", "INFO", "DEBG" 
+  "EMRG", "ALRT", "CRIT", "ERR", "WARN", "NOTE", "INFO", "DEBG" 
 };
 
 #ifdef HAVE_TIME_H
