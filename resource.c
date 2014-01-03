@@ -233,6 +233,7 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
     if (left < *buflen) {	/* this is not the first resource  */
       *p++ = ',';
       --left;
+      ++written;
     }
 
     if (!coap_print_link(r, p, &left))
