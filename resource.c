@@ -1,6 +1,6 @@
 /* resource.c -- generic resource handling
  *
- * Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -63,6 +63,43 @@ coap_free_subscription(coap_subscription_t *subscription) {
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
+/* Helper functions for conditional output of character sequences into
+ * a given buffer. The first Offset characters are skipped.
+ */
+
+/**
+ * Adds Char to Buf if Offset is zero. Otherwise, Char is not written
+ * and Offset is decremented.
+ */
+#define PRINT_WITH_OFFSET(Buf,Offset,Char)		\
+  if ((Offset) == 0) {					\
+    (*(Buf)++) = (Char);				\
+  } else {						\
+    (Offset)--;						\
+  }							\
+
+/**
+ * Adds Char to Buf if Offset is zero and Buf is less than Bufend.
+ */
+#define PRINT_COND_WITH_OFFSET(Buf,Bufend,Offset,Char,Trunc)	\
+  if ((Buf) < (Bufend)) {					\
+    PRINT_WITH_OFFSET(Buf,Offset,Char);				\
+  } else {							\
+    (Trunc) = 1;						\
+  }
+
+/**
+ * Copies at most Length characters of Str to Buf. The first Offset
+ * characters are skipped. Output may be truncated to Bufend - Buf
+ * characters.
+ */
+#define COPY_COND_WITH_OFFSET(Buf,Bufend,Offset,Str,Length,Trunc) {	\
+    size_t i;								\
+    for (i = 0; !(Trunc) && i < (Length); i++) {			\
+      PRINT_COND_WITH_OFFSET((Buf), (Bufend), (Offset), (Str)[i], (Trunc)); \
+    }									\
+  }
+ 
 int
 match(const str *text, const str *pattern, int match_prefix, int match_substring) {
   assert(text); assert(pattern);
@@ -108,22 +145,31 @@ match(const str *text, const str *pattern, int match_prefix, int match_substring
  * @param buf     The buffer to write the result.
  * @param buflen  Must be initialized to the maximum length of @p buf and will be
  *                set to the number of bytes written on return.
+ * @param offset  The offset in bytes where the output shall start. This 
+ *                parameter is used to support the block option.
  * @param query_filter A filter query according to <a href="http://tools.ietf.org/html/draft-ietf-core-link-format-11#section-4.1">Link Format</a>
  * 
- * @return @c 0 on error or @c 1 on success.
+ * @return A value less than zero on error, or a value greater or equal zero
+ *    on success, where @c 0 means that this was the final block of the resource
+ *    representation, a value greater than zero indicates that more data is
+ *    available.
  */
 #if defined(__GNUC__) && defined(WITHOUT_QUERY_FILTER)
 int
 print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
+		size_t offset,
 		coap_opt_t *query_filter __attribute__ ((unused))) {
 #else /* not a GCC */
 int
 print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
-		coap_opt_t *query_filter) {
+		size_t offset, coap_opt_t *query_filter) {
 #endif /* GCC */
   coap_resource_t *r;
   unsigned char *p = buf;
+  const unsigned char *bufend = buf + *buflen;
   size_t left, written = 0;
+  int result = 0;
+  int subsequent_resource = 0;
 #ifndef COAP_RESOURCES_NOHASH
   coap_resource_t *tmp;
 #endif
@@ -228,22 +274,29 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
     }
 #endif /* WITHOUT_QUERY_FILTER */
 
-    left = *buflen - written;
-
-    if (left < *buflen) {	/* this is not the first resource  */
-      *p++ = ',';
-      --left;
-      ++written;
+    if (!subsequent_resource) {	/* this is the first resource  */
+      subsequent_resource = 1;
+    } else {
+      PRINT_COND_WITH_OFFSET(p, bufend, offset, ',', result);
+      if (result != 0) {
+	break;
+      }
     }
 
-    if (!coap_print_link(r, p, &left))
-      return 0;
-    
+    left = bufend - p; /* calculate available space */
+    result = coap_print_link(r, p, &left, &offset);
+
+    /* coap_print_link() sets left to the number of characters that
+     * where actually written to p. Now advance to its end. */
     p += left;
-    written += left;
+
+    if (result != 0) { 		/* error or truncated output */
+      break;
+    }
   }
+
   *buflen = p - buf;
-  return 1;
+  return result;
 }
 
 coap_resource_t *
@@ -479,19 +532,19 @@ coap_get_resource_from_key(coap_context_t *context, coap_key_t key) {
 
 int
 coap_print_link(const coap_resource_t *resource, 
-		unsigned char *buf, size_t *len) {
+		unsigned char *buf, size_t *len, size_t *offset) {
   unsigned char *p = buf;
+  const unsigned char *bufend = buf + *len;
   coap_attr_t *attr;
+  int result = 0;
+  
+  PRINT_COND_WITH_OFFSET(p, bufend, *offset, '<', result);
+  PRINT_COND_WITH_OFFSET(p, bufend, *offset, '/', result);
 
-  size_t written = resource->uri.length + 3;
-  if (*len < written) 
-    return 0;
-
-  *p++ = '<';
-  *p++ = '/';
-  memcpy(p, resource->uri.s, resource->uri.length);
-  p += resource->uri.length;
-  *p++ = '>';
+  COPY_COND_WITH_OFFSET(p, bufend, *offset, 
+			resource->uri.s, resource->uri.length, result);
+  
+  PRINT_COND_WITH_OFFSET(p, bufend, *offset, '>', result);
 
 #ifndef WITH_CONTIKI
   LL_FOREACH(resource->link_attr, attr) {
@@ -499,31 +552,29 @@ coap_print_link(const coap_resource_t *resource,
   for (attr = list_head(resource->link_attr); attr; 
        attr = list_item_next(attr)) {
 #endif /* WITH_CONTIKI */
-    written += attr->name.length + 1;
-    if (*len < written)
-      return 0;
 
-    *p++ = ';';
-    memcpy(p, attr->name.s, attr->name.length);
-    p += attr->name.length;
+    if (result != 0) {
+      break;
+    }
+
+    PRINT_COND_WITH_OFFSET(p, bufend, *offset, ';', result);
+
+    COPY_COND_WITH_OFFSET(p, bufend, *offset,
+			  attr->name.s, attr->name.length, result);
 
     if (attr->value.s) {
-      written += attr->value.length + 1;
-      if (*len < written)
-	return 0;
-      
-      *p++ = '=';
-      memcpy(p, attr->value.s, attr->value.length);
-      p += attr->value.length;
+      PRINT_COND_WITH_OFFSET(p, bufend, *offset, '=', result);
+
+      COPY_COND_WITH_OFFSET(p, bufend, *offset,
+			    attr->value.s, attr->value.length, result);
     }
   }
-  if (resource->observable && written + 4 <= *len) {
-    memcpy(p, ";obs", 4);
-    written += 4;
+  if (resource->observable) {
+    COPY_COND_WITH_OFFSET(p, bufend, *offset, ";obs", 4, result);
   }
-
-  *len = written;
-  return 1;
+  
+  *len = p - buf;
+  return result;
 }
 
 #ifndef WITHOUT_OBSERVE

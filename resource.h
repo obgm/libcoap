@@ -184,12 +184,16 @@ void coap_delete_attr(coap_attr_t *attr);
  * @param buf      The output buffer to write the description to.
  * @param len      Must be initialized to the length of @p buf and 
  * will be set to the number of characters written on success.
+ * @param offset   The offset within the resource description where to
+ *                 start writing into @p buf. This is useful for dealing
+ *                 with the Block2 option.
  * 
- * @return @c 1 on success, or @c 0 on error. If @c 0, @p len is
- * undefined.
+ * @return A value less than zero on error. @c 0 indicates that the link
+ *   fit into the given buffer, and a value greater zero indicates that
+ *   more data is available.
  */
 int coap_print_link(const coap_resource_t *resource, 
-		    unsigned char *buf, size_t *len);
+		    unsigned char *buf, size_t *len, size_t *offset);
 
 /** 
  * Registers the specified @p handler as message handler for the request type

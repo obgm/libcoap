@@ -130,7 +130,7 @@ static void received_package(void *arg, struct udp_pcb *upcb, struct pbuf *p, ip
 
 #endif /* WITH_LWIP */
 
-int print_wellknown(coap_context_t *, unsigned char *, size_t *, coap_opt_t *);
+int print_wellknown(coap_context_t *, unsigned char *, size_t *, size_t, coap_opt_t *);
 
 void coap_handle_failed_notify(coap_context_t *, const coap_address_t *, 
 			       const str *);
@@ -1104,6 +1104,7 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   coap_opt_iterator_t opt_iter;
   size_t len;
   unsigned char buf[2];
+  int result = 0;
 
   resp = coap_pdu_init(request->hdr->type == COAP_MESSAGE_CON 
 		       ? COAP_MESSAGE_ACK 
@@ -1146,8 +1147,9 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   resp->length++;
   len = resp->max_size - resp->length;
 
-  if (!print_wellknown(context, resp->data, &len,
-	       coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter))) {
+  result = print_wellknown(context, resp->data, &len, 0,
+	      coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter));
+  if (result < 0) {
     debug("print_wellknown failed\n");
     goto error;
   } 

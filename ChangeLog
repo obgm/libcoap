@@ -1,3 +1,17 @@
+2014-01-07  Olaf Bergmann  <bergmann@tzi.org>
+
+	* resource.c (coap_print_link): Output partial resource
+	descriptions. The function now provides a sliding window over the
+	textual representation of the resource. Output starts at the given
+	offset and ends at the buffer's upper bound. The meaning of the
+	return value has changed to allow distinguishing whether or not
+	the resource description has been truncated at the buffer's upper
+	bound.
+	(print_wellknown): Support for the new coap_print_link(). An
+	additional parameter now is used to provide the offset into the
+	resource description. The meaning of the return value has been
+	adjusted accordingly.
+
 2013-12-23  Olaf Bergmann  <bergmann@tzi.org>
 
 	* configure.in: merged with LWIP port from chrysn
