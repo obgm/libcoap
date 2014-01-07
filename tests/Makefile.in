@@ -18,7 +18,8 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 # files and flags
 PROGRAMS:=testdriver
-SOURCES:= test_uri.c test_options.c test_pdu.c test_error_response.c
+SOURCES:= test_uri.c test_options.c test_pdu.c test_error_response.c \
+  test_wellknown.c
 HEADERS:=$(SOURCES:.c=.h)
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
 CFLAGS:=-g -Wall @CFLAGS@
