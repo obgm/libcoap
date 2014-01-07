@@ -1,6 +1,6 @@
 /* block.h -- block transfer
  *
- * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012,2014 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -17,6 +17,19 @@
  * @defgroup block Block Transfer
  * @{
  */
+
+#ifndef COAP_MAX_BLOCK_SZX
+/**
+ * The largest value for the SZX component in a Block option. Note
+ * that 1 << (COAP_MAX_BLOCK_SZX + 4) should not exceed
+ * COAP_MAX_PDU_SIZE.
+ */
+#define COAP_MAX_BLOCK_SZX      4
+#endif /* COAP_MAX_BLOCK_SZX */
+
+#if (COAP_MAX_PDU_SIZE - 6) < (1 << (COAP_MAX_BLOCK_SZX + 4))
+#error "COAP_MAX_BLOCK_SZX too large"
+#endif
 
 /**
  * Structure of Block options. 

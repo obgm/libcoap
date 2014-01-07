@@ -145,8 +145,10 @@ match(const str *text, const str *pattern, int match_prefix, int match_substring
  * @param buf     The buffer to write the result.
  * @param buflen  Must be initialized to the maximum length of @p buf and will be
  *                set to the number of bytes written on return.
- * @param offset  The offset in bytes where the output shall start. This 
- *                parameter is used to support the block option.
+ * @param offset  The offset in bytes where the output shall start and is
+ *                shifted accordingly with the characters that have been
+ *                processed. This parameter is used to support the block 
+ *                option. 
  * @param query_filter A filter query according to <a href="http://tools.ietf.org/html/draft-ietf-core-link-format-11#section-4.1">Link Format</a>
  * 
  * @return A value less than zero on error, or a value greater or equal zero

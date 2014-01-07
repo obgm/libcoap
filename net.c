@@ -1,6 +1,6 @@
 /* net.c -- CoAP network interface
  *
- * Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -39,6 +39,7 @@
 #include "resource.h"
 #include "option.h"
 #include "encode.h"
+#include "block.h"
 #include "net.h"
 
 #if defined(WITH_POSIX)
@@ -311,6 +312,8 @@ coap_new_context(
   coap_register_option(c, COAP_OPTION_ACCEPT);
   coap_register_option(c, COAP_OPTION_PROXY_URI);
   coap_register_option(c, COAP_OPTION_PROXY_SCHEME);
+  coap_register_option(c, COAP_OPTION_BLOCK2);
+  coap_register_option(c, COAP_OPTION_BLOCK1);
 
 #ifdef WITH_POSIX
   c->sockfd = socket(listen_addr->addr.sa.sa_family, SOCK_DGRAM, 0);
@@ -1098,13 +1101,29 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
   return response;
 }
 
+/**
+ * Quick hack to determine the size of the resource description for
+ * .well-known/core.
+ */
+static inline size_t
+get_wkc_len(coap_context_t *context, coap_opt_t *query_filter) {
+  /* FIXME: determine size of resource description */
+  return 105;
+}
+
+#define SZX_TO_BYTES(SZX) ((size_t)(1 << ((SZX) + 4)))
+
 coap_pdu_t *
 wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   coap_pdu_t *resp;
   coap_opt_iterator_t opt_iter;
-  size_t len;
+  size_t len, wkc_len;
   unsigned char buf[2];
   int result = 0;
+  int need_block2 = 0;	   /* set to 1 if Block2 option is required */
+  coap_block_t block;
+  coap_opt_t *query_filter;
+  size_t offset = 0;
 
   resp = coap_pdu_init(request->hdr->type == COAP_MESSAGE_CON 
 		       ? COAP_MESSAGE_ACK 
@@ -1119,6 +1138,23 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   if (!coap_add_token(resp, request->hdr->token_length, request->hdr->token)) {
     debug("wellknown_response: cannot add token\n");
     goto error;
+  }
+
+  query_filter = coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter);
+  wkc_len = get_wkc_len(context, query_filter);
+
+  /* check whether the request contains the Block2 option */
+  if (coap_get_block(request, COAP_OPTION_BLOCK2, &block)) {
+    offset = block.num << (block.szx + 4);
+    if (block.szx > 6) {  /* invalid, MUST lead to 4.00 Bad Request */
+      resp->hdr->code = COAP_RESPONSE_CODE(400);
+      return resp;
+    } else if (block.szx > COAP_MAX_BLOCK_SZX) {
+      block.szx = COAP_MAX_BLOCK_SZX;
+      block.num = offset >> (block.szx + 4);
+    }
+
+    need_block2 = 1;
   }
 
   /* Check if there is sufficient space to add Content-Format option 
@@ -1138,6 +1174,34 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
 		  coap_encode_var_bytes(buf, 
 			COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf);
 
+  /* check if Block2 option is required even if not requested */
+  if (!need_block2 && (resp->max_size - (size_t)resp->length < wkc_len)) {
+    assert(resp->length <= resp->max_size);
+    const size_t payloadlen = resp->max_size - resp->length;
+    /* yes, need block-wise transfer */
+    block.num = 0;
+    block.m = 0;      /* the M bit is set by coap_write_block_opt() */
+    block.szx = COAP_MAX_BLOCK_SZX;
+    while (payloadlen < SZX_TO_BYTES(block.szx)) {
+      if (block.szx == 0) {
+	debug("wellknown_response: message to small even for szx == 0\n");
+	goto error;
+      } else {
+	block.szx--;
+      }
+    }
+
+    need_block2 = 1;
+  }
+
+  /* write Block2 option if necessary */
+  if (need_block2) {
+    if (coap_write_block_opt(&block, COAP_OPTION_BLOCK2, resp, wkc_len) < 0) {
+      debug("wellknown_response: cannot add Block2 option\n");
+      goto error;
+    }
+  }
+
   /* Manually set payload of response to let print_wellknown() write,
    * into our buffer without copying data. */
 
@@ -1145,10 +1209,9 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   *resp->data = COAP_PAYLOAD_START;
   resp->data++;
   resp->length++;
-  len = resp->max_size - resp->length;
+  len = need_block2 ? SZX_TO_BYTES(block.szx) : resp->max_size - resp->length;
 
-  result = print_wellknown(context, resp->data, &len, 0,
-	      coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter));
+  result = print_wellknown(context, resp->data, &len, offset, query_filter);
   if (result < 0) {
     debug("print_wellknown failed\n");
     goto error;
