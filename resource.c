@@ -81,11 +81,11 @@ coap_free_subscription(coap_subscription_t *subscription) {
 /**
  * Adds Char to Buf if Offset is zero and Buf is less than Bufend.
  */
-#define PRINT_COND_WITH_OFFSET(Buf,Bufend,Offset,Char,Trunc)	\
-  if ((Buf) < (Bufend)) {					\
-    PRINT_WITH_OFFSET(Buf,Offset,Char);				\
-  } else {							\
-    (Trunc) = 1;						\
+#define PRINT_COND_WITH_OFFSET(Buf,Bufend,Offset,Char,Result) {		\
+    if ((Buf) < (Bufend)) {						\
+      PRINT_WITH_OFFSET(Buf,Offset,Char);				\
+    }									\
+    (Result)++;								\
   }
 
 /**
@@ -93,10 +93,10 @@ coap_free_subscription(coap_subscription_t *subscription) {
  * characters are skipped. Output may be truncated to Bufend - Buf
  * characters.
  */
-#define COPY_COND_WITH_OFFSET(Buf,Bufend,Offset,Str,Length,Trunc) {	\
+#define COPY_COND_WITH_OFFSET(Buf,Bufend,Offset,Str,Length,Result) {	\
     size_t i;								\
-    for (i = 0; !(Trunc) && i < (Length); i++) {			\
-      PRINT_COND_WITH_OFFSET((Buf), (Bufend), (Offset), (Str)[i], (Trunc)); \
+    for (i = 0; i < (Length); i++) {					\
+      PRINT_COND_WITH_OFFSET((Buf), (Bufend), (Offset), (Str)[i], (Result)); \
     }									\
   }
  
@@ -144,25 +144,25 @@ match(const str *text, const str *pattern, int match_prefix, int match_substring
  * @param context The context with the resource map.
  * @param buf     The buffer to write the result.
  * @param buflen  Must be initialized to the maximum length of @p buf and will be
- *                set to the number of bytes written on return.
+ *                set to the length of the well-known response on return.
  * @param offset  The offset in bytes where the output shall start and is
  *                shifted accordingly with the characters that have been
  *                processed. This parameter is used to support the block 
  *                option. 
  * @param query_filter A filter query according to <a href="http://tools.ietf.org/html/draft-ietf-core-link-format-11#section-4.1">Link Format</a>
  * 
- * @return A value less than zero on error, or a value greater or equal zero
- *    on success, where @c 0 means that this was the final block of the resource
- *    representation, a value greater than zero indicates that more data is
- *    available.
+ * @return COAP_PRINT_STATUS_ERROR on error. Otherwise, the lower 28 bits are
+ *         set to the number of bytes that have actually been written to
+ *         @p buf. COAP_PRINT_STATUS_TRUNC is set when the output has been
+ *         truncated.
  */
 #if defined(__GNUC__) && defined(WITHOUT_QUERY_FILTER)
-int
+coap_print_status_t
 print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
 		size_t offset,
 		coap_opt_t *query_filter __attribute__ ((unused))) {
 #else /* not a GCC */
-int
+coap_print_status_t
 print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
 		size_t offset, coap_opt_t *query_filter) {
 #endif /* GCC */
@@ -170,7 +170,8 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
   unsigned char *p = buf;
   const unsigned char *bufend = buf + *buflen;
   size_t left, written = 0;
-  int result = 0;
+  coap_print_status_t result;
+  const size_t old_offset = offset;
   int subsequent_resource = 0;
 #ifndef COAP_RESOURCES_NOHASH
   coap_resource_t *tmp;
@@ -186,7 +187,6 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
     {2, (unsigned char *)"if"},
     {3, (unsigned char *)"rel"},
     {0, NULL}};
-  str *rt_attributes;
 #endif /* WITHOUT_QUERY_FILTER */
 
 #ifdef WITH_CONTIKI
@@ -279,25 +279,27 @@ print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
     if (!subsequent_resource) {	/* this is the first resource  */
       subsequent_resource = 1;
     } else {
-      PRINT_COND_WITH_OFFSET(p, bufend, offset, ',', result);
-      if (result != 0) {
-	break;
-      }
+      PRINT_COND_WITH_OFFSET(p, bufend, offset, ',', written);
     }
 
     left = bufend - p; /* calculate available space */
     result = coap_print_link(r, p, &left, &offset);
 
-    /* coap_print_link() sets left to the number of characters that
-     * where actually written to p. Now advance to its end. */
-    p += left;
-
-    if (result != 0) { 		/* error or truncated output */
+    if (result & COAP_PRINT_STATUS_ERROR) {
       break;
     }
+
+    /* coap_print_link() returns the number of characters that
+     * where actually written to p. Now advance to its end. */
+    p += COAP_PRINT_OUTPUT_LENGTH(result);
+    written += left;
   }
 
-  *buflen = p - buf;
+  *buflen = written;
+  result = p - buf;
+  if (result + old_offset - offset < *buflen) {
+    result |= COAP_PRINT_STATUS_TRUNC;
+  }
   return result;
 }
 
@@ -532,21 +534,23 @@ coap_get_resource_from_key(coap_context_t *context, coap_key_t key) {
 #endif /* WITH_CONTIKI */
 }
 
-int
+coap_print_status_t
 coap_print_link(const coap_resource_t *resource, 
 		unsigned char *buf, size_t *len, size_t *offset) {
   unsigned char *p = buf;
   const unsigned char *bufend = buf + *len;
   coap_attr_t *attr;
-  int result = 0;
+  coap_print_status_t result = 0;
+  const size_t old_offset = *offset;
   
-  PRINT_COND_WITH_OFFSET(p, bufend, *offset, '<', result);
-  PRINT_COND_WITH_OFFSET(p, bufend, *offset, '/', result);
+  *len = 0;
+  PRINT_COND_WITH_OFFSET(p, bufend, *offset, '<', *len);
+  PRINT_COND_WITH_OFFSET(p, bufend, *offset, '/', *len);
 
   COPY_COND_WITH_OFFSET(p, bufend, *offset, 
-			resource->uri.s, resource->uri.length, result);
+			resource->uri.s, resource->uri.length, *len);
   
-  PRINT_COND_WITH_OFFSET(p, bufend, *offset, '>', result);
+  PRINT_COND_WITH_OFFSET(p, bufend, *offset, '>', *len);
 
 #ifndef WITH_CONTIKI
   LL_FOREACH(resource->link_attr, attr) {
@@ -555,27 +559,28 @@ coap_print_link(const coap_resource_t *resource,
        attr = list_item_next(attr)) {
 #endif /* WITH_CONTIKI */
 
-    if (result != 0) {
-      break;
-    }
-
-    PRINT_COND_WITH_OFFSET(p, bufend, *offset, ';', result);
+    PRINT_COND_WITH_OFFSET(p, bufend, *offset, ';', *len);
 
     COPY_COND_WITH_OFFSET(p, bufend, *offset,
-			  attr->name.s, attr->name.length, result);
+			  attr->name.s, attr->name.length, *len);
 
     if (attr->value.s) {
-      PRINT_COND_WITH_OFFSET(p, bufend, *offset, '=', result);
+      PRINT_COND_WITH_OFFSET(p, bufend, *offset, '=', *len);
 
       COPY_COND_WITH_OFFSET(p, bufend, *offset,
-			    attr->value.s, attr->value.length, result);
+			    attr->value.s, attr->value.length, *len);
     }
+
   }
   if (resource->observable) {
-    COPY_COND_WITH_OFFSET(p, bufend, *offset, ";obs", 4, result);
+    COPY_COND_WITH_OFFSET(p, bufend, *offset, ";obs", 4, *len);
   }
-  
-  *len = p - buf;
+
+  result = p - buf;
+  if (result + old_offset - *offset < *len) {
+    result |= COAP_PRINT_STATUS_TRUNC;
+  }
+
   return result;
 }
 

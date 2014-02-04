@@ -27,7 +27,7 @@ extern int print_wellknown(coap_context_t *context, unsigned char *buf,
 
 void
 t_wellknown1(void) {
-  int result;
+  coap_print_status_t result;
   coap_resource_t *r;
   unsigned char buf[40];
   size_t buflen, offset, ofs;
@@ -52,8 +52,8 @@ t_wellknown1(void) {
 
     result = coap_print_link(r, buf, &buflen, &ofs);
   
-    CU_ASSERT(result == 0);
-    CU_ASSERT(buflen == sizeof(teststr) - offset);
+    CU_ASSERT(result == sizeof(teststr) - offset);
+    CU_ASSERT(buflen == sizeof(teststr));
     CU_ASSERT(memcmp(buf, teststr + offset, sizeof(teststr) - offset) == 0);
   }
   
@@ -63,6 +63,7 @@ t_wellknown1(void) {
   result = coap_print_link(r, buf, &buflen, &ofs);
   
   CU_ASSERT(result == 0);
+    CU_ASSERT(buflen == sizeof(teststr));
 
   /* offset exceeds buffer */
   buflen = sizeof(buf);
@@ -70,11 +71,12 @@ t_wellknown1(void) {
   result = coap_print_link(r, buf, &buflen, &ofs);
 
   CU_ASSERT(result == 0);
+  CU_ASSERT(buflen == sizeof(teststr));
 }
 
 void
 t_wellknown2(void) {
-  int result;
+  coap_print_status_t result;
   coap_resource_t *r;
   unsigned char buf[10];	/* smaller than teststr */
   size_t buflen, offset, ofs;
@@ -97,8 +99,9 @@ t_wellknown2(void) {
 
     result = coap_print_link(r, buf, &buflen, &ofs);
   
-    CU_ASSERT(result == 1);
-    CU_ASSERT(buflen == sizeof(buf));
+    CU_ASSERT(result == (COAP_PRINT_STATUS_TRUNC | sizeof(buf)));
+    CU_ASSERT(buflen == sizeof(teststr));
+    CU_ASSERT(ofs == 0);
     CU_ASSERT(memcmp(buf, teststr + offset, sizeof(buf)) == 0);
   }
 
@@ -108,9 +111,11 @@ t_wellknown2(void) {
     buflen = sizeof(buf);
     result = coap_print_link(r, buf, &buflen, &ofs);
   
-    CU_ASSERT(result == 0);
-    CU_ASSERT(buflen == sizeof(teststr) - offset);
-    CU_ASSERT(memcmp(buf, teststr + offset, buflen) == 0);
+    CU_ASSERT(result == sizeof(teststr) - offset);
+    CU_ASSERT(buflen == sizeof(teststr));
+    CU_ASSERT(ofs == 0);
+    CU_ASSERT(memcmp(buf, teststr + offset, 
+		     COAP_PRINT_OUTPUT_LENGTH(result)) == 0);
   }
 
   /* offset exceeds buffer */
@@ -118,11 +123,14 @@ t_wellknown2(void) {
   ofs = offset;
   result = coap_print_link(r, buf, &buflen, &ofs);
   CU_ASSERT(result == 0);
+  CU_ASSERT(buflen == sizeof(teststr));
+  CU_ASSERT(ofs == offset - sizeof(teststr));
 }
 
 void
 t_wellknown3(void) {
-  int result, j;
+  coap_print_status_t result;
+  int j;
   coap_resource_t *r;
   static char uris[2 * COAP_MAX_PDU_SIZE];
   unsigned char *uribuf = (unsigned char *)uris;
@@ -146,20 +154,96 @@ t_wellknown3(void) {
    */
   offset = num_resources * (TEST_URI_LEN + 4);
   result = print_wellknown(ctx, buf, &buflen, offset, NULL);
-  CU_ASSERT(result > 0);
+  CU_ASSERT((result & COAP_PRINT_STATUS_ERROR) == 0 );
+  CU_ASSERT(COAP_PRINT_OUTPUT_LENGTH(result) > 0);
 }
 
+/* Create wellknown response for request without Block-option. */
 void
 t_wellknown4(void) {
   coap_pdu_t *response;
+  coap_block_t block;
 
   response = wellknown_response(ctx, pdu);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 
-  /* printf("%.*s", (int)(((unsigned char *)response->hdr + response->length) - response->data), response->data); */
+  CU_ASSERT(coap_get_block(response, COAP_OPTION_BLOCK2, &block) != 0);
+
+  CU_ASSERT(block.num == 0);
+  CU_ASSERT(block.m == 1);
+  CU_ASSERT(1 << (block.szx + 4) 
+    == (unsigned char *)response->hdr + response->length - response->data);
 
   coap_delete_pdu(response);
+}
+
+/* Create wellknown response for request with Block2-option and an szx
+ * value smaller than COAP_MAX_BLOCK_SZX.
+ */
+void
+t_wellknown5(void) {
+  coap_pdu_t *response;
+  coap_block_t inblock = { .num = 1, .m = 0, .szx = 1 };
+  coap_block_t block;
+  unsigned char buf[3];
+
+  if (!coap_add_option(pdu, COAP_OPTION_BLOCK2, 
+		       coap_encode_var_bytes(buf, ((inblock.num << 4) | 
+						   (inblock.m << 3) | 
+						   inblock.szx)), buf)) {
+    CU_FAIL("cannot add Block2 option");
+    return;
+  }
+
+  response = wellknown_response(ctx, pdu);
+
+  CU_ASSERT_PTR_NOT_NULL(response);
+
+  CU_ASSERT(coap_get_block(response, COAP_OPTION_BLOCK2, &block) != 0);
+
+  CU_ASSERT(block.num == inblock.num);
+  CU_ASSERT(block.m == 1);
+  CU_ASSERT(1 << (block.szx + 4)
+    == (unsigned char *)response->hdr + response->length - response->data);
+
+  coap_delete_pdu(response);
+}
+
+void
+t_wellknown6(void) {
+  coap_pdu_t *response;
+  coap_block_t block = { .num = 0, .szx = 6 };
+  unsigned char buf[TEST_PDU_SIZE];
+
+
+  do {
+    coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+
+    pdu->hdr->type = COAP_MESSAGE_NON;
+    pdu->hdr->code = COAP_REQUEST_GET;
+    pdu->hdr->id = htons(0x1234);
+
+    CU_ASSERT_PTR_NOT_NULL(pdu);
+
+    if (!pdu || !coap_add_option(pdu, COAP_OPTION_BLOCK2, 
+                 	 coap_encode_var_bytes(buf, 
+				       ((block.num << 4) | block.szx)), buf)) {
+      CU_FAIL("cannot create request");
+      return;
+    }
+    
+    response = wellknown_response(ctx, pdu);
+
+    CU_ASSERT_PTR_NOT_NULL(response);
+
+    /* coap_show_pdu(response); */
+
+    CU_ASSERT(coap_get_block(response, COAP_OPTION_BLOCK2, &block) != 0);
+
+    block.num++;
+    coap_delete_pdu(response);
+  } while (block.m == 1);
 }
 
 int 
@@ -241,6 +325,8 @@ t_init_wellknown_tests(void) {
   WKC_TEST(suite, t_wellknown2);
   WKC_TEST(suite, t_wellknown3);
   WKC_TEST(suite, t_wellknown4);
+  WKC_TEST(suite, t_wellknown5);
+  WKC_TEST(suite, t_wellknown6);
 
   return suite;
 }

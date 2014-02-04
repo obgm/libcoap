@@ -10,6 +10,9 @@
 
 #include <ctype.h>
 #include <stdio.h>
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #elif HAVE_SYS_UNISTD_H
@@ -1107,8 +1110,18 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
  */
 static inline size_t
 get_wkc_len(coap_context_t *context, coap_opt_t *query_filter) {
-  /* FIXME: determine size of resource description */
-  return 105;
+  unsigned char buf[1];
+  size_t len = 0;
+
+  if (print_wellknown(context, buf, &len, UINT_MAX, query_filter)
+      & COAP_PRINT_STATUS_ERROR) {
+    warn("cannot determine length of /.well-known/core\n");
+    return 0;
+  }
+
+  debug("get_wkc_len: print_wellknown() returned %zu\n", len);
+
+  return len;
 }
 
 #define SZX_TO_BYTES(SZX) ((size_t)(1 << ((SZX) + 4)))
@@ -1212,12 +1225,12 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   len = need_block2 ? SZX_TO_BYTES(block.szx) : resp->max_size - resp->length;
 
   result = print_wellknown(context, resp->data, &len, offset, query_filter);
-  if (result < 0) {
+  if ((result & COAP_PRINT_STATUS_ERROR) != 0) {
     debug("print_wellknown failed\n");
     goto error;
   } 
   
-  resp->length += len;
+  resp->length += COAP_PRINT_OUTPUT_LENGTH(result);
   return resp;
 
  error:
