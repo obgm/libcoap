@@ -342,7 +342,7 @@ message_handler(struct coap_context_t  *ctx,
       if (COAP_OPT_BLOCK_MORE(block_opt)) {
 	/* more bit is set */
 	debug("found the M bit, block size is %u, block nr. %u\n",
-	      COAP_OPT_BLOCK_SZX(block_opt), COAP_OPT_BLOCK_NUM(block_opt));
+	      COAP_OPT_BLOCK_SZX(block_opt), coap_opt_block_num(block_opt));
 
 	/* create pdu with request for next block */
 	pdu = coap_new_request(ctx, method, NULL); /* first, create bare PDU w/o any option  */
@@ -365,9 +365,9 @@ message_handler(struct coap_context_t  *ctx,
 
 	  /* finally add updated block option from response, clear M bit */
 	  /* blocknr = (blocknr & 0xfffffff7) + 0x10; */
-	  debug("query block %d\n", (COAP_OPT_BLOCK_NUM(block_opt) + 1));
+	  debug("query block %d\n", (coap_opt_block_num(block_opt) + 1));
 	  coap_add_option(pdu, blktype, coap_encode_var_bytes(buf, 
-	      ((COAP_OPT_BLOCK_NUM(block_opt) + 1) << 4) | 
+	      ((coap_opt_block_num(block_opt) + 1) << 4) | 
               COAP_OPT_BLOCK_SZX(block_opt)), buf);
 
 	  if (received->hdr->type == COAP_MESSAGE_CON)
