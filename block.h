@@ -40,29 +40,27 @@ typedef struct {
   unsigned int szx:3;		/**< block size */
 } coap_block_t;
 
-/** Returns the value of the least significant byte of a Block option @p opt. */
-#define COAP_OPT_BLOCK_LAST(opt) ( COAP_OPT_VALUE(opt) + (COAP_OPT_LENGTH(opt) - 1) )
+/**
+ * Returns the value of the least significant byte of a Block option @p opt. 
+ * For zero-length options (i.e. num == m == szx == 0), COAP_OPT_BLOCK_LAST
+ * returns @c NULL.
+ */
+#define COAP_OPT_BLOCK_LAST(opt) \
+  (COAP_OPT_LENGTH(opt) ? (COAP_OPT_VALUE(opt) + (COAP_OPT_LENGTH(opt)-1)) : 0)
 
 /** Returns the value of the More-bit of a Block option @p opt. */
-#define COAP_OPT_BLOCK_MORE(opt) ( *COAP_OPT_BLOCK_LAST(opt) & 0x08 )
+#define COAP_OPT_BLOCK_MORE(opt) \
+  (COAP_OPT_LENGTH(opt) ? (*COAP_OPT_BLOCK_LAST(opt) & 0x08) : 0)
 
 /** Returns the value of the SZX-field of a Block option @p opt. */
-#define COAP_OPT_BLOCK_SZX(opt)  ( *COAP_OPT_BLOCK_LAST(opt) & 0x07 )
+#define COAP_OPT_BLOCK_SZX(opt)  \
+  (COAP_OPT_LENGTH(opt) ? (*COAP_OPT_BLOCK_LAST(opt) & 0x07) : 0)
 
-/** Implementation of COAP_OPT_BLOCK_NUM */
-static inline unsigned int
-_coap_block_num_impl(const coap_opt_t *block_opt) {
-  unsigned int num = 0;
-
-  if (COAP_OPT_LENGTH(block_opt) > 1)
-    num = coap_decode_var_bytes(COAP_OPT_VALUE(block_opt), 
-				COAP_OPT_LENGTH(block_opt) - 1);
-
-  return (num << 4) | ((*COAP_OPT_BLOCK_LAST(block_opt) & 0xF0) >> 4);
-}
-
-/** Returns the value of field @c num in the given block option @p Block. */
-#define COAP_OPT_BLOCK_NUM(Block) _coap_block_num_impl(Block)
+/**
+ * Returns the value of field @c num in the given block option @p
+ * block_opt.
+ */
+unsigned int coap_opt_block_num(const coap_opt_t *block_opt);
 
 /**
  * Checks if more than @p num blocks are required to deliver @p data_len
