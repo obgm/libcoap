@@ -17,7 +17,9 @@ abs_builddir = @abs_builddir@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 # files and flags
-PROGRAMS:=testdriver
+ifneq (,@TESTS@)
+  PROGRAMS:=testdriver
+endif
 SOURCES:= test_uri.c test_options.c test_pdu.c test_error_response.c \
   test_wellknown.c
 HEADERS:=$(SOURCES:.c=.h)
