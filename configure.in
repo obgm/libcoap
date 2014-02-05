@@ -1,13 +1,13 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 #
-# Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
 #
 # This file is part of the CoAP library libcoap. Please see
 # README for terms of use. 
 
 AC_PREREQ([2.65])
-AC_INIT([libcoap], [4.1.0])
+AC_INIT([libcoap], [4.1.1])
 AC_CONFIG_SRCDIR([coap.h])
 
 # First check for Contiki build to quit configure before any other test
