@@ -1,6 +1,6 @@
 # Makefile for libcoap
 #
-# Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
 #
 # This file is part of the CoAP library libcoap. Please see
 # README for terms of use.
@@ -108,11 +108,14 @@ dist:	$(FILES) $(SUBDIRS)
 	tar czf $(package).tar.gz $(DISTDIR)
 
 install:
-	mkdir -p $(includerootdir)/coap
-	mkdir -p $(librootdir)
-	cp -r $(HEADERS) $(includerootdir)/coap/
+	test -d $(includerootdir)/libcoap || mkdir -p $(includerootdir)/libcoap
+	test -d $(librootdir) || mkdir -p $(librootdir)
+	cp -r $(HEADERS) $(includerootdir)/libcoap/
 	cp $(LIB) $(librootdir)/
-	cp $(LIBSO) $(librootdir)/
+ifdef BUILD_SO
+	cp $(LIBSO) $(librootdir)/$(LIBSO).@LIBSO_VERSION@
+	test -h $(librootdir)/$(LIBSO) || ln -s $(librootdir)/$(LIBSO).@LIBSO_VERSION@ $(librootdir)/$(LIBSO)
+endif
 
 TAGS:
 	$(ETAGS) -o $@.new $(SOURCES)
