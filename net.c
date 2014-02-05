@@ -139,6 +139,43 @@ int print_wellknown(coap_context_t *, unsigned char *, size_t *, size_t, coap_op
 void coap_handle_failed_notify(coap_context_t *, const coap_address_t *, 
 			       const str *);
 
+unsigned int
+coap_adjust_basetime(coap_context_t *ctx, coap_tick_t now) {
+  unsigned int result = 0;
+  coap_tick_diff_t delta = now - ctx->sendqueue_basetime;
+
+  if (ctx->sendqueue) {
+    /* delta < 0 means that the new time stamp is before the old. */
+    if (delta <= 0) {
+      ctx->sendqueue->t -= delta;
+    } else {
+      /* This case is more complex: The time must be advanced forward,
+       * thus possibly leading to timed out elements at the queue's
+       * start. For every element that has timed out, its relative
+       * time is set to zero and the result counter is increased. */
+
+      coap_queue_t *q = ctx->sendqueue;
+      coap_tick_t t = 0;
+      while (q && (t + q->t < (coap_tick_t)delta)) {
+	t += q->t;
+	q->t = 0;
+	result++;
+	q = q->next;
+      }
+
+      /* finally adjust the first element that has not expired */
+      if (q) {
+	q->t = (coap_tick_t)delta - t;
+      }
+    }
+  }
+
+  /* adjust basetime */
+  ctx->sendqueue_basetime += delta;
+
+  return result;
+}
+
 int
 coap_insert_node(coap_queue_t **queue, coap_queue_t *node) {
   coap_queue_t *p, *q;
@@ -923,9 +960,8 @@ coap_remove_from_queue(coap_queue_t **queue, coap_tid_t id, coap_queue_t **node)
   if ( id == (*queue)->id ) { /* found transaction */
     *node = *queue;
     *queue = (*queue)->next;
-    if (*queue != NULL)
-    {
-      (*queue)->t += (*node)->t;	/* adjust relative time of new queue head */
+    if (*queue) {	  /* adjust relative time of new queue head */
+      (*queue)->t += (*node)->t;
     }
     (*node)->next = NULL;
     /* coap_delete_node( q ); */
