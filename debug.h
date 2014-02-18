@@ -1,6 +1,6 @@
 /* debug.h -- debug utilities
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011,2014 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -34,6 +34,12 @@ coap_log_t coap_get_log_level();
 
 /** Sets the log level to the specified value. */
 void coap_set_log_level(coap_log_t level);
+
+/** Returns a zero-terminated string with the name of this library. */
+const char *coap_package_name();
+
+/** Returns a zero-terminated string with the library version. */
+const char *coap_package_version();
 
 /** 
  * Writes the given text to @c COAP_ERR_FD (for @p level <= @c

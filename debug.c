@@ -1,6 +1,6 @@
 /* debug.c -- debug utilities
  *
- * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012,2014 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -36,6 +36,14 @@
 #endif
 
 static coap_log_t maxlog = LOG_WARNING;	/* default maximum log level */
+
+const char *coap_package_name() {
+  return PACKAGE_NAME;
+}
+
+const char *coap_package_version() {
+  return PACKAGE_STRING;
+}
 
 coap_log_t 
 coap_get_log_level() {
