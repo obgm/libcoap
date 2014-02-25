@@ -1403,6 +1403,17 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
       h(context, resource, &node->remote, 
 	node->pdu, &token, response);
 
+      /* If original request contained a token, and the registered
+       * application handler made no changes to the response, then
+       * this is an empty ACK with a token, which is a malformed
+       * PDU */
+      if ((response->hdr->type == COAP_MESSAGE_ACK)
+	  && (response->hdr->code == 0)) {
+	/* Remove token from otherwise-empty acknowledgment PDU */
+	response->hdr->token_length = 0;
+	response->length = sizeof(coap_hdr_t);
+      }
+
       if (response->hdr->type != COAP_MESSAGE_NON ||
 	  (response->hdr->code >= 64 
 	   && !coap_is_mcast(&node->local))) {
