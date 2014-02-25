@@ -219,7 +219,7 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
   coap_pdu_t *response;
   coap_async_state_t *tmp;
 
-  size_t size = sizeof(coap_hdr_t) + 8;
+  size_t size = sizeof(coap_hdr_t) + 13;
 
   if (!async || now < async->created + (unsigned long)async->appdata) 
     return;
