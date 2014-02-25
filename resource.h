@@ -302,14 +302,16 @@ void coap_touch_observer(coap_context_t *context,
 
 /**
  * Removes any subscription for @p observer from @p resource and releases
- * the allocated storage.
+ * the allocated storage. The result is @c 1 if an observation relationship
+ * with @p observer and @p token existed, @c 0 otherwise.
  *
  * @param resource The observed resource.
  * @param observer The observer's address.
  * @param token    The token that identifies this subscription or @c NULL for any
  *                 token.
+ * @return @c 1 if the observer has been deleted, @c 0 otherwise.
  */
-void coap_delete_observer(coap_resource_t *resource, 
+int coap_delete_observer(coap_resource_t *resource, 
 			  const coap_address_t *observer, 
 			  const str *token);
 

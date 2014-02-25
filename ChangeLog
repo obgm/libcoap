@@ -1,3 +1,8 @@
+2014-02-25  Olaf Bergmann  <bergmann@tzi.org>
+
+	* net.c (coap_cancel): Handling of 7.31 responses to cancel
+	notifications (see Section 4.6 of draft-ietf-core-observe-12)
+
 2014-02-04  Olaf Bergmann  <bergmann@tzi.org>
 
 	* resource.c (coap_print_link): This function now takes an offset

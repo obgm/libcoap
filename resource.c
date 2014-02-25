@@ -670,7 +670,7 @@ coap_touch_observer(coap_context_t *context, const coap_address_t *observer,
 #endif /* WITH_CONTIKI */
 }
 
-void
+int
 coap_delete_observer(coap_resource_t *resource, const coap_address_t *observer,
 		     const str *token) {
   coap_subscription_t *s;
@@ -682,6 +682,8 @@ coap_delete_observer(coap_resource_t *resource, const coap_address_t *observer,
 
     COAP_FREE_TYPE(subscription,s);
   }
+
+  return s != NULL;
 }
 
 static void

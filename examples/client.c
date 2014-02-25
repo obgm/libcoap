@@ -164,42 +164,37 @@ coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options ) {
 
 coap_tid_t
 clear_obs(coap_context_t *ctx, const coap_address_t *remote) {
-  coap_list_t *option;
   coap_pdu_t *pdu;
   coap_tid_t tid = COAP_INVALID_TID;
 
   /* create bare PDU w/o any option  */
-  pdu = coap_new_request(ctx, COAP_REQUEST_GET, NULL);
-  
-  if (pdu) {
-    /* FIXME: add token */
-    /* add URI components from optlist */
-    for (option = optlist; option; option = option->next ) {
-      switch (COAP_OPTION_KEY(*(coap_option *)option->data)) {
-      case COAP_OPTION_URI_HOST :
-      case COAP_OPTION_URI_PORT :
-      case COAP_OPTION_URI_PATH :
-      case COAP_OPTION_URI_QUERY :
-	coap_add_option ( pdu, COAP_OPTION_KEY(*(coap_option *)option->data),
-			  COAP_OPTION_LENGTH(*(coap_option *)option->data),
-			  COAP_OPTION_DATA(*(coap_option *)option->data) );
-	break;
-      default:
-	;			/* skip other options */
-      }
-    }
+  coap_log(LOG_INFO, "response code 7.31 is %d\n", COAP_RESPONSE_CODE(731));
+  pdu = coap_pdu_init(msgtype, COAP_RESPONSE_CODE(731), 
+		      coap_new_message_id(ctx),
+		      sizeof(coap_hdr_t) + the_token.length);
 
-    if (pdu->hdr->type == COAP_MESSAGE_CON)
-      tid = coap_send_confirmed(ctx, remote, pdu);
-    else 
-      tid = coap_send(ctx, remote, pdu);
-    
-    if (tid == COAP_INVALID_TID) {
-      debug("clear_obs: error sending new request");
-      coap_delete_pdu(pdu);
-    } else if (pdu->hdr->type != COAP_MESSAGE_CON)
-      coap_delete_pdu(pdu);
+  if (!pdu) {
+    return tid;
   }
+
+  if (!coap_add_token(pdu, the_token.length, the_token.s)) {
+    coap_log(LOG_CRIT, "cannot add token");
+    coap_delete_pdu(pdu);
+    return tid;
+  }
+  coap_show_pdu(pdu);
+
+  if (pdu->hdr->type == COAP_MESSAGE_CON)
+    tid = coap_send_confirmed(ctx, remote, pdu);
+  else 
+    tid = coap_send(ctx, remote, pdu);
+    
+  if (tid == COAP_INVALID_TID) {
+    debug("clear_obs: error sending new request");
+    coap_delete_pdu(pdu);
+  } else if (pdu->hdr->type != COAP_MESSAGE_CON)
+    coap_delete_pdu(pdu);
+
   return tid;
 }
 
@@ -304,16 +299,9 @@ message_handler(struct coap_context_t  *ctx,
     return;
   }
 
-  switch (received->hdr->type) {
-  case COAP_MESSAGE_CON:
-    /* acknowledge received response if confirmable (TODO: check Token) */
-    coap_send_ack(ctx, remote, received);
-    break;
-  case COAP_MESSAGE_RST:
+  if (received->hdr->type == COAP_MESSAGE_RST) {
     info("got RST\n");
     return;
-  default:
-    ;
   }
 
   /* output the received data, if any */

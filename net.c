@@ -1005,7 +1005,6 @@ coap_cancel_all_messages(coap_context_t *context, const coap_address_t *dst,
    * and use the specified token */
   coap_queue_t *p, *q;
   
-  debug("cancel_all_messages\n");
   while (context->sendqueue && 
 	 coap_address_equals(dst, &context->sendqueue->remote) &&
 	 token_match(token, token_length, 
@@ -1276,6 +1275,56 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   return resp;
 }
 
+/**
+ * This function cancels outstanding messages for the remote peer and
+ * token specified in @p sent. Any observation relationship for
+ * sent->remote and the token are removed. Calling this function is
+ * required when receiving an RST message (usually in response to a
+ * notification) or a 7.31 response.
+ *
+ * This function returns @c 0 when the token is unknown with this
+ * peer, or a value greater than zero otherwise.
+ */
+static int
+coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
+#ifndef WITHOUT_OBSERVE
+  coap_resource_t *r;
+#ifndef COAP_RESOURCES_NOHASH
+  coap_resource_t *tmp;
+#endif
+  str token = { 0, NULL };
+  int num_cancelled = 0;    /* the number of observers cancelled */
+
+  /* remove observer for this resource, if any 
+   * get token from sent and try to find a matching resource. Uh!
+   */
+
+  COAP_SET_STR(&token, sent->pdu->hdr->token_length, sent->pdu->hdr->token);
+
+#ifndef WITH_CONTIKI
+#ifdef COAP_RESOURCES_NOHASH
+  LL_FOREACH(context->resources, r) {
+#else
+  HASH_ITER(hh, context->resources, r, tmp) {
+#endif
+    num_cancelled += coap_delete_observer(r, &sent->remote, &token);
+    coap_cancel_all_messages(context, &sent->remote, token.s, token.length);
+  }
+#else /* WITH_CONTIKI */
+  r = (coap_resource_t *)resource_storage.mem;
+  for (i = 0; i < resource_storage.num; ++i, ++r) {
+    if (resource_storage.count[i]) {
+      num_cancelled += coap_delete_observer(r, &sent->remote, &token);
+      coap_cancel_all_messages(context, &sent->remote, token.s, token.length);
+    }
+  }
+#endif /* WITH_CONTIKI */
+  return num_cancelled;
+#else /* WITOUT_OBSERVE */  
+  return 0;
+#endif /* WITOUT_OBSERVE */  
+}
+
 #define WANT_WKC(Pdu,Key)					\
   (((Pdu)->hdr->code == COAP_REQUEST_GET) && is_wkc(Key))
 
@@ -1353,6 +1402,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 
       h(context, resource, &node->remote, 
 	node->pdu, &token, response);
+
       if (response->hdr->type != COAP_MESSAGE_NON ||
 	  (response->hdr->code >= 64 
 	   && !coap_is_mcast(&node->local))) {
@@ -1387,7 +1437,13 @@ handle_response(coap_context_t *context,
 
   /* First acknowledge incoming response if it is a CON message. Note
   * that the necessary checks are done in coap_send_ack(). */
-  coap_send_ack(context, &rcvd->remote, rcvd->pdu);
+  if (rcvd->pdu->hdr->code == COAP_RESPONSE_CODE(731)
+      && !coap_cancel(context, rcvd)) {
+
+    coap_send_rst(context, &rcvd->remote, rcvd->pdu);
+  } else {
+    coap_send_ack(context, &rcvd->remote, rcvd->pdu);
+  }
 
   /* Call application-specific reponse handler when available. */
   if (context->response_handler) {
@@ -1406,46 +1462,6 @@ handle_locally(coap_context_t *context, coap_queue_t *node) {
 #endif /* GCC */
   /* this function can be used to check if node->pdu is really for us */
   return 1;
-}
-
-/**
- * This function handles RST messages received for the message passed
- * in @p sent.
- */
-static void
-coap_handle_rst(coap_context_t *context, const coap_queue_t *sent) {
-#ifndef WITHOUT_OBSERVE
-  coap_resource_t *r;
-#ifndef COAP_RESOURCES_NOHASH
-  coap_resource_t *tmp;
-#endif
-  str token = { 0, NULL };
-
-  /* remove observer for this resource, if any 
-   * get token from sent and try to find a matching resource. Uh!
-   */
-
-  COAP_SET_STR(&token, sent->pdu->hdr->token_length, sent->pdu->hdr->token);
-
-#ifndef WITH_CONTIKI
-#ifdef COAP_RESOURCES_NOHASH
-  LL_FOREACH(context->resources, r) {
-#else
-  HASH_ITER(hh, context->resources, r, tmp) {
-#endif
-    coap_delete_observer(r, &sent->remote, &token);
-    coap_cancel_all_messages(context, &sent->remote, token.s, token.length);
-  }
-#else /* WITH_CONTIKI */
-  r = (coap_resource_t *)resource_storage.mem;
-  for (i = 0; i < resource_storage.num; ++i, ++r) {
-    if (resource_storage.count[i]) {
-      coap_delete_observer(r, &sent->remote, &token);
-      coap_cancel_all_messages(context, &sent->remote, token.s, token.length);
-    }
-  }
-#endif /* WITH_CONTIKI */
-#endif /* WITOUT_OBSERVE */  
 }
 
 void
@@ -1500,7 +1516,7 @@ coap_dispatch( coap_context_t *context ) {
       coap_remove_from_queue(&context->sendqueue, rcvd->id, &sent);
 
       if (sent)
-	coap_handle_rst(context, sent);
+	coap_cancel(context, sent);
       goto cleanup;
 
     case COAP_MESSAGE_NON :	/* check for unknown critical options */
@@ -1539,7 +1555,9 @@ coap_dispatch( coap_context_t *context ) {
       else if (COAP_MESSAGE_IS_RESPONSE(rcvd->pdu->hdr))
 	handle_response(context, sent, rcvd);
       else {
-	debug("dropped message with invalid code\n");
+	debug("dropped message with invalid code (%d.%02d)\n", 
+	      COAP_RESPONSE_CLASS(rcvd->pdu->hdr->code),
+	      rcvd->pdu->hdr->code & 0x1f);
 	coap_send_message_type(context, &rcvd->remote, rcvd->pdu, 
 				 COAP_MESSAGE_RST);
       }

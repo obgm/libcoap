@@ -178,7 +178,7 @@ typedef struct {
 #define COAP_MESSAGE_IS_EMPTY(MSG)    ((MSG)->code == 0)
 #define COAP_MESSAGE_IS_REQUEST(MSG)  (!COAP_MESSAGE_IS_EMPTY(MSG)	\
 				       && ((MSG)->code < 32))
-#define COAP_MESSAGE_IS_RESPONSE(MSG) ((MSG)->code >= 64 && (MSG)->code <= 191)
+#define COAP_MESSAGE_IS_RESPONSE(MSG) ((MSG)->code >= 64)
 
 #define COAP_OPT_LONG 0x0F	/* OC == 0b1111 indicates that the option list in a
 				 * CoAP message is limited by 0b11110000 marker */
