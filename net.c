@@ -536,7 +536,7 @@ coap_send_ack(coap_context_t *context,
 	      coap_pdu_t *request) {
   coap_pdu_t *response;
   coap_tid_t result = COAP_INVALID_TID;
-  
+
   if (request && request->hdr->type == COAP_MESSAGE_CON) {
     response = coap_pdu_init(COAP_MESSAGE_ACK, 0, request->hdr->id, 
 			     sizeof(coap_pdu_t)); 
@@ -1384,16 +1384,16 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 static inline void
 handle_response(coap_context_t *context, 
 		coap_queue_t *sent, coap_queue_t *rcvd) {
-  
-  /* Call application-specific reponse handler when available.  If
-   * not, we must acknowledge confirmable messages. */
+
+  /* First acknowledge incoming response if it is a CON message. Note
+  * that the necessary checks are done in coap_send_ack(). */
+  coap_send_ack(context, &rcvd->remote, rcvd->pdu);
+
+  /* Call application-specific reponse handler when available. */
   if (context->response_handler) {
     context->response_handler(context, 
 			      &rcvd->remote, sent ? sent->pdu : NULL, 
 			      rcvd->pdu, rcvd->id);
-  } else {
-    /* send ACK if rcvd is confirmable (i.e. a separate response) */
-    coap_send_ack(context, &rcvd->remote, rcvd->pdu);
   }
 }
 
