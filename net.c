@@ -1448,12 +1448,20 @@ handle_response(coap_context_t *context,
 
   /* First acknowledge incoming response if it is a CON message. Note
   * that the necessary checks are done in coap_send_ack(). */
-  if (rcvd->pdu->hdr->code == COAP_RESPONSE_CODE(731)
-      && !coap_cancel(context, rcvd)) {
-
-    coap_send_rst(context, &rcvd->remote, rcvd->pdu);
+  if (rcvd->pdu->hdr->code == COAP_RESPONSE_CODE(731)) {
+    if (!coap_cancel(context, rcvd)) {
+      coap_send_rst(context, &rcvd->remote, rcvd->pdu);
+    } else {
+      coap_send_ack(context, &rcvd->remote, rcvd->pdu);
+    }
   } else {
-    coap_send_ack(context, &rcvd->remote, rcvd->pdu);
+    /* In a lossy context, the ACK of a separate response may have
+     * been lost, so we need to stop retransmitting requests with the
+     * same token.
+     */
+    coap_cancel_all_messages(context, &rcvd->remote,
+			     rcvd->pdu->hdr->token, 
+			     rcvd->pdu->hdr->token_length);
   }
 
   /* Call application-specific reponse handler when available. */
