@@ -64,12 +64,6 @@ coap_write_block_opt(coap_block_t *block, unsigned short type,
 
   assert(pdu);
 
-  /* Block2 */
-  if (type != COAP_OPTION_BLOCK2) {
-    warn("coap_write_block_opt: skipped unknown option\n");
-    return -1;
-  }
-
   start = block->num << (block->szx + 4);
   if (data_length <= start) {
     debug("illegal block requested\n");
