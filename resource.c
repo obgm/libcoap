@@ -737,6 +737,9 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       /* fill with observer-specific data */
       h(context, r, &obs->subscriber, NULL, &token, response);
 
+      /* TODO: do not send response and remove observer when 
+       *  COAP_RESPONSE_CLASS(response->hdr->code) > 2
+       */
       if (response->hdr->type == COAP_MESSAGE_CON) {
 	tid = coap_send_confirmed(context, &obs->subscriber, response);
 	obs->non_cnt = 0;

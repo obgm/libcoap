@@ -165,13 +165,14 @@ coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options ) {
 coap_tid_t
 clear_obs(coap_context_t *ctx, const coap_address_t *remote) {
   coap_pdu_t *pdu;
+  coap_list_t *option;
   coap_tid_t tid = COAP_INVALID_TID;
+  unsigned char buf[2];
 
   /* create bare PDU w/o any option  */
-  coap_log(LOG_INFO, "response code 7.31 is %d\n", COAP_RESPONSE_CODE(731));
-  pdu = coap_pdu_init(msgtype, COAP_RESPONSE_CODE(731), 
+  pdu = coap_pdu_init(msgtype, COAP_REQUEST_GET,
 		      coap_new_message_id(ctx),
-		      sizeof(coap_hdr_t) + the_token.length);
+		      COAP_MAX_PDU_SIZE);
 
   if (!pdu) {
     return tid;
@@ -179,9 +180,44 @@ clear_obs(coap_context_t *ctx, const coap_address_t *remote) {
 
   if (!coap_add_token(pdu, the_token.length, the_token.s)) {
     coap_log(LOG_CRIT, "cannot add token");
-    coap_delete_pdu(pdu);
-    return tid;
+    goto error;
   }
+
+  for (option = optlist; option; option = option->next ) {
+    if (COAP_OPTION_KEY(*(coap_option *)option->data) 
+	== COAP_OPTION_URI_HOST) {
+      if (!coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)option->data),
+			   COAP_OPTION_LENGTH(*(coap_option *)option->data),
+			   COAP_OPTION_DATA(*(coap_option *)option->data))) {
+	goto error;
+      }
+      break;
+    }
+  }
+
+  if (!coap_add_option(pdu, COAP_OPTION_OBSERVE,
+		       coap_encode_var_bytes(buf, COAP_OBSERVE_CANCEL),
+		       buf)) {
+    coap_log(LOG_CRIT, "cannot add option Observe: %u", COAP_OBSERVE_CANCEL);
+    goto error;
+  }
+
+  for (option = optlist; option; option = option->next ) {
+    switch (COAP_OPTION_KEY(*(coap_option *)option->data)) {
+    case COAP_OPTION_URI_PORT :
+    case COAP_OPTION_URI_PATH :
+    case COAP_OPTION_URI_QUERY :
+      if (!coap_add_option (pdu, COAP_OPTION_KEY(*(coap_option *)option->data),
+			    COAP_OPTION_LENGTH(*(coap_option *)option->data),
+			    COAP_OPTION_DATA(*(coap_option *)option->data))) {
+	goto error;
+      }
+      break;
+    default: 
+      ;
+    }
+  }
+
   coap_show_pdu(pdu);
 
   if (pdu->hdr->type == COAP_MESSAGE_CON)
@@ -195,6 +231,10 @@ clear_obs(coap_context_t *ctx, const coap_address_t *remote) {
   } else if (pdu->hdr->type != COAP_MESSAGE_CON)
     coap_delete_pdu(pdu);
 
+  return tid;
+ error:
+
+  coap_delete_pdu(pdu);
   return tid;
 }
 

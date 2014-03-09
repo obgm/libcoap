@@ -1399,9 +1399,39 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
     if (coap_add_token(response, node->pdu->hdr->token_length,
 		       node->pdu->hdr->token)) {
       str token = { node->pdu->hdr->token_length, node->pdu->hdr->token };
+      coap_opt_iterator_t opt_iter;
+      coap_opt_t *observe = NULL;
+      int observe_action = COAP_OBSERVE_CANCEL;
+
+      /* check for Observe option */
+      if (resource->observable) {
+	observe = coap_check_option(node->pdu, COAP_OPTION_OBSERVE, &opt_iter);
+	if (observe) {
+	  observe_action =
+	    coap_decode_var_bytes(coap_opt_value(observe),
+				  coap_opt_length(observe));
+	 
+	  if ((observe_action & COAP_OBSERVE_CANCEL) == 0) {
+	    coap_subscription_t *subscription;
+
+	    coap_log(LOG_DEBUG, "create new subscription\n");
+	    subscription = coap_add_observer(resource, &node->remote, &token);
+	    if (subscription) {
+	      subscription->non = node->pdu->hdr->type == COAP_MESSAGE_NON;
+	      coap_touch_observer(context, &node->remote, &token);
+	    }
+	  }
+	}
+      }
 
       h(context, resource, &node->remote, 
 	node->pdu, &token, response);
+
+      if (observe && ((COAP_RESPONSE_CLASS(response->hdr->code) > 2)
+		      || ((observe_action & COAP_OBSERVE_CANCEL) != 0))) {
+	coap_log(LOG_DEBUG, "removed observer");
+	coap_delete_observer(resource,  &node->remote, &token);
+      }
 
       /* If original request contained a token, and the registered
        * application handler made no changes to the response, then
@@ -1446,23 +1476,15 @@ static inline void
 handle_response(coap_context_t *context, 
 		coap_queue_t *sent, coap_queue_t *rcvd) {
 
-  /* First acknowledge incoming response if it is a CON message. Note
-  * that the necessary checks are done in coap_send_ack(). */
-  if (rcvd->pdu->hdr->code == COAP_RESPONSE_CODE(731)) {
-    if (!coap_cancel(context, rcvd)) {
-      coap_send_rst(context, &rcvd->remote, rcvd->pdu);
-    } else {
-      coap_send_ack(context, &rcvd->remote, rcvd->pdu);
-    }
-  } else {
-    /* In a lossy context, the ACK of a separate response may have
-     * been lost, so we need to stop retransmitting requests with the
-     * same token.
-     */
-    coap_cancel_all_messages(context, &rcvd->remote,
-			     rcvd->pdu->hdr->token, 
-			     rcvd->pdu->hdr->token_length);
-  }
+  coap_send_ack(context, &rcvd->remote, rcvd->pdu);
+  
+  /* In a lossy context, the ACK of a separate response may have
+   * been lost, so we need to stop retransmitting requests with the
+   * same token.
+   */
+  coap_cancel_all_messages(context, &rcvd->remote,
+			   rcvd->pdu->hdr->token, 
+			   rcvd->pdu->hdr->token_length);
 
   /* Call application-specific reponse handler when available. */
   if (context->response_handler) {

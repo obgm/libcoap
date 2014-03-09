@@ -19,6 +19,18 @@
  * @{
  */
 
+/**
+ * The value COAP_OBSERVE_ESTABLISH in a GET request indicates 
+ * a new observe relationship for (sender address, token) is requested.
+ */
+#define COAP_OBSERVE_ESTABLISH 0
+
+/**
+ * The value COAP_OBSERVE_CANCEL in a GET request indicates that the
+ * observe relationship for (sender address, token) must be cancelled.
+ */
+#define COAP_OBSERVE_CANCEL 1
+
 #ifndef COAP_OBS_MAX_NON
 /**
  * Number of notifications that may be sent non-confirmable before a

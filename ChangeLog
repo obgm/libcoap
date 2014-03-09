@@ -1,3 +1,8 @@
+2014-03-09  Olaf Bergmann  <bergmann@tzi.org>
+
+	* net.c (coap_cancel): Removed 7.31 again and implemented new
+	method for cancelling observe relationships.
+
 2014-02-25  Olaf Bergmann  <bergmann@tzi.org>
 
 	* net.c (coap_cancel): Handling of 7.31 responses to cancel

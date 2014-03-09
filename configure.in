@@ -7,7 +7,7 @@
 # README for terms of use. 
 
 AC_PREREQ([2.65])
-AC_INIT([libcoap], [4.1.1])
+AC_INIT([libcoap], [4.1.2])
 AC_CONFIG_SRCDIR([coap.h])
 
 # First check for Contiki build to quit configure before any other test

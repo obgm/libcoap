@@ -83,7 +83,6 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   size_t len;
   time_t now;
   coap_tick_t t;
-  coap_subscription_t *subscription;
 
   /* FIXME: return time, e.g. in human-readable by default and ticks
    * when query ?ticks is given. */
@@ -92,19 +91,12 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   response->hdr->code = 
     my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
 
-  if (request != NULL &&
-      coap_check_option(request, COAP_OPTION_OBSERVE, &opt_iter)) {
-    subscription = coap_add_observer(resource, peer, token);
-    if (subscription) {
-      subscription->non = request->hdr->type == COAP_MESSAGE_NON;
-      coap_add_option(response, COAP_OPTION_OBSERVE, 0, NULL);
-    }
-  }
-  if (resource->dirty == 1)
+  if (coap_find_observer(resource, peer, token)) {
+    /* FIXME: need to check for resource->dirty? */
     coap_add_option(response, COAP_OPTION_OBSERVE, 
 		    coap_encode_var_bytes(buf, ctx->observe), buf);
+  }
 
-    
   if (my_clock_base)
     coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
 		    coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
