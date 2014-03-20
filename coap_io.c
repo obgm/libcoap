@@ -40,25 +40,24 @@
 
 #ifdef WITH_CONTIKI
 struct coap_contiki_endpoint_t {
-  struct list *next;
   int handle;
   coap_address_t addr;
   struct uip_udp_conn *conn;	/**< uIP connection object */
 };
 
-static inline coap_posix_endpoint_t *
+static inline coap_contiki_endpoint_t *
 coap_malloc_contiki_endpoint() {
   /* FIXME */
   return NULL;
 }
 
 static inline void
-coap_free_contiki_endpoint(coap_posix_endpoint_t *ep) {
+coap_free_contiki_endpoint(coap_endpoint_t *ep) {
   /* FIXME */
 }
 
 coap_endpoint_t *
-coap_new_endpoint(const coap_address_t *addr) {
+coap_new_endpoint(const coap_address_t *addr, int flags) {
   static initialized = 0;
   struct coap_contiki_endpoint_t ep;
 
@@ -82,56 +81,82 @@ coap_free_endpoint(coap_endpoint_t *ep) {
 }
 
 #else /* WITH_CONTIKI */
-struct coap_posix_endpoint_t {
-  struct list *next;
-  int handle;
-  coap_address_t addr;
-  int ifindex;
-};
-
-static inline struct coap_posix_endpoint_t *
+static inline struct coap_endpoint_t *
 coap_malloc_posix_endpoint() {
-  return (struct coap_posix_endpoint_t *)coap_malloc(sizeof(struct coap_posix_endpoint_t));
+  return (struct coap_endpoint_t *)coap_malloc(sizeof(struct coap_endpoint_t));
 }
 
 static inline void
-coap_free_posix_endpoint(struct coap_posix_endpoint_t *ep) {
+coap_free_posix_endpoint(struct coap_endpoint_t *ep) {
   coap_free(ep);
 }
 
 coap_endpoint_t *
-coap_new_endpoint(const coap_address_t *addr) {
+coap_new_endpoint(const coap_address_t *addr, int flags) {
   int sockfd = socket(addr->addr.sa.sa_family, SOCK_DGRAM, 0);
-  int reuse = 1;
-  struct coap_posix_endpoint_t *ep;
+  int on = 1;
+  struct coap_endpoint_t *ep;
 
   if (sockfd < 0) {
-    coap_log(LOG_WARN, "coap_new_endpoint: socket");
+    coap_log(LOG_WARNING, "coap_new_endpoint: socket");
     return NULL;
   }
 
-  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, 
-		 &reuse, sizeof(reuse) ) < 0) {
-    coap_log(LOG_WARN, "coap_new_endpoint: setsockopt SO_REUSEADDR");
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
+    coap_log(LOG_WARNING, "coap_new_endpoint: setsockopt SO_REUSEADDR");
+
+  on = 1;
+  switch(addr->addr.sa.sa_family) {
+  case AF_INET:
+    if (setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on)) < 0)
+      coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IP_PKTINFO\n");
+    break;
+  case AF_INET6:
+#ifdef IPV6_RECVPKTINFO
+  if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on)) < 0)
+    coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_RECVPKTINFO\n");
+#else /* IPV6_RECVPKTINFO */
+  if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_PKTINFO, &on, sizeof(on)) < 0)
+    coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_PKTINFO\n");
+#endif /* IPV6_RECVPKTINFO */      
+  break;
+  default:
+    coap_log(LOG_ALERT, "coap_new_endpoint: unsupported sa_family\n");
   }
 
   if (bind(sockfd, &addr->addr.sa, addr->size) < 0) {
-    coap_log(LOG_WARN, "coap_new_endpoint: bind");
+    coap_log(LOG_WARNING, "coap_new_endpoint: bind");
     close (sockfd);
     return NULL;
   }
 
   ep = coap_malloc_posix_endpoint();
   if (!ep) {
-    coap_log(LOG_WARN, "coap_new_endpoint: malloc");
+    coap_log(LOG_WARNING, "coap_new_endpoint: malloc");
     close(sockfd);
     return NULL;
   }
 
-  memset(ep, 0, sizeof(struct coap_posix_endpoint_t));
+  memset(ep, 0, sizeof(struct coap_endpoint_t));
   ep->handle = sockfd;
+  ep->flags = flags;
   memcpy(&ep->addr, addr, sizeof(coap_address_t));
   
+#ifndef NDEBUG
+  if (LOG_DEBUG <= coap_get_log_level()) {
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN 40
+#endif
+    unsigned char addr_str[INET6_ADDRSTRLEN+8];
+
+    if (coap_print_addr(addr, addr_str, INET6_ADDRSTRLEN+8)) {
+      debug("created %sendpoint %s\n", 
+	    ep->flags & COAP_ENDPOINT_DTLS ? "DTLS " : "",
+	    addr_str);
+    }
+  }
+#endif /* NDEBUG */
+
   return (coap_endpoint_t *)ep;
 }
 
@@ -140,7 +165,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
   if(ep) {
     if (ep->handle >= 0)
       close(ep->handle);
-    coap_free_posix_endpoint((struct coap_posix_endpoint_t *)ep);
+    coap_free_posix_endpoint((struct coap_endpoint_t *)ep);
   }
 }
 
@@ -163,14 +188,21 @@ struct in_pktinfo {
   struct in_addr ipi_addr;
 };
 
+#ifdef __GNUC__
+#define UNUSED_PARAM __attribute__ ((unused))
+#else /* not a GCC */
+#define UNUSED_PARAM
+#endif /* GCC */
+
 ssize_t
-coap_network_send(const coap_endpoint_t *local_interface,
+coap_network_send(struct coap_context_t *context UNUSED_PARAM,
+		  const coap_endpoint_t *local_interface,
 		  const coap_address_t *dst,
 		  unsigned char *data,
 		  size_t datalen) {
 #ifndef WITH_CONTIKI
-  struct coap_posix_endpoint_t *ep = 
-    (struct coap_posix_endpoint_t *)local_interface;
+  struct coap_endpoint_t *ep = 
+    (struct coap_endpoint_t *)local_interface;
   /* a buffer large enough to hold all protocol address types */
   char buf[CMSG_LEN(sizeof(struct sockaddr_storage))];
   struct msghdr mhdr;
@@ -233,7 +265,7 @@ coap_network_send(const coap_endpoint_t *local_interface,
   }
   default:
     /* error */
-    coap_log(LOG_WARN, "protocol not supported\n");
+    coap_log(LOG_WARNING, "protocol not supported\n");
     return -1;
   }
 
@@ -251,6 +283,8 @@ coap_network_send(const coap_endpoint_t *local_interface,
 
 #ifndef CUSTOM_COAP_NETWORK_READ
 
+#define SIN6(A) ((struct sockaddr_in6 *)(A))
+
 ssize_t
 coap_network_read(coap_endpoint_t *local_interface,
 		  coap_address_t *remote, 
@@ -261,8 +295,7 @@ coap_network_read(coap_endpoint_t *local_interface,
   char msg_control[CMSG_LEN(sizeof(struct sockaddr_storage))]; 
   struct msghdr mhdr;
   struct iovec iov[1];
-  struct coap_posix_endpoint_t *ep =
-    (struct coap_posix_endpoint_t *)local_interface;
+  struct coap_endpoint_t *ep = local_interface;
   coap_address_t local;
 #endif /* WITH_CONTIKI */
 
@@ -323,7 +356,9 @@ coap_network_read(coap_endpoint_t *local_interface,
 	       &u.p->ipi6_addr, sizeof(struct in6_addr));
 
 	remote->size = mhdr.msg_namelen;
-	memcpy(&remote->addr.st, mhdr.msg_name, remote->size);
+	remote->addr.sin6.sin6_family = SIN6(mhdr.msg_name)->sin6_family;
+	remote->addr.sin6.sin6_addr = SIN6(mhdr.msg_name)->sin6_addr;
+	remote->addr.sin6.sin6_port = SIN6(mhdr.msg_name)->sin6_port;
 
 	break;
       }
@@ -375,5 +410,7 @@ coap_network_read(coap_endpoint_t *local_interface,
 
   return len;
 }
+
+#undef SIN6
 
 #endif /*  CUSTOM_COAP_NETWORK_READ */
