@@ -1,7 +1,7 @@
 /* subscribe.h -- subscription handling for CoAP
- *                see draft-hartke-coap-observe-03
+ *                see draft-ietf-core-observe-12
  *
- * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012,2014 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -13,6 +13,7 @@
 
 #include "config.h"
 #include "address.h"
+#include "coap_io.h"
 
 /** 
  * @defgroup observe Resource observation
@@ -52,6 +53,7 @@
 /** Subscriber information */
 typedef struct coap_subscription_t {
   struct coap_subscription_t *next; /**< next element in linked list */
+  coap_endpoint_t local_if;	    /**< local communication interface */
   coap_address_t subscriber;	    /**< address and port of subscriber */
 
   unsigned int non:1;		/**< send non-confirmable notifies if @c 1  */

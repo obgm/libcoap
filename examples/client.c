@@ -1,6 +1,6 @@
 /* coap-client -- simple CoAP client
  *
- * Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -163,7 +163,9 @@ coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options ) {
 }
 
 coap_tid_t
-clear_obs(coap_context_t *ctx, const coap_address_t *remote) {
+clear_obs(coap_context_t *ctx,
+	  const coap_endpoint_t *local_interface,
+	  const coap_address_t *remote) {
   coap_pdu_t *pdu;
   coap_list_t *option;
   coap_tid_t tid = COAP_INVALID_TID;
@@ -221,9 +223,9 @@ clear_obs(coap_context_t *ctx, const coap_address_t *remote) {
   coap_show_pdu(pdu);
 
   if (pdu->hdr->type == COAP_MESSAGE_CON)
-    tid = coap_send_confirmed(ctx, remote, pdu);
+    tid = coap_send_confirmed(ctx, local_interface, remote, pdu);
   else 
-    tid = coap_send(ctx, remote, pdu);
+    tid = coap_send(ctx, local_interface, remote, pdu);
     
   if (tid == COAP_INVALID_TID) {
     debug("clear_obs: error sending new request");
@@ -308,6 +310,7 @@ check_token(coap_pdu_t *received) {
 
 void
 message_handler(struct coap_context_t  *ctx, 
+		const coap_endpoint_t *local_interface,
 		const coap_address_t *remote, 
 		coap_pdu_t *sent,
 		coap_pdu_t *received,
@@ -335,7 +338,7 @@ message_handler(struct coap_context_t  *ctx,
     /* drop if this was just some message, or send RST in case of notification */
     if (!sent && (received->hdr->type == COAP_MESSAGE_CON || 
 		  received->hdr->type == COAP_MESSAGE_NON))
-      coap_send_rst(ctx, remote, received);
+      coap_send_rst(ctx, local_interface, remote, received);
     return;
   }
 
@@ -399,9 +402,9 @@ message_handler(struct coap_context_t  *ctx,
               COAP_OPT_BLOCK_SZX(block_opt)), buf);
 
 	  if (received->hdr->type == COAP_MESSAGE_CON)
-	    tid = coap_send_confirmed(ctx, remote, pdu);
+	    tid = coap_send_confirmed(ctx, local_interface, remote, pdu);
 	  else 
-	    tid = coap_send(ctx, remote, pdu);
+	    tid = coap_send(ctx, local_interface, remote, pdu);
 
 	  if (tid == COAP_INVALID_TID) {
 	    debug("message_handler: error sending new request");
@@ -433,7 +436,7 @@ message_handler(struct coap_context_t  *ctx,
   }
 
   /* finally send new request, if needed */
-  if (pdu && coap_send(ctx, remote, pdu) == COAP_INVALID_TID) {
+  if (pdu && coap_send(ctx, local_interface, remote, pdu) == COAP_INVALID_TID) {
     debug("message_handler: error sending response");
   }
   coap_delete_pdu(pdu);
@@ -1123,9 +1126,9 @@ main(int argc, char **argv) {
 #endif
 
   if (pdu->hdr->type == COAP_MESSAGE_CON)
-    tid = coap_send_confirmed(ctx, &dst, pdu);
+    tid = coap_send_confirmed(ctx, ctx->endpoint, &dst, pdu);
   else 
-    tid = coap_send(ctx, &dst, pdu);
+    tid = coap_send(ctx, ctx->endpoint, &dst, pdu);
 
   if (pdu->hdr->type != COAP_MESSAGE_CON || tid == COAP_INVALID_TID)
     coap_delete_pdu(pdu);
@@ -1167,7 +1170,7 @@ main(int argc, char **argv) {
     } else if ( result > 0 ) {	/* read from socket */
       if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
 	coap_read( ctx );	/* read received data */
-	coap_dispatch( ctx );	/* and dispatch PDUs from receivequeue */
+	/* coap_dispatch( ctx );	/\* and dispatch PDUs from receivequeue *\/ */
       }
     } else { /* timeout */
       coap_ticks(&now);
@@ -1177,7 +1180,7 @@ main(int argc, char **argv) {
       } 
       if (obs_wait && obs_wait <= now) {
 	debug("clear observation relationship\n");
-	clear_obs(ctx, &dst); /* FIXME: handle error case COAP_TID_INVALID */
+	clear_obs(ctx, ctx->endpoint, &dst); /* FIXME: handle error case COAP_TID_INVALID */
 
 	/* make sure that the obs timer does not fire again */
 	obs_wait = 0; 

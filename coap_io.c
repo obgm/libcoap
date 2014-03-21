@@ -1,6 +1,6 @@
 /* coap_io.h -- Default network I/O functions for libcoap
  *
- * Copyright (C) 2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2012,2014 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -27,6 +27,7 @@
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif 
+#include <errno.h>
 
 #ifdef WITH_CONTIKI
 # include "uip.h"
@@ -285,36 +286,67 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
 
 #define SIN6(A) ((struct sockaddr_in6 *)(A))
 
+#ifdef WITH_POSIX
+static coap_packet_t *
+coap_malloc_packet() {
+  coap_packet_t *packet;
+  const size_t need = sizeof(coap_packet_t) + COAP_MAX_PDU_SIZE;
+
+  packet = (coap_packet_t *)coap_malloc(need);
+  if (packet) {
+    memset(packet, 0, need);
+  }
+  return packet;
+}
+
+void
+coap_free_packet(coap_packet_t *packet) {
+  coap_free(packet);
+}
+#endif /* WITH_POSIX */
+#ifdef WITH_CONTIKI
+/* FIXME: implement coap_malloc_packet and coap_free_packet */
+#endif /* WITH_CONTIKI */
+#ifdef WITH_LWIP
+/* FIXME: implement coap_malloc_packet and coap_free_packet */
+#endif /* WITH_LWIP */
+
+static inline size_t
+coap_get_max_packetlength(const coap_packet_t *packet UNUSED_PARAM) {
+  return COAP_MAX_PDU_SIZE;
+}
+
 ssize_t
-coap_network_read(coap_endpoint_t *local_interface,
-		  coap_address_t *remote, 
-		  unsigned char *buf, size_t buflen) {
+coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   ssize_t len = -1;
 
-#ifndef WITH_CONTIKI
+#ifdef WITH_POSIX
   char msg_control[CMSG_LEN(sizeof(struct sockaddr_storage))]; 
   struct msghdr mhdr;
   struct iovec iov[1];
-  struct coap_endpoint_t *ep = local_interface;
-  coap_address_t local;
-#endif /* WITH_CONTIKI */
+#endif /* WITH_POSIX */
 
-  assert(local_interface);
-  assert(remote);
-  assert(buf);
+  assert(ep);
+  assert(packet);
 
-  coap_address_init(&local);
-  coap_address_init(remote);
-  ep->ifindex = 0;
+  *packet = coap_malloc_packet();
+  
+  if (!*packet) {
+    warn("coap_network_read: insufficient memory, drop packet\n");
+    return -1;
+  }
 
-#ifndef WITH_CONTIKI
-  iov[0].iov_base = buf;
-  iov[0].iov_len = buflen;
+  coap_address_init(&(*packet)->dst); /* the local interface address */
+  coap_address_init(&(*packet)->src); /* the remote peer */
+
+#ifdef WITH_POSIX
+  iov[0].iov_base = (*packet)->payload;
+  iov[0].iov_len = coap_get_max_packetlength(*packet);
 
   memset(&mhdr, 0, sizeof(struct msghdr));
 
-  mhdr.msg_name = &remote->addr.st;
-  mhdr.msg_namelen = sizeof(remote->addr.st);
+  mhdr.msg_name = &(*packet)->src.addr.st;
+  mhdr.msg_namelen = sizeof((*packet)->src.addr.st);
 
   mhdr.msg_iov = iov;
   mhdr.msg_iovlen = 1;
@@ -324,20 +356,24 @@ coap_network_read(coap_endpoint_t *local_interface,
   assert(sizeof(msg_control) == CMSG_LEN(sizeof(struct sockaddr_storage)));
 
   len = recvmsg(ep->handle, &mhdr, 0);
-  coap_log(LOG_DEBUG, "read %d bytes on fd %d\n", (int)len, ep->handle);
 
-  buflen = 0;
-  if (len >= 0) {
+  if (len < 0) {
+    coap_log(LOG_WARNING, "coap_network_read: %s\n", strerror(errno));
+    coap_free_packet(*packet);
+    *packet = NULL;
+  } else {
     struct cmsghdr *cmsg;
 
+    coap_log(LOG_DEBUG, "received %d bytes on fd %d\n", (int)len, ep->handle);
+
     /* use getsockname() to get the local port */
-    local.size = sizeof(local.addr);
-    if (getsockname(ep->handle, &local.addr.sa, &local.size) < 0) {
+    (*packet)->dst.size = sizeof((*packet)->dst.addr);
+    if (getsockname(ep->handle, &(*packet)->dst.addr.sa, &(*packet)->dst.size) < 0) {
       coap_log(LOG_DEBUG, "cannot determine local port\n");
       return -1;
     }
 
-    buflen = len;
+    (*packet)->length = len;
 
     /* Walk through ancillary data records until the local interface
      * is found where the data was received. */
@@ -350,15 +386,17 @@ coap_network_read(coap_endpoint_t *local_interface,
 	  struct in6_pktinfo *p;
 	} u;
 	u.c = CMSG_DATA(cmsg);
-	ep->ifindex = (int)(u.p->ipi6_ifindex);
+	(*packet)->ifindex = (int)(u.p->ipi6_ifindex);
 
-	memcpy(&local.addr.sin6.sin6_addr, 
+	memcpy(&(*packet)->dst.addr.sin6.sin6_addr, 
 	       &u.p->ipi6_addr, sizeof(struct in6_addr));
 
-	remote->size = mhdr.msg_namelen;
-	remote->addr.sin6.sin6_family = SIN6(mhdr.msg_name)->sin6_family;
-	remote->addr.sin6.sin6_addr = SIN6(mhdr.msg_name)->sin6_addr;
-	remote->addr.sin6.sin6_port = SIN6(mhdr.msg_name)->sin6_port;
+	(*packet)->src.size = mhdr.msg_namelen;
+	assert((*packet)->src.size == sizeof(struct sockaddr_in6));
+
+	(*packet)->src.addr.sin6.sin6_family = SIN6(mhdr.msg_name)->sin6_family;
+	(*packet)->src.addr.sin6.sin6_addr = SIN6(mhdr.msg_name)->sin6_addr;
+	(*packet)->src.addr.sin6.sin6_port = SIN6(mhdr.msg_name)->sin6_port;
 
 	break;
       }
@@ -371,18 +409,20 @@ coap_network_read(coap_endpoint_t *local_interface,
 	} u;
 
 	u.c = CMSG_DATA(cmsg);
-	ep->ifindex = u.p->ipi_ifindex;
-	memcpy(&local.addr.sin.sin_addr, 
+	(*packet)->ifindex = u.p->ipi_ifindex;
+
+	memcpy(&(*packet)->dst.addr.sin.sin_addr, 
 	       &u.p->ipi_addr, sizeof(struct in_addr));
 
-	remote->size = mhdr.msg_namelen;
-	memcpy(&remote->addr.st, mhdr.msg_name, remote->size);
+	(*packet)->src.size = mhdr.msg_namelen;
+	memcpy(&(*packet)->src.addr.st, mhdr.msg_name, (*packet)->src.size);
 
 	break;
       }
     }
   }
-#else /* WITH_CONTIKI */
+#endif /* WITH_POSIX */
+#ifdef WITH_CONTIKI
   /* FIXME: untested, make this work */
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
@@ -407,6 +447,9 @@ coap_network_read(coap_endpoint_t *local_interface,
 #undef UIP_IP_BUF
 #undef UIP_UDP_BUF
 #endif /* WITH_CONTIKI */
+#ifdef WITH_LWIP
+#error "coap_network_read() not implemented on this platform"
+#endif
 
   return len;
 }

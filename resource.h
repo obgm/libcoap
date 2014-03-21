@@ -43,7 +43,7 @@
 
 /** Definition of message handler function (@sa coap_resource_t). */
 typedef void (*coap_method_handler_t)
-  (coap_context_t  *, struct coap_resource_t *, coap_address_t *, coap_pdu_t *,
+  (coap_context_t  *, struct coap_resource_t *, const coap_endpoint_t *, coap_address_t *, coap_pdu_t *,
    str * /* token */, coap_pdu_t * /* response */);
 
 #define COAP_ATTR_FLAGS_RELEASE_NAME  0x1
@@ -272,6 +272,7 @@ void coap_hash_request_uri(const coap_pdu_t *request, coap_key_t key);
  *        @c NULL on error.
  */
 coap_subscription_t *coap_add_observer(coap_resource_t *resource, 
+				       const coap_endpoint_t *local_interface,
 				       const coap_address_t *observer,
 				       const str *token);
 
