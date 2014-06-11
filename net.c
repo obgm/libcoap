@@ -849,7 +849,12 @@ coap_read( coap_context_t *ctx ) {
   } else {
 #ifdef WITH_POSIX
     /* FIXME: make sure that dst == ctx->endpoint->addr */
-    result = coap_handle_message(ctx, ctx->endpoint, packet);
+    if (coap_address_isany(&ctx->endpoint->addr) ||
+	coap_address_equals(&packet->dst, &ctx->endpoint->addr)) {
+      result = coap_handle_message(ctx, ctx->endpoint, packet);
+    } else {
+      coap_log(LOG_DEBUG, "packet received on wrong interface, dropped\n");
+    }
 #endif /* WITH_POSIX */
 #ifdef WITH_LWIP
     result = coap_handle_message(ctx, &src, 
