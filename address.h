@@ -49,6 +49,9 @@ typedef struct coap_address_t {
 
 #define _coap_address_equals_impl(A, B) ((A)->addr.addr == (B)->addr.addr && A->port == B->port)
 
+/** @todo implementation of _coap_address_isany_impl() for Contiki */
+#define _coap_address_isany_impl(A)  0
+
 /* FIXME sure there is something in lwip */
 
 #define _coap_is_mcast_impl(Address) 0
@@ -67,6 +70,10 @@ typedef struct coap_address_t {
   ((A)->size == (B)->size					\
    && (A)->port == (B)->port					\
    && uip_ipaddr_cmp(&((A)->addr),&((B)->addr)))
+
+/** @todo implementation of _coap_address_isany_impl() for Contiki */
+#define _coap_address_isany_impl(A)				\
+  0
 
 #define _coap_is_mcast_impl(Address) uip_is_addr_mcast(&((Address)->addr))
 #endif /* WITH_CONTIKI */
@@ -104,6 +111,21 @@ _coap_address_equals_impl(const coap_address_t *a,
    ;
  }
  return 0;
+}
+
+static inline int
+_coap_address_isany_impl(const coap_address_t *a) {
+  /* need to compare only relevant parts of sockaddr_in6 */
+  switch (a->addr.sa.sa_family) {
+  case AF_INET:
+    return a->addr.sin.sin_addr.s_addr == INADDR_ANY;
+  case AF_INET6:
+    return memcmp(&in6addr_any, &a->addr.sin6.sin6_addr, sizeof(in6addr_any)) == 0;
+  default:
+    ;
+  }
+
+  return 0;
 }
 
 static inline int
@@ -149,6 +171,17 @@ static inline int
 coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
   assert(a); assert(b);
   return _coap_address_equals_impl(a, b);
+}
+
+/**
+ * Checks if given address object @p a denotes the wildcard
+ * address. This function returns @c 1 if this is the case, @c 0
+ * otherwise. The parameters @p a must not be @c NULL;
+ */
+static inline int
+coap_address_isany(const coap_address_t *a) {
+  assert(a);
+  return _coap_address_isany_impl(a);
 }
 
 /**
