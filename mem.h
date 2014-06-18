@@ -44,11 +44,14 @@ void *coap_malloc_type(coap_memory_tag_t type, size_t size);
 
 /**
  * Releases the memory that was allocated by coap_malloc_type().
+ * The type tag @p type must be the same that was used for
+ * allocating the object pointed to by @p.
  *
+ * @param type The type of the object to release.
  * @param p A pointer to memory that was allocated by
  *          coap_malloc_type().
  */
-void coap_free_type(void *p);
+void coap_free_type(coap_memory_tag_t type, void *p);
 
 /**
  * Wrapper function to coap_malloc_type() for backwards compatibility.
@@ -61,7 +64,7 @@ static inline void *coap_malloc(size_t size) {
  * Wrapper function to coap_free_type() for backwards compatibility.
  */
 static inline void coap_free(void *object) {
-  coap_free_type(object);
+  coap_free_type(COAP_STRING, object);
 }
 
 #endif /* _COAP_MEM_H_ */

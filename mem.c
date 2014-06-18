@@ -36,7 +36,7 @@ coap_malloc_type(coap_memory_tag_t type UNUSED_PARAM, size_t size) {
 }
 
 void
-coap_free_type(void *p) {
+coap_free_type(coap_memory_tag_t type UNUSED_PARAM, void *p) {
   free(p);
 }
 
@@ -46,13 +46,7 @@ coap_free_type(void *p) {
 #define COAP_MAX_STRING_SIZE 12
 #define COAP_MAX_STRINGS      8
 
-typedef struct {
-  coap_memory_tag_t type;
-  char data[];
-} coap_memory_item_t;
-
 struct coap_string_t {
-  coap_memory_tag_t type;
   char data[COAP_MAX_STRING_SIZE];
 };
 
@@ -74,34 +68,20 @@ coap_memory_init() {
 void *
 coap_malloc_type(coap_memory_tag_t type, size_t size) {
   struct memb *container =  get_container(type);
-  coap_memory_item_t *item;
   
   assert(container);
 
-  if (size + sizeof(coap_memory_item_t) > container->size) {
+  if (size > container->size) {
     debug("coap_malloc_type: Requested memory exceeds maximum object size\n");
     return NULL;
   }
 
-  item = (coap_memory_item_t *)memb_alloc(container);
-  if (item != NULL) {
-    item->type = type;
-    return item->data;
-  } else {
-    debug("coap_malloc_type: insufficient memory\n");
-    return NULL;
-  }
+  return memb_alloc(container);
 }
 
 void
-coap_free_type(void *object) {
-  coap_memory_item_t *item;
-
-  if (object) {
-    item = (char *)object - sizeof(coap_memory_item_t);
-    
-    memb_free(get_container(item->type), item);
-  }
+coap_free_type(coap_memory_tag_t type, void *object) {
+  memb_free(get_container(type), object);
 }
 #endif /* WITH_CONTIKI */
 
