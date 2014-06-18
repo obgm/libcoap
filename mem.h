@@ -9,6 +9,10 @@
 #ifndef _COAP_MEM_H_
 #define _COAP_MEM_H_
 
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+
 /**
  * Initializes libcoap's memory management. This function must be
  * called once before coap_malloc() can be used on constrained
