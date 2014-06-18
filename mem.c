@@ -24,8 +24,14 @@ void
 coap_memory_init() {
 }
 
+#ifdef __GNUC__
+#define UNUSED_PARAM __attribute__((unused))
+#else
+#define UNUSED_PARAM
+#endif /* __GNUC__ */
+
 void *
-coap_malloc_type(coap_memory_tag_t type, size_t size) {
+coap_malloc_type(coap_memory_tag_t type UNUSED_PARAM, size_t size) {
   return malloc(size);
 }
 
