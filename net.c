@@ -82,8 +82,9 @@ coap_free_node(coap_queue_t *node) {
 #  define DEBUG DEBUG_PRINT
 # endif /* DEBUG */
 
+#include "mem.h"
 #include "memb.h"
-#include "net/uip-debug.h"
+#include "net/ip/uip-debug.h"
 
 clock_time_t clock_offset;
 
@@ -317,9 +318,13 @@ coap_new_context(
   coap_clock_init();
 #ifdef WITH_LWIP
   prng_init(LWIP_RAND());
-#else /* WITH_LWIP */
-  prng_init((unsigned long)listen_addr ^ clock_offset);
 #endif /* WITH_LWIP */
+#ifdef WITH_CONTIKI
+  prng_init((ptrdiff_t)listen_addr ^ clock_offset);
+#endif /* WITH_LWIP */
+#ifdef WITH_POSIX
+  prng_init((unsigned long)listen_addr ^ clock_offset);
+#endif /* WITH_POSIX */
 
 #ifndef WITH_CONTIKI
   if ( !c ) {
@@ -332,6 +337,7 @@ coap_new_context(
 #ifdef WITH_CONTIKI
   coap_resources_init();
   coap_pdu_resources_init();
+  coap_memory_init();
 
   c = &the_coap_context;
   initialized = 1;
@@ -1280,7 +1286,7 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
  * token specified in @p sent. Any observation relationship for
  * sent->remote and the token are removed. Calling this function is
  * required when receiving an RST message (usually in response to a
- * notification) or a 7.31 response.
+ * notification) or a GET request with the Observe option set to 1.
  *
  * This function returns @c 0 when the token is unknown with this
  * peer, or a value greater than zero otherwise.
@@ -1291,6 +1297,8 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
   coap_resource_t *r;
 #ifndef COAP_RESOURCES_NOHASH
   coap_resource_t *tmp;
+#else
+  coap_iterator_t resource_iter;
 #endif
   str token = { 0, NULL };
   int num_cancelled = 0;    /* the number of observers cancelled */
@@ -1301,24 +1309,23 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
 
   COAP_SET_STR(&token, sent->pdu->hdr->token_length, sent->pdu->hdr->token);
 
-#ifndef WITH_CONTIKI
 #ifdef COAP_RESOURCES_NOHASH
-  LL_FOREACH(context->resources, r) {
-#else
-  HASH_ITER(hh, context->resources, r, tmp) {
-#endif
-    num_cancelled += coap_delete_observer(r, &sent->remote, &token);
-    coap_cancel_all_messages(context, &sent->remote, token.s, token.length);
-  }
-#else /* WITH_CONTIKI */
-  r = (coap_resource_t *)resource_storage.mem;
-  for (i = 0; i < resource_storage.num; ++i, ++r) {
-    if (resource_storage.count[i]) {
+  /* traverse resources and delete matching observers for each resource */
+  if (coap_resource_iterator_init(context->resources, &resource_iter) != NULL) {
+
+    while ((r = coap_resource_next(&resource_iter))) {
       num_cancelled += coap_delete_observer(r, &sent->remote, &token);
       coap_cancel_all_messages(context, &sent->remote, token.s, token.length);
     }
+
   }
-#endif /* WITH_CONTIKI */
+#else /* COAP_RESOURCES_NOHASH */
+  HASH_ITER(hh, context->resources, r, tmp) {
+    num_cancelled += coap_delete_observer(r, &sent->remote, &token);
+    coap_cancel_all_messages(context, &sent->remote, token.s, token.length);
+  }
+#endif  /* COAP_RESOURCES_NOHASH */
+
   return num_cancelled;
 #else /* WITOUT_OBSERVE */  
   return 0;

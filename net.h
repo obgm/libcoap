@@ -96,9 +96,9 @@ typedef struct {
 /** The CoAP stack's global state is stored in a coap_context_t object */
 typedef struct coap_context_t {
   coap_opt_filter_t known_options;
-#ifndef WITH_CONTIKI
+
   struct coap_resource_t *resources; /**< hash table or list of known resources */
-#endif /* WITH_CONTIKI */
+
 #ifndef WITHOUT_ASYNC
   /** list of asynchronous transactions */
   struct coap_async_state_t *async_state;
