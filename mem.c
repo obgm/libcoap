@@ -9,6 +9,13 @@
 
 #include "config.h"
 #include "mem.h"
+#include "debug.h"
+
+#ifdef HAVE_ASSERT_H
+#include <assert.h>
+#else /* HAVE_ASSERT_H */
+#define assert(...)
+#endif /* HAVE_ASSERT_H */
 
 #ifdef HAVE_MALLOC
 #include <stdlib.h>
