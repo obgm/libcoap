@@ -46,25 +46,22 @@ coap_iterator_init(void *storage, coap_iterator_t *ri) {
   return ri;
 }
 
+struct thing {
+  struct thing *next;
+};
+
 void *
 coap_iterator_next(coap_iterator_t *ri) {
+  void *item;
   assert(ri);
 
-  return ri->data;
-  
-  static inline void *
-    list_item_next(void *item)
+  item = ri->data;
 
-  m = (struct memb *)ri->data;
-
-  while (!result && (ri->pos < m->num)) {
-    if (m->count[ri->pos]) {
-      result = (void *)((char *)m->mem + (ri->pos * m->size));
-    }
-    ++ri->pos;
+  if (ri->data != NULL) {
+    ri->data = ((struct thing *)ri->data)->next;
   }
-  
-  return result;
+
+  return item;
 }
 
 #endif /* WITH_POSIX */
