@@ -35,9 +35,46 @@
   ((coap_##Type##_t *)coap_malloc(sizeof(coap_##Type##_t)))
 #define COAP_FREE_TYPE(Type, Object) coap_free(Object)
 
+coap_iterator_t *
+coap_iterator_init(void *storage, coap_iterator_t *ri) {
+  assert(storage);
+  assert(ri);
+  
+  ri->data = storage;
+  ri->pos  = 0;
+
+  return ri;
+}
+
+void *
+coap_iterator_next(coap_iterator_t *ri) {
+  assert(ri);
+
+  return ri->data;
+  
+  static inline void *
+    list_item_next(void *item)
+
+  m = (struct memb *)ri->data;
+
+  while (!result && (ri->pos < m->num)) {
+    if (m->count[ri->pos]) {
+      result = (void *)((char *)m->mem + (ri->pos * m->size));
+    }
+    ++ri->pos;
+  }
+  
+  return result;
+}
+
 #endif /* WITH_POSIX */
 #ifdef WITH_CONTIKI
+#include "mem.h"
 #include "memb.h"
+
+#define COAP_MALLOC_TYPE(Type) \
+  ((coap_##Type##_t *)memb_alloc(&(Type##_storage)))
+#define COAP_FREE_TYPE(Type, Object) memb_free(&(Type##_storage), (Object))
 
 MEMB(resource_storage, coap_resource_t, COAP_MAX_RESOURCES);
 MEMB(attribute_storage, coap_attr_t, COAP_MAX_ATTRIBUTES);
@@ -59,6 +96,49 @@ static inline void
 coap_free_subscription(coap_subscription_t *subscription) {
   memb_free(&subscription_storage, subscription);
 }
+
+coap_iterator_t *
+coap_iterator_init(void *storage, coap_iterator_t *ri) {
+  assert(storage);
+  assert(ri);
+  
+  ri->data = storage;
+  ri->pos  = 0;
+
+  return ri;
+}
+
+void *
+coap_iterator_next(coap_iterator_t *ri) {
+  struct memb *m;
+  void *result = NULL;
+
+  assert(ri);
+
+  m = (struct memb *)ri->data;
+
+  while (!result && (ri->pos < m->num)) {
+    if (m->count[ri->pos]) {
+      result = (void *)((char *)m->mem + (ri->pos * m->size));
+    }
+    ++ri->pos;
+  }
+  
+  return result;
+}
+
+coap_iterator_t *
+coap_resource_iterator_init(struct coap_resource_t *resources, 
+			    coap_iterator_t *ri) {
+  /* For Contiki, the resources component of coap_context_t is not used... */
+  return coap_iterator_init(&resource_storage, ri);
+}
+
+coap_resource_t *
+coap_resource_next(coap_iterator_t *ri) {
+  return (coap_resource_t *)coap_iterator_next(ri);
+}
+
 #endif /* WITH_CONTIKI */
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -416,7 +496,7 @@ coap_delete_attr(coap_attr_t *attr) {
   memp_free(MEMP_COAP_RESOURCEATTR, attr);
 #endif
 #ifdef WITH_CONTIKI
-  /* FIXME it looks like this was never implemented */
+  memb_free(&attribute_storage, attr);
 #endif
 }
 
@@ -658,9 +738,11 @@ coap_touch_observer(coap_context_t *context, const coap_address_t *observer,
     }
   }
 #else /* WITH_CONTIKI */
-  r = (coap_resource_t *)resource_storage.mem;
-  for (i = 0; i < resource_storage.num; ++i, ++r) {
-    if (resource_storage.count[i]) {
+  coap_iterator_t resource_iter;
+
+  if (coap_resource_iterator_init(context->resources, &resource_iter) != NULL) {
+
+    while ((r = coap_resource_next(&resource_iter))) {
       s = coap_find_observer(r, observer, token);
       if (s) {
 	s->fail_cnt = 0;
