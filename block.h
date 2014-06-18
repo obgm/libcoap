@@ -36,8 +36,8 @@
  */
 typedef struct {
   unsigned int num;	  /**< block number */
-  uint8_t m:1;		  /**< 1 if more blocks follow, 0 otherwise */
-  uint8_t szx:3;	  /**< block size */
+  unsigned int m:1;	  /**< 1 if more blocks follow, 0 otherwise */
+  unsigned int szx:3;	  /**< block size */
 } coap_block_t;
 
 /**
