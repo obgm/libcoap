@@ -85,6 +85,12 @@ typedef int ssize_t;
 #undef HAVE_ASSERT_H
 #endif /* defined(TMOTE_SKY) */
 
+#ifdef CONTIKI_TARGET_MINIMAL_NET
+#undef COAP_MAX_PDU_SIZE
+#define COAP_MAX_PDU_SIZE 1400
+#undef HAVE_ASSERT_H
+#endif /* CONTIKI_TARGET_MINIMAL_NET */
+
 #ifndef BYTE_ORDER
 # ifdef UIP_CONF_BYTE_ORDER
 #  define BYTE_ORDER UIP_CONF_BYTE_ORDER
