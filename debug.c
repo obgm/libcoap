@@ -32,7 +32,7 @@
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT
 # endif /* DEBUG */
-#include "net/uip-debug.h"
+#include "net/ip/uip-debug.h"
 #endif
 
 static coap_log_t maxlog = LOG_WARNING;	/* default maximum log level */
@@ -234,7 +234,17 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
 #endif
 }
 
-#ifndef WITH_CONTIKI
+#ifdef WITH_CONTIKI
+# define fprintf(fd, ...) PRINTF(__VA_ARGS__)
+# define fflush(...)
+
+# ifdef HAVE_VPRINTF
+#  define vfprintf(fd, ...) vprintf(__VA_ARGS__)
+# else /* HAVE_VPRINTF */
+#  define vfprintf(fd, ...) PRINTF(__VA_ARGS__)
+# endif /* HAVE_VPRINTF */
+#endif /* WITH_CONTIKI */
+
 void
 coap_show_pdu(const coap_pdu_t *pdu) {
   unsigned char buf[COAP_MAX_PDU_SIZE]; /* need some space for output creation */
@@ -290,45 +300,9 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   fflush(COAP_DEBUG_FD);
 }
 
-#else /* WITH_CONTIKI */
-
-void
-coap_show_pdu(const coap_pdu_t *pdu) {
-  unsigned char buf[80]; /* need some space for output creation */
-
-  PRINTF("v:%d t:%d oc:%d c:%d id:%u", 
-	  pdu->hdr->version, pdu->hdr->type,
-	  pdu->hdr->optcnt, pdu->hdr->code, uip_ntohs(pdu->hdr->id));
-
-  /* show options, if any */
-  if (pdu->hdr->optcnt) {
-    coap_opt_iterator_t opt_iter;
-    coap_opt_t *option;
-    coap_option_iterator_init((coap_pdu_t *)pdu, &opt_iter, COAP_OPT_ALL);
-
-    PRINTF(" o:");
-    while ((option = coap_option_next(&opt_iter))) {
-
-      if (print_readable(COAP_OPT_VALUE(option), 
-			 COAP_OPT_LENGTH(option), 
-			 buf, sizeof(buf), 0))
-	PRINTF(" %d:%s", opt_iter.type, buf);
-    }
-  }
-  
-  if (pdu->data < (unsigned char *)pdu->hdr + pdu->length) {
-    print_readable(pdu->data, 
-		   (unsigned char *)pdu->hdr + pdu->length - pdu->data, 
-		   buf, sizeof(buf), 0 );
-    PRINTF(" d:%s", buf);
-  }
-  PRINTF("\r\n");
-}
-#endif /* WITH_CONTIKI */
 
 #endif /* NDEBUG */
 
-#ifndef WITH_CONTIKI
 void 
 coap_log_impl(coap_log_t level, const char *format, ...) {
   char timebuf[32];
@@ -353,25 +327,4 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
   va_end(ap);
   fflush(log_fd);
 }
-#else /* WITH_CONTIKI */
-void 
-coap_log_impl(coap_log_t level, const char *format, ...) {
-  char timebuf[32];
-  coap_tick_t now;
-  va_list ap;
 
-  if (maxlog < level)
-    return;
-  
-  coap_ticks(&now);
-  if (print_timestamp(timebuf,sizeof(timebuf), now))
-    PRINTF("%s ", timebuf);
-
-  if (level <= LOG_DEBUG)
-    PRINTF("%s ", loglevels[level]);
-
-  va_start(ap, format);
-  PRINTF(format, ap);
-  va_end(ap);
-}
-#endif /* WITH_CONTIKI */

@@ -31,7 +31,7 @@
  */
 
 #include "config.h"
-#include "net/uip-debug.h"
+#include "net/ip/uip-debug.h"
 
 #include <string.h>
 
@@ -96,7 +96,6 @@ void
 hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource, 
 	     coap_address_t *peer, coap_pdu_t *request, str *token, 
 	     coap_pdu_t *response) {
-  coap_opt_iterator_t opt_iter;
   unsigned char buf[2];
   coap_tick_t now;
   coap_tick_t t;
@@ -104,31 +103,12 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   /* if my_clock_base was deleted, we pretend to have no such resource */
   response->hdr->code = COAP_RESPONSE_CODE(205),
 
-  coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
+  coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
 		  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
 
   coap_add_option(response, COAP_OPTION_MAXAGE,
 		  coap_encode_var_bytes(buf, 0x01), buf);
   
-  /* Check if subscription was requested. */
-  if (request && 
-      coap_check_option(request, COAP_OPTION_SUBSCRIPTION, &opt_iter) && 
-      coap_add_observer(resource, peer, token)) {
-
-    /* add a new observe value */
-    coap_add_option(response, COAP_OPTION_SUBSCRIPTION,
-		    coap_encode_var_bytes(buf, ctx->observe), buf);
-
-    if (token->length)
-      coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
-  } else {
-    coap_add_option(response, COAP_OPTION_SUBSCRIPTION,
-		    coap_encode_var_bytes(buf, ctx->observe), buf);
-
-    if (token->length)
-      coap_add_option(response, COAP_OPTION_TOKEN, token->length, token->s);
-  }
-
   /* calculate current time */
   coap_ticks(&t);
   now = my_clock_base + (t / COAP_TICKS_PER_SECOND);

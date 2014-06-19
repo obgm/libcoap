@@ -6,6 +6,10 @@
 #include "contiki-net.h"
 
 #define WITH_CONTIKI 1
+#define COAP_RESOURCES_NOHASH 1
+
+#define PACKAGE_STRING "libcoap"
+#define PACKAGE_NAME "libcoap"
 
 #define COAP_MAX_PDU_SIZE 64
 
@@ -67,14 +71,39 @@
 #define HAVE_UNISTD_H
 #endif /* defined(PLATFORM) && PLATFORM == PLATFORM_MC1322X */
 
-#if defined(TMOTE_SKY)
+#if defined(TMOTE_SKY) || defined(CONTIKI_TARGET_SKY) || defined(CONTIKI_TARGET_WISMOTE)
 /* Need to set the byte order for TMote Sky explicitely */
 
 #define BYTE_ORDER UIP_LITTLE_ENDIAN
+#undef COAP_MAX_PDU_SIZE
+#define COAP_MAX_PDU_SIZE 100
+
+#define COAP_MAX_BLOCK_SZX 2
 
 typedef int ssize_t;
+typedef void FILE;
+
+#define HAVE_LIMITS_H 1
 #undef HAVE_ASSERT_H
+#define HAVE_VPRINTF 1
 #endif /* defined(TMOTE_SKY) */
+
+#ifdef CONTIKI_TARGET_MINIMAL_NET
+#undef COAP_MAX_PDU_SIZE
+#define COAP_MAX_PDU_SIZE 1400
+#undef HAVE_ASSERT_H
+#define HAVE_VPRINTF 1
+#endif /* CONTIKI_TARGET_MINIMAL_NET */
+
+#ifdef CONTIKI_TARGET_CC2538DK
+#define BYTE_ORDER UIP_LITTLE_ENDIAN
+#undef COAP_MAX_PDU_SIZE
+#define COAP_MAX_PDU_SIZE 100
+
+#define COAP_MAX_BLOCK_SZX 2
+
+#define HAVE_LIMITS_H 1
+#endif /* CONTIKI_TARGET_CC2538DK */
 
 #ifndef BYTE_ORDER
 # ifdef UIP_CONF_BYTE_ORDER

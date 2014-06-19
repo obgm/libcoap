@@ -1,3 +1,10 @@
+2014-06-18  Olaf Bergmann  <bergmann@tzi.org>
+
+	* mem.c (coap_malloc_type): New functions for allocating memory.
+	On POSIX systems, coap_malloc_type() and coap_free_type() are just
+	wrapper functions for malloc() and free(), while on Contiki and
+	LWIP distinct arrays are used for each type.
+
 2014-03-09  Olaf Bergmann  <bergmann@tzi.org>
 
 	* net.c (coap_cancel): Removed 7.31 again and implemented new

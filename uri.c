@@ -394,7 +394,7 @@ coap_new_uri(const unsigned char *uri, unsigned int length) {
   URI_DATA(result)[length] = '\0'; /* make it zero-terminated */
 
   if (coap_split_uri(URI_DATA(result), length, (coap_uri_t *)result) < 0) {
-    free(result);
+    coap_free(result);
     return NULL;
   }
   return (coap_uri_t *)result;

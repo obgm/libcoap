@@ -324,4 +324,15 @@ void coap_check_notify(coap_context_t *context);
 
 /** @} */
 
+typedef struct coap_iterator_t {
+  void *data;			/**< opaque iterator state */
+  unsigned int pos;		/**< current item number */
+} coap_iterator_t ;
+
+coap_iterator_t *
+coap_resource_iterator_init(coap_resource_t *resources,
+			    coap_iterator_t *ri);
+
+coap_resource_t *coap_resource_next(coap_iterator_t *ri);
+
 #endif /* _COAP_RESOURCE_H_ */
