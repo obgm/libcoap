@@ -401,7 +401,7 @@ message_handler(struct coap_context_t  *ctx,
 	      ((coap_opt_block_num(block_opt) + 1) << 4) | 
               COAP_OPT_BLOCK_SZX(block_opt)), buf);
 
-	  if (received->hdr->type == COAP_MESSAGE_CON)
+	  if (pdu->hdr->type == COAP_MESSAGE_CON)
 	    tid = coap_send_confirmed(ctx, local_interface, remote, pdu);
 	  else 
 	    tid = coap_send(ctx, local_interface, remote, pdu);
@@ -411,7 +411,7 @@ message_handler(struct coap_context_t  *ctx,
             coap_delete_pdu(pdu);
 	  } else {
 	    set_timeout(&max_wait, wait_seconds);
-            if (received->hdr->type != COAP_MESSAGE_CON)
+            if (pdu->hdr->type != COAP_MESSAGE_CON)
               coap_delete_pdu(pdu);
           }
 
