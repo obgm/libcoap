@@ -488,13 +488,15 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
 
   memset(h, 0, sizeof(coap_key_t));
 
-  /* Compare the complete address structure in case of IPv4. For IPv6,
-   * we need to look at the transport address only. */
+  /* Compare the transport address. */
 
 #ifdef WITH_POSIX
   switch (peer->addr.sa.sa_family) {
   case AF_INET:
-    coap_hash((const unsigned char *)&peer->addr.sa, peer->size, h);
+    coap_hash((const unsigned char *)&peer->addr.sin.sin_port,
+	      sizeof(peer->addr.sin.sin_port), h);
+    coap_hash((const unsigned char *)&peer->addr.sin.sin_addr,
+	      sizeof(peer->addr.sin.sin_addr), h);
     break;
   case AF_INET6:
     coap_hash((const unsigned char *)&peer->addr.sin6.sin6_port,
