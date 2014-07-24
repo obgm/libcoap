@@ -110,7 +110,7 @@ typedef struct coap_context_t {
   coap_tick_t sendqueue_basetime;
   coap_queue_t *sendqueue;
   coap_endpoint_t *endpoint;	/**< the endpoint used for listening  */
-#if WITH_POSIX
+#ifdef WITH_POSIX
   int sockfd;			/**< send/receive socket */
 #endif /* WITH_POSIX */
 #ifdef WITH_CONTIKI
