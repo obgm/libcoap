@@ -51,7 +51,7 @@
 time_t clock_offset;
 
 static inline coap_queue_t *
-coap_malloc_node() {
+coap_malloc_node(void) {
   return (coap_queue_t *)coap_malloc(sizeof(coap_queue_t));
 }
 

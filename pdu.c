@@ -123,7 +123,7 @@ coap_pdu_init(unsigned char type, unsigned char code,
 }
 
 coap_pdu_t *
-coap_new_pdu() {
+coap_new_pdu(void) {
   coap_pdu_t *pdu;
   
 #ifndef WITH_CONTIKI

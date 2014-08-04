@@ -30,16 +30,16 @@ typedef enum { LOG_EMERG=0, LOG_ALERT, LOG_CRIT, LOG_WARNING,
 #endif
 
 /** Returns the current log level. */
-coap_log_t coap_get_log_level();
+coap_log_t coap_get_log_level(void);
 
 /** Sets the log level to the specified value. */
 void coap_set_log_level(coap_log_t level);
 
 /** Returns a zero-terminated string with the name of this library. */
-const char *coap_package_name();
+const char *coap_package_name(void);
 
 /** Returns a zero-terminated string with the library version. */
-const char *coap_package_version();
+const char *coap_package_version(void);
 
 /** 
  * Writes the given text to @c COAP_ERR_FD (for @p level <= @c

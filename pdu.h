@@ -275,7 +275,7 @@ void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
  * @deprecated This function allocates the maximum storage for each
  * PDU. Use coap_pdu_init() instead. 
  */
-coap_pdu_t *coap_new_pdu();
+coap_pdu_t *coap_new_pdu(void);
 
 void coap_delete_pdu(coap_pdu_t *);
 

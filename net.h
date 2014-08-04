@@ -72,7 +72,7 @@ int coap_delete_node(coap_queue_t *node);
 void coap_delete_all(coap_queue_t *queue);
 
 /** Creates a new node suitable for adding to the CoAP sendqueue. */
-coap_queue_t *coap_new_node();
+coap_queue_t *coap_new_node(void);
 
 struct coap_resource_t;
 struct coap_context_t;
