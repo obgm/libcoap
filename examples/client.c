@@ -92,7 +92,7 @@ append_to_output(const unsigned char *data, size_t len) {
 }
 
 void
-close_output() {
+close_output(void) {
   if (file) {
 
     /* add a newline before closing in case were writing to stdout */
@@ -742,7 +742,7 @@ cmdline_blocksize(char *arg) {
 /* Called after processing the options from the commandline to set 
  * Block1 or Block2 depending on method. */
 void 
-set_blocksize() {
+set_blocksize(void) {
   static unsigned char buf[4];	/* hack: temporarily take encoded bytes */
   unsigned short opt;
 
