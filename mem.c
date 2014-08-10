@@ -21,7 +21,7 @@
 #include <stdlib.h>
 
 void
-coap_memory_init() {
+coap_memory_init(void) {
 }
 
 #ifdef __GNUC__
@@ -61,7 +61,7 @@ get_container(coap_memory_tag_t type) {
 }
 
 void
-coap_memory_init() {
+coap_memory_init(void) {
   memb_init(&string_storage);
 }
 

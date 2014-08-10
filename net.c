@@ -236,7 +236,7 @@ coap_delete_all(coap_queue_t *queue) {
 }
 
 coap_queue_t *
-coap_new_node() {
+coap_new_node(void) {
   coap_queue_t *node;
   node = coap_malloc_node();
 
