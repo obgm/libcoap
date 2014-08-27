@@ -128,7 +128,8 @@ new_response( coap_context_t  *ctx, coap_queue_t *node, unsigned int code ) {
 }
 
 coap_pdu_t *
-coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options ) {
+coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options,
+		 unsigned char *data, size_t length) {
   coap_pdu_t *pdu;
   coap_list_t *opt;
 
@@ -152,11 +153,11 @@ coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options ) {
 		    COAP_OPTION_DATA(*(coap_option *)opt->data));
   }
 
-  if (payload.length) {
+  if (length) {
     if ((flags & FLAGS_BLOCK) == 0)
-      coap_add_data(pdu, payload.length, payload.s);
+      coap_add_data(pdu, length, data);
     else
-      coap_add_block(pdu, payload.length, payload.s, block.num, block.szx);
+      coap_add_block(pdu, length, data, block.num, block.szx);
   }
 
   return pdu;
@@ -282,20 +283,6 @@ resolve_address(const str *server, struct sockaddr *dst) {
   return len;
 }
 
-static inline coap_opt_t *
-get_block(coap_pdu_t *pdu, coap_opt_iterator_t *opt_iter) {
-  coap_opt_filter_t f;
-  
-  assert(pdu);
-
-  memset(f, 0, sizeof(coap_opt_filter_t));
-  coap_option_setb(f, COAP_OPTION_BLOCK1);
-  coap_option_setb(f, COAP_OPTION_BLOCK2);
-
-  coap_option_iterator_init(pdu, opt_iter, f);
-  return coap_option_next(opt_iter);
-}
-
 #define HANDLE_BLOCK1(Pdu)						\
   ((method == COAP_REQUEST_PUT || method == COAP_REQUEST_POST) &&	\
    ((flags & FLAGS_BLOCK) == 0) &&					\
@@ -348,7 +335,7 @@ message_handler(struct coap_context_t  *ctx,
   }
 
   /* output the received data, if any */
-  if (received->hdr->code == COAP_RESPONSE_CODE(205)) {
+  if (COAP_RESPONSE_CLASS(received->hdr->code) == 2) {
 
     /* set obs timer if we have successfully subscribed a resource */
     if (sent && coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter)) {
@@ -358,25 +345,21 @@ message_handler(struct coap_context_t  *ctx,
     
     /* Got some data, check if block option is set. Behavior is undefined if
      * both, Block1 and Block2 are present. */
-    block_opt = get_block(received, &opt_iter);
-    if (!block_opt) {
-      /* There is no block option set, just read the data and we are done. */
-      if (coap_get_data(received, &len, &databuf))
-	append_to_output(databuf, len);
-    } else {
+    block_opt = coap_check_option(received, COAP_OPTION_BLOCK2, &opt_iter);
+    if (block_opt) { /* handle Block2 */
       unsigned short blktype = opt_iter.type;
 
       /* TODO: check if we are looking at the correct block number */
       if (coap_get_data(received, &len, &databuf))
 	append_to_output(databuf, len);
 
-      if (COAP_OPT_BLOCK_MORE(block_opt)) {
+      if(COAP_OPT_BLOCK_MORE(block_opt)) {
 	/* more bit is set */
 	debug("found the M bit, block size is %u, block nr. %u\n",
 	      COAP_OPT_BLOCK_SZX(block_opt), coap_opt_block_num(block_opt));
 
 	/* create pdu with request for next block */
-	pdu = coap_new_request(ctx, method, NULL); /* first, create bare PDU w/o any option  */
+	pdu = coap_new_request(ctx, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
 	if ( pdu ) {
 	  /* add URI components from optlist */
 	  for (option = optlist; option; option = option->next ) {
@@ -418,9 +401,78 @@ message_handler(struct coap_context_t  *ctx,
 	  return;
 	}
       }
+    } else { /* no Block2 option */
+      block_opt = coap_check_option(received, COAP_OPTION_BLOCK1, &opt_iter);
+
+      if (block_opt) { /* handle Block1 */
+	block.szx = COAP_OPT_BLOCK_SZX(block_opt);
+	block.num = coap_opt_block_num(block_opt);
+
+	debug("found Block1, block size is %u, block nr. %u\n",
+	      block.szx, block.num);
+
+	if (payload.length <= (block.num+1) * (1 << (block.szx + 4))) {
+	  debug("upload ready\n");
+	  ready = 1;
+	  return;
+	}
+
+	/* create pdu with request for next block */
+	pdu = coap_new_request(ctx, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
+	if (pdu) {
+
+	  /* add URI components from optlist */
+	  for (option = optlist; option; option = option->next ) {
+	    switch (COAP_OPTION_KEY(*(coap_option *)option->data)) {
+	    case COAP_OPTION_URI_HOST :
+	    case COAP_OPTION_URI_PORT :
+	    case COAP_OPTION_URI_PATH :
+	    case COAP_OPTION_CONTENT_FORMAT :
+	    case COAP_OPTION_URI_QUERY :
+	      coap_add_option ( pdu, COAP_OPTION_KEY(*(coap_option *)option->data),
+				COAP_OPTION_LENGTH(*(coap_option *)option->data),
+				COAP_OPTION_DATA(*(coap_option *)option->data) );
+	      break;
+	    default:
+	      ;			/* skip other options */
+	    }
+	  }
+
+	  /* finally add updated block option from response, clear M bit */
+	  /* blocknr = (blocknr & 0xfffffff7) + 0x10; */
+	  block.num++;
+	  block.m = ((block.num+1) * (1 << (block.szx + 4)) < payload.length);
+
+	  debug("send block %d\n", block.num);
+	  coap_add_option(pdu, COAP_OPTION_BLOCK1, coap_encode_var_bytes(buf,
+	      (block.num << 4) | (block.m << 3) | block.szx), buf);
+
+	  coap_add_block(pdu, payload.length, payload.s, block.num, block.szx);
+	  coap_show_pdu(pdu);
+	  if (pdu->hdr->type == COAP_MESSAGE_CON)
+	    tid = coap_send_confirmed(ctx, local_interface, remote, pdu);
+	  else 
+	    tid = coap_send(ctx, local_interface, remote, pdu);
+
+	  if (tid == COAP_INVALID_TID) {
+	    debug("message_handler: error sending new request");
+            coap_delete_pdu(pdu);
+	  } else {
+	    set_timeout(&max_wait, wait_seconds);
+            if (pdu->hdr->type != COAP_MESSAGE_CON)
+              coap_delete_pdu(pdu);
+          }
+
+	  return;
+	}
+      } else {
+	/* There is no block option set, just read the data and we are done. */
+	if (coap_get_data(received, &len, &databuf))
+	  append_to_output(databuf, len);
+      }
     }
   } else {			/* no 2.05 */
-
+    
     /* check if an error was signaled and output payload if so */
     if (COAP_RESPONSE_CLASS(received->hdr->code) >= 4) {
       fprintf(stderr, "%d.%02d", 
@@ -745,13 +797,18 @@ void
 set_blocksize(void) {
   static unsigned char buf[4];	/* hack: temporarily take encoded bytes */
   unsigned short opt;
+  unsigned int opt_length;
 
   if (method != COAP_REQUEST_DELETE) {
     opt = method == COAP_REQUEST_GET ? COAP_OPTION_BLOCK2 : COAP_OPTION_BLOCK1;
 
-    coap_insert(&optlist, new_option_node(opt,
-                coap_encode_var_bytes(buf, (block.num << 4 | block.szx)), buf),
-		order_opts);
+    block.m = (opt == COAP_OPTION_BLOCK1) && 
+      ((1 << (block.szx + 4)) < payload.length);
+
+    opt_length = coap_encode_var_bytes(buf, 
+			      (block.num << 4 | block.m << 3 | block.szx));
+
+    coap_insert(&optlist, new_option_node(opt, opt_length, buf), order_opts);
   }
 }
 
@@ -1115,7 +1172,7 @@ main(int argc, char **argv) {
   if (flags & FLAGS_BLOCK)
     set_blocksize();
 
-  if (! (pdu = coap_new_request(ctx, method, optlist)))
+  if (! (pdu = coap_new_request(ctx, method, optlist, payload.s, payload.length)))
     return -1;
 
 #ifndef NDEBUG
