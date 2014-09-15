@@ -6,7 +6,7 @@
  * README for terms of use. 
  */
 
-#include "config.h"
+#include "coap_config.h"
 
 #if defined(HAVE_ASSERT_H) && !defined(assert)
 # include <assert.h>

@@ -9,7 +9,7 @@
 #ifndef _PDU_H_
 #define _PDU_H_
 
-#include "config.h"
+#include "coap_config.h"
 #include "coap_list.h"
 #include "uri.h"
 

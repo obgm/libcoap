@@ -7,7 +7,7 @@
  */
 
 
-#include "config.h"
+#include "coap_config.h"
 #include "mem.h"
 #include "debug.h"
 

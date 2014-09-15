@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#include "config.h"
+#include "coap_config.h"
 
 #ifdef HAVE_ASSERT_H
 #include <assert.h>

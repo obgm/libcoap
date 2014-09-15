@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 
-#include "config.h"
+#include "coap_config.h"
 
 /**
  * @defgroup clock Clock Handling

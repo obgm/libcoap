@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#include "config.h"
+#include "coap_config.h"
 #include "debug.h"
 #include "mem.h"
 #include "coap_list.h"

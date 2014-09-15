@@ -10,7 +10,7 @@
 #  include <stdio.h>
 #endif
 
-#include "config.h"
+#include "coap_config.h"
 #include "encode.h"
 
 /* Carsten suggested this when fls() is not available: */

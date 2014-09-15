@@ -2,6 +2,7 @@
 # platform-specific options
 
 ifeq ($(TARGET), econotag)
+UIP_CONF_IPV6_RPL=0
 CFLAGS += -DUIP_CONF_TCP=0
 endif
 
@@ -24,6 +25,12 @@ all: coap-server #coap-client
 
 CONTIKI=../..
 #CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+
+CFLAGS += -DCOAP_MAX_BLOCK_SZX=1
+
+ifeq ($(UIP_CONF_IPV6_RPL),0)
+CFLAGS += -DUIP_CONF_IPV6_RPL=0 -DRPL_BORDER_ROUTER=0
+endif
 
 WITH_UIP6=1
 UIP_CONF_IPV6=1

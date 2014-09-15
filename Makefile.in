@@ -26,14 +26,14 @@ librootdir = $(DESTDIR)$(prefix)/lib
 SOURCES:= pdu.c net.c debug.c encode.c uri.c coap_list.c resource.c hashkey.c \
 	 str.c option.c async.c subscribe.c block.c mem.c coap_io.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
-HEADERS:=coap.h config.h debug.h pdu.h net.h encode.h uri.h coap_list.h mem.h \
+HEADERS:=coap.h coap_config.h debug.h pdu.h net.h encode.h uri.h coap_list.h mem.h \
 	str.h option.h bits.h uthash.h utlist.h resource.h hashkey.h async.h \
 	subscribe.h block.h address.h prng.h coap_time.h t_list.h  coap_io.h
 CFLAGS:=-Wall -Wextra -std=c99 -pedantic @CFLAGS@
 CPPFLAGS:=@CPPFLAGS@
 DISTDIR=$(top_builddir)/$(package)
 SUBDIRS:=examples doc tests
-FILES:=ChangeLog README LICENSE.BSD LICENSE.GPL Makefile.in configure configure.in config.h.in $(SOURCES) $(HEADERS)
+FILES:=ChangeLog README LICENSE.BSD LICENSE.GPL Makefile.in configure configure.in coap_config.h.in $(SOURCES) $(HEADERS)
 LIB:=libcoap.a
 LDSOFLAGS=-shared
 LDFLAGS:=@LIBS@

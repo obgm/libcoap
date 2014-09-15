@@ -9,7 +9,7 @@
 #ifndef _COAP_IO_H_
 #define _COAP_IO_H_
 
-#include "config.h"
+#include "coap_config.h"
 
 #ifdef HAVE_ASSERT_H
 #include <assert.h>

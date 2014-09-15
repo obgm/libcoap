@@ -6,7 +6,7 @@
  * README for terms of use. 
  */
 
-#include "config.h"
+#include "coap_config.h"
 
 #ifdef HAVE_STDIO_H
 #  include <stdio.h>
