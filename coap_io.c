@@ -40,45 +40,52 @@
 #ifndef CUSTOM_COAP_NETWORK_ENDPOINT
 
 #ifdef WITH_CONTIKI
-struct coap_contiki_endpoint_t {
-  int handle;
-  coap_address_t addr;
-  struct uip_udp_conn *conn;	/**< uIP connection object */
-};
+static ep_initialized = 0;
 
-static inline coap_contiki_endpoint_t *
+static inline struct coap_endpoint_t *
 coap_malloc_contiki_endpoint() {
-  /* FIXME */
-  return NULL;
+  static struct coap_endpoint_t ep;
+
+  if (ep_initialized) {
+    return NULL;
+  } else {
+    ep_initialized = 1;
+    return &ep;
+  }
 }
 
 static inline void
-coap_free_contiki_endpoint(coap_endpoint_t *ep) {
-  /* FIXME */
+coap_free_contiki_endpoint(struct coap_endpoint_t *ep) {
+  ep_initialized = 0;
 }
 
 coap_endpoint_t *
 coap_new_endpoint(const coap_address_t *addr, int flags) {
-  static initialized = 0;
-  struct coap_contiki_endpoint_t ep;
+  struct coap_endpoint_t *ep = coap_malloc_contiki_endpoint();
 
-  if (initialized)
-    return NULL;
+  if (ep) {
+    memset(ep, 0, sizeof(struct coap_contiki_endpoint_t));
+    ep->handle.conn = udp_new(NULL, 0, NULL);
 
-  memset(&ep, 0, sizeof(struct coap_contiki_endpoint_t));
-  ep.conn = udp_new(NULL, 0, NULL);
+    if (!ep->handle.conn) {
+      coap_free_endpoint(ep);
+      return NULL;
+    }
 
-  if (!ep.conn)
-    return NULL;
-
-  memcpy(ep.addr, addr, sizeof(coap_address_t));
-  udp_bind(ep.conn, addr->port);
-  return &ep;
+    memcpy(ep->addr, addr, sizeof(coap_address_t));
+    udp_bind(ep->handle.conn, addr->port);
+  }
+  return ep;
 }
 
 void
 coap_free_endpoint(coap_endpoint_t *ep) {
-  /* FIXME */
+  if (ep) {
+    if (ep->handle.conn) {
+      uip_udp_remove(ep->handle.conn);
+    }
+    coap_free_contiki_endpoint(ep);
+  }
 }
 
 #else /* WITH_CONTIKI */
@@ -139,7 +146,7 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
   }
 
   memset(ep, 0, sizeof(struct coap_endpoint_t));
-  ep->handle = sockfd;
+  ep->handle.fd = sockfd;
   ep->flags = flags;
   memcpy(&ep->addr, addr, sizeof(coap_address_t));
   
@@ -164,8 +171,8 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
 void
 coap_free_endpoint(coap_endpoint_t *ep) {
   if(ep) {
-    if (ep->handle >= 0)
-      close(ep->handle);
+    if (ep->handle.fd >= 0)
+      close(ep->handle.fd);
     coap_free_posix_endpoint((struct coap_endpoint_t *)ep);
   }
 }
@@ -270,7 +277,7 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     return -1;
   }
 
-  return sendmsg(ep->handle, &mhdr, 0);
+  return sendmsg(ep->handle.fd, &mhdr, 0);
 #else /* WITH_CONTIKI */
   /* FIXME: untested */
   /* FIXME: is there a way to check if send was successful? */
@@ -355,7 +362,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   mhdr.msg_controllen = sizeof(msg_control);
   assert(sizeof(msg_control) == CMSG_LEN(sizeof(struct sockaddr_storage)));
 
-  len = recvmsg(ep->handle, &mhdr, 0);
+  len = recvmsg(ep->handle.fd, &mhdr, 0);
 
   if (len < 0) {
     coap_log(LOG_WARNING, "coap_network_read: %s\n", strerror(errno));
@@ -364,11 +371,11 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   } else {
     struct cmsghdr *cmsg;
 
-    coap_log(LOG_DEBUG, "received %d bytes on fd %d\n", (int)len, ep->handle);
+    coap_log(LOG_DEBUG, "received %d bytes on fd %d\n", (int)len, ep->handle.fd);
 
     /* use getsockname() to get the local port */
     (*packet)->dst.size = sizeof((*packet)->dst.addr);
-    if (getsockname(ep->handle, &(*packet)->dst.addr.sa, &(*packet)->dst.size) < 0) {
+    if (getsockname(ep->handle.fd, &(*packet)->dst.addr.sa, &(*packet)->dst.size) < 0) {
       coap_log(LOG_DEBUG, "cannot determine local port\n");
       return -1;
     }
@@ -440,10 +447,25 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
     }
     
     memcpy(buf, uip_appdata, len);
-    /* PRINTF("Server received %d bytes from [", (int)len); */
-    /* PRINT6ADDR(&local->addr); */
-    /* PRINTF("]:%d\n", uip_ntohs(local->port)); */
+    PRINTF("Server received %d bytes from [", (int)len);
+    PRINT6ADDR(remote->addr);
+    PRINTF("]:%d\n", uip_ntohs(remote->port));
   }
+
+#if 0
+  if(uip_newdata()) {
+    uip_ipaddr_copy(&src.addr, &UIP_IP_BUF->srcipaddr);
+    src.port = UIP_UDP_BUF->srcport;
+    uip_ipaddr_copy(&dst.addr, &UIP_IP_BUF->destipaddr);
+    dst.port = UIP_UDP_BUF->destport;
+
+    bytes_read = uip_datalen();
+    ((char *)uip_appdata)[bytes_read] = 0;
+    PRINTF("Server received %d bytes from [", (int)bytes_read);
+    PRINT6ADDR(&src.addr);
+    PRINTF("]:%d\n", uip_ntohs(src.port));
+  }
+#endif
 #undef UIP_IP_BUF
 #undef UIP_UDP_BUF
 #endif /* WITH_CONTIKI */

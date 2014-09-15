@@ -54,7 +54,10 @@ struct coap_context_t;
  * this endpoint.
  */
 typedef struct coap_endpoint_t {
-  int handle;	       /**< opaque handle to identify this endpoint */
+  union {
+    int fd;	       /**< on POSIX systems */
+    void *conn;	       /**< opaque connection (e.g. uip_conn in Contiki) */
+  } handle;	       /**< opaque handle to identify this endpoint */
   coap_address_t addr; /**< local interface address */
   int ifindex;
   int flags;

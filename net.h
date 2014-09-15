@@ -143,6 +143,14 @@ typedef struct coap_context_t {
   unsigned int observe;
 
   coap_response_handler_t response_handler;
+
+  ssize_t (*network_send)(struct coap_context_t *context,
+			  const coap_endpoint_t *local_interface,
+			  const coap_address_t *dst,
+			  unsigned char *data, size_t datalen);
+
+  ssize_t (*network_read)(coap_endpoint_t *ep, coap_packet_t **packet);
+
 } coap_context_t;
 
 /**

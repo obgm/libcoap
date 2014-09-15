@@ -367,18 +367,13 @@ coap_new_context(
   }
 #ifdef WITH_POSIX
   c->sockfd = c->endpoint->handle;
-
-  return c;
-
- onerror:
-  coap_free(c);
-  return NULL;
-
 #endif /* WITH_POSIX */
+
+#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
+  c->network_send = coap_network_send;
+  c->network_read = coap_network_read;
+
 #ifdef WITH_CONTIKI
-  c->conn = udp_new(NULL, 0, NULL);
-  udp_bind(c->conn, listen_addr->port);
-  
   process_start(&coap_retransmit_process, (char *)c);
 
   PROCESS_CONTEXT_BEGIN(&coap_retransmit_process);
@@ -388,8 +383,15 @@ coap_new_context(
   /* the retransmit timer must be initialized to some large value */
   etimer_set(&the_coap_context.retransmit_timer, 0xFFFF);
   PROCESS_CONTEXT_END(&coap_retransmit_process);
-  return c;
 #endif /* WITH_CONTIKI */
+
+  return c;
+
+ onerror:
+  coap_free(c);
+  return NULL;
+
+#endif /* WITH_POSIX || WITH_CONTIKI */
 #ifdef WITH_LWIP
   c->pcb = udp_new();
   /* hard assert: this is not expected to fail dynamically */
@@ -551,7 +553,7 @@ coap_send_impl(coap_context_t *context,
   if ( !context || !dst || !pdu )
     return id;
 
-  bytes_written = coap_network_send(context, local_interface, dst, 
+  bytes_written = context->network_send(context, local_interface, dst, 
 				    (unsigned char *)pdu->hdr, pdu->length);
 
   if (bytes_written >= 0) {
@@ -809,7 +811,7 @@ void coap_dispatch(coap_context_t *context, coap_queue_t *rcvd);
 
 int
 coap_read( coap_context_t *ctx ) {
-#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
+#if defined(WITH_LWIP)
   char *buf;
 #endif
   ssize_t bytes_read = -1;
@@ -829,21 +831,10 @@ coap_read( coap_context_t *ctx ) {
   coap_address_init(&src);
 
 #ifdef WITH_POSIX
-  bytes_read = coap_network_read(ctx->endpoint, &packet);
+  bytes_read = ctx->network_read(ctx->endpoint, &packet);
 #endif /* WITH_POSIX */
 #ifdef WITH_CONTIKI
-  if(uip_newdata()) {
-    uip_ipaddr_copy(&src.addr, &UIP_IP_BUF->srcipaddr);
-    src.port = UIP_UDP_BUF->srcport;
-    uip_ipaddr_copy(&dst.addr, &UIP_IP_BUF->destipaddr);
-    dst.port = UIP_UDP_BUF->destport;
-
-    bytes_read = uip_datalen();
-    ((char *)uip_appdata)[bytes_read] = 0;
-    PRINTF("Server received %d bytes from [", (int)bytes_read);
-    PRINT6ADDR(&src.addr);
-    PRINTF("]:%d\n", uip_ntohs(src.port));
-  } 
+  bytes_read = ctx->network_read(ctx->endpoint, &packet);
 #endif /* WITH_CONTIKI */
 #ifdef WITH_LWIP
   /* FIXME: use lwip address operation functions */
@@ -869,7 +860,7 @@ coap_read( coap_context_t *ctx ) {
       (unsigned char *)ctx->pending_package bytes_read);
 #endif /* WITH_LWIP */
 #ifdef WITH_CONTIKI
-    result = coap_handle_message(ctx, &src, uip_appdata, bytes_read);    
+    result = coap_handle_message(ctx, ctx->endpoint, packet);
 #endif /* WITH_CONTIKI */
   }
 
