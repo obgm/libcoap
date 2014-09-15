@@ -43,6 +43,7 @@ coap_free_type(coap_memory_tag_t type UNUSED_PARAM, void *p) {
 #else /* HAVE_MALLOC */
 
 #ifdef WITH_CONTIKI
+
 #define COAP_MAX_STRING_SIZE 12
 #define COAP_MAX_STRINGS      8
 
@@ -50,19 +51,33 @@ struct coap_string_t {
   char data[COAP_MAX_STRING_SIZE];
 };
 
+#include "pdu.h"
+#include "coap_io.h"
+
+#define COAP_MAX_PACKET_SIZE (sizeof(coap_packet_t) + COAP_MAX_PDU_SIZE)
+#define COAP_MAX_PACKETS     2
+
+struct coap_packetbuf_t {
+  char data[COAP_MAX_PACKET_SIZE];
+};
+
+
 MEMB(string_storage, struct coap_string_t, COAP_MAX_STRINGS);
+MEMB(packet_storage, struct coap_packetbuf_t, COAP_MAX_PACKETS);
 
 static struct memb *
 get_container(coap_memory_tag_t type) {
   switch(type) {
   default:
     return &string_storage;
+    return &packet_storage;
   }
 }
 
 void
 coap_memory_init(void) {
   memb_init(&string_storage);
+  memb_init(&packet_storage);
 }
 
 void *

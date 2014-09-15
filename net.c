@@ -540,7 +540,7 @@ coap_send_ack(coap_context_t *context,
   return result;
 }
 
-#ifdef WITH_POSIX
+#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
 /* releases space allocated by PDU if free_pdu is set */
 coap_tid_t
 coap_send_impl(coap_context_t *context, 
@@ -819,9 +819,6 @@ coap_read( coap_context_t *ctx ) {
   coap_address_t src;
   int result = -1;		/* the value to be returned */
 
-#ifdef WITH_CONTIKI
-  buf = uip_appdata;
-#endif /* WITH_CONTIKI */
 #ifdef WITH_LWIP
   LWIP_ASSERT("No package pending", ctx->pending_package != NULL);
   LWIP_ASSERT("Can only deal with contiguous PBUFs to read the initial details", ctx->pending_package->tot_len == ctx->pending_package->len);

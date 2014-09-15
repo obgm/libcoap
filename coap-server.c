@@ -93,7 +93,8 @@ init_coap() {
 #endif
 
 void 
-hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource, 
+hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
+	     const coap_endpoint_t *local_interface,
 	     coap_address_t *peer, coap_pdu_t *request, str *token, 
 	     coap_pdu_t *response) {
   unsigned char buf[2];
@@ -188,7 +189,7 @@ PROCESS_THREAD(coap_server_process, ev, data)
     PROCESS_YIELD();
     if(ev == tcpip_event) {
       coap_read(coap_context);	/* read received data */
-      coap_dispatch(coap_context); /* and dispatch PDUs from receivequeue */
+      /* coap_dispatch(coap_context); /\* and dispatch PDUs from receivequeue *\/ */
     } else if (ev == PROCESS_EVENT_TIMER && etimer_expired(&dirty_timer)) {
       time_resource->dirty = 1;
       etimer_reset(&dirty_timer);
