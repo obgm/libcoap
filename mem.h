@@ -18,7 +18,7 @@
  * called once before coap_malloc() can be used on constrained
  * devices.
  */
-void coap_memory_init();
+void coap_memory_init(void);
 
 /**
  * Type specifiers for coap_malloc_type(). Memory objects can be typed

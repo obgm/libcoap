@@ -145,6 +145,7 @@ char *coap_response_phrase(unsigned char code);
 #define COAP_MEDIATYPE_APPLICATION_RDF_XML           43 /* application/rdf+xml */
 #define COAP_MEDIATYPE_APPLICATION_EXI               47 /* application/exi  */
 #define COAP_MEDIATYPE_APPLICATION_JSON              50 /* application/json  */
+#define COAP_MEDIATYPE_APPLICATION_CBOR              60 /* application/cbor  */
 
 /* Note that identifiers for registered media types are in the range 0-65535. We
  * use an unallocated type here and hope for the best. */
@@ -274,7 +275,7 @@ void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
  * @deprecated This function allocates the maximum storage for each
  * PDU. Use coap_pdu_init() instead. 
  */
-coap_pdu_t *coap_new_pdu();
+coap_pdu_t *coap_new_pdu(void);
 
 void coap_delete_pdu(coap_pdu_t *);
 

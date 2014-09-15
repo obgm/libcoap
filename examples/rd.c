@@ -58,7 +58,7 @@ typedef struct rd_t {
 rd_t *resources = NULL;
 
 inline rd_t *
-rd_new() {
+rd_new(void) {
   rd_t *rd;
   rd = (rd_t *)coap_malloc(sizeof(rd_t));
   if (rd)

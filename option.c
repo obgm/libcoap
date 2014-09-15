@@ -57,8 +57,9 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 
   switch(result->delta) {
   case 15:
-    if (*opt != COAP_PAYLOAD_START)
+    if (*opt != COAP_PAYLOAD_START) {
       debug("ignored reserved option delta 15\n");
+    }
     return 0;
   case 14:
     /* Handle two-byte value: First, the MSB + 269 is stored as delta value.

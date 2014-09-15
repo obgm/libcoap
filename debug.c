@@ -37,16 +37,16 @@
 
 static coap_log_t maxlog = LOG_WARNING;	/* default maximum log level */
 
-const char *coap_package_name() {
+const char *coap_package_name(void) {
   return PACKAGE_NAME;
 }
 
-const char *coap_package_version() {
+const char *coap_package_version(void) {
   return PACKAGE_STRING;
 }
 
 coap_log_t 
-coap_get_log_level() {
+coap_get_log_level(void) {
   return maxlog;
 }
 

@@ -51,7 +51,7 @@ void coap_hash_impl(const unsigned char *s, unsigned int len, coap_key_t h);
 #define coap_str_hash(Str,H) {			\
     assert(Str);				\
     memset((H), 0, sizeof(coap_key_t));		\
-    coap_hash((H), (Str)->s, (Str)->length);	\
+    coap_hash((Str)->s, (Str)->length, (H));	\
   }
 
 #endif /* _COAP_HASHKEY_H_ */

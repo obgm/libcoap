@@ -90,7 +90,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
 
 #else /* WITH_CONTIKI */
 static inline struct coap_endpoint_t *
-coap_malloc_posix_endpoint() {
+coap_malloc_posix_endpoint(void) {
   return (struct coap_endpoint_t *)coap_malloc(sizeof(struct coap_endpoint_t));
 }
 
@@ -295,7 +295,7 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
 
 #ifdef WITH_POSIX
 static coap_packet_t *
-coap_malloc_packet() {
+coap_malloc_packet(void) {
   coap_packet_t *packet;
   const size_t need = sizeof(coap_packet_t) + COAP_MAX_PDU_SIZE;
 
