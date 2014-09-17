@@ -68,9 +68,9 @@ MEMB(packet_storage, struct coap_packetbuf_t, COAP_MAX_PACKETS);
 static struct memb *
 get_container(coap_memory_tag_t type) {
   switch(type) {
+  case COAP_PACKET: return &packet_storage;
   default:
     return &string_storage;
-    return &packet_storage;
   }
 }
 
