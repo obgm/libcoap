@@ -63,7 +63,7 @@
 
 #include "contiki-conf.h"
 
-#if defined(PLATFORM) && PLATFORM == PLATFORM_MC1322X
+#if (defined(PLATFORM) && PLATFORM == PLATFORM_MC1322X) || defined(CONTIKI_TARGET_ECONOTAG)
 /* Redbee econotags get a special treatment here: endianness is set
  * explicitly, and 
  */ 
@@ -74,7 +74,7 @@
 #define HAVE_UNISTD_H
 #define HAVE_SYS_TYPES_H
 #define HAVE_LIMITS_H
-#endif /* defined(PLATFORM) && PLATFORM == PLATFORM_MC1322X */
+#endif /* PLATFORM_MC1322X || CONTIKI_TARGET_ECONOTAG */
 
 #if defined(TMOTE_SKY) || defined(CONTIKI_TARGET_SKY) || defined(CONTIKI_TARGET_WISMOTE)
 /* Need to set the byte order for TMote Sky explicitely */
