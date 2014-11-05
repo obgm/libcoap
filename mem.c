@@ -51,24 +51,28 @@ struct coap_string_t {
   char data[COAP_MAX_STRING_SIZE];
 };
 
+#include "coap_config.h"
+#include "net.h"
 #include "pdu.h"
 #include "coap_io.h"
 
 #define COAP_MAX_PACKET_SIZE (sizeof(coap_packet_t) + COAP_MAX_PDU_SIZE)
 #define COAP_MAX_PACKETS     2
 
-struct coap_packetbuf_t {
-  char data[COAP_MAX_PACKET_SIZE];
-};
-
+typedef union {
+  coap_packet_t packet;
+  char buf[COAP_MAX_PACKET_SIZE];
+} coap_packetbuf_t;
 
 MEMB(string_storage, struct coap_string_t, COAP_MAX_STRINGS);
-MEMB(packet_storage, struct coap_packetbuf_t, COAP_MAX_PACKETS);
+MEMB(packet_storage, coap_packetbuf_t, COAP_MAX_PACKETS);
+MEMB(node_storage, coap_queue_t, COAP_PDU_MAXCNT);
 
 static struct memb *
 get_container(coap_memory_tag_t type) {
   switch(type) {
   case COAP_PACKET: return &packet_storage;
+  case COAP_NODE:   return &node_storage;
   default:
     return &string_storage;
   }
@@ -78,6 +82,7 @@ void
 coap_memory_init(void) {
   memb_init(&string_storage);
   memb_init(&packet_storage);
+  memb_init(&node_storage);
 }
 
 void *

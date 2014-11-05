@@ -104,12 +104,12 @@ PROCESS(coap_retransmit_process, "message retransmit process");
 
 static inline coap_queue_t *
 coap_malloc_node() {
-  return (coap_queue_t *)memb_alloc(&node_storage);
+  return (coap_queue_t *)coap_malloc_type(COAP_NODE, 0);
 }
 
 static inline void
 coap_free_node(coap_queue_t *node) {
-  memb_free(&node_storage, node);
+  coap_free_type(COAP_NODE, node);
 }
 #endif /* WITH_CONTIKI */
 #ifdef WITH_LWIP
@@ -876,7 +876,7 @@ coap_handle_message(coap_context_t *ctx,
   unsigned char *msg = packet->payload;
   size_t msg_len = packet->length;
   coap_queue_t *node;
-  
+
   /* the negated result code */
   enum result_t { RESULT_OK, RESULT_ERR_EARLY, RESULT_ERR };
   int result = RESULT_ERR_EARLY;
@@ -920,7 +920,7 @@ coap_handle_message(coap_context_t *ctx,
   memcpy(&node->remote, remote, sizeof(coap_address_t));
 
   if (!coap_pdu_parse(msg, msg_len, node->pdu)) {
-    warn("discard malformed PDU");
+    warn("discard malformed PDU\n");
     goto error;
   }
 
@@ -933,7 +933,7 @@ coap_handle_message(coap_context_t *ctx,
 #define INET6_ADDRSTRLEN 40
 #endif
     unsigned char addr[INET6_ADDRSTRLEN+8], localaddr[INET6_ADDRSTRLEN+8];
-    
+
     if (coap_print_addr(remote, addr, INET6_ADDRSTRLEN+8) &&
 	coap_print_addr(&packet->dst, localaddr, INET6_ADDRSTRLEN+8) )
       debug("** received %d bytes from %s on interface %s:\n",
@@ -1205,6 +1205,7 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
 
   /* check whether the request contains the Block2 option */
   if (coap_get_block(request, COAP_OPTION_BLOCK2, &block)) {
+    debug("create block\n");
     offset = block.num << (block.szx + 4);
     if (block.szx > 6) {  /* invalid, MUST lead to 4.00 Bad Request */
       resp->hdr->code = COAP_RESPONSE_CODE(400);
@@ -1477,6 +1478,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
     if (WANT_WKC(node->pdu, key)) {
       debug("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
       response = wellknown_response(context, node->pdu);
+      debug("have wellknown response %p\n", response);
     } else
       response = coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(405), 
 					 opt_filter);

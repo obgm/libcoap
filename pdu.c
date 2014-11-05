@@ -1,6 +1,6 @@
 /* pdu.c -- CoAP message structure
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -27,7 +27,10 @@
 #ifdef WITH_CONTIKI
 #include "memb.h"
 
-typedef unsigned char _pdu[sizeof(coap_pdu_t) + COAP_MAX_PDU_SIZE];
+typedef union {
+  coap_pdu_t pdu;
+  unsigned char buf[sizeof(coap_pdu_t) + COAP_MAX_PDU_SIZE];
+} _pdu;
 
 MEMB(pdu_storage, _pdu, COAP_PDU_MAXCNT);
 
@@ -39,13 +42,18 @@ coap_pdu_resources_init() {
 #include "mem.h"
 #endif /* WITH_CONTIKI */
 
+#define ALIGNPTR(ptr) ((((unsigned int)(ptr) + sizeof(void *) - 1) / \
+			sizeof(void *)) * sizeof(void *))
+
 void
 coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   assert(pdu);
 
   memset(pdu, 0, sizeof(coap_pdu_t) + size);
   pdu->max_size = size;
-  pdu->hdr = (coap_hdr_t *)((unsigned char *)pdu + sizeof(coap_pdu_t));
+  pdu->hdr = (coap_hdr_t *)ALIGNPTR((unsigned char *)pdu + sizeof(coap_pdu_t));
+  assert(((unsigned int)pdu->hdr & (sizeof(void *) - 1)) == 0);
+
   pdu->hdr->version = COAP_DEFAULT_VERSION;
 
   /* data is NULL unless explicitly set by coap_add_data() */
@@ -384,7 +392,7 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
   /* append data (including the Token) to pdu structure */
   memcpy(pdu->hdr + 1, data + sizeof(coap_hdr_t), length - sizeof(coap_hdr_t));
   pdu->length = length;
-  
+ 
   /* Finally calculate beginning of data block and thereby check integrity
    * of the PDU structure. */
 
@@ -393,7 +401,6 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
   opt = (unsigned char *)(pdu->hdr + 1) + pdu->hdr->token_length;
 
   while (length && *opt != COAP_PAYLOAD_START) {
-
     if (!next_option_safe(&opt, (size_t *)&length)) {
       debug("coap_pdu_parse: drop\n");
       goto discard;
