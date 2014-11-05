@@ -126,5 +126,7 @@ typedef void FILE;
 
 #define ntohs uip_ntohs
 
+#define coap_log(fd, ...) printf(__VA_ARGS__)
+
 #endif /* _CONFIG_H_ */
 
