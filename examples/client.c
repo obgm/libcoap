@@ -506,11 +506,12 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-	   "(c) 2010-2013 Olaf Bergmann <bergmann@tzi.org>\n\n"
+	   "(c) 2010-2014 Olaf Bergmann <bergmann@tzi.org>\n\n"
 	   "usage: %s [-A type...] [-t type] [-b [num,]size] [-B seconds] [-e text]\n"
 	   "\t\t[-g group] [-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
-	   "\t\t[-s duration] [-O num,text] [-T string] [-v num] URI\n\n"
+	   "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
+	   "\t-a addr\tthe local interface address to use\n"
 	   "\t-A type...\taccepted media types as comma-separated list of\n"
 	   "\t\t\tsymbolic or numeric values\n"
 	   "\t-t type\t\tcontent type for given resource for PUT/POST\n"
@@ -1020,13 +1021,18 @@ main(int argc, char **argv) {
   static str server;
   unsigned short port = COAP_DEFAULT_PORT;
   char port_str[NI_MAXSERV] = "0";
+  char node_str[NI_MAXHOST] = "";
   int opt, res;
   char *group = NULL;
   coap_log_t log_level = LOG_WARNING;
   coap_tid_t tid = COAP_INVALID_TID;
 
-  while ((opt = getopt(argc, argv, "Nb:e:f:g:m:p:s:t:o:v:A:B:O:P:T:")) != -1) {
+  while ((opt = getopt(argc, argv, "Na:b:e:f:g:m:p:s:t:o:v:A:B:O:P:T:")) != -1) {
     switch (opt) {
+    case 'a' :
+      strncpy(node_str, optarg, NI_MAXHOST-1);
+      node_str[NI_MAXHOST - 1] = '\0';
+      break;
     case 'b' :
       cmdline_blocksize(optarg);
       break;
@@ -1131,13 +1137,13 @@ main(int argc, char **argv) {
     addrptr = &dst.addr.sin.sin_addr;
 
     /* create context for IPv4 */
-    ctx = get_context("0.0.0.0", port_str);
+    ctx = get_context(node_str[0] == 0 ? "0.0.0.0" : node_str, port_str);
     break;
   case AF_INET6:
     addrptr = &dst.addr.sin6.sin6_addr;
 
     /* create context for IPv6 */
-    ctx = get_context("::", port_str);
+    ctx = get_context(node_str[0] == 0 ? "::" : node_str, port_str);
     break;
   default:
     ;
