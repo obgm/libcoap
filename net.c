@@ -344,7 +344,7 @@ coap_new_context(
   }
 
 #ifdef WITH_POSIX
-  c->sockfd = c->endpoint->handle;
+  c->sockfd = c->endpoint->handle.fd;
 #endif /* WITH_POSIX */
 
 #if defined(WITH_POSIX) || defined(WITH_CONTIKI)
