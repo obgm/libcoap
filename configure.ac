@@ -37,8 +37,10 @@ AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo \
                 strnlen])
 
-# Override the various template files, currently just one makefile.
-AC_CONFIG_FILES([Makefile])
+# Override the various template files, currently just makefiles.
+AC_CONFIG_FILES([
+Makefile
+include/Makefile])
 
 AC_OUTPUT
 
