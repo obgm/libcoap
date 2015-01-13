@@ -1,5 +1,22 @@
 #!/bin/sh -e
 
+# uncomment the set command for debugging
+#set -x
+
+# function to check for needed helper tools
+check_helper() {
+#echo "Checking for $1 ..."
+TOOL=`which "$1" || echo none`
+
+if [ "$TOOL" = "none" ]; then
+    echo
+    echo "Couldn't find '$1'!"
+    RET=1
+else
+    RET=0
+fi
+}
+
 PROJECT="libcoap"
 
 AUTOGEN_FILES="INSTALL \
@@ -10,10 +27,12 @@ AUTOGEN_FILES="INSTALL \
 		libtool ltmain.sh \
 		missing \
 		Makefile Makefile.in \
-		stamp-h1 src/.dirstamp libcoap*.la* src/*.lo"
+		stamp-h1 src/.dirstamp libcoap*.la* src/*.*o"
 
 AUTOGEN_DIRS=".deps .libs autom4te.cache/ m4/ src/.libs/ src/.deps/"
 
+# checking for cleaner argument
+echo
 if [ "$1" = "--clean" ]; then
     echo "removing autogerated files ..."
     rm -rf $AUTOGEN_FILES $AUTOGEN_DIRS
@@ -24,8 +43,62 @@ else
     echo
 fi
 
+# checking for autoreconf
+check_helper autoconf
+if [ "$RET" = "1" ]; then
+    echo "You propably need to install the package 'autoconf'."
+    ERROR=1
+else
+    echo "Found 'autoconf'."
+fi
+
+# checking for aclocal
+check_helper aclocal
+if [ "$RET" = "1" ]; then
+    echo "You propably need to install the package 'automake'."
+    ERROR=1
+else
+    echo "Found 'aclocal'."
+fi
+
+# checking for libtool
+# The libtool helper maybe installed as 'libtoolize', checking for 'libtool' first.
+check_helper libtool
+if [ "$RET" = "1" ]; then
+    # O.k. libtool not found, searching for libtoolize.
+    check_helper libtoolize
+    if [ "$RET" = "1" ]; then
+        echo "You propably need to install the package 'libtool'."
+        # That's bad, we found nothing!
+        ERROR=1
+    else
+        echo "Found 'libtoolize'."
+        break
+    fi
+else
+    echo "Found 'libtool'."
+fi
+
+# exit if one tool isn't available
+if [ "$ERROR" = "1" ]; then
+    echo
+    echo "One or more needed tools are missing, exiting ..."
+    echo "Please install the needed software packages and restart 'autogen.sh' again."
+    echo
+    exit
+fi
+
+echo
+echo "  --->  Found all needed tools! That's fine."
+echo
+
+# countinue otherwise
 test -n "$srcdir" || srcdir=`dirname "$0"`
 test -n "$srcdir" || srcdir=.
+
+# Creating the directory m4 before calling autoreconf to
+# not struggle with old versions of aclocal.
+mkdir -p $srcdir/m4
 
 echo "Generating needed autotools files for $PROJECT by running autoreconf ..."
 autoreconf --force --install --verbose "$srcdir"
