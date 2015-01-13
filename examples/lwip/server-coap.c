@@ -19,6 +19,5 @@ void server_coap_init(void)
 
 void server_coap_poll(void)
 {
-	coap_dispatch(main_coap_context);
 	coap_check_notify(main_coap_context);
 }
