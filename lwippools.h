@@ -12,6 +12,15 @@
 #define MEMP_NUM_COAPCONTEXT 1
 #endif
 
+#ifndef MEMP_NUM_COAPENDPOINT
+#define MEMP_NUM_COAPENDPOINT 1
+#endif
+
+/* 1 is sufficient as this is very short-lived */
+#ifndef MEMP_NUM_COAPPACKET
+#define MEMP_NUM_COAPPACKET 1
+#endif
+
 #ifndef MEMP_NUM_COAPNODE
 #define MEMP_NUM_COAPNODE 4
 #endif
@@ -29,6 +38,8 @@
 #endif
 
 LWIP_MEMPOOL(COAP_CONTEXT, MEMP_NUM_COAPCONTEXT, sizeof(coap_context_t), "COAP_CONTEXT")
+LWIP_MEMPOOL(COAP_ENDPOINT, MEMP_NUM_COAPENDPOINT, sizeof(coap_endpoint_t), "COAP_ENDPOINT")
+LWIP_MEMPOOL(COAP_PACKET, MEMP_NUM_COAPPACKET, sizeof(coap_packet_t), "COAP_PACKET")
 LWIP_MEMPOOL(COAP_NODE, MEMP_NUM_COAPNODE, sizeof(coap_queue_t), "COAP_NODE")
 LWIP_MEMPOOL(COAP_subscription, MEMP_NUM_COAP_SUBSCRIPTION, sizeof(coap_subscription_t), "COAP_subscription")
 LWIP_MEMPOOL(COAP_RESOURCE, MEMP_NUM_COAPRESOURCE, sizeof(coap_resource_t), "COAP_RESOURCE")
