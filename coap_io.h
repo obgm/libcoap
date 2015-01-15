@@ -26,6 +26,10 @@
 
 #include "address.h"
 
+#ifdef WITH_LWIP
+# include <lwip/udp.h>
+#endif
+
 /**
  * Abstract handle that is used to identify a local network interface.
  */
@@ -45,7 +49,13 @@ struct coap_context_t;
  * this endpoint.
  */
 typedef struct coap_endpoint_t {
+#ifdef WITH_POSIX
   int handle;	       /**< opaque handle to identify this endpoint */
+#endif
+#ifdef WITH_LWIP
+  struct udp_pcb *pcb;
+  struct coap_context_t *context; /**< @FIXME this was added in a hurry, not sure it confirms to the overall model --chrysn */
+#endif
   coap_address_t addr; /**< local interface address */
   int ifindex;
   int flags;
