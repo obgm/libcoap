@@ -861,7 +861,7 @@ coap_read( coap_context_t *ctx ) {
     if (coap_address_isany(&ctx->endpoint->addr) ||
 	coap_address_equals(&packet->dst, &ctx->endpoint->addr)) {
     */
-      result = coap_handle_message(ctx, ctx->endpoint, packet);
+      result = coap_handle_message(ctx, packet);
     /*
     } else {
       coap_log(LOG_DEBUG, "packet received on wrong interface, dropped\n");
@@ -884,18 +884,18 @@ coap_read( coap_context_t *ctx ) {
 
 int
 coap_handle_message(coap_context_t *ctx,
-		    const coap_endpoint_t *local_interface,
 		    coap_packet_t *packet) {
 		    /* const coap_address_t *remote,  */
 		    /* unsigned char *msg, size_t msg_len) { */
-  const coap_address_t *remote = &packet->src;
-  unsigned char *msg = packet->payload;
-  size_t msg_len = packet->length;
+  unsigned char *msg;
+  size_t msg_len;
   coap_queue_t *node;
   
   /* the negated result code */
   enum result_t { RESULT_OK, RESULT_ERR_EARLY, RESULT_ERR };
   int result = RESULT_ERR_EARLY;
+
+  coap_packet_get_memmapped(packet, &msg, &msg_len);
 
   if (msg_len < sizeof(coap_hdr_t)) {
     debug("coap_handle_message: discarded invalid frame\n" );
@@ -928,12 +928,8 @@ coap_handle_message(coap_context_t *ctx,
 
   coap_ticks(&node->t);
 
-  node->local_if.handle = local_interface->handle;
-  memcpy(&node->local_if.addr, &packet->dst, sizeof(node->local_if.addr));
-  node->local_if.ifindex = packet->ifindex;
-  node->local_if.flags = 0; /* FIXME */
-
-  memcpy(&node->remote, remote, sizeof(coap_address_t));
+  coap_packet_populate_endpoint(packet, &node->local_if);
+  coap_packet_copy_source(packet, &node->remote);
 
   if (!coap_pdu_parse(msg, msg_len, node->pdu)) {
     warn("discard malformed PDU");

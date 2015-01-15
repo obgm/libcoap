@@ -37,6 +37,21 @@
 #include "mem.h"
 #include "coap_io.h"
 
+#ifndef WITH_LWIP
+struct coap_packet_t {
+  coap_if_handle_t hnd;	      /**< the interface handle */
+  coap_address_t src;	      /**< the packet's source address */
+  coap_address_t dst;	      /**< the packet's destination address */
+  const coap_endpoint_t *interface;
+  
+  int ifindex;
+  void *session;		/**< opaque session data */
+
+  size_t length;		/**< length of payload */
+  unsigned char payload[];	/**< payload */
+};
+#endif
+
 #ifndef CUSTOM_COAP_NETWORK_ENDPOINT
 
 #ifdef WITH_CONTIKI
@@ -316,6 +331,26 @@ coap_get_max_packetlength(const coap_packet_t *packet UNUSED_PARAM) {
   return COAP_MAX_PDU_SIZE;
 }
 
+void
+coap_packet_populate_endpoint(coap_packet_t *packet, coap_endpoint_t *target)
+{
+  target->handle = packet->interface->handle;
+  memcpy(&target->addr, &packet->dst, sizeof(target->addr));
+  target->ifindex = packet->ifindex;
+  target->flags = 0; /* FIXME */
+}
+void
+coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target)
+{
+  memcpy(target, &packet->src, sizeof(coap_address_t));
+}
+void
+coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length)
+{
+	*address = packet->payload;
+	*length = packet->length;
+}
+
 ssize_t
 coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   ssize_t len = -1;
@@ -450,6 +485,8 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 #ifdef WITH_LWIP
 #error "coap_network_read() not implemented on this platform"
 #endif
+
+  (*packet)->interface = ep;
 
   return len;
 }

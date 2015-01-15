@@ -366,7 +366,6 @@ int coap_read(coap_context_t *context);
  *              zero on error.
  */
 int coap_handle_message(coap_context_t *ctx,
-			const coap_endpoint_t *local_interface,
 			coap_packet_t *packet);
 
 /** 
