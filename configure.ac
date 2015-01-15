@@ -5,7 +5,15 @@
 #
 # Please run 'autogen.sh' to let autoconf produce a configure script.
 
-AC_INIT([libcoap], [4.1.2], [libcoap-developers@lists.sourceforge.net], [libcoap], [http://libcoap.sourceforge.net/])
+# Define the libcoap software version here. Note! The libtool versions are
+# defined later.
+m4_define([libcoap_major_version], [4])
+m4_define([libcoap_minor_version], [1])
+m4_define([libcoap_micro_version], [2])
+
+m4_define([libcoap_version],[libcoap_major_version.libcoap_minor_version.libcoap_micro_version])
+
+AC_INIT([libcoap], [libcoap_version], [libcoap-developers@lists.sourceforge.net], [libcoap], [http://libcoap.sourceforge.net/])
 AC_PREREQ([2.59])
 AM_INIT_AUTOMAKE([1.10 -Wall no-define])
 
@@ -47,5 +55,5 @@ AC_OUTPUT
 
 AC_MSG_RESULT([
 libcoap configuration summary:
-      libcoap package version : 4.1.2
+      libcoap package version : "$PACKAGE_VERSION"
 ]);
