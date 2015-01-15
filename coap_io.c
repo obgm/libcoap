@@ -37,7 +37,6 @@
 #include "mem.h"
 #include "coap_io.h"
 
-#ifndef WITH_LWIP
 struct coap_packet_t {
   coap_if_handle_t hnd;	      /**< the interface handle */
   coap_address_t src;	      /**< the packet's source address */
@@ -50,7 +49,6 @@ struct coap_packet_t {
   size_t length;		/**< length of payload */
   unsigned char payload[];	/**< payload */
 };
-#endif
 
 #ifndef CUSTOM_COAP_NETWORK_ENDPOINT
 
@@ -322,9 +320,6 @@ coap_free_packet(coap_packet_t *packet) {
 #ifdef WITH_CONTIKI
 /* FIXME: implement coap_malloc_packet and coap_free_packet */
 #endif /* WITH_CONTIKI */
-#ifdef WITH_LWIP
-/* FIXME: implement coap_malloc_packet and coap_free_packet */
-#endif /* WITH_LWIP */
 
 static inline size_t
 coap_get_max_packetlength(const coap_packet_t *packet UNUSED_PARAM) {
