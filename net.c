@@ -112,29 +112,6 @@ coap_free_node(coap_queue_t *node) {
   memb_free(&node_storage, node);
 }
 #endif /* WITH_CONTIKI */
-#ifdef WITH_LWIP
-
-/** Callback to udp_recv when using lwIP. Gets called by lwIP on arriving
- * packages, places a reference in context->pending_package, and calls
- * coap_read to process the package. Thus, coap_read needs not be called in
- * lwIP main loops. (When modifying this for thread-like operation, ie. if you
- * remove the coap_read call from this, make sure that coap_read gets a chance
- * to run before this callback is entered the next time.)
- */
-static void received_package(void *arg, struct udp_pcb *upcb, struct pbuf *p, ip_addr_t *addr, u16_t port)
-{
-  struct coap_context_t *context = (coap_context_t *)arg;
-
-  LWIP_ASSERT("pending_package was not cleared.", context->pending_package == NULL);
-
-  context->pending_package = p; /* we don't free it, coap_read has to do that */
-  context->pending_address.addr = addr->addr; /* FIXME: this has to become address-type independent, probably there'll be an lwip function for that */
-  context->pending_port = port;
-
-  coap_read(context);
-}
-
-#endif /* WITH_LWIP */
 
 int print_wellknown(coap_context_t *, unsigned char *, size_t *, size_t, coap_opt_t *);
 
@@ -389,18 +366,6 @@ coap_new_context(
   PROCESS_CONTEXT_END(&coap_retransmit_process);
   return c;
 #endif /* WITH_CONTIKI */
-#ifdef WITH_LWIP
-  c->pcb = udp_new();
-  /* hard assert: this is not expected to fail dynamically */
-  LWIP_ASSERT("Failed to allocate PCB for CoAP", c->pcb != NULL);
-
-  udp_recv(c->pcb, received_package, (void*)c);
-  udp_bind(c->pcb, &listen_addr->addr, listen_addr->port);
-
-  c->timer_configured = 0;
-
-  return c;
-#endif
 }
 
 void
@@ -807,7 +772,7 @@ void coap_dispatch(coap_context_t *context, coap_queue_t *rcvd);
 
 int
 coap_read( coap_context_t *ctx ) {
-#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
+#ifdef WITH_CONTIKI
   char *buf;
 #endif
   ssize_t bytes_read = -1;
@@ -818,11 +783,6 @@ coap_read( coap_context_t *ctx ) {
 #ifdef WITH_CONTIKI
   buf = uip_appdata;
 #endif /* WITH_CONTIKI */
-#ifdef WITH_LWIP
-  LWIP_ASSERT("No package pending", ctx->pending_package != NULL);
-  LWIP_ASSERT("Can only deal with contiguous PBUFs to read the initial details", ctx->pending_package->tot_len == ctx->pending_package->len);
-  buf = ctx->pending_package->payload;
-#endif /* WITH_LWIP */
 
   coap_address_init(&src);
 
@@ -843,12 +803,6 @@ coap_read( coap_context_t *ctx ) {
     PRINTF("]:%d\n", uip_ntohs(src.port));
   } 
 #endif /* WITH_CONTIKI */
-#ifdef WITH_LWIP
-  /* FIXME: use lwip address operation functions */
-  src.addr.addr = ctx->pending_address.addr;
-  src.port = ctx->pending_port;
-  bytes_read = ctx->pending_package->tot_len;
-#endif /* WITH_LWIP */
 
   if ( bytes_read < 0 ) {
     warn("coap_read: recvfrom");
@@ -866,10 +820,6 @@ coap_read( coap_context_t *ctx ) {
     }
     */
 #endif /* WITH_POSIX */
-#ifdef WITH_LWIP
-    result = coap_handle_message(ctx, &src, 
-      (unsigned char *)ctx->pending_package bytes_read);
-#endif /* WITH_LWIP */
 #ifdef WITH_CONTIKI
     result = coap_handle_message(ctx, &src, uip_appdata, bytes_read);    
 #endif /* WITH_CONTIKI */
@@ -914,12 +864,7 @@ coap_handle_message(coap_context_t *ctx,
   /* from this point, the result code indicates that */
   result = RESULT_ERR;
   
-#ifdef WITH_LWIP
-  node->pdu = coap_pdu_from_pbuf(ctx->pending_package);
-  ctx->pending_package = NULL;
-#else
   node->pdu = coap_pdu_init(0, 0, 0, msg_len);
-#endif
   if (!node->pdu) {
     goto error;
   }
@@ -964,11 +909,6 @@ coap_handle_message(coap_context_t *ctx,
   return -result;
 
  error_early:
-#ifdef WITH_LWIP
-  /* even if there was an error, clean up */
-  pbuf_free(ctx->pending_package);
-  ctx->pending_package = NULL;
-#endif
   return -result;
 }
 
