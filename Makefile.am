@@ -47,6 +47,13 @@ libcoap_la_SOURCES = \
 ## file (.so). This will be changed later to a substituted version via variables.
 libcoap_la_LDFLAGS = -version-info 0
 
+## Install the generated pkg-config file (.pc) into the expected location for
+## architecture-dependent package configuration information.  Occasionally,
+## pkg-config files are also used for architecture-independent data packages,
+## in which case the correct install location would be $(datadir)/pkgconfig.
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libcoap.pc
+
 ## Define an independent executable script for inclusion in the distribution
 ## archive.  However, it will not be installed on an end user's system due to
 ## the noinst_ prefix.

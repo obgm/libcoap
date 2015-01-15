@@ -40,6 +40,7 @@ AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo \
 # Override the various template files, currently just makefiles.
 AC_CONFIG_FILES([
 Makefile
+libcoap.pc:libcoap.pc.in
 include/Makefile])
 
 AC_OUTPUT
