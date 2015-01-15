@@ -857,12 +857,16 @@ coap_read( coap_context_t *ctx ) {
   } else {
 #ifdef WITH_POSIX
     /* FIXME: make sure that dst == ctx->endpoint->addr */
+    /* disabled for violating the packet abstraction
     if (coap_address_isany(&ctx->endpoint->addr) ||
 	coap_address_equals(&packet->dst, &ctx->endpoint->addr)) {
+    */
       result = coap_handle_message(ctx, ctx->endpoint, packet);
+    /*
     } else {
       coap_log(LOG_DEBUG, "packet received on wrong interface, dropped\n");
     }
+    */
 #endif /* WITH_POSIX */
 #ifdef WITH_LWIP
     result = coap_handle_message(ctx, &src, 
@@ -946,11 +950,13 @@ coap_handle_message(coap_context_t *ctx,
 #endif
     unsigned char addr[INET6_ADDRSTRLEN+8], localaddr[INET6_ADDRSTRLEN+8];
     
+    /** @FIXME get debug to work again **
     if (coap_print_addr(remote, addr, INET6_ADDRSTRLEN+8) &&
 	coap_print_addr(&packet->dst, localaddr, INET6_ADDRSTRLEN+8) )
       debug("** received %d bytes from %s on interface %s:\n",
 	    (int)msg_len, addr, localaddr);
     
+	    */
     coap_show_pdu(node->pdu);
   }
 #endif
