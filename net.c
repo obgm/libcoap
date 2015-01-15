@@ -1312,11 +1312,13 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
 static int
 coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
 #ifndef WITHOUT_OBSERVE
+#ifdef WITH_CONTIKI
+  coap_iterator_t resource_iter;
+#else
   coap_resource_t *r;
 #ifndef COAP_RESOURCES_NOHASH
   coap_resource_t *tmp;
-#else
-  coap_iterator_t resource_iter;
+#endif
 #endif
   str token = { 0, NULL };
   int num_cancelled = 0;    /* the number of observers cancelled */
@@ -1327,7 +1329,7 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
 
   COAP_SET_STR(&token, sent->pdu->hdr->token_length, sent->pdu->hdr->token);
 
-#ifdef COAP_RESOURCES_NOHASH
+#ifdef WITH_CONTIKI
   /* traverse resources and delete matching observers for each resource */
   if (coap_resource_iterator_init(context->resources, &resource_iter) != NULL) {
 
@@ -1337,12 +1339,16 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
     }
 
   }
+#else
+#ifdef COAP_RESOURCES_NOHASH
+  LL_FOREACH(context->resources, r) {
 #else /* COAP_RESOURCES_NOHASH */
   HASH_ITER(hh, context->resources, r, tmp) {
+#endif
     num_cancelled += coap_delete_observer(r, &sent->remote, &token);
     coap_cancel_all_messages(context, &sent->remote, token.s, token.length);
   }
-#endif  /* COAP_RESOURCES_NOHASH */
+#endif /* not WITH_CONTIKI */
 
   return num_cancelled;
 #else /* WITOUT_OBSERVE */  
