@@ -43,7 +43,7 @@
 #include "timer.h"
 #include <signal.h>
 
-#include <server-coap.h>
+#include "server-coap.h"
 
 static ip_addr_t ipaddr, netmask, gw;
 
@@ -63,6 +63,7 @@ main(int argc, char **argv)
 	printf("TCP/IP initialized.\n");
 
 	netif_add(&netif, &ipaddr, &netmask, &gw, NULL, mintapif_init, ethernet_input);
+	netif.flags |= NETIF_FLAG_ETHARP;
 	netif_set_default(&netif);
 	netif_set_up(&netif);
 #if LWIP_IPV6
