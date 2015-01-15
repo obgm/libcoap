@@ -52,12 +52,12 @@ time_t clock_offset;
 
 static inline coap_queue_t *
 coap_malloc_node(void) {
-  return (coap_queue_t *)coap_malloc(sizeof(coap_queue_t));
+  return (coap_queue_t *)coap_malloc_type(COAP_NODE, sizeof(coap_queue_t));
 }
 
 static inline void
 coap_free_node(coap_queue_t *node) {
-  coap_free(node);
+  coap_free_type(COAP_NODE, node);
 }
 #endif /* WITH_POSIX */
 #ifdef WITH_LWIP
@@ -297,12 +297,9 @@ is_wkc(coap_key_t k) {
 coap_context_t *
 coap_new_context(
   const coap_address_t *listen_addr) {
-#ifdef WITH_POSIX
-  coap_context_t *c = coap_malloc( sizeof( coap_context_t ) );
-#endif /* WITH_POSIX */
-#ifdef WITH_LWIP
-  coap_context_t *c = memp_malloc(MEMP_COAP_CONTEXT);
-#endif /* WITH_LWIP */
+#ifndef WITH_CONTIKI
+  coap_context_t *c = coap_malloc_type(COAP_CONTEXT, sizeof( coap_context_t ) );
+#endif /* not WITH_CONTIKI */
 #ifdef WITH_CONTIKI
   coap_context_t *c;
 
@@ -365,16 +362,18 @@ coap_new_context(
   if (c->endpoint == NULL) {
     goto onerror;
   }
+#ifndef WITH_CONTIKI
 #ifdef WITH_POSIX
   c->sockfd = c->endpoint->handle;
+#endif
 
   return c;
 
  onerror:
-  coap_free(c);
+  coap_free_type(COAP_CONTEXT, c);
   return NULL;
 
-#endif /* WITH_POSIX */
+#endif /* not WITH_CONTIKI */
 #ifdef WITH_CONTIKI
   c->conn = udp_new(NULL, 0, NULL);
   udp_bind(c->conn, listen_addr->port);
@@ -433,13 +432,12 @@ coap_free_context(coap_context_t *context) {
 #endif /* WITH_POSIX || WITH_LWIP */
 
   coap_free_endpoint(context->endpoint);
-#ifdef WITH_POSIX
-  coap_free(context);
-#endif
 #ifdef WITH_LWIP
   udp_remove(context->pcb);
-  memp_free(MEMP_COAP_CONTEXT, context);
-#endif
+#endif /* WITH_LWIP */
+#ifndef WITH_CONTIKI
+  coap_free_type(COAP_CONTEXT, context);
+#endif/* not WITH_CONTIKI */
 #ifdef WITH_CONTIKI
   memset(&the_coap_context, 0, sizeof(coap_context_t));
   initialized = 0;

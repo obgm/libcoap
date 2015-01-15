@@ -26,7 +26,7 @@ void coap_memory_init(void);
  * memory management on constrained devices.
  */
 typedef enum { 
-  COAP_STRING, COAP_ATTRIBUTE_NAME, COAP_ATTRIBUTE_VALUE 
+  COAP_STRING, COAP_ATTRIBUTE_NAME, COAP_ATTRIBUTE_VALUE, COAP_NODE, COAP_CONTEXT, COAP_ENDPOINT
 } coap_memory_tag_t;
 
 /**
