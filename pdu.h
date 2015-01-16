@@ -207,7 +207,7 @@ typedef struct {
 typedef struct {
   size_t max_size;	/**< allocated storage for options and data */
 
-  coap_hdr_t *hdr;
+  coap_hdr_t *hdr;              /**< Address of the first byte of the CoAP message. This may or may not equal (coap_hdr_t*)(pdu+1) depending on the memory management implementation. */
   unsigned short max_delta;	/**< highest option number */
   unsigned short length;	/**< PDU length (including header, options, data)  */
   unsigned char *data;		/**< payload */
