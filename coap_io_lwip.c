@@ -11,20 +11,20 @@
 #include "mem.h"
 #include "coap_io.h"
 
-void coap_packet_populate_endpoint(coap_packet_t *incoming, coap_endpoint_t *target)
+void coap_packet_populate_endpoint(coap_packet_t *packet, coap_endpoint_t *target)
 {
 	printf("FIXME no endpoint populated\n");
 }
-void coap_packet_copy_source(coap_packet_t *incoming, coap_address_t *target)
+void coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target)
 {
-	/** @FIXME types wtf */
-	memcpy(target, ip_current_src_addr(), sizeof(coap_address_t));
+	target->port = packet->srcport;
+	memcpy(&target->addr, ip_current_src_addr(), sizeof(ip_addr_t));
 }
-void coap_packet_get_memmapped(coap_packet_t *incoming, unsigned char **address, size_t *length)
+void coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length)
 {
-	LWIP_ASSERT("Can only deal with contiguous PBUFs to read the initial details", incoming->pbuf->tot_len == incoming->pbuf->len);
-	*address = incoming->pbuf->payload;
-	*length = incoming->pbuf->tot_len;
+	LWIP_ASSERT("Can only deal with contiguous PBUFs to read the initial details", packet->pbuf->tot_len == packet->pbuf->len);
+	*address = packet->pbuf->payload;
+	*length = packet->pbuf->tot_len;
 }
 void coap_free_packet(coap_packet_t *packet)
 {
@@ -47,6 +47,7 @@ static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, ip_addr_t
 	/* this is fatal because due to the short life of the packet, never should there be more than one coap_packet_t required */
 	LWIP_ASSERT("Insufficient coap_packet_t resources.", packet != NULL);
 	packet->pbuf = p;
+	packet->srcport = port;
 
 	/** FIXME derive the context without changing endopint definition */
 	coap_handle_message(ep->context, packet);

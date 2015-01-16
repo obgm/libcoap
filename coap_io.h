@@ -132,6 +132,7 @@ void coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, s
 struct coap_packet_t {
 	struct pbuf *pbuf;
 	const coap_endpoint_t *local_interface;
+	uint16_t srcport;
 };
 #endif
 
