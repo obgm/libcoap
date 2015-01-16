@@ -226,13 +226,11 @@ typedef struct {
  * Creates a CoAP PDU from an lwIP @p pbuf, whose reference is passed on to
  * this function.
  *
- * The pbuf is checked for being contiguous, for having enough head space for
- * the PDU struct (which is located directly in front of the data, overwriting
- * the old other headers), and for having only one reference. The reference is
- * stored in the PDU and will be freed when the PDU is freed.
+ * The pbuf is checked for being contiguous, and for having only one reference.
+ * The reference is stored in the PDU and will be freed when the PDU is freed.
  *
- * (For now, these are errors; in future, a new pbuf might be allocated, the
- * data copied and the passed pbuf freed).
+ * (For now, these are fatal errors; in future, a new pbuf might be allocated,
+ * the data copied and the passed pbuf freed).
  *
  * This behaves like coap_pdu_init(0, 0, 0, pbuf->tot_len), and afterwards
  * copying the contents of the pbuf to the pdu.
