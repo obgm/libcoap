@@ -397,9 +397,6 @@ coap_free_context(coap_context_t *context) {
 #endif /* WITH_POSIX || WITH_LWIP */
 
   coap_free_endpoint(context->endpoint);
-#ifdef WITH_LWIP
-  udp_remove(context->pcb);
-#endif /* WITH_LWIP */
 #ifndef WITH_CONTIKI
   coap_free_type(COAP_CONTEXT, context);
 #endif/* not WITH_CONTIKI */
@@ -563,7 +560,7 @@ coap_send_impl(coap_context_t *context,
 
   pbuf_realloc(p, pdu->length);
 
-  udp_sendto(context->pcb, p,
+  udp_sendto(context->endpoint->pcb, p,
 			&dst->addr, dst->port);
 
   pbuf_header(p, -(ptrdiff_t)((uint8_t*)pdu - (uint8_t*)p->payload) - sizeof(coap_pdu_t)); /* FIXME hack around udp_sendto not restoring; see http://lists.gnu.org/archive/html/lwip-users/2013-06/msg00008.html. for udp over ip over ethernet, this was -42; as we're doing ppp too, this has to be calculated generically */
