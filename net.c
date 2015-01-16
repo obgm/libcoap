@@ -869,15 +869,15 @@ coap_handle_message(coap_context_t *ctx,
     goto error;
   }
 
-  coap_ticks(&node->t);
-
-  coap_packet_populate_endpoint(packet, &node->local_if);
-  coap_packet_copy_source(packet, &node->remote);
-
   if (!coap_pdu_parse(msg, msg_len, node->pdu)) {
     warn("discard malformed PDU");
     goto error;
   }
+
+  coap_ticks(&node->t);
+
+  coap_packet_populate_endpoint(packet, &node->local_if);
+  coap_packet_copy_source(packet, &node->remote);
 
   /* and add new node to receive queue */
   coap_transaction_id(&node->remote, node->pdu, &node->id);
