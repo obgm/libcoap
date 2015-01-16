@@ -43,9 +43,16 @@ void
 coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   assert(pdu);
 
+#ifdef WITH_LWIP
+  /* the pdu itself is not wiped as opposed to the other implementations,
+   * because we have to rely on the pbuf to be set there. */
+  pdu->hdr = pdu->pbuf->payload;
+  memset(pdu->hdr, 0, size);
+#else
   memset(pdu, 0, sizeof(coap_pdu_t) + size);
-  pdu->max_size = size;
   pdu->hdr = (coap_hdr_t *)((unsigned char *)pdu + sizeof(coap_pdu_t));
+#endif
+  pdu->max_size = size;
   pdu->hdr->version = COAP_DEFAULT_VERSION;
 
   /* data is NULL unless explicitly set by coap_add_data() */
@@ -99,25 +106,22 @@ coap_pdu_init(unsigned char type, unsigned char code,
   pdu = (coap_pdu_t *)memb_alloc(&pdu_storage);
 #endif
 #ifdef WITH_LWIP
+  pdu = (coap_pdu_t*)coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
+  if (!pdu) return NULL;
   p = pbuf_alloc(PBUF_TRANSPORT, size, PBUF_RAM);
-  if (p != NULL) {
-    u8_t header_error = pbuf_header(p, sizeof(coap_pdu_t));
-    /* we could catch that case and allocate larger memory in advance, but then
-     * again, we'd run into greater trouble with incoming packages anyway */
-    LWIP_ASSERT("CoAP PDU header does not fit in transport header", header_error == 0);
-    pdu = p->payload;
-  } else {
+  if (p == NULL) {
+    coap_free_type(COAP_PDU, pdu);
     pdu = NULL;
   }
 #endif
   if (pdu) {
+#ifdef WITH_LWIP
+    pdu->pbuf = p;
+#endif
     coap_pdu_clear(pdu, size);
     pdu->hdr->id = id;
     pdu->hdr->type = type;
     pdu->hdr->code = code;
-#ifdef WITH_LWIP
-    pdu->pbuf = p;
-#endif
   } 
   return pdu;
 }
@@ -147,6 +151,7 @@ coap_delete_pdu(coap_pdu_t *pdu) {
 #ifdef WITH_LWIP
   if (pdu != NULL) /* accepting double free as the other implementation accept that too */
     pbuf_free(pdu->pbuf);
+  coap_free_type(COAP_PDU, pdu);
 #endif
 #ifdef WITH_CONTIKI
   memb_free(&pdu_storage, pdu);

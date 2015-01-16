@@ -533,7 +533,6 @@ coap_send_impl(coap_context_t *context,
 	       const coap_address_t *dst,
 	       coap_pdu_t *pdu) {
   coap_tid_t id = COAP_INVALID_TID;
-  struct pbuf *p;
   uint8_t err;
   char *data_backup;
 
@@ -548,37 +547,12 @@ coap_send_impl(coap_context_t *context,
    * should actually check that the pdu is not held by anyone but us. the
    * respective pbuf is already exclusively owned by the pdu. */
 
-  p = pdu->pbuf;
-  LWIP_ASSERT("The PDU header is not where it is expected", pdu->hdr == p->payload + sizeof(coap_pdu_t));
-
-  err = pbuf_header(p, -sizeof(coap_pdu_t));
-  if (err)
-  {
-    debug("coap_send_impl: pbuf_header failed\n");
-    pbuf_free(p);
-    return id;
-  }
+  pbuf_realloc(pdu->pbuf, pdu->length);
 
   coap_transaction_id(dst, pdu, &id);
 
-  pbuf_realloc(p, pdu->length);
-
-  udp_sendto(context->endpoint->pcb, p,
+  udp_sendto(context->endpoint->pcb, pdu->pbuf,
 			&dst->addr, dst->port);
-
-  pbuf_header(p, -(ptrdiff_t)((uint8_t*)pdu - (uint8_t*)p->payload) - sizeof(coap_pdu_t)); /* FIXME hack around udp_sendto not restoring; see http://lists.gnu.org/archive/html/lwip-users/2013-06/msg00008.html. for udp over ip over ethernet, this was -42; as we're doing ppp too, this has to be calculated generically */
-
-  err = pbuf_header(p, sizeof(coap_pdu_t));
-  LWIP_ASSERT("Cannot undo pbuf_header", err == 0);
-
-  /* restore destroyed pdu data */
-  LWIP_ASSERT("PDU not restored", p->payload == pdu);
-  pdu->max_size = p->tot_len - sizeof(coap_pdu_t); /* reduced after pbuf_realloc */
-  pdu->hdr = p->payload + sizeof(coap_pdu_t);
-  pdu->max_delta = 0; /* won't be used any more */
-  pdu->length = pdu->max_size;
-  pdu->data = data_backup;
-  pdu->pbuf = p;
 
   return id;
 }

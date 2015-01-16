@@ -213,7 +213,7 @@ typedef struct {
   unsigned char *data;		/**< payload */
 
 #ifdef WITH_LWIP
-  struct pbuf *pbuf; /**< lwIP PBUF. The allocated coap_pdu_t will always reside inside the pbuf's payload, but the pointer has to be kept because no exact offset can be given. This field must not be accessed from outside, because the pbuf's reference count is checked to be 1 when the pbuf is assigned to the pdu, and the pbuf stays exclusive to this pdu. */
+  struct pbuf *pbuf; /**< lwIP PBUF. The package data will always reside inside the pbuf's payload, but this pointer has to be kept because no exact offset can be given. This field must not be accessed from outside, because the pbuf's reference count is checked to be 1 when the pbuf is assigned to the pdu, and the pbuf stays exclusive to this pdu. */
 #endif
 
 } coap_pdu_t;
