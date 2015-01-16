@@ -63,22 +63,22 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
 coap_pdu_t *
 coap_pdu_from_pbuf(struct pbuf *pbuf)
 {
+  if (pbuf == NULL) return NULL;
+
   LWIP_ASSERT("Can only deal with contiguous PBUFs", pbuf->tot_len == pbuf->len);
   LWIP_ASSERT("coap_read needs to receive an exclusive copy of the incoming pbuf", pbuf->ref == 1);
 
-  void *data = pbuf->payload;
-  coap_pdu_t *result;
-
-  u8_t header_error = pbuf_header(pbuf, sizeof(coap_pdu_t));
-  LWIP_ASSERT("CoAP PDU header does not fit in existing header space", header_error == 0);
-
-  result = (coap_pdu_t *)pbuf->payload;
+  coap_pdu_t *result = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
+  if (!result) {
+	  pbuf_free(pbuf);
+	  return NULL;
+  }
 
   memset(result, 0, sizeof(coap_pdu_t));
 
-  result->max_size = pbuf->tot_len - sizeof(coap_pdu_t);
-  result->length = pbuf->tot_len - sizeof(coap_pdu_t);
-  result->hdr = data;
+  result->max_size = pbuf->tot_len;
+  result->length = pbuf->tot_len;
+  result->hdr = pbuf->payload;
   result->pbuf = pbuf;
 
   return result;
@@ -362,10 +362,16 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
     debug("discarded invalid PDU\n");
   }
 
+#ifdef WITH_LWIP)
+  LWIP_ASSERT("coap_pdu_parse with unexpected addresses", data == pdu->hdr);
+  LWIP_ASSERT("coap_pdu_parse with unexpected length", length == pdu->length);
+#else
+
   pdu->hdr->version = data[0] >> 6;
   pdu->hdr->type = (data[0] >> 4) & 0x03;
   pdu->hdr->token_length = data[0] & 0x0f;
   pdu->hdr->code = data[1];
+#endif
   pdu->data = NULL;
 
   /* sanity checks */
@@ -382,6 +388,7 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
     goto discard;
   }
 
+#ifndef WITH_LWIP
   /* Copy message id in network byte order, so we can easily write the
    * response back to the network. */
   memcpy(&pdu->hdr->id, data + 2, 2);
@@ -392,6 +399,7 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
   
   /* Finally calculate beginning of data block and thereby check integrity
    * of the PDU structure. */
+#endif
 
   /* skip header + token */
   length -= (pdu->hdr->token_length + sizeof(coap_hdr_t));

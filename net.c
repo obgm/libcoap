@@ -838,7 +838,11 @@ coap_handle_message(coap_context_t *ctx,
   /* from this point, the result code indicates that */
   result = RESULT_ERR;
   
+#ifdef WITH_LWIP
+  node->pdu = coap_pdu_from_pbuf(coap_packet_extract_pbuf(packet));
+#else
   node->pdu = coap_pdu_init(0, 0, 0, msg_len);
+#endif
   if (!node->pdu) {
     goto error;
   }
