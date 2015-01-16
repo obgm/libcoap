@@ -122,6 +122,11 @@ void coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target);
 void coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length);
 
 #ifdef WITH_LWIP
+/** Get the pbuf of a packet. The caller takes over responsibility for freeing the pbuf. */
+struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet);
+#endif
+
+#ifdef WITH_LWIP
 /* this is only included in coap_io.h instead of .c in order to be available for sizeof in lwippools.h. */
 
 /** Simple carry-over of the incoming pbuf that is later turned into a node.

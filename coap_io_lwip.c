@@ -28,9 +28,18 @@ void coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, s
 }
 void coap_free_packet(coap_packet_t *packet)
 {
-	pbuf_free(packet->pbuf);
+	if (packet->pbuf)
+		pbuf_free(packet->pbuf);
 	coap_free_type(COAP_PACKET, packet);
 }
+
+struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet)
+{
+	struct pbuf *ret = packet->pbuf;
+	packet->pbuf = NULL;
+	return ret;
+}
+
 
 /** Callback from lwIP when a package was received.
  *
