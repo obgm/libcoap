@@ -27,6 +27,66 @@ AM_PROG_AR
 AC_CONFIG_MACRO_DIR([m4])
 LT_INIT([disable-static])
 
+# Setting the libtool versioning
+###################################################################################
+#                                                                                 #
+#  To set the version of the library, libtool provides the -version-info          #
+#  parameter, which accepts three numbers, separated by colons, that are called   #
+#  respectively, current, revision and age. Both their name and their behaviour,  #
+#  nowadays, have to be considered fully arbitrary, as the explanation provided   #
+#  in the official documentation is confusing to say the least, and can be, in    #
+#  some cases, considered completely wrong.                                       #
+#  https://autotools.io/libtool/version.html                                      #
+#                                                                                 #
+###################################################################################
+#
+# How to work with the libtool versioning?
+#
+# Follow the followings steps from top to bottom. This means allways start at point 1
+# if you plan to make a release and change the values.
+# Every new library starts with a version 'current'  (short 'c') = 0
+#                                         'revision' (short 'r') = 0
+#                                         'age'      (short 'a') = 0
+#
+# Update the libtool versioning only immediately before a public release of libcoap.
+#
+# 1. If the library source code has changed at all since the last update, then
+#    increment revision (c:r:a becomes c:r+1:a).
+#  --> Increase the 'LT_LIBCOAP_REVISION' value with *everey* new software release.
+#
+# 2. If any interfaces [exported functions or data] have been added, removed, or
+#    changed since the last update, increment current, and set revision to 0
+#    (c:r:a becomes c+1:r=0:a).
+#  --> Increase the 'LT_LIBCOAP_CURRENT' value whenever as an interface has been added,
+#      removed or changed. This implies also a API change! You mostly have to change
+#      the 'libcoap_major_version' then too!
+#  --> Set 'LT_LIBCOAP_REVISION' to 0.
+#
+# 3. If any interfaces have been added since the last public release, then increment
+#    age (c:r:a becomes c:r:a+1). Adding new interfaces will make the library allways
+#    backwards compatable.
+#  --> Increase the 'LT_LIBCOAP_AGE' value only if the changes made to the ABI are
+#      backward compatible.
+#
+# 4. If any interfaces whitin the library have been removed since the last public
+#    release, then set age to 0.
+#  --> Set 'LT_LIBCOAP_AGE' to 0.
+
+LT_LIBCOAP_CURRENT=0
+LT_LIBCOAP_REVISION=0
+LT_LIBCOAP_AGE=0
+LIBCOAP_SO_VERSION=$LT_LIBCOAP_CURRENT.$LT_LIBCOAP_REVISION.$LT_LIBCOAP_AGE
+
+# Announce the libtool version
+AC_SUBST(LT_LIBCOAP_CURRENT)
+AC_SUBST(LT_LIBCOAP_REVISION)
+AC_SUBST(LT_LIBCOAP_AGE)
+AC_SUBST(LIBCOAP_SO_VERSION)
+
+# Defining the API Version
+LIBCOAP_API_VERSION=1.0
+AC_SUBST(LIBCOAP_API_VERSION)
+
 # Check for needed additional programs
 # FIXME! Switch to configure section?
 AC_PATH_PROG(DOXYGEN, doxygen, [:])
@@ -48,12 +108,14 @@ AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo \
 # Override the various template files, currently just makefiles.
 AC_CONFIG_FILES([
 Makefile
-libcoap.pc:libcoap.pc.in
-include/Makefile])
+libcoap-$LIBCOAP_API_VERSION.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
+])
 
 AC_OUTPUT
 
 AC_MSG_RESULT([
 libcoap configuration summary:
       libcoap package version : "$PACKAGE_VERSION"
+      libcoap library version : "$LIBCOAP_SO_VERSION"
+      libcoap API version     : "$LIBCOAP_API_VERSION"
 ]);

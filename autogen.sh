@@ -24,7 +24,7 @@ AUTOGEN_FILES="INSTALL \
 		coap_config.h coap_config.h.in* compile config.guess config.h* config.log config.status config.sub configure \
 		depcomp \
 		install-sh \
-		libtool ltmain.sh \
+		libcoap-1.0.pc libtool ltmain.sh \
 		missing \
 		Makefile Makefile.in \
 		stamp-h1 src/.dirstamp libcoap*.la* src/*.*o"
