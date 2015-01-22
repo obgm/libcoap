@@ -91,6 +91,15 @@ AC_SUBST(LIBCOAP_API_VERSION)
 # FIXME! Switch to configure section?
 AC_PATH_PROG(DOXYGEN, doxygen, [:])
 
+# Check for ctags
+AC_ARG_VAR([CTAGS_PROG],[the 'ctag' program to use for make target 'update-map-file'])
+AC_PATH_PROG([CTAGS_PROG],[ctags],[])
+if test "x$CTAGS_PROG" = "x"; then
+	AC_MSG_NOTICE([==> Note: 'ctags' command not found!])
+	AC_MSG_WARN([==> Without ctags you will be unable to run the target 'update-map-file'!])
+	AC_MSG_WARN([==> This is no problem if you just want to build the library libcoap.])
+fi
+
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
                   stdlib.h string.h strings.h sys/socket.h sys/time.h \

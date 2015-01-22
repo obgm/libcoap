@@ -87,6 +87,13 @@ libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS = -version-info $(LT_LIBCOAP_CURRENT):$
 
 ## Helper target to generate the symbol table needed by libtool
 update-map-file:
+	@if [ "$(CTAGS_PROG)" = "" ]; then \
+		echo ;\
+		echo "There was no ctags program found by the configure script!" ;\
+		echo "ctags is needed for running this target! Please note the warning about the missed ctags program of the configure script." ;\
+		echo ;\
+		exit 1;\
+	fi
 	( echo "VER_$(LIBCOAP_API_VERSION) {" ; \
 	echo "global:" ; \
 	ctags -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print "  " $$1 ";" }' | sort ; \
