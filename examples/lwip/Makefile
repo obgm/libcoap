@@ -33,7 +33,9 @@ vpath %.c $(top_srcdir)/src
 
 COAPOBJS = net.o debug.o option.o resource.o hashkey.o pdu.o encode.o subscribe.o coap_io_lwip.o block.o uri.o
 
-CFLAGS += -g3 -Wall -pedantic -Dopenbsd -DIPv4 -O0 -fpack-struct
+CFLAGS += -g3 -Wall -Wextra -pedantic -O0 -fpack-struct
+# not sorted out yet
+CFLAGS += -Wno-unused-parameter
 
 CFLAGS += -Ilwip/src/include/ -Ilwip/src/include/ipv4/ -Ilwip-contrib/ports/unix/include/ -Ilwip-contrib/ports/unix/proj/minimal/
 

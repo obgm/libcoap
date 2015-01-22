@@ -50,7 +50,7 @@ struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet)
  *
  * It handles everything coap_read does on other implementations.
  */
-static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, ip_addr_t *addr, u16_t port)
+static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_addr_t *addr, u16_t port)
 {
 	coap_endpoint_t *ep = (coap_endpoint_t*)arg;
 	coap_packet_t *packet = coap_malloc_type(COAP_PACKET, sizeof(coap_packet_t));
