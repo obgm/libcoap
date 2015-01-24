@@ -1500,7 +1500,7 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
 	
 	goto cleanup;
       }
-      break;
+    default: break;
     }
    
     /* Pass message to upper layer if a specific handler was
