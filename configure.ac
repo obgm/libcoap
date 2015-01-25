@@ -114,7 +114,33 @@ AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo \
                 strnlen])
 
-# Override the various template files, currently just makefiles.
+AC_MSG_CHECKING([operating system])
+
+case $host in
+	*-linux* | *-uclinux*)
+	AC_MSG_RESULT([Linux])
+	backend="linux"
+	;;
+
+	*)
+	AC_MSG_WARN([==> Currently unsupported operating system!])
+	AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
+esac
+
+case $backend in
+	linux)
+	AC_DEFINE(OS_LINUX, 1, [Linux backend])
+	AC_SUBST(OS_LINUX)
+	;;
+esac
+
+# Override the various template files, currently just makefiles and the
+# pkgconfig *.pc file.
+# Later if the API version is changing dont forget to change the
+# libcoap-$LIBCOAP_API_VERSION.pc.in file too!! You will have to change
+# the 'Cflags' variable to something like
+#     Cflags: -I${includedir}/coap-@LIBCOAP_API_VERSION@
+#
 AC_CONFIG_FILES([
 Makefile
 libcoap-$LIBCOAP_API_VERSION.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
@@ -127,4 +153,5 @@ libcoap configuration summary:
       libcoap package version : "$PACKAGE_VERSION"
       libcoap library version : "$LIBCOAP_SO_VERSION"
       libcoap API version     : "$LIBCOAP_API_VERSION"
+      host system             : "$host"
 ]);
