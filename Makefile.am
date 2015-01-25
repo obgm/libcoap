@@ -17,6 +17,8 @@ DEFAULT_CFLAGS = -D_GNU_SOURCE -DWITH_POSIX -Wall -Wextra -Wunused -Wunused-resu
 
 AM_CFLAGS = -I @top_builddir@/include/coap/ $(DEFAULT_CFLAGS) -std=c99
 
+SUBDIRS = . $(DOC_DIR)
+
 ## Define a libtool archive target "libcoap-@LIBCOAP_API_VERSION@.la", with
 ## @LIBCOAP_API_VERSION@ substituted into the generated Makefile at configure
 ## time.

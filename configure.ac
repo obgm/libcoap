@@ -87,9 +87,45 @@ AC_SUBST(LIBCOAP_SO_VERSION)
 LIBCOAP_API_VERSION=1.0
 AC_SUBST(LIBCOAP_API_VERSION)
 
-# Check for needed additional programs
-# FIXME! Switch to configure section?
-AC_PATH_PROG(DOXYGEN, doxygen, [:])
+# configure options
+# __documentation__
+AC_ARG_ENABLE([documentation],
+              [AC_HELP_STRING([--enable-documentation],
+              [Enable building the documentation (default=yes)])],
+              [build_documentation="$enableval"],
+              [build_documentation="yes"])
+
+if test "x$build_documentation" = "xyes"; then
+	# Check for doxygen
+	AC_PATH_PROGS([DOXYGEN], [doxygen])
+	if test -z "$DOXYGEN"; then
+		if test "x$build_documentation" = "xyes"; then
+			AC_MSG_WARN([==> Doxygen not found - continuing without Doxygen support])
+			AC_MSG_WARN([==> The libcoap html documentation will not be build!])
+			doxygen_version="not found"
+		fi
+	else
+		AC_MSG_CHECKING([for compatible doxygen version])
+						doxygen_version=`$DOXYGEN --version`
+						AS_VERSION_COMPARE([$doxygen_version], [1.7.0],
+						[AC_MSG_RESULT([no])
+						 DOXYGEN=""],
+						[AC_MSG_RESULT([yes])],
+						[AC_MSG_RESULT([yes])])
+		if test "x$DOXYGEN" = "x" -a "x$build_documentation" = "xyes"; then
+			AC_MSG_ERROR([==> Doxygen $doxygen_version too old. Doxygen 1.7+ required for documentation build.])
+			AC_MSG_ERROR([==> Install required doxygen version or disable the documentation using --disable-documentation])
+		else
+			# we found doxygen and the version is valid
+			DOC_DIR=doc
+			AC_SUBST(DOC_DIR)
+		fi
+	fi
+fi
+
+AM_CONDITIONAL([HAVE_DOXYGEN],
+	[test -n "$DOXYGEN"])AM_COND_IF([HAVE_DOXYGEN],
+	[AC_CONFIG_FILES([doc/Doxyfile])])
 
 # Check for ctags
 AC_ARG_VAR([CTAGS_PROG],[the 'ctag' program to use for make target 'update-map-file'])
@@ -143,6 +179,7 @@ esac
 #
 AC_CONFIG_FILES([
 Makefile
+doc/Makefile
 libcoap-$LIBCOAP_API_VERSION.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
 ])
 
@@ -153,5 +190,11 @@ libcoap configuration summary:
       libcoap package version : "$PACKAGE_VERSION"
       libcoap library version : "$LIBCOAP_SO_VERSION"
       libcoap API version     : "$LIBCOAP_API_VERSION"
-      host system             : "$host"
-]);
+      host system             : "$host"]);
+if test "x$build_documentation" = "xyes" -a "x$DOXYGEN" != "x"; then
+	AC_MSG_RESULT([      build documentation     : "yes" ($DOXYGEN $doxygen_version)])
+else
+	if test "x$build_documentation" = "xno"; then
+		AC_MSG_RESULT([      build documentation     : "no"])
+	fi
+fi

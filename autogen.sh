@@ -23,13 +23,18 @@ AUTOGEN_FILES="INSTALL \
 		aclocal.m4 ar-lib \
 		coap_config.h coap_config.h.in* compile config.guess config.h* config.log config.status config.sub configure \
 		depcomp \
+		doc/Doxyfile doc/doxyfile.stamp doc/doxygen_sqlite3.db doc/Makefile doc/Makefile.in \
 		install-sh \
 		libcoap-1.0.pc libtool ltmain.sh \
 		missing \
 		Makefile Makefile.in \
 		stamp-h1 src/.dirstamp libcoap*.la* src/*.*o"
 
-AUTOGEN_DIRS=".deps .libs autom4te.cache/ m4/ src/.libs/ src/.deps/"
+AUTOGEN_DIRS=".deps \
+		.libs autom4te.cache/ \
+		doc/html/ \
+		m4/ \
+		src/.libs/ src/.deps/"
 
 # checking for cleaner argument
 echo
