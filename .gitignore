@@ -30,3 +30,9 @@ libcoap*.pc
 src/*.o
 src/*.lo
 
+# the doc/ folder
+doc/Doxyfile
+doc/Makefile.in
+doc/doxyfile.stamp
+doc/doxygen_sqlite3.db
+doc/html/
