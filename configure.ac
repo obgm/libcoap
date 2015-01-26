@@ -119,6 +119,29 @@ if test "x$build_documentation" = "xyes"; then
 			# we found doxygen and the version is valid
 			DOC_DIR=doc
 			AC_SUBST(DOC_DIR)
+			# now checking dot (needed for graphics)
+			AC_PATH_PROG([DOT], [dot])
+			if test "x$DOT" = "x"; then
+				AC_MSG_WARN([==> dot not found - continuing without DOT support])
+				AC_MSG_WARN([==> The libcoap html documentation will be build without DOT graphics!])
+				HAVE_DOT="NO"
+			else
+				AC_MSG_CHECKING([for compatible dot version])
+				dot_version=`$DOT -V 2>&1|$GREP -oP '(?<=version\W)@<:@0-9.@:>@*(?=\W(.*))'`
+				AS_VERSION_COMPARE([$dot_version], [2.26.0],
+								   [AC_MSG_RESULT([no])
+								    DOT=""],
+								   [AC_MSG_RESULT([yes])],
+								   [AC_MSG_RESULT([yes])])
+				if test "x$DOT" = "x" -a "x$build_documentation" = "xyes"; then
+						AC_MSG_WARN([==> Graphviz dot $dot_version too old. Graphviz 2.26+ required for documentation build.])
+						AC_MSG_ERROR([==> Install required graphviz version or disable the documentation using --disable-documentation])
+				fi
+				# we found dot and the version is valid
+				HAVE_DOT="YES"
+				# exporting the test to doc/Doxygen(.in)
+				AC_SUBST(HAVE_DOT)
+			fi
 		fi
 	fi
 fi
@@ -192,7 +215,13 @@ libcoap configuration summary:
       libcoap API version     : "$LIBCOAP_API_VERSION"
       host system             : "$host"]);
 if test "x$build_documentation" = "xyes" -a "x$DOXYGEN" != "x"; then
-	AC_MSG_RESULT([      build documentation     : "yes" ($DOXYGEN $doxygen_version)])
+	AC_MSG_RESULT([      build documentation     : "yes"])
+	AC_MSG_RESULT([          --> Doxygen around  : "yes" ($DOXYGEN $doxygen_version)])
+	if test "x$DOT" = "x"; then
+		AC_MSG_RESULT([             -->  dot around  : "no" (DOT not found!)])
+	else
+		AC_MSG_RESULT([             -->  dot around  : "yes" ($DOT $dot_version)])
+	fi
 else
 	if test "x$build_documentation" = "xno"; then
 		AC_MSG_RESULT([      build documentation     : "no"])
