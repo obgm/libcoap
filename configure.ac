@@ -153,6 +153,41 @@ AM_CONDITIONAL([HAVE_DOXYGEN],
 	[test -n "$DOXYGEN"])AM_COND_IF([HAVE_DOXYGEN],
 	[AC_CONFIG_FILES([doc/Doxyfile])])
 
+# configure options
+# __tests__
+AC_ARG_ENABLE([tests],
+              [AC_HELP_STRING([--enable-tests],
+              [Enable building the tests (default=no)])],
+              [build_tests="$enableval"],
+              [build_tests="no"])
+
+if test "x$build_tests" = "xyes"; then
+	# CUnit ships not version within the pkgconfig file cunit.pc so we have to do some more work here
+	# Check for CUnit header files
+	AC_CHECK_HEADERS([CUnit/CUnit.h],
+					 [],
+					 [AC_MSG_WARN([==> You want to build the testing binary but the needed header files for CUnit could not be found!])
+					  AC_MSG_ERROR([==> Install the package that contains the headers or disable the testing binary using --disable-tests.])
+					 ])
+	# Check now for libcunit
+	save_LIBS="$LIBS"
+	LIBS=""
+	CUNIT_LIBS=""
+	have_cunit=no
+	AC_SEARCH_LIBS([CU_add_suite],
+				   [cunit],
+				   [CUNIT_LIBS="$LIBS"
+				    AC_DEFINE(HAVE_LIBCUNIT, [1], [Define if the system has libcunit])
+				   ],
+				   [AC_MSG_WARN([==> You want to build the testing binary but the needed library 'libcunit' for linking could not be found!])
+				    AC_MSG_ERROR([==> Install the package that contains the library or disable the testing binary using --disable-tests.])
+				   ])
+	LIBS="$save_LIBS"
+	AC_SUBST(CUNIT_LIBS)
+	HAVE_CUNIT="YES"
+fi
+AM_CONDITIONAL(HAVE_CUNIT, [test "x$CUNIT_LIBS" != "x"])
+
 # Check for ctags
 AC_ARG_VAR([CTAGS_PROG],[the 'ctag' program to use for make target 'update-map-file'])
 AC_PATH_PROG([CTAGS_PROG],[ctags],[])
@@ -229,4 +264,9 @@ else
 	if test "x$build_documentation" = "xno"; then
 		AC_MSG_RESULT([      build documentation     : "no"])
 	fi
+fi
+if test "x$build_tests" = "xyes"; then
+	AC_MSG_RESULT([      build unit test binary  : "yes"])
+else
+	AC_MSG_RESULT([      build unit test binary  : "no"])
 fi
