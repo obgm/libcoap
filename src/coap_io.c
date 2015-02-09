@@ -199,7 +199,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
 
 #ifndef CUSTOM_COAP_NETWORK_SEND
 
-#ifdef WITH_POSIX
+#if defined(WITH_POSIX) != defined(HAVE_NETINET_IN_H)
 /* define struct in6_pktinfo and struct in_pktinfo if not available
    FIXME: check with configure 
 */
