@@ -25,7 +25,10 @@ AC_CONFIG_HEADERS([coap_config.h])
 AC_PROG_CC
 AM_PROG_AR
 AC_CONFIG_MACRO_DIR([m4])
-LT_INIT([disable-static])
+
+# enable the automatically build of shared and static libraries, the unit
+# tests needs the static library
+LT_INIT([shared static])
 
 # Setting the libtool versioning
 ###################################################################################
