@@ -36,3 +36,8 @@ doc/Makefile.in
 doc/doxyfile.stamp
 doc/doxygen_sqlite3.db
 doc/html/
+
+# the tests/ folder
+tests/.deps
+tests/testdriver
+tests/*.o

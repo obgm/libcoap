@@ -241,6 +241,7 @@ esac
 AC_CONFIG_FILES([
 Makefile
 doc/Makefile
+tests/Makefile
 libcoap-$LIBCOAP_API_VERSION.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
 ])
 

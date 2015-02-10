@@ -28,13 +28,15 @@ AUTOGEN_FILES="INSTALL \
 		libcoap-1.0.pc libtool ltmain.sh \
 		missing \
 		Makefile Makefile.in \
-		stamp-h1 src/.dirstamp libcoap*.la* src/*.*o"
+		stamp-h1 src/.dirstamp libcoap*.la* src/*.*o \
+		tests/*.o tests/Makefile tests/testdriver"
 
 AUTOGEN_DIRS=".deps \
 		.libs autom4te.cache/ \
 		doc/html/ \
 		m4/ \
-		src/.libs/ src/.deps/"
+		src/.libs/ src/.deps/ \
+		tests/.deps/"
 
 # checking for cleaner argument
 echo
