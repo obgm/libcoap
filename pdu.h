@@ -207,13 +207,13 @@ typedef struct {
 typedef struct {
   size_t max_size;	/**< allocated storage for options and data */
 
-  coap_hdr_t *hdr;
+  coap_hdr_t *hdr;              /**< Address of the first byte of the CoAP message. This may or may not equal (coap_hdr_t*)(pdu+1) depending on the memory management implementation. */
   unsigned short max_delta;	/**< highest option number */
   unsigned short length;	/**< PDU length (including header, options, data)  */
   unsigned char *data;		/**< payload */
 
 #ifdef WITH_LWIP
-  struct pbuf *pbuf; /**< lwIP PBUF. The allocated coap_pdu_t will always reside inside the pbuf's payload, but the pointer has to be kept because no exact offset can be given. This field must not be accessed from outside, because the pbuf's reference count is checked to be 1 when the pbuf is assigned to the pdu, and the pbuf stays exclusive to this pdu. */
+  struct pbuf *pbuf; /**< lwIP PBUF. The package data will always reside inside the pbuf's payload, but this pointer has to be kept because no exact offset can be given. This field must not be accessed from outside, because the pbuf's reference count is checked to be 1 when the pbuf is assigned to the pdu, and the pbuf stays exclusive to this pdu. */
 #endif
 
 } coap_pdu_t;
@@ -226,13 +226,11 @@ typedef struct {
  * Creates a CoAP PDU from an lwIP @p pbuf, whose reference is passed on to
  * this function.
  *
- * The pbuf is checked for being contiguous, for having enough head space for
- * the PDU struct (which is located directly in front of the data, overwriting
- * the old other headers), and for having only one reference. The reference is
- * stored in the PDU and will be freed when the PDU is freed.
+ * The pbuf is checked for being contiguous, and for having only one reference.
+ * The reference is stored in the PDU and will be freed when the PDU is freed.
  *
- * (For now, these are errors; in future, a new pbuf might be allocated, the
- * data copied and the passed pbuf freed).
+ * (For now, these are fatal errors; in future, a new pbuf might be allocated,
+ * the data copied and the passed pbuf freed).
  *
  * This behaves like coap_pdu_init(0, 0, 0, pbuf->tot_len), and afterwards
  * copying the contents of the pbuf to the pdu.

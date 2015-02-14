@@ -26,6 +26,10 @@
 
 #include "address.h"
 
+#ifdef WITH_LWIP
+# include <lwip/udp.h>
+#endif
+
 /**
  * Abstract handle that is used to identify a local network interface.
  */
@@ -34,17 +38,8 @@ typedef int coap_if_handle_t;
 /** Invalid interface handle */
 #define COAP_IF_INVALID -1
 
-typedef struct coap_packet_t {
-  coap_if_handle_t hnd;	      /**< the interface handle */
-  coap_address_t src;	      /**< the packet's source address */
-  coap_address_t dst;	      /**< the packet's destination address */
-  
-  int ifindex;
-  void *session;		/**< opaque session data */
-
-  size_t length;		/**< length of payload */
-  unsigned char payload[];	/**< payload */
-} coap_packet_t;
+struct coap_packet_t;
+typedef struct coap_packet_t coap_packet_t;
 
 struct coap_context_t;
 
@@ -54,10 +49,16 @@ struct coap_context_t;
  * this endpoint.
  */
 typedef struct coap_endpoint_t {
+#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
   union {
     int fd;	       /**< on POSIX systems */
     void *conn;	       /**< opaque connection (e.g. uip_conn in Contiki) */
   } handle;	       /**< opaque handle to identify this endpoint */
+#endif /* WITH_POSIX or WITH_CONTIKI */
+#ifdef WITH_LWIP
+  struct udp_pcb *pcb;
+  struct coap_context_t *context; /**< @FIXME this was added in a hurry, not sure it confirms to the overall model --chrysn */
+#endif /* WITH_LWIP */
   coap_address_t addr; /**< local interface address */
   int ifindex;
   int flags;
@@ -107,5 +108,40 @@ ssize_t coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet);
 
 /** Releases the storage allocated for @p packet */
 void coap_free_packet(coap_packet_t *packet);
+
+/** Populate the coap_endpoint_t *target from the incoming packet's destination
+ * data.
+ *
+ * This is usually used to copy a packet's data into a node's local_if member. */
+void coap_packet_populate_endpoint(coap_packet_t *packet, coap_endpoint_t *target);
+
+/** Given an incoming packet, copy its source address into an address struct */
+void coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target);
+
+/** Given a packet, set msg and msg_len to an address and length of the
+ * packet's data in memory.
+ *
+ * */
+void coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length);
+
+#ifdef WITH_LWIP
+/** Get the pbuf of a packet. The caller takes over responsibility for freeing the pbuf. */
+struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet);
+#endif
+
+#ifdef WITH_LWIP
+/* this is only included in coap_io.h instead of .c in order to be available for sizeof in lwippools.h. */
+
+/** Simple carry-over of the incoming pbuf that is later turned into a node.
+ *
+ * Source address data is currently side-banded via ip_current_dest_addr & co
+ * as the packets have limited lifetime anyway.
+ */
+struct coap_packet_t {
+	struct pbuf *pbuf;
+	const coap_endpoint_t *local_interface;
+	uint16_t srcport;
+};
+#endif
 
 #endif /* _COAP_IO_H_ */

@@ -52,12 +52,12 @@ time_t clock_offset;
 
 static inline coap_queue_t *
 coap_malloc_node(void) {
-  return (coap_queue_t *)coap_malloc(sizeof(coap_queue_t));
+  return (coap_queue_t *)coap_malloc_type(COAP_NODE, sizeof(coap_queue_t));
 }
 
 static inline void
 coap_free_node(coap_queue_t *node) {
-  coap_free(node);
+  coap_free_type(COAP_NODE, node);
 }
 #endif /* WITH_POSIX */
 #ifdef WITH_LWIP
@@ -112,29 +112,6 @@ coap_free_node(coap_queue_t *node) {
   coap_free_type(COAP_NODE, node);
 }
 #endif /* WITH_CONTIKI */
-#ifdef WITH_LWIP
-
-/** Callback to udp_recv when using lwIP. Gets called by lwIP on arriving
- * packages, places a reference in context->pending_package, and calls
- * coap_read to process the package. Thus, coap_read needs not be called in
- * lwIP main loops. (When modifying this for thread-like operation, ie. if you
- * remove the coap_read call from this, make sure that coap_read gets a chance
- * to run before this callback is entered the next time.)
- */
-static void received_package(void *arg, struct udp_pcb *upcb, struct pbuf *p, ip_addr_t *addr, u16_t port)
-{
-  struct coap_context_t *context = (coap_context_t *)arg;
-
-  LWIP_ASSERT("pending_package was not cleared.", context->pending_package == NULL);
-
-  context->pending_package = p; /* we don't free it, coap_read has to do that */
-  context->pending_address.addr = addr->addr; /* FIXME: this has to become address-type independent, probably there'll be an lwip function for that */
-  context->pending_port = port;
-
-  coap_read(context);
-}
-
-#endif /* WITH_LWIP */
 
 int print_wellknown(coap_context_t *, unsigned char *, size_t *, size_t, coap_opt_t *);
 
@@ -297,12 +274,9 @@ is_wkc(coap_key_t k) {
 coap_context_t *
 coap_new_context(
   const coap_address_t *listen_addr) {
-#ifdef WITH_POSIX
-  coap_context_t *c = coap_malloc( sizeof( coap_context_t ) );
-#endif /* WITH_POSIX */
-#ifdef WITH_LWIP
-  coap_context_t *c = memp_malloc(MEMP_COAP_CONTEXT);
-#endif /* WITH_LWIP */
+#ifndef WITH_CONTIKI
+  coap_context_t *c = coap_malloc_type(COAP_CONTEXT, sizeof( coap_context_t ) );
+#endif /* not WITH_CONTIKI */
 #ifdef WITH_CONTIKI
   coap_context_t *c;
 
@@ -362,9 +336,13 @@ coap_new_context(
   coap_register_option(c, COAP_OPTION_BLOCK1);
 
   c->endpoint = coap_new_endpoint(listen_addr, COAP_ENDPOINT_NOSEC);
+#ifdef WITH_LWIP
+  c->endpoint->context = c;
+#endif
   if (c->endpoint == NULL) {
     goto onerror;
   }
+
 #ifdef WITH_POSIX
   c->sockfd = c->endpoint->handle;
 #endif /* WITH_POSIX */
@@ -372,6 +350,7 @@ coap_new_context(
 #if defined(WITH_POSIX) || defined(WITH_CONTIKI)
   c->network_send = coap_network_send;
   c->network_read = coap_network_read;
+#endif /* WITH_POSIX or WITH_CONTIKI */
 
 #ifdef WITH_CONTIKI
   process_start(&coap_retransmit_process, (char *)c);
@@ -390,20 +369,6 @@ coap_new_context(
  onerror:
   coap_free(c);
   return NULL;
-
-#endif /* WITH_POSIX || WITH_CONTIKI */
-#ifdef WITH_LWIP
-  c->pcb = udp_new();
-  /* hard assert: this is not expected to fail dynamically */
-  LWIP_ASSERT("Failed to allocate PCB for CoAP", c->pcb != NULL);
-
-  udp_recv(c->pcb, received_package, (void*)c);
-  udp_bind(c->pcb, &listen_addr->addr, listen_addr->port);
-
-  c->timer_configured = 0;
-
-  return c;
-#endif
 }
 
 void
@@ -435,13 +400,9 @@ coap_free_context(coap_context_t *context) {
 #endif /* WITH_POSIX || WITH_LWIP */
 
   coap_free_endpoint(context->endpoint);
-#ifdef WITH_POSIX
-  coap_free(context);
-#endif
-#ifdef WITH_LWIP
-  udp_remove(context->pcb);
-  memp_free(MEMP_COAP_CONTEXT, context);
-#endif
+#ifndef WITH_CONTIKI
+  coap_free_type(COAP_CONTEXT, context);
+#endif/* not WITH_CONTIKI */
 #ifdef WITH_CONTIKI
   memset(&the_coap_context, 0, sizeof(coap_context_t));
   initialized = 0;
@@ -572,7 +533,6 @@ coap_send_impl(coap_context_t *context,
 	       const coap_address_t *dst,
 	       coap_pdu_t *pdu) {
   coap_tid_t id = COAP_INVALID_TID;
-  struct pbuf *p;
   uint8_t err;
   char *data_backup;
 
@@ -587,37 +547,12 @@ coap_send_impl(coap_context_t *context,
    * should actually check that the pdu is not held by anyone but us. the
    * respective pbuf is already exclusively owned by the pdu. */
 
-  p = pdu->pbuf;
-  LWIP_ASSERT("The PDU header is not where it is expected", pdu->hdr == p->payload + sizeof(coap_pdu_t));
-
-  err = pbuf_header(p, -sizeof(coap_pdu_t));
-  if (err)
-  {
-    debug("coap_send_impl: pbuf_header failed\n");
-    pbuf_free(p);
-    return id;
-  }
+  pbuf_realloc(pdu->pbuf, pdu->length);
 
   coap_transaction_id(dst, pdu, &id);
 
-  pbuf_realloc(p, pdu->length);
-
-  udp_sendto(context->pcb, p,
+  udp_sendto(context->endpoint->pcb, pdu->pbuf,
 			&dst->addr, dst->port);
-
-  pbuf_header(p, -(ptrdiff_t)((uint8_t*)pdu - (uint8_t*)p->payload) - sizeof(coap_pdu_t)); /* FIXME hack around udp_sendto not restoring; see http://lists.gnu.org/archive/html/lwip-users/2013-06/msg00008.html. for udp over ip over ethernet, this was -42; as we're doing ppp too, this has to be calculated generically */
-
-  err = pbuf_header(p, sizeof(coap_pdu_t));
-  LWIP_ASSERT("Cannot undo pbuf_header", err == 0);
-
-  /* restore destroyed pdu data */
-  LWIP_ASSERT("PDU not restored", p->payload == pdu);
-  pdu->max_size = p->tot_len - sizeof(coap_pdu_t); /* reduced after pbuf_realloc */
-  pdu->hdr = p->payload + sizeof(coap_pdu_t);
-  pdu->max_delta = 0; /* won't be used any more */
-  pdu->length = pdu->max_size;
-  pdu->data = data_backup;
-  pdu->pbuf = p;
 
   return id;
 }
@@ -811,7 +746,7 @@ void coap_dispatch(coap_context_t *context, coap_queue_t *rcvd);
 
 int
 coap_read( coap_context_t *ctx ) {
-#if defined(WITH_LWIP)
+#ifdef WITH_CONTIKI
   char *buf;
 #endif
   ssize_t bytes_read = -1;
@@ -819,11 +754,9 @@ coap_read( coap_context_t *ctx ) {
   coap_address_t src;
   int result = -1;		/* the value to be returned */
 
-#ifdef WITH_LWIP
-  LWIP_ASSERT("No package pending", ctx->pending_package != NULL);
-  LWIP_ASSERT("Can only deal with contiguous PBUFs to read the initial details", ctx->pending_package->tot_len == ctx->pending_package->len);
-  buf = ctx->pending_package->payload;
-#endif /* WITH_LWIP */
+#ifdef WITH_CONTIKI
+  buf = uip_appdata;
+#endif /* WITH_CONTIKI */
 
   coap_address_init(&src);
 
@@ -833,29 +766,23 @@ coap_read( coap_context_t *ctx ) {
 #ifdef WITH_CONTIKI
   bytes_read = ctx->network_read(ctx->endpoint, &packet);
 #endif /* WITH_CONTIKI */
-#ifdef WITH_LWIP
-  /* FIXME: use lwip address operation functions */
-  src.addr.addr = ctx->pending_address.addr;
-  src.port = ctx->pending_port;
-  bytes_read = ctx->pending_package->tot_len;
-#endif /* WITH_LWIP */
 
   if ( bytes_read < 0 ) {
     warn("coap_read: recvfrom");
   } else {
 #ifdef WITH_POSIX
     /* FIXME: make sure that dst == ctx->endpoint->addr */
+    /* disabled for violating the packet abstraction
     if (coap_address_isany(&ctx->endpoint->addr) ||
 	coap_address_equals(&packet->dst, &ctx->endpoint->addr)) {
-      result = coap_handle_message(ctx, ctx->endpoint, packet);
+    */
+      result = coap_handle_message(ctx, packet);
+    /*
     } else {
       coap_log(LOG_DEBUG, "packet received on wrong interface, dropped\n");
     }
+    */
 #endif /* WITH_POSIX */
-#ifdef WITH_LWIP
-    result = coap_handle_message(ctx, &src, 
-      (unsigned char *)ctx->pending_package bytes_read);
-#endif /* WITH_LWIP */
 #ifdef WITH_CONTIKI
     result = coap_handle_message(ctx, ctx->endpoint, packet);
 #endif /* WITH_CONTIKI */
@@ -868,18 +795,18 @@ coap_read( coap_context_t *ctx ) {
 
 int
 coap_handle_message(coap_context_t *ctx,
-		    const coap_endpoint_t *local_interface,
 		    coap_packet_t *packet) {
 		    /* const coap_address_t *remote,  */
 		    /* unsigned char *msg, size_t msg_len) { */
-  const coap_address_t *remote = &packet->src;
-  unsigned char *msg = packet->payload;
-  size_t msg_len = packet->length;
+  unsigned char *msg;
+  size_t msg_len;
   coap_queue_t *node;
 
   /* the negated result code */
   enum result_t { RESULT_OK, RESULT_ERR_EARLY, RESULT_ERR };
   int result = RESULT_ERR_EARLY;
+
+  coap_packet_get_memmapped(packet, &msg, &msg_len);
 
   if (msg_len < sizeof(coap_hdr_t)) {
     debug("coap_handle_message: discarded invalid frame\n" );
@@ -901,8 +828,7 @@ coap_handle_message(coap_context_t *ctx,
   result = RESULT_ERR;
   
 #ifdef WITH_LWIP
-  node->pdu = coap_pdu_from_pbuf(ctx->pending_package);
-  ctx->pending_package = NULL;
+  node->pdu = coap_pdu_from_pbuf(coap_packet_extract_pbuf(packet));
 #else
   node->pdu = coap_pdu_init(0, 0, 0, msg_len);
 #endif
@@ -910,19 +836,15 @@ coap_handle_message(coap_context_t *ctx,
     goto error;
   }
 
-  coap_ticks(&node->t);
-
-  node->local_if.handle = local_interface->handle;
-  memcpy(&node->local_if.addr, &packet->dst, sizeof(node->local_if.addr));
-  node->local_if.ifindex = packet->ifindex;
-  node->local_if.flags = 0; /* FIXME */
-
-  memcpy(&node->remote, remote, sizeof(coap_address_t));
-
   if (!coap_pdu_parse(msg, msg_len, node->pdu)) {
     warn("discard malformed PDU\n");
     goto error;
   }
+
+  coap_ticks(&node->t);
+
+  coap_packet_populate_endpoint(packet, &node->local_if);
+  coap_packet_copy_source(packet, &node->remote);
 
   /* and add new node to receive queue */
   coap_transaction_id(&node->remote, node->pdu, &node->id);
@@ -932,13 +854,14 @@ coap_handle_message(coap_context_t *ctx,
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 40
 #endif
+    /** @FIXME get debug to work again **
     unsigned char addr[INET6_ADDRSTRLEN+8], localaddr[INET6_ADDRSTRLEN+8];
-
     if (coap_print_addr(remote, addr, INET6_ADDRSTRLEN+8) &&
 	coap_print_addr(&packet->dst, localaddr, INET6_ADDRSTRLEN+8) )
       debug("** received %d bytes from %s on interface %s:\n",
 	    (int)msg_len, addr, localaddr);
     
+	    */
     coap_show_pdu(node->pdu);
   }
 #endif
@@ -952,11 +875,6 @@ coap_handle_message(coap_context_t *ctx,
   return -result;
 
  error_early:
-#ifdef WITH_LWIP
-  /* even if there was an error, clean up */
-  pbuf_free(ctx->pending_package);
-  ctx->pending_package = NULL;
-#endif
   return -result;
 }
 
@@ -1301,11 +1219,13 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
 static int
 coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
 #ifndef WITHOUT_OBSERVE
+#ifdef WITH_CONTIKI
+  coap_iterator_t resource_iter;
+#else
   coap_resource_t *r;
 #ifndef COAP_RESOURCES_NOHASH
   coap_resource_t *tmp;
-#else
-  coap_iterator_t resource_iter;
+#endif
 #endif
   str token = { 0, NULL };
   int num_cancelled = 0;    /* the number of observers cancelled */
@@ -1316,7 +1236,7 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
 
   COAP_SET_STR(&token, sent->pdu->hdr->token_length, sent->pdu->hdr->token);
 
-#ifdef COAP_RESOURCES_NOHASH
+#ifdef WITH_CONTIKI
   /* traverse resources and delete matching observers for each resource */
   if (coap_resource_iterator_init(context->resources, &resource_iter) != NULL) {
 
@@ -1326,12 +1246,16 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
     }
 
   }
+#else
+#ifdef COAP_RESOURCES_NOHASH
+  LL_FOREACH(context->resources, r) {
 #else /* COAP_RESOURCES_NOHASH */
   HASH_ITER(hh, context->resources, r, tmp) {
+#endif
     num_cancelled += coap_delete_observer(r, &sent->remote, &token);
     coap_cancel_all_messages(context, &sent->remote, token.s, token.length);
   }
-#endif  /* COAP_RESOURCES_NOHASH */
+#endif /* not WITH_CONTIKI */
 
   return num_cancelled;
 #else /* WITOUT_OBSERVE */  
