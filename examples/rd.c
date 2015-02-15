@@ -31,7 +31,7 @@
 #include <errno.h>
 #include <signal.h>
 
-#include "config.h"
+#include "coap_config.h"
 #include "utlist.h"
 #include "resource.h"
 #include "coap.h"

@@ -6,7 +6,7 @@
  * README for terms of use. 
  */
 
-#include "config.h"
+#include "coap_config.h"
 
 #include <string.h>
 #include <stdlib.h>
