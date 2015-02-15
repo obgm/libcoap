@@ -1,6 +1,6 @@
 /* mem.h -- CoAP memory handling
  *
- * Copyright (C) 2010,2011,2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011,2014,2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -28,7 +28,7 @@ void coap_memory_init(void);
  * memory management on constrained devices.
  */
 typedef enum { 
-  COAP_STRING, COAP_ATTRIBUTE_NAME, COAP_ATTRIBUTE_VALUE, COAP_PACKET, COAP_NODE, COAP_CONTEXT, COAP_ENDPOINT, COAP_PDU
+  COAP_STRING, COAP_ATTRIBUTE_NAME, COAP_ATTRIBUTE_VALUE, COAP_PACKET, COAP_NODE, COAP_CONTEXT, COAP_ENDPOINT, COAP_PDU, COAP_PDU_BUF
 } coap_memory_tag_t;
 
 #ifndef WITH_LWIP
