@@ -1,6 +1,6 @@
 /* block.c -- block transfer
  *
- * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012,2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -14,6 +14,10 @@
 
 #include "debug.h"
 #include "block.h"
+
+#if (COAP_MAX_PDU_SIZE - 6) < (1 << (COAP_MAX_BLOCK_SZX + 4))
+#error "COAP_MAX_BLOCK_SZX too large"
+#endif
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
