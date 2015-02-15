@@ -53,6 +53,7 @@
 #else
 #  error "Need IPV6_PKTINFO or IPV6_RECVPKTINFO to request ancillary data from OS."
 #endif /* IPV6_RECVPKTINFO */
+#endif /* WITH_POSIX */
 
 struct coap_packet_t {
   coap_if_handle_t hnd;	      /**< the interface handle */
