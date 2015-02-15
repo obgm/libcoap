@@ -7,7 +7,7 @@
  * README for terms of use. 
  */
 
-#include "config.h"
+#include "coap_config.h"
 #include "mem.h"
 #include "coap_io.h"
 
