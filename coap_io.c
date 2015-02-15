@@ -37,18 +37,20 @@
 #include "mem.h"
 #include "coap_io.h"
 
+#ifdef WITH_POSIX
 struct coap_packet_t {
   coap_if_handle_t hnd;	      /**< the interface handle */
   coap_address_t src;	      /**< the packet's source address */
   coap_address_t dst;	      /**< the packet's destination address */
   const coap_endpoint_t *interface;
-  
+
   int ifindex;
   void *session;		/**< opaque session data */
 
   size_t length;		/**< length of payload */
   unsigned char payload[];	/**< payload */
 };
+#endif
 
 #ifndef CUSTOM_COAP_NETWORK_ENDPOINT
 
@@ -365,6 +367,16 @@ coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t
 	*length = packet->length;
 }
 
+/**
+ * Checks if a message with destination address @param dst matches the
+ * local interface with address @param local. This function returns @c 1
+ * if @param dst is a valid match, and @c 0 otherwise.
+ */
+static inline int
+is_local_if(const coap_address_t *local, const coap_address_t *dst) {
+  return coap_address_isany(local) || coap_address_equals(dst, local);
+}
+
 ssize_t
 coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   ssize_t len = -1;
@@ -408,8 +420,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 
   if (len < 0) {
     coap_log(LOG_WARNING, "coap_network_read: %s\n", strerror(errno));
-    coap_free_packet(*packet);
-    *packet = NULL;
+    goto error;
   } else {
     struct cmsghdr *cmsg;
 
@@ -419,7 +430,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
     (*packet)->dst.size = sizeof((*packet)->dst.addr);
     if (getsockname(ep->handle.fd, &(*packet)->dst.addr.sa, &(*packet)->dst.size) < 0) {
       coap_log(LOG_DEBUG, "cannot determine local port\n");
-      return -1;
+      goto error;
     }
 
     (*packet)->length = len;
@@ -469,6 +480,11 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 	break;
       }
     }
+
+    if (!is_local_if(&ep->addr, &(*packet)->dst)) {
+      coap_log(LOG_DEBUG, "packet received on wrong interface, dropped\n");
+      goto error;
+    }
   }
 #endif /* WITH_POSIX */
 #ifdef WITH_CONTIKI
@@ -481,6 +497,11 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
     (*packet)->src.port = UIP_UDP_BUF->srcport;
     uip_ipaddr_copy(&(*packet)->dst.addr, &UIP_IP_BUF->destipaddr);
     (*packet)->dst.port = UIP_UDP_BUF->destport;
+
+    if (!is_local_if(&ep->addr, &(*packet)->dst)) {
+      coap_log(LOG_DEBUG, "packet received on wrong interface, dropped\n");
+      goto error;
+    }
 
     len = uip_datalen();
     
@@ -499,7 +520,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
       unsigned char addr_str[INET6_ADDRSTRLEN+8];
       
       if (coap_print_addr(&(*packet)->src, addr_str, INET6_ADDRSTRLEN+8)) {
-	debug("received %d bytes from %s\n", len, addr_str);
+	debug("received %zd bytes from %s\n", len, addr_str);
       }
     }
 #endif /* NDEBUG */
@@ -518,6 +539,10 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   (*packet)->interface = ep;
 
   return len;
+ error:
+  coap_free_packet(*packet);
+  *packet = NULL;
+  return -1;
 }
 
 #undef SIN6
