@@ -23,27 +23,7 @@
 #include "pdu.h"
 #include "option.h"
 #include "encode.h"
-
-#ifdef WITH_CONTIKI
-#include "memb.h"
-
-typedef union {
-  coap_pdu_t pdu;
-  unsigned char buf[sizeof(coap_pdu_t) + COAP_MAX_PDU_SIZE];
-} _pdu;
-
-MEMB(pdu_storage, _pdu, COAP_PDU_MAXCNT);
-
-void
-coap_pdu_resources_init() {
-  memb_init(&pdu_storage);
-}
-#else /* WITH_CONTIKI */
 #include "mem.h"
-#endif /* WITH_CONTIKI */
-
-#define ALIGNPTR(ptr) ((((unsigned int)(ptr) + sizeof(void *) - 1) / \
-			sizeof(void *)) * sizeof(void *))
 
 void
 coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
@@ -53,12 +33,11 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   /* the pdu itself is not wiped as opposed to the other implementations,
    * because we have to rely on the pbuf to be set there. */
   pdu->hdr = pdu->pbuf->payload;
-  memset(pdu->hdr, 0, size);
 #else
-  memset(pdu, 0, sizeof(coap_pdu_t) + size);
-  pdu->hdr = (coap_hdr_t *)ALIGNPTR((unsigned char *)pdu + sizeof(coap_pdu_t));
-  assert(((unsigned int)pdu->hdr & (sizeof(void *) - 1)) == 0);
+  pdu->max_delta = 0;
+  pdu->data = NULL;
 #endif
+  memset(pdu->hdr, 0, size);
   pdu->max_size = size;
   pdu->hdr->version = COAP_DEFAULT_VERSION;
 
@@ -106,12 +85,15 @@ coap_pdu_init(unsigned char type, unsigned char code,
     return NULL;
 
   /* size must be large enough for hdr */
-#ifdef WITH_POSIX
-  pdu = coap_malloc(sizeof(coap_pdu_t) + size);
-#endif
-#ifdef WITH_CONTIKI
-  pdu = (coap_pdu_t *)memb_alloc(&pdu_storage);
-#endif
+#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
+  pdu = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
+  if (!pdu) return NULL;
+  pdu->hdr = coap_malloc_type(COAP_PDU_BUF, size);
+  if (pdu->hdr == NULL) {
+    coap_free_type(COAP_PDU, pdu);
+    pdu = NULL;
+  }
+#endif /* WITH_POSIX or WITH_CONTIKI */
 #ifdef WITH_LWIP
   pdu = (coap_pdu_t*)coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
   if (!pdu) return NULL;
@@ -152,16 +134,18 @@ coap_new_pdu(void) {
 
 void
 coap_delete_pdu(coap_pdu_t *pdu) {
-#ifdef WITH_POSIX
-  coap_free( pdu );
+#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
+  if (pdu != NULL) {
+    if (pdu->hdr != NULL) {
+      coap_free_type(COAP_PDU_BUF, pdu->hdr);
+    }
+    coap_free_type(COAP_PDU, pdu);
+  }
 #endif
 #ifdef WITH_LWIP
   if (pdu != NULL) /* accepting double free as the other implementation accept that too */
     pbuf_free(pdu->pbuf);
   coap_free_type(COAP_PDU, pdu);
-#endif
-#ifdef WITH_CONTIKI
-  memb_free(&pdu_storage, pdu);
 #endif
 }
 
