@@ -1,1 +1,1 @@
-../../config.h.lwip
+../../coap_config.h.lwip
