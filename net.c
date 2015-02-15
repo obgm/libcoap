@@ -84,7 +84,6 @@ coap_free_node(coap_queue_t *node) {
 # endif /* DEBUG */
 
 #include "mem.h"
-#include "memb.h"
 #include "net/ip/uip-debug.h"
 
 clock_time_t clock_offset;
@@ -93,12 +92,9 @@ clock_time_t clock_offset;
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
 
 void coap_resources_init();
-void coap_pdu_resources_init();
 
 unsigned char initialized = 0;
 coap_context_t the_coap_context;
-
-MEMB(node_storage, coap_queue_t, COAP_PDU_MAXCNT);
 
 PROCESS(coap_retransmit_process, "message retransmit process");
 
@@ -310,7 +306,6 @@ coap_new_context(
 #endif /* not WITH_CONTIKI */
 #ifdef WITH_CONTIKI
   coap_resources_init();
-  coap_pdu_resources_init();
   coap_memory_init();
 
   c = &the_coap_context;
@@ -746,46 +741,23 @@ void coap_dispatch(coap_context_t *context, coap_queue_t *rcvd);
 
 int
 coap_read( coap_context_t *ctx ) {
-#ifdef WITH_CONTIKI
-  char *buf;
-#endif
   ssize_t bytes_read = -1;
   coap_packet_t *packet;
   coap_address_t src;
   int result = -1;		/* the value to be returned */
 
-#ifdef WITH_CONTIKI
-  buf = uip_appdata;
-#endif /* WITH_CONTIKI */
-
   coap_address_init(&src);
 
-#ifdef WITH_POSIX
+#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
   bytes_read = ctx->network_read(ctx->endpoint, &packet);
-#endif /* WITH_POSIX */
-#ifdef WITH_CONTIKI
-  bytes_read = ctx->network_read(ctx->endpoint, &packet);
-#endif /* WITH_CONTIKI */
+#endif /* WITH_POSIX or WITH_CONTIKI */
 
   if ( bytes_read < 0 ) {
     warn("coap_read: recvfrom");
   } else {
-#ifdef WITH_POSIX
-    /* FIXME: make sure that dst == ctx->endpoint->addr */
-    /* disabled for violating the packet abstraction
-    if (coap_address_isany(&ctx->endpoint->addr) ||
-	coap_address_equals(&packet->dst, &ctx->endpoint->addr)) {
-    */
-      result = coap_handle_message(ctx, packet);
-    /*
-    } else {
-      coap_log(LOG_DEBUG, "packet received on wrong interface, dropped\n");
-    }
-    */
-#endif /* WITH_POSIX */
-#ifdef WITH_CONTIKI
-    result = coap_handle_message(ctx, ctx->endpoint, packet);
-#endif /* WITH_CONTIKI */
+#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
+    result = coap_handle_message(ctx, packet);
+#endif /* WITH_POSIX or WITH_CONTIKI */
   }
 
   coap_free_packet(packet);
@@ -1221,6 +1193,7 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
 #ifndef WITHOUT_OBSERVE
 #ifdef WITH_CONTIKI
   coap_iterator_t resource_iter;
+  coap_resource_t *r;
 #else
   coap_resource_t *r;
 #ifndef COAP_RESOURCES_NOHASH
@@ -1402,7 +1375,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
     if (WANT_WKC(node->pdu, key)) {
       debug("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
       response = wellknown_response(context, node->pdu);
-      debug("have wellknown response %p\n", response);
+      debug("have wellknown response %p\n", (void *)response);
     } else
       response = coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(405), 
 					 opt_filter);
