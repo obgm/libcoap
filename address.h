@@ -61,14 +61,12 @@ typedef struct coap_address_t {
 #include "uip.h"
 
 typedef struct coap_address_t {
-  unsigned char size;
   uip_ipaddr_t addr;
   unsigned short port;
 } coap_address_t;
 
 #define _coap_address_equals_impl(A,B)				\
-  ((A)->size == (B)->size					\
-   && (A)->port == (B)->port					\
+  ((A)->port == (B)->port					\
    && uip_ipaddr_cmp(&((A)->addr),&((B)->addr)))
 
 /** @todo implementation of _coap_address_isany_impl() for Contiki */
@@ -156,8 +154,8 @@ static inline void
 coap_address_init(coap_address_t *addr) {
   assert(addr);
   memset(addr, 0, sizeof(coap_address_t));
-#ifndef WITH_LWIP
-  /* lwip has constandt address sizes and doesn't need the .size part */
+#ifdef WITH_POSIX
+  /* lwip and Contiki have constant address sizes and doesn't need the .size part */
   addr->size = sizeof(addr->addr);
 #endif
 }
