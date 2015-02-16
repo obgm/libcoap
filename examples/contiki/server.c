@@ -92,7 +92,6 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 	     const coap_endpoint_t *local_interface,
 	     coap_address_t *peer, coap_pdu_t *request, str *token, 
 	     coap_pdu_t *response) {
-#if 1
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
   unsigned char buf[40];
@@ -138,29 +137,6 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 
     }
   }
-#else
-  unsigned char buf[20];
-  int len;
-  coap_tick_t now;
-  coap_tick_t t;
-
-  /* if my_clock_base was deleted, we pretend to have no such resource */
-  response->hdr->code = COAP_RESPONSE_CODE(205),
-
-  coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
-		  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
-
-  coap_add_option(response, COAP_OPTION_MAXAGE,
-		  coap_encode_var_bytes(buf, 0x01), buf);
-  
-  /* calculate current time */
-  coap_ticks(&t);
-  now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
-    
-  /* output ticks */
-  len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
-  coap_add_data(response, len, buf);
-#endif
 }
 
 void
