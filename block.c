@@ -98,7 +98,7 @@ coap_write_block_opt(coap_block_t *block, unsigned short type,
 	debug("not enough space, even the smallest block does not fit");
 	return -3;
       }
-      debug("decrease block size for %d to %d\n", avail, coap_fls(avail) - 5);
+      debug("decrease block size for %zu to %d\n", avail, coap_fls(avail) - 5);
       szx = block->szx;
       block->szx = coap_fls(avail) - 5;
       block->m = 1;
