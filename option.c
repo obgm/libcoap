@@ -359,7 +359,7 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
     opt[0] |= length & 0x0f;
   } else if (length < 270) {
     if (maxlen < skip + 1) {
-      debug("insufficient space to encode option length %d", length);
+      debug("insufficient space to encode option length %zu", length);
       return 0;
     }
     
