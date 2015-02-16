@@ -87,7 +87,9 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
       return NULL;
     }
 
+    coap_address_init(&ep->addr);
     uip_ipaddr_copy(&ep->addr.addr, &addr->addr);
+    ep->addr.port = addr->port;
     udp_bind((struct uip_udp_conn *)ep->handle.conn, addr->port);
   }
   return ep;
