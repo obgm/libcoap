@@ -723,20 +723,6 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   return COAP_INVALID_TID;
 }
 
-/** 
- * Checks if @p opt fits into the message that ends with @p maxpos.
- * This function returns @c 1 on success, or @c 0 if the option @p opt
- * would exceed @p maxpos.
- */
-static inline int
-check_opt_size(coap_opt_t *opt, unsigned char *maxpos) {
-  if (opt && opt < maxpos) {
-    if (((*opt & 0x0f) < 0x0f) || (opt + 1 < maxpos))
-      return opt + COAP_OPT_SIZE(opt) < maxpos;
-  }
-  return 0;
-}
-
 void coap_dispatch(coap_context_t *context, coap_queue_t *rcvd);
 
 int
