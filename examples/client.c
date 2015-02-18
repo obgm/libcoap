@@ -531,7 +531,7 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-	   "(c) 2010-2014 Olaf Bergmann <bergmann@tzi.org>\n\n"
+	   "(c) 2010-2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
 	   "usage: %s [-A type...] [-t type] [-b [num,]size] [-B seconds] [-e text]\n"
 	   "\t\t[-g group] [-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
 	   "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] URI\n\n"

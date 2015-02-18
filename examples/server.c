@@ -1,7 +1,7 @@
 /* coap -- simple implementation of the Constrained Application Protocol (CoAP)
- *         as defined in draft-ietf-core-coap
+ *         as defined in RFC 7252
  *
- * Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
