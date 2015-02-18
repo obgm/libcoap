@@ -16,6 +16,11 @@
 	calculation and renamed transmission parameters according to
 	Section 4.8 of RFC 7252.
 
+2015-02-17  Olaf Bergmann  <bergmann@tzi.org>
+
+	* major rework to get Contiki and lwip running
+	* many fixed bugs and warnings
+
 2014-06-18  Olaf Bergmann  <bergmann@tzi.org>
 
 	* mem.c (coap_malloc_type): New functions for allocating memory.
