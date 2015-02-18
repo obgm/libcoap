@@ -460,6 +460,9 @@ do {                                                                            
      case 3:  _hj_i += ( (unsigned)_hj_key[2] << 16 );                           \
      case 2:  _hj_i += ( (unsigned)_hj_key[1] << 8 );                            \
      case 1:  _hj_i += _hj_key[0];                                               \
+     /* case 0: nothing left to add */                                           \
+     default: /* make gcc -Wswitch-default happy */                              \
+       ;                                                                         \
   }                                                                              \
   HASH_JEN_MIX(_hj_i, _hj_j, hashv);                                             \
   bkt = hashv & (num_bkts-1);                                                    \
