@@ -1,12 +1,16 @@
 /* debug.c -- debug utilities
  *
- * Copyright (C) 2010--2012,2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012,2014--2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
  */
 
 #include "coap_config.h"
+
+#if defined(HAVE_STRNLEN) && defined(__GNUC__) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE 1
+#endif
 
 #if defined(HAVE_ASSERT_H) && !defined(assert)
 # include <assert.h>
