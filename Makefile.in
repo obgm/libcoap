@@ -33,7 +33,7 @@ CFLAGS:=-Wall -Wextra -std=c99 -pedantic @CFLAGS@
 CPPFLAGS:=@CPPFLAGS@
 DISTDIR=$(top_builddir)/$(package)
 SUBDIRS:=examples doc tests
-FILES:=ChangeLog README LICENSE.BSD LICENSE.GPL Makefile.in configure configure.in coap_config.h.in $(SOURCES) $(HEADERS)
+FILES:=ChangeLog README.md LICENSE.BSD LICENSE.GPL Makefile.in configure configure.in coap_config.h.in $(SOURCES) $(HEADERS)
 LIB:=libcoap.a
 LDSOFLAGS=-shared
 LDFLAGS:=@LIBS@
