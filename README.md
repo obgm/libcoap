@@ -1,6 +1,6 @@
 libcoap: A C implementation of IETF Constrained Application Protocol (RFC 7252)
 
-Copyright (C) 2010--2014 by Olaf Bergmann <bergmann@tzi.org>
+Copyright (C) 2010--2015 by Olaf Bergmann <bergmann@tzi.org>
 
 ABOUT LIBCOAP
 =============
