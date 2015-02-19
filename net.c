@@ -72,7 +72,7 @@
 
 #ifndef COAP_DEFAULT_MAX_RETRANSMIT
 /**
- * Number message retransmissions before message sending is stopped
+ * Number of message retransmissions before message sending is stopped
  */
 #define COAP_DEFAULT_MAX_RETRANSMIT  4 /* see RFC 7252, Section 4.8 */
 #endif
