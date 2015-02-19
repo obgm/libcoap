@@ -1,6 +1,6 @@
 /* net.c -- CoAP network interface
  *
- * Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -45,6 +45,47 @@
 #include "encode.h"
 #include "block.h"
 #include "net.h"
+
+/**
+ * @defgroup cc Rate Control
+ * The transmission parameters for CoAP rate control ("Congestion
+ * Control" in stream-oriented protocols) are defined in
+ * https://tools.ietf.org/html/rfc7252#section-4.8
+ * @{
+ */
+
+#ifndef COAP_DEFAULT_ACK_TIMEOUT
+/**
+ * Number of seconds when to expect an ACK or a response to an
+ * outstanding CON message.
+ */
+#define COAP_DEFAULT_ACK_TIMEOUT  2 /* see RFC 7252, Section 4.8 */
+#endif
+
+#ifndef COAP_DEFAULT_ACK_RANDOM_FACTOR
+/**
+ * A factor that is used to randomize the wait time before a message
+ * is retransmitted to prevent synchronization effects.
+ */
+#define COAP_DEFAULT_ACK_RANDOM_FACTOR  1.5 /* see RFC 7252, Section 4.8 */
+#endif
+
+#ifndef COAP_DEFAULT_MAX_RETRANSMIT
+/**
+ * Number message retransmissions before message sending is stopped
+ */
+#define COAP_DEFAULT_MAX_RETRANSMIT  4 /* see RFC 7252, Section 4.8 */
+#endif
+
+#ifndef COAP_DEFAULT_NSTART
+/**
+ * The number of simultaneous outstanding interactions that a client
+ * maintains to a given server.
+ */
+#define COAP_DEFAULT_NSTART 1 /* see RFC 7252, Section 4.8 */
+#endif
+
+/** @} */
 
 #if defined(WITH_POSIX)
 
@@ -609,7 +650,7 @@ coap_send_confirmed(coap_context_t *context,
 		    coap_pdu_t *pdu) {
   coap_queue_t *node;
   coap_tick_t now;
-  int r;
+  unsigned char r;
 
   node = coap_new_node();
   if (!node) {
@@ -626,10 +667,9 @@ coap_send_confirmed(coap_context_t *context,
   
   prng((unsigned char *)&r,sizeof(r));
 
-  /* add randomized RESPONSE_TIMEOUT to determine retransmission timeout */
-  node->timeout = COAP_DEFAULT_RESPONSE_TIMEOUT * COAP_TICKS_PER_SECOND +
-    (COAP_DEFAULT_RESPONSE_TIMEOUT >> 1) *
-    ((COAP_TICKS_PER_SECOND * (r & 0xFF)) >> 8);
+  /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
+  node->timeout = COAP_TICKS_PER_SECOND * COAP_DEFAULT_ACK_TIMEOUT *
+      (1 + (COAP_DEFAULT_ACK_RANDOM_FACTOR - 1) * ((r & 0xFF)/ 256.0));
 
   node->local_if = *local_interface;
   memcpy(&node->remote, dst, sizeof(coap_address_t));
