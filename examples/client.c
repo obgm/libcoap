@@ -1,6 +1,6 @@
 /* coap-client -- simple CoAP client
  *
- * Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -22,6 +22,7 @@
 #include <netdb.h>
 
 #include "coap.h"
+#include "coap_list.h"
 
 int flags = 0;
 
@@ -127,8 +128,23 @@ new_response( coap_context_t  *ctx, coap_queue_t *node, unsigned int code ) {
   return pdu;
 }
 
+static int
+order_opts(void *a, void *b) {
+  coap_option *o1, *o2;
+
+  if (!a || !b)
+    return a < b ? -1 : 1;
+
+  o1 = (coap_option *)(((coap_list_t *)a)->data);
+  o2 = (coap_option *)(((coap_list_t *)b)->data);
+
+  return (COAP_OPTION_KEY(*o1) < COAP_OPTION_KEY(*o2))
+    ? -1
+    : (COAP_OPTION_KEY(*o1) != COAP_OPTION_KEY(*o2));
+}
+
 coap_pdu_t *
-coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options,
+coap_new_request(coap_context_t *ctx, method_t m, coap_list_t **options,
 		 unsigned char *data, size_t length) {
   coap_pdu_t *pdu;
   coap_list_t *opt;
@@ -147,10 +163,16 @@ coap_new_request(coap_context_t *ctx, method_t m, coap_list_t *options,
 
   coap_show_pdu(pdu);
 
-  for (opt = options; opt; opt = opt->next) {
-    coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)opt->data),
-		    COAP_OPTION_LENGTH(*(coap_option *)opt->data),
-		    COAP_OPTION_DATA(*(coap_option *)opt->data));
+  if (options) {
+    /* sort options for delta encoding */
+    LL_SORT((*options), order_opts);
+
+    LL_FOREACH((*options), opt) {
+      coap_option *o = (coap_option *)(opt->data);
+      coap_add_option(pdu, COAP_OPTION_KEY(*o),
+		      COAP_OPTION_LENGTH(*o),
+		      COAP_OPTION_DATA(*o));
+    }
   }
 
   if (length) {
@@ -187,11 +209,11 @@ clear_obs(coap_context_t *ctx,
   }
 
   for (option = optlist; option; option = option->next ) {
-    if (COAP_OPTION_KEY(*(coap_option *)option->data) 
-	== COAP_OPTION_URI_HOST) {
-      if (!coap_add_option(pdu, COAP_OPTION_KEY(*(coap_option *)option->data),
-			   COAP_OPTION_LENGTH(*(coap_option *)option->data),
-			   COAP_OPTION_DATA(*(coap_option *)option->data))) {
+    coap_option *o = (coap_option *)(option->data);
+    if (COAP_OPTION_KEY(*o) == COAP_OPTION_URI_HOST) {
+      if (!coap_add_option(pdu, COAP_OPTION_KEY(*o),
+			   COAP_OPTION_LENGTH(*o),
+			   COAP_OPTION_DATA(*o))) {
 	goto error;
       }
       break;
@@ -206,13 +228,14 @@ clear_obs(coap_context_t *ctx,
   }
 
   for (option = optlist; option; option = option->next ) {
-    switch (COAP_OPTION_KEY(*(coap_option *)option->data)) {
+    coap_option *o = (coap_option *)(option->data);
+    switch (COAP_OPTION_KEY(*o)) {
     case COAP_OPTION_URI_PORT :
     case COAP_OPTION_URI_PATH :
     case COAP_OPTION_URI_QUERY :
-      if (!coap_add_option (pdu, COAP_OPTION_KEY(*(coap_option *)option->data),
-			    COAP_OPTION_LENGTH(*(coap_option *)option->data),
-			    COAP_OPTION_DATA(*(coap_option *)option->data))) {
+      if (!coap_add_option (pdu, COAP_OPTION_KEY(*o),
+			    COAP_OPTION_LENGTH(*o),
+			    COAP_OPTION_DATA(*o))) {
 	goto error;
       }
       break;
@@ -363,14 +386,15 @@ message_handler(struct coap_context_t  *ctx,
 	if ( pdu ) {
 	  /* add URI components from optlist */
 	  for (option = optlist; option; option = option->next ) {
-	    switch (COAP_OPTION_KEY(*(coap_option *)option->data)) {
+	    coap_option *o = (coap_option *)(option->data);
+	    switch (COAP_OPTION_KEY(*o)) {
 	    case COAP_OPTION_URI_HOST :
 	    case COAP_OPTION_URI_PORT :
 	    case COAP_OPTION_URI_PATH :
 	    case COAP_OPTION_URI_QUERY :
-	      coap_add_option ( pdu, COAP_OPTION_KEY(*(coap_option *)option->data),
-				COAP_OPTION_LENGTH(*(coap_option *)option->data),
-				COAP_OPTION_DATA(*(coap_option *)option->data) );
+	      coap_add_option (pdu, COAP_OPTION_KEY(*o),
+			       COAP_OPTION_LENGTH(*o),
+			       COAP_OPTION_DATA(*o));
 	      break;
 	    default:
 	      ;			/* skip other options */
@@ -423,15 +447,16 @@ message_handler(struct coap_context_t  *ctx,
 
 	  /* add URI components from optlist */
 	  for (option = optlist; option; option = option->next ) {
-	    switch (COAP_OPTION_KEY(*(coap_option *)option->data)) {
+	    coap_option *o = (coap_option *)(option->data);
+	    switch (COAP_OPTION_KEY(*o)) {
 	    case COAP_OPTION_URI_HOST :
 	    case COAP_OPTION_URI_PORT :
 	    case COAP_OPTION_URI_PATH :
 	    case COAP_OPTION_CONTENT_FORMAT :
 	    case COAP_OPTION_URI_QUERY :
-	      coap_add_option ( pdu, COAP_OPTION_KEY(*(coap_option *)option->data),
-				COAP_OPTION_LENGTH(*(coap_option *)option->data),
-				COAP_OPTION_DATA(*(coap_option *)option->data) );
+	      coap_add_option (pdu, COAP_OPTION_KEY(*o),
+			       COAP_OPTION_LENGTH(*o),
+			       COAP_OPTION_DATA(*o));
 	      break;
 	    default:
 	      ;			/* skip other options */
@@ -604,41 +629,23 @@ join( coap_context_t *ctx, char *group_name ){
   return result;
 }
 
-int
-order_opts(void *a, void *b) {
-  if (!a || !b)
-    return a < b ? -1 : 1;
-
-  if (COAP_OPTION_KEY(*(coap_option *)a) < COAP_OPTION_KEY(*(coap_option *)b))
-    return -1;
-
-  return COAP_OPTION_KEY(*(coap_option *)a) == COAP_OPTION_KEY(*(coap_option *)b);
-}
-
-
 coap_list_t *
 new_option_node(unsigned short key, unsigned int length, unsigned char *data) {
-  coap_option *option;
   coap_list_t *node;
 
-  option = coap_malloc(sizeof(coap_option) + length);
-  if ( !option )
-    goto error;
+  node = coap_malloc(sizeof(coap_list_t) + sizeof(coap_option) + length);
 
-  COAP_OPTION_KEY(*option) = key;
-  COAP_OPTION_LENGTH(*option) = length;
-  memcpy(COAP_OPTION_DATA(*option), data, length);
+  if (node) {
+    coap_option *option;
+    option = (coap_option *)(node->data);
+    COAP_OPTION_KEY(*option) = key;
+    COAP_OPTION_LENGTH(*option) = length;
+    memcpy(COAP_OPTION_DATA(*option), data, length);
+  } else {
+    coap_log(LOG_DEBUG, "new_option_node: malloc\n");
+  }
 
-  /* we can pass NULL here as delete function since option is released automatically  */
-  node = coap_new_listnode(option, NULL);
-
-  if ( node )
-    return node;
-
- error:
-  perror("new_option_node: malloc");
-  coap_free( option );
-  return NULL;
+  return node;
 }
 
 typedef struct { 
@@ -699,8 +706,9 @@ cmdline_content_type(char *arg, unsigned short key) {
 
   for (i = 0; i < valcnt; ++i) {
     node = new_option_node(key, coap_encode_var_bytes(buf, value[i]), buf);
-    if (node)
-      coap_insert( &optlist, node, order_opts );
+    if (node) {
+      LL_PREPEND(optlist, node);
+    }
   }
 }
 
@@ -716,27 +724,24 @@ cmdline_uri(char *arg) {
   if (proxy.length) {		/* create Proxy-Uri from argument */
     size_t len = strlen(arg);
     while (len > 270) {
-      coap_insert(&optlist, 
-		  new_option_node(COAP_OPTION_PROXY_URI,
-				  270, (unsigned char *)arg),
-		  order_opts);
+      coap_insert(&optlist, new_option_node(COAP_OPTION_PROXY_URI,
+					    270, (unsigned char *)arg));
+
       len -= 270;
       arg += 270;
     }
 
-    coap_insert(&optlist, 
-		new_option_node(COAP_OPTION_PROXY_URI,
-				len, (unsigned char *)arg),
-		order_opts);
+    coap_insert(&optlist, new_option_node(COAP_OPTION_PROXY_URI,
+					  len, (unsigned char *)arg));
+
   } else {			/* split arg into Uri-* options */
     coap_split_uri((unsigned char *)arg, strlen(arg), &uri );
 
     if (uri.port != COAP_DEFAULT_PORT) {
-      coap_insert( &optlist, 
-		   new_option_node(COAP_OPTION_URI_PORT,
-				   coap_encode_var_bytes(portbuf, uri.port),
-				 portbuf),
-		   order_opts);    
+      coap_insert(&optlist,
+		  new_option_node(COAP_OPTION_URI_PORT,
+				  coap_encode_var_bytes(portbuf, uri.port),
+				  portbuf));
     }
 
     if (uri.path.length) {
@@ -746,8 +751,7 @@ cmdline_uri(char *arg) {
       while (res--) {
 	coap_insert(&optlist, new_option_node(COAP_OPTION_URI_PATH,
 					      COAP_OPT_LENGTH(buf),
-					      COAP_OPT_VALUE(buf)),
-		    order_opts);
+					      COAP_OPT_VALUE(buf)));
 
 	buf += COAP_OPT_SIZE(buf);      
       }
@@ -761,8 +765,7 @@ cmdline_uri(char *arg) {
       while (res--) {
 	coap_insert(&optlist, new_option_node(COAP_OPTION_URI_QUERY,
 					      COAP_OPT_LENGTH(buf),
-					      COAP_OPT_VALUE(buf)),
-		    order_opts);
+					      COAP_OPT_VALUE(buf)));
 
 	buf += COAP_OPT_SIZE(buf);      
       }
@@ -809,15 +812,14 @@ set_blocksize(void) {
     opt_length = coap_encode_var_bytes(buf, 
 			      (block.num << 4 | block.m << 3 | block.szx));
 
-    coap_insert(&optlist, new_option_node(opt, opt_length, buf), order_opts);
+    coap_insert(&optlist, new_option_node(opt, opt_length, buf));
   }
 }
 
 void
 cmdline_subscribe(char *arg) {
   obs_seconds = atoi(optarg);
-  coap_insert(&optlist, new_option_node(COAP_OPTION_SUBSCRIPTION, 0, NULL),
-	      order_opts);
+  coap_insert(&optlist, new_option_node(COAP_OPTION_SUBSCRIPTION, 0, NULL));
 }
 
 int
@@ -870,9 +872,8 @@ cmdline_option(char *arg) {
   if (*arg == ',')
     ++arg;
 
-  coap_insert( &optlist, new_option_node(num,
-					 strlen(arg),
-					 (unsigned char *)arg), order_opts);
+  coap_insert(&optlist,
+	      new_option_node(num, strlen(arg), (unsigned char *)arg));
 }
 
 extern int  check_segment(const unsigned char *s, size_t length);
@@ -1170,15 +1171,14 @@ main(int argc, char **argv) {
       /* add Uri-Host */
 
     coap_insert(&optlist, new_option_node(COAP_OPTION_URI_HOST,
-					  uri.host.length, uri.host.s),
-		order_opts);
+					  uri.host.length, uri.host.s));
   }
 
   /* set block option if requested at commandline */
   if (flags & FLAGS_BLOCK)
     set_blocksize();
 
-  if (! (pdu = coap_new_request(ctx, method, optlist, payload.s, payload.length)))
+  if (! (pdu = coap_new_request(ctx, method, &optlist, payload.s, payload.length)))
     return -1;
 
 #ifndef NDEBUG
@@ -1254,6 +1254,7 @@ main(int argc, char **argv) {
 
   close_output();
 
+  coap_delete_list(optlist);
   coap_free_context( ctx );
 
   return 0;

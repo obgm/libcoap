@@ -1,3 +1,10 @@
+2015-02-20  Olaf Bergmann  <bergmann@tzi.org>
+
+	* coap_list.[hc]: Moved old list implementation into
+	sub-directory examples and replaced by linked lists
+	from utlist.h. As a result, the list must be sorted
+	explicitly with LL_SORT).
+
 2015-02-19  Olaf Bergmann  <bergmann@tzi.org>
 
 	* net.c (coap_send_confirmed): Fixed retransmission timeout
