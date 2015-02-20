@@ -1,6 +1,6 @@
 # Makefile for libcoap
 #
-# Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010,2011,2015 Olaf Bergmann <bergmann@tzi.org>
 #
 # This file is part of the CoAP library libcoap. Please see
 # README for terms of use. 
@@ -18,7 +18,9 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 # files and flags
 PROGRAMS:=coap-server coap-client rd #etsi_iot_01 tiny
-SOURCES:= tiny.c client.c server.c rd.c etsi_iot_01.c
+client_SOURCES:= client.o coap_list.o
+client_OBJECTS:= $(patsubst %.c, %.o, $(client_SOURCES))
+SOURCES:= tiny.c $(client_SOURCES) server.c rd.c etsi_iot_01.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
 #CFLAGS:=-g -Wall -ansi -pedantic -I..
 CFLAGS:=-g -Wall @CFLAGS@
@@ -43,8 +45,8 @@ check:
 tiny:	tiny.o $(libcoap)
 	$(CC) -o $@ $< $(LDFLAGS)
 
-coap-client: client.o $(libcoap)
-	$(CC) -o $@ $< $(LDFLAGS) $(LDLIBS)
+coap-client: $(CLIENT_OBJS) $(libcoap)
+	$(CC) -o $@ $(CLIENT_OBJS) $(LDFLAGS) $(LDLIBS)
 
 coap-server:	server.o $(libcoap)
 	$(CC) -o $@ $< $(LDFLAGS) $(LDLIBS)

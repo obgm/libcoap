@@ -10,7 +10,6 @@
 #define _PDU_H_
 
 #include "coap_config.h"
-#include "coap_list.h"
 #include "uri.h"
 
 #ifdef WITH_LWIP

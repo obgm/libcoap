@@ -1,6 +1,6 @@
 # Makefile for libcoap
 #
-# Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010--2015 Olaf Bergmann <bergmann@tzi.org>
 #
 # This file is part of the CoAP library libcoap. Please see
 # README for terms of use.
@@ -23,10 +23,10 @@ includerootdir = $(DESTDIR)$(prefix)/include
 librootdir = $(DESTDIR)$(prefix)/lib
 
 # files and flags
-SOURCES:= pdu.c net.c debug.c encode.c uri.c coap_list.c resource.c hashkey.c \
+SOURCES:= pdu.c net.c debug.c encode.c uri.c resource.c hashkey.c \
 	 str.c option.c async.c subscribe.c block.c mem.c coap_io.c
 OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
-HEADERS:=coap.h coap_config.h debug.h pdu.h net.h encode.h uri.h coap_list.h mem.h \
+HEADERS:=coap.h coap_config.h debug.h pdu.h net.h encode.h uri.h mem.h \
 	str.h option.h bits.h uthash.h utlist.h resource.h hashkey.h async.h \
 	subscribe.h block.h address.h prng.h coap_time.h t_list.h  coap_io.h
 CFLAGS:=-Wall -Wextra -std=c99 -pedantic @CFLAGS@
