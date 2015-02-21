@@ -87,6 +87,32 @@
 
 /** @} */
 
+/**
+ * The number of bits for the fractional part of ACK_TIMEOUT and
+ * ACK_RANDOM_FACTOR. Must be less or equal 8.
+ */
+#define FRAC_BITS 6
+
+/**
+ * The maximum number of bits for fixed point integers that are used
+ * for retransmission time calculation. Currently this must be @c 8.
+ */
+#define MAX_BITS 8
+
+#if FRAC_BITS > 8
+#error FRAC_BITS must be less or equal 8
+#endif
+
+/** creates a Qx.frac from fval */
+#define Q(frac,fval) ((unsigned short)(((1 << (frac)) * (fval))))
+
+/** creates a Qx.FRAC_BITS from COAP_DEFAULT_ACK_RANDOM_FACTOR */
+#define ACK_RANDOM_FACTOR					\
+  Q(FRAC_BITS, COAP_DEFAULT_ACK_RANDOM_FACTOR)
+
+/** creates a Qx.FRAC_BITS from COAP_DEFAULT_ACK_TIMEOUT */
+#define ACK_TIMEOUT Q(FRAC_BITS, COAP_DEFAULT_ACK_TIMEOUT)
+
 #if defined(WITH_POSIX)
 
 time_t clock_offset;
@@ -643,6 +669,43 @@ coap_send_message_type(coap_context_t *context,
   return result;
 }
 
+/**
+ * Calculates the initial timeout based on the global CoAP transmission
+ * parameters ACK_TIMEOUT, ACK_RANDOM_FACTOR, and COAP_TICKS_PER_SECOND.
+ * The calculation requires ACK_TIMEOUT and ACK_RANDOM_FACTOR to be in
+ * Qx.FRAC_BITS fixed point notation, whereas the passed parameter @p r
+ * is interpreted as the fractional part of a Q0.MAX_BITS random value.
+ *
+ * @param r  random value as fractional part of a Q0.MAX_BITS fixed point
+ *           value
+ * @return   COAP_TICKS_PER_SECOND * ACK_TIMEOUT * (1 + (ACK_RANDOM_FACTOR - 1) * r)
+ */
+static inline unsigned int
+calc_timeout(unsigned char r) {
+  unsigned int result;
+
+  /* The integer 1.0 as a Qx.FRAC_BITS */
+#define FP1 Q(FRAC_BITS, 1)
+
+  /* rounds val up and right shifts by frac positions */
+#define SHR_FP(val,frac) (((val) + (1 << ((frac) - 1))) >> (frac))
+
+  /* Inner term: multiply ACK_RANDOM_FACTOR by Q0.MAX_BITS[r] and
+   * make the result a rounded Qx.FRAC_BITS */
+  result = SHR_FP((ACK_RANDOM_FACTOR - FP1) * r, MAX_BITS);
+
+  /* Add 1 to the inner term and multiply with ACK_TIMEOUT, then
+   * make the result a rounded Qx.FRAC_BITS */
+  result = SHR_FP(((result + FP1) * ACK_TIMEOUT), FRAC_BITS);
+
+  /* Multiply with COAP_TICKS_PER_SECOND to yield system ticks
+   * (yields a Qx.FRAC_BITS) and shift to get an integer */
+  return SHR_FP((COAP_TICKS_PER_SECOND * result), FRAC_BITS);
+
+#undef FP1
+#undef SHR_FP
+}
+
 coap_tid_t
 coap_send_confirmed(coap_context_t *context, 
 		    const coap_endpoint_t *local_interface,
@@ -668,8 +731,7 @@ coap_send_confirmed(coap_context_t *context,
   prng((unsigned char *)&r,sizeof(r));
 
   /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
-  node->timeout = COAP_TICKS_PER_SECOND * COAP_DEFAULT_ACK_TIMEOUT *
-      (1 + (COAP_DEFAULT_ACK_RANDOM_FACTOR - 1) * ((r & 0xFF)/ 256.0));
+  node->timeout = calc_timeout(r);
 
   node->local_if = *local_interface;
   memcpy(&node->remote, dst, sizeof(coap_address_t));

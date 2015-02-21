@@ -1,3 +1,8 @@
+2015-02-21  Olaf Bergmann  <bergmann@tzi.org>
+
+	* net.c (coap_send_confirmed): Use fixed point arithmetic
+	to calculate retransmission timeout.
+
 2015-02-20  Olaf Bergmann  <bergmann@tzi.org>
 
 	* coap_list.[hc]: Moved old list implementation into
