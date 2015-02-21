@@ -45,8 +45,8 @@ check:
 tiny:	tiny.o $(libcoap)
 	$(CC) -o $@ $< $(LDFLAGS)
 
-coap-client: $(CLIENT_OBJS) $(libcoap)
-	$(CC) -o $@ $(CLIENT_OBJS) $(LDFLAGS) $(LDLIBS)
+coap-client: $(client_OBJECTS) $(libcoap)
+	$(CC) -o $@ $(client_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
 coap-server:	server.o $(libcoap)
 	$(CC) -o $@ $< $(LDFLAGS) $(LDLIBS)
