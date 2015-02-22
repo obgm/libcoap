@@ -23,6 +23,7 @@ AM_INIT_AUTOMAKE([1.10 -Wall no-define])
 AC_CONFIG_HEADERS([coap_config.h])
 
 AC_PROG_CC
+AM_PROG_CC_C_O
 AM_PROG_AR
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -89,6 +90,30 @@ AC_SUBST(LIBCOAP_SO_VERSION)
 # Defining the API Version
 LIBCOAP_API_VERSION=1.0
 AC_SUBST(LIBCOAP_API_VERSION)
+
+# Adding some default warning options for code QS
+# see https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
+# and http://www.gnu.org/software/automake/manual/html_node/Flag-Variables-Ordering.html
+WARNING_CFLAGS="\
+-pedantic \
+-Wall \
+-Wextra \
+-Wformat-security \
+-Winline \
+-Wlogical-op \
+-Wmissing-declarations \
+-Wmissing-prototypes \
+-Wnested-externs \
+-Wpointer-arith \
+-Wshadow \
+-Wstrict-prototypes \
+-Wswitch-default \
+-Wswitch-enum \
+-Wunused \
+-Wunused-result \
+"
+
+AC_SUBST([WARNING_CFLAGS])
 
 # configure options
 # __documentation__
@@ -217,6 +242,7 @@ case $host in
 	*-linux* | *-uclinux*)
 	AC_MSG_RESULT([Linux])
 	backend="linux"
+	CFLAGS="$CFLAGS -D_GNU_SOURCE -DWITH_POSIX"
 	;;
 
 	*)

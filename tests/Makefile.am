@@ -8,6 +8,9 @@
 # just do anything if 'HAVE_CUNIT' is defined
 if HAVE_CUNIT
 
+# picking up the default warning CFLAGS
+AM_CFLAGS = $(WARNING_CFLAGS) -std=c99
+
 noinst_PROGRAMS = \
  testdriver
 
@@ -26,7 +29,7 @@ testdriver_LDADD = @CUNIT_LIBS@ @top_builddir@/.libs/libcoap-$(LIBCOAP_API_VERSI
 # nothing to adopt here. No needed to implement something here because the test
 # unit will always be build againts the actual header files!
 #
-testdriver_CFLAGS = -I @top_builddir@/include/coap/ -D_GNU_SOURCE -DWITH_POSIX -Wall -Wextra -Wunused -Wunused-result -Wlogical-op -Winline -Wswitch-default -Wswitch-enum -fPIC -pedantic -Wformat -Wformat-security -fPIE -pie
+testdriver_CFLAGS = -I @top_builddir@/include/coap/ $(AM_CFLAGS)
 
 CLEANFILES = testdriver
 

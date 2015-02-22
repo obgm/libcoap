@@ -12,10 +12,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
-## default CFLAGS
-DEFAULT_CFLAGS = -D_GNU_SOURCE -DWITH_POSIX -Wall -Wextra -Wunused -Wunused-result -Wlogical-op -Winline -Wswitch-default -Wswitch-enum -fPIC -pedantic -Wformat -Wformat-security -fPIE -pie
-
-AM_CFLAGS = -I @top_builddir@/include/coap/ $(DEFAULT_CFLAGS) -std=c99
+AM_CFLAGS = -I @top_builddir@/include/coap/ $(WARNING_CFLAGS) -std=c99
 
 SUBDIRS = . $(DOC_DIR) tests
 
@@ -26,6 +23,11 @@ SUBDIRS = . $(DOC_DIR) tests
 ## by the predefined variable $(bindir), along with the actual shared library
 ## file (.so).
 lib_LTLIBRARIES = libcoap-@LIBCOAP_API_VERSION@.la
+
+libcoap_@LIBCOAP_API_VERSION@_la_CFLAGS = \
+  -fPIC \
+  -fPIE \
+  $(AM_CFLAGS)
 
 ## Define the source file list for the "libcoap.la" target.
 ## Note that it is not necessary to list header files which are already listed
@@ -85,7 +87,10 @@ libcoap_include_HEADERS = \
 ## Instruct libtool to include API version information in the generated shared
 ## library file (.so). The library ABI version will later defined in configure.ac,
 ## so that all version information is kept in one place.
-libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS = -version-info $(LT_LIBCOAP_CURRENT):$(LT_LIBCOAP_REVISION):$(LT_LIBCOAP_AGE) -Wl,--version-script=$(srcdir)/libcoap-$(LIBCOAP_API_VERSION).map
+libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS = \
+  -version-info $(LT_LIBCOAP_CURRENT):$(LT_LIBCOAP_REVISION):$(LT_LIBCOAP_AGE) \
+  -Wl,--version-script=$(srcdir)/libcoap-$(LIBCOAP_API_VERSION).map \
+  -pie
 
 ## Helper target to generate the symbol table needed by libtool
 update-map-file:
