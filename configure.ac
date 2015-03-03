@@ -260,6 +260,15 @@ case $host in
 	CFLAGS="$CFLAGS -D_GNU_SOURCE -DWITH_POSIX"
 	;;
 
+	*-solaris*)
+	AC_MSG_RESULT([Solaris])
+	backend="sunos"
+	# set _XOPEN_SOURCE and _XOPEN_SOURCE_EXTENDED to enable XPG4v2 (POSIX 2004)
+	# set __EXTENSION__ to shut up feature test macros that restrict -std=c99
+	# to only C99 (and nothing newer)
+	CFLAGS="$CFLAGS -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=600 -D__EXTENSIONS__=1 -DWITH_POSIX"
+	;;
+
 	*)
 	AC_MSG_WARN([==> Currently unsupported operating system!])
 	AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
@@ -269,6 +278,9 @@ case $backend in
 	linux)
 	AC_DEFINE(OS_LINUX, 1, [Linux backend])
 	AC_SUBST(OS_LINUX)
+	;;
+
+	sunos)
 	;;
 esac
 
