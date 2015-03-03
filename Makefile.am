@@ -92,8 +92,9 @@ libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS = \
   -Wl,--version-script=$(srcdir)/libcoap-$(LIBCOAP_API_VERSION).map \
   -pie
 
-## Helper target to generate the symbol table needed by libtool
-update-map-file:
+# This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if
+# configure has detected a usable version of the ctags program and aborts if not.
+check_ctags=\
 	@if [ "$(CTAGS_PROG)" = "" ]; then \
 		echo ;\
 		echo "There was no ctags program found by the configure script!" ;\
@@ -101,12 +102,29 @@ update-map-file:
 		echo ;\
 		exit 1;\
 	fi
+
+.PHONY:	update-map-file
+
+## Helper target to generate the symbol table needed by libtool.
+## The .map format is used when ld supports linker scripts, otherwise
+## it must fall back to a plain symbol file.
+update-map-file: libcoap-$(LIBCOAP_API_VERSION).map libcoap-$(LIBCOAP_API_VERSION).sym
+
+libcoap-$(LIBCOAP_API_VERSION).map: $(libcoap_include_HEADERS)
+	$(call check_ctags)
 	( echo "VER_$(LIBCOAP_API_VERSION) {" ; \
 	echo "global:" ; \
-	ctags -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print "  " $$1 ";" }' | sort ; \
+	ctags -f - --c-kinds=p $^ | awk '/^coap_/ { print "  " $$1 ";" }' | sort ; \
 	echo "local:" ; \
 	echo "  *;" ; \
-	echo "};" ) > $(srcdir)/libcoap-$(LIBCOAP_API_VERSION).map
+	echo "};" ) > $@.new
+	mv $@.new $@
+
+libcoap-$(LIBCOAP_API_VERSION).sym: $(libcoap_include_HEADERS)
+	$(call check_ctags)
+	( ctags -f - --c-kinds=p $^ | awk '/^coap_/ { print $$1 }' | sort ) \
+	> $@.new
+	mv $@.new $@
 
 ## Install the generated pkg-config file (.pc) into the expected location for
 ## architecture-dependent package configuration information.  Occasionally,
