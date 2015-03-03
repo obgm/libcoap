@@ -221,6 +221,12 @@ if test "x$CTAGS_PROG" = "x"; then
 	AC_MSG_WARN([==> Without ctags you will be unable to run the target 'update-map-file'!])
 	AC_MSG_WARN([==> This is no problem if you just want to build the library libcoap.])
 fi
+if ! "$CTAGS_PROG" --c-kinds=f /dev/null &>/dev/null; then
+	AC_MSG_NOTICE([==> Note: your ctags does not support '--c-kinds'!])
+	AC_MSG_NOTICE([==> Most likely, you are using the GNU Emacs ctag and not exuberant ctag])
+	AC_MSG_WARN([==> This option is required for target 'update-map-file'])
+	AC_MSG_WARN([==> which is not a problem if you just want to build the library libcoap.])
+fi
 
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
