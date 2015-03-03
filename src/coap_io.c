@@ -215,6 +215,11 @@ struct in_pktinfo {
 };
 #endif
 
+#if defined(WITH_POSIX) && !defined(SOL_IP)
+/* Solaris expects level IPPROTO_IP for ancillary data. */
+#define SOL_IP IPPROTO_IP
+#endif
+
 #ifdef __GNUC__
 #define UNUSED_PARAM __attribute__ ((unused))
 #else /* not a GCC */
