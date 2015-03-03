@@ -269,8 +269,14 @@ case $host in
 	CFLAGS="$CFLAGS -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=600 -D__EXTENSIONS__=1 -DWITH_POSIX"
 	;;
 
+	*-darwin*)
+	AC_MSG_RESULT([Darwin])
+	backend="macos"
+	CFLAGS="$CFLAGS -D_GNU_SOURCE -DWITH_POSIX"
+	;;
+
 	*)
-	AC_MSG_WARN([==> Currently unsupported operating system!])
+	AC_MSG_WARN([==> Currently unsupported operating system ${host}!])
 	AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
 esac
 
@@ -281,6 +287,11 @@ case $backend in
 	;;
 
 	sunos)
+	;;
+
+	macos)
+	AC_DEFINE(__APPLE_USE_RFC_3542, 1,
+		  [Define this to 1 for ancillary data on MacOS])
 	;;
 esac
 
