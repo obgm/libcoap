@@ -118,6 +118,12 @@ AX_CHECK_COMPILE_FLAG([-fdiagnostics-color], [CFLAGS="$CFLAGS -fdiagnostics-colo
 
 AC_SUBST([WARNING_CFLAGS])
 
+AX_CHECK_LINK_FLAG([-Wl,--version-script=./libcoap-${LIBCOAP_API_VERSION}.map],
+	[libcoap_SYMBOLS="-Wl,--version-script=\$(srcdir)/libcoap-\$(LIBCOAP_API_VERSION).map"],
+	[libcoap_SYMBOLS="-export-symbols \$(srcdir)/libcoap-\$(LIBCOAP_API_VERSION).sym"])
+
+AC_SUBST(libcoap_SYMBOLS)
+
 # configure options
 # __documentation__
 AC_ARG_ENABLE([documentation],

@@ -87,9 +87,9 @@ libcoap_include_HEADERS = \
 ## Instruct libtool to include API version information in the generated shared
 ## library file (.so). The library ABI version will later defined in configure.ac,
 ## so that all version information is kept in one place.
-libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS = \
-  -version-info $(LT_LIBCOAP_CURRENT):$(LT_LIBCOAP_REVISION):$(LT_LIBCOAP_AGE) \
-  -Wl,--version-script=$(srcdir)/libcoap-$(LIBCOAP_API_VERSION).map \
+libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS =					\
+  -version-info $(LT_LIBCOAP_CURRENT):$(LT_LIBCOAP_REVISION):$(LT_LIBCOAP_AGE)	\
+  @libcoap_SYMBOLS@ \
   -pie
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if
