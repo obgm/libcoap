@@ -29,12 +29,12 @@ AUTOGEN_FILES="INSTALL \
 		missing \
 		Makefile Makefile.in \
 		stamp-h1 src/.dirstamp libcoap*.la* src/*.*o \
-		tests/*.o tests/Makefile tests/testdriver"
+		tests/*.o tests/Makefile tests/testdriver \
+		m4/libtool.m4 m4/lt~obsolete.m4 m4/ltoptions.m4 m4/ltsugar.m4 m4/ltversion.m4"
 
 AUTOGEN_DIRS=".deps \
 		.libs autom4te.cache/ \
 		doc/html/ \
-		m4/ \
 		src/.libs/ src/.deps/ \
 		tests/.deps/"
 

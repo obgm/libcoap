@@ -100,7 +100,6 @@ WARNING_CFLAGS="\
 -Wextra \
 -Wformat-security \
 -Winline \
--Wlogical-op \
 -Wmissing-declarations \
 -Wmissing-prototypes \
 -Wnested-externs \
@@ -112,6 +111,9 @@ WARNING_CFLAGS="\
 -Wunused \
 -Wunused-result \
 "
+
+# check whether or not the compiler supports -Wlogical-op (clang does not...)
+AX_CHECK_COMPILE_FLAG([-Wlogical-op], [WARNING_CFLAGS="$WARNING_CFLAGS -Wlogical-op"])
 
 AC_SUBST([WARNING_CFLAGS])
 
