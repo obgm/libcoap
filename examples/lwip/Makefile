@@ -1,3 +1,5 @@
+top_srcdir = ../..
+
 all: server
 
 lwip:
@@ -20,9 +22,9 @@ vpath %.c lwip/src/core/ lwip-contrib/ports/unix/proj/minimal/ lwip/src/netif/ l
 
 CFLAGS += -std=gnu99
 
-CFLAGS += -I../..
+CFLAGS += -I$(top_srcdir)/include/coap
 
-vpath %.c ../..
+vpath %.c $(top_srcdir)/src
 
 COAPOBJS = net.o debug.o option.o resource.o hashkey.o pdu.o encode.o subscribe.o coap_io_lwip.o block.o uri.o
 
