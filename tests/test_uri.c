@@ -1,6 +1,6 @@
 /* libcoap unit tests
  *
- * Copyright (C) 2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2012,2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -10,7 +10,7 @@
 #include <coap.h>
 #include "test_uri.h"
 
-void
+static void
 t_parse_uri1(void) {
   char teststr[] = "coap://[::1]/.well-known/core";
 
@@ -34,7 +34,7 @@ t_parse_uri1(void) {
   }
 }
 
-void
+static void
 t_parse_uri2(void) {
   char teststr[] = "coap://[::1]:8000/.well-known/core";
   int result;
@@ -57,7 +57,7 @@ t_parse_uri2(void) {
   }
 }
 
-void
+static void
 t_parse_uri3(void) {
   char teststr[] = "coap://localhost/?foo&bla=fasel";
   int result;
@@ -79,7 +79,7 @@ t_parse_uri3(void) {
   }
 }
 
-void
+static void
 t_parse_uri4(void) {
   char teststr[] = "coap://:100000";
   int result;
@@ -89,7 +89,7 @@ t_parse_uri4(void) {
   CU_ASSERT(result < 0);
 }
 
-void
+static void
 t_parse_uri5(void) {
   char teststr[] = "coap://foo:100000";
   int result;
@@ -112,7 +112,7 @@ t_parse_uri5(void) {
   }
 }
 
-void
+static void
 t_parse_uri6(void) {
   char teststr[] = "coap://134.102.218.2/.well-known/core";
   int result;
@@ -135,7 +135,7 @@ t_parse_uri6(void) {
   }
 }
 
-void
+static void
 t_parse_uri7(void) {
   char teststr[] = "coap://foo.bar:5683/some_resource/with/multiple/segments";
   int result;
@@ -176,7 +176,7 @@ t_parse_uri7(void) {
   }
 }
 
-void
+static void
 t_parse_uri8(void) {
   char teststr[] = "http://example.com/%7E%AB%13";
   int result;
@@ -190,7 +190,7 @@ t_parse_uri8(void) {
   }
 }
 
-void
+static void
 t_parse_uri9(void) {
   char teststr[] = "http://example.com/%x";
   int result;
@@ -204,7 +204,7 @@ t_parse_uri9(void) {
   }
 }
 
-void
+static void
 t_parse_uri10(void) {
   char teststr[] = "/absolute/path";
   int result;
@@ -227,7 +227,7 @@ t_parse_uri10(void) {
   }
 }
 
-void
+static void
 t_parse_uri11(void) {
   char teststr[] = 
     "coap://xn--18j4d.example/%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF";
@@ -269,7 +269,7 @@ t_parse_uri11(void) {
   }
 }
 
-void
+static void
 t_parse_uri12(void) {
   char teststr[] = "coap://198.51.100.1:61616//%2F//?%2F%2F&?%26";
   int result;
@@ -313,7 +313,7 @@ t_parse_uri12(void) {
   }
 }
 
-void
+static void
 t_parse_uri13(void) {
   char teststr[] __attribute__ ((aligned (8))) = { 
     0x00, 0x00, 0x00, 0x00, 0x80, 0x03, 'f',  'o',

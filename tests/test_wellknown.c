@@ -1,9 +1,9 @@
 /* libcoap unit tests
  *
- * Copyright (C) 2013--2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2013--2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 #include <assert.h>
@@ -20,12 +20,7 @@
 coap_context_t *ctx;	   /* Holds the coap context for most tests */
 coap_pdu_t *pdu;	   /* Holds the parsed PDU for most tests */
 
-extern coap_pdu_t *wellknown_response(coap_context_t *, coap_pdu_t *);
-extern int print_wellknown(coap_context_t *context, unsigned char *buf, 
-			   size_t *buflen, size_t offset, 
-			   coap_opt_t *query_filter);
-
-void
+static void
 t_wellknown1(void) {
   coap_print_status_t result;
   coap_resource_t *r;
@@ -51,17 +46,17 @@ t_wellknown1(void) {
     buflen = sizeof(buf);
 
     result = coap_print_link(r, buf, &buflen, &ofs);
-  
+
     CU_ASSERT(result == sizeof(teststr) - offset);
     CU_ASSERT(buflen == sizeof(teststr));
     CU_ASSERT(memcmp(buf, teststr + offset, sizeof(teststr) - offset) == 0);
   }
-  
+
   /* offset points behind teststr */
   ofs = offset;
   buflen = sizeof(buf);
   result = coap_print_link(r, buf, &buflen, &ofs);
-  
+
   CU_ASSERT(result == 0);
     CU_ASSERT(buflen == sizeof(teststr));
 
@@ -74,7 +69,7 @@ t_wellknown1(void) {
   CU_ASSERT(buflen == sizeof(teststr));
 }
 
-void
+static void
 t_wellknown2(void) {
   coap_print_status_t result;
   coap_resource_t *r;
@@ -86,7 +81,7 @@ t_wellknown2(void) {
     'i', 'f', '=', '"', 'o', 'n', 'e', '"',
     ';', 'o', 'b', 's'
   };
-  
+
   r = coap_resource_init((unsigned char *)"abcd", 4, 0);
   r->observable = 1;
   coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"\"one\"", 5, 0);
@@ -98,7 +93,7 @@ t_wellknown2(void) {
     buflen = sizeof(buf);
 
     result = coap_print_link(r, buf, &buflen, &ofs);
-  
+
     CU_ASSERT(result == (COAP_PRINT_STATUS_TRUNC | sizeof(buf)));
     CU_ASSERT(buflen == sizeof(teststr));
     CU_ASSERT(ofs == 0);
@@ -110,11 +105,11 @@ t_wellknown2(void) {
     ofs = offset;
     buflen = sizeof(buf);
     result = coap_print_link(r, buf, &buflen, &ofs);
-  
+
     CU_ASSERT(result == sizeof(teststr) - offset);
     CU_ASSERT(buflen == sizeof(teststr));
     CU_ASSERT(ofs == 0);
-    CU_ASSERT(memcmp(buf, teststr + offset, 
+    CU_ASSERT(memcmp(buf, teststr + offset,
 		     COAP_PRINT_OUTPUT_LENGTH(result)) == 0);
   }
 
@@ -127,7 +122,7 @@ t_wellknown2(void) {
   CU_ASSERT(ofs == offset - sizeof(teststr));
 }
 
-void
+static void
 t_wellknown3(void) {
   coap_print_status_t result;
   int j;
@@ -153,18 +148,18 @@ t_wellknown3(void) {
    * characters. Otherwise, CU_ASSERT(result > 0) will fail.
    */
   offset = num_resources * (TEST_URI_LEN + 4);
-  result = print_wellknown(ctx, buf, &buflen, offset, NULL);
+  result = coap_print_wellknown(ctx, buf, &buflen, offset, NULL);
   CU_ASSERT((result & COAP_PRINT_STATUS_ERROR) == 0 );
   CU_ASSERT(COAP_PRINT_OUTPUT_LENGTH(result) > 0);
 }
 
 /* Create wellknown response for request without Block-option. */
-void
+static void
 t_wellknown4(void) {
   coap_pdu_t *response;
   coap_block_t block;
 
-  response = wellknown_response(ctx, pdu);
+  response = coap_wellknown_response(ctx, pdu);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -172,7 +167,7 @@ t_wellknown4(void) {
 
   CU_ASSERT(block.num == 0);
   CU_ASSERT(block.m == 1);
-  CU_ASSERT(1 << (block.szx + 4) 
+  CU_ASSERT(1 << (block.szx + 4)
     == (unsigned char *)response->hdr + response->length - response->data);
 
   coap_delete_pdu(response);
@@ -181,22 +176,22 @@ t_wellknown4(void) {
 /* Create wellknown response for request with Block2-option and an szx
  * value smaller than COAP_MAX_BLOCK_SZX.
  */
-void
+static void
 t_wellknown5(void) {
   coap_pdu_t *response;
   coap_block_t inblock = { .num = 1, .m = 0, .szx = 1 };
   coap_block_t block;
   unsigned char buf[3];
 
-  if (!coap_add_option(pdu, COAP_OPTION_BLOCK2, 
-		       coap_encode_var_bytes(buf, ((inblock.num << 4) | 
-						   (inblock.m << 3) | 
+  if (!coap_add_option(pdu, COAP_OPTION_BLOCK2,
+		       coap_encode_var_bytes(buf, ((inblock.num << 4) |
+						   (inblock.m << 3) |
 						   inblock.szx)), buf)) {
     CU_FAIL("cannot add Block2 option");
     return;
   }
 
-  response = wellknown_response(ctx, pdu);
+  response = coap_wellknown_response(ctx, pdu);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -210,7 +205,7 @@ t_wellknown5(void) {
   coap_delete_pdu(response);
 }
 
-void
+static void
 t_wellknown6(void) {
   coap_pdu_t *response;
   coap_block_t block = { .num = 0, .szx = 6 };
@@ -226,14 +221,14 @@ t_wellknown6(void) {
 
     CU_ASSERT_PTR_NOT_NULL(pdu);
 
-    if (!pdu || !coap_add_option(pdu, COAP_OPTION_BLOCK2, 
-                 	 coap_encode_var_bytes(buf, 
+    if (!pdu || !coap_add_option(pdu, COAP_OPTION_BLOCK2,
+				 coap_encode_var_bytes(buf,
 				       ((block.num << 4) | block.szx)), buf)) {
       CU_FAIL("cannot create request");
       return;
     }
-    
-    response = wellknown_response(ctx, pdu);
+
+    response = coap_wellknown_response(ctx, pdu);
 
     CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -246,7 +241,7 @@ t_wellknown6(void) {
   } while (block.m == 1);
 }
 
-int 
+static int
 t_wkc_tests_create(void) {
   coap_address_t addr;
 
@@ -292,11 +287,11 @@ t_wkc_tests_create(void) {
     }
 
   }
-#endif  
+#endif
   return ctx == NULL || pdu == NULL;
 }
 
-int 
+static int
 t_wkc_tests_remove(void) {
   coap_delete_pdu(pdu);
   coap_free_context(ctx);
@@ -309,7 +304,7 @@ t_init_wellknown_tests(void) {
 
   suite = CU_add_suite(".well-known/core", t_wkc_tests_create, t_wkc_tests_remove);
   if (!suite) {			/* signal error */
-    fprintf(stderr, "W: cannot add .well-known/core test suite (%s)\n", 
+    fprintf(stderr, "W: cannot add .well-known/core test suite (%s)\n",
 	    CU_get_error_msg());
 
     return NULL;

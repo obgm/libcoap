@@ -12,9 +12,14 @@
 #include "test_sendqueue.h"
 #include "test_wellknown.h"
 
+#ifdef __GNUC__
+#define UNUSED_PARAM __attribute__ ((unused))
+#else /* not a GCC */
+#define UNUSED_PARAM
+#endif /* GCC */
 
 int
-main(int argc, char **argv) {
+main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM) {
   CU_ErrorCode result;
   CU_BasicRunMode run_mode = CU_BRM_VERBOSE;
 

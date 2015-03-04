@@ -1,6 +1,6 @@
 /* libcoap unit tests
  *
- * Copyright (C) 2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2012,2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -16,7 +16,7 @@
  ** decoder tests
  ************************************************************************/
 
-void
+static void
 t_parse_option1(void) {
   /* delta == 0, length == 0, value == 0 */
   str teststr = {  1, (unsigned char *)"" };
@@ -32,7 +32,7 @@ t_parse_option1(void) {
   /* FIXME: value? */
 }
 
-void
+static void
 t_parse_option2(void) {
   /* delta == 12, length == 1, value == 0 */
   str teststr = {  2, (unsigned char *)"\xc1" };
@@ -47,7 +47,7 @@ t_parse_option2(void) {
   CU_ASSERT(option.value == teststr.s + 1);
 }
 
-void
+static void
 t_parse_option3(void) {
   /* delta == 3, length == 12, value == 0 */
   str teststr = { 13, (unsigned char *)"\x3c\x00\x01\x02\x03\x04"
@@ -64,7 +64,7 @@ t_parse_option3(void) {
   /* CU_ASSERT(memcmp(option.value, teststr.s + 1, 12) == 0); */
 }
 
-void
+static void
 t_parse_option4(void) {
   /* delta == 15, length == 3, value == 0 */
   str teststr = {  2, (unsigned char *)"\xf3" };
@@ -76,7 +76,7 @@ t_parse_option4(void) {
   CU_ASSERT(result == 0);
 }
 
-void
+static void
 t_parse_option5(void) {
   /* delta == 3, length == 15, value == 0 */
   str teststr = {  2, (unsigned char *)"\x3f" };
@@ -88,7 +88,7 @@ t_parse_option5(void) {
   CU_ASSERT(result == 0);
 }
 
-void
+static void
 t_parse_option6(void) {
   /* delta == 15, length == 15 */
   str teststr = {  1, (unsigned char *)"\xff" };
@@ -100,7 +100,7 @@ t_parse_option6(void) {
   CU_ASSERT(result == 0);
 }
 
-void
+static void
 t_parse_option7(void) {
   /* delta == 20, length == 0 */
   str teststr = {  2, (unsigned char *)"\xd0\x07" };
@@ -114,7 +114,7 @@ t_parse_option7(void) {
   CU_ASSERT(option.length == 0);
 }
 
-void
+static void
 t_parse_option8(void) {
   /* delta == 780, length == 0 */
   str teststr = {  3, (unsigned char *)"\xe0\x01\xff" };
@@ -128,7 +128,7 @@ t_parse_option8(void) {
   CU_ASSERT(option.length == 0);
 }
 
-void
+static void
 t_parse_option9(void) {
   /* delta == 65535, length == 0 */
   str teststr = {  3, (unsigned char *)"\xe0\xfe\xf2" };
@@ -141,7 +141,7 @@ t_parse_option9(void) {
   CU_ASSERT(option.delta == 65535);
 }
 
-void
+static void
 t_parse_option10(void) {
   /* delta > 65535 (illegal), length == 0 */
   str teststr = {  3, (unsigned char *)"\xe0\xff\xff" };
@@ -153,7 +153,7 @@ t_parse_option10(void) {
   CU_ASSERT(result == 0);
 }
 
-void
+static void
 t_parse_option11(void) {
   /* illegal delta value (option too short) */
   str teststr = {  1, (unsigned char *)"\xd0" };
@@ -165,7 +165,7 @@ t_parse_option11(void) {
   CU_ASSERT(result == 0);
 }
 
-void
+static void
 t_parse_option12(void) {
   /* delta == 280, length == 500 */
   str teststr = {  3, (unsigned char *)"\xee\xff\x0b" };
@@ -177,7 +177,7 @@ t_parse_option12(void) {
   CU_ASSERT(result == 0);
 }
 
-void
+static void
 t_parse_option13(void) {
   /* delta == 280, length == 500 */
   unsigned char _data[505];
@@ -198,7 +198,7 @@ t_parse_option13(void) {
   CU_ASSERT(option.value == &_data[5]);
 }
 
-void
+static void
 t_parse_option14(void) {
   /* delta == 268, length == 65535 */
   unsigned char *data;
@@ -229,7 +229,7 @@ t_parse_option14(void) {
  ** encoder tests
  ************************************************************************/
 
-void
+static void
 t_encode_option1(void) {
   char teststr[] = { 0x00 };
   unsigned char buf[40];
@@ -241,7 +241,7 @@ t_encode_option1(void) {
   CU_ASSERT(memcmp(buf, teststr, result) == 0);
 }
 
-void
+static void
 t_encode_option2(void) {
   char teststr[] = { 0x5d, 0xff };
   unsigned char buf[40];
@@ -253,7 +253,7 @@ t_encode_option2(void) {
   CU_ASSERT(memcmp(buf, teststr, result) == 0);
 }
 
-void
+static void
 t_encode_option3(void) {
   char teststr[] = { 0xd1, 0x01 };
   unsigned char buf[40];
@@ -265,7 +265,7 @@ t_encode_option3(void) {
   CU_ASSERT(memcmp(buf, teststr, result) == 0);
 }
 
-void
+static void
 t_encode_option4(void) {
   char teststr[] = { 0xdd, 0xff, 0xab };
   unsigned char buf[40];
@@ -277,7 +277,7 @@ t_encode_option4(void) {
   CU_ASSERT(memcmp(buf, teststr, result) == 0);
 }
 
-void
+static void
 t_encode_option5(void) {
   char teststr[] = { 0xed, 0x13, 0x00, 0xff };
   unsigned char buf[40];
@@ -289,7 +289,7 @@ t_encode_option5(void) {
   CU_ASSERT(memcmp(buf, teststr, result) == 0);
 }
 
-void
+static void
 t_encode_option6(void) {
   char teststr[] = { 0xee, 0xfe, 0xf2, 0xfe, 0xf2 };
   unsigned char buf[40];
@@ -301,7 +301,7 @@ t_encode_option6(void) {
   CU_ASSERT(memcmp(buf, teststr, result) == 0);
 }
 
-void
+static void
 t_encode_option7(void) {
   char teststr[] = { 0x35, 'v', 'a', 'l', 'u', 'e' };
   const size_t valoff = 1;
@@ -317,7 +317,7 @@ t_encode_option7(void) {
   CU_ASSERT(memcmp(buf, teststr, result) == 0);
 }
 
-void
+static void
 t_encode_option8(void) {
   /* value does not fit in message buffer */
   unsigned char buf[40];
@@ -338,7 +338,7 @@ t_encode_option8(void) {
  ** accessor tests
  ************************************************************************/
 
-void
+static void
 t_access_option1(void) {
   const char teststr[] = { 0x12, 'a', 'b' };
 
@@ -348,7 +348,7 @@ t_access_option1(void) {
   CU_ASSERT(coap_opt_size((coap_opt_t *)teststr) == sizeof(teststr));
 }
 
-void
+static void
 t_access_option2(void) {
   const char teststr[] = { 0xe2, 0x18, 0xfd, 'a', 'b' };
 
@@ -358,7 +358,7 @@ t_access_option2(void) {
   CU_ASSERT(coap_opt_size((coap_opt_t *)teststr) == sizeof(teststr));
 }
 
-void
+static void
 t_access_option3(void) {
   const char teststr[] = { 0xed, 0x18, 0x0a, 0x00, 'a', 'b', 'c', 'd', 
 			   'e',  'f',  'g',  'h',  'i', 'j', 'k', 'l',
@@ -371,7 +371,7 @@ t_access_option3(void) {
   CU_ASSERT(coap_opt_size((coap_opt_t *)teststr) == sizeof(teststr));
 }
 
-void
+static void
 t_access_option4(void) {
   const char teststr[] = { 0xde, 0xff, 0xfe, 0xf2, 'a', 'b', 'c' };
 
@@ -381,7 +381,7 @@ t_access_option4(void) {
   CU_ASSERT(coap_opt_size((coap_opt_t *)teststr) == 65535 + 4);
 }
 
-void
+static void
 t_access_option5(void) {
   const char teststr[] = { 0xee, 0xfe, 0xf2, 0x00, 0xdd, 'a', 'b', 'c' };
 
@@ -391,7 +391,7 @@ t_access_option5(void) {
   CU_ASSERT(coap_opt_size((coap_opt_t *)teststr) == 495);
 }
 
-void
+static void
 t_access_option6(void) {
   const char teststr[] = { 0xf2, 'a', 'b' };
 
@@ -401,7 +401,7 @@ t_access_option6(void) {
   CU_ASSERT(coap_opt_size((coap_opt_t *)teststr) == 0);
 }
 
-void
+static void
 t_access_option7(void) {
   const char teststr[] = { 0x2f, 'a', 'b' };
 
@@ -417,7 +417,7 @@ t_access_option7(void) {
 
 #define TEST_MAX_SIZE 1000
 
-void
+static void
 t_iterate_option1(void) {
   /* CoAP PDU without token, options, or data */
   char teststr[] __attribute__ ((aligned (8))) = { 
@@ -442,7 +442,7 @@ t_iterate_option1(void) {
   CU_ASSERT(option == NULL);
 }
 
-void
+static void
 t_iterate_option2(void) {
   /* CoAP PDU with token but without options and data */
   char teststr[] __attribute__ ((aligned (8))) = { 
@@ -467,7 +467,7 @@ t_iterate_option2(void) {
   CU_ASSERT(option == NULL);
 }
 
-void
+static void
 t_iterate_option3(void) {
   /* CoAP PDU with token and options */
   char teststr[] __attribute__ ((aligned (8))) = { 
@@ -508,7 +508,7 @@ t_iterate_option3(void) {
   CU_ASSERT_PTR_EQUAL(option, NULL);
 }
 
-void
+static void
 t_iterate_option4(void) {
   /* CoAP PDU with token, options, and data */
   char teststr[] __attribute__ ((aligned (8))) = { 
@@ -550,7 +550,7 @@ t_iterate_option4(void) {
   CU_ASSERT_PTR_EQUAL(option, NULL);
 }
 
-void
+static void
 t_iterate_option5(void) {
   /* CoAP PDU with malformed option */
   char teststr[] __attribute__ ((aligned (8))) = { 
@@ -581,7 +581,7 @@ t_iterate_option5(void) {
   CU_ASSERT_PTR_EQUAL(option, NULL);
 }
 
-void
+static void
 t_iterate_option6(void) {
   /* option filter */
   /* CoAP PDU with token, options, and data */
@@ -626,7 +626,7 @@ t_iterate_option6(void) {
   CU_ASSERT_PTR_EQUAL(option, NULL);
 }
 
-void
+static void
 t_iterate_option7(void) {
   /* option filter */
   char teststr[] __attribute__ ((aligned (8))) = { 
@@ -672,7 +672,7 @@ t_iterate_option7(void) {
   CU_ASSERT_PTR_EQUAL(option, NULL);
 }
 
-void
+static void
 t_iterate_option8(void) {
   /* option filter */
   char teststr[] __attribute__ ((aligned (8))) = { 
@@ -702,7 +702,7 @@ t_iterate_option8(void) {
   CU_ASSERT_PTR_EQUAL(option, NULL);
 }
 
-void
+static void
 t_iterate_option9(void) {
   /* options filter: option number too large for filter */
   char teststr[] __attribute__ ((aligned (8))) = { 
@@ -732,7 +732,7 @@ t_iterate_option9(void) {
   CU_ASSERT_PTR_EQUAL(option, NULL);
 }
 
-void
+static void
 t_iterate_option10(void) {
   /* options filter: option numbers in PDU exceed filter size */
   char teststr[] __attribute__ ((aligned (8))) = { 
