@@ -110,7 +110,7 @@ strnlen(const char *s, size_t maxlen) {
 }
 #endif /* HAVE_STRNLEN */
 
-unsigned int
+static unsigned int
 print_readable( const unsigned char *data, unsigned int len,
 		unsigned char *result, unsigned int buflen, int encode_always ) {
   const unsigned char hex[] = "0123456789ABCDEF";

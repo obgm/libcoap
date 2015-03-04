@@ -193,7 +193,7 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
  * @param length  Length of @p seg.
  * @param buf     The result buffer.
  */
-void
+static void
 decode_segment(const unsigned char *seg, size_t length, unsigned char *buf) {
 
   while (length--) {
@@ -215,7 +215,7 @@ decode_segment(const unsigned char *seg, size_t length, unsigned char *buf) {
  * percent-encodings are correct. This function returns @c -1 on error
  * or the length of @p s when decoded.
  */
-int 
+static int
 check_segment(const unsigned char *s, size_t length) {
 
   size_t n = 0;
@@ -254,7 +254,7 @@ check_segment(const unsigned char *s, size_t length) {
  * @bug This function does not split segments that are bigger than 270
  * bytes.
  */
-int
+static int
 make_decoded_option(const unsigned char *s, size_t length, 
 		    unsigned char *buf, size_t buflen) {
   int res;
@@ -307,7 +307,7 @@ typedef void (*segment_handler_t)(unsigned char *, size_t, void *);
  * 
  * @return The number of characters that have been parsed from @p s.
  */
-size_t
+static size_t
 coap_split_path_impl(coap_parse_iterator_t *parse_iter,
 		     segment_handler_t h, void *data) {
   unsigned char *seg;
@@ -332,7 +332,7 @@ struct cnt_str {
   int n;
 };
 
-void
+static void
 write_option(unsigned char *s, size_t len, void *data) {
   struct cnt_str *state = (struct cnt_str *)data;
   int res;
