@@ -335,4 +335,7 @@ coap_resource_iterator_init(coap_resource_t *resources,
 
 coap_resource_t *coap_resource_next(coap_iterator_t *ri);
 
+coap_print_status_t coap_print_wellknown(coap_context_t *, unsigned char *, size_t *, size_t, coap_opt_t *);
+void coap_handle_failed_notify(coap_context_t *, const coap_address_t *, const str *);
+
 #endif /* _COAP_RESOURCE_H_ */

@@ -177,7 +177,7 @@ coap_resource_next(coap_iterator_t *ri) {
     }									\
   }
  
-int
+static int
 match(const str *text, const str *pattern, int match_prefix, int match_substring) {
   assert(text); assert(pattern);
   
@@ -235,12 +235,12 @@ match(const str *text, const str *pattern, int match_prefix, int match_substring
  */
 #if defined(__GNUC__) && defined(WITHOUT_QUERY_FILTER)
 coap_print_status_t
-print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
+coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
 		size_t offset,
 		coap_opt_t *query_filter __attribute__ ((unused))) {
 #else /* not a GCC */
 coap_print_status_t
-print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
+coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
 		size_t offset, coap_opt_t *query_filter) {
 #endif /* GCC */
   coap_resource_t *r;
