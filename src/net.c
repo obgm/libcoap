@@ -176,11 +176,6 @@ coap_free_node(coap_queue_t *node) {
 }
 #endif /* WITH_CONTIKI */
 
-int print_wellknown(coap_context_t *, unsigned char *, size_t *, size_t, coap_opt_t *);
-
-void coap_handle_failed_notify(coap_context_t *, const coap_address_t *, 
-			       const str *);
-
 unsigned int
 coap_adjust_basetime(coap_context_t *ctx, coap_tick_t now) {
   unsigned int result = 0;
@@ -565,7 +560,7 @@ coap_send_ack(coap_context_t *context,
 
 #if defined(WITH_POSIX) || defined(WITH_CONTIKI)
 /* releases space allocated by PDU if free_pdu is set */
-coap_tid_t
+static coap_tid_t
 coap_send_impl(coap_context_t *context, 
 	       const coap_endpoint_t *local_interface,
 	       const coap_address_t *dst,
@@ -1138,13 +1133,13 @@ get_wkc_len(coap_context_t *context, coap_opt_t *query_filter) {
   unsigned char buf[1];
   size_t len = 0;
 
-  if (print_wellknown(context, buf, &len, UINT_MAX, query_filter)
+  if (coap_print_wellknown(context, buf, &len, UINT_MAX, query_filter)
       & COAP_PRINT_STATUS_ERROR) {
     warn("cannot determine length of /.well-known/core\n");
     return 0;
   }
 
-  debug("get_wkc_len: print_wellknown() returned %zu\n", len);
+  debug("get_wkc_len: coap_print_wellknown() returned %zu\n", len);
 
   return len;
 }
@@ -1152,7 +1147,7 @@ get_wkc_len(coap_context_t *context, coap_opt_t *query_filter) {
 #define SZX_TO_BYTES(SZX) ((size_t)(1 << ((SZX) + 4)))
 
 coap_pdu_t *
-wellknown_response(coap_context_t *context, coap_pdu_t *request) {
+coap_wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   coap_pdu_t *resp;
   coap_opt_iterator_t opt_iter;
   size_t len, wkc_len;
@@ -1169,12 +1164,12 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
 		       COAP_RESPONSE_CODE(205),
 		       request->hdr->id, COAP_MAX_PDU_SIZE);
   if (!resp) {
-    debug("wellknown_response: cannot create PDU\n");
+    debug("coap_wellknown_response: cannot create PDU\n");
     return NULL;
   }
   
   if (!coap_add_token(resp, request->hdr->token_length, request->hdr->token)) {
-    debug("wellknown_response: cannot add token\n");
+    debug("coap_wellknown_response: cannot add token\n");
     goto error;
   }
 
@@ -1201,7 +1196,7 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
    * avoid sending error responses with that option but no actual
    * content. */
   if (resp->max_size <= (size_t)resp->length + 3) {
-    debug("wellknown_response: insufficient storage space\n");
+    debug("coap_wellknown_response: insufficient storage space\n");
     goto error;
   }
 
@@ -1223,7 +1218,7 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
     block.szx = COAP_MAX_BLOCK_SZX;
     while (payloadlen < SZX_TO_BYTES(block.szx)) {
       if (block.szx == 0) {
-	debug("wellknown_response: message to small even for szx == 0\n");
+	debug("coap_wellknown_response: message to small even for szx == 0\n");
 	goto error;
       } else {
 	block.szx--;
@@ -1236,7 +1231,7 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   /* write Block2 option if necessary */
   if (need_block2) {
     if (coap_write_block_opt(&block, COAP_OPTION_BLOCK2, resp, wkc_len) < 0) {
-      debug("wellknown_response: cannot add Block2 option\n");
+      debug("coap_wellknown_response: cannot add Block2 option\n");
       goto error;
     }
   }
@@ -1250,9 +1245,9 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   resp->length++;
   len = need_block2 ? SZX_TO_BYTES(block.szx) : resp->max_size - resp->length;
 
-  result = print_wellknown(context, resp->data, &len, offset, query_filter);
+  result = coap_print_wellknown(context, resp->data, &len, offset, query_filter);
   if ((result & COAP_PRINT_STATUS_ERROR) != 0) {
-    debug("print_wellknown failed\n");
+    debug("coap_print_wellknown failed\n");
     goto error;
   } 
   
@@ -1327,7 +1322,7 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
 #define WANT_WKC(Pdu,Key)					\
   (((Pdu)->hdr->code == COAP_REQUEST_GET) && is_wkc(Key))
 
-void
+static void
 handle_request(coap_context_t *context, coap_queue_t *node) {      
   coap_method_handler_t h = NULL;
   coap_pdu_t *response = NULL;
@@ -1351,7 +1346,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
     case COAP_REQUEST_GET: 
       if (is_wkc(key)) {	/* GET request for .well-known/core */
 	info("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
-	response = wellknown_response(context, node->pdu);
+	response = coap_wellknown_response(context, node->pdu);
 
       } else { /* GET request for any another resource, return 4.04 */
 
@@ -1462,7 +1457,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
   } else {
     if (WANT_WKC(node->pdu, key)) {
       debug("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
-      response = wellknown_response(context, node->pdu);
+      response = coap_wellknown_response(context, node->pdu);
       debug("have wellknown response %p\n", (void *)response);
     } else
       response = coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(405), 

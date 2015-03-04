@@ -493,6 +493,17 @@ int coap_option_check_critical(coap_context_t *ctx,
 			       coap_pdu_t *pdu,
 			       coap_opt_filter_t unknown);
 
+/**
+ * Creates a new response for given @p request with the contents of
+ * @c .well-known/core. The result is NULL on error or a newly
+ * allocated PDU that must be released by coap_delete_pdu().
+ *
+ * @param context The current coap context to use
+ * @param request The request for @c .well-known/core
+ * @return A new 2.05 response for @c .well-known/core or NULL on error.
+ */
+coap_pdu_t *coap_wellknown_response(coap_context_t *context, coap_pdu_t *request);
+
 #ifdef __cplusplus
 }
 #endif
