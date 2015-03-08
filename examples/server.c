@@ -37,6 +37,7 @@
 static int quit = 0;
 
 /* changeable clock base (see handle_put_time()) */
+static time_t clock_offset;
 static time_t my_clock_base = 0;
 
 struct coap_resource_t *time_resource = NULL;
@@ -359,6 +360,8 @@ main(int argc, char **argv) {
   char port_str[NI_MAXSERV] = "5683";
   int opt;
   coap_log_t log_level = LOG_WARNING;
+
+  clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv, "A:p:v:")) != -1) {
     switch (opt) {

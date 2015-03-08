@@ -26,8 +26,7 @@ extern "C" {
 
 /**
  * @defgroup clock Clock Handling
- * Default implementation of internal clock. You should redefine this if
- * you do not have time() and gettimeofday().
+ * Default implementation of internal clock.
  * @{
  */
 
@@ -40,6 +39,7 @@ extern "C" {
 #define COAP_TICKS_PER_SECOND 1000
 
 typedef uint32_t coap_tick_t;
+typedef uint32_t coap_time_t;
 typedef int32_t coap_tick_diff_t;
 
 static inline void coap_ticks_impl(coap_tick_t *t)
@@ -55,11 +55,15 @@ static inline void coap_clock_init_impl(void)
 
 #define coap_ticks coap_ticks_impl
 
+static inline coap_time_t coap_ticks_to_rt(coap_tick_t t) {
+  return t / COAP_TICKS_PER_SECOND;
+}
 #endif
 #ifdef WITH_CONTIKI
 #include "clock.h"
 
 typedef clock_time_t coap_tick_t;
+typedef clock_time_t coap_time_t;
 
 /**
  * This data type is used to represent the difference between two
@@ -70,72 +74,62 @@ typedef int coap_tick_diff_t;
 
 #define COAP_TICKS_PER_SECOND CLOCK_SECOND
 
-/** Set at startup to initialize the internal clock (time in seconds). */
-extern clock_time_t clock_offset;
-
 static inline void
-contiki_clock_init_impl(void) {
+coap_clock_init(void) {
   clock_init();
-  clock_offset = clock_time();
 }
 
-#define coap_clock_init contiki_clock_init_impl
-
 static inline void
-contiki_ticks_impl(coap_tick_t *t) {
+coap_ticks(coap_tick_t *t) {
   *t = clock_time();
 }
 
-#define coap_ticks contiki_ticks_impl
-
+static inline coap_time_t coap_ticks_to_rt(coap_tick_t t) {
+  return t / COAP_TICKS_PER_SECOND;
+}
 #endif /* WITH_CONTIKI */
 #ifdef WITH_POSIX
-typedef unsigned int coap_tick_t; 
+/**
+ * This data type represents internal timer ticks with
+ * COAP_TICKS_PER_SECOND resolution.
+ */
+typedef unsigned long coap_tick_t;
+
+/** CoAP time in seconds since epoch. */
+typedef time_t coap_time_t;
 
 /**
  * This data type is used to represent the difference between two
  * clock_tick_t values. This data type must have the same size in
  * memory as coap_tick_t to allow wrapping.
  */
-typedef int coap_tick_diff_t;
+typedef long coap_tick_diff_t;
 
-#define COAP_TICKS_PER_SECOND 1024
+/** Use ms resolution on POSIX systems */
+#define COAP_TICKS_PER_SECOND 1000
 
-/** Set at startup to initialize the internal clock (time in seconds). */
-extern time_t clock_offset;
+/** Initializes the internal clock. */
+static inline void coap_clock_init(void)
+{
+}
+
+/** Sets @p t to the internal time with COAP_TICKS_PER_SECOND resolution. */
+void coap_ticks(coap_tick_t *t);
+
+/**
+ * Helper function that converts coap ticks to wallclock time. On POSIX,
+ * this function returns the number of seconds since the epoch. On other
+ * systems, it may be the calculated number of seconds since last reboot
+ * or so.
+ *
+ * @param t Internal system ticks
+ * @return The number of seconds that has passed since a specific reference
+ *         point (seconds since epoch on POSIX).
+ */
+static inline coap_time_t coap_ticks_to_rt(coap_tick_t t) {
+  return t / COAP_TICKS_PER_SECOND;
+}
 #endif /* WITH_POSIX */
-
-#ifndef coap_clock_init
-static inline void
-coap_clock_init_impl(void) {
-#ifdef HAVE_TIME_H
-  clock_offset = time(NULL);
-#else
-#  ifdef __GNUC__
-    /* Issue a warning when using gcc. Other prepropressors do 
-     *  not seem to have a similar feature. */ 
-#   warning "cannot initialize clock"
-#  endif
-  clock_offset = 0;
-#endif
-}
-#define coap_clock_init coap_clock_init_impl
-#endif /* coap_clock_init */
-
-#ifndef coap_ticks
-static inline void
-coap_ticks_impl(coap_tick_t *t) {
-#ifdef HAVE_SYS_TIME_H
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  *t = (tv.tv_sec - clock_offset) * COAP_TICKS_PER_SECOND 
-    + (tv.tv_usec * COAP_TICKS_PER_SECOND / 1000000);
-#else
-#error "clock not implemented"
-#endif
-}
-#define coap_ticks coap_ticks_impl
-#endif /* coap_ticks */
 
 /**
  * Returns @c 1 if and only if @p a is less than @p b where less is

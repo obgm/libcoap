@@ -1,3 +1,8 @@
+2015-03-05  Olaf Bergmann  <bergmann@tzi.org>
+
+	* src/coap_time.c (coap_ticks): Changed POSIX implementation
+	to fixed point arithmetic and removed clock_offset.
+
 2015-02-21  Olaf Bergmann  <bergmann@tzi.org>
 
 	* net.c (coap_send_confirmed): Use fixed point arithmetic

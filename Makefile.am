@@ -36,6 +36,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/async.c \
   src/block.c \
   src/coap_io.c \
+  src/coap_time.c \
   src/debug.c \
   src/encode.c \
   src/hashkey.c \

@@ -69,7 +69,7 @@ static char *loglevels[] = {
 static inline size_t
 print_timestamp(char *s, size_t len, coap_tick_t t) {
   struct tm *tmp;
-  time_t now = clock_offset + (t / COAP_TICKS_PER_SECOND);
+  time_t now = coap_ticks_to_rt(t);
   tmp = localtime(&now);
   return strftime(s, len, "%b %d %H:%M:%S", tmp);
 }
@@ -80,7 +80,7 @@ static inline size_t
 print_timestamp(char *s, size_t len, coap_tick_t t) {
 #ifdef HAVE_SNPRINTF
   return snprintf(s, len, "%u.%03u", 
-		  (unsigned int)(clock_offset + (t / COAP_TICKS_PER_SECOND)), 
+		  (unsigned int)coap_ticks_to_rt(t),
 		  (unsigned int)(t % COAP_TICKS_PER_SECOND));
 #else /* HAVE_SNPRINTF */
   /* @todo do manual conversion of timestamp */
