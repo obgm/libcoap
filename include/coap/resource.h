@@ -264,10 +264,10 @@ void coap_hash_request_uri(const coap_pdu_t *request, coap_key_t key);
  * has been added, or @c NULL on error.
  *
  * @param resource The observed resource.
+ * @param local_interface The local network interface where the
+ *                observer is attached to.
  * @param observer The remote peer that wants to received status updates.
  * @param token The token that identifies this subscription.
- * @param token_length The actual length of @p token. Must be @c 0 when
- *        @p token is @c NULL.
  * @return A pointer to the added/updated subscription information or 
  *        @c NULL on error.
  */

@@ -222,6 +222,8 @@ void coap_free_context(coap_context_t *context);
  * coap_send_confirmed(). The caller must release the memory.
  *
  * @param context The CoAP context to use.
+ * @param local_interface The local network interface where the outbound
+ *                packet is sent.
  * @param dst     The address to send to.
  * @param pdu     The CoAP PDU to send.
  * @return The message id of the sent message or @c COAP_INVALID_TID on error.
@@ -257,6 +259,8 @@ coap_pdu_t *coap_new_error_response(coap_pdu_t *request,
  * The caller must release the memory.
  *
  * @param context The CoAP context to use.
+ * @param local_interface The local network interface where the outbound
+ *                packet is sent.
  * @param dst     The address to send to.
  * @param pdu     The CoAP PDU to send.
  * @return The message id of the sent message or @c COAP_INVALID_TID on error.
@@ -275,6 +279,8 @@ coap_tid_t coap_send(coap_context_t *context,
  * 
  * @param context The context to use.
  * @param request The original request to respond to.
+ * @param local_interface The local network interface where the outbound
+ *                packet is sent.
  * @param dst     The remote peer that sent the request.
  * @param code    The reponse code.
  * @param opts    A filter that specifies the options to copy from the 
@@ -296,6 +302,8 @@ coap_tid_t coap_send_error(coap_context_t *context,
  * message was not sent, a valid transaction id otherwise.
  *
  * @param context The CoAP context.
+ * @param local_interface The local network interface where the outbound
+ *                packet is sent.
  * @param dst Where to send the context.
  * @param request The request that should be responded to.
  * @param type Which type to set
@@ -313,6 +321,8 @@ coap_send_message_type(coap_context_t *context,
  * the message was sent or @c COAP_INVALID_TID on error.
  * 
  * @param context The context to use.
+ * @param local_interface The local network interface where the outbound
+ *                packet is sent.
  * @param dst     The destination address.
  * @param request The request to be acknowledged.
  * 
@@ -330,6 +340,8 @@ coap_tid_t coap_send_ack(coap_context_t *context,
  * the message was sent or @c COAP_INVALID_TID on error.
  * 
  * @param context The context to use.
+ * @param local_interface The local network interface where the outbound
+ *                packet is sent.
  * @param dst     The destination address.
  * @param request The request to be reset.
  * 
@@ -361,10 +373,7 @@ int coap_read(coap_context_t *context);
  * error.
  *
  * @param ctx     The current CoAP context.
- * @param local_interface The local interface where @p msg was received.
- * @param remote  The remote peer that has sent the message.
- * @param msg     The message data.
- * @param msg_length The actual length of @p msg in bytes.
+ * @param packet  The received packet.
  * @return @c 0 if message was handled successfully, or less than 
  *              zero on error.
  */
@@ -425,8 +434,8 @@ coap_remove_transaction(coap_queue_t **queue, coap_tid_t id) {
 
 /**
  * Retrieves transaction from queue.
- * @queue The transaction queue to be searched
- * @id Unique key of the transaction to find.
+ * @param queue The transaction queue to be searched
+ * @param id Unique key of the transaction to find.
  * @return A pointer to the transaction object or NULL if not found
  */
 coap_queue_t *coap_find_transaction(coap_queue_t *queue, coap_tid_t id);

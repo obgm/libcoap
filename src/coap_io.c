@@ -375,9 +375,9 @@ coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t
 }
 
 /**
- * Checks if a message with destination address @param dst matches the
- * local interface with address @param local. This function returns @c 1
- * if @param dst is a valid match, and @c 0 otherwise.
+ * Checks if a message with destination address @p dst matches the
+ * local interface with address @p local. This function returns @c 1
+ * if @p dst is a valid match, and @c 0 otherwise.
  */
 static inline int
 is_local_if(const coap_address_t *local, const coap_address_t *dst) {

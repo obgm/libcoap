@@ -47,9 +47,9 @@ typedef enum {
 void *coap_malloc_type(coap_memory_tag_t type, size_t size);
 
 /**
- * Releases the memory that was allocated by coap_malloc_type().
- * The type tag @p type must be the same that was used for
- * allocating the object pointed to by @p.
+ * Releases the memory that was allocated by coap_malloc_type().  The
+ * type tag @p type must be the same that was used for allocating the
+ * object pointed to by @p.
  *
  * @param type The type of the object to release.
  * @param p A pointer to memory that was allocated by

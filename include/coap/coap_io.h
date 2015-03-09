@@ -92,7 +92,7 @@ ssize_t coap_network_send(struct coap_context_t *context,
  * of bytes that have been read, or a value less than zero on error. In
  * case of an error, @p *packet is set to NULL.
  *
- * @param local_interface The local endpoint where data is read.
+ * @param ep     The endpoint that is used for reading data from the network.
  * @param packet A result parameter where a pointer to the received
  *               packet structure is stored. The caller must call
  *               coap_free_packet to release the storage used by this

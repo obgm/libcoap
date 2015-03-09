@@ -28,7 +28,7 @@ typedef struct {
  * object or NULL on error. The memory allocated by the new coap_uri_t
  * must be released using coap_free().
  * @param uri The URI path to copy.
- * @para length The length of uri.
+ * @param length The length of uri.
  *
  * @return New URI object or NULL on error.
  */
@@ -90,7 +90,7 @@ typedef struct {
  * @param s         The string to tokenize.
  * @param n         The length of @p s.
  * @param separator The separator character that delimits tokens.
- * @param delim     A set of characters that delimit @s.
+ * @param delim     A set of characters that delimit @p s.
  * @param dlen      The length of @p delim.
  * @param pi        The iterator object to initialize.
  * 

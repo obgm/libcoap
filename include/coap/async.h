@@ -113,7 +113,7 @@ int coap_remove_async(coap_context_t *context, coap_tid_t id,
  * for the object @p s. The registered application data will be
  * released automatically if COAP_ASYNC_RELEASE_DATA is set.
  * 
- * @param s The object to delete.
+ * @param state The object to delete.
  */
 void 
 coap_free_async(coap_async_state_t *state);

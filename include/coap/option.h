@@ -261,7 +261,7 @@ size_t coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
  * @param n     Maximum length of @p opt.
  * @param delta The option delta.
  * @param val   The option value to copy into @p opt.
- * @param len   The actual length of @p val.
+ * @param length The actual length of @p val.
  * @return The number of bytes that have been written to @p opt or
  *         @c 0 on error. The return value will always be less than @p n.
  */
