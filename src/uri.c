@@ -1,6 +1,6 @@
 /* uri.c -- helper functions for URI treatment
  *
- * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012,2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -297,6 +297,14 @@ make_decoded_option(const unsigned char *s, size_t length,
 
 typedef void (*segment_handler_t)(unsigned char *, size_t, void *);
 
+/**
+ * Checks if path segment @p s consists of one or two dots.
+ */
+static inline int
+dots(unsigned char *s, size_t len) {
+  return *s == '.' && (len == 1 || (*(s+1) == '.' && len == 2));
+}
+
 /** 
  * Splits the given string into segments. You should call one of the
  * macros coap_split_path() or coap_split_query() instead.
@@ -308,23 +316,32 @@ typedef void (*segment_handler_t)(unsigned char *, size_t, void *);
  * @return The number of characters that have been parsed from @p s.
  */
 static size_t
-coap_split_path_impl(coap_parse_iterator_t *parse_iter,
+coap_split_path_impl(const unsigned char *s, size_t length,
 		     segment_handler_t h, void *data) {
-  unsigned char *seg;
-  size_t length;
-  
-  assert(parse_iter);
-  assert(h);
 
-  length = parse_iter->n;
-  
-  while ( (seg = coap_parse_next(parse_iter)) ) {
+  const unsigned char *p, *q;
 
-    /* any valid path segment is handled here: */
-    h(seg, parse_iter->segment_length, data);
+  p = q = s;
+  while (length > 0 && !strnchr((unsigned char *)"?#", 2, *q)) {
+    if (*q == '/') {		/* start new segment */
+
+      if (!dots((unsigned char *)p, q - p)) {
+	h((unsigned char *)p, q - p, data);
+      }
+
+      p = q + 1;
+    }
+
+    q++;
+    length--;
   }
-  
-  return length - (parse_iter->n - parse_iter->segment_length);
+
+  /* write last segment */
+  if (!dots((unsigned char *)p, q - p)) {
+    h((unsigned char *)p, q - p, data);
+  }
+
+  return q - s;
 }
 
 struct cnt_str {
@@ -338,10 +355,6 @@ write_option(unsigned char *s, size_t len, void *data) {
   int res;
   assert(state);
 
-  /* skip empty segments and those that consist of only one or two dots */
-  if (memcmp(s, "..", min(len,2)) == 0)
-    return;
-  
   res = make_decoded_option(s, len, state->buf.s, state->buf.length);
   if (res > 0) {
     state->buf.s += res;
@@ -354,13 +367,11 @@ int
 coap_split_path(const unsigned char *s, size_t length, 
 		unsigned char *buf, size_t *buflen) {
   struct cnt_str tmp = { { *buflen, buf }, 0 };
-  coap_parse_iterator_t pi;
 
-  coap_parse_iterator_init((unsigned char *)s, length, 
-			   '/', (unsigned char *)"?#", 2, &pi);
-  coap_split_path_impl(&pi, write_option, &tmp);
+  coap_split_path_impl(s, length, write_option, &tmp);
 
   *buflen = *buflen - tmp.buf.length;
+
   return tmp.n;
 }
 
@@ -368,14 +379,23 @@ int
 coap_split_query(const unsigned char *s, size_t length, 
 		unsigned char *buf, size_t *buflen) {
   struct cnt_str tmp = { { *buflen, buf }, 0 };
-  coap_parse_iterator_t pi;
+  const unsigned char *p;
 
-  coap_parse_iterator_init((unsigned char *)s, length, 
-			   '&', (unsigned char *)"#", 1, &pi);
+  p = s;
+  while (length > 0 && *s != '#') {
+    if (*s == '&') {		/* start new query element */
+      write_option((unsigned char *)p, s - p, &tmp);
+      p = s + 1;
+    }
 
-  coap_split_path_impl(&pi, write_option, &tmp);
+    s++;
+    length--;
+  }
 
-  *buflen = tmp.buf.length;
+  /* write last query element */
+  write_option((unsigned char *)p, s - p, &tmp);
+
+  *buflen = *buflen - tmp.buf.length;
   return tmp.n;
 }
 
@@ -452,77 +472,12 @@ hash_segment(unsigned char *s, size_t len, void *data) {
 
 int
 coap_hash_path(const unsigned char *path, size_t len, coap_key_t key) {
-  coap_parse_iterator_t pi;
-
   if (!path)
     return 0;
 
   memset(key, 0, sizeof(coap_key_t));
 
-  coap_parse_iterator_init((unsigned char *)path, len, 
-			   '/', (unsigned char *)"?#", 2, &pi);
-  coap_split_path_impl(&pi, hash_segment, key);
+  coap_split_path_impl(path, len, hash_segment, key);
 
   return 1;
 }
-
-/* iterator functions */
-
-coap_parse_iterator_t *
-coap_parse_iterator_init(unsigned char *s, size_t n, 
-			 unsigned char separator,
-			 unsigned char *delim, size_t dlen,
-			 coap_parse_iterator_t *pi) {
-  assert(pi);
-  assert(separator);
-
-  pi->separator = separator;
-  pi->delim = delim;
-  pi->dlen = dlen;
-  pi->pos = s;
-  pi->n = n;
-  pi->segment_length = 0;
-
-  return pi;
-}
-
-unsigned char *
-coap_parse_next(coap_parse_iterator_t *pi) {
-  unsigned char *p;
-
-  if (!pi)
-    return NULL;
-
-  /* proceed to the next segment */
-  pi->n -= pi->segment_length;
-  pi->pos += pi->segment_length;
-  pi->segment_length = 0;
-
-  /* last segment? */
-  if (!pi->n || strnchr(pi->delim, pi->dlen, *pi->pos)) {
-    pi->pos = NULL;
-    return NULL;
-  }
-
-  /* skip following separator (the first segment might not have one) */
-  if (*pi->pos == pi->separator) {
-    ++pi->pos;
-    --pi->n;
-  }
-
-  p = pi->pos;
-
-  while (pi->segment_length < pi->n && *p != pi->separator &&
-	 !strnchr(pi->delim, pi->dlen, *p)) {
-    ++p;
-    ++pi->segment_length;
-  }
-
-  if (!pi->n) {
-    pi->pos = NULL;
-    pi->segment_length = 0;
-  }
-
-  return pi->pos;
-}
-

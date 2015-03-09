@@ -61,61 +61,6 @@ int coap_hash_path(const unsigned char *path, size_t len, coap_key_t key);
  */
 
 /** 
- * Iterator to for tokenizing a URI path or query. This structure must
- * be initialized with coap_parse_iterator_init(). Call
- * coap_parse_next() to walk through the tokens.
- *
- * @code
- * unsigned char *token;
- * coap_parse_iterator_t pi;
- * coap_parse_iterator_init(uri.path.s, uri.path.length, '/', "?#", 2, &pi);
- *
- * while ((token = coap_parse_next(&pi))) {
- *   ... do something with token ...
- * }
- * @endcode
- */
-typedef struct {
-  size_t n;			/**< number of remaining characters in buffer */
-  unsigned char separator;	/**< segment separators */
-  unsigned char *delim; 	/**< delimiters where to split the string */
-  size_t dlen;			/**< length of separator */
-  unsigned char *pos;		/**< current position in buffer */
-  size_t segment_length;	/**< length of current segment */
-} coap_parse_iterator_t;
-
-/** 
- * Initializes the given iterator @p pi. 
- * 
- * @param s         The string to tokenize.
- * @param n         The length of @p s.
- * @param separator The separator character that delimits tokens.
- * @param delim     A set of characters that delimit @p s.
- * @param dlen      The length of @p delim.
- * @param pi        The iterator object to initialize.
- * 
- * @return The initialized iterator object @p pi.
- */
-coap_parse_iterator_t *
-coap_parse_iterator_init(unsigned char *s, size_t n, 
-			 unsigned char separator,
-			 unsigned char *delim, size_t dlen,
-			 coap_parse_iterator_t *pi);
-
-/** 
- * Updates the iterator @p pi to point to the next token. This
- * function returns a pointer to that token or @c NULL if no more
- * tokens exist. The contents of @p pi will be updated. In particular,
- * @c pi->segment_length specifies the length of the current token, @c
- * pi->pos points to its beginning.
- * 
- * @param pi The iterator to update.
- * 
- * @return The next token or @c NULL if no more tokens exist.
- */
-unsigned char *coap_parse_next(coap_parse_iterator_t *pi);
-
-/** 
  * Parses a given string into URI components. The identified syntactic
  * components are stored in the result parameter @p uri. Optional URI
  * components that are not specified will be set to { 0, 0 }, except
