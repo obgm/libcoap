@@ -309,7 +309,8 @@ dots(unsigned char *s, size_t len) {
  * Splits the given string into segments. You should call one of the
  * macros coap_split_path() or coap_split_query() instead.
  * 
- * @param parse_iter The iterator used for tokenizing.
+ * @param s      The URI string to be tokenized.
+ * @param length The length of @p s.
  * @param h      A handler that is called with every token.
  * @param data   Opaque data that is passed to @p h when called.
  * 
