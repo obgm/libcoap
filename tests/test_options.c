@@ -243,7 +243,7 @@ t_encode_option1(void) {
 
 static void
 t_encode_option2(void) {
-  char teststr[] = { 0x5d, 0xff };
+  uint8_t teststr[] = { 0x5d, 0xff };
   unsigned char buf[40];
   size_t result;
   
@@ -255,7 +255,7 @@ t_encode_option2(void) {
 
 static void
 t_encode_option3(void) {
-  char teststr[] = { 0xd1, 0x01 };
+  uint8_t teststr[] = { 0xd1, 0x01 };
   unsigned char buf[40];
   size_t result;
   
@@ -267,7 +267,7 @@ t_encode_option3(void) {
 
 static void
 t_encode_option4(void) {
-  char teststr[] = { 0xdd, 0xff, 0xab };
+  uint8_t teststr[] = { 0xdd, 0xff, 0xab };
   unsigned char buf[40];
   size_t result;
   
@@ -279,7 +279,7 @@ t_encode_option4(void) {
 
 static void
 t_encode_option5(void) {
-  char teststr[] = { 0xed, 0x13, 0x00, 0xff };
+  uint8_t teststr[] = { 0xed, 0x13, 0x00, 0xff };
   unsigned char buf[40];
   size_t result;
   
@@ -291,7 +291,7 @@ t_encode_option5(void) {
 
 static void
 t_encode_option6(void) {
-  char teststr[] = { 0xee, 0xfe, 0xf2, 0xfe, 0xf2 };
+  uint8_t teststr[] = { 0xee, 0xfe, 0xf2, 0xfe, 0xf2 };
   unsigned char buf[40];
   size_t result;
   
@@ -303,7 +303,7 @@ t_encode_option6(void) {
 
 static void
 t_encode_option7(void) {
-  char teststr[] = { 0x35, 'v', 'a', 'l', 'u', 'e' };
+  uint8_t teststr[] = { 0x35, 'v', 'a', 'l', 'u', 'e' };
   const size_t valoff = 1;
   unsigned char buf[40];
   size_t result;
@@ -340,7 +340,7 @@ t_encode_option8(void) {
 
 static void
 t_access_option1(void) {
-  const char teststr[] = { 0x12, 'a', 'b' };
+  const uint8_t teststr[] = { 0x12, 'a', 'b' };
 
   CU_ASSERT(coap_opt_delta((coap_opt_t *)teststr) == 1);
   CU_ASSERT(coap_opt_length((coap_opt_t *)teststr) == 2);
@@ -350,7 +350,7 @@ t_access_option1(void) {
 
 static void
 t_access_option2(void) {
-  const char teststr[] = { 0xe2, 0x18, 0xfd, 'a', 'b' };
+  const uint8_t teststr[] = { 0xe2, 0x18, 0xfd, 'a', 'b' };
 
   CU_ASSERT(coap_opt_delta((coap_opt_t *)teststr) == 6666);
   CU_ASSERT(coap_opt_length((coap_opt_t *)teststr) == 2);
@@ -360,7 +360,7 @@ t_access_option2(void) {
 
 static void
 t_access_option3(void) {
-  const char teststr[] = { 0xed, 0x18, 0x0a, 0x00, 'a', 'b', 'c', 'd', 
+  const uint8_t teststr[] = { 0xed, 0x18, 0x0a, 0x00, 'a', 'b', 'c', 'd', 
 			   'e',  'f',  'g',  'h',  'i', 'j', 'k', 'l',
 			   'm'
   };
@@ -373,7 +373,7 @@ t_access_option3(void) {
 
 static void
 t_access_option4(void) {
-  const char teststr[] = { 0xde, 0xff, 0xfe, 0xf2, 'a', 'b', 'c' };
+  const uint8_t teststr[] = { 0xde, 0xff, 0xfe, 0xf2, 'a', 'b', 'c' };
 
   CU_ASSERT(coap_opt_delta((coap_opt_t *)teststr) == 268);
   CU_ASSERT(coap_opt_length((coap_opt_t *)teststr) == 65535);
@@ -383,7 +383,7 @@ t_access_option4(void) {
 
 static void
 t_access_option5(void) {
-  const char teststr[] = { 0xee, 0xfe, 0xf2, 0x00, 0xdd, 'a', 'b', 'c' };
+  const uint8_t teststr[] = { 0xee, 0xfe, 0xf2, 0x00, 0xdd, 'a', 'b', 'c' };
 
   CU_ASSERT(coap_opt_delta((coap_opt_t *)teststr) == 65535);
   CU_ASSERT(coap_opt_length((coap_opt_t *)teststr) == 490);
@@ -393,7 +393,7 @@ t_access_option5(void) {
 
 static void
 t_access_option6(void) {
-  const char teststr[] = { 0xf2, 'a', 'b' };
+  const uint8_t teststr[] = { 0xf2, 'a', 'b' };
 
   CU_ASSERT(coap_opt_delta((coap_opt_t *)teststr) == 0);
   CU_ASSERT(coap_opt_length((coap_opt_t *)teststr) == 0);
@@ -403,7 +403,7 @@ t_access_option6(void) {
 
 static void
 t_access_option7(void) {
-  const char teststr[] = { 0x2f, 'a', 'b' };
+  const uint8_t teststr[] = { 0x2f, 'a', 'b' };
 
   CU_ASSERT(coap_opt_delta((coap_opt_t *)teststr) == 2);
   CU_ASSERT(coap_opt_length((coap_opt_t *)teststr) == 0);
@@ -420,7 +420,7 @@ t_access_option7(void) {
 static void
 t_iterate_option1(void) {
   /* CoAP PDU without token, options, or data */
-  char teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
     0x00, 0x00, 0x00, 0x00 
   };
 
@@ -445,7 +445,7 @@ t_iterate_option1(void) {
 static void
 t_iterate_option2(void) {
   /* CoAP PDU with token but without options and data */
-  char teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
     0x03, 0x00, 0x00, 0x00, 't', 'o', 'k'
   };
 
@@ -470,7 +470,7 @@ t_iterate_option2(void) {
 static void
 t_iterate_option3(void) {
   /* CoAP PDU with token and options */
-  char teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
     0x03, 0x00, 0x00, 0x00, 't', 'o', 'k', 0x13, 
     'o',  'p',  't',  0x00, 0xd1, 0x10, 'x'
   };
@@ -511,7 +511,7 @@ t_iterate_option3(void) {
 static void
 t_iterate_option4(void) {
   /* CoAP PDU with token, options, and data */
-  char teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
     0x03, 0x00, 0x00, 0x00, 't', 'o', 'k', 0x13, 
     'o',  'p',  't',  0x00, 0xd1, 0x10, 'x', 0xff,
     'd',  'a',  't',  'a'
@@ -553,7 +553,7 @@ t_iterate_option4(void) {
 static void
 t_iterate_option5(void) {
   /* CoAP PDU with malformed option */
-  char teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
     0x00, 0x00, 0x00, 0x00, 0x52, 'o', 'p', 0xee, 
     0x12, 0x03, 0x00
   };
@@ -585,7 +585,7 @@ static void
 t_iterate_option6(void) {
   /* option filter */
   /* CoAP PDU with token, options, and data */
-  char teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
     0x00, 0x00, 0x00, 0x00, 0x80, 0x20, 0x00, 0x00,
     0xc0, 0x00
   };
@@ -629,7 +629,7 @@ t_iterate_option6(void) {
 static void
 t_iterate_option7(void) {
   /* option filter */
-  char teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
     0x00, 0x00, 0x00, 0x00, 0x80, 0x20, 0x00, 0x00,
     0xc0, 0x00, 0x10, 0x10, 0x00
   };
@@ -675,7 +675,7 @@ t_iterate_option7(void) {
 static void
 t_iterate_option8(void) {
   /* option filter */
-  char teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
     0x00, 0x00, 0x00, 0x00, 0x80, 0x20, 0x00, 0x00,
     0xc0, 0x00, 0x10, 0x10, 0x00
   };
@@ -705,7 +705,7 @@ t_iterate_option8(void) {
 static void
 t_iterate_option9(void) {
   /* options filter: option number too large for filter */
-  char teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
     0x00, 0x00, 0x00, 0x00, 0x80, 0x20, 0x00, 0x00,
     0xc0, 0x00, 0x10, 0x10, 0x00
   };
@@ -735,7 +735,7 @@ t_iterate_option9(void) {
 static void
 t_iterate_option10(void) {
   /* options filter: option numbers in PDU exceed filter size */
-  char teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
     0x00, 0x00, 0x00, 0x00, 0x80, 0x20, 0x00, 0x00,
     0xd0, 0x26, 0xe0, 0x10, 0x00
   };

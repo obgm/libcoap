@@ -315,7 +315,7 @@ t_parse_uri12(void) {
 
 static void
 t_parse_uri13(void) {
-  char teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
     0x00, 0x00, 0x00, 0x00, 0x80, 0x03, 'f',  'o',
     'o',  0x3b, '.',  'w',  'e',  'l',  'l',  '-',  
     'k',  'n',  'o',  'w',  'n',  0x04,  'c', 'o',  

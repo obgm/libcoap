@@ -21,7 +21,7 @@ coap_pdu_t *pdu;	      /* Holds the parsed PDU for most tests */
 
 static void
 t_parse_pdu1(void) {
-  char teststr[] = {  0x40, 0x01, 0x93, 0x34 };
+  uint8_t teststr[] = {  0x40, 0x01, 0x93, 0x34 };
   int result;
 
   result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
@@ -38,7 +38,7 @@ t_parse_pdu1(void) {
 
 static void
 t_parse_pdu2(void) {
-  char teststr[] = {  0x55, 0x69, 0x12, 0x34, 't', 'o', 'k', 'e', 'n' };
+  uint8_t teststr[] = {  0x55, 0x69, 0x12, 0x34, 't', 'o', 'k', 'e', 'n' };
   int result;
 
   result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
@@ -56,7 +56,7 @@ t_parse_pdu2(void) {
 
 static void
 t_parse_pdu3(void) {
-  char teststr[] = {  0x53, 0x69, 0x12, 0x34, 't', 'o', 'k', 'e', 'n' };
+  uint8_t teststr[] = {  0x53, 0x69, 0x12, 0x34, 't', 'o', 'k', 'e', 'n' };
   int result;
 
   result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
@@ -66,7 +66,7 @@ t_parse_pdu3(void) {
 static void
 t_parse_pdu4(void) {
   /* illegal token length */
-  char teststr[] = {  0x59, 0x69, 0x12, 0x34,
+  uint8_t teststr[] = {  0x59, 0x69, 0x12, 0x34,
 		      't', 'o', 'k', 'e', 'n', '1', '2', '3', '4' };
   int result;
 
@@ -82,7 +82,7 @@ t_parse_pdu4(void) {
 static void
 t_parse_pdu5(void) {
   /* PDU with options */
-  char teststr[] = {  0x55, 0x73, 0x12, 0x34, 't', 'o', 'k', 'e',
+  uint8_t teststr[] = {  0x55, 0x73, 0x12, 0x34, 't', 'o', 'k', 'e',
 		      'n',  0x00, 0xc1, 0x00
   };
   int result;
@@ -105,7 +105,7 @@ t_parse_pdu5(void) {
 static void
 t_parse_pdu6(void) {
   /* PDU with options that exceed the PDU */
-  char teststr[] = {  0x55, 0x73, 0x12, 0x34, 't', 'o', 'k', 'e',
+  uint8_t teststr[] = {  0x55, 0x73, 0x12, 0x34, 't', 'o', 'k', 'e',
 		      'n',  0x00, 0xc1, 0x00, 0xae, 0xf0, 0x03
   };
   int result;
@@ -117,7 +117,7 @@ t_parse_pdu6(void) {
 static void
 t_parse_pdu7(void) {
   /* PDU with options and payload */
-  char teststr[] = {  0x55, 0x73, 0x12, 0x34, 't', 'o', 'k', 'e',
+  uint8_t teststr[] = {  0x55, 0x73, 0x12, 0x34, 't', 'o', 'k', 'e',
 		      'n',  0x00, 0xc1, 0x00, 0xff, 'p', 'a', 'y',
 		      'l', 'o', 'a', 'd'
   };
@@ -143,7 +143,7 @@ t_parse_pdu7(void) {
 static void
 t_parse_pdu8(void) {
   /* PDU without options but with payload */
-  char teststr[] = {  0x50, 0x73, 0x12, 0x34,
+  uint8_t teststr[] = {  0x50, 0x73, 0x12, 0x34,
 		      0xff, 'p', 'a', 'y', 'l', 'o', 'a',
 		      'd'
   };
@@ -168,7 +168,7 @@ t_parse_pdu8(void) {
 static void
 t_parse_pdu9(void) {
   /* PDU without options and payload but with payload start marker */
-  char teststr[] = {  0x70, 0x00, 0x12, 0x34, 0xff };
+  uint8_t teststr[] = {  0x70, 0x00, 0x12, 0x34, 0xff };
   int result;
 
   result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
@@ -178,7 +178,7 @@ t_parse_pdu9(void) {
 static void
 t_parse_pdu10(void) {
   /* PDU without payload but with options and payload start marker */
-  char teststr[] = {  0x53, 0x73, 0x12, 0x34, 't', 'o', 'k',
+  uint8_t teststr[] = {  0x53, 0x73, 0x12, 0x34, 't', 'o', 'k',
 		      0x30, 0xc1, 0x00, 0xff
   };
   int result;
@@ -189,7 +189,7 @@ t_parse_pdu10(void) {
 
 static void
 t_parse_pdu11(void) {
-  char teststr[] = {  0x60, 0x00, 0x12, 0x34 };
+  uint8_t teststr[] = {  0x60, 0x00, 0x12, 0x34 };
   int result;
 
   result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
@@ -206,7 +206,7 @@ t_parse_pdu11(void) {
 static void
 t_parse_pdu12(void) {
   /* RST */
-  char teststr[] = {  0x70, 0x00, 0x12, 0x34 };
+  uint8_t teststr[] = {  0x70, 0x00, 0x12, 0x34 };
   int result;
 
   result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
@@ -223,7 +223,7 @@ t_parse_pdu12(void) {
 static void
 t_parse_pdu13(void) {
   /* RST with content */
-  char teststr[] = {  0x70, 0x00, 0x12, 0x34,
+  uint8_t teststr[] = {  0x70, 0x00, 0x12, 0x34,
 		      0xff, 'c', 'o', 'n', 't', 'e', 'n', 't'
   };
   int result;
@@ -235,7 +235,7 @@ t_parse_pdu13(void) {
 static void
 t_parse_pdu14(void) {
   /* ACK with content */
-  char teststr[] = {  0x60, 0x00, 0x12, 0x34,
+  uint8_t teststr[] = {  0x60, 0x00, 0x12, 0x34,
 		      0xff, 'c', 'o', 'n', 't', 'e', 'n', 't'
   };
   int result;
@@ -250,7 +250,7 @@ t_parse_pdu14(void) {
 
 static void
 t_encode_pdu1(void) {
-  char teststr[] = { 0x45, 0x01, 0x12, 0x34, 't', 'o', 'k', 'e', 'n' };
+  uint8_t teststr[] = { 0x45, 0x01, 0x12, 0x34, 't', 'o', 'k', 'e', 'n' };
   int result;
 
   coap_pdu_clear(pdu, pdu->max_size);
@@ -296,7 +296,7 @@ t_encode_pdu3(void) {
 static void
 t_encode_pdu4(void) {
   /* PDU with options */
-  char teststr[] = { 0x60, 0x99, 0x12, 0x34, 0x3d, 0x05, 0x66, 0x61,
+  uint8_t teststr[] = { 0x60, 0x99, 0x12, 0x34, 0x3d, 0x05, 0x66, 0x61,
 		     0x6e, 0x63, 0x79, 0x70, 0x72, 0x6f, 0x78, 0x79,
 		     0x2e, 0x63, 0x6f, 0x61, 0x70, 0x2e, 0x6d, 0x65,
 		     0x84, 0x70, 0x61, 0x74, 0x68, 0x00, 0xe8, 0x1e,
@@ -350,7 +350,7 @@ t_encode_pdu4(void) {
 static void
 t_encode_pdu5(void) {
   /* PDU with token and options */
-  char teststr[] = { 0x68, 0x84, 0x12, 0x34, '1',  '2',  '3',  '4',
+  uint8_t teststr[] = { 0x68, 0x84, 0x12, 0x34, '1',  '2',  '3',  '4',
                      '5',  '6',  '7',  '8',  0x18, 0x41, 0x42, 0x43,
 		     0x44, 0x45, 0x46, 0x47, 0x48, 0xd1, 0x03, 0x12
   };
@@ -391,7 +391,7 @@ t_encode_pdu5(void) {
 static void
 t_encode_pdu6(void) {
   /* PDU with data */
-  char teststr[] = { 0x50, 0x02, 0x12, 0x34, 0xff, '1',  '2',  '3',
+  uint8_t teststr[] = { 0x50, 0x02, 0x12, 0x34, 0xff, '1',  '2',  '3',
 		     '4', '5',  '6',  '7',  '8'
   };
   coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
@@ -412,7 +412,7 @@ t_encode_pdu6(void) {
 static void
 t_encode_pdu7(void) {
   /* PDU with empty data */
-  char teststr[] = { 0x40, 0x43, 0x12, 0x34 };
+  uint8_t teststr[] = { 0x40, 0x43, 0x12, 0x34 };
   int result;
   coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
 
@@ -435,7 +435,7 @@ t_encode_pdu7(void) {
 static void
 t_encode_pdu8(void) {
   /* PDU with token and data */
-  char teststr[] = { 0x42, 0x43, 0x12, 0x34, 0x00, 0x01, 0xff, 0x00 };
+  uint8_t teststr[] = { 0x42, 0x43, 0x12, 0x34, 0x00, 0x01, 0xff, 0x00 };
   int result;
   coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
 
@@ -462,7 +462,7 @@ t_encode_pdu8(void) {
 static void
 t_encode_pdu9(void) {
   /* PDU with options and data */
-  char teststr[] = { 0x60, 0x44, 0x12, 0x34, 0x48, 's',  'o',  'm',
+  uint8_t teststr[] = { 0x60, 0x44, 0x12, 0x34, 0x48, 's',  'o',  'm',
 		     'e',  'e',  't',  'a',  'g',  0x10, 0xdd, 0x11,
 		     0x04, 's',  'o',  'm',  'e',  'r',  'a',  't',
 		     'h',  'e',  'r',  'l',  'o',  'n',  'g',  'u',
@@ -513,7 +513,7 @@ t_encode_pdu9(void) {
 static void
 t_encode_pdu10(void) {
   /* PDU with token, options and data */
-  char teststr[] = { 0x62, 0x44, 0x12, 0x34, 0x00, 0x00, 0x8d, 0xf2,
+  uint8_t teststr[] = { 0x62, 0x44, 0x12, 0x34, 0x00, 0x00, 0x8d, 0xf2,
 		     'c',  'o',  'a',  'p',  ':',  '/',  '/',  'e',
 		     'x',  'a',  'm',  'p',  'l',  'e',  '.',  'c',
 		     'o',  'm',  '/',  '1',  '2',  '3',  '4',  '5',
