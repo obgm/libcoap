@@ -41,14 +41,6 @@ main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM) {
   CU_cleanup_registry();
 
   printf("\n\nknown bugs:\n");
-  printf("\t- Test: t_parse_uri5 ... FAILED\n"
-	 "\t    1. test_uri.c:109  - CU_FAIL(\"invalid port not detected\")\n");
-  printf("\t- Test: t_parse_uri12 ... FAILED\n"
-    	 "\t    1. test_uri.c:301  - result == 4\n"
-    	 "\t    2. test_uri.c:302  - buflen == sizeof(uricheckbuf)\n"
-    	 "\t    3. test_uri.c:303  - CU_ASSERT_NSTRING_EQUAL(buf,uricheckbuf,buflen)\n"
-         "\t    4. test_uri.c:309  - buflen == sizeof(querycheckbuf)\n"
-         "\t    5. test_uri.c:310  - CU_ASSERT_NSTRING_EQUAL(buf,querycheckbuf,buflen)\n");
   printf("\t- Test: t_error_response8 ... FAILED\n"
 	 "\t    1. test_error_response.c:310  - response->length == sizeof(teststr)\n"
 	 "\t    2. test_error_response.c:316  - memcmp(response->hdr, teststr, sizeof(teststr)) == 0\n");
