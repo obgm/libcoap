@@ -61,6 +61,12 @@ coap_tick_t obs_wait = 0;	/* timeout for current subscription */
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
+#ifdef __GNUC__
+#define UNUSED_PARAM __attribute__ ((unused))
+#else /* not a GCC */
+#define UNUSED_PARAM
+#endif /* GCC */
+
 static inline void
 set_timeout(coap_tick_t *timer, const unsigned int seconds) {
   coap_ticks(timer);
@@ -301,7 +307,7 @@ message_handler(struct coap_context_t  *ctx,
 		const coap_address_t *remote,
 		coap_pdu_t *sent,
 		coap_pdu_t *received,
-		const coap_tid_t id) {
+		const coap_tid_t id UNUSED_PARAM) {
 
   coap_pdu_t *pdu = NULL;
   coap_opt_t *block_opt;
@@ -794,7 +800,7 @@ set_blocksize(void) {
 }
 
 static void
-cmdline_subscribe(char *arg) {
+cmdline_subscribe(char *arg UNUSED_PARAM) {
   obs_seconds = atoi(optarg);
   coap_insert(&optlist, new_option_node(COAP_OPTION_SUBSCRIPTION, 0, NULL));
 }
