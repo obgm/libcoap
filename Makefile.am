@@ -96,7 +96,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS =					\
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if
 # configure has detected a usable version of the ctags program and aborts if not.
-check_ctags=\
+check_ctags:
 	@if [ "$(CTAGS_PROG)" = "" ]; then \
 		echo ;\
 		echo "There was no ctags program found by the configure script!" ;\
@@ -112,19 +112,17 @@ check_ctags=\
 ## it must fall back to a plain symbol file.
 update-map-file: libcoap-$(LIBCOAP_API_VERSION).map libcoap-$(LIBCOAP_API_VERSION).sym
 
-libcoap-$(LIBCOAP_API_VERSION).map: $(libcoap_include_HEADERS)
-	$(call check_ctags)
+libcoap-$(LIBCOAP_API_VERSION).map: check_ctags $(libcoap_include_HEADERS)
 	( echo "VER_$(LIBCOAP_API_VERSION) {" ; \
 	echo "global:" ; \
-	ctags -f - --c-kinds=p $^ | awk '/^coap_/ { print "  " $$1 ";" }' | sort ; \
+	ctags -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print "  " $$1 ";" }' | sort ; \
 	echo "local:" ; \
 	echo "  *;" ; \
 	echo "};" ) > $@.new
 	mv $@.new $@
 
-libcoap-$(LIBCOAP_API_VERSION).sym: $(libcoap_include_HEADERS)
-	$(call check_ctags)
-	( ctags -f - --c-kinds=p $^ | awk '/^coap_/ { print $$1 }' | sort ) \
+libcoap-$(LIBCOAP_API_VERSION).sym: check_ctags $(libcoap_include_HEADERS)
+	( ctags -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print $$1 }' | sort ) \
 	> $@.new
 	mv $@.new $@
 
