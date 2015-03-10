@@ -669,7 +669,7 @@ cmdline_content_type(char *arg, unsigned short key) {
       value[valcnt++] = atoi(q);
     } else {
       for (i=0; content_types[i].media_type &&
-	     strncmp(q,content_types[i].media_type, p ? p-q : strlen(q)) != 0 ;
+	     strncmp(q,content_types[i].media_type, p ? (size_t)(p-q) : strlen(q)) != 0 ;
 	   ++i)
 	;
 
@@ -790,7 +790,7 @@ set_blocksize(void) {
     opt = method == COAP_REQUEST_GET ? COAP_OPTION_BLOCK2 : COAP_OPTION_BLOCK1;
 
     block.m = (opt == COAP_OPTION_BLOCK1) &&
-      ((1 << (block.szx + 4)) < payload.length);
+      ((1u << (block.szx + 4)) < payload.length);
 
     opt_length = coap_encode_var_bytes(buf,
 			      (block.num << 4 | block.m << 3 | block.szx));
@@ -978,7 +978,7 @@ cmdline_input_from_file(char *filename, str *buf) {
 
   len = fread(buf->s, 1, buf->length, inputfile);
 
-  if (len < buf->length) {
+  if (len < 0 || ((size_t)len < buf->length)) {
     if (ferror(inputfile) != 0) {
       perror("cmdline_input_from_file: fread");
       coap_free(buf->s);
