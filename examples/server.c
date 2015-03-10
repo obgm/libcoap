@@ -55,7 +55,7 @@ static coap_async_state_t *async = NULL;
 #endif /* GCC */
 
 /* SIGINT handler: set quit to 1 for graceful termination */
-void
+static void
 handle_sigint(int signum UNUSED_PARAM) {
   quit = 1;
 }
@@ -63,7 +63,7 @@ handle_sigint(int signum UNUSED_PARAM) {
 #define INDEX "This is a test server made with libcoap (see http://libcoap.sf.net)\n" \
    	      "Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>\n\n"
 
-void 
+static void
 hnd_get_index(coap_context_t  *ctx UNUSED_PARAM, struct coap_resource_t *resource UNUSED_PARAM, 
 	      const coap_endpoint_t *local_interface UNUSED_PARAM,
 	      coap_address_t *peer UNUSED_PARAM, coap_pdu_t *request UNUSED_PARAM, str *token UNUSED_PARAM,
@@ -81,7 +81,7 @@ hnd_get_index(coap_context_t  *ctx UNUSED_PARAM, struct coap_resource_t *resourc
   coap_add_data(response, strlen(INDEX), (unsigned char *)INDEX);
 }
 
-void 
+static void
 hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 	     const coap_endpoint_t *local_interface UNUSED_PARAM,
 	     coap_address_t *peer, coap_pdu_t *request, str *token,
@@ -140,7 +140,7 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   }
 }
 
-void 
+static void
 hnd_put_time(coap_context_t  *ctx UNUSED_PARAM, struct coap_resource_t *resource UNUSED_PARAM,
 	     const coap_endpoint_t *local_interface UNUSED_PARAM,
 	     coap_address_t *peer UNUSED_PARAM, coap_pdu_t *request, str *token UNUSED_PARAM,
@@ -173,7 +173,7 @@ hnd_put_time(coap_context_t  *ctx UNUSED_PARAM, struct coap_resource_t *resource
   }
 }
 
-void 
+static void
 hnd_delete_time(coap_context_t  *ctx UNUSED_PARAM, struct coap_resource_t *resource UNUSED_PARAM,
 		const coap_endpoint_t *local_interface UNUSED_PARAM,
 		coap_address_t *peer UNUSED_PARAM, coap_pdu_t *request UNUSED_PARAM, str *token UNUSED_PARAM,
@@ -185,7 +185,7 @@ hnd_delete_time(coap_context_t  *ctx UNUSED_PARAM, struct coap_resource_t *resou
 }
 
 #ifndef WITHOUT_ASYNC
-void
+static void
 hnd_get_async(coap_context_t  *ctx, struct coap_resource_t *resource UNUSED_PARAM,
 	      const coap_endpoint_t *local_interface UNUSED_PARAM,
 	      coap_address_t *peer, coap_pdu_t *request, str *token UNUSED_PARAM,
@@ -218,7 +218,7 @@ hnd_get_async(coap_context_t  *ctx, struct coap_resource_t *resource UNUSED_PARA
 			      (void *)(COAP_TICKS_PER_SECOND * delay));
 }
 
-void 
+static void
 check_async(coap_context_t  *ctx, const coap_endpoint_t *local_if,
 	    coap_tick_t now) {
   coap_pdu_t *response;
@@ -258,7 +258,7 @@ check_async(coap_context_t  *ctx, const coap_endpoint_t *local_if,
 }
 #endif /* WITHOUT_ASYNC */
 
-void
+static void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
@@ -295,7 +295,7 @@ init_resources(coap_context_t *ctx) {
 #endif /* WITHOUT_ASYNC */
 }
 
-void
+static void
 usage( const char *program, const char *version) {
   const char *p;
 
@@ -304,7 +304,7 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-	   "(c) 2010,2011 Olaf Bergmann <bergmann@tzi.org>\n\n"
+	   "(c) 2010,2011,2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
 	   "usage: %s [-A address] [-p port]\n\n"
 	   "\t-A address\tinterface address to bind to\n"
 	   "\t-p port\t\tlisten on specified port\n"
@@ -312,7 +312,7 @@ usage( const char *program, const char *version) {
 	   program, version, program );
 }
 
-coap_context_t *
+static coap_context_t *
 get_context(const char *node, const char *port) {
   coap_context_t *ctx = NULL;  
   int s;
