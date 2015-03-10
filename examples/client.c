@@ -67,7 +67,7 @@ set_timeout(coap_tick_t *timer, const unsigned int seconds) {
   *timer += seconds * COAP_TICKS_PER_SECOND;
 }
 
-int
+static int
 append_to_output(const unsigned char *data, size_t len) {
   size_t written;
 
@@ -92,7 +92,7 @@ append_to_output(const unsigned char *data, size_t len) {
   return 0;
 }
 
-void
+static void
 close_output(void) {
   if (file) {
 
@@ -103,29 +103,6 @@ close_output(void) {
     fflush(file);
     fclose(file);
   }
-}
-
-coap_pdu_t *
-new_ack( coap_context_t  *ctx, coap_queue_t *node ) {
-  coap_pdu_t *pdu = coap_new_pdu();
-
-  if (pdu) {
-    pdu->hdr->type = COAP_MESSAGE_ACK;
-    pdu->hdr->code = 0;
-    pdu->hdr->id = node->pdu->hdr->id;
-  }
-
-  return pdu;
-}
-
-coap_pdu_t *
-new_response( coap_context_t  *ctx, coap_queue_t *node, unsigned int code ) {
-  coap_pdu_t *pdu = new_ack(ctx, node);
-
-  if (pdu)
-    pdu->hdr->code = code;
-
-  return pdu;
 }
 
 static int
@@ -143,7 +120,7 @@ order_opts(void *a, void *b) {
     : (COAP_OPTION_KEY(*o1) != COAP_OPTION_KEY(*o2));
 }
 
-coap_pdu_t *
+static coap_pdu_t *
 coap_new_request(coap_context_t *ctx, method_t m, coap_list_t **options,
 		 unsigned char *data, size_t length) {
   coap_pdu_t *pdu;
@@ -185,7 +162,7 @@ coap_new_request(coap_context_t *ctx, method_t m, coap_list_t **options,
   return pdu;
 }
 
-coap_tid_t
+static coap_tid_t
 clear_obs(coap_context_t *ctx,
 	  const coap_endpoint_t *local_interface,
 	  const coap_address_t *remote) {
@@ -264,7 +241,7 @@ clear_obs(coap_context_t *ctx,
   return tid;
 }
 
-int
+static int
 resolve_address(const str *server, struct sockaddr *dst) {
 
   struct addrinfo *res, *ainfo;
@@ -312,13 +289,13 @@ resolve_address(const str *server, struct sockaddr *dst) {
    ((Pdu)->hdr->code == COAP_RESPONSE_CODE(201) ||			\
     (Pdu)->hdr->code == COAP_RESPONSE_CODE(204)))
 
-inline int
+static inline int
 check_token(coap_pdu_t *received) {
   return received->hdr->token_length == the_token.length &&
     memcmp(received->hdr->token, the_token.s, the_token.length) == 0;
 }
 
-void
+static void
 message_handler(struct coap_context_t  *ctx,
 		const coap_endpoint_t *local_interface,
 		const coap_address_t *remote,
@@ -522,7 +499,7 @@ message_handler(struct coap_context_t  *ctx,
   ready = coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter) == NULL;
 }
 
-void
+static void
 usage( const char *program, const char *version) {
   const char *p;
 
@@ -569,7 +546,7 @@ usage( const char *program, const char *version) {
 	   ,program, version, program, wait_seconds);
 }
 
-int
+static int
 join( coap_context_t *ctx, char *group_name ){
   struct ipv6_mreq mreq;
   struct addrinfo   *reslocal = NULL, *resmulti = NULL, hints, *ainfo;
@@ -629,7 +606,7 @@ join( coap_context_t *ctx, char *group_name ){
   return result;
 }
 
-coap_list_t *
+static coap_list_t *
 new_option_node(unsigned short key, unsigned int length, unsigned char *data) {
   coap_list_t *node;
 
@@ -653,7 +630,7 @@ typedef struct {
   char *media_type;
 } content_type_t;
 
-void
+static void
 cmdline_content_type(char *arg, unsigned short key) {
   static content_type_t content_types[] = {
     {  0, "plain" },
@@ -712,7 +689,7 @@ cmdline_content_type(char *arg, unsigned short key) {
   }
 }
 
-void
+static void
 cmdline_uri(char *arg) {
   unsigned char portbuf[2];
 #define BUFSIZE 40
@@ -773,7 +750,7 @@ cmdline_uri(char *arg) {
   }
 }
 
-int
+static int
 cmdline_blocksize(char *arg) {
   unsigned short size;
 
@@ -797,7 +774,7 @@ cmdline_blocksize(char *arg) {
 
 /* Called after processing the options from the commandline to set
  * Block1 or Block2 depending on method. */
-void
+static void
 set_blocksize(void) {
   static unsigned char buf[4];	/* hack: temporarily take encoded bytes */
   unsigned short opt;
@@ -816,13 +793,13 @@ set_blocksize(void) {
   }
 }
 
-void
+static void
 cmdline_subscribe(char *arg) {
   obs_seconds = atoi(optarg);
   coap_insert(&optlist, new_option_node(COAP_OPTION_SUBSCRIPTION, 0, NULL));
 }
 
-int
+static int
 cmdline_proxy(char *arg) {
   char *proxy_port_str = strrchr((const char *)arg, ':'); /* explicit port ? */
   if (proxy_port_str) {
@@ -855,13 +832,13 @@ cmdline_proxy(char *arg) {
   return 1;
 }
 
-inline void
+static inline void
 cmdline_token(char *arg) {
   strncpy((char *)the_token.s, arg, min(sizeof(_token_data), strlen(arg)));
   the_token.length = strlen(arg);
 }
 
-void
+static void
 cmdline_option(char *arg) {
   unsigned int num = 0;
 
@@ -939,7 +916,7 @@ check_segment(const unsigned char *s, size_t length) {
   return n;
 }
 
-int
+static int
 cmdline_input(char *text, str *buf) {
   int len;
   len = check_segment((unsigned char *)text, strlen(text));
@@ -956,7 +933,7 @@ cmdline_input(char *text, str *buf) {
   return 1;
 }
 
-int
+static int
 cmdline_input_from_file(char *filename, str *buf) {
   FILE *inputfile = NULL;
   ssize_t len;
@@ -1013,7 +990,7 @@ cmdline_input_from_file(char *filename, str *buf) {
   return result;
 }
 
-method_t
+static method_t
 cmdline_method(char *arg) {
   static char *methods[] =
     { 0, "get", "post", "put", "delete", 0};
@@ -1025,7 +1002,7 @@ cmdline_method(char *arg) {
   return i;	     /* note that we do not prevent illegal methods */
 }
 
-coap_context_t *
+static coap_context_t *
 get_context(const char *node, const char *port) {
   coap_context_t *ctx = NULL;
   int s;
