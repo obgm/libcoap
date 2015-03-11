@@ -7,6 +7,8 @@
  */
 
 #include "coap_config.h"
+#include "utlist.h"
+#include "mem.h"
 #include "net.h"
 #include "debug.h"
 #include "resource.h"
@@ -17,7 +19,6 @@
  * COAP_ATTR_FLAGS_RELEASE_NAME / COAP_ATTR_FLAGS_RELEASE_VALUE /
  * COAP_RESOURCE_FLAGS_RELEASE_URI. not sure what those lines should actually
  * do on lwip. */
-#include "mem.h"
 
 #include <lwip/memp.h>
 
@@ -28,7 +29,6 @@
 #endif
 
 #ifdef WITH_POSIX
-#include "mem.h"
 
 #define COAP_MALLOC_TYPE(Type) \
   ((coap_##Type##_t *)coap_malloc(sizeof(coap_##Type##_t)))
@@ -36,7 +36,6 @@
 
 #endif /* WITH_POSIX */
 #ifdef WITH_CONTIKI
-#include "mem.h"
 #include "memb.h"
 
 #define COAP_MALLOC_TYPE(Type) \
