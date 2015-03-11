@@ -69,6 +69,8 @@ MEMB(packet_storage, coap_packetbuf_t, COAP_MAX_PACKETS);
 MEMB(node_storage, coap_queue_t, COAP_PDU_MAXCNT);
 MEMB(pdu_storage, coap_pdu_t, COAP_PDU_MAXCNT);
 MEMB(pdu_buf_storage, coap_packetbuf_t, COAP_PDU_MAXCNT);
+MEMB(resource_storage, coap_resource_t, COAP_MAX_RESOURCES);
+MEMB(attribute_storage, coap_attr_t, COAP_MAX_ATTRIBUTES);
 
 static struct memb *
 get_container(coap_memory_tag_t type) {
@@ -77,6 +79,8 @@ get_container(coap_memory_tag_t type) {
   case COAP_NODE:   return &node_storage;
   case COAP_PDU:     return &pdu_storage;
   case COAP_PDU_BUF: return &pdu_buf_storage;
+  case COAP_RESOURCE: return &resource_storage;
+  case COAP_RESOURCEATTR: return &attribute_storage;
   default:
     return &string_storage;
   }
@@ -89,6 +93,8 @@ coap_memory_init(void) {
   memb_init(&node_storage);
   memb_init(&pdu_storage);
   memb_init(&pdu_buf_storage);
+  memb_init(&resource_storage);
+  memb_init(&attribute_storage);
 }
 
 void *

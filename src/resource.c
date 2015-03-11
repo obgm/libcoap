@@ -43,14 +43,10 @@
   ((coap_##Type##_t *)memb_alloc(&(Type##_storage)))
 #define COAP_FREE_TYPE(Type, Object) memb_free(&(Type##_storage), (Object))
 
-MEMB(resource_storage, coap_resource_t, COAP_MAX_RESOURCES);
-MEMB(attribute_storage, coap_attr_t, COAP_MAX_ATTRIBUTES);
 MEMB(subscription_storage, coap_subscription_t, COAP_MAX_SUBSCRIBERS);
 
 void
 coap_resources_init() {
-  memb_init(&resource_storage);
-  memb_init(&attribute_storage);
   memb_init(&subscription_storage);
 }
 
@@ -292,14 +288,11 @@ coap_resource_t *
 coap_resource_init(const unsigned char *uri, size_t len, int flags) {
   coap_resource_t *r;
 
-#ifdef WITH_POSIX
-  r = (coap_resource_t *)coap_malloc(sizeof(coap_resource_t));
-#endif
 #ifdef WITH_LWIP
   r = (coap_resource_t *)memp_malloc(MEMP_COAP_RESOURCE);
 #endif
-#ifdef WITH_CONTIKI
-  r = (coap_resource_t *)memb_alloc(&resource_storage);
+#ifndef WITH_LWIP
+  r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
 #endif
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
@@ -327,14 +320,11 @@ coap_add_attr(coap_resource_t *resource,
   if (!resource || !name)
     return NULL;
 
-#ifdef WITH_POSIX
-  attr = (coap_attr_t *)coap_malloc(sizeof(coap_attr_t));
-#endif
 #ifdef WITH_LWIP
   attr = (coap_attr_t *)memp_malloc(MEMP_COAP_RESOURCEATTR);
 #endif
-#ifdef WITH_CONTIKI
-  attr = (coap_attr_t *)memb_alloc(&attribute_storage);
+#ifndef WITH_LWIP
+  attr = (coap_attr_t *)coap_malloc_type(COAP_RESOURCEATTR, sizeof(coap_attr_t));
 #endif
 
   if (attr) {
@@ -380,14 +370,12 @@ coap_delete_attr(coap_attr_t *attr) {
     coap_free(attr->name.s);
   if (attr->flags & COAP_ATTR_FLAGS_RELEASE_VALUE)
     coap_free(attr->value.s);
-#ifdef WITH_POSIX
-  coap_free(attr);
-#endif
+
 #ifdef WITH_LWIP
   memp_free(MEMP_COAP_RESOURCEATTR, attr);
 #endif
-#ifdef WITH_CONTIKI
-  memb_free(&attribute_storage, attr);
+#ifndef WITH_LWIP
+  coap_free_type(COAP_RESOURCEATTR, attr);
 #endif
 }
 
@@ -428,14 +416,11 @@ coap_free_resource(coap_resource_t *resource) {
   /* free all elements from resource->subscribers */
   LL_FOREACH_SAFE(resource->subscribers, obs, otmp) COAP_FREE_TYPE(subscription, obs);
 
-#ifdef WITH_POSIX
-  coap_free(resource);
-#endif
 #ifdef WITH_LWIP
   memp_free(MEMP_COAP_RESOURCE, resource);
 #endif
-#ifdef WITH_CONTIKI
-  memb_free(&resource_storage, resource);
+#ifndef WITH_LWIP
+  coap_free_type(COAP_RESOURCE, resource);
 #endif /* WITH_CONTIKI */
 }
  
