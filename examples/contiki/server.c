@@ -40,6 +40,7 @@
 
 static coap_context_t *coap_context;
 
+static clock_time_t clock_offset;
 /* changeable clock base (see handle_put_time()) */
 static clock_time_t my_clock_base = 0;
 static coap_resource_t *time_resource = NULL; /* just for testing */
@@ -193,6 +194,7 @@ PROCESS_THREAD(coap_server_process, ev, data)
 {
   PROCESS_BEGIN();
 
+  clock_offset = clock_time();
   init_coap_server(&coap_context);
 
   if (!coap_context) {
