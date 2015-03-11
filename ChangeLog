@@ -1,3 +1,8 @@
+2015-03-11  Olaf Bergmann  <bergmann@tzi.org>
+
+	* include/coap/resource.h: Replaced custom list structures by
+	utlist macros.
+
 2015-03-09  Olaf Bergmann  <bergmann@tzi.org>
 
 	* src/uri.c (coap_split_path): Fixed URI parser bug and

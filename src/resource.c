@@ -13,7 +13,6 @@
 #include "subscribe.h"
 
 #ifdef WITH_LWIP
-#include "utlist.h"
 /* mem.h is only needed for the string free calls for
  * COAP_ATTR_FLAGS_RELEASE_NAME / COAP_ATTR_FLAGS_RELEASE_VALUE /
  * COAP_RESOURCE_FLAGS_RELEASE_URI. not sure what those lines should actually
@@ -27,42 +26,13 @@
 #define COAP_FREE_TYPE(Type, Object) memp_free(MEMP_COAP_##Type, Object)
 
 #endif
+
 #ifdef WITH_POSIX
-#include "utlist.h"
 #include "mem.h"
 
 #define COAP_MALLOC_TYPE(Type) \
   ((coap_##Type##_t *)coap_malloc(sizeof(coap_##Type##_t)))
 #define COAP_FREE_TYPE(Type, Object) coap_free(Object)
-
-coap_iterator_t *
-coap_iterator_init(void *storage, coap_iterator_t *ri) {
-  assert(storage);
-  assert(ri);
-  
-  ri->data = storage;
-  ri->pos  = 0;
-
-  return ri;
-}
-
-struct thing {
-  struct thing *next;
-};
-
-void *
-coap_iterator_next(coap_iterator_t *ri) {
-  void *item;
-  assert(ri);
-
-  item = ri->data;
-
-  if (ri->data != NULL) {
-    ri->data = ((struct thing *)ri->data)->next;
-  }
-
-  return item;
-}
 
 #endif /* WITH_POSIX */
 #ifdef WITH_CONTIKI
@@ -92,48 +62,6 @@ coap_malloc_subscription() {
 static inline void
 coap_free_subscription(coap_subscription_t *subscription) {
   memb_free(&subscription_storage, subscription);
-}
-
-coap_iterator_t *
-coap_iterator_init(void *storage, coap_iterator_t *ri) {
-  assert(storage);
-  assert(ri);
-  
-  ri->data = storage;
-  ri->pos  = 0;
-
-  return ri;
-}
-
-void *
-coap_iterator_next(coap_iterator_t *ri) {
-  struct memb *m;
-  void *result = NULL;
-
-  assert(ri);
-
-  m = (struct memb *)ri->data;
-
-  while (!result && (ri->pos < m->num)) {
-    if (m->count[ri->pos]) {
-      result = (void *)((char *)m->mem + (ri->pos * m->size));
-    }
-    ++ri->pos;
-  }
-  
-  return result;
-}
-
-coap_iterator_t *
-coap_resource_iterator_init(struct coap_resource_t *resources, 
-			    coap_iterator_t *ri) {
-  /* For Contiki, the resources component of coap_context_t is not used... */
-  return coap_iterator_init(&resource_storage, ri);
-}
-
-coap_resource_t *
-coap_resource_next(coap_iterator_t *ri) {
-  return (coap_resource_t *)coap_iterator_next(ri);
 }
 
 #endif /* WITH_CONTIKI */
@@ -243,16 +171,12 @@ coap_print_status_t
 coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
 		size_t offset, coap_opt_t *query_filter) {
 #endif /* GCC */
-  coap_resource_t *r;
   unsigned char *p = buf;
   const unsigned char *bufend = buf + *buflen;
   size_t left, written = 0;
   coap_print_status_t result;
   const size_t old_offset = offset;
   int subsequent_resource = 0;
-#ifndef COAP_RESOURCES_NOHASH
-  coap_resource_t *tmp;
-#endif
 #ifndef WITHOUT_QUERY_FILTER
   str resource_param = { 0, NULL }, query_pattern = { 0, NULL };
   int flags = 0; /* MATCH_SUBSTRING, MATCH_PREFIX, MATCH_URI */
@@ -265,10 +189,6 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
     {3, (unsigned char *)"rel"},
     {0, NULL}};
 #endif /* WITHOUT_QUERY_FILTER */
-
-#ifdef WITH_CONTIKI
-  int i;
-#endif /* WITH_CONTIKI */
 
 #ifndef WITHOUT_QUERY_FILTER
   /* split query filter, if any */
@@ -314,19 +234,7 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
   }
 #endif /* WITHOUT_QUERY_FILTER */
 
-#ifndef WITH_CONTIKI
-
-#ifdef COAP_RESOURCES_NOHASH
-  LL_FOREACH(context->resources, r) {
-#else
-  HASH_ITER(hh, context->resources, r, tmp) {
-#endif
-#else /* WITH_CONTIKI */
-  r = (coap_resource_t *)resource_storage.mem;
-  for (i = 0; i < resource_storage.num; ++i, ++r) {
-    if (!resource_storage.count[i])
-      continue;
-#endif /* WITH_CONTIKI */
+  RESOURCES_ITER(context->resources, r) {
 
 #ifndef WITHOUT_QUERY_FILTER
     if (resource_param.length) { /* there is a query filter */
@@ -396,11 +304,6 @@ coap_resource_init(const unsigned char *uri, size_t len, int flags) {
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
 
-#ifdef WITH_CONTIKI
-    LIST_STRUCT_INIT(r, link_attr);
-#endif /* WITH_CONTIKI */
-    LIST_STRUCT_INIT(r, subscribers);
-
     r->uri.s = (unsigned char *)uri;
     r->uri.length = len;
     
@@ -444,11 +347,7 @@ coap_add_attr(coap_resource_t *resource,
     attr->flags = flags;
 
     /* add attribute to resource list */
-#ifndef WITH_CONTIKI
     LL_PREPEND(resource->link_attr, attr);
-#else /* WITH_CONTIKI */
-    list_add(resource->link_attr, attr);
-#endif /* WITH_CONTIKI */
   } else {
     debug("coap_add_attr: no memory left\n");
   }
@@ -464,12 +363,7 @@ coap_find_attr(coap_resource_t *resource,
   if (!resource || !name)
     return NULL;
 
-#ifndef WITH_CONTIKI
   LL_FOREACH(resource->link_attr, attr) {
-#else /* WITH_CONTIKI */
-  for (attr = list_head(resource->link_attr); attr; 
-       attr = list_item_next(attr)) {
-#endif /* WITH_CONTIKI */    
     if (attr->name.length == nlen &&
 	memcmp(attr->name.s, name, nlen) == 0)
       return attr;
@@ -515,22 +409,39 @@ coap_hash_request_uri(const coap_pdu_t *request, coap_key_t key) {
 
 void
 coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
-#ifndef WITH_CONTIKI
-#ifdef COAP_RESOURCES_NOHASH
-  LL_PREPEND(context->resources, resource);
-#else
-  HASH_ADD(hh, context->resources, key, sizeof(coap_key_t), resource);
-#endif
-#endif /* WITH_CONTIKI */
+  RESOURCES_ADD(context->resources, resource);
 }
 
+static void
+coap_free_resource(coap_resource_t *resource) {
+  coap_attr_t *attr, *tmp;
+  coap_subscription_t *obs, *otmp;
+
+  assert(resource);
+
+  /* delete registered attributes */
+  LL_FOREACH_SAFE(resource->link_attr, attr, tmp) coap_delete_attr(attr);
+
+  if (resource->flags & COAP_RESOURCE_FLAGS_RELEASE_URI)
+    coap_free(resource->uri.s);
+
+  /* free all elements from resource->subscribers */
+  LL_FOREACH_SAFE(resource->subscribers, obs, otmp) COAP_FREE_TYPE(subscription, obs);
+
+#ifdef WITH_POSIX
+  coap_free(resource);
+#endif
+#ifdef WITH_LWIP
+  memp_free(MEMP_COAP_RESOURCE, resource);
+#endif
+#ifdef WITH_CONTIKI
+  memb_free(&resource_storage, resource);
+#endif /* WITH_CONTIKI */
+}
+ 
 int
 coap_delete_resource(coap_context_t *context, coap_key_t key) {
   coap_resource_t *resource;
-  coap_attr_t *attr, *tmp;
-#ifdef WITH_CONTIKI
-  coap_subscription_t *obs;
-#endif
 
   if (!context)
     return 0;
@@ -539,76 +450,42 @@ coap_delete_resource(coap_context_t *context, coap_key_t key) {
 
   if (!resource) 
     return 0;
-    
-#if defined(WITH_POSIX) || defined(WITH_LWIP)
-#ifdef COAP_RESOURCES_NOHASH
-  LL_DELETE(context->resources, resource);
-#else
-  HASH_DELETE(hh, context->resources, resource);
-#endif
 
-  /* delete registered attributes */
-  LL_FOREACH_SAFE(resource->link_attr, attr, tmp) coap_delete_attr(attr);
+  /* remove resource from list */
+  RESOURCES_DELETE(context->resources, resource);
 
-  if (resource->flags & COAP_RESOURCE_FLAGS_RELEASE_URI)
-    coap_free(resource->uri.s);
-
-#ifdef WITH_POSIX
-  coap_free(resource);
-#endif
-#ifdef WITH_LWIP
-  memp_free(MEMP_COAP_RESOURCE, resource);
-#endif
-#else /* not (WITH_POSIX || WITH_LWIP) */
-  /* delete registered attributes */
-  while ( (attr = list_pop(resource->link_attr)) )
-    memb_free(&attribute_storage, attr);
-
-  /* delete subscribers */
-  while ( (obs = list_pop(resource->subscribers)) ) {
-    /* FIXME: notify observer that its subscription has been removed */
-    memb_free(&subscription_storage, obs);
-  }
-
-  memb_free(&resource_storage, resource);
-#endif /* WITH_CONTIKI */
+  /* and free its allocated memory */
+  coap_free_resource(resource);
 
   return 1;
 }
 
+void
+coap_delete_all_resources(coap_context_t *context) {
+  coap_resource_t *res;
+  coap_resource_t *rtmp;
+
+  /* Cannot call RESOURCES_ITER because coap_free_resource() releases
+   * the allocated storage. */
+
+#ifdef COAP_RESOURCES_NOHASH
+  LL_FOREACH_SAFE(context->resources, res, rtmp) {
+#else
+  HASH_ITER(hh, context->resources, res, rtmp) {
+#endif
+    coap_free_resource(res);
+  }
+
+  context->resources = NULL;
+}
+
 coap_resource_t *
 coap_get_resource_from_key(coap_context_t *context, coap_key_t key) {
-#ifndef WITH_CONTIKI
-  coap_resource_t *resource;
-#ifdef COAP_RESOURCES_NOHASH
-  resource = NULL;
-  LL_FOREACH(context->resources, resource) {
-    /* if you think you can outspart the compiler and speed things up by (eg by
-     * casting to uint32* and comparing alues), increment this counter: 1 */
-    if (memcmp(key, resource->key, sizeof(coap_key_t)) == 0)
-	    return resource;
-  }
-  return NULL;
-#else
-  HASH_FIND(hh, context->resources, key, sizeof(coap_key_t), resource);
+  coap_resource_t *result;
 
-  return resource;
-#endif
-#else /* WITH_CONTIKI */
-  int i;
-  coap_resource_t *ptr2;
+  RESOURCES_FIND(context->resources, key, result);
 
-  /* the search function is basically taken from memb.c */
-  ptr2 = (coap_resource_t *)resource_storage.mem;
-  for (i = 0; i < resource_storage.num; ++i) {
-    if (resource_storage.count[i] && 
-	(memcmp(ptr2->key, key, sizeof(coap_key_t)) == 0))
-      return (coap_resource_t *)ptr2;
-    ++ptr2;
-  }
-
-  return NULL;
-#endif /* WITH_CONTIKI */
+  return result;
 }
 
 coap_print_status_t
@@ -629,12 +506,7 @@ coap_print_link(const coap_resource_t *resource,
   
   PRINT_COND_WITH_OFFSET(p, bufend, *offset, '>', *len);
 
-#ifndef WITH_CONTIKI
   LL_FOREACH(resource->link_attr, attr) {
-#else /* WITH_CONTIKI */
-  for (attr = list_head(resource->link_attr); attr; 
-       attr = list_item_next(attr)) {
-#endif /* WITH_CONTIKI */
 
     PRINT_COND_WITH_OFFSET(p, bufend, *offset, ';', *len);
 
@@ -670,7 +542,7 @@ coap_find_observer(coap_resource_t *resource, const coap_address_t *peer,
   assert(resource);
   assert(peer);
 
-  for (s = list_head(resource->subscribers); s; s = list_item_next(s)) {
+  LL_FOREACH(resource->subscribers, s) {
     if (coap_address_equals(&s->subscriber, peer)
 	&& (!token || (token->length == s->token_length 
 		       && memcmp(token->s, s->token, token->length) == 0)))
@@ -713,7 +585,7 @@ coap_add_observer(coap_resource_t *resource,
   }
 
   /* add subscriber to resource */
-  list_add(resource->subscribers, s);
+  LL_PREPEND(resource->subscribers, s);
 
   return s;
 }
@@ -721,34 +593,14 @@ coap_add_observer(coap_resource_t *resource,
 void
 coap_touch_observer(coap_context_t *context, const coap_address_t *observer,
 		    const str *token) {
-  coap_resource_t *r;
   coap_subscription_t *s;
 
-#ifndef WITH_CONTIKI
-#ifdef COAP_RESOURCES_NOHASH
-  LL_FOREACH(context->resources, r) {
-#else
-  coap_resource_t *tmp;
-  HASH_ITER(hh, context->resources, r, tmp) {
-#endif
+  RESOURCES_ITER(context->resources, r) {
     s = coap_find_observer(r, observer, token);
     if (s) {
       s->fail_cnt = 0;
     }
   }
-#else /* WITH_CONTIKI */
-  coap_iterator_t resource_iter;
-
-  if (coap_resource_iterator_init(context->resources, &resource_iter) != NULL) {
-
-    while ((r = coap_resource_next(&resource_iter))) {
-      s = coap_find_observer(r, observer, token);
-      if (s) {
-	s->fail_cnt = 0;
-      }
-    }
-  }
-#endif /* WITH_CONTIKI */
 }
 
 int
@@ -758,8 +610,8 @@ coap_delete_observer(coap_resource_t *resource, const coap_address_t *observer,
 
   s = coap_find_observer(resource, observer, token);
 
-  if (s) {
-    list_remove(resource->subscribers, s);
+  if (resource->subscribers && s) {
+    LL_DELETE(resource->subscribers, s);
 
     COAP_FREE_TYPE(subscription,s);
   }
@@ -781,8 +633,8 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
     h = r->handler[COAP_REQUEST_GET - 1];
     assert(h);		/* we do not allow subscriptions if no
 			 * GET handler is defined */
-    
-    for (obs = list_head(r->subscribers); obs; obs = list_item_next(obs)) {
+
+    LL_FOREACH(r->subscribers, obs) {
       if (r->dirty == 0 && obs->dirty == 0)
         /* running this resource due to partiallydirty, but this observation's notification was already enqueued */
         continue;
@@ -848,27 +700,10 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
 
 void
 coap_check_notify(coap_context_t *context) {
-  coap_resource_t *r;
-#ifndef WITH_CONTIKI
 
-#ifdef COAP_RESOURCES_NOHASH
-  LL_FOREACH(context->resources, r) {
-#else
-  coap_resource_t *tmp;
-  HASH_ITER(hh, context->resources, r, tmp) {
-#endif
+  RESOURCES_ITER(context->resources, r) {
     coap_notify_observers(context, r);
   }
-#else /* WITH_CONTIKI */
-  int i;
-  
-  r = (coap_resource_t *)resource_storage.mem;
-  for (i = 0; i < resource_storage.num; ++i, ++r) {
-    if (resource_storage.count[i]) {
-      coap_notify_observers(context, r);
-    }
-  }
-#endif /* WITH_CONTIKI */
 }
 
 /**
@@ -886,10 +721,9 @@ coap_remove_failed_observers(coap_context_t *context,
 			     coap_resource_t *resource,
 			     const coap_address_t *peer,
 			     const str *token) {
-  coap_subscription_t *obs;
+  coap_subscription_t *obs, *otmp;
 
-  for (obs = list_head(resource->subscribers); obs; 
-       obs = list_item_next(obs)) {
+  LL_FOREACH_SAFE(resource->subscribers, obs, otmp) {
     if (coap_address_equals(peer, &obs->subscriber) &&
 	token->length == obs->token_length &&
 	memcmp(token->s, obs->token, token->length) == 0) {
@@ -899,7 +733,7 @@ coap_remove_failed_observers(coap_context_t *context,
       if (obs->fail_cnt < COAP_OBS_MAX_FAIL)
 	obs->fail_cnt++;
       else {
-	list_remove(resource->subscribers, obs);
+	LL_DELETE(resource->subscribers, obs);
 	obs->fail_cnt = 0;
 	
 #ifndef NDEBUG
@@ -927,27 +761,9 @@ void
 coap_handle_failed_notify(coap_context_t *context, 
 			  const coap_address_t *peer, 
 			  const str *token) {
-  coap_resource_t *r;
 
-#ifndef WITH_CONTIKI
-
-#ifdef COAP_RESOURCES_NOHASH
-  LL_FOREACH(context->resources, r) {
-#else
-  coap_resource_t *tmp;
-  HASH_ITER(hh, context->resources, r, tmp) {
-#endif
+  RESOURCES_ITER(context->resources, r) {
 	coap_remove_failed_observers(context, r, peer, token);
   }
-#else /* WITH_CONTIKI */
-  int i;
-  
-  r = (coap_resource_t *)resource_storage.mem;
-  for (i = 0; i < resource_storage.num; ++i, ++r) {
-    if (resource_storage.count[i]) {
-      coap_remove_failed_observers(context, r, peer, token);
-    }
-  }
-#endif /* WITH_CONTIKI */
 }
 #endif /* WITHOUT_NOTIFY */

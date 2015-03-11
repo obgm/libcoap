@@ -15,7 +15,6 @@
 #define _COAP_RESOURCE_H_
 
 #include "coap_config.h"
-#include "t_list.h"
 
 #if defined(HAVE_ASSERT_H) && !defined(assert)
 # include <assert.h>
@@ -26,14 +25,12 @@
 #define COAP_RESOURCE_CHECK_TIME 2
 #endif /* COAP_RESOURCE_CHECK_TIME */
 
-#ifndef WITH_CONTIKI
-#  ifdef COAP_RESOURCES_NOHASH
-#    include "utlist.h"
-#  else
-#    include "uthash.h"
-#  endif
-#else /* WITH_CONTIKI */
-#endif /* WITH_CONTIKI */
+#ifdef COAP_RESOURCES_NOHASH
+#  include "utlist.h"
+#else
+#  include "uthash.h"
+#endif
+
 #include "hashkey.h"
 #include "async.h"
 #include "str.h"
@@ -74,20 +71,14 @@ typedef struct coap_resource_t {
 
   coap_key_t key;	/**< the actual key bytes for this resource */
 
-#ifndef WITH_CONTIKI
 #ifdef COAP_RESOURCES_NOHASH
   struct coap_resource_t *next;
 #else
   UT_hash_handle hh;
 #endif
-#endif /* WITH_CONTIKI */
 
-#ifndef WITH_CONTIKI
   coap_attr_t *link_attr; /**< attributes to be included with the link format */
-#else /* WITH_CONTIKI */
-  LIST_STRUCT(link_attr); /**< attributes to be included with the link format */
-#endif /* WITH_CONTIKI */
-  LIST_STRUCT(subscribers); /**< list of observers for this resource */
+  coap_subscription_t *subscribers; /**< list of observers for this resource */
 
 
   /**
@@ -131,6 +122,13 @@ void coap_add_resource(coap_context_t *context, coap_resource_t *resource);
  * @return @c 1 if the resource was found (and destroyed), @c 0 otherwise.
  */
 int coap_delete_resource(coap_context_t *context, coap_key_t key);
+
+/**
+ * Deletes all resources from given @p context and frees their storage.
+ *
+ * @param context The CoAP context with the resources to be deleted.
+ */
+void coap_delete_all_resources(coap_context_t *context);
 
 /** 
  * Registers a new attribute with the given @p resource. As the
@@ -322,18 +320,47 @@ int coap_delete_observer(coap_resource_t *resource,
  */
 void coap_check_notify(coap_context_t *context);
 
+#ifdef COAP_RESOURCES_NOHASH
+
+#define RESOURCES_ADD(r, obj)			\
+  LL_PREPEND((r), (obj))
+
+#define RESOURCES_DELETE(r, obj)		\
+  LL_DELETE((r), (obj))
+
+#define RESOURCES_ITER(r,tmp) \
+  coap_resource_t *tmp;	      \
+  LL_FOREACH((r), tmp)
+
+#define RESOURCES_FIND(r, k, res) {					\
+    coap_resource_t *tmp;						\
+    (res) = tmp = NULL;							\
+    LL_FOREACH((r), tmp) {						\
+      if (memcmp((k), tmp->key, sizeof(coap_key_t)) == 0) {		\
+	(res) = tmp;							\
+	break;								\
+      }									\
+    }									\
+  }
+#else /* COAP_RESOURCES_NOHASH */
+
+#define RESOURCES_ADD(r, obj)				\
+  HASH_ADD(hh, (r), key, sizeof(coap_key_t), (obj))
+
+#define RESOURCES_DELETE(r, obj)		\
+  HASH_DELETE(hh, (r), (obj))
+
+#define RESOURCES_ITER(r,tmp)			\
+  coap_resource_t *tmp, *rtmp;			\
+  HASH_ITER(hh, (r), tmp, rtmp)
+
+#define RESOURCES_FIND(r, k, res) {			\
+    HASH_FIND(hh, (r), (k), sizeof(coap_key_t), (res));	\
+  }
+
+#endif /* COAP_RESOURCES_NOHASH */
+
 /** @} */
-
-typedef struct coap_iterator_t {
-  void *data;			/**< opaque iterator state */
-  unsigned int pos;		/**< current item number */
-} coap_iterator_t ;
-
-coap_iterator_t *
-coap_resource_iterator_init(coap_resource_t *resources,
-			    coap_iterator_t *ri);
-
-coap_resource_t *coap_resource_next(coap_iterator_t *ri);
 
 coap_print_status_t coap_print_wellknown(coap_context_t *, unsigned char *, size_t *, size_t, coap_opt_t *);
 void coap_handle_failed_notify(coap_context_t *, const coap_address_t *, const str *);
