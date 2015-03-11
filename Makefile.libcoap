@@ -4,4 +4,4 @@ libcoap_dir := $(filter %libcoap,$(APPDS))
 vpath %c $(libcoap_dir)/src
 
 # set include path for coap sources
-CFLAGS += -I$(libcoap_dir)/include/coap
+CFLAGS += -I$(libcoap_dir)/include/coap -DCOAP_RESOURCES_NOHASH

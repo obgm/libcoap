@@ -4,7 +4,7 @@ top_srcdir ?= ../..
 
 CFLAGS += -std=gnu99
 
-CFLAGS += -I$(top_srcdir)/include/coap
+CFLAGS += -I$(top_srcdir)/include/coap -DCOAP_RESOURCES_NOHASH
 
 vpath %.c $(top_srcdir)/src
 
