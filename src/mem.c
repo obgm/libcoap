@@ -55,6 +55,7 @@ struct coap_string_t {
 #include "net.h"
 #include "pdu.h"
 #include "coap_io.h"
+#include "resource.h"
 
 #define COAP_MAX_PACKET_SIZE (sizeof(coap_packet_t) + COAP_MAX_PDU_SIZE)
 #define COAP_MAX_PACKETS     2
