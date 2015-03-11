@@ -33,6 +33,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_CFLAGS = \
 ## Note that it is not necessary to list header files which are already listed
 ## elsewhere in a _HEADERS variable assignment.
 libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
+  src/address.c \
   src/async.c \
   src/block.c \
   src/coap_io.c \
