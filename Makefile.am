@@ -14,7 +14,7 @@ ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
 AM_CFLAGS = -I @top_builddir@/include/coap/ $(WARNING_CFLAGS) -std=c99
 
-SUBDIRS = . $(DOC_DIR) tests
+SUBDIRS = . $(DOC_DIR) tests examples
 
 ## Define a libtool archive target "libcoap-@LIBCOAP_API_VERSION@.la", with
 ## @LIBCOAP_API_VERSION@ substituted into the generated Makefile at configure

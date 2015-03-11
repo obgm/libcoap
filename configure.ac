@@ -222,6 +222,22 @@ if test "x$build_tests" = "xyes"; then
 fi
 AM_CONDITIONAL(HAVE_CUNIT, [test "x$CUNIT_LIBS" != "x"])
 
+# configure options
+# __examples__
+AC_ARG_ENABLE([examples],
+              [AC_HELP_STRING([--enable-examples],
+              [Enable building the tests (default=yes)])],
+              [build_examples="$enableval"],
+              [build_examples="yes"])
+
+if test "x$build_examples" = "xyes"; then
+	BUILD_EXAMPLES="YES"
+fi
+AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$build_examples" != "x"])
+
+# end configure options
+#######################
+
 # Check for ctags
 AC_ARG_VAR([CTAGS_PROG],[the 'ctag' program to use for make target 'update-map-file'])
 AC_PATH_PROG([CTAGS_PROG],[ctags],[])
@@ -305,6 +321,7 @@ esac
 AC_CONFIG_FILES([
 Makefile
 doc/Makefile
+examples/Makefile
 tests/Makefile
 libcoap-$LIBCOAP_API_VERSION.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
 ])
@@ -334,4 +351,7 @@ if test "x$build_tests" = "xyes"; then
 	AC_MSG_RESULT([      build unit test binary  : "yes"])
 else
 	AC_MSG_RESULT([      build unit test binary  : "no"])
+fi
+if test "x$build_examples" = "xyes"; then
+	AC_MSG_RESULT([      build examples          : "yes"])
 fi
