@@ -24,6 +24,7 @@ AUTOGEN_FILES="INSTALL \
 		coap_config.h coap_config.h.in* compile config.guess config.h* config.log config.status config.sub configure \
 		depcomp \
 		doc/Doxyfile doc/doxyfile.stamp doc/doxygen_sqlite3.db doc/Makefile doc/Makefile.in \
+		examples/*.o examples/rd.o examples/coap-* examples/rd \
 		install-sh \
 		libcoap-1.0.pc libtool ltmain.sh \
 		missing \
@@ -35,6 +36,7 @@ AUTOGEN_FILES="INSTALL \
 AUTOGEN_DIRS=".deps \
 		.libs autom4te.cache/ \
 		doc/html/ \
+		examples/.deps/ \
 		src/.libs/ src/.deps/ \
 		tests/.deps/"
 
@@ -53,7 +55,7 @@ fi
 # checking for autoreconf
 check_helper autoconf
 if [ "$RET" = "1" ]; then
-    echo "You propably need to install the package 'autoconf'."
+    echo "You probably need to install the package 'autoconf'."
     ERROR=1
 else
     echo "Found 'autoconf'."
@@ -62,7 +64,7 @@ fi
 # checking for aclocal
 check_helper aclocal
 if [ "$RET" = "1" ]; then
-    echo "You propably need to install the package 'automake'."
+    echo "You probably need to install the package 'automake'."
     ERROR=1
 else
     echo "Found 'aclocal'."
@@ -75,7 +77,7 @@ if [ "$RET" = "1" ]; then
     # O.k. libtool not found, searching for libtoolize.
     check_helper libtoolize
     if [ "$RET" = "1" ]; then
-        echo "You propably need to install the package 'libtool'."
+        echo "You probably need to install the package 'libtool'."
         # That's bad, we found nothing!
         ERROR=1
     else
