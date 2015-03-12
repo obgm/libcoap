@@ -420,7 +420,7 @@ hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource UNUSED_PARAM,
 	
 	loc_size += 
 	  snprintf((char *)(loc + loc_size), LOCSIZE - loc_size - 1, 
-		   "-%x", now);
+		   "-%x", (unsigned int)(now & (unsigned int)-1));
       }
     }
   }
