@@ -57,7 +57,13 @@ typedef struct rd_t {
 
 rd_t *resources = NULL;
 
-inline rd_t *
+#ifdef __GNUC__
+#define UNUSED_PARAM __attribute__ ((unused))
+#else /* not a GCC */
+#define UNUSED_PARAM
+#endif /* GCC */
+
+static inline rd_t *
 rd_new(void) {
   rd_t *rd;
   rd = (rd_t *)coap_malloc(sizeof(rd_t));
@@ -67,7 +73,7 @@ rd_new(void) {
   return rd;
 }	
 
-inline void
+static inline void
 rd_delete(rd_t *rd) {
   if (rd) {
     coap_free(rd->data.s);
@@ -79,15 +85,15 @@ rd_delete(rd_t *rd) {
 static int quit = 0;
 
 /* SIGINT handler: set quit to 1 for graceful termination */
-void
-handle_sigint(int signum) {
+static void
+handle_sigint(int signum UNUSED_PARAM) {
   quit = 1;
 }
 
-void 
-hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource, 
-	      const coap_endpoint_t *local_interface,
-	      coap_address_t *peer, coap_pdu_t *request, str *token,
+static void 
+hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM, struct coap_resource_t *resource, 
+	      const coap_endpoint_t *local_interface UNUSED_PARAM,
+	      coap_address_t *peer UNUSED_PARAM, coap_pdu_t *request UNUSED_PARAM, str *token UNUSED_PARAM,
 	      coap_pdu_t *response) {
   rd_t *rd = NULL;
   unsigned char buf[3];
@@ -106,10 +112,10 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
     coap_add_data(response, rd->data.length, rd->data.s);
 }
 
-void 
-hnd_put_resource(coap_context_t  *ctx, struct coap_resource_t *resource, 
-		 const coap_endpoint_t *local_interface,
-		 coap_address_t *peer, coap_pdu_t *request, str *token,
+static void 
+hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM, struct coap_resource_t *resource UNUSED_PARAM, 
+		 const coap_endpoint_t *local_interface UNUSED_PARAM,
+		 coap_address_t *peer UNUSED_PARAM, coap_pdu_t *request UNUSED_PARAM, str *token UNUSED_PARAM,
 		 coap_pdu_t *response) {
 #if 1
   response->hdr->code = COAP_RESPONSE_CODE(501);
@@ -181,10 +187,10 @@ hnd_put_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
 #endif
 }
 
-void 
+static void 
 hnd_delete_resource(coap_context_t  *ctx, struct coap_resource_t *resource, 
-		    const coap_endpoint_t *local_interface,
-		    coap_address_t *peer, coap_pdu_t *request, str *token,
+		    const coap_endpoint_t *local_interface UNUSED_PARAM,
+		    coap_address_t *peer UNUSED_PARAM, coap_pdu_t *request UNUSED_PARAM, str *token UNUSED_PARAM,
 		    coap_pdu_t *response) {
   rd_t *rd = NULL;
 
@@ -200,10 +206,10 @@ hnd_delete_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
   response->hdr->code = COAP_RESPONSE_CODE(202);
 }
 
-void 
-hnd_get_rd(coap_context_t  *ctx, struct coap_resource_t *resource, 
-	      const coap_endpoint_t *local_interface,
-	      coap_address_t *peer, coap_pdu_t *request, str *token,
+static void 
+hnd_get_rd(coap_context_t  *ctx UNUSED_PARAM, struct coap_resource_t *resource UNUSED_PARAM, 
+	      const coap_endpoint_t *local_interface UNUSED_PARAM,
+	      coap_address_t *peer UNUSED_PARAM, coap_pdu_t *request UNUSED_PARAM, str *token UNUSED_PARAM,
 	      coap_pdu_t *response) {
   unsigned char buf[3];
 
@@ -216,7 +222,7 @@ hnd_get_rd(coap_context_t  *ctx, struct coap_resource_t *resource,
 	  coap_encode_var_bytes(buf, 0x2ffff), buf);
 }
 
-int
+static int
 parse_param(unsigned char *search, size_t search_len,
 	    unsigned char *data, size_t data_len, str *result) {
 
@@ -260,7 +266,7 @@ parse_param(unsigned char *search, size_t search_len,
   return 0;
 }
 
-void
+static void
 add_source_address(struct coap_resource_t *resource, coap_address_t *peer) {
 #define BUFSIZE 64
   char *buf;
@@ -316,8 +322,8 @@ add_source_address(struct coap_resource_t *resource, coap_address_t *peer) {
 }
 
 
-rd_t *
-make_rd(coap_address_t *peer, coap_pdu_t *pdu) {    
+static rd_t *
+make_rd(coap_address_t *peer UNUSED_PARAM, coap_pdu_t *pdu) {    
   rd_t *rd;
   unsigned char *data;
   coap_opt_iterator_t opt_iter;
@@ -349,10 +355,10 @@ make_rd(coap_address_t *peer, coap_pdu_t *pdu) {
   return rd;
 }
 
-void 
-hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource, 
-	    const coap_endpoint_t *local_interface,
-	      coap_address_t *peer, coap_pdu_t *request, str *token,
+static void 
+hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource UNUSED_PARAM, 
+	    const coap_endpoint_t *local_interface UNUSED_PARAM,
+	      coap_address_t *peer, coap_pdu_t *request, str *token UNUSED_PARAM,
 	      coap_pdu_t *response) {
   coap_resource_t *r;
   coap_opt_iterator_t opt_iter;
@@ -485,7 +491,7 @@ hnd_post_rd(coap_context_t  *ctx, struct coap_resource_t *resource,
   }
 }
 
-void
+static void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
@@ -501,7 +507,7 @@ init_resources(coap_context_t *ctx) {
 
 }
 
-void
+static void
 usage( const char *program, const char *version) {
   const char *p;
 
@@ -518,7 +524,7 @@ usage( const char *program, const char *version) {
 	   program, version, program );
 }
 
-coap_context_t *
+static coap_context_t *
 get_context(const char *node, const char *port) {
   coap_context_t *ctx = NULL;  
   int s;
@@ -560,7 +566,7 @@ get_context(const char *node, const char *port) {
   return ctx;
 }
 
-int
+static int
 join(coap_context_t *ctx, char *group_name) {
   struct ipv6_mreq mreq;
   struct addrinfo   *reslocal = NULL, *resmulti = NULL, hints, *ainfo;
