@@ -39,6 +39,16 @@ doc/doxyfile.stamp
 doc/doxygen_sqlite3.db
 doc/html/
 
+# the examples/ folder
+examples/.deps/
+examples/client.o
+examples/coap-client
+examples/coap-server
+examples/coap_list.o
+examples/rd
+examples/rd.o
+examples/server.o
+
 # the tests/ folder
 tests/.deps
 tests/testdriver
