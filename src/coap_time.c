@@ -14,7 +14,7 @@
 #include "coap_config.h"
 #include "coap_time.h"
 
-#if _POSIX_TIMERS
+#if _POSIX_TIMERS && !defined(__APPLE__)
   /* _POSIX_TIMERS is > 0 when clock_gettime() is available */
 
   /* Use real-time clock for correct timestamps in coap_log(). */  
