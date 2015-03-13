@@ -94,6 +94,8 @@ libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS =					\
   @libcoap_SYMBOLS@ \
   -pie
 
+.PHONY:	update-map-file check_ctags
+
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if
 # configure has detected a usable version of the ctags program and aborts if not.
 check_ctags:
@@ -104,8 +106,6 @@ check_ctags:
 		echo ;\
 		exit 1;\
 	fi
-
-.PHONY:	update-map-file
 
 ## Helper target to generate the symbol table needed by libtool.
 ## The .map format is used when ld supports linker scripts, otherwise
