@@ -267,6 +267,9 @@ AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo \
                 strnlen])
 
+# Check if clock_gettime() requires librt, when available
+AC_SEARCH_LIBS([clock_gettime], [rt])
+
 AC_MSG_CHECKING([operating system])
 
 case $host in
