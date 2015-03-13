@@ -72,11 +72,9 @@ global:
   coap_package_name;
   coap_package_version;
   coap_packet_copy_source;
-  coap_packet_extract_pbuf;
   coap_packet_get_memmapped;
   coap_packet_populate_endpoint;
   coap_pdu_clear;
-  coap_pdu_from_pbuf;
   coap_pdu_init;
   coap_pdu_parse;
   coap_peek_next;
