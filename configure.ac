@@ -267,6 +267,10 @@ AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo \
                 strnlen])
 
+# Check if -lsocket -lnsl is required (specifically Solaris)
+AC_SEARCH_LIBS([socket], [socket])
+AC_SEARCH_LIBS([inet_ntop], [nsl])
+
 # Check if clock_gettime() requires librt, when available
 AC_SEARCH_LIBS([clock_gettime], [rt])
 
