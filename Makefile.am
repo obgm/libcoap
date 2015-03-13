@@ -94,6 +94,8 @@ libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS =					\
   @libcoap_SYMBOLS@ \
   -pie
 
+CTAGS_IGNORE=-I "coap_packet_extract_pbuf coap_pdu_from_pbuf"
+
 .PHONY:	update-map-file check_ctags
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if
@@ -115,14 +117,14 @@ update-map-file: libcoap-$(LIBCOAP_API_VERSION).map libcoap-$(LIBCOAP_API_VERSIO
 libcoap-$(LIBCOAP_API_VERSION).map: check_ctags $(libcoap_include_HEADERS)
 	( echo "VER_$(LIBCOAP_API_VERSION) {" ; \
 	echo "global:" ; \
-	ctags -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print "  " $$1 ";" }' | sort ; \
+	ctags $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print "  " $$1 ";" }' | sort ; \
 	echo "local:" ; \
 	echo "  *;" ; \
 	echo "};" ) > $@.new
 	mv $@.new $@
 
 libcoap-$(LIBCOAP_API_VERSION).sym: check_ctags $(libcoap_include_HEADERS)
-	( ctags -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print $$1 }' | sort ) \
+	( ctags $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print $$1 }' | sort ) \
 	> $@.new
 	mv $@.new $@
 
