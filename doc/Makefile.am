@@ -9,25 +9,26 @@
 # We can only perfom the targets in this directory if doxygen is present.
 
 if HAVE_DOXYGEN
-directory = $(builddir)/html
 
-dist_man_MANS = $(directory)/html
-$(directory)/html: doxyfile.stamp
-	$(directory): doxyfile.stamp
+dist_pkgdata_DATA = doxyfile.stamp
+
+CLEANFILES = \
+  doxyfile.stamp \
+  doxygen_sqlite3.db
 
 doxyfile.stamp:
 	$(DOXYGEN) Doxyfile
 	echo Timestamp > doxyfile.stamp
 
-CLEANFILES = doxyfile.stamp doxygen_sqlite3.db
-
 all-local: doxyfile.stamp
 
 clean-local:
-	rm -rf $(directory)
+	rm -rf $(srcdir)/html
 
-install-exec-am: all-local
+install-data-am: all-local
 	$(MKDIR_P) $(htmldir)/html || exit 1
-	cp -a $(directory) $(htmldir)
+	cp -a $(srcdir)/html $(htmldir)
+
+.PHONY: doxyfile.stamp
 
 endif # HAVE_DOXYGEN
