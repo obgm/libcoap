@@ -3,7 +3,7 @@
  * Copyright (C) 2010--2012,2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 #ifndef _COAP_H_
