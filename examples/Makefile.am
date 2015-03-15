@@ -23,6 +23,4 @@ coap_server_LDADD = @top_builddir@/.libs/libcoap-$(LIBCOAP_API_VERSION).la
 rd_SOURCES = rd.c
 rd_LDADD = @top_builddir@/.libs/libcoap-$(LIBCOAP_API_VERSION).la
 
-install-exec-am: all-local
-
 endif # BUILD_EXAMPLES
