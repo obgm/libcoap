@@ -12,6 +12,12 @@ AUTOMAKE_OPTIONS = subdir-objects
 
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
+## Additional files for the distribution archive
+EXTRA_DIST = \
+  $(pkgconfig_DATA).in \
+  libcoap-$(LIBCOAP_API_VERSION).map \
+  libcoap-$(LIBCOAP_API_VERSION).sym
+
 AM_CFLAGS = -I @top_builddir@/include/coap/ $(WARNING_CFLAGS) -std=c99
 
 SUBDIRS = . $(DOC_DIR) tests examples
