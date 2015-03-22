@@ -16,7 +16,14 @@ ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 EXTRA_DIST = \
   $(pkgconfig_DATA).in \
   libcoap-$(LIBCOAP_API_VERSION).map \
-  libcoap-$(LIBCOAP_API_VERSION).sym
+  libcoap-$(LIBCOAP_API_VERSION).sym \
+  examples/coap_list.h \
+  tests/test_options.h \
+  tests/test_pdu.h \
+  tests/test_error_response.h \
+  tests/test_sendqueue.h \
+  tests/test_uri.h \
+  tests/test_wellknown.h
 
 AM_CFLAGS = -I @top_builddir@/include/coap/ $(WARNING_CFLAGS) -std=c99
 
