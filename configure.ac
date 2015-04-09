@@ -281,26 +281,36 @@ AC_SEARCH_LIBS([clock_gettime], [rt])
 
 AC_MSG_CHECKING([operating system])
 
+# Set up here some extra platform depended defines and variables.
+# The "ADDITIONAL_CFLAGS" is need as this stand-alone definition
+# for the doxygen part.
 case $host in
 	*-linux* | *-uclinux*)
 	AC_MSG_RESULT([Linux])
-	backend="linux"
-	CFLAGS="$CFLAGS -D_GNU_SOURCE -DWITH_POSIX"
+	ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+
+	# Not yet needed but if some code definitions have to depend on the platform.
+	#AC_DEFINE(OS_LINUX, 1, [Linux backend])
+	#AC_SUBST(OS_LINUX)
 	;;
 
 	*-solaris*)
 	AC_MSG_RESULT([Solaris])
-	backend="sunos"
 	# set _XOPEN_SOURCE and _XOPEN_SOURCE_EXTENDED to enable XPG4v2 (POSIX 2004)
 	# set __EXTENSION__ to shut up feature test macros that restrict -std=c99
 	# to only C99 (and nothing newer)
-	CFLAGS="$CFLAGS -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=600 -D__EXTENSIONS__=1 -DWITH_POSIX"
+	ADDITIONAL_CFLAGS="-D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=600 -D__EXTENSIONS__=1 -DWITH_POSIX"
 	;;
 
 	*-darwin*)
 	AC_MSG_RESULT([Darwin])
-	backend="macos"
-	CFLAGS="$CFLAGS -D_GNU_SOURCE -DWITH_POSIX"
+	ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+
+	AC_DEFINE(__APPLE_USE_RFC_3542, 1, [Define this to 1 for ancillary data on MacOS])
+
+	# Not yet needed but if some code definitions have to depend on the platform.
+	#AC_DEFINE(OS_MACOS, 1, [MacOS backend])
+	#AC_SUBST(OS_MACOS)
 	;;
 
 	*)
@@ -308,20 +318,8 @@ case $host in
 	AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
 esac
 
-case $backend in
-	linux)
-	AC_DEFINE(OS_LINUX, 1, [Linux backend])
-	AC_SUBST(OS_LINUX)
-	;;
-
-	sunos)
-	;;
-
-	macos)
-	AC_DEFINE(__APPLE_USE_RFC_3542, 1,
-		  [Define this to 1 for ancillary data on MacOS])
-	;;
-esac
+# And finaly combining the CFLAGS together ...
+CFLAGS+=" $ADDITIONAL_CFLAGS"
 
 # Override the various template files, currently just makefiles and the
 # pkgconfig *.pc file.
