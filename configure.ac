@@ -318,6 +318,10 @@ case $host in
 	AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
 esac
 
+# Exporting the PREDEFINED_CFLAGS definition
+PREDEFINED_CFLAGS=`echo $ADDITIONAL_CFLAGS | sed -e 's/-D//g'`
+AC_SUBST(PREDEFINED_CFLAGS)
+
 # And finaly combining the CFLAGS together ...
 CFLAGS+=" $ADDITIONAL_CFLAGS"
 
