@@ -162,6 +162,7 @@ if test "x$build_documentation" = "xyes"; then
 				AC_MSG_WARN([==> dot not found - continuing without DOT support])
 				AC_MSG_WARN([==> The libcoap html documentation will be build without DOT graphics!])
 				HAVE_DOT="NO"
+				USE_CALL_GRAPH="NO"
 			else
 				AC_MSG_CHECKING([for compatible dot version])
 				dot_version=`$DOT -V 2>&1|$GREP -oP '(?<=version\W)@<:@0-9.@:>@*(?=\W(.*))'`
@@ -176,8 +177,12 @@ if test "x$build_documentation" = "xyes"; then
 				fi
 				# we found dot and the version is valid
 				HAVE_DOT="YES"
-				# exporting the test to doc/Doxygen(.in)
+				# let doxygen create caller graphics
+				# see http://www.stack.nl/~dimitri/doxygen/manual/config.html#cfg_call_graph
+				USE_CALL_GRAPH="YES"
+				# exporting the tests to doc/Doxygen(.in)
 				AC_SUBST(HAVE_DOT)
+				AC_SUBST(USE_CALL_GRAPH)
 			fi
 		fi
 	fi
