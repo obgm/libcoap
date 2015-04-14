@@ -33,7 +33,7 @@ Doxygen is used for creating a HTML based online documentation.
 ~~~~~~~~~~~~~~~~~
 The main discussion and development platform for libcoap is the mailing list
 on Sourceforge.
-No matter if if you just have a simple question, some specific problem or
+No matter if you just have a simple question, some specific problem or
 want to discuss some patches, please write it to the mailing list. Please
 avoid personal mailings to the maintainer (or some other contributor) if
 your questions will probably be in the interest of other users too.
@@ -67,7 +67,7 @@ create (or better say checkout) the local 'develop' branch:
   cd libcoap
   git checkout develop origin/develop
 
-Now you can simple start your own local branch (for example 'my-develop')
+Now you can simply start your own local branch (for example 'my-develop')
 with the 'origin/develop' as parent so you can later create the patches
 against the the upstream devlopment branch:
 
@@ -124,7 +124,7 @@ file(s).
 * Single lines within the source code should not be longer then 78
   characters.
 
-* If there a functions with a lot of parameters that not fits into the above
+* If there a functions with a lot of parameters that do not fit into the above
   rule split the declaration (in the *.h) and the implementation (in the *.c)
   into single lines per parameter. For example like this (from src/block.c):
 
@@ -151,7 +151,7 @@ coap_add_block(coap_pdu_t *pdu,
 5.4 API Changes
 ---------------
 * Never break the API!
-  Don't remove old functions and if there some changes is needed in some kind
+  Don't remove old functions and if there some changes are needed in some kind
   always provide a wrapper for the old call to let the library be backward
   compatible and mark the old function as @deprecated in the doxygen comment.
   Please discuss needed changes on the mailing list.
@@ -166,7 +166,7 @@ coap_add_block(coap_pdu_t *pdu,
   way. Don't use something to generic like "bugfix commit".
 
 * A patch/commit or a series of patches/commits have to ensure that the
-  whole project is able to build up every thing, in short: Do not break the
+  whole project is able to build up every thing, in short: Do not break
   any make target and test your work.
 
 * Every patch/commit should handle one single logical change. If more than
