@@ -208,10 +208,11 @@ coap_context_t *coap_new_context(const coap_address_t *listen_addr);
  */
 static inline unsigned short
 coap_new_message_id(coap_context_t *context) {
+  context->message_id++;
 #ifndef WITH_CONTIKI
-  return htons(++(context->message_id));
+  return htons(context->message_id);
 #else /* WITH_CONTIKI */
-  return uip_htons(++context->message_id);
+  return uip_htons(context->message_id);
 #endif
 }
 
