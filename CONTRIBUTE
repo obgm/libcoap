@@ -10,6 +10,7 @@ Any contributions have to be made dual licensed under the terms of the
 license
 
   * BSD 2-Clause (The BSD 2-Clause License)
+
 and
 
   * GPL v2+ (The GNU General Public License 2.0 or later)
@@ -23,11 +24,12 @@ Please refer also to the libcoap website for additional information
 
   http://libcoap.net/
 
-The build environment is grounded on the classical autotools,the GNU GCC and
-the LLVM C-compiler (CLang) are supported. The Windows systeme are not
-supported currently (until someone is creating support for it).
+The build environment is grounded on the classical autotools, the GNU GCC and
+the LLVM C-compiler (CLang) are supported. The Windows systems are not
+currently supported (until someone is creating support for it).
 
-Doxygen is used for creating a HTML based online documentation.
+Doxygen is used for creating a HTML based online documentation of the
+libcoap library.
 
 2. Communications
 ~~~~~~~~~~~~~~~~~
@@ -49,11 +51,11 @@ The archive of the list can be found on:
 ~~~~~~~~~~~~~~~~~~~~~~~~
 As written above libcoap is maintained with the Git tools so you should be
 familiar with the various git commands.
-The libcoap is using just two main branches, the 'master' branch is holding
-the point releases, all the development process is going on in the 'develop'
-branch.
+The libcoap project is using just two main branches, the 'master' branch is
+holding the point releases, all the development process is going on in the
+'develop' branch.
 To start any contributing you first have to clone the git tree from the main
-repository from Sourceforge:
+repository on Sourceforge:
 
   git clone git://libcoap.git.sourceforge.net/gitroot/libcoap/libcoap
 
@@ -61,7 +63,7 @@ repository from Sourceforge:
 ~~~~~~~~~~~~~~~~~~~~~~~~
 As one golden rule you should work on improvements within *your* own local
 development branch! To do so you have to first checkout the 'develop' branch
-as local branch and then start on top on this branch your own branch. First
+as local branch and then start on top on this branch your own branch. So
 create (or better say checkout) the local 'develop' branch:
 
   cd libcoap
@@ -69,7 +71,7 @@ create (or better say checkout) the local 'develop' branch:
 
 Now you can simply start your own local branch (for example 'my-develop')
 with the 'origin/develop' as parent so you can later create the patches
-against the the upstream devlopment branch:
+against the the upstream development branch:
 
   git checkout -b my-develop
 
@@ -91,7 +93,7 @@ hold probably explanations why you create the patches in the way you have done.
 
   git format-patch --cover-letter -o ../patches4libcoap
 
-This command will create a patch series in ../patches4libcoap there you find a
+This command will create a patch series in ../patches4libcoap where you find a
 patch named '0000-cover-letter.patch'. Please modify this patch with some
 useful information's for the mailing list. After finish this you now can send
 your patches to libcoap-developers@lists.sourceforge.net
@@ -182,4 +184,35 @@ coap_add_block(coap_pdu_t *pdu,
     rd.c: Fixed type-specifier warning
     Makefile.am: Added missing src/address.c
     address.[hc]: make coap_address_equals() not inline on POSIX
+
+6. Where to start contributing?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+There are various things you could starting on to contribute, the best
+is you simply pick up an issue you blindly see and just improve the
+situation. Please take also a look into the file TODO and choose a point
+from there or point the maintainer to add other things here too.
+
+* Documentation
+We are always lacking on a better documentation on the source code, so
+maybe you can improve the doxygen documentation.
+Also a good documentation on the usage of the libcoap and the example
+binaries is always improvable. So we appreciate any help on this.
+
+* Man Pages
+The source is providing some example binaries which originally just should show
+how the libcoap can be used. Right now these binaries are fully usable and
+quite more than simple examples on a system.  But there are no man pages
+available. Maybe you can write up good man pages and also some good HowTo's on
+the usage for these binaries. A man page for the library itself would be also a
+improvement.
+
+* HowTo's
+The libcoap library has now a lot of functions you can use.
+Unfortunately there is no good user guide on how to use the libcoap in
+any external project. This means there is no HowTo or CheatSheet for a
+programming person available. You want to write up something?
+
+* missed Functionality
+There are some features that are still missing inside the libcoap. For
+example some DTLS implementations and proxy functionality.
 
