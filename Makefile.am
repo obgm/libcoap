@@ -14,6 +14,8 @@ ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
 ## Additional files for the distribution archive
 EXTRA_DIST = \
+  CONTRIBUTE \
+  TODO \
   $(pkgconfig_DATA).in \
   libcoap-$(LIBCOAP_API_VERSION).map \
   libcoap-$(LIBCOAP_API_VERSION).sym \
