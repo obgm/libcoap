@@ -1,4 +1,4 @@
-# doc/Makefile.am
+# examples/Makefile.am
 #
 # Copyright (C)      2015 Carsten Schoenert <c.schoenert@t-online.de>
 #
