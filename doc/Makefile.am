@@ -10,25 +10,32 @@
 
 if HAVE_DOXYGEN
 
-dist_pkgdata_DATA = doxyfile.stamp
-
 CLEANFILES = \
-  doxyfile.stamp \
   doxygen_sqlite3.db
 
-doxyfile.stamp:
-	$(DOXYGEN) Doxyfile
-	echo Timestamp > doxyfile.stamp
 
-all-local: doxyfile.stamp
+# This target has no check for automated install data! It's simply assumed that
+# that the 'all' target is running before, in short: the user has to run first
+# 'make' before running 'make install'!
+install-data-am:
+	@if [ ! -d $(srcdir)/html ]; then \
+		echo ;\
+		echo "     No install data in '$(srcdir)/html'found! Please run 'make all' first." ;\
+		echo ;\
+		exit 1 ;\
+	fi
+	$(MKDIR_P) $(DESTDIR)$(htmldir)/html || exit 1
+	cp -a $(srcdir)/html $(DESTDIR)$(htmldir)
+
+uninstall-am:
+	-rm -rf $(DESTDIR)$(htmldir)/html
+
+all:
+	$(DOXYGEN) Doxyfile
 
 clean-local:
 	rm -rf $(srcdir)/html
 
-install-data-am: all-local
-	$(MKDIR_P) $(htmldir)/html || exit 1
-	cp -a $(srcdir)/html $(htmldir)
-
-.PHONY: doxyfile.stamp
+distclean-local: clean-local
 
 endif # HAVE_DOXYGEN
