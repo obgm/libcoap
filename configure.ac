@@ -88,7 +88,7 @@ AC_SUBST(LT_LIBCOAP_AGE)
 AC_SUBST(LIBCOAP_SO_VERSION)
 
 # Defining the API Version
-LIBCOAP_API_VERSION=1.0
+LIBCOAP_API_VERSION=1
 AC_SUBST(LIBCOAP_API_VERSION)
 
 # Adding some default warning options for code QS
