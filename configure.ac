@@ -336,6 +336,7 @@ AC_CONFIG_FILES([
 Makefile
 doc/Makefile
 examples/Makefile
+include/coap/coap.h
 tests/Makefile
 libcoap-$LIBCOAP_API_VERSION.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
 ])

@@ -50,6 +50,9 @@ examples/rd
 examples/rd.o
 examples/server.o
 
+# the include/ folder
+include/coap/coap.h
+
 # the tests/ folder
 tests/.deps
 tests/testdriver

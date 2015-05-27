@@ -25,6 +25,7 @@ AUTOGEN_FILES="INSTALL \
 		depcomp \
 		doc/Doxyfile doc/doxyfile.stamp doc/doxygen_sqlite3.db doc/Makefile doc/Makefile.in \
 		examples/*.o examples/rd.o examples/coap-* examples/rd \
+		include/coap/coap.h
 		install-sh \
 		libcoap-1.0.pc libtool ltmain.sh \
 		missing \
