@@ -119,17 +119,20 @@ print_readable( const unsigned char *data, unsigned int len,
   unsigned int cnt = 0;
   assert(data || len == 0);
 
-  if (buflen == 0 || len == 0)
+  if (buflen == 0) { /* there is nothing we can do here but return */
     return 0;
+  }
 
   while (len) {
     if (!encode_always && isprint(*data)) {
-      if (cnt == buflen)
-	break;
+      if (cnt+1 < buflen) { /* keep one byte for terminating zero */
       *result++ = *data;
       ++cnt;
+      } else {
+	break;
+      }
     } else {
-      if (cnt+4 < buflen) {
+      if (cnt+4 < buflen) { /* keep one byte for terminating zero */
 	*result++ = '\\';
 	*result++ = 'x';
 	*result++ = hex[(*data & 0xf0) >> 4];
@@ -142,7 +145,7 @@ print_readable( const unsigned char *data, unsigned int len,
     ++data; --len;
   }
 
-  *result = '\0';
+  *result = '\0'; /* add a terminating zero */
   return cnt;
 }
 
