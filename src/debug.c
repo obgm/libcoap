@@ -29,7 +29,9 @@
 #include <time.h>
 #endif
 
+#include "block.h"
 #include "debug.h"
+#include "encode.h"
 #include "net.h"
 
 #ifdef WITH_CONTIKI
@@ -249,57 +251,218 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
 # endif /* HAVE_VPRINTF */
 #endif /* WITH_CONTIKI */
 
+/** Returns a textual description of the message type @p t. */
+static const char *
+msg_type_string(uint8_t t) {
+  static char *types[] = { "CON", "NON", "ACK", "RST", "???" };
+
+  return types[min(t, sizeof(types)/sizeof(char *) - 1)];
+}
+
+/** Returns a textual description of the method or response code. */
+static const char *
+msg_code_string(uint8_t c) {
+  static char *methods[] = { "0.00", "GET", "POST", "PUT", "DELETE", "PATCH" };
+  static char buf[5];
+
+  if (c < sizeof(methods)/sizeof(char *)) {
+    return methods[c];
+  } else {
+    snprintf(buf, sizeof(buf), "%u.%02u", c >> 5, c & 0x1f);
+    return buf;
+  }
+}
+
+/** Returns a textual description of the option name. */
+static const char *
+msg_option_string(uint16_t option_type) {
+  struct option_desc_t {
+    uint16_t type;
+    const char *name;
+  };
+
+  static struct option_desc_t options[] = {
+    { COAP_OPTION_IF_MATCH, "If-Match" },
+    { COAP_OPTION_URI_HOST, "Uri-Host" },
+    { COAP_OPTION_ETAG, "ETag" },
+    { COAP_OPTION_IF_NONE_MATCH, "If-None-Match" },
+    { COAP_OPTION_OBSERVE, "Observe" },
+    { COAP_OPTION_URI_PORT, "Uri-Port" },
+    { COAP_OPTION_LOCATION_PATH, "Location-Path" },
+    { COAP_OPTION_URI_PATH, "Uri-Path" },
+    { COAP_OPTION_CONTENT_FORMAT, "Content-Format" },
+    { COAP_OPTION_MAXAGE, "Max-Age" },
+    { COAP_OPTION_URI_QUERY, "Uri-Query" },
+    { COAP_OPTION_ACCEPT, "Accept" },
+    { COAP_OPTION_LOCATION_QUERY, "Location-Query" },
+    { COAP_OPTION_BLOCK2, "Block2" },
+    { COAP_OPTION_BLOCK1, "Block1" },
+    { COAP_OPTION_PROXY_URI, "Proxy-Uri" },
+    { COAP_OPTION_PROXY_SCHEME, "Proxy-Scheme" },
+    { COAP_OPTION_SIZE1, "Size1" }
+  };
+
+  static char buf[6];
+  size_t i;
+
+  /* search option_type in list of known options */
+  for (i = 0; i < sizeof(options)/sizeof(struct option_desc_t); i++) {
+    if (option_type == options[i].type) {
+      return options[i].name;
+    }
+  }
+
+  /* unknown option type, just print to buf */
+  snprintf(buf, sizeof(buf), "%u", option_type);
+  return buf;
+}
+
+static unsigned int
+print_content_format(unsigned int format_type,
+		     unsigned char *result, unsigned int buflen) {
+  struct desc_t {
+    unsigned int type;
+    const char *name;
+  };
+
+  static struct desc_t formats[] = {
+    { COAP_MEDIATYPE_TEXT_PLAIN, "text/plain" },
+    { COAP_MEDIATYPE_APPLICATION_LINK_FORMAT, "application/link-format" },
+    { COAP_MEDIATYPE_APPLICATION_XML, "application/xml" },
+    { COAP_MEDIATYPE_APPLICATION_OCTET_STREAM, "application/octet-stream" },
+    { COAP_MEDIATYPE_APPLICATION_EXI, "application/exi" },
+    { COAP_MEDIATYPE_APPLICATION_JSON, "application/json" },
+    { COAP_MEDIATYPE_APPLICATION_CBOR, "application/cbor" }
+  };
+
+  size_t i;
+
+  /* search format_type in list of known content formats */
+  for (i = 0; i < sizeof(formats)/sizeof(struct desc_t); i++) {
+    if (format_type == formats[i].type) {
+      return snprintf((char *)result, buflen, "%s", formats[i].name);
+    }
+  }
+
+  /* unknown content format, just print numeric value to buf */
+  return snprintf((char *)result, buflen, "%d", format_type);
+}
+
+/**
+ * Returns 1 if the given @p content_format is either unknown or known
+ * to carry binary data. The return value @c 0 hence indicates
+ * printable data which is also assumed if @p content_format is @c 01.
+ */
+static inline int
+is_binary(int content_format) {
+  return !(content_format == -1 ||
+	   content_format == COAP_MEDIATYPE_TEXT_PLAIN ||
+	   content_format == COAP_MEDIATYPE_APPLICATION_LINK_FORMAT ||
+	   content_format == COAP_MEDIATYPE_APPLICATION_XML ||
+	   content_format == COAP_MEDIATYPE_APPLICATION_JSON);
+}
+
 void
 coap_show_pdu(const coap_pdu_t *pdu) {
   unsigned char buf[COAP_MAX_PDU_SIZE]; /* need some space for output creation */
-  int encode = 0, have_options = 0;
+  size_t buf_len = 0; /* takes the number of bytes written to buf */
+  int encode = 0, have_options = 0, i;
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
+  int content_format = -1;
+  size_t data_len;
+  unsigned char *data;
 
-  fprintf(COAP_DEBUG_FD, "v:%d t:%d tkl:%d c:%d id:%u",
-	  pdu->hdr->version, pdu->hdr->type,
-	  pdu->hdr->token_length,
-	  pdu->hdr->code, ntohs(pdu->hdr->id));
+  fprintf(COAP_DEBUG_FD, "v:%d t:%s c:%s i:%04x {",
+	  pdu->hdr->version, msg_type_string(pdu->hdr->type),
+	  msg_code_string(pdu->hdr->code), ntohs(pdu->hdr->id));
+
+  for (i = 0; i < pdu->hdr->token_length; i++) {
+    fprintf(COAP_DEBUG_FD, "%02x", pdu->hdr->token[i]);
+  }
+  fprintf(COAP_DEBUG_FD, "}");
 
   /* show options, if any */
   coap_option_iterator_init((coap_pdu_t *)pdu, &opt_iter, COAP_OPT_ALL);
 
+  fprintf(COAP_DEBUG_FD, " [");
   while ((option = coap_option_next(&opt_iter))) {
     if (!have_options) {
       have_options = 1;
-      fprintf(COAP_DEBUG_FD, " o: [");
     } else {
       fprintf(COAP_DEBUG_FD, ",");
     }
 
-    if (opt_iter.type == COAP_OPTION_URI_PATH ||
-	opt_iter.type == COAP_OPTION_PROXY_URI ||
-	opt_iter.type == COAP_OPTION_URI_HOST ||
-	opt_iter.type == COAP_OPTION_LOCATION_PATH ||
-	opt_iter.type == COAP_OPTION_LOCATION_QUERY ||
-	  opt_iter.type == COAP_OPTION_URI_PATH ||
-	opt_iter.type == COAP_OPTION_URI_QUERY) {
-      encode = 0;
-    } else {
-      encode = 1;
+    switch (opt_iter.type) {
+    case COAP_OPTION_CONTENT_FORMAT:
+      content_format = (int)coap_decode_var_bytes(COAP_OPT_VALUE(option),
+						  COAP_OPT_LENGTH(option));
+
+      buf_len = print_content_format(content_format, buf, sizeof(buf));
+      break;
+
+    case COAP_OPTION_BLOCK1:
+    case COAP_OPTION_BLOCK2:
+      /* split block option into number/more/size where more is the
+       * letter M if set, the _ otherwise */
+      buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
+			 coap_opt_block_num(option), /* block number */
+			 COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
+			 (2 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+
+      break;
+
+    case COAP_OPTION_URI_PORT:
+    case COAP_OPTION_MAXAGE:
+    case COAP_OPTION_OBSERVE:
+    case COAP_OPTION_SIZE1:
+      /* show values as unsigned decimal value */
+      buf_len = snprintf((char *)buf, sizeof(buf), "%u",
+			 coap_decode_var_bytes(COAP_OPT_VALUE(option),
+					       COAP_OPT_LENGTH(option)));
+      break;
+
+    default:
+      /* generic output function for all other option types */
+      if (opt_iter.type == COAP_OPTION_URI_PATH ||
+	  opt_iter.type == COAP_OPTION_PROXY_URI ||
+	  opt_iter.type == COAP_OPTION_URI_HOST ||
+	  opt_iter.type == COAP_OPTION_LOCATION_PATH ||
+	  opt_iter.type == COAP_OPTION_LOCATION_QUERY ||
+	  opt_iter.type == COAP_OPTION_URI_QUERY) {
+	encode = 0;
+      } else {
+	encode = 1;
+      }
+
+      buf_len = print_readable(COAP_OPT_VALUE(option),
+			       COAP_OPT_LENGTH(option),
+			       buf, sizeof(buf), encode);
     }
-    
-    if (print_readable(COAP_OPT_VALUE(option), 
-		       COAP_OPT_LENGTH(option), 
-		       buf, sizeof(buf), encode ))
-      fprintf(COAP_DEBUG_FD, " %d:'%s'", opt_iter.type, buf);
+
+    fprintf(COAP_DEBUG_FD, " %s:%.*s", msg_option_string(opt_iter.type),
+	    (int)buf_len, buf);
   }
 
-  if (have_options)
-    fprintf(COAP_DEBUG_FD, " ]");
+  fprintf(COAP_DEBUG_FD, " ]");
   
-  if (pdu->data) {
-    assert(pdu->data < (unsigned char *)pdu->hdr + pdu->length);
-    print_readable(pdu->data, 
-		   (unsigned char *)pdu->hdr + pdu->length - pdu->data, 
-		   buf, sizeof(buf), 0 );
-    fprintf(COAP_DEBUG_FD, " d:%s", buf);
+  if (coap_get_data((coap_pdu_t *)pdu, &data_len, &data)) {
+
+    fprintf(COAP_DEBUG_FD, " :: ");
+
+    if (is_binary(content_format)) {
+      fprintf(COAP_DEBUG_FD, "<<");
+      while (data_len--) {
+	fprintf(COAP_DEBUG_FD, "%02x", *data++);
+      }
+      fprintf(COAP_DEBUG_FD, ">>");
+    } else {
+      if (print_readable(data, data_len, buf, sizeof(buf), 0)) {
+	fprintf(COAP_DEBUG_FD, "'%s'", buf);
+      }
+    }
   }
+
   fprintf(COAP_DEBUG_FD, "\n");
   fflush(COAP_DEBUG_FD);
 }
