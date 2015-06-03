@@ -1281,6 +1281,54 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
 #endif /* WITOUT_OBSERVE */  
 }
 
+/**
+ * Checks for No-Response option in given @p request and
+ * returns @c 1 if @p response should be suppressed
+ * according to draft-tcs-coap-no-response-option-11.txt.
+ * 
+ * The value of the No-Response option is encoded as
+ * follows:
+ *
+ *  +-------+-------------+--------------------------+
+ *  | Value | Binary Rep. | Description              |
+ *  +-------+-------------+--------------------------+
+ *  |     0 |   <empty>   | Allow all responses.     |
+ *  +-------+-------------+--------------------------+
+ *  |     2 |   00000010  | Suppress 2.xx responses. |
+ *  +-------+-------------+--------------------------+
+ *  |     8 |   00001000  | Suppress 4.xx responses. |
+ *  +-------+-------------+--------------------------+
+ *  |    16 |   00010000  | Suppress 5.xx responses. |
+ *  +-------+-------------+--------------------------+
+ *  |   127 |   01111111  | Suppress all responses.  |
+ *  +-------+-------------+--------------------------+
+ *
+ * @param request  The CoAP request to check for the No-Response option.
+ *                 This parameter must not be NULL.
+ * @param response The response that is potentially suppressed.
+ *                 This parameter must not be NULL.
+ * @return @c 1 if the response code matches the No-Response option,
+ *         or @c 0, otherwise. 
+ */
+static inline int
+no_response(coap_pdu_t *request, coap_pdu_t *response) {
+  coap_opt_t *nores;
+  coap_opt_iterator_t opt_iter;
+  uint8_t val = 0;
+
+  assert(request);
+  assert(response);
+
+  nores = coap_check_option(request, COAP_OPTION_NORESPONSE, &opt_iter);
+
+  if (nores) {
+    val = coap_decode_var_bytes(coap_opt_value(nores), coap_opt_length(nores));
+  }
+
+  return (COAP_RESPONSE_CLASS(request->hdr->code) > 0)
+    && (((2 << (COAP_RESPONSE_CLASS(request->hdr->code) - 1)) & val) > 0);
+}
+
 #define WANT_WKC(Pdu,Key)					\
   (((Pdu)->hdr->code == COAP_REQUEST_GET) && is_wkc(Key))
 
@@ -1329,7 +1377,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 					   opt_filter);
     }
       
-    if (response && coap_send(context, &node->local_if, 
+    if (response && !no_response(node->pdu, response) && coap_send(context, &node->local_if, 
 			      &node->remote, response) == COAP_INVALID_TID) {
       warn("cannot send response for transaction %u\n", node->id);
     }
@@ -1385,6 +1433,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
       h(context, resource, &node->local_if, &node->remote,
 	node->pdu, &token, response);
 
+      if (!no_response(node->pdu, response)) {
       if (observe && ((COAP_RESPONSE_CLASS(response->hdr->code) > 2)
 		      || ((observe_action & COAP_OBSERVE_CANCEL) != 0))) {
 	coap_log(LOG_DEBUG, "removed observer");
@@ -1411,7 +1460,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 	  debug("cannot send response for message %d\n", node->pdu->hdr->id);
 	  }
       }
-
+      }
       coap_delete_pdu(response);
     } else {
       warn("cannot generate response\r\n");
