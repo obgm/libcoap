@@ -205,7 +205,7 @@ coap_option_next(coap_opt_iterator_t *oi) {
 }
 
 coap_opt_t *
-coap_check_option(coap_pdu_t *pdu, unsigned char type, 
+coap_check_option(coap_pdu_t *pdu, unsigned short type, 
 		  coap_opt_iterator_t *oi) {
   coap_opt_filter_t f;
   
