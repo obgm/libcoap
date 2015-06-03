@@ -40,10 +40,5 @@ main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM) {
 
   CU_cleanup_registry();
 
-  printf("\n\nknown bugs:\n");
-  printf("\t- Test: t_error_response8 ... FAILED\n"
-	 "\t    1. test_error_response.c:310  - response->length == sizeof(teststr)\n"
-	 "\t    2. test_error_response.c:316  - memcmp(response->hdr, teststr, sizeof(teststr)) == 0\n");
-
   return result;
 }
