@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "option.h"
+#include "encode.h"		/* for coap_fls() */
 #include "debug.h"
 
 coap_opt_t *
@@ -406,3 +407,117 @@ coap_opt_encode(coap_opt_t *opt, size_t maxlen, unsigned short delta,
   return l + length;
 }
 
+/* coap_opt_filter_t has the following internal structure: */
+typedef struct {
+  uint16_t mask;
+
+#define LONG_MASK ((1 << COAP_OPT_FILTER_LONG) - 1)
+#define SHORT_MASK \
+  (~LONG_MASK & ((1 << (COAP_OPT_FILTER_LONG + COAP_OPT_FILTER_SHORT)) - 1))
+
+  uint16_t long_opts[COAP_OPT_FILTER_LONG];
+  uint8_t short_opts[COAP_OPT_FILTER_SHORT];
+} opt_filter;
+
+/** Returns true iff @p type denotes an option type larger than 255. */
+static inline int
+is_long_option(unsigned short type) { return type > 255; }
+
+/** Operation specifiers for coap_filter_op(). */
+enum filter_op_t { FILTER_SET, FILTER_CLEAR, FILTER_GET };
+
+/**
+ * Applies @p op on @p filter with respect to @p type. The following
+ * operations are defined:
+ *
+ * FILTER_SET: Store @p type into an empty slot in @p filter. Returns
+ * @c 1 on success, or @c 0 if no spare slot was available.
+ *
+ * FILTER_CLEAR: Remove @p type from filter if it exists.
+ *
+ * FILTER_GET: Search for @p type in @p filter. Returns @c 1 if found,
+ * or @c 0 if not found.
+ *
+ * @param filter The filter object.
+ * @param type   The option type to set, get or clear in @p filter.
+ * @param op     The operation to apply to @p filter and @p type.
+ *
+ * @return 1 on success, and 0 when FILTER_GET yields no
+ * hit or no free slot is available to store @p type with FILTER_SET.
+ */
+static int
+coap_option_filter_op(coap_opt_filter_t filter,
+		      unsigned short type,
+		      enum filter_op_t op) {
+  size_t index = 0;
+  opt_filter *of = (opt_filter *)filter;
+  uint16_t nr, mask = 0;
+
+  if (is_long_option(type)) {
+    mask = LONG_MASK;
+
+    for (nr = 1; index < COAP_OPT_FILTER_LONG; nr <<= 1, index++) {
+
+      if (((of->mask & nr) > 0) && (of->long_opts[index] == type)) {
+	if (op == FILTER_CLEAR) {
+	  of->mask &= ~nr;
+	}
+
+	return 1;
+      }
+    }
+  } else {
+    mask = SHORT_MASK;
+
+    for (nr = 1 << COAP_OPT_FILTER_LONG; index < COAP_OPT_FILTER_SHORT;
+	 nr <<= 1, index++) {
+
+      if (((of->mask & nr) > 0) && (of->short_opts[index] == (type & 0xff))) {
+	if (op == FILTER_CLEAR) {
+	  of->mask &= ~nr;
+	}
+
+	return 1;
+      }
+    }
+  }
+
+  /* type was not found, so there is nothing to do if op is CLEAR or GET */
+  if ((op == FILTER_CLEAR) || (op == FILTER_GET)) {
+    return 0;
+  }
+
+  /* handle FILTER_SET: */
+
+  index = coap_fls(~of->mask & mask);
+  if (!index) {
+    return 0;
+  }
+
+  if (is_long_option(type)) {
+    of->long_opts[index - 1] = type;
+  } else {
+    of->short_opts[index - COAP_OPT_FILTER_LONG - 1] = type;
+  }
+
+  of->mask |= 1 << (index - 1);
+
+  return 1;
+}
+
+int
+coap_option_filter_set(coap_opt_filter_t filter, unsigned short type) {
+  return coap_option_filter_op(filter, type, FILTER_SET);
+}
+
+int
+coap_option_filter_unset(coap_opt_filter_t filter, unsigned short type) {
+  return coap_option_filter_op(filter, type, FILTER_CLEAR);
+}
+
+int
+coap_option_filter_get(const coap_opt_filter_t filter, unsigned short type) {
+  /* Ugly cast to make the const go away (FILTER_GET wont change filter
+   * but as _set and _unset do, the function does not take a const). */
+  return coap_option_filter_op((uint16_t *)filter, type, FILTER_GET);
+}

@@ -84,10 +84,55 @@ coap_opt_t *options_start(coap_pdu_t *pdu);
  */
 
 /**
- * Fixed-size bit-vector we use for option filtering. It is large enough to hold
- * the highest option number known at build time (20 in the core spec).
+ * The number of option types below 256 that can be stored in an
+ * option filter. COAP_OPT_FILTER_SHORT + COAP_OPT_FILTER_LONG must be
+ * at most 16. Each coap_option_filter_t object reserves
+ * ((COAP_OPT_FILTER_SHORT + 1) / 2) * 2 bytes for short options.
  */
-typedef unsigned char coap_opt_filter_t[(COAP_MAX_OPT >> 3) + 1];
+#define COAP_OPT_FILTER_SHORT 6
+
+/**
+ * The number of option types above 255 that can be stored in an
+ * option filter. COAP_OPT_FILTER_SHORT + COAP_OPT_FILTER_LONG must be
+ * at most 16. Each coap_option_filter_t object reserves
+ * COAP_OPT_FILTER_LONG * 2 bytes for short options.
+ */
+#define COAP_OPT_FILTER_LONG  2
+
+/* Ensure that COAP_OPT_FILTER_SHORT and COAP_OPT_FILTER_LONG are set
+ * correctly. */
+#if (COAP_OPT_FILTER_SHORT + COAP_OPT_FILTER_LONG > 16)
+#error COAP_OPT_FILTER_SHORT + COAP_OPT_FILTER_LONG must be less or equal 16
+#endif /* (COAP_OPT_FILTER_SHORT + COAP_OPT_FILTER_LONG > 16) */
+
+/** The number of elements in coap_opt_filter_t. */
+#define COAP_OPT_FILTER_SIZE					\
+  (((COAP_OPT_FILTER_SHORT + 1) >> 1) + COAP_OPT_FILTER_LONG) +1
+
+/**
+ * Fixed-size vector we use for option filtering. It is large enough
+ * to hold COAP_OPT_FILTER_SHORT entries with an option number between
+ * 0 and 255, and COAP_OPT_FILTER_LONG entries with an option number
+ * between 256 and 65535. Its internal structure is
+ *
+ * @code
+struct {
+  uint16_t mask;
+  uint16_t long_opts[COAP_OPT_FILTER_LONG];
+  uint8_t short_opts[COAP_OPT_FILTER_SHORT];
+}
+ * @endcode
+ *
+ * The first element contains a bit vector that indicates which fields
+ * in the remaining array are used. The first COAP_OPT_FILTER_LONG
+ * bits correspond to the long option types that are stored in the
+ * elements from index 1 to COAP_OPT_FILTER_LONG. The next
+ * COAP_OPT_FILTER_SHORT bits correspond to the short option types
+ * that are stored in the elements from index COAP_OPT_FILTER_LONG + 1
+ * to COAP_OPT_FILTER_LONG + COAP_OPT_FILTER_SHORT. The latter
+ * elements are treated as bytes.
+ */
+typedef uint16_t coap_opt_filter_t[COAP_OPT_FILTER_SIZE];
 
 /** Pre-defined filter that includes all options. */
 #define COAP_OPT_ALL NULL
@@ -103,9 +148,47 @@ coap_option_filter_clear(coap_opt_filter_t f) {
 }
 
 /**
+ * Sets the corresponding entry for @p type in @p filter. This
+ * function returns @c 1 if bit was set or @c 0 on error (i.e. when
+ * the given type does not fit in the filter).
+ *
+ * @param filter The filter object to change.
+ * @param type   The type for which the bit should be set.
+ *
+ * @return       @c 1 if bit was set, @c 0 otherwise.
+ */
+int coap_option_filter_set(coap_opt_filter_t filter, unsigned short type);
+
+/**
+ * Clears the corresponding entry for @p type in @p filter. This
+ * function returns @c 1 if bit was set or @c 0 on error (i.e. when
+ * the given type does not fit in the filter).
+ *
+ * @param filter The filter object to change.
+ * @param type   The type that should be cleared from the filter.
+ *
+ * @return       @c 1 if bit was set, @c 0 otherwise.
+ */
+int coap_option_filter_unset(coap_opt_filter_t filter, unsigned short type);
+
+/**
+ * Checks if @p type is contained in @p filter. This function returns
+ * @c 1 if found, @c 0 if not, or @c -1 on error (i.e. when the given
+ * type does not fit in the filter).
+ *
+ * @param filter The filter object to search.
+ * @param type   The type to search for.
+ *
+ * @return       @c 1 if @p type was found, @c 0 otherwise, or @c -1 on error.
+ */
+int coap_option_filter_get(const coap_opt_filter_t filter, unsigned short type);
+
+/**
  * Sets the corresponding bit for @p type in @p filter. This function returns @c
  * 1 if bit was set or @c -1 on error (i.e. when the given type does not fit in
  * the filter).
+ *
+ * @deprecated Use coap_option_filter_set() instead.
  *
  * @param filter The filter object to change.
  * @param type   The type for which the bit should be set.
@@ -114,13 +197,15 @@ coap_option_filter_clear(coap_opt_filter_t f) {
  */
 inline static int
 coap_option_setb(coap_opt_filter_t filter, unsigned short type) {
-  return bits_setb((uint8_t *)filter, sizeof(coap_opt_filter_t), type);
+  return coap_option_filter_set(filter, type) ? 1 : -1;
 }
 
 /**
  * Clears the corresponding bit for @p type in @p filter. This function returns
  * @c 1 if bit was cleared or @c -1 on error (i.e. when the given type does not
  * fit in the filter).
+ *
+ * @deprecated Use coap_option_filter_unset() instead.
  *
  * @param filter The filter object to change.
  * @param type   The type for which the bit should be cleared.
@@ -129,13 +214,15 @@ coap_option_setb(coap_opt_filter_t filter, unsigned short type) {
  */
 inline static int
 coap_option_clrb(coap_opt_filter_t filter, unsigned short type) {
-  return bits_clrb((uint8_t *)filter, sizeof(coap_opt_filter_t), type);
+  return coap_option_filter_unset(filter, type) ? 1 : -1;
 }
 
 /**
  * Gets the corresponding bit for @p type in @p filter. This function returns @c
  * 1 if the bit is set @c 0 if not, or @c -1 on error (i.e. when the given type
  * does not fit in the filter).
+ *
+ * @deprecated Use coap_option_filter_get() instead.
  *
  * @param filter The filter object to read bit from.
  * @param type   The type for which the bit should be read.
@@ -144,7 +231,7 @@ coap_option_clrb(coap_opt_filter_t filter, unsigned short type) {
  */
 inline static int
 coap_option_getb(const coap_opt_filter_t filter, unsigned short type) {
-  return bits_getb((uint8_t *)filter, sizeof(coap_opt_filter_t), type);
+  return coap_option_filter_get(filter, type);
 }
 
 /**
