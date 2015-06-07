@@ -767,12 +767,117 @@ t_iterate_option10(void) {
 }
 
 /************************************************************************
+ ** filter tests
+ ************************************************************************/
+
+static void
+t_filter_option1(void) {
+  coap_opt_filter_t filter;
+
+  coap_option_filter_clear(filter);
+
+  CU_ASSERT(coap_option_filter_set(filter, 0) == 1);
+  CU_ASSERT(coap_option_filter_set(filter, 37) == 1);
+  CU_ASSERT(coap_option_filter_set(filter, 37) == 1);
+  CU_ASSERT(coap_option_filter_set(filter, 43) == 1);
+  CU_ASSERT(coap_option_filter_set(filter, 290) == 1);
+  CU_ASSERT(coap_option_filter_set(filter, 65535) == 1);
+
+  CU_ASSERT(coap_option_filter_get(filter, 0) == 1);
+  CU_ASSERT(coap_option_filter_get(filter, 37) == 1);
+  CU_ASSERT(coap_option_filter_get(filter, 43) == 1);
+  CU_ASSERT(coap_option_filter_get(filter, 290) == 1);
+  CU_ASSERT(coap_option_filter_get(filter, 65535) == 1);
+
+  CU_ASSERT(coap_option_filter_unset(filter, 37) == 1);
+
+  CU_ASSERT(coap_option_filter_get(filter, 0) == 1);
+  CU_ASSERT(coap_option_filter_get(filter, 43) == 1);
+  CU_ASSERT(coap_option_filter_get(filter, 290) == 1);
+  CU_ASSERT(coap_option_filter_get(filter, 65535) == 1);
+
+  CU_ASSERT(coap_option_filter_get(filter, 37) == 0);
+  CU_ASSERT(coap_option_filter_get(filter, 89) == 0);
+}
+
+static void
+t_filter_option2(void) {
+  coap_opt_filter_t filter;
+  int s;
+
+  coap_option_filter_clear(filter);
+
+  /* fill all COAP_OPT_FILTER_SHORT slots */
+  for (s = 0; s < COAP_OPT_FILTER_SHORT; s++) {
+    CU_ASSERT(coap_option_filter_set(filter, s));
+  }
+
+  /* adding a short option type must fail */
+  CU_ASSERT(coap_option_filter_set(filter, COAP_OPT_FILTER_SHORT) == 0);
+
+  /* adding a long option type must succeed */
+  CU_ASSERT(coap_option_filter_set(filter, 256) == 1);
+}
+
+static void
+t_filter_option3(void) {
+  coap_opt_filter_t filter;
+  int l;
+
+  coap_option_filter_clear(filter);
+
+  /* set COAP_OPT_FILTER_LONG long filters */
+  for (l = 0; l < COAP_OPT_FILTER_LONG; l++) {
+    CU_ASSERT(coap_option_filter_set(filter, 256 + l) == 1);
+  }
+
+  /* the next must fail and must not be found */
+  CU_ASSERT(coap_option_filter_set(filter, 256 + COAP_OPT_FILTER_LONG) == 0);
+  CU_ASSERT(coap_option_filter_get(filter, 256 + COAP_OPT_FILTER_LONG) == 0);
+
+  /* remove one item */
+  CU_ASSERT(coap_option_filter_unset(filter, 256) == 1);
+  CU_ASSERT(coap_option_filter_get(filter, 256) == 0);
+
+  /* now, storing a new filter must succeed */
+  CU_ASSERT(coap_option_filter_set(filter, 256 + COAP_OPT_FILTER_LONG) == 1);
+  CU_ASSERT(coap_option_filter_get(filter, 256 + COAP_OPT_FILTER_LONG) == 1);
+
+  /* and all other items must be available as well */
+  for (l = 0; l < COAP_OPT_FILTER_LONG; l++) {
+    CU_ASSERT(coap_option_filter_get(filter, 256 + l + 1) == 1);
+  }
+
+  /* set COAP_OPT_FILTER_SHORT short filters */
+  for (l = 0; l < COAP_OPT_FILTER_SHORT; l++) {
+    CU_ASSERT(coap_option_filter_set(filter, l) == 1);
+  }
+
+  /* the next must fail and must not be found */
+  CU_ASSERT(coap_option_filter_set(filter, COAP_OPT_FILTER_SHORT) == 0);
+  CU_ASSERT(coap_option_filter_get(filter, COAP_OPT_FILTER_SHORT) == 0);
+
+  /* remove one item */
+  CU_ASSERT(coap_option_filter_unset(filter, 0) == 1);
+  CU_ASSERT(coap_option_filter_get(filter, 0) == 0);
+
+  /* now, storing a new filter must succeed */
+  CU_ASSERT(coap_option_filter_set(filter, COAP_OPT_FILTER_SHORT) == 1);
+  CU_ASSERT(coap_option_filter_get(filter, COAP_OPT_FILTER_SHORT) == 1);
+
+  /* and all other items must be available as well */
+  for (l = 0; l < COAP_OPT_FILTER_SHORT; l++) {
+    CU_ASSERT(coap_option_filter_get(filter, l + 1) == 1);
+  }
+}
+
+/************************************************************************
  ** initialization 
  ************************************************************************/
 
 CU_pSuite
 t_init_option_tests(void) {
-  CU_pSuite suite[4];
+  CU_pSuite suite[5];
 
   suite[0] = CU_add_suite("option parser", NULL, NULL);
   if (!suite[0]) {			/* signal error */
@@ -864,6 +969,22 @@ t_init_option_tests(void) {
     
   } else {
     fprintf(stderr, "W: cannot add option iterator test suite (%s)\n", 
+	    CU_get_error_msg());
+  }
+
+  if ((suite[4] = CU_add_suite("option filter", NULL, NULL))) {
+#define OPTION_FILTER_TEST(n,s)			      \
+    if (!CU_add_test(suite[4], s, t_filter_option##n)) {		      \
+      fprintf(stderr, "W: cannot add option filter test (%s)\n",     \
+	      CU_get_error_msg());				      \
+    }
+
+    OPTION_FILTER_TEST(1, "option filter #1");
+    OPTION_FILTER_TEST(2, "option filter #2");
+    OPTION_FILTER_TEST(3, "option filter #3");
+
+  } else {
+    fprintf(stderr, "W: cannot add option filter test suite (%s)\n",
 	    CU_get_error_msg());
   }
 
