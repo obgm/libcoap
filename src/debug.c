@@ -302,7 +302,8 @@ msg_option_string(uint16_t option_type) {
     { COAP_OPTION_BLOCK1, "Block1" },
     { COAP_OPTION_PROXY_URI, "Proxy-Uri" },
     { COAP_OPTION_PROXY_SCHEME, "Proxy-Scheme" },
-    { COAP_OPTION_SIZE1, "Size1" }
+    { COAP_OPTION_SIZE1, "Size1" },
+    { COAP_OPTION_NORESPONSE, "No-Response" }
   };
 
   static char buf[6];
