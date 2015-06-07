@@ -60,6 +60,9 @@ coap_opt_block_num
 coap_opt_delta
 coap_opt_encode
 coap_option_check_critical
+coap_option_filter_get
+coap_option_filter_set
+coap_option_filter_unset
 coap_option_iterator_init
 coap_option_next
 coap_opt_length
