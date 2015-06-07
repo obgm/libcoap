@@ -599,6 +599,7 @@ t_encode_pdu10(void) {
 
 static void
 t_encode_pdu11(void) {
+  coap_log_t level = coap_get_log_level();
   /* data too long for PDU */
   size_t old_max = pdu->max_size;
   int result;
@@ -606,7 +607,9 @@ t_encode_pdu11(void) {
   coap_pdu_clear(pdu, 8);	/* clear PDU, with small maximum */
 
   CU_ASSERT(pdu->data == NULL);
+  coap_set_log_level(LOG_CRIT);
   result = coap_add_data(pdu, 10, (unsigned char *)"0123456789");
+  coap_set_log_level(level);
 
   CU_ASSERT(result == 0);
   CU_ASSERT(pdu->data == NULL);

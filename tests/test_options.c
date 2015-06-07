@@ -393,9 +393,12 @@ t_access_option5(void) {
 
 static void
 t_access_option6(void) {
+  coap_log_t level = coap_get_log_level();
   const uint8_t teststr[] = { 0xf2, 'a', 'b' };
 
+  coap_set_log_level(LOG_CRIT);
   CU_ASSERT(coap_opt_delta((coap_opt_t *)teststr) == 0);
+  coap_set_log_level(level);
   CU_ASSERT(coap_opt_length((coap_opt_t *)teststr) == 0);
   CU_ASSERT_PTR_EQUAL(coap_opt_value((coap_opt_t *)teststr), NULL);
   CU_ASSERT(coap_opt_size((coap_opt_t *)teststr) == 0);
