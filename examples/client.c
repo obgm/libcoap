@@ -516,13 +516,13 @@ usage( const char *program, const char *version) {
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
 	   "(c) 2010-2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
 	   "usage: %s [-A type...] [-t type] [-b [num,]size] [-B seconds] [-e text]\n"
-	   "\t\t[-g group] [-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
+	   "\t\t[-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
 	   "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] URI\n\n"
 	   "\tURI can be an absolute or relative coap URI,\n"
 	   "\t-a addr\tthe local interface address to use\n"
 	   "\t-A type...\taccepted media types as comma-separated list of\n"
 	   "\t\t\tsymbolic or numeric values\n"
-	   "\t-t type\t\tcontent type for given resource for PUT/POST\n"
+	   "\t-t type\t\tcontent format for given resource for PUT/POST\n"
 	   "\t-b [num,]size\tblock size to be used in GET/PUT/POST requests\n"
 	   "\t       \t\t(value must be a multiple of 16 not larger than 1024)\n"
 	   "\t       \t\tIf num is present, the request chain will start at\n"
@@ -532,7 +532,6 @@ usage( const char *program, const char *version) {
 	   "\t-e text\t\tinclude text as payload (use percent-encoding for\n"
 	   "\t\t\tnon-ASCII characters)\n"
 	   "\t-f file\t\tfile to send with PUT/POST (use '-' for STDIN)\n"
-	   "\t-g group\tjoin the given multicast group\n"
 	   "\t-m method\trequest method (get|put|post|delete), default is 'get'\n"
 	   "\t-N\t\tsend NON-confirmable message\n"
 	   "\t-o file\t\toutput received data to this file (use '-' for STDOUT)\n"
@@ -550,66 +549,6 @@ usage( const char *program, const char *version) {
 	   "\tcoap-client -m get -T cafe coap://[::1]/time\n"
 	   "\techo 1000 | coap-client -m put -T cafe coap://[::1]/time -f -\n"
 	   ,program, version, program, wait_seconds);
-}
-
-static int
-join( coap_context_t *ctx, char *group_name ){
-  struct ipv6_mreq mreq;
-  struct addrinfo   *reslocal = NULL, *resmulti = NULL, hints, *ainfo;
-  int result = -1;
-
-  /* we have to resolve the link-local interface to get the interface id */
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_INET6;
-  hints.ai_socktype = SOCK_DGRAM;
-
-  result = getaddrinfo("::", NULL, &hints, &reslocal);
-  if ( result < 0 ) {
-    fprintf(stderr, "join: cannot resolve link-local interface: %s\n",
-	    gai_strerror(result));
-    goto finish;
-  }
-
-  /* get the first suitable interface identifier */
-  for (ainfo = reslocal; ainfo != NULL; ainfo = ainfo->ai_next) {
-    if ( ainfo->ai_family == AF_INET6 ) {
-      mreq.ipv6mr_interface =
-	      ((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_scope_id;
-      break;
-    }
-  }
-
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_INET6;
-  hints.ai_socktype = SOCK_DGRAM;
-
-  /* resolve the multicast group address */
-  result = getaddrinfo(group_name, NULL, &hints, &resmulti);
-
-  if ( result < 0 ) {
-    fprintf(stderr, "join: cannot resolve multicast address: %s\n",
-	    gai_strerror(result));
-    goto finish;
-  }
-
-  for (ainfo = resmulti; ainfo != NULL; ainfo = ainfo->ai_next) {
-    if ( ainfo->ai_family == AF_INET6 ) {
-      mreq.ipv6mr_multiaddr =
-	((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_addr;
-      break;
-    }
-  }
-
-  result = setsockopt( ctx->sockfd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
-		       (char *)&mreq, sizeof(mreq) );
-  if ( result < 0 )
-    perror("join: setsockopt");
-
- finish:
-  freeaddrinfo(resmulti);
-  freeaddrinfo(reslocal);
-
-  return result;
 }
 
 static coap_list_t *
@@ -645,6 +584,7 @@ cmdline_content_type(char *arg, unsigned short key) {
     { 40, "link-format" },
     { 40, "application/link-format" },
     { 41, "xml" },
+    { 41, "application/xml" },
     { 42, "binary" },
     { 42, "octet-stream" },
     { 42, "application/octet-stream" },
@@ -652,6 +592,8 @@ cmdline_content_type(char *arg, unsigned short key) {
     { 47, "application/exi" },
     { 50, "json" },
     { 50, "application/json" },
+    { 60, "cbor" },
+    { 60, "application/cbor" },
     { 255, NULL }
   };
   coap_list_t *node;
@@ -677,7 +619,7 @@ cmdline_content_type(char *arg, unsigned short key) {
 	value[valcnt] = content_types[i].code;
 	valcnt++;
       } else {
-	warn("W: unknown content-type '%s'\n",arg);
+	warn("W: unknown content-format '%s'\n",arg);
       }
     }
 
@@ -1067,7 +1009,6 @@ main(int argc, char **argv) {
   char port_str[NI_MAXSERV] = "0";
   char node_str[NI_MAXHOST] = "";
   int opt, res;
-  char *group = NULL;
   coap_log_t log_level = LOG_WARNING;
   coap_tid_t tid = COAP_INVALID_TID;
 
@@ -1090,9 +1031,6 @@ main(int argc, char **argv) {
     case 'f' :
       if (!cmdline_input_from_file(optarg,&payload))
 	payload.length = 0;
-      break;
-    case 'g' :
-      group = optarg;
       break;
     case 'p' :
       strncpy(port_str, optarg, NI_MAXSERV-1);
@@ -1200,10 +1138,6 @@ main(int argc, char **argv) {
 
   coap_register_option(ctx, COAP_OPTION_BLOCK2);
   coap_register_response_handler(ctx, message_handler);
-
-  /* join multicast group if requested at command line */
-  if (group)
-    join(ctx, group);
 
   /* construct CoAP message */
 
