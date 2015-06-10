@@ -546,7 +546,6 @@ coap_send_ack(coap_context_t *context,
 }
 
 #if defined(WITH_POSIX) || defined(WITH_CONTIKI)
-/* releases space allocated by PDU if free_pdu is set */
 static coap_tid_t
 coap_send_impl(coap_context_t *context, 
 	       const coap_endpoint_t *local_interface,
