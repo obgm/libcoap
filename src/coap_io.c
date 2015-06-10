@@ -396,7 +396,8 @@ coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t
  */
 static inline int
 is_local_if(const coap_address_t *local, const coap_address_t *dst) {
-  return coap_address_isany(local) || coap_address_equals(dst, local);
+  return coap_address_isany(local) || coap_address_equals(dst, local) ||
+    coap_is_mcast(dst);
 }
 
 ssize_t
