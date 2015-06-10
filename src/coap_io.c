@@ -271,9 +271,17 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     memset(pktinfo, 0, sizeof(struct in6_pktinfo));
   
     pktinfo->ipi6_ifindex = ep->ifindex;
-    memcpy(&pktinfo->ipi6_addr, 
-	   &local_interface->addr.addr.sin6.sin6_addr, 
-	   local_interface->addr.size);
+    if (coap_is_mcast(&local_interface->addr)) {
+      /* We cannot send with multicast address as source address
+       * and hence let the kernel pick the outgoing interface. */
+      pktinfo->ipi6_ifindex = 0;
+      memset(&pktinfo->ipi6_addr, 0, sizeof(pktinfo->ipi6_addr));
+    } else {
+      pktinfo->ipi6_ifindex = ep->ifindex;
+      memcpy(&pktinfo->ipi6_addr,
+	     &local_interface->addr.addr.sin6.sin6_addr,
+	     local_interface->addr.size);
+    }
     break;
   }
   case AF_INET: {
@@ -291,10 +299,17 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     pktinfo = (struct in_pktinfo *)CMSG_DATA(cmsg);
     memset(pktinfo, 0, sizeof(struct in_pktinfo));
 
-    pktinfo->ipi_ifindex = ep->ifindex;
-    memcpy(&pktinfo->ipi_spec_dst, 
-	   &local_interface->addr.addr.sin.sin_addr, 
-	   local_interface->addr.size);
+    if (coap_is_mcast(&local_interface->addr)) {
+      /* We cannot send with multicast address as source address
+       * and hence let the kernel pick the outgoing interface. */
+      pktinfo->ipi_ifindex = 0;
+      memset(&pktinfo->ipi_spec_dst, 0, sizeof(pktinfo->ipi_spec_dst));
+    } else {
+      pktinfo->ipi_ifindex = ep->ifindex;
+      memcpy(&pktinfo->ipi_spec_dst,
+	     &local_interface->addr.addr.sin.sin_addr,
+	     local_interface->addr.size);
+    }
     break;
   }
   default:
