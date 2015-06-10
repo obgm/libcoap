@@ -558,6 +558,13 @@ coap_send_impl(coap_context_t *context,
   if ( !context || !dst || !pdu )
     return id;
 
+  /* Do not send error responses for requests that were received via
+   * IP multicast. */
+  if (coap_is_mcast(&local_interface->addr) &&
+      COAP_RESPONSE_CLASS(pdu->hdr->code) > 2) {
+    return COAP_DROPPED_RESPONSE;
+  }
+
   bytes_written = context->network_send(context, local_interface, dst, 
 				    (unsigned char *)pdu->hdr, pdu->length);
 
@@ -1372,7 +1379,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 
       debug("unhandled request for unknown resource 0x%02x%02x%02x%02x\r\n",
 	    key[0], key[1], key[2], key[3]);
-      if (!coap_mcast_interface(&node->local_if))
+
 	response = coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(405), 
 					   opt_filter);
     }
@@ -1608,8 +1615,11 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
 	debug("dropped message with invalid code (%d.%02d)\n", 
 	      COAP_RESPONSE_CLASS(rcvd->pdu->hdr->code),
 	      rcvd->pdu->hdr->code & 0x1f);
-	coap_send_message_type(context, &rcvd->local_if, &rcvd->remote, 
-			       rcvd->pdu, COAP_MESSAGE_RST);
+
+	if (!coap_is_mcast(&rcvd->local_if.addr)) {
+	  coap_send_message_type(context, &rcvd->local_if, &rcvd->remote,
+				 rcvd->pdu, COAP_MESSAGE_RST);
+	}
       }
     }
     
