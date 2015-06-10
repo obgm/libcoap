@@ -307,6 +307,7 @@ usage( const char *program, const char *version) {
 	   "(c) 2010,2011,2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
 	   "usage: %s [-A address] [-p port]\n\n"
 	   "\t-A address\tinterface address to bind to\n"
+	   "\t-g group\tjoin the given multicast group\n"
 	   "\t-p port\t\tlisten on specified port\n"
 	   "\t-v num\t\tverbosity level (default: 3)\n",
 	   program, version, program );
@@ -354,9 +355,70 @@ get_context(const char *node, const char *port) {
   return ctx;
 }
 
+static int
+join(coap_context_t *ctx, char *group_name){
+  struct ipv6_mreq mreq;
+  struct addrinfo   *reslocal = NULL, *resmulti = NULL, hints, *ainfo;
+  int result = -1;
+
+  /* we have to resolve the link-local interface to get the interface id */
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET6;
+  hints.ai_socktype = SOCK_DGRAM;
+
+  result = getaddrinfo("::", NULL, &hints, &reslocal);
+  if (result < 0) {
+    fprintf(stderr, "join: cannot resolve link-local interface: %s\n",
+	    gai_strerror(result));
+    goto finish;
+  }
+
+  /* get the first suitable interface identifier */
+  for (ainfo = reslocal; ainfo != NULL; ainfo = ainfo->ai_next) {
+    if (ainfo->ai_family == AF_INET6) {
+      mreq.ipv6mr_interface =
+	((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_scope_id;
+      break;
+    }
+  }
+
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET6;
+  hints.ai_socktype = SOCK_DGRAM;
+
+  /* resolve the multicast group address */
+  result = getaddrinfo(group_name, NULL, &hints, &resmulti);
+
+  if (result < 0) {
+    fprintf(stderr, "join: cannot resolve multicast address: %s\n",
+	    gai_strerror(result));
+    goto finish;
+  }
+
+  for (ainfo = resmulti; ainfo != NULL; ainfo = ainfo->ai_next) {
+    if (ainfo->ai_family == AF_INET6) {
+      mreq.ipv6mr_multiaddr =
+	((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_addr;
+      break;
+    }
+  }
+
+  result = setsockopt(ctx->sockfd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
+		      (char *)&mreq, sizeof(mreq));
+  if (result < 0)
+    perror("join: setsockopt");
+
+ finish:
+  freeaddrinfo(resmulti);
+  freeaddrinfo(reslocal);
+
+  return result;
+}
+
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
+  char *group = NULL;
   fd_set readfds;
   struct timeval tv, *timeout;
   int result;
@@ -369,11 +431,14 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "A:p:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:g:p:v:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
       addr_str[NI_MAXHOST - 1] = '\0';
+      break;
+    case 'g' :
+      group = optarg;
       break;
     case 'p' :
       strncpy(port_str, optarg, NI_MAXSERV-1);
@@ -395,6 +460,10 @@ main(int argc, char **argv) {
     return -1;
 
   init_resources(ctx);
+
+  /* join multicast group if requested at command line */
+  if (group)
+    join(ctx, group);
 
   signal(SIGINT, handle_sigint);
 
@@ -447,7 +516,7 @@ main(int argc, char **argv) {
 #endif /* WITHOUT_OBSERVE */
   }
 
-  coap_free_context( ctx );
+  coap_free_context(ctx);
 
   return 0;
 }
