@@ -1325,10 +1325,6 @@ no_response(coap_pdu_t *request, coap_pdu_t *response) {
     val = coap_decode_var_bytes(coap_opt_value(nores), coap_opt_length(nores));
   }
 
-  debug("response class is %d (bit %d), val is %02x\n",
-	COAP_RESPONSE_CLASS(response->hdr->code),
-	(1 << (COAP_RESPONSE_CLASS(response->hdr->code) - 1)),
-	val);
   return (COAP_RESPONSE_CLASS(response->hdr->code) > 0)
     && (((1 << (COAP_RESPONSE_CLASS(response->hdr->code) - 1)) & val) > 0);
 }
