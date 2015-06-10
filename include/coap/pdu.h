@@ -165,6 +165,12 @@ typedef int coap_tid_t;
 /** Indicates an invalid transaction id. */
 #define COAP_INVALID_TID -1
 
+/**
+ * Indicates that a response is suppressed. This will occur for error
+ * responses if the request was received via IP multicast.
+ */
+#define COAP_DROPPED_RESPONSE -2
+
 #ifdef WORDS_BIGENDIAN
 typedef struct {
   unsigned int version:2;      /* protocol version */
