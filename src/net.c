@@ -523,7 +523,7 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
 
   coap_hash((const unsigned char *)&pdu->hdr->id, sizeof(unsigned short), h);
 
-  *id = ((h[0] << 8) | h[1]) ^ ((h[2] << 8) | h[3]);
+  *id = (((h[0] << 8) | h[1]) ^ ((h[2] << 8) | h[3])) & INT_MAX;
 }
 
 coap_tid_t
