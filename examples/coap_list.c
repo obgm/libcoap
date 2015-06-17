@@ -1,9 +1,11 @@
+/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 * -*- */
+
 /* coap_list.c -- CoAP list structures
  *
  * Copyright (C) 2010,2011,2015 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * This file is part of the CoAP library libcoap. Please see README for terms of
+ * use.
  */
 
 /* #include "coap_config.h" */

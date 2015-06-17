@@ -1,9 +1,11 @@
+/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 * -*- */
+
 /* coap-client -- simple CoAP client
  *
  * Copyright (C) 2010--2015 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms of
+ * use.
  */
 
 #include "coap_config.h"
@@ -41,23 +43,23 @@ static unsigned short proxy_port = COAP_DEFAULT_PORT;
 /* reading is done when this flag is set */
 static int ready = 0;
 
-static str output_file = { 0, NULL }; /* output file name */
-static FILE *file = NULL;	/* output file stream */
+static str output_file = { 0, NULL };   /* output file name */
+static FILE *file = NULL;               /* output file stream */
 
-static str payload = { 0, NULL }; /* optional payload to send */
+static str payload = { 0, NULL };       /* optional payload to send */
 
 unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
 
 typedef unsigned char method_t;
-method_t method = 1;		/* the method we are using in our requests */
+method_t method = 1;                    /* the method we are using in our requests */
 
 coap_block_t block = { .num = 0, .m = 0, .szx = 6 };
 
-unsigned int wait_seconds = 90;	/* default timeout in seconds */
-coap_tick_t max_wait;		/* global timeout (changed by set_timeout()) */
+unsigned int wait_seconds = 90;         /* default timeout in seconds */
+coap_tick_t max_wait;                   /* global timeout (changed by set_timeout()) */
 
-unsigned int obs_seconds = 30;	/* default observe time */
-coap_tick_t obs_wait = 0;	/* timeout for current subscription */
+unsigned int obs_seconds = 30;          /* default observe time */
+coap_tick_t obs_wait = 0;               /* timeout for current subscription */
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
@@ -82,8 +84,8 @@ append_to_output(const unsigned char *data, size_t len) {
       file = stdout;
     else {
       if (!(file = fopen((char *)output_file.s, "w"))) {
-	perror("fopen");
-	return -1;
+        perror("fopen");
+        return -1;
       }
     }
   }
@@ -127,8 +129,11 @@ order_opts(void *a, void *b) {
 }
 
 static coap_pdu_t *
-coap_new_request(coap_context_t *ctx, method_t m, coap_list_t **options,
-		 unsigned char *data, size_t length) {
+coap_new_request(coap_context_t *ctx,
+                 method_t m,
+                 coap_list_t **options,
+                 unsigned char *data,
+                 size_t length) {
   coap_pdu_t *pdu;
   coap_list_t *opt;
 
@@ -152,9 +157,10 @@ coap_new_request(coap_context_t *ctx, method_t m, coap_list_t **options,
 
     LL_FOREACH((*options), opt) {
       coap_option *o = (coap_option *)(opt->data);
-      coap_add_option(pdu, COAP_OPTION_KEY(*o),
-		      COAP_OPTION_LENGTH(*o),
-		      COAP_OPTION_DATA(*o));
+      coap_add_option(pdu,
+                      COAP_OPTION_KEY(*o),
+                      COAP_OPTION_LENGTH(*o),
+                      COAP_OPTION_DATA(*o));
     }
   }
 
@@ -170,17 +176,18 @@ coap_new_request(coap_context_t *ctx, method_t m, coap_list_t **options,
 
 static coap_tid_t
 clear_obs(coap_context_t *ctx,
-	  const coap_endpoint_t *local_interface,
-	  const coap_address_t *remote) {
+          const coap_endpoint_t *local_interface,
+          const coap_address_t *remote) {
   coap_pdu_t *pdu;
   coap_list_t *option;
   coap_tid_t tid = COAP_INVALID_TID;
   unsigned char buf[2];
 
   /* create bare PDU w/o any option  */
-  pdu = coap_pdu_init(msgtype, COAP_REQUEST_GET,
-		      coap_new_message_id(ctx),
-		      COAP_MAX_PDU_SIZE);
+  pdu = coap_pdu_init(msgtype,
+                      COAP_REQUEST_GET,
+                      coap_new_message_id(ctx),
+                      COAP_MAX_PDU_SIZE);
 
   if (!pdu) {
     return tid;
@@ -194,18 +201,20 @@ clear_obs(coap_context_t *ctx,
   for (option = optlist; option; option = option->next ) {
     coap_option *o = (coap_option *)(option->data);
     if (COAP_OPTION_KEY(*o) == COAP_OPTION_URI_HOST) {
-      if (!coap_add_option(pdu, COAP_OPTION_KEY(*o),
-			   COAP_OPTION_LENGTH(*o),
-			   COAP_OPTION_DATA(*o))) {
-	goto error;
+      if (!coap_add_option(pdu,
+          COAP_OPTION_KEY(*o),
+          COAP_OPTION_LENGTH(*o),
+          COAP_OPTION_DATA(*o))) {
+        goto error;
       }
       break;
     }
   }
 
-  if (!coap_add_option(pdu, COAP_OPTION_OBSERVE,
-		       coap_encode_var_bytes(buf, COAP_OBSERVE_CANCEL),
-		       buf)) {
+  if (!coap_add_option(pdu,
+      COAP_OPTION_OBSERVE,
+      coap_encode_var_bytes(buf, COAP_OBSERVE_CANCEL),
+      buf)) {
     coap_log(LOG_CRIT, "cannot add option Observe: %u", COAP_OBSERVE_CANCEL);
     goto error;
   }
@@ -216,13 +225,14 @@ clear_obs(coap_context_t *ctx,
     case COAP_OPTION_URI_PORT :
     case COAP_OPTION_URI_PATH :
     case COAP_OPTION_URI_QUERY :
-      if (!coap_add_option (pdu, COAP_OPTION_KEY(*o),
-			    COAP_OPTION_LENGTH(*o),
-			    COAP_OPTION_DATA(*o))) {
-	goto error;
+      if (!coap_add_option (pdu,
+                            COAP_OPTION_KEY(*o),
+                            COAP_OPTION_LENGTH(*o),
+                            COAP_OPTION_DATA(*o))) {
+        goto error;
       }
       break;
-    default:
+      default:
       ;
     }
   }
@@ -289,10 +299,10 @@ resolve_address(const str *server, struct sockaddr *dst) {
   return len;
 }
 
-#define HANDLE_BLOCK1(Pdu)						\
-  ((method == COAP_REQUEST_PUT || method == COAP_REQUEST_POST) &&	\
-   ((flags & FLAGS_BLOCK) == 0) &&					\
-   ((Pdu)->hdr->code == COAP_RESPONSE_CODE(201) ||			\
+#define HANDLE_BLOCK1(Pdu)                                        \
+  ((method == COAP_REQUEST_PUT || method == COAP_REQUEST_POST) && \
+   ((flags & FLAGS_BLOCK) == 0) &&                                \
+   ((Pdu)->hdr->code == COAP_RESPONSE_CODE(201) ||                \
     (Pdu)->hdr->code == COAP_RESPONSE_CODE(204)))
 
 static inline int
@@ -302,12 +312,12 @@ check_token(coap_pdu_t *received) {
 }
 
 static void
-message_handler(struct coap_context_t  *ctx,
-		const coap_endpoint_t *local_interface,
-		const coap_address_t *remote,
-		coap_pdu_t *sent,
-		coap_pdu_t *received,
-		const coap_tid_t id UNUSED_PARAM) {
+message_handler(struct coap_context_t *ctx,
+                const coap_endpoint_t *local_interface,
+                const coap_address_t *remote,
+                coap_pdu_t *sent,
+                coap_pdu_t *received,
+                const coap_tid_t id UNUSED_PARAM) {
 
   coap_pdu_t *pdu = NULL;
   coap_opt_t *block_opt;
@@ -321,7 +331,7 @@ message_handler(struct coap_context_t  *ctx,
 #ifndef NDEBUG
   if (LOG_DEBUG <= coap_get_log_level()) {
     debug("** process incoming %d.%02d response:\n",
-	  (received->hdr->code >> 5), received->hdr->code & 0x1F);
+          (received->hdr->code >> 5), received->hdr->code & 0x1F);
     coap_show_pdu(received);
   }
 #endif
@@ -330,7 +340,7 @@ message_handler(struct coap_context_t  *ctx,
   if (!check_token(received)) {
     /* drop if this was just some message, or send RST in case of notification */
     if (!sent && (received->hdr->type == COAP_MESSAGE_CON ||
-		  received->hdr->type == COAP_MESSAGE_NON))
+                  received->hdr->type == COAP_MESSAGE_NON))
       coap_send_rst(ctx, local_interface, remote, received);
     return;
   }
@@ -357,138 +367,149 @@ message_handler(struct coap_context_t  *ctx,
 
       /* TODO: check if we are looking at the correct block number */
       if (coap_get_data(received, &len, &databuf))
-	append_to_output(databuf, len);
+        append_to_output(databuf, len);
 
       if(COAP_OPT_BLOCK_MORE(block_opt)) {
-	/* more bit is set */
-	debug("found the M bit, block size is %u, block nr. %u\n",
-	      COAP_OPT_BLOCK_SZX(block_opt), coap_opt_block_num(block_opt));
+        /* more bit is set */
+        debug("found the M bit, block size is %u, block nr. %u\n",
+              COAP_OPT_BLOCK_SZX(block_opt),
+              coap_opt_block_num(block_opt));
 
-	/* create pdu with request for next block */
-	pdu = coap_new_request(ctx, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
-	if ( pdu ) {
-	  /* add URI components from optlist */
-	  for (option = optlist; option; option = option->next ) {
-	    coap_option *o = (coap_option *)(option->data);
-	    switch (COAP_OPTION_KEY(*o)) {
-	    case COAP_OPTION_URI_HOST :
-	    case COAP_OPTION_URI_PORT :
-	    case COAP_OPTION_URI_PATH :
-	    case COAP_OPTION_URI_QUERY :
-	      coap_add_option (pdu, COAP_OPTION_KEY(*o),
-			       COAP_OPTION_LENGTH(*o),
-			       COAP_OPTION_DATA(*o));
-	      break;
-	    default:
-	      ;			/* skip other options */
-	    }
-	  }
+        /* create pdu with request for next block */
+        pdu = coap_new_request(ctx, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
+        if ( pdu ) {
+          /* add URI components from optlist */
+          for (option = optlist; option; option = option->next ) {
+            coap_option *o = (coap_option *)(option->data);
+            switch (COAP_OPTION_KEY(*o)) {
+              case COAP_OPTION_URI_HOST :
+              case COAP_OPTION_URI_PORT :
+              case COAP_OPTION_URI_PATH :
+              case COAP_OPTION_URI_QUERY :
+                coap_add_option (pdu,
+                                 COAP_OPTION_KEY(*o),
+                                 COAP_OPTION_LENGTH(*o),
+                                 COAP_OPTION_DATA(*o));
+                break;
+              default:
+                ;     /* skip other options */
+            }
+          }
 
-	  /* finally add updated block option from response, clear M bit */
-	  /* blocknr = (blocknr & 0xfffffff7) + 0x10; */
-	  debug("query block %d\n", (coap_opt_block_num(block_opt) + 1));
-	  coap_add_option(pdu, blktype, coap_encode_var_bytes(buf,
-	      ((coap_opt_block_num(block_opt) + 1) << 4) |
-              COAP_OPT_BLOCK_SZX(block_opt)), buf);
+          /* finally add updated block option from response, clear M bit */
+          /* blocknr = (blocknr & 0xfffffff7) + 0x10; */
+          debug("query block %d\n", (coap_opt_block_num(block_opt) + 1));
+          coap_add_option(pdu,
+                          blktype,
+                          coap_encode_var_bytes(buf,
+                                 ((coap_opt_block_num(block_opt) + 1) << 4) |
+                                  COAP_OPT_BLOCK_SZX(block_opt)), buf);
 
-	  if (pdu->hdr->type == COAP_MESSAGE_CON)
-	    tid = coap_send_confirmed(ctx, local_interface, remote, pdu);
-	  else
-	    tid = coap_send(ctx, local_interface, remote, pdu);
+          if (pdu->hdr->type == COAP_MESSAGE_CON)
+            tid = coap_send_confirmed(ctx, local_interface, remote, pdu);
+          else
+            tid = coap_send(ctx, local_interface, remote, pdu);
 
-	  if (tid == COAP_INVALID_TID) {
-	    debug("message_handler: error sending new request");
+          if (tid == COAP_INVALID_TID) {
+            debug("message_handler: error sending new request");
             coap_delete_pdu(pdu);
-	  } else {
-	    set_timeout(&max_wait, wait_seconds);
+          } else {
+            set_timeout(&max_wait, wait_seconds);
             if (pdu->hdr->type != COAP_MESSAGE_CON)
               coap_delete_pdu(pdu);
           }
 
-	  return;
-	}
+          return;
+        }
       }
     } else { /* no Block2 option */
       block_opt = coap_check_option(received, COAP_OPTION_BLOCK1, &opt_iter);
 
       if (block_opt) { /* handle Block1 */
-	block.szx = COAP_OPT_BLOCK_SZX(block_opt);
-	block.num = coap_opt_block_num(block_opt);
+        block.szx = COAP_OPT_BLOCK_SZX(block_opt);
+        block.num = coap_opt_block_num(block_opt);
 
-	debug("found Block1, block size is %u, block nr. %u\n",
-	      block.szx, block.num);
+        debug("found Block1, block size is %u, block nr. %u\n",
+        block.szx, block.num);
 
-	if (payload.length <= (block.num+1) * (1 << (block.szx + 4))) {
-	  debug("upload ready\n");
-	  ready = 1;
-	  return;
-	}
+        if (payload.length <= (block.num+1) * (1 << (block.szx + 4))) {
+          debug("upload ready\n");
+          ready = 1;
+          return;
+        }
 
-	/* create pdu with request for next block */
-	pdu = coap_new_request(ctx, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
-	if (pdu) {
+        /* create pdu with request for next block */
+        pdu = coap_new_request(ctx, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
+        if (pdu) {
 
-	  /* add URI components from optlist */
-	  for (option = optlist; option; option = option->next ) {
-	    coap_option *o = (coap_option *)(option->data);
-	    switch (COAP_OPTION_KEY(*o)) {
-	    case COAP_OPTION_URI_HOST :
-	    case COAP_OPTION_URI_PORT :
-	    case COAP_OPTION_URI_PATH :
-	    case COAP_OPTION_CONTENT_FORMAT :
-	    case COAP_OPTION_URI_QUERY :
-	      coap_add_option (pdu, COAP_OPTION_KEY(*o),
-			       COAP_OPTION_LENGTH(*o),
-			       COAP_OPTION_DATA(*o));
-	      break;
-	    default:
-	      ;			/* skip other options */
-	    }
-	  }
+          /* add URI components from optlist */
+          for (option = optlist; option; option = option->next ) {
+            coap_option *o = (coap_option *)(option->data);
+            switch (COAP_OPTION_KEY(*o)) {
+              case COAP_OPTION_URI_HOST :
+              case COAP_OPTION_URI_PORT :
+              case COAP_OPTION_URI_PATH :
+              case COAP_OPTION_CONTENT_FORMAT :
+              case COAP_OPTION_URI_QUERY :
+                coap_add_option (pdu,
+                                 COAP_OPTION_KEY(*o),
+                                 COAP_OPTION_LENGTH(*o),
+                                 COAP_OPTION_DATA(*o));
+                break;
+              default:
+              ;     /* skip other options */
+            }
+          }
 
-	  /* finally add updated block option from response, clear M bit */
-	  /* blocknr = (blocknr & 0xfffffff7) + 0x10; */
-	  block.num++;
-	  block.m = ((block.num+1) * (1 << (block.szx + 4)) < payload.length);
+          /* finally add updated block option from response, clear M bit */
+          /* blocknr = (blocknr & 0xfffffff7) + 0x10; */
+          block.num++;
+          block.m = ((block.num+1) * (1 << (block.szx + 4)) < payload.length);
 
-	  debug("send block %d\n", block.num);
-	  coap_add_option(pdu, COAP_OPTION_BLOCK1, coap_encode_var_bytes(buf,
-	      (block.num << 4) | (block.m << 3) | block.szx), buf);
+          debug("send block %d\n", block.num);
+          coap_add_option(pdu,
+                          COAP_OPTION_BLOCK1,
+                          coap_encode_var_bytes(buf,
+                          (block.num << 4) | (block.m << 3) | block.szx), buf);
 
-	  coap_add_block(pdu, payload.length, payload.s, block.num, block.szx);
-	  coap_show_pdu(pdu);
-	  if (pdu->hdr->type == COAP_MESSAGE_CON)
-	    tid = coap_send_confirmed(ctx, local_interface, remote, pdu);
-	  else
-	    tid = coap_send(ctx, local_interface, remote, pdu);
+          coap_add_block(pdu,
+                         payload.length,
+                         payload.s,
+                         block.num,
+                         block.szx);
+          coap_show_pdu(pdu);
+          if (pdu->hdr->type == COAP_MESSAGE_CON)
+            tid = coap_send_confirmed(ctx, local_interface, remote, pdu);
+          else
+            tid = coap_send(ctx, local_interface, remote, pdu);
 
-	  if (tid == COAP_INVALID_TID) {
-	    debug("message_handler: error sending new request");
+          if (tid == COAP_INVALID_TID) {
+            debug("message_handler: error sending new request");
             coap_delete_pdu(pdu);
-	  } else {
-	    set_timeout(&max_wait, wait_seconds);
+          } else {
+            set_timeout(&max_wait, wait_seconds);
             if (pdu->hdr->type != COAP_MESSAGE_CON)
               coap_delete_pdu(pdu);
           }
 
-	  return;
-	}
+          return;
+        }
       } else {
-	/* There is no block option set, just read the data and we are done. */
-	if (coap_get_data(received, &len, &databuf))
-	  append_to_output(databuf, len);
+        /* There is no block option set, just read the data and we are done. */
+        if (coap_get_data(received, &len, &databuf))
+        append_to_output(databuf, len);
       }
     }
-  } else {			/* no 2.05 */
+  } else {      /* no 2.05 */
 
     /* check if an error was signaled and output payload if so */
     if (COAP_RESPONSE_CLASS(received->hdr->code) >= 4) {
       fprintf(stderr, "%d.%02d",
-	      (received->hdr->code >> 5), received->hdr->code & 0x1F);
+              (received->hdr->code >> 5), received->hdr->code & 0x1F);
       if (coap_get_data(received, &len, &databuf)) {
-      fprintf(stderr, " ");
-	while(len--)
-	  fprintf(stderr, "%c", *databuf++);
+        fprintf(stderr, " ");
+        while(len--)
+        fprintf(stderr, "%c", *databuf++);
       }
       fprintf(stderr, "\n");
     }
@@ -514,41 +535,41 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-	   "(c) 2010-2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [-A type...] [-t type] [-b [num,]size] [-B seconds] [-e text]\n"
-	   "\t\t[-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
-	   "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] URI\n\n"
-	   "\tURI can be an absolute or relative coap URI,\n"
-	   "\t-a addr\tthe local interface address to use\n"
-	   "\t-A type...\taccepted media types as comma-separated list of\n"
-	   "\t\t\tsymbolic or numeric values\n"
-	   "\t-t type\t\tcontent format for given resource for PUT/POST\n"
-	   "\t-b [num,]size\tblock size to be used in GET/PUT/POST requests\n"
-	   "\t       \t\t(value must be a multiple of 16 not larger than 1024)\n"
-	   "\t       \t\tIf num is present, the request chain will start at\n"
-	   "\t       \t\tblock num\n"
-	   "\t-B seconds\tbreak operation after waiting given seconds\n"
-	   "\t\t\t(default is %d)\n"
-	   "\t-e text\t\tinclude text as payload (use percent-encoding for\n"
-	   "\t\t\tnon-ASCII characters)\n"
-	   "\t-f file\t\tfile to send with PUT/POST (use '-' for STDIN)\n"
-	   "\t-m method\trequest method (get|put|post|delete), default is 'get'\n"
-	   "\t-N\t\tsend NON-confirmable message\n"
-	   "\t-o file\t\toutput received data to this file (use '-' for STDOUT)\n"
-	   "\t-p port\t\tlisten on specified port\n"
-	   "\t-s duration\tsubscribe for given duration [s]\n"
-	   "\t-v num\t\tverbosity level (default: 3)\n"
-	   "\t-O num,text\tadd option num with contents text to request\n"
-	   "\t-P addr[:port]\tuse proxy (automatically adds Proxy-Uri option to\n"
-	   "\t\t\trequest)\n"
-	   "\t-T token\tinclude specified token\n"
-	   "\n"
-	   "examples:\n"
-	   "\tcoap-client -m get coap://[::1]/\n"
-	   "\tcoap-client -m get coap://[::1]/.well-known/core\n"
-	   "\tcoap-client -m get -T cafe coap://[::1]/time\n"
-	   "\techo 1000 | coap-client -m put -T cafe coap://[::1]/time -f -\n"
-	   ,program, version, program, wait_seconds);
+     "(c) 2010-2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
+     "usage: %s [-A type...] [-t type] [-b [num,]size] [-B seconds] [-e text]\n"
+     "\t\t[-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
+     "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] URI\n\n"
+     "\tURI can be an absolute or relative coap URI,\n"
+     "\t-a addr\tthe local interface address to use\n"
+     "\t-A type...\taccepted media types as comma-separated list of\n"
+     "\t\t\tsymbolic or numeric values\n"
+     "\t-t type\t\tcontent format for given resource for PUT/POST\n"
+     "\t-b [num,]size\tblock size to be used in GET/PUT/POST requests\n"
+     "\t       \t\t(value must be a multiple of 16 not larger than 1024)\n"
+     "\t       \t\tIf num is present, the request chain will start at\n"
+     "\t       \t\tblock num\n"
+     "\t-B seconds\tbreak operation after waiting given seconds\n"
+     "\t\t\t(default is %d)\n"
+     "\t-e text\t\tinclude text as payload (use percent-encoding for\n"
+     "\t\t\tnon-ASCII characters)\n"
+     "\t-f file\t\tfile to send with PUT/POST (use '-' for STDIN)\n"
+     "\t-m method\trequest method (get|put|post|delete), default is 'get'\n"
+     "\t-N\t\tsend NON-confirmable message\n"
+     "\t-o file\t\toutput received data to this file (use '-' for STDOUT)\n"
+     "\t-p port\t\tlisten on specified port\n"
+     "\t-s duration\tsubscribe for given duration [s]\n"
+     "\t-v num\t\tverbosity level (default: 3)\n"
+     "\t-O num,text\tadd option num with contents text to request\n"
+     "\t-P addr[:port]\tuse proxy (automatically adds Proxy-Uri option to\n"
+     "\t\t\trequest)\n"
+     "\t-T token\tinclude specified token\n"
+     "\n"
+     "examples:\n"
+     "\tcoap-client -m get coap://[::1]/\n"
+     "\tcoap-client -m get coap://[::1]/.well-known/core\n"
+     "\tcoap-client -m get -T cafe coap://[::1]/time\n"
+     "\techo 1000 | coap-client -m put -T cafe coap://[::1]/time -f -\n"
+     ,program, version, program, wait_seconds);
 }
 
 static coap_list_t *
@@ -607,19 +628,20 @@ cmdline_content_type(char *arg, unsigned short key) {
 
     if (isdigit(*q)) {
       if (p)
-	*p = '\0';
+        *p = '\0';
       value[valcnt++] = atoi(q);
     } else {
-      for (i=0; content_types[i].media_type &&
-	     strncmp(q,content_types[i].media_type, p ? (size_t)(p-q) : strlen(q)) != 0 ;
-	   ++i)
-	;
+      for (i=0;
+           content_types[i].media_type &&
+           strncmp(q, content_types[i].media_type, p ? (size_t)(p-q) : strlen(q)) != 0 ;
+           ++i)
+      ;
 
       if (content_types[i].media_type) {
-	value[valcnt] = content_types[i].code;
-	valcnt++;
+        value[valcnt] = content_types[i].code;
+        valcnt++;
       } else {
-	warn("W: unknown content-format '%s'\n",arg);
+        warn("W: unknown content-format '%s'\n",arg);
       }
     }
 
@@ -646,27 +668,31 @@ cmdline_uri(char *arg) {
   size_t buflen;
   int res;
 
-  if (proxy.length) {		/* create Proxy-Uri from argument */
+  if (proxy.length) {   /* create Proxy-Uri from argument */
     size_t len = strlen(arg);
     while (len > 270) {
-      coap_insert(&optlist, new_option_node(COAP_OPTION_PROXY_URI,
-					    270, (unsigned char *)arg));
+      coap_insert(&optlist,
+                  new_option_node(COAP_OPTION_PROXY_URI,
+                  270,
+                  (unsigned char *)arg));
 
       len -= 270;
       arg += 270;
     }
 
-    coap_insert(&optlist, new_option_node(COAP_OPTION_PROXY_URI,
-					  len, (unsigned char *)arg));
+    coap_insert(&optlist,
+                new_option_node(COAP_OPTION_PROXY_URI,
+                len,
+                (unsigned char *)arg));
 
-  } else {			/* split arg into Uri-* options */
-    coap_split_uri((unsigned char *)arg, strlen(arg), &uri );
+  } else {      /* split arg into Uri-* options */
+      coap_split_uri((unsigned char *)arg, strlen(arg), &uri );
 
     if (uri.port != COAP_DEFAULT_PORT) {
       coap_insert(&optlist,
-		  new_option_node(COAP_OPTION_URI_PORT,
-				  coap_encode_var_bytes(portbuf, uri.port),
-				  portbuf));
+                  new_option_node(COAP_OPTION_URI_PORT,
+                  coap_encode_var_bytes(portbuf, uri.port),
+                  portbuf));
     }
 
     if (uri.path.length) {
@@ -674,11 +700,12 @@ cmdline_uri(char *arg) {
       res = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
 
       while (res--) {
-	coap_insert(&optlist, new_option_node(COAP_OPTION_URI_PATH,
-					      COAP_OPT_LENGTH(buf),
-					      COAP_OPT_VALUE(buf)));
+        coap_insert(&optlist,
+                    new_option_node(COAP_OPTION_URI_PATH,
+                    COAP_OPT_LENGTH(buf),
+                    COAP_OPT_VALUE(buf)));
 
-	buf += COAP_OPT_SIZE(buf);
+        buf += COAP_OPT_SIZE(buf);
       }
     }
 
@@ -688,11 +715,12 @@ cmdline_uri(char *arg) {
       res = coap_split_query(uri.query.s, uri.query.length, buf, &buflen);
 
       while (res--) {
-	coap_insert(&optlist, new_option_node(COAP_OPTION_URI_QUERY,
-					      COAP_OPT_LENGTH(buf),
-					      COAP_OPT_VALUE(buf)));
+        coap_insert(&optlist,
+                    new_option_node(COAP_OPTION_URI_QUERY,
+                    COAP_OPT_LENGTH(buf),
+                    COAP_OPT_VALUE(buf)));
 
-	buf += COAP_OPT_SIZE(buf);
+        buf += COAP_OPT_SIZE(buf);
       }
     }
   }
@@ -702,7 +730,7 @@ static int
 cmdline_blocksize(char *arg) {
   unsigned short size;
 
- again:
+  again:
   size = 0;
   while(*arg && *arg != ',')
     size = size * 10 + (*arg++ - '0');
@@ -735,7 +763,7 @@ set_blocksize(void) {
       ((1u << (block.szx + 4)) < payload.length);
 
     opt_length = coap_encode_var_bytes(buf,
-			      (block.num << 4 | block.m << 3 | block.szx));
+          (block.num << 4 | block.m << 3 | block.szx));
 
     coap_insert(&optlist, new_option_node(opt, opt_length, buf));
   }
@@ -798,7 +826,7 @@ cmdline_option(char *arg) {
     ++arg;
 
   coap_insert(&optlist,
-	      new_option_node(num, strlen(arg), (unsigned char *)arg));
+              new_option_node(num, strlen(arg), (unsigned char *)arg));
 }
 
 /**
@@ -852,7 +880,7 @@ check_segment(const unsigned char *s, size_t length) {
   while (length) {
     if (*s == '%') {
       if (length < 2 || !(isxdigit(s[1]) && isxdigit(s[2])))
-	return -1;
+        return -1;
 
       s += 2;
       length -= 2;
@@ -947,7 +975,7 @@ cmdline_method(char *arg) {
   for (i=1; methods[i] && strcasecmp(arg,methods[i]) != 0 ; ++i)
     ;
 
-  return i;	     /* note that we do not prevent illegal methods */
+  return i;     /* note that we do not prevent illegal methods */
 }
 
 static coap_context_t *
@@ -979,15 +1007,15 @@ get_context(const char *node, const char *port) {
 
       ctx = coap_new_context(&addr);
       if (ctx) {
-	/* TODO: output address:port for successful binding */
-	goto finish;
+        /* TODO: output address:port for successful binding */
+        goto finish;
       }
     }
   }
 
   fprintf(stderr, "no context available for interface '%s'\n", node);
 
- finish:
+  finish:
   freeaddrinfo(result);
   return ctx;
 }
@@ -1026,11 +1054,11 @@ main(int argc, char **argv) {
       break;
     case 'e' :
       if (!cmdline_input(optarg,&payload))
-	payload.length = 0;
+        payload.length = 0;
       break;
     case 'f' :
       if (!cmdline_input_from_file(optarg,&payload))
-	payload.length = 0;
+        payload.length = 0;
       break;
     case 'p' :
       strncpy(port_str, optarg, NI_MAXSERV-1);
@@ -1050,11 +1078,11 @@ main(int argc, char **argv) {
       output_file.s = (unsigned char *)coap_malloc(output_file.length + 1);
 
       if (!output_file.s) {
-	fprintf(stderr, "cannot set output file: insufficient memory\n");
-	exit(-1);
+        fprintf(stderr, "cannot set output file: insufficient memory\n");
+        exit(-1);
       } else {
-	/* copy filename including trailing zero */
-	memcpy(output_file.s, optarg, output_file.length + 1);
+        /* copy filename including trailing zero */
+        memcpy(output_file.s, optarg, output_file.length + 1);
       }
       break;
     case 'A' :
@@ -1069,7 +1097,7 @@ main(int argc, char **argv) {
     case 'P' :
       if (!cmdline_proxy(optarg)) {
         fprintf(stderr, "error specifying proxy address\n");
-	exit(-1);
+        exit(-1);
       }
       break;
     case 'T' :
@@ -1144,11 +1172,13 @@ main(int argc, char **argv) {
   if (!proxy.length && addrptr
       && (inet_ntop(dst.addr.sa.sa_family, addrptr, addr, sizeof(addr)) != 0)
       && (strlen(addr) != uri.host.length
-	  || memcmp(addr, uri.host.s, uri.host.length) != 0)) {
-      /* add Uri-Host */
+      || memcmp(addr, uri.host.s, uri.host.length) != 0)) {
+        /* add Uri-Host */
 
-    coap_insert(&optlist, new_option_node(COAP_OPTION_URI_HOST,
-					  uri.host.length, uri.host.s));
+        coap_insert(&optlist,
+                    new_option_node(COAP_OPTION_URI_HOST,
+                    uri.host.length,
+                    uri.host.s));
   }
 
   /* set block option if requested at commandline */
@@ -1195,36 +1225,36 @@ main(int argc, char **argv) {
     } else {
       /* check if obs_wait fires before max_wait */
       if (obs_wait && obs_wait < max_wait) {
-	tv.tv_usec = ((obs_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-	tv.tv_sec = (obs_wait - now) / COAP_TICKS_PER_SECOND;
+        tv.tv_usec = ((obs_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
+        tv.tv_sec = (obs_wait - now) / COAP_TICKS_PER_SECOND;
       } else {
-	tv.tv_usec = ((max_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-	tv.tv_sec = (max_wait - now) / COAP_TICKS_PER_SECOND;
+        tv.tv_usec = ((max_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
+        tv.tv_sec = (max_wait - now) / COAP_TICKS_PER_SECOND;
       }
     }
 
     result = select(ctx->sockfd + 1, &readfds, 0, 0, &tv);
 
-    if ( result < 0 ) {		/* error */
+    if ( result < 0 ) {   /* error */
       perror("select");
-    } else if ( result > 0 ) {	/* read from socket */
+    } else if ( result > 0 ) {  /* read from socket */
       if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
-	coap_read( ctx );	/* read received data */
-	/* coap_dispatch( ctx );	/\* and dispatch PDUs from receivequeue *\/ */
+        coap_read( ctx );       /* read received data */
+        /* coap_dispatch( ctx );  /\* and dispatch PDUs from receivequeue *\/ */
       }
     } else { /* timeout */
       coap_ticks(&now);
       if (max_wait <= now) {
-	info("timeout\n");
-	break;
+        info("timeout\n");
+        break;
       }
       if (obs_wait && obs_wait <= now) {
-	debug("clear observation relationship\n");
-	clear_obs(ctx, ctx->endpoint, &dst); /* FIXME: handle error case COAP_TID_INVALID */
+        debug("clear observation relationship\n");
+        clear_obs(ctx, ctx->endpoint, &dst); /* FIXME: handle error case COAP_TID_INVALID */
 
-	/* make sure that the obs timer does not fire again */
-	obs_wait = 0;
-	obs_seconds = 0;
+        /* make sure that the obs timer does not fire again */
+        obs_wait = 0;
+        obs_seconds = 0;
       }
     }
   }
