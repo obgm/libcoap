@@ -24,7 +24,7 @@ AUTOGEN_FILES="INSTALL \
 		coap_config.h coap_config.h.in* compile config.guess config.h* config.log config.status config.sub configure \
 		depcomp \
 		doc/Doxyfile doc/doxyfile.stamp doc/doxygen_sqlite3.db doc/Makefile doc/Makefile.in \
-		examples/*.o examples/rd.o examples/coap-* examples/rd \
+		examples/*.o  examples/coap-client examples/coap-server examples/coap-rd \
 		include/coap/coap.h
 		install-sh \
 		libcoap-1.pc libtool ltmain.sh \
