@@ -23,4 +23,18 @@ coap_server_LDADD = @top_builddir@/.libs/libcoap-$(LIBCOAP_API_VERSION).la
 coap_rd_SOURCES = coap-rd.c
 coap_rd_LDADD = @top_builddir@/.libs/libcoap-$(LIBCOAP_API_VERSION).la
 
+# building the manpages
+TXT5 = coap-client.txt \
+       coap-rd.txt \
+       coap-server.txt
+
+MAN5 = $(TXT5:%.txt=%.5)
+
+man5_MANS = $(MAN5)
+
+.txt.5:
+	a2x --doctype manpage --format manpage $<
+
+CLEANFILES = *.5
+
 endif # BUILD_EXAMPLES
