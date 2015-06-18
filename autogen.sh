@@ -27,7 +27,7 @@ AUTOGEN_FILES="INSTALL \
 		examples/*.o examples/rd.o examples/coap-* examples/rd \
 		include/coap/coap.h
 		install-sh \
-		libcoap-1.0.pc libtool ltmain.sh \
+		libcoap-1.pc libtool ltmain.sh \
 		missing \
 		Makefile Makefile.in \
 		stamp-h1 src/.dirstamp libcoap*.la* src/*.*o \
