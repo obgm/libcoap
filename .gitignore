@@ -42,13 +42,16 @@ doc/html/
 
 # the examples/ folder
 examples/.deps/
-examples/client.o
+examples/*.o
 examples/coap-client
+examples/coap-rd
 examples/coap-server
-examples/coap_list.o
-examples/rd
-examples/rd.o
-examples/server.o
+examples/coap-client.5
+examples/coap-client.txt
+examples/coap-rd.5
+examples/coap-rd.txt
+examples/coap-server.5
+examples/coap-server.txt
 
 # the include/ folder
 include/coap/coap.h
