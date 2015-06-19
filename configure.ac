@@ -236,6 +236,11 @@ AC_ARG_ENABLE([examples],
               [build_examples="yes"])
 
 if test "x$build_examples" = "xyes"; then
+	AC_PATH_PROG([A2X], [a2x])
+	if test "x$A2X" = "x"; then
+		AC_MSG_WARN([==> You want to build the examples binaries, that is also including the respective manpages but a2x was not found!])
+		AC_MSG_ERROR([==> Install the package that contains the a2x binary or disable the build of the examples using --disable-examples.])
+	fi
 	BUILD_EXAMPLES="YES"
 fi
 AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$build_examples" != "x"])
@@ -372,4 +377,5 @@ else
 fi
 if test "x$build_examples" = "xyes"; then
 	AC_MSG_RESULT([      build examples          : "yes"])
+	AC_MSG_RESULT([             -->  a2x around  : "yes" ($A2X)])
 fi

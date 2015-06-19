@@ -33,7 +33,7 @@ MAN5 = $(TXT5:%.txt=%.5)
 man5_MANS = $(MAN5)
 
 .txt.5:
-	a2x --doctype manpage --format manpage $<
+	$(A2X) --doctype manpage --format manpage $<
 
 CLEANFILES = *.5
 
