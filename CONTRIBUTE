@@ -201,10 +201,11 @@ binaries is always improvable. So we appreciate any help on this.
 * Man Pages
 The source is providing some example binaries which originally just should show
 how the libcoap can be used. Right now these binaries are fully usable and
-quite more than simple examples on a system.  But there are no man pages
-available. Maybe you can write up good man pages and also some good HowTo's on
-the usage for these binaries. A man page for the library itself would be also a
-improvement.
+quite more than simple examples on a system. There are man pages for these
+binaries available, if you found there is a improvement needed please do so and
+write to the mailing list explained in section 2.
+Maybe you can write up some good HowTo's on the usage for these binaries. A man
+page for the library itself would be also a improvement.
 
 * HowTo's
 The libcoap library has now a lot of functions you can use.
