@@ -109,8 +109,7 @@ typedef long coap_tick_diff_t;
 /**
  * Initializes the internal clock.
  */
-static inline void coap_clock_init(void) {
-}
+void coap_clock_init(void);
 
 /**
  * Sets @p t to the internal time with COAP_TICKS_PER_SECOND resolution.
@@ -127,9 +126,7 @@ void coap_ticks(coap_tick_t *t);
  * @return  The number of seconds that has passed since a specific reference
  *          point (seconds since epoch on POSIX).
  */
-static inline coap_time_t coap_ticks_to_rt(coap_tick_t t) {
-  return t / COAP_TICKS_PER_SECOND;
-}
+coap_time_t coap_ticks_to_rt(coap_tick_t t);
 #endif /* WITH_POSIX */
 
 /**

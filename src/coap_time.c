@@ -14,12 +14,27 @@
 #include "coap_config.h"
 #include "coap_time.h"
 
+static coap_time_t coap_clock_offset = 0;
+
 #if _POSIX_TIMERS && !defined(__APPLE__)
   /* _POSIX_TIMERS is > 0 when clock_gettime() is available */
 
   /* Use real-time clock for correct timestamps in coap_log(). */  
 #define COAP_CLOCK CLOCK_REALTIME
 #endif
+
+void
+coap_clock_init(void) {
+#ifdef COAP_CLOCK
+  struct timespec tv;
+  clock_gettime(COAP_CLOCK, &tv);
+#else /* _POSIX_TIMERS */
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+#endif /* not _POSIX_TIMERS */
+
+  coap_clock_offset = tv.tv_sec;
+}
 
 /* creates a Qx.frac from fval */
 #define Q(frac,fval) ((coap_tick_t)(((1 << (frac)) * (fval))))
@@ -60,7 +75,12 @@ coap_ticks(coap_tick_t *t) {
 
   /* Finally, convert temporary FP representation to multiple of
    * COAP_TICKS_PER_SECOND */
-  *t = tmp + tv.tv_sec * COAP_TICKS_PER_SECOND;
+  *t = tmp + (tv.tv_sec - coap_clock_offset) * COAP_TICKS_PER_SECOND;
+}
+
+coap_time_t
+coap_ticks_to_rt(coap_tick_t t) {
+  return coap_clock_offset + (t / COAP_TICKS_PER_SECOND);
 }
 
 #undef Q
