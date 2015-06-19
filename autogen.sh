@@ -19,27 +19,32 @@ fi
 
 PROJECT="libcoap"
 
-AUTOGEN_FILES="INSTALL \
-		aclocal.m4 ar-lib \
-		coap_config.h coap_config.h.in* compile config.guess config.h* config.log config.status config.sub configure \
-		depcomp \
-		doc/Doxyfile doc/doxyfile.stamp doc/doxygen_sqlite3.db doc/Makefile doc/Makefile.in \
-		examples/*.o  examples/coap-client examples/coap-server examples/coap-rd \
-		include/coap/coap.h
-		install-sh \
-		libcoap-1.pc libtool ltmain.sh \
-		missing \
-		Makefile Makefile.in \
-		stamp-h1 src/.dirstamp libcoap*.la* src/*.*o \
-		tests/*.o tests/Makefile tests/testdriver \
-		m4/libtool.m4 m4/lt~obsolete.m4 m4/ltoptions.m4 m4/ltsugar.m4 m4/ltversion.m4"
+AUTOGEN_FILES="
+INSTALL
+aclocal.m4 ar-lib
+coap_config.h coap_config.h.in* compile config.guess config.h* config.log config.status config.sub configure
+depcomp
+doc/Doxyfile doc/doxyfile.stamp doc/doxygen_sqlite3.db doc/Makefile doc/Makefile.in
+examples/*.o  examples/coap-client examples/coap-server examples/coap-rd
+examples/coap-*.5 examples/coap-*.txt examples/Makefile.in
+include/coap/coap.h
+install-sh
+libcoap-1.pc libtool ltmain.sh
+missing
+Makefile Makefile.in
+stamp-h1 src/.dirstamp libcoap*.la* src/*.*o
+tests/*.o tests/Makefile tests/testdriver
+m4/libtool.m4 m4/lt~obsolete.m4 m4/ltoptions.m4 m4/ltsugar.m4 m4/ltversion.m4
+"
 
-AUTOGEN_DIRS=".deps \
-		.libs autom4te.cache/ \
-		doc/html/ \
-		examples/.deps/ \
-		src/.libs/ src/.deps/ \
-		tests/.deps/"
+AUTOGEN_DIRS="
+.deps
+.libs autom4te.cache/
+doc/html/
+examples/.deps/ examples/.libs
+src/.deps/ src/.libs/
+tests/.deps/
+"
 
 # checking for cleaner argument
 echo
