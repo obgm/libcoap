@@ -6,13 +6,16 @@
  * README for terms of use.
  */
 
+#include "coap_config.h"
+#include "test_wellknown.h"
+
+#include <coap.h>
+
 #include <assert.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <coap.h>
-#include <netinet/in.h>
-#include "test_wellknown.h"
 
 #define TEST_PDU_SIZE 120
 #define TEST_URI_LEN    4

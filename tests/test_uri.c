@@ -6,9 +6,12 @@
  * README for terms of use. 
  */
 
-#include <stdio.h>
-#include <coap.h>
+#include "coap_config.h"
 #include "test_uri.h"
+
+#include <coap.h>
+
+#include <stdio.h>
 
 static void
 t_parse_uri1(void) {

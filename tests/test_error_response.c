@@ -6,12 +6,15 @@
  * README for terms of use.
  */
 
+#include "coap_config.h"
+#include "test_error_response.h"
+
+#include <coap.h>
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <coap.h>
-#include "test_error_response.h"
 
 coap_pdu_t *pdu;	      /* Holds the request PDU for most tests */
 coap_opt_filter_t opts;	      /* option filter used for generating responses */

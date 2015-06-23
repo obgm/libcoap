@@ -23,7 +23,7 @@ testdriver_SOURCES = \
  test_uri.c \
  test_wellknown.c
 
-testdriver_LDADD = @CUNIT_LIBS@ @top_builddir@/.libs/libcoap-$(LIBCOAP_API_VERSION).a
+testdriver_LDADD = @CUNIT_LIBS@ @top_builddir@/.libs/libcoap-$(LIBCOAP_API_VERSION).la
 
 # If there is a API change to something $(LIBCOAP_API_VERSION) > 1 there is
 # nothing to adopt here. No needed to implement something here because the test

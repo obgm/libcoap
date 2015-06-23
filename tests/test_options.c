@@ -6,11 +6,14 @@
  * README for terms of use. 
  */
 
+#include "coap_config.h"
+#include "test_options.h"
+
+#include <coap.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <coap.h>
-#include "test_options.h"
 
 /************************************************************************
  ** decoder tests

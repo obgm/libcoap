@@ -6,12 +6,15 @@
  * README for terms of use.
  */
 
+#include "coap_config.h"
+#include "test_pdu.h"
+
+#include <coap.h>
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <coap.h>
-#include "test_pdu.h"
 
 coap_pdu_t *pdu;	      /* Holds the parsed PDU for most tests */
 

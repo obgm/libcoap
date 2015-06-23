@@ -6,9 +6,12 @@
  * README for terms of use.
  */
 
-#include <stdio.h>
-#include <coap.h>
+#include "coap_config.h"
 #include "test_sendqueue.h"
+
+#include <coap.h>
+
+#include <stdio.h>
 
 static coap_queue_t *sendqueue;
 
