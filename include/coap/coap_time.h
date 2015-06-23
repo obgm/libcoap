@@ -21,8 +21,6 @@
 extern "C" {
 #endif
 
-#include "coap_config.h"
-
 /**
  * @defgroup clock Clock Handling
  * Default implementation of internal clock.

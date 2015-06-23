@@ -14,8 +14,6 @@
 #ifndef _COAP_PRNG_H_
 #define _COAP_PRNG_H_
 
-#include "coap_config.h"
-
 /**
  * @defgroup prng Pseudo Random Numbers
  * @{

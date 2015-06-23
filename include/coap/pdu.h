@@ -14,7 +14,6 @@
 #ifndef _PDU_H_
 #define _PDU_H_
 
-#include "coap_config.h"
 #include "uri.h"
 
 #ifdef WITH_LWIP

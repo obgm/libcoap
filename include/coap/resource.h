@@ -14,8 +14,6 @@
 #ifndef _COAP_RESOURCE_H_
 #define _COAP_RESOURCE_H_
 
-#include "coap_config.h"
-
 #if defined(HAVE_ASSERT_H) && !defined(assert)
 # include <assert.h>
 #endif

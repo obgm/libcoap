@@ -9,8 +9,6 @@
 #ifndef _COAP_DEBUG_H_
 #define _COAP_DEBUG_H_
 
-#include "coap_config.h"
-
 #ifndef COAP_DEBUG_FD
 #define COAP_DEBUG_FD stdout
 #endif

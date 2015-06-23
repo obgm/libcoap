@@ -13,8 +13,6 @@
 extern "C" {
 #endif
 
-#include "coap_config.h"
-
 #ifdef HAVE_ASSERT_H
 #include <assert.h>
 #else
@@ -216,7 +214,7 @@ coap_new_message_id(coap_context_t *context) {
 #endif
 }
 
-/*
+/**
  * CoAP stack context must be released with coap_free_context(). This function
  * clears all entries from the receive queue and send queue and deletes the
  * resources that have been registered with @p context, and frees the attached
@@ -544,3 +542,4 @@ coap_pdu_t *coap_wellknown_response(coap_context_t *context,
 #endif
 
 #endif /* _COAP_NET_H_ */
+
