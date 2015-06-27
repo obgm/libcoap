@@ -236,6 +236,7 @@ AC_ARG_ENABLE([examples],
               [build_examples="yes"])
 
 if test "x$build_examples" = "xyes"; then
+	AC_ARG_VAR([A2X], [a2x command])
 	AC_PATH_PROG([A2X], [a2x])
 	if test "x$A2X" = "x"; then
 		AC_MSG_WARN([==> You want to build the examples binaries, that is also including the respective manpages but a2x was not found!])
