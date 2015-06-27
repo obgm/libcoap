@@ -13,26 +13,11 @@
 extern "C" {
 #endif
 
-#ifdef HAVE_ASSERT_H
 #include <assert.h>
-#else
-#ifndef assert
-#warning "assertions are disabled"
-#  define assert(x)
-#endif
-#endif
-
 #include <stdlib.h>
 #include <string.h>
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef HAVE_TIME_H
-#include <time.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
-#endif
+#include <time.h>
 
 #ifdef WITH_LWIP
 #include <lwip/ip_addr.h>

@@ -9,9 +9,7 @@
 #ifndef _COAP_MEM_H_
 #define _COAP_MEM_H_
 
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
 
 #ifndef WITH_LWIP
 /**

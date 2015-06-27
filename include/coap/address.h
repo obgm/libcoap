@@ -14,25 +14,9 @@
 #ifndef _COAP_ADDRESS_H_
 #define _COAP_ADDRESS_H_
 
-#ifdef HAVE_ASSERT_H
 #include <assert.h>
-#else
-#ifndef assert
-#warning "assertions are disabled"
-#  define assert(x)
-#endif
-#endif
-
-#include <string.h>
 #include <stdint.h>
-
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-
-#ifdef HAVE_NETINET_IN_H
-#include <sys/socket.h>
-#endif
+#include <string.h>
 
 #ifdef WITH_LWIP
 #include <lwip/ip_addr.h>

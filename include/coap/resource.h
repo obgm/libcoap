@@ -14,9 +14,7 @@
 #ifndef _COAP_RESOURCE_H_
 #define _COAP_RESOURCE_H_
 
-#if defined(HAVE_ASSERT_H) && !defined(assert)
 # include <assert.h>
-#endif
 
 #ifndef COAP_RESOURCE_CHECK_TIME
 /** The interval in seconds to check if resources have changed. */
