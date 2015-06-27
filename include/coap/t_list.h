@@ -1,4 +1,5 @@
-/* t_list -- tinydtls lists
+/*
+ * t_list -- tinydtls lists
  *
  * Copyright (C) 2012 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -28,8 +29,8 @@
  * @brief Wrappers for list structures and functions
  */
 
-#ifndef _DTLS_LIST_H_
-#define _DTLS_LIST_H_
+#ifndef _COAP_DTLS_LIST_H_
+#define _COAP_DTLS_LIST_H_
 
 #ifndef WITH_CONTIKI
 #include "uthash.h"
@@ -142,5 +143,4 @@ list_item_next(void *item)
 #include "list.h"
 #endif /* WITH_CONTIKI */
 
-#endif /* _DTLS_LIST_H_ */
-
+#endif /* _COAP_DTLS_LIST_H_ */

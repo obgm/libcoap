@@ -1,9 +1,10 @@
-/* coap_time.h -- Clock Handling
+/*
+ * coap_time.h -- Clock Handling
  *
- * Copyright (C) 2010--2013 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2013 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
  */
 
 /**
@@ -13,13 +14,6 @@
 
 #ifndef _COAP_TIME_H_
 #define _COAP_TIME_H_
-
-/*
-** Make sure we can call this stuff from C++.
-*/
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * @defgroup clock Clock Handling
@@ -144,10 +138,5 @@ static inline int coap_time_le(coap_tick_t a, coap_tick_t b) {
 }
 
 /** @} */
-
-#ifdef __cplusplus
-}
-#endif
-
 
 #endif /* _COAP_TIME_H_ */

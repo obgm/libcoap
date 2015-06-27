@@ -1,12 +1,11 @@
-/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 * -*- */
-
-/* coap.h -- main header file for CoAP stack
+/*
+ * coap.h -- main header file for CoAP stack
  *
  * Copyright (C) 2010-2012,2015 Olaf Bergmann <bergmann@tzi.org>
  *               2015 Carsten Schoenert <c.schoenert@t-online.de>
  *
- * This file is part of the CoAP library libcoap. Please see README for
- * terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
  */
 
 #ifndef _COAP_H_

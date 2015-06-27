@@ -3,8 +3,8 @@
  *
  * Copyright (C) 2010-2013 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
  */
 
 /**
@@ -12,8 +12,8 @@
  * @brief Helpers for handling options in CoAP PDUs
  */
 
-#ifndef _OPTION_H_
-#define _OPTION_H_
+#ifndef _COAP_OPTION_H_
+#define _COAP_OPTION_H_
 
 #include "bits.h"
 #include "pdu.h"

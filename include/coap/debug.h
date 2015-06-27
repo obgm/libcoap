@@ -1,9 +1,10 @@
-/* debug.h -- debug utilities
+/*
+ * debug.h -- debug utilities
  *
- * Copyright (C) 2010,2011,2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2011,2014 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
  */
 
 #ifndef _COAP_DEBUG_H_
@@ -78,6 +79,6 @@ size_t coap_print_addr(const struct coap_address_t *, unsigned char *, size_t);
 #define coap_show_pdu(x)
 #define coap_print_addr(...)
 
-#endif
+#endif /* NDEBUG */
 
 #endif /* _COAP_DEBUG_H_ */

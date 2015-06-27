@@ -1,17 +1,14 @@
-/* net.h -- CoAP network interface
+/*
+ * net.h -- CoAP network interface
  *
- * Copyright (C) 2010--2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2015 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
  */
 
 #ifndef _COAP_NET_H_
 #define _COAP_NET_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include <assert.h>
 #include <stdlib.h>
@@ -23,11 +20,11 @@ extern "C" {
 #include <lwip/ip_addr.h>
 #endif
 
-#include "option.h"
 #include "coap_io.h"
-#include "prng.h"
-#include "pdu.h"
 #include "coap_time.h"
+#include "option.h"
+#include "pdu.h"
+#include "prng.h"
 
 struct coap_queue_t;
 
@@ -156,7 +153,6 @@ inline static void
 coap_register_option(coap_context_t *ctx, unsigned char type) {
   coap_option_setb(ctx->known_options, type);
 }
-
 
 /**
  * Set sendqueue_basetime in the given context object @p ctx to @p now. This
@@ -522,9 +518,4 @@ int coap_option_check_critical(coap_context_t *ctx,
 coap_pdu_t *coap_wellknown_response(coap_context_t *context,
                                     coap_pdu_t *request);
 
-#ifdef __cplusplus
-}
-#endif
-
 #endif /* _COAP_NET_H_ */
-

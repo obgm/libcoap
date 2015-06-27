@@ -1,16 +1,17 @@
-/* block.h -- block transfer
+/*
+ * block.h -- block transfer
  *
- * Copyright (C) 2010--2012,2014,2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2012,2014-2015 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
  */
 
 #ifndef _COAP_BLOCK_H_
 #define _COAP_BLOCK_H_
 
-#include "option.h"
 #include "encode.h"
+#include "option.h"
 #include "pdu.h"
 
 /**

@@ -1,9 +1,10 @@
-/* pdu.h -- CoAP message structure
+/*
+ * pdu.h -- CoAP message structure
  *
- * Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2014 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
  */
 
 /**
@@ -11,8 +12,8 @@
  * @brief Pre-defined constants that reflect defaults for CoAP
  */
 
-#ifndef _PDU_H_
-#define _PDU_H_
+#ifndef _COAP_PDU_H_
+#define _COAP_PDU_H_
 
 #include "uri.h"
 
@@ -384,4 +385,4 @@ int coap_get_data(coap_pdu_t *pdu,
                   size_t *len,
                   unsigned char **data);
 
-#endif /* _PDU_H_ */
+#endif /* _COAP_PDU_H_ */

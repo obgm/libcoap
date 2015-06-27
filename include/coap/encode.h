@@ -1,9 +1,10 @@
-/* encode.h -- encoding and decoding of CoAP data types
+/*
+ * encode.h -- encoding and decoding of CoAP data types
  *
- * Copyright (C) 2010--2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2012 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
  */
 
 #ifndef _COAP_ENCODE_H_

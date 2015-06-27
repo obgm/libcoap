@@ -1,9 +1,10 @@
-/* resource.h -- generic resource handling
+/*
+ * resource.h -- generic resource handling
  *
  * Copyright (C) 2010,2011,2014,2015 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
  */
 
 /**
@@ -86,7 +87,6 @@ typedef struct coap_resource_t {
   coap_attr_t *link_attr; /**< attributes to be included with the link format */
   coap_subscription_t *subscribers;  /**< list of observers for this resource */
 
-
   /**
    * Request URI for this resource. This field will point into the static
    * memory.
@@ -97,8 +97,8 @@ typedef struct coap_resource_t {
 } coap_resource_t;
 
 /**
- * Creates a new resource object and initializes the link field to the string of
- * length @p len. This function returns the new coap_resource_t object.
+ * Creates a new resource object and initializes the link field to the string
+ * of length @p len. This function returns the new coap_resource_t object.
  *
  * @param uri    The URI path of the new resource.
  * @param len    The length of @p uri.

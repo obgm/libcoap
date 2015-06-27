@@ -1,10 +1,10 @@
 /*
  * bits.h -- bit vector manipulation
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2011 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
  */
 
 /**
@@ -12,11 +12,11 @@
  * @brief Bit vector manipulation
  */
 
-#ifndef _BITS_H_
-#define _BITS_H_
+#ifndef _COAP_BITS_H_
+#define _COAP_BITS_H_
 
-#include <sys/types.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 /**
  * Sets the bit @p bit in bit-vector @p vec. This function returns @c 1 if bit
@@ -76,4 +76,4 @@ bits_getb(const uint8_t *vec, size_t size, uint8_t bit) {
   return (*(vec + (bit >> 3)) & (1 << (bit & 0x07))) != 0;
 }
 
-#endif /* _BITS_H_ */
+#endif /* _COAP_BITS_H_ */

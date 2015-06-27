@@ -1,9 +1,10 @@
-/* address.h -- representation of network addresses
+/*
+ * address.h -- representation of network addresses
  *
- * Copyright (C) 2010,2011,2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2011,2015 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
  */
 
 /**

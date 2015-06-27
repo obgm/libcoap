@@ -1,10 +1,11 @@
-/* subscribe.h -- subscription handling for CoAP
+/*
+ * subscribe.h -- subscription handling for CoAP
  *                see draft-ietf-core-observe-16
  *
- * Copyright (C) 2010--2012,2014,2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2012,2014-2015 Olaf Bergmann <bergmann@tzi.org>
  *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
  */
 
 
