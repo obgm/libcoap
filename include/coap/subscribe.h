@@ -55,7 +55,6 @@ typedef struct coap_subscription_t {
   coap_endpoint_t local_if;         /**< local communication interface */
   coap_address_t subscriber;        /**< address and port of subscriber */
 
-  unsigned int non:1;      /**< send non-confirmable notifies if @c 1  */
   unsigned int non_cnt:4;  /**< up to 15 non-confirmable notifies allowed */
   unsigned int fail_cnt:2; /**< up to 3 confirmable notifies can fail */
   unsigned int dirty:1;    /**< set if the notification temporarily could not be

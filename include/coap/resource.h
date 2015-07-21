@@ -1,6 +1,6 @@
 /* resource.h -- generic resource handling
  *
- * Copyright (C) 2010,2011,2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011,2014,2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
@@ -59,6 +59,8 @@ typedef struct coap_attr_t {
 } coap_attr_t;
 
 #define COAP_RESOURCE_FLAGS_RELEASE_URI 0x1
+#define COAP_RESOURCE_FLAGS_NOTIFY_NON  0x0
+#define COAP_RESOURCE_FLAGS_NOTIFY_CON  0x2
 
 typedef struct coap_resource_t {
   unsigned int dirty:1;          /**< set to 1 if resource has changed */
@@ -108,6 +110,17 @@ typedef struct coap_resource_t {
  */
 coap_resource_t *coap_resource_init(const unsigned char *uri,
                                     size_t len, int flags);
+
+
+/**
+ * Sets the notification message type of resource @p r to given
+ * @p mode which must be one of @c COAP_RESOURCE_FLAGS_NOTIFY_NON
+ * or @c COAP_RESOURCE_FLAGS_NOTIFY_CON.
+ */
+static inline void
+coap_resource_set_mode(coap_resource_t *r, int mode) {
+  r->flags = (r->flags & !COAP_RESOURCE_FLAGS_NOTIFY_CON) | mode;
+}
 
 /**
  * Registers the given @p resource for @p context. The resource must have been

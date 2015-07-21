@@ -1429,7 +1429,6 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 	    subscription = coap_add_observer(resource, &node->local_if, 
 					     &node->remote, &token);
 	    if (subscription) {
-	      subscription->non = node->pdu->hdr->type == COAP_MESSAGE_NON;
 	      coap_touch_observer(context, &node->remote, &token);
 	    }
 	  }

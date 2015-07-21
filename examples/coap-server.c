@@ -299,7 +299,7 @@ init_resources(coap_context_t *ctx) {
   /* store clock base to use in /time */
   my_clock_base = clock_offset;
 
-  r = coap_resource_init((unsigned char *)"time", 4, 0);
+  r = coap_resource_init((unsigned char *)"time", 4, COAP_RESOURCE_FLAGS_NOTIFY_CON);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
