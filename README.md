@@ -25,6 +25,6 @@ LICENSE INFORMATION
 This library is published as open-source software without any warranty
 of any kind. Use is permitted under the terms of the GNU General
 Public License (GPL), Version 2 or higher, OR the revised BSD
-license. Please refer to LICENSE.GPL oder LICENSE.BSD for further
+license. Please refer to LICENSE.GPL or LICENSE.BSD for further
 details.
 
