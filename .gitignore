@@ -32,6 +32,11 @@ src/.dirstamp
 src/.libs/
 src/*.o
 src/*.lo
+platform/**/.deps/
+platform/**/.dirstamp
+platform/**/.libs/
+platform/**/*.o
+platform/**/*.lo
 
 # the doc/ folder
 doc/Doxyfile

@@ -193,6 +193,11 @@ AM_CONDITIONAL([HAVE_DOXYGEN],
 	[AC_CONFIG_FILES([doc/Doxyfile])])
 
 # configure options
+# __platform__
+AC_ARG_VAR([PLATFORM],
+	   [Select a platform to build for. E.g. posix, contiki, lwip])
+
+# configure options
 # __tests__
 AC_ARG_ENABLE([tests],
               [AC_HELP_STRING([--enable-tests],

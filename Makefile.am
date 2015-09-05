@@ -27,7 +27,7 @@ EXTRA_DIST = \
   tests/test_uri.h \
   tests/test_wellknown.h
 
-AM_CFLAGS = -I @top_builddir@/include/coap/ $(WARNING_CFLAGS) -std=c99
+AM_CFLAGS = -I @top_builddir@/include/coap/ -I @top_builddir@/platform/@PLATFORM@/ $(WARNING_CFLAGS) -std=c99
 
 SUBDIRS = . $(DOC_DIR) tests examples
 
@@ -48,7 +48,6 @@ libcoap_@LIBCOAP_API_VERSION@_la_CFLAGS = \
 ## Note that it is not necessary to list header files which are already listed
 ## elsewhere in a _HEADERS variable assignment.
 libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
-  src/address.c \
   src/async.c \
   src/block.c \
   src/coap_io.c \
@@ -63,7 +62,8 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/resource.c \
   src/str.c \
   src/subscribe.c \
-  src/uri.c
+  src/uri.c \
+  platform/@PLATFORM@/address.c
 
 ## Define the list of public header files and their install location.
 ## The list defined here will be used within the include/Makefile.am
