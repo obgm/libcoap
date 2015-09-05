@@ -7,6 +7,7 @@ global:
   coap_add_option;
   coap_add_option_later;
   coap_add_resource;
+  coap_address_init;
   coap_address_equals;
   coap_add_token;
   coap_adjust_basetime;
