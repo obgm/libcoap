@@ -1,13 +1,3 @@
-/* coap_time.c -- Clock Handling
- *
- * Copyright (C) 2015 Olaf Bergmann <bergmann@tzi.org>
- *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
- */
-
-#ifdef WITH_POSIX
-#include <time.h>
 #include <sys/time.h>
 #include <unistd.h>  /* _POSIX_TIMERS */
 
@@ -87,12 +77,5 @@ coap_ticks_to_rt(coap_tick_t t) {
 #undef FRAC
 #undef SHR_FP
 
-#else /* WITH_POSIX */
 
-/* make compilers happy that do not like empty modules */
-static inline void dummy()
-{
-}
-
-#endif /* not WITH_POSIX */
 

@@ -51,7 +51,6 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/async.c \
   src/block.c \
   src/coap_io.c \
-  src/coap_time.c \
   src/debug.c \
   src/encode.c \
   src/hashkey.c \
@@ -63,6 +62,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/str.c \
   src/subscribe.c \
   src/uri.c \
+  platform/@PLATFORM@/coap_time.c \
   platform/@PLATFORM@/address.c
 
 ## Define the list of public header files and their install location.
