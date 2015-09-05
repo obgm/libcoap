@@ -1,3 +1,6 @@
+#ifndef _PLATFORM_ADDRESS_H_
+#define _PLATFORM_ADDRESS_H_
+
 #include <assert.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -12,4 +15,4 @@ struct coap_address_t {
   } addr;
 };
 
-
+#endif /* _PLATFORM_ADDRESS_H_ */

@@ -62,8 +62,9 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/str.c \
   src/subscribe.c \
   src/uri.c \
-  platform/@PLATFORM@/platform_time.c \
-  platform/@PLATFORM@/platform_address.c
+  platform/@PLATFORM@/platform_address.c \
+  platform/@PLATFORM@/platform_io.c \
+  platform/@PLATFORM@/platform_time.c
 
 ## Define the list of public header files and their install location.
 ## The list defined here will be used within the include/Makefile.am

@@ -1,3 +1,6 @@
+#ifndef _PLATFORM_TIME_H_
+#define _PLATFORM_TIME_H_
+
 #include <time.h>
 
 /**
@@ -21,4 +24,4 @@ typedef long coap_tick_diff_t;
 /** Use ms resolution on POSIX systems */
 #define COAP_TICKS_PER_SECOND 1000
 
-
+#endif /* _PLATFORM_TIME_H_ */

@@ -1,3 +1,5 @@
+#include "coap_config.h"
+
 #include "address.h"
 
 int

@@ -1,7 +1,8 @@
+#include "coap_config.h"
+
 #include <sys/time.h>
 #include <unistd.h>  /* _POSIX_TIMERS */
 
-#include "coap_config.h"
 #include "coap_time.h"
 
 static coap_time_t coap_clock_offset = 0;
