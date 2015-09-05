@@ -34,7 +34,7 @@
 #include <sys/socket.h>
 #endif
 
-#include "coap_address.h"
+#include "platform_address.h"
 
 typedef struct coap_address_t coap_address_t;
 
