@@ -51,6 +51,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/async.c \
   src/block.c \
   src/coap_io.c \
+  src/coap_context.c \
   src/debug.c \
   src/encode.c \
   src/hashkey.c \
@@ -77,6 +78,7 @@ libcoap_include_HEADERS = \
    include/coap/bits.h \
    include/coap/block.h \
    include/coap/coap.h \
+   include/coap/coap_context.h \
    include/coap/coap_io.h \
    include/coap/coap_time.h \
    include/coap/debug.h \
