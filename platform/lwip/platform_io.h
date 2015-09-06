@@ -9,7 +9,8 @@
  * as the packets have limited lifetime anyway.
  */
 struct coap_packet_t {
-  struct pbuf *pbuf;
+  unsigned char *data;
+  size_t data_len;
   const coap_endpoint_t *local_interface;
   uint16_t srcport;
 };

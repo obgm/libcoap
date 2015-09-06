@@ -22,14 +22,11 @@ void coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target)
 }
 void coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length)
 {
-	LWIP_ASSERT("Can only deal with contiguous PBUFs to read the initial details", packet->pbuf->tot_len == packet->pbuf->len);
-	*address = packet->pbuf->payload;
-	*length = packet->pbuf->tot_len;
+  *address = packet->data;
+  length = packet->data_len;
 }
 void coap_free_packet(coap_packet_t *packet)
 {
-	if (packet->pbuf)
-		pbuf_free(packet->pbuf);
 	coap_free_type(COAP_PACKET, packet);
 }
 
@@ -43,7 +40,7 @@ struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet)
 
 /** Callback from lwIP when a package was received.
  *
- * The current implemntation deals this to coap_handle_message immedately, but
+ * The current implementation deals this to coap_handle_message immedately, but
  * other mechanisms (as storing the package in a queue and later fetching it
  * when coap_read is called) can be envisioned.
  *
@@ -52,16 +49,26 @@ struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet)
 static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, ip_addr_t *addr, u16_t port)
 {
 	coap_endpoint_t *ep = (coap_endpoint_t*)arg;
+
+	LWIP_ASSERT("Can only deal with contiguous PBUFs to read the initial details",
+	    p->tot_len == p->len);
+
 	coap_packet_t *packet = coap_malloc_type(COAP_PACKET, sizeof(coap_packet_t));
 	/* this is fatal because due to the short life of the packet, never should there be more than one coap_packet_t required */
 	LWIP_ASSERT("Insufficient coap_packet_t resources.", packet != NULL);
-	packet->pbuf = p;
+
+	packet->data = p->payload;
+	packet->data_len = p->tot_len;
 	packet->srcport = port;
 
 	/** FIXME derive the context without changing endopint definition */
 	coap_handle_message(ep->context, packet);
 
 	coap_free_packet(packet);
+	// Free the pbuf that the data comes from
+	if (p) {
+	    pbuf_free(p);
+	}
 }
 
 coap_endpoint_t *coap_new_endpoint(const coap_address_t *addr, int flags) {

@@ -1,5 +1,8 @@
 #include "coap_io.h"
 
+#include <lwip/pbuf.h>
+#include <lwip/udp.h>
+
 #include "debug.h"
 #include "mem.h"
 #include "coap_io.h"
@@ -92,100 +95,17 @@ coap_free_endpoint(coap_endpoint_t *ep) {
   }
 }
 
-
-
 ssize_t
 coap_network_send(struct coap_context_t *context UNUSED_PARAM,
-		  const coap_endpoint_t *local_interface,
-		  const coap_address_t *dst,
-		  unsigned char *data,
-		  size_t datalen) {
-
-  struct coap_endpoint_t *ep = 
-    (struct coap_endpoint_t *)local_interface;
-
-  /* a buffer large enough to hold all protocol address types */
-  char buf[CMSG_LEN(sizeof(struct sockaddr_storage))];
-  struct msghdr mhdr;
-  struct iovec iov[1];
-
-  assert(local_interface);
-
-  iov[0].iov_base = data;
-  iov[0].iov_len = datalen;
-
-  memset(&mhdr, 0, sizeof(struct msghdr));
-  mhdr.msg_name = (void *)&dst->addr;
-  mhdr.msg_namelen = dst->size;
-
-  mhdr.msg_iov = iov;
-  mhdr.msg_iovlen = 1;
-
-  switch (dst->addr.sa.sa_family) {
-  case AF_INET6: {
-    struct cmsghdr *cmsg;
-    struct in6_pktinfo *pktinfo;
-
-    mhdr.msg_control = buf;
-    mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
-
-    cmsg = CMSG_FIRSTHDR(&mhdr);
-    cmsg->cmsg_level = IPPROTO_IPV6;
-    cmsg->cmsg_type = IPV6_PKTINFO;
-    cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
-  
-    pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
-    memset(pktinfo, 0, sizeof(struct in6_pktinfo));
-  
-    pktinfo->ipi6_ifindex = ep->ifindex;
-    if (coap_is_mcast(&local_interface->addr)) {
-      /* We cannot send with multicast address as source address
-       * and hence let the kernel pick the outgoing interface. */
-      pktinfo->ipi6_ifindex = 0;
-      memset(&pktinfo->ipi6_addr, 0, sizeof(pktinfo->ipi6_addr));
-    } else {
-      pktinfo->ipi6_ifindex = ep->ifindex;
-      memcpy(&pktinfo->ipi6_addr,
-	     &local_interface->addr.addr.sin6.sin6_addr,
-	     local_interface->addr.size);
-    }
-    break;
-  }
-  case AF_INET: {
-    struct cmsghdr *cmsg;
-    struct in_pktinfo *pktinfo;
-
-    mhdr.msg_control = buf;
-    mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
-
-    cmsg = CMSG_FIRSTHDR(&mhdr);
-    cmsg->cmsg_level = SOL_IP;
-    cmsg->cmsg_type = IP_PKTINFO;
-    cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
-
-    pktinfo = (struct in_pktinfo *)CMSG_DATA(cmsg);
-    memset(pktinfo, 0, sizeof(struct in_pktinfo));
-
-    if (coap_is_mcast(&local_interface->addr)) {
-      /* We cannot send with multicast address as source address
-       * and hence let the kernel pick the outgoing interface. */
-      pktinfo->ipi_ifindex = 0;
-      memset(&pktinfo->ipi_spec_dst, 0, sizeof(pktinfo->ipi_spec_dst));
-    } else {
-      pktinfo->ipi_ifindex = ep->ifindex;
-      memcpy(&pktinfo->ipi_spec_dst,
-	     &local_interface->addr.addr.sin.sin_addr,
-	     local_interface->addr.size);
-    }
-    break;
-  }
-  default:
-    /* error */
-    coap_log(LOG_WARNING, "protocol not supported\n");
-    return -1;
-  }
-
-  return sendmsg(ep->handle.fd, &mhdr, 0);
+                  const coap_endpoint_t *local_interface,
+                  const coap_address_t *dst,
+                  unsigned char *data,
+                  size_t datalen) {
+  struct pbuf *p = pbuf_alloc(PBUF_TRANSPORT, datalen, PBUF_REF);
+  pbuf->payload = data;
+  udp_sendto(context->endpoint->pcb, pdu->pbuf,
+             &dst->addr, dst->port);
+  pbuf_free(p);
 }
 
 
