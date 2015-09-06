@@ -113,9 +113,14 @@
 /** creates a Qx.FRAC_BITS from COAP_DEFAULT_ACK_TIMEOUT */
 #define ACK_TIMEOUT Q(FRAC_BITS, COAP_DEFAULT_ACK_TIMEOUT)
 
-#if defined(WITH_POSIX)
+#ifdef WITH_LWIP
 
-time_t clock_offset;
+#include <lwip/memp.h>
+
+static void coap_retransmittimer_execute(void *arg);
+static void coap_retransmittimer_restart(coap_context_t *ctx);
+
+#endif /* WITH_LWIP */
 
 static inline coap_queue_t *
 coap_malloc_node(void) {
@@ -126,25 +131,13 @@ static inline void
 coap_free_node(coap_queue_t *node) {
   coap_free_type(COAP_NODE, node);
 }
+
+#if defined(WITH_POSIX)
+
+time_t clock_offset;
+
 #endif /* WITH_POSIX */
-#ifdef WITH_LWIP
 
-#include <lwip/memp.h>
-
-static void coap_retransmittimer_execute(void *arg);
-static void coap_retransmittimer_restart(coap_context_t *ctx);
-
-static inline coap_queue_t *
-coap_malloc_node() {
-	return (coap_queue_t *)memp_malloc(MEMP_COAP_NODE);
-}
-
-static inline void
-coap_free_node(coap_queue_t *node) {
-	memp_free(MEMP_COAP_NODE, node);
-}
-
-#endif /* WITH_LWIP */
 #ifdef WITH_CONTIKI
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT
@@ -155,9 +148,6 @@ coap_free_node(coap_queue_t *node) {
 
 clock_time_t clock_offset;
 
-#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
-#define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
-
 void coap_resources_init();
 
 unsigned char initialized = 0;
@@ -165,15 +155,6 @@ coap_context_t the_coap_context;
 
 PROCESS(coap_retransmit_process, "message retransmit process");
 
-static inline coap_queue_t *
-coap_malloc_node() {
-  return (coap_queue_t *)coap_malloc_type(COAP_NODE, 0);
-}
-
-static inline void
-coap_free_node(coap_queue_t *node) {
-  coap_free_type(COAP_NODE, node);
-}
 #endif /* WITH_CONTIKI */
 
 unsigned int

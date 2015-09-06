@@ -44,6 +44,8 @@ extern "C" {
 #include "pdu.h"
 #include "coap_time.h"
 
+#include "platform_utils.h"
+
 struct coap_queue_t;
 
 typedef struct coap_queue_t {
@@ -207,11 +209,7 @@ coap_context_t *coap_new_context(const coap_address_t *listen_addr);
 static inline unsigned short
 coap_new_message_id(coap_context_t *context) {
   context->message_id++;
-#ifndef WITH_CONTIKI
-  return htons(context->message_id);
-#else /* WITH_CONTIKI */
-  return uip_htons(context->message_id);
-#endif
+  return HTONS(context->message_id);
 }
 
 /**
