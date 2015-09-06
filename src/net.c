@@ -3,7 +3,7 @@
  * Copyright (C) 2010--2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 #include "coap_config.h"
@@ -303,7 +303,7 @@ is_wkc(coap_key_t k) {
   static coap_key_t wkc;
   static unsigned char _initialized = 0;
   if (!_initialized) {
-    _initialized = coap_hash_path((unsigned char *)COAP_DEFAULT_URI_WELLKNOWN, 
+    _initialized = coap_hash_path((unsigned char *)COAP_DEFAULT_URI_WELLKNOWN,
 				 sizeof(COAP_DEFAULT_URI_WELLKNOWN) - 1, wkc);
   }
   return memcmp(k, wkc, sizeof(coap_key_t)) == 0;
@@ -435,13 +435,13 @@ coap_free_context(coap_context_t *context) {
 }
 
 int
-coap_option_check_critical(coap_context_t *ctx, 
+coap_option_check_critical(coap_context_t *ctx,
 			   coap_pdu_t *pdu,
 			   coap_opt_filter_t unknown) {
 
   coap_opt_iterator_t opt_iter;
   int ok = 1;
-  
+
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
   while (coap_option_next(&opt_iter)) {
@@ -452,10 +452,10 @@ coap_option_check_critical(coap_context_t *ctx,
      * the largest known option, we know that everything beyond is
      * bad.
      */
-    if (opt_iter.type & 0x01 && 
+    if (opt_iter.type & 0x01 &&
 	coap_option_getb(ctx->known_options, opt_iter.type) < 1) {
       debug("unknown critical option %d\n", opt_iter.type);
-      
+
       ok = 0;
 
       /* When opt_iter.type is beyond our known option range,
@@ -470,7 +470,7 @@ coap_option_check_critical(coap_context_t *ctx,
 }
 
 coap_tid_t
-coap_send_ack(coap_context_t *context, 
+coap_send_ack(coap_context_t *context,
 	      const coap_endpoint_t *local_interface,
 	      const coap_address_t *dst,
 	      coap_pdu_t *request) {
@@ -478,8 +478,8 @@ coap_send_ack(coap_context_t *context,
   coap_tid_t result = COAP_INVALID_TID;
 
   if (request && request->hdr->type == COAP_MESSAGE_CON) {
-    response = coap_pdu_init(COAP_MESSAGE_ACK, 0, request->hdr->id, 
-			     sizeof(coap_pdu_t)); 
+    response = coap_pdu_init(COAP_MESSAGE_ACK, 0, request->hdr->id,
+			     sizeof(coap_pdu_t));
     if (response) {
       result = coap_send(context, local_interface, dst, response);
       coap_delete_pdu(response);
@@ -489,7 +489,7 @@ coap_send_ack(coap_context_t *context,
 }
 
 static coap_tid_t
-coap_send_impl(coap_context_t *context, 
+coap_send_impl(coap_context_t *context,
 	       const coap_endpoint_t *local_interface,
 	       const coap_address_t *dst,
 	       coap_pdu_t *pdu) {
@@ -1311,7 +1311,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 			     ? COAP_MESSAGE_ACK
 			     : COAP_MESSAGE_NON,
 			     0, node->pdu->hdr->id, COAP_MAX_PDU_SIZE);
-    
+
     /* Implementation detail: coap_add_token() immediately returns 0
        if response == NULL */
     if (coap_add_token(response, node->pdu->hdr->token_length,
@@ -1384,42 +1384,42 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
       response = coap_wellknown_response(context, node->pdu);
       debug("have wellknown response %p\n", (void *)response);
     } else
-      response = coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(405), 
+      response = coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(405),
 					 opt_filter);
-    
+
     if (!response || (coap_send(context, &node->local_if, &node->remote,
 				response) == COAP_INVALID_TID)) {
       debug("cannot send response for transaction %u\n", node->id);
     }
     coap_delete_pdu(response);
-  }  
+  }
 }
 
 static inline void
-handle_response(coap_context_t *context, 
+handle_response(coap_context_t *context,
 		coap_queue_t *sent, coap_queue_t *rcvd) {
 
   coap_send_ack(context, &rcvd->local_if, &rcvd->remote, rcvd->pdu);
-  
+
   /* In a lossy context, the ACK of a separate response may have
    * been lost, so we need to stop retransmitting requests with the
    * same token.
    */
   coap_cancel_all_messages(context, &rcvd->remote,
-			   rcvd->pdu->hdr->token, 
+			   rcvd->pdu->hdr->token,
 			   rcvd->pdu->hdr->token_length);
 
   /* Call application-specific reponse handler when available. */
   if (context->response_handler) {
     context->response_handler(context, &rcvd->local_if,
-			      &rcvd->remote, sent ? sent->pdu : NULL, 
+			      &rcvd->remote, sent ? sent->pdu : NULL,
 			      rcvd->pdu, rcvd->id);
   }
 }
 
 static inline int
 #ifdef __GNUC__
-handle_locally(coap_context_t *context __attribute__ ((unused)), 
+handle_locally(coap_context_t *context __attribute__ ((unused)),
 	       coap_queue_t *node __attribute__ ((unused))) {
 #else /* not a GCC */
 handle_locally(coap_context_t *context, coap_queue_t *node) {
@@ -1445,7 +1445,7 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
     /*   debug("dropped packet with unknown version %u\n", rcvd->pdu->hdr->version); */
     /*   goto cleanup; */
     /* } */
-    
+
     switch (rcvd->pdu->hdr->type) {
     case COAP_MESSAGE_ACK:
       /* find transaction in sendqueue to stop retransmission */
@@ -1454,11 +1454,11 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
       if (rcvd->pdu->hdr->code == 0)
 	goto cleanup;
 
-      /* if sent code was >= 64 the message might have been a 
+      /* if sent code was >= 64 the message might have been a
        * notification. Then, we must flag the observer to be alive
        * by setting obs->fail_cnt = 0. */
       if (sent && COAP_RESPONSE_CLASS(sent->pdu->hdr->code) == 2) {
-	const str token = 
+	const str token =
 	  { sent->pdu->hdr->token_length, sent->pdu->hdr->token };
 	coap_touch_observer(context, &sent->remote, &token);
       }
@@ -1486,26 +1486,26 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
     case COAP_MESSAGE_CON :	/* check for unknown critical options */
       if (coap_option_check_critical(context, rcvd->pdu, opt_filter) == 0) {
 
-	/* FIXME: send response only if we have received a request. Otherwise, 
+	/* FIXME: send response only if we have received a request. Otherwise,
 	 * send RST. */
-	response = 
+	response =
 	  coap_new_error_response(rcvd->pdu, COAP_RESPONSE_CODE(402), opt_filter);
 
 	if (!response)
 	  warn("coap_dispatch: cannot create error reponse\n");
 	else {
-	  if (coap_send(context, &rcvd->local_if, &rcvd->remote, response) 
+	  if (coap_send(context, &rcvd->local_if, &rcvd->remote, response)
 	      == COAP_INVALID_TID) {
 	    warn("coap_dispatch: error sending reponse\n");
 	  }
           coap_delete_pdu(response);
-	}	 
-	
+	}
+
 	goto cleanup;
       }
     default: break;
     }
-   
+
     /* Pass message to upper layer if a specific handler was
      * registered for a request that should be handled locally. */
     if (handle_locally(context, rcvd)) {
@@ -1514,7 +1514,7 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
       else if (COAP_MESSAGE_IS_RESPONSE(rcvd->pdu->hdr))
 	handle_response(context, sent, rcvd);
       else {
-	debug("dropped message with invalid code (%d.%02d)\n", 
+	debug("dropped message with invalid code (%d.%02d)\n",
 	      COAP_RESPONSE_CLASS(rcvd->pdu->hdr->code),
 	      rcvd->pdu->hdr->code & 0x1f);
 
@@ -1524,7 +1524,7 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
 	}
       }
     }
-    
+
   cleanup:
     coap_delete_node(sent);
     coap_delete_node(rcvd);
@@ -1554,9 +1554,9 @@ PROCESS_THREAD(coap_retransmit_process, ev, data)
     PROCESS_YIELD();
     if (ev == PROCESS_EVENT_TIMER) {
       if (etimer_expired(&the_coap_context.retransmit_timer)) {
-	
+
 	nextpdu = coap_peek_next(&the_coap_context);
-	
+
 	coap_ticks(&now);
 	while (nextpdu && nextpdu->t <= now) {
 	  coap_retransmit(&the_coap_context, coap_pop_next(&the_coap_context));
@@ -1564,9 +1564,9 @@ PROCESS_THREAD(coap_retransmit_process, ev, data)
 	}
 
 	/* need to set timer to some value even if no nextpdu is available */
-	etimer_set(&the_coap_context.retransmit_timer, 
+	etimer_set(&the_coap_context.retransmit_timer,
 		   nextpdu ? nextpdu->t - now : 0xFFFF);
-      } 
+      }
 #ifndef WITHOUT_OBSERVE
       if (etimer_expired(&the_coap_context.notify_timer)) {
 	coap_check_notify(&the_coap_context);
@@ -1575,7 +1575,7 @@ PROCESS_THREAD(coap_retransmit_process, ev, data)
 #endif /* WITHOUT_OBSERVE */
     }
   }
-  
+
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
