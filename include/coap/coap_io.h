@@ -61,8 +61,6 @@ typedef struct coap_endpoint_t {
 
 #ifdef WITH_LWIP
   struct udp_pcb *pcb;
- /**< @FIXME this was added in a hurry, not sure it confirms to the overall model --chrysn */
-  struct coap_context_t *context;
 #endif /* WITH_LWIP */
 
   coap_address_t addr; /**< local interface address */

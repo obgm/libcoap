@@ -113,9 +113,6 @@ coap_new_context(
   coap_register_option(c, COAP_OPTION_BLOCK1);
 
   c->endpoint = coap_new_endpoint(listen_addr, COAP_ENDPOINT_NOSEC);
-#ifdef WITH_LWIP
-  c->endpoint->context = c;
-#endif
   if (c->endpoint == NULL) {
     goto onerror;
   }
