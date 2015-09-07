@@ -43,14 +43,14 @@ static void sigaction_handler(int sig, siginfo_t *si UNUSED, void *uc UNUSED) {
   coap_timer_t *timer = running_timers;
   running_timers = running_timers->next_timer;
 
-  // execute timer callback
-  if (timer->cb) {
-    timer->cb(timer->data);
-  }
-
   if (running_timers) {
     // set the itimer again
     update_itimer();
+  }
+
+  // execute timer callback
+  if (timer->cb) {
+    timer->cb(timer->data);
   }
 
   signal(sig, SIG_IGN);

@@ -49,6 +49,27 @@ unsigned char initialized = 0;
 coap_context_t the_coap_context;
 #endif
 
+static void notify_timer_cb(void *data) {
+  coap_context_t *c = data;
+  coap_check_notify(c);
+  coap_timer_set(c->notify_timer, COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND);
+}
+
+// TODO this should probably be in its own file ... coap_retransmit.c?
+static void retransmit_timer_cb(void *data) {
+  coap_context_t *c = data;
+  coap_queue_t *nextpdu = coap_peek_next(c);
+  coap_tick_t now;
+
+  coap_ticks(&now);
+  while (nextpdu && nextpdu->t <= now) {
+    coap_retransmit(c, coap_pop_next(c));
+    nextpdu = coap_peek_next(c);
+  }
+
+  coap_timer_set(c->retransmit_timer, nextpdu ? nextpdu->t - now : 0xFFFF);
+}
+
 coap_context_t *
 coap_new_context(
   const coap_address_t *listen_addr) {
@@ -125,12 +146,12 @@ coap_new_context(
   c->network_read = coap_network_read;
 
 # ifndef WITHOUT_OBSERVE
-  c->notify_timer = coap_new_timer(NULL, c); //FIXME
+  c->notify_timer = coap_new_timer(notify_timer_cb, (void *)c);
   coap_timer_set(c->notify_timer, COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND);
 #endif /* WITHOUT_OBSERVE */
 
   /* the retransmit timer must be initialized to some large value */
-  c->retransmit_timer = coap_new_timer(NULL, c); //FIXME
+  c->retransmit_timer = coap_new_timer(retransmit_timer_cb, (void *)c);
   coap_timer_set(c->retransmit_timer, 0xFFFF);
 
   return c;
