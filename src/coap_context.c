@@ -49,12 +49,14 @@ unsigned char initialized = 0;
 coap_context_t the_coap_context;
 #endif
 
+#ifndef WITHOUT_OBSERVE
 static void notify_timer_cb(void *data) {
   debug("NOTIFY!\n");
   coap_context_t *c = data;
   coap_check_notify(c);
   coap_timer_set(c->notify_timer, COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND);
 }
+#endif
 
 // TODO this should probably be in its own file ... coap_retransmit.c?
 static void retransmit_timer_cb(void *data) {
@@ -70,7 +72,9 @@ static void retransmit_timer_cb(void *data) {
     nextpdu = coap_peek_next(c);
   }
 
-  coap_timer_set(c->retransmit_timer, nextpdu ? nextpdu->t - now : 0xFFFF);
+  if (nextpdu) {
+    coap_timer_set(c->retransmit_timer, nextpdu->t - now);
+  }
 }
 
 coap_context_t *

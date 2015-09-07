@@ -78,5 +78,3 @@ coap_ticks_to_rt(coap_tick_t t) {
 #undef FRAC
 #undef SHR_FP
 
-
-

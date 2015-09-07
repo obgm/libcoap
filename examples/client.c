@@ -1233,7 +1233,9 @@ main(int argc, char **argv) {
       }
     }
 
-    result = select(ctx->sockfd + 1, &readfds, 0, 0, &tv);
+    //result = select(ctx->sockfd + 1, &readfds, 0, 0, &tv);
+    result = 0;
+    pause();
 
     if ( result < 0 ) {   /* error */
       perror("select");
