@@ -95,9 +95,9 @@ AC_SUBST(LIBCOAP_API_VERSION)
 # see https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
 # and http://www.gnu.org/software/automake/manual/html_node/Flag-Variables-Ordering.html
 WARNING_CFLAGS="\
--pedantic \
 -Wall \
 -Wextra \
+-Werror \
 -Wformat-security \
 -Winline \
 -Wmissing-declarations \
