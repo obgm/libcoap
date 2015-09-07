@@ -1212,11 +1212,11 @@ main(int argc, char **argv) {
 
     nextpdu = coap_peek_next( ctx );
 
-    coap_ticks(&now);
-    while (nextpdu && nextpdu->t <= now - ctx->sendqueue_basetime) {
-      coap_retransmit( ctx, coap_pop_next( ctx ));
-      nextpdu = coap_peek_next( ctx );
-    }
+//    coap_ticks(&now);
+//    while (nextpdu && nextpdu->t <= now - ctx->sendqueue_basetime) {
+//      coap_retransmit( ctx, coap_pop_next( ctx ));
+//      nextpdu = coap_peek_next( ctx );
+//    }
 
     if (nextpdu && nextpdu->t < min(obs_wait ? obs_wait : max_wait, max_wait) - now) {
       /* set timeout if there is a pdu to send */

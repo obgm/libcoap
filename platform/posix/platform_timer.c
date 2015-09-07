@@ -1,5 +1,6 @@
 #include "coap_timer.h"
 
+#include "debug.h"
 #include "mem.h"
 
 #include <string.h>
@@ -24,24 +25,30 @@ struct coap_timer_t {
 
 static struct sigaction timer_sigaction;
 
-static struct coap_timer_t *running_timers;
+static struct coap_timer_t *running_timers = NULL;
 
 static void update_itimer(void) {
-  coap_tick_t num_ticks = running_timers->duration - running_timers->base_time;
+  coap_tick_t now;
+  coap_ticks(&now);
+  coap_tick_t num_ticks = running_timers->duration - (now - running_timers->base_time);
 
   struct itimerval it = {
     .it_value.tv_sec = num_ticks / COAP_TICKS_PER_SECOND,
     .it_value.tv_usec = num_ticks % COAP_TICKS_PER_SECOND * 1000, // MS -> US
   };
 
+  coap_log(LOG_INFO, ">>>> SETITIMER to %lu\n", num_ticks);
+
   setitimer(ITIMER_REAL, &it, NULL);
 }
 
-static void sigaction_handler(int sig, siginfo_t *si UNUSED, void *uc UNUSED) {
+static void sigaction_handler(int sig UNUSED, siginfo_t *si UNUSED, void *uc UNUSED) {
   // TODO assert(running_timers);
   // remove timer from the running list
   coap_timer_t *timer = running_timers;
   running_timers = running_timers->next_timer;
+
+  coap_log(LOG_INFO, ">>>> SIGACTION\n");
 
   if (running_timers) {
     // set the itimer again
@@ -53,10 +60,11 @@ static void sigaction_handler(int sig, siginfo_t *si UNUSED, void *uc UNUSED) {
     timer->cb(timer->data);
   }
 
-  signal(sig, SIG_IGN);
+  coap_log(LOG_INFO, ">>>> SIGACTION DONE\n");
 }
 
 void coap_timer_init(void) {
+  memset(&timer_sigaction, 0, sizeof(struct sigaction));
   timer_sigaction.sa_sigaction = sigaction_handler;
   sigaction(SIGALRM, &timer_sigaction, NULL);
 }
@@ -76,15 +84,19 @@ void coap_free_timer(coap_timer_t *timer) {
 }
 
 void coap_timer_set(coap_timer_t *timer, coap_tick_t num_ticks) {
+  // TODO handle the case where the timer is set
+  coap_log(LOG_INFO, "SETTING TIMER TO %lu\n", num_ticks);
+  coap_tick_t now;
+  coap_ticks(&now);
   coap_timer_t **cur = &running_timers;
   while (*cur &&
-         (*cur)->duration - (*cur)->base_time < num_ticks) {
+         (*cur)->duration - (now - (*cur)->base_time) < num_ticks) {
     cur = &(*cur)->next_timer;
   }
   *cur = timer;
 
-  // set basetime
   coap_ticks(&timer->base_time);
+  timer->duration = num_ticks;
 
   if (timer == running_timers) {
     update_itimer();

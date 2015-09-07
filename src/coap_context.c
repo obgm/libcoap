@@ -50,6 +50,7 @@ coap_context_t the_coap_context;
 #endif
 
 static void notify_timer_cb(void *data) {
+  debug("NOTIFY!\n");
   coap_context_t *c = data;
   coap_check_notify(c);
   coap_timer_set(c->notify_timer, COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND);
@@ -57,11 +58,13 @@ static void notify_timer_cb(void *data) {
 
 // TODO this should probably be in its own file ... coap_retransmit.c?
 static void retransmit_timer_cb(void *data) {
+  debug("CALLBACK!\n");
   coap_context_t *c = data;
   coap_queue_t *nextpdu = coap_peek_next(c);
-  coap_tick_t now;
 
+  coap_tick_t now;
   coap_ticks(&now);
+
   while (nextpdu && nextpdu->t <= now) {
     coap_retransmit(c, coap_pop_next(c));
     nextpdu = coap_peek_next(c);
@@ -73,6 +76,7 @@ static void retransmit_timer_cb(void *data) {
 coap_context_t *
 coap_new_context(
   const coap_address_t *listen_addr) {
+  coap_timer_init();
 #ifndef WITH_CONTIKI
   coap_context_t *c = coap_malloc_type(COAP_CONTEXT, sizeof( coap_context_t ) );
 #endif /* not WITH_CONTIKI */
@@ -150,9 +154,7 @@ coap_new_context(
   coap_timer_set(c->notify_timer, COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND);
 #endif /* WITHOUT_OBSERVE */
 
-  /* the retransmit timer must be initialized to some large value */
   c->retransmit_timer = coap_new_timer(retransmit_timer_cb, (void *)c);
-  coap_timer_set(c->retransmit_timer, 0xFFFF);
 
   return c;
 
