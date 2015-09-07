@@ -22,10 +22,6 @@
 #include <arpa/inet.h>
 #endif
 
-#ifdef WITH_LWIP
-#include <lwip/timers.h>
-#endif
-
 #include "debug.h"
 #include "mem.h"
 #include "str.h"
@@ -35,6 +31,7 @@
 #include "encode.h"
 #include "block.h"
 #include "net.h"
+#include "coap_timer.h"
 
 #if defined(WITH_POSIX)
 
@@ -127,22 +124,17 @@ coap_new_context(
   c->sockfd = c->endpoint->handle.fd;
 #endif /* WITH_POSIX */
 
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
   c->network_send = coap_network_send;
   c->network_read = coap_network_read;
-#endif /* WITH_POSIX or WITH_CONTIKI */
 
-#ifdef WITH_CONTIKI
-  process_start(&coap_retransmit_process, (char *)c);
-
-  PROCESS_CONTEXT_BEGIN(&coap_retransmit_process);
-#ifndef WITHOUT_OBSERVE
-  etimer_set(&c->notify_timer, COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND);
+# ifndef WITHOUT_OBSERVE
+  c->notify_timer = coap_new_timer(NULL, c); //FIXME
+  coap_timer_set(c->notify_timer, COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND);
 #endif /* WITHOUT_OBSERVE */
+
   /* the retransmit timer must be initialized to some large value */
-  etimer_set(&the_coap_context.retransmit_timer, 0xFFFF);
-  PROCESS_CONTEXT_END(&coap_retransmit_process);
-#endif /* WITH_CONTIKI */
+  c->retransmit_timer = coap_new_timer(NULL, c); //FIXME
+  coap_timer_set(c->retransmit_timer, 0xFFFF);
 
   return c;
 
@@ -159,20 +151,19 @@ coap_free_context(coap_context_t *context) {
 
   coap_delete_all(context->sendqueue);
 
-#ifdef WITH_LWIP
-  context->sendqueue = NULL;
-  coap_retransmittimer_restart(context);
+  coap_free_timer(context->retransmit_timer);
+#ifndef WITHOUT_OBSERVE
+  coap_free_timer(context->notify_timer);
 #endif
 
   coap_delete_all_resources(context);
 
   coap_free_endpoint(context->endpoint);
-#ifndef WITH_CONTIKI
-  coap_free_type(COAP_CONTEXT, context);
-#endif/* not WITH_CONTIKI */
 #ifdef WITH_CONTIKI
   memset(&the_coap_context, 0, sizeof(coap_context_t));
   initialized = 0;
+#else
+  coap_free_type(COAP_CONTEXT, context);
 #endif /* WITH_CONTIKI */
 }
 

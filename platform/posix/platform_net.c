@@ -1,5 +1,7 @@
 #include "net.h"
 
+#include <limits.h>
+
 void coap_transaction_id(const coap_address_t *peer,
                          const coap_pdu_t *pdu,
                          coap_tid_t *id) {

@@ -15,6 +15,7 @@
 
 #include "pdu.h"
 #include "coap_time.h"
+#include "coap_timer.h"
 
 typedef struct coap_queue_t { // TODO create coap_queue.h
   struct coap_queue_t *next;
@@ -60,15 +61,10 @@ typedef struct coap_context_t {
 
 #ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;      /**< uIP connection object */
-  struct etimer retransmit_timer; /**< fires when the next packet must be sent */
-  struct etimer notify_timer;     /**< used to check resources periodically */
 #endif /* WITH_CONTIKI */
 
-#ifdef WITH_LWIP
-  uint8_t timer_configured;       /**< Set to 1 when a retransmission is
-                                   *   scheduled using lwIP timers for this
-                                   *   context, otherwise 0. */
-#endif /* WITH_LWIP */
+  coap_timer_t *retransmit_timer; /**< fires when the next packet must be sent */
+  coap_timer_t *notify_timer;     /**< used to check resources periodically */
 
   /**
    * The last message id that was used is stored in this field. The initial

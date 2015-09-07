@@ -30,10 +30,6 @@
 #include <arpa/inet.h>
 #endif
 
-#ifdef WITH_LWIP
-#include <lwip/timers.h>
-#endif
-
 #include "debug.h"
 #include "mem.h"
 #include "str.h"
@@ -113,15 +109,6 @@
 /** creates a Qx.FRAC_BITS from COAP_DEFAULT_ACK_TIMEOUT */
 #define ACK_TIMEOUT Q(FRAC_BITS, COAP_DEFAULT_ACK_TIMEOUT)
 
-#ifdef WITH_LWIP
-
-#include <lwip/memp.h>
-
-static void coap_retransmittimer_execute(void *arg);
-static void coap_retransmittimer_restart(coap_context_t *ctx);
-
-#endif /* WITH_LWIP */
-
 static inline coap_queue_t *
 coap_malloc_node(void) {
   return (coap_queue_t *)coap_malloc_type(COAP_NODE, sizeof(coap_queue_t));
@@ -131,20 +118,6 @@ static inline void
 coap_free_node(coap_queue_t *node) {
   coap_free_type(COAP_NODE, node);
 }
-
-#ifdef WITH_CONTIKI
-# ifndef DEBUG
-#  define DEBUG DEBUG_PRINT
-# endif /* DEBUG */
-
-#include "mem.h"
-#include "net/ip/uip-debug.h"
-
-void coap_resources_init();
-
-PROCESS(coap_retransmit_process, "message retransmit process");
-
-#endif /* WITH_CONTIKI */
 
 unsigned int
 coap_adjust_basetime(coap_context_t *ctx, coap_tick_t now) {
@@ -519,16 +492,10 @@ coap_send_confirmed(coap_context_t *context,
 
   coap_insert_node(&context->sendqueue, node);
 
-#ifdef WITH_LWIP
-  if (node == context->sendqueue) /* don't bother with timer stuff if there are earlier retransmits */
-    coap_retransmittimer_restart(context);
-#endif
-
-#ifdef WITH_CONTIKI
-  { /* (re-)initialize retransmission timer */
-    process_post(&coap_retransmit_process, PROCESS_EVENT_MSG, context);
+   /* Reschedule the retransmit timer if the head node is the new node */
+  if (node == context->sendqueue) {
+    coap_timer_set(context->retransmit_timer, node->t);
   }
-#endif /* WITH_CONTIKI */
 
   return node->id;
 }
@@ -543,24 +510,22 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     node->retransmit_cnt++;
     node->t = node->timeout << node->retransmit_cnt;
     coap_insert_node(&context->sendqueue, node);
-#ifdef WITH_LWIP
-    if (node == context->sendqueue) /* don't bother with timer stuff if there are earlier retransmits */
-      coap_retransmittimer_restart(context);
-#endif
+
+    if (node == context->sendqueue) {
+      coap_timer_set(context->retransmit_timer, node->t);
+    }
 
     debug("** retransmission #%d of transaction %d\n",
-	  node->retransmit_cnt, ntohs(node->pdu->hdr->id));
+	  node->retransmit_cnt, NTOHS(node->pdu->hdr->id));
 
     node->id = coap_send_impl(context, &node->local_if,
-			      &node->remote, node->pdu);
+                              &node->remote, node->pdu);
+
     return node->id;
   }
 
   /* no more retransmissions, remove node from system */
-
-#ifndef WITH_CONTIKI
-  debug("** removed transaction %d\n", ntohs(node->id));
-#endif
+  debug("** removed transaction %d\n", NTOHS(node->id));
 
 #ifndef WITHOUT_OBSERVE
   /* Check if subscriptions exist that should be canceled after
@@ -591,16 +556,12 @@ coap_read( coap_context_t *ctx ) {
 
   coap_address_init(&src);
 
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
   bytes_read = ctx->network_read(ctx->endpoint, &packet);
-#endif /* WITH_POSIX or WITH_CONTIKI */
 
   if ( bytes_read < 0 ) {
     warn("coap_read: recvfrom");
   } else {
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
     result = coap_handle_message(ctx, packet);
-#endif /* WITH_POSIX or WITH_CONTIKI */
   }
 
   coap_free_packet(packet);
@@ -753,7 +714,7 @@ coap_cancel_all_messages(coap_context_t *context, const coap_address_t *dst,
 		     context->sendqueue->pdu->hdr->token_length)) {
     q = context->sendqueue;
     context->sendqueue = q->next;
-    debug("**** removed transaction %d\n", ntohs(q->pdu->hdr->id));
+    debug("**** removed transaction %d\n", NTOHS(q->pdu->hdr->id));
     coap_delete_node(q);
   }
 
@@ -769,7 +730,7 @@ coap_cancel_all_messages(coap_context_t *context, const coap_address_t *dst,
 	token_match(token, token_length,
 		    q->pdu->hdr->token, q->pdu->hdr->token_length)) {
       p->next = q->next;
-      debug("**** removed transaction %d\n", ntohs(q->pdu->hdr->id));
+      debug("**** removed transaction %d\n", NTOHS(q->pdu->hdr->id));
       coap_delete_node(q);
       q = p->next;
     } else {
@@ -1393,140 +1354,3 @@ coap_can_exit( coap_context_t *context ) {
   return !context || (context->sendqueue == NULL);
 }
 
-#ifdef WITH_CONTIKI
-
-/*---------------------------------------------------------------------------*/
-/* CoAP message retransmission */
-/*---------------------------------------------------------------------------*/
-PROCESS_THREAD(coap_retransmit_process, ev, data)
-{
-  coap_tick_t now;
-  coap_queue_t *nextpdu;
-  coap_context_t *context = NULL;
-
-  PROCESS_BEGIN();
-
-  debug("Started retransmit process\r\n");
-
-  while(1) {
-    PROCESS_YIELD();
-
-    if (ev != PROCESS_EVENT_MSG && ev != PROCESS_EVENT_TIMER) {
-      // Toss out events we're not interested in
-      continue;
-    }
-
-    if (ev == PROCESS_EVENT_MSG) {
-      context = data;
-#ifndef WITHOUT_OBSERVE
-    } else if (etimer_expired(&context->notify_timer)) {
-      coap_check_notify(context);
-      etimer_reset(context->notify_timer);
-#endif /* WITHOUT_OBSERVE */
-    }
-
-    if (ev == PROCESSS_EVENT_TIMER && !etimer_expired(&context->retransmit_timer)) {
-      continue;
-    }
-
-    nextpdu = coap_peek_next(context);
-
-    coap_ticks(&now);
-    while (nextpdu && nextpdu->t <= now) {
-      coap_retransmit(context, coap_pop_next(context));
-      nextpdu = coap_peek_next(context);
-    }
-
-    /* need to set timer to some value even if no nextpdu is available */
-    etimer_set(&context->retransmit_timer,
-	nextpdu ? nextpdu->t - now : 0xFFFF);
-  }
-
-  PROCESS_END();
-}
-/*---------------------------------------------------------------------------*/
-
-#endif /* WITH_CONTIKI */
-
-#ifdef WITH_LWIP
-/* FIXME: retransmits that are not required any more due to incoming packages
- * do *not* get cleared at the moment, the wakeup when the transmission is due
- * is silently accepted. this is mainly due to the fact that the required
- * checks are similar in two places in the code (when receiving ACK and RST)
- * and that they cause more than one patch chunk, as it must be first checked
- * whether the sendqueue item to be dropped is the next one pending, and later
- * the restart function has to be called. nothing insurmountable, but it can
- * also be implemented when things have stabilized, and the performance
- * penality is minimal
- *
- * also, this completely ignores COAP_RESOURCE_CHECK_TIME.
- * */
-
-static void coap_retransmittimer_execute(void *arg)
-{
-	coap_context_t *ctx = (coap_context_t*)arg;
-	coap_tick_t now;
-	coap_tick_t elapsed;
-	coap_queue_t *nextinqueue;
-
-	ctx->timer_configured = 0;
-
-	coap_ticks(&now);
-
-	elapsed = now - ctx->sendqueue_basetime; /* that's positive for sure, and unless we haven't been called for a complete wrapping cycle, did not wrap */
-
-	nextinqueue = coap_peek_next(ctx);
-	while (nextinqueue != NULL)
-	{
-		if (nextinqueue->t > elapsed) {
-			nextinqueue->t -= elapsed;
-			break;
-		} else {
-			elapsed -= nextinqueue->t;
-			coap_retransmit(ctx, coap_pop_next(ctx));
-			nextinqueue = coap_peek_next(ctx);
-		}
-	}
-
-	ctx->sendqueue_basetime = now;
-
-	coap_retransmittimer_restart(ctx);
-}
-
-static void coap_retransmittimer_restart(coap_context_t *ctx)
-{
-	coap_tick_t now, elapsed, delay;
-
-	if (ctx->timer_configured)
-	{
-		printf("clearing\n");
-		sys_untimeout(coap_retransmittimer_execute, (void*)ctx);
-		ctx->timer_configured = 0;
-	}
-	if (ctx->sendqueue != NULL)
-	{
-		coap_ticks(&now);
-		elapsed = now - ctx->sendqueue_basetime;
-		if (ctx->sendqueue->t >= elapsed) {
-			delay = ctx->sendqueue->t - elapsed;
-		} else {
-			/* a strange situation, but not completely impossible.
-			 *
-			 * this happens, for example, right after
-			 * coap_retransmittimer_execute, when a retransmission
-			 * was *just not yet* due, and the clock ticked before
-			 * our coap_ticks was called.
-			 *
-			 * not trying to retransmit anything now, as it might
-			 * cause uncontrollable recursion; let's just try again
-			 * with the next main loop run.
-			 * */
-			delay = 0;
-		}
-
-		printf("scheduling for %d ticks\n", delay);
-		sys_timeout(delay, coap_retransmittimer_execute, (void*)ctx);
-		ctx->timer_configured = 1;
-	}
-}
-#endif

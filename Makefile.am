@@ -65,7 +65,9 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/uri.c \
   platform/@PLATFORM@/platform_address.c \
   platform/@PLATFORM@/platform_io.c \
-  platform/@PLATFORM@/platform_time.c
+  platform/@PLATFORM@/platform_net.c \
+  platform/@PLATFORM@/platform_time.c \
+  platform/@PLATFORM@/platform_timer.c
 
 ## Define the list of public header files and their install location.
 ## The list defined here will be used within the include/Makefile.am
@@ -81,6 +83,7 @@ libcoap_include_HEADERS = \
    include/coap/coap_context.h \
    include/coap/coap_io.h \
    include/coap/coap_time.h \
+   include/coap/coap_timer.h \
    include/coap/debug.h \
    include/coap/encode.h \
    include/coap/hashkey.h \

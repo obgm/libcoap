@@ -95,6 +95,13 @@ coap_free_endpoint(coap_endpoint_t *ep) {
   }
 }
 
+
+ssize_t
+coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
+  // TODO not implemented
+  return -1;
+}
+
 ssize_t
 coap_network_send(struct coap_context_t *context UNUSED_PARAM,
                   const coap_endpoint_t *local_interface,
