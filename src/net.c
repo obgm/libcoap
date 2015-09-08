@@ -506,7 +506,6 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   debug("RETRANSMIT\n");
 
   if (!context || !node)
-    debug("NO NODE\n");
     return COAP_INVALID_TID;
 
   /* re-initialize timeout when maximum number of retransmissions are not reached yet */

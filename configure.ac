@@ -198,6 +198,13 @@ AM_CONDITIONAL([HAVE_DOXYGEN],
 AC_ARG_VAR([PLATFORM],
 	   [Select a platform to build for. E.g. posix, contiki, lwip])
 
+if test -z "$PLATFORM"; then
+      PLATFORM="posix"
+fi
+if test "$PLATFORM" = "posix"; then
+      AC_CONFIG_SUBDIRS([platform/posix/libev])
+fi
+
 # configure options
 # __tests__
 AC_ARG_ENABLE([tests],

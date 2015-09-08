@@ -27,9 +27,13 @@ EXTRA_DIST = \
   tests/test_uri.h \
   tests/test_wellknown.h
 
-AM_CFLAGS = -I @top_builddir@/include/coap/ -I @top_builddir@/platform/@PLATFORM@/ $(WARNING_CFLAGS) -std=c99
+# FIXME Only add for posix
+AM_CFLAGS = -I @top_builddir@/include/coap/ \
+            -I @top_builddir@/platform/@PLATFORM@/
+            $(WARNING_CFLAGS) -std=c99
 
-SUBDIRS = . $(DOC_DIR) tests examples
+# FIXME Only add for posix
+SUBDIRS = . platform/posix/libev $(DOC_DIR) tests examples
 
 ## Define a libtool archive target "libcoap-@LIBCOAP_API_VERSION@.la", with
 ## @LIBCOAP_API_VERSION@ substituted into the generated Makefile at configure
@@ -43,6 +47,9 @@ libcoap_@LIBCOAP_API_VERSION@_la_CFLAGS = \
   -fPIC \
   -fPIE \
   $(AM_CFLAGS)
+
+# FIXME only add for POSIX
+libcoap_@LIBCOAP_API_VERSION@_la_LIBADD = platform/posix/libev/libev.la
 
 ## Define the source file list for the "libcoap.la" target.
 ## Note that it is not necessary to list header files which are already listed
