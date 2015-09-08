@@ -275,7 +275,7 @@ resolve_address(const str *server, struct sockaddr *dst) {
   hints.ai_socktype = SOCK_DGRAM;
   hints.ai_family = AF_UNSPEC;
 
-  error = getaddrinfo(addrstr, "", &hints, &res);
+  error = getaddrinfo(addrstr, NULL, &hints, &res);
 
   if (error != 0) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(error));
