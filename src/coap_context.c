@@ -51,7 +51,6 @@ coap_context_t the_coap_context;
 
 #ifndef WITHOUT_OBSERVE
 static void notify_timer_cb(void *data) {
-  debug("NOTIFY!\n");
   coap_context_t *c = data;
   coap_check_notify(c);
   coap_timer_set(c->notify_timer, COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND);
@@ -60,7 +59,6 @@ static void notify_timer_cb(void *data) {
 
 // TODO this should probably be in its own file ... coap_retransmit.c?
 static void retransmit_timer_cb(void *data) {
-  debug("CALLBACK!\n");
   coap_context_t *c = data;
   coap_queue_t *nextpdu = coap_peek_next(c);
 

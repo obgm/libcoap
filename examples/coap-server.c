@@ -450,7 +450,6 @@ main(int argc, char **argv) {
   struct timeval tv, *timeout;
   int result;
   coap_tick_t now;
-  coap_queue_t *nextpdu;
   char addr_str[NI_MAXHOST] = "::";
   char port_str[NI_MAXSERV] = "5683";
   int opt;
@@ -498,24 +497,11 @@ main(int argc, char **argv) {
     FD_ZERO(&readfds);
     FD_SET( ctx->sockfd, &readfds );
 
-    nextpdu = coap_peek_next( ctx );
-
     coap_ticks(&now);
-    while (nextpdu && nextpdu->t <= now - ctx->sendqueue_basetime) {
-      coap_retransmit( ctx, coap_pop_next( ctx ) );
-      nextpdu = coap_peek_next( ctx );
-    }
 
-    if ( nextpdu && nextpdu->t <= COAP_RESOURCE_CHECK_TIME ) {
-      /* set timeout if there is a pdu to send before our automatic timeout occurs */
-      tv.tv_usec = ((nextpdu->t) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-      tv.tv_sec = (nextpdu->t) / COAP_TICKS_PER_SECOND;
-      timeout = &tv;
-    } else {
-      tv.tv_usec = 0;
-      tv.tv_sec = COAP_RESOURCE_CHECK_TIME;
-      timeout = &tv;
-    }
+    tv.tv_usec = 0;
+    tv.tv_sec = COAP_RESOURCE_CHECK_TIME;
+    timeout = &tv;
     result = select( FD_SETSIZE, &readfds, 0, 0, timeout );
 
     if ( result < 0 ) {         /* error */

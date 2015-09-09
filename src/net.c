@@ -494,7 +494,6 @@ coap_send_confirmed(coap_context_t *context,
 
    /* Reschedule the retransmit timer if the head node is the new node */
   if (node == context->sendqueue) {
-    debug("SCHEDULING RETRANSMIT!\n");
     coap_timer_set(context->retransmit_timer, node->t);
   }
 
@@ -503,7 +502,6 @@ coap_send_confirmed(coap_context_t *context,
 
 coap_tid_t
 coap_retransmit(coap_context_t *context, coap_queue_t *node) {
-  debug("RETRANSMIT\n");
 
   if (!context || !node)
     return COAP_INVALID_TID;
