@@ -430,7 +430,7 @@ join(coap_context_t *ctx, char *group_name){
     }
   }
 
-  result = setsockopt(ctx->sockfd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
+  result = setsockopt(ctx->endpoint->handle.fd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
           (char *)&mreq, sizeof(mreq));
   if (result < 0)
     perror("join: setsockopt");
@@ -495,7 +495,7 @@ main(int argc, char **argv) {
 
   while ( !quit ) {
     FD_ZERO(&readfds);
-    FD_SET( ctx->sockfd, &readfds );
+    FD_SET( ctx->endpoint->handle.fd, &readfds );
 
     coap_ticks(&now);
 
@@ -508,7 +508,7 @@ main(int argc, char **argv) {
       if (errno != EINTR)
         perror("select");
     } else if ( result > 0 ) {  /* read from socket */
-      if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
+      if ( FD_ISSET( ctx->endpoint->handle.fd, &readfds ) ) {
         coap_read( ctx );       /* read received data */
         /* coap_dispatch( ctx );  /\* and dispatch PDUs from receivequeue *\/ */
       }

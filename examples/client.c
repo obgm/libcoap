@@ -1207,15 +1207,15 @@ main(int argc, char **argv) {
 
   while ( !(ready && coap_can_exit(ctx)) ) {
     FD_ZERO(&readfds);
-    FD_SET( ctx->sockfd, &readfds );
+    FD_SET( ctx->endpoint->handle.fd, &readfds );
 
     tv.tv_sec = wait_seconds;
-    result = select(ctx->sockfd + 1, &readfds, 0, 0, &tv);
+    result = select(ctx->endpoint->handle.fd + 1, &readfds, 0, 0, &tv);
 
     if ( result < 0 ) {   /* error */
       perror("select");
     } else if ( result > 0 ) {  /* read from socket */
-      if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
+      if ( FD_ISSET( ctx->endpoint->handle.fd, &readfds ) ) {
         coap_read( ctx );       /* read received data */
         /* coap_dispatch( ctx );  /\* and dispatch PDUs from receivequeue *\/ */
       }

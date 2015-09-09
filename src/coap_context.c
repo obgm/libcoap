@@ -128,10 +128,6 @@ coap_new_context(
     goto onerror;
   }
 
-#ifdef WITH_POSIX
-  c->sockfd = c->endpoint->handle.fd;
-#endif /* WITH_POSIX */
-
   c->network_send = coap_network_send;
   c->network_read = coap_network_read;
 
