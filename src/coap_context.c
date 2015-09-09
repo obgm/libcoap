@@ -33,17 +33,6 @@
 #include "net.h"
 #include "coap_timer.h"
 
-#if defined(WITH_POSIX)
-
-time_t clock_offset;
-
-#elif defined(WITH_CONTIKI)
-
-clock_time_t clock_offset;
-
-#endif /* WITH_CONTIKI */
-
-
 #ifdef WITH_CONTIKI // TODO Should be more abstracted. E.g. CONTEXT_SINGLETON
 unsigned char initialized = 0;
 coap_context_t the_coap_context;
@@ -95,15 +84,10 @@ coap_new_context(
   }
 
   coap_clock_init();
-#ifdef WITH_LWIP
-  prng_init(LWIP_RAND());
-#endif /* WITH_LWIP */
-#ifdef WITH_CONTIKI
-  prng_init((ptrdiff_t)listen_addr ^ clock_offset);
-#endif /* WITH_LWIP */
-#ifdef WITH_POSIX
-  prng_init((unsigned long)listen_addr ^ clock_offset);
-#endif /* WITH_POSIX */
+
+  coap_tick_t now;
+  coap_ticks(&now);
+  prng_init((ptrdiff_t)listen_addr ^ now);
 
 #ifndef WITH_CONTIKI
   if (!c) {

@@ -73,6 +73,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   platform/@PLATFORM@/platform_address.c \
   platform/@PLATFORM@/platform_io.c \
   platform/@PLATFORM@/platform_net.c \
+  platform/@PLATFORM@/platform_prng.c \
   platform/@PLATFORM@/platform_time.c \
   platform/@PLATFORM@/platform_timer.c
 
