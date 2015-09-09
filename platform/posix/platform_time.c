@@ -61,7 +61,7 @@ coap_ticks(coap_tick_t *t) {
    * Both cases should not be possible here.
    */
 
-  tmp = tv.tv_usec * Q(FRAC, (COAP_TICKS_PER_SECOND/1000000.0));
+  tmp = SHR_FP(tv.tv_usec * Q(FRAC, (COAP_TICKS_PER_SECOND/1000000.0)), FRAC);
 #endif /* not _POSIX_TIMERS */
 
   /* Finally, convert temporary FP representation to multiple of
