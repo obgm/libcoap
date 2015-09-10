@@ -29,14 +29,14 @@ COAPOBJS = net.o \
            platform_timer.o \
            platform_prng.o
 
-#CFLAGS += -I$(CONTIKI)/core/ -I$(CONTIKI)/core/sys/ -I$(CONTIKI)/core/net/ip/ -I$(CONTIKI)/core/lib/ $(PLATFORM_CFLAGS)
 CPPFLAGS += $(PLATFORM_CPPFLAGS)
 
 # making an executable out of all of it
 
-OBJS = server.o ${CONTIKIOBJS} ${COAPOBJS}
+OBJS = server.o contiki-$(TARGET).a ${COAPOBJS}
 
 server: ${OBJS}
+	${LD} ${OBJS} -o server
 
 symbols.h:	$(CONTIKI)/tools/empty-symbols.h
 	cp -p $< $@

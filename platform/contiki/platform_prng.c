@@ -1,5 +1,6 @@
 #include "prng.h"
 
+#include "random.h"
 
 void
 prng_init(unsigned long value) {
