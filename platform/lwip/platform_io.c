@@ -7,92 +7,84 @@
 #include "mem.h"
 #include "coap_io.h"
 
-static inline struct coap_endpoint_t *
-coap_malloc_posix_endpoint(void) {
-  return (struct coap_endpoint_t *)coap_malloc(sizeof(struct coap_endpoint_t));
+/*
+void coap_packet_populate_endpoint(coap_packet_t *packet, coap_endpoint_t *target)
+{
+  printf("FIXME no endpoint populated\n");
+}
+*/
+
+void coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target)
+{
+  target->port = packet->srcport;
+  memcpy(&target->addr, ip_current_src_addr(), sizeof(ip_addr_t));
 }
 
-static inline void
-coap_free_posix_endpoint(struct coap_endpoint_t *ep) {
-  coap_free(ep);
+/** Callback from lwIP when a package was received.
+ *
+ * The current implementation deals this to coap_handle_message immedately, but
+ * other mechanisms (as storing the package in a queue and later fetching it
+ * when coap_read is called) can be envisioned.
+ *
+ * It handles everything coap_read does on other implementations.
+ */
+static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, ip_addr_t *addr, u16_t port)
+{
+  coap_endpoint_t *ep = (coap_endpoint_t*)arg;
+
+  LWIP_ASSERT("Can only deal with contiguous PBUFs to read the initial details",
+      p->tot_len == p->len);
+
+  coap_packet_t *packet = coap_malloc_type(COAP_PACKET, sizeof(coap_packet_t));
+  /* this is fatal because due to the short life of the packet, never should there be more than one coap_packet_t required */
+  LWIP_ASSERT("Insufficient coap_packet_t resources.", packet != NULL);
+
+  packet->data = p->payload;
+  packet->data_len = p->tot_len;
+  packet->srcport = port;
+
+  /** FIXME derive the context without changing endopint definition */
+  coap_handle_message(ep->context, packet);
+
+  coap_free_packet(packet);
+  // Free the pbuf that the data comes from
+  if (p) {
+      pbuf_free(p);
+  }
 }
+
 
 coap_endpoint_t *
 coap_new_endpoint(const coap_address_t *addr, int flags) {
-  int sockfd = socket(addr->addr.sa.sa_family, SOCK_DGRAM, 0);
-  int on = 1;
-  struct coap_endpoint_t *ep;
+  coap_endpoint_t *result;
+  err_t err;
 
-  if (sockfd < 0) {
-    coap_log(LOG_WARNING, "coap_new_endpoint: socket");
-    return NULL;
+  LWIP_ASSERT("Flags not supported for LWIP endpoints", flags == COAP_ENDPOINT_NOSEC);
+
+  result = coap_malloc_type(COAP_ENDPOINT, sizeof(coap_endpoint_t));
+  if (!result) return NULL;
+
+  result->pcb = udp_new();
+  if (result->pcb == NULL) goto error;
+
+  udp_recv(result->pcb, coap_recv, (void*)result);
+  err = udp_bind(result->pcb, &addr->addr, addr->port);
+  if (err) {
+    udp_remove(result->pcb);
+    goto error;
   }
 
-  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
-    coap_log(LOG_WARNING, "coap_new_endpoint: setsockopt SO_REUSEADDR");
+  return result;
 
-  on = 1;
-  switch(addr->addr.sa.sa_family) {
-  case AF_INET:
-    if (setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on)) < 0)
-      coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IP_PKTINFO\n");
-    break;
-  case AF_INET6:
-#ifdef IPV6_RECVPKTINFO
-  if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on)) < 0)
-    coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_RECVPKTINFO\n");
-#else /* IPV6_RECVPKTINFO */
-  if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_PKTINFO, &on, sizeof(on)) < 0)
-    coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_PKTINFO\n");
-#endif /* IPV6_RECVPKTINFO */      
-  break;
-  default:
-    coap_log(LOG_ALERT, "coap_new_endpoint: unsupported sa_family\n");
-  }
-
-  if (bind(sockfd, &addr->addr.sa, addr->size) < 0) {
-    coap_log(LOG_WARNING, "coap_new_endpoint: bind");
-    close (sockfd);
-    return NULL;
-  }
-
-  ep = coap_malloc_posix_endpoint();
-  if (!ep) {
-    coap_log(LOG_WARNING, "coap_new_endpoint: malloc");
-    close(sockfd);
-    return NULL;
-  }
-
-  memset(ep, 0, sizeof(struct coap_endpoint_t));
-  ep->handle.fd = sockfd;
-  ep->flags = flags;
-  memcpy(&ep->addr, addr, sizeof(coap_address_t));
-  
-#ifndef NDEBUG
-  if (LOG_DEBUG <= coap_get_log_level()) {
-#ifndef INET6_ADDRSTRLEN
-#define INET6_ADDRSTRLEN 40
-#endif
-    unsigned char addr_str[INET6_ADDRSTRLEN+8];
-
-    if (coap_print_addr(addr, addr_str, INET6_ADDRSTRLEN+8)) {
-      debug("created %sendpoint %s\n", 
-	    ep->flags & COAP_ENDPOINT_DTLS ? "DTLS " : "",
-	    addr_str);
-    }
-  }
-#endif /* NDEBUG */
-
-  return (coap_endpoint_t *)ep;
+error:
+  coap_free_type(COAP_ENDPOINT, result);
+  return NULL;
 }
 
 void
 coap_free_endpoint(coap_endpoint_t *ep) {
-  if(ep) {
-    if (ep->handle.fd >= 0)
-      close(ep->handle.fd);
-    coap_free_posix_endpoint((struct coap_endpoint_t *)ep);
-  }
+  udp_remove(ep->pcb);
+  coap_free_type(COAP_ENDPOINT, ep);
 }
 
 

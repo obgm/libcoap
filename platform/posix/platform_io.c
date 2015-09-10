@@ -218,8 +218,9 @@ coap_malloc_packet(void) {
 }
 
 void
-coap_free_packet(coap_packet_t *packet) {
-  coap_free(packet);
+coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target)
+{
+  memcpy(target, &packet->src, sizeof(coap_address_t));
 }
 
 ssize_t

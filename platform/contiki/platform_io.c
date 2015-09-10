@@ -45,6 +45,12 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
 }
 
 void
+coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target)
+{
+  memcpy(target, &packet->src, sizeof(coap_address_t));
+}
+
+void
 coap_free_endpoint(coap_endpoint_t *ep) {
   if (ep) {
     if (ep->handle.conn) {
@@ -71,14 +77,9 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
   return datalen;
 }
 
-static inline coap_packet_t *
+coap_packet_t *
 coap_malloc_packet(void) {
   return (coap_packet_t *)coap_malloc_type(COAP_PACKET, 0);
-}
-
-void
-coap_free_packet(coap_packet_t *packet) {
-  coap_free_type(COAP_PACKET, packet);
 }
 
 /* FIXME: untested, make this work */

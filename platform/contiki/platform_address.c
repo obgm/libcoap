@@ -2,11 +2,6 @@
 
 #include "address.h"
 
-struct coap_address_t {
-  uip_ipaddr_t addr;
-  unsigned short port;
-};
-
 int coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
   return a->port == b->port && uip_ipaddr_cmp(&a->addr,&b->addr);
 }

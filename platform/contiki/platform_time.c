@@ -2,12 +2,12 @@
 
 void
 coap_clock_init(void) {
-  clock_init();
+  //clock_init();
 }
 
 void
 coap_ticks(coap_tick_t *t) {
-  *t = clock_time();
+  //*t = clock_time();
 }
 
 coap_time_t

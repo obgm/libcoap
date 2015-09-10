@@ -27,11 +27,7 @@ coap_packet_populate_endpoint(coap_packet_t *packet, coap_endpoint_t *target)
   target->ifindex = packet->ifindex;
   target->flags = 0; /* FIXME */
 }
-void
-coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target)
-{
-  memcpy(target, &packet->src, sizeof(coap_address_t));
-}
+
 void
 coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length)
 {
@@ -44,4 +40,10 @@ coap_is_local_if(const coap_address_t *local, const coap_address_t *dst) {
   return coap_address_isany(local) || coap_address_equals(dst, local) ||
     coap_is_mcast(dst);
 }
+
+void coap_free_packet(coap_packet_t *packet)
+{
+  coap_free_type(COAP_PACKET, packet);
+}
+
 

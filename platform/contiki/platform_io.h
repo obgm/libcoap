@@ -1,3 +1,6 @@
+#ifndef _PLATFORM_IO_H_
+#define _PLATFORM_IO_H_
+
 #include "uip.h"
 
 /*
@@ -15,3 +18,4 @@ struct coap_packet_t {
   unsigned char payload[];      /**< payload */
 };
 
+#endif /* _PLATFORM_IO_H_ */

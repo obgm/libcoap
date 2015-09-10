@@ -11,9 +11,9 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <errno.h>
-#ifdef HAVE_LIMITS_H
+//#ifdef HAVE_LIMITS_H FIXME
 #include <limits.h>
-#endif
+//#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #elif HAVE_SYS_UNISTD_H

@@ -98,7 +98,6 @@ coap_new_context(
   }
 #endif /* not WITH_CONTIKI */
 #ifdef WITH_CONTIKI
-  coap_resources_init();
   coap_memory_init();
 
   c = &the_coap_context;

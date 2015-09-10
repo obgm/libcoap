@@ -31,7 +31,8 @@
  */
 
 #include "coap_config.h"
-#include "net/ip/uip-debug.h"
+#include "contiki-lib.h"
+#include "contiki-net.h"
 
 #include <string.h>
 
