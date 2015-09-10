@@ -27,9 +27,13 @@ EXTRA_DIST = \
   tests/test_uri.h \
   tests/test_wellknown.h
 
-AM_CFLAGS = -I @top_builddir@/include/coap/ $(WARNING_CFLAGS) -std=c99
+# FIXME Only add for posix
+AM_CFLAGS = -I @top_builddir@/include/coap/ \
+            -I @top_builddir@/platform/@PLATFORM@/
+            $(WARNING_CFLAGS) -std=c99
 
-SUBDIRS = . $(DOC_DIR) tests examples
+# FIXME Only add for posix
+SUBDIRS = . platform/posix/libev $(DOC_DIR) tests examples
 
 ## Define a libtool archive target "libcoap-@LIBCOAP_API_VERSION@.la", with
 ## @LIBCOAP_API_VERSION@ substituted into the generated Makefile at configure
@@ -44,15 +48,17 @@ libcoap_@LIBCOAP_API_VERSION@_la_CFLAGS = \
   -fPIE \
   $(AM_CFLAGS)
 
+# FIXME only add for POSIX
+libcoap_@LIBCOAP_API_VERSION@_la_LIBADD = platform/posix/libev/libev.la
+
 ## Define the source file list for the "libcoap.la" target.
 ## Note that it is not necessary to list header files which are already listed
 ## elsewhere in a _HEADERS variable assignment.
 libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
-  src/address.c \
   src/async.c \
   src/block.c \
   src/coap_io.c \
-  src/coap_time.c \
+  src/coap_context.c \
   src/debug.c \
   src/encode.c \
   src/hashkey.c \
@@ -63,7 +69,13 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/resource.c \
   src/str.c \
   src/subscribe.c \
-  src/uri.c
+  src/uri.c \
+  platform/@PLATFORM@/platform_address.c \
+  platform/@PLATFORM@/platform_io.c \
+  platform/@PLATFORM@/platform_net.c \
+  platform/@PLATFORM@/platform_prng.c \
+  platform/@PLATFORM@/platform_time.c \
+  platform/@PLATFORM@/platform_timer.c
 
 ## Define the list of public header files and their install location.
 ## The list defined here will be used within the include/Makefile.am
@@ -76,8 +88,10 @@ libcoap_include_HEADERS = \
    include/coap/bits.h \
    include/coap/block.h \
    include/coap/coap.h \
+   include/coap/coap_context.h \
    include/coap/coap_io.h \
    include/coap/coap_time.h \
+   include/coap/coap_timer.h \
    include/coap/debug.h \
    include/coap/encode.h \
    include/coap/hashkey.h \

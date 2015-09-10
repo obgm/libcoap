@@ -14,53 +14,6 @@
 #include "resource.h"
 #include "subscribe.h"
 
-#ifdef WITH_LWIP
-/* mem.h is only needed for the string free calls for
- * COAP_ATTR_FLAGS_RELEASE_NAME / COAP_ATTR_FLAGS_RELEASE_VALUE /
- * COAP_RESOURCE_FLAGS_RELEASE_URI. not sure what those lines should actually
- * do on lwip. */
-
-#include <lwip/memp.h>
-
-#define COAP_MALLOC_TYPE(Type) \
-  ((coap_##Type##_t *)memp_malloc(MEMP_COAP_##Type))
-#define COAP_FREE_TYPE(Type, Object) memp_free(MEMP_COAP_##Type, Object)
-
-#endif
-
-#ifdef WITH_POSIX
-
-#define COAP_MALLOC_TYPE(Type) \
-  ((coap_##Type##_t *)coap_malloc(sizeof(coap_##Type##_t)))
-#define COAP_FREE_TYPE(Type, Object) coap_free(Object)
-
-#endif /* WITH_POSIX */
-#ifdef WITH_CONTIKI
-#include "memb.h"
-
-#define COAP_MALLOC_TYPE(Type) \
-  ((coap_##Type##_t *)memb_alloc(&(Type##_storage)))
-#define COAP_FREE_TYPE(Type, Object) memb_free(&(Type##_storage), (Object))
-
-MEMB(subscription_storage, coap_subscription_t, COAP_MAX_SUBSCRIBERS);
-
-void
-coap_resources_init() {
-  memb_init(&subscription_storage);
-}
-
-static inline coap_subscription_t *
-coap_malloc_subscription() {
-  return memb_alloc(&subscription_storage);
-}
-
-static inline void
-coap_free_subscription(coap_subscription_t *subscription) {
-  memb_free(&subscription_storage, subscription);
-}
-
-#endif /* WITH_CONTIKI */
-
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
 /* Helper functions for conditional output of character sequences into
@@ -287,12 +240,7 @@ coap_resource_t *
 coap_resource_init(const unsigned char *uri, size_t len, int flags) {
   coap_resource_t *r;
 
-#ifdef WITH_LWIP
-  r = (coap_resource_t *)memp_malloc(MEMP_COAP_RESOURCE);
-#endif
-#ifndef WITH_LWIP
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
-#endif
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
 
@@ -319,12 +267,7 @@ coap_add_attr(coap_resource_t *resource,
   if (!resource || !name)
     return NULL;
 
-#ifdef WITH_LWIP
-  attr = (coap_attr_t *)memp_malloc(MEMP_COAP_RESOURCEATTR);
-#endif
-#ifndef WITH_LWIP
   attr = (coap_attr_t *)coap_malloc_type(COAP_RESOURCEATTR, sizeof(coap_attr_t));
-#endif
 
   if (attr) {
     attr->name.length = nlen;
@@ -370,12 +313,7 @@ coap_delete_attr(coap_attr_t *attr) {
   if (attr->flags & COAP_ATTR_FLAGS_RELEASE_VALUE)
     coap_free(attr->value.s);
 
-#ifdef WITH_LWIP
-  memp_free(MEMP_COAP_RESOURCEATTR, attr);
-#endif
-#ifndef WITH_LWIP
   coap_free_type(COAP_RESOURCEATTR, attr);
-#endif
 }
 
 void
@@ -413,14 +351,9 @@ coap_free_resource(coap_resource_t *resource) {
     coap_free(resource->uri.s);
 
   /* free all elements from resource->subscribers */
-  LL_FOREACH_SAFE(resource->subscribers, obs, otmp) COAP_FREE_TYPE(subscription, obs);
+  LL_FOREACH_SAFE(resource->subscribers, obs, otmp) coap_free_type(COAP_SUBSCRIPTION, obs);
 
-#ifdef WITH_LWIP
-  memp_free(MEMP_COAP_RESOURCE, resource);
-#endif
-#ifndef WITH_LWIP
   coap_free_type(COAP_RESOURCE, resource);
-#endif /* WITH_CONTIKI */
 }
  
 int
@@ -554,7 +487,7 @@ coap_add_observer(coap_resource_t *resource,
 
   /* s points to a different subscription, so we have to create
    * another one. */
-  s = COAP_MALLOC_TYPE(subscription);
+  s = coap_malloc_type(COAP_SUBSCRIPTION, sizeof(coap_subscription_t));
 
   if (!s)
     return NULL;
@@ -597,7 +530,7 @@ coap_delete_observer(coap_resource_t *resource, const coap_address_t *observer,
   if (resource->subscribers && s) {
     LL_DELETE(resource->subscribers, s);
 
-    COAP_FREE_TYPE(subscription,s);
+    coap_free_type(COAP_SUBSCRIPTION, s);
   }
 
   return s != NULL;
@@ -734,7 +667,7 @@ coap_remove_failed_observers(coap_context_t *context,
 	coap_cancel_all_messages(context, &obs->subscriber, 
 				 obs->token, obs->token_length);
 
-	COAP_FREE_TYPE(subscription, obs);
+        coap_free_type(COAP_SUBSCRIPTION, obs);
       }
     }
     break;			/* break loop if observer was found */

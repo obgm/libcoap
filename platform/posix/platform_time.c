@@ -1,17 +1,8 @@
-/* coap_time.c -- Clock Handling
- *
- * Copyright (C) 2015 Olaf Bergmann <bergmann@tzi.org>
- *
- * This file is part of the CoAP library libcoap. Please see
- * README for terms of use.
- */
+#include "coap_config.h"
 
-#ifdef WITH_POSIX
-#include <time.h>
 #include <sys/time.h>
 #include <unistd.h>  /* _POSIX_TIMERS */
 
-#include "coap_config.h"
 #include "coap_time.h"
 
 static coap_time_t coap_clock_offset = 0;
@@ -70,7 +61,7 @@ coap_ticks(coap_tick_t *t) {
    * Both cases should not be possible here.
    */
 
-  tmp = tv.tv_usec * Q(FRAC, (COAP_TICKS_PER_SECOND/1000000.0));
+  tmp = SHR_FP(tv.tv_usec * Q(FRAC, (COAP_TICKS_PER_SECOND/1000000.0)), FRAC);
 #endif /* not _POSIX_TIMERS */
 
   /* Finally, convert temporary FP representation to multiple of
@@ -86,13 +77,4 @@ coap_ticks_to_rt(coap_tick_t t) {
 #undef Q
 #undef FRAC
 #undef SHR_FP
-
-#else /* WITH_POSIX */
-
-/* make compilers happy that do not like empty modules */
-static inline void dummy()
-{
-}
-
-#endif /* not WITH_POSIX */
 

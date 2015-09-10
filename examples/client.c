@@ -1030,7 +1030,6 @@ main(int argc, char **argv) {
   struct timeval tv;
   int result;
   coap_tick_t now;
-  coap_queue_t *nextpdu;
   coap_pdu_t  *pdu;
   static str server;
   unsigned short port = COAP_DEFAULT_PORT;
@@ -1208,37 +1207,15 @@ main(int argc, char **argv) {
 
   while ( !(ready && coap_can_exit(ctx)) ) {
     FD_ZERO(&readfds);
-    FD_SET( ctx->sockfd, &readfds );
+    FD_SET( ctx->endpoint->handle.fd, &readfds );
 
-    nextpdu = coap_peek_next( ctx );
-
-    coap_ticks(&now);
-    while (nextpdu && nextpdu->t <= now - ctx->sendqueue_basetime) {
-      coap_retransmit( ctx, coap_pop_next( ctx ));
-      nextpdu = coap_peek_next( ctx );
-    }
-
-    if (nextpdu && nextpdu->t < min(obs_wait ? obs_wait : max_wait, max_wait) - now) {
-      /* set timeout if there is a pdu to send */
-      tv.tv_usec = ((nextpdu->t) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-      tv.tv_sec = (nextpdu->t) / COAP_TICKS_PER_SECOND;
-    } else {
-      /* check if obs_wait fires before max_wait */
-      if (obs_wait && obs_wait < max_wait) {
-        tv.tv_usec = ((obs_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-        tv.tv_sec = (obs_wait - now) / COAP_TICKS_PER_SECOND;
-      } else {
-        tv.tv_usec = ((max_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-        tv.tv_sec = (max_wait - now) / COAP_TICKS_PER_SECOND;
-      }
-    }
-
-    result = select(ctx->sockfd + 1, &readfds, 0, 0, &tv);
+    tv.tv_sec = wait_seconds;
+    result = select(ctx->endpoint->handle.fd + 1, &readfds, 0, 0, &tv);
 
     if ( result < 0 ) {   /* error */
       perror("select");
     } else if ( result > 0 ) {  /* read from socket */
-      if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
+      if ( FD_ISSET( ctx->endpoint->handle.fd, &readfds ) ) {
         coap_read( ctx );       /* read received data */
         /* coap_dispatch( ctx );  /\* and dispatch PDUs from receivequeue *\/ */
       }

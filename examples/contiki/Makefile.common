@@ -4,20 +4,39 @@ top_srcdir ?= ../..
 
 CFLAGS += -std=gnu99
 
+CFLAGS += -I$(top_srcdir)/platform/contiki/
 CFLAGS += -I$(top_srcdir)/include/coap -DCOAP_RESOURCES_NOHASH
 
-vpath %.c $(top_srcdir)/src
+vpath %.c $(top_srcdir)/src  $(top_srcdir)/platform/contiki
 
-COAPOBJS = net.o debug.o option.o resource.o hashkey.o pdu.o encode.o subscribe.o coap_io.o block.o uri.o mem.o
+COAPOBJS = net.o \
+           debug.o \
+           option.o \
+           resource.o \
+           hashkey.o \
+           pdu.o \
+           encode.o \
+           subscribe.o \
+           coap_context.o \
+           coap_io.o \
+           block.o \
+           uri.o \
+           mem.o \
+           platform_address.o \
+           platform_time.o \
+           platform_io.o \
+           platform_net.o \
+           platform_timer.o \
+           platform_prng.o
 
-CFLAGS += -I$(CONTIKI)/core/ -I$(CONTIKI)/core/sys/ -I$(CONTIKI)/core/net/ip/ -I$(CONTIKI)/core/lib/ $(PLATFORM_CFLAGS)
 CPPFLAGS += $(PLATFORM_CPPFLAGS)
 
 # making an executable out of all of it
 
-OBJS = server.o ${CONTIKIOBJS} ${COAPOBJS}
+OBJS = server.o contiki-$(TARGET).a ${COAPOBJS}
 
 server: ${OBJS}
+	${LD} ${OBJS} -o server
 
 symbols.h:	$(CONTIKI)/tools/empty-symbols.h
 	cp -p $< $@

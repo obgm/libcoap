@@ -95,9 +95,9 @@ AC_SUBST(LIBCOAP_API_VERSION)
 # see https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
 # and http://www.gnu.org/software/automake/manual/html_node/Flag-Variables-Ordering.html
 WARNING_CFLAGS="\
--pedantic \
 -Wall \
 -Wextra \
+-Werror \
 -Wformat-security \
 -Winline \
 -Wmissing-declarations \
@@ -109,6 +109,7 @@ WARNING_CFLAGS="\
 -Wswitch-default \
 -Wswitch-enum \
 -Wunused \
+-Wno-error=unused-parameter \
 -Wunused-result \
 "
 
@@ -191,6 +192,18 @@ fi
 AM_CONDITIONAL([HAVE_DOXYGEN],
 	[test -n "$DOXYGEN"])AM_COND_IF([HAVE_DOXYGEN],
 	[AC_CONFIG_FILES([doc/Doxyfile])])
+
+# configure options
+# __platform__
+AC_ARG_VAR([PLATFORM],
+	   [Select a platform to build for. E.g. posix, contiki, lwip])
+
+if test -z "$PLATFORM"; then
+      PLATFORM="posix"
+fi
+if test "$PLATFORM" = "posix"; then
+      AC_CONFIG_SUBDIRS([platform/posix/libev])
+fi
 
 # configure options
 # __tests__

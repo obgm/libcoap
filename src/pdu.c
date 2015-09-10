@@ -3,7 +3,7 @@
  * Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 #include "coap_config.h"
@@ -25,18 +25,14 @@
 #include "encode.h"
 #include "mem.h"
 
+#include "platform_utils.h"
+
 void
 coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   assert(pdu);
 
-#ifdef WITH_LWIP
-  /* the pdu itself is not wiped as opposed to the other implementations,
-   * because we have to rely on the pbuf to be set there. */
-  pdu->hdr = pdu->pbuf->payload;
-#else
   pdu->max_delta = 0;
   pdu->data = NULL;
-#endif
   memset(pdu->hdr, 0, size);
   pdu->max_size = size;
   pdu->hdr->version = COAP_DEFAULT_VERSION;
@@ -45,47 +41,16 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   pdu->length = sizeof(coap_hdr_t);
 }
 
-#ifdef WITH_LWIP
 coap_pdu_t *
-coap_pdu_from_pbuf(struct pbuf *pbuf)
-{
-  if (pbuf == NULL) return NULL;
-
-  LWIP_ASSERT("Can only deal with contiguous PBUFs", pbuf->tot_len == pbuf->len);
-  LWIP_ASSERT("coap_read needs to receive an exclusive copy of the incoming pbuf", pbuf->ref == 1);
-
-  coap_pdu_t *result = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
-  if (!result) {
-	  pbuf_free(pbuf);
-	  return NULL;
-  }
-
-  memset(result, 0, sizeof(coap_pdu_t));
-
-  result->max_size = pbuf->tot_len;
-  result->length = pbuf->tot_len;
-  result->hdr = pbuf->payload;
-  result->pbuf = pbuf;
-
-  return result;
-}
-#endif
-
-coap_pdu_t *
-coap_pdu_init(unsigned char type, unsigned char code, 
+coap_pdu_init(unsigned char type, unsigned char code,
 	      unsigned short id, size_t size) {
   coap_pdu_t *pdu;
-#ifdef WITH_LWIP
-    struct pbuf *p;
-#endif
-
   assert(size <= COAP_MAX_PDU_SIZE);
   /* Size must be large enough to fit the header. */
   if (size < sizeof(coap_hdr_t) || size > COAP_MAX_PDU_SIZE)
     return NULL;
 
   /* size must be large enough for hdr */
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
   pdu = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
   if (!pdu) return NULL;
   pdu->hdr = coap_malloc_type(COAP_PDU_BUF, size);
@@ -93,37 +58,21 @@ coap_pdu_init(unsigned char type, unsigned char code,
     coap_free_type(COAP_PDU, pdu);
     pdu = NULL;
   }
-#endif /* WITH_POSIX or WITH_CONTIKI */
-#ifdef WITH_LWIP
-  pdu = (coap_pdu_t*)coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
-  if (!pdu) return NULL;
-  p = pbuf_alloc(PBUF_TRANSPORT, size, PBUF_RAM);
-  if (p == NULL) {
-    coap_free_type(COAP_PDU, pdu);
-    pdu = NULL;
-  }
-#endif
+
   if (pdu) {
-#ifdef WITH_LWIP
-    pdu->pbuf = p;
-#endif
     coap_pdu_clear(pdu, size);
     pdu->hdr->id = id;
     pdu->hdr->type = type;
     pdu->hdr->code = code;
-  } 
+  }
   return pdu;
 }
 
 coap_pdu_t *
 coap_new_pdu(void) {
   coap_pdu_t *pdu;
-  
-#ifndef WITH_CONTIKI
-  pdu = coap_pdu_init(0, 0, ntohs(COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
-#else /* WITH_CONTIKI */
-  pdu = coap_pdu_init(0, 0, uip_ntohs(COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
-#endif /* WITH_CONTIKI */
+
+  pdu = coap_pdu_init(0, 0, NTOHS(COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
 
 #ifndef NDEBUG
   if (!pdu)
@@ -134,19 +83,12 @@ coap_new_pdu(void) {
 
 void
 coap_delete_pdu(coap_pdu_t *pdu) {
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
   if (pdu != NULL) {
     if (pdu->hdr != NULL) {
       coap_free_type(COAP_PDU_BUF, pdu->hdr);
     }
     coap_free_type(COAP_PDU, pdu);
   }
-#endif
-#ifdef WITH_LWIP
-  if (pdu != NULL) /* accepting double free as the other implementation accept that too */
-    pbuf_free(pdu->pbuf);
-  coap_free_type(COAP_PDU, pdu);
-#endif
 }
 
 int
@@ -171,7 +113,7 @@ size_t
 coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const unsigned char *data) {
   size_t optsize;
   coap_opt_t *opt;
-  
+
   assert(pdu);
   pdu->data = NULL;
 
@@ -183,7 +125,7 @@ coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const un
   opt = (unsigned char *)pdu->hdr + pdu->length;
 
   /* encode option and check length */
-  optsize = coap_opt_encode(opt, pdu->max_size - pdu->length, 
+  optsize = coap_opt_encode(opt, pdu->max_size - pdu->length,
 			    type - pdu->max_delta, data, len);
 
   if (!optsize) {
@@ -276,7 +218,7 @@ typedef struct {
   char *phrase;
 } error_desc_t;
 
-/* if you change anything here, make sure, that the longest string does not 
+/* if you change anything here, make sure, that the longest string does not
  * exceed COAP_ERROR_PHRASE_LENGTH. */
 error_desc_t coap_error[] = {
   { COAP_RESPONSE_CODE(65),  "2.01 Created" },
@@ -314,7 +256,7 @@ coap_response_phrase(unsigned char code) {
 #endif
 
 /**
- * Advances *optp to next option if still in PDU. This function 
+ * Advances *optp to next option if still in PDU. This function
  * returns the number of bytes opt has been advanced or @c 0
  * on error.
  */
@@ -323,7 +265,7 @@ next_option_safe(coap_opt_t **optp, size_t *length) {
   coap_option_t option;
   size_t optsize;
 
-  assert(optp); assert(*optp); 
+  assert(optp); assert(*optp);
   assert(length);
 
   optsize = coap_opt_parse(*optp, *length, &option);
@@ -353,16 +295,10 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
     debug("discarded invalid PDU\n");
   }
 
-#ifdef WITH_LWIP
-  LWIP_ASSERT("coap_pdu_parse with unexpected addresses", data == pdu->hdr);
-  LWIP_ASSERT("coap_pdu_parse with unexpected length", length == pdu->length);
-#else
-
   pdu->hdr->version = data[0] >> 6;
   pdu->hdr->type = (data[0] >> 4) & 0x03;
   pdu->hdr->token_length = data[0] & 0x0f;
   pdu->hdr->code = data[1];
-#endif
   pdu->data = NULL;
 
   /* sanity checks */
@@ -379,7 +315,6 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
     goto discard;
   }
 
-#ifndef WITH_LWIP
   /* Copy message id in network byte order, so we can easily write the
    * response back to the network. */
   memcpy(&pdu->hdr->id, data + 2, 2);
@@ -387,10 +322,9 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
   /* append data (including the Token) to pdu structure */
   memcpy(pdu->hdr + 1, data + sizeof(coap_hdr_t), length - sizeof(coap_hdr_t));
   pdu->length = length;
- 
+
   /* Finally calculate beginning of data block and thereby check integrity
    * of the PDU structure. */
-#endif
 
   /* skip header + token */
   length -= (pdu->hdr->token_length + sizeof(coap_hdr_t));
@@ -413,7 +347,7 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
       goto discard;
     }
 
-    debug("set data to %p (pdu ends at %p)\n", (unsigned char *)opt, 
+    debug("set data to %p (pdu ends at %p)\n", (unsigned char *)opt,
 	  (unsigned char *)pdu->hdr + pdu->length);
     pdu->data = (unsigned char *)opt;
   }
