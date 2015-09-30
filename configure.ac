@@ -187,6 +187,7 @@ if test "x$build_documentation" = "xyes"; then
 		fi
 	fi
 fi
+AM_CONDITIONAL(BUILD_DOCUMENTATION, [test "x$build_documentation" = "xyes"])
 
 AM_CONDITIONAL([HAVE_DOXYGEN],
 	[test -n "$DOXYGEN"])AM_COND_IF([HAVE_DOXYGEN],
@@ -235,16 +236,16 @@ AC_ARG_ENABLE([examples],
               [build_examples="$enableval"],
               [build_examples="yes"])
 
-if test "x$build_examples" = "xyes"; then
+if test "x$build_examples" = "xyes" -a "x$build_documentation" = "xyes"; then
 	AC_ARG_VAR([A2X], [a2x command])
 	AC_PATH_PROG([A2X], [a2x])
 	if test "x$A2X" = "x"; then
 		AC_MSG_WARN([==> You want to build the examples binaries, that is also including the respective manpages but a2x was not found!])
 		AC_MSG_ERROR([==> Install the package that contains the a2x binary or disable the build of the examples using --disable-examples.])
 	fi
-	BUILD_EXAMPLES="YES"
+	build_examples="yes"
 fi
-AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$build_examples" != "x"])
+AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$build_examples" = "xyes"])
 
 # end configure options
 #######################
@@ -378,5 +379,11 @@ else
 fi
 if test "x$build_examples" = "xyes"; then
 	AC_MSG_RESULT([      build examples          : "yes"])
-	AC_MSG_RESULT([             -->  a2x around  : "yes" ($A2X)])
+	if test "x$A2X" != "x"; then
+		AC_MSG_RESULT([             -->  use a2x     : "yes" ($A2X)])
+	else
+		AC_MSG_RESULT([             -->  use a2x     : "no"])
+	fi
+else
+	AC_MSG_RESULT([      build examples          : "no"])
 fi
