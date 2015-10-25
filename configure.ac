@@ -27,6 +27,8 @@ AM_PROG_CC_C_O
 AM_PROG_AR
 AC_CONFIG_MACRO_DIR([m4])
 
+AC_C_BIGENDIAN
+
 # enable the automatically build of shared and static libraries, the unit
 # tests needs the static library
 LT_INIT([shared static])
