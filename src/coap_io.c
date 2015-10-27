@@ -165,8 +165,14 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
   memset(ep, 0, sizeof(struct coap_endpoint_t));
   ep->handle.fd = sockfd;
   ep->flags = flags;
-  memcpy(&ep->addr, addr, sizeof(coap_address_t));
-  
+
+  ep->addr.size = addr->size;
+  if (getsockname(sockfd, &ep->addr.addr.sa, &ep->addr.size) < 0) {
+    coap_log(LOG_WARNING, "coap_new_endpoint: cannot determine local address");
+    close (sockfd);
+    return NULL;
+  }
+
 #ifndef NDEBUG
   if (LOG_DEBUG <= coap_get_log_level()) {
 #ifndef INET6_ADDRSTRLEN
@@ -174,7 +180,7 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
 #endif
     unsigned char addr_str[INET6_ADDRSTRLEN+8];
 
-    if (coap_print_addr(addr, addr_str, INET6_ADDRSTRLEN+8)) {
+    if (coap_print_addr(&ep->addr, addr_str, INET6_ADDRSTRLEN+8)) {
       debug("created %sendpoint %s\n", 
 	    ep->flags & COAP_ENDPOINT_DTLS ? "DTLS " : "",
 	    addr_str);
