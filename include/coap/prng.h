@@ -20,7 +20,7 @@
  * @{
  */
 
-#ifndef WITH_CONTIKI
+#if defined(WITH_POSIX) || (defined(WITH_LWIP) && !defined(LWIP_RAND))
 #include <stdlib.h>
 
 /**
@@ -34,7 +34,9 @@ coap_prng_impl(unsigned char *buf, size_t len) {
     *buf++ = rand() & 0xFF;
   return 1;
 }
-#else /* WITH_CONTIKI */
+#endif /* WITH_POSIX */
+
+#ifdef WITH_CONTIKI
 #include <string.h>
 
 /**
@@ -59,6 +61,26 @@ contiki_prng_impl(unsigned char *buf, size_t len) {
 #define prng(Buf,Length) contiki_prng_impl((Buf), (Length))
 #define prng_init(Value) random_init((unsigned short)(Value))
 #endif /* WITH_CONTIKI */
+
+#if defined(WITH_LWIP) && defined(LWIP_RAND)
+static inline int
+lwip_prng_impl(unsigned char *buf, size_t len) {
+  u32_t v = LWIP_RAND();
+  while (len > sizeof(v)) {
+    memcpy(buf, &v, sizeof(v));
+    len -= sizeof(v);
+    buf += sizeof(v);
+    v = LWIP_RAND();
+  }
+
+  memcpy(buf, &v, len);
+  return 1;
+}
+
+#define prng(Buf,Length) lwip_prng_impl((Buf), (Length))
+#define prng_init(Value)
+
+#endif /* WITH_LWIP */
 
 #ifndef prng
 /**
