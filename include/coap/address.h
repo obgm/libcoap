@@ -27,18 +27,11 @@ typedef struct coap_address_t {
   ip_addr_t addr;
 } coap_address_t;
 
-/* FIXME oversimplification: just assuming it's an ipv4 address instead of
- * looking up the appropraite lwip function */
+#define _coap_address_equals_impl(A, B)   (!!ip_addr_cmp(&(A)->addr,&(B)->addr))
 
-#define _coap_address_equals_impl(A, B)   \
-        ((A)->addr.addr == (B)->addr.addr \
-        && A->port == B->port)
+#define _coap_address_isany_impl(A)  ip_addr_isany(&(A)->addr)
 
-/** @todo implementation of _coap_address_isany_impl() for Contiki */
-#define _coap_address_isany_impl(A)  0
-
-/* FIXME sure there is something in lwip */
-#define _coap_is_mcast_impl(Address) 0
+#define _coap_is_mcast_impl(Address) ip_addr_ismulticast(&(Address)->addr)
 #endif /* WITH_LWIP */
 
 #ifdef WITH_CONTIKI
