@@ -34,6 +34,11 @@
 #include "encode.h"
 #include "net.h"
 
+#ifdef WITH_LWIP
+# define fprintf(fd, ...) LWIP_PLATFORM_DIAG((__VA_ARGS__))
+# define fflush(...)
+#endif
+
 #ifdef WITH_CONTIKI
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT
