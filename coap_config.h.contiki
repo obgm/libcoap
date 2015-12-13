@@ -106,6 +106,7 @@ typedef void FILE;
 #undef COAP_MAX_PDU_SIZE
 #define COAP_MAX_PDU_SIZE 100
 
+#undef COAP_MAX_BLOCK_SZX
 #define COAP_MAX_BLOCK_SZX 2
 
 #define HAVE_LIMITS_H 1
