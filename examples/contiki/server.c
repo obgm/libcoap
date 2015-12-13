@@ -62,7 +62,7 @@ init_coap_server(coap_context_t **ctx) {
 
   uip_ip6addr(&listen_addr.addr, 0xaaaa, 0, 0, 0, 0, 0, 0, NODE_ADDR);
 #ifndef CONTIKI_TARGET_MINIMAL_NET
-  uip_ds6_prefix_add(&listen_addr.addr, 64, 0);
+  uip_ds6_prefix_add(&listen_addr.addr, 64, 0, 0, 0, 0);
 #endif /* not CONTIKI_TARGET_MINIMAL_NET */
   
   uip_ds6_addr_add(&listen_addr.addr, 0, ADDR_MANUAL);
