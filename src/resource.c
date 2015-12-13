@@ -7,12 +7,13 @@
  */
 
 #include "coap_config.h"
-#include "utlist.h"
+#include "coap.h"
+#include "debug.h"
 #include "mem.h"
 #include "net.h"
-#include "debug.h"
 #include "resource.h"
 #include "subscribe.h"
+#include "utlist.h"
 
 #ifdef WITH_LWIP
 /* mem.h is only needed for the string free calls for

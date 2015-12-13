@@ -8,6 +8,7 @@
  */
 
 #include "coap_config.h"
+#include "coap.h"
 
 #if defined(HAVE_ASSERT_H) && !defined(assert)
 # include <assert.h>

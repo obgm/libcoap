@@ -14,12 +14,11 @@
 #ifndef WITHOUT_ASYNC
 
 #include "coap_config.h"
-
-#include "utlist.h"
-
-#include "mem.h"
-#include "debug.h"
+#include "coap.h"
 #include "async.h"
+#include "debug.h"
+#include "mem.h"
+#include "utlist.h"
 
 coap_async_state_t *
 coap_register_async(coap_context_t *context, coap_address_t *peer,
