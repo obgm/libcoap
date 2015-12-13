@@ -81,6 +81,7 @@ libcoap_include_HEADERS = \
    include/coap/debug.h \
    include/coap/encode.h \
    include/coap/hashkey.h \
+   include/coap/libcoap.h \
    include/coap/mem.h \
    include/coap/net.h \
    include/coap/option.h \
