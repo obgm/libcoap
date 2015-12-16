@@ -14,7 +14,7 @@ m4_define([libcoap_micro_version], [2])
 m4_define([libcoap_version],[libcoap_major_version.libcoap_minor_version.libcoap_micro_version])
 
 AC_INIT([libcoap], [libcoap_version], [libcoap-developers@lists.sourceforge.net], [libcoap], [http://libcoap.sourceforge.net/])
-AC_PREREQ([2.59])
+AC_PREREQ([2.64])
 AM_INIT_AUTOMAKE([1.10 -Wall no-define no-dist-gzip dist-bzip2])
 
 # Generate one configuration header file for building the library itself with
@@ -24,8 +24,9 @@ AC_CONFIG_HEADERS([coap_config.h])
 
 AC_PROG_CC
 AM_PROG_CC_C_O
-AM_PROG_AR
 AC_CONFIG_MACRO_DIR([m4])
+m4_pattern_allow([AM_PROG_AR])
+AM_PROG_AR
 
 # enable the automatically build of shared and static libraries, the unit
 # tests needs the static library
