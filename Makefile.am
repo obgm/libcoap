@@ -90,7 +90,6 @@ libcoap_include_HEADERS = \
    include/coap/resource.h \
    include/coap/str.h \
    include/coap/subscribe.h \
-   include/coap/t_list.h \
    include/coap/uri.h \
    include/coap/uthash.h \
    include/coap/utlist.h

@@ -1,7 +1,7 @@
 /*
  * coap.h -- main header file for CoAP stack of libcoap
  *
- * Copyright (C) 2010-2012,2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2012,2015-2016 Olaf Bergmann <bergmann@tzi.org>
  *               2015 Carsten Schoenert <c.schoenert@t-online.de>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
@@ -48,7 +48,6 @@ extern "C" {
 #include "resource.h"
 #include "str.h"
 #include "subscribe.h"
-#include "t_list.h"
 #include "uri.h"
 #include "uthash.h"
 #include "utlist.h"
