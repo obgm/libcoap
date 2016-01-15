@@ -15,14 +15,14 @@ and
 
   * GPL v2+ (The GNU General Public License 2.0 or later)
 
-The used VCS for libcoap is Git, the main repository is placed under the
-umbrella of Sourceforge. You will find the starting project page here:
+The used VCS for libcoap is Git, the main repository is living on GitHub.
+You can clone (or fork directly on GitHub) on the repository site:
 
-  https://sourceforge.net/projects/libcoap/
+  https://github.com/obgm/libcoap
 
 Please refer also to the libcoap website for additional information
 
-  http://libcoap.net/
+  https://libcoap.net/
 
 The build environment is grounded on the classical autotools, the GNU GCC and
 the LLVM C-compiler (CLang) are supported. The Windows systems are not
@@ -55,9 +55,9 @@ The libcoap project is using just two main branches, the 'master' branch is
 holding the point releases, all the development process is going on in the
 'develop' branch.
 To start any contributing you first have to clone the git tree from the main
-repository on Sourceforge:
+repository on GitHub:
 
-  git clone git://libcoap.git.sourceforge.net/gitroot/libcoap/libcoap
+  git clone https://github.com/obgm/libcoap.git
 
 4. Working on the source
 ~~~~~~~~~~~~~~~~~~~~~~~~
