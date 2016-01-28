@@ -1173,6 +1173,15 @@ coap_wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   query_filter = coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter);
   wkc_len = get_wkc_len(context, query_filter);
 
+  /* The value of some resources is undefined and get_wkc_len will return 0.*/
+  if (wkc_len == 0){
+    debug("coap_wellknown_response: undefined resource\n");
+    /* set error code 4.00 Bad Request*/
+    resp->hdr->code = COAP_RESPONSE_CODE(400);
+    resp->length = sizeof(coap_hdr_t) + resp->hdr->token_length;
+    return resp;
+  }
+
   /* check whether the request contains the Block2 option */
   if (coap_get_block(request, COAP_OPTION_BLOCK2, &block)) {
     debug("create block\n");
