@@ -545,7 +545,7 @@ init_resources(coap_context_t *ctx) {
   coap_register_handler(r, COAP_REQUEST_POST, hnd_post_rd);
 
   coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"40", 2, 0);
-  coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"\"core-rd\"", 9, 0);
+  coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"\"core.rd\"", 9, 0);
   coap_add_attr(r, (unsigned char *)"ins", 2, (unsigned char *)"\"default\"", 9, 0);
 
   coap_add_resource(ctx, r);
