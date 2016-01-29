@@ -1514,7 +1514,7 @@ handle_response(coap_context_t *context,
 			   rcvd->pdu->hdr->token, 
 			   rcvd->pdu->hdr->token_length);
 
-  /* Call application-specific reponse handler when available. */
+  /* Call application-specific response handler when available. */
   if (context->response_handler) {
     context->response_handler(context, &rcvd->local_if,
 			      &rcvd->remote, sent ? sent->pdu : NULL, 
@@ -1601,11 +1601,11 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
 	  coap_new_error_response(rcvd->pdu, COAP_RESPONSE_CODE(402), opt_filter);
 
 	if (!response)
-	  warn("coap_dispatch: cannot create error reponse\n");
+	  warn("coap_dispatch: cannot create error response\n");
 	else {
 	  if (coap_send(context, &rcvd->local_if, &rcvd->remote, response) 
 	      == COAP_INVALID_TID) {
-	    warn("coap_dispatch: error sending reponse\n");
+	    warn("coap_dispatch: error sending response\n");
 	  }
           coap_delete_pdu(response);
 	}	 

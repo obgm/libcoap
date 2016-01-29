@@ -274,7 +274,7 @@ coap_tid_t coap_send(coap_context_t *context,
  * @param local_interface The local network interface where the outbound packet
  *                        is sent.
  * @param dst             The remote peer that sent the request.
- * @param code            The reponse code.
+ * @param code            The response code.
  * @param opts            A filter that specifies the options to copy from the
  *                        @p request.
  *
