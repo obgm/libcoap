@@ -11,15 +11,19 @@ config() {
 
 case "${PLATFORM}" in
     contiki) config "--disable-tests --disable-documentation --disable-examples" && \
-               (cd examples/contiki && make V=1 contiki all)
+               cd examples/contiki && make V=1 contiki all
              ;;
     lwip)    config "--disable-tests --disable-documentation --disable-examples" && \
-               (cd examples/lwip && make lwip lwip-contrib all)
+               cd examples/lwip && make lwip lwip-contrib all
              ;;
     posix|*) config "$WITH_TESTS --enable-documentation --enable-examples" && make
              ;;
 esac
 
-if test -n "$WITH_TESTS" ; then
+err=$?
+if test $err = 0 -a -n "$WITH_TESTS" ; then
     tests/testdriver
+    err=$?
 fi
+
+exit $err
