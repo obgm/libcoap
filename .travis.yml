@@ -4,13 +4,13 @@ compiler:
   - clang
 
 env:
-  - PLATFORM=posix TESTS=yes
+  - PLATFORM=posix
   - PLATFORM=lwip
   - PLATFORM=contiki
 
 addons:
   apt_packages:
-    - libcunit-dev
+    - libcunit1-dev
     - doxygen
     - libxml2-utils
     - xsltproc
