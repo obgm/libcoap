@@ -1,14 +1,16 @@
 top_srcdir = ../..
 
+WITH_BRANCH=-b STABLE-1_4_1
+
 all: server
 
 lwip:
-	git clone git://git.savannah.nongnu.org/lwip.git -b DEVEL-1_4_1
+	git clone --depth 1 git://git.savannah.nongnu.org/lwip.git $(WITH_BRANCH)
 	curl -L 'https://savannah.nongnu.org/bugs/download.php?file_id=28185' -o lwip/memp.patch
 	cd lwip && patch -p1 < memp.patch
 
 lwip-contrib:
-	git clone git://git.savannah.nongnu.org/lwip/lwip-contrib.git -b STABLE-1_4_1-RC1
+	git clone --depth 1 git://git.savannah.nongnu.org/lwip/lwip-contrib.git $(WITH_BRANCH)
 
 # lwip and coap opts (include early to shadow the lwip-contrib/ports/unix/proj/minimal/ file and any ../../config.h)
 CFLAGS += -DWITH_LWIP -iquote.
