@@ -201,7 +201,7 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
 # if WITH_CONTIKI
   unsigned char *p = buf;
   uint8_t i;
-#  if WITH_UIP6
+#  if NETSTACK_CONF_WITH_IPV6
   const unsigned char hex[] = "0123456789ABCDEF";
 
   if (len < 41)
