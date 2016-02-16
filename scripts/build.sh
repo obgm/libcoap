@@ -11,7 +11,7 @@ config() {
 
 case "${PLATFORM}" in
     contiki) config "--disable-tests --disable-documentation --disable-examples" && \
-               make -C examples/contiki V=1 contiki all
+               make -C examples/contiki
              ;;
     lwip)    config "--disable-tests --disable-documentation --disable-examples" && \
                make -C examples/lwip lwip lwip-contrib all
