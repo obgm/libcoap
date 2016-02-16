@@ -4,7 +4,7 @@ compiler:
   - clang
 
 env:
-  - PLATFORM=posix
+  - PLATFORM=posix TESTS=yes
   - PLATFORM=lwip
   - PLATFORM=contiki
 
