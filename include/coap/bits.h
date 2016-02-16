@@ -16,7 +16,6 @@
 #define _COAP_BITS_H_
 
 #include <stdint.h>
-#include <sys/types.h>
 
 /**
  * Sets the bit @p bit in bit-vector @p vec. This function returns @c 1 if bit
