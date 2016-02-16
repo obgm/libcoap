@@ -11,7 +11,7 @@ lwip-contrib:
 	git clone git://git.savannah.nongnu.org/lwip/lwip-contrib.git -b STABLE-1_4_1-RC1
 
 # lwip and coap opts (include early to shadow the lwip-contrib/ports/unix/proj/minimal/ file and any ../../config.h)
-CFLAGS += -I. -I-
+CFLAGS += -DWITH_LWIP -iquote.
 
 # lwip library
 
