@@ -13,7 +13,7 @@ m4_define([libcoap_micro_version], [2])
 
 m4_define([libcoap_version],[libcoap_major_version.libcoap_minor_version.libcoap_micro_version])
 
-AC_INIT([libcoap], [libcoap_version], [libcoap-developers@lists.sourceforge.net], [libcoap], [https://libcoap.net/])
+AC_INIT([libcoap], [libcoap_version], [https://github.com/obgm/libcoap], [libcoap], [https://libcoap.net/])
 AC_PREREQ([2.64])
 AM_INIT_AUTOMAKE([1.10 -Wall no-define no-dist-gzip dist-bzip2])
 
@@ -323,7 +323,7 @@ case $host in
 
 	*)
 	AC_MSG_WARN([==> Currently unsupported operating system ${host}!])
-	AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
+	AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to '@PACKAGE_BUGREPORT@'.])
 esac
 
 # Exporting the PREDEFINED_CFLAGS definition

@@ -158,8 +158,8 @@ EXIT STATUS
 BUGS
 -----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+@PACKAGE_URL@
 
 AUTHORS
 -------
-The libcoap project <libcoap-developers@lists.sourceforge.net>
+The libcoap project @PACKAGE_URL@
