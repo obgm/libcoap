@@ -26,9 +26,9 @@ CFLAGS += -std=gnu99
 
 CFLAGS += -I$(top_srcdir)/include/coap
 
-vpath %.c $(top_srcdir)/src
+vpath %.c $(top_srcdir)/src $(top_srcdir)/src/platform/lwip
 
-COAPOBJS = net.o debug.o option.o resource.o hashkey.o pdu.o encode.o subscribe.o coap_io_lwip.o block.o uri.o
+COAPOBJS = net.o debug.o option.o resource.o hashkey.o pdu.o encode.o subscribe.o coap_io_lwip.o block.o uri.o prng.o
 
 CFLAGS += -g3 -Wall -pedantic -Dopenbsd -DIPv4 -O0 -fpack-struct
 
