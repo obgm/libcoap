@@ -1,6 +1,6 @@
 # Makefile.am for libcoap
 #
-# Copyright (C) 2010-2015 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010-2016 Olaf Bergmann <bergmann@tzi.org>
 #           (C)      2015 Carsten Schoenert <c.schoenert@t-online.de>
 #
 # This file is part of the CoAP C library libcoap. Please see README and
@@ -51,7 +51,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/address.c \
   src/async.c \
   src/block.c \
-  src/coap_io.c \
+  src/platform/@PLATFORM@/coap_io.c \
   src/coap_time.c \
   src/debug.c \
   src/encode.c \
