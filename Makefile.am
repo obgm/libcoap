@@ -63,7 +63,8 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/resource.c \
   src/str.c \
   src/subscribe.c \
-  src/uri.c
+  src/uri.c \
+  src/platform/@PLATFORM@/prng.c
 
 ## Define the list of public header files and their install location.
 ## The list defined here will be used within the include/Makefile.am

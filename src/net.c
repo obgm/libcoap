@@ -349,14 +349,11 @@ coap_new_context(
 
   coap_clock_init();
 #ifdef WITH_LWIP
-  prng_init(LWIP_RAND());
+  coap_prng_init(LWIP_RAND());
 #endif /* WITH_LWIP */
-#ifdef WITH_CONTIKI
-  prng_init((ptrdiff_t)listen_addr ^ clock_offset);
-#endif /* WITH_LWIP */
-#ifdef WITH_POSIX
-  prng_init((unsigned long)listen_addr ^ clock_offset);
-#endif /* WITH_POSIX */
+#if defined (WITH_CONTIKI) || defined (WITH_POSIX)
+  coap_prng_init((void *)((unsigned long)listen_addr ^ clock_offset));
+#endif /* WITH_CONTIKI || WITH_POSIX */
 
 #ifndef WITH_CONTIKI
   if (!c) {
@@ -377,7 +374,7 @@ coap_new_context(
   memset(c, 0, sizeof( coap_context_t ) );
 
   /* initialize message id */
-  prng((unsigned char *)&c->message_id, sizeof(unsigned short));
+  coap_prng((unsigned char *)&c->message_id, sizeof(unsigned short));
 
   c->endpoint = coap_new_endpoint(listen_addr, COAP_ENDPOINT_NOSEC);
 #ifdef WITH_LWIP
@@ -720,7 +717,7 @@ coap_send_confirmed(coap_context_t *context,
     return COAP_INVALID_TID;
   }
   
-  prng((unsigned char *)&r,sizeof(r));
+  coap_prng((unsigned char *)&r,sizeof(r));
 
   /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
   node->timeout = calc_timeout(r);

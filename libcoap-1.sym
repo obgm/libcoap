@@ -84,6 +84,8 @@ coap_pop_next
 coap_print_addr
 coap_print_link
 coap_print_wellknown
+coap_prng
+coap_prng_init
 coap_read
 coap_register_async
 coap_remove_async

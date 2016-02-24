@@ -296,6 +296,7 @@ case $host in
 	*-linux* | *-uclinux*)
 	AC_MSG_RESULT([Linux])
 	ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+        PLATFORM=posix
 
 	# Not yet needed but if some code definitions have to depend on the platform.
 	#AC_DEFINE(OS_LINUX, 1, [Linux backend])
@@ -308,11 +309,13 @@ case $host in
 	# set __EXTENSION__ to shut up feature test macros that restrict -std=c99
 	# to only C99 (and nothing newer)
 	ADDITIONAL_CFLAGS="-D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=600 -D__EXTENSIONS__=1 -DWITH_POSIX"
+        PLATFORM=posix
 	;;
 
 	*-darwin*)
 	AC_MSG_RESULT([Darwin])
 	ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+        PLATFORM=posix
 
 	AC_DEFINE(__APPLE_USE_RFC_3542, 1, [Define this to 1 for ancillary data on MacOS])
 
@@ -325,6 +328,9 @@ case $host in
 	AC_MSG_WARN([==> Currently unsupported operating system ${host}!])
 	AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
 esac
+
+# Export platform definition
+AC_SUBST(PLATFORM)
 
 # Exporting the PREDEFINED_CFLAGS definition
 PREDEFINED_CFLAGS=`echo $ADDITIONAL_CFLAGS | sed -e 's/-D//g'`
