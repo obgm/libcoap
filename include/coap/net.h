@@ -90,10 +90,6 @@ typedef struct coap_context_t {
   coap_queue_t *sendqueue;
   coap_endpoint_t *endpoint;      /**< the endpoint used for listening  */
 
-#ifdef WITH_POSIX
-  int sockfd;                     /**< send/receive socket */
-#endif /* WITH_POSIX */
-
 #ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;      /**< uIP connection object */
   struct etimer retransmit_timer; /**< fires when the next packet must be sent */

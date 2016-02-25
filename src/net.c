@@ -1,6 +1,6 @@
 /* net.c -- CoAP network interface
  *
- * Copyright (C) 2010--2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -36,6 +36,7 @@
 #include <lwip/timers.h>
 #endif
 
+#include "utlist.h"
 #include "debug.h"
 #include "mem.h"
 #include "str.h"
@@ -329,6 +330,21 @@ is_wkc(coap_key_t k) {
 }
 #endif
 
+void
+coap_detach_endpoint(coap_endpoint_t *endpoint) {
+  if (endpoint->context != NULL) {
+    LL_DELETE(endpoint->context->endpoint, endpoint);
+    endpoint->context = NULL;
+  }
+}
+
+void
+coap_attach_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint) {
+  coap_detach_endpoint(endpoint);
+  endpoint->context = ctx;
+  LL_PREPEND(ctx->endpoint, endpoint);
+}
+
 coap_context_t *
 coap_new_context(
   const coap_address_t *listen_addr) {
@@ -376,17 +392,10 @@ coap_new_context(
   /* initialize message id */
   coap_prng((unsigned char *)&c->message_id, sizeof(unsigned short));
 
-  c->endpoint = coap_new_endpoint(listen_addr, COAP_ENDPOINT_NOSEC);
-#ifdef WITH_LWIP
-  c->endpoint->context = c;
-#endif
+  coap_attach_endpoint(c, coap_new_endpoint(listen_addr, COAP_ENDPOINT_NOSEC));
   if (c->endpoint == NULL) {
     goto onerror;
   }
-
-#ifdef WITH_POSIX
-  c->sockfd = c->endpoint->handle.fd;
-#endif /* WITH_POSIX */
 
 #if defined(WITH_POSIX) || defined(WITH_CONTIKI)
   c->network_send = coap_network_send;
