@@ -37,6 +37,7 @@ struct coap_context_t;
  * tuple (handle, addr) must uniquely identify this endpoint.
  */
 typedef struct coap_endpoint_t {
+  struct coap_endpoint_t *next;
 #if defined(WITH_POSIX) || defined(WITH_CONTIKI)
   union {
     int fd;       /**< on POSIX systems */
@@ -46,10 +47,8 @@ typedef struct coap_endpoint_t {
 
 #ifdef WITH_LWIP
   struct udp_pcb *pcb;
- /**< @FIXME --chrysn
-  * this was added in a hurry, not sure it confirms to the overall model */
-  struct coap_context_t *context;
 #endif /* WITH_LWIP */
+  struct coap_context_t *context;
 
   coap_address_t addr; /**< local interface address */
   int ifindex;
