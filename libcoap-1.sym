@@ -93,6 +93,8 @@ coap_remove_from_queue
 coap_resource_init
 coap_response_phrase
 coap_retransmit
+coap_run
+coap_run_once
 coap_send
 coap_send_ack
 coap_send_confirmed
