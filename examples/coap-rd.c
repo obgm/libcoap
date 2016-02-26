@@ -31,7 +31,6 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <errno.h>
-#include <signal.h>
 
 #include "coap_config.h"
 #include "utlist.h"
@@ -81,15 +80,6 @@ rd_delete(rd_t *rd) {
     coap_free(rd->data.s);
     coap_free(rd);
   }
-}
-
-/* temporary storage for dynamic resource representations */
-static int quit = 0;
-
-/* SIGINT handler: set quit to 1 for graceful termination */
-static void
-handle_sigint(int signum UNUSED_PARAM) {
-  quit = 1;
 }
 
 static void
@@ -657,11 +647,15 @@ join(coap_context_t *ctx, char *group_name) {
     }
   }
 
-  result = setsockopt(ctx->sockfd,
-                      IPPROTO_IPV6, IPV6_JOIN_GROUP,
-                      (char *)&mreq, sizeof(mreq) );
-  if ( result < 0 )
-    perror("join: setsockopt");
+  if (ctx->endpoint) {
+    result = setsockopt(ctx->endpoint->handle.fd,
+                        IPPROTO_IPV6, IPV6_JOIN_GROUP,
+                        (char *)&mreq, sizeof(mreq) );
+    if ( result < 0 )
+      perror("join: setsockopt");
+  } else {
+    result = -1;
+  }
 
  finish:
   freeaddrinfo(resmulti);
@@ -673,11 +667,6 @@ join(coap_context_t *ctx, char *group_name) {
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
-  fd_set readfds;
-  struct timeval tv, *timeout;
-  int result;
-  coap_tick_t now;
-  coap_queue_t *nextpdu;
   char addr_str[NI_MAXHOST] = "::";
   char port_str[NI_MAXSERV] = "5683";
   char *group = NULL;
@@ -717,47 +706,9 @@ main(int argc, char **argv) {
 
   init_resources(ctx);
 
-  signal(SIGINT, handle_sigint);
+  coap_run(ctx);
 
-  while ( !quit ) {
-    FD_ZERO(&readfds);
-    FD_SET( ctx->sockfd, &readfds );
-
-    nextpdu = coap_peek_next( ctx );
-
-    coap_ticks(&now);
-    while ( nextpdu && nextpdu->t <= now ) {
-      coap_retransmit( ctx, coap_pop_next( ctx ) );
-      nextpdu = coap_peek_next( ctx );
-    }
-
-    if ( nextpdu && nextpdu->t <= now + COAP_RESOURCE_CHECK_TIME ) {
-      /* set timeout if there is a pdu to send before our automatic
-         timeout occurs */
-      tv.tv_usec = ((nextpdu->t - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-      tv.tv_sec = (nextpdu->t - now) / COAP_TICKS_PER_SECOND;
-      timeout = &tv;
-    } else {
-      tv.tv_usec = 0;
-      tv.tv_sec = COAP_RESOURCE_CHECK_TIME;
-      timeout = &tv;
-    }
-    result = select( FD_SETSIZE, &readfds, 0, 0, timeout );
-
-    if ( result < 0 ) {     /* error */
-      if (errno != EINTR)
-        perror("select");
-      } else if ( result > 0 ) {  /* read from socket */
-        if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
-          coap_read( ctx ); /* read received data */
-          /* coap_dispatch( ctx );  /\* and dispatch PDUs from receivequeue *\/ */
-        }
-      } else {            /* timeout */
-        /* coap_check_resource_list( ctx ); */
-    }
-  }
-
-  coap_free_context( ctx );
+  coap_free_context(ctx);
 
   return 0;
 }

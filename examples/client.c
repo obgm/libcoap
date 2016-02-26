@@ -60,6 +60,7 @@ coap_tick_t max_wait;                   /* global timeout (changed by set_timeou
 
 unsigned int obs_seconds = 30;          /* default observe time */
 coap_tick_t obs_wait = 0;               /* timeout for current subscription */
+int observe = 0;                        /* set to 1 if resource is being observed */
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
@@ -71,8 +72,7 @@ coap_tick_t obs_wait = 0;               /* timeout for current subscription */
 
 static inline void
 set_timeout(coap_tick_t *timer, const unsigned int seconds) {
-  coap_ticks(timer);
-  *timer += seconds * COAP_TICKS_PER_SECOND;
+  *timer = seconds * 1000;
 }
 
 static int
@@ -357,6 +357,7 @@ message_handler(struct coap_context_t *ctx,
     if (sent && coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter)) {
       debug("observation relationship established, set timeout to %d\n", obs_seconds);
       set_timeout(&obs_wait, obs_seconds);
+      observe = 1;
     }
 
     /* Got some data, check if block option is set. Behavior is undefined if
@@ -1026,11 +1027,7 @@ main(int argc, char **argv) {
   coap_address_t dst;
   static char addr[INET6_ADDRSTRLEN];
   void *addrptr = NULL;
-  fd_set readfds;
-  struct timeval tv;
   int result;
-  coap_tick_t now;
-  coap_queue_t *nextpdu;
   coap_pdu_t  *pdu;
   static str server;
   unsigned short port = COAP_DEFAULT_PORT;
@@ -1203,58 +1200,33 @@ main(int argc, char **argv) {
   if (pdu->hdr->type != COAP_MESSAGE_CON || tid == COAP_INVALID_TID)
     coap_delete_pdu(pdu);
 
+
   set_timeout(&max_wait, wait_seconds);
   debug("timeout is set to %d seconds\n", wait_seconds);
 
-  while ( !(ready && coap_can_exit(ctx)) ) {
-    FD_ZERO(&readfds);
-    FD_SET( ctx->sockfd, &readfds );
-
-    nextpdu = coap_peek_next( ctx );
-
-    coap_ticks(&now);
-    while (nextpdu && nextpdu->t <= now - ctx->sendqueue_basetime) {
-      coap_retransmit( ctx, coap_pop_next( ctx ));
-      nextpdu = coap_peek_next( ctx );
-    }
-
-    if (nextpdu && nextpdu->t < min(obs_wait ? obs_wait : max_wait, max_wait) - now) {
-      /* set timeout if there is a pdu to send */
-      tv.tv_usec = ((nextpdu->t) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-      tv.tv_sec = (nextpdu->t) / COAP_TICKS_PER_SECOND;
-    } else {
-      /* check if obs_wait fires before max_wait */
-      if (obs_wait && obs_wait < max_wait) {
-        tv.tv_usec = ((obs_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-        tv.tv_sec = (obs_wait - now) / COAP_TICKS_PER_SECOND;
-      } else {
-        tv.tv_usec = ((max_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-        tv.tv_sec = (max_wait - now) / COAP_TICKS_PER_SECOND;
-      }
-    }
-
-    result = select(ctx->sockfd + 1, &readfds, 0, 0, &tv);
-
-    if ( result < 0 ) {   /* error */
-      perror("select");
-    } else if ( result > 0 ) {  /* read from socket */
-      if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
-        coap_read( ctx );       /* read received data */
-        /* coap_dispatch( ctx );  /\* and dispatch PDUs from receivequeue *\/ */
-      }
-    } else { /* timeout */
-      coap_ticks(&now);
-      if (max_wait <= now) {
-        info("timeout\n");
-        break;
-      }
-      if (obs_wait && obs_wait <= now) {
+  coap_tick_t start, now;
+  coap_ticks(&start);
+  while (!(ready && coap_can_exit(ctx))) {
+    unsigned int wait_ms = observe ? min(obs_wait, max_wait) : max_wait;
+    result = coap_run_once(ctx, wait_ms);
+    if (result >= 0) {
+      if ((unsigned int)result <= obs_wait) {
+        obs_wait -= result;
+      } else if (observe) {
         debug("clear observation relationship\n");
         clear_obs(ctx, ctx->endpoint, &dst); /* FIXME: handle error case COAP_TID_INVALID */
 
         /* make sure that the obs timer does not fire again */
         obs_wait = 0;
-        obs_seconds = 0;
+        observe = 0;
+      }
+
+      coap_ticks(&now);
+      if (start + wait_seconds * COAP_TICKS_PER_SECOND < now) {
+        ready = 1;
+      }
+      if ((unsigned int)result < max_wait) {
+        max_wait -= result;
       }
     }
   }

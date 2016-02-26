@@ -29,8 +29,6 @@
 #include "resource.h"
 #include "coap.h"
 
-#define COAP_RESOURCE_CHECK_TIME 2
-
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -246,12 +244,14 @@ hnd_get_async(coap_context_t *ctx,
 
 static void
 check_async(coap_context_t *ctx,
-            const coap_endpoint_t *local_if,
-            coap_tick_t now) {
+            const coap_endpoint_t *local_if) {
+  coap_tick_t now;
   coap_pdu_t *response;
   coap_async_state_t *tmp;
 
   size_t size = sizeof(coap_hdr_t) + 13;
+
+  coap_ticks(&now);
 
   if (!async || now < async->created + (unsigned long)async->appdata)
     return;
@@ -430,10 +430,14 @@ join(coap_context_t *ctx, char *group_name){
     }
   }
 
-  result = setsockopt(ctx->sockfd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
-          (char *)&mreq, sizeof(mreq));
-  if (result < 0)
-    perror("join: setsockopt");
+  if (ctx->endpoint) {
+    result = setsockopt(ctx->endpoint->handle.fd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
+                        (char *)&mreq, sizeof(mreq));
+    if (result < 0)
+      perror("join: setsockopt");
+  } else {
+    result = -1;
+  }
 
  finish:
   freeaddrinfo(resmulti);
@@ -446,15 +450,12 @@ int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
   char *group = NULL;
-  fd_set readfds;
-  struct timeval tv, *timeout;
   int result;
-  coap_tick_t now;
-  coap_queue_t *nextpdu;
   char addr_str[NI_MAXHOST] = "::";
   char port_str[NI_MAXSERV] = "5683";
   int opt;
   coap_log_t log_level = LOG_WARNING;
+  unsigned int wait_ms;
 
   clock_offset = time(NULL);
 
@@ -494,51 +495,27 @@ main(int argc, char **argv) {
 
   signal(SIGINT, handle_sigint);
 
-  while ( !quit ) {
-    FD_ZERO(&readfds);
-    FD_SET( ctx->sockfd, &readfds );
+  wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+  while (!quit) {
+    result = coap_run_once(ctx, wait_ms);
 
-    nextpdu = coap_peek_next( ctx );
-
-    coap_ticks(&now);
-    while (nextpdu && nextpdu->t <= now - ctx->sendqueue_basetime) {
-      coap_retransmit( ctx, coap_pop_next( ctx ) );
-      nextpdu = coap_peek_next( ctx );
-    }
-
-    if ( nextpdu && nextpdu->t <= COAP_RESOURCE_CHECK_TIME ) {
-      /* set timeout if there is a pdu to send before our automatic timeout occurs */
-      tv.tv_usec = ((nextpdu->t) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-      tv.tv_sec = (nextpdu->t) / COAP_TICKS_PER_SECOND;
-      timeout = &tv;
+    if (result < 0) {
+      break;
+    } else if ((unsigned int)result < wait_ms) {
+      wait_ms -= result;
     } else {
-      tv.tv_usec = 0;
-      tv.tv_sec = COAP_RESOURCE_CHECK_TIME;
-      timeout = &tv;
-    }
-    result = select( FD_SETSIZE, &readfds, 0, 0, timeout );
-
-    if ( result < 0 ) {         /* error */
-      if (errno != EINTR)
-        perror("select");
-    } else if ( result > 0 ) {  /* read from socket */
-      if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
-        coap_read( ctx );       /* read received data */
-        /* coap_dispatch( ctx );  /\* and dispatch PDUs from receivequeue *\/ */
-      }
-    } else {      /* timeout */
       if (time_resource) {
         time_resource->dirty = 1;
       }
+      wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
     }
 
 #ifndef WITHOUT_ASYNC
     /* check if we have to send asynchronous responses */
-    check_async(ctx, ctx->endpoint, now);
+    check_async(ctx, ctx->endpoint);
 #endif /* WITHOUT_ASYNC */
 
 #ifndef WITHOUT_OBSERVE
-    /* check if we have to send observe notifications */
     coap_check_notify(ctx);
 #endif /* WITHOUT_OBSERVE */
   }
