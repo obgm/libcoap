@@ -1,6 +1,6 @@
 # configure.ac for the libcoap package
 #
-# Copyright (C) 2010-2015 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010-2016 Olaf Bergmann <bergmann@tzi.org>
 #           (C)      2015 Carsten Schoenert <c.schoenert@t-online.de>
 #
 # Please run 'autogen.sh' to let autoconf produce a configure script.
@@ -269,7 +269,7 @@ fi
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
                   stdlib.h string.h strings.h sys/socket.h sys/time.h \
-                  time.h unistd.h sys/unistd.h syslog.h])
+                  time.h unistd.h sys/unistd.h syslog.h sys/select.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
