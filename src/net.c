@@ -1444,7 +1444,10 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 	    if (subscription) {
 	      coap_touch_observer(context, &node->remote, &token);
 	    }
-	  }
+	  } else {
+            coap_log(LOG_DEBUG, "removed observer\n");
+            coap_delete_observer(resource,  &node->remote, &token);
+          }
 	}
       }
 
@@ -1452,11 +1455,10 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 	node->pdu, &token, response);
 
       if (!no_response(node->pdu, response)) {
-      if (observe && ((COAP_RESPONSE_CLASS(response->hdr->code) > 2)
-		      || ((observe_action & COAP_OBSERVE_CANCEL) != 0))) {
-	coap_log(LOG_DEBUG, "removed observer");
-	coap_delete_observer(resource,  &node->remote, &token);
-      }
+        if (observe && (COAP_RESPONSE_CLASS(response->hdr->code) > 2)) {
+          coap_log(LOG_DEBUG, "removed observer\n");
+          coap_delete_observer(resource,  &node->remote, &token);
+        }
 
       /* If original request contained a token, and the registered
        * application handler made no changes to the response, then
