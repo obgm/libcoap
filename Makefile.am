@@ -67,7 +67,8 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/subscribe.c \
   src/uri.c \
   $(platform_src)/coap_io.c \
-  $(platform_src)/prng.c
+  $(platform_src)/prng.c \
+  $(platform_src)/run.c
 
 ## Define the list of public header files and their install location.
 ## The list defined here will be used within the include/Makefile.am
@@ -92,6 +93,7 @@ libcoap_include_HEADERS = \
    include/coap/pdu.h \
    include/coap/prng.h \
    include/coap/resource.h \
+   include/coap/run.h \
    include/coap/str.h \
    include/coap/subscribe.h \
    include/coap/uri.h \

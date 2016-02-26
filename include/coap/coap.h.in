@@ -46,6 +46,7 @@ extern "C" {
 #include "pdu.h"
 #include "prng.h"
 #include "resource.h"
+#include "run.h"
 #include "str.h"
 #include "subscribe.h"
 #include "uri.h"
