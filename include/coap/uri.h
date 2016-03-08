@@ -14,6 +14,18 @@
 #include "str.h"
 
 /**
+ * The scheme specifiers. Secure schemes have an odd numeric value,
+ * others are even.
+ */
+enum coap_uri_scheme_t {
+  COAP_URI_SCHEME_COAP=0,
+  COAP_URI_SCHEME_COAPS=1
+};
+
+/** This mask can be used to check if a parsed URI scheme is secure. */
+#define COAP_URI_SCHEME_SECURE_MASK 0x01
+
+/**
  * Representation of parsed URI. Components may be filled from a string with
  * coap_split_uri() and can be used as input for option-creation functions.
  */
@@ -23,7 +35,15 @@ typedef struct {
   str path;             /**< Beginning of the first path segment. 
                              Use coap_split_path() to create Uri-Path options */
   str query;            /**<  The query part if present */
+
+  /** The parsed scheme specifier. */
+  enum coap_uri_scheme_t scheme;
 } coap_uri_t;
+
+static inline int
+coap_uri_scheme_is_secure(const coap_uri_t *uri) {
+  return uri && ((uri->scheme & COAP_URI_SCHEME_SECURE_MASK) != 0);
+}
 
 /**
  * Creates a new coap_uri_t object from the specified URI. Returns the new
