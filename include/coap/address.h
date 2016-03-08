@@ -53,6 +53,9 @@ typedef struct coap_address_t {
 #endif /* WITH_CONTIKI */
 
 #ifdef WITH_POSIX
+#include <sys/socket.h>
+#include <netinet/in.h>
+
 /** multi-purpose address abstraction */
 typedef struct coap_address_t {
   socklen_t size;           /**< size of addr */
