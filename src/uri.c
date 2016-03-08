@@ -74,6 +74,10 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
   /* There might be an additional 's', indicating the secure version: */
   if (len && (secure = tolower(*p) == 's')) {
     ++p; --len;
+    uri->scheme = COAP_URI_SCHEME_COAPS;
+    uri->port = COAPS_DEFAULT_PORT;
+  } else {
+    uri->scheme = COAP_URI_SCHEME_COAP;
   }
 
   q = (unsigned char *)"://";
