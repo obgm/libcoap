@@ -127,6 +127,21 @@ typedef struct coap_context_t {
 } coap_context_t;
 
 /**
+ * Attach given @p endpoint to CoAP context @p ctx.
+ *
+ * @param ctx      The CoAP context where @p endpoint will be attached.
+ * @param endpoint The CoAP endpoint to attach.
+ */
+void coap_attach_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint);
+
+/**
+ * Detach @p endpoint from its CoAP context.
+ *
+ * @param endpoint The CoAP endpoint to detach.
+ */
+void coap_detach_endpoint(coap_endpoint_t *endpoint);
+
+/**
  * Registers a new message handler that is called whenever a response was
  * received that matches an ongoing transaction.
  *
