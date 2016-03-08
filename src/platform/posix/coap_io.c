@@ -28,6 +28,7 @@
 # include <unistd.h>
 #endif 
 #include <errno.h>
+#include <fcntl.h>
 
 #include "debug.h"
 #include "mem.h"
@@ -60,13 +61,19 @@ coap_free_posix_endpoint(struct coap_endpoint_t *ep) {
 
 coap_endpoint_t *
 coap_new_endpoint(const coap_address_t *addr, int flags) {
-  int sockfd = socket(addr->addr.sa.sa_family, SOCK_DGRAM, 0);
+  int sockfd;
   int on = 1;
-  struct coap_endpoint_t *ep;
+  struct coap_endpoint_t *ep = NULL;
 
+  sockfd = socket(addr->addr.sa.sa_family, SOCK_DGRAM, 0);
   if (sockfd < 0) {
     coap_log(LOG_WARNING, "coap_new_endpoint: socket");
     return NULL;
+  }
+
+  if (fcntl(sockfd, F_SETFL, O_NONBLOCK) < 0) {
+    coap_log(LOG_WARNING, "coap_new_endpoint: %s\n", strerror(errno));
+    goto error;
   }
 
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
@@ -93,15 +100,13 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
 
   if (bind(sockfd, &addr->addr.sa, addr->size) < 0) {
     coap_log(LOG_WARNING, "coap_new_endpoint: bind");
-    close (sockfd);
-    return NULL;
+    goto error;
   }
 
   ep = coap_malloc_posix_endpoint();
   if (!ep) {
     coap_log(LOG_WARNING, "coap_new_endpoint: malloc");
-    close(sockfd);
-    return NULL;
+    goto error;
   }
 
   memset(ep, 0, sizeof(struct coap_endpoint_t));
@@ -111,8 +116,7 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
   ep->addr.size = addr->size;
   if (getsockname(sockfd, &ep->addr.addr.sa, &ep->addr.size) < 0) {
     coap_log(LOG_WARNING, "coap_new_endpoint: cannot determine local address");
-    close (sockfd);
-    return NULL;
+    goto error;
   }
 
 #ifndef NDEBUG
@@ -131,6 +135,11 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
 #endif /* NDEBUG */
 
   return (coap_endpoint_t *)ep;
+ error:
+
+  close (sockfd);
+  coap_free_posix_endpoint(ep);
+  return NULL;
 }
 
 void
@@ -333,6 +342,13 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 
   assert(ep);
   assert(packet);
+
+  if ((ep->flags & COAP_ENDPOINT_HAS_DATA) == 0) {
+    return -1;
+  } else {
+    /* clear has-data flag */
+    ep->flags &= ~COAP_ENDPOINT_HAS_DATA;
+  }
 
   *packet = coap_malloc_packet();
   
