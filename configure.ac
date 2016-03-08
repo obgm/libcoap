@@ -248,6 +248,14 @@ if test "x$build_examples" = "xyes" -a "x$build_documentation" = "xyes"; then
 fi
 AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$build_examples" = "xyes"])
 
+# __dtls__
+AC_ARG_ENABLE([dtls],
+              [AC_HELP_STRING([--enable-dtls],
+              [Enable DTLS provided by tinydtls (default=yes)])],
+              [build_dtls="$enableval"],
+              [build_dtls="yes"])
+AM_CONDITIONAL(BUILD_DTLS, [test "x$build_dtls" = "xyes"])
+
 # end configure options
 #######################
 
@@ -286,6 +294,19 @@ AC_SEARCH_LIBS([inet_ntop], [nsl])
 
 # Check if clock_gettime() requires librt, when available
 AC_SEARCH_LIBS([clock_gettime], [rt])
+
+# Add tinydtls to build flags if selected
+if test "x$build_dtls" = "xyes" ; then
+	if test -d "$srcdir/ext/tinydtls"; then
+	   AC_CONFIG_SUBDIRS([ext/tinydtls])
+	   AC_DEFINE(HAVE_LIBTINYDTLS, [1], [Define if the system has libtinydtls])
+           CPPFLAGS="$CPPFLAGS -I \$(top_srcdir)/ext/tinydtls"
+           LDFLAGS="$LDFLAGS -L\$(top_srcdir)/ext/tinydtls -ltinydtls"
+        else
+           build_dtls="no"
+        fi
+fi
+AC_SEARCH_LIBS([], [tinydtls])
 
 AC_MSG_CHECKING([operating system])
 
@@ -393,4 +414,9 @@ if test "x$build_examples" = "xyes"; then
 	fi
 else
 	AC_MSG_RESULT([      build examples          : "no"])
+fi
+if test "x$build_dtls" = "xyes"; then
+	AC_MSG_RESULT([      build with DTLS support : "yes"])
+else
+	AC_MSG_RESULT([      build with DTLS support : "no"])
 fi

@@ -29,7 +29,7 @@ EXTRA_DIST = \
 
 AM_CFLAGS = -I @top_builddir@/include/coap/ $(WARNING_CFLAGS) -std=c99
 
-SUBDIRS = . $(DOC_DIR) tests examples
+SUBDIRS = $(subdirs) . $(DOC_DIR) tests examples
 
 ## Define a libtool archive target "libcoap-@LIBCOAP_API_VERSION@.la", with
 ## @LIBCOAP_API_VERSION@ substituted into the generated Makefile at configure
@@ -54,6 +54,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/address.c \
   src/async.c \
   src/block.c \
+  src/coap_dtls.c \
   src/coap_time.c \
   src/debug.c \
   src/encode.c \
@@ -81,6 +82,7 @@ libcoap_include_HEADERS = \
    include/coap/bits.h \
    include/coap/block.h \
    include/coap/coap.h \
+   include/coap/coap_dtls.h \
    include/coap/coap_io.h \
    include/coap/coap_time.h \
    include/coap/debug.h \
