@@ -37,7 +37,8 @@ typedef enum {
   COAP_PDU,
   COAP_PDU_BUF,
   COAP_RESOURCE,
-  COAP_RESOURCEATTR
+  COAP_RESOURCEATTR,
+  COAP_DTLS_SESSION
 } coap_memory_tag_t;
 
 #ifndef WITH_LWIP

@@ -32,6 +32,7 @@
 
 #include "debug.h"
 #include "mem.h"
+#include "coap_dtls.h"
 #include "coap_io.h"
 
 struct coap_packet_t {
@@ -64,6 +65,11 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
   int sockfd;
   int on = 1;
   struct coap_endpoint_t *ep = NULL;
+
+  if (((flags & COAP_ENDPOINT_DTLS) != 0) && !coap_dtls_is_supported()) {
+    coap_log(LOG_CRIT, "coap_new_endpoint: DTLS not supported\n");
+    return NULL;
+  }
 
   sockfd = socket(addr->addr.sa.sa_family, SOCK_DGRAM, 0);
   if (sockfd < 0) {

@@ -21,6 +21,7 @@
 #endif
 
 #include "coap_io.h"
+#include "coap_dtls.h"
 #include "coap_time.h"
 #include "option.h"
 #include "pdu.h"
@@ -124,6 +125,7 @@ typedef struct coap_context_t {
 
   ssize_t (*network_read)(coap_endpoint_t *ep, coap_packet_t **packet);
 
+  struct coap_dtls_context_t *dtls_context;
 } coap_context_t;
 
 /**
