@@ -30,6 +30,8 @@
 #include <arpa/inet.h>
 #endif
 
+#include "coap_dtls.h"
+
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
 #include <lwip/udp.h>
@@ -358,11 +360,6 @@ coap_new_context(
     return NULL;
 #endif /* WITH_CONTIKI */
 
-  if (!listen_addr) {
-    coap_log(LOG_EMERG, "no listen address specified\n");
-    return NULL;
-  }
-
   coap_clock_init();
 #ifdef WITH_LWIP
   coap_prng_init(LWIP_RAND());
@@ -389,12 +386,19 @@ coap_new_context(
 
   memset(c, 0, sizeof( coap_context_t ) );
 
+  c->dtls_context = coap_dtls_new_context(c);
+  if (c->dtls_context == NULL) {
+    coap_log(LOG_WARNING, "coap_init: no DTLS context available\n");
+  }
+
   /* initialize message id */
   coap_prng((unsigned char *)&c->message_id, sizeof(unsigned short));
 
-  coap_attach_endpoint(c, coap_new_endpoint(listen_addr, COAP_ENDPOINT_NOSEC));
-  if (c->endpoint == NULL) {
-    goto onerror;
+  if (listen_addr) {
+    coap_attach_endpoint(c, coap_new_endpoint(listen_addr, COAP_ENDPOINT_NOSEC));
+    if (c->endpoint == NULL) {
+      goto onerror;
+    }
   }
 
 #if defined(WITH_POSIX) || defined(WITH_CONTIKI)
@@ -423,6 +427,7 @@ coap_new_context(
 
 void
 coap_free_context(coap_context_t *context) {
+  coap_endpoint_t *ep;
 
   if (!context)
     return;
@@ -436,7 +441,12 @@ coap_free_context(coap_context_t *context) {
 
   coap_delete_all_resources(context);
 
-  coap_free_endpoint(context->endpoint);
+  LL_FOREACH(context->endpoint, ep) {
+    coap_free_endpoint(ep);
+  }
+
+  coap_dtls_free_context(context->dtls_context);
+
 #ifndef WITH_CONTIKI
   coap_free_type(COAP_CONTEXT, context);
 #endif/* not WITH_CONTIKI */
@@ -618,11 +628,43 @@ coap_send_impl(coap_context_t *context,
 }
 #endif /* WITH_LWIP */
 
+static int
+is_dtls(const coap_endpoint_t *endpoint) {
+  return (endpoint->flags & COAP_ENDPOINT_DTLS) != 0;
+}
+
 coap_tid_t 
 coap_send(coap_context_t *context, 
 	  const coap_endpoint_t *local_interface,
 	  const coap_address_t *dst, 
 	  coap_pdu_t *pdu) {
+
+  /* FIXME: the following DTLS-specific case should probably go into
+   * coap_send_impl() with proper treatment of CON messages. */
+  if (is_dtls(local_interface)) {
+    struct coap_dtls_session_t *session;
+    coap_tid_t id = COAP_INVALID_TID;
+
+    session = coap_dtls_get_session(context, local_interface, dst);
+    if (session == NULL) {
+      coap_log(LOG_WARNING, "coap_send: no DTLS session available\n");
+      return COAP_INVALID_TID;
+    } else {
+      coap_log(LOG_WARNING, "coap_send: trying DTLS\n");
+      if (coap_dtls_send(context, session,
+                         (unsigned char *)pdu->hdr, pdu->length) < 0) {
+        goto finish;
+      } else {
+        coap_transaction_id(dst, pdu, &id);
+        /* goto finish */
+      }
+    }
+  finish:
+    coap_dtls_free_session(session);
+    return id;
+  }
+
+  coap_log(LOG_WARNING, "coap_send: huh, no DTLS\n");
   return coap_send_impl(context, local_interface, dst, pdu);
 }
 
@@ -825,31 +867,66 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 
 void coap_dispatch(coap_context_t *context, coap_queue_t *rcvd);
 
+#ifdef WITH_LWIP
 int
-coap_read( coap_context_t *ctx ) {
+coap_read(coap_context_t *ctx) {
+  return -1;
+}
+#else /* WITH_LWIP */
+static int
+coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint) {
   ssize_t bytes_read = -1;
   coap_packet_t *packet;
-  coap_address_t src;
   int result = -1;		/* the value to be returned */
 
-  coap_address_init(&src);
+  bytes_read = ctx->network_read(endpoint, &packet);
 
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
-  bytes_read = ctx->network_read(ctx->endpoint, &packet);
-#endif /* WITH_POSIX or WITH_CONTIKI */
-
-  if ( bytes_read < 0 ) {
+  if (bytes_read < 0) {
     warn("coap_read: recvfrom");
   } else {
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
-    result = coap_handle_message(ctx, packet);
-#endif /* WITH_POSIX or WITH_CONTIKI */
+    if (bytes_read > 0) {
+      if (is_dtls(endpoint)) {
+        unsigned char *data;
+        size_t data_len;
+        coap_address_t remote;
+
+        coap_packet_get_memmapped(packet, &data, &data_len);
+        coap_packet_copy_source(packet, &remote);
+
+        {
+          unsigned char buf[200];
+          size_t s  = coap_print_addr(&remote, buf, sizeof(buf));
+          coap_log(LOG_DEBUG, "#### %.*s\n", s, buf);
+        }
+        result = coap_dtls_handle_message(ctx, endpoint, &remote, data, data_len);
+      } else {
+        result = coap_handle_message(ctx, packet);
+      }
+    } else {
+      debug("##### no data ######\n");
+    }
   }
 
   coap_free_packet(packet);
 
   return result;
 }
+
+int
+coap_read(coap_context_t *ctx) {
+  coap_endpoint_t *ep, *tmp;
+  int result = -1;
+
+  /* If we have more than one endpoint, the result does not really
+   * help with anything, so we set it simply to the last return value
+   * retrieved from coap_read_endpoint(). */
+  LL_FOREACH_SAFE(ctx->endpoint, ep, tmp) {
+    result = coap_read_endpoint(ctx, ep);
+  }
+
+  return result;
+}
+#endif /* WITH_LWIP */
 
 int
 coap_handle_message(coap_context_t *ctx,

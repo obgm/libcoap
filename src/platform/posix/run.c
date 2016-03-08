@@ -69,9 +69,10 @@ coap_run_once(coap_context_t *ctx, unsigned int timeout_ms) {
       coap_tick_t past = now;
       LL_FOREACH(ctx->endpoint, ep) {
         if (FD_ISSET(ep->handle.fd, &readfds)) {
-          coap_read(ctx);       /* read received data */
+          ep->flags |= 0x1000;  /* COAP_ENDPOINT_HAS_DATA */
         }
       }
+      coap_read(ctx);           /* read received data */
       coap_ticks(&now);
       return ((now - past) * 1000) / COAP_TICKS_PER_SECOND;
     } else { /* timeout */

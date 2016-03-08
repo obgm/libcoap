@@ -24,7 +24,10 @@
 #include <netdb.h>
 
 #include "coap.h"
+#include "coap_dtls.h"
 #include "coap_list.h"
+
+void dtls_set_log_level(int);
 
 int flags = 0;
 
@@ -660,6 +663,11 @@ cmdline_content_type(char *arg, unsigned short key) {
   }
 }
 
+static unsigned short
+get_default_port(const coap_uri_t *u) {
+  return coap_uri_scheme_is_secure(u) ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT;
+}
+
 static void
 cmdline_uri(char *arg) {
   unsigned char portbuf[2];
@@ -687,9 +695,9 @@ cmdline_uri(char *arg) {
                 (unsigned char *)arg));
 
   } else {      /* split arg into Uri-* options */
-      coap_split_uri((unsigned char *)arg, strlen(arg), &uri );
+    coap_split_uri((unsigned char *)arg, strlen(arg), &uri );
 
-    if (uri.port != COAP_DEFAULT_PORT) {
+    if (uri.port != get_default_port(&uri)) {
       coap_insert(&optlist,
                   new_option_node(COAP_OPTION_URI_PORT,
                   coap_encode_var_bytes(portbuf, uri.port),
@@ -980,11 +988,19 @@ cmdline_method(char *arg) {
 }
 
 static coap_context_t *
-get_context(const char *node, const char *port) {
+get_context(const char *node, const char *port, int secure) {
   coap_context_t *ctx = NULL;
   int s;
   struct addrinfo hints;
   struct addrinfo *result, *rp;
+  int ep_type;
+
+  ctx = coap_new_context(NULL);
+  if (!ctx) {
+    return NULL;
+  }
+
+  ep_type = secure ? COAP_ENDPOINT_DTLS : COAP_ENDPOINT_NOSEC;
 
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
@@ -1000,23 +1016,29 @@ get_context(const char *node, const char *port) {
   /* iterate through results until success */
   for (rp = result; rp != NULL; rp = rp->ai_next) {
     coap_address_t addr;
+    coap_endpoint_t *endpoint;
 
     if (rp->ai_addrlen <= sizeof(addr.addr)) {
       coap_address_init(&addr);
       addr.size = rp->ai_addrlen;
       memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
 
-      ctx = coap_new_context(&addr);
-      if (ctx) {
-        /* TODO: output address:port for successful binding */
+      endpoint = coap_new_endpoint(&addr, ep_type);
+      if (endpoint) {
+        coap_attach_endpoint(ctx, endpoint);
         goto finish;
+      } else {
+        coap_log(LOG_CRIT, "cannot create endpoint\n");
+        continue;
       }
     }
   }
 
   fprintf(stderr, "no context available for interface '%s'\n", node);
+  coap_free_context(ctx);
+  ctx = NULL;
 
-  finish:
+ finish:
   freeaddrinfo(result);
   return ctx;
 }
@@ -1109,11 +1131,16 @@ main(int argc, char **argv) {
     }
   }
 
+  dtls_set_log_level(log_level);
   coap_set_log_level(log_level);
 
-  if ( optind < argc )
+  if (optind < argc) {
     cmdline_uri( argv[optind] );
-  else {
+    if (coap_uri_scheme_is_secure(&uri) && !coap_dtls_is_supported()) {
+      coap_log(LOG_EMERG, "coaps URI scheme not supported in this version of libcoap\n");
+      exit(1);
+    }
+  } else {
     usage( argv[0], PACKAGE_VERSION );
     exit( 1 );
   }
@@ -1144,13 +1171,15 @@ main(int argc, char **argv) {
     addrptr = &dst.addr.sin.sin_addr;
 
     /* create context for IPv4 */
-    ctx = get_context(node_str[0] == 0 ? "0.0.0.0" : node_str, port_str);
+    ctx = get_context(node_str[0] == 0 ? "0.0.0.0" : node_str, port_str,
+                      coap_uri_scheme_is_secure(&uri));
     break;
   case AF_INET6:
     addrptr = &dst.addr.sin6.sin6_addr;
 
     /* create context for IPv6 */
-    ctx = get_context(node_str[0] == 0 ? "::" : node_str, port_str);
+    ctx = get_context(node_str[0] == 0 ? "::" : node_str, port_str,
+                      coap_uri_scheme_is_secure(&uri));
     break;
   default:
     ;
