@@ -1718,6 +1718,17 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
 }
 
 int
+coap_handle_event(coap_context_t *context, coap_event_t event, void *data) {
+  coap_log(LOG_DEBUG, "*** EVENT: 0x%04x\n", event);
+
+  if (context->handle_event) {
+    return context->handle_event(context, event, data);
+  } else {
+    return 0;
+  }
+}
+
+int
 coap_can_exit( coap_context_t *context ) {
   return !context || (context->sendqueue == NULL);
 }
