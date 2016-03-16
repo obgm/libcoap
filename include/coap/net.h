@@ -392,7 +392,9 @@ int coap_read(coap_context_t *context);
  *               error.
  */
 int coap_handle_message(coap_context_t *ctx,
-                        coap_packet_t *packet);
+                        const coap_endpoint_t *local_interface,
+                        const coap_address_t *remote,
+                        unsigned char *msg, size_t msg_len);
 
 /**
  * Calculates a unique transaction id from given arguments @p peer and @p pdu.
