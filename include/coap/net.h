@@ -22,6 +22,7 @@
 
 #include "coap_io.h"
 #include "coap_dtls.h"
+#include "coap_event.h"
 #include "coap_keystore.h"
 #include "coap_time.h"
 #include "option.h"
@@ -118,6 +119,12 @@ typedef struct coap_context_t {
   unsigned int observe;
 
   coap_response_handler_t response_handler;
+
+  /**
+   * Callback function that is used to signal events to the
+   * application.  This field is set by coap_set_event_handler().
+   */
+  coap_event_handler_t handle_event;
 
   ssize_t (*network_send)(struct coap_context_t *context,
                           const coap_endpoint_t *local_interface,
@@ -396,6 +403,19 @@ int coap_handle_message(coap_context_t *ctx,
                         const coap_address_t *remote,
                         unsigned char *msg, size_t msg_len);
 
+/**
+ * Invokes the event handler of @p context for the given @p event and
+ * @p data.
+ *
+ * @param context The CoAP context whose event handler is to be called.
+ * @param event   The event to deliver.
+ * @param data    Any data related to @p event.
+ * @return The result from the associated event handler or 0 if none was
+ * registered.
+ */
+int coap_handle_event(coap_context_t *context,
+                      coap_event_t event,
+                      void *data);
 /**
  * Calculates a unique transaction id from given arguments @p peer and @p pdu.
  * The id is returned in @p id.
