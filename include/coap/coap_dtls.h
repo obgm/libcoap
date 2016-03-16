@@ -19,6 +19,12 @@
  * @{
  */
 
+/**
+ * The maximum expected size of a DTLS record. This constant is used
+ * to allocate storage in the sendqueue for a DTLS session in case the
+ * data cannot be sent immediately.
+ */
+#define COAP_DTLS_MAX_PACKET_SIZE COAP_MAX_PDU_SIZE
 
 struct coap_dtls_context_t;
 struct coap_dtls_session_t;
@@ -39,10 +45,12 @@ struct coap_dtls_context_t *coap_dtls_new_context(struct coap_context_t *coap_co
 void coap_dtls_free_context(struct coap_dtls_context_t *dtls_context);
 
 struct coap_dtls_session_t *
-coap_dtls_new_session(const coap_endpoint_t *local_interface,
+coap_dtls_new_session(struct coap_dtls_context_t *dtls_context,
+                      const coap_endpoint_t *local_interface,
                       const coap_address_t *remote);
 
-void coap_dtls_free_session(struct coap_dtls_session_t *session);
+void coap_dtls_free_session(struct coap_dtls_context_t *dtls_context,
+                            struct coap_dtls_session_t *session);
 
 struct coap_dtls_session_t *
 coap_dtls_get_session(struct coap_context_t *coap_context,
@@ -51,7 +59,7 @@ coap_dtls_get_session(struct coap_context_t *coap_context,
 
 int coap_dtls_send(struct coap_context_t *coap_context,
                    struct coap_dtls_session_t *session,
-                   const unsigned char *data, size_t data_len);
+                   const coap_pdu_t *pdu);
 
 int coap_dtls_handle_message(struct coap_context_t *coap_context,
                              const coap_endpoint_t *local_interface,

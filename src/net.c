@@ -654,9 +654,9 @@ coap_send(coap_context_t *context,
       coap_log(LOG_WARNING, "coap_send: no DTLS session available\n");
       return COAP_INVALID_TID;
     } else {
-      coap_log(LOG_WARNING, "coap_send: trying DTLS\n");
-      if (coap_dtls_send(context, session,
-                         (unsigned char *)pdu->hdr, pdu->length) < 0) {
+      int res = coap_dtls_send(context, session, pdu);
+      if (res < 0) {
+        coap_log(LOG_WARNING, "coap_send: error sending data over DTLS\n");
         goto finish;
       } else {
         coap_transaction_id(dst, pdu, &id);
