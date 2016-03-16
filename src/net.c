@@ -664,7 +664,6 @@ coap_send(coap_context_t *context,
       }
     }
   finish:
-    coap_dtls_free_session(session);
     return id;
   }
 
@@ -889,25 +888,18 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint) {
     warn("coap_read: recvfrom");
   } else {
     if (bytes_read > 0) {
+      unsigned char *data;
+      size_t data_len;
+      coap_address_t remote;
+
+      coap_packet_get_memmapped(packet, &data, &data_len);
+      coap_packet_copy_source(packet, &remote);
+
       if (is_dtls(endpoint)) {
-        unsigned char *data;
-        size_t data_len;
-        coap_address_t remote;
-
-        coap_packet_get_memmapped(packet, &data, &data_len);
-        coap_packet_copy_source(packet, &remote);
-
-        {
-          unsigned char buf[200];
-          size_t s  = coap_print_addr(&remote, buf, sizeof(buf));
-          coap_log(LOG_DEBUG, "#### %.*s\n", s, buf);
-        }
         result = coap_dtls_handle_message(ctx, endpoint, &remote, data, data_len);
       } else {
-        result = coap_handle_message(ctx, packet);
+        result = coap_handle_message(ctx, endpoint, &remote, data, data_len);
       }
-    } else {
-      debug("##### no data ######\n");
     }
   }
 
@@ -934,18 +926,14 @@ coap_read(coap_context_t *ctx) {
 
 int
 coap_handle_message(coap_context_t *ctx,
-		    coap_packet_t *packet) {
-		    /* const coap_address_t *remote,  */
-		    /* unsigned char *msg, size_t msg_len) { */
-  unsigned char *msg;
-  size_t msg_len;
+                    const coap_endpoint_t *local_interface,
+		    const coap_address_t *remote,
+		    unsigned char *msg, size_t msg_len) {
   coap_queue_t *node;
 
   /* the negated result code */
   enum result_t { RESULT_OK, RESULT_ERR_EARLY, RESULT_ERR };
   int result = RESULT_ERR_EARLY;
-
-  coap_packet_get_memmapped(packet, &msg, &msg_len);
 
   if (msg_len < sizeof(coap_hdr_t)) {
     debug("coap_handle_message: discarded invalid frame\n" );
@@ -982,8 +970,8 @@ coap_handle_message(coap_context_t *ctx,
 
   coap_ticks(&node->t);
 
-  coap_packet_populate_endpoint(packet, &node->local_if);
-  coap_packet_copy_source(packet, &node->remote);
+  node->local_if = *local_interface;
+  node->remote = *remote;
 
   /* and add new node to receive queue */
   coap_transaction_id(&node->remote, node->pdu, &node->id);
