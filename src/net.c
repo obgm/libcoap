@@ -386,9 +386,12 @@ coap_new_context(
 
   memset(c, 0, sizeof( coap_context_t ) );
 
+  c->keystore = coap_new_keystore();
   c->dtls_context = coap_dtls_new_context(c);
-  if (c->dtls_context == NULL) {
-    coap_log(LOG_WARNING, "coap_init: no DTLS context available\n");
+  if (!c->keystore || !c->dtls_context) {
+    coap_log(LOG_EMERG, "coap_init: no DTLS context available\n");
+    coap_free_context(c);
+    return NULL;
   }
 
   /* initialize message id */
@@ -427,7 +430,7 @@ coap_new_context(
 
 void
 coap_free_context(coap_context_t *context) {
-  coap_endpoint_t *ep;
+  coap_endpoint_t *ep, *tmp;
 
   if (!context)
     return;
@@ -441,11 +444,12 @@ coap_free_context(coap_context_t *context) {
 
   coap_delete_all_resources(context);
 
-  LL_FOREACH(context->endpoint, ep) {
+  coap_dtls_free_context(context->dtls_context);
+  coap_free_keystore(context->keystore);
+
+  LL_FOREACH_SAFE(context->endpoint, ep, tmp) {
     coap_free_endpoint(ep);
   }
-
-  coap_dtls_free_context(context->dtls_context);
 
 #ifndef WITH_CONTIKI
   coap_free_type(COAP_CONTEXT, context);
@@ -664,7 +668,6 @@ coap_send(coap_context_t *context,
     return id;
   }
 
-  coap_log(LOG_WARNING, "coap_send: huh, no DTLS\n");
   return coap_send_impl(context, local_interface, dst, pdu);
 }
 
@@ -873,6 +876,7 @@ coap_read(coap_context_t *ctx) {
   return -1;
 }
 #else /* WITH_LWIP */
+
 static int
 coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint) {
   ssize_t bytes_read = -1;
