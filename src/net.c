@@ -917,7 +917,9 @@ coap_read(coap_context_t *ctx) {
    * help with anything, so we set it simply to the last return value
    * retrieved from coap_read_endpoint(). */
   LL_FOREACH_SAFE(ctx->endpoint, ep, tmp) {
-    result = coap_read_endpoint(ctx, ep);
+    if ((ep->flags & COAP_ENDPOINT_HAS_DATA) != 0) {
+      result = coap_read_endpoint(ctx, ep);
+    }
   }
 
   return result;
