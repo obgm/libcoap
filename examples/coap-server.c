@@ -28,6 +28,7 @@
 #include "coap_config.h"
 #include "resource.h"
 #include "coap.h"
+#include "coap_dtls.h"
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -323,6 +324,21 @@ init_resources(coap_context_t *ctx) {
 }
 
 static void
+fill_keystore(coap_context_t *ctx) {
+  coap_keystore_item_t *psk;
+  static unsigned char user[] = "Client_identity";
+  size_t user_length = sizeof(user) - 1;
+  static unsigned char key[] = "secretPSK";
+  size_t key_length = sizeof(key) - 1;
+
+  psk = coap_keystore_new_psk(NULL, 0, user, user_length,
+                              key, key_length, 0);
+  if (!psk || !coap_keystore_store_item(ctx->keystore, psk, NULL)) {
+    coap_log(LOG_WARNING, "cannot store key\n");
+  }
+}
+
+static void
 usage( const char *program, const char *version) {
   const char *p;
 
@@ -347,6 +363,11 @@ get_context(const char *node, const char *port) {
   struct addrinfo hints;
   struct addrinfo *result, *rp;
 
+  ctx = coap_new_context(NULL);
+  if (!ctx) {
+    return NULL;
+  }
+
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
   hints.ai_socktype = SOCK_DGRAM; /* Coap uses UDP */
@@ -361,16 +382,38 @@ get_context(const char *node, const char *port) {
   /* iterate through results until success */
   for (rp = result; rp != NULL; rp = rp->ai_next) {
     coap_address_t addr;
+    coap_endpoint_t *endpoint;
 
     if (rp->ai_addrlen <= sizeof(addr.addr)) {
       coap_address_init(&addr);
       addr.size = rp->ai_addrlen;
       memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
 
-      ctx = coap_new_context(&addr);
-      if (ctx) {
-        /* TODO: output address:port for successful binding */
+      endpoint = coap_new_endpoint(&addr, COAP_ENDPOINT_NOSEC);
+      if (endpoint) {
+        coap_attach_endpoint(ctx, endpoint);
+
+        if (coap_dtls_is_supported()) {
+          if (addr.addr.sa.sa_family == AF_INET) {
+            addr.addr.sin.sin_port = htons(ntohs(addr.addr.sin.sin_port) + 1);
+          } else if (addr.addr.sa.sa_family == AF_INET6) {
+            addr.addr.sin6.sin6_port =
+              htons(ntohs(addr.addr.sin6.sin6_port) + 1);
+          } else {
+            goto finish;
+          }
+
+          endpoint = coap_new_endpoint(&addr, COAP_ENDPOINT_DTLS);
+          if (endpoint) {
+            coap_attach_endpoint(ctx, endpoint);
+          } else {
+            coap_log(LOG_CRIT, "cannot create DTLS endpoint\n");
+          }
+        }
         goto finish;
+      } else {
+        coap_log(LOG_CRIT, "cannot create endpoint\n");
+        continue;
       }
     }
   }
@@ -487,6 +530,7 @@ main(int argc, char **argv) {
   if (!ctx)
     return -1;
 
+  fill_keystore(ctx);
   init_resources(ctx);
 
   /* join multicast group if requested at command line */
