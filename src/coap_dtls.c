@@ -208,6 +208,7 @@ get_psk_info(struct dtls_context_t *dtls_context,
   coap_context_t *coap_context = dtls_get_app_data(dtls_context);
   coap_keystore_item_t *psk;
   ssize_t length;
+  int fatal_error = DTLS_ALERT_INTERNAL_ERROR;
 
   if(!coap_context || !coap_context->keystore) {
     goto error;
@@ -223,6 +224,7 @@ get_psk_info(struct dtls_context_t *dtls_context,
                                  NULL, 0, (coap_address_t *)session);
     if (!psk) {
       coap_log(LOG_WARNING, "no PSK identity for given realm\n");
+      fatal_error = DTLS_ALERT_CLOSE_NOTIFY;
       goto error;
     }
 
@@ -238,6 +240,7 @@ get_psk_info(struct dtls_context_t *dtls_context,
                                  id, id_len, (coap_address_t *)session);
     if (!psk) {
       coap_log(LOG_WARNING, "PSK for unknown id requested, exiting\n");
+      fatal_error = DTLS_ALERT_HANDSHAKE_FAILURE;
       goto error;
     }
 
@@ -246,15 +249,18 @@ get_psk_info(struct dtls_context_t *dtls_context,
       coap_log(LOG_WARNING, "cannot set psk -- buffer too small\n");
       goto error;
     }
+
     return length;
   case DTLS_PSK_HINT:
-    break;
+    /* There is no point in sending a psk_identity_hint hence it is
+     * set to zero length. */
+    return 0;
   default:
     coap_log(LOG_WARNING, "unsupported request type: %d\n", type);
   }
 
   error:
-    return dtls_alert_fatal_create(DTLS_ALERT_INTERNAL_ERROR);
+    return dtls_alert_fatal_create(fatal_error);
 }
 
 static dtls_handler_t cb = {
@@ -446,20 +452,30 @@ coap_dtls_handle_message(struct coap_context_t *coap_context,
                          const coap_address_t *dst,
                          const unsigned char *data, size_t data_len) {
   coap_dtls_session_t *session;
+  int new_session = 0;
 
-  /* session = coap_dtls_new_session(local_interface, dst); */
   session = coap_dtls_find_session(coap_context->dtls_context,
                                    local_interface, dst);
+
+  if (!session) {
+    if ((session = coap_dtls_new_session(coap_context->dtls_context,
+                                         local_interface, dst)) != NULL) {
+      new_session = 1;
+    }
+  }
 
   if (!session) {
     coap_log(LOG_WARNING, "cannot allocate session, drop packet\n");
     return -1;
   }
 
-  dtls_handle_message(coap_context->dtls_context->dtls_context,
-                      &session->dtls_session, (uint8 *)data, data_len);
+  int res =
+    dtls_handle_message(coap_context->dtls_context->dtls_context,
+                        &session->dtls_session, (uint8 *)data, data_len);
 
-  /* coap_dtls_free_session(session); */
+  if ((res < 0) && new_session) {
+    coap_dtls_free_session(coap_context->dtls_context, session);
+  }
 
   return -1;
 }
