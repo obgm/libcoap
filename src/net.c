@@ -569,6 +569,11 @@ coap_send_ack(coap_context_t *context,
   return result;
 }
 
+static int
+is_dtls(const coap_endpoint_t *endpoint) {
+  return (endpoint->flags & COAP_ENDPOINT_DTLS) != 0;
+}
+
 #if defined(WITH_POSIX) || defined(WITH_CONTIKI)
 static coap_tid_t
 coap_send_impl(coap_context_t *context, 
@@ -588,8 +593,29 @@ coap_send_impl(coap_context_t *context,
     return COAP_DROPPED_RESPONSE;
   }
 
-  bytes_written = context->network_send(context, local_interface, dst, 
-				    (unsigned char *)pdu->hdr, pdu->length);
+  /* Pass to DTLS module for sending if local_interface is for secure
+   * communication. */
+  if (is_dtls(local_interface)) {
+    struct coap_dtls_session_t *session;
+
+    session = coap_dtls_get_session(context, local_interface, dst);
+    if (session == NULL) {
+      coap_log(LOG_WARNING, "coap_send: no DTLS session available\n");
+      goto finish;
+    } else {
+      bytes_written = coap_dtls_send(context, session, pdu);
+      /* If coap_dtls_send() has returned a negative value we need to
+       * output a custom error message. Otherwise, we end this branch
+       * to create a valid transaction id. */
+      if (bytes_written < 0) {
+        coap_log(LOG_WARNING, "coap_send: error sending data over DTLS\n");
+        goto finish;
+      }
+    }
+  } else {
+    bytes_written = context->network_send(context, local_interface, dst,
+                                          (unsigned char *)pdu->hdr, pdu->length);
+  }
 
   if (bytes_written >= 0) {
     coap_transaction_id(dst, pdu, &id);
@@ -597,6 +623,7 @@ coap_send_impl(coap_context_t *context,
     coap_log(LOG_CRIT, "coap_send_impl: %s\n", strerror(errno));
   }
 
+ finish:
   return id;
 }
 #endif /* WITH_POSIX */
@@ -632,40 +659,11 @@ coap_send_impl(coap_context_t *context,
 }
 #endif /* WITH_LWIP */
 
-static int
-is_dtls(const coap_endpoint_t *endpoint) {
-  return (endpoint->flags & COAP_ENDPOINT_DTLS) != 0;
-}
-
 coap_tid_t 
 coap_send(coap_context_t *context, 
 	  const coap_endpoint_t *local_interface,
 	  const coap_address_t *dst, 
 	  coap_pdu_t *pdu) {
-
-  /* FIXME: the following DTLS-specific case should probably go into
-   * coap_send_impl() with proper treatment of CON messages. */
-  if (is_dtls(local_interface)) {
-    struct coap_dtls_session_t *session;
-    coap_tid_t id = COAP_INVALID_TID;
-
-    session = coap_dtls_get_session(context, local_interface, dst);
-    if (session == NULL) {
-      coap_log(LOG_WARNING, "coap_send: no DTLS session available\n");
-      return COAP_INVALID_TID;
-    } else {
-      int res = coap_dtls_send(context, session, pdu);
-      if (res < 0) {
-        coap_log(LOG_WARNING, "coap_send: error sending data over DTLS\n");
-        goto finish;
-      } else {
-        coap_transaction_id(dst, pdu, &id);
-        /* goto finish */
-      }
-    }
-  finish:
-    return id;
-  }
 
   return coap_send_impl(context, local_interface, dst, pdu);
 }
