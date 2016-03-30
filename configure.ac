@@ -306,7 +306,6 @@ if test "x$build_dtls" = "xyes" ; then
            build_dtls="no"
         fi
 fi
-AC_SEARCH_LIBS([], [tinydtls])
 
 AC_MSG_CHECKING([operating system])
 
