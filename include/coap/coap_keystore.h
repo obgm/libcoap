@@ -10,7 +10,6 @@
 #ifndef _COAP_KEYSTORE_H_
 #define _COAP_KEYSTORE_H_
 
-#include "coap_config.h"
 #include "address.h"
 
 /**
