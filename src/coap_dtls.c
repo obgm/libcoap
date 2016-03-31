@@ -155,6 +155,7 @@ dtls_event(struct dtls_context_t *dtls_context,
            unsigned short code) {
   coap_context_t *coap_context;
   coap_dtls_session_t *session;
+  int event = (level == DTLS_ALERT_LEVEL_FATAL) ? COAP_EVENT_DTLS_ERROR : -1;
 
   coap_context = (coap_context_t *)dtls_get_app_data(dtls_context);
   assert(coap_context && coap_context->dtls_context);
@@ -172,25 +173,42 @@ dtls_event(struct dtls_context_t *dtls_context,
     return -1;
   }
 
+  /* Stop all transactions that are affected from a fatal error
+   * condition. */
+  if (level == DTLS_ALERT_LEVEL_FATAL) {
+    struct queue_t *item;
+    LL_FOREACH(session->sendqueue, item) {
+      coap_queue_t *node = NULL;
+      coap_remove_from_queue(&coap_context->sendqueue, item->id, &node);
+      coap_delete_node(node);
+    }
+  }
+
   /* handle DTLS events */
   switch (code) {
   case DTLS_ALERT_CLOSE_NOTIFY: {
-    coap_handle_event(coap_context, COAP_EVENT_DTLS_CLOSED, session);
+    event = COAP_EVENT_DTLS_CLOSED;
     break;
   }
   case DTLS_EVENT_CONNECTED: {
     flush_data(coap_context->dtls_context, session);
-    coap_handle_event(coap_context, COAP_EVENT_DTLS_CONNECTED, session);
+    event = COAP_EVENT_DTLS_CONNECTED;
     break;
   }
   case DTLS_EVENT_RENEGOTIATE: {
-    coap_handle_event(coap_context, COAP_EVENT_DTLS_RENEGOTIATE, session);
+    event = COAP_EVENT_DTLS_RENEGOTIATE;
     break;
   }
   default:
-    if (level == DTLS_ALERT_LEVEL_FATAL) {
-      coap_handle_event(coap_context, COAP_EVENT_DTLS_ERROR, session);
-    }
+    ;
+  }
+
+  if (event != -1) {
+    coap_handle_event(coap_context, event, session);
+  }
+
+  if (level == DTLS_ALERT_LEVEL_FATAL) {
+    coap_dtls_free_session(coap_context->dtls_context, session);
   }
 
   return 0;
