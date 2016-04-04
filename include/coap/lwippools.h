@@ -9,6 +9,7 @@
  * include this or include something more generic which includes this), and
  * MEMP_USE_CUSTOM_POOLS has to be set in lwipopts.h. */
 
+#include "coap_config.h"
 #include <net.h>
 #include <resource.h>
 #include <subscribe.h>
