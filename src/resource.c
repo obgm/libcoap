@@ -457,6 +457,7 @@ coap_delete_all_resources(coap_context_t *context) {
   LL_FOREACH_SAFE(context->resources, res, rtmp) {
 #else
   HASH_ITER(hh, context->resources, res, rtmp) {
+    HASH_DELETE(hh, context->resources, res);
 #endif
     coap_free_resource(res);
   }
