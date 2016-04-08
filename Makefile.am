@@ -44,9 +44,6 @@ libcoap_@LIBCOAP_API_VERSION@_la_CFLAGS = \
   -fPIE \
   $(AM_CFLAGS)
 
-## Platform-specific sources are located in platform_src
-platform_src = src/platform/@PLATFORM@
-
 ## Define the source file list for the "libcoap.la" target.
 ## Note that it is not necessary to list header files which are already listed
 ## elsewhere in a _HEADERS variable assignment.
@@ -69,9 +66,9 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/str.c \
   src/subscribe.c \
   src/uri.c \
-  $(platform_src)/coap_io.c \
-  $(platform_src)/prng.c \
-  $(platform_src)/run.c
+  src/platform/@PLATFORM@/coap_io.c \
+  src/platform/@PLATFORM@/prng.c \
+  src/platform/@PLATFORM@/run.c
 
 ## Define the list of public header files and their install location.
 ## The list defined here will be used within the include/Makefile.am
