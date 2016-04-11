@@ -233,7 +233,7 @@ AM_CONDITIONAL(HAVE_CUNIT, [test "x$CUNIT_LIBS" != "x"])
 # __examples__
 AC_ARG_ENABLE([examples],
               [AC_HELP_STRING([--enable-examples],
-              [Enable building the tests (default=yes)])],
+              [Enable building the example binaries (default=yes)])],
               [build_examples="$enableval"],
               [build_examples="yes"])
 
