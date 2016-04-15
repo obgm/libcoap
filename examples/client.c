@@ -31,8 +31,6 @@
                       * identity) in bytes. */
 #define MAX_KEY   64 /* Maximum length of a key (i.e., PSK) in bytes. */
 
-void dtls_set_log_level(int);
-
 int flags = 0;
 
 static unsigned char _token_data[8];
@@ -1168,7 +1166,7 @@ main(int argc, char **argv) {
     }
   }
 
-  dtls_set_log_level(log_level);
+  coap_dtls_set_log_level(log_level);
   coap_set_log_level(log_level);
 
   if (optind < argc) {
