@@ -32,6 +32,12 @@ struct coap_dtls_session_t;
 /** Returns 1 if support for DTLS is enabled, or 0 otherwise. */
 int coap_dtls_is_supported(void);
 
+/** Sets the log level to the specified value. */
+void coap_dtls_set_log_level(int level);
+
+/** Returns the current log level. */
+int coap_dtls_get_log_level(void);
+
 /**
  * Creates a new DTLS context for the given @p coap_context. This function
  * returns a pointer to a new DTLS context object or NULL on error.

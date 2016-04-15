@@ -26,6 +26,11 @@
 #include <tinydtls.h>
 #include <dtls.h>
 
+/* Prototypes from dtls_debug.h as including that header will conflict
+ * with coap_config.h. */
+void dtls_set_log_level(int);
+int dtls_get_log_level(void);
+
 /* Data item in the DTLS send queue. */
 struct queue_t {
   struct queue_t *next;
@@ -55,6 +60,16 @@ typedef struct coap_dtls_context_t {
 int
 coap_dtls_is_supported(void) {
   return 1;
+}
+
+void
+coap_dtls_set_log_level(int level) {
+  dtls_set_log_level(level);
+}
+
+int
+coap_dtls_get_log_level(void) {
+  return dtls_get_log_level();
 }
 
 static int
