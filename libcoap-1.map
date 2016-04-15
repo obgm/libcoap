@@ -31,12 +31,14 @@ global:
   coap_dispatch;
   coap_dtls_free_context;
   coap_dtls_free_session;
+  coap_dtls_get_log_level;
   coap_dtls_get_session;
   coap_dtls_handle_message;
   coap_dtls_is_supported;
   coap_dtls_new_context;
   coap_dtls_new_session;
   coap_dtls_send;
+  coap_dtls_set_log_level;
   coap_encode_var_bytes;
   coap_find_async;
   coap_find_attr;
