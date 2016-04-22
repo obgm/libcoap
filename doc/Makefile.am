@@ -26,6 +26,7 @@ install-data-am:
 	fi
 	$(MKDIR_P) $(DESTDIR)$(htmldir)/html || exit 1
 	cp -a $(srcdir)/html $(DESTDIR)$(htmldir)
+	find $(DESTDIR)$(htmldir) -type f -name "*.md5" -exec rm {} \;
 
 uninstall-am:
 	-rm -rf $(DESTDIR)$(htmldir)/html
