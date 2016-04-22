@@ -276,9 +276,8 @@ AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
 # Checks for library functions.
-AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo \
-                strnlen])
+                strnlen malloc])
 
 # Check if -lsocket -lnsl is required (specifically Solaris)
 AC_SEARCH_LIBS([socket], [socket])
