@@ -429,6 +429,18 @@ coap_new_context(
 }
 
 void
+coap_set_app_data(coap_context_t *ctx, void *app_data) {
+  assert(ctx);
+  ctx->app = app_data;
+}
+
+void *
+coap_get_app_data(coap_context_t *ctx) {
+  assert(ctx);
+  return ctx->app;
+}
+
+void
 coap_free_context(coap_context_t *context) {
   coap_endpoint_t *ep, *tmp;
 

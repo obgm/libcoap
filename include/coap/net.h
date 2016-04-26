@@ -135,6 +135,7 @@ typedef struct coap_context_t {
 
   coap_keystore_t *keystore;
   struct coap_dtls_context_t *dtls_context;
+  void *app;                    /**< application-specific data */
 } coap_context_t;
 
 /**
@@ -225,6 +226,19 @@ coap_new_message_id(coap_context_t *context) {
  */
 void coap_free_context(coap_context_t *context);
 
+/**
+ * Stores @p data with the given CoAP context. This function
+ * overwrites any value that has previously been stored with @p
+ * context.
+ */
+void coap_set_app_data(coap_context_t *context, void *data);
+
+/**
+ * Returns any application-specific data that has been stored with @p
+ * context using the function coap_set_app_data(). This function will
+ * return @c NULL if no data has been stored.
+ */
+void *coap_get_app_data(coap_context_t *context);
 
 /**
  * Sends a confirmed CoAP message to given destination. The memory that is
