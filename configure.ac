@@ -110,12 +110,12 @@ WARNING_CFLAGS="\
 -Wswitch-default \
 -Wswitch-enum \
 -Wunused \
--Wunused-result \
 "
 
 # check whether or not the compiler supports -Wlogical-op (clang does not...)
 AX_CHECK_COMPILE_FLAG([-Wlogical-op], [WARNING_CFLAGS="$WARNING_CFLAGS -Wlogical-op"],,[-Werror])
 AX_CHECK_COMPILE_FLAG([-fdiagnostics-color], [CFLAGS="$CFLAGS -fdiagnostics-color"],,[-Werror])
+AX_CHECK_COMPILE_FLAG([-Wunused-result], [WARNING_CFLAGS="$WARNING_CFLAGS -Wunused-result"])
 
 AC_SUBST([WARNING_CFLAGS])
 
