@@ -4,7 +4,7 @@ TARGET?=minimal-net
 all: server
 
 $(CONTIKI):
-	git clone https://github.com/contiki-os/contiki.git $@
+	git clone --depth 1 https://github.com/contiki-os/contiki.git $@
 	cd $(CONTIKI)/apps && ln -s ../../../.. libcoap
 
 server:	$(CONTIKI)
