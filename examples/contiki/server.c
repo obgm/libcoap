@@ -31,7 +31,10 @@
  */
 
 #include "coap_config.h"
+
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
+#include "net/net-debug.h"
 
 #include <string.h>
 
@@ -71,9 +74,9 @@ init_coap_server(coap_context_t **ctx) {
   uip_ip6addr(&gw_addr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0x0001);
   uip_ds6_defrt_add(&gw_addr, 0);
 
-  uip_debug_lladdr_print(&uip_lladdr);
+  PRINTLLADDR(&uip_lladdr);
   printf("\r\n");
-  uip_debug_ipaddr_print(&listen_addr.addr);
+  PRINT6ADDR(&listen_addr.addr);
   printf("\r\n");
 
   *ctx = coap_new_context(&listen_addr);
