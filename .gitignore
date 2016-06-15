@@ -60,3 +60,7 @@ include/coap/coap.h
 tests/.deps
 tests/testdriver
 tests/*.o
+
+# ctags - Sublime plugin
+tags
+.tags*
