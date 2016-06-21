@@ -10,6 +10,7 @@
 #include "coap_config.h"
 #include "mem.h"
 #include "coap_io.h"
+#include <lwip/udp.h>
 
 void coap_packet_populate_endpoint(coap_packet_t *packet, coap_endpoint_t *target)
 {

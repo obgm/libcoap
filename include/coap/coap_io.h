@@ -15,10 +15,6 @@
 
 #include "address.h"
 
-#ifdef WITH_LWIP
-# include <lwip/udp.h>
-#endif
-
 /**
  * Abstract handle that is used to identify a local network interface.
  */
