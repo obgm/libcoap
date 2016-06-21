@@ -380,12 +380,12 @@ coap_new_context(
   prng((unsigned char *)&c->message_id, sizeof(unsigned short));
 
   c->endpoint = coap_new_endpoint(listen_addr, COAP_ENDPOINT_NOSEC);
-#ifdef WITH_LWIP
-  c->endpoint->context = c;
-#endif
   if (c->endpoint == NULL) {
     goto onerror;
   }
+#ifdef WITH_LWIP
+  c->endpoint->context = c;
+#endif
 
 #ifdef WITH_POSIX
   c->sockfd = c->endpoint->handle.fd;
@@ -411,7 +411,7 @@ coap_new_context(
   return c;
 
  onerror:
-  coap_free(c);
+  coap_free_type(COAP_CONTEXT, c);
   return NULL;
 }
 
