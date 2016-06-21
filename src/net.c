@@ -587,15 +587,11 @@ coap_send_impl(coap_context_t *context,
 	       const coap_address_t *dst,
 	       coap_pdu_t *pdu) {
   coap_tid_t id = COAP_INVALID_TID;
-  uint8_t err;
-  char *data_backup;
 
   if ( !context || !dst || !pdu )
   {
     return id;
   }
-
-  data_backup = pdu->data;
 
   /* FIXME: we can't check this here with the existing infrastructure, but we
    * should actually check that the pdu is not held by anyone but us. the
@@ -819,6 +815,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 
 void coap_dispatch(coap_context_t *context, coap_queue_t *rcvd);
 
+#ifndef WITH_LWIP
+/* WITH_LWIP, this is handled by coap_recv in a different way */
 int
 coap_read( coap_context_t *ctx ) {
   ssize_t bytes_read = -1;
@@ -828,22 +826,19 @@ coap_read( coap_context_t *ctx ) {
 
   coap_address_init(&src);
 
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
   bytes_read = ctx->network_read(ctx->endpoint, &packet);
-#endif /* WITH_POSIX or WITH_CONTIKI */
 
   if ( bytes_read < 0 ) {
     warn("coap_read: recvfrom");
   } else {
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
     result = coap_handle_message(ctx, packet);
-#endif /* WITH_POSIX or WITH_CONTIKI */
   }
 
   coap_free_packet(packet);
 
   return result;
 }
+#endif /* not WITH_LWIP */
 
 int
 coap_handle_message(coap_context_t *ctx,

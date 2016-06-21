@@ -354,7 +354,10 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
   }
 
 #ifdef WITH_LWIP
-  LWIP_ASSERT("coap_pdu_parse with unexpected addresses", data == pdu->hdr);
+  /* this verifies that with the classical copy-at-parse-time and lwip's
+   * zerocopy-into-place approaches, both share the same idea of destination
+   * addresses */
+  LWIP_ASSERT("coap_pdu_parse with unexpected addresses", data == (void*)pdu->hdr);
   LWIP_ASSERT("coap_pdu_parse with unexpected length", length == pdu->length);
 #else
 
