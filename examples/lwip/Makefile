@@ -43,7 +43,10 @@ CFLAGS += -Ilwip/src/include/ -Ilwip/src/include/ipv4/ -Ilwip-contrib/ports/unix
 
 OBJS = server.o server-coap.o ${LWIPOBJS} ${COAPOBJS}
 
-${OBJS}: lwip lwip-contrib
+../../include/coap/coap.h:
+	@echo "Error: coap.h not present. Run teh autotools chain (\`./autogen.sh && ./configure\`) in the project root directory to build the required coap.h file."
+	@exit 1
+${OBJS}: lwip lwip-contrib ../../include/coap/coap.h
 
 server: ${OBJS}
 
