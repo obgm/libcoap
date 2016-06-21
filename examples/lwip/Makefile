@@ -1,13 +1,11 @@
 top_srcdir = ../..
 
-WITH_BRANCH=-b STABLE-1_4_1
+WITH_BRANCH=-b STABLE-2_0_0_RC1
 
 all: server
 
 lwip:
 	git clone --depth 1 git://git.savannah.nongnu.org/lwip.git $(WITH_BRANCH)
-	curl -L 'https://savannah.nongnu.org/bugs/download.php?file_id=28185' -o lwip/memp.patch
-	cd lwip && patch -p1 < memp.patch
 
 lwip-contrib:
 	git clone --depth 1 git://git.savannah.nongnu.org/lwip/lwip-contrib.git $(WITH_BRANCH)
@@ -17,8 +15,13 @@ CFLAGS += -DWITH_LWIP -iquote.
 
 # lwip library
 
-LWIPOBJS = def.o init.o mintapif.o etharp.o netif.o timer.o timers.o stats.o mem.o memp.o udp.o tcp.o pbuf.o ip_addr.o ip.o inet_chksum.o tcp_in.o tcp_out.o icmp.o raw.o ip_frag.o sys_arch.o
-vpath %.c lwip/src/core/ lwip-contrib/ports/unix/proj/minimal/ lwip/src/netif/ lwip/src/core/ipv4/ lwip-contrib/ports/unix/
+LWIPOBJS = def.o init.o tapif.o etharp.o netif.o timers.o stats.o mem.o memp.o udp.o tcp.o pbuf.o ip4_addr.o ip4.o inet_chksum.o tcp_in.o tcp_out.o icmp.o raw.o ip_frag.o sys_arch.o ethernet.o ip.o
+vpath %.c lwip/src/core/ lwip-contrib/ports/unix/proj/minimal/ lwip/src/netif/ lwip/src/core/ipv4/ lwip-contrib/ports/unix/ lwip-contrib/ports/unix/netif/
+CFLAGS += -DLWIP_UNIX_LINUX
+
+# if ipv6 is used
+vpath %.c lwip/src/core/ipv6/
+LWIPOBJS += mld6.o ip6.o icmp6.o ethip6.o nd6.o ip6_addr.o ip6_frag.o
 
 # coap library
 
@@ -34,11 +37,11 @@ CFLAGS += -g3 -Wall -pedantic -Dopenbsd -DIPv4 -O0 -fpack-struct
 
 CFLAGS += -Ilwip/src/include/ -Ilwip/src/include/ipv4/ -Ilwip-contrib/ports/unix/include/ -Ilwip-contrib/ports/unix/proj/minimal/
 
-${LWIPOBJS}: lwip lwip-contrib
-
 # making an executable out of all of it
 
 OBJS = server.o server-coap.o ${LWIPOBJS} ${COAPOBJS}
+
+${OBJS}: lwip lwip-contrib
 
 server: ${OBJS}
 
