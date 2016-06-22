@@ -6,6 +6,7 @@ compiler:
 env:
   - PLATFORM=posix TESTS=yes
   - PLATFORM=contiki
+  - PLATFORM=lwip
 
 addons:
   apt_packages:
