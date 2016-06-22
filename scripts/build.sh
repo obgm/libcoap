@@ -15,7 +15,7 @@ case "${PLATFORM}" in
              ;;
     lwip)    config "--disable-tests --disable-documentation --disable-examples" && \
                make -C examples/lwip lwip lwip-contrib
-               make -C examples/lwip
+               make -C examples/lwip LDFLAGS=`grep ac_cv_search_clock_gettime=- config.log|cut -d= -f2`
              ;;
     posix|*) config "$WITH_TESTS --enable-documentation --enable-examples" && \
                make
