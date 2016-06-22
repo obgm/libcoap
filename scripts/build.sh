@@ -14,6 +14,7 @@ case "${PLATFORM}" in
                make -C examples/contiki
              ;;
     lwip)    config "--disable-tests --disable-documentation --disable-examples" && \
+               make -C examples/lwip lwip lwip-contrib
                make -C examples/lwip
              ;;
     posix|*) config "$WITH_TESTS --enable-documentation --enable-examples" && \
