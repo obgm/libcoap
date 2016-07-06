@@ -1,7 +1,7 @@
 /*
  * uri.h -- helper functions for URI treatment
  *
- * Copyright (C) 2010-2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2011,2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -75,10 +75,8 @@ int coap_hash_path(const unsigned char *path, size_t len, coap_key_t key);
  * @param uri     The coap_uri_t object to store the result.
  * @return        @c 0 on success, or < 0 on error.
  *
- * @note The host name part will be converted to lower case by this
- * function.
  */
-int coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri);
+int coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri);
 
 /**
  * Splits the given URI path into segments. Each segment is preceded

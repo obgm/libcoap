@@ -1,6 +1,6 @@
 /* uri.c -- helper functions for URI treatment
  *
- * Copyright (C) 2010--2012,2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012,2015-2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -41,9 +41,12 @@ strnchr(unsigned char *s, size_t len, unsigned char c) {
   return len ? s : NULL;
 }
 
+#define ISEQUAL_CI(a,b) \
+  ((a) == (b) || (islower(b) && ((a) == ((b) - 0x20))))
+
 int
-coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
-  unsigned char *p, *q;
+coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
+  const unsigned char *p, *q;
   int secure = 0, res = 0;
 
   if (!str_var || !uri)
@@ -60,7 +63,7 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
   }
 
   q = (unsigned char *)COAP_DEFAULT_SCHEME;
-  while (len && *q && tolower(*p) == *q) {
+  while (len && *q && ISEQUAL_CI(*p, *q)) {
     ++p; ++q; --len;
   }
   
@@ -72,12 +75,12 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
   }
 
   /* There might be an additional 's', indicating the secure version: */
-  if (len && (secure = tolower(*p) == 's')) {
+  if (len && (secure = *p == 's')) {
     ++p; --len;
   }
 
   q = (unsigned char *)"://";
-  while (len && *q && tolower(*p) == *q) {
+  while (len && *q && *p == *q) {
     ++p; ++q; --len;
   }
 
@@ -100,11 +103,10 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
       goto error;
     } 
 
-    COAP_SET_STR(&uri->host, q - p, p);
+    COAP_SET_STR(&uri->host, q - p, (unsigned char *)p);
     ++q; --len;
   } else {			/* IPv4 address or FQDN */
     while (len && *q != ':' && *q != '/' && *q != '?') {
-      *q = tolower(*q);
       ++q;
       --len;
     }
@@ -114,7 +116,7 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
       goto error;
     }
 
-    COAP_SET_STR(&uri->host, q - p, p);
+    COAP_SET_STR(&uri->host, q - p, (unsigned char *)p);
   }
 
   /* check for Uri-Port */
@@ -158,7 +160,7 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
     }
   
     if (p < q) {
-      COAP_SET_STR(&uri->path, q - p, p);
+      COAP_SET_STR(&uri->path, q - p, (unsigned char *)p);
       p = q;
     }
   }
@@ -167,7 +169,7 @@ coap_split_uri(unsigned char *str_var, size_t len, coap_uri_t *uri) {
   if (len && *p == '?') {
     ++p;
     --len;
-    COAP_SET_STR(&uri->query, len, p);
+    COAP_SET_STR(&uri->query, len, (unsigned char *)p);
     len = 0;
   }
 
