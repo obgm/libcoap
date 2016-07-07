@@ -330,7 +330,7 @@ PREDEFINED_CFLAGS=`echo $ADDITIONAL_CFLAGS | sed -e 's/-D//g'`
 AC_SUBST(PREDEFINED_CFLAGS)
 
 # And finaly combining the CFLAGS together ...
-CFLAGS+=" $ADDITIONAL_CFLAGS"
+CFLAGS="$CFLAGS $ADDITIONAL_CFLAGS"
 
 # Override the various template files, currently just makefiles and the
 # pkgconfig *.pc file.
