@@ -103,10 +103,16 @@ typedef struct coap_resource_t {
  * @param uri    The URI path of the new resource.
  * @param len    The length of @p uri.
  * @param flags  Flags for memory management (in particular release of memory). Possibly values:<br/>
+<<<<<<< HEAD
  * COAP_RESOURCE_FLAGS_RELEASE_URI If this flag is set, the URI passed to coap_resource_init() is free'd by coap_delete_resource()<br/>
  * COAP_RESOURCE_FLAGS_NOTIFY_CON If this flag is set, coap-observe notifications will be sent confirmable by default.<br/>
  * COAP_RESOURCE_FLAGS_NOTIFY_NON (default) If this flag is set, coap-observe notifications will be sent non-confirmable by default.<br/>
  * If flags is set to 0 then the COAP_RESOURCE_FLAGS_NOTIFY_NON is considered.
+=======
+ * 0 No flag<br/>
+ * COAP_RESOURCE_FLAGS_RELEASE_URI If this flag is set, the URI passed to coap_resource_init() is free'd by coap_delete_resource()<br/>
+ * COAP_RESOURCE_FLAGS_NOTIFY_CON If this flag is set, coap-observe notifications will be sent confirmable by default.
+>>>>>>> bec71a1279bbf04b9e32ca9d3f31da68b70e0cce
  * 
  * @return       A pointer to the new object or @c NULL on error.
  */
