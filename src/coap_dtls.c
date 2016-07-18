@@ -537,20 +537,23 @@ coap_dtls_get_session(struct coap_context_t *coap_context UNUSED,
 }
 
 int
-coap_dtls_send(struct coap_context_t *coap_context UNUSED,
-               struct coap_dtls_session_t *session UNUSED,
-               const unsigned char *data UNUSED, size_t data_len UNUSED) {
+coap_dtls_send(struct coap_context_t *coap_context,
+               struct coap_dtls_session_t *session,
+               const coap_pdu_t *pdu) {
   return -1;
 }
 
 struct coap_dtls_session_t *
-coap_dtls_new_session(const coap_endpoint_t *local_interface UNUSED,
-                      const coap_address_t *remote UNUSED) {
+coap_dtls_new_session(struct coap_dtls_context_t *dtls_context,
+                      const coap_endpoint_t *local_interface,
+                      const coap_address_t *remote) {
   return NULL;
 }
 
+struct coap_dtls_session_t;
 void
-coap_dtls_free_session(coap_dtls_session_t *session UNUSED) {}
+coap_dtls_free_session(struct coap_dtls_context_t *dtls_context,
+                       struct coap_dtls_session_t *session) {}
 
 int
 coap_dtls_handle_message(struct coap_context_t *coap_context UNUSED,
