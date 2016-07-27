@@ -6,12 +6,13 @@
  * README for terms of use.
  */
 
+#include "coap_config.h"
+
 #ifdef WITH_POSIX
 #include <time.h>
 #include <sys/time.h>
 #include <unistd.h>  /* _POSIX_TIMERS */
 
-#include "coap_config.h"
 #include "coap_time.h"
 
 static coap_time_t coap_clock_offset = 0;
@@ -90,7 +91,7 @@ coap_ticks_to_rt(coap_tick_t t) {
 #else /* WITH_POSIX */
 
 /* make compilers happy that do not like empty modules */
-static inline void dummy()
+COAP_STATIC_INLINE void dummy()
 {
 }
 

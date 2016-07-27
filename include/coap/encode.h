@@ -10,10 +10,10 @@
 #ifndef _COAP_ENCODE_H_
 #define _COAP_ENCODE_H_
 
-#if (BSD >= 199103) || defined(WITH_CONTIKI)
-# include <string.h>
-#else
+#ifdef HAVE_STRINGS_H
 # include <strings.h>
+#else 
+# include <string.h>
 #endif
 
 #define Nn 8  /* duplicate definition of N if built on sky motes */

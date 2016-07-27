@@ -143,7 +143,7 @@ coap_option_iterator_init(coap_pdu_t *pdu, coap_opt_iterator_t *oi,
   return oi;
 }
 
-static inline int
+COAP_STATIC_INLINE int
 opt_finished(coap_opt_iterator_t *oi) {
   assert(oi);
 
@@ -420,7 +420,7 @@ typedef struct {
 } opt_filter;
 
 /** Returns true iff @p type denotes an option type larger than 255. */
-static inline int
+COAP_STATIC_INLINE int
 is_long_option(unsigned short type) { return type > 255; }
 
 /** Operation specifiers for coap_filter_op(). */

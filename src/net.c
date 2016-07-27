@@ -19,7 +19,9 @@
 #elif HAVE_SYS_UNISTD_H
 #include <sys/unistd.h>
 #endif
-#include <sys/types.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
@@ -28,6 +30,9 @@
 #endif
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#endif
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
 #endif
 
 #ifdef WITH_LWIP
@@ -113,16 +118,16 @@
 /** creates a Qx.FRAC_BITS from COAP_DEFAULT_ACK_TIMEOUT */
 #define ACK_TIMEOUT Q(FRAC_BITS, COAP_DEFAULT_ACK_TIMEOUT)
 
-#if defined(WITH_POSIX)
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 
 time_t clock_offset;
 
-static inline coap_queue_t *
+COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node(void) {
   return (coap_queue_t *)coap_malloc_type(COAP_NODE, sizeof(coap_queue_t));
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_free_node(coap_queue_t *node) {
   coap_free_type(COAP_NODE, node);
 }
@@ -134,12 +139,12 @@ coap_free_node(coap_queue_t *node) {
 static void coap_retransmittimer_execute(void *arg);
 static void coap_retransmittimer_restart(coap_context_t *ctx);
 
-static inline coap_queue_t *
+COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node() {
 	return (coap_queue_t *)memp_malloc(MEMP_COAP_NODE);
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_free_node(coap_queue_t *node) {
 	memp_free(MEMP_COAP_NODE, node);
 }
@@ -165,12 +170,12 @@ coap_context_t the_coap_context;
 
 PROCESS(coap_retransmit_process, "message retransmit process");
 
-static inline coap_queue_t *
+COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node() {
   return (coap_queue_t *)coap_malloc_type(COAP_NODE, 0);
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_free_node(coap_queue_t *node) {
   coap_free_type(COAP_NODE, node);
 }
@@ -668,7 +673,7 @@ coap_send_message_type(coap_context_t *context,
  *           value
  * @return   COAP_TICKS_PER_SECOND * ACK_TIMEOUT * (1 + (ACK_RANDOM_FACTOR - 1) * r)
  */
-static inline unsigned int
+COAP_STATIC_INLINE unsigned int
 calc_timeout(unsigned char r) {
   unsigned int result;
 
@@ -969,7 +974,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_tid_t id, coap_queue_t **node)
 
 }
 
-static inline int
+COAP_STATIC_INLINE int
 token_match(const unsigned char *a, size_t alen, 
 	    const unsigned char *b, size_t blen) {
   return alen == blen && (alen == 0 || memcmp(a, b, alen) == 0);
@@ -1120,7 +1125,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
  * Quick hack to determine the size of the resource description for
  * .well-known/core.
  */
-static inline size_t
+COAP_STATIC_INLINE size_t
 get_wkc_len(coap_context_t *context, coap_opt_t *query_filter) {
   unsigned char buf[1];
   size_t len = 0;
@@ -1324,7 +1329,7 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
  * @return @c 1 if the response code matches the No-Response option,
  *         or @c 0, otherwise. 
  */
-static inline int
+COAP_STATIC_INLINE int
 no_response(coap_pdu_t *request, coap_pdu_t *response) {
   coap_opt_t *nores;
   coap_opt_iterator_t opt_iter;
@@ -1497,7 +1502,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
   }  
 }
 
-static inline void
+COAP_STATIC_INLINE void
 handle_response(coap_context_t *context, 
 		coap_queue_t *sent, coap_queue_t *rcvd) {
 
@@ -1519,7 +1524,7 @@ handle_response(coap_context_t *context,
   }
 }
 
-static inline int
+COAP_STATIC_INLINE int
 #ifdef __GNUC__
 handle_locally(coap_context_t *context __attribute__ ((unused)), 
 	       coap_queue_t *node __attribute__ ((unused))) {

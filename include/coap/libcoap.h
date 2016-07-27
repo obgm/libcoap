@@ -10,6 +10,8 @@
 #ifndef _LIBCOAP_H_
 #define _LIBCOAP_H_
 
+#include "coap_config.h"
+
 /* The non posix embedded platforms like Contiki, TinyOS, RIOT, ... doesn't have
  * a POSIX compatible header structure so we have to slightly do some platform
  * related things. Currently there is only Contiki available so we check for a
@@ -18,9 +20,14 @@
  *
  * The CONTIKI variable is within the Contiki build environment! */
 
-#if !defined (CONTIKI) 
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
-#endif /* CONTIKI */
+#endif
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+#endif
 
 #endif /* _LIBCOAP_H_ */
