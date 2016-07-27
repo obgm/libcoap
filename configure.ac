@@ -134,65 +134,65 @@ AC_ARG_ENABLE([documentation],
               [build_documentation="yes"])
 
 if test "x$build_documentation" = "xyes"; then
-	# Check for doxygen
-	AC_PATH_PROGS([DOXYGEN], [doxygen])
-	if test -z "$DOXYGEN"; then
-		if test "x$build_documentation" = "xyes"; then
-			AC_MSG_WARN([==> Doxygen not found - continuing without Doxygen support])
-			AC_MSG_WARN([==> The libcoap html documentation will not be build!])
-			doxygen_version="not found"
-		fi
-	else
-		AC_MSG_CHECKING([for compatible doxygen version])
-						doxygen_version=`$DOXYGEN --version`
-						AS_VERSION_COMPARE([$doxygen_version], [1.7.0],
-						[AC_MSG_RESULT([no])
-						 DOXYGEN=""],
-						[AC_MSG_RESULT([yes])],
-						[AC_MSG_RESULT([yes])])
-		if test "x$DOXYGEN" = "x" -a "x$build_documentation" = "xyes"; then
-			AC_MSG_ERROR([==> Doxygen $doxygen_version too old. Doxygen 1.7+ required for documentation build.])
-			AC_MSG_ERROR([==> Install required doxygen version or disable the documentation using --disable-documentation])
-		else
-			# we found doxygen and the version is valid
-			DOC_DIR=doc
-			AC_SUBST(DOC_DIR)
-			# now checking dot (needed for graphics)
-			AC_PATH_PROG([DOT], [dot])
-			if test "x$DOT" = "x"; then
-				AC_MSG_WARN([==> dot not found - continuing without DOT support])
-				AC_MSG_WARN([==> The libcoap html documentation will be build without DOT graphics!])
-				HAVE_DOT="NO"
-				USE_CALL_GRAPH="NO"
-			else
-				AC_MSG_CHECKING([for compatible dot version])
-				dot_version=`$DOT -V 2>&1|$GREP -oP '(?<=version\W)@<:@0-9.@:>@*(?=\W(.*))'`
-				AS_VERSION_COMPARE([$dot_version], [2.26.0],
-								   [AC_MSG_RESULT([no])
-								    DOT=""],
-								   [AC_MSG_RESULT([yes])],
-								   [AC_MSG_RESULT([yes])])
-				if test "x$DOT" = "x" -a "x$build_documentation" = "xyes"; then
-						AC_MSG_WARN([==> Graphviz dot $dot_version too old. Graphviz 2.26+ required for documentation build.])
-						AC_MSG_ERROR([==> Install required graphviz version or disable the documentation using --disable-documentation])
-				fi
-				# we found dot and the version is valid
-				HAVE_DOT="YES"
-				# let doxygen create caller graphics
-				# see http://www.stack.nl/~dimitri/doxygen/manual/config.html#cfg_call_graph
-				USE_CALL_GRAPH="YES"
-				# exporting the tests to doc/Doxygen(.in)
-				AC_SUBST(HAVE_DOT)
-				AC_SUBST(USE_CALL_GRAPH)
-			fi
-		fi
-	fi
+    # Check for doxygen
+    AC_PATH_PROGS([DOXYGEN], [doxygen])
+    if test -z "$DOXYGEN"; then
+        if test "x$build_documentation" = "xyes"; then
+            AC_MSG_WARN([==> Doxygen not found - continuing without Doxygen support])
+            AC_MSG_WARN([==> The libcoap html documentation will not be build!])
+            doxygen_version="not found"
+        fi
+    else
+        AC_MSG_CHECKING([for compatible doxygen version])
+                        doxygen_version=`$DOXYGEN --version`
+                        AS_VERSION_COMPARE([$doxygen_version], [1.7.0],
+                        [AC_MSG_RESULT([no])
+                         DOXYGEN=""],
+                        [AC_MSG_RESULT([yes])],
+                        [AC_MSG_RESULT([yes])])
+        if test "x$DOXYGEN" = "x" -a "x$build_documentation" = "xyes"; then
+            AC_MSG_ERROR([==> Doxygen $doxygen_version too old. Doxygen 1.7+ required for documentation build.])
+            AC_MSG_ERROR([==> Install required doxygen version or disable the documentation using --disable-documentation])
+        else
+            # we found doxygen and the version is valid
+            DOC_DIR=doc
+            AC_SUBST(DOC_DIR)
+            # now checking dot (needed for graphics)
+            AC_PATH_PROG([DOT], [dot])
+            if test "x$DOT" = "x"; then
+                AC_MSG_WARN([==> dot not found - continuing without DOT support])
+                AC_MSG_WARN([==> The libcoap html documentation will be build without DOT graphics!])
+                HAVE_DOT="NO"
+                USE_CALL_GRAPH="NO"
+            else
+                AC_MSG_CHECKING([for compatible dot version])
+                dot_version=`$DOT -V 2>&1|$GREP -oP '(?<=version\W)@<:@0-9.@:>@*(?=\W(.*))'`
+                AS_VERSION_COMPARE([$dot_version], [2.26.0],
+                                   [AC_MSG_RESULT([no])
+                                    DOT=""],
+                                   [AC_MSG_RESULT([yes])],
+                                   [AC_MSG_RESULT([yes])])
+                if test "x$DOT" = "x" -a "x$build_documentation" = "xyes"; then
+                        AC_MSG_WARN([==> Graphviz dot $dot_version too old. Graphviz 2.26+ required for documentation build.])
+                        AC_MSG_ERROR([==> Install required graphviz version or disable the documentation using --disable-documentation])
+                fi
+                # we found dot and the version is valid
+                HAVE_DOT="YES"
+                # let doxygen create caller graphics
+                # see http://www.stack.nl/~dimitri/doxygen/manual/config.html#cfg_call_graph
+                USE_CALL_GRAPH="YES"
+                # exporting the tests to doc/Doxygen(.in)
+                AC_SUBST(HAVE_DOT)
+                AC_SUBST(USE_CALL_GRAPH)
+            fi
+        fi
+    fi
 fi
 AM_CONDITIONAL(BUILD_DOCUMENTATION, [test "x$build_documentation" = "xyes"])
 
 AM_CONDITIONAL([HAVE_DOXYGEN],
-	[test -n "$DOXYGEN"])AM_COND_IF([HAVE_DOXYGEN],
-	[AC_CONFIG_FILES([doc/Doxyfile])])
+    [test -n "$DOXYGEN"])AM_COND_IF([HAVE_DOXYGEN],
+    [AC_CONFIG_FILES([doc/Doxyfile])])
 
 # configure options
 # __tests__
@@ -203,29 +203,29 @@ AC_ARG_ENABLE([tests],
               [build_tests="no"])
 
 if test "x$build_tests" = "xyes"; then
-	# CUnit ships not version within the pkgconfig file cunit.pc so we have to do some more work here
-	# Check for CUnit header files
-	AC_CHECK_HEADERS([CUnit/CUnit.h],
-					 [],
-					 [AC_MSG_WARN([==> You want to build the testing binary but the needed header files for CUnit could not be found!])
-					  AC_MSG_ERROR([==> Install the package that contains the headers or disable the testing binary using --disable-tests.])
-					 ])
-	# Check now for libcunit
-	save_LIBS="$LIBS"
-	LIBS=""
-	CUNIT_LIBS=""
-	have_cunit=no
-	AC_SEARCH_LIBS([CU_add_suite],
-				   [cunit],
-				   [CUNIT_LIBS="$LIBS"
-				    AC_DEFINE(HAVE_LIBCUNIT, [1], [Define if the system has libcunit])
-				   ],
-				   [AC_MSG_WARN([==> You want to build the testing binary but the needed library 'libcunit' for linking could not be found!])
-				    AC_MSG_ERROR([==> Install the package that contains the library or disable the testing binary using --disable-tests.])
-				   ])
-	LIBS="$save_LIBS"
-	AC_SUBST(CUNIT_LIBS)
-	HAVE_CUNIT="YES"
+    # CUnit ships not version within the pkgconfig file cunit.pc so we have to do some more work here
+    # Check for CUnit header files
+    AC_CHECK_HEADERS([CUnit/CUnit.h],
+                     [],
+                     [AC_MSG_WARN([==> You want to build the testing binary but the needed header files for CUnit could not be found!])
+                      AC_MSG_ERROR([==> Install the package that contains the headers or disable the testing binary using --disable-tests.])
+                     ])
+    # Check now for libcunit
+    save_LIBS="$LIBS"
+    LIBS=""
+    CUNIT_LIBS=""
+    have_cunit=no
+    AC_SEARCH_LIBS([CU_add_suite],
+                   [cunit],
+                   [CUNIT_LIBS="$LIBS"
+                    AC_DEFINE(HAVE_LIBCUNIT, [1], [Define if the system has libcunit])
+                   ],
+                   [AC_MSG_WARN([==> You want to build the testing binary but the needed library 'libcunit' for linking could not be found!])
+                    AC_MSG_ERROR([==> Install the package that contains the library or disable the testing binary using --disable-tests.])
+                   ])
+    LIBS="$save_LIBS"
+    AC_SUBST(CUNIT_LIBS)
+    HAVE_CUNIT="YES"
 fi
 AM_CONDITIONAL(HAVE_CUNIT, [test "x$CUNIT_LIBS" != "x"])
 
@@ -238,13 +238,13 @@ AC_ARG_ENABLE([examples],
               [build_examples="yes"])
 
 if test "x$build_examples" = "xyes" -a "x$build_documentation" = "xyes"; then
-	AC_ARG_VAR([A2X], [a2x command])
-	AC_PATH_PROG([A2X], [a2x])
-	if test "x$A2X" = "x"; then
-		AC_MSG_WARN([==> You want to build the examples binaries, that is also including the respective manpages but a2x was not found!])
-		AC_MSG_ERROR([==> Install the package that contains the a2x binary or disable the build of the examples using --disable-examples.])
-	fi
-	build_examples="yes"
+    AC_ARG_VAR([A2X], [a2x command])
+    AC_PATH_PROG([A2X], [a2x])
+    if test "x$A2X" = "x"; then
+        AC_MSG_WARN([==> You want to build the examples binaries, that is also including the respective manpages but a2x was not found!])
+        AC_MSG_ERROR([==> Install the package that contains the a2x binary or disable the build of the examples using --disable-examples.])
+    fi
+    build_examples="yes"
 fi
 AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$build_examples" = "xyes"])
 
@@ -255,15 +255,15 @@ AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$build_examples" = "xyes"])
 AC_ARG_VAR([CTAGS_PROG],[the 'ctag' program to use for make target 'update-map-file'])
 AC_PATH_PROG([CTAGS_PROG],[ctags],[])
 if test "x$CTAGS_PROG" = "x"; then
-	AC_MSG_NOTICE([==> Note: 'ctags' command not found!])
-	AC_MSG_WARN([==> Without ctags you will be unable to run the target 'update-map-file'!])
-	AC_MSG_WARN([==> This is no problem if you just want to build the library libcoap.])
+    AC_MSG_NOTICE([==> Note: 'ctags' command not found!])
+    AC_MSG_WARN([==> Without ctags you will be unable to run the target 'update-map-file'!])
+    AC_MSG_WARN([==> This is no problem if you just want to build the library libcoap.])
 fi
 if ! "$CTAGS_PROG" --c-kinds=f /dev/null &>/dev/null; then
-	AC_MSG_NOTICE([==> Note: your ctags does not support '--c-kinds'!])
-	AC_MSG_NOTICE([==> Most likely, you are using the GNU Emacs ctag and not exuberant ctag])
-	AC_MSG_WARN([==> This option is required for target 'update-map-file'])
-	AC_MSG_WARN([==> which is not a problem if you just want to build the library libcoap.])
+    AC_MSG_NOTICE([==> Note: your ctags does not support '--c-kinds'!])
+    AC_MSG_NOTICE([==> Most likely, you are using the GNU Emacs ctag and not exuberant ctag])
+    AC_MSG_WARN([==> This option is required for target 'update-map-file'])
+    AC_MSG_WARN([==> which is not a problem if you just want to build the library libcoap.])
 fi
 
 # Checks for header files.
@@ -292,37 +292,37 @@ AC_MSG_CHECKING([operating system])
 # The "ADDITIONAL_CFLAGS" is need as this stand-alone definition
 # for the doxygen part.
 case $host in
-	*-linux* | *-uclinux*)
-	AC_MSG_RESULT([Linux])
-	ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+    *-linux* | *-uclinux*)
+    AC_MSG_RESULT([Linux])
+    ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
 
-	# Not yet needed but if some code definitions have to depend on the platform.
-	#AC_DEFINE(OS_LINUX, 1, [Linux backend])
-	#AC_SUBST(OS_LINUX)
-	;;
+    # Not yet needed but if some code definitions have to depend on the platform.
+    #AC_DEFINE(OS_LINUX, 1, [Linux backend])
+    #AC_SUBST(OS_LINUX)
+    ;;
 
-	*-solaris*)
-	AC_MSG_RESULT([Solaris])
-	# set _XOPEN_SOURCE and _XOPEN_SOURCE_EXTENDED to enable XPG4v2 (POSIX 2004)
-	# set __EXTENSION__ to shut up feature test macros that restrict -std=c99
-	# to only C99 (and nothing newer)
-	ADDITIONAL_CFLAGS="-D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=600 -D__EXTENSIONS__=1 -DWITH_POSIX"
-	;;
+    *-solaris*)
+    AC_MSG_RESULT([Solaris])
+    # set _XOPEN_SOURCE and _XOPEN_SOURCE_EXTENDED to enable XPG4v2 (POSIX 2004)
+    # set __EXTENSION__ to shut up feature test macros that restrict -std=c99
+    # to only C99 (and nothing newer)
+    ADDITIONAL_CFLAGS="-D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=600 -D__EXTENSIONS__=1 -DWITH_POSIX"
+    ;;
 
-	*-darwin*)
-	AC_MSG_RESULT([Darwin])
-	ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+    *-darwin*)
+    AC_MSG_RESULT([Darwin])
+    ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
 
-	AC_DEFINE(__APPLE_USE_RFC_3542, 1, [Define this to 1 for ancillary data on MacOS])
+    AC_DEFINE(__APPLE_USE_RFC_3542, 1, [Define this to 1 for ancillary data on MacOS])
 
-	# Not yet needed but if some code definitions have to depend on the platform.
-	#AC_DEFINE(OS_MACOS, 1, [MacOS backend])
-	#AC_SUBST(OS_MACOS)
-	;;
+    # Not yet needed but if some code definitions have to depend on the platform.
+    #AC_DEFINE(OS_MACOS, 1, [MacOS backend])
+    #AC_SUBST(OS_MACOS)
+    ;;
 
-	*)
-	AC_MSG_WARN([==> Currently unsupported operating system ${host}!])
-	AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
+    *)
+    AC_MSG_WARN([==> Currently unsupported operating system ${host}!])
+    AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
 esac
 
 # Exporting the PREDEFINED_CFLAGS definition
@@ -360,30 +360,30 @@ libcoap configuration summary:
       libcoap API version     : "$LIBCOAP_API_VERSION"
       host system             : "$host"]);
 if test "x$build_documentation" = "xyes" -a "x$DOXYGEN" != "x"; then
-	AC_MSG_RESULT([      build documentation     : "yes"])
-	AC_MSG_RESULT([          --> Doxygen around  : "yes" ($DOXYGEN $doxygen_version)])
-	if test "x$DOT" = "x"; then
-		AC_MSG_RESULT([             -->  dot around  : "no" (DOT not found!)])
-	else
-		AC_MSG_RESULT([             -->  dot around  : "yes" ($DOT $dot_version)])
-	fi
+    AC_MSG_RESULT([      build documentation     : "yes"])
+    AC_MSG_RESULT([          --> Doxygen around  : "yes" ($DOXYGEN $doxygen_version)])
+    if test "x$DOT" = "x"; then
+        AC_MSG_RESULT([             -->  dot around  : "no" (DOT not found!)])
+    else
+        AC_MSG_RESULT([             -->  dot around  : "yes" ($DOT $dot_version)])
+    fi
 else
-	if test "x$build_documentation" = "xno"; then
-		AC_MSG_RESULT([      build documentation     : "no"])
-	fi
+    if test "x$build_documentation" = "xno"; then
+        AC_MSG_RESULT([      build documentation     : "no"])
+    fi
 fi
 if test "x$build_tests" = "xyes"; then
-	AC_MSG_RESULT([      build unit test binary  : "yes"])
+    AC_MSG_RESULT([      build unit test binary  : "yes"])
 else
-	AC_MSG_RESULT([      build unit test binary  : "no"])
+    AC_MSG_RESULT([      build unit test binary  : "no"])
 fi
 if test "x$build_examples" = "xyes"; then
-	AC_MSG_RESULT([      build examples          : "yes"])
-	if test "x$A2X" != "x"; then
-		AC_MSG_RESULT([             -->  use a2x     : "yes" ($A2X)])
-	else
-		AC_MSG_RESULT([             -->  use a2x     : "no"])
-	fi
+    AC_MSG_RESULT([      build examples          : "yes"])
+    if test "x$A2X" != "x"; then
+        AC_MSG_RESULT([             -->  use a2x     : "yes" ($A2X)])
+    else
+        AC_MSG_RESULT([             -->  use a2x     : "no"])
+    fi
 else
-	AC_MSG_RESULT([      build examples          : "no"])
+    AC_MSG_RESULT([      build examples          : "no"])
 fi
