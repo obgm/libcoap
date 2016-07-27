@@ -15,7 +15,13 @@
 #ifndef _COAP_ADDRESS_H_
 #define _COAP_ADDRESS_H_
 
+#ifdef HAVE_ASSERT_H
 #include <assert.h>
+#else
+#ifndef assert
+#  define assert(x)
+#endif
+#endif
 #include <stdint.h>
 #include <string.h>
 

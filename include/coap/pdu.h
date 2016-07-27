@@ -248,15 +248,17 @@ typedef struct {
   unsigned char header_data[6];
   unsigned char token[]; /* the actual token, if any */
 } coap_hdr_tcp_32bit_t;
+#endif /* WITH_TCP */
 
 typedef union {
   coap_hdr_udp_t udp;
+#ifdef WITH_TCP
   coap_hdr_tcp_t tcp;  
   coap_hdr_tcp_8bit_t tcp_8bit;
   coap_hdr_tcp_16bit_t tcp_16bit;
   coap_hdr_tcp_32bit_t tcp_32bit;
-} coap_hdr_transport_t;
 #endif /* WITH_TCP */
+} coap_hdr_transport_t;
 
 // Typedef for backwards compatibility.
 typedef coap_hdr_udp_t coap_hdr_t;
@@ -299,12 +301,10 @@ typedef struct {
                                *   This may or may not equal (coap_hdr_t*)(pdu+1)
                                *   depending on the memory management
                                *   implementation. */
-#ifdef WITH_TCP
     coap_hdr_transport_t *transport_hdr; /**< Address of the first byte of the CoAP message.
                                            *   This may or may not equal (coap_hdr_t*)(pdu+1)
                                            *   depending on the memory management
                                            *   implementation. */
-#endif
   };
   unsigned short max_delta; /**< highest option number */
   unsigned short length;    /**< PDU length (including header, options, data) */
@@ -367,12 +367,40 @@ coap_pdu_init(unsigned char type,
               size_t size);
 
 /**
+ * Creates a new CoAP PDU of given @p size (must be large enough to hold the
+ * basic CoAP message header (coap_hdr_t). The function returns a pointer to
+ * the node coap_pdu_t object on success, or @c NULL on error. The storage
+ * allocated for the result must be released with coap_delete_pdu().
+ *
+ * @param type The type of the PDU (one of COAP_MESSAGE_CON,
+ *             COAP_MESSAGE_NON, COAP_MESSAGE_ACK, COAP_MESSAGE_RST).
+ * @param code The message code.
+ * @param id   The message id to set or COAP_INVALID_TID if unknown.
+ * @param size The number of bytes to allocate for the actual message.
+ * @param transport The transport type.
+ *
+ * @return A pointer to the new PDU object or @c NULL on error.
+ */
+coap_pdu_t *
+coap_pdu_init2(unsigned char type, unsigned char code, unsigned short id,
+               size_t size, coap_transport_t transport);
+
+/**
  * Clears any contents from @p pdu and resets @c version field, @c
  * length and @c data pointers. @c max_size is set to @p size, any
  * other field is set to @c 0. Note that @p pdu must be a valid
  * pointer to a coap_pdu_t object created e.g. by coap_pdu_init().
  */
 void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
+
+/**
+ * Clears any contents from @p pdu and resets @c version field, @c
+ * length and @c data pointers. @c max_size is set to @p size, any
+ * other field is set to @c 0. Note that @p pdu must be a valid
+ * pointer to a coap_pdu_t object created e.g. by coap_pdu_init().
+ */
+void coap_pdu_clear2(coap_pdu_t *pdu, size_t size, coap_transport_t transport,
+                     unsigned int length);
 
 /**
  * Creates a new CoAP PDU.
@@ -512,6 +540,25 @@ size_t coap_get_opt_header_length(unsigned short key, size_t length);
 #endif /* WITH_TCP */
 
 /**
+ * Add code in coap header.
+ *
+ * @param pdu  The pdu pointer.
+ * @param transport The transport type.
+ * @param code  The message code.
+ */
+void coap_add_code(const coap_pdu_t *pdu, coap_transport_t transport,
+                   unsigned int code);
+
+/**
+ * Get message code from coap header
+ *
+ * @param pdu  The pdu pointer.
+ * @param transport The transport type.
+ * @return The message code.
+ */
+unsigned int coap_get_code(const coap_pdu_t *pdu, coap_transport_t transport);
+
+/**
  * Adds token of length @p len to @p pdu.
  * Adding the token destroys any following contents of the pdu. Hence options
  * and data must be added after coap_add_token() has been called. In @p pdu,
@@ -543,6 +590,27 @@ int coap_add_token(coap_pdu_t *pdu,
  */
 int coap_add_token2(coap_pdu_t *pdu, size_t len, const unsigned char *data,
                     coap_transport_t transport);
+
+/**
+ * Get token from coap header
+ *
+ * @param pdu_hdr  The header pointer of PDU.
+ * @param token  out parameter to get token.
+ * @param token_length  out parameter to get token length.
+ */
+void coap_get_token(const coap_hdr_t *pdu_hdr,
+                    unsigned char **token, unsigned int *token_length);
+
+/**
+ * Get token from coap header based on transport type
+ *
+ * @param pdu_hdr  The header pointer of PDU.
+ * @param transport The transport type.
+ * @param token  out parameter to get token.
+ * @param token_length  out parameter to get token length.
+ */
+void coap_get_token2(const coap_hdr_transport_t *pdu_hdr, coap_transport_t transport,
+                     unsigned char **token, unsigned int *token_length);
 
 /**
  * Adds option of given type to pdu that is passed as first parameter.
@@ -592,7 +660,7 @@ int coap_add_data(coap_pdu_t *pdu,
  * 1 if *len and *data have correct values. Note that these values are destroyed
  * with the pdu.
  */
-int coap_get_data(coap_pdu_t *pdu,
+int coap_get_data(const coap_pdu_t *pdu,
                   size_t *len,
                   unsigned char **data);
 

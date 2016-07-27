@@ -206,7 +206,11 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
       return 0;
   }
 
+#ifdef HAVE_SNPRINTF
   p += snprintf((char *)p, buf + len - p + 1, ":%d", port);
+#else /* HAVE_SNPRINTF */
+    /* @todo manual conversion of port number */
+#endif /* HAVE_SNPRINTF */
 
   return buf + len - p;
 #else /* HAVE_ARPA_INET_H */

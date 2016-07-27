@@ -20,7 +20,7 @@
  * @{
  */
 
-#if defined(WITH_POSIX) || (defined(WITH_LWIP) && !defined(LWIP_RAND))
+#if !defined(WITH_CONTIKI) && !defined(LWIP_RAND)
 #include <stdlib.h>
 
 /**
@@ -34,9 +34,7 @@ coap_prng_impl(unsigned char *buf, size_t len) {
     *buf++ = rand() & 0xFF;
   return 1;
 }
-#endif /* WITH_POSIX */
-
-#ifdef WITH_CONTIKI
+#else /* WITH_CONTIKI */
 #include <string.h>
 
 /**

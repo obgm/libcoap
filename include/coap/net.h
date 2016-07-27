@@ -10,7 +10,14 @@
 #ifndef _COAP_NET_H_
 #define _COAP_NET_H_
 
+#ifdef HAVE_ASSERT_H
 #include <assert.h>
+#else
+#ifndef assert
+#  define assert(x)
+#endif
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #ifdef HAVE_SYS_TIME_H

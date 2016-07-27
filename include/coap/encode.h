@@ -15,6 +15,9 @@
 #else 
 # include <string.h>
 #endif
+#include <stdbool.h>
+
+#include "option.h"
 
 #define Nn 8  /* duplicate definition of N if built on sky motes */
 #define E 4
@@ -48,5 +51,11 @@ unsigned int coap_decode_var_bytes(unsigned char *buf,unsigned int len);
  * Returns the number of bytes used to encode val or 0 on error.
  */
 unsigned int coap_encode_var_bytes(unsigned char *buf, unsigned int val);
+
+/**
+ * Tests whether the option definition has a type that allows variable byte encoding.
+ * Returns true when supported, false when not supported.
+ */
+bool coap_is_var_bytes(coap_option_def_t* def);
 
 #endif /* _COAP_ENCODE_H_ */

@@ -119,22 +119,65 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 coap_opt_iterator_t *
 coap_option_iterator_init(coap_pdu_t *pdu, coap_opt_iterator_t *oi,
 			  const coap_opt_filter_t filter) {
+    return coap_option_iterator_init2(pdu, oi, filter, COAP_UDP);
+}
+
+coap_opt_iterator_t *
+coap_option_iterator_init2(coap_pdu_t *pdu, coap_opt_iterator_t *oi,
+                           const coap_opt_filter_t filter, coap_transport_t transport) {
   assert(pdu); 
   assert(pdu->hdr);
   assert(oi);
   
   memset(oi, 0, sizeof(coap_opt_iterator_t));
 
-  oi->next_option = (unsigned char *)pdu->hdr + sizeof(coap_hdr_t)
-    + pdu->hdr->token_length;
-  if ((unsigned char *)pdu->hdr + pdu->length <= oi->next_option) {
-    oi->bad = 1;
-    return NULL;
+  unsigned int token_length;
+  unsigned int headerSize;
+
+  switch (transport) {
+#ifdef WITH_TCP
+    case COAP_TCP:
+      token_length = (pdu->transport_hdr->tcp.header_data[0]) & 0x0f;
+      headerSize = COAP_TCP_HEADER_NO_FIELD;
+      break;
+    case COAP_TCP_8BIT:
+      token_length = (pdu->transport_hdr->tcp_8bit.header_data[0]) & 0x0f;
+      headerSize = COAP_TCP_HEADER_8_BIT;
+      break;
+    case COAP_TCP_16BIT:
+      token_length = (pdu->transport_hdr->tcp_16bit.header_data[0]) & 0x0f;
+      headerSize = COAP_TCP_HEADER_16_BIT;
+      break;
+    case COAP_TCP_32BIT:
+      token_length = pdu->transport_hdr->tcp_32bit.header_data[0] & 0x0f;
+      headerSize = COAP_TCP_HEADER_32_BIT;
+      break;
+#endif
+    default:
+      token_length = pdu->transport_hdr->udp.token_length;
+      headerSize = sizeof(pdu->transport_hdr->udp);
+      break;
   }
 
-  assert((sizeof(coap_hdr_t) + pdu->hdr->token_length) <= pdu->length);
+  oi->next_option = (unsigned char *)pdu->hdr + headerSize + token_length;
+  if (COAP_UDP == transport) {
+    if ((unsigned char *) &(pdu->transport_hdr->udp) + pdu->length <= oi->next_option) {
+      oi->bad = 1;
+      return NULL;
+    }
+  }
+#ifdef WITH_TCP
+  else {
+    if ((unsigned char *) &(pdu->transport_hdr->tcp) + pdu->length <= oi->next_option) {
+      oi->bad = 1;
+      return NULL;
+    }
+  }
+#endif
 
-  oi->length = pdu->length - (sizeof(coap_hdr_t) + pdu->hdr->token_length);
+  assert((headerSize + token_length) <= pdu->length);
+
+  oi->length = pdu->length - (headerSize + token_length);
 
   if (filter) {
     memcpy(oi->filter, filter, sizeof(coap_opt_filter_t));
@@ -520,4 +563,41 @@ coap_option_filter_get(const coap_opt_filter_t filter, unsigned short type) {
   /* Ugly cast to make the const go away (FILTER_GET wont change filter
    * but as _set and _unset do, the function does not take a const). */
   return coap_option_filter_op((uint16_t *)filter, type, FILTER_GET);
+}
+
+static coap_option_def_t coap_option_def[] = {
+  { COAP_OPTION_IF_MATCH,       'o',  0,   8 },
+  { COAP_OPTION_URI_HOST,       's',  1, 255 },
+  { COAP_OPTION_ETAG,           'o',  1,   8 },
+  { COAP_OPTION_IF_NONE_MATCH,  'e',  0,   0 },
+  { COAP_OPTION_URI_PORT,       'u',  0,   2 },
+  { COAP_OPTION_LOCATION_PATH,  's',  0, 255 },
+  { COAP_OPTION_URI_PATH,       's',  0, 255 },
+  { COAP_OPTION_CONTENT_TYPE,   'u',  0,   2 },
+  { COAP_OPTION_MAXAGE,         'u',  0,   4 },
+  { COAP_OPTION_URI_QUERY,      's',  1, 255 },
+  { COAP_OPTION_ACCEPT,         'u',  0,   2 },
+  { COAP_OPTION_LOCATION_QUERY, 's',  0, 255 },
+  { COAP_OPTION_PROXY_URI,      's',  1,1034 },
+  { COAP_OPTION_PROXY_SCHEME,   's',  1, 255 },
+  { COAP_OPTION_SIZE1,          'u',  0,   4 },
+  { COAP_OPTION_SIZE2,          'u',  0,   4 },
+  { COAP_OPTION_OBSERVE,        'u',  0,   3 },
+  { COAP_OPTION_BLOCK2,         'u',  0,   3 },
+  { COAP_OPTION_BLOCK1,         'u',  0,   3 },
+};
+
+coap_option_def_t*
+coap_opt_def(unsigned short key) {
+  int i;
+
+  if (COAP_MAX_OPT < key) {
+    return NULL;
+  }
+  for (i = 0; i < (int)(sizeof(coap_option_def)/sizeof(coap_option_def_t)); i++) {
+    if (key == coap_option_def[i].key)
+      return &(coap_option_def[i]);
+  }
+  debug("coap_opt_def: add key:[%d] to coap_is_var_bytes", key);
+  return NULL;
 }

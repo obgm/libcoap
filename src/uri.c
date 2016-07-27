@@ -490,3 +490,62 @@ coap_hash_path(const unsigned char *path, size_t len, coap_key_t key) {
 
   return 1;
 }
+
+/* iterator functions */
+
+coap_parse_iterator_t *
+coap_parse_iterator_init(unsigned char *s, size_t n, unsigned char *separator, unsigned char *delim,
+        size_t dlen, coap_parse_iterator_t *pi) {
+    assert(pi);
+    assert(separator);
+
+    pi->separator = separator;
+    pi->delim = delim;
+    pi->dlen = dlen;
+    pi->pos = s;
+    pi->n = n;
+    pi->segment_length = 0;
+
+    return pi;
+}
+
+unsigned char *
+coap_parse_next(coap_parse_iterator_t *pi) {
+    unsigned char *p, *s;
+
+    if (!pi)
+        return NULL;
+
+    /* proceed to the next segment */
+    pi->n -= pi->segment_length;
+    pi->pos += pi->segment_length;
+    pi->segment_length = 0;
+    s = pi->separator;
+
+    /* last segment? */
+    if (!pi->n || strnchr(pi->delim, pi->dlen, *pi->pos)) {
+        pi->pos = NULL;
+        return NULL;
+    }
+
+    /* skip following separator (the first segment might not have one) */
+
+      if (strchr((const char*)s,*(pi->pos))) {
+          ++pi->pos;
+          --pi->n;
+      }
+
+      p = pi->pos;
+
+      while ((pi->segment_length < pi->n) && (!strchr((const char*)s,*p))
+              && (!strnchr(pi->delim, pi->dlen, *p))) {
+          ++p;
+          ++pi->segment_length;
+      }
+
+    if (!pi->n) {
+        pi->pos = NULL;
+        pi->segment_length = 0;
+    }
+    return pi->pos;
+}
