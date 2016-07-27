@@ -14,7 +14,8 @@
 #include "encode.h"
 
 /* Carsten suggested this when fls() is not available: */
-int coap_fls(unsigned int i) {
+int
+coap_fls(unsigned int i) {
   int n;
   for (n = 0; i; n++)
     i >>= 1;

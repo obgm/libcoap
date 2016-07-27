@@ -21,6 +21,11 @@
 #include <lwip/pbuf.h>
 #endif
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #define COAP_DEFAULT_PORT      5683 /* CoAP default UDP port */
 #define COAP_DEFAULT_MAX_AGE     60 /* default maximum object lifetime in seconds */
 #ifndef COAP_MAX_PDU_SIZE
@@ -53,11 +58,14 @@
 #define COAP_REQUEST_DELETE    4
 
 /* CoAP option types (be sure to update check_critical when adding options */
+/* See http://www.iana.org/assignments/core-parameters/core-parameters.xhtml#option-numbers */
 
 #define COAP_OPTION_IF_MATCH        1 /* C, opaque, 0-8 B, (none) */
 #define COAP_OPTION_URI_HOST        3 /* C, String, 1-255 B, destination address */
 #define COAP_OPTION_ETAG            4 /* E, opaque, 1-8 B, (none) */
 #define COAP_OPTION_IF_NONE_MATCH   5 /* empty, 0 B, (none) */
+#define COAP_OPTION_OBSERVE         6 /* E, empty/uint, 0 B/0-3 B, (none) */
+#define COAP_OPTION_SUBSCRIPTION  COAP_OPTION_OBSERVE
 #define COAP_OPTION_URI_PORT        7 /* C, uint, 0-2 B, destination port */
 #define COAP_OPTION_LOCATION_PATH   8 /* E, String, 0-255 B, - */
 #define COAP_OPTION_URI_PATH       11 /* C, String, 0-255 B, (none) */
@@ -71,15 +79,11 @@
 #define COAP_OPTION_PROXY_SCHEME   39 /* C, String, 1-255 B, (none) */
 #define COAP_OPTION_SIZE1          60 /* E, uint, 0-4 B, (none) */
 
-/* option types from draft-ietf-coap-observe-09 */
+/* selected option types from draft-core-block-21 */
 
-#define COAP_OPTION_OBSERVE         6 /* E, empty/uint, 0 B/0-3 B, (none) */
-#define COAP_OPTION_SUBSCRIPTION  COAP_OPTION_OBSERVE
-
-/* selected option types from draft-core-block-04 */
-
-#define COAP_OPTION_BLOCK2         23 /* C, uint, 0--3 B, (none) */
-#define COAP_OPTION_BLOCK1         27 /* C, uint, 0--3 B, (none) */
+#define COAP_OPTION_BLOCK2         23 /* C, uint, 0-3 B, (none) */
+#define COAP_OPTION_BLOCK1         27 /* C, uint, 0-3 B, (none) */
+#define COAP_OPTION_SIZE2          28 /* E, uint, 0-4 B, (none) */
 
 /* selected option types from draft-tcs-coap-no-response-option-11 */
 
@@ -171,27 +175,91 @@ typedef int coap_tid_t;
  */
 #define COAP_DROPPED_RESPONSE -2
 
+#define COAP_TCP_HEADER_NO_FIELD    2
+#define COAP_TCP_HEADER_8_BIT       3
+#define COAP_TCP_HEADER_16_BIT      4
+#define COAP_TCP_HEADER_32_BIT      6
+
+#define COAP_TCP_LENGTH_FIELD_8_BIT      13
+#define COAP_TCP_LENGTH_FIELD_16_BIT     269
+#define COAP_TCP_LENGTH_FIELD_32_BIT     65805
+
+#define COAP_TCP_LENGTH_LIMIT_8_BIT      13
+#define COAP_TCP_LENGTH_LIMIT_16_BIT     256
+#define COAP_TCP_LENGTH_LIMIT_32_BIT     65536
+
+#define COAP_TCP_LENGTH_FIELD_NUM_8_BIT      13
+#define COAP_TCP_LENGTH_FIELD_NUM_16_BIT     14
+#define COAP_TCP_LENGTH_FIELD_NUM_32_BIT     15
+
+#define COAP_OPTION_FIELD_8_BIT      12
+#define COAP_OPTION_FIELD_16_BIT     256
+#define COAP_OPTION_FIELD_32_BIT     65536
+
+typedef enum {
+    COAP_UDP = 0,
+#ifdef WITH_TCP
+    COAP_TCP,
+    COAP_TCP_8BIT,
+    COAP_TCP_16BIT,
+    COAP_TCP_32BIT
+#endif
+} coap_transport_t;
+
 #ifdef WORDS_BIGENDIAN
 typedef struct {
-  unsigned int version:2;      /* protocol version */
-  unsigned int type:2;         /* type flag */
-  unsigned int token_length:4; /* length of Token */
-  unsigned int code:8;         /* request method (value 1--10) or response
-                                  code (value 40-255) */
-  unsigned short id;           /* message id */
-  unsigned char token[];       /* the actual token, if any */
-} coap_hdr_t;
+  unsigned short version:2;      /* protocol version */
+  unsigned short type:2;         /* type flag */
+  unsigned short token_length:4; /* length of Token */
+  unsigned short code:8;         /* request method (value 1--10) or response
+                                    code (value 40-255) */
+  unsigned short id;             /* message id */
+  unsigned char token[];         /* the actual token, if any */
+} coap_hdr_udp_t;
 #else
 typedef struct {
-  unsigned int token_length:4; /* length of Token */
-  unsigned int type:2;         /* type flag */
-  unsigned int version:2;      /* protocol version */
-  unsigned int code:8;         /* request method (value 1--10) or response
-                                  code (value 40-255) */
-  unsigned short id;           /* transaction id (network byte order!) */
-  unsigned char token[];       /* the actual token, if any */
-} coap_hdr_t;
+  unsigned short token_length:4; /* length of Token */
+  unsigned short type:2;         /* type flag */
+  unsigned short version:2;      /* protocol version */
+  unsigned short code:8;         /* request method (value 1--10) or response
+                                    code (value 40-255) */
+  unsigned short id;             /* transaction id (network byte order!) */
+  unsigned char token[];         /* the actual token, if any */
+} coap_hdr_udp_t;
 #endif
+
+#ifdef WITH_TCP
+typedef struct {
+  unsigned char header_data[COAP_TCP_HEADER_NO_FIELD];
+  unsigned char token[]; /* the actual token, if any */
+} coap_hdr_tcp_t;
+
+typedef struct {
+  unsigned char header_data[COAP_TCP_HEADER_8_BIT];
+  unsigned char token[]; /* the actual token, if any */
+} coap_hdr_tcp_8bit_t;
+
+typedef struct {
+  unsigned char header_data[COAP_TCP_HEADER_16_BIT];
+  unsigned char token[]; /* the actual token, if any */
+} coap_hdr_tcp_16bit_t;
+
+typedef struct {
+  unsigned char header_data[6];
+  unsigned char token[]; /* the actual token, if any */
+} coap_hdr_tcp_32bit_t;
+
+typedef union {
+  coap_hdr_udp_t udp;
+  coap_hdr_tcp_t tcp;  
+  coap_hdr_tcp_8bit_t tcp_8bit;
+  coap_hdr_tcp_16bit_t tcp_16bit;
+  coap_hdr_tcp_32bit_t tcp_32bit;
+} coap_hdr_transport_t;
+#endif /* WITH_TCP */
+
+// Typedef for backwards compatibility.
+typedef coap_hdr_udp_t coap_hdr_t;
 
 #define COAP_MESSAGE_IS_EMPTY(MSG)    ((MSG)->code == 0)
 #define COAP_MESSAGE_IS_REQUEST(MSG)  (!COAP_MESSAGE_IS_EMPTY(MSG) \
@@ -226,10 +294,18 @@ typedef struct {
 
 typedef struct {
   size_t max_size;          /**< allocated storage for options and data */
-  coap_hdr_t *hdr;          /**< Address of the first byte of the CoAP message.
-                             *   This may or may not equal (coap_hdr_t*)(pdu+1)
-                             *   depending on the memory management
-                             *   implementation. */
+  union {
+    coap_hdr_t *hdr;          /**< Address of the first byte of the CoAP message.
+                               *   This may or may not equal (coap_hdr_t*)(pdu+1)
+                               *   depending on the memory management
+                               *   implementation. */
+#ifdef WITH_TCP
+    coap_hdr_transport_t *transport_hdr; /**< Address of the first byte of the CoAP message.
+                                           *   This may or may not equal (coap_hdr_t*)(pdu+1)
+                                           *   depending on the memory management
+                                           *   implementation. */
+#endif
+  };
   unsigned short max_delta; /**< highest option number */
   unsigned short length;    /**< PDU length (including header, options, data) */
   unsigned char *data;      /**< payload */
@@ -308,6 +384,15 @@ void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
  */
 coap_pdu_t *coap_new_pdu(void);
 
+/**
+ * Creates a new CoAP PDU. The object is created on the heap and must be released
+ * using coap_delete_pdu();
+ *
+ * @deprecated This function allocates the maximum storage for each
+ * PDU. Use coap_pdu_init2() instead.
+ */
+coap_pdu_t *coap_new_pdu2(coap_transport_t transport, unsigned int size);
+
 void coap_delete_pdu(coap_pdu_t *);
 
 /**
@@ -327,6 +412,106 @@ int coap_pdu_parse(unsigned char *data,
                    coap_pdu_t *result);
 
 /**
+ * Parses @p data into the CoAP PDU structure given in @p result. This
+ * function returns @c 0 on error or a number greater than zero on
+ * success.
+ *
+ * @param data   The raw data to parse as CoAP PDU
+ * @param length The actual size of @p data
+ * @param result The PDU structure to fill. Note that the structure must
+ *               provide space for at least @p length bytes to hold the
+ *               entire CoAP PDU.
+ * @param transport The transport type.
+ * @return A value greater than zero on success or @c 0 on error.
+ */
+int coap_pdu_parse2(unsigned char *data, size_t length, coap_pdu_t *pdu,
+                    coap_transport_t transport);
+
+#ifdef WITH_TCP
+/**
+ * Get total pdu size including header + option + payload (with marker) from pdu data.
+ *
+ * @param data   The raw data to parse as CoAP PDU.
+ * @param size   payload size of pdu.
+ * @return Total message length.
+ */
+size_t coap_get_total_message_length(const unsigned char *data, size_t size);
+
+/**
+ * Get transport type of coap header for coap over tcp
+ * through payload size(including payload marker) + option size.
+ *
+ * @param size   payload size of pdu.
+ * @return The transport type.
+ */
+coap_transport_t coap_get_tcp_header_type_from_size(unsigned int size);
+
+/**
+ * Get transport type of coap header for coap over tcp
+ * through first nibble(0~E) of init-byte .
+ *
+ * @param legnth   length value of init byte.
+* @return The transport type.
+ */
+coap_transport_t coap_get_tcp_header_type_from_initbyte(unsigned int length);
+
+/**
+ * Add length of option/payload into 'Len+ byte...' field of coap header
+ * for coap over tcp.
+ *
+ * @param pdu  The pdu pointer.
+ * @param transport The transport type.
+ * @param length  length value of init byte.
+ */
+void coap_add_length(const coap_pdu_t *pdu, coap_transport_t transport,
+                     unsigned int length);
+
+/**
+ * Get the length of option/payload field of coap header for coap over tcp.
+ *
+ * @param pdu  The pdu pointer.
+ * @param transport The transport type.
+ * @return length value of init byte.
+ */
+unsigned int coap_get_length(const coap_pdu_t *pdu, coap_transport_t transport);
+
+/**
+ * Get the length of option/payload field of coap header for coap over tcp.
+ *
+ * @param header   The header to parse.
+ * @return transport The transport type.
+ */
+unsigned int coap_get_length_from_header(const unsigned char *header,
+                                         coap_transport_t transport);
+
+/**
+ * Get length of header including len, TKL, Len+bytes, Code, token bytes for coap over tcp.
+ *
+ * @param data   The raw data to parse as CoAP PDU
+ * @return header length + token length
+ */
+unsigned int coap_get_tcp_header_length(unsigned char *data);
+
+/**
+ * Get length of header including len, TKL, Len+bytes, Code
+ * without token bytes for coap over tcp.
+ *
+ * @param transport The transport type.
+ * @return header length.
+ */
+unsigned int coap_get_tcp_header_length_for_transport(coap_transport_t transport);
+
+/**
+ * Get option length.
+ *
+ * @param key      delta of option
+ * @param length   length of option
+ * @return total option length
+ */
+size_t coap_get_opt_header_length(unsigned short key, size_t length);
+#endif /* WITH_TCP */
+
+/**
  * Adds token of length @p len to @p pdu.
  * Adding the token destroys any following contents of the pdu. Hence options
  * and data must be added after coap_add_token() has been called. In @p pdu,
@@ -344,8 +529,23 @@ int coap_add_token(coap_pdu_t *pdu,
                   const unsigned char *data);
 
 /**
- * Adds option of given type to pdu that is passed as first
- * parameter.
+ * Adds token of length @p len to @p pdu. Adding the token destroys
+ * any following contents of the pdu. Hence options and data must be
+ * added after coap_add_token2() has been called. In @p pdu, length is
+ * set to @p len + @c 4, and max_delta is set to @c 0.  This funtion
+ * returns @c 0 on error or a value greater than zero on success.
+ *
+ * @param pdu  The pdu pointer.
+ * @param len  The length of the new token.
+ * @param data The token to add.
+ * @param transport The transport type.
+ * @return A value greater than zero on success, or @c 0 on error.
+ */
+int coap_add_token2(coap_pdu_t *pdu, size_t len, const unsigned char *data,
+                    coap_transport_t transport);
+
+/**
+ * Adds option of given type to pdu that is passed as first parameter.
  * coap_add_option() destroys the PDU's data, so coap_add_data() must be called
  * after all options have been added. As coap_add_token() destroys the options
  * following the token, the token must be added before coap_add_option() is
@@ -355,6 +555,17 @@ size_t coap_add_option(coap_pdu_t *pdu,
                        unsigned short type,
                        unsigned int len,
                        const unsigned char *data);
+
+/**
+ * Adds option of given type to pdu that is passed as first
+ * parameter. coap_add_option2() destroys the PDU's data, so
+ * coap_add_data() must be called after all options have been added.
+ * As coap_add_token2() destroys the options following the token,
+ * the token must be added before coap_add_option2() is called.
+ * This function returns the number of bytes written or @c 0 on error.
+ */
+size_t coap_add_option2(coap_pdu_t *pdu, unsigned short type, unsigned int len,
+                        const unsigned char *data, coap_transport_t transport);
 
 /**
  * Adds option of given type to pdu that is passed as first parameter, but does
@@ -385,4 +596,7 @@ int coap_get_data(coap_pdu_t *pdu,
                   size_t *len,
                   unsigned char **data);
 
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 #endif /* _COAP_PDU_H_ */

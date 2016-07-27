@@ -85,7 +85,7 @@ coap_pdu_init(unsigned char type, unsigned char code,
     return NULL;
 
   /* size must be large enough for hdr */
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP)
   pdu = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
   if (!pdu) return NULL;
   pdu->hdr = coap_malloc_type(COAP_PDU_BUF, size);

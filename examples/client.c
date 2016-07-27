@@ -69,7 +69,7 @@ coap_tick_t obs_wait = 0;               /* timeout for current subscription */
 #define UNUSED_PARAM
 #endif /* GCC */
 
-static inline void
+COAP_STATIC_INLINE void
 set_timeout(coap_tick_t *timer, const unsigned int seconds) {
   coap_ticks(timer);
   *timer += seconds * COAP_TICKS_PER_SECOND;
@@ -305,7 +305,7 @@ resolve_address(const str *server, struct sockaddr *dst) {
    ((Pdu)->hdr->code == COAP_RESPONSE_CODE(201) ||                \
     (Pdu)->hdr->code == COAP_RESPONSE_CODE(204)))
 
-static inline int
+COAP_STATIC_INLINE int
 check_token(coap_pdu_t *received) {
   return received->hdr->token_length == the_token.length &&
     memcmp(received->hdr->token, the_token.s, the_token.length) == 0;
@@ -808,7 +808,7 @@ cmdline_proxy(char *arg) {
   return 1;
 }
 
-static inline void
+COAP_STATIC_INLINE void
 cmdline_token(char *arg) {
   strncpy((char *)the_token.s, arg, min(sizeof(_token_data), strlen(arg)));
   the_token.length = strlen(arg);

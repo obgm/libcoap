@@ -1,0 +1,37 @@
+#ifndef _COAP_CONFIG_H_
+#define _COAP_CONFIG_H_
+
+/* Define to 1 if you have <Ws2tcpip.h> header file. */
+#if defined(_WIN32)
+#define HAVE_WS2TCPIP_H 1
+#endif
+
+/* Define to 1 if you have <Winsock2.h> header file. */
+#if defined(_WIN32)
+#define HAVE_WINSOCK2_H 1
+#endif
+
+#ifdef _WIN32
+#define ssize_t SSIZE_T
+#define in_port_t uint16_t
+#endif
+
+/* Define to the full name of this package. */
+#define PACKAGE_NAME "libcoap"
+
+/* Define to the full name and version of this package. */
+#define PACKAGE_STRING "libcoap 4.1.1"
+
+#ifndef COAP_STATIC_INLINE
+#  if defined(__cplusplus)
+#    define COAP_STATIC_INLINE inline
+#  else
+#    ifdef _MSC_VER
+#      define COAP_STATIC_INLINE static __inline
+#    else
+#      define COAP_STATIC_INLINE static inline
+#    endif
+#  endif
+#endif
+
+#endif /* _COAP_CONFIG_H_ */

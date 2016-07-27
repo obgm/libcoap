@@ -29,7 +29,7 @@
 
 #endif
 
-#ifdef WITH_POSIX
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 
 #define COAP_MALLOC_TYPE(Type) \
   ((coap_##Type##_t *)coap_malloc(sizeof(coap_##Type##_t)))
@@ -50,19 +50,21 @@ coap_resources_init() {
   memb_init(&subscription_storage);
 }
 
-static inline coap_subscription_t *
+COAP_STATIC_INLINE coap_subscription_t *
 coap_malloc_subscription() {
   return memb_alloc(&subscription_storage);
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_free_subscription(coap_subscription_t *subscription) {
   memb_free(&subscription_storage, subscription);
 }
 
 #endif /* WITH_CONTIKI */
 
+#ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 /* Helper functions for conditional output of character sequences into
  * a given buffer. The first Offset characters are skipped.
