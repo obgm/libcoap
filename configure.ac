@@ -165,13 +165,29 @@ if test "x$build_documentation" = "xyes"; then
                 HAVE_DOT="NO"
                 USE_CALL_GRAPH="NO"
             else
-                AC_MSG_CHECKING([for compatible dot version])
-                dot_version=`$DOT -V 2>&1|$GREP -oP '(?<=version\W)@<:@0-9.@:>@*(?=\W(.*))'`
+                AC_MSG_CHECKING([for compatible dot version (>= 2.26.0)])
+                case $host in
+                    *-freebsd1*)
+                    # csh and tcsh have a different output redirection than more recent shells
+                    # cmd >& file   # Redirect both stdout and stderr to file.
+                    # cmd >>& file  # Append both stdout and stderr to file.
+                    # cmd1 | cmd2   # pipe stdout to cmd2
+                    # cmd1 |& cmd2  # pipe stdout and stderr to cmd2
+                    # Using a explicit call with the default always available C-shell on FreeBSD,
+                    # the user may have installed another shell from a port which we don't know here
+                    dot_version=`export DOT=$DOT && csh -c '$DOT -V |& cut -f5 -d" "'`
+                    ;;
+
+                    *)
+                    dot_version=`$DOT -V 2>&1 | cut -f5 -d" "`
+                    ;;
+
+                esac
                 AS_VERSION_COMPARE([$dot_version], [2.26.0],
                                    [AC_MSG_RESULT([no])
                                     DOT=""],
-                                   [AC_MSG_RESULT([yes])],
-                                   [AC_MSG_RESULT([yes])])
+                                   [AC_MSG_RESULT([yes $dot_version])],
+                                   [AC_MSG_RESULT([yes $dot_version])])
                 if test "x$DOT" = "x" -a "x$build_documentation" = "xyes"; then
                         AC_MSG_WARN([==> Graphviz dot $dot_version too old. Graphviz 2.26+ required for documentation build.])
                         AC_MSG_ERROR([==> Install required graphviz version or disable the documentation using --disable-documentation])
