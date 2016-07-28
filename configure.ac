@@ -134,59 +134,75 @@ AC_ARG_ENABLE([documentation],
               [build_documentation="yes"])
 
 if test "x$build_documentation" = "xyes"; then
-	# Check for doxygen
-	AC_PATH_PROGS([DOXYGEN], [doxygen])
-	if test -z "$DOXYGEN"; then
-		if test "x$build_documentation" = "xyes"; then
-			AC_MSG_WARN([==> Doxygen not found - continuing without Doxygen support])
-			AC_MSG_WARN([==> The libcoap html documentation will not be build!])
-			doxygen_version="not found"
-		fi
-	else
-		AC_MSG_CHECKING([for compatible doxygen version])
-						doxygen_version=`$DOXYGEN --version`
-						AS_VERSION_COMPARE([$doxygen_version], [1.7.0],
-						[AC_MSG_RESULT([no])
-						 DOXYGEN=""],
-						[AC_MSG_RESULT([yes])],
-						[AC_MSG_RESULT([yes])])
-		if test "x$DOXYGEN" = "x" -a "x$build_documentation" = "xyes"; then
-			AC_MSG_ERROR([==> Doxygen $doxygen_version too old. Doxygen 1.7+ required for documentation build.])
-			AC_MSG_ERROR([==> Install required doxygen version or disable the documentation using --disable-documentation])
-		else
-			# we found doxygen and the version is valid
-			DOC_DIR=doc
-			AC_SUBST(DOC_DIR)
-			# now checking dot (needed for graphics)
-			AC_PATH_PROG([DOT], [dot])
-			if test "x$DOT" = "x"; then
-				AC_MSG_WARN([==> dot not found - continuing without DOT support])
-				AC_MSG_WARN([==> The libcoap html documentation will be build without DOT graphics!])
-				HAVE_DOT="NO"
-				USE_CALL_GRAPH="NO"
-			else
-				AC_MSG_CHECKING([for compatible dot version])
-				dot_version=`$DOT -V 2>&1|$GREP -oP '(?<=version\W)@<:@0-9.@:>@*(?=\W(.*))'`
-				AS_VERSION_COMPARE([$dot_version], [2.26.0],
-								   [AC_MSG_RESULT([no])
-								    DOT=""],
-								   [AC_MSG_RESULT([yes])],
-								   [AC_MSG_RESULT([yes])])
-				if test "x$DOT" = "x" -a "x$build_documentation" = "xyes"; then
-						AC_MSG_WARN([==> Graphviz dot $dot_version too old. Graphviz 2.26+ required for documentation build.])
-						AC_MSG_ERROR([==> Install required graphviz version or disable the documentation using --disable-documentation])
-				fi
-				# we found dot and the version is valid
-				HAVE_DOT="YES"
-				# let doxygen create caller graphics
-				# see http://www.stack.nl/~dimitri/doxygen/manual/config.html#cfg_call_graph
-				USE_CALL_GRAPH="YES"
-				# exporting the tests to doc/Doxygen(.in)
-				AC_SUBST(HAVE_DOT)
-				AC_SUBST(USE_CALL_GRAPH)
-			fi
-		fi
-	fi
+    # Check for doxygen
+    AC_PATH_PROGS([DOXYGEN], [doxygen])
+    if test -z "$DOXYGEN"; then
+        if test "x$build_documentation" = "xyes"; then
+            AC_MSG_WARN([==> Doxygen not found - continuing without Doxygen support])
+            AC_MSG_WARN([==> The libcoap html documentation will not be build!])
+            doxygen_version="not found"
+        fi
+    else
+        AC_MSG_CHECKING([for compatible doxygen version])
+                        doxygen_version=`$DOXYGEN --version`
+                        AS_VERSION_COMPARE([$doxygen_version], [1.7.0],
+                        [AC_MSG_RESULT([no])
+                         DOXYGEN=""],
+                        [AC_MSG_RESULT([yes])],
+                        [AC_MSG_RESULT([yes])])
+        if test "x$DOXYGEN" = "x" -a "x$build_documentation" = "xyes"; then
+            AC_MSG_ERROR([==> Doxygen $doxygen_version too old. Doxygen 1.7+ required for documentation build.])
+            AC_MSG_ERROR([==> Install required doxygen version or disable the documentation using --disable-documentation])
+        else
+            # we found doxygen and the version is valid
+            DOC_DIR=doc
+            AC_SUBST(DOC_DIR)
+            # now checking dot (needed for graphics)
+            AC_PATH_PROG([DOT], [dot])
+            if test "x$DOT" = "x"; then
+                AC_MSG_WARN([==> dot not found - continuing without DOT support])
+                AC_MSG_WARN([==> The libcoap html documentation will be build without DOT graphics!])
+                HAVE_DOT="NO"
+                USE_CALL_GRAPH="NO"
+            else
+                AC_MSG_CHECKING([for compatible dot version (>= 2.26.0)])
+                case $host in
+                    *-freebsd1*)
+                    # csh and tcsh have a different output redirection than more recent shells
+                    # cmd >& file   # Redirect both stdout and stderr to file.
+                    # cmd >>& file  # Append both stdout and stderr to file.
+                    # cmd1 | cmd2   # pipe stdout to cmd2
+                    # cmd1 |& cmd2  # pipe stdout and stderr to cmd2
+                    # Using a explicit call with the default always available C-shell on FreeBSD,
+                    # the user may have installed another shell from a port which we don't know here
+                    dot_version=`export DOT=$DOT && csh -c '$DOT -V |& cut -f5 -d" "'`
+                    ;;
+
+                    *)
+                    dot_version=`$DOT -V 2>&1 | cut -f5 -d" "`
+                    ;;
+
+                esac
+                AS_VERSION_COMPARE([$dot_version], [2.26.0],
+                                   [AC_MSG_RESULT([no])
+                                    DOT=""],
+                                   [AC_MSG_RESULT([yes $dot_version])],
+                                   [AC_MSG_RESULT([yes $dot_version])])
+                if test "x$DOT" = "x" -a "x$build_documentation" = "xyes"; then
+                        AC_MSG_WARN([==> Graphviz dot $dot_version too old. Graphviz 2.26+ required for documentation build.])
+                        AC_MSG_ERROR([==> Install required graphviz version or disable the documentation using --disable-documentation])
+                fi
+                # we found dot and the version is valid
+                HAVE_DOT="YES"
+                # let doxygen create caller graphics
+                # see http://www.stack.nl/~dimitri/doxygen/manual/config.html#cfg_call_graph
+                USE_CALL_GRAPH="YES"
+                # exporting the tests to doc/Doxygen(.in)
+                AC_SUBST(HAVE_DOT)
+                AC_SUBST(USE_CALL_GRAPH)
+            fi
+        fi
+    fi
 fi
 AM_CONDITIONAL(BUILD_DOCUMENTATION, [test "x$build_documentation" = "xyes"])
 
