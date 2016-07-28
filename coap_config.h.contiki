@@ -121,7 +121,7 @@ typedef void FILE;
 # endif /* UIP_CONF_BYTE_ORDER */
 #endif /* BYTE_ORDER */
 
-/* Define assert() as emtpy directive unless HAVE_ASSERT_H is given. */
+/* Define assert() as empty directive unless HAVE_ASSERT_H is given. */
 #ifndef HAVE_ASSERT_H
 # define assert(x)
 #endif

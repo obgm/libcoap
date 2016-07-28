@@ -214,19 +214,16 @@ coap_new_pdu2(coap_transport_t transport, unsigned int size) {
 
 void
 coap_delete_pdu(coap_pdu_t *pdu) {
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
   if (pdu != NULL) {
+#ifdef WITH_LWIP
+    pbuf_free(pdu->pbuf);
+#else
     if (pdu->hdr != NULL) {
       coap_free_type(COAP_PDU_BUF, pdu->hdr);
     }
+#endif
     coap_free_type(COAP_PDU, pdu);
   }
-#endif
-#ifdef WITH_LWIP
-  if (pdu != NULL) /* accepting double free as the other implementation accept that too */
-    pbuf_free(pdu->pbuf);
-  coap_free_type(COAP_PDU, pdu);
-#endif
 }
 
 #ifdef WITH_TCP

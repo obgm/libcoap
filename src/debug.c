@@ -287,7 +287,11 @@ msg_code_string(uint8_t c) {
   if (c < sizeof(methods)/sizeof(char *)) {
     return methods[c];
   } else {
+#ifdef HAVE_SNPRINTF
     snprintf(buf, sizeof(buf), "%u.%02u", c >> 5, c & 0x1f);
+#else
+    sprintf(buf, "%u.%02u", c >> 5, c & 0x1f);
+#endif
     return buf;
   }
 }
@@ -333,13 +337,17 @@ msg_option_string(uint16_t option_type) {
   }
 
   /* unknown option type, just print to buf */
+#ifdef HAVE_SNPRINTF
   snprintf(buf, sizeof(buf), "%u", option_type);
+#else
+  sprintf(buf, "%u", option_type);
+#endif
   return buf;
 }
 
 static unsigned int
 print_content_format(unsigned int format_type,
-		     unsigned char *result, unsigned int buflen) {
+                     unsigned char *result, unsigned int buflen) {
   struct desc_t {
     unsigned int type;
     const char *name;
@@ -360,12 +368,24 @@ print_content_format(unsigned int format_type,
   /* search format_type in list of known content formats */
   for (i = 0; i < sizeof(formats)/sizeof(struct desc_t); i++) {
     if (format_type == formats[i].type) {
+#ifdef HAVE_SNPRINTF
       return snprintf((char *)result, buflen, "%s", formats[i].name);
+#else
+      /* @todo manual conversion of content format */
+      return 0;
+#endif
     }
   }
 
   /* unknown content format, just print numeric value to buf */
+#ifdef HAVE_SNPRINTF
   return snprintf((char *)result, buflen, "%d", format_type);
+#else
+  if (buflen >= 10) {
+    return sprintf((char *)result, "%d", format_type);
+  }
+  return 0;
+#endif
 }
 
 /**
@@ -425,11 +445,17 @@ coap_show_pdu(const coap_pdu_t *pdu) {
     case COAP_OPTION_BLOCK2:
       /* split block option into number/more/size where more is the
        * letter M if set, the _ otherwise */
+#ifdef HAVE_SNPRINTF
       buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
 			 coap_opt_block_num(option), /* block number */
 			 COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
 			 (2 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
-
+#else
+      buf_len = sprintf((char *)buf, "%u/%c/%u",
+			 coap_opt_block_num(option), /* block number */
+			 COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
+			 (2 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+#endif
       break;
 
     case COAP_OPTION_URI_PORT:
@@ -437,9 +463,15 @@ coap_show_pdu(const coap_pdu_t *pdu) {
     case COAP_OPTION_OBSERVE:
     case COAP_OPTION_SIZE1:
       /* show values as unsigned decimal value */
+#ifdef HAVE_SNPRINTF
       buf_len = snprintf((char *)buf, sizeof(buf), "%u",
 			 coap_decode_var_bytes(COAP_OPT_VALUE(option),
 					       COAP_OPT_LENGTH(option)));
+#else
+      buf_len = sprintf((char *)buf, "%u",
+			 coap_decode_var_bytes(COAP_OPT_VALUE(option),
+					       COAP_OPT_LENGTH(option)));
+#endif
       break;
 
     default:
