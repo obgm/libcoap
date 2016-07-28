@@ -120,7 +120,7 @@
 
 #if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 
-time_t clock_offset;
+time_t clock_offset = 0;
 
 COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node(void) {
@@ -158,7 +158,7 @@ coap_free_node(coap_queue_t *node) {
 #include "mem.h"
 #include "net/ip/uip-debug.h"
 
-clock_time_t clock_offset;
+clock_time_t clock_offset = 0;
 
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
@@ -337,6 +337,11 @@ is_wkc(coap_key_t k) {
 coap_context_t *
 coap_new_context(
   const coap_address_t *listen_addr) {
+  if (!listen_addr) {
+    coap_log(LOG_EMERG, "no listen address specified\n");
+    return NULL;
+  }
+
 #ifndef WITH_CONTIKI
   coap_context_t *c = coap_malloc_type(COAP_CONTEXT, sizeof( coap_context_t ) );
 #endif /* not WITH_CONTIKI */
@@ -346,11 +351,6 @@ coap_new_context(
   if (initialized)
     return NULL;
 #endif /* WITH_CONTIKI */
-
-  if (!listen_addr) {
-    coap_log(LOG_EMERG, "no listen address specified\n");
-    return NULL;
-  }
 
   coap_clock_init();
 #ifdef WITH_LWIP

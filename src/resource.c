@@ -116,7 +116,7 @@ match(const str *text, const str *pattern, int match_prefix, int match_substring
     while (remaining_length) {
       size_t token_length;
       unsigned char *token = next_token;
-      next_token = memchr(token, ' ', remaining_length);
+      next_token = (unsigned char *)memchr(token, ' ', remaining_length);
 
       if (next_token) {
         token_length = next_token - token;

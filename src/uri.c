@@ -414,7 +414,7 @@ coap_uri_t *
 coap_new_uri(const unsigned char *uri, unsigned int length) {
   unsigned char *result;
 
-  result = coap_malloc(length + 1 + sizeof(coap_uri_t));
+  result = (unsigned char *)coap_malloc(length + 1 + sizeof(coap_uri_t));
 
   if (!result)
     return NULL;
@@ -476,7 +476,7 @@ coap_clone_uri(const coap_uri_t *uri) {
  * segment_handler_t hence we use this wrapper as safe typecast. */
 COAP_STATIC_INLINE void
 hash_segment(unsigned char *s, size_t len, void *data) {
-  coap_hash(s, len, data);
+  coap_hash(s, len, (unsigned char *)data);
 }
 
 int
@@ -530,14 +530,14 @@ coap_parse_next(coap_parse_iterator_t *pi) {
 
     /* skip following separator (the first segment might not have one) */
 
-      if (strchr((const char*)s,*(pi->pos))) {
+      if (strchr((const char*)s, *(pi->pos))) {
           ++pi->pos;
           --pi->n;
       }
 
       p = pi->pos;
 
-      while ((pi->segment_length < pi->n) && (!strchr((const char*)s,*p))
+      while ((pi->segment_length < pi->n) && (!strchr((const char*)s, *p))
               && (!strnchr(pi->delim, pi->dlen, *p))) {
           ++p;
           ++pi->segment_length;

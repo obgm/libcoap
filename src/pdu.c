@@ -99,7 +99,7 @@ coap_pdu_init2(unsigned char type, unsigned char code, unsigned short id,
 #endif
 
   unsigned int length = 0;
-  switch(transport) {
+  switch (transport) {
     case COAP_UDP:
       length = sizeof(coap_hdr_t);
       break;
@@ -129,21 +129,21 @@ coap_pdu_init2(unsigned char type, unsigned char code, unsigned short id,
 #endif
 
   /* size must be large enough for hdr */
-#if defined(WITH_POSIX) || defined(WITH_ARDUINO) || defined(_WIN32)
-  pdu = (coap_pdu_t *)coap_malloc(sizeof(coap_pdu_t) + size);
-#endif
-#ifdef WITH_CONTIKI
-  pdu = (coap_pdu_t *)memb_alloc(&pdu_storage);
+#if defined(WITH_POSIX) || defined(WITH_CONTIKI) || defined(WITH_ARDUINO) || defined(_WIN32)
+  pdu = (coap_pdu_t *)coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
+  if (!pdu) return NULL;
+  pdu->hdr = coap_malloc_type(COAP_PDU_BUF, size);
+  if (pdu->hdr == NULL) {
+    coap_free_type(COAP_PDU, pdu);
+    pdu = NULL;
+  }
 #endif
 #ifdef WITH_LWIP
+  pdu = (coap_pdu_t*)coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
+  if (!pdu) return NULL;
   p = pbuf_alloc(PBUF_TRANSPORT, size, PBUF_RAM);
-  if (p != NULL) {
-    u8_t header_error = pbuf_header(p, sizeof(coap_pdu_t));
-    /* we could catch that case and allocate larger memory in advance, but then
-     * again, we'd run into greater trouble with incoming packages anyway */
-    LWIP_ASSERT("CoAP PDU header does not fit in transport header", header_error == 0);
-    pdu = p->payload;
-  } else {
+  if (p == NULL) {
+    coap_free_type(COAP_PDU, pdu);
     pdu = NULL;
   }
 #endif
@@ -185,7 +185,7 @@ coap_pdu_init2(unsigned char type, unsigned char code, unsigned short id,
 
 coap_pdu_t *
 coap_new_pdu(void) {
-  return coap_new_pdu2(COAP_UDP, 0);
+  return coap_new_pdu2(COAP_UDP, COAP_MAX_PDU_SIZE);
 }
 
 coap_pdu_t *
@@ -198,11 +198,7 @@ coap_new_pdu2(coap_transport_t transport, unsigned int size) {
 #else /* WITH_CONTIKI */
                        uip_ntohs(COAP_INVALID_TID),
 #endif /* WITH_CONTIKI */
-#ifndef WITH_TCP
-                       COAP_MAX_PDU_SIZE,
-#else
                        size,
-#endif
                        transport);
 
 #ifndef NDEBUG
@@ -259,7 +255,7 @@ coap_get_tcp_header_type_from_size(unsigned int size) {
 coap_transport_t
 coap_get_tcp_header_type_from_initbyte(unsigned int length) {
     coap_transport_t type;
-    switch(length) {
+    switch (length) {
         case COAP_TCP_LENGTH_FIELD_NUM_8_BIT:
             type = COAP_TCP_8BIT;
             break;
@@ -279,7 +275,7 @@ void
 coap_add_length(const coap_pdu_t *pdu, coap_transport_t transport, unsigned int length) {
     assert(pdu);
 
-    switch(transport) {
+    switch (transport) {
         case COAP_TCP:
             pdu->transport_hdr->tcp.header_data[0] = length << 4;
             break;
@@ -316,7 +312,7 @@ coap_get_length_from_header(const unsigned char *header, coap_transport_t transp
 
     unsigned int length = 0;
     unsigned int length_field_data = 0;
-    switch(transport) {
+    switch (transport) {
         case COAP_TCP:
             length = header[0] >> 4;
             break;
@@ -344,7 +340,7 @@ coap_get_length(const coap_pdu_t *pdu, coap_transport_t transport) {
 
     unsigned int length = 0;
     unsigned int length_field_data = 0;
-    switch(transport) {
+    switch (transport) {
         case COAP_TCP:
             length = pdu->transport_hdr->tcp.header_data[0] >> 4;
             break;
@@ -388,7 +384,7 @@ coap_get_tcp_header_length(unsigned char *data) {
 unsigned int
 coap_get_tcp_header_length_for_transport(coap_transport_t transport) {
     unsigned int length = 0;
-    switch(transport) {
+    switch (transport) {
         case COAP_TCP:
             length = COAP_TCP_HEADER_NO_FIELD;
             break;
@@ -443,7 +439,7 @@ void
 coap_add_code(const coap_pdu_t *pdu, coap_transport_t transport, unsigned int code) {
   assert(pdu);
 
-  switch(transport) {
+  switch (transport) {
     case COAP_UDP:
       pdu->transport_hdr->udp.code = COAP_RESPONSE_CODE(code);
       break;
@@ -471,7 +467,7 @@ coap_get_code(const coap_pdu_t *pdu, coap_transport_t transport) {
   assert(pdu);
 
   unsigned int code = 0;
-  switch(transport) {
+  switch (transport) {
     case COAP_UDP:
       code = pdu->transport_hdr->udp.code;
       break;
@@ -509,7 +505,7 @@ coap_add_token2(coap_pdu_t *pdu, size_t len, const unsigned char *data,
     return 0;
 
   unsigned char* token = NULL;
-  switch(transport) {
+  switch (transport) {
     case COAP_UDP:
       pdu->transport_hdr->udp.token_length = len;
       token = pdu->transport_hdr->udp.token;
@@ -568,7 +564,7 @@ coap_get_token2(const coap_hdr_transport_t *pdu_hdr, coap_transport_t transport,
   assert(token);
   assert(token_length);
 
-  switch(transport) {
+  switch (transport) {
     case COAP_UDP:
       *token_length = pdu_hdr->udp.token_length;
       *token = (unsigned char *)pdu_hdr->udp.token;
@@ -616,7 +612,7 @@ coap_add_option2(coap_pdu_t *pdu, unsigned short type, unsigned int len,
     return 0;
   }
 
-  switch(transport) {
+  switch (transport) {
 #ifdef WITH_TCP
     case COAP_TCP:
       opt = (unsigned char *) &(pdu->transport_hdr->tcp) + pdu->length;
@@ -825,7 +821,7 @@ coap_pdu_parse2(unsigned char *data, size_t length, coap_pdu_t *pdu,
   coap_opt_t *opt = NULL;
   unsigned int tokenLength = 0;
 #ifdef WITH_TCP
-  switch(transport) {
+  switch (transport) {
     case COAP_UDP:
       break;
     case COAP_TCP:
