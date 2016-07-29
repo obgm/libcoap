@@ -258,7 +258,7 @@ if test "x$build_examples" = "xyes" -a "x$build_documentation" = "xyes"; then
     AC_PATH_PROG([A2X], [a2x])
     if test "x$A2X" = "x"; then
         AC_MSG_WARN([==> You want to build the examples binaries, that is also including the respective manpages but a2x was not found!])
-        AC_MSG_ERROR([==> Install the package that contains the a2x binary or disable the build of the examples using --disable-examples.])
+        AC_MSG_ERROR([==> Install the package containg a2x (mostly asciidoc) or disable the build of the examples using --disable-examples.])
     fi
     build_examples="yes"
 fi
