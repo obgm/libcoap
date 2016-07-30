@@ -130,7 +130,7 @@ AC_SUBST(libcoap_SYMBOLS)
 # __documentation__
 AC_ARG_ENABLE([documentation],
               [AC_HELP_STRING([--enable-documentation],
-              [Enable building the documentation (default=yes)])],
+              [Enable building the documentation [default=yes]])],
               [build_documentation="$enableval"],
               [build_documentation="yes"])
 
@@ -215,7 +215,7 @@ AM_CONDITIONAL([HAVE_DOXYGEN],
 # __tests__
 AC_ARG_ENABLE([tests],
               [AC_HELP_STRING([--enable-tests],
-              [Enable building the tests (default=no)])],
+              [Enable building the binary testsuite [default=no]])],
               [build_tests="$enableval"],
               [build_tests="no"])
 
@@ -235,7 +235,7 @@ AM_CONDITIONAL(HAVE_CUNIT, [test "x$CUNIT_LIBS" != "x"])
 # __examples__
 AC_ARG_ENABLE([examples],
               [AC_HELP_STRING([--enable-examples],
-              [Enable building the example binaries (default=yes)])],
+              [Enable building the example binaries [default=yes]])],
               [build_examples="$enableval"],
               [build_examples="yes"])
 
