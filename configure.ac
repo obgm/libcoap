@@ -145,13 +145,13 @@ if test "x$build_documentation" = "xyes"; then
             doxygen_version="not found"
         fi
     else
-        AC_MSG_CHECKING([for compatible doxygen version])
+        AC_MSG_CHECKING([for compatible doxygen version (>= 1.7.0)])
                         doxygen_version=`$DOXYGEN --version`
                         AS_VERSION_COMPARE([$doxygen_version], [1.7.0],
                         [AC_MSG_RESULT([no])
                          DOXYGEN=""],
-                        [AC_MSG_RESULT([yes])],
-                        [AC_MSG_RESULT([yes])])
+                        [AC_MSG_RESULT([yes $doxygen_version])],
+                        [AC_MSG_RESULT([yes $doxygen_version])])
         if test "x$DOXYGEN" = "x" -a "x$build_documentation" = "xyes"; then
             AC_MSG_ERROR([==> Doxygen $doxygen_version too old. Doxygen 1.7+ required for documentation build.])
             AC_MSG_ERROR([==> Install required doxygen version or disable the documentation using --disable-documentation])
