@@ -25,6 +25,7 @@ AC_CONFIG_HEADERS([coap_config.h])
 
 AC_PROG_CC
 AM_PROG_CC_C_O
+AC_PROG_SED
 AC_CONFIG_MACRO_DIR([m4])
 m4_pattern_allow([AM_PROG_AR])
 AM_PROG_AR
@@ -378,7 +379,7 @@ esac
 AC_SUBST(PLATFORM)
 
 # Exporting the PREDEFINED_CFLAGS definition
-PREDEFINED_CFLAGS=`echo $ADDITIONAL_CFLAGS | sed -e 's/-D//g'`
+PREDEFINED_CFLAGS=`echo $ADDITIONAL_CFLAGS | $SED -e 's/-D//g'`
 AC_SUBST(PREDEFINED_CFLAGS)
 
 # And finaly combining the CFLAGS together ...
