@@ -27,7 +27,7 @@ EXTRA_DIST = \
   tests/test_uri.h \
   tests/test_wellknown.h
 
-AM_CFLAGS = -I @top_builddir@/include/coap/ $(WARNING_CFLAGS) -std=c99
+AM_CFLAGS = -I$(top_builddir)/include/coap -I$(top_srcdir)/include/coap $(WARNING_CFLAGS) -std=c99
 
 SUBDIRS = . $(DOC_DIR) tests examples
 
@@ -71,34 +71,34 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
 ## generating of the symbol mapping file.
 libcoap_includedir = $(includedir)/coap/
 libcoap_include_HEADERS = \
-   include/coap/address.h \
-   include/coap/async.h \
-   include/coap/bits.h \
-   include/coap/block.h \
-   include/coap/coap.h \
-   include/coap/coap_io.h \
-   include/coap/coap_time.h \
-   include/coap/debug.h \
-   include/coap/encode.h \
-   include/coap/hashkey.h \
-   include/coap/libcoap.h \
-   include/coap/mem.h \
-   include/coap/net.h \
-   include/coap/option.h \
-   include/coap/pdu.h \
-   include/coap/prng.h \
-   include/coap/resource.h \
-   include/coap/str.h \
-   include/coap/subscribe.h \
-   include/coap/uri.h \
-   include/coap/uthash.h \
-   include/coap/utlist.h
+  $(top_srcdir)/include/coap/address.h \
+  $(top_srcdir)/include/coap/async.h \
+  $(top_srcdir)/include/coap/bits.h \
+  $(top_srcdir)/include/coap/block.h \
+  $(top_srcdir)/include/coap/coap.h \
+  $(top_srcdir)/include/coap/coap_io.h \
+  $(top_srcdir)/include/coap/coap_time.h \
+  $(top_srcdir)/include/coap/debug.h \
+  $(top_srcdir)/include/coap/encode.h \
+  $(top_srcdir)/include/coap/hashkey.h \
+  $(top_srcdir)/include/coap/libcoap.h \
+  $(top_srcdir)/include/coap/mem.h \
+  $(top_srcdir)/include/coap/net.h \
+  $(top_srcdir)/include/coap/option.h \
+  $(top_srcdir)/include/coap/pdu.h \
+  $(top_srcdir)/include/coap/prng.h \
+  $(top_srcdir)/include/coap/resource.h \
+  $(top_srcdir)/include/coap/str.h \
+  $(top_srcdir)/include/coap/subscribe.h \
+  $(top_srcdir)/include/coap/uri.h \
+  $(top_srcdir)/include/coap/uthash.h \
+  $(top_srcdir)/include/coap/utlist.h
 
 # If there is a API change to something $(LIBCOAP_API_VERSION) > 1 the install
 # prefix for the header files has to change to not conflict the older version
 # if the user want's to install both versions. There will be something used like
 # libcoap_include_HEADERS = \
-#   include/coap-$(LIBCOAP_API_VERSION)/*
+#  $(top_srcdir)/include/coap-$(LIBCOAP_API_VERSION)/*
 
 
 ## Instruct libtool to include API version information in the generated shared
@@ -142,6 +142,13 @@ libcoap-$(LIBCOAP_API_VERSION).sym: check_ctags $(libcoap_include_HEADERS)
 	( $(CTAGS_PROG) $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print $$1 }' | sort ) \
 	> $@.new
 	mv $@.new $@
+
+clean-local:
+	rm libcoap-1.sym
+	rm libcoap-1.map
+	rm libcoap-1.pc
+
+distclean-local: clean-local
 
 ## Install the generated pkg-config file (.pc) into the expected location for
 ## architecture-dependent package configuration information.  Occasionally,
