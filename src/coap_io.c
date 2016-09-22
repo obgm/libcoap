@@ -388,7 +388,15 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     return -1;
   }
 
+#ifdef WSA_CMSG_SPACE
+  {
+    int sent = 0;
+    WSASendMsg(ep->handle.fd, &mhdr, 0, &sent, NULL, NULL);
+    return sent;
+  }
+#else
   return sendmsg(ep->handle.fd, &mhdr, 0);
+#endif
 #else /* WITH_CONTIKI */
   /* FIXME: untested */
   /* FIXME: is there a way to check if send was successful? */
