@@ -554,7 +554,7 @@ coap_send_ack(coap_context_t *context,
   return result;
 }
 
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP)
 static coap_tid_t
 coap_send_impl(coap_context_t *context, 
 	       const coap_endpoint_t *local_interface,
