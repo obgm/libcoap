@@ -2,7 +2,7 @@
 
 /* coap-client -- simple CoAP client
  *
- * Copyright (C) 2010--2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms of
  * use.
@@ -770,8 +770,8 @@ set_blocksize(void) {
 }
 
 static void
-cmdline_subscribe(char *arg UNUSED_PARAM) {
-  obs_seconds = atoi(optarg);
+cmdline_subscribe(char *arg) {
+  obs_seconds = atoi(arg);
   coap_insert(&optlist, new_option_node(COAP_OPTION_SUBSCRIPTION, 0, NULL));
 }
 
