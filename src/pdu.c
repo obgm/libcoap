@@ -806,7 +806,7 @@ coap_pdu_parse2(unsigned char *data, size_t length, coap_pdu_t *pdu,
   unsigned int headerSize = 0;
 
   if (COAP_UDP == transport) {
-    headerSize = sizeof(sizeof(coap_hdr_t));
+    headerSize = sizeof(coap_hdr_t);
   }
 #ifdef WITH_TCP
   else {
