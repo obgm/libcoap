@@ -279,11 +279,11 @@ typedef struct {
 /* if you change anything here, make sure, that the longest string does not 
  * exceed COAP_ERROR_PHRASE_LENGTH. */
 error_desc_t coap_error[] = {
-  { COAP_RESPONSE_CODE(65),  "2.01 Created" },
-  { COAP_RESPONSE_CODE(66),  "2.02 Deleted" },
-  { COAP_RESPONSE_CODE(67),  "2.03 Valid" },
-  { COAP_RESPONSE_CODE(68),  "2.04 Changed" },
-  { COAP_RESPONSE_CODE(69),  "2.05 Content" },
+  { COAP_RESPONSE_CODE(201), "Created" },
+  { COAP_RESPONSE_CODE(202), "Deleted" },
+  { COAP_RESPONSE_CODE(203), "Valid" },
+  { COAP_RESPONSE_CODE(204), "Changed" },
+  { COAP_RESPONSE_CODE(205), "Content" },
   { COAP_RESPONSE_CODE(400), "Bad Request" },
   { COAP_RESPONSE_CODE(401), "Unauthorized" },
   { COAP_RESPONSE_CODE(402), "Bad Option" },
