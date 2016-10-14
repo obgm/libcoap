@@ -54,6 +54,7 @@ typedef SOCKET coap_socket_t;
 #include "debug.h"
 #include "mem.h"
 #include "coap_io.h"
+#include "pdu.h"
 
 #if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 struct coap_packet_t {
