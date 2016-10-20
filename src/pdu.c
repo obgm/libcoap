@@ -176,7 +176,7 @@ coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const un
   pdu->data = NULL;
 
   if (type < pdu->max_delta) {
-    warn("coap_add_option: options are not in correct order\n");
+    coap_warn("coap_add_option: options are not in correct order\n");
     return 0;
   }
 
@@ -187,7 +187,7 @@ coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const un
 			    type - pdu->max_delta, data, len);
 
   if (!optsize) {
-    warn("coap_add_option: cannot add option\n");
+    coap_warn("coap_add_option: cannot add option\n");
     /* error */
     return 0;
   } else {
@@ -208,7 +208,7 @@ coap_add_option_later(coap_pdu_t *pdu, unsigned short type, unsigned int len) {
   pdu->data = NULL;
 
   if (type < pdu->max_delta) {
-    warn("coap_add_option: options are not in correct order\n");
+    coap_warn("coap_add_option: options are not in correct order\n");
     return NULL;
   }
 
@@ -219,7 +219,7 @@ coap_add_option_later(coap_pdu_t *pdu, unsigned short type, unsigned int len) {
 			    type - pdu->max_delta, NULL, len);
 
   if (!optsize) {
-    warn("coap_add_option: cannot add option\n");
+    coap_warn("coap_add_option: cannot add option\n");
     /* error */
     return NULL;
   } else {
@@ -239,7 +239,7 @@ coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
     return 1;
 
   if (pdu->length + len + 1 > pdu->max_size) {
-    warn("coap_add_data: cannot add: data too large for PDU\n");
+    coap_warn("coap_add_data: cannot add: data too large for PDU\n");
     assert(pdu->data == NULL);
     return 0;
   }
@@ -345,12 +345,12 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
   assert(pdu);
 
   if (pdu->max_size < length) {
-    debug("insufficient space to store parsed PDU\n");
+    coap_debug("insufficient space to store parsed PDU\n");
     return 0;
   }
 
   if (length < sizeof(coap_hdr_t)) {
-    debug("discarded invalid PDU\n");
+    coap_debug("discarded invalid PDU\n");
   }
 
 #ifdef WITH_LWIP
@@ -371,14 +371,14 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
   /* sanity checks */
   if (pdu->hdr->code == 0) {
     if (length != sizeof(coap_hdr_t) || pdu->hdr->token_length) {
-      debug("coap_pdu_parse: empty message is not empty\n");
+      coap_debug("coap_pdu_parse: empty message is not empty\n");
       goto discard;
     }
   }
 
   if (length < sizeof(coap_hdr_t) + pdu->hdr->token_length
       || pdu->hdr->token_length > 8) {
-    debug("coap_pdu_parse: invalid Token\n");
+    coap_debug("coap_pdu_parse: invalid Token\n");
     goto discard;
   }
 
@@ -401,7 +401,7 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
 
   while (length && *opt != COAP_PAYLOAD_START) {
     if (!next_option_safe(&opt, (size_t *)&length)) {
-      debug("coap_pdu_parse: drop\n");
+      coap_debug("coap_pdu_parse: drop\n");
       goto discard;
     }
   }
@@ -412,11 +412,11 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
     opt++; length--;
 
     if (!length) {
-      debug("coap_pdu_parse: message ending in payload start marker\n");
+      coap_debug("coap_pdu_parse: message ending in payload start marker\n");
       goto discard;
     }
 
-    debug("set data to %p (pdu ends at %p)\n", (unsigned char *)opt, 
+    coap_debug("set data to %p (pdu ends at %p)\n", (unsigned char *)opt, 
 	  (unsigned char *)pdu->hdr + pdu->length);
     pdu->data = (unsigned char *)opt;
   }

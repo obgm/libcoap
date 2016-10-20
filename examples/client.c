@@ -146,7 +146,7 @@ coap_new_request(coap_context_t *ctx,
 
   pdu->hdr->token_length = the_token.length;
   if ( !coap_add_token(pdu, the_token.length, the_token.s)) {
-    debug("cannot add token to request\n");
+    coap_debug("cannot add token to request\n");
   }
 
   coap_show_pdu(pdu);
@@ -245,7 +245,7 @@ clear_obs(coap_context_t *ctx,
     tid = coap_send(ctx, local_interface, remote, pdu);
 
   if (tid == COAP_INVALID_TID) {
-    debug("clear_obs: error sending new request");
+    coap_debug("clear_obs: error sending new request");
     coap_delete_pdu(pdu);
   } else if (pdu->hdr->type != COAP_MESSAGE_CON)
     coap_delete_pdu(pdu);
@@ -330,7 +330,7 @@ message_handler(struct coap_context_t *ctx,
 
 #ifndef NDEBUG
   if (LOG_DEBUG <= coap_get_log_level()) {
-    debug("** process incoming %d.%02d response:\n",
+    coap_debug("** process incoming %d.%02d response:\n",
           (received->hdr->code >> 5), received->hdr->code & 0x1F);
     coap_show_pdu(received);
   }
@@ -346,7 +346,7 @@ message_handler(struct coap_context_t *ctx,
   }
 
   if (received->hdr->type == COAP_MESSAGE_RST) {
-    info("got RST\n");
+    coap_info("got RST\n");
     return;
   }
 
@@ -355,7 +355,7 @@ message_handler(struct coap_context_t *ctx,
 
     /* set obs timer if we have successfully subscribed a resource */
     if (sent && coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter)) {
-      debug("observation relationship established, set timeout to %d\n", obs_seconds);
+      coap_debug("observation relationship established, set timeout to %d\n", obs_seconds);
       set_timeout(&obs_wait, obs_seconds);
     }
 
@@ -371,7 +371,7 @@ message_handler(struct coap_context_t *ctx,
 
       if(COAP_OPT_BLOCK_MORE(block_opt)) {
         /* more bit is set */
-        debug("found the M bit, block size is %u, block nr. %u\n",
+        coap_debug("found the M bit, block size is %u, block nr. %u\n",
               COAP_OPT_BLOCK_SZX(block_opt),
               coap_opt_block_num(block_opt));
 
@@ -398,7 +398,7 @@ message_handler(struct coap_context_t *ctx,
 
           /* finally add updated block option from response, clear M bit */
           /* blocknr = (blocknr & 0xfffffff7) + 0x10; */
-          debug("query block %d\n", (coap_opt_block_num(block_opt) + 1));
+          coap_debug("query block %d\n", (coap_opt_block_num(block_opt) + 1));
           coap_add_option(pdu,
                           blktype,
                           coap_encode_var_bytes(buf,
@@ -411,7 +411,7 @@ message_handler(struct coap_context_t *ctx,
             tid = coap_send(ctx, local_interface, remote, pdu);
 
           if (tid == COAP_INVALID_TID) {
-            debug("message_handler: error sending new request");
+            coap_debug("message_handler: error sending new request");
             coap_delete_pdu(pdu);
           } else {
             set_timeout(&max_wait, wait_seconds);
@@ -429,11 +429,11 @@ message_handler(struct coap_context_t *ctx,
         block.szx = COAP_OPT_BLOCK_SZX(block_opt);
         block.num = coap_opt_block_num(block_opt);
 
-        debug("found Block1, block size is %u, block nr. %u\n",
+        coap_debug("found Block1, block size is %u, block nr. %u\n",
         block.szx, block.num);
 
         if (payload.length <= (block.num+1) * (1 << (block.szx + 4))) {
-          debug("upload ready\n");
+          coap_debug("upload ready\n");
           ready = 1;
           return;
         }
@@ -466,7 +466,7 @@ message_handler(struct coap_context_t *ctx,
           block.num++;
           block.m = ((block.num+1) * (1 << (block.szx + 4)) < payload.length);
 
-          debug("send block %d\n", block.num);
+          coap_debug("send block %d\n", block.num);
           coap_add_option(pdu,
                           COAP_OPTION_BLOCK1,
                           coap_encode_var_bytes(buf,
@@ -484,7 +484,7 @@ message_handler(struct coap_context_t *ctx,
             tid = coap_send(ctx, local_interface, remote, pdu);
 
           if (tid == COAP_INVALID_TID) {
-            debug("message_handler: error sending new request");
+            coap_debug("message_handler: error sending new request");
             coap_delete_pdu(pdu);
           } else {
             set_timeout(&max_wait, wait_seconds);
@@ -518,7 +518,7 @@ message_handler(struct coap_context_t *ctx,
 
   /* finally send new request, if needed */
   if (pdu && coap_send(ctx, local_interface, remote, pdu) == COAP_INVALID_TID) {
-    debug("message_handler: error sending response");
+    coap_debug("message_handler: error sending response");
   }
   coap_delete_pdu(pdu);
 
@@ -641,7 +641,7 @@ cmdline_content_type(char *arg, unsigned short key) {
         value[valcnt] = content_types[i].code;
         valcnt++;
       } else {
-        warn("W: unknown content-format '%s'\n",arg);
+        coap_warn("W: unknown content-format '%s'\n",arg);
       }
     }
 
@@ -1190,7 +1190,7 @@ main(int argc, char **argv) {
 
 #ifndef NDEBUG
   if (LOG_DEBUG <= coap_get_log_level()) {
-    debug("sending CoAP request:\n");
+    coap_debug("sending CoAP request:\n");
     coap_show_pdu(pdu);
   }
 #endif
@@ -1204,7 +1204,7 @@ main(int argc, char **argv) {
     coap_delete_pdu(pdu);
 
   set_timeout(&max_wait, wait_seconds);
-  debug("timeout is set to %d seconds\n", wait_seconds);
+  coap_debug("timeout is set to %d seconds\n", wait_seconds);
 
   while ( !(ready && coap_can_exit(ctx)) ) {
     FD_ZERO(&readfds);
@@ -1245,11 +1245,11 @@ main(int argc, char **argv) {
     } else { /* timeout */
       coap_ticks(&now);
       if (max_wait <= now) {
-        info("timeout\n");
+        coap_info("timeout\n");
         break;
       }
       if (obs_wait && obs_wait <= now) {
-        debug("clear observation relationship\n");
+        coap_debug("clear observation relationship\n");
         clear_obs(ctx, ctx->endpoint, &dst); /* FIXME: handle error case COAP_TID_INVALID */
 
         /* make sure that the obs timer does not fire again */

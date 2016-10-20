@@ -304,7 +304,7 @@ coap_resource_init(const unsigned char *uri, size_t len, int flags) {
 
     r->flags = flags;
   } else {
-    debug("coap_resource_init: no memory left\n");
+    coap_debug("coap_resource_init: no memory left\n");
   }
   
   return r;
@@ -339,7 +339,7 @@ coap_add_attr(coap_resource_t *resource,
     /* add attribute to resource list */
     LL_PREPEND(resource->link_attr, attr);
   } else {
-    debug("coap_add_attr: no memory left\n");
+    coap_debug("coap_add_attr: no memory left\n");
   }
   
   return attr;
@@ -632,14 +632,14 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       if (!response) {
         obs->dirty = 1;
         r->partiallydirty = 1;
-	debug("coap_check_notify: pdu init failed, resource stays partially dirty\n");
+	coap_debug("coap_check_notify: pdu init failed, resource stays partially dirty\n");
 	continue;
       }
 
       if (!coap_add_token(response, obs->token_length, obs->token)) {
         obs->dirty = 1;
         r->partiallydirty = 1;
-	debug("coap_check_notify: cannot add token, resource stays partially dirty\n");
+	coap_debug("coap_check_notify: cannot add token, resource stays partially dirty\n");
 	coap_delete_pdu(response);
 	continue;
       }
@@ -672,7 +672,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
 	coap_delete_pdu(response);
       if (COAP_INVALID_TID == tid)
       {
-	debug("coap_check_notify: sending failed, resource stays partially dirty\n");
+	coap_debug("coap_check_notify: sending failed, resource stays partially dirty\n");
         obs->dirty = 1;
         r->partiallydirty = 1;
       }
@@ -731,7 +731,7 @@ coap_remove_failed_observers(coap_context_t *context,
 	  unsigned char addr[INET6_ADDRSTRLEN+8];
 
 	  if (coap_print_addr(&obs->subscriber, addr, INET6_ADDRSTRLEN+8))
-	    debug("** removed observer %s\n", addr);
+	    coap_debug("** removed observer %s\n", addr);
 	}
 #endif
 	coap_cancel_all_messages(context, &obs->subscriber, 

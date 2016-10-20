@@ -153,7 +153,7 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
 
         tmp.s = (unsigned char *)coap_malloc(tmp.length);
         if (!tmp.s) {
-          debug("hnd_put_rd: cannot allocate storage for new rd\n");
+          coap_debug("hnd_put_rd: cannot allocate storage for new rd\n");
           code = COAP_RESPONSE_CODE(503);
           goto finish;
         }
@@ -183,7 +183,7 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
   response = coap_pdu_init(type, code, request->hdr->id, size);
 
   if (!response) {
-    debug("cannot create response for message %d\n", request->hdr->id);
+    coap_debug("cannot create response for message %d\n", request->hdr->id);
     return;
   }
 
@@ -191,7 +191,7 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
     coap_add_token(response, request->hdr->token_length, request->hdr->token);
 
   if (coap_send(ctx, peer, response) == COAP_INVALID_TID) {
-    debug("hnd_get_rd: cannot send response for message %d\n",
+    coap_debug("hnd_get_rd: cannot send response for message %d\n",
     request->hdr->id);
   }
   coap_delete_pdu(response);
@@ -361,14 +361,14 @@ make_rd(coap_address_t *peer UNUSED_PARAM, coap_pdu_t *pdu) {
   rd = rd_new();
 
   if (!rd) {
-    debug("hnd_get_rd: cannot allocate storage for rd\n");
+    coap_debug("hnd_get_rd: cannot allocate storage for rd\n");
     return NULL;
   }
 
   if (coap_get_data(pdu, &rd->data.length, &data)) {
     rd->data.s = (unsigned char *)coap_malloc(rd->data.length);
     if (!rd->data.s) {
-      debug("hnd_get_rd: cannot allocate storage for rd->data\n");
+      coap_debug("hnd_get_rd: cannot allocate storage for rd->data\n");
       rd_delete(rd);
       return NULL;
     }

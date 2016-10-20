@@ -105,7 +105,7 @@ coap_malloc_type(coap_memory_tag_t type, size_t size) {
   assert(container);
 
   if (size > container->size) {
-    debug("coap_malloc_type: Requested memory exceeds maximum object size\n");
+    coap_debug("coap_malloc_type: Requested memory exceeds maximum object size\n");
     return NULL;
   }
 

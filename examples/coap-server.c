@@ -261,7 +261,7 @@ check_async(coap_context_t *ctx,
              : COAP_MESSAGE_NON,
              COAP_RESPONSE_CODE(205), 0, size);
   if (!response) {
-    debug("check_async: insufficient memory, we'll try later\n");
+    coap_debug("check_async: insufficient memory, we'll try later\n");
     async->appdata =
       (void *)((unsigned long)async->appdata + 15 * COAP_TICKS_PER_SECOND);
     return;
@@ -275,7 +275,7 @@ check_async(coap_context_t *ctx,
   coap_add_data(response, 4, (unsigned char *)"done");
 
   if (coap_send(ctx, local_if, &async->peer, response) == COAP_INVALID_TID) {
-    debug("check_async: cannot send response for message %d\n",
+    coap_debug("check_async: cannot send response for message %d\n",
     response->hdr->id);
   }
   coap_delete_pdu(response);

@@ -181,7 +181,7 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
     unsigned char addr_str[INET6_ADDRSTRLEN+8];
 
     if (coap_print_addr(&ep->addr, addr_str, INET6_ADDRSTRLEN+8)) {
-      debug("created %sendpoint %s\n", 
+      coap_debug("created %sendpoint %s\n", 
 	    ep->flags & COAP_ENDPOINT_DTLS ? "DTLS " : "",
 	    addr_str);
     }
@@ -422,7 +422,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   *packet = coap_malloc_packet();
   
   if (!*packet) {
-    warn("coap_network_read: insufficient memory, drop packet\n");
+    coap_warn("coap_network_read: insufficient memory, drop packet\n");
     return -1;
   }
 
@@ -536,7 +536,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
     
     if (len > coap_get_max_packetlength(*packet)) {
       /* FIXME: we might want to send back a response */
-      warn("discarded oversized packet\n");
+      coap_warn("discarded oversized packet\n");
       return -1;
     }
 
@@ -549,7 +549,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
       unsigned char addr_str[INET6_ADDRSTRLEN+8];
       
       if (coap_print_addr(&(*packet)->src, addr_str, INET6_ADDRSTRLEN+8)) {
-	debug("received %zd bytes from %s\n", len, addr_str);
+	coap_debug("received %zd bytes from %s\n", len, addr_str);
       }
     }
 #endif /* NDEBUG */

@@ -32,7 +32,7 @@ coap_register_async(coap_context_t *context, coap_address_t *peer,
   if (s != NULL) {
     /* We must return NULL here as the caller must know that he is
      * responsible for releasing @p data. */
-    debug("asynchronous state for transaction %d already registered\n", id);
+    coap_debug("asynchronous state for transaction %d already registered\n", id);
     return NULL;
   }
 

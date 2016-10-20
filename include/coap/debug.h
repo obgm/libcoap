@@ -61,9 +61,9 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
 #ifndef NDEBUG
 
 /* A set of convenience macros for common log levels. */
-#define info(...) coap_log(LOG_INFO, __VA_ARGS__)
-#define warn(...) coap_log(LOG_WARNING, __VA_ARGS__)
-#define debug(...) coap_log(LOG_DEBUG, __VA_ARGS__)
+#define coap_info(...) coap_log(LOG_INFO, __VA_ARGS__)
+#define coap_warn(...) coap_log(LOG_WARNING, __VA_ARGS__)
+#define coap_debug(...) coap_log(LOG_DEBUG, __VA_ARGS__)
 
 #include "pdu.h"
 void coap_show_pdu(const coap_pdu_t *);
@@ -73,9 +73,9 @@ size_t coap_print_addr(const struct coap_address_t *, unsigned char *, size_t);
 
 #else
 
-#define debug(...)
-#define info(...)
-#define warn(...)
+#define coap_debug(...)
+#define coap_info(...)
+#define coap_warn(...)
 
 #define coap_show_pdu(x)
 #define coap_print_addr(...)
