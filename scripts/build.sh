@@ -1,7 +1,7 @@
 #! /bin/sh
 
 if test "x$TESTS" = "xyes" -o "x$TESTS" = "xtrue" ; then
-    WITH_TESTS=--enable-tests
+    WITH_TESTS="`scripts/fix-cunit.sh` --enable-tests"
 fi
      
 config() {
