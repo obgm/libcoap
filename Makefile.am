@@ -75,7 +75,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap/async.h \
   $(top_srcdir)/include/coap/bits.h \
   $(top_srcdir)/include/coap/block.h \
-  $(top_srcdir)/include/coap/coap.h \
+  $(top_builddir)/include/coap/coap.h \
   $(top_srcdir)/include/coap/coap_io.h \
   $(top_srcdir)/include/coap/coap_time.h \
   $(top_srcdir)/include/coap/debug.h \
