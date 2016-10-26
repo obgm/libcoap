@@ -10,6 +10,8 @@ env:
 
 addons:
   apt_packages:
+    - pkg-config
+    - graphviz
     - libcunit1-dev
     - doxygen
     - libxml2-utils
