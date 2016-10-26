@@ -13,3 +13,4 @@ fi
 
 # output location of generated cunit.pc
 echo PKG_CONFIG_PATH=`pwd`
+cat `pwd`/cunit.pc
