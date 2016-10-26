@@ -2,11 +2,12 @@
 
 if test "x$TESTS" = "xyes" -o "x$TESTS" = "xtrue" ; then
     WITH_TESTS="`scripts/fix-cunit.sh` --enable-tests"
+    test -f cunit.pc && echo cat `pwd`/cunit.pc
 fi
      
 config() {
     echo "./configure $*"
-    ./configure $*
+    ./configure $* || cat config.log
 }
 
 case "${PLATFORM}" in
