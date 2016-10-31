@@ -1,3 +1,6 @@
+sudo: required
+dist: trusty
+
 language: c
 compiler:
   - gcc
@@ -17,6 +20,7 @@ addons:
     - libxml2-utils
     - xsltproc
     - docbook-xml
+    - docbook-xsl
     - asciidoc
 
 branches:
