@@ -563,6 +563,7 @@ usage( const char *program, const char *version) {
      "\t-P addr[:port]\tuse proxy (automatically adds Proxy-Uri option to\n"
      "\t\t\trequest)\n"
      "\t-T token\tinclude specified token\n"
+     "\t-U\t\tnever include Uri-Host or Uri-Port options\n"
      "\n"
      "examples:\n"
      "\tcoap-client -m get coap://[::1]/\n"
@@ -660,7 +661,7 @@ cmdline_content_type(char *arg, unsigned short key) {
 }
 
 static void
-cmdline_uri(char *arg) {
+cmdline_uri(char *arg, int create_uri_opts) {
   unsigned char portbuf[2];
 #define BUFSIZE 40
   unsigned char _buf[BUFSIZE];
@@ -688,7 +689,7 @@ cmdline_uri(char *arg) {
   } else {      /* split arg into Uri-* options */
       coap_split_uri((unsigned char *)arg, strlen(arg), &uri );
 
-    if (uri.port != COAP_DEFAULT_PORT) {
+    if (uri.port != COAP_DEFAULT_PORT && create_uri_opts) {
       coap_insert(&optlist,
                   new_option_node(COAP_OPTION_URI_PORT,
                   coap_encode_var_bytes(portbuf, uri.port),
@@ -1039,8 +1040,9 @@ main(int argc, char **argv) {
   int opt, res;
   coap_log_t log_level = LOG_WARNING;
   coap_tid_t tid = COAP_INVALID_TID;
+  int create_uri_opts = 1;
 
-  while ((opt = getopt(argc, argv, "Na:b:e:f:g:m:p:s:t:o:v:A:B:O:P:T:")) != -1) {
+  while ((opt = getopt(argc, argv, "Na:b:e:f:g:m:p:s:t:o:v:A:B:O:P:T:U")) != -1) {
     switch (opt) {
     case 'a' :
       strncpy(node_str, optarg, NI_MAXHOST-1);
@@ -1103,6 +1105,9 @@ main(int argc, char **argv) {
     case 'T' :
       cmdline_token(optarg);
       break;
+    case 'U' :
+      create_uri_opts = 0;
+      break;
     case 'v' :
       log_level = strtol(optarg, NULL, 10);
       break;
@@ -1115,7 +1120,7 @@ main(int argc, char **argv) {
   coap_set_log_level(log_level);
 
   if ( optind < argc )
-    cmdline_uri( argv[optind] );
+    cmdline_uri( argv[optind], create_uri_opts );
   else {
     usage( argv[0], PACKAGE_VERSION );
     exit( 1 );
@@ -1172,7 +1177,8 @@ main(int argc, char **argv) {
   if (!proxy.length && addrptr
       && (inet_ntop(dst.addr.sa.sa_family, addrptr, addr, sizeof(addr)) != 0)
       && (strlen(addr) != uri.host.length
-      || memcmp(addr, uri.host.s, uri.host.length) != 0)) {
+      || memcmp(addr, uri.host.s, uri.host.length) != 0)
+      && create_uri_opts) {
         /* add Uri-Host */
 
         coap_insert(&optlist,

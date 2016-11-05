@@ -105,6 +105,9 @@ OPTIONS
 *-T* token::
    Include the 'token' to the request.
 
+*-U* ::
+   Never include Uri-Host or Uri-Port options.
+
 EXAMPLES
 --------
 * Example
