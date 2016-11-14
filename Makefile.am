@@ -109,9 +109,9 @@ libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS =					\
   @libcoap_SYMBOLS@ \
   -pie
 
+## Collect symbols here we want to ignore while building the helper files
+## libcoap-$(LIBCOAP_API_VERSION).{map,sym} for the linker.
 CTAGS_IGNORE=-I "coap_packet_extract_pbuf coap_pdu_from_pbuf"
-
-.PHONY:	update-map-file check_ctags
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if
 # configure has detected a usable version of the ctags program and aborts if not.
@@ -143,13 +143,6 @@ libcoap-$(LIBCOAP_API_VERSION).sym: check_ctags $(libcoap_include_HEADERS)
 	> $@.new
 	mv $@.new $@
 
-clean-local:
-	rm libcoap-1.sym
-	rm libcoap-1.map
-	rm libcoap-1.pc
-
-distclean-local: clean-local
-
 ## Install the generated pkg-config file (.pc) into the expected location for
 ## architecture-dependent package configuration information.  Occasionally,
 ## pkg-config files are also used for architecture-independent data packages,
@@ -161,4 +154,27 @@ pkgconfig_DATA = libcoap-$(LIBCOAP_API_VERSION).pc
 ## archive.  However, it will not be installed on an end user's system due to
 ## the noinst_ prefix.
 dist_noinst_SCRIPTS = autogen.sh
+
+## various *-local targets
+## Remove the helper files for the linker and the pkg-config file if there
+## is 'make distclean' called. NOTE: To re create the *.{map,sym} files you
+## need to call the target update-map-file after the configure script was
+## running!
+distclean-local:
+	rm -f libcoap-$(LIBCOAP_API_VERSION).map
+	rm -f libcoap-$(LIBCOAP_API_VERSION).sym
+	rm -f libcoap-$(LIBCOAP_API_VERSION).pc
+	@echo
+	@echo "     ---> Please note the following important advice! <---"
+	@echo "     The files libcoap-$(LIBCOAP_API_VERSION).{map,sym} are removed by the distclean target!"
+	@echo "     To regenerate this two files you need to call 'make update-map-file' first before any"
+	@echo "     other Make target. Otherwise the build of libcoap will fail!"
+	@echo
+
+## Ensure we have actual *.{map,sym} files if we create a release tarball.
+dist-local: update-map-file
+
+## Finaly some phony targets, just to ensure those targets are always buildable
+## no matter if the user has created same called files.
+.PHONY: update-map-file check_ctags
 
