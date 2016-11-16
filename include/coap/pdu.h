@@ -81,9 +81,9 @@
 #define COAP_OPTION_BLOCK2         23 /* C, uint, 0--3 B, (none) */
 #define COAP_OPTION_BLOCK1         27 /* C, uint, 0--3 B, (none) */
 
-/* selected option types from draft-tcs-coap-no-response-option-11 */
+/* selected option types from RFC 7967 */
 
-#define COAP_OPTION_NORESPONSE    284 /* N, uint, 0--1 B, 0 */
+#define COAP_OPTION_NORESPONSE    258 /* N, uint, 0--1 B, 0 */
 
 #define COAP_MAX_OPT            65535 /**< the highest option number we know */
 
