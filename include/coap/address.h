@@ -18,6 +18,8 @@
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
+#include "libcoap.h"
 
 #ifdef WITH_LWIP
 #include <lwip/ip_addr.h>
