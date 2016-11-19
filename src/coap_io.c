@@ -520,7 +520,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 	       &u.p->ipi_addr, sizeof(struct in_addr));
 
 	(*packet)->src.size = mhdr.msg_namelen;
-	memcpy(&(*packet)->src.addr.st, mhdr.msg_name, (*packet)->src.size);
+	assert(memcmp(&(*packet)->src.addr.st, mhdr.msg_name, (*packet)->src.size) == 0);
 
 	break;
       }
