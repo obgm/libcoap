@@ -538,7 +538,7 @@ usage( const char *program, const char *version) {
      "(c) 2010-2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
      "usage: %s [-A type...] [-t type] [-b [num,]size] [-B seconds] [-e text]\n"
      "\t\t[-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
-     "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] URI\n\n"
+     "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] [-U] URI\n\n"
      "\tURI can be an absolute or relative coap URI,\n"
      "\t-a addr\tthe local interface address to use\n"
      "\t-A type...\taccepted media types as comma-separated list of\n"
