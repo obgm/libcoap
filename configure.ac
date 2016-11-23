@@ -347,6 +347,11 @@ case $host in
     ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
     ;;
 
+    *kfreebsd*)
+    AC_MSG_RESULT([kFreeBSD])
+    ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+    ;;
+
     *)
     AC_MSG_WARN([==> Currently unsupported operating system '${host}' !])
     AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
