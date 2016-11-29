@@ -417,7 +417,7 @@ coap_show_pdu(const coap_pdu_t *pdu) {
       buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
 			 coap_opt_block_num(option), /* block number */
 			 COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
-			 (2 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+			 (1 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
 
       break;
 
