@@ -1,6 +1,6 @@
 /* pdu.c -- CoAP message structure
  *
- * Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -284,15 +284,18 @@ error_desc_t coap_error[] = {
   { COAP_RESPONSE_CODE(203), "Valid" },
   { COAP_RESPONSE_CODE(204), "Changed" },
   { COAP_RESPONSE_CODE(205), "Content" },
+  { COAP_RESPONSE_CODE(231), "Continue" },
   { COAP_RESPONSE_CODE(400), "Bad Request" },
   { COAP_RESPONSE_CODE(401), "Unauthorized" },
   { COAP_RESPONSE_CODE(402), "Bad Option" },
   { COAP_RESPONSE_CODE(403), "Forbidden" },
   { COAP_RESPONSE_CODE(404), "Not Found" },
   { COAP_RESPONSE_CODE(405), "Method Not Allowed" },
+  { COAP_RESPONSE_CODE(406), "Not Acceptable" },
   { COAP_RESPONSE_CODE(408), "Request Entity Incomplete" },
+  { COAP_RESPONSE_CODE(412), "Precondition Failed" },
   { COAP_RESPONSE_CODE(413), "Request Entity Too Large" },
-  { COAP_RESPONSE_CODE(415), "Unsupported Media Type" },
+  { COAP_RESPONSE_CODE(415), "Unsupported Content-Format" },
   { COAP_RESPONSE_CODE(500), "Internal Server Error" },
   { COAP_RESPONSE_CODE(501), "Not Implemented" },
   { COAP_RESPONSE_CODE(502), "Bad Gateway" },
