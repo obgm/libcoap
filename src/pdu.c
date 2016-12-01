@@ -390,8 +390,10 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
    * response back to the network. */
   memcpy(&pdu->hdr->id, data + 2, 2);
 
-  /* append data (including the Token) to pdu structure */
-  memcpy(pdu->hdr + 1, data + sizeof(coap_hdr_t), length - sizeof(coap_hdr_t));
+  /* Append data (including the Token) to pdu structure, if any. */
+  if (length > sizeof(coap_hdr_t)) {
+    memcpy(pdu->hdr + 1, data + sizeof(coap_hdr_t), length - sizeof(coap_hdr_t));
+  }
   pdu->length = length;
  
   /* Finally calculate beginning of data block and thereby check integrity
