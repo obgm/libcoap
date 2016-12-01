@@ -264,7 +264,7 @@ t_encode_pdu1(void) {
   result = coap_add_token(pdu, 5, (unsigned char *)"token");
 
   CU_ASSERT(result == 1);
-  CU_ASSERT(pdu->length = sizeof(teststr));
+  CU_ASSERT(pdu->length == sizeof(teststr));
   CU_ASSERT_PTR_NULL(pdu->data);
   CU_ASSERT(memcmp(pdu->hdr, teststr, sizeof(teststr)) == 0);
 }
