@@ -495,8 +495,11 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 	memcpy(&(*packet)->dst.addr.sin6.sin6_addr, 
 	       &u.p->ipi6_addr, sizeof(struct in6_addr));
 
-	(*packet)->src.size = mhdr.msg_namelen;
-	assert((*packet)->src.size == sizeof(struct sockaddr_in6));
+	(*packet)->src.size = sizeof(struct sockaddr_in6);
+        if ((*packet)->src.size != mhdr.msg_namelen) {
+          coap_log(LOG_DEBUG, "wrong IPv6 address length detected, dropped packet\n");
+          goto error;
+        }
 
 	(*packet)->src.addr.sin6.sin6_family = SIN6(mhdr.msg_name)->sin6_family;
 	(*packet)->src.addr.sin6.sin6_addr = SIN6(mhdr.msg_name)->sin6_addr;
@@ -519,7 +522,12 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 	memcpy(&(*packet)->dst.addr.sin.sin_addr, 
 	       &u.p->ipi_addr, sizeof(struct in_addr));
 
-	(*packet)->src.size = mhdr.msg_namelen;
+	(*packet)->src.size = sizeof(struct sockaddr_in);
+        if ((*packet)->src.size != mhdr.msg_namelen) {
+          coap_log(LOG_DEBUG, "wrong IPv4 address length detected, dropped packet\n");
+          goto error;
+        }
+
 	assert(memcmp(&(*packet)->src.addr.st, mhdr.msg_name, (*packet)->src.size) == 0);
 
 	break;
@@ -531,7 +539,12 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 	memcpy(&(*packet)->dst.addr.sin.sin_addr,
 	       CMSG_DATA(cmsg), sizeof(struct in_addr));
 
-	(*packet)->src.size = mhdr.msg_namelen;
+	(*packet)->src.size = sizeof(struct sockaddr_in);
+        if ((*packet)->src.size != mhdr.msg_namelen) {
+          coap_log(LOG_DEBUG, "wrong IPv4 address length detected, dropped packet\n");
+          goto error;
+        }
+
 	assert(memcmp(&(*packet)->src.addr.st, mhdr.msg_name, (*packet)->src.size) == 0);
 
 	break;
