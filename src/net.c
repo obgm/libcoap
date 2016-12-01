@@ -332,20 +332,19 @@ is_wkc(coap_key_t k) {
 coap_context_t *
 coap_new_context(
   const coap_address_t *listen_addr) {
-#ifndef WITH_CONTIKI
-  coap_context_t *c = coap_malloc_type(COAP_CONTEXT, sizeof( coap_context_t ) );
-#endif /* not WITH_CONTIKI */
-#ifdef WITH_CONTIKI
   coap_context_t *c;
-
-  if (initialized)
-    return NULL;
-#endif /* WITH_CONTIKI */
 
   if (!listen_addr) {
     coap_log(LOG_EMERG, "no listen address specified\n");
     return NULL;
   }
+#ifdef WITH_CONTIKI
+  if (initialized)
+    return NULL;
+#endif /* WITH_CONTIKI */
+#ifndef WITH_CONTIKI
+  c = coap_malloc_type(COAP_CONTEXT, sizeof(coap_context_t));
+#endif /* not WITH_CONTIKI */
 
   coap_clock_init();
 #ifdef WITH_LWIP
