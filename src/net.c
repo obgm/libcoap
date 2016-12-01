@@ -1425,6 +1425,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
       warn("cannot send response for transaction %u\n", node->id);
     }
     coap_delete_pdu(response);
+    response = NULL;
 
     return;
   }
@@ -1509,6 +1510,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
       }
       }
       coap_delete_pdu(response);
+      response = NULL;
     } else {
       warn("cannot generate response\r\n");
     }
@@ -1528,7 +1530,10 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
       }
     }
     coap_delete_pdu(response);
-  }  
+    response = NULL;
+  }
+
+  assert(response == NULL);
 }
 
 static inline void
