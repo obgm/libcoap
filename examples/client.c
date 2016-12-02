@@ -426,11 +426,24 @@ message_handler(struct coap_context_t *ctx,
       block_opt = coap_check_option(received, COAP_OPTION_BLOCK1, &opt_iter);
 
       if (block_opt) { /* handle Block1 */
-        block.szx = COAP_OPT_BLOCK_SZX(block_opt);
-        block.num = coap_opt_block_num(block_opt);
-
-        debug("found Block1, block size is %u, block nr. %u\n",
-        block.szx, block.num);
+        unsigned int szx = COAP_OPT_BLOCK_SZX(block_opt);
+        unsigned int num = coap_opt_block_num(block_opt);
+        debug("found Block1 option, block size is %u, block nr. %u\n", szx, num);
+        if (szx != block.szx) {
+          unsigned int bytes_sent = ((block.num + 1) << (block.szx + 4));
+          if (bytes_sent % (1 << (szx + 4)) == 0) {
+            /* Recompute the block number of the previous packet given the new block size */
+            block.num = (bytes_sent >> (szx + 4)) - 1;
+            block.szx = szx;
+            debug("new Block1 size is %u, block number %u completed\n", (1 << (block.szx + 4)), block.num);
+          } else {
+            debug("ignoring request to increase Block1 size, "
+            "next block is not aligned on requested block size boundary. "
+            "(%u x %u mod %u = %u != 0)\n",
+                  block.num + 1, (1 << (block.szx + 4)), (1 << (szx + 4)),
+                  bytes_sent % (1 << (szx + 4)));
+          }
+        }
 
         if (payload.length <= (block.num+1) * (1 << (block.szx + 4))) {
           debug("upload ready\n");
