@@ -51,6 +51,7 @@ t_error_response1(void) {
   CU_ASSERT(pdu->hdr->id == htons(0x1234));
 
   CU_ASSERT(memcmp(response->hdr, teststr, sizeof(teststr)) == 0);
+  coap_delete_pdu(response);
 }
 
 static void
@@ -80,6 +81,7 @@ t_error_response2(void) {
   CU_ASSERT(response->hdr->code == 0x84);
 
   CU_ASSERT(memcmp(response->hdr, teststr, sizeof(teststr)) == 0);
+  coap_delete_pdu(response);
 }
 
 static void
@@ -113,6 +115,7 @@ t_error_response3(void) {
   CU_ASSERT(response->hdr->code == code);
 
   CU_ASSERT(memcmp(response->hdr, teststr, sizeof(teststr)) == 0);
+  coap_delete_pdu(response);
 }
 
 static void
@@ -152,6 +155,7 @@ t_error_response4(void) {
   CU_ASSERT(response->hdr->code == code);
 
   CU_ASSERT(memcmp(response->hdr, teststr, sizeof(teststr)) == 0);
+  coap_delete_pdu(response);
 }
 
 static void
@@ -193,6 +197,7 @@ t_error_response5(void) {
   CU_ASSERT(response->hdr->code == code);
 
   CU_ASSERT(memcmp(response->hdr, teststr, sizeof(teststr)) == 0);
+  coap_delete_pdu(response);
 }
 
 static void
@@ -234,6 +239,7 @@ t_error_response6(void) {
   CU_ASSERT(response->hdr->code == code);
 
   CU_ASSERT(memcmp(response->hdr, teststr, sizeof(teststr)) == 0);
+  coap_delete_pdu(response);
 }
 
 static void
@@ -276,6 +282,7 @@ t_error_response7(void) {
   CU_ASSERT(response->hdr->code == code);
 
   CU_ASSERT(memcmp(response->hdr, teststr, sizeof(teststr)) == 0);
+  coap_delete_pdu(response);
 }
 
 static void
@@ -317,6 +324,7 @@ t_error_response8(void) {
   CU_ASSERT(response->hdr->code == code);
 
   CU_ASSERT(memcmp(response->hdr, teststr, sizeof(teststr)) == 0);
+  coap_delete_pdu(response);
 }
 
 static int
