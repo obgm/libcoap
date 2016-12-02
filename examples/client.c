@@ -673,7 +673,16 @@ cmdline_content_type(char *arg, unsigned short key) {
   }
 }
 
-static void
+/**
+ * Sets global URI options according to the URI passed as @p arg.
+ * This function returns 0 on success or -1 on error.
+ *
+ * @param arg             The URI string.
+ * @param create_uri_opts Flags that indicate whether Uri-Host and
+ *                        Uri-Port should be suppressed.
+ * @return 0 on success, -1 otherwise
+ */
+static int
 cmdline_uri(char *arg, int create_uri_opts) {
   unsigned char portbuf[2];
 #define BUFSIZE 40
@@ -700,7 +709,9 @@ cmdline_uri(char *arg, int create_uri_opts) {
                 (unsigned char *)arg));
 
   } else {      /* split arg into Uri-* options */
-      coap_split_uri((unsigned char *)arg, strlen(arg), &uri );
+    if (coap_split_uri((unsigned char *)arg, strlen(arg), &uri) < 0) {
+      return -1;
+    }
 
     if (uri.port != COAP_DEFAULT_PORT && create_uri_opts) {
       coap_insert(&optlist,
@@ -738,6 +749,8 @@ cmdline_uri(char *arg, int create_uri_opts) {
       }
     }
   }
+
+  return 0;
 }
 
 static int
@@ -1132,9 +1145,12 @@ main(int argc, char **argv) {
 
   coap_set_log_level(log_level);
 
-  if ( optind < argc )
-    cmdline_uri( argv[optind], create_uri_opts );
-  else {
+  if (optind < argc) {
+    if (cmdline_uri(argv[optind], create_uri_opts) < 0) {
+      coap_log(LOG_ERR, "invalid CoAP URI\n");
+      exit(1);
+    }
+  } else {
     usage( argv[0], PACKAGE_VERSION );
     exit( 1 );
   }
