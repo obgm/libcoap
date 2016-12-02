@@ -955,20 +955,22 @@ cmdline_input_from_file(char *filename, str *buf) {
     inputfile = stdin;
   } else {
     /* read from specified input file */
-    if (stat(filename, &statbuf) < 0) {
+    inputfile = fopen(filename, "r");
+    if ( !inputfile ) {
+      perror("cmdline_input_from_file: fopen");
+      return 0;
+    }
+
+    if (fstat(fileno(inputfile), &statbuf) < 0) {
       perror("cmdline_input_from_file: stat");
+      fclose(inputfile);
       return 0;
     }
 
     buf->length = statbuf.st_size;
     buf->s = (unsigned char *)coap_malloc(buf->length);
-    if (!buf->s)
-      return 0;
-
-    inputfile = fopen(filename, "r");
-    if ( !inputfile ) {
-      perror("cmdline_input_from_file: fopen");
-      coap_free(buf->s);
+    if (!buf->s) {
+      fclose(inputfile);
       return 0;
     }
   }
