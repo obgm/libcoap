@@ -1391,30 +1391,22 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
      * be the well-known URI. In that case, we generate a default
      * response, otherwise, we return 4.04 */
 
-    switch(node->pdu->hdr->code) {
-
-    case COAP_REQUEST_GET: 
-      if (is_wkc(key)) {	/* GET request for .well-known/core */
+    if (is_wkc(key)) {	/* request for .well-known/core */
+      if (node->pdu->hdr->code == COAP_REQUEST_GET) { /* GET */
 	info("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
 	response = coap_wellknown_response(context, node->pdu);
-
-      } else { /* GET request for any another resource, return 4.04 */
-
-	debug("GET for unknown resource 0x%02x%02x%02x%02x, return 4.04\n", 
-	      key[0], key[1], key[2], key[3]);
-	response = 
-	  coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(404), 
-				  opt_filter);
-      }
-      break;
-
-    default: 			/* any other request type */
-
-      debug("unhandled request for unknown resource 0x%02x%02x%02x%02x\r\n",
-	    key[0], key[1], key[2], key[3]);
-
+      } else {
+        debug("method not allowed for .well-known/core\n");
 	response = coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(405), 
 					   opt_filter);
+      }
+    } else { /* request for any another resource, return 4.04 */
+
+      debug("request for unknown resource 0x%02x%02x%02x%02x, return 4.04\n",
+            key[0], key[1], key[2], key[3]);
+      response =
+        coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(404),
+                                opt_filter);
     }
       
     if (response
