@@ -1,6 +1,6 @@
 /* address.c -- representation of network addresses
  *
- * Copyright (C) 2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2015-2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
@@ -8,6 +8,7 @@
 
 #ifdef WITH_POSIX
 #include <assert.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
@@ -37,6 +38,20 @@ coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
  return 0;
 }
 
+int coap_is_mcast(const coap_address_t *a) {
+  if (!a)
+    return 0;
+
+ switch (a->addr.sa.sa_family) {
+ case AF_INET:
+   return IN_MULTICAST(ntohl(a->addr.sin.sin_addr.s_addr));
+ case  AF_INET6:
+   return IN6_IS_ADDR_MULTICAST(&a->addr.sin6.sin6_addr);
+ default:  /* fall through and signal error */
+   ;
+  }
+ return 0;
+}
 #else /* WITH_POSIX */
 
 /* make compilers happy that do not like empty modules */
