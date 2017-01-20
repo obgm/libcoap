@@ -427,7 +427,7 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
 #ifndef CUSTOM_COAP_NETWORK_READ
 
 #define SIN6(A) ((struct sockaddr_in6 *)(A))
-#if defined(WITH_POSIX) || defiend(HAVE_WS2TCPIP_H)
+#if defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)
 static coap_packet_t *
 coap_malloc_packet(void) {
   coap_packet_t *packet;
