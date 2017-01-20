@@ -60,7 +60,7 @@ typedef struct coap_address_t {
 #define _coap_is_mcast_impl(Address) uip_is_addr_mcast(&((Address)->addr))
 #endif /* WITH_CONTIKI */
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)
 /** multi-purpose address abstraction */
 typedef struct coap_address_t {
   socklen_t size;           /**< size of addr */
@@ -95,7 +95,7 @@ _coap_address_isany_impl(const coap_address_t *a) {
 
   return 0;
 }
-#endif /* WITH_POSIX */
+#endif /* WITH_POSIX || HAVE_WS2TCPIP_H */
 
 /**
  * Resets the given coap_address_t object @p addr to its default values. In
@@ -108,8 +108,8 @@ COAP_STATIC_INLINE void
 coap_address_init(coap_address_t *addr) {
   assert(addr);
   memset(addr, 0, sizeof(coap_address_t));
-#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
-  /* lwip and Contiki have constant address sizes and doesn't need the .size part */
+#if defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)
+  /* lwip and Contiki have constant address sizes and don't need the .size part */
   addr->size = sizeof(addr->addr);
 #endif
 }
@@ -144,7 +144,7 @@ coap_address_isany(const coap_address_t *a) {
  * returns @c 1 if @p a is multicast, @c 0 otherwise.
  */
 int coap_is_mcast(const coap_address_t *a);
-#else /* !(WITH_POSIX || HAVE_WS2TCPIP_H) */
+#else /* WITH_POSIX || HAVE_WS2TCPIP_H */
 /**
  * Checks if given address @p a denotes a multicast address. This function
  * returns @c 1 if @p a is multicast, @c 0 otherwise.
@@ -153,6 +153,6 @@ COAP_STATIC_INLINE int
 coap_is_mcast(const coap_address_t *a) {
   return a && _coap_is_mcast_impl(a);
 }
-#endif /* WITH_POSIX */
+#endif /* WITH_POSIX || HAVE_WS2TCPIP_H */
 
 #endif /* _COAP_ADDRESS_H_ */

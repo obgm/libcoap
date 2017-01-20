@@ -118,7 +118,7 @@
 /** creates a Qx.FRAC_BITS from COAP_DEFAULT_ACK_TIMEOUT */
 #define ACK_TIMEOUT Q(FRAC_BITS, COAP_DEFAULT_ACK_TIMEOUT)
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)
 
 time_t clock_offset = 0;
 
@@ -553,7 +553,7 @@ coap_send_ack(coap_context_t *context,
   return result;
 }
 
-#if !defined(WITH_LWIP)
+#if defined(WITH_POSIX) || defined(WITH_CONTIKI) || defined(HAVE_WS2TCPIP_H)
 static coap_tid_t
 coap_send_impl(coap_context_t *context, 
 	       const coap_endpoint_t *local_interface,

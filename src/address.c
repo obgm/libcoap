@@ -63,7 +63,7 @@ int coap_is_mcast(const coap_address_t *a) {
   }
  return 0;
 }
-#else /* !(WITH_POSIX || HAVE_WS2TCPIP_H) */
+#else /* WITH_POSIX || HAVE_WS2TCPIP_H */
 
 /* make compilers happy that do not like empty modules */
 COAP_STATIC_INLINE void dummy()

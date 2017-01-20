@@ -263,7 +263,7 @@ struct in_pktinfo {
 };
 #endif
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI) && !defined(SOL_IP)
+#if (defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)) && !defined(SOL_IP)
 /* Solaris and Windows expect level IPPROTO_IP for ancillary data. */
 #define SOL_IP IPPROTO_IP
 #endif
@@ -427,7 +427,7 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
 #ifndef CUSTOM_COAP_NETWORK_READ
 
 #define SIN6(A) ((struct sockaddr_in6 *)(A))
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if defined(WITH_POSIX) || defiend(HAVE_WS2TCPIP_H)
 static coap_packet_t *
 coap_malloc_packet(void) {
   coap_packet_t *packet;
@@ -444,7 +444,7 @@ void
 coap_free_packet(coap_packet_t *packet) {
   coap_free(packet);
 }
-#endif /* WITH_POSIX */
+#endif /* WITH_POSIX || HAVE_WS2TCPIP_H */
 #ifdef WITH_CONTIKI
 COAP_STATIC_INLINE coap_packet_t *
 coap_malloc_packet(void) {
