@@ -47,6 +47,7 @@ global:
   coap_hash_path;
   coap_hash_request_uri;
   coap_insert_node;
+  coap_is_mcast;
   coap_log_impl;
   coap_malloc_type;
   coap_memory_init;

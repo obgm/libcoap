@@ -1,7 +1,7 @@
 /*
  * address.h -- representation of network addresses
  *
- * Copyright (C) 2010-2011,2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2011,2015-2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -24,6 +24,8 @@
 #endif
 #include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
+#include "libcoap.h"
 
 #ifdef WITH_LWIP
 #include <lwip/ip_addr.h>
@@ -93,23 +95,7 @@ _coap_address_isany_impl(const coap_address_t *a) {
 
   return 0;
 }
-
-COAP_STATIC_INLINE int
-_coap_is_mcast_impl(const coap_address_t *a) {
-  if (!a)
-    return 0;
-
- switch (a->addr.sa.sa_family) {
- case AF_INET:
-   return IN_MULTICAST(a->addr.sin.sin_addr.s_addr);
- case  AF_INET6:
-   return IN6_IS_ADDR_MULTICAST(&a->addr.sin6.sin6_addr);
- default:  /* fall through and signal error */
-   ;
-  }
- return 0;
-}
-#endif /* !WITH_LWIP && !WITH_CONTIKI */
+#endif /* WITH_POSIX */
 
 /**
  * Resets the given coap_address_t object @p addr to its default values. In
@@ -152,6 +138,13 @@ coap_address_isany(const coap_address_t *a) {
   return _coap_address_isany_impl(a);
 }
 
+#ifdef WITH_POSIX
+/**
+ * Checks if given address @p a denotes a multicast address. This function
+ * returns @c 1 if @p a is multicast, @c 0 otherwise.
+ */
+int coap_is_mcast(const coap_address_t *a);
+#else /* WITH_POSIX */
 /**
  * Checks if given address @p a denotes a multicast address. This function
  * returns @c 1 if @p a is multicast, @c 0 otherwise.
@@ -160,5 +153,6 @@ COAP_STATIC_INLINE int
 coap_is_mcast(const coap_address_t *a) {
   return a && _coap_is_mcast_impl(a);
 }
+#endif /* WITH_POSIX */
 
 #endif /* _COAP_ADDRESS_H_ */

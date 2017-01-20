@@ -76,6 +76,15 @@ else
     echo "Found 'aclocal'."
 fi
 
+# checking for pkg-config
+check_helper pkg-config
+if [ "$RET" = "1" ]; then
+    echo "You probably need to install the package 'pkg-config|pkgconf'."
+    ERROR=1
+else
+    echo "Found 'pkg-config'."
+fi
+
 # checking for libtool
 # The libtool helper maybe installed as 'libtoolize', checking for 'libtool' first.
 check_helper libtool
@@ -100,7 +109,7 @@ if [ "$ERROR" = "1" ]; then
     echo "One or more needed tools are missing, exiting ..."
     echo "Please install the needed software packages and restart 'autogen.sh' again."
     echo
-    exit
+    exit 1
 fi
 
 echo

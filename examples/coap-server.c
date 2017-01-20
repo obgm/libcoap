@@ -178,7 +178,8 @@ hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
 
   resource->dirty = 1;
 
-  coap_get_data(request, &size, &data);
+  /* coap_get_data() sets size to 0 on error */
+  (void)coap_get_data(request, &size, &data);
 
   if (size == 0)        /* re-init */
     my_clock_base = clock_offset;

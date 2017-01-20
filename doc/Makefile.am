@@ -18,14 +18,14 @@ CLEANFILES = \
 # that the 'all' target is running before, in short: the user has to run first
 # 'make' before running 'make install'!
 install-data-am:
-	@if [ ! -d $(srcdir)/html ]; then \
+	@if [ ! -d $(top_builddir)/doc/html ]; then \
 		echo ;\
-		echo "     No install data in '$(srcdir)/html'found! Please run 'make all' first." ;\
+		echo "     No install data in '$(top_builddir)/doc/html'found! Please run 'make all' first." ;\
 		echo ;\
 		exit 1 ;\
 	fi
 	$(MKDIR_P) $(DESTDIR)$(htmldir)/html || exit 1
-	cp -a $(srcdir)/html $(DESTDIR)$(htmldir)
+	cp -a $(top_builddir)/doc/html $(DESTDIR)$(htmldir)
 	find $(DESTDIR)$(htmldir) -type f -name "*.md5" -exec rm {} \;
 
 uninstall-am:
@@ -35,7 +35,7 @@ all:
 	$(DOXYGEN) Doxyfile
 
 clean-local:
-	rm -rf $(srcdir)/html
+	rm -rf $(top_builddir)/doc/html
 
 distclean-local: clean-local
 
