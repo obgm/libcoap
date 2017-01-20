@@ -138,13 +138,13 @@ coap_address_isany(const coap_address_t *a) {
   return _coap_address_isany_impl(a);
 }
 
-#ifdef WITH_POSIX
+#if defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)
 /**
  * Checks if given address @p a denotes a multicast address. This function
  * returns @c 1 if @p a is multicast, @c 0 otherwise.
  */
 int coap_is_mcast(const coap_address_t *a);
-#else /* WITH_POSIX */
+#else /* !(WITH_POSIX || HAVE_WS2TCPIP_H) */
 /**
  * Checks if given address @p a denotes a multicast address. This function
  * returns @c 1 if @p a is multicast, @c 0 otherwise.

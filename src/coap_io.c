@@ -56,7 +56,7 @@ typedef SOCKET coap_socket_t;
 #include "coap_io.h"
 #include "pdu.h"
 
-#ifdef WITH_POSIX
+#if defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)
 /* define generic PKTINFO for IPv4 */
 #if defined(IP_PKTINFO)
 #  define GEN_IP_PKTINFO IP_PKTINFO
@@ -87,7 +87,7 @@ struct coap_packet_t {
   size_t length;		/**< length of payload */
   unsigned char payload[];	/**< payload */
 };
-#endif
+#endif /* WITH_POSIX || HAVE_WS2TCPIP_H */
 
 #ifndef CUSTOM_COAP_NETWORK_ENDPOINT
 

@@ -8,7 +8,7 @@
 
 #include "coap_config.h"
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)
 #include <assert.h>
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
@@ -63,7 +63,7 @@ int coap_is_mcast(const coap_address_t *a) {
   }
  return 0;
 }
-#else /* WITH_POSIX */
+#else /* !(WITH_POSIX || HAVE_WS2TCPIP_H) */
 
 /* make compilers happy that do not like empty modules */
 COAP_STATIC_INLINE void dummy()
