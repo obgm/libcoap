@@ -274,6 +274,7 @@ AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
+AC_C_INLINE
 
 # Checks for library functions.
 AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo \
@@ -349,6 +350,17 @@ examples/coap-rd.txt
 include/coap/coap.h
 tests/Makefile
 libcoap-$LIBCOAP_API_VERSION.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
+])
+
+AH_BOTTOM([
+/* Make libcoap headers safe to use from C++ */
+#ifndef COAP_STATIC_INLINE
+#  if defined(__cplusplus)
+#    define COAP_STATIC_INLINE inline
+#  else
+#    define COAP_STATIC_INLINE static inline
+#  endif
+#endif
 ])
 
 AC_OUTPUT
