@@ -43,6 +43,9 @@
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "libcoap"
 
+/* Define to the version of this package. */
+#define PACKAGE_VERSION "4.1.1"
+
 /* Define to the full name and version of this package. */
 #define PACKAGE_STRING "libcoap 4.1.1"
 

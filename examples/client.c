@@ -12,18 +12,33 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#else
+# include "getopt.h"
+#endif
 #include <stdio.h>
 #include <ctype.h>
-#include <sys/select.h>
+#ifdef HAVE_SYS_SELECT_H
+# include <sys/select.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+#ifdef HAVE_SYS_SOCKET_H
+# include <sys/socket.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
+# include <arpa/inet.h>
+#endif
+#ifdef HAVE_NETDB_H
+# include <netdb.h>
+#endif
 
 #include "coap.h"
+#include "coap_append.h"
 #include "coap_list.h"
 
 int flags = 0;
@@ -61,7 +76,9 @@ coap_tick_t max_wait;                   /* global timeout (changed by set_timeou
 unsigned int obs_seconds = 30;          /* default observe time */
 coap_tick_t obs_wait = 0;               /* timeout for current subscription */
 
+#ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 #ifdef __GNUC__
 #define UNUSED_PARAM __attribute__ ((unused))
@@ -694,7 +711,7 @@ cmdline_uri(char *arg, int create_uri_opts) {
   if (proxy.length) {   /* create Proxy-Uri from argument */
     size_t len = strlen(arg);
     while (len > 270) {
-      coap_insert(&optlist,
+      coap_append(&optlist,
                   new_option_node(COAP_OPTION_PROXY_URI,
                   270,
                   (unsigned char *)arg));
@@ -703,7 +720,7 @@ cmdline_uri(char *arg, int create_uri_opts) {
       arg += 270;
     }
 
-    coap_insert(&optlist,
+    coap_append(&optlist,
                 new_option_node(COAP_OPTION_PROXY_URI,
                 len,
                 (unsigned char *)arg));
@@ -714,7 +731,7 @@ cmdline_uri(char *arg, int create_uri_opts) {
     }
 
     if (uri.port != COAP_DEFAULT_PORT && create_uri_opts) {
-      coap_insert(&optlist,
+      coap_append(&optlist,
                   new_option_node(COAP_OPTION_URI_PORT,
                   coap_encode_var_bytes(portbuf, uri.port),
                   portbuf));
@@ -725,7 +742,7 @@ cmdline_uri(char *arg, int create_uri_opts) {
       res = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
 
       while (res--) {
-        coap_insert(&optlist,
+        coap_append(&optlist,
                     new_option_node(COAP_OPTION_URI_PATH,
                     COAP_OPT_LENGTH(buf),
                     COAP_OPT_VALUE(buf)));
@@ -740,7 +757,7 @@ cmdline_uri(char *arg, int create_uri_opts) {
       res = coap_split_query(uri.query.s, uri.query.length, buf, &buflen);
 
       while (res--) {
-        coap_insert(&optlist,
+        coap_append(&optlist,
                     new_option_node(COAP_OPTION_URI_QUERY,
                     COAP_OPT_LENGTH(buf),
                     COAP_OPT_VALUE(buf)));
@@ -792,14 +809,14 @@ set_blocksize(void) {
     opt_length = coap_encode_var_bytes(buf,
           (block.num << 4 | block.m << 3 | block.szx));
 
-    coap_insert(&optlist, new_option_node(opt, opt_length, buf));
+    coap_append(&optlist, new_option_node(opt, opt_length, buf));
   }
 }
 
 static void
 cmdline_subscribe(char *arg) {
   obs_seconds = atoi(arg);
-  coap_insert(&optlist, new_option_node(COAP_OPTION_SUBSCRIPTION, 0, NULL));
+  coap_append(&optlist, new_option_node(COAP_OPTION_SUBSCRIPTION, 0, NULL));
 }
 
 static int
@@ -852,7 +869,7 @@ cmdline_option(char *arg) {
   if (*arg == ',')
     ++arg;
 
-  coap_insert(&optlist,
+  coap_append(&optlist,
               new_option_node(num, strlen(arg), (unsigned char *)arg));
 }
 
@@ -1212,7 +1229,7 @@ main(int argc, char **argv) {
       && create_uri_opts) {
         /* add Uri-Host */
 
-        coap_insert(&optlist,
+        coap_append(&optlist,
                     new_option_node(COAP_OPTION_URI_HOST,
                     uri.host.length,
                     uri.host.s));

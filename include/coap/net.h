@@ -103,6 +103,10 @@ typedef struct coap_context_t {
   int sockfd;                     /**< send/receive socket */
 #endif /* WITH_POSIX */
 
+#ifdef HAVE_WS2TCPIP_H
+  SOCKET sockfd;                  /**< send/receive socket */
+#endif /* HAVE_WS2TCPIP_H */
+
 #ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;      /**< uIP connection object */
   struct etimer retransmit_timer; /**< fires when the next packet must be sent */

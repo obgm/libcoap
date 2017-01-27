@@ -8,26 +8,16 @@
  * use.
  */
 
-#ifndef _COAP_LIST_H_
-#define _COAP_LIST_H_
+#ifndef _COAP_APPEND_H_
+#define _COAP_APPEND_H_
 
 #include "utlist.h"
-
-typedef struct coap_list_t {
-  struct coap_list_t *next;
-  char data[];
-} coap_list_t;
+#include "coap_list.h"
 
 /**
  * Adds node to given queue, ordered by specified order function. Returns 1
  * when insert was successful, 0 otherwise.
  */
-int coap_insert(coap_list_t **queue, coap_list_t *node);
+int coap_append(coap_list_t **queue, coap_list_t *node);
 
-/* destroys specified node */
-int coap_delete(coap_list_t *node);
-
-/* removes all items from given queue and frees the allocated storage */
-void coap_delete_list(coap_list_t *queue);
-
-#endif /* _COAP_LIST_H_ */
+#endif /* _COAP_APPEND_H_ */

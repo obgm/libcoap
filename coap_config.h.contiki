@@ -131,5 +131,14 @@ typedef void FILE;
 #include <stdio.h>
 #define coap_log(fd, ...) printf(__VA_ARGS__)
 
+/* Make libcoap headers safe to use from C++ */
+#ifndef COAP_STATIC_INLINE
+#  if defined(__cplusplus)
+#    define COAP_STATIC_INLINE inline
+#  else
+#    define COAP_STATIC_INLINE static inline
+#  endif
+#endif
+
 #endif /* _CONFIG_H_ */
 

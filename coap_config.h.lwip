@@ -22,4 +22,13 @@
 
 #define COAP_RESOURCES_NOHASH
 
+/* Make libcoap headers safe to use from C++ */
+#ifndef COAP_STATIC_INLINE
+#  if defined(__cplusplus)
+#    define COAP_STATIC_INLINE inline
+#  else
+#    define COAP_STATIC_INLINE static inline
+#  endif
+#endif
+
 #endif /* _CONFIG_H_ */
