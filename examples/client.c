@@ -36,6 +36,10 @@
 #ifdef HAVE_NETDB_H
 # include <netdb.h>
 #endif
+#ifndef HAVE_STRCASECMP
+  /* The POSIX strcasecmp() is not supported, so use the ISO C++ conformant _stricmp instead. */
+# define strcasecmp _stricmp
+#endif
 
 #include "coap.h"
 #include "coap_append.h"
