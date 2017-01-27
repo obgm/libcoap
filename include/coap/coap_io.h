@@ -140,7 +140,7 @@ struct coap_packet_t {
   coap_if_handle_t hnd;         /**< the interface handle */
   coap_address_t src;           /**< the packet's source address */
   coap_address_t dst;           /**< the packet's destination address */
-  const coap_endpoint_t *interface;
+  const coap_endpoint_t *endpoint;
   int ifindex;
   void *session;                /**< opaque session data */
   size_t length;                /**< length of payload */
