@@ -8,7 +8,7 @@
  * use.
  */
 
-/* #include "coap_config.h" */
+#include "coap_config.h"
 
 #include <stdio.h>
 #include <string.h>
