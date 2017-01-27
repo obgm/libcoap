@@ -1,7 +1,7 @@
 # Makefile.am for libcoap
 #
 # Copyright (C) 2010-2015 Olaf Bergmann <bergmann@tzi.org>
-#           (C)      2015 Carsten Schoenert <c.schoenert@t-online.de>
+#           (C) 2015-2016 Carsten Schoenert <c.schoenert@t-online.de>
 #
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.
@@ -27,7 +27,7 @@ EXTRA_DIST = \
   tests/test_uri.h \
   tests/test_wellknown.h
 
-AM_CFLAGS = -I @top_builddir@/include/coap/ $(WARNING_CFLAGS) -std=c99
+AM_CFLAGS = -I$(top_builddir)/include/coap -I$(top_srcdir)/include/coap $(WARNING_CFLAGS) -std=c99
 
 SUBDIRS = . $(DOC_DIR) tests examples
 
@@ -71,34 +71,34 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
 ## generating of the symbol mapping file.
 libcoap_includedir = $(includedir)/coap/
 libcoap_include_HEADERS = \
-   include/coap/address.h \
-   include/coap/async.h \
-   include/coap/bits.h \
-   include/coap/block.h \
-   include/coap/coap.h \
-   include/coap/coap_io.h \
-   include/coap/coap_time.h \
-   include/coap/debug.h \
-   include/coap/encode.h \
-   include/coap/hashkey.h \
-   include/coap/libcoap.h \
-   include/coap/mem.h \
-   include/coap/net.h \
-   include/coap/option.h \
-   include/coap/pdu.h \
-   include/coap/prng.h \
-   include/coap/resource.h \
-   include/coap/str.h \
-   include/coap/subscribe.h \
-   include/coap/uri.h \
-   include/coap/uthash.h \
-   include/coap/utlist.h
+  $(top_srcdir)/include/coap/address.h \
+  $(top_srcdir)/include/coap/async.h \
+  $(top_srcdir)/include/coap/bits.h \
+  $(top_srcdir)/include/coap/block.h \
+  $(top_builddir)/include/coap/coap.h \
+  $(top_srcdir)/include/coap/coap_io.h \
+  $(top_srcdir)/include/coap/coap_time.h \
+  $(top_srcdir)/include/coap/debug.h \
+  $(top_srcdir)/include/coap/encode.h \
+  $(top_srcdir)/include/coap/hashkey.h \
+  $(top_srcdir)/include/coap/libcoap.h \
+  $(top_srcdir)/include/coap/mem.h \
+  $(top_srcdir)/include/coap/net.h \
+  $(top_srcdir)/include/coap/option.h \
+  $(top_srcdir)/include/coap/pdu.h \
+  $(top_srcdir)/include/coap/prng.h \
+  $(top_srcdir)/include/coap/resource.h \
+  $(top_srcdir)/include/coap/str.h \
+  $(top_srcdir)/include/coap/subscribe.h \
+  $(top_srcdir)/include/coap/uri.h \
+  $(top_srcdir)/include/coap/uthash.h \
+  $(top_srcdir)/include/coap/utlist.h
 
 # If there is a API change to something $(LIBCOAP_API_VERSION) > 1 the install
 # prefix for the header files has to change to not conflict the older version
 # if the user want's to install both versions. There will be something used like
 # libcoap_include_HEADERS = \
-#   include/coap-$(LIBCOAP_API_VERSION)/*
+#  $(top_srcdir)/include/coap-$(LIBCOAP_API_VERSION)/*
 
 
 ## Instruct libtool to include API version information in the generated shared
@@ -109,9 +109,9 @@ libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS =					\
   @libcoap_SYMBOLS@ \
   -pie
 
+## Collect symbols here we want to ignore while building the helper files
+## libcoap-$(LIBCOAP_API_VERSION).{map,sym} for the linker.
 CTAGS_IGNORE=-I "coap_packet_extract_pbuf coap_pdu_from_pbuf"
-
-.PHONY:	update-map-file check_ctags
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if
 # configure has detected a usable version of the ctags program and aborts if not.
@@ -132,14 +132,14 @@ update-map-file: libcoap-$(LIBCOAP_API_VERSION).map libcoap-$(LIBCOAP_API_VERSIO
 libcoap-$(LIBCOAP_API_VERSION).map: check_ctags $(libcoap_include_HEADERS)
 	( echo "VER_$(LIBCOAP_API_VERSION) {" ; \
 	echo "global:" ; \
-	ctags $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print "  " $$1 ";" }' | sort ; \
+	$(CTAGS_PROG) $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print "  " $$1 ";" }' | sort ; \
 	echo "local:" ; \
 	echo "  *;" ; \
 	echo "};" ) > $@.new
 	mv $@.new $@
 
 libcoap-$(LIBCOAP_API_VERSION).sym: check_ctags $(libcoap_include_HEADERS)
-	( ctags $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print $$1 }' | sort ) \
+	( $(CTAGS_PROG) $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print $$1 }' | sort ) \
 	> $@.new
 	mv $@.new $@
 
@@ -154,4 +154,27 @@ pkgconfig_DATA = libcoap-$(LIBCOAP_API_VERSION).pc
 ## archive.  However, it will not be installed on an end user's system due to
 ## the noinst_ prefix.
 dist_noinst_SCRIPTS = autogen.sh
+
+## various *-local targets
+## Remove the helper files for the linker and the pkg-config file if there
+## is 'make distclean' called. NOTE: To re create the *.{map,sym} files you
+## need to call the target update-map-file after the configure script was
+## running!
+distclean-local:
+	rm -f libcoap-$(LIBCOAP_API_VERSION).map
+	rm -f libcoap-$(LIBCOAP_API_VERSION).sym
+	rm -f libcoap-$(LIBCOAP_API_VERSION).pc
+	@echo
+	@echo "     ---> Please note the following important advice! <---"
+	@echo "     The files libcoap-$(LIBCOAP_API_VERSION).{map,sym} are removed by the distclean target!"
+	@echo "     To regenerate this two files you need to call 'make update-map-file' first before any"
+	@echo "     other Make target. Otherwise the build of libcoap will fail!"
+	@echo
+
+## Ensure we have actual *.{map,sym} files if we create a release tarball.
+dist-local: update-map-file
+
+## Finaly some phony targets, just to ensure those targets are always buildable
+## no matter if the user has created same called files.
+.PHONY: update-map-file check_ctags
 

@@ -29,7 +29,7 @@
 
 #endif
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)
 
 #define COAP_MALLOC_TYPE(Type) \
   ((coap_##Type##_t *)coap_malloc(sizeof(coap_##Type##_t)))

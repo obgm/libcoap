@@ -1,6 +1,9 @@
-libcoap: A C implementation of IETF Constrained Application Protocol (RFC 7252)
+# libcoap: A C implementation of the Constrained Application Protocol (RFC 7252)
 
-Copyright (C) 2010--2015 by Olaf Bergmann <bergmann@tzi.org>
+[![Build Status](https://travis-ci.org/obgm/libcoap.svg?branch=master)](https://travis-ci.org/obgm/libcoap)
+[![Static Analysis](https://scan.coverity.com/projects/10970/badge.svg?flat=1)](https://scan.coverity.com/projects/obgm-libcoap)
+
+Copyright (C) 2010--2017 by Olaf Bergmann <bergmann@tzi.org> and others
 
 ABOUT LIBCOAP
 =============

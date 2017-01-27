@@ -20,7 +20,7 @@
  * @{
  */
 
-#if !defined(WITH_CONTIKI) && !defined(LWIP_RAND)
+#if defined(WITH_POSIX) || (defined(WITH_LWIP) && !defined(LWIP_RAND)) || defined(HAVE_WS2TCPIP_H)
 #include <stdlib.h>
 
 /**
@@ -34,7 +34,9 @@ coap_prng_impl(unsigned char *buf, size_t len) {
     *buf++ = rand() & 0xFF;
   return 1;
 }
-#else /* WITH_CONTIKI */
+#endif /* WITH_POSIX || (WITH_LWIP && !LWIP_RAND) || HAVE_WS2TCPIP_H */
+
+#ifdef WITH_CONTIKI
 #include <string.h>
 
 /**

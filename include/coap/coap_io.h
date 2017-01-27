@@ -33,12 +33,14 @@ struct coap_context_t;
  * tuple (handle, addr) must uniquely identify this endpoint.
  */
 typedef struct coap_endpoint_t {
-#ifndef WITH_LWIP
+#if defined(WITH_POSIX) || defined(WITH_CONTIKI) || defined(HAVE_WS2TCPIP_H)
   union {
     int fd;       /**< on POSIX systems */
     void *conn;   /**< opaque connection (e.g. uip_conn in Contiki) */
   } handle;       /**< opaque handle to identify this endpoint */
-#else
+#endif /* WITH_POSIX || WITH_CONTIKI || HAVE_WS2TCPIP_H */
+
+#ifdef WITH_LWIP
   struct udp_pcb *pcb;
  /**< @FIXME --chrysn
   * this was added in a hurry, not sure it confirms to the overall model */

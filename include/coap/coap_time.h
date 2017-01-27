@@ -76,7 +76,7 @@ COAP_STATIC_INLINE coap_time_t coap_ticks_to_rt(coap_tick_t t) {
 }
 #endif /* WITH_CONTIKI */
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)
 /**
  * This data type represents internal timer ticks with COAP_TICKS_PER_SECOND
  * resolution.
@@ -119,7 +119,7 @@ void coap_ticks(coap_tick_t *t);
  *          point (seconds since epoch on POSIX).
  */
 coap_time_t coap_ticks_to_rt(coap_tick_t t);
-#endif /* !WITH_LWIP && !WITH_CONTIKI */
+#endif /* WITH_POSIX || HAVE_WS2TCPIP_H */
 
 /**
  * Returns @c 1 if and only if @p a is less than @p b where less is defined on a

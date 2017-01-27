@@ -1,6 +1,6 @@
 /* pdu.c -- CoAP message structure
  *
- * Copyright (C) 2010--2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use. 
@@ -732,20 +732,23 @@ typedef struct {
 /* if you change anything here, make sure, that the longest string does not 
  * exceed COAP_ERROR_PHRASE_LENGTH. */
 error_desc_t coap_error[] = {
-  { COAP_RESPONSE_CODE(65),  "2.01 Created" },
-  { COAP_RESPONSE_CODE(66),  "2.02 Deleted" },
-  { COAP_RESPONSE_CODE(67),  "2.03 Valid" },
-  { COAP_RESPONSE_CODE(68),  "2.04 Changed" },
-  { COAP_RESPONSE_CODE(69),  "2.05 Content" },
+  { COAP_RESPONSE_CODE(201), "Created" },
+  { COAP_RESPONSE_CODE(202), "Deleted" },
+  { COAP_RESPONSE_CODE(203), "Valid" },
+  { COAP_RESPONSE_CODE(204), "Changed" },
+  { COAP_RESPONSE_CODE(205), "Content" },
+  { COAP_RESPONSE_CODE(231), "Continue" },
   { COAP_RESPONSE_CODE(400), "Bad Request" },
   { COAP_RESPONSE_CODE(401), "Unauthorized" },
   { COAP_RESPONSE_CODE(402), "Bad Option" },
   { COAP_RESPONSE_CODE(403), "Forbidden" },
   { COAP_RESPONSE_CODE(404), "Not Found" },
   { COAP_RESPONSE_CODE(405), "Method Not Allowed" },
+  { COAP_RESPONSE_CODE(406), "Not Acceptable" },
   { COAP_RESPONSE_CODE(408), "Request Entity Incomplete" },
+  { COAP_RESPONSE_CODE(412), "Precondition Failed" },
   { COAP_RESPONSE_CODE(413), "Request Entity Too Large" },
-  { COAP_RESPONSE_CODE(415), "Unsupported Media Type" },
+  { COAP_RESPONSE_CODE(415), "Unsupported Content-Format" },
   { COAP_RESPONSE_CODE(500), "Internal Server Error" },
   { COAP_RESPONSE_CODE(501), "Not Implemented" },
   { COAP_RESPONSE_CODE(502), "Bad Gateway" },
@@ -920,6 +923,15 @@ coap_pdu_parse2(unsigned char *data, size_t length, coap_pdu_t *pdu,
     length -= (tokenLength + headerSize);
   }
 #endif
+
+  /* Append data (including the Token) to pdu structure, if any. */
+  if (length > sizeof(coap_hdr_t)) {
+    memcpy(pdu->hdr + 1, data + sizeof(coap_hdr_t), length - sizeof(coap_hdr_t));
+  }
+  pdu->length = length;
+ 
+  /* Finally calculate beginning of data block and thereby check integrity
+   * of the PDU structure. */
 
   while (length && *opt != COAP_PAYLOAD_START) {
     coap_option_t option;

@@ -79,15 +79,20 @@ extern "C"
 #define COAP_OPTION_PROXY_SCHEME   39 /* C, String, 1-255 B, (none) */
 #define COAP_OPTION_SIZE1          60 /* E, uint, 0-4 B, (none) */
 
-/* selected option types from draft-core-block-21 */
+/* option types from RFC 7641 */
+
+#define COAP_OPTION_OBSERVE         6 /* E, empty/uint, 0 B/0-3 B, (none) */
+#define COAP_OPTION_SUBSCRIPTION  COAP_OPTION_OBSERVE
+
+/* selected option types from RFC 7959 */
 
 #define COAP_OPTION_BLOCK2         23 /* C, uint, 0-3 B, (none) */
 #define COAP_OPTION_BLOCK1         27 /* C, uint, 0-3 B, (none) */
 #define COAP_OPTION_SIZE2          28 /* E, uint, 0-4 B, (none) */
 
-/* selected option types from draft-tcs-coap-no-response-option-11 */
+/* selected option types from RFC 7967 */
 
-#define COAP_OPTION_NORESPONSE    284 /* N, uint, 0--1 B, 0 */
+#define COAP_OPTION_NORESPONSE    258 /* N, uint, 0--1 B, 0 */
 
 #define COAP_MAX_OPT            65535 /**< the highest option number we know */
 

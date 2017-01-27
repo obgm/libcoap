@@ -17,7 +17,7 @@ SYNOPSIS
 *coap-client* [*-A* type1, _type2_ ,...] [*-t* type] [*-b* [num,]size]
               [*-B* seconds] [*-e* text] [*-f* file] [*-m* method] [*-N*]
               [*-o* file] [*-P* addr[:port]] [*-p* port] [*-s* duration]
-              [*-O* num,text] [*-T* token] [*-v* num] [*-a* addr] URI
+              [*-O* num,text] [*-T* token] [*-v* num] [*-a* addr] [*-U*] URI
 
 DESCRIPTION
 -----------
@@ -104,6 +104,9 @@ OPTIONS
 
 *-T* token::
    Include the 'token' to the request.
+
+*-U* ::
+   Never include Uri-Host or Uri-Port options.
 
 EXAMPLES
 --------

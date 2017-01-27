@@ -20,11 +20,11 @@
 #include "option.h"
 
 #define Nn 8  /* duplicate definition of N if built on sky motes */
-#define E 4
+#define ENCODE_HEADER_SIZE 4
 #define HIBIT (1 << (Nn - 1))
-#define EMASK ((1 << E) - 1)
+#define EMASK ((1 << ENCODE_HEADER_SIZE) - 1)
 #define MMASK ((1 << Nn) - 1 - EMASK)
-#define MAX_VALUE ( (1 << Nn) - (1 << E) ) * (1 << ((1 << E) - 1))
+#define MAX_VALUE ( (1 << Nn) - (1 << ENCODE_HEADER_SIZE) ) * (1 << ((1 << ENCODE_HEADER_SIZE) - 1))
 
 #define COAP_PSEUDOFP_DECODE_8_4(r) (r < HIBIT ? r : (r & MMASK) << (r & EMASK))
 
@@ -37,7 +37,7 @@ extern int coap_fls(unsigned int i);
 
 /* ls and s must be integer variables */
 #define COAP_PSEUDOFP_ENCODE_8_4_DOWN(v,ls) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (v >> ls) & MMASK) + ls)
-#define COAP_PSEUDOFP_ENCODE_8_4_UP(v,ls,s) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (s = (((v + ((1<<E<<ls)-1)) >> ls) & MMASK)), s == 0 ? HIBIT + ls + 1 : s + ls))
+#define COAP_PSEUDOFP_ENCODE_8_4_UP(v,ls,s) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (s = (((v + ((1<<ENCODE_HEADER_SIZE<<ls)-1)) >> ls) & MMASK)), s == 0 ? HIBIT + ls + 1 : s + ls))
 
 /**
  * Decodes multiple-length byte sequences. buf points to an input byte sequence

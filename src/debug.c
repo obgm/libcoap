@@ -167,7 +167,7 @@ print_readable( const unsigned char *data, unsigned int len,
 
 size_t
 coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t len) {
-#if defined(HAVE_ARPA_INET_H) || defined(_WIN32)
+#if defined(HAVE_ARPA_INET_H) || defined(HAVE_WS2TCPIP_H)
   const void *addrptr = NULL;
   in_port_t port;
   unsigned char *p = buf;
@@ -449,12 +449,12 @@ coap_show_pdu(const coap_pdu_t *pdu) {
       buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
 			 coap_opt_block_num(option), /* block number */
 			 COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
-			 (2 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+			 (1 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
 #else
       buf_len = sprintf((char *)buf, "%u/%c/%u",
 			 coap_opt_block_num(option), /* block number */
 			 COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
-			 (2 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+			 (1 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
 #endif
       break;
 

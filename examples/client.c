@@ -1,8 +1,8 @@
-/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 * -*- */
+/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
 /* coap-client -- simple CoAP client
  *
- * Copyright (C) 2010--2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms of
  * use.
@@ -426,11 +426,24 @@ message_handler(struct coap_context_t *ctx,
       block_opt = coap_check_option(received, COAP_OPTION_BLOCK1, &opt_iter);
 
       if (block_opt) { /* handle Block1 */
-        block.szx = COAP_OPT_BLOCK_SZX(block_opt);
-        block.num = coap_opt_block_num(block_opt);
-
-        debug("found Block1, block size is %u, block nr. %u\n",
-        block.szx, block.num);
+        unsigned int szx = COAP_OPT_BLOCK_SZX(block_opt);
+        unsigned int num = coap_opt_block_num(block_opt);
+        debug("found Block1 option, block size is %u, block nr. %u\n", szx, num);
+        if (szx != block.szx) {
+          unsigned int bytes_sent = ((block.num + 1) << (block.szx + 4));
+          if (bytes_sent % (1 << (szx + 4)) == 0) {
+            /* Recompute the block number of the previous packet given the new block size */
+            block.num = (bytes_sent >> (szx + 4)) - 1;
+            block.szx = szx;
+            debug("new Block1 size is %u, block number %u completed\n", (1 << (block.szx + 4)), block.num);
+          } else {
+            debug("ignoring request to increase Block1 size, "
+            "next block is not aligned on requested block size boundary. "
+            "(%u x %u mod %u = %u != 0)\n",
+                  block.num + 1, (1 << (block.szx + 4)), (1 << (szx + 4)),
+                  bytes_sent % (1 << (szx + 4)));
+          }
+        }
 
         if (payload.length <= (block.num+1) * (1 << (block.szx + 4))) {
           debug("upload ready\n");
@@ -538,7 +551,7 @@ usage( const char *program, const char *version) {
      "(c) 2010-2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
      "usage: %s [-A type...] [-t type] [-b [num,]size] [-B seconds] [-e text]\n"
      "\t\t[-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
-     "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] URI\n\n"
+     "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] [-U] URI\n\n"
      "\tURI can be an absolute or relative coap URI,\n"
      "\t-a addr\tthe local interface address to use\n"
      "\t-A type...\taccepted media types as comma-separated list of\n"
@@ -563,6 +576,7 @@ usage( const char *program, const char *version) {
      "\t-P addr[:port]\tuse proxy (automatically adds Proxy-Uri option to\n"
      "\t\t\trequest)\n"
      "\t-T token\tinclude specified token\n"
+     "\t-U\t\tnever include Uri-Host or Uri-Port options\n"
      "\n"
      "examples:\n"
      "\tcoap-client -m get coap://[::1]/\n"
@@ -659,8 +673,17 @@ cmdline_content_type(char *arg, unsigned short key) {
   }
 }
 
-static void
-cmdline_uri(char *arg) {
+/**
+ * Sets global URI options according to the URI passed as @p arg.
+ * This function returns 0 on success or -1 on error.
+ *
+ * @param arg             The URI string.
+ * @param create_uri_opts Flags that indicate whether Uri-Host and
+ *                        Uri-Port should be suppressed.
+ * @return 0 on success, -1 otherwise
+ */
+static int
+cmdline_uri(char *arg, int create_uri_opts) {
   unsigned char portbuf[2];
 #define BUFSIZE 40
   unsigned char _buf[BUFSIZE];
@@ -686,9 +709,11 @@ cmdline_uri(char *arg) {
                 (unsigned char *)arg));
 
   } else {      /* split arg into Uri-* options */
-      coap_split_uri((unsigned char *)arg, strlen(arg), &uri );
+    if (coap_split_uri((unsigned char *)arg, strlen(arg), &uri) < 0) {
+      return -1;
+    }
 
-    if (uri.port != COAP_DEFAULT_PORT) {
+    if (uri.port != COAP_DEFAULT_PORT && create_uri_opts) {
       coap_insert(&optlist,
                   new_option_node(COAP_OPTION_URI_PORT,
                   coap_encode_var_bytes(portbuf, uri.port),
@@ -724,6 +749,8 @@ cmdline_uri(char *arg) {
       }
     }
   }
+
+  return 0;
 }
 
 static int
@@ -770,8 +797,8 @@ set_blocksize(void) {
 }
 
 static void
-cmdline_subscribe(char *arg UNUSED_PARAM) {
-  obs_seconds = atoi(optarg);
+cmdline_subscribe(char *arg) {
+  obs_seconds = atoi(arg);
   coap_insert(&optlist, new_option_node(COAP_OPTION_SUBSCRIPTION, 0, NULL));
 }
 
@@ -928,20 +955,22 @@ cmdline_input_from_file(char *filename, str *buf) {
     inputfile = stdin;
   } else {
     /* read from specified input file */
-    if (stat(filename, &statbuf) < 0) {
+    inputfile = fopen(filename, "r");
+    if ( !inputfile ) {
+      perror("cmdline_input_from_file: fopen");
+      return 0;
+    }
+
+    if (fstat(fileno(inputfile), &statbuf) < 0) {
       perror("cmdline_input_from_file: stat");
+      fclose(inputfile);
       return 0;
     }
 
     buf->length = statbuf.st_size;
     buf->s = (unsigned char *)coap_malloc(buf->length);
-    if (!buf->s)
-      return 0;
-
-    inputfile = fopen(filename, "r");
-    if ( !inputfile ) {
-      perror("cmdline_input_from_file: fopen");
-      coap_free(buf->s);
+    if (!buf->s) {
+      fclose(inputfile);
       return 0;
     }
   }
@@ -1039,8 +1068,9 @@ main(int argc, char **argv) {
   int opt, res;
   coap_log_t log_level = LOG_WARNING;
   coap_tid_t tid = COAP_INVALID_TID;
+  int create_uri_opts = 1;
 
-  while ((opt = getopt(argc, argv, "Na:b:e:f:g:m:p:s:t:o:v:A:B:O:P:T:")) != -1) {
+  while ((opt = getopt(argc, argv, "Na:b:e:f:g:m:p:s:t:o:v:A:B:O:P:T:U")) != -1) {
     switch (opt) {
     case 'a' :
       strncpy(node_str, optarg, NI_MAXHOST-1);
@@ -1103,6 +1133,9 @@ main(int argc, char **argv) {
     case 'T' :
       cmdline_token(optarg);
       break;
+    case 'U' :
+      create_uri_opts = 0;
+      break;
     case 'v' :
       log_level = strtol(optarg, NULL, 10);
       break;
@@ -1114,9 +1147,12 @@ main(int argc, char **argv) {
 
   coap_set_log_level(log_level);
 
-  if ( optind < argc )
-    cmdline_uri( argv[optind] );
-  else {
+  if (optind < argc) {
+    if (cmdline_uri(argv[optind], create_uri_opts) < 0) {
+      coap_log(LOG_ERR, "invalid CoAP URI\n");
+      exit(1);
+    }
+  } else {
     usage( argv[0], PACKAGE_VERSION );
     exit( 1 );
   }
@@ -1172,7 +1208,8 @@ main(int argc, char **argv) {
   if (!proxy.length && addrptr
       && (inet_ntop(dst.addr.sa.sa_family, addrptr, addr, sizeof(addr)) != 0)
       && (strlen(addr) != uri.host.length
-      || memcmp(addr, uri.host.s, uri.host.length) != 0)) {
+      || memcmp(addr, uri.host.s, uri.host.length) != 0)
+      && create_uri_opts) {
         /* add Uri-Host */
 
         coap_insert(&optlist,
