@@ -300,7 +300,7 @@ typedef struct {
  */
 
 typedef struct {
-  size_t max_size;          /**< allocated storage for options and data */
+  size_t max_size;            /**< allocated storage for options and data */
   union {
     coap_hdr_t *hdr;          /**< Address of the first byte of the CoAP message.
                                *   This may or may not equal (coap_hdr_t*)(pdu+1)

@@ -35,6 +35,7 @@ static coap_tick_t coap_clock_offset = 0;
 #ifdef HAVE_WINSOCK2_H
 static int
 gettimeofday(struct timeval *tp, TIME_ZONE_INFORMATION *tzp) {
+  (void)tzp;
   static const uint64_t EPOCH = ((uint64_t) 116444736000000000ULL);
 
   SYSTEMTIME system_time;
@@ -76,7 +77,7 @@ coap_clock_init(void) {
 
 void
 coap_ticks(coap_tick_t *t) {
-  unsigned long tmp;
+  coap_tick_t tmp;
 
 #ifdef COAP_CLOCK
   struct timespec tv;

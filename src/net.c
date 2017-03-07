@@ -496,19 +496,16 @@ coap_option_check_critical(coap_context_t *ctx,
   return ok;
 }
 
-#if defined(WITH_POSIX) || defined(WITH_LWIP) || defined(WITH_CONTIKI)
 void
 coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu, 
 		    coap_tid_t *id) {
-  (void)peer;
-
   coap_key_t h;
 
   memset(h, 0, sizeof(coap_key_t));
 
   /* Compare the transport address. */
 
-#ifdef WITH_POSIX
+#if defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)
   switch (peer->addr.sa.sa_family) {
   case AF_INET:
     coap_hash((const unsigned char *)&peer->addr.sin.sin_port,
@@ -536,7 +533,6 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
 
   *id = (((h[0] << 8) | h[1]) ^ ((h[2] << 8) | h[3])) & INT_MAX;
 }
-#endif
 
 coap_tid_t
 coap_send_ack(coap_context_t *context, 
@@ -1574,6 +1570,8 @@ handle_locally(coap_context_t *context __attribute__ ((unused)),
 handle_locally(coap_context_t *context, coap_queue_t *node) {
 #endif /* GCC */
   /* this function can be used to check if node->pdu is really for us */
+  (void)context;
+  (void)node;
   return 1;
 }
 

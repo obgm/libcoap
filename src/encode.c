@@ -18,7 +18,8 @@
 #endif
 
 /* Carsten suggested this when fls() is not available: */
-coap_fls(unsigned int i) {
+#ifndef HAVE_FLS
+int coap_fls(unsigned int i) {
   return coap_flsll(i);
 }
 #endif
