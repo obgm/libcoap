@@ -587,7 +587,7 @@ usage( const char *program, const char *version) {
 }
 
 static coap_list_t *
-new_option_node(unsigned short key, unsigned int length, unsigned char *data) {
+new_option_node(unsigned short key, size_t length, unsigned char *data) {
   coap_list_t *node;
 
   node = coap_malloc(sizeof(coap_list_t) + sizeof(coap_option) + length);

@@ -14,7 +14,7 @@
 #include "coap_config.h"
 #include "coap_time.h"
 
-static coap_time_t coap_clock_offset = 0;
+static coap_tick_t coap_clock_offset = 0;
 
 #if _POSIX_TIMERS && !defined(__APPLE__)
   /* _POSIX_TIMERS is > 0 when clock_gettime() is available */
@@ -23,6 +23,7 @@ static coap_time_t coap_clock_offset = 0;
 #define COAP_CLOCK CLOCK_REALTIME
 #endif
 
+  (void)tzp;
 void
 coap_clock_init(void) {
 #ifdef COAP_CLOCK
@@ -47,7 +48,7 @@ coap_clock_init(void) {
 
 void
 coap_ticks(coap_tick_t *t) {
-  unsigned long tmp;
+  coap_tick_t tmp;
 
 #ifdef COAP_CLOCK
   struct timespec tv;
