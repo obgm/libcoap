@@ -337,6 +337,18 @@ t_encode_option8(void) {
   CU_ASSERT(result == 0);
 }
 
+static void
+t_encode_option9(void) {
+  uint8_t teststr[] = { 0xe1, 0x00, 0x00 };
+  unsigned char buf[40] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+  size_t result;
+  
+  result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 269, 1);
+  CU_ASSERT(result == sizeof(teststr));
+  
+  CU_ASSERT(memcmp(buf, teststr, result) == 0);
+}
+
 /************************************************************************
  ** accessor tests
  ************************************************************************/
@@ -929,6 +941,7 @@ t_init_option_tests(void) {
     OPTION_ENCODER_TEST(6, "encode option #6");
     OPTION_ENCODER_TEST(7, "encode option #7");
     OPTION_ENCODER_TEST(8, "encode option #8");
+    OPTION_ENCODER_TEST(9, "encode option #9");
     
   } else {
     fprintf(stderr, "W: cannot add option encoder test suite (%s)\n", 
