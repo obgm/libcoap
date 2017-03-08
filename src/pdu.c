@@ -928,7 +928,6 @@ coap_pdu_parse2(unsigned char *data, size_t length, coap_pdu_t *pdu,
   if (length > sizeof(coap_hdr_t)) {
     memcpy(pdu->hdr + 1, data + sizeof(coap_hdr_t), length - sizeof(coap_hdr_t));
   }
-  pdu->length = length;
  
   /* Finally calculate beginning of data block and thereby check integrity
    * of the PDU structure. */
