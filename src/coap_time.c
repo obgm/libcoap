@@ -23,7 +23,6 @@ static coap_tick_t coap_clock_offset = 0;
 #define COAP_CLOCK CLOCK_REALTIME
 #endif
 
-  (void)tzp;
 void
 coap_clock_init(void) {
 #ifdef COAP_CLOCK
