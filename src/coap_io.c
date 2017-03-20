@@ -262,7 +262,6 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
   (void)data;
   (void)context;
 
-  mhdr.Control.buf = buf;
   struct msghdr mhdr;
   struct iovec iov[1];
 
