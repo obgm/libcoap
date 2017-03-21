@@ -741,8 +741,8 @@ coap_remove_failed_observers(coap_context_t *context,
 
 	COAP_FREE_TYPE(subscription, obs);
       }
+      break;			/* break loop if observer was found */
     }
-    break;			/* break loop if observer was found */
   }
 }
 
