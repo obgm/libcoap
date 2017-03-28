@@ -258,8 +258,6 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
 #ifndef WITH_CONTIKI
   /* a buffer large enough to hold all protocol address types */
   char buf[CMSG_LEN(sizeof(struct sockaddr_storage))];
-  (void)datalen;
-  (void)data;
   (void)context;
 
   struct msghdr mhdr;
@@ -347,6 +345,8 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
 #else /* WITH_CONTIKI */
   /* FIXME: untested */
   /* FIXME: is there a way to check if send was successful? */
+  (void)datalen;
+  (void)data;
   uip_udp_packet_sendto((struct uip_udp_conn *)ep->handle.conn, data, datalen, 
 			&dst->addr, dst->port);
   return datalen;
@@ -390,7 +390,7 @@ coap_free_packet(coap_packet_t *packet) {
 #endif /* WITH_CONTIKI */
 
 static inline size_t
-coap_get_max_packetlength(const coap_packet_t *packet UNUSED_PARAM) {
+coap_get_max_packetlength(const coap_packet_t *packet) {
   (void)packet;
   return COAP_MAX_PDU_SIZE;
 }
