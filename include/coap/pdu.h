@@ -51,6 +51,9 @@
 #define COAP_REQUEST_POST      2
 #define COAP_REQUEST_PUT       3
 #define COAP_REQUEST_DELETE    4
+#define COAP_REQUEST_FETCH     5 /* RFC 8132 */
+#define COAP_REQUEST_PATCH     6 /* RFC 8132 */
+#define COAP_REQUEST_IPATCH    7 /* RFC 8132 */
 
 /* CoAP option types (be sure to update check_critical when adding options */
 

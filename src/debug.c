@@ -271,7 +271,8 @@ msg_type_string(unsigned short t) {
 /** Returns a textual description of the method or response code. */
 static const char *
 msg_code_string(unsigned short c) {
-  static char *methods[] = { "0.00", "GET", "POST", "PUT", "DELETE", "PATCH" };
+  static char *methods[] = { "0.00", "GET", "POST", "PUT", "DELETE",
+                             "FETCH", "PATCH", "iPATCH" };
   static char buf[5];
 
   if (c < sizeof(methods)/sizeof(char *)) {
