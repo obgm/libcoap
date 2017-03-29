@@ -62,6 +62,8 @@ coap_free_subscription(coap_subscription_t *subscription) {
 
 #endif /* WITH_CONTIKI */
 
+#define COAP_PRINT_STATUS_MAX (~COAP_PRINT_STATUS_MASK)
+
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
 /* Helper functions for conditional output of character sequences into
@@ -167,6 +169,7 @@ coap_print_status_t
 coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
 		size_t offset, coap_opt_t *query_filter) {
 #endif /* GCC */
+  size_t output_length = 0;
   unsigned char *p = buf;
   const unsigned char *bufend = buf + *buflen;
   size_t left, written = 0;
@@ -277,7 +280,15 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
   }
 
   *buflen = written;
-  result = p - buf;
+  output_length = p - buf;
+
+  if (output_length > COAP_PRINT_STATUS_MAX)
+  {
+    return COAP_PRINT_STATUS_ERROR;
+  }
+
+  result = (coap_print_status_t)output_length;
+
   if (result + old_offset - offset < *buflen) {
     result |= COAP_PRINT_STATUS_TRUNC;
   }
@@ -481,6 +492,7 @@ coap_print_link(const coap_resource_t *resource,
   const unsigned char *bufend = buf + *len;
   coap_attr_t *attr;
   coap_print_status_t result = 0;
+  size_t output_length = 0;
   const size_t old_offset = *offset;
   
   *len = 0;
@@ -511,7 +523,15 @@ coap_print_link(const coap_resource_t *resource,
     COPY_COND_WITH_OFFSET(p, bufend, *offset, ";obs", 4, *len);
   }
 
-  result = p - buf;
+  output_length = p - buf;
+
+  if (output_length > COAP_PRINT_STATUS_MAX)
+  {
+    return COAP_PRINT_STATUS_ERROR;
+  }
+
+  result = (coap_print_status_t)output_length;
+
   if (result + old_offset - *offset < *len) {
     result |= COAP_PRINT_STATUS_TRUNC;
   }
