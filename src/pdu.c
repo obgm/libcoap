@@ -124,7 +124,7 @@ coap_new_pdu(void) {
   coap_pdu_t *pdu;
   
 #ifndef WITH_CONTIKI
-  pdu = coap_pdu_init(0, 0, ntohs((u_short)COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
+  pdu = coap_pdu_init(0, 0, ntohs((uint16_t)COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
 #else /* WITH_CONTIKI */
   pdu = coap_pdu_init(0, 0, uip_ntohs(COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
 #endif /* WITH_CONTIKI */
