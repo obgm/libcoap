@@ -31,13 +31,13 @@ coap_memory_init(void) {
 #endif /* __GNUC__ */
 
 void *
-coap_malloc_type(coap_memory_tag_t type UNUSED_PARAM, size_t size) {
+coap_malloc_type(coap_memory_tag_t type, size_t size) {
   (void)type;
   return malloc(size);
 }
 
 void
-coap_free_type(coap_memory_tag_t type UNUSED_PARAM, void *p) {
+coap_free_type(coap_memory_tag_t type, void *p) {
   (void)type;
   free(p);
 }

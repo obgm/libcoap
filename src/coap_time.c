@@ -47,7 +47,7 @@ coap_clock_init(void) {
 
 void
 coap_ticks(coap_tick_t *t) {
-  coap_tick_t tmp;
+  unsigned long tmp;
 
 #ifdef COAP_CLOCK
   struct timespec tv;
