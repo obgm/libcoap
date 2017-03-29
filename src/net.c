@@ -491,12 +491,11 @@ coap_option_check_critical(coap_context_t *ctx,
   return ok;
 }
 
+#if defined(WITH_POSIX) || defined(WITH_LWIP) || defined(WITH_CONTIKI)
 void
 coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu, 
 		    coap_tid_t *id) {
-#if !defined(WITH_POSIX) && !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
   (void)peer;
-#endif
 
   coap_key_t h;
 
@@ -532,6 +531,7 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
 
   *id = (((h[0] << 8) | h[1]) ^ ((h[2] << 8) | h[3])) & INT_MAX;
 }
+#endif
 
 coap_tid_t
 coap_send_ack(coap_context_t *context, 
@@ -1561,19 +1561,6 @@ handle_response(coap_context_t *context,
   }
 }
 
-static inline int
-#ifdef __GNUC__
-handle_locally(coap_context_t *context __attribute__ ((unused)), 
-	       coap_queue_t *node __attribute__ ((unused))) {
-#else /* not a GCC */
-handle_locally(coap_context_t *context, coap_queue_t *node) {
-#endif /* GCC */
-  /* this function can be used to check if node->pdu is really for us */
-  (void)context;
-  (void)node;
-  return 1;
-}
-
 void
 coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
   coap_queue_t *sent = NULL;
@@ -1658,21 +1645,19 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
    
     /* Pass message to upper layer if a specific handler was
      * registered for a request that should be handled locally. */
-    if (handle_locally(context, rcvd)) {
-      if (COAP_MESSAGE_IS_REQUEST(rcvd->pdu->hdr))
-	handle_request(context, rcvd);
-      else if (COAP_MESSAGE_IS_RESPONSE(rcvd->pdu->hdr))
-	handle_response(context, sent, rcvd);
-      else {
-	debug("dropped message with invalid code (%d.%02d)\n", 
-	      COAP_RESPONSE_CLASS(rcvd->pdu->hdr->code),
-	      rcvd->pdu->hdr->code & 0x1f);
+    if (COAP_MESSAGE_IS_REQUEST(rcvd->pdu->hdr))
+	  handle_request(context, rcvd);
+    else if (COAP_MESSAGE_IS_RESPONSE(rcvd->pdu->hdr))
+	  handle_response(context, sent, rcvd);
+    else {
+	  debug("dropped message with invalid code (%d.%02d)\n",
+	        COAP_RESPONSE_CLASS(rcvd->pdu->hdr->code),
+	        rcvd->pdu->hdr->code & 0x1f);
 
-	if (!coap_is_mcast(&rcvd->local_if.addr)) {
-	  coap_send_message_type(context, &rcvd->local_if, &rcvd->remote,
+	  if (!coap_is_mcast(&rcvd->local_if.addr)) {
+	    coap_send_message_type(context, &rcvd->local_if, &rcvd->remote,
 				 rcvd->pdu, COAP_MESSAGE_RST);
-	}
-      }
+	  }
     }
     
   cleanup:
