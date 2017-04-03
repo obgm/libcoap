@@ -18,13 +18,20 @@
 #endif
 
 /* Carsten suggested this when fls() is not available: */
-int
 coap_fls(unsigned int i) {
+  return coap_flsll(i);
+}
+#endif
+
+#ifndef HAVE_FLSLL
+int coap_flsll(long long i)
+{
   int n;
   for (n = 0; i; n++)
     i >>= 1;
   return n;
 }
+#endif
 
 unsigned int
 coap_decode_var_bytes(unsigned char *buf,unsigned int len) {

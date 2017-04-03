@@ -496,9 +496,12 @@ coap_option_check_critical(coap_context_t *ctx,
   return ok;
 }
 
+#if defined(WITH_POSIX) || defined(WITH_LWIP) || defined(WITH_CONTIKI)
 void
 coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu, 
 		    coap_tid_t *id) {
+  (void)peer;
+
   coap_key_t h;
 
   memset(h, 0, sizeof(coap_key_t));
@@ -533,6 +536,7 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
 
   *id = (((h[0] << 8) | h[1]) ^ ((h[2] << 8) | h[3])) & INT_MAX;
 }
+#endif
 
 coap_tid_t
 coap_send_ack(coap_context_t *context, 
@@ -798,7 +802,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   /* no more retransmissions, remove node from system */
 
 #ifndef WITH_CONTIKI
-  debug("** removed transaction %d\n", ntohs(node->id));
+  debug("** removed transaction %d\n", ntohl(node->id));
 #endif
 
 #ifndef WITHOUT_OBSERVE
@@ -1035,7 +1039,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
   coap_opt_iterator_t opt_iter;
   coap_pdu_t *response;
   size_t size = sizeof(coap_hdr_t) + request->hdr->token_length;
-  int type; 
+  unsigned char type;
   coap_opt_t *option;
   unsigned short opt_type = 0;	/* used for calculating delta-storage */
 
@@ -1107,15 +1111,16 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
 
     /* copy all options */
     coap_option_iterator_init(request, &opt_iter, opts);
-    while((option = coap_option_next(&opt_iter)))
-      coap_add_option(response, opt_iter.type, 
-		      COAP_OPT_LENGTH(option),
-		      COAP_OPT_VALUE(option));
+    while ((option = coap_option_next(&opt_iter))) {
+      coap_add_option(response, opt_iter.type,
+                      COAP_OPT_LENGTH(option),
+                      COAP_OPT_VALUE(option));
+    }
 
 #if COAP_ERROR_PHRASE_LENGTH > 0
     /* note that diagnostic messages do not need a Content-Format option. */
     if (phrase)
-      coap_add_data(response, strlen(phrase), (unsigned char *)phrase);
+      coap_add_data(response, (unsigned int)strlen(phrase), (unsigned char *)phrase);
 #endif
   }
 
@@ -1192,7 +1197,7 @@ coap_wellknown_response(coap_context_t *context, coap_pdu_t *request) {
       return resp;
     } else if (block.szx > COAP_MAX_BLOCK_SZX) {
       block.szx = COAP_MAX_BLOCK_SZX;
-      block.num = offset >> (block.szx + 4);
+      block.num = (unsigned int)(offset >> (block.szx + 4));
     }
 
     need_block2 = 1;
@@ -1256,9 +1261,16 @@ coap_wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   if ((result & COAP_PRINT_STATUS_ERROR) != 0) {
     debug("coap_print_wellknown failed\n");
     goto error;
-  } 
+  }
   
-  resp->length += COAP_PRINT_OUTPUT_LENGTH(result);
+  unsigned int new_resp_length = resp->length + COAP_PRINT_OUTPUT_LENGTH(result);
+  if (new_resp_length > USHRT_MAX)
+  {
+      debug("coap_print_wellknown failed - print result too large\n");
+      goto error;
+  }
+
+  resp->length = (unsigned short)new_resp_length;
   return resp;
 
  error:
@@ -1339,7 +1351,7 @@ static enum respond_t
 no_response(coap_pdu_t *request, coap_pdu_t *response) {
   coap_opt_t *nores;
   coap_opt_iterator_t opt_iter;
-  uint8_t val = 0;
+  unsigned int val = 0;
 
   assert(request);
   assert(response);
@@ -1595,9 +1607,9 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
        * notification. Then, we must flag the observer to be alive
        * by setting obs->fail_cnt = 0. */
       if (sent && COAP_RESPONSE_CLASS(sent->pdu->hdr->code) == 2) {
-	const str token = 
-	  { sent->pdu->hdr->token_length, sent->pdu->hdr->token };
-	coap_touch_observer(context, &sent->remote, &token);
+        const str token =
+          {sent->pdu->hdr->token_length, sent->pdu->hdr->token};
+        coap_touch_observer(context, &sent->remote, &token);
       }
       break;
 
@@ -1649,21 +1661,19 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
    
     /* Pass message to upper layer if a specific handler was
      * registered for a request that should be handled locally. */
-    if (handle_locally(context, rcvd)) {
-      if (COAP_MESSAGE_IS_REQUEST(rcvd->pdu->hdr))
-	handle_request(context, rcvd);
-      else if (COAP_MESSAGE_IS_RESPONSE(rcvd->pdu->hdr))
-	handle_response(context, sent, rcvd);
-      else {
-	debug("dropped message with invalid code (%d.%02d)\n", 
-	      COAP_RESPONSE_CLASS(rcvd->pdu->hdr->code),
-	      rcvd->pdu->hdr->code & 0x1f);
+    if (COAP_MESSAGE_IS_REQUEST(rcvd->pdu->hdr))
+	  handle_request(context, rcvd);
+    else if (COAP_MESSAGE_IS_RESPONSE(rcvd->pdu->hdr))
+	  handle_response(context, sent, rcvd);
+    else {
+	  debug("dropped message with invalid code (%d.%02d)\n",
+	        COAP_RESPONSE_CLASS(rcvd->pdu->hdr->code),
+	        rcvd->pdu->hdr->code & 0x1f);
 
-	if (!coap_is_mcast(&rcvd->local_if.addr)) {
-	  coap_send_message_type(context, &rcvd->local_if, &rcvd->remote,
+	  if (!coap_is_mcast(&rcvd->local_if.addr)) {
+	    coap_send_message_type(context, &rcvd->local_if, &rcvd->remote,
 				 rcvd->pdu, COAP_MESSAGE_RST);
-	}
-      }
+	  }
     }
     
   cleanup:

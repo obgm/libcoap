@@ -15,6 +15,12 @@
 
 #include "address.h"
 
+#ifdef HAVE_WS2TCPIP_H
+typedef SOCKET coap_socket_t;
+#else
+typedef int coap_socket_t;
+#endif
+
 /**
  * Abstract handle that is used to identify a local network interface.
  */
@@ -35,9 +41,9 @@ struct coap_context_t;
 typedef struct coap_endpoint_t {
 #if defined(WITH_POSIX) || defined(WITH_CONTIKI) || defined(HAVE_WS2TCPIP_H)
   union {
-    int fd;       /**< on POSIX systems */
-    void *conn;   /**< opaque connection (e.g. uip_conn in Contiki) */
-  } handle;       /**< opaque handle to identify this endpoint */
+    coap_socket_t fd; /**< on POSIX, Contiki and Windows systems */
+    void *conn;       /**< opaque connection (e.g. uip_conn in Contiki) */
+  } handle;           /**< opaque handle to identify this endpoint */
 #endif /* WITH_POSIX || WITH_CONTIKI || HAVE_WS2TCPIP_H */
 
 #ifdef WITH_LWIP

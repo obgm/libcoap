@@ -12,6 +12,10 @@
 # include <assert.h>
 #endif
 
+#if defined(HAVE_LIMITS_H)
+#include <limits.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -197,7 +201,7 @@ coap_new_pdu2(coap_transport_t transport, unsigned int size) {
 
   pdu = coap_pdu_init2(0, 0,
 #ifndef WITH_CONTIKI
-                       ntohs(COAP_INVALID_TID),
+                       ntohs((uint16_t)COAP_INVALID_TID),
 #else /* WITH_CONTIKI */
                        uip_ntohs(COAP_INVALID_TID),
 #endif /* WITH_CONTIKI */
@@ -510,7 +514,7 @@ coap_add_token2(coap_pdu_t *pdu, size_t len, const unsigned char *data,
   unsigned char* token = NULL;
   switch (transport) {
     case COAP_UDP:
-      pdu->transport_hdr->udp.token_length = len;
+      pdu->transport_hdr->udp.token_length = (unsigned char)len;
       token = pdu->transport_hdr->udp.token;
       pdu->length = HEADERLENGTH;
       break;
@@ -639,13 +643,14 @@ coap_add_option2(coap_pdu_t *pdu, unsigned short type, unsigned int len,
   optsize = coap_opt_encode(opt, pdu->max_size - pdu->length, 
 			    type - pdu->max_delta, data, len);
 
-  if (!optsize) {
+  size_t new_pdu_length = pdu->length + optsize;
+  if (!optsize || new_pdu_length > USHRT_MAX) {
     warn("coap_add_option: cannot add option\n");
     /* error */
     return 0;
   } else {
     pdu->max_delta = type;
-    pdu->length += optsize;
+    pdu->length = (unsigned short)new_pdu_length;
   }
 
   return optsize;
@@ -671,13 +676,14 @@ coap_add_option_later(coap_pdu_t *pdu, unsigned short type, unsigned int len) {
   optsize = coap_opt_encode(opt, pdu->max_size - pdu->length,
 			    type - pdu->max_delta, NULL, len);
 
-  if (!optsize) {
+  size_t new_pdu_length = pdu->length + optsize;
+  if (!optsize || new_pdu_length > USHRT_MAX) {
     warn("coap_add_option: cannot add option\n");
     /* error */
     return NULL;
   } else {
     pdu->max_delta = type;
-    pdu->length += optsize;
+    pdu->length = (unsigned short)new_pdu_length;
   }
 
   return ((unsigned char*)opt) + optsize - len;
@@ -691,7 +697,8 @@ coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
   if (len == 0)
     return 1;
 
-  if (pdu->length + len + 1 > pdu->max_size) {
+  size_t new_length = pdu->length + len + 1;
+  if (new_length > pdu->max_size || new_length > USHRT_MAX) {
     warn("coap_add_data: cannot add: data too large for PDU\n");
     assert(pdu->data == NULL);
     return 0;
@@ -702,7 +709,7 @@ coap_add_data(coap_pdu_t *pdu, unsigned int len, const unsigned char *data) {
   pdu->data++;
 
   memcpy(pdu->data, data, len);
-  pdu->length += len + 1;
+  pdu->length = (unsigned short)new_length;
   return 1;
 }
 
@@ -804,7 +811,7 @@ coap_pdu_parse2(unsigned char *data, size_t length, coap_pdu_t *pdu,
   assert(data);
   assert(pdu);
 
-  if (pdu->max_size < length) {
+  if (pdu->max_size < length || length > USHRT_MAX) {
     debug("insufficient space to store parsed PDU\n");
     return -1;
   }

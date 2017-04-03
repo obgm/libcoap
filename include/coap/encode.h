@@ -35,6 +35,13 @@ extern int coap_fls(unsigned int i);
 #define coap_fls(i) fls(i)
 #endif
 
+#ifndef HAVE_FLSLL
+ /* include this only if flsll() is not available */
+extern int coap_flsll(long long i);
+#else
+#define coap_flsll(i) flsll(i)
+#endif
+
 /* ls and s must be integer variables */
 #define COAP_PSEUDOFP_ENCODE_8_4_DOWN(v,ls) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (v >> ls) & MMASK) + ls)
 #define COAP_PSEUDOFP_ENCODE_8_4_UP(v,ls,s) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (s = (((v + ((1<<ENCODE_HEADER_SIZE<<ls)-1)) >> ls) & MMASK)), s == 0 ? HIBIT + ls + 1 : s + ls))
