@@ -491,12 +491,9 @@ coap_option_check_critical(coap_context_t *ctx,
   return ok;
 }
 
-#if defined(WITH_POSIX) || defined(WITH_LWIP) || defined(WITH_CONTIKI)
 void
 coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu, 
 		    coap_tid_t *id) {
-  (void)peer;
-
   coap_key_t h;
 
   memset(h, 0, sizeof(coap_key_t));
@@ -531,7 +528,6 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
 
   *id = (((h[0] << 8) | h[1]) ^ ((h[2] << 8) | h[3])) & INT_MAX;
 }
-#endif
 
 coap_tid_t
 coap_send_ack(coap_context_t *context, 
