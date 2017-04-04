@@ -1260,8 +1260,7 @@ coap_wellknown_response(coap_context_t *context, coap_pdu_t *request) {
   }
   
   unsigned int new_resp_length = resp->length + COAP_PRINT_OUTPUT_LENGTH(result);
-  if (new_resp_length > USHRT_MAX)
-  {
+  if (new_resp_length > USHRT_MAX) {
       debug("coap_print_wellknown failed - print result too large\n");
       goto error;
   }

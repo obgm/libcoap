@@ -323,12 +323,10 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     struct in6_pktinfo *pktinfo;
 
 #ifdef WSA_CMSG_SPACE
-#pragma warning( push )
-#pragma warning( disable : 4116 )
     /* Warning C4116 "unnamed type definition in parantheses" is harmless in
      * this case and the unnamed type is part of a system header macro. */
+#pragma warning( suppress : 4116 )
     mhdr.Control.len = CMSG_SPACE(sizeof(struct in6_pktinfo));
-#pragma warning( pop )
 #else
     mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
 #endif
@@ -361,12 +359,10 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     struct in_pktinfo *pktinfo;
 
 #ifdef WSA_CMSG_SPACE
-#pragma warning( push )
-#pragma warning( disable : 4116 )
     /* Warning C4116 "unnamed type definition in parantheses" is harmless in
      * this case and the unnamed type is part of a system header macro. */
+#pragma warning( suppress : 4116 )
     mhdr.Control.len = CMSG_SPACE(sizeof(struct in_pktinfo));
-#pragma warning( pop )
 #else
     mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
 #endif
