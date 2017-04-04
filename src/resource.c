@@ -282,8 +282,7 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
   *buflen = written;
   output_length = p - buf;
 
-  if (output_length > COAP_PRINT_STATUS_MAX)
-  {
+  if (output_length > COAP_PRINT_STATUS_MAX) {
     return COAP_PRINT_STATUS_ERROR;
   }
 
@@ -525,8 +524,7 @@ coap_print_link(const coap_resource_t *resource,
 
   output_length = p - buf;
 
-  if (output_length > COAP_PRINT_STATUS_MAX)
-  {
+  if (output_length > COAP_PRINT_STATUS_MAX) {
     return COAP_PRINT_STATUS_ERROR;
   }
 
@@ -690,8 +688,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
 
       if (COAP_INVALID_TID == tid || response->hdr->type != COAP_MESSAGE_CON)
 	coap_delete_pdu(response);
-      if (COAP_INVALID_TID == tid)
-      {
+      if (COAP_INVALID_TID == tid) {
 	debug("coap_check_notify: sending failed, resource stays partially dirty\n");
         obs->dirty = 1;
         r->partiallydirty = 1;
