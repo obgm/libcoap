@@ -400,11 +400,9 @@ int coap_handle_message(coap_context_t *ctx,
  * @param pdu  The message that initiated the transaction.
  * @param id   Set to the new id.
  */
-#if defined(WITH_POSIX) || defined(WITH_LWIP) || defined(WITH_CONTIKI)
 void coap_transaction_id(const coap_address_t *peer,
                          const coap_pdu_t *pdu,
                          coap_tid_t *id);
-#endif
 
 /**
  * This function removes the element with given @p id from the list given list.

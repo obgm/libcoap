@@ -21,7 +21,6 @@
 # define CLOSE_SOCKET(fd)    close(fd)
 # define COAP_SOCKET_ERROR   (-1)
 # define COAP_INVALID_SOCKET (-1)
-typedef int coap_socket_t;
 #endif
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
@@ -37,7 +36,6 @@ typedef int coap_socket_t;
 # define CMSG_FIRSTHDR       WSA_CMSG_FIRSTHDR
 # define CMSG_LEN            WSA_CMSG_LEN
 # define CMSG_SPACE          WSA_CMSG_SPACE
-typedef SOCKET coap_socket_t;
 #endif
 #ifdef HAVE_SYS_UIO_H
 # include <sys/uio.h>
@@ -290,6 +288,10 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
   (void)context;
 
 #ifdef WSA_CMSG_SPACE
+  (void)datalen;
+  (void)data;
+  (void)context;
+
   WSAMSG mhdr;
   WSABUF dataBuf;
 
@@ -298,6 +300,7 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
   mhdr.name = (PSOCKADDR)&dst->addr.sa;
   mhdr.lpBuffers = &dataBuf;
   mhdr.dwBufferCount = 1;
+  mhdr.Control.buf = buf;
 #else
   struct msghdr mhdr;
   struct iovec iov[1];
@@ -320,6 +323,9 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     struct in6_pktinfo *pktinfo;
 
 #ifdef WSA_CMSG_SPACE
+    /* Warning C4116 "unnamed type definition in parantheses" is harmless in
+     * this case and the unnamed type is part of a system header macro. */
+#pragma warning( suppress : 4116 )
     mhdr.Control.len = CMSG_SPACE(sizeof(struct in6_pktinfo));
 #else
     mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
@@ -353,6 +359,9 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     struct in_pktinfo *pktinfo;
 
 #ifdef WSA_CMSG_SPACE
+    /* Warning C4116 "unnamed type definition in parantheses" is harmless in
+     * this case and the unnamed type is part of a system header macro. */
+#pragma warning( suppress : 4116 )
     mhdr.Control.len = CMSG_SPACE(sizeof(struct in_pktinfo));
 #else
     mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
@@ -406,7 +415,7 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
 
 #ifdef WSA_CMSG_SPACE
   {
-    int sent = 0;
+    DWORD sent = 0;
     WSASendMsg(ep->handle.fd, &mhdr, 0, &sent, NULL, NULL);
     return sent;
   }
