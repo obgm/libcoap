@@ -130,7 +130,7 @@ coap_keystore_remove_item(coap_keystore_t *keystore,
 
 static inline int
 match(const void *a, size_t alen, const void *b, size_t blen) {
-  return !a || !b || ((alen == blen) && (memcmp(a, b, alen) == 0));
+  return !a || !b || ((alen == blen) && ((alen == 0) || (memcmp(a, b, alen) == 0)));
 }
 
 coap_keystore_item_t *
@@ -164,7 +164,11 @@ coap_psk_set_identity(const coap_keystore_item_t *psk,
     return -1;
   }
 
-  memcpy(buf, psk->entry.psk.identity, psk->entry.psk.identity_length);
+  memset(buf, 0, max_len);
+
+  if (psk->entry.psk.identity_length > 0) {
+    memcpy(buf, psk->entry.psk.identity, psk->entry.psk.identity_length);
+  }
   return psk->entry.psk.identity_length;
 }
 
@@ -175,6 +179,10 @@ ssize_t coap_psk_set_key(const coap_keystore_item_t *psk,
     return -1;
   }
 
-  memcpy(buf, psk->entry.psk.key, psk->entry.psk.key_length);
+  memset(buf, 0, max_len);
+
+  if (psk->entry.psk.key_length > 0) {
+    memcpy(buf, psk->entry.psk.key, psk->entry.psk.key_length);
+  }
   return psk->entry.psk.key_length;
 }

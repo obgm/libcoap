@@ -1230,10 +1230,15 @@ main(int argc, char **argv) {
     goto finish;
   }
 
-  if (user_length > 0) {
+  /* Create a new PSK item and add to keystore if talking to a secure
+     resource. The user name or key may be empty. */
+  if (coap_uri_scheme_is_secure(&uri)) {
     coap_keystore_item_t *psk;
-    psk = coap_keystore_new_psk(NULL, 0, user, (size_t)user_length,
-                                key, (size_t)key_length, 0);
+    psk = coap_keystore_new_psk(NULL, 0,
+                                (user_length > 0) ? user : NULL,
+                                (size_t)user_length,
+                                (key_length > 0) ? key : NULL,
+                                (size_t)key_length, 0);
     if (!psk || !coap_keystore_store_item(ctx->keystore, psk, NULL)) {
       coap_log(LOG_WARNING, "cannot store key\n");
     }
