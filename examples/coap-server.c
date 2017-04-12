@@ -507,7 +507,7 @@ main(int argc, char **argv) {
       nextpdu = coap_peek_next( ctx );
     }
 
-    if ( nextpdu && nextpdu->t <= COAP_RESOURCE_CHECK_TIME ) {
+    if (nextpdu && nextpdu->t <= (COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND)) {
       /* set timeout if there is a pdu to send before our automatic timeout occurs */
       tv.tv_usec = ((nextpdu->t) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
       tv.tv_sec = (nextpdu->t) / COAP_TICKS_PER_SECOND;
