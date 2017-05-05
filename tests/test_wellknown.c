@@ -12,7 +12,9 @@
 #include <coap.h>
 
 #include <assert.h>
+#ifdef HAVE_NETINET_IN_H 
 #include <netinet/in.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

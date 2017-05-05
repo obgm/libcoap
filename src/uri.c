@@ -20,6 +20,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "libcoap.h"
 #include "mem.h"
 #include "debug.h"
 #include "pdu.h"
@@ -37,7 +38,7 @@
  * @return A pointer to the first occurence of @p c, or @c NULL 
  * if not found.
  */
-static inline unsigned char *
+COAP_STATIC_INLINE unsigned char *
 strnchr(unsigned char *s, size_t len, unsigned char c) {
   while (len && *s++ != c)
     --len;
@@ -317,7 +318,7 @@ typedef void (*segment_handler_t)(unsigned char *, size_t, void *);
 /**
  * Checks if path segment @p s consists of one or two dots.
  */
-static inline int
+COAP_STATIC_INLINE int
 dots(unsigned char *s, size_t len) {
   return *s == '.' && (len == 1 || (*(s+1) == '.' && len == 2));
 }
@@ -424,7 +425,7 @@ coap_uri_t *
 coap_new_uri(const unsigned char *uri, unsigned int length) {
   unsigned char *result;
 
-  result = coap_malloc(length + 1 + sizeof(coap_uri_t));
+  result = (unsigned char*)coap_malloc(length + 1 + sizeof(coap_uri_t));
 
   if (!result)
     return NULL;
@@ -484,7 +485,7 @@ coap_clone_uri(const coap_uri_t *uri) {
 
 /* The function signature of coap_hash() is different from
  * segment_handler_t hence we use this wrapper as safe typecast. */
-static inline void
+COAP_STATIC_INLINE void
 hash_segment(unsigned char *s, size_t len, void *data) {
   assert(len <= UINT_MAX);
   coap_hash(s, (unsigned int)len, (unsigned char *)data);

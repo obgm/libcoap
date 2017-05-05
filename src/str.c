@@ -10,12 +10,13 @@
 
 #include <stdio.h>
 
+#include "libcoap.h"
 #include "debug.h"
 #include "mem.h"
 #include "str.h"
 
 str *coap_new_string(size_t size) {
-  str *s = coap_malloc(sizeof(str) + size + 1);
+  str *s = (str *)coap_malloc(sizeof(str) + size + 1);
   if ( !s ) {
 #ifndef NDEBUG
     coap_log(LOG_CRIT, "coap_new_string: malloc\n");

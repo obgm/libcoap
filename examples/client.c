@@ -8,20 +8,23 @@
  * use.
  */
 
-#include "coap_config.h"
-
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <sys/select.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#include "getopt.c"
+#else
+#include <unistd.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#endif
 
 #include "coap.h"
 #include "coap_list.h"
@@ -61,7 +64,9 @@ coap_tick_t max_wait;                   /* global timeout (changed by set_timeou
 unsigned int obs_seconds = 30;          /* default observe time */
 coap_tick_t obs_wait = 0;               /* timeout for current subscription */
 
+#ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 #ifdef __GNUC__
 #define UNUSED_PARAM __attribute__ ((unused))
@@ -144,7 +149,7 @@ coap_new_request(coap_context_t *ctx,
   pdu->hdr->id = coap_new_message_id(ctx);
   pdu->hdr->code = m;
 
-  pdu->hdr->token_length = the_token.length;
+  pdu->hdr->token_length = (uint16_t)the_token.length;
   if ( !coap_add_token(pdu, the_token.length, the_token.s)) {
     debug("cannot add token to request\n");
   }
@@ -1140,11 +1145,12 @@ main(int argc, char **argv) {
       log_level = strtol(optarg, NULL, 10);
       break;
     default:
-      usage( argv[0], PACKAGE_VERSION );
+      usage( argv[0], LIBCOAP_PACKAGE_VERSION );
       exit( 1 );
     }
   }
 
+  coap_startup();
   coap_set_log_level(log_level);
 
   if (optind < argc) {
@@ -1153,7 +1159,7 @@ main(int argc, char **argv) {
       exit(1);
     }
   } else {
-    usage( argv[0], PACKAGE_VERSION );
+    usage( argv[0], LIBCOAP_PACKAGE_VERSION );
     exit( 1 );
   }
 
@@ -1258,22 +1264,29 @@ main(int argc, char **argv) {
     if (nextpdu && nextpdu->t < min(obs_wait ? obs_wait : max_wait, max_wait) - now) {
       /* set timeout if there is a pdu to send */
       tv.tv_usec = ((nextpdu->t) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-      tv.tv_sec = (nextpdu->t) / COAP_TICKS_PER_SECOND;
+      tv.tv_sec = (long)((nextpdu->t) / COAP_TICKS_PER_SECOND);
     } else {
       /* check if obs_wait fires before max_wait */
       if (obs_wait && obs_wait < max_wait) {
         tv.tv_usec = ((obs_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-        tv.tv_sec = (obs_wait - now) / COAP_TICKS_PER_SECOND;
+        tv.tv_sec = (long)((obs_wait - now) / COAP_TICKS_PER_SECOND);
       } else {
         tv.tv_usec = ((max_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-        tv.tv_sec = (max_wait - now) / COAP_TICKS_PER_SECOND;
+        tv.tv_sec = (long)((max_wait - now) / COAP_TICKS_PER_SECOND);
       }
     }
 
     result = select(ctx->sockfd + 1, &readfds, 0, 0, &tv);
 
     if ( result < 0 ) {   /* error */
+#ifdef _WIN32
+	  char *szErrorMsg = NULL;
+	  FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
+	  fprintf( stderr, "select: %s\n", szErrorMsg );
+	  LocalFree( szErrorMsg );
+#else
       perror("select");
+#endif
     } else if ( result > 0 ) {  /* read from socket */
       if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
         coap_read( ctx );       /* read received data */
@@ -1300,6 +1313,7 @@ main(int argc, char **argv) {
 
   coap_delete_list(optlist);
   coap_free_context( ctx );
+  coap_cleanup();
 
   return 0;
 }

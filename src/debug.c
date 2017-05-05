@@ -24,11 +24,15 @@
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+#endif
 
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
 
+#include "libcoap.h"
 #include "block.h"
 #include "debug.h"
 #include "encode.h"
@@ -73,7 +77,7 @@ static char *loglevels[] = {
 
 #ifdef HAVE_TIME_H
 
-static inline size_t
+COAP_STATIC_INLINE size_t
 print_timestamp(char *s, size_t len, coap_tick_t t) {
   struct tm *tmp;
   time_t now = coap_ticks_to_rt(t);
@@ -83,7 +87,7 @@ print_timestamp(char *s, size_t len, coap_tick_t t) {
 
 #else /* alternative implementation: just print the timestamp */
 
-static inline size_t
+COAP_STATIC_INLINE size_t
 print_timestamp(char *s, size_t len, coap_tick_t t) {
 #ifdef HAVE_SNPRINTF
   return snprintf(s, len, "%u.%03u", 
@@ -160,7 +164,7 @@ print_readable( const unsigned char *data, size_t len,
 
 size_t
 coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t len) {
-#ifdef HAVE_ARPA_INET_H
+#if defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )
   const void *addrptr = NULL;
   in_port_t port;
   unsigned char *p = buf;
@@ -364,7 +368,7 @@ print_content_format(unsigned int format_type,
  * to carry binary data. The return value @c 0 hence indicates
  * printable data which is also assumed if @p content_format is @c 01.
  */
-static inline int
+COAP_STATIC_INLINE int
 is_binary(int content_format) {
   return !(content_format == -1 ||
 	   content_format == COAP_MEDIATYPE_TEXT_PLAIN ||

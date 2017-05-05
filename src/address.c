@@ -6,11 +6,24 @@
  * README for terms of use.
  */
 
-#ifdef WITH_POSIX
+#include "coap_config.h"
+
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#ifdef HAVE_ASSERT_H
 #include <assert.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+#endif
 
 #include "address.h"
 
@@ -52,12 +65,11 @@ int coap_is_mcast(const coap_address_t *a) {
   }
  return 0;
 }
-#else /* WITH_POSIX */
+#else /* !defined(WITH_CONTIKI) && !defined(WITH_LWIP) */
 
 /* make compilers happy that do not like empty modules */
-static inline void dummy()
+COAP_STATIC_INLINE void dummy()
 {
 }
 
-#endif /* not WITH_POSIX */
-
+#endif /* !defined(WITH_CONTIKI) && !defined(WITH_LWIP) */

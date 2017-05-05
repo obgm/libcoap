@@ -21,7 +21,8 @@
 #include <sys/types.h>
 #include "libcoap.h"
 
-#ifdef WITH_LWIP
+#if defined(WITH_LWIP)
+
 #include <lwip/ip_addr.h>
 
 typedef struct coap_address_t {
@@ -34,9 +35,9 @@ typedef struct coap_address_t {
 #define _coap_address_isany_impl(A)  ip_addr_isany(&(A)->addr)
 
 #define _coap_is_mcast_impl(Address) ip_addr_ismulticast(&(Address)->addr)
-#endif /* WITH_LWIP */
 
-#ifdef WITH_CONTIKI
+#elif defined(WITH_CONTIKI)
+
 #include "uip.h"
 
 typedef struct coap_address_t {
@@ -52,10 +53,10 @@ typedef struct coap_address_t {
 #define _coap_address_isany_impl(A)  0
 
 #define _coap_is_mcast_impl(Address) uip_is_addr_mcast(&((Address)->addr))
-#endif /* WITH_CONTIKI */
 
-#ifdef WITH_POSIX
-/** multi-purpose address abstraction */
+#else /* WITH_LWIP || WITH_CONTIKI */
+
+ /** multi-purpose address abstraction */
 typedef struct coap_address_t {
   socklen_t size;           /**< size of addr */
   union {
@@ -73,7 +74,7 @@ typedef struct coap_address_t {
  */
 int coap_address_equals(const coap_address_t *a, const coap_address_t *b);
 
-static inline int
+COAP_STATIC_INLINE int
 _coap_address_isany_impl(const coap_address_t *a) {
   /* need to compare only relevant parts of sockaddr_in6 */
   switch (a->addr.sa.sa_family) {
@@ -89,7 +90,7 @@ _coap_address_isany_impl(const coap_address_t *a) {
 
   return 0;
 }
-#endif /* WITH_POSIX */
+#endif /* WITH_LWIP || WITH_CONTIKI */
 
 /**
  * Resets the given coap_address_t object @p addr to its default values. In
@@ -98,23 +99,23 @@ _coap_address_isany_impl(const coap_address_t *a) {
  *
  * @param addr The coap_address_t object to initialize.
  */
-static inline void
+COAP_STATIC_INLINE void
 coap_address_init(coap_address_t *addr) {
   assert(addr);
   memset(addr, 0, sizeof(coap_address_t));
-#ifdef WITH_POSIX
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
   /* lwip and Contiki have constant address sizes and doesn't need the .size part */
   addr->size = sizeof(addr->addr);
 #endif
 }
 
-#ifndef WITH_POSIX
+#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
 /**
  * Compares given address objects @p a and @p b. This function returns @c 1 if
  * addresses are equal, @c 0 otherwise. The parameters @p a and @p b must not be
  * @c NULL;
  */
-static inline int
+COAP_STATIC_INLINE int
 coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
   assert(a); assert(b);
   return _coap_address_equals_impl(a, b);
@@ -126,27 +127,28 @@ coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
  * function returns @c 1 if this is the case, @c 0 otherwise. The parameters @p
  * a must not be @c NULL;
  */
-static inline int
+COAP_STATIC_INLINE int
 coap_address_isany(const coap_address_t *a) {
   assert(a);
   return _coap_address_isany_impl(a);
 }
 
-#ifdef WITH_POSIX
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+
 /**
  * Checks if given address @p a denotes a multicast address. This function
  * returns @c 1 if @p a is multicast, @c 0 otherwise.
  */
 int coap_is_mcast(const coap_address_t *a);
-#else /* WITH_POSIX */
+#else /* !WITH_LWIP && !WITH_CONTIKI */
 /**
  * Checks if given address @p a denotes a multicast address. This function
  * returns @c 1 if @p a is multicast, @c 0 otherwise.
  */
-static inline int
+COAP_STATIC_INLINE int
 coap_is_mcast(const coap_address_t *a) {
   return a && _coap_is_mcast_impl(a);
 }
-#endif /* WITH_POSIX */
+#endif /* !WITH_LWIP && !WITH_CONTIKI */
 
 #endif /* _COAP_ADDRESS_H_ */

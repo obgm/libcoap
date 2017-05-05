@@ -20,23 +20,7 @@
  * @{
  */
 
-#if defined(WITH_POSIX) || (defined(WITH_LWIP) && !defined(LWIP_RAND))
-#include <stdlib.h>
-
-/**
- * Fills \p buf with \p len random bytes. This is the default implementation for
- * prng(). You might want to change prng() to use a better PRNG on your specific
- * platform.
- */
-static inline int
-coap_prng_impl(unsigned char *buf, size_t len) {
-  while (len--)
-    *buf++ = rand() & 0xFF;
-  return 1;
-}
-#endif /* WITH_POSIX */
-
-#ifdef WITH_CONTIKI
+#if defined(WITH_CONTIKI)
 #include <string.h>
 
 /**
@@ -44,7 +28,7 @@ coap_prng_impl(unsigned char *buf, size_t len) {
  * prng(). You might want to change prng() to use a better PRNG on your specific
  * platform.
  */
-static inline int
+COAP_STATIC_INLINE int
 contiki_prng_impl(unsigned char *buf, size_t len) {
   unsigned short v = random_rand();
   while (len > sizeof(v)) {
@@ -60,10 +44,8 @@ contiki_prng_impl(unsigned char *buf, size_t len) {
 
 #define prng(Buf,Length) contiki_prng_impl((Buf), (Length))
 #define prng_init(Value) random_init((unsigned short)(Value))
-#endif /* WITH_CONTIKI */
-
-#if defined(WITH_LWIP) && defined(LWIP_RAND)
-static inline int
+#elif defined(WITH_LWIP) && defined(LWIP_RAND)
+COAP_STATIC_INLINE int
 lwip_prng_impl(unsigned char *buf, size_t len) {
   u32_t v = LWIP_RAND();
   while (len > sizeof(v)) {
@@ -79,8 +61,22 @@ lwip_prng_impl(unsigned char *buf, size_t len) {
 
 #define prng(Buf,Length) lwip_prng_impl((Buf), (Length))
 #define prng_init(Value)
+#else
+#include <stdlib.h>
 
-#endif /* WITH_LWIP */
+ /**
+ * Fills \p buf with \p len random bytes. This is the default implementation for
+ * prng(). You might want to change prng() to use a better PRNG on your specific
+ * platform.
+ */
+COAP_STATIC_INLINE int
+coap_prng_impl( unsigned char *buf, size_t len ) {
+	while ( len-- )
+		*buf++ = rand() & 0xFF;
+	return 1;
+}
+#endif
+
 
 #ifndef prng
 /**

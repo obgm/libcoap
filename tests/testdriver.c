@@ -11,6 +11,7 @@
 #include "test_error_response.h"
 #include "test_sendqueue.h"
 #include "test_wellknown.h"
+#include "libcoap.h"
 
 #ifdef __GNUC__
 #define UNUSED_PARAM __attribute__ ((unused))
@@ -28,6 +29,7 @@ main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM) {
     return -2;
   }
 
+  coap_startup();
   t_init_uri_tests();
   t_init_option_tests();
   t_init_pdu_tests();
@@ -39,6 +41,7 @@ main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM) {
   result = CU_basic_run_tests();
 
   CU_cleanup_registry();
+  coap_cleanup();
 
   return result;
 }

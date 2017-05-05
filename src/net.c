@@ -19,7 +19,9 @@
 #elif HAVE_SYS_UNISTD_H
 #include <sys/unistd.h>
 #endif
+#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
@@ -29,6 +31,9 @@
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+#endif
 
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
@@ -36,6 +41,7 @@
 #include <lwip/timers.h>
 #endif
 
+#include "libcoap.h"
 #include "debug.h"
 #include "mem.h"
 #include "str.h"
@@ -113,20 +119,20 @@
 /** creates a Qx.FRAC_BITS from COAP_DEFAULT_ACK_TIMEOUT */
 #define ACK_TIMEOUT Q(FRAC_BITS, COAP_DEFAULT_ACK_TIMEOUT)
 
-#if defined(WITH_POSIX)
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 
-time_t clock_offset;
+time_t clock_offset = 0;
 
-static inline coap_queue_t *
+COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node(void) {
   return (coap_queue_t *)coap_malloc_type(COAP_NODE, sizeof(coap_queue_t));
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_free_node(coap_queue_t *node) {
   coap_free_type(COAP_NODE, node);
 }
-#endif /* WITH_POSIX */
+#endif /* !defined(WITH_LWIP) && !defined(WITH_CONTIKI) */
 #ifdef WITH_LWIP
 
 #include <lwip/memp.h>
@@ -134,12 +140,12 @@ coap_free_node(coap_queue_t *node) {
 static void coap_retransmittimer_execute(void *arg);
 static void coap_retransmittimer_restart(coap_context_t *ctx);
 
-static inline coap_queue_t *
+COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node() {
 	return (coap_queue_t *)memp_malloc(MEMP_COAP_NODE);
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_free_node(coap_queue_t *node) {
 	memp_free(MEMP_COAP_NODE, node);
 }
@@ -153,7 +159,7 @@ coap_free_node(coap_queue_t *node) {
 #include "mem.h"
 #include "net/ip/uip-debug.h"
 
-clock_time_t clock_offset;
+clock_time_t clock_offset = 0;
 
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
@@ -165,12 +171,12 @@ coap_context_t the_coap_context;
 
 PROCESS(coap_retransmit_process, "message retransmit process");
 
-static inline coap_queue_t *
+COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node() {
   return (coap_queue_t *)coap_malloc_type(COAP_NODE, 0);
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_free_node(coap_queue_t *node) {
   coap_free_type(COAP_NODE, node);
 }
@@ -386,14 +392,14 @@ coap_new_context(
   c->endpoint->context = c;
 #endif
 
-#ifdef WITH_POSIX
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
   c->sockfd = c->endpoint->handle.fd;
-#endif /* WITH_POSIX */
+#endif
 
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP)
   c->network_send = coap_network_send;
   c->network_read = coap_network_read;
-#endif /* WITH_POSIX or WITH_CONTIKI */
+#endif
 
 #ifdef WITH_CONTIKI
   process_start(&coap_retransmit_process, (char *)c);
@@ -500,7 +506,7 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
 
   /* Compare the transport address. */
 
-#ifdef WITH_POSIX
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
   switch (peer->addr.sa.sa_family) {
   case AF_INET:
     coap_hash((const unsigned char *)&peer->addr.sin.sin_port,
@@ -517,12 +523,11 @@ coap_transaction_id(const coap_address_t *peer, const coap_pdu_t *pdu,
   default:
     return;
   }
-#endif
-#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
+#else /* !defined(WITH_LWIP) && !defined(WITH_CONTIKI) */
     /* FIXME: with lwip, we can do better */
     coap_hash((const unsigned char *)&peer->port, sizeof(peer->port), h);
     coap_hash((const unsigned char *)&peer->addr, sizeof(peer->addr), h);  
-#endif /* WITH_LWIP || WITH_CONTIKI */
+#endif /* !defined(WITH_LWIP) && !defined(WITH_CONTIKI) */
 
   coap_hash((const unsigned char *)&pdu->hdr->id, sizeof(unsigned short), h);
 
@@ -548,7 +553,7 @@ coap_send_ack(coap_context_t *context,
   return result;
 }
 
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP)
 static coap_tid_t
 coap_send_impl(coap_context_t *context, 
 	       const coap_endpoint_t *local_interface,
@@ -575,13 +580,19 @@ coap_send_impl(coap_context_t *context,
   if (bytes_written >= 0) {
     coap_transaction_id(dst, pdu, &id);
   } else {
+#if defined(HAVE_WINSOCK2_H)
+  	char *szErrorMsg = NULL;
+	FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
+    coap_log(LOG_CRIT, "coap_send_impl: %s\n", szErrorMsg);
+	LocalFree( szErrorMsg );
+#else
     coap_log(LOG_CRIT, "coap_send_impl: %s\n", strerror(errno));
+#endif
   }
 
   return id;
 }
-#endif /* WITH_POSIX */
-#ifdef WITH_LWIP
+#else /* !defined(WITH_LWIP) */
 coap_tid_t
 coap_send_impl(coap_context_t *context,
 	       const coap_endpoint_t *local_interface,
@@ -607,7 +618,7 @@ coap_send_impl(coap_context_t *context,
 
   return id;
 }
-#endif /* WITH_LWIP */
+#endif /* !defined(WITH_LWIP) */
 
 coap_tid_t 
 coap_send(coap_context_t *context, 
@@ -669,7 +680,7 @@ coap_send_message_type(coap_context_t *context,
  *           value
  * @return   COAP_TICKS_PER_SECOND * ACK_TIMEOUT * (1 + (ACK_RANDOM_FACTOR - 1) * r)
  */
-static inline unsigned int
+COAP_STATIC_INLINE unsigned int
 calc_timeout(unsigned char r) {
   unsigned int result;
 
@@ -970,7 +981,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_tid_t id, coap_queue_t **node)
 
 }
 
-static inline int
+COAP_STATIC_INLINE int
 token_match(const unsigned char *a, size_t alen, 
 	    const unsigned char *b, size_t blen) {
   return alen == blen && (alen == 0 || memcmp(a, b, alen) == 0);
@@ -1122,7 +1133,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
  * Quick hack to determine the size of the resource description for
  * .well-known/core.
  */
-static inline size_t
+COAP_STATIC_INLINE size_t
 get_wkc_len(coap_context_t *context, coap_opt_t *query_filter) {
   unsigned char buf[1];
   size_t len = 0;
@@ -1535,7 +1546,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
   assert(response == NULL);
 }
 
-static inline void
+COAP_STATIC_INLINE void
 handle_response(coap_context_t *context, 
 		coap_queue_t *sent, coap_queue_t *rcvd) {
 
@@ -1665,6 +1676,20 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
 int
 coap_can_exit( coap_context_t *context ) {
   return !context || (context->sendqueue == NULL);
+}
+
+void coap_startup() {
+#if defined(HAVE_WINSOCK2_H)
+  WORD wVersionRequested = MAKEWORD( 2, 2 );
+  WSADATA wsaData;
+  WSAStartup( wVersionRequested, &wsaData );
+#endif
+}
+
+void coap_cleanup() {
+#if defined(HAVE_WINSOCK2_H)
+  WSACleanup();
+#endif
 }
 
 #ifdef WITH_CONTIKI

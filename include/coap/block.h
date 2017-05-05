@@ -61,13 +61,13 @@ unsigned int coap_opt_block_num(const coap_opt_t *block_opt);
  * Checks if more than @p num blocks are required to deliver @p data_len
  * bytes of data for a block size of 1 << (@p szx + 4).
  */
-static inline int
+COAP_STATIC_INLINE int
 coap_more_blocks(size_t data_len, unsigned int num, unsigned short szx) {
   return ((num+1) << (szx + 4)) < data_len;
 }
 
 /** Sets the More-bit in @p block_opt */
-static inline void
+COAP_STATIC_INLINE void
 coap_opt_block_set_m(coap_opt_t *block_opt, int m) {
   if (m)
     *(COAP_OPT_VALUE(block_opt) + (COAP_OPT_LENGTH(block_opt) - 1)) |= 0x08;

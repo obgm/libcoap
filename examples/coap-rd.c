@@ -19,21 +19,25 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <sys/select.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <signal.h>
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#include "getopt.c"
+#else
+#include <unistd.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <sys/stat.h>
 #include <dirent.h>
-#include <errno.h>
-#include <signal.h>
+#endif
 
-#include "coap_config.h"
 #include "utlist.h"
 #include "resource.h"
 #include "coap.h"
@@ -623,8 +627,8 @@ join(coap_context_t *ctx, char *group_name) {
   hints.ai_socktype = SOCK_DGRAM;
 
   result = getaddrinfo("::", NULL, &hints, &reslocal);
-  if ( result < 0 ) {
-    perror("join: cannot resolve link-local interface");
+  if ( result != 0 ) {
+    fprintf( stderr, "join: cannot resolve link-local interface: %s\n", gai_strerror( result ) );
     goto finish;
   }
 
@@ -644,8 +648,8 @@ join(coap_context_t *ctx, char *group_name) {
   /* resolve the multicast group address */
   result = getaddrinfo(group_name, NULL, &hints, &resmulti);
 
-  if ( result < 0 ) {
-    perror("join: cannot resolve multicast address");
+  if ( result != 0 ) {
+    fprintf( stderr, "join: cannot resolve multicast address: %s\n", gai_strerror( result ) );
     goto finish;
   }
 
@@ -660,8 +664,16 @@ join(coap_context_t *ctx, char *group_name) {
   result = setsockopt(ctx->sockfd,
                       IPPROTO_IPV6, IPV6_JOIN_GROUP,
                       (char *)&mreq, sizeof(mreq) );
-  if ( result < 0 )
+  if ( result < 0 ) {
+#ifdef _WIN32
+    char *szErrorMsg = NULL;
+    FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
+    fprintf( stderr, "join: setsockopt: %s\n", szErrorMsg );
+    LocalFree( szErrorMsg );
+#else
     perror("join: setsockopt");
+#endif
+  }
 
  finish:
   freeaddrinfo(resmulti);
@@ -701,11 +713,12 @@ main(int argc, char **argv) {
       log_level = strtol(optarg, NULL, 10);
       break;
     default:
-      usage( argv[0], PACKAGE_VERSION );
+      usage( argv[0], LIBCOAP_PACKAGE_VERSION );
       exit( 1 );
     }
   }
 
+  coap_startup();
   coap_set_log_level(log_level);
 
   ctx = get_context(addr_str, port_str);
@@ -735,7 +748,7 @@ main(int argc, char **argv) {
       /* set timeout if there is a pdu to send before our automatic
          timeout occurs */
       tv.tv_usec = ((nextpdu->t - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-      tv.tv_sec = (nextpdu->t - now) / COAP_TICKS_PER_SECOND;
+      tv.tv_sec = (long)((nextpdu->t - now) / COAP_TICKS_PER_SECOND);
       timeout = &tv;
     } else {
       tv.tv_usec = 0;
@@ -745,8 +758,15 @@ main(int argc, char **argv) {
     result = select( FD_SETSIZE, &readfds, 0, 0, timeout );
 
     if ( result < 0 ) {     /* error */
+#ifdef _WIN32
+      char *szErrorMsg = NULL;
+      FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
+      fprintf( stderr, "select: %s\n", szErrorMsg );
+      LocalFree( szErrorMsg );
+#else
       if (errno != EINTR)
         perror("select");
+#endif
       } else if ( result > 0 ) {  /* read from socket */
         if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
           coap_read( ctx ); /* read received data */
@@ -758,6 +778,7 @@ main(int argc, char **argv) {
   }
 
   coap_free_context( ctx );
+  coap_cleanup();
 
   return 0;
 }

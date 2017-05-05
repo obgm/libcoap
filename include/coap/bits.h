@@ -28,9 +28,9 @@
  *
  * @return     @c -1 if @p bit does not fit into @p vec, @c 1 otherwise.
  */
-inline static int
+COAP_STATIC_INLINE int
 bits_setb(uint8_t *vec, size_t size, uint8_t bit) {
-  if (size <= (bit >> 3))
+  if (size <= ((size_t)bit >> 3))
     return -1;
 
   *(vec + (bit >> 3)) |= (uint8_t)(1 << (bit & 0x07));
@@ -48,9 +48,9 @@ bits_setb(uint8_t *vec, size_t size, uint8_t bit) {
  *
  * @return     @c -1 if @p bit does not fit into @p vec, @c 1 otherwise.
  */
-inline static int
+COAP_STATIC_INLINE int
 bits_clrb(uint8_t *vec, size_t size, uint8_t bit) {
-  if (size <= (bit >> 3))
+  if (size <= ((size_t)bit >> 3))
     return -1;
 
   *(vec + (bit >> 3)) &= (uint8_t)(~(1 << (bit & 0x07)));
@@ -67,9 +67,9 @@ bits_clrb(uint8_t *vec, size_t size, uint8_t bit) {
  *
  * @return     @c 1 if the bit is set, @c 0 otherwise.
  */
-inline static int
+COAP_STATIC_INLINE int
 bits_getb(const uint8_t *vec, size_t size, uint8_t bit) {
-  if (size <= (bit >> 3))
+  if (size <= ((size_t)bit >> 3))
     return -1;
 
   return (*(vec + (bit >> 3)) & (1 << (bit & 0x07))) != 0;

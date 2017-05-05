@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "libcoap.h"
 #include "debug.h"
 #include "mem.h"
 #include "coap_list.h"

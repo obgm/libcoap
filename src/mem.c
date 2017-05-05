@@ -8,6 +8,7 @@
 
 
 #include "coap_config.h"
+#include "libcoap.h"
 #include "mem.h"
 #include "debug.h"
 

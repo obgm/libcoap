@@ -126,7 +126,7 @@ coap_resource_t *coap_resource_init(const unsigned char *uri,
  * @p mode which must be one of @c COAP_RESOURCE_FLAGS_NOTIFY_NON
  * or @c COAP_RESOURCE_FLAGS_NOTIFY_CON.
  */
-static inline void
+COAP_STATIC_INLINE void
 coap_resource_set_mode(coap_resource_t *r, int mode) {
   r->flags = (r->flags & !COAP_RESOURCE_FLAGS_NOTIFY_CON) | mode;
 }
@@ -255,7 +255,7 @@ coap_print_status_t coap_print_link(const coap_resource_t *resource,
  * @param method   The CoAP request method to handle.
  * @param handler  The handler to register with @p resource.
  */
-static inline void
+COAP_STATIC_INLINE void
 coap_register_handler(coap_resource_t *resource,
                       unsigned char method,
                       coap_method_handler_t handler) {
