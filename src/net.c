@@ -369,10 +369,9 @@ coap_new_context(
   coap_clock_init();
 #ifdef WITH_LWIP
   coap_prng_init(LWIP_RAND());
-#endif /* WITH_LWIP */
-#if defined (WITH_CONTIKI) || defined (WITH_POSIX)
+#else
   coap_prng_init((void *)((unsigned long)listen_addr ^ clock_offset));
-#endif /* WITH_CONTIKI || WITH_POSIX */
+#endif
 
 #ifndef WITH_CONTIKI
   if (!c) {
