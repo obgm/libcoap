@@ -353,15 +353,13 @@ coap_new_context(
 #endif /* not WITH_CONTIKI */
 
   coap_clock_init();
-#ifdef WITH_LWIP
+#if defined(WITH_LWIP)
   prng_init(LWIP_RAND());
-#endif /* WITH_LWIP */
-#ifdef WITH_CONTIKI
+#elif defined(WITH_CONTIKI)
   prng_init((ptrdiff_t)listen_addr ^ clock_offset);
-#endif /* WITH_LWIP */
-#ifdef WITH_POSIX
+#elif !defined(_WIN32)
   prng_init((unsigned long)listen_addr ^ clock_offset);
-#endif /* WITH_POSIX */
+#endif
 
 #ifndef WITH_CONTIKI
   if (!c) {
