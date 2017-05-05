@@ -52,18 +52,25 @@ coap_run_once(coap_context_t *ctx, unsigned int timeout_ms) {
     if (nextpdu && ((max_wait == 0) || nextpdu->t < max_wait)) {
       /* set timeout if there is a pdu to send */
       tv.tv_usec = ((nextpdu->t) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-      tv.tv_sec = (nextpdu->t) / COAP_TICKS_PER_SECOND;
+      tv.tv_sec = (long)(nextpdu->t) / COAP_TICKS_PER_SECOND;
     } else {
       tv.tv_usec = (max_wait % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-      tv.tv_sec = max_wait / COAP_TICKS_PER_SECOND;
+      tv.tv_sec = (long)max_wait / COAP_TICKS_PER_SECOND;
     }
 
     result = select(maxfd + 1, &readfds, 0, 0, (nextpdu || (max_wait > 0)) ? &tv : NULL);
 
     if (result < 0) {   /* error */
-      if (errno != EINTR) {
+#ifdef _WIN32
+      char *szErrorMsg = NULL;
+      FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
+	  coap_log(LOG_DEBUG, szErrorMsg);
+      LocalFree( szErrorMsg );
+#else
+	  if (errno != EINTR) {
         coap_log(LOG_DEBUG, strerror(errno));
       }
+#endif
       return -1;
     } else if (result > 0) {  /* read from socket */
       coap_tick_t past = now;

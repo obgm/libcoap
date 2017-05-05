@@ -17,9 +17,16 @@
 #endif
 #ifdef HAVE_SYS_SOCKET_H
 # include <sys/socket.h>
+# define OPTVAL_T(t)         (t)
 #endif
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
+#endif
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+# define OPTVAL_T(t)         (const char*)(t)
+# undef CMSG_DATA
+# define CMSG_DATA WSA_CMSG_DATA
 #endif
 #ifdef HAVE_SYS_UIO_H
 # include <sys/uio.h>
@@ -30,16 +37,18 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#include "libcoap.h"
 #include "debug.h"
 #include "mem.h"
 #include "coap_dtls.h"
 #include "coap_io.h"
+#include "pdu.h"
 
 struct coap_packet_t {
   coap_if_handle_t hnd;	      /**< the interface handle */
   coap_address_t src;	      /**< the packet's source address */
   coap_address_t dst;	      /**< the packet's destination address */
-  const coap_endpoint_t *interface;
+  const coap_endpoint_t *endpoint;
 
   int ifindex;
   void *session;		/**< opaque session data */
@@ -50,21 +59,24 @@ struct coap_packet_t {
 
 #ifndef CUSTOM_COAP_NETWORK_ENDPOINT
 
-static inline struct coap_endpoint_t *
+COAP_STATIC_INLINE struct coap_endpoint_t *
 coap_malloc_posix_endpoint(void) {
   return (struct coap_endpoint_t *)coap_malloc(sizeof(struct coap_endpoint_t));
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_free_posix_endpoint(struct coap_endpoint_t *ep) {
   coap_free(ep);
 }
 
 coap_endpoint_t *
 coap_new_endpoint(const coap_address_t *addr, int flags) {
-  int sockfd;
+  coap_socket_t sockfd;
   int on = 1;
   struct coap_endpoint_t *ep = NULL;
+#ifdef _WIN32
+  u_long uNonBlocking = 1;
+#endif
 
   if (((flags & COAP_ENDPOINT_DTLS) != 0) && !coap_dtls_is_supported()) {
     coap_log(LOG_CRIT, "coap_new_endpoint: DTLS not supported\n");
@@ -72,31 +84,38 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
   }
 
   sockfd = socket(addr->addr.sa.sa_family, SOCK_DGRAM, 0);
-  if (sockfd < 0) {
+  if (sockfd == COAP_INVALID_SOCKET) {
     coap_log(LOG_WARNING, "coap_new_endpoint: socket");
     return NULL;
   }
 
+#ifdef _WIN32
+  if (ioctlsocket(sockfd, FIONBIO, &uNonBlocking) != NO_ERROR) {
+    coap_log(LOG_WARNING, "coap_new_endpoint: %s\n", "cannot set ot non-blocking");
+    goto error;
+  }
+#else
   if (fcntl(sockfd, F_SETFL, O_NONBLOCK) < 0) {
     coap_log(LOG_WARNING, "coap_new_endpoint: %s\n", strerror(errno));
     goto error;
   }
+#endif
 
-  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
     coap_log(LOG_WARNING, "coap_new_endpoint: setsockopt SO_REUSEADDR");
 
   on = 1;
   switch(addr->addr.sa.sa_family) {
   case AF_INET:
-    if (setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on)) < 0)
+    if (setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IP_PKTINFO\n");
     break;
   case AF_INET6:
 #ifdef IPV6_RECVPKTINFO
-    if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on)) < 0)
+    if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_RECVPKTINFO\n");
 #else /* IPV6_RECVPKTINFO */
-    if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_PKTINFO, &on, sizeof(on)) < 0)
+    if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_PKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_PKTINFO\n");
 #endif /* IPV6_RECVPKTINFO */
     break;
@@ -104,7 +123,7 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
     coap_log(LOG_ALERT, "coap_new_endpoint: unsupported sa_family\n");
   }
 
-  if (bind(sockfd, &addr->addr.sa, addr->size) < 0) {
+  if (bind(sockfd, &addr->addr.sa, addr->size) == COAP_SOCKET_ERROR) {
     coap_log(LOG_WARNING, "coap_new_endpoint: bind");
     goto error;
   }
@@ -143,7 +162,7 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
   return (coap_endpoint_t *)ep;
  error:
 
-  close (sockfd);
+  coap_closesocket(sockfd);
   coap_free_posix_endpoint(ep);
   return NULL;
 }
@@ -151,8 +170,8 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
 void
 coap_free_endpoint(coap_endpoint_t *ep) {
   if(ep) {
-    if (ep->handle.fd >= 0)
-      close(ep->handle.fd);
+    if (ep->handle.fd != COAP_INVALID_SOCKET)
+      coap_closesocket(ep->handle.fd);
     coap_free_posix_endpoint((struct coap_endpoint_t *)ep);
   }
 }
@@ -177,7 +196,7 @@ struct in_pktinfo {
 };
 #endif /* HAVE_NETINET_IN_H */
 
-#if defined(WITH_POSIX) && !defined(SOL_IP)
+#if !defined(SOL_IP)
 /* Solaris expects level IPPROTO_IP for ancillary data. */
 #define SOL_IP IPPROTO_IP
 #endif
@@ -187,6 +206,25 @@ struct in_pktinfo {
 #else /* not a GCC */
 #define UNUSED_PARAM
 #endif /* GCC */
+
+#if defined(_WIN32)
+#include <mswsock.h>
+static __declspec( thread ) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
+/* Map struct WSABUF fields to their posix counterpart */
+#define msghdr _WSAMSG
+#define msg_name name
+#define msg_namelen namelen
+#define msg_iov lpBuffers
+#define msg_iovlen dwBufferCount
+#define msg_control Control.buf
+#define msg_controllen Control.len
+#define iovec _WSABUF
+#define iov_base buf
+#define iov_len len
+#undef CMSG_DATA
+#define CMSG_DATA WSA_CMSG_DATA
+#define ipi_spec_dst ipi_addr
+#endif
 
 ssize_t
 coap_network_send(struct coap_context_t *context UNUSED_PARAM,
@@ -200,6 +238,11 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
 
   /* a buffer large enough to hold all protocol address types */
   char buf[CMSG_LEN(sizeof(struct sockaddr_storage))];
+#ifdef _WIN32
+  DWORD dwNumberOfBytesSent = 0;
+  int r;
+#endif
+
   struct msghdr mhdr;
   struct iovec iov[1];
 
@@ -279,7 +322,15 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     return -1;
   }
 
+#ifdef _WIN32
+  r = WSASendMsg( ep->handle.fd, &mhdr, 0 /*dwFlags*/, &dwNumberOfBytesSent, NULL /*lpOverlapped*/, NULL /*lpCompletionRoutine*/ );
+  if ( r == 0 )
+    return (ssize_t)dwNumberOfBytesSent;
+  else
+    return -1;
+#else
   return sendmsg(ep->handle.fd, &mhdr, 0);
+#endif
 }
 
 #endif /* CUSTOM_COAP_NETWORK_SEND */
@@ -305,14 +356,14 @@ coap_free_packet(coap_packet_t *packet) {
   coap_free(packet);
 }
 
-static inline size_t
+COAP_STATIC_INLINE size_t
 coap_get_max_packetlength(const coap_packet_t *packet UNUSED_PARAM) {
   return COAP_MAX_PDU_SIZE;
 }
 
 void
 coap_packet_populate_endpoint(coap_packet_t *packet, coap_endpoint_t *target) {
-  target->handle = packet->interface->handle;
+  target->handle = packet->endpoint->handle;
   memcpy(&target->addr, &packet->dst, sizeof(target->addr));
   target->ifindex = packet->ifindex;
   target->flags = 0; /* FIXME */
@@ -332,7 +383,7 @@ coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t
  * local interface with address @p local. This function returns @c 1
  * if @p dst is a valid match, and @c 0 otherwise.
  */
-static inline int
+COAP_STATIC_INLINE int
 is_local_if(const coap_address_t *local, const coap_address_t *dst) {
   return coap_address_isany(local) || coap_address_equals(dst, local) ||
     coap_is_mcast(dst);
@@ -341,8 +392,12 @@ is_local_if(const coap_address_t *local, const coap_address_t *dst) {
 ssize_t
 coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   ssize_t len = -1;
+#if defined(_WIN32)
+  DWORD dwNumberOfBytesRecvd = 0;
+  int r;
+#endif
 
-  char msg_control[CMSG_LEN(sizeof(struct sockaddr_storage))];
+  char buf[CMSG_LEN(sizeof(struct sockaddr_storage))];
   struct msghdr mhdr;
   struct iovec iov[1];
 
@@ -371,29 +426,51 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 
   memset(&mhdr, 0, sizeof(struct msghdr));
 
-  mhdr.msg_name = &(*packet)->src.addr.st;
+  mhdr.msg_name = (struct sockaddr*)&(*packet)->src.addr.st;
   mhdr.msg_namelen = sizeof((*packet)->src.addr.st);
 
   mhdr.msg_iov = iov;
   mhdr.msg_iovlen = 1;
 
-  mhdr.msg_control = msg_control;
-  mhdr.msg_controllen = sizeof(msg_control);
-  assert(sizeof(msg_control) == CMSG_LEN(sizeof(struct sockaddr_storage)));
+  mhdr.msg_control = buf;
+  mhdr.msg_controllen = sizeof(buf);
+  assert(sizeof(buf) == CMSG_LEN(sizeof(struct sockaddr_storage)));
 
+#if defined(_WIN32)
+  if ( !lpWSARecvMsg ) {
+    GUID wsaid = WSAID_WSARECVMSG;
+	DWORD cbBytesReturned = 0;
+	if ( WSAIoctl( ep->handle.fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &wsaid, sizeof( wsaid ), &lpWSARecvMsg, sizeof( lpWSARecvMsg ), &cbBytesReturned, NULL, NULL ) != 0 ) {
+      coap_log(LOG_WARNING, "coap_network_read: no WSARecvMsg\n");
+      return -1;
+    }
+  }
+  r = lpWSARecvMsg( ep->handle.fd, &mhdr, &dwNumberOfBytesRecvd, NULL /* LPWSAOVERLAPPED */, NULL /* LPWSAOVERLAPPED_COMPLETION_ROUTINE */ );
+  if ( r == 0 ) {
+    len = (ssize_t)dwNumberOfBytesRecvd;
+  } else {
+	char *szErrorMsg = NULL;
+	FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
+    coap_log(LOG_WARNING, "coap_network_read: %s\n", szErrorMsg);
+	LocalFree( szErrorMsg );
+	len = -1;
+  }
+#else
   len = recvmsg(ep->handle.fd, &mhdr, 0);
+  if ( len < 0 )
+    coap_log(LOG_WARNING, "coap_network_read: %s\n", strerror(errno));
+#endif
 
   if (len < 0) {
-    coap_log(LOG_WARNING, "coap_network_read: %s\n", strerror(errno));
     goto error;
   } else {
     struct cmsghdr *cmsg;
 
-    coap_log(LOG_DEBUG, "received %d bytes on fd %d\n", (int)len, ep->handle.fd);
+    coap_log(LOG_DEBUG, "received %d bytes on fd %d\n", (int)len, (int)ep->handle.fd);
 
     /* use getsockname() to get the local port */
     (*packet)->dst.size = sizeof((*packet)->dst.addr);
-    if (getsockname(ep->handle.fd, &(*packet)->dst.addr.sa, &(*packet)->dst.size) < 0) {
+    if (getsockname(ep->handle.fd, &(*packet)->dst.addr.sa, &(*packet)->dst.size) == COAP_SOCKET_ERROR) {
       coap_log(LOG_DEBUG, "cannot determine local port\n");
       goto error;
     }
@@ -452,7 +529,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
     }
   }
 
-  (*packet)->interface = ep;
+  (*packet)->endpoint = ep;
 
   return len;
  error:

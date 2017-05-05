@@ -15,6 +15,18 @@
 
 #include "address.h"
 
+#ifdef _WIN32
+typedef SOCKET coap_socket_t;
+#define coap_closesocket closesocket
+#define COAP_SOCKET_ERROR SOCKET_ERROR
+#define COAP_INVALID_SOCKET INVALID_SOCKET
+#else
+typedef int coap_socket_t;
+#define coap_closesocket close
+#define COAP_SOCKET_ERROR (-1)
+#define COAP_INVALID_SOCKET (-1)
+#endif
+
 #ifdef WITH_LWIP
 # include <lwip/udp.h>
 #endif
@@ -38,12 +50,13 @@ struct coap_context_t;
  */
 typedef struct coap_endpoint_t {
   struct coap_endpoint_t *next;
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP)
   union {
-    int fd;       /**< on POSIX systems */
-    void *conn;   /**< opaque connection (e.g. uip_conn in Contiki) */
-  } handle;       /**< opaque handle to identify this endpoint */
+    coap_socket_t fd; /**< on POSIX, Contiki and Windows systems */
+    void *conn;       /**< opaque connection (e.g. uip_conn in Contiki) */
+  } handle;           /**< opaque handle to identify this endpoint */
 #endif /* WITH_POSIX or WITH_CONTIKI */
+#endif /* !WITH_LWIP */
 
 #ifdef WITH_LWIP
   struct udp_pcb *pcb;
@@ -145,7 +158,7 @@ struct coap_packet_t {
   coap_if_handle_t hnd;         /**< the interface handle */
   coap_address_t src;           /**< the packet's source address */
   coap_address_t dst;           /**< the packet's destination address */
-  const coap_endpoint_t *interface;
+  const coap_endpoint_t *endpoint;
   int ifindex;
   void *session;                /**< opaque session data */
   size_t length;                /**< length of payload */
