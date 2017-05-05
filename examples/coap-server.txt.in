@@ -60,10 +60,10 @@ verbosity level is set to '5'.
 
 * Example
 ----
-coap-server -A 2001:db8:81a8:0:6ef0:dead:feed:beef  -g FF02:FD
+coap-server -A 2001:db8:81a8:0:6ef0:dead:feed:beef  -g FF02::FD
 ----
 Set listening address to '2001:db8:81a8:0:6ef0:dead:feed:beef' and join the
-All CoAP Nodes multicast group 'FF02:FD'.
+All CoAP Nodes multicast group 'FF02::FD'.
 
 FILES
 ------
