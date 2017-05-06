@@ -236,8 +236,8 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
   struct coap_endpoint_t *ep =
     (struct coap_endpoint_t *)local_interface;
 
-  /* a buffer large enough to hold all protocol address types */
-  char buf[CMSG_LEN(sizeof(struct sockaddr_storage))];
+  /* a buffer large enough to hold all packet info types, ipv6 is the largest */
+  char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 #ifdef _WIN32
   DWORD dwNumberOfBytesSent = 0;
   int r;
@@ -258,7 +258,7 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
   mhdr.msg_iov = iov;
   mhdr.msg_iovlen = 1;
 
-  switch (dst->addr.sa.sa_family) {
+  if ( !coap_address_isany(&local_interface->addr) && !coap_is_mcast(&local_interface->addr) ) switch (dst->addr.sa.sa_family) {
   case AF_INET6: {
     struct cmsghdr *cmsg;
     struct in6_pktinfo *pktinfo;
@@ -275,17 +275,7 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     memset(pktinfo, 0, sizeof(struct in6_pktinfo));
 
     pktinfo->ipi6_ifindex = ep->ifindex;
-    if (coap_is_mcast(&local_interface->addr)) {
-      /* We cannot send with multicast address as source address
-       * and hence let the kernel pick the outgoing interface. */
-      pktinfo->ipi6_ifindex = 0;
-      memset(&pktinfo->ipi6_addr, 0, sizeof(pktinfo->ipi6_addr));
-    } else {
-      pktinfo->ipi6_ifindex = ep->ifindex;
-      memcpy(&pktinfo->ipi6_addr,
-	     &local_interface->addr.addr.sin6.sin6_addr,
-	     local_interface->addr.size);
-    }
+    memcpy( &pktinfo->ipi6_addr, &local_interface->addr.addr.sin6.sin6_addr, sizeof(pktinfo->ipi6_addr) );
     break;
   }
   case AF_INET: {
@@ -303,17 +293,8 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     pktinfo = (struct in_pktinfo *)CMSG_DATA(cmsg);
     memset(pktinfo, 0, sizeof(struct in_pktinfo));
 
-    if (coap_is_mcast(&local_interface->addr)) {
-      /* We cannot send with multicast address as source address
-       * and hence let the kernel pick the outgoing interface. */
-      pktinfo->ipi_ifindex = 0;
-      memset(&pktinfo->ipi_spec_dst, 0, sizeof(pktinfo->ipi_spec_dst));
-    } else {
-      pktinfo->ipi_ifindex = ep->ifindex;
-      memcpy(&pktinfo->ipi_spec_dst,
-	     &local_interface->addr.addr.sin.sin_addr,
-	     local_interface->addr.size);
-    }
+    pktinfo->ipi_ifindex = ep->ifindex;
+    memcpy( &pktinfo->ipi_spec_dst, &local_interface->addr.addr.sin.sin_addr, sizeof(pktinfo->ipi_spec_dst) );
     break;
   }
   default:
@@ -397,7 +378,9 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   int r;
 #endif
 
-  char buf[CMSG_LEN(sizeof(struct sockaddr_storage))];
+  /* a buffer large enough to hold all packet info types, ipv6 is the largest */  
+  char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+
   struct msghdr mhdr;
   struct iovec iov[1];
 
@@ -434,7 +417,6 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 
   mhdr.msg_control = buf;
   mhdr.msg_controllen = sizeof(buf);
-  assert(sizeof(buf) == CMSG_LEN(sizeof(struct sockaddr_storage)));
 
 #if defined(_WIN32)
   if ( !lpWSARecvMsg ) {
