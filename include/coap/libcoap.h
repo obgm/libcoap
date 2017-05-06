@@ -40,8 +40,8 @@ typedef USHORT in_port_t;
 #  endif
 #endif
 
-void coap_startup();
+void coap_startup(void);
 
-void coap_cleanup();
+void coap_cleanup(void);
 
 #endif /* _LIBCOAP_H_ */

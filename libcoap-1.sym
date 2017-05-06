@@ -12,6 +12,7 @@ coap_cancel_all_messages
 coap_can_exit
 coap_check_notify
 coap_check_option
+coap_cleanup
 coap_clock_init
 coap_clone_uri
 coap_decode_var_bytes
@@ -102,6 +103,7 @@ coap_show_pdu
 coap_split_path
 coap_split_query
 coap_split_uri
+coap_startup
 coap_subscription_init
 coap_ticks
 coap_ticks

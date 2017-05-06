@@ -1676,7 +1676,7 @@ coap_can_exit( coap_context_t *context ) {
   return !context || (context->sendqueue == NULL);
 }
 
-void coap_startup() {
+void coap_startup(void) {
 #if defined(HAVE_WINSOCK2_H)
   WORD wVersionRequested = MAKEWORD( 2, 2 );
   WSADATA wsaData;
@@ -1684,7 +1684,7 @@ void coap_startup() {
 #endif
 }
 
-void coap_cleanup() {
+void coap_cleanup(void) {
 #if defined(HAVE_WINSOCK2_H)
   WSACleanup();
 #endif
