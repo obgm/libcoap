@@ -101,8 +101,6 @@ print_timestamp(char *s, size_t len, coap_tick_t t) {
 
 #endif /* HAVE_TIME_H */
 
-#ifndef NDEBUG
-
 #ifndef HAVE_STRNLEN
 /** 
  * A length-safe strlen() fake. 
@@ -480,8 +478,6 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   fflush(COAP_DEBUG_FD);
 }
 
-
-#endif /* NDEBUG */
 
 void 
 coap_log_impl(coap_log_t level, const char *format, ...) {
