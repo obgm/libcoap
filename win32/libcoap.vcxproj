@@ -207,7 +207,7 @@ TYPE %(FullPath) &gt;&gt; "%(Outputs)"</Command>
     </CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">
-    <TargetName>$(ProjectName)d-1</TargetName>
+    <TargetName>$(ProjectName)-1d</TargetName>
     <CustomBuildBeforeTargets />
     <CustomBuildAfterTargets />
     <LinkIncremental>false</LinkIncremental>
