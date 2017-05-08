@@ -72,7 +72,7 @@ coap_free_posix_endpoint(struct coap_endpoint_t *ep) {
 coap_endpoint_t *
 coap_new_endpoint(const coap_address_t *addr, int flags) {
   coap_socket_t sockfd;
-  int on = 1;
+  int on = 1, off = 0;
   struct coap_endpoint_t *ep = NULL;
 #ifdef _WIN32
   u_long uNonBlocking = 1;
@@ -111,6 +111,9 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
       coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IP_PKTINFO\n");
     break;
   case AF_INET6:
+    /* Configure the socket as dual-stacked */
+    if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, OPTVAL_T(&off), sizeof(off)) == COAP_SOCKET_ERROR)
+      coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_V6ONLY\n");
 #ifdef IPV6_RECVPKTINFO
     if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_RECVPKTINFO\n");
@@ -118,7 +121,8 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
     if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_PKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_PKTINFO\n");
 #endif /* IPV6_RECVPKTINFO */
-    break;
+    setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, OPTVAL_T(&on), sizeof(on)); /* ignore error, because the likely cause is that IPv4 is disabled at the os level */
+  break;
   default:
     coap_log(LOG_ALERT, "coap_new_endpoint: unsupported sa_family\n");
   }
@@ -258,24 +262,42 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
   mhdr.msg_iov = iov;
   mhdr.msg_iovlen = 1;
 
-  if ( !coap_address_isany(&local_interface->addr) && !coap_is_mcast(&local_interface->addr) ) switch (dst->addr.sa.sa_family) {
+  if ( !coap_address_isany(&local_interface->addr) && !coap_is_mcast(&local_interface->addr) ) switch (local_interface->addr.addr.sa.sa_family) {
   case AF_INET6: {
     struct cmsghdr *cmsg;
-    struct in6_pktinfo *pktinfo;
 
-    mhdr.msg_control = buf;
-    mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+    if ( IN6_IS_ADDR_V4MAPPED( &local_interface->addr.addr.sin6.sin6_addr ) ) {
+      struct in_pktinfo *pktinfo;
+      mhdr.msg_control = buf;
+      mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
 
-    cmsg = CMSG_FIRSTHDR(&mhdr);
-    cmsg->cmsg_level = IPPROTO_IPV6;
-    cmsg->cmsg_type = IPV6_PKTINFO;
-    cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+      cmsg = CMSG_FIRSTHDR(&mhdr);
+      cmsg->cmsg_level = SOL_IP;
+      cmsg->cmsg_type = IP_PKTINFO;
+      cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 
-    pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
-    memset(pktinfo, 0, sizeof(struct in6_pktinfo));
+      pktinfo = (struct in_pktinfo *)CMSG_DATA(cmsg);
+      memset(pktinfo, 0, sizeof(struct in_pktinfo));
 
-    pktinfo->ipi6_ifindex = ep->ifindex;
-    memcpy( &pktinfo->ipi6_addr, &local_interface->addr.addr.sin6.sin6_addr, sizeof(pktinfo->ipi6_addr) );
+      pktinfo->ipi_ifindex = ep->ifindex;
+      memcpy( &pktinfo->ipi_spec_dst, local_interface->addr.addr.sin6.sin6_addr.s6_addr + 12, sizeof(pktinfo->ipi_spec_dst) );
+
+	} else {
+      struct in6_pktinfo *pktinfo;
+      mhdr.msg_control = buf;
+      mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+
+      cmsg = CMSG_FIRSTHDR(&mhdr);
+      cmsg->cmsg_level = IPPROTO_IPV6;
+      cmsg->cmsg_type = IPV6_PKTINFO;
+      cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+
+      pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
+      memset(pktinfo, 0, sizeof(struct in6_pktinfo));
+
+      pktinfo->ipi6_ifindex = ep->ifindex;
+      memcpy( &pktinfo->ipi6_addr, &local_interface->addr.addr.sin6.sin6_addr, sizeof(pktinfo->ipi6_addr) );
+    }
     break;
   }
   case AF_INET: {
@@ -450,6 +472,8 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 
     coap_log(LOG_DEBUG, "received %d bytes on fd %d\n", (int)len, (int)ep->handle.fd);
 
+    ( *packet )->src.size = mhdr.msg_namelen;
+	
     /* use getsockname() to get the local port */
     (*packet)->dst.size = sizeof((*packet)->dst.addr);
     if (getsockname(ep->handle.fd, &(*packet)->dst.addr.sa, &(*packet)->dst.size) == COAP_SOCKET_ERROR) {
@@ -465,41 +489,32 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 
       /* get the local interface for IPv6 */
       if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
-	union {
-	  unsigned char *c;
-	  struct in6_pktinfo *p;
-	} u;
-	u.c = CMSG_DATA(cmsg);
-	(*packet)->ifindex = (int)(u.p->ipi6_ifindex);
-
-	memcpy(&(*packet)->dst.addr.sin6.sin6_addr,
-	       &u.p->ipi6_addr, sizeof(struct in6_addr));
-
-	(*packet)->src.size = mhdr.msg_namelen;
-	assert((*packet)->src.size == sizeof(struct sockaddr_in6));
-
-	(*packet)->src.addr.sin6.sin6_family = SIN6(mhdr.msg_name)->sin6_family;
-	(*packet)->src.addr.sin6.sin6_addr = SIN6(mhdr.msg_name)->sin6_addr;
-	(*packet)->src.addr.sin6.sin6_port = SIN6(mhdr.msg_name)->sin6_port;
-
-	break;
+        union {
+          uint8_t *c;
+          struct in6_pktinfo *p;
+        } u;
+        u.c = CMSG_DATA(cmsg);
+        (*packet)->ifindex = (int)(u.p->ipi6_ifindex);
+        memcpy(&(*packet)->dst.addr.sin6.sin6_addr, &u.p->ipi6_addr, sizeof(struct in6_addr));
+        break;
       }
 
       /* local interface for IPv4 */
       if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_PKTINFO) {
-	union {
-	  unsigned char *c;
-	  struct in_pktinfo *p;
-	} u;
-
-	u.c = CMSG_DATA(cmsg);
-	(*packet)->ifindex = u.p->ipi_ifindex;
-
-	memcpy(&(*packet)->dst.addr.sin.sin_addr,
-	       &u.p->ipi_addr, sizeof(struct in_addr));
-
-	(*packet)->src.size = mhdr.msg_namelen;
-	memcpy(&(*packet)->src.addr.st, mhdr.msg_name, (*packet)->src.size);
+        union {
+          uint8_t *c;
+          struct in_pktinfo *p;
+        } u;
+        u.c = CMSG_DATA(cmsg);
+        (*packet)->ifindex = u.p->ipi_ifindex;
+        if ( (*packet)->dst.addr.sa.sa_family==AF_INET6 ) {
+          memset( (*packet)->dst.addr.sin6.sin6_addr.s6_addr, 0, 10 );
+          (*packet)->dst.addr.sin6.sin6_addr.s6_addr[10] = 0xff;
+          (*packet)->dst.addr.sin6.sin6_addr.s6_addr[11] = 0xff;
+          memcpy( (*packet)->dst.addr.sin6.sin6_addr.s6_addr+12, &u.p->ipi_addr, sizeof(struct in_addr) );
+        } else {
+          memcpy(&(*packet)->dst.addr.sin.sin_addr, &u.p->ipi_addr, sizeof(struct in_addr));
+        }
 
 	break;
       }
