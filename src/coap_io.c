@@ -169,7 +169,9 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
       coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_V6ONLY\n");
     if (setsockopt(sockfd, IPPROTO_IPV6, GEN_IPV6_PKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_PKTINFO\n");
+#ifdef _WIN32
     setsockopt(sockfd, IPPROTO_IP, GEN_IP_PKTINFO, OPTVAL_T(&on), sizeof(on)); /* ignore error, because the likely cause is that IPv4 is disabled at the os level */
+#endif
   break;
   default:
     coap_log(LOG_ALERT, "coap_new_endpoint: unsupported sa_family\n");
@@ -315,6 +317,7 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
   case AF_INET6: {
     struct cmsghdr *cmsg;
 
+#ifdef _WIN32
     if ( IN6_IS_ADDR_V4MAPPED( &local_interface->addr.addr.sin6.sin6_addr ) ) {
       struct in_pktinfo *pktinfo;
       mhdr.msg_control = buf;
@@ -331,7 +334,9 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
       pktinfo->ipi_ifindex = ep->ifindex;
       memcpy( &pktinfo->ipi_spec_dst, local_interface->addr.addr.sin6.sin6_addr.s6_addr + 12, sizeof(pktinfo->ipi_spec_dst) );
 
-	} else {
+	} else
+#endif
+	{
       struct in6_pktinfo *pktinfo;
       mhdr.msg_control = buf;
       mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
