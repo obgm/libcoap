@@ -136,8 +136,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\libcoap-1.sym">
-      <Filter>Resource Files</Filter>
-    </None>
+    <CustomBuild Include="..\libcoap-1.sym" />
   </ItemGroup>
 </Project>
