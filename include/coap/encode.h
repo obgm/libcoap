@@ -50,10 +50,22 @@ extern int coap_flsll(long long i);
 unsigned int coap_decode_var_bytes(unsigned char *buf,unsigned int len);
 
 /**
- * Encodes multiple-length byte sequences. buf points to an output buffer of
- * sufficient length to store the encoded bytes. val is the value to encode.
- * Returns the number of bytes used to encode val or 0 on error.
+ * DEPRECATED. Encodes multiple-length byte sequences. buf points to
+ * an output buffer of sufficient length to store the encoded
+ * bytes. val is the value to encode.  Returns the number of bytes
+ * used to encode val or 0 on error.
+ * Please use coap_encode_var_bytes2() instead.
  */
 unsigned int coap_encode_var_bytes(unsigned char *buf, unsigned int val);
+
+/**
+ * Encodes multiple-length byte sequences. buf points to an output
+ * buffer of buf_len bytes to store the encoded bytes. val is the
+ * value to encode.  Returns the number of bytes used to encode val or
+ * 0 on error.  This includes the case where val requires more than
+ * buf_len bytes.
+ */
+unsigned int coap_encode_var_bytes2(unsigned char *buf, unsigned int len,
+				    unsigned int val);
 
 #endif /* _COAP_ENCODE_H_ */

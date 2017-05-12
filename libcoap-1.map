@@ -27,6 +27,7 @@ global:
   coap_delete_string;
   coap_dispatch;
   coap_encode_var_bytes;
+  coap_encode_var_bytes2;
   coap_find_async;
   coap_find_attr;
   coap_find_observer;

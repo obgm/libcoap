@@ -55,3 +55,22 @@ coap_encode_var_bytes(unsigned char *buf, unsigned int val) {
   return n;
 }
 
+unsigned int
+coap_encode_var_bytes2(unsigned char *buf, unsigned int buf_len,
+		       unsigned int val) {
+  unsigned int n, i;
+
+  /* count how many bytes are needed to store value: */
+  for (n = 0, i = val; i && n < sizeof(val); ++n)
+    i >>= 8;
+
+  if (n > buf_len)
+    return 0;
+
+  i = n;
+  while (i--) {
+    buf[i] = val & 0xff;
+    val >>= 8;
+  }
+  return n;
+}

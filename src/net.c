@@ -1205,7 +1205,7 @@ coap_wellknown_response(coap_context_t *context, coap_pdu_t *request) {
 
   /* Add Content-Format. As we have checked for available storage,
    * nothing should go wrong here. */
-  assert(coap_encode_var_bytes(buf, 
+  assert(coap_encode_var_bytes2(buf, sizeof(buf),
 		    COAP_MEDIATYPE_APPLICATION_LINK_FORMAT) == 1);
   coap_add_option(resp, COAP_OPTION_CONTENT_FORMAT,
 		  coap_encode_var_bytes(buf, 
