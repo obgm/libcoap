@@ -19,6 +19,21 @@ functions for platform with support for malloc() and BSD-style
 sockets. The examples directory contains a client and a server to
 demonstrate the use of this library. 
 
+INSTALLATION INSTRUCTIONS - BRANCH DTLS
+================
+
+First get the TinyDTLS submodule:
+```bash
+git submodule update --init --recursive
+```
+
+Second generate the environment and build everything:
+```bash
+./autogen.sh
+./configure --disable-shared
+make
+```
+
 LICENSE INFORMATION
 ===================
 
