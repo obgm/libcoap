@@ -23,12 +23,12 @@ INSTALLATION INSTRUCTIONS - BRANCH DTLS
 ================
 
 First get the TinyDTLS submodule:
-```bash
+```shell
 git submodule update --init --recursive
 ```
 
 Second generate the environment and build everything:
-```bash
+```shell
 ./autogen.sh
 ./configure --disable-shared
 make
