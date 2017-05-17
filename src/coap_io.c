@@ -274,9 +274,12 @@ static __declspec( thread ) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
 #define iovec _WSABUF
 #define iov_base buf
 #define iov_len len
+#define iov_len_t u_long
 #undef CMSG_DATA
 #define CMSG_DATA WSA_CMSG_DATA
 #define ipi_spec_dst ipi_addr
+#else
+#define iov_len_t size_t
 #endif
 
 ssize_t
@@ -304,7 +307,7 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
   assert(local_interface);
 
   iov[0].iov_base = data;
-  iov[0].iov_len = datalen;
+  iov[0].iov_len = (iov_len_t)datalen;
 
   memset(&mhdr, 0, sizeof(struct msghdr));
   mhdr.msg_name = (void *)&dst->addr;
@@ -504,7 +507,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 
 #if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
   iov[0].iov_base = (*packet)->payload;
-  iov[0].iov_len = coap_get_max_packetlength(*packet);
+  iov[0].iov_len = (iov_len_t)coap_get_max_packetlength(*packet);
 
   memset(&mhdr, 0, sizeof(struct msghdr));
 
