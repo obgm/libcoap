@@ -56,34 +56,52 @@ LT_INIT([shared static])
 #
 # How to work with the libtool versioning?
 #
-# Follow the followings steps from top to bottom. This means allways start at point 1
+# Follow the followings steps from top to bottom. This means always start at point 1
 # if you plan to make a release and change the values.
 # Every new library starts with a version 'current'  (short 'c') = 0
 #                                         'revision' (short 'r') = 0
 #                                         'age'      (short 'a') = 0
 #
-# Update the libtool versioning only immediately before a public release of libcoap.
+# Update the libtool versioning only after the release of a public release of libcoap.
+# Go through the following checklist from top to bottom and check your needs, following
+# the reminded changes if you can "Yes" for specific check.
 #
-# 1. If the library source code has changed at all since the last update, then
-#    increment revision (c:r:a becomes c:r+1:a).
-#  --> Increase the 'LT_LIBCOAP_REVISION' value with *everey* new software release.
+# 1. Only existing code has changed, no functional changes
+#    If the library source code has changed but *no* new symbols were added at all
+#    since the last update, then increment revision (c:r:a becomes c:r+1:a).
+#    This is usually happen if the existing source of a function was changed for
+#    bug fixing e.g.
 #
-# 2. If any interfaces [exported functions or data] have been added, removed, or
-#    changed since the last update, increment current, and set revision to 0
-#    (c:r:a becomes c+1:r=0:a).
-#  --> Increase the 'LT_LIBCOAP_CURRENT' value whenever as an interface has been added,
-#      removed or changed. This implies also a API change! You mostly have to change
-#      the 'libcoap_major_version' then too!
+#  --> Increase the 'LT_LIBCOAP_REVISION' value with *every* new software release
+#      within one release cycle.
+#
+# 2. Interfaces were added, functional changed or removed
+#    If any interfaces [exported functions or data] have been added, got internal
+#    changes that implies a different behaviour or removed and by this the visible
+#    symbols have changed since the last update, increment current, and set
+#    revision to 0 (c:r:a becomes c+1:r=0:a).
+#
+#  --> Increase the 'LT_LIBCOAP_CURRENT' value whenever as an interface has been added
+#      or removed. This implies also a API change! You mostly have to change the
+#      'libcoap_major_version' or at least 'libcoap_minor_version' then too!
 #  --> Set 'LT_LIBCOAP_REVISION' to 0.
 #
-# 3. If any interfaces have been added since the last public release, then increment
-#    age (c:r:a becomes c:r:a+1). Adding new interfaces will make the library allways
-#    backwards compatable.
+# 3. Interfaces were added but none removed or changed
+#    If any interfaces have been added since the last public release and non of the
+#    existing interfaces were removed and existing interfaces have not changed internally
+#    functionality then the new library is backward compatible. Existing binaries can
+#    use the new library the same than as the existing old library without loosing
+#    existing functionality or breakage.
+#    Increase age by 1 (c:r:a becomes c:r:a+1).
+#
 #  --> Increase the 'LT_LIBCOAP_AGE' value only if the changes made to the ABI are
 #      backward compatible.
 #
-# 4. If any interfaces whitin the library have been removed since the last public
-#    release, then set age to 0.
+# 4. Interfaces were removed or have functional changes
+#    If any interfaces within the library have been removed since the last public
+#    release or got some internal changes that let the interface act different than
+#    before, then set age to 0. The library isn't backwards compatible.
+#
 #  --> Set 'LT_LIBCOAP_AGE' to 0.
 
 LT_LIBCOAP_CURRENT=0
