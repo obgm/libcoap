@@ -11,7 +11,12 @@ m4_define([libcoap_major_version], [4])
 m4_define([libcoap_minor_version], [2])
 m4_define([libcoap_micro_version], [0])
 
-m4_define([libcoap_version],[libcoap_major_version.libcoap_minor_version.libcoap_micro_version])
+# define a appending release state if needed, for example for pre-releases
+# like 'alpha' or 'rc1', for a full release keep the value empty!
+m4_define([libcoap_release_state], [alpha])
+
+# concatenate the full libcoap version string
+m4_define([libcoap_version], [m4_format([%s.%s.%s%s], libcoap_major_version, libcoap_minor_version, libcoap_micro_version, libcoap_release_state)])
 
 AC_INIT([libcoap], [libcoap_version], [libcoap-developers@lists.sourceforge.net], [libcoap], [https://libcoap.net/])
 AC_PREREQ([2.64])
