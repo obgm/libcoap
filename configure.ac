@@ -8,8 +8,8 @@
 # Define the libcoap software version here. Note! The libtool versions are
 # defined later.
 m4_define([libcoap_major_version], [4])
-m4_define([libcoap_minor_version], [1])
-m4_define([libcoap_micro_version], [2])
+m4_define([libcoap_minor_version], [2])
+m4_define([libcoap_micro_version], [0])
 
 m4_define([libcoap_version],[libcoap_major_version.libcoap_minor_version.libcoap_micro_version])
 
