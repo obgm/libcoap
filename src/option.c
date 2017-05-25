@@ -366,7 +366,7 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
     }
     
     opt[0] |= 0x0d;
-    opt[++skip] = length - 13;
+    opt[++skip] = (uint8_t)(length - 13);
   } else {
     if (maxlen < skip + 2) {
       debug("insufficient space to encode option delta %d", delta);
@@ -498,7 +498,7 @@ coap_option_filter_op(coap_opt_filter_t filter,
   if (is_long_option(type)) {
     of->long_opts[index - 1] = type;
   } else {
-    of->short_opts[index - COAP_OPT_FILTER_LONG - 1] = type;
+    of->short_opts[index - COAP_OPT_FILTER_LONG - 1] = (uint8_t)type;
   }
 
   of->mask |= 1 << (index - 1);

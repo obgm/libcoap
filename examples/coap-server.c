@@ -30,7 +30,6 @@
 #include <dirent.h>
 #endif
 
-#include "resource.h"
 #include "coap.h"
 #include "coap_dtls.h"
 
@@ -478,9 +477,9 @@ join(coap_context_t *ctx, char *group_name){
   }
 
   if (ctx->endpoint) {
-    result = setsockopt(ctx->sockfd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
+    result = setsockopt(ctx->endpoint->handle.fd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
                         (char *)&mreq, sizeof(mreq));
-    if (result < 0) {
+    if (result==COAP_SOCKET_ERROR) {
 #ifdef _WIN32
       char *szErrorMsg = NULL;
       FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );

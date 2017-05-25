@@ -229,7 +229,7 @@ decode_segment(const unsigned char *seg, size_t length, unsigned char *buf) {
 static int
 check_segment(const unsigned char *s, size_t length) {
 
-  size_t n = 0;
+  int n = 0;
 
   while (length) {
     if (*s == '%') {
@@ -298,7 +298,7 @@ make_decoded_option(const unsigned char *s, size_t length,
 
   decode_segment(s, length, buf);
 
-  return written + res;
+  return (int)(written + res);
 }
 
 
@@ -479,7 +479,7 @@ coap_clone_uri(const coap_uri_t *uri) {
  * segment_handler_t hence we use this wrapper as safe typecast. */
 COAP_STATIC_INLINE void
 hash_segment(unsigned char *s, size_t len, void *data) {
-  coap_hash(s, len, data);
+  coap_hash(s, (unsigned)len, data);
 }
 
 int

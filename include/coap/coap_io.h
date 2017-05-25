@@ -50,16 +50,13 @@ struct coap_context_t;
  */
 typedef struct coap_endpoint_t {
   struct coap_endpoint_t *next;
-#if !defined(WITH_LWIP)
+#ifdef WITH_LWIP
+  struct udp_pcb *pcb;
+#else
   union {
     coap_socket_t fd; /**< on POSIX, Contiki and Windows systems */
     void *conn;       /**< opaque connection (e.g. uip_conn in Contiki) */
   } handle;           /**< opaque handle to identify this endpoint */
-#endif /* WITH_POSIX or WITH_CONTIKI */
-#endif /* !WITH_LWIP */
-
-#ifdef WITH_LWIP
-  struct udp_pcb *pcb;
 #endif /* WITH_LWIP */
   struct coap_context_t *context;
 

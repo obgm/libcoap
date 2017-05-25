@@ -14,9 +14,13 @@
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #else
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
+#endif
 #include <sys/types.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #endif /* HAVE_SYS_SELECT_H */
 
 int
@@ -33,10 +37,12 @@ coap_run_once(coap_context_t *ctx, unsigned int timeout_ms) {
   FD_ZERO(&readfds);
   LL_FOREACH(ctx->endpoint, ep) {
     FD_SET(ep->handle.fd, &readfds);
+#ifndef _WIN32	/* nfds is ignored by winsock */
     if (maxfd < ep->handle.fd) {
       maxfd = ep->handle.fd;
     }
-  }
+#endif
+}
 
   coap_ticks(&now);
 
@@ -81,14 +87,14 @@ coap_run_once(coap_context_t *ctx, unsigned int timeout_ms) {
       }
       coap_read(ctx);           /* read received data */
       coap_ticks(&now);
-      return ((now - past) * 1000) / COAP_TICKS_PER_SECOND;
+      return (int)(((now - past) * 1000) / COAP_TICKS_PER_SECOND);
     } else { /* timeout */
       coap_tick_t past = now;
       coap_ticks(&now);
       if (past + max_wait <= now) {
-        return (now - past);
+        return (int)(now - past);
       } else {
-        max_wait -= (now - past);
+        max_wait -= (unsigned long)(now - past);
       }
     }
   }

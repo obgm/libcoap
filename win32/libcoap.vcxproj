@@ -38,7 +38,9 @@
     <ClCompile Include="..\src\address.c" />
     <ClCompile Include="..\src\async.c" />
     <ClCompile Include="..\src\block.c" />
-    <ClCompile Include="..\src\coap_io.c" />
+    <ClCompile Include="..\src\coap_dtls.c" />
+    <ClCompile Include="..\src\coap_event.c" />
+    <ClCompile Include="..\src\coap_keystore.c" />
     <ClCompile Include="..\src\coap_time.c" />
     <ClCompile Include="..\src\debug.c" />
     <ClCompile Include="..\src\encode.c" />
@@ -47,6 +49,9 @@
     <ClCompile Include="..\src\net.c" />
     <ClCompile Include="..\src\option.c" />
     <ClCompile Include="..\src\pdu.c" />
+    <ClCompile Include="..\src\platform\posix\coap_io.c" />
+    <ClCompile Include="..\src\platform\posix\run.c" />
+    <ClCompile Include="..\src\platform\win32\prng.c" />
     <ClCompile Include="..\src\resource.c" />
     <ClCompile Include="..\src\str.c" />
     <ClCompile Include="..\src\subscribe.c" />

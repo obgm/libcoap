@@ -156,7 +156,7 @@ coap_add_token(coap_pdu_t *pdu, size_t len, const unsigned char *data) {
   if (!pdu || len > 8 || pdu->max_size < HEADERLENGTH)
     return 0;
 
-  pdu->hdr->token_length = len;
+  pdu->hdr->token_length = (uint16_t)len;
   if (len)
     memcpy(pdu->hdr->token, data, len);
   pdu->max_delta = 0;
@@ -192,7 +192,7 @@ coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const un
     return 0;
   } else {
     pdu->max_delta = type;
-    pdu->length += optsize;
+    pdu->length += (uint16_t)optsize;
   }
 
   return optsize;
@@ -224,7 +224,7 @@ coap_add_option_later(coap_pdu_t *pdu, unsigned short type, unsigned int len) {
     return NULL;
   } else {
     pdu->max_delta = type;
-    pdu->length += optsize;
+    pdu->length += (uint16_t)optsize;
   }
 
   return ((unsigned char*)opt) + optsize - len;

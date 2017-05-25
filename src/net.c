@@ -370,7 +370,7 @@ coap_new_context(
 #ifdef WITH_LWIP
   coap_prng_init(LWIP_RAND());
 #else
-  coap_prng_init((void *)((unsigned long)listen_addr ^ clock_offset));
+  coap_prng_init((void *)((uintptr_t)listen_addr ^ clock_offset));
 #endif
 
 #ifndef WITH_CONTIKI
@@ -1211,7 +1211,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
 #if COAP_ERROR_PHRASE_LENGTH > 0
     /* note that diagnostic messages do not need a Content-Format option. */
     if (phrase)
-      coap_add_data(response, strlen(phrase), (unsigned char *)phrase);
+      coap_add_data(response, (unsigned)strlen(phrase), (unsigned char *)phrase);
 #endif
   }
 
@@ -1288,7 +1288,7 @@ coap_wellknown_response(coap_context_t *context, coap_pdu_t *request) {
       return resp;
     } else if (block.szx > COAP_MAX_BLOCK_SZX) {
       block.szx = COAP_MAX_BLOCK_SZX;
-      block.num = offset >> (block.szx + 4);
+      block.num = (unsigned)(offset >> (block.szx + 4));
     }
 
     need_block2 = 1;

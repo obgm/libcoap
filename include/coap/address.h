@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
+#include "libcoap.h"
 
 #if defined(WITH_LWIP)
 
@@ -53,9 +54,6 @@ typedef struct coap_address_t {
 #define _coap_is_mcast_impl(Address) uip_is_addr_mcast(&((Address)->addr))
 
 #else /* WITH_LWIP || WITH_CONTIKI */
-#ifdef WITH_POSIX
-#include <sys/socket.h>
-#include <netinet/in.h>
 
 /** multi-purpose address abstraction */
 typedef struct coap_address_t {

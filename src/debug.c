@@ -385,8 +385,8 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   unsigned char *data;
 
   fprintf(COAP_DEBUG_FD, "v:%d t:%s c:%s i:%04x {",
-	  pdu->hdr->version, msg_type_string(pdu->hdr->type),
-	  msg_code_string(pdu->hdr->code), ntohs(pdu->hdr->id));
+	  pdu->hdr->version, msg_type_string((uint8_t)pdu->hdr->type),
+	  msg_code_string((uint8_t)pdu->hdr->code), ntohs(pdu->hdr->id));
 
   for (i = 0; i < pdu->hdr->token_length; i++) {
     fprintf(COAP_DEBUG_FD, "%02x", pdu->hdr->token[i]);
@@ -468,7 +468,7 @@ coap_show_pdu(const coap_pdu_t *pdu) {
       }
       fprintf(COAP_DEBUG_FD, ">>");
     } else {
-      if (print_readable(data, data_len, buf, sizeof(buf), 0)) {
+      if (print_readable(data, (unsigned)data_len, buf, sizeof(buf), 0)) {
 	fprintf(COAP_DEBUG_FD, "'%s'", buf);
       }
     }

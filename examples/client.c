@@ -1297,7 +1297,7 @@ main(int argc, char **argv) {
   coap_tick_t start, now;
   coap_ticks(&start);
   while (!(ready && coap_can_exit(ctx))) {
-    unsigned int wait_ms = observe ? min(obs_wait, max_wait) : max_wait;
+    unsigned int wait_ms = (unsigned)(observe ? min(obs_wait, max_wait) : max_wait);
     result = coap_run_once(ctx, wait_ms);
     if (result >= 0) {
       if ((unsigned int)result <= obs_wait) {

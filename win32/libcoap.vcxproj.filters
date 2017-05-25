@@ -24,9 +24,6 @@
     <ClCompile Include="..\src\block.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\coap_io.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\coap_time.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -61,6 +58,24 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\uri.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_dtls.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_event.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_keystore.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\platform\posix\run.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\platform\posix\coap_io.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\platform\win32\prng.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

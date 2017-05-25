@@ -274,7 +274,7 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
   }
 
   *buflen = written;
-  result = p - buf;
+  result = (coap_print_status_t)(p - buf);
   if (result + old_offset - offset < *buflen) {
     result |= COAP_PRINT_STATUS_TRUNC;
   }
@@ -508,7 +508,7 @@ coap_print_link(const coap_resource_t *resource,
     COPY_COND_WITH_OFFSET(p, bufend, *offset, ";obs", 4, *len);
   }
 
-  result = p - buf;
+  result = (coap_print_status_t)(p - buf);
   if (result + old_offset - *offset < *len) {
     result |= COAP_PRINT_STATUS_TRUNC;
   }

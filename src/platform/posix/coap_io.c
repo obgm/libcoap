@@ -186,7 +186,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
 
 #ifndef CUSTOM_COAP_NETWORK_SEND
 
-#ifndef HAVE_NETINET_IN_H
+#if !defined(HAVE_NETINET_IN_H) && !defined(HAVE_WS2TCPIP_H)
 /* define struct in6_pktinfo and struct in_pktinfo if not available
    FIXME: check with configure
 */
@@ -200,7 +200,7 @@ struct in_pktinfo {
   struct in_addr ipi_spec_dst;
   struct in_addr ipi_addr;
 };
-#endif /* HAVE_NETINET_IN_H */
+#endif /* HAVE_NETINET_IN_H || HAVE_WS2TCPIP_H */
 
 #if !defined(SOL_IP)
 /* Solaris expects level IPPROTO_IP for ancillary data. */

@@ -13,7 +13,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#ifndef _WIN32
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
 #include <time.h>

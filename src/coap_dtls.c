@@ -520,6 +520,15 @@ coap_dtls_is_supported(void) {
   return 0;
 }
 
+void
+coap_dtls_set_log_level(int level) {
+}
+
+int
+coap_dtls_get_log_level(void) {
+  return 0;
+}
+
 struct coap_dtls_context_t *
 coap_dtls_new_context(struct coap_context_t *coap_context UNUSED) {
   return NULL;
