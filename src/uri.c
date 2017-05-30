@@ -37,7 +37,7 @@
  * @return A pointer to the first occurence of @p c, or @c NULL 
  * if not found.
  */
-static inline unsigned char *
+COAP_STATIC_INLINE unsigned char *
 strnchr(unsigned char *s, size_t len, unsigned char c) {
   while (len && *s++ != c)
     --len;
@@ -317,7 +317,7 @@ typedef void (*segment_handler_t)(unsigned char *, size_t, void *);
 /**
  * Checks if path segment @p s consists of one or two dots.
  */
-static inline int
+COAP_STATIC_INLINE int
 dots(unsigned char *s, size_t len) {
   return *s == '.' && (len == 1 || (*(s+1) == '.' && len == 2));
 }
@@ -424,7 +424,7 @@ coap_uri_t *
 coap_new_uri(const unsigned char *uri, unsigned int length) {
   unsigned char *result;
 
-  result = coap_malloc(length + 1 + sizeof(coap_uri_t));
+  result = (unsigned char *)coap_malloc(length + 1 + sizeof(coap_uri_t));
 
   if (!result)
     return NULL;
@@ -484,7 +484,7 @@ coap_clone_uri(const coap_uri_t *uri) {
 
 /* The function signature of coap_hash() is different from
  * segment_handler_t hence we use this wrapper as safe typecast. */
-static inline void
+COAP_STATIC_INLINE void
 hash_segment(unsigned char *s, size_t len, void *data) {
   assert(len <= UINT_MAX);
   coap_hash(s, (unsigned int)len, (unsigned char *)data);
@@ -500,4 +500,63 @@ coap_hash_path(const unsigned char *path, size_t len, coap_key_t key) {
   coap_split_path_impl(path, len, hash_segment, key);
 
   return 1;
+}
+
+/* iterator functions */
+
+coap_parse_iterator_t *
+coap_parse_iterator_init(unsigned char *s, size_t n, unsigned char *separator, unsigned char *delim,
+        size_t dlen, coap_parse_iterator_t *pi) {
+    assert(pi);
+    assert(separator);
+
+    pi->separator = separator;
+    pi->delim = delim;
+    pi->dlen = dlen;
+    pi->pos = s;
+    pi->n = n;
+    pi->segment_length = 0;
+
+    return pi;
+}
+
+unsigned char *
+coap_parse_next(coap_parse_iterator_t *pi) {
+    unsigned char *p, *s;
+
+    if (!pi)
+        return NULL;
+
+    /* proceed to the next segment */
+    pi->n -= pi->segment_length;
+    pi->pos += pi->segment_length;
+    pi->segment_length = 0;
+    s = pi->separator;
+
+    /* last segment? */
+    if (!pi->n || strnchr(pi->delim, pi->dlen, *pi->pos)) {
+        pi->pos = NULL;
+        return NULL;
+    }
+
+    /* skip following separator (the first segment might not have one) */
+
+      if (strchr((const char*)s, *(pi->pos))) {
+          ++pi->pos;
+          --pi->n;
+      }
+
+      p = pi->pos;
+
+      while ((pi->segment_length < pi->n) && (!strchr((const char*)s, *p))
+              && (!strnchr(pi->delim, pi->dlen, *p))) {
+          ++p;
+          ++pi->segment_length;
+      }
+
+    if (!pi->n) {
+        pi->pos = NULL;
+        pi->segment_length = 0;
+    }
+    return pi->pos;
 }

@@ -29,7 +29,7 @@
 
 #endif
 
-#ifdef WITH_POSIX
+#if defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)
 
 #define COAP_MALLOC_TYPE(Type) \
   ((coap_##Type##_t *)coap_malloc(sizeof(coap_##Type##_t)))
@@ -50,12 +50,12 @@ coap_resources_init() {
   memb_init(&subscription_storage);
 }
 
-static inline coap_subscription_t *
+COAP_STATIC_INLINE coap_subscription_t *
 coap_malloc_subscription() {
   return memb_alloc(&subscription_storage);
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_free_subscription(coap_subscription_t *subscription) {
   memb_free(&subscription_storage, subscription);
 }
@@ -64,7 +64,9 @@ coap_free_subscription(coap_subscription_t *subscription) {
 
 #define COAP_PRINT_STATUS_MAX (~COAP_PRINT_STATUS_MASK)
 
+#ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 /* Helper functions for conditional output of character sequences into
  * a given buffer. The first Offset characters are skipped.
@@ -116,7 +118,7 @@ match(const str *text, const str *pattern, int match_prefix, int match_substring
     while (remaining_length) {
       size_t token_length;
       unsigned char *token = next_token;
-      next_token = memchr(token, ' ', remaining_length);
+      next_token = (unsigned char *)memchr(token, ' ', remaining_length);
 
       if (next_token) {
         token_length = next_token - token;
@@ -282,8 +284,7 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
   *buflen = written;
   output_length = p - buf;
 
-  if (output_length > COAP_PRINT_STATUS_MAX)
-  {
+  if (output_length > COAP_PRINT_STATUS_MAX) {
     return COAP_PRINT_STATUS_ERROR;
   }
 
@@ -525,8 +526,7 @@ coap_print_link(const coap_resource_t *resource,
 
   output_length = p - buf;
 
-  if (output_length > COAP_PRINT_STATUS_MAX)
-  {
+  if (output_length > COAP_PRINT_STATUS_MAX) {
     return COAP_PRINT_STATUS_ERROR;
   }
 
@@ -690,8 +690,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
 
       if (COAP_INVALID_TID == tid || response->hdr->type != COAP_MESSAGE_CON)
 	coap_delete_pdu(response);
-      if (COAP_INVALID_TID == tid)
-      {
+      if (COAP_INVALID_TID == tid) {
 	debug("coap_check_notify: sending failed, resource stays partially dirty\n");
         obs->dirty = 1;
         r->partiallydirty = 1;

@@ -8,18 +8,17 @@
  * use.
  */
 
-/* #include "coap_config.h" */
+#include "coap_config.h"
 
 #include <stdio.h>
 #include <string.h>
 
 #include "debug.h"
 #include "mem.h"
-#include "coap_list.h"
-
+#include "coap_append.h"
 
 int
-coap_insert(coap_list_t **head, coap_list_t *node) {
+coap_append(coap_list_t **head, coap_list_t *node) {
   if (!node) {
     coap_log(LOG_WARNING, "cannot create option Proxy-Uri\n");
   } else {
@@ -30,24 +29,3 @@ coap_insert(coap_list_t **head, coap_list_t *node) {
 
   return node != NULL;
 }
-
-int
-coap_delete(coap_list_t *node) {
-  if (node) {
-    coap_free(node);
-  }
-  return 1;
-}
-
-void
-coap_delete_list(coap_list_t *queue) {
-  coap_list_t *elt, *tmp;
-
-  if (!queue)
-    return;
-
-  LL_FOREACH_SAFE(queue, elt, tmp) {
-    coap_delete(elt);
-  }
-}
-

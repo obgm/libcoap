@@ -19,7 +19,9 @@
 #error "COAP_MAX_BLOCK_SZX too large"
 #endif
 
+#ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 #ifndef WITHOUT_BLOCK
 unsigned int
@@ -49,7 +51,7 @@ coap_get_block(coap_pdu_t *pdu, unsigned short type, coap_block_t *block) {
   assert(block);
   memset(block, 0, sizeof(coap_block_t));
 
-  if (pdu && (option = coap_check_option(pdu, type, &opt_iter))) {
+  if (pdu && (option = coap_check_option(pdu, type, &opt_iter)) != NULL) {
     unsigned int num;
 
     block->szx = COAP_OPT_BLOCK_SZX(option);
@@ -76,6 +78,12 @@ coap_write_block_opt(coap_block_t *block, unsigned short type,
   unsigned char buf[4];
 
   assert(pdu);
+
+  /* Block2 */
+  if (type != COAP_OPTION_BLOCK2) {
+    warn("coap_write_block_opt: skipped unknown option\n");
+    return -1;
+  }
 
   start = block->num << (block->szx + 4);
   if (data_length <= start) {

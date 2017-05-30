@@ -6,12 +6,21 @@
  * README for terms of use.
  */
 
-#ifdef WITH_POSIX
-#include <time.h>
-#include <sys/time.h>
-#include <unistd.h>  /* _POSIX_TIMERS */
-
 #include "coap_config.h"
+
+#ifdef HAVE_TIME_H
+#include <time.h>
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>  /* _POSIX_TIMERS */
+#endif
+#ifdef HAVE_WINSOCK2_H
+#include <winsock2.h>
+#include <stdint.h>
+#endif
+
 #include "coap_time.h"
 
 static coap_tick_t coap_clock_offset = 0;
@@ -21,6 +30,27 @@ static coap_tick_t coap_clock_offset = 0;
 
   /* Use real-time clock for correct timestamps in coap_log(). */  
 #define COAP_CLOCK CLOCK_REALTIME
+#endif
+
+#ifdef HAVE_WINSOCK2_H
+static int
+gettimeofday(struct timeval *tp, TIME_ZONE_INFORMATION *tzp) {
+  (void)tzp;
+  static const uint64_t EPOCH = ((uint64_t) 116444736000000000ULL);
+
+  SYSTEMTIME system_time;
+  FILETIME file_time;
+  uint64_t time;
+
+  GetSystemTime(&system_time);
+  SystemTimeToFileTime(&system_time, &file_time);
+  time = ((uint64_t)file_time.dwLowDateTime);
+  time += ((uint64_t)file_time.dwHighDateTime) << 32;
+
+  tp->tv_sec = (long)((time - EPOCH) / 10000000L);
+  tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
+  return 0;
+}
 #endif
 
 void
@@ -47,7 +77,7 @@ coap_clock_init(void) {
 
 void
 coap_ticks(coap_tick_t *t) {
-  unsigned long tmp;
+  coap_tick_t tmp;
 
 #ifdef COAP_CLOCK
   struct timespec tv;
@@ -90,7 +120,7 @@ coap_ticks_to_rt(coap_tick_t t) {
 #else /* WITH_POSIX */
 
 /* make compilers happy that do not like empty modules */
-static inline void dummy()
+COAP_STATIC_INLINE void dummy()
 {
 }
 

@@ -20,7 +20,7 @@
  * @{
  */
 
-#if defined(WITH_POSIX) || (defined(WITH_LWIP) && !defined(LWIP_RAND))
+#if defined(WITH_POSIX) || (defined(WITH_LWIP) && !defined(LWIP_RAND)) || defined(HAVE_WS2TCPIP_H)
 #include <stdlib.h>
 
 /**
@@ -28,13 +28,13 @@
  * prng(). You might want to change prng() to use a better PRNG on your specific
  * platform.
  */
-static inline int
+COAP_STATIC_INLINE int
 coap_prng_impl(unsigned char *buf, size_t len) {
   while (len--)
     *buf++ = rand() & 0xFF;
   return 1;
 }
-#endif /* WITH_POSIX */
+#endif /* WITH_POSIX || (WITH_LWIP && !LWIP_RAND) || HAVE_WS2TCPIP_H */
 
 #ifdef WITH_CONTIKI
 #include <string.h>
@@ -44,7 +44,7 @@ coap_prng_impl(unsigned char *buf, size_t len) {
  * prng(). You might want to change prng() to use a better PRNG on your specific
  * platform.
  */
-static inline int
+COAP_STATIC_INLINE int
 contiki_prng_impl(unsigned char *buf, size_t len) {
   unsigned short v = random_rand();
   while (len > sizeof(v)) {
@@ -63,7 +63,7 @@ contiki_prng_impl(unsigned char *buf, size_t len) {
 #endif /* WITH_CONTIKI */
 
 #if defined(WITH_LWIP) && defined(LWIP_RAND)
-static inline int
+COAP_STATIC_INLINE int
 lwip_prng_impl(unsigned char *buf, size_t len) {
   u32_t v = LWIP_RAND();
   while (len > sizeof(v)) {

@@ -7,6 +7,7 @@
  */
 
 #include "coap_config.h"
+#include "coap.h"
 
 #if defined(HAVE_STRNLEN) && defined(__GNUC__) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE 1
@@ -23,6 +24,12 @@
 
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#if defined(__ANDROID__)
+typedef __uint16_t in_port_t;
+#endif
+#endif
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
 #endif
 
 #ifdef HAVE_TIME_H
@@ -73,7 +80,7 @@ static char *loglevels[] = {
 
 #ifdef HAVE_TIME_H
 
-static inline size_t
+COAP_STATIC_INLINE size_t
 print_timestamp(char *s, size_t len, coap_tick_t t) {
   struct tm *tmp;
   time_t now = coap_ticks_to_rt(t);
@@ -83,7 +90,7 @@ print_timestamp(char *s, size_t len, coap_tick_t t) {
 
 #else /* alternative implementation: just print the timestamp */
 
-static inline size_t
+COAP_STATIC_INLINE size_t
 print_timestamp(char *s, size_t len, coap_tick_t t) {
 #ifdef HAVE_SNPRINTF
   return snprintf(s, len, "%u.%03u", 
@@ -108,7 +115,7 @@ print_timestamp(char *s, size_t len, coap_tick_t t) {
  * 
  * @return The length of @p s.
  */
-static inline size_t
+COAP_STATIC_INLINE size_t
 strnlen(const char *s, size_t maxlen) {
   size_t n = 0;
   while(*s++ && n < maxlen)
@@ -160,7 +167,7 @@ print_readable( const unsigned char *data, size_t len,
 
 size_t
 coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t len) {
-#ifdef HAVE_ARPA_INET_H
+#if defined(HAVE_ARPA_INET_H) || defined(HAVE_WS2TCPIP_H)
   const void *addrptr = NULL;
   in_port_t port;
   unsigned char *p = buf;
@@ -200,7 +207,11 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
       return 0;
   }
 
+#ifdef HAVE_SNPRINTF
   p += snprintf((char *)p, buf + len - p + 1, ":%d", port);
+#else /* HAVE_SNPRINTF */
+    /* @todo manual conversion of port number */
+#endif /* HAVE_SNPRINTF */
 
   return buf + len - p;
 #else /* HAVE_ARPA_INET_H */
@@ -278,7 +289,11 @@ msg_code_string(unsigned short c) {
   if (c < sizeof(methods)/sizeof(char *)) {
     return methods[c];
   } else {
+#ifdef HAVE_SNPRINTF
     snprintf(buf, sizeof(buf), "%u.%02u", c >> 5, c & 0x1f);
+#else
+    sprintf(buf, "%u.%02u", c >> 5, c & 0x1f);
+#endif
     return buf;
   }
 }
@@ -324,13 +339,17 @@ msg_option_string(uint16_t option_type) {
   }
 
   /* unknown option type, just print to buf */
+#ifdef HAVE_SNPRINTF
   snprintf(buf, sizeof(buf), "%u", option_type);
+#else
+  sprintf(buf, "%u", option_type);
+#endif
   return buf;
 }
 
 static unsigned int
 print_content_format(unsigned int format_type,
-		     unsigned char *result, unsigned int buflen) {
+                     unsigned char *result, unsigned int buflen) {
   struct desc_t {
     unsigned int type;
     const char *name;
@@ -351,12 +370,24 @@ print_content_format(unsigned int format_type,
   /* search format_type in list of known content formats */
   for (i = 0; i < sizeof(formats)/sizeof(struct desc_t); i++) {
     if (format_type == formats[i].type) {
+#ifdef HAVE_SNPRINTF
       return snprintf((char *)result, buflen, "%s", formats[i].name);
+#else
+      /* @todo manual conversion of content format */
+      return 0;
+#endif
     }
   }
 
   /* unknown content format, just print numeric value to buf */
+#ifdef HAVE_SNPRINTF
   return snprintf((char *)result, buflen, "%d", format_type);
+#else
+  if (buflen >= 10) {
+    return sprintf((char *)result, "%d", format_type);
+  }
+  return 0;
+#endif
 }
 
 /**
@@ -364,7 +395,7 @@ print_content_format(unsigned int format_type,
  * to carry binary data. The return value @c 0 hence indicates
  * printable data which is also assumed if @p content_format is @c 01.
  */
-static inline int
+COAP_STATIC_INLINE int
 is_binary(int content_format) {
   return !(content_format == -1 ||
 	   content_format == COAP_MEDIATYPE_TEXT_PLAIN ||
@@ -416,11 +447,17 @@ coap_show_pdu(const coap_pdu_t *pdu) {
     case COAP_OPTION_BLOCK2:
       /* split block option into number/more/size where more is the
        * letter M if set, the _ otherwise */
+#ifdef HAVE_SNPRINTF
       buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
 			 coap_opt_block_num(option), /* block number */
 			 COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
 			 (1 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
-
+#else
+      buf_len = sprintf((char *)buf, "%u/%c/%u",
+			 coap_opt_block_num(option), /* block number */
+			 COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
+			 (1 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+#endif
       break;
 
     case COAP_OPTION_URI_PORT:
@@ -428,9 +465,15 @@ coap_show_pdu(const coap_pdu_t *pdu) {
     case COAP_OPTION_OBSERVE:
     case COAP_OPTION_SIZE1:
       /* show values as unsigned decimal value */
+#ifdef HAVE_SNPRINTF
       buf_len = snprintf((char *)buf, sizeof(buf), "%u",
 			 coap_decode_var_bytes(COAP_OPT_VALUE(option),
 					       COAP_OPT_LENGTH(option)));
+#else
+      buf_len = sprintf((char *)buf, "%u",
+			 coap_decode_var_bytes(COAP_OPT_VALUE(option),
+					       COAP_OPT_LENGTH(option)));
+#endif
       break;
 
     default:

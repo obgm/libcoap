@@ -12,7 +12,9 @@
 #include <coap.h>
 
 #include <assert.h>
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -139,8 +141,12 @@ t_wellknown3(void) {
 
   /* ,</0000> (TEST_URI_LEN + 4 chars) */
   for (j = 0; j < num_resources; j++) {
+#ifdef HAVE_SNPRINTF
     int len = snprintf((char *)uribuf, TEST_URI_LEN + 1,
 		       "%0*d", TEST_URI_LEN, j);
+#else
+    int len = sprintf((char *)uribuf, "%0*d", TEST_URI_LEN, j);
+#endif
     r = coap_resource_init(uribuf, len, 0);
     coap_add_resource(ctx, r);
     uribuf += TEST_URI_LEN;

@@ -10,10 +10,19 @@
 #ifndef _COAP_NET_H_
 #define _COAP_NET_H_
 
+#ifdef HAVE_ASSERT_H
 #include <assert.h>
+#else
+#ifndef assert
+#  define assert(x)
+#endif
+#endif
+
 #include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
+#endif
 #include <time.h>
 
 #ifdef WITH_LWIP
@@ -94,6 +103,10 @@ typedef struct coap_context_t {
   int sockfd;                     /**< send/receive socket */
 #endif /* WITH_POSIX */
 
+#ifdef HAVE_WS2TCPIP_H
+  SOCKET sockfd;                  /**< send/receive socket */
+#endif /* HAVE_WS2TCPIP_H */
+
 #ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;      /**< uIP connection object */
   struct etimer retransmit_timer; /**< fires when the next packet must be sent */
@@ -137,7 +150,7 @@ typedef struct coap_context_t {
  * @param context The context to register the handler for.
  * @param handler The response handler to register.
  */
-static inline void
+COAP_STATIC_INLINE void
 coap_register_response_handler(coap_context_t *context,
                                coap_response_handler_t handler) {
   context->response_handler = handler;
@@ -149,7 +162,7 @@ coap_register_response_handler(coap_context_t *context,
  * @param ctx  The context to use.
  * @param type The option type to register.
  */
-inline static void
+COAP_STATIC_INLINE void
 coap_register_option(coap_context_t *ctx, unsigned char type) {
   coap_option_setb(ctx->known_options, type);
 }
@@ -185,7 +198,7 @@ coap_context_t *coap_new_context(const coap_address_t *listen_addr);
  *
  * @return        Incremented message id in network byte order.
  */
-static inline unsigned short
+COAP_STATIC_INLINE unsigned short
 coap_new_message_id(coap_context_t *context) {
   context->message_id++;
 #ifndef WITH_CONTIKI
@@ -342,7 +355,7 @@ coap_tid_t coap_send_ack(coap_context_t *context,
  * @return                The transaction id if RST was sent or @c
  *                        COAP_INVALID_TID on error.
  */
-static inline coap_tid_t
+COAP_STATIC_INLINE coap_tid_t
 coap_send_rst(coap_context_t *context,
               const coap_endpoint_t *local_interface,
               const coap_address_t *dst,
@@ -420,7 +433,7 @@ int coap_remove_from_queue(coap_queue_t **queue,
  *
  * @return      @c 1 if node was found, removed and destroyed, @c 0 otherwise.
  */
-inline static int
+COAP_STATIC_INLINE int
 coap_remove_transaction(coap_queue_t **queue, coap_tid_t id) {
   coap_queue_t *node;
   if (!coap_remove_from_queue(queue, id, &node))

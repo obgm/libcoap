@@ -111,6 +111,7 @@ do {                                                                            
   LDECLTYPE(list) _ls_q;                                                                       \
   LDECLTYPE(list) _ls_e;                                                                       \
   LDECLTYPE(list) _ls_tail;                                                                    \
+  LDECLTYPE(list) _tmp;                                                                        \
   int _ls_insize, _ls_nmerges, _ls_psize, _ls_qsize, _ls_i, _ls_looping;                       \
   if (list) {                                                                                  \
     _ls_insize = 1;                                                                            \

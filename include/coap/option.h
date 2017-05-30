@@ -32,6 +32,17 @@ typedef struct {
   unsigned char *value;
 } coap_option_t;
 
+/** Representation of the association between a CoAP option key and its
+ *  data type and valid data length ranges.
+ */
+typedef struct
+{
+    unsigned short key;     /**< The ID of the option the following values apply to. */
+    unsigned char type;     /**< The type of the option: u=uint, s=string, o=opaque. */
+    unsigned int min;       /**< The minimum number of bytes allowed for the option data */
+    unsigned int max;       /**< The maximum number of bytes allowed for the option data */
+} coap_option_def_t;
+
 /**
  * Parses the option pointed to by @p opt into @p result. This function returns
  * the number of bytes that have been parsed, or @c 0 on error. An error is
@@ -142,7 +153,7 @@ typedef uint16_t coap_opt_filter_t[COAP_OPT_FILTER_SIZE];
  *
  * @param f The filter to clear.
  */
-static inline void
+COAP_STATIC_INLINE void
 coap_option_filter_clear(coap_opt_filter_t f) {
   memset(f, 0, sizeof(coap_opt_filter_t));
 }
@@ -195,7 +206,7 @@ int coap_option_filter_get(const coap_opt_filter_t filter, unsigned short type);
  *
  * @return       @c 1 if bit was set, @c -1 otherwise.
  */
-inline static int
+COAP_STATIC_INLINE int
 coap_option_setb(coap_opt_filter_t filter, unsigned short type) {
   return coap_option_filter_set(filter, type) ? 1 : -1;
 }
@@ -212,7 +223,7 @@ coap_option_setb(coap_opt_filter_t filter, unsigned short type) {
  *
  * @return       @c 1 if bit was set, @c -1 otherwise.
  */
-inline static int
+COAP_STATIC_INLINE int
 coap_option_clrb(coap_opt_filter_t filter, unsigned short type) {
   return coap_option_filter_unset(filter, type) ? 1 : -1;
 }
@@ -229,7 +240,7 @@ coap_option_clrb(coap_opt_filter_t filter, unsigned short type) {
  *
  * @return       @c 1 if bit was set, @c 0 if not, @c -1 on error.
  */
-inline static int
+COAP_STATIC_INLINE int
 coap_option_getb(const coap_opt_filter_t filter, unsigned short type) {
   return coap_option_filter_get(filter, type);
 }
@@ -278,6 +289,26 @@ typedef struct {
 coap_opt_iterator_t *coap_option_iterator_init(coap_pdu_t *pdu,
                                                coap_opt_iterator_t *oi,
                                                const coap_opt_filter_t filter);
+
+/**
+ * Initializes the given option iterator @p oi to point to the
+ * beginning of the @p pdu's option list. This function returns @p oi
+ * on success, @c NULL otherwise (i.e. when no options exist).
+ * Note that a length check on the option list must be performed before
+ * coap_option_iterator_init() is called.
+ *
+ * @param pdu  The PDU the options of which should be walked through.
+ * @param oi   An iterator object that will be initilized.
+ * @param filter An optional option type filter.
+ *               With @p type != @c COAP_OPT_ALL, coap_option_next()
+ *               will return only options matching this bitmask.
+ *               Fence-post options @c 14, @c 28, @c 42, ... are always
+ *               skipped.
+ *
+ * @return The iterator object @p oi on success, @c NULL otherwise.
+ */
+coap_opt_iterator_t *coap_option_iterator_init2(coap_pdu_t *pdu, coap_opt_iterator_t *oi,
+        const coap_opt_filter_t filter, coap_transport_t transport);
 
 /**
  * Updates the iterator @p oi to point to the next option. This function returns
@@ -401,6 +432,16 @@ unsigned short coap_opt_length(const coap_opt_t *opt);
  * @return    A pointer to the option value or @c NULL on error.
  */
 unsigned char *coap_opt_value(coap_opt_t *opt);
+
+/**
+ * Returns a pointer to the coap option range definitions. @key
+ * must be a valid option ID. This function returns @c NULL if
+ * @p key is not a valid option ID.
+ *
+ * @param key The option ID whose definition should be returned.
+ * @return A pointer to the option definition.
+ */
+coap_option_def_t* coap_opt_def(unsigned short key);
 
 /** @deprecated { Use coap_opt_value() instead. } */
 #define COAP_OPT_VALUE(opt) coap_opt_value((coap_opt_t *)opt)

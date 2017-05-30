@@ -88,14 +88,14 @@ coap_new_payload(size_t size) {
   return p;
 }
 
-static inline coap_payload_t *
+COAP_STATIC_INLINE coap_payload_t *
 coap_find_payload(const coap_key_t key) {
   coap_payload_t *p;
   HASH_FIND(hh, test_resources, key, sizeof(coap_key_t), p);
   return p;
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_add_payload(const coap_key_t key, coap_payload_t *payload,
 		 coap_dynamic_uri_t *uri) {
   assert(payload);
@@ -109,7 +109,7 @@ coap_add_payload(const coap_key_t key, coap_payload_t *payload,
   }
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_delete_payload(coap_payload_t *payload) {
   if (payload) {
     coap_dynamic_uri_t *uri;

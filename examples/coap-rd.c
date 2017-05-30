@@ -65,7 +65,7 @@ rd_t *resources = NULL;
 #define UNUSED_PARAM
 #endif /* GCC */
 
-static inline rd_t *
+COAP_STATIC_INLINE rd_t *
 rd_new(void) {
   rd_t *rd;
   rd = (rd_t *)coap_malloc(sizeof(rd_t));
@@ -75,7 +75,7 @@ rd_new(void) {
   return rd;
 }
 
-static inline void
+COAP_STATIC_INLINE void
 rd_delete(rd_t *rd) {
   if (rd) {
     coap_free(rd->data.s);

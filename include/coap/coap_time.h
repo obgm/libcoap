@@ -33,17 +33,17 @@ typedef uint32_t coap_tick_t;
 typedef uint32_t coap_time_t;
 typedef int32_t coap_tick_diff_t;
 
-static inline void coap_ticks_impl(coap_tick_t *t) {
+COAP_STATIC_INLINE void coap_ticks_impl(coap_tick_t *t) {
   *t = sys_now();
 }
 
-static inline void coap_clock_init_impl(void) {
+COAP_STATIC_INLINE void coap_clock_init_impl(void) {
 }
 
 #define coap_clock_init coap_clock_init_impl
 #define coap_ticks coap_ticks_impl
 
-static inline coap_time_t coap_ticks_to_rt(coap_tick_t t) {
+COAP_STATIC_INLINE coap_time_t coap_ticks_to_rt(coap_tick_t t) {
   return t / COAP_TICKS_PER_SECOND;
 }
 #endif
@@ -63,20 +63,20 @@ typedef int coap_tick_diff_t;
 
 #define COAP_TICKS_PER_SECOND CLOCK_SECOND
 
-static inline void coap_clock_init(void) {
+COAP_STATIC_INLINE void coap_clock_init(void) {
   clock_init();
 }
 
-static inline void coap_ticks(coap_tick_t *t) {
+COAP_STATIC_INLINE void coap_ticks(coap_tick_t *t) {
   *t = clock_time();
 }
 
-static inline coap_time_t coap_ticks_to_rt(coap_tick_t t) {
+COAP_STATIC_INLINE coap_time_t coap_ticks_to_rt(coap_tick_t t) {
   return t / COAP_TICKS_PER_SECOND;
 }
 #endif /* WITH_CONTIKI */
 
-#ifdef WITH_POSIX
+#if defined(WITH_POSIX) || defined(HAVE_WS2TCPIP_H)
 /**
  * This data type represents internal timer ticks with COAP_TICKS_PER_SECOND
  * resolution.
@@ -119,13 +119,13 @@ void coap_ticks(coap_tick_t *t);
  *          point (seconds since epoch on POSIX).
  */
 coap_time_t coap_ticks_to_rt(coap_tick_t t);
-#endif /* WITH_POSIX */
+#endif /* WITH_POSIX || HAVE_WS2TCPIP_H */
 
 /**
  * Returns @c 1 if and only if @p a is less than @p b where less is defined on a
  * signed data type.
  */
-static inline int coap_time_lt(coap_tick_t a, coap_tick_t b) {
+COAP_STATIC_INLINE int coap_time_lt(coap_tick_t a, coap_tick_t b) {
   return ((coap_tick_diff_t)(a - b)) < 0;
 }
 
@@ -133,7 +133,7 @@ static inline int coap_time_lt(coap_tick_t a, coap_tick_t b) {
  * Returns @c 1 if and only if @p a is less than or equal @p b where less is
  * defined on a signed data type.
  */
-static inline int coap_time_le(coap_tick_t a, coap_tick_t b) {
+COAP_STATIC_INLINE int coap_time_le(coap_tick_t a, coap_tick_t b) {
   return a == b || coap_time_lt(a,b);
 }
 
