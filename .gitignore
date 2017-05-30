@@ -62,3 +62,7 @@ include/coap/coap.h
 tests/.deps
 tests/testdriver
 tests/*.o
+
+# sym and map files
+libcoap-*.map
+libcoap-*.sym
