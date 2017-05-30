@@ -1737,6 +1737,44 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
   assert(response == NULL);
 }
 
+static inline int
+is_separate(const coap_queue_t *node) {
+   return node->retransmit_cnt > COAP_DEFAULT_MAX_RETRANSMIT;
+}
+
+static int
+coap_find_separate_from_queue(coap_context_t *context, const coap_address_t *dst,
+			 const unsigned char *token, size_t token_length, coap_queue_t **sent) {
+  coap_queue_t *p = NULL;
+  for (p = context->sendqueue; p; p = p->next)
+    if (coap_address_equals(dst, &p->remote) &&
+        token_match(token, token_length,
+                    p->pdu->hdr->token,
+                    p->pdu->hdr->token_length) &&
+        is_separate(p)) {
+      *sent = p;
+      return 1;
+    }
+  return 0;
+}
+
+static inline void
+handle_response(coap_context_t *context, 
+		coap_queue_t *sent, coap_queue_t *rcvd) {
+
+  coap_send_ack(context, &rcvd->local_if, &rcvd->remote, rcvd->pdu);
+
+  /* In case of separate response, the request cannot be matched with
+   * transaction id which is based on message id and remote address.
+   * Besides, excludes type Acknowledgement since separate response
+   * cannot be be of that type.
+   */
+  if (sent == NULL && rcvd->pdu->hdr->type != COAP_MESSAGE_ACK) {
+    coap_find_separate_from_queue(context, &rcvd->remote,
+        rcvd->pdu->hdr->token,
+        rcvd->pdu->hdr->token_length, &sent);
+  }
+
 COAP_STATIC_INLINE void
 handle_response(coap_context_t *context,
   coap_queue_t *sent, coap_queue_t *rcvd) {
@@ -1756,6 +1794,14 @@ handle_response(coap_context_t *context,
     context->response_handler(context, rcvd->session, sent ? sent->pdu : NULL,
       rcvd->pdu, rcvd->id);
   }
+
+  /* In a lossy context, the ACK of a separate response may have
+   * been lost, so we need to stop retransmitting requests with the
+   * same token.
+   */
+  coap_cancel_all_messages(context, &rcvd->remote,
+			   rcvd->pdu->hdr->token,
+			   rcvd->pdu->hdr->token_length);
 }
 
 void
@@ -1781,8 +1827,15 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
       /* find transaction in sendqueue to stop retransmission */
       coap_remove_from_queue(&context->sendqueue, rcvd->session, rcvd->id, &sent);
 
-      if (rcvd->pdu->hdr->code == 0)
+      if (rcvd->pdu->hdr->code == 0) {
+        if (sent != NULL) {
+          sent->retransmit_cnt = COAP_DEFAULT_MAX_RETRANSMIT + 1;
+          sent->t = sent->timeout << COAP_DEFAULT_MAX_RETRANSMIT;
+          coap_insert_node(&context->sendqueue, sent);
+          sent = NULL;
+        }
 	goto cleanup;
+      }
 
       /* if sent code was >= 64 the message might have been a
        * notification. Then, we must flag the observer to be alive
