@@ -180,6 +180,8 @@ typedef int coap_tid_t;
  */
 #define COAP_DROPPED_RESPONSE -2
 
+#define COAP_WS_HEADER 2
+
 #define COAP_TCP_HEADER_NO_FIELD    2
 #define COAP_TCP_HEADER_8_BIT       3
 #define COAP_TCP_HEADER_16_BIT      4
@@ -207,7 +209,10 @@ typedef enum {
     COAP_TCP,
     COAP_TCP_8BIT,
     COAP_TCP_16BIT,
-    COAP_TCP_32BIT
+    COAP_TCP_32BIT,
+#endif
+#ifdef WITH_WS
+    COAP_WS
 #endif
 } coap_transport_t;
 
@@ -255,14 +260,24 @@ typedef struct {
 } coap_hdr_tcp_32bit_t;
 #endif /* WITH_TCP */
 
+#ifdef WITH_WS
+typedef struct {
+  unsigned char header_data[COAP_WS_HEADER];
+  unsigned char token[]; /* the actual token, if any */
+} coap_hdr_ws_t;
+#endif /* WITH_WS */
+
 typedef union {
   coap_hdr_udp_t udp;
 #ifdef WITH_TCP
-  coap_hdr_tcp_t tcp;  
+  coap_hdr_tcp_t tcp;
   coap_hdr_tcp_8bit_t tcp_8bit;
   coap_hdr_tcp_16bit_t tcp_16bit;
   coap_hdr_tcp_32bit_t tcp_32bit;
 #endif /* WITH_TCP */
+#ifdef WITH_WS
+  coap_hdr_ws_t ws;
+#endif /* WITH_WS */
 } coap_hdr_transport_t;
 
 // Typedef for backwards compatibility.
@@ -534,6 +549,8 @@ unsigned int coap_get_tcp_header_length(unsigned char *data);
  */
 unsigned int coap_get_tcp_header_length_for_transport(coap_transport_t transport);
 
+#endif /* WITH_TCP */
+
 /**
  * Get option length.
  *
@@ -542,7 +559,6 @@ unsigned int coap_get_tcp_header_length_for_transport(coap_transport_t transport
  * @return total option length
  */
 size_t coap_get_opt_header_length(unsigned short key, size_t length);
-#endif /* WITH_TCP */
 
 /**
  * Add code in coap header.
