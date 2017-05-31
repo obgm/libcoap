@@ -1,7 +1,7 @@
 # configure.ac for the libcoap package
 #
-# Copyright (C) 2010-2016 Olaf Bergmann <bergmann@tzi.org>
-#           (C)      2015 Carsten Schoenert <c.schoenert@t-online.de>
+# Copyright (C) 2010-2015 Olaf Bergmann <bergmann@tzi.org>
+#           (C) 2015-2016 Carsten Schoenert <c.schoenert@t-online.de>
 #
 # Please run 'autogen.sh' to let autoconf produce a configure script.
 
@@ -259,19 +259,38 @@ AM_CONDITIONAL(BUILD_DTLS, [test "x$build_dtls" = "xyes"])
 # end configure options
 #######################
 
-# Check for ctags
-AC_ARG_VAR([CTAGS_PROG],[the 'ctag' program to use for make target 'update-map-file'])
-AC_PATH_PROG([CTAGS_PROG],[ctags],[])
-if test "x$CTAGS_PROG" = "x"; then
-	AC_MSG_NOTICE([==> Note: 'ctags' command not found!])
-	AC_MSG_WARN([==> Without ctags you will be unable to run the target 'update-map-file'!])
-	AC_MSG_WARN([==> This is no problem if you just want to build the library libcoap.])
-fi
-if ! "$CTAGS_PROG" --c-kinds=f /dev/null &>/dev/null; then
-	AC_MSG_NOTICE([==> Note: your ctags does not support '--c-kinds'!])
-	AC_MSG_NOTICE([==> Most likely, you are using the GNU Emacs ctag and not exuberant ctag])
-	AC_MSG_WARN([==> This option is required for target 'update-map-file'])
-	AC_MSG_WARN([==> which is not a problem if you just want to build the library libcoap.])
+##########################################
+# from configure options independed checks
+
+# Check for (ex)ctags binary
+# The needed ctags binary name differs on FreeBSD and Linux, on Linux
+# systems we search for 'ctags', on FreeBSD for 'exctags'
+case $host in
+    # FreeBSD has exctags from the ctags port
+    *-freebsd1*)
+    AC_ARG_VAR([CTAGS_PROG],[the 'exctags' program to use for make target 'update-map-file'])
+    AC_PATH_PROG([CTAGS_PROG],[exctags],[HAVE_CTAGS=no])
+    ;;
+
+    *)
+    # Linux distributions have exuberant-ctags
+    AC_ARG_VAR([CTAGS_PROG],[the 'ctags' program to use for make target 'update-map-file'])
+    AC_PATH_PROG([CTAGS_PROG],[ctags],[HAVE_CTAGS=no])
+    ;;
+
+esac
+
+if test "x$HAVE_CTAGS" = "xno"; then
+    AC_MSG_NOTICE([==> Note: '(ex)ctags' command not found!])
+    AC_MSG_WARN([==> Without ctags you will be unable to run the target 'update-map-file'!])
+    AC_MSG_WARN([==> This is no problem if you just want to build the library libcoap.])
+else
+    if test "`$CTAGS_PROG --help | grep '\--<LANG>-kinds'`" = ""; then
+        AC_MSG_NOTICE([==> Note: Your ctags binary does not support '--c-kinds'!])
+        AC_MSG_NOTICE([==> Most likely, you are using the GNU Emacs ctag and not exuberant ctag.])
+        AC_MSG_WARN([==> This option is required for the target 'update-map-file'.])
+        AC_MSG_WARN([==> which is not a problem if you just want to build the library libcoap.])
+    fi
 fi
 
 # Checks for header files.
