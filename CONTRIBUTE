@@ -6,14 +6,14 @@
 ~~~~~~~~~~~~~
 The libcoap project is a FOSS project that is dual licensed. The maintainer
 for the libcoap is Olaf Bergmann <bergmann@tzi.org>.
-Any contributions have to be made dual licensed under the terms of the
+Any contributions have to be made under the terms of the
 license
 
   * BSD 2-Clause (The BSD 2-Clause License)
 
-and
-
-  * GPL v2+ (The GNU General Public License 2.0 or later)
+Contributions made up to 2017-06-01 have been made under the dual
+license model BSD 2-Clause and GPL v2+ (The GNU General Public License
+2.0 or later).
 
 The used VCS for libcoap is Git, the main repository is living on GitHub.
 You can clone (or fork directly on GitHub) on the repository site:
