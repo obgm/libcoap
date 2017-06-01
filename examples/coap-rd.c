@@ -34,9 +34,9 @@
 #include <signal.h>
 
 #include "coap_config.h"
-#include "utlist.h"
-#include "resource.h"
-#include "coap.h"
+#include <coap/utlist.h>
+#include <coap/resource.h>
+#include <coap/coap.h>
 
 #define COAP_RESOURCE_CHECK_TIME 2
 

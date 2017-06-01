@@ -8,4 +8,4 @@ Description: C-Implementation of CoAP.
 Version: @PACKAGE_VERSION@
 URL: @PACKAGE_URL@
 Libs: -L${libdir} -lcoap-@LIBCOAP_API_VERSION@
-Cflags: -I${includedir}/coap
+Cflags: -I${includedir}

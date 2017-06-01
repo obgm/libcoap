@@ -23,7 +23,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#include "coap.h"
+#include <coap/coap.h>
 #include "coap_list.h"
 
 int flags = 0;
