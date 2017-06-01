@@ -13,6 +13,7 @@ env:
 
 addons:
   apt_packages:
+    - exuberant-ctags
     - pkg-config
     - graphviz
     - libcunit1-dev

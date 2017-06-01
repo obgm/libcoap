@@ -178,3 +178,5 @@ dist-local: update-map-file
 ## no matter if the user has created same called files.
 .PHONY: update-map-file check_ctags
 
+## Generate *.{map,sym}
+$(lib_LTLIBRARIES): libcoap-$(LIBCOAP_API_VERSION).map libcoap-$(LIBCOAP_API_VERSION).sym
