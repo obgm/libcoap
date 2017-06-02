@@ -21,6 +21,9 @@
  * @{
  */
 
+#include <time.h>
+#include <sys/time.h>
+
 #ifdef WITH_LWIP
 
 #include <stdint.h>
