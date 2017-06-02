@@ -368,6 +368,7 @@ case $host in
 	*-freebsd1*)
 	AC_MSG_RESULT([FreeBSD-1x])
 	ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+        PLATFORM=posix
 	;;
 
 	*)
