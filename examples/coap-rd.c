@@ -659,7 +659,7 @@ join(coap_context_t *ctx, char *group_name) {
 #ifdef _WIN32
       char *szErrorMsg = NULL;
       FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
-      fprintf( stderr, "join: setsockopt: %s\n", szErrorMsg );
+      fprintf( stderr, "join: setsockopt: %s", szErrorMsg );
       LocalFree( szErrorMsg );
 #else
       perror("join: setsockopt");

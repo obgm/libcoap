@@ -463,7 +463,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   } else {
 	char *szErrorMsg = NULL;
 	FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
-    coap_log(LOG_WARNING, "coap_network_read: %s\n", szErrorMsg);
+    coap_log(LOG_WARNING, "coap_network_read: %s", szErrorMsg);
 	LocalFree( szErrorMsg );
 	len = -1;
   }

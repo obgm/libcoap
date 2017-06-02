@@ -639,7 +639,7 @@ coap_send_impl(coap_context_t *context,
 #if defined(HAVE_WINSOCK2_H)
   	char *szErrorMsg = NULL;
 	FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
-    coap_log(LOG_CRIT, "coap_send_impl: %s\n", szErrorMsg);
+    coap_log(LOG_CRIT, "coap_send_impl: %s", szErrorMsg);
 	LocalFree( szErrorMsg );
 #else
     coap_log(LOG_CRIT, "coap_send_impl: %s\n", strerror(errno));
@@ -905,7 +905,7 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint) {
   bytes_read = ctx->network_read(endpoint, &packet);
 
   if (bytes_read < 0) {
-    warn("coap_read: recvfrom");
+    warn("coap_read: recvfrom\n");
   } else {
     if (bytes_read > 0) {
       unsigned char *data;
