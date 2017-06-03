@@ -517,6 +517,8 @@ coap_dtls_handle_message(struct coap_context_t *coap_context,
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/rand.h>
+#include <openssl/hmac.h>
 
 /* Data item in the DTLS send queue. */
 struct queue_t {
@@ -541,6 +543,7 @@ typedef struct coap_dtls_context_t {
 	SSL *ssl;	/* OpenSSL object for listening to connection requests */
 	BIO *bio;	/* I/O stream for ClientHello / HelloVerifyRequest datagrams */
 	coap_dtls_session_t *sessions;
+	HMAC_CTX cookie_hmac;
 } coap_dtls_context_t;
 
 int coap_dtls_is_supported( void ) {
@@ -767,13 +770,20 @@ static int coap_dtls_verify_cert( int ok, X509_STORE_CTX *ctx ) {
 }
 
 static int coap_dtls_generate_cookie( SSL *ssl, unsigned char *cookie, unsigned int *cookie_len ) {
-	memcpy( cookie, "COOKIE", 6 );
-	*cookie_len = 6;
-	return 1;
+	coap_dtls_context_t *dtls= ( coap_dtls_context_t *)SSL_CTX_get_app_data( ssl->ctx );
+	BIO *rbio = SSL_get_rbio( ssl );
+	coap_ssl_data *data = (coap_ssl_data*)rbio->ptr;
+	int r = HMAC_Init_ex( &dtls->cookie_hmac, NULL, 0, NULL, NULL );
+	r &= HMAC_Update( &dtls->cookie_hmac, (const uint8_t*)&data->local_interface->addr.addr, (size_t)data->local_interface->addr.size );
+	r &= HMAC_Update( &dtls->cookie_hmac, (const uint8_t*)&data->peer->addr, (size_t)data->peer->size );
+	r &= HMAC_Final( &dtls->cookie_hmac, cookie, cookie_len );
+	return r;
 }
 
 static int coap_dtls_verify_cookie( SSL *ssl, unsigned char *cookie, unsigned int cookie_len ) {
-	if ( cookie_len == 6 && memcmp( cookie, "COOKIE", 6 ) == 0 )
+	uint8_t hmac[32];
+	unsigned len = 32;
+	if ( coap_dtls_generate_cookie( ssl, hmac, &len) && cookie_len == len && memcmp( cookie, hmac, len ) == 0 )
 		return 1;
 	else
 		return 0;
@@ -910,11 +920,18 @@ struct coap_dtls_context_t *coap_dtls_new_context( struct coap_context_t *coap_c
 
 	context = ( struct coap_dtls_context_t * )coap_malloc( sizeof( struct coap_dtls_context_t ) );
 	if ( context ) {
+		uint8_t cookie_secret[32];
 		memset( context, 0, sizeof( struct coap_dtls_context_t ) );
 		context->ctx = SSL_CTX_new( DTLSv1_method() );
 		if ( !context->ctx )
 			goto error;
+		SSL_CTX_set_app_data( context->ctx, context );
 		SSL_CTX_set_read_ahead( context->ctx, 1 );
+		if ( !RAND_bytes( cookie_secret, (int)sizeof( cookie_secret ) ) )
+			coap_prng( cookie_secret, sizeof( cookie_secret ) );
+		HMAC_CTX_init( &context->cookie_hmac );
+		if ( !HMAC_Init_ex( &context->cookie_hmac, cookie_secret, (int)sizeof( cookie_secret ), EVP_sha256(), NULL ) )
+			goto error;
 		/*SSL_CTX_set_verify( context->ctx, SSL_VERIFY_PEER, coap_dtls_verify_cert );*/
 		SSL_CTX_set_cookie_generate_cb( context->ctx, coap_dtls_generate_cookie );
 		SSL_CTX_set_cookie_verify_cb( context->ctx, coap_dtls_verify_cookie );
@@ -952,6 +969,7 @@ void coap_dtls_free_context( struct coap_dtls_context_t *dtls_context ) {
 		BIO_free_all( dtls_context->bio );
 	if ( dtls_context->ctx )
 		SSL_CTX_free( dtls_context->ctx );
+	HMAC_CTX_cleanup( &dtls_context->cookie_hmac );
 	coap_free( dtls_context );
 }
 
