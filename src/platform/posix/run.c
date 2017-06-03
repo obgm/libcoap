@@ -69,7 +69,13 @@ coap_run_once(coap_context_t *ctx, unsigned int timeout_ms) {
     if (result < 0) {   /* error */
 #ifdef _WIN32
       char *szErrorMsg = NULL;
-      FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
+	  int err = WSAGetLastError();
+	  if ( err == WSAEINVAL ) { /* May happen because of ICMP */
+        coap_tick_t past = now;
+        coap_ticks( &now );
+        return (int)( ( ( now - past ) * 1000 ) / COAP_TICKS_PER_SECOND );
+      }
+      FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)err, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
 	  coap_log(LOG_DEBUG, szErrorMsg);
       LocalFree( szErrorMsg );
 #else

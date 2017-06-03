@@ -893,9 +893,7 @@ static void coap_dtls_info_callback( const SSL *ssl, int where, int ret ) {
 		}
 	}
 
-	if ( ( where & SSL_CB_EXIT ) != 0 && ( where & SSL_ST_INIT ) == 0 && ret <= 0 )
-		coap_handle_event( coap_context, ret < 0 ? COAP_EVENT_DTLS_ERROR : COAP_EVENT_DTLS_CLOSED, session );
-	else if ( where == SSL_CB_HANDSHAKE_START && ssl->state == SSL_ST_RENEGOTIATE )
+	if ( where == SSL_CB_HANDSHAKE_START && ssl->state == SSL_ST_RENEGOTIATE )
 		coap_handle_event( coap_context, COAP_EVENT_DTLS_RENEGOTIATE, session );
 }
 
@@ -943,8 +941,11 @@ error:
 }
 
 void coap_dtls_free_context( struct coap_dtls_context_t *dtls_context ) {
-	while ( dtls_context->sessions )
+	while ( dtls_context->sessions ) {
+		if ( !( SSL_get_shutdown( dtls_context->sessions->ssl ) & SSL_SENT_SHUTDOWN ) )
+			SSL_shutdown( dtls_context->sessions->ssl );
 		coap_dtls_free_session( dtls_context, dtls_context->sessions );
+	}
 	if ( dtls_context->ssl )
 		SSL_free( dtls_context->ssl );
 	else if ( dtls_context->bio )
@@ -1116,6 +1117,10 @@ int coap_dtls_send( struct coap_context_t *coap_context, struct coap_dtls_sessio
 			}
 		} else {
 			coap_log( LOG_WARNING, "coap_dtls_send: cannot send PDU\n" );
+			if ( err == SSL_ERROR_ZERO_RETURN )
+				coap_handle_event( coap_context, COAP_EVENT_DTLS_CLOSED, session );
+			else
+				coap_handle_event( coap_context, COAP_EVENT_DTLS_ERROR, session );
 			coap_dtls_free_session( coap_context->dtls_context, session );
 			res = -1;
 		}
@@ -1184,7 +1189,15 @@ int coap_dtls_handle_message( struct coap_context_t *coap_context, const coap_en
 					coap_handle_event( coap_context, COAP_EVENT_DTLS_CONNECTED, session );
 				}
 				r = 0;
+			} else if ( err == SSL_ERROR_ZERO_RETURN ) {
+				/* Got a close notify alert from the remote side */
+				SSL_shutdown( session->ssl );
+				coap_handle_event( coap_context, COAP_EVENT_DTLS_CLOSED, session );
+				coap_dtls_free_session( coap_context->dtls_context, session );
+				session = NULL;
+				r = 0;
 			} else {
+				coap_handle_event( coap_context, COAP_EVENT_DTLS_ERROR, session );
 				r = -1;
 			}
 		}

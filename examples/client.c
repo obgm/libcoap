@@ -1324,10 +1324,9 @@ main(int argc, char **argv) {
   result = 0;
 
  finish:
-  close_output();
-
   coap_delete_list(optlist);
   coap_free_context( ctx );
+  close_output();
   coap_cleanup();
 
   return result;
