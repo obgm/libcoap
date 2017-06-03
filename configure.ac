@@ -1,7 +1,7 @@
 # configure.ac for the libcoap package
 #
 # Copyright (C) 2010-2015 Olaf Bergmann <bergmann@tzi.org>
-#           (C) 2015-2016 Carsten Schoenert <c.schoenert@t-online.de>
+#           (C) 2015-2017 Carsten Schoenert <c.schoenert@t-online.de>
 #
 # Please run 'autogen.sh' to let autoconf produce a configure script.
 
@@ -289,18 +289,18 @@ case $host in
     # FreeBSD has exctags from the ctags port
     *-freebsd1*)
     AC_ARG_VAR([CTAGS_PROG],[the 'exctags' program to use for make target 'update-map-file'])
-    AC_PATH_PROG([CTAGS_PROG],[exctags],[HAVE_CTAGS=no])
+    AC_PATH_PROG([CTAGS_PROG],[exctags])
     ;;
 
     *)
     # Linux distributions have exuberant-ctags
     AC_ARG_VAR([CTAGS_PROG],[the 'ctags' program to use for make target 'update-map-file'])
-    AC_PATH_PROG([CTAGS_PROG],[ctags],[HAVE_CTAGS=no])
+    AC_PATH_PROG([CTAGS_PROG],[ctags])
     ;;
 
 esac
 
-if test "x$HAVE_CTAGS" = "xno"; then
+if test "x$CTAGS_PROG" = "x"; then
     AC_MSG_NOTICE([==> Note: '(ex)ctags' command not found!])
     AC_MSG_WARN([==> Without ctags you will be unable to run the target 'update-map-file'!])
     AC_MSG_WARN([==> This is no problem if you just want to build the library libcoap.])
