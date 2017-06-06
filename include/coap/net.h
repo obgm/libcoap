@@ -244,6 +244,12 @@ coap_pdu_t *coap_new_error_response(coap_pdu_t *request,
                                     unsigned char code,
                                     coap_opt_filter_t opts);
 
+coap_tid_t
+coap_send_impl(coap_context_t *context,
+	       const coap_endpoint_t *local_interface,
+	       const coap_address_t *dst,
+	       coap_pdu_t *pdu);
+
 /**
  * Sends a non-confirmed CoAP message to given destination. The memory that is
  * allocated by pdu will not be released by coap_send().
