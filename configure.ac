@@ -37,6 +37,8 @@ AM_PROG_AR
 
 AC_C_BIGENDIAN
 
+AC_C_BIGENDIAN
+
 # enable the automatically build of shared and static libraries, the unit
 # tests needs the static library
 LT_INIT([shared static])
