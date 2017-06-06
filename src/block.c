@@ -118,9 +118,10 @@ coap_write_block_opt(coap_block_t *block, unsigned short type,
   }
 
   /* to re-encode the block option */
-  coap_add_option(pdu, type, coap_encode_var_bytes(buf, ((block->num << 4) | 
-							 (block->m << 3) | 
-							 block->szx)), 
+  coap_add_option(pdu, type, coap_encode_var_bytes2(buf, sizeof(buf),
+						    ((block->num << 4) |
+						     (block->m << 3) |
+						     block->szx)),
 		  buf);
 
   return 1;
