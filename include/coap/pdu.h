@@ -172,7 +172,20 @@ typedef int coap_tid_t;
  */
 #define COAP_DROPPED_RESPONSE -2
 
-#ifdef WORDS_BIGENDIAN
+#if defined(_MSC_VER)
+#include <stdint.h>
+#pragma pack( push, 1 )
+typedef struct {
+	uint16_t token_length : 4;     /* length of Token */
+	uint16_t type : 2;             /* type flag */
+	uint16_t version : 2;          /* protocol version */
+	uint16_t code : 8;             /* request method (value 1--10) or response
+								   code (value 40-255) */
+	uint16_t id;                 /* transaction id (network byte order!) */
+	uint8_t token[];             /* the actual token, if any */
+} coap_hdr_t;
+#pragma pack( pop )
+#elif defined(WORDS_BIGENDIAN)
 typedef struct {
   unsigned int version:2;      /* protocol version */
   unsigned int type:2;         /* type flag */

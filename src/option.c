@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "libcoap.h"
 #include "option.h"
 #include "encode.h"		/* for coap_fls() */
 #include "debug.h"
@@ -143,7 +144,7 @@ coap_option_iterator_init(coap_pdu_t *pdu, coap_opt_iterator_t *oi,
   return oi;
 }
 
-static inline int
+COAP_STATIC_INLINE int
 opt_finished(coap_opt_iterator_t *oi) {
   assert(oi);
 
@@ -365,7 +366,7 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
     }
     
     opt[0] |= 0x0d;
-    opt[++skip] = length - 13;
+    opt[++skip] = (uint8_t)(length - 13);
   } else {
     if (maxlen < skip + 2) {
       debug("insufficient space to encode option delta %d", delta);
@@ -420,7 +421,7 @@ typedef struct {
 } opt_filter;
 
 /** Returns true iff @p type denotes an option type larger than 255. */
-static inline int
+COAP_STATIC_INLINE int
 is_long_option(unsigned short type) { return type > 255; }
 
 /** Operation specifiers for coap_filter_op(). */
@@ -497,7 +498,7 @@ coap_option_filter_op(coap_opt_filter_t filter,
   if (is_long_option(type)) {
     of->long_opts[index - 1] = type;
   } else {
-    of->short_opts[index - COAP_OPT_FILTER_LONG - 1] = type;
+    of->short_opts[index - COAP_OPT_FILTER_LONG - 1] = (uint8_t)type;
   }
 
   of->mask |= 1 << (index - 1);

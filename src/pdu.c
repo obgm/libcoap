@@ -18,7 +18,11 @@
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
+#ifdef HAVE_WINSOCK2_H
+#include <winsock2.h>
+#endif
 
+#include "libcoap.h"
 #include "debug.h"
 #include "pdu.h"
 #include "option.h"
@@ -85,7 +89,7 @@ coap_pdu_init(unsigned char type, unsigned char code,
     return NULL;
 
   /* size must be large enough for hdr */
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP)
   pdu = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
   if (!pdu) return NULL;
   pdu->hdr = coap_malloc_type(COAP_PDU_BUF, size);
@@ -93,8 +97,7 @@ coap_pdu_init(unsigned char type, unsigned char code,
     coap_free_type(COAP_PDU, pdu);
     pdu = NULL;
   }
-#endif /* WITH_POSIX or WITH_CONTIKI */
-#ifdef WITH_LWIP
+#else /* WITH_LWIP */
   pdu = (coap_pdu_t*)coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
   if (!pdu) return NULL;
   p = pbuf_alloc(PBUF_TRANSPORT, size, PBUF_RAM);
@@ -102,7 +105,7 @@ coap_pdu_init(unsigned char type, unsigned char code,
     coap_free_type(COAP_PDU, pdu);
     pdu = NULL;
   }
-#endif
+#endif /* WITH_LWIP */
   if (pdu) {
 #ifdef WITH_LWIP
     pdu->pbuf = p;
@@ -134,19 +137,16 @@ coap_new_pdu(void) {
 
 void
 coap_delete_pdu(coap_pdu_t *pdu) {
-#if defined(WITH_POSIX) || defined(WITH_CONTIKI)
   if (pdu != NULL) {
+#ifdef WITH_LWIP
+    pbuf_free(pdu->pbuf);
+#else
     if (pdu->hdr != NULL) {
       coap_free_type(COAP_PDU_BUF, pdu->hdr);
     }
+#endif
     coap_free_type(COAP_PDU, pdu);
   }
-#endif
-#ifdef WITH_LWIP
-  if (pdu != NULL) /* accepting double free as the other implementation accept that too */
-    pbuf_free(pdu->pbuf);
-  coap_free_type(COAP_PDU, pdu);
-#endif
 }
 
 int
@@ -156,11 +156,11 @@ coap_add_token(coap_pdu_t *pdu, size_t len, const unsigned char *data) {
   if (!pdu || len > 8 || pdu->max_size < HEADERLENGTH)
     return 0;
 
-  pdu->hdr->token_length = len;
+  pdu->hdr->token_length = (uint16_t)len;
   if (len)
     memcpy(pdu->hdr->token, data, len);
   pdu->max_delta = 0;
-  pdu->length = HEADERLENGTH;
+  pdu->length = (unsigned short)HEADERLENGTH;
   pdu->data = NULL;
 
   return 1;
@@ -192,7 +192,7 @@ coap_add_option(coap_pdu_t *pdu, unsigned short type, unsigned int len, const un
     return 0;
   } else {
     pdu->max_delta = type;
-    pdu->length += optsize;
+    pdu->length += (uint16_t)optsize;
   }
 
   return optsize;
@@ -224,7 +224,7 @@ coap_add_option_later(coap_pdu_t *pdu, unsigned short type, unsigned int len) {
     return NULL;
   } else {
     pdu->max_delta = type;
-    pdu->length += optsize;
+    pdu->length += (uint16_t)optsize;
   }
 
   return ((unsigned char*)opt) + optsize - len;
@@ -386,7 +386,7 @@ coap_pdu_parse(unsigned char *data, size_t length, coap_pdu_t *pdu) {
 
   /* append data (including the Token) to pdu structure */
   memcpy(pdu->hdr + 1, data + sizeof(coap_hdr_t), length - sizeof(coap_hdr_t));
-  pdu->length = length;
+  pdu->length = (unsigned short)length;
  
   /* Finally calculate beginning of data block and thereby check integrity
    * of the PDU structure. */

@@ -138,7 +138,7 @@ coap_async_state_t *coap_find_async(coap_context_t *context, coap_tid_t id);
  *
  * @param s The state object to update.
  */
-static inline void
+COAP_STATIC_INLINE void
 coap_touch_async(coap_async_state_t *s) { coap_ticks(&s->created); }
 
 /** @} */

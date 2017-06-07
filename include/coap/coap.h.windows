@@ -14,19 +14,19 @@
 #include "libcoap.h"
 
 /* Define the address where bug reports for libcoap should be sent. */
-#define LIBCOAP_PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"
+#define LIBCOAP_PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"
 
 /* Define the full name of libcoap. */
-#define LIBCOAP_PACKAGE_NAME "@PACKAGE_NAME@"
+#define LIBCOAP_PACKAGE_NAME "libcoap"
 
 /* Define the full name and version of libcoap. */
-#define LIBCOAP_PACKAGE_STRING "@PACKAGE_STRING@"
+#define LIBCOAP_PACKAGE_STRING "libcoap 4.1.2"
 
 /* Define the home page for libcoap. */
-#define LIBCOAP_PACKAGE_URL "@PACKAGE_URL@"
+#define LIBCOAP_PACKAGE_URL "https://libcoap.net/"
 
 /* Define the version of libcoap this file belongs to. */
-#define LIBCOAP_PACKAGE_VERSION "@PACKAGE_VERSION@"
+#define LIBCOAP_PACKAGE_VERSION "4.1.2"
 
 #ifdef __cplusplus
 extern "C" {

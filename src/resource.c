@@ -15,7 +15,7 @@
 #include "subscribe.h"
 #include "utlist.h"
 
-#ifdef WITH_LWIP
+#if defined(WITH_LWIP)
 /* mem.h is only needed for the string free calls for
  * COAP_ATTR_FLAGS_RELEASE_NAME / COAP_ATTR_FLAGS_RELEASE_VALUE /
  * COAP_RESOURCE_FLAGS_RELEASE_URI. not sure what those lines should actually
@@ -27,16 +27,7 @@
   ((coap_##Type##_t *)memp_malloc(MEMP_COAP_##Type))
 #define COAP_FREE_TYPE(Type, Object) memp_free(MEMP_COAP_##Type, Object)
 
-#endif
-
-#ifdef WITH_POSIX
-
-#define COAP_MALLOC_TYPE(Type) \
-  ((coap_##Type##_t *)coap_malloc(sizeof(coap_##Type##_t)))
-#define COAP_FREE_TYPE(Type, Object) coap_free(Object)
-
-#endif /* WITH_POSIX */
-#ifdef WITH_CONTIKI
+#elif defined(WITH_CONTIKI)
 #include "memb.h"
 
 #define COAP_MALLOC_TYPE(Type) \
@@ -50,19 +41,25 @@ coap_resources_init() {
   memb_init(&subscription_storage);
 }
 
-static inline coap_subscription_t *
+COAP_STATIC_INLINE coap_subscription_t *
 coap_malloc_subscription() {
   return memb_alloc(&subscription_storage);
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_free_subscription(coap_subscription_t *subscription) {
   memb_free(&subscription_storage, subscription);
 }
 
-#endif /* WITH_CONTIKI */
+#else
+#define COAP_MALLOC_TYPE(Type) \
+  ((coap_##Type##_t *)coap_malloc(sizeof(coap_##Type##_t)))
+#define COAP_FREE_TYPE(Type, Object) coap_free(Object)
+#endif
 
+#ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 /* Helper functions for conditional output of character sequences into
  * a given buffer. The first Offset characters are skipped.
@@ -114,7 +111,7 @@ match(const str *text, const str *pattern, int match_prefix, int match_substring
     while (remaining_length) {
       size_t token_length;
       unsigned char *token = next_token;
-      next_token = memchr(token, ' ', remaining_length);
+      next_token = (unsigned char *)memchr(token, ' ', remaining_length);
 
       if (next_token) {
         token_length = next_token - token;
@@ -277,7 +274,7 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
   }
 
   *buflen = written;
-  result = p - buf;
+  result = (coap_print_status_t)(p - buf);
   if (result + old_offset - offset < *buflen) {
     result |= COAP_PRINT_STATUS_TRUNC;
   }
@@ -511,7 +508,7 @@ coap_print_link(const coap_resource_t *resource,
     COPY_COND_WITH_OFFSET(p, bufend, *offset, ";obs", 4, *len);
   }
 
-  result = p - buf;
+  result = (coap_print_status_t)(p - buf);
   if (result + old_offset - *offset < *len) {
     result |= COAP_PRINT_STATUS_TRUNC;
   }

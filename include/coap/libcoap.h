@@ -18,9 +18,30 @@
  *
  * The CONTIKI variable is within the Contiki build environment! */
 
-#if !defined (CONTIKI) 
+#if defined(_WIN32)
+#pragma comment(lib,"Ws2_32.lib")
+#include <ws2tcpip.h>
+typedef SSIZE_T ssize_t;
+typedef USHORT in_port_t;
+#elif !defined (CONTIKI)
 #include <netinet/in.h>
 #include <sys/socket.h>
 #endif /* CONTIKI */
+
+#ifndef COAP_STATIC_INLINE
+#  if defined(__cplusplus)
+#    define COAP_STATIC_INLINE inline
+#  else
+#    if defined(_MSC_VER)
+#      define COAP_STATIC_INLINE static __inline
+#    else
+#      define COAP_STATIC_INLINE static inline
+#    endif
+#  endif
+#endif
+
+void coap_startup(void);
+
+void coap_cleanup(void);
 
 #endif /* _LIBCOAP_H_ */

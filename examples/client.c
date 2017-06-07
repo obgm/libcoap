@@ -8,20 +8,23 @@
  * use.
  */
 
-#include "coap_config.h"
-
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <sys/select.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#include "getopt.c"
+#else
+#include <unistd.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#endif
 
 #include "coap.h"
 #include "coap_dtls.h"
@@ -67,7 +70,9 @@ unsigned int obs_seconds = 30;          /* default observe time */
 coap_tick_t obs_wait = 0;               /* timeout for current subscription */
 int observe = 0;                        /* set to 1 if resource is being observed */
 
+#ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 #ifdef __GNUC__
 #define UNUSED_PARAM __attribute__ ((unused))
@@ -149,7 +154,7 @@ coap_new_request(coap_context_t *ctx,
   pdu->hdr->id = coap_new_message_id(ctx);
   pdu->hdr->code = m;
 
-  pdu->hdr->token_length = the_token.length;
+  pdu->hdr->token_length = (uint16_t)the_token.length;
   if ( !coap_add_token(pdu, the_token.length, the_token.s)) {
     debug("cannot add token to request\n");
   }
@@ -1161,11 +1166,12 @@ main(int argc, char **argv) {
       log_level = strtol(optarg, NULL, 10);
       break;
     default:
-      usage( argv[0], PACKAGE_VERSION );
+      usage( argv[0], LIBCOAP_PACKAGE_VERSION );
       exit( 1 );
     }
   }
 
+  coap_startup();
   coap_dtls_set_log_level(log_level);
   coap_set_log_level(log_level);
 
@@ -1176,7 +1182,7 @@ main(int argc, char **argv) {
       exit(1);
     }
   } else {
-    usage( argv[0], PACKAGE_VERSION );
+    usage( argv[0], LIBCOAP_PACKAGE_VERSION );
     exit( 1 );
   }
 
@@ -1291,7 +1297,7 @@ main(int argc, char **argv) {
   coap_tick_t start, now;
   coap_ticks(&start);
   while (!(ready && coap_can_exit(ctx))) {
-    unsigned int wait_ms = observe ? min(obs_wait, max_wait) : max_wait;
+    unsigned int wait_ms = (unsigned)(observe ? min(obs_wait, max_wait) : max_wait);
     result = coap_run_once(ctx, wait_ms);
     if (result >= 0) {
       if ((unsigned int)result <= obs_wait) {
@@ -1318,10 +1324,10 @@ main(int argc, char **argv) {
   result = 0;
 
  finish:
-  close_output();
-
   coap_delete_list(optlist);
   coap_free_context( ctx );
+  close_output();
+  coap_cleanup();
 
   return result;
 }

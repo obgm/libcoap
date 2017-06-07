@@ -17,9 +17,16 @@
 #endif
 #ifdef HAVE_SYS_SOCKET_H
 # include <sys/socket.h>
+# define OPTVAL_T(t)         (t)
 #endif
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
+#endif
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+# define OPTVAL_T(t)         (const char*)(t)
+# undef CMSG_DATA
+# define CMSG_DATA WSA_CMSG_DATA
 #endif
 #ifdef HAVE_SYS_UIO_H
 # include <sys/uio.h>
@@ -30,16 +37,18 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#include "libcoap.h"
 #include "debug.h"
 #include "mem.h"
 #include "coap_dtls.h"
 #include "coap_io.h"
+#include "pdu.h"
 
 struct coap_packet_t {
   coap_if_handle_t hnd;	      /**< the interface handle */
   coap_address_t src;	      /**< the packet's source address */
   coap_address_t dst;	      /**< the packet's destination address */
-  const coap_endpoint_t *interface;
+  const coap_endpoint_t *endpoint;
 
   int ifindex;
   void *session;		/**< opaque session data */
@@ -50,21 +59,24 @@ struct coap_packet_t {
 
 #ifndef CUSTOM_COAP_NETWORK_ENDPOINT
 
-static inline struct coap_endpoint_t *
+COAP_STATIC_INLINE struct coap_endpoint_t *
 coap_malloc_posix_endpoint(void) {
   return (struct coap_endpoint_t *)coap_malloc(sizeof(struct coap_endpoint_t));
 }
 
-static inline void
+COAP_STATIC_INLINE void
 coap_free_posix_endpoint(struct coap_endpoint_t *ep) {
   coap_free(ep);
 }
 
 coap_endpoint_t *
 coap_new_endpoint(const coap_address_t *addr, int flags) {
-  int sockfd;
-  int on = 1;
+  coap_socket_t sockfd;
+  int on = 1, off = 0;
   struct coap_endpoint_t *ep = NULL;
+#ifdef _WIN32
+  u_long uNonBlocking = 1;
+#endif
 
   if (((flags & COAP_ENDPOINT_DTLS) != 0) && !coap_dtls_is_supported()) {
     coap_log(LOG_CRIT, "coap_new_endpoint: DTLS not supported\n");
@@ -72,39 +84,52 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
   }
 
   sockfd = socket(addr->addr.sa.sa_family, SOCK_DGRAM, 0);
-  if (sockfd < 0) {
+  if (sockfd == COAP_INVALID_SOCKET) {
     coap_log(LOG_WARNING, "coap_new_endpoint: socket");
     return NULL;
   }
 
+#ifdef _WIN32
+  if (ioctlsocket(sockfd, FIONBIO, &uNonBlocking) != NO_ERROR) {
+    coap_log(LOG_WARNING, "coap_new_endpoint: %s\n", "cannot set ot non-blocking");
+    goto error;
+  }
+#else
   if (fcntl(sockfd, F_SETFL, O_NONBLOCK) < 0) {
     coap_log(LOG_WARNING, "coap_new_endpoint: %s\n", strerror(errno));
     goto error;
   }
+#endif
 
-  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
     coap_log(LOG_WARNING, "coap_new_endpoint: setsockopt SO_REUSEADDR");
 
   on = 1;
   switch(addr->addr.sa.sa_family) {
   case AF_INET:
-    if (setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on)) < 0)
+    if (setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IP_PKTINFO\n");
     break;
   case AF_INET6:
+    /* Configure the socket as dual-stacked */
+    if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, OPTVAL_T(&off), sizeof(off)) == COAP_SOCKET_ERROR)
+      coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_V6ONLY\n");
 #ifdef IPV6_RECVPKTINFO
-    if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on)) < 0)
+    if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_RECVPKTINFO\n");
 #else /* IPV6_RECVPKTINFO */
-    if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_PKTINFO, &on, sizeof(on)) < 0)
+    if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_PKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_PKTINFO\n");
 #endif /* IPV6_RECVPKTINFO */
-    break;
+#ifdef _WIN32
+    setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, OPTVAL_T(&on), sizeof(on)); /* ignore error, because the likely cause is that IPv4 is disabled at the os level */
+#endif
+  break;
   default:
     coap_log(LOG_ALERT, "coap_new_endpoint: unsupported sa_family\n");
   }
 
-  if (bind(sockfd, &addr->addr.sa, addr->size) < 0) {
+  if (bind(sockfd, &addr->addr.sa, addr->size) == COAP_SOCKET_ERROR) {
     coap_log(LOG_WARNING, "coap_new_endpoint: bind");
     goto error;
   }
@@ -143,7 +168,7 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
   return (coap_endpoint_t *)ep;
  error:
 
-  close (sockfd);
+  coap_closesocket(sockfd);
   coap_free_posix_endpoint(ep);
   return NULL;
 }
@@ -151,8 +176,8 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
 void
 coap_free_endpoint(coap_endpoint_t *ep) {
   if(ep) {
-    if (ep->handle.fd >= 0)
-      close(ep->handle.fd);
+    if (ep->handle.fd != COAP_INVALID_SOCKET)
+      coap_closesocket(ep->handle.fd);
     coap_free_posix_endpoint((struct coap_endpoint_t *)ep);
   }
 }
@@ -161,7 +186,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
 
 #ifndef CUSTOM_COAP_NETWORK_SEND
 
-#ifndef HAVE_NETINET_IN_H
+#if !defined(HAVE_NETINET_IN_H) && !defined(HAVE_WS2TCPIP_H)
 /* define struct in6_pktinfo and struct in_pktinfo if not available
    FIXME: check with configure
 */
@@ -175,9 +200,9 @@ struct in_pktinfo {
   struct in_addr ipi_spec_dst;
   struct in_addr ipi_addr;
 };
-#endif /* HAVE_NETINET_IN_H */
+#endif /* HAVE_NETINET_IN_H || HAVE_WS2TCPIP_H */
 
-#if defined(WITH_POSIX) && !defined(SOL_IP)
+#if !defined(SOL_IP)
 /* Solaris expects level IPPROTO_IP for ancillary data. */
 #define SOL_IP IPPROTO_IP
 #endif
@@ -187,6 +212,28 @@ struct in_pktinfo {
 #else /* not a GCC */
 #define UNUSED_PARAM
 #endif /* GCC */
+
+#if defined(_WIN32)
+#include <mswsock.h>
+static __declspec( thread ) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
+/* Map struct WSABUF fields to their posix counterpart */
+#define msghdr _WSAMSG
+#define msg_name name
+#define msg_namelen namelen
+#define msg_iov lpBuffers
+#define msg_iovlen dwBufferCount
+#define msg_control Control.buf
+#define msg_controllen Control.len
+#define iovec _WSABUF
+#define iov_base buf
+#define iov_len len
+#define iov_len_t u_long
+#undef CMSG_DATA
+#define CMSG_DATA WSA_CMSG_DATA
+#define ipi_spec_dst ipi_addr
+#else
+#define iov_len_t size_t
+#endif
 
 ssize_t
 coap_network_send(struct coap_context_t *context UNUSED_PARAM,
@@ -198,15 +245,20 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
   struct coap_endpoint_t *ep =
     (struct coap_endpoint_t *)local_interface;
 
-  /* a buffer large enough to hold all protocol address types */
-  char buf[CMSG_LEN(sizeof(struct sockaddr_storage))];
+  /* a buffer large enough to hold all packet info types, ipv6 is the largest */
+  char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+#ifdef _WIN32
+  DWORD dwNumberOfBytesSent = 0;
+  int r;
+#endif
+
   struct msghdr mhdr;
   struct iovec iov[1];
 
   assert(local_interface);
 
   iov[0].iov_base = data;
-  iov[0].iov_len = datalen;
+  iov[0].iov_len = (iov_len_t)datalen;
 
   memset(&mhdr, 0, sizeof(struct msghdr));
   mhdr.msg_name = (void *)&dst->addr;
@@ -215,33 +267,44 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
   mhdr.msg_iov = iov;
   mhdr.msg_iovlen = 1;
 
-  switch (dst->addr.sa.sa_family) {
+  if ( !coap_address_isany(&local_interface->addr) && !coap_is_mcast(&local_interface->addr) ) switch (local_interface->addr.addr.sa.sa_family) {
   case AF_INET6: {
     struct cmsghdr *cmsg;
-    struct in6_pktinfo *pktinfo;
 
-    mhdr.msg_control = buf;
-    mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+#ifdef _WIN32
+    if ( IN6_IS_ADDR_V4MAPPED( &local_interface->addr.addr.sin6.sin6_addr ) ) {
+      struct in_pktinfo *pktinfo;
+      mhdr.msg_control = buf;
+      mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
 
-    cmsg = CMSG_FIRSTHDR(&mhdr);
-    cmsg->cmsg_level = IPPROTO_IPV6;
-    cmsg->cmsg_type = IPV6_PKTINFO;
-    cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+      cmsg = CMSG_FIRSTHDR(&mhdr);
+      cmsg->cmsg_level = SOL_IP;
+      cmsg->cmsg_type = IP_PKTINFO;
+      cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 
-    pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
-    memset(pktinfo, 0, sizeof(struct in6_pktinfo));
+      pktinfo = (struct in_pktinfo *)CMSG_DATA(cmsg);
+      memset(pktinfo, 0, sizeof(struct in_pktinfo));
 
-    pktinfo->ipi6_ifindex = ep->ifindex;
-    if (coap_is_mcast(&local_interface->addr)) {
-      /* We cannot send with multicast address as source address
-       * and hence let the kernel pick the outgoing interface. */
-      pktinfo->ipi6_ifindex = 0;
-      memset(&pktinfo->ipi6_addr, 0, sizeof(pktinfo->ipi6_addr));
-    } else {
+      pktinfo->ipi_ifindex = ep->ifindex;
+      memcpy( &pktinfo->ipi_spec_dst, local_interface->addr.addr.sin6.sin6_addr.s6_addr + 12, sizeof(pktinfo->ipi_spec_dst) );
+
+	} else
+#endif
+	{
+      struct in6_pktinfo *pktinfo;
+      mhdr.msg_control = buf;
+      mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+
+      cmsg = CMSG_FIRSTHDR(&mhdr);
+      cmsg->cmsg_level = IPPROTO_IPV6;
+      cmsg->cmsg_type = IPV6_PKTINFO;
+      cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+
+      pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
+      memset(pktinfo, 0, sizeof(struct in6_pktinfo));
+
       pktinfo->ipi6_ifindex = ep->ifindex;
-      memcpy(&pktinfo->ipi6_addr,
-	     &local_interface->addr.addr.sin6.sin6_addr,
-	     local_interface->addr.size);
+      memcpy( &pktinfo->ipi6_addr, &local_interface->addr.addr.sin6.sin6_addr, sizeof(pktinfo->ipi6_addr) );
     }
     break;
   }
@@ -260,17 +323,8 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     pktinfo = (struct in_pktinfo *)CMSG_DATA(cmsg);
     memset(pktinfo, 0, sizeof(struct in_pktinfo));
 
-    if (coap_is_mcast(&local_interface->addr)) {
-      /* We cannot send with multicast address as source address
-       * and hence let the kernel pick the outgoing interface. */
-      pktinfo->ipi_ifindex = 0;
-      memset(&pktinfo->ipi_spec_dst, 0, sizeof(pktinfo->ipi_spec_dst));
-    } else {
-      pktinfo->ipi_ifindex = ep->ifindex;
-      memcpy(&pktinfo->ipi_spec_dst,
-	     &local_interface->addr.addr.sin.sin_addr,
-	     local_interface->addr.size);
-    }
+    pktinfo->ipi_ifindex = ep->ifindex;
+    memcpy( &pktinfo->ipi_spec_dst, &local_interface->addr.addr.sin.sin_addr, sizeof(pktinfo->ipi_spec_dst) );
     break;
   }
   default:
@@ -279,7 +333,15 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
     return -1;
   }
 
+#ifdef _WIN32
+  r = WSASendMsg( ep->handle.fd, &mhdr, 0 /*dwFlags*/, &dwNumberOfBytesSent, NULL /*lpOverlapped*/, NULL /*lpCompletionRoutine*/ );
+  if ( r == 0 )
+    return (ssize_t)dwNumberOfBytesSent;
+  else
+    return -1;
+#else
   return sendmsg(ep->handle.fd, &mhdr, 0);
+#endif
 }
 
 #endif /* CUSTOM_COAP_NETWORK_SEND */
@@ -305,14 +367,14 @@ coap_free_packet(coap_packet_t *packet) {
   coap_free(packet);
 }
 
-static inline size_t
+COAP_STATIC_INLINE size_t
 coap_get_max_packetlength(const coap_packet_t *packet UNUSED_PARAM) {
   return COAP_MAX_PDU_SIZE;
 }
 
 void
 coap_packet_populate_endpoint(coap_packet_t *packet, coap_endpoint_t *target) {
-  target->handle = packet->interface->handle;
+  target->handle = packet->endpoint->handle;
   memcpy(&target->addr, &packet->dst, sizeof(target->addr));
   target->ifindex = packet->ifindex;
   target->flags = 0; /* FIXME */
@@ -332,7 +394,7 @@ coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t
  * local interface with address @p local. This function returns @c 1
  * if @p dst is a valid match, and @c 0 otherwise.
  */
-static inline int
+COAP_STATIC_INLINE int
 is_local_if(const coap_address_t *local, const coap_address_t *dst) {
   return coap_address_isany(local) || coap_address_equals(dst, local) ||
     coap_is_mcast(dst);
@@ -341,8 +403,14 @@ is_local_if(const coap_address_t *local, const coap_address_t *dst) {
 ssize_t
 coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   ssize_t len = -1;
+#if defined(_WIN32)
+  DWORD dwNumberOfBytesRecvd = 0;
+  int r;
+#endif
 
-  char msg_control[CMSG_LEN(sizeof(struct sockaddr_storage))];
+  /* a buffer large enough to hold all packet info types, ipv6 is the largest */  
+  char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+
   struct msghdr mhdr;
   struct iovec iov[1];
 
@@ -367,33 +435,56 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   coap_address_init(&(*packet)->src); /* the remote peer */
 
   iov[0].iov_base = (*packet)->payload;
-  iov[0].iov_len = coap_get_max_packetlength(*packet);
+  iov[0].iov_len = (iov_len_t)coap_get_max_packetlength(*packet);
 
   memset(&mhdr, 0, sizeof(struct msghdr));
 
-  mhdr.msg_name = &(*packet)->src.addr.st;
+  mhdr.msg_name = (struct sockaddr*)&(*packet)->src.addr.st;
   mhdr.msg_namelen = sizeof((*packet)->src.addr.st);
 
   mhdr.msg_iov = iov;
   mhdr.msg_iovlen = 1;
 
-  mhdr.msg_control = msg_control;
-  mhdr.msg_controllen = sizeof(msg_control);
-  assert(sizeof(msg_control) == CMSG_LEN(sizeof(struct sockaddr_storage)));
+  mhdr.msg_control = buf;
+  mhdr.msg_controllen = sizeof(buf);
 
+#if defined(_WIN32)
+  if ( !lpWSARecvMsg ) {
+    GUID wsaid = WSAID_WSARECVMSG;
+	DWORD cbBytesReturned = 0;
+	if ( WSAIoctl( ep->handle.fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &wsaid, sizeof( wsaid ), &lpWSARecvMsg, sizeof( lpWSARecvMsg ), &cbBytesReturned, NULL, NULL ) != 0 ) {
+      coap_log(LOG_WARNING, "coap_network_read: no WSARecvMsg\n");
+      return -1;
+    }
+  }
+  r = lpWSARecvMsg( ep->handle.fd, &mhdr, &dwNumberOfBytesRecvd, NULL /* LPWSAOVERLAPPED */, NULL /* LPWSAOVERLAPPED_COMPLETION_ROUTINE */ );
+  if ( r == 0 ) {
+    len = (ssize_t)dwNumberOfBytesRecvd;
+  } else {
+	char *szErrorMsg = NULL;
+	FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
+    coap_log(LOG_WARNING, "coap_network_read: %s", szErrorMsg);
+	LocalFree( szErrorMsg );
+	len = -1;
+  }
+#else
   len = recvmsg(ep->handle.fd, &mhdr, 0);
+  if ( len < 0 )
+    coap_log(LOG_WARNING, "coap_network_read: %s\n", strerror(errno));
+#endif
 
   if (len < 0) {
-    coap_log(LOG_WARNING, "coap_network_read: %s\n", strerror(errno));
     goto error;
   } else {
     struct cmsghdr *cmsg;
 
-    coap_log(LOG_DEBUG, "received %d bytes on fd %d\n", (int)len, ep->handle.fd);
+    coap_log(LOG_DEBUG, "received %d bytes on fd %d\n", (int)len, (int)ep->handle.fd);
 
+    ( *packet )->src.size = mhdr.msg_namelen;
+	
     /* use getsockname() to get the local port */
     (*packet)->dst.size = sizeof((*packet)->dst.addr);
-    if (getsockname(ep->handle.fd, &(*packet)->dst.addr.sa, &(*packet)->dst.size) < 0) {
+    if (getsockname(ep->handle.fd, &(*packet)->dst.addr.sa, &(*packet)->dst.size) == COAP_SOCKET_ERROR) {
       coap_log(LOG_DEBUG, "cannot determine local port\n");
       goto error;
     }
@@ -406,41 +497,32 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 
       /* get the local interface for IPv6 */
       if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
-	union {
-	  unsigned char *c;
-	  struct in6_pktinfo *p;
-	} u;
-	u.c = CMSG_DATA(cmsg);
-	(*packet)->ifindex = (int)(u.p->ipi6_ifindex);
-
-	memcpy(&(*packet)->dst.addr.sin6.sin6_addr,
-	       &u.p->ipi6_addr, sizeof(struct in6_addr));
-
-	(*packet)->src.size = mhdr.msg_namelen;
-	assert((*packet)->src.size == sizeof(struct sockaddr_in6));
-
-	(*packet)->src.addr.sin6.sin6_family = SIN6(mhdr.msg_name)->sin6_family;
-	(*packet)->src.addr.sin6.sin6_addr = SIN6(mhdr.msg_name)->sin6_addr;
-	(*packet)->src.addr.sin6.sin6_port = SIN6(mhdr.msg_name)->sin6_port;
-
-	break;
+        union {
+          uint8_t *c;
+          struct in6_pktinfo *p;
+        } u;
+        u.c = CMSG_DATA(cmsg);
+        (*packet)->ifindex = (int)(u.p->ipi6_ifindex);
+        memcpy(&(*packet)->dst.addr.sin6.sin6_addr, &u.p->ipi6_addr, sizeof(struct in6_addr));
+        break;
       }
 
       /* local interface for IPv4 */
       if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_PKTINFO) {
-	union {
-	  unsigned char *c;
-	  struct in_pktinfo *p;
-	} u;
-
-	u.c = CMSG_DATA(cmsg);
-	(*packet)->ifindex = u.p->ipi_ifindex;
-
-	memcpy(&(*packet)->dst.addr.sin.sin_addr,
-	       &u.p->ipi_addr, sizeof(struct in_addr));
-
-	(*packet)->src.size = mhdr.msg_namelen;
-	memcpy(&(*packet)->src.addr.st, mhdr.msg_name, (*packet)->src.size);
+        union {
+          uint8_t *c;
+          struct in_pktinfo *p;
+        } u;
+        u.c = CMSG_DATA(cmsg);
+        (*packet)->ifindex = u.p->ipi_ifindex;
+        if ( (*packet)->dst.addr.sa.sa_family==AF_INET6 ) {
+          memset( (*packet)->dst.addr.sin6.sin6_addr.s6_addr, 0, 10 );
+          (*packet)->dst.addr.sin6.sin6_addr.s6_addr[10] = 0xff;
+          (*packet)->dst.addr.sin6.sin6_addr.s6_addr[11] = 0xff;
+          memcpy( (*packet)->dst.addr.sin6.sin6_addr.s6_addr+12, &u.p->ipi_addr, sizeof(struct in_addr) );
+        } else {
+          memcpy(&(*packet)->dst.addr.sin.sin_addr, &u.p->ipi_addr, sizeof(struct in_addr));
+        }
 
 	break;
       }
@@ -452,7 +534,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
     }
   }
 
-  (*packet)->interface = ep;
+  (*packet)->endpoint = ep;
 
   return len;
  error:

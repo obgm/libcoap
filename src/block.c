@@ -12,6 +12,7 @@
 # include <assert.h>
 #endif
 
+#include "libcoap.h"
 #include "debug.h"
 #include "block.h"
 
@@ -19,7 +20,9 @@
 #error "COAP_MAX_BLOCK_SZX too large"
 #endif
 
+#ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 #ifndef WITHOUT_BLOCK
 unsigned int
@@ -49,7 +52,7 @@ coap_get_block(coap_pdu_t *pdu, unsigned short type, coap_block_t *block) {
   assert(block);
   memset(block, 0, sizeof(coap_block_t));
 
-  if (pdu && (option = coap_check_option(pdu, type, &opt_iter))) {
+  if (pdu && (option = coap_check_option(pdu, type, &opt_iter)) != NULL) {
     block->szx = COAP_OPT_BLOCK_SZX(option);
     if (COAP_OPT_BLOCK_MORE(option))
       block->m = 1;
@@ -75,7 +78,7 @@ coap_write_block_opt(coap_block_t *block, unsigned short type,
   }
   
   avail = pdu->max_size - pdu->length - 4;
-  want = 1 << (block->szx + 4);
+  want = (size_t)1 << (block->szx + 4);
 
   /* check if entire block fits in message */
   if (want <= avail) {
@@ -98,9 +101,9 @@ coap_write_block_opt(coap_block_t *block, unsigned short type,
 	debug("not enough space, even the smallest block does not fit");
 	return -3;
       }
-      debug("decrease block size for %zu to %d\n", avail, coap_fls(avail) - 5);
+      debug("decrease block size for %zu to %d\n", avail, coap_fls((unsigned)avail) - 5);
       szx = block->szx;
-      block->szx = coap_fls(avail) - 5;
+      block->szx = coap_fls((unsigned)avail) - 5;
       block->m = 1;
       block->num <<= szx - block->szx;
     }
@@ -125,7 +128,7 @@ coap_add_block(coap_pdu_t *pdu, unsigned int len, const unsigned char *data,
     return 0;
   
   return coap_add_data(pdu, 
-		       min(len - start, (unsigned int)(1 << (block_szx + 4))),
+		       min((unsigned)(len - start), (unsigned int)(1 << (block_szx + 4))),
 		       data + start);
 }
 #endif /* WITHOUT_BLOCK  */

@@ -12,6 +12,12 @@
 
 #include "coap_keystore.h"
 
+#ifdef __GNUC__
+#define UNUSED __attribute__((unused))
+#else /* __GNUC__ */
+#define UNUSED
+#endif /* __GNUC__ */
+
 typedef enum coap_credentials_type_t {
   COAP_KEYSTORE_UNKNOWN=0,
   COAP_KEYSTORE_PSK
@@ -116,7 +122,7 @@ coap_keystore_free_item(coap_keystore_item_t *item) {
 int
 coap_keystore_store_item(coap_keystore_t *keystore,
                          coap_keystore_item_t *item,
-                         const coap_address_t *remote __attribute__((unused))) {
+                         const coap_address_t *remote UNUSED) {
   LL_PREPEND(keystore->store, item);
   return 1;
 }
@@ -137,7 +143,7 @@ coap_keystore_item_t *
 coap_keystore_find_psk(const coap_keystore_t *keystore,
                        const void *realm, size_t realm_length,
                        const void *identity, size_t identity_length,
-                       const coap_address_t *remote __attribute__((unused))) {
+                       const coap_address_t *remote UNUSED) {
   coap_keystore_item_t *item;
 #define MATCH_PSK_FIELD(Field, Object)          \
   match((Field),                                \

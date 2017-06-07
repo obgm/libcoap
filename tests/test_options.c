@@ -423,10 +423,16 @@ t_access_option7(void) {
 
 #define TEST_MAX_SIZE 1000
 
+#ifdef _MSC_VER 
+#  define ALIGNED(x) 
+#else 
+#  define ALIGNED(x) __attribute__ ((aligned (x))) 
+#endif 
+
 static void
 t_iterate_option1(void) {
   /* CoAP PDU without token, options, or data */
-  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] ALIGNED(8) = { 
     0x00, 0x00, 0x00, 0x00 
   };
 
@@ -451,7 +457,7 @@ t_iterate_option1(void) {
 static void
 t_iterate_option2(void) {
   /* CoAP PDU with token but without options and data */
-  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] ALIGNED(8) = { 
     0x03, 0x00, 0x00, 0x00, 't', 'o', 'k'
   };
 
@@ -476,7 +482,7 @@ t_iterate_option2(void) {
 static void
 t_iterate_option3(void) {
   /* CoAP PDU with token and options */
-  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] ALIGNED(8) = { 
     0x03, 0x00, 0x00, 0x00, 't', 'o', 'k', 0x13, 
     'o',  'p',  't',  0x00, 0xd1, 0x10, 'x'
   };
@@ -517,7 +523,7 @@ t_iterate_option3(void) {
 static void
 t_iterate_option4(void) {
   /* CoAP PDU with token, options, and data */
-  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] ALIGNED(8) = { 
     0x03, 0x00, 0x00, 0x00, 't', 'o', 'k', 0x13, 
     'o',  'p',  't',  0x00, 0xd1, 0x10, 'x', 0xff,
     'd',  'a',  't',  'a'
@@ -559,7 +565,7 @@ t_iterate_option4(void) {
 static void
 t_iterate_option5(void) {
   /* CoAP PDU with malformed option */
-  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] ALIGNED(8) = { 
     0x00, 0x00, 0x00, 0x00, 0x52, 'o', 'p', 0xee, 
     0x12, 0x03, 0x00
   };
@@ -591,7 +597,7 @@ static void
 t_iterate_option6(void) {
   /* option filter */
   /* CoAP PDU with token, options, and data */
-  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] ALIGNED(8) = { 
     0x00, 0x00, 0x00, 0x00, 0x80, 0x20, 0x00, 0x00,
     0xc0, 0x00
   };
@@ -635,7 +641,7 @@ t_iterate_option6(void) {
 static void
 t_iterate_option7(void) {
   /* option filter */
-  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] ALIGNED(8) = { 
     0x00, 0x00, 0x00, 0x00, 0x80, 0x20, 0x00, 0x00,
     0xc0, 0x00, 0x10, 0x10, 0x00
   };
@@ -681,7 +687,7 @@ t_iterate_option7(void) {
 static void
 t_iterate_option8(void) {
   /* option filter */
-  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] ALIGNED(8) = { 
     0x00, 0x00, 0x00, 0x00, 0x80, 0x20, 0x00, 0x00,
     0xc0, 0x00, 0x10, 0x10, 0x00
   };
@@ -711,7 +717,7 @@ t_iterate_option8(void) {
 static void
 t_iterate_option9(void) {
   /* options filter: option number too large for filter */
-  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] ALIGNED(8) = { 
     0x00, 0x00, 0x00, 0x00, 0x80, 0x20, 0x00, 0x00,
     0xc0, 0x00, 0x10, 0x10, 0x00
   };
@@ -741,7 +747,7 @@ t_iterate_option9(void) {
 static void
 t_iterate_option10(void) {
   /* options filter: option numbers in PDU exceed filter size */
-  uint8_t teststr[] __attribute__ ((aligned (8))) = { 
+  uint8_t teststr[] ALIGNED(8) = { 
     0x00, 0x00, 0x00, 0x00, 0x80, 0x20, 0x00, 0x00,
     0xd0, 0x26, 0xe0, 0x10, 0x00
   };
