@@ -9,7 +9,7 @@
 if BUILD_EXAMPLES
 
 # picking up the default warning CFLAGS into AM_CFLAGS
-AM_CFLAGS = -isystem$(top_builddir)/include/coap -I$(top_srcdir)/include/coap $(WARNING_CFLAGS) -std=c99
+AM_CFLAGS = -isystem$(top_builddir)/include -I$(top_srcdir)/include $(WARNING_CFLAGS) -std=c99
 
 # etsi_iot_01 and tiny are missing
 bin_PROGRAMS = coap-client coap-server coap-rd

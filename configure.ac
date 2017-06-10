@@ -1,17 +1,22 @@
 # configure.ac for the libcoap package
 #
 # Copyright (C) 2010-2015 Olaf Bergmann <bergmann@tzi.org>
-#           (C) 2015-2016 Carsten Schoenert <c.schoenert@t-online.de>
+#           (C) 2015-2017 Carsten Schoenert <c.schoenert@t-online.de>
 #
 # Please run 'autogen.sh' to let autoconf produce a configure script.
 
 # Define the libcoap software version here. Note! The libtool versions are
 # defined later.
 m4_define([libcoap_major_version], [4])
-m4_define([libcoap_minor_version], [1])
-m4_define([libcoap_micro_version], [2])
+m4_define([libcoap_minor_version], [2])
+m4_define([libcoap_micro_version], [0])
 
-m4_define([libcoap_version],[libcoap_major_version.libcoap_minor_version.libcoap_micro_version])
+# define a appending release state if needed, for example for pre-releases
+# like 'alpha' or 'rc1', for a full release keep the value empty!
+m4_define([libcoap_release_state], [alpha])
+
+# concatenate the full libcoap version string
+m4_define([libcoap_version], [m4_format([%s.%s.%s%s], libcoap_major_version, libcoap_minor_version, libcoap_micro_version, libcoap_release_state)])
 
 AC_INIT([libcoap], [libcoap_version], [libcoap-developers@lists.sourceforge.net], [libcoap], [https://libcoap.net/])
 AC_PREREQ([2.64])
@@ -51,39 +56,57 @@ LT_INIT([shared static])
 #
 # How to work with the libtool versioning?
 #
-# Follow the followings steps from top to bottom. This means allways start at point 1
+# Follow the followings steps from top to bottom. This means always start at point 1
 # if you plan to make a release and change the values.
 # Every new library starts with a version 'current'  (short 'c') = 0
 #                                         'revision' (short 'r') = 0
 #                                         'age'      (short 'a') = 0
 #
-# Update the libtool versioning only immediately before a public release of libcoap.
+# Update the libtool versioning only after the release of a public release of libcoap.
+# Go through the following checklist from top to bottom and check your needs, following
+# the reminded changes if you can "Yes" for specific check.
 #
-# 1. If the library source code has changed at all since the last update, then
-#    increment revision (c:r:a becomes c:r+1:a).
-#  --> Increase the 'LT_LIBCOAP_REVISION' value with *everey* new software release.
+# 1. Only existing code has changed, no functional changes
+#    If the library source code has changed but *no* new symbols were added at all
+#    since the last update, then increment revision (c:r:a becomes c:r+1:a).
+#    This is usually happen if the existing source of a function was changed for
+#    bug fixing e.g.
 #
-# 2. If any interfaces [exported functions or data] have been added, removed, or
-#    changed since the last update, increment current, and set revision to 0
-#    (c:r:a becomes c+1:r=0:a).
-#  --> Increase the 'LT_LIBCOAP_CURRENT' value whenever as an interface has been added,
-#      removed or changed. This implies also a API change! You mostly have to change
-#      the 'libcoap_major_version' then too!
+#  --> Increase the 'LT_LIBCOAP_REVISION' value with *every* new software release
+#      within one release cycle.
+#
+# 2. Interfaces were added, functional changed or removed
+#    If any interfaces [exported functions or data] have been added, got internal
+#    changes that implies a different behaviour or removed and by this the visible
+#    symbols have changed since the last update, increment current, and set
+#    revision to 0 (c:r:a becomes c+1:r=0:a).
+#
+#  --> Increase the 'LT_LIBCOAP_CURRENT' value whenever as an interface has been added
+#      or removed. This implies also a API change! You mostly have to change the
+#      'libcoap_major_version' or at least 'libcoap_minor_version' then too!
 #  --> Set 'LT_LIBCOAP_REVISION' to 0.
 #
-# 3. If any interfaces have been added since the last public release, then increment
-#    age (c:r:a becomes c:r:a+1). Adding new interfaces will make the library allways
-#    backwards compatable.
+# 3. Interfaces were added but none removed or changed
+#    If any interfaces have been added since the last public release and non of the
+#    existing interfaces were removed and existing interfaces have not changed internally
+#    functionality then the new library is backward compatible. Existing binaries can
+#    use the new library the same than as the existing old library without loosing
+#    existing functionality or breakage.
+#    Increase age by 1 (c:r:a becomes c:r:a+1).
+#
 #  --> Increase the 'LT_LIBCOAP_AGE' value only if the changes made to the ABI are
 #      backward compatible.
 #
-# 4. If any interfaces whitin the library have been removed since the last public
-#    release, then set age to 0.
+# 4. Interfaces were removed or have functional changes
+#    If any interfaces within the library have been removed since the last public
+#    release or got some internal changes that let the interface act different than
+#    before, then set age to 0. The library isn't backwards compatible.
+#
 #  --> Set 'LT_LIBCOAP_AGE' to 0.
 
-LT_LIBCOAP_CURRENT=0
+LT_LIBCOAP_CURRENT=1
 LT_LIBCOAP_REVISION=0
-LT_LIBCOAP_AGE=0
+LT_LIBCOAP_AGE=1
 LIBCOAP_SO_VERSION=$LT_LIBCOAP_CURRENT.$LT_LIBCOAP_REVISION.$LT_LIBCOAP_AGE
 
 # Announce the libtool version
@@ -266,18 +289,18 @@ case $host in
     # FreeBSD has exctags from the ctags port
     *-freebsd1*)
     AC_ARG_VAR([CTAGS_PROG],[the 'exctags' program to use for make target 'update-map-file'])
-    AC_PATH_PROG([CTAGS_PROG],[exctags],[HAVE_CTAGS=no])
+    AC_PATH_PROG([CTAGS_PROG],[exctags])
     ;;
 
     *)
     # Linux distributions have exuberant-ctags
     AC_ARG_VAR([CTAGS_PROG],[the 'ctags' program to use for make target 'update-map-file'])
-    AC_PATH_PROG([CTAGS_PROG],[ctags],[HAVE_CTAGS=no])
+    AC_PATH_PROG([CTAGS_PROG],[ctags])
     ;;
 
 esac
 
-if test "x$HAVE_CTAGS" = "xno"; then
+if test "x$CTAGS_PROG" = "x"; then
     AC_MSG_NOTICE([==> Note: '(ex)ctags' command not found!])
     AC_MSG_WARN([==> Without ctags you will be unable to run the target 'update-map-file'!])
     AC_MSG_WARN([==> This is no problem if you just want to build the library libcoap.])

@@ -33,6 +33,7 @@ global:
   coap_find_observer;
   coap_find_transaction;
   coap_fls;
+  coap_flsll;
   coap_free_async;
   coap_free_context;
   coap_free_endpoint;
