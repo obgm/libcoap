@@ -23,6 +23,8 @@
 #endif
 
 #include "coap_io.h"
+#include "coap_dtls.h"
+#include "coap_event.h"
 #include "coap_time.h"
 #include "option.h"
 #include "pdu.h"
@@ -92,10 +94,6 @@ typedef struct coap_context_t {
   coap_queue_t *sendqueue;
   coap_endpoint_t *endpoint;      /**< the endpoint used for listening  */
 
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
-  coap_socket_t sockfd;                     /**< send/receive socket */
-#endif
-
 #ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;      /**< uIP connection object */
   struct etimer retransmit_timer; /**< fires when the next packet must be sent */
@@ -123,6 +121,12 @@ typedef struct coap_context_t {
 
   coap_response_handler_t response_handler;
 
+  /**
+   * Callback function that is used to signal events to the
+   * application.  This field is set by coap_set_event_handler().
+   */
+  coap_event_handler_t handle_event;
+
   ssize_t (*network_send)(struct coap_context_t *context,
                           const coap_endpoint_t *local_interface,
                           const coap_address_t *dst,
@@ -130,7 +134,24 @@ typedef struct coap_context_t {
 
   ssize_t (*network_read)(coap_endpoint_t *ep, coap_packet_t **packet);
 
+  struct coap_dtls_context_t *dtls_context;
+  void *app;                    /**< application-specific data */
 } coap_context_t;
+
+/**
+ * Attach given @p endpoint to CoAP context @p ctx.
+ *
+ * @param ctx      The CoAP context where @p endpoint will be attached.
+ * @param endpoint The CoAP endpoint to attach.
+ */
+void coap_attach_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint);
+
+/**
+ * Detach @p endpoint from its CoAP context.
+ *
+ * @param endpoint The CoAP endpoint to detach.
+ */
+void coap_detach_endpoint(coap_endpoint_t *endpoint);
 
 /**
  * Registers a new message handler that is called whenever a response was
@@ -205,6 +226,19 @@ coap_new_message_id(coap_context_t *context) {
  */
 void coap_free_context(coap_context_t *context);
 
+/**
+ * Stores @p data with the given CoAP context. This function
+ * overwrites any value that has previously been stored with @p
+ * context.
+ */
+void coap_set_app_data(coap_context_t *context, void *data);
+
+/**
+ * Returns any application-specific data that has been stored with @p
+ * context using the function coap_set_app_data(). This function will
+ * return @c NULL if no data has been stored.
+ */
+void *coap_get_app_data(coap_context_t *context);
 
 /**
  * Sends a confirmed CoAP message to given destination. The memory that is
@@ -379,8 +413,20 @@ int coap_read(coap_context_t *context);
  *               error.
  */
 int coap_handle_message(coap_context_t *ctx,
-                        coap_packet_t *packet);
 
+/**
+ * Invokes the event handler of @p context for the given @p event and
+ * @p data.
+ *
+ * @param context The CoAP context whose event handler is to be called.
+ * @param event   The event to deliver.
+ * @param data    Any data related to @p event.
+ * @return The result from the associated event handler or 0 if none was
+ * registered.
+ */
+int coap_handle_event(coap_context_t *context,
+                      coap_event_t event,
+                      void *data);
 /**
  * Calculates a unique transaction id from given arguments @p peer and @p pdu.
  * The id is returned in @p id.

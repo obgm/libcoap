@@ -1,9 +1,9 @@
-/* coap_io.h -- Default network I/O functions for libcoap
+/* coap_io.c -- Default network I/O functions for libcoap
  *
- * Copyright (C) 2012,2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2012,2014,2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 #include "coap_config.h"
@@ -14,7 +14,7 @@
 
 #ifdef HAVE_SYS_SELECT_H
 # include <sys/select.h>
-#endif 
+#endif
 #ifdef HAVE_SYS_SOCKET_H
 # include <sys/socket.h>
 # define OPTVAL_T(t)         (t)
@@ -43,6 +43,7 @@
 #include "libcoap.h"
 #include "debug.h"
 #include "mem.h"
+#include "coap_dtls.h"
 #include "coap_io.h"
 #include "pdu.h"
 
@@ -145,10 +146,16 @@ coap_free_posix_endpoint(struct coap_endpoint_t *ep) {
 
 coap_endpoint_t *
 coap_new_endpoint(const coap_address_t *addr, int flags) {
-  coap_socket_t sockfd = socket(addr->addr.sa.sa_family, SOCK_DGRAM, 0);
+  coap_socket_t sockfd;
   int on = 1, off = 0;
-  struct coap_endpoint_t *ep;
+  struct coap_endpoint_t *ep = NULL;
 
+  if (((flags & COAP_ENDPOINT_DTLS) != 0) && !coap_dtls_is_supported()) {
+    coap_log(LOG_CRIT, "coap_new_endpoint: DTLS not supported\n");
+    return NULL;
+  }
+
+  sockfd =  = socket(addr->addr.sa.sa_family, SOCK_DGRAM, 0);
   if (sockfd == COAP_INVALID_SOCKET) {
     coap_log(LOG_WARNING, "coap_new_endpoint: socket");
     return NULL;
@@ -177,15 +184,13 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
 
   if (bind(sockfd, &addr->addr.sa, addr->size) == COAP_SOCKET_ERROR) {
     coap_log(LOG_WARNING, "coap_new_endpoint: bind");
-    coap_closesocket(sockfd);
-    return NULL;
+    goto error;
   }
 
   ep = coap_malloc_posix_endpoint();
   if (!ep) {
     coap_log(LOG_WARNING, "coap_new_endpoint: malloc");
-    coap_closesocket(sockfd);
-    return NULL;
+    goto error;
   }
 
   memset(ep, 0, sizeof(struct coap_endpoint_t));
@@ -195,8 +200,7 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
   ep->addr.size = addr->size;
   if (getsockname(sockfd, &ep->addr.addr.sa, &ep->addr.size) < 0) {
     coap_log(LOG_WARNING, "coap_new_endpoint: cannot determine local address");
-    coap_closesocket(sockfd);
-    return NULL;
+    goto error;
   }
 
 #ifndef NDEBUG
@@ -207,7 +211,7 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
     unsigned char addr_str[INET6_ADDRSTRLEN+8];
 
     if (coap_print_addr(&ep->addr, addr_str, INET6_ADDRSTRLEN+8)) {
-      debug("created %sendpoint %s\n", 
+      debug("created %sendpoint %s\n",
 	    ep->flags & COAP_ENDPOINT_DTLS ? "DTLS " : "",
 	    addr_str);
     }
@@ -215,6 +219,11 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
 #endif /* NDEBUG */
 
   return (coap_endpoint_t *)ep;
+ error:
+
+  coap_closesocket(sockfd);
+  coap_free_posix_endpoint(ep);
+  return NULL;
 }
 
 void
@@ -233,7 +242,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
 
 #if (!defined(WITH_CONTIKI) && !defined(WITH_LWIP)) != ( defined(HAVE_NETINET_IN_H) || defined(HAVE_WS2TCPIP_H) )
 /* define struct in6_pktinfo and struct in_pktinfo if not available
-   FIXME: check with configure 
+   FIXME: check with configure
 */
 struct in6_pktinfo {
   struct in6_addr ipi6_addr;	/* src/dst IPv6 address */
@@ -287,7 +296,7 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
 		  unsigned char *data,
 		  size_t datalen) {
 
-  struct coap_endpoint_t *ep = 
+  struct coap_endpoint_t *ep =
     (struct coap_endpoint_t *)local_interface;
 
 #ifndef WITH_CONTIKI
@@ -342,10 +351,10 @@ coap_network_send(struct coap_context_t *context UNUSED_PARAM,
       cmsg->cmsg_level = IPPROTO_IPV6;
       cmsg->cmsg_type = IPV6_PKTINFO;
       cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
-  
+
       pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
       memset(pktinfo, 0, sizeof(struct in6_pktinfo));
-  
+
       pktinfo->ipi6_ifindex = ep->ifindex;
       memcpy( &pktinfo->ipi6_addr, &local_interface->addr.addr.sin6.sin6_addr, sizeof(pktinfo->ipi6_addr) );
     }
@@ -441,23 +450,20 @@ coap_get_max_packetlength(const coap_packet_t *packet) {
 }
 
 void
-coap_packet_populate_endpoint(coap_packet_t *packet, coap_endpoint_t *target)
-{
+coap_packet_populate_endpoint(coap_packet_t *packet, coap_endpoint_t *target) {
   target->handle = packet->endpoint->handle;
   memcpy(&target->addr, &packet->dst, sizeof(target->addr));
   target->ifindex = packet->ifindex;
   target->flags = 0; /* FIXME */
 }
 void
-coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target)
-{
+coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target) {
   memcpy(target, &packet->src, sizeof(coap_address_t));
 }
 void
-coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length)
-{
-	*address = packet->payload;
-	*length = packet->length;
+coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length) {
+  *address = packet->payload;
+  *length = packet->length;
 }
 
 /**
@@ -489,8 +495,15 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
   assert(ep);
   assert(packet);
 
+  if ((ep->flags & COAP_ENDPOINT_HAS_DATA) == 0) {
+    return -1;
+  } else {
+    /* clear has-data flag */
+    ep->flags &= ~COAP_ENDPOINT_HAS_DATA;
+  }
+
   *packet = coap_malloc_packet();
-  
+
   if (!*packet) {
     warn("coap_network_read: insufficient memory, drop packet\n");
     return -1;
@@ -510,7 +523,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
 
   mhdr.msg_iov = iov;
   mhdr.msg_iovlen = 1;
-  
+
   mhdr.msg_control = buf;
   mhdr.msg_controllen = sizeof(buf);
 
@@ -560,7 +573,7 @@ coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet) {
     /* Walk through ancillary data records until the local interface
      * is found where the data was received. */
     for (cmsg = CMSG_FIRSTHDR(&mhdr); cmsg; cmsg = CMSG_NXTHDR(&mhdr, cmsg)) {
-      
+
       /* get the local interface for IPv6 */
       if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
         union {

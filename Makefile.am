@@ -1,6 +1,6 @@
 # Makefile.am for libcoap
 #
-# Copyright (C) 2010-2015 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010-2016 Olaf Bergmann <bergmann@tzi.org>
 #           (C) 2015-2016 Carsten Schoenert <c.schoenert@t-online.de>
 #
 # This file is part of the CoAP C library libcoap. Please see README and
@@ -29,7 +29,7 @@ EXTRA_DIST = \
 
 AM_CFLAGS = -I$(top_builddir)/include/coap -I$(top_srcdir)/include/coap $(WARNING_CFLAGS) -std=c99
 
-SUBDIRS = . $(DOC_DIR) tests examples
+SUBDIRS = $(subdirs) . $(DOC_DIR) tests examples
 
 ## Define a libtool archive target "libcoap-@LIBCOAP_API_VERSION@.la", with
 ## @LIBCOAP_API_VERSION@ substituted into the generated Makefile at configure
@@ -52,6 +52,8 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/async.c \
   src/block.c \
   src/coap_io.c \
+  src/coap_dtls.c \
+  src/coap_event.c \
   src/coap_time.c \
   src/debug.c \
   src/encode.c \
@@ -77,6 +79,8 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap/block.h \
   $(top_builddir)/include/coap/coap.h \
   $(top_srcdir)/include/coap/coap_io.h \
+  $(top_srcdir)/include/coap/coap_dtls.h \
+  $(top_srcdir)/include/coap/coap_event.h \
   $(top_srcdir)/include/coap/coap_time.h \
   $(top_srcdir)/include/coap/debug.h \
   $(top_srcdir)/include/coap/encode.h \

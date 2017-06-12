@@ -10,11 +10,13 @@ global:
   coap_address_equals;
   coap_add_token;
   coap_adjust_basetime;
+  coap_attach_endpoint;
   coap_cancel_all_messages;
   coap_can_exit;
   coap_check_notify;
   coap_check_option;
   coap_cleanup;
+  coap_clear_event_handler;
   coap_clock_init;
   coap_clone_uri;
   coap_decode_var_bytes;
@@ -26,7 +28,18 @@ global:
   coap_delete_pdu;
   coap_delete_resource;
   coap_delete_string;
+  coap_detach_endpoint;
   coap_dispatch;
+  coap_dtls_free_context;
+  coap_dtls_free_session;
+  coap_dtls_get_log_level;
+  coap_dtls_get_session;
+  coap_dtls_handle_message;
+  coap_dtls_is_supported;
+  coap_dtls_new_context;
+  coap_dtls_new_session;
+  coap_dtls_send;
+  coap_dtls_set_log_level;
   coap_encode_var_bytes;
   coap_find_async;
   coap_find_attr;
@@ -43,6 +56,7 @@ global:
   coap_get_data;
   coap_get_log_level;
   coap_get_resource_from_key;
+  coap_handle_event;
   coap_handle_failed_notify;
   coap_handle_message;
   coap_hash_impl;
@@ -101,6 +115,7 @@ global:
   coap_send_confirmed;
   coap_send_error;
   coap_send_message_type;
+  coap_set_event_handler;
   coap_set_log_level;
   coap_show_pdu;
   coap_split_path;

@@ -29,11 +29,11 @@ stamp-h1
 .libs/
 libcoap*.la
 libcoap*.pc
-src/.deps/
-src/.dirstamp
-src/.libs/
-src/*.o
-src/*.lo
+src/**/.deps/
+src/**/.dirstamp
+src/**/.libs/
+src/**/*.o
+src/**/*.lo
 
 # the doc/ folder
 doc/Doxyfile
@@ -62,3 +62,7 @@ include/coap/coap.h
 tests/.deps
 tests/testdriver
 tests/*.o
+
+# ctags - Sublime plugin
+tags
+.tags*

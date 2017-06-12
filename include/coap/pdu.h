@@ -22,6 +22,7 @@
 #endif
 
 #define COAP_DEFAULT_PORT      5683 /* CoAP default UDP port */
+#define COAPS_DEFAULT_PORT     5684 /* CoAP default UDP port for secure transmission */
 #define COAP_DEFAULT_MAX_AGE     60 /* default maximum object lifetime in seconds */
 #ifndef COAP_MAX_PDU_SIZE
 #define COAP_MAX_PDU_SIZE      1400 /* maximum size of a CoAP PDU */

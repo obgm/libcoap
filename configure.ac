@@ -276,6 +276,14 @@ if test "x$build_examples" = "xyes" -a "x$build_documentation" = "xyes"; then
 fi
 AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$build_examples" = "xyes"])
 
+# __dtls__
+AC_ARG_ENABLE([dtls],
+              [AC_HELP_STRING([--enable-dtls],
+              [Enable DTLS provided by tinydtls (default=yes)])],
+              [build_dtls="$enableval"],
+              [build_dtls="yes"])
+AM_CONDITIONAL(BUILD_DTLS, [test "x$build_dtls" = "xyes"])
+
 # end configure options
 #######################
 
@@ -333,6 +341,18 @@ AC_SEARCH_LIBS([inet_ntop], [nsl])
 # Check if clock_gettime() requires librt, when available
 AC_SEARCH_LIBS([clock_gettime], [rt])
 
+# Add tinydtls to build flags if selected
+if test "x$build_dtls" = "xyes" ; then
+	if test -d "$srcdir/ext/tinydtls"; then
+	   AC_CONFIG_SUBDIRS([ext/tinydtls])
+	   AC_DEFINE(HAVE_LIBTINYDTLS, [1], [Define if the system has libtinydtls])
+           CPPFLAGS="$CPPFLAGS -I \$(top_srcdir)/ext/tinydtls"
+           LDFLAGS="$LDFLAGS -L\$(top_srcdir)/ext/tinydtls -ltinydtls"
+        else
+           build_dtls="no"
+        fi
+fi
+
 AC_MSG_CHECKING([operating system])
 
 # Set up here some extra platform depended defines and variables.
@@ -341,7 +361,7 @@ AC_MSG_CHECKING([operating system])
 case $host in
     *-linux* | *-uclinux*)
     AC_MSG_RESULT([Linux])
-    ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+    ADDITIONAL_CFLAGS="-D_GNU_SOURCE"
 
     # Not yet needed but if some code definitions have to depend on the platform.
     #AC_DEFINE(OS_LINUX, 1, [Linux backend])
@@ -353,12 +373,12 @@ case $host in
     # set _XOPEN_SOURCE and _XOPEN_SOURCE_EXTENDED to enable XPG4v2 (POSIX 2004)
     # set __EXTENSION__ to shut up feature test macros that restrict -std=c99
     # to only C99 (and nothing newer)
-    ADDITIONAL_CFLAGS="-D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=600 -D__EXTENSIONS__=1 -DWITH_POSIX"
+    ADDITIONAL_CFLAGS="-D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=600 -D__EXTENSIONS__=1"
     ;;
 
     *-darwin*)
     AC_MSG_RESULT([Darwin])
-    ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+    ADDITIONAL_CFLAGS="-D_GNU_SOURCE"
 
     AC_DEFINE(__APPLE_USE_RFC_3542, 1, [Define this to 1 for ancillary data on MacOS])
 
@@ -369,12 +389,12 @@ case $host in
 
     *-freebsd1*)
     AC_MSG_RESULT([FreeBSD-1x])
-    ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+    ADDITIONAL_CFLAGS="-D_GNU_SOURCE"
     ;;
 
     *kfreebsd*)
     AC_MSG_RESULT([kFreeBSD])
-    ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+    ADDITIONAL_CFLAGS="-D_GNU_SOURCE"
     ;;
 
     *)
@@ -443,4 +463,9 @@ if test "x$build_examples" = "xyes"; then
     fi
 else
     AC_MSG_RESULT([      build examples          : "no"])
+fi
+if test "x$build_dtls" = "xyes"; then
+	AC_MSG_RESULT([      build with DTLS support : "yes"])
+else
+	AC_MSG_RESULT([      build with DTLS support : "no"])
 fi

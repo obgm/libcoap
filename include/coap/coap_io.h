@@ -45,6 +45,8 @@ struct coap_context_t;
  * tuple (handle, addr) must uniquely identify this endpoint.
  */
 typedef struct coap_endpoint_t {
+  struct coap_endpoint_t *next;
+
 #if !defined(WITH_LWIP)
   union {
     coap_socket_t fd; /**< on POSIX, Contiki and Windows systems */
@@ -66,6 +68,10 @@ typedef struct coap_endpoint_t {
 
 #define COAP_ENDPOINT_NOSEC 0x00
 #define COAP_ENDPOINT_DTLS  0x01
+#define COAP_ENDPOINT_NOSEC    0x0000
+#define COAP_ENDPOINT_DTLS     0x0001
+
+#define COAP_ENDPOINT_HAS_DATA 0x1000
 
 coap_endpoint_t *coap_new_endpoint(const coap_address_t *addr, int flags);
 

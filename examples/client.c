@@ -27,7 +27,12 @@
 #endif
 
 #include <coap/coap.h>
+#include <coap/coap_dtls.h>
 #include "coap_list.h"
+
+#define MAX_USER 128 /* Maximum length of a user name (i.e., PSK
+                      * identity) in bytes. */
+#define MAX_KEY   64 /* Maximum length of a key (i.e., PSK) in bytes. */
 
 int flags = 0;
 
@@ -556,7 +561,8 @@ usage( const char *program, const char *version) {
      "(c) 2010-2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
      "usage: %s [-A type...] [-t type] [-b [num,]size] [-B seconds] [-e text]\n"
      "\t\t[-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
-     "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] [-U] URI\n\n"
+     "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] [-U]\n\n"
+     "\t\t[-u user] [-k key] URI\n\n"
      "\tURI can be an absolute or relative coap URI,\n"
      "\t-a addr\tthe local interface address to use\n"
      "\t-A type...\taccepted media types as comma-separated list of\n"
@@ -571,11 +577,15 @@ usage( const char *program, const char *version) {
      "\t-e text\t\tinclude text as payload (use percent-encoding for\n"
      "\t\t\tnon-ASCII characters)\n"
      "\t-f file\t\tfile to send with PUT/POST (use '-' for STDIN)\n"
+     "\t-k key\t\tPre-shared key for the specified user. This argument\n"
+     "\t       \t\trequires DTLS with PSK to be available.\n"
      "\t-m method\trequest method (get|put|post|delete), default is 'get'\n"
      "\t-N\t\tsend NON-confirmable message\n"
      "\t-o file\t\toutput received data to this file (use '-' for STDOUT)\n"
      "\t-p port\t\tlisten on specified port\n"
      "\t-s duration\tsubscribe for given duration [s]\n"
+     "\t-u user\t\tuser identity for pre-shared key mode. This argument\n"
+     "\t       \t\trequires DTLS with PSK to be available.\n"
      "\t-v num\t\tverbosity level (default: 3)\n"
      "\t-O num,text\tadd option num with contents text to request\n"
      "\t-P addr[:port]\tuse proxy (automatically adds Proxy-Uri option to\n"
@@ -678,6 +688,11 @@ cmdline_content_type(char *arg, unsigned short key) {
   }
 }
 
+static unsigned short
+get_default_port(const coap_uri_t *u) {
+  return coap_uri_scheme_is_secure(u) ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT;
+}
+
 /**
  * Sets global URI options according to the URI passed as @p arg.
  * This function returns 0 on success or -1 on error.
@@ -715,10 +730,16 @@ cmdline_uri(char *arg, int create_uri_opts) {
 
   } else {      /* split arg into Uri-* options */
     if (coap_split_uri((unsigned char *)arg, strlen(arg), &uri) < 0) {
+      coap_log(LOG_ERR, "invalid CoAP URI\n");
       return -1;
     }
 
-    if (uri.port != COAP_DEFAULT_PORT && create_uri_opts) {
+    if (coap_uri_scheme_is_secure(&uri) && !coap_dtls_is_supported()) {
+      coap_log(LOG_EMERG, "coaps URI scheme not supported in this version of libcoap\n");
+      return -1;
+    }
+
+    if (uri.port != get_default_port(&uri) && create_uri_opts) {
       coap_insert(&optlist,
                   new_option_node(COAP_OPTION_URI_PORT,
                   coap_encode_var_bytes(portbuf, uri.port),
@@ -1012,12 +1033,40 @@ cmdline_method(char *arg) {
   return i;     /* note that we do not prevent illegal methods */
 }
 
+static ssize_t
+cmdline_read_user(char *arg, unsigned char *buf, size_t maxlen) {
+  size_t len = strnlen(arg, maxlen);
+  if (len) {
+    memcpy(buf, arg, len);
+    return len;
+  }
+  return -1;
+}
+
+static ssize_t
+cmdline_read_key(char *arg, unsigned char *buf, size_t maxlen) {
+  size_t len = strnlen(arg, maxlen);
+  if (len) {
+    memcpy(buf, arg, len);
+    return len;
+  }
+  return -1;
+}
+
 static coap_context_t *
-get_context(const char *node, const char *port) {
+get_context(const char *node, const char *port, int secure) {
   coap_context_t *ctx = NULL;
   int s;
   struct addrinfo hints;
   struct addrinfo *result, *rp;
+  int ep_type;
+
+  ctx = coap_new_context(NULL);
+  if (!ctx) {
+    return NULL;
+  }
+
+  ep_type = secure ? COAP_ENDPOINT_DTLS : COAP_ENDPOINT_NOSEC;
 
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
@@ -1033,23 +1082,29 @@ get_context(const char *node, const char *port) {
   /* iterate through results until success */
   for (rp = result; rp != NULL; rp = rp->ai_next) {
     coap_address_t addr;
+    coap_endpoint_t *endpoint;
 
     if (rp->ai_addrlen <= sizeof(addr.addr)) {
       coap_address_init(&addr);
       addr.size = rp->ai_addrlen;
       memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
 
-      ctx = coap_new_context(&addr);
-      if (ctx) {
-        /* TODO: output address:port for successful binding */
+      endpoint = coap_new_endpoint(&addr, ep_type);
+      if (endpoint) {
+        coap_attach_endpoint(ctx, endpoint);
         goto finish;
+      } else {
+        coap_log(LOG_CRIT, "cannot create endpoint\n");
+        continue;
       }
     }
   }
 
   fprintf(stderr, "no context available for interface '%s'\n", node);
+  coap_free_context(ctx);
+  ctx = NULL;
 
-  finish:
+ finish:
   freeaddrinfo(result);
   return ctx;
 }
@@ -1062,9 +1117,9 @@ main(int argc, char **argv) {
   void *addrptr = NULL;
   fd_set readfds;
   struct timeval tv;
-  int result;
   coap_tick_t now;
   coap_queue_t *nextpdu;
+  int result = -1;
   coap_pdu_t  *pdu;
   static str server;
   unsigned short port = COAP_DEFAULT_PORT;
@@ -1073,9 +1128,11 @@ main(int argc, char **argv) {
   int opt, res;
   coap_log_t log_level = LOG_WARNING;
   coap_tid_t tid = COAP_INVALID_TID;
+  unsigned char user[MAX_USER], key[MAX_KEY];
+  ssize_t user_length = 0, key_length = 0;
   int create_uri_opts = 1;
 
-  while ((opt = getopt(argc, argv, "Na:b:e:f:g:m:p:s:t:o:v:A:B:O:P:T:U")) != -1) {
+  while ((opt = getopt(argc, argv, "Na:b:e:f:g:k:m:p:s:t:o:v:A:B:O:P:T:u:U")) != -1) {
     switch (opt) {
     case 'a' :
       strncpy(node_str, optarg, NI_MAXHOST-1);
@@ -1094,6 +1151,9 @@ main(int argc, char **argv) {
     case 'f' :
       if (!cmdline_input_from_file(optarg,&payload))
         payload.length = 0;
+      break;
+    case 'k' :
+      key_length = cmdline_read_key(optarg, key, MAX_KEY);
       break;
     case 'p' :
       strncpy(port_str, optarg, NI_MAXSERV-1);
@@ -1138,6 +1198,9 @@ main(int argc, char **argv) {
     case 'T' :
       cmdline_token(optarg);
       break;
+    case 'u' :
+      user_length = cmdline_read_user(optarg, user, MAX_USER);
+      break;
     case 'U' :
       create_uri_opts = 0;
       break;
@@ -1151,11 +1214,11 @@ main(int argc, char **argv) {
   }
 
   coap_startup();
+  coap_dtls_set_log_level(log_level);
   coap_set_log_level(log_level);
 
   if (optind < argc) {
     if (cmdline_uri(argv[optind], create_uri_opts) < 0) {
-      coap_log(LOG_ERR, "invalid CoAP URI\n");
       exit(1);
     }
   } else {
@@ -1189,13 +1252,15 @@ main(int argc, char **argv) {
     addrptr = &dst.addr.sin.sin_addr;
 
     /* create context for IPv4 */
-    ctx = get_context(node_str[0] == 0 ? "0.0.0.0" : node_str, port_str);
+    ctx = get_context(node_str[0] == 0 ? "0.0.0.0" : node_str, port_str,
+                      coap_uri_scheme_is_secure(&uri));
     break;
   case AF_INET6:
     addrptr = &dst.addr.sin6.sin6_addr;
 
     /* create context for IPv6 */
-    ctx = get_context(node_str[0] == 0 ? "::" : node_str, port_str);
+    ctx = get_context(node_str[0] == 0 ? "::" : node_str, port_str,
+                      coap_uri_scheme_is_secure(&uri));
     break;
   default:
     ;
@@ -1203,7 +1268,26 @@ main(int argc, char **argv) {
 
   if (!ctx) {
     coap_log(LOG_EMERG, "cannot create context\n");
-    return -1;
+    goto finish;
+  }
+
+  if ((user_length < 0) || (key_length < 0)) {
+    coap_log(LOG_CRIT, "Invalid user name or key specified\n");
+    goto finish;
+  }
+
+  /* Create a new PSK item and add to keystore if talking to a secure
+     resource. The user name or key may be empty. */
+  if (coap_uri_scheme_is_secure(&uri)) {
+    coap_keystore_item_t *psk;
+    psk = coap_keystore_new_psk(NULL, 0,
+                                (user_length > 0) ? user : NULL,
+                                (size_t)user_length,
+                                (key_length > 0) ? key : NULL,
+                                (size_t)key_length, 0);
+    if (!psk || !coap_keystore_store_item(ctx->keystore, psk, NULL)) {
+      coap_log(LOG_WARNING, "cannot store key\n");
+    }
   }
 
   coap_register_option(ctx, COAP_OPTION_BLOCK2);
@@ -1228,8 +1312,9 @@ main(int argc, char **argv) {
   if (flags & FLAGS_BLOCK)
     set_blocksize();
 
-  if (! (pdu = coap_new_request(ctx, method, &optlist, payload.s, payload.length)))
-    return -1;
+  if (! (pdu = coap_new_request(ctx, method, &optlist, payload.s, payload.length))) {
+    goto finish;
+  }
 
 #ifndef NDEBUG
   if (LOG_DEBUG <= coap_get_log_level()) {
@@ -1309,11 +1394,14 @@ main(int argc, char **argv) {
     }
   }
 
+  result = 0;
+
+ finish:
   close_output();
 
   coap_delete_list(optlist);
   coap_free_context( ctx );
   coap_cleanup();
 
-  return 0;
+  return result;
 }

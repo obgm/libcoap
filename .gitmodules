@@ -1,0 +1,4 @@
+[submodule "ext/tinydtls"]
+	path = ext/tinydtls
+	url = https://git.eclipse.org/r/tinydtls/org.eclipse.tinydtls
+    ignore = dirty
