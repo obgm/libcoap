@@ -151,7 +151,7 @@ void coap_attach_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint);
  *
  * @param endpoint The CoAP endpoint to detach.
  */
-void coap_detach_endpoint(coap_endpoint_t *endpoint);
+void coap_detach_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint);
 
 /**
  * Registers a new message handler that is called whenever a response was
@@ -412,7 +412,7 @@ int coap_read(coap_context_t *context);
  * @return       @c 0 if message was handled successfully, or less than zero on
  *               error.
  */
-int coap_handle_message(coap_context_t *ctx,
+int coap_handle_message(coap_context_t *ctx, coap_packet_t *packet);
 
 /**
  * Invokes the event handler of @p context for the given @p event and

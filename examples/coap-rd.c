@@ -732,11 +732,15 @@ main(int argc, char **argv) {
 
   init_resources(ctx);
 
-  coap_run(ctx);
-
   while ( !quit ) {
-    FD_ZERO(&readfds);
-    FD_SET( ctx->sockfd, &readfds );
+    coap_endpoint_t *ep;
+    coap_socket_t nfds = 0;
+    FD_ZERO( &readfds );
+    LL_FOREACH( ctx->endpoint, ep ) {
+      if ( ep->handle.fd + 1 > nfds )
+	nfds = ep->handle.fd + 1;
+      FD_SET( ep->handle.fd, &readfds );
+    }
 
     nextpdu = coap_peek_next( ctx );
 
@@ -757,7 +761,7 @@ main(int argc, char **argv) {
       tv.tv_sec = COAP_RESOURCE_CHECK_TIME;
       timeout = &tv;
     }
-    result = select( FD_SETSIZE, &readfds, 0, 0, timeout );
+    result = select( nfds, &readfds, 0, 0, timeout );
 
     if ( result < 0 ) {     /* error */
 #ifdef _WIN32
@@ -770,10 +774,11 @@ main(int argc, char **argv) {
         perror("select");
 #endif
       } else if ( result > 0 ) {  /* read from socket */
-        if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
-          coap_read( ctx ); /* read received data */
-          /* coap_dispatch( ctx );  /\* and dispatch PDUs from receivequeue *\/ */
-        }
+	LL_FOREACH( ctx->endpoint, ep ) {
+	  if ( FD_ISSET( ep->handle.fd, &readfds ) )
+	    ep->flags |= COAP_ENDPOINT_HAS_DATA;
+	}
+	coap_read( ctx ); /* read received data */
       } else {            /* timeout */
         /* coap_check_resource_list( ctx ); */
     }

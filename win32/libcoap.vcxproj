@@ -38,6 +38,8 @@
     <ClCompile Include="..\src\address.c" />
     <ClCompile Include="..\src\async.c" />
     <ClCompile Include="..\src\block.c" />
+    <ClCompile Include="..\src\coap_dtls.c" />
+    <ClCompile Include="..\src\coap_event.c" />
     <ClCompile Include="..\src\coap_io.c" />
     <ClCompile Include="..\src\coap_time.c" />
     <ClCompile Include="..\src\debug.c" />
@@ -59,6 +61,8 @@
     <ClInclude Include="..\include\coap\bits.h" />
     <ClInclude Include="..\include\coap\block.h" />
     <ClInclude Include="..\include\coap\coap.h" />
+    <ClInclude Include="..\include\coap\coap_dtls.h" />
+    <ClInclude Include="..\include\coap\coap_event.h" />
     <ClInclude Include="..\include\coap\coap_io.h" />
     <ClInclude Include="..\include\coap\coap_time.h" />
     <ClInclude Include="..\include\coap\debug.h" />
@@ -231,34 +235,52 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     </CustomBuildBeforeTargets>
     <CustomBuildAfterTargets>
     </CustomBuildAfterTargets>
+    <IncludePath>$(IncludePath);$(SolutionDir)include</IncludePath>
+    <LibraryPath>$(LibraryPath);$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">
     <TargetName>$(ProjectName)-1d</TargetName>
     <CustomBuildBeforeTargets />
     <CustomBuildAfterTargets />
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(IncludePath);$(SolutionDir)include</IncludePath>
+    <LibraryPath>$(LibraryPath);$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <CustomBuildBeforeTargets>
     </CustomBuildBeforeTargets>
     <CustomBuildAfterTargets>
     </CustomBuildAfterTargets>
+    <IncludePath>$(IncludePath);$(SolutionDir)include</IncludePath>
+    <LibraryPath>$(LibraryPath);$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">
     <CustomBuildBeforeTargets />
     <CustomBuildAfterTargets />
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)-1</TargetName>
+    <IncludePath>$(IncludePath);$(SolutionDir)include</IncludePath>
+    <LibraryPath>$(LibraryPath);$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">
     <TargetName>$(ProjectName)-1d</TargetName>
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>$(ProjectName)d</TargetName>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">
     <TargetName>$(ProjectName)-1</TargetName>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

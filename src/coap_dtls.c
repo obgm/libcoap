@@ -12,7 +12,6 @@
 #include "debug.h"
 #include "mem.h"
 #include "coap_dtls.h"
-#include "coap_keystore.h"
 #include "utlist.h"
 
 #ifdef __GNUC__
@@ -518,6 +517,18 @@ coap_dtls_handle_message(struct coap_context_t *coap_context,
 int
 coap_dtls_is_supported(void) {
   return 0;
+}
+
+static int dtls_log_level = 0;
+
+void
+coap_dtls_set_log_level(int level) {
+  dtls_log_level = level;
+}
+
+int
+coap_dtls_get_log_level(void) {
+  return dtls_log_level;
 }
 
 struct coap_dtls_context_t *

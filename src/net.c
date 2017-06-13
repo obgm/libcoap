@@ -338,17 +338,12 @@ is_wkc(coap_key_t k) {
 #endif
 
 void
-coap_detach_endpoint(coap_endpoint_t *endpoint) {
-  if (endpoint->context != NULL) {
-    LL_DELETE(endpoint->context->endpoint, endpoint);
-    endpoint->context = NULL;
-  }
+coap_detach_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint) {
+    LL_DELETE(ctx->endpoint, endpoint);
 }
 
 void
 coap_attach_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint) {
-  coap_detach_endpoint(endpoint);
-  endpoint->context = ctx;
   LL_PREPEND(ctx->endpoint, endpoint);
 }
 
@@ -392,11 +387,13 @@ coap_new_context(
 
   memset(c, 0, sizeof( coap_context_t ) );
 
-  c->dtls_context = coap_dtls_new_context(c);
-  if (!c->dtls_context) {
-    coap_log(LOG_EMERG, "coap_init: no DTLS context available\n");
-    coap_free_context(c);
-    return NULL;
+  if ( coap_dtls_is_supported() ) {
+    c->dtls_context = coap_dtls_new_context(c);
+    if (!c->dtls_context) {
+      coap_log(LOG_EMERG, "coap_init: no DTLS context available\n");
+      coap_free_context(c);
+      return NULL;
+    }
   }
 
   /* initialize message id */
@@ -465,7 +462,8 @@ coap_free_context(coap_context_t *context) {
 
   coap_delete_all_resources(context);
 
-  coap_dtls_free_context(context->dtls_context);
+  if ( context->dtls_context )
+    coap_dtls_free_context(context->dtls_context);
 
   LL_FOREACH_SAFE(context->endpoint, ep, tmp) {
     coap_free_endpoint(ep);

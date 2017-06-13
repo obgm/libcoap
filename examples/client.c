@@ -1279,6 +1279,7 @@ main(int argc, char **argv) {
   /* Create a new PSK item and add to keystore if talking to a secure
      resource. The user name or key may be empty. */
   if (coap_uri_scheme_is_secure(&uri)) {
+    /*
     coap_keystore_item_t *psk;
     psk = coap_keystore_new_psk(NULL, 0,
                                 (user_length > 0) ? user : NULL,
@@ -1288,6 +1289,7 @@ main(int argc, char **argv) {
     if (!psk || !coap_keystore_store_item(ctx->keystore, psk, NULL)) {
       coap_log(LOG_WARNING, "cannot store key\n");
     }
+    */
   }
 
   coap_register_option(ctx, COAP_OPTION_BLOCK2);
@@ -1335,8 +1337,14 @@ main(int argc, char **argv) {
   debug("timeout is set to %d seconds\n", wait_seconds);
 
   while ( !(ready && coap_can_exit(ctx)) ) {
+    coap_endpoint_t *ep;
+    coap_socket_t nfds = 0;
     FD_ZERO(&readfds);
-    FD_SET( ctx->sockfd, &readfds );
+    LL_FOREACH( ctx->endpoint, ep ) {
+      if ( ep->handle.fd + 1 > nfds )
+	nfds = ep->handle.fd + 1;
+      FD_SET( ep->handle.fd, &readfds );
+    }
 
     nextpdu = coap_peek_next( ctx );
 
@@ -1361,7 +1369,7 @@ main(int argc, char **argv) {
       }
     }
 
-    result = select(ctx->sockfd + 1, &readfds, 0, 0, &tv);
+    result = select( nfds, &readfds, 0, 0, &tv );
 
     if ( result < 0 ) {   /* error */
 #ifdef _WIN32
@@ -1373,10 +1381,11 @@ main(int argc, char **argv) {
       perror("select");
 #endif
     } else if ( result > 0 ) {  /* read from socket */
-      if ( FD_ISSET( ctx->sockfd, &readfds ) ) {
-        coap_read( ctx );       /* read received data */
-        /* coap_dispatch( ctx );  /\* and dispatch PDUs from receivequeue *\/ */
+      LL_FOREACH( ctx->endpoint, ep ) {
+	if ( FD_ISSET( ep->handle.fd, &readfds ) )
+	  ep->flags |= COAP_ENDPOINT_HAS_DATA;
       }
+      coap_read( ctx );       /* read received data */
     } else { /* timeout */
       coap_ticks(&now);
       if (max_wait <= now) {

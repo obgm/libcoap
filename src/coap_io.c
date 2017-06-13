@@ -155,7 +155,7 @@ coap_new_endpoint(const coap_address_t *addr, int flags) {
     return NULL;
   }
 
-  sockfd =  = socket(addr->addr.sa.sa_family, SOCK_DGRAM, 0);
+  sockfd = socket(addr->addr.sa.sa_family, SOCK_DGRAM, 0);
   if (sockfd == COAP_INVALID_SOCKET) {
     coap_log(LOG_WARNING, "coap_new_endpoint: socket");
     return NULL;
