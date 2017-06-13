@@ -234,6 +234,7 @@ decrypt_callback(gnutls_transport_ptr_t context, void *receive_buffer, size_t re
   struct coap_dtls_session_t * session = (struct coap_dtls_session_t *)context;
 
   coap_endpoint_t *local_interface;
+
   assert(session->ctx);
   assert(session->ctx->endpoint);
 
@@ -241,14 +242,21 @@ decrypt_callback(gnutls_transport_ptr_t context, void *receive_buffer, size_t re
     LL_SEARCH_SCALAR(session->ctx->endpoint, local_interface,
                      handle.fd, session->ifindex);
 
-    ssize_t bytes_read = 0;
+    coap_packet_t *packet;
 
-    bytes_read = recvfrom(local_interface->handle.fd, receive_buffer, receive_buffer_length, 0,
-                          &session->network_address.addr, &session->network_address.size);
+    ssize_t bytes_read = 0;
+    local_interface->flags |= COAP_ENDPOINT_HAS_DATA;
+
+    bytes_read = coap_network_read(local_interface, &packet);
+
     if (bytes_read < 0) {
       if (errno == EAGAIN) {
         coap_log(LOG_DEBUG, "eagain\n");
       }
+    } else {
+      unsigned char* payload = 0;
+      coap_packet_get_memmapped(packet, &payload, &bytes_read);
+      memcpy(receive_buffer, payload, bytes_read);
     }
     return bytes_read;
   }
