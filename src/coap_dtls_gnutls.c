@@ -242,19 +242,12 @@ decrypt_callback(gnutls_transport_ptr_t context, void *receive_buffer, size_t re
                      handle.fd, session->ifindex);
 
     ssize_t bytes_read = 0;
-    int retries = 3;
-    // TODO1: should not do socket operations in this file, use coap_network_read?
-    // TODO2: case we do receive here, should select/poll, but what should be the timeout
-    while (bytes_read <= 0 && retries-- >= 0) {
-      bytes_read = recvfrom(local_interface->handle.fd, receive_buffer, receive_buffer_length, 0,
-                            &(session->network_address.addr.sa), &session->network_address.size);
-      if (bytes_read < 0) {
-        if (errno == EAGAIN) {
-          coap_log(LOG_DEBUG, "eagain\n");
-          sleep(1);
-        } else {
-          break;
-        }
+
+    bytes_read = recvfrom(local_interface->handle.fd, receive_buffer, receive_buffer_length, 0,
+                          &session->network_address.addr, &session->network_address.size);
+    if (bytes_read < 0) {
+      if (errno == EAGAIN) {
+        coap_log(LOG_DEBUG, "eagain\n");
       }
     }
     return bytes_read;
@@ -324,6 +317,8 @@ psk_callback(gnutls_session_t session, const char *username, gnutls_datum_t * ke
 }
 
 #if GNUTLS_VERSION_MAJOR >= 3
+/* callback set by gnutls_transport_set_pull_timeout_function for gnutls to
+   check if data is available. Should not be needed when select works */
 static int
 receive_timeout(gnutls_transport_ptr_t context, unsigned int ms) {
   fd_set rfds;
@@ -338,20 +333,19 @@ receive_timeout(gnutls_transport_ptr_t context, unsigned int ms) {
   LL_SEARCH_SCALAR(session->ctx->endpoint, local_interface,
                    handle.fd, session->ifindex);
 
-  assert(local_interface);
-
-  // TODO: don't do socket operations in this file
   int fd = local_interface->handle.fd;
 
   FD_ZERO(&rfds);
   FD_SET(fd, &rfds);
-  ms = 4000;
+
+  // ms is usually 0 (is data available immediately?). Does not work for me if ms==0
+  if (ms == 0)
+    ms = 100;
+
   tv.tv_sec = ms/1000;
   tv.tv_usec = (ms % 1000) * 1000;
 
   ret = select(fd + 1, &rfds, NULL, NULL, &tv);
-  if (ret <= 0)
-    return ret;
   return ret;
 }
 #endif
