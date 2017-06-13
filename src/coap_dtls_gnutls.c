@@ -75,10 +75,10 @@ typedef struct coap_dtls_context_t {
   // gnutls stuff
   gnutls_certificate_credentials_t cert_credentials;
   uint8_t *certificate;
-  const char *pskIdentity;
+  const char *psk_identity;
   int certificate_length;
-  gnutls_datum_t pskKey;
-  gnutls_priority_t _PriorityCache;
+  gnutls_datum_t psk_key;
+  gnutls_priority_t priority_cache;
 
   CertificateFormat certificateFormat;
   uint8_t client;
@@ -110,9 +110,9 @@ certificate_verify(gnutls_session_t session) {
 void
 dtls_set_psk(struct coap_dtls_context_t *ctx, const char * identity, const uint8_t * key, int key_length) {
   if (key_length > 0)  {
-    ctx->pskIdentity = identity;
-    ctx->pskKey.data = (unsigned char *)key;
-    ctx->pskKey.size = key_length;
+    ctx->psk_identity = identity;
+    ctx->psk_key.data = (unsigned char *)key;
+    ctx->psk_key.size = key_length;
   }
 }
 
@@ -180,9 +180,9 @@ coap_dtls_new_context(struct coap_context_t *coap_context) {
     dtls_set_psk(context, "Client_identity", (uint8_t*)"EodEYFJDcdTYbxcc", 16);
 
 #if ((GNUTLS_VERSION_MAJOR > 3) || ((GNUTLS_VERSION_MAJOR == 3) && (GNUTLS_VERSION_MINOR >= 4)))
-    gnutls_priority_init(&context->_PriorityCache, "NONE:+VERS-ALL:+ECDHE-ECDSA:+ECDHE-PSK:+PSK:+CURVE-ALL:+AES-128-CCM-8:+AES-128-CBC:+MAC-ALL:-SHA1:+COMP-ALL:+SIGN-ALL:+CTYPE-X.509", NULL);
+    gnutls_priority_init(&context->priority_cache, "NONE:+VERS-ALL:+ECDHE-ECDSA:+ECDHE-PSK:+PSK:+CURVE-ALL:+AES-128-CCM-8:+AES-128-CBC:+MAC-ALL:-SHA1:+COMP-ALL:+SIGN-ALL:+CTYPE-X.509", NULL);
 #else
-    gnutls_priority_init(&context->_PriorityCache, "NONE:+VERS-TLS-ALL:+ECDHE-ECDSA:+ECDHE-PSK:+PSK:+CURVE-ALL:+AES-128-CBC:+MAC-ALL:-SHA1:+COMP-ALL:+SIGN-ALL:+CTYPE-X.509", NULL);
+    gnutls_priority_init(&context->priority_cache, "NONE:+VERS-TLS-ALL:+ECDHE-ECDSA:+ECDHE-PSK:+PSK:+CURVE-ALL:+AES-128-CBC:+MAC-ALL:-SHA1:+COMP-ALL:+SIGN-ALL:+CTYPE-X.509", NULL);
 #endif
 
   }
@@ -201,9 +201,9 @@ coap_dtls_free_context(struct coap_dtls_context_t *dtls_context) {
     //free(certificate);
     dtls_context->certificate = NULL;
   }
-  if (dtls_context->pskIdentity) {
-    //free(pskIdentity);
-    dtls_context->pskIdentity = NULL;
+  if (dtls_context->psk_identity) {
+    //free(psk_identity);
+    dtls_context->psk_identity = NULL;
   }
   dtls_context->certificate_length = 0;
 
@@ -220,7 +220,7 @@ coap_dtls_free_context(struct coap_dtls_context_t *dtls_context) {
     gnutls_certificate_free_credentials(dtls_context->cert_credentials);
     dtls_context->cert_credentials = NULL;
 
-    gnutls_priority_deinit(dtls_context->_PriorityCache);
+    gnutls_priority_deinit(dtls_context->priority_cache);
   }
 
   gnutls_global_deinit();
@@ -243,7 +243,8 @@ decrypt_callback(gnutls_transport_ptr_t context, void *receive_buffer, size_t re
 
     ssize_t bytes_read = 0;
     int retries = 3;
-    // TODO: should not do socket operations in this file, use coap_network_read?
+    // TODO1: should not do socket operations in this file, use coap_network_read?
+    // TODO2: case we do receive here, should select/poll, but what should be the timeout
     while (bytes_read <= 0 && retries-- >= 0) {
       bytes_read = recv(local_interface->handle.fd, receive_buffer, receive_buffer_length, 0);
       if (bytes_read < 0) {
@@ -280,18 +281,18 @@ static ssize_t
 dtls_send_to_peer(gnutls_transport_ptr_t context, const void * send_buffer,
                   size_t send_buffer_length) {
   int result = 0;
-  struct coap_dtls_session_t * dtlsSession = (struct coap_dtls_session_t *)context;
-  if (dtlsSession) {
+  struct coap_dtls_session_t *dtls_session = (struct coap_dtls_session_t *)context;
+  if (dtls_session) {
     coap_endpoint_t *local_interface;
-    assert(dtlsSession->ctx);
-    assert(dtlsSession->ctx->endpoint);
+    assert(dtls_session->ctx);
+    assert(dtls_session->ctx->endpoint);
 
-    LL_SEARCH_SCALAR(dtlsSession->ctx->endpoint, local_interface,
-                     handle.fd, dtlsSession->ifindex);
+    LL_SEARCH_SCALAR(dtls_session->ctx->endpoint, local_interface,
+                     handle.fd, dtls_session->ifindex);
 
     assert(local_interface);
-    result = coap_network_send(dtlsSession->ctx, local_interface,
-                               &dtlsSession->network_address, (uint8_t*)send_buffer, send_buffer_length);
+    result = coap_network_send(dtls_session->ctx, local_interface,
+                               &dtls_session->network_address, (uint8_t*)send_buffer, send_buffer_length);
     if (result != (int)send_buffer_length) {
       coap_log(LOG_WARNING, "coap_network_send failed\n");
       result = 0;
@@ -313,11 +314,11 @@ psk_client_callback(gnutls_session_t session, char **username, gnutls_datum_t * 
 /* callback passed to gnutls_psk_set_server_credentials_function(credentials, psk_callback */
 static int
 psk_callback(gnutls_session_t session, const char *username, gnutls_datum_t * key) {
-  struct coap_dtls_session_t* dtlsSession = (struct coap_dtls_session_t *)gnutls_transport_get_ptr(session);
+  struct coap_dtls_session_t* dtls_session = (struct coap_dtls_session_t *)gnutls_transport_get_ptr(session);
   (void)username;
-  key->data = gnutls_malloc(dtlsSession->ctx->dtls_context->pskKey.size);
-  key->size = dtlsSession->ctx->dtls_context->pskKey.size;
-  memcpy(key->data, dtlsSession->ctx->dtls_context->pskKey.data, key->size);
+  key->data = gnutls_malloc(dtls_session->ctx->dtls_context->psk_key.size);
+  key->size = dtls_session->ctx->dtls_context->psk_key.size;
+  memcpy(key->data, dtls_session->ctx->dtls_context->psk_key.data, key->size);
   return 0;
 }
 
@@ -391,7 +392,7 @@ coap_dtls_new_session(struct coap_dtls_context_t *dtls_context,
 #endif
     gnutls_transport_set_ptr(session->dtls_session, session); // set user data
 
-    if (dtls_context->certificate || !dtls_context->pskIdentity) {
+    if (dtls_context->certificate || !dtls_context->psk_identity) {
       if (dtls_context->cert_credentials) {
         gnutls_credentials_set(session->dtls_session, GNUTLS_CRD_CERTIFICATE, dtls_context->cert_credentials);
       } else if (gnutls_certificate_allocate_credentials(&dtls_context->cert_credentials) == GNUTLS_E_SUCCESS) {
@@ -417,12 +418,12 @@ coap_dtls_new_session(struct coap_dtls_context_t *dtls_context,
         gnutls_credentials_set(session->dtls_session, GNUTLS_CRD_CERTIFICATE, dtls_context->cert_credentials);
       }
     }
-    if (dtls_context->pskIdentity) {
+    if (dtls_context->psk_identity) {
       if (dtls_context->client) {
         if (!dtls_context->certificate) {
           gnutls_psk_client_credentials_t credentials;
           if (gnutls_psk_allocate_client_credentials(&credentials) == GNUTLS_E_SUCCESS) {
-            if (gnutls_psk_set_client_credentials(credentials, dtls_context->pskIdentity, &dtls_context->pskKey, GNUTLS_PSK_KEY_RAW) == GNUTLS_E_SUCCESS) {
+            if (gnutls_psk_set_client_credentials(credentials, dtls_context->psk_identity, &dtls_context->psk_key, GNUTLS_PSK_KEY_RAW) == GNUTLS_E_SUCCESS) {
               gnutls_credentials_set(session->dtls_session, GNUTLS_CRD_PSK, credentials);
               session->credentials = credentials;
               session->credential_type = CREDENTIAL_TYPE_CLIENT_PSK;
@@ -444,7 +445,7 @@ coap_dtls_new_session(struct coap_dtls_context_t *dtls_context,
       }
     }
 
-    gnutls_priority_set(session->dtls_session, dtls_context->_PriorityCache);
+    gnutls_priority_set(session->dtls_session, dtls_context->priority_cache);
     if (!dtls_context->client) {
       gnutls_certificate_server_set_request(session->dtls_session, GNUTLS_CERT_REQUEST); // GNUTLS_CERT_IGNORE  Don't require Client Cert
     }
