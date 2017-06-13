@@ -246,7 +246,8 @@ decrypt_callback(gnutls_transport_ptr_t context, void *receive_buffer, size_t re
     // TODO1: should not do socket operations in this file, use coap_network_read?
     // TODO2: case we do receive here, should select/poll, but what should be the timeout
     while (bytes_read <= 0 && retries-- >= 0) {
-      bytes_read = recv(local_interface->handle.fd, receive_buffer, receive_buffer_length, 0);
+      bytes_read = recvfrom(local_interface->handle.fd, receive_buffer, receive_buffer_length, 0,
+                            &(session->network_address.addr.sa), &session->network_address.size);
       if (bytes_read < 0) {
         if (errno == EAGAIN) {
           coap_log(LOG_DEBUG, "eagain\n");
