@@ -44,9 +44,9 @@ typedef struct coap_async_state_t {
    */
   void *appdata;
   unsigned short message_id;       /**< id of last message seen */
+  coap_session_t *session;	   /**< transaction session */
   coap_tid_t id;                   /**< transaction id */
   struct coap_async_state_t *next; /**< internally used for linking */
-  coap_address_t peer;             /**< the peer to notify */
   size_t tokenlen;                 /**< length of the token */
   unsigned char token[];           /**< the token to use in a response */
 } coap_async_state_t;
@@ -71,7 +71,7 @@ typedef struct coap_async_state_t {
  * is already registered.
  *
  * @param context  The context to use.
- * @param peer     The remote peer that is to be asynchronously notified.
+ * @param session  The session that is used for asynchronous transmissions.
  * @param request  The request that is handled asynchronously.
  * @param flags    Flags to control state management.
  * @param data     Opaque application data to register. Note that the
@@ -83,7 +83,7 @@ typedef struct coap_async_state_t {
  */
 coap_async_state_t *
 coap_register_async(coap_context_t *context,
-                    coap_address_t *peer,
+                    coap_session_t *session,
                     coap_pdu_t *request,
                     unsigned char flags,
                     void *data);
@@ -96,6 +96,7 @@ coap_register_async(coap_context_t *context,
  * functions. You will have to call coap_free_async() to do so.
  *
  * @param context The context where the async object is registered.
+ * @param session  The session that is used for asynchronous transmissions.
  * @param id      The identifier of the asynchronous transaction.
  * @param s       Will be set to the object identified by @p id after removal.
  *
@@ -104,6 +105,7 @@ coap_register_async(coap_context_t *context,
  *                return value is @c 1.
  */
 int coap_remove_async(coap_context_t *context,
+                      coap_session_t *session,
                       coap_tid_t id,
                       coap_async_state_t **s);
 
@@ -124,12 +126,13 @@ coap_free_async(coap_async_state_t *state);
  *
  * @param context The context where the asynchronous objects are registered
  *                with.
+ * @param session  The session that is used for asynchronous transmissions.
  * @param id      The id of the object to retrieve.
  *
  * @return        A pointer to the object identified by @p id or @c NULL if
  *                not found.
  */
-coap_async_state_t *coap_find_async(coap_context_t *context, coap_tid_t id);
+coap_async_state_t *coap_find_async(coap_context_t *context, coap_session_t *session, coap_tid_t id);
 
 /**
  * Updates the time stamp of @p s.

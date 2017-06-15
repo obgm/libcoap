@@ -486,7 +486,7 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
 
   if (coap_send(ctx, &async->peer, response) == COAP_INVALID_TID) {
     debug("check_async: cannot send response for message %d\n", 
-	  response->hdr->id);
+	  ntohs(response->hdr->id));
   }
   coap_delete_pdu(response);
   

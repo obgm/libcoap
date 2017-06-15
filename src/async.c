@@ -21,13 +21,12 @@
 #include "utlist.h"
 
 coap_async_state_t *
-coap_register_async(coap_context_t *context, coap_address_t *peer,
+coap_register_async(coap_context_t *context, coap_session_t *session,
 		    coap_pdu_t *request, unsigned char flags, void *data) {
   coap_async_state_t *s;
-  coap_tid_t id;
+  coap_tid_t id = ntohs( request->hdr->id );
 
-  coap_transaction_id(peer, request, &id);
-  LL_SEARCH_SCALAR(context->async_state,s,id,id);
+  LL_SEARCH_PAIR(context->async_state,s,session,session,id,id);
 
   if (s != NULL) {
     /* We must return NULL here as the caller must know that he is
@@ -52,16 +51,14 @@ coap_register_async(coap_context_t *context, coap_address_t *peer,
     s->flags |= COAP_ASYNC_CONFIRM;
 
   s->appdata = data;
-
-  memcpy(&s->peer, peer, sizeof(coap_address_t));
+  s->session = coap_session_reference( session );
+  s->id = id;
 
   if (request->hdr->token_length) {
     s->tokenlen = request->hdr->token_length;
     memcpy(s->token, request->hdr->token, request->hdr->token_length);
   }
     
-  memcpy(&s->id, &id, sizeof(coap_tid_t));
-
   coap_touch_async(s);
 
   LL_PREPEND(context->async_state, s);
@@ -70,16 +67,16 @@ coap_register_async(coap_context_t *context, coap_address_t *peer,
 }
 
 coap_async_state_t *
-coap_find_async(coap_context_t *context, coap_tid_t id) {
+coap_find_async(coap_context_t *context, coap_session_t *session, coap_tid_t id) {
   coap_async_state_t *tmp;
-  LL_SEARCH_SCALAR(context->async_state,tmp,id,id);  
+  LL_SEARCH_PAIR(context->async_state,tmp,session,session,id,id);
   return tmp;
 }
 
 int
-coap_remove_async(coap_context_t *context, coap_tid_t id, 
-		  coap_async_state_t **s) {
-  coap_async_state_t *tmp = coap_find_async(context, id);
+coap_remove_async(coap_context_t *context, coap_session_t *session,
+                  coap_tid_t id, coap_async_state_t **s) {
+  coap_async_state_t *tmp = coap_find_async(context, session, id);
 
   if (tmp)
     LL_DELETE(context->async_state,tmp);
@@ -90,6 +87,8 @@ coap_remove_async(coap_context_t *context, coap_tid_t id,
 
 void 
 coap_free_async(coap_async_state_t *s) {
+  if ( s->session )
+    coap_session_release( s->session );
   if (s && (s->flags & COAP_ASYNC_RELEASE_DATA) != 0)
     coap_free(s->appdata);
   coap_free(s); 

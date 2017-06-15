@@ -12,10 +12,6 @@
 #include "coap_io.h"
 #include <lwip/udp.h>
 
-void coap_packet_populate_endpoint(coap_packet_t *packet, coap_endpoint_t *target)
-{
-	printf("FIXME no endpoint populated\n");
-}
 void coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target)
 {
 	target->port = packet->srcport;

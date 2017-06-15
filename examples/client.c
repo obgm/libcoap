@@ -63,11 +63,12 @@ method_t method = 1;                    /* the method we are using in our reques
 
 coap_block_t block = { .num = 0, .m = 0, .szx = 6 };
 
-unsigned int wait_seconds = 90;         /* default timeout in seconds */
-coap_tick_t max_wait;                   /* global timeout (changed by set_timeout()) */
-
+unsigned int wait_seconds = 90;		/* default timeout in seconds */
+unsigned int wait_ms = 0;
+int wait_ms_reset = 0;
 unsigned int obs_seconds = 30;          /* default observe time */
-coap_tick_t obs_wait = 0;               /* timeout for current subscription */
+unsigned int obs_ms = 0;                /* timeout for current subscription */
+int obs_ms_reset = 0;
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -185,9 +186,7 @@ coap_new_request(coap_context_t *ctx,
 }
 
 static coap_tid_t
-clear_obs(coap_context_t *ctx,
-          const coap_endpoint_t *local_interface,
-          const coap_address_t *remote) {
+clear_obs(coap_context_t *ctx, coap_session_t *session) {
   coap_pdu_t *pdu;
   coap_list_t *option;
   coap_tid_t tid = COAP_INVALID_TID;
@@ -250,9 +249,9 @@ clear_obs(coap_context_t *ctx,
   coap_show_pdu(pdu);
 
   if (pdu->hdr->type == COAP_MESSAGE_CON)
-    tid = coap_send_confirmed(ctx, local_interface, remote, pdu);
+    tid = coap_send_confirmed(session, pdu);
   else
-    tid = coap_send(ctx, local_interface, remote, pdu);
+    tid = coap_send(session, pdu);
 
   if (tid == COAP_INVALID_TID) {
     debug("clear_obs: error sending new request");
@@ -323,8 +322,7 @@ check_token(coap_pdu_t *received) {
 
 static void
 message_handler(struct coap_context_t *ctx,
-                const coap_endpoint_t *local_interface,
-                const coap_address_t *remote,
+                coap_session_t *session,
                 coap_pdu_t *sent,
                 coap_pdu_t *received,
                 const coap_tid_t id UNUSED_PARAM) {
@@ -351,7 +349,7 @@ message_handler(struct coap_context_t *ctx,
     /* drop if this was just some message, or send RST in case of notification */
     if (!sent && (received->hdr->type == COAP_MESSAGE_CON ||
                   received->hdr->type == COAP_MESSAGE_NON))
-      coap_send_rst(ctx, local_interface, remote, received);
+      coap_send_rst(session, received);
     return;
   }
 
@@ -366,7 +364,8 @@ message_handler(struct coap_context_t *ctx,
     /* set obs timer if we have successfully subscribed a resource */
     if (sent && coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter)) {
       debug("observation relationship established, set timeout to %d\n", obs_seconds);
-      set_timeout(&obs_wait, obs_seconds);
+      obs_ms = obs_seconds * 1000;
+      obs_ms_reset = 1;
     }
 
     /* Got some data, check if block option is set. Behavior is undefined if
@@ -416,15 +415,16 @@ message_handler(struct coap_context_t *ctx,
                                   COAP_OPT_BLOCK_SZX(block_opt)), buf);
 
           if (pdu->hdr->type == COAP_MESSAGE_CON)
-            tid = coap_send_confirmed(ctx, local_interface, remote, pdu);
+            tid = coap_send_confirmed(session, pdu);
           else
-            tid = coap_send(ctx, local_interface, remote, pdu);
+            tid = coap_send(session, pdu);
 
           if (tid == COAP_INVALID_TID) {
             debug("message_handler: error sending new request");
             coap_delete_pdu(pdu);
           } else {
-            set_timeout(&max_wait, wait_seconds);
+	    wait_ms = wait_seconds * 1000;
+	    wait_ms_reset = 1;
             if (pdu->hdr->type != COAP_MESSAGE_CON)
               coap_delete_pdu(pdu);
           }
@@ -502,15 +502,16 @@ message_handler(struct coap_context_t *ctx,
                          block.szx);
           coap_show_pdu(pdu);
           if (pdu->hdr->type == COAP_MESSAGE_CON)
-            tid = coap_send_confirmed(ctx, local_interface, remote, pdu);
+            tid = coap_send_confirmed(session, pdu);
           else
-            tid = coap_send(ctx, local_interface, remote, pdu);
+            tid = coap_send(session, pdu);
 
           if (tid == COAP_INVALID_TID) {
             debug("message_handler: error sending new request");
             coap_delete_pdu(pdu);
           } else {
-            set_timeout(&max_wait, wait_seconds);
+	    wait_ms = wait_seconds * 1000;
+	    wait_ms_reset = 1;
             if (pdu->hdr->type != COAP_MESSAGE_CON)
               coap_delete_pdu(pdu);
           }
@@ -540,7 +541,7 @@ message_handler(struct coap_context_t *ctx,
   }
 
   /* finally send new request, if needed */
-  if (pdu && coap_send(ctx, local_interface, remote, pdu) == COAP_INVALID_TID) {
+  if (pdu && coap_send(session, pdu) == COAP_INVALID_TID) {
     debug("message_handler: error sending response");
   }
   coap_delete_pdu(pdu);
@@ -1053,72 +1054,68 @@ cmdline_read_key(char *arg, unsigned char *buf, size_t maxlen) {
   return -1;
 }
 
-static coap_context_t *
-get_context(const char *node, const char *port, int secure) {
-  coap_context_t *ctx = NULL;
-  int s;
-  struct addrinfo hints;
-  struct addrinfo *result, *rp;
-  int ep_type;
+static coap_session_t *
+get_session(
+  coap_context_t *ctx,
+  const char *local_addr,
+  const char *local_port,
+  coap_proto_t proto,
+  coap_address_t *dst,
+  const uint8_t *identity,
+  size_t identity_len,
+  const uint8_t *key,
+  size_t key_len
+) {
+  coap_session_t *session = NULL;
 
-  ctx = coap_new_context(NULL);
-  if (!ctx) {
-    return NULL;
-  }
+  if ( local_addr ) {
+    int s;
+    struct addrinfo hints;
+    struct addrinfo *result = NULL, *rp;
 
-  ep_type = secure ? COAP_ENDPOINT_DTLS : COAP_ENDPOINT_NOSEC;
+    memset( &hints, 0, sizeof( struct addrinfo ) );
+    hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
+    hints.ai_socktype = SOCK_DGRAM; /* Coap uses UDP */
+    hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL;
 
-  memset(&hints, 0, sizeof(struct addrinfo));
-  hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
-  hints.ai_socktype = SOCK_DGRAM; /* Coap uses UDP */
-  hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL;
+    s = getaddrinfo( local_addr, local_port, &hints, &result );
+    if ( s != 0 ) {
+      fprintf( stderr, "getaddrinfo: %s\n", gai_strerror( s ) );
+      return NULL;
+    }
 
-  s = getaddrinfo(node, port, &hints, &result);
-  if ( s != 0 ) {
-    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
-    return NULL;
-  }
-
-  /* iterate through results until success */
-  for (rp = result; rp != NULL; rp = rp->ai_next) {
-    coap_address_t addr;
-    coap_endpoint_t *endpoint;
-
-    if (rp->ai_addrlen <= sizeof(addr.addr)) {
-      coap_address_init(&addr);
-      addr.size = rp->ai_addrlen;
-      memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
-
-      endpoint = coap_new_endpoint(&addr, ep_type);
-      if (endpoint) {
-        coap_attach_endpoint(ctx, endpoint);
-        goto finish;
-      } else {
-        coap_log(LOG_CRIT, "cannot create endpoint\n");
-        continue;
+    /* iterate through results until success */
+    for ( rp = result; rp != NULL; rp = rp->ai_next ) {
+      coap_address_t bind_addr;
+      if ( rp->ai_addrlen <= sizeof( bind_addr.addr ) ) {
+	coap_address_init( &bind_addr );
+	bind_addr.size = rp->ai_addrlen;
+	memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
+	if ( identity && key && proto == COAP_PROTO_DTLS )
+	  session = coap_new_client_session_psk( ctx, &bind_addr, dst, proto, identity, identity_len, key, key_len );
+	else
+	  session = coap_new_client_session( ctx, &bind_addr, dst, proto );
+	if ( session )
+	  break;
       }
     }
+    freeaddrinfo( result );
+  } else {
+    if ( identity && key && proto == COAP_PROTO_DTLS )
+      session = coap_new_client_session_psk( ctx, NULL, dst, proto, identity, identity_len, key, key_len );
+    else
+      session = coap_new_client_session( ctx, NULL, dst, proto );
   }
-
-  fprintf(stderr, "no context available for interface '%s'\n", node);
-  coap_free_context(ctx);
-  ctx = NULL;
-
- finish:
-  freeaddrinfo(result);
-  return ctx;
+  return session;
 }
 
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx = NULL;
+  coap_session_t *session = NULL;
   coap_address_t dst;
   static char addr[INET6_ADDRSTRLEN];
   void *addrptr = NULL;
-  fd_set readfds;
-  struct timeval tv;
-  coap_tick_t now;
-  coap_queue_t *nextpdu;
   int result = -1;
   coap_pdu_t  *pdu;
   static str server;
@@ -1226,6 +1223,11 @@ main(int argc, char **argv) {
     exit( 1 );
   }
 
+  if ( ( user_length < 0 ) || ( key_length < 0 ) ) {
+    coap_log( LOG_CRIT, "Invalid user name or key specified\n" );
+    goto finish;
+  }
+  
   if (proxy.length) {
     server = proxy;
     port = proxy_port;
@@ -1242,54 +1244,41 @@ main(int argc, char **argv) {
     exit(-1);
   }
 
+  ctx = coap_new_context( NULL );
+  if ( !ctx ) {
+    coap_log( LOG_EMERG, "cannot create context\n" );
+    goto finish;
+  }
+
   dst.size = res;
-  dst.addr.sin.sin_port = htons(port);
+  dst.addr.sin.sin_port = htons( port );
+
+  session = get_session(
+    ctx,
+    node_str[0] ? node_str : NULL, port_str,
+    coap_uri_scheme_is_secure( &uri ) ? COAP_PROTO_DTLS : COAP_PROTO_UDP,
+    &dst,
+    user_length > 0 ? user : NULL, (size_t)user_length,
+    key_length > 0  ? key : NULL, (size_t)key_length
+  );
+
+  if ( !session ) {
+    coap_log( LOG_EMERG, "cannot create client session\n" );
+    goto finish;
+  }
 
   /* add Uri-Host if server address differs from uri.host */
 
   switch (dst.addr.sa.sa_family) {
   case AF_INET:
     addrptr = &dst.addr.sin.sin_addr;
-
     /* create context for IPv4 */
-    ctx = get_context(node_str[0] == 0 ? "0.0.0.0" : node_str, port_str,
-                      coap_uri_scheme_is_secure(&uri));
     break;
   case AF_INET6:
     addrptr = &dst.addr.sin6.sin6_addr;
-
-    /* create context for IPv6 */
-    ctx = get_context(node_str[0] == 0 ? "::" : node_str, port_str,
-                      coap_uri_scheme_is_secure(&uri));
     break;
   default:
     ;
-  }
-
-  if (!ctx) {
-    coap_log(LOG_EMERG, "cannot create context\n");
-    goto finish;
-  }
-
-  if ((user_length < 0) || (key_length < 0)) {
-    coap_log(LOG_CRIT, "Invalid user name or key specified\n");
-    goto finish;
-  }
-
-  /* Create a new PSK item and add to keystore if talking to a secure
-     resource. The user name or key may be empty. */
-  if (coap_uri_scheme_is_secure(&uri)) {
-    /*
-    coap_keystore_item_t *psk;
-    psk = coap_keystore_new_psk(NULL, 0,
-                                (user_length > 0) ? user : NULL,
-                                (size_t)user_length,
-                                (key_length > 0) ? key : NULL,
-                                (size_t)key_length, 0);
-    if (!psk || !coap_keystore_store_item(ctx->keystore, psk, NULL)) {
-      coap_log(LOG_WARNING, "cannot store key\n");
-    }
-    */
   }
 
   coap_register_option(ctx, COAP_OPTION_BLOCK2);
@@ -1326,50 +1315,19 @@ main(int argc, char **argv) {
 #endif
 
   if (pdu->hdr->type == COAP_MESSAGE_CON)
-    tid = coap_send_confirmed(ctx, ctx->endpoint, &dst, pdu);
+    tid = coap_send_confirmed(session, pdu);
   else
-    tid = coap_send(ctx, ctx->endpoint, &dst, pdu);
+    tid = coap_send(session, pdu);
 
   if (pdu->hdr->type != COAP_MESSAGE_CON || tid == COAP_INVALID_TID)
     coap_delete_pdu(pdu);
 
-  set_timeout(&max_wait, wait_seconds);
-  debug("timeout is set to %d seconds\n", wait_seconds);
+  wait_ms = wait_seconds * 1000;
+  debug("timeout is set to %u seconds\n", wait_seconds);
 
   while ( !(ready && coap_can_exit(ctx)) ) {
-    coap_endpoint_t *ep;
-    coap_socket_t nfds = 0;
-    FD_ZERO(&readfds);
-    LL_FOREACH( ctx->endpoint, ep ) {
-      if ( ep->handle.fd + 1 > nfds )
-	nfds = ep->handle.fd + 1;
-      FD_SET( ep->handle.fd, &readfds );
-    }
 
-    nextpdu = coap_peek_next( ctx );
-
-    coap_ticks(&now);
-    while (nextpdu && nextpdu->t <= now - ctx->sendqueue_basetime) {
-      coap_retransmit( ctx, coap_pop_next( ctx ));
-      nextpdu = coap_peek_next( ctx );
-    }
-
-    if (nextpdu && nextpdu->t < min(obs_wait ? obs_wait : max_wait, max_wait) - now) {
-      /* set timeout if there is a pdu to send */
-      tv.tv_usec = ((nextpdu->t) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-      tv.tv_sec = (long)((nextpdu->t) / COAP_TICKS_PER_SECOND);
-    } else {
-      /* check if obs_wait fires before max_wait */
-      if (obs_wait && obs_wait < max_wait) {
-        tv.tv_usec = ((obs_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-        tv.tv_sec = (long)((obs_wait - now) / COAP_TICKS_PER_SECOND);
-      } else {
-        tv.tv_usec = ((max_wait - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-        tv.tv_sec = (long)((max_wait - now) / COAP_TICKS_PER_SECOND);
-      }
-    }
-
-    result = select( nfds, &readfds, 0, 0, &tv );
+    result = coap_run_once( ctx, wait_ms == 0 ? obs_ms : obs_ms == 0 ? wait_ms : min( wait_ms, obs_ms ) );
 
     if ( result < 0 ) {   /* error */
 #ifdef _WIN32
@@ -1380,26 +1338,29 @@ main(int argc, char **argv) {
 #else
       perror("select");
 #endif
-    } else if ( result > 0 ) {  /* read from socket */
-      LL_FOREACH( ctx->endpoint, ep ) {
-	if ( FD_ISSET( ep->handle.fd, &readfds ) )
-	  ep->flags |= COAP_ENDPOINT_HAS_DATA;
+    } else {
+      if ( wait_ms > 0 && !wait_ms_reset ) {
+	if ( (unsigned)result >= wait_ms ) {
+	  info( "timeout\n" );
+	  break;
+	} else {
+	  wait_ms -= result;
+	}
       }
-      coap_read( ctx );       /* read received data */
-    } else { /* timeout */
-      coap_ticks(&now);
-      if (max_wait <= now) {
-        info("timeout\n");
-        break;
-      }
-      if (obs_wait && obs_wait <= now) {
-        debug("clear observation relationship\n");
-        clear_obs(ctx, ctx->endpoint, &dst); /* FIXME: handle error case COAP_TID_INVALID */
+      if ( obs_ms > 0 && !obs_ms_reset ) {
+	if ( (unsigned)result >= obs_ms ) {
+	  debug( "clear observation relationship\n" );
+	  clear_obs( ctx, session ); /* FIXME: handle error case COAP_TID_INVALID */
 
-        /* make sure that the obs timer does not fire again */
-        obs_wait = 0;
-        obs_seconds = 0;
+	  /* make sure that the obs timer does not fire again */
+	  obs_ms = 0;
+	  obs_seconds = 0;
+	} else {
+	  obs_ms -= result;
+	}
       }
+      wait_ms_reset = 0;
+      obs_ms_reset = 0;
     }
   }
 
@@ -1409,6 +1370,7 @@ main(int argc, char **argv) {
   close_output();
 
   coap_delete_list(optlist);
+  coap_session_release( session );
   coap_free_context( ctx );
   coap_cleanup();
 

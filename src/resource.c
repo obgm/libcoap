@@ -422,7 +422,10 @@ coap_free_resource(coap_resource_t *resource) {
     coap_free(resource->uri.s);
 
   /* free all elements from resource->subscribers */
-  LL_FOREACH_SAFE(resource->subscribers, obs, otmp) COAP_FREE_TYPE(subscription, obs);
+  LL_FOREACH_SAFE( resource->subscribers, obs, otmp ) {
+    coap_session_release( obs->session );
+    COAP_FREE_TYPE( subscription, obs );
+  }
 
 #ifdef WITH_LWIP
   memp_free(MEMP_COAP_RESOURCE, resource);
@@ -538,15 +541,15 @@ coap_print_link(const coap_resource_t *resource,
 
 #ifndef WITHOUT_OBSERVE
 coap_subscription_t *
-coap_find_observer(coap_resource_t *resource, const coap_address_t *peer,
+coap_find_observer(coap_resource_t *resource, coap_session_t *session,
 		     const str *token) {
   coap_subscription_t *s;
 
   assert(resource);
-  assert(peer);
+  assert(session);
 
   LL_FOREACH(resource->subscribers, s) {
-    if (coap_address_equals(&s->subscriber, peer)
+    if (s->session == session
 	&& (!token || (token->length == s->token_length 
 		       && memcmp(token->s, s->token, token->length) == 0)))
       return s;
@@ -557,15 +560,14 @@ coap_find_observer(coap_resource_t *resource, const coap_address_t *peer,
 
 coap_subscription_t *
 coap_add_observer(coap_resource_t *resource, 
-		  const coap_endpoint_t *local_interface,
-		  const coap_address_t *observer,
+                  coap_session_t *session,
 		  const str *token) {
   coap_subscription_t *s;
   
-  assert(observer);
+  assert( session );
 
   /* Check if there is already a subscription for this peer. */
-  s = coap_find_observer(resource, observer, token);
+  s = coap_find_observer(resource, session, token);
 
   /* We are done if subscription was found. */
   if (s)
@@ -579,8 +581,7 @@ coap_add_observer(coap_resource_t *resource,
     return NULL;
 
   coap_subscription_init(s);
-  s->local_if = *local_interface;
-  memcpy(&s->subscriber, observer, sizeof(coap_address_t));
+  s->session = coap_session_reference( session );
   
   if (token && token->length) {
     s->token_length = token->length;
@@ -594,12 +595,12 @@ coap_add_observer(coap_resource_t *resource,
 }
 
 void
-coap_touch_observer(coap_context_t *context, const coap_address_t *observer,
+coap_touch_observer(coap_context_t *context, coap_session_t *session,
 		    const str *token) {
   coap_subscription_t *s;
 
   RESOURCES_ITER(context->resources, r) {
-    s = coap_find_observer(r, observer, token);
+    s = coap_find_observer(r, session, token);
     if (s) {
       s->fail_cnt = 0;
     }
@@ -607,15 +608,15 @@ coap_touch_observer(coap_context_t *context, const coap_address_t *observer,
 }
 
 int
-coap_delete_observer(coap_resource_t *resource, const coap_address_t *observer,
+coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
 		     const str *token) {
   coap_subscription_t *s;
 
-  s = coap_find_observer(resource, observer, token);
+  s = coap_find_observer(resource, session, token);
 
   if (resource->subscribers && s) {
     LL_DELETE(resource->subscribers, s);
-
+    coap_session_release( session );
     COAP_FREE_TYPE(subscription,s);
   }
 
@@ -672,16 +673,16 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
 	response->hdr->type = COAP_MESSAGE_CON;
       }
       /* fill with observer-specific data */
-      h(context, r, &obs->local_if, &obs->subscriber, NULL, &token, response);
+      h(context, r, obs->session, NULL, &token, response);
 
       /* TODO: do not send response and remove observer when 
        *  COAP_RESPONSE_CLASS(response->hdr->code) > 2
        */
       if (response->hdr->type == COAP_MESSAGE_CON) {
-	tid = coap_send_confirmed(context, &obs->local_if, &obs->subscriber, response);
+	tid = coap_send_confirmed(obs->session, response);
 	obs->non_cnt = 0;
       } else {
-	tid = coap_send(context, &obs->local_if, &obs->subscriber, response);
+	tid = coap_send(obs->session, response);
 	obs->non_cnt++;
       }
 
@@ -723,12 +724,12 @@ coap_check_notify(coap_context_t *context) {
 static void
 coap_remove_failed_observers(coap_context_t *context,
 			     coap_resource_t *resource,
-			     const coap_address_t *peer,
+			     coap_session_t *session,
 			     const str *token) {
   coap_subscription_t *obs, *otmp;
 
   LL_FOREACH_SAFE(resource->subscribers, obs, otmp) {
-    if (coap_address_equals(peer, &obs->subscriber) &&
+    if ( obs->session == session &&
 	token->length == obs->token_length &&
 	memcmp(token->s, obs->token, token->length) == 0) {
       
@@ -747,13 +748,13 @@ coap_remove_failed_observers(coap_context_t *context,
 #endif
 	  unsigned char addr[INET6_ADDRSTRLEN+8];
 
-	  if (coap_print_addr(&obs->subscriber, addr, INET6_ADDRSTRLEN+8))
+	  if (coap_print_addr(&obs->session->remote_addr, addr, INET6_ADDRSTRLEN+8))
 	    debug("** removed observer %s\n", addr);
 	}
 #endif
-	coap_cancel_all_messages(context, &obs->subscriber, 
+	coap_cancel_all_messages(context, obs->session, 
 				 obs->token, obs->token_length);
-
+	coap_session_release( obs->session );
 	COAP_FREE_TYPE(subscription, obs);
       }
       break;			/* break loop if observer was found */
@@ -763,11 +764,11 @@ coap_remove_failed_observers(coap_context_t *context,
 
 void
 coap_handle_failed_notify(coap_context_t *context, 
-			  const coap_address_t *peer, 
+			  coap_session_t *session, 
 			  const str *token) {
 
   RESOURCES_ITER(context->resources, r) {
-	coap_remove_failed_observers(context, r, peer, token);
+	coap_remove_failed_observers(context, r, session, token);
   }
 }
 #endif /* WITHOUT_NOTIFY */

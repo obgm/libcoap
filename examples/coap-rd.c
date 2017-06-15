@@ -97,8 +97,7 @@ handle_sigint(int signum UNUSED_PARAM) {
 static void
 hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
                  struct coap_resource_t *resource,
-                 const coap_endpoint_t *local_interface UNUSED_PARAM,
-                 coap_address_t *peer UNUSED_PARAM,
+                 coap_session_t *session UNUSED_PARAM,
                  coap_pdu_t *request UNUSED_PARAM,
                  str *token UNUSED_PARAM,
                  coap_pdu_t *response) {
@@ -125,8 +124,7 @@ hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
 static void
 hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
                  struct coap_resource_t *resource UNUSED_PARAM,
-                 const coap_endpoint_t *local_interface UNUSED_PARAM,
-                 coap_address_t *peer UNUSED_PARAM,
+                 coap_session_t *session UNUSED_PARAM,
                  coap_pdu_t *request UNUSED_PARAM,
                  str *token UNUSED_PARAM,
                  coap_pdu_t *response) {
@@ -203,8 +201,7 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
 static void
 hnd_delete_resource(coap_context_t  *ctx,
                     struct coap_resource_t *resource,
-                    const coap_endpoint_t *local_interface UNUSED_PARAM,
-                    coap_address_t *peer UNUSED_PARAM,
+                    coap_session_t *session UNUSED_PARAM,
                     coap_pdu_t *request UNUSED_PARAM,
                     str *token UNUSED_PARAM,
                     coap_pdu_t *response) {
@@ -225,8 +222,7 @@ hnd_delete_resource(coap_context_t  *ctx,
 static void
 hnd_get_rd(coap_context_t  *ctx UNUSED_PARAM,
            struct coap_resource_t *resource UNUSED_PARAM,
-           const coap_endpoint_t *local_interface UNUSED_PARAM,
-           coap_address_t *peer UNUSED_PARAM,
+           coap_session_t *session UNUSED_PARAM,
            coap_pdu_t *request UNUSED_PARAM,
            str *token UNUSED_PARAM,
            coap_pdu_t *response) {
@@ -354,7 +350,7 @@ add_source_address(struct coap_resource_t *resource,
 }
 
 static rd_t *
-make_rd(coap_address_t *peer UNUSED_PARAM, coap_pdu_t *pdu) {
+make_rd(coap_pdu_t *pdu) {
   rd_t *rd;
   unsigned char *data;
   coap_opt_iterator_t opt_iter;
@@ -389,8 +385,7 @@ make_rd(coap_address_t *peer UNUSED_PARAM, coap_pdu_t *pdu) {
 static void
 hnd_post_rd(coap_context_t  *ctx,
             struct coap_resource_t *resource UNUSED_PARAM,
-            const coap_endpoint_t *local_interface UNUSED_PARAM,
-            coap_address_t *peer,
+            coap_session_t *session,
             coap_pdu_t *request,
             str *token UNUSED_PARAM,
             coap_pdu_t *response) {
@@ -501,11 +496,11 @@ hnd_post_rd(coap_context_t  *ctx,
     }
   }
 
-  add_source_address(r, peer);
+  add_source_address(r, &session->remote_addr );
 
   {
     rd_t *rd;
-    rd = make_rd(peer, request);
+    rd = make_rd(request);
     if (rd) {
       coap_hash_path(loc, loc_size, rd->key);
       HASH_ADD(hh, resources, key, sizeof(coap_key_t), rd);
@@ -660,7 +655,7 @@ join(coap_context_t *ctx, char *group_name) {
   }
 
   if (ctx->endpoint) {
-    result = setsockopt(ctx->endpoint->handle.fd,
+    result = setsockopt(ctx->endpoint->sock.fd,
                         IPPROTO_IPV6, IPV6_JOIN_GROUP,
                         (char *)&mreq, sizeof(mreq) );
     if ( result < 0 ) {
@@ -687,11 +682,7 @@ join(coap_context_t *ctx, char *group_name) {
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
-  fd_set readfds;
-  struct timeval tv, *timeout;
   int result;
-  coap_tick_t now;
-  coap_queue_t *nextpdu;
   char addr_str[NI_MAXHOST] = "::";
   char port_str[NI_MAXSERV] = "5683";
   char *group = NULL;
@@ -733,35 +724,7 @@ main(int argc, char **argv) {
   init_resources(ctx);
 
   while ( !quit ) {
-    coap_endpoint_t *ep;
-    coap_socket_t nfds = 0;
-    FD_ZERO( &readfds );
-    LL_FOREACH( ctx->endpoint, ep ) {
-      if ( ep->handle.fd + 1 > nfds )
-	nfds = ep->handle.fd + 1;
-      FD_SET( ep->handle.fd, &readfds );
-    }
-
-    nextpdu = coap_peek_next( ctx );
-
-    coap_ticks(&now);
-    while ( nextpdu && nextpdu->t <= now ) {
-      coap_retransmit( ctx, coap_pop_next( ctx ) );
-      nextpdu = coap_peek_next( ctx );
-    }
-
-    if ( nextpdu && nextpdu->t <= now + COAP_RESOURCE_CHECK_TIME ) {
-      /* set timeout if there is a pdu to send before our automatic
-         timeout occurs */
-      tv.tv_usec = ((nextpdu->t - now) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-      tv.tv_sec = (long)((nextpdu->t - now) / COAP_TICKS_PER_SECOND);
-      timeout = &tv;
-    } else {
-      tv.tv_usec = 0;
-      tv.tv_sec = COAP_RESOURCE_CHECK_TIME;
-      timeout = &tv;
-    }
-    result = select( nfds, &readfds, 0, 0, timeout );
+    result = coap_run_once( ctx, COAP_RESOURCE_CHECK_TIME * 1000 );
 
     if ( result < 0 ) {     /* error */
 #ifdef _WIN32
@@ -773,13 +736,7 @@ main(int argc, char **argv) {
       if (errno != EINTR)
         perror("select");
 #endif
-      } else if ( result > 0 ) {  /* read from socket */
-	LL_FOREACH( ctx->endpoint, ep ) {
-	  if ( FD_ISSET( ep->handle.fd, &readfds ) )
-	    ep->flags |= COAP_ENDPOINT_HAS_DATA;
-	}
-	coap_read( ctx ); /* read received data */
-      } else {            /* timeout */
+      } else {
         /* coap_check_resource_list( ctx ); */
     }
   }

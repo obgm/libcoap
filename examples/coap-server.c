@@ -72,8 +72,7 @@ handle_sigint(int signum UNUSED_PARAM) {
 static void
 hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
               struct coap_resource_t *resource UNUSED_PARAM,
-              const coap_endpoint_t *local_interface UNUSED_PARAM,
-              coap_address_t *peer UNUSED_PARAM,
+              coap_session_t *session UNUSED_PARAM,
               coap_pdu_t *request UNUSED_PARAM,
               str *token UNUSED_PARAM,
               coap_pdu_t *response) {
@@ -95,8 +94,7 @@ hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
 static void
 hnd_get_time(coap_context_t  *ctx,
              struct coap_resource_t *resource,
-             const coap_endpoint_t *local_interface UNUSED_PARAM,
-             coap_address_t *peer,
+             coap_session_t *session,
              coap_pdu_t *request,
              str *token,
              coap_pdu_t *response) {
@@ -114,7 +112,7 @@ hnd_get_time(coap_context_t  *ctx,
   response->hdr->code =
     my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
 
-  if (coap_find_observer(resource, peer, token)) {
+  if (coap_find_observer(resource, session, token)) {
     /* FIXME: need to check for resource->dirty? */
     coap_add_option(response,
                     COAP_OPTION_OBSERVE,
@@ -162,8 +160,7 @@ hnd_get_time(coap_context_t  *ctx,
 static void
 hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
              struct coap_resource_t *resource UNUSED_PARAM,
-             const coap_endpoint_t *local_interface UNUSED_PARAM,
-             coap_address_t *peer UNUSED_PARAM,
+             coap_session_t *session UNUSED_PARAM,
              coap_pdu_t *request,
              str *token UNUSED_PARAM,
              coap_pdu_t *response) {
@@ -199,8 +196,7 @@ hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
 static void
 hnd_delete_time(coap_context_t *ctx UNUSED_PARAM,
                 struct coap_resource_t *resource UNUSED_PARAM,
-                const coap_endpoint_t *local_interface UNUSED_PARAM,
-                coap_address_t *peer UNUSED_PARAM,
+                coap_session_t *session UNUSED_PARAM,
                 coap_pdu_t *request UNUSED_PARAM,
                 str *token UNUSED_PARAM,
                 coap_pdu_t *response UNUSED_PARAM) {
@@ -214,8 +210,7 @@ hnd_delete_time(coap_context_t *ctx UNUSED_PARAM,
 static void
 hnd_get_async(coap_context_t *ctx,
               struct coap_resource_t *resource UNUSED_PARAM,
-              const coap_endpoint_t *local_interface UNUSED_PARAM,
-              coap_address_t *peer,
+              coap_session_t *session,
               coap_pdu_t *request,
               str *token UNUSED_PARAM,
               coap_pdu_t *response) {
@@ -243,7 +238,7 @@ hnd_get_async(coap_context_t *ctx,
   }
 
   async = coap_register_async(ctx,
-                              peer,
+                              session,
                               request,
                               COAP_ASYNC_SEPARATE | COAP_ASYNC_CONFIRM,
                               (void *)(COAP_TICKS_PER_SECOND * delay));
@@ -279,12 +274,12 @@ check_async(coap_context_t *ctx,
 
   coap_add_data(response, 4, (unsigned char *)"done");
 
-  if (coap_send(ctx, local_if, &async->peer, response) == COAP_INVALID_TID) {
+  if (coap_send(async->session, response) == COAP_INVALID_TID) {
     debug("check_async: cannot send response for message %d\n",
-    response->hdr->id);
+    ntohs(response->hdr->id));
   }
   coap_delete_pdu(response);
-  coap_remove_async(ctx, async->id, &tmp);
+  coap_remove_async(ctx, async->session, async->id, &tmp);
   coap_free_async(async);
   async = NULL;
 }
@@ -395,10 +390,8 @@ get_context(const char *node, const char *port) {
       addr.size = rp->ai_addrlen;
       memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
 
-      endpoint = coap_new_endpoint(&addr, COAP_ENDPOINT_NOSEC);
+      endpoint = coap_new_endpoint(ctx, &addr, COAP_PROTO_UDP);
       if (endpoint) {
-        coap_attach_endpoint(ctx, endpoint);
-
         if (coap_dtls_is_supported()) {
           if (addr.addr.sa.sa_family == AF_INET) {
             addr.addr.sin.sin_port = htons(ntohs(addr.addr.sin.sin_port) + 1);
@@ -409,10 +402,8 @@ get_context(const char *node, const char *port) {
             goto finish;
           }
 
-          endpoint = coap_new_endpoint(&addr, COAP_ENDPOINT_DTLS);
-          if (endpoint) {
-            coap_attach_endpoint(ctx, endpoint);
-          } else {
+          endpoint = coap_new_endpoint(ctx, &addr, COAP_PROTO_DTLS);
+          if (!endpoint) {
             coap_log(LOG_CRIT, "cannot create DTLS endpoint\n");
           }
         }
@@ -480,7 +471,7 @@ join(coap_context_t *ctx, char *group_name){
   }
 
   if (ctx->endpoint) {
-    result = setsockopt(ctx->endpoint->handle.fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, (char *)&mreq, sizeof(mreq));
+    result = setsockopt(ctx->endpoint->sock.fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, (char *)&mreq, sizeof(mreq));
     if (result < 0) {
 #ifdef _WIN32
       char *szErrorMsg = NULL;
@@ -506,15 +497,12 @@ int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
   char *group = NULL;
-  fd_set readfds;
-  struct timeval tv, *timeout;
-  int result;
   coap_tick_t now;
-  coap_queue_t *nextpdu;
   char addr_str[NI_MAXHOST] = "::";
   char port_str[NI_MAXSERV] = "5683";
   int opt;
   coap_log_t log_level = LOG_WARNING;
+  unsigned wait_ms;
 
   clock_offset = time(NULL);
 
@@ -556,60 +544,24 @@ main(int argc, char **argv) {
 
   signal(SIGINT, handle_sigint);
 
+  wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+
   while ( !quit ) {
-    coap_endpoint_t *ep;
-    coap_socket_t nfds = 0;
-    FD_ZERO( &readfds );
-    LL_FOREACH( ctx->endpoint, ep ) {
-      if ( ep->handle.fd + 1 > nfds )
-	nfds = ep->handle.fd + 1;
-      FD_SET( ep->handle.fd, &readfds );
-    }
-
-    nextpdu = coap_peek_next( ctx );
-
-    coap_ticks(&now);
-    while (nextpdu && nextpdu->t <= now - ctx->sendqueue_basetime) {
-      coap_retransmit( ctx, coap_pop_next( ctx ) );
-      nextpdu = coap_peek_next( ctx );
-    }
-
-    if (nextpdu && nextpdu->t <= (COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND)) {
-      /* set timeout if there is a pdu to send before our automatic timeout occurs */
-      tv.tv_usec = ((nextpdu->t) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-      tv.tv_sec = (long)((nextpdu->t) / COAP_TICKS_PER_SECOND);
-      timeout = &tv;
+    int result = coap_run_once( ctx, COAP_RESOURCE_CHECK_TIME * wait_ms );
+    if ( result < 0 ) {
+      break;
+    } else if ( (unsigned)result < wait_ms ) {
+      wait_ms -= result;
     } else {
-      tv.tv_usec = 0;
-      tv.tv_sec = COAP_RESOURCE_CHECK_TIME;
-      timeout = &tv;
-    }
-    result = select( nfds, &readfds, 0, 0, timeout );
-
-    if ( result < 0 ) {         /* error */
-#ifdef _WIN32
-      char *szErrorMsg = NULL;
-      FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
-      fprintf( stderr, "select: %s\n", szErrorMsg );
-      LocalFree( szErrorMsg );
-#else
-      if (errno != EINTR)
-        perror("select");
-#endif
-    } else if ( result > 0 ) {  /* read from socket */
-      LL_FOREACH( ctx->endpoint, ep ) {
-	if ( FD_ISSET( ep->handle.fd, &readfds ) )
-	  ep->flags |= COAP_ENDPOINT_HAS_DATA;
+      if ( time_resource ) {
+	time_resource->dirty = 1;
       }
-      coap_read( ctx );       /* read received data */
-    } else {      /* timeout */
-      if (time_resource) {
-        time_resource->dirty = 1;
-      }
+      wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
     }
 
 #ifndef WITHOUT_ASYNC
     /* check if we have to send asynchronous responses */
+    coap_ticks( &now );
     check_async(ctx, ctx->endpoint, now);
 #endif /* WITHOUT_ASYNC */
 

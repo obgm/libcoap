@@ -16,29 +16,74 @@
 #include "address.h"
 
 #ifdef _WIN32
-typedef SOCKET coap_socket_t;
+typedef SOCKET coap_fd_t;
 #define coap_closesocket closesocket
 #define COAP_SOCKET_ERROR SOCKET_ERROR
 #define COAP_INVALID_SOCKET INVALID_SOCKET
 #else
-typedef int coap_socket_t;
+typedef int coap_fd_t;
 #define coap_closesocket close
 #define COAP_SOCKET_ERROR (-1)
 #define COAP_INVALID_SOCKET (-1)
 #endif
 
-/**
- * Abstract handle that is used to identify a local network interface.
- */
-typedef int coap_if_handle_t;
-
-/** Invalid interface handle */
-#define COAP_IF_INVALID -1
-
 struct coap_packet_t;
 typedef struct coap_packet_t coap_packet_t;
 
+struct coap_session_t;
+typedef struct coap_session_t coap_session_t;
+
 struct coap_context_t;
+typedef struct coap_context_t coap_context_t;
+
+typedef uint16_t coap_socket_flags_t;
+
+typedef struct coap_socket_t {
+#if defined(WITH_LWIP)
+  struct udp_pcb *pcb;
+#elif defined(WITH_CONTIKI)
+  void *conn;
+#else
+  coap_fd_t fd;
+#endif /* WITH_LWIP */
+  coap_socket_flags_t flags;
+} coap_socket_t;
+
+/**
+ * coap_socket_flags_t values
+ */
+#define COAP_SOCKET_EMPTY       0x0000  /**< the socket is not used */
+#define COAP_SOCKET_NOT_EMPTY   0x0001  /**< the socket is not empty */
+#define COAP_SOCKET_BOUND       0x0002  /**< the socket is bound */
+#define COAP_SOCKET_CONNECTED   0x0004  /**< the socket is connected */
+#define COAP_SOCKET_WANT_DATA   0x0010  /**< non blocking socket is waiting for reading */
+#define COAP_SOCKET_WANT_WRITE  0x0020  /**< non blocking socket is waiting for writing */
+#define COAP_SOCKET_HAS_DATA    0x0100  /**< non blocking socket can now read without blocking */
+#define COAP_SOCKET_CAN_WRITE   0x0200  /**< non blocking socket can now write without blocking */
+
+typedef uint8_t coap_proto_t;
+ /**
+ * coap_proto_t values
+ */
+#define COAP_PROTO_NONE	  0
+#define COAP_PROTO_UDP	  1
+#define COAP_PROTO_DTLS	  2
+
+typedef uint8_t coap_session_type_t;
+/**
+* coap_session_type_t values
+*/
+#define COAP_SESSION_TYPE_CLIENT 1
+#define COAP_SESSION_TYPE_SERVER 2
+
+typedef uint8_t coap_session_state_t;
+/**
+* coap_session_state_t values
+*/
+#define COAP_SESSION_STATE_NONE		0
+#define COAP_SESSION_STATE_CONNECTING	1
+#define COAP_SESSION_STATE_HANDSHAKE	2
+#define COAP_SESSION_STATE_ESTABLISHED	3
 
 /**
  * Abstraction of virtual endpoint that can be attached to coap_context_t. The
@@ -46,59 +91,123 @@ struct coap_context_t;
  */
 typedef struct coap_endpoint_t {
   struct coap_endpoint_t *next;
-
-#if !defined(WITH_LWIP)
-  union {
-    coap_socket_t fd; /**< on POSIX, Contiki and Windows systems */
-    void *conn;       /**< opaque connection (e.g. uip_conn in Contiki) */
-  } handle;           /**< opaque handle to identify this endpoint */
-#endif /* !WITH_LWIP */
-
-#ifdef WITH_LWIP
-  struct udp_pcb *pcb;
- /**< @FIXME --chrysn
-  * this was added in a hurry, not sure it confirms to the overall model */
-  struct coap_context_t *context;
-#endif /* WITH_LWIP */
-
-  coap_address_t addr; /**< local interface address */
-  int ifindex;
-  int flags;
+  coap_context_t *context;	  /**< endpoint's context */
+  coap_proto_t proto;		  /**< protocol used on this interface */
+  coap_socket_t sock;		  /**< socket object for the interface, if any */
+  coap_address_t bind_addr;	  /**< local interface address */
+  coap_session_t *sessions;	  /**< list of active sessions */
 } coap_endpoint_t;
 
-#define COAP_ENDPOINT_NOSEC    0x0000
-#define COAP_ENDPOINT_DTLS     0x0001
+/**
+ * Create a new endpoint for communicating with peers.
+ *
+ * @param context	The coap context that will own the new endpoint
+ * @param listen_addr	Address the endpoint will listen for incoming requests on or originate outgoing requests from. Use NULL to specify that no incoming request will be accepted and use a random endpoint.
+ * @param proto		Protocol used on this endpoint
+*/
 
-#define COAP_ENDPOINT_HAS_DATA 0x1000
+coap_endpoint_t *coap_new_endpoint( coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto );
 
-coap_endpoint_t *coap_new_endpoint(const coap_address_t *addr, int flags);
+typedef struct coap_session_t {
+  struct coap_session_t *next;
+  coap_proto_t proto;		  /**< protocol used */
+  coap_session_type_t type;	  /**< client or server side socket */
+  coap_session_state_t state;	  /**< current state of relationaship with peer */
+  int ref;			  /**< reference count from queues */
+  coap_address_t local_addr;	  /**< local address and port */
+  coap_address_t remote_addr;     /**< remote address and port */
+  int ifindex;                    /**< interface index */
+  coap_socket_t sock;		  /**< socket object for the session, if any */
+  coap_endpoint_t *endpoint;	  /**< session's endpoint */
+  coap_context_t *context;	  /**< session's context */
+  void *tls;			  /**< security parameters */
+} coap_session_t;
 
-void coap_free_endpoint(coap_endpoint_t *ep);
+/**
+ * Increment reference counter on a session.
+ *
+ * @param session The CoAP session.
+ * @return same as session
+*/
+coap_session_t *coap_session_reference( coap_session_t *session );
+
+/**
+* Decrement reference counter on a session.
+*
+* @param session The CoAP session.
+*/
+void coap_session_release( coap_session_t *session );
+
+/**
+ * Lookup the server session for the packet received on an endpoint, or create
+ * a new one.
+ *
+ * @param endpoint Active endpoint the packet was received on.
+ * @param packet Received packet.
+ * @return The CoAP session.
+*/
+coap_session_t *coap_endpoint_get_session( coap_endpoint_t *endpoint, const coap_packet_t *packet );
+
+/**
+ * Creates a new client session to the designated server.
+ * @param ctx The CoAP context.
+ * @param local_if Address of local interface. It is recommended to use NULL to let the operating system choose a suitable local interface. If an address is specified, the port number should be zero, which means that a free port is automatically selected.
+ * @param server The server's address. If the port number is zero, the default port for the protocol will be used.
+ * @param proto Protocol.
+ *
+ * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
+ */
+coap_session_t *coap_new_client_session(
+  coap_context_t *ctx,
+  coap_address_t *local_if,
+  coap_address_t *server,
+  coap_proto_t proto
+);
+
+/**
+* Creates a new client session to the designated server with PSK credentials
+* @param ctx The CoAP context.
+* @param local_if Address of local interface. It is recommended to use NULL to let the operating system choose a suitable local interface. If an address is specified, the port number should be zero, which means that a free port is automatically selected.
+* @param server The server's address. If the port number is zero, the default port for the protocol will be used.
+* @param identity PSK client identity
+* @param identity_len Length PSK client identity
+* @param key PSK shared key
+* @param key_len PSK shared key length
+* @param proto Protocol.
+*
+* @return A new CoAP session or NULL if failed. Call coap_session_release to free.
+*/
+coap_session_t *coap_new_client_session_psk(
+  coap_context_t *ctx,
+  coap_address_t *local_if,
+  coap_address_t *server,
+  coap_proto_t proto,
+  const uint8_t *identity,
+  size_t identity_len,
+  const uint8_t *key,
+  size_t key_len
+);
 
 /**
  * Function interface for data transmission. This function returns the number of
  * bytes that have been transmitted, or a value less than zero on error.
  *
- * @param context          The calling CoAP context.
- * @param local_interface  The local interface to send the data.
- * @param dst              The address of the receiver.
+ * @param sock             Socket to send data with
+ * @param session          Addressing information for unconnected sockets, or NULL
  * @param data             The data to send.
  * @param datalen          The actual length of @p data.
  *
  * @return                 The number of bytes written on success, or a value
  *                         less than zero on error.
  */
-ssize_t coap_network_send(struct coap_context_t *context,
-                          const coap_endpoint_t *local_interface,
-                          const coap_address_t *dst,
-                          unsigned char *data, size_t datalen);
+ssize_t coap_network_send( coap_socket_t *sock, const coap_session_t *session, uint8_t *data, size_t datalen );
 
 /**
  * Function interface for reading data. This function returns the number of
  * bytes that have been read, or a value less than zero on error. In case of an
  * error, @p *packet is set to NULL.
  *
- * @param ep     The endpoint that is used for reading data from the network.
+ * @param sock   Socket to read data from
  * @param packet A result parameter where a pointer to the received packet
  *               structure is stored. The caller must call coap_free_packet to
  *               release the storage used by this packet.
@@ -106,7 +215,7 @@ ssize_t coap_network_send(struct coap_context_t *context,
  * @return       The number of bytes received on success, or a value less than
  *               zero on error.
  */
-ssize_t coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet);
+ssize_t coap_network_read( coap_socket_t *sock, coap_packet_t **packet );
 
 #ifndef coap_mcast_interface
 # define coap_mcast_interface(Local) 0
@@ -118,26 +227,15 @@ ssize_t coap_network_read(coap_endpoint_t *ep, coap_packet_t **packet);
 void coap_free_packet(coap_packet_t *packet);
 
 /**
- * Populate the coap_endpoint_t *target from the incoming packet's destination
- * data.
- *
- * This is usually used to copy a packet's data into a node's local_if member.
- */
-void coap_packet_populate_endpoint(coap_packet_t *packet,
-                                   coap_endpoint_t *target);
-
-/**
- * Given an incoming packet, copy its source address into an address struct.
- */
-void coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target);
-
-/**
  * Given a packet, set msg and msg_len to an address and length of the packet's
  * data in memory.
  * */
 void coap_packet_get_memmapped(coap_packet_t *packet,
                                unsigned char **address,
                                size_t *length);
+
+void coap_packet_set_addr( coap_packet_t *packet, const coap_address_t *src,
+                           const coap_address_t *dst );
 
 #ifdef WITH_LWIP
 /**
@@ -153,12 +251,9 @@ struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet);
  * sizeof in mem.c.
  */
 struct coap_packet_t {
-  coap_if_handle_t hnd;         /**< the interface handle */
   coap_address_t src;           /**< the packet's source address */
   coap_address_t dst;           /**< the packet's destination address */
-  const coap_endpoint_t *endpoint;
   int ifindex;
-  void *session;                /**< opaque session data */
   size_t length;                /**< length of payload */
   unsigned char payload[];      /**< payload */
 };

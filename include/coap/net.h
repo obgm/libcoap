@@ -38,9 +38,8 @@ typedef struct coap_queue_t {
   unsigned char retransmit_cnt; /**< retransmission counter, will be removed
                                  *    when zero */
   unsigned int timeout;         /**< the randomized timeout value */
-  coap_endpoint_t local_if;     /**< the local address interface */
-  coap_address_t remote;        /**< remote address */
-  coap_tid_t id;                /**< unique transaction id */
+  coap_session_t *session;      /**< the CoAP session */
+  coap_tid_t id;                /**< CoAP transaction id */
   coap_pdu_t *pdu;              /**< the CoAP PDU to send */
 } coap_queue_t;
 
@@ -63,9 +62,8 @@ struct coap_async_state_t;
 #endif
 
 /** Message handler that is used as call-back in coap_context_t */
-typedef void (*coap_response_handler_t)(struct coap_context_t  *,
-                                        const coap_endpoint_t *local_interface,
-                                        const coap_address_t *remote,
+typedef void (*coap_response_handler_t)(struct coap_context_t *,
+                                        coap_session_t *session,
                                         coap_pdu_t *sent,
                                         coap_pdu_t *received,
                                         const coap_tid_t id);
@@ -92,7 +90,8 @@ typedef struct coap_context_t {
    * to sendqueue_basetime. */
   coap_tick_t sendqueue_basetime;
   coap_queue_t *sendqueue;
-  coap_endpoint_t *endpoint;      /**< the endpoint used for listening  */
+  coap_endpoint_t *endpoint;      /**< the endpoints used for listening  */
+  coap_session_t *sessions;	  /**< client sessions */
 
 #ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;      /**< uIP connection object */
@@ -127,31 +126,13 @@ typedef struct coap_context_t {
    */
   coap_event_handler_t handle_event;
 
-  ssize_t (*network_send)(struct coap_context_t *context,
-                          const coap_endpoint_t *local_interface,
-                          const coap_address_t *dst,
-                          unsigned char *data, size_t datalen);
+  ssize_t (*network_send)(coap_socket_t *sock, const coap_session_t *session, uint8_t *data, size_t datalen);
 
-  ssize_t (*network_read)(coap_endpoint_t *ep, coap_packet_t **packet);
+  ssize_t (*network_read)(coap_socket_t *sock, coap_packet_t **packet);
 
   struct coap_dtls_context_t *dtls_context;
   void *app;                    /**< application-specific data */
 } coap_context_t;
-
-/**
- * Attach given @p endpoint to CoAP context @p ctx.
- *
- * @param ctx      The CoAP context where @p endpoint will be attached.
- * @param endpoint The CoAP endpoint to attach.
- */
-void coap_attach_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint);
-
-/**
- * Detach @p endpoint from its CoAP context.
- *
- * @param endpoint The CoAP endpoint to detach.
- */
-void coap_detach_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint);
 
 /**
  * Registers a new message handler that is called whenever a response was
@@ -254,10 +235,7 @@ void *coap_get_app_data(coap_context_t *context);
  * @return                The message id of the sent message or @c
  *                        COAP_INVALID_TID on error.
  */
-coap_tid_t coap_send_confirmed(coap_context_t *context,
-                               const coap_endpoint_t *local_interface,
-                               const coap_address_t *dst,
-                               coap_pdu_t *pdu);
+coap_tid_t coap_send_confirmed(coap_session_t *session, coap_pdu_t *pdu);
 
 /**
  * Creates a new ACK PDU with specified error @p code. The options specified by
@@ -285,19 +263,13 @@ coap_pdu_t *coap_new_error_response(coap_pdu_t *request,
  * allocated by pdu will not be released by coap_send().
  * The caller must release the memory.
  *
- * @param context         The CoAP context to use.
- * @param local_interface The local network interface where the outbound packet
- *                        is sent.
- * @param dst             The address to send to.
+ * @param session         The CoAP session.
  * @param pdu             The CoAP PDU to send.
  *
  * @return                The message id of the sent message or @c
  *                        COAP_INVALID_TID on error.
  */
-coap_tid_t coap_send(coap_context_t *context,
-                     const coap_endpoint_t *local_interface,
-                     const coap_address_t *dst,
-                     coap_pdu_t *pdu);
+coap_tid_t coap_send(coap_session_t *session, coap_pdu_t *pdu);
 
 /**
  * Sends an error response with code @p code for request @p request to @p dst.
@@ -305,11 +277,8 @@ coap_tid_t coap_send(coap_context_t *context,
  * from the request. This function returns the transaction id if the message was
  * sent, or @c COAP_INVALID_TID otherwise.
  *
- * @param context         The context to use.
+ * @param session         The CoAP session.
  * @param request         The original request to respond to.
- * @param local_interface The local network interface where the outbound packet
- *                        is sent.
- * @param dst             The remote peer that sent the request.
  * @param code            The response code.
  * @param opts            A filter that specifies the options to copy from the
  *                        @p request.
@@ -317,10 +286,8 @@ coap_tid_t coap_send(coap_context_t *context,
  * @return                The transaction id if the message was sent, or @c
  *                        COAP_INVALID_TID otherwise.
  */
-coap_tid_t coap_send_error(coap_context_t *context,
+coap_tid_t coap_send_error(coap_session_t *session,
                            coap_pdu_t *request,
-                           const coap_endpoint_t *local_interface,
-                           const coap_address_t *dst,
                            unsigned char code,
                            coap_opt_filter_t opts);
 
@@ -329,64 +296,42 @@ coap_tid_t coap_send_error(coap_context_t *context,
  * RST). This function returns @c COAP_INVALID_TID when the message was not
  * sent, a valid transaction id otherwise.
  *
- * @param  context        The CoAP context.
- * @param local_interface The local network interface where the outbound packet
- *                        is sent.
- * @param dst             Where to send the context.
+ * @param session         The CoAP session.
  * @param request         The request that should be responded to.
  * @param type            Which type to set.
  * @return                transaction id on success or @c COAP_INVALID_TID
  *                        otherwise.
  */
 coap_tid_t
-coap_send_message_type(coap_context_t *context,
-                       const coap_endpoint_t *local_interface,
-                       const coap_address_t *dst,
-                       coap_pdu_t *request,
-                       unsigned char type);
+coap_send_message_type(coap_session_t *session, coap_pdu_t *request, unsigned char type);
 
 /**
  * Sends an ACK message with code @c 0 for the specified @p request to @p dst.
  * This function returns the corresponding transaction id if the message was
  * sent or @c COAP_INVALID_TID on error.
  *
- * @param context         The context to use.
- * @param local_interface The local network interface where the outbound packet
- *                        is sent.
- * @param dst             The destination address.
+ * @param session         The CoAP session.
  * @param request         The request to be acknowledged.
  *
  * @return                The transaction id if ACK was sent or @c
  *                        COAP_INVALID_TID on error.
  */
-coap_tid_t coap_send_ack(coap_context_t *context,
-                         const coap_endpoint_t *local_interface,
-                         const coap_address_t *dst,
-                         coap_pdu_t *request);
+coap_tid_t coap_send_ack(coap_session_t *session, coap_pdu_t *request);
 
 /**
  * Sends an RST message with code @c 0 for the specified @p request to @p dst.
  * This function returns the corresponding transaction id if the message was
  * sent or @c COAP_INVALID_TID on error.
  *
- * @param context         The context to use.
- * @param local_interface The local network interface where the outbound packet
- *                        is sent.
- * @param dst             The destination address.
+ * @param session         The CoAP session.
  * @param request         The request to be reset.
  *
  * @return                The transaction id if RST was sent or @c
  *                        COAP_INVALID_TID on error.
  */
 COAP_STATIC_INLINE coap_tid_t
-coap_send_rst(coap_context_t *context,
-              const coap_endpoint_t *local_interface,
-              const coap_address_t *dst,
-              coap_pdu_t *request) {
-  return coap_send_message_type(context,
-                                local_interface,
-                                dst, request,
-                                COAP_MESSAGE_RST);
+coap_send_rst(coap_session_t *session, coap_pdu_t *request) {
+  return coap_send_message_type(session, request, COAP_MESSAGE_RST);
 }
 
 /**
@@ -395,11 +340,18 @@ coap_send_rst(coap_context_t *context,
 coap_tid_t coap_retransmit(coap_context_t *context, coap_queue_t *node);
 
 /**
- * Reads data from the network and tries to parse as CoAP PDU. On success, 0 is
- * returned and a new node with the parsed PDU is added to the receive queue in
- * the specified context object.
+ * Reads all data from the network.
  */
-int coap_read(coap_context_t *context);
+void coap_read(coap_context_t *context);
+
+/**
+ * The main message processing loop.
+ * @param ctx The CoAP context
+ * @param timeout_ms Minimum number of milliseconds to wait for new messages before returning. If zero the call will block until at least one packet is sent or received.
+ * @return number of milliseconds spent or -1 if there was an error
+ */
+
+int coap_run_once( coap_context_t *ctx, unsigned int timeout_ms );
 
 /**
  * Parses and interprets a CoAP message with context @p ctx. This function
@@ -412,7 +364,7 @@ int coap_read(coap_context_t *context);
  * @return       @c 0 if message was handled successfully, or less than zero on
  *               error.
  */
-int coap_handle_message(coap_context_t *ctx, coap_packet_t *packet);
+int coap_handle_message(coap_context_t *ctx, coap_session_t *session, uint8_t *data, size_t data_len);
 
 /**
  * Invokes the event handler of @p context for the given @p event and
@@ -428,18 +380,6 @@ int coap_handle_event(coap_context_t *context,
                       coap_event_t event,
                       void *data);
 /**
- * Calculates a unique transaction id from given arguments @p peer and @p pdu.
- * The id is returned in @p id.
- *
- * @param peer The remote party who sent @p pdu.
- * @param pdu  The message that initiated the transaction.
- * @param id   Set to the new id.
- */
-void coap_transaction_id(const coap_address_t *peer,
-                         const coap_pdu_t *pdu,
-                         coap_tid_t *id);
-
-/**
  * This function removes the element with given @p id from the list given list.
  * If @p id was found, @p node is updated to point to the removed element. Note
  * that the storage allocated by @p node is @b not released. The caller must do
@@ -448,13 +388,15 @@ void coap_transaction_id(const coap_address_t *peer,
  * the contents of @p node is undefined.
  *
  * @param queue The queue to search for @p id.
- * @param id    The node id to look for.
+ * @param session The session to look for.
+ * @param id    The transaction id to look for.
  * @param node  If found, @p node is updated to point to the removed node. You
  *              must release the storage pointed to by @p node manually.
  *
  * @return      @c 1 if @p id was found, @c 0 otherwise.
  */
 int coap_remove_from_queue(coap_queue_t **queue,
+                           coap_session_t *session,
                            coap_tid_t id,
                            coap_queue_t **node);
 
@@ -464,14 +406,15 @@ int coap_remove_from_queue(coap_queue_t **queue,
  * the removed node.
  *
  * @param queue The queue to search for @p id.
+ * @param session The session to look for.
  * @param id    The transaction id.
  *
  * @return      @c 1 if node was found, removed and destroyed, @c 0 otherwise.
  */
 COAP_STATIC_INLINE int
-coap_remove_transaction(coap_queue_t **queue, coap_tid_t id) {
+coap_remove_transaction(coap_queue_t **queue, coap_session_t *session, coap_tid_t id) {
   coap_queue_t *node;
-  if (!coap_remove_from_queue(queue, id, &node))
+  if (!coap_remove_from_queue(queue, session, id, &node))
     return 0;
 
   coap_delete_node(node);
@@ -482,23 +425,24 @@ coap_remove_transaction(coap_queue_t **queue, coap_tid_t id) {
  * Retrieves transaction from the queue.
  *
  * @param queue The transaction queue to be searched.
- * @param id    Unique key of the transaction to find.
+ * @param session The session to find.
+ * @param id    The transaction id to find.
  *
  * @return      A pointer to the transaction object or NULL if not found.
  */
-coap_queue_t *coap_find_transaction(coap_queue_t *queue, coap_tid_t id);
+coap_queue_t *coap_find_transaction(coap_queue_t *queue, coap_session_t *session, coap_tid_t id);
 
 /**
  * Cancels all outstanding messages for peer @p dst that have the specified
  * token.
  *
  * @param context      The context in use.
- * @param dst          Destination address of the messages to remove.
+ * @param dst          Session of the messages to remove.
  * @param token        Message token.
  * @param token_length Actual length of @p token.
  */
 void coap_cancel_all_messages(coap_context_t *context,
-                              const coap_address_t *dst,
+                              coap_session_t *session,
                               const unsigned char *token,
                               size_t token_length);
 

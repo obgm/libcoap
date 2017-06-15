@@ -449,6 +449,16 @@ do {                                                                            
     }                                                                                          \
 } while(0)
 
+#define LL_SEARCH_PAIR(head,out,field1,val1,field2,val2)                                       \
+    LL_SEARCH_PAIR2(head,out,field1,val1,field2,val2,next)
+
+#define LL_SEARCH_PAIR2(head,out,field1,val1,field2,val2,next)                                 \
+do {                                                                                           \
+    LL_FOREACH2(head,out,next) {                                                               \
+      if ((out)->field1 == (val1) && (out)->field2 == (val2)) break;                           \
+    }                                                                                          \
+} while(0)
+
 #define LL_SEARCH(head,out,elt,cmp)                                                            \
     LL_SEARCH2(head,out,elt,cmp,next)
 

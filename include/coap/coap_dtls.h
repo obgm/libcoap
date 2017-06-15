@@ -68,9 +68,8 @@ int coap_dtls_send(struct coap_context_t *coap_context,
                    const coap_pdu_t *pdu);
 
 int coap_dtls_handle_message(struct coap_context_t *coap_context,
-                             const coap_endpoint_t *local_interface,
-                             const coap_address_t *dst,
-                             const unsigned char *data,
+                             coap_session_t *session,
+                             const uint8_t *data,
                              size_t data_len);
 
 /** @} */

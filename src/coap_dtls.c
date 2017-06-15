@@ -339,18 +339,6 @@ coap_dtls_free_context(struct coap_dtls_context_t *dtls_context) {
   coap_free(dtls_context);
 }
 
-/* Convenience macro to copy IPv6 addresses without garbage. */
-#define COAP_COPY_ADDRESS(DST,SRC) do {                                 \
-    (DST)->size = (SRC)->size;                                          \
-    if ((SRC)->addr.sa.sa_family == AF_INET6) {                         \
-      (DST)->addr.sin6.sin6_family = (SRC)->addr.sin6.sin6_family;      \
-      (DST)->addr.sin6.sin6_addr = (SRC)->addr.sin6.sin6_addr;          \
-      (DST)->addr.sin6.sin6_port = (SRC)->addr.sin6.sin6_port;          \
-    } else {                                                            \
-      (DST)->addr.st = (SRC)->addr.st;                                  \
-    }                                                                   \
-  } while (0);
-
 struct coap_dtls_session_t *
 coap_dtls_new_session(coap_dtls_context_t *dtls_context,
                       const coap_endpoint_t *local_interface,
@@ -568,8 +556,7 @@ coap_dtls_free_session(struct coap_dtls_context_t *dtls_context,
 
 int
 coap_dtls_handle_message(struct coap_context_t *coap_context UNUSED,
-                         const coap_endpoint_t *local_interface UNUSED,
-                         const coap_address_t *dst UNUSED,
+                         coap_session_t *session UNUSED,
                          const unsigned char *data UNUSED,
                          size_t data_len UNUSED) {
   return -1;

@@ -109,6 +109,28 @@ coap_address_init(coap_address_t *addr) {
 #endif
 }
 
+/* Convenience function to copy IPv6 addresses without garbage. */
+
+COAP_STATIC_INLINE void
+coap_address_copy( coap_address_t *dst, const coap_address_t *src ) {
+#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
+  memcpy( dst, src, sizeof( coap_address_t ) );
+#else
+  memset( dst, 0, sizeof( coap_address_t ) );
+  dst->size = src->size;
+  if ( src->addr.sa.sa_family == AF_INET6 ) {
+    dst->addr.sin6.sin6_family = src->addr.sin6.sin6_family;
+    dst->addr.sin6.sin6_addr = src->addr.sin6.sin6_addr;
+    dst->addr.sin6.sin6_port = src->addr.sin6.sin6_port;
+    dst->addr.sin6.sin6_scope_id = src->addr.sin6.sin6_scope_id;
+  } else if ( src->addr.sa.sa_family == AF_INET ) {
+    dst->addr.st = src->addr.st;
+  } else {
+    memcpy( &dst->addr, &src->addr, src->size );
+  }
+#endif
+}
+
 #if defined(WITH_LWIP) || defined(WITH_CONTIKI)
 /**
  * Compares given address objects @p a and @p b. This function returns @c 1 if
