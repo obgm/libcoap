@@ -63,10 +63,19 @@
     <ClCompile Include="..\src\uri.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\coap_dtls.c">
+    <ClCompile Include="..\src\coap_event.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\coap_event.c">
+    <ClCompile Include="..\src\coap_notls.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_tinydtls.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_openssl.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\session.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -144,6 +153,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\coap\coap_event.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\coap\session.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -278,7 +278,6 @@ check_async(coap_context_t *ctx,
     debug("check_async: cannot send response for message %d\n",
     ntohs(response->hdr->id));
   }
-  coap_delete_pdu(response);
   coap_remove_async(ctx, async->session, async->id, &tmp);
   coap_free_async(async);
   async = NULL;
@@ -324,19 +323,9 @@ init_resources(coap_context_t *ctx) {
 
 static void
 fill_keystore(coap_context_t *ctx) {
-  /*
-  coap_keystore_item_t *psk;
-  static unsigned char user[] = "Client_identity";
-  size_t user_length = sizeof(user) - 1;
-  static unsigned char key[] = "secretPSK";
-  size_t key_length = sizeof(key) - 1;
-
-  psk = coap_keystore_new_psk(NULL, 0, user, user_length,
-                              key, key_length, 0);
-  if (!psk || !coap_keystore_store_item(ctx->keystore, psk, NULL)) {
-    coap_log(LOG_WARNING, "cannot store key\n");
-  }
-  */
+  static uint8_t key[] = "secretPSK";
+  size_t key_len = sizeof( key ) - 1;
+  coap_context_set_psk( ctx, "CoAP", key, key_len );
 }
 
 static void
@@ -472,15 +461,8 @@ join(coap_context_t *ctx, char *group_name){
 
   if (ctx->endpoint) {
     result = setsockopt(ctx->endpoint->sock.fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, (char *)&mreq, sizeof(mreq));
-    if (result < 0) {
-#ifdef _WIN32
-      char *szErrorMsg = NULL;
-      FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
-      fprintf( stderr, "join: setsockopt: %s\n", szErrorMsg );
-      LocalFree( szErrorMsg );
-#else
-      perror("join: setsockopt");
-#endif
+    if ( result == COAP_SOCKET_ERROR ) {
+      fprintf( stderr, "join: setsockopt: %s\n", coap_socket_strerror() );
     }
   } else {
     result = -1;

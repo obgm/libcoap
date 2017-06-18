@@ -488,7 +488,6 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
     debug("check_async: cannot send response for message %d\n", 
 	  ntohs(response->hdr->id));
   }
-  coap_delete_pdu(response);
   
   coap_remove_async(ctx, async->id, &tmp);
   coap_free_async(async);

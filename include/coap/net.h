@@ -29,6 +29,7 @@
 #include "option.h"
 #include "pdu.h"
 #include "prng.h"
+#include "session.h"
 
 struct coap_queue_t;
 
@@ -126,11 +127,18 @@ typedef struct coap_context_t {
    */
   coap_event_handler_t handle_event;
 
-  ssize_t (*network_send)(coap_socket_t *sock, const coap_session_t *session, uint8_t *data, size_t datalen);
+  ssize_t (*network_send)(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen);
 
   ssize_t (*network_read)(coap_socket_t *sock, coap_packet_t **packet);
 
+  unsigned (*get_client_psk)( const coap_session_t *session, const char *hint, char *identity, unsigned max_identity_len, uint8_t *psk, unsigned max_psk_len );
+  unsigned (*get_server_psk)( const coap_session_t *session, const char *identity, uint8_t *psk, unsigned max_psk_len );
+  int (*get_server_hint)( const coap_session_t *session, char *hint, unsigned max_hint_len );
+
   struct coap_dtls_context_t *dtls_context;
+  char *psk_hint;
+  uint8_t *psk_key;
+  unsigned psk_key_len;
   void *app;                    /**< application-specific data */
 } coap_context_t;
 
@@ -181,6 +189,18 @@ coap_queue_t *coap_pop_next( coap_context_t *context );
 coap_context_t *coap_new_context(const coap_address_t *listen_addr);
 
 /**
+ * Set the context's default server PSK hint and/or key.
+ * These global defaults are used only no PSK callback is specified.
+ *
+ * @param hint    The default PSK server hint sent to a client. If NULL, PSK authentication is disabled. Empty string is a valid hint.
+ * @param key     The default PSK key. If NULL, PSK authentication will fail.
+ * @param key_len The default PSK key's lenght. If 0, PSK authentication will fail.
+ */
+
+void coap_context_set_psk( coap_context_t *ctx, const char *hint,
+                           const uint8_t *key, unsigned key_len );
+
+/**
  * Returns a new message id and updates @p context->message_id accordingly. The
  * message id is returned in network byte order to make it easier to read in
  * tracing tools.
@@ -222,22 +242,6 @@ void coap_set_app_data(coap_context_t *context, void *data);
 void *coap_get_app_data(coap_context_t *context);
 
 /**
- * Sends a confirmed CoAP message to given destination. The memory that is
- * allocated by pdu will not be released by coap_send_confirmed(). The caller
- * must release the memory.
- *
- * @param context         The CoAP context to use.
- * @param local_interface The local network interface where the outbound
- *                        packet is sent.
- * @param dst             The address to send to.
- * @param pdu             The CoAP PDU to send.
- *
- * @return                The message id of the sent message or @c
- *                        COAP_INVALID_TID on error.
- */
-coap_tid_t coap_send_confirmed(coap_session_t *session, coap_pdu_t *pdu);
-
-/**
  * Creates a new ACK PDU with specified error @p code. The options specified by
  * the filter expression @p opts will be copied from the original request
  * contained in @p request. Unless @c SHORT_ERROR_RESPONSE was defined at build
@@ -257,19 +261,6 @@ coap_tid_t coap_send_confirmed(coap_session_t *session, coap_pdu_t *pdu);
 coap_pdu_t *coap_new_error_response(coap_pdu_t *request,
                                     unsigned char code,
                                     coap_opt_filter_t opts);
-
-/**
- * Sends a non-confirmed CoAP message to given destination. The memory that is
- * allocated by pdu will not be released by coap_send().
- * The caller must release the memory.
- *
- * @param session         The CoAP session.
- * @param pdu             The CoAP PDU to send.
- *
- * @return                The message id of the sent message or @c
- *                        COAP_INVALID_TID on error.
- */
-coap_tid_t coap_send(coap_session_t *session, coap_pdu_t *pdu);
 
 /**
  * Sends an error response with code @p code for request @p request to @p dst.
@@ -333,6 +324,19 @@ COAP_STATIC_INLINE coap_tid_t
 coap_send_rst(coap_session_t *session, coap_pdu_t *request) {
   return coap_send_message_type(session, request, COAP_MESSAGE_RST);
 }
+
+/**
+* Sends a CoAP message to given peer. The memory that is
+* allocated by pdu will be released by coap_send().
+* The caller must not use the pdu after calling coap_send().
+*
+* @param session         The CoAP session.
+* @param pdu             The CoAP PDU to send.
+*
+* @return                The message id of the sent message or @c
+*                        COAP_INVALID_TID on error.
+*/
+coap_tid_t coap_send( coap_session_t *session, coap_pdu_t *pdu );
 
 /**
  * Handles retransmissions of confirmable messages
@@ -421,6 +425,10 @@ coap_remove_transaction(coap_queue_t **queue, coap_session_t *session, coap_tid_
   return 1;
 }
 
+coap_tid_t
+coap_wait_ack( coap_context_t *context, coap_session_t *session,
+  coap_pdu_t *pdu, int retransmit_cnt );
+
 /**
  * Retrieves transaction from the queue.
  *
@@ -500,7 +508,7 @@ int coap_option_check_critical(coap_context_t *ctx,
 /**
  * Creates a new response for given @p request with the contents of @c
  * .well-known/core. The result is NULL on error or a newly allocated PDU that
- * must be released by coap_delete_pdu().
+ * must be either sent with coap_sent() or released by coap_delete_pdu().
  *
  * @param context The current coap context to use.
  * @param request The request for @c .well-known/core .

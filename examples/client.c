@@ -248,16 +248,10 @@ clear_obs(coap_context_t *ctx, coap_session_t *session) {
 
   coap_show_pdu(pdu);
 
-  if (pdu->hdr->type == COAP_MESSAGE_CON)
-    tid = coap_send_confirmed(session, pdu);
-  else
-    tid = coap_send(session, pdu);
+  tid = coap_send(session, pdu);
 
-  if (tid == COAP_INVALID_TID) {
+  if (tid == COAP_INVALID_TID)
     debug("clear_obs: error sending new request");
-    coap_delete_pdu(pdu);
-  } else if (pdu->hdr->type != COAP_MESSAGE_CON)
-    coap_delete_pdu(pdu);
 
   return tid;
  error:
@@ -414,19 +408,13 @@ message_handler(struct coap_context_t *ctx,
                                  ((coap_opt_block_num(block_opt) + 1) << 4) |
                                   COAP_OPT_BLOCK_SZX(block_opt)), buf);
 
-          if (pdu->hdr->type == COAP_MESSAGE_CON)
-            tid = coap_send_confirmed(session, pdu);
-          else
-            tid = coap_send(session, pdu);
+          tid = coap_send(session, pdu);
 
           if (tid == COAP_INVALID_TID) {
             debug("message_handler: error sending new request");
-            coap_delete_pdu(pdu);
           } else {
 	    wait_ms = wait_seconds * 1000;
 	    wait_ms_reset = 1;
-            if (pdu->hdr->type != COAP_MESSAGE_CON)
-              coap_delete_pdu(pdu);
           }
 
           return;
@@ -501,19 +489,14 @@ message_handler(struct coap_context_t *ctx,
                          block.num,
                          block.szx);
           coap_show_pdu(pdu);
-          if (pdu->hdr->type == COAP_MESSAGE_CON)
-            tid = coap_send_confirmed(session, pdu);
-          else
-            tid = coap_send(session, pdu);
+
+	  tid = coap_send(session, pdu);
 
           if (tid == COAP_INVALID_TID) {
             debug("message_handler: error sending new request");
-            coap_delete_pdu(pdu);
           } else {
 	    wait_ms = wait_seconds * 1000;
 	    wait_ms_reset = 1;
-            if (pdu->hdr->type != COAP_MESSAGE_CON)
-              coap_delete_pdu(pdu);
           }
 
           return;
@@ -541,10 +524,8 @@ message_handler(struct coap_context_t *ctx,
   }
 
   /* finally send new request, if needed */
-  if (pdu && coap_send(session, pdu) == COAP_INVALID_TID) {
+  if (pdu && coap_send(session, pdu) == COAP_INVALID_TID)
     debug("message_handler: error sending response");
-  }
-  coap_delete_pdu(pdu);
 
   /* our job is done, we can exit at any time */
   ready = coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter) == NULL;
@@ -1061,10 +1042,9 @@ get_session(
   const char *local_port,
   coap_proto_t proto,
   coap_address_t *dst,
-  const uint8_t *identity,
-  size_t identity_len,
+  const char *identity,
   const uint8_t *key,
-  size_t key_len
+  unsigned key_len
 ) {
   coap_session_t *session = NULL;
 
@@ -1092,7 +1072,7 @@ get_session(
 	bind_addr.size = rp->ai_addrlen;
 	memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
 	if ( identity && key && proto == COAP_PROTO_DTLS )
-	  session = coap_new_client_session_psk( ctx, &bind_addr, dst, proto, identity, identity_len, key, key_len );
+	  session = coap_new_client_session_psk( ctx, &bind_addr, dst, proto, identity, key, key_len );
 	else
 	  session = coap_new_client_session( ctx, &bind_addr, dst, proto );
 	if ( session )
@@ -1102,7 +1082,7 @@ get_session(
     freeaddrinfo( result );
   } else {
     if ( identity && key && proto == COAP_PROTO_DTLS )
-      session = coap_new_client_session_psk( ctx, NULL, dst, proto, identity, identity_len, key, key_len );
+      session = coap_new_client_session_psk( ctx, NULL, dst, proto, identity, key, key_len );
     else
       session = coap_new_client_session( ctx, NULL, dst, proto );
   }
@@ -1125,7 +1105,7 @@ main(int argc, char **argv) {
   int opt, res;
   coap_log_t log_level = LOG_WARNING;
   coap_tid_t tid = COAP_INVALID_TID;
-  unsigned char user[MAX_USER], key[MAX_KEY];
+  unsigned char user[MAX_USER + 1], key[MAX_KEY];
   ssize_t user_length = 0, key_length = 0;
   int create_uri_opts = 1;
 
@@ -1197,6 +1177,8 @@ main(int argc, char **argv) {
       break;
     case 'u' :
       user_length = cmdline_read_user(optarg, user, MAX_USER);
+      if ( user_length >= 0 )
+	user[user_length] = 0;
       break;
     case 'U' :
       create_uri_opts = 0;
@@ -1258,8 +1240,8 @@ main(int argc, char **argv) {
     node_str[0] ? node_str : NULL, port_str,
     coap_uri_scheme_is_secure( &uri ) ? COAP_PROTO_DTLS : COAP_PROTO_UDP,
     &dst,
-    user_length > 0 ? user : NULL, (size_t)user_length,
-    key_length > 0  ? key : NULL, (size_t)key_length
+    user_length > 0 ? (const char *)user : NULL,
+    key_length > 0  ? key : NULL, (unsigned)key_length
   );
 
   if ( !session ) {
@@ -1314,13 +1296,7 @@ main(int argc, char **argv) {
   }
 #endif
 
-  if (pdu->hdr->type == COAP_MESSAGE_CON)
-    tid = coap_send_confirmed(session, pdu);
-  else
-    tid = coap_send(session, pdu);
-
-  if (pdu->hdr->type != COAP_MESSAGE_CON || tid == COAP_INVALID_TID)
-    coap_delete_pdu(pdu);
+  tid = coap_send(session, pdu);
 
   wait_ms = wait_seconds * 1000;
   debug("timeout is set to %u seconds\n", wait_seconds);
@@ -1329,16 +1305,7 @@ main(int argc, char **argv) {
 
     result = coap_run_once( ctx, wait_ms == 0 ? obs_ms : obs_ms == 0 ? wait_ms : min( wait_ms, obs_ms ) );
 
-    if ( result < 0 ) {   /* error */
-#ifdef _WIN32
-	  char *szErrorMsg = NULL;
-	  FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
-	  fprintf( stderr, "select: %s\n", szErrorMsg );
-	  LocalFree( szErrorMsg );
-#else
-      perror("select");
-#endif
-    } else {
+    if ( result >= 0 ) {
       if ( wait_ms > 0 && !wait_ms_reset ) {
 	if ( (unsigned)result >= wait_ms ) {
 	  info( "timeout\n" );
@@ -1367,12 +1334,12 @@ main(int argc, char **argv) {
   result = 0;
 
  finish:
-  close_output();
 
   coap_delete_list(optlist);
   coap_session_release( session );
   coap_free_context( ctx );
   coap_cleanup();
+  close_output();
 
   return result;
 }

@@ -11,6 +11,7 @@
 #define _COAP_DTLS_H_
 
 #include "net.h"
+#include "session.h"
 #include "pdu.h"
 
 /**
@@ -27,7 +28,6 @@
 #define COAP_DTLS_MAX_PACKET_SIZE COAP_MAX_PDU_SIZE
 
 struct coap_dtls_context_t;
-struct coap_dtls_session_t;
 
 /** Returns 1 if support for DTLS is enabled, or 0 otherwise. */
 int coap_dtls_is_supported(void);
@@ -45,32 +45,72 @@ int coap_dtls_get_log_level(void);
  * @param coap_context The CoAP context where the DTLS object shall be used.
  * @return A DTLS context object or NULL on error;
  */
-struct coap_dtls_context_t *coap_dtls_new_context(struct coap_context_t *coap_context);
+struct coap_dtls_context_t *
+coap_dtls_new_context( coap_context_t *coap_context );
 
 /** Releases the storage allocated for @p dtls_context. */
-void coap_dtls_free_context(struct coap_dtls_context_t *dtls_context);
+void coap_dtls_free_context( struct coap_dtls_context_t *dtls_context );
 
-struct coap_dtls_session_t *
-coap_dtls_new_session(struct coap_dtls_context_t *dtls_context,
-                      const coap_endpoint_t *local_interface,
-                      const coap_address_t *remote);
+/**
+ * Create a new client-side session. This should send a HELLO to the server.
+ *
+ * @param session   The CoAP session
+ * @return Opaque handle to underlying TLS library object containing security parameters for the session.
+*/
+void *coap_dtls_new_client_session( coap_session_t *session );
 
-void coap_dtls_free_session(struct coap_dtls_context_t *dtls_context,
-                            struct coap_dtls_session_t *session);
+/**
+* Create a new server-side session.
+* Called after coap_dtls_hello() has returned 1, signalling that a validated HELLO was received from a client.
+* This should send a HELLO to the server.
+*
+* @param session   The CoAP session
+* @return Opaque handle to underlying TLS library object containing security parameters for the session.
+*/
+void *coap_dtls_new_server_session( coap_session_t *session );
 
-struct coap_dtls_session_t *
-coap_dtls_get_session(struct coap_context_t *coap_context,
-                      const coap_endpoint_t *local_interface,
-                      const coap_address_t *dst);
+/**
+ * Terminates the DTLS session (may send an ALERT if necessary) then frees the underlying TLS library object containing security parameters for the session.
+ *
+ * @param session   The CoAP session
+ */
+void coap_dtls_free_session( coap_session_t *session );
 
-int coap_dtls_send(struct coap_context_t *coap_context,
-                   struct coap_dtls_session_t *session,
-                   const coap_pdu_t *pdu);
+/**
+* Send data to a DTLS peer.
+*
+* @param session   The CoAP session
+* @param pdu       The CoAP PDU
+* @return 0 if this would be blocking, -1 if there is an error or the number of cleartext bytes sent
+*/
+int coap_dtls_send( coap_session_t *session,
+                    const uint8_t *data,
+                    size_t data_len );
 
-int coap_dtls_handle_message(struct coap_context_t *coap_context,
-                             coap_session_t *session,
-                             const uint8_t *data,
-                             size_t data_len);
+/**
+* Handling incoming data from a DTLS peer.
+*
+* @param session   The CoAP session
+* @param data      Encrypted datagram
+* @param data_len  Encrypted datagram size
+* @return result of coap_handle_message on the decrypted CoAP PDU or -1 for error.
+*/
+int coap_dtls_receive( coap_session_t *session,
+                       const uint8_t *data,
+                       size_t data_len);
+
+/**
+* Handling client HELLO messages from a new candiate peer.
+* Note that session->tls is empty.
+*
+* @param session   The CoAP session
+* @param data      Encrypted datagram
+* @param data_len  Encrypted datagram size
+* @return 0 if a cookie verification message has been sent, 1 if the HELLO contains a valid cookie and a server session should be created, -1 if the message is invalid.
+*/
+int coap_dtls_hello( coap_session_t *session,
+  const uint8_t *data,
+  size_t data_len );
 
 /** @} */
 

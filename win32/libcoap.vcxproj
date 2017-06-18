@@ -38,10 +38,12 @@
     <ClCompile Include="..\src\address.c" />
     <ClCompile Include="..\src\async.c" />
     <ClCompile Include="..\src\block.c" />
-    <ClCompile Include="..\src\coap_dtls.c" />
     <ClCompile Include="..\src\coap_event.c" />
     <ClCompile Include="..\src\coap_io.c" />
+    <ClCompile Include="..\src\coap_notls.c" />
+    <ClCompile Include="..\src\coap_openssl.c" />
     <ClCompile Include="..\src\coap_time.c" />
+    <ClCompile Include="..\src\coap_tinydtls.c" />
     <ClCompile Include="..\src\debug.c" />
     <ClCompile Include="..\src\encode.c" />
     <ClCompile Include="..\src\hashkey.c" />
@@ -50,6 +52,7 @@
     <ClCompile Include="..\src\option.c" />
     <ClCompile Include="..\src\pdu.c" />
     <ClCompile Include="..\src\resource.c" />
+    <ClCompile Include="..\src\session.c" />
     <ClCompile Include="..\src\str.c" />
     <ClCompile Include="..\src\subscribe.c" />
     <ClCompile Include="..\src\uri.c" />
@@ -75,6 +78,7 @@
     <ClInclude Include="..\include\coap\pdu.h" />
     <ClInclude Include="..\include\coap\prng.h" />
     <ClInclude Include="..\include\coap\resource.h" />
+    <ClInclude Include="..\include\coap\session.h" />
     <ClInclude Include="..\include\coap\str.h" />
     <ClInclude Include="..\include\coap\subscribe.h" />
     <ClInclude Include="..\include\coap\uri.h" />
@@ -337,6 +341,7 @@ copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>$(IntDir)$(TargetName).def</ModuleDefinitionFile>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;libcryptod.lib;libssld.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
@@ -463,6 +468,7 @@ copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>$(IntDir)$(TargetName).def</ModuleDefinitionFile>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;libcrypto.lib;libssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h

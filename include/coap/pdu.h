@@ -175,6 +175,8 @@ typedef int coap_tid_t;
  */
 #define COAP_DROPPED_RESPONSE -2
 
+#define COAP_PDU_DELAYED -3
+
 #if defined(_MSC_VER)
 #include <stdint.h>
 #pragma pack( push, 1 )
@@ -241,7 +243,7 @@ typedef struct {
  * Header structure for CoAP PDUs
  */
 
-typedef struct {
+typedef struct coap_pdu_t {
   size_t max_size;          /**< allocated storage for options and data */
   coap_hdr_t *hdr;          /**< Address of the first byte of the CoAP message.
                              *   This may or may not equal (coap_hdr_t*)(pdu+1)
@@ -291,7 +293,8 @@ coap_pdu_t * coap_pdu_from_pbuf(struct pbuf *pbuf);
  * Creates a new CoAP PDU of given @p size (must be large enough to hold the
  * basic CoAP message header (coap_hdr_t). The function returns a pointer to the
  * node coap_pdu_t object on success, or @c NULL on error. The storage allocated
- * for the result must be released with coap_delete_pdu().
+ * for the result must be released with coap_delete_pdu() if coap_send() is not
+ * called.
  *
  * @param type The type of the PDU (one of COAP_MESSAGE_CON, COAP_MESSAGE_NON,
  *             COAP_MESSAGE_ACK, COAP_MESSAGE_RST).
@@ -318,12 +321,20 @@ void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
 /**
  * Creates a new CoAP PDU.
  * The object is created on the heap and must be released using
- * coap_delete_pdu();
+ * coap_delete_pdu() unless coap_send() is called in which case
+ * coap_send() will take care of calling coap_delete_pdu().
  *
  * @deprecated This function allocates the maximum storage for each
  * PDU. Use coap_pdu_init() instead.
  */
 coap_pdu_t *coap_new_pdu(void);
+
+/**
+ * Dispose of an CoAP PDU and frees associated storage.
+ * Not that in general you should not call this function directly.
+ * When a PDU is sent with coap_send(), coap_delete_pdu() will be
+ * called automatically for you.
+ */
 
 void coap_delete_pdu(coap_pdu_t *);
 

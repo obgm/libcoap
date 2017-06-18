@@ -194,7 +194,6 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
     debug("hnd_get_rd: cannot send response for message %d\n",
     request->hdr->id);
   }
-  coap_delete_pdu(response);
 #endif
 }
 
@@ -658,15 +657,8 @@ join(coap_context_t *ctx, char *group_name) {
     result = setsockopt(ctx->endpoint->sock.fd,
                         IPPROTO_IPV6, IPV6_JOIN_GROUP,
                         (char *)&mreq, sizeof(mreq) );
-    if ( result < 0 ) {
-#ifdef _WIN32
-      char *szErrorMsg = NULL;
-      FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
-      fprintf( stderr, "join: setsockopt: %s\n", szErrorMsg );
-      LocalFree( szErrorMsg );
-#else
-      perror("join: setsockopt");
-#endif
+    if ( result == COAP_SOCKET_ERROR ) {
+      fprintf( stderr, "join: setsockopt: %s\n", coap_socket_strerror() );
     }
   } else {
     result = -1;
@@ -725,19 +717,8 @@ main(int argc, char **argv) {
 
   while ( !quit ) {
     result = coap_run_once( ctx, COAP_RESOURCE_CHECK_TIME * 1000 );
-
-    if ( result < 0 ) {     /* error */
-#ifdef _WIN32
-      char *szErrorMsg = NULL;
-      FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)&szErrorMsg, 0, NULL );
-      fprintf( stderr, "select: %s\n", szErrorMsg );
-      LocalFree( szErrorMsg );
-#else
-      if (errno != EINTR)
-        perror("select");
-#endif
-      } else {
-        /* coap_check_resource_list( ctx ); */
+    if ( result >= 0 ) {
+      /* coap_check_resource_list( ctx ); */
     }
   }
 

@@ -64,6 +64,8 @@
 #define snprintf _snprintf
 #endif
 
+#define HAVE_OPENSSL 1
+
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"
 

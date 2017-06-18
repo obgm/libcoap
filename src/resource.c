@@ -679,15 +679,13 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
        *  COAP_RESPONSE_CLASS(response->hdr->code) > 2
        */
       if (response->hdr->type == COAP_MESSAGE_CON) {
-	tid = coap_send_confirmed(obs->session, response);
 	obs->non_cnt = 0;
       } else {
-	tid = coap_send(obs->session, response);
 	obs->non_cnt++;
       }
 
-      if (COAP_INVALID_TID == tid || response->hdr->type != COAP_MESSAGE_CON)
-	coap_delete_pdu(response);
+      tid = coap_send( obs->session, response );
+
       if (COAP_INVALID_TID == tid)
       {
 	debug("coap_check_notify: sending failed, resource stays partially dirty\n");

@@ -1,4 +1,4 @@
-libcoap_src = pdu.c net.c debug.c encode.c uri.c subscribe.c resource.c hashkey.c str.c option.c async.c block.c mem.c coap_io.c
+libcoap_src = pdu.c net.c debug.c encode.c uri.c subscribe.c resource.c hashkey.c str.c option.c async.c block.c mem.c coap_io.c session.c
 
 libcoap_dir := $(filter %libcoap,$(APPDS))
 vpath %c $(libcoap_dir)/src
