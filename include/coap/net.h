@@ -135,7 +135,7 @@ typedef struct coap_context_t {
   unsigned (*get_server_psk)( const coap_session_t *session, const char *identity, uint8_t *psk, unsigned max_psk_len );
   int (*get_server_hint)( const coap_session_t *session, char *hint, unsigned max_hint_len );
 
-  struct coap_dtls_context_t *dtls_context;
+  void *dtls_context;
   char *psk_hint;
   uint8_t *psk_key;
   unsigned psk_key_len;

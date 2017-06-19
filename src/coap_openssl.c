@@ -297,8 +297,8 @@ static void coap_dtls_info_callback( const SSL *ssl, int where, int ret ) {
 
 static int ssl_library_loaded = 0;
 
-struct coap_dtls_context_t *coap_dtls_new_context( struct coap_context_t *coap_context ) {
-  struct coap_dtls_context_t *context;
+void *coap_dtls_new_context( struct coap_context_t *coap_context ) {
+  coap_dtls_context_t *context;
 
   if ( !ssl_library_loaded ) {
     SSL_load_error_strings();
@@ -306,11 +306,11 @@ struct coap_dtls_context_t *coap_dtls_new_context( struct coap_context_t *coap_c
     ssl_library_loaded = 1;
   }
 
-  context = ( struct coap_dtls_context_t * )coap_malloc( sizeof( struct coap_dtls_context_t ) );
+  context = (coap_dtls_context_t *)coap_malloc( sizeof(coap_dtls_context_t ) );
   if ( context ) {
     BIO *bio;
     uint8_t cookie_secret[32];
-    memset( context, 0, sizeof( struct coap_dtls_context_t ) );
+    memset( context, 0, sizeof(coap_dtls_context_t) );
     context->ctx = SSL_CTX_new( DTLSv1_2_method() );
     if ( !context->ctx )
       goto error;
@@ -362,7 +362,8 @@ error:
   return NULL;
 }
 
-void coap_dtls_free_context( struct coap_dtls_context_t *context ) {
+void coap_dtls_free_context( void *handle ) {
+  coap_dtls_context_t *context = (coap_dtls_context_t *)handle;
   if ( context->ssl )
     SSL_free( context->ssl );
   if ( context->ctx )
@@ -380,7 +381,7 @@ void * coap_dtls_new_server_session( coap_session_t *session ) {
   BIO *nbio = NULL;
   SSL *nssl = NULL, *ssl = NULL;
   coap_ssl_data *data;
-  coap_dtls_context_t *dtls = session->context->dtls_context;
+  coap_dtls_context_t *dtls = (coap_dtls_context_t *)session->context->dtls_context;
   int r;
 
   nssl = SSL_new( dtls->ctx );
@@ -431,7 +432,7 @@ void *coap_dtls_new_client_session( coap_session_t *session ) {
   SSL *ssl = NULL;
   coap_ssl_data *data;
   int r;
-  coap_dtls_context_t *dtls = session->context->dtls_context;
+  coap_dtls_context_t *dtls = (coap_dtls_context_t *)session->context->dtls_context;
 
   ssl = SSL_new( dtls->ctx );
   if ( !ssl )
@@ -505,7 +506,7 @@ int coap_dtls_send( coap_session_t *session,
 int coap_dtls_hello( coap_session_t *session,
                      const uint8_t *data, size_t data_len )
 {
-  struct coap_dtls_context_t *ctx = session->context->dtls_context;
+  coap_dtls_context_t *ctx = (coap_dtls_context_t *)session->context->dtls_context;
   coap_ssl_data *ssl_data;
   int r;
 

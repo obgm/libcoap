@@ -398,6 +398,28 @@ coap_free_endpoint( coap_endpoint_t *ep ) {
   }
 }
 
+coap_session_t *
+coap_session_get_by_peer( coap_context_t *ctx,
+                          const coap_address_t *remote_addr,
+                          int ifindex )
+{
+  coap_session_t *s;
+  coap_endpoint_t *ep;
+  LL_FOREACH( ctx->sessions, s ) {
+    if ( s->ifindex == ifindex && coap_address_equals( &s->remote_addr, remote_addr ) )
+      return s;
+  }
+  LL_FOREACH( ctx->endpoint, ep ) {
+    if ( ep->hello.ifindex == ifindex && coap_address_equals( &ep->hello.remote_addr, remote_addr ) )
+      return &ep->hello;
+    LL_FOREACH( ep->sessions, s ) {
+      if ( s->ifindex == ifindex && coap_address_equals( &s->remote_addr, remote_addr ) )
+	return s;
+    }
+  }
+  return NULL;
+}
+
 const char *coap_session_str( const coap_session_t *session ) {
   static char szSession[256];
   char *p = szSession, *end = szSession + sizeof( szSession );

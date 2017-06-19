@@ -207,4 +207,6 @@ coap_session_t *coap_endpoint_get_session( coap_endpoint_t *endpoint, const coap
 
 coap_session_t *coap_endpoint_new_dtls_session( coap_endpoint_t *endpoint, const coap_packet_t *packet );
 
+coap_session_t *coap_session_get_by_peer( coap_context_t *ctx, const coap_address_t *remote_addr, int ifindex );
+
 #endif  /* _SESSION_H */

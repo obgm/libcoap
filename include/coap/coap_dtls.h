@@ -27,8 +27,6 @@
  */
 #define COAP_DTLS_MAX_PACKET_SIZE COAP_MAX_PDU_SIZE
 
-struct coap_dtls_context_t;
-
 /** Returns 1 if support for DTLS is enabled, or 0 otherwise. */
 int coap_dtls_is_supported(void);
 
@@ -45,11 +43,11 @@ int coap_dtls_get_log_level(void);
  * @param coap_context The CoAP context where the DTLS object shall be used.
  * @return A DTLS context object or NULL on error;
  */
-struct coap_dtls_context_t *
+void *
 coap_dtls_new_context( coap_context_t *coap_context );
 
 /** Releases the storage allocated for @p dtls_context. */
-void coap_dtls_free_context( struct coap_dtls_context_t *dtls_context );
+void coap_dtls_free_context( void *dtls_context );
 
 /**
  * Create a new client-side session. This should send a HELLO to the server.
