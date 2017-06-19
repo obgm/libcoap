@@ -72,8 +72,8 @@ coap_free_session( coap_session_t *session ) {
     return;
   if ( session->proto == COAP_PROTO_DTLS )
     coap_dtls_free_session( session );
-  if ( session->sock.flags != COAP_SOCKET_EMPTY && session->sock.fd != COAP_INVALID_SOCKET )
-    coap_closesocket( session->sock.fd );
+  if ( session->sock.flags != COAP_SOCKET_EMPTY )
+    coap_socket_close( &session->sock );
   if ( session->endpoint ) {
     if ( session->endpoint->sessions )
       LL_DELETE( session->endpoint->sessions, session );
@@ -107,7 +107,7 @@ ssize_t coap_session_send( coap_session_t *session, const uint8_t *data, size_t 
   }
 
   bytes_written = coap_socket_send( sock, session, data, datalen );
-  if ( bytes_written == datalen )
+  if ( bytes_written == (ssize_t)datalen )
     debug( "*  %s: sent %zd bytes\n", coap_session_str( session ), datalen );
   else
     debug( "*  %s: failed to send %zd bytes\n", coap_session_str( session ), datalen );
@@ -171,6 +171,9 @@ void coap_session_disconnected( coap_session_t *session ) {
 coap_session_t *
 coap_endpoint_get_session( coap_endpoint_t *endpoint, const coap_packet_t *packet ) {
   coap_session_t *session = NULL;
+
+  endpoint->hello.ifindex = -1;
+
   LL_FOREACH( endpoint->sessions, session ) {
     if ( session->ifindex == packet->ifindex && coap_address_equals( &session->local_addr, &packet->dst ) && coap_address_equals( &session->remote_addr, &packet->src ) )
       return session;
@@ -221,7 +224,6 @@ coap_session_create_client(
   coap_proto_t proto
 ) {
   coap_session_t *session = NULL;
-  int on = 1, off = 0;
 
   assert( server );
   assert( proto != COAP_PROTO_NONE );
@@ -268,7 +270,7 @@ coap_session_connect( coap_session_t *session ) {
 }
 
 coap_session_t *coap_new_client_session(
-  coap_context_t *ctx,
+  struct coap_context_t *ctx,
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto
@@ -282,13 +284,13 @@ coap_session_t *coap_new_client_session(
 }
 
 coap_session_t *coap_new_client_session_psk(
-  coap_context_t *ctx,
+  struct coap_context_t *ctx,
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto,
   const char *identity,
   const uint8_t *key,
-  size_t key_len
+  unsigned key_len
 ) {
   coap_session_t *session = coap_session_create_client( ctx, local_if, server, proto );
 

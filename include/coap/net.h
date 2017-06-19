@@ -129,7 +129,7 @@ typedef struct coap_context_t {
 
   ssize_t (*network_send)(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen);
 
-  ssize_t (*network_read)(coap_socket_t *sock, coap_packet_t **packet);
+  ssize_t (*network_read)(coap_socket_t *sock, struct coap_packet_t **packet);
 
   unsigned (*get_client_psk)( const coap_session_t *session, const char *hint, char *identity, unsigned max_identity_len, uint8_t *psk, unsigned max_psk_len );
   unsigned (*get_server_psk)( const coap_session_t *session, const char *identity, uint8_t *psk, unsigned max_psk_len );

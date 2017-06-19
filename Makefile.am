@@ -52,7 +52,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/async.c \
   src/block.c \
   src/coap_io.c \
-  src/coap_dtls.c \
+  src/coap_tinydtls.c \
   src/coap_event.c \
   src/coap_time.c \
   src/debug.c \

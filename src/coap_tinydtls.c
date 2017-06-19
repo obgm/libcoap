@@ -170,26 +170,26 @@ get_psk_info(struct dtls_context_t *dtls_context,
       fatal_error = DTLS_ALERT_CLOSE_NOTIFY;
       goto error;
     }
-    length = strlen( result );
+    length = strlen( (const char *)result );
     client = 1;
     return (int)length;
 
   case DTLS_PSK_KEY:
     if ( coap_context->get_server_psk ) {
       if ( id_len + 1 > sizeof( buf ) ) {
-	coap_log( LOG_WARNING, "cannot set psk -- identity too big\n" );
-	goto error;
+        coap_log( LOG_WARNING, "cannot set psk -- identity too big\n" );
+        goto error;
       }
       memcpy( buf, id, id_len );
       buf[id_len] = 0;
-      return (int)coap_context->get_server_psk( coap_session, buf, result, (unsigned)result_length )
+      return (int)coap_context->get_server_psk( coap_session, buf, result, (unsigned)result_length );
     }
   case DTLS_PSK_HINT:
     client = 0;
     if ( coap_context->get_server_hint ) {
       result[0] = 0;
-      if ( coap_context->get_server_hint( coap_session, result, result_length ) )
-	length = strlen( result );
+      if ( coap_context->get_server_hint( coap_session, (char *)result, result_length ) )
+        length = strlen( (const char *)result );
     } else {
       length = 0;
     }
@@ -214,8 +214,8 @@ static dtls_handler_t cb = {
 #endif
 };
 
-struct coap_dtls_context_t *
-coap_dtls_new_context( coap_context_t *coap_context ) {
+void *
+coap_dtls_new_context( struct coap_context_t *coap_context ) {
   struct dtls_context_t *dtls_context = dtls_new_context( coap_context );
   if (!dtls_context)
     goto error;
@@ -241,9 +241,9 @@ coap_dtls_new_session( coap_session_t *session ) {
   if ( dtls_session ) {
     /* create tinydtls session object from remote address and local
     * endpoint handle */
-    dtls_session_init( &dtls_session );
-    coap_copy_address( (coap_address_t*)&dtls_session, &session->remote_addr );
-    dtls_session.ifindex = session->ifindex;
+    dtls_session_init( dtls_session );
+    coap_address_copy( (coap_address_t*)dtls_session, &session->remote_addr );
+    dtls_session->ifindex = session->ifindex;
     debug( "*** new session %p\n", dtls_session );
   }
 
@@ -261,17 +261,17 @@ void *coap_dtls_new_client_session( coap_session_t *session ) {
     return NULL;
   peer =
     dtls_get_peer( (struct dtls_context_t *)session->context->dtls_context,
-                   &dtls_session );
+                   dtls_session );
 
   if ( !peer ) {
     /* The peer connection does not yet exist. */
     /* dtls_connect() returns a value greater than zero if a new
     * connection attempt is made, 0 for session reuse. */
     if ( dtls_connect( (struct dtls_context_t *)session->context->dtls_context,
-      &dtls_session ) >= 0 ) {
+      dtls_session ) >= 0 ) {
       peer =
-	dtls_get_peer( (struct dtls_context_t *)coap_context->dtls_context,
-	                &dtls_session );
+        dtls_get_peer( (struct dtls_context_t *)session->context->dtls_context,
+	                   dtls_session );
     }
   }
 
@@ -302,7 +302,7 @@ coap_dtls_send( coap_session_t *session,
   coap_log(LOG_DEBUG, "call dtls_write\n");
 
   res = dtls_write((struct dtls_context_t *)session->context->dtls_context,
-                   (session_t)session->tls, (uint8 *)data, data_len);
+                   (session_t *)session->tls, (uint8 *)data, data_len);
 
   if (res < 0)
     coap_log(LOG_WARNING, "coap_dtls_send: cannot send PDU\n");
@@ -319,6 +319,29 @@ coap_dtls_receive( coap_session_t *session,
   int res = dtls_handle_message(
     (struct dtls_context_t *)session->context->dtls_context,
     dtls_session, (uint8 *)data, (int)data_len);
+  return res;
+}
+
+int
+coap_dtls_hello( coap_session_t *session,
+                 const uint8_t *data,
+                 size_t data_len
+) {
+  session_t dtls_session;
+  struct dtls_context_t *dtls_context =
+    (struct dtls_context_t *)session->context->dtls_context;
+  
+  dtls_session_init( &dtls_session );
+  coap_address_copy( (coap_address_t*)&dtls_session, &session->remote_addr );
+  dtls_session.ifindex = session->ifindex;
+  int res = dtls_handle_message( dtls_context, &dtls_session,
+                                 (uint8 *)data, (int)data_len);
+  if ( res >= 0 ) {
+    if ( dtls_get_peer( dtls_context, &dtls_session ) )
+      res = 1;
+	else
+      res = 0;
+  }
   return res;
 }
 

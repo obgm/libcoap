@@ -553,7 +553,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
     if ( r == 0 )
       len = (ssize_t)dwNumberOfBytesRecvd;
 #else
-    len = recvmsg( socket->fd, &mhdr, 0 );
+    len = recvmsg( sock->fd, &mhdr, 0 );
 #endif
 
     if ( len < 0 ) {
@@ -782,14 +782,14 @@ int coap_run_once( coap_context_t *ctx, unsigned int timeout_ms ) {
 #endif
 
 #ifdef _WIN32
-const char *coap_socket_strerror() {
+const char *coap_socket_strerror( void ) {
   static char szError[256];
   if ( FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)WSAGetLastError(), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPSTR)szError, ( DWORD )sizeof( szError ), NULL ) == 0 )
     strcpy( szError, "Unknown error" );
   return szError;
 }
 #else
-const char *coap_socket_strerrror() {
+const char *coap_socket_strerror( void ) {
   return strerror( errno );
 }
 #endif

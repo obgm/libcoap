@@ -28,16 +28,8 @@ typedef int coap_fd_t;
 #endif
 
 struct coap_packet_t;
-typedef struct coap_packet_t coap_packet_t;
-
 struct coap_session_t;
-typedef struct coap_session_t coap_session_t;
-
-struct coap_context_t;
-typedef struct coap_context_t coap_context_t;
-
 struct coap_pdu_t;
-typedef struct coap_pdu_t coap_pdu_t;
 
 typedef uint16_t coap_socket_flags_t;
 
@@ -83,17 +75,17 @@ coap_socket_bind_udp( coap_socket_t *sock,
 void coap_socket_close( coap_socket_t *sock );
 
 ssize_t
-coap_socket_send( coap_socket_t *sock, coap_session_t *session,
+coap_socket_send( coap_socket_t *sock, struct coap_session_t *session,
                   const uint8_t *data, size_t data_len );
 
 
 #ifdef WITH_LWIP
 ssize_t
-coap_socket_send_pdu( coap_socket_t *sock, coap_session_t *session,
-                      coap_pdu_t *pdu );
+coap_socket_send_pdu( coap_socket_t *sock, struct coap_session_t *session,
+                      struct coap_pdu_t *pdu );
 #endif
 
-const char *coap_socket_strerror();
+const char *coap_socket_strerror( void );
 
 /**
  * Function interface for data transmission. This function returns the number of
@@ -107,7 +99,7 @@ const char *coap_socket_strerror();
  * @return                 The number of bytes written on success, or a value
  *                         less than zero on error.
  */
-ssize_t coap_network_send( coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen );
+ssize_t coap_network_send( coap_socket_t *sock, const struct coap_session_t *session, const uint8_t *data, size_t datalen );
 
 /**
  * Function interface for reading data. This function returns the number of
@@ -122,7 +114,7 @@ ssize_t coap_network_send( coap_socket_t *sock, const coap_session_t *session, c
  * @return       The number of bytes received on success, or a value less than
  *               zero on error.
  */
-ssize_t coap_network_read( coap_socket_t *sock, coap_packet_t **packet );
+ssize_t coap_network_read( coap_socket_t *sock, struct coap_packet_t **packet );
 
 #ifndef coap_mcast_interface
 # define coap_mcast_interface(Local) 0
@@ -131,17 +123,17 @@ ssize_t coap_network_read( coap_socket_t *sock, coap_packet_t **packet );
 /**
  * Releases the storage allocated for @p packet.
  */
-void coap_free_packet(coap_packet_t *packet);
+void coap_free_packet(struct coap_packet_t *packet);
 
 /**
  * Given a packet, set msg and msg_len to an address and length of the packet's
  * data in memory.
  * */
-void coap_packet_get_memmapped(coap_packet_t *packet,
+void coap_packet_get_memmapped(struct coap_packet_t *packet,
                                unsigned char **address,
                                size_t *length);
 
-void coap_packet_set_addr( coap_packet_t *packet, const coap_address_t *src,
+void coap_packet_set_addr( struct coap_packet_t *packet, const coap_address_t *src,
                            const coap_address_t *dst );
 
 #ifdef WITH_LWIP
@@ -149,7 +141,7 @@ void coap_packet_set_addr( coap_packet_t *packet, const coap_address_t *src,
  * Get the pbuf of a packet. The caller takes over responsibility for freeing
  * the pbuf.
  */
-struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet);
+struct pbuf *coap_packet_extract_pbuf(struct coap_packet_t *packet);
 #endif
 
 #if defined(WITH_LWIP)
@@ -175,5 +167,6 @@ struct coap_packet_t {
   unsigned char payload[];    /**< payload */
 };
 #endif
+typedef struct coap_packet_t coap_packet_t;
 
 #endif /* _COAP_IO_H_ */

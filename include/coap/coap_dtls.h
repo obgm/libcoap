@@ -44,7 +44,7 @@ int coap_dtls_get_log_level(void);
  * @return A DTLS context object or NULL on error;
  */
 void *
-coap_dtls_new_context( coap_context_t *coap_context );
+coap_dtls_new_context( struct coap_context_t *coap_context );
 
 /** Releases the storage allocated for @p dtls_context. */
 void coap_dtls_free_context( void *dtls_context );

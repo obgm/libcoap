@@ -14,7 +14,7 @@
 #include "pdu.h"
 
 struct coap_endpoint_t;
-typedef struct coap_endpoint_t coap_endpoint_t;
+struct coap_contex_t;
 
 typedef uint8_t coap_proto_t;
 /**
@@ -57,8 +57,8 @@ typedef struct coap_session_t {
   coap_address_t remote_addr;     /**< remote address and port */
   int ifindex;                    /**< interface index */
   coap_socket_t sock;		  /**< socket object for the session, if any */
-  coap_endpoint_t *endpoint;	  /**< session's endpoint */
-  coap_context_t *context;	  /**< session's context */
+  struct coap_endpoint_t *endpoint;	  /**< session's endpoint */
+  struct coap_context_t *context;	  /**< session's context */
   void *tls;			  /**< security parameters */
   coap_pdu_queue_t *sendqueue;	  /**< list of messages waiting to be sent */
   char *psk_identity;
@@ -107,7 +107,7 @@ void coap_session_connected( coap_session_t *session );
 * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
 */
 coap_session_t *coap_new_client_session(
-  coap_context_t *ctx,
+  struct coap_context_t *ctx,
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto
@@ -127,7 +127,7 @@ coap_session_t *coap_new_client_session(
 * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
 */
 coap_session_t *coap_new_client_session_psk(
-  coap_context_t *ctx,
+  struct coap_context_t *ctx,
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto,
@@ -167,7 +167,7 @@ coap_session_delay_pdu( coap_session_t *session, coap_pdu_t *pdu, int retransmit
 */
 typedef struct coap_endpoint_t {
   struct coap_endpoint_t *next;
-  coap_context_t *context;	  /**< endpoint's context */
+  struct coap_context_t *context;	  /**< endpoint's context */
   coap_proto_t proto;		  /**< protocol used on this interface */
   coap_socket_t sock;		  /**< socket object for the interface, if any */
   coap_address_t bind_addr;	  /**< local interface address */
@@ -183,7 +183,7 @@ typedef struct coap_endpoint_t {
 * @param proto		Protocol used on this endpoint
 */
 
-coap_endpoint_t *coap_new_endpoint( coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto );
+coap_endpoint_t *coap_new_endpoint( struct coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto );
 
 void coap_free_endpoint( coap_endpoint_t *ep );
 
@@ -203,10 +203,10 @@ const char *coap_endpoint_str( const coap_endpoint_t *endpoint );
 * @param packet Received packet.
 * @return The CoAP session.
 */
-coap_session_t *coap_endpoint_get_session( coap_endpoint_t *endpoint, const coap_packet_t *packet );
+coap_session_t *coap_endpoint_get_session( coap_endpoint_t *endpoint, const struct coap_packet_t *packet );
 
-coap_session_t *coap_endpoint_new_dtls_session( coap_endpoint_t *endpoint, const coap_packet_t *packet );
+coap_session_t *coap_endpoint_new_dtls_session( coap_endpoint_t *endpoint, const struct coap_packet_t *packet );
 
-coap_session_t *coap_session_get_by_peer( coap_context_t *ctx, const coap_address_t *remote_addr, int ifindex );
+coap_session_t *coap_session_get_by_peer( struct coap_context_t *ctx, const struct coap_address_t *remote_addr, int ifindex );
 
 #endif  /* _SESSION_H */
