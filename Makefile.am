@@ -54,6 +54,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/coap_io.c \
   src/coap_tinydtls.c \
   src/coap_event.c \
+  src/coap_openssl.c \
   src/coap_time.c \
   src/debug.c \
   src/encode.c \
