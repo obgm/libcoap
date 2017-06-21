@@ -287,6 +287,8 @@ void *coap_dtls_new_client_session( coap_session_t *session ) {
 void
 coap_dtls_free_session( coap_session_t *coap_session ) {
   if ( coap_session->tls ) {
+    dtls_close( (struct dtls_context_t *)coap_session->context->dtls_context,
+                (session_t *)coap_session->tls );
     debug("*** removed session %p\n", coap_session->tls);
     coap_free_type(COAP_DTLS_SESSION, coap_session->tls);
   }
