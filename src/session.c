@@ -153,6 +153,10 @@ void coap_session_connected( coap_session_t *session ) {
 
 void coap_session_disconnected( coap_session_t *session ) {
   debug( "*** %s: session disconnected\n", coap_session_str( session ) );
+  if ( session->proto == COAP_PROTO_DTLS && session->tls ) {
+    coap_dtls_free_session( session );
+    session->tls = NULL;
+  }
   session->state = COAP_SESSION_STATE_NONE;
   while ( session->sendqueue ) {
     coap_pdu_queue_t *q = session->sendqueue;

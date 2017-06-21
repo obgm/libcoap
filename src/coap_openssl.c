@@ -503,6 +503,30 @@ int coap_dtls_send( coap_session_t *session,
   return r;
 }
 
+int coap_dtls_get_context_timeout( void *dtls_context ) {
+  return -1;
+}
+
+int coap_dtls_get_timeout( coap_session_t *session ) {
+  SSL *ssl = (SSL *)session->tls;
+  struct timeval timeout;
+
+  assert( ssl != NULL );
+  if ( DTLSv1_get_timeout( ssl, &timeout ) > 0 )
+    return (int)( timeout.tv_sec * 1000 + timeout.tv_usec / 1000 );
+  return -1;
+}
+
+void coap_dtls_handle_timeout( coap_session_t *session ) {
+  SSL *ssl = (SSL *)session->tls;
+
+  assert( ssl != NULL );
+  if ( DTLSv1_handle_timeout( ssl ) < 0 ) {
+    /* Too may retries */
+    coap_session_disconnected( session );
+  }
+}
+
 int coap_dtls_hello( coap_session_t *session,
                      const uint8_t *data, size_t data_len )
 {

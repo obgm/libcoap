@@ -312,6 +312,27 @@ coap_dtls_send( coap_session_t *session,
   return res;
 }
 
+int coap_dtls_get_context_timeout( void *dtls_context ) {
+  clock_time_t next = 0;
+  dtls_check_retransmit( (struct dtls_context_t *)dtls_context, &next );
+  if ( next > 0 ) {
+#if DTLS_TICKS_PER_SECOND != 1000
+    return (int)(( next * 1000 + DTLS_TICKS_PER_SECOND - 1 ) / DTLS_TICKS_PER_SECOND);
+#else
+    return (int)next;
+#endif
+  }
+  return -1;
+}
+
+int coap_dtls_get_timeout( coap_session_t *session ) {
+  return -1;
+}
+
+void coap_dtls_handle_timeout( coap_session_t *session ) {
+  return 0;
+}
+
 int
 coap_dtls_receive( coap_session_t *session,
                    const uint8_t *data,

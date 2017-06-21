@@ -69,4 +69,7 @@ void coap_show_pdu(const coap_pdu_t *);
 struct coap_address_t;
 size_t coap_print_addr(const struct coap_address_t *, unsigned char *, size_t);
 
+void coap_debug_set_packet_loss( const char *loss_level );
+int coap_debug_send_packet();
+
 #endif /* _COAP_DEBUG_H_ */

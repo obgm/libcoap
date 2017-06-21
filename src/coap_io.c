@@ -311,7 +311,9 @@ ssize_t
 coap_network_send( coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen ) {
   ssize_t bytes_written = 0;
 
-  if ( sock->flags & COAP_SOCKET_CONNECTED ) {
+  if ( !coap_debug_send_packet() ) {
+    bytes_written = (ssize_t)datalen;
+  } else if ( sock->flags & COAP_SOCKET_CONNECTED ) {
 #ifdef _WIN32
     bytes_written = send( sock->fd, (const char *)data, (int)datalen, 0 );
 #else
@@ -675,12 +677,14 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
 
 #if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 int
-coap_run_once( coap_context_t *ctx, unsigned int timeout_ms ) {
+coap_run_once( coap_context_t *ctx, unsigned timeout_ms ) {
   fd_set readfds;
   struct timeval tv;
   coap_queue_t *nextpdu;
   coap_tick_t now;
-  unsigned long max_wait;
+  coap_tick_t max_wait;
+  coap_tick_t dtls_timeout;
+  coap_session_t *dtls_timeout_session;
   int result;
   coap_endpoint_t *ep;
   coap_session_t *s;
@@ -712,24 +716,72 @@ coap_run_once( coap_context_t *ctx, unsigned int timeout_ms ) {
   }
 
   max_wait = timeout_ms * COAP_TICKS_PER_SECOND / 1000;
+
   while ( 1 ) {
+    dtls_timeout = 0;
+    dtls_timeout_session = NULL;
+
     nextpdu = coap_peek_next( ctx );
 
-    while ( nextpdu && nextpdu->t <= now - ctx->sendqueue_basetime ) {
+    while ( nextpdu && now >= ctx->sendqueue_basetime && nextpdu->t <= now - ctx->sendqueue_basetime ) {
       coap_retransmit( ctx, coap_pop_next( ctx ) );
       nextpdu = coap_peek_next( ctx );
     }
 
-    if ( nextpdu && ( ( max_wait == 0 ) || nextpdu->t < max_wait ) ) {
+    if ( ctx->dtls_context ) {
+      int ctx_timeout = coap_dtls_get_context_timeout( ctx->dtls_context );
+      if ( ctx_timeout < 0 ) {
+	ctx_timeout = 0;
+	LL_FOREACH( ctx->endpoint, ep ) {
+	  if ( ep->proto == COAP_PROTO_DTLS ) {
+	    LL_FOREACH( ep->sessions, s ) {
+	      if ( s->proto == COAP_PROTO_DTLS && s->tls ) {
+		int s_timeout = coap_dtls_get_timeout( s );
+		if ( s_timeout == 0 )
+		  s_timeout = 1;
+		if ( s_timeout > 0 ) {
+		  if ( ctx_timeout == 0 || s_timeout < ctx_timeout ) {
+		    ctx_timeout = s_timeout;
+		    dtls_timeout_session = s;
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+	LL_FOREACH( ctx->sessions, s ) {
+	  if ( s->proto == COAP_PROTO_DTLS && s->tls ) {
+	    int s_timeout = coap_dtls_get_timeout( s );
+	    if ( s_timeout == 0 )
+	      s_timeout = 1;
+	    if ( s_timeout > 0 ) {
+	      if ( ctx_timeout == 0 || s_timeout < ctx_timeout ) {
+		ctx_timeout = s_timeout;
+		dtls_timeout_session = s;
+	      }
+	    }
+	  }
+	}
+      } else if ( ctx_timeout > 0 ) {
+	debug( "** DTLS global timeout set to %dms\n", ctx_timeout );
+      }
+      if ( ctx_timeout > 0 )
+	dtls_timeout = (coap_tick_t)ctx_timeout * COAP_TICKS_PER_SECOND / 1000;
+    }
+
+    if ( nextpdu && ( max_wait == 0 || nextpdu->t < max_wait ) && ( dtls_timeout == 0 || nextpdu->t < dtls_timeout ) ) {
       /* set timeout if there is a pdu to send */
       tv.tv_usec = ( ( nextpdu->t ) % COAP_TICKS_PER_SECOND ) * 1000000 / COAP_TICKS_PER_SECOND;
       tv.tv_sec = (long)( nextpdu->t ) / COAP_TICKS_PER_SECOND;
-    } else {
+    } else if ( dtls_timeout > 0 && ( max_wait == 0 || dtls_timeout < max_wait ) ) {
+      tv.tv_usec = ( dtls_timeout % COAP_TICKS_PER_SECOND ) * 1000000 / COAP_TICKS_PER_SECOND;
+      tv.tv_sec = (long)dtls_timeout / COAP_TICKS_PER_SECOND;
+    } else if ( max_wait > 0 ) {
       tv.tv_usec = ( max_wait % COAP_TICKS_PER_SECOND ) * 1000000 / COAP_TICKS_PER_SECOND;
       tv.tv_sec = (long)max_wait / COAP_TICKS_PER_SECOND;
     }
 
-    result = select( nfds, &readfds, 0, 0, ( nextpdu || ( max_wait > 0 ) ) ? &tv : NULL );
+    result = select( nfds, &readfds, 0, 0, ( nextpdu || max_wait > 0 || dtls_timeout > 0 ) ? &tv : NULL );
 
     if ( result < 0 ) {   /* error */
 #ifdef _WIN32
@@ -764,10 +816,14 @@ coap_run_once( coap_context_t *ctx, unsigned int timeout_ms ) {
     } else { /* timeout */
       coap_tick_t past = now;
       coap_ticks( &now );
-      if ( past + max_wait <= now ) {
+      if ( dtls_timeout > 0 && dtls_timeout_session && past + dtls_timeout <= now ) {
+	debug( "** %s: DTLS retransmit timeout after %ums\n", coap_session_str( dtls_timeout_session ), (unsigned)( dtls_timeout * 1000 / COAP_TICKS_PER_SECOND ) );
+	coap_dtls_handle_timeout( dtls_timeout_session );
+      }
+      if ( max_wait > 0 && past + max_wait <= now ) {
 	return (int)( now - past );
       } else {
-	max_wait -= (unsigned long)( now - past );
+	max_wait -= (unsigned)( now - past );
       }
     }
   }

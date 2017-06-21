@@ -506,3 +506,34 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
   fflush(log_fd);
 }
 
+static int num_initial_packets_lost = 0;
+static int packet_loss_level = 0;
+static int send_packet_count = 0;
+
+void coap_debug_set_packet_loss( const char *loss_level ) {
+  char *end = NULL;
+  int level = (int)strtol( loss_level, &end, 10 );
+  if ( end == loss_level || level <= 0 )
+    return;
+  if ( *end == '%' ) {
+    if ( level > 100 )
+      level = 100;
+    packet_loss_level = level * 65536 / 100;
+  } else {
+    num_initial_packets_lost = (int)level;
+  }
+  send_packet_count = 0;
+}
+
+int coap_debug_send_packet() {
+  ++send_packet_count;
+  if ( num_initial_packets_lost > 0 && send_packet_count <= num_initial_packets_lost )
+    return 0;
+  if ( packet_loss_level > 0 ) {
+    uint16_t r = 0;
+    prng( (uint8_t*)&r, 2 );
+    if ( r < packet_loss_level )
+      return 0;
+  }
+  return 1;
+}

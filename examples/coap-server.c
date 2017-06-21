@@ -342,8 +342,10 @@ usage( const char *program, const char *version) {
      "\t-A address\tinterface address to bind to\n"
      "\t-g group\tjoin the given multicast group\n"
      "\t-p port\t\tlisten on specified port\n"
-     "\t-v num\t\tverbosity level (default: 3)\n",
-     program, version, program );
+     "\t-v num\t\tverbosity level (default: 3)\n"
+     "\t-l num\t\tFail to send the first num datagrams (for debugging only)\n"
+     "\t-l loss%%\t\tRandmoly fail to send datagrams with the specified probability(for debugging only)\n",
+    program, version, program );
 }
 
 static coap_context_t *
@@ -488,7 +490,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "A:g:p:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:g:p:v:l:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -503,6 +505,9 @@ main(int argc, char **argv) {
       break;
     case 'v' :
       log_level = strtol(optarg, NULL, 10);
+      break;
+    case 'l':
+      coap_debug_set_packet_loss( optarg );
       break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );

@@ -574,6 +574,8 @@ usage( const char *program, const char *version) {
      "\t\t\trequest)\n"
      "\t-T token\tinclude specified token\n"
      "\t-U\t\tnever include Uri-Host or Uri-Port options\n"
+     "\t-l num\t\tFail to send the first num datagrams (for debugging only)\n"
+     "\t-l loss%%\t\tRandmoly fail to send datagrams with the specified probability(for debugging only)\n"
      "\n"
      "examples:\n"
      "\tcoap-client -m get coap://[::1]/\n"
@@ -1109,7 +1111,7 @@ main(int argc, char **argv) {
   ssize_t user_length = 0, key_length = 0;
   int create_uri_opts = 1;
 
-  while ((opt = getopt(argc, argv, "Na:b:e:f:g:k:m:p:s:t:o:v:A:B:O:P:T:u:U")) != -1) {
+  while ((opt = getopt(argc, argv, "Na:b:e:f:g:k:m:p:s:t:o:v:A:B:O:P:T:u:U:l:")) != -1) {
     switch (opt) {
     case 'a' :
       strncpy(node_str, optarg, NI_MAXHOST-1);
@@ -1185,6 +1187,9 @@ main(int argc, char **argv) {
       break;
     case 'v' :
       log_level = strtol(optarg, NULL, 10);
+      break;
+    case 'l':
+      coap_debug_set_packet_loss( optarg );
       break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );

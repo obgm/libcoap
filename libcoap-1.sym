@@ -17,6 +17,7 @@ coap_clear_event_handler
 coap_clock_init
 coap_clone_uri
 coap_context_set_psk
+coap_debug_set_packet_loss
 coap_decode_var_bytes
 coap_delete_all
 coap_delete_all_resources

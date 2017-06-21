@@ -75,15 +75,38 @@ void *coap_dtls_new_server_session( coap_session_t *session );
 void coap_dtls_free_session( coap_session_t *session );
 
 /**
-* Send data to a DTLS peer.
-*
-* @param session   The CoAP session
-* @param pdu       The CoAP PDU
-* @return 0 if this would be blocking, -1 if there is an error or the number of cleartext bytes sent
-*/
+ * Send data to a DTLS peer.
+ *
+ * @param session   The CoAP session
+ * @param pdu       The CoAP PDU
+ * @return 0 if this would be blocking, -1 if there is an error or the number of cleartext bytes sent
+ */
 int coap_dtls_send( coap_session_t *session,
                     const uint8_t *data,
                     size_t data_len );
+
+/**
+ * Do all pending retransmits and get next timeout
+ * 
+ * @param dtls_context The DTLS context
+ * @return <0 If not implemented, i.e. each session has its own timeout, 0 if no timeout, >0 Number of milliseconds until the next timeout.
+ */
+int coap_dtls_get_context_timeout( void *dtls_context );
+
+/**
+ * Get next timeout for this session.
+ *
+ * @param session The CoAP session
+ * @return <0 If no event is pending, >=0 Number of milliseconds until the next timeout.
+ */
+int coap_dtls_get_timeout( coap_session_t *session );
+
+/**
+ * Handle a DTLS timeout expiration.
+ *
+ * @param session The CoAP session
+ */
+void coap_dtls_handle_timeout( coap_session_t *session );
 
 /**
 * Handling incoming data from a DTLS peer.
