@@ -29,6 +29,10 @@ coap_dtls_is_supported(void) {
   return 1;
 }
 
+void coap_dtls_startup( void ) {
+  dtls_init();
+}
+
 void
 coap_dtls_set_log_level(int level) {
   dtls_set_log_level(level);

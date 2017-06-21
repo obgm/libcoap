@@ -26,6 +26,9 @@ coap_dtls_is_supported( void ) {
 
 static int dtls_log_level = 0;
 
+void coap_dtls_startup( void ) {
+}
+
 void
 coap_dtls_set_log_level( int level ) {
   dtls_log_level = level;
@@ -36,48 +39,61 @@ coap_dtls_get_log_level( void ) {
   return dtls_log_level;
 }
 
-struct coap_dtls_context_t *
-  coap_dtls_new_context( struct coap_context_t *coap_context UNUSED ) {
+void *
+coap_dtls_new_context( struct coap_context_t *coap_context UNUSED ) {
   return NULL;
 }
 
 void
-coap_dtls_free_context( struct coap_dtls_context_t *dtls_context ) {
+coap_dtls_free_context( void *handle UNUSED ) {
 }
 
-struct coap_dtls_session_t *
-  coap_dtls_get_session( struct coap_context_t *coap_context UNUSED,
-    const coap_endpoint_t *local_interface UNUSED,
-    const coap_address_t *dst UNUSED ) {
+void *coap_dtls_new_server_session( coap_session_t *session UNUSED ) {
   return NULL;
 }
 
-int
-coap_dtls_send( struct coap_context_t *coap_context,
-  struct coap_dtls_session_t *session,
-  const coap_pdu_t *pdu ) {
-  return -1;
-}
-
-struct coap_dtls_session_t *
-  coap_dtls_new_session( struct coap_dtls_context_t *dtls_context,
-    const coap_endpoint_t *local_interface,
-    const coap_address_t *remote ) {
+void *coap_dtls_new_client_session( coap_session_t *session UNUSED ) {
   return NULL;
 }
 
-struct coap_dtls_session_t;
 void
-coap_dtls_free_session( struct coap_dtls_context_t *dtls_context,
-  struct coap_dtls_session_t *session ) {
+coap_dtls_free_session( coap_session_t *coap_session UNUSED ) {
 }
 
 int
-coap_dtls_handle_message( struct coap_context_t *coap_context UNUSED,
-  coap_session_t *session UNUSED,
-  const unsigned char *data UNUSED,
-  size_t data_len UNUSED ) {
+coap_dtls_send( coap_session_t *session UNUSED,
+  const uint8_t *data UNUSED,
+  size_t data_len UNUSED
+) {
   return -1;
+}
+
+int coap_dtls_get_context_timeout( void *dtls_context UNUSED ) {
+  return -1;
+}
+
+int coap_dtls_get_timeout( coap_session_t *session UNUSED ) {
+  return -1;
+}
+
+void coap_dtls_handle_timeout( coap_session_t *session UNUSED ) {
+  return 0;
+}
+
+int
+coap_dtls_receive( coap_session_t *session UNUSED,
+  const uint8_t *data UNUSED,
+  size_t data_len UNUSED
+) {
+  return -1;
+}
+
+int
+coap_dtls_hello( coap_session_t *session UNUSED,
+  const uint8_t *data UNUSED,
+  size_t data_len UNUSED
+) {
+  return 0;
 }
 
 #undef UNUSED

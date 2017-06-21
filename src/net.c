@@ -1828,6 +1828,7 @@ void coap_startup(void) {
   WSADATA wsaData;
   WSAStartup( wVersionRequested, &wsaData );
 #endif
+  coap_dtls_startup();
 }
 
 void coap_cleanup(void) {

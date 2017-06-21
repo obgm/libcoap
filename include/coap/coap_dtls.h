@@ -135,4 +135,6 @@ int coap_dtls_hello( coap_session_t *session,
 
 /** @} */
 
+void coap_dtls_startup( void );
+
 #endif /* COAP_DTLS_H */

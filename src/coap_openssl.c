@@ -33,6 +33,11 @@ int coap_dtls_is_supported( void ) {
   return 1;
 }
 
+void coap_dtls_startup( void ) {
+  SSL_load_error_strings();
+  SSL_library_init();
+}
+
 static int dtls_log_level = 0;
 
 void coap_dtls_set_log_level( int level ) {
@@ -295,16 +300,8 @@ static void coap_dtls_info_callback( const SSL *ssl, int where, int ret ) {
   }
 }
 
-static int ssl_library_loaded = 0;
-
 void *coap_dtls_new_context( struct coap_context_t *coap_context ) {
   coap_dtls_context_t *context;
-
-  if ( !ssl_library_loaded ) {
-    SSL_load_error_strings();
-    SSL_library_init();
-    ssl_library_loaded = 1;
-  }
 
   context = (coap_dtls_context_t *)coap_malloc( sizeof(coap_dtls_context_t ) );
   if ( context ) {
