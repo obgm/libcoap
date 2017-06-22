@@ -606,4 +606,10 @@ int coap_dtls_receive(coap_session_t *session,
   return r;
 }
 
+#else /* !HAVE_OPENSSL */
+
+/* make compilers happy that do not like empty modules */
+static inline void dummy(void) {
+}
+
 #endif /* HAVE_OPENSSL */

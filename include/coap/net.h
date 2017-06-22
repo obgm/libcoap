@@ -199,7 +199,7 @@ coap_context_t *coap_new_context(const coap_address_t *listen_addr);
  */
 
 void coap_context_set_psk( coap_context_t *ctx, const char *hint,
-                           const uint8_t *key, unsigned key_len );
+                           const uint8_t *key, size_t key_len );
 
 /**
  * Returns a new message id and updates @p context->message_id accordingly. The

@@ -349,6 +349,8 @@ coap_get_session_client_psk(
   uint8_t *identity, size_t *identity_len, size_t max_identity_len,
   uint8_t *psk, size_t max_psk_len
 ) {
+  (void)hint;
+  (void)hint_len;
   if (session->psk_identity && session->psk_identity_len > 0 && session->psk_key && session->psk_key_len > 0) {
     if (session->psk_identity_len <= max_identity_len && session->psk_key_len <= max_psk_len) {
       memcpy(identity, session->psk_identity, session->psk_identity_len);
@@ -373,6 +375,8 @@ coap_get_context_server_psk(
   const uint8_t *identity, size_t identity_len,
   uint8_t *psk, size_t max_psk_len
 ) {
+  (void)identity;
+  (void)identity_len;
   const coap_context_t *ctx = session->context;
   if (ctx && ctx->psk_key && ctx->psk_key_len > 0 && ctx->psk_key_len <= max_psk_len) {
     memcpy(psk, ctx->psk_key, ctx->psk_key_len);

@@ -312,11 +312,13 @@ int coap_dtls_get_context_timeout(void *dtls_context) {
 }
 
 int coap_dtls_get_timeout(coap_session_t *session) {
+  (void)session;
   return -1;
 }
 
 void coap_dtls_handle_timeout(coap_session_t *session) {
-  return 0;
+  (void)session;
+  return;
 }
 
 int
