@@ -65,7 +65,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/option.c \
   src/pdu.c \
   src/resource.c \
-  src/session.c \
+  src/coap_session.c \
   src/str.c \
   src/subscribe.c \
   src/uri.c
@@ -95,7 +95,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap/pdu.h \
   $(top_srcdir)/include/coap/prng.h \
   $(top_srcdir)/include/coap/resource.h \
-  $(top_srcdir)/include/coap/session.h \
+  $(top_srcdir)/include/coap/coap_session.h \
   $(top_srcdir)/include/coap/str.h \
   $(top_srcdir)/include/coap/subscribe.h \
   $(top_srcdir)/include/coap/uri.h \

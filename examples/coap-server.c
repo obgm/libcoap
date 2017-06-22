@@ -343,7 +343,7 @@ usage( const char *program, const char *version) {
      "\t-g group\tjoin the given multicast group\n"
      "\t-p port\t\tlisten on specified port\n"
      "\t-v num\t\tverbosity level (default: 3)\n"
-     "\t-l num\t\tFail to send the first num datagrams (for debugging only)\n"
+     "\t-l list\t\tFail to send some datagram specified by a comma separated list of number or number intervals(for debugging only)\n"
      "\t-l loss%%\t\tRandmoly fail to send datagrams with the specified probability(for debugging only)\n",
     program, version, program );
 }
@@ -507,7 +507,10 @@ main(int argc, char **argv) {
       log_level = strtol(optarg, NULL, 10);
       break;
     case 'l':
-      coap_debug_set_packet_loss( optarg );
+      if (!coap_debug_set_packet_loss(optarg)) {
+	usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+	exit(1);
+      }
       break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );

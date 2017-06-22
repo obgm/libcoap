@@ -75,7 +75,7 @@
     <ClCompile Include="..\src\coap_openssl.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\session.c">
+    <ClCompile Include="..\src\coap_session.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -155,7 +155,7 @@
     <ClInclude Include="..\include\coap\coap_event.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap\session.h">
+    <ClInclude Include="..\include\coap\coap_session.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

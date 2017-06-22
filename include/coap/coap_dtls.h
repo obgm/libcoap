@@ -11,7 +11,7 @@
 #define _COAP_DTLS_H_
 
 #include "net.h"
-#include "session.h"
+#include "coap_session.h"
 #include "pdu.h"
 
 /**

@@ -574,7 +574,7 @@ usage( const char *program, const char *version) {
      "\t\t\trequest)\n"
      "\t-T token\tinclude specified token\n"
      "\t-U\t\tnever include Uri-Host or Uri-Port options\n"
-     "\t-l num\t\tFail to send the first num datagrams (for debugging only)\n"
+     "\t-l list\t\tFail to send some datagram specified by a comma separated list of number or number intervals(for debugging only)\n"
      "\t-l loss%%\t\tRandmoly fail to send datagrams with the specified probability(for debugging only)\n"
      "\n"
      "examples:\n"
@@ -1113,83 +1113,86 @@ main(int argc, char **argv) {
 
   while ((opt = getopt(argc, argv, "Na:b:e:f:g:k:m:p:s:t:o:v:A:B:O:P:T:u:U:l:")) != -1) {
     switch (opt) {
-    case 'a' :
-      strncpy(node_str, optarg, NI_MAXHOST-1);
+    case 'a':
+      strncpy(node_str, optarg, NI_MAXHOST - 1);
       node_str[NI_MAXHOST - 1] = '\0';
       break;
-    case 'b' :
+    case 'b':
       cmdline_blocksize(optarg);
       break;
-    case 'B' :
+    case 'B':
       wait_seconds = atoi(optarg);
       break;
-    case 'e' :
-      if (!cmdline_input(optarg,&payload))
-        payload.length = 0;
+    case 'e':
+      if (!cmdline_input(optarg, &payload))
+	payload.length = 0;
       break;
-    case 'f' :
-      if (!cmdline_input_from_file(optarg,&payload))
-        payload.length = 0;
+    case 'f':
+      if (!cmdline_input_from_file(optarg, &payload))
+	payload.length = 0;
       break;
-    case 'k' :
+    case 'k':
       key_length = cmdline_read_key(optarg, key, MAX_KEY);
       break;
-    case 'p' :
-      strncpy(port_str, optarg, NI_MAXSERV-1);
+    case 'p':
+      strncpy(port_str, optarg, NI_MAXSERV - 1);
       port_str[NI_MAXSERV - 1] = '\0';
       break;
-    case 'm' :
+    case 'm':
       method = cmdline_method(optarg);
       break;
-    case 'N' :
+    case 'N':
       msgtype = COAP_MESSAGE_NON;
       break;
-    case 's' :
+    case 's':
       cmdline_subscribe(optarg);
       break;
-    case 'o' :
+    case 'o':
       output_file.length = strlen(optarg);
       output_file.s = (unsigned char *)coap_malloc(output_file.length + 1);
 
       if (!output_file.s) {
-        fprintf(stderr, "cannot set output file: insufficient memory\n");
-        exit(-1);
+	fprintf(stderr, "cannot set output file: insufficient memory\n");
+	exit(-1);
       } else {
-        /* copy filename including trailing zero */
-        memcpy(output_file.s, optarg, output_file.length + 1);
+	/* copy filename including trailing zero */
+	memcpy(output_file.s, optarg, output_file.length + 1);
       }
       break;
-    case 'A' :
-      cmdline_content_type(optarg,COAP_OPTION_ACCEPT);
+    case 'A':
+      cmdline_content_type(optarg, COAP_OPTION_ACCEPT);
       break;
-    case 't' :
-      cmdline_content_type(optarg,COAP_OPTION_CONTENT_TYPE);
+    case 't':
+      cmdline_content_type(optarg, COAP_OPTION_CONTENT_TYPE);
       break;
-    case 'O' :
+    case 'O':
       cmdline_option(optarg);
       break;
-    case 'P' :
+    case 'P':
       if (!cmdline_proxy(optarg)) {
-        fprintf(stderr, "error specifying proxy address\n");
-        exit(-1);
+	fprintf(stderr, "error specifying proxy address\n");
+	exit(-1);
       }
       break;
-    case 'T' :
+    case 'T':
       cmdline_token(optarg);
       break;
-    case 'u' :
+    case 'u':
       user_length = cmdline_read_user(optarg, user, MAX_USER);
-      if ( user_length >= 0 )
+      if (user_length >= 0)
 	user[user_length] = 0;
       break;
-    case 'U' :
+    case 'U':
       create_uri_opts = 0;
       break;
-    case 'v' :
+    case 'v':
       log_level = strtol(optarg, NULL, 10);
       break;
     case 'l':
-      coap_debug_set_packet_loss( optarg );
+      if (!coap_debug_set_packet_loss(optarg)) {
+	usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+	exit(1);
+      }
       break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );

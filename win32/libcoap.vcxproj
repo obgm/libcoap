@@ -42,6 +42,7 @@
     <ClCompile Include="..\src\coap_io.c" />
     <ClCompile Include="..\src\coap_notls.c" />
     <ClCompile Include="..\src\coap_openssl.c" />
+    <ClCompile Include="..\src\coap_session.c" />
     <ClCompile Include="..\src\coap_time.c" />
     <ClCompile Include="..\src\coap_tinydtls.c" />
     <ClCompile Include="..\src\debug.c" />
@@ -52,7 +53,6 @@
     <ClCompile Include="..\src\option.c" />
     <ClCompile Include="..\src\pdu.c" />
     <ClCompile Include="..\src\resource.c" />
-    <ClCompile Include="..\src\session.c" />
     <ClCompile Include="..\src\str.c" />
     <ClCompile Include="..\src\subscribe.c" />
     <ClCompile Include="..\src\uri.c" />
@@ -67,6 +67,7 @@
     <ClInclude Include="..\include\coap\coap_dtls.h" />
     <ClInclude Include="..\include\coap\coap_event.h" />
     <ClInclude Include="..\include\coap\coap_io.h" />
+    <ClInclude Include="..\include\coap\coap_session.h" />
     <ClInclude Include="..\include\coap\coap_time.h" />
     <ClInclude Include="..\include\coap\debug.h" />
     <ClInclude Include="..\include\coap\encode.h" />
@@ -78,7 +79,6 @@
     <ClInclude Include="..\include\coap\pdu.h" />
     <ClInclude Include="..\include\coap\prng.h" />
     <ClInclude Include="..\include\coap\resource.h" />
-    <ClInclude Include="..\include\coap\session.h" />
     <ClInclude Include="..\include\coap\str.h" />
     <ClInclude Include="..\include\coap\subscribe.h" />
     <ClInclude Include="..\include\coap\uri.h" />

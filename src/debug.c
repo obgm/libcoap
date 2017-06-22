@@ -506,29 +506,61 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
   fflush(log_fd);
 }
 
-static int num_initial_packets_lost = 0;
+static struct packet_num_interval {
+  int start;
+  int end;
+} packet_loss_intervals[10];
+static int num_packet_loss_intervals = 0;
 static int packet_loss_level = 0;
 static int send_packet_count = 0;
 
-void coap_debug_set_packet_loss( const char *loss_level ) {
+int coap_debug_set_packet_loss(const char *loss_level) {
+  const char *p = loss_level;
   char *end = NULL;
-  int level = (int)strtol( loss_level, &end, 10 );
-  if ( end == loss_level || level <= 0 )
-    return;
-  if ( *end == '%' ) {
-    if ( level > 100 )
-      level = 100;
-    packet_loss_level = level * 65536 / 100;
+  int n = (int)strtol(p, &end, 10), i = 0;
+  if (end == p || n <= 0)
+    return 0;
+  if (*end == '%') {
+    if (n > 100)
+      n = 100;
+    packet_loss_level = n * 65536 / 100;
   } else {
-    num_initial_packets_lost = (int)level;
+    while (i < 10) {
+      packet_loss_intervals[i].start = n;
+      if (*end == '-') {
+	p = end + 1;
+	n = (int)strtol(p, &end, 10);
+	if (end == p || n <= 0)
+	  return 0;
+      }
+      packet_loss_intervals[i++].end = n;
+      if (*end == 0)
+	break;
+      if (*end != ',')
+	return 0;
+      p = end + 1;
+      n = (int)strtol(p, &end, 10);
+      if (end == p || n <= 0)
+	return 0;
+    }
+    if (i == 10)
+      return 0;
+    num_packet_loss_intervals = i;
   }
   send_packet_count = 0;
+  return 1;
 }
 
-int coap_debug_send_packet() {
+int coap_debug_send_packet(void) {
   ++send_packet_count;
-  if ( num_initial_packets_lost > 0 && send_packet_count <= num_initial_packets_lost )
-    return 0;
+  if (num_packet_loss_intervals > 0) {
+    int i;
+    for (i = 0; i < num_packet_loss_intervals; i++) {
+      if (send_packet_count >= packet_loss_intervals[i].start
+	&& send_packet_count <= packet_loss_intervals[i].end)
+	return 0;
+    }
+  }
   if ( packet_loss_level > 0 ) {
     uint16_t r = 0;
     prng( (uint8_t*)&r, 2 );

@@ -29,7 +29,7 @@
 #include "option.h"
 #include "pdu.h"
 #include "prng.h"
-#include "session.h"
+#include "coap_session.h"
 
 struct coap_queue_t;
 
@@ -131,14 +131,15 @@ typedef struct coap_context_t {
 
   ssize_t (*network_read)(coap_socket_t *sock, struct coap_packet_t **packet);
 
-  unsigned (*get_client_psk)( const coap_session_t *session, const char *hint, char *identity, unsigned max_identity_len, uint8_t *psk, unsigned max_psk_len );
-  unsigned (*get_server_psk)( const coap_session_t *session, const char *identity, uint8_t *psk, unsigned max_psk_len );
-  int (*get_server_hint)( const coap_session_t *session, char *hint, unsigned max_hint_len );
+  size_t(*get_client_psk)(const coap_session_t *session, const uint8_t *hint, size_t hint_len, uint8_t *identity, size_t *identity_len, size_t max_identity_len, uint8_t *psk, size_t max_psk_len);
+  size_t(*get_server_psk)(const coap_session_t *session, const uint8_t *identity, size_t identity_len, uint8_t *psk, size_t max_psk_len);
+  size_t(*get_server_hint)(const coap_session_t *session, uint8_t *hint, size_t max_hint_len);
 
   void *dtls_context;
-  char *psk_hint;
+  uint8_t *psk_hint;
+  size_t psk_hint_len;
   uint8_t *psk_key;
-  unsigned psk_key_len;
+  size_t psk_key_len;
   void *app;                    /**< application-specific data */
 } coap_context_t;
 

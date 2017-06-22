@@ -98,4 +98,10 @@ coap_dtls_hello( coap_session_t *session UNUSED,
 
 #undef UNUSED
 
+#else /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL */
+
+/* make compilers happy that do not like empty modules */
+static inline void dummy(void) {
+}
+
 #endif /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL */

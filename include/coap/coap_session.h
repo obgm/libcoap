@@ -1,4 +1,4 @@
-/* session.h -- Session management for libcoap
+/* coap_session.h -- Session management for libcoap
 *
 * Copyright (C) 2017 Jean-Claue Michelou <jcm@spinetix.com>
 *
@@ -61,9 +61,10 @@ typedef struct coap_session_t {
   struct coap_context_t *context;	  /**< session's context */
   void *tls;			  /**< security parameters */
   coap_pdu_queue_t *sendqueue;	  /**< list of messages waiting to be sent */
-  char *psk_identity;
+  uint8_t *psk_identity;
+  size_t psk_identity_len;
   uint8_t *psk_key;
-  unsigned psk_key_len;
+  size_t psk_key_len;
 } coap_session_t;
 
 /**
