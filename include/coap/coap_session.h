@@ -11,10 +11,13 @@
 
 
 #include "coap_io.h"
+#include "coap_time.h"
 #include "pdu.h"
 
 struct coap_endpoint_t;
 struct coap_contex_t;
+
+#define COAP_DEFAULT_SESSION_TIMEOUT 300
 
 typedef uint8_t coap_proto_t;
 /**
@@ -61,6 +64,7 @@ typedef struct coap_session_t {
   struct coap_context_t *context;	  /**< session's context */
   void *tls;			  /**< security parameters */
   coap_pdu_queue_t *sendqueue;	  /**< list of messages waiting to be sent */
+  coap_tick_t last_rx_tx;
   uint8_t *psk_identity;
   size_t psk_identity_len;
   uint8_t *psk_key;
@@ -73,7 +77,7 @@ typedef struct coap_session_t {
 * @param session The CoAP session.
 * @return same as session
 */
-coap_session_t *coap_session_reference( coap_session_t *session );
+coap_session_t *coap_session_reference(coap_session_t *session);
 
 /**
 * Decrement reference counter on a session.
@@ -82,21 +86,21 @@ coap_session_t *coap_session_reference( coap_session_t *session );
 *
 * @param session The CoAP session.
 */
-void coap_session_release( coap_session_t *session );
+void coap_session_release(coap_session_t *session);
 
 /**
 * Notify session that it has failed connecting or has been disconnected.
 *
 * @param session The CoAP session.
 */
-void coap_session_disconnected( coap_session_t *session );
+void coap_session_disconnected(coap_session_t *session);
 
 /**
 * Notify session that it has just connected or reconnected.
 *
 * @param session The CoAP session.
 */
-void coap_session_connected( coap_session_t *session );
+void coap_session_connected(coap_session_t *session);
 
 /**
 * Creates a new client session to the designated server.
@@ -148,8 +152,8 @@ coap_session_t *coap_new_client_session_psk(
 * @return                 The number of bytes written on success, or a value
 *                         less than zero on error.
 */
-ssize_t coap_session_send( coap_session_t *session,
-                           const uint8_t *data, size_t datalen );
+ssize_t coap_session_send(coap_session_t *session,
+  const uint8_t *data, size_t datalen);
 
 /**
  * Get session description.
@@ -157,10 +161,10 @@ ssize_t coap_session_send( coap_session_t *session,
  * @param session  The CoAP session.
  * @return description string
  */
-const char *coap_session_str( const coap_session_t *session );
+const char *coap_session_str(const coap_session_t *session);
 
 ssize_t
-coap_session_delay_pdu( coap_session_t *session, coap_pdu_t *pdu, int retransmit_cnt );
+coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu, int retransmit_cnt);
 
 /**
 * Abstraction of virtual endpoint that can be attached to coap_context_t. The
@@ -184,9 +188,9 @@ typedef struct coap_endpoint_t {
 * @param proto		Protocol used on this endpoint
 */
 
-coap_endpoint_t *coap_new_endpoint( struct coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto );
+coap_endpoint_t *coap_new_endpoint(struct coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto);
 
-void coap_free_endpoint( coap_endpoint_t *ep );
+void coap_free_endpoint(coap_endpoint_t *ep);
 
 /**
 * Get endpoint description.
@@ -194,7 +198,7 @@ void coap_free_endpoint( coap_endpoint_t *ep );
 * @param session  The CoAP endpoint.
 * @return description string
 */
-const char *coap_endpoint_str( const coap_endpoint_t *endpoint );
+const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
 
 /**
 * Lookup the server session for the packet received on an endpoint, or create
@@ -204,10 +208,16 @@ const char *coap_endpoint_str( const coap_endpoint_t *endpoint );
 * @param packet Received packet.
 * @return The CoAP session.
 */
-coap_session_t *coap_endpoint_get_session( coap_endpoint_t *endpoint, const struct coap_packet_t *packet );
+coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
+  const struct coap_packet_t *packet, coap_tick_t now);
 
-coap_session_t *coap_endpoint_new_dtls_session( coap_endpoint_t *endpoint, const struct coap_packet_t *packet );
+coap_session_t *coap_endpoint_new_dtls_session(coap_endpoint_t *endpoint,
+  const struct coap_packet_t *packet, coap_tick_t now);
 
-coap_session_t *coap_session_get_by_peer( struct coap_context_t *ctx, const struct coap_address_t *remote_addr, int ifindex );
+coap_session_t *coap_session_get_by_peer(struct coap_context_t *ctx,
+  const struct coap_address_t *remote_addr, int ifindex);
+
+void coap_session_free(coap_session_t *session);
+
 
 #endif  /* _SESSION_H */

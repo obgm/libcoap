@@ -650,6 +650,7 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, int retransmit_cnt) {
     sock = &session->endpoint->sock;
   }
   bytes_written = coap_socket_send_pdu(sock, session, pdu);
+  coap_ticks(&session->last_rx_tx);
 
 #else
 
@@ -939,7 +940,7 @@ coap_handle_message_for_proto(coap_context_t *ctx, coap_session_t *session, coap
 }
 
 static int
-coap_read_session(coap_context_t *ctx, coap_session_t *session) {
+coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
   ssize_t bytes_read = -1;
   coap_packet_t *packet;
   int result = -1;		/* the value to be returned */
@@ -952,6 +953,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session) {
     warn("*  %s: read error\n", coap_session_str(session));
   } else if (bytes_read > 0) {
     debug("*  %s: received %zd bytes\n", coap_session_str(session), bytes_read);
+    session->last_rx_tx = now;
     coap_packet_set_addr(packet, &session->remote_addr, &session->local_addr);
     result = coap_handle_message_for_proto(ctx, session, packet);
   }
@@ -962,7 +964,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session) {
 }
 
 static int
-coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint) {
+coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t now) {
   ssize_t bytes_read = -1;
   coap_packet_t *packet;
   int result = -1;		/* the value to be returned */
@@ -972,12 +974,12 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint) {
   if (bytes_read < 0) {
     warn("*  %s: read failed\n", coap_endpoint_str(endpoint));
   } else if (bytes_read > 0) {
-    coap_session_t *session = coap_endpoint_get_session(endpoint, packet);
+    coap_session_t *session = coap_endpoint_get_session(endpoint, packet, now);
     if (session) {
       debug("*  %s: received %zd bytes\n", coap_session_str(session), bytes_read);
       result = coap_handle_message_for_proto(ctx, session, packet);
       if (endpoint->proto == COAP_PROTO_DTLS && session->type == COAP_SESSION_TYPE_HELLO && result == 1)
-	coap_endpoint_new_dtls_session(endpoint, packet);
+	coap_endpoint_new_dtls_session(endpoint, packet, now);
     }
   }
 
@@ -987,18 +989,18 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint) {
 }
 
 void
-coap_read(coap_context_t *ctx) {
+coap_read(coap_context_t *ctx, coap_tick_t now) {
   coap_endpoint_t *ep, *tmp;
   coap_session_t *s, *tmp_s;
 
   LL_FOREACH_SAFE(ctx->endpoint, ep, tmp) {
     if ((ep->sock.flags & COAP_SOCKET_HAS_DATA) != 0)
-      coap_read_endpoint(ctx, ep);
+      coap_read_endpoint(ctx, ep, now);
   }
 
   LL_FOREACH_SAFE(ctx->sessions, s, tmp_s) {
     if ((s->sock.flags & COAP_SOCKET_HAS_DATA) != 0)
-      coap_read_session(ctx, s);
+      coap_read_session(ctx, s, now);
   }
 
 }

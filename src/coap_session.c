@@ -20,8 +20,6 @@
 #include "utlist.h"
 #include <stdio.h>
 
-static void coap_free_session(coap_session_t *session);
-
 coap_session_t *
 coap_session_reference(coap_session_t *session) {
   ++session->ref;
@@ -35,7 +33,7 @@ coap_session_release(coap_session_t *session) {
     if (session->ref > 0)
       --session->ref;
     if (session->ref == 0 && session->type == COAP_SESSION_TYPE_CLIENT)
-      coap_free_session(session);
+      coap_session_free(session);
   }
 }
 
@@ -61,8 +59,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type, const coap_addre
   return session;
 }
 
-static void
-coap_free_session(coap_session_t *session) {
+void coap_session_free(coap_session_t *session) {
   coap_pdu_queue_t *q, *tmp;
 
   if (!session)
@@ -107,10 +104,12 @@ ssize_t coap_session_send(coap_session_t *session, const uint8_t *data, size_t d
   }
 
   bytes_written = coap_socket_send(sock, session, data, datalen);
-  if (bytes_written == (ssize_t)datalen)
+  if (bytes_written == (ssize_t)datalen) {
+    coap_ticks(&session->last_rx_tx);
     debug("*  %s: sent %zd bytes\n", coap_session_str(session), datalen);
-  else
+  } else {
     debug("*  %s: failed to send %zd bytes\n", coap_session_str(session), datalen);
+  }
   return bytes_written;
 }
 
@@ -173,15 +172,31 @@ void coap_session_disconnected(coap_session_t *session) {
 }
 
 coap_session_t *
-coap_endpoint_get_session(coap_endpoint_t *endpoint, const coap_packet_t *packet) {
+coap_endpoint_get_session(coap_endpoint_t *endpoint,
+  const coap_packet_t *packet, coap_tick_t now) {
   coap_session_t *session = NULL;
+  unsigned int num_idle = 0;
+  coap_session_t *oldest = NULL;
 
   endpoint->hello.ifindex = -1;
 
   LL_FOREACH(endpoint->sessions, session) {
-    if (session->ifindex == packet->ifindex && coap_address_equals(&session->local_addr, &packet->dst) && coap_address_equals(&session->remote_addr, &packet->src))
+    if (session->ifindex == packet->ifindex &&
+      coap_address_equals(&session->local_addr, &packet->dst) &&
+      coap_address_equals(&session->remote_addr, &packet->src))
+    {
+      session->last_rx_tx = now;
       return session;
+    }
+    if (session->ref == 0 && session->sendqueue == NULL && session->type == COAP_SESSION_TYPE_SERVER) {
+      ++num_idle;
+      if (oldest==NULL || session->last_rx_tx < oldest->last_rx_tx)
+	oldest = session;
+    }
   }
+
+  if (endpoint->context->max_idle_sessions > 0 && num_idle >= endpoint->context->max_idle_sessions)
+    coap_session_free(oldest);
 
   if (endpoint->proto == COAP_PROTO_DTLS) {
     session = &endpoint->hello;
@@ -189,8 +204,11 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint, const coap_packet_t *packet
     coap_address_copy(&session->remote_addr, &packet->src);
     session->ifindex = packet->ifindex;
   } else {
-    session = coap_make_session(endpoint->proto, COAP_SESSION_TYPE_SERVER, &packet->dst, &packet->src, packet->ifindex, endpoint->context, endpoint);
+    session = coap_make_session(endpoint->proto, COAP_SESSION_TYPE_SERVER,
+      &packet->dst, &packet->src, packet->ifindex, endpoint->context,
+      endpoint);
     if (session) {
+      session->last_rx_tx = now;
       if (endpoint->proto == COAP_PROTO_UDP)
 	session->state = COAP_SESSION_STATE_ESTABLISHED;
       LL_PREPEND(endpoint->sessions, session);
@@ -203,9 +221,10 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint, const coap_packet_t *packet
 
 coap_session_t *
 coap_endpoint_new_dtls_session(coap_endpoint_t *endpoint,
-  const coap_packet_t *packet) {
+  const coap_packet_t *packet, coap_tick_t now) {
   coap_session_t *session = coap_make_session(COAP_PROTO_DTLS, COAP_SESSION_TYPE_SERVER, &packet->dst, &packet->src, packet->ifindex, endpoint->context, endpoint);
   if (session) {
+    session->last_rx_tx = now;
     session->state = COAP_SESSION_STATE_HANDSHAKE;
     session->tls = coap_dtls_new_server_session(session);
     if (session->tls) {
@@ -213,7 +232,8 @@ coap_endpoint_new_dtls_session(coap_endpoint_t *endpoint,
       LL_PREPEND(endpoint->sessions, session);
       debug("*** %s: new incoming session\n", coap_session_str(session));
     } else {
-      coap_free_session(session);
+      coap_session_free(session);
+      session = NULL;
     }
   }
   return session;
@@ -252,7 +272,7 @@ coap_session_create_client(
 
 error:
   if (session)
-    coap_free_session(session);
+    coap_session_free(session);
   return NULL;
 }
 
@@ -265,10 +285,11 @@ coap_session_connect(coap_session_t *session) {
     if (session->tls) {
       session->state = COAP_SESSION_STATE_HANDSHAKE;
     } else {
-      coap_free_session(session);
+      coap_session_free(session);
       return NULL;
     }
   }
+  coap_ticks(&session->last_rx_tx);
   return session;
 }
 

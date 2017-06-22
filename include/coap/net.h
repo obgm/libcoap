@@ -140,6 +140,11 @@ typedef struct coap_context_t {
   size_t psk_hint_len;
   uint8_t *psk_key;
   size_t psk_key_len;
+
+  unsigned int session_timeout;	   /**< Number of seconds of inactivity after which an unused session will be closed. 0 means use default. */
+  unsigned int max_idle_sessions;  /**< Maximum number of simultaneous unused sessions per endpoint. 0 means no maximum. */
+  unsigned int keepalive_interval; /**< Minimum interval before sending a keepalive message. 0 means disabled. */
+
   void *app;                    /**< application-specific data */
 } coap_context_t;
 
@@ -347,7 +352,7 @@ coap_tid_t coap_retransmit(coap_context_t *context, coap_queue_t *node);
 /**
  * Reads all data from the network.
  */
-void coap_read(coap_context_t *context);
+void coap_read(coap_context_t *context, coap_tick_t now);
 
 /**
  * The main message processing loop.
