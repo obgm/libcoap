@@ -303,11 +303,10 @@ int coap_dtls_get_context_timeout(void *dtls_context) {
   clock_time_t next = 0;
   dtls_check_retransmit((struct dtls_context_t *)dtls_context, &next);
   if (next > 0) {
-#if DTLS_TICKS_PER_SECOND != 1000
-    return (int)((next * 1000 + DTLS_TICKS_PER_SECOND - 1) / DTLS_TICKS_PER_SECOND);
-#else
-    return (int)next;
-#endif
+    clock_time_t now;
+    dtls_ticks(&now);
+    if (next >= now)
+      return (int)(((next - now) * 1000 + DTLS_TICKS_PER_SECOND - 1) / DTLS_TICKS_PER_SECOND);
   }
   return -1;
 }
