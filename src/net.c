@@ -930,7 +930,7 @@ coap_handle_message_for_proto(coap_context_t *ctx, coap_session_t *session, coap
   if (session->proto == COAP_PROTO_DTLS) {
     if (session->type == COAP_SESSION_TYPE_HELLO)
       result = coap_dtls_hello(session, data, data_len);
-    else
+    else if (session->tls)
       result = coap_dtls_receive(session, data, data_len);
   } else if (session->proto == COAP_PROTO_UDP) {
     result = coap_handle_message(ctx, session, data, data_len);

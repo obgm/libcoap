@@ -112,7 +112,7 @@ dtls_event(struct dtls_context_t *dtls_context,
 
   if (event == COAP_EVENT_DTLS_CONNECTED)
     coap_session_connected(coap_session);
-  else if (event == DTLS_ALERT_CLOSE_NOTIFY)
+  else if (event == DTLS_ALERT_CLOSE_NOTIFY || COAP_EVENT_DTLS_ERROR)
     coap_session_disconnected(coap_session);
 
   return 0;
