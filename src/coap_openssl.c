@@ -268,6 +268,8 @@ static unsigned coap_dtls_psk_server_callback(SSL *ssl, const char *identity, un
   return (unsigned)data->session->context->get_server_psk(data->session, (const uint8_t*)identity, identity_len, (uint8_t*)buf, max_len);
 }
 
+static int dtls_event = 0;
+
 static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
   const char *pstr;
   int w = where &~SSL_ST_MASK;
@@ -286,10 +288,12 @@ static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
     pstr = (where & SSL_CB_READ) ? "read" : "write";
     if (dtls_log_level <= LOG_WARNING)
       coap_log(LOG_WARNING, "SSL3 alert %s:%s:%s\n", pstr, SSL_alert_type_string_long(ret), SSL_alert_desc_string_long(ret));
+    if ((where & SSL_CB_WRITE) && (ret >> 8) == SSL3_AL_FATAL)
+      dtls_event = COAP_EVENT_DTLS_ERROR;
   } else if (where & SSL_CB_EXIT) {
     if (ret == 0) {
       if (dtls_log_level <= LOG_WARNING) {
-	long e;
+	unsigned long e;
 	coap_log(LOG_WARNING, "%s:failed in %s\n", pstr, SSL_state_string_long(ssl));
 	while ((e = ERR_get_error()))
 	  coap_log(LOG_WARNING, "  %s at %s:%s\n", ERR_reason_error_string(e), ERR_lib_error_string(e), ERR_func_error_string(e));
@@ -307,11 +311,8 @@ static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
     }
   }
 
-  if (where == SSL_CB_HANDSHAKE_START && SSL_get_state(ssl) == TLS_ST_OK) {
-    coap_session_t *session = (coap_session_t *)SSL_get_app_data(ssl);
-    if (session && session->context)
-      coap_handle_event(session->context, COAP_EVENT_DTLS_RENEGOTIATE, session);
-  }
+  if (where == SSL_CB_HANDSHAKE_START && SSL_get_state(ssl) == TLS_ST_OK)
+    dtls_event = COAP_EVENT_DTLS_RENEGOTIATE;
 }
 
 void *coap_dtls_new_context(struct coap_context_t *coap_context) {
@@ -495,6 +496,7 @@ int coap_dtls_send(coap_session_t *session,
 
   assert(ssl != NULL);
 
+  dtls_event = -1;
   r = SSL_write(ssl, data, (int)data_len);
 
   if (r <= 0) {
@@ -503,12 +505,18 @@ int coap_dtls_send(coap_session_t *session,
       r = 0;
     } else {
       coap_log(LOG_WARNING, "coap_dtls_send: cannot send PDU\n");
-      if (r == SSL_ERROR_ZERO_RETURN) {
-	coap_handle_event(session->context, COAP_EVENT_DTLS_CLOSED, session);
-	coap_session_disconnected(session);
-      } else {
-	coap_handle_event(session->context, COAP_EVENT_DTLS_ERROR, session);
-      }
+      if (err == SSL_ERROR_ZERO_RETURN)
+	dtls_event = COAP_EVENT_DTLS_CLOSED;
+      else if (err == SSL_ERROR_SSL)
+	dtls_event = COAP_EVENT_DTLS_ERROR;
+      r = -1;
+    }
+  }
+
+  if (dtls_event >= 0) {
+    coap_handle_event(session->context, dtls_event, session);
+    if (dtls_event == COAP_EVENT_DTLS_ERROR || dtls_event == COAP_EVENT_DTLS_CLOSED) {
+      coap_session_disconnected(session);
       r = -1;
     }
   }
@@ -580,6 +588,7 @@ int coap_dtls_receive(coap_session_t *session,
   ssl_data->pdu = data;
   ssl_data->pdu_len = (unsigned)data_len;
 
+  dtls_event = -1;
   r = SSL_read(ssl, pdu, COAP_MAX_PDU_SIZE);
   if (r > 0) {
     return coap_handle_message(session->context, session, pdu, (size_t)r);
@@ -591,15 +600,19 @@ int coap_dtls_receive(coap_session_t *session,
 	coap_session_connected(session);
       }
       r = 0;
-    } else if (err == SSL_ERROR_ZERO_RETURN) {
-      /* Got a close notify alert from the remote side */
-      SSL_shutdown(ssl);
-      coap_handle_event(session->context, COAP_EVENT_DTLS_CLOSED, session);
-      coap_session_disconnected(session);
-      r = -1;
     } else {
-      coap_handle_event(session->context, COAP_EVENT_DTLS_ERROR, session);
+      if (err == SSL_ERROR_ZERO_RETURN)	/* Got a close notify alert from the remote side */
+	dtls_event = COAP_EVENT_DTLS_CLOSED;
+      else if (err == SSL_ERROR_SSL)
+	dtls_event = COAP_EVENT_DTLS_ERROR;
       r = -1;
+    }
+    if (dtls_event >= 0) {
+      coap_handle_event(session->context, dtls_event, session);
+      if (dtls_event == COAP_EVENT_DTLS_ERROR || dtls_event == COAP_EVENT_DTLS_CLOSED) {
+	coap_session_disconnected(session);
+	r = -1;
+      }
     }
   }
 
