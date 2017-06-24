@@ -155,9 +155,9 @@ coap_socket_bind_udp(coap_socket_t *sock,
   }
 
 #ifdef _WIN32
-  if (ioctlsocket(sock->fd, FIONBIO, &u_on) == SOCKET_ERROR) {
+  if (ioctlsocket(sock->fd, FIONBIO, &u_on) == COAP_SOCKET_ERROR) {
 #else
-  if (ioctl(sock->fd, FIONBIO, &on) == SOCKET_ERROR) {
+  if (ioctl(sock->fd, FIONBIO, &on) == COAP_SOCKET_ERROR) {
 #endif
     coap_log(LOG_WARNING, "coap_socket_bind_udp: ioctl FIONBIO: %s\n", coap_socket_strerror());
   }
@@ -222,9 +222,9 @@ coap_socket_connect_udp(coap_socket_t *sock,
   }
 
 #ifdef _WIN32
-  if (ioctlsocket(sock->fd, FIONBIO, &u_on) == SOCKET_ERROR) {
+  if (ioctlsocket(sock->fd, FIONBIO, &u_on) == COAP_SOCKET_ERROR) {
 #else
-  if (ioctl(sock->fd, FIONBIO, &on) == SOCKET_ERROR) {
+  if (ioctl(sock->fd, FIONBIO, &on) == COAP_SOCKET_ERROR) {
 #endif
     coap_log(LOG_WARNING, "coap_socket_connect_udp: ioctl FIONBIO: %s\n", coap_socket_strerror());
   }
@@ -540,7 +540,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
 #ifdef _WIN32
       if (WSAGetLastError() == WSAECONNRESET) {
 #else
-      if (errno == ECONNRESET) {
+      if (errno == ECONNREFUSED) {
 #endif
 	/* client-side ICMP destination unreachable, ignore it */
 	coap_log(LOG_WARNING, "coap_network_read: unreachable\n");
@@ -598,7 +598,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
 #ifdef _WIN32
       if (WSAGetLastError() == WSAECONNRESET) {
 #else
-      if (errno == ECONNRESET) {
+      if (errno == ECONNREFUSED) {
 #endif
 	/* server-side ICMP destination unreachable, ignore it. The destination address is in msg_name. */
 	coap_free_packet(*packet);
