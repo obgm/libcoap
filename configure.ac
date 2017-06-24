@@ -363,6 +363,21 @@ if test "x$build_dtls" = "xyes"; then
                       Install at least on of the package(s) containing the development files for GnuTLS (>= $gnutls_version_required) or OpenSSL(>= $openssl_version_required)
                       or disable the DTLS support using '--disable-dtls'.])
     fi
+
+    # Saving the DTLS related Compiler flags.
+    if test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
+        DTLS_CFLAGS="$GnuTLS_CFLAGS"
+        DTLS_LIBS="$GnuTLS_LIBS"
+        AC_DEFINE(HAVE_LIBGNUTLS, [1], [Define if the system has libgnutls28])
+    fi
+    if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
+        DTLS_CFLAGS="$OpenSSL_CFLAGS"
+        DTLS_LIBS="$OpenSSL_LIBS"
+        AC_DEFINE(HAVE_OPENSSL, [1], [Define if the system has libssl1.1])
+    fi
+
+    AC_SUBST(DTLS_CFLAGS)
+    AC_SUBST(DTLS_LIBS)
 fi
 
 # configure options

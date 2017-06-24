@@ -27,7 +27,7 @@ EXTRA_DIST = \
   tests/test_uri.h \
   tests/test_wellknown.h
 
-AM_CFLAGS = -I$(top_builddir)/include/coap -I$(top_srcdir)/include/coap $(WARNING_CFLAGS) -std=c99
+AM_CFLAGS = -I$(top_builddir)/include/coap -I$(top_srcdir)/include/coap $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
 
 SUBDIRS = . $(DOC_DIR) tests examples
 
@@ -107,6 +107,7 @@ libcoap_include_HEADERS = \
 libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS =					\
   -version-info $(LT_LIBCOAP_CURRENT):$(LT_LIBCOAP_REVISION):$(LT_LIBCOAP_AGE)	\
   @libcoap_SYMBOLS@ \
+  $(DTLS_LIBS) \
   -pie
 
 ## Collect symbols here we want to ignore while building the helper files
