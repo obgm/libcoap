@@ -942,7 +942,7 @@ coap_handle_message_for_proto(coap_context_t *ctx, coap_session_t *session, coap
 static int
 coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
   ssize_t bytes_read = -1;
-  coap_packet_t *packet;
+  coap_packet_t *packet = NULL;
   int result = -1;		/* the value to be returned */
 
   assert(session->sock.flags & COAP_SOCKET_CONNECTED);
@@ -958,7 +958,8 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
     result = coap_handle_message_for_proto(ctx, session, packet);
   }
 
-  coap_free_packet(packet);
+  if ( packet )
+    coap_free_packet(packet);
 
   return result;
 }
@@ -966,7 +967,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 static int
 coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t now) {
   ssize_t bytes_read = -1;
-  coap_packet_t *packet;
+  coap_packet_t *packet = NULL;
   int result = -1;		/* the value to be returned */
 
   bytes_read = ctx->network_read(&endpoint->sock, &packet);
@@ -983,7 +984,8 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
     }
   }
 
-  coap_free_packet(packet);
+  if ( packet )
+    coap_free_packet(packet);
 
   return result;
 }

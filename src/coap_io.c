@@ -140,27 +140,39 @@ coap_socket_bind_udp(coap_socket_t *sock,
   const coap_address_t *listen_addr,
   coap_address_t *bound_addr) {
   int on = 1, off = 0;
+#ifdef _WIN32
+  u_long u_on = 1;
+#endif
 
   sock->fd = socket(listen_addr->addr.sa.sa_family, SOCK_DGRAM, 0);
+
   if (sock->fd == COAP_INVALID_SOCKET) {
-    coap_log(LOG_WARNING, "coap_socket_bind_udp: socket");
+    coap_log(LOG_WARNING, "coap_socket_bind_udp: socket: %s\n", coap_socket_strerror());
     goto error;
   }
 
+#ifdef _WIN32
+  if (ioctlsocket(sock->fd, FIONBIO, &u_on) == SOCKET_ERROR) {
+#else
+  if (ioctl(sock->fd, FIONBIO, &on) == SOCKET_ERROR) {
+#endif
+    coap_log(LOG_WARNING, "coap_socket_bind_udp: ioctl FIONBIO: %s\n", coap_socket_strerror());
+  }
+
   if (setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
-    coap_log(LOG_WARNING, "coap_socket_bind_udp: setsockopt SO_REUSEADDR");
+    coap_log(LOG_WARNING, "coap_socket_bind_udp: setsockopt SO_REUSEADDR: %s\n", coap_socket_strerror());
 
   switch (listen_addr->addr.sa.sa_family) {
   case AF_INET:
     if (setsockopt(sock->fd, IPPROTO_IP, GEN_IP_PKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
-      coap_log(LOG_ALERT, "coap_socket_bind_udp: setsockopt IP_PKTINFO\n");
+      coap_log(LOG_ALERT, "coap_socket_bind_udp: setsockopt IP_PKTINFO: %s\n", coap_socket_strerror());
     break;
   case AF_INET6:
     /* Configure the socket as dual-stacked */
     if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY, OPTVAL_T(&off), sizeof(off)) == COAP_SOCKET_ERROR)
-      coap_log(LOG_ALERT, "coap_socket_bind_udp: setsockopt IPV6_V6ONLY\n");
+      coap_log(LOG_ALERT, "coap_socket_bind_udp: setsockopt IPV6_V6ONLY: %s\n", coap_socket_strerror());
     if (setsockopt(sock->fd, IPPROTO_IPV6, GEN_IPV6_PKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
-      coap_log(LOG_ALERT, "coap_socket_bind_udp: setsockopt IPV6_PKTINFO\n");
+      coap_log(LOG_ALERT, "coap_socket_bind_udp: setsockopt IPV6_PKTINFO: %s\n", coap_socket_strerror());
     setsockopt(sock->fd, IPPROTO_IP, GEN_IP_PKTINFO, OPTVAL_T(&on), sizeof(on)); /* ignore error, because the likely cause is that IPv4 is disabled at the os level */
     break;
   default:
@@ -168,13 +180,13 @@ coap_socket_bind_udp(coap_socket_t *sock,
   }
 
   if (bind(sock->fd, &listen_addr->addr.sa, listen_addr->size) == COAP_SOCKET_ERROR) {
-    coap_log(LOG_WARNING, "coap_socket_bind_udp: bind");
+    coap_log(LOG_WARNING, "coap_socket_bind_udp: bind: %s\n", coap_socket_strerror());
     goto error;
   }
 
   bound_addr->size = (socklen_t)sizeof(*bound_addr);
   if (getsockname(sock->fd, &bound_addr->addr.sa, &bound_addr->size) < 0) {
-    coap_log(LOG_WARNING, "coap_socket_bind_udp: cannot determine local address");
+    coap_log(LOG_WARNING, "coap_socket_bind_udp: getsockname: %s\n", coap_socket_strerror());
     goto error;
   }
 
@@ -193,14 +205,25 @@ coap_socket_connect_udp(coap_socket_t *sock,
   coap_address_t *local_addr,
   coap_address_t *remote_addr) {
   int on = 1, off = 0;
+#ifdef _WIN32
+  u_long u_on = 1;
+#endif
   coap_address_t connect_addr;
   coap_address_copy(&connect_addr, server);
 
   sock->fd = socket(connect_addr.addr.sa.sa_family, SOCK_DGRAM, 0);
 
   if (sock->fd == COAP_INVALID_SOCKET) {
-    coap_log(LOG_WARNING, "coap_socket_connect_udp: socket");
+    coap_log(LOG_WARNING, "coap_socket_connect_udp: socket: %s\n", coap_socket_strerror());
     goto error;
+  }
+
+#ifdef _WIN32
+  if (ioctlsocket(sock->fd, FIONBIO, &u_on) == SOCKET_ERROR) {
+#else
+  if (ioctl(sock->fd, FIONBIO, &on) == SOCKET_ERROR) {
+#endif
+    coap_log(LOG_WARNING, "coap_socket_connect_udp: ioctl FIONBIO: %s\n", coap_socket_strerror());
   }
 
   switch (connect_addr.addr.sa.sa_family) {
@@ -213,7 +236,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
       connect_addr.addr.sin6.sin6_port = htons(default_port);
     /* Configure the socket as dual-stacked */
     if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY, OPTVAL_T(&off), sizeof(off)) == COAP_SOCKET_ERROR)
-      coap_log(LOG_WARNING, "coap_socket_connect_udp: setsockopt IPV6_V6ONLY\n");
+      coap_log(LOG_WARNING, "coap_socket_connect_udp: setsockopt IPV6_V6ONLY: %s\n", coap_socket_strerror());
     break;
   default:
     coap_log(LOG_ALERT, "coap_socket_connect_udp: unsupported sa_family\n");
@@ -221,24 +244,24 @@ coap_socket_connect_udp(coap_socket_t *sock,
 
   if (local_if) {
     if (setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
-      coap_log(LOG_WARNING, "coap_socket_connect_udp: setsockopt SO_REUSEADDR");
+      coap_log(LOG_WARNING, "coap_socket_connect_udp: setsockopt SO_REUSEADDR: %s\n", coap_socket_strerror());
     if (bind(sock->fd, &local_if->addr.sa, local_if->size) == COAP_SOCKET_ERROR) {
-      coap_log(LOG_WARNING, "coap_socket_connect_udp: bind");
+      coap_log(LOG_WARNING, "coap_socket_connect_udp: bind: %s\n", coap_socket_strerror());
       goto error;
     }
   }
 
   if (connect(sock->fd, &connect_addr.addr.sa, connect_addr.size) == COAP_SOCKET_ERROR) {
-    coap_log(LOG_WARNING, "coap_socket_connect_udp: connect");
+    coap_log(LOG_WARNING, "coap_socket_connect_udp: connect: %s\n", coap_socket_strerror());
     goto error;
   }
 
   if (getsockname(sock->fd, &local_addr->addr.sa, &local_addr->size) == COAP_SOCKET_ERROR) {
-    coap_log(LOG_WARNING, "coap_new_session: getsockname");
+    coap_log(LOG_WARNING, "coap_new_session: getsockname: %s\n", coap_socket_strerror());
   }
 
   if (getpeername(sock->fd, &remote_addr->addr.sa, &remote_addr->size) == COAP_SOCKET_ERROR) {
-    coap_log(LOG_WARNING, "coap_new_session: getpeername");
+    coap_log(LOG_WARNING, "coap_new_session: getpeername: %s\n", coap_socket_strerror());
   }
 
   return 1;
@@ -511,6 +534,19 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
     len = recv(sock->fd, (*packet)->payload, coap_get_max_packetlength(*packet), 0);
 #endif
     if (len < 0) {
+#ifdef _WIN32
+      if (WSAGetLastError() == WSAECONNRESET) {
+#else
+      if (errno == ECONNRESET) {
+#endif
+	/* client-side ICMP destination unreachable, ignore it */
+	coap_log(LOG_WARNING, "coap_network_read: unreachable\n");
+	coap_free_packet(*packet);
+	*packet = NULL;
+	return 0;
+      }
+      coap_log(LOG_WARNING, "coap_network_read: %s\n", coap_socket_strerror());
+      goto error;
     } else if (len > 0) {
       (*packet)->length = (size_t)len;
     }
@@ -556,6 +592,16 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
 #endif
 
     if (len < 0) {
+#ifdef _WIN32
+      if (WSAGetLastError() == WSAECONNRESET) {
+#else
+      if (errno == ECONNRESET) {
+#endif
+	/* server-side ICMP destination unreachable, ignore it. The destination address is in msg_name. */
+	coap_free_packet(*packet);
+	*packet = NULL;
+	return 0;
+      }
       coap_log(LOG_WARNING, "coap_network_read: %s\n", coap_socket_strerror());
       goto error;
     } else {
