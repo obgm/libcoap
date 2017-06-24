@@ -238,6 +238,134 @@ AM_CONDITIONAL([HAVE_DOXYGEN],
     [AC_CONFIG_FILES([doc/Doxyfile])])
 
 # configure options
+# __dtls__
+# The Datagram Transport Layer Security (DTLS) feature needs cryptographic
+# functions.
+# We currently support the GnuTLS and OpenSSL library. The user can preselect
+# the cryptographic library that should be used by adding '--with-gnutls' or
+# '--with-openssl'.
+# If the user isn't using a selection we first search for GnuTLS and fallback
+# to OpenSSL if the GnuTLS library couldn't be found.
+
+gnutls_version_required=3.2.0
+openssl_version_required=1.1.0
+
+AC_ARG_ENABLE([dtls],
+              [AS_HELP_STRING([--enable-dtls],
+                              [Enable building with DTLS support [default=yes]])],
+              [build_dtls="$enableval"],
+              [build_dtls="yes"])
+
+AC_ARG_WITH([gnutls],
+            [AS_HELP_STRING([--with-gnutls],
+                            [Use GnuTLS for DTLS functions])],
+            [with_gnutls="yes"],
+            [with_gnutls="no"])
+
+AC_ARG_WITH([openssl],
+            [AS_HELP_STRING([--with-openssl],
+                            [Use OpenSSL for DTLS functions])],
+            [with_openssl="yes"],
+            [with_openssl="no"])
+
+#AC_ARG_WITH([tinydtls],
+#            [AS_HELP_STRING([--with-tinydtls],
+#                            [Use TinyDTLS for DTLS functions])],
+#            [with_tinydtls="yes"],
+#            [with_tinydtls="no"])
+
+if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes"; then
+    if test "x$build_dtls" = "x"; then
+        # Give a advice that '--with_gnutls' or '--with_openssl' was used but
+        # DTLS support isn't configured.
+        AC_MSG_NOTICE([==> Using the configure options '--with-gnutls' or '--with-openssl' without '--enable-dtls' is useles and will be ignored.])
+    fi
+fi
+
+# O.K. the user hasn't de-selected DTLS
+if test "x$build_dtls" = "xyes"; then
+    # The user can't select multiple crypto libraries.
+    if test "x$with_gnutls" = "xyes" -a "x$with_openssl" = "xyes"; then
+        AC_MSG_ERROR([==> You can't use the options '--with-gnutls' and '--with-openssl' at the same time while '--enable-dtls' is selected!
+                  ==> Please note, the option '--enable-dtls' is turned on by default if not explicitly disabled!])
+    fi
+
+    # Check for all possible usable and supported SSL crypto libraries
+    # GnuTLS
+    PKG_CHECK_MODULES([GnuTLS],
+                      [gnutls],
+                      [have_gnutls="yes"],
+                      [have_gnutls="no"])
+
+    # OpenSSL
+    PKG_CHECK_MODULES([OpenSSL],
+                      [openssl],
+                      [have_openssl="yes"],
+                      [have_openssl="no"])
+
+    # TinyDTLS ?
+    # TBD ?
+
+    # The user wants to use explicit GnuTLS if '--with-gnutls' was set.
+    if test "x$with_gnutls" = "xyes"; then
+        # Some more sanity checking.
+        if test "x$have_gnutls" != "xyes"; then
+            AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the GnuTLS library but pkg-config file 'gnutls.pc' could not be found!
+                      Install the package(s) containing the development files for GnuTLS, 
+                      or use '--with_openssl' or disable the DTLS support using '--disable-dtls'.])
+        fi
+        AC_MSG_NOTICE([The use of GnuTLS was explicit requested due configure option '--with-gnutls'!])
+
+        # check for valid GnuTLS version
+        gnutls_version=`pkg-config --modversion gnutls`
+        AX_CHECK_GNUTLS_VERSION
+        have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+    fi
+
+    # The user wants to use explicit OpenSSL if '--with-openssl was set'.
+    if test "x$with_openssl" = "xyes"; then
+        # Some more sanity checking.
+        if test "x$have_openssl" != "xyes"; then
+            AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the OpenSSL library but pkg-config file 'openssl.pc' could not be found!
+                      Install the package(s) containing the development files for OpenSSL,
+                      or use '--with_gnutls' or disable the DTLS support using '--disable-dtls'.])
+        fi
+        AC_MSG_NOTICE([The use of OpenSSL was explicit requested due configure option '--with-openssl'!])
+
+        # check for valid OpenSSL version
+        openssl_version=`pkg-config --modversion openssl`
+        AX_CHECK_OPENSSL_VERSION
+        have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+    fi
+
+    # The user hasn't requested the use of a specific cryptographic library
+    # we try first GnuTLS for usability ...
+    if test "x$have_gnutls" = "xyes" -a "x$with_gnutls" = "xno"; then
+        gnutls_version=`pkg-config --modversion gnutls`
+        AX_CHECK_GNUTLS_VERSION
+        AC_MSG_NOTICE([Using autoselected library GnuTLS for DTLS support!])
+        with_gnutls_auto="yes"
+        have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+    fi
+
+    # ... and if not found check OpenSSL is suitable.
+    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xno" -a "x$with_gnutls_auto" = "x"; then
+        openssl_version=`pkg-config --modversion openssl`
+        AX_CHECK_OPENSSL_VERSION
+        AC_MSG_NOTICE([Using autoselected library OpenSSL for DTLS support!])
+        with_openssl_auto="yes"
+        have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+    fi
+
+    # Giving out a error message if we haven't found at least one crypto library.
+    if test "x$have_gnutls" = "xno" -a "x$have_openssl" = "xno"; then
+        AC_MSG_ERROR([==> Option '--enable-dtls' is set but one of the needed cryptographic library GnuTLS nor OpenSSL could be found!
+                      Install at least on of the package(s) containing the development files for GnuTLS (>= $gnutls_version_required) or OpenSSL(>= $openssl_version_required)
+                      or disable the DTLS support using '--disable-dtls'.])
+    fi
+fi
+
+# configure options
 # __tests__
 AC_ARG_ENABLE([tests],
               [AC_HELP_STRING([--enable-tests],
