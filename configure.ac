@@ -544,6 +544,21 @@ libcoap configuration summary:
       libcoap library version : "$LIBCOAP_SO_VERSION"
       libcoap API version     : "$LIBCOAP_API_VERSION"
       host system             : "$host"]);
+if test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
+    AC_MSG_RESULT([      build DTLS support      : "yes"])
+    AC_MSG_RESULT([          -->  GnuTLS around  : "yes" (found GnuTLS $gnutls_version)])
+    AC_MSG_RESULT([               GNUTLS_CFLAGS  : "$GnuTLS_CFLAGS"])
+    AC_MSG_RESULT([               GNUTLS_LIBS    : "$GnuTLS_LIBS"])
+fi
+if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
+    AC_MSG_RESULT([      build DTLS support      : "yes"])
+    AC_MSG_RESULT([         -->  OpenSSL around  : "yes" (found OpenSSL $openssl_version)])
+    AC_MSG_RESULT([              OPENSSL_CFLAGS  : "$OpenSSL_CFLAGS"])
+    AC_MSG_RESULT([              OPENSSL_LIBS    : "$OpenSSL_LIBS"])
+fi
+if test "x$build_dtls" != "xyes"; then
+    AC_MSG_RESULT([      build DTLS support      : "no"])
+fi
 if test "x$build_documentation" = "xyes" -a "x$DOXYGEN" != "x"; then
     AC_MSG_RESULT([      build documentation     : "yes"])
     AC_MSG_RESULT([          --> Doxygen around  : "yes" ($DOXYGEN $doxygen_version)])
