@@ -154,6 +154,10 @@ AC_SUBST(libcoap_SYMBOLS)
 
 # configure options
 # __documentation__
+
+doxygen_version_required=1.7.0
+dot_version_required=2.26.0
+
 AC_ARG_ENABLE([documentation],
               [AS_HELP_STRING([--enable-documentation],
                               [Enable building the documentation [default=yes]])],
@@ -170,16 +174,16 @@ if test "x$build_documentation" = "xyes"; then
             doxygen_version="not found"
         fi
     else
-        AC_MSG_CHECKING([for compatible doxygen version (>= 1.7.0)])
+        AC_MSG_CHECKING([for compatible doxygen version (>= $doxygen_version_required)])
         doxygen_version=`$DOXYGEN --version`
         AS_VERSION_COMPARE([$doxygen_version],
-                           [1.7.0],
+                           [$doxygen_version_required],
                            [AC_MSG_RESULT([no])
                             DOXYGEN=""],
                            [AC_MSG_RESULT([yes $doxygen_version])],
                            [AC_MSG_RESULT([yes $doxygen_version])])
         if test "x$DOXYGEN" = "x" -a "x$build_documentation" = "xyes"; then
-            AC_MSG_ERROR([==> Doxygen $doxygen_version too old. Doxygen 1.7+ required for documentation build.])
+            AC_MSG_ERROR([==> Doxygen $doxygen_version too old. Doxygen >= $doxygen_version_required required for documentation build.])
             AC_MSG_ERROR([==> Install required doxygen version or disable the documentation using '--disable-documentation'.])
         else
             # we found doxygen and the version is valid
@@ -193,7 +197,7 @@ if test "x$build_documentation" = "xyes"; then
                 HAVE_DOT="NO"
                 USE_CALL_GRAPH="NO"
             else
-                AC_MSG_CHECKING([for compatible dot version (>= 2.26.0)])
+                AC_MSG_CHECKING([for compatible dot version (>= $dot_version_required)])
                 case $host in
                     *-freebsd1*)
                     # csh and tcsh have a different output redirection than more recent shells
@@ -212,13 +216,13 @@ if test "x$build_documentation" = "xyes"; then
 
                 esac
                 AS_VERSION_COMPARE([$dot_version],
-                                   [2.26.0],
+                                   [$dot_version_required],
                                    [AC_MSG_RESULT([no])
                                     DOT=""],
                                    [AC_MSG_RESULT([yes $dot_version])],
                                    [AC_MSG_RESULT([yes $dot_version])])
                 if test "x$DOT" = "x" -a "x$build_documentation" = "xyes"; then
-                    AC_MSG_WARN([==> Graphviz dot $dot_version too old. Graphviz 2.26+ required for documentation build.])
+                    AC_MSG_WARN([==> Graphviz dot $dot_version too old. Graphviz >= $dot_version_required required for documentation build.])
                     AC_MSG_ERROR([==> Install required graphviz version or disable the documentation using '--disable-documentation'.])
                 fi
                 # we found dot and the version is valid
