@@ -546,7 +546,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
 	coap_log(LOG_WARNING, "coap_network_read: unreachable\n");
 	coap_free_packet(*packet);
 	*packet = NULL;
-	return 0;
+	return -2;
       }
       coap_log(LOG_WARNING, "coap_network_read: %s\n", coap_socket_strerror());
       goto error;
@@ -884,7 +884,7 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
     coap_session_free(expiration_session);
   }
 
-  if (dtls_timeout > 0 && dtls_timeout_session && before + dtls_timeout <= now) {
+  if (dtls_timeout > 0 && dtls_timeout_session && dtls_timeout_session->tls && before + dtls_timeout <= now) {
     debug("** %s: DTLS retransmit timeout after %ums\n", coap_session_str(dtls_timeout_session), (unsigned)(dtls_timeout * 1000 / COAP_TICKS_PER_SECOND));
     coap_dtls_handle_timeout(dtls_timeout_session);
   }

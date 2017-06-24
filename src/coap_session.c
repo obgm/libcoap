@@ -17,6 +17,7 @@
 #include "net.h"
 #include "debug.h"
 #include "mem.h"
+#include "resource.h"
 #include "utlist.h"
 #include <stdio.h>
 
@@ -167,6 +168,26 @@ void coap_session_disconnected(coap_session_t *session) {
     }
     if (q->pdu)
       coap_delete_pdu(q->pdu);
+    coap_free(q);
+  }
+}
+
+void coap_session_reset(coap_session_t *session) {
+  debug("*** %s: session reset\n", coap_session_str(session));
+#ifndef WITHOUT_OBSERVE
+  coap_delete_observers(session->context, session);
+#endif
+  coap_cancel_session_messages(session->context, session);
+  if (session->proto == COAP_PROTO_DTLS && session->tls) {
+    coap_dtls_free_session(session);
+    session->tls = NULL;
+  }
+  session->state = COAP_SESSION_STATE_NONE;
+  while (session->sendqueue) {
+    coap_pdu_queue_t *q = session->sendqueue;
+    session->sendqueue = q->next;
+    debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), (int)ntohs(q->pdu->hdr->id));
+    coap_delete_pdu(q->pdu);
     coap_free(q);
   }
 }

@@ -623,6 +623,20 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
   return s != NULL;
 }
 
+void
+coap_delete_observers(coap_context_t *context, coap_session_t *session) {
+  RESOURCES_ITER(context->resources, resource) {
+    coap_subscription_t *s, *tmp;
+    LL_FOREACH_SAFE(resource->subscribers, s, tmp) {
+      if (s->session == session) {
+	LL_DELETE(resource->subscribers, s);
+	coap_session_release(session);
+	COAP_FREE_TYPE(subscription, s);
+      }
+    }
+  }
+}
+
 static void
 coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
   coap_method_handler_t h;

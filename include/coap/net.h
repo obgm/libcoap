@@ -447,11 +447,11 @@ coap_wait_ack( coap_context_t *context, coap_session_t *session,
 coap_queue_t *coap_find_transaction(coap_queue_t *queue, coap_session_t *session, coap_tid_t id);
 
 /**
- * Cancels all outstanding messages for peer @p dst that have the specified
+ * Cancels all outstanding messages for session @p session that have the specified
  * token.
  *
  * @param context      The context in use.
- * @param dst          Session of the messages to remove.
+ * @param session      Session of the messages to remove.
  * @param token        Message token.
  * @param token_length Actual length of @p token.
  */
@@ -459,6 +459,16 @@ void coap_cancel_all_messages(coap_context_t *context,
                               coap_session_t *session,
                               const unsigned char *token,
                               size_t token_length);
+
+/**
+* Cancels all outstanding messages for session @p session.
+*
+* @param context      The context in use.
+* @param session      Session of the messages to remove.
+*/
+void
+coap_cancel_session_messages(coap_context_t *context,
+                             coap_session_t *session);
 
 /**
  * Dispatches the PDUs from the receive queue in given context.

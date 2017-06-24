@@ -345,6 +345,14 @@ int coap_delete_observer(coap_resource_t *resource,
                          const str *token);
 
 /**
+ * Removes any subscription for @p session and releases the allocated storage.
+ *
+ * @param context  The CoAP context to use.
+ * @param session  The observer's session.
+ */
+void coap_delete_observers(coap_context_t *context, coap_session_t *session);
+
+/**
  * Checks for all known resources, if they are dirty and notifies subscribed
  * observers.
  */

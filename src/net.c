@@ -950,7 +950,10 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
   bytes_read = ctx->network_read(&session->sock, &packet);
 
   if (bytes_read < 0) {
-    warn("*  %s: read error\n", coap_session_str(session));
+    if (bytes_read == -2)
+      coap_session_reset(session);
+    else
+      warn("*  %s: read error\n", coap_session_str(session));
   } else if (bytes_read > 0) {
     debug("*  %s: received %zd bytes\n", coap_session_str(session), bytes_read);
     session->last_rx_tx = now;
@@ -1133,6 +1136,36 @@ COAP_STATIC_INLINE int
 token_match(const unsigned char *a, size_t alen,
   const unsigned char *b, size_t blen) {
   return alen == blen && (alen == 0 || memcmp(a, b, alen) == 0);
+}
+
+void
+coap_cancel_session_messages(coap_context_t *context, coap_session_t *session) {
+  coap_queue_t *p, *q;
+
+  while (context->sendqueue && context->sendqueue->session == session) {
+    q = context->sendqueue;
+    context->sendqueue = q->next;
+    debug("** %s tid=%d: removed\n", coap_session_str(session), q->id);
+    coap_delete_node(q);
+  }
+
+  if (!context->sendqueue)
+    return;
+
+  p = context->sendqueue;
+  q = p->next;
+
+  while (q) {
+    if (q->session == session) {
+      p->next = q->next;
+      debug("** %s tid=%d: removed\n", coap_session_str(session), q->id);
+      coap_delete_node(q);
+      q = p->next;
+    } else {
+      p = q;
+      q = q->next;
+    }
+  }
 }
 
 void

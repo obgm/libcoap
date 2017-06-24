@@ -96,6 +96,13 @@ void coap_session_release(coap_session_t *session);
 void coap_session_disconnected(coap_session_t *session);
 
 /**
+* Notify session that the remote peer is no longer listening.
+*
+* @param session The CoAP session.
+*/
+void coap_session_reset(coap_session_t *session);
+
+/**
 * Notify session that it has just connected or reconnected.
 *
 * @param session The CoAP session.
