@@ -19,6 +19,9 @@
 # include <sys/socket.h>
 # define OPTVAL_T(t)         (t)
 #endif
+#ifdef HAVE_SYS_IOCTL_H
+ #include <sys/ioctl.h>
+#endif
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
 #endif
