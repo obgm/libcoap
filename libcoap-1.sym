@@ -41,7 +41,6 @@ coap_flsll
 coap_free_async
 coap_free_context
 coap_free_endpoint
-coap_free_packet
 coap_free_type
 coap_get_block
 coap_get_data
@@ -107,6 +106,7 @@ coap_send_ack
 coap_send_error
 coap_send_message_type
 coap_session_release
+coap_session_max_pdu_size
 coap_set_event_handler
 coap_set_log_level
 coap_show_pdu

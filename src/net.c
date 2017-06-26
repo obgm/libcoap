@@ -942,12 +942,21 @@ coap_handle_message_for_proto(coap_context_t *ctx, coap_session_t *session, coap
 static int
 coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
   ssize_t bytes_read = -1;
-  coap_packet_t *packet = NULL;
   int result = -1;		/* the value to be returned */
+#ifdef WITH_CONTIKI
+  coap_packet_t *packet = coap_malloc_packet();
+#else /* WITH_CONTIKI */
+  coap_packet_t s_packet;
+  coap_packet_t *packet = &s_packet;
+#endif /* WITH_CONTIKI */
 
   assert(session->sock.flags & COAP_SOCKET_CONNECTED);
 
-  bytes_read = ctx->network_read(&session->sock, &packet);
+  if (packet) {
+    coap_address_copy(&packet->src, &session->remote_addr);
+    coap_address_copy(&packet->dst, &session->local_addr);
+    bytes_read = ctx->network_read(&session->sock, packet);
+  }
 
   if (bytes_read < 0) {
     if (bytes_read == -2)
@@ -961,8 +970,10 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
     result = coap_handle_message_for_proto(ctx, session, packet);
   }
 
+#ifdef WITH_CONTIKI
   if ( packet )
     coap_free_packet(packet);
+#endif
 
   return result;
 }
@@ -970,10 +981,21 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 static int
 coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t now) {
   ssize_t bytes_read = -1;
-  coap_packet_t *packet = NULL;
   int result = -1;		/* the value to be returned */
+#ifdef WITH_CONTIKI
+  coap_packet_t *packet = coap_malloc_packet();
+#else /* WITH_CONTIKI */
+  coap_packet_t s_packet;
+  coap_packet_t *packet = &s_packet;
+#endif /* WITH_CONTIKI */
 
-  bytes_read = ctx->network_read(&endpoint->sock, &packet);
+  assert(endpoint->sock.flags&COAP_SOCKET_BOUND);
+
+  if (packet) {
+    coap_address_init(&packet->src);
+    coap_address_copy(&packet->dst, &endpoint->bind_addr);
+    bytes_read = ctx->network_read(&endpoint->sock, packet);
+  }
 
   if (bytes_read < 0) {
     warn("*  %s: read failed\n", coap_endpoint_str(endpoint));
@@ -987,8 +1009,10 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
     }
   }
 
-  if ( packet )
+#ifdef WITH_CONTIKI
+  if (packet)
     coap_free_packet(packet);
+#endif
 
   return result;
 }
@@ -1332,7 +1356,8 @@ get_wkc_len(coap_context_t *context, coap_opt_t *query_filter) {
 #define SZX_TO_BYTES(SZX) ((size_t)(1 << ((SZX) + 4)))
 
 coap_pdu_t *
-coap_wellknown_response(coap_context_t *context, coap_pdu_t *request) {
+coap_wellknown_response(coap_context_t *context, coap_session_t *session,
+  coap_pdu_t *request) {
   coap_pdu_t *resp;
   coap_opt_iterator_t opt_iter;
   size_t len, wkc_len;
@@ -1347,7 +1372,7 @@ coap_wellknown_response(coap_context_t *context, coap_pdu_t *request) {
     ? COAP_MESSAGE_ACK
     : COAP_MESSAGE_NON,
     COAP_RESPONSE_CODE(205),
-    request->hdr->id, COAP_MAX_PDU_SIZE);
+    request->hdr->id, coap_session_max_pdu_size(session));
   if (!resp) {
     debug("coap_wellknown_response: cannot create PDU\n");
     return NULL;
@@ -1592,7 +1617,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
     if (is_wkc(key)) {	/* request for .well-known/core */
       if (node->pdu->hdr->code == COAP_REQUEST_GET) { /* GET */
 	info("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
-	response = coap_wellknown_response(context, node->pdu);
+	response = coap_wellknown_response(context, node->session, node->pdu);
       } else {
 	debug("method not allowed for .well-known/core\n");
 	response = coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(405),
@@ -1630,7 +1655,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
     response = coap_pdu_init(node->pdu->hdr->type == COAP_MESSAGE_CON
       ? COAP_MESSAGE_ACK
       : COAP_MESSAGE_NON,
-      0, node->pdu->hdr->id, COAP_MAX_PDU_SIZE);
+      0, node->pdu->hdr->id, coap_session_max_pdu_size(node->session));
 
     /* Implementation detail: coap_add_token() immediately returns 0
        if response == NULL */
@@ -1705,7 +1730,7 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
   } else {
     if (WANT_WKC(node->pdu, key)) {
       debug("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
-      response = coap_wellknown_response(context, node->pdu);
+      response = coap_wellknown_response(context, node->session, node->pdu);
       debug("have wellknown response %p\n", (void *)response);
     } else
       response = coap_new_error_response(node->pdu, COAP_RESPONSE_CODE(405),

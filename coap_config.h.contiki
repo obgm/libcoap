@@ -11,7 +11,8 @@
 #define PACKAGE_STRING "libcoap"
 #define PACKAGE_NAME "libcoap"
 
-#define COAP_MAX_PDU_SIZE 64
+#define COAP_DEFAULT_PDU_SIZE 64
+#define COAP_RXBUFFER_SIZE 64
 
 /** Number of resources that can be handled by a CoAP server in addition to
  * @c /.well-known/core */
@@ -29,6 +30,11 @@
  * many retransmissions to be dealt with.
  */
 #define COAP_PDU_MAXCNT 4
+
+/**
+ * Maximum number of sessions.
+ */
+#define COAP_MAX_SESSIONS 2
 
 /**
  * Maximum number of subscriptions. Every additional subscriber costs
@@ -81,8 +87,10 @@
 /* Need to set the byte order for TMote Sky explicitely */
 
 #define BYTE_ORDER UIP_LITTLE_ENDIAN
-#undef COAP_MAX_PDU_SIZE
-#define COAP_MAX_PDU_SIZE 100
+#undef COAP_DEFAULT_PDU_SIZE
+#undef COAP_RXBUFFER_SIZE
+#define COAP_DEFAULT_PDU_SIZE 100
+#define COAP_RXBUFFER_SIZE 100
 
 #define COAP_MAX_BLOCK_SZX 2
 
@@ -95,8 +103,10 @@ typedef void FILE;
 #endif /* defined(TMOTE_SKY) */
 
 #ifdef CONTIKI_TARGET_MINIMAL_NET
-#undef COAP_MAX_PDU_SIZE
-#define COAP_MAX_PDU_SIZE 1400
+#undef COAP_DEFAULT_PDU_SIZE
+#undef COAP_RXBUFFER_SIZE
+#define COAP_DEFAULT_PDU_SIZE 1152
+#define COAP_RXBUFFER_SIZE 1472
 #define HAVE_ASSERT_H 1
 #define HAVE_VPRINTF 1
 #define HAVE_SYS_TYPES_H 1
@@ -104,8 +114,10 @@ typedef void FILE;
 
 #ifdef CONTIKI_TARGET_CC2538DK
 #define BYTE_ORDER UIP_LITTLE_ENDIAN
-#undef COAP_MAX_PDU_SIZE
-#define COAP_MAX_PDU_SIZE 100
+#undef COAP_DEFAULT_PDU_SIZE
+#undef COAP_RXBUFFER_SIZE
+#define COAP_DEFAULT_PDU_SIZE 100
+#define COAP_RXBUFFER_SIZE 100
 
 #undef COAP_MAX_BLOCK_SZX
 #define COAP_MAX_BLOCK_SZX 2

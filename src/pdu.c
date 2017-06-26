@@ -32,6 +32,7 @@
 #include "option.h"
 #include "encode.h"
 #include "mem.h"
+#include "coap_session.h"
 
 void
 coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
@@ -84,13 +85,20 @@ coap_pdu_init(unsigned char type, unsigned char code,
 	      unsigned short id, size_t size) {
   coap_pdu_t *pdu;
 #ifdef WITH_LWIP
-    struct pbuf *p;
+  struct pbuf *p;
 #endif
 
-  assert(size <= COAP_MAX_PDU_SIZE);
+#ifdef WITH_CONTIKI
+  assert(size <= COAP_RXBUFFER_SIZE);
   /* Size must be large enough to fit the header. */
-  if (size < sizeof(coap_hdr_t) || size > COAP_MAX_PDU_SIZE)
+  if (size < sizeof(coap_hdr_t) || size > COAP_RXBUFFER_SIZE)
     return NULL;
+#else
+  assert(size <= 16384);
+  /* Size must be large enough to fit the header. */
+  if (size < sizeof(coap_hdr_t) || size > 16384)
+    return NULL;
+#endif
 
   /* size must be large enough for hdr */
 #if !defined(WITH_LWIP)
@@ -123,13 +131,13 @@ coap_pdu_init(unsigned char type, unsigned char code,
 }
 
 coap_pdu_t *
-coap_new_pdu(void) {
+coap_new_pdu(struct coap_session_t *session) {
   coap_pdu_t *pdu;
   
 #ifndef WITH_CONTIKI
-  pdu = coap_pdu_init(0, 0, ntohs((uint16_t)COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
+  pdu = coap_pdu_init(0, 0, ntohs((uint16_t)COAP_INVALID_TID), coap_session_max_pdu_size(session));
 #else /* WITH_CONTIKI */
-  pdu = coap_pdu_init(0, 0, uip_ntohs(COAP_INVALID_TID), COAP_MAX_PDU_SIZE);
+  pdu = coap_pdu_init(0, 0, uip_ntohs(COAP_INVALID_TID), coap_session_max_pdu_size(session));
 #endif /* WITH_CONTIKI */
 
 #ifndef NDEBUG

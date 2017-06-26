@@ -40,7 +40,7 @@ coap_session_release(coap_session_t *session) {
 
 static coap_session_t *
 coap_make_session(coap_proto_t proto, coap_session_type_t type, const coap_address_t *local, const coap_address_t *remote, int ifindex, coap_context_t *context, coap_endpoint_t *endpoint) {
-  coap_session_t *session = (coap_session_t*)coap_malloc(sizeof(coap_session_t));
+  coap_session_t *session = (coap_session_t*)coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
   if (!session)
     return NULL;
   memset(session, 0, sizeof(*session));
@@ -57,6 +57,17 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type, const coap_addre
   session->ifindex = ifindex;
   session->context = context;
   session->endpoint = endpoint;
+  if (endpoint)
+    session->mtu = endpoint->default_mtu;
+  else
+    session->mtu = COAP_DEFAULT_PDU_SIZE;
+  if (proto == COAP_PROTO_DTLS) {
+    session->tls_overhead = 29;
+    if (session->tls_overhead >= session->mtu) {
+      session->tls_overhead = session->mtu;
+      coap_log(LOG_ERR, "DTLS overhead exceeds MTU\n");
+    }
+  }
   return session;
 }
 
@@ -92,7 +103,19 @@ void coap_session_free(coap_session_t *session) {
 
   debug("*** %s: session closed\n", coap_session_str(session));
 
-  coap_free(session);
+  coap_free_type(COAP_SESSION, session);
+}
+
+unsigned int coap_session_max_pdu_size(coap_session_t *session) {
+  return session->mtu - session->tls_overhead;
+}
+
+void coap_session_set_mtu(coap_session_t *session, unsigned mtu) {
+  session->mtu = (uint16_t)mtu;
+  if (session->tls_overhead >= session->mtu) {
+    session->tls_overhead = session->mtu;
+    coap_log(LOG_ERR, "DTLS overhead exceeds MTU\n");
+  }
 }
 
 ssize_t coap_session_send(coap_session_t *session, const uint8_t *data, size_t datalen) {
@@ -129,7 +152,17 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu, int retransmit_
 
 void coap_session_connected(coap_session_t *session) {
   debug("*** %s: session connected\n", coap_session_str(session));
+
   session->state = COAP_SESSION_STATE_ESTABLISHED;
+
+  if ( session->proto==COAP_PROTO_DTLS) {
+    session->tls_overhead = (uint16_t)coap_dtls_get_overhead(session);
+    if (session->tls_overhead >= session->mtu) {
+      session->tls_overhead = session->mtu;
+      coap_log(LOG_ERR, "DTLS overhead exceeds MTU\n");
+    }
+  }
+
   while (session->sendqueue && session->state == COAP_SESSION_STATE_ESTABLISHED) {
     ssize_t bytes_written;
     coap_pdu_queue_t *q = session->sendqueue;
@@ -417,12 +450,18 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     ep->hello.endpoint = ep;
   }
 
+  ep->default_mtu = COAP_DEFAULT_PDU_SIZE;
+
   LL_PREPEND(context->endpoint, ep);
   return ep;
 
 error:
   coap_free_endpoint(ep);
   return NULL;
+}
+
+void coap_endpoint_set_default_mtu(coap_endpoint_t *ep, unsigned mtu) {
+  ep->default_mtu = (uint16_t)mtu;
 }
 
 void

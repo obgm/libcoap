@@ -141,6 +141,7 @@ order_opts(void *a, void *b) {
 
 static coap_pdu_t *
 coap_new_request(coap_context_t *ctx,
+                 coap_session_t *session,
                  method_t m,
                  coap_list_t **options,
                  unsigned char *data,
@@ -148,7 +149,7 @@ coap_new_request(coap_context_t *ctx,
   coap_pdu_t *pdu;
   coap_list_t *opt;
 
-  if ( ! ( pdu = coap_new_pdu() ) )
+  if ( ! ( pdu = coap_new_pdu(session) ) )
     return NULL;
 
   pdu->hdr->type = msgtype;
@@ -196,7 +197,7 @@ clear_obs(coap_context_t *ctx, coap_session_t *session) {
   pdu = coap_pdu_init(msgtype,
                       COAP_REQUEST_GET,
                       coap_new_message_id(ctx),
-                      COAP_MAX_PDU_SIZE);
+                      coap_session_max_pdu_size(session));
 
   if (!pdu) {
     return tid;
@@ -379,7 +380,7 @@ message_handler(struct coap_context_t *ctx,
               coap_opt_block_num(block_opt));
 
         /* create pdu with request for next block */
-        pdu = coap_new_request(ctx, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
+        pdu = coap_new_request(ctx, session, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
         if ( pdu ) {
           /* add URI components from optlist */
           for (option = optlist; option; option = option->next ) {
@@ -450,7 +451,7 @@ message_handler(struct coap_context_t *ctx,
         }
 
         /* create pdu with request for next block */
-        pdu = coap_new_request(ctx, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
+        pdu = coap_new_request(ctx, session, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
         if (pdu) {
 
           /* add URI components from optlist */
@@ -1293,7 +1294,7 @@ main(int argc, char **argv) {
   if (flags & FLAGS_BLOCK)
     set_blocksize();
 
-  if (! (pdu = coap_new_request(ctx, method, &optlist, payload.s, payload.length))) {
+  if (! (pdu = coap_new_request(ctx, session, method, &optlist, payload.s, payload.length))) {
     goto finish;
   }
 

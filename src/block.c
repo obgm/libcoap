@@ -16,7 +16,7 @@
 #include "debug.h"
 #include "block.h"
 
-#if (COAP_MAX_PDU_SIZE - 6) < (1 << (COAP_MAX_BLOCK_SZX + 4))
+#if (COAP_DEFAULT_PDU_SIZE - 6) < (1 << (COAP_MAX_BLOCK_SZX + 4))
 #error "COAP_MAX_BLOCK_SZX too large"
 #endif
 

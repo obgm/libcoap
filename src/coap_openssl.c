@@ -323,7 +323,7 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
     BIO *bio;
     uint8_t cookie_secret[32];
     memset(context, 0, sizeof(coap_dtls_context_t));
-    context->ctx = SSL_CTX_new(DTLS_method());
+    context->ctx = SSL_CTX_new(DTLSv1_2_method());
     if (!context->ctx)
       goto error;
     SSL_CTX_set_min_proto_version(context->ctx, DTLS1_2_VERSION);
@@ -583,13 +583,13 @@ int coap_dtls_receive(coap_session_t *session,
   assert(ssl != NULL);
 
   int in_init = SSL_in_init(ssl);
-  uint8_t pdu[COAP_MAX_PDU_SIZE];
+  uint8_t pdu[COAP_RXBUFFER_SIZE];
   ssl_data = (coap_ssl_data*)BIO_get_data(SSL_get_rbio(ssl));
   ssl_data->pdu = data;
   ssl_data->pdu_len = (unsigned)data_len;
 
   dtls_event = -1;
-  r = SSL_read(ssl, pdu, COAP_MAX_PDU_SIZE);
+  r = SSL_read(ssl, pdu, (int)sizeof(pdu));
   if (r > 0) {
     return coap_handle_message(session->context, session, pdu, (size_t)r);
   } else {
@@ -619,6 +619,60 @@ int coap_dtls_receive(coap_session_t *session,
   return r;
 }
 
+unsigned int coap_dtls_get_overhead(coap_session_t *session) {
+  unsigned int overhead = 37;
+  const SSL_CIPHER *s_ciph = NULL;
+  if (session->tls != NULL)
+    s_ciph = SSL_get_current_cipher(session->tls);
+  if ( s_ciph ) {
+    unsigned int ivlen, maclen, blocksize = 1, pad = 0;
+    
+    const EVP_CIPHER *e_ciph;
+    const EVP_MD *e_md;
+    char cipher[128];
+
+    e_ciph = EVP_get_cipherbynid(SSL_CIPHER_get_cipher_nid(s_ciph));
+
+    switch (EVP_CIPHER_mode(e_ciph)) {
+    case EVP_CIPH_GCM_MODE:
+      ivlen = EVP_GCM_TLS_EXPLICIT_IV_LEN;
+      maclen = EVP_GCM_TLS_TAG_LEN;
+      break;
+
+    case EVP_CIPH_CCM_MODE:
+      ivlen = EVP_CCM_TLS_EXPLICIT_IV_LEN;
+      SSL_CIPHER_description(s_ciph, cipher, sizeof(cipher));
+      if (strstr(cipher, "CCM8"))
+	maclen = 8;
+      else
+	maclen = 16;
+      break;
+
+    case EVP_CIPH_CBC_MODE:
+      e_md = EVP_get_digestbynid(SSL_CIPHER_get_digest_nid(s_ciph));
+      blocksize = EVP_CIPHER_block_size(e_ciph);
+      ivlen = EVP_CIPHER_iv_length(e_ciph);
+      pad = 1;
+      maclen = EVP_MD_size(e_md);
+      break;
+
+    case EVP_CIPH_STREAM_CIPHER:
+      /* Seen with PSK-CHACHA20-POLY1305 */
+      ivlen = 8;
+      maclen = 8;
+      break;
+
+    default:
+      SSL_CIPHER_description(s_ciph, cipher, sizeof(cipher));
+      coap_log(LOG_WARNING, "Unknown overhead for DTLS with cipher %s\n", cipher);
+      ivlen = 8;
+      maclen = 16;
+      break;
+    }
+    overhead = DTLS1_RT_HEADER_LENGTH + ivlen + maclen + blocksize - 1 + pad;
+  }
+  return overhead;
+}
 #else /* !HAVE_OPENSSL */
 
 /* make compilers happy that do not like empty modules */

@@ -55,9 +55,11 @@ typedef struct coap_session_t {
   coap_proto_t proto;		  /**< protocol used */
   coap_session_type_t type;	  /**< client or server side socket */
   coap_session_state_t state;	  /**< current state of relationaship with peer */
-  int ref;			  /**< reference count from queues */
-  coap_address_t local_addr;	  /**< local address and port */
+  uint8_t ref;			  /**< reference count from queues */
+  uint16_t mtu;			  /**< path mtu */
+  uint16_t tls_overhead;	  /**< overhead of TLS layer */
   coap_address_t remote_addr;     /**< remote address and port */
+  coap_address_t local_addr;	  /**< local address and port */
   int ifindex;                    /**< interface index */
   coap_socket_t sock;		  /**< socket object for the session, if any */
   struct coap_endpoint_t *endpoint;	  /**< session's endpoint */
@@ -108,6 +110,23 @@ void coap_session_reset(coap_session_t *session);
 * @param session The CoAP session.
 */
 void coap_session_connected(coap_session_t *session);
+
+/**
+* Set the session MTU. This is the maximum message size that can be sent,
+* excluding IP and UDP overhead.
+*
+* @param session The CoAP session.
+* @param mtu maximum message size
+*/
+void coap_session_set_mtu(coap_session_t *session, unsigned mtu);
+
+/**
+ * Get maximum acceptable PDU size
+ *
+ * @param session The CoAP session.
+ * @return maximum PDU size
+ */
+unsigned int coap_session_max_pdu_size(coap_session_t *session);
 
 /**
 * Creates a new client session to the designated server.
@@ -179,8 +198,9 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu, int retransmit_
 */
 typedef struct coap_endpoint_t {
   struct coap_endpoint_t *next;
-  struct coap_context_t *context;	  /**< endpoint's context */
+  struct coap_context_t *context; /**< endpoint's context */
   coap_proto_t proto;		  /**< protocol used on this interface */
+  uint16_t default_mtu; 	  /**< default mtu for this interface */
   coap_socket_t sock;		  /**< socket object for the interface, if any */
   coap_address_t bind_addr;	  /**< local interface address */
   coap_session_t *sessions;	  /**< list of active sessions */
@@ -197,7 +217,17 @@ typedef struct coap_endpoint_t {
 
 coap_endpoint_t *coap_new_endpoint(struct coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto);
 
+/**
+* Set the endpoint's default MTU. This is the maximum message size that can be
+* sent, excluding IP and UDP overhead.
+*
+* @param session The CoAP session.
+* @param mtu maximum message size
+*/
+void coap_endpoint_set_default_mtu(coap_endpoint_t *ep, unsigned mtu);
+
 void coap_free_endpoint(coap_endpoint_t *ep);
+
 
 /**
 * Get endpoint description.

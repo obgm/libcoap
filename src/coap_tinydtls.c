@@ -356,6 +356,10 @@ coap_dtls_hello(coap_session_t *session,
   return res;
 }
 
+unsigned int coap_dtls_get_overhead(coap_session_t *session) {
+  return 13 + 8 + 8;
+}
+
 #else /* !HAVE_LIBTINYDTLS */
 
  /* make compilers happy that do not like empty modules */

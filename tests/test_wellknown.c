@@ -132,7 +132,7 @@ t_wellknown3(void) {
   coap_print_status_t result;
   int j;
   coap_resource_t *r;
-  static char uris[2 * COAP_MAX_PDU_SIZE];
+  static char uris[2 * COAP_DEFAULT_PDU_SIZE];
   unsigned char *uribuf = (unsigned char *)uris;
   unsigned char buf[40];
   size_t buflen = sizeof(buf);
@@ -264,7 +264,7 @@ t_wkc_tests_create(void) {
   /* add resources to coap context */
   if (ctx && pdu) {
     coap_resource_t *r;
-    static char _buf[2 * COAP_MAX_PDU_SIZE];
+    static char _buf[2 * COAP_DEFAULT_PDU_SIZE];
     unsigned char *buf = (unsigned char *)_buf;
     int i;
 

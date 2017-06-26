@@ -80,6 +80,8 @@ coap_endpoint_t *coap_new_endpoint(const coap_address_t *addr, int flags) {
 		goto error;
 	}
 
+	result->default_mtu = COAP_DEFAULT_PDU_SIZE;
+
 	return result;
 
 error:

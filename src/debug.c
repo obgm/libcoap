@@ -377,7 +377,7 @@ is_binary(int content_format) {
 
 void
 coap_show_pdu(const coap_pdu_t *pdu) {
-  unsigned char buf[COAP_MAX_PDU_SIZE]; /* need some space for output creation */
+  unsigned char buf[COAP_DEFAULT_PDU_SIZE]; /* need some space for output creation */
   size_t buf_len = 0; /* takes the number of bytes written to buf */
   int encode = 0, have_options = 0, i;
   coap_opt_iterator_t opt_iter;

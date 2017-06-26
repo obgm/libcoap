@@ -130,12 +130,12 @@ void coap_socket_close(coap_socket_t *sock) {
 
 struct coap_endpoint_t *
   coap_malloc_endpoint(void) {
-  return (struct coap_endpoint_t *)coap_malloc(sizeof(struct coap_endpoint_t));
+  return (struct coap_endpoint_t *)coap_malloc_type(COAP_ENDPOINT, sizeof(struct coap_endpoint_t));
 }
 
 void
 coap_mfree_endpoint(struct coap_endpoint_t *ep) {
-  coap_free(ep);
+  coap_free_type(COAP_ENDPOINT, ep);
 }
 
 int
@@ -459,24 +459,6 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 
 #define SIN6(A) ((struct sockaddr_in6 *)(A))
 
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
-static coap_packet_t *
-coap_malloc_packet(void) {
-  coap_packet_t *packet;
-  const size_t need = sizeof(coap_packet_t) + COAP_MAX_PDU_SIZE;
-
-  packet = (coap_packet_t *)coap_malloc(need);
-  if (packet) {
-    memset(packet, 0, need);
-  }
-  return packet;
-}
-
-void
-coap_free_packet(coap_packet_t *packet) {
-  coap_free(packet);
-}
-#endif /* !defined(WITH_CONTIKI) && !defined(WITH_LWIP) */
 #ifdef WITH_CONTIKI
 COAP_STATIC_INLINE coap_packet_t *
 coap_malloc_packet(void) {
@@ -488,12 +470,6 @@ coap_free_packet(coap_packet_t *packet) {
   coap_free_type(COAP_PACKET, packet);
 }
 #endif /* WITH_CONTIKI */
-
-COAP_STATIC_INLINE size_t
-coap_get_max_packetlength(const coap_packet_t *packet) {
-  (void)packet;
-  return COAP_MAX_PDU_SIZE;
-}
 
 void
 coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length) {
@@ -507,7 +483,7 @@ void coap_packet_set_addr(coap_packet_t *packet, const coap_address_t *src, cons
 }
 
 ssize_t
-coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
+coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   ssize_t len = -1;
 
   assert(sock);
@@ -520,19 +496,9 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
     sock->flags &= ~COAP_SOCKET_HAS_DATA;
   }
 
-  *packet = coap_malloc_packet();
-
-  if (!*packet) {
-    warn("coap_network_read: insufficient memory, drop packet\n");
-    return -1;
-  }
-
-  coap_address_init(&(*packet)->dst); /* the local interface address */
-  coap_address_init(&(*packet)->src); /* the remote peer */
-
   if (sock->flags & COAP_SOCKET_CONNECTED) {
 #ifdef _WIN32
-    len = recv(sock->fd, (char *)(*packet)->payload, (int)coap_get_max_packetlength(*packet), 0);
+    len = recv(sock->fd, (char *)packet->payload, COAP_RXBUFFER_SIZE, 0);
 #else
     len = recv(sock->fd, (*packet)->payload, coap_get_max_packetlength(*packet), 0);
 #endif
@@ -544,14 +510,12 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
 #endif
 	/* client-side ICMP destination unreachable, ignore it */
 	coap_log(LOG_WARNING, "coap_network_read: unreachable\n");
-	coap_free_packet(*packet);
-	*packet = NULL;
 	return -2;
       }
       coap_log(LOG_WARNING, "coap_network_read: %s\n", coap_socket_strerror());
       goto error;
     } else if (len > 0) {
-      (*packet)->length = (size_t)len;
+      packet->length = (size_t)len;
     }
   } else {
 #if defined(_WIN32)
@@ -564,13 +528,13 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
     struct msghdr mhdr;
     struct iovec iov[1];
 
-    iov[0].iov_base = (*packet)->payload;
-    iov[0].iov_len = (iov_len_t)coap_get_max_packetlength(*packet);
+    iov[0].iov_base = packet->payload;
+    iov[0].iov_len = (iov_len_t)COAP_RXBUFFER_SIZE;
 
     memset(&mhdr, 0, sizeof(struct msghdr));
 
-    mhdr.msg_name = (struct sockaddr*)&(*packet)->src.addr.st;
-    mhdr.msg_namelen = sizeof((*packet)->src.addr.st);
+    mhdr.msg_name = (struct sockaddr*)&packet->src.addr.st;
+    mhdr.msg_namelen = sizeof(packet->src.addr.st);
 
     mhdr.msg_iov = iov;
     mhdr.msg_iovlen = 1;
@@ -601,8 +565,6 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
       if (errno == ECONNREFUSED) {
 #endif
 	/* server-side ICMP destination unreachable, ignore it. The destination address is in msg_name. */
-	coap_free_packet(*packet);
-	*packet = NULL;
 	return 0;
       }
       coap_log(LOG_WARNING, "coap_network_read: %s\n", coap_socket_strerror());
@@ -610,16 +572,8 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
     } else {
       struct cmsghdr *cmsg;
 
-      (*packet)->src.size = mhdr.msg_namelen;
-
-      /* use getsockname() to get the local port */
-      (*packet)->dst.size = sizeof((*packet)->dst.addr);
-      if (getsockname(sock->fd, &(*packet)->dst.addr.sa, &(*packet)->dst.size) == COAP_SOCKET_ERROR) {
-	coap_log(LOG_DEBUG, "cannot determine local port\n");
-	goto error;
-      }
-
-      (*packet)->length = (size_t)len;
+      packet->src.size = mhdr.msg_namelen;
+      packet->length = (size_t)len;
 
       /* Walk through ancillary data records until the local interface
        * is found where the data was received. */
@@ -632,8 +586,8 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
 	    struct in6_pktinfo *p;
 	  } u;
 	  u.c = CMSG_DATA(cmsg);
-	  (*packet)->ifindex = (int)(u.p->ipi6_ifindex);
-	  memcpy(&(*packet)->dst.addr.sin6.sin6_addr, &u.p->ipi6_addr, sizeof(struct in6_addr));
+	  packet->ifindex = (int)(u.p->ipi6_ifindex);
+	  memcpy(&packet->dst.addr.sin6.sin6_addr, &u.p->ipi6_addr, sizeof(struct in6_addr));
 	  break;
 	}
 
@@ -645,21 +599,21 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
 	    struct in_pktinfo *p;
 	  } u;
 	  u.c = CMSG_DATA(cmsg);
-	  (*packet)->ifindex = u.p->ipi_ifindex;
-	  if ((*packet)->dst.addr.sa.sa_family == AF_INET6) {
-	    memset((*packet)->dst.addr.sin6.sin6_addr.s6_addr, 0, 10);
-	    (*packet)->dst.addr.sin6.sin6_addr.s6_addr[10] = 0xff;
-	    (*packet)->dst.addr.sin6.sin6_addr.s6_addr[11] = 0xff;
-	    memcpy((*packet)->dst.addr.sin6.sin6_addr.s6_addr + 12, &u.p->ipi_addr, sizeof(struct in_addr));
+	  packet->ifindex = u.p->ipi_ifindex;
+	  if (packet->dst.addr.sa.sa_family == AF_INET6) {
+	    memset(packet->dst.addr.sin6.sin6_addr.s6_addr, 0, 10);
+	    packet->dst.addr.sin6.sin6_addr.s6_addr[10] = 0xff;
+	    packet->dst.addr.sin6.sin6_addr.s6_addr[11] = 0xff;
+	    memcpy(packet->dst.addr.sin6.sin6_addr.s6_addr + 12, &u.p->ipi_addr, sizeof(struct in_addr));
 	  } else {
-	    memcpy(&(*packet)->dst.addr.sin.sin_addr, &u.p->ipi_addr, sizeof(struct in_addr));
+	    memcpy(&packet->dst.addr.sin.sin_addr, &u.p->ipi_addr, sizeof(struct in_addr));
 	  }
 	  break;
 	}
 #elif defined(IP_RECVDSTADDR)
 	if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR) {
-	  (*packet)->ifindex = 0;
-	  memcpy(&(*packet)->dst.addr.sin.sin_addr, CMSG_DATA(cmsg), sizeof(struct in_addr));
+	  packet->ifindex = 0;
+	  memcpy(&packet->dst.addr.sin.sin_addr, CMSG_DATA(cmsg), sizeof(struct in_addr));
 	  break;
 	}
 #endif /* IP_PKTINFO */
@@ -714,10 +668,8 @@ coap_network_read(coap_socket_t *sock, coap_packet_t **packet) {
   if (len >= 0)
     return len;
 #if !defined(WITH_LWIP)
-  error:
-       coap_free_packet(*packet);
-       *packet = NULL;
-       return -1;
+error:
+  return -1;
 #endif
 }
 

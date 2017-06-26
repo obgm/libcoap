@@ -660,7 +660,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       coap_tid_t tid = COAP_INVALID_TID;
       obs->dirty = 0;
       /* initialize response */
-      response = coap_pdu_init(COAP_MESSAGE_CON, 0, 0, COAP_MAX_PDU_SIZE);
+      response = coap_pdu_init(COAP_MESSAGE_CON, 0, 0, coap_session_max_pdu_size(obs->session));
       if (!response) {
         obs->dirty = 1;
         r->partiallydirty = 1;

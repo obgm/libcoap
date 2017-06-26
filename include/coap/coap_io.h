@@ -15,6 +15,10 @@
 
 #include "address.h"
 
+#ifndef COAP_RXBUFFER_SIZE
+#define COAP_RXBUFFER_SIZE 1472
+#endif /* COAP_RXBUFFER_SIZE */
+
 #ifdef _WIN32
 typedef SOCKET coap_fd_t;
 #define coap_closesocket closesocket
@@ -107,23 +111,16 @@ ssize_t coap_network_send( coap_socket_t *sock, const struct coap_session_t *ses
  * error, @p *packet is set to NULL.
  *
  * @param sock   Socket to read data from
- * @param packet A result parameter where a pointer to the received packet
- *               structure is stored. The caller must call coap_free_packet to
- *               release the storage used by this packet.
+ * @param packet Received packet metadata and payload. src and dst should be preset.
  *
  * @return       The number of bytes received on success, or a value less than
  *               zero on error.
  */
-ssize_t coap_network_read( coap_socket_t *sock, struct coap_packet_t **packet );
+ssize_t coap_network_read( coap_socket_t *sock, struct coap_packet_t *packet );
 
 #ifndef coap_mcast_interface
 # define coap_mcast_interface(Local) 0
 #endif
-
-/**
- * Releases the storage allocated for @p packet.
- */
-void coap_free_packet(struct coap_packet_t *packet);
 
 /**
  * Given a packet, set msg and msg_len to an address and length of the packet's
@@ -164,7 +161,7 @@ struct coap_packet_t {
   coap_address_t dst;	      /**< the packet's destination address */
   int ifindex;                /**< the interface index */
   size_t length;              /**< length of payload */
-  unsigned char payload[];    /**< payload */
+  unsigned char payload[COAP_RXBUFFER_SIZE]; /**< payload */
 };
 #endif
 typedef struct coap_packet_t coap_packet_t;

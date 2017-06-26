@@ -24,9 +24,9 @@
 #define COAP_DEFAULT_PORT      5683 /* CoAP default UDP port */
 #define COAPS_DEFAULT_PORT     5684 /* CoAP default UDP port for secure transmission */
 #define COAP_DEFAULT_MAX_AGE     60 /* default maximum object lifetime in seconds */
-#ifndef COAP_MAX_PDU_SIZE
-#define COAP_MAX_PDU_SIZE      1400 /* maximum size of a CoAP PDU */
-#endif /* COAP_MAX_PDU_SIZE */
+#ifndef COAP_DEFAULT_PDU_SIZE
+#define COAP_DEFAULT_PDU_SIZE      1152 /* default maximum size of a CoAP PDU */
+#endif /* COAP_DEFAULT_PDU_SIZE */
 
 #define COAP_DEFAULT_VERSION      1 /* version of CoAP supported */
 #define COAP_DEFAULT_SCHEME  "coap" /* the default scheme for CoAP URIs */
@@ -320,14 +320,11 @@ void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
 
 /**
  * Creates a new CoAP PDU.
- * The object is created on the heap and must be released using
- * coap_delete_pdu() unless coap_send() is called in which case
- * coap_send() will take care of calling coap_delete_pdu().
  *
  * @deprecated This function allocates the maximum storage for each
  * PDU. Use coap_pdu_init() instead.
  */
-coap_pdu_t *coap_new_pdu(void);
+coap_pdu_t *coap_new_pdu(struct coap_session_t *session);
 
 /**
  * Dispose of an CoAP PDU and frees associated storage.

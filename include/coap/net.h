@@ -129,7 +129,7 @@ typedef struct coap_context_t {
 
   ssize_t (*network_send)(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen);
 
-  ssize_t (*network_read)(coap_socket_t *sock, struct coap_packet_t **packet);
+  ssize_t (*network_read)(coap_socket_t *sock, struct coap_packet_t *packet);
 
   size_t(*get_client_psk)(const coap_session_t *session, const uint8_t *hint, size_t hint_len, uint8_t *identity, size_t *identity_len, size_t max_identity_len, uint8_t *psk, size_t max_psk_len);
   size_t(*get_server_psk)(const coap_session_t *session, const uint8_t *identity, size_t identity_len, uint8_t *psk, size_t max_psk_len);
@@ -527,11 +527,13 @@ int coap_option_check_critical(coap_context_t *ctx,
  * must be either sent with coap_sent() or released by coap_delete_pdu().
  *
  * @param context The current coap context to use.
+ * @param session The CoAP session.
  * @param request The request for @c .well-known/core .
  *
  * @return        A new 2.05 response for @c .well-known/core or NULL on error.
  */
 coap_pdu_t *coap_wellknown_response(coap_context_t *context,
+                                    coap_session_t *session,
                                     coap_pdu_t *request);
 
 #endif /* _COAP_NET_H_ */

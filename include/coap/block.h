@@ -22,9 +22,9 @@
 #ifndef COAP_MAX_BLOCK_SZX
 /**
  * The largest value for the SZX component in a Block option. Note that
- * 1 << (COAP_MAX_BLOCK_SZX + 4) should not exceed COAP_MAX_PDU_SIZE.
+ * 1 << (COAP_MAX_BLOCK_SZX + 4) should not exceed COAP_DEFAULT_PDU_SIZE.
  */
-#define COAP_MAX_BLOCK_SZX      4
+#define COAP_MAX_BLOCK_SZX      6
 #endif /* COAP_MAX_BLOCK_SZX */
 
 /**
