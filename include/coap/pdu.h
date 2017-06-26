@@ -17,6 +17,8 @@
 
 #include "uri.h"
 
+struct coap_session_t;
+
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
 #endif

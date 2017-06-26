@@ -500,7 +500,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 #ifdef _WIN32
     len = recv(sock->fd, (char *)packet->payload, COAP_RXBUFFER_SIZE, 0);
 #else
-    len = recv(sock->fd, (*packet)->payload, coap_get_max_packetlength(*packet), 0);
+    len = recv(sock->fd, packet->payload, COAP_RXBUFFER_SIZE, 0);
 #endif
     if (len < 0) {
 #ifdef _WIN32
