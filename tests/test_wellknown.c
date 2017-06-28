@@ -24,6 +24,8 @@
 
 coap_context_t *ctx;	   /* Holds the coap context for most tests */
 coap_pdu_t *pdu;	   /* Holds the parsed PDU for most tests */
+coap_session_t *session;   /* Holds a reference-counted session object
+                            * that is passed to coap_wellknown_response(). */
 
 static void
 t_wellknown1(void) {
@@ -164,7 +166,7 @@ t_wellknown4(void) {
   coap_pdu_t *response;
   coap_block_t block;
 
-  response = coap_wellknown_response(ctx, pdu);
+  response = coap_wellknown_response(ctx, session, pdu);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -196,7 +198,7 @@ t_wellknown5(void) {
     return;
   }
 
-  response = coap_wellknown_response(ctx, pdu);
+  response = coap_wellknown_response(ctx, session, pdu);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -233,7 +235,7 @@ t_wellknown6(void) {
       return;
     }
 
-    response = coap_wellknown_response(ctx, pdu);
+    response = coap_wellknown_response(ctx, session, pdu);
 
     CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -258,6 +260,9 @@ t_wkc_tests_create(void) {
   addr.addr.sin6.sin6_port = htons(COAP_DEFAULT_PORT);
 
   ctx = coap_new_context(&addr);
+
+  addr.addr.sin6.sin6_addr = in6addr_loopback;
+  session = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
 
   pdu = coap_pdu_init(0, 0, 0, TEST_PDU_SIZE);
 #if 0
