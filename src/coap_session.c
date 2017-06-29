@@ -72,7 +72,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type, const coap_addre
 }
 
 void coap_session_free(coap_session_t *session) {
-  coap_pdu_queue_t *q, *tmp;
+  coap_queue_t *q, *tmp;
 
   if (!session)
     return;
@@ -95,11 +95,8 @@ void coap_session_free(coap_session_t *session) {
   if (session->psk_key)
     coap_free(session->psk_key);
 
-  LL_FOREACH_SAFE(session->sendqueue, q, tmp) {
-    if (q->pdu)
-      coap_delete_pdu(q->pdu);
-    coap_free(q);
-  }
+  LL_FOREACH_SAFE(session->sendqueue, q, tmp)
+    coap_delete_node(q);
 
   debug("*** %s: session closed\n", coap_session_str(session));
 
@@ -137,16 +134,34 @@ ssize_t coap_session_send(coap_session_t *session, const uint8_t *data, size_t d
   return bytes_written;
 }
 
+unsigned int calc_timeout(unsigned char r);
+
 ssize_t
-coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu, int retransmit_cnt) {
-  coap_pdu_queue_t *q = (coap_pdu_queue_t*)coap_malloc(sizeof(coap_pdu_queue_t));
-  if (q == NULL)
-    return COAP_INVALID_TID;
-  q->next = NULL;
-  q->pdu = pdu;
-  q->retransmit_cnt = retransmit_cnt;
-  LL_APPEND(session->sendqueue, q);
-  debug("** %s tid=%d: delayed\n", coap_session_str(session), (int)ntohs(q->pdu->hdr->id));
+coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
+                       coap_queue_t *node)
+{
+  if ( node ) {
+    coap_queue_t *removed = NULL;
+    coap_remove_from_queue(&session->context->sendqueue, session, node->id, &removed);
+    assert(removed == node);
+    coap_session_release(node->session);
+    node->session = NULL;
+    node->t = 0;
+  } else {
+    node = coap_new_node();
+    if (node == NULL)
+      return COAP_INVALID_TID;
+    node->id = ntohs(pdu->hdr->id);
+    node->pdu = pdu;
+    if (pdu->hdr->type == COAP_MESSAGE_CON) {
+      uint8_t r;
+      prng(&r, sizeof(r));
+      /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
+      node->timeout = calc_timeout(r);
+    }
+  }
+  LL_APPEND(session->sendqueue, node);
+  debug("** %s tid=%d: delayed\n", coap_session_str(session), node->id);
   return COAP_PDU_DELAYED;
 }
 
@@ -165,20 +180,20 @@ void coap_session_connected(coap_session_t *session) {
 
   while (session->sendqueue && session->state == COAP_SESSION_STATE_ESTABLISHED) {
     ssize_t bytes_written;
-    coap_pdu_queue_t *q = session->sendqueue;
+    coap_queue_t *q = session->sendqueue;
     session->sendqueue = q->next;
+    q->next = NULL;
     debug("** %s tid=%d: transmitted after delay\n", coap_session_str(session), (int)ntohs(q->pdu->hdr->id));
     if (session->proto == COAP_PROTO_DTLS)
       bytes_written = coap_dtls_send(session, (const uint8_t*)q->pdu->hdr, q->pdu->length);
     else
       bytes_written = coap_session_send(session, (const uint8_t*)q->pdu->hdr, q->pdu->length);
     if (bytes_written > 0 && q->pdu->hdr->type == COAP_MESSAGE_CON) {
-      if (coap_wait_ack(session->context, session, q->pdu, q->retransmit_cnt) >= 0)
-	q->pdu = NULL;
+      if (coap_wait_ack(session->context, session, q) >= 0)
+	q = NULL;
     }
-    if (q->pdu)
-      coap_delete_pdu(q->pdu);
-    coap_free(q);
+    if ( q )
+      coap_delete_node(q);
     if (bytes_written < 0)
       break;
   }
@@ -192,16 +207,16 @@ void coap_session_disconnected(coap_session_t *session) {
   }
   session->state = COAP_SESSION_STATE_NONE;
   while (session->sendqueue) {
-    coap_pdu_queue_t *q = session->sendqueue;
+    coap_queue_t *q = session->sendqueue;
     session->sendqueue = q->next;
-    debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), (int)ntohs(q->pdu->hdr->id));
+    q->next = NULL;
+    debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), q->id);
     if (q->pdu->hdr->type == COAP_MESSAGE_CON) {
-      if (coap_wait_ack(session->context, session, q->pdu, q->retransmit_cnt) >= 0)
-	q->pdu = NULL;
+      if (coap_wait_ack(session->context, session, q) >= 0)
+	q = NULL;
     }
-    if (q->pdu)
-      coap_delete_pdu(q->pdu);
-    coap_free(q);
+    if (q)
+      coap_delete_node(q);
   }
 }
 
@@ -217,11 +232,11 @@ void coap_session_reset(coap_session_t *session) {
   }
   session->state = COAP_SESSION_STATE_NONE;
   while (session->sendqueue) {
-    coap_pdu_queue_t *q = session->sendqueue;
+    coap_queue_t *q = session->sendqueue;
     session->sendqueue = q->next;
-    debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), (int)ntohs(q->pdu->hdr->id));
-    coap_delete_pdu(q->pdu);
-    coap_free(q);
+    q->next = NULL;
+    debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), (int)q->id);
+    coap_delete_node(q);
   }
 }
 
@@ -446,6 +461,7 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
   if (proto == COAP_PROTO_DTLS) {
     ep->hello.proto = proto;
     ep->hello.type = COAP_SESSION_TYPE_HELLO;
+    ep->hello.mtu = ep->default_mtu;
     ep->hello.context = context;
     ep->hello.endpoint = ep;
   }

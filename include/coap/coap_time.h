@@ -120,6 +120,25 @@ void coap_ticks(coap_tick_t *t);
  *          point (seconds since epoch on POSIX).
  */
 coap_time_t coap_ticks_to_rt(coap_tick_t t);
+
+/**
+* Helper function that converts coap ticks to POSIX wallclock time in us.
+*
+* @param t Internal system ticks.
+*
+* @return  The number of seconds that has passed since a specific reference
+*          point (seconds since epoch on POSIX).
+*/
+uint64_t coap_ticks_to_rt_us(coap_tick_t t);
+
+/**
+* Helper function that converts POSIX wallclock time in us to coap ticks.
+*
+* @param t POSIX time is us
+*
+* @return  coap ticks
+*/
+coap_tick_t coap_ticks_from_rt_us(uint64_t t);
 #endif
 
 /**

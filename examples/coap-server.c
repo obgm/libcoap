@@ -519,6 +519,7 @@ main(int argc, char **argv) {
   }
 
   coap_startup();
+  coap_dtls_set_log_level(log_level);
   coap_set_log_level(log_level);
 
   ctx = get_context(addr_str, port_str);

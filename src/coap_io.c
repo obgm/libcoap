@@ -533,8 +533,8 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 
     memset(&mhdr, 0, sizeof(struct msghdr));
 
-    mhdr.msg_name = (struct sockaddr*)&packet->src.addr.st;
-    mhdr.msg_namelen = sizeof(packet->src.addr.st);
+    mhdr.msg_name = (struct sockaddr*)&packet->src.addr;
+    mhdr.msg_namelen = sizeof(packet->src.addr);
 
     mhdr.msg_iov = iov;
     mhdr.msg_iovlen = 1;
@@ -674,66 +674,55 @@ error:
 }
 
 #if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
-int
-coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
-  fd_set readfds;
-  struct timeval tv;
+
+unsigned int
+coap_write(coap_context_t *ctx,
+           coap_socket_t *sockets[],
+           unsigned int max_sockets,
+           unsigned int *num_sockets,
+           coap_tick_t now)
+{
   coap_queue_t *nextpdu;
-  coap_tick_t before, now;
-  coap_tick_t max_wait;
-  int result;
   coap_endpoint_t *ep;
   coap_session_t *s;
-  coap_fd_t nfds = 0;
-  coap_tick_t dtls_timeout = 0;
-  coap_session_t *dtls_timeout_session = NULL;
-  coap_tick_t expiration_timeout = 0;
-  coap_session_t *expiration_session = NULL;
   coap_tick_t session_timeout;
+  coap_tick_t timeout = 0;
 
-  coap_ticks(&now);
+  *num_sockets = 0;
 
   if (ctx->session_timeout > 0)
     session_timeout = ctx->session_timeout * COAP_TICKS_PER_SECOND;
   else
     session_timeout = COAP_DEFAULT_SESSION_TIMEOUT * COAP_TICKS_PER_SECOND;
 
-  FD_ZERO(&readfds);
   LL_FOREACH(ctx->endpoint, ep) {
     coap_session_t *tmp;
-    if (ep->sock.flags & COAP_SOCKET_WANT_DATA) {
-      if (ep->sock.fd + 1 > nfds)
-	nfds = ep->sock.fd + 1;
-      FD_SET(ep->sock.fd, &readfds);
+    if (ep->sock.flags & (COAP_SOCKET_WANT_DATA|COAP_SOCKET_WANT_WRITE)) {
+      if (*num_sockets < max_sockets)
+        sockets[(*num_sockets)++] = &ep->sock;
     }
     LL_FOREACH_SAFE(ctx->endpoint->sessions, s, tmp) {
       if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 && s->sendqueue == NULL && (s->last_rx_tx + session_timeout <= now || s->state == COAP_SESSION_STATE_NONE)) {
-	coap_session_free(s);
+        coap_session_free(s);
       } else {
-	if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 && s->sendqueue == NULL) {
-	  coap_tick_t s_timeout = now - (s->last_rx_tx + session_timeout);
-	  if (expiration_timeout == 0 || s_timeout < expiration_timeout) {
-	    expiration_timeout = s_timeout;
-	    expiration_session = s;
-	  }
-	}
-	if (s->sock.flags & COAP_SOCKET_WANT_DATA) {
-	  if (s->sock.fd + 1 > nfds)
-	    nfds = s->sock.fd + 1;
-	  FD_SET(s->sock.fd, &readfds);
-	}
+        if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 && s->sendqueue == NULL) {
+          coap_tick_t s_timeout = now - (s->last_rx_tx + session_timeout);
+          if (timeout == 0 || s_timeout < timeout)
+            timeout = s_timeout;
+        }
+        if (s->sock.flags & (COAP_SOCKET_WANT_DATA | COAP_SOCKET_WANT_WRITE)) {
+          if (*num_sockets < max_sockets)
+            sockets[(*num_sockets)++] = &s->sock;
+        }
       }
     }
   }
   LL_FOREACH(ctx->sessions, s) {
-    if (s->sock.flags & COAP_SOCKET_WANT_DATA) {
-      if (s->sock.fd + 1 > nfds)
-	nfds = s->sock.fd + 1;
-      FD_SET(s->sock.fd, &readfds);
+    if (s->sock.flags & (COAP_SOCKET_WANT_DATA | COAP_SOCKET_WANT_WRITE)) {
+      if (*num_sockets < max_sockets)
+        sockets[(*num_sockets)++] = &s->sock;
     }
   }
-
-  max_wait = timeout_ms * COAP_TICKS_PER_SECOND / 1000;
 
   nextpdu = coap_peek_next(ctx);
 
@@ -742,63 +731,87 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
     nextpdu = coap_peek_next(ctx);
   }
 
+  if (nextpdu && (timeout == 0 || nextpdu->t - ( now - ctx->sendqueue_basetime ) < timeout))
+    timeout = nextpdu->t - (now - ctx->sendqueue_basetime);
+
   if (ctx->dtls_context) {
-    int ctx_timeout = coap_dtls_get_context_timeout(ctx->dtls_context);
-    if (ctx_timeout < 0) {
-      ctx_timeout = 0;
+    if (coap_dtls_is_context_timeout()) {
+      coap_tick_t tls_timeout = coap_dtls_get_context_timeout(ctx->dtls_context);
+      if (tls_timeout > 0) {
+        if (tls_timeout < now)
+          tls_timeout = now + 1;
+        debug("** DTLS global timeout set to %dms\n", (int)((tls_timeout - now) * 1000 / COAP_TICKS_PER_SECOND));
+        if (timeout == 0 || tls_timeout - now < timeout)
+          timeout = tls_timeout - now;
+      }
+    } else {
       LL_FOREACH(ctx->endpoint, ep) {
-	if (ep->proto == COAP_PROTO_DTLS) {
-	  LL_FOREACH(ep->sessions, s) {
-	    if (s->proto == COAP_PROTO_DTLS && s->tls) {
-	      int s_timeout = coap_dtls_get_timeout(s);
-	      if (s_timeout == 0)
-		s_timeout = 1;
-	      if (s_timeout > 0) {
-		if (ctx_timeout == 0 || s_timeout < ctx_timeout) {
-		  ctx_timeout = s_timeout;
-		  dtls_timeout_session = s;
-		}
-	      }
-	    }
-	  }
-	}
+        if (ep->proto == COAP_PROTO_DTLS) {
+          LL_FOREACH(ep->sessions, s) {
+            if (s->proto == COAP_PROTO_DTLS && s->tls) {
+              coap_tick_t tls_timeout = coap_dtls_get_timeout(s);
+              while (tls_timeout > 0 && tls_timeout <= now) {
+                debug("** %s: DTLS retransmit timeout\n", coap_session_str(s));
+                coap_dtls_handle_timeout(s);
+                tls_timeout = coap_dtls_get_timeout(s);
+              }
+              if (tls_timeout > 0 && (timeout == 0 || tls_timeout - now < timeout))
+                timeout = tls_timeout - now;
+            }
+          }
+        }
       }
       LL_FOREACH(ctx->sessions, s) {
-	if (s->proto == COAP_PROTO_DTLS && s->tls) {
-	  int s_timeout = coap_dtls_get_timeout(s);
-	  if (s_timeout == 0)
-	    s_timeout = 1;
-	  if (s_timeout > 0) {
-	    if (ctx_timeout == 0 || s_timeout < ctx_timeout) {
-	      ctx_timeout = s_timeout;
-	      dtls_timeout_session = s;
-	    }
-	  }
-	}
+        if (s->proto == COAP_PROTO_DTLS && s->tls) {
+          coap_tick_t tls_timeout = coap_dtls_get_timeout(s);
+          while (tls_timeout > 0 && tls_timeout <= now) {
+            debug("** %s: DTLS retransmit timeout\n", coap_session_str(s));
+            coap_dtls_handle_timeout(s);
+            tls_timeout = coap_dtls_get_timeout(s);
+          }
+          if (tls_timeout > 0 && (timeout == 0 || tls_timeout - now < timeout))
+            timeout = tls_timeout - now;
+        }
       }
-    } else if (ctx_timeout > 0) {
-      debug("** DTLS global timeout set to %dms\n", ctx_timeout);
     }
-    if (ctx_timeout > 0)
-      dtls_timeout = (coap_tick_t)ctx_timeout * COAP_TICKS_PER_SECOND / 1000;
   }
 
-  if (nextpdu && (dtls_timeout == 0 || nextpdu->t < dtls_timeout) && (expiration_timeout == 0 || nextpdu->t < expiration_timeout) && (max_wait == 0 || nextpdu->t < max_wait)) {
-    /* set timeout if there is a pdu to send */
-    tv.tv_usec = ((nextpdu->t) % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-    tv.tv_sec = (long)(nextpdu->t) / COAP_TICKS_PER_SECOND;
-  } else if (dtls_timeout > 0 && (expiration_timeout == 0 || dtls_timeout < expiration_timeout) && (max_wait == 0 || dtls_timeout < max_wait)) {
-    tv.tv_usec = (dtls_timeout % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-    tv.tv_sec = (long)dtls_timeout / COAP_TICKS_PER_SECOND;
-  } else if (expiration_timeout > 0 && (max_wait == 0 || expiration_timeout < max_wait)) {
-    tv.tv_usec = (expiration_timeout % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-    tv.tv_sec = (long)expiration_timeout / COAP_TICKS_PER_SECOND;
-  } else if (max_wait > 0) {
-    tv.tv_usec = (max_wait % COAP_TICKS_PER_SECOND) * 1000000 / COAP_TICKS_PER_SECOND;
-    tv.tv_sec = (long)max_wait / COAP_TICKS_PER_SECOND;
+  return (unsigned int)((timeout * 1000 + COAP_TICKS_PER_SECOND - 1) / COAP_TICKS_PER_SECOND);
+}
+
+int
+coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
+  fd_set readfds, writefds;
+  coap_fd_t nfds = 0;
+  struct timeval tv;
+  coap_tick_t before, now;
+  int result;
+  coap_socket_t *sockets[64];
+  unsigned int num_sockets = 0, i, timeout;
+
+  coap_ticks(&before);
+
+  timeout = coap_write(ctx, sockets, (unsigned int)(sizeof(sockets) / sizeof(sockets[0])), &num_sockets, before);
+  if (timeout == 0 || timeout_ms < timeout)
+    timeout = timeout_ms;
+
+  FD_ZERO(&readfds);
+  FD_ZERO(&writefds);
+  for (i = 0; i < num_sockets; i++) {
+    if (sockets[i]->fd + 1 > nfds)
+      nfds = sockets[i]->fd + 1;
+    if (sockets[i]->flags & COAP_SOCKET_WANT_DATA)
+      FD_SET(sockets[i]->fd, &readfds);
+    if (sockets[i]->flags & COAP_SOCKET_WANT_WRITE)
+      FD_SET(sockets[i]->fd, &writefds);
   }
 
-  result = select(nfds, &readfds, 0, 0, (nextpdu || max_wait > 0 || dtls_timeout > 0) ? &tv : NULL);
+  if ( timeout > 0 ) {
+    tv.tv_usec = (timeout % 1000) * 1000;
+    tv.tv_sec = (long)(timeout / 1000);
+  }
+
+  result = select(nfds, &readfds, &writefds, 0, timeout > 0 ? &tv : NULL);
 
   if (result < 0) {   /* error */
 #ifdef _WIN32
@@ -810,36 +823,18 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
       return -1;
     }
   }
-  if (result > 0) {  /* read from socket */
-    LL_FOREACH(ctx->endpoint, ep) {
-      if (FD_ISSET(ep->sock.fd, &readfds))
-	ep->sock.flags |= COAP_SOCKET_HAS_DATA;
-      LL_FOREACH(ctx->endpoint->sessions, s) {
-	if (FD_ISSET(s->sock.fd, &readfds))
-	  s->sock.flags |= COAP_SOCKET_HAS_DATA;
-      }
+
+  if (result > 0) {
+    for (i = 0; i < num_sockets; i++) {
+      if ((sockets[i]->flags & COAP_SOCKET_WANT_DATA) && FD_ISSET(sockets[i]->fd, &readfds))
+        sockets[i]->flags |= COAP_SOCKET_HAS_DATA;
+      if ((sockets[i]->flags & COAP_SOCKET_WANT_WRITE) && FD_ISSET(sockets[i]->fd, &writefds))
+        sockets[i]->flags |= COAP_SOCKET_CAN_WRITE;
     }
-    LL_FOREACH(ctx->sessions, s) {
-      if (FD_ISSET(s->sock.fd, &readfds))
-	s->sock.flags |= COAP_SOCKET_HAS_DATA;
-    }
-    coap_ticks(&now);
-    coap_read(ctx, now);           /* read received data */
   }
 
-  before = now;
   coap_ticks(&now);
-
-  if (expiration_timeout > 0 && expiration_session && expiration_session->ref == 0 && expiration_session->sendqueue == NULL && expiration_session->last_rx_tx + session_timeout <= now) {
-    if (dtls_timeout_session == expiration_session)
-      dtls_timeout_session = NULL;
-    coap_session_free(expiration_session);
-  }
-
-  if (dtls_timeout > 0 && dtls_timeout_session && dtls_timeout_session->tls && before + dtls_timeout <= now) {
-    debug("** %s: DTLS retransmit timeout after %ums\n", coap_session_str(dtls_timeout_session), (unsigned)(dtls_timeout * 1000 / COAP_TICKS_PER_SECOND));
-    coap_dtls_handle_timeout(dtls_timeout_session);
-  }
+  coap_read(ctx, now);
 
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
@@ -847,6 +842,17 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
 #else
 int coap_run_once(coap_context_t *ctx, unsigned int timeout_ms) {
   return -1;
+}
+
+unsigned int
+coap_write(coap_context_t *ctx,
+           coap_socket_t *sockets[],
+           unsigned int max_sockets,
+           unsigned int *num_sockets,
+           coap_tick_t now)
+{
+  *num_sockets = 0;
+  return 0;
 }
 #endif
 

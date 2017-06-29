@@ -61,7 +61,6 @@ typedef struct coap_address_t {
   socklen_t size;           /**< size of addr */
   union {
     struct sockaddr         sa;
-    struct sockaddr_storage st;
     struct sockaddr_in      sin;
     struct sockaddr_in6     sin6;
   } addr;
@@ -124,7 +123,7 @@ coap_address_copy( coap_address_t *dst, const coap_address_t *src ) {
     dst->addr.sin6.sin6_port = src->addr.sin6.sin6_port;
     dst->addr.sin6.sin6_scope_id = src->addr.sin6.sin6_scope_id;
   } else if ( src->addr.sa.sa_family == AF_INET ) {
-    dst->addr.st = src->addr.st;
+    dst->addr.sin = src->addr.sin;
   } else {
     memcpy( &dst->addr, &src->addr, src->size );
   }

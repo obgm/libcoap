@@ -68,6 +68,13 @@ void *coap_dtls_new_server_session(coap_session_t *session);
 void coap_dtls_free_session(coap_session_t *session);
 
 /**
+ * Notify of a change in the session's MTU, e.g. after a PMTU update.
+ *
+ * @param session   The CoAP session
+ */
+void coap_dtls_session_update_mtu(coap_session_t *session);
+
+/**
  * Send data to a DTLS peer.
  *
  * @param session   The CoAP session
@@ -79,20 +86,28 @@ int coap_dtls_send(coap_session_t *session,
                    size_t data_len);
 
 /**
+* Check if timeout is handled per session or per context.
+*
+* @param dtls_context The DTLS context
+* @return 1 of timeout and retransmit is per context, 0 if it is per session.
+*/
+int coap_dtls_is_context_timeout(void);
+
+/**
  * Do all pending retransmits and get next timeout
  * 
  * @param dtls_context The DTLS context
- * @return <0 If not implemented, i.e. each session has its own timeout, 0 if no timeout, >0 Number of milliseconds until the next timeout.
+ * @return 0 If no event is pending or date of the next retransmit.
  */
-int coap_dtls_get_context_timeout(void *dtls_context);
+coap_tick_t coap_dtls_get_context_timeout(void *dtls_context);
 
 /**
  * Get next timeout for this session.
  *
  * @param session The CoAP session
- * @return <0 If no event is pending, >=0 Number of milliseconds until the next timeout.
+ * @return 0 If no event is pending or date of the next retransmit.
  */
-int coap_dtls_get_timeout(coap_session_t *session);
+coap_tick_t coap_dtls_get_timeout(coap_session_t *session);
 
 /**
  * Handle a DTLS timeout expiration.

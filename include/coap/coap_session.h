@@ -16,6 +16,7 @@
 
 struct coap_endpoint_t;
 struct coap_contex_t;
+struct coap_queue_t;
 
 #define COAP_DEFAULT_SESSION_TIMEOUT 300
 
@@ -44,12 +45,6 @@ typedef uint8_t coap_session_state_t;
 #define COAP_SESSION_STATE_HANDSHAKE	2
 #define COAP_SESSION_STATE_ESTABLISHED	3
 
-typedef struct coap_pdu_queue_t {
-  struct coap_pdu_queue_t *next;
-  coap_pdu_t *pdu;
-  int retransmit_cnt;
-} coap_pdu_queue_t;
-
 typedef struct coap_session_t {
   struct coap_session_t *next;
   coap_proto_t proto;		  /**< protocol used */
@@ -65,7 +60,7 @@ typedef struct coap_session_t {
   struct coap_endpoint_t *endpoint;	  /**< session's endpoint */
   struct coap_context_t *context;	  /**< session's context */
   void *tls;			  /**< security parameters */
-  coap_pdu_queue_t *sendqueue;	  /**< list of messages waiting to be sent */
+  struct coap_queue_t *sendqueue; /**< list of messages waiting to be sent */
   coap_tick_t last_rx_tx;
   uint8_t *psk_identity;
   size_t psk_identity_len;
@@ -190,8 +185,8 @@ ssize_t coap_session_send(coap_session_t *session,
 const char *coap_session_str(const coap_session_t *session);
 
 ssize_t
-coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu, int retransmit_cnt);
-
+coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
+                       struct coap_queue_t *node);
 /**
 * Abstraction of virtual endpoint that can be attached to coap_context_t. The
 * tuple (handle, addr) must uniquely identify this endpoint.

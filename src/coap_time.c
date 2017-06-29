@@ -114,6 +114,14 @@ coap_ticks_to_rt(coap_tick_t t) {
   return coap_clock_offset + (t / COAP_TICKS_PER_SECOND);
 }
 
+uint64_t coap_ticks_to_rt_us(coap_tick_t t) {
+  return (uint64_t)coap_clock_offset * 1000000 + (uint64_t)t * 1000000 / COAP_TICKS_PER_SECOND;
+}
+
+coap_tick_t coap_ticks_from_rt_us(uint64_t t) {
+  return (coap_tick_t)((t - (uint64_t)coap_clock_offset * 1000000) * COAP_TICKS_PER_SECOND / 1000000);
+}
+
 #undef Q
 #undef FRAC
 #undef SHR_FP

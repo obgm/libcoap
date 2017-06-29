@@ -19,6 +19,9 @@
 #include <tinydtls.h>
 #include <dtls.h>
 
+static coap_time_t dtls_tick_0 = 0;
+static coap_tick_t coap_tick_0 = 0;
+
  /* Prototypes from dtls_debug.h as including that header will conflict
   * with coap_config.h. */
 void dtls_set_log_level(int);
@@ -31,6 +34,8 @@ coap_dtls_is_supported(void) {
 
 void coap_dtls_startup(void) {
   dtls_init();
+  dtls_ticks(&dtls_tick_0);
+  coap_ticks(&coap_tick_0);
 }
 
 void
@@ -272,6 +277,11 @@ void *coap_dtls_new_client_session(coap_session_t *session) {
 }
 
 void
+coap_dtls_session_update_mtu(coap_session_t *session) {
+  (void)session;
+}
+
+void
 coap_dtls_free_session(coap_session_t *coap_session) {
   if (coap_session->tls) {
     dtls_close((struct dtls_context_t *)coap_session->context->dtls_context,
@@ -299,21 +309,21 @@ coap_dtls_send(coap_session_t *session,
   return res;
 }
 
-int coap_dtls_get_context_timeout(void *dtls_context) {
-  clock_time_t next = 0;
-  dtls_check_retransmit((struct dtls_context_t *)dtls_context, &next);
-  if (next > 0) {
-    clock_time_t now;
-    dtls_ticks(&now);
-    if (next >= now)
-      return (int)(((next - now) * 1000 + DTLS_TICKS_PER_SECOND - 1) / DTLS_TICKS_PER_SECOND);
-  }
-  return -1;
+int coap_dtls_is_context_timeout(void) {
+  return 1;
 }
 
-int coap_dtls_get_timeout(coap_session_t *session) {
+coap_tick_t coap_dtls_get_context_timeout(void *dtls_context) {
+  clock_time_t next = 0;
+  dtls_check_retransmit((struct dtls_context_t *)dtls_context, &next);
+  if (next > 0)
+    return ((coap_tick_t)(next - dtls_tick_0)) * COAP_TICKS_PER_SECOND / DTLS_TICKS_PER_SECOND + coap_tick_0;
+  return 0;
+}
+
+coap_tick_t coap_dtls_get_timeout(coap_session_t *session) {
   (void)session;
-  return -1;
+  return 0;
 }
 
 void coap_dtls_handle_timeout(coap_session_t *session) {

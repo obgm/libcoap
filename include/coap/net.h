@@ -350,12 +350,41 @@ coap_tid_t coap_send( coap_session_t *session, coap_pdu_t *pdu );
 coap_tid_t coap_retransmit(coap_context_t *context, coap_queue_t *node);
 
 /**
- * Reads all data from the network.
+* For applications with their own message loop, send all pending retransmits and
+* return the list of sockets with events to wait for and the next timeout
+* The application should call coap_read, then coap_write again when any condition below is true:
+* - data is available on any of the sockets with the COAP_SOCKET_WANT_DATA flag set
+* - at least some data can be written without blocking on any of the sockets with the COAP_SOCKET_WANT_WRITE flag set
+* - the timeout has expired
+* Before calling coap_read or coap_write again, the application should position COAP_SOCKET_HAS_DATA and COAP_SOCKET_CAN_WRITE flags as applicable.
+*
+* @param ctx The CoAP context
+* @param sockets array of socket descriptors, filled on output
+* @param max_sockets size of socket array.
+* @param num_sockets pointer to the number of valid entries in the socket arrays on output
+* @param now Current time.
+* @return timeout as maxmimum number of milliseconds that the application should wait for network events or 0 if the application should wait forever.
+*/
+
+unsigned int
+coap_write(coap_context_t *ctx,
+  coap_socket_t *sockets[],
+  unsigned int max_sockets,
+  unsigned int *num_sockets,
+  coap_tick_t now
+);
+
+/**
+ * For applications with their own message loop, reads all data from the network.
+ *
+ * @param ctx The CoAP context
+ * @param now Current time
  */
-void coap_read(coap_context_t *context, coap_tick_t now);
+void coap_read(coap_context_t *ctx, coap_tick_t now);
 
 /**
  * The main message processing loop.
+ *
  * @param ctx The CoAP context
  * @param timeout_ms Minimum number of milliseconds to wait for new messages before returning. If zero the call will block until at least one packet is sent or received.
  * @return number of milliseconds spent or -1 if there was an error
@@ -433,7 +462,7 @@ coap_remove_transaction(coap_queue_t **queue, coap_session_t *session, coap_tid_
 
 coap_tid_t
 coap_wait_ack( coap_context_t *context, coap_session_t *session,
-  coap_pdu_t *pdu, int retransmit_cnt );
+               coap_queue_t *node);
 
 /**
  * Retrieves transaction from the queue.

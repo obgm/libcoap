@@ -124,8 +124,6 @@
 
 #if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 
-time_t clock_offset = 0;
-
 COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node(void) {
   return (coap_queue_t *)coap_malloc_type(COAP_NODE, sizeof(coap_queue_t));
@@ -164,8 +162,6 @@ coap_free_node(coap_queue_t *node) {
 
 #include "mem.h"
 #include "net/ip/uip-debug.h"
-
-clock_time_t clock_offset = 0;
 
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
@@ -268,7 +264,8 @@ coap_delete_node(coap_queue_t *node) {
     return 0;
 
   coap_delete_pdu(node->pdu);
-  coap_session_release(node->session);
+  if ( node->session )
+    coap_session_release(node->session);
   coap_free_node(node);
 
   return 1;
@@ -444,18 +441,12 @@ coap_new_context(
   if (initialized)
     return NULL;
 #endif /* WITH_CONTIKI */
+
+  coap_startup();
+
 #ifndef WITH_CONTIKI
   c = coap_malloc_type(COAP_CONTEXT, sizeof(coap_context_t));
 #endif /* not WITH_CONTIKI */
-
-  coap_clock_init();
-#if defined(WITH_LWIP)
-  prng_init(LWIP_RAND());
-#elif defined(WITH_CONTIKI)
-  prng_init((ptrdiff_t)listen_addr ^ clock_offset);
-#elif !defined(_WIN32)
-  prng_init((unsigned long)listen_addr ^ clock_offset);
-#endif
 
 #ifndef WITH_CONTIKI
   if (!c) {
@@ -639,7 +630,7 @@ coap_send_ack(coap_session_t *session, coap_pdu_t *request) {
 }
 
 static ssize_t
-coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, int retransmit_cnt) {
+coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
   ssize_t bytes_written;
 
 #ifdef LWIP
@@ -668,14 +659,14 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, int retransmit_cnt) {
       session->tls = coap_dtls_new_client_session(session);
       if (session->tls) {
 	session->state = COAP_SESSION_STATE_HANDSHAKE;
-	return coap_session_delay_pdu(session, pdu, retransmit_cnt);
+	return coap_session_delay_pdu(session, pdu, node);
       }
     }
     return -1;
   }
 
   if (session->state != COAP_SESSION_STATE_ESTABLISHED)
-    return coap_session_delay_pdu(session, pdu, retransmit_cnt);
+    return coap_session_delay_pdu(session, pdu, node);
 
   /* Pass to DTLS module for sending if local_interface is for secure
    * communication. */
@@ -731,7 +722,7 @@ coap_send_message_type(coap_session_t *session, coap_pdu_t *request, unsigned ch
  *           value
  * @return   COAP_TICKS_PER_SECOND * ACK_TIMEOUT * (1 + (ACK_RANDOM_FACTOR - 1) * r)
  */
-COAP_STATIC_INLINE unsigned int
+unsigned int
 calc_timeout(unsigned char r) {
   unsigned int result;
 
@@ -759,25 +750,10 @@ calc_timeout(unsigned char r) {
 
 coap_tid_t
 coap_wait_ack(coap_context_t *context, coap_session_t *session,
-  coap_pdu_t *pdu, int retransmit_cnt) {
+              coap_queue_t *node) {
   coap_tick_t now;
-  unsigned char r;
 
-  coap_queue_t *node = coap_new_node();
-  if (!node) {
-    debug("coap_wait_ack: insufficient memory\n");
-    return COAP_INVALID_TID;
-  }
-
-  node->id = ntohs(pdu->hdr->id);
-  node->retransmit_cnt = retransmit_cnt;
-
-  prng((unsigned char *)&r, sizeof(r));
-
-  /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
-  node->timeout = calc_timeout(r) << retransmit_cnt;
   node->session = coap_session_reference(session);
-  node->pdu = pdu;
 
   /* Set timer for pdu retransmission. If this is the first element in
   * the retransmission queue, the base time is set to the current
@@ -817,17 +793,17 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
   }
 #endif /* WITH_CONTIKI */
 
-  debug("** %s tid=%d added to retransmit queue (%us)\n",
+  debug("** %s tid=%d added to retransmit queue (%ums)\n",
     coap_session_str(node->session), node->id,
-    (unsigned)(node->t / COAP_TICKS_PER_SECOND));
+    (unsigned)(node->t * 1000 / COAP_TICKS_PER_SECOND));
 
   return node->id;
 }
 
 coap_tid_t
 coap_send(coap_session_t *session, coap_pdu_t *pdu) {
-
-  ssize_t bytes_written = coap_send_pdu(session, pdu, 0);
+  uint8_t r;
+  ssize_t bytes_written = coap_send_pdu(session, pdu, NULL);
 
   if (bytes_written == COAP_PDU_DELAYED)
     return ntohs(pdu->hdr->id);
@@ -843,7 +819,18 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     return id;
   }
 
-  return coap_wait_ack(session->context, session, pdu, 0);
+  coap_queue_t *node = coap_new_node();
+  if (!node) {
+    debug("coap_wait_ack: insufficient memory\n");
+    return COAP_INVALID_TID;
+  }
+
+  node->id = ntohs(pdu->hdr->id);
+  node->pdu = pdu;
+  prng(&r, sizeof(r));
+  /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
+  node->timeout = calc_timeout(r);
+  return coap_wait_ack(session->context, session, node);
 }
 
 coap_tid_t
@@ -854,9 +841,17 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   /* re-initialize timeout when maximum number of retransmissions are not reached yet */
   if (node->retransmit_cnt < COAP_DEFAULT_MAX_RETRANSMIT) {
     ssize_t bytes_written;
+    coap_tick_t now;
 
     node->retransmit_cnt++;
-    node->t = node->timeout << node->retransmit_cnt;
+    coap_ticks(&now);
+    if (context->sendqueue == NULL) {
+      node->t = node->timeout << node->retransmit_cnt;
+      context->sendqueue_basetime = now;
+    } else {
+      /* make node->t relative to context->sendqueue_basetime */
+      node->t = (now - context->sendqueue_basetime) + (node->timeout << node->retransmit_cnt);
+    }
     coap_insert_node(&context->sendqueue, node);
 #ifdef WITH_LWIP
     if (node == context->sendqueue) /* don't bother with timer stuff if there are earlier retransmits */
@@ -866,16 +861,12 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     debug("** %s tid=%d: retransmission #%d\n",
       coap_session_str(node->session), node->id, node->retransmit_cnt);
 
-    bytes_written = coap_send_pdu(node->session, node->pdu, node->retransmit_cnt);
+    bytes_written = coap_send_pdu(node->session, node->pdu, node);
 
     if (bytes_written == COAP_PDU_DELAYED) {
       /* PDU was not retransmitted immediately because a new handshake is
-	 in progress. Must be remove from the retransmit list as it now
-	 belongs to the delayed list of the session. */
-      coap_tid_t id = node->id;
-      node->pdu = NULL;
-      coap_remove_transaction(&context->sendqueue, node->session, node->id);
-      return id;
+	 in progress. node was moved to the send queue of the session. */
+      return node->id;
     }
 
     if (bytes_written < 0)
@@ -1128,7 +1119,6 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_tid_t
       (*queue)->t += (*node)->t;
     }
     (*node)->next = NULL;
-    /* coap_delete_node( q ); */
     debug("** %s tid=%d: removed\n", coap_session_str(session), id);
     return 1;
   }
@@ -1147,7 +1137,6 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_tid_t
     }
     q->next = NULL;
     *node = q;
-    /* coap_delete_node( q ); */
     debug("** %s tid=%d: removed\n", coap_session_str(session), id);
     return 1;
   }
@@ -1884,14 +1873,43 @@ coap_handle_event(coap_context_t *context, coap_event_t event, void *data) {
 
 int
 coap_can_exit(coap_context_t *context) {
-  return !context || (context->sendqueue == NULL);
+  coap_endpoint_t *ep;
+  coap_session_t *s;
+  if (!context)
+    return 1;
+  if (context->sendqueue)
+    return 0;
+  LL_FOREACH(context->endpoint, ep) {
+    LL_FOREACH(ep->sessions, s) {
+      if (s->sendqueue)
+        return 0;
+    }
+  }
+  LL_FOREACH(context->sessions, s) {
+    if (s->sendqueue)
+      return 0;
+  }
+  return 1;
 }
 
+static int coap_started = 0;
+
 void coap_startup(void) {
+  if (coap_started)
+    return;
+  coap_started = 1;
 #if defined(HAVE_WINSOCK2_H)
   WORD wVersionRequested = MAKEWORD(2, 2);
   WSADATA wsaData;
   WSAStartup(wVersionRequested, &wsaData);
+#endif
+  coap_clock_init();
+#if defined(WITH_LWIP)
+  prng_init(LWIP_RAND());
+#elif defined(WITH_CONTIKI)
+  prng_init(0);
+#elif !defined(_WIN32)
+  prng_init(0);
 #endif
   coap_dtls_startup();
 }
