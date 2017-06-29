@@ -19,7 +19,7 @@
 #include <tinydtls.h>
 #include <dtls.h>
 
-static coap_time_t dtls_tick_0 = 0;
+static dtls_tick_t dtls_tick_0 = 0;
 static coap_tick_t coap_tick_0 = 0;
 
  /* Prototypes from dtls_debug.h as including that header will conflict
@@ -367,6 +367,7 @@ coap_dtls_hello(coap_session_t *session,
 }
 
 unsigned int coap_dtls_get_overhead(coap_session_t *session) {
+  (void)session;
   return 13 + 8 + 8;
 }
 

@@ -134,8 +134,6 @@ ssize_t coap_session_send(coap_session_t *session, const uint8_t *data, size_t d
   return bytes_written;
 }
 
-unsigned int calc_timeout(unsigned char r);
-
 ssize_t
 coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
                        coap_queue_t *node)
