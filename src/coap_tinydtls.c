@@ -75,50 +75,37 @@ dtls_application_data(struct dtls_context_t *dtls_context,
   return coap_handle_message(coap_context, coap_session, data, len);
 }
 
+static int coap_event_dtls = 0;
+
 static int
 dtls_event(struct dtls_context_t *dtls_context,
   session_t *dtls_session,
   dtls_alert_level_t level,
   unsigned short code) {
-  coap_context_t *coap_context = (coap_context_t *)dtls_get_app_data(dtls_context);
-  coap_session_t *coap_session =
-    coap_session_get_by_peer(coap_context, (const coap_address_t*)dtls_session, dtls_session->ifindex);
-  int event = (level == DTLS_ALERT_LEVEL_FATAL) ? COAP_EVENT_DTLS_ERROR : -1;
 
-  if (!coap_session) {
-    coap_log(LOG_CRIT, "cannot handle event: session not found\n");
-    return -1;
-  }
+  if (level == DTLS_ALERT_LEVEL_FATAL)
+    coap_event_dtls = COAP_EVENT_DTLS_ERROR;
 
   /* handle DTLS events */
   switch (code) {
   case DTLS_ALERT_CLOSE_NOTIFY:
   {
-    event = COAP_EVENT_DTLS_CLOSED;
+    coap_event_dtls = COAP_EVENT_DTLS_CLOSED;
     break;
   }
   case DTLS_EVENT_CONNECTED:
   {
-    event = COAP_EVENT_DTLS_CONNECTED;
+    coap_event_dtls = COAP_EVENT_DTLS_CONNECTED;
     break;
   }
   case DTLS_EVENT_RENEGOTIATE:
   {
-    event = COAP_EVENT_DTLS_RENEGOTIATE;
+    coap_event_dtls = COAP_EVENT_DTLS_RENEGOTIATE;
     break;
   }
   default:
     ;
   }
-
-  if (event != -1) {
-    coap_handle_event(coap_context, event, coap_session);
-  }
-
-  if (event == COAP_EVENT_DTLS_CONNECTED)
-    coap_session_connected(coap_session);
-  else if (event == DTLS_ALERT_CLOSE_NOTIFY || event == COAP_EVENT_DTLS_ERROR)
-    coap_session_disconnected(coap_session);
 
   return 0;
 }
@@ -300,11 +287,20 @@ coap_dtls_send(coap_session_t *session,
 
   coap_log(LOG_DEBUG, "call dtls_write\n");
 
+  coap_event_dtls = -1;
   res = dtls_write((struct dtls_context_t *)session->context->dtls_context,
     (session_t *)session->tls, (uint8 *)data, data_len);
 
   if (res < 0)
     coap_log(LOG_WARNING, "coap_dtls_send: cannot send PDU\n");
+
+  if (coap_event_dtls >= 0) {
+    coap_handle_event(session->context, coap_event_dtls, session);
+    if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
+      coap_session_connected(session);
+    else if (coap_event_dtls == DTLS_ALERT_CLOSE_NOTIFY || coap_event_dtls == COAP_EVENT_DTLS_ERROR)
+      coap_session_disconnected(session);
+  }
 
   return res;
 }
@@ -337,9 +333,21 @@ coap_dtls_receive(coap_session_t *session,
   size_t data_len
 ) {
   session_t *dtls_session = (session_t *)session->tls;
-  int res = dtls_handle_message(
+  int res;
+
+  coap_event_dtls = -1;
+  res = dtls_handle_message(
     (struct dtls_context_t *)session->context->dtls_context,
     dtls_session, (uint8 *)data, (int)data_len);
+
+  if (coap_event_dtls >= 0) {
+    coap_handle_event(session->context, coap_event_dtls, session);
+    if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
+      coap_session_connected(session);
+    else if (coap_event_dtls == DTLS_ALERT_CLOSE_NOTIFY || coap_event_dtls == COAP_EVENT_DTLS_ERROR)
+      coap_session_disconnected(session);
+  }
+
   return res;
 }
 
