@@ -48,12 +48,52 @@ coap_dtls_get_log_level(void) {
   return dtls_get_log_level();
 }
 
+static void get_session_addr(const session_t *s, coap_address_t *a) {
+#ifdef WITH_CONTIKI
+  a->addr = s->addr;
+  a->port = s->port;
+#else
+  if (s->addr.sa.sa_family == AF_INET6) {
+    a->size = (socklen_t)sizeof(a->addr.sin6);
+    a->addr.sin6 = s->addr.sin6;
+  } else if (s->addr.sa.sa_family == AF_INET) {
+    a->size = (socklen_t)sizeof(a->addr.sin);
+    a->addr.sin = s->addr.sin;
+  } else {
+    a->size = (socklen_t)s->size;
+    a->addr.sa = s->addr.sa;
+  }
+#endif
+}
+
+static void put_session_addr(const coap_address_t *a, session_t *s) {
+#ifdef WITH_CONTIKI
+  s->size = (unsigned char)sizeof(s->addr);
+  s->addr = a->addr;
+  s->port = a->port;
+#else
+  if (a->addr.sa.sa_family == AF_INET6) {
+    s->size = (socklen_t)sizeof(s->addr.sin6);
+    s->addr.sin6 = a->addr.sin6;
+  } else if (a->addr.sa.sa_family == AF_INET) {
+    s->size = (socklen_t)sizeof(s->addr.sin);
+    s->addr.sin = a->addr.sin;
+  } else {
+    s->size = (socklen_t)a->size;
+    s->addr.sa = a->addr.sa;
+  }
+#endif
+}
+
 static int
 dtls_send_to_peer(struct dtls_context_t *dtls_context,
   session_t *dtls_session, uint8 *data, size_t len) {
   coap_context_t *coap_context = (coap_context_t *)dtls_get_app_data(dtls_context);
-  coap_session_t *coap_session =
-    coap_session_get_by_peer(coap_context, (const coap_address_t*)dtls_session, dtls_session->ifindex);
+  coap_session_t *coap_session;
+  coap_address_t remote_addr;
+
+  get_session_addr(dtls_session, &remote_addr);
+  coap_session = coap_session_get_by_peer(coap_context, &remote_addr, dtls_session->ifindex);
   if (!coap_session) {
     coap_log(LOG_WARNING, "dtls_send_to_peer: cannot find local interface\n");
     return -3;
@@ -65,8 +105,11 @@ static int
 dtls_application_data(struct dtls_context_t *dtls_context,
   session_t *dtls_session, uint8 *data, size_t len) {
   coap_context_t *coap_context = (coap_context_t *)dtls_get_app_data(dtls_context);
-  coap_session_t *coap_session =
-    coap_session_get_by_peer(coap_context, (const coap_address_t*)dtls_session, dtls_session->ifindex);
+  coap_session_t *coap_session;
+  coap_address_t remote_addr;
+
+  get_session_addr(dtls_session, &remote_addr);
+  coap_session = coap_session_get_by_peer(coap_context, &remote_addr, dtls_session->ifindex);
   if (!coap_session) {
     debug("dropped message that was received on invalid interface\n");
     return -1;
@@ -82,6 +125,8 @@ dtls_event(struct dtls_context_t *dtls_context,
   session_t *dtls_session,
   dtls_alert_level_t level,
   unsigned short code) {
+  (void)dtls_context;
+  (void)dtls_session;
 
   if (level == DTLS_ALERT_LEVEL_FATAL)
     coap_event_dtls = COAP_EVENT_DTLS_ERROR;
@@ -126,6 +171,8 @@ get_psk_info(struct dtls_context_t *dtls_context,
   static int client = 0;
   static uint8_t psk[128];
   static size_t psk_len = 0;
+  coap_address_t remote_addr;
+
 
   if (type == DTLS_PSK_KEY && client) {
     if (psk_len > result_length) {
@@ -139,8 +186,12 @@ get_psk_info(struct dtls_context_t *dtls_context,
 
   client = 0;
   coap_context = (coap_context_t *)dtls_get_app_data(dtls_context);
-  coap_session =
-    coap_session_get_by_peer(coap_context, (const coap_address_t*)dtls_session, dtls_session->ifindex);
+  get_session_addr(dtls_session, &remote_addr);
+  coap_session = coap_session_get_by_peer(coap_context, &remote_addr, dtls_session->ifindex);
+  if (!coap_session) {
+    debug("cannot get PSK, session not found\n");
+    goto error;
+  }
 
   switch (type) {
   case DTLS_PSK_IDENTITY:
@@ -221,7 +272,7 @@ coap_dtls_new_session(coap_session_t *session) {
     /* create tinydtls session object from remote address and local
     * endpoint handle */
     dtls_session_init(dtls_session);
-    coap_address_copy((coap_address_t*)dtls_session, &session->remote_addr);
+    put_session_addr(&session->remote_addr, dtls_session);
     dtls_session->ifindex = session->ifindex;
     debug("*** new session %p\n", dtls_session);
   }
@@ -361,7 +412,7 @@ coap_dtls_hello(coap_session_t *session,
     (struct dtls_context_t *)session->context->dtls_context;
 
   dtls_session_init(&dtls_session);
-  coap_address_copy((coap_address_t*)&dtls_session, &session->remote_addr);
+  put_session_addr(&session->remote_addr, dtls_session);
   dtls_session.ifindex = session->ifindex;
   int res = dtls_handle_message(dtls_context, &dtls_session,
     (uint8 *)data, (int)data_len);
