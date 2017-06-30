@@ -412,7 +412,7 @@ coap_dtls_hello(coap_session_t *session,
     (struct dtls_context_t *)session->context->dtls_context;
 
   dtls_session_init(&dtls_session);
-  put_session_addr(&session->remote_addr, dtls_session);
+  put_session_addr(&session->remote_addr, &dtls_session);
   dtls_session.ifindex = session->ifindex;
   int res = dtls_handle_message(dtls_context, &dtls_session,
     (uint8 *)data, (int)data_len);
