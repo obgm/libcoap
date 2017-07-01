@@ -738,8 +738,8 @@ coap_write(coap_context_t *ctx,
     if (coap_dtls_is_context_timeout()) {
       coap_tick_t tls_timeout = coap_dtls_get_context_timeout(ctx->dtls_context);
       if (tls_timeout > 0) {
-        if (tls_timeout < now)
-          tls_timeout = now + 1;
+        if (tls_timeout < now + COAP_TICKS_PER_SECOND / 10)
+          tls_timeout = now + COAP_TICKS_PER_SECOND / 10;
         debug("** DTLS global timeout set to %dms\n", (int)((tls_timeout - now) * 1000 / COAP_TICKS_PER_SECOND));
         if (timeout == 0 || tls_timeout - now < timeout)
           timeout = tls_timeout - now;

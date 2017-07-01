@@ -321,9 +321,13 @@ coap_dtls_session_update_mtu(coap_session_t *session) {
 
 void
 coap_dtls_free_session(coap_session_t *coap_session) {
+  struct dtls_context_t *ctx = (struct dtls_context_t *)coap_session->context->dtls_context;
   if (coap_session->tls) {
-    dtls_close((struct dtls_context_t *)coap_session->context->dtls_context,
-      (session_t *)coap_session->tls);
+    dtls_peer_t *peer = dtls_get_peer(ctx, (session_t *)coap_session->tls);
+    if ( peer )
+      dtls_reset_peer(ctx, peer);
+    else
+      dtls_close(ctx, (session_t *)coap_session->tls);
     debug("*** removed session %p\n", coap_session->tls);
     coap_free_type(COAP_DTLS_SESSION, coap_session->tls);
   }
