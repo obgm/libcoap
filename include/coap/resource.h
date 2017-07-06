@@ -80,12 +80,13 @@ typedef struct coap_resource_t {
   unsigned int cacheable:1;      /**< can be cached */
 
   /**
-   * Used to store handlers for the four coap methods @c GET, @c POST, @c PUT,
-   * and @c DELETE. coap_dispatch() will pass incoming requests to the handler
+   * Used to store handlers for the seven coap methods @c GET, @c POST, @c PUT,
+   * @c DELETE, @c FETCH, @c PATCH and @c IPATCH.
+   * coap_dispatch() will pass incoming requests to the handler
    * that corresponds to its request method or generate a 4.05 response if no
    * handler is available.
    */
-  coap_method_handler_t handler[4];
+  coap_method_handler_t handler[7];
 
   coap_key_t key;                /**< the actual key bytes for this resource */
 
