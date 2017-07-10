@@ -27,5 +27,7 @@ LICENSE INFORMATION
 
 This library is published as open-source software without any warranty
 of any kind. Use is permitted under the terms of the simplified BSD
-license. Please refer to LICENSE.BSD for further details.
+license. It includes public domain software. libcoap binaries may also
+include open-source software with their respective licensing terms.
+Please refer to LICENSE for further details.
 
