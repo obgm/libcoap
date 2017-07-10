@@ -273,11 +273,11 @@ AC_ARG_WITH([openssl],
             [with_openssl="yes"],
             [with_openssl="no"])
 
-#AC_ARG_WITH([tinydtls],
-#            [AS_HELP_STRING([--with-tinydtls],
-#                            [Use TinyDTLS for DTLS functions])],
-#            [with_tinydtls="yes"],
-#            [with_tinydtls="no"])
+AC_ARG_WITH([tinydtls],
+           [AS_HELP_STRING([--with-tinydtls],
+                           [Use TinyDTLS for DTLS functions])],
+           [with_tinydtls="yes"],
+           [with_tinydtls="no"])
 
 if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes"; then
     if test "x$build_dtls" = "x"; then
@@ -343,9 +343,23 @@ if test "x$build_dtls" = "xyes"; then
         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
 
+    # The user wants to use explicit OpenSSL if '--with-tinydtls was set'.
+    if test "x$with_tinydtls" = "xyes" ; then
+        if test "x$enable_shared" = "xyes"; then
+            AC_MSG_ERROR([==> You want to build libcoap with DTLS support by tinyDTLS but have enabled shared libraries.
+                      Please pass '--disable-shared' to configure or select a different DTLS library.])
+        fi
+        if test -d "$srcdir/ext/tinydtls"; then
+           AC_CONFIG_SUBDIRS([ext/tinydtls])
+           have_tinydtls="yes"
+         else
+           have_tinydtls="no"
+         fi
+    fi
+
     # The user hasn't requested the use of a specific cryptographic library
     # we try first GnuTLS for usability ...
-    if test "x$have_gnutls" = "xyes" -a "x$with_gnutls" = "xno"; then
+    if test "x$have_gnutls" = "xyes" -a "x$with_gnutls" = "xno" -a "x$with_tinydtls" = "xno"; then
         gnutls_version=`pkg-config --modversion gnutls`
         AX_CHECK_GNUTLS_VERSION
         AC_MSG_NOTICE([Using autoselected library GnuTLS for DTLS support!])
@@ -354,7 +368,7 @@ if test "x$build_dtls" = "xyes"; then
     fi
 
     # ... and if not found check OpenSSL is suitable.
-    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xno" -a "x$with_gnutls_auto" = "x"; then
+    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xno" -a "x$with_gnutls_auto" = "x" -a "x$with_tinydtls" = "xno"; then
         openssl_version=`pkg-config --modversion openssl`
         AX_CHECK_OPENSSL_VERSION
         AC_MSG_NOTICE([Using autoselected library OpenSSL for DTLS support!])
@@ -362,9 +376,11 @@ if test "x$build_dtls" = "xyes"; then
         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
 
+    # Note that tinyDTLS is used only when explicitly requested.
+
     # Giving out a error message if we haven't found at least one crypto library.
-    if test "x$have_gnutls" = "xno" -a "x$have_openssl" = "xno"; then
-        AC_MSG_ERROR([==> Option '--enable-dtls' is set but one of the needed cryptographic library GnuTLS nor OpenSSL could be found!
+    if test "x$have_gnutls" = "xno" -a "x$have_openssl" = "xno" -a "x$have_tinydtls" = "xno"; then
+        AC_MSG_ERROR([==> Option '--enable-dtls' is set but one of the needed cryptographic library GnuTLS nor OpenSSL nor tinyDTLS could be found!
                       Install at least on of the package(s) containing the development files for GnuTLS (>= $gnutls_version_required) or OpenSSL(>= $openssl_version_required)
                       or disable the DTLS support using '--disable-dtls'.])
     fi
@@ -380,7 +396,11 @@ if test "x$build_dtls" = "xyes"; then
         DTLS_LIBS="$OpenSSL_LIBS"
         AC_DEFINE(HAVE_OPENSSL, [1], [Define if the system has libssl1.1])
     fi
-
+    if test "x$with_tinydtls" = "xyes"; then
+       DTLS_CFLAGS="-I \$(top_srcdir)/ext/tinydtls"
+       DTLS_LIBS="-L\$(top_srcdir)/ext/tinydtls -ltinydtls"
+       AC_DEFINE(HAVE_LIBTINYDTLS, [1], [Define if the system has libtinydtls])
+    fi
     AC_SUBST(DTLS_CFLAGS)
     AC_SUBST(DTLS_LIBS)
 fi
@@ -423,14 +443,6 @@ if test "x$build_examples" = "xyes" -a "x$build_documentation" = "xyes"; then
     build_examples="yes"
 fi
 AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$build_examples" = "xyes"])
-
-# __dtls__
-AC_ARG_ENABLE([dtls],
-              [AC_HELP_STRING([--enable-dtls],
-              [Enable DTLS provided by tinydtls (default=yes)])],
-              [build_dtls="$enableval"],
-              [build_dtls="yes"])
-AM_CONDITIONAL(BUILD_DTLS, [test "x$build_dtls" = "xyes"])
 
 # end configure options
 #######################
@@ -488,18 +500,6 @@ AC_SEARCH_LIBS([inet_ntop], [nsl])
 
 # Check if clock_gettime() requires librt, when available
 AC_SEARCH_LIBS([clock_gettime], [rt])
-
-# Add tinydtls to build flags if selected
-if test "x$build_dtls" = "xyes" ; then
-	if test -d "$srcdir/ext/tinydtls"; then
-	   AC_CONFIG_SUBDIRS([ext/tinydtls])
-	   AC_DEFINE(HAVE_LIBTINYDTLS, [1], [Define if the system has libtinydtls])
-           CPPFLAGS="$CPPFLAGS -I \$(top_srcdir)/ext/tinydtls"
-           LDFLAGS="$LDFLAGS -L\$(top_srcdir)/ext/tinydtls -ltinydtls"
-        else
-           build_dtls="no"
-        fi
-fi
 
 AC_MSG_CHECKING([operating system])
 
@@ -595,6 +595,12 @@ if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
     AC_MSG_RESULT([         -->  OpenSSL around  : "yes" (found OpenSSL $openssl_version)])
     AC_MSG_RESULT([              OPENSSL_CFLAGS  : "$OpenSSL_CFLAGS"])
     AC_MSG_RESULT([              OPENSSL_LIBS    : "$OpenSSL_LIBS"])
+fi
+if test "x$with_tinydtls" = "xyes"; then
+    AC_MSG_RESULT([      build DTLS support      : "yes"])
+    AC_MSG_RESULT([         -->  OpenSSL around  : "yes" (found tinyDTLS)])
+    AC_MSG_RESULT([              TINYDTLS_CFLAGS : "$DTLS_CFLAGS"])
+    AC_MSG_RESULT([              TINYDTLS_LIBS   : "$DTLS_LIBS"])
 fi
 if test "x$build_dtls" != "xyes"; then
     AC_MSG_RESULT([      build DTLS support      : "no"])
