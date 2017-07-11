@@ -1,7 +1,7 @@
 # Makefile.am for libcoap
 #
-# Copyright (C) 2010-2016 Olaf Bergmann <bergmann@tzi.org>
-#           (C) 2015-2016 Carsten Schoenert <c.schoenert@t-online.de>
+# Copyright (C) 2010-2017 Olaf Bergmann <bergmann@tzi.org>
+#           (C) 2015-2017 Carsten Schoenert <c.schoenert@t-online.de>
 #
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.
@@ -65,12 +65,13 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/address.c \
   src/async.c \
   src/block.c \
+  src/coap_event.c \
   src/coap_io.c \
   src/coap_notls.c \
-  src/coap_tinydtls.c \
-  src/coap_event.c \
   src/coap_openssl.c \
+  src/coap_session.c \
   src/coap_time.c \
+  src/coap_tinydtls.c \
   src/debug.c \
   src/encode.c \
   src/hashkey.c \
@@ -79,7 +80,6 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/option.c \
   src/pdu.c \
   src/resource.c \
-  src/coap_session.c \
   src/str.c \
   src/subscribe.c \
   src/uri.c
@@ -95,9 +95,10 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap/bits.h \
   $(top_srcdir)/include/coap/block.h \
   $(top_builddir)/include/coap/coap.h \
-  $(top_srcdir)/include/coap/coap_io.h \
   $(top_srcdir)/include/coap/coap_dtls.h \
   $(top_srcdir)/include/coap/coap_event.h \
+  $(top_srcdir)/include/coap/coap_io.h \
+  $(top_srcdir)/include/coap/coap_session.h \
   $(top_srcdir)/include/coap/coap_time.h \
   $(top_srcdir)/include/coap/debug.h \
   $(top_srcdir)/include/coap/encode.h \
@@ -109,7 +110,6 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap/pdu.h \
   $(top_srcdir)/include/coap/prng.h \
   $(top_srcdir)/include/coap/resource.h \
-  $(top_srcdir)/include/coap/coap_session.h \
   $(top_srcdir)/include/coap/str.h \
   $(top_srcdir)/include/coap/subscribe.h \
   $(top_srcdir)/include/coap/uri.h \
