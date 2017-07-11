@@ -16,16 +16,30 @@ ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 EXTRA_DIST = \
   CONTRIBUTE \
   TODO \
+  LICENSE \
   $(pkgconfig_DATA).in \
   libcoap-$(LIBCOAP_API_VERSION).map \
   libcoap-$(LIBCOAP_API_VERSION).sym \
   examples/coap_list.h \
+  examples/getopt.c \
   tests/test_options.h \
   tests/test_pdu.h \
   tests/test_error_response.h \
   tests/test_sendqueue.h \
   tests/test_uri.h \
-  tests/test_wellknown.h
+  tests/test_wellknown.h \
+  win32/coap-client/coap-client.vcxproj \
+  win32/coap-client/coap-client.vcxproj.filters \
+  win32/coap-rd/coap-rd.vcxproj \
+  win32/coap-rd/coap-rd.vcxproj.filters \
+  win32/coap-server/coap-server.vcxproj \
+  win32/coap-server/coap-server.vcxproj.filters \
+  win32/libcoap.sln \
+  win32/libcoap.vcxproj \
+  win32/libcoap.vcxproj.filters \
+  win32/testdriver/testdriver.vcxproj \
+  win32/testdriver/testdriver.vcxproj.filters \
+  win32/testdriver/testdriver.vcxproj.user
 
 AM_CFLAGS = -I$(top_builddir)/include/coap -I$(top_srcdir)/include/coap $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
 
