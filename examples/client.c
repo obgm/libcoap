@@ -562,7 +562,7 @@ usage( const char *program, const char *version) {
      "\t-f file\t\tfile to send with PUT/POST (use '-' for STDIN)\n"
      "\t-k key\t\tPre-shared key for the specified user. This argument\n"
      "\t       \t\trequires DTLS with PSK to be available.\n"
-     "\t-m method\trequest method (get|put|post|delete), default is 'get'\n"
+     "\t-m method\trequest method (get|put|post|delete|fetch|patch|ipatch), default is 'get'\n"
      "\t-N\t\tsend NON-confirmable message\n"
      "\t-o file\t\toutput received data to this file (use '-' for STDOUT)\n"
      "\t-p port\t\tlisten on specified port\n"
@@ -1009,7 +1009,7 @@ cmdline_input_from_file(char *filename, str *buf) {
 static method_t
 cmdline_method(char *arg) {
   static char *methods[] =
-    { 0, "get", "post", "put", "delete", 0};
+    { 0, "get", "post", "put", "delete", "fetch", "patch", "ipatch", 0};
   unsigned char i;
 
   for (i=1; methods[i] && strcasecmp(arg,methods[i]) != 0 ; ++i)
