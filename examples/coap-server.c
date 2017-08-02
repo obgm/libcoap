@@ -246,7 +246,6 @@ hnd_get_async(coap_context_t *ctx,
 
 static void
 check_async(coap_context_t *ctx,
-            const coap_endpoint_t *local_if,
             coap_tick_t now) {
   coap_pdu_t *response;
   coap_async_state_t *tmp;
@@ -553,7 +552,7 @@ main(int argc, char **argv) {
 #ifndef WITHOUT_ASYNC
     /* check if we have to send asynchronous responses */
     coap_ticks( &now );
-    check_async(ctx, ctx->endpoint, now);
+    check_async(ctx, now);
 #endif /* WITHOUT_ASYNC */
 
 #ifndef WITHOUT_OBSERVE
