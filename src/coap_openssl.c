@@ -299,6 +299,7 @@ static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
 
 void *coap_dtls_new_context(struct coap_context_t *coap_context) {
   coap_dtls_context_t *context;
+  (void)coap_context;
 
   context = (coap_dtls_context_t *)coap_malloc(sizeof(coap_dtls_context_t));
   if (context) {
