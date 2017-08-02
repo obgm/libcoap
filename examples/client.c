@@ -1023,9 +1023,8 @@ cmdline_read_user(char *arg, unsigned char *buf, size_t maxlen) {
   size_t len = strnlen(arg, maxlen);
   if (len) {
     memcpy(buf, arg, len);
-    return len;
   }
-  return -1;
+  return len;
 }
 
 static ssize_t
