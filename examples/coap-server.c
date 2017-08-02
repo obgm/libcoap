@@ -266,7 +266,7 @@ check_async(coap_context_t *ctx,
     return;
   }
 
-  response->hdr->id = coap_new_message_id(ctx);
+  response->hdr->id = coap_new_message_id(async->session);
 
   if (async->tokenlen)
     coap_add_token(response, async->tokenlen, async->token);

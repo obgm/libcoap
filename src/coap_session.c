@@ -68,6 +68,10 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type, const coap_addre
       coap_log(LOG_ERR, "DTLS overhead exceeds MTU\n");
     }
   }
+
+  /* initialize message id */
+  prng((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));
+
   return session;
 }
 

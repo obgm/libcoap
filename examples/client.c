@@ -148,12 +148,13 @@ coap_new_request(coap_context_t *ctx,
                  size_t length) {
   coap_pdu_t *pdu;
   coap_list_t *opt;
+  (void)ctx;
 
   if ( ! ( pdu = coap_new_pdu(session) ) )
     return NULL;
 
   pdu->hdr->type = msgtype;
-  pdu->hdr->id = coap_new_message_id(ctx);
+  pdu->hdr->id = coap_new_message_id(session);
   pdu->hdr->code = m;
 
   pdu->hdr->token_length = (uint16_t)the_token.length;
@@ -190,11 +191,12 @@ clear_obs(coap_context_t *ctx, coap_session_t *session) {
   coap_list_t *option;
   coap_tid_t tid = COAP_INVALID_TID;
   unsigned char buf[2];
+  (void)ctx;
 
   /* create bare PDU w/o any option  */
   pdu = coap_pdu_init(msgtype,
                       COAP_REQUEST_GET,
-                      coap_new_message_id(ctx),
+                      coap_new_message_id(session),
                       coap_session_max_pdu_size(session));
 
   if (!pdu) {

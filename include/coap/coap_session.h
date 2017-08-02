@@ -60,6 +60,7 @@ typedef struct coap_session_t {
   struct coap_endpoint_t *endpoint;	  /**< session's endpoint */
   struct coap_context_t *context;	  /**< session's context */
   void *tls;			  /**< security parameters */
+  uint16_t tx_mid;                /**< the last message id that was used in this session */
   struct coap_queue_t *sendqueue; /**< list of messages waiting to be sent */
   coap_tick_t last_rx_tx;
   uint8_t *psk_identity;

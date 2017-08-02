@@ -215,13 +215,13 @@ void coap_context_set_psk( coap_context_t *ctx, const char *hint,
  *
  * @return        Incremented message id in network byte order.
  */
-COAP_STATIC_INLINE unsigned short
-coap_new_message_id(coap_context_t *context) {
-  context->message_id++;
+COAP_STATIC_INLINE uint16_t
+coap_new_message_id(coap_session_t *session) {
+  session->tx_mid++;
 #ifndef WITH_CONTIKI
-  return htons(context->message_id);
+  return htons(session->tx_mid);
 #else /* WITH_CONTIKI */
-  return uip_htons(context->message_id);
+  return uip_htons(session->tx_mid);
 #endif
 }
 
