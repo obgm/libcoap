@@ -88,12 +88,6 @@ rd_delete(rd_t *rd) {
 /* temporary storage for dynamic resource representations */
 static int quit = 0;
 
-/* SIGINT handler: set quit to 1 for graceful termination */
-static void
-handle_sigint(int signum UNUSED_PARAM) {
-  quit = 1;
-}
-
 static void
 hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
                  struct coap_resource_t *resource,
