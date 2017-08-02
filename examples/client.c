@@ -1106,7 +1106,6 @@ main(int argc, char **argv) {
   char node_str[NI_MAXHOST] = "";
   int opt, res;
   coap_log_t log_level = LOG_WARNING;
-  coap_tid_t tid = COAP_INVALID_TID;
   unsigned char user[MAX_USER + 1], key[MAX_KEY];
   ssize_t user_length = 0, key_length = 0;
   int create_uri_opts = 1;
@@ -1304,7 +1303,7 @@ main(int argc, char **argv) {
   }
 #endif
 
-  tid = coap_send(session, pdu);
+  coap_send(session, pdu);
 
   wait_ms = wait_seconds * 1000;
   debug("timeout is set to %u seconds\n", wait_seconds);
