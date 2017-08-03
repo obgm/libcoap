@@ -345,7 +345,16 @@ print_content_format(unsigned int format_type,
     { COAP_MEDIATYPE_APPLICATION_OCTET_STREAM, "application/octet-stream" },
     { COAP_MEDIATYPE_APPLICATION_EXI, "application/exi" },
     { COAP_MEDIATYPE_APPLICATION_JSON, "application/json" },
-    { COAP_MEDIATYPE_APPLICATION_CBOR, "application/cbor" }
+    { COAP_MEDIATYPE_APPLICATION_CBOR, "application/cbor" },
+    { COAP_MEDIATYPE_APPLICATION_COSE_SIGN, "application/cose; cose-type=\"cose-sign\"" },
+    { COAP_MEDIATYPE_APPLICATION_COSE_SIGN1, "application/cose; cose-type=\"cose-sign1\"" },
+    { COAP_MEDIATYPE_APPLICATION_COSE_ENCRYPT, "application/cose; cose-type=\"cose-encrypt\"" },
+    { COAP_MEDIATYPE_APPLICATION_COSE_ENCRYPT0, "application/cose; cose-type=\"cose-encrypt0\"" },
+    { COAP_MEDIATYPE_APPLICATION_COSE_MAC, "application/cose; cose-type=\"cose-mac\"" },
+    { COAP_MEDIATYPE_APPLICATION_COSE_MAC0, "application/cose; cose-type=\"cose-mac0\"" },
+    { COAP_MEDIATYPE_APPLICATION_COSE_KEY, "application/cose-key" },
+    { COAP_MEDIATYPE_APPLICATION_COSE_KEY_SET, "application/cose-key-set" },
+    { 75, "application/dcaf+cbor" }
   };
 
   size_t i;
