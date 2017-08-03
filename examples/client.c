@@ -161,8 +161,6 @@ coap_new_request(coap_context_t *ctx,
     debug("cannot add token to request\n");
   }
 
-  coap_show_pdu(pdu);
-
   if (options) {
     /* sort options for delta encoding */
     LL_SORT((*options), order_opts);
@@ -332,7 +330,7 @@ message_handler(struct coap_context_t *ctx,
   coap_tid_t tid;
 
 #ifndef NDEBUG
-  if (LOG_DEBUG <= coap_get_log_level()) {
+  if (LOG_INFO <= coap_get_log_level()) {
     debug("** process incoming %d.%02d response:\n",
           (received->hdr->code >> 5), received->hdr->code & 0x1F);
     coap_show_pdu(received);
@@ -1297,7 +1295,7 @@ main(int argc, char **argv) {
   }
 
 #ifndef NDEBUG
-  if (LOG_DEBUG <= coap_get_log_level()) {
+  if (LOG_INFO <= coap_get_log_level()) {
     debug("sending CoAP request:\n");
     coap_show_pdu(pdu);
   }
