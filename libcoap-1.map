@@ -153,7 +153,6 @@ global:
   coap_socket_close;
   coap_socket_connect_udp;
   coap_socket_send;
-  coap_socket_send_pdu;
   coap_socket_strerror;
   coap_split_path;
   coap_split_query;
