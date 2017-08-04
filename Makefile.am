@@ -134,7 +134,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS =					\
 
 ## Collect symbols here we want to ignore while building the helper files
 ## libcoap-$(LIBCOAP_API_VERSION).{map,sym} for the linker.
-CTAGS_IGNORE=-I "coap_packet_extract_pbuf coap_pdu_from_pbuf"
+CTAGS_IGNORE=-I "coap_packet_extract_pbuf coap_pdu_from_pbuf coap_socket_send_pdu"
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if
 # configure has detected a usable version of the ctags program and aborts if not.
