@@ -537,7 +537,7 @@ main(int argc, char **argv) {
   wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
 
   while ( !quit ) {
-    int result = coap_run_once( ctx, COAP_RESOURCE_CHECK_TIME * wait_ms );
+    int result = coap_run_once( ctx, wait_ms );
     if ( result < 0 ) {
       break;
     } else if ( (unsigned)result < wait_ms ) {
