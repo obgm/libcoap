@@ -83,7 +83,6 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *session UNUSED) {
 }
 
 void coap_dtls_handle_timeout(coap_session_t *session UNUSED) {
-  return 0;
 }
 
 int
