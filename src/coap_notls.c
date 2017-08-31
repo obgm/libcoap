@@ -101,7 +101,7 @@ coap_dtls_hello(coap_session_t *session UNUSED,
   return 0;
 }
 
-unsigned int coap_dtls_get_overhead(coap_session_t *session) {
+unsigned int coap_dtls_get_overhead(coap_session_t *session UNUSED) {
   return 0;
 }
 
