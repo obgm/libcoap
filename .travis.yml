@@ -7,9 +7,10 @@ compiler:
   - clang
 
 env:
-  - PLATFORM=posix TESTS=yes
-  - PLATFORM=contiki
-  - PLATFORM=lwip
+  - PLATFORM=posix TESTS=yes TLS=no
+  - PLATFORM=posix TLS=openssl
+  - PLATFORM=contiki TLS=no
+  - PLATFORM=lwip TLS=no
 
 addons:
   apt_packages:
