@@ -259,10 +259,12 @@ coap_opt_length(const coap_opt_t *opt) {
     return 0;
   case 0xe0:
     ++opt;
-    /* fall through to skip another byte */
+    /* fall through */
+    /* to skip another byte */
   case 0xd0:
     ++opt;
-    /* fall through to skip another byte */
+    /* fall through */
+    /* to skip another byte */
   default:
     ++opt;
   }
