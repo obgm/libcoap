@@ -20,13 +20,24 @@
 #include "mem.h"
 #include "utlist.h"
 
+/* utlist-style macros for searching pairs in linked lists */
+#define SEARCH_PAIR(head,out,field1,val1,field2,val2)   \
+  SEARCH_PAIR2(head,out,field1,val1,field2,val2,next)
+
+#define SEARCH_PAIR2(head,out,field1,val1,field2,val2,next)             \
+  do {                                                                  \
+    LL_FOREACH2(head,out,next) {                                        \
+      if ((out)->field1 == (val1) && (out)->field2 == (val2)) break;    \
+    }                                                                   \
+} while(0)
+
 coap_async_state_t *
 coap_register_async(coap_context_t *context, coap_session_t *session,
 		    coap_pdu_t *request, unsigned char flags, void *data) {
   coap_async_state_t *s;
   coap_tid_t id = ntohs( request->hdr->id );
 
-  LL_SEARCH_PAIR(context->async_state,s,session,session,id,id);
+  SEARCH_PAIR(context->async_state,s,session,session,id,id);
 
   if (s != NULL) {
     /* We must return NULL here as the caller must know that he is
@@ -69,7 +80,7 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
 coap_async_state_t *
 coap_find_async(coap_context_t *context, coap_session_t *session, coap_tid_t id) {
   coap_async_state_t *tmp;
-  LL_SEARCH_PAIR(context->async_state,tmp,session,session,id,id);
+  SEARCH_PAIR(context->async_state,tmp,session,session,id,id);
   return tmp;
 }
 
