@@ -1639,6 +1639,8 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
     h = resource->handler[node->pdu->hdr->code - 1];
 
   if (h) {
+    str *query = coap_get_query(node->pdu);
+    int owns_query = 1;
     debug("call custom handler for resource 0x%02x%02x%02x%02x\n",
       key[0], key[1], key[2], key[3]);
     response = coap_pdu_init(node->pdu->hdr->type == COAP_MESSAGE_CON
@@ -1667,7 +1669,8 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 	    coap_subscription_t *subscription;
 
 	    coap_log(LOG_DEBUG, "create new subscription\n");
-	    subscription = coap_add_observer(resource, node->session, &token);
+	    subscription = coap_add_observer(resource, node->session, &token, query);
+	    owns_query = 0;
 	    if (subscription) {
 	      coap_touch_observer(context, node->session, &token);
 	    }
@@ -1678,7 +1681,10 @@ handle_request(coap_context_t *context, coap_queue_t *node) {
 	}
       }
 
-      h(context, resource, node->session, node->pdu, &token, response);
+      h(context, resource, node->session, node->pdu, &token, query, response);
+
+      if (query && owns_query)
+	coap_delete_string(query);
 
       respond = no_response(node->pdu, response);
       if (respond != RESPONSE_DROP) {

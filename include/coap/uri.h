@@ -12,6 +12,7 @@
 
 #include "hashkey.h"
 #include "str.h"
+struct coap_pdu_t;
 
 /**
  * The scheme specifiers. Secure schemes have an odd numeric value,
@@ -135,6 +136,13 @@ int coap_split_query(const unsigned char *s,
                      size_t length,
                      unsigned char *buf,
                      size_t *buflen);
+
+/**
+ * Extract query string from request PDU according to escape rules in 6.5.8.
+ * @param request Request PDU.
+ * @return        Reconstructed and escaped query string part.
+ */
+str *coap_get_query(struct coap_pdu_t *request);
 
 /** @} */
 

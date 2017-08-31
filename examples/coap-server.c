@@ -75,6 +75,7 @@ hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
               coap_session_t *session UNUSED_PARAM,
               coap_pdu_t *request UNUSED_PARAM,
               str *token UNUSED_PARAM,
+              str *query UNUSED_PARAM,
               coap_pdu_t *response) {
   unsigned char buf[3];
 
@@ -97,9 +98,8 @@ hnd_get_time(coap_context_t  *ctx,
              coap_session_t *session,
              coap_pdu_t *request,
              str *token,
+             str *query,
              coap_pdu_t *response) {
-  coap_opt_iterator_t opt_iter;
-  coap_opt_t *option;
   unsigned char buf[40];
   size_t len;
   time_t now;
@@ -134,10 +134,8 @@ hnd_get_time(coap_context_t  *ctx,
     coap_ticks(&t);
     now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
 
-    if (request != NULL
-        && (option = coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter))
-        && memcmp(COAP_OPT_VALUE(option), "ticks",
-        min(5, COAP_OPT_LENGTH(option))) == 0) {
+    if (query != NULL
+        && memcmp(query->s, "ticks", min(5, query->length)) == 0) {
           /* output ticks */
           len = snprintf((char *)buf,
                          min(sizeof(buf),
@@ -159,10 +157,11 @@ hnd_get_time(coap_context_t  *ctx,
 
 static void
 hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
-             struct coap_resource_t *resource UNUSED_PARAM,
+             struct coap_resource_t *resource,
              coap_session_t *session UNUSED_PARAM,
              coap_pdu_t *request,
              str *token UNUSED_PARAM,
+             str *query UNUSED_PARAM,
              coap_pdu_t *response) {
   coap_tick_t t;
   size_t size;
@@ -177,7 +176,7 @@ hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
   response->hdr->code =
     my_clock_base ? COAP_RESPONSE_CODE(204) : COAP_RESPONSE_CODE(201);
 
-  resource->dirty = 1;
+  coap_resource_set_dirty(resource, NULL);
 
   /* coap_get_data() sets size to 0 on error */
   (void)coap_get_data(request, &size, &data);
@@ -199,6 +198,7 @@ hnd_delete_time(coap_context_t *ctx UNUSED_PARAM,
                 coap_session_t *session UNUSED_PARAM,
                 coap_pdu_t *request UNUSED_PARAM,
                 str *token UNUSED_PARAM,
+                str *query UNUSED_PARAM,
                 coap_pdu_t *response UNUSED_PARAM) {
   my_clock_base = 0;    /* mark clock as "deleted" */
 
@@ -213,9 +213,8 @@ hnd_get_async(coap_context_t *ctx,
               coap_session_t *session,
               coap_pdu_t *request,
               str *token UNUSED_PARAM,
+              str *query UNUSED_PARAM,
               coap_pdu_t *response) {
-  coap_opt_iterator_t opt_iter;
-  coap_opt_t *option;
   unsigned long delay = 5;
   size_t size;
 
@@ -228,12 +227,11 @@ hnd_get_async(coap_context_t *ctx,
     return;
   }
 
-  option = coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter);
-  if (option) {
-    unsigned char *p = COAP_OPT_VALUE(option);
+  if (query) {
+    unsigned char *p = query->s;
 
     delay = 0;
-    for (size = COAP_OPT_LENGTH(option); size; --size, ++p)
+    for (size = query->length; size; --size, ++p)
       delay = delay * 10 + (*p - '0');
   }
 
@@ -544,7 +542,7 @@ main(int argc, char **argv) {
       wait_ms -= result;
     } else {
       if ( time_resource ) {
-	time_resource->dirty = 1;
+	coap_resource_set_dirty(time_resource, NULL);
       }
       wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
     }

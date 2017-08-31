@@ -124,6 +124,7 @@ coap_register_async
 coap_remove_async
 coap_remove_from_queue
 coap_resource_init
+coap_resource_set_dirty
 coap_response_phrase
 coap_retransmit
 coap_run_once
