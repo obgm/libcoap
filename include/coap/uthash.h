@@ -597,6 +597,7 @@ do {                                                                            
     case 3:  _hj_i += ( (unsigned)_hj_key[2] << 16 );  /* FALLTHROUGH */         \
     case 2:  _hj_i += ( (unsigned)_hj_key[1] << 8 );   /* FALLTHROUGH */         \
     case 1:  _hj_i += _hj_key[0];                                                \
+    default: ;                                         /* does not happen */     \
   }                                                                              \
   HASH_JEN_MIX(_hj_i, _hj_j, hashv);                                             \
 } while (0)
