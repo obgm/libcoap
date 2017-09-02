@@ -41,6 +41,11 @@ coap_log_t coap_get_log_level(void);
 /** Sets the log level to the specified value. */
 void coap_set_log_level(coap_log_t level);
 
+typedef void (*coap_log_handler_t) (coap_log_t level, const char *message);
+
+/** Add a custom log callback, use NULL to reset default handler */
+void coap_set_log_handler(coap_log_handler_t handler);
+
 /** Returns a zero-terminated string with the name of this library. */
 const char *coap_package_name(void);
 
