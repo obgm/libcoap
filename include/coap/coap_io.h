@@ -166,4 +166,11 @@ struct coap_packet_t {
 #endif
 typedef struct coap_packet_t coap_packet_t;
 
+typedef enum {
+  COAP_NACK_TOO_MANY_RETRIES,
+  COAP_NACK_NOT_DELIVERABLE,
+  COAP_NACK_RST,
+  COAP_NACK_TLS_FAILED
+} coap_nack_reason_t;
+
 #endif /* _COAP_IO_H_ */

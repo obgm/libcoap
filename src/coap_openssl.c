@@ -509,7 +509,7 @@ int coap_dtls_send(coap_session_t *session,
   if (dtls_event >= 0) {
     coap_handle_event(session->context, dtls_event, session);
     if (dtls_event == COAP_EVENT_DTLS_ERROR || dtls_event == COAP_EVENT_DTLS_CLOSED) {
-      coap_session_disconnected(session);
+      coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
       r = -1;
     }
   }
@@ -540,8 +540,8 @@ void coap_dtls_handle_timeout(coap_session_t *session) {
 
   assert(ssl != NULL);
   if (DTLSv1_handle_timeout(ssl) < 0) {
-    /* Too may retries */
-    coap_session_disconnected(session);
+    /* Too many retries */
+    coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
   }
 }
 
@@ -607,7 +607,7 @@ int coap_dtls_receive(coap_session_t *session,
     if (dtls_event >= 0) {
       coap_handle_event(session->context, dtls_event, session);
       if (dtls_event == COAP_EVENT_DTLS_ERROR || dtls_event == COAP_EVENT_DTLS_CLOSED) {
-	coap_session_disconnected(session);
+	coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
 	r = -1;
       }
     }
