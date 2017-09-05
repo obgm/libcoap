@@ -106,5 +106,5 @@ coap_free_async(coap_async_state_t *s) {
 }
 
 #else
-void does_not_exist();	/* make some compilers happy */
+void does_not_exist(void);	/* make some compilers happy */
 #endif /* WITHOUT_ASYNC */

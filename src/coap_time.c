@@ -129,7 +129,7 @@ coap_tick_t coap_ticks_from_rt_us(uint64_t t) {
 #else /* HAVE_TIME_H */
 
 /* make compilers happy that do not like empty modules */
-COAP_STATIC_INLINE void dummy()
+COAP_STATIC_INLINE void dummy(void)
 {
 }
 
