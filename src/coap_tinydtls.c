@@ -354,7 +354,7 @@ coap_dtls_send(coap_session_t *session,
     if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
       coap_session_connected(session);
     else if (coap_event_dtls == DTLS_ALERT_CLOSE_NOTIFY || coap_event_dtls == COAP_EVENT_DTLS_ERROR)
-      coap_session_disconnected(session);
+      coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
   }
 
   return res;
@@ -400,7 +400,7 @@ coap_dtls_receive(coap_session_t *session,
     if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
       coap_session_connected(session);
     else if (coap_event_dtls == DTLS_ALERT_CLOSE_NOTIFY || coap_event_dtls == COAP_EVENT_DTLS_ERROR)
-      coap_session_disconnected(session);
+      coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
   }
 
   return res;

@@ -69,6 +69,13 @@ typedef void (*coap_response_handler_t)(struct coap_context_t *,
                                         coap_pdu_t *received,
                                         const coap_tid_t id);
 
+/** Message handler that is used as call-back in coap_context_t */
+typedef void (*coap_nack_handler_t)(struct coap_context_t *,
+                                    coap_session_t *session,
+                                    coap_pdu_t *sent,
+                                    coap_nack_reason_t reason,
+                                    const coap_tid_t id);
+
 #define COAP_MID_CACHE_SIZE 3
 typedef struct {
   unsigned char flags[COAP_MID_CACHE_SIZE];
@@ -120,6 +127,7 @@ typedef struct coap_context_t {
   unsigned int observe;
 
   coap_response_handler_t response_handler;
+  coap_nack_handler_t nack_handler;
 
   /**
    * Callback function that is used to signal events to the
@@ -160,6 +168,22 @@ coap_register_response_handler(coap_context_t *context,
                                coap_response_handler_t handler) {
   context->response_handler = handler;
 }
+
+/**
+ * Registers a new message handler that is called whenever a confirmable
+ * message (request or response) is dropped after all retries have been
+ * exhausted, or a rst message was received, or a network or TLS level
+ * event was received that indicates delivering the message is not possible.
+ *
+ * @param context The context to register the handler for.
+ * @param handler The nack handler to register.
+ */
+COAP_STATIC_INLINE void
+coap_register_nack_handler(coap_context_t *context,
+                           coap_nack_handler_t handler) {
+  context->nack_handler = handler;
+}
+
 
 /**
  * Registers the option type @p type with the given context object @p ctx.
@@ -245,7 +269,7 @@ void coap_set_app_data(coap_context_t *context, void *data);
  * context using the function coap_set_app_data(). This function will
  * return @c NULL if no data has been stored.
  */
-void *coap_get_app_data(coap_context_t *context);
+void *coap_get_app_data(const coap_context_t *context);
 
 /**
  * Creates a new ACK PDU with specified error @p code. The options specified by
@@ -439,27 +463,6 @@ int coap_remove_from_queue(coap_queue_t **queue,
                            coap_tid_t id,
                            coap_queue_t **node);
 
-/**
- * Removes the transaction identified by @p id from given @p queue. This is a
- * convenience function for coap_remove_from_queue() with automatic deletion of
- * the removed node.
- *
- * @param queue The queue to search for @p id.
- * @param session The session to look for.
- * @param id    The transaction id.
- *
- * @return      @c 1 if node was found, removed and destroyed, @c 0 otherwise.
- */
-COAP_STATIC_INLINE int
-coap_remove_transaction(coap_queue_t **queue, coap_session_t *session, coap_tid_t id) {
-  coap_queue_t *node;
-  if (!coap_remove_from_queue(queue, session, id, &node))
-    return 0;
-
-  coap_delete_node(node);
-  return 1;
-}
-
 coap_tid_t
 coap_wait_ack( coap_context_t *context, coap_session_t *session,
                coap_queue_t *node);
@@ -497,7 +500,8 @@ void coap_cancel_all_messages(coap_context_t *context,
 */
 void
 coap_cancel_session_messages(coap_context_t *context,
-                             coap_session_t *session);
+                             coap_session_t *session,
+                             coap_nack_reason_t reason);
 
 /**
  * Dispatches the PDUs from the receive queue in given context.

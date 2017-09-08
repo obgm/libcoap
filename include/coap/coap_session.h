@@ -67,6 +67,7 @@ typedef struct coap_session_t {
   size_t psk_identity_len;
   uint8_t *psk_key;
   size_t psk_key_len;
+  void *app;                    /**< application-specific data */
 } coap_session_t;
 
 /**
@@ -87,11 +88,24 @@ coap_session_t *coap_session_reference(coap_session_t *session);
 void coap_session_release(coap_session_t *session);
 
 /**
+* Stores @p data with the given session. This function overwrites any value
+* that has previously been stored with @p session.
+*/
+void coap_session_set_app_data(coap_session_t *session, void *data);
+
+/**
+* Returns any application-specific data that has been stored with @p
+* session using the function coap_session_set_app_data(). This function will
+* return @c NULL if no data has been stored.
+*/
+void *coap_session_get_app_data(const coap_session_t *session);
+
+/**
 * Notify session that it has failed connecting or has been disconnected.
 *
 * @param session The CoAP session.
 */
-void coap_session_disconnected(coap_session_t *session);
+void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason);
 
 /**
 * Notify session that the remote peer is no longer listening.

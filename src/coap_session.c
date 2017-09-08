@@ -38,6 +38,18 @@ coap_session_release(coap_session_t *session) {
   }
 }
 
+void
+coap_session_set_app_data(coap_session_t *session, void *app_data) {
+  assert(session);
+  session->app = app_data;
+}
+
+void *
+coap_session_get_app_data(const coap_session_t *session) {
+  assert(session);
+  return session->app;
+}
+
 static coap_session_t *
 coap_make_session(coap_proto_t proto, coap_session_type_t type, const coap_address_t *local, const coap_address_t *remote, int ifindex, coap_context_t *context, coap_endpoint_t *endpoint) {
   coap_session_t *session = (coap_session_t*)coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
@@ -99,8 +111,11 @@ void coap_session_free(coap_session_t *session) {
   if (session->psk_key)
     coap_free(session->psk_key);
 
-  LL_FOREACH_SAFE(session->sendqueue, q, tmp)
+  LL_FOREACH_SAFE(session->sendqueue, q, tmp) {
+    if (q->pdu->hdr->type==COAP_MESSAGE_CON && session->context->nack_handler)
+      session->context->nack_handler(session->context, session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);
     coap_delete_node(q);
+  }
 
   debug("*** %s: session closed\n", coap_session_str(session));
 
@@ -190,7 +205,7 @@ void coap_session_connected(coap_session_t *session) {
       bytes_written = coap_dtls_send(session, (const uint8_t*)q->pdu->hdr, q->pdu->length);
     else
       bytes_written = coap_session_send(session, (const uint8_t*)q->pdu->hdr, q->pdu->length);
-    if (bytes_written > 0 && q->pdu->hdr->type == COAP_MESSAGE_CON) {
+    if (q->pdu->hdr->type == COAP_MESSAGE_CON) {
       if (coap_wait_ack(session->context, session, q) >= 0)
 	q = NULL;
     }
@@ -201,7 +216,7 @@ void coap_session_connected(coap_session_t *session) {
   }
 }
 
-void coap_session_disconnected(coap_session_t *session) {
+void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
   debug("*** %s: session disconnected\n", coap_session_str(session));
   if (session->proto == COAP_PROTO_DTLS && session->tls) {
     coap_dtls_free_session(session);
@@ -227,7 +242,7 @@ void coap_session_reset(coap_session_t *session) {
 #ifndef WITHOUT_OBSERVE
   coap_delete_observers(session->context, session);
 #endif
-  coap_cancel_session_messages(session->context, session);
+  coap_cancel_session_messages(session->context, session, COAP_NACK_NOT_DELIVERABLE);
   if (session->proto == COAP_PROTO_DTLS && session->tls) {
     coap_dtls_free_session(session);
     session->tls = NULL;
@@ -238,6 +253,8 @@ void coap_session_reset(coap_session_t *session) {
     session->sendqueue = q->next;
     q->next = NULL;
     debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), (int)q->id);
+    if (q->pdu->hdr->type == COAP_MESSAGE_CON && session->context->nack_handler)
+      session->context->nack_handler(session->context, session, q->pdu, COAP_NACK_NOT_DELIVERABLE, q->id);
     coap_delete_node(q);
   }
 }

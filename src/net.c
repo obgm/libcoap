@@ -520,7 +520,7 @@ coap_set_app_data(coap_context_t *ctx, void *app_data) {
 }
 
 void *
-coap_get_app_data(coap_context_t *ctx) {
+coap_get_app_data(const coap_context_t *ctx) {
   assert(ctx);
   return ctx->app;
 }
@@ -896,6 +896,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 #endif /* WITHOUT_OBSERVE */
 
   /* And finally delete the node */
+  if (node->pdu->hdr->type == COAP_MESSAGE_CON && context->nack_handler)
+    context->nack_handler(context, node->session, node->pdu, COAP_NACK_TOO_MANY_RETRIES, node->id);
   coap_delete_node(node);
   return COAP_INVALID_TID;
 }
@@ -1019,8 +1021,12 @@ coap_read(coap_context_t *ctx, coap_tick_t now) {
   }
 
   LL_FOREACH_SAFE(ctx->sessions, s, tmp_s) {
-    if ((s->sock.flags & COAP_SOCKET_HAS_DATA) != 0)
+    if ((s->sock.flags & COAP_SOCKET_HAS_DATA) != 0) {
+      /* Make sure the session object is not deleted in one of the callbacks  */
+      coap_session_reference(s);
       coap_read_session(ctx, s, now);
+	  coap_session_release(s);
+	}
   }
 
 }
@@ -1152,13 +1158,16 @@ token_match(const unsigned char *a, size_t alen,
 }
 
 void
-coap_cancel_session_messages(coap_context_t *context, coap_session_t *session) {
+coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
+  coap_nack_reason_t reason) {
   coap_queue_t *p, *q;
 
   while (context->sendqueue && context->sendqueue->session == session) {
     q = context->sendqueue;
     context->sendqueue = q->next;
     debug("** %s tid=%d: removed\n", coap_session_str(session), q->id);
+    if (q->pdu->hdr->type == COAP_MESSAGE_CON && context->nack_handler)
+      context->nack_handler(context, session, q->pdu, reason, q->id);
     coap_delete_node(q);
   }
 
@@ -1172,6 +1181,8 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session) {
     if (q->session == session) {
       p->next = q->next;
       debug("** %s tid=%d: removed\n", coap_session_str(session), q->id);
+      if (q->pdu->hdr->type == COAP_MESSAGE_CON && context->nack_handler)
+        context->nack_handler(context, session, q->pdu, reason, q->id);
       coap_delete_node(q);
       q = p->next;
     } else {
@@ -1184,7 +1195,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session) {
 void
 coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
   const unsigned char *token, size_t token_length) {
-  /* cancel all messages in sendqueue that are for dst
+  /* cancel all messages in sendqueue that belong to session
    * and use the specified token */
   coap_queue_t *p, *q;
 
@@ -1816,6 +1827,10 @@ coap_dispatch(coap_context_t *context, coap_queue_t *rcvd) {
 
       if (sent)
 	coap_cancel(context, sent);
+
+      if(sent->pdu->hdr->type==COAP_MESSAGE_CON && context->nack_handler)
+	context->nack_handler(context, sent->session, sent->pdu, COAP_NACK_RST, sent->id);
+
       goto cleanup;
 
     case COAP_MESSAGE_NON:	/* check for unknown critical options */

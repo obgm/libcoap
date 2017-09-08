@@ -136,12 +136,14 @@ coap_session_connected
 coap_session_delay_pdu
 coap_session_disconnected
 coap_session_free
+coap_session_get_app_data
 coap_session_get_by_peer
 coap_session_max_pdu_size
 coap_session_reference
 coap_session_release
 coap_session_reset
 coap_session_send
+coap_session_set_app_data
 coap_session_set_mtu
 coap_session_str
 coap_set_app_data
