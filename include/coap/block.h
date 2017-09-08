@@ -21,8 +21,7 @@
 
 #ifndef COAP_MAX_BLOCK_SZX
 /**
- * The largest value for the SZX component in a Block option. Note that
- * 1 << (COAP_MAX_BLOCK_SZX + 4) should not exceed COAP_DEFAULT_PDU_SIZE.
+ * The largest value for the SZX component in a Block option.
  */
 #define COAP_MAX_BLOCK_SZX      6
 #endif /* COAP_MAX_BLOCK_SZX */
@@ -42,15 +41,15 @@ typedef struct {
  * returns @c NULL.
  */
 #define COAP_OPT_BLOCK_LAST(opt) \
-  (COAP_OPT_LENGTH(opt) ? (COAP_OPT_VALUE(opt) + (COAP_OPT_LENGTH(opt)-1)) : 0)
+  (coap_opt_length(opt) ? (coap_opt_const_value(opt) + (coap_opt_length(opt)-1)) : 0)
 
 /** Returns the value of the More-bit of a Block option @p opt. */
 #define COAP_OPT_BLOCK_MORE(opt) \
-  (COAP_OPT_LENGTH(opt) ? (*COAP_OPT_BLOCK_LAST(opt) & 0x08) : 0)
+  (coap_opt_length(opt) ? (*COAP_OPT_BLOCK_LAST(opt) & 0x08) : 0)
 
 /** Returns the value of the SZX-field of a Block option @p opt. */
 #define COAP_OPT_BLOCK_SZX(opt)  \
-  (COAP_OPT_LENGTH(opt) ? (*COAP_OPT_BLOCK_LAST(opt) & 0x07) : 0)
+  (coap_opt_length(opt) ? (*COAP_OPT_BLOCK_LAST(opt) & 0x07) : 0)
 
 /**
  * Returns the value of field @c num in the given block option @p block_opt.
@@ -62,7 +61,7 @@ unsigned int coap_opt_block_num(const coap_opt_t *block_opt);
  * bytes of data for a block size of 1 << (@p szx + 4).
  */
 COAP_STATIC_INLINE int
-coap_more_blocks(size_t data_len, unsigned int num, unsigned short szx) {
+coap_more_blocks(size_t data_len, unsigned int num, uint16_t szx) {
   return ((num+1) << (szx + 4)) < data_len;
 }
 
@@ -70,9 +69,9 @@ coap_more_blocks(size_t data_len, unsigned int num, unsigned short szx) {
 COAP_STATIC_INLINE void
 coap_opt_block_set_m(coap_opt_t *block_opt, int m) {
   if (m)
-    *(COAP_OPT_VALUE(block_opt) + (COAP_OPT_LENGTH(block_opt) - 1)) |= 0x08;
+    *(coap_opt_value(block_opt) + (coap_opt_length(block_opt) - 1)) |= 0x08;
   else
-    *(COAP_OPT_VALUE(block_opt) + (COAP_OPT_LENGTH(block_opt) - 1)) &= ~0x08;
+    *(coap_opt_value(block_opt) + (coap_opt_length(block_opt) - 1)) &= ~0x08;
 }
 
 /**
@@ -88,7 +87,7 @@ coap_opt_block_set_m(coap_opt_t *block_opt, int m) {
  *
  * @return      @c 1 on success, @c 0 otherwise.
  */
-int coap_get_block(coap_pdu_t *pdu, unsigned short type, coap_block_t *block);
+int coap_get_block(coap_pdu_t *pdu, uint16_t type, coap_block_t *block);
 
 /**
  * Writes a block option of type @p type to message @p pdu. If the requested
@@ -111,7 +110,7 @@ int coap_get_block(coap_pdu_t *pdu, unsigned short type, coap_block_t *block);
  * @return            @c 1 on success, or a negative value on error.
  */
 int coap_write_block_opt(coap_block_t *block,
-                         unsigned short type,
+                         uint16_t type,
                          coap_pdu_t *pdu,
                          size_t data_length);
 

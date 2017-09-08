@@ -20,13 +20,8 @@ struct coap_queue_t;
 
 #define COAP_DEFAULT_SESSION_TIMEOUT 300
 
-typedef uint8_t coap_proto_t;
-/**
-* coap_proto_t values
-*/
-#define COAP_PROTO_NONE	  0
-#define COAP_PROTO_UDP	  1
-#define COAP_PROTO_DTLS	  2
+#define COAP_PROTO_NOT_RELIABLE(p) ((p)==COAP_PROTO_UDP || (p)==COAP_PROTO_DTLS)
+#define COAP_PROTO_RELIABLE(p) ((p)==COAP_PROTO_TCP || (p)==COAP_PROTO_TLS)
 
 typedef uint8_t coap_session_type_t;
 /**
@@ -190,6 +185,20 @@ coap_session_t *coap_new_client_session_psk(
 */
 ssize_t coap_session_send(coap_session_t *session,
   const uint8_t *data, size_t datalen);
+
+/**
+* Send a pdu according to the session's protocol. This function returns
+* the number of bytes that have been transmitted, or a value less than zero
+* on error.
+*
+* @param session          Session to send pdu on.
+* @param pdu              The pdu to send.
+*
+* @return                 The number of bytes written on success, or a value
+*                         less than zero on error.
+*/
+ssize_t coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu);
+
 
 /**
  * Get session description.

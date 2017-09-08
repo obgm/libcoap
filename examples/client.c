@@ -46,7 +46,7 @@ static coap_list_t *optlist = NULL;
  * TODO: associate the resources with transaction id and make it expireable */
 static coap_uri_t uri;
 static str proxy = { 0, NULL };
-static unsigned short proxy_port = COAP_DEFAULT_PORT;
+static uint16_t proxy_port = COAP_DEFAULT_PORT;
 
 /* reading is done when this flag is set */
 static int ready = 0;
@@ -150,14 +150,14 @@ coap_new_request(coap_context_t *ctx,
   coap_list_t *opt;
   (void)ctx;
 
-  if ( ! ( pdu = coap_new_pdu(session) ) )
+  if ( ! ( pdu = coap_new_pdu() ) )
     return NULL;
 
-  pdu->hdr->type = msgtype;
-  pdu->hdr->id = coap_new_message_id(session);
-  pdu->hdr->code = m;
+  pdu->type = msgtype;
+  pdu->tid = coap_new_message_id(session);
+  pdu->code = m;
 
-  pdu->hdr->token_length = (uint16_t)the_token.length;
+  pdu->token_length = (uint8_t)the_token.length;
   if ( !coap_add_token(pdu, the_token.length, the_token.s)) {
     debug("cannot add token to request\n");
   }
@@ -311,8 +311,8 @@ resolve_address(const str *server, struct sockaddr *dst) {
 
 static inline int
 check_token(coap_pdu_t *received) {
-  return received->hdr->token_length == the_token.length &&
-    memcmp(received->hdr->token, the_token.s, the_token.length) == 0;
+  return received->token_length == the_token.length &&
+    memcmp(received->token, the_token.s, the_token.length) == 0;
 }
 
 static void
@@ -334,7 +334,7 @@ message_handler(struct coap_context_t *ctx,
 #ifndef NDEBUG
   if (LOG_INFO <= coap_get_log_level()) {
     debug("** process incoming %d.%02d response:\n",
-          (received->hdr->code >> 5), received->hdr->code & 0x1F);
+          (received->code >> 5), received->code & 0x1F);
     coap_show_pdu(received);
   }
 #endif
@@ -342,19 +342,19 @@ message_handler(struct coap_context_t *ctx,
   /* check if this is a response to our original request */
   if (!check_token(received)) {
     /* drop if this was just some message, or send RST in case of notification */
-    if (!sent && (received->hdr->type == COAP_MESSAGE_CON ||
-                  received->hdr->type == COAP_MESSAGE_NON))
+    if (!sent && (received->type == COAP_MESSAGE_CON ||
+                  received->type == COAP_MESSAGE_NON))
       coap_send_rst(session, received);
     return;
   }
 
-  if (received->hdr->type == COAP_MESSAGE_RST) {
+  if (received->type == COAP_MESSAGE_RST) {
     info("got RST\n");
     return;
   }
 
   /* output the received data, if any */
-  if (COAP_RESPONSE_CLASS(received->hdr->code) == 2) {
+  if (COAP_RESPONSE_CLASS(received->code) == 2) {
 
     /* set obs timer if we have successfully subscribed a resource */
     if (sent && coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter)) {
@@ -367,7 +367,7 @@ message_handler(struct coap_context_t *ctx,
      * both, Block1 and Block2 are present. */
     block_opt = coap_check_option(received, COAP_OPTION_BLOCK2, &opt_iter);
     if (block_opt) { /* handle Block2 */
-      unsigned short blktype = opt_iter.type;
+      uint16_t blktype = opt_iter.type;
 
       /* TODO: check if we are looking at the correct block number */
       if (coap_get_data(received, &len, &databuf))
@@ -511,9 +511,9 @@ message_handler(struct coap_context_t *ctx,
   } else {      /* no 2.05 */
 
     /* check if an error was signaled and output payload if so */
-    if (COAP_RESPONSE_CLASS(received->hdr->code) >= 4) {
+    if (COAP_RESPONSE_CLASS(received->code) >= 4) {
       fprintf(stderr, "%d.%02d",
-              (received->hdr->code >> 5), received->hdr->code & 0x1F);
+              (received->code >> 5), received->code & 0x1F);
       if (coap_get_data(received, &len, &databuf)) {
         fprintf(stderr, " ");
         while(len--)
@@ -587,7 +587,7 @@ usage( const char *program, const char *version) {
 }
 
 static coap_list_t *
-new_option_node(unsigned short key, size_t length, unsigned char *data) {
+new_option_node(uint16_t key, size_t length, unsigned char *data) {
   coap_list_t *node;
 
   node = coap_malloc(sizeof(coap_list_t) + sizeof(coap_option) + length);
@@ -611,7 +611,7 @@ typedef struct {
 } content_type_t;
 
 static void
-cmdline_content_type(char *arg, unsigned short key) {
+cmdline_content_type(char *arg, uint16_t key) {
   static content_type_t content_types[] = {
     {  0, "plain" },
     {  0, "text/plain" },
@@ -673,7 +673,7 @@ cmdline_content_type(char *arg, unsigned short key) {
   }
 }
 
-static unsigned short
+static uint16_t
 get_default_port(const coap_uri_t *u) {
   return coap_uri_scheme_is_secure(u) ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT;
 }
@@ -738,10 +738,10 @@ cmdline_uri(char *arg, int create_uri_opts) {
       while (res--) {
         coap_insert(&optlist,
                     new_option_node(COAP_OPTION_URI_PATH,
-                    COAP_OPT_LENGTH(buf),
-                    COAP_OPT_VALUE(buf)));
+                    coap_opt_length(buf),
+                    coap_opt_value(buf)));
 
-        buf += COAP_OPT_SIZE(buf);
+        buf += coap_opt_size(buf);
       }
     }
 
@@ -753,10 +753,10 @@ cmdline_uri(char *arg, int create_uri_opts) {
       while (res--) {
         coap_insert(&optlist,
                     new_option_node(COAP_OPTION_URI_QUERY,
-                    COAP_OPT_LENGTH(buf),
-                    COAP_OPT_VALUE(buf)));
+                    coap_opt_length(buf),
+                    coap_opt_value(buf)));
 
-        buf += COAP_OPT_SIZE(buf);
+        buf += coap_opt_size(buf);
       }
     }
   }
@@ -766,7 +766,7 @@ cmdline_uri(char *arg, int create_uri_opts) {
 
 static int
 cmdline_blocksize(char *arg) {
-  unsigned short size;
+  uint16_t size;
 
   again:
   size = 0;
@@ -791,7 +791,7 @@ cmdline_blocksize(char *arg) {
 static void
 set_blocksize(void) {
   static unsigned char buf[4];	/* hack: temporarily take encoded bytes */
-  unsigned short opt;
+  uint16_t opt;
   unsigned int opt_length;
 
   if (method != COAP_REQUEST_DELETE) {
@@ -1101,7 +1101,7 @@ main(int argc, char **argv) {
   int result = -1;
   coap_pdu_t  *pdu;
   static str server;
-  unsigned short port = COAP_DEFAULT_PORT;
+  uint16_t port = COAP_DEFAULT_PORT;
   char port_str[NI_MAXSERV] = "0";
   char node_str[NI_MAXHOST] = "";
   int opt, res;

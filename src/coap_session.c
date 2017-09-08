@@ -72,7 +72,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type, const coap_addre
   if (endpoint)
     session->mtu = endpoint->default_mtu;
   else
-    session->mtu = COAP_DEFAULT_PDU_SIZE;
+    session->mtu = COAP_DEFAULT_MTU;
   if (proto == COAP_PROTO_DTLS) {
     session->tls_overhead = 29;
     if (session->tls_overhead >= session->mtu) {
@@ -112,7 +112,7 @@ void coap_session_free(coap_session_t *session) {
     coap_free(session->psk_key);
 
   LL_FOREACH_SAFE(session->sendqueue, q, tmp) {
-    if (q->pdu->hdr->type==COAP_MESSAGE_CON && session->context->nack_handler)
+    if (q->pdu->type==COAP_MESSAGE_CON && session->context->nack_handler)
       session->context->nack_handler(session->context, session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);
     coap_delete_node(q);
   }
@@ -168,9 +168,9 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     node = coap_new_node();
     if (node == NULL)
       return COAP_INVALID_TID;
-    node->id = ntohs(pdu->hdr->id);
+    node->id = pdu->tid;
     node->pdu = pdu;
-    if (pdu->hdr->type == COAP_MESSAGE_CON) {
+    if (pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto) ) {
       uint8_t r;
       prng(&r, sizeof(r));
       /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
@@ -200,12 +200,9 @@ void coap_session_connected(coap_session_t *session) {
     coap_queue_t *q = session->sendqueue;
     session->sendqueue = q->next;
     q->next = NULL;
-    debug("** %s tid=%d: transmitted after delay\n", coap_session_str(session), (int)ntohs(q->pdu->hdr->id));
-    if (session->proto == COAP_PROTO_DTLS)
-      bytes_written = coap_dtls_send(session, (const uint8_t*)q->pdu->hdr, q->pdu->length);
-    else
-      bytes_written = coap_session_send(session, (const uint8_t*)q->pdu->hdr, q->pdu->length);
-    if (q->pdu->hdr->type == COAP_MESSAGE_CON) {
+    debug("** %s tid=%d: transmitted after delay\n", coap_session_str(session), (int)q->pdu->tid);
+    bytes_written = coap_session_send_pdu(session, q->pdu);
+    if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (coap_wait_ack(session->context, session, q) >= 0)
 	q = NULL;
     }
@@ -229,7 +226,7 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     session->sendqueue = q->next;
     q->next = NULL;
     debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), q->id);
-    if (q->pdu->hdr->type == COAP_MESSAGE_CON) {
+    if (q->pdu->type==COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (coap_wait_ack(session->context, session, q) >= 0)
 	q = NULL;
     }
@@ -254,8 +251,11 @@ void coap_session_reset(coap_session_t *session) {
     session->sendqueue = q->next;
     q->next = NULL;
     debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), (int)q->id);
-    if (q->pdu->hdr->type == COAP_MESSAGE_CON && session->context->nack_handler)
+    if ( q->pdu->type == COAP_MESSAGE_CON
+      && COAP_PROTO_NOT_RELIABLE(session->proto)
+      && session->context->nack_handler ) {
       session->context->nack_handler(session->context, session, q->pdu, COAP_NACK_NOT_DELIVERABLE, q->id);
+    }
     coap_delete_node(q);
   }
 }
@@ -486,7 +486,7 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     ep->hello.endpoint = ep;
   }
 
-  ep->default_mtu = COAP_DEFAULT_PDU_SIZE;
+  ep->default_mtu = COAP_DEFAULT_MTU;
 
   LL_PREPEND(context->endpoint, ep);
   return ep;

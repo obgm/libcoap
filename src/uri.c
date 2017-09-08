@@ -150,7 +150,7 @@ coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
 	      goto error;
       }
 
-      uri->port = (unsigned short)uri_port;
+      uri->port = (uint16_t)uri_port;
     } 
   }
   

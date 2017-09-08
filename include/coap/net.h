@@ -118,7 +118,7 @@ typedef struct coap_context_t {
    * value is set by coap_new_context() and is usually a random value. A new
    * message id can be created with coap_new_message_id().
    */
-  unsigned short message_id;
+  uint16_t message_id;
 
   /**
    * The next value to be used for Observe. This field is global for all
@@ -241,12 +241,7 @@ void coap_context_set_psk( coap_context_t *ctx, const char *hint,
  */
 COAP_STATIC_INLINE uint16_t
 coap_new_message_id(coap_session_t *session) {
-  session->tx_mid++;
-#ifndef WITH_CONTIKI
-  return htons(session->tx_mid);
-#else /* WITH_CONTIKI */
-  return uip_htons(session->tx_mid);
-#endif
+  return ++session->tx_mid;
 }
 
 /**

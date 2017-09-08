@@ -350,7 +350,7 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
     SSL_set_bio(context->ssl, bio, bio);
     SSL_set_app_data(context->ssl, NULL);
     SSL_set_options(context->ssl, SSL_OP_COOKIE_EXCHANGE);
-    SSL_set_mtu(context->ssl, COAP_DEFAULT_PDU_SIZE);
+    SSL_set_mtu(context->ssl, COAP_DEFAULT_MTU);
   }
 
   return context;

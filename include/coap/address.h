@@ -42,7 +42,7 @@ typedef struct coap_address_t {
 
 typedef struct coap_address_t {
   uip_ipaddr_t addr;
-  unsigned short port;
+  uint16_t port;
 } coap_address_t;
 
 #define _coap_address_equals_impl(A,B) \

@@ -189,12 +189,12 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
 #ifndef WITHOUT_QUERY_FILTER
   /* split query filter, if any */
   if (query_filter) {
-    resource_param.s = COAP_OPT_VALUE(query_filter);
-    while (resource_param.length < COAP_OPT_LENGTH(query_filter)
+    resource_param.s = coap_opt_value(query_filter);
+    while (resource_param.length < coap_opt_length(query_filter)
 	   && resource_param.s[resource_param.length] != '=')
       resource_param.length++;
     
-    if (resource_param.length < COAP_OPT_LENGTH(query_filter)) {
+    if (resource_param.length < coap_opt_length(query_filter)) {
       const str *rt_attributes;
       if (resource_param.length == 4 && 
 	  memcmp(resource_param.s, "href", 4) == 0)
@@ -210,11 +210,11 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
 
       /* rest is query-pattern */
       query_pattern.s = 
-	COAP_OPT_VALUE(query_filter) + resource_param.length + 1;
+	coap_opt_value(query_filter) + resource_param.length + 1;
 
-      assert((resource_param.length + 1) <= COAP_OPT_LENGTH(query_filter));
+      assert((resource_param.length + 1) <= coap_opt_length(query_filter));
       query_pattern.length = 
-	COAP_OPT_LENGTH(query_filter) - (resource_param.length + 1);
+	coap_opt_length(query_filter) - (resource_param.length + 1);
 
      if ((query_pattern.s[0] == '/') && ((flags & MATCH_URI) == MATCH_URI)) {
        query_pattern.s++;
@@ -400,7 +400,7 @@ coap_hash_request_uri(const coap_pdu_t *request, coap_key_t key) {
 
   coap_option_iterator_init((coap_pdu_t *)request, &opt_iter, filter);
   while ((option = coap_option_next(&opt_iter)))
-    coap_hash(COAP_OPT_VALUE(option), COAP_OPT_LENGTH(option), key);
+    coap_hash(coap_opt_value(option), coap_opt_length(option), key);
 }
 
 void
@@ -691,12 +691,12 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       token.length = obs->token_length;
       token.s = obs->token;
 
-      response->hdr->id = coap_new_message_id(obs->session);
+      response->tid = coap_new_message_id(obs->session);
       if ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) == 0
 	  && obs->non_cnt < COAP_OBS_MAX_NON) {
-	response->hdr->type = COAP_MESSAGE_NON;
+	response->type = COAP_MESSAGE_NON;
       } else {
-	response->hdr->type = COAP_MESSAGE_CON;
+	response->type = COAP_MESSAGE_CON;
       }
       /* fill with observer-specific data */
       h(context, r, obs->session, NULL, &token, obs->query, response);
@@ -704,7 +704,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       /* TODO: do not send response and remove observer when 
        *  COAP_RESPONSE_CLASS(response->hdr->code) > 2
        */
-      if (response->hdr->type == COAP_MESSAGE_CON) {
+      if (response->type == COAP_MESSAGE_CON) {
 	obs->non_cnt = 0;
       } else {
 	obs->non_cnt++;

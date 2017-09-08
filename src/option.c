@@ -24,14 +24,9 @@
 
 coap_opt_t *
 options_start(coap_pdu_t *pdu) {
-
-  if (pdu && pdu->hdr && 
-      (pdu->hdr->token + pdu->hdr->token_length 
-       < (unsigned char *)pdu->hdr + pdu->length)) {
-
-    coap_opt_t *opt = pdu->hdr->token + pdu->hdr->token_length;
+  if (pdu && pdu->token_length < pdu->used_size) {
+    coap_opt_t *opt = pdu->token + pdu->token_length;
     return (*opt == COAP_PAYLOAD_START) ? NULL : opt;
-  
   } else 
     return NULL;
 }
@@ -121,21 +116,18 @@ coap_opt_iterator_t *
 coap_option_iterator_init(coap_pdu_t *pdu, coap_opt_iterator_t *oi,
 			  const coap_opt_filter_t filter) {
   assert(pdu); 
-  assert(pdu->hdr);
+  assert(pdu->token);
   assert(oi);
   
   memset(oi, 0, sizeof(coap_opt_iterator_t));
 
-  oi->next_option = (unsigned char *)pdu->hdr + sizeof(coap_hdr_t)
-    + pdu->hdr->token_length;
-  if ((unsigned char *)pdu->hdr + pdu->length <= oi->next_option) {
+  oi->next_option = pdu->token + pdu->token_length;
+  if (pdu->token + pdu->used_size <= oi->next_option) {
     oi->bad = 1;
     return NULL;
   }
 
-  assert((sizeof(coap_hdr_t) + pdu->hdr->token_length) <= pdu->length);
-
-  oi->length = pdu->length - (sizeof(coap_hdr_t) + pdu->hdr->token_length);
+  oi->length = pdu->used_size - pdu->token_length;
 
   if (filter) {
     memcpy(oi->filter, filter, sizeof(coap_opt_filter_t));
@@ -207,7 +199,7 @@ coap_option_next(coap_opt_iterator_t *oi) {
 }
 
 coap_opt_t *
-coap_check_option(coap_pdu_t *pdu, unsigned short type, 
+coap_check_option(coap_pdu_t *pdu, uint16_t type, 
 		  coap_opt_iterator_t *oi) {
   coap_opt_filter_t f;
   
@@ -219,9 +211,9 @@ coap_check_option(coap_pdu_t *pdu, unsigned short type,
   return coap_option_next(oi);
 }
 
-unsigned short
+uint16_t
 coap_opt_delta(const coap_opt_t *opt) {
-  unsigned short n;
+  uint16_t n;
 
   n = (*opt++ & 0xf0) >> 4;
 
@@ -248,9 +240,9 @@ coap_opt_delta(const coap_opt_t *opt) {
   return n;
 }
 
-unsigned short
+uint16_t
 coap_opt_length(const coap_opt_t *opt) {
-  unsigned short length;
+  uint16_t length;
 
   length = *opt & 0x0f;
   switch (*opt & 0xf0) {
@@ -330,7 +322,7 @@ coap_opt_size(const coap_opt_t *opt) {
 
 size_t
 coap_opt_setheader(coap_opt_t *opt, size_t maxlen, 
-		   unsigned short delta, size_t length) {
+		   uint16_t delta, size_t length) {
   size_t skip = 0;
 
   assert(opt);
@@ -384,8 +376,8 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
 }
 
 size_t
-coap_opt_encode(coap_opt_t *opt, size_t maxlen, unsigned short delta,
-		const unsigned char *val, size_t length) {
+coap_opt_encode(coap_opt_t *opt, size_t maxlen, uint16_t delta,
+		const uint8_t *val, size_t length) {
   size_t l = 1;
 
   l = coap_opt_setheader(opt, maxlen, delta, length);
@@ -424,7 +416,7 @@ typedef struct {
 
 /** Returns true iff @p type denotes an option type larger than 255. */
 COAP_STATIC_INLINE int
-is_long_option(unsigned short type) { return type > 255; }
+is_long_option(uint16_t type) { return type > 255; }
 
 /** Operation specifiers for coap_filter_op(). */
 enum filter_op_t { FILTER_SET, FILTER_CLEAR, FILTER_GET };
@@ -450,7 +442,7 @@ enum filter_op_t { FILTER_SET, FILTER_CLEAR, FILTER_GET };
  */
 static int
 coap_option_filter_op(coap_opt_filter_t filter,
-		      unsigned short type,
+		      uint16_t type,
 		      enum filter_op_t op) {
   size_t index = 0;
   opt_filter *of = (opt_filter *)filter;
@@ -509,17 +501,17 @@ coap_option_filter_op(coap_opt_filter_t filter,
 }
 
 int
-coap_option_filter_set(coap_opt_filter_t filter, unsigned short type) {
+coap_option_filter_set(coap_opt_filter_t filter, uint16_t type) {
   return coap_option_filter_op(filter, type, FILTER_SET);
 }
 
 int
-coap_option_filter_unset(coap_opt_filter_t filter, unsigned short type) {
+coap_option_filter_unset(coap_opt_filter_t filter, uint16_t type) {
   return coap_option_filter_op(filter, type, FILTER_CLEAR);
 }
 
 int
-coap_option_filter_get(const coap_opt_filter_t filter, unsigned short type) {
+coap_option_filter_get(const coap_opt_filter_t filter, uint16_t type) {
   /* Ugly cast to make the const go away (FILTER_GET wont change filter
    * but as _set and _unset do, the function does not take a const). */
   return coap_option_filter_op((uint16_t *)filter, type, FILTER_GET);

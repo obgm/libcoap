@@ -35,7 +35,7 @@ coap_async_state_t *
 coap_register_async(coap_context_t *context, coap_session_t *session,
 		    coap_pdu_t *request, unsigned char flags, void *data) {
   coap_async_state_t *s;
-  coap_tid_t id = ntohs( request->hdr->id );
+  coap_tid_t id = request->tid;
 
   SEARCH_PAIR(context->async_state,s,session,session,id,id);
 
@@ -48,26 +48,26 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
 
   /* store information for handling the asynchronous task */
   s = (coap_async_state_t *)coap_malloc(sizeof(coap_async_state_t) + 
-					request->hdr->token_length);
+					request->token_length);
   if (!s) {
     coap_log(LOG_CRIT, "coap_register_async: insufficient memory\n");
     return NULL;
   }
 
-  memset(s, 0, sizeof(coap_async_state_t) + request->hdr->token_length);
+  memset(s, 0, sizeof(coap_async_state_t) + request->token_length);
 
   /* set COAP_ASYNC_CONFIRM according to request's type */
   s->flags = flags & ~COAP_ASYNC_CONFIRM;
-  if (request->hdr->type == COAP_MESSAGE_CON)
+  if (request->type == COAP_MESSAGE_CON)
     s->flags |= COAP_ASYNC_CONFIRM;
 
   s->appdata = data;
   s->session = coap_session_reference( session );
   s->id = id;
 
-  if (request->hdr->token_length) {
-    s->tokenlen = request->hdr->token_length;
-    memcpy(s->token, request->hdr->token, request->hdr->token_length);
+  if (request->token_length) {
+    s->tokenlen = request->token_length;
+    memcpy(s->token, request->token, request->token_length);
   }
     
   coap_touch_async(s);

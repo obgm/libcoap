@@ -101,7 +101,7 @@ hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
 
   HASH_FIND(hh, resources, resource->key, sizeof(coap_key_t), rd);
 
-  response->hdr->code = COAP_RESPONSE_CODE(205);
+  response->code = COAP_RESPONSE_CODE(205);
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
@@ -125,7 +125,7 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
                  str *query UNUSED_PARAM,
                  coap_pdu_t *response) {
 #if 1
-  response->hdr->code = COAP_RESPONSE_CODE(501);
+  response->code = COAP_RESPONSE_CODE(501);
 #else /* FIXME */
   coap_opt_iterator_t opt_iter;
   coap_opt_t *token, *etag;
@@ -212,7 +212,7 @@ hnd_delete_resource(coap_context_t  *ctx,
    * using coap_malloc() and must be released. */
   coap_delete_resource(ctx, resource->key);
 
-  response->hdr->code = COAP_RESPONSE_CODE(202);
+  response->code = COAP_RESPONSE_CODE(202);
 }
 
 static void
@@ -225,7 +225,7 @@ hnd_get_rd(coap_context_t  *ctx UNUSED_PARAM,
            coap_pdu_t *response) {
   unsigned char buf[3];
 
-  response->hdr->code = COAP_RESPONSE_CODE(205);
+  response->code = COAP_RESPONSE_CODE(205);
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
@@ -372,8 +372,8 @@ make_rd(coap_pdu_t *pdu) {
 
   etag = coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter);
   if (etag) {
-    rd->etag_len = min(COAP_OPT_LENGTH(etag), sizeof(rd->etag));
-    memcpy(rd->etag, COAP_OPT_VALUE(etag), rd->etag_len);
+    rd->etag_len = min(coap_opt_length(etag), sizeof(rd->etag));
+    memcpy(rd->etag, coap_opt_value(etag), rd->etag_len);
   }
 
   return rd;
@@ -396,7 +396,7 @@ hnd_post_rd(coap_context_t  *ctx,
 
   loc = (unsigned char *)coap_malloc(LOCSIZE);
   if (!loc) {
-    response->hdr->code = COAP_RESPONSE_CODE(500);
+    response->code = COAP_RESPONSE_CODE(500);
     return;
   }
   memcpy(loc, RD_ROOT_STR, RD_ROOT_SIZE);
@@ -426,7 +426,7 @@ hnd_post_rd(coap_context_t  *ctx,
   } else {      /* generate node identifier */
     loc_size +=
       snprintf((char *)(loc + loc_size), LOCSIZE - loc_size - 1,
-               "%x", request->hdr->id);
+               "%x", request->tid);
 
     if (loc_size > 1) {
       if (ins.length) {
@@ -505,7 +505,7 @@ hnd_post_rd(coap_context_t  *ctx,
 
   /* create response */
 
-  response->hdr->code = COAP_RESPONSE_CODE(201);
+  response->code = COAP_RESPONSE_CODE(201);
 
   { /* split path into segments and add Location-Path options */
     unsigned char _b[LOCSIZE];
@@ -517,9 +517,9 @@ hnd_post_rd(coap_context_t  *ctx,
     while (nseg--) {
       coap_add_option(response,
                       COAP_OPTION_LOCATION_PATH,
-                      COAP_OPT_LENGTH(b),
-                      COAP_OPT_VALUE(b));
-      b += COAP_OPT_SIZE(b);
+                      coap_opt_length(b),
+                      coap_opt_value(b));
+      b += coap_opt_size(b);
     }
   }
 }

@@ -264,7 +264,7 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
 
 /** Returns a textual description of the message type @p t. */
 static const char *
-msg_type_string(unsigned short t) {
+msg_type_string(uint16_t t) {
   static char *types[] = { "CON", "NON", "ACK", "RST", "???" };
 
   return types[min(t, sizeof(types)/sizeof(char *) - 1)];
@@ -272,13 +272,17 @@ msg_type_string(unsigned short t) {
 
 /** Returns a textual description of the method or response code. */
 static const char *
-msg_code_string(unsigned short c) {
-  static char *methods[] = { "0.00", "GET", "POST", "PUT", "DELETE",
-                             "FETCH", "PATCH", "iPATCH" };
+msg_code_string(uint16_t c) {
+  static const char *methods[] = { "0.00", "GET", "POST", "PUT", "DELETE",
+                                   "FETCH", "PATCH", "iPATCH" };
+  static const char *signals[] = { "7.00", "CSM", "Ping", "Pong", "Release",
+                                   "Abort" };
   static char buf[5];
 
-  if (c < sizeof(methods)/sizeof(char *)) {
+  if (c < sizeof(methods)/sizeof(const char *)) {
     return methods[c];
+  } else if ( c>=224 && c-224 < sizeof(signals)/sizeof(const char *) ) {
+    return signals[c-224];
   } else {
     snprintf(buf, sizeof(buf), "%u.%02u", c >> 5, c & 0x1f);
     return buf;
@@ -386,7 +390,7 @@ is_binary(int content_format) {
 
 void
 coap_show_pdu(const coap_pdu_t *pdu) {
-  unsigned char buf[COAP_DEFAULT_PDU_SIZE]; /* need some space for output creation */
+  unsigned char buf[1024]; /* need some space for output creation */
   size_t buf_len = 0; /* takes the number of bytes written to buf */
   int encode = 0, have_options = 0, i;
   coap_opt_iterator_t opt_iter;
@@ -396,11 +400,11 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   unsigned char *data;
 
   fprintf(COAP_DEBUG_FD, "v:%d t:%s c:%s i:%04x {",
-	  pdu->hdr->version, msg_type_string(pdu->hdr->type),
-	  msg_code_string(pdu->hdr->code), ntohs(pdu->hdr->id));
+	  COAP_DEFAULT_VERSION, msg_type_string(pdu->type),
+	  msg_code_string(pdu->code), pdu->tid);
 
-  for (i = 0; i < pdu->hdr->token_length; i++) {
-    fprintf(COAP_DEBUG_FD, "%02x", pdu->hdr->token[i]);
+  for (i = 0; i < pdu->token_length; i++) {
+    fprintf(COAP_DEBUG_FD, "%02x", pdu->token[i]);
   }
   fprintf(COAP_DEBUG_FD, "}");
 
@@ -417,8 +421,8 @@ coap_show_pdu(const coap_pdu_t *pdu) {
 
     switch (opt_iter.type) {
     case COAP_OPTION_CONTENT_FORMAT:
-      content_format = (int)coap_decode_var_bytes(COAP_OPT_VALUE(option),
-						  COAP_OPT_LENGTH(option));
+      content_format = (int)coap_decode_var_bytes(coap_opt_value(option),
+						  coap_opt_length(option));
 
       buf_len = print_content_format(content_format, buf, sizeof(buf));
       break;
@@ -440,8 +444,8 @@ coap_show_pdu(const coap_pdu_t *pdu) {
     case COAP_OPTION_SIZE1:
       /* show values as unsigned decimal value */
       buf_len = snprintf((char *)buf, sizeof(buf), "%u",
-			 coap_decode_var_bytes(COAP_OPT_VALUE(option),
-					       COAP_OPT_LENGTH(option)));
+			 coap_decode_var_bytes(coap_opt_value(option),
+					       coap_opt_length(option)));
       break;
 
     default:
@@ -457,8 +461,8 @@ coap_show_pdu(const coap_pdu_t *pdu) {
 	encode = 1;
       }
 
-      buf_len = print_readable(COAP_OPT_VALUE(option),
-			       COAP_OPT_LENGTH(option),
+      buf_len = print_readable(coap_opt_value(option),
+			       coap_opt_length(option),
 			       buf, sizeof(buf), encode);
     }
 

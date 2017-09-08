@@ -78,12 +78,27 @@ void coap_dtls_session_update_mtu(coap_session_t *session);
  * Send data to a DTLS peer.
  *
  * @param session   The CoAP session
- * @param pdu       The CoAP PDU
+ * @param data      pointer to data
+ * @param size      number of bytes to send
  * @return 0 if this would be blocking, -1 if there is an error or the number of cleartext bytes sent
  */
 int coap_dtls_send(coap_session_t *session,
                    const uint8_t *data,
                    size_t data_len);
+
+/**
+ * Send data to a TLS peer.
+ *
+ * @param session   The CoAP session
+ * @param data      pointer to data
+ * @param size      number of bytes to send
+ * @param flush     set to non-zero if the message should be sent now
+ * @return 0 if this would be blocking, -1 if there is an error or the number of cleartext bytes sent
+ */
+int coap_tls_send(coap_session_t *session,
+                   const uint8_t *data,
+                   size_t data_len,
+                   int flush);
 
 /**
 * Check if timeout is handled per session or per context.
