@@ -68,6 +68,7 @@ coap_get_app_data
 coap_get_block
 coap_get_data
 coap_get_log_level
+coap_get_query
 coap_get_resource_from_key
 coap_handle_event
 coap_handle_failed_notify

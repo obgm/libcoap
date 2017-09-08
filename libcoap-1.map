@@ -70,6 +70,7 @@ global:
   coap_get_block;
   coap_get_data;
   coap_get_log_level;
+  coap_get_query;
   coap_get_resource_from_key;
   coap_handle_event;
   coap_handle_failed_notify;
@@ -126,6 +127,7 @@ global:
   coap_remove_async;
   coap_remove_from_queue;
   coap_resource_init;
+  coap_resource_set_dirty;
   coap_response_phrase;
   coap_retransmit;
   coap_run_once;
@@ -137,16 +139,19 @@ global:
   coap_session_delay_pdu;
   coap_session_disconnected;
   coap_session_free;
+  coap_session_get_app_data;
   coap_session_get_by_peer;
   coap_session_max_pdu_size;
   coap_session_reference;
   coap_session_release;
   coap_session_reset;
   coap_session_send;
+  coap_session_set_app_data;
   coap_session_set_mtu;
   coap_session_str;
   coap_set_app_data;
   coap_set_event_handler;
+  coap_set_log_handler;
   coap_set_log_level;
   coap_show_pdu;
   coap_socket_bind_udp;
