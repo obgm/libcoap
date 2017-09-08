@@ -424,6 +424,8 @@ coap_free_resource(coap_resource_t *resource) {
   /* free all elements from resource->subscribers */
   LL_FOREACH_SAFE( resource->subscribers, obs, otmp ) {
     coap_session_release( obs->session );
+    if (obs->query)
+      coap_delete_string(obs->query);
     COAP_FREE_TYPE( subscription, obs );
   }
 
@@ -561,7 +563,8 @@ coap_find_observer(coap_resource_t *resource, coap_session_t *session,
 coap_subscription_t *
 coap_add_observer(coap_resource_t *resource, 
                   coap_session_t *session,
-		  const str *token) {
+		  const str *token,
+                  str *query) {
   coap_subscription_t *s;
   
   assert( session );
@@ -570,15 +573,22 @@ coap_add_observer(coap_resource_t *resource,
   s = coap_find_observer(resource, session, token);
 
   /* We are done if subscription was found. */
-  if (s)
+  if (s) {
+    if (s->query)
+      coap_delete_string(s->query);
+    s->query = query;
     return s;
+  }
 
   /* s points to a different subscription, so we have to create
    * another one. */
   s = COAP_MALLOC_TYPE(subscription);
 
-  if (!s)
+  if (!s) {
+    if (query)
+      coap_delete_string(query);
     return NULL;
+  }
 
   coap_subscription_init(s);
   s->session = coap_session_reference( session );
@@ -587,6 +597,8 @@ coap_add_observer(coap_resource_t *resource,
     s->token_length = token->length;
     memcpy(s->token, token->s, min(s->token_length, 8));
   }
+
+  s->query = query;
 
   /* add subscriber to resource */
   LL_PREPEND(resource->subscribers, s);
@@ -687,7 +699,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
 	response->hdr->type = COAP_MESSAGE_CON;
       }
       /* fill with observer-specific data */
-      h(context, r, obs->session, NULL, &token, response);
+      h(context, r, obs->session, NULL, &token, obs->query, response);
 
       /* TODO: do not send response and remove observer when 
        *  COAP_RESPONSE_CLASS(response->hdr->code) > 2
@@ -713,6 +725,32 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
     context->observe++;
   }
   r->dirty = 0;
+}
+
+int
+coap_resource_set_dirty(coap_resource_t *r, const str *query) {
+  if (!r->observable)
+    return 0;
+  if (query) {
+    coap_subscription_t *obs;
+    int found = 0;
+    LL_FOREACH(r->subscribers, obs) {
+      if (obs->query
+       && obs->query->length==query->length
+       && memcmp(obs->query->s, query->s, query->length)==0 ) {
+	found = 1;
+	if (!r->dirty && !obs->dirty) {
+	  obs->dirty = 1;
+	  r->partiallydirty = 1;
+	}
+      }
+    }
+    if (!found)
+      return 0;
+  } else {
+    r->dirty = 1;
+  }
+  return 1;
 }
 
 void

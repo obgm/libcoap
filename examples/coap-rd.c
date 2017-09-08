@@ -94,6 +94,7 @@ hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
                  coap_session_t *session UNUSED_PARAM,
                  coap_pdu_t *request UNUSED_PARAM,
                  str *token UNUSED_PARAM,
+                 str *query UNUSED_PARAM,
                  coap_pdu_t *response) {
   rd_t *rd = NULL;
   unsigned char buf[3];
@@ -121,6 +122,7 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
                  coap_session_t *session UNUSED_PARAM,
                  coap_pdu_t *request UNUSED_PARAM,
                  str *token UNUSED_PARAM,
+                 str *query UNUSED_PARAM,
                  coap_pdu_t *response) {
 #if 1
   response->hdr->code = COAP_RESPONSE_CODE(501);
@@ -197,6 +199,7 @@ hnd_delete_resource(coap_context_t  *ctx,
                     coap_session_t *session UNUSED_PARAM,
                     coap_pdu_t *request UNUSED_PARAM,
                     str *token UNUSED_PARAM,
+                    str *query UNUSED_PARAM,
                     coap_pdu_t *response) {
   rd_t *rd = NULL;
 
@@ -218,6 +221,7 @@ hnd_get_rd(coap_context_t  *ctx UNUSED_PARAM,
            coap_session_t *session UNUSED_PARAM,
            coap_pdu_t *request UNUSED_PARAM,
            str *token UNUSED_PARAM,
+           str *query UNUSED_PARAM,
            coap_pdu_t *response) {
   unsigned char buf[3];
 
@@ -381,10 +385,9 @@ hnd_post_rd(coap_context_t  *ctx,
             coap_session_t *session,
             coap_pdu_t *request,
             str *token UNUSED_PARAM,
+            str *query UNUSED_PARAM,
             coap_pdu_t *response) {
   coap_resource_t *r;
-  coap_opt_iterator_t opt_iter;
-  coap_opt_t *query;
 #define LOCSIZE 68
   unsigned char *loc;
   size_t loc_size;
@@ -402,16 +405,11 @@ hnd_post_rd(coap_context_t  *ctx,
   loc[loc_size++] = '/';
 
   /* store query parameters for later use */
-  query = coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter);
   if (query) {
-    parse_param((unsigned char *)"h", 1,
-    COAP_OPT_VALUE(query), COAP_OPT_LENGTH(query), &h);
-    parse_param((unsigned char *)"ins", 3,
-    COAP_OPT_VALUE(query), COAP_OPT_LENGTH(query), &ins);
-    parse_param((unsigned char *)"lt", 2,
-    COAP_OPT_VALUE(query), COAP_OPT_LENGTH(query), &lt);
-    parse_param((unsigned char *)"rt", 2,
-    COAP_OPT_VALUE(query), COAP_OPT_LENGTH(query), &rt);
+    parse_param((unsigned char *)"h", 1, query->s, query->length, &h);
+    parse_param((unsigned char *)"ins", 3, query->s, query->length, &ins);
+    parse_param((unsigned char *)"lt", 2, query->s, query->length, &lt);
+    parse_param((unsigned char *)"rt", 2, query->s, query->length, &rt);
   }
 
   if (h.length) {   /* client has specified a node name */

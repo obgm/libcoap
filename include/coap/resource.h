@@ -44,6 +44,7 @@ typedef void (*coap_method_handler_t)
    coap_session_t *,
    coap_pdu_t *,
    str * /* token */,
+   str * /* query string */,
    coap_pdu_t * /* response */);
 
 #define COAP_ATTR_FLAGS_RELEASE_NAME  0x1
@@ -298,12 +299,15 @@ void coap_hash_request_uri(const coap_pdu_t *request, coap_key_t key);
  * @param resource        The observed resource.
  * @param session         The observer's session
  * @param token           The token that identifies this subscription.
+ * @param query           The query string, if any. subscription will
+                          take ownership of the string.
  * @return                A pointer to the added/updated subscription
  *                        information or @c NULL on error.
  */
 coap_subscription_t *coap_add_observer(coap_resource_t *resource,
                                        coap_session_t *session,
-                                       const str *token);
+                                       const str *token,
+                                       str *query);
 
 /**
  * Returns a subscription object for given @p peer.
@@ -407,5 +411,7 @@ coap_print_status_t coap_print_wellknown(coap_context_t *,
                                          coap_opt_t *);
 
 void coap_handle_failed_notify(coap_context_t *, coap_session_t *, const str *);
+
+int coap_resource_set_dirty(coap_resource_t *r, const str *query);
 
 #endif /* _COAP_RESOURCE_H_ */
