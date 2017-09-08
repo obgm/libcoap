@@ -148,6 +148,7 @@ coap_session_set_mtu
 coap_session_str
 coap_set_app_data
 coap_set_event_handler
+coap_set_log_handler
 coap_set_log_level
 coap_show_pdu
 coap_socket_bind_udp

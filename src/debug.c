@@ -489,30 +489,45 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   fflush(COAP_DEBUG_FD);
 }
 
+static coap_log_handler_t log_handler = NULL;
+
+void coap_set_log_handler(coap_log_handler_t handler) {
+  log_handler = handler;
+}
 
 void 
 coap_log_impl(coap_log_t level, const char *format, ...) {
-  char timebuf[32];
-  coap_tick_t now;
-  va_list ap;
-  FILE *log_fd;
 
   if (maxlog < level)
     return;
+
+  if (log_handler) {
+    char message[128];
+    va_list ap;
+    va_start(ap, format);
+    vsnprintf( message, sizeof(message), format, ap);
+    va_end(ap);
+    log_handler(level, message);
+  } else {
+    char timebuf[32];
+    coap_tick_t now;
+    va_list ap;
+    FILE *log_fd;
   
-  log_fd = level <= LOG_CRIT ? COAP_ERR_FD : COAP_DEBUG_FD;
+    log_fd = level <= LOG_CRIT ? COAP_ERR_FD : COAP_DEBUG_FD;
 
-  coap_ticks(&now);
-  if (print_timestamp(timebuf,sizeof(timebuf), now))
-    fprintf(log_fd, "%s ", timebuf);
+    coap_ticks(&now);
+    if (print_timestamp(timebuf,sizeof(timebuf), now))
+      fprintf(log_fd, "%s ", timebuf);
 
-  if (level <= LOG_DEBUG)
-    fprintf(log_fd, "%s ", loglevels[level]);
+    if (level <= LOG_DEBUG)
+      fprintf(log_fd, "%s ", loglevels[level]);
 
-  va_start(ap, format);
-  vfprintf(log_fd, format, ap);
-  va_end(ap);
-  fflush(log_fd);
+    va_start(ap, format);
+    vfprintf(log_fd, format, ap);
+    va_end(ap);
+    fflush(log_fd);
+  }
 }
 
 static struct packet_num_interval {
