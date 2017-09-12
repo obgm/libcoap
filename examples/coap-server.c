@@ -104,6 +104,7 @@ hnd_get_time(coap_context_t  *ctx,
   size_t len;
   time_t now;
   coap_tick_t t;
+  (void)request;
 
   /* FIXME: return time, e.g. in human-readable by default and ticks
    * when query ?ticks is given. */

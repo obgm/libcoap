@@ -217,6 +217,7 @@ void coap_session_connected(coap_session_t *session) {
 }
 
 void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
+  (void)reason;
   debug("*** %s: session disconnected\n", coap_session_str(session));
   if (session->proto == COAP_PROTO_DTLS && session->tls) {
     coap_dtls_free_session(session);
