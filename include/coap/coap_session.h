@@ -48,6 +48,7 @@ typedef struct coap_session_t {
   uint8_t ref;			  /**< reference count from queues */
   uint16_t mtu;			  /**< path mtu */
   uint16_t tls_overhead;	  /**< overhead of TLS layer */
+  coap_address_t local_if;        /**< optional local interface address */
   coap_address_t remote_addr;     /**< remote address and port */
   coap_address_t local_addr;	  /**< local address and port */
   int ifindex;                    /**< interface index */
@@ -57,6 +58,10 @@ typedef struct coap_session_t {
   void *tls;			  /**< security parameters */
   uint16_t tx_mid;                /**< the last message id that was used in this session */
   struct coap_queue_t *sendqueue; /**< list of messages waiting to be sent */
+  size_t partial_write;           /**< if > 0 indicates number of bytes already written from the pdu at the head of sendqueue */
+  uint8_t read_header[8];         /**< storage space for header of incoming message header */
+  size_t partial_read;            /**< if > 0 indicates number of bytes already read for an incoming message */
+  coap_pdu_t *partial_pdu;        /**< incomplete incoming pdu */
   coap_tick_t last_rx_tx;
   uint8_t *psk_identity;
   size_t psk_identity_len;
@@ -131,7 +136,7 @@ void coap_session_set_mtu(coap_session_t *session, unsigned mtu);
  * @param session The CoAP session.
  * @return maximum PDU size
  */
-unsigned int coap_session_max_pdu_size(coap_session_t *session);
+size_t coap_session_max_pdu_size(coap_session_t *session);
 
 /**
 * Creates a new client session to the designated server.
@@ -170,6 +175,18 @@ coap_session_t *coap_new_client_session_psk(
   const char *identity,
   const uint8_t *key,
   unsigned key_len
+);
+
+/**
+* Creates a new server session for the specified endpoint.
+* @param ctx The CoAP context.
+* @param ep An endpoint where an incoming connection request is pending.
+*
+* @return A new CoAP session or NULL if failed. Call coap_session_release to free.
+*/
+coap_session_t *coap_new_server_session(
+  struct coap_context_t *ctx,
+  struct coap_endpoint_t *ep
 );
 
 /**

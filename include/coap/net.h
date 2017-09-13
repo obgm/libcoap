@@ -372,10 +372,12 @@ coap_tid_t coap_retransmit(coap_context_t *context, coap_queue_t *node);
 * For applications with their own message loop, send all pending retransmits and
 * return the list of sockets with events to wait for and the next timeout
 * The application should call coap_read, then coap_write again when any condition below is true:
-* - data is available on any of the sockets with the COAP_SOCKET_WANT_DATA flag set
+* - data is available on any of the sockets with the COAP_SOCKET_WANT_READ
+* - an incoming connection is pending in the listen queue and the COAP_SOCKET_WANT_ACCEPT flag is set
 * - at least some data can be written without blocking on any of the sockets with the COAP_SOCKET_WANT_WRITE flag set
+* - a connection event occured (success or failure) and the COAP_SOCKET_WANT_CONNECT flag is set
 * - the timeout has expired
-* Before calling coap_read or coap_write again, the application should position COAP_SOCKET_HAS_DATA and COAP_SOCKET_CAN_WRITE flags as applicable.
+* Before calling coap_read or coap_write again, the application should position COAP_SOCKET_CAN_READ and COAP_SOCKET_CAN_WRITE flags as applicable.
 *
 * @param ctx The CoAP context
 * @param sockets array of socket descriptors, filled on output
@@ -422,7 +424,7 @@ int coap_run_once( coap_context_t *ctx, unsigned int timeout_ms );
  * @return       @c 0 if message was handled successfully, or less than zero on
  *               error.
  */
-int coap_handle_message(coap_context_t *ctx, coap_session_t *session, uint8_t *data, size_t data_len);
+int coap_handle_dgram(coap_context_t *ctx, coap_session_t *session, uint8_t *data, size_t data_len);
 
 /**
  * Invokes the event handler of @p context for the given @p event and
@@ -501,7 +503,8 @@ coap_cancel_session_messages(coap_context_t *context,
 /**
  * Dispatches the PDUs from the receive queue in given context.
  */
-void coap_dispatch(coap_context_t *context, coap_queue_t *rcvd);
+void coap_dispatch(coap_context_t *context, coap_session_t *session,
+                   coap_pdu_t *pdu);
 
 /**
  * Returns 1 if there are no messages to send or to dispatch in the context's

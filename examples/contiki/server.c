@@ -134,11 +134,8 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 	&& memcmp(COAP_OPT_VALUE(option), "ticks",
 		  min(5, COAP_OPT_LENGTH(option))) == 0) {
       /* output ticks */
-      len = snprintf((char *)buf, 
-	   min(sizeof(buf), response->max_size - response->length),
-		     "%u", (unsigned int)now);
+      len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
       coap_add_data(response, len, buf);
-
     }
   }
 }

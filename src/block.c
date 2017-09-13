@@ -82,6 +82,7 @@ coap_write_block_opt(coap_block_t *block, uint16_t type,
     return -2;
   }
   
+  assert(pdu->max_size > 0);
   avail = pdu->max_size - pdu->used_size - 4;
   want = (size_t)1 << (block->szx + 4);
 

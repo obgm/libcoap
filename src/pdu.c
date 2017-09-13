@@ -39,8 +39,11 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   assert(pdu);
   assert(pdu->token);
   assert(pdu->max_hdr_size >= COAP_PDU_MAX_UDP_HEADER_SIZE);
+  if (pdu->alloc_size > size)
+    pdu->alloc_size = size;
   pdu->type = 0;
   pdu->code = 0;
+  pdu->hdr_size = 0;
   pdu->token_length = 0;
   pdu->tid = 0;
   pdu->max_delta = 0;
@@ -69,7 +72,8 @@ coap_pdu_from_pbuf( struct pbuf *pbuf )
   pdu->max_hdr_size = COAP_PDU_MAX_UDP_HEADER_SIZE;
   pdu->pbuf = pbuf;
   pdu->token = pbuf->payload + pdu->max_hdr_size;
-  coap_pdu_clear(pdu, pbuf->tot_len - pdu->max_hdr_size);
+  pdu->alloc_size = pbuf->tot_len - pdu->max_hdr_size;
+  coap_pdu_clear(pdu, pdu->alloc_size);
 
   return pdu;
 }
@@ -81,14 +85,11 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size) {
   uint8_t *buf;
 
 #ifdef WITH_CONTIKI
-  if (size == 0)
+  if (size == COAP_PDU_SIZE_DYNAMIC)
     size = COAP_RXBUFFER_SIZE - COAP_PDU_MAX_UDP_HEADER_SIZE;
   assert(size <= COAP_RXBUFFER_SIZE - COAP_PDU_MAX_UDP_HEADER_SIZE);
   if (size > COAP_RXBUFFER_SIZE - COAP_PDU_MAX_UDP_HEADER_SIZE)
     return NULL;
-#else
-  if (size == 0)
-    size = 256;
 #endif
 
   pdu = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
@@ -107,9 +108,17 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size) {
     pdu = NULL;
   }
   pdu->token = pdu->pbuf->payload + pdu->max_hdr_size;
-  size = pbuf->tot_len - pdu->max_hdr_size;
+  if (size == COAP_PDU_SIZE_DYNAMIC)
+    size = pbuf->tot_len - pdu->max_hdr_size;
+  assert(size <= pbuf->tot_len - pdu->max_hdr_size);
+  if (size > pbuf->tot_len - pdu->max_hdr_size)
+    return NULL;
 #else /* WITH_LWIP */
-  buf = coap_malloc_type(COAP_PDU_BUF, size + pdu->max_hdr_size);
+  if (size != COAP_PDU_SIZE_DYNAMIC)
+    pdu->alloc_size = size;
+  else
+    pdu->alloc_size = 256;
+  buf = coap_malloc_type(COAP_PDU_BUF, pdu->alloc_size + pdu->max_hdr_size);
   if (buf == NULL) {
     coap_free_type(COAP_PDU, pdu);
     pdu = NULL;
@@ -124,8 +133,8 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size) {
 }
 
 coap_pdu_t *
-coap_new_pdu() {
-  coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, 0);
+coap_new_pdu(struct coap_session_t *session) {
+  coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, coap_session_max_pdu_size(session));
 #ifndef NDEBUG
   if (!pdu)
     coap_log(LOG_CRIT, "coap_new_pdu: cannot allocate memory for new PDU\n");
@@ -147,23 +156,19 @@ coap_delete_pdu(coap_pdu_t *pdu) {
 }
 
 static int coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
-  if (new_size > pdu->max_size) {
-#if defined(WITH_LWIP)
-    if (new_size > pbuf->tot_len - pdu->max_hdr_size) {
-      warn( "coap_pdu_resize: pdu too big\n" );
-      return NULL;
-    }
-#elif defined(WITH_CONTIKI)
-    if (new_size > COAP_RXBUFFER_SIZE - COAP_PDU_MAX_UDP_HEADER_SIZE) {
-      warn( "coap_pdu_resize: pdu too big\n" );
-      return NULL;
-    }
-#else
+  if (new_size > pdu->alloc_size) {
     uint8_t *new_hdr;
-    size_t offset = 0;
+    size_t offset;
+    if (pdu->max_size && new_size > pdu->max_size) {
+      warn( "coap_pdu_resize: pdu too big\n" );
+      return 0;
+    }
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
     if (pdu->data != NULL) {
       assert(pdu->data > pdu->token);
       offset = pdu->data - pdu->token;
+    } else {
+      offset = 0;
     }
     new_hdr = (uint8_t*)realloc(pdu->token - pdu->max_hdr_size, new_size + pdu->max_hdr_size);
     if (new_hdr == NULL) {
@@ -177,18 +182,14 @@ static int coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
       pdu->data = NULL;
 #endif
   }
-  pdu->max_size = new_size;
+  pdu->alloc_size = new_size;
   return 1;
 }
 
 static int
 coap_pdu_check_resize(coap_pdu_t *pdu, size_t size) {
-  if (size > pdu->max_size) {
-#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
-    warn("coap_pdu_check_resize: cannot resize\n");
-    return 0;
-#endif
-    size_t new_size = pdu->max_size * 2;
+  if (size > pdu->alloc_size) {
+    size_t new_size = max(256, pdu->alloc_size * 2);
     while (size > new_size)
       new_size *= 2;
     if (!coap_pdu_resize(pdu, new_size))
@@ -229,13 +230,15 @@ coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len, const uint8_t *data)
     return 0;
   }
 
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
   if (!coap_pdu_check_resize(pdu, pdu->used_size + len + 5))
     return 0;
+#endif
 
   opt = pdu->token + pdu->used_size;
 
   /* encode option and check length */
-  optsize = coap_opt_encode(opt, pdu->max_size - pdu->used_size, 
+  optsize = coap_opt_encode(opt, pdu->alloc_size - pdu->used_size, 
 			    type - pdu->max_delta, data, len);
 
   if (!optsize) {
@@ -264,13 +267,15 @@ coap_add_option_later(coap_pdu_t *pdu, uint16_t type, size_t len) {
     return NULL;
   }
 
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
   if (!coap_pdu_check_resize(pdu, pdu->used_size + len + 5))
     return 0;
+#endif
 
   opt = pdu->token + pdu->used_size;
 
   /* encode option and check length */
-  optsize = coap_opt_encode(opt, pdu->max_size - pdu->used_size,
+  optsize = coap_opt_encode(opt, pdu->alloc_size - pdu->used_size,
 			    type - pdu->max_delta, NULL, len);
 
   if (!optsize) {
@@ -432,7 +437,7 @@ coap_pdu_parse_size(coap_proto_t proto,
   if ((proto == COAP_PROTO_TCP || proto==COAP_PROTO_TLS) && length >= 1) {
     uint8_t len = *data >> 4;
     if (len < 13) {
-      size = len - 2;
+      size = len;
     } else if (length >= 2) {
       if (len==13) {
 	size = (size_t)data[1] + 13;
@@ -444,99 +449,50 @@ coap_pdu_parse_size(coap_proto_t proto,
 	}
       }
     }
+    size += data[0] & 0x0f;
   }
   
   return size;
 }
 
 int
-coap_pdu_parse_opt(coap_proto_t proto,
-                   const uint8_t *data,
-                   size_t length,
-                   coap_pdu_t *pdu,
-                   size_t *offset)
-{
-  const coap_opt_t *opt;
-  const uint8_t *token;
-
-  assert(data);
-  assert(pdu);
-
-  *offset = 0;
-
-#ifdef WITH_LWIP
-  /* this verifies that with the classical copy-at-parse-time and lwip's
-   * zerocopy-into-place approaches, both share the same idea of destination
-   * addresses */
-  LWIP_ASSERT("coap_pdu_parse with unexpected addresses", data == pdu->token - 4);
-  LWIP_ASSERT("coap_pdu_parse with unexpected length", length == pdu->used_size + 4);
-#endif
-
+coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
+  uint8_t *hdr = pdu->token - pdu->hdr_size;
   if (proto == COAP_PROTO_UDP || proto == COAP_PROTO_DTLS) {
-    if (length < 4) {
-      debug( "coap_pdu_parse: UDP header too short\n" );
-      return 0;
-    }
-    uint8_t version = data[0] >> 6;
-    if (version != COAP_DEFAULT_VERSION) {
+    assert(pdu->hdr_size == 4);
+    if ((hdr[0] >> 6) != COAP_DEFAULT_VERSION) {
       debug( "coap_pdu_parse: UDP version not supported\n" );
       return 0;
     }
-    pdu->type = (data[0] >> 4) & 0x03;
-    pdu->token_length = data[0] & 0x0f;
-    pdu->code = data[1];
-    pdu->tid = (uint16_t)data[2] << 8 | data[3];
-    token = data + 4;
-  } else if (proto == COAP_PROTO_UDP || proto == COAP_PROTO_DTLS) {
-    uint8_t len;
-    if (length < 2) {
-      debug( "coap_pdu_parse: TCP header too short\n" );
-      return 0;
-    }
-    len = data[0] >> 4;
-    if (len < 13) {
-      pdu->code = data[1];
-      token = data + 2;
-    } else if (len == 13) {
-      if (length < 3) {
-	debug( "coap_pdu_parse: TCP8 header too short\n" );
-	return 0;
-      }
-      pdu->code = data[2];
-      token = data + 3;
-    } else if (len == 14) {
-      if (length < 4) {
-	debug( "coap_pdu_parse: TCP16 header too short\n" );
-	return 0;
-      }
-      pdu->code = data[3];
-      token = data + 4;
-    } else {
-      if (length < 6) {
-	debug( "coap_pdu_parse: TCP32 header too short\n" );
-	return 0;
-      }
-      pdu->code = data[5];
-      token = data + 6;
-    }
+    pdu->type = (hdr[0] >> 4) & 0x03;
+    pdu->token_length = hdr[0] & 0x0f;
+    pdu->code = hdr[1];
+    pdu->tid = (uint16_t)hdr[2] << 8 | hdr[3];
+  } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
+    assert(pdu->hdr_size >= 2 && pdu->hdr_size <= 6);
     pdu->type = COAP_MESSAGE_CON;
-    pdu->token_length = data[0] & 0x0f;
+    pdu->token_length = hdr[0] & 0x0f;
+    pdu->code = hdr[pdu->hdr_size-1];
     pdu->tid = 0;
   } else {
     debug( "coap_pdu_parse: unsupported protocol\n" );
     return 0;
   }
+  return 1;
+}
+
+int
+coap_pdu_parse_opt(coap_pdu_t *pdu, coap_proto_t proto) {
 
   /* sanity checks */
   if (pdu->code == 0) {
-    if (length != token - data || pdu->token_length) {
+    if (pdu->used_size != 0 || pdu->token_length) {
       debug("coap_pdu_parse: empty message is not empty\n");
       return 0;
     }
   }
 
-  if (token + pdu->token_length > data + length
-      || pdu->token_length > 8) {
+  if (pdu->token_length > pdu->used_size || pdu->token_length > 8) {
     debug("coap_pdu_parse: invalid Token\n");
     return 0;
   }
@@ -544,10 +500,11 @@ coap_pdu_parse_opt(coap_proto_t proto,
   if (pdu->code == 0) {
     /* empty packet */
     pdu->used_size = 0;
+    pdu->data = NULL;
   } else {
     /* skip header + token */
-    opt = token + pdu->token_length;
-    length = data + length - opt;
+    coap_opt_t *opt = pdu->token + pdu->token_length;
+    size_t length = pdu->used_size - pdu->token_length;
 
     while (length > 0 && *opt != COAP_PAYLOAD_START) {
       if ( !next_option_safe( &opt, (size_t *)&length ) ) {
@@ -565,17 +522,10 @@ coap_pdu_parse_opt(coap_proto_t proto,
         return 0;
       }
     }
-
-    if (opt > token) {
-      if (!coap_pdu_check_resize(pdu, opt - token))
-	return 0;
-
-      /* Append options (including the token) to pdu structure, if any. */
-      memcpy(pdu->token, token, opt - token);
-      pdu->used_size = opt - token;
-
-      *offset = opt - data;
-    }
+    if (length > 0)
+      pdu->data = opt;
+    else
+      pdu->data = NULL;
   }
 
   return 1;
@@ -587,18 +537,21 @@ coap_pdu_parse(coap_proto_t proto,
                size_t length,
                coap_pdu_t *pdu)
 {
-  size_t offset;
-  if (coap_pdu_parse_opt(proto, data, length, pdu, &offset) == 0)
+  size_t hdr_size;
+
+  if (length == 0)
     return 0;
-  length -= offset;
-  if (offset == 0 || length == 0)
-    return 1;
-  if (!coap_pdu_resize(pdu, pdu->used_size + length))
+  hdr_size = coap_pdu_parse_header_size(proto, data);
+  if (!hdr_size || hdr_size > length)
     return 0;
-  pdu->data = pdu->token + pdu->used_size;
-  memcpy(pdu->data, data + offset, length);
-  pdu->used_size += length;
-  return 1;
+  if (hdr_size > pdu->max_hdr_size)
+    return 0;
+  if (!coap_pdu_resize(pdu, length - hdr_size))
+    return 0;
+  memcpy(pdu->token - hdr_size, data, length);
+  pdu->hdr_size = (uint8_t)hdr_size;
+  pdu->used_size = length - hdr_size;
+  return coap_pdu_parse_header(pdu, proto) && coap_pdu_parse_opt(pdu, proto);
 }
 
 size_t
@@ -615,7 +568,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
     pdu->token[-3] = pdu->code;
     pdu->token[-2] = (uint8_t)(pdu->tid >> 8);
     pdu->token[-1] = (uint8_t)(pdu->tid);
-    return 4;
+    pdu->hdr_size = 4;
   } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
     size_t len;
     assert(pdu->used_size >= pdu->token_length);
@@ -633,7 +586,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
       pdu->token[-2] = (uint8_t)len << 4
                      | pdu->token_length;
       pdu->token[-1] = pdu->code;
-      return 2;
+      pdu->hdr_size = 2;
     } else if (len < 269) {
       assert(pdu->max_hdr_size >= 3);
       if (pdu->max_hdr_size < 3) {
@@ -643,7 +596,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
       pdu->token[-3] = 13 << 4 | pdu->token_length;
       pdu->token[-2] = (uint8_t)(len - 13);
       pdu->token[-1] = pdu->code;
-      return 3;
+      pdu->hdr_size = 3;
     } else if (len < 65805) {
       assert(pdu->max_hdr_size >= 4);
       if (pdu->max_hdr_size < 4) {
@@ -654,7 +607,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
       pdu->token[-3] = (uint8_t)((len - 269) >> 8);
       pdu->token[-2] = (uint8_t)(len - 269);
       pdu->token[-1] = pdu->code;
-      return 4;
+      pdu->hdr_size = 4;
     } else {
       assert(pdu->max_hdr_size >= 6);
       if (pdu->max_hdr_size < 6) {
@@ -667,9 +620,10 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
       pdu->token[-3] = (uint8_t)((len - 65805) >> 8);
       pdu->token[-2] = (uint8_t)(len - 65805);
       pdu->token[-1] = pdu->code;
-      return 6;
+      pdu->hdr_size = 6;
     }
+  } else {
+    warn("coap_pdu_encode_header: unsupported protocol");
   }
-  warn("coap_pdu_encode_header: unsupported protocol");
-  return 0;
+  return pdu->hdr_size;
 }

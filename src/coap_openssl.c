@@ -33,6 +33,10 @@ int coap_dtls_is_supported(void) {
   return 1;
 }
 
+int coap_tls_is_supported(void) {
+  return 0;
+}
+
 void coap_dtls_startup(void) {
   SSL_load_error_strings();
   SSL_library_init();
@@ -588,7 +592,7 @@ int coap_dtls_receive(coap_session_t *session,
   dtls_event = -1;
   r = SSL_read(ssl, pdu, (int)sizeof(pdu));
   if (r > 0) {
-    return coap_handle_message(session->context, session, pdu, (size_t)r);
+    return coap_handle_dgram(session->context, session, pdu, (size_t)r);
   } else {
     int err = SSL_get_error(ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
@@ -670,6 +674,15 @@ unsigned int coap_dtls_get_overhead(coap_session_t *session) {
   }
   return overhead;
 }
+
+int coap_tls_send(coap_session_t *session,
+                  const uint8_t *data,
+                  size_t data_len,
+                  int flush )
+{
+  return -1;
+}
+
 #else /* !HAVE_OPENSSL */
 
 /* make compilers happy that do not like empty modules */

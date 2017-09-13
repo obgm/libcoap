@@ -72,7 +72,6 @@ coap_get_query
 coap_get_resource_from_key
 coap_handle_event
 coap_handle_failed_notify
-coap_handle_message
 coap_hash_impl
 coap_hash_path
 coap_hash_request_uri
@@ -168,6 +167,7 @@ coap_ticks
 coap_ticks_from_rt_us
 coap_ticks_to_rt
 coap_ticks_to_rt_us
+coap_tls_is_supported
 coap_touch_observer
 coap_wait_ack
 coap_wellknown_response

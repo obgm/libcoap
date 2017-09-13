@@ -24,6 +24,11 @@ coap_dtls_is_supported(void) {
   return 0;
 }
 
+int
+coap_tls_is_supported(void) {
+  return 0;
+}
+
 static int dtls_log_level = 0;
 
 void coap_dtls_startup(void) {
@@ -103,6 +108,14 @@ coap_dtls_hello(coap_session_t *session UNUSED,
 
 unsigned int coap_dtls_get_overhead(coap_session_t *session UNUSED) {
   return 0;
+}
+
+int coap_tls_send(coap_session_t *session,
+                  const uint8_t *data,
+                  size_t data_len,
+                  int flush )
+{
+  return -1;
 }
 
 #undef UNUSED

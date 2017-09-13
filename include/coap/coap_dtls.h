@@ -23,6 +23,9 @@
 /** Returns 1 if support for DTLS is enabled, or 0 otherwise. */
 int coap_dtls_is_supported(void);
 
+/** Returns 1 if support for TLS is enabled, or 0 otherwise. */
+int coap_tls_is_supported( void );
+
 /** Sets the log level to the specified value. */
 void coap_dtls_set_log_level(int level);
 
@@ -87,20 +90,6 @@ int coap_dtls_send(coap_session_t *session,
                    size_t data_len);
 
 /**
- * Send data to a TLS peer.
- *
- * @param session   The CoAP session
- * @param data      pointer to data
- * @param size      number of bytes to send
- * @param flush     set to non-zero if the message should be sent now
- * @return 0 if this would be blocking, -1 if there is an error or the number of cleartext bytes sent
- */
-int coap_tls_send(coap_session_t *session,
-                   const uint8_t *data,
-                   size_t data_len,
-                   int flush);
-
-/**
 * Check if timeout is handled per session or per context.
 *
 * @param dtls_context The DTLS context
@@ -137,7 +126,7 @@ void coap_dtls_handle_timeout(coap_session_t *session);
 * @param session   The CoAP session
 * @param data      Encrypted datagram
 * @param data_len  Encrypted datagram size
-* @return result of coap_handle_message on the decrypted CoAP PDU or -1 for error.
+* @return result of coap_handle_dgram on the decrypted CoAP PDU or -1 for error.
 */
 int coap_dtls_receive(coap_session_t *session,
                       const uint8_t *data,
@@ -164,6 +153,22 @@ int coap_dtls_hello(coap_session_t *session,
  */
 
 unsigned int coap_dtls_get_overhead(coap_session_t *session);
+
+/**
+ * Send data to a TLS peer.
+ *
+ * @param session   The CoAP session
+ * @param data      pointer to data
+ * @param size      number of bytes to send
+ * @param flush     set to non-zero if the message should be sent now
+ * @return 0 if this would be blocking, -1 if there is an error or the number of cleartext bytes sent
+ */
+int coap_tls_send(coap_session_t *session,
+                   const uint8_t *data,
+                   size_t data_len,
+                   int flush);
+
+
 
 /** @} */
 

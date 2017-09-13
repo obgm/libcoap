@@ -248,11 +248,13 @@ typedef struct coap_pdu_t {
   uint8_t type;             /**< message type */
   uint8_t code;             /**< request method (value 1--10) or response code (value 40-255) */
   uint8_t max_hdr_size;	    /**< space reserved for protocol-specific header */
+  uint8_t hdr_size;         /**< actaul size used for protocol-specific header */
   uint8_t token_length;     /**< length of Token */
   uint16_t tid;             /**< transaction id, if any, in regular host byte order */
   uint16_t max_delta;       /**< highest option number */
-  size_t max_size;          /**< allocated storage for token, options and payload */
+  size_t alloc_size;        /**< allocated storage for token, options and payload */
   size_t used_size;         /**< used bytes of storage for token, options and payload */
+  size_t max_size;          /**< maximum size for token, options and payload, or zero for variable size pdu */
   uint8_t *token;           /**< first byte of token, if any, or options */
   uint8_t *data;	    /**< first byte of payload, if any */
 #ifdef LWIP
@@ -304,6 +306,7 @@ typedef uint8_t coap_proto_t;
 #define COAP_PROTO_TCP	  3
 #define COAP_PROTO_TLS	  4
 
+#define COAP_PDU_SIZE_DYNAMIC ((size_t)-1)
 
 /**
  * Creates a new CoAP PDU with at least enough storage space for the given
@@ -316,17 +319,17 @@ typedef uint8_t coap_proto_t;
  *             COAP_MESSAGE_ACK, COAP_MESSAGE_RST).
  * @param code The message code.
  * @param tid  The transcation id to set or 0 if unknown / not applicable.
- * @param size The number of bytes to allocate for the message, or zero to use
- *             a reasonable start size.
- *
+ * @param size The maximum allowed number of byte for the message.
+ *             Use COAP_PDU_SIZE_DYNAMIC to get a variable size PDU that
+ *             will grow automatically.
  * @return     A pointer to the new PDU object or @c NULL on error.
  */
 coap_pdu_t *
 coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size);
 
 /**
- * Clears any contents from @p pdu and resets @c version field, @c
- * length and @c data pointers. @c max_size is set to @p size, any
+ * Clears any contents from @p pdu and resets @c used_size,
+ * and @c data pointers. @c max_size is set to @p size, any
  * other field is set to @c 0. Note that @p pdu must be a valid
  * pointer to a coap_pdu_t object created e.g. by coap_pdu_init().
  */
@@ -335,7 +338,7 @@ void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
 /**
  * Creates a new CoAP PDU.
  */
-coap_pdu_t *coap_new_pdu();
+coap_pdu_t *coap_new_pdu(struct coap_session_t *session);
 
 /**
  * Dispose of an CoAP PDU and frees associated storage.
@@ -374,32 +377,27 @@ size_t coap_pdu_parse_size(coap_proto_t proto,
                            size_t length);
 
 /**
- * Parses @p data into the CoAP PDU structure given in @p result.
+ * Decode the protocol specific header for the specified PDU.
+ * @param pdu A newly received PDU.
+ * @param proto The target wire protocol.
+ * @return 1 for success or 0 on error.
+ */
+
+int coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto);
+
+/**
+ * Verify consistency in the given CoAP PDU structure and locate the data.
  * This function returns @c 0 on error or a number greater than zero on
  * success.
- * This function only parses the header, token and options, up to the
- * payload start marker.
- * The payload itself is not copied, only its start position is returned.
- * It need not be present in the supplied data.
- * coap_add_data() or coap_add_data_after() must be called later to add the
- * data to the pdu if the payload is not empty.
+ * This function only parses the token and options, up to the payload start
+ * marker.
  *
  * @param proto   Session's protocol
- * @param data    The raw data to parse as CoAP PDU.
- * @param length  The actual size of @p data.
- * @param pdu     The PDU structure to fill. Note that the structure must
- *                provide space to hold at least the token and options
- *                part of the message.
- * @param offset  Position of payload inside data or 0 if message has an
- *                empty payload.
+ * @param pdu     The PDU structure to.
  *
  * @return       1 on success or @c 0 on error.
  */
-int coap_pdu_parse_opt(coap_proto_t proto,
-                       const uint8_t *data,
-                       size_t length,
-                       coap_pdu_t *pdu,
-                       size_t *offset);
+int coap_pdu_parse_opt(coap_pdu_t *pdu, coap_proto_t proto);
 
 /**
 * Parses @p data into the CoAP PDU structure given in @p result.

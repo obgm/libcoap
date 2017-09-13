@@ -268,7 +268,7 @@ t_encode_pdu2(void) {
   size_t old_max = pdu->max_size;
   int result;
 
-  coap_pdu_clear(pdu, 7);	/* set very small PDU size */
+  coap_pdu_clear(pdu, 3);	/* set very small PDU size */
 
   pdu->type = COAP_MESSAGE_CON;
   pdu->code = COAP_REQUEST_GET;
@@ -276,7 +276,7 @@ t_encode_pdu2(void) {
 
   result = coap_add_token(pdu, 5, (unsigned char *)"token");
 
-  CU_ASSERT(result == 1);
+  CU_ASSERT(result == 0);
 
   coap_pdu_clear(pdu, old_max);	/* restore PDU size */
 }
@@ -609,16 +609,16 @@ t_encode_pdu11(void) {
   result = coap_add_data(pdu, 10, (unsigned char *)"0123456789");
   coap_set_log_level(level);
 
-  CU_ASSERT(result == 1);
-  CU_ASSERT(pdu->data != NULL);
-  CU_ASSERT(pdu->used_size == 11);
+  CU_ASSERT(result == 0);
+  CU_ASSERT(pdu->data == NULL);
+  CU_ASSERT(pdu->used_size == 0);
 
   pdu->max_size = old_max;
 }
 
 static int
 t_pdu_tests_create(void) {
-  pdu = coap_pdu_init(0, 0, 0, 0);
+  pdu = coap_pdu_init(0, 0, 0, COAP_PDU_SIZE_DYNAMIC);
 
   return pdu == NULL;
 }

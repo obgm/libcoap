@@ -56,6 +56,8 @@ static FILE *file = NULL;               /* output file stream */
 
 static str payload = { 0, NULL };       /* optional payload to send */
 
+static int reliable = 0;
+
 unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
 
 typedef unsigned char method_t;
@@ -150,7 +152,7 @@ coap_new_request(coap_context_t *ctx,
   coap_list_t *opt;
   (void)ctx;
 
-  if ( ! ( pdu = coap_new_pdu() ) )
+  if (!(pdu = coap_new_pdu(session)))
     return NULL;
 
   pdu->type = msgtype;
@@ -545,7 +547,7 @@ usage( const char *program, const char *version) {
      "usage: %s [-A type...] [-t type] [-b [num,]size] [-B seconds] [-e text]\n"
      "\t\t[-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
      "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] [-U]\n\n"
-     "\t\t[-u user] [-k key] URI\n\n"
+     "\t\t[-u user] [-k key] [-r] URI\n\n"
      "\tURI can be an absolute or relative coap URI,\n"
      "\t-a addr\tthe local interface address to use\n"
      "\t-A type...\taccepted media types as comma-separated list of\n"
@@ -575,6 +577,7 @@ usage( const char *program, const char *version) {
      "\t\t\trequest)\n"
      "\t-T token\tinclude specified token\n"
      "\t-U\t\tnever include Uri-Host or Uri-Port options\n"
+     "\t-r\t\tUse reliable protocol (TCP or TLS)\n"
      "\t-l list\t\tFail to send some datagram specified by a comma separated list of number or number intervals(for debugging only)\n"
      "\t-l loss%%\t\tRandmoly fail to send datagrams with the specified probability(for debugging only)\n"
      "\n"
@@ -1057,7 +1060,7 @@ get_session(
 
     memset( &hints, 0, sizeof( struct addrinfo ) );
     hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
-    hints.ai_socktype = SOCK_DGRAM; /* Coap uses UDP */
+    hints.ai_socktype = COAP_PROTO_RELIABLE(proto) ? SOCK_STREAM : SOCK_DGRAM; /* Coap uses UDP */
     hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL;
 
     s = getaddrinfo( local_addr, local_port, &hints, &result );
@@ -1073,7 +1076,7 @@ get_session(
 	coap_address_init( &bind_addr );
 	bind_addr.size = rp->ai_addrlen;
 	memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
-	if ( identity && key && proto == COAP_PROTO_DTLS )
+	if ( identity && key && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) )
 	  session = coap_new_client_session_psk( ctx, &bind_addr, dst, proto, identity, key, key_len );
 	else
 	  session = coap_new_client_session( ctx, &bind_addr, dst, proto );
@@ -1083,7 +1086,7 @@ get_session(
     }
     freeaddrinfo( result );
   } else {
-    if ( identity && key && proto == COAP_PROTO_DTLS )
+    if ( identity && key && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) )
       session = coap_new_client_session_psk( ctx, NULL, dst, proto, identity, key, key_len );
     else
       session = coap_new_client_session( ctx, NULL, dst, proto );
@@ -1110,7 +1113,7 @@ main(int argc, char **argv) {
   ssize_t user_length = 0, key_length = 0;
   int create_uri_opts = 1;
 
-  while ((opt = getopt(argc, argv, "Na:b:e:f:g:k:m:p:s:t:o:v:A:B:O:P:T:u:U:l:")) != -1) {
+  while ((opt = getopt(argc, argv, "Nra:b:e:f:g:k:m:p:s:t:o:v:A:B:O:P:T:u:U:l:")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1193,6 +1196,9 @@ main(int argc, char **argv) {
 	exit(1);
       }
       break;
+    case 'r':
+      reliable = 1;
+      break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
       exit( 1 );
@@ -1245,7 +1251,9 @@ main(int argc, char **argv) {
   session = get_session(
     ctx,
     node_str[0] ? node_str : NULL, port_str,
-    coap_uri_scheme_is_secure( &uri ) ? COAP_PROTO_DTLS : COAP_PROTO_UDP,
+    reliable ?
+        coap_uri_scheme_is_secure(&uri) ? COAP_PROTO_TLS : COAP_PROTO_TCP
+      : coap_uri_scheme_is_secure(&uri) ? COAP_PROTO_DTLS : COAP_PROTO_UDP,
     &dst,
     user_length > 0 ? (const char *)user : NULL,
     key_length > 0  ? key : NULL, (unsigned)key_length

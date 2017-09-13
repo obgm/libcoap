@@ -115,7 +115,7 @@ dtls_application_data(struct dtls_context_t *dtls_context,
     return -1;
   }
 
-  return coap_handle_message(coap_context, coap_session, data, len);
+  return coap_handle_dgram(coap_context, coap_session, data, len);
 }
 
 static int coap_event_dtls = 0;
