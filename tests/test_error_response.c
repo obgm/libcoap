@@ -321,7 +321,7 @@ t_error_response8(void) {
 
 static int
 t_error_response_tests_create(void) {
-  pdu = coap_pdu_init(0, 0, 0, COAP_PDU_SIZE_DYNAMIC);
+  pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
 
   return pdu == NULL;
 }

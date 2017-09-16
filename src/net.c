@@ -1942,8 +1942,8 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
   if (pdu->code == COAP_SIGNALING_CSM) {
     while ((option = coap_option_next(&opt_iter))) {
       if (opt_iter.type == COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE) {
-	session->mtu = coap_decode_var_bytes(coap_opt_value(option),
-	  coap_opt_length(option));
+	coap_session_set_mtu(session, coap_decode_var_bytes(coap_opt_value(option),
+	  coap_opt_length(option)));
       } else if (opt_iter.type == COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER) {
         /* ... */
       }

@@ -84,18 +84,13 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size) {
   coap_pdu_t *pdu;
   uint8_t *buf;
 
-#ifdef WITH_CONTIKI
-  if (size == COAP_PDU_SIZE_DYNAMIC)
-    size = COAP_RXBUFFER_SIZE - COAP_PDU_MAX_UDP_HEADER_SIZE;
-  assert(size <= COAP_RXBUFFER_SIZE - COAP_PDU_MAX_UDP_HEADER_SIZE);
-  if (size > COAP_RXBUFFER_SIZE - COAP_PDU_MAX_UDP_HEADER_SIZE)
-    return NULL;
-#endif
-
   pdu = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
   if (!pdu) return NULL;
 
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
+  assert(size < 65805);
+  if (size >= 65805)
+    return NULL;
   pdu->max_hdr_size = COAP_PDU_MAX_UDP_HEADER_SIZE;
 #else
   pdu->max_hdr_size = COAP_PDU_MAX_TCP_HEADER_SIZE;
@@ -108,16 +103,8 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size) {
     pdu = NULL;
   }
   pdu->token = pdu->pbuf->payload + pdu->max_hdr_size;
-  if (size == COAP_PDU_SIZE_DYNAMIC)
-    size = pbuf->tot_len - pdu->max_hdr_size;
-  assert(size <= pbuf->tot_len - pdu->max_hdr_size);
-  if (size > pbuf->tot_len - pdu->max_hdr_size)
-    return NULL;
 #else /* WITH_LWIP */
-  if (size != COAP_PDU_SIZE_DYNAMIC)
-    pdu->alloc_size = size;
-  else
-    pdu->alloc_size = 256;
+  pdu->alloc_size = min(size, 256);
   buf = coap_malloc_type(COAP_PDU_BUF, pdu->alloc_size + pdu->max_hdr_size);
   if (buf == NULL) {
     coap_free_type(COAP_PDU, pdu);
@@ -192,6 +179,11 @@ coap_pdu_check_resize(coap_pdu_t *pdu, size_t size) {
     size_t new_size = max(256, pdu->alloc_size * 2);
     while (size > new_size)
       new_size *= 2;
+    if (pdu->max_size && new_size > pdu->max_size) {
+      new_size = pdu->max_size;
+      if (new_size < size)
+	return 0;
+    }
     if (!coap_pdu_resize(pdu, new_size))
       return 0;
   }

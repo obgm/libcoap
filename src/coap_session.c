@@ -133,13 +133,15 @@ void coap_session_free(coap_session_t *session) {
 }
 
 size_t coap_session_max_pdu_size(coap_session_t *session) {
-  if (session->mtu > 0)
-    return (size_t)(session->mtu - session->tls_overhead);
-  return COAP_PDU_SIZE_DYNAMIC;
+  return (size_t)(session->mtu - session->tls_overhead);
 }
 
 void coap_session_set_mtu(coap_session_t *session, unsigned mtu) {
-  session->mtu = (uint16_t)mtu;
+#if defined(WITH_CONTIKI) || defined(WITH_LWIP)
+  if (mtu >= 65805)
+    mtu = 65804;
+#endif
+  session->mtu = mtu;
   if (session->tls_overhead >= session->mtu) {
     session->tls_overhead = session->mtu;
     coap_log(LOG_ERR, "DTLS overhead exceeds MTU\n");

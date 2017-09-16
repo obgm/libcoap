@@ -618,7 +618,7 @@ t_encode_pdu11(void) {
 
 static int
 t_pdu_tests_create(void) {
-  pdu = coap_pdu_init(0, 0, 0, COAP_PDU_SIZE_DYNAMIC);
+  pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
 
   return pdu == NULL;
 }

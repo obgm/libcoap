@@ -29,7 +29,7 @@ make_pdu( unsigned int value ) {
   static unsigned char buf[20];
   int len, ls;
 
-  if (!(pdu = coap_pdu_init(0, 0, 0, COAP_PDU_SIZE_DYNAMIC)))
+  if (!(pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU)))
     return NULL;
 
   pdu->type = COAP_MESSAGE_NON;

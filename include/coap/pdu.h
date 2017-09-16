@@ -32,8 +32,12 @@ struct coap_session_t;
 #define COAP_DEFAULT_MTU       1152
 #endif /* COAP_DEFAULT_MTU */
 #ifndef COAP_DEFAULT_MAX_PDU_RX_SIZE
+#if defined(WITH_CONTIKI) || defined(WITH_LWIP)
+#define COAP_DEFAULT_MAX_PDU_RX_SIZE 65804
+#else
 #define COAP_DEFAULT_MAX_PDU_RX_SIZE 8*1024*1024
-#endif /* COAP_DEFAULT_MTU */
+#endif
+#endif /* COAP_DEFAULT_MAX_PDU_RX_SIZE */
 
 #define COAP_DEFAULT_VERSION      1 /* version of CoAP supported */
 #define COAP_DEFAULT_SCHEME  "coap" /* the default scheme for CoAP URIs */
@@ -309,8 +313,6 @@ typedef uint8_t coap_proto_t;
 #define COAP_PROTO_TCP	  3
 #define COAP_PROTO_TLS	  4
 
-#define COAP_PDU_SIZE_DYNAMIC ((size_t)-1)
-
 /**
  * Creates a new CoAP PDU with at least enough storage space for the given
  * @p size maximum message size. The function returns a pointer to the
@@ -323,8 +325,6 @@ typedef uint8_t coap_proto_t;
  * @param code The message code.
  * @param tid  The transcation id to set or 0 if unknown / not applicable.
  * @param size The maximum allowed number of byte for the message.
- *             Use COAP_PDU_SIZE_DYNAMIC to get a variable size PDU that
- *             will grow automatically.
  * @return     A pointer to the new PDU object or @c NULL on error.
  */
 coap_pdu_t *
