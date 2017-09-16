@@ -702,7 +702,7 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
       if (session->proto == COAP_PROTO_TLS) {
 	/* ... */
       } else {
-	coap_session_connected(session);
+	coap_session_send_csm(session);
       }
     } else {
       return -1;
@@ -996,7 +996,7 @@ coap_connect_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t n
   if (coap_socket_connect_tcp2(&session->sock, &session->local_addr, &session->remote_addr)) {
     session->last_rx_tx = now;
     if (session->proto == COAP_PROTO_TCP) {
-      coap_session_connected(session);
+      coap_session_send_csm(session);
     } else {
       /* ... */
     }
@@ -1225,6 +1225,8 @@ coap_read(coap_context_t *ctx, coap_tick_t now) {
   }
 
   LL_FOREACH_SAFE(ctx->sessions, s, tmp_s) {
+    if ((s->sock.flags & COAP_SOCKET_CAN_CONNECT) != 0)
+      coap_connect_session(ctx, s, now);
     if ((s->sock.flags & COAP_SOCKET_CAN_READ) != 0) {
       /* Make sure the session object is not deleted in one of the callbacks  */
       coap_session_reference(s);
@@ -1233,8 +1235,6 @@ coap_read(coap_context_t *ctx, coap_tick_t now) {
     }
     if ((s->sock.flags & COAP_SOCKET_CAN_WRITE) != 0)
       coap_write_session(ctx, s, now);
-    if ((s->sock.flags & COAP_SOCKET_CAN_CONNECT) != 0)
-      coap_connect_session(ctx, s, now);
   }
 }
 #endif /* not WITH_LWIP */
@@ -1931,6 +1931,37 @@ handle_response(coap_context_t *context, coap_session_t *session,
   }
 }
 
+static void
+handle_signaling(coap_context_t *context, coap_session_t *session,
+  coap_pdu_t *pdu) {
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *option;
+
+  coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
+
+  if (pdu->code == COAP_SIGNALING_CSM) {
+    while ((option = coap_option_next(&opt_iter))) {
+      if (opt_iter.type == COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE) {
+	session->mtu = coap_decode_var_bytes(coap_opt_value(option),
+	  coap_opt_length(option));
+      } else if (opt_iter.type == COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER) {
+        /* ... */
+      }
+    }
+    if (session->state == COAP_SESSION_STATE_CSM)
+      coap_session_connected(session);
+  } else if (pdu->code == COAP_SIGNALING_PING) {
+    coap_pdu_t *pong = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_PONG, 0, 16);
+    if (pong) {
+      coap_add_option(pong, COAP_SIGNALING_OPTION_CUSTODY, 0, NULL);
+      coap_send(session, pong);
+    }
+  } else if (pdu->code == COAP_SIGNALING_RELEASE
+          || pdu->code == COAP_SIGNALING_ABORT) {
+    coap_session_disconnected(session, COAP_NACK_RST);
+  }
+}
+
 void
 coap_dispatch(coap_context_t *context, coap_session_t *session,
   coap_pdu_t *pdu) {
@@ -2020,7 +2051,9 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
   /* Pass message to upper layer if a specific handler was
     * registered for a request that should be handled locally. */
-  if (COAP_PDU_IS_REQUEST(pdu))
+  if (COAP_PDU_IS_SIGNALING(pdu))
+    handle_signaling(context, session, pdu);
+  else if (COAP_PDU_IS_REQUEST(pdu))
     handle_request(context, session, pdu);
   else if (COAP_PDU_IS_RESPONSE(pdu))
     handle_response(context, session, sent ? sent->pdu : NULL, pdu);

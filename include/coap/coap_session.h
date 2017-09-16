@@ -38,16 +38,17 @@ typedef uint8_t coap_session_state_t;
 #define COAP_SESSION_STATE_NONE		0
 #define COAP_SESSION_STATE_CONNECTING	1
 #define COAP_SESSION_STATE_HANDSHAKE	2
-#define COAP_SESSION_STATE_ESTABLISHED	3
+#define COAP_SESSION_STATE_CSM		3
+#define COAP_SESSION_STATE_ESTABLISHED	4
 
 typedef struct coap_session_t {
   struct coap_session_t *next;
   coap_proto_t proto;		  /**< protocol used */
   coap_session_type_t type;	  /**< client or server side socket */
   coap_session_state_t state;	  /**< current state of relationaship with peer */
-  uint8_t ref;			  /**< reference count from queues */
-  uint16_t mtu;			  /**< path mtu */
-  uint16_t tls_overhead;	  /**< overhead of TLS layer */
+  unsigned ref;			  /**< reference count from queues */
+  unsigned tls_overhead;	  /**< overhead of TLS layer */
+  unsigned mtu;			  /**< path or CSM mtu */
   coap_address_t local_if;        /**< optional local interface address */
   coap_address_t remote_addr;     /**< remote address and port */
   coap_address_t local_addr;	  /**< local address and port */
@@ -113,6 +114,13 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
 * @param session The CoAP session.
 */
 void coap_session_reset(coap_session_t *session);
+
+/**
+* Notify session transport has just connected and CSM exchange can now start.
+*
+* @param session The CoAP session.
+*/
+void coap_session_send_csm(coap_session_t *session);
 
 /**
 * Notify session that it has just connected or reconnected.

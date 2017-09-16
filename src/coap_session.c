@@ -19,6 +19,7 @@
 #include "mem.h"
 #include "resource.h"
 #include "utlist.h"
+#include "encode.h"
 #include <stdio.h>
 
 coap_session_t *
@@ -78,7 +79,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   session->endpoint = endpoint;
   if (endpoint)
     session->mtu = endpoint->default_mtu;
-  else if (COAP_PROTO_NOT_RELIABLE(proto))
+  else
     session->mtu = COAP_DEFAULT_MTU;
   if (proto == COAP_PROTO_DTLS) {
     session->tls_overhead = 29;
@@ -193,6 +194,31 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
   return COAP_PDU_DELAYED;
 }
 
+void coap_session_send_csm(coap_session_t *session) {
+  coap_pdu_t *pdu;
+  uint8_t buf[4];
+  assert(COAP_PROTO_RELIABLE(session->proto));
+  debug("*** %s: sending CSM\n", coap_session_str(session));
+  session->state = COAP_SESSION_STATE_CSM;
+  session->partial_write = 0;
+  if (session->mtu == 0)
+    session->mtu = 1152;  /* base value */
+  pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CSM, 0, 16);
+  if ( pdu == NULL
+    || coap_add_option(pdu, COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE,
+         coap_encode_var_bytes(buf, COAP_DEFAULT_MAX_PDU_RX_SIZE), buf) == 0
+    || coap_pdu_encode_header(pdu, session->proto) == 0
+  ) {
+    coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
+  } else {
+    ssize_t bytes_written = coap_session_send_pdu(session, pdu);
+    if (bytes_written != pdu->used_size + pdu->hdr_size)
+      coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
+  }
+  if (pdu)
+    coap_delete_pdu(pdu);
+}
+
 void coap_session_connected(coap_session_t *session) {
   debug("*** %s: session connected\n", coap_session_str(session));
 
@@ -200,7 +226,7 @@ void coap_session_connected(coap_session_t *session) {
   session->partial_write = 0;
 
   if ( session->proto==COAP_PROTO_DTLS) {
-    session->tls_overhead = (uint16_t)coap_dtls_get_overhead(session);
+    session->tls_overhead = coap_dtls_get_overhead(session);
     if (session->tls_overhead >= session->mtu) {
       session->tls_overhead = session->mtu;
       coap_log(LOG_ERR, "DTLS overhead exceeds MTU\n");
@@ -425,7 +451,7 @@ coap_session_connect(coap_session_t *session) {
     } else if (session->proto == COAP_PROTO_TLS) {
       session->state = COAP_SESSION_STATE_HANDSHAKE;
     } else {
-      session->state = COAP_SESSION_STATE_ESTABLISHED;
+      coap_session_send_csm(session);
     }
   }
   coap_ticks(&session->last_rx_tx);
@@ -435,7 +461,7 @@ coap_session_connect(coap_session_t *session) {
 static coap_session_t *
 coap_session_accept(coap_session_t *session) {
   if (session->proto == COAP_PROTO_TCP) {
-    session->state = COAP_SESSION_STATE_ESTABLISHED;
+    coap_session_send_csm(session);
   } else if (session->proto == COAP_PROTO_TLS) {
     session->state = COAP_SESSION_STATE_HANDSHAKE;
   }
@@ -591,8 +617,7 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     ep->hello.endpoint = ep;
   }
 
-  if (COAP_PROTO_NOT_RELIABLE(proto))
-    ep->default_mtu = COAP_DEFAULT_MTU;
+  ep->default_mtu = COAP_DEFAULT_MTU;
 
   LL_PREPEND(context->endpoint, ep);
   return ep;

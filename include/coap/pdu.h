@@ -31,6 +31,9 @@ struct coap_session_t;
 #ifndef COAP_DEFAULT_MTU
 #define COAP_DEFAULT_MTU       1152
 #endif /* COAP_DEFAULT_MTU */
+#ifndef COAP_DEFAULT_MAX_PDU_RX_SIZE
+#define COAP_DEFAULT_MAX_PDU_RX_SIZE 8*1024*1024
+#endif /* COAP_DEFAULT_MTU */
 
 #define COAP_DEFAULT_VERSION      1 /* version of CoAP supported */
 #define COAP_DEFAULT_SCHEME  "coap" /* the default scheme for CoAP URIs */
