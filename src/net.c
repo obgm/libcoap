@@ -647,8 +647,8 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
 	pdu->token - pdu->hdr_size, pdu->used_size + pdu->hdr_size);
       break;
     case COAP_PROTO_TLS:
-      bytes_written = coap_tls_send(session, pdu->token - pdu->hdr_size,
-	                            pdu->used_size + pdu->hdr_size, 1);
+      bytes_written = coap_tls_write(session, pdu->token - pdu->hdr_size,
+	                             pdu->used_size + pdu->hdr_size);
       break;
     default:
       break;
@@ -1025,11 +1025,10 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
 	);
 	break;
       case COAP_PROTO_TLS:
-	bytes_written = coap_tls_send(
+	bytes_written = coap_tls_write(
 	  session,
 	  q->pdu->token - q->pdu->hdr_size - session->partial_write,
-	  q->pdu->used_size + q->pdu->hdr_size - session->partial_write,
-	  0
+	  q->pdu->used_size + q->pdu->hdr_size - session->partial_write
 	);
 	break;
     }

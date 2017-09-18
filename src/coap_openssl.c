@@ -675,11 +675,17 @@ unsigned int coap_dtls_get_overhead(coap_session_t *session) {
   return overhead;
 }
 
-int coap_tls_send(coap_session_t *session,
-                  const uint8_t *data,
-                  size_t data_len,
-                  int flush )
-{
+ssize_t coap_tls_write(coap_session_t *session,
+                       const uint8_t *data,
+                       size_t data_len
+) {
+  return -1;
+}
+
+ssize_t coap_tls_read(coap_session_t *session,
+                      uint8_t *data,
+                      size_t data_len
+) {
   return -1;
 }
 

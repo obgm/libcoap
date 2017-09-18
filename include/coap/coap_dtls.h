@@ -1,7 +1,8 @@
 /*
- * coap_dtls.h -- Datagram Transport Layer Support for libcoap
+ * coap_dtls.h -- (Datagram) Transport Layer Support for libcoap
  *
  * Copyright (C) 2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2017 Jean-Claude Michelou <jcm@spinetix.com>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -155,20 +156,32 @@ int coap_dtls_hello(coap_session_t *session,
 unsigned int coap_dtls_get_overhead(coap_session_t *session);
 
 /**
- * Send data to a TLS peer.
+ * Send data to a TLS peer, with implicit flush.
  *
  * @param session   The CoAP session
  * @param data      pointer to data
  * @param size      number of bytes to send
- * @param flush     set to non-zero if the message should be sent now
- * @return 0 if this would be blocking, -1 if there is an error or the number of cleartext bytes sent
+ * @return          0 if this should be retried, -1 if there is an error or
+ *                  the number of cleartext bytes sent.
  */
-int coap_tls_send(coap_session_t *session,
-                   const uint8_t *data,
-                   size_t data_len,
-                   int flush);
-
-
+ssize_t coap_tls_write(coap_session_t *session,
+                       const uint8_t *data,
+                       size_t data_len
+                       );
+  
+/**
+ * Read some data from a TLS peer.
+ *
+ * @param session   The CoAP session
+ * @param data      pointer to data
+ * @param size      maximum number of bytes to read
+ * @return          0 if this should be retried, -1 if there is an error or
+ *                  the number of cleartext bytes read.
+ */
+ssize_t coap_tls_read(coap_session_t *session,
+                      uint8_t *data,
+                      size_t data_len
+                      );
 
 /** @} */
 
