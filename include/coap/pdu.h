@@ -33,7 +33,7 @@ struct coap_session_t;
 #endif /* COAP_DEFAULT_MTU */
 #ifndef COAP_DEFAULT_MAX_PDU_RX_SIZE
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
-#define COAP_DEFAULT_MAX_PDU_RX_SIZE 65804
+#define COAP_DEFAULT_MAX_PDU_RX_SIZE 65808
 #else
 #define COAP_DEFAULT_MAX_PDU_RX_SIZE 8*1024*1024
 #endif

@@ -88,8 +88,8 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size) {
   if (!pdu) return NULL;
 
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
-  assert(size < 65805);
-  if (size >= 65805)
+  assert(size < 65809);
+  if (size >= 65809)
     return NULL;
   pdu->max_hdr_size = COAP_PDU_MAX_UDP_HEADER_SIZE;
 #else
@@ -222,10 +222,9 @@ coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len, const uint8_t *data)
     return 0;
   }
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
-  if (!coap_pdu_check_resize(pdu, pdu->used_size + len + 5))
+  if (!coap_pdu_check_resize(pdu,
+      pdu->used_size + coap_opt_encode_size(type - pdu->max_delta, len)))
     return 0;
-#endif
 
   opt = pdu->token + pdu->used_size;
 
@@ -259,10 +258,9 @@ coap_add_option_later(coap_pdu_t *pdu, uint16_t type, size_t len) {
     return NULL;
   }
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
-  if (!coap_pdu_check_resize(pdu, pdu->used_size + len + 5))
+  if (!coap_pdu_check_resize(pdu,
+      pdu->used_size + coap_opt_encode_size(type - pdu->max_delta, len)))
     return 0;
-#endif
 
   opt = pdu->token + pdu->used_size;
 

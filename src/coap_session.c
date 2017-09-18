@@ -133,13 +133,26 @@ void coap_session_free(coap_session_t *session) {
 }
 
 size_t coap_session_max_pdu_size(coap_session_t *session) {
-  return (size_t)(session->mtu - session->tls_overhead);
+  size_t max_with_header = (size_t)(session->mtu - session->tls_overhead);
+  if (COAP_PROTO_NOT_RELIABLE(session->proto))
+    return max_with_header > 4 ? max_with_header - 4 : 0;
+  /* we must assume there is no token to be on the safe side */
+  if (max_with_header <= 2)
+    return 0;
+  else if (max_with_header < 13 + 2)
+    return max_with_header - 2;
+  else if (max_with_header < 269 + 3)
+    return max_with_header - 3;
+  else if (max_with_header < 65805 + 4)
+    return max_with_header - 4;
+  else
+    return max_with_header - 6;
 }
 
 void coap_session_set_mtu(coap_session_t *session, unsigned mtu) {
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
-  if (mtu >= 65805)
-    mtu = 65804;
+  if (mtu >= 65809)
+    mtu = 65808;
 #endif
   session->mtu = mtu;
   if (session->tls_overhead >= session->mtu) {

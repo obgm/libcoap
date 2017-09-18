@@ -331,6 +331,17 @@ size_t coap_opt_setheader(coap_opt_t *opt,
                           size_t length);
 
 /**
+ * Compute storage bytes needed for an option with given @p delta and
+ * @p length
+ *
+ * @param delta  The option delta.
+ * @param length The option length.
+ *
+ * @return       The number of bytes required to encode this option.
+ */
+size_t coap_opt_encode_size(uint16_t delta, size_t length);
+
+/**
  * Encodes option with given @p delta into @p opt. This function returns the
  * number of bytes written to @p opt or @c 0 on error. This happens especially
  * when @p opt does not provide sufficient space to store the option value,

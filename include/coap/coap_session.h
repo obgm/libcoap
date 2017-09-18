@@ -142,7 +142,7 @@ void coap_session_set_mtu(coap_session_t *session, unsigned mtu);
  * Get maximum acceptable PDU size
  *
  * @param session The CoAP session.
- * @return maximum PDU size
+ * @return maximum PDU size, not including header (but including token).
  */
 size_t coap_session_max_pdu_size(coap_session_t *session);
 

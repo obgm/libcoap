@@ -376,6 +376,27 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
 }
 
 size_t
+coap_opt_encode_size(uint16_t delta, size_t length) {
+  size_t n = 1;
+  
+  if (delta >= 13) {
+    if (delta < 269)
+      n += 1;
+    else
+      n += 2;
+  }
+  
+  if (length >= 13) {
+    if (length < 269)
+      n += 1;
+    else
+      n += 2;
+  }
+  
+  return n + length;
+}
+
+size_t
 coap_opt_encode(coap_opt_t *opt, size_t maxlen, uint16_t delta,
 		const uint8_t *val, size_t length) {
   size_t l = 1;
