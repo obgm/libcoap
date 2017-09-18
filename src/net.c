@@ -1047,23 +1047,22 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
 
 static void
 coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
-  ssize_t bytes_read = -1;
+#ifdef WITH_CONTIKI
+  coap_packet_t *packet = coap_malloc_packet();
+  if ( !packet )
+    return
+#else /* WITH_CONTIKI */
+  coap_packet_t s_packet;
+  coap_packet_t *packet = &s_packet;
+#endif /* WITH_CONTIKI */
 
   assert(session->sock.flags & COAP_SOCKET_CONNECTED);
 
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
-#ifdef WITH_CONTIKI
-    coap_packet_t *packet = coap_malloc_packet();
-#else /* WITH_CONTIKI */
-    coap_packet_t s_packet;
-    coap_packet_t *packet = &s_packet;
-#endif /* WITH_CONTIKI */
-
-    if (packet) {
-      coap_address_copy(&packet->src, &session->remote_addr);
-      coap_address_copy(&packet->dst, &session->local_addr);
-      bytes_read = ctx->network_read(&session->sock, packet);
-    }
+    ssize_t bytes_read;
+    coap_address_copy(&packet->src, &session->remote_addr);
+    coap_address_copy(&packet->dst, &session->local_addr);
+    bytes_read = ctx->network_read(&session->sock, packet);
 
     if (bytes_read < 0) {
       if (bytes_read == -2)
@@ -1076,75 +1075,93 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       coap_packet_set_addr(packet, &session->remote_addr, &session->local_addr);
       coap_handle_dgram_for_proto(ctx, session, packet);
     }
-
-  #ifdef WITH_CONTIKI
-    if ( packet )
-      coap_free_packet(packet);
-  #endif
   } else {
-    while (1) {
-      if (session->partial_pdu) {
-	size_t len = session->partial_pdu->used_size
-		   + session->partial_pdu->hdr_size
-		   - session->partial_read;
-	size_t offset = session->partial_read - session->partial_pdu->hdr_size;
-	if ( len > 0 )
-	  bytes_read = coap_socket_read(&session->sock, session->partial_pdu->token + offset, len);
-	else
-	  bytes_read = 0;
-	if (bytes_read == (ssize_t)len) {
-	  if (coap_pdu_parse_header(session->partial_pdu, session->proto)
-	    && coap_pdu_parse_opt(session->partial_pdu, session->proto)) {
-	    coap_dispatch(ctx, session, session->partial_pdu);
+    ssize_t bytes_read;
+    const uint8_t *p;
+    int retry;
+    /* adjust for LWIP */
+    uint8_t *buf = packet->payload;
+    size_t buf_len = sizeof(packet->payload);
+
+    do {
+      if (session->proto == COAP_PROTO_TCP)
+	bytes_read = coap_socket_read(&session->sock, buf, buf_len);
+      else if (session->proto == COAP_PROTO_TLS)
+	bytes_read = coap_tls_read(session, buf, buf_len);
+      p = buf;
+      retry = bytes_read == buf_len;
+      while (bytes_read > 0) {
+	if (session->partial_pdu) {
+	  size_t len = session->partial_pdu->used_size
+		     + session->partial_pdu->hdr_size
+		     - session->partial_read;
+	  size_t n = min(len, (size_t)bytes_read);
+	  memcpy(session->partial_pdu->token - session->partial_pdu->hdr_size
+	         + session->partial_read, p, n);
+	  p += n;
+	  bytes_read -= n;
+	  if (n == len) {
+	    if (coap_pdu_parse_header(session->partial_pdu, session->proto)
+	      && coap_pdu_parse_opt(session->partial_pdu, session->proto)) {
+	      coap_dispatch(ctx, session, session->partial_pdu);
+	    }
+	    coap_delete_pdu(session->partial_pdu);
+	    session->partial_pdu = NULL;
+	    session->partial_read = 0;
+	  } else {
+	    session->partial_read += n;
 	  }
-	  coap_delete_pdu(session->partial_pdu);
-	  session->partial_pdu = NULL;
-	  session->partial_read = 0;
-	} else {
-	  if (bytes_read > 0)
-	    session->partial_read += bytes_read;
-	  break;
-	}
-      } else if (session->partial_read > 0) {
-	size_t hdr_size = coap_pdu_parse_header_size(session->proto,
-	  session->read_header);
-	size_t len = hdr_size - session->partial_read;
-	bytes_read = coap_socket_read(&session->sock, session->read_header
-	  + session->partial_read, len);
-	if (bytes_read == (ssize_t)len ) {
-	  size_t size = coap_pdu_parse_size(session->proto, session->read_header,
-	    hdr_size);
-	  session->partial_pdu = coap_pdu_init(0, 0, 0, size);
-	  if (session->partial_pdu == NULL) {
-	    coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
-	    break;
+	} else if (session->partial_read > 0) {
+	  size_t hdr_size = coap_pdu_parse_header_size(session->proto,
+	    session->read_header);
+	  size_t len = hdr_size - session->partial_read;
+	  size_t n = min(len, (size_t)bytes_read);
+	  memcpy(session->read_header + session->partial_read, p, n);
+	  p += n;
+	  bytes_read -= n;
+	  if (n == len) {
+	    size_t size = coap_pdu_parse_size(session->proto, session->read_header,
+	      hdr_size);
+	    session->partial_pdu = coap_pdu_init(0, 0, 0, size);
+	    if (session->partial_pdu == NULL) {
+	      bytes_read = -1;
+	      break;
+	    }
+	    session->partial_pdu->hdr_size = (uint8_t)hdr_size;
+	    session->partial_pdu->used_size = size;
+	    memcpy(session->partial_pdu->token - hdr_size, session->read_header, hdr_size);
+	    session->partial_read = hdr_size;
+	    if (size == 0) {
+	      if (coap_pdu_parse_header(session->partial_pdu, session->proto)) {
+		coap_dispatch(ctx, session, session->partial_pdu);
+	      }
+	      coap_delete_pdu(session->partial_pdu);
+	      session->partial_pdu = NULL;
+	      session->partial_read = 0;
+	    }
+	  } else {
+            session->partial_read += bytes_read;
 	  }
-	  session->partial_pdu->hdr_size = (uint8_t)hdr_size;
-	  session->partial_pdu->used_size = size;
-	  memcpy(session->partial_pdu->token - hdr_size, session->read_header, hdr_size);
-	  session->partial_read = hdr_size;
 	} else {
-	  if (bytes_read > 0)
-	    session->partial_read += bytes_read;
-	  break;
-	}
-      } else {
-	bytes_read = coap_socket_read(&session->sock, session->read_header, 1);
-	if (bytes_read > 0) {
+	  session->read_header[0] = *p++;
+	  bytes_read -= 1;
 	  if (!coap_pdu_parse_header_size(session->proto,
 	    session->read_header)) {
-	    coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
+	    bytes_read = -1;
 	    break;
 	  }
 	  session->partial_read = 1;
-	} else {
-	  break;
 	}
       }
-    }
+    } while (bytes_read == 0 && retry);
     if (bytes_read < 0)
       coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
   }
+
+#ifdef WITH_CONTIKI
+  if ( packet )
+    coap_free_packet( packet );
+#endif
 }
 
 static int
