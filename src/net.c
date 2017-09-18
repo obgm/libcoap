@@ -643,8 +643,8 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
 				     pdu->used_size + pdu->hdr_size);
       break;
     case COAP_PROTO_TCP:
-      bytes_written = coap_socket_write(&session->sock,
-	pdu->token - pdu->hdr_size, pdu->used_size + pdu->hdr_size);
+      bytes_written = coap_session_write(session, pdu->token - pdu->hdr_size,
+	                                 pdu->used_size + pdu->hdr_size);
       break;
     case COAP_PROTO_TLS:
       bytes_written = coap_tls_write(session, pdu->token - pdu->hdr_size,
@@ -1018,8 +1018,8 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
     assert(session->partial_write < q->pdu->used_size + q->pdu->hdr_size);
     switch (session->proto) {
       case COAP_PROTO_TCP:
-	bytes_written = coap_socket_write(
-	  &session->sock,
+	bytes_written = coap_session_write(
+	  session,
 	  q->pdu->token - q->pdu->hdr_size - session->partial_write,
 	  q->pdu->used_size + q->pdu->hdr_size - session->partial_write
 	);
@@ -1088,6 +1088,10 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 	bytes_read = coap_socket_read(&session->sock, buf, buf_len);
       else if (session->proto == COAP_PROTO_TLS)
 	bytes_read = coap_tls_read(session, buf, buf_len);
+      if (bytes_read > 0) {
+        debug("*  %s: received %zd bytes\n", coap_session_str(session), bytes_read);
+        session->last_rx_tx = now;
+      }
       p = buf;
       retry = bytes_read == buf_len;
       while (bytes_read > 0) {
