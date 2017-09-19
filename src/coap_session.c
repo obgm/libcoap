@@ -290,7 +290,7 @@ void coap_session_connected(coap_session_t *session) {
 void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
   (void)reason;
   debug("*** %s: session disconnected\n", coap_session_str(session));
-  if (session->proto == COAP_PROTO_DTLS && session->tls) {
+  if ((session->proto == COAP_PROTO_DTLS || session->proto == COAP_PROTO_TLS) && session->tls) {
     coap_dtls_free_session(session);
     session->tls = NULL;
   }
@@ -314,8 +314,12 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
 	coap_delete_node(q);
     }
   }
-  if (COAP_PROTO_RELIABLE(session->proto))
+  if (COAP_PROTO_RELIABLE(session->proto)) {
     coap_socket_close(&session->sock);
+#ifndef WITHOUT_OBSERVE
+    coap_delete_observers(session->context, session);
+#endif
+  }
 }
 
 void coap_session_reset(coap_session_t *session) {
