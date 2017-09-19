@@ -68,6 +68,7 @@ coap_block_t block = { .num = 0, .m = 0, .szx = 6 };
 unsigned int wait_seconds = 90;		/* default timeout in seconds */
 unsigned int wait_ms = 0;
 int wait_ms_reset = 0;
+int obs_started = 0;
 unsigned int obs_seconds = 30;          /* default observe time */
 unsigned int obs_ms = 0;                /* timeout for current subscription */
 int obs_ms_reset = 0;
@@ -359,8 +360,9 @@ message_handler(struct coap_context_t *ctx,
   if (COAP_RESPONSE_CLASS(received->code) == 2) {
 
     /* set obs timer if we have successfully subscribed a resource */
-    if (sent && coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter)) {
+    if (!obs_started && coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter)) {
       debug("observation relationship established, set timeout to %d\n", obs_seconds);
+      obs_started = 1;
       obs_ms = obs_seconds * 1000;
       obs_ms_reset = 1;
     }
