@@ -700,7 +700,11 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
 	return coap_session_delay_pdu(session, pdu, node);
       }
       if (session->proto == COAP_PROTO_TLS) {
-	/* ... */
+	session->tls = coap_tls_new_client_session(session);
+	if (session->tls) {
+	  session->state = COAP_SESSION_STATE_HANDSHAKE;
+	  return coap_session_delay_pdu(session, pdu, node);
+	}
       } else {
 	coap_session_send_csm(session);
       }
@@ -997,8 +1001,12 @@ coap_connect_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t n
     session->last_rx_tx = now;
     if (session->proto == COAP_PROTO_TCP) {
       coap_session_send_csm(session);
-    } else {
-      /* ... */
+    } else if (session->proto == COAP_PROTO_TLS) {
+      session->tls = coap_tls_new_client_session(session);
+      if (session->tls)
+	session->state = COAP_SESSION_STATE_HANDSHAKE;
+      else
+	coap_session_reset(session);
     }
   } else {
     coap_session_reset(session);
@@ -1217,6 +1225,8 @@ static int
 coap_accept_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint,
   coap_tick_t now) {
   coap_session_t *session = coap_new_server_session(ctx, endpoint);
+  if (session)
+    session->last_rx_tx = now;
   return session != NULL;
 }
 
