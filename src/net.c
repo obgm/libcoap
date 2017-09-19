@@ -959,11 +959,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 #endif /* WITHOUT_OBSERVE */
 
   /* And finally delete the node */
-  if ( node->pdu->type == COAP_MESSAGE_CON
-    && COAP_PROTO_NOT_RELIABLE(node->session->proto)
-    && context->nack_handler) {
+  if (node->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
     context->nack_handler(context, node->session, node->pdu, COAP_NACK_TOO_MANY_RETRIES, node->id);
-  }
   coap_delete_node(node);
   return COAP_INVALID_TID;
 }
@@ -1356,12 +1353,8 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
     q = context->sendqueue;
     context->sendqueue = q->next;
     debug("** %s tid=%d: removed\n", coap_session_str(session), q->id);
-    if ( q->pdu->type == COAP_MESSAGE_CON
-      && context->nack_handler
-      && COAP_PROTO_NOT_RELIABLE(session->proto)
-    ) {
+    if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
       context->nack_handler(context, session, q->pdu, reason, q->id);
-    }
     coap_delete_node(q);
   }
 
@@ -1375,12 +1368,8 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
     if (q->session == session) {
       p->next = q->next;
       debug("** %s tid=%d: removed\n", coap_session_str(session), q->id);
-      if ( q->pdu->type == COAP_MESSAGE_CON
-        && context->nack_handler
-        && COAP_PROTO_NOT_RELIABLE(session->proto)
-      ) {
+      if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
         context->nack_handler(context, session, q->pdu, reason, q->id);
-      }
       coap_delete_node(q);
       q = p->next;
     } else {
