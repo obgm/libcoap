@@ -199,6 +199,7 @@ static long coap_dgram_ctrl(BIO *a, int cmd, long num, void *ptr) {
   return ret;
 }
 
+#if 0
 static int coap_dtls_verify_cert(int ok, X509_STORE_CTX *ctx) {
   (void)ok;
   (void)ctx;
@@ -207,6 +208,7 @@ static int coap_dtls_verify_cert(int ok, X509_STORE_CTX *ctx) {
     coap_log(LOG_WARNING, "cannot accept DTLS connection with certificate.\n");
   return 0;	/* For now, trust no one */
 }
+#endif
 
 static int coap_dtls_generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len) {
   coap_dtls_context_t *dtls = (coap_dtls_context_t *)SSL_CTX_get_app_data(SSL_get_SSL_CTX(ssl));
@@ -317,6 +319,7 @@ static int coap_sock_create(BIO *a) {
 }
 
 static int coap_sock_destroy(BIO *a) {
+  (void)a;
   return 1;
 }
 
@@ -357,6 +360,7 @@ static int coap_sock_puts(BIO *a, const char *pstr) {
 
 static long coap_sock_ctrl(BIO *a, int cmd, long num, void *ptr) {
   int r = 1;
+  (void)a;
   (void)ptr;
   (void)num;
 
@@ -441,6 +445,8 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
     if (!context->tls.ctx)
       goto error;
     SSL_CTX_set_app_data(context->tls.ctx, &context->tls);
+    SSL_CTX_set_min_proto_version(context->tls.ctx, TLS1_VERSION);
+    SSL_CTX_set_cipher_list(context->dtls.ctx, "TLSv1.2:TLSv1.0");
     /*SSL_CTX_set_verify(context->tls.ctx, SSL_VERIFY_PEER, coap_dtls_verify_cert);*/
     SSL_CTX_set_info_callback(context->tls.ctx, coap_dtls_info_callback);
     SSL_CTX_set_psk_client_callback(context->tls.ctx, coap_dtls_psk_client_callback);

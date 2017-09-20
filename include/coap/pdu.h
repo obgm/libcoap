@@ -395,12 +395,11 @@ int coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto);
  * This function only parses the token and options, up to the payload start
  * marker.
  *
- * @param proto   Session's protocol
  * @param pdu     The PDU structure to.
  *
  * @return       1 on success or @c 0 on error.
  */
-int coap_pdu_parse_opt(coap_pdu_t *pdu, coap_proto_t proto);
+int coap_pdu_parse_opt(coap_pdu_t *pdu);
 
 /**
 * Parses @p data into the CoAP PDU structure given in @p result.

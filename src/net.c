@@ -55,6 +55,10 @@
 #include "net.h"
 #include "utlist.h"
 
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
  /**
   * @defgroup cc Rate Control
   * The transmission parameters for CoAP rate control ("Congestion
@@ -994,6 +998,7 @@ coap_handle_dgram_for_proto(coap_context_t *ctx, coap_session_t *session, coap_p
 
 static void
 coap_connect_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
+  (void)ctx;
   if (coap_socket_connect_tcp2(&session->sock, &session->local_addr, &session->remote_addr)) {
     session->last_rx_tx = now;
     if (session->proto == COAP_PROTO_TCP) {
@@ -1012,8 +1017,7 @@ coap_connect_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t n
 
 static void
 coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
-  ssize_t bytes_written = -1;
-
+  (void)ctx;
   assert(session->sock.flags & COAP_SOCKET_CONNECTED);
 
   while (session->sendqueue) {
@@ -1036,6 +1040,8 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
 	  q->pdu->used_size + q->pdu->hdr_size - session->partial_write
 	);
 	break;
+      default:
+        break;
     }
     if (bytes_written > 0)
       session->last_rx_tx = now;
@@ -1098,7 +1104,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
         session->last_rx_tx = now;
       }
       p = buf;
-      retry = bytes_read == buf_len;
+      retry = bytes_read == (ssize_t)buf_len;
       while (bytes_read > 0) {
 	if (session->partial_pdu) {
 	  size_t len = session->partial_pdu->used_size
@@ -1111,7 +1117,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 	  bytes_read -= n;
 	  if (n == len) {
 	    if (coap_pdu_parse_header(session->partial_pdu, session->proto)
-	      && coap_pdu_parse_opt(session->partial_pdu, session->proto)) {
+	      && coap_pdu_parse_opt(session->partial_pdu)) {
 	      coap_dispatch(ctx, session, session->partial_pdu);
 	    }
 	    coap_delete_pdu(session->partial_pdu);
@@ -1215,6 +1221,9 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
 
 static int
 coap_write_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t now) {
+  (void)ctx;
+  (void)endpoint;
+  (void)now;
   return 0;
 }
 
@@ -1955,6 +1964,7 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
   coap_pdu_t *pdu) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
+  (void)context;
 
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 

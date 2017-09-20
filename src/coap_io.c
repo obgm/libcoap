@@ -564,8 +564,10 @@ coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
   if (r == COAP_SOCKET_ERROR) {
 #ifdef _WIN32
     if (WSAGetLastError() == WSAEWOULDBLOCK) {
-#else
+#elif EAGAIN != EWOULDBLOCK
     if (errno==EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+#else
+    if (errno==EAGAIN || errno == EINTR) {
 #endif
       sock->flags |= COAP_SOCKET_WANT_WRITE;
       return 0;
@@ -588,7 +590,7 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
 #ifdef _WIN32
   r = recv(sock->fd, (char *)data, (int)data_len, 0);
 #else
-  r = send(sock->fd, data, data_len, 0);
+  r = recv(sock->fd, data, data_len, 0);
 #endif
   if (r == 0) {
     /* graceful shutdown */
@@ -599,8 +601,10 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
 #ifdef _WIN32
     error = WSAGetLastError();
     if (error == WSAEWOULDBLOCK) {
-#else
+#elif EAGAIN != EWOULDBLOCK
     if (errno==EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+#else
+    if (errno==EAGAIN || errno == EINTR) {
 #endif
       return 0;
     }

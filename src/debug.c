@@ -281,7 +281,7 @@ msg_code_string(uint16_t c) {
 
   if (c < sizeof(methods)/sizeof(const char *)) {
     return methods[c];
-  } else if ( c>=224 && c-224 < sizeof(signals)/sizeof(const char *) ) {
+  } else if (c >= 224 && c - 224 < (int)(sizeof(signals)/sizeof(const char *))) {
     return signals[c-224];
   } else {
     snprintf(buf, sizeof(buf), "%u.%02u", c >> 5, c & 0x1f);

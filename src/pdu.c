@@ -34,6 +34,14 @@
 #include "mem.h"
 #include "coap_session.h"
 
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
+#ifndef max
+#define max(a,b) ((a) > (b) ? (a) : (b))
+#endif
+
 void
 coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   assert(pdu);
@@ -472,7 +480,7 @@ coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
 }
 
 int
-coap_pdu_parse_opt(coap_pdu_t *pdu, coap_proto_t proto) {
+coap_pdu_parse_opt(coap_pdu_t *pdu) {
 
   /* sanity checks */
   if (pdu->code == 0) {
@@ -493,7 +501,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu, coap_proto_t proto) {
     pdu->data = NULL;
   } else {
     /* skip header + token */
-    coap_opt_t *opt = pdu->token + pdu->token_length;
+    const coap_opt_t *opt = pdu->token + pdu->token_length;
     size_t length = pdu->used_size - pdu->token_length;
 
     while (length > 0 && *opt != COAP_PAYLOAD_START) {
@@ -513,7 +521,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu, coap_proto_t proto) {
       }
     }
     if (length > 0)
-      pdu->data = opt;
+		pdu->data = (uint8_t*)opt;
     else
       pdu->data = NULL;
   }
@@ -541,7 +549,7 @@ coap_pdu_parse(coap_proto_t proto,
   memcpy(pdu->token - hdr_size, data, length);
   pdu->hdr_size = (uint8_t)hdr_size;
   pdu->used_size = length - hdr_size;
-  return coap_pdu_parse_header(pdu, proto) && coap_pdu_parse_opt(pdu, proto);
+  return coap_pdu_parse_header(pdu, proto) && coap_pdu_parse_opt(pdu);
 }
 
 size_t
