@@ -6,8 +6,8 @@ compiler:
 env:
   - PLATFORM=posix TESTS=yes TLS=no
   - PLATFORM=posix TLS=openssl
-  - PLATFORM=contiki TLS=no
-  - PLATFORM=lwip TLS=no
+#  - PLATFORM=contiki TLS=no
+#  - PLATFORM=lwip TLS=no
 
 addons:
   apt_packages:
