@@ -66,3 +66,4 @@ tests/*.o
 # ctags - Sublime plugin
 tags
 .tags*
+TAGS
