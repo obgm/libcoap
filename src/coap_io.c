@@ -727,6 +727,7 @@ coap_write(coap_context_t *ctx,
   nextpdu = coap_peek_next(ctx);
 
   while (nextpdu && now >= ctx->sendqueue_basetime && nextpdu->t <= now - ctx->sendqueue_basetime) {
+    nextpdu->t = 0;
     coap_retransmit(ctx, coap_pop_next(ctx));
     nextpdu = coap_peek_next(ctx);
   }
