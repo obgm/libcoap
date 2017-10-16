@@ -1,7 +1,7 @@
-language: c
-compiler:
-  - gcc
-  - clang
+sudo: required
+
+services:
+  - docker
 
 env:
   - PLATFORM=posix TESTS=yes TLS=no
@@ -9,17 +9,8 @@ env:
 #  - PLATFORM=contiki TLS=no
 #  - PLATFORM=lwip TLS=no
 
-addons:
-  apt_packages:
-    - pkg-config
-    - graphviz
-    - libcunit1-dev
-    - doxygen
-    - libxml2-utils
-    - xsltproc
-    - docbook-xml
-    - docbook-xsl
-    - asciidoc
+before_install:
+  - docker build -t obgm/libcoap:travis-env .
 
 branches:
   only:
@@ -28,6 +19,5 @@ branches:
      - /^release-.*$/
      - travis-test
 
-before_script: ./autogen.sh --clean && ./autogen.sh
-
-script: scripts/build.sh
+script:
+  - docker run obgm/libcoap:travis-env /bin/sh -c "./configure --disable-documentation --enable-tests --enable-examples --with-openssl && make"
