@@ -1,4 +1,9 @@
 sudo: required
+language: c
+
+compiler:
+  - gcc
+  - clang
 
 services:
   - docker
@@ -20,4 +25,4 @@ branches:
      - travis-test
 
 script:
-  - docker run obgm/libcoap:travis-env /bin/sh -c "./configure --disable-documentation --enable-tests --enable-examples --with-openssl && make"
+  - docker run -e CC -e PLATFORM -e TESTS -e TLS obgm/libcoap:travis-env /bin/sh -c "scripts/build.sh"
