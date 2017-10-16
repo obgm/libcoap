@@ -1,9 +1,10 @@
 FROM debian:testing-slim
 
 RUN apt-get update && apt-get install -y autoconf automake gcc clang \
-  libtool libtool-bin make pkg-config libcunit1-dev libssl-dev
+  libtool libtool-bin make pkg-config libcunit1-dev libssl-dev \
+  exuberant-ctags
 RUN apt-get install -y graphviz doxygen libxml2-utils xsltproc
-RUN apt-get install -y docbook-xml docbook-xsl asciidoc
+RUN apt-get install -y docbook-xml docbook-xsl asciidoc-base
 
 ENV libcoap_dir=/libcoap
 ADD . $libcoap_dir
