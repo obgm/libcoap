@@ -29,7 +29,7 @@ case "${PLATFORM}" in
                make -C examples/lwip lwip lwip-contrib
                make -C examples/lwip LDLIBS=`grep ac_cv_search_clock_gettime=- config.log|cut -d= -f2`
              ;;
-    posix|*) config "$WITH_TESTS --enable-documentation --enable-examples $WITH_TLS" && \
+    posix|*) config "$WITH_TESTS --disable-documentation --enable-examples $WITH_TLS" && \
                make
              ;;
 esac
