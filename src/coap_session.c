@@ -139,11 +139,11 @@ size_t coap_session_max_pdu_size(coap_session_t *session) {
   /* we must assume there is no token to be on the safe side */
   if (max_with_header <= 2)
     return 0;
-  else if (max_with_header < 13 + 2)
+  else if (max_with_header <= COAP_MAX_MESSAGE_SIZE_TCP0 + 2)
     return max_with_header - 2;
-  else if (max_with_header < 269 + 3)
+  else if (max_with_header <= COAP_MAX_MESSAGE_SIZE_TCP8 + 3)
     return max_with_header - 3;
-  else if (max_with_header < 65805 + 4)
+  else if (max_with_header <= COAP_MAX_MESSAGE_SIZE_TCP16 + 4)
     return max_with_header - 4;
   else
     return max_with_header - 6;
@@ -151,8 +151,8 @@ size_t coap_session_max_pdu_size(coap_session_t *session) {
 
 void coap_session_set_mtu(coap_session_t *session, unsigned mtu) {
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
-  if (mtu >= 65809)
-    mtu = 65808;
+  if (mtu > COAP_MAX_MESSAGE_SIZE_TCP16 + 4)
+    mtu = COAP_MAX_MESSAGE_SIZE_TCP16 + 4;
 #endif
   session->mtu = mtu;
   if (session->tls_overhead >= session->mtu) {

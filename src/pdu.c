@@ -96,8 +96,8 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size) {
   if (!pdu) return NULL;
 
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
-  assert(size < 65809);
-  if (size >= 65809)
+  assert(size <= COAP_MAX_MESSAGE_SIZE_TCP16 + 4);
+  if (size > COAP_MAX_MESSAGE_SIZE_TCP16 + 4)
     return NULL;
   pdu->max_hdr_size = COAP_PDU_MAX_UDP_HEADER_SIZE;
 #else
@@ -438,12 +438,13 @@ coap_pdu_parse_size(coap_proto_t proto,
       size = len;
     } else if (length >= 2) {
       if (len==13) {
-	size = (size_t)data[1] + 13;
+	size = (size_t)data[1] + COAP_MESSAGE_SIZE_OFFSET_TCP8;
       } else if (length >= 3) {
 	if (len==14) {
-	  size = ((size_t)data[1] << 8) + data[2] + 269;
+	  size = ((size_t)data[1] << 8) + data[2] + COAP_MESSAGE_SIZE_OFFSET_TCP16;
 	} else if (length >= 5) {
-	  size = ((size_t)data[1] << 24) + ((size_t)data[2] << 16) + ((size_t)data[3] << 8) + data[4] + 65805;
+	  size = ((size_t)data[1] << 24) + ((size_t)data[2] << 16)
+               + ((size_t)data[3] << 8) + data[4] + COAP_MESSAGE_SIZE_OFFSET_TCP32;
 	}
       }
     }
@@ -575,7 +576,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
       return 0;
     }
     len = pdu->used_size - pdu->token_length;
-    if (len < 13) {
+    if (len <= COAP_MAX_MESSAGE_SIZE_TCP0) {
       assert(pdu->max_hdr_size >= 2);
       if (pdu->max_hdr_size < 2) {
 	warn("coap_pdu_encode_header: not enough space for TCP0 header");
@@ -585,25 +586,25 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
                      | pdu->token_length;
       pdu->token[-1] = pdu->code;
       pdu->hdr_size = 2;
-    } else if (len < 269) {
+    } else if (len <= COAP_MAX_MESSAGE_SIZE_TCP8) {
       assert(pdu->max_hdr_size >= 3);
       if (pdu->max_hdr_size < 3) {
 	warn("coap_pdu_encode_header: not enough space for TCP8 header");
 	return 0;
       }
       pdu->token[-3] = 13 << 4 | pdu->token_length;
-      pdu->token[-2] = (uint8_t)(len - 13);
+      pdu->token[-2] = (uint8_t)(len - COAP_MESSAGE_SIZE_OFFSET_TCP8);
       pdu->token[-1] = pdu->code;
       pdu->hdr_size = 3;
-    } else if (len < 65805) {
+    } else if (len <= COAP_MAX_MESSAGE_SIZE_TCP16) {
       assert(pdu->max_hdr_size >= 4);
       if (pdu->max_hdr_size < 4) {
 	warn("coap_pdu_encode_header: not enough space for TCP16 header");
 	return 0;
       }
       pdu->token[-4] = 14 << 4 | pdu->token_length;
-      pdu->token[-3] = (uint8_t)((len - 269) >> 8);
-      pdu->token[-2] = (uint8_t)(len - 269);
+      pdu->token[-3] = (uint8_t)((len - COAP_MESSAGE_SIZE_OFFSET_TCP16) >> 8);
+      pdu->token[-2] = (uint8_t)(len - COAP_MESSAGE_SIZE_OFFSET_TCP16);
       pdu->token[-1] = pdu->code;
       pdu->hdr_size = 4;
     } else {
@@ -613,10 +614,10 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
 	return 0;
       }
       pdu->token[-6] = 15 << 4 | pdu->token_length;
-      pdu->token[-5] = (uint8_t)((len - 65805) >> 24);
-      pdu->token[-4] = (uint8_t)((len - 65805) >> 16);
-      pdu->token[-3] = (uint8_t)((len - 65805) >> 8);
-      pdu->token[-2] = (uint8_t)(len - 65805);
+      pdu->token[-5] = (uint8_t)((len - COAP_MESSAGE_SIZE_OFFSET_TCP32) >> 24);
+      pdu->token[-4] = (uint8_t)((len - COAP_MESSAGE_SIZE_OFFSET_TCP32) >> 16);
+      pdu->token[-3] = (uint8_t)((len - COAP_MESSAGE_SIZE_OFFSET_TCP32) >> 8);
+      pdu->token[-2] = (uint8_t)(len - COAP_MESSAGE_SIZE_OFFSET_TCP32);
       pdu->token[-1] = pdu->code;
       pdu->hdr_size = 6;
     }
