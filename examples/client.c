@@ -724,8 +724,13 @@ cmdline_uri(char *arg, int create_uri_opts) {
       return -1;
     }
 
-    if (coap_uri_scheme_is_secure(&uri) && !coap_dtls_is_supported()) {
+    if (uri.scheme==COAP_URI_SCHEME_COAPS && !reliable && !coap_dtls_is_supported()) {
       coap_log(LOG_EMERG, "coaps URI scheme not supported in this version of libcoap\n");
+      return -1;
+    }
+
+    if ((uri.scheme==COAP_URI_SCHEME_COAPS_TCP || (uri.scheme==COAP_URI_SCHEME_COAPS && reliable)) && !coap_tls_is_supported()) {
+      coap_log(LOG_EMERG, "coaps+tcp URI scheme not supported in this version of libcoap\n");
       return -1;
     }
 
@@ -1253,9 +1258,11 @@ main(int argc, char **argv) {
   session = get_session(
     ctx,
     node_str[0] ? node_str : NULL, port_str,
-    reliable ?
-        coap_uri_scheme_is_secure(&uri) ? COAP_PROTO_TLS : COAP_PROTO_TCP
-      : coap_uri_scheme_is_secure(&uri) ? COAP_PROTO_DTLS : COAP_PROTO_UDP,
+    uri.scheme==COAP_URI_SCHEME_COAP_TCP ? COAP_PROTO_TCP :
+    uri.scheme==COAP_URI_SCHEME_COAPS_TCP ? COAP_PROTO_TLS :
+    (reliable ?
+        uri.scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_TLS : COAP_PROTO_TCP
+      : uri.scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_DTLS : COAP_PROTO_UDP),
     &dst,
     user_length > 0 ? (const char *)user : NULL,
     key_length > 0  ? key : NULL, (unsigned)key_length

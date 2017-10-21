@@ -88,6 +88,15 @@ coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
     uri->scheme = COAP_URI_SCHEME_COAP;
   }
 
+  /* There might be and addition "+tcp", indicating reliable transport: */
+  if (len>=4 && p[0] == '+' && p[1] == 't' && p[2] == 'c' && p[3] == 'p' ) {
+    p += 4;
+    len -= 4;
+    if (uri->scheme == COAP_URI_SCHEME_COAPS)
+      uri->scheme = COAP_URI_SCHEME_COAPS_TCP;
+    else
+      uri->scheme = COAP_URI_SCHEME_COAP_TCP;
+  }
   q = (unsigned char *)"://";
   while (len && *q && *p == *q) {
     ++p; ++q; --len;
