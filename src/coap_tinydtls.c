@@ -444,11 +444,11 @@ int coap_tls_is_supported(void) {
   return 0;
 }
 
-void *coap_tls_new_client_session(coap_session_t *session UNUSED) {
+void *coap_tls_new_client_session(coap_session_t *session UNUSED, int *connected UNUSED) {
   return NULL;
 }
 
-void *coap_tls_new_server_session(coap_session_t *session UNUSED) {
+void *coap_tls_new_server_session(coap_session_t *session UNUSED, int *connected UNUSED) {
   return NULL;
 }
 

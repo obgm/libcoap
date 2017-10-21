@@ -479,9 +479,14 @@ coap_session_connect(coap_session_t *session) {
     if (session->sock.flags & COAP_SOCKET_WANT_CONNECT) {
       session->state = COAP_SESSION_STATE_CONNECTING;
     } else if (session->proto == COAP_PROTO_TLS) {
-      session->tls = coap_tls_new_client_session(session);
+      int connected = 0;
+      session->tls = coap_tls_new_client_session(session, &connected);
       if (session->tls) {
 	session->state = COAP_SESSION_STATE_HANDSHAKE;
+        if (connected) {
+          coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+          coap_session_send_csm(session);
+        }
       } else {
 	coap_session_free(session);
 	return NULL;
@@ -499,9 +504,14 @@ coap_session_accept(coap_session_t *session) {
   if (session->proto == COAP_PROTO_TCP) {
     coap_session_send_csm(session);
   } else if (session->proto == COAP_PROTO_TLS) {
-    session->tls = coap_tls_new_server_session(session);
+    int connected = 0;
+    session->tls = coap_tls_new_server_session(session, &connected);
     if (session->tls) {
       session->state = COAP_SESSION_STATE_HANDSHAKE;
+      if (connected) {
+        coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+        coap_session_send_csm(session);
+      }
     } else {
       coap_session_free(session);
       session = NULL;

@@ -781,12 +781,13 @@ unsigned int coap_dtls_get_overhead(coap_session_t *session) {
   return overhead;
 }
 
-void *coap_tls_new_client_session(coap_session_t *session) {
+void *coap_tls_new_client_session(coap_session_t *session, int *connected) {
   BIO *bio = NULL;
   SSL *ssl = NULL;
   int r;
   coap_tls_context_t *tls = &((coap_openssl_context_t *)session->context->dtls_context)->tls;
 
+  *connected = 0;
   ssl = SSL_new(tls->ctx);
   if (!ssl)
     goto error;
@@ -811,6 +812,8 @@ void *coap_tls_new_client_session(coap_session_t *session) {
   if (r == 0)
     goto error;
 
+  *connected = SSL_is_init_finished(ssl);
+
   return ssl;
 
 error:
@@ -819,12 +822,13 @@ error:
   return NULL;
 }
 
-void * coap_tls_new_server_session(coap_session_t *session) {
+void *coap_tls_new_server_session(coap_session_t *session, int *connected) {
   BIO *bio = NULL;
   SSL *ssl = NULL;
   coap_tls_context_t *tls = &((coap_openssl_context_t *)session->context->dtls_context)->tls;
   int r;
 
+  *connected = 0;
   ssl = SSL_new(tls->ctx);
   if (!ssl)
     goto error;
@@ -858,6 +862,8 @@ void * coap_tls_new_server_session(coap_session_t *session) {
   if (r == 0)
     goto error;
 
+  *connected = SSL_is_init_finished(ssl);
+
   return ssl;
 
 error:
@@ -876,16 +882,16 @@ ssize_t coap_tls_write(coap_session_t *session,
   if (ssl == NULL)
     return -1;
 
-  in_init = SSL_in_init( ssl );
+  in_init = !SSL_is_init_finished(ssl);
   dtls_event = -1;
   r = SSL_write(ssl, data, (int)data_len);
 
   if (r <= 0) {
     int err = SSL_get_error(ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
-      if ( in_init && SSL_is_init_finished( ssl ) ) {
-        coap_handle_event( session->context, COAP_EVENT_DTLS_CONNECTED, session );
-        coap_session_send_csm( session );
+      if (in_init && SSL_is_init_finished(ssl)) {
+        coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+        coap_session_send_csm(session);
       }
       if (err == SSL_ERROR_WANT_READ)
 	session->sock.flags |= COAP_SOCKET_WANT_READ;
@@ -900,6 +906,9 @@ ssize_t coap_tls_write(coap_session_t *session,
 	dtls_event = COAP_EVENT_DTLS_ERROR;
       r = -1;
     }
+  } else if (in_init && SSL_is_init_finished(ssl)) {
+    coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+    coap_session_send_csm(session);
   }
 
   if (dtls_event >= 0) {
@@ -908,9 +917,6 @@ ssize_t coap_tls_write(coap_session_t *session,
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
       r = -1;
     }
-  } else if ( in_init && SSL_is_init_finished( ssl ) ) {
-    coap_handle_event( session->context, COAP_EVENT_DTLS_CONNECTED, session );
-    coap_session_send_csm( session );
   }
 
   return r;
@@ -926,7 +932,7 @@ ssize_t coap_tls_read(coap_session_t *session,
   if (ssl == NULL)
     return -1;
 
-  in_init = SSL_in_init(ssl);
+  in_init = !SSL_is_init_finished(ssl);
   dtls_event = -1;
   r = SSL_read(ssl, data, (int)data_len);
   if (r <= 0) {
@@ -948,16 +954,17 @@ ssize_t coap_tls_read(coap_session_t *session,
 	dtls_event = COAP_EVENT_DTLS_ERROR;
       r = -1;
     }
-    if (dtls_event >= 0) {
-      coap_handle_event(session->context, dtls_event, session);
-      if (dtls_event == COAP_EVENT_DTLS_ERROR || dtls_event == COAP_EVENT_DTLS_CLOSED) {
-	coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
-	r = -1;
-      }
-    }
   } else if (in_init && SSL_is_init_finished(ssl)) {
     coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
     coap_session_send_csm(session);
+  }
+
+  if (dtls_event >= 0) {
+    coap_handle_event(session->context, dtls_event, session);
+    if (dtls_event == COAP_EVENT_DTLS_ERROR || dtls_event == COAP_EVENT_DTLS_CLOSED) {
+      coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
+      r = -1;
+    }
   }
 
   return r;

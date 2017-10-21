@@ -110,11 +110,11 @@ unsigned int coap_dtls_get_overhead(coap_session_t *session UNUSED) {
   return 0;
 }
 
-void *coap_tls_new_client_session(coap_session_t *session UNUSED) {
+void *coap_tls_new_client_session(coap_session_t *session UNUSED, int *connected UNUSED) {
   return NULL;
 }
 
-void *coap_tls_new_server_session(coap_session_t *session UNUSED) {
+void *coap_tls_new_server_session(coap_session_t *session UNUSED, int *connected UNUSED) {
   return NULL;
 }
 

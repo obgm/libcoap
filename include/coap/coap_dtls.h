@@ -161,7 +161,7 @@ unsigned int coap_dtls_get_overhead(coap_session_t *session);
  * @param session   The CoAP session
  * @return Opaque handle to underlying TLS library object containing security parameters for the session.
 */
-void *coap_tls_new_client_session(coap_session_t *session);
+void *coap_tls_new_client_session(coap_session_t *session, int *connected);
 
 /**
 * Create a new server-side session.
@@ -169,7 +169,7 @@ void *coap_tls_new_client_session(coap_session_t *session);
 * @param session   The CoAP session
 * @return Opaque handle to underlying TLS library object containing security parameters for the session.
 */
-void *coap_tls_new_server_session(coap_session_t *session);
+void *coap_tls_new_server_session(coap_session_t *session, int *connected);
 
 /**
  * Send data to a TLS peer, with implicit flush.
