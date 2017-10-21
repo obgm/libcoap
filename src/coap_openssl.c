@@ -870,23 +870,28 @@ ssize_t coap_tls_write(coap_session_t *session,
                        const uint8_t *data,
                        size_t data_len
 ) {
-  int r;
   SSL *ssl = (SSL *)session->tls;
+  int r, in_init;
 
   if (ssl == NULL)
     return -1;
 
+  in_init = SSL_in_init( ssl );
   dtls_event = -1;
   r = SSL_write(ssl, data, (int)data_len);
 
   if (r <= 0) {
     int err = SSL_get_error(ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
-      r = 0;
+      if ( in_init && SSL_is_init_finished( ssl ) ) {
+        coap_handle_event( session->context, COAP_EVENT_DTLS_CONNECTED, session );
+        coap_session_send_csm( session );
+      }
       if (err == SSL_ERROR_WANT_READ)
 	session->sock.flags |= COAP_SOCKET_WANT_READ;
       if (err == SSL_ERROR_WANT_WRITE)
 	session->sock.flags |= COAP_SOCKET_WANT_WRITE;
+      r = 0;
     } else {
       coap_log(LOG_WARNING, "coap_tls_write: cannot send PDU\n");
       if (err == SSL_ERROR_ZERO_RETURN)
@@ -903,6 +908,9 @@ ssize_t coap_tls_write(coap_session_t *session,
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
       r = -1;
     }
+  } else if ( in_init && SSL_is_init_finished( ssl ) ) {
+    coap_handle_event( session->context, COAP_EVENT_DTLS_CONNECTED, session );
+    coap_session_send_csm( session );
   }
 
   return r;
@@ -913,12 +921,12 @@ ssize_t coap_tls_read(coap_session_t *session,
                       size_t data_len
 ) {
   SSL *ssl = (SSL *)session->tls;
-  int r;
+  int r, in_init;
 
   if (ssl == NULL)
     return -1;
 
-  int in_init = SSL_in_init(ssl);
+  in_init = SSL_in_init(ssl);
   dtls_event = -1;
   r = SSL_read(ssl, data, (int)data_len);
   if (r <= 0) {
