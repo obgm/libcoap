@@ -1041,6 +1041,7 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
 	);
 	break;
       default:
+        bytes_written = -1;
         break;
     }
     if (bytes_written > 0)
