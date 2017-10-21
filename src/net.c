@@ -1652,7 +1652,9 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
     }
   }
 
-  len = need_block2 ? SZX_TO_BYTES( block.szx ) : resp->max_size ? resp->max_size - resp->used_size : wkc_len;
+  len = need_block2 ? SZX_TO_BYTES( block.szx ) :
+        resp->max_size && resp->used_size + wkc_len + 1 > resp->max_size ?
+        resp->max_size - resp->used_size - 1 : wkc_len;
   data = coap_add_data_after(resp, len);
   if (!data) {
     debug( "coap_wellknown_response: coap_add_data failed\n" );
