@@ -29,7 +29,21 @@ typedef struct coap_dtls_context_t {
   BIO_ADDR *bio_addr;
 } coap_dtls_context_t;
 
+typedef struct coap_tls_context_t {
+  SSL_CTX *ctx;
+  BIO_METHOD *meth;
+} coap_tls_context_t;
+
+typedef struct coap_openssl_context_t {
+  coap_dtls_context_t dtls;
+  coap_tls_context_t tls;
+} coap_openssl_context_t;
+
 int coap_dtls_is_supported(void) {
+  return 1;
+}
+
+int coap_tls_is_supported(void) {
   return 1;
 }
 
@@ -185,6 +199,7 @@ static long coap_dgram_ctrl(BIO *a, int cmd, long num, void *ptr) {
   return ret;
 }
 
+#if 0
 static int coap_dtls_verify_cert(int ok, X509_STORE_CTX *ctx) {
   (void)ok;
   (void)ctx;
@@ -193,6 +208,7 @@ static int coap_dtls_verify_cert(int ok, X509_STORE_CTX *ctx) {
     coap_log(LOG_WARNING, "cannot accept DTLS connection with certificate.\n");
   return 0;	/* For now, trust no one */
 }
+#endif
 
 static int coap_dtls_generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len) {
   coap_dtls_context_t *dtls = (coap_dtls_context_t *)SSL_CTX_get_app_data(SSL_get_SSL_CTX(ssl));
@@ -215,7 +231,7 @@ static int coap_dtls_verify_cookie(SSL *ssl, const unsigned char *cookie, unsign
 
 static unsigned coap_dtls_psk_client_callback(SSL *ssl, const char *hint, char *identity, unsigned int max_identity_len, unsigned char *buf, unsigned max_len) {
   size_t hint_len = 0, identity_len = 0, psk_len;
-  coap_ssl_data *data = (coap_ssl_data*)BIO_get_data(SSL_get_rbio(ssl));
+  coap_session_t *session = (coap_session_t*)SSL_get_app_data(ssl);
 
   if (hint)
     hint_len = strlen(hint);
@@ -224,10 +240,10 @@ static unsigned coap_dtls_psk_client_callback(SSL *ssl, const char *hint, char *
 
   coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)hint_len, hint);
 
-  if (data->session == NULL || data->session->context == NULL || data->session->context->get_client_psk == NULL)
+  if (session == NULL || session->context == NULL || session->context->get_client_psk == NULL)
     return 0;
 
-  psk_len = data->session->context->get_client_psk(data->session, (const uint8_t*)hint, hint_len, (uint8_t*)identity, &identity_len, max_identity_len - 1, (uint8_t*)buf, max_len);
+  psk_len = session->context->get_client_psk(session, (const uint8_t*)hint, hint_len, (uint8_t*)identity, &identity_len, max_identity_len - 1, (uint8_t*)buf, max_len);
   if (identity_len < max_identity_len)
     identity[identity_len] = 0;
   return (unsigned)psk_len;
@@ -235,7 +251,7 @@ static unsigned coap_dtls_psk_client_callback(SSL *ssl, const char *hint, char *
 
 static unsigned coap_dtls_psk_server_callback(SSL *ssl, const char *identity, unsigned char *buf, unsigned max_len) {
   size_t identity_len = 0;
-  coap_ssl_data *data = (coap_ssl_data*)BIO_get_data(SSL_get_rbio(ssl));
+  coap_session_t *session = (coap_session_t*)SSL_get_app_data(ssl);
 
   if (identity)
     identity_len = strlen(identity);
@@ -244,10 +260,10 @@ static unsigned coap_dtls_psk_server_callback(SSL *ssl, const char *identity, un
 
   coap_log(LOG_DEBUG, "got psk_identity: '%.*s'\n", (int)identity_len, identity);
 
-  if (data->session == NULL || data->session->context == NULL || data->session->context->get_server_psk == NULL)
+  if (session == NULL || session->context == NULL || session->context->get_server_psk == NULL)
     return 0;
 
-  return (unsigned)data->session->context->get_server_psk(data->session, (const uint8_t*)identity, identity_len, (uint8_t*)buf, max_len);
+  return (unsigned)session->context->get_server_psk(session, (const uint8_t*)identity, identity_len, (uint8_t*)buf, max_len);
 }
 
 static int dtls_event = 0;
@@ -297,60 +313,154 @@ static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
     dtls_event = COAP_EVENT_DTLS_RENEGOTIATE;
 }
 
+static int coap_sock_create(BIO *a) {
+  BIO_set_init(a, 1);
+  return 1;
+}
+
+static int coap_sock_destroy(BIO *a) {
+  (void)a;
+  return 1;
+}
+
+static int coap_sock_read(BIO *a, char *out, int outl) {
+  int ret = 0;
+  coap_session_t *session = (coap_session_t *)BIO_get_data(a);
+
+  if (out != NULL) {
+    ret = (int)coap_socket_read(&session->sock, (uint8_t*)out, (size_t)outl);
+    if (ret == 0) {
+      BIO_set_retry_read(a);
+      ret = -1;
+    } else {
+      BIO_clear_retry_flags(a);
+    }
+  }
+  return ret;
+}
+
+static int coap_sock_write(BIO *a, const char *in, int inl) {
+  int ret = 0;
+  coap_session_t *session = (coap_session_t *)BIO_get_data(a);
+
+  ret = (int)coap_socket_write(&session->sock, (const uint8_t*)in, (size_t)inl);
+  BIO_clear_retry_flags(a);
+  if (ret == 0) {
+    BIO_set_retry_read(a);
+    ret = -1;
+  } else {
+    BIO_clear_retry_flags(a);
+  }
+  return ret;
+}
+
+static int coap_sock_puts(BIO *a, const char *pstr) {
+  return coap_sock_write(a, pstr, (int)strlen(pstr));
+}
+
+static long coap_sock_ctrl(BIO *a, int cmd, long num, void *ptr) {
+  int r = 1;
+  (void)a;
+  (void)ptr;
+  (void)num;
+
+  switch (cmd) {
+  case BIO_C_SET_FD:
+  case BIO_C_GET_FD:
+    r = -1;
+    break;
+  case BIO_CTRL_SET_CLOSE:
+  case BIO_CTRL_DUP:
+  case BIO_CTRL_FLUSH:
+    r = 1;
+    break;
+  default:
+  case BIO_CTRL_GET_CLOSE:
+    r = 0;
+    break;
+  }
+  return r;
+}
+
 void *coap_dtls_new_context(struct coap_context_t *coap_context) {
-  coap_dtls_context_t *context;
+  coap_openssl_context_t *context;
   (void)coap_context;
 
-  context = (coap_dtls_context_t *)coap_malloc(sizeof(coap_dtls_context_t));
+  context = (coap_openssl_context_t *)coap_malloc(sizeof(coap_openssl_context_t));
   if (context) {
     BIO *bio;
     uint8_t cookie_secret[32];
-    memset(context, 0, sizeof(coap_dtls_context_t));
-    context->ctx = SSL_CTX_new(DTLS_method());
-    if (!context->ctx)
+
+    memset(context, 0, sizeof(coap_openssl_context_t));
+
+    /* Set up DTLS context */
+    context->dtls.ctx = SSL_CTX_new(DTLS_method());
+    if (!context->dtls.ctx)
       goto error;
-    SSL_CTX_set_min_proto_version(context->ctx, DTLS1_2_VERSION);
-    SSL_CTX_set_app_data(context->ctx, context);
-    SSL_CTX_set_read_ahead(context->ctx, 1);
-    SSL_CTX_set_cipher_list(context->ctx, "TLSv1.2:TLSv1.0");
+    SSL_CTX_set_min_proto_version(context->dtls.ctx, DTLS1_2_VERSION);
+    SSL_CTX_set_app_data(context->dtls.ctx, &context->dtls);
+    SSL_CTX_set_read_ahead(context->dtls.ctx, 1);
+    SSL_CTX_set_cipher_list(context->dtls.ctx, "TLSv1.2:TLSv1.0");
     if (!RAND_bytes(cookie_secret, (int)sizeof(cookie_secret))) {
       if (dtls_log_level >= LOG_WARNING)
 	coap_log(LOG_WARNING, "Insufficient entropy for random cookie generation");
       prng(cookie_secret, sizeof(cookie_secret));
     }
-    context->cookie_hmac = HMAC_CTX_new();
-    if (!HMAC_Init_ex(context->cookie_hmac, cookie_secret, (int)sizeof(cookie_secret), EVP_sha256(), NULL))
+    context->dtls.cookie_hmac = HMAC_CTX_new();
+    if (!HMAC_Init_ex(context->dtls.cookie_hmac, cookie_secret, (int)sizeof(cookie_secret), EVP_sha256(), NULL))
       goto error;
-    /*SSL_CTX_set_verify( context->ctx, SSL_VERIFY_PEER, coap_dtls_verify_cert );*/
-    SSL_CTX_set_cookie_generate_cb(context->ctx, coap_dtls_generate_cookie);
-    SSL_CTX_set_cookie_verify_cb(context->ctx, coap_dtls_verify_cookie);
-    SSL_CTX_set_info_callback(context->ctx, coap_dtls_info_callback);
-    SSL_CTX_set_psk_client_callback(context->ctx, coap_dtls_psk_client_callback);
-    SSL_CTX_set_psk_server_callback(context->ctx, coap_dtls_psk_server_callback);
-    SSL_CTX_use_psk_identity_hint(context->ctx, "");
-    SSL_CTX_set_options(context->ctx, SSL_OP_NO_QUERY_MTU);
-    context->meth = BIO_meth_new(BIO_TYPE_DGRAM, "coapdgram");
-    if (!context->meth)
+    /*SSL_CTX_set_verify(context->dtls.ctx, SSL_VERIFY_PEER, coap_dtls_verify_cert );*/
+    SSL_CTX_set_cookie_generate_cb(context->dtls.ctx, coap_dtls_generate_cookie);
+    SSL_CTX_set_cookie_verify_cb(context->dtls.ctx, coap_dtls_verify_cookie);
+    SSL_CTX_set_info_callback(context->dtls.ctx, coap_dtls_info_callback);
+    SSL_CTX_set_psk_client_callback(context->dtls.ctx, coap_dtls_psk_client_callback);
+    SSL_CTX_set_psk_server_callback(context->dtls.ctx, coap_dtls_psk_server_callback);
+    SSL_CTX_use_psk_identity_hint(context->dtls.ctx, "");
+    SSL_CTX_set_options(context->dtls.ctx, SSL_OP_NO_QUERY_MTU);
+    context->dtls.meth = BIO_meth_new(BIO_TYPE_DGRAM, "coapdgram");
+    if (!context->dtls.meth)
       goto error;
-    context->bio_addr = BIO_ADDR_new();
-    if (!context->bio_addr)
+    context->dtls.bio_addr = BIO_ADDR_new();
+    if (!context->dtls.bio_addr)
       goto error;
-    BIO_meth_set_write(context->meth, coap_dgram_write);
-    BIO_meth_set_read(context->meth, coap_dgram_read);
-    BIO_meth_set_puts(context->meth, coap_dgram_puts);
-    BIO_meth_set_ctrl(context->meth, coap_dgram_ctrl);
-    BIO_meth_set_create(context->meth, coap_dgram_create);
-    BIO_meth_set_destroy(context->meth, coap_dgram_destroy);
-    context->ssl = SSL_new(context->ctx);
-    if (!context->ssl)
+    BIO_meth_set_write(context->dtls.meth, coap_dgram_write);
+    BIO_meth_set_read(context->dtls.meth, coap_dgram_read);
+    BIO_meth_set_puts(context->dtls.meth, coap_dgram_puts);
+    BIO_meth_set_ctrl(context->dtls.meth, coap_dgram_ctrl);
+    BIO_meth_set_create(context->dtls.meth, coap_dgram_create);
+    BIO_meth_set_destroy(context->dtls.meth, coap_dgram_destroy);
+    context->dtls.ssl = SSL_new(context->dtls.ctx);
+    if (!context->dtls.ssl)
       goto error;
-    bio = BIO_new(context->meth);
+    bio = BIO_new(context->dtls.meth);
     if (!bio)
       goto error;
-    SSL_set_bio(context->ssl, bio, bio);
-    SSL_set_app_data(context->ssl, NULL);
-    SSL_set_options(context->ssl, SSL_OP_COOKIE_EXCHANGE);
-    SSL_set_mtu(context->ssl, COAP_DEFAULT_PDU_SIZE);
+    SSL_set_bio(context->dtls.ssl, bio, bio);
+    SSL_set_app_data(context->dtls.ssl, NULL);
+    SSL_set_options(context->dtls.ssl, SSL_OP_COOKIE_EXCHANGE);
+    SSL_set_mtu(context->dtls.ssl, COAP_DEFAULT_MTU);
+
+    /* Set up TLS context */
+    context->tls.ctx = SSL_CTX_new(TLS_method());
+    if (!context->tls.ctx)
+      goto error;
+    SSL_CTX_set_app_data(context->tls.ctx, &context->tls);
+    SSL_CTX_set_min_proto_version(context->tls.ctx, TLS1_VERSION);
+    SSL_CTX_set_cipher_list(context->dtls.ctx, "TLSv1.2:TLSv1.0");
+    /*SSL_CTX_set_verify(context->tls.ctx, SSL_VERIFY_PEER, coap_dtls_verify_cert);*/
+    SSL_CTX_set_info_callback(context->tls.ctx, coap_dtls_info_callback);
+    SSL_CTX_set_psk_client_callback(context->tls.ctx, coap_dtls_psk_client_callback);
+    SSL_CTX_set_psk_server_callback(context->tls.ctx, coap_dtls_psk_server_callback);
+    SSL_CTX_use_psk_identity_hint(context->tls.ctx, "");
+    context->tls.meth = BIO_meth_new(BIO_TYPE_SOCKET, "coapsock");
+    if (!context->tls.meth)
+      goto error;
+    BIO_meth_set_write(context->tls.meth, coap_sock_write);
+    BIO_meth_set_read(context->tls.meth, coap_sock_read);
+    BIO_meth_set_puts(context->tls.meth, coap_sock_puts);
+    BIO_meth_set_ctrl(context->tls.meth, coap_sock_ctrl);
+    BIO_meth_set_create(context->tls.meth, coap_sock_create);
+    BIO_meth_set_destroy(context->tls.meth, coap_sock_destroy);
   }
 
   return context;
@@ -361,17 +471,17 @@ error:
 }
 
 void coap_dtls_free_context(void *handle) {
-  coap_dtls_context_t *context = (coap_dtls_context_t *)handle;
-  if (context->ssl)
-    SSL_free(context->ssl);
-  if (context->ctx)
-    SSL_CTX_free(context->ctx);
-  if (context->cookie_hmac)
-    HMAC_CTX_free(context->cookie_hmac);
-  if (context->meth)
-    BIO_meth_free(context->meth);
-  if (context->bio_addr)
-    BIO_ADDR_free(context->bio_addr);
+  coap_openssl_context_t *context = (coap_openssl_context_t *)handle;
+  if (context->dtls.ssl)
+    SSL_free(context->dtls.ssl);
+  if (context->dtls.ctx)
+    SSL_CTX_free(context->dtls.ctx);
+  if (context->dtls.cookie_hmac)
+    HMAC_CTX_free(context->dtls.cookie_hmac);
+  if (context->dtls.meth)
+    BIO_meth_free(context->dtls.meth);
+  if (context->dtls.bio_addr)
+    BIO_ADDR_free(context->dtls.bio_addr);
   coap_free(context);
 }
 
@@ -379,7 +489,7 @@ void * coap_dtls_new_server_session(coap_session_t *session) {
   BIO *nbio = NULL;
   SSL *nssl = NULL, *ssl = NULL;
   coap_ssl_data *data;
-  coap_dtls_context_t *dtls = (coap_dtls_context_t *)session->context->dtls_context;
+  coap_dtls_context_t *dtls = &((coap_openssl_context_t *)session->context->dtls_context)->dtls;
   int r;
 
   nssl = SSL_new(dtls->ctx);
@@ -434,7 +544,7 @@ void *coap_dtls_new_client_session(coap_session_t *session) {
   SSL *ssl = NULL;
   coap_ssl_data *data;
   int r;
-  coap_dtls_context_t *dtls = (coap_dtls_context_t *)session->context->dtls_context;
+  coap_dtls_context_t *dtls = &((coap_openssl_context_t *)session->context->dtls_context)->dtls;
 
   ssl = SSL_new(dtls->ctx);
   if (!ssl)
@@ -547,18 +657,18 @@ void coap_dtls_handle_timeout(coap_session_t *session) {
 
 int coap_dtls_hello(coap_session_t *session,
   const uint8_t *data, size_t data_len) {
-  coap_dtls_context_t *ctx = (coap_dtls_context_t *)session->context->dtls_context;
+  coap_dtls_context_t *dtls = &((coap_openssl_context_t *)session->context->dtls_context)->dtls;
   coap_ssl_data *ssl_data;
   int r;
 
-  SSL_set_mtu(ctx->ssl, session->mtu);
-  ssl_data = (coap_ssl_data*)BIO_get_data(SSL_get_rbio(ctx->ssl));
+  SSL_set_mtu(dtls->ssl, session->mtu);
+  ssl_data = (coap_ssl_data*)BIO_get_data(SSL_get_rbio(dtls->ssl));
   ssl_data->session = session;
   ssl_data->pdu = data;
   ssl_data->pdu_len = (unsigned)data_len;
-  r = DTLSv1_listen(ctx->ssl, ctx->bio_addr);
+  r = DTLSv1_listen(dtls->ssl, dtls->bio_addr);
   if (r <= 0) {
-    int err = SSL_get_error(ctx->ssl, r);
+    int err = SSL_get_error(dtls->ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
       /* Got a ClientHello, sent-out a VerifyRequest */
       r = 0;
@@ -588,7 +698,7 @@ int coap_dtls_receive(coap_session_t *session,
   dtls_event = -1;
   r = SSL_read(ssl, pdu, (int)sizeof(pdu));
   if (r > 0) {
-    return coap_handle_message(session->context, session, pdu, (size_t)r);
+    return coap_handle_dgram(session->context, session, pdu, (size_t)r);
   } else {
     int err = SSL_get_error(ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
@@ -670,6 +780,196 @@ unsigned int coap_dtls_get_overhead(coap_session_t *session) {
   }
   return overhead;
 }
+
+void *coap_tls_new_client_session(coap_session_t *session, int *connected) {
+  BIO *bio = NULL;
+  SSL *ssl = NULL;
+  int r;
+  coap_tls_context_t *tls = &((coap_openssl_context_t *)session->context->dtls_context)->tls;
+
+  *connected = 0;
+  ssl = SSL_new(tls->ctx);
+  if (!ssl)
+    goto error;
+  bio = BIO_new(tls->meth);
+  if (!bio)
+    goto error;
+  BIO_set_data(bio, session);
+  SSL_set_bio(ssl, bio, bio);
+  SSL_set_app_data(ssl, session);
+
+  r = SSL_connect(ssl);
+  if (r == -1) {
+    int ret = SSL_get_error(ssl, r);
+    if (ret != SSL_ERROR_WANT_READ && ret != SSL_ERROR_WANT_WRITE)
+      r = 0;
+    if (ret == SSL_ERROR_WANT_READ)
+      session->sock.flags |= COAP_SOCKET_WANT_READ;
+    if (ret == SSL_ERROR_WANT_WRITE)
+      session->sock.flags |= COAP_SOCKET_WANT_WRITE;
+  }
+
+  if (r == 0)
+    goto error;
+
+  *connected = SSL_is_init_finished(ssl);
+
+  return ssl;
+
+error:
+  if (ssl)
+    SSL_free(ssl);
+  return NULL;
+}
+
+void *coap_tls_new_server_session(coap_session_t *session, int *connected) {
+  BIO *bio = NULL;
+  SSL *ssl = NULL;
+  coap_tls_context_t *tls = &((coap_openssl_context_t *)session->context->dtls_context)->tls;
+  int r;
+
+  *connected = 0;
+  ssl = SSL_new(tls->ctx);
+  if (!ssl)
+    goto error;
+  bio = BIO_new(tls->meth);
+  if (!bio)
+    goto error;
+  BIO_set_data(bio, session);
+  SSL_set_bio(ssl, bio, bio);
+  SSL_set_app_data(ssl, session);
+
+  if (session->context->get_server_hint) {
+    char hint[128] = "";
+    size_t hint_len = session->context->get_server_hint(session, (uint8_t*)hint, sizeof(hint) - 1);
+    if (hint_len > 0 && hint_len < sizeof(hint)) {
+      hint[hint_len] = 0;
+      SSL_use_psk_identity_hint(ssl, hint);
+    }
+  }
+
+  r = SSL_accept(ssl);
+  if (r == -1) {
+    int err = SSL_get_error(ssl, r);
+    if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE)
+      r = 0;
+    if (err == SSL_ERROR_WANT_READ)
+      session->sock.flags |= COAP_SOCKET_WANT_READ;
+    if (err == SSL_ERROR_WANT_WRITE)
+      session->sock.flags |= COAP_SOCKET_WANT_WRITE;
+  }
+
+  if (r == 0)
+    goto error;
+
+  *connected = SSL_is_init_finished(ssl);
+
+  return ssl;
+
+error:
+  if (ssl)
+    SSL_free(ssl);
+  return NULL;
+}
+
+ssize_t coap_tls_write(coap_session_t *session,
+                       const uint8_t *data,
+                       size_t data_len
+) {
+  SSL *ssl = (SSL *)session->tls;
+  int r, in_init;
+
+  if (ssl == NULL)
+    return -1;
+
+  in_init = !SSL_is_init_finished(ssl);
+  dtls_event = -1;
+  r = SSL_write(ssl, data, (int)data_len);
+
+  if (r <= 0) {
+    int err = SSL_get_error(ssl, r);
+    if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
+      if (in_init && SSL_is_init_finished(ssl)) {
+        coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+        coap_session_send_csm(session);
+      }
+      if (err == SSL_ERROR_WANT_READ)
+	session->sock.flags |= COAP_SOCKET_WANT_READ;
+      if (err == SSL_ERROR_WANT_WRITE)
+	session->sock.flags |= COAP_SOCKET_WANT_WRITE;
+      r = 0;
+    } else {
+      coap_log(LOG_WARNING, "coap_tls_write: cannot send PDU\n");
+      if (err == SSL_ERROR_ZERO_RETURN)
+	dtls_event = COAP_EVENT_DTLS_CLOSED;
+      else if (err == SSL_ERROR_SSL)
+	dtls_event = COAP_EVENT_DTLS_ERROR;
+      r = -1;
+    }
+  } else if (in_init && SSL_is_init_finished(ssl)) {
+    coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+    coap_session_send_csm(session);
+  }
+
+  if (dtls_event >= 0) {
+    coap_handle_event(session->context, dtls_event, session);
+    if (dtls_event == COAP_EVENT_DTLS_ERROR || dtls_event == COAP_EVENT_DTLS_CLOSED) {
+      coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
+      r = -1;
+    }
+  }
+
+  return r;
+}
+
+ssize_t coap_tls_read(coap_session_t *session,
+                      uint8_t *data,
+                      size_t data_len
+) {
+  SSL *ssl = (SSL *)session->tls;
+  int r, in_init;
+
+  if (ssl == NULL)
+    return -1;
+
+  in_init = !SSL_is_init_finished(ssl);
+  dtls_event = -1;
+  r = SSL_read(ssl, data, (int)data_len);
+  if (r <= 0) {
+    int err = SSL_get_error(ssl, r);
+    if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
+      if (in_init && SSL_is_init_finished(ssl)) {
+	coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+	coap_session_send_csm(session);
+      }
+      if (err == SSL_ERROR_WANT_READ)
+	session->sock.flags |= COAP_SOCKET_WANT_READ;
+      if (err == SSL_ERROR_WANT_WRITE)
+	session->sock.flags |= COAP_SOCKET_WANT_WRITE;
+      r = 0;
+    } else {
+      if (err == SSL_ERROR_ZERO_RETURN)	/* Got a close notify alert from the remote side */
+	dtls_event = COAP_EVENT_DTLS_CLOSED;
+      else if (err == SSL_ERROR_SSL)
+	dtls_event = COAP_EVENT_DTLS_ERROR;
+      r = -1;
+    }
+  } else if (in_init && SSL_is_init_finished(ssl)) {
+    coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+    coap_session_send_csm(session);
+  }
+
+  if (dtls_event >= 0) {
+    coap_handle_event(session->context, dtls_event, session);
+    if (dtls_event == COAP_EVENT_DTLS_ERROR || dtls_event == COAP_EVENT_DTLS_CLOSED) {
+      coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
+      r = -1;
+    }
+  }
+
+  return r;
+}
+
 #else /* !HAVE_OPENSSL */
 
 /* make compilers happy that do not like empty modules */

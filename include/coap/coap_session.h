@@ -20,13 +20,8 @@ struct coap_queue_t;
 
 #define COAP_DEFAULT_SESSION_TIMEOUT 300
 
-typedef uint8_t coap_proto_t;
-/**
-* coap_proto_t values
-*/
-#define COAP_PROTO_NONE	  0
-#define COAP_PROTO_UDP	  1
-#define COAP_PROTO_DTLS	  2
+#define COAP_PROTO_NOT_RELIABLE(p) ((p)==COAP_PROTO_UDP || (p)==COAP_PROTO_DTLS)
+#define COAP_PROTO_RELIABLE(p) ((p)==COAP_PROTO_TCP || (p)==COAP_PROTO_TLS)
 
 typedef uint8_t coap_session_type_t;
 /**
@@ -43,16 +38,18 @@ typedef uint8_t coap_session_state_t;
 #define COAP_SESSION_STATE_NONE		0
 #define COAP_SESSION_STATE_CONNECTING	1
 #define COAP_SESSION_STATE_HANDSHAKE	2
-#define COAP_SESSION_STATE_ESTABLISHED	3
+#define COAP_SESSION_STATE_CSM		3
+#define COAP_SESSION_STATE_ESTABLISHED	4
 
 typedef struct coap_session_t {
   struct coap_session_t *next;
   coap_proto_t proto;		  /**< protocol used */
   coap_session_type_t type;	  /**< client or server side socket */
   coap_session_state_t state;	  /**< current state of relationaship with peer */
-  uint8_t ref;			  /**< reference count from queues */
-  uint16_t mtu;			  /**< path mtu */
-  uint16_t tls_overhead;	  /**< overhead of TLS layer */
+  unsigned ref;			  /**< reference count from queues */
+  unsigned tls_overhead;	  /**< overhead of TLS layer */
+  unsigned mtu;			  /**< path or CSM mtu */
+  coap_address_t local_if;        /**< optional local interface address */
   coap_address_t remote_addr;     /**< remote address and port */
   coap_address_t local_addr;	  /**< local address and port */
   int ifindex;                    /**< interface index */
@@ -62,6 +59,10 @@ typedef struct coap_session_t {
   void *tls;			  /**< security parameters */
   uint16_t tx_mid;                /**< the last message id that was used in this session */
   struct coap_queue_t *sendqueue; /**< list of messages waiting to be sent */
+  size_t partial_write;           /**< if > 0 indicates number of bytes already written from the pdu at the head of sendqueue */
+  uint8_t read_header[8];         /**< storage space for header of incoming message header */
+  size_t partial_read;            /**< if > 0 indicates number of bytes already read for an incoming message */
+  coap_pdu_t *partial_pdu;        /**< incomplete incoming pdu */
   coap_tick_t last_rx_tx;
   uint8_t *psk_identity;
   size_t psk_identity_len;
@@ -115,6 +116,13 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
 void coap_session_reset(coap_session_t *session);
 
 /**
+* Notify session transport has just connected and CSM exchange can now start.
+*
+* @param session The CoAP session.
+*/
+void coap_session_send_csm(coap_session_t *session);
+
+/**
 * Notify session that it has just connected or reconnected.
 *
 * @param session The CoAP session.
@@ -134,9 +142,9 @@ void coap_session_set_mtu(coap_session_t *session, unsigned mtu);
  * Get maximum acceptable PDU size
  *
  * @param session The CoAP session.
- * @return maximum PDU size
+ * @return maximum PDU size, not including header (but including token).
  */
-unsigned int coap_session_max_pdu_size(coap_session_t *session);
+size_t coap_session_max_pdu_size(coap_session_t *session);
 
 /**
 * Creates a new client session to the designated server.
@@ -178,8 +186,21 @@ coap_session_t *coap_new_client_session_psk(
 );
 
 /**
-* Function interface for data transmission. This function returns the number of
-* bytes that have been transmitted, or a value less than zero on error.
+* Creates a new server session for the specified endpoint.
+* @param ctx The CoAP context.
+* @param ep An endpoint where an incoming connection request is pending.
+*
+* @return A new CoAP session or NULL if failed. Call coap_session_release to free.
+*/
+coap_session_t *coap_new_server_session(
+  struct coap_context_t *ctx,
+  struct coap_endpoint_t *ep
+);
+
+/**
+* Function interface for datagram data transmission. This function returns
+* the number of bytes that have been transmitted, or a value less than zero
+* on error.
 *
 * @param session          Session to send data on.
 * @param data             The data to send.
@@ -190,6 +211,36 @@ coap_session_t *coap_new_client_session_psk(
 */
 ssize_t coap_session_send(coap_session_t *session,
   const uint8_t *data, size_t datalen);
+
+/**
+* Function interface for stream data transmission. This function returns
+* the number of bytes that have been transmitted, or a value less than zero
+* on error. The number of bytes written may be less than datalen because of
+* congestion control.
+*
+* @param session          Session to send data on.
+* @param data             The data to send.
+* @param datalen          The actual length of @p data.
+*
+* @return                 The number of bytes written on success, or a value
+*                         less than zero on error.
+*/
+ssize_t coap_session_write(coap_session_t *session,
+  const uint8_t *data, size_t datalen);
+
+/**
+* Send a pdu according to the session's protocol. This function returns
+* the number of bytes that have been transmitted, or a value less than zero
+* on error.
+*
+* @param session          Session to send pdu on.
+* @param pdu              The pdu to send.
+*
+* @return                 The number of bytes written on success, or a value
+*                         less than zero on error.
+*/
+ssize_t coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu);
+
 
 /**
  * Get session description.

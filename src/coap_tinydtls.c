@@ -115,7 +115,7 @@ dtls_application_data(struct dtls_context_t *dtls_context,
     return -1;
   }
 
-  return coap_handle_message(coap_context, coap_session, data, len);
+  return coap_handle_dgram(coap_context, coap_session, data, len);
 }
 
 static int coap_event_dtls = 0;
@@ -124,7 +124,7 @@ static int
 dtls_event(struct dtls_context_t *dtls_context,
   session_t *dtls_session,
   dtls_alert_level_t level,
-  unsigned short code) {
+  uint16_t code) {
   (void)dtls_context;
   (void)dtls_session;
 
@@ -433,6 +433,40 @@ unsigned int coap_dtls_get_overhead(coap_session_t *session) {
   (void)session;
   return 13 + 8 + 8;
 }
+
+#ifdef __GNUC__
+#define UNUSED __attribute__((unused))
+#else /* __GNUC__ */
+#define UNUSED
+#endif /* __GNUC__ */
+
+int coap_tls_is_supported(void) {
+  return 0;
+}
+
+void *coap_tls_new_client_session(coap_session_t *session UNUSED, int *connected UNUSED) {
+  return NULL;
+}
+
+void *coap_tls_new_server_session(coap_session_t *session UNUSED, int *connected UNUSED) {
+  return NULL;
+}
+
+ssize_t coap_tls_write(coap_session_t *session UNUSED,
+                       const uint8_t *data UNUSED,
+                       size_t data_len UNUSED
+) {
+  return -1;
+}
+
+ssize_t coap_tls_read(coap_session_t *session UNUSED,
+                      uint8_t *data UNUSED,
+                      size_t data_len UNUSED
+) {
+  return -1;
+}
+
+#undef UNUSED
 
 #else /* !HAVE_LIBTINYDTLS */
 

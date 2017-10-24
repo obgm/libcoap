@@ -31,7 +31,7 @@ int coap_flsll(long long i)
 #endif
 
 unsigned int
-coap_decode_var_bytes(unsigned char *buf,unsigned int len) {
+coap_decode_var_bytes(const uint8_t *buf,unsigned int len) {
   unsigned int i, n = 0;
   for (i = 0; i < len; ++i)
     n = (n << 8) + buf[i];
@@ -40,7 +40,7 @@ coap_decode_var_bytes(unsigned char *buf,unsigned int len) {
 }
 
 unsigned int
-coap_encode_var_bytes(unsigned char *buf, unsigned int val) {
+coap_encode_var_bytes(uint8_t *buf, unsigned int val) {
   unsigned int n, i;
 
   for (n = 0, i = val; i && n < sizeof(val); ++n)

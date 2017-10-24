@@ -133,7 +133,7 @@ PROCESS_THREAD(coap_server_process, ev, data)
 
   request = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_GET, 
 			  coap_new_message_id(coap_context), 
-			  COAP_DEFFAULT_PDU_SIZE);
+			  COAP_DEFAULT_MTU);
   
   coap_split_uri((unsigned char *)resource, strlen(resource), &uri);
 
@@ -156,9 +156,9 @@ PROCESS_THREAD(coap_server_process, ev, data)
 
     while (res--) {
       coap_add_option(request, COAP_OPTION_URI_PATH, 
-		      COAP_OPT_LENGTH(buf), COAP_OPT_VALUE(buf));
+		      coap_opt_length(buf), coap_opt_value(buf));
 
-      buf += COAP_OPT_SIZE(buf);      
+      buf += coap_opt_size(buf);      
     }
   }
 

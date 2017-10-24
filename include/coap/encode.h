@@ -16,6 +16,8 @@
 # include <strings.h>
 #endif
 
+#include <stdint.h>
+
 #define Nn 8  /* duplicate definition of N if built on sky motes */
 #define ENCODE_HEADER_SIZE 4
 #define HIBIT (1 << (Nn - 1))
@@ -47,13 +49,13 @@ extern int coap_flsll(long long i);
  * Decodes multiple-length byte sequences. buf points to an input byte sequence
  * of length len. Returns the decoded value.
  */
-unsigned int coap_decode_var_bytes(unsigned char *buf,unsigned int len);
+unsigned int coap_decode_var_bytes(const uint8_t *buf, unsigned int len);
 
 /**
  * Encodes multiple-length byte sequences. buf points to an output buffer of
  * sufficient length to store the encoded bytes. val is the value to encode.
  * Returns the number of bytes used to encode val or 0 on error.
  */
-unsigned int coap_encode_var_bytes(unsigned char *buf, unsigned int val);
+unsigned int coap_encode_var_bytes(uint8_t *buf, unsigned int val);
 
 #endif /* _COAP_ENCODE_H_ */

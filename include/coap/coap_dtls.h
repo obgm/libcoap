@@ -1,7 +1,8 @@
 /*
- * coap_dtls.h -- Datagram Transport Layer Support for libcoap
+ * coap_dtls.h -- (Datagram) Transport Layer Support for libcoap
  *
  * Copyright (C) 2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2017 Jean-Claude Michelou <jcm@spinetix.com>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -22,6 +23,9 @@
 
 /** Returns 1 if support for DTLS is enabled, or 0 otherwise. */
 int coap_dtls_is_supported(void);
+
+/** Returns 1 if support for TLS is enabled, or 0 otherwise. */
+int coap_tls_is_supported( void );
 
 /** Sets the log level to the specified value. */
 void coap_dtls_set_log_level(int level);
@@ -78,7 +82,8 @@ void coap_dtls_session_update_mtu(coap_session_t *session);
  * Send data to a DTLS peer.
  *
  * @param session   The CoAP session
- * @param pdu       The CoAP PDU
+ * @param data      pointer to data
+ * @param size      number of bytes to send
  * @return 0 if this would be blocking, -1 if there is an error or the number of cleartext bytes sent
  */
 int coap_dtls_send(coap_session_t *session,
@@ -122,7 +127,7 @@ void coap_dtls_handle_timeout(coap_session_t *session);
 * @param session   The CoAP session
 * @param data      Encrypted datagram
 * @param data_len  Encrypted datagram size
-* @return result of coap_handle_message on the decrypted CoAP PDU or -1 for error.
+* @return result of coap_handle_dgram on the decrypted CoAP PDU or -1 for error.
 */
 int coap_dtls_receive(coap_session_t *session,
                       const uint8_t *data,
@@ -149,6 +154,50 @@ int coap_dtls_hello(coap_session_t *session,
  */
 
 unsigned int coap_dtls_get_overhead(coap_session_t *session);
+
+/**
+ * Create a new client-side session.
+ *
+ * @param session   The CoAP session
+ * @return Opaque handle to underlying TLS library object containing security parameters for the session.
+*/
+void *coap_tls_new_client_session(coap_session_t *session, int *connected);
+
+/**
+* Create a new server-side session.
+*
+* @param session   The CoAP session
+* @return Opaque handle to underlying TLS library object containing security parameters for the session.
+*/
+void *coap_tls_new_server_session(coap_session_t *session, int *connected);
+
+/**
+ * Send data to a TLS peer, with implicit flush.
+ *
+ * @param session   The CoAP session
+ * @param data      pointer to data
+ * @param size      number of bytes to send
+ * @return          0 if this should be retried, -1 if there is an error or
+ *                  the number of cleartext bytes sent.
+ */
+ssize_t coap_tls_write(coap_session_t *session,
+                       const uint8_t *data,
+                       size_t data_len
+                       );
+  
+/**
+ * Read some data from a TLS peer.
+ *
+ * @param session   The CoAP session
+ * @param data      pointer to data
+ * @param size      maximum number of bytes to read
+ * @return          0 if this should be retried, -1 if there is an error or
+ *                  the number of cleartext bytes read.
+ */
+ssize_t coap_tls_read(coap_session_t *session,
+                      uint8_t *data,
+                      size_t data_len
+                      );
 
 /** @} */
 

@@ -131,7 +131,7 @@ hnd_get_index(coap_context_t  *ctx, struct coap_resource_t *resource,
 	      coap_pdu_t *response) {
   unsigned char buf[3];
 
-  response->hdr->code = COAP_RESPONSE_CODE(205);
+  response->code = COAP_RESPONSE_CODE(205);
 
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
 	  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
@@ -154,12 +154,12 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
 
   test_payload = coap_find_payload(resource->key);
   if (!test_payload) {
-    response->hdr->code = COAP_RESPONSE_CODE(500);
+    response->code = COAP_RESPONSE_CODE(500);
     
     return;
   }
 
-  response->hdr->code = COAP_RESPONSE_CODE(205);
+  response->code = COAP_RESPONSE_CODE(205);
 
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
 	  coap_encode_var_bytes(buf, test_payload->media_type), buf);
@@ -180,13 +180,13 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
 
       switch (res) {
       case -2:			/* illegal block */
-	response->hdr->code = COAP_RESPONSE_CODE(400);
+	response->code = COAP_RESPONSE_CODE(400);
 	goto error;
       case -1:			/* should really not happen */
 	assert(0);
 	/* fall through if assert is a no-op */
       case -3:			/* cannot handle request */
-	response->hdr->code = COAP_RESPONSE_CODE(500);
+	response->code = COAP_RESPONSE_CODE(500);
 	goto error;
       default:			/* everything is good */
 	;
@@ -214,8 +214,8 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
 
  error:
   coap_add_data(response, 
-		strlen(coap_response_phrase(response->hdr->code)),
-		(unsigned char *)coap_response_phrase(response->hdr->code));
+		strlen(coap_response_phrase(response->code)),
+		(unsigned char *)coap_response_phrase(response->code));
 }
 
 /* DELETE handler for dynamic resources created by POST /test */
@@ -232,7 +232,7 @@ hnd_delete_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
 
   coap_delete_resource(ctx, resource->key);
 
-  response->hdr->code = COAP_RESPONSE_CODE(202);
+  response->code = COAP_RESPONSE_CODE(202);
 }
 
 void 
@@ -260,7 +260,7 @@ hnd_post_test(coap_context_t  *ctx, struct coap_resource_t *resource,
   uri = (coap_dynamic_uri_t *)coap_malloc(sizeof(coap_dynamic_uri_t) + l);
   if (!(test_payload && uri)) {
     coap_log(LOG_CRIT, "cannot allocate new resource under /test");
-    response->hdr->code = COAP_RESPONSE_CODE(500);    
+    response->code = COAP_RESPONSE_CODE(500);    
     coap_free(test_payload);
     coap_free(uri);
   } else {
@@ -291,12 +291,12 @@ hnd_post_test(coap_context_t  *ctx, struct coap_resource_t *resource,
 
     while (res--) {
       coap_add_option(response, COAP_OPTION_LOCATION_PATH,
-		      COAP_OPT_LENGTH(buf), COAP_OPT_VALUE(buf));
+		      coap_opt_length(buf), coap_opt_value(buf));
       
-      buf += COAP_OPT_SIZE(buf);      
+      buf += coap_opt_size(buf);      
     }
 
-    response->hdr->code = COAP_RESPONSE_CODE(201);
+    response->code = COAP_RESPONSE_CODE(201);
   }
 
 }
@@ -311,7 +311,7 @@ hnd_put_test(coap_context_t  *ctx, struct coap_resource_t *resource,
   size_t len;
   unsigned char *data;
 
-  response->hdr->code = COAP_RESPONSE_CODE(204);
+  response->code = COAP_RESPONSE_CODE(204);
 
   coap_get_data(request, &len, &data);
 
@@ -349,7 +349,7 @@ hnd_put_test(coap_context_t  *ctx, struct coap_resource_t *resource,
   return;
  error:
   warn("cannot modify resource\n");
-  response->hdr->code = COAP_RESPONSE_CODE(500);
+  response->code = COAP_RESPONSE_CODE(500);
 }
 
 void 
@@ -365,7 +365,7 @@ hnd_delete_test(coap_context_t  *ctx, struct coap_resource_t *resource,
     payload->length = 0;
 #endif
 
-  response->hdr->code = COAP_RESPONSE_CODE(202);
+  response->code = COAP_RESPONSE_CODE(202);
 }
 
 void 
@@ -378,7 +378,7 @@ hnd_get_query(coap_context_t  *ctx, struct coap_resource_t *resource,
   size_t len, L;
   unsigned char buf[70];
 
-  response->hdr->code = COAP_RESPONSE_CODE(205);
+  response->code = COAP_RESPONSE_CODE(205);
 
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
 	  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
@@ -416,10 +416,10 @@ hnd_get_separate(coap_context_t  *ctx, struct coap_resource_t *resource,
   unsigned long delay = 5;
 
   if (async) {
-    if (async->id != request->hdr->id) {
+    if (async->id != request->tid) {
       coap_opt_filter_t f;
       coap_option_filter_clear(f);
-      response->hdr->code = COAP_RESPONSE_CODE(503);
+      response->code = COAP_RESPONSE_CODE(503);
     }
     return;
   }
@@ -456,7 +456,7 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
   coap_pdu_t *response;
   coap_async_state_t *tmp;
   unsigned char buf[2];
-  size_t size = sizeof(coap_hdr_t) + 8;
+  size_t size = 8;
 
   if (!async || now < async->created + (unsigned long)async->appdata) 
     return;
@@ -474,7 +474,7 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
     return;
   }
   
-  response->hdr->id = coap_new_message_id(ctx);
+  response->tid = coap_new_message_id(ctx);
 
   if (async->tokenlen)
     coap_add_token(response, async->tokenlen, async->token);
@@ -486,7 +486,7 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
 
   if (coap_send(ctx, &async->peer, response) == COAP_INVALID_TID) {
     debug("check_async: cannot send response for message %d\n", 
-	  ntohs(response->hdr->id));
+	  response->tid);
   }
   
   coap_remove_async(ctx, async->id, &tmp);

@@ -16,10 +16,6 @@
 #include "debug.h"
 #include "block.h"
 
-#if (COAP_DEFAULT_PDU_SIZE - 6) < (1 << (COAP_MAX_BLOCK_SZX + 4))
-#error "COAP_MAX_BLOCK_SZX too large"
-#endif
-
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -28,7 +24,7 @@
 unsigned int
 coap_opt_block_num(const coap_opt_t *block_opt) {
   unsigned int num = 0;
-  unsigned short len;
+  uint16_t len;
   
   len = coap_opt_length(block_opt);
 
@@ -37,15 +33,15 @@ coap_opt_block_num(const coap_opt_t *block_opt) {
   }
   
   if (len > 1) {
-    num = coap_decode_var_bytes(COAP_OPT_VALUE(block_opt), 
-				COAP_OPT_LENGTH(block_opt) - 1);
+    num = coap_decode_var_bytes(coap_opt_const_value(block_opt), 
+				coap_opt_length(block_opt) - 1);
   }
   
   return (num << 4) | ((*COAP_OPT_BLOCK_LAST(block_opt) & 0xF0) >> 4);
 }
 
 int
-coap_get_block(coap_pdu_t *pdu, unsigned short type, coap_block_t *block) {
+coap_get_block(coap_pdu_t *pdu, uint16_t type, coap_block_t *block) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
 
@@ -73,7 +69,7 @@ coap_get_block(coap_pdu_t *pdu, unsigned short type, coap_block_t *block) {
 }
 
 int
-coap_write_block_opt(coap_block_t *block, unsigned short type,
+coap_write_block_opt(coap_block_t *block, uint16_t type,
 		     coap_pdu_t *pdu, size_t data_length) {
   size_t start, want, avail;
   unsigned char buf[4];
@@ -86,7 +82,8 @@ coap_write_block_opt(coap_block_t *block, unsigned short type,
     return -2;
   }
   
-  avail = pdu->max_size - pdu->length - 4;
+  assert(pdu->max_size > 0);
+  avail = pdu->max_size - pdu->used_size - 4;
   want = (size_t)1 << (block->szx + 4);
 
   /* check if entire block fits in message */

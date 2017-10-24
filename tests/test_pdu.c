@@ -27,15 +27,14 @@ t_parse_pdu1(void) {
   uint8_t teststr[] = {  0x40, 0x01, 0x93, 0x34 };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result > 0);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(pdu->hdr->version == 1);
-  CU_ASSERT(pdu->hdr->type == COAP_MESSAGE_CON);
-  CU_ASSERT(pdu->hdr->token_length == 0);
-  CU_ASSERT(pdu->hdr->code == COAP_REQUEST_GET);
-  CU_ASSERT(memcmp(&pdu->hdr->id, teststr + 2, 2) == 0);
+  CU_ASSERT(pdu->used_size == sizeof(teststr) - 4);
+  CU_ASSERT(pdu->type == COAP_MESSAGE_CON);
+  CU_ASSERT(pdu->token_length == 0);
+  CU_ASSERT(pdu->code == COAP_REQUEST_GET);
+  CU_ASSERT(pdu->tid == 0x9334);
   CU_ASSERT_PTR_NULL(pdu->data);
 }
 
@@ -44,16 +43,15 @@ t_parse_pdu2(void) {
   uint8_t teststr[] = {  0x55, 0x69, 0x12, 0x34, 't', 'o', 'k', 'e', 'n' };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result > 0);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(pdu->hdr->version == 1);
-  CU_ASSERT(pdu->hdr->type == COAP_MESSAGE_NON);
-  CU_ASSERT(pdu->hdr->token_length == 5);
-  CU_ASSERT(pdu->hdr->code == 0x69);
-  CU_ASSERT(memcmp(&pdu->hdr->id, teststr + 2, 2) == 0);
-  CU_ASSERT(memcmp(pdu->hdr->token, teststr + 4, 5) == 0);
+  CU_ASSERT(pdu->used_size == sizeof(teststr) - 4);
+  CU_ASSERT(pdu->type == COAP_MESSAGE_NON);
+  CU_ASSERT(pdu->token_length == 5);
+  CU_ASSERT(pdu->code == 0x69);
+  CU_ASSERT(pdu->tid == 0x1234);
+  CU_ASSERT(memcmp(pdu->token, teststr + 4, 5) == 0);
   CU_ASSERT_PTR_NULL(pdu->data);
 }
 
@@ -62,7 +60,7 @@ t_parse_pdu3(void) {
   uint8_t teststr[] = {  0x53, 0x69, 0x12, 0x34, 't', 'o', 'k', 'e', 'n' };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result == 0);
 }
 
@@ -73,12 +71,12 @@ t_parse_pdu4(void) {
 		      't', 'o', 'k', 'e', 'n', '1', '2', '3', '4' };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result == 0);
 
   teststr[0] = 0x5f;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result == 0);
 }
 
@@ -90,16 +88,15 @@ t_parse_pdu5(void) {
   };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result > 0);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(pdu->hdr->version == 1);
-  CU_ASSERT(pdu->hdr->type == COAP_MESSAGE_NON);
-  CU_ASSERT(pdu->hdr->token_length == 5);
-  CU_ASSERT(pdu->hdr->code == 0x73);
-  CU_ASSERT(memcmp(&pdu->hdr->id, teststr + 2, 2) == 0);
-  CU_ASSERT(memcmp(pdu->hdr->token, teststr + 4, 5) == 0);
+  CU_ASSERT(pdu->used_size == sizeof(teststr) - 4);
+  CU_ASSERT(pdu->type == COAP_MESSAGE_NON);
+  CU_ASSERT(pdu->token_length == 5);
+  CU_ASSERT(pdu->code == 0x73);
+  CU_ASSERT(pdu->tid == 0x1234);
+  CU_ASSERT(memcmp(pdu->token, teststr + 4, 5) == 0);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   /* FIXME: check options */
@@ -113,7 +110,7 @@ t_parse_pdu6(void) {
   };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result == 0);
 }
 
@@ -126,20 +123,19 @@ t_parse_pdu7(void) {
   };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result > 0);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(pdu->hdr->version == 1);
-  CU_ASSERT(pdu->hdr->type == COAP_MESSAGE_NON);
-  CU_ASSERT(pdu->hdr->token_length == 5);
-  CU_ASSERT(pdu->hdr->code == 0x73);
-  CU_ASSERT(memcmp(&pdu->hdr->id, teststr + 2, 2) == 0);
-  CU_ASSERT(memcmp(pdu->hdr->token, teststr + 4, 5) == 0);
+  CU_ASSERT(pdu->used_size == sizeof(teststr) - 4);
+  CU_ASSERT(pdu->type == COAP_MESSAGE_NON);
+  CU_ASSERT(pdu->token_length == 5);
+  CU_ASSERT(pdu->code == 0x73);
+  CU_ASSERT(pdu->tid == 0x1234);
+  CU_ASSERT(memcmp(pdu->token, teststr + 4, 5) == 0);
 
   /* FIXME: check options */
 
-  CU_ASSERT(pdu->data == (unsigned char *)pdu->hdr + 13);
+  CU_ASSERT(pdu->data == pdu->token + 9);
   CU_ASSERT(memcmp(pdu->data, teststr + 13, 7) == 0);
 }
 
@@ -152,19 +148,18 @@ t_parse_pdu8(void) {
   };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result > 0);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(pdu->hdr->version == 1);
-  CU_ASSERT(pdu->hdr->type == COAP_MESSAGE_NON);
-  CU_ASSERT(pdu->hdr->token_length == 0);
-  CU_ASSERT(pdu->hdr->code == 0x73);
-  CU_ASSERT(memcmp(&pdu->hdr->id, teststr + 2, 2) == 0);
+  CU_ASSERT(pdu->used_size == sizeof(teststr) - 4);
+  CU_ASSERT(pdu->type == COAP_MESSAGE_NON);
+  CU_ASSERT(pdu->token_length == 0);
+  CU_ASSERT(pdu->code == 0x73);
+  CU_ASSERT(pdu->tid == 0x1234);
 
   /* FIXME: check options */
 
-  CU_ASSERT(pdu->data == (unsigned char *)pdu->hdr + 5);
+  CU_ASSERT(pdu->data == pdu->token + 1);
   CU_ASSERT(memcmp(pdu->data, teststr + 5, 7) == 0);
 }
 
@@ -174,7 +169,7 @@ t_parse_pdu9(void) {
   uint8_t teststr[] = {  0x70, 0x00, 0x12, 0x34, 0xff };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result == 0);
 }
 
@@ -186,7 +181,7 @@ t_parse_pdu10(void) {
   };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result == 0);
 }
 
@@ -195,15 +190,14 @@ t_parse_pdu11(void) {
   uint8_t teststr[] = {  0x60, 0x00, 0x12, 0x34 };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result > 0);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(pdu->hdr->version == 1);
-  CU_ASSERT(pdu->hdr->type == COAP_MESSAGE_ACK);
-  CU_ASSERT(pdu->hdr->token_length == 0);
-  CU_ASSERT(pdu->hdr->code == 0);
-  CU_ASSERT(memcmp(&pdu->hdr->id, teststr + 2, 2) == 0);
+  CU_ASSERT(pdu->used_size == sizeof(teststr) - 4);
+  CU_ASSERT(pdu->type == COAP_MESSAGE_ACK);
+  CU_ASSERT(pdu->token_length == 0);
+  CU_ASSERT(pdu->code == 0);
+  CU_ASSERT(pdu->tid == 0x1234);
 }
 
 static void
@@ -212,15 +206,14 @@ t_parse_pdu12(void) {
   uint8_t teststr[] = {  0x70, 0x00, 0x12, 0x34 };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result > 0);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(pdu->hdr->version == 1);
-  CU_ASSERT(pdu->hdr->type == COAP_MESSAGE_RST);
-  CU_ASSERT(pdu->hdr->token_length == 0);
-  CU_ASSERT(pdu->hdr->code == 0);
-  CU_ASSERT(memcmp(&pdu->hdr->id, teststr + 2, 2) == 0);
+  CU_ASSERT(pdu->used_size == sizeof(teststr) - 4);
+  CU_ASSERT(pdu->type == COAP_MESSAGE_RST);
+  CU_ASSERT(pdu->token_length == 0);
+  CU_ASSERT(pdu->code == 0);
+  CU_ASSERT(pdu->tid == 0x1234);
 }
 
 static void
@@ -231,7 +224,7 @@ t_parse_pdu13(void) {
   };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result == 0);
 }
 
@@ -243,7 +236,7 @@ t_parse_pdu14(void) {
   };
   int result;
 
-  result = coap_pdu_parse((unsigned char *)teststr, sizeof(teststr), pdu);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result == 0);
 }
 
@@ -257,16 +250,17 @@ t_encode_pdu1(void) {
   int result;
 
   coap_pdu_clear(pdu, pdu->max_size);
-  pdu->hdr->type = COAP_MESSAGE_CON;
-  pdu->hdr->code = COAP_REQUEST_GET;
-  pdu->hdr->id = htons(0x1234);
+  pdu->type = COAP_MESSAGE_CON;
+  pdu->code = COAP_REQUEST_GET;
+  pdu->tid = 0x1234;
 
   result = coap_add_token(pdu, 5, (unsigned char *)"token");
 
   CU_ASSERT(result == 1);
-  CU_ASSERT(pdu->length == sizeof(teststr));
+  CU_ASSERT(pdu->used_size == 5);
   CU_ASSERT_PTR_NULL(pdu->data);
-  CU_ASSERT(memcmp(pdu->hdr, teststr, sizeof(teststr)) == 0);
+  CU_ASSERT(coap_pdu_encode_header(pdu, COAP_PROTO_UDP) == 4);
+  CU_ASSERT(memcmp(pdu->token - 4, teststr, sizeof(teststr)) == 0);
 }
 
 static void
@@ -274,11 +268,11 @@ t_encode_pdu2(void) {
   size_t old_max = pdu->max_size;
   int result;
 
-  coap_pdu_clear(pdu, 7);	/* set very small PDU size */
+  coap_pdu_clear(pdu, 3);	/* set very small PDU size */
 
-  pdu->hdr->type = COAP_MESSAGE_CON;
-  pdu->hdr->code = COAP_REQUEST_GET;
-  pdu->hdr->id = htons(0x1234);
+  pdu->type = COAP_MESSAGE_CON;
+  pdu->code = COAP_REQUEST_GET;
+  pdu->tid = 0x1234;
 
   result = coap_add_token(pdu, 5, (unsigned char *)"token");
 
@@ -310,18 +304,18 @@ t_encode_pdu4(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
 
-  pdu->hdr->type = COAP_MESSAGE_ACK;
-  pdu->hdr->code = 0x99;
-  pdu->hdr->id = htons(0x1234);
+  pdu->type = COAP_MESSAGE_ACK;
+  pdu->code = 0x99;
+  pdu->tid = 0x1234;
 
-  CU_ASSERT(pdu->length == 4);
+  CU_ASSERT(pdu->used_size == 0);
 
   result = coap_add_option(pdu, COAP_OPTION_URI_HOST,
        18, (unsigned char *)"fancyproxy.coap.me");
 
   CU_ASSERT(result == 20);
   CU_ASSERT(pdu->max_delta == 3);
-  CU_ASSERT(pdu->length == 24);
+  CU_ASSERT(pdu->used_size == 20);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_URI_PATH,
@@ -329,25 +323,25 @@ t_encode_pdu4(void) {
 
   CU_ASSERT(result == 5);
   CU_ASSERT(pdu->max_delta == 11);
-  CU_ASSERT(pdu->length == 29);
+  CU_ASSERT(pdu->used_size == 25);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_URI_PATH, 0, NULL);
 
   CU_ASSERT(result == 1);
   CU_ASSERT(pdu->max_delta == 11);
-  CU_ASSERT(pdu->length == 30);
+  CU_ASSERT(pdu->used_size == 26);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, 8000, 8, (unsigned char *)"fancyopt");
 
   CU_ASSERT(result == 11);
   CU_ASSERT(pdu->max_delta == 8000);
-  CU_ASSERT(pdu->length == 41);
+  CU_ASSERT(pdu->used_size == 37);
   CU_ASSERT_PTR_NULL(pdu->data);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(memcmp(pdu->hdr, teststr, sizeof(teststr)) == 0);
+  CU_ASSERT(coap_pdu_encode_header(pdu, COAP_PROTO_UDP) == 4);
+  CU_ASSERT(memcmp(pdu->token - 4, teststr, sizeof(teststr)) == 0);
 }
 
 static void
@@ -361,22 +355,22 @@ t_encode_pdu5(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
 
-  pdu->hdr->type = COAP_MESSAGE_ACK;
-  pdu->hdr->code = COAP_RESPONSE_CODE(404);
-  pdu->hdr->id = htons(0x1234);
+  pdu->type = COAP_MESSAGE_ACK;
+  pdu->code = COAP_RESPONSE_CODE(404);
+  pdu->tid = 0x1234;
 
-  CU_ASSERT(pdu->length == 4);
+  CU_ASSERT(pdu->used_size == 0);
 
   result = coap_add_token(pdu, 8, (unsigned char *)"12345678");
 
-  CU_ASSERT(pdu->length == 12);
+  CU_ASSERT(pdu->used_size == 8);
 
   result = coap_add_option(pdu, COAP_OPTION_IF_MATCH,
 			   8, (unsigned char *)"ABCDEFGH");
 
   CU_ASSERT(result == 9);
   CU_ASSERT(pdu->max_delta == 1);
-  CU_ASSERT(pdu->length == 21);
+  CU_ASSERT(pdu->used_size == 17);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_ACCEPT,
@@ -384,11 +378,11 @@ t_encode_pdu5(void) {
 
   CU_ASSERT(result == 3);
   CU_ASSERT(pdu->max_delta == 17);
-  CU_ASSERT(pdu->length == 24);
+  CU_ASSERT(pdu->used_size == 20);
   CU_ASSERT_PTR_NULL(pdu->data);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(memcmp(pdu->hdr, teststr, sizeof(teststr)) == 0);
+  CU_ASSERT(coap_pdu_encode_header(pdu, COAP_PROTO_UDP) == 4);
+  CU_ASSERT(memcmp(pdu->token - 4, teststr, sizeof(teststr)) == 0);
 }
 
 static void
@@ -399,17 +393,18 @@ t_encode_pdu6(void) {
   };
   coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
 
-  pdu->hdr->type = COAP_MESSAGE_NON;
-  pdu->hdr->code = COAP_REQUEST_POST;
-  pdu->hdr->id = htons(0x1234);
+  pdu->type = COAP_MESSAGE_NON;
+  pdu->code = COAP_REQUEST_POST;
+  pdu->tid = 0x1234;
 
-  CU_ASSERT(pdu->length == 4);
+  CU_ASSERT(pdu->used_size == 0);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   coap_add_data(pdu, 8, (unsigned char *)"12345678");
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(memcmp(pdu->hdr, teststr, sizeof(teststr)) == 0);
+  CU_ASSERT(pdu->used_size == 9);
+  CU_ASSERT(coap_pdu_encode_header(pdu, COAP_PROTO_UDP) == 4);
+  CU_ASSERT(memcmp(pdu->token - 4, teststr, sizeof(teststr)) == 0);
 }
 
 static void
@@ -419,20 +414,20 @@ t_encode_pdu7(void) {
   int result;
   coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
 
-  pdu->hdr->type = COAP_MESSAGE_CON;
-  pdu->hdr->code = COAP_RESPONSE_CODE(203);
-  pdu->hdr->id = htons(0x1234);
+  pdu->type = COAP_MESSAGE_CON;
+  pdu->code = COAP_RESPONSE_CODE(203);
+  pdu->tid = 0x1234;
 
-  CU_ASSERT(pdu->length == 4);
+  CU_ASSERT(pdu->used_size == 0);
 
   result = coap_add_data(pdu, 0, NULL);
 
   CU_ASSERT(result > 0);
-  CU_ASSERT(pdu->length == 4);
+  CU_ASSERT(pdu->used_size == 0);
   CU_ASSERT_PTR_NULL(pdu->data);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(memcmp(pdu->hdr, teststr, sizeof(teststr)) == 0);
+  CU_ASSERT(coap_pdu_encode_header(pdu, COAP_PROTO_UDP) == 4);
+  CU_ASSERT(memcmp(pdu->token - 4, teststr, sizeof(teststr)) == 0);
 }
 
 static void
@@ -442,11 +437,11 @@ t_encode_pdu8(void) {
   int result;
   coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
 
-  pdu->hdr->type = COAP_MESSAGE_CON;
-  pdu->hdr->code = COAP_RESPONSE_CODE(203);
-  pdu->hdr->id = htons(0x1234);
+  pdu->type = COAP_MESSAGE_CON;
+  pdu->code = COAP_RESPONSE_CODE(203);
+  pdu->tid = 0x1234;
 
-  CU_ASSERT(pdu->length == 4);
+  CU_ASSERT(pdu->used_size == 0);
 
   result = coap_add_token(pdu, 2, (unsigned char *)"\x00\x01");
 
@@ -455,11 +450,11 @@ t_encode_pdu8(void) {
   result = coap_add_data(pdu, 1, (unsigned char *)"\0");
 
   CU_ASSERT(result > 0);
-  CU_ASSERT(pdu->length == 8);
-  CU_ASSERT(pdu->data == (unsigned char *)pdu->hdr + 7);
+  CU_ASSERT(pdu->used_size == 4);
+  CU_ASSERT(pdu->data == pdu->token + 3);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(memcmp(pdu->hdr, teststr, sizeof(teststr)) == 0);
+  CU_ASSERT(coap_pdu_encode_header(pdu, COAP_PROTO_UDP) == 4);
+  CU_ASSERT(memcmp(pdu->token - 4, teststr, sizeof(teststr)) == 0);
 }
 
 static void
@@ -475,24 +470,24 @@ t_encode_pdu9(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
 
-  pdu->hdr->type = COAP_MESSAGE_ACK;
-  pdu->hdr->code = COAP_RESPONSE_CODE(204);
-  pdu->hdr->id = htons(0x1234);
+  pdu->type = COAP_MESSAGE_ACK;
+  pdu->code = COAP_RESPONSE_CODE(204);
+  pdu->tid = 0x1234;
 
-  CU_ASSERT(pdu->length == 4);
+  CU_ASSERT(pdu->used_size == 0);
 
   result = coap_add_option(pdu, COAP_OPTION_ETAG, 8, (unsigned char *)"someetag");
 
   CU_ASSERT(result == 9);
   CU_ASSERT(pdu->max_delta == 4);
-  CU_ASSERT(pdu->length == 13);
+  CU_ASSERT(pdu->used_size == 9);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_IF_NONE_MATCH, 0, NULL);
 
   CU_ASSERT(result == 1);
   CU_ASSERT(pdu->max_delta == 5);
-  CU_ASSERT(pdu->length == 14);
+  CU_ASSERT(pdu->used_size == 10);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_PROXY_URI,
@@ -500,17 +495,17 @@ t_encode_pdu9(void) {
 
   CU_ASSERT(result == 20);
   CU_ASSERT(pdu->max_delta == 35);
-  CU_ASSERT(pdu->length == 34);
+  CU_ASSERT(pdu->used_size == 30);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_data(pdu, 4, (unsigned char *)"data");
 
   CU_ASSERT(result > 0);
-  CU_ASSERT(pdu->length == 39);
-  CU_ASSERT(pdu->data == (unsigned char *)pdu->hdr + 35);
+  CU_ASSERT(pdu->used_size == 35);
+  CU_ASSERT(pdu->data == pdu->token + 31);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(memcmp(pdu->hdr, teststr, sizeof(teststr)) == 0);
+  CU_ASSERT(coap_pdu_encode_header(pdu, COAP_PROTO_UDP) == 4);
+  CU_ASSERT(memcmp(pdu->token - 4, teststr, sizeof(teststr)) == 0);
 }
 
 static void
@@ -557,11 +552,11 @@ t_encode_pdu10(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
 
-  pdu->hdr->type = COAP_MESSAGE_ACK;
-  pdu->hdr->code = COAP_RESPONSE_CODE(204);
-  pdu->hdr->id = htons(0x1234);
+  pdu->type = COAP_MESSAGE_ACK;
+  pdu->code = COAP_RESPONSE_CODE(204);
+  pdu->tid = 0x1234;
 
-  CU_ASSERT(pdu->length == 4);
+  CU_ASSERT(pdu->used_size == 0);
 
   result = coap_add_token(pdu, 2, (unsigned char *)"\0\0");
 
@@ -571,7 +566,7 @@ t_encode_pdu10(void) {
 
   CU_ASSERT(result == 257);
   CU_ASSERT(pdu->max_delta == 8);
-  CU_ASSERT(pdu->length == 263);
+  CU_ASSERT(pdu->used_size == 259);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_LOCATION_PATH, 14,
@@ -579,7 +574,7 @@ t_encode_pdu10(void) {
 
   CU_ASSERT(result == 16);
   CU_ASSERT(pdu->max_delta == 8);
-  CU_ASSERT(pdu->length == 279);
+  CU_ASSERT(pdu->used_size == 275);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_LOCATION_QUERY,
@@ -587,17 +582,17 @@ t_encode_pdu10(void) {
 
   CU_ASSERT(result == 2);
   CU_ASSERT(pdu->max_delta == 20);
-  CU_ASSERT(pdu->length == 281);
+  CU_ASSERT(pdu->used_size == 277);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_data(pdu, 4, (unsigned char *)"data");
 
   CU_ASSERT(result > 0);
-  CU_ASSERT(pdu->length == 286);
-  CU_ASSERT(pdu->data == (unsigned char *)pdu->hdr + 282);
+  CU_ASSERT(pdu->used_size == 282);
+  CU_ASSERT(pdu->data == pdu->token + 278);
 
-  CU_ASSERT(pdu->length == sizeof(teststr));
-  CU_ASSERT(memcmp(pdu->hdr, teststr, sizeof(teststr)) == 0);
+  CU_ASSERT(coap_pdu_encode_header(pdu, COAP_PROTO_UDP) == 4);
+  CU_ASSERT(memcmp(pdu->token - 4, teststr, sizeof(teststr)) == 0);
 }
 
 static void
@@ -616,13 +611,14 @@ t_encode_pdu11(void) {
 
   CU_ASSERT(result == 0);
   CU_ASSERT(pdu->data == NULL);
+  CU_ASSERT(pdu->used_size == 0);
 
   pdu->max_size = old_max;
 }
 
 static int
 t_pdu_tests_create(void) {
-  pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_PDU_SIZE);
+  pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
 
   return pdu == NULL;
 }

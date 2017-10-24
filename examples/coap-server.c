@@ -79,7 +79,7 @@ hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
               coap_pdu_t *response) {
   unsigned char buf[3];
 
-  response->hdr->code = COAP_RESPONSE_CODE(205);
+  response->code = COAP_RESPONSE_CODE(205);
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
@@ -110,7 +110,7 @@ hnd_get_time(coap_context_t  *ctx,
    * when query ?ticks is given. */
 
   /* if my_clock_base was deleted, we pretend to have no such resource */
-  response->hdr->code =
+  response->code =
     my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
 
   if (coap_find_observer(resource, session, token)) {
@@ -138,19 +138,13 @@ hnd_get_time(coap_context_t  *ctx,
     if (query != NULL
         && memcmp(query->s, "ticks", min(5, query->length)) == 0) {
           /* output ticks */
-          len = snprintf((char *)buf,
-                         min(sizeof(buf),
-                             response->max_size - response->length),
-                             "%u", (unsigned int)now);
+          len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
           coap_add_data(response, len, buf);
 
     } else {      /* output human-readable time */
       struct tm *tmp;
       tmp = gmtime(&now);
-      len = strftime((char *)buf,
-                     min(sizeof(buf),
-                     response->max_size - response->length),
-                     "%b %d %H:%M:%S", tmp);
+      len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
       coap_add_data(response, len, buf);
     }
   }
@@ -174,7 +168,7 @@ hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
    */
 
   /* if my_clock_base was deleted, we pretend to have no such resource */
-  response->hdr->code =
+  response->code =
     my_clock_base ? COAP_RESPONSE_CODE(204) : COAP_RESPONSE_CODE(201);
 
   coap_resource_set_dirty(resource, NULL);
@@ -220,10 +214,10 @@ hnd_get_async(coap_context_t *ctx,
   size_t size;
 
   if (async) {
-    if (async->id != request->hdr->id) {
+    if (async->id != request->tid) {
       coap_opt_filter_t f;
       coap_option_filter_clear(f);
-      response->hdr->code = COAP_RESPONSE_CODE(503);
+      response->code = COAP_RESPONSE_CODE(503);
     }
     return;
   }
@@ -249,7 +243,7 @@ check_async(coap_context_t *ctx,
   coap_pdu_t *response;
   coap_async_state_t *tmp;
 
-  size_t size = sizeof(coap_hdr_t) + 13;
+  size_t size = 13;
 
   if (!async || now < async->created + (unsigned long)async->appdata)
     return;
@@ -265,7 +259,7 @@ check_async(coap_context_t *ctx,
     return;
   }
 
-  response->hdr->id = coap_new_message_id(async->session);
+  response->tid = coap_new_message_id(async->session);
 
   if (async->tokenlen)
     coap_add_token(response, async->tokenlen, async->token);
@@ -274,7 +268,7 @@ check_async(coap_context_t *ctx,
 
   if (coap_send(async->session, response) == COAP_INVALID_TID) {
     debug("check_async: cannot send response for message %d\n",
-    ntohs(response->hdr->id));
+    response->tid);
   }
   coap_remove_async(ctx, async->session, async->id, &tmp);
   coap_free_async(async);
@@ -371,42 +365,51 @@ get_context(const char *node, const char *port) {
 
   /* iterate through results until success */
   for (rp = result; rp != NULL; rp = rp->ai_next) {
-    coap_address_t addr;
-    coap_endpoint_t *endpoint;
+    coap_address_t addr, addrs;
+    coap_endpoint_t *ep_udp = NULL, *ep_dtls = NULL, *ep_tcp = NULL, *ep_tls = NULL;
 
     if (rp->ai_addrlen <= sizeof(addr.addr)) {
       coap_address_init(&addr);
       addr.size = rp->ai_addrlen;
       memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
-
-      endpoint = coap_new_endpoint(ctx, &addr, COAP_PROTO_UDP);
-      if (endpoint) {
-        if (coap_dtls_is_supported()) {
-          if (addr.addr.sa.sa_family == AF_INET) {
-            addr.addr.sin.sin_port = htons(ntohs(addr.addr.sin.sin_port) + 1);
-          } else if (addr.addr.sa.sa_family == AF_INET6) {
-            addr.addr.sin6.sin6_port =
-              htons(ntohs(addr.addr.sin6.sin6_port) + 1);
-          } else {
-            goto finish;
-          }
-
-          endpoint = coap_new_endpoint(ctx, &addr, COAP_PROTO_DTLS);
-          if (!endpoint) {
-            coap_log(LOG_CRIT, "cannot create DTLS endpoint\n");
-          }
-        }
-        goto finish;
+      addrs = addr;
+      if (addr.addr.sa.sa_family == AF_INET) {
+        addrs.addr.sin.sin_port = htons(ntohs(addr.addr.sin.sin_port) + 1);
+      } else if (addr.addr.sa.sa_family == AF_INET6) {
+        addrs.addr.sin6.sin6_port = htons(ntohs(addr.addr.sin6.sin6_port) + 1);
       } else {
-        coap_log(LOG_CRIT, "cannot create endpoint\n");
+        goto finish;
+      }
+
+      ep_udp = coap_new_endpoint(ctx, &addr, COAP_PROTO_UDP);
+      if (ep_udp) {
+	if (coap_dtls_is_supported()) {
+	  ep_dtls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_DTLS);
+	  if (!ep_dtls)
+	    coap_log(LOG_CRIT, "cannot create DTLS endpoint\n");
+	}
+      } else {
+        coap_log(LOG_CRIT, "cannot create UDP endpoint\n");
         continue;
       }
+      ep_tcp = coap_new_endpoint(ctx, &addr, COAP_PROTO_TCP);
+      if (ep_tcp) {
+	if (coap_tls_is_supported()) {
+	  ep_tls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_TLS);
+	  if (!ep_tls)
+	    coap_log(LOG_CRIT, "cannot create TLS endpoint\n");
+	}
+      } else {
+        coap_log(LOG_CRIT, "cannot create TCP endpoint\n");
+      }
+      if (ep_udp)
+	goto finish;
     }
   }
 
   fprintf(stderr, "no context available for interface '%s'\n", node);
 
-  finish:
+finish:
   freeaddrinfo(result);
   return ctx;
 }

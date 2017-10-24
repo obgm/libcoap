@@ -23,12 +23,33 @@ struct coap_session_t;
 #include <lwip/pbuf.h>
 #endif
 
-#define COAP_DEFAULT_PORT      5683 /* CoAP default UDP port */
-#define COAPS_DEFAULT_PORT     5684 /* CoAP default UDP port for secure transmission */
+#include <stdint.h>
+
+#define COAP_DEFAULT_PORT      5683 /* CoAP default UDP/TCP port */
+#define COAPS_DEFAULT_PORT     5684 /* CoAP default UDP/TCP port for secure transmission */
 #define COAP_DEFAULT_MAX_AGE     60 /* default maximum object lifetime in seconds */
-#ifndef COAP_DEFAULT_PDU_SIZE
-#define COAP_DEFAULT_PDU_SIZE      1152 /* default maximum size of a CoAP PDU */
-#endif /* COAP_DEFAULT_PDU_SIZE */
+#ifndef COAP_DEFAULT_MTU
+#define COAP_DEFAULT_MTU       1152
+#endif /* COAP_DEFAULT_MTU */
+
+/* TCP Message format constants, do not modify */
+#define COAP_MESSAGE_SIZE_OFFSET_TCP8 13
+#define COAP_MESSAGE_SIZE_OFFSET_TCP16 269 /* 13 + 256 */
+#define COAP_MESSAGE_SIZE_OFFSET_TCP32 65805 /* 269 + 65536 */
+
+/* Derived message size limits */
+#define COAP_MAX_MESSAGE_SIZE_TCP0 (COAP_MESSAGE_SIZE_OFFSET_TCP8-1) /* 12 */
+#define COAP_MAX_MESSAGE_SIZE_TCP8 (COAP_MESSAGE_SIZE_OFFSET_TCP16-1) /* 268 */
+#define COAP_MAX_MESSAGE_SIZE_TCP16 (COAP_MESSAGE_SIZE_OFFSET_TCP32-1) /* 65804 */
+#define COAP_MAX_MESSAGE_SIZE_TCP32 (COAP_MESSAGE_SIZE_OFFSET_TCP32+0xFFFFFFFF)
+
+#ifndef COAP_DEFAULT_MAX_PDU_RX_SIZE
+#if defined(WITH_CONTIKI) || defined(WITH_LWIP)
+#define COAP_DEFAULT_MAX_PDU_RX_SIZE (COAP_MAX_MESSAGE_SIZE_TCP16+4)
+#else
+#define COAP_DEFAULT_MAX_PDU_RX_SIZE (8*1024*1024)
+#endif
+#endif /* COAP_DEFAULT_MAX_PDU_RX_SIZE */
 
 #define COAP_DEFAULT_VERSION      1 /* version of CoAP supported */
 #define COAP_DEFAULT_SCHEME  "coap" /* the default scheme for CoAP URIs */
@@ -146,6 +167,24 @@ char *coap_response_phrase(unsigned char code);
 #endif
 #define COAP_RESPONSE_X_242    COAP_RESPONSE_CODE(402)  /* Critical Option not supported */
 
+#define COAP_SIGNALING_CODE(N) (((N)/100 << 5) | (N)%100)
+#define COAP_SIGNALING_CSM     COAP_SIGNALING_CODE(701)
+#define COAP_SIGNALING_PING    COAP_SIGNALING_CODE(702)
+#define COAP_SIGNALING_PONG    COAP_SIGNALING_CODE(703)
+#define COAP_SIGNALING_RELEASE COAP_SIGNALING_CODE(704)
+#define COAP_SIGNALING_ABORT   COAP_SIGNALING_CODE(705)
+
+/* Applies to COAP_SIGNALING_CSM */
+#define COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE 2
+#define COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER 4
+/* Applies to COAP_SIGNALING_PING / COAP_SIGNALING_PONG */
+#define COAP_SIGNALING_OPTION_CUSTODY 2
+/* Applies to COAP_SIGNALING_RELEASE */
+#define COAP_SIGNALING_OPTION_ALTERNATIVE_ADDRESS 2
+#define COAP_SIGNALING_OPTION_HOLD_OFF 4
+/* Applies to COAP_SIGNALING_ABORT */
+#define COAP_SIGNALING_OPTION_BAD_CSM_OPTION 2
+
 /* CoAP media type encoding */
 
 #define COAP_MEDIATYPE_TEXT_PLAIN                 0 /* text/plain (UTF-8) */
@@ -190,46 +229,6 @@ typedef int coap_tid_t;
 
 #define COAP_PDU_DELAYED -3
 
-#if defined(_MSC_VER)
-#include <stdint.h>
-#pragma pack( push, 1 )
-typedef struct {
-	uint16_t token_length : 4;     /* length of Token */
-	uint16_t type : 2;             /* type flag */
-	uint16_t version : 2;          /* protocol version */
-	uint16_t code : 8;             /* request method (value 1--10) or response
-								   code (value 40-255) */
-	uint16_t id;                 /* transaction id (network byte order!) */
-	uint8_t token[];             /* the actual token, if any */
-} coap_hdr_t;
-#pragma pack( pop )
-#elif defined(WORDS_BIGENDIAN)
-typedef struct {
-  unsigned int version:2;      /* protocol version */
-  unsigned int type:2;         /* type flag */
-  unsigned int token_length:4; /* length of Token */
-  unsigned int code:8;         /* request method (value 1--10) or response
-                                  code (value 40-255) */
-  unsigned short id;           /* message id */
-  unsigned char token[];       /* the actual token, if any */
-} coap_hdr_t;
-#else
-typedef struct {
-  unsigned int token_length:4; /* length of Token */
-  unsigned int type:2;         /* type flag */
-  unsigned int version:2;      /* protocol version */
-  unsigned int code:8;         /* request method (value 1--10) or response
-                                  code (value 40-255) */
-  unsigned short id;           /* transaction id (network byte order!) */
-  unsigned char token[];       /* the actual token, if any */
-} coap_hdr_t;
-#endif
-
-#define COAP_MESSAGE_IS_EMPTY(MSG)    ((MSG)->code == 0)
-#define COAP_MESSAGE_IS_REQUEST(MSG)  (!COAP_MESSAGE_IS_EMPTY(MSG) \
-                                       && ((MSG)->code < 32))
-#define COAP_MESSAGE_IS_RESPONSE(MSG) ((MSG)->code >= 64)
-
 #define COAP_OPT_LONG 0x0F      /* OC == 0b1111 indicates that the option list
                                  * in a CoAP message is limited by 0b11110000
                                  * marker */
@@ -244,7 +243,7 @@ typedef struct {
  * structure (see macro COAP_OPTION_DATA).
  */
 typedef struct {
-  unsigned short key;           /* the option key (no delta coding) */
+  uint16_t key;           /* the option key (no delta coding) */
   unsigned int length;
 } coap_option;
 
@@ -253,35 +252,49 @@ typedef struct {
 #define COAP_OPTION_DATA(option) ((unsigned char *)&(option) + sizeof(coap_option))
 
 /**
- * Header structure for CoAP PDUs
+ * structure for CoAP PDUs
+ * token, if any, follows the fixed size header, then options until
+ * payload marker (0xff), then the payload if stored inline.
+ * Memory layout is:
+ * <---header--->|<---token---><---options--->0xff<---payload--->
+ * header is addressed with a negative offset to token, its maximum size is
+ * max_hdr_size.
+ * options starts at token + token_length
+ * payload starts at data, its length is used_size - (data - token)
  */
 
 typedef struct coap_pdu_t {
-  size_t max_size;          /**< allocated storage for options and data */
-  coap_hdr_t *hdr;          /**< Address of the first byte of the CoAP message.
-                             *   This may or may not equal (coap_hdr_t*)(pdu+1)
-                             *   depending on the memory management
-                             *   implementation. */
-  unsigned short max_delta; /**< highest option number */
-  unsigned short length;    /**< PDU length (including header, options, data) */
-  unsigned char *data;      /**< payload */
-
-#ifdef WITH_LWIP
+  uint8_t type;             /**< message type */
+  uint8_t code;             /**< request method (value 1--10) or response code (value 40-255) */
+  uint8_t max_hdr_size;	    /**< space reserved for protocol-specific header */
+  uint8_t hdr_size;         /**< actaul size used for protocol-specific header */
+  uint8_t token_length;     /**< length of Token */
+  uint16_t tid;             /**< transaction id, if any, in regular host byte order */
+  uint16_t max_delta;       /**< highest option number */
+  size_t alloc_size;        /**< allocated storage for token, options and payload */
+  size_t used_size;         /**< used bytes of storage for token, options and payload */
+  size_t max_size;          /**< maximum size for token, options and payload, or zero for variable size pdu */
+  uint8_t *token;           /**< first byte of token, if any, or options */
+  uint8_t *data;	    /**< first byte of payload, if any */
+#ifdef LWIP
   struct pbuf *pbuf;        /**< lwIP PBUF. The package data will always reside
-                             *    inside the pbuf's payload, but this pointer
-                             *    has to be kept because no exact offset can be
-                             *    given. This field must not be accessed from
-                             *    outside, because the pbuf's reference count
-                             *    is checked to be 1 when the pbuf is assigned
-                             *    to the pdu, and the pbuf stays exclusive to
-                             *    this pdu. */
+			    *    inside the pbuf's payload, but this pointer
+			    *    has to be kept because no exact offset can be
+			    *    given. This field must not be accessed from
+			    *    outside, because the pbuf's reference count
+			    *    is checked to be 1 when the pbuf is assigned
+			    *    to the pdu, and the pbuf stays exclusive to
+			    *    this pdu. */
 #endif
 } coap_pdu_t;
 
-/**
- * Options in coap_pdu_t are accessed with the macro COAP_OPTION.
- */
-#define COAP_OPTION(node) ((coap_option *)(node)->options)
+#define COAP_PDU_IS_EMPTY(pdu)     ((pdu)->code == 0)
+#define COAP_PDU_IS_REQUEST(pdu)   (!COAP_PDU_IS_EMPTY(pdu) && (pdu)->code < 32)
+#define COAP_PDU_IS_RESPONSE(pdu)  ((pdu)->code >= 64 && (pdu)->code < 224)
+#define COAP_PDU_IS_SIGNALING(pdu) ((pdu)->code >= 224)
+
+#define COAP_PDU_MAX_UDP_HEADER_SIZE 4
+#define COAP_PDU_MAX_TCP_HEADER_SIZE 6
 
 #ifdef WITH_LWIP
 /**
@@ -302,9 +315,19 @@ typedef struct coap_pdu_t {
 coap_pdu_t * coap_pdu_from_pbuf(struct pbuf *pbuf);
 #endif
 
+typedef uint8_t coap_proto_t;
 /**
- * Creates a new CoAP PDU of given @p size (must be large enough to hold the
- * basic CoAP message header (coap_hdr_t). The function returns a pointer to the
+* coap_proto_t values
+*/
+#define COAP_PROTO_NONE	  0
+#define COAP_PROTO_UDP	  1
+#define COAP_PROTO_DTLS	  2
+#define COAP_PROTO_TCP	  3
+#define COAP_PROTO_TLS	  4
+
+/**
+ * Creates a new CoAP PDU with at least enough storage space for the given
+ * @p size maximum message size. The function returns a pointer to the
  * node coap_pdu_t object on success, or @c NULL on error. The storage allocated
  * for the result must be released with coap_delete_pdu() if coap_send() is not
  * called.
@@ -312,20 +335,16 @@ coap_pdu_t * coap_pdu_from_pbuf(struct pbuf *pbuf);
  * @param type The type of the PDU (one of COAP_MESSAGE_CON, COAP_MESSAGE_NON,
  *             COAP_MESSAGE_ACK, COAP_MESSAGE_RST).
  * @param code The message code.
- * @param id   The message id to set or COAP_INVALID_TID if unknown.
- * @param size The number of bytes to allocate for the actual message.
- *
+ * @param tid  The transcation id to set or 0 if unknown / not applicable.
+ * @param size The maximum allowed number of byte for the message.
  * @return     A pointer to the new PDU object or @c NULL on error.
  */
 coap_pdu_t *
-coap_pdu_init(unsigned char type,
-              unsigned char code,
-              unsigned short id,
-              size_t size);
+coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size);
 
 /**
- * Clears any contents from @p pdu and resets @c version field, @c
- * length and @c data pointers. @c max_size is set to @p size, any
+ * Clears any contents from @p pdu and resets @c used_size,
+ * and @c data pointers. @c max_size is set to @p size, any
  * other field is set to @c 0. Note that @p pdu must be a valid
  * pointer to a coap_pdu_t object created e.g. by coap_pdu_init().
  */
@@ -333,9 +352,6 @@ void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
 
 /**
  * Creates a new CoAP PDU.
- *
- * @deprecated This function allocates the maximum storage for each
- * PDU. Use coap_pdu_init() instead.
  */
 coap_pdu_t *coap_new_pdu(struct coap_session_t *session);
 
@@ -349,21 +365,72 @@ coap_pdu_t *coap_new_pdu(struct coap_session_t *session);
 void coap_delete_pdu(coap_pdu_t *);
 
 /**
- * Parses @p data into the CoAP PDU structure given in @p result.
+* Interprets @p data to determine the number of bytes in the header.
+* This function returns @c 0 on error or a number greater than zero on success.
+*
+* @param proto  Session's protocol
+* @param data   The first byte of raw data to parse as CoAP PDU.
+*
+* @return       A value greater than zero on success or @c 0 on error.
+*/
+size_t coap_pdu_parse_header_size(coap_proto_t proto,
+                                 const uint8_t *data);
+
+/**
+ * Parses @p data to extract the message size.
+ * @p length must be at least coap_pdu_parse_header_size(proto, data).
  * This function returns @c 0 on error or a number greater than zero on success.
  *
+ * @param proto  Session's protocol
  * @param data   The raw data to parse as CoAP PDU.
  * @param length The actual size of @p data.
- * @param result The PDU structure to fill. Note that the structure must
- *               provide space for at least @p length bytes to hold the
- *               entire CoAP PDU.
  *
  * @return       A value greater than zero on success or @c 0 on error.
  */
-int coap_pdu_parse(unsigned char *data,
-                   size_t length,
-                   coap_pdu_t *result);
+size_t coap_pdu_parse_size(coap_proto_t proto,
+                           const uint8_t *data,
+                           size_t length);
 
+/**
+ * Decode the protocol specific header for the specified PDU.
+ * @param pdu A newly received PDU.
+ * @param proto The target wire protocol.
+ * @return 1 for success or 0 on error.
+ */
+
+int coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto);
+
+/**
+ * Verify consistency in the given CoAP PDU structure and locate the data.
+ * This function returns @c 0 on error or a number greater than zero on
+ * success.
+ * This function only parses the token and options, up to the payload start
+ * marker.
+ *
+ * @param pdu     The PDU structure to.
+ *
+ * @return       1 on success or @c 0 on error.
+ */
+int coap_pdu_parse_opt(coap_pdu_t *pdu);
+
+/**
+* Parses @p data into the CoAP PDU structure given in @p result.
+* The target pdu must be large enough to 
+* This function returns @c 0 on error or a number greater than zero on success.
+*
+* @param proto   Session's protocol
+* @param data    The raw data to parse as CoAP PDU.
+* @param length  The actual size of @p data.
+* @param pdu     The PDU structure to fill. Note that the structure must
+*                provide space to hold at least the token and options
+*                part of the message.
+*
+* @return       1 on success or @c 0 on error.
+*/
+int coap_pdu_parse(coap_proto_t proto,
+                   const uint8_t *data,
+                   size_t length,
+                   coap_pdu_t *pdu);
 /**
  * Adds token of length @p len to @p pdu.
  * Adding the token destroys any following contents of the pdu. Hence options
@@ -379,7 +446,7 @@ int coap_pdu_parse(unsigned char *data,
  */
 int coap_add_token(coap_pdu_t *pdu,
                   size_t len,
-                  const unsigned char *data);
+                  const uint8_t *data);
 
 /**
  * Adds option of given type to pdu that is passed as first
@@ -390,9 +457,9 @@ int coap_add_token(coap_pdu_t *pdu,
  * called. This function returns the number of bytes written or @c 0 on error.
  */
 size_t coap_add_option(coap_pdu_t *pdu,
-                       unsigned short type,
-                       unsigned int len,
-                       const unsigned char *data);
+                       uint16_t type,
+                       size_t len,
+                       const uint8_t *data);
 
 /**
  * Adds option of given type to pdu that is passed as first parameter, but does
@@ -401,9 +468,9 @@ size_t coap_add_option(coap_pdu_t *pdu,
  * address to which the option data has to be written before the PDU can be
  * sent, or @c NULL on error.
  */
-unsigned char *coap_add_option_later(coap_pdu_t *pdu,
-                                     unsigned short type,
-                                     unsigned int len);
+uint8_t *coap_add_option_later(coap_pdu_t *pdu,
+                               uint16_t type,
+                               size_t len);
 
 /**
  * Adds given data to the pdu that is passed as first parameter. Note that the
@@ -411,8 +478,17 @@ unsigned char *coap_add_option_later(coap_pdu_t *pdu,
  * only once per PDU, otherwise the result is undefined.
  */
 int coap_add_data(coap_pdu_t *pdu,
-                  unsigned int len,
-                  const unsigned char *data);
+                  size_t len,
+                  const uint8_t *data);
+
+/**
+ * Adds given data to the pdu that is passed as first parameter but does not
+ * copyt it. Note that the PDU's data is destroyed by coap_add_option().
+ * coap_add_data() must be have been called once for this PDU, otherwise the
+ * result is undefined.
+ * The actual data must be copied at the returned location.
+ */
+uint8_t *coap_add_data_after(coap_pdu_t *pdu, size_t len);
 
 /**
  * Retrieves the length and data pointer of specified PDU. Returns 0 on error or
@@ -421,6 +497,15 @@ int coap_add_data(coap_pdu_t *pdu,
  */
 int coap_get_data(coap_pdu_t *pdu,
                   size_t *len,
-                  unsigned char **data);
+                  uint8_t **data);
+
+/**
+ * Compose the protocol specific header for the specified PDU.
+ * @param pdu A newly composed PDU.
+ * @param proto The target wire protocol.
+ * @return Number of header bytes prepended before pdu->token or 0 on error.
+ */
+
+size_t coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto);
 
 #endif /* _COAP_PDU_H_ */

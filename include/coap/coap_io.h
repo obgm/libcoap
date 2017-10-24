@@ -51,37 +51,70 @@ typedef struct coap_socket_t {
 /**
  * coap_socket_flags_t values
  */
-#define COAP_SOCKET_EMPTY       0x0000  /**< the socket is not used */
-#define COAP_SOCKET_NOT_EMPTY   0x0001  /**< the socket is not empty */
-#define COAP_SOCKET_BOUND       0x0002  /**< the socket is bound */
-#define COAP_SOCKET_CONNECTED   0x0004  /**< the socket is connected */
-#define COAP_SOCKET_WANT_DATA   0x0010  /**< non blocking socket is waiting for reading */
-#define COAP_SOCKET_WANT_WRITE  0x0020  /**< non blocking socket is waiting for writing */
-#define COAP_SOCKET_HAS_DATA    0x0100  /**< non blocking socket can now read without blocking */
-#define COAP_SOCKET_CAN_WRITE   0x0200  /**< non blocking socket can now write without blocking */
+#define COAP_SOCKET_EMPTY        0x0000  /**< the socket is not used */
+#define COAP_SOCKET_NOT_EMPTY    0x0001  /**< the socket is not empty */
+#define COAP_SOCKET_BOUND        0x0002  /**< the socket is bound */
+#define COAP_SOCKET_CONNECTED    0x0004  /**< the socket is connected */
+#define COAP_SOCKET_WANT_READ    0x0010  /**< non blocking socket is waiting for reading */
+#define COAP_SOCKET_WANT_WRITE   0x0020  /**< non blocking socket is waiting for writing */
+#define COAP_SOCKET_WANT_ACCEPT  0x0040  /**< non blocking server socket is waiting for accept */
+#define COAP_SOCKET_WANT_CONNECT 0x0080  /**< non blocking client socket is waiting for connect */
+#define COAP_SOCKET_CAN_READ     0x0100  /**< non blocking socket can now read without blocking */
+#define COAP_SOCKET_CAN_WRITE    0x0200  /**< non blocking socket can now write without blocking */
+#define COAP_SOCKET_CAN_ACCEPT   0x0400  /**< non blocking server socket can now accept without blocking */
+#define COAP_SOCKET_CAN_CONNECT  0x0800  /**< non blocking client socket can now connect without blocking */
 
 struct coap_endpoint_t *coap_malloc_endpoint( void );
 void coap_mfree_endpoint( struct coap_endpoint_t *ep );
 
 int
-coap_socket_connect_udp( coap_socket_t *sock,
+coap_socket_connect_udp(coap_socket_t *sock,
+                        const coap_address_t *local_if,
+                        const coap_address_t *server,
+                        int default_port,
+                        coap_address_t *local_addr,
+                        coap_address_t *remote_addr);
+
+int
+coap_socket_bind_udp(coap_socket_t *sock,
+                     const coap_address_t *listen_addr,
+                     coap_address_t *bound_addr );
+
+int
+coap_socket_connect_tcp1(coap_socket_t *sock,
                          const coap_address_t *local_if,
                          const coap_address_t *server,
                          int default_port,
                          coap_address_t *local_addr,
-                         coap_address_t *remote_addr );
+                         coap_address_t *remote_addr);
 
 int
-coap_socket_bind_udp( coap_socket_t *sock,
-                      const coap_address_t *listen_addr,
-                      coap_address_t *bound_addr );
+coap_socket_connect_tcp2(coap_socket_t *sock,
+                         coap_address_t *local_addr,
+                         coap_address_t *remote_addr);
 
-void coap_socket_close( coap_socket_t *sock );
+int
+coap_socket_bind_tcp(coap_socket_t *sock,
+                     const coap_address_t *listen_addr,
+                     coap_address_t *bound_addr);
+
+int
+coap_socket_accept_tcp(coap_socket_t *server,
+                       coap_socket_t *new_client,
+                       coap_address_t *local_addr,
+                       coap_address_t *remote_addr);
+
+void coap_socket_close(coap_socket_t *sock);
 
 ssize_t
 coap_socket_send( coap_socket_t *sock, struct coap_session_t *session,
                   const uint8_t *data, size_t data_len );
 
+ssize_t
+coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len);
+
+ssize_t
+coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len);
 
 #ifdef WITH_LWIP
 ssize_t

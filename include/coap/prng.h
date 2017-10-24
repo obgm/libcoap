@@ -30,7 +30,7 @@
  */
 COAP_STATIC_INLINE int
 contiki_prng_impl(unsigned char *buf, size_t len) {
-  unsigned short v = random_rand();
+  uint16_t v = random_rand();
   while (len > sizeof(v)) {
     memcpy(buf, &v, sizeof(v));
     len -= sizeof(v);
@@ -43,7 +43,7 @@ contiki_prng_impl(unsigned char *buf, size_t len) {
 }
 
 #define prng(Buf,Length) contiki_prng_impl((Buf), (Length))
-#define prng_init(Value) random_init((unsigned short)(Value))
+#define prng_init(Value) random_init((uint16_t)(Value))
 #elif defined(WITH_LWIP) && defined(LWIP_RAND)
 COAP_STATIC_INLINE int
 lwip_prng_impl(unsigned char *buf, size_t len) {

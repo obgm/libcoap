@@ -325,7 +325,7 @@ t_parse_uri12(void) {
 static void
 t_parse_uri13(void) {
   uint8_t teststr[] ALIGNED(8) = { 
-    0x00, 0x00, 0x00, 0x00, 0x80, 0x03, 'f',  'o',
+    0x80, 0x03, 'f',  'o',
     'o',  0x3b, '.',  'w',  'e',  'l',  'l',  '-',  
     'k',  'n',  'o',  'w',  'n',  0x04,  'c', 'o',  
     'r',  'e'
@@ -333,8 +333,9 @@ t_parse_uri13(void) {
 
   coap_pdu_t pdu = { 
     .max_size = sizeof(teststr),
-    .hdr = (coap_hdr_t *)teststr,
-    .length = sizeof(teststr)
+    .token_length = 0,
+    .token = teststr,
+    .used_size = sizeof(teststr)
   };
 
   coap_key_t key;

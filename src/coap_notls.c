@@ -24,6 +24,11 @@ coap_dtls_is_supported(void) {
   return 0;
 }
 
+int
+coap_tls_is_supported(void) {
+  return 0;
+}
+
 static int dtls_log_level = 0;
 
 void coap_dtls_startup(void) {
@@ -103,6 +108,28 @@ coap_dtls_hello(coap_session_t *session UNUSED,
 
 unsigned int coap_dtls_get_overhead(coap_session_t *session UNUSED) {
   return 0;
+}
+
+void *coap_tls_new_client_session(coap_session_t *session UNUSED, int *connected UNUSED) {
+  return NULL;
+}
+
+void *coap_tls_new_server_session(coap_session_t *session UNUSED, int *connected UNUSED) {
+  return NULL;
+}
+
+ssize_t coap_tls_write(coap_session_t *session UNUSED,
+                       const uint8_t *data UNUSED,
+                       size_t data_len UNUSED
+) {
+  return -1;
+}
+
+ssize_t coap_tls_read(coap_session_t *session UNUSED,
+                      uint8_t *data UNUSED,
+                      size_t data_len UNUSED
+) {
+  return -1;
 }
 
 #undef UNUSED

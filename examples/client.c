@@ -46,7 +46,7 @@ static coap_list_t *optlist = NULL;
  * TODO: associate the resources with transaction id and make it expireable */
 static coap_uri_t uri;
 static str proxy = { 0, NULL };
-static unsigned short proxy_port = COAP_DEFAULT_PORT;
+static uint16_t proxy_port = COAP_DEFAULT_PORT;
 
 /* reading is done when this flag is set */
 static int ready = 0;
@@ -55,6 +55,8 @@ static str output_file = { 0, NULL };   /* output file name */
 static FILE *file = NULL;               /* output file stream */
 
 static str payload = { 0, NULL };       /* optional payload to send */
+
+static int reliable = 0;
 
 unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
 
@@ -66,6 +68,7 @@ coap_block_t block = { .num = 0, .m = 0, .szx = 6 };
 unsigned int wait_seconds = 90;		/* default timeout in seconds */
 unsigned int wait_ms = 0;
 int wait_ms_reset = 0;
+int obs_started = 0;
 unsigned int obs_seconds = 30;          /* default observe time */
 unsigned int obs_ms = 0;                /* timeout for current subscription */
 int obs_ms_reset = 0;
@@ -150,14 +153,14 @@ coap_new_request(coap_context_t *ctx,
   coap_list_t *opt;
   (void)ctx;
 
-  if ( ! ( pdu = coap_new_pdu(session) ) )
+  if (!(pdu = coap_new_pdu(session)))
     return NULL;
 
-  pdu->hdr->type = msgtype;
-  pdu->hdr->id = coap_new_message_id(session);
-  pdu->hdr->code = m;
+  pdu->type = msgtype;
+  pdu->tid = coap_new_message_id(session);
+  pdu->code = m;
 
-  pdu->hdr->token_length = (uint16_t)the_token.length;
+  pdu->token_length = (uint8_t)the_token.length;
   if ( !coap_add_token(pdu, the_token.length, the_token.s)) {
     debug("cannot add token to request\n");
   }
@@ -311,8 +314,8 @@ resolve_address(const str *server, struct sockaddr *dst) {
 
 static inline int
 check_token(coap_pdu_t *received) {
-  return received->hdr->token_length == the_token.length &&
-    memcmp(received->hdr->token, the_token.s, the_token.length) == 0;
+  return received->token_length == the_token.length &&
+    memcmp(received->token, the_token.s, the_token.length) == 0;
 }
 
 static void
@@ -334,7 +337,7 @@ message_handler(struct coap_context_t *ctx,
 #ifndef NDEBUG
   if (LOG_INFO <= coap_get_log_level()) {
     debug("** process incoming %d.%02d response:\n",
-          (received->hdr->code >> 5), received->hdr->code & 0x1F);
+          (received->code >> 5), received->code & 0x1F);
     coap_show_pdu(received);
   }
 #endif
@@ -342,23 +345,24 @@ message_handler(struct coap_context_t *ctx,
   /* check if this is a response to our original request */
   if (!check_token(received)) {
     /* drop if this was just some message, or send RST in case of notification */
-    if (!sent && (received->hdr->type == COAP_MESSAGE_CON ||
-                  received->hdr->type == COAP_MESSAGE_NON))
+    if (!sent && (received->type == COAP_MESSAGE_CON ||
+                  received->type == COAP_MESSAGE_NON))
       coap_send_rst(session, received);
     return;
   }
 
-  if (received->hdr->type == COAP_MESSAGE_RST) {
+  if (received->type == COAP_MESSAGE_RST) {
     info("got RST\n");
     return;
   }
 
   /* output the received data, if any */
-  if (COAP_RESPONSE_CLASS(received->hdr->code) == 2) {
+  if (COAP_RESPONSE_CLASS(received->code) == 2) {
 
     /* set obs timer if we have successfully subscribed a resource */
-    if (sent && coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter)) {
+    if (!obs_started && coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter)) {
       debug("observation relationship established, set timeout to %d\n", obs_seconds);
+      obs_started = 1;
       obs_ms = obs_seconds * 1000;
       obs_ms_reset = 1;
     }
@@ -367,7 +371,7 @@ message_handler(struct coap_context_t *ctx,
      * both, Block1 and Block2 are present. */
     block_opt = coap_check_option(received, COAP_OPTION_BLOCK2, &opt_iter);
     if (block_opt) { /* handle Block2 */
-      unsigned short blktype = opt_iter.type;
+      uint16_t blktype = opt_iter.type;
 
       /* TODO: check if we are looking at the correct block number */
       if (coap_get_data(received, &len, &databuf))
@@ -511,9 +515,9 @@ message_handler(struct coap_context_t *ctx,
   } else {      /* no 2.05 */
 
     /* check if an error was signaled and output payload if so */
-    if (COAP_RESPONSE_CLASS(received->hdr->code) >= 4) {
+    if (COAP_RESPONSE_CLASS(received->code) >= 4) {
       fprintf(stderr, "%d.%02d",
-              (received->hdr->code >> 5), received->hdr->code & 0x1F);
+              (received->code >> 5), received->code & 0x1F);
       if (coap_get_data(received, &len, &databuf)) {
         fprintf(stderr, " ");
         while(len--)
@@ -545,7 +549,7 @@ usage( const char *program, const char *version) {
      "usage: %s [-A type...] [-t type] [-b [num,]size] [-B seconds] [-e text]\n"
      "\t\t[-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
      "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] [-U]\n\n"
-     "\t\t[-u user] [-k key] URI\n\n"
+     "\t\t[-u user] [-k key] [-r] URI\n\n"
      "\tURI can be an absolute or relative coap URI,\n"
      "\t-a addr\tthe local interface address to use\n"
      "\t-A type...\taccepted media types as comma-separated list of\n"
@@ -575,6 +579,7 @@ usage( const char *program, const char *version) {
      "\t\t\trequest)\n"
      "\t-T token\tinclude specified token\n"
      "\t-U\t\tnever include Uri-Host or Uri-Port options\n"
+     "\t-r\t\tUse reliable protocol (TCP or TLS)\n"
      "\t-l list\t\tFail to send some datagram specified by a comma separated list of number or number intervals(for debugging only)\n"
      "\t-l loss%%\t\tRandmoly fail to send datagrams with the specified probability(for debugging only)\n"
      "\n"
@@ -587,7 +592,7 @@ usage( const char *program, const char *version) {
 }
 
 static coap_list_t *
-new_option_node(unsigned short key, size_t length, unsigned char *data) {
+new_option_node(uint16_t key, size_t length, unsigned char *data) {
   coap_list_t *node;
 
   node = coap_malloc(sizeof(coap_list_t) + sizeof(coap_option) + length);
@@ -611,7 +616,7 @@ typedef struct {
 } content_type_t;
 
 static void
-cmdline_content_type(char *arg, unsigned short key) {
+cmdline_content_type(char *arg, uint16_t key) {
   static content_type_t content_types[] = {
     {  0, "plain" },
     {  0, "text/plain" },
@@ -673,7 +678,7 @@ cmdline_content_type(char *arg, unsigned short key) {
   }
 }
 
-static unsigned short
+static uint16_t
 get_default_port(const coap_uri_t *u) {
   return coap_uri_scheme_is_secure(u) ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT;
 }
@@ -719,8 +724,13 @@ cmdline_uri(char *arg, int create_uri_opts) {
       return -1;
     }
 
-    if (coap_uri_scheme_is_secure(&uri) && !coap_dtls_is_supported()) {
+    if (uri.scheme==COAP_URI_SCHEME_COAPS && !reliable && !coap_dtls_is_supported()) {
       coap_log(LOG_EMERG, "coaps URI scheme not supported in this version of libcoap\n");
+      return -1;
+    }
+
+    if ((uri.scheme==COAP_URI_SCHEME_COAPS_TCP || (uri.scheme==COAP_URI_SCHEME_COAPS && reliable)) && !coap_tls_is_supported()) {
+      coap_log(LOG_EMERG, "coaps+tcp URI scheme not supported in this version of libcoap\n");
       return -1;
     }
 
@@ -738,10 +748,10 @@ cmdline_uri(char *arg, int create_uri_opts) {
       while (res--) {
         coap_insert(&optlist,
                     new_option_node(COAP_OPTION_URI_PATH,
-                    COAP_OPT_LENGTH(buf),
-                    COAP_OPT_VALUE(buf)));
+                    coap_opt_length(buf),
+                    coap_opt_value(buf)));
 
-        buf += COAP_OPT_SIZE(buf);
+        buf += coap_opt_size(buf);
       }
     }
 
@@ -753,10 +763,10 @@ cmdline_uri(char *arg, int create_uri_opts) {
       while (res--) {
         coap_insert(&optlist,
                     new_option_node(COAP_OPTION_URI_QUERY,
-                    COAP_OPT_LENGTH(buf),
-                    COAP_OPT_VALUE(buf)));
+                    coap_opt_length(buf),
+                    coap_opt_value(buf)));
 
-        buf += COAP_OPT_SIZE(buf);
+        buf += coap_opt_size(buf);
       }
     }
   }
@@ -766,7 +776,7 @@ cmdline_uri(char *arg, int create_uri_opts) {
 
 static int
 cmdline_blocksize(char *arg) {
-  unsigned short size;
+  uint16_t size;
 
   again:
   size = 0;
@@ -791,7 +801,7 @@ cmdline_blocksize(char *arg) {
 static void
 set_blocksize(void) {
   static unsigned char buf[4];	/* hack: temporarily take encoded bytes */
-  unsigned short opt;
+  uint16_t opt;
   unsigned int opt_length;
 
   if (method != COAP_REQUEST_DELETE) {
@@ -1057,7 +1067,7 @@ get_session(
 
     memset( &hints, 0, sizeof( struct addrinfo ) );
     hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
-    hints.ai_socktype = SOCK_DGRAM; /* Coap uses UDP */
+    hints.ai_socktype = COAP_PROTO_RELIABLE(proto) ? SOCK_STREAM : SOCK_DGRAM; /* Coap uses UDP */
     hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL;
 
     s = getaddrinfo( local_addr, local_port, &hints, &result );
@@ -1073,7 +1083,7 @@ get_session(
 	coap_address_init( &bind_addr );
 	bind_addr.size = rp->ai_addrlen;
 	memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
-	if ( identity && key && proto == COAP_PROTO_DTLS )
+	if ( identity && key && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) )
 	  session = coap_new_client_session_psk( ctx, &bind_addr, dst, proto, identity, key, key_len );
 	else
 	  session = coap_new_client_session( ctx, &bind_addr, dst, proto );
@@ -1083,7 +1093,7 @@ get_session(
     }
     freeaddrinfo( result );
   } else {
-    if ( identity && key && proto == COAP_PROTO_DTLS )
+    if ( identity && key && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) )
       session = coap_new_client_session_psk( ctx, NULL, dst, proto, identity, key, key_len );
     else
       session = coap_new_client_session( ctx, NULL, dst, proto );
@@ -1101,7 +1111,7 @@ main(int argc, char **argv) {
   int result = -1;
   coap_pdu_t  *pdu;
   static str server;
-  unsigned short port = COAP_DEFAULT_PORT;
+  uint16_t port = COAP_DEFAULT_PORT;
   char port_str[NI_MAXSERV] = "0";
   char node_str[NI_MAXHOST] = "";
   int opt, res;
@@ -1110,7 +1120,7 @@ main(int argc, char **argv) {
   ssize_t user_length = 0, key_length = 0;
   int create_uri_opts = 1;
 
-  while ((opt = getopt(argc, argv, "Na:b:e:f:g:k:m:p:s:t:o:v:A:B:O:P:T:u:U:l:")) != -1) {
+  while ((opt = getopt(argc, argv, "Nra:b:e:f:g:k:m:p:s:t:o:v:A:B:O:P:T:u:U:l:")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1193,6 +1203,9 @@ main(int argc, char **argv) {
 	exit(1);
       }
       break;
+    case 'r':
+      reliable = 1;
+      break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
       exit( 1 );
@@ -1245,7 +1258,11 @@ main(int argc, char **argv) {
   session = get_session(
     ctx,
     node_str[0] ? node_str : NULL, port_str,
-    coap_uri_scheme_is_secure( &uri ) ? COAP_PROTO_DTLS : COAP_PROTO_UDP,
+    uri.scheme==COAP_URI_SCHEME_COAP_TCP ? COAP_PROTO_TCP :
+    uri.scheme==COAP_URI_SCHEME_COAPS_TCP ? COAP_PROTO_TLS :
+    (reliable ?
+        uri.scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_TLS : COAP_PROTO_TCP
+      : uri.scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_DTLS : COAP_PROTO_UDP),
     &dst,
     user_length > 0 ? (const char *)user : NULL,
     key_length > 0  ? key : NULL, (unsigned)key_length

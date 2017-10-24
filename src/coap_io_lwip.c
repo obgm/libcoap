@@ -40,7 +40,7 @@ struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet)
 
 /** Callback from lwIP when a package was received.
  *
- * The current implementation deals this to coap_handle_message immediately, but
+ * The current implementation deals this to coap_handle_dgram immediately, but
  * other mechanisms (as storing the package in a queue and later fetching it
  * when coap_read is called) can be envisioned.
  *
@@ -56,7 +56,7 @@ static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_
 	packet->srcport = port;
 
 	/** FIXME derive the context without changing endpoint definition */
-	coap_handle_message(ep->context, packet);
+	coap_handle_dgram(ep->context, packet);
 
 	coap_free_packet(packet);
 }
@@ -80,7 +80,7 @@ coap_endpoint_t *coap_new_endpoint(const coap_address_t *addr, int flags) {
 		goto error;
 	}
 
-	result->default_mtu = COAP_DEFAULT_PDU_SIZE;
+	result->default_mtu = COAP_DEFAULT_MTU;
 
 	return result;
 

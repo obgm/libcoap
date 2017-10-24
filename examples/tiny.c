@@ -29,12 +29,12 @@ make_pdu( unsigned int value ) {
   static unsigned char buf[20];
   int len, ls;
 
-  if ( ! ( pdu = coap_new_pdu() ) )
+  if (!(pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU)))
     return NULL;
 
-  pdu->hdr->type = COAP_MESSAGE_NON;
-  pdu->hdr->code = COAP_REQUEST_POST;
-  pdu->hdr->id = htons(id++);
+  pdu->type = COAP_MESSAGE_NON;
+  pdu->code = COAP_REQUEST_POST;
+  pdu->tid = id++;
 
   enc = COAP_PSEUDOFP_ENCODE_8_4_DOWN(value,ls);
   coap_add_data( pdu, 1, &enc);

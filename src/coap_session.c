@@ -19,6 +19,7 @@
 #include "mem.h"
 #include "resource.h"
 #include "utlist.h"
+#include "encode.h"
 #include <stdio.h>
 
 coap_session_t *
@@ -51,19 +52,26 @@ coap_session_get_app_data(const coap_session_t *session) {
 }
 
 static coap_session_t *
-coap_make_session(coap_proto_t proto, coap_session_type_t type, const coap_address_t *local, const coap_address_t *remote, int ifindex, coap_context_t *context, coap_endpoint_t *endpoint) {
+coap_make_session(coap_proto_t proto, coap_session_type_t type,
+  const coap_address_t *local_if, const coap_address_t *local_addr,
+  const coap_address_t *remote_addr, int ifindex, coap_context_t *context,
+  coap_endpoint_t *endpoint) {
   coap_session_t *session = (coap_session_t*)coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
   if (!session)
     return NULL;
   memset(session, 0, sizeof(*session));
   session->proto = proto;
   session->type = type;
-  if (local)
-    coap_address_copy(&session->local_addr, local);
+  if (local_if)
+    coap_address_copy(&session->local_if, local_if);
+  else
+    coap_address_init(&session->local_if);
+  if (local_addr)
+    coap_address_copy(&session->local_addr, local_addr);
   else
     coap_address_init(&session->local_addr);
-  if (remote)
-    coap_address_copy(&session->remote_addr, remote);
+  if (remote_addr)
+    coap_address_copy(&session->remote_addr, remote_addr);
   else
     coap_address_init(&session->remote_addr);
   session->ifindex = ifindex;
@@ -72,7 +80,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type, const coap_addre
   if (endpoint)
     session->mtu = endpoint->default_mtu;
   else
-    session->mtu = COAP_DEFAULT_PDU_SIZE;
+    session->mtu = COAP_DEFAULT_MTU;
   if (proto == COAP_PROTO_DTLS) {
     session->tls_overhead = 29;
     if (session->tls_overhead >= session->mtu) {
@@ -95,6 +103,8 @@ void coap_session_free(coap_session_t *session) {
   assert(session->ref == 0);
   if (session->ref)
     return;
+  if (session->partial_pdu)
+    coap_delete_pdu(session->partial_pdu);
   if (session->proto == COAP_PROTO_DTLS)
     coap_dtls_free_session(session);
   if (session->sock.flags != COAP_SOCKET_EMPTY)
@@ -112,7 +122,7 @@ void coap_session_free(coap_session_t *session) {
     coap_free(session->psk_key);
 
   LL_FOREACH_SAFE(session->sendqueue, q, tmp) {
-    if (q->pdu->hdr->type==COAP_MESSAGE_CON && session->context->nack_handler)
+    if (q->pdu->type==COAP_MESSAGE_CON && session->context->nack_handler)
       session->context->nack_handler(session->context, session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);
     coap_delete_node(q);
   }
@@ -122,12 +132,29 @@ void coap_session_free(coap_session_t *session) {
   coap_free_type(COAP_SESSION, session);
 }
 
-unsigned int coap_session_max_pdu_size(coap_session_t *session) {
-  return session->mtu - session->tls_overhead;
+size_t coap_session_max_pdu_size(coap_session_t *session) {
+  size_t max_with_header = (size_t)(session->mtu - session->tls_overhead);
+  if (COAP_PROTO_NOT_RELIABLE(session->proto))
+    return max_with_header > 4 ? max_with_header - 4 : 0;
+  /* we must assume there is no token to be on the safe side */
+  if (max_with_header <= 2)
+    return 0;
+  else if (max_with_header <= COAP_MAX_MESSAGE_SIZE_TCP0 + 2)
+    return max_with_header - 2;
+  else if (max_with_header <= COAP_MAX_MESSAGE_SIZE_TCP8 + 3)
+    return max_with_header - 3;
+  else if (max_with_header <= COAP_MAX_MESSAGE_SIZE_TCP16 + 4)
+    return max_with_header - 4;
+  else
+    return max_with_header - 6;
 }
 
 void coap_session_set_mtu(coap_session_t *session, unsigned mtu) {
-  session->mtu = (uint16_t)mtu;
+#if defined(WITH_CONTIKI) || defined(WITH_LWIP)
+  if (mtu > COAP_MAX_MESSAGE_SIZE_TCP16 + 4)
+    mtu = COAP_MAX_MESSAGE_SIZE_TCP16 + 4;
+#endif
+  session->mtu = mtu;
   if (session->tls_overhead >= session->mtu) {
     session->tls_overhead = session->mtu;
     coap_log(LOG_ERR, "DTLS overhead exceeds MTU\n");
@@ -153,6 +180,17 @@ ssize_t coap_session_send(coap_session_t *session, const uint8_t *data, size_t d
   return bytes_written;
 }
 
+ssize_t coap_session_write(coap_session_t *session, const uint8_t *data, size_t datalen) {
+  ssize_t bytes_written = coap_socket_write(&session->sock, data, datalen);
+  if (bytes_written > 0) {
+    coap_ticks(&session->last_rx_tx);
+    debug("*  %s: sent %zd bytes\n", coap_session_str(session), datalen);
+  } else if (bytes_written < 0) {
+    debug( "*  %s: failed to send %zd bytes\n", coap_session_str(session), datalen );
+  }
+  return bytes_written;
+}
+
 ssize_t
 coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
                        coap_queue_t *node)
@@ -168,9 +206,9 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     node = coap_new_node();
     if (node == NULL)
       return COAP_INVALID_TID;
-    node->id = ntohs(pdu->hdr->id);
+    node->id = pdu->tid;
     node->pdu = pdu;
-    if (pdu->hdr->type == COAP_MESSAGE_CON) {
+    if (pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       uint8_t r;
       prng(&r, sizeof(r));
       /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
@@ -182,13 +220,39 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
   return COAP_PDU_DELAYED;
 }
 
+void coap_session_send_csm(coap_session_t *session) {
+  coap_pdu_t *pdu;
+  uint8_t buf[4];
+  assert(COAP_PROTO_RELIABLE(session->proto));
+  debug("*** %s: sending CSM\n", coap_session_str(session));
+  session->state = COAP_SESSION_STATE_CSM;
+  session->partial_write = 0;
+  if (session->mtu == 0)
+    session->mtu = 1152;  /* base value */
+  pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CSM, 0, 16);
+  if ( pdu == NULL
+    || coap_add_option(pdu, COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE,
+         coap_encode_var_bytes(buf, COAP_DEFAULT_MAX_PDU_RX_SIZE), buf) == 0
+    || coap_pdu_encode_header(pdu, session->proto) == 0
+  ) {
+    coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
+  } else {
+    ssize_t bytes_written = coap_session_send_pdu(session, pdu);
+    if (bytes_written != (ssize_t)pdu->used_size + pdu->hdr_size)
+      coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
+  }
+  if (pdu)
+    coap_delete_pdu(pdu);
+}
+
 void coap_session_connected(coap_session_t *session) {
   debug("*** %s: session connected\n", coap_session_str(session));
 
   session->state = COAP_SESSION_STATE_ESTABLISHED;
+  session->partial_write = 0;
 
   if ( session->proto==COAP_PROTO_DTLS) {
-    session->tls_overhead = (uint16_t)coap_dtls_get_overhead(session);
+    session->tls_overhead = coap_dtls_get_overhead(session);
     if (session->tls_overhead >= session->mtu) {
       session->tls_overhead = session->mtu;
       coap_log(LOG_ERR, "DTLS overhead exceeds MTU\n");
@@ -200,41 +264,61 @@ void coap_session_connected(coap_session_t *session) {
     coap_queue_t *q = session->sendqueue;
     session->sendqueue = q->next;
     q->next = NULL;
-    debug("** %s tid=%d: transmitted after delay\n", coap_session_str(session), (int)ntohs(q->pdu->hdr->id));
-    if (session->proto == COAP_PROTO_DTLS)
-      bytes_written = coap_dtls_send(session, (const uint8_t*)q->pdu->hdr, q->pdu->length);
-    else
-      bytes_written = coap_session_send(session, (const uint8_t*)q->pdu->hdr, q->pdu->length);
-    if (q->pdu->hdr->type == COAP_MESSAGE_CON) {
+    debug("** %s tid=%d: transmitted after delay\n", coap_session_str(session), (int)q->pdu->tid);
+    bytes_written = coap_session_send_pdu(session, q->pdu);
+    if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (coap_wait_ack(session->context, session, q) >= 0)
 	q = NULL;
     }
-    if ( q )
-      coap_delete_node(q);
-    if (bytes_written < 0)
-      break;
+    if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+      if (q)
+	coap_delete_node(q);
+      if (bytes_written < 0)
+	break;
+    } else {
+      if (bytes_written <= 0 || (size_t)bytes_written < q->pdu->used_size + q->pdu->hdr_size) {
+	q->next = session->sendqueue;
+	session->sendqueue = q;
+	if (bytes_written > 0)
+	  session->partial_write = (size_t)bytes_written;
+	break;
+      }
+    }
   }
 }
 
 void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
   (void)reason;
   debug("*** %s: session disconnected\n", coap_session_str(session));
-  if (session->proto == COAP_PROTO_DTLS && session->tls) {
+  if ((session->proto == COAP_PROTO_DTLS || session->proto == COAP_PROTO_TLS) && session->tls) {
     coap_dtls_free_session(session);
     session->tls = NULL;
   }
   session->state = COAP_SESSION_STATE_NONE;
-  while (session->sendqueue) {
-    coap_queue_t *q = session->sendqueue;
-    session->sendqueue = q->next;
-    q->next = NULL;
-    debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), q->id);
-    if (q->pdu->hdr->type == COAP_MESSAGE_CON) {
-      if (coap_wait_ack(session->context, session, q) >= 0)
-	q = NULL;
+  if (session->partial_pdu) {
+    coap_delete_pdu(session->partial_pdu);
+    session->partial_pdu = NULL;
+  }
+  session->partial_read = 0;
+  if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+    while (session->sendqueue) {
+      coap_queue_t *q = session->sendqueue;
+      session->sendqueue = q->next;
+      q->next = NULL;
+      debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), q->id);
+      if (q->pdu->type==COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
+	if (coap_wait_ack(session->context, session, q) >= 0)
+	  q = NULL;
+      }
+      if (q)
+	coap_delete_node(q);
     }
-    if (q)
-      coap_delete_node(q);
+  }
+  if (COAP_PROTO_RELIABLE(session->proto)) {
+    coap_socket_close(&session->sock);
+#ifndef WITHOUT_OBSERVE
+    coap_delete_observers(session->context, session);
+#endif
   }
 }
 
@@ -249,12 +333,17 @@ void coap_session_reset(coap_session_t *session) {
     session->tls = NULL;
   }
   session->state = COAP_SESSION_STATE_NONE;
+  if (session->partial_pdu) {
+    coap_delete_pdu(session->partial_pdu);
+    session->partial_pdu = NULL;
+  }
+  session->partial_read = 0;
   while (session->sendqueue) {
     coap_queue_t *q = session->sendqueue;
     session->sendqueue = q->next;
     q->next = NULL;
     debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), (int)q->id);
-    if (q->pdu->hdr->type == COAP_MESSAGE_CON && session->context->nack_handler)
+    if (q->pdu->type == COAP_MESSAGE_CON && session->context->nack_handler)
       session->context->nack_handler(session->context, session, q->pdu, COAP_NACK_NOT_DELIVERABLE, q->id);
     coap_delete_node(q);
   }
@@ -294,7 +383,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     session->ifindex = packet->ifindex;
   } else {
     session = coap_make_session(endpoint->proto, COAP_SESSION_TYPE_SERVER,
-      &packet->dst, &packet->src, packet->ifindex, endpoint->context,
+      NULL, &packet->dst, &packet->src, packet->ifindex, endpoint->context,
       endpoint);
     if (session) {
       session->last_rx_tx = now;
@@ -311,7 +400,9 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
 coap_session_t *
 coap_endpoint_new_dtls_session(coap_endpoint_t *endpoint,
   const coap_packet_t *packet, coap_tick_t now) {
-  coap_session_t *session = coap_make_session(COAP_PROTO_DTLS, COAP_SESSION_TYPE_SERVER, &packet->dst, &packet->src, packet->ifindex, endpoint->context, endpoint);
+  coap_session_t *session = coap_make_session(COAP_PROTO_DTLS,
+    COAP_SESSION_TYPE_SERVER, NULL, &packet->dst, &packet->src,
+    packet->ifindex, endpoint->context, endpoint);
   if (session) {
     session->last_rx_tx = now;
     session->state = COAP_SESSION_STATE_HANDSHAKE;
@@ -340,20 +431,27 @@ coap_session_create_client(
   assert(server);
   assert(proto != COAP_PROTO_NONE);
 
-  session = coap_make_session(proto, COAP_SESSION_TYPE_CLIENT, local_if, server, 0, ctx, NULL);
+  session = coap_make_session(proto, COAP_SESSION_TYPE_CLIENT, local_if,
+    local_if, server, 0, ctx, NULL);
   if (!session)
     goto error;
 
-  if (!coap_socket_connect_udp(&session->sock, local_if, server,
-    proto == COAP_PROTO_DTLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
-    &session->local_addr, &session->remote_addr
-  )
-    ) {
-    goto error;
+  if (proto == COAP_PROTO_UDP || proto == COAP_PROTO_DTLS) {
+    if (!coap_socket_connect_udp(&session->sock, &session->local_if, server,
+      proto == COAP_PROTO_DTLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
+      &session->local_addr, &session->remote_addr)) {
+      goto error;
+    }
+  } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
+    if (!coap_socket_connect_tcp1(&session->sock, &session->local_if, server,
+      proto == COAP_PROTO_DTLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
+      &session->local_addr, &session->remote_addr)) {
+      goto error;
+    }
   }
 
   session->ref = 1;
-  session->sock.flags = COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED | COAP_SOCKET_WANT_DATA;
+  session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED | COAP_SOCKET_WANT_READ;
   if (local_if)
     session->sock.flags |= COAP_SOCKET_BOUND;
   LL_PREPEND(ctx->sessions, session);
@@ -377,8 +475,48 @@ coap_session_connect(coap_session_t *session) {
       coap_session_free(session);
       return NULL;
     }
+  } else if (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS) {
+    if (session->sock.flags & COAP_SOCKET_WANT_CONNECT) {
+      session->state = COAP_SESSION_STATE_CONNECTING;
+    } else if (session->proto == COAP_PROTO_TLS) {
+      int connected = 0;
+      session->tls = coap_tls_new_client_session(session, &connected);
+      if (session->tls) {
+	session->state = COAP_SESSION_STATE_HANDSHAKE;
+        if (connected) {
+          coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+          coap_session_send_csm(session);
+        }
+      } else {
+	coap_session_free(session);
+	return NULL;
+      }
+    } else {
+      coap_session_send_csm(session);
+    }
   }
   coap_ticks(&session->last_rx_tx);
+  return session;
+}
+
+static coap_session_t *
+coap_session_accept(coap_session_t *session) {
+  if (session->proto == COAP_PROTO_TCP) {
+    coap_session_send_csm(session);
+  } else if (session->proto == COAP_PROTO_TLS) {
+    int connected = 0;
+    session->tls = coap_tls_new_server_session(session, &connected);
+    if (session->tls) {
+      session->state = COAP_SESSION_STATE_HANDSHAKE;
+      if (connected) {
+        coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+        coap_session_send_csm(session);
+      }
+    } else {
+      coap_session_free(session);
+      session = NULL;
+    }
+  }
   return session;
 }
 
@@ -435,6 +573,33 @@ coap_session_t *coap_new_client_session_psk(
   return coap_session_connect(session);
 }
 
+coap_session_t *coap_new_server_session(
+  struct coap_context_t *ctx,
+  coap_endpoint_t *ep
+) {
+  coap_session_t *session;
+  session = coap_make_session( ep->proto, COAP_SESSION_TYPE_SERVER,
+                               &ep->bind_addr, NULL, NULL, 0, ctx, ep );
+  if (!session)
+    goto error;
+  if (!coap_socket_accept_tcp(&ep->sock, &session->sock,
+                              &session->local_addr, &session->remote_addr))
+    goto error;
+  session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED
+                       | COAP_SOCKET_WANT_READ;
+  LL_PREPEND(ep->sessions, session);
+  if (session) {
+    debug("*** %s: new incoming session\n", coap_session_str(session));
+    session = coap_session_accept(session);
+  }
+  return session;
+
+error:
+  if (session)
+    coap_session_free(session);
+  return NULL;
+}
+
 coap_endpoint_t *
 coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto) {
   struct coap_endpoint_t *ep = NULL;
@@ -448,6 +613,11 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     goto error;
   }
 
+  if (proto == COAP_PROTO_TLS && !coap_tls_is_supported()) {
+    coap_log(LOG_CRIT, "coap_new_endpoint: TLS not supported\n");
+    goto error;
+  }
+
   ep = coap_malloc_endpoint();
   if (!ep) {
     coap_log(LOG_WARNING, "coap_new_endpoint: malloc");
@@ -458,8 +628,18 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
   ep->context = context;
   ep->proto = proto;
 
-  if (!coap_socket_bind_udp(&ep->sock, listen_addr, &ep->bind_addr))
+  if (proto==COAP_PROTO_TCP || proto==COAP_PROTO_TLS) {
+    if (!coap_socket_bind_tcp(&ep->sock, listen_addr, &ep->bind_addr))
+      goto error;
+    ep->sock.flags |= COAP_SOCKET_WANT_ACCEPT;
+  } else if (proto==COAP_PROTO_UDP || proto==COAP_PROTO_DTLS) {
+    if (!coap_socket_bind_udp(&ep->sock, listen_addr, &ep->bind_addr))
+      goto error;
+    ep->sock.flags |= COAP_SOCKET_WANT_READ;
+  } else {
+    coap_log(LOG_CRIT, "coap_new_endpoint: protocol not supported\n");
     goto error;
+  }
 
 #ifndef NDEBUG
   if (LOG_DEBUG <= coap_get_log_level()) {
@@ -470,13 +650,15 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
 
     if (coap_print_addr(&ep->bind_addr, addr_str, INET6_ADDRSTRLEN + 8)) {
       debug("created %s endpoint %s\n",
-	ep->proto == COAP_PROTO_DTLS ? "DTLS " : "UDP",
+	  ep->proto == COAP_PROTO_TLS ? "TLS"
+	: ep->proto == COAP_PROTO_TCP ? "TCP"
+	: ep->proto == COAP_PROTO_DTLS ? "DTLS " : "UDP",
 	addr_str);
     }
   }
 #endif /* NDEBUG */
 
-  ep->sock.flags = COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_BOUND | COAP_SOCKET_WANT_DATA;
+  ep->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_BOUND;
 
   if (proto == COAP_PROTO_DTLS) {
     ep->hello.proto = proto;
@@ -486,7 +668,7 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     ep->hello.endpoint = ep;
   }
 
-  ep->default_mtu = COAP_DEFAULT_PDU_SIZE;
+  ep->default_mtu = COAP_DEFAULT_MTU;
 
   LL_PREPEND(context->endpoint, ep);
   return ep;
@@ -563,6 +745,12 @@ const char *coap_session_str(const coap_session_t *session) {
     } else if (session->proto == COAP_PROTO_DTLS) {
       strcpy(p, " DTLS");
       p += 5;
+    } else if (session->proto == COAP_PROTO_TCP) {
+      strcpy(p, " TCP");
+      p += 4;
+    } else if (session->proto == COAP_PROTO_TLS) {
+      strcpy(p, " TLS");
+      p += 4;
     } else {
       strcpy(p, " NONE");
       p += 5;

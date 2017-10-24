@@ -10,6 +10,8 @@
 #ifndef _COAP_URI_H_
 #define _COAP_URI_H_
 
+#include <stdint.h>
+
 #include "hashkey.h"
 #include "str.h"
 struct coap_pdu_t;
@@ -20,7 +22,9 @@ struct coap_pdu_t;
  */
 enum coap_uri_scheme_t {
   COAP_URI_SCHEME_COAP=0,
-  COAP_URI_SCHEME_COAPS=1
+  COAP_URI_SCHEME_COAPS=1,
+  COAP_URI_SCHEME_COAP_TCP=2,
+  COAP_URI_SCHEME_COAPS_TCP=3
 };
 
 /** This mask can be used to check if a parsed URI scheme is secure. */
@@ -32,7 +36,7 @@ enum coap_uri_scheme_t {
  */
 typedef struct {
   str host;             /**< host part of the URI */
-  unsigned short port;  /**< The port in host byte order */
+  uint16_t port;  /**< The port in host byte order */
   str path;             /**< Beginning of the first path segment. 
                              Use coap_split_path() to create Uri-Path options */
   str query;            /**<  The query part if present */

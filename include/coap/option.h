@@ -22,14 +22,14 @@
  * Use byte-oriented access methods here because sliding a complex struct
  * coap_opt_t over the data buffer may cause bus error on certain platforms.
  */
-typedef unsigned char coap_opt_t;
+typedef uint8_t coap_opt_t;
 #define PCHAR(p) ((coap_opt_t *)(p))
 
 /** Representation of CoAP options. */
 typedef struct {
-  unsigned short delta;
+  uint16_t delta;
   size_t length;
-  unsigned char *value;
+  uint8_t *value;
 } coap_option_t;
 
 /**
@@ -59,9 +59,6 @@ size_t coap_opt_parse(const coap_opt_t *opt,
  */
 size_t coap_opt_size(const coap_opt_t *opt);
 
-/** @deprecated { Use coap_opt_size() instead. } */
-#define COAP_OPT_SIZE(opt) coap_opt_size(opt)
-
 /**
  * Calculates the beginning of the PDU's option section.
  *
@@ -76,7 +73,7 @@ coap_opt_t *options_start(coap_pdu_t *pdu);
  * @hideinitializer
  */
 #define options_next(opt) \
-  ((coap_opt_t *)((unsigned char *)(opt) + COAP_OPT_SIZE(opt)))
+  ((coap_opt_t *)((uint8_t *)(opt) + coap_opt_size(opt)))
 
 /**
  * @defgroup opt_filter Option Filters
@@ -157,7 +154,7 @@ coap_option_filter_clear(coap_opt_filter_t f) {
  *
  * @return       @c 1 if bit was set, @c 0 otherwise.
  */
-int coap_option_filter_set(coap_opt_filter_t filter, unsigned short type);
+int coap_option_filter_set(coap_opt_filter_t filter, uint16_t type);
 
 /**
  * Clears the corresponding entry for @p type in @p filter. This
@@ -169,7 +166,7 @@ int coap_option_filter_set(coap_opt_filter_t filter, unsigned short type);
  *
  * @return       @c 1 if bit was set, @c 0 otherwise.
  */
-int coap_option_filter_unset(coap_opt_filter_t filter, unsigned short type);
+int coap_option_filter_unset(coap_opt_filter_t filter, uint16_t type);
 
 /**
  * Checks if @p type is contained in @p filter. This function returns
@@ -181,7 +178,7 @@ int coap_option_filter_unset(coap_opt_filter_t filter, unsigned short type);
  *
  * @return       @c 1 if @p type was found, @c 0 otherwise, or @c -1 on error.
  */
-int coap_option_filter_get(const coap_opt_filter_t filter, unsigned short type);
+int coap_option_filter_get(const coap_opt_filter_t filter, uint16_t type);
 
 /**
  * Sets the corresponding bit for @p type in @p filter. This function returns @c
@@ -196,7 +193,7 @@ int coap_option_filter_get(const coap_opt_filter_t filter, unsigned short type);
  * @return       @c 1 if bit was set, @c -1 otherwise.
  */
 COAP_STATIC_INLINE int
-coap_option_setb(coap_opt_filter_t filter, unsigned short type) {
+coap_option_setb(coap_opt_filter_t filter, uint16_t type) {
   return coap_option_filter_set(filter, type) ? 1 : -1;
 }
 
@@ -213,7 +210,7 @@ coap_option_setb(coap_opt_filter_t filter, unsigned short type) {
  * @return       @c 1 if bit was set, @c -1 otherwise.
  */
 COAP_STATIC_INLINE int
-coap_option_clrb(coap_opt_filter_t filter, unsigned short type) {
+coap_option_clrb(coap_opt_filter_t filter, uint16_t type) {
   return coap_option_filter_unset(filter, type) ? 1 : -1;
 }
 
@@ -230,7 +227,7 @@ coap_option_clrb(coap_opt_filter_t filter, unsigned short type) {
  * @return       @c 1 if bit was set, @c 0 if not, @c -1 on error.
  */
 COAP_STATIC_INLINE int
-coap_option_getb(const coap_opt_filter_t filter, unsigned short type) {
+coap_option_getb(const coap_opt_filter_t filter, uint16_t type) {
   return coap_option_filter_get(filter, type);
 }
 
@@ -252,7 +249,7 @@ coap_option_getb(const coap_opt_filter_t filter, unsigned short type) {
  */
 typedef struct {
   size_t length;                /**< remaining length of PDU */
-  unsigned short type;          /**< decoded option type */
+  uint16_t type;                /**< decoded option type */
   unsigned int bad:1;           /**< iterator object is ok if not set */
   unsigned int filtered:1;      /**< denotes whether or not filter is used */
   coap_opt_t *next_option;      /**< pointer to the unparsed next option */
@@ -311,7 +308,7 @@ coap_opt_t *coap_option_next(coap_opt_iterator_t *oi);
  *             not found.
  */
 coap_opt_t *coap_check_option(coap_pdu_t *pdu,
-                              unsigned short type,
+                              uint16_t type,
                               coap_opt_iterator_t *oi);
 
 /**
@@ -330,8 +327,19 @@ coap_opt_t *coap_check_option(coap_pdu_t *pdu,
  */
 size_t coap_opt_setheader(coap_opt_t *opt,
                           size_t maxlen,
-                          unsigned short delta,
+                          uint16_t delta,
                           size_t length);
+
+/**
+ * Compute storage bytes needed for an option with given @p delta and
+ * @p length
+ *
+ * @param delta  The option delta.
+ * @param length The option length.
+ *
+ * @return       The number of bytes required to encode this option.
+ */
+size_t coap_opt_encode_size(uint16_t delta, size_t length);
 
 /**
  * Encodes option with given @p delta into @p opt. This function returns the
@@ -350,8 +358,8 @@ size_t coap_opt_setheader(coap_opt_t *opt,
  */
 size_t coap_opt_encode(coap_opt_t *opt,
                        size_t n,
-                       unsigned short delta,
-                       const unsigned char *val,
+                       uint16_t delta,
+                       const uint8_t *val,
                        size_t length);
 
 /**
@@ -364,14 +372,7 @@ size_t coap_opt_encode(coap_opt_t *opt,
  *
  * @return    The number of bytes read or @c 0 on error.
  */
-unsigned short coap_opt_delta(const coap_opt_t *opt);
-
-/** @deprecated { Use coap_opt_delta() instead. } */
-#define COAP_OPT_DELTA(opt) coap_opt_delta(opt)
-
-/** @deprecated { Use coap_opt_encode() instead. } */
-#define COAP_OPT_SETDELTA(opt,val) \
-  coap_opt_encode((opt), COAP_DEFAULT_PDU_SIZE, (val), NULL, 0)
+uint16_t coap_opt_delta(const coap_opt_t *opt);
 
 /**
  * Returns the length of the given option. @p opt must point to an option jump
@@ -386,10 +387,7 @@ unsigned short coap_opt_delta(const coap_opt_t *opt);
  *
  * @return     The option's length or @c 0 when undefined.
  */
-unsigned short coap_opt_length(const coap_opt_t *opt);
-
-/** @deprecated { Use coap_opt_length() instead. } */
-#define COAP_OPT_LENGTH(opt) coap_opt_length(opt)
+uint16_t coap_opt_length(const coap_opt_t *opt);
 
 /**
  * Returns a pointer to the value of the given option. @p opt must point to an
@@ -400,10 +398,12 @@ unsigned short coap_opt_length(const coap_opt_t *opt);
  *
  * @return    A pointer to the option value or @c NULL on error.
  */
-unsigned char *coap_opt_value(coap_opt_t *opt);
+uint8_t *coap_opt_value(coap_opt_t *opt);
 
-/** @deprecated { Use coap_opt_value() instead. } */
-#define COAP_OPT_VALUE(opt) coap_opt_value((coap_opt_t *)opt)
+COAP_STATIC_INLINE const uint8_t *
+coap_opt_const_value( const coap_opt_t *opt ) {
+  return coap_opt_value((coap_opt_t*)opt);
+}
 
 /** @} */
 
