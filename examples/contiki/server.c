@@ -111,9 +111,8 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
     my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
 
   if (coap_find_observer(resource, peer, token)) {
-    /* FIXME: need to check for resource->dirty? */
     coap_add_option(response, COAP_OPTION_OBSERVE, 
-		    coap_encode_var_bytes(buf, ctx->observe), buf);
+		    coap_encode_var_bytes(buf, resource->observe), buf);
   }
 
   if (my_clock_base)
@@ -218,7 +217,7 @@ PROCESS_THREAD(coap_server_process, ev, data)
       coap_read(coap_context);	/* read received data */
       /* coap_dispatch(coap_context); /\* and dispatch PDUs from receivequeue *\/ */
     } else if (ev == PROCESS_EVENT_TIMER && etimer_expired(&dirty_timer)) {
-      time_resource->dirty = 1;
+      coap_resource_set_dirty(time_resource, NULL);
       etimer_reset(&dirty_timer);
     }
   }

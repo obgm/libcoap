@@ -120,12 +120,6 @@ typedef struct coap_context_t {
    */
   uint16_t message_id;
 
-  /**
-   * The next value to be used for Observe. This field is global for all
-   * resources and will be updated when notifications are created.
-   */
-  unsigned int observe;
-
   coap_response_handler_t response_handler;
   coap_nack_handler_t nack_handler;
 
