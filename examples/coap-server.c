@@ -114,10 +114,9 @@ hnd_get_time(coap_context_t  *ctx,
     my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
 
   if (coap_find_observer(resource, session, token)) {
-    /* FIXME: need to check for resource->dirty? */
     coap_add_option(response,
                     COAP_OPTION_OBSERVE,
-                    coap_encode_var_bytes(buf, ctx->observe), buf);
+                    coap_encode_var_bytes(buf, resource->observe), buf);
   }
 
   if (my_clock_base)

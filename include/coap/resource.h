@@ -106,6 +106,12 @@ typedef struct coap_resource_t {
   str uri;
   int flags;
 
+  /**
+  * The next value for the Observe option. This field must be increased each
+  * time the resource changes. Only the lower 24 bits are sent.
+  */
+  unsigned int observe;
+
 } coap_resource_t;
 
 /**

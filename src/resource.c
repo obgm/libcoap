@@ -720,9 +720,6 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       }
 
     }
-
-    /* Increment value for next Observe use. */
-    context->observe++;
   }
   r->dirty = 0;
 }
@@ -750,6 +747,10 @@ coap_resource_set_dirty(coap_resource_t *r, const str *query) {
   } else {
     r->dirty = 1;
   }
+
+  /* Increment value for next Observe use. Observe value must be < 2^24 */
+  r->observe = (r->observe + 1) & 0xFFFFFF;
+
   return 1;
 }
 
