@@ -358,6 +358,7 @@ get_context(const char *node, const char *port) {
   s = getaddrinfo(node, port, &hints, &result);
   if ( s != 0 ) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
+    coap_free_context(ctx);
     return NULL;
   }
 
