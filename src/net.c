@@ -861,13 +861,16 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   uint8_t r;
   ssize_t bytes_written;
 
-  if (!coap_pdu_encode_header(pdu, session->proto))
-    return COAP_INVALID_TID;
+  if (!coap_pdu_encode_header(pdu, session->proto)) {
+    goto error;
+  }
 
   bytes_written = coap_send_pdu( session, pdu, NULL );
 
-  if (bytes_written == COAP_PDU_DELAYED)
+  if (bytes_written == COAP_PDU_DELAYED) {
+    /* do not free pdu as it is stored with session for later use */
     return pdu->tid;
+  }
 
   if (bytes_written < 0) {
     coap_delete_pdu(pdu);
@@ -878,10 +881,10 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     (size_t)bytes_written < pdu->used_size + pdu->hdr_size) {
     if (coap_session_delay_pdu(session, pdu, NULL) == COAP_PDU_DELAYED) {
       session->partial_write = (size_t)bytes_written;
+      /* do not free pdu as it is stored with session for later use */
       return pdu->tid;
     } else {
-      coap_delete_pdu(pdu);
-      return COAP_INVALID_TID;
+      goto error;
     }
   }
 
@@ -894,7 +897,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   coap_queue_t *node = coap_new_node();
   if (!node) {
     debug("coap_wait_ack: insufficient memory\n");
-    return COAP_INVALID_TID;
+    goto error;
   }
 
   node->id = pdu->tid;
@@ -903,6 +906,9 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
   node->timeout = calc_timeout(r);
   return coap_wait_ack(session->context, session, node);
+ error:
+  coap_delete_pdu(pdu);
+  return COAP_INVALID_TID;
 }
 
 coap_tid_t
