@@ -150,8 +150,7 @@ static long coap_dgram_ctrl(BIO *a, int cmd, long num, void *ptr) {
     break;
   case BIO_CTRL_SET_CLOSE:
     BIO_set_shutdown(a, (int)num);
-    break;
-    ret = 0;
+    ret = 1;
     break;
   case BIO_CTRL_DGRAM_SET_PEEK_MODE:
     data->peekmode = (unsigned)num;
