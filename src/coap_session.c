@@ -444,7 +444,7 @@ coap_session_create_client(
     }
   } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
     if (!coap_socket_connect_tcp1(&session->sock, &session->local_if, server,
-      proto == COAP_PROTO_DTLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
+      proto == COAP_PROTO_TLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
       &session->local_addr, &session->remote_addr)) {
       goto error;
     }
