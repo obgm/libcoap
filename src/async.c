@@ -98,11 +98,15 @@ coap_remove_async(coap_context_t *context, coap_session_t *session,
 
 void 
 coap_free_async(coap_async_state_t *s) {
-  if ( s->session )
-    coap_session_release( s->session );
-  if (s && (s->flags & COAP_ASYNC_RELEASE_DATA) != 0)
-    coap_free(s->appdata);
-  coap_free(s); 
+  if (s) {
+    if (s->session) {
+      coap_session_release(s->session);
+    }
+    if ((s->flags & COAP_ASYNC_RELEASE_DATA) != 0) {
+      coap_free(s->appdata);
+    }
+    coap_free(s);
+  }
 }
 
 #else
