@@ -266,8 +266,7 @@ check_async(coap_context_t *ctx,
   coap_add_data(response, 4, (unsigned char *)"done");
 
   if (coap_send(async->session, response) == COAP_INVALID_TID) {
-    debug("check_async: cannot send response for message %d\n",
-    response->tid);
+    debug("check_async: cannot send response for message\n");
   }
   coap_remove_async(ctx, async->session, async->id, &tmp);
   coap_free_async(async);
