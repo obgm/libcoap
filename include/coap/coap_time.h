@@ -97,7 +97,7 @@ typedef time_t coap_time_t;
 typedef int64_t coap_tick_diff_t;
 
 /** Use ms resolution on POSIX systems */
-#define COAP_TICKS_PER_SECOND 1000
+#define COAP_TICKS_PER_SECOND ((coap_tick_t)(1000U))
 
 /**
  * Initializes the internal clock.
