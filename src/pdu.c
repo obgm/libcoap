@@ -108,7 +108,7 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size) {
   pdu->pbuf = pbuf_alloc(PBUF_TRANSPORT, size + pdu->max_hdr_size, PBUF_RAM);
   if (pdu->pbuf == NULL) {
     coap_free_type(COAP_PDU, pdu);
-    pdu = NULL;
+    return NULL;
   }
   pdu->token = pdu->pbuf->payload + pdu->max_hdr_size;
 #else /* WITH_LWIP */
@@ -116,7 +116,7 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size) {
   buf = coap_malloc_type(COAP_PDU_BUF, pdu->alloc_size + pdu->max_hdr_size);
   if (buf == NULL) {
     coap_free_type(COAP_PDU, pdu);
-    pdu = NULL;
+    return NULL;
   }
   pdu->token = buf + pdu->max_hdr_size;
 #endif /* WITH_LWIP */
