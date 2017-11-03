@@ -528,9 +528,8 @@ message_handler(struct coap_context_t *ctx,
 
   }
 
-  /* finally send new request, if needed */
-  if (pdu && coap_send(session, pdu) == COAP_INVALID_TID)
-    debug("message_handler: error sending response");
+  /* any pdu that has been created in this function must be sent by now */
+  assert(pdu == NULL);
 
   /* our job is done, we can exit at any time */
   ready = coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter) == NULL;
