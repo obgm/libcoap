@@ -122,7 +122,7 @@ void coap_session_free(coap_session_t *session) {
     coap_free(session->psk_key);
 
   LL_FOREACH_SAFE(session->sendqueue, q, tmp) {
-    if (q->pdu->type==COAP_MESSAGE_CON && session->context->nack_handler)
+    if (q->pdu->type==COAP_MESSAGE_CON && session->context && session->context->nack_handler)
       session->context->nack_handler(session->context, session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);
     coap_delete_node(q);
   }
