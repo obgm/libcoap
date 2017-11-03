@@ -2065,12 +2065,12 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       /* find transaction in sendqueue to stop retransmission */
       coap_remove_from_queue(&context->sendqueue, session, pdu->tid, &sent);
 
-      if (sent)
+      if (sent) {
 	coap_cancel(context, sent);
 
-      if(sent->pdu->type==COAP_MESSAGE_CON && context->nack_handler)
-	context->nack_handler(context, sent->session, sent->pdu, COAP_NACK_RST, sent->id);
-
+        if(sent->pdu->type==COAP_MESSAGE_CON && context->nack_handler)
+          context->nack_handler(context, sent->session, sent->pdu, COAP_NACK_RST, sent->id);
+      }
       goto cleanup;
 
     case COAP_MESSAGE_NON:	/* check for unknown critical options */
