@@ -1099,7 +1099,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       coap_handle_dgram_for_proto(ctx, session, packet);
     }
   } else {
-    ssize_t bytes_read;
+    ssize_t bytes_read = 0;
     const uint8_t *p;
     int retry;
     /* adjust for LWIP */
