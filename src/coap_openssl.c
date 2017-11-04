@@ -481,6 +481,10 @@ void coap_dtls_free_context(void *handle) {
     BIO_meth_free(context->dtls.meth);
   if (context->dtls.bio_addr)
     BIO_ADDR_free(context->dtls.bio_addr);
+  if ( context->tls.ctx )
+      SSL_CTX_free( context->tls.ctx );
+  if ( context->tls.meth )
+      BIO_meth_free( context->tls.meth );
   coap_free(context);
 }
 
@@ -869,6 +873,15 @@ error:
   if (ssl)
     SSL_free(ssl);
   return NULL;
+}
+
+void coap_tls_free_session(coap_session_t *session) {
+  SSL *ssl = (SSL *)session->tls;
+  if (ssl) {
+    if (!(SSL_get_shutdown(ssl) & SSL_SENT_SHUTDOWN))
+      SSL_shutdown(ssl);
+    SSL_free(ssl);
+  }
 }
 
 ssize_t coap_tls_write(coap_session_t *session,

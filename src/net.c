@@ -1315,6 +1315,7 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
   }
 
   coap_dispatch(ctx, session, pdu);
+  coap_delete_pdu(pdu);
   return 0;
 
 error:

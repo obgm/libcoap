@@ -452,6 +452,9 @@ void *coap_tls_new_server_session(coap_session_t *session UNUSED, int *connected
   return NULL;
 }
 
+void coap_tls_free_session(coap_session_t *coap_session UNUSED) {
+}
+
 ssize_t coap_tls_write(coap_session_t *session UNUSED,
                        const uint8_t *data UNUSED,
                        size_t data_len UNUSED

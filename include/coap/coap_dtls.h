@@ -172,6 +172,14 @@ void *coap_tls_new_client_session(coap_session_t *session, int *connected);
 void *coap_tls_new_server_session(coap_session_t *session, int *connected);
 
 /**
+* Terminates the TLS session (may send an ALERT if necessary) then frees the
+* underlying TLS library object containing security parameters for the session.
+*
+* @param session   The CoAP session
+*/
+void coap_tls_free_session( coap_session_t *session );
+
+/**
  * Send data to a TLS peer, with implicit flush.
  *
  * @param session   The CoAP session
