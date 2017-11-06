@@ -107,6 +107,8 @@ void coap_session_free(coap_session_t *session) {
     coap_delete_pdu(session->partial_pdu);
   if (session->proto == COAP_PROTO_DTLS)
     coap_dtls_free_session(session);
+  else if (session->proto == COAP_PROTO_TLS)
+    coap_tls_free_session(session);
   if (session->sock.flags != COAP_SOCKET_EMPTY)
     coap_socket_close(&session->sock);
   if (session->endpoint) {
@@ -282,6 +284,8 @@ void coap_session_connected(coap_session_t *session) {
 	if (bytes_written > 0)
 	  session->partial_write = (size_t)bytes_written;
 	break;
+      } else {
+        coap_delete_node(q);
       }
     }
   }
@@ -290,10 +294,14 @@ void coap_session_connected(coap_session_t *session) {
 void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
   (void)reason;
   debug("*** %s: session disconnected\n", coap_session_str(session));
-  if ((session->proto == COAP_PROTO_DTLS || session->proto == COAP_PROTO_TLS) && session->tls) {
+  if (session->proto == COAP_PROTO_DTLS && session->tls) {
     coap_dtls_free_session(session);
     session->tls = NULL;
+  } else if (session->proto == COAP_PROTO_TLS && session->tls) {
+    coap_tls_free_session(session);
+    session->tls = NULL;
   }
+
   session->state = COAP_SESSION_STATE_NONE;
   if (session->partial_pdu) {
     coap_delete_pdu(session->partial_pdu);
@@ -331,7 +339,11 @@ void coap_session_reset(coap_session_t *session) {
   if (session->proto == COAP_PROTO_DTLS && session->tls) {
     coap_dtls_free_session(session);
     session->tls = NULL;
+  } else if (session->proto == COAP_PROTO_TLS && session->tls) {
+    coap_tls_free_session(session);
+    session->tls = NULL;
   }
+
   session->state = COAP_SESSION_STATE_NONE;
   if (session->partial_pdu) {
     coap_delete_pdu(session->partial_pdu);
@@ -685,16 +697,17 @@ void coap_endpoint_set_default_mtu(coap_endpoint_t *ep, unsigned mtu) {
 void
 coap_free_endpoint(coap_endpoint_t *ep) {
   if (ep) {
-    coap_session_t *session;
+    coap_session_t *session, *tmp;
 
     if (ep->sock.flags != COAP_SOCKET_EMPTY)
       coap_socket_close(&ep->sock);
 
-    LL_FOREACH(ep->sessions, session) {
+    LL_FOREACH_SAFE(ep->sessions, session, tmp) {
       assert(session->ref == 0);
       if (session->ref == 0) {
-	if (session->sock.flags != COAP_SOCKET_EMPTY)
-	  coap_socket_close(&session->sock);
+        session->endpoint = NULL;
+        session->context = NULL;
+        coap_session_free(session);
       }
     }
 
