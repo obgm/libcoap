@@ -47,7 +47,8 @@ struct coap_session_t;
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
 #define COAP_DEFAULT_MAX_PDU_RX_SIZE (COAP_MAX_MESSAGE_SIZE_TCP16+4)
 #else
-#define COAP_DEFAULT_MAX_PDU_RX_SIZE (8*1024*1024)
+/* 8 MiB max-message-size plus some space for options */
+#define COAP_DEFAULT_MAX_PDU_RX_SIZE (8*1024*1024+256)
 #endif
 #endif /* COAP_DEFAULT_MAX_PDU_RX_SIZE */
 
