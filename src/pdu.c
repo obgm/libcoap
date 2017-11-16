@@ -324,9 +324,15 @@ coap_get_data(coap_pdu_t *pdu, size_t *len, uint8_t **data) {
   assert(len);
   assert(data);
 
-  *len = pdu->used_size - (pdu->data - pdu->token);
   *data = pdu->data;
-  return *data != NULL;
+  if(pdu->data == NULL) {
+     *len = 0;
+     return 0;
+  }
+
+  *len = pdu->used_size - (pdu->data - pdu->token);
+
+  return 1;
 }
 
 #ifndef SHORT_ERROR_RESPONSE
