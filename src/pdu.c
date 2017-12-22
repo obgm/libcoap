@@ -150,7 +150,8 @@ coap_delete_pdu(coap_pdu_t *pdu) {
   }
 }
 
-static int coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
+int
+coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
   if (new_size > pdu->alloc_size) {
     uint8_t *new_hdr;
     size_t offset;

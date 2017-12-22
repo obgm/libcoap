@@ -344,6 +344,17 @@ coap_pdu_t *
 coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size);
 
 /**
+ * Dynamically grows the size of @p pdu to @p new_size. The new size
+ * must not exceed the PDU's configure maximum size. On success, this
+ * function returns 1, otherwise 0.
+ *
+ * @param pdu      The PDU to resize.
+ * @param new_size The new size in bytes.
+ * @return         1 if the operation succeeded, 0 otherwise.
+ */
+int coap_pdu_resize(coap_pdu_t *pdu, size_t new_size);
+
+/**
  * Clears any contents from @p pdu and resets @c used_size,
  * and @c data pointers. @c max_size is set to @p size, any
  * other field is set to @c 0. Note that @p pdu must be a valid
