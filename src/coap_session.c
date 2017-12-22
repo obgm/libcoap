@@ -230,7 +230,7 @@ void coap_session_send_csm(coap_session_t *session) {
   session->state = COAP_SESSION_STATE_CSM;
   session->partial_write = 0;
   if (session->mtu == 0)
-    session->mtu = 1152;  /* base value */
+    session->mtu = COAP_DEFAULT_MTU;  /* base value */
   pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CSM, 0, 16);
   if ( pdu == NULL
     || coap_add_option(pdu, COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE,
