@@ -1160,6 +1160,10 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 	      bytes_read = -1;
 	      break;
 	    }
+            if (session->partial_pdu->alloc_size < size && !coap_pdu_resize(session->partial_pdu, size)) {
+              bytes_read = -1;
+              break;
+            }
 	    session->partial_pdu->hdr_size = (uint8_t)hdr_size;
 	    session->partial_pdu->used_size = size;
 	    memcpy(session->partial_pdu->token - hdr_size, session->read_header, hdr_size);
