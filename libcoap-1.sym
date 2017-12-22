@@ -123,6 +123,7 @@ coap_pdu_parse_header
 coap_pdu_parse_header_size
 coap_pdu_parse_opt
 coap_pdu_parse_size
+coap_pdu_resize
 coap_peek_next
 coap_pop_next
 coap_print_addr
@@ -184,6 +185,7 @@ coap_ticks
 coap_ticks_from_rt_us
 coap_ticks_to_rt
 coap_ticks_to_rt_us
+coap_tls_free_session
 coap_tls_is_supported
 coap_tls_new_client_session
 coap_tls_new_server_session
