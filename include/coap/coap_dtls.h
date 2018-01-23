@@ -11,6 +11,24 @@
 #ifndef _COAP_DTLS_H_
 #define _COAP_DTLS_H_
 
+#ifdef HAVE_LIBTINYDTLS
+#ifdef WITH_ECC
+#pragma message "ECC build activated"
+
+typedef enum {
+  COAP_DTLS_ECDH_CURVE_SECP256R1
+} coap_dtls_ecdh_curve;
+
+typedef struct coap_dtls_ecdsa_key_t {
+  coap_dtls_ecdh_curve curve;
+  const unsigned char *priv_key;	/** < private key as bytes > */
+  const unsigned char *pub_key_x;	/** < x part of the public key for the given private key > */
+  const unsigned char *pub_key_y;	/** < y part of the public key for the given private key > */
+} coap_dtls_ecdsa_key_t;
+
+#endif
+#endif
+
 #include "net.h"
 #include "coap_session.h"
 #include "pdu.h"

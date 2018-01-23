@@ -233,14 +233,58 @@ error:
   return dtls_alert_fatal_create(fatal_error);
 }
 
+#ifdef WITH_ECC
+//TODO: Handle DTLS error codes properly (see dtls.h in tinydtls)
+static int
+get_ecdsa_key(struct dtls_context_t *dtls_context,
+	       const session_t *dtls_session,
+	       const dtls_ecdsa_key_t **result) {
+  coap_context_t *coap_context;
+  coap_session_t *coap_session;
+  int fatal_error = DTLS_ALERT_INTERNAL_ERROR;
+  coap_address_t remote_addr;
+
+  coap_context = (coap_context_t *)dtls_get_app_data(dtls_context);
+  get_session_addr(dtls_session, &remote_addr);
+  coap_session = coap_session_get_by_peer(coap_context, &remote_addr, dtls_session->ifindex);
+  if (!coap_session) {
+    debug("cannot get ECDSA key, session not found\n");
+    goto error;
+  }
+
+  return coap_context->get_ecdsa_key(coap_session, result);
+
+ error:
+  return dtls_alert_fatal_create(fatal_error);
+}
+
+static int verify_ecdsa_key(struct dtls_context_t *dtls_context,
+			    const session_t *dtls_session,
+			    const unsigned char *other_pub_x,
+			    const unsigned char *other_pub_y,
+			    size_t key_size) {
+  coap_context_t *coap_context;
+  coap_session_t *coap_session;
+  coap_address_t remote_addr;
+
+  coap_context = (coap_context_t *)dtls_get_app_data(dtls_context);
+  get_session_addr(dtls_session, &remote_addr);
+  coap_session = coap_session_get_by_peer(coap_context, &remote_addr, dtls_session->ifindex);
+  if (!coap_session) {
+    debug("WARN: session not found, may not be able to verify key.\n");
+  }
+  return coap_context->verify_ecdsa_key(coap_session, other_pub_x, other_pub_y, key_size);
+}
+#endif
+
 static dtls_handler_t cb = {
   .write = dtls_send_to_peer,
   .read = dtls_application_data,
   .event = dtls_event,
   .get_psk_info = get_psk_info,
 #ifdef WITH_ECC
-  .get_ecdsa_key = NULL,
-  .verify_ecdsa_key = NULL
+  .get_ecdsa_key = get_ecdsa_key,
+  .verify_ecdsa_key = verify_ecdsa_key
 #endif
 };
 

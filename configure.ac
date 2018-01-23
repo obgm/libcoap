@@ -406,6 +406,24 @@ if test "x$build_dtls" = "xyes"; then
 fi
 
 # configure options
+# __add support for ECC crypto with tinydtls__
+AC_ARG_ENABLE([ecc],
+              [AS_HELP_STRING([--with-ecc],
+                              [Enable building with DTLS ECC support [default=yes]])],
+              [build_ecc="$enableval"],
+              [build_ecc="yes"])
+
+if test "x$build_dtls" = "x" -a "x$with_tinydtls" = "xyes"; then
+    # Give a advice that '--with_gnutls' or '--with_openssl' was used but
+    # DTLS support isn't configured.
+    AC_MSG_NOTICE([==> Using the configure option '--with-ecc' without '--enable-dtls' and '--enable-tinydtls' is useless and will be ignored.])
+else
+    if test "x$build_ecc" = "xyes"; then
+        AC_DEFINE(WITH_ECC, 1, [Activate ECC CoAP build with tinydtls])
+    fi
+fi
+
+# configure options
 # __tests__
 AC_ARG_ENABLE([tests],
               [AS_HELP_STRING([--enable-tests],
@@ -601,6 +619,11 @@ if test "x$with_tinydtls" = "xyes"; then
     AC_MSG_RESULT([         -->  OpenSSL around  : "yes" (found tinyDTLS)])
     AC_MSG_RESULT([              TINYDTLS_CFLAGS : "$DTLS_CFLAGS"])
     AC_MSG_RESULT([              TINYDTLS_LIBS   : "$DTLS_LIBS"])
+    if test "x$build_ecc" = "xyes"; then
+        AC_MSG_RESULT([              ECC support     : "yes"])
+    else
+        AC_MSG_RESULT([              ECC support     : "no"])
+    fi
 fi
 if test "x$build_dtls" != "xyes"; then
     AC_MSG_RESULT([      build DTLS support      : "no"])

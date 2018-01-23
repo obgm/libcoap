@@ -137,6 +137,10 @@ typedef struct coap_context_t {
   size_t(*get_server_psk)(const coap_session_t *session, const uint8_t *identity, size_t identity_len, uint8_t *psk, size_t max_psk_len);
   size_t(*get_server_hint)(const coap_session_t *session, uint8_t *hint, size_t max_hint_len);
 
+#ifdef WITH_ECC
+  int (*get_ecdsa_key)(const coap_session_t *session, coap_dtls_ecdsa_key_t **result);
+  int (*verify_ecdsa_key)(const coap_session_t *session, unsigned char *pub_x, unsigned char *pub_y, size_t key_size);
+#endif
   void *dtls_context;
   uint8_t *psk_hint;
   size_t psk_hint_len;
@@ -210,7 +214,15 @@ coap_queue_t *coap_pop_next( coap_context_t *context );
 /**
  * Creates a new coap_context_t object that will hold the CoAP stack status.
  */
+#ifdef WITH_ECC
+coap_context_t *
+coap_new_context(
+  const coap_address_t *listen_addr,
+  int (*get_ecdsa_key)(const coap_session_t *session, coap_dtls_ecdsa_key_t **result),
+  int (*verify_ecdsa_key)(const coap_session_t *session, unsigned char *pub_x, unsigned char *pub_y, size_t key_size));
+#else
 coap_context_t *coap_new_context(const coap_address_t *listen_addr);
+#endif
 
 /**
  * Set the context's default server PSK hint and/or key.

@@ -436,9 +436,17 @@ void coap_context_set_psk(coap_context_t *ctx,
   }
 }
 
+#ifdef WITH_ECC
+coap_context_t *
+coap_new_context(
+  const coap_address_t *listen_addr,
+  int (*get_ecdsa_key)(const coap_session_t *session, coap_dtls_ecdsa_key_t **result),
+  int (*verify_ecdsa_key)(const coap_session_t *session, unsigned char *pub_x, unsigned char *pub_y, size_t key_size)) {
+#else
 coap_context_t *
 coap_new_context(
   const coap_address_t *listen_addr) {
+#endif
   coap_context_t *c;
 
 #ifdef WITH_CONTIKI
@@ -497,6 +505,13 @@ coap_new_context(
   c->get_client_psk = coap_get_session_client_psk;
   c->get_server_psk = coap_get_context_server_psk;
   c->get_server_hint = coap_get_context_server_hint;
+
+#ifdef WITH_ECC
+  if (get_ecdsa_key && verify_ecdsa_key) {
+    c->get_ecdsa_key = get_ecdsa_key;
+    c->verify_ecdsa_key = verify_ecdsa_key;
+  }
+#endif
 
 #ifdef WITH_CONTIKI
   process_start(&coap_retransmit_process, (char *)c);
