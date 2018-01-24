@@ -32,6 +32,15 @@ coap_dtls_is_supported(void) {
   return 1;
 }
 
+int
+coap_dtls_ecc_is_supported(void) {
+#ifdef WITH_ECC
+  return 1;
+#else
+  return 0;
+#endif
+}
+
 void coap_dtls_startup(void) {
   dtls_init();
   dtls_ticks(&dtls_tick_0);
@@ -252,7 +261,10 @@ get_ecdsa_key(struct dtls_context_t *dtls_context,
     goto error;
   }
 
-  return coap_context->get_ecdsa_key(coap_session, result);
+  if (coap_context->get_ecdsa_key && coap_context->verify_ecdsa_key) {
+    return coap_context->get_ecdsa_key(coap_session,
+				       (coap_dtls_ecdsa_key_t **)result);
+  }
 
  error:
   return dtls_alert_fatal_create(fatal_error);
@@ -266,6 +278,7 @@ static int verify_ecdsa_key(struct dtls_context_t *dtls_context,
   coap_context_t *coap_context;
   coap_session_t *coap_session;
   coap_address_t remote_addr;
+  int fatal_error = DTLS_ALERT_INTERNAL_ERROR;
 
   coap_context = (coap_context_t *)dtls_get_app_data(dtls_context);
   get_session_addr(dtls_session, &remote_addr);
@@ -273,7 +286,14 @@ static int verify_ecdsa_key(struct dtls_context_t *dtls_context,
   if (!coap_session) {
     debug("WARN: session not found, may not be able to verify key.\n");
   }
-  return coap_context->verify_ecdsa_key(coap_session, other_pub_x, other_pub_y, key_size);
+
+  if (coap_context->get_ecdsa_key && coap_context->verify_ecdsa_key) {
+    return coap_context->verify_ecdsa_key(coap_session,
+					  other_pub_x,
+					  other_pub_y,
+					  key_size);
+  }
+  return dtls_alert_fatal_create(fatal_error);
 }
 #endif
 

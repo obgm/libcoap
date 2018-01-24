@@ -441,7 +441,7 @@ coap_context_t *
 coap_new_context(
   const coap_address_t *listen_addr,
   int (*get_ecdsa_key)(const coap_session_t *session, coap_dtls_ecdsa_key_t **result),
-  int (*verify_ecdsa_key)(const coap_session_t *session, unsigned char *pub_x, unsigned char *pub_y, size_t key_size)) {
+  int (*verify_ecdsa_key)(const coap_session_t *session, const unsigned char *pub_x, const unsigned char *pub_y, size_t key_size)) {
 #else
 coap_context_t *
 coap_new_context(

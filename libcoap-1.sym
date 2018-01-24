@@ -32,6 +32,7 @@ coap_delete_pdu
 coap_delete_resource
 coap_delete_string
 coap_dispatch
+coap_dtls_ecc_is_supported
 coap_dtls_free_context
 coap_dtls_free_session
 coap_dtls_get_context_timeout
