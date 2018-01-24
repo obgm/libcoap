@@ -123,6 +123,20 @@ void coap_session_free(coap_session_t *session) {
   if (session->psk_key)
     coap_free(session->psk_key);
 
+#ifdef WITH_ECC
+  if (session->ecdsa_key) {
+    coap_free(session->ecdsa_key->priv_key);
+    coap_free(session->ecdsa_key->pub_key_x);
+    coap_free(session->ecdsa_key->pub_key_y);
+    coap_free(session->ecdsa_key);
+    session->ecdsa_key = NULL;
+    session->ecdsa_key_size = 0;
+  }
+
+  if (session->verify_ecdsa_key)
+    session->verify_ecdsa_key = NULL;
+#endif
+
   LL_FOREACH_SAFE(session->sendqueue, q, tmp) {
     if (q->pdu->type==COAP_MESSAGE_CON && session->context && session->context->nack_handler)
       session->context->nack_handler(session->context, session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);
@@ -584,6 +598,60 @@ coap_session_t *coap_new_client_session_psk(
   debug("*** %s: new outgoing session\n", coap_session_str(session));
   return coap_session_connect(session);
 }
+
+#ifdef WITH_ECC
+coap_session_t *coap_new_client_session_ecdsa(struct coap_context_t *ctx,
+					      const coap_address_t *local_if,
+					      const coap_address_t *server,
+					      coap_proto_t proto,
+					      int (*verify_ecdsa_key)(const unsigned char *pub_x, const unsigned char *pub_y, size_t len),
+					      coap_dtls_ecdsa_key_t *ecdsa_key,
+					      size_t key_size) {
+  coap_session_t *session = coap_session_create_client(ctx, local_if, server, proto);
+
+  if (!session)
+    return NULL;
+
+  if (!ecdsa_key) {
+    coap_log(LOG_WARNING, "No session ECDSA key data specified");
+  } else {
+    session->ecdsa_key = (coap_dtls_ecdsa_key_t *)coap_malloc(sizeof(coap_dtls_ecdsa_key_t));
+    if (!session->ecdsa_key) {
+      coap_log(LOG_ERR, "No memory to store ECDSA data");
+      coap_session_release(session);
+      return NULL;
+    } else {
+      session->ecdsa_key->priv_key = (unsigned char *)coap_malloc(key_size);
+      session->ecdsa_key->pub_key_x = (unsigned char *)coap_malloc(key_size);
+      session->ecdsa_key->pub_key_y = (unsigned char *)coap_malloc(key_size);
+      if (!session->ecdsa_key->priv_key
+	  || !session->ecdsa_key->pub_key_x
+	  || !session->ecdsa_key->pub_key_y) {
+	coap_log(LOG_ERR, "No memory to store ECDSA key data");
+	coap_free(session->ecdsa_key->priv_key);
+	coap_free(session->ecdsa_key->pub_key_x);
+	coap_free(session->ecdsa_key->pub_key_y);
+	coap_free(session->ecdsa_key);
+	coap_session_release(session);
+	return NULL;
+      }
+      memcpy(session->ecdsa_key->priv_key, ecdsa_key->priv_key, key_size);
+      memcpy(session->ecdsa_key->pub_key_x, ecdsa_key->pub_key_x, key_size);
+      memcpy(session->ecdsa_key->pub_key_y, ecdsa_key->pub_key_y, key_size);
+      session->ecdsa_key_size = key_size;
+    }
+  }
+
+  if (!verify_ecdsa_key) {
+    coap_log(LOG_WARNING, "No session ECDSA verify callback specified");
+  } else {
+    session->verify_ecdsa_key = verify_ecdsa_key;
+  }
+
+  debug("*** %s: new outgoing session\n", coap_session_str(session));
+  return coap_session_connect(session);
+}
+#endif
 
 coap_session_t *coap_new_server_session(
   struct coap_context_t *ctx,

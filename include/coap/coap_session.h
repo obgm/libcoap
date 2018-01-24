@@ -9,10 +9,12 @@
 #ifndef _SESSION_H_
 #define _SESSION_H_
 
-
 #include "coap_io.h"
 #include "coap_time.h"
 #include "pdu.h"
+#ifdef WITH_ECC
+#include "ecdsa.h"
+#endif
 
 struct coap_endpoint_t;
 struct coap_contex_t;
@@ -68,6 +70,11 @@ typedef struct coap_session_t {
   size_t psk_identity_len;
   uint8_t *psk_key;
   size_t psk_key_len;
+#ifdef WITH_ECC
+  coap_dtls_ecdsa_key_t *ecdsa_key;
+  size_t ecdsa_key_size;
+  int (*verify_ecdsa_key)(const unsigned char *pub_x, const unsigned char *pub_y, size_t key_size);
+#endif
   void *app;                    /**< application-specific data */
 } coap_session_t;
 
@@ -184,6 +191,26 @@ coap_session_t *coap_new_client_session_psk(
   const uint8_t *key,
   unsigned key_len
 );
+
+#ifdef WITH_ECC
+/**
+* Creates a new client session to the designated server with ECDSA key authentication
+* @param ctx The CoAP context
+* @param local_if Address of local interface. It is recommended to use NULL to let the operating system choose a suitable local interface. If an address is specified, the port number should be zero, which means that a free port is automatically selected.
+* @param server The server's address. If the port number is zero, the default port for the protocol will be used.
+* @param verify_ecdsa_key Pointer to remote public key verification function
+* @param ecdsa_key ECDSA key
+* @param key_size ECDSA key size (in bytes)
+* @param proto Protocol.
+*/
+coap_session_t *coap_new_client_session_ecdsa(struct coap_context_t *ctx,
+					      const coap_address_t *local_if,
+					      const coap_address_t *server,
+					      coap_proto_t proto,
+					      int (*verify_ecdsa_key)(const unsigned char *pub_x, const unsigned char *pub_y, size_t len),
+					      coap_dtls_ecdsa_key_t *ecdsa_key,
+					      size_t key_size);
+#endif
 
 /**
 * Creates a new server session for the specified endpoint.

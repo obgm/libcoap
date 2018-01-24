@@ -370,6 +370,55 @@ coap_get_session_client_psk(
   return 0;
 }
 
+#ifdef WITH_ECC
+static int
+coap_get_session_client_ecdsa(const coap_session_t *session,
+			      const coap_dtls_ecdsa_key_t **result) {
+  if (session->ecdsa_key) {
+    *result = session->ecdsa_key;
+    return 0;
+  } else if (session->context && session->context->ecdsa_key) {
+    *result = session->context->ecdsa_key;
+    return 0;
+  }
+  return -1;
+}
+
+static int
+coap_verify_session_client_ecdsa(const coap_session_t *session,
+				 const unsigned char *pub_x,
+				 const unsigned char *pub_y,
+				 size_t key_size) {
+  if (session->verify_ecdsa_key) {
+    return session->verify_ecdsa_key(pub_x, pub_y, key_size);
+  } else if (session->context && session->context->verify_ecdsa_key) {
+    return session->context->verify_ecdsa_key(pub_x, pub_y, key_size);
+  }
+  return -1;
+}
+
+static int
+coap_get_context_server_ecdsa(const coap_context_t *ctx,
+			      const coap_dtls_ecdsa_key_t **result) {
+  if (ctx && ctx->ecdsa_key) {
+    *result = ctx->ecdsa_key;
+    return 0;
+  }
+  return -1;
+}
+
+static int
+coap_verify_context_server_ecdsa(const coap_context_t *ctx,
+				 const unsigned char *pub_x,
+				 const unsigned char *pub_y,
+				 size_t key_size) {
+  if (ctx && ctx->verify_ecdsa_key) {
+    return ctx->verify_ecdsa_key(pub_x, pub_y, key_size);
+  }
+  return -1;
+}
+#endif
+
 static size_t
 coap_get_context_server_psk(
   const coap_session_t *session,
@@ -437,16 +486,58 @@ void coap_context_set_psk(coap_context_t *ctx,
 }
 
 #ifdef WITH_ECC
-coap_context_t *
-coap_new_context(
-  const coap_address_t *listen_addr,
-  int (*get_ecdsa_key)(const coap_session_t *session, coap_dtls_ecdsa_key_t **result),
-  int (*verify_ecdsa_key)(const coap_session_t *session, const unsigned char *pub_x, const unsigned char *pub_y, size_t key_size)) {
-#else
-coap_context_t *
-coap_new_context(
-  const coap_address_t *listen_addr) {
+void coap_context_set_ecdsa(coap_context_t *ctx,
+			    coap_dtls_ecdsa_key_t *ecdsa_key,
+			    size_t key_size) {
+  if (ctx->ecdsa_key) {
+    coap_free(ctx->ecdsa_key->priv_key);
+    coap_free(ctx->ecdsa_key->pub_key_x);
+    coap_free(ctx->ecdsa_key->pub_key_y);
+    coap_free(ctx->ecdsa_key);
+  }
+  ctx->ecdsa_key = NULL;
+  ctx->ecdsa_key_size = 0;
+
+  if (ecdsa_key && key_size > 0) {
+    ctx->ecdsa_key = (coap_dtls_ecdsa_key_t *)coap_malloc(sizeof(coap_dtls_ecdsa_key_t));
+    if (!ctx->ecdsa_key) {
+      coap_log(LOG_ERR, "No memory to store ECDSA data");
+      return;
+    }
+    ctx->ecdsa_key->priv_key = (unsigned char *)coap_malloc(key_size);
+    ctx->ecdsa_key->pub_key_x = (unsigned char *)coap_malloc(key_size);
+    ctx->ecdsa_key->pub_key_y = (unsigned char *)coap_malloc(key_size);
+    if (!ctx->ecdsa_key->priv_key
+	|| !ctx->ecdsa_key->pub_key_x
+	|| !ctx->ecdsa_key->pub_key_y) {
+      coap_log(LOG_ERR, "No memory to store ECDSA key data");
+      coap_free(ctx->ecdsa_key->priv_key);
+      coap_free(ctx->ecdsa_key->pub_key_x);
+      coap_free(ctx->ecdsa_key->pub_key_y);
+      coap_free(ctx->ecdsa_key);
+      return;
+    }
+    memcpy(ctx->ecdsa_key->priv_key, ecdsa_key->priv_key, key_size);
+    memcpy(ctx->ecdsa_key->pub_key_x, ecdsa_key->pub_key_x, key_size);
+    memcpy(ctx->ecdsa_key->pub_key_y, ecdsa_key->pub_key_y, key_size);
+    ctx->ecdsa_key->curve = ecdsa_key->curve;
+    ctx->ecdsa_key_size = key_size;
+  }
+}
+
+void coap_context_set_ecdsa_verify(coap_context_t *ctx,
+				   int (*verify_ecdsa)
+				   (const unsigned char *pub_x,
+				    const unsigned char *pub_y,
+				    size_t key_size)) {
+  if (ctx && verify_ecdsa)
+    ctx->verify_ecdsa_key = verify_ecdsa;
+  return;
+}
 #endif
+
+coap_context_t *
+coap_new_context(const coap_address_t *listen_addr) {
   coap_context_t *c;
 
 #ifdef WITH_CONTIKI
@@ -507,10 +598,13 @@ coap_new_context(
   c->get_server_hint = coap_get_context_server_hint;
 
 #ifdef WITH_ECC
-  if (get_ecdsa_key && verify_ecdsa_key) {
-    c->get_ecdsa_key = get_ecdsa_key;
-    c->verify_ecdsa_key = verify_ecdsa_key;
-  }
+  c->ecdsa_key = NULL;
+  c->ecdsa_key_size = 0;
+  c->verify_ecdsa_key = NULL;
+  c->get_client_ecdsa = coap_get_session_client_ecdsa;
+  c->get_server_ecdsa = coap_get_context_server_ecdsa;
+  c->verify_client_ecdsa = coap_verify_session_client_ecdsa;
+  c->verify_server_ecdsa = coap_verify_context_server_ecdsa;
 #endif
 
 #ifdef WITH_CONTIKI
@@ -572,6 +666,20 @@ coap_free_context(coap_context_t *context) {
 
   if (context->psk_key)
     coap_free(context->psk_key);
+
+#ifdef WITH_ECC
+  if (context->ecdsa_key) {
+    coap_free(context->ecdsa_key->priv_key);
+    coap_free(context->ecdsa_key->pub_key_x);
+    coap_free(context->ecdsa_key->pub_key_y);
+    coap_free(context->ecdsa_key);
+    context->ecdsa_key = NULL;
+    context->ecdsa_key_size = 0;
+  }
+
+  if (context->verify_ecdsa_key)
+    context->verify_ecdsa_key = NULL;
+#endif
 
 #ifndef WITH_CONTIKI
   coap_free_type(COAP_CONTEXT, context);

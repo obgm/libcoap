@@ -114,7 +114,8 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap/subscribe.h \
   $(top_srcdir)/include/coap/uri.h \
   $(top_srcdir)/include/coap/uthash.h \
-  $(top_srcdir)/include/coap/utlist.h
+  $(top_srcdir)/include/coap/utlist.h \
+  $(top_srcdir)/include/coap/ecdsa.h
 
 # If there is a API change to something $(LIBCOAP_API_VERSION) > 1 the install
 # prefix for the header files has to change to not conflict the older version

@@ -30,6 +30,9 @@
 #include "pdu.h"
 #include "prng.h"
 #include "coap_session.h"
+#ifdef WITH_ECC
+#include "ecdsa.h"
+#endif
 
 struct coap_queue_t;
 
@@ -138,8 +141,13 @@ typedef struct coap_context_t {
   size_t(*get_server_hint)(const coap_session_t *session, uint8_t *hint, size_t max_hint_len);
 
 #ifdef WITH_ECC
-  int (*get_ecdsa_key)(const coap_session_t *session, coap_dtls_ecdsa_key_t **result);
-  int (*verify_ecdsa_key)(const coap_session_t *session, const unsigned char *pub_x, const unsigned char *pub_y, size_t key_size);
+  int (*get_client_ecdsa)(const coap_session_t *session, const coap_dtls_ecdsa_key_t **result);
+  int (*get_server_ecdsa)(const struct coap_context_t *ctx, const coap_dtls_ecdsa_key_t **result);
+  int (*verify_client_ecdsa)(const coap_session_t *coap_session, const unsigned char *pub_x, const unsigned char *pub_y, size_t key_size);
+  int (*verify_server_ecdsa)(const struct coap_context_t *ctx, const unsigned char *pub_x, const unsigned char *pub_y, size_t key_size);
+  int (*verify_ecdsa_key)(const unsigned char *pub_x, const unsigned char *pub_y, size_t key_size);
+  coap_dtls_ecdsa_key_t *ecdsa_key;
+  size_t ecdsa_key_size;
 #endif
   void *dtls_context;
   uint8_t *psk_hint;
@@ -214,15 +222,7 @@ coap_queue_t *coap_pop_next( coap_context_t *context );
 /**
  * Creates a new coap_context_t object that will hold the CoAP stack status.
  */
-#ifdef WITH_ECC
-coap_context_t *
-coap_new_context(
-  const coap_address_t *listen_addr,
-  int (*get_ecdsa_key)(const coap_session_t *session, coap_dtls_ecdsa_key_t **result),
-  int (*verify_ecdsa_key)(const coap_session_t *session, const unsigned char *pub_x, const unsigned char *pub_y, size_t key_size));
-#else
 coap_context_t *coap_new_context(const coap_address_t *listen_addr);
-#endif
 
 /**
  * Set the context's default server PSK hint and/or key.
@@ -236,6 +236,17 @@ coap_context_t *coap_new_context(const coap_address_t *listen_addr);
 void coap_context_set_psk( coap_context_t *ctx, const char *hint,
                            const uint8_t *key, size_t key_len );
 
+#ifdef WITH_ECC
+void coap_context_set_ecdsa(coap_context_t *ctx,
+			    coap_dtls_ecdsa_key_t *ecdsa_key,
+			    size_t key_size);
+
+void coap_context_set_ecdsa_verify(coap_context_t *ctx,
+				   int (*verify_ecdsa)
+				   (const unsigned char *pub_x,
+				    const unsigned char *pub_y,
+				    size_t key_size));
+#endif
 /**
  * Returns a new message id and updates @p context->message_id accordingly. The
  * message id is returned in network byte order to make it easier to read in

@@ -11,20 +11,12 @@
 #ifndef _COAP_DTLS_H_
 #define _COAP_DTLS_H_
 
-typedef enum {
-  COAP_DTLS_ECDH_CURVE_SECP256R1
-} coap_dtls_ecdh_curve;
-
-typedef struct coap_dtls_ecdsa_key_t {
-  coap_dtls_ecdh_curve curve;
-  const unsigned char *priv_key;	/** < private key as bytes > */
-  const unsigned char *pub_key_x;	/** < x part of the public key for the given private key > */
-  const unsigned char *pub_key_y;	/** < y part of the public key for the given private key > */
-} coap_dtls_ecdsa_key_t;
-
 #include "net.h"
 #include "coap_session.h"
 #include "pdu.h"
+#ifdef WITH_ECC
+#include "ecdsa.h"
+#endif
 
 /**
  * @defgroup dtls DTLS Support
@@ -37,9 +29,6 @@ int coap_dtls_is_supported(void);
 
 /** Returns 1 if support for TLS is enabled, or 0 otherwise. */
 int coap_tls_is_supported( void );
-
-/** Returns 1 if DTLS with ECC is enabled, or 0 otherwise. */
-int coap_dtls_ecc_is_supported(void);
 
 /** Sets the log level to the specified value. */
 void coap_dtls_set_log_level(int level);

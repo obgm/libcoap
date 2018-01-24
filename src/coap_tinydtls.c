@@ -32,15 +32,6 @@ coap_dtls_is_supported(void) {
   return 1;
 }
 
-int
-coap_dtls_ecc_is_supported(void) {
-#ifdef WITH_ECC
-  return 1;
-#else
-  return 0;
-#endif
-}
-
 void coap_dtls_startup(void) {
   dtls_init();
   dtls_ticks(&dtls_tick_0);
@@ -250,24 +241,19 @@ get_ecdsa_key(struct dtls_context_t *dtls_context,
 	       const dtls_ecdsa_key_t **result) {
   coap_context_t *coap_context;
   coap_session_t *coap_session;
-  int fatal_error = DTLS_ALERT_INTERNAL_ERROR;
   coap_address_t remote_addr;
 
   coap_context = (coap_context_t *)dtls_get_app_data(dtls_context);
   get_session_addr(dtls_session, &remote_addr);
   coap_session = coap_session_get_by_peer(coap_context, &remote_addr, dtls_session->ifindex);
   if (!coap_session) {
-    debug("cannot get ECDSA key, session not found\n");
-    goto error;
+    debug("cannot get ECDSA session key, session not found, trying context key\n");
+    return coap_context->get_server_ecdsa(coap_context,
+					  (const coap_dtls_ecdsa_key_t **) result);
   }
 
-  if (coap_context->get_ecdsa_key && coap_context->verify_ecdsa_key) {
-    return coap_context->get_ecdsa_key(coap_session,
-				       (coap_dtls_ecdsa_key_t **)result);
-  }
-
- error:
-  return dtls_alert_fatal_create(fatal_error);
+  return coap_context->get_client_ecdsa(coap_session,
+					(const coap_dtls_ecdsa_key_t **) result);
 }
 
 static int verify_ecdsa_key(struct dtls_context_t *dtls_context,
@@ -278,22 +264,16 @@ static int verify_ecdsa_key(struct dtls_context_t *dtls_context,
   coap_context_t *coap_context;
   coap_session_t *coap_session;
   coap_address_t remote_addr;
-  int fatal_error = DTLS_ALERT_INTERNAL_ERROR;
 
   coap_context = (coap_context_t *)dtls_get_app_data(dtls_context);
   get_session_addr(dtls_session, &remote_addr);
   coap_session = coap_session_get_by_peer(coap_context, &remote_addr, dtls_session->ifindex);
   if (!coap_session) {
-    debug("WARN: session not found, may not be able to verify key.\n");
+    debug("session not found, trying context verify function\n");
+    return coap_context->verify_server_ecdsa(coap_context, other_pub_x, other_pub_y, key_size);
   }
 
-  if (coap_context->get_ecdsa_key && coap_context->verify_ecdsa_key) {
-    return coap_context->verify_ecdsa_key(coap_session,
-					  other_pub_x,
-					  other_pub_y,
-					  key_size);
-  }
-  return dtls_alert_fatal_create(fatal_error);
+  return coap_context->verify_client_ecdsa(coap_session, other_pub_x, other_pub_y, key_size);
 }
 #endif
 
@@ -305,6 +285,9 @@ static dtls_handler_t cb = {
 #ifdef WITH_ECC
   .get_ecdsa_key = get_ecdsa_key,
   .verify_ecdsa_key = verify_ecdsa_key
+#else
+  .get_ecdsa_key = NULL,
+  .verify_ecdsa_key = NULL
 #endif
 };
 
