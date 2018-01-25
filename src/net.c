@@ -601,7 +601,6 @@ coap_new_context(const coap_address_t *listen_addr) {
   c->get_server_hint = coap_get_context_server_hint;
 
 #ifdef WITH_ECC
-  c->dtls_handle = NULL;
   c->ecdsa_key = NULL;
   c->ecdsa_key_size = 0;
   c->verify_ecdsa_key = NULL;
