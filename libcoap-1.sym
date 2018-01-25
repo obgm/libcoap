@@ -34,6 +34,7 @@ coap_delete_pdu
 coap_delete_resource
 coap_delete_string
 coap_dispatch
+coap_dtls_clear_ecdsa
 coap_dtls_free_context
 coap_dtls_free_session
 coap_dtls_get_context_timeout
@@ -50,6 +51,7 @@ coap_dtls_new_server_session
 coap_dtls_receive
 coap_dtls_send
 coap_dtls_session_update_mtu
+coap_dtls_set_ecdsa
 coap_dtls_set_log_level
 coap_dtls_startup
 coap_encode_var_bytes

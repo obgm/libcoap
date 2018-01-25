@@ -81,6 +81,22 @@ void coap_dtls_free_session(coap_session_t *session);
  */
 void coap_dtls_session_update_mtu(coap_session_t *session);
 
+#ifdef WITH_ECC
+/**
+ * Set ECDSA callbacks for the context
+ *
+ * @param context   The CoAP context
+ */
+void coap_dtls_set_ecdsa(struct coap_context_t *ctx);
+
+/**
+ * Clear ECDSA callbacks for context
+ *
+ * @param context   The CoAP context
+ */
+void coap_dtls_clear_ecdsa(struct coap_context_t *ctx);
+#endif
+
 /**
  * Send data to a DTLS peer.
  *

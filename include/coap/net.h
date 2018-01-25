@@ -148,6 +148,7 @@ typedef struct coap_context_t {
   int (*verify_ecdsa_key)(const unsigned char *pub_x, const unsigned char *pub_y, size_t key_size);
   coap_dtls_ecdsa_key_t *ecdsa_key;
   size_t ecdsa_key_size;
+  void *dtls_handle;
 #endif
   void *dtls_context;
   uint8_t *psk_hint;

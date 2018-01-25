@@ -277,31 +277,70 @@ static int verify_ecdsa_key(struct dtls_context_t *dtls_context,
 }
 #endif
 
+#ifndef WITH_ECC
 static dtls_handler_t cb = {
   .write = dtls_send_to_peer,
   .read = dtls_application_data,
   .event = dtls_event,
-  .get_psk_info = get_psk_info,
-#ifdef WITH_ECC
+  .get_psk_info = get_psk_info
+};
+#endif
+/*#ifdef WITH_ECC
   .get_ecdsa_key = get_ecdsa_key,
   .verify_ecdsa_key = verify_ecdsa_key
-#else
-  .get_ecdsa_key = NULL,
-  .verify_ecdsa_key = NULL
 #endif
-};
+};*/
 
 void *
 coap_dtls_new_context(struct coap_context_t *coap_context) {
   struct dtls_context_t *dtls_context = dtls_new_context(coap_context);
+  dtls_handler_t *handle;
   if (!dtls_context)
     goto error;
+#ifdef WITH_ECC
+  if (!(coap_context->dtls_handle = coap_malloc_type(COAP_STRING,
+						     sizeof(dtls_handler_t)))) {
+    coap_log(LOG_ERR, "No memory to store DTLS handle");
+    goto error;
+  }
+  handle = (dtls_handler_t *)coap_context->dtls_handle;
+  handle->write = dtls_send_to_peer;
+  handle->read = dtls_application_data;
+  handle->event = dtls_event;
+  handle->get_psk_info = get_psk_info;
+  handle->get_ecdsa_key = NULL;
+  handle->verify_ecdsa_key = NULL;
+  dtls_set_handler(dtls_context, handle);
+#else
   dtls_set_handler(dtls_context, &cb);
+#endif
   return dtls_context;
 error:
   coap_dtls_free_context(dtls_context);
   return NULL;
 }
+
+#ifdef WITH_ECC
+void
+coap_dtls_set_ecdsa(coap_context_t *ctx) {
+  dtls_handler_t *handle = ctx->dtls_handle;
+  if (!handle->get_ecdsa_key) {
+    handle->get_ecdsa_key = get_ecdsa_key;
+    handle->verify_ecdsa_key = verify_ecdsa_key;
+  }
+  return;
+}
+
+void
+coap_dtls_clear_ecdsa(coap_context_t *ctx) {
+  dtls_handler_t *handle = ctx->dtls_handle;
+  if (handle->get_ecdsa_key) {
+    handle->get_ecdsa_key = NULL;
+    handle->verify_ecdsa_key = NULL;
+  }
+  return;
+}
+#endif
 
 void
 coap_dtls_free_context(void *handle) {

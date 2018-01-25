@@ -522,7 +522,10 @@ void coap_context_set_ecdsa(coap_context_t *ctx,
     memcpy(ctx->ecdsa_key->pub_key_y, ecdsa_key->pub_key_y, key_size);
     ctx->ecdsa_key->curve = ecdsa_key->curve;
     ctx->ecdsa_key_size = key_size;
+    coap_dtls_set_ecdsa(ctx);
+    return;
   }
+  coap_dtls_clear_ecdsa(ctx);
 }
 
 void coap_context_set_ecdsa_verify(coap_context_t *ctx,
@@ -598,6 +601,7 @@ coap_new_context(const coap_address_t *listen_addr) {
   c->get_server_hint = coap_get_context_server_hint;
 
 #ifdef WITH_ECC
+  c->dtls_handle = NULL;
   c->ecdsa_key = NULL;
   c->ecdsa_key_size = 0;
   c->verify_ecdsa_key = NULL;
@@ -668,6 +672,10 @@ coap_free_context(coap_context_t *context) {
     coap_free(context->psk_key);
 
 #ifdef WITH_ECC
+  if (context->dtls_handle) {
+    coap_free(context->dtls_handle);
+    context->dtls_handle = NULL;
+  }
   if (context->ecdsa_key) {
     coap_free(context->ecdsa_key->priv_key);
     coap_free(context->ecdsa_key->pub_key_x);

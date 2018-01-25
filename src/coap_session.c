@@ -612,40 +612,49 @@ coap_session_t *coap_new_client_session_ecdsa(struct coap_context_t *ctx,
   if (!session)
     return NULL;
 
-  if (!ecdsa_key) {
-    coap_log(LOG_WARNING, "No session ECDSA key data specified");
+  if (!ecdsa_key && !ctx->ecdsa_key) {
+    coap_log(LOG_ERR, "No session ECDSA key data specified "
+	     "and no global ECDSA key available");
+    coap_session_release(session);
+    return NULL;
+  } else if (!verify_ecdsa_key && !ctx->verify_ecdsa_key) {
+    coap_log(LOG_ERR, "No session ECDSA verify callback specified and no "
+	     "global verify callback set");
+    coap_session_release(session);
+    return NULL;
   } else {
-    session->ecdsa_key = (coap_dtls_ecdsa_key_t *)coap_malloc(sizeof(coap_dtls_ecdsa_key_t));
-    if (!session->ecdsa_key) {
-      coap_log(LOG_ERR, "No memory to store ECDSA data");
-      coap_session_release(session);
-      return NULL;
-    } else {
-      session->ecdsa_key->priv_key = (unsigned char *)coap_malloc(key_size);
-      session->ecdsa_key->pub_key_x = (unsigned char *)coap_malloc(key_size);
-      session->ecdsa_key->pub_key_y = (unsigned char *)coap_malloc(key_size);
-      if (!session->ecdsa_key->priv_key
-	  || !session->ecdsa_key->pub_key_x
-	  || !session->ecdsa_key->pub_key_y) {
-	coap_log(LOG_ERR, "No memory to store ECDSA key data");
-	coap_free(session->ecdsa_key->priv_key);
-	coap_free(session->ecdsa_key->pub_key_x);
-	coap_free(session->ecdsa_key->pub_key_y);
-	coap_free(session->ecdsa_key);
+    if (ecdsa_key) {
+      session->ecdsa_key = (coap_dtls_ecdsa_key_t *)coap_malloc(sizeof(coap_dtls_ecdsa_key_t));
+      if (!session->ecdsa_key) {
+	coap_log(LOG_ERR, "No memory to store ECDSA data");
 	coap_session_release(session);
 	return NULL;
+      } else {
+	session->ecdsa_key->priv_key = (unsigned char *)coap_malloc(key_size);
+	session->ecdsa_key->pub_key_x = (unsigned char *)coap_malloc(key_size);
+	session->ecdsa_key->pub_key_y = (unsigned char *)coap_malloc(key_size);
+	if (!session->ecdsa_key->priv_key
+	    || !session->ecdsa_key->pub_key_x
+	    || !session->ecdsa_key->pub_key_y) {
+	  coap_log(LOG_ERR, "No memory to store ECDSA key data");
+	  coap_free(session->ecdsa_key->priv_key);
+	  coap_free(session->ecdsa_key->pub_key_x);
+	  coap_free(session->ecdsa_key->pub_key_y);
+	  coap_free(session->ecdsa_key);
+	  coap_session_release(session);
+	  return NULL;
+	}
+	memcpy(session->ecdsa_key->priv_key, ecdsa_key->priv_key, key_size);
+	memcpy(session->ecdsa_key->pub_key_x, ecdsa_key->pub_key_x, key_size);
+	memcpy(session->ecdsa_key->pub_key_y, ecdsa_key->pub_key_y, key_size);
+	session->ecdsa_key_size = key_size;
       }
-      memcpy(session->ecdsa_key->priv_key, ecdsa_key->priv_key, key_size);
-      memcpy(session->ecdsa_key->pub_key_x, ecdsa_key->pub_key_x, key_size);
-      memcpy(session->ecdsa_key->pub_key_y, ecdsa_key->pub_key_y, key_size);
-      session->ecdsa_key_size = key_size;
     }
-  }
 
-  if (!verify_ecdsa_key) {
-    coap_log(LOG_WARNING, "No session ECDSA verify callback specified");
-  } else {
-    session->verify_ecdsa_key = verify_ecdsa_key;
+    if (verify_ecdsa_key) {
+      session->verify_ecdsa_key = verify_ecdsa_key;
+    }
+    coap_dtls_set_ecdsa(ctx);
   }
 
   debug("*** %s: new outgoing session\n", coap_session_str(session));
