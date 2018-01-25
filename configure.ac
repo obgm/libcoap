@@ -26,7 +26,7 @@ PKG_PROG_PKG_CONFIG([0.20])
 # Generate one configuration header file for building the library itself with
 # an auto generated template. We need later a second one (include/libcoap.h)
 # that will be installed alongside the library.
-AC_CONFIG_HEADERS([coap_config.h])
+AC_CONFIG_HEADERS([coap_config.h include/coap/coap.h])
 
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -413,13 +413,13 @@ AC_ARG_ENABLE([ecc],
               [build_ecc="$enableval"],
               [build_ecc="yes"])
 
-if test "x$build_dtls" = "x" -a "x$with_tinydtls" = "xyes"; then
+if test "x$build_dtls" = "x" -o "x$with_tinydtls" = "x"; then
     # Give a advice that '--with_gnutls' or '--with_openssl' was used but
     # DTLS support isn't configured.
     AC_MSG_NOTICE([==> Using the configure option '--with-ecc' without '--enable-dtls' and '--enable-tinydtls' is useless and will be ignored.])
 else
     if test "x$build_ecc" = "xyes"; then
-        AC_DEFINE(WITH_ECC, 1, [Activate ECC CoAP build with tinydtls])
+        AC_DEFINE(WITH_ECC, 1, [Define if secure CoAP with ECDSA ECC via tinydtls is enabled])
     fi
 fi
 
@@ -589,7 +589,6 @@ examples/Makefile
 examples/coap-client.txt
 examples/coap-server.txt
 examples/coap-rd.txt
-include/coap/coap.h
 tests/Makefile
 libcoap-$LIBCOAP_API_VERSION.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
 ])
