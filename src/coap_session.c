@@ -637,8 +637,10 @@ coap_session_t *coap_new_client_session_ecdsa(struct coap_context_t *ctx,
   * exists we throw an error. */
   if (!ctx->ecdsa_key || !ctx->verify_ecdsa_key) {
     LL_FOREACH(ctx->sessions, sessionptr) {
-      if ((!ctx->ecdsa_key && !sessionptr->ecdsa_key)
-	  || (!ctx->verify_ecdsa_key && !sessionptr->verify_ecdsa_key))
+      if ((sessionptr != session) && ((!ctx->ecdsa_key
+				       && !sessionptr->ecdsa_key)
+				      || (!ctx->verify_ecdsa_key
+					  && !sessionptr->verify_ecdsa_key)))
 	break;
     }
     if (sessionptr) {
