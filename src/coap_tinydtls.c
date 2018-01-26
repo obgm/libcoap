@@ -291,8 +291,8 @@ static dtls_handler_t cb = {
 #ifdef WITH_ECC
   .get_ecdsa_key = NULL,
   .verify_ecdsa_key = NULL
-};
 #endif /* WITH_ECC */
+};
 #endif /* COAP_ECC_ENABLED */
 
 void *
