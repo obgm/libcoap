@@ -486,23 +486,43 @@ void coap_context_set_psk(coap_context_t *ctx,
 }
 
 #ifdef COAP_ECC_ENABLED
-void coap_context_set_ecdsa(coap_context_t *ctx,
+int coap_context_set_ecdsa(coap_context_t *ctx,
 			    coap_dtls_ecdsa_key_t *ecdsa_key,
 			    size_t key_size) {
+  coap_session_t *sessionptr;
+
+  /* Refuse to delete active ECDSA key if ALL existing sessions
+   * doesn't provide their own keys*/
+  if (ctx->ecdsa_key || ctx->sessions) {
+    LL_FOREACH(ctx->sessions, sessionptr) {
+      if (!sessionptr->ecdsa_key) {
+	if (ctx->ecdsa_key) {
+	  coap_log(LOG_ERR, "A session using existing ECDSA key exists, stop "
+		   "it before changing context key");
+	  return -1;
+	} else {
+	  coap_log(LOG_ERR, "Non-ECDSA sessions already exists, stop them "
+		   "before switching to ECDSA");
+	  return -1;
+	}
+      }
+    }
+  }
+
   if (ctx->ecdsa_key) {
     coap_free(ctx->ecdsa_key->priv_key);
     coap_free(ctx->ecdsa_key->pub_key_x);
     coap_free(ctx->ecdsa_key->pub_key_y);
     coap_free(ctx->ecdsa_key);
+    ctx->ecdsa_key = NULL;
+    ctx->ecdsa_key_size = 0;
   }
-  ctx->ecdsa_key = NULL;
-  ctx->ecdsa_key_size = 0;
 
   if (ecdsa_key && key_size > 0) {
     ctx->ecdsa_key = (coap_dtls_ecdsa_key_t *)coap_malloc(sizeof(coap_dtls_ecdsa_key_t));
     if (!ctx->ecdsa_key) {
       coap_log(LOG_ERR, "No memory to store ECDSA data");
-      return;
+      return -1;
     }
     ctx->ecdsa_key->priv_key = (unsigned char *)coap_malloc(key_size);
     ctx->ecdsa_key->pub_key_x = (unsigned char *)coap_malloc(key_size);
@@ -515,27 +535,63 @@ void coap_context_set_ecdsa(coap_context_t *ctx,
       coap_free(ctx->ecdsa_key->pub_key_x);
       coap_free(ctx->ecdsa_key->pub_key_y);
       coap_free(ctx->ecdsa_key);
-      return;
+      return -1;
     }
     memcpy(ctx->ecdsa_key->priv_key, ecdsa_key->priv_key, key_size);
     memcpy(ctx->ecdsa_key->pub_key_x, ecdsa_key->pub_key_x, key_size);
     memcpy(ctx->ecdsa_key->pub_key_y, ecdsa_key->pub_key_y, key_size);
     ctx->ecdsa_key->curve = ecdsa_key->curve;
     ctx->ecdsa_key_size = key_size;
+    if (!ctx->verify_ecdsa_key)
+      return 0;
     coap_dtls_set_ecdsa(ctx);
-    return;
+    return 0;
   }
-  coap_dtls_clear_ecdsa(ctx);
+
+  /* We just have deleted existing key and no session
+   * exists, clear ECDSA support */
+  if (!ctx->sessions)
+    coap_dtls_clear_ecdsa(ctx);
 }
 
-void coap_context_set_ecdsa_verify(coap_context_t *ctx,
+int coap_context_set_ecdsa_verify(coap_context_t *ctx,
 				   int (*verify_ecdsa)
 				   (const unsigned char *pub_x,
 				    const unsigned char *pub_y,
 				    size_t key_size)) {
-  if (ctx && verify_ecdsa)
+  coap_session_t *sessionptr;
+
+  if (ctx->verify_ecdsa_key || ctx->sessions) {
+    LL_FOREACH(ctx->sessions, sessionptr) {
+      if (!sessionptr->verify_ecdsa_key) {
+	if (ctx->verify_ecdsa_key) {
+	  coap_log(LOG_ERR, "A session using existing ECDSA verify callback "
+		   "exists, stop it before changing context key");
+	  return -1;
+	} else {
+	  coap_log(LOG_ERR, "Non-ECDSA sessions already exists, stop them "
+		   "before switching to ECDSA");
+	  return -1;
+	}
+      }
+    }
+  }
+
+  if (ctx->verify_ecdsa_key) {
+    ctx->verify_ecdsa_key = NULL;
+  }
+
+  if (verify_ecdsa) {
     ctx->verify_ecdsa_key = verify_ecdsa;
-  return;
+    if (!ctx->ecdsa_key)
+      return 0;
+    coap_dtls_set_ecdsa(ctx);
+    return 0;
+  }
+
+  if (!ctx->sessions)
+    coap_dtls_clear_ecdsa(ctx);
+  return 0;
 }
 #endif
 

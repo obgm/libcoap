@@ -238,15 +238,15 @@ void coap_context_set_psk( coap_context_t *ctx, const char *hint,
                            const uint8_t *key, size_t key_len );
 
 #ifdef COAP_ECC_ENABLED
-void coap_context_set_ecdsa(coap_context_t *ctx,
-			    coap_dtls_ecdsa_key_t *ecdsa_key,
-			    size_t key_size);
+int coap_context_set_ecdsa(coap_context_t *ctx,
+			   coap_dtls_ecdsa_key_t *ecdsa_key,
+			   size_t key_size);
 
-void coap_context_set_ecdsa_verify(coap_context_t *ctx,
-				   int (*verify_ecdsa)
-				   (const unsigned char *pub_x,
-				    const unsigned char *pub_y,
-				    size_t key_size));
+int coap_context_set_ecdsa_verify(coap_context_t *ctx,
+				  int (*verify_ecdsa)
+				  (const unsigned char *pub_x,
+				   const unsigned char *pub_y,
+				   size_t key_size));
 #endif
 /**
  * Returns a new message id and updates @p context->message_id accordingly. The

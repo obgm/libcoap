@@ -96,6 +96,9 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
 
 void coap_session_free(coap_session_t *session) {
   coap_queue_t *q, *tmp;
+#ifdef COAP_ECC_ENABLED
+  coap_session_t *sessionptr;
+#endif
 
   if (!session)
     return;
@@ -123,6 +126,23 @@ void coap_session_free(coap_session_t *session) {
     coap_free(session->psk_key);
 
 #ifdef COAP_ECC_ENABLED
+  /* TinyDTLS implementation forces us to have ECDSA enabled context-wide,
+  * Thus if a session AND the CoAP context has no key or verify callback
+  * we clear ECDSA support from the context. */
+  if (session->context && (!session->ecdsa_key || !session->verify_ecdsa_key)) {
+    LL_FOREACH(session->context->sessions, sessionptr) {
+      if ((!session->ecdsa_key && !sessionptr->ecdsa_key)
+	  || (!session->verify_ecdsa_key && !sessionptr->verify_ecdsa_key))
+        break;
+    }
+    if (sessionptr) {
+      coap_log(LOG_WARNING, "No ECDSA material available in context and there is "
+	       "a non-ECDSA session (btw, this should not happen, what did "
+	       "you do ?)");
+      coap_dtls_clear_ecdsa(session->context);
+    }
+  }
+
   if (session->ecdsa_key) {
     coap_free(session->ecdsa_key->priv_key);
     coap_free(session->ecdsa_key->pub_key_x);
@@ -607,9 +627,26 @@ coap_session_t *coap_new_client_session_ecdsa(struct coap_context_t *ctx,
 					      coap_dtls_ecdsa_key_t *ecdsa_key,
 					      size_t key_size) {
   coap_session_t *session = coap_session_create_client(ctx, local_if, server, proto);
+  coap_session_t *sessionptr;
 
   if (!session)
     return NULL;
+
+  /* TinyDTLS implementation forces us to have ECDSA enabled context-wide,
+  * Thus if there is no global ECDSA material and a non-ECDSA session already
+  * exists we throw an error. */
+  if (!ctx->ecdsa_key || !ctx->verify_ecdsa_key) {
+    LL_FOREACH(ctx->sessions, sessionptr) {
+      if ((!ctx->ecdsa_key && !sessionptr->ecdsa_key)
+	  || (!ctx->verify_ecdsa_key && !sessionptr->verify_ecdsa_key))
+	break;
+    }
+    if (sessionptr) {
+      coap_log(LOG_ERR, "Non-ECDSA sessions already exists");
+      coap_session_release(session);
+      return NULL;
+    }
+  }
 
   if (!ecdsa_key && !ctx->ecdsa_key) {
     coap_log(LOG_ERR, "No session ECDSA key data specified "
