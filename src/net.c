@@ -370,7 +370,7 @@ coap_get_session_client_psk(
   return 0;
 }
 
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
 static int
 coap_get_session_client_ecdsa(const coap_session_t *session,
 			      const coap_dtls_ecdsa_key_t **result) {
@@ -485,7 +485,7 @@ void coap_context_set_psk(coap_context_t *ctx,
   }
 }
 
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
 void coap_context_set_ecdsa(coap_context_t *ctx,
 			    coap_dtls_ecdsa_key_t *ecdsa_key,
 			    size_t key_size) {
@@ -600,7 +600,7 @@ coap_new_context(const coap_address_t *listen_addr) {
   c->get_server_psk = coap_get_context_server_psk;
   c->get_server_hint = coap_get_context_server_hint;
 
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
   c->ecdsa_key = NULL;
   c->ecdsa_key_size = 0;
   c->verify_ecdsa_key = NULL;
@@ -670,7 +670,7 @@ coap_free_context(coap_context_t *context) {
   if (context->psk_key)
     coap_free(context->psk_key);
 
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
   if (context->dtls_handle) {
     coap_free(context->dtls_handle);
     context->dtls_handle = NULL;

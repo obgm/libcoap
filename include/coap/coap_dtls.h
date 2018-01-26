@@ -14,7 +14,7 @@
 #include "net.h"
 #include "coap_session.h"
 #include "pdu.h"
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
 #include "ecdsa.h"
 #endif
 
@@ -81,7 +81,7 @@ void coap_dtls_free_session(coap_session_t *session);
  */
 void coap_dtls_session_update_mtu(coap_session_t *session);
 
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
 /**
  * Set ECDSA callbacks for the context
  *

@@ -407,19 +407,16 @@ fi
 
 # configure options
 # __add support for ECC crypto with tinydtls__
-AC_ARG_ENABLE([ecc],
-              [AS_HELP_STRING([--with-ecc],
-                              [Enable building with DTLS ECC support [default=yes]])],
-              [build_ecc="$enableval"],
+AC_ARG_WITH([ecc],
+            [AS_HELP_STRING([--without-ecc],
+                              [Disable building with DTLS ECC support in tinydtls [default=no]])],
+              [build_ecc="no"],
               [build_ecc="yes"])
 
-if test "x$build_dtls" = "x" -o "x$with_tinydtls" = "x"; then
-    # Give a advice that '--with_gnutls' or '--with_openssl' was used but
-    # DTLS support isn't configured.
-    AC_MSG_NOTICE([==> Using the configure option '--with-ecc' without '--enable-dtls' and '--enable-tinydtls' is useless and will be ignored.])
-else
-    if test "x$build_ecc" = "xyes"; then
-        AC_DEFINE(WITH_ECC, 1, [Define if secure CoAP with ECDSA ECC via tinydtls is enabled])
+if test "x$build_dtls" = "xyes" -a "x$with_tinydtls" = "xyes"; then
+	if test "x$build_ecc" = "xyes"; then
+		AC_DEFINE(COAP_ECC_ENABLED, 1, [Define if secure CoAP with ECDSA ECC via tinydtls is enabled])
+		COAP_ECC_ENABLED = 1
     fi
 fi
 

@@ -9,7 +9,6 @@
 #ifndef _COAP_SESSION_H_
 #define _COAP_SESSION_H_
 
-
 #include "coap_config.h"
 #include "coap_io.h"
 #include "coap_dtls.h"
@@ -123,7 +122,7 @@ void coap_session_free(coap_session_t *session) {
   if (session->psk_key)
     coap_free(session->psk_key);
 
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
   if (session->ecdsa_key) {
     coap_free(session->ecdsa_key->priv_key);
     coap_free(session->ecdsa_key->pub_key_x);
@@ -599,7 +598,7 @@ coap_session_t *coap_new_client_session_psk(
   return coap_session_connect(session);
 }
 
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
 coap_session_t *coap_new_client_session_ecdsa(struct coap_context_t *ctx,
 					      const coap_address_t *local_if,
 					      const coap_address_t *server,

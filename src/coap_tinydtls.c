@@ -233,7 +233,7 @@ error:
   return dtls_alert_fatal_create(fatal_error);
 }
 
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
 //TODO: Handle DTLS error codes properly (see dtls.h in tinydtls)
 static int
 get_ecdsa_key(struct dtls_context_t *dtls_context,
@@ -277,7 +277,7 @@ static int verify_ecdsa_key(struct dtls_context_t *dtls_context,
 }
 #endif
 
-#ifndef WITH_ECC
+#ifndef COAP_ECC_ENABLED
 static dtls_handler_t cb = {
   .write = dtls_send_to_peer,
   .read = dtls_application_data,
@@ -285,11 +285,6 @@ static dtls_handler_t cb = {
   .get_psk_info = get_psk_info
 };
 #endif
-/*#ifdef WITH_ECC
-  .get_ecdsa_key = get_ecdsa_key,
-  .verify_ecdsa_key = verify_ecdsa_key
-#endif
-};*/
 
 void *
 coap_dtls_new_context(struct coap_context_t *coap_context) {
@@ -297,7 +292,7 @@ coap_dtls_new_context(struct coap_context_t *coap_context) {
   dtls_handler_t *handle;
   if (!dtls_context)
     goto error;
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
   if (!(coap_context->dtls_handle = coap_malloc_type(COAP_STRING,
 						     sizeof(dtls_handler_t)))) {
     coap_log(LOG_ERR, "No memory to store DTLS handle");
@@ -320,7 +315,7 @@ error:
   return NULL;
 }
 
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
 void
 coap_dtls_set_ecdsa(coap_context_t *ctx) {
   dtls_handler_t *handle = ctx->dtls_handle;

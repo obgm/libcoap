@@ -12,7 +12,7 @@
 #include "coap_io.h"
 #include "coap_time.h"
 #include "pdu.h"
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
 #include "ecdsa.h"
 #endif
 
@@ -70,7 +70,7 @@ typedef struct coap_session_t {
   size_t psk_identity_len;
   uint8_t *psk_key;
   size_t psk_key_len;
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
   coap_dtls_ecdsa_key_t *ecdsa_key;
   size_t ecdsa_key_size;
   int (*verify_ecdsa_key)(const unsigned char *pub_x, const unsigned char *pub_y, size_t key_size);
@@ -192,7 +192,7 @@ coap_session_t *coap_new_client_session_psk(
   unsigned key_len
 );
 
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
 /**
 * Creates a new client session to the designated server with ECDSA key authentication
 * @param ctx The CoAP context

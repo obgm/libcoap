@@ -27,7 +27,7 @@
 #define LIBCOAP_PACKAGE_VERSION "@PACKAGE_VERSION@"
 
 /* Define to 1 if secure CoAP with ECDSA ECC via tinydtls is enabled */
-#undef WITH_ECC
+#undef COAP_ECC_ENABLED
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,7 +56,7 @@ extern "C" {
 #include "uri.h"
 #include "uthash.h"
 #include "utlist.h"
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
 #include "ecdsa.h"
 #endif
 

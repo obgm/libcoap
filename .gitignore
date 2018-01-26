@@ -67,3 +67,6 @@ tests/*.o
 tags
 .tags*
 TAGS
+
+# timestamp file for coap.h generation
+include/coap/stamp-h2

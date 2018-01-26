@@ -30,7 +30,7 @@
 #include "pdu.h"
 #include "prng.h"
 #include "coap_session.h"
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
 #include "ecdsa.h"
 #endif
 
@@ -140,7 +140,7 @@ typedef struct coap_context_t {
   size_t(*get_server_psk)(const coap_session_t *session, const uint8_t *identity, size_t identity_len, uint8_t *psk, size_t max_psk_len);
   size_t(*get_server_hint)(const coap_session_t *session, uint8_t *hint, size_t max_hint_len);
 
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
   int (*get_client_ecdsa)(const coap_session_t *session, const coap_dtls_ecdsa_key_t **result);
   int (*get_server_ecdsa)(const struct coap_context_t *ctx, const coap_dtls_ecdsa_key_t **result);
   int (*verify_client_ecdsa)(const coap_session_t *coap_session, const unsigned char *pub_x, const unsigned char *pub_y, size_t key_size);
@@ -237,7 +237,7 @@ coap_context_t *coap_new_context(const coap_address_t *listen_addr);
 void coap_context_set_psk( coap_context_t *ctx, const char *hint,
                            const uint8_t *key, size_t key_len );
 
-#ifdef WITH_ECC
+#ifdef COAP_ECC_ENABLED
 void coap_context_set_ecdsa(coap_context_t *ctx,
 			    coap_dtls_ecdsa_key_t *ecdsa_key,
 			    size_t key_size);
