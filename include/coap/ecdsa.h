@@ -1,7 +1,8 @@
 /*
- * ecdsa.h -- representation of ECDSA key material
+ * ecdsa.h -- representation of ECDSA key material taken from tinydtls
  *
- * Copyright (C) 2010-2011,2015-2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2011--2015 Olaf Bergmann <bergmann@tzi.org> and others.
+ * Copyright (C) 2018 Axel Moinet <axel.moinet@u-bourgogne.fr>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.

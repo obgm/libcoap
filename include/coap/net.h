@@ -2,6 +2,7 @@
  * net.h -- CoAP network interface
  *
  * Copyright (C) 2010-2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2018 Axel Moinet <axel.moinet@u-bourgogne.fr>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -238,15 +239,16 @@ void coap_context_set_psk( coap_context_t *ctx, const char *hint,
                            const uint8_t *key, size_t key_len );
 
 #ifdef COAP_ECC_ENABLED
-int coap_context_set_ecdsa(coap_context_t *ctx,
-			   coap_dtls_ecdsa_key_t *ecdsa_key,
-			   size_t key_size);
+int
+coap_context_set_ecdsa(coap_context_t *ctx,
+		       coap_dtls_ecdsa_key_t *ecdsa_key,
+		       size_t key_size);
 
-int coap_context_set_ecdsa_verify(coap_context_t *ctx,
-				  int (*verify_ecdsa)
-				  (const unsigned char *pub_x,
-				   const unsigned char *pub_y,
-				   size_t key_size));
+int
+coap_context_set_ecdsa_verify(coap_context_t *ctx,
+			      int (*verify_ecdsa)(const unsigned char *pub_x,
+						  const unsigned char *pub_y,
+						  size_t key_size));
 #endif
 /**
  * Returns a new message id and updates @p context->message_id accordingly. The

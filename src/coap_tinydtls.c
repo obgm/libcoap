@@ -2,6 +2,7 @@
  * coap_tinydtls.c -- Datagram Transport Layer Support for libcoap with tinydtls
  *
  * Copyright (C) 2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2018 Axel Moinet <axel.moinet@u-bourgogne.fr>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -15,6 +16,9 @@
 #include "debug.h"
 #include "mem.h"
 #include "coap_dtls.h"
+#ifdef COAP_ECC_ENABLED
+#include "ecdsa.h"
+#endif
 
 #include <tinydtls.h>
 #include <dtls.h>
@@ -256,11 +260,12 @@ get_ecdsa_key(struct dtls_context_t *dtls_context,
 					(const coap_dtls_ecdsa_key_t **) result);
 }
 
-static int verify_ecdsa_key(struct dtls_context_t *dtls_context,
-			    const session_t *dtls_session,
-			    const unsigned char *other_pub_x,
-			    const unsigned char *other_pub_y,
-			    size_t key_size) {
+static int
+verify_ecdsa_key(struct dtls_context_t *dtls_context,
+		 const session_t *dtls_session,
+		 const unsigned char *other_pub_x,
+		 const unsigned char *other_pub_y,
+		 size_t key_size) {
   coap_context_t *coap_context;
   coap_session_t *coap_session;
   coap_address_t remote_addr;
@@ -275,16 +280,20 @@ static int verify_ecdsa_key(struct dtls_context_t *dtls_context,
 
   return coap_context->verify_client_ecdsa(coap_session, other_pub_x, other_pub_y, key_size);
 }
-#endif
+#endif /* COAP_ECC_ENABLED */
 
 #ifndef COAP_ECC_ENABLED
 static dtls_handler_t cb = {
   .write = dtls_send_to_peer,
   .read = dtls_application_data,
   .event = dtls_event,
-  .get_psk_info = get_psk_info
+  .get_psk_info = get_psk_info,
+#ifdef WITH_ECC
+  .get_ecdsa_key = NULL,
+  .verify_ecdsa_key = NULL
 };
-#endif
+#endif /* WITH_ECC */
+#endif /* COAP_ECC_ENABLED */
 
 void *
 coap_dtls_new_context(struct coap_context_t *coap_context) {
@@ -308,7 +317,7 @@ coap_dtls_new_context(struct coap_context_t *coap_context) {
   dtls_set_handler(dtls_context, handle);
 #else
   dtls_set_handler(dtls_context, &cb);
-#endif
+#endif /* COAP_ECC_ENABLED */
   return dtls_context;
 error:
   coap_dtls_free_context(dtls_context);
@@ -335,7 +344,7 @@ coap_dtls_clear_ecdsa(coap_context_t *ctx) {
   }
   return;
 }
-#endif
+#endif /* COAP_ECC_ENABLED */
 
 void
 coap_dtls_free_context(void *handle) {

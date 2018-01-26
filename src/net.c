@@ -1,6 +1,7 @@
 /* net.c -- CoAP network interface
  *
  * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2018 Axel Moinet <axel.moinet@u-bourgogne.fr>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
@@ -54,6 +55,9 @@
 #include "block.h"
 #include "net.h"
 #include "utlist.h"
+#ifdef COAP_ECC_ENABLED
+#include "ecdsa.h"
+#endif
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -417,7 +421,7 @@ coap_verify_context_server_ecdsa(const coap_context_t *ctx,
   }
   return -1;
 }
-#endif
+#endif /* COAP_ECC_ENABLED */
 
 static size_t
 coap_get_context_server_psk(
@@ -486,9 +490,10 @@ void coap_context_set_psk(coap_context_t *ctx,
 }
 
 #ifdef COAP_ECC_ENABLED
-int coap_context_set_ecdsa(coap_context_t *ctx,
-			    coap_dtls_ecdsa_key_t *ecdsa_key,
-			    size_t key_size) {
+int
+coap_context_set_ecdsa(coap_context_t *ctx,
+		       coap_dtls_ecdsa_key_t *ecdsa_key,
+		       size_t key_size) {
   coap_session_t *sessionptr;
 
   /* Refuse to delete active ECDSA key if ALL existing sessions
@@ -552,13 +557,14 @@ int coap_context_set_ecdsa(coap_context_t *ctx,
    * exists, clear ECDSA support */
   if (!ctx->sessions)
     coap_dtls_clear_ecdsa(ctx);
+  return 0;
 }
 
-int coap_context_set_ecdsa_verify(coap_context_t *ctx,
-				   int (*verify_ecdsa)
-				   (const unsigned char *pub_x,
-				    const unsigned char *pub_y,
-				    size_t key_size)) {
+int
+coap_context_set_ecdsa_verify(coap_context_t *ctx,
+			      int (*verify_ecdsa)(const unsigned char *pub_x,
+						  const unsigned char *pub_y,
+						  size_t key_size)) {
   coap_session_t *sessionptr;
 
   if (ctx->verify_ecdsa_key || ctx->sessions) {

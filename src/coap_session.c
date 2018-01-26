@@ -1,6 +1,7 @@
 /* session.c -- Session management for libcoap
 *
 * Copyright (C) 2017 Jean-Claue Michelou <jcm@spinetix.com>
+* Copyright (C) 2018 Axel Moinet <axel.moinet@u-bourgogne.fr>
 *
 * This file is part of the CoAP library libcoap. Please see
 * README for terms of use.
@@ -19,6 +20,9 @@
 #include "resource.h"
 #include "utlist.h"
 #include "encode.h"
+#ifdef COAP_ECC_ENABLED
+#include "ecdsa.h"
+#endif
 #include <stdio.h>
 
 coap_session_t *
@@ -127,19 +131,28 @@ void coap_session_free(coap_session_t *session) {
 
 #ifdef COAP_ECC_ENABLED
   /* TinyDTLS implementation forces us to have ECDSA enabled context-wide,
-  * Thus if a session AND the CoAP context has no key or verify callback
+  * Thus if a session AND the CoAP context has no key or no verify callback
   * we clear ECDSA support from the context. */
-  if (session->context && (!session->ecdsa_key || !session->verify_ecdsa_key)) {
-    LL_FOREACH(session->context->sessions, sessionptr) {
-      if ((!session->ecdsa_key && !sessionptr->ecdsa_key)
-	  || (!session->verify_ecdsa_key && !sessionptr->verify_ecdsa_key))
-        break;
-    }
-    if (sessionptr) {
-      coap_log(LOG_WARNING, "No ECDSA material available in context and there is "
-	       "a non-ECDSA session (btw, this should not happen, what did "
-	       "you do ?)");
-      coap_dtls_clear_ecdsa(session->context);
+  if (session->ecdsa_key || session->verify_ecdsa_key) {
+    if (session->context) {
+      if (!session->context->ecdsa_key
+	  || !session->context->verify_ecdsa_key) {
+	if (session->context->sessions) {
+	  LL_FOREACH(session->context->sessions, sessionptr) {
+	    if ((!session->ecdsa_key && !sessionptr->ecdsa_key)
+		|| (!session->verify_ecdsa_key && !sessionptr->verify_ecdsa_key))
+	      break;
+	  }
+	  if (sessionptr) {
+	    coap_log(LOG_ERR, "No ECDSA material available in context and there "
+		     "is a non-ECDSA session (btw, this should not happen...),"
+		     "force disabling ECDSA support.");
+	    coap_dtls_clear_ecdsa(session->context);
+	  }
+	} else {
+	  coap_dtls_clear_ecdsa(session->context);
+	}
+      }
     }
   }
 
@@ -154,7 +167,7 @@ void coap_session_free(coap_session_t *session) {
 
   if (session->verify_ecdsa_key)
     session->verify_ecdsa_key = NULL;
-#endif
+#endif /* COAP_ECC_ENABLED */
 
   LL_FOREACH_SAFE(session->sendqueue, q, tmp) {
     if (q->pdu->type==COAP_MESSAGE_CON && session->context && session->context->nack_handler)
@@ -619,13 +632,16 @@ coap_session_t *coap_new_client_session_psk(
 }
 
 #ifdef COAP_ECC_ENABLED
-coap_session_t *coap_new_client_session_ecdsa(struct coap_context_t *ctx,
-					      const coap_address_t *local_if,
-					      const coap_address_t *server,
-					      coap_proto_t proto,
-					      int (*verify_ecdsa_key)(const unsigned char *pub_x, const unsigned char *pub_y, size_t len),
-					      coap_dtls_ecdsa_key_t *ecdsa_key,
-					      size_t key_size) {
+coap_session_t *
+coap_new_client_session_ecdsa(struct coap_context_t *ctx,
+			      const coap_address_t *local_if,
+			      const coap_address_t *server,
+			      coap_proto_t proto,
+			      int (*verify_ecdsa_key)(const unsigned char *pub_x,
+						      const unsigned char *pub_y,
+						      size_t len),
+			      coap_dtls_ecdsa_key_t *ecdsa_key,
+			      size_t key_size) {
   coap_session_t *session = coap_session_create_client(ctx, local_if, server, proto);
   coap_session_t *sessionptr;
 
@@ -637,10 +653,9 @@ coap_session_t *coap_new_client_session_ecdsa(struct coap_context_t *ctx,
   * exists we throw an error. */
   if (!ctx->ecdsa_key || !ctx->verify_ecdsa_key) {
     LL_FOREACH(ctx->sessions, sessionptr) {
-      if ((sessionptr != session) && ((!ctx->ecdsa_key
-				       && !sessionptr->ecdsa_key)
-				      || (!ctx->verify_ecdsa_key
-					  && !sessionptr->verify_ecdsa_key)))
+      if ((sessionptr != session)
+	  && ((!ctx->ecdsa_key && !sessionptr->ecdsa_key)
+	      || (!ctx->verify_ecdsa_key && !sessionptr->verify_ecdsa_key)))
 	break;
     }
     if (sessionptr) {
@@ -698,7 +713,7 @@ coap_session_t *coap_new_client_session_ecdsa(struct coap_context_t *ctx,
   debug("*** %s: new outgoing session\n", coap_session_str(session));
   return coap_session_connect(session);
 }
-#endif
+#endif /* COAP_ECC_ENABLED */
 
 coap_session_t *coap_new_server_session(
   struct coap_context_t *ctx,

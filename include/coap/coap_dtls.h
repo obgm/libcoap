@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2016 Olaf Bergmann <bergmann@tzi.org>
  * Copyright (C) 2017 Jean-Claude Michelou <jcm@spinetix.com>
+ * Copyright (C) 2018 Axel Moinet <axel.moinet@u-bourgogne.fr>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -95,7 +96,7 @@ void coap_dtls_set_ecdsa(struct coap_context_t *ctx);
  * @param context   The CoAP context
  */
 void coap_dtls_clear_ecdsa(struct coap_context_t *ctx);
-#endif
+#endif /* COAP_ECC_ENABLED */
 
 /**
  * Send data to a DTLS peer.

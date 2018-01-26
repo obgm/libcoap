@@ -1,6 +1,7 @@
 /* coap_session.h -- Session management for libcoap
 *
 * Copyright (C) 2017 Jean-Claue Michelou <jcm@spinetix.com>
+* Copyright (C) 2018 Axel Moinet <axel.moinet@u-bourgogne.fr>
 *
 * This file is part of the CoAP library libcoap. Please see
 * README for terms of use.
@@ -73,7 +74,9 @@ typedef struct coap_session_t {
 #ifdef COAP_ECC_ENABLED
   coap_dtls_ecdsa_key_t *ecdsa_key;
   size_t ecdsa_key_size;
-  int (*verify_ecdsa_key)(const unsigned char *pub_x, const unsigned char *pub_y, size_t key_size);
+  int (*verify_ecdsa_key)(const unsigned char *pub_x,
+			  const unsigned char *pub_y,
+			  size_t key_size);
 #endif
   void *app;                    /**< application-specific data */
 } coap_session_t;
@@ -198,18 +201,21 @@ coap_session_t *coap_new_client_session_psk(
 * @param ctx The CoAP context
 * @param local_if Address of local interface. It is recommended to use NULL to let the operating system choose a suitable local interface. If an address is specified, the port number should be zero, which means that a free port is automatically selected.
 * @param server The server's address. If the port number is zero, the default port for the protocol will be used.
-* @param verify_ecdsa_key Pointer to remote public key verification function
+* @param verify_ecdsa_key Pointer to remote public key verification callback
 * @param ecdsa_key ECDSA key
 * @param key_size ECDSA key size (in bytes)
 * @param proto Protocol.
 */
-coap_session_t *coap_new_client_session_ecdsa(struct coap_context_t *ctx,
-					      const coap_address_t *local_if,
-					      const coap_address_t *server,
-					      coap_proto_t proto,
-					      int (*verify_ecdsa_key)(const unsigned char *pub_x, const unsigned char *pub_y, size_t len),
-					      coap_dtls_ecdsa_key_t *ecdsa_key,
-					      size_t key_size);
+coap_session_t *
+coap_new_client_session_ecdsa(struct coap_context_t *ctx,
+			      const coap_address_t *local_if,
+			      const coap_address_t *server,
+			      coap_proto_t proto,
+			      int (*verify_ecdsa_key)(const unsigned char *pub_x,
+						      const unsigned char *pub_y,
+						      size_t len),
+			      coap_dtls_ecdsa_key_t *ecdsa_key,
+			      size_t key_size);
 #endif
 
 /**

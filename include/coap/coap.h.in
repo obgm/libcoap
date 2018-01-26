@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2010-2012,2015-2017 Olaf Bergmann <bergmann@tzi.org>
  *               2015 Carsten Schoenert <c.schoenert@t-online.de>
+ *               2018 Axel Moinet <axel.moinet@u-bourgogne.fr>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -56,6 +57,7 @@ extern "C" {
 #include "uri.h"
 #include "uthash.h"
 #include "utlist.h"
+
 #ifdef COAP_ECC_ENABLED
 #include "ecdsa.h"
 #endif
