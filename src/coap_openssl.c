@@ -123,6 +123,11 @@ static int coap_dgram_write(BIO *a, const char *in, int inl) {
   coap_ssl_data *data = (coap_ssl_data *)BIO_get_data(a);
 
   if (data->session) {
+    if (data->session->sock.flags == COAP_SOCKET_EMPTY && data->session->endpoint == NULL) {
+      /* socket was closed on client due to error */
+      BIO_clear_retry_flags(a);
+      return -1;
+    }
     ret = (int)coap_session_send(data->session, (unsigned char*)in, (size_t)inl);
     BIO_clear_retry_flags(a);
     if (ret <= 0)
