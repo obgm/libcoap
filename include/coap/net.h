@@ -88,16 +88,13 @@ typedef void (*coap_pong_handler_t)(struct coap_context_t *,
 					coap_pdu_t *received,
 					const coap_tid_t id);
 
-#define COAP_MID_CACHE_SIZE 3
-typedef struct {
-  unsigned char flags[COAP_MID_CACHE_SIZE];
-  coap_key_t item[COAP_MID_CACHE_SIZE];
-} coap_mid_cache_t;
-
 /** The CoAP stack's global state is stored in a coap_context_t object */
 typedef struct coap_context_t {
   coap_opt_filter_t known_options;
-  struct coap_resource_t *resources; /**< hash table or list of known resources */
+  struct coap_resource_t *resources; /**< hash table or list of known
+                                          resources */
+  struct coap_resource_t *unknown_resource; /**< can be used for handling
+                                                 unknown resources */
 
 #ifndef WITHOUT_ASYNC
   /**
