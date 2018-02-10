@@ -2010,6 +2010,10 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
       coap_add_option(pong, COAP_SIGNALING_OPTION_CUSTODY, 0, NULL);
       coap_send(session, pong);
     }
+  } else if (pdu->code == COAP_SIGNALING_PONG) {
+      if (context->pong_handler) {
+        context->pong_handler(context, session, pdu, pdu->tid);
+      }
   } else if (pdu->code == COAP_SIGNALING_RELEASE
           || pdu->code == COAP_SIGNALING_ABORT) {
     coap_session_disconnected(session, COAP_NACK_RST);
@@ -2112,6 +2116,12 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   else if (COAP_PDU_IS_RESPONSE(pdu))
     handle_response(context, session, sent ? sent->pdu : NULL, pdu);
   else {
+    if (COAP_PDU_IS_EMPTY(pdu)) {
+      if (context->ping_handler) {
+        context->ping_handler(context, session,
+          pdu, pdu->tid);
+      }
+    }
     debug("dropped message with invalid code (%d.%02d)\n",
       COAP_RESPONSE_CLASS(pdu->code),
       pdu->code & 0x1f);
