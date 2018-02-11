@@ -18,6 +18,16 @@ struct coap_endpoint_t;
 struct coap_contex_t;
 struct coap_queue_t;
 
+/**
+* Abstraction of a fixed point number that can be used where necessary instead
+* of a float.  1,000 fractional bits equals one integer 
+*/
+typedef struct coap_fixed_point_t {
+  uint16_t integer_part;    /**< Integer part of fixed point variable */
+  uint16_t fractional_part; /**< Fractional part of fixed point variable
+                                1/1000 (3 points) precision */
+} coap_fixed_point_t;
+
 #define COAP_DEFAULT_SESSION_TIMEOUT 300
 
 #define COAP_PROTO_NOT_RELIABLE(p) ((p)==COAP_PROTO_UDP || (p)==COAP_PROTO_DTLS)
@@ -69,6 +79,9 @@ typedef struct coap_session_t {
   uint8_t *psk_key;
   size_t psk_key_len;
   void *app;                    /**< application-specific data */
+  unsigned int max_retransmit;          /**< maximum re-transmit count (default 4) */
+  coap_fixed_point_t ack_timeout;       /**< timeout waiting for ack (default 2 secs) */
+  coap_fixed_point_t ack_random_factor; /**< ack random factor backoff (default 1.5) */
 } coap_session_t;
 
 /**
@@ -317,5 +330,114 @@ coap_session_t *coap_session_get_by_peer(struct coap_context_t *ctx,
 
 void coap_session_free(coap_session_t *session);
 
+ /**
+  * @defgroup cc Rate Control
+  * The transmission parameters for CoAP rate control ("Congestion
+  * Control" in stream-oriented protocols) are defined in
+  * https://tools.ietf.org/html/rfc7252#section-4.8
+  * @{
+  */
+
+  /**
+   * Number of seconds when to expect an ACK or a response to an
+   * outstanding CON message.
+   * RFC 7252, Section 4.8 Default value of ACK_TIMEOUT is 2
+   */
+#define COAP_DEFAULT_ACK_TIMEOUT ((coap_fixed_point_t){2,0})
+
+   /**
+    * A factor that is used to randomize the wait time before a message
+    * is retransmitted to prevent synchronization effects.
+    * RFC 7252, Section 4.8 Default value of ACK_RANDOM_FACTOR is 1.5
+    */
+#define COAP_DEFAULT_ACK_RANDOM_FACTOR ((coap_fixed_point_t){1,500})
+
+    /**
+     * Number of message retransmissions before message sending is stopped
+     * RFC 7252, Section 4.8 Default value of MAX_RETRANSMIT is 4
+     */
+#define COAP_DEFAULT_MAX_RETRANSMIT  4
+
+     /**
+      * The number of simultaneous outstanding interactions that a client
+      * maintains to a given server.
+      * RFC 7252, Section 4.8 Default value of NSTART is 1
+      */
+#define COAP_DEFAULT_NSTART 1
+
+      /** @} */
+
+/**
+* Set the CoAP maximum retransmit count before failure
+*
+* Number of message retransmissions before message sending is stopped
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 4 and should not normally
+*              get changed.
+*/
+void coap_session_set_max_retransmit(coap_session_t *session,
+                                     unsigned int value);
+
+/**
+* Set the CoAP initial ack response timeout before the next re-transmit
+*
+* Number of seconds when to expect an ACK or a response to an
+* outstanding CON message.
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 2 and should not normally
+*              get changed.
+*/
+void coap_session_set_ack_timeout(coap_session_t *session,
+                                  coap_fixed_point_t value);
+
+/**
+* Set the CoAP ack randomize factor
+*
+* A factor that is used to randomize the wait time before a message
+* is retransmitted to prevent synchronization effects.
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 1.5 and should not normally
+*              get changed.
+*/
+void coap_session_set_ack_random_factor(coap_session_t *session,
+                                        coap_fixed_point_t value);
+
+/**
+* Get the CoAP maximum retransmit before failure
+*
+* Number of message retransmissions before message sending is stopped
+*
+* @param session The CoAP session.
+*
+* @return Current maximum retransmit value
+*/
+unsigned int coap_session_get_max_transmit(coap_session_t *session);
+
+/**
+* Get the CoAP initial ack response timeout before the next re-transmit
+*
+* Number of seconds when to expect an ACK or a response to an
+* outstanding CON message.
+*
+* @param session The CoAP session.
+*
+* @return Current ack response timeout value
+*/
+coap_fixed_point_t coap_session_get_ack_timeout(coap_session_t *session);
+
+/**
+* Get the CoAP ack randomize factor
+*
+* A factor that is used to randomize the wait time before a message
+* is retransmitted to prevent synchronization effects.
+*
+* @param session The CoAP session.
+*
+* @return Current ack randomize value
+*/
+coap_fixed_point_t coap_session_get_ack_random_factor(coap_session_t *session);
 
 #endif  /* _SESSION_H */
