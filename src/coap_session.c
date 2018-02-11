@@ -22,6 +22,51 @@
 #include "encode.h"
 #include <stdio.h>
 
+void
+coap_session_set_max_retransmit (coap_session_t *session, unsigned int value) {
+  if (value > 0)
+    session->max_retransmit = value;
+  coap_log(LOG_DEBUG, "*** %s: session max_retransmit set to %d\n",
+           coap_session_str(session), session->max_retransmit);
+  return;
+}
+
+void
+coap_session_set_ack_timeout (coap_session_t *session, coap_fixed_point_t value) {
+  if (value.integer_part > 0 && value.fractional_part < 1000)
+    session->ack_timeout = value;
+  coap_log(LOG_DEBUG, "*** %s: session ack_timeout set to %d.%03d\n",
+           coap_session_str(session), session->ack_timeout.integer_part,
+           session->ack_timeout.fractional_part);
+  return;
+}
+
+void
+coap_session_set_ack_random_factor (coap_session_t *session,
+                                    coap_fixed_point_t value) {
+  if (value.integer_part > 0 && value.fractional_part < 1000)
+    session->ack_random_factor = value;
+  coap_log(LOG_DEBUG, "*** %s: session ack_random_factor set to %d.%03d\n",
+           coap_session_str(session), session->ack_random_factor.integer_part,
+           session->ack_random_factor.fractional_part);
+  return;
+}
+
+unsigned int
+coap_session_get_max_transmit (coap_session_t *session) {
+  return session->max_retransmit;
+}
+
+coap_fixed_point_t
+coap_session_get_ack_timeout (coap_session_t *session) {
+  return session->ack_timeout;
+}
+
+coap_fixed_point_t
+coap_session_get_ack_random_factor (coap_session_t *session) {
+  return session->ack_random_factor;
+}
+
 coap_session_t *
 coap_session_reference(coap_session_t *session) {
   ++session->ref;
@@ -88,6 +133,9 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
       coap_log(LOG_ERR, "DTLS overhead exceeds MTU\n");
     }
   }
+  session->max_retransmit = COAP_DEFAULT_MAX_RETRANSMIT;
+  session->ack_timeout = COAP_DEFAULT_ACK_TIMEOUT;
+  session->ack_random_factor = COAP_DEFAULT_ACK_RANDOM_FACTOR;
 
   /* initialize message id */
   prng((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));
@@ -214,7 +262,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
       uint8_t r;
       prng(&r, sizeof(r));
       /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
-      node->timeout = calc_timeout(r);
+      node->timeout = coap_calc_timeout(session, r);
     }
   }
   LL_APPEND(session->sendqueue, node);
