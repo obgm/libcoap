@@ -216,13 +216,35 @@ coap_context_t *coap_new_context(const coap_address_t *listen_addr);
  * Set the context's default server PSK hint and/or key.
  * These global defaults are used only no PSK callback is specified.
  *
- * @param hint    The default PSK server hint sent to a client. If NULL, PSK authentication is disabled. Empty string is a valid hint.
+ * @param context The current coap_context_t object.
+ * @param hint    The default PSK server hint sent to a client. If NULL, PSK
+ *                authentication is disabled. Empty string is a valid hint.
  * @param key     The default PSK key. If NULL, PSK authentication will fail.
- * @param key_len The default PSK key's lenght. If 0, PSK authentication will fail.
+ * @param key_len The default PSK key's lenght. If 0, PSK authentication will
+ *                fail.
+ *
+ * @return 1 if successful, else 0
  */
 
-void coap_context_set_psk( coap_context_t *ctx, const char *hint,
+int coap_context_set_psk( coap_context_t *context, const char *hint,
                            const uint8_t *key, size_t key_len );
+
+/**
+ * Set the context's default PKI information.
+ * The Callback is called to set up the appropriate information if set.
+ *
+ * @param context        The current coap_context_t object.
+ * @param setup_callback The callback which is SSL support dependent. Can be
+ *                       NULL.
+ * @param setup_data     If NULL, PKI authentication will fail. Certificate
+ *                       information required.
+ *
+ * @return 1 if successful, else 0
+ */
+
+int coap_context_set_pki(coap_context_t *context,
+                           coap_dtls_security_setup_t setup_callback,
+                           coap_dtls_pki_t* setup_data);
 
 /**
  * Returns a new message id and updates @p context->message_id accordingly. The
