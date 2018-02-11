@@ -33,6 +33,63 @@ void coap_dtls_set_log_level(int level);
 /** Returns the current log level. */
 int coap_dtls_get_log_level(void);
 
+/** The structure used for defining the PKI setup data to be used */
+typedef struct coap_dtls_pki_t {
+  /* Alternative 1: Name of file on disk */
+  const char *ca_file;
+  const char *public_cert;
+  const char *private_key;
+  /* Alternative 2: ASN1 version */
+  const uint8_t *asn1_ca_file;
+  const uint8_t *asn1_public_cert;
+  const uint8_t *asn1_private_key;
+  int asn1_ca_file_len;
+  int asn1_public_cert_len;
+  int asn1_private_key_len;
+  int asn1_private_key_type; /* E.G. EVP_PKEY_RSA */
+} coap_dtls_pki_t;
+
+/**
+ * Security setup handler that is used as call-back in coap_context_set_pki()
+ * Typically, this will be calling additonal functions like
+ * SSL_CTX_set_tlsext_servername_callback() etc.
+ *
+ * @param context The security context definition - e.g. SSL_CTX * for OpenSSL. 
+ *              This will be dependent on the underlying TLS library
+ *              - see coap_get_tls_library_version()
+ * @param setup_data A structure containing setup data passed into
+ *                  coap_context_set_pki() or coap_new_client_session_pki().
+ * @return 1 if successful, else 0
+ */
+typedef int (*coap_dtls_security_setup_t)(void *context,
+                                        coap_dtls_pki_t *setup_data);
+
+/**
+* Creates a new client session to the designated server with PKI credentials
+* @param ctx The CoAP context.
+* @param local_if Address of local interface. It is recommended to use NULL to
+*                 let the operating system choose a suitable local interface.
+*                 If an address is specified, the port number should be zero,
+*                 which means that a free port is automatically selected.
+* @param server The server's address. If the port number is zero, the default
+*               port for the protocol will be used.
+* @param proto CoAP Protocol.
+* @param setup_callback The callback which is SSL support dependent. Can be
+*                       NULL.
+* @param setup_data PKI parameters.
+*
+* @return A new CoAP session or NULL if failed. Call coap_session_release()
+*         to free.
+*/
+coap_session_t *coap_new_client_session_pki(
+  struct coap_context_t *ctx,
+  const coap_address_t *local_if,
+  const coap_address_t *server,
+  coap_proto_t proto,
+  coap_dtls_security_setup_t setup_callback,
+  coap_dtls_pki_t* setup_data
+);
+
 /**
  * Creates a new DTLS context for the given @p coap_context. This function
  * returns a pointer to a new DTLS context object or NULL on error.
@@ -43,6 +100,49 @@ int coap_dtls_get_log_level(void);
 void *
 coap_dtls_new_context(struct coap_context_t *coap_context);
 
+/**
+ * Set the dtls context's default server PSK hint and/or key.
+ * This does the PSK specifics for coap_dtls_new_context()
+ *
+ * @param ctx The CoAP context.
+ * @param hint    The default PSK server hint sent to a client. If NULL, PSK
+ *                authentication is disabled. Empty string is a valid hint.
+ * @param key     The default PSK key. If NULL, PSK authentication will fail.
+ * @param key_len The default PSK key's lenght. If 0, PSK authentication will
+ *                fail.
+ *
+ * @return 1 if successful, else 0
+ */
+
+int coap_dtls_context_set_psk(struct coap_context_t *ctx, const char *hint,
+                           const uint8_t *key, size_t key_len );
+
+/**
+ * Set the dtls context's default server PKI information.
+ * This does the PKI specifics for coap_dtls_new_context()
+ * The Callback is called to set up the appropriate information.
+ *
+ * @param ctx The CoAP context.
+ * @param setup_callback The callback which is TLS library support dependent
+ * @param setup_data     If NULL, PKI authentication will fail. Certificate
+ *                       information required.
+ *
+ * @return 1 if successful, else 0
+ */
+
+int coap_dtls_context_set_pki(struct coap_context_t *ctx,
+                           coap_dtls_security_setup_t setup_callback,
+                           coap_dtls_pki_t* setup_data);
+
+/**
+ * Check whether one of the coap_dtls_context_set_*() functions have been
+ * called.
+ *
+ * @return 1 if coap_dtls_context_set_*() called, else 0
+ */
+
+int coap_dtls_context_check_keys_enabled(struct coap_context_t *ctx);
+
 /** Releases the storage allocated for @p dtls_context. */
 void coap_dtls_free_context(void *dtls_context);
 
@@ -50,7 +150,8 @@ void coap_dtls_free_context(void *dtls_context);
  * Create a new client-side session. This should send a HELLO to the server.
  *
  * @param session   The CoAP session
- * @return Opaque handle to underlying TLS library object containing security parameters for the session.
+ * @return Opaque handle to underlying TLS library object containing security
+ * parameters for the session.
 */
 void *coap_dtls_new_client_session(coap_session_t *session);
 
