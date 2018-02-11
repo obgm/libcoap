@@ -59,47 +59,6 @@
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
- /**
-  * @defgroup cc Rate Control
-  * The transmission parameters for CoAP rate control ("Congestion
-  * Control" in stream-oriented protocols) are defined in
-  * https://tools.ietf.org/html/rfc7252#section-4.8
-  * @{
-  */
-
-#ifndef COAP_DEFAULT_ACK_TIMEOUT
-  /**
-   * Number of seconds when to expect an ACK or a response to an
-   * outstanding CON message.
-   */
-#define COAP_DEFAULT_ACK_TIMEOUT  2 /* see RFC 7252, Section 4.8 */
-#endif
-
-#ifndef COAP_DEFAULT_ACK_RANDOM_FACTOR
-   /**
-    * A factor that is used to randomize the wait time before a message
-    * is retransmitted to prevent synchronization effects.
-    */
-#define COAP_DEFAULT_ACK_RANDOM_FACTOR  1.5 /* see RFC 7252, Section 4.8 */
-#endif
-
-#ifndef COAP_DEFAULT_MAX_RETRANSMIT
-    /**
-     * Number of message retransmissions before message sending is stopped
-     */
-#define COAP_DEFAULT_MAX_RETRANSMIT  4 /* see RFC 7252, Section 4.8 */
-#endif
-
-#ifndef COAP_DEFAULT_NSTART
-     /**
-      * The number of simultaneous outstanding interactions that a client
-      * maintains to a given server.
-      */
-#define COAP_DEFAULT_NSTART 1 /* see RFC 7252, Section 4.8 */
-#endif
-
-      /** @} */
-
       /**
        * The number of bits for the fractional part of ACK_TIMEOUT and
        * ACK_RANDOM_FACTOR. Must be less or equal 8.
@@ -116,15 +75,16 @@
 #error FRAC_BITS must be less or equal 8
 #endif
 
-	/** creates a Qx.frac from fval */
-#define Q(frac,fval) ((uint16_t)(((1 << (frac)) * (fval))))
+	/** creates a Qx.frac from fval in coap_fixed_point_t */
+#define Q(frac,fval) ((uint16_t)(((1 << (frac)) * fval.integer_part) + \
+                      ((1 << (frac)) * fval.fractional_part + 500)/1000))
 
-/** creates a Qx.FRAC_BITS from COAP_DEFAULT_ACK_RANDOM_FACTOR */
+/** creates a Qx.FRAC_BITS from session's 'ack_random_factor' */
 #define ACK_RANDOM_FACTOR					\
-  Q(FRAC_BITS, COAP_DEFAULT_ACK_RANDOM_FACTOR)
+  Q(FRAC_BITS, session->ack_random_factor)
 
-/** creates a Qx.FRAC_BITS from COAP_DEFAULT_ACK_TIMEOUT */
-#define ACK_TIMEOUT Q(FRAC_BITS, COAP_DEFAULT_ACK_TIMEOUT)
+/** creates a Qx.FRAC_BITS from session's 'ack_timeout' */
+#define ACK_TIMEOUT Q(FRAC_BITS, session->ack_timeout)
 
 #if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 
@@ -768,22 +728,24 @@ coap_send_message_type(coap_session_t *session, coap_pdu_t *request, unsigned ch
 }
 
 /**
- * Calculates the initial timeout based on the global CoAP transmission
- * parameters ACK_TIMEOUT, ACK_RANDOM_FACTOR, and COAP_TICKS_PER_SECOND.
- * The calculation requires ACK_TIMEOUT and ACK_RANDOM_FACTOR to be in
+ * Calculates the initial timeout based on the session CoAP transmission
+ * parameters 'ack_timeout', 'ack_random_factor', and COAP_TICKS_PER_SECOND.
+ * The calculation requires 'ack_timeout' and 'ack_random_factor' to be in
  * Qx.FRAC_BITS fixed point notation, whereas the passed parameter @p r
  * is interpreted as the fractional part of a Q0.MAX_BITS random value.
  *
+ * @param session session timeout is associated with
  * @param r  random value as fractional part of a Q0.MAX_BITS fixed point
  *           value
- * @return   COAP_TICKS_PER_SECOND * ACK_TIMEOUT * (1 + (ACK_RANDOM_FACTOR - 1) * r)
+ * @return   COAP_TICKS_PER_SECOND * 'ack_timeout' *
+ *           (1 + ('ack_random_factor' - 1) * r)
  */
 unsigned int
-calc_timeout(unsigned char r) {
+coap_calc_timeout(coap_session_t *session, unsigned char r) {
   unsigned int result;
 
   /* The integer 1.0 as a Qx.FRAC_BITS */
-#define FP1 Q(FRAC_BITS, 1)
+#define FP1 Q(FRAC_BITS, ((coap_fixed_point_t){1,0}))
 
   /* rounds val up and right shifts by frac positions */
 #define SHR_FP(val,frac) (((val) + (1 << ((frac) - 1))) >> (frac))
@@ -904,7 +866,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   node->pdu = pdu;
   prng(&r, sizeof(r));
   /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
-  node->timeout = calc_timeout(r);
+  node->timeout = coap_calc_timeout(session, r);
   return coap_wait_ack(session->context, session, node);
  error:
   coap_delete_pdu(pdu);
@@ -917,7 +879,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     return COAP_INVALID_TID;
 
   /* re-initialize timeout when maximum number of retransmissions are not reached yet */
-  if (node->retransmit_cnt < COAP_DEFAULT_MAX_RETRANSMIT) {
+  if (node->retransmit_cnt < node->session->max_retransmit) {
     ssize_t bytes_written;
     coap_tick_t now;
 
