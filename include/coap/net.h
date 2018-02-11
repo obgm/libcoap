@@ -561,6 +561,19 @@ coap_pdu_t *coap_wellknown_response(coap_context_t *context,
                                     coap_session_t *session,
                                     coap_pdu_t *request);
 
-unsigned int calc_timeout(unsigned char r);
+/**
+ * Calculates the initial timeout based on the session CoAP transmission
+ * parameters 'ack_timeout', 'ack_random_factor', and COAP_TICKS_PER_SECOND.
+ * The calculation requires 'ack_timeout' and 'ack_random_factor' to be in
+ * Qx.FRAC_BITS fixed point notation, whereas the passed parameter @p r
+ * is interpreted as the fractional part of a Q0.MAX_BITS random value.
+ *
+ * @param session session timeout is associated with
+ * @param r  random value as fractional part of a Q0.MAX_BITS fixed point
+ *           value
+ * @return   COAP_TICKS_PER_SECOND * 'ack_timeout' *
+ *           (1 + ('ack_random_factor' - 1) * r)
+ */
+unsigned int coap_calc_timeout(coap_session_t *session, unsigned char r);
 
 #endif /* _COAP_NET_H_ */
