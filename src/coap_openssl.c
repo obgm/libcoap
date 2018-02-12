@@ -1,5 +1,5 @@
 /*
-* coap_tinydtls.c -- Datagram Transport Layer Support for libcoap with openssl
+* coap_openssl.c -- Datagram Transport Layer Support for libcoap with openssl
 *
 * Copyright (C) 2017 Jean-Claude Michelou <jcm@spinetix.com>
 *
@@ -11,7 +11,7 @@
 
 #ifdef HAVE_OPENSSL
 
-#include "coap_dtls.h"
+#include "net.h"
 #include "mem.h"
 #include "debug.h"
 #include "prng.h"
@@ -37,6 +37,7 @@ typedef struct coap_tls_context_t {
 typedef struct coap_openssl_context_t {
   coap_dtls_context_t dtls;
   coap_tls_context_t tls;
+  int psk_pki_enabled;
 } coap_openssl_context_t;
 
 int coap_dtls_is_supported(void) {
@@ -197,17 +198,6 @@ static long coap_dgram_ctrl(BIO *a, int cmd, long num, void *ptr) {
   }
   return ret;
 }
-
-#if 0
-static int coap_dtls_verify_cert(int ok, X509_STORE_CTX *ctx) {
-  (void)ok;
-  (void)ctx;
-
-  if (dtls_log_level >= LOG_WARNING)
-    coap_log(LOG_WARNING, "cannot accept DTLS connection with certificate.\n");
-  return 0;	/* For now, trust no one */
-}
-#endif
 
 static int coap_dtls_generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len) {
   coap_dtls_context_t *dtls = (coap_dtls_context_t *)SSL_CTX_get_app_data(SSL_get_SSL_CTX(ssl));
@@ -387,7 +377,6 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
 
   context = (coap_openssl_context_t *)coap_malloc(sizeof(coap_openssl_context_t));
   if (context) {
-    BIO *bio;
     uint8_t cookie_secret[32];
 
     memset(context, 0, sizeof(coap_openssl_context_t));
@@ -412,9 +401,6 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
     SSL_CTX_set_cookie_generate_cb(context->dtls.ctx, coap_dtls_generate_cookie);
     SSL_CTX_set_cookie_verify_cb(context->dtls.ctx, coap_dtls_verify_cookie);
     SSL_CTX_set_info_callback(context->dtls.ctx, coap_dtls_info_callback);
-    SSL_CTX_set_psk_client_callback(context->dtls.ctx, coap_dtls_psk_client_callback);
-    SSL_CTX_set_psk_server_callback(context->dtls.ctx, coap_dtls_psk_server_callback);
-    SSL_CTX_use_psk_identity_hint(context->dtls.ctx, "");
     SSL_CTX_set_options(context->dtls.ctx, SSL_OP_NO_QUERY_MTU);
     context->dtls.meth = BIO_meth_new(BIO_TYPE_DGRAM, "coapdgram");
     if (!context->dtls.meth)
@@ -428,16 +414,6 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
     BIO_meth_set_ctrl(context->dtls.meth, coap_dgram_ctrl);
     BIO_meth_set_create(context->dtls.meth, coap_dgram_create);
     BIO_meth_set_destroy(context->dtls.meth, coap_dgram_destroy);
-    context->dtls.ssl = SSL_new(context->dtls.ctx);
-    if (!context->dtls.ssl)
-      goto error;
-    bio = BIO_new(context->dtls.meth);
-    if (!bio)
-      goto error;
-    SSL_set_bio(context->dtls.ssl, bio, bio);
-    SSL_set_app_data(context->dtls.ssl, NULL);
-    SSL_set_options(context->dtls.ssl, SSL_OP_COOKIE_EXCHANGE);
-    SSL_set_mtu(context->dtls.ssl, COAP_DEFAULT_MTU);
 
     /* Set up TLS context */
     context->tls.ctx = SSL_CTX_new(TLS_method());
@@ -448,9 +424,6 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
     SSL_CTX_set_cipher_list(context->dtls.ctx, "TLSv1.2:TLSv1.0");
     /*SSL_CTX_set_verify(context->tls.ctx, SSL_VERIFY_PEER, coap_dtls_verify_cert);*/
     SSL_CTX_set_info_callback(context->tls.ctx, coap_dtls_info_callback);
-    SSL_CTX_set_psk_client_callback(context->tls.ctx, coap_dtls_psk_client_callback);
-    SSL_CTX_set_psk_server_callback(context->tls.ctx, coap_dtls_psk_server_callback);
-    SSL_CTX_use_psk_identity_hint(context->tls.ctx, "");
     context->tls.meth = BIO_meth_new(BIO_TYPE_SOCKET, "coapsock");
     if (!context->tls.meth)
       goto error;
@@ -468,6 +441,139 @@ error:
   coap_dtls_free_context(context);
   return NULL;
 }
+
+int coap_dtls_context_set_psk(coap_context_t *ctx,
+  const char *hint,
+  const uint8_t *key, size_t key_len
+) {
+  (void)key;
+  (void)key_len;
+  coap_openssl_context_t *context = ((coap_openssl_context_t *)ctx->dtls_context);
+  BIO *bio;
+  SSL_CTX_set_psk_client_callback(context->dtls.ctx, coap_dtls_psk_client_callback);
+  SSL_CTX_set_psk_server_callback(context->dtls.ctx, coap_dtls_psk_server_callback);
+  SSL_CTX_use_psk_identity_hint(context->dtls.ctx, hint ? hint : "");
+  SSL_CTX_set_psk_client_callback(context->tls.ctx, coap_dtls_psk_client_callback);
+  SSL_CTX_set_psk_server_callback(context->tls.ctx, coap_dtls_psk_server_callback);
+  SSL_CTX_use_psk_identity_hint(context->tls.ctx, hint);
+  if (!context->dtls.ssl) {
+    context->dtls.ssl = SSL_new(context->dtls.ctx);
+    if (!context->dtls.ssl)
+      return 0;
+    bio = BIO_new(context->dtls.meth);
+    if (!bio) {
+      SSL_free (context->dtls.ssl);
+      context->dtls.ssl = NULL;
+      return 0;
+    }
+    SSL_set_bio(context->dtls.ssl, bio, bio);
+    SSL_set_app_data(context->dtls.ssl, NULL);
+    SSL_set_options(context->dtls.ssl, SSL_OP_COOKIE_EXCHANGE);
+    SSL_set_mtu(context->dtls.ssl, COAP_DEFAULT_MTU);
+  }
+  context->psk_pki_enabled = 1;
+  return 1;
+}
+
+int coap_dtls_context_set_pki( coap_context_t *ctx,
+  coap_dtls_security_setup_t setup_callback,
+  coap_dtls_pki_t* setup_data
+) {
+  coap_openssl_context_t *context = ((coap_openssl_context_t *)ctx->dtls_context);
+  BIO *bio;
+  if (context->dtls.ctx) {
+    if (setup_data->public_cert && setup_data->public_cert[0]) {
+      if (!(SSL_CTX_use_certificate_file(context->dtls.ctx, setup_data->public_cert, SSL_FILETYPE_PEM))) {
+        coap_log(LOG_WARNING, "*** coap_dtls_context_set_pki: DTLS: %s: Unable to configure Server Certificate\n", setup_data->public_cert);
+        return 0;
+      }
+    }
+    else if (setup_data->asn1_public_cert && setup_data->asn1_public_cert_len > 0) {
+      if (!(SSL_CTX_use_certificate_ASN1(context->dtls.ctx, setup_data->asn1_public_cert_len, setup_data->asn1_public_cert))) {
+        coap_log(LOG_WARNING, "*** coap_dtls_context_set_pki: DTLS: %s: Unable to configure Server Certificate\n", "ASN1");
+        return 0;
+      }
+    }
+    else {
+      coap_log(LOG_ERR, "*** coap_dtls_context_set_pki: DTLS: No Server Certificate defined\n");
+    }
+    if (setup_data->private_key && setup_data->private_key[0]) {
+      if (!(SSL_CTX_use_PrivateKey_file(context->dtls.ctx, setup_data->private_key, SSL_FILETYPE_PEM))) {
+        coap_log(LOG_WARNING, "*** coap_dtls_context_set_pki: DTLS: %s: Unable to configure Server Private Key\n", setup_data->private_key);
+        return 0;
+      }
+    }
+    else if (setup_data->asn1_private_key && setup_data->asn1_private_key_len > 0) {
+      if (!(SSL_CTX_use_PrivateKey_ASN1(setup_data->asn1_private_key_type, context->dtls.ctx, setup_data->asn1_private_key, setup_data->asn1_private_key_len))) {
+        coap_log(LOG_WARNING, "*** coap_dtls_context_set_pki: DTLS: %s: Unable to configure Server Private Key\n", "ASN1");
+        return 0;
+      }
+    }
+    else {
+      coap_log(LOG_ERR, "*** coap_dtls_context_set_pki: DTLS: No Server Private Key defined\n");
+    }
+  }
+  if (context->tls.ctx) {
+    if (setup_data->public_cert && setup_data->public_cert[0]) {
+      if (!(SSL_CTX_use_certificate_file(context->tls.ctx, setup_data->public_cert, SSL_FILETYPE_PEM))) {
+        coap_log(LOG_WARNING, "*** coap_dtls_context_set_pki: TLS: %s: Unable to configure Server Certificate\n", setup_data->public_cert);
+        return 0;
+      }
+    }
+    else if (setup_data->asn1_public_cert && setup_data->asn1_public_cert_len > 0) {
+      if (!(SSL_CTX_use_certificate_ASN1(context->tls.ctx, setup_data->asn1_public_cert_len, setup_data->asn1_public_cert))) {
+        coap_log(LOG_WARNING, "*** coap_dtls_context_set_pki: TLS: %s: Unable to configure Server Certificate\n", "ASN1");
+        return 0;
+      }
+    }
+    else {
+      coap_log(LOG_ERR, "*** coap_dtls_context_set_pki: TLS: No Server Certificate defined\n");
+    }
+    if (setup_data->private_key && setup_data->private_key[0]) {
+      if (!(SSL_CTX_use_PrivateKey_file(context->tls.ctx, setup_data->private_key, SSL_FILETYPE_PEM))) {
+        coap_log(LOG_WARNING, "*** coap_dtls_context_set_pki: TLS: %s: Unable to configure Server Private Key\n", setup_data->private_key);
+        return 0;
+      }
+    }
+    else if (setup_data->asn1_private_key && setup_data->asn1_private_key_len > 0) {
+      if (!(SSL_CTX_use_PrivateKey_ASN1(setup_data->asn1_private_key_type, context->tls.ctx, setup_data->asn1_private_key, setup_data->asn1_private_key_len))) {
+        coap_log(LOG_WARNING, "*** coap_dtls_context_set_pki: TLS: %s: Unable to configure Server Private Key\n", "ASN1");
+        return 0;
+      }
+    }
+    else {
+      coap_log(LOG_ERR, "*** coap_dtls_context_set_pki: TLS: No Server Private Key defined\n");
+    }
+  }
+
+  if (!setup_callback) return 0;
+  if (!setup_callback(context->dtls.ctx, setup_data)) return 0;
+  if (!setup_callback(context->tls.ctx, setup_data)) return 0;;
+  if (!context->dtls.ssl) {
+    context->dtls.ssl = SSL_new(context->dtls.ctx);
+    if (!context->dtls.ssl)
+      return 0;
+    bio = BIO_new(context->dtls.meth);
+    if (!bio) {
+      SSL_free (context->dtls.ssl);
+      context->dtls.ssl = NULL;
+      return 0;
+    }
+    SSL_set_bio(context->dtls.ssl, bio, bio);
+    SSL_set_app_data(context->dtls.ssl, NULL);
+    SSL_set_options(context->dtls.ssl, SSL_OP_COOKIE_EXCHANGE);
+    SSL_set_mtu(context->dtls.ssl, COAP_DEFAULT_MTU);
+  }
+  context->psk_pki_enabled = 1;
+  return 1;
+}
+
+int coap_dtls_context_check_keys_enabled(coap_context_t *ctx)
+{
+  coap_openssl_context_t *context = ((coap_openssl_context_t *)ctx->dtls_context);
+  return context->psk_pki_enabled;
+}
+
 
 void coap_dtls_free_context(void *handle) {
   coap_openssl_context_t *context = (coap_openssl_context_t *)handle;
@@ -547,8 +653,11 @@ void *coap_dtls_new_client_session(coap_session_t *session) {
   SSL *ssl = NULL;
   coap_ssl_data *data;
   int r;
-  coap_dtls_context_t *dtls = &((coap_openssl_context_t *)session->context->dtls_context)->dtls;
+  coap_openssl_context_t *context = ((coap_openssl_context_t *)session->context->dtls_context);
+  coap_dtls_context_t *dtls = &context->dtls;
 
+  if (!context->psk_pki_enabled)
+    goto error;
   ssl = SSL_new(dtls->ctx);
   if (!ssl)
     goto error;
@@ -788,8 +897,11 @@ void *coap_tls_new_client_session(coap_session_t *session, int *connected) {
   BIO *bio = NULL;
   SSL *ssl = NULL;
   int r;
-  coap_tls_context_t *tls = &((coap_openssl_context_t *)session->context->dtls_context)->tls;
+  coap_openssl_context_t *context = ((coap_openssl_context_t *)session->context->dtls_context);
+  coap_tls_context_t *tls = &context->tls;
 
+  if (!context->psk_pki_enabled)
+    goto error;
   *connected = 0;
   ssl = SSL_new(tls->ctx);
   if (!ssl)
