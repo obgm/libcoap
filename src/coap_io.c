@@ -852,7 +852,6 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 #endif
         /* client-side ICMP destination unreachable, ignore it */
         coap_log(LOG_WARNING, "coap_network_read: unreachable\n");
-        coap_socket_close(sock);
         return -2;
       }
       coap_log(LOG_WARNING, "coap_network_read: %s\n", coap_socket_strerror());
