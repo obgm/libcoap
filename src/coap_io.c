@@ -48,7 +48,7 @@
 #include "libcoap.h"
 #include "debug.h"
 #include "mem.h"
-#include "coap_dtls.h"
+#include "net.h"
 #include "coap_io.h"
 #include "pdu.h"
 #include "utlist.h"
