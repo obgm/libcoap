@@ -1,0 +1,230 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc,tw=0:
+
+coap_handler(3)
+=================
+:doctype: manpage
+:man source:   coap_handler
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_handler, coap_register_handler, coap_register_response_handler, 
+coap_register_nack_handler, coap_register_ping_handler, 
+coap_register_pong_handler
+- work with CoAP handlers
+
+SYNOPSIS
+--------
+*#include <coap/coap.h>*
+
+*void coap_register_handler(coap_resource_t *_resource_, unsigned char 
+_method_, coap_method_handler_t _handler_);*
+
+*void coap_register_response_handler(coap_context_t *_context_, 
+coap_response_handler_t _handler_)*;
+
+*void coap_register_nack_handler(coap_context_t *_context_, 
+coap_nack_handler_t _handler_)*;
+
+*void coap_register_ping_handler(coap_context_t *_context_, 
+coap_ping_handler_t _handler_)*;
+
+*void coap_register_pong_handler(coap_context_t *_context_, 
+coap_pong_handler_t _handler_)*;
+
+Link with -lcoap-@LIBCOAP_API_VERSION@.
+
+DESCRIPTION
+-----------
+
+The *coap_register_handler*() function registers a callback handler _handler_ 
+that is called when there is a URI match against the _resource_ and there is 
+a _method_ (e.g. PUT, POST etc.) match. _method_ can be one of the following.
+----
+COAP_REQUEST_GET
+COAP_REQUEST_POST
+COAP_REQUEST_PUT
+COAP_REQUEST_DELETE
+COAP_REQUEST_FETCH
+COAP_REQUEST_PATCH
+COAP_REQUEST_IPATCH
+----
+
+The handler function prototype is defined as:
+[source, c]
+----
+typedef void (*coap_method_handler_t)(coap_context_t  *,
+                                      coap_resource_t *,
+                                      coap_session_t *,
+                                      coap_pdu_t *,
+                                      str * /* token */,
+                                      str * /* query string */,
+                                      coap_pdu_t * /* response */);
+----
+
+The *coap_register_response_handler*() function defines a request's response 
+_handler_ for traffic associated with the _context_.  The application can use 
+this for handling any response packets, including sending a RST packet if this 
+response was unexpected.
+
+The handler function prototype is defined as:
+[source, c]
+----
+typedef void (*coap_response_handler_t)(coap_context_t *,
+                                        coap_session_t *session,
+                                        coap_pdu_t *sent,
+                                        coap_pdu_t *received,
+                                        const coap_tid_t id);
+----
+
+The *coap_register_nack_handler*() function defines a request's negative 
+response _handler_ for traffic associated with the _context_.
+
+The handler function prototype is defined as:
+[source, c]
+----
+typedef void (*coap_nack_handler_t)(coap_context_t *,
+                                    coap_session_t *session,
+                                    coap_pdu_t *sent,
+                                    coap_nack_reason_t reason,
+                                    const coap_tid_t id);
+----
+
+The *coap_register_ping_handler*() function defines a _handler_ for tracking 
+CoAP ping traffic associated with the _context_.
+
+The handler function prototype is defined as:
+[source, c]
+----
+typedef void (*coap_ping_handler_t)(coap_context_t *,
+                                        coap_session_t *session,
+                                        coap_pdu_t *received,
+                                        const coap_tid_t id);
+----
+
+The *coap_register_pong_handler*() function defines a _handler_ for tracking 
+CoAP TCP ping response traffic associated with the _context_.
+
+The handler function prototype is defined as:
+[source, c]
+----
+typedef void (*coap_pong_handler_t)(coap_context_t *,
+                                        coap_session_t *session,
+                                        coap_pdu_t *received,
+                                        const coap_tid_t id);
+----
+
+EXAMPLES
+--------
+*GET Resource Callback Handler*
+
+[source, c]
+--
+#include <coap/coap.h>
+
+hnd_get_time(coap_context_t *ctx, coap_resource_t *resource, 
+coap_session_t *session, coap_pdu_t *request, str *token, str *query, 
+coap_pdu_t *response) {
+
+  unsigned char buf[40];
+  size_t len;
+  time_t now;
+  coap_tick_t t;
+
+  /* Define what the response ode is going to be */
+  response->code = COAP_RESPONSE_CODE(205);
+
+  /* If the resource is being Observed, return with Observe set */
+  if (coap_find_observer(resource, session, token)) {
+    coap_add_option(response,
+                    COAP_OPTION_OBSERVE,
+                    coap_encode_var_bytes(buf, resource->observe), buf);
+  }
+
+  /* Response is in plain text format */
+  coap_add_option(response,
+                    COAP_OPTION_CONTENT_FORMAT,
+                    coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+
+  /* Report on how long this response is valid for */
+  coap_add_option(response,
+                  COAP_OPTION_MAXAGE,
+                  coap_encode_var_bytes(buf, 0x01), buf);
+
+  now = time(NULL);
+
+  if (query != NULL && memcmp(query->s, "secs", min(4, query->length)) == 0) {
+    /* Output secs since Jan 1 1970 */
+    len = snprintf((char *)buf, sizeof(buf), "%lu", now);
+    coap_add_data(response, len, buf);
+  } else {
+    /* Output human-readable time */
+    struct tm *tmp;
+    tmp = gmtime(&now);
+    len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
+    coap_add_data(response, len, buf);
+  }
+
+}
+--
+*Packet Response Handler*
+
+[source, c]
+--
+#include <coap/coap.h>
+
+static void
+response_handler(coap_context_t *ctx, coap_session_t *session, 
+coap_pdu_t *sent, coap_pdu_t *received, const coap_tid_t id) {
+
+  coap_pdu_t *pdu = NULL;
+  coap_opt_t *block_opt;
+  coap_opt_iterator_t opt_iter;
+  unsigned char buf[4];
+  size_t len;
+  unsigned char *databuf;
+  coap_tid_t tid;
+
+  /* check if this is a response to our original request */
+  if (!check_token(received)) {
+    /* drop if this was just some message, or send RST in case of notification */
+    if (!sent && (received->type == COAP_MESSAGE_CON ||
+                  received->type == COAP_MESSAGE_NON))
+      coap_send_rst(session, received);
+    return;
+  }
+
+  if (received->type == COAP_MESSAGE_RST) {
+    info("got RST\n");
+    return;
+  }
+
+  /* Output the received data, if any */
+  if (COAP_RESPONSE_CLASS(received->code) == 2) {
+    /* Additional code to deal with the response */
+
+  }
+  return;
+
+}
+--
+
+SEE ALSO
+--------
+*coap_resource*(3)
+
+FURTHER INFORMATION
+-------------------
+See "RFC7252: The Constrained Application Protocol (CoAP)" for further 
+information.
+
+BUGS
+----
+Please report bugs on the mailing list for libcoap:
+libcoap-developers@lists.sourceforge.net
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>
