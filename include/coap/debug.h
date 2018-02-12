@@ -57,7 +57,12 @@ const char *coap_package_version(void);
  * COAP_DEBUG_FD (for @p level >= @c LOG_WARNING). The text is output only when
  * @p level is below or equal to the log level that set by coap_set_log_level().
  */
+#if (defined(__GNUC__))
+void coap_log_impl(coap_log_t level,
+              const char *format, ...) __attribute__ ((format(printf, 2, 3)));
+#else
 void coap_log_impl(coap_log_t level, const char *format, ...);
+#endif
 
 #ifndef coap_log
 #define coap_log(level, ...) do { if ((level)<=coap_get_log_level()) coap_log_impl((level), __VA_ARGS__); } while(0)
