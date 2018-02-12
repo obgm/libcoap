@@ -18,6 +18,7 @@ coap_cleanup
 coap_clear_event_handler
 coap_clock_init
 coap_clone_uri
+coap_context_set_pki
 coap_context_set_psk
 coap_debug_send_packet
 coap_debug_set_packet_loss
@@ -32,6 +33,9 @@ coap_delete_pdu
 coap_delete_resource
 coap_delete_string
 coap_dispatch
+coap_dtls_context_check_keys_enabled
+coap_dtls_context_set_pki
+coap_dtls_context_set_psk
 coap_dtls_free_context
 coap_dtls_free_session
 coap_dtls_get_context_timeout
@@ -87,6 +91,7 @@ coap_mfree_endpoint
 coap_network_read
 coap_network_send
 coap_new_client_session
+coap_new_client_session_pki
 coap_new_client_session_psk
 coap_new_context
 coap_new_endpoint
