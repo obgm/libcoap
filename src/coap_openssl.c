@@ -546,9 +546,10 @@ int coap_dtls_context_set_pki( coap_context_t *ctx,
     }
   }
 
-  if (!setup_callback) return 0;
-  if (!setup_callback(context->dtls.ctx, setup_data)) return 0;
-  if (!setup_callback(context->tls.ctx, setup_data)) return 0;;
+  if (setup_callback) {
+    if (!setup_callback(context->dtls.ctx, setup_data)) return 0;
+    if (!setup_callback(context->tls.ctx, setup_data)) return 0;;
+  }
   if (!context->dtls.ssl) {
     context->dtls.ssl = SSL_new(context->dtls.ctx);
     if (!context->dtls.ssl)
