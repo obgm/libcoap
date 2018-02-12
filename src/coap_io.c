@@ -1169,7 +1169,7 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
 #else
     if (errno != EINTR) {
 #endif
-      coap_log(LOG_DEBUG, coap_socket_strerror());
+      coap_log(LOG_DEBUG, "%s", coap_socket_strerror());
       return -1;
     }
   }
