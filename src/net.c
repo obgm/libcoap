@@ -2006,14 +2006,17 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
       coap_session_connected(session);
   } else if (pdu->code == COAP_SIGNALING_PING) {
     coap_pdu_t *pong = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_PONG, 0, 1);
+    if (context->ping_handler) {
+      context->ping_handler(context, session, pdu, pdu->tid);
+    }
     if (pong) {
       coap_add_option(pong, COAP_SIGNALING_OPTION_CUSTODY, 0, NULL);
       coap_send(session, pong);
     }
   } else if (pdu->code == COAP_SIGNALING_PONG) {
-      if (context->pong_handler) {
-        context->pong_handler(context, session, pdu, pdu->tid);
-      }
+    if (context->pong_handler) {
+      context->pong_handler(context, session, pdu, pdu->tid);
+    }
   } else if (pdu->code == COAP_SIGNALING_RELEASE
           || pdu->code == COAP_SIGNALING_ABORT) {
     coap_session_disconnected(session, COAP_NACK_RST);
