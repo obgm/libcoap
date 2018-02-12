@@ -349,6 +349,8 @@ get_context(const char *node, const char *port) {
   if (!ctx) {
     return NULL;
   }
+  /* Need PSK set up before we set up (D)TLS endpoints */
+  fill_keystore(ctx);
 
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
@@ -526,7 +528,6 @@ main(int argc, char **argv) {
   if (!ctx)
     return -1;
 
-  fill_keystore(ctx);
   init_resources(ctx);
 
   /* join multicast group if requested at command line */
