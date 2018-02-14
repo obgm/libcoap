@@ -453,7 +453,6 @@ coap_get_tls_library_version(void) {
 }
 
 int coap_dtls_context_set_pki( coap_context_t *ctx UNUSED,
-  coap_dtls_security_setup_t setup_callback UNUSED,
   coap_dtls_pki_t* setup_data UNUSED
 ) {
   return 0;
