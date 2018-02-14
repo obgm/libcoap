@@ -29,6 +29,14 @@ coap_tls_is_supported(void) {
   return 0;
 }
 
+coap_tls_version_t *
+coap_get_tls_library_version(void) {
+  static coap_tls_version_t version;
+  version.version = 0;
+  version.type = COAP_TLS_LIBRARY_NOTLS;
+  return &version;
+}
+
 static int dtls_log_level = 0;
 
 void coap_dtls_startup(void) {
