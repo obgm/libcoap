@@ -492,7 +492,6 @@ int coap_dtls_context_set_psk(coap_context_t *ctx,
 }
 
 int coap_dtls_context_set_pki( coap_context_t *ctx,
-  coap_dtls_security_setup_t setup_callback,
   coap_dtls_pki_t* setup_data
 ) {
   coap_openssl_context_t *context = ((coap_openssl_context_t *)ctx->dtls_context);
@@ -520,7 +519,60 @@ int coap_dtls_context_set_pki( coap_context_t *ctx,
       }
     }
     else if (setup_data->asn1_private_key && setup_data->asn1_private_key_len > 0) {
-      if (!(SSL_CTX_use_PrivateKey_ASN1(setup_data->asn1_private_key_type, context->dtls.ctx, setup_data->asn1_private_key, setup_data->asn1_private_key_len))) {
+      int pkey_type;
+      switch (setup_data->asn1_private_key_type) {
+      case COAP_ASN1_PKEY_NONE:
+        pkey_type = EVP_PKEY_NONE;
+        break;
+      case COAP_ASN1_PKEY_RSA:
+        pkey_type = EVP_PKEY_RSA;
+        break;
+      case COAP_ASN1_PKEY_RSA2:
+        pkey_type = EVP_PKEY_RSA2;
+        break;
+      case COAP_ASN1_PKEY_DSA:
+        pkey_type = EVP_PKEY_DSA;
+        break;
+      case COAP_ASN1_PKEY_DSA1:
+        pkey_type = EVP_PKEY_DSA1;
+        break;
+      case COAP_ASN1_PKEY_DSA2:
+        pkey_type = EVP_PKEY_DSA2;
+        break;
+      case COAP_ASN1_PKEY_DSA3:
+        pkey_type = EVP_PKEY_DSA3;
+        break;
+      case COAP_ASN1_PKEY_DSA4:
+        pkey_type = EVP_PKEY_DSA4;
+        break;
+      case COAP_ASN1_PKEY_DH:
+        pkey_type = EVP_PKEY_DH;
+        break;
+      case COAP_ASN1_PKEY_DHX:
+        pkey_type = EVP_PKEY_DHX;
+        break;
+      case COAP_ASN1_PKEY_EC:
+        pkey_type = EVP_PKEY_EC;
+        break;
+      case COAP_ASN1_PKEY_HMAC:
+        pkey_type = EVP_PKEY_HMAC;
+        break;
+      case COAP_ASN1_PKEY_CMAC:
+        pkey_type = EVP_PKEY_CMAC;
+        break;
+      case COAP_ASN1_PKEY_TLS1_PRF:
+        pkey_type = EVP_PKEY_TLS1_PRF;
+        break;
+      case COAP_ASN1_PKEY_HKDF:
+        pkey_type = EVP_PKEY_HKDF;
+        break;
+      default:
+        coap_log(LOG_WARNING,
+      "*** coap_dtls_context_set_pki: DTLS: Unknown Private Key type %d for ASN1\n",
+                 setup_data->asn1_private_key_type);
+        return 0;
+      }
+      if (!(SSL_CTX_use_PrivateKey_ASN1(pkey_type, context->dtls.ctx, setup_data->asn1_private_key, setup_data->asn1_private_key_len))) {
         coap_log(LOG_WARNING, "*** coap_dtls_context_set_pki: DTLS: %s: Unable to configure Server Private Key\n", "ASN1");
         return 0;
       }
@@ -562,9 +614,9 @@ int coap_dtls_context_set_pki( coap_context_t *ctx,
     }
   }
 
-  if (setup_callback) {
-    if (!setup_callback(context->dtls.ctx, setup_data)) return 0;
-    if (!setup_callback(context->tls.ctx, setup_data)) return 0;;
+  if (setup_data->call_back) {
+    if (!setup_data->call_back(context->dtls.ctx, setup_data)) return 0;
+    if (!setup_data->call_back(context->tls.ctx, setup_data)) return 0;;
   }
   if (!context->dtls.ssl) {
     context->dtls.ssl = SSL_new(context->dtls.ctx);
