@@ -10,7 +10,7 @@ services:
 
 env:
   - PLATFORM=posix TESTS=yes TLS=no
-  - PLATFORM=posix TLS=openssl
+  - PLATFORM=posix TESTS=yes TLS=openssl
 #  - PLATFORM=contiki TLS=no
 #  - PLATFORM=lwip TLS=no
 
