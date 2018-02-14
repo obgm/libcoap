@@ -599,7 +599,6 @@ coap_session_t *coap_new_client_session_pki(
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto,
-  coap_dtls_security_setup_t setup_callback,
   coap_dtls_pki_t* setup_data
 ) {
   coap_session_t *session = coap_session_create_client(ctx, local_if, server, proto);
@@ -608,7 +607,7 @@ coap_session_t *coap_new_client_session_pki(
     return NULL;
 
   if (coap_dtls_is_supported()) {
-    if (!coap_dtls_context_set_pki(ctx, setup_callback, setup_data)) {
+    if (!coap_dtls_context_set_pki(ctx, setup_data)) {
       coap_session_release(session);
       return NULL;
     }
