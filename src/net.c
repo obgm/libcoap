@@ -442,11 +442,10 @@ int coap_context_set_psk(coap_context_t *ctx,
 }
 
 int coap_context_set_pki(coap_context_t *ctx,
-  coap_dtls_security_setup_t setup_callback,
   coap_dtls_pki_t* setup_data
 ) {
   if (coap_dtls_is_supported()) {
-    return coap_dtls_context_set_pki(ctx, setup_callback, setup_data);
+    return coap_dtls_context_set_pki(ctx, setup_data);
   }
   return 0;
 }
