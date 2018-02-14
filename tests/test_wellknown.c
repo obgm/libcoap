@@ -254,14 +254,14 @@ t_wkc_tests_create(void) {
 
   coap_address_init(&addr);
 
-  addr.size = sizeof(struct sockaddr_in6);
-  addr.addr.sin6.sin6_family = AF_INET6;
-  addr.addr.sin6.sin6_addr = in6addr_any;
-  addr.addr.sin6.sin6_port = htons(COAP_DEFAULT_PORT);
+  addr.size = sizeof(struct sockaddr_in);
+  addr.addr.sin.sin_family = AF_INET;
+  addr.addr.sin.sin_addr.s_addr = htonl(INADDR_ANY);
+  addr.addr.sin.sin_port = htons(COAP_DEFAULT_PORT);
 
   ctx = coap_new_context(&addr);
 
-  addr.addr.sin6.sin6_addr = in6addr_loopback;
+  addr.addr.sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   session = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
 
   pdu = coap_pdu_init(0, 0, 0, TEST_PDU_SIZE);

@@ -21,7 +21,8 @@ testdriver_SOURCES = \
  test_pdu.c \
  test_sendqueue.c \
  test_uri.c \
- test_wellknown.c
+ test_wellknown.c \
+ test_tls.c
 
 testdriver_LDADD = $(CUNIT_LIBS) $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_API_VERSION).la
 

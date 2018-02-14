@@ -27,6 +27,21 @@ int coap_dtls_is_supported(void);
 /** Returns 1 if support for TLS is enabled, or 0 otherwise. */
 int coap_tls_is_supported( void );
 
+#define COAP_TLS_LIBRARY_NOTLS 0
+#define COAP_TLS_LIBRARY_TINYDTLS 1
+#define COAP_TLS_LIBRARY_OPENSSL 2
+#define COAP_TLS_LIBRARY_GNUTLS 3
+
+typedef struct coap_tls_version_t {
+  uint64_t version; /* Library Version */
+  int type; /* One of COAP_TLS_LIBRARY_* */
+} coap_tls_version_t;
+
+/**
+ * Returns the version and type of library libcoap was compiled against
+ */
+coap_tls_version_t *coap_get_tls_library_version(void);
+
 /** Sets the log level to the specified value. */
 void coap_dtls_set_log_level(int level);
 

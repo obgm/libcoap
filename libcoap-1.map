@@ -77,6 +77,7 @@ global:
   coap_get_log_level;
   coap_get_query;
   coap_get_resource_from_key;
+  coap_get_tls_library_version;
   coap_handle_dgram;
   coap_handle_event;
   coap_handle_failed_notify;

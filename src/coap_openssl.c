@@ -41,11 +41,27 @@ typedef struct coap_openssl_context_t {
 } coap_openssl_context_t;
 
 int coap_dtls_is_supported(void) {
+  if (SSLeay() < 0x10100000L) {
+    coap_log(LOG_WARNING, "OpenSSL version 1.1.0 or later is required\n");
+    return 0;
+  }
   return 1;
 }
 
 int coap_tls_is_supported(void) {
+  if (SSLeay() < 0x10100000L) {
+    coap_log(LOG_WARNING, "OpenSSL version 1.1.0 or later is required\n");
+    return 0;
+  }
   return 1;
+}
+
+coap_tls_version_t *
+coap_get_tls_library_version(void) {
+  static coap_tls_version_t version;
+  version.version = SSLeay();
+  version.type = COAP_TLS_LIBRARY_OPENSSL;
+  return &version;
 }
 
 void coap_dtls_startup(void) {

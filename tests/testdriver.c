@@ -11,6 +11,7 @@
 #include "test_error_response.h"
 #include "test_sendqueue.h"
 #include "test_wellknown.h"
+#include "test_tls.h"
 #include "libcoap.h"
 
 #ifdef __GNUC__
@@ -36,6 +37,7 @@ main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM) {
   t_init_error_response_tests();
   t_init_sendqueue_tests();
   t_init_wellknown_tests();
+  t_init_tls_tests();
 
   CU_basic_set_mode(run_mode);
   result = CU_basic_run_tests();
