@@ -437,7 +437,7 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
       goto error;
     SSL_CTX_set_app_data(context->tls.ctx, &context->tls);
     SSL_CTX_set_min_proto_version(context->tls.ctx, TLS1_VERSION);
-    SSL_CTX_set_cipher_list(context->dtls.ctx, "TLSv1.2:TLSv1.0");
+    SSL_CTX_set_cipher_list(context->tls.ctx, "TLSv1.2:TLSv1.0");
     /*SSL_CTX_set_verify(context->tls.ctx, SSL_VERIFY_PEER, coap_dtls_verify_cert);*/
     SSL_CTX_set_info_callback(context->tls.ctx, coap_dtls_info_callback);
     context->tls.meth = BIO_meth_new(BIO_TYPE_SOCKET, "coapsock");
