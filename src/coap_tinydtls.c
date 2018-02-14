@@ -444,6 +444,14 @@ int coap_tls_is_supported(void) {
   return 0;
 }
 
+coap_tls_version_t *
+coap_get_tls_library_version(void) {
+  static coap_tls_version_t version;
+  version.version = DTLS_VERSION;
+  version.type = COAP_TLS_LIBRARY_TINYDTLS;
+  return &version;
+}
+
 void *coap_tls_new_client_session(coap_session_t *session UNUSED, int *connected UNUSED) {
   return NULL;
 }
