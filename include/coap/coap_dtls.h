@@ -48,8 +48,45 @@ void coap_dtls_set_log_level(int level);
 /** Returns the current log level. */
 int coap_dtls_get_log_level(void);
 
+struct coap_dtls_pki_t;
+
+/**
+ * Security setup handler that is used as call-back in coap_context_set_pki()
+ * Typically, this will be calling additonal functions like
+ * SSL_CTX_set_tlsext_servername_callback() etc.
+ *
+ * @param context The security context definition - e.g. SSL_CTX * for OpenSSL. 
+ *              This will be dependent on the underlying TLS library
+ *              - see coap_get_tls_library_version()
+ * @param setup_data A structure containing setup data originally passed into
+ *                  coap_context_set_pki() or coap_new_client_session_pki().
+ * @return 1 if successful, else 0
+ */
+typedef int (*coap_dtls_security_setup_t)(void *context,
+                                        struct coap_dtls_pki_t *setup_data);
+
+typedef enum coap_asn1_privatekey_type_t {
+  COAP_ASN1_PKEY_NONE,
+  COAP_ASN1_PKEY_RSA,
+  COAP_ASN1_PKEY_RSA2,
+  COAP_ASN1_PKEY_DSA,
+  COAP_ASN1_PKEY_DSA1,
+  COAP_ASN1_PKEY_DSA2,
+  COAP_ASN1_PKEY_DSA3,
+  COAP_ASN1_PKEY_DSA4,
+  COAP_ASN1_PKEY_DH,
+  COAP_ASN1_PKEY_DHX,
+  COAP_ASN1_PKEY_EC,
+  COAP_ASN1_PKEY_HMAC,
+  COAP_ASN1_PKEY_CMAC,
+  COAP_ASN1_PKEY_TLS1_PRF,
+  COAP_ASN1_PKEY_HKDF
+} coap_asn1_privatekey_type_t;
+
 /** The structure used for defining the PKI setup data to be used */
 typedef struct coap_dtls_pki_t {
+  /* Optional CallBack for additional setup */
+  coap_dtls_security_setup_t call_back;
   /* Alternative 1: Name of file on disk */
   const char *ca_file;
   const char *public_cert;
@@ -61,49 +98,8 @@ typedef struct coap_dtls_pki_t {
   int asn1_ca_file_len;
   int asn1_public_cert_len;
   int asn1_private_key_len;
-  int asn1_private_key_type; /* E.G. EVP_PKEY_RSA */
+  coap_asn1_privatekey_type_t asn1_private_key_type;
 } coap_dtls_pki_t;
-
-/**
- * Security setup handler that is used as call-back in coap_context_set_pki()
- * Typically, this will be calling additonal functions like
- * SSL_CTX_set_tlsext_servername_callback() etc.
- *
- * @param context The security context definition - e.g. SSL_CTX * for OpenSSL. 
- *              This will be dependent on the underlying TLS library
- *              - see coap_get_tls_library_version()
- * @param setup_data A structure containing setup data passed into
- *                  coap_context_set_pki() or coap_new_client_session_pki().
- * @return 1 if successful, else 0
- */
-typedef int (*coap_dtls_security_setup_t)(void *context,
-                                        coap_dtls_pki_t *setup_data);
-
-/**
-* Creates a new client session to the designated server with PKI credentials
-* @param ctx The CoAP context.
-* @param local_if Address of local interface. It is recommended to use NULL to
-*                 let the operating system choose a suitable local interface.
-*                 If an address is specified, the port number should be zero,
-*                 which means that a free port is automatically selected.
-* @param server The server's address. If the port number is zero, the default
-*               port for the protocol will be used.
-* @param proto CoAP Protocol.
-* @param setup_callback The callback which is SSL support dependent. Can be
-*                       NULL.
-* @param setup_data PKI parameters.
-*
-* @return A new CoAP session or NULL if failed. Call coap_session_release()
-*         to free.
-*/
-coap_session_t *coap_new_client_session_pki(
-  struct coap_context_t *ctx,
-  const coap_address_t *local_if,
-  const coap_address_t *server,
-  coap_proto_t proto,
-  coap_dtls_security_setup_t setup_callback,
-  coap_dtls_pki_t* setup_data
-);
 
 /**
  * Creates a new DTLS context for the given @p coap_context. This function
@@ -138,7 +134,6 @@ int coap_dtls_context_set_psk(struct coap_context_t *ctx, const char *hint,
  * The Callback is called to set up the appropriate information.
  *
  * @param ctx The CoAP context.
- * @param setup_callback The callback which is TLS library support dependent
  * @param setup_data     If NULL, PKI authentication will fail. Certificate
  *                       information required.
  *
@@ -146,7 +141,6 @@ int coap_dtls_context_set_psk(struct coap_context_t *ctx, const char *hint,
  */
 
 int coap_dtls_context_set_pki(struct coap_context_t *ctx,
-                           coap_dtls_security_setup_t setup_callback,
                            coap_dtls_pki_t* setup_data);
 
 /**
