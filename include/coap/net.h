@@ -234,8 +234,6 @@ int coap_context_set_psk( coap_context_t *context, const char *hint,
  * The Callback is called to set up the appropriate information if set.
  *
  * @param context        The current coap_context_t object.
- * @param setup_callback The callback which is SSL support dependent. Can be
- *                       NULL.
  * @param setup_data     If NULL, PKI authentication will fail. Certificate
  *                       information required.
  *
@@ -243,7 +241,6 @@ int coap_context_set_psk( coap_context_t *context, const char *hint,
  */
 
 int coap_context_set_pki(coap_context_t *context,
-                           coap_dtls_security_setup_t setup_callback,
                            coap_dtls_pki_t* setup_data);
 
 /**
