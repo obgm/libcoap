@@ -25,5 +25,18 @@ branches:
      - /^release-.*$/
      - travis-test
 
+# Docker disables IPv6 in containers by default, so re-enable it.
+before_script:
+  # `daemon.json` is normally missing, but let's log it in case that changes.
+  - sudo touch /etc/docker/daemon.json
+  - sudo cat /etc/docker/daemon.json
+  - sudo service docker stop
+  # This needs YAML quoting because of the curly braces.
+  - 'echo ''{"ipv6": true, "fixed-cidr-v6": "2001:db8:1::/64"}'' | sudo tee /etc/docker/daemon.json'
+  - sudo service docker start
+  # Fail early if docker failed on start -- add `- sudo dockerd` to debug.
+  - sudo docker info
+  # Paranoia log: what if our config got overwritten?
+  - sudo cat /etc/docker/daemon.json
 script:
   - docker run -e CC -e PLATFORM -e TESTS -e TLS obgm/libcoap:travis-env /bin/sh -c "scripts/build.sh"
