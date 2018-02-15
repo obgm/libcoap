@@ -700,6 +700,8 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
     iov[0].iov_base = (uint8_t*)data;
     iov[0].iov_len = (iov_len_t)datalen;
 
+    memset( buf, 0, sizeof(buf));
+
     memset(&mhdr, 0, sizeof(struct msghdr));
     mhdr.msg_name = (void *)&session->remote_addr.addr;
     mhdr.msg_namelen = session->remote_addr.size;
@@ -723,7 +725,6 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 
 	pktinfo = (struct in_pktinfo *)CMSG_DATA(cmsg);
-	memset(pktinfo, 0, sizeof(struct in_pktinfo));
 
 	pktinfo->ipi_ifindex = session->ifindex;
 	memcpy(&pktinfo->ipi_spec_dst, session->local_addr.addr.sin6.sin6_addr.s6_addr + 12, sizeof(pktinfo->ipi_spec_dst));
@@ -738,7 +739,6 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
 
 	pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
-	memset(pktinfo, 0, sizeof(struct in6_pktinfo));
 
 	pktinfo->ipi6_ifindex = session->ifindex;
 	memcpy(&pktinfo->ipi6_addr, &session->local_addr.addr.sin6.sin6_addr, sizeof(pktinfo->ipi6_addr));
@@ -760,7 +760,6 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
       cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 
       pktinfo = (struct in_pktinfo *)CMSG_DATA(cmsg);
-      memset(pktinfo, 0, sizeof(struct in_pktinfo));
 
       pktinfo->ipi_ifindex = session->ifindex;
       memcpy(&pktinfo->ipi_spec_dst, &session->local_addr.addr.sin.sin_addr, sizeof(pktinfo->ipi_spec_dst));
