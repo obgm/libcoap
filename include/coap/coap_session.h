@@ -185,6 +185,31 @@ coap_session_t *coap_new_client_session_psk(
   unsigned key_len
 );
 
+struct coap_dtls_pki_t;
+
+/**
+* Creates a new client session to the designated server with PKI credentials
+* @param ctx The CoAP context.
+* @param local_if Address of local interface. It is recommended to use NULL to
+*                 let the operating system choose a suitable local interface.
+*                 If an address is specified, the port number should be zero,
+*                 which means that a free port is automatically selected.
+* @param server The server's address. If the port number is zero, the default
+*               port for the protocol will be used.
+* @param proto CoAP Protocol.
+* @param setup_data PKI parameters.
+*
+* @return A new CoAP session or NULL if failed. Call coap_session_release()
+*         to free.
+*/
+coap_session_t *coap_new_client_session_pki(
+  struct coap_context_t *ctx,
+  const coap_address_t *local_if,
+  const coap_address_t *server,
+  coap_proto_t proto,
+  struct coap_dtls_pki_t *setup_data
+);
+
 /**
 * Creates a new server session for the specified endpoint.
 * @param ctx The CoAP context.

@@ -11,7 +11,7 @@
 
 #if !defined(HAVE_LIBTINYDTLS) && !defined(HAVE_OPENSSL)
 
-#include "coap_dtls.h"
+#include "net.h"
 
 #ifdef __GNUC__
 #define UNUSED __attribute__((unused))
@@ -35,6 +35,24 @@ coap_get_tls_library_version(void) {
   version.version = 0;
   version.type = COAP_TLS_LIBRARY_NOTLS;
   return &version;
+}
+
+int coap_dtls_context_set_pki( coap_context_t *ctx UNUSED,
+  coap_dtls_pki_t* setup_data UNUSED
+) {
+  return 0;
+}
+
+int coap_dtls_context_set_psk(coap_context_t *ctx UNUSED,
+  const char *hint UNUSED,
+  const uint8_t *key UNUSED, size_t key_len UNUSED
+) {
+  return 0;
+}
+
+int coap_dtls_context_check_keys_enabled(coap_context_t *ctx)
+{
+  return 0;
 }
 
 static int dtls_log_level = 0;

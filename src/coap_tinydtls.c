@@ -11,10 +11,10 @@
 
 #ifdef HAVE_LIBTINYDTLS
 
+#include "net.h"
 #include "address.h"
 #include "debug.h"
 #include "mem.h"
-#include "coap_dtls.h"
 
 #include <tinydtls.h>
 #include <dtls.h>
@@ -450,6 +450,24 @@ coap_get_tls_library_version(void) {
   version.version = DTLS_VERSION;
   version.type = COAP_TLS_LIBRARY_TINYDTLS;
   return &version;
+}
+
+int coap_dtls_context_set_pki( coap_context_t *ctx UNUSED,
+  coap_dtls_pki_t* setup_data UNUSED
+) {
+  return 0;
+}
+
+int coap_dtls_context_set_psk(coap_context_t *ctx UNUSED,
+  const char *hint UNUSED,
+  const uint8_t *key UNUSED, size_t key_len UNUSED
+) {
+  return 1;
+}
+
+int coap_dtls_context_check_keys_enabled(coap_context_t *ctx)
+{
+  return 1;
 }
 
 void *coap_tls_new_client_session(coap_session_t *session UNUSED, int *connected UNUSED) {

@@ -42,7 +42,6 @@
 #endif
 
 #include "libcoap.h"
-#include "coap_dtls.h"
 #include "utlist.h"
 #include "debug.h"
 #include "mem.h"
@@ -399,7 +398,7 @@ coap_get_context_server_hint(
   return 0;
 }
 
-void coap_context_set_psk(coap_context_t *ctx,
+int coap_context_set_psk(coap_context_t *ctx,
   const char *hint,
   const uint8_t *key, size_t key_len
 ) {
@@ -417,6 +416,7 @@ void coap_context_set_psk(coap_context_t *ctx,
       ctx->psk_hint_len = hint_len;
     } else {
       coap_log(LOG_ERR, "No memory to store PSK hint");
+      return 0;
     }
   }
 
@@ -432,8 +432,22 @@ void coap_context_set_psk(coap_context_t *ctx,
       ctx->psk_key_len = key_len;
     } else {
       coap_log(LOG_ERR, "No memory to store PSK key");
+      return 0;
     }
   }
+  if (coap_dtls_is_supported()) {
+    return coap_dtls_context_set_psk(ctx, hint, key, key_len);
+  }
+  return 0;
+}
+
+int coap_context_set_pki(coap_context_t *ctx,
+  coap_dtls_pki_t* setup_data
+) {
+  if (coap_dtls_is_supported()) {
+    return coap_dtls_context_set_pki(ctx, setup_data);
+  }
+  return 0;
 }
 
 coap_context_t *

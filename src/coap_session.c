@@ -12,7 +12,6 @@
 
 #include "coap_config.h"
 #include "coap_io.h"
-#include "coap_dtls.h"
 #include "coap_session.h"
 #include "net.h"
 #include "debug.h"
@@ -568,6 +567,8 @@ coap_session_t *coap_new_client_session_psk(
       session->psk_identity_len = identity_len;
     } else {
       coap_log(LOG_WARNING, "Cannot store session PSK identity");
+      coap_session_release(session);
+      return NULL;
     }
   }
 
@@ -578,12 +579,43 @@ coap_session_t *coap_new_client_session_psk(
       session->psk_key_len = key_len;
     } else {
       coap_log(LOG_WARNING, "Cannot store session PSK key");
+      coap_session_release(session);
+      return NULL;
     }
   }
 
+  if (coap_dtls_is_supported()) {
+    if (!coap_dtls_context_set_psk(ctx, NULL, key, key_len)) {
+      coap_session_release(session);
+      return NULL;
+    }
+  }
   debug("*** %s: new outgoing session\n", coap_session_str(session));
   return coap_session_connect(session);
 }
+
+coap_session_t *coap_new_client_session_pki(
+  struct coap_context_t *ctx,
+  const coap_address_t *local_if,
+  const coap_address_t *server,
+  coap_proto_t proto,
+  coap_dtls_pki_t* setup_data
+) {
+  coap_session_t *session = coap_session_create_client(ctx, local_if, server, proto);
+
+  if (!session)
+    return NULL;
+
+  if (coap_dtls_is_supported()) {
+    if (!coap_dtls_context_set_pki(ctx, setup_data)) {
+      coap_session_release(session);
+      return NULL;
+    }
+  }
+  debug("*** %s: new outgoing session\n", coap_session_str(session));
+  return coap_session_connect(session);
+}
+
 
 coap_session_t *coap_new_server_session(
   struct coap_context_t *ctx,
@@ -628,6 +660,13 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
   if (proto == COAP_PROTO_TLS && !coap_tls_is_supported()) {
     coap_log(LOG_CRIT, "coap_new_endpoint: TLS not supported\n");
     goto error;
+  }
+
+  if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
+    if (!coap_dtls_context_check_keys_enabled(context)) {
+      coap_log(LOG_INFO, "coap_new_endpoint: one of coap_dtls_context_set_psk() or coap_dtls_context_set_pki() not called\n");
+      goto error;
+    }
   }
 
   ep = coap_malloc_endpoint();
