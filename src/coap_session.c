@@ -447,6 +447,8 @@ coap_session_create_client(
   if (!session)
     goto error;
 
+  coap_session_reference(session);
+
   if (proto == COAP_PROTO_UDP || proto == COAP_PROTO_DTLS) {
     if (!coap_socket_connect_udp(&session->sock, &session->local_if, server,
       proto == COAP_PROTO_DTLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
@@ -461,7 +463,6 @@ coap_session_create_client(
     }
   }
 
-  session->ref = 1;
   session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED | COAP_SOCKET_WANT_READ;
   if (local_if)
     session->sock.flags |= COAP_SOCKET_BOUND;
@@ -469,8 +470,7 @@ coap_session_create_client(
   return session;
 
 error:
-  if (session)
-    coap_session_free(session);
+  coap_session_release(session);
   return NULL;
 }
 
@@ -483,7 +483,7 @@ coap_session_connect(coap_session_t *session) {
     if (session->tls) {
       session->state = COAP_SESSION_STATE_HANDSHAKE;
     } else {
-      coap_session_free(session);
+      coap_session_release(session);
       return NULL;
     }
   } else if (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS) {
@@ -499,7 +499,7 @@ coap_session_connect(coap_session_t *session) {
           coap_session_send_csm(session);
         }
       } else {
-	coap_session_free(session);
+	coap_session_release(session);
 	return NULL;
       }
     } else {
@@ -524,7 +524,7 @@ coap_session_accept(coap_session_t *session) {
         coap_session_send_csm(session);
       }
     } else {
-      coap_session_free(session);
+      coap_session_release(session);
       session = NULL;
     }
   }
@@ -626,6 +626,7 @@ coap_session_t *coap_new_server_session(
                                &ep->bind_addr, NULL, NULL, 0, ctx, ep );
   if (!session)
     goto error;
+
   if (!coap_socket_accept_tcp(&ep->sock, &session->sock,
                               &session->local_addr, &session->remote_addr))
     goto error;
@@ -639,8 +640,7 @@ coap_session_t *coap_new_server_session(
   return session;
 
 error:
-  if (session)
-    coap_session_free(session);
+  coap_session_free(session);
   return NULL;
 }
 
