@@ -315,7 +315,7 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
       return 1;
     }
     coap_log(LOG_WARNING, "coap_socket_connect_tcp1: connect: %s\n", coap_socket_strerror());
-    return 0;
+    goto error;
   }
 
   if (getsockname(sock->fd, &local_addr->addr.sa, &local_addr->size) == COAP_SOCKET_ERROR) {
@@ -849,9 +849,9 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 #else
       if (errno == ECONNREFUSED) {
 #endif
-	/* client-side ICMP destination unreachable, ignore it */
-	coap_log(LOG_WARNING, "coap_network_read: unreachable\n");
-	return -2;
+        /* client-side ICMP destination unreachable, ignore it */
+        coap_log(LOG_WARNING, "coap_network_read: unreachable\n");
+        return -2;
       }
       coap_log(LOG_WARNING, "coap_network_read: %s\n", coap_socket_strerror());
       goto error;
