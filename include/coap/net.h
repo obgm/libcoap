@@ -76,6 +76,18 @@ typedef void (*coap_nack_handler_t)(struct coap_context_t *,
                                     coap_nack_reason_t reason,
                                     const coap_tid_t id);
 
+/** Message handler that is used as call-back in coap_context_t */
+typedef void (*coap_ping_handler_t)(struct coap_context_t *,
+                                        coap_session_t *session,
+                                        coap_pdu_t *received,
+                                        const coap_tid_t id);
+
+/** Message handler that is used as call-back in coap_context_t */
+typedef void (*coap_pong_handler_t)(struct coap_context_t *,
+				  	coap_session_t *session,
+					coap_pdu_t *received,
+					const coap_tid_t id);
+
 #define COAP_MID_CACHE_SIZE 3
 typedef struct {
   unsigned char flags[COAP_MID_CACHE_SIZE];
@@ -122,6 +134,8 @@ typedef struct coap_context_t {
 
   coap_response_handler_t response_handler;
   coap_nack_handler_t nack_handler;
+  coap_ping_handler_t ping_handler;
+  coap_pong_handler_t pong_handler;
 
   /**
    * Callback function that is used to signal events to the
@@ -178,6 +192,31 @@ coap_register_nack_handler(coap_context_t *context,
   context->nack_handler = handler;
 }
 
+/**
+ * Registers a new message handler that is called whenever a CoAP Ping
+ * message is received.
+ *
+ * @param context The context to register the handler for.
+ * @param handler The ping handler to register.
+ */
+COAP_STATIC_INLINE void
+coap_register_ping_handler(coap_context_t *context,
+                           coap_ping_handler_t handler) {
+  context->ping_handler = handler;
+}
+
+/**
+ * Registers a new message handler that is called whenever a CoAP Pong
+ * message is received.
+ *
+ * @param context The context to register the handler for.
+ * @param handler The pong handler to register.
+ */
+COAP_STATIC_INLINE void
+coap_register_pong_handler(coap_context_t *context,
+                           coap_pong_handler_t handler) {
+  context->pong_handler = handler;
+}
 
 /**
  * Registers the option type @p type with the given context object @p ctx.
