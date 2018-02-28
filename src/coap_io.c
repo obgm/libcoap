@@ -261,6 +261,7 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
   coap_address_t connect_addr;
   coap_address_copy( &connect_addr, server );
 
+  sock->flags &= ~COAP_SOCKET_CONNECTED;
   sock->fd = socket(server->addr.sa.sa_family, SOCK_STREAM, 0);
 
   if (sock->fd == COAP_INVALID_SOCKET) {
@@ -326,6 +327,7 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
     coap_log(LOG_WARNING, "coap_socket_connect_tcp1: getpeername: %s\n", coap_socket_strerror());
   }
 
+  sock->flags |= COAP_SOCKET_CONNECTED;
   return 1;
 
 error:
@@ -480,8 +482,10 @@ coap_socket_connect_udp(coap_socket_t *sock,
   u_long u_on = 1;
 #endif
   coap_address_t connect_addr;
+  int is_mcast = coap_is_mcast(server);
   coap_address_copy(&connect_addr, server);
 
+  sock->flags &= ~(COAP_SOCKET_CONNECTED | COAP_SOCKET_MULTICAST);
   sock->fd = socket(connect_addr.addr.sa.sa_family, SOCK_DGRAM, 0);
 
   if (sock->fd == COAP_INVALID_SOCKET) {
@@ -523,6 +527,16 @@ coap_socket_connect_udp(coap_socket_t *sock,
     }
   }
 
+  /* special treatment for sockets that are used for multicast communication */
+  if (is_mcast) {
+    if (getsockname(sock->fd, &local_addr->addr.sa, &local_addr->size) == COAP_SOCKET_ERROR) {
+      coap_log(LOG_WARNING, "coap_socket_connect_udp: getsockname for multicast socket: %s\n", coap_socket_strerror());
+    }
+    coap_address_copy(remote_addr, &connect_addr);
+    sock->flags |= COAP_SOCKET_MULTICAST;
+    return 1;
+  }
+
   if (connect(sock->fd, &connect_addr.addr.sa, connect_addr.size) == COAP_SOCKET_ERROR) {
     coap_log(LOG_WARNING, "coap_socket_connect_udp: connect: %s\n", coap_socket_strerror());
     goto error;
@@ -536,6 +550,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
     coap_log(LOG_WARNING, "coap_socket_connect_udp: getpeername: %s\n", coap_socket_strerror());
   }
 
+  sock->flags |= COAP_SOCKET_CONNECTED;
   return 1;
 
 error:

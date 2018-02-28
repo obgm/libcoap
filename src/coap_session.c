@@ -463,7 +463,7 @@ coap_session_create_client(
     }
   }
 
-  session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED | COAP_SOCKET_WANT_READ;
+  session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_WANT_READ;
   if (local_if)
     session->sock.flags |= COAP_SOCKET_BOUND;
   LL_PREPEND(ctx->sessions, session);
