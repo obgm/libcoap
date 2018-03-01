@@ -312,7 +312,12 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
 #else
     if (errno == EINPROGRESS) {
 #endif
-      sock->flags |= COAP_SOCKET_WANT_CONNECT;
+      /*
+       * COAP_SOCKET_CONNECTED needs to be set here as there will be reads/writes
+       * by underlying TLS libraries during connect() and we do not want to
+       * assert() in coap_read_session() or coap_write_session() when called by coap_read()
+       */
+      sock->flags |= COAP_SOCKET_WANT_CONNECT | COAP_SOCKET_CONNECTED;
       return 1;
     }
     coap_log(LOG_WARNING, "coap_socket_connect_tcp1: connect: %s\n", coap_socket_strerror());
