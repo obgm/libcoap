@@ -74,7 +74,6 @@ libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
   src/coap_tinydtls.c \
   src/debug.c \
   src/encode.c \
-  src/hashkey.c \
   src/mem.c \
   src/net.c \
   src/option.c \
@@ -102,7 +101,6 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap/coap_time.h \
   $(top_srcdir)/include/coap/debug.h \
   $(top_srcdir)/include/coap/encode.h \
-  $(top_srcdir)/include/coap/hashkey.h \
   $(top_srcdir)/include/coap/libcoap.h \
   $(top_srcdir)/include/coap/mem.h \
   $(top_srcdir)/include/coap/net.h \
@@ -155,14 +153,14 @@ update-map-file: libcoap-$(LIBCOAP_API_VERSION).map libcoap-$(LIBCOAP_API_VERSIO
 libcoap-$(LIBCOAP_API_VERSION).map: check_ctags $(libcoap_include_HEADERS)
 	( echo "VER_$(LIBCOAP_API_VERSION) {" ; \
 	echo "global:" ; \
-	$(CTAGS_PROG) $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print "  " $$1 ";" }' | sort ; \
+	$(CTAGS_PROG) $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print "  " $$1 ";" }' | sort -u ; \
 	echo "local:" ; \
 	echo "  *;" ; \
 	echo "};" ) > $@.new
 	mv $@.new $@
 
 libcoap-$(LIBCOAP_API_VERSION).sym: check_ctags $(libcoap_include_HEADERS)
-	( $(CTAGS_PROG) $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print $$1 }' | sort ) \
+	( $(CTAGS_PROG) $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print $$1 }' | sort -u ) \
 	> $@.new
 	mv $@.new $@
 
