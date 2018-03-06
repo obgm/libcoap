@@ -51,7 +51,7 @@
 
 typedef struct rd_t {
   UT_hash_handle hh;      /**< hash handle (for internal use only) */
-  coap_key_t key;         /**< the actual key bytes for this resource */
+  str uri_path;           /**< the actual key for this resource */
 
   size_t etag_len;        /**< actual length of @c etag */
   unsigned char etag[8];  /**< ETag for current description */
@@ -99,7 +99,7 @@ hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
   rd_t *rd = NULL;
   unsigned char buf[3];
 
-  HASH_FIND(hh, resources, resource->key, sizeof(coap_key_t), rd);
+  HASH_FIND(hh, resources, resource->uri_path.s, resource->uri_path.length, rd);
 
   response->code = COAP_RESPONSE_CODE(205);
 
@@ -138,7 +138,7 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
   unsigned char *data;
   str tmp;
 
-  HASH_FIND(hh, resources, resource->key, sizeof(coap_key_t), rd);
+  HASH_FIND(hh, resources, resource->uri_path.s, resource->uri_path.length, rd);
   if (rd) {
     /* found resource object, now check Etag */
     etag = coap_check_option(request, COAP_OPTION_ETAG, &opt_iter);
@@ -203,14 +203,14 @@ hnd_delete_resource(coap_context_t  *ctx,
                     coap_pdu_t *response) {
   rd_t *rd = NULL;
 
-  HASH_FIND(hh, resources, resource->key, sizeof(coap_key_t), rd);
+  HASH_FIND(hh, resources, resource->uri_path.s, resource->uri_path.length, rd);
   if (rd) {
     HASH_DELETE(hh, resources, rd);
     rd_delete(rd);
   }
   /* FIXME: link attributes for resource have been created dynamically
    * using coap_malloc() and must be released. */
-  coap_delete_resource(ctx, resource->key);
+  coap_delete_resource(ctx, resource);
 
   response->code = COAP_RESPONSE_CODE(202);
 }
@@ -493,8 +493,9 @@ hnd_post_rd(coap_context_t  *ctx,
     rd_t *rd;
     rd = make_rd(request);
     if (rd) {
-      coap_hash_path(loc, loc_size, rd->key);
-      HASH_ADD(hh, resources, key, sizeof(coap_key_t), rd);
+      rd->uri_path.s = loc;
+      rd->uri_path.length = loc_size;
+      HASH_ADD(hh, resources, uri_path.s[0], rd->uri_path.length, rd);
     } else {
       /* FIXME: send error response and delete r */
     }
