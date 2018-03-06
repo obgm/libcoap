@@ -20,6 +20,7 @@ testdriver_SOURCES = \
  test_options.c \
  test_pdu.c \
  test_sendqueue.c \
+ test_session.c \
  test_uri.c \
  test_wellknown.c \
  test_tls.c
