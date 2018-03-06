@@ -494,35 +494,18 @@ coap_clone_uri(const coap_uri_t *uri) {
   return result;
 }
 
-/* hash URI path segments */
-
-/* The function signature of coap_hash() is different from
- * segment_handler_t hence we use this wrapper as safe typecast. */
-COAP_STATIC_INLINE void
-hash_segment(unsigned char *s, size_t len, void *data) {
-  assert(len <= UINT_MAX);
-  coap_hash(s, (unsigned int)len, (unsigned char *)data);
-}
-
-int
-coap_hash_path(const unsigned char *path, size_t len, coap_key_t key) {
-  if (!path)
-    return 0;
-
-  memset(key, 0, sizeof(coap_key_t));
-
-  coap_split_path_impl(path, len, hash_segment, key);
-
-  return 1;
-}
-
 COAP_STATIC_INLINE int
-is_unescaped_in_query(unsigned char c) {
+is_unescaped_in_path(unsigned char c) {
   return ( c >= 'A' && c <= 'Z' ) || ( c >= 'a' && c <= 'z' )
       || ( c >= '0' && c <= '9' ) || c == '-' || c == '.' || c == '_'
       || c == '~' || c == '!' || c == '$' || c == '\'' || c == '('
       || c == ')' || c == '*' || c == '+' || c == ',' || c == ';' || c=='='
-      || c==':' || c=='@' || c=='/' || c=='?';
+      || c==':' || c=='@' || c == '&';
+}
+
+COAP_STATIC_INLINE int
+is_unescaped_in_query(unsigned char c) {
+  return is_unescaped_in_path(c) || c=='/' || c=='?';
 }
 
 str *coap_get_query(coap_pdu_t *request) {
@@ -537,7 +520,7 @@ str *coap_get_query(coap_pdu_t *request) {
   coap_option_filter_set(f, COAP_OPTION_URI_QUERY);
   coap_option_iterator_init(request, &opt_iter, f);
   while ((q = coap_option_next(&opt_iter))) {
-    unsigned seg_len = coap_opt_length(q), i;
+    uint16_t seg_len = coap_opt_length(q), i;
     unsigned char *seg= coap_opt_value(q);
     for (i = 0; i < seg_len; i++) {
       if (is_unescaped_in_query(seg[i]))
@@ -558,7 +541,7 @@ str *coap_get_query(coap_pdu_t *request) {
       while ((q = coap_option_next(&opt_iter))) {
 	if (s != query->s)
 	  *s++ = '&';
-	unsigned seg_len = coap_opt_length(q), i;
+	uint16_t seg_len = coap_opt_length(q), i;
 	unsigned char *seg= coap_opt_value(q);
 	for (i = 0; i < seg_len; i++) {
 	  if (is_unescaped_in_query(seg[i])) {
@@ -574,3 +557,58 @@ str *coap_get_query(coap_pdu_t *request) {
   }
   return query;
 }
+
+str *coap_get_uri_path(coap_pdu_t *request) {
+  coap_opt_iterator_t opt_iter;
+  coap_opt_filter_t f;
+  coap_opt_t *q;
+  str *uri_path = NULL;
+  size_t length = 0;
+  static const unsigned char hex[] = "0123456789ABCDEF";
+
+  coap_option_filter_clear(f);
+  coap_option_filter_set(f, COAP_OPTION_URI_PATH);
+  coap_option_iterator_init(request, &opt_iter, f);
+  while ((q = coap_option_next(&opt_iter))) {
+    uint16_t seg_len = coap_opt_length(q), i;
+    unsigned char *seg= coap_opt_value(q);
+    for (i = 0; i < seg_len; i++) {
+      if (is_unescaped_in_path(seg[i]))
+	length += 1;
+      else
+	length += 3;
+    }
+    /* bump for the leading "/" */
+    length += 1;
+  }
+  /* The first entry does not have a leading "/" */
+  if (length > 0)
+    length -= 1;
+
+  /* if 0, either no URI_PATH Option, or the first one was empty */
+  uri_path = coap_new_string(length);
+  if (uri_path) {
+    uri_path->length = length;
+    unsigned char *s = uri_path->s;
+    int n = 0;
+    coap_option_iterator_init(request, &opt_iter, f);
+    while ((q = coap_option_next(&opt_iter))) {
+      if (n++) {
+        *s++ = '/';
+      }
+      uint16_t seg_len = coap_opt_length(q), i;
+      unsigned char *seg= coap_opt_value(q);
+      for (i = 0; i < seg_len; i++) {
+        if (is_unescaped_in_path(seg[i])) {
+          *s++ = seg[i];
+        } else {
+          *s++ = '%';
+          *s++ = hex[seg[i]>>4];
+          *s++ = hex[seg[i]&0x0F];
+        }
+      }
+    }
+  }
+  return uri_path;
+}
+
