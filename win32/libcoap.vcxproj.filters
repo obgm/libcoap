@@ -36,9 +36,6 @@
     <ClCompile Include="..\src\encode.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\hashkey.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\mem.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -102,9 +99,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\coap\encode.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\coap\hashkey.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\coap\libcoap.h">
