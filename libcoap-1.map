@@ -11,6 +11,7 @@ global:
   coap_address_equals;
   coap_add_token;
   coap_adjust_basetime;
+  coap_calc_timeout;
   coap_cancel_all_messages;
   coap_cancel_session_messages;
   coap_can_exit;
