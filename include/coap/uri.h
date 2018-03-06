@@ -12,7 +12,6 @@
 
 #include <stdint.h>
 
-#include "hashkey.h"
 #include "str.h"
 struct coap_pdu_t;
 
@@ -67,18 +66,6 @@ coap_uri_t *coap_new_uri(const unsigned char *uri, unsigned int length);
  * memory to hold the coap_uri_t structure and its contents. The object must
  * be released with coap_free(). */
 coap_uri_t *coap_clone_uri(const coap_uri_t *uri);
-
-/**
- * Calculates a hash over the given path and stores the result in 
- * @p key. This function returns @c 0 on error or @c 1 on success.
- * 
- * @param path The URI path to generate hash for.
- * @param len  The length of @p path.
- * @param key  The output buffer.
- * 
- * @return @c 1 if @p key was set, @c 0 otherwise.
- */
-int coap_hash_path(const unsigned char *path, size_t len, coap_key_t key);
 
 /**
  * @defgroup uri_parse URI Parsing Functions
@@ -147,6 +134,13 @@ int coap_split_query(const unsigned char *s,
  * @return        Reconstructed and escaped query string part.
  */
 str *coap_get_query(struct coap_pdu_t *request);
+
+/**
+ * Extract uri_path string from request PDU
+ * @param request Request PDU.
+ * @return        Reconstructed and escaped uri path string part.
+ */
+str *coap_get_uri_path(struct coap_pdu_t *request);
 
 /** @} */
 
