@@ -6,7 +6,6 @@
 #include "contiki-net.h"
 
 #define WITH_CONTIKI 1
-#define COAP_RESOURCES_NOHASH 1
 
 #define PACKAGE_STRING "libcoap"
 #define PACKAGE_NAME "libcoap"
