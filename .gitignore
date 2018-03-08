@@ -36,8 +36,9 @@ src/**/*.o
 src/**/*.lo
 src/*.lo
 src/*.o
-src/.deps
+src/.deps/
 src/.dirstamp
+src/.libs/
 
 # the doc/ folder
 doc/Doxyfile
