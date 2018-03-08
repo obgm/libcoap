@@ -116,7 +116,7 @@ AC_SUBST(LT_LIBCOAP_AGE)
 AC_SUBST(LIBCOAP_SO_VERSION)
 
 # Defining the API Version
-LIBCOAP_API_VERSION=1
+LIBCOAP_API_VERSION=2
 AC_SUBST(LIBCOAP_API_VERSION)
 
 # Adding some default warning options for code QS
@@ -305,19 +305,19 @@ AC_ARG_ENABLE([dtls],
 AC_ARG_WITH([gnutls],
             [AS_HELP_STRING([--with-gnutls],
                             [Use GnuTLS for DTLS functions])],
-            [with_gnutls="yes"],
+            [with_gnutls="$withval"],
             [with_gnutls="no"])
 
 AC_ARG_WITH([openssl],
             [AS_HELP_STRING([--with-openssl],
                             [Use OpenSSL for DTLS functions])],
-            [with_openssl="yes"],
+            [with_openssl="$withval"],
             [with_openssl="no"])
 
 AC_ARG_WITH([tinydtls],
            [AS_HELP_STRING([--with-tinydtls],
                            [Use TinyDTLS for DTLS functions])],
-           [with_tinydtls="yes"],
+           [with_tinydtls="$withval"],
            [with_tinydtls="no"])
 
 if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes"; then
@@ -358,7 +358,7 @@ if test "x$build_dtls" = "xyes"; then
         if test "x$have_gnutls" != "xyes"; then
             AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the GnuTLS library but pkg-config file 'gnutls.pc' could not be found!
                       Install the package(s) containing the development files for GnuTLS, 
-                      or use '--with_openssl' or disable the DTLS support using '--disable-dtls'.])
+                      or use '--with-openssl' or disable the DTLS support using '--disable-dtls'.])
         fi
         AC_MSG_NOTICE([The use of GnuTLS was explicit requested due configure option '--with-gnutls'!])
 
@@ -374,7 +374,7 @@ if test "x$build_dtls" = "xyes"; then
         if test "x$have_openssl" != "xyes"; then
             AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the OpenSSL library but pkg-config file 'openssl.pc' could not be found!
                       Install the package(s) containing the development files for OpenSSL,
-                      or use '--with_gnutls' or disable the DTLS support using '--disable-dtls'.])
+                      or use '--with-gnutls' or disable the DTLS support using '--disable-dtls'.])
         fi
         AC_MSG_NOTICE([The use of OpenSSL was explicit requested due configure option '--with-openssl'!])
 
@@ -409,7 +409,7 @@ if test "x$build_dtls" = "xyes"; then
     fi
 
     # ... and if not found check OpenSSL is suitable.
-    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xno" -a "x$with_gnutls_auto" = "x" -a "x$with_tinydtls" = "xno"; then
+    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xyes" -a "x$with_gnutls_auto" = "x" -a "x$with_tinydtls" = "xno"; then
         openssl_version=`pkg-config --modversion openssl`
         AX_CHECK_OPENSSL_VERSION
         AC_MSG_NOTICE([Using autoselected library OpenSSL for DTLS support!])
@@ -445,6 +445,26 @@ if test "x$build_dtls" = "xyes"; then
     AC_SUBST(DTLS_CFLAGS)
     AC_SUBST(DTLS_LIBS)
 fi
+
+# Define the Library name extension for the TLS the library was linked against
+if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=-openssl
+elif test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=-gnutls
+elif test "x$with_tinydtls" = "xyes"; then
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=-tinydtls
+else
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=
+fi
+
+if test "x$LIBCOAP_DTLS_LIB_EXTENSION_NAME" != "x"; then
+    LIBCOAP_NAME_SUFFIX="$LIBCOAP_API_VERSION$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
+else
+    LIBCOAP_NAME_SUFFIX="$LIBCOAP_API_VERSION"
+fi
+
+AC_SUBST(LIBCOAP_NAME_SUFFIX)
+AC_SUBST(LIBCOAP_DTLS_LIB_EXTENSION_NAME)
 
 # configure options
 # __tests__
@@ -614,7 +634,7 @@ man/coap-server.txt
 man/coap-rd.txt
 man/Makefile
 tests/Makefile
-libcoap-$LIBCOAP_API_VERSION.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
+libcoap-$LIBCOAP_NAME_SUFFIX.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
 ])
 
 AC_OUTPUT
@@ -624,6 +644,7 @@ libcoap configuration summary:
       libcoap package version : "$PACKAGE_VERSION"
       libcoap library version : "$LIBCOAP_SO_VERSION"
       libcoap API version     : "$LIBCOAP_API_VERSION"
+      libcoap DTLS lib extn   : "$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
       host system             : "$host"]);
 if test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support      : "yes"])
