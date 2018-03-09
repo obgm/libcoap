@@ -52,6 +52,7 @@
 #include "coap_io.h"
 #include "pdu.h"
 #include "utlist.h"
+#include "resource.h"
 
 #if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
  /* define generic PKTINFO for IPv4 */
@@ -1050,6 +1051,9 @@ coap_write(coap_context_t *ctx,
   coap_tick_t timeout = 0;
 
   *num_sockets = 0;
+
+  /* Check to see if we need to send off any Observe requests */
+  coap_check_notify(ctx);
 
   if (ctx->session_timeout > 0)
     session_timeout = ctx->session_timeout * COAP_TICKS_PER_SECOND;
