@@ -2144,7 +2144,19 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       pdu->code & 0x1f);
 
     if (!coap_is_mcast(&session->local_addr)) {
-      coap_send_message_type(session, pdu, COAP_MESSAGE_RST);
+      if (COAP_PDU_IS_EMPTY(pdu)) {
+        if (session->proto != COAP_PROTO_TCP && session->proto != COAP_PROTO_TLS) {
+          coap_tick_t now;
+          coap_ticks(&now);
+          if (session->last_tx_rst + COAP_TICKS_PER_SECOND/4 < now) {
+            coap_send_message_type(session, pdu, COAP_MESSAGE_RST);
+            session->last_tx_rst = now;
+          }
+        }
+      }
+      else {
+        coap_send_message_type(session, pdu, COAP_MESSAGE_RST);
+      }
     }
   }
 
