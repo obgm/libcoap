@@ -23,9 +23,9 @@ DESCRIPTION
 -----------
 *coap-client* is a CoAP client to communicate with 6LoWPAN devices via
 the protocol CoAP (RFC 7252) using the URI given as argument on the
-command line. The URI must have the scheme 'coap' (or 'coaps' when
-coap-client was built with support for secure communication). The URI's
-host part may be a DNS name or a literal IP address. Note that, for
+command line. The URI must have the scheme 'coap', 'coap+tcp', 'coaps' or
+'coaps+tcp' when coap-client was built with support for secure communication.
+The URI's host part may be a DNS name or a literal IP address. Note that, for
 IPv6 address references, angle brackets are required (c.f. EXAMPLES).
 
 

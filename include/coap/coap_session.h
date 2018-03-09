@@ -74,6 +74,7 @@ typedef struct coap_session_t {
   size_t partial_read;            /**< if > 0 indicates number of bytes already read for an incoming message */
   coap_pdu_t *partial_pdu;        /**< incomplete incoming pdu */
   coap_tick_t last_rx_tx;
+  coap_tick_t last_tx_rst;
   uint8_t *psk_identity;
   size_t psk_identity_len;
   uint8_t *psk_key;
