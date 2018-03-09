@@ -292,11 +292,11 @@ init_resources(coap_context_t *ctx) {
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
+  coap_resource_set_get_observable(r, 1);
 
   coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
   coap_add_attr(r, (unsigned char *)"title", 5, (unsigned char *)"\"Internal Clock\"", 16, 0);
   coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"\"Ticks\"", 7, 0);
-  r->observable = 1;
   coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"\"clock\"", 7, 0);
 
   coap_add_resource(ctx, r);
@@ -556,11 +556,6 @@ main(int argc, char **argv) {
     coap_ticks( &now );
     check_async(ctx, now);
 #endif /* WITHOUT_ASYNC */
-
-#ifndef WITHOUT_OBSERVE
-    /* check if we have to send observe notifications */
-    coap_check_notify(ctx);
-#endif /* WITHOUT_OBSERVE */
   }
 
   coap_free_context(ctx);
