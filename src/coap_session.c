@@ -531,6 +531,11 @@ coap_session_connect(coap_session_t *session) {
     if (session->tls) {
       session->state = COAP_SESSION_STATE_HANDSHAKE;
     } else {
+      /* Need to free session object. As a new session may not yet
+       * have been referenced, we call coap_session_reference() first
+       * before trying to release the object.
+       */
+      coap_session_reference(session);
       coap_session_release(session);
       return NULL;
     }
@@ -547,6 +552,11 @@ coap_session_connect(coap_session_t *session) {
           coap_session_send_csm(session);
         }
       } else {
+        /* Need to free session object. As a new session may not yet
+         * have been referenced, we call coap_session_reference()
+         * first before trying to release the object.
+         */
+        coap_session_reference(session);
 	coap_session_release(session);
 	return NULL;
       }
@@ -572,6 +582,11 @@ coap_session_accept(coap_session_t *session) {
         coap_session_send_csm(session);
       }
     } else {
+      /* Need to free session object. As a new session may not yet
+       * have been referenced, we call coap_session_reference() first
+       * before trying to release the object.
+       */
+      coap_session_reference(session);
       coap_session_release(session);
       session = NULL;
     }
