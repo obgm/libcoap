@@ -100,6 +100,7 @@ dtls_send_to_peer(struct dtls_context_t *dtls_context,
   coap_session = coap_session_get_by_peer(coap_context, &remote_addr, dtls_session->ifindex);
   if (!coap_session) {
     coap_log(LOG_WARNING, "dtls_send_to_peer: cannot find local interface\n");
+    coap_handle_event(coap_context, COAP_EVENT_DTLS_ERROR, NULL);
     return -3;
   }
   return (int)coap_session_send(coap_session, data, len);
