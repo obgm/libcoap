@@ -20,6 +20,4 @@
 
 #define HAVE_LIMITS_H
 
-#define COAP_RESOURCES_NOHASH
-
 #endif /* _CONFIG_H_ */

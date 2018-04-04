@@ -236,7 +236,8 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
     if (resource_param.length) { /* there is a query filter */
       
       if (flags & MATCH_URI) {	/* match resource URI */
-	if (!match(&r->uri, &query_pattern, (flags & MATCH_PREFIX) != 0, (flags & MATCH_SUBSTRING) != 0))
+	if (!match(&r->uri_path, &query_pattern, (flags & MATCH_PREFIX) != 0,
+            (flags & MATCH_SUBSTRING) != 0))
 	  continue;
       } else {			/* match attribute */
 	coap_attr_t *attr;
@@ -293,7 +294,7 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
 }
 
 coap_resource_t *
-coap_resource_init(const unsigned char *uri, size_t len, int flags) {
+coap_resource_init(const unsigned char *uri_path, size_t len, int flags) {
   coap_resource_t *r;
 
 #ifdef WITH_LWIP
@@ -305,14 +306,39 @@ coap_resource_init(const unsigned char *uri, size_t len, int flags) {
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
 
-    r->uri.s = (unsigned char *)uri;
-    r->uri.length = len;
+    r->uri_path.s = (unsigned char *)uri_path;
+    r->uri_path.length = len;
     
-    coap_hash_path(r->uri.s, r->uri.length, r->key);
-
     r->flags = flags;
   } else {
     debug("coap_resource_init: no memory left\n");
+  }
+  
+  return r;
+}
+
+static const unsigned char coap_unknown_resource_uri[] =
+                       "- Unknown -";
+
+coap_resource_t *
+coap_resource_unknown_init(coap_method_handler_t put_handler) {
+  coap_resource_t *r;
+
+#ifdef WITH_LWIP
+  r = (coap_resource_t *)memp_malloc(MEMP_COAP_RESOURCE);
+#endif
+#ifndef WITH_LWIP
+  r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
+#endif
+  if (r) {
+    memset(r, 0, sizeof(coap_resource_t));
+    r->is_unknown = 1;
+    /* Something unlikely to be used, but it shows up in the logs */
+    r->uri_path.s = (unsigned char*)coap_unknown_resource_uri;
+    r->uri_path.length = sizeof(coap_unknown_resource_uri)-1;
+    coap_register_handler(r, COAP_REQUEST_PUT, put_handler);
+  } else {
+    coap_log(LOG_DEBUG, "coap_resource_unknown_init: no memory left\n");
   }
   
   return r;
@@ -387,27 +413,6 @@ coap_delete_attr(coap_attr_t *attr) {
 #endif
 }
 
-void
-coap_hash_request_uri(const coap_pdu_t *request, coap_key_t key) {
-  coap_opt_iterator_t opt_iter;
-  coap_opt_filter_t filter;
-  coap_opt_t *option;
-
-  memset(key, 0, sizeof(coap_key_t));
-
-  coap_option_filter_clear(filter);
-  coap_option_setb(filter, COAP_OPTION_URI_PATH);
-
-  coap_option_iterator_init((coap_pdu_t *)request, &opt_iter, filter);
-  while ((option = coap_option_next(&opt_iter)))
-    coap_hash(coap_opt_value(option), coap_opt_length(option), key);
-}
-
-void
-coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
-  RESOURCES_ADD(context->resources, resource);
-}
-
 static void
 coap_free_resource(coap_resource_t *resource) {
   coap_attr_t *attr, *tmp;
@@ -419,7 +424,7 @@ coap_free_resource(coap_resource_t *resource) {
   LL_FOREACH_SAFE(resource->link_attr, attr, tmp) coap_delete_attr(attr);
 
   if (resource->flags & COAP_RESOURCE_FLAGS_RELEASE_URI)
-    coap_free(resource->uri.s);
+    coap_free(resource->uri_path.s);
 
   /* free all elements from resource->subscribers */
   LL_FOREACH_SAFE( resource->subscribers, obs, otmp ) {
@@ -436,18 +441,39 @@ coap_free_resource(coap_resource_t *resource) {
   coap_free_type(COAP_RESOURCE, resource);
 #endif /* WITH_CONTIKI */
 }
- 
+
+void
+coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
+  if (resource->is_unknown) {
+    if (context->unknown_resource)
+      coap_free_resource(context->unknown_resource);
+    context->unknown_resource = resource;
+  }
+  else {
+    coap_resource_t *r = coap_get_resource_from_uri_path(context,
+                                                         resource->uri_path);
+
+    if (r) {
+      coap_log(LOG_WARNING,
+        "coap_add_resource: Duplicate uri_path '%*.*s', old resource deleted\n",
+        (int)resource->uri_path.length, (int)resource->uri_path.length,
+        resource->uri_path.s);
+      coap_delete_resource(context, r);
+    }
+    RESOURCES_ADD(context->resources, resource);
+  }
+}
+
 int
-coap_delete_resource(coap_context_t *context, coap_key_t key) {
-  coap_resource_t *resource;
-
-  if (!context)
+coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
+  if (!context || !resource)
     return 0;
 
-  resource = coap_get_resource_from_key(context, key);
-
-  if (!resource) 
-    return 0;
+  if (resource->is_unknown && (context->unknown_resource == resource)) {
+    coap_free_resource(context->unknown_resource);
+    context->unknown_resource = NULL;
+    return 1;
+  }
 
   /* remove resource from list */
   RESOURCES_DELETE(context->resources, resource);
@@ -466,23 +492,24 @@ coap_delete_all_resources(coap_context_t *context) {
   /* Cannot call RESOURCES_ITER because coap_free_resource() releases
    * the allocated storage. */
 
-#ifdef COAP_RESOURCES_NOHASH
-  LL_FOREACH_SAFE(context->resources, res, rtmp) {
-#else
   HASH_ITER(hh, context->resources, res, rtmp) {
     HASH_DELETE(hh, context->resources, res);
-#endif
     coap_free_resource(res);
   }
 
   context->resources = NULL;
+
+  if (context->unknown_resource) {
+    coap_free_resource(context->unknown_resource);
+    context->unknown_resource = NULL;
+  }
 }
 
 coap_resource_t *
-coap_get_resource_from_key(coap_context_t *context, coap_key_t key) {
+coap_get_resource_from_uri_path(coap_context_t *context, str uri_path) {
   coap_resource_t *result;
 
-  RESOURCES_FIND(context->resources, key, result);
+  RESOURCES_FIND(context->resources, uri_path, result);
 
   return result;
 }
@@ -502,7 +529,7 @@ coap_print_link(const coap_resource_t *resource,
   PRINT_COND_WITH_OFFSET(p, bufend, *offset, '/', *len);
 
   COPY_COND_WITH_OFFSET(p, bufend, *offset, 
-			resource->uri.s, resource->uri.length, *len);
+			resource->uri_path.s, resource->uri_path.length, *len);
   
   PRINT_COND_WITH_OFFSET(p, bufend, *offset, '>', *len);
 

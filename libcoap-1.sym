@@ -75,14 +75,12 @@ coap_get_block
 coap_get_data
 coap_get_log_level
 coap_get_query
-coap_get_resource_from_key
+coap_get_resource_from_uri_path
 coap_get_tls_library_version
+coap_get_uri_path
 coap_handle_dgram
 coap_handle_event
 coap_handle_failed_notify
-coap_hash_impl
-coap_hash_path
-coap_hash_request_uri
 coap_insert_node
 coap_is_mcast
 coap_log_impl
@@ -142,6 +140,7 @@ coap_remove_async
 coap_remove_from_queue
 coap_resource_init
 coap_resource_set_dirty
+coap_resource_unknown_init
 coap_response_phrase
 coap_retransmit
 coap_run_once
@@ -193,7 +192,6 @@ coap_split_query
 coap_split_uri
 coap_startup
 coap_subscription_init
-coap_ticks
 coap_ticks
 coap_ticks_from_rt_us
 coap_ticks_to_rt

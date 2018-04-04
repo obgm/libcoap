@@ -22,13 +22,7 @@
 #define COAP_RESOURCE_CHECK_TIME 2
 #endif /* COAP_RESOURCE_CHECK_TIME */
 
-#ifdef COAP_RESOURCES_NOHASH
-#  include "utlist.h"
-#else
-#  include "uthash.h"
-#endif
-
-#include "hashkey.h"
+#include "uthash.h"
 #include "async.h"
 #include "str.h"
 #include "pdu.h"
@@ -78,6 +72,7 @@ typedef struct coap_resource_t {
                                   *   been notified of the last change */
   unsigned int observable:1;     /**< can be observed */
   unsigned int cacheable:1;      /**< can be cached */
+  unsigned int is_unknown:1;     /**< resource created for unknown handler */
 
   /**
    * Used to store handlers for the seven coap methods @c GET, @c POST, @c PUT,
@@ -88,22 +83,17 @@ typedef struct coap_resource_t {
    */
   coap_method_handler_t handler[7];
 
-  coap_key_t key;                /**< the actual key bytes for this resource */
-
-#ifdef COAP_RESOURCES_NOHASH
-  struct coap_resource_t *next;
-#else
   UT_hash_handle hh;
-#endif
 
   coap_attr_t *link_attr; /**< attributes to be included with the link format */
   coap_subscription_t *subscribers;  /**< list of observers for this resource */
 
   /**
-   * Request URI for this resource. This field will point into the static
-   * memory.
+   * Request URI Path for this resource. This field will point into static
+   * or allocated memory which must remain there for the duration of the
+   * resource.
    */
-  str uri;
+  str uri_path;         /**< the key used for hash lookup for this resource */
   int flags;
 
   /**
@@ -118,30 +108,51 @@ typedef struct coap_resource_t {
  * Creates a new resource object and initializes the link field to the string
  * of length @p len. This function returns the new coap_resource_t object.
  *
- * @param uri    The URI path of the new resource.
- * @param len    The length of @p uri.
- * @param flags  Flags for memory management (in particular release of memory).
+ * @param uri_path The URI path of the new resource.
+ * @param len     The length of @p uri_path.
+ * @param flags   Flags for memory management (in particular release of memory).
  *
  * @return       A pointer to the new object or @c NULL on error.
  */
-coap_resource_t *coap_resource_init(const unsigned char *uri,
+coap_resource_t *coap_resource_init(const unsigned char *uri_path,
                                     size_t len, int flags);
 
 
 /**
- * Sets the notification message type of resource @p r to given
- * @p mode which must be one of @c COAP_RESOURCE_FLAGS_NOTIFY_NON
- * or @c COAP_RESOURCE_FLAGS_NOTIFY_CON.
+ * Creates a new resource object for the unknown resource handler with support
+ * for PUT.  Additional methods and handlers can be added to the resource
+ * with coap_register_handler(), but this is not generally recommended.
+ * If this resource is added multiple times to the same coap_context with
+ * coap_add_resource(), the previous resource is deleted.
+ *
+ * This function returns the new coap_resource_t object.
+ *
+ * @param put_handler The PUT handler to register with @p resource for
+ *                    unknown Uri-Path.
+ *
+ * @return       A pointer to the new object or @c NULL on error.
+ */
+coap_resource_t *coap_resource_unknown_init(coap_method_handler_t put_handler);
+
+/**
+ * Sets the notification message type of resource @p resource to given
+ * @p mode
+
+ * @param resource The resource to update.
+ * @param mode     Must be one of @c COAP_RESOURCE_FLAGS_NOTIFY_NON
+ *                 or @c COAP_RESOURCE_FLAGS_NOTIFY_CON.
  */
 COAP_STATIC_INLINE void
-coap_resource_set_mode(coap_resource_t *r, int mode) {
-  r->flags = (r->flags & !COAP_RESOURCE_FLAGS_NOTIFY_CON) | mode;
+coap_resource_set_mode(coap_resource_t *resource, int mode) {
+  resource->flags = (resource->flags &
+    ~(COAP_RESOURCE_FLAGS_NOTIFY_CON|COAP_RESOURCE_FLAGS_NOTIFY_NON)) |
+    (mode & (COAP_RESOURCE_FLAGS_NOTIFY_CON|COAP_RESOURCE_FLAGS_NOTIFY_NON));
 }
 
 /**
  * Registers the given @p resource for @p context. The resource must have been
- * created by coap_resource_init(), the storage allocated for the resource will
- * be released by coap_delete_resource().
+ * created by coap_resource_init() or coap_resource_unknown_init(), the
+ * storage allocated for the resource will be released by coap_delete_resource().
  *
  * @param context  The context to use.
  * @param resource The resource to store.
@@ -149,16 +160,16 @@ coap_resource_set_mode(coap_resource_t *r, int mode) {
 void coap_add_resource(coap_context_t *context, coap_resource_t *resource);
 
 /**
- * Deletes a resource identified by @p key. The storage allocated for that
- * resource is freed.
+ * Deletes a resource identified by @p resource. The storage allocated for that
+ * resource is freed, and removed from the context.
  *
  * @param context  The context where the resources are stored.
- * @param key      The unique key for the resource to delete.
+ * @param resource The resource to delete.
  *
  * @return         @c 1 if the resource was found (and destroyed),
  *                 @c 0 otherwise.
  */
-int coap_delete_resource(coap_context_t *context, coap_key_t key);
+int coap_delete_resource(coap_context_t *context, coap_resource_t *resource);
 
 /**
  * Deletes all resources from given @p context and frees their storage.
@@ -272,25 +283,16 @@ coap_register_handler(coap_resource_t *resource,
 }
 
 /**
- * Returns the resource identified by the unique string @p key. If no resource
- * was found, this function returns @c NULL.
+ * Returns the resource identified by the unique string @p uri_path. If no
+ * resource was found, this function returns @c NULL.
  *
  * @param context  The context to look for this resource.
- * @param key      The unique key of the resource.
+ * @param uri_path  The unique string uri of the resource.
  *
  * @return         A pointer to the resource or @c NULL if not found.
  */
-coap_resource_t *coap_get_resource_from_key(coap_context_t *context,
-                                            coap_key_t key);
-
-/**
- * Calculates the hash key for the resource requested by the Uri-Options of @p
- * request. This function calls coap_hash() for every path segment.
- *
- * @param request The requesting pdu.
- * @param key     The resulting hash is stored in @p key.
- */
-void coap_hash_request_uri(const coap_pdu_t *request, coap_key_t key);
+coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
+                                                str uri_path);
 
 /**
  * @addtogroup observe
@@ -369,32 +371,8 @@ void coap_delete_observers(coap_context_t *context, coap_session_t *session);
  */
 void coap_check_notify(coap_context_t *context);
 
-#ifdef COAP_RESOURCES_NOHASH
-
 #define RESOURCES_ADD(r, obj) \
-  LL_PREPEND((r), (obj))
-
-#define RESOURCES_DELETE(r, obj) \
-  LL_DELETE((r), (obj))
-
-#define RESOURCES_ITER(r,tmp) \
-  coap_resource_t *tmp;       \
-  LL_FOREACH((r), tmp)
-
-#define RESOURCES_FIND(r, k, res) {                         \
-    coap_resource_t *tmp;                                   \
-    (res) = tmp = NULL;                                     \
-    LL_FOREACH((r), tmp) {                                  \
-      if (memcmp((k), tmp->key, sizeof(coap_key_t)) == 0) { \
-        (res) = tmp;                                        \
-        break;                                              \
-      }                                                     \
-    }                                                       \
-  }
-#else /* COAP_RESOURCES_NOHASH */
-
-#define RESOURCES_ADD(r, obj) \
-  HASH_ADD(hh, (r), key, sizeof(coap_key_t), (obj))
+  HASH_ADD(hh, (r), uri_path.s[0], (obj)->uri_path.length, (obj))
 
 #define RESOURCES_DELETE(r, obj) \
   HASH_DELETE(hh, (r), (obj))
@@ -404,10 +382,8 @@ void coap_check_notify(coap_context_t *context);
   HASH_ITER(hh, (r), tmp, rtmp)
 
 #define RESOURCES_FIND(r, k, res) {                     \
-    HASH_FIND(hh, (r), (k), sizeof(coap_key_t), (res)); \
+    HASH_FIND(hh, (r), (k).s, (k).length, (res)); \
   }
-
-#endif /* COAP_RESOURCES_NOHASH */
 
 /** @} */
 

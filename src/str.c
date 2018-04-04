@@ -15,8 +15,9 @@
 #include "mem.h"
 #include "str.h"
 
-str *coap_new_string(size_t size) {
-  str *s = (str *)coap_malloc(sizeof(str) + size + 1);
+coap_string_t *coap_new_string(size_t size) {
+  coap_string_t *s =
+            (coap_string_t *)coap_malloc_type(COAP_STRING, sizeof(coap_string_t) + size + 1);
   if ( !s ) {
 #ifndef NDEBUG
     coap_log(LOG_CRIT, "coap_new_string: malloc\n");
@@ -24,12 +25,12 @@ str *coap_new_string(size_t size) {
     return NULL;
   }
 
-  memset(s, 0, sizeof(str));
-  s->s = ((unsigned char *)s) + sizeof(str);
+  memset(s, 0, sizeof(coap_string_t));
+  s->s = ((unsigned char *)s) + sizeof(coap_string_t);
   return s;
 }
 
-void coap_delete_string(str *s) {
-  coap_free(s);
+void coap_delete_string(coap_string_t *s) {
+  coap_free_type(COAP_STRING, s);
 }
 

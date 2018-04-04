@@ -283,25 +283,6 @@ coap_pop_next(coap_context_t *context) {
   return next;
 }
 
-#ifdef COAP_DEFAULT_WKC_HASHKEY
-/** Checks if @p Key is equal to the pre-defined hash key for.well-known/core. */
-#define is_wkc(Key)							\
-  (memcmp((Key), COAP_DEFAULT_WKC_HASHKEY, sizeof(coap_key_t)) == 0)
-#else
-/* Implements a singleton to store a hash key for the .wellknown/core
- * resources. */
-int
-is_wkc(coap_key_t k) {
-  static coap_key_t wkc;
-  static unsigned char _initialized = 0;
-  if (!_initialized) {
-    _initialized = coap_hash_path((unsigned char *)COAP_DEFAULT_URI_WELLKNOWN,
-      sizeof(COAP_DEFAULT_URI_WELLKNOWN) - 1, wkc);
-  }
-  return memcmp(k, wkc, sizeof(coap_key_t)) == 0;
-}
-#endif
-
 static size_t
 coap_get_session_client_psk(
   const coap_session_t *session,
@@ -1776,8 +1757,9 @@ no_response(coap_pdu_t *request, coap_pdu_t *response) {
   return RESPONSE_DEFAULT;
 }
 
-#define WANT_WKC(Pdu,Key)					\
-  (((Pdu)->code == COAP_REQUEST_GET) && is_wkc(Key))
+static coap_string_t coap_default_uri_wellknown =
+          { sizeof(COAP_DEFAULT_URI_WELLKNOWN)-1,
+           (unsigned char*)COAP_DEFAULT_URI_WELLKNOWN };
 
 static void
 handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu) {
@@ -1785,7 +1767,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_pdu_t *response = NULL;
   coap_opt_filter_t opt_filter;
   coap_resource_t *resource;
-  coap_key_t key;
   /* The respond field indicates whether a response must be treated
    * specially due to a No-Response option that declares disinterest
    * or interest in a specific response class. DEFAULT indicates that
@@ -1795,15 +1776,30 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_option_filter_clear(opt_filter);
 
   /* try to find the resource from the request URI */
-  coap_hash_request_uri(pdu, key);
-  resource = coap_get_resource_from_key(context, key);
+  str *uri_path = coap_get_uri_path(pdu);
+  if (!uri_path)
+    return;
+  resource = coap_get_resource_from_uri_path(context, *uri_path);
 
-  if (!resource) {
-    /* The resource was not found. Check if the request URI happens to
-     * be the well-known URI. In that case, we generate a default
-     * response, otherwise, we return 4.04 */
+  if ((resource == NULL) || (resource->is_unknown == 1)) {
+    /* The resource was not found or there is an unexpected match against the
+     * resource defined for handling unknown URIs.
+     * Check if the request URI happens to be the well-known URI, or if the
+     * unknown resource handler is defined, a PUT or optionally other methods,
+     * if configured, for the unknown handler.
+     *
+     * if well-known URI generate a default response
+     *
+     * else if unknown URI handler defined, call the unknown
+     *  URI handler (to allow for potential generation of resource
+     *  [RFC7272 5.8.3]) if the appropriate method is defined.
+     *
+     * else if DELETE return 2.02 (RFC7252: 5.8.4.  DELETE)
+     *
+     * else return 4.04 */
 
-    if (is_wkc(key)) {	/* request for .well-known/core */
+    if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
+      /* request for .well-known/core */
       if (pdu->code == COAP_REQUEST_GET) { /* GET */
 	info("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
 	response = coap_wellknown_response(context, session, pdu);
@@ -1812,25 +1808,55 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 	response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(405),
 	  opt_filter);
       }
+    } else if ((context->unknown_resource != NULL) &&
+               ((size_t)pdu->code - 1 <
+                (sizeof(resource->handler) / sizeof(coap_method_handler_t))) &&
+               (context->unknown_resource->handler[pdu->code - 1])) {
+      /*
+       * The unknown_resource can be used to handle undefined resources
+       * for a PUT request and can support any other registered handler
+       * defined for it
+       * Example set up code:-
+       *   r = coap_resource_init_unknown(hnd_put_unknown);
+       *   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_unknown);
+       *   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_unknown);
+       *   coap_add_resource(ctx, r);
+       */
+      resource = context->unknown_resource;
+    } else if (pdu->code == COAP_REQUEST_DELETE) {
+      /*
+       * Request for DELETE on non-existant resource (RFC7252: 5.8.4.  DELETE)
+       */
+      coap_log(LOG_DEBUG, "request for unknown resource '%*.*s',"
+                          " return 2.02\n",
+	                  (int)uri_path->length,
+	                  (int)uri_path->length,
+	                  uri_path->s);
+      response =
+	coap_new_error_response(pdu, COAP_RESPONSE_CODE(202),
+	  opt_filter);
     } else { /* request for any another resource, return 4.04 */
 
-      debug("request for unknown resource 0x%02x%02x%02x%02x, return 4.04\n",
-	key[0], key[1], key[2], key[3]);
+      coap_log(LOG_DEBUG, "request for unknown resource '%*.*s', return 4.04\n",
+	(int)uri_path->length, (int)uri_path->length, uri_path->s);
       response =
 	coap_new_error_response(pdu, COAP_RESPONSE_CODE(404),
 	  opt_filter);
     }
 
-    if (response && (no_response(pdu, response) != RESPONSE_DROP)) {
-      if (coap_send(session, response) == COAP_INVALID_TID)
-	warn("cannot send response for transaction %u\n", pdu->tid);
-    } else {
-      coap_delete_pdu(response);
+    if (!resource) {
+      if (response && (no_response(pdu, response) != RESPONSE_DROP)) {
+        if (coap_send(session, response) == COAP_INVALID_TID)
+          warn("cannot send response for transaction %u\n", pdu->tid);
+      } else {
+        coap_delete_pdu(response);
+      }
+
+      response = NULL;
+
+      coap_delete_string(uri_path);
+      return;
     }
-
-    response = NULL;
-
-    return;
   }
 
   /* the resource was found, check if there is a registered handler */
@@ -1841,8 +1867,9 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   if (h) {
     str *query = coap_get_query(pdu);
     int owns_query = 1;
-    debug("call custom handler for resource 0x%02x%02x%02x%02x\n",
-      key[0], key[1], key[2], key[3]);
+     coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
+      (int)resource->uri_path.length, (int)resource->uri_path.length,
+      resource->uri_path.s);
     response = coap_pdu_init(pdu->type == COAP_MESSAGE_CON
       ? COAP_MESSAGE_ACK
       : COAP_MESSAGE_NON,
@@ -1922,7 +1949,8 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       warn("cannot generate response\r\n");
     }
   } else {
-    if (WANT_WKC(pdu, key)) {
+    if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
+      /* request for .well-known/core */
       debug("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
       response = coap_wellknown_response(context, session, pdu);
       debug("have wellknown response %p\n", (void *)response);
@@ -1940,6 +1968,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   }
 
   assert(response == NULL);
+  coap_delete_string(uri_path);
 }
 
 static void

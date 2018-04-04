@@ -47,7 +47,6 @@
     <ClCompile Include="..\src\coap_tinydtls.c" />
     <ClCompile Include="..\src\debug.c" />
     <ClCompile Include="..\src\encode.c" />
-    <ClCompile Include="..\src\hashkey.c" />
     <ClCompile Include="..\src\mem.c" />
     <ClCompile Include="..\src\net.c" />
     <ClCompile Include="..\src\option.c" />
@@ -71,7 +70,6 @@
     <ClInclude Include="..\include\coap\coap_time.h" />
     <ClInclude Include="..\include\coap\debug.h" />
     <ClInclude Include="..\include\coap\encode.h" />
-    <ClInclude Include="..\include\coap\hashkey.h" />
     <ClInclude Include="..\include\coap\libcoap.h" />
     <ClInclude Include="..\include\coap\mem.h" />
     <ClInclude Include="..\include\coap\net.h" />

@@ -338,12 +338,11 @@ t_parse_uri13(void) {
     .used_size = sizeof(teststr)
   };
 
-  coap_key_t key;
+  str *uri_path = coap_get_uri_path(&pdu);
 
-  coap_hash_request_uri(&pdu, key);
-  
-  CU_ASSERT(sizeof(key) == sizeof(COAP_DEFAULT_WKC_HASHKEY) - 1);
-  CU_ASSERT_NSTRING_EQUAL(key, COAP_DEFAULT_WKC_HASHKEY, sizeof(key));
+  CU_ASSERT(uri_path->length == sizeof(COAP_DEFAULT_URI_WELLKNOWN)-1);
+  CU_ASSERT_NSTRING_EQUAL(uri_path->s, COAP_DEFAULT_URI_WELLKNOWN,
+                          sizeof(COAP_DEFAULT_URI_WELLKNOWN)-1);
 }
 
 static void
