@@ -3,7 +3,7 @@
  * Copyright (C) 2012,2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 #include "coap_config.h"
@@ -30,8 +30,8 @@ t_parse_uri1(void) {
     CU_ASSERT(uri.path.length == 16);
     CU_ASSERT_NSTRING_EQUAL(uri.path.s, ".well-known/core", 16);
 
-    CU_ASSERT(uri.query.length == 0);    
-    CU_ASSERT(uri.query.s == NULL);    
+    CU_ASSERT(uri.query.length == 0);
+    CU_ASSERT(uri.query.s == NULL);
   } else {
     CU_FAIL("uri parser error");
   }
@@ -53,8 +53,8 @@ t_parse_uri2(void) {
     CU_ASSERT(uri.path.length == 16);
     CU_ASSERT_NSTRING_EQUAL(uri.path.s, ".well-known/core", 16);
 
-    CU_ASSERT(uri.query.length == 0);    
-    CU_ASSERT(uri.query.s == NULL);    
+    CU_ASSERT(uri.query.length == 0);
+    CU_ASSERT(uri.query.s == NULL);
   } else {
     CU_FAIL("uri parser error");
   }
@@ -75,7 +75,7 @@ t_parse_uri3(void) {
 
     CU_ASSERT(uri.path.length == 0);
 
-    CU_ASSERT(uri.query.length == 13);    
+    CU_ASSERT(uri.query.length == 13);
     CU_ASSERT_NSTRING_EQUAL(uri.query.s, "foo&bla=fasel", 13);
   } else {
     CU_FAIL("uri parser error");
@@ -131,8 +131,8 @@ t_parse_uri6(void) {
     CU_ASSERT(uri.path.length == 16);
     CU_ASSERT_NSTRING_EQUAL(uri.path.s, ".well-known/core", 16);
 
-    CU_ASSERT(uri.query.length == 0);    
-    CU_ASSERT(uri.query.s == NULL);    
+    CU_ASSERT(uri.query.length == 0);
+    CU_ASSERT(uri.query.s == NULL);
   } else {
     CU_FAIL("uri parser error");
   }
@@ -167,7 +167,7 @@ t_parse_uri7(void) {
     CU_ASSERT_NSTRING_EQUAL(uri.path.s, "some_resource/with/multiple/segments", 36);
 
     CU_ASSERT(uri.query.length == 0);
-    CU_ASSERT(uri.query.s == NULL);    
+    CU_ASSERT(uri.query.s == NULL);
 
     /* check path segments */
     result = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
@@ -223,8 +223,8 @@ t_parse_uri10(void) {
     CU_ASSERT(uri.path.length == 13);
     CU_ASSERT_NSTRING_EQUAL(uri.path.s, "absolute/path", 13);
 
-    CU_ASSERT(uri.query.length == 0);    
-    CU_ASSERT(uri.query.s == NULL);    
+    CU_ASSERT(uri.query.length == 0);
+    CU_ASSERT(uri.query.s == NULL);
   } else {
     CU_FAIL("uri parser error");
   }
@@ -232,7 +232,7 @@ t_parse_uri10(void) {
 
 static void
 t_parse_uri11(void) {
-  char teststr[] = 
+  char teststr[] =
     "coap://xn--18j4d.example/%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF";
   int result;
   coap_uri_t uri;
@@ -243,8 +243,8 @@ t_parse_uri11(void) {
      preceded by a dummy option indicating that holds the (dummy)
      delta value 0 and the actual segment length. */
   const unsigned char checkbuf[] = {
-    0x0d, 0x02, 0xE3, 0x81, 0x93, 0xE3, 0x82, 0x93, 
-    0xE3, 0x81, 0xAB, 0xE3, 0x81, 0xA1, 0xE3, 0x81, 
+    0x0d, 0x02, 0xE3, 0x81, 0x93, 0xE3, 0x82, 0x93,
+    0xE3, 0x81, 0xAB, 0xE3, 0x81, 0xA1, 0xE3, 0x81,
     0xAF
   };
 
@@ -256,12 +256,12 @@ t_parse_uri11(void) {
     CU_ASSERT(uri.port == COAP_DEFAULT_PORT);
 
     CU_ASSERT(uri.path.length == 45);
-    CU_ASSERT_NSTRING_EQUAL(uri.path.s, 
+    CU_ASSERT_NSTRING_EQUAL(uri.path.s,
 			    "%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF", 45);
 
-    CU_ASSERT(uri.query.length == 0);    
-    CU_ASSERT(uri.query.s == NULL);    
-    
+    CU_ASSERT(uri.query.length == 0);
+    CU_ASSERT(uri.query.s == NULL);
+
     /* check path segments */
     result = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
     CU_ASSERT(result == 1);
@@ -316,22 +316,22 @@ t_parse_uri12(void) {
   }
 }
 
-#ifdef _MSC_VER 
-#  define ALIGNED(x) 
-#else 
-#  define ALIGNED(x) __attribute__ ((aligned (x))) 
-#endif 
+#ifdef _MSC_VER
+#  define ALIGNED(x)
+#else
+#  define ALIGNED(x) __attribute__ ((aligned (x)))
+#endif
 
 static void
 t_parse_uri13(void) {
-  uint8_t teststr[] ALIGNED(8) = { 
+  uint8_t teststr[] ALIGNED(8) = {
     0x80, 0x03, 'f',  'o',
-    'o',  0x3b, '.',  'w',  'e',  'l',  'l',  '-',  
-    'k',  'n',  'o',  'w',  'n',  0x04,  'c', 'o',  
+    'o',  0x3b, '.',  'w',  'e',  'l',  'l',  '-',
+    'k',  'n',  'o',  'w',  'n',  0x04,  'c', 'o',
     'r',  'e'
   };
 
-  coap_pdu_t pdu = { 
+  coap_pdu_t pdu = {
     .max_size = sizeof(teststr),
     .token_length = 0,
     .token = teststr,
@@ -428,13 +428,130 @@ t_parse_uri17(void) {
   }
 }
 
+static void
+t_parse_uri18(void) {
+  coap_pdu_t pdu = {
+    .max_size = 0,
+    .token_length = 0,
+    .token = (uint8_t *)"",
+    .used_size = 0
+  };
+
+  str *uri_path = coap_get_uri_path(&pdu);
+
+  CU_ASSERT(uri_path->length == 0);
+  /* strings are stored with terminating zero */
+  CU_ASSERT_NSTRING_EQUAL(uri_path->s, "", 1);
+}
+
+static void
+t_parse_uri19(void) {
+  uint8_t teststr[] ALIGNED(8) = {
+    0xb3, 'f', 'o', 'o',
+    0x00                  /* "foo/" as Uri-Path options */
+  };
+
+  coap_pdu_t pdu = {
+    .max_size = sizeof(teststr),
+    .token_length = 0,
+    .token = teststr,
+    .used_size = sizeof(teststr)
+  };
+
+  str *uri_path = coap_get_uri_path(&pdu);
+
+  CU_ASSERT(uri_path->length == 4);
+  CU_ASSERT_NSTRING_EQUAL(uri_path->s, "foo/", 4);
+}
+
+static void
+t_parse_uri20(void) {
+  uint8_t teststr[] ALIGNED(8) = {
+    0xb0, 0x00                  /* "//" as Uri-Path options */
+  };
+
+  coap_pdu_t pdu = {
+    .max_size = sizeof(teststr),
+    .token_length = 0,
+    .token = teststr,
+    .used_size = sizeof(teststr)
+  };
+
+  str *uri_path = coap_get_uri_path(&pdu);
+
+  /* The leading '/' is stripped hence only one '/' remains. */
+  CU_ASSERT(uri_path->length == 1);
+  CU_ASSERT_NSTRING_EQUAL(uri_path->s, "/", 1);
+}
+
+static void
+t_parse_uri21(void) {
+  uint8_t teststr[] ALIGNED(8) = {
+    0xb0, 0x03, 'f', 'o', 'o'   /* "//foo" as Uri-Path options */
+  };
+
+  coap_pdu_t pdu = {
+    .max_size = sizeof(teststr),
+    .token_length = 0,
+    .token = teststr,
+    .used_size = sizeof(teststr)
+  };
+
+  str *uri_path = coap_get_uri_path(&pdu);
+
+  /* The leading '/' is stripped hence only one '/' remains. */
+  CU_ASSERT(uri_path->length == 4);
+  CU_ASSERT_NSTRING_EQUAL(uri_path->s, "/foo", 4);
+}
+
+static void
+t_parse_uri22(void) {
+  uint8_t teststr[] ALIGNED(8) = {
+    /* characters that are not percent-encoded in a path segment */
+    0xba, '-', '.', '_', '~', '!', '$', '&', '\'', '(', ')',
+    0x05, '*', '+', ',', ';', '='
+  };
+
+  coap_pdu_t pdu = {
+    .max_size = sizeof(teststr),
+    .token_length = 0,
+    .token = teststr,
+    .used_size = sizeof(teststr)
+  };
+
+  str *uri_path = coap_get_uri_path(&pdu);
+
+  CU_ASSERT(uri_path->length == 16);
+  CU_ASSERT_NSTRING_EQUAL(uri_path->s, "-._~!$&'()/*+,;=", 16);
+}
+
+static void
+t_parse_uri23(void) {
+  uint8_t teststr[] ALIGNED(8) = {
+    /* characters that must be percent-encoded in a path segment */
+    0xb5, '%', ' ', '#', '[', ']'
+  };
+
+  coap_pdu_t pdu = {
+    .max_size = sizeof(teststr),
+    .token_length = 0,
+    .token = teststr,
+    .used_size = sizeof(teststr)
+  };
+
+  str *uri_path = coap_get_uri_path(&pdu);
+
+  CU_ASSERT(uri_path->length == 15);
+  CU_ASSERT_NSTRING_EQUAL(uri_path->s, "%25%20%23%5B%5D", 15);
+}
+
 CU_pSuite
 t_init_uri_tests(void) {
   CU_pSuite suite;
 
   suite = CU_add_suite("uri parser", NULL, NULL);
   if (!suite) {			/* signal error */
-    fprintf(stderr, "W: cannot add uri parser test suite (%s)\n", 
+    fprintf(stderr, "W: cannot add uri parser test suite (%s)\n",
 	    CU_get_error_msg());
 
     return NULL;
@@ -463,6 +580,12 @@ t_init_uri_tests(void) {
   URI_TEST(suite, t_parse_uri15);
   URI_TEST(suite, t_parse_uri16);
   URI_TEST(suite, t_parse_uri17);
+  URI_TEST(suite, t_parse_uri18);
+  URI_TEST(suite, t_parse_uri19);
+  URI_TEST(suite, t_parse_uri20);
+  URI_TEST(suite, t_parse_uri21);
+  URI_TEST(suite, t_parse_uri22);
+  URI_TEST(suite, t_parse_uri23);
 
   return suite;
 }
