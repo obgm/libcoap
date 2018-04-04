@@ -629,6 +629,8 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
   if (resource->subscribers && s) {
     LL_DELETE(resource->subscribers, s);
     coap_session_release( session );
+    if (s->query)
+      coap_delete_string(s->query);
     COAP_FREE_TYPE(subscription,s);
   }
 
@@ -643,6 +645,8 @@ coap_delete_observers(coap_context_t *context, coap_session_t *session) {
       if (s->session == session) {
 	LL_DELETE(resource->subscribers, s);
 	coap_session_release(session);
+        if (s->query)
+          coap_delete_string(s->query);
 	COAP_FREE_TYPE(subscription, s);
       }
     }
@@ -806,6 +810,8 @@ coap_remove_failed_observers(coap_context_t *context,
 	coap_cancel_all_messages(context, obs->session, 
 				 obs->token, obs->token_length);
 	coap_session_release( obs->session );
+        if (obs->query)
+          coap_delete_string(obs->query);
 	COAP_FREE_TYPE(subscription, obs);
       }
       break;			/* break loop if observer was found */
