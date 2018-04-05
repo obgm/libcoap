@@ -7,6 +7,7 @@ global:
   coap_add_observer;
   coap_add_option;
   coap_add_option_later;
+  coap_add_optlist_pdu;
   coap_add_resource;
   coap_address_equals;
   coap_add_token;
@@ -32,6 +33,7 @@ global:
   coap_delete_node;
   coap_delete_observer;
   coap_delete_observers;
+  coap_delete_optlist;
   coap_delete_pdu;
   coap_delete_resource;
   coap_delete_string;
@@ -66,6 +68,7 @@ global:
   coap_handle_event;
   coap_handle_failed_notify;
   coap_insert_node;
+  coap_insert_optlist;
   coap_is_mcast;
   coap_log_impl;
   coap_malloc_endpoint;
@@ -81,6 +84,7 @@ global:
   coap_new_endpoint;
   coap_new_error_response;
   coap_new_node;
+  coap_new_optlist;
   coap_new_pdu;
   coap_new_server_session;
   coap_new_string;
