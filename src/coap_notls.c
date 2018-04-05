@@ -50,7 +50,7 @@ int coap_dtls_context_set_psk(coap_context_t *ctx UNUSED,
   return 0;
 }
 
-int coap_dtls_context_check_keys_enabled(coap_context_t *ctx)
+int coap_dtls_context_check_keys_enabled(coap_context_t *ctx UNUSED)
 {
   return 0;
 }
