@@ -102,6 +102,12 @@ typedef struct coap_resource_t {
   */
   unsigned int observe;
 
+  /**
+   * This pointer is under user control. It can be used to store context for
+   * the coap handler.
+   */
+  void *user_data;
+
 } coap_resource_t;
 
 /**
@@ -147,6 +153,32 @@ coap_resource_set_mode(coap_resource_t *resource, int mode) {
   resource->flags = (resource->flags &
     ~(COAP_RESOURCE_FLAGS_NOTIFY_CON|COAP_RESOURCE_FLAGS_NOTIFY_NON)) |
     (mode & (COAP_RESOURCE_FLAGS_NOTIFY_CON|COAP_RESOURCE_FLAGS_NOTIFY_NON));
+}
+
+/**
+ * Sets the user_data. The user_data is exclusively used by the library-user
+ * and can be used as context in the handler functions.
+ *
+ * @param r	Resource to attach the data to
+ * @param data	Data to attach to the user_data field. This pointer is only used for
+ *		storage, the data remains under user control
+ */
+COAP_STATIC_INLINE void
+coap_resource_set_userdata(coap_resource_t *r, void *data) {
+  r->user_data = data;
+}
+
+/**
+ * Gets the user_data. The user_data is exclusively used by the library-user
+ * and can be used as context in the handler functions.
+ *
+ * @param r	Resource to retrieve the user_darta from
+ *
+ * @return	The user_data pointer
+ */
+COAP_STATIC_INLINE void *
+coap_resource_get_userdata(coap_resource_t *r) {
+  return r->user_data;
 }
 
 /**
