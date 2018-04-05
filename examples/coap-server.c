@@ -31,7 +31,6 @@
 #endif
 
 #include <coap/coap.h>
-#include <coap/coap_dtls.h>
 
 #define COAP_RESOURCE_CHECK_TIME 2
 
@@ -93,7 +92,7 @@ hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
 }
 
 static void
-hnd_get_time(coap_context_t  *ctx,
+hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
              struct coap_resource_t *resource,
              coap_session_t *session,
              coap_pdu_t *request,
@@ -252,7 +251,7 @@ check_async(coap_context_t *ctx,
              : COAP_MESSAGE_NON,
              COAP_RESPONSE_CODE(205), 0, size);
   if (!response) {
-    debug("check_async: insufficient memory, we'll try later\n");
+    coap_log(LOG_DEBUG, "check_async: insufficient memory, we'll try later\n");
     async->appdata =
       (void *)((unsigned long)async->appdata + 15 * COAP_TICKS_PER_SECOND);
     return;
@@ -266,7 +265,7 @@ check_async(coap_context_t *ctx,
   coap_add_data(response, 4, (unsigned char *)"done");
 
   if (coap_send(async->session, response) == COAP_INVALID_TID) {
-    debug("check_async: cannot send response for message\n");
+    coap_log(LOG_DEBUG, "check_async: cannot send response for message\n");
   }
   coap_remove_async(ctx, async->session, async->id, &tmp);
   coap_free_async(async);
@@ -375,9 +374,11 @@ get_context(const char *node, const char *port) {
       memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
       addrs = addr;
       if (addr.addr.sa.sa_family == AF_INET) {
-        addrs.addr.sin.sin_port = htons(ntohs(addr.addr.sin.sin_port) + 1);
+        uint16_t temp = ntohs(addr.addr.sin.sin_port) + 1;
+        addrs.addr.sin.sin_port = htons(temp);
       } else if (addr.addr.sa.sa_family == AF_INET6) {
-        addrs.addr.sin6.sin6_port = htons(ntohs(addr.addr.sin6.sin6_port) + 1);
+        uint16_t temp = ntohs(addr.addr.sin6.sin6_port) + 1;
+        addrs.addr.sin6.sin6_port = htons(temp);
       } else {
         goto finish;
       }
