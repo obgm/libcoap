@@ -394,6 +394,49 @@ coap_print_status_t coap_print_wellknown(coap_context_t *,
 
 void coap_handle_failed_notify(coap_context_t *, coap_session_t *, const str *);
 
+/**
+ * Set whether a @p resource is observable.  If the resource is observable
+ * and the client has set the COAP_OPTION_OBSERVE in a request packet, then
+ * whenever the state of the resource changes (a call to
+ * coap_resource_trigger_observe()), an Observer response will get sent.
+ *
+ * @param resource The CoAP resource to use.
+ * @param mode     @c 1 if Observable is to be set, @c 0 otherwise.
+ *
+ */
+COAP_STATIC_INLINE void
+coap_resource_set_get_observable(coap_resource_t *resource, int mode) {
+  resource->observable = mode ? 1 : 0;
+}
+
+/**
+ * Initiate the sending of an Observe packet for all observers of @p resource,
+ * optionally matching @p query if not NULL
+ *
+ * @param resource The CoAP resource to use.
+ * @param query    The Query to match against or NULL  
+ *
+ * @return         @c 1 if the Observe has been triggered, @c 0 otherwise.
+ */
+int coap_resource_notify_observers(coap_resource_t *resource, const str *query);
+
+/**
+ * Get the UriPath from a @p resource.
+ *
+ * @param resource The CoAP resource to check.
+ *
+ * @return         The UriPath if it exists or @c NULL otherwise.
+ */
+COAP_STATIC_INLINE const str*
+coap_resource_get_uri_path(coap_resource_t *resource) {
+  if (resource)
+    return &resource->uri_path;
+  return NULL;
+}
+
+/**
+ * @deprecated use coap_resource_notify_observers() instead.
+ */
 int coap_resource_set_dirty(coap_resource_t *r, const str *query);
 
 #endif /* _COAP_RESOURCE_H_ */

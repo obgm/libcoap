@@ -360,7 +360,7 @@ message_handler(struct coap_context_t *ctx,
   if (COAP_RESPONSE_CLASS(received->code) == 2) {
 
     /* set obs timer if we have successfully subscribed a resource */
-    if (!obs_started && coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter)) {
+    if (!obs_started && coap_check_option(received, COAP_OPTION_OBSERVE, &opt_iter)) {
       debug("observation relationship established, set timeout to %d\n", obs_seconds);
       obs_started = 1;
       obs_ms = obs_seconds * 1000;
@@ -532,7 +532,7 @@ message_handler(struct coap_context_t *ctx,
   assert(pdu == NULL);
 
   /* our job is done, we can exit at any time */
-  ready = coap_check_option(received, COAP_OPTION_SUBSCRIPTION, &opt_iter) == NULL;
+  ready = coap_check_option(received, COAP_OPTION_OBSERVE, &opt_iter) == NULL;
 }
 
 static void
@@ -819,7 +819,7 @@ set_blocksize(void) {
 static void
 cmdline_subscribe(char *arg) {
   obs_seconds = atoi(arg);
-  coap_insert(&optlist, new_option_node(COAP_OPTION_SUBSCRIPTION, 0, NULL));
+  coap_insert(&optlist, new_option_node(COAP_OPTION_OBSERVE, 0, NULL));
 }
 
 static int
