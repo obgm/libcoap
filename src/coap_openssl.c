@@ -745,6 +745,8 @@ void *coap_dtls_new_client_session(coap_session_t *session) {
   SSL_set_options(ssl, SSL_OP_COOKIE_EXCHANGE);
   SSL_set_mtu(ssl, session->mtu);
 
+  session->dtls_timeout_count = 0;
+
   r = SSL_connect(ssl);
   if (r == -1) {
     int ret = SSL_get_error(ssl, r);
@@ -835,7 +837,9 @@ void coap_dtls_handle_timeout(coap_session_t *session) {
   SSL *ssl = (SSL *)session->tls;
 
   assert(ssl != NULL);
-  if (DTLSv1_handle_timeout(ssl) < 0) {
+  if (((session->state == COAP_SESSION_STATE_HANDSHAKE) &&
+       (++session->dtls_timeout_count > session->max_retransmit)) || 
+      (DTLSv1_handle_timeout(ssl) < 0)) {
     /* Too many retries */
     coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
   }
