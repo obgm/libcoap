@@ -25,22 +25,4 @@ coap_server_LDADD = $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_API_VER
 coap_rd_SOURCES = coap-rd.c
 coap_rd_LDADD = $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_API_VERSION).la
 
-# build manuals only if 'BUILD_DOCUMENTATION' is defined
-if BUILD_DOCUMENTATION
-
-# building the manpages
-TXT5 = coap-client.txt \
-       coap-rd.txt \
-       coap-server.txt
-
-MAN5 = $(TXT5:%.txt=%.5)
-
-man5_MANS = $(MAN5)
-
-.txt.5:
-	$(A2X) --doctype manpage --format manpage $<
-
-CLEANFILES = *.5
-endif # BUILD_DOCUMENTATION
-
 endif # BUILD_EXAMPLES

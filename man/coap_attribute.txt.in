@@ -1,0 +1,140 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc,tw=0:
+
+coap_attribute(3)
+=================
+:doctype: manpage
+:man source:   coap_attribute
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_attribute, coap_add_attr, coap_find_attr
+- work with CoAP attributes
+
+SYNOPSIS
+--------
+*#include <coap/coap.h>*
+
+*coap_attr_t *coap_add_attr(coap_resource_t *_resource_, const unsigned char 
+*_name_, size_t _nlen_, const unsigned char *_value_, size_t _vlen_, 
+int _flags_);*
+
+*coap_attr_t *coap_find_attr(coap_resource_t *_resource_, const unsigned 
+char *_name_, size_t _nlen_);*
+
+Link with -lcoap-@LIBCOAP_API_VERSION@.
+
+DESCRIPTION
+-----------
+CoAP Resources on a CoAP Server need to be created, updated etc. The URI in 
+the request packet defines the resource to work with, with possibly the Query 
+referring to a sub-resource.
+When resources are configured on the CoAP server, the URI to match against 
+is specified. 
+Callback Handlers are then added to the resource to handle the different 
+request methods.
+Adding Attributes allows textual information to be added to the resource 
+which can then be reported back to any client doing a "GET .well-known/core" 
+request. 
+
+Attributes are automatically freed when a Resource is deleted.
+
+The *coap_add_attr*() function
+registers a new attribute called _name_ with a name length of _nlen_ 
+for the _resource_. 
+The value of the attribute is _value_ with a length of _vlen_.
+_flags_ can be one or more of the following, which, if set, defines what is 
+to be internally freed off when the attribute is deleted with 
+*coap_delete_resource*().
+It is imperative that _name_ and _value_ point to data that is valid during 
+the lifetime of the attribute.
+
+*COAP_ATTR_FLAGS_RELEASE_NAME*::
+Free off _name_ when attribute is deleted with *coap_delete_resource*().
+
+*COAP_ATTR_FLAGS_RELEASE_NAME*::
+Free off _value_ when attribute is deleted with *coap_delete_resource*().
+
+The *coap_find_attr*() function returns the attribute with the _name_ with 
+a length of _nlen_, if found, associated with _resource_.
+
+RETURN VALUES
+-------------
+*coap_add_attr*() function returns a pointer to the attribute that was 
+created or NULL if there is a malloc failure. 
+
+*coap_find_attr*() function returns a pointer to the first matching 
+attribute or NULL if the _name_ was not found. 
+
+EXAMPLE
+-------
+*Initialize Resources*
+
+[source, c]
+--
+#include <coap/coap.h>
+
+static void
+init_resources(coap_context_t *ctx) { 
+
+  coap_resource_t *r;
+
+  /* Create a resource to return general information */
+  r = coap_resource_init(NULL, 0, 0);
+  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_index);
+
+  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
+  coap_add_attr(r, (unsigned char *)"title", 5,
+                (unsigned char *)"\"General Info\"", 14, 0);
+
+  coap_add_resource(ctx, r);
+
+  /* Create a resource to return return or update time */
+  r = coap_resource_init((unsigned char *)"time", 4,
+                         COAP_RESOURCE_FLAGS_NOTIFY_CON);
+  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
+  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
+  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
+
+  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
+  coap_add_attr(r, (unsigned char *)"title", 5,
+                (unsigned char *)"\"Internal Clock\"", 16, 0);
+  coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"\"secs\"", 6,
+                0);
+  coap_resource_set_get_observable(r, 1);
+  coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"\"clock\"", 7,
+                0);
+
+  coap_add_resource(ctx, r);
+
+  /* Create a resource to handle unknown URIs */
+  r = coap_resource_init((const u_char*)"/-unknown-", sizeof ("/-unknown-")-1,
+                         0);
+  coap_register_handler(r, COAP_REQUEST_PUT,    hnd_unknown);
+  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_unknown);
+  coap_register_handler(r, COAP_REQUEST_GET,    hnd_unknown);
+
+  coap_add_resource_unknown(ctx, r);
+
+}
+--
+
+SEE ALSO
+--------
+*coap_resource*(3) and *coap_handler*(3)
+
+FURTHER INFORMATION
+-------------------
+See RFC7252 `The Constrained Application Protocol (CoAP)' for further 
+information.
+
+BUGS
+----
+Please report bugs on the mailing list for libcoap:
+libcoap-developers@lists.sourceforge.net
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>
