@@ -42,6 +42,7 @@ typedef enum {
   COAP_DTLS_SESSION,
 #endif
   COAP_SESSION,
+  COAP_OPTLIST,
 } coap_memory_tag_t;
 
 #ifndef WITH_LWIP
