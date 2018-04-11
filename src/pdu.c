@@ -205,6 +205,11 @@ coap_add_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
   if (!pdu || len > 8)
     return 0;
 
+  if (pdu->used_size) {
+    coap_log(LOG_WARNING,
+             "coap_add_token: The token must defined first. Token ignored\n");
+    return 0;
+  }
   if (!coap_pdu_check_resize(pdu, len))
     return 0;
   pdu->token_length = (uint8_t)len;
