@@ -24,7 +24,9 @@ int _flags_);*
 *coap_attr_t *coap_find_attr(coap_resource_t *_resource_, const unsigned 
 char *_name_, size_t _nlen_);*
 
-Link with -lcoap-@LIBCOAP_API_VERSION@.
+Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
+or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+type.
 
 DESCRIPTION
 -----------
@@ -51,6 +53,7 @@ to be internally freed off when the attribute is deleted with
 It is imperative that _name_ and _value_ point to data that is valid during 
 the lifetime of the attribute.
 
+[horizontal]
 *COAP_ATTR_FLAGS_RELEASE_NAME*::
 Free off _name_ when attribute is deleted with *coap_delete_resource*().
 
