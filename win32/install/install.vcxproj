@@ -180,7 +180,6 @@ if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client$(DbgSuffix).exe coap-client$(DbgSuffix).pdb coap-server$(DbgSuffix).exe coap-server$(DbgSuffix).pdb coap-rd$(DbgSuffix).exe coap-rd$(DbgSuffix).pdb libcoap-1$(DbgSuffix).dll libcoap-1$(DbgSuffix).pdb ) do copy "$(IntDir)%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
 copy "$(SolutionDir)$(Configuration)\libcoap-1$(DbgSuffix).lib" "$(OutDir)lib"
-copy "$(SolutionDir)$(Configuration)\libcoap-1$(DbgSuffix).pdb" "$(OutDir)lib"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -205,7 +204,6 @@ if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coap-rd.exe coap-rd.pdb libcoap-1.dll libcoap-1.pdb ) do copy "$(IntDir)%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
 copy "$(SolutionDir)$(Configuration)\libcoap-1.lib" "$(OutDir)lib"
-copy "$(SolutionDir)$(Configuration)\libcoap-1.pdb" "$(OutDir)lib"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -229,7 +227,6 @@ if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client$(DbgSuffix).exe coap-client$(DbgSuffix).pdb coap-server$(DbgSuffix).exe coap-server$(DbgSuffix).pdb coap-rd$(DbgSuffix).exe coap-rd$(DbgSuffix).pdb libcoap-1$(DbgSuffix).dll libcoap-1$(DbgSuffix).pdb ) do copy "$(IntDir)%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
 copy "$(SolutionDir)$(Configuration)\libcoap-1$(DbgSuffix).lib" "$(OutDir)lib"
-copy "$(SolutionDir)$(Configuration)\libcoap-1$(DbgSuffix).pdb" "$(OutDir)lib"
 </Command>
       <Message>Installing</Message>
     </PostBuildEvent>
@@ -254,7 +251,6 @@ if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coap-rd.exe coap-rd.pdb libcoap-1.dll libcoap-1.pdb ) do copy "$(IntDir)%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
 copy "$(SolutionDir)$(Configuration)\libcoap-1.lib" "$(OutDir)lib"
-copy "$(SolutionDir)$(Configuration)\libcoap-1.pdb" "$(OutDir)lib"
 </Command>
       <Message>Installing</Message>
     </PostBuildEvent>
