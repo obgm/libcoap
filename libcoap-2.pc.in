@@ -7,6 +7,6 @@ Name: @PACKAGE_NAME@
 Description: C-Implementation of CoAP.
 Version: @PACKAGE_VERSION@
 URL: @PACKAGE_URL@
-Libs: -L${libdir} -lcoap-@LIBCOAP_API_VERSION@
+Libs: -L${libdir} -lcoap-@LIBCOAP_NAME_SUFFIX@
 Libs.private: @DTLS_LIBS@
 Cflags: -I${includedir}

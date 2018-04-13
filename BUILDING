@@ -1,0 +1,49 @@
+To build the libcoap libraries, you need to do the following
+
+Unpack the distribution package file
+Change into the top level directory of the unpackaged files
+
+Run the following commands
+
+./autogen.sh
+./configure
+make
+make install
+
+./autogen.sh will fail if there is a required package for buildling libcoap 
+that is missing. Install the missing package and try ./autogen.sh again.
+
+It is possible that you may need to provide some options to ./configure
+to customize your installation.
+
+In particular you may need to define which (D)TLS ligrary to use as well as
+disable some building of documentation.
+
+General configure instructions can be found in INSTALL, which is built
+by ./autogen.sh
+
+./configure --help
+gives the specific options available to libcoap.
+
+Some examples are:-
+
+# No DTLS
+./configure --enable-tests --disable-documentation --enable-examples --disable-dtls --enable-shared
+
+# With TinyDTLS
+./configure --enable-tests --disable-documentation --enable-examples --with-tinydtls --disable-shared
+
+# With OpenSSL
+./configure --with-openssl --enable-tests --enable-shared
+
+Note: --disable-documentation disables the building of doxygen and man page
+files.  If you want to only disable one of them, use --disable-doxygen or
+--disable-manpages.  Doxygen requires the program doxygen and man pages require
+the program a2x to build the appropriate files.
+
+If you need to rebuild the libcoap-*.{map,sym} files to update any exposed
+function changes, run
+
+make update-map-file
+
+prior to running 'make'.
