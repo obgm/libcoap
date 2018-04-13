@@ -1326,7 +1326,9 @@ main(int argc, char **argv) {
 
   while ( !(ready && coap_can_exit(ctx)) ) {
 
-    result = coap_run_once( ctx, wait_ms == 0 ? obs_ms : obs_ms == 0 ? wait_ms : min( wait_ms, obs_ms ) );
+    result = coap_run_once( ctx, wait_ms == 0 ?
+                                 obs_ms : obs_ms == 0 ?
+                                 min(wait_ms, 1000) : min( wait_ms, obs_ms ) );
 
     if ( result >= 0 ) {
       if ( wait_ms > 0 && !wait_ms_reset ) {
