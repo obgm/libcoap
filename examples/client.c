@@ -512,8 +512,7 @@ usage( const char *program, const char *version) {
      "\t\t[-u user] [-k key] [-r] URI\n\n"
      "\tURI can be an absolute or relative coap URI,\n"
      "\t-a addr\tthe local interface address to use\n"
-     "\t-A type...\taccepted media types as comma-separated list of\n"
-     "\t\t\tsymbolic or numeric values\n"
+     "\t-A type...\taccepted media type\n"
      "\t-t type\t\tcontent format for given resource for PUT/POST\n"
      "\t-b [num,]size\tblock size to be used in GET/PUT/POST requests\n"
      "\t       \t\t(value must be a multiple of 16 not larger than 1024)\n"
@@ -578,44 +577,30 @@ cmdline_content_type(char *arg, uint16_t key) {
     { 255, NULL }
   };
   coap_optlist_t *node;
-  unsigned char i, value[10];
-  int valcnt = 0;
-  unsigned char buf[2];
-  char *p, *q = arg;
+  unsigned char i;
+  uint16_t value;
+  uint8_t buf[2];
 
-  while (q && *q) {
-    p = strchr(q, ',');
-
-    if (isdigit(*q)) {
-      if (p)
-        *p = '\0';
-      value[valcnt++] = atoi(q);
-    } else {
-      for (i=0;
-           content_types[i].media_type &&
-           strncmp(q, content_types[i].media_type, p ? (size_t)(p-q) : strlen(q)) != 0 ;
-           ++i)
+  if (isdigit(*arg)) {
+    value = atoi(arg);
+  } else {
+    for (i=0;
+         content_types[i].media_type &&
+           strncmp(arg, content_types[i].media_type, strlen(arg)) != 0 ;
+         ++i)
       ;
 
-      if (content_types[i].media_type) {
-        value[valcnt] = content_types[i].code;
-        valcnt++;
-      } else {
-        coap_log(LOG_WARNING, "W: unknown content-format '%s'\n",arg);
-      }
+    if (content_types[i].media_type) {
+      value = content_types[i].code;
+    } else {
+      coap_log(LOG_WARNING, "W: unknown content-format '%s'\n",arg);
+      return;
     }
-
-    if (!p || key == COAP_OPTION_CONTENT_TYPE)
-      break;
-
-    q = p+1;
   }
 
-  for (i = 0; i < valcnt; ++i) {
-    node = coap_new_optlist(key, coap_encode_var_safe(buf, sizeof(buf), value[i]), buf);
-    if (node) {
-      coap_insert_optlist(&optlist, node);
-    }
+  node = coap_new_optlist(key, coap_encode_var_safe(buf, sizeof(buf), value), buf);
+  if (node) {
+    coap_insert_optlist(&optlist, node);
   }
 }
 
