@@ -500,12 +500,12 @@ coap_free_context(coap_context_t *context) {
 
   coap_delete_all_resources(context);
 
-  if (context->dtls_context)
-    coap_dtls_free_context(context->dtls_context);
-
   LL_FOREACH_SAFE(context->endpoint, ep, tmp) {
     coap_free_endpoint(ep);
   }
+
+  if (context->dtls_context)
+    coap_dtls_free_context(context->dtls_context);
 
   if (context->psk_hint)
     coap_free(context->psk_hint);
