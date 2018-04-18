@@ -41,7 +41,7 @@ typedef struct {
  * returns @c NULL.
  */
 #define COAP_OPT_BLOCK_LAST(opt) \
-  (coap_opt_length(opt) ? (coap_opt_const_value(opt) + (coap_opt_length(opt)-1)) : 0)
+  (coap_opt_length(opt) ? (coap_opt_value(opt) + (coap_opt_length(opt)-1)) : 0)
 
 /** Returns the value of the More-bit of a Block option @p opt. */
 #define COAP_OPT_BLOCK_MORE(opt) \
