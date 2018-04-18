@@ -222,7 +222,7 @@ coap_register_pong_handler(coap_context_t *context,
  * @param type The option type to register.
  */
 COAP_STATIC_INLINE void
-coap_register_option(coap_context_t *ctx, unsigned char type) {
+coap_register_option(coap_context_t *ctx, uint16_t type) {
   coap_option_setb(ctx->known_options, type);
 }
 
