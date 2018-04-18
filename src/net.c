@@ -1310,7 +1310,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_tid_t
   do {
     p = q;
     q = q->next;
-  } while (q && session != q->session && id != q->id);
+  } while (q && (session != q->session || id != q->id));
 
   if (q) {			/* found transaction */
     p->next = q->next;
