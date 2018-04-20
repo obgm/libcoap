@@ -274,7 +274,7 @@ coap_dtls_new_session(coap_session_t *session) {
     dtls_session_init(dtls_session);
     put_session_addr(&session->remote_addr, dtls_session);
     dtls_session->ifindex = session->ifindex;
-    debug("*** new session %p\n", dtls_session);
+    debug("*** new session %p\n", (void *)dtls_session);
   }
 
   return dtls_session;
