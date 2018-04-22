@@ -120,9 +120,9 @@ strnlen(const char *s, size_t maxlen) {
 #endif /* HAVE_STRNLEN */
 
 static size_t
-print_readable( const unsigned char *data, size_t len,
+print_readable( const uint8_t *data, size_t len,
 		unsigned char *result, size_t buflen, int encode_always ) {
-  const unsigned char hex[] = "0123456789ABCDEF";
+  const uint8_t hex[] = "0123456789ABCDEF";
   size_t cnt = 0;
   assert(data || len == 0);
 
@@ -188,7 +188,7 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
   }
 
   /* Cast needed for Windows, since it doesn't have the correct API signature. */
-  if (inet_ntop(addr->addr.sa.sa_family, (void*)addrptr, (char *)p, len) == 0) {
+  if (inet_ntop(addr->addr.sa.sa_family, addrptr, (char *)p, len) == 0) {
     perror("coap_print_addr");
     return 0;
   }
@@ -210,7 +210,7 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
   unsigned char *p = buf;
   uint8_t i;
 #  if NETSTACK_CONF_WITH_IPV6
-  const unsigned char hex[] = "0123456789ABCDEF";
+  const uint8_t hex[] = "0123456789ABCDEF";
 
   if (len < 41)
     return 0;
@@ -452,7 +452,7 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   fprintf(COAP_DEBUG_FD, "}");
 
   /* show options, if any */
-  coap_option_iterator_init((coap_pdu_t *)pdu, &opt_iter, COAP_OPT_ALL);
+  coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
   fprintf(COAP_DEBUG_FD, " [");
   while ((option = coap_option_next(&opt_iter))) {
@@ -551,7 +551,7 @@ coap_show_pdu(const coap_pdu_t *pdu) {
 
   fprintf(COAP_DEBUG_FD, " ]");
   
-  if (coap_get_data((coap_pdu_t *)pdu, &data_len, &data)) {
+  if (coap_get_data(pdu, &data_len, &data)) {
 
     fprintf(COAP_DEBUG_FD, " :: ");
 

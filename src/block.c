@@ -33,7 +33,7 @@ coap_opt_block_num(const coap_opt_t *block_opt) {
   }
   
   if (len > 1) {
-    num = coap_decode_var_bytes(coap_opt_const_value(block_opt), 
+    num = coap_decode_var_bytes(coap_opt_value(block_opt), 
 				coap_opt_length(block_opt) - 1);
   }
   
@@ -127,7 +127,7 @@ coap_write_block_opt(coap_block_t *block, uint16_t type,
 }
 
 int 
-coap_add_block(coap_pdu_t *pdu, unsigned int len, const unsigned char *data,
+coap_add_block(coap_pdu_t *pdu, unsigned int len, const uint8_t *data,
 	       unsigned int block_num, unsigned char block_szx) {
   unsigned int start;
   start = block_num << (block_szx + 4);

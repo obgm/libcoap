@@ -715,16 +715,17 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 #endif
     struct msghdr mhdr;
     struct iovec iov[1];
+    const void *addr = &session->remote_addr.addr;
 
     assert(session);
 
-    iov[0].iov_base = (uint8_t*)data;
+    memcpy (&iov[0].iov_base, &data, sizeof (iov[0].iov_base));
     iov[0].iov_len = (iov_len_t)datalen;
 
     memset( buf, 0, sizeof(buf));
 
     memset(&mhdr, 0, sizeof(struct msghdr));
-    mhdr.msg_name = (void *)&session->remote_addr.addr;
+    memcpy (&mhdr.msg_name, &addr, sizeof (mhdr.msg_name));
     mhdr.msg_namelen = session->remote_addr.size;
 
     mhdr.msg_iov = iov;

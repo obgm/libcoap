@@ -45,7 +45,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
     return 0;							\
   } else {							\
     (e) -= step;						\
-    (o) = ((unsigned char *)(o)) + step;			\
+    (o) = ((o)) + step;			\
   }
 
   if (length < 1)
@@ -103,7 +103,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
   ADVANCE_OPT(opt,length,1);
   /* opt now points to value, if present */
 
-  result->value = (unsigned char *)opt;
+  result->value = opt;
   if (length < result->length) {
     debug("invalid option length\n");
     return 0;
@@ -115,7 +115,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 }
 
 coap_opt_iterator_t *
-coap_option_iterator_init(coap_pdu_t *pdu, coap_opt_iterator_t *oi,
+coap_option_iterator_init(const coap_pdu_t *pdu, coap_opt_iterator_t *oi,
 			  const coap_opt_filter_t filter) {
   assert(pdu); 
   assert(pdu->token);
@@ -279,8 +279,8 @@ coap_opt_length(const coap_opt_t *opt) {
   return length;
 }
 
-unsigned char *
-coap_opt_value(coap_opt_t *opt) {
+const uint8_t *
+coap_opt_value(const coap_opt_t *opt) {
   size_t ofs = 1;
 
   switch (*opt & 0xf0) {
@@ -311,7 +311,7 @@ coap_opt_value(coap_opt_t *opt) {
     ;
   }
 
-  return (unsigned char *)opt + ofs;
+  return (const uint8_t *)opt + ofs;
 }
 
 size_t
@@ -534,7 +534,7 @@ coap_option_filter_unset(coap_opt_filter_t filter, uint16_t type) {
 }
 
 int
-coap_option_filter_get(const coap_opt_filter_t filter, uint16_t type) {
+coap_option_filter_get(coap_opt_filter_t filter, uint16_t type) {
   /* Ugly cast to make the const go away (FILTER_GET wont change filter
    * but as _set and _unset do, the function does not take a const). */
   return coap_option_filter_op((uint16_t *)filter, type, FILTER_GET);
