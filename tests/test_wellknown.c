@@ -41,10 +41,10 @@ t_wellknown1(void) {
     'e', '"', ';', 'c', 't', '=', '0'
   };
 
-  r = coap_resource_init(NULL, 0, 0);
+  r = coap_resource_init(NULL, 0);
 
-  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
-  coap_add_attr(r, (unsigned char *)"title", 5, (unsigned char *)"\"some attribute\"", 16, 0);
+  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+  coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"some attribute\""), 0);
 
   coap_add_resource(ctx, r);
 
@@ -89,9 +89,9 @@ t_wellknown2(void) {
     ';', 'o', 'b', 's'
   };
 
-  r = coap_resource_init((unsigned char *)"abcd", 4, 0);
+  r = coap_resource_init(coap_make_str_const("abcd"), 0);
   r->observable = 1;
-  coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"\"one\"", 5, 0);
+  coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"one\""), 0);
 
   coap_add_resource(ctx, r);
 
@@ -145,7 +145,8 @@ t_wellknown3(void) {
   for (j = 0; j < num_resources; j++) {
     int len = snprintf((char *)uribuf, TEST_URI_LEN + 1,
 		       "%0*d", TEST_URI_LEN, j);
-    r = coap_resource_init(uribuf, len, 0);
+    coap_str_const_t uri_path = {.length = len, .s = uribuf};
+    r = coap_resource_init(&uri_path, 0);
     coap_add_resource(ctx, r);
     uribuf += TEST_URI_LEN;
   }
@@ -276,14 +277,14 @@ t_wkc_tests_create(void) {
     /* </>;title="some attribute";ct=0 (31 chars) */
     r = coap_resource_init(NULL, 0, 0);
 
-    coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
-    coap_add_attr(r, (unsigned char *)"title", 5, (unsigned char *)"\"some attribute\"", 16, 0);
+    coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+    coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"some attribute\""), 0);
     coap_add_resource(ctx, r);
 
     /* ,</abcd>;if="one";obs (21 chars) */
-    r = coap_resource_init((unsigned char *)"abcd", 4, 0);
+    r = coap_resource_init((const uint8_t *)"abcd", 4, 0);
     r->observable = 1;
-    coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"\"one\"", 5, 0);
+    coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"one\""), 0);
 
     coap_add_resource(ctx, r);
 

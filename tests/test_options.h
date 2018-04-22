@@ -8,4 +8,10 @@
 
 #include <CUnit/CUnit.h>
 
+/** Asserts that const pointers actual == expected.
+ *  Reports failure with no other action.
+ */
+#define CU_ASSERT_PTR_EQUAL_C(actual, expected) \
+  { CU_assertImplementation(((const void*)(actual) == (const void*)(expected)), __LINE__, ("CU_ASSERT_PTR_EQUAL(" #actual "," #expected ")"), __FILE__, "", CU_FALSE); }
+
 CU_pSuite t_init_option_tests(void);

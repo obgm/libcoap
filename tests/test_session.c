@@ -160,6 +160,7 @@ t_session6(void) {
   CU_ASSERT_PTR_NOT_NULL(session);
   CU_ASSERT_PTR_NOT_NULL(ctx->sessions);
   CU_ASSERT(session->state == COAP_SESSION_STATE_ESTABLISHED);
+  coap_session_release(session);
 }
 
 /* This function creates a set of nodes for testing. These nodes

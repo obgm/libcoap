@@ -299,7 +299,7 @@ t_sendqueue_tests_create(void) {
 
     node[n]->id = n;
     node[n]->t = timestamp[n];
-    node[n]->session = session;
+    node[n]->session = coap_session_reference(session);
   }
 
   if (error) {
@@ -319,6 +319,13 @@ t_sendqueue_tests_create(void) {
 
 static int
 t_sendqueue_tests_remove(void) {
+  size_t n;
+  for (n = 0; n < sizeof(node)/sizeof(coap_queue_t *); n++) {
+    if (node[n]) {
+      coap_delete_node(node[n]);
+      node[n] = NULL;
+    }
+  }
   coap_free_context(ctx);
   return 0;
 }
