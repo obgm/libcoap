@@ -34,11 +34,11 @@ enum coap_uri_scheme_t {
  * coap_split_uri() and can be used as input for option-creation functions.
  */
 typedef struct {
-  str host;             /**< host part of the URI */
-  uint16_t port;  /**< The port in host byte order */
-  str path;             /**< Beginning of the first path segment. 
-                             Use coap_split_path() to create Uri-Path options */
-  str query;            /**<  The query part if present */
+  coap_str_const_t host;  /**< host part of the URI */
+  uint16_t port;          /**< The port in host byte order */
+  coap_str_const_t path;  /**< Beginning of the first path segment. 
+                           Use coap_split_path() to create Uri-Path options */
+  coap_str_const_t query; /**<  The query part if present */
 
   /** The parsed scheme specifier. */
   enum coap_uri_scheme_t scheme;
@@ -59,7 +59,7 @@ coap_uri_scheme_is_secure(const coap_uri_t *uri) {
  *
  * @return New URI object or NULL on error.
  */
-coap_uri_t *coap_new_uri(const unsigned char *uri, unsigned int length);
+coap_uri_t *coap_new_uri(const uint8_t *uri, unsigned int length);
 
 /**
  * Clones the specified coap_uri_t object. Thie function allocates sufficient
@@ -88,7 +88,7 @@ coap_uri_t *coap_clone_uri(const coap_uri_t *uri);
  * @return        @c 0 on success, or < 0 on error.
  *
  */
-int coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri);
+int coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri);
 
 /**
  * Splits the given URI path into segments. Each segment is preceded
@@ -103,7 +103,7 @@ int coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri);
  * 
  * @return       The number of segments created or @c -1 on error.
  */
-int coap_split_path(const unsigned char *s,
+int coap_split_path(const uint8_t *s,
                     size_t length,
                     unsigned char *buf,
                     size_t *buflen);
@@ -123,7 +123,7 @@ int coap_split_path(const unsigned char *s,
  *
  * @bug This function does not reserve additional space for delta > 12.
  */
-int coap_split_query(const unsigned char *s,
+int coap_split_query(const uint8_t *s,
                      size_t length,
                      unsigned char *buf,
                      size_t *buflen);
@@ -133,14 +133,14 @@ int coap_split_query(const unsigned char *s,
  * @param request Request PDU.
  * @return        Reconstructed and escaped query string part.
  */
-str *coap_get_query(struct coap_pdu_t *request);
+coap_string_t *coap_get_query(const struct coap_pdu_t *request);
 
 /**
  * Extract uri_path string from request PDU
  * @param request Request PDU.
  * @return        Reconstructed and escaped uri path string part.
  */
-str *coap_get_uri_path(struct coap_pdu_t *request);
+coap_string_t *coap_get_uri_path(const struct coap_pdu_t *request);
 
 /** @} */
 

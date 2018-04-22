@@ -535,7 +535,7 @@ coap_queue_t *coap_find_transaction(coap_queue_t *queue, coap_session_t *session
  */
 void coap_cancel_all_messages(coap_context_t *context,
                               coap_session_t *session,
-                              const unsigned char *token,
+                              const uint8_t *token,
                               size_t token_length);
 
 /**

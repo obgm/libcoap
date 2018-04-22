@@ -504,7 +504,7 @@ uint8_t *coap_add_data_after(coap_pdu_t *pdu, size_t len);
  * 1 if *len and *data have correct values. Note that these values are destroyed
  * with the pdu.
  */
-int coap_get_data(coap_pdu_t *pdu,
+int coap_get_data(const coap_pdu_t *pdu,
                   size_t *len,
                   uint8_t **data);
 
