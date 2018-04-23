@@ -34,8 +34,8 @@ coap_ping_handler_t _handler_)*;
 *void coap_register_pong_handler(coap_context_t *_context_, 
 coap_pong_handler_t _handler_)*;
 
-Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
-or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -57,13 +57,13 @@ COAP_REQUEST_IPATCH
 The handler function prototype is defined as:
 [source, c]
 ----
-typedef void (*coap_method_handler_t)(coap_context_t  *,
-                                      coap_resource_t *,
-                                      coap_session_t *,
-                                      coap_pdu_t *,
-                                      str * /* token */,
-                                      str * /* query string */,
-                                      coap_pdu_t * /* response */);
+typedef void (*coap_method_handler_t)(coap_context_t *context,
+                                      coap_resource_t *resource,
+                                      coap_session_t *session,
+                                      coap_pdu_t *incoming_pdu,
+                                      coap_string_t *token,
+                                      coap_string_t *query,
+                                      coap_pdu_t *response_pdu);
 ----
 
 The *coap_register_response_handler*() function defines a request's response 
@@ -74,7 +74,7 @@ response was unexpected.
 The handler function prototype is defined as:
 [source, c]
 ----
-typedef void (*coap_response_handler_t)(coap_context_t *,
+typedef void (*coap_response_handler_t)(coap_context_t *context,
                                         coap_session_t *session,
                                         coap_pdu_t *sent,
                                         coap_pdu_t *received,
@@ -87,7 +87,7 @@ response _handler_ for traffic associated with the _context_.
 The handler function prototype is defined as:
 [source, c]
 ----
-typedef void (*coap_nack_handler_t)(coap_context_t *,
+typedef void (*coap_nack_handler_t)(coap_context_t *context,
                                     coap_session_t *session,
                                     coap_pdu_t *sent,
                                     coap_nack_reason_t reason,
@@ -100,7 +100,7 @@ CoAP ping traffic associated with the _context_.
 The handler function prototype is defined as:
 [source, c]
 ----
-typedef void (*coap_ping_handler_t)(coap_context_t *,
+typedef void (*coap_ping_handler_t)(coap_context_t *context,
                                         coap_session_t *session,
                                         coap_pdu_t *received,
                                         const coap_tid_t id);
@@ -112,7 +112,7 @@ CoAP TCP ping response traffic associated with the _context_.
 The handler function prototype is defined as:
 [source, c]
 ----
-typedef void (*coap_pong_handler_t)(coap_context_t *,
+typedef void (*coap_pong_handler_t)(coap_context_t *context,
                                         coap_session_t *session,
                                         coap_pdu_t *received,
                                         const coap_tid_t id);
@@ -127,8 +127,8 @@ EXAMPLES
 #include <coap/coap.h>
 
 hnd_get_time(coap_context_t *ctx, coap_resource_t *resource, 
-coap_session_t *session, coap_pdu_t *request, str *token, str *query, 
-coap_pdu_t *response) {
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token, 
+coap_string_t *query, coap_pdu_t *response) {
 
   unsigned char buf[40];
   size_t len;

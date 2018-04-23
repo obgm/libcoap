@@ -21,15 +21,15 @@ SYNOPSIS
 int _mode_);*
 
 *int coap_resource_notify_observers(coap_resource_t *_resource_, 
-const str *_query_);*
+const const_string_t *_query_);*
 
 *const str *coap_resource_get_uri_path(coap_resource_t *_resource_);*
 
 *coap_subscription_t *coap_find_observer(coap_resource_t *_resource_, 
-coap_session_t *_session_, const str *_token_);*
+coap_session_t *_session_, const const_string_t *_token_);*
 
-Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
-or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -71,6 +71,13 @@ observable status of the _resource_ by the setting of _mode_.  If _mode_ is
 1, then the _resource_ is observable.  If _mode_ is 0, then the 
 _resource_ is no longer observable.
 
+*NOTE:* It is not possible for the Unknown Resource, created by 
+coap_resource_unknown_init(), to be observable as the Uri-Path is not known
+when libcoap creates a "fake GET request".  The Unknown Resource PUT
+handler must create a new resource and mark the resource as "observable" if
+a specific resource needs to be observable.  The application must then
+manage the deleteion of the resource at the appropriate time.
+
 The *coap_resource_notify_observers*() function needs to be called whenever the 
 server application determines that there has been a change to the state of 
 _resource_, possibly only matching a specific _query_ if _query_ is not NULL.
@@ -84,71 +91,42 @@ being observed or not.
 
 RETURN VALUES
 -------------
-The *coap_resource_get_uri_path*() function 
-returns the uri_path or NULL if there was a failure. 
+The *coap_resource_get_uri_path*() function returns the uri_path or NULL if 
+there was a failure.
 
-The *coap_find_observer*() function 
-returns the subscription or NULL if there was a failure. 
+The *coap_find_observer*() function returns the subscription or NULL if there 
+was a failure. 
 
 The *coap_resource_set_get_observable*() function return 0 on failure, 1 on 
 success.
 
 EXAMPLES
 --------
-*Server Initialize Resources*
+*Simple Time Server*
 
 [source, c]
 --
 #include <coap/coap.h>
 
-external coap_resource_t *time_resource;
+coap_resource_t *time_resource = NULL;
 
-static void
-init_resources(coap_context_t *ctx)
-{ 
-
-  coap_resource_t *r;
-
-  /* Create a resource to return return or update time */
-  r = coap_resource_init((unsigned char *)"time", 4,
-                         COAP_RESOURCE_FLAGS_NOTIFY_CON);
-
-  /* We are using a generic GET handler here */
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_generic);
-
-  coap_resource_set_get_observable(r, 1);
-
-  coap_add_resource(ctx, r);
-  time_resource = 1;
-
+static int check_if_time_resource_has_changed(coap_resource_t *resource) {
+  return 1;
 }
---
-
-*Server GET Callback Handlers*
-
-[source, c]
---
-#include <coap/coap.h>
 
 /* specific GET "time" handler, called from hnd_get_generic() */
 
-static void 
-hnd_get_time(coap_context_t *ctx, coap_resource_t *resource, 
-coap_session_t *session, coap_pdu_t *request, str *token, str *query, 
-coap_pdu_t *response) {
+static void
+hnd_get_time(coap_context_t *ctx, coap_resource_t *resource,
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_string_t *query, coap_pdu_t *response) {
 
   unsigned char buf[40];
   size_t len;
   time_t now;
-  coap_tick_t t;
 
   /* Define what the response code is going to be */
   response->code = COAP_RESPONSE_CODE(205);
-
-  /*
-   * Note that the following coap_add_option MUST be defined with numerically
-   * incrementing COAP_OPTION_ options
-   */
 
   /* If the resource is being Observed, return with Observe set */
   if (coap_find_observer(resource, session, token)) {
@@ -169,7 +147,7 @@ coap_pdu_t *response) {
 
   now = time(NULL);
 
-  if (query != NULL && memcmp(query->s, "secs", min(4, query->length)) == 0) {
+  if (query != NULL && coap_string_equal(query, coap_make_str_const("secs"))) {
     /* Output secs since Jan 1 1970 */
     len = snprintf((char *)buf, sizeof(buf), "%lu", now);
     coap_add_data(response, len, buf);
@@ -183,12 +161,14 @@ coap_pdu_t *response) {
 
 }
 
-static void 
-hnd_get_generic(coap_context_t *ctx, coap_resource_t *resource, 
-coap_session_t *session, coap_pdu_t *request, str *token, str *query, 
-coap_pdu_t *response) {
+/* Generic GET handler */
 
-  const str *uri_path = coap_resource_get_uri_path(resource);
+static void
+hnd_get_generic(coap_context_t *ctx, coap_resource_t *resource,
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_string_t *query, coap_pdu_t *response) {
+
+  coap_str_const_t *uri_path = coap_resource_get_uri_path(resource);
 
   if (!uri_path) {
     /* Unexpected Failure */
@@ -197,31 +177,57 @@ coap_pdu_t *response) {
   }
 
   /* Is this the "time" resource" ? */
-  if (!memcmp((char*)uri_path->s, "time", sizeof("time")) {
-    return hnd_get_time(ctx, resource, session, request, token, query,
-                        response);
+  if (coap_string_equal(uri_path, coap_make_str_const("time"))) {
+    hnd_get_time(ctx, resource, session, request, token, query,
+                 response);
+    return;
   }
 
   /* Other resources code */
 
   /* Failure response */
   response->code = COAP_RESPONSE_CODE(400);
+}
+
+/* Initialize generic GET handler */
+
+static void
+init_resources(coap_context_t *ctx)
+{
+
+  coap_resource_t *r;
+
+  /* Create a resource to return return or update time */
+  r = coap_resource_init(coap_make_str_const("time"),
+                         COAP_RESOURCE_FLAGS_NOTIFY_CON);
+
+  /* We are using a generic GET handler here */
+  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_generic);
+
+  coap_resource_set_get_observable(r, 1);
+
+  coap_add_resource(ctx, r);
+  time_resource = r;
 
 }
---
 
-*Server Main Loop*
-
-[source, c]
---
-#include <coap/coap.h>
-
-coap_resource_t *time_resource = NULL;
 
 int main(int argc, char *argv[]){
 
-  coap_contest_t *ctx = NULL;
+  coap_context_t *ctx = NULL;
+  coap_endpoint_t *ep = NULL;
+  coap_address_t addr;
   unsigned wait_ms;
+
+  /* Create the libcoap context */
+  ctx = coap_new_context(NULL);
+  if (!ctx) {
+    exit(1);
+  }
+  coap_address_init(&addr);
+  addr.addr.sa.sa_family = AF_INET;
+  addr.addr.sin.sin_port = ntohs(COAP_DEFAULT_PORT);
+  ep = coap_new_endpoint(ctx, &addr, COAP_PROTO_UDP);
 
   /* Other Set up Code */
 
@@ -242,16 +248,18 @@ int main(int argc, char *argv[]){
       wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
     }
   }
+  exit(0);
+
 }
 --
 
-*Client Request Setup*
+*Client Observe Request Setup*
 
 [source, c]
 --
 #include <coap/coap.h>
 
-/* usually, requests are sent confirmable */
+/* Usually, requests are sent confirmable */
 
 static unsigned char msgtype = COAP_MESSAGE_CON;
 
@@ -281,7 +289,6 @@ coap_optlist_t **options, unsigned char *data, size_t length, int observe) {
     goto error;
   }
 
-
   if (request_code == COAP_REQUEST_GET && observe) {
     /* Indicate that we want to observe this resource */
     if (!coap_insert_optlist(options, 
@@ -289,7 +296,6 @@ coap_optlist_t **options, unsigned char *data, size_t length, int observe) {
                                          COAP_OBSERVE_ESTABLISH, NULL)))
       goto error;
   }
-
 
   /* ... Other code / options etc. ... */
 

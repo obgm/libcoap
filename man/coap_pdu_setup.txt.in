@@ -47,8 +47,8 @@ size_t *_buflen_);*
 *int coap_split_query(const uint8_t *_query_, size_t _length_, uint8_t *_buffer_,
 size_t *_buflen_);*
 
-Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
-or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -311,8 +311,8 @@ error:
 
 static void 
 hnd_get_time(coap_context_t *context, coap_resource_t *resource, 
-coap_session_t *session, coap_pdu_t *request, str *token, str *query, 
-coap_pdu_t *response) {
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token, 
+coap_string_t *query, coap_pdu_t *response) {
 
   unsigned char buf[40];
   size_t len;
@@ -381,6 +381,7 @@ FURTHER INFORMATION
 -------------------
 See "RFC7252: The Constrained Application Protocol (CoAP)" for further 
 information.
+
 See https://www.iana.org/assignments/core-parameters/core-parameters.xhtml#option-numbers
 for the current set of defined CoAP Options.
 

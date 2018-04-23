@@ -58,8 +58,8 @@ _proto_, coap_dtls_pki_t *_setup_data_);*
 
 *void coap_session_set_mtu(coap_session_t *_session_, unsigned _mtu_);*
 
-Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
-or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -96,7 +96,7 @@ coap_new_context()
 coap_context_set_psk() and/or coap_context_set_pki() if encryption is required
 coap_new_endpoint()
 ----
-Note: coap_context_set_psk() should be called before coap_context_set_pki() to
+*NOTE:* coap_context_set_psk() should be called before coap_context_set_pki() to
 make sure that the PSK ciphers are in place for the first PSK incoming
 connection if both PSK and PKI are to be hosted.
 

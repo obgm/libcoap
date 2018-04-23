@@ -48,14 +48,14 @@ man7_MANS = $(MAN7)
 
 # We are limited to 10 names, but synopsis can cover more
 install-man: install-man3 install-man5 install-man7
-	@/bin/cp -f coap_context.3 coap_free_endpoint.3
-	@/bin/cp -f coap_context.3 coap_endpoint_set_default_mtu.3
-	@/bin/cp -f coap_context.3 coap_session_reference.3
-	@/bin/cp -f coap_context.3 coap_session_release.3
-	@/bin/cp -f coap_context.3 coap_session_set_mtu.3
-	@/bin/cp -f coap_pdu_setup.3 coap_encode_var_bytes.3
-	@/bin/cp -f coap_pdu_setup.3 coap_split_path.3
-	@/bin/cp -f coap_pdu_setup.3 coap_split_query.3
+	@echo ".so man3/coap_context.3" > coap_free_endpoint.3
+	@echo ".so man3/coap_context.3" > coap_endpoint_set_default_mtu.3
+	@echo ".so man3/coap_context.3" > coap_session_reference.3
+	@echo ".so man3/coap_context.3" > coap_session_release.3
+	@echo ".so man3/coap_context.3" > coap_session_set_mtu.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_bytes.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_split_path.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_split_query.3
 	$(INSTALL_DATA) *.3 "$(DESTDIR)$(man3dir)"
 
 CLEANFILES = *.3 *.5 *.7 *.xml

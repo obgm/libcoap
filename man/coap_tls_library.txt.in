@@ -24,8 +24,8 @@ SYNOPSIS
 
 *coap_tls_version_t *coap_get_tls_library_version(void);*
 
-Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
-or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -37,7 +37,7 @@ the application needs to dynamically determine whether DTLS or TLS is
 supported, what type of TLS implementation libcoap was compiled with, as well 
 as detect what is the version of the currently loaded TLS library is.
 
-Note: If OpenSSL is being used, then the minimum OpenSSL library version is 
+*NOTE:* If OpenSSL is being used, then the minimum OpenSSL library version is 
 1.1.0.
 
 Network traffic can be encrypted or un-encrypted with libcoap - how to set 
