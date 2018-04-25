@@ -169,9 +169,9 @@ copy "$(SolutionDir)$(Configuration)\libcoap$(DbgSuffix).pdb" "$(OutDir)lib"</Co
       <Command>if not exist "$(OutDir)include\coap" mkdir "$(OutDir)include\coap"
 copy "$(SolutionDir)..\include\coap\*.h" "$(OutDir)include\coap"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
-for %%f in ( coap-client$(DbgSuffix).exe coap-client$(DbgSuffix).pdb coap-server$(DbgSuffix).exe coap-server$(DbgSuffix).pdb coap-rd$(DbgSuffix).exe coap-rd$(DbgSuffix).pdb libcoap-1$(DbgSuffix).dll libcoap-1$(DbgSuffix).pdb ) do copy "$(SolutionDir)$(Configuration)\%%f" "$(OutDir)bin"
+for %%f in ( coap-client$(DbgSuffix).exe coap-client$(DbgSuffix).pdb coap-server$(DbgSuffix).exe coap-server$(DbgSuffix).pdb coap-rd$(DbgSuffix).exe coap-rd$(DbgSuffix).pdb libcoap-2$(DbgSuffix)-openssl.dll libcoap-2$(DbgSuffix)-openssl.pdb ) do copy "$(SolutionDir)$(Configuration)\%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
-copy "$(SolutionDir)$(Configuration)\libcoap-1$(DbgSuffix).lib" "$(OutDir)lib"
+copy "$(SolutionDir)$(Configuration)\libcoap-2$(DbgSuffix)-openssl.lib" "$(OutDir)lib"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -193,9 +193,9 @@ copy "$(SolutionDir)$(Configuration)\libcoap.pdb" "$(OutDir)lib"</Command>
       <Command>if not exist "$(OutDir)include\coap" mkdir "$(OutDir)include\coap"
 copy "$(SolutionDir)..\include\coap\*.h" "$(OutDir)include\coap"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
-for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coap-rd.exe coap-rd.pdb libcoap-1.dll libcoap-1.pdb ) do copy "$(SolutionDir)$(Configuration)\%%f" "$(OutDir)bin"
+for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coap-rd.exe coap-rd.pdb libcoap-2-openssl.dll libcoap-2-openssl.pdb ) do copy "$(SolutionDir)$(Configuration)\%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
-copy "$(SolutionDir)$(Configuration)\libcoap-1.lib" "$(OutDir)lib"
+copy "$(SolutionDir)$(Configuration)\libcoap-2-openssl.lib" "$(OutDir)lib"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -216,9 +216,9 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap$(DbgSuffix).pdb" "$(Out
       <Command>if not exist "$(OutDir)include\coap" mkdir "$(OutDir)include\coap"
 copy "$(SolutionDir)..\include\coap\*.h" "$(OutDir)include\coap"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
-for %%f in ( coap-client$(DbgSuffix).exe coap-client$(DbgSuffix).pdb coap-server$(DbgSuffix).exe coap-server$(DbgSuffix).pdb coap-rd$(DbgSuffix).exe coap-rd$(DbgSuffix).pdb libcoap-1$(DbgSuffix).dll libcoap-1$(DbgSuffix).pdb ) do copy "$(SolutionDir)$(Platform)\$(Configuration)\%%f" "$(OutDir)bin"
+for %%f in ( coap-client$(DbgSuffix).exe coap-client$(DbgSuffix).pdb coap-server$(DbgSuffix).exe coap-server$(DbgSuffix).pdb coap-rd$(DbgSuffix).exe coap-rd$(DbgSuffix).pdb libcoap-2$(DbgSuffix)-openssl.dll libcoap-2$(DbgSuffix)-openssl.pdb ) do copy "$(SolutionDir)$(Platform)\$(Configuration)\%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
-copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap-1$(DbgSuffix).lib" "$(OutDir)lib"
+copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap-2$(DbgSuffix)-openssl.lib" "$(OutDir)lib"
 </Command>
       <Message>Installing</Message>
     </PostBuildEvent>
@@ -240,9 +240,9 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap.pdb" "$(OutDir)lib"</Co
       <Command>if not exist "$(OutDir)include\coap" mkdir "$(OutDir)include\coap"
 copy "$(SolutionDir)..\include\coap\*.h" "$(OutDir)include\coap"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
-for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coap-rd.exe coap-rd.pdb libcoap-1.dll libcoap-1.pdb ) do copy "$(SolutionDir)$(Platform)\$(Configuration)\%%f" "$(OutDir)bin"
+for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coap-rd.exe coap-rd.pdb libcoap-2-openssl.dll libcoap-2-openssl.pdb ) do copy "$(SolutionDir)$(Platform)\$(Configuration)\%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
-copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap-1.lib" "$(OutDir)lib"
+copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap-2-openssl.lib" "$(OutDir)lib"
 </Command>
       <Message>Installing</Message>
     </PostBuildEvent>
