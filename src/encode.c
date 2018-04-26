@@ -11,6 +11,8 @@
 #endif
 
 #include "coap_config.h"
+#include "coap.h"
+#include "mem.h"
 #include "encode.h"
 
 /* Carsten suggested this when fls() is not available: */
@@ -40,12 +42,16 @@ coap_decode_var_bytes(const uint8_t *buf,unsigned int len) {
 }
 
 unsigned int
-coap_encode_var_bytes(uint8_t *buf, unsigned int val) {
+coap_encode_var_safe(uint8_t *buf, size_t length, unsigned int val) {
   unsigned int n, i;
 
   for (n = 0, i = val; i && n < sizeof(val); ++n)
     i >>= 8;
 
+  if (n > length) {
+    assert (n <= length);
+    return 0;
+  }
   i = n;
   while (i--) {
     buf[i] = val & 0xff;

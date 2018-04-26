@@ -46,16 +46,50 @@ extern int coap_flsll(long long i);
 #define COAP_PSEUDOFP_ENCODE_8_4_UP(v,ls,s) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (s = (((v + ((1<<ENCODE_HEADER_SIZE<<ls)-1)) >> ls) & MMASK)), s == 0 ? HIBIT + ls + 1 : s + ls))
 
 /**
- * Decodes multiple-length byte sequences. buf points to an input byte sequence
- * of length len. Returns the decoded value.
+ * Decodes multiple-length byte sequences. @p buf points to an input byte
+ * sequence of length @p length. Returns the decoded value.
+ *
+ * @param buf The input byte sequence to decode from
+ * @param length The length of the input byte sequence
+ *
+ * @return      The decoded value
  */
-unsigned int coap_decode_var_bytes(const uint8_t *buf, unsigned int len);
+unsigned int coap_decode_var_bytes(const uint8_t *buf, unsigned int length);
 
 /**
- * Encodes multiple-length byte sequences. buf points to an output buffer of
- * sufficient length to store the encoded bytes. val is the value to encode.
- * Returns the number of bytes used to encode val or 0 on error.
+ * Encodes multiple-length byte sequences. @p buf points to an output buffer of
+ * sufficient length to store the encoded bytes. @p value is the value to
+ * encode.
+ * Returns the number of bytes used to encode @p value or 0 on error.
+ *
+ * @param buf    The output buffer to decode into
+ * @param length The output buffer size to encode into (must be sufficient)
+ * @param value  The value to encode into the buffer
+ *
+ * @return       The number of bytes used to encode @p value or @c 0 on error.
  */
-unsigned int coap_encode_var_bytes(uint8_t *buf, unsigned int val);
+unsigned int coap_encode_var_safe(uint8_t *buf,
+                                  size_t length,
+                                  unsigned int value);
+
+/**
+ * @deprecated.  Provided for backward compatability.  As @p value has a 
+ * maximum value of 0xffffffff, and buf is usually defined as an array, it
+ * is unsafe to continue to use this variant if buf[] is less than buf[4].
+ *
+ * For example
+ *  char buf[1],oops;
+ *  ..
+ *  coap_encode_var_bytes(buf, 0xfff);
+ * would cause oops to get overwritten.  This error can only be found by code
+ * inspection.
+ *   coap_encode_var_safe(buf, sizeof(buf), 0xfff);
+ * would catch this error at run-time and should be used instead.
+ */
+COAP_STATIC_INLINE COAP_DEPRECATED int
+coap_encode_var_bytes(uint8_t *buf, unsigned int value
+) {
+  return coap_encode_var_safe(buf, sizeof(value), value);
+}
 
 #endif /* _COAP_ENCODE_H_ */

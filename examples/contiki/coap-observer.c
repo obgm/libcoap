@@ -140,7 +140,9 @@ PROCESS_THREAD(coap_server_process, ev, data)
   if (uri.port != COAP_DEFAULT_PORT) {
     unsigned char portbuf[2];
     coap_add_option(request, COAP_OPTION_URI_PORT,
-		    coap_encode_var_bytes(portbuf, uri.port), portbuf);
+		    coap_encode_var_safe(portbuf, sizeof(portbuf),
+                                         uri.port),
+                    portbuf);
   }
 
   if (uri.path.length) {

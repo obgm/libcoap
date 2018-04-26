@@ -192,9 +192,10 @@ t_wellknown5(void) {
   unsigned char buf[3];
 
   if (!coap_add_option(pdu, COAP_OPTION_BLOCK2,
-		       coap_encode_var_bytes(buf, ((inblock.num << 4) |
-						   (inblock.m << 3) |
-						   inblock.szx)), buf)) {
+		       coap_encode_var_safe(buf, sizeof(buf),
+                                            ((inblock.num << 4) |
+					     (inblock.m << 3) |
+					     inblock.szx)), buf)) {
     CU_FAIL("cannot add Block2 option");
     return;
   }
@@ -230,7 +231,7 @@ t_wellknown6(void) {
     CU_ASSERT_PTR_NOT_NULL(pdu);
 
     if (!pdu || !coap_add_option(pdu, COAP_OPTION_BLOCK2,
-				 coap_encode_var_bytes(buf,
+				 coap_encode_var_safe(buf, sizeof(buf),
 				       ((block.num << 4) | block.szx)), buf)) {
       CU_FAIL("cannot create request");
       return;

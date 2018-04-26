@@ -40,7 +40,7 @@ coap_dispatch
 coap_dtls_get_log_level
 coap_dtls_is_supported
 coap_dtls_set_log_level
-coap_encode_var_bytes
+coap_encode_var_safe
 coap_endpoint_get_session
 coap_endpoint_new_dtls_session
 coap_endpoint_set_default_mtu

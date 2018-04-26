@@ -3,7 +3,7 @@
  * Copyright (C) 2010--2012,2015-2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 #include "coap_config.h"
@@ -25,18 +25,18 @@ unsigned int
 coap_opt_block_num(const coap_opt_t *block_opt) {
   unsigned int num = 0;
   uint16_t len;
-  
+
   len = coap_opt_length(block_opt);
 
   if (len == 0) {
     return 0;
   }
-  
+
   if (len > 1) {
-    num = coap_decode_var_bytes(coap_opt_value(block_opt), 
+    num = coap_decode_var_bytes(coap_opt_value(block_opt),
 				coap_opt_length(block_opt) - 1);
   }
-  
+
   return (num << 4) | ((*COAP_OPT_BLOCK_LAST(block_opt) & 0xF0) >> 4);
 }
 
@@ -81,7 +81,7 @@ coap_write_block_opt(coap_block_t *block, uint16_t type,
     debug("illegal block requested\n");
     return -2;
   }
-  
+
   assert(pdu->max_size > 0);
   avail = pdu->max_size - pdu->used_size - 4;
   want = (size_t)1 << (block->szx + 4);
@@ -118,15 +118,16 @@ coap_write_block_opt(coap_block_t *block, uint16_t type,
   }
 
   /* to re-encode the block option */
-  coap_add_option(pdu, type, coap_encode_var_bytes(buf, ((block->num << 4) | 
-							 (block->m << 3) | 
-							 block->szx)), 
+  coap_add_option(pdu, type, coap_encode_var_safe(buf, sizeof(buf),
+                                                  ((block->num << 4) |
+						  (block->m << 3) |
+						   block->szx)),
 		  buf);
 
   return 1;
 }
 
-int 
+int
 coap_add_block(coap_pdu_t *pdu, unsigned int len, const uint8_t *data,
 	       unsigned int block_num, unsigned char block_szx) {
   unsigned int start;
@@ -134,8 +135,8 @@ coap_add_block(coap_pdu_t *pdu, unsigned int len, const uint8_t *data,
 
   if (len <= start)
     return 0;
-  
-  return coap_add_data(pdu, 
+
+  return coap_add_data(pdu,
 		       min(len - start, (1U << (block_szx + 4))),
 		       data + start);
 }

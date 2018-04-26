@@ -126,6 +126,7 @@ EXAMPLES
 --
 #include <coap/coap.h>
 
+void
 hnd_get_time(coap_context_t *ctx, coap_resource_t *resource, 
 coap_session_t *session, coap_pdu_t *request, coap_string_t *token, 
 coap_string_t *query, coap_pdu_t *response) {
@@ -142,22 +143,25 @@ coap_string_t *query, coap_pdu_t *response) {
   if (coap_find_observer(resource, session, token)) {
     coap_add_option(response,
                     COAP_OPTION_OBSERVE,
-                    coap_encode_var_bytes(buf, resource->observe), buf);
+                    coap_encode_var_safe(buf, sizeof(buf), resource->observe),
+                    buf);
   }
 
   /* Response is in plain text format */
   coap_add_option(response,
-                    COAP_OPTION_CONTENT_FORMAT,
-                    coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+                  COAP_OPTION_CONTENT_FORMAT,
+                  coap_encode_var_safe(buf, sizeof (buf),
+                                        COAP_MEDIATYPE_TEXT_PLAIN),
+                  buf);
 
   /* Report on how long this response is valid for */
   coap_add_option(response,
                   COAP_OPTION_MAXAGE,
-                  coap_encode_var_bytes(buf, 0x01), buf);
+                  coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
 
   now = time(NULL);
 
-  if (query != NULL && memcmp(query->s, "secs", min(4, query->length)) == 0) {
+  if (query != NULL && coap_string_equal(query, coap_make_str_const("secs"))) {
     /* Output secs since Jan 1 1970 */
     len = snprintf((char *)buf, sizeof(buf), "%lu", now);
     coap_add_data(response, len, buf);
