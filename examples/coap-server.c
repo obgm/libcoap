@@ -47,6 +47,13 @@ static time_t my_clock_base = 0;
 
 struct coap_resource_t *time_resource = NULL;
 
+static char *cert_file = NULL;          /* Combined certificate and private key file */
+#define MAX_KEY   64 /* Maximum length of a key (i.e., PSK) in bytes. */
+static uint8_t key[MAX_KEY];
+static ssize_t key_length = 0;
+int key_defined = 0;
+static const char *hint = "CoAP";
+
 #ifndef WITHOUT_ASYNC
 /* This variable is used to mimic long-running tasks that require
  * asynchronous responses. */
@@ -336,9 +343,22 @@ init_resources(coap_context_t *ctx) {
 
 static void
 fill_keystore(coap_context_t *ctx) {
-  static uint8_t key[] = "secretPSK";
-  size_t key_len = sizeof( key ) - 1;
-  coap_context_set_psk( ctx, "CoAP", key, key_len );
+  if (cert_file) {
+    coap_dtls_pki_t dtls_pki;
+    memset (&dtls_pki, 0, sizeof(dtls_pki));
+    dtls_pki.public_cert = cert_file;
+    dtls_pki.private_key = cert_file;
+    coap_context_set_pki(ctx, &dtls_pki);
+    if (key_defined)
+      coap_context_set_psk(ctx, hint, key, key_length);
+  }
+  else if (key_defined) {
+    coap_context_set_psk(ctx, hint, key, key_length);
+  }
+  else if (coap_dtls_is_supported() || coap_tls_is_supported()) {
+    coap_log(LOG_DEBUG,
+             "(D)TLS not enabled as neither -k or -c options specified\n");
+  }
 }
 
 static void
@@ -351,13 +371,23 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
      "(c) 2010,2011,2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
-     "usage: %s [-A address] [-p port]\n\n"
-     "\t-A address\tinterface address to bind to\n"
-     "\t-g group\tjoin the given multicast group\n"
-     "\t-p port\t\tlisten on specified port\n"
-     "\t-v num\t\tverbosity level (default: 3)\n"
-     "\t-l list\t\tFail to send some datagram specified by a comma separated list of number or number intervals(for debugging only)\n"
-     "\t-l loss%%\t\tRandmoly fail to send datagrams with the specified probability(for debugging only)\n",
+     "Usage: %s [-A address] [-g group] [-p port] [-l loss] [-c certfile]\n"
+     "\t\t[-k key] [-h hint] [-v num]\n\n"
+     "\t-A address\tInterface address to bind to\n"
+     "\t-g group\tJoin the given multicast group\n"
+     "\t-p port\t\tListen on specified port\n"
+     "\t-c certfile\tPEM file containing both CERTIFICATE and PRIVATE KEY\n"
+     "\t       \t\tThis argument requires (D)TLS with PKI to be available\n"
+     "\t-h hint\t\tPSK Hint.  Default is CoAP\n"
+     "\t-k key\t\tPre-shared key. This argument requires (D)TLS with PSK\n"
+     "\t       \t\tto be available. This cannot be empty if defined.\n"
+     "\t       \t\tNote that both -c and -k need to be defined\n"
+     "\t       \t\tfor both PSK and PKI to be concurrently supported\n"
+     "\t-l list\t\tFail to send some datagram specified by a comma separated\n"
+     "\t\t\tlist of number or number intervals (for debugging only)\n"
+     "\t-l loss%%\tRandomly fail to send datagrams with the specified\n"
+     "\t\t\tprobability (for debugging only)\n"
+     "\t-v num\t\tVerbosity level (default: 3)\n",
     program, version, program );
 }
 
@@ -409,7 +439,7 @@ get_context(const char *node, const char *port) {
 
       ep_udp = coap_new_endpoint(ctx, &addr, COAP_PROTO_UDP);
       if (ep_udp) {
-	if (coap_dtls_is_supported()) {
+	if (coap_dtls_is_supported() && (key_defined || cert_file)) {
 	  ep_dtls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_DTLS);
 	  if (!ep_dtls)
 	    coap_log(LOG_CRIT, "cannot create DTLS endpoint\n");
@@ -420,7 +450,7 @@ get_context(const char *node, const char *port) {
       }
       ep_tcp = coap_new_endpoint(ctx, &addr, COAP_PROTO_TCP);
       if (ep_tcp) {
-	if (coap_tls_is_supported()) {
+	if (coap_tls_is_supported() && (key_defined || cert_file)) {
 	  ep_tls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_TLS);
 	  if (!ep_tls)
 	    coap_log(LOG_CRIT, "cannot create TLS endpoint\n");
@@ -504,6 +534,16 @@ join(coap_context_t *ctx, char *group_name){
   return result;
 }
 
+static ssize_t
+cmdline_read_key(char *arg, unsigned char *buf, size_t maxlen) {
+  size_t len = strnlen(arg, maxlen);
+  if (len) {
+    memcpy(buf, arg, len);
+    return len;
+  }
+  return -1;
+}
+
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
@@ -517,14 +557,32 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "A:g:p:v:l:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:c:g:h:k:p:v:l:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
       addr_str[NI_MAXHOST - 1] = '\0';
       break;
+    case 'c' :
+      cert_file = optarg;
+      break;
     case 'g' :
       group = optarg;
+      break;
+    case 'h' :
+      if (!optarg[0]) {
+        coap_log( LOG_CRIT, "Invalid PSK hint specified\n" );
+        break;
+      }
+      hint = optarg;
+      break;
+    case 'k' :
+      key_length = cmdline_read_key(optarg, key, MAX_KEY);
+      if (key_length < 0) {
+        coap_log( LOG_CRIT, "Invalid PSK key specified\n" );
+        break;
+      }
+      key_defined = 1;
       break;
     case 'p' :
       strncpy(port_str, optarg, NI_MAXSERV-1);
