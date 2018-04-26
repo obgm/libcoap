@@ -1071,7 +1071,7 @@ coap_write(coap_context_t *ctx,
         coap_session_free(s);
       } else {
         if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 && s->sendqueue == NULL) {
-          coap_tick_t s_timeout = now - (s->last_rx_tx + session_timeout);
+          coap_tick_t s_timeout = (s->last_rx_tx + session_timeout) - now;
           if (timeout == 0 || s_timeout < timeout)
             timeout = s_timeout;
         }
@@ -1119,7 +1119,12 @@ coap_write(coap_context_t *ctx,
               while (tls_timeout > 0 && tls_timeout <= now) {
                 coap_log(LOG_DEBUG, "**  %s: DTLS retransmit timeout\n", coap_session_str(s));
                 coap_dtls_handle_timeout(s);
-                tls_timeout = s->tls ? coap_dtls_get_timeout(s) : 0;
+                if (s->tls)
+                  tls_timeout = coap_dtls_get_timeout(s);
+                else {
+                  tls_timeout = 0;
+                  timeout = 1;
+                }
               }
               if (tls_timeout > 0 && (timeout == 0 || tls_timeout - now < timeout))
                 timeout = tls_timeout - now;
@@ -1133,7 +1138,12 @@ coap_write(coap_context_t *ctx,
           while (tls_timeout > 0 && tls_timeout <= now) {
             coap_log(LOG_DEBUG, "**  %s: DTLS retransmit timeout\n", coap_session_str(s));
             coap_dtls_handle_timeout(s);
-            tls_timeout = s->tls ? coap_dtls_get_timeout(s) : 0;
+            if (s->tls)
+              tls_timeout = coap_dtls_get_timeout(s);
+            else {
+              tls_timeout = 0;
+              timeout = 1;
+            }
           }
           if (tls_timeout > 0 && (timeout == 0 || tls_timeout - now < timeout))
             timeout = tls_timeout - now;
