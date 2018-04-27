@@ -330,6 +330,7 @@ coap_dtls_free_session(coap_session_t *coap_session) {
       dtls_close(ctx, (session_t *)coap_session->tls);
     debug("*** removed session %p\n", coap_session->tls);
     coap_free_type(COAP_DTLS_SESSION, coap_session->tls);
+    coap_session->tls = NULL;
   }
 }
 
@@ -456,20 +457,32 @@ coap_get_tls_library_version(void) {
   return &version;
 }
 
-int coap_dtls_context_set_pki( coap_context_t *ctx UNUSED,
-  coap_dtls_pki_t* setup_data UNUSED
+int
+coap_dtls_context_set_pki(coap_context_t *ctx UNUSED,
+  coap_dtls_pki_t* setup_data UNUSED,
+  int server UNUSED
 ) {
   return 0;
 }
 
-int coap_dtls_context_set_psk(coap_context_t *ctx UNUSED,
+int
+coap_dtls_context_set_pki_root_cas(struct coap_context_t *ctx UNUSED,
+  const char *ca_file UNUSED,
+  const char *ca_path UNUSED
+) {
+  return 0;
+}
+
+int
+coap_dtls_context_set_psk(coap_context_t *ctx UNUSED,
   const char *hint UNUSED,
-  const uint8_t *key UNUSED, size_t key_len UNUSED
+  int server UNUSED
 ) {
   return 1;
 }
 
-int coap_dtls_context_check_keys_enabled(coap_context_t *ctx UNUSED)
+int
+coap_dtls_context_check_keys_enabled(coap_context_t *ctx UNUSED)
 {
   return 1;
 }
