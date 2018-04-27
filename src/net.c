@@ -356,7 +356,7 @@ int coap_context_set_psk(coap_context_t *ctx,
       memcpy(ctx->psk_hint, hint, hint_len);
       ctx->psk_hint_len = hint_len;
     } else {
-      coap_log(LOG_ERR, "No memory to store PSK hint");
+      coap_log(LOG_ERR, "No memory to store PSK hint\n");
       return 0;
     }
   }
@@ -372,12 +372,12 @@ int coap_context_set_psk(coap_context_t *ctx,
       memcpy(ctx->psk_key, key, key_len);
       ctx->psk_key_len = key_len;
     } else {
-      coap_log(LOG_ERR, "No memory to store PSK key");
+      coap_log(LOG_ERR, "No memory to store PSK key\n");
       return 0;
     }
   }
   if (coap_dtls_is_supported()) {
-    return coap_dtls_context_set_psk(ctx, hint, key, key_len);
+    return coap_dtls_context_set_psk(ctx, hint, COAP_DTLS_ROLE_SERVER);
   }
   return 0;
 }
@@ -385,8 +385,24 @@ int coap_context_set_psk(coap_context_t *ctx,
 int coap_context_set_pki(coap_context_t *ctx,
   coap_dtls_pki_t* setup_data
 ) {
+  if (!setup_data)
+    return 0;
+  if (setup_data->version != COAP_DTLS_PKI_SETUP_VERSION) {
+    coap_log(LOG_ERR, "coap_context_set_pki: Wrong version of setup_data\n");
+    return 0;
+  }
   if (coap_dtls_is_supported()) {
-    return coap_dtls_context_set_pki(ctx, setup_data);
+    return coap_dtls_context_set_pki(ctx, setup_data, COAP_DTLS_ROLE_SERVER);
+  }
+  return 0;
+}
+
+int coap_context_set_pki_root_cas(coap_context_t *ctx,
+  const char *ca_file,
+  const char *ca_dir
+) {
+  if (coap_dtls_is_supported()) {
+    return coap_dtls_context_set_pki_root_cas(ctx, ca_file, ca_dir);
   }
   return 0;
 }

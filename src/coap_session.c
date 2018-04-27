@@ -349,7 +349,8 @@ void coap_session_connected(coap_session_t *session) {
 
 void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
   (void)reason;
-  debug("*** %s: session disconnected\n", coap_session_str(session));
+  coap_log(LOG_DEBUG, "*** %s: session disconnected (reason %d)\n",
+                      coap_session_str(session), reason);
   if (session->proto == COAP_PROTO_DTLS && session->tls) {
     coap_dtls_free_session(session);
     session->tls = NULL;
@@ -631,17 +632,22 @@ coap_session_t *coap_new_client_session_psk(
   if (!session)
     return NULL;
 
-  if (identity) {
+  if (identity && (strlen(identity) > 0)) {
     size_t identity_len = strlen(identity);
     session->psk_identity = (uint8_t*)coap_malloc(identity_len);
     if (session->psk_identity) {
       memcpy(session->psk_identity, identity, identity_len);
       session->psk_identity_len = identity_len;
     } else {
-      coap_log(LOG_WARNING, "Cannot store session PSK identity");
+      coap_log(LOG_WARNING, "Cannot store session PSK identity\n");
       coap_session_release(session);
       return NULL;
     }
+  }
+  else if (coap_dtls_is_supported()) {
+    coap_log(LOG_WARNING, "PSK identity not defined\n");
+    coap_session_release(session);
+    return NULL;
   }
 
   if (key && key_len > 0) {
@@ -650,14 +656,19 @@ coap_session_t *coap_new_client_session_psk(
       memcpy(session->psk_key, key, key_len);
       session->psk_key_len = key_len;
     } else {
-      coap_log(LOG_WARNING, "Cannot store session PSK key");
+      coap_log(LOG_WARNING, "Cannot store session PSK key\n");
       coap_session_release(session);
       return NULL;
     }
   }
+  else if (coap_dtls_is_supported()) {
+    coap_log(LOG_WARNING, "PSK key not defined\n");
+    coap_session_release(session);
+    return NULL;
+  }
 
   if (coap_dtls_is_supported()) {
-    if (!coap_dtls_context_set_psk(ctx, NULL, key, key_len)) {
+    if (!coap_dtls_context_set_psk(ctx, NULL, COAP_DTLS_ROLE_CLIENT)) {
       coap_session_release(session);
       return NULL;
     }
@@ -673,13 +684,19 @@ coap_session_t *coap_new_client_session_pki(
   coap_proto_t proto,
   coap_dtls_pki_t* setup_data
 ) {
+  if (setup_data->version != COAP_DTLS_PKI_SETUP_VERSION) {
+    coap_log(LOG_ERR, "coap_new_client_session_pki: Wrong version of setup_data\n");
+    return 0;
+  }
   coap_session_t *session = coap_session_create_client(ctx, local_if, server, proto);
 
   if (!session)
     return NULL;
 
   if (coap_dtls_is_supported()) {
-    if (!coap_dtls_context_set_pki(ctx, setup_data)) {
+    if (!setup_data)
+      return NULL;
+    if (!coap_dtls_context_set_pki(ctx, setup_data, COAP_DTLS_ROLE_CLIENT)) {
       coap_session_release(session);
       return NULL;
     }
@@ -736,7 +753,7 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
 
   if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
     if (!coap_dtls_context_check_keys_enabled(context)) {
-      coap_log(LOG_INFO, "coap_new_endpoint: one of coap_dtls_context_set_psk() or coap_dtls_context_set_pki() not called\n");
+      coap_log(LOG_INFO, "coap_new_endpoint: one of coap_context_set_psk() or coap_context_set_pki() not called\n");
       goto error;
     }
   }
