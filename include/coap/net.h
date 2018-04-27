@@ -33,6 +33,9 @@
 
 struct coap_queue_t;
 
+/**
+ * Queue entry
+ */
 typedef struct coap_queue_t {
   struct coap_queue_t *next;
   coap_tick_t t;                /**< when to send PDU for the next time */
@@ -44,16 +47,37 @@ typedef struct coap_queue_t {
   coap_pdu_t *pdu;              /**< the CoAP PDU to send */
 } coap_queue_t;
 
-/** Adds node to given queue, ordered by node->t. */
+/**
+ * Adds @p node to given @p queue, ordered by variable t in @p node.
+ *
+ * @param queue Queue to add to.
+ * @param node Node entry to add to Queue.
+ *
+ * @return @c 1 added to queue, @c 0 failure.
+ */
 int coap_insert_node(coap_queue_t **queue, coap_queue_t *node);
 
-/** Destroys specified node. */
+/**
+ * Destroys specified @p node.
+ *
+ * @param node Node entry to remove.
+ *
+ * @return @c 1 node deleted from queue, @c 0 failure.
+ */
 int coap_delete_node(coap_queue_t *node);
 
-/** Removes all items from given queue and frees the allocated storage. */
+/**
+ * Removes all items from given @p queue and frees the allocated storage.
+ *
+ * @param queue The queue to delete.
+ */
 void coap_delete_all(coap_queue_t *queue);
 
-/** Creates a new node suitable for adding to the CoAP sendqueue. */
+/**
+ * Creates a new node suitable for adding to the CoAP sendqueue.
+ *
+ * @return New node entry, or @c NULL if failure.
+ */
 coap_queue_t *coap_new_node(void);
 
 struct coap_resource_t;
@@ -62,33 +86,65 @@ struct coap_context_t;
 struct coap_async_state_t;
 #endif
 
-/** Message handler that is used as call-back in coap_context_t */
-typedef void (*coap_response_handler_t)(struct coap_context_t *,
+/**
+ * Response handler that is used as call-back in coap_context_t.
+ *
+ * @param context CoAP session.
+ * @param session CoAP session.
+ * @param sent The PDU that was transmitted.
+ * @param received The PDU that was received.
+ * @param id CoAP transaction ID.
+ */
+typedef void (*coap_response_handler_t)(struct coap_context_t *context,
                                         coap_session_t *session,
                                         coap_pdu_t *sent,
                                         coap_pdu_t *received,
                                         const coap_tid_t id);
 
-/** Message handler that is used as call-back in coap_context_t */
-typedef void (*coap_nack_handler_t)(struct coap_context_t *,
+/**
+ * Negative Acknowedge handler that is used as call-back in coap_context_t.
+ *
+ * @param context CoAP session.
+ * @param session CoAP session.
+ * @param sent The PDU that was transmitted.
+ * @param reason The reason for the NACK.
+ * @param id CoAP transaction ID.
+ */
+typedef void (*coap_nack_handler_t)(struct coap_context_t *context,
                                     coap_session_t *session,
                                     coap_pdu_t *sent,
                                     coap_nack_reason_t reason,
                                     const coap_tid_t id);
 
-/** Message handler that is used as call-back in coap_context_t */
-typedef void (*coap_ping_handler_t)(struct coap_context_t *,
+/**
+ * Recieved Ping handler that is used as call-back in coap_context_t.
+ *
+ * @param context CoAP session.
+ * @param session CoAP session.
+ * @param received The PDU that was received.
+ * @param id CoAP transaction ID.
+ */
+typedef void (*coap_ping_handler_t)(struct coap_context_t *context,
                                         coap_session_t *session,
                                         coap_pdu_t *received,
                                         const coap_tid_t id);
 
-/** Message handler that is used as call-back in coap_context_t */
-typedef void (*coap_pong_handler_t)(struct coap_context_t *,
+/**
+ * Recieved Pong handler that is used as call-back in coap_context_t.
+ *
+ * @param context CoAP session.
+ * @param session CoAP session.
+ * @param received The PDU that was received.
+ * @param id CoAP transaction ID.
+ */
+typedef void (*coap_pong_handler_t)(struct coap_context_t *context,
 				  	coap_session_t *session,
 					coap_pdu_t *received,
 					const coap_tid_t id);
 
-/** The CoAP stack's global state is stored in a coap_context_t object */
+/**
+ * The CoAP stack's global state is stored in a coap_context_t object.
+ */
 typedef struct coap_context_t {
   coap_opt_filter_t known_options;
   struct coap_resource_t *resources; /**< hash table or list of known
@@ -249,35 +305,48 @@ coap_queue_t *coap_pop_next( coap_context_t *context );
 coap_context_t *coap_new_context(const coap_address_t *listen_addr);
 
 /**
- * Set the context's default server PSK hint and/or key.
- * These global defaults are used only no PSK callback is specified.
+ * Set the context's default PSK hint and/or key for a server.
  *
  * @param context The current coap_context_t object.
- * @param hint    The default PSK server hint sent to a client. If NULL, PSK
+ * @param hint    The default PSK server hint sent to a client. If @p NULL, PSK
  *                authentication is disabled. Empty string is a valid hint.
- * @param key     The default PSK key. If NULL, PSK authentication will fail.
- * @param key_len The default PSK key's lenght. If 0, PSK authentication will
+ * @param key     The default PSK key. If @p NULL, PSK authentication will fail.
+ * @param key_len The default PSK key's length. If @p 0, PSK authentication will
  *                fail.
  *
- * @return 1 if successful, else 0
+ * @return @c 1 if successful, else @c 0.
  */
-
 int coap_context_set_psk( coap_context_t *context, const char *hint,
                            const uint8_t *key, size_t key_len );
 
 /**
- * Set the context's default PKI information.
- * The Callback is called to set up the appropriate information if set.
+ * Set the context's default PKI information for a server.
  *
  * @param context        The current coap_context_t object.
- * @param setup_data     If NULL, PKI authentication will fail. Certificate
+ * @param setup_data     If @p NULL, PKI authentication will fail. Certificate
  *                       information required.
  *
- * @return 1 if successful, else 0
+ * @return @c 1 if successful, else @c 0.
  */
+int
+coap_context_set_pki(coap_context_t *context,
+                     coap_dtls_pki_t *setup_data);
 
-int coap_context_set_pki(coap_context_t *context,
-                           coap_dtls_pki_t* setup_data);
+/**
+ * Set the context's default Root CA information for a client or server.
+ *
+ * @param context        The current coap_context_t object.
+ * @param ca_file        If not @p NULL, is the full path name of a PEM encoded
+ *                       file containing all the Root CAs to be used.
+ * @param ca_dir         If not @p NULL, points to a directory containing PEM
+ *                       encoded files containing all the Root CAs to be used.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+int
+coap_context_set_pki_root_cas(coap_context_t *context,
+                              const char *ca_file,
+                              const char *ca_dir);
 
 /**
  * Returns a new message id and updates @p session->tx_mid accordingly. The
@@ -298,6 +367,8 @@ coap_new_message_id(coap_session_t *session) {
  * clears all entries from the receive queue and send queue and deletes the
  * resources that have been registered with @p context, and frees the attached
  * endpoints.
+ *
+ * @param context The current coap_context_t object to free off.
  */
 void coap_free_context(coap_context_t *context);
 
@@ -305,6 +376,10 @@ void coap_free_context(coap_context_t *context);
  * Stores @p data with the given CoAP context. This function
  * overwrites any value that has previously been stored with @p
  * context.
+ *
+ * @param context The CoAP context.
+ * @param data The data to store with wih the context. Note that this data
+ *             must be valid during the lifetime of @p context.
  */
 void coap_set_app_data(coap_context_t *context, void *data);
 
@@ -312,6 +387,10 @@ void coap_set_app_data(coap_context_t *context, void *data);
  * Returns any application-specific data that has been stored with @p
  * context using the function coap_set_app_data(). This function will
  * return @c NULL if no data has been stored.
+ *
+ * @param context The CoAP context.
+ *
+ * @return The data previously stored or @c NULL if not data stored.
  */
 void *coap_get_app_data(const coap_context_t *context);
 
@@ -414,6 +493,12 @@ coap_tid_t coap_send( coap_session_t *session, coap_pdu_t *pdu );
 
 /**
  * Handles retransmissions of confirmable messages
+ *
+ * @param context      The CoAP context.
+ * @param node         The node to retransmit.
+ *
+ * @return             The message id of the sent message or @c
+ *                     COAP_INVALID_TID on error.
  */
 coap_tid_t coap_retransmit(coap_context_t *context, coap_queue_t *node);
 
@@ -433,6 +518,7 @@ coap_tid_t coap_retransmit(coap_context_t *context, coap_queue_t *node);
 * @param max_sockets size of socket array.
 * @param num_sockets pointer to the number of valid entries in the socket arrays on output
 * @param now Current time.
+*
 * @return timeout as maxmimum number of milliseconds that the application should wait for network events or 0 if the application should wait forever.
 */
 
@@ -458,7 +544,7 @@ void coap_read(coap_context_t *ctx, coap_tick_t now);
  * @param ctx The CoAP context
  * @param timeout_ms Minimum number of milliseconds to wait for new messages before returning. If zero the call will block until at least one packet is sent or received.
  *
- * @return number of milliseconds spent or -1 if there was an error
+ * @return number of milliseconds spent or @c -1 if there was an error
  */
 
 int coap_run_once( coap_context_t *ctx, unsigned int timeout_ms );
@@ -523,7 +609,7 @@ coap_wait_ack( coap_context_t *context, coap_session_t *session,
  * @param session The session to find.
  * @param id    The transaction id to find.
  *
- * @return      A pointer to the transaction object or NULL if not found.
+ * @return      A pointer to the transaction object or @c NULL if not found.
  */
 coap_queue_t *coap_find_transaction(coap_queue_t *queue, coap_session_t *session, coap_tid_t id);
 
@@ -592,7 +678,7 @@ void coap_ticks(coap_tick_t *);
       }
     }
   }
- * @endcode
+   @endcode
  *
  * @param ctx      The context where all known options are registered.
  * @param pdu      The PDU to check.
