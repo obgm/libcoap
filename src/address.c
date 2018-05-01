@@ -68,7 +68,7 @@ int coap_is_mcast(const coap_address_t *a) {
 #else /* !defined(WITH_CONTIKI) && !defined(WITH_LWIP) */
 
 /* make compilers happy that do not like empty modules */
-COAP_STATIC_INLINE void dummy(void)
+static inline void dummy(void)
 {
 }
 

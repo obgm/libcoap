@@ -22,7 +22,7 @@
 
 #if defined(WITH_CONTIKI)
 #include <string.h>
-
+#include "lib/random.h"
 /**
  * Fills \p buf with \p len random bytes. This is the default implementation for
  * prng(). You might want to change prng() to use a better PRNG on your specific
