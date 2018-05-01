@@ -153,13 +153,14 @@ coap_delete_pdu(coap_pdu_t *pdu) {
 int
 coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
   if (new_size > pdu->alloc_size) {
-    uint8_t *new_hdr;
-    size_t offset;
+
     if (pdu->max_size && new_size > pdu->max_size) {
       warn( "coap_pdu_resize: pdu too big\n" );
       return 0;
     }
 #if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+    uint8_t *new_hdr;
+    size_t offset;
     if (pdu->data != NULL) {
       assert(pdu->data > pdu->token);
       offset = pdu->data - pdu->token;
