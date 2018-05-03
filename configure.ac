@@ -277,6 +277,12 @@ if test "x$build_manpages" = "xyes"; then
         AC_MSG_ERROR([==> Install the package containg a2x (mostly asciidoc) or disable the build of the manpages using '--disable-manpages'.])
         build_manpages="no"
     else
+        AX_CHECK_A2X_TO_MANPAGE([], [
+            AC_MSG_RESULT([no])
+            AC_MSG_WARN([==> You want to build the manpages with a2x, but manpage formatting does not work!])
+            AC_MSG_ERROR([==> Install the packages containg the docbook DTD and XSL stylesheets (presumably docbook, docbook-xml) or disable the build of the manpages using '--disable-manpages'.])
+            build_manpages="no"
+        ])
         MAN_DIR=man
         AC_SUBST(MAN_DIR)
     fi
