@@ -49,6 +49,7 @@ EOF
                 ac_cv_a2x_man=no
                 $2
              fi
+             rm -f conftestman.txt conftest.out foo.7
         fi
     ])
     HAVE_A2X_MAN="$ac_cv_a2x_man"
