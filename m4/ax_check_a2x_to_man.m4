@@ -41,12 +41,13 @@ AUTHORS
 -------
 author
 EOF
-             $A2X  --doctype manpage --format manpage conftestman.txt >conftest.out 2>&1
+             $A2X --verbose --doctype manpage --format manpage conftestman.txt >conftest.out 2>&1
              if test "$?" = 0; then
                 ac_cv_a2x_man=yes
                 $1
              else
                 ac_cv_a2x_man=no
+                cat conftest.out >&AS_MESSAGE_LOG_FD 2>&1
                 $2
              fi
              rm -f conftestman.txt conftest.out foo.7
