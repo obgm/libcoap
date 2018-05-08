@@ -303,6 +303,16 @@ void coap_session_send_csm(coap_session_t *session) {
     coap_delete_pdu(pdu);
 }
 
+coap_tid_t coap_session_send_ping(coap_session_t *session) {
+  coap_pdu_t *ping;
+  if (session->state != COAP_SESSION_STATE_ESTABLISHED)
+    return 0;
+  ping = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_PING, 0, 1);
+  if (!ping)
+    return COAP_INVALID_TID;
+  return coap_send(session, ping);
+}
+
 void coap_session_connected(coap_session_t *session) {
   if (session->state != COAP_SESSION_STATE_ESTABLISHED)
     coap_log(LOG_DEBUG, "*** %s: session connected\n", coap_session_str(session));
@@ -318,6 +328,7 @@ void coap_session_connected(coap_session_t *session) {
     }
   }
 
+  coap_handle_event(session->context, COAP_EVENT_SESSION_CONNECTED, session);
   while (session->delayqueue && session->state == COAP_SESSION_STATE_ESTABLISHED) {
     ssize_t bytes_written;
     coap_queue_t *q = session->delayqueue;
@@ -356,72 +367,64 @@ void coap_session_connected(coap_session_t *session) {
 
 void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
   (void)reason;
+  coap_session_state_t state = session->state;
+
   coap_log(LOG_DEBUG, "*** %s: session disconnected (reason %d)\n",
                       coap_session_str(session), reason);
-  if (session->proto == COAP_PROTO_DTLS && session->tls) {
-    coap_dtls_free_session(session);
-    session->tls = NULL;
-  } else if (session->proto == COAP_PROTO_TLS && session->tls) {
-    coap_tls_free_session(session);
+#ifndef WITHOUT_OBSERVE
+  coap_delete_observers( session->context, session );
+#endif
+
+  if ( session->tls) {
+    if (session->proto == COAP_PROTO_DTLS)
+      coap_dtls_free_session(session);
+    else if (session->proto == COAP_PROTO_TLS)
+      coap_tls_free_session(session);
     session->tls = NULL;
   }
 
   session->state = COAP_SESSION_STATE_NONE;
+
   if (session->partial_pdu) {
     coap_delete_pdu(session->partial_pdu);
     session->partial_pdu = NULL;
   }
   session->partial_read = 0;
-  if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
-    while (session->delayqueue) {
-      coap_queue_t *q = session->delayqueue;
-      session->delayqueue = q->next;
-      q->next = NULL;
-      debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), q->id);
-      if (q->pdu->type==COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
-	if (coap_wait_ack(session->context, session, q) >= 0)
-	  q = NULL;
-      }
-      if (q)
-	coap_delete_node(q);
-    }
-  }
-  if (COAP_PROTO_RELIABLE(session->proto)) {
-    coap_socket_close(&session->sock);
-#ifndef WITHOUT_OBSERVE
-    coap_delete_observers(session->context, session);
-#endif
-  }
-}
 
-void coap_session_reset(coap_session_t *session) {
-  debug("*** %s: session reset\n", coap_session_str(session));
-#ifndef WITHOUT_OBSERVE
-  coap_delete_observers(session->context, session);
-#endif
-  coap_cancel_session_messages(session->context, session, COAP_NACK_NOT_DELIVERABLE);
-  if (session->proto == COAP_PROTO_DTLS && session->tls) {
-    coap_dtls_free_session(session);
-    session->tls = NULL;
-  } else if (session->proto == COAP_PROTO_TLS && session->tls) {
-    coap_tls_free_session(session);
-    session->tls = NULL;
-  }
-
-  session->state = COAP_SESSION_STATE_NONE;
-  if (session->partial_pdu) {
-    coap_delete_pdu(session->partial_pdu);
-    session->partial_pdu = NULL;
-  }
-  session->partial_read = 0;
   while (session->delayqueue) {
     coap_queue_t *q = session->delayqueue;
     session->delayqueue = q->next;
     q->next = NULL;
-    debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), (int)q->id);
-    if (q->pdu->type == COAP_MESSAGE_CON && session->context->nack_handler)
-      session->context->nack_handler(session->context, session, q->pdu, COAP_NACK_NOT_DELIVERABLE, q->id);
-    coap_delete_node(q);
+    debug("** %s tid=%d: not transmitted after delay\n",
+      coap_session_str(session), q->id);
+    if (q->pdu->type==COAP_MESSAGE_CON
+      && COAP_PROTO_NOT_RELIABLE(session->proto)
+      && reason != COAP_NACK_RST)
+    {
+      if (coap_wait_ack(session->context, session, q) >= 0)
+	q = NULL;
+    }
+    if (q && q->pdu->type == COAP_MESSAGE_CON
+      && session->context->nack_handler)
+    {
+      session->context->nack_handler(session->context, session, q->pdu,
+	                             reason, q->id);
+    }
+    if (q)
+      coap_delete_node(q);
+  }
+  if ( COAP_PROTO_RELIABLE(session->proto) ) {
+    if (session->sock.flags != COAP_SOCKET_EMPTY) {
+      coap_socket_close(&session->sock);
+      coap_handle_event(session->context,
+	state == COAP_SESSION_STATE_CONNECTING ?
+	COAP_EVENT_TCP_FAILED : COAP_EVENT_TCP_CLOSED, session);
+    }
+    if (state != COAP_SESSION_STATE_NONE) {
+      coap_handle_event(session->context,
+	state == COAP_SESSION_STATE_ESTABLISHED ?
+	COAP_EVENT_SESSION_CLOSED : COAP_EVENT_SESSION_FAILED, session);
+    }
   }
 }
 
@@ -564,10 +567,8 @@ coap_session_connect(coap_session_t *session) {
       session->tls = coap_tls_new_client_session(session, &connected);
       if (session->tls) {
 	session->state = COAP_SESSION_STATE_HANDSHAKE;
-        if (connected) {
-          coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+        if (connected)
           coap_session_send_csm(session);
-        }
       } else {
         /* Need to free session object. As a new session may not yet
          * have been referenced, we call coap_session_reference()
@@ -587,6 +588,8 @@ coap_session_connect(coap_session_t *session) {
 
 static coap_session_t *
 coap_session_accept(coap_session_t *session) {
+  if (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS)
+    coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
   if (session->proto == COAP_PROTO_TCP) {
     coap_session_send_csm(session);
   } else if (session->proto == COAP_PROTO_TLS) {

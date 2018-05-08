@@ -24,10 +24,27 @@ struct coap_context_t;
  */
  typedef unsigned int coap_event_t;
 
+/**
+ * (D)TLS events for COAP_PROTO_DTLS and COAP_PROTO_TLS
+ */
 #define COAP_EVENT_DTLS_CLOSED        0x0000
 #define COAP_EVENT_DTLS_CONNECTED     0x01DE
 #define COAP_EVENT_DTLS_RENEGOTIATE   0x01DF
 #define COAP_EVENT_DTLS_ERROR         0x0200
+
+/**
+ * TCP events for COAP_PROTO_TCP and COAP_PROTO_TLS
+ */
+#define COAP_EVENT_TCP_CONNECTED      0x1001
+#define COAP_EVENT_TCP_CLOSED         0x1002
+#define COAP_EVENT_TCP_FAILED         0x1003
+
+/**
+ * CSM exchange events for reliable protocols only
+ */
+#define COAP_EVENT_SESSION_CONNECTED  0x2001
+#define COAP_EVENT_SESSION_CLOSED     0x2002
+#define COAP_EVENT_SESSION_FAILED     0x2003
 
 /**
  * Type for event handler functions that can be registered with a CoAP
