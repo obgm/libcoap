@@ -20,6 +20,7 @@ coap_cleanup
 coap_clear_event_handler
 coap_clock_init
 coap_clone_uri
+coap_context_set_keepalive
 coap_context_set_pki
 coap_context_set_pki_root_cas
 coap_context_set_psk
@@ -150,7 +151,6 @@ coap_session_get_max_transmit
 coap_session_max_pdu_size
 coap_session_reference
 coap_session_release
-coap_session_reset
 coap_session_send
 coap_session_send_csm
 coap_session_send_pdu

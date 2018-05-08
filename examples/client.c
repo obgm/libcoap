@@ -45,6 +45,7 @@ static coap_optlist_t *optlist = NULL;
 static coap_uri_t uri;
 static coap_string_t proxy = { 0, NULL };
 static uint16_t proxy_port = COAP_DEFAULT_PORT;
+static unsigned int ping_seconds = 0;
 
 /* reading is done when this flag is set */
 static int ready = 0;
@@ -510,7 +511,7 @@ usage( const char *program, const char *version) {
      "Usage: %s [-a addr] [-b [num,]size] [-c certfile] [-C cafile] [-e text]\n"
      "\t\t[-f file] [-k key] [-l loss] [-m method] [-o file]\n"
      "\t\t[-p port] [-r] [-s duration] [-t type]  [-u user]\n"
-     "\t\t[-v num] [-A type] [-B seconds] [-N] [-O num,text]\n"
+     "\t\t[-v num] [-A type] [-B seconds] [-N] [-O num,text] [-K interval]\n"
      "\t\t[-P addr[:port]] [-R root_cafile] [-T token] [-U] URI\n\n"
      "\tURI can be an absolute URI or a URI prefixed with scheme and host\n\n"
      "\t-a addr\t\tThe local interface address to use\n"
@@ -549,6 +550,7 @@ usage( const char *program, const char *version) {
      "\t       \t\tcommand line the same filename for both the certfile and\n"
      "\t       \t\tcafile (as in  '-c certfile -C certfile') to trigger\n"
      "\t       \t\tvalidation\n"
+     "\t-K interval\tsend a ping after interval seconds of inactivity\n"
      "\t-N     \t\tSend NON-confirmable message\n"
      "\t-O num,text\tAdd option num with contents text to request\n"
      "\t-P addr[:port]\tUse proxy (automatically adds Proxy-Uri option to\n"
@@ -1143,7 +1145,7 @@ main(int argc, char **argv) {
   ssize_t user_length = 0, key_length = 0;
   int create_uri_opts = 1;
 
-  while ((opt = getopt(argc, argv, "Nra:b:c:e:f:k:m:p:s:t:o:v:A:B:C:O:P:R:T:u:U:l:")) != -1) {
+  while ((opt = getopt(argc, argv, "Nra:b:c:e:f:k:m:p:s:t:o:v:A:B:C:O:P:R:T:u:U:l:K:")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1238,6 +1240,9 @@ main(int argc, char **argv) {
     case 'r':
       reliable = 1;
       break;
+    case 'K':
+      ping_seconds = atoi(optarg);
+      break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
       exit( 1 );
@@ -1284,6 +1289,8 @@ main(int argc, char **argv) {
     coap_log( LOG_EMERG, "cannot create context\n" );
     goto finish;
   }
+
+  coap_context_set_keepalive(ctx, ping_seconds);
 
   dst.size = res;
   dst.addr.sin.sin_port = htons( port );

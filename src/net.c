@@ -407,6 +407,10 @@ int coap_context_set_pki_root_cas(coap_context_t *ctx,
   return 0;
 }
 
+void coap_context_set_keepalive(coap_context_t *context, unsigned int seconds) {
+  context->ping_timeout = seconds;
+}
+
 coap_context_t *
 coap_new_context(
   const coap_address_t *listen_addr) {
@@ -449,6 +453,9 @@ coap_new_context(
       return NULL;
     }
   }
+
+  /* set default CSM timeout */
+  c->csm_timeout = 30;
 
   /* initialize message id */
   prng((unsigned char *)&c->message_id, sizeof(uint16_t));
@@ -675,28 +682,39 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
 	session->state = COAP_SESSION_STATE_HANDSHAKE;
 	return coap_session_delay_pdu(session, pdu, node);
       }
+      coap_handle_event(session->context, COAP_EVENT_DTLS_ERROR, session);
       return -1;
     } else if(COAP_PROTO_RELIABLE(session->proto)) {
       if (!coap_socket_connect_tcp1(
 	&session->sock, &session->local_if, &session->remote_addr,
 	session->proto == COAP_PROTO_TLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
 	&session->local_addr, &session->remote_addr
-      ) || (session->sock.flags & COAP_SOCKET_WANT_CONNECT) != 0 ) {
-	if ((session->sock.flags & COAP_SOCKET_WANT_CONNECT) != 0 )
-	  session->state = COAP_SESSION_STATE_CONNECTING;
+      )) {
+	coap_handle_event(session->context, COAP_EVENT_TCP_FAILED, session);
+	return -1;
+      }
+      session->last_ping = 0;
+      session->csm_tx = 0;
+      coap_ticks( &session->last_rx_tx );
+      if ((session->sock.flags & COAP_SOCKET_WANT_CONNECT) != 0) {
+        session->state = COAP_SESSION_STATE_CONNECTING;
 	return coap_session_delay_pdu(session, pdu, node);
       }
+      coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
       if (session->proto == COAP_PROTO_TLS) {
         int connected = 0;
+	session->state = COAP_SESSION_STATE_HANDSHAKE;
 	session->tls = coap_tls_new_client_session(session, &connected);
 	if (session->tls) {
-	  session->state = COAP_SESSION_STATE_HANDSHAKE;
           if (connected) {
             coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
             coap_session_send_csm(session);
           }
 	  return coap_session_delay_pdu(session, pdu, node);
 	}
+	coap_handle_event(session->context, COAP_EVENT_DTLS_ERROR, session);
+	coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
+	return -1;
       } else {
 	coap_session_send_csm(session);
       }
@@ -1006,23 +1024,26 @@ coap_connect_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t n
   (void)ctx;
   if (coap_socket_connect_tcp2(&session->sock, &session->local_addr, &session->remote_addr)) {
     session->last_rx_tx = now;
+    coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
     if (session->proto == COAP_PROTO_TCP) {
       coap_session_send_csm(session);
     } else if (session->proto == COAP_PROTO_TLS) {
       int connected = 0;
+      session->state = COAP_SESSION_STATE_HANDSHAKE;
       session->tls = coap_tls_new_client_session(session, &connected);
       if (session->tls) {
-	session->state = COAP_SESSION_STATE_HANDSHAKE;
         if (connected) {
           coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
           coap_session_send_csm(session);
         }
       } else {
-	coap_session_reset(session);
+	coap_handle_event(session->context, COAP_EVENT_DTLS_ERROR, session);
+	coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
       }
     }
   } else {
-    coap_session_reset(session);
+    coap_handle_event(session->context, COAP_EVENT_TCP_FAILED, session);
+    coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
   }
 }
 
@@ -1089,7 +1110,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 
     if (bytes_read < 0) {
       if (bytes_read == -2)
-	coap_session_reset(session);
+	coap_session_disconnected(session, COAP_NACK_RST);
       else
 	warn("*  %s: read error\n", coap_session_str(session));
     } else if (bytes_read > 0) {
@@ -1271,22 +1292,34 @@ coap_read(coap_context_t *ctx, coap_tick_t now) {
 	coap_read_session(ctx, s, now);
 	coap_session_release(s);
       }
-      if ((s->sock.flags & COAP_SOCKET_CAN_WRITE) != 0)
+      if ((s->sock.flags & COAP_SOCKET_CAN_WRITE) != 0) {
+	/* Make sure the session object is not deleted in one of the callbacks  */
+	coap_session_reference(s);
 	coap_write_session(ctx, s, now);
+	coap_session_release(s);
+      }
     }
   }
 
   LL_FOREACH_SAFE(ctx->sessions, s, tmp_s) {
-    if ((s->sock.flags & COAP_SOCKET_CAN_CONNECT) != 0)
+    if ((s->sock.flags & COAP_SOCKET_CAN_CONNECT) != 0) {
+      /* Make sure the session object is not deleted in one of the callbacks  */
+      coap_session_reference(s);
       coap_connect_session(ctx, s, now);
+      coap_session_release( s );
+    }
     if ((s->sock.flags & COAP_SOCKET_CAN_READ) != 0) {
       /* Make sure the session object is not deleted in one of the callbacks  */
       coap_session_reference(s);
       coap_read_session(ctx, s, now);
       coap_session_release(s);
     }
-    if ((s->sock.flags & COAP_SOCKET_CAN_WRITE) != 0)
+    if ((s->sock.flags & COAP_SOCKET_CAN_WRITE) != 0) {
+      /* Make sure the session object is not deleted in one of the callbacks  */
+      coap_session_reference(s);
       coap_write_session(ctx, s, now);
+      coap_session_release( s );
+    }
   }
 }
 #endif /* not WITH_LWIP */

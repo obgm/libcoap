@@ -169,6 +169,7 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
 void coap_socket_close(coap_socket_t *sock) {
   if (sock->conn)
     uip_udp_remove((struct uip_udp_conn *)sock->conn);
+  sock->flags = COAP_SOCKET_EMPTY;
 }
 
 #else
@@ -578,7 +579,7 @@ void coap_socket_close(coap_socket_t *sock) {
     coap_closesocket(sock->fd);
     sock->fd = COAP_INVALID_SOCKET;
   }
-  sock->flags = 0;
+  sock->flags = COAP_SOCKET_EMPTY;
 }
 
 ssize_t
@@ -1059,6 +1060,7 @@ coap_write(coap_context_t *ctx,
   coap_session_t *s;
   coap_tick_t session_timeout;
   coap_tick_t timeout = 0;
+  coap_session_t *tmp;
 
   *num_sockets = 0;
 
@@ -1071,7 +1073,6 @@ coap_write(coap_context_t *ctx,
     session_timeout = COAP_DEFAULT_SESSION_TIMEOUT * COAP_TICKS_PER_SECOND;
 
   LL_FOREACH(ctx->endpoint, ep) {
-    coap_session_t *tmp;
     if (ep->sock.flags & (COAP_SOCKET_WANT_READ | COAP_SOCKET_WANT_WRITE | COAP_SOCKET_WANT_ACCEPT)) {
       if (*num_sockets < max_sockets)
         sockets[(*num_sockets)++] = &ep->sock;
@@ -1095,7 +1096,53 @@ coap_write(coap_context_t *ctx,
       }
     }
   }
-  LL_FOREACH(ctx->sessions, s) {
+  LL_FOREACH_SAFE(ctx->sessions, s, tmp) {
+    if (
+        s->type == COAP_SESSION_TYPE_CLIENT
+     && COAP_PROTO_RELIABLE(s->proto)
+     && s->state == COAP_SESSION_STATE_ESTABLISHED
+     && ctx->ping_timeout > 0
+    ) {
+      coap_tick_t s_timeout;
+      if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
+	if ( (s->last_ping > 0 && s->last_ping == s->last_rx_tx)
+	  || coap_session_send_ping(s) == COAP_INVALID_TID)
+	{
+	  /* Make sure the session object is not deleted in the callback */
+	  coap_session_reference(s);
+	  coap_session_disconnected(s, COAP_NACK_NOT_DELIVERABLE);
+	  coap_session_release(s);
+	  continue;
+	}
+        s->last_rx_tx = now;
+	s->last_ping = now;
+      }
+      s_timeout = (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND) - now;
+      if (timeout == 0 || s_timeout < timeout)
+	timeout = s_timeout;
+    }
+
+    if (
+        s->type == COAP_SESSION_TYPE_CLIENT
+     && COAP_PROTO_RELIABLE(s->proto)
+     && s->state == COAP_SESSION_STATE_CSM
+     && ctx->csm_timeout > 0
+    ) {
+      coap_tick_t s_timeout;
+      if (s->csm_tx == 0) {
+	s->csm_tx = now;
+      } else if (s->csm_tx + ctx->csm_timeout * COAP_TICKS_PER_SECOND <= now) {
+	/* Make sure the session object is not deleted in the callback */
+	coap_session_reference(s);
+	coap_session_disconnected(s, COAP_NACK_NOT_DELIVERABLE);
+	coap_session_release(s);
+	continue;
+      }
+      s_timeout = (s->csm_tx + ctx->csm_timeout * COAP_TICKS_PER_SECOND) - now;
+      if (timeout == 0 || s_timeout < timeout)
+	timeout = s_timeout;
+    }
+
     if (s->sock.flags & (COAP_SOCKET_WANT_READ | COAP_SOCKET_WANT_WRITE | COAP_SOCKET_WANT_CONNECT)) {
       if (*num_sockets < max_sockets)
         sockets[(*num_sockets)++] = &s->sock;

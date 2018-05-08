@@ -76,6 +76,8 @@ typedef struct coap_session_t {
   coap_pdu_t *partial_pdu;        /**< incomplete incoming pdu */
   coap_tick_t last_rx_tx;
   coap_tick_t last_tx_rst;
+  coap_tick_t last_ping;
+  coap_tick_t csm_tx;
   uint8_t *psk_identity;
   size_t psk_identity_len;
   uint8_t *psk_key;
@@ -118,19 +120,12 @@ void coap_session_set_app_data(coap_session_t *session, void *data);
 void *coap_session_get_app_data(const coap_session_t *session);
 
 /**
-* Notify session that it has failed connecting or has been disconnected.
+* Notify session that it has failed.
 *
 * @param session The CoAP session.
 * @param reason The reason why the session was disconnected.
 */
 void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason);
-
-/**
-* Notify session that the remote peer is no longer listening.
-*
-* @param session The CoAP session.
-*/
-void coap_session_reset(coap_session_t *session);
 
 /**
 * Notify session transport has just connected and CSM exchange can now start.
@@ -481,5 +476,13 @@ coap_fixed_point_t coap_session_get_ack_timeout(coap_session_t *session);
 * @return Current ack randomize value
 */
 coap_fixed_point_t coap_session_get_ack_random_factor(coap_session_t *session);
+
+/**
+ * Send a ping message for the session.
+ * @param session The CoAP session.
+ *
+ * @return COAP_INVALID_TID if there is an error
+ */
+coap_tid_t coap_session_send_ping(coap_session_t *session);
 
 #endif  /* _SESSION_H */
