@@ -694,6 +694,7 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
 	return -1;
       }
       session->last_ping = 0;
+      session->last_pong = 0;
       session->csm_tx = 0;
       coap_ticks( &session->last_rx_tx );
       if ((session->sock.flags & COAP_SOCKET_WANT_CONNECT) != 0) {
@@ -2095,6 +2096,7 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
       coap_send(session, pong);
     }
   } else if (pdu->code == COAP_SIGNALING_PONG) {
+    session->last_pong = session->last_rx_tx;
     if (context->pong_handler) {
       context->pong_handler(context, session, pdu, pdu->tid);
     }

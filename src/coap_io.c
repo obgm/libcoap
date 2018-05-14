@@ -1105,7 +1105,7 @@ coap_write(coap_context_t *ctx,
     ) {
       coap_tick_t s_timeout;
       if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
-	if ( (s->last_ping > 0 && s->last_ping == s->last_rx_tx)
+	if ((s->last_ping > 0 && s->last_pong < s->last_ping)
 	  || coap_session_send_ping(s) == COAP_INVALID_TID)
 	{
 	  /* Make sure the session object is not deleted in the callback */
