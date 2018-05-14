@@ -77,6 +77,7 @@ typedef struct coap_session_t {
   coap_tick_t last_rx_tx;
   coap_tick_t last_tx_rst;
   coap_tick_t last_ping;
+  coap_tick_t last_pong;
   coap_tick_t csm_tx;
   uint8_t *psk_identity;
   size_t psk_identity_len;
