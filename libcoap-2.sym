@@ -154,6 +154,7 @@ coap_session_release
 coap_session_send
 coap_session_send_csm
 coap_session_send_pdu
+coap_session_send_ping
 coap_session_set_ack_random_factor
 coap_session_set_ack_timeout
 coap_session_set_app_data

@@ -22,6 +22,7 @@ global:
   coap_clear_event_handler;
   coap_clock_init;
   coap_clone_uri;
+  coap_context_set_keepalive;
   coap_context_set_pki;
   coap_context_set_pki_root_cas;
   coap_context_set_psk;
@@ -152,10 +153,10 @@ global:
   coap_session_max_pdu_size;
   coap_session_reference;
   coap_session_release;
-  coap_session_reset;
   coap_session_send;
   coap_session_send_csm;
   coap_session_send_pdu;
+  coap_session_send_ping;
   coap_session_set_ack_random_factor;
   coap_session_set_ack_timeout;
   coap_session_set_app_data;
