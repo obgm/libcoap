@@ -84,38 +84,24 @@
     <ClInclude Include="..\include\coap\utlist.h" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\libcoap-1.sym">
+    <CustomBuild Include="..\libcoap-2.sym">
       <FileType>Document</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">false</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Creating module definition file</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)$(TargetName).def</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">Creating module definition file</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">$(IntDir)$(TargetName).def</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">Creating module definition file</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">$(IntDir)$(TargetName).def</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Creating module definition file</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)$(TargetName).def</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkObjects>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ECHO LIBRARY $(TargetName) &gt; "$(IntDir)$(TargetName).def"
+ECHO EXPORTS &gt;&gt;  "$(IntDir)$(TargetName).def"
+TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">ECHO LIBRARY $(TargetName) &gt; "$(IntDir)$(TargetName).def"
 ECHO EXPORTS &gt;&gt;  "$(IntDir)$(TargetName).def"
 TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">ECHO LIBRARY $(TargetName) &gt; "$(IntDir)$(TargetName).def"
 ECHO EXPORTS &gt;&gt;  "$(IntDir)$(TargetName).def"
 TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ECHO LIBRARY $(TargetName) &gt; "$(IntDir)$(TargetName).def"
-ECHO EXPORTS &gt;&gt;  "$(IntDir)$(TargetName).def"
-TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ECHO LIBRARY $(TargetName) &gt; "$(IntDir)$(TargetName).def"
 ECHO EXPORTS &gt;&gt;  "$(IntDir)$(TargetName).def"
 TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ECHO LIBRARY $(TargetName) &gt; "$(IntDir)$(TargetName).def"
 ECHO EXPORTS &gt;&gt;  "$(IntDir)$(TargetName).def"
 TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
@@ -128,14 +114,26 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ECHO LIBRARY $(TargetName) &gt; "$(IntDir)$(TargetName).def"
 ECHO EXPORTS &gt;&gt;  "$(IntDir)$(TargetName).def"
 TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Creating module definition file</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">Creating module definition file</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">Creating module definition file</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Creating module definition file</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Creating module definition file</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">Creating module definition file</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">Creating module definition file</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Creating module definition file</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)$(TargetName).def</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">$(IntDir)$(TargetName).def</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">$(IntDir)$(TargetName).def</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)$(TargetName).def</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)$(TargetName).def</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">$(IntDir)$(TargetName).def</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">$(IntDir)$(TargetName).def</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)$(TargetName).def</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkObjects>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">false</LinkObjects>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">false</LinkObjects>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkObjects>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">false</LinkObjects>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">false</LinkObjects>
@@ -146,7 +144,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     <ProjectGuid>{96A98759-36B3-4246-A265-CAFCEEC0F2F2}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>libcoap</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

@@ -38,7 +38,7 @@
     <ProjectGuid>{640AC988-FE9E-4580-BDF5-0D9FD57C3CE5}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>coaprp</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

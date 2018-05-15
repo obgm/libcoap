@@ -154,6 +154,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\libcoap-1.sym" />
+    <None Include="..\libcoap-2.sym" />
   </ItemGroup>
 </Project>

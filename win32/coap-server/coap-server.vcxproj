@@ -38,7 +38,7 @@
     <ProjectGuid>{F9255447-0C93-47CB-8644-62F0E6995791}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>coap_server</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
     <ProjectName>coap-server</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
