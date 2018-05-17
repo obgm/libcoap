@@ -598,6 +598,63 @@ coap_add_token2(coap_pdu_t *pdu, size_t len, const unsigned char *data,
   return 1;
 }
 
+int coap_add_token_to_empty_message(coap_pdu_t *pdu, size_t len, const unsigned char *data,
+                                    coap_transport_t transport)
+{
+    const size_t HEADERLENGTH = len;
+    /* must allow for pdu == NULL as callers may rely on this */
+    if (!pdu || len > 8)
+        return 0;
+
+    unsigned char* token = NULL;
+    switch(transport)
+    {
+        case COAP_UDP:
+            pdu->transport_hdr->udp.token_length = len;
+            token = pdu->transport_hdr->udp.token;
+            pdu->length = HEADERLENGTH;
+            break;
+#ifdef WITH_TCP
+        case COAP_TCP:
+            pdu->transport_hdr->tcp.header_data[0] =
+                    pdu->transport_hdr->tcp.header_data[0] | len;
+            token = pdu->transport_hdr->tcp.token;
+            pdu->length = len + COAP_TCP_HEADER_NO_FIELD;
+            break;
+        case COAP_TCP_8BIT:
+            pdu->transport_hdr->tcp_8bit.header_data[0] =
+                    pdu->transport_hdr->tcp_8bit.header_data[0] | len;
+            token = pdu->transport_hdr->tcp_8bit.token;
+            pdu->length = len + COAP_TCP_HEADER_8_BIT;
+            break;
+        case COAP_TCP_16BIT:
+            pdu->transport_hdr->tcp_16bit.header_data[0] =
+                    pdu->transport_hdr->tcp_16bit.header_data[0] | len;
+            token = pdu->transport_hdr->tcp_16bit.token;
+            pdu->length = len + COAP_TCP_HEADER_16_BIT;
+            break;
+        case COAP_TCP_32BIT:
+            pdu->transport_hdr->tcp_32bit.header_data[0] =
+                    pdu->transport_hdr->tcp_32bit.header_data[0] | len;
+            token = pdu->transport_hdr->tcp_32bit.token;
+            pdu->length = len + COAP_TCP_HEADER_32_BIT;
+            break;
+#endif
+        default:
+            debug("it has wrong type\n");
+    }
+
+    if (len)
+    {
+        memcpy(token, data, len);
+    }
+
+    pdu->max_delta = 0;
+    pdu->data = NULL;
+
+    return 1;
+}
+
 void
 coap_get_token(const coap_hdr_t *pdu_hdr,
                unsigned char **token, unsigned int *token_length) {
