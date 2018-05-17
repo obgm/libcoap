@@ -598,8 +598,8 @@ coap_add_token2(coap_pdu_t *pdu, size_t len, const unsigned char *data,
   return 1;
 }
 
-int coap_add_token_for_empty_message(coap_pdu_t *pdu, size_t len, const unsigned char *data,
-                                     coap_transport_t transport)
+int coap_add_token_to_empty_message(coap_pdu_t *pdu, size_t len, const unsigned char *data,
+                                    coap_transport_t transport)
 {
     const size_t HEADERLENGTH = len;
     /* must allow for pdu == NULL as callers may rely on this */
