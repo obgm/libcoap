@@ -613,6 +613,16 @@ int coap_add_token2(coap_pdu_t *pdu, size_t len, const unsigned char *data,
                     coap_transport_t transport);
 
 /**
+ * @param pdu  The pdu pointer.
+ * @param len  The length of the new token.
+ * @param data The token to add.
+ * @param transport The transport type.
+ * @return A value greater than zero on success, or @c 0 on error.
+ */
+int coap_add_token_to_empty_message(coap_pdu_t *pdu, size_t len, const unsigned char *data,
+                                    coap_transport_t transport);
+    
+/**
  * Get token from coap header
  *
  * @param pdu_hdr  The header pointer of PDU.
