@@ -1949,6 +1949,8 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       warn("cannot generate response\r\n");
     }
   } else {
+    if (response)
+      coap_delete_pdu(response);
     if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
       /* request for .well-known/core */
       debug("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
