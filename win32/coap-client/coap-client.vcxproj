@@ -334,10 +334,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\examples\client.c" />
-    <ClCompile Include="..\..\examples\coap_list.c" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\examples\coap_list.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\libcoap.vcxproj">

@@ -8,6 +8,23 @@
  * use.
  */
 
+/*
+ * examples/coap_list.[ch] are DEPRECATED.  You should be using
+ * struct coap_optlist_t instead with the following functions which are a part
+ * of libcoap.
+ *
+ * coap_new_optlist()
+ * coap_insert_optlist()
+ * coap_delete_optlist()
+ * coap_add_optlist_pdu()
+ *
+ * See 'man coap_pdu_setup' for further information.
+ *
+ * examples/coap_list.[ch] files will be removed in a future release
+ * They are left here to support building backward compatability of old versions
+ * of coap-client
+ */
+
 #ifndef _COAP_LIST_H_
 #define _COAP_LIST_H_
 

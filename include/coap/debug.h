@@ -65,7 +65,7 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
 #endif
 
 #ifndef coap_log
-#define coap_log(level, ...) do { if ((level)<=coap_get_log_level()) coap_log_impl((level), __VA_ARGS__); } while(0)
+#define coap_log(level, ...) do { if ((level)<=(int)coap_get_log_level()) coap_log_impl((level), __VA_ARGS__); } while(0)
 #endif
 
 /* A set of convenience macros for common log levels. */

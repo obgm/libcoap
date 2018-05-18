@@ -28,7 +28,9 @@ const str *_query_);*
 *coap_subscription_t *coap_find_observer(coap_resource_t *_resource_, 
 coap_session_t *_session_, const str *_token_);*
 
-Link with -lcoap-@LIBCOAP_API_VERSION@.
+Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
+or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+type.
 
 DESCRIPTION
 -----------
@@ -143,6 +145,11 @@ coap_pdu_t *response) {
   /* Define what the response code is going to be */
   response->code = COAP_RESPONSE_CODE(205);
 
+  /*
+   * Note that the following coap_add_option MUST be defined with numerically
+   * incrementing COAP_OPTION_ options
+   */
+
   /* If the resource is being Observed, return with Observe set */
   if (coap_find_observer(resource, session, token)) {
     coap_add_option(response,
@@ -244,118 +251,72 @@ int main(int argc, char *argv[]){
 --
 #include <coap/coap.h>
 
-unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
+/* usually, requests are sent confirmable */
 
-typedef struct coap_list_t {
-  struct coap_list_t *next;
-  char data[];
-} coap_list_t;
+static unsigned char msgtype = COAP_MESSAGE_CON;
 
-static int coap_insert(coap_list_t **head, coap_list_t *node) {
-
-  if (!node) {
-    coap_log(LOG_WARNING, "node not specified\n");
-  } else {
-    /* must append at the list end to avoid re-ordering of
-     * options during sort */
-    LL_APPEND((*head), node);
-  } 
-  
-  return node != NULL;
-
-}
-
-static coap_list_t * new_option_node(uint16_t key, size_t length,
-unsigned char *data) {
-
-  coap_list_t *node;
-
-  node = coap_malloc(sizeof(coap_list_t) + sizeof(coap_option) + length);
-
-  if (node) {
-    coap_option *option;
-    option = (coap_option *)(node->data);
-    COAP_OPTION_KEY(*option) = key;
-    COAP_OPTION_LENGTH(*option) = length;
-    memcpy(COAP_OPTION_DATA(*option), data, length);
-  } else {
-    coap_log(LOG_DEBUG, "new_option_node: malloc\n");
-  }
-
-  return node;
-
-}
-
-static int order_opts(void *a, void *b) {
-
-  coap_option *o1, *o2;
-
-  if (!a || !b)
-    return a < b ? -1 : 1;
-
-  o1 = (coap_option *)(((coap_list_t *)a)->data);
-  o2 = (coap_option *)(((coap_list_t *)b)->data);
-
-  return (COAP_OPTION_KEY(*o1) < COAP_OPTION_KEY(*o2))
-    ? -1
-    : (COAP_OPTION_KEY(*o1) != COAP_OPTION_KEY(*o2));
-
-}
+static unsigned int token = 0;
 
 static coap_pdu_t *
-coap_new_request(coap_context_t *ctx, coap_session_t *session, char m,
-coap_list_t **options, unsigned char *data, size_t length, int observe) {
+coap_new_request(coap_context_t *context, coap_session_t *session, char request_code,
+coap_optlist_t **options, unsigned char *data, size_t length, int observe) {
 
-  static unsigned int token = 0;
   coap_pdu_t *pdu;
-  coap_list_t *opt;
-  (void)ctx;
+  coap_optlist_t *opt;
+  (void)context;
 
-  if (!(pdu = coap_new_pdu(session)))
+  /* Create the pdu with the apropriate options */
+  pdu = coap_pdu_init(msgtype, request_code, coap_new_message_id(session),
+                      coap_session_max_pdu_size(session));
+  if (!pdu)
     return NULL;
 
-  pdu->type = msgtype;
-  pdu->tid = coap_new_message_id(session);
-  pdu->code = m;
-
-  /* Create uniqueness for this request */
+  /*
+   * Create uniqueness token for this request for handling unsolicited /
+   * delayed responses
+   */
   token++;
   if (!coap_add_token(pdu, sizeof(token), (unsigned char*)&token)) {
     coap_log(LOG_DEBUG, "cannot add token to request\n");
+    goto error;
   }
 
-  if (m == COAP_REQUEST_GET && observe) {
+
+  if (request_code == COAP_REQUEST_GET && observe) {
     /* Indicate that we want to observe this resource */
-    coap_insert(options, new_option_node(COAP_OPTION_OBSERVE,
-                                         COAP_OBSERVE_ESTABLISH, NULL));
+    if (!coap_insert_optlist(options, 
+                             coap_new_optlist(COAP_OPTION_OBSERVE,
+                                         COAP_OBSERVE_ESTABLISH, NULL)))
+      goto error;
   }
 
-  if (options) {
-    /* sort options for delta encoding */
-    LL_SORT((*options), order_opts);
 
-    LL_FOREACH((*options), opt) {
-      coap_option *o = (coap_option *)(opt->data);
-      coap_add_option(pdu,
-                      COAP_OPTION_KEY(*o),
-                      COAP_OPTION_LENGTH(*o),
-                      COAP_OPTION_DATA(*o));
-    }
-  }
+  /* ... Other code / options etc. ... */
 
-  if (length) {
-    coap_add_data(pdu, length, data);
+  /* Add in all the options (after internal sorting) to the pdu */
+  if (!coap_add_optlist_pdu(pdu, *options))
+    goto error;
+
+  if (data && length) {
+    /* Add in the specified data */
+    if (!coap_add_data(pdu, length, data))
+      goto error;
   }
 
   return pdu;
+
+error:
+
+  coap_delete_pdu(pdu);
+  return NULL;
 
 }
 --
 
 SEE ALSO
 --------
-*coap_attribute*(3), *coap_context*(3), *coap_handler*(3) and 
-*coap_resource*(3)
+*coap_attribute*(3), *coap_context*(3), *coap_handler*(3), *coap_pdu_setup*(3)
+and *coap_resource*(3)
 
 FURTHER INFORMATION
 -------------------

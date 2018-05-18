@@ -34,7 +34,9 @@ coap_resource_t _resource_);*
 
 *void coap_resource_set_mode(coap_resource_t *_resource_, int _mode_);*
 
-Link with -lcoap-@LIBCOAP_API_VERSION@.
+Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
+or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+type.
 
 DESCRIPTION
 -----------
@@ -76,6 +78,7 @@ or'ed together.
 It is imperative that _uri_path_ points to data that is valid during the 
 lifetime of the resource.
 
+[horizontal]
 *COAP_RESOURCE_FLAGS_NOTIFY_NON*::
 Set the notification message type to non-confirmable.
 

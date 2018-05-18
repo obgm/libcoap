@@ -10,11 +10,10 @@ coap_context(3)
 
 NAME
 ----
-coap_context, coap_new_context, 
+coap_context, coap_new_context, coap_free_context,
 coap_context_set_pki, coap_context_set_psk, coap_new_endpoint, 
 coap_new_client_session, 
-coap_new_client_session_pki, coap_new_client_session_psk, 
-coap_get_tls_library_version
+coap_new_client_session_pki, coap_new_client_session_psk
 - work with CoAP contexts
 
 SYNOPSIS
@@ -59,7 +58,9 @@ _proto_, coap_dtls_pki_t *_setup_data_);*
 
 *void coap_session_set_mtu(coap_session_t *_session_, unsigned _mtu_);*
 
-Link with -lcoap-@LIBCOAP_API_VERSION@.
+Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
+or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+type.
 
 DESCRIPTION
 -----------
@@ -352,7 +353,7 @@ const char *private_key_file, const char *ca_file) {
 
   coap_address_init(&listen_addr);
   listen_addr.addr.sa.sa_family = AF_INET;
-  listen_addr.addr.sin.sin_port = htons (5683);
+  listen_addr.addr.sin.sin_port = htons (5684);
 
   endpoint = coap_new_endpoint(context, &listen_addr, COAP_PROTO_DTLS);
   if (!endpoint) {
@@ -433,7 +434,7 @@ uint8_t *key, unsigned key_len) {
 
   coap_address_init(&listen_addr);
   listen_addr.addr.sa.sa_family = AF_INET;
-  listen_addr.addr.sin.sin_port = htons (5683);
+  listen_addr.addr.sin.sin_port = htons (5684);
 
   endpoint = coap_new_endpoint(context, &listen_addr, COAP_PROTO_DTLS);
   if (!endpoint) {
@@ -503,7 +504,7 @@ const char *ca_file) {
   coap_address_init(&server);
   server.addr.sa.sa_family = AF_INET;
   server.addr.sin.sin_addr = ip_address;
-  server.addr.sin.sin_port = htons (5683);
+  server.addr.sin.sin_port = htons (5684);
 
   memset (&dtls_pki, 0, sizeof (dtls_pki));
 
@@ -513,7 +514,7 @@ const char *ca_file) {
   dtls_pki.call_back   = NULL;
 
   session = coap_new_client_session_pki(context, NULL, &server, 
-                                        COAP_PROTO_UDP, &dtls_pki);
+                                        COAP_PROTO_DTLS, &dtls_pki);
   if (!session) {
     coap_free_context(context);
     return NULL;
@@ -544,10 +545,10 @@ const char *identity, const uint8_t *key, unsigned key_len) {
   coap_address_init(&server);
   server.addr.sa.sa_family = AF_INET;
   server.addr.sin.sin_addr = ip_address;
-  server.addr.sin.sin_port = htons (5683);
+  server.addr.sin.sin_port = htons (5684);
 
   session = coap_new_client_session_psk(context, NULL, &server, 
-                                        COAP_PROTO_UDP, identity, key, key_len);
+                                        COAP_PROTO_DTLS, identity, key, key_len);
   if (!session) {
     coap_free_context(context);
     return NULL;

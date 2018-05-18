@@ -38,7 +38,9 @@ coap_fixed_point_t _value_)*;
 
 *int coap_debug_set_packet_loss(const char *_loss_level_)*;
 
-Link with -lcoap-@LIBCOAP_API_VERSION@.
+Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
+or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+type.
 
 DESCRIPTION
 -----------
@@ -61,6 +63,24 @@ typedef struct coap_fixed_point_t {
                                1/1000 (3 points) precision */
 } coap_fixed_point_t;
 ----
+
+The CoAP message retry rules are (with the default values to compute the time)
+----
+1st retransmit after 1 * ack_timeout * ack_random factor (3 seconds)
+2nd retransmit after 2 * ack_timeout * ack_random factor (6 seconds)
+3rd retransmit after 3 * ack_timeout * ack_random factor (12 seconds)
+4th retransmit after 4 * ack_timeout * ack_random factor (24 seconds)
+5th retransmit after 5 * ack_timeout * ack_random factor (48 seconds)
+
+As max_transmit (by default) is 4, then the 5th retransmit does not get sent,
+but at that point COAP_NACK_TOO_MANY_RETRIES gets raised in the nack_handler
+(if defined). Note that the sum of the seconds is 93 matching RFC7252.
+----
+
+It should be noted that these retries are seperate from the DTLS or TLS
+encrypted session setup retry timeouts. For DTLS, the initial requesting
+packet will get sent max_retransmit times before reporting failure.
+For TLS the initial TCP connection will timeout before reporting failure.
 
 It is also possible to set up packet losses, for both confirmable, and 
 non-confirmable messages.  This can be used for stress testing packet 

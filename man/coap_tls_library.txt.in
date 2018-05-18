@@ -24,7 +24,9 @@ SYNOPSIS
 
 *coap_tls_version_t *coap_get_tls_library_version(void);*
 
-Link with -lcoap-@LIBCOAP_API_VERSION@.
+Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
+or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+type.
 
 DESCRIPTION
 -----------
@@ -59,10 +61,10 @@ type and library version in a coap_tls_version_t* structure.
 
 [source, c]
 ----
-#define COAP_TLS_LIBRARY_NOTLS 0
+#define COAP_TLS_LIBRARY_NOTLS    0
 #define COAP_TLS_LIBRARY_TINYDTLS 1
-#define COAP_TLS_LIBRARY_OPENSSL 2
-#define COAP_TLS_LIBRARY_GNUTLS 3
+#define COAP_TLS_LIBRARY_OPENSSL  2
+#define COAP_TLS_LIBRARY_GNUTLS   3
 
 typedef struct coap_tls_version_t {
   uint64_t version; /* Library Version as returned by the TLS library */
