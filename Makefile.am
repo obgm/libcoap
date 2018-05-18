@@ -17,15 +17,19 @@ EXTRA_DIST = \
   CONTRIBUTE \
   TODO \
   LICENSE \
-  $(pkgconfig_DATA).in \
+  libcoap-$(LIBCOAP_API_VERSION).pc.in \
   libcoap-$(LIBCOAP_API_VERSION).map \
   libcoap-$(LIBCOAP_API_VERSION).sym \
   examples/coap_list.h \
   examples/getopt.c \
+  include/coap/utlist.h \
+  tests/test_common.h \
+  tests/test_error_response.h \
   tests/test_options.h \
   tests/test_pdu.h \
-  tests/test_error_response.h \
   tests/test_sendqueue.h \
+  tests/test_session.h \
+  tests/test_tls.h \
   tests/test_uri.h \
   tests/test_wellknown.h \
   win32/coap-client/coap-client.vcxproj \
@@ -111,8 +115,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap/str.h \
   $(top_srcdir)/include/coap/subscribe.h \
   $(top_srcdir)/include/coap/uri.h \
-  $(top_srcdir)/include/coap/uthash.h \
-  $(top_srcdir)/include/coap/utlist.h
+  $(top_srcdir)/include/coap/uthash.h
 
 # If there is a API change to something $(LIBCOAP_API_VERSION) > 1 the install
 # prefix for the header files has to change to not conflict the older version
