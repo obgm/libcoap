@@ -566,6 +566,15 @@ coap_print_link(const coap_resource_t *resource,
   return result;
 }
 
+void
+coap_register_handler(coap_resource_t *resource,
+                      unsigned char method,
+                      coap_method_handler_t handler) {
+  assert(resource);
+  assert(method > 0 && (size_t)(method-1) < sizeof(resource->handler)/sizeof(coap_method_handler_t));
+  resource->handler[method-1] = handler;
+}
+
 #ifndef WITHOUT_OBSERVE
 coap_subscription_t *
 coap_find_observer(coap_resource_t *resource, coap_session_t *session,

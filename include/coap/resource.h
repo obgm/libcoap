@@ -322,14 +322,9 @@ coap_print_status_t coap_print_link(const coap_resource_t *resource,
  * @param method   The CoAP request method to handle.
  * @param handler  The handler to register with @p resource.
  */
-COAP_STATIC_INLINE void
-coap_register_handler(coap_resource_t *resource,
-                      unsigned char method,
-                      coap_method_handler_t handler) {
-  assert(resource);
-  assert(method > 0 && (size_t)(method-1) < sizeof(resource->handler)/sizeof(coap_method_handler_t));
-  resource->handler[method-1] = handler;
-}
+void coap_register_handler(coap_resource_t *resource,
+                           unsigned char method,
+                           coap_method_handler_t handler);
 
 /**
  * Returns the resource identified by the unique string @p uri_path. If no
