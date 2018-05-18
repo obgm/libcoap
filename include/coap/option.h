@@ -447,7 +447,7 @@ coap_optlist_t *coap_new_optlist(uint16_t number,
 
 /**
  * The current optlist of @p optlist_chain is first sorted (as per RFC7272
- * ordering requirements) and then added to the @pdu.
+ * ordering requirements) and then added to the @p pdu.
  *
  * @param pdu  The pdu to add the options to from the chain list
  * @param optlist_chain The chained list of optlist to add to the pdu
