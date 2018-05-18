@@ -252,6 +252,14 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     node->session = NULL;
     node->t = 0;
   } else {
+    coap_queue_t *q = NULL;
+    /* Check that the same tid is not getting re-used in violation of RFC7252 */
+    LL_FOREACH(session->sendqueue, q) {
+      if (q->id == pdu->tid) {
+        coap_log(LOG_ERR, "**  %s tid=%d: already in-use - dropped\n", coap_session_str(session), pdu->tid);
+        return COAP_INVALID_TID;
+      }
+    }
     node = coap_new_node();
     if (node == NULL)
       return COAP_INVALID_TID;
