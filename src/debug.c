@@ -71,7 +71,7 @@ coap_set_log_level(coap_log_t level) {
 }
 
 /* this array has the same order as the type log_t */
-static char *loglevels[] = {
+static const char *loglevels[] = {
   "EMRG", "ALRT", "CRIT", "ERR", "WARN", "NOTE", "INFO", "DEBG" 
 };
 
@@ -265,7 +265,7 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
 /** Returns a textual description of the message type @p t. */
 static const char *
 msg_type_string(uint16_t t) {
-  static char *types[] = { "CON", "NON", "ACK", "RST", "???" };
+  static const char *types[] = { "CON", "NON", "ACK", "RST", "???" };
 
   return types[min(t, sizeof(types)/sizeof(char *) - 1)];
 }

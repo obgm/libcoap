@@ -132,7 +132,7 @@ struct coap_session_t;
  * @return     A zero-terminated string describing the error, or @c NULL if not
  *             found.
  */
-char *coap_response_phrase(unsigned char code);
+const char *coap_response_phrase(unsigned char code);
 
 #define COAP_ERROR_PHRASE_LENGTH   32 /**< maximum length of error phrase */
 

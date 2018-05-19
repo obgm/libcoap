@@ -137,6 +137,7 @@ WARNING_CFLAGS="\
 -Wswitch-default \
 -Wswitch-enum \
 -Wunused \
+-Wwrite-strings \
 "
 
 # check whether or not the compiler supports -Wlogical-op (clang does not...)

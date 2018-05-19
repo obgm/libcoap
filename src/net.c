@@ -1426,7 +1426,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
   uint16_t opt_type = 0;	/* used for calculating delta-storage */
 
 #if COAP_ERROR_PHRASE_LENGTH > 0
-  char *phrase = coap_response_phrase(code);
+  const char *phrase = coap_response_phrase(code);
 
   /* Need some more space for the error phrase and payload start marker */
   if (phrase)

@@ -559,7 +559,7 @@ usage( const char *program, const char *version) {
 
 typedef struct {
   unsigned char code;
-  char *media_type;
+  const char *media_type;
 } content_type_t;
 
 static void
@@ -968,7 +968,7 @@ cmdline_input_from_file(char *filename, str *buf) {
 
 static method_t
 cmdline_method(char *arg) {
-  static char *methods[] =
+  static const char *methods[] =
     { 0, "get", "post", "put", "delete", "fetch", "patch", "ipatch", 0};
   unsigned char i;
 

@@ -344,7 +344,7 @@ coap_get_data(coap_pdu_t *pdu, size_t *len, uint8_t **data) {
 #ifndef SHORT_ERROR_RESPONSE
 typedef struct {
   unsigned char code;
-  char *phrase;
+  const char *phrase;
 } error_desc_t;
 
 /* if you change anything here, make sure, that the longest string does not 
@@ -376,7 +376,7 @@ error_desc_t coap_error[] = {
   { 0, NULL }			/* end marker */
 };
 
-char *
+const char *
 coap_response_phrase(unsigned char code) {
   int i;
   for (i = 0; coap_error[i].code; ++i) {
