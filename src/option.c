@@ -552,6 +552,7 @@ coap_new_optlist(uint16_t number,
   if (node) {
     node->number = number;
     node->length = length;
+    node->data = (uint8_t *)&node[1];
     memcpy(node->data, data, length);
   } else {
     coap_log(LOG_WARNING, "coap_new_optlist: malloc failure\n");

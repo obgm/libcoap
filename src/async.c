@@ -47,14 +47,13 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
   }
 
   /* store information for handling the asynchronous task */
-  s = (coap_async_state_t *)coap_malloc(sizeof(coap_async_state_t) + 
-					request->token_length);
+  s = (coap_async_state_t *)coap_malloc(sizeof(coap_async_state_t));
   if (!s) {
     coap_log(LOG_CRIT, "coap_register_async: insufficient memory\n");
     return NULL;
   }
 
-  memset(s, 0, sizeof(coap_async_state_t) + request->token_length);
+  memset(s, 0, sizeof(coap_async_state_t));
 
   /* set COAP_ASYNC_CONFIRM according to request's type */
   s->flags = flags & ~COAP_ASYNC_CONFIRM;
@@ -66,8 +65,9 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
   s->id = id;
 
   if (request->token_length) {
-    s->tokenlen = request->token_length;
-    memcpy(s->token, request->token, request->token_length);
+    /* A token can be up to 8 bytes */
+    s->tokenlen = (request->token_length > 8) ? 8 : request->token_length;
+    memcpy(s->token, request->token, s->tokenlen);
   }
     
   coap_touch_async(s);

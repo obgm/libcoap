@@ -48,7 +48,7 @@ typedef struct coap_async_state_t {
   coap_tid_t id;                   /**< transaction id */
   struct coap_async_state_t *next; /**< internally used for linking */
   size_t tokenlen;                 /**< length of the token */
-  unsigned char token[];           /**< the token to use in a response */
+  uint8_t token[8];                /**< the token to use in a response */
 } coap_async_state_t;
 
 /* Definitions for Async Status Flags These flags can be used to control the
