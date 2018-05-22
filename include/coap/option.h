@@ -429,7 +429,7 @@ typedef struct coap_optlist_t {
   struct coap_optlist_t *next;  /**< next entry in the optlist chain */
   uint16_t number;              /**< the option number (no delta coding) */
   size_t length;                /**< the option value length */
-  uint8_t data[];               /**< the option data */
+  uint8_t *data;                /**< the option data */
 } coap_optlist_t;
 
 /**
