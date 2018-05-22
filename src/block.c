@@ -31,9 +31,9 @@ coap_opt_block_num(const coap_opt_t *block_opt) {
   if (len == 0) {
     return 0;
   }
-  
+
   if (len > 1) {
-    num = coap_decode_var_bytes(coap_opt_const_value(block_opt), 
+    num = coap_decode_var_bytes(coap_opt_value(block_opt),
 				coap_opt_length(block_opt) - 1);
   }
   

@@ -280,7 +280,7 @@ coap_opt_length(const coap_opt_t *opt) {
 }
 
 unsigned char *
-coap_opt_value(coap_opt_t *opt) {
+coap_opt_value(const coap_opt_t *opt) {
   size_t ofs = 1;
 
   switch (*opt & 0xf0) {

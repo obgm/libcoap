@@ -400,12 +400,7 @@ uint16_t coap_opt_length(const coap_opt_t *opt);
  *
  * @return    A pointer to the option value or @c NULL on error.
  */
-uint8_t *coap_opt_value(coap_opt_t *opt);
-
-COAP_STATIC_INLINE const uint8_t *
-coap_opt_const_value( const coap_opt_t *opt ) {
-  return coap_opt_value((coap_opt_t*)opt);
-}
+uint8_t *coap_opt_value(const coap_opt_t *opt);
 
 /** @} */
 
