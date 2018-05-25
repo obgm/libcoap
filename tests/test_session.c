@@ -92,7 +92,8 @@ timeout(const coap_fixed_point_t ack_timeout,
  */
 COAP_STATIC_INLINE int
 good_enough(unsigned int v, unsigned int ref) {
-  return (abs(v - ref) / 100.0) <= FP_ERR_THRESHOLD;
+#define delta(a,b) (((a) < (b)) ? ((b) - (a)) : ((a) - (b)))
+  return (delta(v,ref) / 100.0) <= FP_ERR_THRESHOLD;
 }
 
 static void
