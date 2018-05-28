@@ -356,8 +356,12 @@ coap_context_set_pki_root_cas(coap_context_t *context,
  * For reliable protocols, a PING message will be sent. If a PONG has not
  * been received before the next PING is due to be sent, the session will
  * considered as disconnected.
- * For unreliable protocols, an empty packet is sent
  *
+ * @param context        The coap_context_t object.
+ * @param seconds		 Number of seconds for the inactivity timer, or zero
+ *                       to disable CoAP-level keepalive messages.
+ *
+ * @return 1 if successful, else 0
  */
 void coap_context_set_keepalive(coap_context_t *context, unsigned int seconds);
 
