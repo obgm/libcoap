@@ -43,7 +43,7 @@ static coap_optlist_t *optlist = NULL;
 /* Request URI.
  * TODO: associate the resources with transaction id and make it expireable */
 static coap_uri_t uri;
-static str proxy = { 0, NULL };
+static coap_string_t proxy = { 0, NULL };
 static uint16_t proxy_port = COAP_DEFAULT_PORT;
 
 /* reading is done when this flag is set */
@@ -88,7 +88,7 @@ set_timeout(coap_tick_t *timer, const unsigned int seconds) {
 }
 
 static int
-append_to_output(const unsigned char *data, size_t len) {
+append_to_output(const uint8_t *data, size_t len) {
   size_t written;
 
   if (!file) {
@@ -231,7 +231,7 @@ clear_obs(coap_context_t *ctx, coap_session_t *session) {
 }
 
 static int
-resolve_address(const str *server, struct sockaddr *dst) {
+resolve_address(const coap_str_const_t *server, struct sockaddr *dst) {
 
   struct addrinfo *res, *ainfo;
   struct addrinfo hints;
@@ -849,7 +849,7 @@ cmdline_option(char *arg) {
  * @param buf     The result buffer.
  */
 static void
-decode_segment(const unsigned char *seg, size_t length, unsigned char *buf) {
+decode_segment(const uint8_t *seg, size_t length, unsigned char *buf) {
 
   while (length--) {
 
@@ -871,7 +871,7 @@ decode_segment(const unsigned char *seg, size_t length, unsigned char *buf) {
  * or the length of @p s when decoded.
  */
 static int
-check_segment(const unsigned char *s, size_t length) {
+check_segment(const uint8_t *s, size_t length) {
 
   size_t n = 0;
 
@@ -1060,7 +1060,7 @@ main(int argc, char **argv) {
   void *addrptr = NULL;
   int result = -1;
   coap_pdu_t  *pdu;
-  static str server;
+  static coap_str_const_t server;
   uint16_t port = COAP_DEFAULT_PORT;
   char port_str[NI_MAXSERV] = "0";
   char node_str[NI_MAXHOST] = "";
@@ -1181,7 +1181,8 @@ main(int argc, char **argv) {
   }
   
   if (proxy.length) {
-    server = proxy;
+    server.length = proxy.length;
+    server.s = proxy.s;
     port = proxy_port;
   } else {
     server = uri.host;

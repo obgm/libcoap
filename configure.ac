@@ -125,6 +125,7 @@ AC_SUBST(LIBCOAP_API_VERSION)
 WARNING_CFLAGS="\
 -pedantic \
 -Wall \
+-Wcast-qual \
 -Wextra \
 -Wformat-security \
 -Winline \

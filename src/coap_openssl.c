@@ -145,7 +145,7 @@ static int coap_dgram_write(BIO *a, const char *in, int inl) {
       BIO_clear_retry_flags(a);
       return -1;
     }
-    ret = (int)coap_session_send(data->session, (unsigned char*)in, (size_t)inl);
+    ret = (int)coap_session_send(data->session, (const uint8_t *)in, (size_t)inl);
     BIO_clear_retry_flags(a);
     if (ret <= 0)
       BIO_set_retry_write(a);
@@ -230,7 +230,7 @@ static int coap_dtls_generate_cookie(SSL *ssl, unsigned char *cookie, unsigned i
   return r;
 }
 
-static int coap_dtls_verify_cookie(SSL *ssl, const unsigned char *cookie, unsigned int cookie_len) {
+static int coap_dtls_verify_cookie(SSL *ssl, const uint8_t *cookie, unsigned int cookie_len) {
   uint8_t hmac[32];
   unsigned len = 32;
   if (coap_dtls_generate_cookie(ssl, hmac, &len) && cookie_len == len && memcmp(cookie, hmac, len) == 0)

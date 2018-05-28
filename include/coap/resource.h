@@ -37,8 +37,8 @@ typedef void (*coap_method_handler_t)
    struct coap_resource_t *,
    coap_session_t *,
    coap_pdu_t *,
-   str * /* token */,
-   str * /* query string */,
+   coap_string_t * /* token */,
+   coap_string_t * /* query string */,
    coap_pdu_t * /* response */);
 
 #define COAP_ATTR_FLAGS_RELEASE_NAME  0x1
@@ -46,8 +46,8 @@ typedef void (*coap_method_handler_t)
 
 typedef struct coap_attr_t {
   struct coap_attr_t *next;
-  str name;
-  str value;
+  coap_str_const_t *name;
+  coap_str_const_t *value;
   int flags;
 } coap_attr_t;
 
@@ -93,7 +93,7 @@ typedef struct coap_resource_t {
    * or allocated memory which must remain there for the duration of the
    * resource.
    */
-  str uri_path;         /**< the key used for hash lookup for this resource */
+  coap_str_const_t *uri_path;  /**< the key used for hash lookup for this resource */
   int flags;
 
   /**
@@ -112,10 +112,14 @@ typedef struct coap_resource_t {
 
 /**
  * Creates a new resource object and initializes the link field to the string
- * of length @p len. This function returns the new coap_resource_t object.
+ * @p uri_path. This function returns the new coap_resource_t object.
  *
- * @param uri_path The URI path of the new resource.
- * @param len      The length of @p uri_path.
+ * If the string is going to be freed off by coap_delete_resource() when
+ * COAP_RESOURCE_FLAGS_RELEASE_URI is set in @p flags, then either the 's'
+ * variable of coap_str_const_t has to point to constant text, or point to data
+ * within the allocated coap_str_const_t parameter.
+ *
+ * @param uri_path The string URI path of the new resource.
  * @param flags    Flags for memory management (in particular release of
  *                 memory). Possible values:@n
  *
@@ -125,7 +129,7 @@ typedef struct coap_resource_t {
  *                  coap_delete_resource()@n
  *
  *                 COAP_RESOURCE_FLAGS_NOTIFY_CON
- *                   If this flag is set, coap-observe notifications
+ *                  If this flag is set, coap-observe notifications
  *                  will be sent confirmable by default.@n
  *
  *                 COAP_RESOURCE_FLAGS_NOTIFY_NON (default)
@@ -137,8 +141,8 @@ typedef struct coap_resource_t {
  * 
  * @return         A pointer to the new object or @c NULL on error.
  */
-coap_resource_t *coap_resource_init(const unsigned char *uri_path,
-                                    size_t len, int flags);
+coap_resource_t *coap_resource_init(coap_str_const_t *uri_path,
+                                    int flags);
 
 
 /**
@@ -229,25 +233,37 @@ void coap_delete_all_resources(coap_context_t *context);
 
 /**
  * Registers a new attribute with the given @p resource. As the
- * attributes str fields will point to @p name and @p val the
+ * attribute's coap_str_const_ fields will point to @p name and @p value the
  * caller must ensure that these pointers are valid during the
  * attribute's lifetime.
+
+ * If the @p name and/or @p value string is going to be freed off at attribute
+ * removal time by the setting of COAP_ATTR_FLAGS_RELEASE_NAME or
+ * COAP_ATTR_FLAGS_RELEASE_VALUE in @p flags, then either the 's'
+ * variable of coap_str_const_t has to point to constant text, or point to data
+ * within the allocated coap_str_const_t parameter.
  *
  * @param resource The resource to register the attribute with.
- * @param name     The attribute's name.
- * @param nlen     Length of @p name.
- * @param val      The attribute's value or @c NULL if none.
- * @param vlen     Length of @p val if specified.
+ * @param name     The attribute's name as a string.
+ * @param value    The attribute's value as a string or @c NULL if none.
  * @param flags    Flags for memory management (in particular release of
- *                 memory).
+ *                 memory). Possible values:@n
+ *
+ *                 COAP_ATTR_FLAGS_RELEASE_NAME
+ *                  If this flag is set, the name passed to
+ *                  coap_add_attr_release() is free'd
+ *                  when the attribute is deleted@n
+ *
+ *                 COAP_ATTR_FLAGS_RELEASE_VALUE
+ *                  If this flag is set, the value passed to
+ *                  coap_add_attr_release() is free'd
+ *                  when the attribute is deleted@n
  *
  * @return         A pointer to the new attribute or @c NULL on error.
  */
 coap_attr_t *coap_add_attr(coap_resource_t *resource,
-                           const unsigned char *name,
-                           size_t nlen,
-                           const unsigned char *val,
-                           size_t vlen,
+                           coap_str_const_t *name,
+                           coap_str_const_t *value,
                            int flags);
 
 /**
@@ -255,17 +271,16 @@ coap_attr_t *coap_add_attr(coap_resource_t *resource,
  * otherwise.
  *
  * @param resource The resource to search for attribute @p name.
- * @param name     Name of the requested attribute.
- * @param nlen     Actual length of @p name.
+ * @param name     Name of the requested attribute as a string.
  * @return         The first attribute with specified @p name or @c NULL if none
  *                 was found.
  */
 coap_attr_t *coap_find_attr(coap_resource_t *resource,
-                            const unsigned char *name,
-                            size_t nlen);
+                            coap_str_const_t *name);
 
 /**
  * Deletes an attribute.
+ * Note: This is for internal use only, as it is not deleted from its chain.
  *
  * @param attr Pointer to a previously created attribute.
  *
@@ -336,7 +351,7 @@ void coap_register_handler(coap_resource_t *resource,
  * @return         A pointer to the resource or @c NULL if not found.
  */
 coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
-                                                str uri_path);
+                                                coap_str_const_t *uri_path);
 
 /**
  * @addtogroup observe
@@ -358,8 +373,8 @@ coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
  */
 coap_subscription_t *coap_add_observer(coap_resource_t *resource,
                                        coap_session_t *session,
-                                       const str *token,
-                                       str *query);
+                                       const coap_string_t *token,
+                                       coap_string_t *query);
 
 /**
  * Returns a subscription object for given @p peer.
@@ -372,7 +387,7 @@ coap_subscription_t *coap_add_observer(coap_resource_t *resource,
  */
 coap_subscription_t *coap_find_observer(coap_resource_t *resource,
                                         coap_session_t *session,
-                                        const str *token);
+                                        const coap_string_t *token);
 
 /**
  * Marks an observer as alive.
@@ -384,7 +399,7 @@ coap_subscription_t *coap_find_observer(coap_resource_t *resource,
  */
 void coap_touch_observer(coap_context_t *context,
                          coap_session_t *session,
-                         const str *token);
+                         const coap_string_t *token);
 
 /**
  * Removes any subscription for @p observer from @p resource and releases the
@@ -399,7 +414,7 @@ void coap_touch_observer(coap_context_t *context,
  */
 int coap_delete_observer(coap_resource_t *resource,
                          coap_session_t *session,
-                         const str *token);
+                         const coap_string_t *token);
 
 /**
  * Removes any subscription for @p session and releases the allocated storage.
@@ -416,7 +431,7 @@ void coap_delete_observers(coap_context_t *context, coap_session_t *session);
 void coap_check_notify(coap_context_t *context);
 
 #define RESOURCES_ADD(r, obj) \
-  HASH_ADD(hh, (r), uri_path.s[0], (obj)->uri_path.length, (obj))
+  HASH_ADD(hh, (r), uri_path->s[0], (obj)->uri_path->length, (obj))
 
 #define RESOURCES_DELETE(r, obj) \
   HASH_DELETE(hh, (r), (obj))
@@ -426,7 +441,7 @@ void coap_check_notify(coap_context_t *context);
   HASH_ITER(hh, (r), tmp, rtmp)
 
 #define RESOURCES_FIND(r, k, res) {                     \
-    HASH_FIND(hh, (r), (k).s, (k).length, (res)); \
+    HASH_FIND(hh, (r), (k)->s, (k)->length, (res)); \
   }
 
 /** @} */
@@ -471,10 +486,10 @@ int coap_resource_notify_observers(coap_resource_t *resource, const str *query);
  *
  * @return         The UriPath if it exists or @c NULL otherwise.
  */
-COAP_STATIC_INLINE const str*
+COAP_STATIC_INLINE coap_str_const_t*
 coap_resource_get_uri_path(coap_resource_t *resource) {
   if (resource)
-    return &resource->uri_path;
+    return resource->uri_path;
   return NULL;
 }
 

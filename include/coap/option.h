@@ -31,7 +31,7 @@ typedef uint8_t coap_opt_t;
 typedef struct {
   uint16_t delta;
   size_t length;
-  uint8_t *value;
+  const uint8_t *value;
 } coap_option_t;
 
 /**
@@ -180,7 +180,7 @@ int coap_option_filter_unset(coap_opt_filter_t filter, uint16_t type);
  *
  * @return       @c 1 if @p type was found, @c 0 otherwise, or @c -1 on error.
  */
-int coap_option_filter_get(const coap_opt_filter_t filter, uint16_t type);
+int coap_option_filter_get(coap_opt_filter_t filter, uint16_t type);
 
 /**
  * Sets the corresponding bit for @p type in @p filter. This function returns @c
@@ -229,7 +229,7 @@ coap_option_clrb(coap_opt_filter_t filter, uint16_t type) {
  * @return       @c 1 if bit was set, @c 0 if not, @c -1 on error.
  */
 COAP_STATIC_INLINE int
-coap_option_getb(const coap_opt_filter_t filter, uint16_t type) {
+coap_option_getb(coap_opt_filter_t filter, uint16_t type) {
   return coap_option_filter_get(filter, type);
 }
 
@@ -274,7 +274,7 @@ typedef struct {
  *
  * @return       The iterator object @p oi on success, @c NULL otherwise.
  */
-coap_opt_iterator_t *coap_option_iterator_init(coap_pdu_t *pdu,
+coap_opt_iterator_t *coap_option_iterator_init(const coap_pdu_t *pdu,
                                                coap_opt_iterator_t *oi,
                                                const coap_opt_filter_t filter);
 
@@ -400,12 +400,7 @@ uint16_t coap_opt_length(const coap_opt_t *opt);
  *
  * @return    A pointer to the option value or @c NULL on error.
  */
-uint8_t *coap_opt_value(coap_opt_t *opt);
-
-COAP_STATIC_INLINE const uint8_t *
-coap_opt_const_value( const coap_opt_t *opt ) {
-  return coap_opt_value((coap_opt_t*)opt);
-}
+const uint8_t *coap_opt_value(const coap_opt_t *opt);
 
 /** @} */
 

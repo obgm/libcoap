@@ -254,7 +254,7 @@ t_encode_pdu1(void) {
   pdu->code = COAP_REQUEST_GET;
   pdu->tid = 0x1234;
 
-  result = coap_add_token(pdu, 5, (unsigned char *)"token");
+  result = coap_add_token(pdu, 5, (const uint8_t *)"token");
 
   CU_ASSERT(result == 1);
   CU_ASSERT(pdu->used_size == 5);
@@ -274,7 +274,7 @@ t_encode_pdu2(void) {
   pdu->code = COAP_REQUEST_GET;
   pdu->tid = 0x1234;
 
-  result = coap_add_token(pdu, 5, (unsigned char *)"token");
+  result = coap_add_token(pdu, 5, (const uint8_t *)"token");
 
   CU_ASSERT(result == 0);
 
@@ -285,7 +285,7 @@ static void
 t_encode_pdu3(void) {
   int result;
 
-  result = coap_add_token(pdu, 9, (unsigned char *)"123456789");
+  result = coap_add_token(pdu, 9, (const uint8_t *)"123456789");
 
   CU_ASSERT(result == 0);
 }
@@ -311,7 +311,7 @@ t_encode_pdu4(void) {
   CU_ASSERT(pdu->used_size == 0);
 
   result = coap_add_option(pdu, COAP_OPTION_URI_HOST,
-       18, (unsigned char *)"fancyproxy.coap.me");
+       18, (const uint8_t *)"fancyproxy.coap.me");
 
   CU_ASSERT(result == 20);
   CU_ASSERT(pdu->max_delta == 3);
@@ -319,7 +319,7 @@ t_encode_pdu4(void) {
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_URI_PATH,
-			   4, (unsigned char *)"path");
+			   4, (const uint8_t *)"path");
 
   CU_ASSERT(result == 5);
   CU_ASSERT(pdu->max_delta == 11);
@@ -333,7 +333,7 @@ t_encode_pdu4(void) {
   CU_ASSERT(pdu->used_size == 26);
   CU_ASSERT_PTR_NULL(pdu->data);
 
-  result = coap_add_option(pdu, 8000, 8, (unsigned char *)"fancyopt");
+  result = coap_add_option(pdu, 8000, 8, (const uint8_t *)"fancyopt");
 
   CU_ASSERT(result == 11);
   CU_ASSERT(pdu->max_delta == 8000);
@@ -361,12 +361,12 @@ t_encode_pdu5(void) {
 
   CU_ASSERT(pdu->used_size == 0);
 
-  result = coap_add_token(pdu, 8, (unsigned char *)"12345678");
+  result = coap_add_token(pdu, 8, (const uint8_t *)"12345678");
 
   CU_ASSERT(pdu->used_size == 8);
 
   result = coap_add_option(pdu, COAP_OPTION_IF_MATCH,
-			   8, (unsigned char *)"ABCDEFGH");
+			   8, (const uint8_t *)"ABCDEFGH");
 
   CU_ASSERT(result == 9);
   CU_ASSERT(pdu->max_delta == 1);
@@ -374,7 +374,7 @@ t_encode_pdu5(void) {
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_ACCEPT,
-			   1, (unsigned char *)"\x12");
+			   1, (const uint8_t *)"\x12");
 
   CU_ASSERT(result == 3);
   CU_ASSERT(pdu->max_delta == 17);
@@ -400,7 +400,7 @@ t_encode_pdu6(void) {
   CU_ASSERT(pdu->used_size == 0);
   CU_ASSERT_PTR_NULL(pdu->data);
 
-  coap_add_data(pdu, 8, (unsigned char *)"12345678");
+  coap_add_data(pdu, 8, (const uint8_t *)"12345678");
 
   CU_ASSERT(pdu->used_size == 9);
   CU_ASSERT(coap_pdu_encode_header(pdu, COAP_PROTO_UDP) == 4);
@@ -443,11 +443,11 @@ t_encode_pdu8(void) {
 
   CU_ASSERT(pdu->used_size == 0);
 
-  result = coap_add_token(pdu, 2, (unsigned char *)"\x00\x01");
+  result = coap_add_token(pdu, 2, (const uint8_t *)"\x00\x01");
 
   CU_ASSERT(result > 0);
 
-  result = coap_add_data(pdu, 1, (unsigned char *)"\0");
+  result = coap_add_data(pdu, 1, (const uint8_t *)"\0");
 
   CU_ASSERT(result > 0);
   CU_ASSERT(pdu->used_size == 4);
@@ -476,7 +476,7 @@ t_encode_pdu9(void) {
 
   CU_ASSERT(pdu->used_size == 0);
 
-  result = coap_add_option(pdu, COAP_OPTION_ETAG, 8, (unsigned char *)"someetag");
+  result = coap_add_option(pdu, COAP_OPTION_ETAG, 8, (const uint8_t *)"someetag");
 
   CU_ASSERT(result == 9);
   CU_ASSERT(pdu->max_delta == 4);
@@ -491,14 +491,14 @@ t_encode_pdu9(void) {
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_PROXY_URI,
-			   17, (unsigned char *)"someratherlonguri");
+			   17, (const uint8_t *)"someratherlonguri");
 
   CU_ASSERT(result == 20);
   CU_ASSERT(pdu->max_delta == 35);
   CU_ASSERT(pdu->used_size == 30);
   CU_ASSERT_PTR_NULL(pdu->data);
 
-  result = coap_add_data(pdu, 4, (unsigned char *)"data");
+  result = coap_add_data(pdu, 4, (const uint8_t *)"data");
 
   CU_ASSERT(result > 0);
   CU_ASSERT(pdu->used_size == 35);
@@ -558,11 +558,11 @@ t_encode_pdu10(void) {
 
   CU_ASSERT(pdu->used_size == 0);
 
-  result = coap_add_token(pdu, 2, (unsigned char *)"\0\0");
+  result = coap_add_token(pdu, 2, (const uint8_t *)"\0\0");
 
   CU_ASSERT(result > 0);
   result = coap_add_option(pdu, COAP_OPTION_LOCATION_PATH, 255,
-			   (unsigned char *)"coap://example.com/12345/%3Fxyz/3048234234/23402348234/239084234-23/%AB%30%af/+123/hfksdh/23480-234-98235/1204/243546345345243/0198sdn3-a-3///aff0934/97u2141/0002/3932423532/56234023/----/=1234=/098141-9564643/21970-----/82364923472wererewr0-921-39123-34/");
+			   (const uint8_t *)"coap://example.com/12345/%3Fxyz/3048234234/23402348234/239084234-23/%AB%30%af/+123/hfksdh/23480-234-98235/1204/243546345345243/0198sdn3-a-3///aff0934/97u2141/0002/3932423532/56234023/----/=1234=/098141-9564643/21970-----/82364923472wererewr0-921-39123-34/");
 
   CU_ASSERT(result == 257);
   CU_ASSERT(pdu->max_delta == 8);
@@ -570,7 +570,7 @@ t_encode_pdu10(void) {
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_LOCATION_PATH, 14,
-			   (unsigned char *)"//492403--098/");
+			   (const uint8_t *)"//492403--098/");
 
   CU_ASSERT(result == 16);
   CU_ASSERT(pdu->max_delta == 8);
@@ -578,14 +578,14 @@ t_encode_pdu10(void) {
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_LOCATION_QUERY,
-			   1, (unsigned char *)"*");
+			   1, (const uint8_t *)"*");
 
   CU_ASSERT(result == 2);
   CU_ASSERT(pdu->max_delta == 20);
   CU_ASSERT(pdu->used_size == 277);
   CU_ASSERT_PTR_NULL(pdu->data);
 
-  result = coap_add_data(pdu, 4, (unsigned char *)"data");
+  result = coap_add_data(pdu, 4, (const uint8_t *)"data");
 
   CU_ASSERT(result > 0);
   CU_ASSERT(pdu->used_size == 282);
@@ -606,7 +606,7 @@ t_encode_pdu11(void) {
 
   CU_ASSERT(pdu->data == NULL);
   coap_set_log_level(LOG_CRIT);
-  result = coap_add_data(pdu, 10, (unsigned char *)"0123456789");
+  result = coap_add_data(pdu, 10, (const uint8_t *)"0123456789");
   coap_set_log_level(level);
 
   CU_ASSERT(result == 0);

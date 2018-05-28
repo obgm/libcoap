@@ -325,7 +325,7 @@ coap_add_data_after(coap_pdu_t *pdu, size_t len) {
 }
 
 int
-coap_get_data(coap_pdu_t *pdu, size_t *len, uint8_t **data) {
+coap_get_data(const coap_pdu_t *pdu, size_t *len, uint8_t **data) {
   assert(pdu);
   assert(len);
   assert(data);
@@ -393,7 +393,7 @@ coap_response_phrase(unsigned char code) {
  * on error.
  */
 static size_t
-next_option_safe(const coap_opt_t **optp, size_t *length) {
+next_option_safe(coap_opt_t **optp, size_t *length) {
   coap_option_t option;
   size_t optsize;
 
@@ -514,7 +514,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
     pdu->data = NULL;
   } else {
     /* skip header + token */
-    const coap_opt_t *opt = pdu->token + pdu->token_length;
+    coap_opt_t *opt = pdu->token + pdu->token_length;
     size_t length = pdu->used_size - pdu->token_length;
 
     while (length > 0 && *opt != COAP_PAYLOAD_START) {

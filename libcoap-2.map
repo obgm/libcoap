@@ -36,6 +36,7 @@ global:
   coap_delete_optlist;
   coap_delete_pdu;
   coap_delete_resource;
+  coap_delete_str_const;
   coap_delete_string;
   coap_dispatch;
   coap_dtls_get_log_level;
@@ -87,6 +88,7 @@ global:
   coap_new_optlist;
   coap_new_pdu;
   coap_new_server_session;
+  coap_new_str_const;
   coap_new_string;
   coap_new_uri;
   coap_opt_block_num;

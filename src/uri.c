@@ -38,8 +38,8 @@
  * @return A pointer to the first occurence of @p c, or @c NULL 
  * if not found.
  */
-COAP_STATIC_INLINE unsigned char *
-strnchr(unsigned char *s, size_t len, unsigned char c) {
+COAP_STATIC_INLINE const uint8_t *
+strnchr(const uint8_t *s, size_t len, unsigned char c) {
   while (len && *s++ != c)
     --len;
   
@@ -50,8 +50,8 @@ strnchr(unsigned char *s, size_t len, unsigned char c) {
   ((a) == (b) || (islower(b) && ((a) == ((b) - 0x20))))
 
 int
-coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
-  const unsigned char *p, *q;
+coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
+  const uint8_t *p, *q;
   int res = 0;
 
   if (!str_var || !uri)
@@ -67,7 +67,7 @@ coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
     goto path;
   }
 
-  q = (unsigned char *)COAP_DEFAULT_SCHEME;
+  q = (const uint8_t *)COAP_DEFAULT_SCHEME;
   while (len && *q && ISEQUAL_CI(*p, *q)) {
     ++p; ++q; --len;
   }
@@ -97,7 +97,7 @@ coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
     else
       uri->scheme = COAP_URI_SCHEME_COAP_TCP;
   }
-  q = (unsigned char *)"://";
+  q = (const uint8_t *)"://";
   while (len && *q && *p == *q) {
     ++p; ++q; --len;
   }
@@ -121,7 +121,7 @@ coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
       goto error;
     } 
 
-    COAP_SET_STR(&uri->host, q - p, (unsigned char *)p);
+    COAP_SET_STR(&uri->host, q - p, p);
     ++q; --len;
   } else {			/* IPv4 address or FQDN */
     while (len && *q != ':' && *q != '/' && *q != '?') {
@@ -134,7 +134,7 @@ coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
       goto error;
     }
 
-    COAP_SET_STR(&uri->host, q - p, (unsigned char *)p);
+    COAP_SET_STR(&uri->host, q - p, p);
   }
 
   /* check for Uri-Port */
@@ -178,7 +178,7 @@ coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
     }
   
     if (p < q) {
-      COAP_SET_STR(&uri->path, q - p, (unsigned char *)p);
+      COAP_SET_STR(&uri->path, q - p, p);
       p = q;
     }
   }
@@ -187,7 +187,7 @@ coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
   if (len && *p == '?') {
     ++p;
     --len;
-    COAP_SET_STR(&uri->query, len, (unsigned char *)p);
+    COAP_SET_STR(&uri->query, len, p);
     len = 0;
   }
 
@@ -220,7 +220,7 @@ coap_split_uri(const unsigned char *str_var, size_t len, coap_uri_t *uri) {
  * @param buf     The result buffer.
  */
 static void
-decode_segment(const unsigned char *seg, size_t length, unsigned char *buf) {
+decode_segment(const uint8_t *seg, size_t length, unsigned char *buf) {
 
   while (length--) {
 
@@ -242,7 +242,7 @@ decode_segment(const unsigned char *seg, size_t length, unsigned char *buf) {
  * and @c -1 on error.
  */
 static int
-check_segment(const unsigned char *s, size_t length, size_t *segment_size) {
+check_segment(const uint8_t *s, size_t length, size_t *segment_size) {
   size_t n = 0;
 
   while (length) {
@@ -283,7 +283,7 @@ check_segment(const unsigned char *s, size_t length, size_t *segment_size) {
  * bytes.
  */
 static int
-make_decoded_option(const unsigned char *s, size_t length, 
+make_decoded_option(const uint8_t *s, size_t length, 
 		    unsigned char *buf, size_t buflen, size_t* optionsize) {
   int res;
   size_t segmentlen;
@@ -326,13 +326,13 @@ make_decoded_option(const unsigned char *s, size_t length,
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
-typedef void (*segment_handler_t)(unsigned char *, size_t, void *);
+typedef void (*segment_handler_t)(const uint8_t *, size_t, void *);
 
 /**
  * Checks if path segment @p s consists of one or two dots.
  */
 COAP_STATIC_INLINE int
-dots(unsigned char *s, size_t len) {
+dots(const uint8_t *s, size_t len) {
   return *s == '.' && (len == 1 || (*(s+1) == '.' && len == 2));
 }
 
@@ -348,17 +348,17 @@ dots(unsigned char *s, size_t len) {
  * @return The number of characters that have been parsed from @p s.
  */
 static size_t
-coap_split_path_impl(const unsigned char *s, size_t length,
+coap_split_path_impl(const uint8_t *s, size_t length,
 		     segment_handler_t h, void *data) {
 
-  const unsigned char *p, *q;
+  const uint8_t *p, *q;
 
   p = q = s;
-  while (length > 0 && !strnchr((unsigned char *)"?#", 2, *q)) {
+  while (length > 0 && !strnchr((const uint8_t *)"?#", 2, *q)) {
     if (*q == '/') {		/* start new segment */
 
-      if (!dots((unsigned char *)p, q - p)) {
-	h((unsigned char *)p, q - p, data);
+      if (!dots(p, q - p)) {
+	h(p, q - p, data);
       }
 
       p = q + 1;
@@ -369,8 +369,8 @@ coap_split_path_impl(const unsigned char *s, size_t length,
   }
 
   /* write last segment */
-  if (!dots((unsigned char *)p, q - p)) {
-    h((unsigned char *)p, q - p, data);
+  if (!dots(p, q - p)) {
+    h(p, q - p, data);
   }
 
   return q - s;
@@ -382,7 +382,7 @@ struct cnt_str {
 };
 
 static void
-write_option(unsigned char *s, size_t len, void *data) {
+write_option(const uint8_t *s, size_t len, void *data) {
   struct cnt_str *state = (struct cnt_str *)data;
   int res;
   size_t optionsize;
@@ -397,7 +397,7 @@ write_option(unsigned char *s, size_t len, void *data) {
 }
 
 int
-coap_split_path(const unsigned char *s, size_t length, 
+coap_split_path(const uint8_t *s, size_t length, 
 		unsigned char *buf, size_t *buflen) {
   struct cnt_str tmp = { { *buflen, buf }, 0 };
 
@@ -409,15 +409,15 @@ coap_split_path(const unsigned char *s, size_t length,
 }
 
 int
-coap_split_query(const unsigned char *s, size_t length, 
+coap_split_query(const uint8_t *s, size_t length, 
 		unsigned char *buf, size_t *buflen) {
   struct cnt_str tmp = { { *buflen, buf }, 0 };
-  const unsigned char *p;
+  const uint8_t *p;
 
   p = s;
   while (length > 0 && *s != '#') {
     if (*s == '&') {		/* start new query element */
-      write_option((unsigned char *)p, s - p, &tmp);
+      write_option(p, s - p, &tmp);
       p = s + 1;
     }
 
@@ -426,7 +426,7 @@ coap_split_query(const unsigned char *s, size_t length,
   }
 
   /* write last query element */
-  write_option((unsigned char *)p, s - p, &tmp);
+  write_option(p, s - p, &tmp);
 
   *buflen = *buflen - tmp.buf.length;
   return tmp.n;
@@ -435,7 +435,7 @@ coap_split_query(const unsigned char *s, size_t length,
 #define URI_DATA(uriobj) ((unsigned char *)(uriobj) + sizeof(coap_uri_t))
 
 coap_uri_t *
-coap_new_uri(const unsigned char *uri, unsigned int length) {
+coap_new_uri(const uint8_t *uri, unsigned int length) {
   unsigned char *result;
 
   result = (unsigned char*)coap_malloc(length + 1 + sizeof(coap_uri_t));
@@ -456,6 +456,7 @@ coap_new_uri(const unsigned char *uri, unsigned int length) {
 coap_uri_t *
 coap_clone_uri(const coap_uri_t *uri) {
   coap_uri_t *result;
+  uint8_t *p;
 
   if ( !uri )
     return  NULL;
@@ -471,31 +472,31 @@ coap_clone_uri(const coap_uri_t *uri) {
   result->port = uri->port;
 
   if ( uri->host.length ) {
-    result->host.s = URI_DATA(result);
+    result->host.s = p = URI_DATA(result);
     result->host.length = uri->host.length;
 
-    memcpy(result->host.s, uri->host.s, uri->host.length);
+    memcpy(p, uri->host.s, uri->host.length);
   }
 
   if ( uri->path.length ) {
-    result->path.s = URI_DATA(result) + uri->host.length;
+    result->path.s = p = URI_DATA(result) + uri->host.length;
     result->path.length = uri->path.length;
 
-    memcpy(result->path.s, uri->path.s, uri->path.length);
+    memcpy(p, uri->path.s, uri->path.length);
   }
 
   if ( uri->query.length ) {
-    result->query.s = URI_DATA(result) + uri->host.length + uri->path.length;
+    result->query.s = p = URI_DATA(result) + uri->host.length + uri->path.length;
     result->query.length = uri->query.length;
 
-    memcpy(result->query.s, uri->query.s, uri->query.length);
+    memcpy (p, uri->query.s, uri->query.length);
   }
 
   return result;
 }
 
 COAP_STATIC_INLINE int
-is_unescaped_in_path(unsigned char c) {
+is_unescaped_in_path(const uint8_t c) {
   return ( c >= 'A' && c <= 'Z' ) || ( c >= 'a' && c <= 'z' )
       || ( c >= '0' && c <= '9' ) || c == '-' || c == '.' || c == '_'
       || c == '~' || c == '!' || c == '$' || c == '\'' || c == '('
@@ -504,24 +505,24 @@ is_unescaped_in_path(unsigned char c) {
 }
 
 COAP_STATIC_INLINE int
-is_unescaped_in_query(unsigned char c) {
+is_unescaped_in_query(const uint8_t c) {
   return is_unescaped_in_path(c) || c=='/' || c=='?';
 }
 
-str *coap_get_query(coap_pdu_t *request) {
+coap_string_t *coap_get_query(const coap_pdu_t *request) {
   coap_opt_iterator_t opt_iter;
   coap_opt_filter_t f;
   coap_opt_t *q;
-  str *query = NULL;
+  coap_string_t *query = NULL;
   size_t length = 0;
-  static const unsigned char hex[] = "0123456789ABCDEF";
+  static const uint8_t hex[] = "0123456789ABCDEF";
 
   coap_option_filter_clear(f);
   coap_option_filter_set(f, COAP_OPTION_URI_QUERY);
   coap_option_iterator_init(request, &opt_iter, f);
   while ((q = coap_option_next(&opt_iter))) {
     uint16_t seg_len = coap_opt_length(q), i;
-    unsigned char *seg= coap_opt_value(q);
+    const uint8_t *seg= coap_opt_value(q);
     for (i = 0; i < seg_len; i++) {
       if (is_unescaped_in_query(seg[i]))
 	length += 1;
@@ -542,7 +543,7 @@ str *coap_get_query(coap_pdu_t *request) {
 	if (s != query->s)
 	  *s++ = '&';
 	uint16_t seg_len = coap_opt_length(q), i;
-	unsigned char *seg= coap_opt_value(q);
+	const uint8_t *seg= coap_opt_value(q);
 	for (i = 0; i < seg_len; i++) {
 	  if (is_unescaped_in_query(seg[i])) {
 	    *s++ = seg[i];
@@ -558,20 +559,20 @@ str *coap_get_query(coap_pdu_t *request) {
   return query;
 }
 
-str *coap_get_uri_path(coap_pdu_t *request) {
+coap_string_t *coap_get_uri_path(const coap_pdu_t *request) {
   coap_opt_iterator_t opt_iter;
   coap_opt_filter_t f;
   coap_opt_t *q;
-  str *uri_path = NULL;
+  coap_string_t *uri_path = NULL;
   size_t length = 0;
-  static const unsigned char hex[] = "0123456789ABCDEF";
+  static const uint8_t hex[] = "0123456789ABCDEF";
 
   coap_option_filter_clear(f);
   coap_option_filter_set(f, COAP_OPTION_URI_PATH);
   coap_option_iterator_init(request, &opt_iter, f);
   while ((q = coap_option_next(&opt_iter))) {
     uint16_t seg_len = coap_opt_length(q), i;
-    unsigned char *seg= coap_opt_value(q);
+    const uint8_t *seg= coap_opt_value(q);
     for (i = 0; i < seg_len; i++) {
       if (is_unescaped_in_path(seg[i]))
 	length += 1;
@@ -597,7 +598,7 @@ str *coap_get_uri_path(coap_pdu_t *request) {
         *s++ = '/';
       }
       uint16_t seg_len = coap_opt_length(q), i;
-      unsigned char *seg= coap_opt_value(q);
+      const uint8_t *seg= coap_opt_value(q);
       for (i = 0; i < seg_len; i++) {
         if (is_unescaped_in_path(seg[i])) {
           *s++ = seg[i];

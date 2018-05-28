@@ -18,8 +18,8 @@ SYNOPSIS
 --------
 *#include <coap/coap.h>*
 
-*coap_resource_t *coap_resource_init(const unsigned char *_uri_path_, 
-size_t _len_, int _flags_);*
+*coap_resource_t *coap_resource_init(coap_str_const_t *_uri_path_, 
+int _flags_);*
 
 *coap_resource_t *coap_resource_unknown_init(coap_method_handler_t 
 _put_handler_);*
@@ -34,8 +34,8 @@ coap_resource_t _resource_);*
 
 *void coap_resource_set_mode(coap_resource_t *_resource_, int _mode_);*
 
-Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
-or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -69,40 +69,41 @@ resource with GET handler must be created by the unknown resource callback
 handle matching the URI which then can be Observable.
 
 The *coap_resource_init*() function returns a newly created _resource_ of 
-type _coap_resource_t_ *.  _uri_path_ specifies the uri path to match against. 
-_len_ is the length of _uri_path_. _flags_ is used to define whether the 
-_resource_ is of type Confirmable Message or Non-Confirmable Message, as well 
-as if _uri_path_ is to be freed when the _resource_ is freed. _flags_ can be 
-one of the first two and optionally the third of the following definitions 
-or'ed together.
-It is imperative that _uri_path_ points to data that is valid during the 
-lifetime of the resource.
+type _coap_resource_t_ *.  _uri_path_ specifies the uri string path to match 
+against.  _flags_ is used to define whether the 
+_resource_ is of type Confirmable Message or Non-Confirmable Message.
+_flags_ can be one of the following definitions or'ed together.
 
 [horizontal]
 *COAP_RESOURCE_FLAGS_NOTIFY_NON*::
 Set the notification message type to non-confirmable.
-
+//-
 *COAP_RESOURCE_FLAGS_NOTIFY_CON*::
 Set the notification message type to confirmable.
-
+//-
 *COAP_RESOURCE_FLAGS_RELEASE_URI*::
-Free off the contents of _uri_path_ when the _resource_ is deleted.
+Free off the coap_str_const_t for _uri_path_ when the _resource_ is deleted.
+
+*NOTE:* _uri_path_, if not 7 bit readable ASCII, binary bytes must be hex 
+encoded according to the rules defined in RFC3968 Section 2.1.
 
 The *coap_resource_unknown_init*() returns a newly created _resource_ of
 type _coap_resource_t_ *. _put_handler_ is automatically added to the 
 _resource_ to handle PUT requests to resources that are unknown.
 
 The *coap_add_resource*() function registers the given _resource_ with the 
-_context_. The _resource_ must have been created by *coap_resource_init*() or 
-*coap_resource_unknown_init*(), the storage allocated for the _resource_ 
+_context_. The _resource_ must have been created by *coap_resource_init*(), 
+or *coap_resource_unknown_init*(). The storage allocated for the _resource_ 
 will be released by *coap_delete_resource*().
 
 As the _uri_path_ of the resource has to be unique across all of the resources 
-associated with a _context_, *coap_add_resource*() will delete any previous
+associated with a _context_, *coap_add_resource*() (or 
+*coap_add_resource_release*()) will delete any previous
 _resource_ with the same _uri_path_ before adding in the new _resource_.
 
 The *coap_delete_resource*() function deletes a _resource_ identified by 
-_resource_ from _context_. The storage allocated for that _resource_ is freed.
+_resource_ from _context_. The storage allocated for that _resource_ is freed, 
+along with any attrigutes associated with the _resource_.
 
 The *coap_delete_all_resources*() function deletes all resources from 
 _context_ and frees their storage.
@@ -127,91 +128,89 @@ EXAMPLES
 --
 #include <coap/coap.h>
 
+#define INDEX "This is a test server made with libcoap (see https://libcoap.net)\n" \
+              "Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>\n\n"
+
+void
+hnd_get_index(coap_context_t *ctx, coap_resource_t *resource,
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_string_t *query, coap_pdu_t *response) {
+  unsigned char buf[3];
+
+  response->code = COAP_RESPONSE_CODE(205);
+
+  coap_add_option(response,
+                  COAP_OPTION_CONTENT_TYPE,
+                  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+
+  coap_add_option(response,
+                  COAP_OPTION_MAXAGE,
+                  coap_encode_var_bytes(buf, 0x2ffff), buf);
+
+  coap_add_data(response, strlen(INDEX), (const uint8_t *)INDEX);
+}
+
+void
+hnd_delete_time(coap_context_t *ctx, coap_resource_t *resource,
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_string_t *query, coap_pdu_t *response) {
+
+  /* .. code .. */
+
+}
+
+void
+hnd_get_time(coap_context_t *ctx, coap_resource_t *resource,
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_string_t *query, coap_pdu_t *response) {
+
+  /* .. code .. */
+
+}
+
+void
+hnd_put_time(coap_context_t *ctx, coap_resource_t *resource,
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_string_t *query, coap_pdu_t *response) {
+
+  /* .. code .. */
+
+}
+
 static void
-init_resources(coap_context_t *ctx) { 
+init_resources(coap_context_t *ctx) {
 
   coap_resource_t *r;
 
   /* Create a resource to return general information */
-  r = coap_resource_init(NULL, 0, 0);
+  r = coap_resource_init(NULL, 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
-  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
-  coap_add_attr(r, (unsigned char *)"title", 5,
-                (unsigned char *)"\"General Info\"", 14, 0);
+  /* Document resource for .well-known/core request */
+  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+  coap_add_attr(r, coap_make_str_const("title"),
+                coap_make_str_const("\"General Info\""), 0);
 
   coap_add_resource(ctx, r);
 
   /* Create a resource to return return or update time */
-  r = coap_resource_init((unsigned char *)"time", 4,
+  r = coap_resource_init(coap_make_str_const("time"),
                          COAP_RESOURCE_FLAGS_NOTIFY_CON);
+  coap_resource_set_get_observable(r, 1);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
 
-  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
-  coap_add_attr(r, (unsigned char *)"title", 5,
-                (unsigned char *)"\"Internal Clock\"", 16, 0);
-  coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"\"secs\"",
-                6, 0);
-  coap_resource_set_get_observable(r, 1);
-  coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"\"clock\"",
-                7, 0);
+  /* Document resource for .well-known/core request */
+  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+  coap_add_attr(r, coap_make_str_const("title"),
+                coap_make_str_const("\"Internal Clock\""), 0);
+  coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("\"secs\""),
+                0);
+  coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"clock\""),
+                0);
 
   coap_add_resource(ctx, r);
-
-}
---
-
-*GET Time Callback Handler*
-
-[source, c]
---
-#include <coap/coap.h>
-
-static void 
-hnd_get_time(coap_context_t *ctx, coap_resource_t *resource, 
-coap_session_t *session, coap_pdu_t *request, str *token, str *query, 
-coap_pdu_t *response) {
-
-  unsigned char buf[40];
-  size_t len;
-  time_t now;
-  coap_tick_t t;
-
-  /* Define what the response code is going to be */
-  response->code = COAP_RESPONSE_CODE(205);
-
-  /* If the resource is being Observed, return with Observe set */
-  if (coap_find_observer(resource, session, token)) {
-    coap_add_option(response,
-                    COAP_OPTION_OBSERVE,
-                    coap_encode_var_bytes(buf, resource->observe), buf);
-  }
-
-  /* Response is in plain text format */
-  coap_add_option(response,
-                    COAP_OPTION_CONTENT_FORMAT,
-                    coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
-
-  /* Report on how long this response is valid for */
-  coap_add_option(response,
-                  COAP_OPTION_MAXAGE,
-                  coap_encode_var_bytes(buf, 0x01), buf);
-
-  now = time(NULL);
-
-  if (query != NULL && memcmp(query->s, "secs", min(4, query->length)) == 0) {
-    /* Output secs since Jan 1 1970 */
-    len = snprintf((char *)buf, sizeof(buf), "%lu", now);
-    coap_add_data(response, len, buf);
-  } else {
-    /* Output human-readable time */
-    struct tm *tmp;
-    tmp = gmtime(&now);
-    len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
-    coap_add_data(response, len, buf);
-  }
 
 }
 --
@@ -222,8 +221,122 @@ coap_pdu_t *response) {
 --
 #include <coap/coap.h>
 
+/* Regular DELETE handler - used by resources created by the
+ * Unknown Resource PUT handler */
+
+void
+hnd_delete(coap_context_t *ctx, coap_resource_t *resource,
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_string_t *query, coap_pdu_t *response) {
+
+  /* .. code .. */
+
+  /* Dynamic resource no longer required - delete it */
+  coap_delete_resource(ctx, resource);
+
+}
+
+/* Regular GET handler - used by resources created by the
+ * Unknown Resource PUT handler */
+
+void
+hnd_get(coap_context_t *ctx, coap_resource_t *resource,
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_string_t *query, coap_pdu_t *response) {
+
+  coap_str_const_t *get_uri_path;
+  coap_string_t *get_query;
+  coap_opt_iterator_t opt_iter;
+  coap_opt_filter_t filter;
+  coap_opt_t *option;
+  int len;
+
+  /*
+   * request will be NULL if an Observe triggered request, so the uri_path,
+   * if needed, must be abstracted from the resource.
+   * The uri_path string is a const pointer
+   */
+
+  get_uri_path = coap_resource_get_uri_path(resource);
+  get_query = query;
+
+  /* .. code .. */
+
+}
+
+/* Regular PUT handler - used by resources created by the
+ * Unknown Resource PUT handler */
+
+void
+hnd_put(coap_context_t *ctx, coap_resource_t *resource,
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_string_t *query, coap_pdu_t *response) {
+
+  coap_string_t *put_uri_path;
+
+  /* get the uri_path */
+  put_uri_path = coap_get_uri_path(request);
+  if (!put_uri_path) {
+    response->code = COAP_RESPONSE_CODE(404);
+    return;
+  }
+
+  /* .. code .. */
+
+  /* Need to do this as coap_get_uri_path() created it */
+  coap_delete_string(put_uri_path);
+
+}
+
+/* Unknown Resource PUT handler */
+
+void
+hnd_unknown_put(coap_context_t *ctx, coap_resource_t *resource,
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_string_t *query, coap_pdu_t *response) {
+
+  coap_resource_t *r;
+  int len;
+  coap_string_t *uri_path;
+
+  /* get the uri_path - wwhill will get used by coap_resource_init() */
+  uri_path = coap_get_uri_path(request);
+  if (!uri_path) {
+    response->code = COAP_RESPONSE_CODE(404);
+    return;
+  }
+
+  /* Check if new URI Path is valid */
+  if (!check_url_fn (uri_path, request->code)) {
+    response->code = COAP_RESPONSE_CODE(404);
+    coap_delete_string(uri_path);
+    return;
+  }
+
+  /*
+   * Create a resource to handle the new URI
+   * uri_path will get deleted when the resource is removed
+   */
+  r = coap_resource_init((coap_str_const_t*)uri_path,
+        COAP_RESOURCE_FLAGS_RELEASE_URI | COAP_RESOURCE_FLAGS_NOTIFY_NON);
+  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put);
+  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete);
+  /* We possibly want to Observe the GETs */
+  coap_resource_set_get_observable(r, 1);
+  coap_register_handler(r, COAP_REQUEST_GET, hnd_get);
+  coap_add_resource(ctx, r);
+
+  /* Do the PUT for this first call */
+  hnd_put(ctx, resource, session, request, token, query, response);
+
+  return;
+
+}
+
+/* Initialize single Unknown Resource PUT handler */
+
 static void
-init_resources(coap_context_t *ctx) { 
+init_resources(coap_context_t *ctx) {
 
   coap_resource_t *r;
 
@@ -234,127 +347,9 @@ init_resources(coap_context_t *ctx) {
 }
 --
 
-*PUT Unknown Resource Callback Handler*
-
-[source, c]
---
-#include <coap/coap.h>
-
-void 
-hnd_unknown_put(coap_context_t *ctx, coap_resource_t *resource, 
-coap_session_t *session, coap_pdu_t *request, str *token, str *query, 
-coap_pdu_t *response) {
-
-  coap_resource_t *r;
-  int len;
-  str *uri_path;
-
-  /* get the uri_path */
-  uri_path = coap_get_uripath(request);
-  if (!uri_path) {
-    response->code = COAP_RESPONSE_CODE(404);
-    return;
-  }
-
-  /* Check if new URI Path is valid */
-  if (!check_url_fn (uri_path, request->code)) {
-    response->code = COAP_RESPONSE_CODE(404);
-    return;
-  }
-
-  /* Create a resource to handle the new URI */
-  r = coap_resource_init((unsigned char *)uri_path->s, uri_path->length,
-        COAP_RESOURCE_FLAGS_RELEASE_URI|COAP_RESOURCE_FLAGS_NOTIFY_NON);
-  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put);
-  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete);
-  /* We possibly want to Observe the GETs */
-  coap_resource_set_get_observable(r, 1);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get);
-  coap_add_resource(ctx, r);
-
-  /* Do the PUT for this first instance */
-  hnd_put(ctx, resource, session, request, token, query, response);
-  return;
-
-}
---
-
-*PUT Dynamic Resource Callback Handler*
-
-[source, c]
---
-#include <coap/coap.h>
-
-void 
-hnd_put(coap_context_t *ctx, coap_resource_t *resource, 
-coap_session_t *session, coap_pdu_t *request, str *token, str *query, 
-coap_pdu_t *response) {
-
-  str *put_uri_path;
-
-  /* get the uri_path */
-  put_uri_path = coap_get_uri_pathpath(request);
-  if (!put_uri_path) {
-    response->code = COAP_RESPONSE_CODE(404);
-    return;
-  }
-
-  /* .. code .. */
-
-  /* Need to do this as coap_get_uripath() created it */
-  coap_free(put_uri_path);
-
-}
---
-
-*GET Dynamic Resource Callback Handler*
-
-[source, c]
---
-#include <coap/coap.h>
-
-void 
-hnd_get(coap_context_t *ctx, coap_resource_t *resource, 
-coap_session_t *session, coap_pdu_t *request, str *token, str *query, 
-coap_pdu_t *response) {
-
-  str get_uri_path;
-  str *get_query;
-  coap_opt_iterator_t opt_iter;
-  coap_opt_filter_t filter;
-  coap_opt_t *option;
-  int len;
-
-  get_uri_path = resource->uri_path;
-  get_query = query;
-
-  /* .. code .. */
-
-}
---
-
-*DELETE Dynamic Resource Callback Handler*
-
-[source, c]
---
-#include <coap/coap.h>
-
-void 
-hnd_delete(coap_context_t *ctx, coap_resource_t *resource, 
-coap_session_t *session, coap_pdu_t *request, str *token, str *query, 
-coap_pdu_t *response) {
-
-  /* .. code .. */
-
-  /* Dynamic resource no longer required - delete it */
-  coap_delete_resource (ctx, resource);
-
-}
---
-
 SEE ALSO
 --------
-*coap_attribute*(3), *coap_context*(3) and *coap_handler*(3)
+*coap_attribute*(3), *coap_context*(3), *coap_observe*(3) and *coap_handler*(3)
 
 FURTHER INFORMATION
 -------------------

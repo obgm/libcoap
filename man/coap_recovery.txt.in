@@ -38,8 +38,8 @@ coap_fixed_point_t _value_)*;
 
 *int coap_debug_set_packet_loss(const char *_loss_level_)*;
 
-Link with -lcoap-@LIBCOAP_API_VERSION@, -lcoap-@LIBCOAP_API_VERSION@-openssl
-or -lcoap-@LIBCOAP_API_VERSION@-tinydtls depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -137,7 +137,7 @@ The client needs to be sending confirmable requests during the test.
 The server can either be stopped, or if packet loss levels are set to 100% by 
 using coap_debug_set_packet_loss("100%") when receiving the client requests. 
 
-Note: If the server end of the connection is returning ICMP unreachable packets 
+*NOTE:* If the server end of the connection is returning ICMP unreachable packets 
 after being turned off, you will get a debug message of the form 
 "coap_network_read: unreachable", so libcoap will stop doing the retries.  If
 this is the case, then you need to make use of (on the server)

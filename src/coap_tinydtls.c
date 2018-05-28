@@ -162,7 +162,7 @@ static int
 get_psk_info(struct dtls_context_t *dtls_context,
   const session_t *dtls_session,
   dtls_credentials_type_t type,
-  const unsigned char *id, size_t id_len,
+  const uint8_t *id, size_t id_len,
   unsigned char *result, size_t result_length) {
   coap_context_t *coap_context;
   coap_session_t *coap_session;

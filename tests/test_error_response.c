@@ -65,8 +65,8 @@ t_error_response2(void) {
   coap_pdu_clear(pdu, pdu->max_size);
   pdu->type = COAP_MESSAGE_NON;
   pdu->tid = 0x1234;
-  coap_add_token(pdu, 5, (unsigned char *)"token");
-  coap_add_option(pdu, COAP_OPTION_URI_HOST, 4, (unsigned char *)"time");
+  coap_add_token(pdu, 5, (const uint8_t *)"token");
+  coap_add_option(pdu, COAP_OPTION_URI_HOST, 4, (const uint8_t *)"time");
 
   coap_option_filter_clear(opts);
   response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(404), opts);
@@ -84,7 +84,7 @@ t_error_response2(void) {
 
 static void
 t_error_response3(void) {
-  const unsigned char code = COAP_RESPONSE_CODE(402);
+  const uint8_t code = COAP_RESPONSE_CODE(402);
   uint8_t teststr[] = {
     0x65, code, 0x00, 0x00, 't', 'o', 'k', 'e',
     'n', 0x90, 0xff, 'B', 'a', 'd', ' ', 'O',
@@ -94,8 +94,8 @@ t_error_response3(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);
   pdu->type = COAP_MESSAGE_CON;
-  coap_add_token(pdu, 5, (unsigned char *)"token");
-  /* coap_add_option(pdu, COAP_OPTION_URI_HOST, 4, (unsigned char *)"time"); */
+  coap_add_token(pdu, 5, (const uint8_t *)"token");
+  /* coap_add_option(pdu, COAP_OPTION_URI_HOST, 4, (const uint8_t *)"time"); */
 
   /* unknown critical option 9 */
   coap_add_option(pdu, 9, 0, NULL);
@@ -117,7 +117,7 @@ t_error_response3(void) {
 
 static void
 t_error_response4(void) {
-  const unsigned char code = COAP_RESPONSE_CODE(402);
+  const uint8_t code = COAP_RESPONSE_CODE(402);
   unsigned char optval[] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
     0x08, 0x09, 0x0a, 0x0b
@@ -133,8 +133,8 @@ t_error_response4(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);
   pdu->type = COAP_MESSAGE_CON;
-  coap_add_token(pdu, 5, (unsigned char *)"token");
-  /* coap_add_option(pdu, COAP_OPTION_URI_HOST, 4, (unsigned char *)"time"); */
+  coap_add_token(pdu, 5, (const uint8_t *)"token");
+  /* coap_add_option(pdu, COAP_OPTION_URI_HOST, 4, (const uint8_t *)"time"); */
 
   /* unknown critical option 9 */
   coap_add_option(pdu, 9, sizeof(optval), optval);
@@ -156,7 +156,7 @@ t_error_response4(void) {
 
 static void
 t_error_response5(void) {
-  const unsigned char code = COAP_RESPONSE_CODE(402);
+  const uint8_t code = COAP_RESPONSE_CODE(402);
   unsigned char optval[] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
@@ -174,8 +174,8 @@ t_error_response5(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);
   pdu->type = COAP_MESSAGE_CON;
-  coap_add_token(pdu, 5, (unsigned char *)"token");
-  /* coap_add_option(pdu, COAP_OPTION_URI_HOST, 4, (unsigned char *)"time"); */
+  coap_add_token(pdu, 5, (const uint8_t *)"token");
+  /* coap_add_option(pdu, COAP_OPTION_URI_HOST, 4, (const uint8_t *)"time"); */
 
   /* unknown critical option 9 */
   coap_add_option(pdu, 9, sizeof(optval), optval);
@@ -197,7 +197,7 @@ t_error_response5(void) {
 
 static void
 t_error_response6(void) {
-  const unsigned char code = COAP_RESPONSE_CODE(402);
+  const uint8_t code = COAP_RESPONSE_CODE(402);
   unsigned char optval[] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
@@ -215,8 +215,8 @@ t_error_response6(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);
   pdu->type = COAP_MESSAGE_CON;
-  coap_add_token(pdu, 5, (unsigned char *)"token");
-  /* coap_add_option(pdu, COAP_OPTION_URI_HOST, 4, (unsigned char *)"time"); */
+  coap_add_token(pdu, 5, (const uint8_t *)"token");
+  /* coap_add_option(pdu, COAP_OPTION_URI_HOST, 4, (const uint8_t *)"time"); */
 
   /* unknown critical option 23 */
   coap_add_option(pdu, 23, sizeof(optval), optval);
@@ -238,7 +238,7 @@ t_error_response6(void) {
 
 static void
 t_error_response7(void) {
-  const unsigned char code = COAP_RESPONSE_CODE(402);
+  const uint8_t code = COAP_RESPONSE_CODE(402);
   unsigned char optval[] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
@@ -256,9 +256,9 @@ t_error_response7(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);
   pdu->type = COAP_MESSAGE_CON;
-  coap_add_token(pdu, 5, (unsigned char *)"token");
+  coap_add_token(pdu, 5, (const uint8_t *)"token");
   /* known option 11 */
-  coap_add_option(pdu, 11, 4, (unsigned char *)"time");
+  coap_add_option(pdu, 11, 4, (const uint8_t *)"time");
 
   /* unknown critical option 23 */
   coap_add_option(pdu, 23, sizeof(optval), optval);
@@ -280,7 +280,7 @@ t_error_response7(void) {
 
 static void
 t_error_response8(void) {
-  const unsigned char code = COAP_RESPONSE_CODE(503);
+  const uint8_t code = COAP_RESPONSE_CODE(503);
   uint8_t teststr[] = {
     0x65, code, 0x00, 0x00,  't',  'o',  'k',  'e',
      'n', 0xe0, 0x02, 0xdc, 0xd0, 0x00, 0xff,  'S',
@@ -292,7 +292,7 @@ t_error_response8(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);
   pdu->type = COAP_MESSAGE_CON;
-  coap_add_token(pdu, 5, (unsigned char *)"token");
+  coap_add_token(pdu, 5, (const uint8_t *)"token");
   /* known option 1000 */
   coap_add_option(pdu, 1000, 0, NULL);
 

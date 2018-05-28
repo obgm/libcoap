@@ -487,6 +487,7 @@ coap_get_app_data(const coap_context_t *ctx) {
 void
 coap_free_context(coap_context_t *context) {
   coap_endpoint_t *ep, *tmp;
+  coap_session_t *sp, *stmp;
 
   if (!context)
     return;
@@ -502,6 +503,10 @@ coap_free_context(coap_context_t *context) {
 
   LL_FOREACH_SAFE(context->endpoint, ep, tmp) {
     coap_free_endpoint(ep);
+  }
+
+  LL_FOREACH_SAFE(context->sessions, sp, stmp) {
+    coap_session_release(sp);
   }
 
   if (context->dtls_context)
@@ -1328,8 +1333,8 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_tid_t
 }
 
 COAP_STATIC_INLINE int
-token_match(const unsigned char *a, size_t alen,
-  const unsigned char *b, size_t blen) {
+token_match(const uint8_t *a, size_t alen,
+  const uint8_t *b, size_t blen) {
   return alen == blen && (alen == 0 || memcmp(a, b, alen) == 0);
 }
 
@@ -1370,7 +1375,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
 
 void
 coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
-  const unsigned char *token, size_t token_length) {
+  const uint8_t *token, size_t token_length) {
   /* cancel all messages in sendqueue that belong to session
    * and use the specified token */
   coap_queue_t *p, *q;
@@ -1502,7 +1507,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
 #if COAP_ERROR_PHRASE_LENGTH > 0
     /* note that diagnostic messages do not need a Content-Format option. */
     if (phrase)
-      coap_add_data(response, (unsigned int)strlen(phrase), (unsigned char *)phrase);
+      coap_add_data(response, (size_t)strlen(phrase), (const uint8_t *)phrase);
 #endif
   }
 
@@ -1669,7 +1674,7 @@ error:
 static int
 coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
 #ifndef WITHOUT_OBSERVE
-  str token = { 0, NULL };
+  coap_string_t token = { 0, NULL };
   int num_cancelled = 0;    /* the number of observers cancelled */
 
   /* remove observer for this resource, if any
@@ -1757,9 +1762,9 @@ no_response(coap_pdu_t *request, coap_pdu_t *response) {
   return RESPONSE_DEFAULT;
 }
 
-static coap_string_t coap_default_uri_wellknown =
+static coap_str_const_t coap_default_uri_wellknown =
           { sizeof(COAP_DEFAULT_URI_WELLKNOWN)-1,
-           (unsigned char*)COAP_DEFAULT_URI_WELLKNOWN };
+           (const uint8_t *)COAP_DEFAULT_URI_WELLKNOWN };
 
 static void
 handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu) {
@@ -1776,10 +1781,11 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_option_filter_clear(opt_filter);
 
   /* try to find the resource from the request URI */
-  str *uri_path = coap_get_uri_path(pdu);
+  coap_string_t *uri_path = coap_get_uri_path(pdu);
   if (!uri_path)
     return;
-  resource = coap_get_resource_from_uri_path(context, *uri_path);
+  coap_str_const_t uri_path_c = { uri_path->length, uri_path->s };
+  resource = coap_get_resource_from_uri_path(context, &uri_path_c);
 
   if ((resource == NULL) || (resource->is_unknown == 1)) {
     /* The resource was not found or there is an unexpected match against the
@@ -1865,11 +1871,11 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     h = resource->handler[pdu->code - 1];
 
   if (h) {
-    str *query = coap_get_query(pdu);
+    coap_string_t *query = coap_get_query(pdu);
     int owns_query = 1;
      coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
-      (int)resource->uri_path.length, (int)resource->uri_path.length,
-      resource->uri_path.s);
+      (int)resource->uri_path->length, (int)resource->uri_path->length,
+      resource->uri_path->s);
     response = coap_pdu_init(pdu->type == COAP_MESSAGE_CON
       ? COAP_MESSAGE_ACK
       : COAP_MESSAGE_NON,
@@ -1878,7 +1884,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     /* Implementation detail: coap_add_token() immediately returns 0
        if response == NULL */
     if (coap_add_token(response, pdu->token_length, pdu->token)) {
-      str token = { pdu->token_length, pdu->token };
+      coap_string_t token = { pdu->token_length, pdu->token };
       coap_opt_iterator_t opt_iter;
       coap_opt_t *observe = NULL;
       int observe_action = COAP_OBSERVE_CANCEL;
@@ -2068,7 +2074,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
        * notification. Then, we must flag the observer to be alive
        * by setting obs->fail_cnt = 0. */
       if (sent && COAP_RESPONSE_CLASS(sent->pdu->code) == 2) {
-	const str token =
+	const coap_string_t token =
 	{ sent->pdu->token_length, sent->pdu->token };
 	coap_touch_observer(context, sent->session, &token);
       }
