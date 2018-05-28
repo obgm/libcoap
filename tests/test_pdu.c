@@ -616,6 +616,112 @@ t_encode_pdu11(void) {
   pdu->max_size = old_max;
 }
 
+static void
+t_encode_pdu12(void) {
+  coap_optlist_t *optlist = NULL;
+  int n;
+  uint8_t opt_num[] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 };
+  uint8_t opt_val[] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 };
+  uint8_t opt_srt[] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 };
+  coap_opt_iterator_t oi;
+  coap_opt_t *option;
+
+  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+
+  CU_ASSERT(pdu->data == NULL);
+
+  for (n = 0; n < (int)sizeof(opt_num); n++) {
+    coap_insert_optlist(&optlist, coap_new_optlist(opt_num[n],
+                     sizeof(opt_val[n]), &opt_val[n]));
+  }
+  coap_add_optlist_pdu(pdu, &optlist);
+
+  /* Check options in pdu are in right order */
+  coap_option_iterator_init(pdu, &oi, COAP_OPT_ALL);
+  for (n = 0; n < (int)sizeof(opt_num); n++) {
+    option = coap_option_next(&oi);
+    CU_ASSERT(oi.bad == 0);
+    CU_ASSERT(option != NULL);
+    CU_ASSERT(coap_opt_length(option) == 1);
+    CU_ASSERT(*coap_opt_value(option) == opt_srt[n]);
+  }
+  option = coap_option_next(&oi);
+  CU_ASSERT(oi.bad == 1);
+  CU_ASSERT(option == NULL);
+  coap_delete_optlist(optlist);
+}
+
+static void
+t_encode_pdu13(void) {
+  coap_optlist_t *optlist = NULL;
+  int n;
+  uint8_t opt_num[] = { 59, 58, 57, 56, 55, 54, 53, 52, 51, 50 };
+  uint8_t opt_val[] = { 59, 58, 57, 56, 55, 54, 53, 52, 51, 50 };
+  uint8_t opt_srt[] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 };
+  coap_opt_iterator_t oi;
+  coap_opt_t *option;
+
+  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+
+  CU_ASSERT(pdu->data == NULL);
+
+  for (n = 0; n < (int)sizeof(opt_num); n++) {
+    coap_insert_optlist(&optlist, coap_new_optlist(opt_num[n],
+                     sizeof(opt_val[n]), &opt_val[n]));
+  }
+  coap_add_optlist_pdu(pdu, &optlist);
+
+  /* Check options in pdu are in right order */
+  coap_option_iterator_init(pdu, &oi, COAP_OPT_ALL);
+  for (n = 0; n < (int)sizeof(opt_num); n++) {
+    option = coap_option_next(&oi);
+    CU_ASSERT(oi.bad == 0);
+    CU_ASSERT(option != NULL);
+    CU_ASSERT(coap_opt_length(option) == 1);
+    CU_ASSERT(*coap_opt_value(option) == opt_srt[n]);
+  }
+  option = coap_option_next(&oi);
+  CU_ASSERT(oi.bad == 1);
+  CU_ASSERT(option == NULL);
+  coap_delete_optlist(optlist);
+}
+
+
+static void
+t_encode_pdu14(void) {
+  coap_optlist_t *optlist = NULL;
+  int n;
+  uint8_t opt_num[] = { 53, 52, 51, 50, 51, 52, 52, 51, 50, 50 };
+  uint8_t opt_val[] = { 59, 56, 53, 50, 54, 57, 58, 55, 51, 52 };
+  uint8_t opt_srt[] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 };
+  coap_opt_iterator_t oi;
+  coap_opt_t *option;
+
+  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+
+  CU_ASSERT(pdu->data == NULL);
+
+  for (n = 0; n < (int)sizeof(opt_num); n++) {
+    coap_insert_optlist(&optlist, coap_new_optlist(opt_num[n],
+                     sizeof(opt_val[n]), &opt_val[n]));
+  }
+  coap_add_optlist_pdu(pdu, &optlist);
+
+  /* Check options in pdu are in right order */
+  coap_option_iterator_init(pdu, &oi, COAP_OPT_ALL);
+  for (n = 0; n < (int)sizeof(opt_num); n++) {
+    option = coap_option_next(&oi);
+    CU_ASSERT(oi.bad == 0);
+    CU_ASSERT(option != NULL);
+    CU_ASSERT(coap_opt_length(option) == 1);
+    CU_ASSERT(*coap_opt_value(option) == opt_srt[n]);
+  }
+  option = coap_option_next(&oi);
+  CU_ASSERT(oi.bad == 1);
+  CU_ASSERT(option == NULL);
+  coap_delete_optlist(optlist);
+}
+
 static int
 t_pdu_tests_create(void) {
   pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
@@ -680,6 +786,9 @@ t_init_pdu_tests(void) {
     PDU_ENCODER_TEST(suite[1], t_encode_pdu9);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu10);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu11);
+    PDU_ENCODER_TEST(suite[1], t_encode_pdu12);
+    PDU_ENCODER_TEST(suite[1], t_encode_pdu13);
+    PDU_ENCODER_TEST(suite[1], t_encode_pdu14);
 
   } else 			/* signal error */
     fprintf(stderr, "W: cannot add pdu parser test suite (%s)\n",

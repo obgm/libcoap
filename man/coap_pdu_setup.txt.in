@@ -27,12 +27,12 @@ const uint8_t *_data_);*
 *coap_optlist_t *coap_new_optlist(uint16_t _number_, size_t _length_,
 const uint8_t *_data_);*
 
-*int coap_insert_optlist(coap_optlist_t *_optlist_chain_,
+*int coap_insert_optlist(coap_optlist_t **_optlist_chain_,
 coap_optlist_t *_optlist_);*
 
 *void coap_delete_optlist(coap_optlist_t *_optlist_chain_);*
 
-*int coap_add_optlist_pdu(coap_pdu_t *_pdu_, coap_optlist_t *_optlist_chain_);*
+*int coap_add_optlist_pdu(coap_pdu_t *_pdu_, coap_optlist_t **_optlist_chain_);*
 
 *size_t coap_add_option(coap_pdu_t *_pdu_, uint16_t _number_, size_t _length_,
 const uint8_t *_data_);*
@@ -281,7 +281,7 @@ unsigned char *data, size_t length, int observe) {
   /* ... Other code / options etc. ... */
 
   /* Add in all the options (after internal sorting) to the pdu */
-  if (!coap_add_optlist_pdu(pdu, optlist_chain))
+  if (!coap_add_optlist_pdu(pdu, &optlist_chain))
     goto error;
 
   if (data && length) {

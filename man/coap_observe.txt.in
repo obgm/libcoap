@@ -300,7 +300,7 @@ coap_optlist_t **options, unsigned char *data, size_t length, int observe) {
   /* ... Other code / options etc. ... */
 
   /* Add in all the options (after internal sorting) to the pdu */
-  if (!coap_add_optlist_pdu(pdu, *options))
+  if (!coap_add_optlist_pdu(pdu, options))
     goto error;
 
   if (data && length) {

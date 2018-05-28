@@ -62,22 +62,6 @@ size_t coap_opt_parse(const coap_opt_t *opt,
 size_t coap_opt_size(const coap_opt_t *opt);
 
 /**
- * Calculates the beginning of the PDU's option section.
- *
- * @param pdu The PDU containing the options.
- * @return    A pointer to the first option if available, or @c NULL otherwise.
- */
-coap_opt_t *options_start(coap_pdu_t *pdu);
-
-/**
- * Interprets @p opt as pointer to a CoAP option and advances to
- * the next byte past this option.
- * @hideinitializer
- */
-#define options_next(opt) \
-  ((coap_opt_t *)((uint8_t *)(opt) + coap_opt_size(opt)))
-
-/**
  * @defgroup opt_filter Option Filters
  * @{
  */
@@ -415,7 +399,7 @@ const uint8_t *coap_opt_value(const coap_opt_t *opt);
  * coap_insert_optlist(&optlist_chain, coap_new_optlist(COAP_OPTION_OBSERVE,
  *                    COAP_OBSERVE_ESTABLISH, NULL));
  *
- * coap_add_optlist_pdu(pdu, *optlist_chain);
+ * coap_add_optlist_pdu(pdu, &optlist_chain);
  * ... other code ...
  * coap_delete_optlist(optlist_chain);
  * @endcode
@@ -449,7 +433,7 @@ coap_optlist_t *coap_new_optlist(uint16_t number,
  *
  * @return     @c 1 if succesful or @c 0 if failure;
  */
-int coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t* optlist_chain);
+int coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t** optlist_chain);
 
 /**
  * Adds @p optlist to the given @p optlist_chain. The optlist_chain variable

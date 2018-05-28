@@ -147,7 +147,7 @@ coap_new_request(coap_context_t *ctx,
   }
 
   if (options)
-    coap_add_optlist_pdu(pdu, *options);
+    coap_add_optlist_pdu(pdu, options);
 
   if (length) {
     if ((flags & FLAGS_BLOCK) == 0)
