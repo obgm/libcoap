@@ -142,8 +142,14 @@ hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
     } else {      /* output human-readable time */
       struct tm *tmp;
       tmp = gmtime(&now);
-      len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
-      coap_add_data(response, len, buf);
+      if (!tmp) {
+        /* If 'now' is not valid */
+        response->code = COAP_RESPONSE_CODE(404);
+      }
+      else {
+        len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
+        coap_add_data(response, len, buf);
+      }
     }
   }
 }
@@ -182,6 +188,18 @@ hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
     while(size--)
       my_clock_base = my_clock_base * 10 + *data++;
     my_clock_base -= t / COAP_TICKS_PER_SECOND;
+
+    /* Sanity check input value */
+    if (!gmtime(&my_clock_base)) {
+      unsigned char buf[3];
+      response->code = COAP_RESPONSE_CODE(400);
+      coap_add_option(response,
+                      COAP_OPTION_CONTENT_FORMAT,
+                      coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+      coap_add_data(response, 22, (const uint8_t*)"Invalid set time value");
+      /* re-init as value is bad */
+      my_clock_base = clock_offset;
+    }
   }
 }
 
