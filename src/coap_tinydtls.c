@@ -388,12 +388,16 @@ coap_dtls_receive(coap_session_t *session,
   size_t data_len
 ) {
   session_t *dtls_session = (session_t *)session->tls;
-  int res;
+  int err;
 
   coap_event_dtls = -1;
-  res = dtls_handle_message(
+  err = dtls_handle_message(
     (struct dtls_context_t *)session->context->dtls_context,
     dtls_session, (uint8 *)data, (int)data_len);
+
+  if (err){
+    coap_event_dtls = COAP_EVENT_DTLS_ERROR;
+  }
 
   if (coap_event_dtls >= 0) {
     coap_handle_event(session->context, coap_event_dtls, session);
@@ -403,7 +407,7 @@ coap_dtls_receive(coap_session_t *session,
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
   }
 
-  return res;
+  return err;
 }
 
 int
