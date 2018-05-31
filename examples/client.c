@@ -81,12 +81,6 @@ int obs_ms_reset = 0;
 #define UNUSED_PARAM
 #endif /* GCC */
 
-static inline void
-set_timeout(coap_tick_t *timer, const unsigned int seconds) {
-  coap_ticks(timer);
-  *timer += seconds * COAP_TICKS_PER_SECOND;
-}
-
 static int
 append_to_output(const uint8_t *data, size_t len) {
   size_t written;
