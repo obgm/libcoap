@@ -47,8 +47,8 @@ coap_free_type(coap_memory_tag_t type, void *p) {
 
 #ifdef WITH_CONTIKI
 
-#define COAP_MAX_STRING_SIZE 12
-#define COAP_MAX_STRINGS      8
+#define COAP_MAX_STRING_SIZE 200
+#define COAP_MAX_STRINGS      10
 
 struct coap_stringbuf_t {
   char data[COAP_MAX_STRING_SIZE];
@@ -112,7 +112,7 @@ coap_malloc_type(coap_memory_tag_t type, size_t size) {
   assert(container);
 
   if (size > container->size) {
-    debug("coap_malloc_type: Requested memory exceeds maximum object size\n");
+    debug("coap_malloc_type: %d. Requested memory exceeds maximum object size: %d\n", (int)type, (int)size);
     return NULL;
   }
 
