@@ -15,7 +15,8 @@ coap-server - CoAP Server based on libcoap
 SYNOPSIS
 --------
 *coap-server* [*-A* addr] [*-g* group] [*-p* port] [*-l* loss]
-              [*-k* key] [*-h* hint] [*-c* certfile] [*-v* num]
+              [*-k* key] [*-h* hint] [*-c* certfile] [*-C* cafile]
+              [*-R* root_cafile] [*-v* num]
 
 DESCRIPTION
 -----------
@@ -39,6 +40,23 @@ OPTIONS
    Use the specified PEM file which contains the CERTIFICATE and PRIVATE
    KEY information. This argument requires (D)TLS with PKI to be available.
 
+*-C* cafile::
+  PEM file containing the CA Certificate that was used to sign the certfile
+  defined using *-c certfile*.
+  If defined, then the client will be given this CA Certificate during the
+  TLS set up.  Furthermore, this will also trigger the validation of the client
+  provided certificate against this cafile or using the CAs defined by
+  *-R root_cafile*.
+  If certfile is self-signed (as defined by *-c certfile*), then you need to
+  have on the command line the same filename for both the certfile and cafile
+  (as in  *-c certfile -C certfile*) to trigger validation.
+
+*-R* root_cafile::
+  PEM file containing the set of trusted root CAs that are to be used to
+  validate the client certificate.  The '-C cafile' does not have to be in
+  this list and is 'trusted' for the verification.
+  Alternatively, this can point to a directory containing a set of CA PEM files.
+
 *-k* key::
    Pre-shared key to use for inbound connections. This cannot be empty if defined.
    This argument requires (D)TLS with PSK to be available.
@@ -51,7 +69,7 @@ OPTIONS
 
 *-l* list::
    Fail to send some datagrams specified by a comma separated list of
-   numbers or number intervals (debugging only).
+   numbers or number ranges (debugging only).
 
 *-l* loss%::
    Randomly failed to send datagams with the specified probability - 100%

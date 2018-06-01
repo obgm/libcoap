@@ -17,8 +17,9 @@ SYNOPSIS
 *coap-client* [*-a* addr] [*-b* [num,]size] [*-c* certfile] [*-e* text]
               [*-f* file] [*-k* key] [*-l* loss] [*-m* method] [*-o* file]
               [*-p* port] [*-r*] [*-s* duration] [*-t* type]  [*-u* user]
-              [*-v* num] [*-A* type] [*-B* seconds] [*-N*]
-              [*-O* num,text] [*-P* addr[:port]] [*-T* token] [*-U*] URI
+              [*-v* num] [*-A* type] [*-B* seconds] [*-C* cafile] [*-N*]
+              [*-O* num,text] [*-P* addr[:port]] [*-R* root_cafile]
+              [*-T* token] [*-U*] URI
 
 DESCRIPTION
 -----------
@@ -118,6 +119,14 @@ OPTIONS
 *-B* seconds::
    Break operation after waiting given seconds (default is 90).
 
+*-C* cafile::
+  PEM file containing the CA Certificate that was used to sign the certfile
+  defined using *-c certfile*.
+  This will trigger the validation of the server certificate.
+  If certfile is self-signed (as defined by *-c certfile*), then you need to
+  have on the command line the same filename for both the certfile and cafile
+  (as in  *-c certfile -C certfile*) to trigger validation.
+
 *-N* ::
    Send NON-confirmable message. If option *-N* is not specified, a
    confirmable message will be sent.
@@ -128,6 +137,12 @@ OPTIONS
 *-P* addr[:port]::
    Address (and port) for proxy to use (automatically adds Proxy-Uri option
    to request).
+
+*-R* root_cafile::
+  PEM file containing the set of trusted root CAs that are to be used to
+  validate the server certificate.  The '-C cafile' does not have to be in
+  this list and is 'trusted' for the verification.
+  Alternatively, this can point to a directory containing a set of CA PEM files.
 
 *-T* token::
    Include the 'token' to the request.
