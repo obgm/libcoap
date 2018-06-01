@@ -58,7 +58,9 @@ static int reliable = 0;
 
 unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
 
-static char *cert_file = NULL;          /* Combined certificate and private key file */
+static char *cert_file = NULL; /* Combined certificate and private key in PEM */
+static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM */
+static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
 
 typedef unsigned char method_t;
 method_t method = 1;                    /* the method we are using in our requests */
@@ -505,11 +507,11 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
      "(c) 2010-2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
-     "Usage: %s [-a addr] [-b [num,]size] [-c certfile] [-e text]\n"
+     "Usage: %s [-a addr] [-b [num,]size] [-c certfile] [-C cafile] [-e text]\n"
      "\t\t[-f file] [-k key] [-l loss] [-m method] [-o file]\n"
      "\t\t[-p port] [-r] [-s duration] [-t type]  [-u user]\n"
      "\t\t[-v num] [-A type] [-B seconds] [-N] [-O num,text]\n"
-     "\t\t[-P addr[:port]] [-T token] [-U] URI\n\n"
+     "\t\t[-P addr[:port]] [-R root_cafile] [-T token] [-U] URI\n\n"
      "\tURI can be an absolute URI or a URI prefixed with scheme and host\n\n"
      "\t-a addr\t\tThe local interface address to use\n"
      "\t-b [num,]size\tBlock size to be used in GET/PUT/POST requests\n"
@@ -519,39 +521,52 @@ usage( const char *program, const char *version) {
      "\t-c certfile\tPEM file containing both CERTIFICATE and PRIVATE KEY\n"
      "\t       \t\tThis argument requires (D)TLS with PKI to be available\n"
      "\t-e text\t\tInclude text as payload (use percent-encoding for\n"
-     "\t\t\tnon-ASCII characters)\n"
+     "\t       \t\tnon-ASCII characters)\n"
      "\t-f file\t\tFile to send with PUT/POST (use '-' for STDIN)\n"
-     "\t-k key\t\tPre-shared key for the specified user. This argument\n"
+     "\t-k key \t\tPre-shared key for the specified user. This argument\n"
      "\t       \t\trequires (D)TLS with PSK to be available\n"
      "\t-l list\t\tFail to send some datagrams specified by a comma separated\n"
-     "\t\t\tlist of numbers or number ranges (for debugging only)\n"
+     "\t       \t\tlist of numbers or number ranges (for debugging only)\n"
      "\t-l loss%%\tRandomly fail to send datagrams with the specified\n"
-     "\t\t\tprobability (for debugging only)\n"
+     "\t       \t\tprobability - 100%% all datagrams, 0%% no datagrams\n"
      "\t-m method\tRequest method (get|put|post|delete|fetch|patch|ipatch),\n"
-     "\t\t\tdefault is 'get'\n"
+     "\t       \t\tdefault is 'get'\n"
      "\t-o file\t\tOutput received data to this file (use '-' for STDOUT)\n"
      "\t-p port\t\tListen on specified port\n"
-     "\t-r\t\tUse reliable protocol (TCP or TLS)\n"
+     "\t-r     \t\tUse reliable protocol (TCP or TLS)\n"
      "\t-s duration\tSubscribe to / Observe resource for given duration [s]\n"
      "\t-t type\t\tContent format for given resource for PUT/POST\n"
      "\t-u user\t\tUser identity for pre-shared key mode. This argument\n"
      "\t       \t\trequires (D)TLS with PSK to be available\n"
-     "\t-v num\t\tVerbosity level (default: 3)\n"
+     "\t-v num \t\tVerbosity level (default: 3)\n"
      "\t-A type\t\tAccepted media type\n"
      "\t-B seconds\tBreak operation after waiting given seconds\n"
-     "\t\t\t(default is %d)\n"
-     "\t-N\t\tSend NON-confirmable message\n"
+     "\t       \t\t(default is %d)\n"
+     "\t-C cafile\tPEM file containing the CA Certificate that was used to\n"
+     "\t       \t\tsign the certfile. This will trigger the validation of\n"
+     "\t       \t\tthe server certificate.  If certfile is self-signed (as\n"
+     "\t       \t\tdefined by '-c certfile'), then you need to have on the\n"
+     "\t       \t\tcommand line the same filename for both the certfile and\n"
+     "\t       \t\tcafile (as in  '-c certfile -C certfile') to trigger\n"
+     "\t       \t\tvalidation\n"
+     "\t-N     \t\tSend NON-confirmable message\n"
      "\t-O num,text\tAdd option num with contents text to request\n"
      "\t-P addr[:port]\tUse proxy (automatically adds Proxy-Uri option to\n"
-     "\t\t\trequest)\n"
+     "\t       \t\trequest)\n"
+     "\t-R root_cafile\tPEM file containing the set of trusted root CAs that\n"
+     "\t       \t\tare to be used to validate the server certificate.\n"
+     "\t       \t\tThe '-C cafile' does not have to be in this list and is\n"
+     "\t       \t\t'trusted' for the verification.\n"
+     "\t       \t\tAlternatively, this can point to a directory containing a\n"
+     "\t       \t\tset of CA PEM files\n"
      "\t-T token\tInclude specified token\n"
-     "\t-U\t\tNever include Uri-Host or Uri-Port options\n"
+     "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
      "\n"
      "Examples:\n"
      "\tcoap-client -m get coap://[::1]/\n"
      "\tcoap-client -m get coap://[::1]/.well-known/core\n"
      "\tcoap-client -m get -T cafe coap://[::1]/time\n"
-     "\techo 1000 | coap-client -m put -T cafe coap://[::1]/time -f -\n"
+     "\techo -n 1000 | coap-client -m put -T cafe coap://[::1]/time -f -\n"
      ,program, version, program, wait_seconds);
 }
 
@@ -984,6 +999,53 @@ cmdline_read_key(char *arg, unsigned char *buf, size_t maxlen) {
   return -1;
 }
 
+static int
+verify_cn_callback(const char *cn,
+                   const uint8_t *asn1_public_cert UNUSED_PARAM,
+                   size_t asn1_length UNUSED_PARAM,
+                   coap_session_t *session UNUSED_PARAM,
+                   unsigned depth,
+                   int validated UNUSED_PARAM,
+                   void *arg UNUSED_PARAM
+) {
+  coap_log(LOG_INFO, "CN '%s' presented by server (%s)\n",
+           cn, depth ? "CA" : "Certificate");
+  return 1;
+}
+
+static coap_dtls_pki_t *
+setup_pki(void) {
+  static coap_dtls_pki_t dtls_pki;
+
+  memset (&dtls_pki, 0, sizeof(dtls_pki));
+  dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
+  if (ca_file) {
+    /*
+     * Add in additional certificate checking.
+     * This list of enabled can be tuned for the specific
+     * requirements - see 'man coap_encryption'.
+     */
+    dtls_pki.verify_peer_cert        = 1;
+    dtls_pki.require_peer_cert       = 1;
+    dtls_pki.allow_self_signed       = 1;
+    dtls_pki.allow_expired_certs     = 1;
+    dtls_pki.cert_chain_validation   = 1;
+    dtls_pki.cert_chain_verify_depth = 2;
+    dtls_pki.check_cert_revocation   = 1;
+    dtls_pki.allow_no_crl            = 1;
+    dtls_pki.allow_expired_crl       = 1;
+    dtls_pki.validate_cn_call_back   = verify_cn_callback;
+    dtls_pki.cn_call_back_arg        = NULL;
+    dtls_pki.validate_sni_call_back  = NULL;
+    dtls_pki.sni_call_back_arg       = NULL;
+  }
+  dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
+  dtls_pki.pki_key.key.pem.public_cert = cert_file;
+  dtls_pki.pki_key.key.pem.private_key = cert_file;
+  dtls_pki.pki_key.key.pem.ca_file = ca_file;
+  return &dtls_pki;
+}
+
 static coap_session_t *
 get_session(
   coap_context_t *ctx,
@@ -996,6 +1058,16 @@ get_session(
   unsigned key_len
 ) {
   coap_session_t *session = NULL;
+
+  /* If general root CAs are defined */
+  if (root_ca_file) {
+    struct stat stbuf;
+    if ((stat(root_ca_file, &stbuf) == 0) && S_ISDIR(stbuf.st_mode)) {
+      coap_context_set_pki_root_cas(ctx, NULL, root_ca_file);
+    } else {
+      coap_context_set_pki_root_cas(ctx, root_ca_file, NULL);
+    }
+  }
 
   if ( local_addr ) {
     int s;
@@ -1021,11 +1093,8 @@ get_session(
 	bind_addr.size = rp->ai_addrlen;
 	memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
         if (cert_file && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
-          coap_dtls_pki_t dtls_pki;
-          memset (&dtls_pki, 0, sizeof(dtls_pki));
-          dtls_pki.public_cert = cert_file;
-          dtls_pki.private_key = cert_file;
-          session = coap_new_client_session_pki(ctx, &bind_addr, dst, proto, &dtls_pki);
+          coap_dtls_pki_t *dtls_pki = setup_pki();
+          session = coap_new_client_session_pki(ctx, &bind_addr, dst, proto, dtls_pki);
         }
         else if ((identity || key) &&
                  (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) ) {
@@ -1042,11 +1111,8 @@ get_session(
     freeaddrinfo( result );
   } else {
     if (cert_file && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
-      coap_dtls_pki_t dtls_pki;
-      memset (&dtls_pki, 0, sizeof(dtls_pki));
-      dtls_pki.public_cert = cert_file;
-      dtls_pki.private_key = cert_file;
-      session = coap_new_client_session_pki(ctx, NULL, dst, proto, &dtls_pki);
+      coap_dtls_pki_t *dtls_pki = setup_pki();
+      session = coap_new_client_session_pki(ctx, NULL, dst, proto, dtls_pki);
     }
     else if ((identity || key) &&
              (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) )
@@ -1077,7 +1143,7 @@ main(int argc, char **argv) {
   ssize_t user_length = 0, key_length = 0;
   int create_uri_opts = 1;
 
-  while ((opt = getopt(argc, argv, "Nra:b:c:e:f:k:m:p:s:t:o:v:A:B:O:P:T:u:U:l:")) != -1) {
+  while ((opt = getopt(argc, argv, "Nra:b:c:e:f:k:m:p:s:t:o:v:A:B:C:O:P:R:T:u:U:l:")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1091,6 +1157,12 @@ main(int argc, char **argv) {
       break;
     case 'c':
       cert_file = optarg;
+      break;
+    case 'C':
+      ca_file = optarg;
+      break;
+    case 'R':
+      root_ca_file = optarg;
       break;
     case 'e':
       if (!cmdline_input(optarg, &payload))
