@@ -1862,6 +1862,11 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
       coap_delete_string(uri_path);
       return;
+    } else {
+      if (response) {
+        /* Need to delete unused response - it will get re-created further on */
+        coap_delete_pdu(response);
+      }
     }
   }
 
@@ -1955,8 +1960,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       warn("cannot generate response\r\n");
     }
   } else {
-    if (response)
-      coap_delete_pdu(response);
     if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
       /* request for .well-known/core */
       debug("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
