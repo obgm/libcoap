@@ -15,7 +15,7 @@
 #include "pdu.h"
 
 struct coap_endpoint_t;
-struct coap_contex_t;
+struct coap_context_t;
 struct coap_queue_t;
 
 /**
