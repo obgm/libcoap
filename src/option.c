@@ -24,15 +24,6 @@
 #include "mem.h"
 #include "utlist.h"
 
-coap_opt_t *
-options_start(coap_pdu_t *pdu) {
-  if (pdu && pdu->token_length < pdu->used_size) {
-    coap_opt_t *opt = pdu->token + pdu->token_length;
-    return (*opt == COAP_PAYLOAD_START) ? NULL : opt;
-  } else 
-    return NULL;
-}
-
 size_t
 coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 
@@ -573,14 +564,14 @@ order_opts(void *a, void *b) {
 }
 
 int
-coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t* options) {
+coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t** options) {
   coap_optlist_t *opt;
 
-  if (options) {
+  if (options && *options) {
     /* sort options for delta encoding */
-    LL_SORT((options), order_opts);
+    LL_SORT((*options), order_opts);
 
-    LL_FOREACH((options), opt) {
+    LL_FOREACH((*options), opt) {
       coap_add_option(pdu, opt->number, opt->length, opt->data);
     }
     return 1;
