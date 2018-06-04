@@ -165,13 +165,13 @@ ssize_t coap_tls_read(coap_session_t *session UNUSED,
 
 #else /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL */
 
-/* Make compilers happy that do not like empty modules. As this
- * function is never used, we ignore -Wunused-function temporarily.
+#ifdef __clang__
+/* Make compilers happy that do not like empty modules. As this function is
+ * never used, we ignore -Wunused-function at the end of compiling this file
  */
-#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 static inline void dummy(void) {
 }
-#pragma GCC diagnostic pop
 
 #endif /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL */
