@@ -112,15 +112,19 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 
   if (coap_find_observer(resource, peer, token)) {
     coap_add_option(response, COAP_OPTION_OBSERVE, 
-		    coap_encode_var_bytes(buf, resource->observe), buf);
+		    coap_encode_var_safe(buf, sizeof(buf),
+                                         resource->observe),
+                    buf);
   }
 
   if (my_clock_base)
     coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
-		    coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+		    coap_encode_var_safe(buf, sizeof(buf),
+                    COAP_MEDIATYPE_TEXT_PLAIN),
+                    buf);
 
   coap_add_option(response, COAP_OPTION_MAXAGE,
-	  coap_encode_var_bytes(buf, 0x01), buf);
+	  coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
 
   if (my_clock_base) {
 
@@ -146,14 +150,14 @@ init_coap_resources(coap_context_t *ctx) {
   r = coap_resource_init(NULL, 0, 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
-  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
-  coap_add_attr(r, (unsigned char *)"title", 5, (unsigned char *)"\"General Info\"", 14, 0);
+  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+  coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"General Info\""), 0);
   coap_add_resource(ctx, r);
 #endif
   /* store clock base to use in /time */
   my_clock_base = clock_offset;
 
-  r = coap_resource_init((unsigned char *)"time", 4, 0);
+  r = coap_resource_init(coap_make_str_const("time"), 0);
   if (!r)
     goto error;
 
@@ -164,18 +168,18 @@ init_coap_resources(coap_context_t *ctx) {
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
 #endif
-  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
-  /* coap_add_attr(r, (unsigned char *)"title", 5, (unsigned char *)"\"Internal Clock\"", 16, 0); */
-  coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"\"Ticks\"", 7, 0);
-  coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"\"clock\"", 7, 0);
+  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+  /* coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Internal Clock\""), 0); */
+  coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("\"ticks\""), 0);
+  coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"clock\""), 0);
 
   coap_add_resource(ctx, r);
 #if 0
 #ifndef WITHOUT_ASYNC
-  r = coap_resource_init((unsigned char *)"async", 5, 0);
+  r = coap_resource_init(coap_make_str_const("async"), 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
 
-  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
+  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
   coap_add_resource(ctx, r);
 #endif /* WITHOUT_ASYNC */
 #endif

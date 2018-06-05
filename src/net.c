@@ -1603,10 +1603,10 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
 
   /* Add Content-Format. As we have checked for available storage,
    * nothing should go wrong here. */
-  assert(coap_encode_var_bytes(buf,
+  assert(coap_encode_var_safe(buf, sizeof(buf),
     COAP_MEDIATYPE_APPLICATION_LINK_FORMAT) == 1);
   coap_add_option(resp, COAP_OPTION_CONTENT_FORMAT,
-    coap_encode_var_bytes(buf,
+    coap_encode_var_safe(buf, sizeof(buf),
       COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf);
 
   /* check if Block2 option is required even if not requested */

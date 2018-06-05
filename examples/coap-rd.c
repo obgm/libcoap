@@ -105,9 +105,9 @@ hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
-                  coap_encode_var_bytes(buf,
-                                        COAP_MEDIATYPE_APPLICATION_LINK_FORMAT),
-                                        buf);
+                  coap_encode_var_safe(buf, sizeof(buf),
+                                       COAP_MEDIATYPE_APPLICATION_LINK_FORMAT),
+                                       buf);
 
   if (rd && rd->etag_len)
     coap_add_option(response, COAP_OPTION_ETAG, rd->etag_len, rd->etag);
@@ -231,13 +231,13 @@ hnd_get_rd(coap_context_t  *ctx UNUSED_PARAM,
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
-                  coap_encode_var_bytes(buf,
-                                        COAP_MEDIATYPE_APPLICATION_LINK_FORMAT),
-                                        buf);
+                  coap_encode_var_safe(buf, sizeof(buf),
+                                       COAP_MEDIATYPE_APPLICATION_LINK_FORMAT),
+                                       buf);
 
   coap_add_option(response,
                   COAP_OPTION_MAXAGE,
-                  coap_encode_var_bytes(buf, 0x2ffff), buf);
+                  coap_encode_var_safe(buf, sizeof(buf), 0x2ffff), buf);
 }
 
 static int

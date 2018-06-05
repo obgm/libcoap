@@ -132,18 +132,21 @@ coap_string_t *query, coap_pdu_t *response) {
   if (coap_find_observer(resource, session, token)) {
     coap_add_option(response,
                     COAP_OPTION_OBSERVE,
-                    coap_encode_var_bytes(buf, resource->observe), buf);
+                    coap_encode_var_safe(buf, sizeof(buf), resource->observe),
+                    buf);
   }
 
   /* Response is in plain text format */
   coap_add_option(response,
                     COAP_OPTION_CONTENT_FORMAT,
-                    coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+                    coap_encode_var_safe(buf, sizeof(buf),
+                                         COAP_MEDIATYPE_TEXT_PLAIN),
+                    buf);
 
   /* Report on how long this response is valid for */
   coap_add_option(response,
                   COAP_OPTION_MAXAGE,
-                  coap_encode_var_bytes(buf, 0x01), buf);
+                  coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
 
   now = time(NULL);
 

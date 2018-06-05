@@ -134,10 +134,12 @@ hnd_get_index(coap_context_t  *ctx, struct coap_resource_t *resource,
   response->code = COAP_RESPONSE_CODE(205);
 
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
-	  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+	          coap_encode_var_safe(buf, sizeof(buf),
+                                       COAP_MEDIATYPE_TEXT_PLAIN),
+                  buf);
 
   coap_add_option(response, COAP_OPTION_MAXAGE,
-	  coap_encode_var_bytes(buf, 0x2ffff), buf);
+	  coap_encode_var_safe(buf, sizeof(buf), 0x2ffff), buf);
     
   coap_add_data(response, strlen(INDEX), (unsigned char *)INDEX);
 }
@@ -162,7 +164,9 @@ hnd_get_resource(coap_context_t  *ctx, struct coap_resource_t *resource,
   response->code = COAP_RESPONSE_CODE(205);
 
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
-	  coap_encode_var_bytes(buf, test_payload->media_type), buf);
+	          coap_encode_var_safe(buf, sizeof(buf),
+                                       test_payload->media_type),
+                  buf);
 
   /* add etag for the resource */
   if (test_payload->flags & REQUIRE_ETAG) {
@@ -381,7 +385,9 @@ hnd_get_query(coap_context_t  *ctx, struct coap_resource_t *resource,
   response->code = COAP_RESPONSE_CODE(205);
 
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
-	  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+	          coap_encode_var_safe(buf, sizeof(buf),
+                                       COAP_MEDIATYPE_TEXT_PLAIN),
+                  buf);
 
   coap_option_filter_clear(f);
   coap_option_setb(f, COAP_OPTION_URI_QUERY);
@@ -480,7 +486,9 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
     coap_add_token(response, async->tokenlen, async->token);
 
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
-		  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+		  coap_encode_var_safe(buf, sizeof(buf),
+                                       COAP_MEDIATYPE_TEXT_PLAIN),
+                  buf);
 
   coap_add_data(response, 4, (unsigned char *)"done");
 

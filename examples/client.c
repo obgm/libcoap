@@ -188,7 +188,7 @@ clear_obs(coap_context_t *ctx, coap_session_t *session) {
 
   if (!coap_add_option(pdu,
       COAP_OPTION_OBSERVE,
-      coap_encode_var_bytes(buf, COAP_OBSERVE_CANCEL),
+      coap_encode_var_safe(buf, sizeof(buf), COAP_OBSERVE_CANCEL),
       buf)) {
     coap_log(LOG_CRIT, "cannot add option Observe: %u\n", COAP_OBSERVE_CANCEL);
     goto error;
@@ -369,7 +369,7 @@ message_handler(struct coap_context_t *ctx,
                    (coap_opt_block_num(block_opt) + 1));
           coap_add_option(pdu,
                           blktype,
-                          coap_encode_var_bytes(buf,
+                          coap_encode_var_safe(buf, sizeof(buf),
                                  ((coap_opt_block_num(block_opt) + 1) << 4) |
                                   COAP_OPT_BLOCK_SZX(block_opt)), buf);
 
@@ -446,7 +446,7 @@ message_handler(struct coap_context_t *ctx,
           coap_log(LOG_DEBUG, "send block %d\n", block.num);
           coap_add_option(pdu,
                           COAP_OPTION_BLOCK1,
-                          coap_encode_var_bytes(buf,
+                          coap_encode_var_safe(buf, sizeof(buf),
                           (block.num << 4) | (block.m << 3) | block.szx), buf);
 
           coap_add_block(pdu,
@@ -612,7 +612,7 @@ cmdline_content_type(char *arg, uint16_t key) {
   }
 
   for (i = 0; i < valcnt; ++i) {
-    node = coap_new_optlist(key, coap_encode_var_bytes(buf, value[i]), buf);
+    node = coap_new_optlist(key, coap_encode_var_safe(buf, sizeof(buf), value[i]), buf);
     if (node) {
       coap_insert_optlist(&optlist, node);
     }
@@ -680,7 +680,7 @@ cmdline_uri(char *arg, int create_uri_opts) {
     if (uri.port != get_default_port(&uri) && create_uri_opts) {
       coap_insert_optlist(&optlist,
                   coap_new_optlist(COAP_OPTION_URI_PORT,
-                  coap_encode_var_bytes(portbuf, uri.port),
+                  coap_encode_var_safe(portbuf, sizeof(portbuf), uri.port),
                   portbuf));
     }
 
@@ -753,7 +753,7 @@ set_blocksize(void) {
     block.m = (opt == COAP_OPTION_BLOCK1) &&
       ((1u << (block.szx + 4)) < payload.length);
 
-    opt_length = coap_encode_var_bytes(buf,
+    opt_length = coap_encode_var_safe(buf, sizeof(buf),
           (block.num << 4 | block.m << 3 | block.szx));
 
     coap_insert_optlist(&optlist, coap_new_optlist(opt, opt_length, buf));

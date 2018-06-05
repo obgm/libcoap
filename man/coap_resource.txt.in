@@ -141,11 +141,13 @@ coap_string_t *query, coap_pdu_t *response) {
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
-                  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+                  coap_encode_var_safe(buf, sizeof(buf),
+                                       COAP_MEDIATYPE_TEXT_PLAIN),
+                  buf);
 
   coap_add_option(response,
                   COAP_OPTION_MAXAGE,
-                  coap_encode_var_bytes(buf, 0x2ffff), buf);
+                  coap_encode_var_safe(buf, sizeof(buf), 0x2ffff), buf);
 
   coap_add_data(response, strlen(INDEX), (const uint8_t *)INDEX);
 }

@@ -82,11 +82,13 @@ hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
-                  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+                  coap_encode_var_safe(buf, sizeof(buf),
+                                       COAP_MEDIATYPE_TEXT_PLAIN),
+                  buf);
 
   coap_add_option(response,
                   COAP_OPTION_MAXAGE,
-                  coap_encode_var_bytes(buf, 0x2ffff), buf);
+                  coap_encode_var_safe(buf, sizeof(buf), 0x2ffff), buf);
 
   coap_add_data(response, strlen(INDEX), (const uint8_t *)INDEX);
 }
@@ -115,17 +117,20 @@ hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
   if (coap_find_observer(resource, session, token)) {
     coap_add_option(response,
                     COAP_OPTION_OBSERVE,
-                    coap_encode_var_bytes(buf, resource->observe), buf);
+                    coap_encode_var_safe(buf, sizeof(buf), resource->observe),
+                    buf);
   }
 
   if (my_clock_base)
     coap_add_option(response,
                     COAP_OPTION_CONTENT_FORMAT,
-                    coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+                    coap_encode_var_safe(buf, sizeof(buf),
+                                         COAP_MEDIATYPE_TEXT_PLAIN),
+                    buf);
 
   coap_add_option(response,
                   COAP_OPTION_MAXAGE,
-                  coap_encode_var_bytes(buf, 0x01), buf);
+                  coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
 
   if (my_clock_base) {
 
@@ -134,7 +139,7 @@ hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
     now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
 
     if (query != NULL
-        && memcmp(query->s, "ticks", min(5, query->length)) == 0) {
+        && coap_string_equal(query, coap_make_str_const("ticks"))) {
           /* output ticks */
           len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
           coap_add_data(response, len, buf);
@@ -195,7 +200,8 @@ hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
       response->code = COAP_RESPONSE_CODE(400);
       coap_add_option(response,
                       COAP_OPTION_CONTENT_FORMAT,
-                      coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+                      coap_encode_var_safe(buf, sizeof(buf),
+                      COAP_MEDIATYPE_TEXT_PLAIN), buf);
       coap_add_data(response, 22, (const uint8_t*)"Invalid set time value");
       /* re-init as value is bad */
       my_clock_base = clock_offset;
@@ -313,7 +319,7 @@ init_resources(coap_context_t *ctx) {
 
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
   coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Internal Clock\""), 0);
-  coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("\"Ticks\""), 0);
+  coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("\"ticks\""), 0);
   coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"clock\""), 0);
 
   coap_add_resource(ctx, r);
