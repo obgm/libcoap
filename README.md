@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/obgm/libcoap.svg?branch=master)](https://travis-ci.org/obgm/libcoap)
 [![Static Analysis](https://scan.coverity.com/projects/10970/badge.svg?flat=1)](https://scan.coverity.com/projects/obgm-libcoap)
 
-Copyright (C) 2010--2017 by Olaf Bergmann <bergmann@tzi.org> and others
+Copyright (C) 2010--2018 by Olaf Bergmann <bergmann@tzi.org> and others
 
 ABOUT LIBCOAP
 =============
@@ -13,6 +13,10 @@ for devices that are constrained their resources such as computing
 power, RF range, memory, bandwith, or network packet sizes. This
 protocol, CoAP, is standardized by the IETF as RFC 7252. For further
 information related to CoAP, see <http://coap.technology>.
+
+You might want to check out
+[libcoap-minimal](https://github.com/obgm/libcoap-minimal) for usage
+examples.
 
 PACKAGE CONTENTS
 ================
