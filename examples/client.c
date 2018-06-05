@@ -802,8 +802,10 @@ cmdline_proxy(char *arg) {
 
 static inline void
 cmdline_token(char *arg) {
-  strncpy((char *)the_token.s, arg, min(sizeof(_token_data), strlen(arg)));
-  the_token.length = strlen(arg);
+  the_token.length = min(sizeof(_token_data), strlen(arg));
+  if (the_token.length > 0) {
+    memcpy((char *)the_token.s, arg, the_token.length);
+  }
 }
 
 static void
