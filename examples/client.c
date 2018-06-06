@@ -665,7 +665,8 @@ cmdline_uri(char *arg, int create_uri_opts) {
     if (uri.port != get_default_port(&uri) && create_uri_opts) {
       coap_insert_optlist(&optlist,
                   coap_new_optlist(COAP_OPTION_URI_PORT,
-                  coap_encode_var_safe(portbuf, sizeof(portbuf), uri.port),
+                                   coap_encode_var_safe(portbuf, sizeof(portbuf),
+                                                        (uri.port & 0xffff)),
                   portbuf));
     }
 
