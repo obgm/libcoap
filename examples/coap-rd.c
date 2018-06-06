@@ -42,7 +42,7 @@
 
 #define COAP_RESOURCE_CHECK_TIME 2
 
-#define RD_ROOT_STR   ((const uint8_t *)"rd")
+#define RD_ROOT_STR   "rd"
 #define RD_ROOT_SIZE  2
 
 #ifndef min
