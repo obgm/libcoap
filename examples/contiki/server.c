@@ -94,7 +94,7 @@ init_coap_server(coap_context_t **ctx) {
 void 
 hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
 	     const coap_endpoint_t *local_interface,
-	     coap_address_t *peer, coap_pdu_t *request, str *token, 
+	     coap_address_t *peer, coap_pdu_t *request, coap_binary_t *token, 
 	     coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;

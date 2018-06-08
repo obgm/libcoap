@@ -51,12 +51,12 @@
 
 typedef struct rd_t {
   UT_hash_handle hh;      /**< hash handle (for internal use only) */
-  str uri_path;           /**< the actual key for this resource */
+  coap_string_t uri_path; /**< the actual key for this resource */
 
   size_t etag_len;        /**< actual length of @c etag */
   unsigned char etag[8];  /**< ETag for current description */
 
-  str data;               /**< points to the resource description  */
+  coap_string_t data;     /**< points to the resource description  */
 } rd_t;
 
 rd_t *resources = NULL;
@@ -93,8 +93,8 @@ hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
                  struct coap_resource_t *resource,
                  coap_session_t *session UNUSED_PARAM,
                  coap_pdu_t *request UNUSED_PARAM,
-                 str *token UNUSED_PARAM,
-                 str *query UNUSED_PARAM,
+                 coap_binary_t *token UNUSED_PARAM,
+                 coap_string_t *query UNUSED_PARAM,
                  coap_pdu_t *response) {
   rd_t *rd = NULL;
   unsigned char buf[3];
@@ -121,8 +121,8 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
                  struct coap_resource_t *resource UNUSED_PARAM,
                  coap_session_t *session UNUSED_PARAM,
                  coap_pdu_t *request UNUSED_PARAM,
-                 str *token UNUSED_PARAM,
-                 str *query UNUSED_PARAM,
+                 coap_binary_t *token UNUSED_PARAM,
+                 coap_string_t *query UNUSED_PARAM,
                  coap_pdu_t *response) {
 #if 1
   response->code = COAP_RESPONSE_CODE(501);
@@ -136,7 +136,7 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
   rd_t *rd = NULL;
   unsigned char code;     /* result code */
   unsigned char *data;
-  str tmp;
+  coap_string_t tmp;
 
   HASH_FIND(hh, resources, resource->uri_path.s, resource->uri_path.length, rd);
   if (rd) {
@@ -200,8 +200,8 @@ hnd_delete_resource(coap_context_t  *ctx,
                     struct coap_resource_t *resource,
                     coap_session_t *session UNUSED_PARAM,
                     coap_pdu_t *request UNUSED_PARAM,
-                    str *token UNUSED_PARAM,
-                    str *query UNUSED_PARAM,
+                    coap_binary_t *token UNUSED_PARAM,
+                    coap_string_t *query UNUSED_PARAM,
                     coap_pdu_t *response) {
   rd_t *rd = NULL;
 
@@ -222,8 +222,8 @@ hnd_get_rd(coap_context_t  *ctx UNUSED_PARAM,
            struct coap_resource_t *resource UNUSED_PARAM,
            coap_session_t *session UNUSED_PARAM,
            coap_pdu_t *request UNUSED_PARAM,
-           str *token UNUSED_PARAM,
-           str *query UNUSED_PARAM,
+           coap_binary_t *token UNUSED_PARAM,
+           coap_string_t *query UNUSED_PARAM,
            coap_pdu_t *response) {
   unsigned char buf[3];
 
@@ -245,10 +245,10 @@ parse_param(const uint8_t *search,
             size_t search_len,
             unsigned char *data,
             size_t data_len,
-            str *result) {
+            coap_string_t *result) {
 
   if (result)
-    memset(result, 0, sizeof(str));
+    memset(result, 0, sizeof(coap_string_t));
 
   if (!search_len)
     return 0;
@@ -387,14 +387,14 @@ hnd_post_rd(coap_context_t  *ctx,
             struct coap_resource_t *resource UNUSED_PARAM,
             coap_session_t *session,
             coap_pdu_t *request,
-            str *token UNUSED_PARAM,
-            str *query UNUSED_PARAM,
+            coap_binary_t *token UNUSED_PARAM,
+            coap_string_t *query UNUSED_PARAM,
             coap_pdu_t *response) {
   coap_resource_t *r;
 #define LOCSIZE 68
   unsigned char *loc;
   size_t loc_size;
-  str h = {0, NULL}, ins = {0, NULL}, rt = {0, NULL}, lt = {0, NULL}; /* store query parameters */
+  coap_string_t h = {0, NULL}, ins = {0, NULL}, rt = {0, NULL}, lt = {0, NULL}; /* store query parameters */
   unsigned char *buf;
   coap_str_const_t attr_val;
   coap_str_const_t resource_val;

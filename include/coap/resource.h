@@ -37,7 +37,7 @@ typedef void (*coap_method_handler_t)
    struct coap_resource_t *,
    coap_session_t *,
    coap_pdu_t *,
-   coap_string_t * /* token */,
+   coap_binary_t * /* token */,
    coap_string_t * /* query string */,
    coap_pdu_t * /* response */);
 
@@ -373,7 +373,7 @@ coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
  */
 coap_subscription_t *coap_add_observer(coap_resource_t *resource,
                                        coap_session_t *session,
-                                       const coap_string_t *token,
+                                       const coap_binary_t *token,
                                        coap_string_t *query);
 
 /**
@@ -387,7 +387,7 @@ coap_subscription_t *coap_add_observer(coap_resource_t *resource,
  */
 coap_subscription_t *coap_find_observer(coap_resource_t *resource,
                                         coap_session_t *session,
-                                        const coap_string_t *token);
+                                        const coap_binary_t *token);
 
 /**
  * Marks an observer as alive.
@@ -399,7 +399,7 @@ coap_subscription_t *coap_find_observer(coap_resource_t *resource,
  */
 void coap_touch_observer(coap_context_t *context,
                          coap_session_t *session,
-                         const coap_string_t *token);
+                         const coap_binary_t *token);
 
 /**
  * Removes any subscription for @p observer from @p resource and releases the
@@ -414,7 +414,7 @@ void coap_touch_observer(coap_context_t *context,
  */
 int coap_delete_observer(coap_resource_t *resource,
                          coap_session_t *session,
-                         const coap_string_t *token);
+                         const coap_binary_t *token);
 
 /**
  * Removes any subscription for @p session and releases the allocated storage.
@@ -451,7 +451,10 @@ coap_print_status_t coap_print_wellknown(coap_context_t *,
                                          size_t *, size_t,
                                          coap_opt_t *);
 
-void coap_handle_failed_notify(coap_context_t *, coap_session_t *, const str *);
+void
+coap_handle_failed_notify(coap_context_t *,
+                          coap_session_t *,
+                          const coap_binary_t *);
 
 /**
  * Set whether a @p resource is observable.  If the resource is observable
@@ -477,7 +480,9 @@ coap_resource_set_get_observable(coap_resource_t *resource, int mode) {
  *
  * @return         @c 1 if the Observe has been triggered, @c 0 otherwise.
  */
-int coap_resource_notify_observers(coap_resource_t *resource, const str *query);
+int
+coap_resource_notify_observers(coap_resource_t *resource,
+                               const coap_string_t *query);
 
 /**
  * Get the UriPath from a @p resource.
@@ -496,6 +501,8 @@ coap_resource_get_uri_path(coap_resource_t *resource) {
 /**
  * @deprecated use coap_resource_notify_observers() instead.
  */
-int coap_resource_set_dirty(coap_resource_t *r, const str *query);
+COAP_DEPRECATED int
+coap_resource_set_dirty(coap_resource_t *r,
+                        const coap_string_t *query);
 
 #endif /* _COAP_RESOURCE_H_ */

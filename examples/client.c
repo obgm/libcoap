@@ -35,7 +35,7 @@
 int flags = 0;
 
 static unsigned char _token_data[8];
-str the_token = { 0, _token_data };
+coap_binary_t the_token = { 0, _token_data };
 
 #define FLAGS_BLOCK 0x01
 
@@ -49,10 +49,10 @@ static uint16_t proxy_port = COAP_DEFAULT_PORT;
 /* reading is done when this flag is set */
 static int ready = 0;
 
-static str output_file = { 0, NULL };   /* output file name */
+static coap_string_t output_file = { 0, NULL };   /* output file name */
 static FILE *file = NULL;               /* output file stream */
 
-static str payload = { 0, NULL };       /* optional payload to send */
+static coap_string_t payload = { 0, NULL };       /* optional payload to send */
 
 static int reliable = 0;
 
@@ -893,7 +893,7 @@ check_segment(const uint8_t *s, size_t length) {
 }
 
 static int
-cmdline_input(char *text, str *buf) {
+cmdline_input(char *text, coap_string_t *buf) {
   int len;
   len = check_segment((unsigned char *)text, strlen(text));
 
@@ -910,7 +910,7 @@ cmdline_input(char *text, str *buf) {
 }
 
 static int
-cmdline_input_from_file(char *filename, str *buf) {
+cmdline_input_from_file(char *filename, coap_string_t *buf) {
   FILE *inputfile = NULL;
   ssize_t len;
   int result = 1;

@@ -23,7 +23,7 @@ int _mode_);*
 *int coap_resource_notify_observers(coap_resource_t *_resource_, 
 const const_string_t *_query_);*
 
-*const str *coap_resource_get_uri_path(coap_resource_t *_resource_);*
+*const coap_string_t *coap_resource_get_uri_path(coap_resource_t *_resource_);*
 
 *coap_subscription_t *coap_find_observer(coap_resource_t *_resource_, 
 coap_session_t *_session_, const const_string_t *_token_);*

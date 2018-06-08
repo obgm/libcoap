@@ -83,8 +83,8 @@ hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
               struct coap_resource_t *resource UNUSED_PARAM,
               coap_session_t *session UNUSED_PARAM,
               coap_pdu_t *request UNUSED_PARAM,
-              str *token UNUSED_PARAM,
-              str *query UNUSED_PARAM,
+              coap_binary_t *token UNUSED_PARAM,
+              coap_string_t *query UNUSED_PARAM,
               coap_pdu_t *response) {
   unsigned char buf[3];
 
@@ -108,8 +108,8 @@ hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
              struct coap_resource_t *resource,
              coap_session_t *session,
              coap_pdu_t *request,
-             str *token,
-             str *query,
+             coap_binary_t *token,
+             coap_string_t *query,
              coap_pdu_t *response) {
   unsigned char buf[40];
   size_t len;
@@ -174,8 +174,8 @@ hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
              struct coap_resource_t *resource,
              coap_session_t *session UNUSED_PARAM,
              coap_pdu_t *request,
-             str *token UNUSED_PARAM,
-             str *query UNUSED_PARAM,
+             coap_binary_t *token UNUSED_PARAM,
+             coap_string_t *query UNUSED_PARAM,
              coap_pdu_t *response) {
   coap_tick_t t;
   size_t size;
@@ -190,7 +190,7 @@ hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
   response->code =
     my_clock_base ? COAP_RESPONSE_CODE(204) : COAP_RESPONSE_CODE(201);
 
-  coap_resource_set_dirty(resource, NULL);
+  coap_resource_notify_observers(resource, NULL);
 
   /* coap_get_data() sets size to 0 on error */
   (void)coap_get_data(request, &size, &data);
@@ -224,8 +224,8 @@ hnd_delete_time(coap_context_t *ctx UNUSED_PARAM,
                 struct coap_resource_t *resource UNUSED_PARAM,
                 coap_session_t *session UNUSED_PARAM,
                 coap_pdu_t *request UNUSED_PARAM,
-                str *token UNUSED_PARAM,
-                str *query UNUSED_PARAM,
+                coap_binary_t *token UNUSED_PARAM,
+                coap_string_t *query UNUSED_PARAM,
                 coap_pdu_t *response UNUSED_PARAM) {
   my_clock_base = 0;    /* mark clock as "deleted" */
 
@@ -239,8 +239,8 @@ hnd_get_async(coap_context_t *ctx,
               struct coap_resource_t *resource UNUSED_PARAM,
               coap_session_t *session,
               coap_pdu_t *request,
-              str *token UNUSED_PARAM,
-              str *query UNUSED_PARAM,
+              coap_binary_t *token UNUSED_PARAM,
+              coap_string_t *query UNUSED_PARAM,
               coap_pdu_t *response) {
   unsigned long delay = 5;
   size_t size;
@@ -325,7 +325,7 @@ hnd_delete(coap_context_t *ctx,
            coap_resource_t *resource,
            coap_session_t *session UNUSED_PARAM,
            coap_pdu_t *request UNUSED_PARAM,
-           coap_string_t *token UNUSED_PARAM,
+           coap_binary_t *token UNUSED_PARAM,
            coap_string_t *query UNUSED_PARAM,
            coap_pdu_t *response UNUSED_PARAM
 ) {
@@ -369,7 +369,7 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
         coap_resource_t *resource,
         coap_session_t *session,
         coap_pdu_t *request UNUSED_PARAM,
-        coap_string_t *token,
+        coap_binary_t *token,
         coap_string_t *query UNUSED_PARAM,
         coap_pdu_t *response
 ) {
@@ -418,7 +418,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
         coap_resource_t *resource UNUSED_PARAM,
         coap_session_t *session UNUSED_PARAM,
         coap_pdu_t *request,
-        coap_string_t *token UNUSED_PARAM,
+        coap_binary_t *token UNUSED_PARAM,
         coap_string_t *query UNUSED_PARAM,
         coap_pdu_t *response
 ) {
@@ -483,7 +483,7 @@ hnd_unknown_put(coap_context_t *ctx,
                 coap_resource_t *resource,
                 coap_session_t *session,
                 coap_pdu_t *request,
-                coap_string_t *token,
+                coap_binary_t *token,
                 coap_string_t *query,
                 coap_pdu_t *response
 ) {

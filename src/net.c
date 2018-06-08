@@ -956,7 +956,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   /* Check if subscriptions exist that should be canceled after
      COAP_MAX_NOTIFY_FAILURES */
   if (node->pdu->code >= 64) {
-    str token = { 0, NULL };
+    coap_binary_t token = { 0, NULL };
 
     token.length = node->pdu->token_length;
     token.s = node->pdu->token;
@@ -1706,7 +1706,7 @@ error:
 static int
 coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
 #ifndef WITHOUT_OBSERVE
-  coap_string_t token = { 0, NULL };
+  coap_binary_t token = { 0, NULL };
   int num_cancelled = 0;    /* the number of observers cancelled */
 
   /* remove observer for this resource, if any
@@ -1921,7 +1921,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     /* Implementation detail: coap_add_token() immediately returns 0
        if response == NULL */
     if (coap_add_token(response, pdu->token_length, pdu->token)) {
-      coap_string_t token = { pdu->token_length, pdu->token };
+      coap_binary_t token = { pdu->token_length, pdu->token };
       coap_opt_iterator_t opt_iter;
       coap_opt_t *observe = NULL;
       int observe_action = COAP_OBSERVE_CANCEL;
@@ -2115,7 +2115,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
        * notification. Then, we must flag the observer to be alive
        * by setting obs->fail_cnt = 0. */
       if (sent && COAP_RESPONSE_CLASS(sent->pdu->code) == 2) {
-	const coap_string_t token =
+	const coap_binary_t token =
 	{ sent->pdu->token_length, sent->pdu->token };
 	coap_touch_observer(context, sent->session, &token);
       }

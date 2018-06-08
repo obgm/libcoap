@@ -377,7 +377,7 @@ coap_split_path_impl(const uint8_t *s, size_t length,
 }
 
 struct cnt_str {
-  str buf;
+  coap_string_t buf;
   int n;
 };
 
