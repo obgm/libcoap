@@ -617,6 +617,9 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
     default:
       break;
   }
+  if (LOG_DEBUG <= coap_get_log_level()) {
+    coap_show_pdu(pdu);
+  }
   return bytes_written;
 }
 
@@ -631,7 +634,12 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
     assert(session->endpoint != NULL);
     sock = &session->endpoint->sock;
   }
+  if (pdu->type == COAP_MESSAGE_CON)
+    session->con_active++;
   bytes_written = coap_socket_send_pdu(sock, session, pdu);
+  if (LOG_DEBUG <= coap_get_log_level()) {
+    coap_show_pdu(pdu);
+  }
   coap_ticks(&session->last_rx_tx);
 
 #else
@@ -682,13 +690,17 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
     }
   }
 
-  if (session->state != COAP_SESSION_STATE_ESTABLISHED)
+  if (session->state != COAP_SESSION_STATE_ESTABLISHED ||
+      (pdu->type == COAP_MESSAGE_CON && session->con_active >= COAP_DEFAULT_NSTART)) {
     return coap_session_delay_pdu(session, pdu, node);
+  }
 
   if ((session->sock.flags & COAP_SOCKET_NOT_EMPTY) &&
     (session->sock.flags & COAP_SOCKET_WANT_WRITE))
     return coap_session_delay_pdu(session, pdu, node);
 
+  if (pdu->type == COAP_MESSAGE_CON)
+    session->con_active++;
   bytes_written = coap_session_send_pdu(session, pdu);
 
 #endif /* WITH_LWIP */
@@ -901,6 +913,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     debug("** %s tid=%d: retransmission #%d\n",
       coap_session_str(node->session), node->id, node->retransmit_cnt);
 
+    if (node->session->con_active)
+      node->session->con_active--;
     bytes_written = coap_send_pdu(node->session, node->pdu, node);
 
     if (bytes_written == COAP_PDU_DELAYED) {
@@ -934,6 +948,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     coap_handle_failed_notify(context, node->session, &token);
   }
 #endif /* WITHOUT_OBSERVE */
+  if (node->session->con_active)
+    node->session->con_active--;
 
   /* And finally delete the node */
   if (node->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
@@ -2070,8 +2086,10 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       /* find transaction in sendqueue to stop retransmission */
       coap_remove_from_queue(&context->sendqueue, session, pdu->tid, &sent);
 
+      if (session->con_active)
+        session->con_active--;
       if (pdu->code == 0)
-	goto cleanup;
+        goto cleanup;
 
       /* if sent code was >= 64 the message might have been a
        * notification. Then, we must flag the observer to be alive

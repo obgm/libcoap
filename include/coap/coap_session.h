@@ -68,6 +68,7 @@ typedef struct coap_session_t {
   struct coap_context_t *context;	  /**< session's context */
   void *tls;			  /**< security parameters */
   uint16_t tx_mid;                /**< the last message id that was used in this session */
+  uint8_t con_active;             /**< Active CON request sent */
   struct coap_queue_t *sendqueue; /**< list of messages waiting to be sent */
   size_t partial_write;           /**< if > 0 indicates number of bytes already written from the pdu at the head of sendqueue */
   uint8_t read_header[8];         /**< storage space for header of incoming message header */

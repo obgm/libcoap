@@ -712,6 +712,8 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       if (r->dirty == 0 && obs->dirty == 0)
         /* running this resource due to partiallydirty, but this observation's notification was already enqueued */
         continue;
+      if (obs->session->con_active >= COAP_DEFAULT_NSTART)
+        continue;
 
       coap_tid_t tid = COAP_INVALID_TID;
       obs->dirty = 0;
