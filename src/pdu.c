@@ -206,6 +206,11 @@ coap_add_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
   if (!pdu || len > 8)
     return 0;
 
+  if (pdu->used_size) {
+    coap_log(LOG_WARNING,
+             "coap_add_token: The token must defined first. Token ignored\n");
+    return 0;
+  }
   if (!coap_pdu_check_resize(pdu, len))
     return 0;
   pdu->token_length = (uint8_t)len;
@@ -321,7 +326,7 @@ coap_add_data_after(coap_pdu_t *pdu, size_t len) {
 }
 
 int
-coap_get_data(coap_pdu_t *pdu, size_t *len, uint8_t **data) {
+coap_get_data(const coap_pdu_t *pdu, size_t *len, uint8_t **data) {
   assert(pdu);
   assert(len);
   assert(data);
@@ -340,7 +345,7 @@ coap_get_data(coap_pdu_t *pdu, size_t *len, uint8_t **data) {
 #ifndef SHORT_ERROR_RESPONSE
 typedef struct {
   unsigned char code;
-  char *phrase;
+  const char *phrase;
 } error_desc_t;
 
 /* if you change anything here, make sure, that the longest string does not 
@@ -372,7 +377,7 @@ error_desc_t coap_error[] = {
   { 0, NULL }			/* end marker */
 };
 
-char *
+const char *
 coap_response_phrase(unsigned char code) {
   int i;
   for (i = 0; coap_error[i].code; ++i) {
@@ -389,7 +394,7 @@ coap_response_phrase(unsigned char code) {
  * on error.
  */
 static size_t
-next_option_safe(const coap_opt_t **optp, size_t *length) {
+next_option_safe(coap_opt_t **optp, size_t *length) {
   coap_option_t option;
   size_t optsize;
 
@@ -510,7 +515,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
     pdu->data = NULL;
   } else {
     /* skip header + token */
-    const coap_opt_t *opt = pdu->token + pdu->token_length;
+    coap_opt_t *opt = pdu->token + pdu->token_length;
     size_t length = pdu->used_size - pdu->token_length;
 
     while (length > 0 && *opt != COAP_PAYLOAD_START) {

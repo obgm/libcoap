@@ -50,7 +50,7 @@ int coap_dtls_context_set_psk(coap_context_t *ctx UNUSED,
   return 0;
 }
 
-int coap_dtls_context_check_keys_enabled(coap_context_t *ctx)
+int coap_dtls_context_check_keys_enabled(coap_context_t *ctx UNUSED)
 {
   return 0;
 }
@@ -165,7 +165,12 @@ ssize_t coap_tls_read(coap_session_t *session UNUSED,
 
 #else /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL */
 
-/* make compilers happy that do not like empty modules */
+#ifdef __clang__
+/* Make compilers happy that do not like empty modules. As this function is
+ * never used, we ignore -Wunused-function at the end of compiling this file
+ */
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 static inline void dummy(void) {
 }
 

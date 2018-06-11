@@ -1,4 +1,4 @@
-VER_1 {
+VER_2 {
 global:
   coap_add_attr;
   coap_add_block;
@@ -7,6 +7,7 @@ global:
   coap_add_observer;
   coap_add_option;
   coap_add_option_later;
+  coap_add_optlist_pdu;
   coap_add_resource;
   coap_address_equals;
   coap_add_token;
@@ -32,32 +33,16 @@ global:
   coap_delete_node;
   coap_delete_observer;
   coap_delete_observers;
+  coap_delete_optlist;
   coap_delete_pdu;
   coap_delete_resource;
+  coap_delete_str_const;
   coap_delete_string;
   coap_dispatch;
-  coap_dtls_context_check_keys_enabled;
-  coap_dtls_context_set_pki;
-  coap_dtls_context_set_psk;
-  coap_dtls_free_context;
-  coap_dtls_free_session;
-  coap_dtls_get_context_timeout;
   coap_dtls_get_log_level;
-  coap_dtls_get_overhead;
-  coap_dtls_get_timeout;
-  coap_dtls_handle_timeout;
-  coap_dtls_hello;
-  coap_dtls_is_context_timeout;
   coap_dtls_is_supported;
-  coap_dtls_new_client_session;
-  coap_dtls_new_context;
-  coap_dtls_new_server_session;
-  coap_dtls_receive;
-  coap_dtls_send;
-  coap_dtls_session_update_mtu;
   coap_dtls_set_log_level;
-  coap_dtls_startup;
-  coap_encode_var_bytes;
+  coap_encode_var_safe;
   coap_endpoint_get_session;
   coap_endpoint_new_dtls_session;
   coap_endpoint_set_default_mtu;
@@ -84,6 +69,7 @@ global:
   coap_handle_event;
   coap_handle_failed_notify;
   coap_insert_node;
+  coap_insert_optlist;
   coap_is_mcast;
   coap_log_impl;
   coap_malloc_endpoint;
@@ -99,8 +85,10 @@ global:
   coap_new_endpoint;
   coap_new_error_response;
   coap_new_node;
+  coap_new_optlist;
   coap_new_pdu;
   coap_new_server_session;
+  coap_new_str_const;
   coap_new_string;
   coap_new_uri;
   coap_opt_block_num;
@@ -138,9 +126,11 @@ global:
   coap_print_wellknown;
   coap_read;
   coap_register_async;
+  coap_register_handler;
   coap_remove_async;
   coap_remove_from_queue;
   coap_resource_init;
+  coap_resource_notify_observers;
   coap_resource_set_dirty;
   coap_resource_unknown_init;
   coap_response_phrase;
@@ -178,17 +168,7 @@ global:
   coap_set_log_handler;
   coap_set_log_level;
   coap_show_pdu;
-  coap_socket_accept_tcp;
-  coap_socket_bind_tcp;
-  coap_socket_bind_udp;
-  coap_socket_close;
-  coap_socket_connect_tcp1;
-  coap_socket_connect_tcp2;
-  coap_socket_connect_udp;
-  coap_socket_read;
-  coap_socket_send;
   coap_socket_strerror;
-  coap_socket_write;
   coap_split_path;
   coap_split_query;
   coap_split_uri;
@@ -198,12 +178,7 @@ global:
   coap_ticks_from_rt_us;
   coap_ticks_to_rt;
   coap_ticks_to_rt_us;
-  coap_tls_free_session;
   coap_tls_is_supported;
-  coap_tls_new_client_session;
-  coap_tls_new_server_session;
-  coap_tls_read;
-  coap_tls_write;
   coap_touch_observer;
   coap_wait_ack;
   coap_wellknown_response;

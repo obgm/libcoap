@@ -16,31 +16,13 @@ AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include \
 # etsi_iot_01 and tiny are missing
 bin_PROGRAMS = coap-client coap-server coap-rd
 
-coap_client_SOURCES = client.c coap_list.c
-coap_client_LDADD =  $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_API_VERSION).la
+coap_client_SOURCES = client.c
+coap_client_LDADD =  $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
 
 coap_server_SOURCES = coap-server.c
-coap_server_LDADD = $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_API_VERSION).la
+coap_server_LDADD = $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
 
 coap_rd_SOURCES = coap-rd.c
-coap_rd_LDADD = $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_API_VERSION).la
-
-# build manuals only if 'BUILD_DOCUMENTATION' is defined
-if BUILD_DOCUMENTATION
-
-# building the manpages
-TXT5 = coap-client.txt \
-       coap-rd.txt \
-       coap-server.txt
-
-MAN5 = $(TXT5:%.txt=%.5)
-
-man5_MANS = $(MAN5)
-
-.txt.5:
-	$(A2X) --doctype manpage --format manpage $<
-
-CLEANFILES = *.5
-endif # BUILD_DOCUMENTATION
+coap_rd_LDADD = $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
 
 endif # BUILD_EXAMPLES

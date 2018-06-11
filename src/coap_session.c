@@ -252,6 +252,14 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     node->session = NULL;
     node->t = 0;
   } else {
+    coap_queue_t *q = NULL;
+    /* Check that the same tid is not getting re-used in violation of RFC7252 */
+    LL_FOREACH(session->sendqueue, q) {
+      if (q->id == pdu->tid) {
+        coap_log(LOG_ERR, "**  %s tid=%d: already in-use - dropped\n", coap_session_str(session), pdu->tid);
+        return COAP_INVALID_TID;
+      }
+    }
     node = coap_new_node();
     if (node == NULL)
       return COAP_INVALID_TID;
@@ -281,7 +289,8 @@ void coap_session_send_csm(coap_session_t *session) {
   pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CSM, 0, 16);
   if ( pdu == NULL
     || coap_add_option(pdu, COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE,
-         coap_encode_var_bytes(buf, COAP_DEFAULT_MAX_PDU_RX_SIZE), buf) == 0
+         coap_encode_var_safe(buf, sizeof(buf),
+                                COAP_DEFAULT_MAX_PDU_RX_SIZE), buf) == 0
     || coap_pdu_encode_header(pdu, session->proto) == 0
   ) {
     coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);

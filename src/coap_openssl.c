@@ -145,7 +145,7 @@ static int coap_dgram_write(BIO *a, const char *in, int inl) {
       BIO_clear_retry_flags(a);
       return -1;
     }
-    ret = (int)coap_session_send(data->session, (unsigned char*)in, (size_t)inl);
+    ret = (int)coap_session_send(data->session, (const uint8_t *)in, (size_t)inl);
     BIO_clear_retry_flags(a);
     if (ret <= 0)
       BIO_set_retry_write(a);
@@ -230,7 +230,7 @@ static int coap_dtls_generate_cookie(SSL *ssl, unsigned char *cookie, unsigned i
   return r;
 }
 
-static int coap_dtls_verify_cookie(SSL *ssl, const unsigned char *cookie, unsigned int cookie_len) {
+static int coap_dtls_verify_cookie(SSL *ssl, const uint8_t *cookie, unsigned int cookie_len) {
   uint8_t hmac[32];
   unsigned len = 32;
   if (coap_dtls_generate_cookie(ssl, hmac, &len) && cookie_len == len && memcmp(cookie, hmac, len) == 0)
@@ -745,6 +745,8 @@ void *coap_dtls_new_client_session(coap_session_t *session) {
   SSL_set_options(ssl, SSL_OP_COOKIE_EXCHANGE);
   SSL_set_mtu(ssl, session->mtu);
 
+  session->dtls_timeout_count = 0;
+
   r = SSL_connect(ssl);
   if (r == -1) {
     int ret = SSL_get_error(ssl, r);
@@ -835,7 +837,9 @@ void coap_dtls_handle_timeout(coap_session_t *session) {
   SSL *ssl = (SSL *)session->tls;
 
   assert(ssl != NULL);
-  if (DTLSv1_handle_timeout(ssl) < 0) {
+  if (((session->state == COAP_SESSION_STATE_HANDSHAKE) &&
+       (++session->dtls_timeout_count > session->max_retransmit)) || 
+      (DTLSv1_handle_timeout(ssl) < 0)) {
     /* Too many retries */
     coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
   }
@@ -1170,7 +1174,12 @@ ssize_t coap_tls_read(coap_session_t *session,
 
 #else /* !HAVE_OPENSSL */
 
-/* make compilers happy that do not like empty modules */
+#ifdef __clang__
+/* Make compilers happy that do not like empty modules. As this function is
+ * never used, we ignore -Wunused-function at the end of compiling this file
+ */
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 static inline void dummy(void) {
 }
 

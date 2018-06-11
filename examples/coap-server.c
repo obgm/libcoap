@@ -31,7 +31,6 @@
 #endif
 
 #include <coap/coap.h>
-#include <coap/coap_dtls.h>
 
 #define COAP_RESOURCE_CHECK_TIME 2
 
@@ -83,17 +82,19 @@ hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
-                  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+                  coap_encode_var_safe(buf, sizeof(buf),
+                                       COAP_MEDIATYPE_TEXT_PLAIN),
+                  buf);
 
   coap_add_option(response,
                   COAP_OPTION_MAXAGE,
-                  coap_encode_var_bytes(buf, 0x2ffff), buf);
+                  coap_encode_var_safe(buf, sizeof(buf), 0x2ffff), buf);
 
-  coap_add_data(response, strlen(INDEX), (unsigned char *)INDEX);
+  coap_add_data(response, strlen(INDEX), (const uint8_t *)INDEX);
 }
 
 static void
-hnd_get_time(coap_context_t  *ctx,
+hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
              struct coap_resource_t *resource,
              coap_session_t *session,
              coap_pdu_t *request,
@@ -116,17 +117,20 @@ hnd_get_time(coap_context_t  *ctx,
   if (coap_find_observer(resource, session, token)) {
     coap_add_option(response,
                     COAP_OPTION_OBSERVE,
-                    coap_encode_var_bytes(buf, resource->observe), buf);
+                    coap_encode_var_safe(buf, sizeof(buf), resource->observe),
+                    buf);
   }
 
   if (my_clock_base)
     coap_add_option(response,
                     COAP_OPTION_CONTENT_FORMAT,
-                    coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
+                    coap_encode_var_safe(buf, sizeof(buf),
+                                         COAP_MEDIATYPE_TEXT_PLAIN),
+                    buf);
 
   coap_add_option(response,
                   COAP_OPTION_MAXAGE,
-                  coap_encode_var_bytes(buf, 0x01), buf);
+                  coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
 
   if (my_clock_base) {
 
@@ -135,7 +139,7 @@ hnd_get_time(coap_context_t  *ctx,
     now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
 
     if (query != NULL
-        && memcmp(query->s, "ticks", min(5, query->length)) == 0) {
+        && coap_string_equal(query, coap_make_str_const("ticks"))) {
           /* output ticks */
           len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
           coap_add_data(response, len, buf);
@@ -143,8 +147,14 @@ hnd_get_time(coap_context_t  *ctx,
     } else {      /* output human-readable time */
       struct tm *tmp;
       tmp = gmtime(&now);
-      len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
-      coap_add_data(response, len, buf);
+      if (!tmp) {
+        /* If 'now' is not valid */
+        response->code = COAP_RESPONSE_CODE(404);
+      }
+      else {
+        len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
+        coap_add_data(response, len, buf);
+      }
     }
   }
 }
@@ -183,6 +193,19 @@ hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
     while(size--)
       my_clock_base = my_clock_base * 10 + *data++;
     my_clock_base -= t / COAP_TICKS_PER_SECOND;
+
+    /* Sanity check input value */
+    if (!gmtime(&my_clock_base)) {
+      unsigned char buf[3];
+      response->code = COAP_RESPONSE_CODE(400);
+      coap_add_option(response,
+                      COAP_OPTION_CONTENT_FORMAT,
+                      coap_encode_var_safe(buf, sizeof(buf),
+                      COAP_MEDIATYPE_TEXT_PLAIN), buf);
+      coap_add_data(response, 22, (const uint8_t*)"Invalid set time value");
+      /* re-init as value is bad */
+      my_clock_base = clock_offset;
+    }
   }
 }
 
@@ -222,7 +245,7 @@ hnd_get_async(coap_context_t *ctx,
   }
 
   if (query) {
-    unsigned char *p = query->s;
+    const uint8_t *p = query->s;
 
     delay = 0;
     for (size = query->length; size; --size, ++p)
@@ -252,7 +275,7 @@ check_async(coap_context_t *ctx,
              : COAP_MESSAGE_NON,
              COAP_RESPONSE_CODE(205), 0, size);
   if (!response) {
-    debug("check_async: insufficient memory, we'll try later\n");
+    coap_log(LOG_DEBUG, "check_async: insufficient memory, we'll try later\n");
     async->appdata =
       (void *)((unsigned long)async->appdata + 15 * COAP_TICKS_PER_SECOND);
     return;
@@ -263,10 +286,10 @@ check_async(coap_context_t *ctx,
   if (async->tokenlen)
     coap_add_token(response, async->tokenlen, async->token);
 
-  coap_add_data(response, 4, (unsigned char *)"done");
+  coap_add_data(response, 4, (const uint8_t *)"done");
 
   if (coap_send(async->session, response) == COAP_INVALID_TID) {
-    debug("check_async: cannot send response for message\n");
+    coap_log(LOG_DEBUG, "check_async: cannot send response for message\n");
   }
   coap_remove_async(ctx, async->session, async->id, &tmp);
   coap_free_async(async);
@@ -278,35 +301,35 @@ static void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
-  r = coap_resource_init(NULL, 0, 0);
+  r = coap_resource_init(NULL, 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
-  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
-  coap_add_attr(r, (unsigned char *)"title", 5, (unsigned char *)"\"General Info\"", 14, 0);
+  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+  coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"General Info\""), 0);
   coap_add_resource(ctx, r);
 
   /* store clock base to use in /time */
   my_clock_base = clock_offset;
 
-  r = coap_resource_init((unsigned char *)"time", 4, COAP_RESOURCE_FLAGS_NOTIFY_CON);
+  r = coap_resource_init(coap_make_str_const("time"), COAP_RESOURCE_FLAGS_NOTIFY_CON);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
+  coap_resource_set_get_observable(r, 1);
 
-  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
-  coap_add_attr(r, (unsigned char *)"title", 5, (unsigned char *)"\"Internal Clock\"", 16, 0);
-  coap_add_attr(r, (unsigned char *)"rt", 2, (unsigned char *)"\"Ticks\"", 7, 0);
-  r->observable = 1;
-  coap_add_attr(r, (unsigned char *)"if", 2, (unsigned char *)"\"clock\"", 7, 0);
+  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+  coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Internal Clock\""), 0);
+  coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("\"ticks\""), 0);
+  coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"clock\""), 0);
 
   coap_add_resource(ctx, r);
   time_resource = r;
 
 #ifndef WITHOUT_ASYNC
-  r = coap_resource_init((unsigned char *)"async", 5, 0);
+  r = coap_resource_init(coap_make_str_const("async"), 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
 
-  coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
+  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
   coap_add_resource(ctx, r);
 #endif /* WITHOUT_ASYNC */
 }
@@ -375,9 +398,11 @@ get_context(const char *node, const char *port) {
       memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
       addrs = addr;
       if (addr.addr.sa.sa_family == AF_INET) {
-        addrs.addr.sin.sin_port = htons(ntohs(addr.addr.sin.sin_port) + 1);
+        uint16_t temp = ntohs(addr.addr.sin.sin_port) + 1;
+        addrs.addr.sin.sin_port = htons(temp);
       } else if (addr.addr.sa.sa_family == AF_INET6) {
-        addrs.addr.sin6.sin6_port = htons(ntohs(addr.addr.sin6.sin6_port) + 1);
+        uint16_t temp = ntohs(addr.addr.sin6.sin6_port) + 1;
+        addrs.addr.sin6.sin6_port = htons(temp);
       } else {
         goto finish;
       }
@@ -556,11 +581,6 @@ main(int argc, char **argv) {
     coap_ticks( &now );
     check_async(ctx, now);
 #endif /* WITHOUT_ASYNC */
-
-#ifndef WITHOUT_OBSERVE
-    /* check if we have to send observe notifications */
-    coap_check_notify(ctx);
-#endif /* WITHOUT_OBSERVE */
   }
 
   coap_free_context(ctx);

@@ -25,7 +25,7 @@ testdriver_SOURCES = \
  test_wellknown.c \
  test_tls.c
 
-testdriver_LDADD = $(CUNIT_LIBS) $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_API_VERSION).la
+testdriver_LDADD = $(CUNIT_LIBS) $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
 
 # If there is a API change to something $(LIBCOAP_API_VERSION) > 1 there is
 # nothing to adopt here. No needed to implement something here because the test

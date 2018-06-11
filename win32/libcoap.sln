@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27004.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcoap", "libcoap.vcxproj", "{96A98759-36B3-4246-A265-CAFCEEC0F2F2}"
 EndProject
@@ -12,6 +12,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testdriver", "testdriver\testdriver.vcxproj", "{C21580DF-4786-441E-B921-21E66DFA926E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "coap-rd", "coap-rd\coap-rd.vcxproj", "{640AC988-FE9E-4580-BDF5-0D9FD57C3CE5}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "install", "install\install.vcxproj", "{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -97,8 +99,27 @@ Global
 		{640AC988-FE9E-4580-BDF5-0D9FD57C3CE5}.Release|x64.Build.0 = Release|x64
 		{640AC988-FE9E-4580-BDF5-0D9FD57C3CE5}.Release|x86.ActiveCfg = Release|Win32
 		{640AC988-FE9E-4580-BDF5-0D9FD57C3CE5}.Release|x86.Build.0 = Release|Win32
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Debug DLL|x64.ActiveCfg = Debug|x64
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Debug DLL|x64.Build.0 = Debug|x64
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Debug DLL|x86.ActiveCfg = Debug DLL|Win32
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Debug DLL|x86.Build.0 = Debug DLL|Win32
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Debug|x64.ActiveCfg = Debug|x64
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Debug|x64.Build.0 = Debug|x64
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Debug|x86.ActiveCfg = Debug|Win32
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Debug|x86.Build.0 = Debug|Win32
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Release DLL|x64.ActiveCfg = Release|x64
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Release DLL|x64.Build.0 = Release|x64
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Release DLL|x86.ActiveCfg = Release DLL|Win32
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Release DLL|x86.Build.0 = Release DLL|Win32
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Release|x64.ActiveCfg = Release|x64
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Release|x64.Build.0 = Release|x64
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Release|x86.ActiveCfg = Release|Win32
+		{150F429D-82C6-4EA2-B1B2-16EF35F9C11A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5DCF7800-FBBF-4AD7-A3B5-E70B574A9CE5}
 	EndGlobalSection
 EndGlobal

@@ -65,6 +65,7 @@ coap_more_blocks(size_t data_len, unsigned int num, uint16_t szx) {
   return ((num+1) << (szx + 4)) < data_len;
 }
 
+#if 0
 /** Sets the More-bit in @p block_opt */
 COAP_STATIC_INLINE void
 coap_opt_block_set_m(coap_opt_t *block_opt, int m) {
@@ -73,6 +74,7 @@ coap_opt_block_set_m(coap_opt_t *block_opt, int m) {
   else
     *(coap_opt_value(block_opt) + (coap_opt_length(block_opt) - 1)) &= ~0x08;
 }
+#endif
 
 /**
  * Initializes @p block from @p pdu. @p type must be either COAP_OPTION_BLOCK1
@@ -128,7 +130,7 @@ int coap_write_block_opt(coap_block_t *block,
  */
 int coap_add_block(coap_pdu_t *pdu,
                    unsigned int len,
-                   const unsigned char *data,
+                   const uint8_t *data,
                    unsigned int block_num,
                    unsigned char block_szx);
 /**@}*/

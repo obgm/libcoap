@@ -15,7 +15,7 @@
 #include "pdu.h"
 
 struct coap_endpoint_t;
-struct coap_contex_t;
+struct coap_context_t;
 struct coap_queue_t;
 
 /**
@@ -83,6 +83,7 @@ typedef struct coap_session_t {
   unsigned int max_retransmit;          /**< maximum re-transmit count (default 4) */
   coap_fixed_point_t ack_timeout;       /**< timeout waiting for ack (default 2 secs) */
   coap_fixed_point_t ack_random_factor; /**< ack random factor backoff (default 1.5) */
+  unsigned int dtls_timeout_count;      /**<dtls setup retry counter */
 } coap_session_t;
 
 /**

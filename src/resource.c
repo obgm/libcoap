@@ -101,18 +101,20 @@ coap_free_subscription(coap_subscription_t *subscription) {
   }
  
 static int
-match(const str *text, const str *pattern, int match_prefix, int match_substring) {
+match(const coap_str_const_t *text, const coap_str_const_t *pattern, int match_prefix,
+  int match_substring
+) {
   assert(text); assert(pattern);
   
   if (text->length < pattern->length)
     return 0;
 
   if (match_substring) {
-    unsigned char *next_token = text->s;
+    const uint8_t *next_token = text->s;
     size_t remaining_length = text->length;
     while (remaining_length) {
       size_t token_length;
-      unsigned char *token = next_token;
+      const uint8_t *token = next_token;
       next_token = (unsigned char *)memchr(token, ' ', remaining_length);
 
       if (next_token) {
@@ -168,21 +170,21 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
 #endif /* GCC */
   size_t output_length = 0;
   unsigned char *p = buf;
-  const unsigned char *bufend = buf + *buflen;
+  const uint8_t *bufend = buf + *buflen;
   size_t left, written = 0;
   coap_print_status_t result;
   const size_t old_offset = offset;
   int subsequent_resource = 0;
 #ifndef WITHOUT_QUERY_FILTER
-  str resource_param = { 0, NULL }, query_pattern = { 0, NULL };
+  coap_str_const_t resource_param = { 0, NULL }, query_pattern = { 0, NULL };
   int flags = 0; /* MATCH_SUBSTRING, MATCH_PREFIX, MATCH_URI */
 #define MATCH_URI       0x01
 #define MATCH_PREFIX    0x02
 #define MATCH_SUBSTRING 0x04
-  static const str _rt_attributes[] = {
-    {2, (unsigned char *)"rt"},
-    {2, (unsigned char *)"if"},
-    {3, (unsigned char *)"rel"},
+  static const coap_str_const_t _rt_attributes[] = {
+    {2, (const uint8_t *)"rt"},
+    {2, (const uint8_t *)"if"},
+    {3, (const uint8_t *)"rel"},
     {0, NULL}};
 #endif /* WITHOUT_QUERY_FILTER */
 
@@ -195,7 +197,7 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
       resource_param.length++;
     
     if (resource_param.length < coap_opt_length(query_filter)) {
-      const str *rt_attributes;
+      const coap_str_const_t *rt_attributes;
       if (resource_param.length == 4 && 
 	  memcmp(resource_param.s, "href", 4) == 0)
 	flags |= MATCH_URI;
@@ -236,19 +238,18 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
     if (resource_param.length) { /* there is a query filter */
       
       if (flags & MATCH_URI) {	/* match resource URI */
-	if (!match(&r->uri_path, &query_pattern, (flags & MATCH_PREFIX) != 0,
+	if (!match(r->uri_path, &query_pattern, (flags & MATCH_PREFIX) != 0,
             (flags & MATCH_SUBSTRING) != 0))
 	  continue;
       } else {			/* match attribute */
 	coap_attr_t *attr;
-        str unquoted_val;
-	attr = coap_find_attr(r, resource_param.s, resource_param.length);
-        if (!attr) continue;
-        if (attr->value.s[0] == '"') {          /* if attribute has a quoted value, remove double quotes */
-          unquoted_val.length = attr->value.length - 2;
-          unquoted_val.s = attr->value.s + 1;
-        } else {
-          unquoted_val = attr->value;
+        coap_str_const_t unquoted_val;
+	attr = coap_find_attr(r, &resource_param);
+        if (!attr || !attr->value) continue;
+        unquoted_val = *attr->value;
+        if (attr->value->s[0] == '"') {          /* if attribute has a quoted value, remove double quotes */
+          unquoted_val.length -= 2;
+          unquoted_val.s += 1;
         }
 	if (!(match(&unquoted_val, &query_pattern, 
                     (flags & MATCH_PREFIX) != 0,
@@ -280,8 +281,7 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
   *buflen = written;
   output_length = p - buf;
 
-  if (output_length > COAP_PRINT_STATUS_MAX)
-  {
+  if (output_length > COAP_PRINT_STATUS_MAX) {
     return COAP_PRINT_STATUS_ERROR;
   }
 
@@ -293,49 +293,52 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
   return result;
 }
 
+static coap_str_const_t *null_path = coap_make_str_const("");
+
 coap_resource_t *
-coap_resource_init(const unsigned char *uri_path, size_t len, int flags) {
+coap_resource_init(coap_str_const_t *uri_path, int flags) {
   coap_resource_t *r;
 
-#ifdef WITH_LWIP
-  r = (coap_resource_t *)memp_malloc(MEMP_COAP_RESOURCE);
-#endif
-#ifndef WITH_LWIP
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
-#endif
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
 
-    r->uri_path.s = (unsigned char *)uri_path;
-    r->uri_path.length = len;
-    
+    if (!(flags & COAP_RESOURCE_FLAGS_RELEASE_URI)) {
+      /* Need to take a copy if caller is not providing a release request */
+      if (uri_path)
+        uri_path = coap_new_str_const(uri_path->s, uri_path->length);
+      else
+        uri_path = coap_new_str_const(null_path->s, null_path->length);
+    }
+    else if (!uri_path) {
+      /* Do not expecte this, but ... */
+      uri_path = coap_new_str_const(null_path->s, null_path->length);
+    }
+      
+    if (uri_path)
+      r->uri_path = uri_path;
+
     r->flags = flags;
   } else {
-    debug("coap_resource_init: no memory left\n");
+    coap_log(LOG_DEBUG, "coap_resource_init: no memory left\n");
   }
   
   return r;
 }
 
-static const unsigned char coap_unknown_resource_uri[] =
+static const uint8_t coap_unknown_resource_uri[] =
                        "- Unknown -";
 
 coap_resource_t *
 coap_resource_unknown_init(coap_method_handler_t put_handler) {
   coap_resource_t *r;
 
-#ifdef WITH_LWIP
-  r = (coap_resource_t *)memp_malloc(MEMP_COAP_RESOURCE);
-#endif
-#ifndef WITH_LWIP
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
-#endif
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
     r->is_unknown = 1;
     /* Something unlikely to be used, but it shows up in the logs */
-    r->uri_path.s = (unsigned char*)coap_unknown_resource_uri;
-    r->uri_path.length = sizeof(coap_unknown_resource_uri)-1;
+    r->uri_path = coap_new_str_const(coap_unknown_resource_uri, sizeof(coap_unknown_resource_uri)-1);
     coap_register_handler(r, COAP_REQUEST_PUT, put_handler);
   } else {
     coap_log(LOG_DEBUG, "coap_resource_unknown_init: no memory left\n");
@@ -346,34 +349,36 @@ coap_resource_unknown_init(coap_method_handler_t put_handler) {
 
 coap_attr_t *
 coap_add_attr(coap_resource_t *resource, 
-	      const unsigned char *name, size_t nlen,
-	      const unsigned char *val, size_t vlen,
+	      coap_str_const_t *name,
+	      coap_str_const_t *val,
               int flags) {
   coap_attr_t *attr;
 
   if (!resource || !name)
     return NULL;
-
-#ifdef WITH_LWIP
-  attr = (coap_attr_t *)memp_malloc(MEMP_COAP_RESOURCEATTR);
-#endif
-#ifndef WITH_LWIP
+ 
   attr = (coap_attr_t *)coap_malloc_type(COAP_RESOURCEATTR, sizeof(coap_attr_t));
-#endif
 
   if (attr) {
-    attr->name.length = nlen;
-    attr->value.length = val ? vlen : 0;
-
-    attr->name.s = (unsigned char *)name;
-    attr->value.s = (unsigned char *)val;
+    if (!(flags & COAP_ATTR_FLAGS_RELEASE_NAME)) {
+      /* Need to take a copy if caller is not providing a release request */
+      name = coap_new_str_const(name->s, name->length);
+    }
+    attr->name = name;
+    if (val) {
+      if (!(flags & COAP_ATTR_FLAGS_RELEASE_VALUE)) {
+        /* Need to take a copy if caller is not providing a release request */
+        val = coap_new_str_const(val->s, val->length);
+      }
+    }
+    attr->value = val;
 
     attr->flags = flags;
 
     /* add attribute to resource list */
     LL_PREPEND(resource->link_attr, attr);
   } else {
-    debug("coap_add_attr: no memory left\n");
+    coap_log(LOG_DEBUG, "coap_add_attr: no memory left\n");
   }
   
   return attr;
@@ -381,15 +386,15 @@ coap_add_attr(coap_resource_t *resource,
 
 coap_attr_t *
 coap_find_attr(coap_resource_t *resource, 
-	       const unsigned char *name, size_t nlen) {
+	       coap_str_const_t *name) {
   coap_attr_t *attr;
 
   if (!resource || !name)
     return NULL;
 
   LL_FOREACH(resource->link_attr, attr) {
-    if (attr->name.length == nlen &&
-	memcmp(attr->name.s, name, nlen) == 0)
+    if (attr->name->length == name->length &&
+	memcmp(attr->name->s, name->s, name->length) == 0)
       return attr;
   }
 
@@ -400,10 +405,10 @@ void
 coap_delete_attr(coap_attr_t *attr) {
   if (!attr)
     return;
-  if (attr->flags & COAP_ATTR_FLAGS_RELEASE_NAME)
-    coap_free(attr->name.s);
-  if (attr->flags & COAP_ATTR_FLAGS_RELEASE_VALUE)
-    coap_free(attr->value.s);
+  coap_delete_str_const(attr->name);
+  if (attr->value) {
+    coap_delete_str_const(attr->value);
+  }
 
 #ifdef WITH_LWIP
   memp_free(MEMP_COAP_RESOURCEATTR, attr);
@@ -423,8 +428,8 @@ coap_free_resource(coap_resource_t *resource) {
   /* delete registered attributes */
   LL_FOREACH_SAFE(resource->link_attr, attr, tmp) coap_delete_attr(attr);
 
-  if (resource->flags & COAP_RESOURCE_FLAGS_RELEASE_URI)
-    coap_free(resource->uri_path.s);
+  /* Either the application provided or libcoap copied - need to delete it */
+  coap_delete_str_const(resource->uri_path);
 
   /* free all elements from resource->subscribers */
   LL_FOREACH_SAFE( resource->subscribers, obs, otmp ) {
@@ -456,8 +461,8 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
     if (r) {
       coap_log(LOG_WARNING,
         "coap_add_resource: Duplicate uri_path '%*.*s', old resource deleted\n",
-        (int)resource->uri_path.length, (int)resource->uri_path.length,
-        resource->uri_path.s);
+        (int)resource->uri_path->length, (int)resource->uri_path->length,
+        resource->uri_path->s);
       coap_delete_resource(context, r);
     }
     RESOURCES_ADD(context->resources, resource);
@@ -506,7 +511,7 @@ coap_delete_all_resources(coap_context_t *context) {
 }
 
 coap_resource_t *
-coap_get_resource_from_uri_path(coap_context_t *context, str uri_path) {
+coap_get_resource_from_uri_path(coap_context_t *context, coap_str_const_t *uri_path) {
   coap_resource_t *result;
 
   RESOURCES_FIND(context->resources, uri_path, result);
@@ -518,7 +523,7 @@ coap_print_status_t
 coap_print_link(const coap_resource_t *resource, 
 		unsigned char *buf, size_t *len, size_t *offset) {
   unsigned char *p = buf;
-  const unsigned char *bufend = buf + *len;
+  const uint8_t *bufend = buf + *len;
   coap_attr_t *attr;
   coap_print_status_t result = 0;
   size_t output_length = 0;
@@ -529,7 +534,7 @@ coap_print_link(const coap_resource_t *resource,
   PRINT_COND_WITH_OFFSET(p, bufend, *offset, '/', *len);
 
   COPY_COND_WITH_OFFSET(p, bufend, *offset, 
-			resource->uri_path.s, resource->uri_path.length, *len);
+			resource->uri_path->s, resource->uri_path->length, *len);
   
   PRINT_COND_WITH_OFFSET(p, bufend, *offset, '>', *len);
 
@@ -538,13 +543,13 @@ coap_print_link(const coap_resource_t *resource,
     PRINT_COND_WITH_OFFSET(p, bufend, *offset, ';', *len);
 
     COPY_COND_WITH_OFFSET(p, bufend, *offset,
-			  attr->name.s, attr->name.length, *len);
+			  attr->name->s, attr->name->length, *len);
 
-    if (attr->value.s) {
+    if (attr->value && attr->value->s) {
       PRINT_COND_WITH_OFFSET(p, bufend, *offset, '=', *len);
 
       COPY_COND_WITH_OFFSET(p, bufend, *offset,
-			    attr->value.s, attr->value.length, *len);
+			    attr->value->s, attr->value->length, *len);
     }
 
   }
@@ -554,8 +559,7 @@ coap_print_link(const coap_resource_t *resource,
 
   output_length = p - buf;
 
-  if (output_length > COAP_PRINT_STATUS_MAX)
-  {
+  if (output_length > COAP_PRINT_STATUS_MAX) {
     return COAP_PRINT_STATUS_ERROR;
   }
 
@@ -568,10 +572,19 @@ coap_print_link(const coap_resource_t *resource,
   return result;
 }
 
+void
+coap_register_handler(coap_resource_t *resource,
+                      unsigned char method,
+                      coap_method_handler_t handler) {
+  assert(resource);
+  assert(method > 0 && (size_t)(method-1) < sizeof(resource->handler)/sizeof(coap_method_handler_t));
+  resource->handler[method-1] = handler;
+}
+
 #ifndef WITHOUT_OBSERVE
 coap_subscription_t *
 coap_find_observer(coap_resource_t *resource, coap_session_t *session,
-		     const str *token) {
+		     const coap_string_t *token) {
   coap_subscription_t *s;
 
   assert(resource);
@@ -590,8 +603,8 @@ coap_find_observer(coap_resource_t *resource, coap_session_t *session,
 coap_subscription_t *
 coap_add_observer(coap_resource_t *resource, 
                   coap_session_t *session,
-		  const str *token,
-                  str *query) {
+		  const coap_string_t *token,
+                  coap_string_t *query) {
   coap_subscription_t *s;
   
   assert( session );
@@ -635,7 +648,7 @@ coap_add_observer(coap_resource_t *resource,
 
 void
 coap_touch_observer(coap_context_t *context, coap_session_t *session,
-		    const str *token) {
+		    const coap_string_t *token) {
   coap_subscription_t *s;
 
   RESOURCES_ITER(context->resources, r) {
@@ -648,7 +661,7 @@ coap_touch_observer(coap_context_t *context, coap_session_t *session,
 
 int
 coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
-		     const str *token) {
+		     const coap_string_t *token) {
   coap_subscription_t *s;
 
   s = coap_find_observer(resource, session, token);
@@ -684,7 +697,7 @@ static void
 coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
   coap_method_handler_t h;
   coap_subscription_t *obs;
-  str token;
+  coap_string_t token;
   coap_pdu_t *response;
 
   if (r->observable && (r->dirty || r->partiallydirty)) {
@@ -743,8 +756,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
 
       tid = coap_send( obs->session, response );
 
-      if (COAP_INVALID_TID == tid)
-      {
+      if (COAP_INVALID_TID == tid) {
 	debug("coap_check_notify: sending failed, resource stays partially dirty\n");
         obs->dirty = 1;
         r->partiallydirty = 1;
@@ -757,6 +769,11 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
 
 int
 coap_resource_set_dirty(coap_resource_t *r, const str *query) {
+  return coap_resource_notify_observers(r, query);
+}
+
+int
+coap_resource_notify_observers(coap_resource_t *r, const str *query) {
   if (!r->observable)
     return 0;
   if (query) {

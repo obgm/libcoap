@@ -34,6 +34,11 @@ src/**/.dirstamp
 src/**/.libs/
 src/**/*.o
 src/**/*.lo
+src/*.lo
+src/*.o
+src/.deps/
+src/.dirstamp
+src/.libs/
 
 # the doc/ folder
 doc/Doxyfile
@@ -42,18 +47,21 @@ doc/doxyfile.stamp
 doc/doxygen_sqlite3.db
 doc/html/
 
+# the man/ folder
+man/Makefile
+man/Makefile.in
+man/*.txt
+man/*.xml
+man/*.3
+man/*.5
+man/*.7
+
 # the examples/ folder
 examples/.deps/
 examples/*.o
 examples/coap-client
 examples/coap-rd
 examples/coap-server
-examples/coap-client.5
-examples/coap-client.txt
-examples/coap-rd.5
-examples/coap-rd.txt
-examples/coap-server.5
-examples/coap-server.txt
 
 # the include/ folder
 include/coap/coap.h

@@ -25,11 +25,13 @@
 typedef uint8_t coap_opt_t;
 #define PCHAR(p) ((coap_opt_t *)(p))
 
-/** Representation of CoAP options. */
+/**
+ * Representation of CoAP options.
+ */
 typedef struct {
   uint16_t delta;
   size_t length;
-  uint8_t *value;
+  const uint8_t *value;
 } coap_option_t;
 
 /**
@@ -58,22 +60,6 @@ size_t coap_opt_parse(const coap_opt_t *opt,
  *            @c 0 as options need at least one byte storage space.
  */
 size_t coap_opt_size(const coap_opt_t *opt);
-
-/**
- * Calculates the beginning of the PDU's option section.
- *
- * @param pdu The PDU containing the options.
- * @return    A pointer to the first option if available, or @c NULL otherwise.
- */
-coap_opt_t *options_start(coap_pdu_t *pdu);
-
-/**
- * Interprets @p opt as pointer to a CoAP option and advances to
- * the next byte past this option.
- * @hideinitializer
- */
-#define options_next(opt) \
-  ((coap_opt_t *)((uint8_t *)(opt) + coap_opt_size(opt)))
 
 /**
  * @defgroup opt_filter Option Filters
@@ -178,7 +164,7 @@ int coap_option_filter_unset(coap_opt_filter_t filter, uint16_t type);
  *
  * @return       @c 1 if @p type was found, @c 0 otherwise, or @c -1 on error.
  */
-int coap_option_filter_get(const coap_opt_filter_t filter, uint16_t type);
+int coap_option_filter_get(coap_opt_filter_t filter, uint16_t type);
 
 /**
  * Sets the corresponding bit for @p type in @p filter. This function returns @c
@@ -227,7 +213,7 @@ coap_option_clrb(coap_opt_filter_t filter, uint16_t type) {
  * @return       @c 1 if bit was set, @c 0 if not, @c -1 on error.
  */
 COAP_STATIC_INLINE int
-coap_option_getb(const coap_opt_filter_t filter, uint16_t type) {
+coap_option_getb(coap_opt_filter_t filter, uint16_t type) {
   return coap_option_filter_get(filter, type);
 }
 
@@ -272,7 +258,7 @@ typedef struct {
  *
  * @return       The iterator object @p oi on success, @c NULL otherwise.
  */
-coap_opt_iterator_t *coap_option_iterator_init(coap_pdu_t *pdu,
+coap_opt_iterator_t *coap_option_iterator_init(const coap_pdu_t *pdu,
                                                coap_opt_iterator_t *oi,
                                                const coap_opt_filter_t filter);
 
@@ -398,8 +384,77 @@ uint16_t coap_opt_length(const coap_opt_t *opt);
  *
  * @return    A pointer to the option value or @c NULL on error.
  */
-uint8_t *coap_opt_value(const coap_opt_t *opt);
+const uint8_t *coap_opt_value(const coap_opt_t *opt);
 
 /** @} */
+
+/**
+ * Representation of chained list of CoAP options to install.
+ *
+ * @code
+ * coap_optlist_t *optlist_chain = NULL;
+ * coap_pdu_t *pdu = coap_new_pdu(session);
+ *
+ * ... other set up code ...
+ * coap_insert_optlist(&optlist_chain, coap_new_optlist(COAP_OPTION_OBSERVE,
+ *                    COAP_OBSERVE_ESTABLISH, NULL));
+ *
+ * coap_add_optlist_pdu(pdu, &optlist_chain);
+ * ... other code ...
+ * coap_delete_optlist(optlist_chain);
+ * @endcode
+ */
+typedef struct coap_optlist_t {
+  struct coap_optlist_t *next;  /**< next entry in the optlist chain */
+  uint16_t number;              /**< the option number (no delta coding) */
+  size_t length;                /**< the option value length */
+  uint8_t *data;                /**< the option data */
+} coap_optlist_t;
+
+/**
+ * Create a new optlist entry.
+ *
+ * @param number    The option number (COAP_OPTION_*)
+ * @param length    The option length
+ * @param data      The option value data
+ *
+ * @return          A pointer to the new optlist entry, or @c NULL if error
+ */
+coap_optlist_t *coap_new_optlist(uint16_t number,
+                                 size_t length,
+                                 const uint8_t *data);
+
+/**
+ * The current optlist of @p optlist_chain is first sorted (as per RFC7272
+ * ordering requirements) and then added to the @p pdu.
+ *
+ * @param pdu  The pdu to add the options to from the chain list
+ * @param optlist_chain The chained list of optlist to add to the pdu
+ *
+ * @return     @c 1 if succesful or @c 0 if failure;
+ */
+int coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t** optlist_chain);
+
+/**
+ * Adds @p optlist to the given @p optlist_chain. The optlist_chain variable
+ * be set to NULL before the initial call to coap_insert_optlist().
+ * The optlist_chain will need to be deleted using coap_delete_optlist()
+ * when no longer required.
+ *
+ * @param optlist_chain The chain to add optlist to
+ * @param optlist  The optlist to add to the queue
+ *
+ * @return         @c 1 if successful, @c 0 otherwise.
+ */
+int coap_insert_optlist(coap_optlist_t **optlist_chain,
+                        coap_optlist_t *optlist);
+
+/**
+ * Removes all entries from the @p optlist_chain, freeing off their
+ * memory usage.
+ *
+ * @param optlist_chain The optlist chain to remove all the entries from
+ */
+void coap_delete_optlist(coap_optlist_t *optlist_chain);
 
 #endif /* _OPTION_H_ */

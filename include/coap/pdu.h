@@ -132,7 +132,7 @@ struct coap_session_t;
  * @return     A zero-terminated string describing the error, or @c NULL if not
  *             found.
  */
-char *coap_response_phrase(unsigned char code);
+const char *coap_response_phrase(unsigned char code);
 
 #define COAP_ERROR_PHRASE_LENGTH   32 /**< maximum length of error phrase */
 
@@ -234,11 +234,13 @@ typedef int coap_tid_t;
 #define COAP_PAYLOAD_START 0xFF /* payload marker */
 
 /**
+ * @deprecated.  Use coap_optlist_t instead.
+ *
  * Structures for more convenient handling of options. (To be used with ordered
  * coap_list_t.) The option's data will be added to the end of the coap_option
  * structure (see macro COAP_OPTION_DATA).
  */
-typedef struct {
+COAP_DEPRECATED typedef struct {
   uint16_t key;           /* the option key (no delta coding) */
   unsigned int length;
 } coap_option;
@@ -502,7 +504,7 @@ uint8_t *coap_add_data_after(coap_pdu_t *pdu, size_t len);
  * 1 if *len and *data have correct values. Note that these values are destroyed
  * with the pdu.
  */
-int coap_get_data(coap_pdu_t *pdu,
+int coap_get_data(const coap_pdu_t *pdu,
                   size_t *len,
                   uint8_t **data);
 

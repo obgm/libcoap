@@ -162,7 +162,7 @@ static int
 get_psk_info(struct dtls_context_t *dtls_context,
   const session_t *dtls_session,
   dtls_credentials_type_t type,
-  const unsigned char *id, size_t id_len,
+  const uint8_t *id, size_t id_len,
   unsigned char *result, size_t result_length) {
   coap_context_t *coap_context;
   coap_session_t *coap_session;
@@ -274,7 +274,7 @@ coap_dtls_new_session(coap_session_t *session) {
     dtls_session_init(dtls_session);
     put_session_addr(&session->remote_addr, dtls_session);
     dtls_session->ifindex = session->ifindex;
-    debug("*** new session %p\n", dtls_session);
+    debug("*** new session %p\n", (void *)dtls_session);
   }
 
   return dtls_session;
@@ -388,12 +388,16 @@ coap_dtls_receive(coap_session_t *session,
   size_t data_len
 ) {
   session_t *dtls_session = (session_t *)session->tls;
-  int res;
+  int err;
 
   coap_event_dtls = -1;
-  res = dtls_handle_message(
+  err = dtls_handle_message(
     (struct dtls_context_t *)session->context->dtls_context,
     dtls_session, (uint8 *)data, (int)data_len);
+
+  if (err){
+    coap_event_dtls = COAP_EVENT_DTLS_ERROR;
+  }
 
   if (coap_event_dtls >= 0) {
     coap_handle_event(session->context, coap_event_dtls, session);
@@ -403,7 +407,7 @@ coap_dtls_receive(coap_session_t *session,
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
   }
 
-  return res;
+  return err;
 }
 
 int
@@ -465,7 +469,7 @@ int coap_dtls_context_set_psk(coap_context_t *ctx UNUSED,
   return 1;
 }
 
-int coap_dtls_context_check_keys_enabled(coap_context_t *ctx)
+int coap_dtls_context_check_keys_enabled(coap_context_t *ctx UNUSED)
 {
   return 1;
 }
@@ -499,7 +503,12 @@ ssize_t coap_tls_read(coap_session_t *session UNUSED,
 
 #else /* !HAVE_LIBTINYDTLS */
 
- /* make compilers happy that do not like empty modules */
+#ifdef __clang__
+/* Make compilers happy that do not like empty modules. As this function is
+ * never used, we ignore -Wunused-function at the end of compiling this file
+ */
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 static inline void dummy(void) {
 }
 

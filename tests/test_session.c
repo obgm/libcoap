@@ -92,7 +92,8 @@ timeout(const coap_fixed_point_t ack_timeout,
  */
 COAP_STATIC_INLINE int
 good_enough(unsigned int v, unsigned int ref) {
-  return (abs(v - ref) / 100.0) <= FP_ERR_THRESHOLD;
+#define delta(a,b) (((a) < (b)) ? ((b) - (a)) : ((a) - (b)))
+  return (delta(v,ref) / 100.0) <= FP_ERR_THRESHOLD;
 }
 
 static void
@@ -160,6 +161,7 @@ t_session6(void) {
   CU_ASSERT_PTR_NOT_NULL(session);
   CU_ASSERT_PTR_NOT_NULL(ctx->sessions);
   CU_ASSERT(session->state == COAP_SESSION_STATE_ESTABLISHED);
+  coap_session_release(session);
 }
 
 /* This function creates a set of nodes for testing. These nodes

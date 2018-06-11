@@ -34,3 +34,16 @@ void coap_delete_string(coap_string_t *s) {
   coap_free_type(COAP_STRING, s);
 }
 
+coap_str_const_t *coap_new_str_const(const uint8_t *data, size_t size) {
+  coap_string_t *s = coap_new_string(size);
+  if (!s)
+    return NULL;
+  memcpy (s->s, data, size);
+  s->length = size;
+  return (coap_str_const_t *)s;
+}
+
+void coap_delete_str_const(coap_str_const_t *s) {
+  coap_free_type(COAP_STRING, s);
+}
+

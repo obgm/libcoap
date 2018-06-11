@@ -21,15 +21,8 @@
 #include "option.h"
 #include "encode.h"		/* for coap_fls() */
 #include "debug.h"
-
-coap_opt_t *
-options_start(coap_pdu_t *pdu) {
-  if (pdu && pdu->token_length < pdu->used_size) {
-    coap_opt_t *opt = pdu->token + pdu->token_length;
-    return (*opt == COAP_PAYLOAD_START) ? NULL : opt;
-  } else 
-    return NULL;
-}
+#include "mem.h"
+#include "utlist.h"
 
 size_t
 coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
@@ -43,7 +36,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
     return 0;							\
   } else {							\
     (e) -= step;						\
-    (o) = ((unsigned char *)(o)) + step;			\
+    (o) = ((o)) + step;			\
   }
 
   if (length < 1)
@@ -101,7 +94,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
   ADVANCE_OPT(opt,length,1);
   /* opt now points to value, if present */
 
-  result->value = (unsigned char *)opt;
+  result->value = opt;
   if (length < result->length) {
     debug("invalid option length\n");
     return 0;
@@ -113,7 +106,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 }
 
 coap_opt_iterator_t *
-coap_option_iterator_init(coap_pdu_t *pdu, coap_opt_iterator_t *oi,
+coap_option_iterator_init(const coap_pdu_t *pdu, coap_opt_iterator_t *oi,
 			  const coap_opt_filter_t filter) {
   assert(pdu); 
   assert(pdu->token);
@@ -277,7 +270,7 @@ coap_opt_length(const coap_opt_t *opt) {
   return length;
 }
 
-unsigned char *
+const uint8_t *
 coap_opt_value(const coap_opt_t *opt) {
   size_t ofs = 1;
 
@@ -309,7 +302,7 @@ coap_opt_value(const coap_opt_t *opt) {
     ;
   }
 
-  return (unsigned char *)opt + ofs;
+  return (const uint8_t *)opt + ofs;
 }
 
 size_t
@@ -465,16 +458,16 @@ static int
 coap_option_filter_op(coap_opt_filter_t filter,
 		      uint16_t type,
 		      enum filter_op_t op) {
-  size_t index = 0;
+  size_t lindex = 0;
   opt_filter *of = (opt_filter *)filter;
   uint16_t nr, mask = 0;
 
   if (is_long_option(type)) {
     mask = LONG_MASK;
 
-    for (nr = 1; index < COAP_OPT_FILTER_LONG; nr <<= 1, index++) {
+    for (nr = 1; lindex < COAP_OPT_FILTER_LONG; nr <<= 1, lindex++) {
 
-      if (((of->mask & nr) > 0) && (of->long_opts[index] == type)) {
+      if (((of->mask & nr) > 0) && (of->long_opts[lindex] == type)) {
 	if (op == FILTER_CLEAR) {
 	  of->mask &= ~nr;
 	}
@@ -485,10 +478,10 @@ coap_option_filter_op(coap_opt_filter_t filter,
   } else {
     mask = SHORT_MASK;
 
-    for (nr = 1 << COAP_OPT_FILTER_LONG; index < COAP_OPT_FILTER_SHORT;
-	 nr <<= 1, index++) {
+    for (nr = 1 << COAP_OPT_FILTER_LONG; lindex < COAP_OPT_FILTER_SHORT;
+	 nr <<= 1, lindex++) {
 
-      if (((of->mask & nr) > 0) && (of->short_opts[index] == (type & 0xff))) {
+      if (((of->mask & nr) > 0) && (of->short_opts[lindex] == (type & 0xff))) {
 	if (op == FILTER_CLEAR) {
 	  of->mask &= ~nr;
 	}
@@ -505,18 +498,18 @@ coap_option_filter_op(coap_opt_filter_t filter,
 
   /* handle FILTER_SET: */
 
-  index = coap_fls(~of->mask & mask);
-  if (!index) {
+  lindex = coap_fls(~of->mask & mask);
+  if (!lindex) {
     return 0;
   }
 
   if (is_long_option(type)) {
-    of->long_opts[index - 1] = type;
+    of->long_opts[lindex - 1] = type;
   } else {
-    of->short_opts[index - COAP_OPT_FILTER_LONG - 1] = (uint8_t)type;
+    of->short_opts[lindex - COAP_OPT_FILTER_LONG - 1] = (uint8_t)type;
   }
 
-  of->mask |= 1 << (index - 1);
+  of->mask |= 1 << (lindex - 1);
 
   return 1;
 }
@@ -532,8 +525,90 @@ coap_option_filter_unset(coap_opt_filter_t filter, uint16_t type) {
 }
 
 int
-coap_option_filter_get(const coap_opt_filter_t filter, uint16_t type) {
+coap_option_filter_get(coap_opt_filter_t filter, uint16_t type) {
   /* Ugly cast to make the const go away (FILTER_GET wont change filter
    * but as _set and _unset do, the function does not take a const). */
   return coap_option_filter_op((uint16_t *)filter, type, FILTER_GET);
 }
+
+coap_optlist_t *
+coap_new_optlist(uint16_t number,
+                          size_t length,
+                          const uint8_t *data
+) {
+  coap_optlist_t *node;          
+     
+  node = coap_malloc_type(COAP_OPTLIST, sizeof(coap_optlist_t) + length);
+     
+  if (node) {
+    node->number = number;
+    node->length = length;
+    node->data = (uint8_t *)&node[1];
+    memcpy(node->data, data, length);
+  } else {
+    coap_log(LOG_WARNING, "coap_new_optlist: malloc failure\n");
+  }
+  
+  return node;
+}
+
+static int
+order_opts(void *a, void *b) {
+  coap_optlist_t *o1 = (coap_optlist_t *)a;
+  coap_optlist_t *o2 = (coap_optlist_t *)b;
+
+  if (!a || !b)
+    return a < b ? -1 : 1;
+
+  return (int)(o1->number - o2->number);
+}
+
+int
+coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t** options) {
+  coap_optlist_t *opt;
+
+  if (options && *options) {
+    /* sort options for delta encoding */
+    LL_SORT((*options), order_opts);
+
+    LL_FOREACH((*options), opt) {
+      coap_add_option(pdu, opt->number, opt->length, opt->data);
+    }
+    return 1;
+  }
+  return 0;
+}
+
+int
+coap_insert_optlist(coap_optlist_t **head, coap_optlist_t *node) {
+  if (!node) {
+    coap_log(LOG_DEBUG, "optlist not provided\n");
+  } else {
+    /* must append at the list end to avoid re-ordering of
+     * options during sort */
+    LL_APPEND((*head), node);
+  }
+
+  return node != NULL;
+}
+
+static int
+coap_internal_delete(coap_optlist_t *node) {
+  if (node) {
+    coap_free_type(COAP_OPTLIST, node);
+  }
+  return 1;
+}
+
+void
+coap_delete_optlist(coap_optlist_t *queue) {
+  coap_optlist_t *elt, *tmp;
+
+  if (!queue)
+    return;
+
+  LL_FOREACH_SAFE(queue, elt, tmp) {
+    coap_internal_delete(elt);
+  }
+}
+

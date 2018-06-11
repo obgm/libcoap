@@ -222,7 +222,7 @@ coap_register_pong_handler(coap_context_t *context,
  * @param type The option type to register.
  */
 COAP_STATIC_INLINE void
-coap_register_option(coap_context_t *ctx, unsigned char type) {
+coap_register_option(coap_context_t *ctx, uint16_t type) {
   coap_option_setb(ctx->known_options, type);
 }
 
@@ -535,7 +535,7 @@ coap_queue_t *coap_find_transaction(coap_queue_t *queue, coap_session_t *session
  */
 void coap_cancel_all_messages(coap_context_t *context,
                               coap_session_t *session,
-                              const unsigned char *token,
+                              const uint8_t *token,
                               size_t token_length);
 
 /**

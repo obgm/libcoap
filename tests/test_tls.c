@@ -68,7 +68,7 @@ t_tls2(void) {
 
 static int
 t_tls_tests_create(void) {
-  coap_dtls_startup();
+  coap_startup();
   return 0;
 }
   

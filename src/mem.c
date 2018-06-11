@@ -47,8 +47,21 @@ coap_free_type(coap_memory_tag_t type, void *p) {
 
 #ifdef WITH_CONTIKI
 
-#define COAP_MAX_STRING_SIZE 200
-#define COAP_MAX_STRINGS      10
+/**
+ * The maximum size of a string on platforms that allocate fixed-size
+ * memory blocks.
+ */
+#ifndef COAP_MAX_STRING_SIZE
+#define COAP_MAX_STRING_SIZE 64
+#endif /* COAP_MAX_STRING_SIZE */
+
+/**
+ * The maximum number of a strings on platforms that allocate
+ * fixed-size memory blocks.
+ */
+#ifndef COAP_MAX_STRINGS
+#define COAP_MAX_STRINGS      8
+#endif /* COAP_MAX_STRINGS */
 
 struct coap_stringbuf_t {
   char data[COAP_MAX_STRING_SIZE];

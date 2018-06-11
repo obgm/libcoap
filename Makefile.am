@@ -17,15 +17,19 @@ EXTRA_DIST = \
   CONTRIBUTE \
   TODO \
   LICENSE \
-  $(pkgconfig_DATA).in \
+  libcoap-$(LIBCOAP_API_VERSION).pc.in \
   libcoap-$(LIBCOAP_API_VERSION).map \
   libcoap-$(LIBCOAP_API_VERSION).sym \
   examples/coap_list.h \
   examples/getopt.c \
+  include/coap/utlist.h \
+  tests/test_common.h \
+  tests/test_error_response.h \
   tests/test_options.h \
   tests/test_pdu.h \
-  tests/test_error_response.h \
   tests/test_sendqueue.h \
+  tests/test_session.h \
+  tests/test_tls.h \
   tests/test_uri.h \
   tests/test_wellknown.h \
   win32/coap-client/coap-client.vcxproj \
@@ -43,17 +47,17 @@ EXTRA_DIST = \
 
 AM_CFLAGS = -I$(top_builddir)/include/coap -I$(top_srcdir)/include/coap $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
 
-SUBDIRS = $(subdirs) . $(DOC_DIR) tests examples
+SUBDIRS = $(subdirs) . $(DOC_DIR) $(MAN_DIR) tests examples
 
-## Define a libtool archive target "libcoap-@LIBCOAP_API_VERSION@.la", with
-## @LIBCOAP_API_VERSION@ substituted into the generated Makefile at configure
+## Define a libtool archive target "libcoap-@LIBCOAP_NAME_SUFFIX@.la", with
+## @LIBCOAP_NAME_SUFFIX@ substituted into the generated Makefile at configure
 ## time.
 ## The libtool archive file (.la) will be installed into the directory named
 ## by the predefined variable $(bindir), along with the actual shared library
 ## file (.so).
-lib_LTLIBRARIES = libcoap-@LIBCOAP_API_VERSION@.la
+lib_LTLIBRARIES = libcoap-@LIBCOAP_NAME_SUFFIX@.la
 
-libcoap_@LIBCOAP_API_VERSION@_la_CFLAGS = \
+libcoap_@LIBCOAP_NAME_SUFFIX@_la_CFLAGS = \
   -fPIC \
   -fPIE \
   $(AM_CFLAGS)
@@ -61,7 +65,7 @@ libcoap_@LIBCOAP_API_VERSION@_la_CFLAGS = \
 ## Define the source file list for the "libcoap.la" target.
 ## Note that it is not necessary to list header files which are already listed
 ## elsewhere in a _HEADERS variable assignment.
-libcoap_@LIBCOAP_API_VERSION@_la_SOURCES = \
+libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/address.c \
   src/async.c \
   src/block.c \
@@ -111,8 +115,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap/str.h \
   $(top_srcdir)/include/coap/subscribe.h \
   $(top_srcdir)/include/coap/uri.h \
-  $(top_srcdir)/include/coap/uthash.h \
-  $(top_srcdir)/include/coap/utlist.h
+  $(top_srcdir)/include/coap/uthash.h
 
 # If there is a API change to something $(LIBCOAP_API_VERSION) > 1 the install
 # prefix for the header files has to change to not conflict the older version
@@ -124,7 +127,7 @@ libcoap_include_HEADERS = \
 ## Instruct libtool to include API version information in the generated shared
 ## library file (.so). The library ABI version will later defined in configure.ac,
 ## so that all version information is kept in one place.
-libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS =					\
+libcoap_@LIBCOAP_NAME_SUFFIX@_la_LDFLAGS =					\
   -version-info $(LT_LIBCOAP_CURRENT):$(LT_LIBCOAP_REVISION):$(LT_LIBCOAP_AGE)	\
   @libcoap_SYMBOLS@ \
   $(DTLS_LIBS) \
@@ -132,7 +135,44 @@ libcoap_@LIBCOAP_API_VERSION@_la_LDFLAGS =					\
 
 ## Collect symbols here we want to ignore while building the helper files
 ## libcoap-$(LIBCOAP_API_VERSION).{map,sym} for the linker.
-CTAGS_IGNORE=-I "coap_packet_extract_pbuf coap_pdu_from_pbuf coap_socket_send_pdu"
+CTAGS_IGNORE=-I " \
+coap_dtls_context_check_keys_enabled \
+coap_dtls_context_set_pki \
+coap_dtls_context_set_psk \
+coap_dtls_free_context \
+coap_dtls_free_session \
+coap_dtls_get_context_timeout \
+coap_dtls_get_overhead \
+coap_dtls_get_timeout \
+coap_dtls_handle_timeout \
+coap_dtls_hello \
+coap_dtls_is_context_timeout \
+coap_dtls_new_client_session \
+coap_dtls_new_context \
+coap_dtls_new_server_session \
+coap_dtls_receive \
+coap_dtls_send \
+coap_dtls_session_update_mtu \
+coap_dtls_startup \
+coap_packet_extract_pbuf \
+coap_pdu_from_pbuf \
+coap_socket_accept_tcp \
+coap_socket_bind_tcp \
+coap_socket_bind_udp \
+coap_socket_close \
+coap_socket_connect_tcp1 \
+coap_socket_connect_tcp2 \
+coap_socket_connect_udp \
+coap_socket_read \
+coap_socket_send \
+coap_socket_send_pdu \
+coap_socket_write \
+coap_tls_free_session \
+coap_tls_new_client_session \
+coap_tls_new_server_session \
+coap_tls_read \
+coap_tls_write \
+"
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if
 # configure has detected a usable version of the ctags program and aborts if not.
@@ -169,7 +209,7 @@ libcoap-$(LIBCOAP_API_VERSION).sym: check_ctags $(libcoap_include_HEADERS)
 ## pkg-config files are also used for architecture-independent data packages,
 ## in which case the correct install location would be $(datadir)/pkgconfig.
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = libcoap-$(LIBCOAP_API_VERSION).pc
+pkgconfig_DATA = libcoap-$(LIBCOAP_NAME_SUFFIX).pc
 
 ## Define an independent executable script for inclusion in the distribution
 ## archive.  However, it will not be installed on an end user's system due to
@@ -182,6 +222,7 @@ dist_noinst_SCRIPTS = autogen.sh
 ## need to call the target update-map-file after the configure script was
 ## running!
 distclean-local:
+	@rm -f src/*.o src/*.lo
 	rm -f libcoap-$(LIBCOAP_API_VERSION).map
 	rm -f libcoap-$(LIBCOAP_API_VERSION).sym
 	rm -f libcoap-$(LIBCOAP_API_VERSION).pc

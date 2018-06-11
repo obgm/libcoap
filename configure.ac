@@ -116,7 +116,7 @@ AC_SUBST(LT_LIBCOAP_AGE)
 AC_SUBST(LIBCOAP_SO_VERSION)
 
 # Defining the API Version
-LIBCOAP_API_VERSION=1
+LIBCOAP_API_VERSION=2
 AC_SUBST(LIBCOAP_API_VERSION)
 
 # Adding some default warning options for code QS
@@ -125,6 +125,7 @@ AC_SUBST(LIBCOAP_API_VERSION)
 WARNING_CFLAGS="\
 -pedantic \
 -Wall \
+-Wcast-qual \
 -Wextra \
 -Wformat-security \
 -Winline \
@@ -137,6 +138,7 @@ WARNING_CFLAGS="\
 -Wswitch-default \
 -Wswitch-enum \
 -Wunused \
+-Wwrite-strings \
 "
 
 # check whether or not the compiler supports -Wlogical-op (clang does not...)
@@ -155,23 +157,36 @@ AC_SUBST(libcoap_SYMBOLS)
 # configure options
 # __documentation__
 
-doxygen_version_required=1.7.0
-dot_version_required=2.26.0
-
 AC_ARG_ENABLE([documentation],
               [AS_HELP_STRING([--enable-documentation],
-                              [Enable building the documentation [default=yes]])],
+                              [Enable building all the documentation [default=yes]])],
               [build_documentation="$enableval"],
               [build_documentation="yes"])
 
-if test "x$build_documentation" = "xyes"; then
+AM_CONDITIONAL(BUILD_DOCUMENTATION, [test "x$build_documentation" = "xyes"])
+
+doxygen_version_required=1.7.0
+dot_version_required=2.26.0
+
+AC_ARG_ENABLE([doxygen],
+              [AS_HELP_STRING([--enable-doxygen],
+                              [Enable building the doxygen documentation [default=yes]])],
+              [build_doxygen="$enableval"],
+              [build_doxygen="yes"])
+
+if test -z "$enable_doxygen"; then
+    if test "x$enable_documentation" = "xno"; then
+        build_doxygen="no"
+    fi
+fi
+
+if test "x$build_doxygen" = "xyes"; then
     # Check for doxygen
     AC_PATH_PROGS([DOXYGEN], [doxygen])
     if test -z "$DOXYGEN"; then
-        if test "x$build_documentation" = "xyes"; then
-            AC_MSG_WARN([==> Doxygen not found - continuing without Doxygen support])
-            AC_MSG_WARN([==> The libcoap html documentation will not be build!])
-            doxygen_version="not found"
+        if test "x$build_doxygen" = "xyes"; then
+            AC_MSG_WARN([==> You want to build the doxygen documentation but doxygen was not found!])
+            AC_MSG_ERROR([==> Install the package containg doxygen or disable the doxygen documentation using '--disable-doxygen'.])
         fi
     else
         AC_MSG_CHECKING([for compatible doxygen version (>= $doxygen_version_required)])
@@ -182,9 +197,9 @@ if test "x$build_documentation" = "xyes"; then
                             DOXYGEN=""],
                            [AC_MSG_RESULT([yes $doxygen_version])],
                            [AC_MSG_RESULT([yes $doxygen_version])])
-        if test "x$DOXYGEN" = "x" -a "x$build_documentation" = "xyes"; then
-            AC_MSG_ERROR([==> Doxygen $doxygen_version too old. Doxygen >= $doxygen_version_required required for documentation build.])
-            AC_MSG_ERROR([==> Install required doxygen version or disable the documentation using '--disable-documentation'.])
+        if test "x$DOXYGEN" = "x" -a "x$build_doxygen" = "xyes"; then
+            AC_MSG_WARN([==> Doxygen $doxygen_version too old. Doxygen >= $doxygen_version_required required for documentation build.])
+            AC_MSG_ERROR([==> Install required doxygen version or disable the doxygen documentation using '--disable-doxygen'.])
         else
             # we found doxygen and the version is valid
             DOC_DIR=doc
@@ -221,9 +236,9 @@ if test "x$build_documentation" = "xyes"; then
                                     DOT=""],
                                    [AC_MSG_RESULT([yes $dot_version])],
                                    [AC_MSG_RESULT([yes $dot_version])])
-                if test "x$DOT" = "x" -a "x$build_documentation" = "xyes"; then
-                    AC_MSG_WARN([==> Graphviz dot $dot_version too old. Graphviz >= $dot_version_required required for documentation build.])
-                    AC_MSG_ERROR([==> Install required graphviz version or disable the documentation using '--disable-documentation'.])
+                if test "x$DOT" = "x" -a "x$build_doxygen" = "xyes"; then
+                    AC_MSG_WARN([==> Graphviz dot $dot_version too old. Graphviz >= $dot_version_required required for doxygen build.])
+                    AC_MSG_ERROR([==> Install required graphviz version or disable the doxygen documentation using '--disable-doxygen'.])
                 fi
                 # we found dot and the version is valid
                 HAVE_DOT="YES"
@@ -237,10 +252,44 @@ if test "x$build_documentation" = "xyes"; then
         fi
     fi
 fi
-AM_CONDITIONAL(BUILD_DOCUMENTATION, [test "x$build_documentation" = "xyes"])
+AM_CONDITIONAL(BUILD_DOXYGEN, [test "x$build_doxygen" = "xyes"])
 
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 AM_COND_IF([HAVE_DOXYGEN], [AC_CONFIG_FILES([doc/Doxyfile])])
+
+# __manpages__
+
+AC_ARG_ENABLE([manpages],
+              [AS_HELP_STRING([--enable-manpages],
+                              [Enable building the manpages [default=yes]])],
+              [build_manpages="$enableval"],
+              [build_manpages="yes"])
+
+if test -z "$enable_manpages"; then
+    if test "x$enable_documentation" = "xno"; then
+        build_manpages="no"
+    fi
+fi
+
+if test "x$build_manpages" = "xyes"; then
+    AC_ARG_VAR([A2X], [a2x command])
+    AC_PATH_PROG([A2X], [a2x])
+    if test "x$A2X" = "x"; then
+        AC_MSG_WARN([==> You want to build the manpages, but a2x was not found!])
+        AC_MSG_ERROR([==> Install the package containg a2x (mostly asciidoc) or disable the build of the manpages using '--disable-manpages'.])
+        build_manpages="no"
+    else
+        AX_CHECK_A2X_TO_MANPAGE([], [
+            AC_MSG_RESULT([no])
+            AC_MSG_WARN([==> You want to build the manpages with a2x, but manpage formatting does not work!])
+            AC_MSG_ERROR([==> Install the packages containg the docbook DTD and XSL stylesheets (presumably docbook, docbook-xml) or disable the build of the manpages using '--disable-manpages'.])
+            build_manpages="no"
+        ])
+        MAN_DIR=man
+        AC_SUBST(MAN_DIR)
+    fi
+fi
+AM_CONDITIONAL(BUILD_MANPAGES, [test "x$build_manpages" = "xyes"])
 
 # configure options
 # __dtls__
@@ -264,19 +313,19 @@ AC_ARG_ENABLE([dtls],
 AC_ARG_WITH([gnutls],
             [AS_HELP_STRING([--with-gnutls],
                             [Use GnuTLS for DTLS functions])],
-            [with_gnutls="yes"],
+            [with_gnutls="$withval"],
             [with_gnutls="no"])
 
 AC_ARG_WITH([openssl],
             [AS_HELP_STRING([--with-openssl],
                             [Use OpenSSL for DTLS functions])],
-            [with_openssl="yes"],
+            [with_openssl="$withval"],
             [with_openssl="no"])
 
 AC_ARG_WITH([tinydtls],
            [AS_HELP_STRING([--with-tinydtls],
                            [Use TinyDTLS for DTLS functions])],
-           [with_tinydtls="yes"],
+           [with_tinydtls="$withval"],
            [with_tinydtls="no"])
 
 if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes"; then
@@ -317,7 +366,7 @@ if test "x$build_dtls" = "xyes"; then
         if test "x$have_gnutls" != "xyes"; then
             AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the GnuTLS library but pkg-config file 'gnutls.pc' could not be found!
                       Install the package(s) containing the development files for GnuTLS, 
-                      or use '--with_openssl' or disable the DTLS support using '--disable-dtls'.])
+                      or use '--with-openssl' or disable the DTLS support using '--disable-dtls'.])
         fi
         AC_MSG_NOTICE([The use of GnuTLS was explicit requested due configure option '--with-gnutls'!])
 
@@ -333,7 +382,7 @@ if test "x$build_dtls" = "xyes"; then
         if test "x$have_openssl" != "xyes"; then
             AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the OpenSSL library but pkg-config file 'openssl.pc' could not be found!
                       Install the package(s) containing the development files for OpenSSL,
-                      or use '--with_gnutls' or disable the DTLS support using '--disable-dtls'.])
+                      or use '--with-gnutls' or disable the DTLS support using '--disable-dtls'.])
         fi
         AC_MSG_NOTICE([The use of OpenSSL was explicit requested due configure option '--with-openssl'!])
 
@@ -368,7 +417,7 @@ if test "x$build_dtls" = "xyes"; then
     fi
 
     # ... and if not found check OpenSSL is suitable.
-    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xno" -a "x$with_gnutls_auto" = "x" -a "x$with_tinydtls" = "xno"; then
+    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xyes" -a "x$with_gnutls_auto" = "x" -a "x$with_tinydtls" = "xno"; then
         openssl_version=`pkg-config --modversion openssl`
         AX_CHECK_OPENSSL_VERSION
         AC_MSG_NOTICE([Using autoselected library OpenSSL for DTLS support!])
@@ -405,6 +454,26 @@ if test "x$build_dtls" = "xyes"; then
     AC_SUBST(DTLS_LIBS)
 fi
 
+# Define the Library name extension for the TLS the library was linked against
+if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=-openssl
+elif test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=-gnutls
+elif test "x$with_tinydtls" = "xyes"; then
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=-tinydtls
+else
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=
+fi
+
+if test "x$LIBCOAP_DTLS_LIB_EXTENSION_NAME" != "x"; then
+    LIBCOAP_NAME_SUFFIX="$LIBCOAP_API_VERSION$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
+else
+    LIBCOAP_NAME_SUFFIX="$LIBCOAP_API_VERSION"
+fi
+
+AC_SUBST(LIBCOAP_NAME_SUFFIX)
+AC_SUBST(LIBCOAP_DTLS_LIB_EXTENSION_NAME)
+
 # configure options
 # __tests__
 AC_ARG_ENABLE([tests],
@@ -433,15 +502,6 @@ AC_ARG_ENABLE([examples],
               [build_examples="$enableval"],
               [build_examples="yes"])
 
-if test "x$build_examples" = "xyes" -a "x$build_documentation" = "xyes"; then
-    AC_ARG_VAR([A2X], [a2x command])
-    AC_PATH_PROG([A2X], [a2x])
-    if test "x$A2X" = "x"; then
-        AC_MSG_WARN([==> You want to build the examples binaries, that is also including the respective manpages but a2x was not found!])
-        AC_MSG_ERROR([==> Install the package containg a2x (mostly asciidoc) or disable the build of the examples using '--disable-examples'.])
-    fi
-    build_examples="yes"
-fi
 AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$build_examples" = "xyes"])
 
 # end configure options
@@ -568,12 +628,22 @@ AC_CONFIG_FILES([
 Makefile
 doc/Makefile
 examples/Makefile
-examples/coap-client.txt
-examples/coap-server.txt
-examples/coap-rd.txt
 include/coap/coap.h
+man/coap.txt
+man/coap_attribute.txt
+man/coap_context.txt
+man/coap_handler.txt
+man/coap_observe.txt
+man/coap_pdu_setup.txt
+man/coap_recovery.txt
+man/coap_resource.txt
+man/coap_tls_library.txt
+man/coap-client.txt
+man/coap-server.txt
+man/coap-rd.txt
+man/Makefile
 tests/Makefile
-libcoap-$LIBCOAP_API_VERSION.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
+libcoap-$LIBCOAP_NAME_SUFFIX.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
 ])
 
 AC_OUTPUT
@@ -583,6 +653,7 @@ libcoap configuration summary:
       libcoap package version : "$PACKAGE_VERSION"
       libcoap library version : "$LIBCOAP_SO_VERSION"
       libcoap API version     : "$LIBCOAP_API_VERSION"
+      libcoap DTLS lib extn   : "$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
       host system             : "$host"]);
 if test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support      : "yes"])
@@ -605,8 +676,8 @@ fi
 if test "x$build_dtls" != "xyes"; then
     AC_MSG_RESULT([      build DTLS support      : "no"])
 fi
-if test "x$build_documentation" = "xyes" -a "x$DOXYGEN" != "x"; then
-    AC_MSG_RESULT([      build documentation     : "yes"])
+if test "x$build_doxygen" = "xyes"; then
+    AC_MSG_RESULT([      build doxygen pages     : "yes"])
     AC_MSG_RESULT([          --> Doxygen around  : "yes" ($DOXYGEN $doxygen_version)])
     if test "x$DOT" = "x"; then
         AC_MSG_RESULT([             -->  dot around  : "no" (DOT not found!)])
@@ -614,9 +685,14 @@ if test "x$build_documentation" = "xyes" -a "x$DOXYGEN" != "x"; then
         AC_MSG_RESULT([             -->  dot around  : "yes" ($DOT $dot_version)])
     fi
 else
-    if test "x$build_documentation" = "xno"; then
-        AC_MSG_RESULT([      build documentation     : "no"])
+    if test "x$build_doxygen" = "xno"; then
+        AC_MSG_RESULT([      build doxygen pages     : "no"])
     fi
+fi
+if test "x$build_manpages" = "xyes"; then
+    AC_MSG_RESULT([      build man pages         : "yes"])
+else
+    AC_MSG_RESULT([      build man pages         : "no"])
 fi
 if test "x$build_tests" = "xyes"; then
     AC_MSG_RESULT([      build unit test binary  : "yes"])
@@ -625,16 +701,6 @@ else
 fi
 if test "x$build_examples" = "xyes"; then
     AC_MSG_RESULT([      build examples          : "yes"])
-    if test "x$A2X" != "x"; then
-        AC_MSG_RESULT([             -->  use a2x     : "yes" ($A2X)])
-    else
-        AC_MSG_RESULT([             -->  use a2x     : "no"])
-    fi
 else
     AC_MSG_RESULT([      build examples          : "no"])
-fi
-if test "x$build_dtls" = "xyes"; then
-	AC_MSG_RESULT([      build with DTLS support : "yes"])
-else
-	AC_MSG_RESULT([      build with DTLS support : "no"])
 fi
