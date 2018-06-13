@@ -24,13 +24,6 @@
 #include "mem.h"
 #include "utlist.h"
 
-size_t
-coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
-
-  const coap_opt_t *opt_start = opt; /* store where parsing starts  */
-
-  assert(opt); assert(result);
-
 #define ADVANCE_OPT(o,e,step) if ((e) < step) {			\
     debug("cannot advance opt past end\n");			\
     return 0;							\
@@ -38,6 +31,22 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
     (e) -= step;						\
     (o) = ((o)) + step;			\
   }
+
+/*
+ * Used to prevent access to *opt when pointing to after end of buffer
+ * after doing a ADVANCE_OPT()
+ */
+#define ADVANCE_OPT_CHECK(o,e,step) \
+  ADVANCE_OPT(o,e,step);            \
+  if ((e) < 1)                      \
+    return 0;
+
+size_t
+coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
+
+  const coap_opt_t *opt_start = opt; /* store where parsing starts  */
+
+  assert(opt); assert(result);
 
   if (length < 1)
     return 0;
@@ -55,7 +64,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
     /* Handle two-byte value: First, the MSB + 269 is stored as delta value.
      * After that, the option pointer is advanced to the LSB which is handled
      * just like case delta == 13. */
-    ADVANCE_OPT(opt,length,1);
+    ADVANCE_OPT_CHECK(opt,length,1);
     result->delta = ((*opt & 0xff) << 8) + 269;
     if (result->delta < 269) {
       debug("delta too large\n");
@@ -63,7 +72,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
     }
     /* fall through */
   case 13:
-    ADVANCE_OPT(opt,length,1);
+    ADVANCE_OPT_CHECK(opt,length,1);
     result->delta += *opt & 0xff;
     break;
     
@@ -79,11 +88,11 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
     /* Handle two-byte value: First, the MSB + 269 is stored as delta value.
      * After that, the option pointer is advanced to the LSB which is handled
      * just like case delta == 13. */
-    ADVANCE_OPT(opt,length,1);
+    ADVANCE_OPT_CHECK(opt,length,1);
     result->length = ((*opt & 0xff) << 8) + 269;
     /* fall through */
   case 13:
-    ADVANCE_OPT(opt,length,1);
+    ADVANCE_OPT_CHECK(opt,length,1);
     result->length += *opt & 0xff;
     break;
     
@@ -91,6 +100,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
     ;
   }
 
+  /* ADVANCE_OPT() is correct here */
   ADVANCE_OPT(opt,length,1);
   /* opt now points to value, if present */
 
@@ -101,6 +111,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
   }
 
 #undef ADVANCE_OPT
+#undef ADVANCE_OPT_CHECK
 
   return (opt + result->length) - opt_start;
 }
