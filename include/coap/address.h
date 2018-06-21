@@ -30,7 +30,9 @@ typedef struct coap_address_t {
   ip_addr_t addr;
 } coap_address_t;
 
-#define _coap_address_equals_impl(A, B)   (!!ip_addr_cmp(&(A)->addr,&(B)->addr))
+#define _coap_address_equals_impl(A, B) \
+        ((A)->port == (B)->port        \
+        && (!!ip_addr_cmp(&(A)->addr,&(B)->addr)))
 
 #define _coap_address_isany_impl(A)  ip_addr_isany(&(A)->addr)
 

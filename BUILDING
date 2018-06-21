@@ -3,12 +3,15 @@ To build the libcoap libraries, you need to do the following
 Unpack the distribution package file
 Change into the top level directory of the unpackaged files
 
-Run the following commands
+Run the following commands (not for LwIP or Contiki - see below)
+
+General Building
+================
 
 ./autogen.sh
 ./configure
 make
-make install
+sudo make install
 
 ./autogen.sh will fail if there is a required package for buildling libcoap 
 that is missing. Install the missing package and try ./autogen.sh again.
@@ -47,3 +50,23 @@ function changes, run
 make update-map-file
 
 prior to running 'make'.
+
+LwIP
+====
+
+./autogen.sh
+./configure --disable-tests --disable-documentation --disable-examples --disable-dtls
+cd examples/lwip
+make 
+
+Executable is ./server. See examples/lwip/README for further information
+
+Contiki
+=======
+
+./autogen.sh
+./configure --disable-tests --disable-documentation --disable-examples --disable-dtls
+cd examples/contiki
+make 
+
+Executable is ./server.minimal-net. See examples/contiki/README for further information

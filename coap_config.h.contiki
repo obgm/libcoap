@@ -1,5 +1,5 @@
-#ifndef _CONFIG_H_
-#define _CONFIG_H_
+#ifndef _COAP_CONFIG_H_
+#define _COAP_CONFIG_H_
 
 #include "contiki.h"
 #include "contiki-lib.h"
@@ -10,17 +10,25 @@
 #define PACKAGE_STRING "libcoap"
 #define PACKAGE_NAME "libcoap"
 
+#ifndef COAP_DEFAULT_PDU_SIZE
 #define COAP_DEFAULT_PDU_SIZE 64
+#endif /* COAP_DEFAULT_PDU_SIZE */
+#ifndef COAP_RXBUFFER_SIZE
 #define COAP_RXBUFFER_SIZE 64
+#endif /* COAP_RXBUFFER_SIZE */
 
 /** Number of resources that can be handled by a CoAP server in addition to
  * @c /.well-known/core */
+#ifndef COAP_MAX_RESOURCES
 #define COAP_MAX_RESOURCES 3
+#endif /* COAP_MAX_RESOURCES */
 
 /** Number of attributes that can be handled (should be at least 
  * @c 2 * COAP_MAX_RESOURCES. to carry the content type and the 
  * resource type. */
+#ifndef COAP_MAX_ATTRIBUTES
 #define COAP_MAX_ATTRIBUTES 4
+#endif /* COAP_MAX_ATTRIBUTES */
 
 /** 
  * Number of PDUs that can be stored simultaneously. This number
@@ -28,32 +36,42 @@
  * PDUs received. Beware that choosing a too small value can lead to
  * many retransmissions to be dealt with.
  */
+#ifndef COAP_PDU_MAXCNT
 #define COAP_PDU_MAXCNT 4
+#endif /* COAP_PDU_MAXCNT */
 
 /**
  * Maximum number of sessions.
  */
+#ifndef COAP_MAX_SESSIONS
 #define COAP_MAX_SESSIONS 2
+#endif /* COAP_MAX_SESSIONS */
 
 /**
  * Maximum number of subscriptions. Every additional subscriber costs
  * 36 B.
  */
+#ifndef COAP_MAX_SUBSCRIBERS
 #define COAP_MAX_SUBSCRIBERS 3
+#endif /* COAP_MAX_SUBSCRIBERS */
 
 /**
  * Number of notifications that may be sent non-confirmable before a
  * confirmable message is sent to detect if observers are alive. The
  * maximum allowed value here is @c 15.
  */
+#ifndef COAP_OBS_MAX_NON
 #define COAP_OBS_MAX_NON   5
+#endif /* COAP_OBS_MAX_NON */
 
 /**
  * Number of confirmable notifications that may fail (i.e. time out
  * without being ACKed) before an observer is removed. The maximum
  * value for COAP_OBS_MAX_FAIL is @c 3.
  */
+#ifndef COAP_OBS_MAX_FAIL
 #define COAP_OBS_MAX_FAIL  3
+#endif /* COAP_OBS_MAX_FAIL */
 
 #ifndef DEBUG
 # define DEBUG DEBUG_PRINT
@@ -142,5 +160,5 @@ typedef void FILE;
 #include <stdio.h>
 #define coap_log(fd, ...) printf(__VA_ARGS__)
 
-#endif /* _CONFIG_H_ */
+#endif /* _COAP_CONFIG_H_ */
 

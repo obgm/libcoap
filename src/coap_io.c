@@ -54,7 +54,7 @@
 #include "utlist.h"
 #include "resource.h"
 
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#if !defined(WITH_CONTIKI)
  /* define generic PKTINFO for IPv4 */
 #if defined(IP_PKTINFO)
 #  define GEN_IP_PKTINFO IP_PKTINFO
@@ -107,9 +107,9 @@ coap_socket_bind_udp(coap_socket_t *sock,
     return 0;
   }
 
-  coap_address_init(&bound_addr);
+  coap_address_init(bound_addr);
   uip_ipaddr_copy(&bound_addr->addr, &listen_addr->addr);
-  bound_addr->addr.port = listen_addr->addr.port;
+  bound_addr->port = listen_addr->port;
   udp_bind((struct uip_udp_conn *)sock->conn, bound_addr->port);
   return 1;
 }
@@ -653,7 +653,7 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
 
 #endif  /* WITH_CONTIKI */
 
-#if (!defined(WITH_CONTIKI) && !defined(WITH_LWIP)) != ( defined(HAVE_NETINET_IN_H) || defined(HAVE_WS2TCPIP_H) )
+#if (!defined(WITH_CONTIKI)) != ( defined(HAVE_NETINET_IN_H) || defined(HAVE_WS2TCPIP_H) )
 /* define struct in6_pktinfo and struct in_pktinfo if not available
    FIXME: check with configure
 */
@@ -669,7 +669,7 @@ struct in_pktinfo {
 };
 #endif
 
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP) && !defined(SOL_IP)
+#if !defined(WITH_CONTIKI) && !defined(SOL_IP)
 /* Solaris expects level IPPROTO_IP for ancillary data. */
 #define SOL_IP IPPROTO_IP
 #endif
@@ -708,11 +708,13 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 
   if (!coap_debug_send_packet()) {
     bytes_written = (ssize_t)datalen;
+#ifndef WITH_CONTIKI
   } else if (sock->flags & COAP_SOCKET_CONNECTED) {
 #ifdef _WIN32
     bytes_written = send(sock->fd, (const char *)data, (int)datalen, 0);
 #else
     bytes_written = send(sock->fd, data, datalen, 0);
+#endif
 #endif
   } else {
 #ifndef WITH_CONTIKI
@@ -831,18 +833,6 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 
 #define SIN6(A) ((struct sockaddr_in6 *)(A))
 
-#ifdef WITH_CONTIKI
-COAP_STATIC_INLINE coap_packet_t *
-coap_malloc_packet(void) {
-  return (coap_packet_t *)coap_malloc_type(COAP_PACKET, 0);
-}
-
-void
-coap_free_packet(coap_packet_t *packet) {
-  coap_free_type(COAP_PACKET, packet);
-}
-#endif /* WITH_CONTIKI */
-
 void
 coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length) {
   *address = packet->payload;
@@ -868,6 +858,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
     sock->flags &= ~COAP_SOCKET_CAN_READ;
   }
 
+#ifndef WITH_CONTIKI
   if (sock->flags & COAP_SOCKET_CONNECTED) {
 #ifdef _WIN32
     len = recv(sock->fd, (char *)packet->payload, COAP_RXBUFFER_SIZE, 0);
@@ -890,11 +881,12 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       packet->length = (size_t)len;
     }
   } else {
+#endif /* WITH_CONTIKI */
 #if defined(_WIN32)
     DWORD dwNumberOfBytesRecvd = 0;
     int r;
 #endif
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#if !defined(WITH_CONTIKI)
     /* a buffer large enough to hold all packet info types, ipv6 is the largest */
     char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
     struct msghdr mhdr;
@@ -991,21 +983,21 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 #endif /* IP_PKTINFO */
       }
     }
-#endif /* !defined(WITH_CONTIKI) && !defined(WITH_LWIP) */
+#endif /* !defined(WITH_CONTIKI) */
 #ifdef WITH_CONTIKI
     /* FIXME: untested, make this work */
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
 
     if (uip_newdata()) {
-      uip_ipaddr_copy(&(*packet)->src.addr, &UIP_IP_BUF->srcipaddr);
-      (*packet)->src.port = UIP_UDP_BUF->srcport;
-      uip_ipaddr_copy(&(*packet)->dst.addr, &UIP_IP_BUF->destipaddr);
-      (*packet)->dst.port = UIP_UDP_BUF->destport;
+      uip_ipaddr_copy(&packet->src.addr, &UIP_IP_BUF->srcipaddr);
+      packet->src.port = UIP_UDP_BUF->srcport;
+      uip_ipaddr_copy(&(packet)->dst.addr, &UIP_IP_BUF->destipaddr);
+      packet->dst.port = UIP_UDP_BUF->destport;
 
       len = uip_datalen();
 
-      if (len > coap_get_max_packetlength(*packet)) {
+      if (len > COAP_RXBUFFER_SIZE) {
 	/* FIXME: we might want to send back a response */
 	warn("discarded oversized packet\n");
 	return -1;
@@ -1019,33 +1011,32 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 #endif
 	unsigned char addr_str[INET6_ADDRSTRLEN + 8];
 
-	if (coap_print_addr(&(*packet)->src, addr_str, INET6_ADDRSTRLEN + 8)) {
+	if (coap_print_addr(&packet->src, addr_str, INET6_ADDRSTRLEN + 8)) {
 	  debug("received %zd bytes from %s\n", len, addr_str);
 	}
       }
 #endif /* NDEBUG */
 
-      (*packet)->length = len;
-      memcpy(&(*packet)->payload, uip_appdata, len);
+      packet->length = len;
+      memcpy(&packet->payload, uip_appdata, len);
     }
 
 #undef UIP_IP_BUF
 #undef UIP_UDP_BUF
 #endif /* WITH_CONTIKI */
-#ifdef WITH_LWIP
-#error "coap_network_read() not implemented on this platform"
-#endif
+#ifndef WITH_CONTIKI
   }
+#endif /* WITH_CONTIKI */
 
   if (len >= 0)
     return len;
-#if !defined(WITH_LWIP)
+#if !defined(WITH_CONTIKI)
 error:
-  return -1;
 #endif
+  return -1;
 }
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_CONTIKI)
 
 unsigned int
 coap_write(coap_context_t *ctx,
@@ -1265,44 +1256,21 @@ const char *coap_socket_strerror(void) {
   return coap_socket_format_errno(WSAGetLastError());
 }
 #else
+#ifndef WITH_CONTIKI
 static const char *coap_socket_format_errno(int error) {
   return strerror(error);
 }
+#endif /* WITH_CONTIKI */
 
 const char *coap_socket_strerror(void) {
   return strerror(errno);
 }
 #endif
 
-#if defined(WITH_LWIP)
-
-ssize_t
-coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
-  coap_pdu_t *pdu) {
-  /* FIXME: we can't check this here with the existing infrastructure, but we
-  * should actually check that the pdu is not held by anyone but us. the
-  * respective pbuf is already exclusively owned by the pdu. */
-
-  pbuf_realloc(pdu->pbuf, pdu->length);
-  udp_sendto(sock->pcb, pdu->pbuf, &session->remote_addr.addr,
-    session->remote_addr.port);
-  return pdu->length;
-}
-
-ssize_t
-coap_socket_send(coap_socket_t *sock, coap_session_t *session,
-  /* Not implemented, use coap_socket_send_pdu instead */
-  return -1;
-}
-
-#else /* defined(WITH_LWIP) */
-
 ssize_t
 coap_socket_send(coap_socket_t *sock, coap_session_t *session,
   const uint8_t *data, size_t data_len) {
   return session->context->network_send(sock, session, data, data_len);
 }
-
-#endif /* defined(WITH_LWIP) */
 
 #undef SIN6

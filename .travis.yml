@@ -12,8 +12,8 @@ env:
   - PLATFORM=posix TESTS=yes TLS=no
   - PLATFORM=posix TESTS=yes TLS=openssl
   - PLATFORM=posix TESTS=yes TLS=tinydtls
-#  - PLATFORM=contiki TLS=no
-#  - PLATFORM=lwip TLS=no
+  - PLATFORM=contiki TLS=no
+  - PLATFORM=lwip TLS=no
 
 matrix:
   exclude:
@@ -21,6 +21,10 @@ matrix:
       env: PLATFORM=posix TESTS=yes TLS=no
     - compiler: clang
       env: PLATFORM=posix TESTS=yes TLS=tinydtls
+    - compiler: clang
+      env: PLATFORM=contiki TLS=no
+    - compiler: clang
+      env: PLATFORM=lwip TLS=no
 
 before_install:
   - docker build -t obgm/libcoap:travis-env .

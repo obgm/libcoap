@@ -38,7 +38,6 @@
 
 #include <string.h>
 
-#include "debug.h"
 #include "coap.h"
 
 static coap_context_t *coap_context;
@@ -93,11 +92,10 @@ init_coap_server(coap_context_t **ctx) {
 
 void 
 hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
-	     const coap_endpoint_t *local_interface,
-	     coap_address_t *peer, coap_pdu_t *request, coap_binary_t *token, 
+	     coap_session_t *session,
+	     coap_pdu_t *request, coap_binary_t *token, 
+             coap_string_t *query,
 	     coap_pdu_t *response) {
-  coap_opt_iterator_t opt_iter;
-  coap_opt_t *option;
   unsigned char buf[40];
   size_t len;
   coap_tick_t now;
@@ -107,10 +105,10 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
    * when query ?ticks is given. */
 
   /* if my_clock_base was deleted, we pretend to have no such resource */
-  response->hdr->code = 
+  response->code = 
     my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
 
-  if (coap_find_observer(resource, peer, token)) {
+  if (coap_find_observer(resource, session, token)) {
     coap_add_option(response, COAP_OPTION_OBSERVE, 
 		    coap_encode_var_safe(buf, sizeof(buf),
                                          resource->observe),
@@ -132,10 +130,9 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
     coap_ticks(&t);
     now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
     
-    if (request != NULL
-	&& (option = coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter))
-	&& memcmp(COAP_OPT_VALUE(option), "ticks",
-		  min(5, COAP_OPT_LENGTH(option))) == 0) {
+
+    if (query != NULL
+        && coap_string_equal(query, coap_make_str_const("ticks"))) {
       /* output ticks */
       len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
       coap_add_data(response, len, buf);
@@ -161,7 +158,7 @@ init_coap_resources(coap_context_t *ctx) {
   if (!r)
     goto error;
 
-  r->observable = 1;
+  coap_resource_set_get_observable(r, 1);
   time_resource = r;
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
 #if 0
@@ -218,10 +215,15 @@ PROCESS_THREAD(coap_server_process, ev, data)
   while(1) {
     PROCESS_YIELD();
     if(ev == tcpip_event) {
-      coap_read(coap_context);	/* read received data */
-      /* coap_dispatch(coap_context); /\* and dispatch PDUs from receivequeue *\/ */
+      coap_tick_t now;
+
+      coap_ticks(&now);
+      /* There is something to read on the endpoint */
+      coap_context->endpoint->sock.flags |= COAP_SOCKET_CAN_READ;
+      /* read in, and send off any responses */
+      coap_read(coap_context, now);  /* read received data */
     } else if (ev == PROCESS_EVENT_TIMER && etimer_expired(&dirty_timer)) {
-      coap_resource_set_dirty(time_resource, NULL);
+      coap_resource_notify_observers(time_resource, NULL);
       etimer_reset(&dirty_timer);
     }
   }
