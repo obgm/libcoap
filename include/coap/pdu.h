@@ -90,6 +90,7 @@ struct coap_session_t;
 #define COAP_OPTION_URI_QUERY      15 /* C, String, 1-255 B, (none) */
 #define COAP_OPTION_ACCEPT         17 /* C, uint,   0-2 B, (none) */
 #define COAP_OPTION_LOCATION_QUERY 20 /* E, String,   0-255 B, (none) */
+#define COAP_OPTION_SIZE2          28 /* E, uint, 0-4 B, (none) */
 #define COAP_OPTION_PROXY_URI      35 /* C, String, 1-1034 B, (none) */
 #define COAP_OPTION_PROXY_SCHEME   39 /* C, String, 1-255 B, (none) */
 #define COAP_OPTION_SIZE1          60 /* E, uint, 0-4 B, (none) */
