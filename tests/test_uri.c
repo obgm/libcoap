@@ -556,6 +556,25 @@ t_parse_uri23(void) {
   coap_delete_string (uri_path);
 }
 
+/*
+ * To test Issue #212 which reads off the end of the input buffer when looking 
+ * for . or .. in the path.
+ * Credit to OSS-Fuzz for finding this, work done by Bhargava Shastry
+ */
+static void
+t_parse_uri24(void) {
+  /* coap://\206cap:// */
+  uint8_t teststr[] = { 0x63, 0x6f, 0x61, 0x70, 0x3a, 0x2f, 0x2f, 0x86, 0x63, 0x6f, 0x61, 0x70, 0x3a, 0x2f, 0x2f };
+  int result;
+  unsigned char buf[40];
+  size_t buflen = sizeof(buf);
+
+  result = coap_split_path(teststr, sizeof(teststr), buf, &buflen);
+  CU_ASSERT(result == 5);
+  CU_ASSERT(buflen == 16);
+}
+
+
 CU_pSuite
 t_init_uri_tests(void) {
   CU_pSuite suite;
@@ -597,6 +616,7 @@ t_init_uri_tests(void) {
   URI_TEST(suite, t_parse_uri21);
   URI_TEST(suite, t_parse_uri22);
   URI_TEST(suite, t_parse_uri23);
+  URI_TEST(suite, t_parse_uri24);
 
   return suite;
 }

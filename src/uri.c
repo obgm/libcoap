@@ -333,7 +333,7 @@ typedef void (*segment_handler_t)(const uint8_t *, size_t, void *);
  */
 COAP_STATIC_INLINE int
 dots(const uint8_t *s, size_t len) {
-  return *s == '.' && (len == 1 || (*(s+1) == '.' && len == 2));
+  return len && *s == '.' && (len == 1 || (len == 2 && *(s+1) == '.'));
 }
 
 /** 

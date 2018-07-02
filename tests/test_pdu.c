@@ -276,6 +276,37 @@ t_parse_pdu15(void) {
   CU_ASSERT(result == 0);
 }
 
+static void log_handler(coap_log_t level, const char *message)
+{
+  (void)level;
+  (void)message;
+}
+
+/*
+ * To test Issue #214 which allows the token size to be set larger than the 
+ * decoded PDU in coap_pdu_parse_header().  This then causes coap_show_pdu()
+ * to access invalid memory.
+ * Credit to OSS-Fuzz for finding this, work done by Bhargava Shastry
+ */
+static void
+t_parse_pdu16(void) {
+  int result;
+  coap_pdu_t *testpdu;
+  uint8_t teststr[] = { 0x5a, 0x0a, 0x5b, 0x5b };
+
+  testpdu = coap_pdu_init(0, 0, 0, sizeof(teststr));
+  CU_ASSERT(testpdu != NULL);
+
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), testpdu);
+  CU_ASSERT(result == 0);
+
+  coap_set_log_handler(log_handler);
+  coap_show_pdu(testpdu);	/* display PDU */
+  coap_set_log_handler(NULL);
+
+  coap_delete_pdu(testpdu);
+}
+
 /************************************************************************
  ** PDU encoder
  ************************************************************************/
@@ -804,6 +835,7 @@ t_init_pdu_tests(void) {
   PDU_TEST(suite[0], t_parse_pdu13);
   PDU_TEST(suite[0], t_parse_pdu14);
   PDU_TEST(suite[0], t_parse_pdu15);
+  PDU_TEST(suite[0], t_parse_pdu16);
 
   suite[1] = CU_add_suite("pdu encoder", t_pdu_tests_create, t_pdu_tests_remove);
   if (suite[1]) {
