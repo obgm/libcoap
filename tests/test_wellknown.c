@@ -241,7 +241,7 @@ t_wellknown6(void) {
 
     CU_ASSERT_PTR_NOT_NULL(response);
 
-    /* coap_show_pdu(response); */
+    /* coap_show_pdu(LOG_INFO, response); */
 
     CU_ASSERT(coap_get_block(response, COAP_OPTION_BLOCK2, &block) != 0);
 

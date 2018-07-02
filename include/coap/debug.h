@@ -74,7 +74,22 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
 #define debug(...) coap_log(LOG_DEBUG, __VA_ARGS__)
 
 #include "pdu.h"
-void coap_show_pdu(const coap_pdu_t *);
+
+/**
+ * Defines the output mode for the coap_show_pdu() function.
+ *
+ * @param use_printf  1 if the output is to use fprintf() (the default)
+ *                    0 if the output is to use coap_log()
+ */
+void coap_set_show_pdu_output(int use_fprintf);
+
+/**
+ * Display the contents of the specified @p pdu.
+ *
+ * @param level The required minimum logging level
+ * @param pdu The PDU to decode
+ */
+void coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu);
 
 struct coap_address_t;
 size_t coap_print_addr(const struct coap_address_t *, unsigned char *, size_t);

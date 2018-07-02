@@ -52,6 +52,15 @@ struct coap_session_t;
 #endif
 #endif /* COAP_DEFAULT_MAX_PDU_RX_SIZE */
 
+#ifndef COAP_DEBUG_BUF_SIZE
+#if defined(WITH_CONTIKI) || defined(WITH_LWIP)
+#define COAP_DEBUG_BUF_SIZE 128
+#else /* defined(WITH_CONTIKI) || defined(WITH_LWIP) */
+/* 1024 derived from RFC7252 4.6.  Message Size max payload */
+#define COAP_DEBUG_BUF_SIZE (8 + 1024 * 2)
+#endif /* defined(WITH_CONTIKI) || defined(WITH_LWIP) */
+#endif /* COAP_DEBUG_BUF_SIZE */
+
 #define COAP_DEFAULT_VERSION      1 /* version of CoAP supported */
 #define COAP_DEFAULT_SCHEME  "coap" /* the default scheme for CoAP URIs */
 

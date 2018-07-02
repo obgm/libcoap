@@ -211,8 +211,7 @@ clear_obs(coap_context_t *ctx, coap_session_t *session) {
     }
   }
 
-  if (LOG_INFO <= coap_get_log_level())
-    coap_show_pdu(pdu);
+  coap_show_pdu(LOG_INFO, pdu);
 
   tid = coap_send(session, pdu);
 
@@ -297,11 +296,9 @@ message_handler(struct coap_context_t *ctx,
   coap_tid_t tid;
 
 #ifndef NDEBUG
-  if (LOG_INFO <= coap_get_log_level()) {
-    coap_log(LOG_DEBUG, "** process incoming %d.%02d response:\n",
-          (received->code >> 5), received->code & 0x1F);
-    coap_show_pdu(received);
-  }
+  coap_log(LOG_DEBUG, "** process incoming %d.%02d response:\n",
+           (received->code >> 5), received->code & 0x1F);
+  coap_show_pdu(LOG_INFO, received);
 #endif
 
   /* check if this is a response to our original request */
@@ -456,7 +453,7 @@ message_handler(struct coap_context_t *ctx,
                          payload.s,
                          block.num,
                          block.szx);
-          coap_show_pdu(pdu);
+          coap_show_pdu(LOG_WARNING, pdu);
 
 	  tid = coap_send(session, pdu);
 
@@ -1278,10 +1275,8 @@ main(int argc, char **argv) {
   }
 
 #ifndef NDEBUG
-  if (LOG_INFO <= coap_get_log_level()) {
-    coap_log(LOG_DEBUG, "sending CoAP request:\n");
-    coap_show_pdu(pdu);
-  }
+  coap_log(LOG_DEBUG, "sending CoAP request:\n");
+  coap_show_pdu(LOG_INFO, pdu);
 #endif
 
   coap_send(session, pdu);

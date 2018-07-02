@@ -300,8 +300,9 @@ t_parse_pdu16(void) {
   result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), testpdu);
   CU_ASSERT(result == 0);
 
+  coap_set_show_pdu_output(0);
   coap_set_log_handler(log_handler);
-  coap_show_pdu(testpdu);	/* display PDU */
+  coap_show_pdu(LOG_ERR, testpdu);	/* display PDU */
   coap_set_log_handler(NULL);
 
   coap_delete_pdu(testpdu);

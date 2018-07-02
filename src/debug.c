@@ -52,12 +52,19 @@
 
 static coap_log_t maxlog = LOG_WARNING;	/* default maximum log level */
 
+static int use_fprintf_for_show_pdu = 1; /* non zero to output with fprintf */
+
 const char *coap_package_name(void) {
   return PACKAGE_NAME;
 }
 
 const char *coap_package_version(void) {
   return PACKAGE_STRING;
+}
+
+void
+coap_set_show_pdu_output(int use_fprintf) {
+  use_fprintf_for_show_pdu = use_fprintf;
 }
 
 coap_log_t 
@@ -316,6 +323,7 @@ msg_option_string(uint8_t code, uint16_t option_type) {
     { COAP_OPTION_PROXY_URI, "Proxy-Uri" },
     { COAP_OPTION_PROXY_SCHEME, "Proxy-Scheme" },
     { COAP_OPTION_SIZE1, "Size1" },
+    { COAP_OPTION_SIZE2, "Size2" },
     { COAP_OPTION_NORESPONSE, "No-Response" }
   };
 
@@ -431,8 +439,18 @@ is_binary(int content_format) {
 	   content_format == COAP_MEDIATYPE_APPLICATION_JSON);
 }
 
+#define COAP_DO_SHOW_OUTPUT_LINE           \
+ do {                                      \
+   if (use_fprintf_for_show_pdu) {         \
+     fprintf(COAP_DEBUG_FD, "%s", outbuf); \
+   }                                       \
+   else {                                  \
+     coap_log(level, "%s", outbuf);        \
+   }                                       \
+ } while (0)
+
 void
-coap_show_pdu(const coap_pdu_t *pdu) {
+coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   unsigned char buf[1024]; /* need some space for output creation */
   size_t buf_len = 0; /* takes the number of bytes written to buf */
   int encode = 0, have_options = 0, i;
@@ -441,25 +459,36 @@ coap_show_pdu(const coap_pdu_t *pdu) {
   int content_format = -1;
   size_t data_len;
   unsigned char *data;
+  char outbuf[COAP_DEBUG_BUF_SIZE];
+  int outbuflen = 0;
+ 
+  /* Save time if not needed */
+  if (level > coap_get_log_level())
+    return;
 
-  fprintf(COAP_DEBUG_FD, "v:%d t:%s c:%s i:%04x {",
+  snprintf(outbuf, sizeof(outbuf), "v:%d t:%s c:%s i:%04x {",
 	  COAP_DEFAULT_VERSION, msg_type_string(pdu->type),
 	  msg_code_string(pdu->code), pdu->tid);
 
   for (i = 0; i < pdu->token_length; i++) {
-    fprintf(COAP_DEBUG_FD, "%02x", pdu->token[i]);
+    outbuflen = strlen(outbuf);
+    snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
+              "%02x", pdu->token[i]);
   }
-  fprintf(COAP_DEBUG_FD, "}");
+  outbuflen = strlen(outbuf);
+  snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "}");
 
   /* show options, if any */
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
-  fprintf(COAP_DEBUG_FD, " [");
+  outbuflen = strlen(outbuf);
+  snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " [");
   while ((option = coap_option_next(&opt_iter))) {
     if (!have_options) {
       have_options = 1;
     } else {
-      fprintf(COAP_DEBUG_FD, ",");
+      outbuflen = strlen(outbuf);
+      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ",");
     }
 
     if (pdu->code == COAP_SIGNALING_CSM) switch(opt_iter.type) {
@@ -520,6 +549,7 @@ coap_show_pdu(const coap_pdu_t *pdu) {
     case COAP_OPTION_MAXAGE:
     case COAP_OPTION_OBSERVE:
     case COAP_OPTION_SIZE1:
+    case COAP_OPTION_SIZE2:
       /* show values as unsigned decimal value */
       buf_len = snprintf((char *)buf, sizeof(buf), "%u",
 			 coap_decode_var_bytes(coap_opt_value(option),
@@ -544,32 +574,70 @@ coap_show_pdu(const coap_pdu_t *pdu) {
 			       buf, sizeof(buf), encode);
     }
 
-    fprintf(COAP_DEBUG_FD, " %s:%.*s",
-      msg_option_string(pdu->code, opt_iter.type),
-      (int)buf_len, buf);
+    outbuflen = strlen(outbuf);
+    snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
+              " %s:%.*s", msg_option_string(pdu->code, opt_iter.type),
+	      (int)buf_len, buf);
   }
 
-  fprintf(COAP_DEBUG_FD, " ]");
+  outbuflen = strlen(outbuf);
+  snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " ]");
   
   if (coap_get_data(pdu, &data_len, &data)) {
 
-    fprintf(COAP_DEBUG_FD, " :: ");
+    outbuflen = strlen(outbuf);
+    snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " :: ");
 
     if (is_binary(content_format)) {
-      fprintf(COAP_DEBUG_FD, "<<");
+      int keep_data_len = data_len;
+      uint8_t *keep_data = data;
+
+      outbuflen = strlen(outbuf);
+      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
+               "binary data length %ld\n", data_len);
+      COAP_DO_SHOW_OUTPUT_LINE; 
+      /*
+       * Output hex dump of binary data as a continuous entry
+       */
+      outbuf[0] = '\000';
+      snprintf(outbuf, sizeof(outbuf),  "<<");
       while (data_len--) {
-	fprintf(COAP_DEBUG_FD, "%02x", *data++);
+	outbuflen = strlen(outbuf);
+        snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
+                 "%02x", *data++);
       }
-      fprintf(COAP_DEBUG_FD, ">>");
+      outbuflen = strlen(outbuf);
+      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ">>");
+      data_len = keep_data_len;
+      data = keep_data;
+      outbuflen = strlen(outbuf);
+      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "\n");
+      COAP_DO_SHOW_OUTPUT_LINE; 
+      /*
+       * Output ascii readable (if possible), immediately under the
+       * hex value of the character output above to help binary debugging
+       */
+      outbuf[0] = '\000';
+      snprintf(outbuf, sizeof(outbuf),  "<<");
+      while (data_len--) {
+	outbuflen = strlen(outbuf);
+        snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
+                 "%c ", isprint (*data) ? *data : '.');
+        data++;
+      }
+      outbuflen = strlen(outbuf);
+      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ">>");
     } else {
       if (print_readable(data, data_len, buf, sizeof(buf), 0)) {
-	fprintf(COAP_DEBUG_FD, "'%s'", buf);
+	outbuflen = strlen(outbuf);
+        snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "'%s'", buf);
       }
     }
   }
 
-  fprintf(COAP_DEBUG_FD, "\n");
-  fflush(COAP_DEBUG_FD);
+  outbuflen = strlen(outbuf);
+  snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "\n");
+  COAP_DO_SHOW_OUTPUT_LINE; 
 }
 
 static coap_log_handler_t log_handler = NULL;
@@ -585,7 +653,11 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     return;
 
   if (log_handler) {
+#if defined(WITH_CONTIKI) || defined(WITH_LWIP)
     char message[128];
+#else
+    char message[8 + 1024 * 2]; /* O/H + Max packet payload size * 2 */
+#endif
     va_list ap;
     va_start(ap, format);
     vsnprintf( message, sizeof(message), format, ap);
