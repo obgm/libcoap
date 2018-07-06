@@ -14,20 +14,26 @@ coap-client - CoAP Client based on libcoap
 
 SYNOPSIS
 --------
-*coap-client* [*-A* type1, _type2_ ,...] [*-t* type] [*-b* [num,]size]
-              [*-B* seconds] [*-e* text] [*-f* file] [*-m* method] [*-N*]
-              [*-o* file] [*-P* addr[:port]] [*-p* port] [*-s* duration]
-              [*-O* num,text] [*-T* token] [*-v* num] [*-a* addr] [*-U*] URI
+*coap-client* [*-a* addr] [*-b* [num,]size] [*-c* certfile] [*-e* text]
+              [*-f* file] [*-k* key] [*-l* loss] [*-m* method] [*-o* file]
+              [*-p* port] [*-r*] [*-s* duration] [*-t* type]  [*-u* user]
+              [*-v* num] [*-A* type] [*-B* seconds] [*-N*]
+              [*-O* num,text] [*-P* addr[:port]] [*-T* token] [*-U*] URI
 
 DESCRIPTION
 -----------
 *coap-client* is a CoAP client to communicate with 6LoWPAN devices via
 the protocol CoAP (RFC 7252) using the URI given as argument on the
 command line. The URI must have the scheme 'coap', 'coap+tcp', 'coaps' or
-'coaps+tcp' when coap-client was built with support for secure communication.
+'coaps+tcp'. 'coaps' and 'coaps+tcp' are only supported when coap-client is
+built with support for secure (D)TLS communication.
+
+If 'coaps' or 'coap+tcp' is being used, provided the CoAP server supports PKI
+and is configured with a Certificate and Private Key, the coap-client does not
+need to have a Pre-Shared Key (-k) or Certificate (-c) configured.
+
 The URI's host part may be a DNS name or a literal IP address. Note that, for
 IPv6 address references, angle brackets are required (c.f. EXAMPLES).
-
 
 OPTIONS
 -------
@@ -43,11 +49,27 @@ OPTIONS
    retrieve the subsequent block from the server until there are no more
    outstanding blocks for the requested content.
 
+*-c* certfile::
+   Use the specified PEM file which contains the CERTIFICATE and PRIVATE
+   KEY information. This argument requires (D)TLS with PKI to be available.
+
 *-e* text::
    Include text as payload (use percent-encoding for non-ASCII characters).
 
 *-f* file::
    File to send with PUT/POST (use '-' for STDIN).
+
+*-k* key::
+   Pre-shared key for the specified user (-u option also required).
+   This argument requires (D)TLS with PSK to be available.
+
+*-l* list::
+   Fail to send some datagrams specified by a comma separated list of
+   numbers or number ranges (debugging only).
+
+*-l* loss%::
+   Randomly failed to send datagams with the specified probability - 100%
+   all datagrams, 0% no datagrams (debugging only).
 
 *-m* method::
    The request method for action (get|put|post|delete), default is 'get'.
@@ -59,9 +81,12 @@ OPTIONS
 *-p* port::
    The port to listen on.
 
+*-r*::
+   Use reliable protocol (TCP or TLS).
+
 *-s* duration::
-   Subscribe to the resource specified by URI for the given 'duration' in
-   seconds.
+   Subscribe to / observe the resource specified by URI for the given
+   'duration' in seconds.
 
 *-t* type::
    Content format for given resource for PUT/POST. 'type' must be either
@@ -78,14 +103,16 @@ OPTIONS
      application/json (json)
      application/cbor (cbor)
 
+*-u* user::
+   User identity for pre-shared key mode (-k option also required).
+   This argument requires (D)TLS with PSK to be available.
+
 *-v* num::
    The verbosity level to use (default: 3, maximum is 9).
 
 *-A* type::
-   Accepted media types as comma-separated list of symbolic or numeric
-   values, there are multiple arguments as comma separated list
-   possible. 'type' must be either a numeric value reflecting a valid
-   CoAP content format or a string that specifies a registered format as
+   Accepted media type. 'type' must be either a numeric value reflecting a
+   valid CoAP content format or a string that specifies a registered format as
    described for option *-t*.
 
 *-B* seconds::
@@ -114,19 +141,21 @@ EXAMPLES
 ----
 coap-client coap://coap.me
 ----
-Query resource '/' from server 'coap.me' (via the GET method).
+Query the resource '/' from server 'coap.me' (using the GET method).
 
 * Example
 ----
 coap-client -m get coap://[::1]/
 ----
-Query on localhost via the 'GET' method.
+Query the resource '/' on localhost using the 'GET' method to get back the
+summary defined attributes.
 
 * Example
 ----
 coap-client -m get coap://[::1]/.well-known/core
 ----
-Quite the same, except on the resource '.well-known/core' on localhost.
+Query on the resource '.well-known/core' on localhost to get back a list of
+the known resources along with their attribute definitions.
 
 * Example
 ----
@@ -135,14 +164,14 @@ coap://[2001:db8:c001:f00d:221:2eff:ff00:2704]:5683/actuators/leds?color=r -f-
 ----
 Send text 'mode=on' to resource 'actuators/leds?color=r' on the endpoint with
 address '2001:db8:c001:f00d:221:2eff:ff00:2704' and port '5683'. Note that the
-port '5683' is the default port and isn't really needed to append.
+port '5683' is the default port and isn't actually required in this instance.
 
 * Example
 ----
 coap-client -m put coap://[fec0::3]/ck -T 3a -t binary -f to_upload
 ----
 Put the contents of file 'to_upload' with content type 'binary' (i.e.
-application/octet-stream) into resource 'ck' on 'fec0::3' by usage of a token
+application/octet-stream) into resource 'ck' on 'fec0::3' using a token of
 '3a' via the 'PUT' method.
 
 FILES

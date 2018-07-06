@@ -58,6 +58,8 @@ static int reliable = 0;
 
 unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
 
+static char *cert_file = NULL;          /* Combined certificate and private key file */
+
 typedef unsigned char method_t;
 method_t method = 1;                    /* the method we are using in our requests */
 
@@ -506,43 +508,49 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
      "(c) 2010-2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
-     "usage: %s [-A type...] [-t type] [-b [num,]size] [-B seconds] [-e text]\n"
-     "\t\t[-m method] [-N] [-o file] [-P addr[:port]] [-p port]\n"
-     "\t\t[-s duration] [-O num,text] [-T string] [-v num] [-a addr] [-U]\n\n"
-     "\t\t[-u user] [-k key] [-r] URI\n\n"
-     "\tURI can be an absolute or relative coap URI,\n"
-     "\t-a addr\tthe local interface address to use\n"
-     "\t-A type...\taccepted media type\n"
-     "\t-t type\t\tcontent format for given resource for PUT/POST\n"
-     "\t-b [num,]size\tblock size to be used in GET/PUT/POST requests\n"
+     "Usage: %s [-a addr] [-b [num,]size] [-c certfile] [-e text]\n"
+     "\t\t[-f file] [-k key] [-l loss] [-m method] [-o file]\n"
+     "\t\t[-p port] [-r] [-s duration] [-t type]  [-u user]\n"
+     "\t\t[-v num] [-A type] [-B seconds] [-N] [-O num,text]\n"
+     "\t\t[-P addr[:port]] [-T token] [-U] URI\n\n"
+     "\tURI can be an absolute URI or a URI prefixed with scheme and host\n\n"
+     "\t-a addr\t\tThe local interface address to use\n"
+     "\t-b [num,]size\tBlock size to be used in GET/PUT/POST requests\n"
      "\t       \t\t(value must be a multiple of 16 not larger than 1024)\n"
      "\t       \t\tIf num is present, the request chain will start at\n"
      "\t       \t\tblock num\n"
-     "\t-B seconds\tbreak operation after waiting given seconds\n"
-     "\t\t\t(default is %d)\n"
-     "\t-e text\t\tinclude text as payload (use percent-encoding for\n"
+     "\t-c certfile\tPEM file containing both CERTIFICATE and PRIVATE KEY\n"
+     "\t       \t\tThis argument requires (D)TLS with PKI to be available\n"
+     "\t-e text\t\tInclude text as payload (use percent-encoding for\n"
      "\t\t\tnon-ASCII characters)\n"
-     "\t-f file\t\tfile to send with PUT/POST (use '-' for STDIN)\n"
+     "\t-f file\t\tFile to send with PUT/POST (use '-' for STDIN)\n"
      "\t-k key\t\tPre-shared key for the specified user. This argument\n"
-     "\t       \t\trequires DTLS with PSK to be available.\n"
-     "\t-m method\trequest method (get|put|post|delete|fetch|patch|ipatch), default is 'get'\n"
-     "\t-N\t\tsend NON-confirmable message\n"
-     "\t-o file\t\toutput received data to this file (use '-' for STDOUT)\n"
-     "\t-p port\t\tlisten on specified port\n"
-     "\t-s duration\tsubscribe for given duration [s]\n"
-     "\t-u user\t\tuser identity for pre-shared key mode. This argument\n"
-     "\t       \t\trequires DTLS with PSK to be available.\n"
-     "\t-v num\t\tverbosity level (default: 3)\n"
-     "\t-O num,text\tadd option num with contents text to request\n"
-     "\t-P addr[:port]\tuse proxy (automatically adds Proxy-Uri option to\n"
-     "\t\t\trequest)\n"
-     "\t-T token\tinclude specified token\n"
-     "\t-U\t\tnever include Uri-Host or Uri-Port options\n"
+     "\t       \t\trequires (D)TLS with PSK to be available\n"
+     "\t-l list\t\tFail to send some datagrams specified by a comma separated\n"
+     "\t\t\tlist of numbers or number ranges (for debugging only)\n"
+     "\t-l loss%%\tRandomly fail to send datagrams with the specified\n"
+     "\t\t\tprobability (for debugging only)\n"
+     "\t-m method\tRequest method (get|put|post|delete|fetch|patch|ipatch),\n"
+     "\t\t\tdefault is 'get'\n"
+     "\t-o file\t\tOutput received data to this file (use '-' for STDOUT)\n"
+     "\t-p port\t\tListen on specified port\n"
      "\t-r\t\tUse reliable protocol (TCP or TLS)\n"
-     "\t-l list\t\tFail to send some datagram specified by a comma separated list of number or number intervals(for debugging only)\n"
-     "\t-l loss%%\tRandomly fail to send datagrams with the specified probability(for debugging only)\n"
+     "\t-s duration\tSubscribe to / Observe resource for given duration [s]\n"
+     "\t-t type\t\tContent format for given resource for PUT/POST\n"
+     "\t-u user\t\tUser identity for pre-shared key mode. This argument\n"
+     "\t       \t\trequires (D)TLS with PSK to be available\n"
+     "\t-v num\t\tVerbosity level (default: 3)\n"
+     "\t-A type\t\tAccepted media type\n"
+     "\t-B seconds\tBreak operation after waiting given seconds\n"
+     "\t\t\t(default is %d)\n"
+     "\t-N\t\tSend NON-confirmable message\n"
+     "\t-O num,text\tAdd option num with contents text to request\n"
+     "\t-P addr[:port]\tUse proxy (automatically adds Proxy-Uri option to\n"
+     "\t\t\trequest)\n"
+     "\t-T token\tInclude specified token\n"
+     "\t-U\t\tNever include Uri-Host or Uri-Port options\n"
      "\n"
-     "examples:\n"
+     "Examples:\n"
      "\tcoap-client -m get coap://[::1]/\n"
      "\tcoap-client -m get coap://[::1]/.well-known/core\n"
      "\tcoap-client -m get -T cafe coap://[::1]/time\n"
@@ -1015,18 +1023,38 @@ get_session(
 	coap_address_init( &bind_addr );
 	bind_addr.size = rp->ai_addrlen;
 	memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
-	if ( identity && key && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) )
-	  session = coap_new_client_session_psk( ctx, &bind_addr, dst, proto, identity, key, key_len );
-	else
+        if (cert_file && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
+          coap_dtls_pki_t dtls_pki;
+          memset (&dtls_pki, 0, sizeof(dtls_pki));
+          dtls_pki.public_cert = cert_file;
+          dtls_pki.private_key = cert_file;
+          session = coap_new_client_session_pki(ctx, &bind_addr, dst, proto, &dtls_pki);
+        }
+        else if ((identity || key) &&
+                 (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) ) {
+	  session = coap_new_client_session_psk( ctx, &bind_addr, dst, proto,
+                           identity, key, key_len );
+        }
+	else {
 	  session = coap_new_client_session( ctx, &bind_addr, dst, proto );
+        }
 	if ( session )
 	  break;
       }
     }
     freeaddrinfo( result );
   } else {
-    if ( identity && key && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) )
-      session = coap_new_client_session_psk( ctx, NULL, dst, proto, identity, key, key_len );
+    if (cert_file && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
+      coap_dtls_pki_t dtls_pki;
+      memset (&dtls_pki, 0, sizeof(dtls_pki));
+      dtls_pki.public_cert = cert_file;
+      dtls_pki.private_key = cert_file;
+      session = coap_new_client_session_pki(ctx, NULL, dst, proto, &dtls_pki);
+    }
+    else if ((identity || key) &&
+             (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) )
+      session = coap_new_client_session_psk( ctx, NULL, dst, proto,
+                      identity, key, key_len );
     else
       session = coap_new_client_session( ctx, NULL, dst, proto );
   }
@@ -1052,7 +1080,7 @@ main(int argc, char **argv) {
   ssize_t user_length = 0, key_length = 0;
   int create_uri_opts = 1;
 
-  while ((opt = getopt(argc, argv, "Nra:b:e:f:g:k:m:p:s:t:o:v:A:B:O:P:T:u:U:l:")) != -1) {
+  while ((opt = getopt(argc, argv, "Nra:b:c:e:f:k:m:p:s:t:o:v:A:B:O:P:T:u:U:l:")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1063,6 +1091,9 @@ main(int argc, char **argv) {
       break;
     case 'B':
       wait_seconds = atoi(optarg);
+      break;
+    case 'c':
+      cert_file = optarg;
       break;
     case 'e':
       if (!cmdline_input(optarg, &payload))
