@@ -600,6 +600,24 @@ coap_find_observer(coap_resource_t *resource, coap_session_t *session,
   return NULL;
 }
 
+static coap_subscription_t *
+coap_find_observer_query(coap_resource_t *resource, coap_session_t *session,
+		     const coap_string_t *query) {
+  coap_subscription_t *s;
+
+  assert(resource);
+  assert(session);
+
+  LL_FOREACH(resource->subscribers, s) {
+    if (s->session == session
+        && ((!query && !s->query)
+             || (query && s->query && coap_string_equal(query, s->query))))
+      return s;
+  }
+  
+  return NULL;
+}
+
 coap_subscription_t *
 coap_add_observer(coap_resource_t *resource, 
                   coap_session_t *session,
@@ -611,6 +629,20 @@ coap_add_observer(coap_resource_t *resource,
 
   /* Check if there is already a subscription for this peer. */
   s = coap_find_observer(resource, session, token);
+  if (!s) {
+    /*
+     * Cannot allow a duplicate to be created for the same query as application
+     * may not be cleaning up duplicates.  If duplicate found, then original
+     * observer is deleted and a new one created with the new token
+     */
+    s = coap_find_observer_query(resource, session, query);
+    if (s) {
+      /* Delete old entry with old token */
+      coap_string_t tmp_token = { s->token_length, s->token };
+      coap_delete_observer(resource, session, &tmp_token);
+      s = NULL;
+    }
+  }
 
   /* We are done if subscription was found. */
   if (s) {
