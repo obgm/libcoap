@@ -2,5 +2,5 @@ FROM debian:testing-slim
 
 RUN apt-get update && apt-get install -y autoconf automake gcc clang \
   libtool libtool-bin make pkg-config libcunit1-dev libssl-dev \
-  exuberant-ctags git
+  exuberant-ctags git valgrind
 RUN apt-get clean

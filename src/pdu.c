@@ -489,6 +489,12 @@ coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
     debug( "coap_pdu_parse: unsupported protocol\n" );
     return 0;
   }
+  if (pdu->token_length > pdu->alloc_size) {
+    /* Invalid PDU provided - not wise to assert here though */
+    coap_log(LOG_DEBUG, "coap_pdu_parse: PDU header token size broken\n");
+    pdu->token_length = pdu->alloc_size;
+    return 0;
+  }
   return 1;
 }
 

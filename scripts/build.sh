@@ -36,7 +36,9 @@ esac
 
 err=$?
 if test $err = 0 -a -n "$WITH_TESTS" ; then
-    tests/testdriver
+    EXEC_FILE=tests/testdriver
+    # then run valgrind on the actual executable
+    libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet $EXEC_FILE
     err=$?
 fi
 

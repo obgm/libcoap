@@ -36,10 +36,11 @@
  * Used to prevent access to *opt when pointing to after end of buffer
  * after doing a ADVANCE_OPT()
  */
-#define ADVANCE_OPT_CHECK(o,e,step) \
-  ADVANCE_OPT(o,e,step);            \
-  if ((e) < 1)                      \
-    return 0;
+#define ADVANCE_OPT_CHECK(o,e,step) do { \
+    ADVANCE_OPT(o,e,step);               \
+    if ((e) < 1)                         \
+      return 0;                          \
+  } while (0)
 
 size_t
 coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
