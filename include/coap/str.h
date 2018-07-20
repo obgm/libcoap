@@ -49,6 +49,7 @@ void coap_delete_string(coap_string_t *string);
  * allocated, and the provided data copied into the string object.
  * The string must be released using coap_delete_str_const();
  *
+ * @param data The data to put in the new string object.
  * @param size The size to allocate for the binary string data
  *
  * @return       A pointer to the new object or @c NULL on error.
@@ -77,14 +78,14 @@ void coap_delete_str_const(coap_str_const_t *string);
 /**
  * Compares the two strings for equality
  *
- * @param string1 The first string
- * @param string2 The second string
+ * @param string1 The first string.
+ * @param string2 The second string.
  *
  * @return         @c 1 if the strings are equal
  *                 @c 0 otherwise.
  */
-#define coap_string_equal(s1,s2) \
-        ((s1)->length == (s2)->length && ((s1)->length == 0 || \
-         memcmp((s1)->s, (s2)->s, (s1)->length) == 0))
+#define coap_string_equal(string1,string2) \
+        ((string1)->length == (string2)->length && ((string1)->length == 0 || \
+         memcmp((string1)->s, (string2)->s, (string1)->length) == 0))
 
 #endif /* _COAP_STR_H_ */

@@ -1,6 +1,6 @@
 /*
  * subscribe.h -- subscription handling for CoAP
- *                see draft-ietf-core-observe-16
+ *                see RFC7641
  *
  * Copyright (C) 2010-2012,2014-2015 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -17,6 +17,7 @@
 
 /**
  * @defgroup observe Resource observation
+ * API functions for interfacing with the observe handling (RFC7641)
  * @{
  */
 

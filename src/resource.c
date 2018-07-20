@@ -817,7 +817,7 @@ coap_check_notify(coap_context_t *context) {
  *
  * @param context  The CoAP context to use
  * @param resource The resource to check for (peer, token)
- * @param peer     The observer's address
+ * @param session  The observer's session
  * @param token    The token that has been used for subscription.
  */
 static void

@@ -120,6 +120,7 @@ void *coap_session_get_app_data(const coap_session_t *session);
 * Notify session that it has failed connecting or has been disconnected.
 *
 * @param session The CoAP session.
+* @param reason The reason why the session was disconnected.
 */
 void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason);
 
@@ -182,11 +183,10 @@ coap_session_t *coap_new_client_session(
 * @param ctx The CoAP context.
 * @param local_if Address of local interface. It is recommended to use NULL to let the operating system choose a suitable local interface. If an address is specified, the port number should be zero, which means that a free port is automatically selected.
 * @param server The server's address. If the port number is zero, the default port for the protocol will be used.
+* @param proto Protocol.
 * @param identity PSK client identity
-* @param identity_len Length PSK client identity
 * @param key PSK shared key
 * @param key_len PSK shared key length
-* @param proto Protocol.
 *
 * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
 */
@@ -322,10 +322,10 @@ coap_endpoint_t *coap_new_endpoint(struct coap_context_t *context, const coap_ad
 * Set the endpoint's default MTU. This is the maximum message size that can be
 * sent, excluding IP and UDP overhead.
 *
-* @param session The CoAP session.
+* @param endpoint The CoAP endpoint.
 * @param mtu maximum message size
 */
-void coap_endpoint_set_default_mtu(coap_endpoint_t *ep, unsigned mtu);
+void coap_endpoint_set_default_mtu(coap_endpoint_t *endpoint, unsigned mtu);
 
 void coap_free_endpoint(coap_endpoint_t *ep);
 
@@ -333,7 +333,7 @@ void coap_free_endpoint(coap_endpoint_t *ep);
 /**
 * Get endpoint description.
 *
-* @param session  The CoAP endpoint.
+* @param endpoint  The CoAP endpoint.
 * @return description string
 */
 const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
@@ -344,6 +344,7 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
 *
 * @param endpoint Active endpoint the packet was received on.
 * @param packet Received packet.
+* @param now The current time in ticks.
 * @return The CoAP session.
 */
 coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
