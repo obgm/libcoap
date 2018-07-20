@@ -280,11 +280,11 @@ int coap_context_set_pki(coap_context_t *context,
                            coap_dtls_pki_t* setup_data);
 
 /**
- * Returns a new message id and updates @p context->message_id accordingly. The
+ * Returns a new message id and updates @p session->tx_mid accordingly. The
  * message id is returned in network byte order to make it easier to read in
  * tracing tools.
  *
- * @param context The current coap_context_t object.
+ * @param session The current coap_session_t object.
  *
  * @return        Incremented message id in network byte order.
  */
@@ -457,18 +457,21 @@ void coap_read(coap_context_t *ctx, coap_tick_t now);
  *
  * @param ctx The CoAP context
  * @param timeout_ms Minimum number of milliseconds to wait for new messages before returning. If zero the call will block until at least one packet is sent or received.
+ *
  * @return number of milliseconds spent or -1 if there was an error
  */
 
 int coap_run_once( coap_context_t *ctx, unsigned int timeout_ms );
 
 /**
- * Parses and interprets a CoAP message with context @p ctx. This function
- * returns @c 0 if the message was handled, or a value less than zero on
+ * Parses and interprets a CoAP datagram with context @p ctx. This function
+ * returns @c 0 if the datagram was handled, or a value less than zero on
  * error.
  *
  * @param ctx    The current CoAP context.
- * @param packet The received packet.
+ * @param session The current CoAP session.
+ * @param data The received packet'd data.
+ * @param data_len The received packet'd data length.
  *
  * @return       @c 0 if message was handled successfully, or less than zero on
  *               error.
@@ -543,6 +546,7 @@ void coap_cancel_all_messages(coap_context_t *context,
 *
 * @param context      The context in use.
 * @param session      Session of the messages to remove.
+* @param reason       The reasion for the session cancellation
 */
 void
 coap_cancel_session_messages(coap_context_t *context,
