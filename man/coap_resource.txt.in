@@ -301,7 +301,7 @@ coap_string_t *query, coap_pdu_t *response) {
   int len;
   coap_string_t *uri_path;
 
-  /* get the uri_path - wwhill will get used by coap_resource_init() */
+  /* get the uri_path - which will get used by coap_resource_init() */
   uri_path = coap_get_uri_path(request);
   if (!uri_path) {
     response->code = COAP_RESPONSE_CODE(404);
