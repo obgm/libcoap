@@ -617,9 +617,7 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
     default:
       break;
   }
-  if (LOG_DEBUG <= coap_get_log_level()) {
-    coap_show_pdu(pdu);
-  }
+  coap_show_pdu(LOG_DEBUG, pdu);
   return bytes_written;
 }
 
@@ -2075,7 +2073,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 	    (int)msg_len, addr, localaddr);
 
 	    */
-    coap_show_pdu(pdu);
+    coap_show_pdu(LOG_DEBUG, pdu);
   }
 #endif
 

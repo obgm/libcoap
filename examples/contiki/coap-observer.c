@@ -103,7 +103,7 @@ message_handler(struct coap_context_t  *ctx,
 
   debug("** process incoming %d.%02d response:\n",
 	(received->hdr->code >> 5), received->hdr->code & 0x1F);
-  coap_show_pdu(received);
+  coap_show_pdu(LOG_WARNING, received);
 
   coap_ticks(&last_seen);
 }
