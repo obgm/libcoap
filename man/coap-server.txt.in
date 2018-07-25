@@ -16,7 +16,7 @@ SYNOPSIS
 --------
 *coap-server* [*-A* addr] [*-g* group] [*-p* port] [*-l* loss]
               [*-k* key] [*-h* hint] [*-c* certfile] [*-C* cafile]
-              [*-R* root_cafile] [*-v* num]
+              [*-R* root_cafile] [*-v* num] [-d max]
 
 DESCRIPTION
 -----------
@@ -77,6 +77,11 @@ OPTIONS
 
 *-v* num::
    The verbosity level to use (default: 3, maximum is 9).
+
+*-d* max::
+   Enable support for creation of dynamic resources when doing a PUT up to a
+   limit of max.  If max is reached, a 4.06 code is returned until one of the
+   dynamic resources has been deleted.
 
 EXAMPLES
 --------

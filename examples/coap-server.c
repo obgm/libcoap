@@ -55,6 +55,7 @@ static uint8_t key[MAX_KEY];
 static ssize_t key_length = 0;
 int key_defined = 0;
 static const char *hint = "CoAP";
+static int support_dynamic = 0;
 
 #ifndef WITHOUT_ASYNC
 /* This variable is used to mimic long-running tasks that require
@@ -306,6 +307,216 @@ check_async(coap_context_t *ctx,
 }
 #endif /* WITHOUT_ASYNC */
 
+typedef struct dynamic_resource {
+  coap_string_t *uri_path;
+  coap_string_t *value;
+} dynamic_resource;
+
+static int dynamic_count = 0;
+static dynamic_resource *dynamic_entry = NULL;
+
+/*
+ * Regular DELETE handler - used by resources created by the
+ * Unknown Resource PUT handler
+ */
+
+static void
+hnd_delete(coap_context_t *ctx,
+           coap_resource_t *resource,
+           coap_session_t *session UNUSED_PARAM,
+           coap_pdu_t *request UNUSED_PARAM,
+           coap_string_t *token UNUSED_PARAM,
+           coap_string_t *query UNUSED_PARAM,
+           coap_pdu_t *response UNUSED_PARAM
+) {
+  int i;
+  coap_string_t *uri_path;
+
+  /* get the uri_path */
+  uri_path = coap_get_uri_path(request);
+  if (!uri_path) {
+    response->code = COAP_RESPONSE_CODE(404);
+    return;
+  }
+
+  for (i = 0; i < dynamic_count; i++) {
+    if (coap_string_equal(uri_path, dynamic_entry[i].uri_path)) {
+      /* Dynamic entry no longer required - delete it */
+      coap_delete_string(dynamic_entry[i].value);
+      if (dynamic_count-i > 1) {
+         memmove (&dynamic_entry[i],
+                  &dynamic_entry[i+1],
+                 (dynamic_count-i-1) * sizeof (dynamic_entry[0]));
+      }
+      dynamic_count--;
+      break;
+    } 
+  }
+
+  /* Dynamic resource no longer required - delete it */
+  coap_delete_resource(ctx, resource);
+  response->code = COAP_RESPONSE_CODE(202);
+  return;
+}
+
+/*
+ * Regular GET handler - used by resources created by the
+ * Unknown Resource PUT handler
+ */
+
+static void
+hnd_get(coap_context_t *ctx UNUSED_PARAM,
+        coap_resource_t *resource,
+        coap_session_t *session,
+        coap_pdu_t *request UNUSED_PARAM,
+        coap_string_t *token,
+        coap_string_t *query UNUSED_PARAM,
+        coap_pdu_t *response
+) {
+  coap_str_const_t *uri_path;
+  uint8_t buf[4];
+  int i;
+
+  /*
+   * request will be NULL if an Observe triggered request, so the uri_path,
+   * if needed, must be abstracted from the resource.
+   * The uri_path string is a const pointer
+   */
+
+  uri_path = coap_resource_get_uri_path(resource);
+  if (!uri_path) {
+    response->code = COAP_RESPONSE_CODE(404);
+    return;
+  }
+
+  for (i = 0; i < dynamic_count; i++) {
+    if (coap_string_equal(uri_path, dynamic_entry[i].uri_path)) {
+      break;
+    } 
+  }
+  if (i == dynamic_count) {
+    response->code = COAP_RESPONSE_CODE(404);
+    return;
+  }
+
+  if (coap_find_observer(resource, session, token)) {
+    coap_add_option(response, COAP_OPTION_OBSERVE, coap_encode_var_safe(buf, sizeof (buf), resource->observe), buf);
+  }
+  if (dynamic_entry[i].value) {
+    coap_add_data (response, dynamic_entry[i].value->length, dynamic_entry[i].value->s);
+  }
+  response->code = COAP_RESPONSE_CODE (205);
+}
+
+/*
+ * Regular PUT handler - used by resources created by the
+ * Unknown Resource PUT handler
+ */
+
+static void
+hnd_put(coap_context_t *ctx UNUSED_PARAM,
+        coap_resource_t *resource UNUSED_PARAM,
+        coap_session_t *session UNUSED_PARAM,
+        coap_pdu_t *request,
+        coap_string_t *token UNUSED_PARAM,
+        coap_string_t *query UNUSED_PARAM,
+        coap_pdu_t *response
+) {
+  coap_string_t *uri_path;
+  int i;
+  size_t size;
+  uint8_t *data;
+
+  /* get the uri_path */
+  uri_path = coap_get_uri_path(request);
+  if (!uri_path) {
+    response->code = COAP_RESPONSE_CODE(404);
+    return;
+  }
+
+  for (i = 0; i < dynamic_count; i++) {
+    if (coap_string_equal(uri_path, dynamic_entry[i].uri_path)) {
+      break;
+    } 
+  }
+  if (i == dynamic_count) {
+    if (dynamic_count >= support_dynamic) {
+      response->code = COAP_RESPONSE_CODE(406);
+      return;
+    }
+    dynamic_count++;
+    dynamic_entry = realloc (dynamic_entry, dynamic_count * sizeof(dynamic_entry[0])); 
+    if (dynamic_entry) {
+      dynamic_entry[i].uri_path = uri_path;
+      dynamic_entry[i].value = NULL;
+      response->code = COAP_RESPONSE_CODE(201);
+    }
+    else {
+      dynamic_count--;
+      response->code = COAP_RESPONSE_CODE(500);
+    }
+  }
+  else {
+    /* Need to do this as coap_get_uri_path() created it */
+    coap_delete_string(uri_path);
+    response->code = COAP_RESPONSE_CODE(204);
+  }
+  coap_get_data (request, &size, &data);
+  if (dynamic_entry[i].value) {
+    coap_delete_string(dynamic_entry[i].value);
+    dynamic_entry[i].value = NULL;
+  }
+  if (size > 0) {
+    dynamic_entry[i].value = coap_new_string(size);
+    memcpy (dynamic_entry[i].value->s, data, size);
+    dynamic_entry[i].value->length = size;
+  }
+  return;
+}
+
+/*
+ * Unknown Resource PUT handler
+ */
+
+static void
+hnd_unknown_put(coap_context_t *ctx,
+                coap_resource_t *resource,
+                coap_session_t *session,
+                coap_pdu_t *request,
+                coap_string_t *token,
+                coap_string_t *query,
+                coap_pdu_t *response
+) {
+  coap_resource_t *r;
+  coap_string_t *uri_path;
+
+  /* get the uri_path - will will get used by coap_resource_init() */
+  uri_path = coap_get_uri_path(request);
+  if (!uri_path) {
+    response->code = COAP_RESPONSE_CODE(404);
+    return;
+  }
+
+  /*
+   * Create a resource to handle the new URI
+   * uri_path will get deleted when the resource is removed
+   */
+  r = coap_resource_init((coap_str_const_t*)uri_path,
+        COAP_RESOURCE_FLAGS_RELEASE_URI | COAP_RESOURCE_FLAGS_NOTIFY_NON);
+  coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Dynamic\""), 0);
+  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put);
+  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete);
+  /* We possibly want to Observe the GETs */
+  coap_resource_set_get_observable(r, 1);
+  coap_register_handler(r, COAP_REQUEST_GET, hnd_get);
+  coap_add_resource(ctx, r);
+
+  /* Do the PUT for this first call */
+  hnd_put(ctx, resource, session, request, token, query, response);
+
+  return;
+}
+
 static void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
@@ -334,6 +545,11 @@ init_resources(coap_context_t *ctx) {
   coap_add_resource(ctx, r);
   time_resource = r;
 
+  if (support_dynamic > 0) {
+    /* Create a resource to handle PUTs to unknown URIs */
+    r = coap_resource_unknown_init(hnd_unknown_put);
+    coap_add_resource(ctx, r);
+  }
 #ifndef WITHOUT_ASYNC
   r = coap_resource_init(coap_make_str_const("async"), 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
@@ -420,7 +636,7 @@ usage( const char *program, const char *version) {
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
      "(c) 2010,2011,2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
      "Usage: %s [-A address] [-g group] [-p port] [-l loss] [-c certfile]\n"
-     "\t\t[-C cafile] [-R root_cafile] [-k key] [-h hint] [-v num]\n\n"
+     "\t\t[-C cafile] [-R root_cafile] [-k key] [-h hint] [-v num] [-d max]\n\n"
      "\t-A address\tInterface address to bind to\n"
      "\t-g group\tJoin the given multicast group\n"
      "\t-p port\t\tListen on specified port\n"
@@ -451,7 +667,10 @@ usage( const char *program, const char *version) {
      "\t-l loss%%\tRandomly fail to send datagrams with the specified\n"
      "\t       \t\tprobability - 100%% all datagrams, 0%% no datagrams\n"
      "\t       \t\t(for debugging only)\n"
-     "\t-v num \t\tVerbosity level (default: 3)\n",
+     "\t-v num \t\tVerbosity level (default: 3)\n"
+     "\t-d max \t\tAllow dynamic creation of up to a total of max resources.\n"
+     "\t       \t\tIf max is reached, a 4.06 code is returned until one of the\n"
+     "\t       \t\tdynamic resources has been deleted\n",
     program, version, program );
 }
 
@@ -622,7 +841,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "A:c:C:g:h:k:l:p:R:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:d:c:C:g:h:k:l:p:R:v:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -633,6 +852,9 @@ main(int argc, char **argv) {
       break;
     case 'C' :
       ca_file = optarg;
+      break;
+    case 'd' :
+      support_dynamic = atoi(optarg);
       break;
     case 'g' :
       group = optarg;
