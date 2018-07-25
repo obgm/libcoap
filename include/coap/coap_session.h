@@ -351,6 +351,17 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
 coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
   const struct coap_packet_t *packet, coap_tick_t now);
 
+/**   
+ * Create a new DTLS session for the @p endpoint.
+ *    
+ * @ingroup dtls_internal
+ *  
+ * @param endpoint  Endpoint to add DTLS session to
+ * @param packet    Received packet information to base session on.
+ * @param now       The current time in ticks.
+ *
+ * @return Created CoAP session or @c NULL if error. 
+ */
 coap_session_t *coap_endpoint_new_dtls_session(coap_endpoint_t *endpoint,
   const struct coap_packet_t *packet, coap_tick_t now);
 

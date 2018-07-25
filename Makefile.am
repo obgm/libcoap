@@ -138,6 +138,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_LDFLAGS =					\
 CTAGS_IGNORE=-I " \
 coap_dtls_context_check_keys_enabled \
 coap_dtls_context_set_pki \
+coap_dtls_context_set_pki_root_cas \
 coap_dtls_context_set_psk \
 coap_dtls_free_context \
 coap_dtls_free_session \
@@ -154,6 +155,7 @@ coap_dtls_receive \
 coap_dtls_send \
 coap_dtls_session_update_mtu \
 coap_dtls_startup \
+coap_endpoint_new_dtls_session \
 coap_packet_extract_pbuf \
 coap_pdu_from_pbuf \
 coap_socket_accept_tcp \

@@ -399,11 +399,20 @@ coap_socket_bind_tcp(coap_socket_t *sock,
 #else
   if (ioctl(sock->fd, FIONBIO, &on) == COAP_SOCKET_ERROR) {
 #endif
-    coap_log(LOG_WARNING, "coap_socket_bind_tcp: ioctl FIONBIO: %s\n", coap_socket_strerror());
+    coap_log(LOG_WARNING, "coap_socket_bind_tcp: ioctl FIONBIO: %s\n",
+                           coap_socket_strerror());
   }
+  if (setsockopt (sock->fd, SOL_SOCKET, SO_KEEPALIVE, OPTVAL_T(&on),
+                  sizeof (on)) == COAP_SOCKET_ERROR)
+    coap_log(LOG_WARNING,
+             "coap_socket_bind_tcp: setsockopt SO_KEEPALIVE: %s\n",
+             coap_socket_strerror());
 
-  if (setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
-    coap_log(LOG_WARNING, "coap_socket_bind_tcp: setsockopt SO_REUSEADDR: %s\n", coap_socket_strerror());
+  if (setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, OPTVAL_T(&on),
+                 sizeof(on)) == COAP_SOCKET_ERROR)
+    coap_log(LOG_WARNING,
+             "coap_socket_bind_tcp: setsockopt SO_REUSEADDR: %s\n",
+             coap_socket_strerror());
 
   switch (listen_addr->addr.sa.sa_family) {
   case AF_INET:

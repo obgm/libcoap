@@ -47,7 +47,9 @@ static time_t my_clock_base = 0;
 
 struct coap_resource_t *time_resource = NULL;
 
-static char *cert_file = NULL;          /* Combined certificate and private key file */
+static char *cert_file = NULL; /* Combined certificate and private key in PEM */
+static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM */
+static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
 #define MAX_KEY   64 /* Maximum length of a key (i.e., PSK) in bytes. */
 static uint8_t key[MAX_KEY];
 static ssize_t key_length = 0;
@@ -341,13 +343,59 @@ init_resources(coap_context_t *ctx) {
 #endif /* WITHOUT_ASYNC */
 }
 
+static int
+verify_cn_callback(const char *cn,
+                   const uint8_t *asn1_public_cert UNUSED_PARAM,
+                   size_t asn1_length UNUSED_PARAM,
+                   coap_session_t *session UNUSED_PARAM,
+                   unsigned depth,
+                   int validated UNUSED_PARAM,
+                   void *arg UNUSED_PARAM
+) {
+  coap_log(LOG_INFO, "CN '%s' presented by client (%s)\n",
+           cn, depth ? "CA" : "Certificate");
+  return 1;
+}
+
 static void
 fill_keystore(coap_context_t *ctx) {
   if (cert_file) {
     coap_dtls_pki_t dtls_pki;
     memset (&dtls_pki, 0, sizeof(dtls_pki));
-    dtls_pki.public_cert = cert_file;
-    dtls_pki.private_key = cert_file;
+    dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
+    if (ca_file) {
+      /*
+       * Add in additional certificate checking.
+       * This list of enabled can be tuned for the specific
+       * requirements - see 'man coap_encryption'.
+       */
+      dtls_pki.verify_peer_cert        = 1;
+      dtls_pki.require_peer_cert       = 1;
+      dtls_pki.allow_self_signed       = 1;
+      dtls_pki.allow_expired_certs     = 1;
+      dtls_pki.cert_chain_validation   = 1;
+      dtls_pki.cert_chain_verify_depth = 2;
+      dtls_pki.check_cert_revocation   = 1;
+      dtls_pki.allow_no_crl            = 1;
+      dtls_pki.allow_expired_crl       = 1;
+      dtls_pki.validate_cn_call_back   = verify_cn_callback;
+      dtls_pki.cn_call_back_arg        = NULL;
+      dtls_pki.validate_sni_call_back  = NULL;
+      dtls_pki.sni_call_back_arg       = NULL;
+    }
+    dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
+    dtls_pki.pki_key.key.pem.public_cert = cert_file;
+    dtls_pki.pki_key.key.pem.private_key = cert_file;
+    dtls_pki.pki_key.key.pem.ca_file = ca_file;
+    /* If general root CAs are defined */
+    if (root_ca_file) {
+      struct stat stbuf;
+      if ((stat(root_ca_file, &stbuf) == 0) && S_ISDIR(stbuf.st_mode)) {
+        coap_context_set_pki_root_cas(ctx, NULL, root_ca_file);
+      } else {
+        coap_context_set_pki_root_cas(ctx, root_ca_file, NULL);
+      }
+    }
     coap_context_set_pki(ctx, &dtls_pki);
     if (key_defined)
       coap_context_set_psk(ctx, hint, key, key_length);
@@ -372,22 +420,38 @@ usage( const char *program, const char *version) {
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
      "(c) 2010,2011,2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
      "Usage: %s [-A address] [-g group] [-p port] [-l loss] [-c certfile]\n"
-     "\t\t[-k key] [-h hint] [-v num]\n\n"
+     "\t\t[-C cafile] [-R root_cafile] [-k key] [-h hint] [-v num]\n\n"
      "\t-A address\tInterface address to bind to\n"
      "\t-g group\tJoin the given multicast group\n"
      "\t-p port\t\tListen on specified port\n"
      "\t-c certfile\tPEM file containing both CERTIFICATE and PRIVATE KEY\n"
      "\t       \t\tThis argument requires (D)TLS with PKI to be available\n"
+     "\t-C cafile\tPEM file containing the CA Certificate that was used to\n"
+     "\t       \t\tsign the certfile. If defined, then the client will be\n"
+     "\t       \t\tgiven this CA Certificate during the TLS set up.\n"
+     "\t       \t\tFurthermore, this will trigger the validation of the\n"
+     "\t       \t\tclient certificate.  If certfile is self-signed (as\n"
+     "\t       \t\tdefined by '-c certfile'), then you need to have on the\n"
+     "\t       \t\tcommand line the same filename for both the certfile and\n"
+     "\t       \t\tcafile (as in  '-c certfile -C certfile') to trigger\n"
+     "\t       \t\tvalidation\n"
+     "\t-R root_cafile\tPEM file containing the set of trusted root CAs that\n"
+     "\t       \t\tare to be used to validate the client certificate.\n"
+     "\t       \t\tThe '-C cafile' does not have to be in this list and is\n"
+     "\t       \t\t'trusted' for the verification.\n"
+     "\t       \t\tAlternatively, this can point to a directory containing a\n"
+     "\t       \t\tset of CA PEM files\n"
      "\t-h hint\t\tPSK Hint.  Default is CoAP\n"
-     "\t-k key\t\tPre-shared key. This argument requires (D)TLS with PSK\n"
+     "\t-k key \t\tPre-shared key. This argument requires (D)TLS with PSK\n"
      "\t       \t\tto be available. This cannot be empty if defined.\n"
      "\t       \t\tNote that both -c and -k need to be defined\n"
      "\t       \t\tfor both PSK and PKI to be concurrently supported\n"
-     "\t-l list\t\tFail to send some datagram specified by a comma separated\n"
-     "\t\t\tlist of number or number intervals (for debugging only)\n"
+     "\t-l list\t\tFail to send some datagrams specified by a comma separated\n"
+     "\t       \t\tlist of numbers or number ranges (for debugging only)\n"
      "\t-l loss%%\tRandomly fail to send datagrams with the specified\n"
-     "\t\t\tprobability (for debugging only)\n"
-     "\t-v num\t\tVerbosity level (default: 3)\n",
+     "\t       \t\tprobability - 100%% all datagrams, 0%% no datagrams\n"
+     "\t       \t\t(for debugging only)\n"
+     "\t-v num \t\tVerbosity level (default: 3)\n",
     program, version, program );
 }
 
@@ -554,10 +618,11 @@ main(int argc, char **argv) {
   int opt;
   coap_log_t log_level = LOG_WARNING;
   unsigned wait_ms;
+  time_t t_last = 0;
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "A:c:g:h:k:p:v:l:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:c:C:g:h:k:l:p:R:v:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -565,6 +630,9 @@ main(int argc, char **argv) {
       break;
     case 'c' :
       cert_file = optarg;
+      break;
+    case 'C' :
+      ca_file = optarg;
       break;
     case 'g' :
       group = optarg;
@@ -584,18 +652,21 @@ main(int argc, char **argv) {
       }
       key_defined = 1;
       break;
-    case 'p' :
-      strncpy(port_str, optarg, NI_MAXSERV-1);
-      port_str[NI_MAXSERV - 1] = '\0';
-      break;
-    case 'v' :
-      log_level = strtol(optarg, NULL, 10);
-      break;
     case 'l':
       if (!coap_debug_set_packet_loss(optarg)) {
 	usage(argv[0], LIBCOAP_PACKAGE_VERSION);
 	exit(1);
       }
+      break;
+    case 'p' :
+      strncpy(port_str, optarg, NI_MAXSERV-1);
+      port_str[NI_MAXSERV - 1] = '\0';
+      break;
+    case 'R' :
+      root_ca_file = optarg;
+      break;
+    case 'v' :
+      log_level = strtol(optarg, NULL, 10);
       break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
@@ -628,8 +699,10 @@ main(int argc, char **argv) {
     } else if ( (unsigned)result < wait_ms ) {
       wait_ms -= result;
     } else {
-      if ( time_resource ) {
-	coap_resource_set_dirty(time_resource, NULL);
+      time_t t_now = time(NULL);
+      if (time_resource && (t_last != t_now)) {
+        t_last = t_now;
+	coap_resource_notify_observers(time_resource, NULL);
       }
       wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
     }

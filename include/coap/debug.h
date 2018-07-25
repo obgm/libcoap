@@ -78,7 +78,7 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
 /**
  * Defines the output mode for the coap_show_pdu() function.
  *
- * @param use_printf  1 if the output is to use fprintf() (the default)
+ * @param use_fprintf  1 if the output is to use fprintf() (the default)
  *                    0 if the output is to use coap_log()
  */
 void coap_set_show_pdu_output(int use_fprintf);
