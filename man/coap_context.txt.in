@@ -40,8 +40,6 @@ const coap_address_t *_listen_addr_, coap_proto_t _proto_);*
 *void coap_endpoint_set_default_mtu(coap_endpoint_t *_endpoint_,
 unsigned _mtu_);*
 
-*const char *coap_endpoint_str(const coap_endpoint_t *_endpoint_);*
-
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
 or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
@@ -148,9 +146,6 @@ The *coap_endpoint_set_default_mtu*() function is used to set the MTU size
 (the maximum message size) of the data in a packet, excluding any IP or
 TCP/UDP overhead to _mtu_ for the _endpoint_.  A sensible default is 1280.
 
-The *coap_endpoint_str*() function returns a description string of the
-_endpoint_.
-
 RETURN VALUES
 -------------
 *coap_new_context*() function returns a newly created context or
@@ -161,9 +156,6 @@ NULL if there is a creation failure.
 
 *coap_new_endpoint*() function returns a newly created endpoint or
 NULL if there is a creation failure.
-
-*coap_endpoint_str*() function returns a description string of the
-_endpoint_.
 
 EXAMPLES
 --------

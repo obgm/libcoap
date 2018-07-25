@@ -56,21 +56,6 @@ typedef struct coap_tls_version_t {
  */
 coap_tls_version_t *coap_get_tls_library_version(void);
 
-/**
- * Sets the (D)TLS logging level to the specified @p level.
- * Note: coap_log_level() will influence output if at a specified level. 
- *
- * @param level The logging level to use - LOG_*
- */
-void coap_dtls_set_log_level(int level);
-
-/**
- * Get the current (D)TLS logging.
- *
- * @return The current log level (one of LOG_*).
- */
-int coap_dtls_get_log_level(void);
-
 struct coap_dtls_pki_t;
 
 /**
@@ -604,6 +589,23 @@ ssize_t coap_tls_read(coap_session_t *coap_session,
 void coap_dtls_startup(void);
 
 /** @} */
+
+/**
+ * @ingroup logging
+ * Sets the (D)TLS logging level to the specified @p level.
+ * Note: coap_log_level() will influence output if at a specified level.
+ *
+ * @param level The logging level to use - LOG_*
+ */
+void coap_dtls_set_log_level(int level);
+
+/**
+ * @ingroup logging
+ * Get the current (D)TLS logging.
+ *
+ * @return The current log level (one of LOG_*).
+ */
+int coap_dtls_get_log_level(void);
 
 
 #endif /* COAP_DTLS_H */

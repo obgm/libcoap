@@ -14,6 +14,7 @@ TXT3 = coap_attribute.txt \
 	coap_context.txt \
 	coap_encryption.txt \
 	coap_handler.txt \
+	coap_logging.txt \
 	coap_observe.txt \
 	coap_pdu_setup.txt \
 	coap_recovery.txt \
@@ -56,6 +57,8 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_query.3
 	@echo ".so man3/coap_session.3" > coap_session_get_app_data.3
 	@echo ".so man3/coap_session.3" > coap_session_set_app_data.3
+	@echo ".so man3/coap_logging.3" > coap_endpoint_str.3
+	@echo ".so man3/coap_logging.3" > coap_session_str.3
 	$(INSTALL_DATA) *.3 "$(DESTDIR)$(man3dir)"
 
 CLEANFILES = *.3 *.5 *.7 *.xml
