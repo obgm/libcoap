@@ -2122,6 +2122,9 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
       coap_log(LOG_ALERT, "got RST for message %d\n", pdu->tid);
 
+      if (session->con_active)
+        session->con_active--;
+
       /* find transaction in sendqueue to stop retransmission */
       coap_remove_from_queue(&context->sendqueue, session, pdu->tid, &sent);
 
