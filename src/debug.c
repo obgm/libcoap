@@ -697,13 +697,16 @@ int coap_debug_set_packet_loss(const char *loss_level) {
   const char *p = loss_level;
   char *end = NULL;
   int n = (int)strtol(p, &end, 10), i = 0;
-  if (end == p || n <= 0)
+  if (end == p || n < 0)
     return 0;
   if (*end == '%') {
     if (n > 100)
       n = 100;
     packet_loss_level = n * 65536 / 100;
+    coap_log(LOG_DEBUG, "packet loss level set to %d%%\n", n);
   } else {
+    if (n <= 0)
+      return 0;
     while (i < 10) {
       packet_loss_intervals[i].start = n;
       if (*end == '-') {
