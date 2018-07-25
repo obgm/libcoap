@@ -304,7 +304,8 @@ void coap_session_send_csm(coap_session_t *session) {
 }
 
 void coap_session_connected(coap_session_t *session) {
-  debug("*** %s: session connected\n", coap_session_str(session));
+  if (session->state != COAP_SESSION_STATE_ESTABLISHED)
+    coap_log(LOG_DEBUG, "*** %s: session connected\n", coap_session_str(session));
 
   session->state = COAP_SESSION_STATE_ESTABLISHED;
   session->partial_write = 0;
@@ -322,7 +323,13 @@ void coap_session_connected(coap_session_t *session) {
     coap_queue_t *q = session->sendqueue;
     session->sendqueue = q->next;
     q->next = NULL;
-    debug("** %s tid=%d: transmitted after delay\n", coap_session_str(session), (int)q->pdu->tid);
+    if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
+      if (session->con_active >= COAP_DEFAULT_NSTART)
+        break;
+      session->con_active++;
+    }
+    coap_log(LOG_DEBUG, "**  %s: tid=%d: transmitted after delay\n",
+             coap_session_str(session), (int)q->pdu->tid);
     bytes_written = coap_session_send_pdu(session, q->pdu);
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (coap_wait_ack(session->context, session, q) >= 0)
