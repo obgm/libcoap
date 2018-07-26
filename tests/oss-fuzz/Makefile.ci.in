@@ -1,0 +1,19 @@
+# -*- Mode: Makefile for CI checks -*-
+
+top_builddir?=@top_builddir@
+top_srcdir?=@top_srcdir@
+WARNING_CFLAGS?=@WARNING_CFLAGS@
+DTLS_CFLAGS?=@DTLS_CFLAGS@
+CPPFLAGS=-I$(top_builddir)/include -I$(top_srcdir)/include
+CFLAGS=$(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
+CFLAGS+=-Wno-missing-prototypes -Wno-missing-declarations
+
+SOURCES:=$(wildcard *.c)
+OBJECTS:= $(patsubst %.c, %.o, $(SOURCES))
+
+.PHONY: check
+
+check: $(OBJECTS)
+
+clean:
+	@-$(RM) $(OBJECTS)
