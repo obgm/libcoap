@@ -648,8 +648,9 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
     assert(session->endpoint != NULL);
     sock = &session->endpoint->sock;
   }
-  if (pdu->type == COAP_MESSAGE_CON)
+  if (pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto))
     session->con_active++;
+
   bytes_written = coap_socket_send_pdu(sock, session, pdu);
   if (LOG_DEBUG <= coap_get_log_level()) {
     coap_show_pdu(pdu);
@@ -713,8 +714,9 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
     (session->sock.flags & COAP_SOCKET_WANT_WRITE))
     return coap_session_delay_pdu(session, pdu, node);
 
-  if (pdu->type == COAP_MESSAGE_CON)
+  if (pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto))
     session->con_active++;
+
   bytes_written = coap_session_send_pdu(session, pdu);
 
 #endif /* WITH_LWIP */
@@ -2100,8 +2102,12 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       /* find transaction in sendqueue to stop retransmission */
       coap_remove_from_queue(&context->sendqueue, session, pdu->tid, &sent);
 
-      if (session->con_active)
+      if (session->con_active) {
         session->con_active--;
+        if (session->state == COAP_SESSION_STATE_ESTABLISHED)
+          /* Flush out any entries on session->sendqueue */
+          coap_session_connected(session);
+      }
       if (pdu->code == 0)
         goto cleanup;
 
@@ -2122,8 +2128,12 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
       coap_log(LOG_ALERT, "got RST for message %d\n", pdu->tid);
 
-      if (session->con_active)
+      if (session->con_active) {
         session->con_active--;
+        if (session->state == COAP_SESSION_STATE_ESTABLISHED)
+          /* Flush out any entries on session->sendqueue */
+          coap_session_connected(session);
+      }
 
       /* find transaction in sendqueue to stop retransmission */
       coap_remove_from_queue(&context->sendqueue, session, pdu->tid, &sent);
