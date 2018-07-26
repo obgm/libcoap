@@ -645,6 +645,7 @@ man/coap-server.txt
 man/coap-rd.txt
 man/Makefile
 tests/Makefile
+tests/oss-fuzz/Makefile.ci
 libcoap-$LIBCOAP_NAME_SUFFIX.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
 ])
 
