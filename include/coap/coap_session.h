@@ -284,10 +284,11 @@ ssize_t coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu);
 
 
 /**
+ * @ingroup logging
  * Get session description.
  *
  * @param session  The CoAP session.
- * @return description string
+ * @return description string.
  */
 const char *coap_session_str(const coap_session_t *session);
 
@@ -332,10 +333,11 @@ void coap_free_endpoint(coap_endpoint_t *ep);
 
 
 /**
+ * @ingroup logging
 * Get endpoint description.
 *
 * @param endpoint  The CoAP endpoint.
-* @return description string
+* @return description string.
 */
 const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
 

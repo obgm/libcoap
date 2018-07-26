@@ -35,8 +35,8 @@ examples directory.
 SEE ALSO
 --------
 *coap_attribute*(3), *coap_context*(3), *coap_encryption*(3), *coap_handler*(3),
-*coap_observe*(3), *coap_pdu_setup*(3), *coap_session*(3), *coap_recovery*(3),
-*coap_resource*(3) and *coap_tls_library*(3)
+*coap_logging*(3), *coap_observe*(3), *coap_pdu_setup*(3), *coap_recovery*(3),
+*coap_resource*(3), *coap_session*(3) and *coap_tls_library*(3)
 
 For example executables, see *coap-client*(5), *coap-rd*(5) and *coap-server*(5)
 
