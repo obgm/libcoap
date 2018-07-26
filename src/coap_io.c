@@ -1077,10 +1077,13 @@ coap_write(coap_context_t *ctx,
         sockets[(*num_sockets)++] = &ep->sock;
     }
     LL_FOREACH_SAFE(ep->sessions, s, tmp) {
-      if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 && s->sendqueue == NULL && (s->last_rx_tx + session_timeout <= now || s->state == COAP_SESSION_STATE_NONE)) {
+      if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 &&
+          s->delayqueue == NULL &&
+          (s->last_rx_tx + session_timeout <= now ||
+           s->state == COAP_SESSION_STATE_NONE)) {
         coap_session_free(s);
       } else {
-        if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 && s->sendqueue == NULL) {
+        if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 && s->delayqueue == NULL) {
           coap_tick_t s_timeout = (s->last_rx_tx + session_timeout) - now;
           if (timeout == 0 || s_timeout < timeout)
             timeout = s_timeout;

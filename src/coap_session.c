@@ -170,7 +170,7 @@ void coap_session_free(coap_session_t *session) {
   if (session->psk_key)
     coap_free(session->psk_key);
 
-  LL_FOREACH_SAFE(session->sendqueue, q, tmp) {
+  LL_FOREACH_SAFE(session->delayqueue, q, tmp) {
     if (q->pdu->type==COAP_MESSAGE_CON && session->context && session->context->nack_handler)
       session->context->nack_handler(session->context, session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);
     coap_delete_node(q);
@@ -254,7 +254,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
   } else {
     coap_queue_t *q = NULL;
     /* Check that the same tid is not getting re-used in violation of RFC7252 */
-    LL_FOREACH(session->sendqueue, q) {
+    LL_FOREACH(session->delayqueue, q) {
       if (q->id == pdu->tid) {
         coap_log(LOG_ERR, "**  %s tid=%d: already in-use - dropped\n", coap_session_str(session), pdu->tid);
         return COAP_INVALID_TID;
@@ -272,7 +272,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
       node->timeout = coap_calc_timeout(session, r);
     }
   }
-  LL_APPEND(session->sendqueue, node);
+  LL_APPEND(session->delayqueue, node);
   debug("** %s tid=%d: delayed\n", coap_session_str(session), node->id);
   return COAP_PDU_DELAYED;
 }
@@ -318,10 +318,10 @@ void coap_session_connected(coap_session_t *session) {
     }
   }
 
-  while (session->sendqueue && session->state == COAP_SESSION_STATE_ESTABLISHED) {
+  while (session->delayqueue && session->state == COAP_SESSION_STATE_ESTABLISHED) {
     ssize_t bytes_written;
-    coap_queue_t *q = session->sendqueue;
-    session->sendqueue = q->next;
+    coap_queue_t *q = session->delayqueue;
+    session->delayqueue = q->next;
     q->next = NULL;
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (session->con_active >= COAP_DEFAULT_NSTART)
@@ -342,8 +342,8 @@ void coap_session_connected(coap_session_t *session) {
 	break;
     } else {
       if (bytes_written <= 0 || (size_t)bytes_written < q->pdu->used_size + q->pdu->hdr_size) {
-	q->next = session->sendqueue;
-	session->sendqueue = q;
+	q->next = session->delayqueue;
+	session->delayqueue = q;
 	if (bytes_written > 0)
 	  session->partial_write = (size_t)bytes_written;
 	break;
@@ -373,9 +373,9 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
   }
   session->partial_read = 0;
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
-    while (session->sendqueue) {
-      coap_queue_t *q = session->sendqueue;
-      session->sendqueue = q->next;
+    while (session->delayqueue) {
+      coap_queue_t *q = session->delayqueue;
+      session->delayqueue = q->next;
       q->next = NULL;
       debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), q->id);
       if (q->pdu->type==COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
@@ -414,9 +414,9 @@ void coap_session_reset(coap_session_t *session) {
     session->partial_pdu = NULL;
   }
   session->partial_read = 0;
-  while (session->sendqueue) {
-    coap_queue_t *q = session->sendqueue;
-    session->sendqueue = q->next;
+  while (session->delayqueue) {
+    coap_queue_t *q = session->delayqueue;
+    session->delayqueue = q->next;
     q->next = NULL;
     debug("** %s tid=%d: not transmitted after delay\n", coap_session_str(session), (int)q->id);
     if (q->pdu->type == COAP_MESSAGE_CON && session->context->nack_handler)
@@ -442,7 +442,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
       session->last_rx_tx = now;
       return session;
     }
-    if (session->ref == 0 && session->sendqueue == NULL && session->type == COAP_SESSION_TYPE_SERVER) {
+    if (session->ref == 0 && session->delayqueue == NULL && session->type == COAP_SESSION_TYPE_SERVER) {
       ++num_idle;
       if (oldest==NULL || session->last_rx_tx < oldest->last_rx_tx)
 	oldest = session;
