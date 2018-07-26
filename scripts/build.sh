@@ -42,4 +42,10 @@ if test $err = 0 -a -n "$WITH_TESTS" ; then
     err=$?
 fi
 
+# invoke OSS-Fuzz syntax checks
+if test $err = 0 -a -n "$WITH_TESTS" ; then
+    make -C tests/oss-fuzz -f Makefile.ci check clean
+    err=$?
+fi
+
 exit $err
