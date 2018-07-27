@@ -184,7 +184,7 @@ static void
 t_parse_option13(void) {
   /* delta == 280, length == 500 */
   unsigned char _data[505];
-  str teststr = {  sizeof(_data), _data };
+  coap_string_t teststr = {  sizeof(_data), _data };
   teststr.s[0] = 0xee;
   teststr.s[1] = 0x00;
   teststr.s[2] = 0x0b;

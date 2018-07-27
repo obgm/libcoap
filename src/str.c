@@ -27,6 +27,7 @@ coap_string_t *coap_new_string(size_t size) {
 
   memset(s, 0, sizeof(coap_string_t));
   s->s = ((unsigned char *)s) + sizeof(coap_string_t);
+  s->s[size] = '\000';
   return s;
 }
 

@@ -584,7 +584,7 @@ coap_register_handler(coap_resource_t *resource,
 #ifndef WITHOUT_OBSERVE
 coap_subscription_t *
 coap_find_observer(coap_resource_t *resource, coap_session_t *session,
-		     const coap_string_t *token) {
+		     const coap_binary_t *token) {
   coap_subscription_t *s;
 
   assert(resource);
@@ -621,7 +621,7 @@ coap_find_observer_query(coap_resource_t *resource, coap_session_t *session,
 coap_subscription_t *
 coap_add_observer(coap_resource_t *resource, 
                   coap_session_t *session,
-		  const coap_string_t *token,
+		  const coap_binary_t *token,
                   coap_string_t *query) {
   coap_subscription_t *s;
   
@@ -638,7 +638,7 @@ coap_add_observer(coap_resource_t *resource,
     s = coap_find_observer_query(resource, session, query);
     if (s) {
       /* Delete old entry with old token */
-      coap_string_t tmp_token = { s->token_length, s->token };
+      coap_binary_t tmp_token = { s->token_length, s->token };
       coap_delete_observer(resource, session, &tmp_token);
       s = NULL;
     }
@@ -680,7 +680,7 @@ coap_add_observer(coap_resource_t *resource,
 
 void
 coap_touch_observer(coap_context_t *context, coap_session_t *session,
-		    const coap_string_t *token) {
+		    const coap_binary_t *token) {
   coap_subscription_t *s;
 
   RESOURCES_ITER(context->resources, r) {
@@ -693,7 +693,7 @@ coap_touch_observer(coap_context_t *context, coap_session_t *session,
 
 int
 coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
-		     const coap_string_t *token) {
+		     const coap_binary_t *token) {
   coap_subscription_t *s;
 
   s = coap_find_observer(resource, session, token);
@@ -729,7 +729,7 @@ static void
 coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
   coap_method_handler_t h;
   coap_subscription_t *obs;
-  coap_string_t token;
+  coap_binary_t token;
   coap_pdu_t *response;
 
   if (r->observable && (r->dirty || r->partiallydirty)) {
@@ -802,12 +802,12 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
 }
 
 int
-coap_resource_set_dirty(coap_resource_t *r, const str *query) {
+coap_resource_set_dirty(coap_resource_t *r, const coap_string_t *query) {
   return coap_resource_notify_observers(r, query);
 }
 
 int
-coap_resource_notify_observers(coap_resource_t *r, const str *query) {
+coap_resource_notify_observers(coap_resource_t *r, const coap_string_t *query) {
   if (!r->observable)
     return 0;
   if (query) {
@@ -858,7 +858,7 @@ static void
 coap_remove_failed_observers(coap_context_t *context,
 			     coap_resource_t *resource,
 			     coap_session_t *session,
-			     const str *token) {
+			     const coap_binary_t *token) {
   coap_subscription_t *obs, *otmp;
 
   LL_FOREACH_SAFE(resource->subscribers, obs, otmp) {
@@ -900,7 +900,7 @@ coap_remove_failed_observers(coap_context_t *context,
 void
 coap_handle_failed_notify(coap_context_t *context, 
 			  coap_session_t *session, 
-			  const str *token) {
+			  const coap_binary_t *token) {
 
   RESOURCES_ITER(context->resources, r) {
 	coap_remove_failed_observers(context, r, session, token);
