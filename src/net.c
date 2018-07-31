@@ -2349,7 +2349,6 @@ static void coap_retransmittimer_execute(void *arg) {
       break;
     } else {
       elapsed -= nextinqueue->t;
-      nextinqueue->t = 0;
       coap_retransmit(ctx, coap_pop_next(ctx));
       nextinqueue = coap_peek_next(ctx);
     }
