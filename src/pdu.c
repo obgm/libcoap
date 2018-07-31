@@ -492,7 +492,7 @@ coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
   if (pdu->token_length > pdu->alloc_size) {
     /* Invalid PDU provided - not wise to assert here though */
     coap_log(LOG_DEBUG, "coap_pdu_parse: PDU header token size broken\n");
-    pdu->token_length = pdu->alloc_size;
+    pdu->token_length = (uint8_t)pdu->alloc_size;
     return 0;
   }
   return 1;
