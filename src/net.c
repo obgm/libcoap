@@ -1031,9 +1031,9 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
   (void)ctx;
   assert(session->sock.flags & COAP_SOCKET_CONNECTED);
 
-  while (session->sendqueue) {
+  while (session->delayqueue) {
     ssize_t bytes_written;
-    coap_queue_t *q = session->sendqueue;
+    coap_queue_t *q = session->delayqueue;
     debug("** %s tid=%d: transmitted after delay\n", coap_session_str(session), (int)q->pdu->tid);
     assert(session->partial_write < q->pdu->used_size + q->pdu->hdr_size);
     switch (session->proto) {
@@ -1062,7 +1062,7 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
 	session->partial_write += (size_t)bytes_written;
       break;
     }
-    session->sendqueue = q->next;
+    session->delayqueue = q->next;
     session->partial_write = 0;
     coap_delete_node(q);
   }
@@ -2232,12 +2232,12 @@ coap_can_exit(coap_context_t *context) {
     return 0;
   LL_FOREACH(context->endpoint, ep) {
     LL_FOREACH(ep->sessions, s) {
-      if (s->sendqueue)
+      if (s->delayqueue)
         return 0;
     }
   }
   LL_FOREACH(context->sessions, s) {
-    if (s->sendqueue)
+    if (s->delayqueue)
       return 0;
   }
   return 1;
