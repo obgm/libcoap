@@ -462,13 +462,12 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
     response->code = COAP_RESPONSE_CODE(204);
   }
 
-  coap_get_data (request, &size, &data);
   if (dynamic_entry[i].value) {
     coap_delete_string(dynamic_entry[i].value);
     dynamic_entry[i].value = NULL;
   }
 
-  if (size > 0) {
+  if (coap_get_data(request, &size, &data) && (size > 0)) {
     dynamic_entry[i].value = coap_new_string(size);
     memcpy (dynamic_entry[i].value->s, data, size);
     dynamic_entry[i].value->length = size;
