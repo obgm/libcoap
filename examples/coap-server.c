@@ -454,24 +454,25 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
     else {
       dynamic_count--;
       response->code = COAP_RESPONSE_CODE(500);
+      return;
     }
-  }
-  else {
+  } else {
     /* Need to do this as coap_get_uri_path() created it */
     coap_delete_string(uri_path);
     response->code = COAP_RESPONSE_CODE(204);
   }
+
   coap_get_data (request, &size, &data);
   if (dynamic_entry[i].value) {
     coap_delete_string(dynamic_entry[i].value);
     dynamic_entry[i].value = NULL;
   }
+
   if (size > 0) {
     dynamic_entry[i].value = coap_new_string(size);
     memcpy (dynamic_entry[i].value->s, data, size);
     dynamic_entry[i].value->length = size;
   }
-  return;
 }
 
 /*
