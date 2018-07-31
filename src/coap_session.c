@@ -691,24 +691,33 @@ coap_session_t *coap_new_client_session_pki(
   coap_proto_t proto,
   coap_dtls_pki_t* setup_data
 ) {
-  if (setup_data->version != COAP_DTLS_PKI_SETUP_VERSION) {
-    coap_log(LOG_ERR, "coap_new_client_session_pki: Wrong version of setup_data\n");
-    return 0;
-  }
-  coap_session_t *session = coap_session_create_client(ctx, local_if, server, proto);
-
-  if (!session)
-    return NULL;
+  coap_session_t *session;
 
   if (coap_dtls_is_supported()) {
-    if (!setup_data)
+    if (!setup_data) {
       return NULL;
+    } else {
+      if (setup_data->version != COAP_DTLS_PKI_SETUP_VERSION) {
+        coap_log(LOG_ERR, "coap_new_client_session_pki: Wrong version of setup_data\n");
+        return NULL;
+      }
+    }
+
+  }
+  session = coap_session_create_client(ctx, local_if, server, proto);
+
+  if (!session) {
+    return NULL;
+  }
+
+  if (coap_dtls_is_supported()) {
+    /* we know that setup_data is not NULL */
     if (!coap_dtls_context_set_pki(ctx, setup_data, COAP_DTLS_ROLE_CLIENT)) {
       coap_session_release(session);
       return NULL;
     }
   }
-  debug("*** %s: new outgoing session\n", coap_session_str(session));
+  coap_log(LOG_DEBUG, "*** %s: new outgoing session\n", coap_session_str(session));
   return coap_session_connect(session);
 }
 
