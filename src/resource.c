@@ -742,9 +742,14 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
 
     LL_FOREACH(r->subscribers, obs) {
       if (r->dirty == 0 && obs->dirty == 0)
-        /* running this resource due to partiallydirty, but this observation's notification was already enqueued */
+        /*
+         * running this resource due to partiallydirty, but this observation's
+         * notification was already enqueued
+         */
         continue;
-      if (obs->session->con_active >= COAP_DEFAULT_NSTART)
+      if (obs->session->con_active >= COAP_DEFAULT_NSTART &&
+          ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) ||
+           (obs->non_cnt >= COAP_OBS_MAX_NON)))
         continue;
 
       coap_tid_t tid = COAP_INVALID_TID;
