@@ -75,3 +75,8 @@ tests/*.o
 tags
 .tags*
 TAGS
+
+# ignore gcov-generated files
+**/*.gcda
+**/*.gcno
+**/*.gcov
