@@ -504,6 +504,27 @@ AC_ARG_ENABLE([examples],
 
 AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$build_examples" = "xyes"])
 
+# configure options
+# __gcov__
+AC_ARG_ENABLE([gcov],
+              [AS_HELP_STRING([--enable-gcov],
+                              [Enable building with gcov test coverage support [default=no]])],
+              [build_gcov="$enableval"],
+              [build_gcov="no"
+               AC_MSG_WARN([gcov is disabled])
+              ])
+
+if test "x$build_gcov" = "xyes"; then
+   if test "x$GCC" != "xyes"; then
+        AC_MSG_ERROR([Currently, gcov is assumed to work with GCC-compatible compilers only.])
+   else
+        AX_CHECK_COMPILE_FLAG([-fprofile-arcs], [CFLAGS="$CFLAGS -fprofile-arcs"])
+        AX_CHECK_COMPILE_FLAG([-ftest-coverage], [CFLAGS="$CFLAGS -ftest-coverage"])
+        # FIXME: clang complains about '--coverage'
+        AX_CHECK_COMPILE_FLAG([--coverage], [CFLAGS="$CFLAGS --coverage -O0" LDFLAGS="$LDFLAGS --coverage"])
+   fi
+fi
+
 # end configure options
 #######################
 
@@ -707,4 +728,9 @@ if test "x$build_examples" = "xyes"; then
     AC_MSG_RESULT([      build examples          : "yes"])
 else
     AC_MSG_RESULT([      build examples          : "no"])
+fi
+if test "x$build_gcov" = "xyes"; then
+    AC_MSG_RESULT([      build with gcov support : "yes"])
+else
+    AC_MSG_RESULT([      build with gcov support : "no"])
 fi
