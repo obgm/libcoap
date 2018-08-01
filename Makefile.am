@@ -223,6 +223,9 @@ dist_noinst_SCRIPTS = autogen.sh
 ## is 'make distclean' called. NOTE: To re create the *.{map,sym} files you
 ## need to call the target update-map-file after the configure script was
 ## running!
+clean-local:
+	-find \( -name '*.gcda' -o -name '*.gcno' -o -name '*.gcov' \) -delete
+
 distclean-local:
 	@rm -f src/*.o src/*.lo
 	rm -f libcoap-$(LIBCOAP_API_VERSION).map
