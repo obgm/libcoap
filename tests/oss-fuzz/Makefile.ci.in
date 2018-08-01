@@ -23,7 +23,7 @@ $(OUT)/%.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $^ -o $@
 
 %_fuzzer: %_target.o
-	$(LINK.cc) $(CXXFLAGS) $^ $(top_builddir)/.libs/$(libcoap).a $(LDFLAGS) $(LIBS) $(DTLS_LIBS) -o $@
+	$(LINK.cc) $(CXXFLAGS) $^ $(top_builddir)/.libs/$(libcoap).a $(LDFLAGS) $(LDLIBS) $(DTLS_LIBS) -o $@
 
 check: $(OBJECTS)
 

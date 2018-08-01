@@ -3,7 +3,8 @@
 top_builddir=../..
 top_srcdir=../..
 
-LIBS=-lFuzzingEngine
+LDLIBS+=-lFuzzingEngine
+export LDLIBS
 
 .PHONY: oss-fuzz clean
 
