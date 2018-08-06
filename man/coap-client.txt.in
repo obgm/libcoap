@@ -17,9 +17,9 @@ SYNOPSIS
 *coap-client* [*-a* addr] [*-b* [num,]size] [*-c* certfile] [*-e* text]
               [*-f* file] [*-k* key] [*-l* loss] [*-m* method] [*-o* file]
               [*-p* port] [*-r*] [*-s* duration] [*-t* type]  [*-u* user]
-              [*-v* num] [*-A* type] [*-B* seconds] [*-C* cafile] [*-N*]
-              [*-O* num,text] [*-P* addr[:port]] [*-R* root_cafile]
-              [*-T* token] [*-U*] URI
+              [*-v* num] [*-A* type] [*-B* seconds] [*-C* cafile]
+              [*-K* interval] [*-N*] [*-O* num,text] [*-P* addr[:port]]
+              [*-R* root_cafile] [*-T* token] [*-U*] URI
 
 DESCRIPTION
 -----------
@@ -126,6 +126,10 @@ OPTIONS
   If certfile is self-signed (as defined by *-c certfile*), then you need to
   have on the command line the same filename for both the certfile and cafile
   (as in  *-c certfile -C certfile*) to trigger validation.
+
+*-K* interval::
+   Send a ping after interval seconds of inactivity (TCP only).
+   If not specified, keep-alive is disabled (default).
 
 *-N* ::
    Send NON-confirmable message. If option *-N* is not specified, a
