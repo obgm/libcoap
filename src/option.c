@@ -4,7 +4,7 @@
  * Copyright (C) 2010-2013 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 
@@ -19,17 +19,17 @@
 
 #include "libcoap.h"
 #include "option.h"
-#include "encode.h"		/* for coap_fls() */
+#include "encode.h"                /* for coap_fls() */
 #include "debug.h"
 #include "mem.h"
 #include "utlist.h"
 
-#define ADVANCE_OPT(o,e,step) if ((e) < step) {			\
-    debug("cannot advance opt past end\n");			\
-    return 0;							\
-  } else {							\
-    (e) -= step;						\
-    (o) = ((o)) + step;			\
+#define ADVANCE_OPT(o,e,step) if ((e) < step) {                        \
+    debug("cannot advance opt past end\n");                        \
+    return 0;                                                        \
+  } else {                                                        \
+    (e) -= step;                                                \
+    (o) = ((o)) + step;                        \
   }
 
 /*
@@ -76,7 +76,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
     ADVANCE_OPT_CHECK(opt,length,1);
     result->delta += *opt & 0xff;
     break;
-    
+
   default:
     ;
   }
@@ -96,7 +96,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
     ADVANCE_OPT_CHECK(opt,length,1);
     result->length += *opt & 0xff;
     break;
-    
+
   default:
     ;
   }
@@ -119,11 +119,11 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 
 coap_opt_iterator_t *
 coap_option_iterator_init(const coap_pdu_t *pdu, coap_opt_iterator_t *oi,
-			  const coap_opt_filter_t filter) {
-  assert(pdu); 
+                          const coap_opt_filter_t filter) {
+  assert(pdu);
   assert(pdu->token);
   assert(oi);
-  
+
   memset(oi, 0, sizeof(coap_opt_iterator_t));
 
   oi->next_option = pdu->token + pdu->token_length;
@@ -145,7 +145,7 @@ COAP_STATIC_INLINE int
 opt_finished(coap_opt_iterator_t *oi) {
   assert(oi);
 
-  if (oi->bad || oi->length == 0 || 
+  if (oi->bad || oi->length == 0 ||
       !oi->next_option || *oi->next_option == COAP_PAYLOAD_START) {
     oi->bad = 1;
   }
@@ -158,7 +158,7 @@ coap_option_next(coap_opt_iterator_t *oi) {
   coap_option_t option;
   coap_opt_t *current_opt = NULL;
   size_t optsize;
-  int b;		   /* to store result of coap_option_getb() */
+  int b;                   /* to store result of coap_option_getb() */
 
   assert(oi);
 
@@ -170,18 +170,18 @@ coap_option_next(coap_opt_iterator_t *oi) {
      * opt_finished() filters out any bad conditions, we can assume that
      * oi->option is valid. */
     current_opt = oi->next_option;
-    
+
     /* Advance internal pointer to next option, skipping any option that
      * is not included in oi->filter. */
     optsize = coap_opt_parse(oi->next_option, oi->length, &option);
     if (optsize) {
       assert(optsize <= oi->length);
-      
+
       oi->next_option += optsize;
       oi->length -= optsize;
-      
+
       oi->type += option.delta;
-    } else {			/* current option is malformed */
+    } else {                        /* current option is malformed */
       oi->bad = 1;
       return NULL;
     }
@@ -189,12 +189,12 @@ coap_option_next(coap_opt_iterator_t *oi) {
     /* Exit the while loop when:
      *   - no filtering is done at all
      *   - the filter matches for the current option
-     *   - the filter is too small for the current option number 
+     *   - the filter is too small for the current option number
      */
     if (!oi->filtered ||
-	(b = coap_option_getb(oi->filter, oi->type)) > 0)
+        (b = coap_option_getb(oi->filter, oi->type)) > 0)
       break;
-    else if (b < 0) {		/* filter too small, cannot proceed */
+    else if (b < 0) {                /* filter too small, cannot proceed */
       oi->bad = 1;
       return NULL;
     }
@@ -204,10 +204,10 @@ coap_option_next(coap_opt_iterator_t *oi) {
 }
 
 coap_opt_t *
-coap_check_option(coap_pdu_t *pdu, uint16_t type, 
-		  coap_opt_iterator_t *oi) {
+coap_check_option(coap_pdu_t *pdu, uint16_t type,
+                  coap_opt_iterator_t *oi) {
   coap_opt_filter_t f;
-  
+
   coap_option_filter_clear(f);
   coap_option_setb(f, type);
 
@@ -229,7 +229,7 @@ coap_opt_delta(const coap_opt_t *opt) {
     /* This case usually should not happen, hence we do not have a
      * proper way to indicate an error. */
     return 0;
-  case 14: 
+  case 14:
     /* Handle two-byte value: First, the MSB + 269 is stored as delta value.
      * After that, the option pointer is advanced to the LSB which is handled
      * just like case delta == 13. */
@@ -326,13 +326,13 @@ coap_opt_size(const coap_opt_t *opt) {
 }
 
 size_t
-coap_opt_setheader(coap_opt_t *opt, size_t maxlen, 
-		   uint16_t delta, size_t length) {
+coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
+                   uint16_t delta, size_t length) {
   size_t skip = 0;
 
   assert(opt);
 
-  if (maxlen == 0)		/* need at least one byte */
+  if (maxlen == 0)                /* need at least one byte */
     return 0;
 
   if (delta < 13) {
@@ -355,7 +355,7 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
     opt[++skip] = ((delta - 269) >> 8) & 0xff;
     opt[++skip] = (delta - 269) & 0xff;
   }
-    
+
   if (length < 13) {
     opt[0] |= length & 0x0f;
   } else if (length < 269) {
@@ -363,7 +363,7 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
       debug("insufficient space to encode option length %zu\n", length);
       return 0;
     }
-    
+
     opt[0] |= 0x0d;
     opt[++skip] = (coap_opt_t)(length - 13);
   } else {
@@ -383,37 +383,37 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
 size_t
 coap_opt_encode_size(uint16_t delta, size_t length) {
   size_t n = 1;
-  
+
   if (delta >= 13) {
     if (delta < 269)
       n += 1;
     else
       n += 2;
   }
-  
+
   if (length >= 13) {
     if (length < 269)
       n += 1;
     else
       n += 2;
   }
-  
+
   return n + length;
 }
 
 size_t
 coap_opt_encode(coap_opt_t *opt, size_t maxlen, uint16_t delta,
-		const uint8_t *val, size_t length) {
+                const uint8_t *val, size_t length) {
   size_t l = 1;
 
   l = coap_opt_setheader(opt, maxlen, delta, length);
   assert(l <= maxlen);
-  
+
   if (!l) {
     debug("coap_opt_encode: cannot set option header\n");
     return 0;
   }
-  
+
   maxlen -= l;
   opt += l;
 
@@ -422,7 +422,7 @@ coap_opt_encode(coap_opt_t *opt, size_t maxlen, uint16_t delta,
     return 0;
   }
 
-  if (val)			/* better be safe here */
+  if (val)                        /* better be safe here */
     memcpy(opt, val, length);
 
   return l + length;
@@ -468,8 +468,8 @@ enum filter_op_t { FILTER_SET, FILTER_CLEAR, FILTER_GET };
  */
 static int
 coap_option_filter_op(coap_opt_filter_t filter,
-		      uint16_t type,
-		      enum filter_op_t op) {
+                      uint16_t type,
+                      enum filter_op_t op) {
   size_t lindex = 0;
   opt_filter *of = (opt_filter *)filter;
   uint16_t nr, mask = 0;
@@ -480,25 +480,25 @@ coap_option_filter_op(coap_opt_filter_t filter,
     for (nr = 1; lindex < COAP_OPT_FILTER_LONG; nr <<= 1, lindex++) {
 
       if (((of->mask & nr) > 0) && (of->long_opts[lindex] == type)) {
-	if (op == FILTER_CLEAR) {
-	  of->mask &= ~nr;
-	}
+        if (op == FILTER_CLEAR) {
+          of->mask &= ~nr;
+        }
 
-	return 1;
+        return 1;
       }
     }
   } else {
     mask = SHORT_MASK;
 
     for (nr = 1 << COAP_OPT_FILTER_LONG; lindex < COAP_OPT_FILTER_SHORT;
-	 nr <<= 1, lindex++) {
+         nr <<= 1, lindex++) {
 
       if (((of->mask & nr) > 0) && (of->short_opts[lindex] == (type & 0xff))) {
-	if (op == FILTER_CLEAR) {
-	  of->mask &= ~nr;
-	}
+        if (op == FILTER_CLEAR) {
+          of->mask &= ~nr;
+        }
 
-	return 1;
+        return 1;
       }
     }
   }
@@ -548,10 +548,10 @@ coap_new_optlist(uint16_t number,
                           size_t length,
                           const uint8_t *data
 ) {
-  coap_optlist_t *node;          
-     
+  coap_optlist_t *node;
+
   node = coap_malloc_type(COAP_OPTLIST, sizeof(coap_optlist_t) + length);
-     
+
   if (node) {
     node->number = number;
     node->length = length;
@@ -560,7 +560,7 @@ coap_new_optlist(uint16_t number,
   } else {
     coap_log(LOG_WARNING, "coap_new_optlist: malloc failure\n");
   }
-  
+
   return node;
 }
 

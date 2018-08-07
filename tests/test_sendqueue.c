@@ -306,8 +306,8 @@ t_sendqueue_tests_create(void) {
     /* destroy all test nodes and set entry to zero */
     for (n = 0; n < sizeof(node)/sizeof(coap_queue_t *); n++) {
       if (node[n]) {
-	coap_delete_node(node[n]);
-	node[n] = NULL;
+        coap_delete_node(node[n]);
+        node[n] = NULL;
       }
     }
     coap_free_context(ctx);
@@ -335,18 +335,18 @@ t_init_sendqueue_tests(void) {
   CU_pSuite suite;
 
   suite = CU_add_suite("sendqueue",
-		       t_sendqueue_tests_create, t_sendqueue_tests_remove);
-  if (!suite) {			/* signal error */
+                       t_sendqueue_tests_create, t_sendqueue_tests_remove);
+  if (!suite) {                        /* signal error */
     fprintf(stderr, "W: cannot add sendqueue test suite (%s)\n",
-	    CU_get_error_msg());
+            CU_get_error_msg());
 
     return NULL;
   }
 
-#define SENDQUEUE_TEST(s,t)					      \
-  if (!CU_ADD_TEST(s,t)) {					      \
-    fprintf(stderr, "W: cannot add sendqueue test (%s)\n",	      \
-	    CU_get_error_msg());				      \
+#define SENDQUEUE_TEST(s,t)                                              \
+  if (!CU_ADD_TEST(s,t)) {                                              \
+    fprintf(stderr, "W: cannot add sendqueue test (%s)\n",              \
+            CU_get_error_msg());                                      \
   }
 
   SENDQUEUE_TEST(suite, t_sendqueue1);

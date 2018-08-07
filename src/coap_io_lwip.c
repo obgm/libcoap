@@ -4,7 +4,7 @@
  *               2014 chrysn <chrysn@fsfe.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 #include "coap_config.h"
@@ -21,28 +21,28 @@ int lwprot_count = 0;
 #if 0
 void coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target)
 {
-	target->port = packet->srcport;
-	memcpy(&target->addr, ip_current_src_addr(), sizeof(ip_addr_t));
+        target->port = packet->srcport;
+        memcpy(&target->addr, ip_current_src_addr(), sizeof(ip_addr_t));
 }
 #endif
 void coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length)
 {
-	LWIP_ASSERT("Can only deal with contiguous PBUFs to read the initial details", packet->pbuf->tot_len == packet->pbuf->len);
-	*address = packet->pbuf->payload;
-	*length = packet->pbuf->tot_len;
+        LWIP_ASSERT("Can only deal with contiguous PBUFs to read the initial details", packet->pbuf->tot_len == packet->pbuf->len);
+        *address = packet->pbuf->payload;
+        *length = packet->pbuf->tot_len;
 }
 void coap_free_packet(coap_packet_t *packet)
 {
-	if (packet->pbuf)
-		pbuf_free(packet->pbuf);
-	coap_free_type(COAP_PACKET, packet);
+        if (packet->pbuf)
+                pbuf_free(packet->pbuf);
+        coap_free_type(COAP_PACKET, packet);
 }
 
 struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet)
 {
-	struct pbuf *ret = packet->pbuf;
-	packet->pbuf = NULL;
-	return ret;
+        struct pbuf *ret = packet->pbuf;
+        packet->pbuf = NULL;
+        return ret;
 }
 
 
@@ -103,39 +103,39 @@ error:
 
 coap_endpoint_t *
 coap_new_endpoint(coap_context_t *context, const coap_address_t *addr, coap_proto_t proto) {
-	coap_endpoint_t *result;
-	err_t err;
+        coap_endpoint_t *result;
+        err_t err;
 
-	LWIP_ASSERT("Proto not supported for LWIP endpoints", proto == COAP_PROTO_UDP);
+        LWIP_ASSERT("Proto not supported for LWIP endpoints", proto == COAP_PROTO_UDP);
 
-	result = coap_malloc_type(COAP_ENDPOINT, sizeof(coap_endpoint_t));
-	if (!result) return NULL;
+        result = coap_malloc_type(COAP_ENDPOINT, sizeof(coap_endpoint_t));
+        if (!result) return NULL;
 
-	result->sock.pcb = udp_new_ip_type(IPADDR_TYPE_ANY);
-	if (result->sock.pcb == NULL) goto error;
+        result->sock.pcb = udp_new_ip_type(IPADDR_TYPE_ANY);
+        if (result->sock.pcb == NULL) goto error;
 
-	udp_recv(result->sock.pcb, coap_recv, (void*)result);
-	err = udp_bind(result->sock.pcb, &addr->addr, addr->port);
-	if (err) {
-		udp_remove(result->sock.pcb);
-		goto error;
-	}
+        udp_recv(result->sock.pcb, coap_recv, (void*)result);
+        err = udp_bind(result->sock.pcb, &addr->addr, addr->port);
+        if (err) {
+                udp_remove(result->sock.pcb);
+                goto error;
+        }
 
-	result->default_mtu = COAP_DEFAULT_MTU;
-	result->context = context;
-	result->proto = proto;
+        result->default_mtu = COAP_DEFAULT_MTU;
+        result->context = context;
+        result->proto = proto;
 
-	return result;
+        return result;
 
 error:
-	coap_free_type(COAP_ENDPOINT, result);
-	return NULL;
+        coap_free_type(COAP_ENDPOINT, result);
+        return NULL;
 }
 
 void coap_free_endpoint(coap_endpoint_t *ep)
 {
-	udp_remove(ep->sock.pcb);
-	coap_free_type(COAP_ENDPOINT, ep);
+        udp_remove(ep->sock.pcb);
+        coap_free_type(COAP_ENDPOINT, ep);
 }
 
 ssize_t

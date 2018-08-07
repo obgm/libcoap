@@ -3,7 +3,7 @@
  * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 #include "coap_config.h"
@@ -193,7 +193,7 @@ coap_pdu_check_resize(coap_pdu_t *pdu, size_t size) {
     if (pdu->max_size && new_size > pdu->max_size) {
       new_size = pdu->max_size;
       if (new_size < size)
-	return 0;
+        return 0;
     }
     if (!coap_pdu_resize(pdu, new_size))
       return 0;
@@ -229,7 +229,7 @@ size_t
 coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len, const uint8_t *data) {
   size_t optsize;
   coap_opt_t *opt;
-  
+
   assert(pdu);
   pdu->data = NULL;
 
@@ -245,8 +245,8 @@ coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len, const uint8_t *data)
   opt = pdu->token + pdu->used_size;
 
   /* encode option and check length */
-  optsize = coap_opt_encode(opt, pdu->alloc_size - pdu->used_size, 
-			    type - pdu->max_delta, data, len);
+  optsize = coap_opt_encode(opt, pdu->alloc_size - pdu->used_size,
+                            type - pdu->max_delta, data, len);
 
   if (!optsize) {
     warn("coap_add_option: cannot add option\n");
@@ -282,7 +282,7 @@ coap_add_option_later(coap_pdu_t *pdu, uint16_t type, size_t len) {
 
   /* encode option and check length */
   optsize = coap_opt_encode(opt, pdu->alloc_size - pdu->used_size,
-			    type - pdu->max_delta, NULL, len);
+                            type - pdu->max_delta, NULL, len);
 
   if (!optsize) {
     warn("coap_add_option: cannot add option\n");
@@ -349,7 +349,7 @@ typedef struct {
   const char *phrase;
 } error_desc_t;
 
-/* if you change anything here, make sure, that the longest string does not 
+/* if you change anything here, make sure, that the longest string does not
  * exceed COAP_ERROR_PHRASE_LENGTH. */
 error_desc_t coap_error[] = {
   { COAP_RESPONSE_CODE(201), "Created" },
@@ -375,7 +375,7 @@ error_desc_t coap_error[] = {
   { COAP_RESPONSE_CODE(503), "Service Unavailable" },
   { COAP_RESPONSE_CODE(504), "Gateway Timeout" },
   { COAP_RESPONSE_CODE(505), "Proxying Not Supported" },
-  { 0, NULL }			/* end marker */
+  { 0, NULL }                        /* end marker */
 };
 
 const char *
@@ -390,7 +390,7 @@ coap_response_phrase(unsigned char code) {
 #endif
 
 /**
- * Advances *optp to next option if still in PDU. This function 
+ * Advances *optp to next option if still in PDU. This function
  * returns the number of bytes opt has been advanced or @c 0
  * on error.
  */
@@ -399,7 +399,7 @@ next_option_safe(coap_opt_t **optp, size_t *length) {
   coap_option_t option;
   size_t optsize;
 
-  assert(optp); assert(*optp); 
+  assert(optp); assert(*optp);
   assert(length);
 
   optsize = coap_opt_parse(*optp, *length, &option);
@@ -452,19 +452,19 @@ coap_pdu_parse_size(coap_proto_t proto,
       size = len;
     } else if (length >= 2) {
       if (len==13) {
-	size = (size_t)data[1] + COAP_MESSAGE_SIZE_OFFSET_TCP8;
+        size = (size_t)data[1] + COAP_MESSAGE_SIZE_OFFSET_TCP8;
       } else if (length >= 3) {
-	if (len==14) {
-	  size = ((size_t)data[1] << 8) + data[2] + COAP_MESSAGE_SIZE_OFFSET_TCP16;
-	} else if (length >= 5) {
-	  size = ((size_t)data[1] << 24) + ((size_t)data[2] << 16)
+        if (len==14) {
+          size = ((size_t)data[1] << 8) + data[2] + COAP_MESSAGE_SIZE_OFFSET_TCP16;
+        } else if (length >= 5) {
+          size = ((size_t)data[1] << 24) + ((size_t)data[2] << 16)
                + ((size_t)data[3] << 8) + data[4] + COAP_MESSAGE_SIZE_OFFSET_TCP32;
-	}
+        }
       }
     }
     size += data[0] & 0x0f;
   }
-  
+
   return size;
 }
 
@@ -527,8 +527,8 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
 
     while (length > 0 && *opt != COAP_PAYLOAD_START) {
       if ( !next_option_safe( &opt, (size_t *)&length ) ) {
-	debug( "coap_pdu_parse: missing payload start code\n" );
-	return 0;
+        debug( "coap_pdu_parse: missing payload start code\n" );
+        return 0;
       }
     }
 
@@ -542,7 +542,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
       }
     }
     if (length > 0)
-		pdu->data = (uint8_t*)opt;
+                pdu->data = (uint8_t*)opt;
     else
       pdu->data = NULL;
   }
@@ -601,8 +601,8 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
     if (len <= COAP_MAX_MESSAGE_SIZE_TCP0) {
       assert(pdu->max_hdr_size >= 2);
       if (pdu->max_hdr_size < 2) {
-	warn("coap_pdu_encode_header: not enough space for TCP0 header");
-	return 0;
+        warn("coap_pdu_encode_header: not enough space for TCP0 header");
+        return 0;
       }
       pdu->token[-2] = (uint8_t)len << 4
                      | pdu->token_length;
@@ -611,8 +611,8 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
     } else if (len <= COAP_MAX_MESSAGE_SIZE_TCP8) {
       assert(pdu->max_hdr_size >= 3);
       if (pdu->max_hdr_size < 3) {
-	warn("coap_pdu_encode_header: not enough space for TCP8 header");
-	return 0;
+        warn("coap_pdu_encode_header: not enough space for TCP8 header");
+        return 0;
       }
       pdu->token[-3] = 13 << 4 | pdu->token_length;
       pdu->token[-2] = (uint8_t)(len - COAP_MESSAGE_SIZE_OFFSET_TCP8);
@@ -621,8 +621,8 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
     } else if (len <= COAP_MAX_MESSAGE_SIZE_TCP16) {
       assert(pdu->max_hdr_size >= 4);
       if (pdu->max_hdr_size < 4) {
-	warn("coap_pdu_encode_header: not enough space for TCP16 header");
-	return 0;
+        warn("coap_pdu_encode_header: not enough space for TCP16 header");
+        return 0;
       }
       pdu->token[-4] = 14 << 4 | pdu->token_length;
       pdu->token[-3] = (uint8_t)((len - COAP_MESSAGE_SIZE_OFFSET_TCP16) >> 8);
@@ -632,8 +632,8 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
     } else {
       assert(pdu->max_hdr_size >= 6);
       if (pdu->max_hdr_size < 6) {
-	warn("coap_pdu_encode_header: not enough space for TCP32 header");
-	return 0;
+        warn("coap_pdu_encode_header: not enough space for TCP32 header");
+        return 0;
       }
       pdu->token[-6] = 15 << 4 | pdu->token_length;
       pdu->token[-5] = (uint8_t)((len - COAP_MESSAGE_SIZE_OFFSET_TCP32) >> 24);

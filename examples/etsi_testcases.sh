@@ -69,7 +69,7 @@ function start_coap_test {
 #
 # pre: resource /test exists and can handle GET with arbitrary payload
 #
-# client sends GET request with Type=0(CON) and Code=1(GET) 
+# client sends GET request with Type=0(CON) and Code=1(GET)
 #
 # check if sent request contains Type value indicating 0 and Code
 # value indicating 1
@@ -474,7 +474,7 @@ function TD_COAP_LINK_01 {
   testaddress=coap://$SERVERTUP/.well-known/core
   echo "retrieve server's list of resource"
   start_tcpdump $1
-  if [ $verbose ]; then 
+  if [ $verbose ]; then
     echo "client command: $COAP_CLIENT $clientopts $testaddress"
   fi
   clientoutput=$($COAP_CLIENT $clientopts "$testaddress")
@@ -753,12 +753,12 @@ function TD_COAP_OBS_04 {
 # check: Server does not send further response
 #
 function TD_COAP_OBS_05 {
-  clientopts="$callopts -s 0 -p $CLIENTPORT" 
+  clientopts="$callopts -s 0 -p $CLIENTPORT"
 #"-v 5 -B $longtimeout -p $CLIENTPORT -s 0"
   testaddress=coap://$SERVERTUP/obs
   echo "server detection of deregistration (explicit RST)"
   start_coap_test $1 stop
-  clientopts="$callopts -p $CLIENTPORT -s 0 -N" 
+  clientopts="$callopts -p $CLIENTPORT -s 0 -N"
 #"-v 5 -B $clienttimeout -p $CLIENTPORT -s 0 -N"
   testaddress=coap://[::1]/obs
   start_coap_test $1

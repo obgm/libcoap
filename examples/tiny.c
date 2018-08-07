@@ -3,7 +3,7 @@
  * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 #include <string.h>
@@ -56,15 +56,15 @@ usage( const char *program ) {
     program = ++p;
 
   fprintf( stderr, "%s -- tiny fake sensor\n"
-	   "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
-	   "usage: %s [group address]\n"
-	   "\n\nSends some fake sensor values to specified multicast group\n",
-	   program, program );
+           "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
+           "usage: %s [group address]\n"
+           "\n\nSends some fake sensor values to specified multicast group\n",
+           program, program );
 }
 
 coap_context_t *
 get_context(const char *node, const char *port) {
-  coap_context_t *ctx = NULL;  
+  coap_context_t *ctx = NULL;
   int s;
   struct addrinfo hints;
   struct addrinfo *result, *rp;
@@ -73,12 +73,12 @@ get_context(const char *node, const char *port) {
   hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
   hints.ai_socktype = SOCK_DGRAM; /* Coap uses UDP */
   hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL;
-  
+
   s = getaddrinfo(node, port, &hints, &result);
   if ( s != 0 ) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
     return NULL;
-  } 
+  }
 
   /* iterate through results until success */
   for (rp = result; rp != NULL; rp = rp->ai_next) {
@@ -88,7 +88,7 @@ get_context(const char *node, const char *port) {
       goto finish;
     }
   }
-  
+
   fprintf(stderr, "no context available for interface '%s'\n", node);
 
  finish:
@@ -124,7 +124,7 @@ main(int argc, char **argv) {
     /* set socket options for multicast */
 
     if ( setsockopt( ctx->sockfd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
-		     (char *)&hops, sizeof(hops) ) < 0 )
+                     (char *)&hops, sizeof(hops) ) < 0 )
       perror("setsockopt: IPV6_MULTICAST_HOPS");
 
   }

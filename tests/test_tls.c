@@ -71,23 +71,23 @@ t_tls_tests_create(void) {
   coap_startup();
   return 0;
 }
-  
+
 CU_pSuite
 t_init_tls_tests(void) {
   CU_pSuite suite;
 
   suite = CU_add_suite("TLS", t_tls_tests_create, NULL);
-  if (!suite) {			/* signal error */
+  if (!suite) {                        /* signal error */
     fprintf(stderr, "W: cannot add TLS test suite (%s)\n",
-	    CU_get_error_msg());
+            CU_get_error_msg());
 
     return NULL;
   }
 
-#define TLS_TEST(s,t)						      \
-  if (!CU_ADD_TEST(s,t)) {					      \
-    fprintf(stderr, "W: cannot add TLS test (%s)\n",	      \
-	    CU_get_error_msg());				      \
+#define TLS_TEST(s,t)                                                      \
+  if (!CU_ADD_TEST(s,t)) {                                              \
+    fprintf(stderr, "W: cannot add TLS test (%s)\n",              \
+            CU_get_error_msg());                                      \
   }
 
   TLS_TEST(suite, t_tls1);

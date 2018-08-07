@@ -20,7 +20,7 @@ struct coap_queue_t;
 
 /**
 * Abstraction of a fixed point number that can be used where necessary instead
-* of a float.  1,000 fractional bits equals one integer 
+* of a float.  1,000 fractional bits equals one integer
 */
 typedef struct coap_fixed_point_t {
   uint16_t integer_part;    /**< Integer part of fixed point variable */
@@ -45,35 +45,35 @@ typedef uint8_t coap_session_state_t;
 /**
  * coap_session_state_t values
  */
-#define COAP_SESSION_STATE_NONE		0
-#define COAP_SESSION_STATE_CONNECTING	1
-#define COAP_SESSION_STATE_HANDSHAKE	2
-#define COAP_SESSION_STATE_CSM		3
-#define COAP_SESSION_STATE_ESTABLISHED	4
+#define COAP_SESSION_STATE_NONE                0
+#define COAP_SESSION_STATE_CONNECTING        1
+#define COAP_SESSION_STATE_HANDSHAKE        2
+#define COAP_SESSION_STATE_CSM                3
+#define COAP_SESSION_STATE_ESTABLISHED        4
 
 typedef struct coap_session_t {
   struct coap_session_t *next;
-  coap_proto_t proto;		  /**< protocol used */
-  coap_session_type_t type;	  /**< client or server side socket */
-  coap_session_state_t state;	  /**< current state of relationaship with peer */
-  unsigned ref;			  /**< reference count from queues */
-  unsigned tls_overhead;	  /**< overhead of TLS layer */
-  unsigned mtu;			  /**< path or CSM mtu */
-  coap_address_t local_if;        /**< optional local interface address */
-  coap_address_t remote_addr;     /**< remote address and port */
-  coap_address_t local_addr;	  /**< local address and port */
-  int ifindex;                    /**< interface index */
-  coap_socket_t sock;		  /**< socket object for the session, if any */
-  struct coap_endpoint_t *endpoint;	  /**< session's endpoint */
-  struct coap_context_t *context;	  /**< session's context */
-  void *tls;			  /**< security parameters */
-  uint16_t tx_mid;                /**< the last message id that was used in this session */
-  uint8_t con_active;             /**< Active CON request sent */
-  struct coap_queue_t *delayqueue; /**< list of delayed messages waiting to be sent */
-  size_t partial_write;           /**< if > 0 indicates number of bytes already written from the pdu at the head of sendqueue */
-  uint8_t read_header[8];         /**< storage space for header of incoming message header */
-  size_t partial_read;            /**< if > 0 indicates number of bytes already read for an incoming message */
-  coap_pdu_t *partial_pdu;        /**< incomplete incoming pdu */
+  coap_proto_t proto;               /**< protocol used */
+  coap_session_type_t type;         /**< client or server side socket */
+  coap_session_state_t state;       /**< current state of relationaship with peer */
+  unsigned ref;                     /**< reference count from queues */
+  unsigned tls_overhead;            /**< overhead of TLS layer */
+  unsigned mtu;                     /**< path or CSM mtu */
+  coap_address_t local_if;          /**< optional local interface address */
+  coap_address_t remote_addr;       /**< remote address and port */
+  coap_address_t local_addr;        /**< local address and port */
+  int ifindex;                      /**< interface index */
+  coap_socket_t sock;               /**< socket object for the session, if any */
+  struct coap_endpoint_t *endpoint; /**< session's endpoint */
+  struct coap_context_t *context;   /**< session's context */
+  void *tls;                        /**< security parameters */
+  uint16_t tx_mid;                  /**< the last message id that was used in this session */
+  uint8_t con_active;               /**< Active CON request sent */
+  struct coap_queue_t *delayqueue;  /**< list of delayed messages waiting to be sent */
+  size_t partial_write;             /**< if > 0 indicates number of bytes already written from the pdu at the head of sendqueue */
+  uint8_t read_header[8];           /**< storage space for header of incoming message header */
+  size_t partial_read;              /**< if > 0 indicates number of bytes already read for an incoming message */
+  coap_pdu_t *partial_pdu;          /**< incomplete incoming pdu */
   coap_tick_t last_rx_tx;
   coap_tick_t last_tx_rst;
   coap_tick_t last_ping;
@@ -83,9 +83,9 @@ typedef struct coap_session_t {
   size_t psk_identity_len;
   uint8_t *psk_key;
   size_t psk_key_len;
-  void *app;                    /**< application-specific data */
-  unsigned int max_retransmit;          /**< maximum re-transmit count (default 4) */
-  coap_fixed_point_t ack_timeout;       /**< timeout waiting for ack (default 2 secs) */
+  void *app;                        /**< application-specific data */
+  unsigned int max_retransmit;      /**< maximum re-transmit count (default 4) */
+  coap_fixed_point_t ack_timeout;   /**< timeout waiting for ack (default 2 secs) */
   coap_fixed_point_t ack_random_factor; /**< ack random factor backoff (default 1.5) */
   unsigned int dtls_timeout_count;      /**< dtls setup retry counter */
   int dtls_event;                       /**< Tracking any (D)TLS events on this sesison */
@@ -299,20 +299,20 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
 typedef struct coap_endpoint_t {
   struct coap_endpoint_t *next;
   struct coap_context_t *context; /**< endpoint's context */
-  coap_proto_t proto;		  /**< protocol used on this interface */
-  uint16_t default_mtu; 	  /**< default mtu for this interface */
-  coap_socket_t sock;		  /**< socket object for the interface, if any */
-  coap_address_t bind_addr;	  /**< local interface address */
-  coap_session_t *sessions;	  /**< list of active sessions */
-  coap_session_t hello;		  /**< special session of DTLS hello messages */
+  coap_proto_t proto;             /**< protocol used on this interface */
+  uint16_t default_mtu;           /**< default mtu for this interface */
+  coap_socket_t sock;             /**< socket object for the interface, if any */
+  coap_address_t bind_addr;       /**< local interface address */
+  coap_session_t *sessions;       /**< list of active sessions */
+  coap_session_t hello;           /**< special session of DTLS hello messages */
 } coap_endpoint_t;
 
 /**
 * Create a new endpoint for communicating with peers.
 *
-* @param context	The coap context that will own the new endpoint
-* @param listen_addr	Address the endpoint will listen for incoming requests on or originate outgoing requests from. Use NULL to specify that no incoming request will be accepted and use a random endpoint.
-* @param proto		Protocol used on this endpoint
+* @param context        The coap context that will own the new endpoint
+* @param listen_addr    Address the endpoint will listen for incoming requests on or originate outgoing requests from. Use NULL to specify that no incoming request will be accepted and use a random endpoint.
+* @param proto          Protocol used on this endpoint
 */
 
 coap_endpoint_t *coap_new_endpoint(struct coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto);
@@ -350,16 +350,16 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
 coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
   const struct coap_packet_t *packet, coap_tick_t now);
 
-/**   
+/**
  * Create a new DTLS session for the @p endpoint.
- *    
+ *
  * @ingroup dtls_internal
- *  
+ *
  * @param endpoint  Endpoint to add DTLS session to
  * @param packet    Received packet information to base session on.
  * @param now       The current time in ticks.
  *
- * @return Created CoAP session or @c NULL if error. 
+ * @return Created CoAP session or @c NULL if error.
  */
 coap_session_t *coap_endpoint_new_dtls_session(coap_endpoint_t *endpoint,
   const struct coap_packet_t *packet, coap_tick_t now);

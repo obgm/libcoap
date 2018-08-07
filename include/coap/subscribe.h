@@ -55,7 +55,7 @@
 /** Subscriber information */
 typedef struct coap_subscription_t {
   struct coap_subscription_t *next; /**< next element in linked list */
-  coap_session_t *session;	    /**< subscriber session */
+  coap_session_t *session;          /**< subscriber session */
 
   unsigned int non_cnt:4;  /**< up to 15 non-confirmable notifies allowed */
   unsigned int fail_cnt:2; /**< up to 3 confirmable notifies can fail */

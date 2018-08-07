@@ -287,7 +287,7 @@ COAP_DEPRECATED typedef struct {
 typedef struct coap_pdu_t {
   uint8_t type;             /**< message type */
   uint8_t code;             /**< request method (value 1--10) or response code (value 40-255) */
-  uint8_t max_hdr_size;	    /**< space reserved for protocol-specific header */
+  uint8_t max_hdr_size;     /**< space reserved for protocol-specific header */
   uint8_t hdr_size;         /**< actaul size used for protocol-specific header */
   uint8_t token_length;     /**< length of Token */
   uint16_t tid;             /**< transaction id, if any, in regular host byte order */
@@ -296,16 +296,16 @@ typedef struct coap_pdu_t {
   size_t used_size;         /**< used bytes of storage for token, options and payload */
   size_t max_size;          /**< maximum size for token, options and payload, or zero for variable size pdu */
   uint8_t *token;           /**< first byte of token, if any, or options */
-  uint8_t *data;	    /**< first byte of payload, if any */
+  uint8_t *data;            /**< first byte of payload, if any */
 #ifdef WITH_LWIP
   struct pbuf *pbuf;        /**< lwIP PBUF. The package data will always reside
-			    *    inside the pbuf's payload, but this pointer
-			    *    has to be kept because no exact offset can be
-			    *    given. This field must not be accessed from
-			    *    outside, because the pbuf's reference count
-			    *    is checked to be 1 when the pbuf is assigned
-			    *    to the pdu, and the pbuf stays exclusive to
-			    *    this pdu. */
+                             *   inside the pbuf's payload, but this pointer
+                             *   has to be kept because no exact offset can be
+                             *   given. This field must not be accessed from
+                             *   outside, because the pbuf's reference count
+                             *   is checked to be 1 when the pbuf is assigned
+                             *   to the pdu, and the pbuf stays exclusive to
+                             *   this pdu. */
 #endif
 } coap_pdu_t;
 
@@ -340,11 +340,11 @@ typedef uint8_t coap_proto_t;
 /**
 * coap_proto_t values
 */
-#define COAP_PROTO_NONE	  0
-#define COAP_PROTO_UDP	  1
-#define COAP_PROTO_DTLS	  2
-#define COAP_PROTO_TCP	  3
-#define COAP_PROTO_TLS	  4
+#define COAP_PROTO_NONE         0
+#define COAP_PROTO_UDP          1
+#define COAP_PROTO_DTLS         2
+#define COAP_PROTO_TCP          3
+#define COAP_PROTO_TLS          4
 
 /**
  * Creates a new CoAP PDU with at least enough storage space for the given
@@ -447,7 +447,7 @@ int coap_pdu_parse_opt(coap_pdu_t *pdu);
 
 /**
 * Parses @p data into the CoAP PDU structure given in @p result.
-* The target pdu must be large enough to 
+* The target pdu must be large enough to
 * This function returns @c 0 on error or a number greater than zero on success.
 *
 * @param proto   Session's protocol

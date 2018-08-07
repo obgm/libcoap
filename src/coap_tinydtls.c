@@ -300,8 +300,8 @@ void *coap_dtls_new_client_session(coap_session_t *session) {
     if (dtls_connect((struct dtls_context_t *)session->context->dtls_context,
       dtls_session) >= 0) {
       peer =
-	dtls_get_peer((struct dtls_context_t *)session->context->dtls_context,
-	  dtls_session);
+        dtls_get_peer((struct dtls_context_t *)session->context->dtls_context,
+          dtls_session);
     }
   }
 

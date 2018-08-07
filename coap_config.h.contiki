@@ -23,14 +23,14 @@
 #define COAP_MAX_RESOURCES 3
 #endif /* COAP_MAX_RESOURCES */
 
-/** Number of attributes that can be handled (should be at least 
- * @c 2 * COAP_MAX_RESOURCES. to carry the content type and the 
+/** Number of attributes that can be handled (should be at least
+ * @c 2 * COAP_MAX_RESOURCES. to carry the content type and the
  * resource type. */
 #ifndef COAP_MAX_ATTRIBUTES
 #define COAP_MAX_ATTRIBUTES 4
 #endif /* COAP_MAX_ATTRIBUTES */
 
-/** 
+/**
  * Number of PDUs that can be stored simultaneously. This number
  * includes both, the PDUs stored for retransmission as well as the
  * PDUs received. Beware that choosing a too small value can lead to
@@ -89,8 +89,8 @@
 
 #if (defined(PLATFORM) && PLATFORM == PLATFORM_MC1322X) || defined(CONTIKI_TARGET_ECONOTAG)
 /* Redbee econotags get a special treatment here: endianness is set
- * explicitly, and 
- */ 
+ * explicitly, and
+ */
 
 #define BYTE_ORDER UIP_LITTLE_ENDIAN
 

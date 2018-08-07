@@ -257,7 +257,7 @@ t_parse_uri11(void) {
 
     CU_ASSERT(uri.path.length == 45);
     CU_ASSERT_NSTRING_EQUAL(uri.path.s,
-			    "%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF", 45);
+                            "%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF", 45);
 
     CU_ASSERT(uri.query.length == 0);
     CU_ASSERT(uri.query.s == NULL);
@@ -557,7 +557,7 @@ t_parse_uri23(void) {
 }
 
 /*
- * To test Issue #212 which reads off the end of the input buffer when looking 
+ * To test Issue #212 which reads off the end of the input buffer when looking
  * for . or .. in the path.
  * Credit to OSS-Fuzz for finding this, work done by Bhargava Shastry
  */
@@ -580,17 +580,17 @@ t_init_uri_tests(void) {
   CU_pSuite suite;
 
   suite = CU_add_suite("uri parser", NULL, NULL);
-  if (!suite) {			/* signal error */
+  if (!suite) {                        /* signal error */
     fprintf(stderr, "W: cannot add uri parser test suite (%s)\n",
-	    CU_get_error_msg());
+            CU_get_error_msg());
 
     return NULL;
   }
 
-#define URI_TEST(s,t)						      \
-  if (!CU_ADD_TEST(s,t)) {					      \
-    fprintf(stderr, "W: cannot add uri parser test (%s)\n",	      \
-	    CU_get_error_msg());				      \
+#define URI_TEST(s,t)                                                      \
+  if (!CU_ADD_TEST(s,t)) {                                              \
+    fprintf(stderr, "W: cannot add uri parser test (%s)\n",              \
+            CU_get_error_msg());                                      \
   }
 
   URI_TEST(suite, t_parse_uri1);

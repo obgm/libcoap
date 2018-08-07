@@ -18,15 +18,15 @@ SYNOPSIS
 --------
 *#include <coap/coap.h>*
 
-*void coap_resource_set_get_observable(coap_resource_t *_resource_, 
+*void coap_resource_set_get_observable(coap_resource_t *_resource_,
 int _mode_);*
 
-*int coap_resource_notify_observers(coap_resource_t *_resource_, 
+*int coap_resource_notify_observers(coap_resource_t *_resource_,
 const const_string_t *_query_);*
 
 *const coap_string_t *coap_resource_get_uri_path(coap_resource_t *_resource_);*
 
-*coap_subscription_t *coap_find_observer(coap_resource_t *_resource_, 
+*coap_subscription_t *coap_find_observer(coap_resource_t *_resource_,
 coap_session_t *_session_, const const_string_t *_token_);*
 
 *int coap_delete_observer(coap_resource_t *_resource_, coap_session_t *_session_,
@@ -40,15 +40,15 @@ type.
 
 DESCRIPTION
 -----------
-RFC 7641 extends the CoAP protocol to be able to monitor the state of a 
+RFC 7641 extends the CoAP protocol to be able to monitor the state of a
 resource over time.
 
-This enables clients to "observe" resources with a defined query, i.e., to 
-retrieve a representation of a resource and keep this representation updated 
+This enables clients to "observe" resources with a defined query, i.e., to
+retrieve a representation of a resource and keep this representation updated
 by the server over a period of time.
 
-The server has to flag a resource as "observable", and then the client has 
-to request in a GET request that it wants to observe this resource by the use 
+The server has to flag a resource as "observable", and then the client has
+to request in a GET request that it wants to observe this resource by the use
 of the COAP_OPTION_OBSERVE Option with a value of COAP_OBSERVE_ESTABLISH.
 Optionally, the client can specify query options for the resource.
 
@@ -79,9 +79,9 @@ in the handler defined by *coap_register_response_handler*(3).  It is the
 responsibility of the client application to match the supplied token and 
 update the appropriate internal information.
 
-The *coap_resource_set_get_observable*() function enables or disables the 
-observable status of the _resource_ by the setting of _mode_.  If _mode_ is 
-1, then the _resource_ is observable.  If _mode_ is 0, then the 
+The *coap_resource_set_get_observable*() function enables or disables the
+observable status of the _resource_ by the setting of _mode_.  If _mode_ is
+1, then the _resource_ is observable.  If _mode_ is 0, then the
 _resource_ is no longer observable.
 
 *NOTE:* It is not possible for the Unknown Resource, created by 
@@ -108,8 +108,8 @@ _resource_, possibly only matching a specific _query_ if _query_ is not NULL.
 The *coap_resource_get_uri_path*() function is used to obtain the UriPath of
 the _resource_ definion.
 
-The *coap_find_observer*() function is used to check whether the current GET 
-request as determined from _resource_, _session_ and _token_ is currently 
+The *coap_find_observer*() function is used to check whether the current GET
+request as determined from _resource_, _session_ and _token_ is currently
 being observed or not.
 
 The *coap_delete_observer*() function deletes the specific observer associated
@@ -120,13 +120,13 @@ associated with the _session_ that is a part of the _context_.
 
 RETURN VALUES
 -------------
-The *coap_resource_get_uri_path*() function returns the uri_path or NULL if 
+The *coap_resource_get_uri_path*() function returns the uri_path or NULL if
 there was a failure.
 
-The *coap_find_observer*() function returns the subscription or NULL if there 
-was a failure. 
+The *coap_find_observer*() function returns the subscription or NULL if there
+was a failure.
 
-The *coap_resource_set_get_observable*() function return 0 on failure, 1 on 
+The *coap_resource_set_get_observable*() function return 0 on failure, 1 on
 success.
 
 The *coap_delete_observer*() function return 0 on failure, 1 on success.
@@ -346,7 +346,7 @@ coap_optlist_t **options, unsigned char *data, size_t length, int observe) {
 
   if (request_code == COAP_REQUEST_GET && observe) {
     /* Indicate that we want to observe this resource */
-    if (!coap_insert_optlist(options, 
+    if (!coap_insert_optlist(options,
                              coap_new_optlist(COAP_OPTION_OBSERVE,
                                          COAP_OBSERVE_ESTABLISH, NULL)))
       goto error;

@@ -3,10 +3,10 @@
  * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
-/** 
+/**
  * @file async.c
  * @brief state management for asynchronous messages
  */
@@ -33,7 +33,7 @@
 
 coap_async_state_t *
 coap_register_async(coap_context_t *context, coap_session_t *session,
-		    coap_pdu_t *request, unsigned char flags, void *data) {
+                    coap_pdu_t *request, unsigned char flags, void *data) {
   coap_async_state_t *s;
   coap_tid_t id = request->tid;
 
@@ -69,7 +69,7 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
     s->tokenlen = (request->token_length > 8) ? 8 : request->token_length;
     memcpy(s->token, request->token, s->tokenlen);
   }
-    
+
   coap_touch_async(s);
 
   LL_PREPEND(context->async_state, s);
@@ -96,7 +96,7 @@ coap_remove_async(coap_context_t *context, coap_session_t *session,
   return tmp != NULL;
 }
 
-void 
+void
 coap_free_async(coap_async_state_t *s) {
   if (s) {
     if (s->session) {
@@ -110,5 +110,5 @@ coap_free_async(coap_async_state_t *s) {
 }
 
 #else
-void does_not_exist(void);	/* make some compilers happy */
+void does_not_exist(void);        /* make some compilers happy */
 #endif /* WITHOUT_ASYNC */

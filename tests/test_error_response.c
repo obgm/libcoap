@@ -16,8 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-coap_pdu_t *pdu;	      /* Holds the request PDU for most tests */
-coap_opt_filter_t opts;	      /* option filter used for generating responses */
+coap_pdu_t *pdu;              /* Holds the request PDU for most tests */
+coap_opt_filter_t opts;              /* option filter used for generating responses */
 
 /************************************************************************
  ** PDU decoder
@@ -337,19 +337,19 @@ t_init_error_response_tests(void) {
   CU_pSuite suite[1];
 
   suite[0] = CU_add_suite("error response generator",
-			  t_error_response_tests_create,
-			  t_error_response_tests_remove);
-  if (!suite[0]) {			/* signal error */
+                          t_error_response_tests_create,
+                          t_error_response_tests_remove);
+  if (!suite[0]) {                        /* signal error */
     fprintf(stderr, "W: cannot add error response generator test suite (%s)\n",
-	    CU_get_error_msg());
+            CU_get_error_msg());
 
     return NULL;
   }
 
-#define ERROR_RESPONSE_TEST(s,t)					\
-  if (!CU_ADD_TEST(s,t)) {						\
+#define ERROR_RESPONSE_TEST(s,t)                                        \
+  if (!CU_ADD_TEST(s,t)) {                                                \
     fprintf(stderr, "W: cannot add error response generator test (%s)\n", \
-	    CU_get_error_msg());					\
+            CU_get_error_msg());                                        \
   }
 
   ERROR_RESPONSE_TEST(suite[0], t_error_response1);

@@ -36,7 +36,7 @@ enum coap_uri_scheme_t {
 typedef struct {
   coap_str_const_t host;  /**< host part of the URI */
   uint16_t port;          /**< The port in host byte order */
-  coap_str_const_t path;  /**< Beginning of the first path segment. 
+  coap_str_const_t path;  /**< Beginning of the first path segment.
                            Use coap_split_path() to create Uri-Path options */
   coap_str_const_t query; /**<  The query part if present */
 
@@ -81,7 +81,7 @@ coap_uri_t *coap_clone_uri(const coap_uri_t *uri);
  * components that are not specified will be set to { 0, 0 }, except for the
  * port which is set to @c COAP_DEFAULT_PORT. This function returns @p 0 if
  * parsing succeeded, a value less than zero otherwise.
- * 
+ *
  * @param str_var The string to split up.
  * @param len     The actual length of @p str_var
  * @param uri     The coap_uri_t object to store the result.
@@ -94,13 +94,13 @@ int coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri);
  * Splits the given URI path into segments. Each segment is preceded
  * by an option pseudo-header with delta-value 0 and the actual length
  * of the respective segment after percent-decoding.
- * 
- * @param s      The path string to split. 
+ *
+ * @param s      The path string to split.
  * @param length The actual length of @p s.
- * @param buf    Result buffer for parsed segments. 
+ * @param buf    Result buffer for parsed segments.
  * @param buflen Maximum length of @p buf. Will be set to the actual number
  *               of bytes written into buf on success.
- * 
+ *
  * @return       The number of segments created or @c -1 on error.
  */
 int coap_split_path(const uint8_t *s,
@@ -108,17 +108,17 @@ int coap_split_path(const uint8_t *s,
                     unsigned char *buf,
                     size_t *buflen);
 
-/** 
+/**
  * Splits the given URI query into segments. Each segment is preceded
  * by an option pseudo-header with delta-value 0 and the actual length
  * of the respective query term.
- * 
- * @param s      The query string to split. 
+ *
+ * @param s      The query string to split.
  * @param length The actual length of @p s.
- * @param buf    Result buffer for parsed segments. 
+ * @param buf    Result buffer for parsed segments.
  * @param buflen Maximum length of @p buf. Will be set to the actual number
  *               of bytes written into buf on success.
- * 
+ *
  * @return       The number of segments created or @c -1 on error.
  *
  * @bug This function does not reserve additional space for delta > 12.

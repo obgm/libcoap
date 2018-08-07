@@ -72,18 +72,18 @@ errno_t __cdecl rand_s( _Out_ unsigned int* _RandomValue );
  */
 COAP_STATIC_INLINE int
 coap_prng_impl( unsigned char *buf, size_t len ) {
-	while ( len != 0 ) {
-		uint32_t r = 0;
-		size_t i;
-		if ( rand_s( &r ) != 0 )
-			return 0;
-		for ( i = 0; i < len && i < 4; i++ ) {
-			*buf++ = (uint8_t)r;
-			r >>= 8;
-		}
-		len -= i;
-	}
-	return 1;
+        while ( len != 0 ) {
+                uint32_t r = 0;
+                size_t i;
+                if ( rand_s( &r ) != 0 )
+                        return 0;
+                for ( i = 0; i < len && i < 4; i++ ) {
+                        *buf++ = (uint8_t)r;
+                        r >>= 8;
+                }
+                len -= i;
+        }
+        return 1;
 }
 
 #else
@@ -96,9 +96,9 @@ coap_prng_impl( unsigned char *buf, size_t len ) {
  */
 COAP_STATIC_INLINE int
 coap_prng_impl( unsigned char *buf, size_t len ) {
-	while ( len-- )
-		*buf++ = rand() & 0xFF;
-	return 1;
+        while ( len-- )
+                *buf++ = rand() & 0xFF;
+        return 1;
 }
 #endif
 

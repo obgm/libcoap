@@ -187,15 +187,15 @@ struct pbuf *coap_packet_extract_pbuf(struct coap_packet_t *packet);
 struct coap_packet_t {
   struct pbuf *pbuf;
   const struct coap_endpoint_t *local_interface;
-  coap_address_t src;	      /**< the packet's source address */
-  coap_address_t dst;	      /**< the packet's destination address */
+  coap_address_t src;              /**< the packet's source address */
+  coap_address_t dst;              /**< the packet's destination address */
   int ifindex;                /**< the interface index */
 //  uint16_t srcport;
 };
 #else
 struct coap_packet_t {
-  coap_address_t src;	      /**< the packet's source address */
-  coap_address_t dst;	      /**< the packet's destination address */
+  coap_address_t src;              /**< the packet's source address */
+  coap_address_t dst;              /**< the packet's destination address */
   int ifindex;                /**< the interface index */
   size_t length;              /**< length of payload */
   unsigned char payload[COAP_RXBUFFER_SIZE]; /**< payload */

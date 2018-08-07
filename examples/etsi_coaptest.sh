@@ -86,7 +86,7 @@ testnumber=$((OPTARG-1))
 g) # name of test group
 # is there a group with that name?
 for i in "${testgroups[@]}"
-  do 
+  do
   # group doesn't have to be case sensitive
   tmpgroup=$(echo $OPTARG | tr '[:lower:]' '[:upper:]')
   if [  $i == $tmpgroup ] ; then

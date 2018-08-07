@@ -208,7 +208,7 @@ coap_add_data_blocked_response(coap_resource_t *resource,
                     COAP_OPTION_MAXAGE,
                     coap_encode_var_safe(buf, sizeof(buf), maxage), buf);
   }
-     
+
   if (block2_requested) {
     int res;
 
@@ -228,7 +228,7 @@ coap_add_data_blocked_response(coap_resource_t *resource,
     default:                        /* everything is good */
         ;
     }
-     
+
     coap_add_option(response,
                     COAP_OPTION_SIZE2,
                     coap_encode_var_safe(buf, sizeof(buf), length),
@@ -256,7 +256,7 @@ coap_add_data_blocked_response(coap_resource_t *resource,
                     buf);
 
     coap_add_block(response, length, data,
-                   block2.num, block2.szx);        
+                   block2.num, block2.szx);
   }
   return;
 

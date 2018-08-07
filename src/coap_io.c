@@ -585,7 +585,7 @@ void coap_socket_close(coap_socket_t *sock) {
 ssize_t
 coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
   ssize_t r;
-  
+
   sock->flags &= ~(COAP_SOCKET_WANT_WRITE | COAP_SOCKET_CAN_WRITE);
 #ifdef _WIN32
   r = send(sock->fd, (const char *)data, (int)data_len, 0);
@@ -617,7 +617,7 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
 #ifdef _WIN32
   int error;
 #endif
-  
+
 #ifdef _WIN32
   r = recv(sock->fd, (char *)data, (int)data_len, 0);
 #else
@@ -659,8 +659,8 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
    FIXME: check with configure
 */
 struct in6_pktinfo {
-  struct in6_addr ipi6_addr;	/* src/dst IPv6 address */
-  unsigned int ipi6_ifindex;	/* send/recv interface index */
+  struct in6_addr ipi6_addr;        /* src/dst IPv6 address */
+  unsigned int ipi6_ifindex;        /* send/recv interface index */
 };
 
 struct in_pktinfo {
@@ -749,33 +749,33 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
       struct cmsghdr *cmsg;
 
       if (IN6_IS_ADDR_V4MAPPED(&session->local_addr.addr.sin6.sin6_addr)) {
-	struct in_pktinfo *pktinfo;
-	mhdr.msg_control = buf;
-	mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
+        struct in_pktinfo *pktinfo;
+        mhdr.msg_control = buf;
+        mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
 
-	cmsg = CMSG_FIRSTHDR(&mhdr);
-	cmsg->cmsg_level = SOL_IP;
-	cmsg->cmsg_type = IP_PKTINFO;
-	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+        cmsg = CMSG_FIRSTHDR(&mhdr);
+        cmsg->cmsg_level = SOL_IP;
+        cmsg->cmsg_type = IP_PKTINFO;
+        cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 
-	pktinfo = (struct in_pktinfo *)CMSG_DATA(cmsg);
+        pktinfo = (struct in_pktinfo *)CMSG_DATA(cmsg);
 
-	pktinfo->ipi_ifindex = session->ifindex;
-	memcpy(&pktinfo->ipi_spec_dst, session->local_addr.addr.sin6.sin6_addr.s6_addr + 12, sizeof(pktinfo->ipi_spec_dst));
+        pktinfo->ipi_ifindex = session->ifindex;
+        memcpy(&pktinfo->ipi_spec_dst, session->local_addr.addr.sin6.sin6_addr.s6_addr + 12, sizeof(pktinfo->ipi_spec_dst));
       } else {
-	struct in6_pktinfo *pktinfo;
-	mhdr.msg_control = buf;
-	mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+        struct in6_pktinfo *pktinfo;
+        mhdr.msg_control = buf;
+        mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
 
-	cmsg = CMSG_FIRSTHDR(&mhdr);
-	cmsg->cmsg_level = IPPROTO_IPV6;
-	cmsg->cmsg_type = IPV6_PKTINFO;
-	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+        cmsg = CMSG_FIRSTHDR(&mhdr);
+        cmsg->cmsg_level = IPPROTO_IPV6;
+        cmsg->cmsg_type = IPV6_PKTINFO;
+        cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
 
-	pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
+        pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
 
-	pktinfo->ipi6_ifindex = session->ifindex;
-	memcpy(&pktinfo->ipi6_addr, &session->local_addr.addr.sin6.sin6_addr, sizeof(pktinfo->ipi6_addr));
+        pktinfo->ipi6_ifindex = session->ifindex;
+        memcpy(&pktinfo->ipi6_addr, &session->local_addr.addr.sin6.sin6_addr, sizeof(pktinfo->ipi6_addr));
       }
       break;
     }
@@ -912,8 +912,8 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       GUID wsaid = WSAID_WSARECVMSG;
       DWORD cbBytesReturned = 0;
       if (WSAIoctl(sock->fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &wsaid, sizeof(wsaid), &lpWSARecvMsg, sizeof(lpWSARecvMsg), &cbBytesReturned, NULL, NULL) != 0) {
-	coap_log(LOG_WARNING, "coap_network_read: no WSARecvMsg\n");
-	return -1;
+        coap_log(LOG_WARNING, "coap_network_read: no WSARecvMsg\n");
+        return -1;
       }
     }
     r = lpWSARecvMsg(sock->fd, &mhdr, &dwNumberOfBytesRecvd, NULL /* LPWSAOVERLAPPED */, NULL /* LPWSAOVERLAPPED_COMPLETION_ROUTINE */);
@@ -929,8 +929,8 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 #else
       if (errno == ECONNREFUSED) {
 #endif
-	/* server-side ICMP destination unreachable, ignore it. The destination address is in msg_name. */
-	return 0;
+        /* server-side ICMP destination unreachable, ignore it. The destination address is in msg_name. */
+        return 0;
       }
       coap_log(LOG_WARNING, "coap_network_read: %s\n", coap_socket_strerror());
       goto error;
@@ -944,43 +944,43 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
        * is found where the data was received. */
       for (cmsg = CMSG_FIRSTHDR(&mhdr); cmsg; cmsg = CMSG_NXTHDR(&mhdr, cmsg)) {
 
-	/* get the local interface for IPv6 */
-	if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
-	  union {
-	    uint8_t *c;
-	    struct in6_pktinfo *p;
-	  } u;
-	  u.c = CMSG_DATA(cmsg);
-	  packet->ifindex = (int)(u.p->ipi6_ifindex);
-	  memcpy(&packet->dst.addr.sin6.sin6_addr, &u.p->ipi6_addr, sizeof(struct in6_addr));
-	  break;
-	}
+        /* get the local interface for IPv6 */
+        if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
+          union {
+            uint8_t *c;
+            struct in6_pktinfo *p;
+          } u;
+          u.c = CMSG_DATA(cmsg);
+          packet->ifindex = (int)(u.p->ipi6_ifindex);
+          memcpy(&packet->dst.addr.sin6.sin6_addr, &u.p->ipi6_addr, sizeof(struct in6_addr));
+          break;
+        }
 
-	/* local interface for IPv4 */
+        /* local interface for IPv4 */
 #if defined(IP_PKTINFO)
-	if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_PKTINFO) {
-	  union {
-	    uint8_t *c;
-	    struct in_pktinfo *p;
-	  } u;
-	  u.c = CMSG_DATA(cmsg);
-	  packet->ifindex = u.p->ipi_ifindex;
-	  if (packet->dst.addr.sa.sa_family == AF_INET6) {
-	    memset(packet->dst.addr.sin6.sin6_addr.s6_addr, 0, 10);
-	    packet->dst.addr.sin6.sin6_addr.s6_addr[10] = 0xff;
-	    packet->dst.addr.sin6.sin6_addr.s6_addr[11] = 0xff;
-	    memcpy(packet->dst.addr.sin6.sin6_addr.s6_addr + 12, &u.p->ipi_addr, sizeof(struct in_addr));
-	  } else {
-	    memcpy(&packet->dst.addr.sin.sin_addr, &u.p->ipi_addr, sizeof(struct in_addr));
-	  }
-	  break;
-	}
+        if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_PKTINFO) {
+          union {
+            uint8_t *c;
+            struct in_pktinfo *p;
+          } u;
+          u.c = CMSG_DATA(cmsg);
+          packet->ifindex = u.p->ipi_ifindex;
+          if (packet->dst.addr.sa.sa_family == AF_INET6) {
+            memset(packet->dst.addr.sin6.sin6_addr.s6_addr, 0, 10);
+            packet->dst.addr.sin6.sin6_addr.s6_addr[10] = 0xff;
+            packet->dst.addr.sin6.sin6_addr.s6_addr[11] = 0xff;
+            memcpy(packet->dst.addr.sin6.sin6_addr.s6_addr + 12, &u.p->ipi_addr, sizeof(struct in_addr));
+          } else {
+            memcpy(&packet->dst.addr.sin.sin_addr, &u.p->ipi_addr, sizeof(struct in_addr));
+          }
+          break;
+        }
 #elif defined(IP_RECVDSTADDR)
-	if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR) {
-	  packet->ifindex = 0;
-	  memcpy(&packet->dst.addr.sin.sin_addr, CMSG_DATA(cmsg), sizeof(struct in_addr));
-	  break;
-	}
+        if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR) {
+          packet->ifindex = 0;
+          memcpy(&packet->dst.addr.sin.sin_addr, CMSG_DATA(cmsg), sizeof(struct in_addr));
+          break;
+        }
 #endif /* IP_PKTINFO */
       }
     }
@@ -999,9 +999,9 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       len = uip_datalen();
 
       if (len > COAP_RXBUFFER_SIZE) {
-	/* FIXME: we might want to send back a response */
-	warn("discarded oversized packet\n");
-	return -1;
+        /* FIXME: we might want to send back a response */
+        warn("discarded oversized packet\n");
+        return -1;
       }
 
       ((char *)uip_appdata)[len] = 0;
@@ -1010,11 +1010,11 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 40
 #endif
-	unsigned char addr_str[INET6_ADDRSTRLEN + 8];
+        unsigned char addr_str[INET6_ADDRSTRLEN + 8];
 
-	if (coap_print_addr(&packet->src, addr_str, INET6_ADDRSTRLEN + 8)) {
-	  debug("received %zd bytes from %s\n", len, addr_str);
-	}
+        if (coap_print_addr(&packet->src, addr_str, INET6_ADDRSTRLEN + 8)) {
+          debug("received %zd bytes from %s\n", len, addr_str);
+        }
       }
 #endif /* NDEBUG */
 
@@ -1096,21 +1096,21 @@ coap_write(coap_context_t *ctx,
     ) {
       coap_tick_t s_timeout;
       if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
-	if ((s->last_ping > 0 && s->last_pong < s->last_ping)
-	  || coap_session_send_ping(s) == COAP_INVALID_TID)
-	{
-	  /* Make sure the session object is not deleted in the callback */
-	  coap_session_reference(s);
-	  coap_session_disconnected(s, COAP_NACK_NOT_DELIVERABLE);
-	  coap_session_release(s);
-	  continue;
-	}
+        if ((s->last_ping > 0 && s->last_pong < s->last_ping)
+          || coap_session_send_ping(s) == COAP_INVALID_TID)
+        {
+          /* Make sure the session object is not deleted in the callback */
+          coap_session_reference(s);
+          coap_session_disconnected(s, COAP_NACK_NOT_DELIVERABLE);
+          coap_session_release(s);
+          continue;
+        }
         s->last_rx_tx = now;
-	s->last_ping = now;
+        s->last_ping = now;
       }
       s_timeout = (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND) - now;
       if (timeout == 0 || s_timeout < timeout)
-	timeout = s_timeout;
+        timeout = s_timeout;
     }
 
     if (
@@ -1121,17 +1121,17 @@ coap_write(coap_context_t *ctx,
     ) {
       coap_tick_t s_timeout;
       if (s->csm_tx == 0) {
-	s->csm_tx = now;
+        s->csm_tx = now;
       } else if (s->csm_tx + ctx->csm_timeout * COAP_TICKS_PER_SECOND <= now) {
-	/* Make sure the session object is not deleted in the callback */
-	coap_session_reference(s);
-	coap_session_disconnected(s, COAP_NACK_NOT_DELIVERABLE);
-	coap_session_release(s);
-	continue;
+        /* Make sure the session object is not deleted in the callback */
+        coap_session_reference(s);
+        coap_session_disconnected(s, COAP_NACK_NOT_DELIVERABLE);
+        coap_session_release(s);
+        continue;
       }
       s_timeout = (s->csm_tx + ctx->csm_timeout * COAP_TICKS_PER_SECOND) - now;
       if (timeout == 0 || s_timeout < timeout)
-	timeout = s_timeout;
+        timeout = s_timeout;
     }
 
     if (s->sock.flags & (COAP_SOCKET_WANT_READ | COAP_SOCKET_WANT_WRITE | COAP_SOCKET_WANT_CONNECT)) {
