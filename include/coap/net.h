@@ -570,13 +570,13 @@ int coap_handle_dgram(coap_context_t *ctx, coap_session_t *session, uint8_t *dat
  *
  * @param context The CoAP context whose event handler is to be called.
  * @param event   The event to deliver.
- * @param data    Any data related to @p event.
+ * @param session The session related to @p event.
  * @return The result from the associated event handler or 0 if none was
  * registered.
  */
 int coap_handle_event(coap_context_t *context,
                       coap_event_t event,
-                      void *data);
+                      coap_session_t *session);
 /**
  * This function removes the element with given @p id from the list given list.
  * If @p id was found, @p node is updated to point to the removed element. Note

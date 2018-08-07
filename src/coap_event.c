@@ -10,8 +10,19 @@
 #include "coap_event.h"
 #include "net.h"
 
+/*
+ * This replaces coap_set_event_handler() so that handler registration is
+ * consistent in the naming.
+ */
 void
-coap_set_event_handler(struct coap_context_t *context, coap_event_handler_t hnd) {
+coap_register_event_handler(struct coap_context_t *context,
+                            coap_event_handler_t hnd) {
+  context->handle_event = hnd;
+}
+
+void
+coap_set_event_handler(struct coap_context_t *context,
+                       coap_event_handler_t hnd) {
   context->handle_event = hnd;
 }
 
