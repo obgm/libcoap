@@ -32,10 +32,13 @@ uninstall-am:
 	-rm -rf $(DESTDIR)$(htmldir)/html
 
 all:
+if BUILD_MANPAGES
+	@./build_man_files.sh
+endif # BUILD_MANPAGES
 	$(DOXYGEN) Doxyfile
 
 clean-local:
-	rm -rf $(top_builddir)/doc/html
+	-rm -rf $(top_builddir)/doc/html man_tmp man_html DoxygenLayout.xml
 
 distclean-local: clean-local
 

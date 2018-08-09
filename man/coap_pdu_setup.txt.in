@@ -12,7 +12,7 @@ NAME
 ----
 coap_pdu_setup, coap_pdu_init, coap_add_token, coap_new_optlist,
 coap_insert_optlist, coap_delete_optlist, coap_add_optlist_pdu,
-coap_add_option, coap_add_data - work with CoAP PDUs
+coap_add_option, coap_add_data - Work with CoAP PDUs
 
 SYNOPSIS
 --------

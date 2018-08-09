@@ -47,7 +47,7 @@ EXTRA_DIST = \
 
 AM_CFLAGS = -I$(top_builddir)/include/coap -I$(top_srcdir)/include/coap $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
 
-SUBDIRS = $(subdirs) . $(DOC_DIR) $(MAN_DIR) tests examples
+SUBDIRS = $(subdirs) . $(MAN_DIR) $(DOC_DIR) tests examples
 
 ## Define a libtool archive target "libcoap-@LIBCOAP_NAME_SUFFIX@.la", with
 ## @LIBCOAP_NAME_SUFFIX@ substituted into the generated Makefile at configure

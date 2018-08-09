@@ -13,7 +13,7 @@ NAME
 coap_context, coap_new_context, coap_free_context,
 coap_context_set_pki, coap_context_set_psk, coap_new_endpoint,
 coap_free_endpoint, coap_endpoint_set_default_mtu, coap_endpoint_str
-- work with CoAP contexts
+- Work with CoAP contexts
 
 SYNOPSIS
 --------

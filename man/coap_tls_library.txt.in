@@ -12,7 +12,7 @@ NAME
 ----
 coap_tls_library, coap_dtls_is_supported, coap_tls_is_supported, 
 coap_get_tls_library_version
-- work with CoAP contexts
+- Work with CoAP contexts
 
 SYNOPSIS
 --------
@@ -41,7 +41,7 @@ as detect what is the version of the currently loaded TLS library is.
 1.1.0.
 
 Network traffic can be encrypted or un-encrypted with libcoap - how to set 
-this up is described in coap_context(3).
+this up is described in *coap_context*(3).
 
 Due to the nature of TLS, there can be Callbacks that are invoked as the TLS 
 session negotiates encryption algorithms, encryption keys etc.

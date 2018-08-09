@@ -30,11 +30,12 @@ examples/Makefile examples/Makefile.in
 include/coap/coap.h
 install-sh
 libcoap-*.pc libtool ltmain.sh
-man/coap_*.[357] man/coap_*.txt man/coap-*.txt man/Makefile man/Makefile.in
+man/coap*.[357] man/coap*.txt man/Makefile man/Makefile.in
 missing
 Makefile Makefile.in
 stamp-h1 src/.dirstamp libcoap*.la* src/*.*o
 tests/*.o tests/Makefile tests/Makefile.in tests/testdriver
+tests/oss-fuzz/Makefile.ci
 m4/libtool.m4 m4/lt~obsolete.m4 m4/ltoptions.m4 m4/ltsugar.m4 m4/ltversion.m4
 "
 
