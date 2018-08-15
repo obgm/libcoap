@@ -964,8 +964,12 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     coap_handle_failed_notify(context, node->session, &token);
   }
 #endif /* WITHOUT_OBSERVE */
-  if (node->session->con_active)
+  if (node->session->con_active) {
     node->session->con_active--;
+    if (node->session->state == COAP_SESSION_STATE_ESTABLISHED)
+      /* Flush out any entries on session->delayqueue */
+      coap_session_connected(node->session);
+ }
 
   /* And finally delete the node */
   if (node->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
@@ -2105,7 +2109,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       if (session->con_active) {
         session->con_active--;
         if (session->state == COAP_SESSION_STATE_ESTABLISHED)
-          /* Flush out any entries on session->sendqueue */
+          /* Flush out any entries on session->delayqueue */
           coap_session_connected(session);
       }
       if (pdu->code == 0)
@@ -2131,7 +2135,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       if (session->con_active) {
         session->con_active--;
         if (session->state == COAP_SESSION_STATE_ESTABLISHED)
-          /* Flush out any entries on session->sendqueue */
+          /* Flush out any entries on session->delayqueue */
           coap_session_connected(session);
       }
 
