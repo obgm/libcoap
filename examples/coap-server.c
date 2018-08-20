@@ -3,7 +3,7 @@
 /* coap -- simple implementation of the Constrained Application Protocol (CoAP)
  *         as defined in RFC 7252
  *
- * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2018 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -76,7 +76,7 @@ handle_sigint(int signum UNUSED_PARAM) {
 }
 
 #define INDEX "This is a test server made with libcoap (see https://libcoap.net)\n" \
-              "Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>\n\n"
+              "Copyright (C) 2010--2018 Olaf Bergmann <bergmann@tzi.org>\n\n"
 
 static void
 hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
@@ -573,6 +573,27 @@ verify_cn_callback(const char *cn,
   return 1;
 }
 
+static coap_dtls_key_t *
+verify_sni_callback(const char *sni,
+                    void *arg UNUSED_PARAM
+) {
+  static coap_dtls_key_t dtls_key;
+
+  /* Just use the defined keys for now */
+  memset (&dtls_key, 0, sizeof(dtls_key));
+  dtls_key.key_type = COAP_PKI_KEY_PEM;
+  dtls_key.key.pem.public_cert = cert_file;
+  dtls_key.key.pem.private_key = cert_file;
+  dtls_key.key.pem.ca_file = ca_file;
+  if (sni[0]) {
+    coap_log(LOG_INFO, "SNI '%s' requested\n", sni);
+  }
+  else {
+    coap_log(LOG_DEBUG, "SNI not requested\n");
+  }
+  return &dtls_key;
+}
+
 static void
 fill_keystore(coap_context_t *ctx) {
   if (cert_file) {
@@ -596,7 +617,7 @@ fill_keystore(coap_context_t *ctx) {
       dtls_pki.allow_expired_crl       = 1;
       dtls_pki.validate_cn_call_back   = verify_cn_callback;
       dtls_pki.cn_call_back_arg        = NULL;
-      dtls_pki.validate_sni_call_back  = NULL;
+      dtls_pki.validate_sni_call_back  = verify_sni_callback;
       dtls_pki.sni_call_back_arg       = NULL;
     }
     dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
@@ -612,9 +633,9 @@ fill_keystore(coap_context_t *ctx) {
         coap_context_set_pki_root_cas(ctx, root_ca_file, NULL);
       }
     }
-    coap_context_set_pki(ctx, &dtls_pki);
     if (key_defined)
       coap_context_set_psk(ctx, hint, key, key_length);
+    coap_context_set_pki(ctx, &dtls_pki);
   }
   else if (key_defined) {
     coap_context_set_psk(ctx, hint, key, key_length);
@@ -634,7 +655,7 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-     "(c) 2010,2011,2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
+     "(c) 2010,2011,2015-2018 Olaf Bergmann <bergmann@tzi.org>\n\n"
      "Usage: %s [-A address] [-g group] [-p port] [-l loss] [-c certfile]\n"
      "\t\t[-C cafile] [-R root_cafile] [-k key] [-h hint] [-v num] [-d max]\n\n"
      "\t-A address\tInterface address to bind to\n"

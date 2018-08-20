@@ -279,7 +279,7 @@ setup_client_session_pki (struct in_addr ip_address,
   dtls_pki.cn_call_back_arg        = NULL;
   dtls_pki.validate_sni_call_back  = NULL;
   dtls_pki.sni_call_back_arg       = NULL;
-  dtls_pki.app_override_tls_setup_call_back = NULL;
+  dtls_pki.additional_tls_setup_call_back = NULL;
   dtls_pki.sni                     = NULL;
   dtls_pki.pki_key.key_type        = COAP_PKI_KEY_PEM;
   dtls_pki.pki_key.key.pem.ca_file = ca_file;
