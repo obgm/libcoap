@@ -33,9 +33,10 @@
 #include <dirent.h>
 #endif
 
-#include <coap/coap.h>
+/* Need to refresh time once per sec */
+#define COAP_RESOURCE_CHECK_TIME 1
 
-#define COAP_RESOURCE_CHECK_TIME 2
+#include <coap/coap.h>
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -49,6 +50,8 @@ static time_t clock_offset;
 static time_t my_clock_base = 0;
 
 struct coap_resource_t *time_resource = NULL;
+
+static int resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_CON;
 
 static char *cert_file = NULL; /* Combined certificate and private key in PEM */
 static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM */
@@ -83,27 +86,17 @@ handle_sigint(int signum UNUSED_PARAM) {
 
 static void
 hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
-              struct coap_resource_t *resource UNUSED_PARAM,
-              coap_session_t *session UNUSED_PARAM,
-              coap_pdu_t *request UNUSED_PARAM,
-              coap_binary_t *token UNUSED_PARAM,
+              struct coap_resource_t *resource,
+              coap_session_t *session,
+              coap_pdu_t *request,
+              coap_binary_t *token,
               coap_string_t *query UNUSED_PARAM,
               coap_pdu_t *response) {
-  unsigned char buf[3];
 
-  response->code = COAP_RESPONSE_CODE(205);
-
-  coap_add_option(response,
-                  COAP_OPTION_CONTENT_TYPE,
-                  coap_encode_var_safe(buf, sizeof(buf),
-                                       COAP_MEDIATYPE_TEXT_PLAIN),
-                  buf);
-
-  coap_add_option(response,
-                  COAP_OPTION_MAXAGE,
-                  coap_encode_var_safe(buf, sizeof(buf), 0x2ffff), buf);
-
-  coap_add_data(response, strlen(INDEX), (const uint8_t *)INDEX);
+  coap_add_data_blocked_response(resource, session, request, response, token,
+                                 COAP_MEDIATYPE_TEXT_PLAIN, 0x2ffff,
+                                 strlen(INDEX),
+                                 (const uint8_t *)INDEX);
 }
 
 static void
@@ -123,28 +116,6 @@ hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
   /* FIXME: return time, e.g. in human-readable by default and ticks
    * when query ?ticks is given. */
 
-  /* if my_clock_base was deleted, we pretend to have no such resource */
-  response->code =
-    my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
-
-  if (coap_find_observer(resource, session, token)) {
-    coap_add_option(response,
-                    COAP_OPTION_OBSERVE,
-                    coap_encode_var_safe(buf, sizeof(buf), resource->observe),
-                    buf);
-  }
-
-  if (my_clock_base)
-    coap_add_option(response,
-                    COAP_OPTION_CONTENT_FORMAT,
-                    coap_encode_var_safe(buf, sizeof(buf),
-                                         COAP_MEDIATYPE_TEXT_PLAIN),
-                    buf);
-
-  coap_add_option(response,
-                  COAP_OPTION_MAXAGE,
-                  coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
-
   if (my_clock_base) {
 
     /* calculate current time */
@@ -155,7 +126,6 @@ hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
         && coap_string_equal(query, coap_make_str_const("ticks"))) {
           /* output ticks */
           len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
-          coap_add_data(response, len, buf);
 
     } else {      /* output human-readable time */
       struct tm *tmp;
@@ -163,12 +133,20 @@ hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
       if (!tmp) {
         /* If 'now' is not valid */
         response->code = COAP_RESPONSE_CODE(404);
+        return;
       }
       else {
         len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
-        coap_add_data(response, len, buf);
       }
     }
+    coap_add_data_blocked_response(resource, session, request, response, token,
+                                   COAP_MEDIATYPE_TEXT_PLAIN, 1,
+                                   len,
+                                   buf);
+  }
+  else {
+    /* if my_clock_base was deleted, we pretend to have no such resource */
+    response->code = COAP_RESPONSE_CODE(404);
   }
 }
 
@@ -310,13 +288,16 @@ check_async(coap_context_t *ctx,
 }
 #endif /* WITHOUT_ASYNC */
 
-typedef struct dynamic_resource {
+typedef struct dynamic_resource_t {
   coap_string_t *uri_path;
   coap_string_t *value;
-} dynamic_resource;
+  coap_resource_t *resource;
+  int created;
+  uint16_t media_type;
+} dynamic_resource_t;
 
 static int dynamic_count = 0;
-static dynamic_resource *dynamic_entry = NULL;
+static dynamic_resource_t *dynamic_entry = NULL;
 
 /*
  * Regular DELETE handler - used by resources created by the
@@ -371,14 +352,14 @@ static void
 hnd_get(coap_context_t *ctx UNUSED_PARAM,
         coap_resource_t *resource,
         coap_session_t *session,
-        coap_pdu_t *request UNUSED_PARAM,
+        coap_pdu_t *request,
         coap_binary_t *token,
         coap_string_t *query UNUSED_PARAM,
         coap_pdu_t *response
 ) {
   coap_str_const_t *uri_path;
-  uint8_t buf[4];
   int i;
+  dynamic_resource_t *resource_entry = NULL;
 
   /*
    * request will be NULL if an Observe triggered request, so the uri_path,
@@ -402,13 +383,13 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
     return;
   }
 
-  if (coap_find_observer(resource, session, token)) {
-    coap_add_option(response, COAP_OPTION_OBSERVE, coap_encode_var_safe(buf, sizeof (buf), resource->observe), buf);
-  }
-  if (dynamic_entry[i].value) {
-    coap_add_data (response, dynamic_entry[i].value->length, dynamic_entry[i].value->s);
-  }
-  response->code = COAP_RESPONSE_CODE (205);
+  resource_entry = &dynamic_entry[i];
+
+  coap_add_data_blocked_response(resource, session, request, response, token,
+                                 resource_entry->media_type, -1,
+                                 resource_entry->value->length,
+                                 resource_entry->value->s);
+  return;
 }
 
 /*
@@ -418,7 +399,7 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
 
 static void
 hnd_put(coap_context_t *ctx UNUSED_PARAM,
-        coap_resource_t *resource UNUSED_PARAM,
+        coap_resource_t *resource,
         coap_session_t *session UNUSED_PARAM,
         coap_pdu_t *request,
         coap_binary_t *token UNUSED_PARAM,
@@ -429,6 +410,11 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
   int i;
   size_t size;
   uint8_t *data;
+  coap_block_t block1;
+  dynamic_resource_t *resource_entry = NULL;
+  unsigned char buf[4];
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *option;
 
   /* get the uri_path */
   uri_path = coap_get_uri_path(request);
@@ -437,6 +423,9 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
     return;
   }
 
+  /*
+   * Locate the correct dynamic block for this request
+   */
   for (i = 0; i < dynamic_count; i++) {
     if (coap_string_equal(uri_path, dynamic_entry[i].uri_path)) {
       break;
@@ -444,6 +433,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
   }
   if (i == dynamic_count) {
     if (dynamic_count >= support_dynamic) {
+      /* Should have been caught in hnd_unknown_put() */
       response->code = COAP_RESPONSE_CODE(406);
       return;
     }
@@ -452,7 +442,17 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
     if (dynamic_entry) {
       dynamic_entry[i].uri_path = uri_path;
       dynamic_entry[i].value = NULL;
+      dynamic_entry[i].resource = resource;
+      dynamic_entry[i].created = 1;
       response->code = COAP_RESPONSE_CODE(201);
+      if ((option = coap_check_option(request, COAP_OPTION_CONTENT_TYPE, &opt_iter)) != NULL) {
+        dynamic_entry[i].media_type =
+            coap_decode_var_bytes (coap_opt_value (option), coap_opt_length (option));
+      }
+      else {
+        dynamic_entry[i].media_type = COAP_MEDIATYPE_TEXT_PLAIN;
+      }
+
     }
     else {
       dynamic_count--;
@@ -463,17 +463,69 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
     /* Need to do this as coap_get_uri_path() created it */
     coap_delete_string(uri_path);
     response->code = COAP_RESPONSE_CODE(204);
+    dynamic_entry[i].created = 0;
   }
 
-  if (dynamic_entry[i].value) {
-    coap_delete_string(dynamic_entry[i].value);
-    dynamic_entry[i].value = NULL;
-  }
+  resource_entry = &dynamic_entry[i];
 
-  if (coap_get_data(request, &size, &data) && (size > 0)) {
-    dynamic_entry[i].value = coap_new_string(size);
-    memcpy (dynamic_entry[i].value->s, data, size);
-    dynamic_entry[i].value->length = size;
+  if (coap_get_block(request, COAP_OPTION_BLOCK1, &block1)) {
+    /* handle BLOCK1 */
+    if (coap_get_data(request, &size, &data) && (size > 0)) {
+      size_t offset = block1.num << (block1.szx + 4);
+      coap_string_t *value = resource_entry->value;
+      if (offset == 0) {
+        if (value) {
+          coap_delete_string(value);
+          value = NULL;
+        }
+      }
+      else if (offset !=
+            (resource_entry->value ? resource_entry->value->length : 0)) {
+        /* Upload is not sequential */
+        response->code = COAP_RESPONSE_CODE(408);
+        return;
+      }
+      resource_entry->value = coap_new_string(offset + size);
+      memcpy (&resource_entry->value->s[offset], data, size);
+      resource_entry->value->length = offset + size;
+      if (value) {
+        memcpy (resource_entry->value->s, value->s, value->length);
+        coap_delete_string(value);
+      }
+    }
+    if (block1.m) {
+      response->code = COAP_RESPONSE_CODE(231);
+    }
+    else if (resource_entry->created) {
+      response->code = COAP_RESPONSE_CODE(201);
+    }
+    else {
+      response->code = COAP_RESPONSE_CODE(204);
+    }
+    coap_add_option(response,
+                    COAP_OPTION_BLOCK1,
+                    coap_encode_var_safe(buf, sizeof(buf),
+                                         ((block1.num << 4) |
+                                          (block1.m << 3) |
+                                          block1.szx)),
+                    buf);
+  }
+  else if (coap_get_data(request, &size, &data) && (size > 0)) {
+    /* Not a BLOCK1 with data */
+    if (resource_entry->value) {
+      coap_delete_string(resource_entry->value);
+      resource_entry->value = NULL;
+    }
+    resource_entry->value = coap_new_string(size);
+    memcpy (resource_entry->value->s, data, size);
+    resource_entry->value->length = size;
+  }
+  else {
+    /* Not a BLOCK1 and no data */
+    if (resource_entry->value) {
+      coap_delete_string(resource_entry->value);
+      resource_entry->value = NULL;
+    }
   }
 }
 
@@ -483,7 +535,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
 
 static void
 hnd_unknown_put(coap_context_t *ctx,
-                coap_resource_t *resource,
+                coap_resource_t *resource UNUSED_PARAM,
                 coap_session_t *session,
                 coap_pdu_t *request,
                 coap_binary_t *token,
@@ -500,12 +552,17 @@ hnd_unknown_put(coap_context_t *ctx,
     return;
   }
 
+  if (dynamic_count >= support_dynamic) {
+    response->code = COAP_RESPONSE_CODE(406);
+    return;
+  }
+
   /*
    * Create a resource to handle the new URI
    * uri_path will get deleted when the resource is removed
    */
   r = coap_resource_init((coap_str_const_t*)uri_path,
-        COAP_RESOURCE_FLAGS_RELEASE_URI | COAP_RESOURCE_FLAGS_NOTIFY_NON);
+        COAP_RESOURCE_FLAGS_RELEASE_URI | resource_flags);
   coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Dynamic\""), 0);
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete);
@@ -515,7 +572,7 @@ hnd_unknown_put(coap_context_t *ctx,
   coap_add_resource(ctx, r);
 
   /* Do the PUT for this first call */
-  hnd_put(ctx, resource, session, request, token, query, response);
+  hnd_put(ctx, r, session, request, token, query, response);
 
   return;
 }
@@ -534,7 +591,7 @@ init_resources(coap_context_t *ctx) {
   /* store clock base to use in /time */
   my_clock_base = clock_offset;
 
-  r = coap_resource_init(coap_make_str_const("time"), COAP_RESOURCE_FLAGS_NOTIFY_CON);
+  r = coap_resource_init(coap_make_str_const("time"), resource_flags);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
@@ -639,7 +696,8 @@ usage( const char *program, const char *version) {
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
      "(c) 2010,2011,2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
      "Usage: %s [-A address] [-g group] [-p port] [-l loss] [-c certfile]\n"
-     "\t\t[-C cafile] [-R root_cafile] [-k key] [-h hint] [-v num] [-d max]\n\n"
+     "\t\t[-C cafile] [-R root_cafile] [-k key] [-h hint] [-N]\n"
+     "\t\t[-v num] [-d max]\n\n"
      "\t-A address\tInterface address to bind to\n"
      "\t-g group\tJoin the given multicast group\n"
      "\t-p port\t\tListen on specified port\n"
@@ -665,6 +723,9 @@ usage( const char *program, const char *version) {
      "\t       \t\tto be available. This cannot be empty if defined.\n"
      "\t       \t\tNote that both -c and -k need to be defined\n"
      "\t       \t\tfor both PSK and PKI to be concurrently supported\n"
+     "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
+     "\t       \t\tevery fifth response will still be sent as a confirmable\n"
+     "\t       \t\tresponse (RFC 7641 requirement)\n"
      "\t-l list\t\tFail to send some datagrams specified by a comma separated\n"
      "\t       \t\tlist of numbers or number ranges (for debugging only)\n"
      "\t-l loss%%\tRandomly fail to send datagrams with the specified\n"
@@ -844,7 +905,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "A:d:c:C:g:h:k:l:p:R:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:d:c:C:g:h:k:l:Np:R:v:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -882,6 +943,9 @@ main(int argc, char **argv) {
 	usage(argv[0], LIBCOAP_PACKAGE_VERSION);
 	exit(1);
       }
+      break;
+    case 'N':
+      resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_NON;
       break;
     case 'p' :
       strncpy(port_str, optarg, NI_MAXSERV-1);
@@ -921,15 +985,32 @@ main(int argc, char **argv) {
     int result = coap_run_once( ctx, wait_ms );
     if ( result < 0 ) {
       break;
-    } else if ( (unsigned)result < wait_ms ) {
+    } else if ( result && (unsigned)result < wait_ms ) {
+      /* decrement if there is a result wait time returned */
       wait_ms -= result;
     } else {
+      /*
+       * result == 0, or result >= wait_ms
+       * (wait_ms could have decremented to a small value, below
+       * the granularity of the timer in coap_run_once() and hence
+       * result == 0)
+       */
       time_t t_now = time(NULL);
-      if (time_resource && (t_last != t_now)) {
+      if (t_last != t_now) {
+        /* Happens once per second */
+        int i;
         t_last = t_now;
-	coap_resource_notify_observers(time_resource, NULL);
+        if (time_resource) {
+          coap_resource_notify_observers(time_resource, NULL);
+        }
+        for (i = 0; i < dynamic_count; i++) {
+          coap_resource_notify_observers(dynamic_entry[i].resource, NULL);
+        }
       }
-      wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+      if (result) {
+        /* result must have been >= wait_ms, so reset wait_ms */
+        wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+      }
     }
 
 #ifndef WITHOUT_ASYNC

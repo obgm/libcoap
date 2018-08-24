@@ -6,6 +6,7 @@
  * README for terms of use. 
  */
 
+#include <stdio.h>
 #include "coap_config.h"
 #include "coap.h"
 #include "debug.h"
@@ -622,7 +623,9 @@ coap_subscription_t *
 coap_add_observer(coap_resource_t *resource, 
                   coap_session_t *session,
 		  const coap_binary_t *token,
-                  coap_string_t *query) {
+                  coap_string_t *query,
+                  int has_block2,
+                  coap_block_t block2) {
   coap_subscription_t *s;
   
   assert( session );
@@ -672,8 +675,13 @@ coap_add_observer(coap_resource_t *resource,
 
   s->query = query;
 
+  s->has_block2 = has_block2;
+  s->block2 = block2;
+
   /* add subscriber to resource */
   LL_PREPEND(resource->subscribers, s);
+
+  coap_log(LOG_DEBUG, "create new subscription\n");
 
   return s;
 }
@@ -704,6 +712,16 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
     if (s->query)
       coap_delete_string(s->query);
     COAP_FREE_TYPE(subscription,s);
+  }
+
+  if (s) {
+    char outbuf[2*s->token_length+1];
+    unsigned int i;
+    for (i = 0; i < s->token_length; i++) {
+      snprintf(&outbuf[2*i], 3,
+                "%02x", s->token[i]);
+    }
+    coap_log(LOG_DEBUG, "removed observer tid %s\n", outbuf);
   }
 
   return s != NULL;

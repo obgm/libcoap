@@ -14,8 +14,12 @@
 #include "option.h"
 #include "pdu.h"
 
+struct coap_resource_t;
+struct coap_session_t;
+
 /**
  * @defgroup block Block Transfer
+ * API functions for handling PDUs using CoAP BLOCK options
  * @{
  */
 
@@ -133,6 +137,36 @@ int coap_add_block(coap_pdu_t *pdu,
                    const uint8_t *data,
                    unsigned int block_num,
                    unsigned char block_szx);
+
+/**
+ * Adds the @p data to the @p response pdu.  If blocks are
+ * required, then the appropriate block will be added and
+ * consequently sent.
+ * Used by a GET request handler.
+ *
+ * @param resource   The resource the data is associated with.
+ * @param session    The coap session.
+ * @param request    The requesting pdu.
+ * @param response   The response pdu.
+ * @param token      The token taken from the (original) requesting pdu.
+ * @param media_type The format of the data.
+ * @param maxage     The maxmimum life of the data. If @c -1, then there
+ *                   is no maxage.
+ * @param length     The total length of the data.
+ * @param data       The data to transmit.
+ *
+ */
+void
+coap_add_data_blocked_response(struct coap_resource_t *resource,
+                               struct coap_session_t *session,
+                               coap_pdu_t *request,
+                               coap_pdu_t *response,
+                               const coap_binary_t *token,
+                               uint16_t media_type,
+                               int maxage,
+                               size_t length,
+                               const uint8_t* data);
+
 /**@}*/
 
 #endif /* _COAP_BLOCK_H_ */

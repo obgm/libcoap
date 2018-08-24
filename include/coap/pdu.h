@@ -84,7 +84,10 @@ struct coap_session_t;
 #define COAP_REQUEST_PATCH     6 /* RFC 8132 */
 #define COAP_REQUEST_IPATCH    7 /* RFC 8132 */
 
-/* CoAP option types (be sure to update check_critical when adding options */
+/*
+ * CoAP option types (be sure to update coap_option_check_critical() when
+ * adding options
+ */
 
 #define COAP_OPTION_IF_MATCH        1 /* C, opaque, 0-8 B, (none) */
 #define COAP_OPTION_URI_HOST        3 /* C, String, 1-255 B, destination address */

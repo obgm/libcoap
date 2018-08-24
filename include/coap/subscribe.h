@@ -14,6 +14,7 @@
 
 #include "address.h"
 #include "coap_io.h"
+#include "block.h"
 
 /**
  * @defgroup observe Resource observation
@@ -61,6 +62,8 @@ typedef struct coap_subscription_t {
   unsigned int dirty:1;    /**< set if the notification temporarily could not be
                             *   sent (in that case, the resource's partially
                             *   dirty flag is set too) */
+  unsigned int has_block2:1; /**< GET request had Block2 definition */
+  coap_block_t block2;     /**< GET request Block2 definition */
   size_t token_length;     /**< actual length of token */
   unsigned char token[8];  /**< token used for subscription */
   coap_string_t *query;    /**< query string used for subscription, if any */

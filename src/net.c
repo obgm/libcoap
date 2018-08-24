@@ -1986,15 +1986,18 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
 	  if ((observe_action & COAP_OBSERVE_CANCEL) == 0) {
 	    coap_subscription_t *subscription;
+            coap_block_t block2;
+            int has_block2 = 0;
 
-	    coap_log(LOG_DEBUG, "create new subscription\n");
-	    subscription = coap_add_observer(resource, session, &token, query);
+            if (coap_get_block(pdu, COAP_OPTION_BLOCK2, &block2)) {
+              has_block2 = 1;
+            }
+	    subscription = coap_add_observer(resource, session, &token, query, has_block2, block2);
 	    owns_query = 0;
 	    if (subscription) {
 	      coap_touch_observer(context, session, &token);
 	    }
 	  } else {
-	    coap_log(LOG_DEBUG, "removed observer\n");
 	    coap_delete_observer(resource, session, &token);
 	  }
 	}
@@ -2008,7 +2011,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       respond = no_response(pdu, response);
       if (respond != RESPONSE_DROP) {
 	if (observe && (COAP_RESPONSE_CLASS(response->code) > 2)) {
-	  coap_log(LOG_DEBUG, "removed observer\n");
 	  coap_delete_observer(resource, session, &token);
 	}
 

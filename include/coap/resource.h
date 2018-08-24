@@ -368,13 +368,17 @@ coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
  * @param token           The token that identifies this subscription.
  * @param query           The query string, if any. subscription will
                           take ownership of the string.
+ * @param has_block2      If Option Block2 defined.
+ * @param block2          Contents of Block2 if Block 2 defined.
  * @return                A pointer to the added/updated subscription
  *                        information or @c NULL on error.
  */
 coap_subscription_t *coap_add_observer(coap_resource_t *resource,
                                        coap_session_t *session,
                                        const coap_binary_t *token,
-                                       coap_string_t *query);
+                                       coap_string_t *query,
+                                       int has_block2,
+                                       coap_block_t block2);
 
 /**
  * Returns a subscription object for given @p peer.

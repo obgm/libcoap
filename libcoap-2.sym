@@ -2,6 +2,7 @@ coap_add_attr
 coap_add_block
 coap_add_data
 coap_add_data_after
+coap_add_data_blocked_response
 coap_add_observer
 coap_add_option
 coap_add_option_later
@@ -67,6 +68,7 @@ coap_get_uri_path
 coap_handle_dgram
 coap_handle_event
 coap_handle_failed_notify
+coap_hash_impl
 coap_insert_node
 coap_insert_optlist
 coap_is_mcast

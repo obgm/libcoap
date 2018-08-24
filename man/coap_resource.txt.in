@@ -69,17 +69,20 @@ resource with GET handler must be created by the unknown resource callback
 handle matching the URI which then can be Observable.
 
 The *coap_resource_init*() function returns a newly created _resource_ of 
-type _coap_resource_t_ *.  _uri_path_ specifies the uri string path to match 
+type _coap_resource_t_ * .  _uri_path_ specifies the uri string path to match 
 against.  _flags_ is used to define whether the 
-_resource_ is of type Confirmable Message or Non-Confirmable Message.
+_resource_ is of type Confirmable Message or Non-Confirmable Message for
+any "observe" responses.  See *coap_observe*(3).
 _flags_ can be one of the following definitions or'ed together.
 
 [horizontal]
 *COAP_RESOURCE_FLAGS_NOTIFY_NON*::
-Set the notification message type to non-confirmable.
+Set the notification message type to non-confirmable for any trigggered
+"observe" responses.
 //-
 *COAP_RESOURCE_FLAGS_NOTIFY_CON*::
-Set the notification message type to confirmable.
+Set the notification message type to confirmable for any trigggered
+"observe" responses.
 //-
 *COAP_RESOURCE_FLAGS_RELEASE_URI*::
 Free off the coap_str_const_t for _uri_path_ when the _resource_ is deleted.
@@ -150,6 +153,7 @@ coap_string_t *query, coap_pdu_t *response) {
                   coap_encode_var_safe(buf, sizeof(buf), 0x2ffff), buf);
 
   coap_add_data(response, strlen(INDEX), (const uint8_t *)INDEX);
+
 }
 
 void
@@ -329,7 +333,7 @@ coap_string_t *query, coap_pdu_t *response) {
   coap_add_resource(ctx, r);
 
   /* Do the PUT for this first call */
-  hnd_put(ctx, resource, session, request, token, query, response);
+  hnd_put(ctx, r, session, request, token, query, response);
 
   return;
 
