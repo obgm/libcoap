@@ -22,7 +22,7 @@ EXTRA_DIST = \
   libcoap-$(LIBCOAP_API_VERSION).sym \
   examples/coap_list.h \
   examples/getopt.c \
-  include/coap/utlist.h \
+  include/coap$(LIBCOAP_API_VERSION)/utlist.h \
   tests/test_common.h \
   tests/test_error_response.h \
   tests/test_options.h \
@@ -89,35 +89,9 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/uri.c
 
 ## Define the list of public header files and their install location.
-## The list defined here will be used within the include/Makefile.am
-## and is only a variable because the content is needed also for the
-## generating of the symbol mapping file.
-libcoap_includedir = $(includedir)/coap/
-libcoap_include_HEADERS = \
-  $(top_srcdir)/include/coap/address.h \
-  $(top_srcdir)/include/coap/async.h \
-  $(top_srcdir)/include/coap/bits.h \
-  $(top_srcdir)/include/coap/block.h \
-  $(top_builddir)/include/coap/coap.h \
-  $(top_srcdir)/include/coap/coap_dtls.h \
-  $(top_srcdir)/include/coap/coap_event.h \
-  $(top_srcdir)/include/coap/coap_hashkey.h \
-  $(top_srcdir)/include/coap/coap_io.h \
-  $(top_srcdir)/include/coap/coap_session.h \
-  $(top_srcdir)/include/coap/coap_time.h \
-  $(top_srcdir)/include/coap/debug.h \
-  $(top_srcdir)/include/coap/encode.h \
-  $(top_srcdir)/include/coap/libcoap.h \
-  $(top_srcdir)/include/coap/mem.h \
-  $(top_srcdir)/include/coap/net.h \
-  $(top_srcdir)/include/coap/option.h \
-  $(top_srcdir)/include/coap/pdu.h \
-  $(top_srcdir)/include/coap/prng.h \
-  $(top_srcdir)/include/coap/resource.h \
-  $(top_srcdir)/include/coap/str.h \
-  $(top_srcdir)/include/coap/subscribe.h \
-  $(top_srcdir)/include/coap/uri.h \
-  $(top_srcdir)/include/coap/uthash.h
+## The API version is appended to the install folder to being able to
+## co-install various versions of libcoap.
+libcoap_includedir = $(includedir)/coap$(LIBCOAP_API_VERSION)/
 
 # If there is a API change to something $(LIBCOAP_API_VERSION) > 1 the install
 # prefix for the header files has to change to not conflict the older version
@@ -125,6 +99,31 @@ libcoap_include_HEADERS = \
 # libcoap_include_HEADERS = \
 #  $(top_srcdir)/include/coap-$(LIBCOAP_API_VERSION)/*
 
+libcoap_include_HEADERS = \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/address.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/async.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/bits.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/block.h \
+  $(top_builddir)/include/coap$(LIBCOAP_API_VERSION)/coap.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_dtls.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_event.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_hashkey.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_io.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_session.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_time.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/debug.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/encode.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/libcoap.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/mem.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/net.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/option.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/pdu.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/prng.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/resource.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/str.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/subscribe.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/uri.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/uthash.h
 
 ## Instruct libtool to include API version information in the generated shared
 ## library file (.so). The library ABI version will later defined in configure.ac,
