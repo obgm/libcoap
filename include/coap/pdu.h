@@ -213,6 +213,16 @@ const char *coap_response_phrase(unsigned char code);
 #define COAP_MEDIATYPE_APPLICATION_COSE_KEY     101 /* application/cose-key  */
 #define COAP_MEDIATYPE_APPLICATION_COSE_KEY_SET 102 /* application/cose-key-set  */
 
+/* Content formats from RFC 8428 */
+#define COAP_MEDIATYPE_APPLICATION_SENML_JSON   110 /* application/senml+json  */
+#define COAP_MEDIATYPE_APPLICATION_SENSML_JSON  111 /* application/sensml+json */
+#define COAP_MEDIATYPE_APPLICATION_SENML_CBOR   112 /* application/senml+cbor  */
+#define COAP_MEDIATYPE_APPLICATION_SENSML_CBOR  113 /* application/sensml+cbor */
+#define COAP_MEDIATYPE_APPLICATION_SENML_EXI    114 /* application/senml-exi   */
+#define COAP_MEDIATYPE_APPLICATION_SENSML_EXI   115 /* application/sensml-exi  */
+#define COAP_MEDIATYPE_APPLICATION_SENML_XML    310 /* application/senml+xml   */
+#define COAP_MEDIATYPE_APPLICATION_SENSML_XML   311 /* application/sensml+xml  */
+
 /* Note that identifiers for registered media types are in the range 0-65535. We
  * use an unallocated type here and hope for the best. */
 #define COAP_MEDIATYPE_ANY                         0xff /* any media type */

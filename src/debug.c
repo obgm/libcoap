@@ -409,6 +409,14 @@ print_content_format(unsigned int format_type,
     { COAP_MEDIATYPE_APPLICATION_COSE_MAC0, "application/cose; cose-type=\"cose-mac0\"" },
     { COAP_MEDIATYPE_APPLICATION_COSE_KEY, "application/cose-key" },
     { COAP_MEDIATYPE_APPLICATION_COSE_KEY_SET, "application/cose-key-set" },
+    { COAP_MEDIATYPE_APPLICATION_SENML_JSON, "application/senml+json" },
+    { COAP_MEDIATYPE_APPLICATION_SENSML_JSON, "application/sensml+json" },
+    { COAP_MEDIATYPE_APPLICATION_SENML_CBOR, "application/senml+cbor" },
+    { COAP_MEDIATYPE_APPLICATION_SENSML_CBOR, "application/sensml+cbor" },
+    { COAP_MEDIATYPE_APPLICATION_SENML_EXI, "application/senml-exi" },
+    { COAP_MEDIATYPE_APPLICATION_SENSML_EXI, "application/sensml-exi" },
+    { COAP_MEDIATYPE_APPLICATION_SENML_XML, "application/senml+xml" },
+    { COAP_MEDIATYPE_APPLICATION_SENSML_XML, "application/sensml+xml" },
     { 75, "application/dcaf+cbor" }
   };
 
