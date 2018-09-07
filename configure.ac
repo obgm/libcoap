@@ -13,7 +13,7 @@ m4_define([libcoap_micro_version], [0])
 
 # define a appending release state if needed, for example for pre-releases
 # like 'alpha' or 'rc1', for a full release keep the value empty!
-m4_define([libcoap_release_state], [alpha])
+m4_define([libcoap_release_state], [rc1])
 
 # concatenate the full libcoap version string
 m4_define([libcoap_version], [m4_format([%s.%s.%s%s], libcoap_major_version, libcoap_minor_version, libcoap_micro_version, libcoap_release_state)])
