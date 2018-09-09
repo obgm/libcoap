@@ -11,7 +11,7 @@ m4_define([libcoap_major_version], [4])
 m4_define([libcoap_minor_version], [2])
 m4_define([libcoap_micro_version], [0])
 
-# define a appending release state if needed, for example for pre-releases
+# define an appending release state if needed, for example for pre-releases
 # like 'alpha' or 'rc1', for a full release keep the value empty!
 m4_define([libcoap_release_state], [rc2])
 
@@ -46,7 +46,7 @@ LT_INIT([shared static])
 #                                                                                 #
 #  To set the version of the library, libtool provides the -version-info          #
 #  parameter, which accepts three numbers, separated by colons, that are called   #
-#  respectively, current, revision and age. Both their name and their behaviour,  #
+#  respectively, current, revision and age. Both their name and their behavior,   #
 #  nowadays, have to be considered fully arbitrary, as the explanation provided   #
 #  in the official documentation is confusing to say the least, and can be, in    #
 #  some cases, considered completely wrong.                                       #
@@ -64,7 +64,7 @@ LT_INIT([shared static])
 #
 # Update the libtool versioning only after the release of a public release of libcoap.
 # Go through the following checklist from top to bottom and check your needs, following
-# the reminded changes if you can "Yes" for specific check.
+# the reminded changes if you can say "Yes" for specific check.
 #
 # 1. Only existing code has changed, no functional changes
 #    If the library source code has changed but *no* new symbols were added at all
@@ -75,9 +75,9 @@ LT_INIT([shared static])
 #  --> Increase the 'LT_LIBCOAP_REVISION' value with *every* new software release
 #      within one release cycle.
 #
-# 2. Interfaces were added, functional changed or removed
+# 2. Interfaces were added, functions have changed or are removed
 #    If any interfaces [exported functions or data] have been added, got internal
-#    changes that implies a different behaviour or removed and by this the visible
+#    changes that implies a different behavior or removed and by this the visible
 #    symbols have changed since the last update, increment current, and set
 #    revision to 0 (c:r:a becomes c+1:r=0:a).
 #
@@ -186,7 +186,7 @@ if test "x$build_doxygen" = "xyes"; then
     if test -z "$DOXYGEN"; then
         if test "x$build_doxygen" = "xyes"; then
             AC_MSG_WARN([==> You want to build the doxygen documentation but doxygen was not found!])
-            AC_MSG_ERROR([==> Install the package containg doxygen or disable the doxygen documentation using '--disable-doxygen'.])
+            AC_MSG_ERROR([==> Install the package that contains doxygen or disable the doxygen documentation using '--disable-doxygen'.])
         fi
     else
         AC_MSG_CHECKING([for compatible doxygen version (>= $doxygen_version_required)])
@@ -220,7 +220,7 @@ if test "x$build_doxygen" = "xyes"; then
                     # cmd >>& file  # Append both stdout and stderr to file.
                     # cmd1 | cmd2   # pipe stdout to cmd2
                     # cmd1 |& cmd2  # pipe stdout and stderr to cmd2
-                    # Using a explicit call with the default always available C-shell on FreeBSD,
+                    # Using an explicit call with the default always available C-shell on FreeBSD,
                     # the user may have installed another shell from a port which we don't know here
                     dot_version=`export DOT=$DOT && csh -c '$DOT -V |& cut -f5 -d" "'`
                     ;;
@@ -276,13 +276,13 @@ if test "x$build_manpages" = "xyes"; then
     AC_PATH_PROG([A2X], [a2x])
     if test "x$A2X" = "x"; then
         AC_MSG_WARN([==> You want to build the manpages, but a2x was not found!])
-        AC_MSG_ERROR([==> Install the package containg a2x (mostly asciidoc) or disable the build of the manpages using '--disable-manpages'.])
+        AC_MSG_ERROR([==> Install the package that contains a2x (mostly asciidoc) or disable the build of the manpages using '--disable-manpages'.])
         build_manpages="no"
     else
         AX_CHECK_A2X_TO_MANPAGE([], [
             AC_MSG_RESULT([no])
             AC_MSG_WARN([==> You want to build the manpages with a2x, but manpage formatting does not work!])
-            AC_MSG_ERROR([==> Install the packages containg the docbook DTD and XSL stylesheets (presumably docbook, docbook-xml) or disable the build of the manpages using '--disable-manpages'.])
+            AC_MSG_ERROR([==> Install the packages that contains the docbook DTD and XSL stylesheets (presumably docbook, docbook-xml) or disable the build of the manpages using '--disable-manpages'.])
             build_manpages="no"
         ])
         MAN_DIR=man
@@ -293,10 +293,10 @@ AM_CONDITIONAL(BUILD_MANPAGES, [test "x$build_manpages" = "xyes"])
 
 # configure options
 # __dtls__
-# The Datagram Transport Layer Security (DTLS) feature needs cryptographic
+# The Datagram Transport Layer Security (DTLS) feature needs cryptography
 # functions.
 # We currently support the GnuTLS and OpenSSL library. The user can preselect
-# the cryptographic library that should be used by adding '--with-gnutls' or
+# the cryptography library that should be used by adding '--with-gnutls' or
 # '--with-openssl'.
 # If the user isn't using a selection we first search for GnuTLS and fallback
 # to OpenSSL if the GnuTLS library couldn't be found.
@@ -330,7 +330,7 @@ AC_ARG_WITH([tinydtls],
 
 if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes"; then
     if test "x$build_dtls" = "x"; then
-        # Give a advice that '--with_gnutls' or '--with_openssl' was used but
+        # Give an advice that '--with_gnutls' or '--with_openssl' was used but
         # DTLS support isn't configured.
         AC_MSG_NOTICE([==> Using the configure options '--with-gnutls' or '--with-openssl' without '--enable-dtls' is useles and will be ignored.])
     fi
@@ -365,7 +365,7 @@ if test "x$build_dtls" = "xyes"; then
         # Some more sanity checking.
         if test "x$have_gnutls" != "xyes"; then
             AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the GnuTLS library but pkg-config file 'gnutls.pc' could not be found!
-                      Install the package(s) containing the development files for GnuTLS,
+                      Install the package(s) that contains the development files for GnuTLS,
                       or use '--with-openssl' or disable the DTLS support using '--disable-dtls'.])
         fi
         AC_MSG_NOTICE([The use of GnuTLS was explicit requested due configure option '--with-gnutls'!])
@@ -381,7 +381,7 @@ if test "x$build_dtls" = "xyes"; then
         # Some more sanity checking.
         if test "x$have_openssl" != "xyes"; then
             AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the OpenSSL library but pkg-config file 'openssl.pc' could not be found!
-                      Install the package(s) containing the development files for OpenSSL,
+                      Install the package(s) that contains the development files for OpenSSL,
                       or use '--with-gnutls' or disable the DTLS support using '--disable-dtls'.])
         fi
         AC_MSG_NOTICE([The use of OpenSSL was explicit requested due configure option '--with-openssl'!])
@@ -406,12 +406,12 @@ if test "x$build_dtls" = "xyes"; then
          fi
     fi
 
-    # The user hasn't requested the use of a specific cryptographic library
+    # The user hasn't requested the use of a specific cryptography library
     # we try first GnuTLS for usability ...
     if test "x$have_gnutls" = "xyes" -a "x$with_gnutls" = "xno" -a "x$with_tinydtls" = "xno"; then
         gnutls_version=`pkg-config --modversion gnutls`
         AX_CHECK_GNUTLS_VERSION
-        AC_MSG_NOTICE([Using autoselected library GnuTLS for DTLS support!])
+        AC_MSG_NOTICE([Using auto selected library GnuTLS for DTLS support!])
         with_gnutls_auto="yes"
         have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
@@ -420,17 +420,17 @@ if test "x$build_dtls" = "xyes"; then
     if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xno" -a "x$with_gnutls_auto" = "x" -a "x$with_tinydtls" = "xno"; then
         openssl_version=`pkg-config --modversion openssl`
         AX_CHECK_OPENSSL_VERSION
-        AC_MSG_NOTICE([Using autoselected library OpenSSL for DTLS support!])
+        AC_MSG_NOTICE([Using auto selected library OpenSSL for DTLS support!])
         with_openssl_auto="yes"
         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
 
     # Note that tinyDTLS is used only when explicitly requested.
 
-    # Giving out a error message if we haven't found at least one crypto library.
+    # Giving out an error message if we haven't found at least one crypto library.
     if test "x$have_gnutls" = "xno" -a "x$have_openssl" = "xno" -a "x$have_tinydtls" != "xno"; then
-        AC_MSG_ERROR([==> Option '--enable-dtls' is set but one of the needed cryptographic library GnuTLS nor OpenSSL nor tinyDTLS could be found!
-                      Install at least on of the package(s) containing the development files for GnuTLS (>= $gnutls_version_required) or OpenSSL(>= $openssl_version_required)
+        AC_MSG_ERROR([==> Option '--enable-dtls' is set but one of the needed cryptography library GnuTLS nor OpenSSL nor tinyDTLS could be found!
+                      Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required) or OpenSSL(>= $openssl_version_required)
                       or disable the DTLS support using '--disable-dtls'.])
     fi
 
@@ -489,7 +489,7 @@ if test "x$build_tests" = "xyes"; then
                        AC_DEFINE(HAVE_LIBCUNIT, [1], [Define if the system has libcunit])],
                       [have_cunit=no
                        AC_MSG_WARN([==> You want to build the testing binary but the pkg-config file cunit.pc could not be found or installed CUnit version is too old!])
-                       AC_MSG_ERROR([==> Install the package(s) containing the development files for CUnit or disable the testing binary using '--disable-tests'.])
+                       AC_MSG_ERROR([==> Install the package(s) that contains the development files for CUnit or disable the testing binary using '--disable-tests'.])
                       ])
 fi
 AM_CONDITIONAL(HAVE_CUNIT, [test "x$CUNIT_LIBS" != "x"])
