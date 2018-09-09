@@ -1,7 +1,7 @@
 # configure.ac for the libcoap package
 #
 # Copyright (C) 2010-2015 Olaf Bergmann <bergmann@tzi.org>
-#           (C) 2015-2017 Carsten Schoenert <c.schoenert@t-online.de>
+#           (C) 2015-2018 Carsten Schoenert <c.schoenert@t-online.de>
 #
 # Please run 'autogen.sh' to let autoconf produce a configure script.
 
@@ -417,7 +417,7 @@ if test "x$build_dtls" = "xyes"; then
     fi
 
     # ... and if not found check OpenSSL is suitable.
-    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xyes" -a "x$with_gnutls_auto" = "x" -a "x$with_tinydtls" = "xno"; then
+    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xno" -a "x$with_gnutls_auto" = "x" -a "x$with_tinydtls" = "xno"; then
         openssl_version=`pkg-config --modversion openssl`
         AX_CHECK_OPENSSL_VERSION
         AC_MSG_NOTICE([Using autoselected library OpenSSL for DTLS support!])
@@ -428,7 +428,7 @@ if test "x$build_dtls" = "xyes"; then
     # Note that tinyDTLS is used only when explicitly requested.
 
     # Giving out a error message if we haven't found at least one crypto library.
-    if test "x$have_gnutls" = "xno" -a "x$have_openssl" = "xno" -a "x$have_tinydtls" = "xno"; then
+    if test "x$have_gnutls" = "xno" -a "x$have_openssl" = "xno" -a "x$have_tinydtls" != "xno"; then
         AC_MSG_ERROR([==> Option '--enable-dtls' is set but one of the needed cryptographic library GnuTLS nor OpenSSL nor tinyDTLS could be found!
                       Install at least on of the package(s) containing the development files for GnuTLS (>= $gnutls_version_required) or OpenSSL(>= $openssl_version_required)
                       or disable the DTLS support using '--disable-dtls'.])
