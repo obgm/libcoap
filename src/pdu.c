@@ -950,6 +950,7 @@ coap_pdu_parse2(unsigned char *data, size_t length, coap_pdu_t *pdu,
   switch (transport) {
     case COAP_UDP:
       break;
+#if defined(WITH_TCP)
     case COAP_TCP:
       for (size_t i = 0 ; i < headerSize ; i++) {
         pdu->transport_hdr->tcp.header_data[i] = data[i];
@@ -984,6 +985,8 @@ coap_pdu_parse2(unsigned char *data, size_t length, coap_pdu_t *pdu,
       opt = ((unsigned char *) &(pdu->transport_hdr->tcp_32bit)) +
               headerSize + tokenLength;
       break;
+#endif
+#if defined(WITH_WS)
     case COAP_WS:
       for (size_t i = 0 ; i < headerSize ; i++) {
         pdu->transport_hdr->ws.header_data[i] = data[i];
@@ -993,6 +996,7 @@ coap_pdu_parse2(unsigned char *data, size_t length, coap_pdu_t *pdu,
       opt = ((unsigned char *) &(pdu->transport_hdr->ws)) +
               headerSize + tokenLength;
       break;
+#endif
     default:
       printf("it has wrong type\n");
   }
