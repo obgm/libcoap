@@ -1077,6 +1077,10 @@ setup_pki(void) {
   return &dtls_pki;
 }
 
+#ifdef _WIN32
+#define S_ISDIR(x) (((x) & S_IFMT) == S_IFDIR)
+#endif
+
 static coap_session_t *
 get_session(
   coap_context_t *ctx,
