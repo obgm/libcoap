@@ -649,7 +649,7 @@ AC_CONFIG_FILES([
 Makefile
 doc/Makefile
 examples/Makefile
-include/coap/coap.h
+include/coap2/coap.h
 man/coap.txt
 man/coap_attribute.txt
 man/coap_context.txt
