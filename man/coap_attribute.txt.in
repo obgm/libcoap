@@ -15,7 +15,7 @@ coap_attribute, coap_add_attr, coap_find_attr
 
 SYNOPSIS
 --------
-*#include <coap/coap.h>*
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *coap_attr_t *coap_add_attr(coap_resource_t *_resource_, coap_str_const_t
 *_name_, coap_str_const_t *_value_, int _flags_);*
@@ -74,7 +74,7 @@ EXAMPLE
 
 [source, c]
 --
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 static void
 init_resources(coap_context_t *ctx) {

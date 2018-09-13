@@ -16,7 +16,7 @@ coap_resource_set_mode - Work with CoAP resources
 
 SYNOPSIS
 --------
-*#include <coap/coap.h>*
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *coap_resource_t *coap_resource_init(coap_str_const_t *_uri_path_,
 int _flags_);*
@@ -129,7 +129,7 @@ EXAMPLES
 
 [source, c]
 --
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #define INDEX "This is a test server made with libcoap (see https://libcoap.net)\n" \
               "Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>\n\n"
@@ -225,7 +225,7 @@ init_resources(coap_context_t *ctx) {
 
 [source, c]
 --
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 /* Regular DELETE handler - used by resources created by the
  * Unknown Resource PUT handler */

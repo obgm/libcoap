@@ -22,7 +22,7 @@ coap_session_str - Work with CoAP sessions
 
 SYNOPSIS
 --------
-*#include <coap/coap.h>*
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *coap_session_t *coap_new_client_session(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_,
@@ -190,7 +190,7 @@ EXAMPLES
 *CoAP Client Non-Encrypted Setup*
 [source, c]
 ----
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #include <netinet/in.h>
 
@@ -222,7 +222,7 @@ setup_client_session (struct in_addr ip_address) {
 *CoAP Client PKI Setup*
 [source, c]
 ----
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #include <netinet/in.h>
 
@@ -300,7 +300,7 @@ setup_client_session_pki (struct in_addr ip_address,
 *CoAP Client PSK Setup*
 [source, c]
 ----
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #include <netinet/in.h>
 
@@ -337,7 +337,7 @@ setup_client_session_psk (struct in_addr ip_address,
 *CoAP Client Setup*
 [source, c]
 ----
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #include <netinet/in.h>
 

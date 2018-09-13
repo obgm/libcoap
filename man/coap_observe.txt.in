@@ -16,7 +16,7 @@ coap_delete_observers - work with CoAP observe
 
 SYNOPSIS
 --------
-*#include <coap/coap.h>*
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *void coap_resource_set_get_observable(coap_resource_t *_resource_,
 int _mode_);*
@@ -137,7 +137,7 @@ EXAMPLES
 
 [source, c]
 --
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 coap_resource_t *time_resource = NULL;
 
@@ -312,7 +312,7 @@ int main(int argc, char *argv[]){
 
 [source, c]
 --
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 /* Usually, requests are sent confirmable */
 

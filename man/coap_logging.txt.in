@@ -17,7 +17,7 @@ coap_set_show_pdu_output, coap_show_pdu
 
 SYNOPSIS
 --------
-*#include <coap/coap.h>*
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *void coap_log(coap_log_t _level_, const char *_format_, ...);*
 

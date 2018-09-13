@@ -16,7 +16,7 @@ coap_add_option, coap_add_data - Work with CoAP PDUs
 
 SYNOPSIS
 --------
-*#include <coap/coap.h>*
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *coap_pdu_t *coap_pdu_init(uint8_t _type_, uint8_t _code_,
 uint16_t _message_id_, size_t _max_size_);*
@@ -227,7 +227,7 @@ EXAMPLES
 
 [source, c]
 --
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 static int token = 0;
 
@@ -323,7 +323,7 @@ error:
 
 [source, c]
 --
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 static void
 hnd_get_time(coap_context_t *context, coap_resource_t *resource,

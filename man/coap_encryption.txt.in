@@ -15,7 +15,7 @@ coap_encryption, coap_dtls_pki_t
 
 SYNOPSIS
 --------
-*#include <coap/coap.h>*
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *struct coap_dtls_pki_t*
 
@@ -425,7 +425,7 @@ EXAMPLES
 *CoAP Server DTLS PKI Setup*
 [source, c]
 ----
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 typedef struct valid_cns_t {
   int count;

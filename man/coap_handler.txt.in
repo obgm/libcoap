@@ -17,7 +17,7 @@ coap_register_pong_handler, coap_register_event_handler
 
 SYNOPSIS
 --------
-*#include <coap/coap.h>*
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *void coap_register_handler(coap_resource_t *_resource_, unsigned char
 _method_, coap_method_handler_t _handler_);*
@@ -165,7 +165,7 @@ EXAMPLES
 
 [source, c]
 --
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 void
 hnd_get_time(coap_context_t *context, coap_resource_t *resource,
@@ -225,7 +225,7 @@ coap_string_t *query, coap_pdu_t *response) {
 
 [source, c]
 --
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 static void
 response_handler(coap_context_t *ctx, coap_session_t *session,

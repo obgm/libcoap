@@ -17,7 +17,7 @@ coap_free_endpoint, coap_endpoint_set_default_mtu, coap_endpoint_str
 
 SYNOPSIS
 --------
-*#include <coap/coap.h>*
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *coap_context_t *coap_new_context(const coap_address_t *_listen_addr_);*
 
@@ -163,7 +163,7 @@ EXAMPLES
 
 [source, c]
 ----
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 static coap_context_t *
 setup_server_context (void) {
@@ -194,7 +194,7 @@ setup_server_context (void) {
 *CoAP Server DTLS PKI Setup*
 [source, c]
 ----
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 typedef struct valid_cns_t {
   int count;
@@ -326,7 +326,7 @@ setup_server_context_pki (const char *public_cert_file,
 *CoAP Server DTLS PSK Setup*
 [source, c]
 ----
-#include <coap/coap.h>
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 static coap_context_t *
 setup_server_context_psk (const char *hint,

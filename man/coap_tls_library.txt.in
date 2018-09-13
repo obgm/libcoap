@@ -16,7 +16,7 @@ coap_get_tls_library_version
 
 SYNOPSIS
 --------
-*#include <coap/coap.h>*
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *int coap_dtls_is_supported(void);*
 

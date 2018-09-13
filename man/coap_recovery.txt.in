@@ -18,7 +18,7 @@ coap_debug_set_packet_loss
 
 SYNOPSIS
 --------
-*#include <coap/coap.h>*
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *void coap_session_set_max_retransmit(coap_session_t *_session_,
 unsigned int _value_)*;
