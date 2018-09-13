@@ -29,7 +29,7 @@
 #include <netdb.h>
 #endif
 
-#include <coap/coap.h>
+#include <coap2/coap.h>
 
 #define MAX_USER 128 /* Maximum length of a user name (i.e., PSK
                       * identity) in bytes. */

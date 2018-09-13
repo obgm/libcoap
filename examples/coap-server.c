@@ -36,7 +36,7 @@
 /* Need to refresh time once per sec */
 #define COAP_RESOURCE_CHECK_TIME 1
 
-#include <coap/coap.h>
+#include <coap2/coap.h>
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))

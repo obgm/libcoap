@@ -28,7 +28,7 @@
 #ifndef _COAP_LIST_H_
 #define _COAP_LIST_H_
 
-#include <coap/utlist.h>
+#include <coap2/utlist.h>
 
 typedef struct coap_list_t {
   struct coap_list_t *next;
