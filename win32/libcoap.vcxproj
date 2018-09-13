@@ -58,30 +58,30 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\coap_config.h" />
-    <ClInclude Include="..\include\coap\address.h" />
-    <ClInclude Include="..\include\coap\async.h" />
-    <ClInclude Include="..\include\coap\bits.h" />
-    <ClInclude Include="..\include\coap\block.h" />
-    <ClInclude Include="..\include\coap\coap.h" />
-    <ClInclude Include="..\include\coap\coap_dtls.h" />
-    <ClInclude Include="..\include\coap\coap_event.h" />
-    <ClInclude Include="..\include\coap\coap_io.h" />
-    <ClInclude Include="..\include\coap\coap_session.h" />
-    <ClInclude Include="..\include\coap\coap_time.h" />
-    <ClInclude Include="..\include\coap\debug.h" />
-    <ClInclude Include="..\include\coap\encode.h" />
-    <ClInclude Include="..\include\coap\libcoap.h" />
-    <ClInclude Include="..\include\coap\mem.h" />
-    <ClInclude Include="..\include\coap\net.h" />
-    <ClInclude Include="..\include\coap\option.h" />
-    <ClInclude Include="..\include\coap\pdu.h" />
-    <ClInclude Include="..\include\coap\prng.h" />
-    <ClInclude Include="..\include\coap\resource.h" />
-    <ClInclude Include="..\include\coap\str.h" />
-    <ClInclude Include="..\include\coap\subscribe.h" />
-    <ClInclude Include="..\include\coap\uri.h" />
-    <ClInclude Include="..\include\coap\uthash.h" />
-    <ClInclude Include="..\include\coap\utlist.h" />
+    <ClInclude Include="..\include\coap2\address.h" />
+    <ClInclude Include="..\include\coap2\async.h" />
+    <ClInclude Include="..\include\coap2\bits.h" />
+    <ClInclude Include="..\include\coap2\block.h" />
+    <ClInclude Include="..\include\coap2\coap.h" />
+    <ClInclude Include="..\include\coap2\coap_dtls.h" />
+    <ClInclude Include="..\include\coap2\coap_event.h" />
+    <ClInclude Include="..\include\coap2\coap_io.h" />
+    <ClInclude Include="..\include\coap2\coap_session.h" />
+    <ClInclude Include="..\include\coap2\coap_time.h" />
+    <ClInclude Include="..\include\coap2\debug.h" />
+    <ClInclude Include="..\include\coap2\encode.h" />
+    <ClInclude Include="..\include\coap2\libcoap.h" />
+    <ClInclude Include="..\include\coap2\mem.h" />
+    <ClInclude Include="..\include\coap2\net.h" />
+    <ClInclude Include="..\include\coap2\option.h" />
+    <ClInclude Include="..\include\coap2\pdu.h" />
+    <ClInclude Include="..\include\coap2\prng.h" />
+    <ClInclude Include="..\include\coap2\resource.h" />
+    <ClInclude Include="..\include\coap2\str.h" />
+    <ClInclude Include="..\include\coap2\subscribe.h" />
+    <ClInclude Include="..\include\coap2\uri.h" />
+    <ClInclude Include="..\include\coap2\uthash.h" />
+    <ClInclude Include="..\include\coap2\utlist.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\libcoap-2.sym">
@@ -306,7 +306,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
+copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Copying config files for windows</Message>
@@ -349,7 +349,7 @@ copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
+copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Copying config files for windows</Message>
@@ -389,7 +389,7 @@ copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
+copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -414,7 +414,7 @@ copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
+copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -437,7 +437,7 @@ copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
+copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Copying config files for windows</Message>
@@ -482,7 +482,7 @@ copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
+copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Copying config files for windows</Message>
@@ -524,7 +524,7 @@ copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
+copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -552,7 +552,7 @@ copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap\coap.h.windows ..\include\coap\coap.h</Command>
+copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
