@@ -621,7 +621,7 @@ int coap_add_token2(coap_pdu_t *pdu, size_t len, const unsigned char *data,
  */
 int coap_add_token_to_empty_message(coap_pdu_t *pdu, size_t len, const unsigned char *data,
                                     coap_transport_t transport);
-    
+
 /**
  * Get token from coap header
  *
