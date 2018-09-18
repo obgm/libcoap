@@ -87,10 +87,10 @@ unsigned int coap_encode_var_safe(uint8_t *buf,
  *   coap_encode_var_safe(buf, sizeof(buf), 0xfff);
  * would catch this error at run-time and should be used instead.
  */
-COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_encode_var_bytes(uint8_t *buf, unsigned int value
-) {
-  return coap_encode_var_safe(buf, sizeof(value), value);
-}
+//COAP_STATIC_INLINE COAP_DEPRECATED int
+//coap_encode_var_bytes(uint8_t *buf, unsigned int value
+//) {
+//  return coap_encode_var_safe(buf, sizeof(value), value);
+//}
 
 #endif /* _COAP_ENCODE_H_ */
