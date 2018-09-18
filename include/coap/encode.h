@@ -90,7 +90,7 @@ unsigned int coap_encode_var_safe(uint8_t *buf,
 COAP_STATIC_INLINE COAP_DEPRECATED int
 coap_encode_var_bytes(uint8_t *buf, unsigned int value
 ) {
-  return coap_encode_var_safe(buf, sizeof(value), value);
+  return (int)coap_encode_var_safe(buf, sizeof(value), value);
 }
 
 #endif /* _COAP_ENCODE_H_ */

@@ -63,7 +63,7 @@ coap_free_type(coap_memory_tag_t type, void *p) {
 #define COAP_MAX_STRINGS      8
 #endif /* COAP_MAX_STRINGS */
 
-struct coap_string_t {
+struct coap_str_t {
   char data[COAP_MAX_STRING_SIZE];
 };
 
@@ -82,7 +82,7 @@ typedef union {
   char buf[COAP_MAX_PACKET_SIZE];
 } coap_packetbuf_t;
 
-MEMB(string_storage, struct coap_string_t, COAP_MAX_STRINGS);
+MEMB(string_storage, struct coap_str_t, COAP_MAX_STRINGS);
 MEMB(packet_storage, coap_packetbuf_t, COAP_MAX_PACKETS);
 MEMB(session_storage, coap_session_t, COAP_MAX_SESSIONS);
 MEMB(node_storage, coap_queue_t, COAP_PDU_MAXCNT);
