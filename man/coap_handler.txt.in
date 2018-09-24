@@ -12,7 +12,7 @@ NAME
 ----
 coap_handler, coap_register_handler, coap_register_response_handler, 
 coap_register_nack_handler, coap_register_ping_handler, 
-coap_register_pong_handler
+coap_register_pong_handler, coap_register_event_handler
 - work with CoAP handlers
 
 SYNOPSIS
@@ -33,6 +33,9 @@ coap_ping_handler_t _handler_)*;
 
 *void coap_register_pong_handler(coap_context_t *_context_, 
 coap_pong_handler_t _handler_)*;
+
+*void coap_register_event_handler(coap_context_t *_context_, 
+coap_event_handler_t _handler_)*;
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
 or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
@@ -69,7 +72,8 @@ typedef void (*coap_method_handler_t)(coap_context_t *context,
 The *coap_register_response_handler*() function defines a request's response 
 _handler_ for traffic associated with the _context_.  The application can use 
 this for handling any response packets, including sending a RST packet if this 
-response was unexpected.
+response was unexpected.  If _handler_ is NULL, then the handler is
+de-registered.
 
 The handler function prototype is defined as:
 [source, c]
@@ -83,6 +87,7 @@ typedef void (*coap_response_handler_t)(coap_context_t *context,
 
 The *coap_register_nack_handler*() function defines a request's negative 
 response _handler_ for traffic associated with the _context_.
+If _handler_ is NULL, then the handler is de-registered.
 
 The handler function prototype is defined as:
 [source, c]
@@ -95,27 +100,63 @@ typedef void (*coap_nack_handler_t)(coap_context_t *context,
 ----
 
 The *coap_register_ping_handler*() function defines a _handler_ for tracking 
-CoAP ping traffic associated with the _context_.
+CoAP ping traffic associated with the _context_. If _handler_ is NULL, then
+the handler is de-registered.
 
 The handler function prototype is defined as:
 [source, c]
 ----
 typedef void (*coap_ping_handler_t)(coap_context_t *context,
-                                        coap_session_t *session,
-                                        coap_pdu_t *received,
-                                        const coap_tid_t id);
+                                    coap_session_t *session,
+                                    coap_pdu_t *received,
+                                    const coap_tid_t id);
 ----
 
 The *coap_register_pong_handler*() function defines a _handler_ for tracking 
 CoAP TCP ping response traffic associated with the _context_.
+If _handler_ is NULL, then the handler is de-registered.
 
 The handler function prototype is defined as:
 [source, c]
 ----
 typedef void (*coap_pong_handler_t)(coap_context_t *context,
-                                        coap_session_t *session,
-                                        coap_pdu_t *received,
-                                        const coap_tid_t id);
+                                    coap_session_t *session,
+                                    coap_pdu_t *received,
+                                    const coap_tid_t id);
+----
+
+The *coap_register_event_handler*() function defines a _handler_ for tracking
+(D)TLS events associated with the _context_. If _handler_ is NULL, then
+the handler is de-registered.
+
+The handler function prototype is defined as:
+[source, c]
+----
+typedef void (*coap_event_handler_t)(coap_context_t *context,
+                                     coap_event_t event,
+                                     coap_session_t *session);
+----
+Events can be one of the following
+----
+/**
+ * (D)TLS events for COAP_PROTO_DTLS and COAP_PROTO_TLS
+ */
+COAP_EVENT_DTLS_CLOSED        0x0000
+COAP_EVENT_DTLS_CONNECTED     0x01DE
+COAP_EVENT_DTLS_RENEGOTIATE   0x01DF
+COAP_EVENT_DTLS_ERROR         0x0200
+/**
+ * TCP events for COAP_PROTO_TCP and COAP_PROTO_TLS
+ */
+COAP_EVENT_TCP_CONNECTED      0x1001
+COAP_EVENT_TCP_CLOSED         0x1002
+COAP_EVENT_TCP_FAILED         0x1003
+/**
+ * CSM exchange events for reliable protocols only
+ */
+COAP_EVENT_SESSION_CONNECTED  0x2001
+COAP_EVENT_SESSION_CLOSED     0x2002
+COAP_EVENT_SESSION_FAILED     0x2003
 ----
 
 EXAMPLES

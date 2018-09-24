@@ -127,6 +127,7 @@ global:
   coap_print_wellknown;
   coap_read;
   coap_register_async;
+  coap_register_event_handler;
   coap_register_handler;
   coap_remove_async;
   coap_remove_from_queue;

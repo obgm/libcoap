@@ -136,6 +136,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   session->max_retransmit = COAP_DEFAULT_MAX_RETRANSMIT;
   session->ack_timeout = COAP_DEFAULT_ACK_TIMEOUT;
   session->ack_random_factor = COAP_DEFAULT_ACK_RANDOM_FACTOR;
+  session->dtls_event = -1;
 
   /* initialize message id */
   prng((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));

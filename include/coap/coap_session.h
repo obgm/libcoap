@@ -87,7 +87,8 @@ typedef struct coap_session_t {
   unsigned int max_retransmit;          /**< maximum re-transmit count (default 4) */
   coap_fixed_point_t ack_timeout;       /**< timeout waiting for ack (default 2 secs) */
   coap_fixed_point_t ack_random_factor; /**< ack random factor backoff (default 1.5) */
-  unsigned int dtls_timeout_count;      /**<dtls setup retry counter */
+  unsigned int dtls_timeout_count;      /**< dtls setup retry counter */
+  int dtls_event;                       /**< Tracking any (D)TLS events on this sesison */
 } coap_session_t;
 
 /**

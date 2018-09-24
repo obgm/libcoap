@@ -10,11 +10,14 @@
 #ifndef _COAP_EVENT_H_
 #define _COAP_EVENT_H_
 
+#include "libcoap.h"
+
 struct coap_context_t;
+struct coap_session_t;
 
 /**
  * @defgroup events Event API
- * API functions for event deliver from lower-layer library functions.
+ * API functions for event delivery from lower-layer library functions.
  * @{
  */
 
@@ -55,8 +58,8 @@ struct coap_context_t;
  * passed as the third argument.
  */
 typedef int (*coap_event_handler_t)(struct coap_context_t *,
-                                    coap_event_t,
-                                    void *);
+                                    coap_event_t event,
+                                    struct coap_session_t *session);
 
 /**
  * Registers the function @p hnd as callback for events from the given
@@ -64,16 +67,34 @@ typedef int (*coap_event_handler_t)(struct coap_context_t *,
  * registered with @p context will be overwritten by this operation.
  *
  * @param context The CoAP context to register the event handler with.
+ * @param hnd     The event handler to be registered.  @c NULL if to be
+ *                de-registered.
+ */
+void coap_register_event_handler(struct coap_context_t *context,
+                            coap_event_handler_t hnd);
+
+/**
+ * Registers the function @p hnd as callback for events from the given
+ * CoAP context @p context. Any event handler that has previously been
+ * registered with @p context will be overwritten by this operation.
+ *
+ * @deprecated Use coap_register_event_handler() instead.
+ *
+ * @param context The CoAP context to register the event handler with.
  * @param hnd     The event handler to be registered.
  */
+COAP_DEPRECATED
 void coap_set_event_handler(struct coap_context_t *context,
                             coap_event_handler_t hnd);
 
 /**
  * Clears the event handler registered with @p context.
  *
+ * @deprecated Use coap_register_event_handler() instead with NULL for hnd.
+ *
  * @param context The CoAP context whose event handler is to be removed.
  */
+COAP_DEPRECATED
 void coap_clear_event_handler(struct coap_context_t *context);
 
 /** @} */

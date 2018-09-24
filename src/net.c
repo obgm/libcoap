@@ -2259,11 +2259,11 @@ cleanup:
 }
 
 int
-coap_handle_event(coap_context_t *context, coap_event_t event, void *data) {
+coap_handle_event(coap_context_t *context, coap_event_t event, coap_session_t *session) {
   coap_log(LOG_DEBUG, "*** EVENT: 0x%04x\n", event);
 
   if (context->handle_event) {
-    return context->handle_event(context, event, data);
+    return context->handle_event(context, event, session);
   } else {
     return 0;
   }
