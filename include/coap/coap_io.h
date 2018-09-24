@@ -207,4 +207,7 @@ typedef enum {
   COAP_NACK_TLS_FAILED
 } coap_nack_reason_t;
 
+extern coap_packet_t *coap_malloc_packet(void);
+extern void coap_free_packet(coap_packet_t *packet);
+
 #endif /* _COAP_IO_H_ */

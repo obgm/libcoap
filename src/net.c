@@ -1236,6 +1236,10 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
     coap_address_copy(&packet->dst, &endpoint->bind_addr);
     bytes_read = ctx->network_read(&endpoint->sock, packet);
   }
+  else
+  {
+	  warn("Packet allocation failure\n");
+  }
 
   if (bytes_read < 0) {
     warn("*  %s: read failed\n", coap_endpoint_str(endpoint));
