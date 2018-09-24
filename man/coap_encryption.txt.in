@@ -11,7 +11,7 @@ coap_encryption(3)
 NAME
 ----
 coap_encryption, coap_dtls_pki_t
-- work with CoAP tls/dtls
+- Work with CoAP tls/dtls
 
 SYNOPSIS
 --------

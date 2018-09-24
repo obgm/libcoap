@@ -12,7 +12,7 @@ NAME
 ----
 coap_resource, coap_resource_init, coap_resource_unknown_init, 
 coap_add_resource, coap_delete_resource, coap_delete_all_resources, 
-coap_resource_set_mode - work with CoAP resources
+coap_resource_set_mode - Work with CoAP resources
 
 SYNOPSIS
 --------

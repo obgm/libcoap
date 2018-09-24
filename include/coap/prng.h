@@ -17,6 +17,7 @@
 
 /**
  * @defgroup prng Pseudo Random Numbers
+ * API functions for gerating pseudo random numbers
  * @{
  */
 

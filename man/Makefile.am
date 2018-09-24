@@ -42,12 +42,15 @@ man7_MANS = $(MAN7)
 
 .txt.3:
 	$(A2X) --doctype manpage --format manpage $<
+	$(A2X) --doctype manpage --format xhtml $<
 
 .txt.5:
 	$(A2X) --doctype manpage --format manpage $<
+	$(A2X) --doctype manpage --format xhtml $<
 
 .txt.7:
 	$(A2X) --doctype manpage --format manpage $<
+	$(A2X) --doctype manpage --format xhtml $<
 
 # We are limited to 10 names, but synopsis can cover more
 install-man: install-man3 install-man5 install-man7
@@ -61,6 +64,6 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_logging.3" > coap_session_str.3
 	$(INSTALL_DATA) *.3 "$(DESTDIR)$(man3dir)"
 
-CLEANFILES = *.3 *.5 *.7 *.xml
+CLEANFILES = *.3 *.5 *.7 *.xml *.html docbook-xsl.css
 
 endif # BUILD_MANPAGES

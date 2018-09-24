@@ -254,7 +254,7 @@ typedef int coap_tid_t;
 #define COAP_PAYLOAD_START 0xFF /* payload marker */
 
 /**
- * @deprecated.  Use coap_optlist_t instead.
+ * @deprecated Use coap_optlist_t instead.
  *
  * Structures for more convenient handling of options. (To be used with ordered
  * coap_list_t.) The option's data will be added to the end of the coap_option

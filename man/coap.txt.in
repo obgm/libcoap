@@ -10,7 +10,11 @@ coap(7)
 
 NAME
 ----
-coap - overview of the libcoap library
+coap - Overview of the libcoap library
+
+SYNOPSIS
+--------
+Summary of the different libcoap API manual pages.
 
 DESCRIPTION
 -----------

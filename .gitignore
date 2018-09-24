@@ -45,11 +45,16 @@ doc/Doxyfile
 doc/Makefile.in
 doc/doxyfile.stamp
 doc/doxygen_sqlite3.db
+doc/DoxygenLayout.xml
 doc/html/
+doc/man_html/
+doc/man_tmp/
 
 # the man/ folder
+man/docbook-xsl.css
 man/Makefile
 man/Makefile.in
+man/*.html
 man/*.txt
 man/*.xml
 man/*.3
@@ -68,6 +73,7 @@ include/coap/coap.h
 
 # the tests/ folder
 tests/.deps
+tests/oss-fuzz/Makefile.ci
 tests/testdriver
 tests/*.o
 

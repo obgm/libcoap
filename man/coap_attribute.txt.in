@@ -11,7 +11,7 @@ coap_attribute(3)
 NAME
 ----
 coap_attribute, coap_add_attr, coap_find_attr
-- work with CoAP attributes
+- Work with CoAP attributes
 
 SYNOPSIS
 --------

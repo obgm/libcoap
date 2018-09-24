@@ -18,7 +18,7 @@ coap_session_reference,
 coap_session_release,
 coap_session_set_mtu,
 coap_session_max_pdu_size,
-coap_session_str - work with CoAP sessions
+coap_session_str - Work with CoAP sessions
 
 SYNOPSIS
 --------
@@ -131,7 +131,7 @@ address or port.  The session will initially have a reference count of 1.
 
 The *coap_new_client_session_pki*() function, for a specific _context_, is
 used to configure the TLS context using the _setup_data_ variables as defined
-in the coap_dtls_pki_t structure - see *coap_encrytion(*3).
+in the coap_dtls_pki_t structure - see *coap_encrytion*(3).
 The session will initially have a reference count of 1.
 
 The *coap_new_client_session_psk*() function, for a specific _context_, is
