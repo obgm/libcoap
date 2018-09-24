@@ -60,10 +60,10 @@ coap_free_type(coap_memory_tag_t type, void *p) {
  * fixed-size memory blocks.
  */
 #ifndef COAP_MAX_STRINGS
-#define COAP_MAX_STRINGS      8
+#define COAP_MAX_STRINGS      10
 #endif /* COAP_MAX_STRINGS */
 
-struct coap_string_t {
+struct coap_stringbuf_t {
   char data[COAP_MAX_STRING_SIZE];
 };
 
@@ -75,14 +75,16 @@ struct coap_string_t {
 #include "coap_session.h"
 
 #define COAP_MAX_PACKET_SIZE (sizeof(coap_packet_t) + COAP_RXBUFFER_SIZE)
+#ifndef COAP_MAX_PACKETS
 #define COAP_MAX_PACKETS     2
+#endif /* COAP_MAX_PACKETS */
 
 typedef union {
   coap_pdu_t packet; /* try to convince the compiler to word-align this structure  */
   char buf[COAP_MAX_PACKET_SIZE];
 } coap_packetbuf_t;
 
-MEMB(string_storage, struct coap_string_t, COAP_MAX_STRINGS);
+MEMB(string_storage, struct coap_stringbuf_t, COAP_MAX_STRINGS);
 MEMB(packet_storage, coap_packetbuf_t, COAP_MAX_PACKETS);
 MEMB(session_storage, coap_session_t, COAP_MAX_SESSIONS);
 MEMB(node_storage, coap_queue_t, COAP_PDU_MAXCNT);
@@ -121,15 +123,23 @@ coap_memory_init(void) {
 void *
 coap_malloc_type(coap_memory_tag_t type, size_t size) {
   struct memb *container =  get_container(type);
+  void *ptr;
   
   assert(container);
 
   if (size > container->size) {
-    debug("coap_malloc_type: Requested memory exceeds maximum object size\n");
+    coap_log(LOG_WARNING,
+             "coap_malloc_type: Requested memory exceeds maximum object size (type %d, size %d, max %d)\n",
+             type, (int)size, container->size);
     return NULL;
   }
 
-  return memb_alloc(container);
+  ptr = memb_alloc(container);
+  if (!ptr)
+    coap_log(LOG_WARNING,
+             "coap_malloc_type: Failure (no free blocks) for type %d\n",
+             type);
+  return ptr;
 }
 
 void

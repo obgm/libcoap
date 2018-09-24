@@ -67,9 +67,13 @@ int coap_is_mcast(const coap_address_t *a) {
 }
 #else /* !defined(WITH_CONTIKI) && !defined(WITH_LWIP) */
 
-/* make compilers happy that do not like empty modules */
-COAP_STATIC_INLINE void dummy(void)
-{
+#ifdef __clang__
+/* Make compilers happy that do not like empty modules. As this function is
+ * never used, we ignore -Wunused-function at the end of compiling this file
+ */
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+static inline void dummy(void) {
 }
 
 #endif /* !defined(WITH_CONTIKI) && !defined(WITH_LWIP) */

@@ -38,7 +38,7 @@
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
 #include <lwip/udp.h>
-#include <lwip/timers.h>
+#include <lwip/timeouts.h>
 #endif
 
 #include "libcoap.h"
@@ -648,7 +648,7 @@ static ssize_t
 coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
   ssize_t bytes_written;
 
-#ifdef LWIP
+#ifdef WITH_LWIP
 
   coap_socket_t *sock = &session->sock;
   if (sock->flags == COAP_SOCKET_EMPTY) {
@@ -660,7 +660,7 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
 
   bytes_written = coap_socket_send_pdu(sock, session, pdu);
   if (LOG_DEBUG <= coap_get_log_level()) {
-    coap_show_pdu(pdu);
+    coap_show_pdu(LOG_DEBUG, pdu);
   }
   coap_ticks(&session->last_rx_tx);
 
@@ -995,9 +995,9 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 
 #ifdef WITH_LWIP
 /* WITH_LWIP, this is handled by coap_recv in a different way */
-int
-coap_read(coap_context_t *ctx) {
-  return -1;
+void
+coap_read(coap_context_t *ctx, coap_tick_t now) {
+  return;
 }
 #else /* WITH_LWIP */
 
@@ -1089,6 +1089,18 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
     coap_delete_node(q);
   }
 }
+
+#ifdef WITH_CONTIKI
+COAP_STATIC_INLINE coap_packet_t *
+coap_malloc_packet(void) {
+  return (coap_packet_t *)coap_malloc_type(COAP_PACKET, 0);
+}
+
+void
+coap_free_packet(coap_packet_t *packet) {
+  coap_free_type(COAP_PACKET, packet);
+}
+#endif /* WITH_CONTIKI */
 
 static void
 coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
@@ -1236,6 +1248,10 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
     coap_address_copy(&packet->dst, &endpoint->bind_addr);
     bytes_read = ctx->network_read(&endpoint->sock, packet);
   }
+  else {
+    coap_log(LOG_WARNING, "*   %s: Packet allocation failed\n", coap_endpoint_str(endpoint));
+    return -1;
+  }
 
   if (bytes_read < 0) {
     warn("*  %s: read failed\n", coap_endpoint_str(endpoint));
@@ -1323,7 +1339,6 @@ coap_read(coap_context_t *ctx, coap_tick_t now) {
     }
   }
 }
-#endif /* not WITH_LWIP */
 
 int
 coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
@@ -1333,11 +1348,7 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
 
   assert(COAP_PROTO_NOT_RELIABLE(session->proto));
 
-#ifdef WITH_LWIP
-  pdu = coap_pdu_from_pbuf(coap_packet_extract_pbuf(packet));
-#else
   pdu = coap_pdu_init(0, 0, 0, msg_len - 4);
-#endif
   if (!pdu)
     goto error;
 
@@ -1355,6 +1366,7 @@ error:
   coap_delete_pdu(pdu);
   return -1;
 }
+#endif /* not WITH_LWIP */
 
 int
 coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_tid_t id, coap_queue_t **node) {

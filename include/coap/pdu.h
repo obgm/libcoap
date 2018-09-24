@@ -294,7 +294,7 @@ typedef struct coap_pdu_t {
   size_t max_size;          /**< maximum size for token, options and payload, or zero for variable size pdu */
   uint8_t *token;           /**< first byte of token, if any, or options */
   uint8_t *data;	    /**< first byte of payload, if any */
-#ifdef LWIP
+#ifdef WITH_LWIP
   struct pbuf *pbuf;        /**< lwIP PBUF. The package data will always reside
 			    *    inside the pbuf's payload, but this pointer
 			    *    has to be kept because no exact offset can be

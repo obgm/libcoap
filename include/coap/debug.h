@@ -119,7 +119,10 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
  *
  * @param level One of the LOG_* values.
  */
-#define coap_log(level, ...) do { if ((level)<=(int)coap_get_log_level()) coap_log_impl((level), __VA_ARGS__); } while(0)
+#define coap_log(level, ...) do { \
+  if ((int)((level))<=(int)coap_get_log_level()) \
+     coap_log_impl((level), __VA_ARGS__); \
+} while(0)
 #endif
 
 /* A set of convenience macros for common log levels. */

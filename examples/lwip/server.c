@@ -37,7 +37,7 @@
 #include "server-coap.h"
 
 #include <lwip/init.h>
-#include <lwip/timers.h>
+#include <lwip/timeouts.h>
 
 #include <netif/etharp.h>
 #include <netif/tapif.h>
@@ -55,8 +55,8 @@ main(int argc, char **argv)
 	 * hard-coded v4 even in presence of v6, which does auto-discovery and
 	 * should thus wind up with an address of fe80::12:34ff:fe56:78ab%tap0
 	 * */
-	IP4_ADDR(&gw, 192,168,0,1);
-	IP4_ADDR(&ipaddr, 192,168,0,2);
+	IP4_ADDR(&gw, 192,168,113,1);
+	IP4_ADDR(&ipaddr, 192,168,113,2);
 	IP4_ADDR(&netmask, 255,255,255,0);
 
 	lwip_init();

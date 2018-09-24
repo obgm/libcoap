@@ -26,8 +26,7 @@ case "${PLATFORM}" in
                make -C examples/contiki
              ;;
     lwip)    config "--disable-tests --disable-documentation --disable-examples $WITH_TLS" && \
-               make -C examples/lwip lwip lwip-contrib
-               make -C examples/lwip LDLIBS=`grep ac_cv_search_clock_gettime=- config.log|cut -d= -f2`
+               make -C examples/lwip
              ;;
     posix|*) config "$WITH_TESTS --disable-documentation --enable-examples $WITH_TLS" && \
                make

@@ -1,0 +1,22 @@
+Example of libcoap running on contiki
+=====================================
+
+To run the example, do
+
+    $ make
+    $ sudo ./server.minimal-net
+
+(and in a second terminal)
+
+    $ sudo ip -6 a a aaaa::1/64 dev tap0
+
+and query `coap://[aaaa::1000]/` with any coap tool.
+
+This will
+
+* download contike from the upstream git sources
+* build the server application
+* run the server application, creating a virtual network device tap0 (unless
+  that exists)
+* configure your network interface to make the server accessible.
+

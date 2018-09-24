@@ -21,6 +21,7 @@
 #include "encode.h"
 #include <stdio.h>
 
+
 void
 coap_session_set_max_retransmit (coap_session_t *session, unsigned int value) {
   if (value > 0)
@@ -752,6 +753,7 @@ error:
   return NULL;
 }
 
+#ifndef WITH_LWIP
 coap_endpoint_t *
 coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto) {
   struct coap_endpoint_t *ep = NULL;
@@ -861,6 +863,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
     coap_mfree_endpoint(ep);
   }
 }
+#endif /* WITH_LWIP */
 
 coap_session_t *
 coap_session_get_by_peer(coap_context_t *ctx,
