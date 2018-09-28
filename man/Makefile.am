@@ -55,6 +55,7 @@ man7_MANS = $(MAN7)
 # We are limited to 10 names, but synopsis can cover more
 install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_context.3" > coap_context_set_pki_root_cas.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_add_data_blocked_response.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_bytes.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_path.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_query.3

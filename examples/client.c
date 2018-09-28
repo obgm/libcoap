@@ -217,7 +217,18 @@ clear_obs(coap_context_t *ctx, coap_session_t *session) {
     }
   }
 
-  coap_show_pdu(LOG_INFO, pdu);
+  if (flags & FLAGS_BLOCK) {
+    block.num = 0;
+    block.m = 0;
+    coap_add_option(pdu,
+      COAP_OPTION_BLOCK2,
+      coap_encode_var_safe(buf, sizeof(buf), (block.num << 4 | block.m << 3 | block.szx)),
+      buf);
+  }
+
+  if (coap_get_log_level() < LOG_DEBUG)
+    coap_show_pdu(LOG_INFO, pdu);
+  
 
   tid = coap_send(session, pdu);
 
@@ -304,7 +315,8 @@ message_handler(struct coap_context_t *ctx,
 #ifndef NDEBUG
   coap_log(LOG_DEBUG, "** process incoming %d.%02d response:\n",
            (received->code >> 5), received->code & 0x1F);
-  coap_show_pdu(LOG_INFO, received);
+  if (coap_get_log_level() < LOG_DEBUG)
+    coap_show_pdu(LOG_INFO, received);
 #endif
 
   /* check if this is a response to our original request */
@@ -344,6 +356,11 @@ message_handler(struct coap_context_t *ctx,
       if (coap_get_data(received, &len, &databuf))
         append_to_output(databuf, len);
 
+      if (coap_opt_block_num(block_opt) == 0) {
+        /* See if observe is set in first response */
+        ready = coap_check_option(received,
+                                  COAP_OPTION_OBSERVE, &opt_iter) == NULL;
+      }
       if(COAP_OPT_BLOCK_MORE(block_opt)) {
         /* more bit is set */
         coap_log(LOG_DEBUG, "found the M bit, block size is %u, block nr. %u\n",
@@ -390,6 +407,7 @@ message_handler(struct coap_context_t *ctx,
           return;
         }
       }
+      return;
     } else { /* no Block2 option */
       block_opt = coap_check_option(received, COAP_OPTION_BLOCK1, &opt_iter);
 
@@ -459,7 +477,8 @@ message_handler(struct coap_context_t *ctx,
                          payload.s,
                          block.num,
                          block.szx);
-          coap_show_pdu(LOG_WARNING, pdu);
+          if (coap_get_log_level() < LOG_DEBUG)
+            coap_show_pdu(LOG_INFO, pdu);
 
 	  tid = coap_send(session, pdu);
 
@@ -1365,7 +1384,8 @@ main(int argc, char **argv) {
 
 #ifndef NDEBUG
   coap_log(LOG_DEBUG, "sending CoAP request:\n");
-  coap_show_pdu(LOG_INFO, pdu);
+  if (coap_get_log_level() < LOG_DEBUG)
+    coap_show_pdu(LOG_INFO, pdu);
 #endif
 
   coap_send(session, pdu);

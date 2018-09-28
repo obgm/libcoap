@@ -39,6 +39,11 @@ const uint8_t *_data_);*
 
 *int coap_add_data(coap_pdu_t *_pdu_, size_t _length_, const uint8_t *_data_);*
 
+*void coap_add_data_blocked_response(coap_resource_t *_resource_,
+coap_session_t *_session_, coap_pdu_t *_request_, coap_pdu_t *_response_,
+const coap_binary_t *_token_, uint16_t _media_type_, int _maxage_,
+size_t _length_, const uint8_t* _data_);
+
 *unsigned int coap_encode_var_safe(uint8_t *_buffer_, size_t _size_,
 unsigned int _value_);*
 
@@ -143,6 +148,7 @@ The following is the current list of options with their numeric value
 #define COAP_OPTION_LOCATION_QUERY 20 /* String, 0-255 B */
 #define COAP_OPTION_BLOCK2         23 /* uint, 0-3 B */
 #define COAP_OPTION_BLOCK1         27 /* uint, 0-3 B */
+#define COAP_OPTION_SIZE2          28 /* uint, 0-4 B */
 #define COAP_OPTION_PROXY_URI      35 /* String, 1-1034 B */
 #define COAP_OPTION_PROXY_SCHEME   39 /* String, 1-255 B */
 #define COAP_OPTION_SIZE1          60 /* uint, 0-4 B */
@@ -170,9 +176,18 @@ with _data_ of length _length_ to the PDU _pdu_.
 It is critical that options are added to the _pdu_ with _number_ either
 being the same or greater than the previous option _number_ that was added.
 
-The *coap_add_data*() function added in the specified payload _data_ of length
+The *coap_add_data*() function adds in the specified payload _data_ of length
 _length_ to the PDU _pdu_. Adding the payload data must be done after any
 token or options are added.  This function must only be called once per _pdu_.
+
+The *coap_add_data_blocked_response*() function added in the specified payload
+_data_ of length _length_ to the PDU _pdu_. It also adds in the appropriate
+CoAP options to handle Block-Wise transfer. This function is usually used for
+a server's GET response.  The _resource_, _session_, _request_, _response_
+and _token_ are the same parameters for the registered GET resource handler.
+The _media_type_ is for the format of the _data_ and _maxage_ defines the
+lifetime of the response.  If set to -1,  then the MAXAGE option does not get
+included.  This function must only be called once per _pdu_.
 
 The *coap_encode_var_safe*() function encodes _value_ into _buffer_ which has
 a size of _size_ in bytes.  Normally, the _buffer_ size should be at least
@@ -318,59 +333,48 @@ coap_string_t *query, coap_pdu_t *response) {
   unsigned char buf[40];
   size_t len;
   time_t now;
-  coap_tick_t t;
 
   /* ... Additional analysis code for resource, request pdu etc.  ... */
 
   /* After analysis, generate a suitable response */
 
-  /* Define what the response code is going to be */
-  response->code = COAP_RESPONSE_CODE(205);
-
   /* Note that token, if set, is already in the response pdu */
-
-  /*
-   * Note that the following coap_add_option MUST be defined with numerically
-   * incrementing COAP_OPTION_ options
-   */
-
-  /* If the resource is being Observed, return with Observe set */
-  if (coap_find_observer(resource, session, token)) {
-    coap_add_option(response,
-                    COAP_OPTION_OBSERVE,
-                    coap_encode_var_safe(buf, sizeof(buf), resource->observe),
-                    buf);
-  }
-
-  /* Response is in plain text format */
-  coap_add_option(response,
-                  COAP_OPTION_CONTENT_FORMAT,
-                  coap_encode_var_safe(buf, sizeof(buf),
-                                       COAP_MEDIATYPE_TEXT_PLAIN),
-                  buf);
-
-  /* Report on how long this response is valid for (1 second in this case)*/
-  coap_add_option(response,
-                  COAP_OPTION_MAXAGE,
-                  coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
 
   now = time(NULL);
 
   if (query != NULL && coap_string_equal(query, coap_make_str_const("secs"))) {
     /* Output secs since Jan 1 1970 */
     len = snprintf((char *)buf, sizeof(buf), "%lu", now);
-    coap_add_data(response, len, buf);
-  } else {
+  }
+  else {
     /* Output human-readable time */
     struct tm *tmp;
     tmp = gmtime(&now);
+    if (!tmp) {
+      /* If 'now' is not valid */
+      response->code = COAP_RESPONSE_CODE(404);
+      return;
+    }
     len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
-    coap_add_data(response, len, buf);
   }
+  /*
+   * Invoke coap_add_data_blocked_response() to do all the hard work.
+   *
+   * Define the format - COAP_MEDIATYPE_TEXT_PLAIN - to add in
+   * Define how long this response is valid for (secs) - 1 - to add in.
+   *
+   * OBSERVE Option added internally if needed within the function
+   * BLOCK2 Option added internally if output too large
+   * ETAG Option added internally
+   */
+  coap_add_data_blocked_response(resource, session, request, response, token,
+                                 COAP_MEDIATYPE_TEXT_PLAIN, 1,
+                                 len,
+                                 buf);
 
   /*
-   * As resource->code has been updated, the response pdu will be transmitted
-   * by the underlying library
+   * As resource->code has been updated in coap_add_data_blocked_response(),
+   * the response pdu will be transmitted by the underlying library.
    */
 
 }

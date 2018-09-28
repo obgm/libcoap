@@ -70,6 +70,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/async.c \
   src/block.c \
   src/coap_event.c \
+  src/coap_hashkey.c \
   src/coap_io.c \
   src/coap_notls.c \
   src/coap_openssl.c \
@@ -100,6 +101,7 @@ libcoap_include_HEADERS = \
   $(top_builddir)/include/coap/coap.h \
   $(top_srcdir)/include/coap/coap_dtls.h \
   $(top_srcdir)/include/coap/coap_event.h \
+  $(top_srcdir)/include/coap/coap_hashkey.h \
   $(top_srcdir)/include/coap/coap_io.h \
   $(top_srcdir)/include/coap/coap_session.h \
   $(top_srcdir)/include/coap/coap_time.h \

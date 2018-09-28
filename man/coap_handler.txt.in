@@ -168,51 +168,56 @@ EXAMPLES
 #include <coap/coap.h>
 
 void
-hnd_get_time(coap_context_t *ctx, coap_resource_t *resource, 
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token, 
+hnd_get_time(coap_context_t *context, coap_resource_t *resource,
+coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
 coap_string_t *query, coap_pdu_t *response) {
 
   unsigned char buf[40];
   size_t len;
   time_t now;
-  coap_tick_t t;
 
-  /* Define what the response ode is going to be */
-  response->code = COAP_RESPONSE_CODE(205);
+  /* ... Additional analysis code for resource, request pdu etc.  ... */
 
-  /* If the resource is being Observed, return with Observe set */
-  if (coap_find_observer(resource, session, token)) {
-    coap_add_option(response,
-                    COAP_OPTION_OBSERVE,
-                    coap_encode_var_safe(buf, sizeof(buf), resource->observe),
-                    buf);
-  }
+  /* After analysis, generate a suitable response */
 
-  /* Response is in plain text format */
-  coap_add_option(response,
-                  COAP_OPTION_CONTENT_FORMAT,
-                  coap_encode_var_safe(buf, sizeof (buf),
-                                        COAP_MEDIATYPE_TEXT_PLAIN),
-                  buf);
-
-  /* Report on how long this response is valid for */
-  coap_add_option(response,
-                  COAP_OPTION_MAXAGE,
-                  coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
+  /* Note that token, if set, is already in the response pdu */
 
   now = time(NULL);
 
   if (query != NULL && coap_string_equal(query, coap_make_str_const("secs"))) {
     /* Output secs since Jan 1 1970 */
     len = snprintf((char *)buf, sizeof(buf), "%lu", now);
-    coap_add_data(response, len, buf);
-  } else {
+  }
+  else {
     /* Output human-readable time */
     struct tm *tmp;
     tmp = gmtime(&now);
+    if (!tmp) {
+      /* If 'now' is not valid */
+      response->code = COAP_RESPONSE_CODE(404);
+      return;
+    }
     len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
-    coap_add_data(response, len, buf);
   }
+  /*
+   * Invoke coap_add_data_blocked_response() to do all the hard work.
+   *
+   * Define the format - COAP_MEDIATYPE_TEXT_PLAIN - to add in
+   * Define how long this response is valid for (secs) - 1 - to add in.
+   *
+   * OBSERVE Option added internally if needed within the function
+   * BLOCK2 Option added internally if output too large
+   * ETAG Option added internally
+   */
+  coap_add_data_blocked_response(resource, session, request, response, token,
+                                 COAP_MEDIATYPE_TEXT_PLAIN, 1,
+                                 len,
+                                 buf);
+
+  /*
+   * As resource->code has been updated in coap_add_data_blocked_response(),
+   * the response pdu will be transmitted by the underlying library.
+   */
 
 }
 --

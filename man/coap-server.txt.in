@@ -16,7 +16,7 @@ SYNOPSIS
 --------
 *coap-server* [*-A* addr] [*-g* group] [*-p* port] [*-l* loss]
               [*-k* key] [*-h* hint] [*-c* certfile] [*-C* cafile]
-              [*-R* root_cafile] [*-v* num] [-d max]
+              [*-R* root_cafile] [-N] [*-v* num] [-d max]
 
 DESCRIPTION
 -----------
@@ -66,6 +66,12 @@ OPTIONS
 *-h* hint::
    Pre-shared key hint to use for inbound connections. The default is 'CoAP'.
    This cannot be empty if defined.
+
+*-N* ::
+   Send NON-confirmable message for \"observe\" responses. If option *-N* is
+   not specified, a confirmable response will be sent.  Even if set, every
+   fifth response will still be sent as a confirmable response
+   (RFC 7641 requirement).
 
 *-l* list::
    Fail to send some datagrams specified by a comma separated list of
