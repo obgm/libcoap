@@ -59,14 +59,11 @@ coap_tls_version_t *coap_get_tls_library_version(void);
 struct coap_dtls_pki_t;
 
 /**
- * Security setup handler that can be used as application call-back in
+ * Additional Security setup handler that can be set up by
  * coap_context_set_pki().
- * Typically, this will be calling additonal functions like
- * SSL_CTX_set_tlsext_servername_callback() etc.
+ * Invoked when libcoap has done the validation checks at the TLS level,
+ * but the application needs to do some additional checks/changes/updates.
  *
- * @param tls_context The security context definition - e.g. SSL_CTX * for
- *                    OpenSSL. This will be dependent on the underlying TLS
- *                    library - see coap_get_tls_library_version()
  * @param tls_session The security session definition - e.g. SSL * for OpenSSL.
  *                    NULL if server call-back.
  *                    This will be dependent on the underlying TLS library -
@@ -76,7 +73,7 @@ struct coap_dtls_pki_t;
  *
  * @return @c 1 if successful, else @c 0.
  */
-typedef int (*coap_dtls_security_setup_t)(void *tls_context, void* tls_session,
+typedef int (*coap_dtls_security_setup_t)(void* tls_session,
                                         struct coap_dtls_pki_t *setup_data);
 
 /**
@@ -228,14 +225,12 @@ typedef struct coap_dtls_pki_t {
   coap_dtls_sni_callback_t validate_sni_call_back;
   void *sni_call_back_arg;  /**< Passed in to the sni call-back function */
 
-  /** Application Setup call-back definition, overriding libcoap's TLS call-backs.
-   * If not @p NULL, then application is handling the characteristics of the TLS
-   * connection setup in the defined call-back handler.  If set, then none of
-   * the options or call-backs above are acted on. 
-   * Otherwise, libcoap internally based on the selected options handles the 
-   * TLS connection setup.
+  /** Addtional Security call-back handler that is invoked when libcoap has
+   * done the standerd, defined validation checks at the TLS level,
+   * If not @p NULL, called from within the TLS Client Hello connection
+   * setup.
    */
-  coap_dtls_security_setup_t app_override_tls_setup_call_back;
+  coap_dtls_security_setup_t additional_tls_setup_call_back;
  
   char* client_sni;    /**<  If not NULL, SNI to use in client TLS setup.
                              Owned by the client app and must remain valid

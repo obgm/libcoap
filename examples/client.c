@@ -1021,6 +1021,7 @@ verify_cn_callback(const char *cn,
 static coap_dtls_pki_t *
 setup_pki(void) {
   static coap_dtls_pki_t dtls_pki;
+  static char client_sni[256];
 
   memset (&dtls_pki, 0, sizeof(dtls_pki));
   dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
@@ -1043,6 +1044,12 @@ setup_pki(void) {
     dtls_pki.cn_call_back_arg        = NULL;
     dtls_pki.validate_sni_call_back  = NULL;
     dtls_pki.sni_call_back_arg       = NULL;
+    memset(client_sni, 0, sizeof(client_sni));
+    if (uri.host.length)
+      memcpy(client_sni, uri.host.s, min(uri.host.length, sizeof(client_sni)));
+    else
+      memcpy(client_sni, "localhost", 9);
+    dtls_pki.client_sni = client_sni;
   }
   dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
   dtls_pki.pki_key.key.pem.public_cert = cert_file;

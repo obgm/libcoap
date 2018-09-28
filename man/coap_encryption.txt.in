@@ -148,7 +148,7 @@ typedef struct coap_dtls_pki_t {
    * If not NULL, then application is handling the characteristics of the TLS
    * connection setup in the defined call-back handler.  If set, then none of
    * the options or call-backs above are acted on. */
-  coap_dtls_security_setup_t app_override_tls_setup_call_back;
+  coap_dtls_security_setup_t additional_tls_setup_call_back;
 
   char* client_sni;       /* If not NULL, SNI to use in client TLS setup.
                              Owned by the client app and must remain valid
@@ -296,20 +296,16 @@ in to the validate_sni_call_back() function and can be used by that function.
 An example would be a set of SNIs that are allowed with their matching
 certificate sets.
 
-*SECTION: Application Setup Callback*
+*SECTION: Application Additional Setup Callback*
 [source, c]
 ----
 /**
- * Security setup handler that is used as an application call-back in
+ * Additional Security setup handler that can be set up by
  * coap_context_set_pki().
- * Typically, this will be calling additonal functions like
- * SSL_CTX_set_tlsext_servername_callback() etc.
+ * Invoked when libcoap has done the validation checks at the TLS level,
+ * but the application needs to do some additional checks/changes/updates.
  *
- * @param context The security context definition - e.g. SSL_CTX * for OpenSSL.
- *                This will be dependent on the underlying TLS library
- *                - see coap_get_tls_library_version()
  * @param session The security session definition - e.g. SSL * for OpenSSL.
- *                NULL if server call-back.
  *                This will be dependent on the underlying TLS library
  *                - see coap_get_tls_library_version()
  * @param setup_data A structure containing setup data originally passed into
@@ -320,10 +316,10 @@ typedef int (*coap_dtls_security_setup_t)(void *context, void* session,
                                         struct coap_dtls_pki_t *setup_data);
 ----
 
-*app_override_tls_setup_call_back* points to an application provided callback
-function that will do all of the TLS callback checking, or NULL. If not NULL,
-then all of the checking defined by the parameters / callbacks above will not
-take place in libcoap.
+*additional_tls_setup_call_back* points to an application provided callback
+function that will do additional checking/changes/updates after libcoap has
+done all of the configured TLS setup checking, or NULL to do no additional
+checking.
 
 *SECTION: Subject Name Indicator (SNI) Definition*
 
@@ -553,7 +549,7 @@ setup_server_context_pki (const char *public_cert_file,
   dtls_pki.cn_call_back_arg        = valid_cn_list;
   dtls_pki.validate_sni_call_back  = verify_sni_callback;
   dtls_pki.sni_call_back_arg       = valid_sni_list;
-  dtls_pki.app_override_tls_setup_call_back = NULL;
+  dtls_pki.additional_tls_setup_call_back = NULL;
   dtls_pki.sni                     = NULL;
   dtls_pki.pki_key.key_type        = COAP_PKI_KEY_PEM;
   dtls_pki.pki_key.key.pem.ca_file = ca_file;
@@ -581,43 +577,6 @@ setup_server_context_pki (const char *public_cert_file,
   init_resources(context);
 
   return context;
-}
-----
-
-*CoAP Server OpenSSL Application Setup Callback*
-[source, c]
-----
-#include <coap/coap.h>
-
-#include <openssl/ssl.h>
-
- /*
-  * Application Callback function for coap_context_set_pki()
-  *
-  * It is the responsibilty of the application to do all of the certificate
-  * checking if used
-  *
-  * parameter tls_context for OpenSSL is SSL_CTX*
-  * parameter tls_session for OpenSSL is SSL_* (NULL for server application)
-  * parameter setup_data is a pointer to coap_dtls_pki_t structure
-  */
-
-int
-application_setup_callback(void *tls_context,
-                    void* tls_session,
-                    coap_dtls_pki_t *setup_data
-) {
-  SSL_CTX *ctx = (SSL_CTX *)tls_context;
-
-  /* Other code */
-
-  /*
-   * Add in an additional callback which gets called during
-   * TLS Session Callback
-   */
-  SSL_CTX_set_tlsext_servername_callback(ctx, tls_server_name_callback);
-
-  return 1;
 }
 ----
 

@@ -294,7 +294,7 @@ setup_server_context_pki (const char *public_cert_file,
   dtls_pki.cn_call_back_arg        = valid_cn_list;
   dtls_pki.validate_sni_call_back  = verify_sni_callback;
   dtls_pki.sni_call_back_arg       = valid_sni_list;
-  dtls_pki.app_override_tls_setup_call_back = NULL;
+  dtls_pki.additional_tls_setup_call_back = NULL;
   dtls_pki.client_sni              = NULL;
   dtls_pki.pki_key.key_type        = COAP_PKI_KEY_PEM;
   dtls_pki.pki_key.key.pem.ca_file = ca_file;
