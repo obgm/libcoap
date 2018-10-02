@@ -6,9 +6,9 @@ interface tap0
 
    prefix aaaa::/64
    {
-  	AdvOnLink on; 
-        AdvAutonomous on; 
-        AdvRouterAddr on; 
+  	AdvOnLink on;
+        AdvAutonomous on;
+        AdvRouterAddr on;
 
    };
-};   
+};  

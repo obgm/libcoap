@@ -58,7 +58,7 @@ init_coap_server(coap_context_t **ctx) {
   assert(ctx);
 
   coap_set_log_level(LOG_DEBUG);
-  
+
   coap_address_init(&listen_addr);
   listen_addr.port = UIP_HTONS(COAP_DEFAULT_PORT);
 
@@ -66,7 +66,7 @@ init_coap_server(coap_context_t **ctx) {
 #ifndef CONTIKI_TARGET_MINIMAL_NET
   uip_ds6_prefix_add(&listen_addr.addr, 64, 0, 0, 0, 0);
 #endif /* not CONTIKI_TARGET_MINIMAL_NET */
-  
+
   uip_ds6_addr_add(&listen_addr.addr, 0, ADDR_MANUAL);
 
   /* set default route to gateway aaaa::1 */
@@ -90,12 +90,12 @@ init_coap_server(coap_context_t **ctx) {
 # define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
-void 
+void
 hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
-	     coap_session_t *session,
-	     coap_pdu_t *request, coap_binary_t *token, 
+             coap_session_t *session,
+             coap_pdu_t *request, coap_binary_t *token,
              coap_string_t *query,
-	     coap_pdu_t *response) {
+             coap_pdu_t *response) {
   unsigned char buf[40];
   size_t len;
   coap_tick_t now;
@@ -105,31 +105,31 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
    * when query ?ticks is given. */
 
   /* if my_clock_base was deleted, we pretend to have no such resource */
-  response->code = 
+  response->code =
     my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
 
   if (coap_find_observer(resource, session, token)) {
-    coap_add_option(response, COAP_OPTION_OBSERVE, 
-		    coap_encode_var_safe(buf, sizeof(buf),
+    coap_add_option(response, COAP_OPTION_OBSERVE,
+                    coap_encode_var_safe(buf, sizeof(buf),
                                          resource->observe),
                     buf);
   }
 
   if (my_clock_base)
     coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
-		    coap_encode_var_safe(buf, sizeof(buf),
+                    coap_encode_var_safe(buf, sizeof(buf),
                     COAP_MEDIATYPE_TEXT_PLAIN),
                     buf);
 
   coap_add_option(response, COAP_OPTION_MAXAGE,
-	  coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
+          coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
 
   if (my_clock_base) {
 
     /* calculate current time */
     coap_ticks(&t);
     now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
-    
+
 
     if (query != NULL
         && coap_string_equal(query, coap_make_str_const("ticks"))) {

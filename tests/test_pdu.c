@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-coap_pdu_t *pdu;	      /* Holds the parsed PDU for most tests */
+coap_pdu_t *pdu;              /* Holds the parsed PDU for most tests */
 
 /************************************************************************
  ** PDU decoder
@@ -68,7 +68,7 @@ static void
 t_parse_pdu4(void) {
   /* illegal token length */
   uint8_t teststr[] = {  0x59, 0x69, 0x12, 0x34,
-		      't', 'o', 'k', 'e', 'n', '1', '2', '3', '4' };
+                      't', 'o', 'k', 'e', 'n', '1', '2', '3', '4' };
   int result;
 
   result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
@@ -84,7 +84,7 @@ static void
 t_parse_pdu5(void) {
   /* PDU with options */
   uint8_t teststr[] = {  0x55, 0x73, 0x12, 0x34, 't', 'o', 'k', 'e',
-		      'n',  0x00, 0xc1, 0x00
+                      'n',  0x00, 0xc1, 0x00
   };
   int result;
 
@@ -106,7 +106,7 @@ static void
 t_parse_pdu6(void) {
   /* PDU with options that exceed the PDU */
   uint8_t teststr[] = {  0x55, 0x73, 0x12, 0x34, 't', 'o', 'k', 'e',
-		      'n',  0x00, 0xc1, 0x00, 0xae, 0xf0, 0x03
+                      'n',  0x00, 0xc1, 0x00, 0xae, 0xf0, 0x03
   };
   int result;
 
@@ -118,8 +118,8 @@ static void
 t_parse_pdu7(void) {
   /* PDU with options and payload */
   uint8_t teststr[] = {  0x55, 0x73, 0x12, 0x34, 't', 'o', 'k', 'e',
-		      'n',  0x00, 0xc1, 0x00, 0xff, 'p', 'a', 'y',
-		      'l', 'o', 'a', 'd'
+                      'n',  0x00, 0xc1, 0x00, 0xff, 'p', 'a', 'y',
+                      'l', 'o', 'a', 'd'
   };
   int result;
 
@@ -143,8 +143,8 @@ static void
 t_parse_pdu8(void) {
   /* PDU without options but with payload */
   uint8_t teststr[] = {  0x50, 0x73, 0x12, 0x34,
-		      0xff, 'p', 'a', 'y', 'l', 'o', 'a',
-		      'd'
+                      0xff, 'p', 'a', 'y', 'l', 'o', 'a',
+                      'd'
   };
   int result;
 
@@ -177,7 +177,7 @@ static void
 t_parse_pdu10(void) {
   /* PDU without payload but with options and payload start marker */
   uint8_t teststr[] = {  0x53, 0x73, 0x12, 0x34, 't', 'o', 'k',
-		      0x30, 0xc1, 0x00, 0xff
+                      0x30, 0xc1, 0x00, 0xff
   };
   int result;
 
@@ -220,7 +220,7 @@ static void
 t_parse_pdu13(void) {
   /* RST with content */
   uint8_t teststr[] = {  0x70, 0x00, 0x12, 0x34,
-		      0xff, 'c', 'o', 'n', 't', 'e', 'n', 't'
+                      0xff, 'c', 'o', 'n', 't', 'e', 'n', 't'
   };
   int result;
 
@@ -232,7 +232,7 @@ static void
 t_parse_pdu14(void) {
   /* ACK with content */
   uint8_t teststr[] = {  0x60, 0x00, 0x12, 0x34,
-		      0xff, 'c', 'o', 'n', 't', 'e', 'n', 't'
+                      0xff, 'c', 'o', 'n', 't', 'e', 'n', 't'
   };
   int result;
 
@@ -268,7 +268,7 @@ t_parse_pdu15(void) {
  224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224,
  224, 224, 224, 224, 224};
 
-  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   CU_ASSERT(pdu->data == NULL);
 
@@ -283,7 +283,7 @@ static void log_handler(coap_log_t level, const char *message)
 }
 
 /*
- * To test Issue #214 which allows the token size to be set larger than the 
+ * To test Issue #214 which allows the token size to be set larger than the
  * decoded PDU in coap_pdu_parse_header().  This then causes coap_show_pdu()
  * to access invalid memory.
  * Credit to OSS-Fuzz for finding this, work done by Bhargava Shastry
@@ -302,7 +302,7 @@ t_parse_pdu16(void) {
 
   coap_set_show_pdu_output(0);
   coap_set_log_handler(log_handler);
-  coap_show_pdu(LOG_ERR, testpdu);	/* display PDU */
+  coap_show_pdu(LOG_ERR, testpdu);        /* display PDU */
   coap_set_log_handler(NULL);
 
   coap_delete_pdu(testpdu);
@@ -336,7 +336,7 @@ t_encode_pdu2(void) {
   size_t old_max = pdu->max_size;
   int result;
 
-  coap_pdu_clear(pdu, 3);	/* set very small PDU size */
+  coap_pdu_clear(pdu, 3);        /* set very small PDU size */
 
   pdu->type = COAP_MESSAGE_CON;
   pdu->code = COAP_REQUEST_GET;
@@ -346,7 +346,7 @@ t_encode_pdu2(void) {
 
   CU_ASSERT(result == 0);
 
-  coap_pdu_clear(pdu, old_max);	/* restore PDU size */
+  coap_pdu_clear(pdu, old_max);        /* restore PDU size */
 }
 
 static void
@@ -362,15 +362,15 @@ static void
 t_encode_pdu4(void) {
   /* PDU with options */
   uint8_t teststr[] = { 0x60, 0x99, 0x12, 0x34, 0x3d, 0x05, 0x66, 0x61,
-		     0x6e, 0x63, 0x79, 0x70, 0x72, 0x6f, 0x78, 0x79,
-		     0x2e, 0x63, 0x6f, 0x61, 0x70, 0x2e, 0x6d, 0x65,
-		     0x84, 0x70, 0x61, 0x74, 0x68, 0x00, 0xe8, 0x1e,
-		     0x28, 0x66, 0x61, 0x6e, 0x63, 0x79, 0x6f, 0x70,
-		     0x74
+                     0x6e, 0x63, 0x79, 0x70, 0x72, 0x6f, 0x78, 0x79,
+                     0x2e, 0x63, 0x6f, 0x61, 0x70, 0x2e, 0x6d, 0x65,
+                     0x84, 0x70, 0x61, 0x74, 0x68, 0x00, 0xe8, 0x1e,
+                     0x28, 0x66, 0x61, 0x6e, 0x63, 0x79, 0x6f, 0x70,
+                     0x74
   };
   int result;
 
-  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   pdu->type = COAP_MESSAGE_ACK;
   pdu->code = 0x99;
@@ -387,7 +387,7 @@ t_encode_pdu4(void) {
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_URI_PATH,
-			   4, (const uint8_t *)"path");
+                           4, (const uint8_t *)"path");
 
   CU_ASSERT(result == 5);
   CU_ASSERT(pdu->max_delta == 11);
@@ -417,11 +417,11 @@ t_encode_pdu5(void) {
   /* PDU with token and options */
   uint8_t teststr[] = { 0x68, 0x84, 0x12, 0x34, '1',  '2',  '3',  '4',
                      '5',  '6',  '7',  '8',  0x18, 0x41, 0x42, 0x43,
-		     0x44, 0x45, 0x46, 0x47, 0x48, 0xd1, 0x03, 0x12
+                     0x44, 0x45, 0x46, 0x47, 0x48, 0xd1, 0x03, 0x12
   };
   int result;
 
-  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   pdu->type = COAP_MESSAGE_ACK;
   pdu->code = COAP_RESPONSE_CODE(404);
@@ -434,7 +434,7 @@ t_encode_pdu5(void) {
   CU_ASSERT(pdu->used_size == 8);
 
   result = coap_add_option(pdu, COAP_OPTION_IF_MATCH,
-			   8, (const uint8_t *)"ABCDEFGH");
+                           8, (const uint8_t *)"ABCDEFGH");
 
   CU_ASSERT(result == 9);
   CU_ASSERT(pdu->max_delta == 1);
@@ -442,7 +442,7 @@ t_encode_pdu5(void) {
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_ACCEPT,
-			   1, (const uint8_t *)"\x12");
+                           1, (const uint8_t *)"\x12");
 
   CU_ASSERT(result == 3);
   CU_ASSERT(pdu->max_delta == 17);
@@ -457,9 +457,9 @@ static void
 t_encode_pdu6(void) {
   /* PDU with data */
   uint8_t teststr[] = { 0x50, 0x02, 0x12, 0x34, 0xff, '1',  '2',  '3',
-		     '4', '5',  '6',  '7',  '8'
+                     '4', '5',  '6',  '7',  '8'
   };
-  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   pdu->type = COAP_MESSAGE_NON;
   pdu->code = COAP_REQUEST_POST;
@@ -480,7 +480,7 @@ t_encode_pdu7(void) {
   /* PDU with empty data */
   uint8_t teststr[] = { 0x40, 0x43, 0x12, 0x34 };
   int result;
-  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   pdu->type = COAP_MESSAGE_CON;
   pdu->code = COAP_RESPONSE_CODE(203);
@@ -503,7 +503,7 @@ t_encode_pdu8(void) {
   /* PDU with token and data */
   uint8_t teststr[] = { 0x42, 0x43, 0x12, 0x34, 0x00, 0x01, 0xff, 0x00 };
   int result;
-  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   pdu->type = COAP_MESSAGE_CON;
   pdu->code = COAP_RESPONSE_CODE(203);
@@ -529,14 +529,14 @@ static void
 t_encode_pdu9(void) {
   /* PDU with options and data */
   uint8_t teststr[] = { 0x60, 0x44, 0x12, 0x34, 0x48, 's',  'o',  'm',
-		     'e',  'e',  't',  'a',  'g',  0x10, 0xdd, 0x11,
-		     0x04, 's',  'o',  'm',  'e',  'r',  'a',  't',
-		     'h',  'e',  'r',  'l',  'o',  'n',  'g',  'u',
-		     'r',  'i',  0xff, 'd',  'a',  't',  'a'
+                     'e',  'e',  't',  'a',  'g',  0x10, 0xdd, 0x11,
+                     0x04, 's',  'o',  'm',  'e',  'r',  'a',  't',
+                     'h',  'e',  'r',  'l',  'o',  'n',  'g',  'u',
+                     'r',  'i',  0xff, 'd',  'a',  't',  'a'
   };
   int result;
 
-  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   pdu->type = COAP_MESSAGE_ACK;
   pdu->code = COAP_RESPONSE_CODE(204);
@@ -559,7 +559,7 @@ t_encode_pdu9(void) {
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_PROXY_URI,
-			   17, (const uint8_t *)"someratherlonguri");
+                           17, (const uint8_t *)"someratherlonguri");
 
   CU_ASSERT(result == 20);
   CU_ASSERT(pdu->max_delta == 35);
@@ -580,45 +580,45 @@ static void
 t_encode_pdu10(void) {
   /* PDU with token, options and data */
   uint8_t teststr[] = { 0x62, 0x44, 0x12, 0x34, 0x00, 0x00, 0x8d, 0xf2,
-		     'c',  'o',  'a',  'p',  ':',  '/',  '/',  'e',
-		     'x',  'a',  'm',  'p',  'l',  'e',  '.',  'c',
-		     'o',  'm',  '/',  '1',  '2',  '3',  '4',  '5',
-		     '/',  '%',  '3',  'F',  'x',  'y',  'z',  '/',
-		     '3',  '0',  '4',  '8',  '2',  '3',  '4',  '2',
-		     '3',  '4',  '/',  '2',  '3',  '4',  '0',  '2',
-		     '3',  '4',  '8',  '2',  '3',  '4',  '/',  '2',
-		     '3',  '9',  '0',  '8',  '4',  '2',  '3',  '4',
-		     '-',  '2',  '3',  '/',  '%',  'A',  'B',  '%',
-		     '3',  '0',  '%',  'a',  'f',  '/',  '+',  '1',
-		     '2',  '3',  '/',  'h',  'f',  'k',  's',  'd',
-		     'h',  '/',  '2',  '3',  '4',  '8',  '0',  '-',
-		     '2',  '3',  '4',  '-',  '9',  '8',  '2',  '3',
-		     '5',  '/',  '1',  '2',  '0',  '4',  '/',  '2',
-		     '4',  '3',  '5',  '4',  '6',  '3',  '4',  '5',
-		     '3',  '4',  '5',  '2',  '4',  '3',  '/',  '0',
-		     '1',  '9',  '8',  's',  'd',  'n',  '3',  '-',
-		     'a',  '-',  '3',  '/',  '/',  '/',  'a',  'f',
-		     'f',  '0',  '9',  '3',  '4',  '/',  '9',  '7',
-		     'u',  '2',  '1',  '4',  '1',  '/',  '0',  '0',
-		     '0',  '2',  '/',  '3',  '9',  '3',  '2',  '4',
-		     '2',  '3',  '5',  '3',  '2',  '/',  '5',  '6',
-		     '2',  '3',  '4',  '0',  '2',  '3',  '/',  '-',
-		     '-',  '-',  '-',  '/',  '=',  '1',  '2',  '3',
-		     '4',  '=',  '/',  '0',  '9',  '8',  '1',  '4',
-		     '1',  '-',  '9',  '5',  '6',  '4',  '6',  '4',
-		     '3',  '/',  '2',  '1',  '9',  '7',  '0',  '-',
-		     '-',  '-',  '-',  '-',  '/',  '8',  '2',  '3',
-		     '6',  '4',  '9',  '2',  '3',  '4',  '7',  '2',
-		     'w',  'e',  'r',  'e',  'r',  'e',  'w',  'r',
-		     '0',  '-',  '9',  '2',  '1',  '-',  '3',  '9',
-		     '1',  '2',  '3',  '-',  '3',  '4',  '/',  0x0d,
-		     0x01, '/',  '/',  '4',  '9',  '2',  '4',  '0',
-		     '3',  '-',  '-',  '0',  '9',  '8',  '/',  0xc1,
-		     '*',  0xff, 'd',  'a',  't',  'a'
+                     'c',  'o',  'a',  'p',  ':',  '/',  '/',  'e',
+                     'x',  'a',  'm',  'p',  'l',  'e',  '.',  'c',
+                     'o',  'm',  '/',  '1',  '2',  '3',  '4',  '5',
+                     '/',  '%',  '3',  'F',  'x',  'y',  'z',  '/',
+                     '3',  '0',  '4',  '8',  '2',  '3',  '4',  '2',
+                     '3',  '4',  '/',  '2',  '3',  '4',  '0',  '2',
+                     '3',  '4',  '8',  '2',  '3',  '4',  '/',  '2',
+                     '3',  '9',  '0',  '8',  '4',  '2',  '3',  '4',
+                     '-',  '2',  '3',  '/',  '%',  'A',  'B',  '%',
+                     '3',  '0',  '%',  'a',  'f',  '/',  '+',  '1',
+                     '2',  '3',  '/',  'h',  'f',  'k',  's',  'd',
+                     'h',  '/',  '2',  '3',  '4',  '8',  '0',  '-',
+                     '2',  '3',  '4',  '-',  '9',  '8',  '2',  '3',
+                     '5',  '/',  '1',  '2',  '0',  '4',  '/',  '2',
+                     '4',  '3',  '5',  '4',  '6',  '3',  '4',  '5',
+                     '3',  '4',  '5',  '2',  '4',  '3',  '/',  '0',
+                     '1',  '9',  '8',  's',  'd',  'n',  '3',  '-',
+                     'a',  '-',  '3',  '/',  '/',  '/',  'a',  'f',
+                     'f',  '0',  '9',  '3',  '4',  '/',  '9',  '7',
+                     'u',  '2',  '1',  '4',  '1',  '/',  '0',  '0',
+                     '0',  '2',  '/',  '3',  '9',  '3',  '2',  '4',
+                     '2',  '3',  '5',  '3',  '2',  '/',  '5',  '6',
+                     '2',  '3',  '4',  '0',  '2',  '3',  '/',  '-',
+                     '-',  '-',  '-',  '/',  '=',  '1',  '2',  '3',
+                     '4',  '=',  '/',  '0',  '9',  '8',  '1',  '4',
+                     '1',  '-',  '9',  '5',  '6',  '4',  '6',  '4',
+                     '3',  '/',  '2',  '1',  '9',  '7',  '0',  '-',
+                     '-',  '-',  '-',  '-',  '/',  '8',  '2',  '3',
+                     '6',  '4',  '9',  '2',  '3',  '4',  '7',  '2',
+                     'w',  'e',  'r',  'e',  'r',  'e',  'w',  'r',
+                     '0',  '-',  '9',  '2',  '1',  '-',  '3',  '9',
+                     '1',  '2',  '3',  '-',  '3',  '4',  '/',  0x0d,
+                     0x01, '/',  '/',  '4',  '9',  '2',  '4',  '0',
+                     '3',  '-',  '-',  '0',  '9',  '8',  '/',  0xc1,
+                     '*',  0xff, 'd',  'a',  't',  'a'
   };
   int result;
 
-  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   pdu->type = COAP_MESSAGE_ACK;
   pdu->code = COAP_RESPONSE_CODE(204);
@@ -630,7 +630,7 @@ t_encode_pdu10(void) {
 
   CU_ASSERT(result > 0);
   result = coap_add_option(pdu, COAP_OPTION_LOCATION_PATH, 255,
-			   (const uint8_t *)"coap://example.com/12345/%3Fxyz/3048234234/23402348234/239084234-23/%AB%30%af/+123/hfksdh/23480-234-98235/1204/243546345345243/0198sdn3-a-3///aff0934/97u2141/0002/3932423532/56234023/----/=1234=/098141-9564643/21970-----/82364923472wererewr0-921-39123-34/");
+                           (const uint8_t *)"coap://example.com/12345/%3Fxyz/3048234234/23402348234/239084234-23/%AB%30%af/+123/hfksdh/23480-234-98235/1204/243546345345243/0198sdn3-a-3///aff0934/97u2141/0002/3932423532/56234023/----/=1234=/098141-9564643/21970-----/82364923472wererewr0-921-39123-34/");
 
   CU_ASSERT(result == 257);
   CU_ASSERT(pdu->max_delta == 8);
@@ -638,7 +638,7 @@ t_encode_pdu10(void) {
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_LOCATION_PATH, 14,
-			   (const uint8_t *)"//492403--098/");
+                           (const uint8_t *)"//492403--098/");
 
   CU_ASSERT(result == 16);
   CU_ASSERT(pdu->max_delta == 8);
@@ -646,7 +646,7 @@ t_encode_pdu10(void) {
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_LOCATION_QUERY,
-			   1, (const uint8_t *)"*");
+                           1, (const uint8_t *)"*");
 
   CU_ASSERT(result == 2);
   CU_ASSERT(pdu->max_delta == 20);
@@ -670,7 +670,7 @@ t_encode_pdu11(void) {
   size_t old_max = pdu->max_size;
   int result;
 
-  coap_pdu_clear(pdu, 8);	/* clear PDU, with small maximum */
+  coap_pdu_clear(pdu, 8);        /* clear PDU, with small maximum */
 
   CU_ASSERT(pdu->data == NULL);
   coap_set_log_level(LOG_CRIT);
@@ -694,7 +694,7 @@ t_encode_pdu12(void) {
   coap_opt_iterator_t oi;
   coap_opt_t *option;
 
-  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   CU_ASSERT(pdu->data == NULL);
 
@@ -729,7 +729,7 @@ t_encode_pdu13(void) {
   coap_opt_iterator_t oi;
   coap_opt_t *option;
 
-  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   CU_ASSERT(pdu->data == NULL);
 
@@ -765,7 +765,7 @@ t_encode_pdu14(void) {
   coap_opt_iterator_t oi;
   coap_opt_t *option;
 
-  coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   CU_ASSERT(pdu->data == NULL);
 
@@ -808,17 +808,17 @@ t_init_pdu_tests(void) {
   CU_pSuite suite[2];
 
   suite[0] = CU_add_suite("pdu parser", t_pdu_tests_create, t_pdu_tests_remove);
-  if (!suite[0]) {			/* signal error */
+  if (!suite[0]) {                        /* signal error */
     fprintf(stderr, "W: cannot add pdu parser test suite (%s)\n",
-	    CU_get_error_msg());
+            CU_get_error_msg());
 
     return NULL;
   }
 
-#define PDU_TEST(s,t)						      \
-  if (!CU_ADD_TEST(s,t)) {					      \
-    fprintf(stderr, "W: cannot add pdu parser test (%s)\n",	      \
-	    CU_get_error_msg());				      \
+#define PDU_TEST(s,t)                                                      \
+  if (!CU_ADD_TEST(s,t)) {                                              \
+    fprintf(stderr, "W: cannot add pdu parser test (%s)\n",              \
+            CU_get_error_msg());                                      \
   }
 
   PDU_TEST(suite[0], t_parse_pdu1);
@@ -840,10 +840,10 @@ t_init_pdu_tests(void) {
 
   suite[1] = CU_add_suite("pdu encoder", t_pdu_tests_create, t_pdu_tests_remove);
   if (suite[1]) {
-#define PDU_ENCODER_TEST(s,t)						      \
-  if (!CU_ADD_TEST(s,t)) {					      \
-    fprintf(stderr, "W: cannot add pdu encoder test (%s)\n",	      \
-	    CU_get_error_msg());				      \
+#define PDU_ENCODER_TEST(s,t)                                                      \
+  if (!CU_ADD_TEST(s,t)) {                                              \
+    fprintf(stderr, "W: cannot add pdu encoder test (%s)\n",              \
+            CU_get_error_msg());                                      \
   }
     PDU_ENCODER_TEST(suite[1], t_encode_pdu1);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu2);
@@ -860,9 +860,9 @@ t_init_pdu_tests(void) {
     PDU_ENCODER_TEST(suite[1], t_encode_pdu13);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu14);
 
-  } else 			/* signal error */
+  } else                         /* signal error */
     fprintf(stderr, "W: cannot add pdu parser test suite (%s)\n",
-	    CU_get_error_msg());
+            CU_get_error_msg());
 
   return suite[0];
 }

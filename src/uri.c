@@ -3,7 +3,7 @@
  * Copyright (C) 2010--2012,2015-2016 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 #include "coap_config.h"
@@ -27,22 +27,22 @@
 #include "option.h"
 #include "uri.h"
 
-/** 
+/**
  * A length-safe version of strchr(). This function returns a pointer
  * to the first occurrence of @p c  in @p s, or @c NULL if not found.
- * 
+ *
  * @param s   The string to search for @p c.
  * @param len The length of @p s.
  * @param c   The character to search.
- * 
- * @return A pointer to the first occurence of @p c, or @c NULL 
+ *
+ * @return A pointer to the first occurence of @p c, or @c NULL
  * if not found.
  */
 COAP_STATIC_INLINE const uint8_t *
 strnchr(const uint8_t *s, size_t len, unsigned char c) {
   while (len && *s++ != c)
     --len;
-  
+
   return len ? s : NULL;
 }
 
@@ -71,7 +71,7 @@ coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
   while (len && *q && ISEQUAL_CI(*p, *q)) {
     ++p; ++q; --len;
   }
-  
+
   /* If q does not point to the string end marker '\0', the schema
    * identifier is wrong. */
   if (*q) {
@@ -109,9 +109,9 @@ coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
 
   /* p points to beginning of Uri-Host */
   q = p;
-  if (len && *p == '[') {	/* IPv6 address reference */
+  if (len && *p == '[') {        /* IPv6 address reference */
     ++p;
-    
+
     while (len && *q != ']') {
       ++q; --len;
     }
@@ -119,11 +119,11 @@ coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
     if (!len || *q != ']' || p == q) {
       res = -3;
       goto error;
-    } 
+    }
 
     COAP_SET_STR(&uri->host, q - p, p);
     ++q; --len;
-  } else {			/* IPv4 address or FQDN */
+  } else {                        /* IPv4 address or FQDN */
     while (len && *q != ':' && *q != '/' && *q != '?') {
       ++q;
       --len;
@@ -141,33 +141,33 @@ coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
   if (len && *q == ':') {
     p = ++q;
     --len;
-    
+
     while (len && isdigit(*q)) {
       ++q;
       --len;
     }
 
-    if (p < q) {		/* explicit port number given */
+    if (p < q) {                /* explicit port number given */
       int uri_port = 0;
-    
+
       while (p < q)
-	      uri_port = uri_port * 10 + (*p++ - '0');
+              uri_port = uri_port * 10 + (*p++ - '0');
 
       /* check if port number is in allowed range */
       if (uri_port > 65535) {
-	      res = -4;
-	      goto error;
+              res = -4;
+              goto error;
       }
 
       uri->port = (uint16_t)uri_port;
-    } 
+    }
   }
-  
- path:		 /* at this point, p must point to an absolute path */
+
+ path:                 /* at this point, p must point to an absolute path */
 
   if (!len)
     goto end;
-  
+
   if (*q == '/') {
     p = ++q;
     --len;
@@ -176,7 +176,7 @@ coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
       ++q;
       --len;
     }
-  
+
     if (p < q) {
       COAP_SET_STR(&uri->path, q - p, p);
       p = q;
@@ -193,28 +193,28 @@ coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
 
   end:
   return len ? -1 : 0;
-  
+
   error:
   return res;
 }
 
-/** 
+/**
  * Calculates decimal value from hexadecimal ASCII character given in
  * @p c. The caller must ensure that @p c actually represents a valid
- * heaxdecimal character, e.g. with isxdigit(3). 
+ * heaxdecimal character, e.g. with isxdigit(3).
  *
  * @hideinitializer
  */
 #define hexchar_to_dec(c) ((c) & 0x40 ? ((c) & 0x0F) + 9 : ((c) & 0x0F))
 
-/** 
+/**
  * Decodes percent-encoded characters while copying the string @p seg
  * of size @p length to @p buf. The caller of this function must
  * ensure that the percent-encodings are correct (i.e. the character
  * '%' is always followed by two hex digits. and that @p buf provides
  * sufficient space to hold the result. This function is supposed to
  * be called by make_decoded_option() only.
- * 
+ *
  * @param seg     The segment to decode and copy.
  * @param length  Length of @p seg.
  * @param buf     The result buffer.
@@ -226,12 +226,12 @@ decode_segment(const uint8_t *seg, size_t length, unsigned char *buf) {
 
     if (*seg == '%') {
       *buf = (hexchar_to_dec(seg[1]) << 4) + hexchar_to_dec(seg[2]);
-      
+
       seg += 2; length -= 2;
     } else {
       *buf = *seg;
     }
-    
+
     ++buf; ++seg;
   }
 }
@@ -248,21 +248,21 @@ check_segment(const uint8_t *s, size_t length, size_t *segment_size) {
   while (length) {
     if (*s == '%') {
       if (length < 2 || !(isxdigit(s[1]) && isxdigit(s[2])))
-	      return -1;
-      
+              return -1;
+
       s += 2;
       length -= 2;
     }
 
     ++s; ++n; --length;
   }
-  
+
   *segment_size = n;
 
   return 0;
 }
-	 
-/** 
+
+/**
  * Writes a coap option from given string @p s to @p buf. @p s should
  * point to a (percent-encoded) path or query segment of a coap_uri_t
  * object.  The created option will have type @c 0, and the length
@@ -270,21 +270,21 @@ check_segment(const uint8_t *s, size_t length, size_t *segment_size) {
  * On success, this function returns @c 0 and sets @p optionsize to the option's
  * size. On error the function returns a value less than zero. This function
  * must be called from coap_split_path_impl() only.
- * 
+ *
  * @param s           The string to decode.
  * @param length      The size of the percent-encoded string @p s.
  * @param buf         The buffer to store the new coap option.
  * @param buflen      The maximum size of @p buf.
  * @param optionsize  The option's size.
- * 
+ *
  * @return @c 0 on success and @c -1 on error.
  *
  * @bug This function does not split segments that are bigger than 270
  * bytes.
  */
 static int
-make_decoded_option(const uint8_t *s, size_t length, 
-		    unsigned char *buf, size_t buflen, size_t* optionsize) {
+make_decoded_option(const uint8_t *s, size_t length,
+                    unsigned char *buf, size_t buflen, size_t* optionsize) {
   int res;
   size_t segmentlen;
   size_t written;
@@ -303,10 +303,10 @@ make_decoded_option(const uint8_t *s, size_t length,
 
   assert(written <= buflen);
 
-  if (!written)			/* encoding error */
+  if (!written)                        /* encoding error */
     return -1;
 
-  buf += written;		/* advance past option type/length */
+  buf += written;                /* advance past option type/length */
   buflen -= written;
 
   if (buflen < segmentlen) {
@@ -336,29 +336,29 @@ dots(const uint8_t *s, size_t len) {
   return len && *s == '.' && (len == 1 || (len == 2 && *(s+1) == '.'));
 }
 
-/** 
+/**
  * Splits the given string into segments. You should call one of the
  * macros coap_split_path() or coap_split_query() instead.
- * 
+ *
  * @param s      The URI string to be tokenized.
  * @param length The length of @p s.
  * @param h      A handler that is called with every token.
  * @param data   Opaque data that is passed to @p h when called.
- * 
+ *
  * @return The number of characters that have been parsed from @p s.
  */
 static size_t
 coap_split_path_impl(const uint8_t *s, size_t length,
-		     segment_handler_t h, void *data) {
+                     segment_handler_t h, void *data) {
 
   const uint8_t *p, *q;
 
   p = q = s;
   while (length > 0 && !strnchr((const uint8_t *)"?#", 2, *q)) {
-    if (*q == '/') {		/* start new segment */
+    if (*q == '/') {                /* start new segment */
 
       if (!dots(p, q - p)) {
-	h(p, q - p, data);
+        h(p, q - p, data);
       }
 
       p = q + 1;
@@ -397,8 +397,8 @@ write_option(const uint8_t *s, size_t len, void *data) {
 }
 
 int
-coap_split_path(const uint8_t *s, size_t length, 
-		unsigned char *buf, size_t *buflen) {
+coap_split_path(const uint8_t *s, size_t length,
+                unsigned char *buf, size_t *buflen) {
   struct cnt_str tmp = { { *buflen, buf }, 0 };
 
   coap_split_path_impl(s, length, write_option, &tmp);
@@ -409,14 +409,14 @@ coap_split_path(const uint8_t *s, size_t length,
 }
 
 int
-coap_split_query(const uint8_t *s, size_t length, 
-		unsigned char *buf, size_t *buflen) {
+coap_split_query(const uint8_t *s, size_t length,
+                unsigned char *buf, size_t *buflen) {
   struct cnt_str tmp = { { *buflen, buf }, 0 };
   const uint8_t *p;
 
   p = s;
   while (length > 0 && *s != '#') {
-    if (*s == '&') {		/* start new query element */
+    if (*s == '&') {                /* start new query element */
       write_option(p, s - p, &tmp);
       p = s + 1;
     }
@@ -462,7 +462,7 @@ coap_clone_uri(const coap_uri_t *uri) {
     return  NULL;
 
   result = (coap_uri_t *)coap_malloc( uri->query.length + uri->host.length +
-				      uri->path.length + sizeof(coap_uri_t) + 1);
+                                      uri->path.length + sizeof(coap_uri_t) + 1);
 
   if ( !result )
     return NULL;
@@ -525,9 +525,9 @@ coap_string_t *coap_get_query(const coap_pdu_t *request) {
     const uint8_t *seg= coap_opt_value(q);
     for (i = 0; i < seg_len; i++) {
       if (is_unescaped_in_query(seg[i]))
-	length += 1;
+        length += 1;
       else
-	length += 3;
+        length += 3;
     }
     length += 1;
   }
@@ -540,19 +540,19 @@ coap_string_t *coap_get_query(const coap_pdu_t *request) {
       unsigned char *s = query->s;
       coap_option_iterator_init(request, &opt_iter, f);
       while ((q = coap_option_next(&opt_iter))) {
-	if (s != query->s)
-	  *s++ = '&';
-	uint16_t seg_len = coap_opt_length(q), i;
-	const uint8_t *seg= coap_opt_value(q);
-	for (i = 0; i < seg_len; i++) {
-	  if (is_unescaped_in_query(seg[i])) {
-	    *s++ = seg[i];
-	  } else {
-	    *s++ = '%';
-	    *s++ = hex[seg[i]>>4];
-	    *s++ = hex[seg[i]&0x0F];
-	  }
-	}
+        if (s != query->s)
+          *s++ = '&';
+        uint16_t seg_len = coap_opt_length(q), i;
+        const uint8_t *seg= coap_opt_value(q);
+        for (i = 0; i < seg_len; i++) {
+          if (is_unescaped_in_query(seg[i])) {
+            *s++ = seg[i];
+          } else {
+            *s++ = '%';
+            *s++ = hex[seg[i]>>4];
+            *s++ = hex[seg[i]&0x0F];
+          }
+        }
       }
     }
   }
@@ -575,9 +575,9 @@ coap_string_t *coap_get_uri_path(const coap_pdu_t *request) {
     const uint8_t *seg= coap_opt_value(q);
     for (i = 0; i < seg_len; i++) {
       if (is_unescaped_in_path(seg[i]))
-	length += 1;
+        length += 1;
       else
-	length += 3;
+        length += 3;
     }
     /* bump for the leading "/" */
     length += 1;

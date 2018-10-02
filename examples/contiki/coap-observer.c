@@ -55,7 +55,7 @@ AUTOSTART_PROCESSES(&coap_server_process);
 void
 init_coap() {
   coap_address_t listen_addr;
-  
+
   coap_address_init(&listen_addr);
   listen_addr.port = UIP_HTONS(COAP_DEFAULT_PORT);
 
@@ -73,15 +73,15 @@ init_coap() {
 
 #ifdef WITH_CONTIKI
   printf("tentative address: [%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]:%d\r\n",
-	 listen_addr.addr.u8[0], listen_addr.addr.u8[1], 
-	 listen_addr.addr.u8[2], listen_addr.addr.u8[3], 
-	 listen_addr.addr.u8[4], listen_addr.addr.u8[5], 
-	 listen_addr.addr.u8[6], listen_addr.addr.u8[7], 
-	 listen_addr.addr.u8[8], listen_addr.addr.u8[9], 
-	 listen_addr.addr.u8[10], listen_addr.addr.u8[11], 
-	 listen_addr.addr.u8[12], listen_addr.addr.u8[13], 
-	 listen_addr.addr.u8[14], listen_addr.addr.u8[15] ,
-	 uip_ntohs(listen_addr.port));
+         listen_addr.addr.u8[0], listen_addr.addr.u8[1],
+         listen_addr.addr.u8[2], listen_addr.addr.u8[3],
+         listen_addr.addr.u8[4], listen_addr.addr.u8[5],
+         listen_addr.addr.u8[6], listen_addr.addr.u8[7],
+         listen_addr.addr.u8[8], listen_addr.addr.u8[9],
+         listen_addr.addr.u8[10], listen_addr.addr.u8[11],
+         listen_addr.addr.u8[12], listen_addr.addr.u8[13],
+         listen_addr.addr.u8[14], listen_addr.addr.u8[15] ,
+         uip_ntohs(listen_addr.port));
 #endif
 
   coap_context = coap_new_context(&listen_addr);
@@ -93,16 +93,16 @@ init_coap() {
 }
 
 void
-message_handler(struct coap_context_t  *ctx, 
-		const coap_address_t *remote, 
-		coap_pdu_t *sent,
-		coap_pdu_t *received,
-		const coap_tid_t id) {
+message_handler(struct coap_context_t  *ctx,
+                const coap_address_t *remote,
+                coap_pdu_t *sent,
+                coap_pdu_t *received,
+                const coap_tid_t id) {
   /* send ACK if received message is confirmable (i.e. a separate response) */
   coap_send_ack(ctx, remote, received);
 
   debug("** process incoming %d.%02d response:\n",
-	(received->hdr->code >> 5), received->hdr->code & 0x1F);
+        (received->hdr->code >> 5), received->hdr->code & 0x1F);
   coap_show_pdu(LOG_WARNING, received);
 
   coap_ticks(&last_seen);
@@ -131,16 +131,16 @@ PROCESS_THREAD(coap_server_process, ev, data)
   uip_ip6addr(&dst.addr, 0xaaaa, 0, 0, 0, 0x206, 0x98ff, 0xfe00, 0x232);
   /* uip_ip6addr(&dst.addr, 0xfe80, 0, 0, 0, 0x206, 0x98ff, 0xfe00, 0x232); */
 
-  request = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_GET, 
-			  coap_new_message_id(coap_context), 
-			  COAP_DEFAULT_MTU);
-  
+  request = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_GET,
+                          coap_new_message_id(coap_context),
+                          COAP_DEFAULT_MTU);
+
   coap_split_uri((unsigned char *)resource, strlen(resource), &uri);
 
   if (uri.port != COAP_DEFAULT_PORT) {
     unsigned char portbuf[2];
     coap_add_option(request, COAP_OPTION_URI_PORT,
-		    coap_encode_var_safe(portbuf, sizeof(portbuf),
+                    coap_encode_var_safe(portbuf, sizeof(portbuf),
                                          uri.port),
                     portbuf);
   }
@@ -157,10 +157,10 @@ PROCESS_THREAD(coap_server_process, ev, data)
     res = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
 
     while (res--) {
-      coap_add_option(request, COAP_OPTION_URI_PATH, 
-		      coap_opt_length(buf), coap_opt_value(buf));
+      coap_add_option(request, COAP_OPTION_URI_PATH,
+                      coap_opt_length(buf), coap_opt_value(buf));
 
-      buf += coap_opt_size(buf);      
+      buf += coap_opt_size(buf);
     }
   }
 
@@ -177,7 +177,7 @@ PROCESS_THREAD(coap_server_process, ev, data)
   while(1) {
     PROCESS_YIELD();
     if(ev == tcpip_event) {
-      coap_read(coap_context);	/* read received data */
+      coap_read(coap_context);        /* read received data */
       coap_dispatch(coap_context); /* and dispatch PDUs from receivequeue */
     }
   }

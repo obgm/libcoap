@@ -3,7 +3,7 @@
  * Copyright (C) 2012,2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 #include "coap_config.h"
@@ -54,7 +54,7 @@ static void
 t_parse_option3(void) {
   /* delta == 3, length == 12, value == 0 */
   coap_str_const_t teststr = { 13, (const uint8_t *)"\x3c\x00\x01\x02\x03\x04"
-		                       "\x05\x06\x07\x08\x09\x0a\x0b" };
+                                       "\x05\x06\x07\x08\x09\x0a\x0b" };
 
   size_t result;
   coap_option_t option;
@@ -190,7 +190,7 @@ t_parse_option13(void) {
   teststr.s[2] = 0x0b;
   teststr.s[3] = 0x00;
   teststr.s[4] = 0xe7;
-  
+
   size_t result;
   coap_option_t option;
 
@@ -217,7 +217,7 @@ t_parse_option14(void) {
   data[1] = 0xff;
   data[2] = 0xfe;
   data[3] = 0xf2;
-  
+
   size_t result;
   coap_option_t option;
 
@@ -238,10 +238,10 @@ t_encode_option1(void) {
   char teststr[] = { 0x00 };
   unsigned char buf[40];
   size_t result;
-  
+
   result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 0, 0);
   CU_ASSERT(result == sizeof(teststr));
-  
+
   CU_ASSERT(memcmp(buf, teststr, result) == 0);
 }
 
@@ -250,10 +250,10 @@ t_encode_option2(void) {
   uint8_t teststr[] = { 0x5d, 0xff };
   unsigned char buf[40];
   size_t result;
-  
+
   result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 5, 268);
   CU_ASSERT(result == sizeof(teststr));
-  
+
   CU_ASSERT(memcmp(buf, teststr, result) == 0);
 }
 
@@ -262,7 +262,7 @@ t_encode_option3(void) {
   uint8_t teststr[] = { 0xd1, 0x01 };
   unsigned char buf[40];
   size_t result;
-  
+
   result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 14, 1);
   CU_ASSERT(result == sizeof(teststr));
 
@@ -274,7 +274,7 @@ t_encode_option4(void) {
   uint8_t teststr[] = { 0xdd, 0xff, 0xab };
   unsigned char buf[40];
   size_t result;
-  
+
   result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 268, 184);
   CU_ASSERT(result == sizeof(teststr));
 
@@ -286,7 +286,7 @@ t_encode_option5(void) {
   uint8_t teststr[] = { 0xed, 0x13, 0x00, 0xff };
   unsigned char buf[40];
   size_t result;
-  
+
   result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 5133, 268);
   CU_ASSERT(result == sizeof(teststr));
 
@@ -298,7 +298,7 @@ t_encode_option6(void) {
   uint8_t teststr[] = { 0xee, 0xfe, 0xf2, 0xfe, 0xf2 };
   unsigned char buf[40];
   size_t result;
-  
+
   result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 65535, 65535);
   CU_ASSERT(result == sizeof(teststr));
 
@@ -311,10 +311,10 @@ t_encode_option7(void) {
   const size_t valoff = 1;
   unsigned char buf[40];
   size_t result;
-  
-  result = coap_opt_encode((coap_opt_t *)buf, sizeof(buf), 3, 
-			   (unsigned char *)teststr + valoff, 
-			   sizeof(teststr) - valoff);
+
+  result = coap_opt_encode((coap_opt_t *)buf, sizeof(buf), 3,
+                           (unsigned char *)teststr + valoff,
+                           sizeof(teststr) - valoff);
 
   CU_ASSERT(result == sizeof(teststr));
 
@@ -326,14 +326,14 @@ t_encode_option8(void) {
   /* value does not fit in message buffer */
   unsigned char buf[40];
   size_t result;
-  
-  result = coap_opt_encode((coap_opt_t *)buf, 8, 15, 
-			   (const uint8_t *)"something", 9);
+
+  result = coap_opt_encode((coap_opt_t *)buf, 8, 15,
+                           (const uint8_t *)"something", 9);
 
   CU_ASSERT(result == 0);
 
-  result = coap_opt_encode((coap_opt_t *)buf, 1, 15, 
-			   (const uint8_t *)"something", 9);
+  result = coap_opt_encode((coap_opt_t *)buf, 1, 15,
+                           (const uint8_t *)"something", 9);
 
   CU_ASSERT(result == 0);
 }
@@ -343,10 +343,10 @@ t_encode_option9(void) {
   uint8_t teststr[] = { 0xe1, 0x00, 0x00 };
   unsigned char buf[40] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
   size_t result;
-  
+
   result = coap_opt_setheader((coap_opt_t *)buf, sizeof(buf), 269, 1);
   CU_ASSERT(result == sizeof(teststr));
-  
+
   CU_ASSERT(memcmp(buf, teststr, result) == 0);
 }
 
@@ -376,9 +376,9 @@ t_access_option2(void) {
 
 static void
 t_access_option3(void) {
-  const uint8_t teststr[] = { 0xed, 0x18, 0x0a, 0x00, 'a', 'b', 'c', 'd', 
-			   'e',  'f',  'g',  'h',  'i', 'j', 'k', 'l',
-			   'm'
+  const uint8_t teststr[] = { 0xed, 0x18, 0x0a, 0x00, 'a', 'b', 'c', 'd',
+                           'e',  'f',  'g',  'h',  'i', 'j', 'k', 'l',
+                           'm'
   };
 
   CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 6423);
@@ -436,20 +436,20 @@ t_access_option7(void) {
 
 #define TEST_MAX_SIZE 1000
 
-#ifdef _MSC_VER 
-#  define ALIGNED(x) 
-#else 
-#  define ALIGNED(x) __attribute__ ((aligned (x))) 
-#endif 
+#ifdef _MSC_VER
+#  define ALIGNED(x)
+#else
+#  define ALIGNED(x) __attribute__ ((aligned (x)))
+#endif
 
 static void
 t_iterate_option1(void) {
   /* CoAP PDU without token, options, or data */
-  uint8_t teststr[] ALIGNED(8) = { 
-    0x00, 0x00, 0x00, 0x00 
+  uint8_t teststr[] ALIGNED(8) = {
+    0x00, 0x00, 0x00, 0x00
   };
 
-  coap_pdu_t pdu = { 
+  coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
     .token = teststr,
     .used_size = 0
@@ -470,11 +470,11 @@ t_iterate_option1(void) {
 static void
 t_iterate_option2(void) {
   /* CoAP PDU with token but without options and data */
-  uint8_t teststr[3] ALIGNED(8) = { 
+  uint8_t teststr[3] ALIGNED(8) = {
     't', 'o', 'k'
   };
 
-  coap_pdu_t pdu = { 
+  coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
     .token_length = 3,
     .token = teststr,
@@ -496,8 +496,8 @@ t_iterate_option2(void) {
 static void
 t_iterate_option3(void) {
   /* CoAP PDU with token and options */
-  uint8_t teststr[] ALIGNED(8) = { 
-    't', 'o', 'k', 0x13, 
+  uint8_t teststr[] ALIGNED(8) = {
+    't', 'o', 'k', 0x13,
     'o',  'p',  't',  0x00, 0xd1, 0x10, 'x'
   };
 
@@ -538,13 +538,13 @@ t_iterate_option3(void) {
 static void
 t_iterate_option4(void) {
   /* CoAP PDU with token, options, and data */
-  uint8_t teststr[] ALIGNED(8) = { 
-    't', 'o', 'k', 0x13, 
+  uint8_t teststr[] ALIGNED(8) = {
+    't', 'o', 'k', 0x13,
     'o',  'p',  't',  0x00, 0xd1, 0x10, 'x', 0xff,
     'd',  'a',  't',  'a'
   };
 
-  coap_pdu_t pdu = { 
+  coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
     .token_length = 3,
     .token = teststr,
@@ -581,12 +581,12 @@ t_iterate_option4(void) {
 static void
 t_iterate_option5(void) {
   /* CoAP PDU with malformed option */
-  uint8_t teststr[] ALIGNED(8) = { 
-    0x52, 'o', 'p', 0xee, 
+  uint8_t teststr[] ALIGNED(8) = {
+    0x52, 'o', 'p', 0xee,
     0x12, 0x03, 0x00
   };
 
-  coap_pdu_t pdu = { 
+  coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
     .token_length = 0,
     .token = teststr,
@@ -614,12 +614,12 @@ static void
 t_iterate_option6(void) {
   /* option filter */
   /* CoAP PDU with token, options, and data */
-  uint8_t teststr[] ALIGNED(8) = { 
+  uint8_t teststr[] ALIGNED(8) = {
     0x80, 0x20, 0x00, 0x00,
     0xc0, 0x00
   };
 
-  coap_pdu_t pdu = { 
+  coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
     .token_length = 0,
     .token = teststr,
@@ -630,7 +630,7 @@ t_iterate_option6(void) {
   coap_opt_filter_t filter;
 
   coap_option_filter_clear(filter);
-  coap_option_setb(filter, 10);	/* option nr 10 only */
+  coap_option_setb(filter, 10);        /* option nr 10 only */
   result = coap_option_iterator_init(&pdu, &oi, filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
@@ -659,12 +659,12 @@ t_iterate_option6(void) {
 static void
 t_iterate_option7(void) {
   /* option filter */
-  uint8_t teststr[] ALIGNED(8) = { 
+  uint8_t teststr[] ALIGNED(8) = {
     0x80, 0x20, 0x00, 0x00,
     0xc0, 0x00, 0x10, 0x10, 0x00
   };
 
-  coap_pdu_t pdu = { 
+  coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
     .token_length = 0,
     .token = teststr,
@@ -706,12 +706,12 @@ t_iterate_option7(void) {
 static void
 t_iterate_option8(void) {
   /* option filter */
-  uint8_t teststr[] ALIGNED(8) = { 
+  uint8_t teststr[] ALIGNED(8) = {
     0x80, 0x20, 0x00, 0x00,
     0xc0, 0x00, 0x10, 0x10, 0x00
   };
 
-  coap_pdu_t pdu = { 
+  coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
     .token_length = 0,
     .token = teststr,
@@ -737,12 +737,12 @@ t_iterate_option8(void) {
 static void
 t_iterate_option9(void) {
   /* options filter: option number too large for filter */
-  uint8_t teststr[] ALIGNED(8) = { 
+  uint8_t teststr[] ALIGNED(8) = {
     0x80, 0x20, 0x00, 0x00,
     0xc0, 0x00, 0x10, 0x10, 0x00
   };
 
-  coap_pdu_t pdu = { 
+  coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
     .token_length = 0,
     .token = teststr,
@@ -768,12 +768,12 @@ t_iterate_option9(void) {
 static void
 t_iterate_option10(void) {
   /* options filter: option numbers in PDU exceed filter size */
-  uint8_t teststr[] ALIGNED(8) = { 
+  uint8_t teststr[] ALIGNED(8) = {
     0x80, 0x20, 0x00, 0x00,
     0xd0, 0x26, 0xe0, 0x10, 0x00
   };
 
-  coap_pdu_t pdu = { 
+  coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
     .token_length = 0,
     .token = teststr,
@@ -906,7 +906,7 @@ t_filter_option3(void) {
 }
 
 /************************************************************************
- ** initialization 
+ ** initialization
  ************************************************************************/
 
 CU_pSuite
@@ -914,17 +914,17 @@ t_init_option_tests(void) {
   CU_pSuite suite[5];
 
   suite[0] = CU_add_suite("option parser", NULL, NULL);
-  if (!suite[0]) {			/* signal error */
-    fprintf(stderr, "W: cannot add option parser test suite (%s)\n", 
-	    CU_get_error_msg());
+  if (!suite[0]) {                        /* signal error */
+    fprintf(stderr, "W: cannot add option parser test suite (%s)\n",
+            CU_get_error_msg());
 
     return NULL;
   }
 
-#define OPTION_TEST(n,s)						      \
-  if (!CU_add_test(suite[0], s, t_parse_option##n)) {	      \
-    fprintf(stderr, "W: cannot add option parser test (%s)\n",	      \
-	    CU_get_error_msg());				      \
+#define OPTION_TEST(n,s)                                       \
+  if (!CU_add_test(suite[0], s, t_parse_option##n)) {          \
+    fprintf(stderr, "W: cannot add option parser test (%s)\n", \
+            CU_get_error_msg());                               \
   }
 
   OPTION_TEST(1, "parse option #1");
@@ -943,10 +943,10 @@ t_init_option_tests(void) {
   OPTION_TEST(14, "parse option #14");
 
   if ((suite[1] = CU_add_suite("option encoder", NULL, NULL))) {
-#define OPTION_ENCODER_TEST(n,s)			      \
-    if (!CU_add_test(suite[1], s, t_encode_option##n)) {		      \
-      fprintf(stderr, "W: cannot add option encoder test (%s)\n",     \
-	      CU_get_error_msg());				      \
+#define OPTION_ENCODER_TEST(n,s)                                  \
+    if (!CU_add_test(suite[1], s, t_encode_option##n)) {          \
+      fprintf(stderr, "W: cannot add option encoder test (%s)\n", \
+              CU_get_error_msg());                                \
     }
 
     OPTION_ENCODER_TEST(1, "encode option #1");
@@ -958,17 +958,17 @@ t_init_option_tests(void) {
     OPTION_ENCODER_TEST(7, "encode option #7");
     OPTION_ENCODER_TEST(8, "encode option #8");
     OPTION_ENCODER_TEST(9, "encode option #9");
-    
+
   } else {
-    fprintf(stderr, "W: cannot add option encoder test suite (%s)\n", 
-	    CU_get_error_msg());
+    fprintf(stderr, "W: cannot add option encoder test suite (%s)\n",
+            CU_get_error_msg());
   }
 
   if ((suite[2] = CU_add_suite("option accessors", NULL, NULL))) {
-#define OPTION_ACCESSOR_TEST(n,s)			      \
-    if (!CU_add_test(suite[2], s, t_access_option##n)) {		      \
-      fprintf(stderr, "W: cannot add option accessor function test (%s)\n",     \
-	      CU_get_error_msg());				      \
+#define OPTION_ACCESSOR_TEST(n,s)                                           \
+    if (!CU_add_test(suite[2], s, t_access_option##n)) {                    \
+      fprintf(stderr, "W: cannot add option accessor function test (%s)\n", \
+              CU_get_error_msg());                                          \
     }
 
     OPTION_ACCESSOR_TEST(1, "access option #1");
@@ -978,17 +978,17 @@ t_init_option_tests(void) {
     OPTION_ACCESSOR_TEST(5, "access option #5");
     OPTION_ACCESSOR_TEST(6, "access option #6");
     OPTION_ACCESSOR_TEST(7, "access option #7");
-    
+
   } else {
-    fprintf(stderr, "W: cannot add option acessor function test suite (%s)\n", 
-	    CU_get_error_msg());
+    fprintf(stderr, "W: cannot add option acessor function test suite (%s)\n",
+            CU_get_error_msg());
   }
 
   if ((suite[3] = CU_add_suite("option iterator", NULL, NULL))) {
-#define OPTION_ITERATOR_TEST(n,s)			      \
-    if (!CU_add_test(suite[3], s, t_iterate_option##n)) {		      \
-      fprintf(stderr, "W: cannot add option iterator test (%s)\n",     \
-	      CU_get_error_msg());				      \
+#define OPTION_ITERATOR_TEST(n,s)                                  \
+    if (!CU_add_test(suite[3], s, t_iterate_option##n)) {          \
+      fprintf(stderr, "W: cannot add option iterator test (%s)\n", \
+              CU_get_error_msg());                                 \
     }
 
     OPTION_ITERATOR_TEST(1, "option iterator #1");
@@ -1001,17 +1001,17 @@ t_init_option_tests(void) {
     OPTION_ITERATOR_TEST(8, "option iterator #8");
     OPTION_ITERATOR_TEST(9, "option iterator #9");
     OPTION_ITERATOR_TEST(10, "option iterator #10");
-    
+
   } else {
-    fprintf(stderr, "W: cannot add option iterator test suite (%s)\n", 
-	    CU_get_error_msg());
+    fprintf(stderr, "W: cannot add option iterator test suite (%s)\n",
+            CU_get_error_msg());
   }
 
   if ((suite[4] = CU_add_suite("option filter", NULL, NULL))) {
-#define OPTION_FILTER_TEST(n,s)			      \
-    if (!CU_add_test(suite[4], s, t_filter_option##n)) {		      \
-      fprintf(stderr, "W: cannot add option filter test (%s)\n",     \
-	      CU_get_error_msg());				      \
+#define OPTION_FILTER_TEST(n,s)                                  \
+    if (!CU_add_test(suite[4], s, t_filter_option##n)) {         \
+      fprintf(stderr, "W: cannot add option filter test (%s)\n", \
+              CU_get_error_msg());                               \
     }
 
     OPTION_FILTER_TEST(1, "option filter #1");
@@ -1020,7 +1020,7 @@ t_init_option_tests(void) {
 
   } else {
     fprintf(stderr, "W: cannot add option filter test suite (%s)\n",
-	    CU_get_error_msg());
+            CU_get_error_msg());
   }
 
   return suite[0];

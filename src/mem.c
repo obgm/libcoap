@@ -3,7 +3,7 @@
  * Copyright (C) 2014--2015 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
- * README for terms of use. 
+ * README for terms of use.
  */
 
 
@@ -124,7 +124,7 @@ void *
 coap_malloc_type(coap_memory_tag_t type, size_t size) {
   struct memb *container =  get_container(type);
   void *ptr;
-  
+
   assert(container);
 
   if (size > container->size) {

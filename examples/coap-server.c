@@ -334,7 +334,7 @@ hnd_delete(coap_context_t *ctx,
       }
       dynamic_count--;
       break;
-    } 
+    }
   }
 
   /* Dynamic resource no longer required - delete it */
@@ -376,7 +376,7 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
   for (i = 0; i < dynamic_count; i++) {
     if (coap_string_equal(uri_path, dynamic_entry[i].uri_path)) {
       break;
-    } 
+    }
   }
   if (i == dynamic_count) {
     response->code = COAP_RESPONSE_CODE(404);
@@ -429,7 +429,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
   for (i = 0; i < dynamic_count; i++) {
     if (coap_string_equal(uri_path, dynamic_entry[i].uri_path)) {
       break;
-    } 
+    }
   }
   if (i == dynamic_count) {
     if (dynamic_count >= support_dynamic) {
@@ -438,7 +438,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
       return;
     }
     dynamic_count++;
-    dynamic_entry = realloc (dynamic_entry, dynamic_count * sizeof(dynamic_entry[0])); 
+    dynamic_entry = realloc (dynamic_entry, dynamic_count * sizeof(dynamic_entry[0]));
     if (dynamic_entry) {
       dynamic_entry[i].uri_path = uri_path;
       dynamic_entry[i].value = NULL;
@@ -807,27 +807,27 @@ get_context(const char *node, const char *port) {
 
       ep_udp = coap_new_endpoint(ctx, &addr, COAP_PROTO_UDP);
       if (ep_udp) {
-	if (coap_dtls_is_supported() && (key_defined || cert_file)) {
-	  ep_dtls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_DTLS);
-	  if (!ep_dtls)
-	    coap_log(LOG_CRIT, "cannot create DTLS endpoint\n");
-	}
+        if (coap_dtls_is_supported() && (key_defined || cert_file)) {
+          ep_dtls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_DTLS);
+          if (!ep_dtls)
+            coap_log(LOG_CRIT, "cannot create DTLS endpoint\n");
+        }
       } else {
         coap_log(LOG_CRIT, "cannot create UDP endpoint\n");
         continue;
       }
       ep_tcp = coap_new_endpoint(ctx, &addr, COAP_PROTO_TCP);
       if (ep_tcp) {
-	if (coap_tls_is_supported() && (key_defined || cert_file)) {
-	  ep_tls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_TLS);
-	  if (!ep_tls)
-	    coap_log(LOG_CRIT, "cannot create TLS endpoint\n");
-	}
+        if (coap_tls_is_supported() && (key_defined || cert_file)) {
+          ep_tls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_TLS);
+          if (!ep_tls)
+            coap_log(LOG_CRIT, "cannot create TLS endpoint\n");
+        }
       } else {
         coap_log(LOG_CRIT, "cannot create TCP endpoint\n");
       }
       if (ep_udp)
-	goto finish;
+        goto finish;
     }
   }
 
@@ -961,8 +961,8 @@ main(int argc, char **argv) {
       break;
     case 'l':
       if (!coap_debug_set_packet_loss(optarg)) {
-	usage(argv[0], LIBCOAP_PACKAGE_VERSION);
-	exit(1);
+        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+        exit(1);
       }
       break;
     case 'N':

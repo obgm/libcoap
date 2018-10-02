@@ -2,7 +2,7 @@ This README documents the test cases supported for the 1st ETSI CoAP
 plugtest on March 24/25 in Paris, France.
 <http://www.etsi.org/plugtests/coap/coap.htm>
 
-Legend: 
+Legend:
   [+] full support
   [o] partial support
   [-] no support

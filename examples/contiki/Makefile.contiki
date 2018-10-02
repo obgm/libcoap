@@ -28,6 +28,6 @@ LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVe
 
 CFLAGS += #-DSHORT_ERROR_RESPONSE -DNDEBUG
 
-APPS += libcoap 
+APPS += libcoap
 
 include $(CONTIKI)/Makefile.include

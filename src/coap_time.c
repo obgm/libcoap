@@ -29,7 +29,7 @@ static coap_tick_t coap_clock_offset = 0;
 #if _POSIX_TIMERS && !defined(__APPLE__)
   /* _POSIX_TIMERS is > 0 when clock_gettime() is available */
 
-  /* Use real-time clock for correct timestamps in coap_log(). */  
+  /* Use real-time clock for correct timestamps in coap_log(). */
 #define COAP_CLOCK CLOCK_REALTIME
 #endif
 

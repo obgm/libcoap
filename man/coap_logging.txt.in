@@ -117,16 +117,16 @@ The *coap_package_version*() function returns the version of this library.
 The *coap_set_show_pdu_output*() function defines whether the output from
 *coap_show_pdu*() is to be either sent to stdout/stderr, or output using
 *coap_log*().  _use_fprintf_ is set to 1 for stdout/stderr (the default), and
-_use_fprintf_ is set to 0 for *coap_log*(). 
+_use_fprintf_ is set to 0 for *coap_log*().
 
 The *coap_show_pdu*() function is used to decode the _pdu_, outputing as
 appropriate for logging _level_.  Where the output goes is dependent on
 *coap_set_show_pdu_output*().
 
-The *coap_endpoint_str*() function returns a description string of the 
+The *coap_endpoint_str*() function returns a description string of the
 _endpoint_.
 
-The *coap_session_str*() function is used to get a string containing the 
+The *coap_session_str*() function is used to get a string containing the
 information about the _session_.
 
 RETURN VALUES
@@ -140,10 +140,10 @@ The *coap_get_log_level*() function returns the current logging level.
 The *coap_dtls_get_log_level*() function returns the current logging level
 for the DTLS library specifics.
 
-The *coap_endpoint_str*() function returns a description string of the 
+The *coap_endpoint_str*() function returns a description string of the
 _endpoint_.
 
-The *coap_session_str*() function returns a description string of the 
+The *coap_session_str*() function returns a description string of the
 _session_.
 
 SEE ALSO
@@ -152,7 +152,7 @@ SEE ALSO
 
 FURTHER INFORMATION
 -------------------
-See "RFC7252: The Constrained Application Protocol (CoAP)" for further 
+See "RFC7252: The Constrained Application Protocol (CoAP)" for further
 information.
 
 BUGS

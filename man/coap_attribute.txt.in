@@ -17,10 +17,10 @@ SYNOPSIS
 --------
 *#include <coap/coap.h>*
 
-*coap_attr_t *coap_add_attr(coap_resource_t *_resource_, coap_str_const_t 
+*coap_attr_t *coap_add_attr(coap_resource_t *_resource_, coap_str_const_t
 *_name_, coap_str_const_t *_value_, int _flags_);*
 
-*coap_attr_t *coap_find_attr(coap_resource_t *_resource_, coap_str_const_t 
+*coap_attr_t *coap_find_attr(coap_resource_t *_resource_, coap_str_const_t
 *_name_);*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
@@ -29,25 +29,25 @@ type.
 
 DESCRIPTION
 -----------
-CoAP Resources on a CoAP Server need to be created, updated etc. The URI in 
-the request packet defines the resource to work with, with possibly the Query 
+CoAP Resources on a CoAP Server need to be created, updated etc. The URI in
+the request packet defines the resource to work with, with possibly the Query
 referring to a sub-resource.
-When resources are configured on the CoAP server, the URI to match against 
-is specified. 
-Callback Handlers are then added to the resource to handle the different 
+When resources are configured on the CoAP server, the URI to match against
+is specified.
+Callback Handlers are then added to the resource to handle the different
 request methods.
-Adding Attributes allows textual information to be added to the resource 
-which can then be reported back to any client doing a "GET .well-known/core" 
-request. 
+Adding Attributes allows textual information to be added to the resource
+which can then be reported back to any client doing a "GET .well-known/core"
+request.
 
 Attributes are automatically freed when a Resource is deleted.
 
 The *coap_add_attr*() function
-registers a new attribute called _name_ for the _resource_. 
+registers a new attribute called _name_ for the _resource_.
 The value of the attribute is _value_.
 
-_flags_ can be one or more of the following, which, if set, defines what is 
-to be internally freed off when the attribute is deleted with 
+_flags_ can be one or more of the following, which, if set, defines what is
+to be internally freed off when the attribute is deleted with
 *coap_delete_resource*().
 
 [horizontal]
@@ -57,16 +57,16 @@ Free off _name_ when attribute is deleted with *coap_delete_resource*().
 *COAP_ATTR_FLAGS_RELEASE_VALUE*::
 Free off _value_ when attribute is deleted with *coap_delete_resource*().
 
-The *coap_find_attr*() function returns the attribute with the _name_, 
+The *coap_find_attr*() function returns the attribute with the _name_,
 if found, associated with _resource_.
 
 RETURN VALUES
 -------------
-*coap_add_attr*() function return a pointer to 
-the attribute that was created or NULL if there is a malloc failure. 
+*coap_add_attr*() function return a pointer to
+the attribute that was created or NULL if there is a malloc failure.
 
-*coap_find_attr*() function returns a pointer to the first matching 
-attribute or NULL if the _name_ was not found. 
+*coap_find_attr*() function returns a pointer to the first matching
+attribute or NULL if the _name_ was not found.
 
 EXAMPLE
 -------
@@ -120,7 +120,7 @@ SEE ALSO
 
 FURTHER INFORMATION
 -------------------
-See RFC7252 `The Constrained Application Protocol (CoAP)' for further 
+See RFC7252 `The Constrained Application Protocol (CoAP)' for further
 information.
 
 BUGS

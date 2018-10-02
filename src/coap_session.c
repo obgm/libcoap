@@ -348,20 +348,20 @@ void coap_session_connected(coap_session_t *session) {
     bytes_written = coap_session_send_pdu(session, q->pdu);
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (coap_wait_ack(session->context, session, q) >= 0)
-	q = NULL;
+        q = NULL;
     }
     if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (q)
-	coap_delete_node(q);
+        coap_delete_node(q);
       if (bytes_written < 0)
-	break;
+        break;
     } else {
       if (bytes_written <= 0 || (size_t)bytes_written < q->pdu->used_size + q->pdu->hdr_size) {
-	q->next = session->delayqueue;
-	session->delayqueue = q;
-	if (bytes_written > 0)
-	  session->partial_write = (size_t)bytes_written;
-	break;
+        q->next = session->delayqueue;
+        session->delayqueue = q;
+        if (bytes_written > 0)
+          session->partial_write = (size_t)bytes_written;
+        break;
       } else {
         coap_delete_node(q);
       }
@@ -406,13 +406,13 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
       && reason != COAP_NACK_RST)
     {
       if (coap_wait_ack(session->context, session, q) >= 0)
-	q = NULL;
+        q = NULL;
     }
     if (q && q->pdu->type == COAP_MESSAGE_CON
       && session->context->nack_handler)
     {
       session->context->nack_handler(session->context, session, q->pdu,
-	                             reason, q->id);
+                                     reason, q->id);
     }
     if (q)
       coap_delete_node(q);
@@ -421,13 +421,13 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     if (session->sock.flags != COAP_SOCKET_EMPTY) {
       coap_socket_close(&session->sock);
       coap_handle_event(session->context,
-	state == COAP_SESSION_STATE_CONNECTING ?
-	COAP_EVENT_TCP_FAILED : COAP_EVENT_TCP_CLOSED, session);
+        state == COAP_SESSION_STATE_CONNECTING ?
+        COAP_EVENT_TCP_FAILED : COAP_EVENT_TCP_CLOSED, session);
     }
     if (state != COAP_SESSION_STATE_NONE) {
       coap_handle_event(session->context,
-	state == COAP_SESSION_STATE_ESTABLISHED ?
-	COAP_EVENT_SESSION_CLOSED : COAP_EVENT_SESSION_FAILED, session);
+        state == COAP_SESSION_STATE_ESTABLISHED ?
+        COAP_EVENT_SESSION_CLOSED : COAP_EVENT_SESSION_FAILED, session);
     }
   }
 }
@@ -452,7 +452,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     if (session->ref == 0 && session->delayqueue == NULL && session->type == COAP_SESSION_TYPE_SERVER) {
       ++num_idle;
       if (oldest==NULL || session->last_rx_tx < oldest->last_rx_tx)
-	oldest = session;
+        oldest = session;
     }
   }
 
@@ -471,7 +471,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     if (session) {
       session->last_rx_tx = now;
       if (endpoint->proto == COAP_PROTO_UDP)
-	session->state = COAP_SESSION_STATE_ESTABLISHED;
+        session->state = COAP_SESSION_STATE_ESTABLISHED;
       LL_PREPEND(endpoint->sessions, session);
       debug("*** %s: new incoming session\n", coap_session_str(session));
     }
@@ -570,7 +570,7 @@ coap_session_connect(coap_session_t *session) {
       int connected = 0;
       session->tls = coap_tls_new_client_session(session, &connected);
       if (session->tls) {
-	session->state = COAP_SESSION_STATE_HANDSHAKE;
+        session->state = COAP_SESSION_STATE_HANDSHAKE;
         if (connected)
           coap_session_send_csm(session);
       } else {
@@ -579,8 +579,8 @@ coap_session_connect(coap_session_t *session) {
          * first before trying to release the object.
          */
         coap_session_reference(session);
-	coap_session_release(session);
-	return NULL;
+        coap_session_release(session);
+        return NULL;
       }
     } else {
       coap_session_send_csm(session);
@@ -814,10 +814,10 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
 
     if (coap_print_addr(&ep->bind_addr, addr_str, INET6_ADDRSTRLEN + 8)) {
       debug("created %s endpoint %s\n",
-	  ep->proto == COAP_PROTO_TLS ? "TLS"
-	: ep->proto == COAP_PROTO_TCP ? "TCP"
-	: ep->proto == COAP_PROTO_DTLS ? "DTLS " : "UDP",
-	addr_str);
+          ep->proto == COAP_PROTO_TLS ? "TLS"
+        : ep->proto == COAP_PROTO_TCP ? "TCP"
+        : ep->proto == COAP_PROTO_DTLS ? "DTLS " : "UDP",
+        addr_str);
     }
   }
 #endif /* NDEBUG */
@@ -883,7 +883,7 @@ coap_session_get_by_peer(coap_context_t *ctx,
       return &ep->hello;
     LL_FOREACH(ep->sessions, s) {
       if (s->ifindex == ifindex && coap_address_equals(&s->remote_addr, remote_addr))
-	return s;
+        return s;
     }
   }
   return NULL;

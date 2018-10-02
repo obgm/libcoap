@@ -13,7 +13,7 @@ General Building
 make
 sudo make install
 
-./autogen.sh will fail if there is a required package for buildling libcoap 
+./autogen.sh will fail if there is a required package for buildling libcoap
 that is missing. Install the missing package and try ./autogen.sh again.
 
 It is possible that you may need to provide some options to ./configure

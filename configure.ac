@@ -365,7 +365,7 @@ if test "x$build_dtls" = "xyes"; then
         # Some more sanity checking.
         if test "x$have_gnutls" != "xyes"; then
             AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the GnuTLS library but pkg-config file 'gnutls.pc' could not be found!
-                      Install the package(s) containing the development files for GnuTLS, 
+                      Install the package(s) containing the development files for GnuTLS,
                       or use '--with-openssl' or disable the DTLS support using '--disable-dtls'.])
         fi
         AC_MSG_NOTICE([The use of GnuTLS was explicit requested due configure option '--with-gnutls'!])

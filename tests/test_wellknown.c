@@ -12,7 +12,7 @@
 #include <coap.h>
 
 #include <assert.h>
-#ifdef HAVE_NETINET_IN_H 
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
 #include <stdio.h>
@@ -22,8 +22,8 @@
 #define TEST_PDU_SIZE 120
 #define TEST_URI_LEN    4
 
-coap_context_t *ctx;	   /* Holds the coap context for most tests */
-coap_pdu_t *pdu;	   /* Holds the parsed PDU for most tests */
+coap_context_t *ctx;           /* Holds the coap context for most tests */
+coap_pdu_t *pdu;           /* Holds the parsed PDU for most tests */
 coap_session_t *session;   /* Holds a reference-counted session object
                             * that is passed to coap_wellknown_response(). */
 
@@ -80,7 +80,7 @@ static void
 t_wellknown2(void) {
   coap_print_status_t result;
   coap_resource_t *r;
-  unsigned char buf[10];	/* smaller than teststr */
+  unsigned char buf[10];        /* smaller than teststr */
   size_t buflen, offset, ofs;
 
   char teststr[] = {  /* ,</abcd>;if="one";obs (21 chars) */
@@ -117,7 +117,7 @@ t_wellknown2(void) {
     CU_ASSERT(buflen == sizeof(teststr));
     CU_ASSERT(ofs == 0);
     CU_ASSERT(memcmp(buf, teststr + offset,
-		     COAP_PRINT_OUTPUT_LENGTH(result)) == 0);
+                     COAP_PRINT_OUTPUT_LENGTH(result)) == 0);
   }
 
   /* offset exceeds buffer */
@@ -144,7 +144,7 @@ t_wellknown3(void) {
   /* ,</0000> (TEST_URI_LEN + 4 chars) */
   for (j = 0; j < num_resources; j++) {
     int len = snprintf((char *)uribuf, TEST_URI_LEN + 1,
-		       "%0*d", TEST_URI_LEN, j);
+                       "%0*d", TEST_URI_LEN, j);
     coap_str_const_t uri_path = {.length = len, .s = uribuf};
     r = coap_resource_init(&uri_path, 0);
     coap_add_resource(ctx, r);
@@ -192,10 +192,10 @@ t_wellknown5(void) {
   unsigned char buf[3];
 
   if (!coap_add_option(pdu, COAP_OPTION_BLOCK2,
-		       coap_encode_var_safe(buf, sizeof(buf),
+                       coap_encode_var_safe(buf, sizeof(buf),
                                             ((inblock.num << 4) |
-					     (inblock.m << 3) |
-					     inblock.szx)), buf)) {
+                                             (inblock.m << 3) |
+                                             inblock.szx)), buf)) {
     CU_FAIL("cannot add Block2 option");
     return;
   }
@@ -222,7 +222,7 @@ t_wellknown6(void) {
 
 
   do {
-    coap_pdu_clear(pdu, pdu->max_size);	/* clear PDU */
+    coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
     pdu->type = COAP_MESSAGE_NON;
     pdu->code = COAP_REQUEST_GET;
@@ -231,8 +231,8 @@ t_wellknown6(void) {
     CU_ASSERT_PTR_NOT_NULL(pdu);
 
     if (!pdu || !coap_add_option(pdu, COAP_OPTION_BLOCK2,
-				 coap_encode_var_safe(buf, sizeof(buf),
-				       ((block.num << 4) | block.szx)), buf)) {
+                                 coap_encode_var_safe(buf, sizeof(buf),
+                                       ((block.num << 4) | block.szx)), buf)) {
       CU_FAIL("cannot create request");
       return;
     }
@@ -292,7 +292,7 @@ t_wkc_tests_create(void) {
     /* ,</0000> (TEST_URI_LEN + 4 chars) */
     for (i = 0; i < sizeof(_buf) / (TEST_URI_LEN + 4); i++) {
       int len = snprintf((char *)buf, TEST_URI_LEN + 1,
-			 "%0*d", TEST_URI_LEN, i);
+                         "%0*d", TEST_URI_LEN, i);
       r = coap_resource_init(buf, len, 0);
       coap_add_resource(ctx, r);
       buf += TEST_URI_LEN + 1;
@@ -315,17 +315,17 @@ t_init_wellknown_tests(void) {
   CU_pSuite suite;
 
   suite = CU_add_suite(".well-known/core", t_wkc_tests_create, t_wkc_tests_remove);
-  if (!suite) {			/* signal error */
+  if (!suite) {                        /* signal error */
     fprintf(stderr, "W: cannot add .well-known/core test suite (%s)\n",
-	    CU_get_error_msg());
+            CU_get_error_msg());
 
     return NULL;
   }
 
-#define WKC_TEST(s,t)						      \
-  if (!CU_ADD_TEST(s,t)) {					      \
-    fprintf(stderr, "W: cannot add .well-known/core test (%s)\n",	      \
-	    CU_get_error_msg());				      \
+#define WKC_TEST(s,t)                                             \
+  if (!CU_ADD_TEST(s,t)) {                                        \
+    fprintf(stderr, "W: cannot add .well-known/core test (%s)\n", \
+            CU_get_error_msg());                                  \
   }
 
   WKC_TEST(suite, t_wellknown1);

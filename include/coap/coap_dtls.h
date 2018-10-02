@@ -23,7 +23,7 @@
 
 /**
  * Check whether DTLS is available.
- * 
+ *
  * @return @c 1 if support for DTLS is enabled, or @c 0 otherwise.
  */
 int coap_dtls_is_supported(void);
@@ -209,14 +209,14 @@ typedef struct coap_dtls_pki_t {
                                     * COAP_DTLS_PKI_SETUP_VERSION and just
                                     * decrement the reserved[] count.
                                     */
- 
+
   /** CN check call-back function.
    * If not NULL, is called when the TLS connection has passed the configured
    * TLS options above for the application to verify if the CN is valid.
    */
   coap_dtls_cn_callback_t validate_cn_call_back;
   void *cn_call_back_arg;  /**< Passed in to the CN call-back function */
- 
+
   /** SNI check call-back function.
    * If not @p NULL, called if the SNI is not previously seen and prior to
    * sending a certificate set back to the client so that the appropriate
@@ -231,7 +231,7 @@ typedef struct coap_dtls_pki_t {
    * setup.
    */
   coap_dtls_security_setup_t additional_tls_setup_call_back;
- 
+
   char* client_sni;    /**<  If not NULL, SNI to use in client TLS setup.
                              Owned by the client app and must remain valid
                              during the call to coap_new_client_session_pki() */
@@ -265,11 +265,11 @@ coap_dtls_new_context(struct coap_context_t *coap_context);
 
 /**
  * Set the DTLS context's default PSK information.
- * This does the PSK specifics following coap_dtls_new_context(). 
+ * This does the PSK specifics following coap_dtls_new_context().
  * If @p COAP_DTLS_ROLE_SERVER, then identity hint will also get set.
- * If @p COAP_DTLS_ROLE_SERVER, then the information will get put into the 
+ * If @p COAP_DTLS_ROLE_SERVER, then the information will get put into the
  * TLS library's context (from which sessions are derived).
- * If @p COAP_DTLS_ROLE_CLIENT, then the information will get put into the 
+ * If @p COAP_DTLS_ROLE_CLIENT, then the information will get put into the
  * TLS library's session.
  *
  * Internal function.
@@ -292,9 +292,9 @@ coap_dtls_context_set_psk(struct coap_context_t *coap_context,
 /**
  * Set the DTLS context's default server PKI information.
  * This does the PKI specifics following coap_dtls_new_context().
- * If @p COAP_DTLS_ROLE_SERVER, then the information will get put into the 
+ * If @p COAP_DTLS_ROLE_SERVER, then the information will get put into the
  * TLS library's context (from which sessions are derived).
- * If @p COAP_DTLS_ROLE_CLIENT, then the information will get put into the 
+ * If @p COAP_DTLS_ROLE_CLIENT, then the information will get put into the
  * TLS library's session.
  *
  * Internal function.
@@ -431,7 +431,7 @@ int coap_dtls_is_context_timeout(void);
  * Do all pending retransmits and get next timeout
  *
  * Internal function.
- * 
+ *
  * @param dtls_context The DTLS context.
  *
  * @return @c 0 if no event is pending or date of the next retransmit.
@@ -557,7 +557,7 @@ ssize_t coap_tls_write(coap_session_t *coap_session,
                        const uint8_t *data,
                        size_t data_len
                        );
-  
+
 /**
  * Read some data from a TLS peer.
  *

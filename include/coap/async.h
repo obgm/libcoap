@@ -44,7 +44,7 @@ typedef struct coap_async_state_t {
    */
   void *appdata;
   uint16_t message_id;       /**< id of last message seen */
-  coap_session_t *session;	   /**< transaction session */
+  coap_session_t *session;         /**< transaction session */
   coap_tid_t id;                   /**< transaction id */
   struct coap_async_state_t *next; /**< internally used for linking */
   size_t tokenlen;                 /**< length of the token */

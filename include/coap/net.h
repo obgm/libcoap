@@ -125,9 +125,9 @@ typedef void (*coap_nack_handler_t)(struct coap_context_t *context,
  * @param id CoAP transaction ID.
  */
 typedef void (*coap_ping_handler_t)(struct coap_context_t *context,
-                                        coap_session_t *session,
-                                        coap_pdu_t *received,
-                                        const coap_tid_t id);
+                                    coap_session_t *session,
+                                    coap_pdu_t *received,
+                                    const coap_tid_t id);
 
 /**
  * Recieved Pong handler that is used as call-back in coap_context_t.
@@ -138,9 +138,9 @@ typedef void (*coap_ping_handler_t)(struct coap_context_t *context,
  * @param id CoAP transaction ID.
  */
 typedef void (*coap_pong_handler_t)(struct coap_context_t *context,
-				  	coap_session_t *session,
-					coap_pdu_t *received,
-					const coap_tid_t id);
+                                    coap_session_t *session,
+                                    coap_pdu_t *received,
+                                    const coap_tid_t id);
 
 /**
  * The CoAP stack's global state is stored in a coap_context_t object.
@@ -164,7 +164,7 @@ typedef struct coap_context_t {
   coap_tick_t sendqueue_basetime;
   coap_queue_t *sendqueue;
   coap_endpoint_t *endpoint;      /**< the endpoints used for listening  */
-  coap_session_t *sessions;	  /**< client sessions */
+  coap_session_t *sessions;       /**< client sessions */
 
 #ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;      /**< uIP connection object */
@@ -210,10 +210,10 @@ typedef struct coap_context_t {
   uint8_t *psk_key;
   size_t psk_key_len;
 
-  unsigned int session_timeout;	   /**< Number of seconds of inactivity after which an unused session will be closed. 0 means use default. */
+  unsigned int session_timeout;    /**< Number of seconds of inactivity after which an unused session will be closed. 0 means use default. */
   unsigned int max_idle_sessions;  /**< Maximum number of simultaneous unused sessions per endpoint. 0 means no maximum. */
-  unsigned int ping_timeout;	   /**< Minimum inactivity time before sending a ping message. 0 means disabled. */
-  unsigned int csm_timeout;	   /**< Timeout for waiting for a CSM from the remote side. 0 means disabled. */
+  unsigned int ping_timeout;           /**< Minimum inactivity time before sending a ping message. 0 means disabled. */
+  unsigned int csm_timeout;           /**< Timeout for waiting for a CSM from the remote side. 0 means disabled. */
 
   void *app;                       /**< application-specific data */
 } coap_context_t;
@@ -358,7 +358,7 @@ coap_context_set_pki_root_cas(coap_context_t *context,
  * considered as disconnected.
  *
  * @param context        The coap_context_t object.
- * @param seconds		 Number of seconds for the inactivity timer, or zero
+ * @param seconds                 Number of seconds for the inactivity timer, or zero
  *                       to disable CoAP-level keepalive messages.
  *
  * @return 1 if successful, else 0

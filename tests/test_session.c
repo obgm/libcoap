@@ -42,7 +42,7 @@ t_session1(void) {
 
   coap_session_reference(session);
   CU_ASSERT(session->ref == 2);
-  
+
   coap_session_release(session);
   CU_ASSERT(session->ref == 1);
 }
@@ -199,18 +199,18 @@ t_init_session_tests(void) {
   CU_pSuite suite;
 
   suite = CU_add_suite("session",
-		       t_session_tests_create, t_session_tests_remove);
-  if (!suite) {			/* signal error */
+                       t_session_tests_create, t_session_tests_remove);
+  if (!suite) {                        /* signal error */
     fprintf(stderr, "W: cannot add session test suite (%s)\n",
-	    CU_get_error_msg());
+            CU_get_error_msg());
 
     return NULL;
   }
 
-#define SESSION_TEST(s,t)					      \
-  if (!CU_ADD_TEST(s,t)) {					      \
-    fprintf(stderr, "W: cannot add session test (%s)\n",	      \
-	    CU_get_error_msg());				      \
+#define SESSION_TEST(s,t)                                              \
+  if (!CU_ADD_TEST(s,t)) {                                              \
+    fprintf(stderr, "W: cannot add session test (%s)\n",              \
+            CU_get_error_msg());                                      \
   }
 
   SESSION_TEST(suite, t_session1);

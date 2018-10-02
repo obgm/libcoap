@@ -71,7 +71,7 @@ method_t method = 1;                    /* the method we are using in our reques
 
 coap_block_t block = { .num = 0, .m = 0, .szx = 6 };
 
-unsigned int wait_seconds = 90;		/* default timeout in seconds */
+unsigned int wait_seconds = 90;                /* default timeout in seconds */
 unsigned int wait_ms = 0;
 int wait_ms_reset = 0;
 int obs_started = 0;
@@ -228,7 +228,7 @@ clear_obs(coap_context_t *ctx, coap_session_t *session) {
 
   if (coap_get_log_level() < LOG_DEBUG)
     coap_show_pdu(LOG_INFO, pdu);
-  
+
 
   tid = coap_send(session, pdu);
 
@@ -400,8 +400,8 @@ message_handler(struct coap_context_t *ctx,
           if (tid == COAP_INVALID_TID) {
             coap_log(LOG_DEBUG, "message_handler: error sending new request\n");
           } else {
-	    wait_ms = wait_seconds * 1000;
-	    wait_ms_reset = 1;
+            wait_ms = wait_seconds * 1000;
+            wait_ms_reset = 1;
           }
 
           return;
@@ -480,13 +480,13 @@ message_handler(struct coap_context_t *ctx,
           if (coap_get_log_level() < LOG_DEBUG)
             coap_show_pdu(LOG_INFO, pdu);
 
-	  tid = coap_send(session, pdu);
+          tid = coap_send(session, pdu);
 
           if (tid == COAP_INVALID_TID) {
             coap_log(LOG_DEBUG, "message_handler: error sending new request\n");
           } else {
-	    wait_ms = wait_seconds * 1000;
-	    wait_ms_reset = 1;
+            wait_ms = wait_seconds * 1000;
+            wait_ms_reset = 1;
           }
 
           return;
@@ -773,7 +773,7 @@ cmdline_blocksize(char *arg) {
  * Block1 or Block2 depending on method. */
 static void
 set_blocksize(void) {
-  static unsigned char buf[4];	/* hack: temporarily take encoded bytes */
+  static unsigned char buf[4];        /* hack: temporarily take encoded bytes */
   uint16_t opt;
   unsigned int opt_length;
 
@@ -1120,23 +1120,23 @@ get_session(
     for ( rp = result; rp != NULL; rp = rp->ai_next ) {
       coap_address_t bind_addr;
       if ( rp->ai_addrlen <= sizeof( bind_addr.addr ) ) {
-	coap_address_init( &bind_addr );
-	bind_addr.size = rp->ai_addrlen;
-	memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
+        coap_address_init( &bind_addr );
+        bind_addr.size = rp->ai_addrlen;
+        memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
         if (cert_file && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
           coap_dtls_pki_t *dtls_pki = setup_pki();
           session = coap_new_client_session_pki(ctx, &bind_addr, dst, proto, dtls_pki);
         }
         else if ((identity || key) &&
                  (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) ) {
-	  session = coap_new_client_session_psk( ctx, &bind_addr, dst, proto,
+          session = coap_new_client_session_psk( ctx, &bind_addr, dst, proto,
                            identity, key, key_len );
         }
-	else {
-	  session = coap_new_client_session( ctx, &bind_addr, dst, proto );
+        else {
+          session = coap_new_client_session( ctx, &bind_addr, dst, proto );
         }
-	if ( session )
-	  break;
+        if ( session )
+          break;
       }
     }
     freeaddrinfo( result );
@@ -1197,11 +1197,11 @@ main(int argc, char **argv) {
       break;
     case 'e':
       if (!cmdline_input(optarg, &payload))
-	payload.length = 0;
+        payload.length = 0;
       break;
     case 'f':
       if (!cmdline_input_from_file(optarg, &payload))
-	payload.length = 0;
+        payload.length = 0;
       break;
     case 'k':
       key_length = cmdline_read_key(optarg, key, MAX_KEY);
@@ -1224,11 +1224,11 @@ main(int argc, char **argv) {
       output_file.s = (unsigned char *)coap_malloc(output_file.length + 1);
 
       if (!output_file.s) {
-	fprintf(stderr, "cannot set output file: insufficient memory\n");
-	exit(-1);
+        fprintf(stderr, "cannot set output file: insufficient memory\n");
+        exit(-1);
       } else {
-	/* copy filename including trailing zero */
-	memcpy(output_file.s, optarg, output_file.length + 1);
+        /* copy filename including trailing zero */
+        memcpy(output_file.s, optarg, output_file.length + 1);
       }
       break;
     case 'A':
@@ -1242,8 +1242,8 @@ main(int argc, char **argv) {
       break;
     case 'P':
       if (!cmdline_proxy(optarg)) {
-	fprintf(stderr, "error specifying proxy address\n");
-	exit(-1);
+        fprintf(stderr, "error specifying proxy address\n");
+        exit(-1);
       }
       break;
     case 'T':
@@ -1252,7 +1252,7 @@ main(int argc, char **argv) {
     case 'u':
       user_length = cmdline_read_user(optarg, user, MAX_USER);
       if (user_length >= 0)
-	user[user_length] = 0;
+        user[user_length] = 0;
       break;
     case 'U':
       create_uri_opts = 0;
@@ -1262,8 +1262,8 @@ main(int argc, char **argv) {
       break;
     case 'l':
       if (!coap_debug_set_packet_loss(optarg)) {
-	usage(argv[0], LIBCOAP_PACKAGE_VERSION);
-	exit(1);
+        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+        exit(1);
       }
       break;
     case 'r':
@@ -1295,7 +1295,7 @@ main(int argc, char **argv) {
     coap_log( LOG_CRIT, "Invalid user name or key specified\n" );
     goto finish;
   }
-  
+
   if (proxy.length) {
     server.length = proxy.length;
     server.s = proxy.s;
@@ -1401,24 +1401,24 @@ main(int argc, char **argv) {
 
     if ( result >= 0 ) {
       if ( wait_ms > 0 && !wait_ms_reset ) {
-	if ( (unsigned)result >= wait_ms ) {
-	  info( "timeout\n" );
-	  break;
-	} else {
-	  wait_ms -= result;
-	}
+        if ( (unsigned)result >= wait_ms ) {
+          info( "timeout\n" );
+          break;
+        } else {
+          wait_ms -= result;
+        }
       }
       if ( obs_ms > 0 && !obs_ms_reset ) {
-	if ( (unsigned)result >= obs_ms ) {
-	  coap_log(LOG_DEBUG, "clear observation relationship\n" );
-	  clear_obs( ctx, session ); /* FIXME: handle error case COAP_TID_INVALID */
+        if ( (unsigned)result >= obs_ms ) {
+          coap_log(LOG_DEBUG, "clear observation relationship\n" );
+          clear_obs( ctx, session ); /* FIXME: handle error case COAP_TID_INVALID */
 
-	  /* make sure that the obs timer does not fire again */
-	  obs_ms = 0;
-	  obs_seconds = 0;
-	} else {
-	  obs_ms -= result;
-	}
+          /* make sure that the obs timer does not fire again */
+          obs_ms = 0;
+          obs_seconds = 0;
+        } else {
+          obs_ms -= result;
+        }
       }
       wait_ms_reset = 0;
       obs_ms_reset = 0;

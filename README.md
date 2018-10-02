@@ -24,7 +24,7 @@ PACKAGE CONTENTS
 This directory contains a protocol parser and basic networking
 functions for platform with support for malloc() and BSD-style
 sockets. The examples directory contains a client and a server to
-demonstrate the use of this library. 
+demonstrate the use of this library.
 
 LICENSE INFORMATION
 ===================

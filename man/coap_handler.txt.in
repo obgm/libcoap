@@ -19,19 +19,19 @@ SYNOPSIS
 --------
 *#include <coap/coap.h>*
 
-*void coap_register_handler(coap_resource_t *_resource_, unsigned char 
+*void coap_register_handler(coap_resource_t *_resource_, unsigned char
 _method_, coap_method_handler_t _handler_);*
 
-*void coap_register_response_handler(coap_context_t *_context_, 
+*void coap_register_response_handler(coap_context_t *_context_,
 coap_response_handler_t _handler_)*;
 
-*void coap_register_nack_handler(coap_context_t *_context_, 
+*void coap_register_nack_handler(coap_context_t *_context_,
 coap_nack_handler_t _handler_)*;
 
-*void coap_register_ping_handler(coap_context_t *_context_, 
+*void coap_register_ping_handler(coap_context_t *_context_,
 coap_ping_handler_t _handler_)*;
 
-*void coap_register_pong_handler(coap_context_t *_context_, 
+*void coap_register_pong_handler(coap_context_t *_context_,
 coap_pong_handler_t _handler_)*;
 
 *void coap_register_event_handler(coap_context_t *_context_, 
@@ -44,8 +44,8 @@ type.
 DESCRIPTION
 -----------
 
-The *coap_register_handler*() function registers a callback handler _handler_ 
-that is called when there is a URI match against the _resource_ and there is 
+The *coap_register_handler*() function registers a callback handler _handler_
+that is called when there is a URI match against the _resource_ and there is
 a _method_ (e.g. PUT, POST etc.) match. _method_ can be one of the following.
 ----
 COAP_REQUEST_GET
@@ -85,7 +85,7 @@ typedef void (*coap_response_handler_t)(coap_context_t *context,
                                         const coap_tid_t id);
 ----
 
-The *coap_register_nack_handler*() function defines a request's negative 
+The *coap_register_nack_handler*() function defines a request's negative
 response _handler_ for traffic associated with the _context_.
 If _handler_ is NULL, then the handler is de-registered.
 
@@ -112,7 +112,7 @@ typedef void (*coap_ping_handler_t)(coap_context_t *context,
                                     const coap_tid_t id);
 ----
 
-The *coap_register_pong_handler*() function defines a _handler_ for tracking 
+The *coap_register_pong_handler*() function defines a _handler_ for tracking
 CoAP TCP ping response traffic associated with the _context_.
 If _handler_ is NULL, then the handler is de-registered.
 
@@ -228,7 +228,7 @@ coap_string_t *query, coap_pdu_t *response) {
 #include <coap/coap.h>
 
 static void
-response_handler(coap_context_t *ctx, coap_session_t *session, 
+response_handler(coap_context_t *ctx, coap_session_t *session,
 coap_pdu_t *sent, coap_pdu_t *received, const coap_tid_t id) {
 
   coap_pdu_t *pdu = NULL;
@@ -269,7 +269,7 @@ SEE ALSO
 
 FURTHER INFORMATION
 -------------------
-See "RFC7252: The Constrained Application Protocol (CoAP)" for further 
+See "RFC7252: The Constrained Application Protocol (CoAP)" for further
 information.
 
 BUGS
