@@ -27,7 +27,7 @@ depcomp
 doc/Doxyfile doc/doxyfile.stamp doc/doxygen_sqlite3.db doc/Makefile doc/Makefile.in
 examples/*.o  examples/coap-client examples/coap-server examples/coap-rd
 examples/Makefile examples/Makefile.in
-include/coap/coap.h
+include/coap2/coap.h
 install-sh
 libcoap-*.pc libtool ltmain.sh
 man/coap*.[357] man/coap*.txt man/Makefile man/Makefile.in
