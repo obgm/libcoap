@@ -35,7 +35,7 @@ LWIPOBJS += mld6.o ip6.o icmp6.o ethip6.o nd6.o ip6_addr.o ip6_frag.o
 
 CFLAGS += -std=gnu99
 
-CFLAGS += -I$(top_srcdir)/include/coap
+CFLAGS += -I$(top_srcdir)/include/coap2
 
 vpath %.c $(top_srcdir)/src
 
@@ -51,11 +51,11 @@ CFLAGS += -Ilwip/src/include/ -Ilwip/src/include/ipv4/ -Ilwip-contrib/ports/unix
 
 OBJS = server.o server-coap.o ${LWIPOBJS} ${COAPOBJS}
 
-../../include/coap/coap.h:
+../../include/coap2/coap.h:
 	@echo "Error: coap.h not present. Run the autotools chain (\`./autogen.sh && ./configure\`) in the project root directory to build the required coap.h file."
 	@exit 1
 
-${OBJS}: lwip lwip-contrib ../../include/coap/coap.h
+${OBJS}: lwip lwip-contrib ../../include/coap2/coap.h
 
 server: ${OBJS}
 #	$(CC) ${OBJS} -o server -lrt
