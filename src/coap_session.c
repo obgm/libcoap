@@ -316,8 +316,11 @@ coap_tid_t coap_session_send_ping(coap_session_t *session) {
 }
 
 void coap_session_connected(coap_session_t *session) {
-  if (session->state != COAP_SESSION_STATE_ESTABLISHED)
+  if (session->state != COAP_SESSION_STATE_ESTABLISHED) {
     coap_log(LOG_DEBUG, "*** %s: session connected\n", coap_session_str(session));
+    if (session->state == COAP_SESSION_STATE_CSM)
+      coap_handle_event(session->context, COAP_EVENT_SESSION_CONNECTED, session);
+  }
 
   session->state = COAP_SESSION_STATE_ESTABLISHED;
   session->partial_write = 0;
@@ -330,7 +333,6 @@ void coap_session_connected(coap_session_t *session) {
     }
   }
 
-  coap_handle_event(session->context, COAP_EVENT_SESSION_CONNECTED, session);
   while (session->delayqueue && session->state == COAP_SESSION_STATE_ESTABLISHED) {
     ssize_t bytes_written;
     coap_queue_t *q = session->delayqueue;
