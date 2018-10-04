@@ -12,7 +12,7 @@ NAME
 ----
 coap_handler, coap_register_handler, coap_register_response_handler, 
 coap_register_nack_handler, coap_register_ping_handler, 
-ccoap_register_pong_handler, coap_register_event_handler
+coap_register_pong_handler, coap_register_event_handler
 - work with CoAP handlers
 
 SYNOPSIS
