@@ -69,7 +69,7 @@ examples/coap-rd
 examples/coap-server
 
 # the include/ folder
-include/coap/coap.h
+include/coap2/coap.h
 
 # the tests/ folder
 tests/.deps
