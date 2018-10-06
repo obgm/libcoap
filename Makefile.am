@@ -17,7 +17,7 @@ EXTRA_DIST = \
   CONTRIBUTE \
   TODO \
   LICENSE \
-  doc/build_man_files.sh \
+  doc/build_man_files.sh.in \
   libcoap-$(LIBCOAP_API_VERSION).pc.in \
   libcoap-$(LIBCOAP_API_VERSION).map \
   libcoap-$(LIBCOAP_API_VERSION).sym \
