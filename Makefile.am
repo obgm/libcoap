@@ -199,13 +199,13 @@ libcoap-$(LIBCOAP_API_VERSION).map: check_ctags $(libcoap_include_HEADERS)
 	$(CTAGS_PROG) $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print "  " $$1 ";" }' | sort -u ; \
 	echo "local:" ; \
 	echo "  *;" ; \
-	echo "};" ) > $@.new
-	mv $@.new $@
+	echo "};" ) > $(top_builddir)/$@.new
+	mv $(top_builddir)/$@.new $(top_builddir)/$@
 
 libcoap-$(LIBCOAP_API_VERSION).sym: check_ctags $(libcoap_include_HEADERS)
 	( $(CTAGS_PROG) $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print $$1 }' | sort -u ) \
-	> $@.new
-	mv $@.new $@
+	> $(top_builddir)/$@.new
+	mv $(top_builddir)/$@.new $(top_builddir)/$@
 
 ## Install the generated pkg-config file (.pc) into the expected location for
 ## architecture-dependent package configuration information.  Occasionally,
