@@ -24,7 +24,7 @@ INSTALL
 aclocal.m4 ar-lib
 coap_config.h coap_config.h.in* compile config.guess config.h* config.log config.status config.sub configure
 depcomp
-doc/Doxyfile doc/doxyfile.stamp doc/doxygen_sqlite3.db doc/Makefile doc/Makefile.in
+doc/build_man_files.sh doc/Doxyfile doc/doxyfile.stamp doc/doxygen_sqlite3.db doc/Makefile doc/Makefile.in
 examples/*.o  examples/coap-client examples/coap-server examples/coap-rd
 examples/Makefile examples/Makefile.in
 include/coap2/coap.h
