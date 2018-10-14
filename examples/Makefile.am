@@ -17,12 +17,12 @@ AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include \
 bin_PROGRAMS = coap-client coap-server coap-rd
 
 coap_client_SOURCES = client.c
-coap_client_LDADD =  $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
+coap_client_LDADD =  $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
 
 coap_server_SOURCES = coap-server.c
-coap_server_LDADD = $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
+coap_server_LDADD = $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
 
 coap_rd_SOURCES = coap-rd.c
-coap_rd_LDADD = $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
+coap_rd_LDADD = $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
 
 endif # BUILD_EXAMPLES
