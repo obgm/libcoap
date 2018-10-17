@@ -3,7 +3,7 @@
  * of use.
  */
 
-/** Memory pool definitions for the libcoap when used with lwIP (which has its
+/* Memory pool definitions for the libcoap when used with lwIP (which has its
  * own mechanism for quickly allocating chunks of data with known sizes). Has
  * to be findable by lwIP (ie. an #include <lwippools.h> must either directly
  * include this or include something more generic which includes this), and

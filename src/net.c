@@ -1805,6 +1805,7 @@ enum respond_t { RESPONSE_DEFAULT, RESPONSE_DROP, RESPONSE_SEND };
  * The value of the No-Response option is encoded as
  * follows:
  *
+ * @code
  *  +-------+-----------------------+-----------------------------------+
  *  | Value | Binary Representation |          Description              |
  *  +-------+-----------------------+-----------------------------------+
@@ -1816,6 +1817,7 @@ enum respond_t { RESPONSE_DEFAULT, RESPONSE_DROP, RESPONSE_SEND };
  *  +-------+-----------------------+-----------------------------------+
  *  |  16   |      00010000         | Not interested in 5.xx responses. |
  *  +-------+-----------------------+-----------------------------------+
+ * @endcode
  *
  * @param request  The CoAP request to check for the No-Response option.
  *                 This parameter must not be NULL.
@@ -2151,7 +2153,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 40
 #endif
-    /** @FIXME get debug to work again **
+    /* FIXME: get debug to work again **
     unsigned char addr[INET6_ADDRSTRLEN+8], localaddr[INET6_ADDRSTRLEN+8];
     if (coap_print_addr(remote, addr, INET6_ADDRSTRLEN+8) &&
         coap_print_addr(&packet->dst, localaddr, INET6_ADDRSTRLEN+8) )

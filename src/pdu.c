@@ -224,7 +224,7 @@ coap_add_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
   return 1;
 }
 
-/** @FIXME de-duplicate code with coap_add_option_later */
+/* FIXME: de-duplicate code with coap_add_option_later */
 size_t
 coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len, const uint8_t *data) {
   size_t optsize;
@@ -260,7 +260,7 @@ coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len, const uint8_t *data)
   return optsize;
 }
 
-/** @FIXME de-duplicate code with coap_add_option */
+/* FIXME: de-duplicate code with coap_add_option */
 uint8_t*
 coap_add_option_later(coap_pdu_t *pdu, uint16_t type, size_t len) {
   size_t optsize;
