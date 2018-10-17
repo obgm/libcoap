@@ -227,8 +227,15 @@ coap_delete_node(coap_queue_t *node) {
     return 0;
 
   coap_delete_pdu(node->pdu);
-  if ( node->session )
+  if ( node->session ) {
+    /*
+     * Need to remove out of context->sendqueue as added in by coap_wait_ack()
+     */
+    if (node->session->context->sendqueue) {
+      LL_DELETE(node->session->context->sendqueue, node);
+    }
     coap_session_release(node->session);
+  }
   coap_free_node(node);
 
   return 1;
@@ -985,9 +992,17 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 #endif /* WITHOUT_OBSERVE */
   if (node->session->con_active) {
     node->session->con_active--;
-    if (node->session->state == COAP_SESSION_STATE_ESTABLISHED)
-      /* Flush out any entries on session->delayqueue */
+    if (node->session->state == COAP_SESSION_STATE_ESTABLISHED) {
+      /*
+       * As there may be another CON in a different queue entry on the same
+       * session that needs to be immediately released,
+       * coap_session_connected() is called.
+       * However, there is the possibility coap_wait_ack() may be called for
+       * this node (queue) and re-added to context->sendqueue.
+       * coap_delete_node(node) called shortly will handle this and remove it.
+       */
       coap_session_connected(node->session);
+    }
  }
 
   /* And finally delete the node */
