@@ -150,7 +150,7 @@ AC_SUBST([WARNING_CFLAGS])
 
 AX_CHECK_LINK_FLAG([-Wl,--version-script=${srcdir}/libcoap-${LIBCOAP_API_VERSION}.map],
                    [libcoap_SYMBOLS="-Wl,--version-script=\$(srcdir)/libcoap-\$(LIBCOAP_API_VERSION).map"],
-                   [libcoap_SYMBOLS="-export-symbols \$(srcdir)/libcoap-\$(LIBCOAP_API_VERSION).sym"])
+                   [libcoap_SYMBOLS="-export-symbols \$(top_builddir)/libcoap-\$(LIBCOAP_API_VERSION).sym"])
 
 AC_SUBST(libcoap_SYMBOLS)
 
