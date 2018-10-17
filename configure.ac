@@ -647,7 +647,6 @@ CFLAGS="$CFLAGS $ADDITIONAL_CFLAGS"
 #
 AC_CONFIG_FILES([
 Makefile
-doc/build_man_files.sh
 doc/Makefile
 examples/Makefile
 include/coap2/coap.h
