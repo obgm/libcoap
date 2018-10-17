@@ -1805,7 +1805,7 @@ enum respond_t { RESPONSE_DEFAULT, RESPONSE_DROP, RESPONSE_SEND };
  * The value of the No-Response option is encoded as
  * follows:
  *
- * @code
+ * @verbatim
  *  +-------+-----------------------+-----------------------------------+
  *  | Value | Binary Representation |          Description              |
  *  +-------+-----------------------+-----------------------------------+
@@ -1817,7 +1817,7 @@ enum respond_t { RESPONSE_DEFAULT, RESPONSE_DROP, RESPONSE_SEND };
  *  +-------+-----------------------+-----------------------------------+
  *  |  16   |      00010000         | Not interested in 5.xx responses. |
  *  +-------+-----------------------+-----------------------------------+
- * @endcode
+ * @endverbatim
  *
  * @param request  The CoAP request to check for the No-Response option.
  *                 This parameter must not be NULL.
