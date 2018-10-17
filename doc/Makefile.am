@@ -39,12 +39,11 @@ man-page-build: man-page-start
 		$(MAKE) -C ../man ;\
 	fi ;\
 	for FILE in $${MAN_FILES} ; do \
-		BASE=`egrep '(^coap\(|^coap(_|-)([a-z]|_[a-z])*\([1-9])' $${FILE}` ;\
+		BASE=`basename $${FILE} | cut -d. -f 1` ;\
 		MANUAL=`egrep -B 1 "^====" $${FILE} | head -1` ;\
 		SUMMARY=`egrep -B 2 "^SYNOPSIS" $${FILE} | sed 's/coap-//g' | cut -d\- -f2 | cut -c2- | head -1` ;\
 		## Build the manual insert page
 		echo "/// @page man_$${BASE} $${MANUAL}" > $(top_builddir)/doc/man_tmp/$${MANUAL}.dox ;\
-		##cat $(top_builddir)/doc/man_tmp/$${MANUAL}.dox ;\
 		echo "/// @htmlinclude $${BASE}.html $${MANUAL}" >> $(top_builddir)/doc/man_tmp/$${MANUAL}.dox ;\
 		## Update insert_file
 		echo "      <tab type=\"user\" visible=\"yes\" url=\"@ref man_$${BASE}\" title=\"$${MANUAL} - $${SUMMARY}\" intro=\"\"/>" >> $(top_builddir)/doc/insert_file ;\
@@ -73,7 +72,10 @@ man-page-build: man-page-start
 	for FILE in $${MAN_FILES} ; do \
 		BASE=`basename $${FILE} | cut -d . -f1` ;\
 		if [ -f $(top_builddir)/man/$${BASE}.html ]; then \
-			cat $(top_builddir)/man/$${BASE}.html | sed 's^<h2>Name</h2>^<h2>NAME</h2>^g' | sed 's^<h2>Synopsis</h2>^<h2>SYNOPSIS</h2>^g' > $(top_builddir)/doc/man_html/$${BASE}.html ;\
+			cp -f $(top_builddir)/man/$${BASE}.html $(top_builddir)/doc/man_html/$${BASE}.html ;\
+			## Correct case sensitive Name and Synopsis
+			$(SED) -i 's^<h2>Name</h2>^<h2>NAME</h2>^g' $(top_builddir)/doc/man_html/$${BASE}.html ;\
+			$(SED) -i 's^<h2>Synopsis</h2>^<h2>SYNOPSIS</h2>^g' $(top_builddir)/doc/man_html/$${BASE}.html ;\
 		else \
 			echo "ERROR: $(top_builddir)/man/$${BASE}.html not found!";\
 			exit 1 ;\
@@ -84,7 +86,7 @@ man-page-build: man-page-start
 			SECTION=`echo $${MANUAL} | cut -d\( -f2 | cut -d\) -f1` ;\
 			$(SED) -i "s^<span class=\"strong\"><strong>$${EBASE}</strong></span>($${SECTION})^<a href=\"man_$${EBASE}.html\" target=\"_self\"><span class=\"strong\"><strong>$${EBASE}</strong></span>($${SECTION})</a>^g" $(top_builddir)/doc/man_html/$${BASE}.html ;\
 		done ;\
-	echo "finalized addition $${BASE}.html" ;\
+		echo "finalized addition $${BASE}.html" ;\
 	done
 
 # This target has no check for automated install data! It's simply assumed that
@@ -98,7 +100,7 @@ install-data-am:
 		exit 1 ;\
 	fi
 	$(MKDIR_P) $(DESTDIR)$(htmldir)/html || exit 1
-	cp -a $(top_builddir)/doc/html $(DESTDIR)$(htmldir)
+	cp -a -f $(top_builddir)/doc/html $(DESTDIR)$(htmldir)
 	find $(DESTDIR)$(htmldir) -type f -name "*.md5" -exec rm {} \;
 
 uninstall-am:
@@ -107,8 +109,11 @@ uninstall-am:
 if BUILD_MANPAGES
 all: man-page-build
 	$(DOXYGEN) Doxyfile
+
 else
-all:
+#
+# Need to make sure the man directories are in place, but empty
+all: man-page-prepare
 	$(DOXYGEN) Doxyfile
 endif # BUILD_MANPAGES
 
