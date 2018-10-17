@@ -706,22 +706,20 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
 
   s = coap_find_observer(resource, session, token);
 
+  if ( s && coap_get_log_level() >= LOG_DEBUG ) {
+    char outbuf[2 * 8 + 1] = "";
+    unsigned int i;
+    for ( i = 0; i < s->token_length; i++ )
+      snprintf( &outbuf[2 * i], 3, "%02x", s->token[i] );
+    coap_log( LOG_DEBUG, "removed observer tid %s\n", outbuf );
+  }
+
   if (resource->subscribers && s) {
     LL_DELETE(resource->subscribers, s);
     coap_session_release( session );
     if (s->query)
       coap_delete_string(s->query);
     COAP_FREE_TYPE(subscription,s);
-  }
-
-  if (s) {
-    char outbuf[2*s->token_length+1];
-    unsigned int i;
-    for (i = 0; i < s->token_length; i++) {
-      snprintf(&outbuf[2*i], 3,
-                "%02x", s->token[i]);
-    }
-    coap_log(LOG_DEBUG, "removed observer tid %s\n", outbuf);
   }
 
   return s != NULL;
