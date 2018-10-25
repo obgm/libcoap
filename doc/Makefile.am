@@ -14,6 +14,9 @@ if HAVE_DOXYGEN
 CLEANFILES = \
   doxygen_sqlite3.db
 
+EXTRA_DIST = \
+  main.md
+
 man-page-cleanup:
 	rm -f $(top_builddir)/doc/DoxygenLayout.xml
 	rm -rf $(top_builddir)/doc/man_tmp
