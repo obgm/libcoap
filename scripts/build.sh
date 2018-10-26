@@ -16,19 +16,26 @@ case "x${TLS}" in
                ;;
 esac
 
+case "x${DOCS}" in
+    xyes)      WITH_DOCS="--enable-documentation"
+               ;;
+    *)         WITH_DOCS="--disable-documentation"
+               ;;
+esac
+
 config() {
     echo "./configure $*"
     ./configure $* || cat config.log
 }
 
 case "${PLATFORM}" in
-    contiki) config "--disable-tests --disable-documentation --disable-examples $WITH_TLS" && \
+    contiki) config "--disable-tests $WITH_DOCS --disable-examples $WITH_TLS" && \
                make -C examples/contiki
              ;;
-    lwip)    config "--disable-tests --disable-documentation --disable-examples $WITH_TLS" && \
+    lwip)    config "--disable-tests $WITH_DOCS --disable-examples $WITH_TLS" && \
                make -C examples/lwip
              ;;
-    posix|*) config "$WITH_TESTS --disable-documentation --enable-examples $WITH_TLS" && \
+    posix|*) config "$WITH_TESTS $WITH_DOCS --enable-examples $WITH_TLS" && \
                make
              ;;
 esac
