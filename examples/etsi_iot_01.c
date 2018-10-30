@@ -352,7 +352,7 @@ hnd_put_test(coap_context_t  *ctx, struct coap_resource_t *resource,
 
   return;
  error:
-  warn("cannot modify resource\n");
+  coap_log(LOG_WARNING, "cannot modify resource\n");
   response->code = COAP_RESPONSE_CODE(500);
 }
 
@@ -448,7 +448,7 @@ hnd_get_separate(coap_context_t  *ctx, struct coap_resource_t *resource,
       delay = d < COAP_RESOURCE_CHECK_TIME_SEC
         ? COAP_RESOURCE_CHECK_TIME_SEC
         : d;
-      debug("set delay to %lu\n", delay);
+      coap_log(LOG_DEBUG, "set delay to %lu\n", delay);
       break;
     }
   }
@@ -474,7 +474,7 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
                            : COAP_MESSAGE_NON,
                            COAP_RESPONSE_CODE(205), 0, size);
   if (!response) {
-    debug("check_async: insufficient memory, we'll try later\n");
+    coap_log(LOG_DEBUG, "check_async: insufficient memory, we'll try later\n");
     async->appdata =
       (void *)((unsigned long)async->appdata + 15 * COAP_TICKS_PER_SECOND);
     return;
@@ -493,7 +493,7 @@ check_async(coap_context_t  *ctx, coap_tick_t now) {
   coap_add_data(response, 4, (unsigned char *)"done");
 
   if (coap_send(ctx, &async->peer, response) == COAP_INVALID_TID) {
-    debug("check_async: cannot send response for message %d\n",
+    coap_log(LOG_DEBUG, "check_async: cannot send response for message %d\n",
           response->tid);
   }
 
@@ -513,7 +513,7 @@ make_large(char *filename) {
 
   /* read from specified input file */
   if (stat(filename, &statbuf) < 0) {
-    warn("cannot stat file %s\n", filename);
+    coap_log(LOG_WARNING, "cannot stat file %s\n", filename);
     return NULL;
   }
 
@@ -523,7 +523,7 @@ make_large(char *filename) {
 
   inputfile = fopen(filename, "r");
   if ( !inputfile ) {
-    warn("cannot read file %s\n", filename);
+    coap_log(LOG_WARNING, "cannot read file %s\n", filename);
     coap_free(payload);
     return NULL;
   }

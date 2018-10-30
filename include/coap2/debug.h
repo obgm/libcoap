@@ -125,23 +125,6 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
 } while(0)
 #endif
 
-/* A set of convenience macros for common log levels. */
-/**
- * Obsoleted.
- * @deprecated Use coap_log(LOG_INFO, ...) instead.
- */
-#define info(...) coap_log(LOG_INFO, __VA_ARGS__)
-/**
- * Obsoleted.
- * @deprecated Use coap_log(LOG_WARNING, ...) instead.
- */
-#define warn(...) coap_log(LOG_WARNING, __VA_ARGS__)
-/**
- * Obsoleted.
- * @deprecated Use coap_log(LOG_DEBUG, ...) instead.
- */
-#define debug(...) coap_log(LOG_DEBUG, __VA_ARGS__)
-
 #include "pdu.h"
 
 /**

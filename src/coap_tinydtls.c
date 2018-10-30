@@ -111,7 +111,8 @@ dtls_application_data(struct dtls_context_t *dtls_context,
   get_session_addr(dtls_session, &remote_addr);
   coap_session = coap_session_get_by_peer(coap_context, &remote_addr, dtls_session->ifindex);
   if (!coap_session) {
-    debug("dropped message that was received on invalid interface\n");
+    coap_log(LOG_DEBUG,
+             "dropped message that was received on invalid interface\n");
     return -1;
   }
 
@@ -189,7 +190,7 @@ get_psk_info(struct dtls_context_t *dtls_context,
   get_session_addr(dtls_session, &remote_addr);
   coap_session = coap_session_get_by_peer(coap_context, &remote_addr, dtls_session->ifindex);
   if (!coap_session) {
-    debug("cannot get PSK, session not found\n");
+    coap_log(LOG_DEBUG, "cannot get PSK, session not found\n");
     goto error;
   }
 
@@ -274,7 +275,7 @@ coap_dtls_new_session(coap_session_t *session) {
     dtls_session_init(dtls_session);
     put_session_addr(&session->remote_addr, dtls_session);
     dtls_session->ifindex = session->ifindex;
-    debug("*** new session %p\n", (void *)dtls_session);
+    coap_log(LOG_DEBUG, "***new session %p\n", (void *)dtls_session);
   }
 
   return dtls_session;
@@ -328,7 +329,7 @@ coap_dtls_free_session(coap_session_t *coap_session) {
       dtls_reset_peer(ctx, peer);
     else
       dtls_close(ctx, (session_t *)coap_session->tls);
-    debug("*** removed session %p\n", coap_session->tls);
+    coap_log(LOG_DEBUG, "***removed session %p\n", coap_session->tls);
     coap_free_type(COAP_DTLS_SESSION, coap_session->tls);
     coap_session->tls = NULL;
   }

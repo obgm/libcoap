@@ -592,7 +592,7 @@ coap_option_check_critical(coap_context_t *ctx,
         break;
       default:
         if (coap_option_filter_get(ctx->known_options, opt_iter.type) <= 0) {
-          debug("unknown critical option %d\n", opt_iter.type);
+          coap_log(LOG_DEBUG, "unknown critical option %d\n", opt_iter.type);
           ok = 0;
 
           /* When opt_iter.type is beyond our known option range,
@@ -865,7 +865,7 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
   }
 #endif /* WITH_CONTIKI */
 
-  debug("** %s tid=%d added to retransmit queue (%ums)\n",
+  coap_log(LOG_DEBUG, "** %s: tid=%d added to retransmit queue (%ums)\n",
     coap_session_str(node->session), node->id,
     (unsigned)(node->t * 1000 / COAP_TICKS_PER_SECOND));
 
@@ -912,7 +912,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
 
   coap_queue_t *node = coap_new_node();
   if (!node) {
-    debug("coap_wait_ack: insufficient memory\n");
+    coap_log(LOG_DEBUG, "coap_wait_ack: insufficient memory\n");
     goto error;
   }
 
@@ -952,8 +952,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
       coap_retransmittimer_restart(context);
 #endif
 
-    debug("** %s tid=%d: retransmission #%d\n",
-      coap_session_str(node->session), node->id, node->retransmit_cnt);
+    coap_log(LOG_DEBUG, "** %s: tid=%d: retransmission #%d\n",
+             coap_session_str(node->session), node->id, node->retransmit_cnt);
 
     if (node->session->con_active)
       node->session->con_active--;
@@ -974,8 +974,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   /* no more retransmissions, remove node from system */
 
 #ifndef WITH_CONTIKI
-  debug("** %s tid=%d: give up after %d attempts\n",
-    coap_session_str(node->session), node->id, node->retransmit_cnt);
+  coap_log(LOG_DEBUG, "** %s: tid=%d: give up after %d attempts\n",
+           coap_session_str(node->session), node->id, node->retransmit_cnt);
 #endif
 
 #ifndef WITHOUT_OBSERVE
@@ -1075,7 +1075,8 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
   while (session->delayqueue) {
     ssize_t bytes_written;
     coap_queue_t *q = session->delayqueue;
-    debug("** %s tid=%d: transmitted after delay\n", coap_session_str(session), (int)q->pdu->tid);
+    coap_log(LOG_DEBUG, "** %s: tid=%d: transmitted after delay\n",
+             coap_session_str(session), (int)q->pdu->tid);
     assert(session->partial_write < q->pdu->used_size + q->pdu->hdr_size);
     switch (session->proto) {
       case COAP_PROTO_TCP:
@@ -1144,9 +1145,11 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       if (bytes_read == -2)
         coap_session_disconnected(session, COAP_NACK_RST);
       else
-        warn("*  %s: read error\n", coap_session_str(session));
+        coap_log(LOG_WARNING, "*  %s: read error\n",
+                 coap_session_str(session));
     } else if (bytes_read > 0) {
-      debug("*  %s: received %zd bytes\n", coap_session_str(session), bytes_read);
+      coap_log(LOG_DEBUG, "*  %s: received %zd bytes\n",
+               coap_session_str(session), bytes_read);
       session->last_rx_tx = now;
       coap_packet_set_addr(packet, &session->remote_addr, &session->local_addr);
       coap_handle_dgram_for_proto(ctx, session, packet);
@@ -1165,7 +1168,8 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       else if (session->proto == COAP_PROTO_TLS)
         bytes_read = coap_tls_read(session, buf, buf_len);
       if (bytes_read > 0) {
-        debug("*  %s: received %zd bytes\n", coap_session_str(session), bytes_read);
+        coap_log(LOG_DEBUG, "*  %s: received %zd bytes\n",
+                 coap_session_str(session), bytes_read);
         session->last_rx_tx = now;
       }
       p = buf;
@@ -1268,16 +1272,18 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
     bytes_read = ctx->network_read(&endpoint->sock, packet);
   }
   else {
-    coap_log(LOG_WARNING, "*   %s: Packet allocation failed\n", coap_endpoint_str(endpoint));
+    coap_log(LOG_WARNING, "*  %s: Packet allocation failed\n",
+             coap_endpoint_str(endpoint));
     return -1;
   }
 
   if (bytes_read < 0) {
-    warn("*  %s: read failed\n", coap_endpoint_str(endpoint));
+    coap_log(LOG_WARNING, "*  %s: read failed\n", coap_endpoint_str(endpoint));
   } else if (bytes_read > 0) {
     coap_session_t *session = coap_endpoint_get_session(endpoint, packet, now);
     if (session) {
-      debug("*  %s: received %zd bytes\n", coap_session_str(session), bytes_read);
+      coap_log(LOG_DEBUG, "*  %s: received %zd bytes\n",
+               coap_session_str(session), bytes_read);
       result = coap_handle_dgram_for_proto(ctx, session, packet);
       if (endpoint->proto == COAP_PROTO_DTLS && session->type == COAP_SESSION_TYPE_HELLO && result == 1)
         coap_endpoint_new_dtls_session(endpoint, packet, now);
@@ -1372,7 +1378,7 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
     goto error;
 
   if (!coap_pdu_parse(session->proto, msg, msg_len, pdu)) {
-    warn("discard malformed PDU\n");
+    coap_log(LOG_WARNING, "discard malformed PDU\n");
     goto error;
   }
 
@@ -1403,7 +1409,8 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_tid_t
       (*queue)->t += (*node)->t;
     }
     (*node)->next = NULL;
-    debug("** %s tid=%d: removed\n", coap_session_str(session), id);
+    coap_log(LOG_DEBUG, "** %s: tid=%d: removed\n",
+             coap_session_str(session), id);
     return 1;
   }
 
@@ -1421,7 +1428,8 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_tid_t
     }
     q->next = NULL;
     *node = q;
-    debug("** %s tid=%d: removed\n", coap_session_str(session), id);
+    coap_log(LOG_DEBUG, "** %s: tid=%d: removed\n",
+             coap_session_str(session), id);
     return 1;
   }
 
@@ -1443,7 +1451,8 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
   while (context->sendqueue && context->sendqueue->session == session) {
     q = context->sendqueue;
     context->sendqueue = q->next;
-    debug("** %s tid=%d: removed\n", coap_session_str(session), q->id);
+    coap_log(LOG_DEBUG, "** %s: tid=%d: removed\n",
+             coap_session_str(session), q->id);
     if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
       context->nack_handler(context, session, q->pdu, reason, q->id);
     coap_delete_node(q);
@@ -1458,7 +1467,8 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
   while (q) {
     if (q->session == session) {
       p->next = q->next;
-      debug("** %s tid=%d: removed\n", coap_session_str(session), q->id);
+      coap_log(LOG_DEBUG, "** %s: tid=%d: removed\n",
+               coap_session_str(session), q->id);
       if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
         context->nack_handler(context, session, q->pdu, reason, q->id);
       coap_delete_node(q);
@@ -1483,7 +1493,8 @@ coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
       context->sendqueue->pdu->token_length)) {
     q = context->sendqueue;
     context->sendqueue = q->next;
-    debug("** %s tid=%d: removed\n", coap_session_str(session), q->id);
+    coap_log(LOG_DEBUG, "** %s: tid=%d: removed\n",
+             coap_session_str(session), q->id);
     coap_delete_node(q);
   }
 
@@ -1499,7 +1510,8 @@ coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
       token_match(token, token_length,
         q->pdu->token, q->pdu->token_length)) {
       p->next = q->next;
-      debug("** %s tid=%d: removed\n", coap_session_str(session), q->id);
+      coap_log(LOG_DEBUG, "** %s: tid=%d: removed\n",
+               coap_session_str(session), q->id);
       coap_delete_node(q);
       q = p->next;
     } else {
@@ -1588,7 +1600,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
     /* copy token */
     if (!coap_add_token(response, request->token_length,
       request->token)) {
-      debug("cannot add token to error response\n");
+      coap_log(LOG_DEBUG, "cannot add token to error response\n");
       coap_delete_pdu(response);
       return NULL;
     }
@@ -1622,11 +1634,11 @@ get_wkc_len(coap_context_t *context, coap_opt_t *query_filter) {
 
   if (coap_print_wellknown(context, buf, &len, UINT_MAX, query_filter)
     & COAP_PRINT_STATUS_ERROR) {
-    warn("cannot determine length of /.well-known/core\n");
+    coap_log(LOG_WARNING, "cannot determine length of /.well-known/core\n");
     return 0;
   }
 
-  debug("get_wkc_len: coap_print_wellknown() returned %zu\n", len);
+  coap_log(LOG_DEBUG, "get_wkc_len: coap_print_wellknown() returned %zu\n", len);
 
   return len;
 }
@@ -1653,12 +1665,12 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
     COAP_RESPONSE_CODE(205),
     request->tid, coap_session_max_pdu_size(session));
   if (!resp) {
-    debug("coap_wellknown_response: cannot create PDU\n");
+    coap_log(LOG_DEBUG, "coap_wellknown_response: cannot create PDU\n");
     return NULL;
   }
 
   if (!coap_add_token(resp, request->token_length, request->token)) {
-    debug("coap_wellknown_response: cannot add token\n");
+    coap_log(LOG_DEBUG, "coap_wellknown_response: cannot add token\n");
     goto error;
   }
 
@@ -1667,7 +1679,7 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
 
   /* The value of some resources is undefined and get_wkc_len will return 0.*/
   if (wkc_len == 0) {
-    debug("coap_wellknown_response: undefined resource\n");
+    coap_log(LOG_DEBUG, "coap_wellknown_response: undefined resource\n");
     /* set error code 4.00 Bad Request*/
     resp->code = COAP_RESPONSE_CODE(400);
     resp->used_size = resp->token_length;
@@ -1676,7 +1688,7 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
 
   /* check whether the request contains the Block2 option */
   if (coap_get_block(request, COAP_OPTION_BLOCK2, &block)) {
-    debug("create block\n");
+    coap_log(LOG_DEBUG, "create block\n");
     offset = block.num << (block.szx + 4);
     if (block.szx > 6) {  /* invalid, MUST lead to 4.00 Bad Request */
       resp->code = COAP_RESPONSE_CODE(400);
@@ -1694,7 +1706,7 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
    * avoid sending error responses with that option but no actual
    * content. */
   if (resp->max_size && resp->max_size <= resp->used_size + 3) {
-    debug("coap_wellknown_response: insufficient storage space\n");
+    coap_log(LOG_DEBUG, "coap_wellknown_response: insufficient storage space\n");
     goto error;
   }
 
@@ -1716,7 +1728,8 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
     block.szx = COAP_MAX_BLOCK_SZX;
     while (payloadlen < SZX_TO_BYTES(block.szx) + 6) {
       if (block.szx == 0) {
-        debug("coap_wellknown_response: message to small even for szx == 0\n");
+        coap_log(LOG_DEBUG,
+             "coap_wellknown_response: message to small even for szx == 0\n");
         goto error;
       } else {
         block.szx--;
@@ -1729,7 +1742,8 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
   /* write Block2 option if necessary */
   if (need_block2) {
     if (coap_write_block_opt(&block, COAP_OPTION_BLOCK2, resp, wkc_len) < 0) {
-      debug("coap_wellknown_response: cannot add Block2 option\n");
+      coap_log(LOG_DEBUG,
+               "coap_wellknown_response: cannot add Block2 option\n");
       goto error;
     }
   }
@@ -1739,13 +1753,13 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
         resp->max_size - resp->used_size - 1 : wkc_len;
   data = coap_add_data_after(resp, len);
   if (!data) {
-    debug( "coap_wellknown_response: coap_add_data failed\n" );
+    coap_log(LOG_DEBUG, "coap_wellknown_response: coap_add_data failed\n" );
     goto error;
   }
 
   result = coap_print_wellknown(context, data, &len, offset, query_filter);
   if ((result & COAP_PRINT_STATUS_ERROR) != 0) {
-    debug("coap_print_wellknown failed\n");
+    coap_log(LOG_DEBUG, "coap_print_wellknown failed\n");
     goto error;
   }
 
@@ -1906,10 +1920,11 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
       /* request for .well-known/core */
       if (pdu->code == COAP_REQUEST_GET) { /* GET */
-        info("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
+        coap_log(LOG_INFO, "create default response for %s\n",
+                 COAP_DEFAULT_URI_WELLKNOWN);
         response = coap_wellknown_response(context, session, pdu);
       } else {
-        debug("method not allowed for .well-known/core\n");
+        coap_log(LOG_DEBUG, "method not allowed for .well-known/core\n");
         response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(405),
           opt_filter);
       }
@@ -1948,7 +1963,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     } else { /* request for any another resource, return 4.04 */
 
       coap_log(LOG_DEBUG, "request for unknown resource '%*.*s', return 4.04\n",
-        (int)uri_path->length, (int)uri_path->length, uri_path->s);
+               (int)uri_path->length, (int)uri_path->length, uri_path->s);
       response =
         coap_new_error_response(pdu, COAP_RESPONSE_CODE(404),
           opt_filter);
@@ -1957,7 +1972,8 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     if (!resource) {
       if (response && (no_response(pdu, response) != RESPONSE_DROP)) {
         if (coap_send(session, response) == COAP_INVALID_TID)
-          warn("cannot send response for transaction %u\n", pdu->tid);
+          coap_log(LOG_WARNING, "cannot send response for transaction %u\n",
+                   pdu->tid);
       } else {
         coap_delete_pdu(response);
       }
@@ -1983,8 +1999,8 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     coap_string_t *query = coap_get_query(pdu);
     int owns_query = 1;
      coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
-      (int)resource->uri_path->length, (int)resource->uri_path->length,
-      resource->uri_path->s);
+              (int)resource->uri_path->length, (int)resource->uri_path->length,
+              resource->uri_path->s);
     response = coap_pdu_init(pdu->type == COAP_MESSAGE_CON
       ? COAP_MESSAGE_ACK
       : COAP_MESSAGE_NON,
@@ -2054,7 +2070,8 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
             && !coap_mcast_interface(&node->local_if)))) {
 
           if (coap_send(session, response) == COAP_INVALID_TID)
-            debug("cannot send response for message %d\n", pdu->tid);
+            coap_log(LOG_DEBUG, "cannot send response for message %d\n",
+                     pdu->tid);
         } else {
           coap_delete_pdu(response);
         }
@@ -2063,21 +2080,23 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       }
       response = NULL;
     } else {
-      warn("cannot generate response\r\n");
+      coap_log(LOG_WARNING, "cannot generate response\r\n");
     }
   } else {
     if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
       /* request for .well-known/core */
-      debug("create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN);
+      coap_log(LOG_DEBUG, "create default response for %s\n",
+               COAP_DEFAULT_URI_WELLKNOWN);
       response = coap_wellknown_response(context, session, pdu);
-      debug("have wellknown response %p\n", (void *)response);
+      coap_log(LOG_DEBUG, "have wellknown response %p\n", (void *)response);
     } else
       response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(405),
         opt_filter);
 
     if (response && (no_response(pdu, response) != RESPONSE_DROP)) {
       if (coap_send(session, response) == COAP_INVALID_TID)
-        debug("cannot send response for transaction %d\n", pdu->tid);
+        coap_log(LOG_DEBUG, "cannot send response for transaction %d\n",
+                 pdu->tid);
     } else {
       coap_delete_pdu(response);
     }
@@ -2162,7 +2181,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     unsigned char addr[INET6_ADDRSTRLEN+8], localaddr[INET6_ADDRSTRLEN+8];
     if (coap_print_addr(remote, addr, INET6_ADDRSTRLEN+8) &&
         coap_print_addr(&packet->dst, localaddr, INET6_ADDRSTRLEN+8) )
-      debug("** received %d bytes from %s on interface %s:\n",
+      coap_log(LOG_DEBUG, "** received %d bytes from %s on interface %s:\n",
             (int)msg_len, addr, localaddr);
 
             */
@@ -2235,10 +2254,11 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
           coap_new_error_response(pdu, COAP_RESPONSE_CODE(402), opt_filter);
 
         if (!response) {
-          warn("coap_dispatch: cannot create error response\n");
+          coap_log(LOG_WARNING,
+                   "coap_dispatch: cannot create error response\n");
         } else {
           if (coap_send(session, response) == COAP_INVALID_TID)
-            warn("coap_dispatch: error sending response\n");
+            coap_log(LOG_WARNING, "coap_dispatch: error sending response\n");
         }
 
         goto cleanup;
@@ -2261,8 +2281,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
           pdu, pdu->tid);
       }
     }
-    debug("dropped message with invalid code (%d.%02d)\n",
-      COAP_RESPONSE_CLASS(pdu->code),
+    coap_log(LOG_DEBUG, "dropped message with invalid code (%d.%02d)\n",
+             COAP_RESPONSE_CLASS(pdu->code),
       pdu->code & 0x1f);
 
     if (!coap_is_mcast(&session->local_addr)) {
@@ -2288,7 +2308,7 @@ cleanup:
 
 int
 coap_handle_event(coap_context_t *context, coap_event_t event, coap_session_t *session) {
-  coap_log(LOG_DEBUG, "*** EVENT: 0x%04x\n", event);
+  coap_log(LOG_DEBUG, "***EVENT: 0x%04x\n", event);
 
   if (context->handle_event) {
     return context->handle_event(context, event, session);
@@ -2357,7 +2377,7 @@ PROCESS_THREAD(coap_retransmit_process, ev, data) {
 
   PROCESS_BEGIN();
 
-  debug("Started retransmit process\r\n");
+  coap_log(LOG_DEBUG, "Started retransmit process\n");
 
   while (1) {
     PROCESS_YIELD();

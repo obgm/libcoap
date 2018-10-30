@@ -79,7 +79,7 @@ coap_set_log_level(coap_log_t level) {
 
 /* this array has the same order as the type log_t */
 static const char *loglevels[] = {
-  "EMRG", "ALRT", "CRIT", "ERR", "WARN", "NOTE", "INFO", "DEBG"
+  "EMRG", "ALRT", "CRIT", "ERR ", "WARN", "NOTE", "INFO", "DEBG"
 };
 
 #ifdef HAVE_TIME_H

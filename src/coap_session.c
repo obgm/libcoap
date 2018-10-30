@@ -26,7 +26,7 @@ void
 coap_session_set_max_retransmit (coap_session_t *session, unsigned int value) {
   if (value > 0)
     session->max_retransmit = value;
-  coap_log(LOG_DEBUG, "*** %s: session max_retransmit set to %d\n",
+  coap_log(LOG_DEBUG, "***%s: session max_retransmit set to %d\n",
            coap_session_str(session), session->max_retransmit);
   return;
 }
@@ -35,7 +35,7 @@ void
 coap_session_set_ack_timeout (coap_session_t *session, coap_fixed_point_t value) {
   if (value.integer_part > 0 && value.fractional_part < 1000)
     session->ack_timeout = value;
-  coap_log(LOG_DEBUG, "*** %s: session ack_timeout set to %d.%03d\n",
+  coap_log(LOG_DEBUG, "***%s: session ack_timeout set to %d.%03d\n",
            coap_session_str(session), session->ack_timeout.integer_part,
            session->ack_timeout.fractional_part);
   return;
@@ -46,7 +46,7 @@ coap_session_set_ack_random_factor (coap_session_t *session,
                                     coap_fixed_point_t value) {
   if (value.integer_part > 0 && value.fractional_part < 1000)
     session->ack_random_factor = value;
-  coap_log(LOG_DEBUG, "*** %s: session ack_random_factor set to %d.%03d\n",
+  coap_log(LOG_DEBUG, "***%s: session ack_random_factor set to %d.%03d\n",
            coap_session_str(session), session->ack_random_factor.integer_part,
            session->ack_random_factor.fractional_part);
   return;
@@ -178,7 +178,7 @@ void coap_session_free(coap_session_t *session) {
     coap_delete_node(q);
   }
 
-  debug("*** %s: session closed\n", coap_session_str(session));
+  coap_log(LOG_DEBUG, "***%s: session closed\n", coap_session_str(session));
 
   coap_free_type(COAP_SESSION, session);
 }
@@ -224,9 +224,11 @@ ssize_t coap_session_send(coap_session_t *session, const uint8_t *data, size_t d
   bytes_written = coap_socket_send(sock, session, data, datalen);
   if (bytes_written == (ssize_t)datalen) {
     coap_ticks(&session->last_rx_tx);
-    debug("*  %s: sent %zd bytes\n", coap_session_str(session), datalen);
+    coap_log(LOG_DEBUG, "*  %s: sent %zd bytes\n",
+             coap_session_str(session), datalen);
   } else {
-    debug("*  %s: failed to send %zd bytes\n", coap_session_str(session), datalen);
+    coap_log(LOG_DEBUG, "*  %s: failed to send %zd bytes\n",
+             coap_session_str(session), datalen);
   }
   return bytes_written;
 }
@@ -235,9 +237,11 @@ ssize_t coap_session_write(coap_session_t *session, const uint8_t *data, size_t 
   ssize_t bytes_written = coap_socket_write(&session->sock, data, datalen);
   if (bytes_written > 0) {
     coap_ticks(&session->last_rx_tx);
-    debug("*  %s: sent %zd bytes\n", coap_session_str(session), datalen);
+    coap_log(LOG_DEBUG, "*  %s: sent %zd bytes\n",
+             coap_session_str(session), datalen);
   } else if (bytes_written < 0) {
-    debug( "*  %s: failed to send %zd bytes\n", coap_session_str(session), datalen );
+    coap_log(LOG_DEBUG,  "*   %s: failed to send %zd bytes\n",
+             coap_session_str(session), datalen );
   }
   return bytes_written;
 }
@@ -258,7 +262,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     /* Check that the same tid is not getting re-used in violation of RFC7252 */
     LL_FOREACH(session->delayqueue, q) {
       if (q->id == pdu->tid) {
-        coap_log(LOG_ERR, "**  %s tid=%d: already in-use - dropped\n", coap_session_str(session), pdu->tid);
+        coap_log(LOG_ERR, "**  %s: tid=%d: already in-use - dropped\n", coap_session_str(session), pdu->tid);
         return COAP_INVALID_TID;
       }
     }
@@ -275,7 +279,8 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     }
   }
   LL_APPEND(session->delayqueue, node);
-  debug("** %s tid=%d: delayed\n", coap_session_str(session), node->id);
+  coap_log(LOG_DEBUG, "** %s: tid=%d: delayed\n",
+           coap_session_str(session), node->id);
   return COAP_PDU_DELAYED;
 }
 
@@ -283,7 +288,7 @@ void coap_session_send_csm(coap_session_t *session) {
   coap_pdu_t *pdu;
   uint8_t buf[4];
   assert(COAP_PROTO_RELIABLE(session->proto));
-  debug("*** %s: sending CSM\n", coap_session_str(session));
+  coap_log(LOG_DEBUG, "***%s: sending CSM\n", coap_session_str(session));
   session->state = COAP_SESSION_STATE_CSM;
   session->partial_write = 0;
   if (session->mtu == 0)
@@ -317,7 +322,8 @@ coap_tid_t coap_session_send_ping(coap_session_t *session) {
 
 void coap_session_connected(coap_session_t *session) {
   if (session->state != COAP_SESSION_STATE_ESTABLISHED) {
-    coap_log(LOG_DEBUG, "*** %s: session connected\n", coap_session_str(session));
+    coap_log(LOG_DEBUG, "***%s: session connected\n",
+             coap_session_str(session));
     if (session->state == COAP_SESSION_STATE_CSM)
       coap_handle_event(session->context, COAP_EVENT_SESSION_CONNECTED, session);
   }
@@ -345,7 +351,7 @@ void coap_session_connected(coap_session_t *session) {
     session->delayqueue = q->next;
     q->next = NULL;
 
-    coap_log(LOG_DEBUG, "**  %s: tid=%d: transmitted after delay\n",
+    coap_log(LOG_DEBUG, "** %s: tid=%d: transmitted after delay\n",
              coap_session_str(session), (int)q->pdu->tid);
     bytes_written = coap_session_send_pdu(session, q->pdu);
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
@@ -375,8 +381,8 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
   (void)reason;
   coap_session_state_t state = session->state;
 
-  coap_log(LOG_DEBUG, "*** %s: session disconnected (reason %d)\n",
-                      coap_session_str(session), reason);
+  coap_log(LOG_DEBUG, "***%s: session disconnected (reason %d)\n",
+           coap_session_str(session), reason);
 #ifndef WITHOUT_OBSERVE
   coap_delete_observers( session->context, session );
 #endif
@@ -401,8 +407,8 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     coap_queue_t *q = session->delayqueue;
     session->delayqueue = q->next;
     q->next = NULL;
-    debug("** %s tid=%d: not transmitted after delay\n",
-      coap_session_str(session), q->id);
+    coap_log(LOG_DEBUG, "** %s: tid=%d: not transmitted after delay\n",
+             coap_session_str(session), q->id);
     if (q->pdu->type==COAP_MESSAGE_CON
       && COAP_PROTO_NOT_RELIABLE(session->proto)
       && reason != COAP_NACK_RST)
@@ -475,7 +481,8 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
       if (endpoint->proto == COAP_PROTO_UDP)
         session->state = COAP_SESSION_STATE_ESTABLISHED;
       LL_PREPEND(endpoint->sessions, session);
-      debug("*** %s: new incoming session\n", coap_session_str(session));
+      coap_log(LOG_DEBUG, "***%s: new incoming session\n",
+               coap_session_str(session));
     }
   }
 
@@ -495,7 +502,8 @@ coap_endpoint_new_dtls_session(coap_endpoint_t *endpoint,
     if (session->tls) {
       session->state = COAP_SESSION_STATE_HANDSHAKE;
       LL_PREPEND(endpoint->sessions, session);
-      debug("*** %s: new incoming session\n", coap_session_str(session));
+      coap_log(LOG_DEBUG, "***%s: new incoming session\n",
+               coap_session_str(session));
     } else {
       coap_session_free(session);
       session = NULL;
@@ -628,7 +636,8 @@ coap_session_t *coap_new_client_session(
 ) {
   coap_session_t *session = coap_session_create_client(ctx, local_if, server, proto);
   if (session) {
-    debug("*** %s: new outgoing session\n", coap_session_str(session));
+    coap_log(LOG_DEBUG, "***%s: new outgoing session\n",
+             coap_session_str(session));
     session = coap_session_connect(session);
   }
   return session;
@@ -689,7 +698,8 @@ coap_session_t *coap_new_client_session_psk(
       return NULL;
     }
   }
-  debug("*** %s: new outgoing session\n", coap_session_str(session));
+  coap_log(LOG_DEBUG, "***%s: new outgoing session\n",
+           coap_session_str(session));
   return coap_session_connect(session);
 }
 
@@ -707,7 +717,8 @@ coap_session_t *coap_new_client_session_pki(
       return NULL;
     } else {
       if (setup_data->version != COAP_DTLS_PKI_SETUP_VERSION) {
-        coap_log(LOG_ERR, "coap_new_client_session_pki: Wrong version of setup_data\n");
+        coap_log(LOG_ERR,
+                 "coap_new_client_session_pki: Wrong version of setup_data\n");
         return NULL;
       }
     }
@@ -726,7 +737,8 @@ coap_session_t *coap_new_client_session_pki(
       return NULL;
     }
   }
-  coap_log(LOG_DEBUG, "*** %s: new outgoing session\n", coap_session_str(session));
+  coap_log(LOG_DEBUG, "***%s: new outgoing session\n",
+           coap_session_str(session));
   return coap_session_connect(session);
 }
 
@@ -748,7 +760,8 @@ coap_session_t *coap_new_server_session(
                        | COAP_SOCKET_WANT_READ;
   LL_PREPEND(ep->sessions, session);
   if (session) {
-    debug("*** %s: new incoming session\n", coap_session_str(session));
+    coap_log(LOG_DEBUG, "***%s: new incoming session\n",
+             coap_session_str(session));
     session = coap_session_accept(session);
   }
   return session;
@@ -779,7 +792,9 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
 
   if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
     if (!coap_dtls_context_check_keys_enabled(context)) {
-      coap_log(LOG_INFO, "coap_new_endpoint: one of coap_context_set_psk() or coap_context_set_pki() not called\n");
+      coap_log(LOG_INFO,
+               "coap_new_endpoint: one of coap_context_set_psk() or "
+               "coap_context_set_pki() not called\n");
       goto error;
     }
   }
@@ -815,10 +830,10 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     unsigned char addr_str[INET6_ADDRSTRLEN + 8];
 
     if (coap_print_addr(&ep->bind_addr, addr_str, INET6_ADDRSTRLEN + 8)) {
-      debug("created %s endpoint %s\n",
-          ep->proto == COAP_PROTO_TLS ? "TLS"
-        : ep->proto == COAP_PROTO_TCP ? "TCP"
-        : ep->proto == COAP_PROTO_DTLS ? "DTLS " : "UDP",
+      coap_log(LOG_DEBUG, "created %s endpoint %s\n",
+          ep->proto == COAP_PROTO_TLS ? "TLS "
+        : ep->proto == COAP_PROTO_TCP ? "TCP "
+        : ep->proto == COAP_PROTO_DTLS ? "DTLS" : "UDP ",
         addr_str);
     }
   }
@@ -908,16 +923,16 @@ const char *coap_session_str(const coap_session_t *session) {
     p += snprintf(p, end - p, " (if%d)", session->ifindex);
   if (p + 6 < end) {
     if (session->proto == COAP_PROTO_UDP) {
-      strcpy(p, " UDP");
+      strcpy(p, " UDP ");
       p += 4;
     } else if (session->proto == COAP_PROTO_DTLS) {
       strcpy(p, " DTLS");
       p += 5;
     } else if (session->proto == COAP_PROTO_TCP) {
-      strcpy(p, " TCP");
+      strcpy(p, " TCP ");
       p += 4;
     } else if (session->proto == COAP_PROTO_TLS) {
-      strcpy(p, " TLS");
+      strcpy(p, " TLS ");
       p += 4;
     } else {
       strcpy(p, " NONE");

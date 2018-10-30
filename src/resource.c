@@ -462,8 +462,8 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
     if (r) {
       coap_log(LOG_WARNING,
         "coap_add_resource: Duplicate uri_path '%*.*s', old resource deleted\n",
-        (int)resource->uri_path->length, (int)resource->uri_path->length,
-        resource->uri_path->s);
+              (int)resource->uri_path->length, (int)resource->uri_path->length,
+              resource->uri_path->s);
       coap_delete_resource(context, r);
     }
     RESOURCES_ADD(context->resources, resource);
@@ -711,7 +711,7 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
     unsigned int i;
     for ( i = 0; i < s->token_length; i++ )
       snprintf( &outbuf[2 * i], 3, "%02x", s->token[i] );
-    coap_log( LOG_DEBUG, "removed observer tid %s\n", outbuf );
+    coap_log(LOG_DEBUG, "removed observer tid %s\n", outbuf);
   }
 
   if (resource->subscribers && s) {
@@ -775,14 +775,18 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       if (!response) {
         obs->dirty = 1;
         r->partiallydirty = 1;
-        debug("coap_check_notify: pdu init failed, resource stays partially dirty\n");
+        coap_log(LOG_DEBUG,
+                 "coap_check_notify: pdu init failed, resource stays "
+                 "partially dirty\n");
         continue;
       }
 
       if (!coap_add_token(response, obs->token_length, obs->token)) {
         obs->dirty = 1;
         r->partiallydirty = 1;
-        debug("coap_check_notify: cannot add token, resource stays partially dirty\n");
+        coap_log(LOG_DEBUG,
+                 "coap_check_notify: cannot add token, resource stays "
+                 "partially dirty\n");
         coap_delete_pdu(response);
         continue;
       }
@@ -812,7 +816,9 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       tid = coap_send( obs->session, response );
 
       if (COAP_INVALID_TID == tid) {
-        debug("coap_check_notify: sending failed, resource stays partially dirty\n");
+        coap_log(LOG_DEBUG,
+                 "coap_check_notify: sending failed, resource stays "
+                 "partially dirty\n");
         obs->dirty = 1;
         r->partiallydirty = 1;
       }
@@ -905,7 +911,7 @@ coap_remove_failed_observers(coap_context_t *context,
           unsigned char addr[INET6_ADDRSTRLEN+8];
 
           if (coap_print_addr(&obs->session->remote_addr, addr, INET6_ADDRSTRLEN+8))
-            debug("** removed observer %s\n", addr);
+            coap_log(LOG_DEBUG, "** removed observer %s\n", addr);
         }
 #endif
         coap_cancel_all_messages(context, obs->session,
