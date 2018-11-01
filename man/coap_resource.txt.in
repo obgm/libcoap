@@ -92,7 +92,8 @@ encoded according to the rules defined in RFC3968 Section 2.1.
 
 The *coap_resource_unknown_init*() returns a newly created _resource_ of
 type _coap_resource_t_ *. _put_handler_ is automatically added to the
-_resource_ to handle PUT requests to resources that are unknown.
+_resource_ to handle PUT requests to resources that are unknown. Additional
+handlers can be added to this resource if required.
 
 The *coap_add_resource*() function registers the given _resource_ with the
 _context_. The _resource_ must have been created by *coap_resource_init*(),
@@ -131,8 +132,7 @@ EXAMPLES
 --
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
-#define INDEX "This is a test server made with libcoap (see https://libcoap.net)\n" \
-              "Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>\n\n"
+#define INDEX "This is an example server using libcoap\n"
 
 void
 hnd_get_index(coap_context_t *ctx, coap_resource_t *resource,
@@ -348,6 +348,12 @@ init_resources(coap_context_t *ctx) {
 
   /* Create a resource to handle PUTs to unknown URIs */
   r = coap_resource_unknown_init(hnd_unknown_put);
+  /*
+   * Additional handlers can be added - for example
+   *  coap_register_handler(r, COAP_REQUEST_POST, hnd_post_unknown);
+   *  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_unknown);
+   *  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_unknown);
+   */
   coap_add_resource(ctx, r);
 
 }

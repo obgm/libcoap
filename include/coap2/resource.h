@@ -147,10 +147,22 @@ coap_resource_t *coap_resource_init(coap_str_const_t *uri_path,
 
 /**
  * Creates a new resource object for the unknown resource handler with support
- * for PUT.  Additional methods and handlers can be added to the resource
- * with coap_register_handler(), but this is not generally recommended.
- * If this resource is added multiple times to the same coap_context with
- * coap_add_resource(), the previous resource is deleted.
+ * for PUT.
+ *
+ * In the same way that additional handlers can be added to the resource
+ * created by coap_resource_init() by using coap_register_handler(), POST,
+ * GET, DELETE etc. handlers can be added to this resource. It is the
+ * responsibility of the application to manage the unknown resources by either
+ * creating new resources with coap_resource_init() (which should have a
+ * DELETE handler specified for the resource removal) or by maintaining an
+ * active resource list.
+ *
+ * Note: There can only be one unknown resource handler per context - attaching
+ *       a new one overrides the previous definition.
+ *
+ * Note: It is not possible to observe the unknown resource with a GET request
+ *       - a seperate resource needs to be reated by the PUT (or POST) handler,
+ *       and make that resource observable.
  *
  * This function returns the new coap_resource_t object.
  *
