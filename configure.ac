@@ -699,7 +699,7 @@ if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
 fi
 if test "x$with_tinydtls" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support      : "yes"])
-    AC_MSG_RESULT([         -->  OpenSSL around  : "yes" (found tinyDTLS)])
+    AC_MSG_RESULT([         -->  tinyDTLS around : "yes"])
     AC_MSG_RESULT([              TINYDTLS_CFLAGS : "$DTLS_CFLAGS"])
     AC_MSG_RESULT([              TINYDTLS_LIBS   : "$DTLS_LIBS"])
 fi
