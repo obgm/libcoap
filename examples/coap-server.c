@@ -479,12 +479,18 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
           value = NULL;
         }
       }
-      else if (offset !=
+      else if (offset >
             (resource_entry->value ? resource_entry->value->length : 0)) {
-        /* Upload is not sequential */
+        /* Upload is not sequential - block missing */
         response->code = COAP_RESPONSE_CODE(408);
         return;
       }
+      else if (offset <
+            (resource_entry->value ? resource_entry->value->length : 0)) {
+        /* Upload is not sequential - block duplicated */
+        goto just_respond;
+      }
+      /* Add in new block to end of current data */
       resource_entry->value = coap_new_string(offset + size);
       memcpy (&resource_entry->value->s[offset], data, size);
       resource_entry->value->length = offset + size;
@@ -493,6 +499,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
         coap_delete_string(value);
       }
     }
+just_respond:
     if (block1.m) {
       response->code = COAP_RESPONSE_CODE(231);
     }

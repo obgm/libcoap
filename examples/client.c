@@ -70,6 +70,8 @@ typedef unsigned char method_t;
 method_t method = 1;                    /* the method we are using in our requests */
 
 coap_block_t block = { .num = 0, .m = 0, .szx = 6 };
+uint16_t last_block1_tid = 0;
+
 
 unsigned int wait_seconds = 90;                /* default timeout in seconds */
 unsigned int wait_ms = 0;
@@ -421,7 +423,7 @@ message_handler(struct coap_context_t *ctx,
           unsigned int bytes_sent = ((block.num + 1) << (block.szx + 4));
           if (bytes_sent % (1 << (szx + 4)) == 0) {
             /* Recompute the block number of the previous packet given the new block size */
-            block.num = (bytes_sent >> (szx + 4)) - 1;
+            num = block.num = (bytes_sent >> (szx + 4)) - 1;
             block.szx = szx;
             coap_log(LOG_DEBUG,
                      "new Block1 size is %u, block number %u completed\n",
@@ -440,6 +442,19 @@ message_handler(struct coap_context_t *ctx,
           ready = 1;
           return;
         }
+        if (last_block1_tid == received->tid) {
+          /*
+           * Duplicate BLOCK1 ACK
+           *
+           * RFCs not clear here, but on a lossy connection, there could
+           * be multiple BLOCK1 ACKs, causing the client to retransmit the
+           * same block multiple times.
+           *
+           * Once a block has been ACKd, there is no need to retransmit it.
+           */
+          return;
+        }
+        last_block1_tid = received->tid;
 
         /* create pdu with request for next block */
         pdu = coap_new_request(ctx, session, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
@@ -463,7 +478,7 @@ message_handler(struct coap_context_t *ctx,
 
           /* finally add updated block option from response, clear M bit */
           /* blocknr = (blocknr & 0xfffffff7) + 0x10; */
-          block.num++;
+          block.num = num + 1;
           block.m = ((block.num+1) * (1 << (block.szx + 4)) < payload.length);
 
           coap_log(LOG_DEBUG, "send block %d\n", block.num);
