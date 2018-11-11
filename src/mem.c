@@ -129,7 +129,8 @@ coap_malloc_type(coap_memory_tag_t type, size_t size) {
 
   if (size > container->size) {
     coap_log(LOG_WARNING,
-             "coap_malloc_type: Requested memory exceeds maximum object size (type %d, size %d, max %d)\n",
+             "coap_malloc_type: Requested memory exceeds maximum object "
+             "size (type %d, size %d, max %d)\n",
              type, (int)size, container->size);
     return NULL;
   }

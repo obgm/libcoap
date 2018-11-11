@@ -350,7 +350,8 @@ static unsigned coap_dtls_psk_server_callback(SSL *ssl, const char *identity, un
   else
     identity = "";
 
-  coap_log(LOG_DEBUG, "got psk_identity: '%.*s'\n", (int)identity_len, identity);
+  coap_log(LOG_DEBUG, "got psk_identity: '%.*s'\n",
+           (int)identity_len, identity);
 
   if (session == NULL || session->context == NULL || session->context->get_server_psk == NULL)
     return 0;
@@ -372,11 +373,12 @@ static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
 
   if (where & SSL_CB_LOOP) {
     if (dtls_log_level >= LOG_DEBUG)
-      coap_log(LOG_DEBUG, "*   %s: %s:%s\n", coap_session_str(session), pstr, SSL_state_string_long(ssl));
+      coap_log(LOG_DEBUG, "*  %s: %s:%s\n",
+               coap_session_str(session), pstr, SSL_state_string_long(ssl));
   } else if (where & SSL_CB_ALERT) {
     pstr = (where & SSL_CB_READ) ? "read" : "write";
     if (dtls_log_level >= LOG_INFO)
-      coap_log(LOG_INFO, "*   %s: SSL3 alert %s:%s:%s\n",
+      coap_log(LOG_INFO, "*  %s: SSL3 alert %s:%s:%s\n",
                coap_session_str(session),
                pstr,
                SSL_alert_type_string_long(ret),
@@ -387,18 +389,24 @@ static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
     if (ret == 0) {
       if (dtls_log_level >= LOG_WARNING) {
         unsigned long e;
-        coap_log(LOG_WARNING, "*   %s: %s:failed in %s\n", coap_session_str(session), pstr, SSL_state_string_long(ssl));
+        coap_log(LOG_WARNING, "*  %s: %s:failed in %s\n",
+                 coap_session_str(session), pstr, SSL_state_string_long(ssl));
         while ((e = ERR_get_error()))
-          coap_log(LOG_WARNING, "*   %s:   %s at %s:%s\n", coap_session_str(session), ERR_reason_error_string(e), ERR_lib_error_string(e), ERR_func_error_string(e));
+          coap_log(LOG_WARNING, "*  %s:   %s at %s:%s\n",
+                   coap_session_str(session), ERR_reason_error_string(e),
+                   ERR_lib_error_string(e), ERR_func_error_string(e));
       }
     } else if (ret < 0) {
       if (dtls_log_level >= LOG_WARNING) {
         int err = SSL_get_error(ssl, ret);
         if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE && err != SSL_ERROR_WANT_CONNECT && err != SSL_ERROR_WANT_ACCEPT && err != SSL_ERROR_WANT_X509_LOOKUP) {
           long e;
-          coap_log(LOG_WARNING, "*   %s: %s:error in %s\n", coap_session_str(session), pstr, SSL_state_string_long(ssl));
+          coap_log(LOG_WARNING, "*  %s: %s:error in %s\n",
+                   coap_session_str(session), pstr, SSL_state_string_long(ssl));
           while ((e = ERR_get_error()))
-            coap_log(LOG_WARNING, "*   %s: %s at %s:%s\n", coap_session_str(session), ERR_reason_error_string(e), ERR_lib_error_string(e), ERR_func_error_string(e));
+            coap_log(LOG_WARNING, "*  %s: %s at %s:%s\n",
+                     coap_session_str(session), ERR_reason_error_string(e),
+                     ERR_lib_error_string(e), ERR_func_error_string(e));
         }
       }
     }
@@ -497,7 +505,8 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
     SSL_CTX_set_cipher_list(context->dtls.ctx, "TLSv1.2:TLSv1.0");
     if (!RAND_bytes(cookie_secret, (int)sizeof(cookie_secret))) {
       if (dtls_log_level >= LOG_WARNING)
-        coap_log(LOG_WARNING, "Insufficient entropy for random cookie generation");
+        coap_log(LOG_WARNING,
+                 "Insufficient entropy for random cookie generation");
       prng(cookie_secret, sizeof(cookie_secret));
     }
     context->dtls.cookie_hmac = HMAC_CTX_new();
@@ -601,7 +610,7 @@ map_key_type(int asn1_private_key_type
   case COAP_ASN1_PKEY_HKDF: return EVP_PKEY_HKDF;
   default:
     coap_log(LOG_WARNING,
-   "*** setup_pki: DTLS: Unknown Private Key type %d for ASN1\n",
+             "*** setup_pki: DTLS: Unknown Private Key type %d for ASN1\n",
              asn1_private_key_type);
     break;
   }
@@ -645,7 +654,7 @@ add_ca_to_cert_store(X509_STORE *st, X509 *x509)
       int r = ERR_GET_REASON(e);
       if (r != X509_R_CERT_ALREADY_IN_HASH_TABLE) {
         /* Not already added */
-        coap_log(LOG_WARNING, "*** setup_pki: (D)TLS: %s at %s:%s\n",
+        coap_log(LOG_WARNING, "***setup_pki: (D)TLS: %s at %s:%s\n",
                  ERR_reason_error_string(e),
                  ERR_lib_error_string(e),
                  ERR_func_error_string(e));
@@ -667,7 +676,8 @@ setup_pki_server(SSL_CTX *ctx,
                                         setup_data->pki_key.key.pem.public_cert,
                                         SSL_FILETYPE_PEM))) {
         coap_log(LOG_WARNING,
- "*** setup_pki: (D)TLS: %s: Unable to configure Server Certificate\n",
+                 "*** setup_pki: (D)TLS: %s: Unable to configure "
+                 "Server Certificate\n",
                  setup_data->pki_key.key.pem.public_cert);
         return 0;
       }
@@ -684,7 +694,8 @@ setup_pki_server(SSL_CTX *ctx,
                                         setup_data->pki_key.key.pem.private_key,
                                         SSL_FILETYPE_PEM))) {
         coap_log(LOG_WARNING,
- "*** setup_pki: (D)TLS: %s: Unable to configure Server Private Key\n",
+                 "*** setup_pki: (D)TLS: %s: Unable to configure "
+                 "Server Private Key\n",
                   setup_data->pki_key.key.pem.private_key);
         return 0;
       }
@@ -707,7 +718,8 @@ setup_pki_server(SSL_CTX *ctx,
         SSL_CTX_set_client_CA_list(ctx, cert_names);
       else {
         coap_log(LOG_WARNING,
- "*** setup_pki: (D)TLS: %s: Unable to configure client CA File\n",
+                 "*** setup_pki: (D)TLS: %s: Unable to configure "
+                 "client CA File\n",
                   setup_data->pki_key.key.pem.ca_file);
         return 0;
       }
@@ -738,7 +750,8 @@ setup_pki_server(SSL_CTX *ctx,
                                  setup_data->pki_key.key.asn1.public_cert_len,
                                  setup_data->pki_key.key.asn1.public_cert))) {
         coap_log(LOG_WARNING,
- "*** setup_pki: (D)TLS: %s: Unable to configure Server Certificate\n",
+                 "*** setup_pki: (D)TLS: %s: Unable to configure "
+                 "Server Certificate\n",
                  "ASN1");
         return 0;
       }
@@ -756,7 +769,8 @@ setup_pki_server(SSL_CTX *ctx,
                              setup_data->pki_key.key.asn1.private_key,
                              setup_data->pki_key.key.asn1.private_key_len))) {
         coap_log(LOG_WARNING,
- "*** setup_pki: (D)TLS: %s: Unable to configure Server Private Key\n",
+                 "*** setup_pki: (D)TLS: %s: Unable to configure "
+                 "Server Private Key\n",
                  "ASN1");
         return 0;
       }
@@ -775,7 +789,8 @@ setup_pki_server(SSL_CTX *ctx,
       X509_STORE *st;
       if (!x509 || !SSL_CTX_add_client_CA(ctx, x509)) {
         coap_log(LOG_WARNING,
- "*** setup_pki: (D)TLS: %s: Unable to configure client CA File\n",
+                 "*** setup_pki: (D)TLS: %s: Unable to configure "
+                 "client CA File\n",
                   "ASN1");
         X509_free(x509);
         return 0;
@@ -808,7 +823,8 @@ setup_pki_ssl(SSL *ssl,
                                    setup_data->pki_key.key.pem.public_cert,
                                    SSL_FILETYPE_PEM))) {
         coap_log(LOG_WARNING,
- "*** setup_pki: (D)TLS: %s: Unable to configure Client Certificate\n",
+                 "*** setup_pki: (D)TLS: %s: Unable to configure "
+                 "Client Certificate\n",
                  setup_data->pki_key.key.pem.public_cert);
         return 0;
       }
@@ -824,7 +840,8 @@ setup_pki_ssl(SSL *ssl,
                                   setup_data->pki_key.key.pem.private_key,
                                   SSL_FILETYPE_PEM))) {
         coap_log(LOG_WARNING,
- "*** setup_pki: (D)TLS: %s: Unable to configure Client Private Key\n",
+                 "*** setup_pki: (D)TLS: %s: Unable to configure "
+                 "Client Private Key\n",
                   setup_data->pki_key.key.pem.private_key);
         return 0;
       }
@@ -849,7 +866,8 @@ setup_pki_ssl(SSL *ssl,
           SSL_set_client_CA_list(ssl, cert_names);
         else {
           coap_log(LOG_WARNING,
- "*** setup_pki: (D)TLS: %s: Unable to configure client CA File\n",
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "client CA File\n",
                     setup_data->pki_key.key.pem.ca_file);
           return 0;
         }
@@ -882,7 +900,8 @@ setup_pki_ssl(SSL *ssl,
                            setup_data->pki_key.key.asn1.public_cert,
                            setup_data->pki_key.key.asn1.public_cert_len))) {
         coap_log(LOG_WARNING,
- "*** setup_pki: (D)TLS: %s: Unable to configure Client Certificate\n",
+                 "*** setup_pki: (D)TLS: %s: Unable to configure "
+                 "Client Certificate\n",
                  "ASN1");
         return 0;
       }
@@ -899,7 +918,8 @@ setup_pki_ssl(SSL *ssl,
                         setup_data->pki_key.key.asn1.private_key,
                         setup_data->pki_key.key.asn1.private_key_len))) {
         coap_log(LOG_WARNING,
- "*** setup_pki: (D)TLS: %s: Unable to configure Client Private Key\n",
+                 "*** setup_pki: (D)TLS: %s: Unable to configure "
+                 "Client Private Key\n",
                  "ASN1");
         return 0;
       }
@@ -920,7 +940,8 @@ setup_pki_ssl(SSL *ssl,
       if (isserver) {
         if (!x509 || !SSL_add_client_CA(ssl, x509)) {
           coap_log(LOG_WARNING,
- "*** setup_pki: (D)TLS: %s: Unable to configure client CA File\n",
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "client CA File\n",
                     "ASN1");
           X509_free(x509);
           return 0;
@@ -1110,7 +1131,7 @@ tls_secret_call_back(SSL *ssl,
   }
   if (!psk_requested) {
     if (session) {
-      coap_log(LOG_DEBUG, "    %s: Using PKI ciphers\n",
+      coap_log(LOG_DEBUG, "   %s: Using PKI ciphers\n",
                 coap_session_str(session));
     }
     else {
@@ -1155,7 +1176,7 @@ tls_secret_call_back(SSL *ssl,
         memcpy(secret, session->context->psk_key, session->context->psk_key_len);
         *secretlen = session->context->psk_key_len;
       }
-      coap_log(LOG_DEBUG, "    %s: Setting PSK ciphers\n",
+      coap_log(LOG_DEBUG, "   %s: Setting PSK ciphers\n",
                coap_session_str(session));
     }
     else {
@@ -1325,7 +1346,7 @@ tls_client_hello_call_back(SSL *ssl,
      * Client has requested PSK and it is supported
      */
     if (session) {
-      coap_log(LOG_DEBUG, "    %s: PSK request\n",
+      coap_log(LOG_DEBUG, "   %s: PSK request\n",
                coap_session_str(session));
     }
     else {
@@ -1431,7 +1452,7 @@ is_x509:
   }
 
   if (session) {
-    coap_log(LOG_DEBUG, "    %s: Using PKI ciphers\n",
+    coap_log(LOG_DEBUG, "   %s: Using PKI ciphers\n",
               coap_session_str(session));
   }
   else {
@@ -1505,7 +1526,8 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
 #if OPENSSL_VERSION_NUMBER < 0x10101000L
       if (SSLeay() >= 0x10101000L) {
         coap_log(LOG_WARNING,
-     "OpenSSL compiled with %lux, linked with %lux, so no certificate checking\n",
+                 "OpenSSL compiled with %lux, linked with %lux, so "
+                 "no certificate checking\n",
                  OPENSSL_VERSION_NUMBER, SSLeay());
       }
       SSL_CTX_set_tlsext_servername_arg(context->dtls.ctx, &context->setup_data);
@@ -1532,7 +1554,8 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
 #if OPENSSL_VERSION_NUMBER < 0x10101000L
       if (SSLeay() >= 0x10101000L) {
         coap_log(LOG_WARNING,
-     "OpenSSL compiled with %lux, linked with %lux, so no certificate checking\n",
+                 "OpenSSL compiled with %lux, linked with %lux, so "
+                 "no certificate checking\n",
                  OPENSSL_VERSION_NUMBER, SSLeay());
       }
       SSL_CTX_set_tlsext_servername_arg(context->tls.ctx, &context->setup_data);
@@ -1977,7 +2000,8 @@ unsigned int coap_dtls_get_overhead(coap_session_t *session) {
 
     default:
       SSL_CIPHER_description(s_ciph, cipher, sizeof(cipher));
-      coap_log(LOG_WARNING, "Unknown overhead for DTLS with cipher %s\n", cipher);
+      coap_log(LOG_WARNING, "Unknown overhead for DTLS with cipher %s\n",
+               cipher);
       ivlen = 8;
       maclen = 16;
       break;
@@ -2121,7 +2145,8 @@ ssize_t coap_tls_write(coap_session_t *session,
         session->sock.flags |= COAP_SOCKET_WANT_WRITE;
       r = 0;
     } else {
-      coap_log(LOG_WARNING, "*** %s: coap_tls_write: cannot send PDU\n", coap_session_str(session));
+      coap_log(LOG_WARNING, "***%s: coap_tls_write: cannot send PDU\n",
+               coap_session_str(session));
       if (err == SSL_ERROR_ZERO_RETURN)
         session->dtls_event = COAP_EVENT_DTLS_CLOSED;
       else if (err == SSL_ERROR_SSL)

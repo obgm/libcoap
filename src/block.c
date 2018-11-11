@@ -80,7 +80,7 @@ coap_write_block_opt(coap_block_t *block, uint16_t type,
 
   start = block->num << (block->szx + 4);
   if (data_length <= start) {
-    debug("illegal block requested\n");
+    coap_log(LOG_DEBUG, "illegal block requested\n");
     return -2;
   }
 
@@ -107,11 +107,13 @@ coap_write_block_opt(coap_block_t *block, uint16_t type,
 
       /* we need to decrease the block size */
       if (avail < 16) {         /* bad luck, this is the smallest block size */
-        debug("not enough space, even the smallest block does not fit");
+        coap_log(LOG_DEBUG,
+                 "not enough space, even the smallest block does not fit");
         return -3;
       }
       newBlockSize = coap_flsll((long long)avail) - 5;
-      debug("decrease block size for %zu to %d\n", avail, newBlockSize);
+      coap_log(LOG_DEBUG,
+               "decrease block size for %zu to %d\n", avail, newBlockSize);
       szx = block->szx;
       block->szx = newBlockSize;
       block->m = 1;

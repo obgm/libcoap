@@ -290,7 +290,7 @@ make_decoded_option(const uint8_t *s, size_t length,
   size_t written;
 
   if (!buflen) {
-    debug("make_decoded_option(): buflen is 0!\n");
+    coap_log(LOG_DEBUG, "make_decoded_option(): buflen is 0!\n");
     return -1;
   }
 
@@ -310,7 +310,7 @@ make_decoded_option(const uint8_t *s, size_t length,
   buflen -= written;
 
   if (buflen < segmentlen) {
-    debug("buffer too small for option\n");
+    coap_log(LOG_DEBUG, "buffer too small for option\n");
     return -1;
   }
 

@@ -329,7 +329,7 @@ message_handler(struct coap_context_t *ctx,
   }
 
   if (received->type == COAP_MESSAGE_RST) {
-    info("got RST\n");
+    coap_log(LOG_INFO, "got RST\n");
     return;
   }
 
@@ -1406,7 +1406,7 @@ main(int argc, char **argv) {
     if ( result >= 0 ) {
       if ( wait_ms > 0 && !wait_ms_reset ) {
         if ( (unsigned)result >= wait_ms ) {
-          info( "timeout\n" );
+          coap_log(LOG_INFO, "timeout\n");
           break;
         } else {
           wait_ms -= result;
