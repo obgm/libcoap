@@ -1127,7 +1127,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 #ifdef WITH_CONTIKI
   coap_packet_t *packet = coap_malloc_packet();
   if ( !packet )
-    return
+    return;
 #else /* WITH_CONTIKI */
   coap_packet_t s_packet;
   coap_packet_t *packet = &s_packet;
