@@ -119,7 +119,7 @@ The *coap_set_show_pdu_output*() function defines whether the output from
 *coap_log*().  _use_fprintf_ is set to 1 for stdout/stderr (the default), and
 _use_fprintf_ is set to 0 for *coap_log*().
 
-The *coap_show_pdu*() function is used to decode the _pdu_, outputing as
+The *coap_show_pdu*() function is used to decode the _pdu_, outputting as
 appropriate for logging _level_.  Where the output goes is dependent on
 *coap_set_show_pdu_output*().
 
