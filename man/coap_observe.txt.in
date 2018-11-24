@@ -328,7 +328,7 @@ coap_optlist_t **options, unsigned char *data, size_t length, int observe) {
   coap_optlist_t *opt;
   (void)context;
 
-  /* Create the pdu with the apropriate options */
+  /* Create the pdu with the appropriate options */
   pdu = coap_pdu_init(msgtype, request_code, coap_new_message_id(session),
                       coap_session_max_pdu_size(session));
   if (!pdu)

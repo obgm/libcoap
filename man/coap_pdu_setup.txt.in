@@ -244,7 +244,7 @@ unsigned char *data, size_t length, int observe) {
   int res;
   coap_optlist_t *optlist_chain = NULL;
 
-  /* Create the pdu with the apropriate options */
+  /* Create the pdu with the appropriate options */
   pdu = coap_pdu_init(msgtype, request_code, coap_new_message_id(session),
                       coap_session_max_pdu_size(session));
   if (!pdu)
