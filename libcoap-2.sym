@@ -171,11 +171,13 @@ coap_set_log_handler
 coap_set_log_level
 coap_set_show_pdu_output
 coap_show_pdu
+coap_show_tls_version
 coap_socket_strerror
 coap_split_path
 coap_split_query
 coap_split_uri
 coap_startup
+coap_string_tls_version
 coap_subscription_init
 coap_ticks
 coap_ticks_from_rt_us
