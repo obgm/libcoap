@@ -77,7 +77,7 @@ but at that point COAP_NACK_TOO_MANY_RETRIES gets raised in the nack_handler
 (if defined). Note that the sum of the seconds is 93 matching RFC7252.
 ----
 
-It should be noted that these retries are seperate from the DTLS or TLS
+It should be noted that these retries are separate from the DTLS or TLS
 encrypted session setup retry timeouts. For DTLS, the initial requesting
 packet will get sent max_retransmit times before reporting failure.
 For TLS the initial TCP connection will timeout before reporting failure.

@@ -161,7 +161,7 @@ coap_resource_t *coap_resource_init(coap_str_const_t *uri_path,
  *       a new one overrides the previous definition.
  *
  * Note: It is not possible to observe the unknown resource with a GET request
- *       - a seperate resource needs to be reated by the PUT (or POST) handler,
+ *       - a separate resource needs to be reated by the PUT (or POST) handler,
  *       and make that resource observable.
  *
  * This function returns the new coap_resource_t object.

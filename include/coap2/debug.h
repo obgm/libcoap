@@ -169,7 +169,7 @@ size_t coap_print_addr(const struct coap_address_t *address,
  * Percentage : 0% to 100%.  Use the specified probability.
  * 0% is send all packets, 100% is drop all packets.
  *
- * List: A comma seperated list of numbers or number ranges that are the
+ * List: A comma separated list of numbers or number ranges that are the
  * packets to drop.
  *
  * @param loss_level The defined loss level (percentage or list).

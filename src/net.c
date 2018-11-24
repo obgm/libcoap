@@ -1943,7 +1943,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
        *   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_unknown);
        *   coap_add_resource(ctx, r);
        *
-       * Note: It is not possible to observe the unknown_resource, a seperate
+       * Note: It is not possible to observe the unknown_resource, a separate
        *       resource must be created (by PUT or POST) which has a GET
        *       handler to be observed
        */
