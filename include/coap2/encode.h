@@ -74,7 +74,7 @@ unsigned int coap_encode_var_safe(uint8_t *buf,
 
 /**
  * @deprecated Use coap_encode_var_safe() instead.
- * Provided for backward compatability.  As @p value has a
+ * Provided for backward compatibility.  As @p value has a
  * maximum value of 0xffffffff, and buf is usually defined as an array, it
  * is unsafe to continue to use this variant if buf[] is less than buf[4].
  *

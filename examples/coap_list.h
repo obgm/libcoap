@@ -21,7 +21,7 @@
  * See 'man coap_pdu_setup' for further information.
  *
  * examples/coap_list.[ch] files will be removed in a future release
- * They are left here to support building backward compatability of old versions
+ * They are left here to support building backward compatibility of old versions
  * of coap-client
  */
 

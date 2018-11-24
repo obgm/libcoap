@@ -201,7 +201,7 @@ typedef struct coap_dtls_pki_t {
   uint8_t allow_no_crl;            /**< 1 ignore if CRL not there */
   uint8_t allow_expired_crl;       /**< 1 if expired crl is allowed */
   uint8_t reserved[6];             /**< Reserved - must be set to 0 for
-                                        future compatability */
+                                        future compatibility */
                                    /* Size of 6 chosen to align to next
                                     * parameter, so if newly defined option
                                     * it can use one of the reserverd slot so
