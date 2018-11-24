@@ -45,8 +45,9 @@ int coap_tls_is_supported(void);
  * information.
  */
 typedef struct coap_tls_version_t {
-  uint64_t version; /**< (D)TLS Library Version */
+  uint64_t version; /**< (D)TLS runtime Library Version */
   int type; /**< Library type. One of COAP_TLS_LIBRARY_* */
+  uint64_t built_version; /**< (D)TLS Built against Library Version */
 } coap_tls_version_t;
 
 /**

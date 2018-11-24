@@ -453,7 +453,23 @@ int coap_tls_is_supported(void) {
 coap_tls_version_t *
 coap_get_tls_library_version(void) {
   static coap_tls_version_t version;
-  version.version = DTLS_VERSION;
+  const char *vers = dtls_package_version();
+
+  version.version = 0;
+  if (vers) {
+    long int p1, p2 = 0, p3 = 0;
+    char* endptr;
+
+    p1 = strtol(vers, &endptr, 10);
+    if (*endptr == '.') {
+      p2 = strtol(endptr+1, &endptr, 10);
+      if (*endptr == '.') {
+        p3 = strtol(endptr+1, &endptr, 10);
+      }
+    }
+    version.version = (p1 << 16) | (p2 << 8) | p3;
+  }
+  version.built_version = version.version;
   version.type = COAP_TLS_LIBRARY_TINYDTLS;
   return &version;
 }

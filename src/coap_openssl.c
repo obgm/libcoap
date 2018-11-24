@@ -142,6 +142,7 @@ coap_tls_version_t *
 coap_get_tls_library_version(void) {
   static coap_tls_version_t version;
   version.version = SSLeay();
+  version.built_version = OPENSSL_VERSION_NUMBER;
   version.type = COAP_TLS_LIBRARY_OPENSSL;
   return &version;
 }
