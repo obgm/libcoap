@@ -65,8 +65,10 @@ man/*.7
 examples/.deps/
 examples/*.o
 examples/coap-client
+examples/coap-etsi_iot_01
 examples/coap-rd
 examples/coap-server
+examples/coap-tiny
 
 # the include/ folder
 include/coap2/coap.h
