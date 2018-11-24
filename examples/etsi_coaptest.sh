@@ -36,7 +36,7 @@ testgroups=( CORE LINK BLOCK OBS )
 testnumber=-1
 group=''
 
-source etsi_testcases.sh
+source `dirname $0`/etsi_testcases.sh
 
 function usage {
 echo "Usage:  `basename $0` [-n testnumber] [-g groupname] [-t timeout] [-P server_port] [-p client port] [-d logdir] [-v] -i interface server_address" 1>&2
