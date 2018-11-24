@@ -196,12 +196,12 @@ the sizeof(int) bytes unless you definitely know less space is required.
 The *coap_split_path*() function splits up _path_ of length _length_ and
 places the result in _buffer_ which has a size of _buflen_.  _buflen_ needs
 to be preset with the size of _buffer_ before the function call, and then
-_buflen_ is updated whith the actual size of _buffer_ used.
+_buflen_ is updated with the actual size of _buffer_ used.
 
 The *coap_split_query*() function splits up _query_ of length _length_ and
 places the result in _buffer_ which has a size of _buflen_.  _buflen_ needs
 to be preset with the size of _buffer_ before the function call, and then
-_buflen_ is updated whith the actual size of _buffer_ used.
+_buflen_ is updated with the actual size of _buffer_ used.
 
 RETURN VALUES
 -------------
