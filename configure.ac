@@ -301,7 +301,7 @@ AM_CONDITIONAL(BUILD_MANPAGES, [test "x$build_manpages" = "xyes"])
 # If the user isn't using a selection we first search for GnuTLS and fallback
 # to OpenSSL if the GnuTLS library couldn't be found.
 
-gnutls_version_required=3.2.0
+gnutls_version_required=3.3.0
 openssl_version_required=1.1.0
 
 AC_ARG_ENABLE([dtls],

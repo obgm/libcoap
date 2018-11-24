@@ -70,6 +70,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/block.c \
   src/coap_event.c \
   src/coap_hashkey.c \
+  src/coap_gnutls.c \
   src/coap_io.c \
   src/coap_notls.c \
   src/coap_openssl.c \
