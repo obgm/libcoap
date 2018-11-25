@@ -3,9 +3,16 @@ To build the libcoap libraries, you need to do the following
 Unpack the distribution package file
 Change into the top level directory of the unpackaged files
 
-Run the following commands (not for LwIP or Contiki - see below)
+TinyDTLS Only
+=============
 
-General Building
+It is possible that you may need to execute the following two commands once to
+get the TinyDTLS code into your project, so the TinyDTLS library can be used.
+
+git submodule init
+git submodule update
+
+General Building (not for LwIP or Contiki - see below)
 ================
 
 ./autogen.sh
@@ -39,6 +46,9 @@ Some examples are:-
 # With OpenSSL
 ./configure --with-openssl --enable-tests --enable-shared
 
+# With GnuTLS
+./configure --with-gnutls --enable-tests --enable-shared
+
 Note: --disable-documentation disables the building of doxygen and man page
 files.  If you want to only disable one of them, use --disable-doxygen or
 --disable-manpages.  Doxygen requires the program doxygen and man pages require
@@ -57,7 +67,7 @@ LwIP
 ./autogen.sh
 ./configure --disable-tests --disable-documentation --disable-examples --disable-dtls
 cd examples/lwip
-make 
+make
 
 Executable is ./server. See examples/lwip/README for further information
 
@@ -67,6 +77,6 @@ Contiki
 ./autogen.sh
 ./configure --disable-tests --disable-documentation --disable-examples --disable-dtls
 cd examples/contiki
-make 
+make
 
 Executable is ./server.minimal-net. See examples/contiki/README for further information
