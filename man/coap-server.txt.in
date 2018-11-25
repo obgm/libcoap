@@ -82,7 +82,8 @@ OPTIONS
    all datagrams, 0% no datagrams (debugging only).
 
 *-v* num::
-   The verbosity level to use (default: 3, maximum is 9).
+   The verbosity level to use (default: 3, maximum is 9). Above 7, there is
+   increased verbosity in GnuTLS logging.
 
 *-d* max::
    Enable support for creation of dynamic resources when doing a PUT up to a

@@ -19,8 +19,9 @@ SYNOPSIS
 
 *struct coap_dtls_pki_t*
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
-or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
+*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -37,7 +38,14 @@ as detect what is the version of the currently loaded TLS library.
 *NOTE:* If OpenSSL is being used, then the minimum supported OpenSSL library
 version is 1.1.0.
 
-Network traffic can be encrypted or un-encrypted with libcoap if there is an
+*NOTE:* If GnuTLS is being used, then the minimum GnuTLS library version is
+3.3.0.
+
+*NOTE:* If GnuTLS is going to interoperate with TinyDTLS, then a minimum
+revision of GnuTLS 3.5.5 which supports CCM algorithms is required
+by TinyDTLS as TinyDTLS currently only supports CCM.
+
+Network traffic can be un-encrypted or encrypted with libcoap if there is an
 underlying TLS library.
 
 If TLS is going to be used for encrypting the network traffic, then the TLS
@@ -53,7 +61,7 @@ will not get built until the new traffic starts, which is done by the libcoap
 library, with the session having a reference count of 1.
 
 For Clients, all the encryption information can be held at the TLS Context and
-CoAP Context levels, or at the TLS Session and CoAP Session levels.  If
+CoAP Context levels, or usually at the TLS Session and CoAP Session levels.  If
 defined at the Context level, then when Sessions are created, they will
 inherit the Context definitions, unless they have separately been defined for
 the Session level, in which case the Session version will get used.
@@ -92,24 +100,22 @@ to provide a PSK.  The Server must have a Hint defined and the Client must
 have an Identity defined.
 
 For PKI setup, if the libcoap PKI configuration options do not handle a specific
-requirement, then an application defined Callback can called to do the
-specific checks.  If Application Callback is defined, then none of the libcoap
-layer Callback checking takes place and it is the responsibility
-of the Application Callback to do all of the checks.
+requirement as defined by the available options, then an application defined
+Callback can called to do the additional specific checks.
 
-The information passed to this Application Callback will be the TLS context and
+The information passed to this Application Callback will be the
 TLS session (as well the configuration information), but the structures
 containing this information will be different as they will be based on the
 underlying TLS library type. coap_get_tls_library_version() is provided to help
 here.
 
-Whether Application Callback is defined or not, libcoap will add in the defined
-Certificate, Private Key and CA Certificate into the TLS environment.  The CA
-Certificate is also added in to the list of valid CAs for Certificate checking.
+Libcoap will add in the defined Certificate, Private Key and CA Certificate
+into the TLS environment.  The CA Certificate is also added in to the list of
+valid CAs for Certificate checking.
 
-Then either Application Callback is called or the internal libcoap Callbacks are
-called.  The internal Callbacks (if no Application Callback) will then check the
-required information as defined in the coap_dtls_pki_t described below.
+The internal Callbacks (and optionally the Application Callback) will then
+check the required information as defined in the coap_dtls_pki_t described
+below.
 
 [source, c]
 ----
@@ -144,10 +150,11 @@ typedef struct coap_dtls_pki_t {
   coap_dtls_sni_callback_t validate_sni_call_back;
   void *sni_call_back_arg;  /* Passed in to the sni call-back function */
 
-  /** Application Setup call-back definition
-   * If not NULL, then application is handling the characteristics of the TLS
-   * connection setup in the defined call-back handler.  If set, then none of
-   * the options or call-backs above are acted on. */
+  /** Addtional Security call-back handler that is invoked when libcoap has
+   * done the standerd, defined validation checks at the TLS level,
+   * If not NULL, called from within the TLS Client Hello connection
+   * setup.
+   */
   coap_dtls_security_setup_t additional_tls_setup_call_back;
 
   char* client_sni;       /* If not NULL, SNI to use in client TLS setup.
@@ -175,7 +182,7 @@ enabled.
 ----
 
 *version* is set to COAP_DTLS_PKI_SETUP_VERSION.  This will then allow support
-different for different versions of the coap_dtls_pki_t structure in the future.
+for different versions of the coap_dtls_pki_t structure in the future.
 
 *SECTION: Peer Certificate Checking*
 

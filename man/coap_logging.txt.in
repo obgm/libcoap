@@ -43,8 +43,9 @@ SYNOPSIS
 
 *const char *coap_session_str(const coap_session_t *_session_);*
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
-or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
+*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -63,28 +64,28 @@ Logging levels (*coap_log_t*) are defined by (the same as for *syslog*()), which
 are numerically incrementing in value:
 
 *LOG_EMERG*::
-Emergency level.
+Emergency level (0).
 
 *LOG_ALERT*::
-Alert level.
+Alert level (1).
 
 *LOG_CRIT*::
-Critical level.
+Critical level (2).
 
 *LOG_ERR*::
-Error level.
+Error level (3).
 
 *LOG_WARNING*::
-Warning level (the default).
+Warning level (the default) (4).
 
 *LOG_NOTICE*::
-Notice level.
+Notice level (5).
 
 *LOG_INFO*::
-Information level.
+Information level (6).
 
 *LOG_DEBUG*::
-Debug level.
+Debug level (7).
 
 The *coap_set_log_level*() function is used to set the current logging _level_
 for output by any subsequent *coap_log*() calls.  Output is only logged if the
@@ -96,7 +97,8 @@ The *coap_get_log_level*() function is used to get the current logging level.
 The *coap_dtls_set_log_level*() function is used to set the logging _level_
 for output by the DTLS library for specific DTLS information. Usually, both
 *coap_set_log_level*() and *coap_dtls_set_log_level*() would be set to the
-same _level_ value.
+same _level_ value. If the logging level is set to greater than LOG_DEBUG,
+the underlying TLS library may get more verbose in its output.
 
 The *coap_dtls_get_log_level*() function is used to get the current logging
 level for the DTLS library.

@@ -10,8 +10,8 @@ coap_handler(3)
 
 NAME
 ----
-coap_handler, coap_register_handler, coap_register_response_handler, 
-coap_register_nack_handler, coap_register_ping_handler, 
+coap_handler, coap_register_handler, coap_register_response_handler,
+coap_register_nack_handler, coap_register_ping_handler,
 coap_register_pong_handler, coap_register_event_handler
 - work with CoAP handlers
 
@@ -34,11 +34,12 @@ coap_ping_handler_t _handler_)*;
 *void coap_register_pong_handler(coap_context_t *_context_,
 coap_pong_handler_t _handler_)*;
 
-*void coap_register_event_handler(coap_context_t *_context_, 
+*void coap_register_event_handler(coap_context_t *_context_,
 coap_event_handler_t _handler_)*;
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
-or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
+*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -69,9 +70,9 @@ typedef void (*coap_method_handler_t)(coap_context_t *context,
                                       coap_pdu_t *response_pdu);
 ----
 
-The *coap_register_response_handler*() function defines a request's response 
-_handler_ for traffic associated with the _context_.  The application can use 
-this for handling any response packets, including sending a RST packet if this 
+The *coap_register_response_handler*() function defines a request's response
+_handler_ for traffic associated with the _context_.  The application can use
+this for handling any response packets, including sending a RST packet if this
 response was unexpected.  If _handler_ is NULL, then the handler is
 de-registered.
 
@@ -99,7 +100,7 @@ typedef void (*coap_nack_handler_t)(coap_context_t *context,
                                     const coap_tid_t id);
 ----
 
-The *coap_register_ping_handler*() function defines a _handler_ for tracking 
+The *coap_register_ping_handler*() function defines a _handler_ for tracking
 CoAP ping traffic associated with the _context_. If _handler_ is NULL, then
 the handler is de-registered.
 
