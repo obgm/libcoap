@@ -10,6 +10,8 @@ case "x${TLS}" in
                ;;
     xopenssl)  WITH_TLS="--with-openssl"
                ;;
+    xgnutls)   WITH_TLS="--with-gnutls"
+               ;;
     xtinydtls) WITH_TLS="--with-tinydtls --disable-shared"
                ;;
     *)         WITH_TLS="--with-gnutls"
