@@ -310,11 +310,11 @@ AC_ARG_ENABLE([dtls],
               [build_dtls="$enableval"],
               [build_dtls="yes"])
 
-#AC_ARG_WITH([gnutls],
-#            [AS_HELP_STRING([--with-gnutls],
-#                            [Use GnuTLS for DTLS functions])],
-#            [with_gnutls="$withval"],
-#            [with_gnutls="no"])
+AC_ARG_WITH([gnutls],
+            [AS_HELP_STRING([--with-gnutls],
+                            [Use GnuTLS for DTLS functions])],
+            [with_gnutls="$withval"],
+            [with_gnutls="no"])
 
 AC_ARG_WITH([openssl],
             [AS_HELP_STRING([--with-openssl],
@@ -346,11 +346,10 @@ if test "x$build_dtls" = "xyes"; then
 
     # Check for all possible usable and supported SSL crypto libraries
     # GnuTLS
-#    PKG_CHECK_MODULES([GnuTLS],
-#                      [gnutls],
-#                      [have_gnutls="yes"],
-#                      [have_gnutls="no"])
-    have_gnutls="no"
+    PKG_CHECK_MODULES([GnuTLS],
+                      [gnutls],
+                      [have_gnutls="yes"],
+                      [have_gnutls="no"])
 
     # OpenSSL
     PKG_CHECK_MODULES([OpenSSL],
@@ -362,20 +361,20 @@ if test "x$build_dtls" = "xyes"; then
     # TBD ?
 
     # The user wants to use explicit GnuTLS if '--with-gnutls' was set.
-#    if test "x$with_gnutls" = "xyes"; then
+    if test "x$with_gnutls" = "xyes"; then
         # Some more sanity checking.
-#        if test "x$have_gnutls" != "xyes"; then
-#            AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the GnuTLS library but pkg-config file 'gnutls.pc' could not be found!
-#                      Install the package(s) that contains the development files for GnuTLS,
-#                      or use '--with-openssl' or disable the DTLS support using '--disable-dtls'.])
-#        fi
-#        AC_MSG_NOTICE([The use of GnuTLS was explicit requested due configure option '--with-gnutls'!])
+        if test "x$have_gnutls" != "xyes"; then
+            AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the GnuTLS library but pkg-config file 'gnutls.pc' could not be found!
+                      Install the package(s) that contains the development files for GnuTLS,
+                      or use '--with-openssl' or disable the DTLS support using '--disable-dtls'.])
+        fi
+        AC_MSG_NOTICE([The use of GnuTLS was explicit requested due configure option '--with-gnutls'!])
 
         # check for valid GnuTLS version
-#        gnutls_version=`pkg-config --modversion gnutls`
-#        AX_CHECK_GNUTLS_VERSION
-#        have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
-#    fi
+        gnutls_version=`pkg-config --modversion gnutls`
+        AX_CHECK_GNUTLS_VERSION
+        have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+    fi
 
     # The user wants to use explicit OpenSSL if '--with-openssl was set'.
     if test "x$with_openssl" = "xyes"; then
@@ -409,17 +408,16 @@ if test "x$build_dtls" = "xyes"; then
 
     # The user hasn't requested the use of a specific cryptography library
     # we try first GnuTLS for usability ...
-#    if test "x$have_gnutls" = "xyes" -a "x$with_gnutls" = "xno" -a "x$with_tinydtls" = "xno"; then
-#        gnutls_version=`pkg-config --modversion gnutls`
-#        AX_CHECK_GNUTLS_VERSION
-#        AC_MSG_NOTICE([Using auto selected library GnuTLS for DTLS support!])
-#        with_gnutls_auto="yes"
-#        have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
-#    fi
+    if test "x$have_gnutls" = "xyes" -a "x$with_gnutls" = "xno" -a "x$with_tinydtls" = "xno"; then
+        gnutls_version=`pkg-config --modversion gnutls`
+        AX_CHECK_GNUTLS_VERSION
+        AC_MSG_NOTICE([Using auto selected library GnuTLS for DTLS support!])
+        with_gnutls_auto="yes"
+        have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+    fi
 
     # ... and if not found check OpenSSL is suitable.
-#    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xno" -a "x$with_gnutls_auto" = "x" -a "x$with_tinydtls" = "xno"; then
-    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xno" -a "x$with_tinydtls" = "xno"; then
+    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xno" -a "x$with_gnutls_auto" = "x" -a "x$with_tinydtls" = "xno"; then
         openssl_version=`pkg-config --modversion openssl`
         AX_CHECK_OPENSSL_VERSION
         AC_MSG_NOTICE([Using auto selected library OpenSSL for DTLS support!])
@@ -430,12 +428,9 @@ if test "x$build_dtls" = "xyes"; then
     # Note that tinyDTLS is used only when explicitly requested.
 
     # Giving out an error message if we haven't found at least one crypto library.
-#    if test "x$have_gnutls" = "xno" -a "x$have_openssl" = "xno" -a "x$have_tinydtls" != "xno"; then
-#        AC_MSG_ERROR([==> Option '--enable-dtls' is set but one of the needed cryptography library GnuTLS nor OpenSSL nor tinyDTLS could be found!
-#                      Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required) or OpenSSL(>= $openssl_version_required)
-    if test "x$have_openssl" = "xno" -a "x$have_tinydtls" != "xno"; then
-        AC_MSG_ERROR([==> Option '--enable-dtls' is set but none of the needed cryptography libraries OpenSSL nor tinyDTLS could be found!
-                      Install at least one of the package(s) that contains the development files for OpenSSL(>= $openssl_version_required)
+    if test "x$have_gnutls" = "xno" -a "x$have_openssl" = "xno" -a "x$have_tinydtls" != "xno"; then
+        AC_MSG_ERROR([==> Option '--enable-dtls' is set but one of the needed cryptography library GnuTLS nor OpenSSL nor tinyDTLS could be found!
+                      Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required) or OpenSSL(>= $openssl_version_required)
                       or disable the DTLS support using '--disable-dtls'.])
     fi
 
