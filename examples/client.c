@@ -523,13 +523,15 @@ message_handler(struct coap_context_t *ctx,
 static void
 usage( const char *program, const char *version) {
   const char *p;
+  char buffer[64];
 
   p = strrchr( program, '/' );
   if ( p )
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-     "(c) 2010-2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
+     "(c) 2010-2018 Olaf Bergmann <bergmann@tzi.org>\n\n"
+     "%s\n\n"
      "Usage: %s [-a addr] [-b [num,]size] [-c certfile] [-C cafile] [-e text]\n"
      "\t\t[-f file] [-k key] [-l loss] [-m method] [-o file]\n"
      "\t\t[-p port] [-r] [-s duration] [-t type]  [-u user]\n"
@@ -591,7 +593,8 @@ usage( const char *program, const char *version) {
      "\tcoap-client -m get coap://[::1]/.well-known/core\n"
      "\tcoap-client -m get -T cafe coap://[::1]/time\n"
      "\techo -n 1000 | coap-client -m put -T cafe coap://[::1]/time -f -\n"
-     ,program, version, program, wait_seconds);
+     ,program, version, coap_string_tls_version(buffer, sizeof(buffer))
+     ,program, wait_seconds);
 }
 
 typedef struct {

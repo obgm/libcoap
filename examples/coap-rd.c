@@ -552,6 +552,7 @@ init_resources(coap_context_t *ctx) {
 static void
 usage( const char *program, const char *version) {
   const char *p;
+  char buffer[64];
 
   p = strrchr( program, '/' );
   if ( p )
@@ -559,11 +560,13 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- CoRE Resource Directory implementation\n"
      "(c) 2011-2012 Olaf Bergmann <bergmann@tzi.org>\n\n"
+     "%s\n\n"
      "usage: %s [-A address] [-p port]\n\n"
      "\t-A address\tinterface address to bind to\n"
      "\t-p port\t\tlisten on specified port\n"
      "\t-v num\t\tverbosity level (default: 3)\n",
-     program, version, program );
+     program, version, coap_string_tls_version(buffer, sizeof(buffer)),
+     program);
 }
 
 static coap_context_t *

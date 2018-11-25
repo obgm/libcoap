@@ -709,6 +709,7 @@ fill_keystore(coap_context_t *ctx) {
 static void
 usage( const char *program, const char *version) {
   const char *p;
+  char buffer[64];
 
   p = strrchr( program, '/' );
   if ( p )
@@ -716,6 +717,7 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
      "(c) 2010,2011,2015-2018 Olaf Bergmann <bergmann@tzi.org>\n\n"
+     "%s\n\n"
      "Usage: %s [-A address] [-g group] [-p port] [-l loss] [-c certfile]\n"
      "\t\t[-C cafile] [-R root_cafile] [-k key] [-h hint] [-N]\n"
      "\t\t[-v num] [-d max]\n\n"
@@ -756,7 +758,8 @@ usage( const char *program, const char *version) {
      "\t-d max \t\tAllow dynamic creation of up to a total of max resources.\n"
      "\t       \t\tIf max is reached, a 4.06 code is returned until one of the\n"
      "\t       \t\tdynamic resources has been deleted\n",
-    program, version, program );
+    program, version, coap_string_tls_version(buffer, sizeof(buffer)),
+    program);
 }
 
 static coap_context_t *
