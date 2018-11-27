@@ -926,6 +926,7 @@ main(int argc, char **argv) {
   coap_log_t log_level = LOG_WARNING;
   unsigned wait_ms;
   time_t t_last = 0;
+  struct sigaction sa;
 
   clock_offset = time(NULL);
 
@@ -1001,7 +1002,12 @@ main(int argc, char **argv) {
   if (group)
     join(ctx, group);
 
-  signal(SIGINT, handle_sigint);
+  memset (&sa, 0, sizeof(sa));
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = handle_sigint;
+  sa.sa_flags = 0;
+  sigaction (SIGINT, &sa, NULL);
+  sigaction (SIGTERM, &sa, NULL);
 
   wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
 
