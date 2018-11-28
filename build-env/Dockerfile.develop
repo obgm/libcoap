@@ -11,7 +11,7 @@ RUN ./autogen.sh --clean && ./autogen.sh
 RUN ./configure --disable-documentation --enable-tests --enable-examples --with-openssl && make install clean
 
 WORKDIR /home
-RUN git clone --depth 1 https://github.com/cabo/cn-cbor.git && cd cn-cbor && ./build.sh all install
+RUN git clone --depth 1 https://github.com/cabo/cn-cbor.git && cd cn-cbor && ./build.sh all doc install
 
 # The image for development with libcoap
 FROM debian:testing-slim
