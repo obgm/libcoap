@@ -1191,7 +1191,7 @@ main(int argc, char **argv) {
   int create_uri_opts = 1;
   struct sigaction sa;
 
-  while ((opt = getopt(argc, argv, "Nra:b:c:e:f:k:m:p:s:t:o:v:A:B:C:O:P:R:T:u:U:l:K:")) != -1) {
+  while ((opt = getopt(argc, argv, "NrUa:b:c:e:f:k:m:p:s:t:o:v:A:B:C:O:P:R:T:u:l:K:")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
