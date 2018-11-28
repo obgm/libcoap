@@ -38,8 +38,9 @@ coap_fixed_point_t _value_)*;
 
 *int coap_debug_set_packet_loss(const char *_loss_level_)*;
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
-or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
+*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -132,7 +133,7 @@ To see what is happening (other than by sniffing the network traffic), the
 logging level needs to be set to LOG_DEBUG in the client by using
 coap_set_log_level(LOG_DEBUG) and coap_dtls_set_log_level(LOG_DEBUG).
 
-The client needs to be sending confirmable requests during the test. 
+The client needs to be sending confirmable requests during the test.
 
 The server can either be stopped, or if packet loss levels are set to 100% by
 using coap_debug_set_packet_loss("100%") when receiving the client requests.

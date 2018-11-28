@@ -688,6 +688,7 @@ main(int argc, char **argv) {
   char port_str[NI_MAXSERV] = "5683";
   int opt;
   coap_log_t log_level = LOG_WARNING;
+  struct sigaction sa;
 
   while ((opt = getopt(argc, argv, "A:p:v:")) != -1) {
     switch (opt) {
@@ -718,7 +719,12 @@ main(int argc, char **argv) {
 
   init_resources(ctx);
 
-  signal(SIGINT, handle_sigint);
+  memset (&sa, 0, sizeof(sa));
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = handle_sigint;
+  sa.sa_flags = 0;
+  sigaction (SIGINT, &sa, NULL);
+  sigaction (SIGTERM, &sa, NULL);
 
   while ( !quit ) {
     FD_ZERO(&readfds);

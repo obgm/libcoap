@@ -10,8 +10,8 @@ coap_resource(3)
 
 NAME
 ----
-coap_resource, coap_resource_init, coap_resource_unknown_init, 
-coap_add_resource, coap_delete_resource, coap_delete_all_resources, 
+coap_resource, coap_resource_init, coap_resource_unknown_init,
+coap_add_resource, coap_delete_resource, coap_delete_all_resources,
 coap_resource_set_mode - Work with CoAP resources
 
 SYNOPSIS
@@ -34,8 +34,9 @@ coap_resource_t _resource_);*
 
 *void coap_resource_set_mode(coap_resource_t *_resource_, int _mode_);*
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
-or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
+*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -68,9 +69,9 @@ CoAP Observe (RFC 7641) is not supported for unknown resources, so a new
 resource with GET handler must be created by the unknown resource callback
 handle matching the URI which then can be Observable.
 
-The *coap_resource_init*() function returns a newly created _resource_ of 
-type _coap_resource_t_ * .  _uri_path_ specifies the uri string path to match 
-against.  _flags_ is used to define whether the 
+The *coap_resource_init*() function returns a newly created _resource_ of
+type _coap_resource_t_ * .  _uri_path_ specifies the uri string path to match
+against.  _flags_ is used to define whether the
 _resource_ is of type Confirmable Message or Non-Confirmable Message for
 any "observe" responses.  See *coap_observe*(3).
 _flags_ can be one of the following definitions or'ed together.

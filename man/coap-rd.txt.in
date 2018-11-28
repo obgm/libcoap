@@ -34,7 +34,8 @@ OPTIONS
    The default port is 5683 if not given any other value.
 
 *-v* num::
-   The verbosity level to use (default: 3, maximum is 9).
+   The verbosity level to use (default: 3, maximum is 9). Above 7, there is
+   increased verbosity in GnuTLS logging.
 
 EXAMPLES
 --------

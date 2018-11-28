@@ -50,8 +50,9 @@ _proto_, coap_dtls_pki_t *_setup_data_);*
 
 *const char *coap_session_str(const coap_session_t *_session_);*
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
-or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
+*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION

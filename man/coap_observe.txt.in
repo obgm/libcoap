@@ -10,7 +10,7 @@ coap_observe(3)
 
 NAME
 ----
-coap_observe, coap_resource_set_get_observable, coap_resource_notify_observers, 
+coap_observe, coap_resource_set_get_observable, coap_resource_notify_observers,
 coap_resource_get_uri_path, coap_find_observer, coap_delete_observer,
 coap_delete_observers - work with CoAP observe
 
@@ -34,8 +34,9 @@ const coap_binary_t *_token_);*
 
 *void coap_delete_observers(coap_context_t *_context_, coap_session_t *_session_);*
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-openssl*
-or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
+Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
+*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -61,11 +62,11 @@ notify the client that the subscription has been removed.
 The underlying library adds in and removes "subscribers" to the resource as
 appropriate in the server side logic.
 
-Within the server application, it needs to determine that there is a change of 
-state of the resource under observation, and then cause the CoAP library 
-layer to initiate a "fake GET request" so that an observe GET response 
-gets sent back to all the clients that are observing the resource.  The 
-appropriate GET handler within the server application is called to fill in the 
+Within the server application, it needs to determine that there is a change of
+state of the resource under observation, and then cause the CoAP library
+layer to initiate a "fake GET request" so that an observe GET response
+gets sent back to all the clients that are observing the resource.  The
+appropriate GET handler within the server application is called to fill in the
 response packet with the appropriate information. This "fake GET request" is
 triggered by a call to *coap_resource_notify_observers*().
 
@@ -73,10 +74,10 @@ The call to *coap_run_once*() in the main server application i/o loop will do
 all the necessary processing of sending any outstanding "fake GET requests".
 
 Whenever the server sends a copy of the state of the "observed" resource to
-the client, it will use the same token used by the client when the client 
+the client, it will use the same token used by the client when the client
 requested the "observe".  The client will receive this observe response
-in the handler defined by *coap_register_response_handler*(3).  It is the 
-responsibility of the client application to match the supplied token and 
+in the handler defined by *coap_register_response_handler*(3).  It is the
+responsibility of the client application to match the supplied token and
 update the appropriate internal information.
 
 The *coap_resource_set_get_observable*() function enables or disables the
@@ -84,7 +85,7 @@ observable status of the _resource_ by the setting of _mode_.  If _mode_ is
 1, then the _resource_ is observable.  If _mode_ is 0, then the
 _resource_ is no longer observable.
 
-*NOTE:* It is not possible for the Unknown Resource, created by 
+*NOTE:* It is not possible for the Unknown Resource, created by
 *coap_resource_unknown_init*(3), to be observable as the Uri-Path is not known
 when libcoap creates a "fake GET request".  The Unknown Resource PUT
 handler must create a new resource and mark the resource as "observable" if
@@ -101,8 +102,8 @@ confirmable, when generally sending non-confirmable,  every 24 hours.
 libcoap handles this by sending every fifth (COAP_OBS_MAX_NON) response as a
 confirmable response for detection that the client is still responding.
 
-The *coap_resource_notify_observers*() function needs to be called whenever the 
-server application determines that there has been a change to the state of 
+The *coap_resource_notify_observers*() function needs to be called whenever the
+server application determines that there has been a change to the state of
 _resource_, possibly only matching a specific _query_ if _query_ is not NULL.
 
 The *coap_resource_get_uri_path*() function is used to obtain the UriPath of

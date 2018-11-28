@@ -109,7 +109,8 @@ OPTIONS
    This argument requires (D)TLS with PSK to be available.
 
 *-v* num::
-   The verbosity level to use (default: 3, maximum is 9).
+   The verbosity level to use (default: 3, maximum is 9). Above 7, there is
+   increased verbosity in GnuTLS logging.
 
 *-A* type::
    Accepted media type. 'type' must be either a numeric value reflecting a

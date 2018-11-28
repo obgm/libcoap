@@ -9,7 +9,7 @@
 
 #include "coap_config.h"
 
-#if !defined(HAVE_LIBTINYDTLS) && !defined(HAVE_OPENSSL)
+#if !defined(HAVE_LIBTINYDTLS) && !defined(HAVE_OPENSSL) && !defined(HAVE_LIBGNUTLS)
 
 #include "net.h"
 
@@ -175,7 +175,7 @@ ssize_t coap_tls_read(coap_session_t *session UNUSED,
 
 #undef UNUSED
 
-#else /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL */
+#else /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL && !HAVE_LIBGNUTLS */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -186,4 +186,4 @@ ssize_t coap_tls_read(coap_session_t *session UNUSED,
 static inline void dummy(void) {
 }
 
-#endif /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL */
+#endif /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL && !HAVE_LIBGNUTLS */

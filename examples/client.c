@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #ifdef _WIN32
@@ -88,6 +89,14 @@ int obs_ms_reset = 0;
 #else /* not a GCC */
 #define UNUSED_PARAM
 #endif /* GCC */
+
+static int quit = 0;
+
+/* SIGINT handler: set quit to 1 for graceful termination */
+static void
+handle_sigint(int signum UNUSED_PARAM) {
+  quit = 1;
+}
 
 static int
 append_to_output(const uint8_t *data, size_t len) {
@@ -523,13 +532,15 @@ message_handler(struct coap_context_t *ctx,
 static void
 usage( const char *program, const char *version) {
   const char *p;
+  char buffer[64];
 
   p = strrchr( program, '/' );
   if ( p )
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-     "(c) 2010-2015 Olaf Bergmann <bergmann@tzi.org>\n\n"
+     "(c) 2010-2018 Olaf Bergmann <bergmann@tzi.org>\n\n"
+     "%s\n\n"
      "Usage: %s [-a addr] [-b [num,]size] [-c certfile] [-C cafile] [-e text]\n"
      "\t\t[-f file] [-k key] [-l loss] [-m method] [-o file]\n"
      "\t\t[-p port] [-r] [-s duration] [-t type]  [-u user]\n"
@@ -591,7 +602,8 @@ usage( const char *program, const char *version) {
      "\tcoap-client -m get coap://[::1]/.well-known/core\n"
      "\tcoap-client -m get -T cafe coap://[::1]/time\n"
      "\techo -n 1000 | coap-client -m put -T cafe coap://[::1]/time -f -\n"
-     ,program, version, program, wait_seconds);
+     ,program, version, coap_string_tls_version(buffer, sizeof(buffer))
+     ,program, wait_seconds);
 }
 
 typedef struct {
@@ -1177,6 +1189,7 @@ main(int argc, char **argv) {
   unsigned char user[MAX_USER + 1], key[MAX_KEY];
   ssize_t user_length = 0, key_length = 0;
   int create_uri_opts = 1;
+  struct sigaction sa;
 
   while ((opt = getopt(argc, argv, "Nra:b:c:e:f:k:m:p:s:t:o:v:A:B:C:O:P:R:T:u:U:l:K:")) != -1) {
     switch (opt) {
@@ -1397,7 +1410,14 @@ main(int argc, char **argv) {
   wait_ms = wait_seconds * 1000;
   coap_log(LOG_DEBUG, "timeout is set to %u seconds\n", wait_seconds);
 
-  while ( !(ready && coap_can_exit(ctx)) ) {
+  memset (&sa, 0, sizeof(sa));
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = handle_sigint;
+  sa.sa_flags = 0;
+  sigaction (SIGINT, &sa, NULL);
+  sigaction (SIGTERM, &sa, NULL);
+
+  while (!quit && !(ready && coap_can_exit(ctx)) ) {
 
     result = coap_run_once( ctx, wait_ms == 0 ?
                                  obs_ms : obs_ms == 0 ?

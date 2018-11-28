@@ -11,6 +11,7 @@ services:
 env:
   - PLATFORM=posix TESTS=yes TLS=no
   - PLATFORM=posix TESTS=yes TLS=openssl
+  - PLATFORM=posix TESTS=yes TLS=gnutls
   - PLATFORM=posix TESTS=yes TLS=tinydtls
   - PLATFORM=contiki TLS=no
   - PLATFORM=lwip TLS=no

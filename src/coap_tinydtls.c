@@ -16,16 +16,20 @@
 #include "debug.h"
 #include "mem.h"
 
+/* We want TinyDTLS versions of these, not libcoap versions */
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_URL
+#undef PACKAGE_VERSION
+
 #include <tinydtls.h>
 #include <dtls.h>
+#include <dtls_debug.h>
 
 static dtls_tick_t dtls_tick_0 = 0;
 static coap_tick_t coap_tick_0 = 0;
-
- /* Prototypes from dtls_debug.h as including that header will conflict
-  * with coap_config.h. */
-void dtls_set_log_level(int);
-int dtls_get_log_level(void);
 
 int
 coap_dtls_is_supported(void) {
@@ -341,12 +345,15 @@ coap_dtls_send(coap_session_t *session,
   size_t data_len
 ) {
   int res;
+  uint8_t *data_rw;
 
   coap_log(LOG_DEBUG, "call dtls_write\n");
 
   coap_event_dtls = -1;
+  /* Need to do this to not get a compiler warning about const parameters */
+  memcpy (&data_rw, &data, sizeof(data_rw));
   res = dtls_write((struct dtls_context_t *)session->context->dtls_context,
-    (session_t *)session->tls, (uint8 *)data, data_len);
+    (session_t *)session->tls, data_rw, data_len);
 
   if (res < 0)
     coap_log(LOG_WARNING, "coap_dtls_send: cannot send PDU\n");
@@ -391,11 +398,14 @@ coap_dtls_receive(coap_session_t *session,
 ) {
   session_t *dtls_session = (session_t *)session->tls;
   int err;
+  uint8_t *data_rw;
 
   coap_event_dtls = -1;
+  /* Need to do this to not get a compiler warning about const parameters */
+  memcpy (&data_rw, &data, sizeof(data_rw));
   err = dtls_handle_message(
     (struct dtls_context_t *)session->context->dtls_context,
-    dtls_session, (uint8 *)data, (int)data_len);
+    dtls_session, data_rw, (int)data_len);
 
   if (err){
     coap_event_dtls = COAP_EVENT_DTLS_ERROR;
@@ -420,12 +430,15 @@ coap_dtls_hello(coap_session_t *session,
   session_t dtls_session;
   struct dtls_context_t *dtls_context =
     (struct dtls_context_t *)session->context->dtls_context;
+  uint8_t *data_rw;
 
   dtls_session_init(&dtls_session);
   put_session_addr(&session->remote_addr, &dtls_session);
   dtls_session.ifindex = session->ifindex;
+  /* Need to do this to not get a compiler warning about const parameters */
+  memcpy (&data_rw, &data, sizeof(data_rw));
   int res = dtls_handle_message(dtls_context, &dtls_session,
-    (uint8 *)data, (int)data_len);
+    data_rw, (int)data_len);
   if (res >= 0) {
     if (dtls_get_peer(dtls_context, &dtls_session))
       res = 1;
@@ -453,7 +466,23 @@ int coap_tls_is_supported(void) {
 coap_tls_version_t *
 coap_get_tls_library_version(void) {
   static coap_tls_version_t version;
-  version.version = DTLS_VERSION;
+  const char *vers = dtls_package_version();
+
+  version.version = 0;
+  if (vers) {
+    long int p1, p2 = 0, p3 = 0;
+    char* endptr;
+
+    p1 = strtol(vers, &endptr, 10);
+    if (*endptr == '.') {
+      p2 = strtol(endptr+1, &endptr, 10);
+      if (*endptr == '.') {
+        p3 = strtol(endptr+1, &endptr, 10);
+      }
+    }
+    version.version = (p1 << 16) | (p2 << 8) | p3;
+  }
+  version.built_version = version.version;
   version.type = COAP_TLS_LIBRARY_TINYDTLS;
   return &version;
 }
