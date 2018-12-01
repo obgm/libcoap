@@ -163,8 +163,12 @@ size_t coap_session_max_pdu_size(coap_session_t *session);
 /**
 * Creates a new client session to the designated server.
 * @param ctx The CoAP context.
-* @param local_if Address of local interface. It is recommended to use NULL to let the operating system choose a suitable local interface. If an address is specified, the port number should be zero, which means that a free port is automatically selected.
-* @param server The server's address. If the port number is zero, the default port for the protocol will be used.
+* @param local_if Address of local interface. It is recommended to use NULL to
+*                 let the operating system choose a suitable local interface.
+*                 If an address is specified, the port number should be zero,
+*                 which means that a free port is automatically selected.
+* @param server The server's address. If the port number is zero, the default
+*               port for the protocol will be used.
 * @param proto Protocol.
 *
 * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
@@ -179,10 +183,16 @@ coap_session_t *coap_new_client_session(
 /**
 * Creates a new client session to the designated server with PSK credentials
 * @param ctx The CoAP context.
-* @param local_if Address of local interface. It is recommended to use NULL to let the operating system choose a suitable local interface. If an address is specified, the port number should be zero, which means that a free port is automatically selected.
-* @param server The server's address. If the port number is zero, the default port for the protocol will be used.
+* @param local_if Address of local interface. It is recommended to use NULL to
+*                 let the operating system choose a suitable local interface.
+*                 If an address is specified, the port number should be zero,
+*                 which means that a free port is automatically selected.
+* @param server The server's address. If the port number is zero, the default
+*               port for the protocol will be used.
 * @param proto Protocol.
 * @param identity PSK client identity
+* @param identity_len PSK client identity length
+                      (does not include the trailing zero byte if a string)
 * @param key PSK shared key
 * @param key_len PSK shared key length
 *
@@ -193,7 +203,8 @@ coap_session_t *coap_new_client_session_psk(
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto,
-  const char *identity,
+  const uint8_t *identity,
+  unsigned identity_len,
   const uint8_t *key,
   unsigned key_len
 );

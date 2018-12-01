@@ -648,7 +648,8 @@ coap_session_t *coap_new_client_session_psk(
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto,
-  const char *identity,
+  const uint8_t *identity,
+  unsigned identity_len,
   const uint8_t *key,
   unsigned key_len
 ) {
@@ -657,11 +658,11 @@ coap_session_t *coap_new_client_session_psk(
   if (!session)
     return NULL;
 
-  if (identity && (strlen(identity) > 0)) {
-    size_t identity_len = strlen(identity);
-    session->psk_identity = (uint8_t*)coap_malloc(identity_len);
+  if (identity) {
+    session->psk_identity = (uint8_t*)coap_malloc(identity_len+1);
     if (session->psk_identity) {
       memcpy(session->psk_identity, identity, identity_len);
+      session->psk_identity[identity_len] = '\000';
       session->psk_identity_len = identity_len;
     } else {
       coap_log(LOG_WARNING, "Cannot store session PSK identity\n");

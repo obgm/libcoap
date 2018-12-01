@@ -1115,7 +1115,8 @@ get_session(
   const char *local_port,
   coap_proto_t proto,
   coap_address_t *dst,
-  const char *identity,
+  const uint8_t *identity,
+  unsigned identity_len,
   const uint8_t *key,
   unsigned key_len
 ) {
@@ -1161,7 +1162,7 @@ get_session(
         else if ((identity || key) &&
                  (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) ) {
           session = coap_new_client_session_psk( ctx, &bind_addr, dst, proto,
-                           identity, key, key_len );
+                           identity, identity_len, key, key_len );
         }
         else {
           session = coap_new_client_session( ctx, &bind_addr, dst, proto );
@@ -1179,7 +1180,7 @@ get_session(
     else if ((identity || key) &&
              (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) )
       session = coap_new_client_session_psk( ctx, NULL, dst, proto,
-                      identity, key, key_len );
+                      identity, identity_len, key, key_len );
     else
       session = coap_new_client_session( ctx, NULL, dst, proto );
   }
@@ -1365,7 +1366,7 @@ main(int argc, char **argv) {
         uri.scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_TLS : COAP_PROTO_TCP
       : uri.scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_DTLS : COAP_PROTO_UDP),
     &dst,
-    user_length > 0 ? (const char *)user : NULL,
+    user, (unsigned)user_length,
     key_length > 0  ? key : NULL, (unsigned)key_length
   );
 

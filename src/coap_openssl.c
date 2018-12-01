@@ -336,6 +336,7 @@ static unsigned coap_dtls_psk_client_callback(SSL *ssl, const char *hint, char *
   if (session == NULL || session->context == NULL || session->context->get_client_psk == NULL)
     return 0;
 
+  /* OpenSSL currently handles this as a zero terminated string */
   psk_len = session->context->get_client_psk(session, (const uint8_t*)hint, hint_len, (uint8_t*)identity, &identity_len, max_identity_len - 1, (uint8_t*)buf, max_len);
   if (identity_len < max_identity_len)
     identity[identity_len] = 0;

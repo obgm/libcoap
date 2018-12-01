@@ -30,7 +30,8 @@ coap_proto_t _proto_);*
 
 *coap_session_t *coap_new_client_session_psk(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_, coap_proto_t
-_proto_, const char *_identity_, const uint8_t *_key_, unsigned _key_len_);*
+_proto_, const uint8_t *_identity_, unsigned _identity_len_,
+const uint8_t *_key_, unsigned _key_len_);*
 
 *coap_session_t *coap_new_client_session_pki(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_, coap_proto_t
@@ -136,12 +137,17 @@ in the coap_dtls_pki_t structure - see *coap_encrytion*(3).
 The session will initially have a reference count of 1.
 
 The *coap_new_client_session_psk*() function, for a specific _context_, is
-used to configure the TLS context using the client _identity_, Pre-Shared Key
-_key_ with length _key_len_.  All 3 parameters must be defined, NULL is not
-valid.  An empty string is not valid for _identity_.  _key_len_ must be greater
+used to configure the TLS context using the client _identity_ with length
+_identity_len, Pre-Shared Key _key_ with length _key_len_.  All 4 parameters
+must be defined, NULL is not valid.  _key_len_ must be greater
 than 0.  This function also includes the _server_ to connect to,
 optionally the local interface _local_if_ to bind to and the CoAP protocol
 _proto_ to use.  The session will initially have a reference count of 1.
+
+*NOTE:* _identity_ can be binary (RFC 7925 "absolute" identity), but currently
+is always treated as a zero terminated string by OpenSSL or GnuTLS.
+
+*NOTE:* _identity_len_ of 0 is not supported by GnuTLS.
 
 The *coap_session_reference*() is used to increment the reference count of
 the _session_.  Incrementing the reference count by an application means that
@@ -307,7 +313,8 @@ setup_client_session_pki (struct in_addr ip_address,
 
 static coap_session_t *
 setup_client_session_psk (struct in_addr ip_address,
-                          const char *identity,
+                          const uint8_t *identity,
+                          unsigned identity_len,
                           const uint8_t *key,
                           unsigned key_len
 ) {
@@ -325,7 +332,8 @@ setup_client_session_psk (struct in_addr ip_address,
   server.addr.sin.sin_port = htons (5684);
 
   session = coap_new_client_session_psk(context, NULL, &server,
-                                        COAP_PROTO_DTLS, identity, key, key_len);
+                                        COAP_PROTO_DTLS, identity,
+                                        identity_len, key, key_len);
   if (!session) {
     coap_free_context(context);
     return NULL;

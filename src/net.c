@@ -299,7 +299,7 @@ coap_get_session_client_psk(
 ) {
   (void)hint;
   (void)hint_len;
-  if (session->psk_identity && session->psk_identity_len > 0 && session->psk_key && session->psk_key_len > 0) {
+  if (session->psk_identity && session->psk_key && session->psk_key_len > 0) {
     if (session->psk_identity_len <= max_identity_len && session->psk_key_len <= max_psk_len) {
       memcpy(identity, session->psk_identity, session->psk_identity_len);
       memcpy(psk, session->psk_key, session->psk_key_len);

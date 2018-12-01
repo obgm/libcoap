@@ -354,7 +354,7 @@ psk_client_callback(gnutls_session_t g_session,
                     char **username, gnutls_datum_t *key) {
   coap_session_t *c_session =
                   (coap_session_t *)gnutls_transport_get_ptr(g_session);
-  uint8_t identity[64];
+  uint8_t identity[128+1];
   size_t identity_len;
   uint8_t psk_key[64];
   size_t psk_len;
@@ -372,6 +372,8 @@ psk_client_callback(gnutls_session_t g_session,
                                                sizeof (identity) - 1,
                                                psk_key,
                                                sizeof(psk_key));
+
+  /* GnuTLS currently handles this as a zero terminated string */
   if (identity_len < sizeof (identity))
     identity[identity_len] = 0;
 
