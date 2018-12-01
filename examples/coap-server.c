@@ -3,7 +3,7 @@
 /* coap -- simple implementation of the Constrained Application Protocol (CoAP)
  *         as defined in RFC 7252
  *
- * Copyright (C) 2010--2018 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2018 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -723,7 +723,7 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-     "(c) 2010,2011,2015-2018 Olaf Bergmann <bergmann@tzi.org>\n\n"
+     "(c) 2010,2011,2015-2018 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
      "%s\n\n"
      "Usage: %s [-A address] [-g group] [-p port] [-l loss] [-c certfile]\n"
      "\t\t[-C cafile] [-R root_cafile] [-k key] [-h hint] [-N]\n"

@@ -2,7 +2,7 @@
 
 /* coap-client -- simple CoAP client
  *
- * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * This file is part of the CoAP library libcoap. Please see README for terms of
  * use.
@@ -554,7 +554,7 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-     "(c) 2010-2018 Olaf Bergmann <bergmann@tzi.org>\n\n"
+     "(c) 2010-2018 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
      "%s\n\n"
      "Usage: %s [-a addr] [-b [num,]size] [-c certfile] [-C cafile] [-e text]\n"
      "\t\t[-f file] [-k key] [-l loss] [-m method] [-o file]\n"
