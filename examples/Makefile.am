@@ -13,8 +13,9 @@ AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include \
             -I$(top_srcdir)/include/coap$(LIBCOAP_API_VERSION) \
             $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
 
-# etsi_iot_01 and tiny are missing
+#
 bin_PROGRAMS = coap-client coap-server coap-rd
+check_PROGRAMS = coap-etsi_iot_01 coap-tiny
 
 coap_client_SOURCES = client.c
 coap_client_LDADD =  $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
@@ -24,5 +25,11 @@ coap_server_LDADD = $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SU
 
 coap_rd_SOURCES = coap-rd.c
 coap_rd_LDADD = $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
+
+coap_etsi_iot_01_SOURCES = etsi_iot_01.c
+coap_etsi_iot_01_LDADD = $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
+
+coap_tiny_SOURCES = tiny.c
+coap_tiny_LDADD = $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
 
 endif # BUILD_EXAMPLES

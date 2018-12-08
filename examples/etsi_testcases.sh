@@ -481,8 +481,8 @@ function TD_COAP_LINK_01 {
   if [[ ! $(echo $clientoutput | grep rt) ]] ; then
     echo "no resource with attribute rt found on server"
   else
-    rt="${clientoutput##*rt=\"}"
-    rt="${rt%%\";*}"
+    rt="${clientoutput##*rt=}"
+    rt="${rt%%;*}"
   fi
   echo -e "\nOutput of client:"
   echo -e $clientoutput

@@ -38,7 +38,7 @@ case "${PLATFORM}" in
                make -C examples/lwip
              ;;
     posix|*) config "$WITH_TESTS $WITH_DOCS --enable-examples $WITH_TLS" && \
-               make
+               make && make check
              ;;
 esac
 
