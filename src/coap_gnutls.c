@@ -1652,8 +1652,12 @@ ssize_t coap_tls_read(coap_session_t *c_session,
     ret = gnutls_record_recv(g_env->g_session, data, (int)data_len);
     if (ret <= 0) {
       switch (ret) {
-      case GNUTLS_E_SUCCESS:
+      case 0:
         c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+        break;
+      case GNUTLS_E_AGAIN:
+        errno = EAGAIN;
+        ret = 0;
         break;
       default:
       coap_log(LOG_WARNING,
