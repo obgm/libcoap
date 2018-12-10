@@ -798,6 +798,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
       struct cmsghdr *cmsg;
 
       if (IN6_IS_ADDR_V4MAPPED(&session->local_addr.addr.sin6.sin6_addr)) {
+#if defined(IP_PKTINFO)
         struct in_pktinfo *pktinfo;
         mhdr.msg_control = buf;
         mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
@@ -811,6 +812,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 
         pktinfo->ipi_ifindex = session->ifindex;
         memcpy(&pktinfo->ipi_spec_dst, session->local_addr.addr.sin6.sin6_addr.s6_addr + 12, sizeof(pktinfo->ipi_spec_dst));
+#endif /* IP_PKTINFO */
       } else {
         struct in6_pktinfo *pktinfo;
         mhdr.msg_control = buf;

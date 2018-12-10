@@ -43,6 +43,10 @@ Some examples are:-
 # With TinyDTLS
 ./configure --enable-tests --disable-documentation --enable-examples --with-tinydtls --disable-shared
 
+Note: FreeBSD requires gmake instead of make when building TinyDTLS - i.e.
+gmake
+sudo gmake install
+
 # With OpenSSL
 ./configure --with-openssl --enable-tests --enable-shared
 

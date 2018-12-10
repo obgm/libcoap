@@ -157,7 +157,7 @@ t_session6(void) {
   saddr.addr.sin6.sin6_addr = in6addr_loopback;
   saddr.addr.sin6.sin6_port = htons(20000);
 
-  session = coap_new_client_session(ctx, &laddr, &saddr, COAP_PROTO_UDP);
+  session = coap_new_client_session(ctx, &saddr, &laddr, COAP_PROTO_UDP);
   CU_ASSERT_PTR_NOT_NULL(session);
   CU_ASSERT_PTR_NOT_NULL(ctx->sessions);
   CU_ASSERT(session->state == COAP_SESSION_STATE_ESTABLISHED);
