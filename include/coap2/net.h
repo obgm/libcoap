@@ -212,6 +212,7 @@ typedef struct coap_context_t {
 
   unsigned int session_timeout;    /**< Number of seconds of inactivity after which an unused session will be closed. 0 means use default. */
   unsigned int max_idle_sessions;  /**< Maximum number of simultaneous unused sessions per endpoint. 0 means no maximum. */
+  unsigned int max_handshake_sessions; /**< Maximum number of simultaneous negotating sessions per endpoint. 0 means use default. */
   unsigned int ping_timeout;           /**< Minimum inactivity time before sending a ping message. 0 means disabled. */
   unsigned int csm_timeout;           /**< Timeout for waiting for a CSM from the remote side. 0 means disabled. */
 

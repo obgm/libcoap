@@ -445,7 +445,9 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
   const coap_packet_t *packet, coap_tick_t now) {
   coap_session_t *session = NULL;
   unsigned int num_idle = 0;
+  unsigned int num_hs = 0;
   coap_session_t *oldest = NULL;
+  coap_session_t *oldest_hs = NULL;
 
   endpoint->hello.ifindex = -1;
 
@@ -457,15 +459,44 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
       session->last_rx_tx = now;
       return session;
     }
-    if (session->ref == 0 && session->delayqueue == NULL && session->type == COAP_SESSION_TYPE_SERVER) {
+    if (session->ref == 0 && session->delayqueue == NULL &&
+        session->type == COAP_SESSION_TYPE_SERVER) {
       ++num_idle;
       if (oldest==NULL || session->last_rx_tx < oldest->last_rx_tx)
         oldest = session;
+
+      if (session->state == COAP_SESSION_STATE_HANDSHAKE) {
+        ++num_hs;
+        /* See if this is a partial SSL session set up
+           which needs to be cleared down to prevent DOS */
+        if ((session->last_rx_tx + COAP_PARTIAL_SESSION_TIMEOUT_TICKS) < now) {
+          if (oldest_hs == NULL ||
+              session->last_rx_tx < oldest_hs->last_rx_tx)
+            oldest_hs = session;
+        }
+      }
     }
   }
 
-  if (endpoint->context->max_idle_sessions > 0 && num_idle >= endpoint->context->max_idle_sessions)
+  if (endpoint->context->max_idle_sessions > 0 &&
+      num_idle >= endpoint->context->max_idle_sessions) {
     coap_session_free(oldest);
+  }
+  else if (oldest_hs) {
+    coap_log(LOG_WARNING, "***%s: Incomplete session timed out\n",
+             coap_session_str(oldest_hs));
+    coap_session_free(oldest_hs);
+  }
+
+  if (num_hs > (endpoint->context->max_handshake_sessions ?
+              endpoint->context->max_handshake_sessions :
+              COAP_DEFAULT_MAX_HANDSHAKE_SESSIONS)) {
+    /* Maxed out on number of session in SSL negotiation state */
+    coap_log(LOG_DEBUG,
+             "Oustanding sessions in COAP_SESSION_STATE_HANDSHAKE too "
+             "large.  New request ignored\n");
+    return NULL;
+  }
 
   if (endpoint->proto == COAP_PROTO_DTLS) {
     session = &endpoint->hello;
