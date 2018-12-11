@@ -157,8 +157,10 @@ coap_dtls_send \
 coap_dtls_session_update_mtu \
 coap_dtls_startup \
 coap_endpoint_new_dtls_session \
+coap_mfree_endpoint \
 coap_packet_extract_pbuf \
 coap_pdu_from_pbuf \
+coap_session_mfree \
 coap_socket_accept_tcp \
 coap_socket_bind_tcp \
 coap_socket_bind_udp \

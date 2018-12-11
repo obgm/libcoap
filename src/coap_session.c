@@ -144,14 +144,9 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   return session;
 }
 
-void coap_session_free(coap_session_t *session) {
+void coap_session_mfree(coap_session_t *session) {
   coap_queue_t *q, *tmp;
 
-  if (!session)
-    return;
-  assert(session->ref == 0);
-  if (session->ref)
-    return;
   if (session->partial_pdu)
     coap_delete_pdu(session->partial_pdu);
   if (session->proto == COAP_PROTO_DTLS)
@@ -160,13 +155,6 @@ void coap_session_free(coap_session_t *session) {
     coap_tls_free_session(session);
   if (session->sock.flags != COAP_SOCKET_EMPTY)
     coap_socket_close(&session->sock);
-  if (session->endpoint) {
-    if (session->endpoint->sessions)
-      LL_DELETE(session->endpoint->sessions, session);
-  } else if (session->context) {
-    if (session->context->sessions)
-      LL_DELETE(session->context->sessions, session);
-  }
   if (session->psk_identity)
     coap_free(session->psk_identity);
   if (session->psk_key)
@@ -177,7 +165,22 @@ void coap_session_free(coap_session_t *session) {
       session->context->nack_handler(session->context, session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);
     coap_delete_node(q);
   }
+}
 
+void coap_session_free(coap_session_t *session) {
+  if (!session)
+    return;
+  assert(session->ref == 0);
+  if (session->ref)
+    return;
+  if (session->endpoint) {
+    if (session->endpoint->sessions)
+      LL_DELETE(session->endpoint->sessions, session);
+  } else if (session->context) {
+    if (session->context->sessions)
+      LL_DELETE(session->context->sessions, session);
+  }
+  coap_session_mfree(session);
   coap_log(LOG_DEBUG, "***%s: session closed\n", coap_session_str(session));
 
   coap_free_type(COAP_SESSION, session);

@@ -368,6 +368,7 @@ coap_session_t *coap_session_get_by_peer(struct coap_context_t *ctx,
   const struct coap_address_t *remote_addr, int ifindex);
 
 void coap_session_free(coap_session_t *session);
+void coap_session_mfree(coap_session_t *session);
 
  /**
   * @defgroup cc Rate Control
