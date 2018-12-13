@@ -812,6 +812,16 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 
         pktinfo->ipi_ifindex = session->ifindex;
         memcpy(&pktinfo->ipi_spec_dst, session->local_addr.addr.sin6.sin6_addr.s6_addr + 12, sizeof(pktinfo->ipi_spec_dst));
+#elif defined(IP_SENDSRCADDR)
+        mhdr.msg_control = buf;
+        mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in_addr));
+
+        cmsg = CMSG_FIRSTHDR(&mhdr);
+        cmsg->cmsg_level = IPPROTO_IP;
+        cmsg->cmsg_type = IP_SENDSRCADDR;
+        cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
+
+        memcpy(CMSG_DATA(cmsg), session->local_addr.addr.sin6.sin6_addr.s6_addr + 12, sizeof(struct in_addr));
 #endif /* IP_PKTINFO */
       } else {
         struct in6_pktinfo *pktinfo;
@@ -848,6 +858,17 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 
       pktinfo->ipi_ifindex = session->ifindex;
       memcpy(&pktinfo->ipi_spec_dst, &session->local_addr.addr.sin.sin_addr, sizeof(pktinfo->ipi_spec_dst));
+#elif defined(IP_SENDSRCADDR)
+      struct cmsghdr *cmsg;
+      mhdr.msg_control = buf;
+      mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in_addr));
+
+      cmsg = CMSG_FIRSTHDR(&mhdr);
+      cmsg->cmsg_level = IPPROTO_IP;
+      cmsg->cmsg_type = IP_SENDSRCADDR;
+      cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
+
+      memcpy(CMSG_DATA(cmsg), &session->local_addr.addr.sin.sin_addr, sizeof(struct in_addr));
 #endif /* IP_PKTINFO */
       break;
     }
