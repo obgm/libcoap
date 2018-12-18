@@ -63,6 +63,7 @@ typedef struct coap_gnutls_env_t {
   coap_ssl_t coap_ssl_data;
   /* If not set, need to do gnutls_handshake */
   int established;
+  int seen_client_hello;
 } coap_gnutls_env_t;
 
 #define IS_PSK (1 << 0)
@@ -107,7 +108,8 @@ typedef struct coap_gnutls_context_t {
 
 static int dtls_log_level = 0;
 
-static int post_client_hello_gnutls(gnutls_session_t g_session);
+static int post_client_hello_gnutls_pki(gnutls_session_t g_session);
+static int post_client_hello_gnutls_psk(gnutls_session_t g_session);
 
 /*
  * return 0 failed
@@ -726,7 +728,7 @@ fail:
  *        neg GNUTLS_E_* error code
  */
 static int
-post_client_hello_gnutls(gnutls_session_t g_session)
+post_client_hello_gnutls_pki(gnutls_session_t g_session)
 {
   coap_session_t *c_session =
                 (coap_session_t *)gnutls_transport_get_ptr(g_session);
@@ -735,6 +737,8 @@ post_client_hello_gnutls(gnutls_session_t g_session)
   coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
   int ret = GNUTLS_E_SUCCESS;
   char *name = NULL;
+
+  g_env->seen_client_hello = 1;
 
   if (g_context->setup_data.validate_sni_call_back) {
     /* DNS names (only type supported) may be at most 256 byte long */
@@ -826,6 +830,21 @@ end:
 
 fail:
   return ret;
+}
+
+/*
+ * return 0   Success (GNUTLS_E_SUCCESS)
+ *        neg GNUTLS_E_* error code
+ */
+static int
+post_client_hello_gnutls_psk(gnutls_session_t g_session)
+{
+  coap_session_t *c_session =
+                (coap_session_t *)gnutls_transport_get_ptr(g_session);
+  coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
+
+  g_env->seen_client_hello = 1;
+  return GNUTLS_E_SUCCESS;
 }
 
 /*
@@ -945,6 +964,10 @@ setup_server_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
             "gnutls_psk_allocate_server_credentials");
     gnutls_psk_set_server_credentials_function(g_env->psk_sv_credentials,
                                                       psk_server_callback);
+
+    gnutls_handshake_set_post_client_hello_function(g_env->g_session,
+                                                 post_client_hello_gnutls_psk);
+
     G_CHECK(gnutls_credentials_set(g_env->g_session,
                                    GNUTLS_CRD_PSK,
                                    g_env->psk_sv_credentials),
@@ -966,7 +989,7 @@ setup_server_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
     }
 
     gnutls_handshake_set_post_client_hello_function(g_env->g_session,
-                                                    post_client_hello_gnutls);
+                                                 post_client_hello_gnutls_pki);
 
     G_CHECK(gnutls_credentials_set(g_env->g_session, GNUTLS_CRD_CERTIFICATE,
                                    g_env->pki_credentials),
@@ -1152,6 +1175,7 @@ void *coap_dtls_new_server_session(coap_session_t *c_session) {
   coap_gnutls_env_t *g_env =
          (coap_gnutls_env_t *)c_session->endpoint->hello.tls;
 
+  gnutls_transport_set_ptr(g_env->g_session, c_session);
   /* For the next one */
   c_session->endpoint->hello.tls = NULL;
 
@@ -1172,7 +1196,7 @@ static void log_last_alert(gnutls_session_t g_session) {
  */
 static int
 do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
-  int ret = -1;
+  int ret;
 
   ret = gnutls_handshake(g_env->g_session);
   switch (ret) {
@@ -1193,10 +1217,12 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
   case GNUTLS_E_INSUFFICIENT_CREDENTIALS:
     coap_log(LOG_WARNING,
              "Insufficient credentials provided.\n");
+    ret = -1;
     break;
   case GNUTLS_E_FATAL_ALERT_RECEIVED:
     log_last_alert(g_env->g_session);
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+    ret = -1;
     break;
   case GNUTLS_E_WARNING_ALERT_RECEIVED:
     log_last_alert(g_env->g_session);
@@ -1211,16 +1237,20 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
     G_ACTION(gnutls_alert_send(g_env->g_session, GNUTLS_AL_FATAL,
                                                  GNUTLS_A_DECRYPT_ERROR));
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+    ret = -1;
     break;
   case GNUTLS_E_UNKNOWN_CIPHER_SUITE:
+  /* fall through */ 
   case GNUTLS_E_TIMEDOUT:
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+    ret = -1;
     break;
   default:
     coap_log(LOG_WARNING,
              "do_gnutls_handshake: session establish "
              "returned %d: '%s'\n",
              ret, gnutls_strerror(ret));
+    ret = -1;
     break;
   }
   return ret;
@@ -1298,10 +1328,11 @@ int coap_dtls_send(coap_session_t *c_session,
   }
   else {
     ret = do_gnutls_handshake(c_session, g_env);
-    ret = gnutls_handshake(g_env->g_session);
-    if (ret != 1) {
-      ret = -1;
+    if (ret == 1) {
+      /* Just connected, so send the data */
+      return coap_dtls_send(c_session, data, data_len);
     }
+    ret = -1;
   }
 
   if (c_session->dtls_event >= 0) {
@@ -1420,8 +1451,15 @@ coap_dtls_hello(coap_session_t *c_session,
       ssl_data->pdu_len = (unsigned)data_len;
       gnutls_dtls_set_data_mtu(g_env->g_session, c_session->mtu);
       ret = do_gnutls_handshake(c_session, g_env);
-      if (ret == 1)
+      if (ret == 1 || g_env->seen_client_hello) {
+        /* The test for seen_client_hello gives the ability to setup a new
+           coap_session to continue the gnutls_handshake past the client hello
+           and safely allow updating of the g_env & g_session and separately
+           letting a new session cleanly start up using endpoint->hello.
+         */
+        g_env->seen_client_hello = 0;
         return 1;
+      }
     }
     return 0;
   }
@@ -1430,8 +1468,15 @@ coap_dtls_hello(coap_session_t *c_session,
   ssl_data->pdu_len = (unsigned)data_len;
 
   ret = do_gnutls_handshake(c_session, g_env);
-  if (ret == 1)
+  if (ret == 1 || g_env->seen_client_hello) {
+    /* The test for seen_client_hello gives the ability to setup a new
+       coap_session to continue the gnutls_handshake past the client hello
+       and safely allow updating of the g_env & g_session and separately
+       letting a new session cleanly start up using endpoint->hello.
+     */
+    g_env->seen_client_hello = 0;
     return 1;
+  }
   return 0;
 }
 
