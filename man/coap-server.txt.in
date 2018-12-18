@@ -14,18 +14,22 @@ coap-server - CoAP Server based on libcoap
 
 SYNOPSIS
 --------
-*coap-server* [*-A* addr] [*-g* group] [*-p* port] [*-l* loss]
-              [*-k* key] [*-h* hint] [*-c* certfile] [*-C* cafile]
-              [*-R* root_cafile] [-N] [*-v* num] [-d max]
+*coap-server* [*-d* max] [*-g* group] [*-l* loss] [*-p* port] [*-v* num]
+              [*-A* address] [*-N*]
+              [[*-k* key] [*-h* hint]]
+              [[*-c* certfile][*-C* cafile] [*-R* root_cafile]]
 
 DESCRIPTION
 -----------
-*coap-server* is an example server for the 'Constrained Application Protocol` (RFC 7252).
+*coap-server* is an example server for the 'Constrained Application Protocol`
+(RFC 7252).
 
-OPTIONS
--------
-*-A* addr::
-   The local address of the interface which the server has to listen.
+OPTIONS - General
+-----------------
+*-d* max::
+   Enable support for creation of dynamic resources when doing a PUT up to a
+   limit of max.  If max is reached, a 4.06 code is returned until one of the
+   dynamic resources has been deleted.
 
 *-g* group::
    Join specified multicast 'group' on startup.
@@ -36,43 +40,6 @@ OPTIONS
    (D)TLS connections.
    The default port is 5683 if not given any other value.
 
-*-c* certfile::
-   Use the specified PEM file which contains the CERTIFICATE and PRIVATE
-   KEY information. This argument requires (D)TLS with PKI to be available.
-
-*-C* cafile::
-  PEM file containing the CA Certificate that was used to sign the certfile
-  defined using *-c certfile*.
-  If defined, then the client will be given this CA Certificate during the
-  TLS set up.  Furthermore, this will also trigger the validation of the client
-  provided certificate against this cafile or using the CAs defined by
-  *-R root_cafile*.
-  If certfile is self-signed (as defined by *-c certfile*), then you need to
-  have on the command line the same filename for both the certfile and cafile
-  (as in  *-c certfile -C certfile*) to trigger validation.
-
-*-R* root_cafile::
-  PEM file containing the set of trusted root CAs that are to be used to
-  validate the client certificate.  The '-C cafile' does not have to be in
-  this list and is 'trusted' for the verification.
-  Alternatively, this can point to a directory containing a set of CA PEM files.
-
-*-k* key::
-   Pre-shared key to use for inbound connections. This cannot be empty if defined.
-   This argument requires (D)TLS with PSK to be available.
-   *Note:* if -c is defined, you need to define -k as well to have the server
-   support both PSK and PKI.
-
-*-h* hint::
-   Pre-shared key hint to use for inbound connections. The default is 'CoAP'.
-   This cannot be empty if defined.
-
-*-N* ::
-   Send NON-confirmable message for \"observe\" responses. If option *-N* is
-   not specified, a confirmable response will be sent.  Even if set, every
-   fifth response will still be sent as a confirmable response
-   (RFC 7641 requirement).
-
 *-l* list::
    Fail to send some datagrams specified by a comma separated list of
    numbers or number ranges (debugging only).
@@ -82,13 +49,57 @@ OPTIONS
    all datagrams, 0% no datagrams (debugging only).
 
 *-v* num::
-   The verbosity level to use (default: 3, maximum is 9). Above 7, there is
+   The verbosity level to use (default 3, maximum is 9). Above 7, there is
    increased verbosity in GnuTLS logging.
 
-*-d* max::
-   Enable support for creation of dynamic resources when doing a PUT up to a
-   limit of max.  If max is reached, a 4.06 code is returned until one of the
-   dynamic resources has been deleted.
+*-A* addr::
+   The local address of the interface which the server has to listen.
+
+*-N* ::
+   Send NON-confirmable message for \"observe\" responses. If option *-N* is
+   not specified, a confirmable response will be sent.  Even if set, every
+   fifth response will still be sent as a confirmable response
+   (RFC 7641 requirement).
+
+OPTIONS - PSK
+-------------
+(If supported by underlying (D)TLS library)
+
+*-h* hint::
+   Pre-shared key hint to use for inbound connections. The default is 'CoAP'.
+   This cannot be empty if defined.
+
+*-k* key::
+   Pre-shared key to use for inbound connections. This cannot be empty if
+   defined.
+   *Note:* if *-c cafile* is defined, you need to define *-k key* as well to
+   have the server support both PSK and PKI.
+
+OPTIONS - PKI
+-------------
+(If supported by underlying (D)TLS library)
+
+*-c* certfile::
+   Use the specified PEM file which contains the CERTIFICATE and PRIVATE
+   KEY information.
+   *Note:* if *-k key* is defined, you need to define *-c cafile* as well to
+   have the server support both PSK and PKI.
+
+*-C* cafile::
+  PEM file containing the CA Certificate that was used to sign the certfile
+  defined using *-c certfile*.
+  If defined, then the client will be given this CA Certificate during the TLS
+  set up. Furthermore, this will trigger the validation of the client
+  certificate. If certfile is self-signed (as defined by *-c certfile*), then
+  you need to have on the command line the same filename for both the certfile
+  and cafile (as in  *-c certfile -C certfile*) to trigger validation.
+
+*-R* root_cafile::
+  PEM file containing the set of trusted root CAs that are to be used to
+  validate the server certificate.  The *-C cafile* does not have to be in
+  this list and is "trusted" for the verification.
+  Alternatively, this can point to a directory containing a set of CA PEM files.
+
 
 EXAMPLES
 --------

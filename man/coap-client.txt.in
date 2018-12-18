@@ -14,12 +14,12 @@ coap-client - CoAP Client based on libcoap
 
 SYNOPSIS
 --------
-*coap-client* [*-a* addr] [*-b* [num,]size] [*-c* certfile] [*-e* text]
-              [*-f* file] [*-k* key] [*-l* loss] [*-m* method] [*-o* file]
-              [*-p* port] [*-r*] [*-s* duration] [*-t* type]  [*-u* user]
-              [*-v* num] [*-A* type] [*-B* seconds] [*-C* cafile]
-              [*-K* interval] [*-N*] [*-O* num,text] [*-P* addr[:port]]
-              [*-R* root_cafile] [*-T* token] [*-U*] URI
+*coap-client* [*-a* addr] [*-b* [num,]size] [*-e* text] [*-f* file] [*-l* loss]
+              [*-m* method] [*-o* file] [*-p* port] [*-r*] [*-s duration*]
+              [*-t* type] [*-v* num] [*-A* type] [*-B* seconds] [*-K* interval]
+              [*-N*] [*-O* num,text] [*-P* addr[:port]] [*-T* token] [*-U*]
+              [[*-k* key] [*-u* user]]
+              [[*-c* certfile] [*-C* cafile] [*-R* root_cafile]] URI
 
 DESCRIPTION
 -----------
@@ -36,8 +36,8 @@ need to have a Pre-Shared Key (-k) or Certificate (-c) configured.
 The URI's host part may be a DNS name or a literal IP address. Note that, for
 IPv6 address references, angle brackets are required (c.f. EXAMPLES).
 
-OPTIONS
--------
+OPTIONS - General
+-----------------
 *-a* addr::
    The local address of the interface that has to be used.
 
@@ -50,19 +50,11 @@ OPTIONS
    retrieve the subsequent block from the server until there are no more
    outstanding blocks for the requested content.
 
-*-c* certfile::
-   Use the specified PEM file which contains the CERTIFICATE and PRIVATE
-   KEY information. This argument requires (D)TLS with PKI to be available.
-
 *-e* text::
    Include text as payload (use percent-encoding for non-ASCII characters).
 
 *-f* file::
    File to send with PUT/POST (use '-' for STDIN).
-
-*-k* key::
-   Pre-shared key for the specified user (-u option also required).
-   This argument requires (D)TLS with PSK to be available.
 
 *-l* list::
    Fail to send some datagrams specified by a comma separated list of
@@ -104,12 +96,8 @@ OPTIONS
      application/json (json)
      application/cbor (cbor)
 
-*-u* user::
-   User identity for pre-shared key mode (-k option also required).
-   This argument requires (D)TLS with PSK to be available.
-
 *-v* num::
-   The verbosity level to use (default: 3, maximum is 9). Above 7, there is
+   The verbosity level to use (default 3, maximum is 9). Above 7, there is
    increased verbosity in GnuTLS logging.
 
 *-A* type::
@@ -119,14 +107,6 @@ OPTIONS
 
 *-B* seconds::
    Break operation after waiting given seconds (default is 90).
-
-*-C* cafile::
-  PEM file containing the CA Certificate that was used to sign the certfile
-  defined using *-c certfile*.
-  This will trigger the validation of the server certificate.
-  If certfile is self-signed (as defined by *-c certfile*), then you need to
-  have on the command line the same filename for both the certfile and cafile
-  (as in  *-c certfile -C certfile*) to trigger validation.
 
 *-K* interval::
    Send a ping after interval seconds of inactivity (TCP only).
@@ -143,17 +123,43 @@ OPTIONS
    Address (and port) for proxy to use (automatically adds Proxy-Uri option
    to request).
 
-*-R* root_cafile::
-  PEM file containing the set of trusted root CAs that are to be used to
-  validate the server certificate.  The '-C cafile' does not have to be in
-  this list and is 'trusted' for the verification.
-  Alternatively, this can point to a directory containing a set of CA PEM files.
-
 *-T* token::
    Include the 'token' to the request.
 
 *-U* ::
    Never include Uri-Host or Uri-Port options.
+
+OPTIONS - PSK
+-------------
+(If supported by underlying (D)TLS library)
+
+*-k* key::
+   Pre-shared key for the specified user (*-u* option also required).
+
+*-u* user::
+   User identity for pre-shared key mode (*-k* option also required).
+
+OPTIONS - PKI
+-------------
+(If supported by underlying (D)TLS library)
+
+*-c* certfile::
+   Use the specified PEM file which contains the CERTIFICATE and PRIVATE
+   KEY information.
+
+*-C* cafile::
+  PEM file containing the CA Certificate that was used to sign the certfile
+  defined using *-c certfile*.
+  This will trigger the validation of the server certificate.
+  If certfile is self-signed (as defined by *-c certfile*), then you need to
+  have on the command line the same filename for both the certfile and cafile
+  (as in  *-c certfile -C certfile*) to trigger validation.
+
+*-R* root_cafile::
+  PEM file containing the set of trusted root CAs that are to be used to
+  validate the server certificate.  The *-C cafile* does not have to be in
+  this list and is "trusted" for the verification.
+  Alternatively, this can point to a directory containing a set of CA PEM files.
 
 EXAMPLES
 --------
