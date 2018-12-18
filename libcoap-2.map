@@ -78,7 +78,6 @@ global:
   coap_malloc_endpoint;
   coap_malloc_type;
   coap_memory_init;
-  coap_mfree_endpoint;
   coap_network_read;
   coap_network_send;
   coap_new_client_session;

@@ -94,6 +94,7 @@ struct coap_endpoint_t *
 void
 coap_mfree_endpoint(struct coap_endpoint_t *ep) {
   ep_initialized = 0;
+  coap_session_mfree(&ep->hello);
 }
 
 int
@@ -183,6 +184,7 @@ struct coap_endpoint_t *
 
 void
 coap_mfree_endpoint(struct coap_endpoint_t *ep) {
+  coap_session_mfree(&ep->hello);
   coap_free_type(COAP_ENDPOINT, ep);
 }
 
