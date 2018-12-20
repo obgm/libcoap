@@ -129,8 +129,8 @@ static void
 close_output(void) {
   if (file) {
 
-    /* add a newline before closing in case were writing to stdout */
-    if (!output_file.s || (output_file.length && output_file.s[0] == '-'))
+    /* add a newline before closing if no option '-o' was specified */
+    if (!output_file.s)
       fwrite("\n", 1, 1, file);
 
     fflush(file);
