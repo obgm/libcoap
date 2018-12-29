@@ -35,12 +35,6 @@ typedef struct coap_str_const_t {
   const uint8_t *s; /**< string data */
 } coap_str_const_t;
 
-/**
- * @deprecated Use coap_string_t instead.
- */
-COAP_DEPRECATED
-typedef coap_string_t str;
-
 #define COAP_SET_STR(st,l,v) { (st)->length = (l), (st)->s = (v); }
 
 /**

@@ -43,7 +43,7 @@ void coap_hash_impl(const unsigned char *s, unsigned int len, coap_key_t h);
 #endif /* coap_hash */
 
 /**
- * Calls coap_hash() with given @c str object as parameter.
+ * Calls coap_hash() with given @c coap_string_t object as parameter.
  *
  * @param Str Must contain a pointer to a coap string object.
  * @param H   A coap_key_t object to store the result.
