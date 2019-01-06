@@ -46,7 +46,7 @@
     <ClCompile Include="..\src\coap_session.c" />
     <ClCompile Include="..\src\coap_time.c" />
     <ClCompile Include="..\src\coap_tinydtls.c" />
-    <ClCompile Include="..\src\debug.c" />
+    <ClCompile Include="..\src\coap_debug.c" />
     <ClCompile Include="..\src\encode.c" />
     <ClCompile Include="..\src\mem.c" />
     <ClCompile Include="..\src\net.c" />
@@ -69,7 +69,7 @@
     <ClInclude Include="..\include\coap2\coap_io.h" />
     <ClInclude Include="..\include\coap2\coap_session.h" />
     <ClInclude Include="..\include\coap2\coap_time.h" />
-    <ClInclude Include="..\include\coap2\debug.h" />
+    <ClInclude Include="..\include\coap2\coap_debug.h" />
     <ClInclude Include="..\include\coap2\encode.h" />
     <ClInclude Include="..\include\coap2\libcoap.h" />
     <ClInclude Include="..\include\coap2\mem.h" />

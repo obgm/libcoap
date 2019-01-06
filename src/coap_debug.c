@@ -34,7 +34,7 @@
 
 #include "libcoap.h"
 #include "block.h"
-#include "debug.h"
+#include "coap_debug.h"
 #include "encode.h"
 #include "net.h"
 

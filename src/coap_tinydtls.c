@@ -13,7 +13,7 @@
 
 #include "net.h"
 #include "address.h"
-#include "debug.h"
+#include "coap_debug.h"
 #include "mem.h"
 
 /* We want TinyDTLS versions of these, not libcoap versions */

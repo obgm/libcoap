@@ -27,7 +27,7 @@
 
 #include "net.h"
 #include "mem.h"
-#include "debug.h"
+#include "coap_debug.h"
 #include "prng.h"
 #include <inttypes.h>
 #include <stdio.h>

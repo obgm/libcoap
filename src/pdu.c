@@ -27,7 +27,7 @@
 #endif
 
 #include "libcoap.h"
-#include "debug.h"
+#include "coap_debug.h"
 #include "pdu.h"
 #include "option.h"
 #include "encode.h"

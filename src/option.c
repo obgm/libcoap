@@ -20,7 +20,7 @@
 #include "libcoap.h"
 #include "option.h"
 #include "encode.h"                /* for coap_fls() */
-#include "debug.h"
+#include "coap_debug.h"
 #include "mem.h"
 #include "utlist.h"
 

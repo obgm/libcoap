@@ -77,7 +77,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_session.c \
   src/coap_time.c \
   src/coap_tinydtls.c \
-  src/debug.c \
+  src/coap_debug.c \
   src/encode.c \
   src/mem.c \
   src/net.c \
@@ -111,7 +111,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_io.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_session.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_time.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/debug.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_debug.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/encode.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/libcoap.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/mem.h \

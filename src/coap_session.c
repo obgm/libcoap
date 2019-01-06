@@ -14,7 +14,7 @@
 #include "coap_io.h"
 #include "coap_session.h"
 #include "net.h"
-#include "debug.h"
+#include "coap_debug.h"
 #include "mem.h"
 #include "resource.h"
 #include "utlist.h"

@@ -42,7 +42,7 @@
  */
 #include "net.h"
 #include "mem.h"
-#include "debug.h"
+#include "coap_debug.h"
 #include "prng.h"
 #include <openssl/ssl.h>
 #include <openssl/err.h>

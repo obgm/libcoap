@@ -46,7 +46,7 @@
 #endif
 
 #include "libcoap.h"
-#include "debug.h"
+#include "coap_debug.h"
 #include "mem.h"
 #include "net.h"
 #include "coap_io.h"

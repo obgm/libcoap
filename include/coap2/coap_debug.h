@@ -1,5 +1,5 @@
 /*
- * debug.h -- debug utilities
+ * coap_debug.h -- debug utilities
  *
  * Copyright (C) 2010-2011,2014 Olaf Bergmann <bergmann@tzi.org>
  *

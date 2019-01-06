@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include "coap_config.h"
 #include "coap.h"
-#include "debug.h"
+#include "coap_debug.h"
 #include "mem.h"
 #include "net.h"
 #include "resource.h"

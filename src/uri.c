@@ -22,7 +22,7 @@
 
 #include "libcoap.h"
 #include "mem.h"
-#include "debug.h"
+#include "coap_debug.h"
 #include "pdu.h"
 #include "option.h"
 #include "uri.h"

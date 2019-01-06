@@ -10,7 +10,7 @@
 #include "coap_config.h"
 #include "libcoap.h"
 #include "mem.h"
-#include "debug.h"
+#include "coap_debug.h"
 
 #ifdef HAVE_ASSERT_H
 #include <assert.h>

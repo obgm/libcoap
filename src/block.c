@@ -13,7 +13,7 @@
 #endif
 
 #include "libcoap.h"
-#include "debug.h"
+#include "coap_debug.h"
 #include "block.h"
 #include "resource.h"
 #include "coap_hashkey.h"
