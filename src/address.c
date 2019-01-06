@@ -27,6 +27,11 @@
 
 #include "address.h"
 
+#ifdef RIOT_VERSION
+/* FIXME */
+#define IN_MULTICAST(Address) (0)
+#endif /* RIOT_VERSION */
+
 int
 coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
   assert(a); assert(b);
