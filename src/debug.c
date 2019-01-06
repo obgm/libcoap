@@ -602,7 +602,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 
       outbuflen = strlen(outbuf);
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-               "binary data length %ld\n", data_len);
+               "binary data length %zu\n", data_len);
       COAP_DO_SHOW_OUTPUT_LINE;
       /*
        * Output hex dump of binary data as a continuous entry
@@ -668,14 +668,14 @@ char *coap_string_tls_version(char *buffer, size_t bufsize)
     snprintf(buffer, bufsize, "TLS Library: None");
     break;
   case COAP_TLS_LIBRARY_TINYDTLS:
-    snprintf(buffer, bufsize, "TLS Library: TinyDTLS - runtime %ld.%ld.%ld, "
-             "libcoap built for %ld.%ld.%ld",
-             tls_version->version >> 16,
-             (tls_version->version >> 8) & 0xff,
-             tls_version->version & 0xff,
-             tls_version->built_version >> 16,
-             (tls_version->built_version >> 8) & 0xff,
-             tls_version->built_version & 0xff);
+    snprintf(buffer, bufsize, "TLS Library: TinyDTLS - runtime %lu.%lu.%lu, "
+             "libcoap built for %lu.%lu.%lu",
+             (unsigned long)(tls_version->version >> 16),
+             (unsigned long)((tls_version->version >> 8) & 0xff),
+             (unsigned long)(tls_version->version & 0xff),
+             (unsigned long)(tls_version->built_version >> 16),
+             (unsigned long)((tls_version->built_version >> 8) & 0xff),
+             (unsigned long)(tls_version->built_version & 0xff));
     break;
   case COAP_TLS_LIBRARY_OPENSSL:
     switch (tls_version->version &0xf) {
@@ -711,23 +711,24 @@ char *coap_string_tls_version(char *buffer, size_t bufsize)
                ((tls_version->built_version >> 4) & 0xff) + 'a' -1 : '\000';
     b_sub[1] = '\000';
     snprintf(buffer, bufsize, "TLS Library: OpenSSL - runtime "
-             "%ld.%ld.%ld%s%s, libcoap built for %ld.%ld.%ld%s%s",
-             tls_version->version >> 28,
-             (tls_version->version >> 20) & 0xff,
-             (tls_version->version >> 12) & 0xff, sub, beta,
-             tls_version->built_version >> 28,
-             (tls_version->built_version >> 20) & 0xff,
-             (tls_version->built_version >> 12) & 0xff, b_sub, b_beta);
+             "%lu.%lu.%lu%s%s, libcoap built for %lu.%lu.%lu%s%s",
+             (unsigned long)(tls_version->version >> 28),
+             (unsigned long)((tls_version->version >> 20) & 0xff),
+             (unsigned long)((tls_version->version >> 12) & 0xff), sub, beta,
+             (unsigned long)(tls_version->built_version >> 28),
+             (unsigned long)((tls_version->built_version >> 20) & 0xff),
+             (unsigned long)((tls_version->built_version >> 12) & 0xff),
+             b_sub, b_beta);
     break;
   case COAP_TLS_LIBRARY_GNUTLS:
-    snprintf(buffer, bufsize, "TLS Library: GnuTLS - runtime %ld.%ld.%ld, "
-             "libcoap built for %ld.%ld.%ld",
-             tls_version->version >> 16,
-             (tls_version->version >> 8) & 0xff,
-             tls_version->version & 0xff,
-             tls_version->built_version >> 16,
-             (tls_version->built_version >> 8) & 0xff,
-             tls_version->built_version & 0xff);
+    snprintf(buffer, bufsize, "TLS Library: GnuTLS - runtime %lu.%lu.%lu, "
+             "libcoap built for %lu.%lu.%lu",
+             (unsigned long)(tls_version->version >> 16),
+             (unsigned long)((tls_version->version >> 8) & 0xff),
+             (unsigned long)(tls_version->version & 0xff),
+             (unsigned long)(tls_version->built_version >> 16),
+             (unsigned long)((tls_version->built_version >> 8) & 0xff),
+             (unsigned long)(tls_version->built_version & 0xff));
     break;
   default:
     snprintf(buffer, bufsize, "Library type %d unknown", tls_version->type);
