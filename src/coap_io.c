@@ -54,7 +54,7 @@
 #include "utlist.h"
 #include "resource.h"
 
-#if !defined(WITH_CONTIKI)
+#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
  /* define generic PKTINFO for IPv4 */
 #if defined(IP_PKTINFO)
 #  define GEN_IP_PKTINFO IP_PKTINFO
@@ -72,7 +72,7 @@
 #else
 #  error "Need IPV6_PKTINFO or IPV6_RECVPKTINFO to request ancillary data from OS."
 #endif /* IPV6_RECVPKTINFO */
-#endif
+#endif /* !(WITH_CONTIKI || RIOT_VERSION) */
 
 void coap_free_endpoint(coap_endpoint_t *ep);
 
@@ -192,7 +192,9 @@ int
 coap_socket_bind_udp(coap_socket_t *sock,
   const coap_address_t *listen_addr,
   coap_address_t *bound_addr) {
+#ifndef RIOT_VERSION
   int on = 1, off = 0;
+#endif /* RIOT_VERSION */
 #ifdef _WIN32
   u_long u_on = 1;
 #endif
@@ -204,7 +206,7 @@ coap_socket_bind_udp(coap_socket_t *sock,
              "coap_socket_bind_udp: socket: %s\n", coap_socket_strerror());
     goto error;
   }
-
+#ifndef RIOT_VERSION
 #ifdef _WIN32
   if (ioctlsocket(sock->fd, FIONBIO, &u_on) == COAP_SOCKET_ERROR) {
 #else
@@ -242,6 +244,7 @@ coap_socket_bind_udp(coap_socket_t *sock,
     coap_log(LOG_ALERT, "coap_socket_bind_udp: unsupported sa_family\n");
     break;
   }
+#endif /* RIOT_VERSION */
 
   if (bind(sock->fd, &listen_addr->addr.sa, listen_addr->size) == COAP_SOCKET_ERROR) {
     coap_log(LOG_WARNING, "coap_socket_bind_udp: bind: %s\n",
@@ -271,7 +274,10 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
                          int default_port,
                          coap_address_t *local_addr,
                          coap_address_t *remote_addr) {
-  int on = 1, off = 0;
+  int on = 1;
+#ifndef RIOT_VERSION
+  int off = 0;
+#endif /* RIOT_VERSION */
 #ifdef _WIN32
   u_long u_on = 1;
 #endif
@@ -288,6 +294,7 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
     goto error;
   }
 
+#ifndef RIOT_VERSION
 #ifdef _WIN32
   if (ioctlsocket(sock->fd, FIONBIO, &u_on) == COAP_SOCKET_ERROR) {
 #else
@@ -297,6 +304,7 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
              "coap_socket_connect_tcp1: ioctl FIONBIO: %s\n",
              coap_socket_strerror());
   }
+#endif /* RIOT_VERSION */
 
   switch (server->addr.sa.sa_family) {
   case AF_INET:
@@ -306,11 +314,13 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
   case AF_INET6:
     if (connect_addr.addr.sin6.sin6_port == 0)
       connect_addr.addr.sin6.sin6_port = htons(default_port);
+#ifndef RIOT_VERSION
     /* Configure the socket as dual-stacked */
     if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY, OPTVAL_T(&off), sizeof(off)) == COAP_SOCKET_ERROR)
       coap_log(LOG_WARNING,
                "coap_socket_connect_tcp1: setsockopt IPV6_V6ONLY: %s\n",
                coap_socket_strerror());
+#endif /* RIOT_VERSION */
     break;
   default:
     coap_log(LOG_ALERT, "coap_socket_connect_tcp1: unsupported sa_family\n");
@@ -413,7 +423,10 @@ int
 coap_socket_bind_tcp(coap_socket_t *sock,
                      const coap_address_t *listen_addr,
                      coap_address_t *bound_addr) {
-  int on = 1, off = 0;
+  int on = 1;
+#ifndef RIOT_VERSION
+  int off = 0;
+#endif /* RIOT_VERSION */
 #ifdef _WIN32
   u_long u_on = 1;
 #endif
@@ -426,6 +439,7 @@ coap_socket_bind_tcp(coap_socket_t *sock,
     goto error;
   }
 
+#ifndef RIOT_VERSION
 #ifdef _WIN32
   if (ioctlsocket(sock->fd, FIONBIO, &u_on) == COAP_SOCKET_ERROR) {
 #else
@@ -434,6 +448,7 @@ coap_socket_bind_tcp(coap_socket_t *sock,
     coap_log(LOG_WARNING, "coap_socket_bind_tcp: ioctl FIONBIO: %s\n",
                            coap_socket_strerror());
   }
+#endif /* RIOT_VERSION */
   if (setsockopt (sock->fd, SOL_SOCKET, SO_KEEPALIVE, OPTVAL_T(&on),
                   sizeof (on)) == COAP_SOCKET_ERROR)
     coap_log(LOG_WARNING,
@@ -450,11 +465,13 @@ coap_socket_bind_tcp(coap_socket_t *sock,
   case AF_INET:
     break;
   case AF_INET6:
+#ifndef RIOT_VERSION
     /* Configure the socket as dual-stacked */
     if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY, OPTVAL_T(&off), sizeof(off)) == COAP_SOCKET_ERROR)
       coap_log(LOG_ALERT,
                "coap_socket_bind_tcp: setsockopt IPV6_V6ONLY: %s\n",
                coap_socket_strerror());
+#endif /* RIOT_VERSION */
     break;
   default:
     coap_log(LOG_ALERT, "coap_socket_bind_tcp: unsupported sa_family\n");
@@ -491,11 +508,13 @@ coap_socket_accept_tcp(coap_socket_t *server,
                        coap_socket_t *new_client,
                        coap_address_t *local_addr,
                        coap_address_t *remote_addr) {
+#ifndef RIOT_VERSION
 #ifdef _WIN32
   u_long u_on = 1;
 #else
   int on = 1;
 #endif
+#endif /* RIOT_VERSION */
 
   server->flags &= ~COAP_SOCKET_CAN_ACCEPT;
 
@@ -511,6 +530,7 @@ coap_socket_accept_tcp(coap_socket_t *server,
     coap_log(LOG_WARNING, "coap_socket_accept_tcp: getsockname: %s\n",
              coap_socket_strerror());
 
+#ifndef RIOT_VERSION
   #ifdef _WIN32
   if (ioctlsocket(new_client->fd, FIONBIO, &u_on) == COAP_SOCKET_ERROR) {
 #else
@@ -519,7 +539,7 @@ coap_socket_accept_tcp(coap_socket_t *server,
     coap_log(LOG_WARNING, "coap_socket_accept_tcp: ioctl FIONBIO: %s\n",
              coap_socket_strerror());
   }
-
+#endif /* RIOT_VERSION */
   return 1;
 }
 
@@ -530,7 +550,10 @@ coap_socket_connect_udp(coap_socket_t *sock,
   int default_port,
   coap_address_t *local_addr,
   coap_address_t *remote_addr) {
-  int on = 1, off = 0;
+  int on = 1;
+#ifndef RIOT_VERSION
+  int off = 0;
+#endif /* RIOT_VERSION */
 #ifdef _WIN32
   u_long u_on = 1;
 #endif
@@ -547,6 +570,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
     goto error;
   }
 
+#ifndef RIOT_VERSION
 #ifdef _WIN32
   if (ioctlsocket(sock->fd, FIONBIO, &u_on) == COAP_SOCKET_ERROR) {
 #else
@@ -555,6 +579,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
     coap_log(LOG_WARNING, "coap_socket_connect_udp: ioctl FIONBIO: %s\n",
              coap_socket_strerror());
   }
+#endif /* RIOT_VERSION */
 
   switch (connect_addr.addr.sa.sa_family) {
   case AF_INET:
@@ -564,11 +589,13 @@ coap_socket_connect_udp(coap_socket_t *sock,
   case AF_INET6:
     if (connect_addr.addr.sin6.sin6_port == 0)
       connect_addr.addr.sin6.sin6_port = htons(default_port);
+#ifndef RIOT_VERSION
     /* Configure the socket as dual-stacked */
     if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY, OPTVAL_T(&off), sizeof(off)) == COAP_SOCKET_ERROR)
       coap_log(LOG_WARNING,
                "coap_socket_connect_udp: setsockopt IPV6_V6ONLY: %s\n",
                coap_socket_strerror());
+#endif /* RIOT_VERSION */
     break;
   default:
     coap_log(LOG_ALERT, "coap_socket_connect_udp: unsupported sa_family\n");
@@ -769,7 +796,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 #endif
 #endif
   } else {
-#ifndef WITH_CONTIKI
+#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
     /* a buffer large enough to hold all packet info types, ipv6 is the largest */
     char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 #ifdef _WIN32
@@ -889,7 +916,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 #else
     bytes_written = sendmsg(sock->fd, &mhdr, 0);
 #endif
-#else /* WITH_CONTIKI */
+#elif defined(WITH_CONTIKI)
     /* FIXME: untested */
     /* FIXME: is there a way to check if send was successful? */
     (void)datalen;
@@ -897,7 +924,11 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
     uip_udp_packet_sendto((struct uip_udp_conn *)sock->conn, data, datalen,
       &session->remote_addr.addr, session->remote_addr.port);
     bytes_written = datalen;
-#endif /* WITH_CONTIKI */
+#elif defined(RIOT_VERSION)
+    bytes_written = sendto(sock->fd, data, datalen, 0,
+                           &session->remote_addr.addr.sa,
+                           session->remote_addr.size);
+#endif /* WITH_CONTIKI || RIOT_VERSION */
   }
 
   if (bytes_written < 0)
@@ -933,7 +964,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
     sock->flags &= ~COAP_SOCKET_CAN_READ;
   }
 
-#ifndef WITH_CONTIKI
+#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
   if (sock->flags & COAP_SOCKET_CONNECTED) {
 #ifdef _WIN32
     len = recv(sock->fd, (char *)packet->payload, COAP_RXBUFFER_SIZE, 0);
@@ -956,12 +987,12 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       packet->length = (size_t)len;
     }
   } else {
-#endif /* WITH_CONTIKI */
+#endif /* !(WITH_CONTIKI || RIOT_VERSION) */
 #if defined(_WIN32)
     DWORD dwNumberOfBytesRecvd = 0;
     int r;
 #endif
-#if !defined(WITH_CONTIKI)
+#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
     /* a buffer large enough to hold all packet info types, ipv6 is the largest */
     char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
     struct msghdr mhdr;
@@ -1058,7 +1089,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 #endif /* IP_PKTINFO */
       }
     }
-#endif /* !defined(WITH_CONTIKI) */
+#endif /* !defined(WITH_CONTIKI) && !defined(RIOT_VERSION) */
 #ifdef WITH_CONTIKI
     /* FIXME: untested, make this work */
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
@@ -1099,13 +1130,25 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 #undef UIP_IP_BUF
 #undef UIP_UDP_BUF
 #endif /* WITH_CONTIKI */
-#ifndef WITH_CONTIKI
+#ifdef RIOT_VERSION
+    packet->src.size = sizeof(packet->src.addr);
+    len = recvfrom (sock->fd, packet->payload, COAP_RXBUFFER_SIZE,
+                    0, &packet->src.addr.sa, &packet->src.size);
+    if (LOG_DEBUG <= coap_get_log_level()) {
+      unsigned char addr_str[INET6_ADDRSTRLEN + 8];
+
+      if (coap_print_addr(&packet->src, addr_str, INET6_ADDRSTRLEN + 8)) {
+        coap_log(LOG_DEBUG, "received %zd bytes from %s\n", len, addr_str);
+      }
+    }
+#endif /* RIOT_VERSION */
+#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
   }
-#endif /* WITH_CONTIKI */
+#endif /* !(WITH_CONTIKI || RIOT_VERSION) */
 
   if (len >= 0)
     return len;
-#if !defined(WITH_CONTIKI)
+#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
 error:
 #endif
   return -1;
