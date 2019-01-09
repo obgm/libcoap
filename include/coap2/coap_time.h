@@ -83,7 +83,34 @@ COAP_STATIC_INLINE uint64_t coap_ticks_to_rt_us(coap_tick_t t) {
   return (uint64_t)t * 1000000 / COAP_TICKS_PER_SECOND;
 }
 
-#else
+#elif defined(RIOT_VERSION)
+#include <xtimer.h>
+
+#define COAP_TICKS_PER_SECOND (XTIMER_HZ)
+
+typedef uint64_t coap_tick_t;
+typedef int64_t coap_tick_diff_t;
+typedef uint32_t coap_time_t;
+
+static inline void coap_clock_init(void) {}
+
+static inline void coap_ticks(coap_tick_t *t) {
+  *t = xtimer_now_usec64();
+}
+
+static inline coap_time_t coap_ticks_to_rt(coap_tick_t t) {
+  return t / 1000000UL;
+}
+
+static inline uint64_t coap_ticks_to_rt_us(coap_tick_t t) {
+  return t;
+}
+
+static inline coap_tick_t coap_ticks_from_rt_us(uint64_t t) {
+  return t / 1000000UL;
+}
+#else /* !WITH_LWIP && !WITH_CONTIKI && !RIOT_VERSION */
+
 #include <stdint.h>
 
 /**
