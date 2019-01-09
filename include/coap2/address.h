@@ -1,7 +1,7 @@
 /*
  * address.h -- representation of network addresses
  *
- * Copyright (C) 2010-2011,2015-2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2011,2015-2016,2019 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -30,14 +30,26 @@ typedef struct coap_address_t {
   ip_addr_t addr;
 } coap_address_t;
 
-#define _coap_address_equals_impl(A, B) \
-        ((A)->port == (B)->port        \
-        && (!!ip_addr_cmp(&(A)->addr,&(B)->addr)))
+static inline int
+coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
+  assert(a); assert(b);
+  return (a->port == b->port) && (!!ip_addr_cmp(&a->addr,&b->addr));
+}
 
-#define _coap_address_isany_impl(A)  ip_addr_isany(&(A)->addr)
+static inline void
+coap_address_copy(coap_address_t *dst, const coap_address_t *src) {
+  memcpy(dst, src, sizeof(coap_address_t));
+}
 
-#define _coap_is_mcast_impl(Address) ip_addr_ismulticast(&(Address)->addr)
+static inline int
+coap_address_isany(const coap_address_t *a) {
+  return a && ip_addr_isany(&a->addr);
+}
 
+static inline int
+coap_is_mcast(const coap_address_t *a) {
+  return a && ip_addr_ismulticast(&a->addr);
+}
 #elif defined(WITH_CONTIKI)
 
 #include "uip.h"
@@ -47,16 +59,56 @@ typedef struct coap_address_t {
   uint16_t port;
 } coap_address_t;
 
-#define _coap_address_equals_impl(A,B) \
-        ((A)->port == (B)->port        \
-        && uip_ipaddr_cmp(&((A)->addr),&((B)->addr)))
+static inline int
+coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
+  return (a->port == b->port) && uip_ipaddr_cmp(&a->addr,&b->addr);
+}
+
+static inline void
+coap_address_copy(coap_address_t *dst, const coap_address_t *src) {
+  memcpy(dst, src, sizeof(coap_address_t));
+}
 
 /** @todo implementation of _coap_address_isany_impl() for Contiki */
-#define _coap_address_isany_impl(A)  0
+static inline int
+coap_address_isany(const coap_address_t *a) {
+  return 0;
+}
 
-#define _coap_is_mcast_impl(Address) uip_is_addr_mcast(&((Address)->addr))
+static inline int
+coap_is_mcast(const coap_address_t *a) {
+  return a && uip_is_addr_mcast(&a->addr);
+}
+#elif defined(RIOT_VERSION)
+#include <net/ipv6/addr.h>
 
-#else /* WITH_LWIP || WITH_CONTIKI */
+typedef struct coap_address_t {
+  network_uint16_t port;
+  ipv6_addr_t addr;
+} coap_address_t;
+
+static inline void coap_address_copy(coap_address_t *dst,
+                                     const coap_address_t *src) {
+  dst->port = src->port;
+  dst->addr = src->addr;
+}
+
+static inline int coap_address_equals(coap_address_t *dst,
+                                      const coap_address_t *src) {
+  return (dst->port.u16 == src->port.u16)
+    && ipv6_addr_equal(&dst->addr, &src->addr);
+}
+
+static inline int
+coap_address_isany(const coap_address_t *a) {
+  return ipv6_addr_is_unspecified(&a->addr);
+}
+
+static inline int
+coap_is_mcast(const coap_address_t *a) {
+  return ipv6_addr_is_multicast(&a->addr);
+}
+#else /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */
 
  /** multi-purpose address abstraction */
 typedef struct coap_address_t {
@@ -75,8 +127,14 @@ typedef struct coap_address_t {
  */
 int coap_address_equals(const coap_address_t *a, const coap_address_t *b);
 
+/**
+ * Checks if given address object @p a denotes the wildcard address. This
+ * function returns @c 1 if this is the case, @c 0 otherwise. The parameters @p
+ * a must not be @c NULL;
+ */
 COAP_STATIC_INLINE int
-_coap_address_isany_impl(const coap_address_t *a) {
+coap_address_isany(const coap_address_t *a) {
+  assert(a);
   /* need to compare only relevant parts of sockaddr_in6 */
   switch (a->addr.sa.sa_family) {
   case AF_INET:
@@ -90,24 +148,6 @@ _coap_address_isany_impl(const coap_address_t *a) {
   }
 
   return 0;
-}
-#endif /* WITH_LWIP || WITH_CONTIKI */
-
-/**
- * Resets the given coap_address_t object @p addr to its default values. In
- * particular, the member size must be initialized to the available size for
- * storing addresses.
- *
- * @param addr The coap_address_t object to initialize.
- */
-COAP_STATIC_INLINE void
-coap_address_init(coap_address_t *addr) {
-  assert(addr);
-  memset(addr, 0, sizeof(coap_address_t));
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
-  /* lwip and Contiki have constant address sizes and doesn't need the .size part */
-  addr->size = sizeof(addr->addr);
-#endif
 }
 
 /* Convenience function to copy IPv6 addresses without garbage. */
@@ -132,46 +172,30 @@ coap_address_copy( coap_address_t *dst, const coap_address_t *src ) {
 #endif
 }
 
-#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
-/**
- * Compares given address objects @p a and @p b. This function returns @c 1 if
- * addresses are equal, @c 0 otherwise. The parameters @p a and @p b must not be
- * @c NULL;
- */
-COAP_STATIC_INLINE int
-coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
-  assert(a); assert(b);
-  return _coap_address_equals_impl(a, b);
-}
-#endif
-
-/**
- * Checks if given address object @p a denotes the wildcard address. This
- * function returns @c 1 if this is the case, @c 0 otherwise. The parameters @p
- * a must not be @c NULL;
- */
-COAP_STATIC_INLINE int
-coap_address_isany(const coap_address_t *a) {
-  assert(a);
-  return _coap_address_isany_impl(a);
-}
-
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
-
 /**
  * Checks if given address @p a denotes a multicast address. This function
  * returns @c 1 if @p a is multicast, @c 0 otherwise.
  */
 int coap_is_mcast(const coap_address_t *a);
-#else /* !WITH_LWIP && !WITH_CONTIKI */
+#endif /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */
+
 /**
- * Checks if given address @p a denotes a multicast address. This function
- * returns @c 1 if @p a is multicast, @c 0 otherwise.
+ * Resets the given coap_address_t object @p addr to its default values. In
+ * particular, the member size must be initialized to the available size for
+ * storing addresses.
+ *
+ * @param addr The coap_address_t object to initialize.
  */
-COAP_STATIC_INLINE int
-coap_is_mcast(const coap_address_t *a) {
-  return a && _coap_is_mcast_impl(a);
+COAP_STATIC_INLINE void
+coap_address_init(coap_address_t *addr) {
+  assert(addr);
+  memset(addr, 0, sizeof(coap_address_t));
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
+  /* lwip and Contiki have constant address sizes and doesn't need the .size part
+   * RIOT support is IPv6-only for now.
+   */
+  addr->size = sizeof(addr->addr);
+#endif
 }
-#endif /* !WITH_LWIP && !WITH_CONTIKI */
 
 #endif /* COAP_ADDRESS_H_ */
