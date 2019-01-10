@@ -88,7 +88,11 @@ typedef struct coap_gnutls_context_t {
   gnutls_priority_t priority_cache;
 } coap_gnutls_context_t;
 
+#if (GNUTLS_VERSION_NUMBER >= 0x030505)
+#define VARIANTS "NORMAL:+ECDHE-PSK:+PSK:+ECDHE-ECDSA:+AES-128-CCM-8"
+#else
 #define VARIANTS "NORMAL:+ECDHE-PSK:+PSK"
+#endif
 
 #define G_ACTION(xx) do { \
   ret = (xx); \
