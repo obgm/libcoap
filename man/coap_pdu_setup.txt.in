@@ -181,14 +181,20 @@ The *coap_add_data*() function adds in the specified payload _data_ of length
 _length_ to the PDU _pdu_. Adding the payload data must be done after any
 token or options are added.  This function must only be called once per _pdu_.
 
-The *coap_add_data_blocked_response*() function added in the specified payload
-_data_ of length _length_ to the PDU _pdu_. It also adds in the appropriate
+The *coap_add_data_blocked_response*() function adds in the appropriate part
+of the payload _data_ of length _length_ to the PDU _pdu_. It should be used
+as a direct replacement for *coap_add_data*() if it is possible that the data
+will not fit into a single pdu. It also adds in the appropriate
 CoAP options to handle Block-Wise transfer. This function is usually used for
 a server's GET response.  The _resource_, _session_, _request_, _response_
 and _token_ are the same parameters for the registered GET resource handler.
 The _media_type_ is for the format of the _data_ and _maxage_ defines the
 lifetime of the response.  If set to -1,  then the MAXAGE option does not get
 included.  This function must only be called once per _pdu_.
+It is the responsibility of the client to recognize that it has only
+received a part of the data and request the next block (with the appropriate
+Block options) from the server.  Returning the next requested block is handled
+by this function.
 
 The *coap_encode_var_safe*() function encodes _value_ into _buffer_ which has
 a size of _size_ in bytes.  Normally, the _buffer_ size should be at least

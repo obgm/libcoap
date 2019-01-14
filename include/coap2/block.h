@@ -139,9 +139,10 @@ int coap_add_block(coap_pdu_t *pdu,
                    unsigned char block_szx);
 
 /**
- * Adds the @p data to the @p response pdu.  If blocks are
- * required, then the appropriate block will be added and
- * consequently sent.
+ * Adds the appropriate part of @p data to the @p response pdu.  If blocks are
+ * required, then the appropriate block will be added to the PDU and sent.
+ * Adds a ETAG option that is the hash of the entire data if the data is to be
+ * split into blocks
  * Used by a GET request handler.
  *
  * @param resource   The resource the data is associated with.
@@ -153,7 +154,7 @@ int coap_add_block(coap_pdu_t *pdu,
  * @param maxage     The maxmimum life of the data. If @c -1, then there
  *                   is no maxage.
  * @param length     The total length of the data.
- * @param data       The data to transmit.
+ * @param data       The entire data block to transmit.
  *
  */
 void
