@@ -412,7 +412,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
   uint8_t *data;
   coap_block_t block1;
   dynamic_resource_t *resource_entry = NULL;
-  unsigned char buf[4];
+  unsigned char buf[6];      /* space to hold encoded/decoded uints */
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
 
@@ -452,9 +452,18 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
       else {
         dynamic_entry[i].media_type = COAP_MEDIATYPE_TEXT_PLAIN;
       }
-
-    }
-    else {
+      /* Store media type of new resource in ct. We can use buf here
+       * as coap_add_attr() will copy the passed string. */
+      memset(buf, 0, sizeof(buf));
+      snprintf((char *)buf, sizeof(buf), "%d", dynamic_entry[i].media_type);
+      /* ensure that buf is always zero-terminated */
+      assert(buf[sizeof(buf) - 1] == '\0');
+      buf[sizeof(buf) - 1] = '\0';
+      coap_add_attr(resource,
+                    coap_make_str_const("ct"),
+                    coap_make_str_const(buf),
+                    0);
+    } else {
       dynamic_count--;
       response->code = COAP_RESPONSE_CODE(500);
       return;
