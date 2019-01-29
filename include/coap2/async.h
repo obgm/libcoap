@@ -12,8 +12,8 @@
  * @brief State management for asynchronous messages
  */
 
-#ifndef _COAP_ASYNC_H_
-#define _COAP_ASYNC_H_
+#ifndef COAP_ASYNC_H_
+#define COAP_ASYNC_H_
 
 #include "net.h"
 
@@ -146,4 +146,4 @@ coap_touch_async(coap_async_state_t *s) { coap_ticks(&s->created); }
 
 #endif /*  WITHOUT_ASYNC */
 
-#endif /* _COAP_ASYNC_H_ */
+#endif /* COAP_ASYNC_H_ */

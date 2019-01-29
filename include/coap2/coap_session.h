@@ -6,8 +6,8 @@
 * README for terms of use.
 */
 
-#ifndef _SESSION_H_
-#define _SESSION_H_
+#ifndef COAP_SESSION_H_
+#define COAP_SESSION_H_
 
 
 #include "coap_io.h"
@@ -490,4 +490,4 @@ coap_fixed_point_t coap_session_get_ack_random_factor(coap_session_t *session);
  */
 coap_tid_t coap_session_send_ping(coap_session_t *session);
 
-#endif  /* _SESSION_H */
+#endif  /* COAP_SESSION_H */

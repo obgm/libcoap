@@ -8,8 +8,8 @@
  * of use.
  */
 
-#ifndef _COAP_DTLS_H_
-#define _COAP_DTLS_H_
+#ifndef COAP_DTLS_H_
+#define COAP_DTLS_H_
 
 #include "net.h"
 #include "coap_session.h"

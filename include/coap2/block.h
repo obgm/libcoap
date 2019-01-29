@@ -7,8 +7,8 @@
  * of use.
  */
 
-#ifndef _COAP_BLOCK_H_
-#define _COAP_BLOCK_H_
+#ifndef COAP_BLOCK_H_
+#define COAP_BLOCK_H_
 
 #include "encode.h"
 #include "option.h"
@@ -170,4 +170,4 @@ coap_add_data_blocked_response(struct coap_resource_t *resource,
 
 /**@}*/
 
-#endif /* _COAP_BLOCK_H_ */
+#endif /* COAP_BLOCK_H_ */

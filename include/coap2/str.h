@@ -7,8 +7,8 @@
  * of use.
  */
 
-#ifndef _COAP_STR_H_
-#define _COAP_STR_H_
+#ifndef COAP_STR_H_
+#define COAP_STR_H_
 
 #include <string.h>
 
@@ -118,4 +118,4 @@ namespace libcoap {
 
 /** @} */
 
-#endif /* _COAP_STR_H_ */
+#endif /* COAP_STR_H_ */

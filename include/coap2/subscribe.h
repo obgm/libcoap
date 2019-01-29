@@ -9,8 +9,8 @@
  */
 
 
-#ifndef _COAP_SUBSCRIBE_H_
-#define _COAP_SUBSCRIBE_H_
+#ifndef COAP_SUBSCRIBE_H_
+#define COAP_SUBSCRIBE_H_
 
 #include "address.h"
 #include "coap_io.h"
@@ -73,4 +73,4 @@ void coap_subscription_init(coap_subscription_t *);
 
 /** @} */
 
-#endif /* _COAP_SUBSCRIBE_H_ */
+#endif /* COAP_SUBSCRIBE_H_ */

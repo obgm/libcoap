@@ -12,8 +12,8 @@
  * @brief definition of hash key type and helper functions
  */
 
-#ifndef _COAP_HASHKEY_H_
-#define _COAP_HASHKEY_H_
+#ifndef COAP_HASHKEY_H_
+#define COAP_HASHKEY_H_
 
 #include "libcoap.h"
 #include "uthash.h"
@@ -37,9 +37,9 @@ void coap_hash_impl(const unsigned char *s, unsigned int len, coap_key_t h);
   coap_hash_impl((String),(Length),(Result))
 
 /* This is used to control the pre-set hash-keys for resources. */
-#define __COAP_DEFAULT_HASH
+#define COAP_DEFAULT_HASH
 #else
-#undef __COAP_DEFAULT_HASH
+#undef COAP_DEFAULT_HASH
 #endif /* coap_hash */
 
 /**
@@ -56,4 +56,4 @@ void coap_hash_impl(const unsigned char *s, unsigned int len, coap_key_t h);
     coap_hash((Str)->s, (Str)->length, (H)); \
   }
 
-#endif /* _COAP_HASHKEY_H_ */
+#endif /* COAP_HASHKEY_H_ */

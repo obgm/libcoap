@@ -7,8 +7,8 @@
  * of use.
  */
 
-#ifndef _COAP_URI_H_
-#define _COAP_URI_H_
+#ifndef COAP_URI_H_
+#define COAP_URI_H_
 
 #include <stdint.h>
 
@@ -144,4 +144,4 @@ coap_string_t *coap_get_uri_path(const struct coap_pdu_t *request);
 
 /** @} */
 
-#endif /* _COAP_URI_H_ */
+#endif /* COAP_URI_H_ */

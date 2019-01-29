@@ -7,8 +7,8 @@
  * of use.
  */
 
-#ifndef _COAP_DEBUG_H_
-#define _COAP_DEBUG_H_
+#ifndef COAP_DEBUG_H_
+#define COAP_DEBUG_H_
 
 /**
  * @defgroup logging Logging Support
@@ -206,4 +206,4 @@ int coap_debug_set_packet_loss(const char *loss_level);
 int coap_debug_send_packet(void);
 
 
-#endif /* _COAP_DEBUG_H_ */
+#endif /* COAP_DEBUG_H_ */

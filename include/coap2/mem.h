@@ -7,8 +7,8 @@
  * of use.
  */
 
-#ifndef _COAP_MEM_H_
-#define _COAP_MEM_H_
+#ifndef COAP_MEM_H_
+#define COAP_MEM_H_
 
 #include <stdlib.h>
 
@@ -113,4 +113,4 @@ COAP_STATIC_INLINE void coap_free(void *pointer) {
 
 #endif /* WITH_LWIP */
 
-#endif /* _COAP_MEM_H_ */
+#endif /* COAP_MEM_H_ */

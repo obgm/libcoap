@@ -12,8 +12,8 @@
  * @brief Bit vector manipulation
  */
 
-#ifndef _COAP_BITS_H_
-#define _COAP_BITS_H_
+#ifndef COAP_BITS_H_
+#define COAP_BITS_H_
 
 #include <stdint.h>
 
@@ -75,4 +75,4 @@ bits_getb(const uint8_t *vec, size_t size, uint8_t bit) {
   return (*(vec + (bit >> 3)) & (1 << (bit & 0x07))) != 0;
 }
 
-#endif /* _COAP_BITS_H_ */
+#endif /* COAP_BITS_H_ */

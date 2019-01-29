@@ -7,8 +7,8 @@
  * of use.
  */
 
-#ifndef _LIBCOAP_H_
-#define _LIBCOAP_H_
+#ifndef COAP_LIBCOAP_H_
+#define COAP_LIBCOAP_H_
 
 /* The non posix embedded platforms like Contiki, TinyOS, RIOT, ... doesn't have
  * a POSIX compatible header structure so we have to slightly do some platform
@@ -55,4 +55,4 @@ void coap_startup(void);
 
 void coap_cleanup(void);
 
-#endif /* _LIBCOAP_H_ */
+#endif /* COAP_LIBCOAP_H_ */

@@ -6,8 +6,8 @@
 * README for terms of use.
 */
 
-#ifndef _COAP_SESSION_H_
-#define _COAP_SESSION_H_
+#ifndef COAP_SESSION_C_
+#define COAP_SESSION_C_
 
 
 #include "coap_config.h"
@@ -998,4 +998,4 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint) {
   return szEndpoint;
 }
 
-#endif  /* _COAP_SESSION_H_ */
+#endif  /* COAP_SESSION_C_ */

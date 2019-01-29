@@ -12,8 +12,8 @@
  * @brief Pre-defined constants that reflect defaults for CoAP
  */
 
-#ifndef _COAP_PDU_H_
-#define _COAP_PDU_H_
+#ifndef COAP_PDU_H_
+#define COAP_PDU_H_
 
 #include "uri.h"
 
@@ -540,4 +540,4 @@ int coap_get_data(const coap_pdu_t *pdu,
 
 size_t coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto);
 
-#endif /* _COAP_PDU_H_ */
+#endif /* COAP_PDU_H_ */

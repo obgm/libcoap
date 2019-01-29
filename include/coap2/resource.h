@@ -12,8 +12,8 @@
  * @brief Generic resource handling
  */
 
-#ifndef _COAP_RESOURCE_H_
-#define _COAP_RESOURCE_H_
+#ifndef COAP_RESOURCE_H_
+#define COAP_RESOURCE_H_
 
 # include <assert.h>
 
@@ -521,4 +521,4 @@ COAP_DEPRECATED int
 coap_resource_set_dirty(coap_resource_t *r,
                         const coap_string_t *query);
 
-#endif /* _COAP_RESOURCE_H_ */
+#endif /* COAP_RESOURCE_H_ */

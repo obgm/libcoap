@@ -12,8 +12,8 @@
  * @brief Clock Handling
  */
 
-#ifndef _COAP_TIME_H_
-#define _COAP_TIME_H_
+#ifndef COAP_TIME_H_
+#define COAP_TIME_H_
 
 /**
  * @defgroup clock Clock Handling
@@ -159,4 +159,4 @@ COAP_STATIC_INLINE int coap_time_le(coap_tick_t a, coap_tick_t b) {
 
 /** @} */
 
-#endif /* _COAP_TIME_H_ */
+#endif /* COAP_TIME_H_ */
