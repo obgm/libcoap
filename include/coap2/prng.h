@@ -12,8 +12,8 @@
  * @brief Pseudo Random Numbers
  */
 
-#ifndef _COAP_PRNG_H_
-#define _COAP_PRNG_H_
+#ifndef COAP_PRNG_H_
+#define COAP_PRNG_H_
 
 /**
  * @defgroup prng Pseudo Random Numbers
@@ -124,4 +124,4 @@ coap_prng_impl( unsigned char *buf, size_t len ) {
 
 /** @} */
 
-#endif /* _COAP_PRNG_H_ */
+#endif /* COAP_PRNG_H_ */

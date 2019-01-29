@@ -7,8 +7,8 @@
  * of use.
  */
 
-#ifndef _COAP_EVENT_H_
-#define _COAP_EVENT_H_
+#ifndef COAP_EVENT_H_
+#define COAP_EVENT_H_
 
 #include "libcoap.h"
 

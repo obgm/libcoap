@@ -7,8 +7,8 @@
  * of use.
  */
 
-#ifndef _COAP_IO_H_
-#define _COAP_IO_H_
+#ifndef COAP_IO_H_
+#define COAP_IO_H_
 
 #include <assert.h>
 #include <sys/types.h>
@@ -210,4 +210,4 @@ typedef enum {
   COAP_NACK_TLS_FAILED
 } coap_nack_reason_t;
 
-#endif /* _COAP_IO_H_ */
+#endif /* COAP_IO_H_ */

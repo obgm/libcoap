@@ -12,8 +12,8 @@
  * @brief Helpers for handling options in CoAP PDUs
  */
 
-#ifndef _COAP_OPTION_H_
-#define _COAP_OPTION_H_
+#ifndef COAP_OPTION_H_
+#define COAP_OPTION_H_
 
 #include "bits.h"
 #include "pdu.h"
@@ -458,4 +458,4 @@ int coap_insert_optlist(coap_optlist_t **optlist_chain,
  */
 void coap_delete_optlist(coap_optlist_t *optlist_chain);
 
-#endif /* _OPTION_H_ */
+#endif /* COAP_OPTION_H_ */

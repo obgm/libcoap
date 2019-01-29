@@ -8,8 +8,8 @@
  * of use.
  */
 
-#ifndef _COAP_H_
-#define _COAP_H_
+#ifndef COAP_H_
+#define COAP_H_
 
 #include "libcoap.h"
 
@@ -56,4 +56,4 @@ extern "C" {
 }
 #endif
 
-#endif /* _COAP_H_ */
+#endif /* COAP_H_ */

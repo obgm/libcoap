@@ -25,8 +25,8 @@
  * of coap-client
  */
 
-#ifndef _COAP_LIST_H_
-#define _COAP_LIST_H_
+#ifndef COAP_LIST_H_
+#define COAP_LIST_H_
 
 #include <coap2/utlist.h>
 
@@ -47,4 +47,4 @@ int coap_delete(coap_list_t *node);
 /* removes all items from given queue and frees the allocated storage */
 void coap_delete_list(coap_list_t *queue);
 
-#endif /* _COAP_LIST_H_ */
+#endif /* COAP_LIST_H_ */

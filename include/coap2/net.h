@@ -7,8 +7,8 @@
  * of use.
  */
 
-#ifndef _COAP_NET_H_
-#define _COAP_NET_H_
+#ifndef COAP_NET_H_
+#define COAP_NET_H_
 
 #include <assert.h>
 #include <stdlib.h>
@@ -739,4 +739,4 @@ coap_pdu_t *coap_wellknown_response(coap_context_t *context,
  */
 unsigned int coap_calc_timeout(coap_session_t *session, unsigned char r);
 
-#endif /* _COAP_NET_H_ */
+#endif /* COAP_NET_H_ */

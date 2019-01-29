@@ -12,8 +12,8 @@
  * @brief Representation of network addresses
  */
 
-#ifndef _COAP_ADDRESS_H_
-#define _COAP_ADDRESS_H_
+#ifndef COAP_ADDRESS_H_
+#define COAP_ADDRESS_H_
 
 #include <assert.h>
 #include <stdint.h>
@@ -174,4 +174,4 @@ coap_is_mcast(const coap_address_t *a) {
 }
 #endif /* !WITH_LWIP && !WITH_CONTIKI */
 
-#endif /* _COAP_ADDRESS_H_ */
+#endif /* COAP_ADDRESS_H_ */

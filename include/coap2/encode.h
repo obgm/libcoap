@@ -7,8 +7,8 @@
  * of use.
  */
 
-#ifndef _COAP_ENCODE_H_
-#define _COAP_ENCODE_H_
+#ifndef COAP_ENCODE_H_
+#define COAP_ENCODE_H_
 
 #if (BSD >= 199103) || defined(WITH_CONTIKI) || defined(_WIN32)
 # include <string.h>
@@ -93,4 +93,4 @@ coap_encode_var_bytes(uint8_t *buf, unsigned int value
   return (int)coap_encode_var_safe(buf, sizeof(value), value);
 }
 
-#endif /* _COAP_ENCODE_H_ */
+#endif /* COAP_ENCODE_H_ */
