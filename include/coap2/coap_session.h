@@ -160,7 +160,7 @@ void coap_session_set_mtu(coap_session_t *session, unsigned mtu);
  * @param session The CoAP session.
  * @return maximum PDU size, not including header (but including token).
  */
-size_t coap_session_max_pdu_size(coap_session_t *session);
+size_t coap_session_max_pdu_size(const coap_session_t *session);
 
 /**
 * Creates a new client session to the designated server.

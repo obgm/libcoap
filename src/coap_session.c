@@ -186,7 +186,7 @@ void coap_session_free(coap_session_t *session) {
   coap_free_type(COAP_SESSION, session);
 }
 
-size_t coap_session_max_pdu_size(coap_session_t *session) {
+size_t coap_session_max_pdu_size(const coap_session_t *session) {
   size_t max_with_header = (size_t)(session->mtu - session->tls_overhead);
   if (COAP_PROTO_NOT_RELIABLE(session->proto))
     return max_with_header > 4 ? max_with_header - 4 : 0;
