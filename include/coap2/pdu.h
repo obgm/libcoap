@@ -385,7 +385,7 @@ void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
 /**
  * Creates a new CoAP PDU.
  */
-coap_pdu_t *coap_new_pdu(struct coap_session_t *session);
+coap_pdu_t *coap_new_pdu(const struct coap_session_t *session);
 
 /**
  * Dispose of an CoAP PDU and frees associated storage.
