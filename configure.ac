@@ -428,7 +428,7 @@ if test "x$build_dtls" = "xyes"; then
     # Note that tinyDTLS is used only when explicitly requested.
 
     # Giving out an error message if we haven't found at least one crypto library.
-    if test "x$have_gnutls" = "xno" -a "x$have_openssl" = "xno" -a "x$have_tinydtls" != "xno"; then
+    if test "x$have_gnutls" = "xno" -a "x$have_openssl" = "xno" -a "x$have_tinydtls" = "xno"; then
         AC_MSG_ERROR([==> Option '--enable-dtls' is set but one of the needed cryptography library GnuTLS nor OpenSSL nor tinyDTLS could be found!
                       Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required) or OpenSSL(>= $openssl_version_required)
                       or disable the DTLS support using '--disable-dtls'.])
