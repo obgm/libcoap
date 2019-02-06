@@ -17,7 +17,7 @@ SYNOPSIS
 *coap-server* [*-d* max] [*-g* group] [*-l* loss] [*-p* port] [*-v* num]
               [*-A* address] [*-N*]
               [[*-k* key] [*-h* hint]]
-              [[*-c* certfile][*-C* cafile] [*-R* root_cafile]]
+              [[*-c* certfile] [*-n*] [*-C* cafile] [*-R* root_cafile]]
 
 DESCRIPTION
 -----------
@@ -84,6 +84,9 @@ OPTIONS - PKI
    KEY information.
    *Note:* if *-k key* is defined, you need to define *-c cafile* as well to
    have the server support both PSK and PKI.
+
+*-n* ::
+   Disable the requirement for clients to have defined client certificates
 
 *-C* cafile::
   PEM file containing the CA Certificate that was used to sign the certfile
