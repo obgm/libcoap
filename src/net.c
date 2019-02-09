@@ -1857,7 +1857,7 @@ no_response(coap_pdu_t *request, coap_pdu_t *response) {
       val = coap_decode_var_bytes(coap_opt_value(nores), coap_opt_length(nores));
 
       /* The response should be dropped when the bit corresponding to
-       * the response class is set (cf. table in funtion
+       * the response class is set (cf. table in function
        * documentation). When a No-Response option is present and the
        * bit is not set, the sender explicitly indicates interest in
        * this response. */

@@ -467,7 +467,7 @@ int coap_pdu_parse(coap_proto_t proto,
  * Adds token of length @p len to @p pdu.
  * Adding the token destroys any following contents of the pdu. Hence options
  * and data must be added after coap_add_token() has been called. In @p pdu,
- * length is set to @p len + @c 4, and max_delta is set to @c 0. This funtion
+ * length is set to @p len + @c 4, and max_delta is set to @c 0. This function
  * returns @c 0 on error or a value greater than zero on success.
  *
  * @param pdu  The PDU where the token is to be added.

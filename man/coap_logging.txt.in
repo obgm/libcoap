@@ -57,7 +57,7 @@ Logging by default is to stderr or stdout depending on the logging level of
 the log entry.  It ia possible to send the logging information to an
 application logging call-back handler for processing by the application.
 
-The *coap_log*() funtion is used to log information at the appropriate _level_.
+The *coap_log*() function is used to log information at the appropriate _level_.
 The rest of the parameters follow the standard *printf*() function format.
 
 Logging levels (*coap_log_t*) are defined by (the same as for *syslog*()), which
