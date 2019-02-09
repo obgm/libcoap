@@ -226,7 +226,7 @@ typedef struct coap_dtls_pki_t {
   coap_dtls_sni_callback_t validate_sni_call_back;
   void *sni_call_back_arg;  /**< Passed in to the sni call-back function */
 
-  /** Addtional Security call-back handler that is invoked when libcoap has
+  /** Additional Security call-back handler that is invoked when libcoap has
    * done the standerd, defined validation checks at the TLS level,
    * If not @p NULL, called from within the TLS Client Hello connection
    * setup.
