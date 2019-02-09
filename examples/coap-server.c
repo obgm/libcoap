@@ -56,6 +56,7 @@ static int resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_CON;
 static char *cert_file = NULL; /* Combined certificate and private key in PEM */
 static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM */
 static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
+static int require_peer_cert = 1; /* By default require peer cert */
 #define MAX_KEY   64 /* Maximum length of a key (i.e., PSK) in bytes. */
 static uint8_t key[MAX_KEY];
 static ssize_t key_length = 0;
@@ -683,7 +684,7 @@ fill_keystore(coap_context_t *ctx) {
        * requirements - see 'man coap_encryption'.
        */
       dtls_pki.verify_peer_cert        = 1;
-      dtls_pki.require_peer_cert       = 1;
+      dtls_pki.require_peer_cert       = require_peer_cert;
       dtls_pki.allow_self_signed       = 1;
       dtls_pki.allow_expired_certs     = 1;
       dtls_pki.cert_chain_validation   = 1;
@@ -737,7 +738,7 @@ usage( const char *program, const char *version) {
      "Usage: %s [-d max] [-g group] [-l loss] [-p port] [-v num]\n"
      "\t\t[-A address] [-N]\n"
      "\t\t[[-k key] [-h hint]]\n"
-     "\t\t[[-c certfile][-C cafile] [-R root_cafile]]\n"
+     "\t\t[[-c certfile][-C cafile] [-n] [-R root_cafile]]\n"
      "General Options\n"
      "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
      "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
@@ -765,6 +766,8 @@ usage( const char *program, const char *version) {
      "PKI Options (if supported by underlying (D)TLS library)\n"
      "\t-c certfile\tPEM file containing both CERTIFICATE and PRIVATE KEY\n"
      "\t       \t\tThis argument requires (D)TLS with PKI to be available\n"
+     "\t-n     \t\tDisable the requirement for clients to have defined\n"
+     "\t       \t\tclient certificates\n"
      "\t-C cafile\tPEM file containing the CA Certificate that was used to\n"
      "\t       \t\tsign the certfile. If defined, then the client will be\n"
      "\t       \t\tgiven this CA Certificate during the TLS set up.\n"
@@ -952,7 +955,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "A:d:c:C:g:h:k:l:Np:R:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:d:c:C:g:h:k:l:nNp:R:v:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -990,6 +993,9 @@ main(int argc, char **argv) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
         exit(1);
       }
+      break;
+    case 'n':
+      require_peer_cert = 0;
       break;
     case 'N':
       resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_NON;
