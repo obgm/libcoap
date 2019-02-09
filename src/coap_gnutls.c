@@ -161,9 +161,14 @@ coap_get_tls_library_version(void) {
 static void
 coap_gnutls_audit_log_func(gnutls_session_t g_session, const char* text)
 {
-  coap_session_t *c_session =
-                  (coap_session_t *)gnutls_transport_get_ptr(g_session);
-  coap_log(LOG_WARNING, "** %s: %s", coap_session_str(c_session), text);
+  if (g_session) {
+    coap_session_t *c_session =
+      (coap_session_t *)gnutls_transport_get_ptr(g_session);
+    coap_log(LOG_WARNING, "** %s: %s",
+             coap_session_str(c_session), text);
+  } else {
+    coap_log(LOG_WARNING, "** (null): %s", text);
+  }
 }
 
 static void
