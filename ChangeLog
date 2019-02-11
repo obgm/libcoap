@@ -1,3 +1,18 @@
+2019-02-11  Olaf Bergmann  <bergmann@tzi.org>
+
+	Change summary for version 4.2.0:
+
+	* DTLS support improvements (OpenSSL, GnuTLS, tinydtls)
+	    * Pre-shared keys, X.509 certificates
+        * new session abstraction
+	* TCP and TLS support
+	* improved documentation; manual pages
+	* changes in internal PDU structure
+	* improved examples (DTLS usage, block-wise transfer)
+	* docker images for continuous integration
+	* support for Google OSS fuzzer
+	* MS Visual Studio project for Windows builds
+
 2017-07-10  Olaf Bergmann  <bergmann@tzi.org>
 
 	* DTLS support (OpenSSL, tinyDTLS) by Jean-Claude Michelou
