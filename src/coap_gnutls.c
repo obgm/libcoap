@@ -187,7 +187,7 @@ coap_gnutls_log_func(int level, const char* text)
 int
 coap_dtls_context_set_pki(coap_context_t *c_context,
                           coap_dtls_pki_t* setup_data,
-                          int role UNUSED)
+                          coap_dtls_role_t role UNUSED)
 {
   coap_gnutls_context_t *g_context =
                          ((coap_gnutls_context_t *)c_context->dtls_context);
@@ -252,7 +252,7 @@ coap_dtls_context_set_pki_root_cas(struct coap_context_t *c_context,
 int
 coap_dtls_context_set_psk(coap_context_t *c_context,
                           const char *identity_hint UNUSED,
-                          int role UNUSED
+                          coap_dtls_role_t role UNUSED
 ) {
   coap_gnutls_context_t *g_context =
                          ((coap_gnutls_context_t *)c_context->dtls_context);
@@ -605,7 +605,7 @@ static int cert_verify_callback_gnutls(gnutls_session_t g_session)
 static int
 setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
                       coap_gnutls_context_t *g_context,
-                      coap_dtls_pki_t *setup_data)
+                      coap_dtls_pki_t *setup_data, coap_dtls_role_t role)
 {
   int ret;
 
@@ -624,14 +624,19 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
                                    GNUTLS_X509_FMT_PEM),
                  "gnutls_certificate_set_x509_key_file");
     }
-    else {
+    else if (role == COAP_DTLS_ROLE_SERVER) {
       coap_log(LOG_ERR,
-               "***setup_pki: (D)TLS: No Client Certificate + Private "
-               "Key defined\n");
+               "***setup_pki: (D)TLS: No %s Certificate + Private "
+               "Key defined\n",
+               role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
       return GNUTLS_E_INSUFFICIENT_CREDENTIALS;
     }
     if (setup_data->pki_key.key.pem.ca_file &&
         setup_data->pki_key.key.pem.ca_file[0]) {
+      if (!*pki_credentials) {
+        G_CHECK(gnutls_certificate_allocate_credentials(pki_credentials),
+                "gnutls_certificate_allocate_credentials");
+      }
       G_CHECK(gnutls_certificate_set_x509_trust_file(*pki_credentials,
                            setup_data->pki_key.key.pem.ca_file,
                            GNUTLS_X509_FMT_PEM),
@@ -660,10 +665,11 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
                            GNUTLS_X509_FMT_DER),
               "gnutls_certificate_set_x509_key_mem");
     }
-    else {
+    else if (role == COAP_DTLS_ROLE_SERVER) {
       coap_log(LOG_ERR,
-               "***setup_pki: (D)TLS: No Client Certificate + Private "
-               "Key defined\n");
+               "***setup_pki: (D)TLS: No %s Certificate + Private "
+               "Key defined\n",
+               role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
       return GNUTLS_E_INSUFFICIENT_CREDENTIALS;
     }
     if (setup_data->pki_key.key.asn1.ca_cert &&
@@ -674,6 +680,10 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
       memcpy(&ca_cert.data, &setup_data->pki_key.key.asn1.ca_cert,
                             sizeof(ca_cert.data));
       ca_cert.size = setup_data->pki_key.key.asn1.ca_cert_len;
+      if (!*pki_credentials) {
+        G_CHECK(gnutls_certificate_allocate_credentials(pki_credentials),
+                "gnutls_certificate_allocate_credentials");
+      }
       G_CHECK(gnutls_certificate_set_x509_trust_mem(*pki_credentials,
                            &ca_cert,
                            GNUTLS_X509_FMT_DER),
@@ -688,6 +698,10 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
   }
 
   if (g_context->root_ca_file) {
+    if (!*pki_credentials) {
+      G_CHECK(gnutls_certificate_allocate_credentials(pki_credentials),
+              "gnutls_certificate_allocate_credentials");
+    }
     G_CHECK(gnutls_certificate_set_x509_trust_file(*pki_credentials,
                          g_context->root_ca_file,
                          GNUTLS_X509_FMT_PEM),
@@ -695,6 +709,10 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
   }
   if (g_context->root_ca_path) {
 #if (GNUTLS_VERSION_NUMBER >= 0x030306)
+    if (!*pki_credentials) {
+      G_CHECK(gnutls_certificate_allocate_credentials(pki_credentials),
+              "gnutls_certificate_allocate_credentials");
+    }
     G_CHECK(gnutls_certificate_set_x509_trust_dir(*pki_credentials,
                          g_context->root_ca_path,
                          GNUTLS_X509_FMT_PEM),
@@ -819,7 +837,7 @@ post_client_hello_gnutls_pki(gnutls_session_t g_session)
       if ((ret = setup_pki_credentials(
                            &g_context->sni_entry_list[i].pki_credentials,
                            g_context,
-                           &sni_setup_data)) < 0) {
+                           &sni_setup_data, COAP_DTLS_ROLE_CLIENT)) < 0) {
         int keep_ret = ret;
         G_ACTION(gnutls_alert_send(g_session, GNUTLS_AL_FATAL,
                                    GNUTLS_A_BAD_CERTIFICATE));
@@ -890,7 +908,7 @@ setup_client_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
   if (g_context->psk_pki_enabled & IS_PKI) {
     coap_dtls_pki_t *setup_data = &g_context->setup_data;
     G_CHECK(setup_pki_credentials(&g_env->pki_credentials, g_context,
-                                  setup_data),
+                                  setup_data, COAP_DTLS_ROLE_CLIENT),
             "setup_pki_credentials");
 
     G_CHECK(gnutls_credentials_set(g_env->g_session, GNUTLS_CRD_CERTIFICATE,
@@ -986,7 +1004,7 @@ setup_server_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
   if (g_context->psk_pki_enabled & IS_PKI) {
     coap_dtls_pki_t *setup_data = &g_context->setup_data;
     G_CHECK(setup_pki_credentials(&g_env->pki_credentials, g_context,
-                                  setup_data),
+                                  setup_data, COAP_DTLS_ROLE_SERVER),
             "setup_pki_credentials");
 
     if (setup_data->require_peer_cert) {
@@ -1228,6 +1246,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
              "Insufficient credentials provided.\n");
     ret = -1;
     break;
+  case GNUTLS_E_UNEXPECTED_HANDSHAKE_PACKET:
   case GNUTLS_E_FATAL_ALERT_RECEIVED:
     log_last_alert(g_env->g_session);
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
@@ -1237,6 +1256,16 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
     log_last_alert(g_env->g_session);
     c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
     ret = 0;
+    break;
+  case GNUTLS_E_NO_CERTIFICATE_FOUND:
+    coap_log(LOG_WARNING,
+             "do_gnutls_handshake: session establish "
+             "returned %d: '%s'\n",
+             ret, gnutls_strerror(ret));
+    G_ACTION(gnutls_alert_send(g_env->g_session, GNUTLS_AL_FATAL,
+                                                 GNUTLS_A_BAD_CERTIFICATE));
+    c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+    ret = -1;
     break;
   case GNUTLS_E_DECRYPTION_FAILED:
     coap_log(LOG_WARNING,
@@ -1249,7 +1278,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
     ret = -1;
     break;
   case GNUTLS_E_UNKNOWN_CIPHER_SUITE:
-  /* fall through */ 
+  /* fall through */
   case GNUTLS_E_TIMEDOUT:
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
     ret = -1;

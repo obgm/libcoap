@@ -1074,17 +1074,31 @@ verify_cn_callback(const char *cn,
 }
 
 static coap_dtls_pki_t *
-setup_pki(void) {
+setup_pki(coap_context_t *ctx) {
   static coap_dtls_pki_t dtls_pki;
   static char client_sni[256];
 
+  /* If general root CAs are defined */
+  if (root_ca_file) {
+    struct stat stbuf;
+    if ((stat(root_ca_file, &stbuf) == 0) && S_ISDIR(stbuf.st_mode)) {
+      coap_context_set_pki_root_cas(ctx, NULL, root_ca_file);
+    } else {
+      coap_context_set_pki_root_cas(ctx, root_ca_file, NULL);
+    }
+  }
+
   memset (&dtls_pki, 0, sizeof(dtls_pki));
   dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
-  if (ca_file) {
+  if (ca_file || root_ca_file) {
     /*
      * Add in additional certificate checking.
      * This list of enabled can be tuned for the specific
      * requirements - see 'man coap_encryption'.
+     *
+     * Note: root_ca_file is setup separately using
+     * coap_context_set_pki_root_cas(), but this is used to define what
+     * checking actually takes place.
      */
     dtls_pki.verify_peer_cert        = 1;
     dtls_pki.require_peer_cert       = 1;
@@ -1130,16 +1144,6 @@ get_session(
 ) {
   coap_session_t *session = NULL;
 
-  /* If general root CAs are defined */
-  if (root_ca_file) {
-    struct stat stbuf;
-    if ((stat(root_ca_file, &stbuf) == 0) && S_ISDIR(stbuf.st_mode)) {
-      coap_context_set_pki_root_cas(ctx, NULL, root_ca_file);
-    } else {
-      coap_context_set_pki_root_cas(ctx, root_ca_file, NULL);
-    }
-  }
-
   if ( local_addr ) {
     int s;
     struct addrinfo hints;
@@ -1163,8 +1167,9 @@ get_session(
         coap_address_init( &bind_addr );
         bind_addr.size = rp->ai_addrlen;
         memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
-        if (cert_file && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
-          coap_dtls_pki_t *dtls_pki = setup_pki();
+        if ((root_ca_file || ca_file || cert_file) &&
+            (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
+          coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
           session = coap_new_client_session_pki(ctx, &bind_addr, dst, proto, dtls_pki);
         }
         else if ((identity || key) &&
@@ -1181,8 +1186,9 @@ get_session(
     }
     freeaddrinfo( result );
   } else {
-    if (cert_file && (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
-      coap_dtls_pki_t *dtls_pki = setup_pki();
+    if ((root_ca_file || ca_file || cert_file) &&
+        (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
+      coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
       session = coap_new_client_session_pki(ctx, NULL, dst, proto, dtls_pki);
     }
     else if ((identity || key) &&
