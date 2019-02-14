@@ -1323,19 +1323,20 @@ tls_client_hello_call_back(SSL *ssl,
    */
   if (session && session->context->psk_key && session->context->psk_key_len) {
     int len = SSL_client_hello_get0_ciphers(ssl, &out);
-    STACK_OF(SSL_CIPHER) *peer_ciphers;
-    STACK_OF(SSL_CIPHER) *scsvc;
-    int ii;
+    STACK_OF(SSL_CIPHER) *peer_ciphers = NULL;
+    STACK_OF(SSL_CIPHER) *scsvc = NULL;
 
-    len = SSL_bytes_to_cipher_list(ssl, out, len,
-                                   SSL_client_hello_isv2(ssl),
-                                   &peer_ciphers, &scsvc);
-    for (ii = 0; ii < sk_SSL_CIPHER_num (peer_ciphers); ii++) {
-      const SSL_CIPHER *peer_cipher = sk_SSL_CIPHER_value(peer_ciphers, ii);
+    if (len && SSL_bytes_to_cipher_list(ssl, out, len,
+                                        SSL_client_hello_isv2(ssl),
+                                        &peer_ciphers, &scsvc)) {
+      int ii;
+      for (ii = 0; ii < sk_SSL_CIPHER_num (peer_ciphers); ii++) {
+        const SSL_CIPHER *peer_cipher = sk_SSL_CIPHER_value(peer_ciphers, ii);
 
-      if (strstr (SSL_CIPHER_get_name (peer_cipher), "PSK")) {
-        psk_requested = 1;
-        break;
+        if (strstr (SSL_CIPHER_get_name (peer_cipher), "PSK")) {
+          psk_requested = 1;
+          break;
+        }
       }
     }
     sk_SSL_CIPHER_free(peer_ciphers);
