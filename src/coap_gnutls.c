@@ -1533,11 +1533,20 @@ coap_sock_read(gnutls_transport_ptr_t context, void *out, size_t outl) {
   coap_session_t *c_session = (struct coap_session_t *)context;
 
   if (out != NULL) {
-    ret = (int)coap_socket_read(&c_session->sock, out, outl);
+#ifdef _WIN32
+    ret = recv(c_session->sock.fd, (char *)out, (int)outl, 0);
+#else
+    ret = recv(c_session->sock.fd, out, outl, 0);
+#endif
     if (ret == 0) {
-      errno = EAGAIN;
-      ret = -1;
-    }
+      /* graceful shutdown */
+      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
+      return 0;
+    } else if (ret == COAP_SOCKET_ERROR)
+      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
+    else if (ret < (ssize_t)outl)
+      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
+    return ret;
   }
   return ret;
 }
@@ -1742,11 +1751,14 @@ ssize_t coap_tls_read(coap_session_t *c_session,
         errno = EAGAIN;
         ret = 0;
         break;
+      case GNUTLS_E_PULL_ERROR:
+        c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
+        break;
       default:
-      coap_log(LOG_WARNING,
-               "coap_tls_read: gnutls_record_recv "
-               "returned %d: '%s'\n",
-               ret, gnutls_strerror(ret));
+        coap_log(LOG_WARNING,
+                 "coap_tls_read: gnutls_record_recv "
+                 "returned %d: '%s'\n",
+                 ret, gnutls_strerror(ret));
         ret = -1;
         break;
       }
