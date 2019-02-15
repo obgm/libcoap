@@ -261,8 +261,10 @@ typedef struct coap_dtls_pki_t {
 void *
 coap_dtls_new_context(struct coap_context_t *coap_context);
 
-#define COAP_DTLS_ROLE_CLIENT  0 /**< Internal function invoked for client */
-#define COAP_DTLS_ROLE_SERVER  1 /**< Internal function invoked for server */
+typedef enum coap_dtls_role_t {
+  COAP_DTLS_ROLE_CLIENT, /**< Internal function invoked for client */
+  COAP_DTLS_ROLE_SERVER  /**< Internal function invoked for server */
+} coap_dtls_role_t;
 
 /**
  * Set the DTLS context's default PSK information.
@@ -288,7 +290,7 @@ coap_dtls_new_context(struct coap_context_t *coap_context);
 int
 coap_dtls_context_set_psk(struct coap_context_t *coap_context,
                           const char *identity_hint,
-                          int role);
+                          coap_dtls_role_t role);
 
 /**
  * Set the DTLS context's default server PKI information.
@@ -312,7 +314,7 @@ coap_dtls_context_set_psk(struct coap_context_t *coap_context,
 int
 coap_dtls_context_set_pki(struct coap_context_t *coap_context,
                           coap_dtls_pki_t *setup_data,
-                          int role);
+                          coap_dtls_role_t role);
 
 /**
  * Set the dtls context's default Root CA information for a client or server.

@@ -559,7 +559,7 @@ error:
 int
 coap_dtls_context_set_psk(coap_context_t *ctx,
                           const char *identity_hint,
-                          int role
+                          coap_dtls_role_t role
 ) {
   coap_openssl_context_t *context = ((coap_openssl_context_t *)ctx->dtls_context);
   BIO *bio;
@@ -814,7 +814,7 @@ setup_pki_server(SSL_CTX *ctx,
 
 static int
 setup_pki_ssl(SSL *ssl,
-                 coap_dtls_pki_t* setup_data, int isserver
+                 coap_dtls_pki_t* setup_data, coap_dtls_role_t role
 ) {
   switch (setup_data->pki_key.key_type) {
   case COAP_PKI_KEY_PEM:
@@ -825,14 +825,18 @@ setup_pki_ssl(SSL *ssl,
                                    SSL_FILETYPE_PEM))) {
         coap_log(LOG_WARNING,
                  "*** setup_pki: (D)TLS: %s: Unable to configure "
-                 "Client Certificate\n",
-                 setup_data->pki_key.key.pem.public_cert);
+                 "%s Certificate\n",
+                 setup_data->pki_key.key.pem.public_cert,
+                 role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
         return 0;
       }
     }
-    else {
+    else if (role == COAP_DTLS_ROLE_SERVER ||
+             (setup_data->pki_key.key.pem.private_key &&
+              setup_data->pki_key.key.pem.private_key[0])) {
       coap_log(LOG_ERR,
-             "*** setup_pki: (D)TLS: No Client Certificate defined\n");
+             "*** setup_pki: (D)TLS: No %s Certificate defined\n",
+             role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
       return 0;
     }
     if (setup_data->pki_key.key.pem.private_key &&
@@ -847,9 +851,12 @@ setup_pki_ssl(SSL *ssl,
         return 0;
       }
     }
-    else {
+    else if (role == COAP_DTLS_ROLE_SERVER ||
+             (setup_data->pki_key.key.pem.public_cert &&
+              setup_data->pki_key.key.pem.public_cert[0])) {
       coap_log(LOG_ERR,
-             "*** setup_pki: (D)TLS: No Client Private Key defined\n");
+             "*** setup_pki: (D)TLS: No %s Private Key defined\n",
+             role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
       return 0;
     }
     if (setup_data->pki_key.key.pem.ca_file &&
@@ -860,7 +867,7 @@ setup_pki_ssl(SSL *ssl,
       char *rw_var = NULL;
       SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
 
-      if (isserver) {
+      if (role == COAP_DTLS_ROLE_SERVER) {
         STACK_OF(X509_NAME) *cert_names = SSL_load_client_CA_file(setup_data->pki_key.key.pem.ca_file);
 
         if (cert_names != NULL)
@@ -868,8 +875,9 @@ setup_pki_ssl(SSL *ssl,
         else {
           coap_log(LOG_WARNING,
                    "*** setup_pki: (D)TLS: %s: Unable to configure "
-                   "client CA File\n",
-                    setup_data->pki_key.key.pem.ca_file);
+                   "%s CA File\n",
+                    setup_data->pki_key.key.pem.ca_file,
+                    role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
           return 0;
         }
       }
@@ -902,14 +910,18 @@ setup_pki_ssl(SSL *ssl,
                            setup_data->pki_key.key.asn1.public_cert_len))) {
         coap_log(LOG_WARNING,
                  "*** setup_pki: (D)TLS: %s: Unable to configure "
-                 "Client Certificate\n",
+                 "%s Certificate\n",
+                 role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client",
                  "ASN1");
         return 0;
       }
     }
-    else {
+    else if (role == COAP_DTLS_ROLE_SERVER ||
+             (setup_data->pki_key.key.asn1.private_key &&
+              setup_data->pki_key.key.asn1.private_key[0])) {
       coap_log(LOG_ERR,
-             "*** setup_pki: (D)TLS: No Client Certificate defined\n");
+             "*** setup_pki: (D)TLS: No %s Certificate defined\n",
+             role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
       return 0;
     }
     if (setup_data->pki_key.key.asn1.private_key &&
@@ -920,14 +932,18 @@ setup_pki_ssl(SSL *ssl,
                         setup_data->pki_key.key.asn1.private_key_len))) {
         coap_log(LOG_WARNING,
                  "*** setup_pki: (D)TLS: %s: Unable to configure "
-                 "Client Private Key\n",
+                 "%s Private Key\n",
+                 role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client",
                  "ASN1");
         return 0;
       }
     }
-    else {
+    else if (role == COAP_DTLS_ROLE_SERVER ||
+             (setup_data->pki_key.key.asn1.public_cert &&
+              setup_data->pki_key.key.asn1.public_cert_len > 0)) {
       coap_log(LOG_ERR,
-             "*** setup_pki: (D)TLS: No Client Private Key defined\n");
+             "*** setup_pki: (D)TLS: No %s Private Key defined",
+             role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
       return 0;
     }
     if (setup_data->pki_key.key.asn1.ca_cert &&
@@ -938,7 +954,7 @@ setup_pki_ssl(SSL *ssl,
       X509_STORE *st;
       SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
 
-      if (isserver) {
+      if (role == COAP_DTLS_ROLE_SERVER) {
         if (!x509 || !SSL_add_client_CA(ssl, x509)) {
           coap_log(LOG_WARNING,
                    "*** setup_pki: (D)TLS: %s: Unable to configure "
@@ -1504,7 +1520,7 @@ is_x509:
 int
 coap_dtls_context_set_pki(coap_context_t *ctx,
                           coap_dtls_pki_t *setup_data,
-                          int role
+                          coap_dtls_role_t role
 ) {
   coap_openssl_context_t *context =
                                 ((coap_openssl_context_t *)ctx->dtls_context);
