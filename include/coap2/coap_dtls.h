@@ -129,7 +129,7 @@ typedef enum coap_asn1_privatekey_type_t {
  * The enum used for determining the PKI key formats.
  */
 typedef enum coap_pki_key_t {
-  COAP_PKI_KEY_PEM,      /**< The PKI key type is PEM */
+  COAP_PKI_KEY_PEM = 0,   /**< The PKI key type is PEM */
   COAP_PKI_KEY_ASN1,      /**< The PKI key type is ASN.1 (DER) */
 } coap_pki_key_t;
 
