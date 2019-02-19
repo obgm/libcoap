@@ -307,6 +307,23 @@ check_token(coap_pdu_t *received) {
     memcmp(received->token, the_token.s, the_token.length) == 0;
 }
 
+static int
+event_handler(coap_context_t *ctx UNUSED_PARAM,
+              coap_event_t event,
+              struct coap_session_t *session UNUSED_PARAM) {
+
+  switch(event) {
+  case COAP_EVENT_DTLS_CLOSED:
+  case COAP_EVENT_TCP_CLOSED:
+  case COAP_EVENT_SESSION_CLOSED:
+    quit = 1;
+    break;
+  default:
+    break;
+  }
+  return 0;
+}
+
 static void
 message_handler(struct coap_context_t *ctx,
                 coap_session_t *session,
@@ -1405,6 +1422,7 @@ main(int argc, char **argv) {
 
   coap_register_option(ctx, COAP_OPTION_BLOCK2);
   coap_register_response_handler(ctx, message_handler);
+  coap_register_event_handler(ctx, event_handler);
 
   /* construct CoAP message */
 
