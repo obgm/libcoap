@@ -120,7 +120,7 @@ file(s).
   the source file:
 
 --8<----
-/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 * -*- */
+/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 --->8--
 
 * Single lines within the source code should not be longer then 78
@@ -198,14 +198,13 @@ maybe you can improve the doxygen documentation.
 Also a good documentation on the usage of the libcoap and the example
 binaries is always improvable. So we appreciate any help on this.
 
-* Man Pages
+* Manual Pages
 The source is providing some example binaries which originally just should show
 how the libcoap can be used. Right now these binaries are fully usable and
 quite more than simple examples on a system. There are man pages for these
 binaries available, if you found there is a improvement needed please do so and
 write to the mailing list explained in section 2.
-Maybe you can write up some good HowTo's on the usage for these binaries. A man
-page for the library itself would be also a improvement.
+Maybe you can write up some good HowTo's on the usage for these binaries.
 
 * HowTo's
 The libcoap library has now a lot of functions you can use.
@@ -213,7 +212,7 @@ Unfortunately there is no good user guide on how to use the libcoap in
 any external project. This means there is no HowTo or CheatSheet for a
 programming person available. You want to write up something?
 
-* missed Functionality
+* Missing functionality
 There are some features that are still missing inside the libcoap. For
 example some DTLS implementations and proxy functionality.
 
