@@ -532,6 +532,9 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
     gnutls_x509_crt_t cert;
     uint8_t der[2048];
     size_t size;
+    /* status == 0 indicates that the certificate passed to
+     *  setup_data.validate_cn_call_back has been validated. */
+    const int cert_is_trusted = !status;
 
     cert_list = gnutls_certificate_get_peers(g_session, &cert_list_size);
     if (cert_list_size == 0) {
@@ -554,7 +557,7 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
            size,
            c_session,
            0,
-           status ? 0 : 1,
+           cert_is_trusted,
            g_context->setup_data.cn_call_back_arg)) {
       alert = GNUTLS_A_ACCESS_DENIED;
       goto fail;
