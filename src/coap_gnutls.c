@@ -1,8 +1,8 @@
 /*
- * coap_gnutls.c -- GunTLS Datagram Transport Layer Support for libcoap
+ * coap_gnutls.c -- GnuTLS Datagram Transport Layer Support for libcoap
  *
  * Copyright (C) 2017 Dag Bjorklund <dag.bjorklund@comsel.fi>
- * Copyright (C) 2018 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2019 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
