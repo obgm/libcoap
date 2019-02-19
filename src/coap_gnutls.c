@@ -376,6 +376,14 @@ psk_client_callback(gnutls_session_t g_session,
   uint8_t psk_key[64];
   size_t psk_len;
 
+  /* Constant passed to get_client_psk callback. The final byte is
+   * reserved for a terminating 0. */
+  const size_t max_identity_len = sizeof(identity) - 1;
+
+  /* Initialize result parameters. */
+  *username = NULL;
+  key->data = NULL;
+
   if (c_session == NULL || c_session->context == NULL ||
       c_session->context->get_client_psk == NULL) {
     return -1;
@@ -386,20 +394,26 @@ psk_client_callback(gnutls_session_t g_session,
                                                0,
                                                identity,
                                                &identity_len,
-                                               sizeof (identity) - 1,
+                                               max_identity_len,
                                                psk_key,
                                                sizeof(psk_key));
-  if (identity_len < sizeof (identity))
-    identity[identity_len] = 0;
+  assert(identity_len < sizeof(identity));
 
+  /* Reserve dynamic memory to hold the identity and a terminating
+   * zero. */
   *username = gnutls_malloc(identity_len+1);
-  memcpy(*username, identity, identity_len+1);
+  if (*username) {
+    memcpy(*username, identity, identity_len);
+    *username[identity_len] = '\0';
+  }
 
   key->data = gnutls_malloc(psk_len);
-  memcpy(key->data, psk_key, psk_len);
-  key->size = psk_len;
+  if (key->data) {
+    memcpy(key->data, psk_key, psk_len);
+    key->size = psk_len;
+  }
 
-  return 0;
+  return (*username && key->data) ? 0 : -1;
 }
 
 /*
