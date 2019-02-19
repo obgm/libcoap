@@ -88,6 +88,12 @@ typedef struct coap_gnutls_context_t {
   gnutls_priority_t priority_cache;
 } coap_gnutls_context_t;
 
+typedef enum coap_free_bye_t {
+  COAP_FREE_BYE_AS_TCP,  /**< call gnutls_bye() with GNUTLS_SHUT_RDWR */
+  COAP_FREE_BYE_AS_UDP,  /**< call gnutls_bye() with GNUTLS_SHUT_WR */
+  COAP_FREE_BYE_NONE     /**< do not call gnutls_bye() */
+} coap_free_bye_t;
+
 #if (GNUTLS_VERSION_NUMBER >= 0x030505)
 #define VARIANTS "NORMAL:+ECDHE-PSK:+PSK:+ECDHE-ECDSA:+AES-128-CCM-8"
 #else
@@ -1173,26 +1179,32 @@ fail:
 static void
 coap_dtls_free_gnutls_env(coap_gnutls_context_t *g_context,
                           coap_gnutls_env_t *g_env,
-                          int unreliable)
+                          coap_free_bye_t free_bye)
 {
   if (g_env) {
     /* It is suggested not to use GNUTLS_SHUT_RDWR in DTLS
      * connections because the peer's closure message might
      * be lost */
-    gnutls_bye(g_env->g_session, unreliable ?
+    if (free_bye != COAP_FREE_BYE_NONE) {
+      /* Only do this if appropriate */
+      gnutls_bye(g_env->g_session, free_bye == COAP_FREE_BYE_AS_UDP ?
                                        GNUTLS_SHUT_WR : GNUTLS_SHUT_RDWR);
+    }
     gnutls_deinit(g_env->g_session);
     g_env->g_session = NULL;
     if (g_context->psk_pki_enabled & IS_PSK) {
       if (g_context->psk_pki_enabled & IS_CLIENT) {
         gnutls_psk_free_client_credentials(g_env->psk_cl_credentials);
+        g_env->psk_cl_credentials = NULL;
       }
       else {
         gnutls_psk_free_server_credentials(g_env->psk_sv_credentials);
+        g_env->psk_sv_credentials = NULL;
       }
     }
     if (g_context->psk_pki_enabled & IS_PKI) {
       gnutls_certificate_free_credentials(g_env->pki_credentials);
+      g_env->pki_credentials = NULL;
     }
     gnutls_free(g_env);
   }
@@ -1259,9 +1271,8 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
     break;
   case GNUTLS_E_NO_CERTIFICATE_FOUND:
     coap_log(LOG_WARNING,
-             "do_gnutls_handshake: session establish "
-             "returned %d: '%s'\n",
-             ret, gnutls_strerror(ret));
+             "Client Certificate requested and required, but not provided\n"
+             );
     G_ACTION(gnutls_alert_send(g_env->g_session, GNUTLS_AL_FATAL,
                                                  GNUTLS_A_BAD_CERTIFICATE));
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
@@ -1303,7 +1314,8 @@ void *coap_dtls_new_client_session(coap_session_t *c_session) {
     if (ret == -1) {
       coap_dtls_free_gnutls_env(c_session->context->dtls_context,
                                 g_env,
-                                COAP_PROTO_NOT_RELIABLE(c_session->proto));
+                                COAP_PROTO_NOT_RELIABLE(c_session->proto) ?
+                                 COAP_FREE_BYE_AS_UDP : COAP_FREE_BYE_AS_TCP);
       return NULL;
     }
   }
@@ -1313,7 +1325,9 @@ void *coap_dtls_new_client_session(coap_session_t *c_session) {
 void coap_dtls_free_session(coap_session_t *c_session) {
   if (c_session && c_session->context) {
     coap_dtls_free_gnutls_env(c_session->context->dtls_context,
-                c_session->tls, COAP_PROTO_NOT_RELIABLE(c_session->proto));
+                c_session->tls,
+                COAP_PROTO_NOT_RELIABLE(c_session->proto) ?
+                 COAP_FREE_BYE_AS_UDP : COAP_FREE_BYE_AS_TCP);
     c_session->tls = NULL;
   }
 }
@@ -1467,6 +1481,22 @@ coap_dtls_receive(coap_session_t *c_session,
   return ret;
 }
 
+#define DTLS_CT_HANDSHAKE          22
+#define DTLS_HT_CLIENT_HELLO        1
+
+/** Generic header structure of the DTLS record layer. */
+typedef struct __attribute__((__packed__)) {
+  uint8_t content_type;           /**< content type of the included message */
+  uint16_t version;               /**< Protocol version */
+  uint16_t epoch;                 /**< counter for cipher state changes */
+  uint8_t sequence_number[6];     /**< sequence number */
+  uint16_t length;                /**< length of the following fragment */
+  uint8_t handshake;              /**< If content_type == DTLS_CT_HANDSHAKE */
+} dtls_record_handshake_t;
+
+#define OFF_CONTENT_TYPE 0     /* offset of content_type in dtls_record_handshake_t */
+#define OFF_HANDSHAKE_TYPE 13  /* offset of handshake in dtls_record_handshake_t */
+
 /*
  * return 0 failed
  *        1 passed
@@ -1481,6 +1511,24 @@ coap_dtls_hello(coap_session_t *c_session,
   int ret;
 
   if (!g_env) {
+    /*
+     * Need to check that this actually is a Client Hello before wasting
+     * time allocating and then freeing off g_env.
+     */
+    if (data_len < (OFF_HANDSHAKE_TYPE + 1)) {
+      coap_log(LOG_DEBUG,
+         "coap_dtls_hello: ContentType %d Short Packet (%ld < %d) dropped\n",
+         data[OFF_CONTENT_TYPE], data_len, OFF_HANDSHAKE_TYPE + 1);
+      return 0;
+    }
+    if (data[OFF_CONTENT_TYPE] != DTLS_CT_HANDSHAKE ||
+        data[OFF_HANDSHAKE_TYPE] != DTLS_HT_CLIENT_HELLO) {
+      coap_log(LOG_DEBUG,
+         "coap_dtls_hello: ContentType %d Handshake %d dropped\n",
+         data[OFF_CONTENT_TYPE], data[OFF_HANDSHAKE_TYPE]);
+      return 0;
+    }
+
     g_env = coap_dtls_new_gnutls_env(c_session, GNUTLS_SERVER);
     if (g_env) {
       c_session->tls = g_env;
@@ -1498,6 +1546,14 @@ coap_dtls_hello(coap_session_t *c_session,
         g_env->seen_client_hello = 0;
         return 1;
       }
+      /*
+       * as the above failed, need to remove g_env to clean up any
+       * pollution of the information
+       */
+      coap_dtls_free_gnutls_env(
+              ((coap_gnutls_context_t *)c_session->context->dtls_context),
+              g_env, COAP_FREE_BYE_NONE);
+      c_session->tls = NULL;
     }
     return 0;
   }
