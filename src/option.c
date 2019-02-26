@@ -557,6 +557,7 @@ coap_new_optlist(uint16_t number,
   node = coap_malloc_type(COAP_OPTLIST, sizeof(coap_optlist_t) + length);
 
   if (node) {
+    memset(node, 0, (sizeof(coap_optlist_t) + length));
     node->number = number;
     node->length = length;
     node->data = (uint8_t *)&node[1];
