@@ -609,15 +609,15 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
 {
   int ret;
 
+  G_CHECK(gnutls_certificate_allocate_credentials(pki_credentials),
+          "gnutls_certificate_allocate_credentials");
+
   switch (setup_data->pki_key.key_type) {
   case COAP_PKI_KEY_PEM:
     if (setup_data->pki_key.key.pem.public_cert &&
         setup_data->pki_key.key.pem.public_cert[0] &&
         setup_data->pki_key.key.pem.private_key &&
         setup_data->pki_key.key.pem.private_key[0]) {
-      G_CHECK(gnutls_certificate_allocate_credentials(pki_credentials),
-              "gnutls_certificate_allocate_credentials");
-
       G_CHECK(gnutls_certificate_set_x509_key_file(*pki_credentials,
                                    setup_data->pki_key.key.pem.public_cert,
                                    setup_data->pki_key.key.pem.private_key,
@@ -633,10 +633,6 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
     }
     if (setup_data->pki_key.key.pem.ca_file &&
         setup_data->pki_key.key.pem.ca_file[0]) {
-      if (!*pki_credentials) {
-        G_CHECK(gnutls_certificate_allocate_credentials(pki_credentials),
-                "gnutls_certificate_allocate_credentials");
-      }
       G_CHECK(gnutls_certificate_set_x509_trust_file(*pki_credentials,
                            setup_data->pki_key.key.pem.ca_file,
                            GNUTLS_X509_FMT_PEM),
@@ -680,10 +676,6 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
       memcpy(&ca_cert.data, &setup_data->pki_key.key.asn1.ca_cert,
                             sizeof(ca_cert.data));
       ca_cert.size = setup_data->pki_key.key.asn1.ca_cert_len;
-      if (!*pki_credentials) {
-        G_CHECK(gnutls_certificate_allocate_credentials(pki_credentials),
-                "gnutls_certificate_allocate_credentials");
-      }
       G_CHECK(gnutls_certificate_set_x509_trust_mem(*pki_credentials,
                            &ca_cert,
                            GNUTLS_X509_FMT_DER),
@@ -698,10 +690,6 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
   }
 
   if (g_context->root_ca_file) {
-    if (!*pki_credentials) {
-      G_CHECK(gnutls_certificate_allocate_credentials(pki_credentials),
-              "gnutls_certificate_allocate_credentials");
-    }
     G_CHECK(gnutls_certificate_set_x509_trust_file(*pki_credentials,
                          g_context->root_ca_file,
                          GNUTLS_X509_FMT_PEM),
@@ -709,10 +697,6 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
   }
   if (g_context->root_ca_path) {
 #if (GNUTLS_VERSION_NUMBER >= 0x030306)
-    if (!*pki_credentials) {
-      G_CHECK(gnutls_certificate_allocate_credentials(pki_credentials),
-              "gnutls_certificate_allocate_credentials");
-    }
     G_CHECK(gnutls_certificate_set_x509_trust_dir(*pki_credentials,
                          g_context->root_ca_path,
                          GNUTLS_X509_FMT_PEM),
@@ -905,7 +889,12 @@ setup_client_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
     gnutls_free(psk_key.data);
   }
 
-  if (g_context->psk_pki_enabled & IS_PKI) {
+  if ((g_context->psk_pki_enabled & IS_PKI) ||
+      (g_context->psk_pki_enabled & (IS_PSK | IS_PKI)) == 0) {
+    /*
+     * If neither PSK or PKI have been set up, use PKI basics.
+     * This works providing COAP_PKI_KEY_PEM has a value of 0.
+     */
     coap_dtls_pki_t *setup_data = &g_context->setup_data;
     G_CHECK(setup_pki_credentials(&g_env->pki_credentials, g_context,
                                   setup_data, COAP_DTLS_ROLE_CLIENT),
@@ -920,7 +909,7 @@ setup_client_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
                                         &g_context->alpn_proto, 1, 0),
               "gnutls_alpn_set_protocols");
 
-    /* Issue SNI if requested */
+    /* Issue SNI if requested (only happens if PKI defined) */
     if (setup_data->client_sni) {
       G_CHECK(gnutls_server_name_set(g_env->g_session, GNUTLS_NAME_DNS,
                                      setup_data->client_sni,
