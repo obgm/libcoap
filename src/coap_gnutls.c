@@ -709,6 +709,11 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
             "gnutls_certificate_set_x509_trust_dir");
 #endif
   }
+  if (!(g_context->psk_pki_enabled & IS_PKI)) {
+    /* No PKI defined at all - still need a trust set up for 3.6.0 or later */
+    G_CHECK(gnutls_certificate_set_x509_system_trust(*pki_credentials),
+            "gnutls_certificate_set_x509_system_trust");
+  }
 
   /* Verify Peer */
   if (setup_data->verify_peer_cert) {
