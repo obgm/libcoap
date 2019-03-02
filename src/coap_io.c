@@ -1,6 +1,6 @@
 /* coap_io.c -- Default network I/O functions for libcoap
  *
- * Copyright (C) 2012,2014,2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2012,2014,2016-2019 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.

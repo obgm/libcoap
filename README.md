@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/obgm/libcoap.svg?branch=master)](https://travis-ci.org/obgm/libcoap)
 [![Static Analysis](https://scan.coverity.com/projects/10970/badge.svg?flat=1)](https://scan.coverity.com/projects/obgm-libcoap)
 
-Copyright (C) 2010--2018 by Olaf Bergmann <bergmann@tzi.org> and others
+Copyright (C) 2010—2019 by Olaf Bergmann <bergmann@tzi.org> and others
 
 ABOUT LIBCOAP
 =============

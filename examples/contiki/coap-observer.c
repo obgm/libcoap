@@ -1,6 +1,6 @@
 /* coap-server.c -- Example CoAP server using Contiki and libcoap
  *
- * Copyright (C) 2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2011,2015,2018-2019 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

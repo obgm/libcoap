@@ -1,9 +1,9 @@
-/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 * -*- */
+/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
 /* coap -- simple implementation of the Constrained Application Protocol (CoAP)
  *         as defined in RFC 7252
  *
- * Copyright (C) 2010--2018 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2010--2019 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -83,7 +83,7 @@ handle_sigint(int signum UNUSED_PARAM) {
 }
 
 #define INDEX "This is a test server made with libcoap (see https://libcoap.net)\n" \
-              "Copyright (C) 2010--2018 Olaf Bergmann <bergmann@tzi.org>\n\n"
+              "Copyright (C) 2010--2019 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
 
 static void
 hnd_get_index(coap_context_t *ctx UNUSED_PARAM,

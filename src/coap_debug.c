@@ -1,6 +1,6 @@
 /* debug.c -- debug utilities
  *
- * Copyright (C) 2010--2012,2014--2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2012,2014--2019 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.

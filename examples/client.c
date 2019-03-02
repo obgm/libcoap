@@ -2,7 +2,7 @@
 
 /* coap-client -- simple CoAP client
  *
- * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2010--2019 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * This file is part of the CoAP library libcoap. Please see README for terms of
  * use.
