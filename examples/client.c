@@ -1236,7 +1236,9 @@ main(int argc, char **argv) {
   unsigned char user[MAX_USER + 1], key[MAX_KEY];
   ssize_t user_length = 0, key_length = 0;
   int create_uri_opts = 1;
+#ifndef _WIN32
   struct sigaction sa;
+#endif
 
   while ((opt = getopt(argc, argv, "NrUa:b:c:e:f:k:m:p:s:t:o:v:A:B:C:O:P:R:T:u:l:K:")) != -1) {
     switch (opt) {
@@ -1458,12 +1460,16 @@ main(int argc, char **argv) {
   wait_ms = wait_seconds * 1000;
   coap_log(LOG_DEBUG, "timeout is set to %u seconds\n", wait_seconds);
 
+#ifdef _WIN32
+  signal(SIGINT, handle_sigint);
+#else
   memset (&sa, 0, sizeof(sa));
   sigemptyset(&sa.sa_mask);
   sa.sa_handler = handle_sigint;
   sa.sa_flags = 0;
   sigaction (SIGINT, &sa, NULL);
   sigaction (SIGTERM, &sa, NULL);
+#endif
 
   while (!quit && !(ready && coap_can_exit(ctx)) ) {
 
