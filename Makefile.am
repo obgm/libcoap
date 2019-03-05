@@ -233,7 +233,7 @@ distclean-local:
 	@rm -f src/*.o src/*.lo
 	rm -f libcoap-$(LIBCOAP_API_VERSION).map
 	rm -f libcoap-$(LIBCOAP_API_VERSION).sym
-	rm -f libcoap-$(LIBCOAP_API_VERSION).pc
+	rm -f libcoap-$(LIBCOAP_NAME_SUFFIX).pc
 	@echo
 	@echo "     ---> Please note the following important advice! <---"
 	@echo "     The files libcoap-$(LIBCOAP_API_VERSION).{map,sym} are removed by the distclean target!"
