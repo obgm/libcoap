@@ -1137,6 +1137,8 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
     packet->src.size = sizeof(packet->src.addr);
     len = recvfrom (sock->fd, packet->payload, COAP_RXBUFFER_SIZE,
                     0, &packet->src.addr.sa, &packet->src.size);
+    packet->ifindex = sock->fd;
+    packet->length = (len > 0) ? len : 0;
     if (LOG_DEBUG <= coap_get_log_level()) {
       unsigned char addr_str[INET6_ADDRSTRLEN + 8];
 
