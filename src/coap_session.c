@@ -941,7 +941,7 @@ coap_session_get_by_peer(coap_context_t *ctx,
 }
 
 const char *coap_session_str(const coap_session_t *session) {
-  static char szSession[256];
+  static char szSession[2 * (INET6_ADDRSTRLEN + 8) + 24];
   char *p = szSession, *end = szSession + sizeof(szSession);
   if (coap_print_addr(&session->local_addr, (unsigned char*)p, end - p) > 0)
     p += strlen(p);
