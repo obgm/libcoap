@@ -8,7 +8,7 @@
 
 #include "coap_config.h"
 
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP) && !defined(RIOT_VERSION)
 #ifdef HAVE_ASSERT_H
 #include <assert.h>
 #endif
