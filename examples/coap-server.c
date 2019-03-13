@@ -866,70 +866,6 @@ finish:
   return ctx;
 }
 
-static int
-join(coap_context_t *ctx, char *group_name){
-  struct ipv6_mreq mreq;
-  struct addrinfo   *reslocal = NULL, *resmulti = NULL, hints, *ainfo;
-  int result = -1;
-
-  /* we have to resolve the link-local interface to get the interface id */
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_INET6;
-  hints.ai_socktype = SOCK_DGRAM;
-
-  result = getaddrinfo("::", NULL, &hints, &reslocal);
-  if (result != 0) {
-    fprintf(stderr, "join: cannot resolve link-local interface: %s\n",
-            gai_strerror(result));
-    goto finish;
-  }
-
-  /* get the first suitable interface identifier */
-  for (ainfo = reslocal; ainfo != NULL; ainfo = ainfo->ai_next) {
-    if (ainfo->ai_family == AF_INET6) {
-      mreq.ipv6mr_interface =
-                ((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_scope_id;
-      break;
-    }
-  }
-
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_INET6;
-  hints.ai_socktype = SOCK_DGRAM;
-
-  /* resolve the multicast group address */
-  result = getaddrinfo(group_name, NULL, &hints, &resmulti);
-
-  if (result != 0) {
-    fprintf(stderr, "join: cannot resolve multicast address: %s\n",
-            gai_strerror(result));
-    goto finish;
-  }
-
-  for (ainfo = resmulti; ainfo != NULL; ainfo = ainfo->ai_next) {
-    if (ainfo->ai_family == AF_INET6) {
-      mreq.ipv6mr_multiaddr =
-                ((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_addr;
-      break;
-    }
-  }
-
-  if (ctx->endpoint) {
-    result = setsockopt(ctx->endpoint->sock.fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, (char *)&mreq, sizeof(mreq));
-    if ( result == COAP_SOCKET_ERROR ) {
-      fprintf( stderr, "join: setsockopt: %s\n", coap_socket_strerror() );
-    }
-  } else {
-    result = -1;
-  }
-
- finish:
-  freeaddrinfo(resmulti);
-  freeaddrinfo(reslocal);
-
-  return result;
-}
-
 static ssize_t
 cmdline_read_key(char *arg, unsigned char *buf, size_t maxlen) {
   size_t len = strnlen(arg, maxlen);
@@ -1030,7 +966,7 @@ main(int argc, char **argv) {
 
   /* join multicast group if requested at command line */
   if (group)
-    join(ctx, group);
+    coap_join_mcast_group(ctx, group);
 
 #ifdef _WIN32
   signal(SIGINT, handle_sigint);

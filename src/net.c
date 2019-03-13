@@ -35,6 +35,8 @@
 #include <ws2tcpip.h>
 #endif
 
+#include <netdb.h>
+
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
 #include <lwip/udp.h>
@@ -2365,6 +2367,93 @@ void coap_cleanup(void) {
   WSACleanup();
 #endif
 }
+
+#if ! defined WITH_CONTIKI && ! defined WITH_LWIP
+int
+coap_join_mcast_group(coap_context_t *ctx, const char *group_name) {
+  struct ipv6_mreq mreq;
+  struct addrinfo   *reslocal = NULL, *resmulti = NULL, hints, *ainfo;
+  int result = -1;
+  coap_endpoint_t *endpoint;
+  int mgroup_setup = 0;
+
+  /* we have to resolve the link-local interface to get the interface id */
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET6;
+  hints.ai_socktype = SOCK_DGRAM;
+
+  result = getaddrinfo("::", NULL, &hints, &reslocal);
+  if (result != 0) {
+    coap_log(LOG_ERR,
+             "coap_join_mcast_group: cannot resolve link-local interface: %s\n",
+             gai_strerror(result));
+    goto finish;
+  }
+
+  /* get the first suitable interface identifier */
+  for (ainfo = reslocal; ainfo != NULL; ainfo = ainfo->ai_next) {
+    if (ainfo->ai_family == AF_INET6) {
+      mreq.ipv6mr_interface =
+                ((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_scope_id;
+      break;
+    }
+  }
+
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET6;
+  hints.ai_socktype = SOCK_DGRAM;
+
+  /* resolve the multicast group address */
+  result = getaddrinfo(group_name, NULL, &hints, &resmulti);
+
+  if (result != 0) {
+    coap_log(LOG_ERR,
+             "coap_join_mcast_group: cannot resolve multicast address: %s\n",
+             gai_strerror(result));
+    goto finish;
+  }
+
+  for (ainfo = resmulti; ainfo != NULL; ainfo = ainfo->ai_next) {
+    if (ainfo->ai_family == AF_INET6) {
+      mreq.ipv6mr_multiaddr =
+                ((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_addr;
+      break;
+    }
+  }
+
+  LL_FOREACH(ctx->endpoint, endpoint) {
+    if (endpoint->proto == COAP_PROTO_UDP ||
+        endpoint->proto == COAP_PROTO_DTLS) {
+      result = setsockopt(endpoint->sock.fd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
+                          (char *)&mreq, sizeof(mreq));
+      if (result == COAP_SOCKET_ERROR) {
+        coap_log(LOG_ERR,
+                 "coap_join_mcast_group: setsockopt: %s: '%s'\n",
+                 coap_socket_strerror(), group_name);
+      }
+      else {
+        mgroup_setup = 1;
+      }
+    }
+  }
+  if (!mgroup_setup) {
+    result = -1;
+  }
+
+ finish:
+  freeaddrinfo(resmulti);
+  freeaddrinfo(reslocal);
+
+  return result;
+}
+#else /* defined WITH_CONTIKI || defined WITH_LWIP */
+int
+coap_join_mcast_group(coap_context_t *ctx, const char *group_name) {
+  (void)ctx;
+  (void)group_name;
+  return -1;
+}
+#endif /* defined WITH_CONTIKI || defined WITH_LWIP */
 
 #ifdef WITH_CONTIKI
 
