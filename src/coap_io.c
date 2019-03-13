@@ -1209,6 +1209,7 @@ coap_io_prepare_io(coap_context_t *ctx,
   return (unsigned int)((timeout * 1000 + COAP_TICKS_PER_SECOND - 1) / COAP_TICKS_PER_SECOND);
 }
 
+#ifndef RIOT_VERSION
 int
 coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   return coap_io_process_with_fds(ctx, timeout_ms, 0, NULL, NULL, NULL);
@@ -1403,6 +1404,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
+#endif /* RIOT_VERSION */
 
 #else /* WITH_CONTIKI */
 int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
