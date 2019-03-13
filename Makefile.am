@@ -23,6 +23,7 @@ EXTRA_DIST = \
   examples/coap_list.h \
   examples/getopt.c \
   include/coap$(LIBCOAP_API_VERSION)/utlist.h \
+  src/coap_io_riot.c \
   tests/test_error_response.h \
   tests/test_options.h \
   tests/test_pdu.h \
