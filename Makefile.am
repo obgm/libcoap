@@ -1,6 +1,6 @@
 # Makefile.am for libcoap
 #
-# Copyright (C) 2010-2017 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010-2019 Olaf Bergmann <bergmann@tzi.org>
 #           (C) 2015-2017 Carsten Schoenert <c.schoenert@t-online.de>
 #
 # This file is part of the CoAP C library libcoap. Please see README and
@@ -23,6 +23,7 @@ EXTRA_DIST = \
   examples/coap_list.h \
   examples/getopt.c \
   include/coap$(LIBCOAP_API_VERSION)/coap_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_riot.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
