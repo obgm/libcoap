@@ -27,6 +27,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/utlist.h \
+  src/coap_io_riot.c \
   tests/test_error_response.h \
   tests/test_encode.h \
   tests/test_options.h \
