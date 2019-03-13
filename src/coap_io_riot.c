@@ -46,6 +46,29 @@
 #include "resource.h"
 
 ssize_t
+coap_network_send(coap_socket_t *sock,
+                  const coap_session_t *session,
+                  const uint8_t *data,
+                  size_t datalen) {
+  ssize_t bytes_written = 0;
+
+  if (!coap_debug_send_packet()) {
+    bytes_written = (ssize_t)datalen;
+  } else if (sock->flags & COAP_SOCKET_CONNECTED) {
+    bytes_written = send(sock->fd, data, datalen, 0);
+  } else {
+    bytes_written = sendto(sock->fd, data, datalen, 0,
+                           &session->remote_addr.addr.sa,
+                           session->remote_addr.size);
+  }
+
+  if (bytes_written < 0)
+    coap_log(LOG_CRIT, "coap_network_send: %s\n", coap_socket_strerror());
+
+  return bytes_written;
+}
+
+ssize_t
 coap_network_read(coap_socket_t *sock, struct coap_packet_t *packet) {
   size_t len;
   ipv6_hdr_t *ipv6_hdr;
