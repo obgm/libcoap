@@ -781,6 +781,7 @@ static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
 #define iov_len_t size_t
 #endif
 
+#ifndef RIOT_VERSION
 ssize_t
 coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen) {
   ssize_t bytes_written = 0;
@@ -936,6 +937,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 
   return bytes_written;
 }
+#endif /* RIOT_VERSION */
 
 #define SIN6(A) ((struct sockaddr_in6 *)(A))
 
