@@ -950,6 +950,7 @@ void coap_packet_set_addr(coap_packet_t *packet, const coap_address_t *src, cons
   coap_address_copy(&packet->dst, dst);
 }
 
+#ifndef RIOT_VERSION
 ssize_t
 coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   ssize_t len = -1;
@@ -1153,6 +1154,7 @@ error:
 #endif
   return -1;
 }
+#endif /* RIOT_VERSION */
 
 #if !defined(WITH_CONTIKI)
 
