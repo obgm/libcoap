@@ -38,13 +38,13 @@ struct coap_queue_t;
  */
 typedef struct coap_queue_t {
   struct coap_queue_t *next;
-  coap_tick_t t;                /**< when to send PDU for the next time */
-  unsigned char retransmit_cnt; /**< retransmission counter, will be removed
-                                 *    when zero */
-  unsigned int timeout;         /**< the randomized timeout value */
-  coap_session_t *session;      /**< the CoAP session */
-  coap_tid_t id;                /**< CoAP transaction id */
+  coap_session_t *session;	  /**< the CoAP session */
   coap_pdu_t *pdu;              /**< the CoAP PDU to send */
+  coap_tick_t t;                /**< when to send PDU for the next time */
+  unsigned int timeout;         /**< the randomized timeout value */
+  coap_tid_t id;                /**< CoAP transaction id */
+  unsigned char retransmit_cnt; /**< retransmission counter, will be removed
+                                  *	 when zero */
 } coap_queue_t;
 
 /**
@@ -172,19 +172,6 @@ typedef struct coap_context_t {
   struct etimer notify_timer;     /**< used to check resources periodically */
 #endif /* WITH_CONTIKI */
 
-#ifdef WITH_LWIP
-  uint8_t timer_configured;       /**< Set to 1 when a retransmission is
-                                   *   scheduled using lwIP timers for this
-                                   *   context, otherwise 0. */
-#endif /* WITH_LWIP */
-
-  /**
-   * The last message id that was used is stored in this field. The initial
-   * value is set by coap_new_context() and is usually a random value. A new
-   * message id can be created with coap_new_message_id().
-   */
-  uint16_t message_id;
-
   coap_response_handler_t response_handler;
   coap_nack_handler_t nack_handler;
   coap_ping_handler_t ping_handler;
@@ -209,14 +196,26 @@ typedef struct coap_context_t {
   size_t psk_hint_len;
   uint8_t *psk_key;
   size_t psk_key_len;
+  void *app;                       /**< application-specific data */
 
   unsigned int session_timeout;    /**< Number of seconds of inactivity after which an unused session will be closed. 0 means use default. */
   unsigned int max_idle_sessions;  /**< Maximum number of simultaneous unused sessions per endpoint. 0 means no maximum. */
   unsigned int max_handshake_sessions; /**< Maximum number of simultaneous negotating sessions per endpoint. 0 means use default. */
   unsigned int ping_timeout;           /**< Minimum inactivity time before sending a ping message. 0 means disabled. */
   unsigned int csm_timeout;           /**< Timeout for waiting for a CSM from the remote side. 0 means disabled. */
+	
+  /**
+   * The last message id that was used is stored in this field. The initial
+   * value is set by coap_new_context() and is usually a random value. A new
+   * message id can be created with coap_new_message_id().
+   */
+  uint16_t message_id;
+#ifdef WITH_LWIP
+  uint8_t timer_configured; 	  /**< Set to 1 when a retransmission is
+								   *   scheduled using lwIP timers for this
+								   *   context, otherwise 0. */
+#endif /* WITH_LWIP */
 
-  void *app;                       /**< application-specific data */
 } coap_context_t;
 
 /**
