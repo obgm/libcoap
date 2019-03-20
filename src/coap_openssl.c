@@ -1322,9 +1322,9 @@ tls_client_hello_call_back(SSL *ssl,
                           int *al,
                           void *arg UNUSED
 ) {
-  coap_session_t *session = (coap_session_t *)SSL_get_app_data(ssl);
-  coap_openssl_context_t *dtls_context = (coap_openssl_context_t *)session->context->dtls_context;
-  coap_dtls_pki_t *setup_data = &dtls_context->setup_data;
+  coap_session_t *session;
+  coap_openssl_context_t *dtls_context;
+  coap_dtls_pki_t *setup_data;
   int psk_requested = 0;
   const unsigned char *out;
   size_t outlen;
@@ -1333,11 +1333,17 @@ tls_client_hello_call_back(SSL *ssl,
     *al = SSL_AD_INTERNAL_ERROR;
     return SSL_CLIENT_HELLO_ERROR;
   }
+  session = (coap_session_t *)SSL_get_app_data(ssl);
+  assert(session != NULL);
+  assert(session->context != NULL);
+  assert(session->context->dtls_context != NULL);
+  dtls_context = (coap_openssl_context_t *)session->context->dtls_context;
+  setup_data = &dtls_context->setup_data;
 
   /*
    * See if PSK being requested
    */
-  if (session && session->context->psk_key && session->context->psk_key_len) {
+  if (session->context->psk_key && session->context->psk_key_len) {
     int len = SSL_client_hello_get0_ciphers(ssl, &out);
     STACK_OF(SSL_CIPHER) *peer_ciphers = NULL;
     STACK_OF(SSL_CIPHER) *scsvc = NULL;
