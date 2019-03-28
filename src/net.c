@@ -53,6 +53,7 @@
 #include "block.h"
 #include "net.h"
 #include "utlist.h"
+#include "coap_mutex.h"
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -1110,28 +1111,19 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
   }
 }
 
-#ifdef WITH_CONTIKI
-COAP_STATIC_INLINE coap_packet_t *
-coap_malloc_packet(void) {
-  return (coap_packet_t *)coap_malloc_type(COAP_PACKET, 0);
-}
-
-void
-coap_free_packet(coap_packet_t *packet) {
-  coap_free_type(COAP_PACKET, packet);
-}
-#endif /* WITH_CONTIKI */
-
 static void
 coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
-#ifdef WITH_CONTIKI
-  coap_packet_t *packet = coap_malloc_packet();
-  if ( !packet )
-    return;
-#else /* WITH_CONTIKI */
+#if COAP_CONSTRAINED_STACK
+  static coap_mutex_t s_static_mutex = COAP_MUTEX_INITIALIZER;
+  static coap_packet_t s_packet;
+#else /* ! COAP_CONSTRAINED_STACK */
   coap_packet_t s_packet;
+#endif /* ! COAP_CONSTRAINED_STACK */
   coap_packet_t *packet = &s_packet;
-#endif /* WITH_CONTIKI */
+
+#if COAP_CONSTRAINED_STACK
+  coap_mutex_lock(&s_static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
 
   assert(session->sock.flags & (COAP_SOCKET_CONNECTED | COAP_SOCKET_MULTICAST));
 
@@ -1245,37 +1237,33 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
     if (bytes_read < 0)
       coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
   }
-
-#ifdef WITH_CONTIKI
-  if ( packet )
-    coap_free_packet( packet );
-#endif
+#if COAP_CONSTRAINED_STACK
+  coap_mutex_unlock(&s_static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
 }
 
 static int
 coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t now) {
   ssize_t bytes_read = -1;
   int result = -1;                /* the value to be returned */
-#ifdef WITH_CONTIKI
-  coap_packet_t *packet = coap_malloc_packet();
-#else /* WITH_CONTIKI */
-  coap_packet_t s_packet;
-  coap_packet_t *packet = &s_packet;
-#endif /* WITH_CONTIKI */
+#if COAP_CONSTRAINED_STACK
+  static coap_mutex_t e_static_mutex = COAP_MUTEX_INITIALIZER;
+  static coap_packet_t e_packet;
+#else /* ! COAP_CONSTRAINED_STACK */
+  coap_packet_t e_packet;
+#endif /* ! COAP_CONSTRAINED_STACK */
+  coap_packet_t *packet = &e_packet;
 
   assert(COAP_PROTO_NOT_RELIABLE(endpoint->proto));
   assert(endpoint->sock.flags & COAP_SOCKET_BOUND);
 
-  if (packet) {
-    coap_address_init(&packet->src);
-    coap_address_copy(&packet->dst, &endpoint->bind_addr);
-    bytes_read = ctx->network_read(&endpoint->sock, packet);
-  }
-  else {
-    coap_log(LOG_WARNING, "*  %s: Packet allocation failed\n",
-             coap_endpoint_str(endpoint));
-    return -1;
-  }
+#if COAP_CONSTRAINED_STACK
+  coap_mutex_lock(&e_static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
+
+  coap_address_init(&packet->src);
+  coap_address_copy(&packet->dst, &endpoint->bind_addr);
+  bytes_read = ctx->network_read(&endpoint->sock, packet);
 
   if (bytes_read < 0) {
     coap_log(LOG_WARNING, "*  %s: read failed\n", coap_endpoint_str(endpoint));
@@ -1289,12 +1277,9 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
         coap_endpoint_new_dtls_session(endpoint, packet, now);
     }
   }
-
-#ifdef WITH_CONTIKI
-  if (packet)
-    coap_free_packet(packet);
-#endif
-
+#if COAP_CONSTRAINED_STACK
+  coap_mutex_unlock(&e_static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
   return result;
 }
 

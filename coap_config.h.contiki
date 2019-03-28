@@ -7,6 +7,10 @@
 
 #define WITH_CONTIKI 1
 
+#ifndef COAP_CONSTRAINED_STACK
+#define COAP_CONSTRAINED_STACK 1
+#endif
+
 #define PACKAGE_STRING "libcoap"
 #define PACKAGE_NAME "libcoap"
 
