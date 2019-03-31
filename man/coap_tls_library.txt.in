@@ -29,8 +29,8 @@ SYNOPSIS
 *void coap_show_tls_version(coap_log_t _level_);*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
-*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
-*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls-int* depending on your (D)TLS library
 type.
 
 DESCRIPTION

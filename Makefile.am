@@ -88,6 +88,23 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/subscribe.c \
   src/uri.c
 
+if INTEGRATE_TINYDTLS
+libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES += \
+  ext/tinydtls/dtls.c \
+  ext/tinydtls/crypto.c \
+  ext/tinydtls/ccm.c \
+  ext/tinydtls/hmac.c \
+  ext/tinydtls/netq.c \
+  ext/tinydtls/peer.c \
+  ext/tinydtls/dtls_time.c \
+  ext/tinydtls/session.c \
+  ext/tinydtls/dtls_debug.c \
+  ext/tinydtls/dtls_prng.c \
+  ext/tinydtls/aes/rijndael.c \
+  ext/tinydtls/ecc/ecc.c \
+  ext/tinydtls/sha2/sha2.c
+endif
+
 ## Define the list of public header files and their install location.
 ## The API version is appended to the install folder to being able to
 ## co-install various versions of libcoap.
@@ -199,13 +216,15 @@ libcoap-$(LIBCOAP_API_VERSION).map: check_ctags $(libcoap_include_HEADERS)
 	( echo "VER_$(LIBCOAP_API_VERSION) {" ; \
 	echo "global:" ; \
 	$(CTAGS_PROG) $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print "  " $$1 ";" }' | sort -u ; \
+	echo "  dtls_package_version;" ; \
 	echo "local:" ; \
 	echo "  *;" ; \
 	echo "};" ) > $(top_builddir)/$@.new
 	mv $(top_builddir)/$@.new $(top_builddir)/$@
 
 libcoap-$(LIBCOAP_API_VERSION).sym: check_ctags $(libcoap_include_HEADERS)
-	( $(CTAGS_PROG) $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print $$1 }' | sort -u ) \
+	( $(CTAGS_PROG) $(CTAGS_IGNORE) -f - --c-kinds=p $(libcoap_include_HEADERS) | awk '/^coap_/ { print $$1 }' | sort -u ; \
+	echo "dtls_package_version" ) \
 	> $(top_builddir)/$@.new
 	mv $(top_builddir)/$@.new $(top_builddir)/$@
 

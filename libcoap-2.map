@@ -190,6 +190,7 @@ global:
   coap_wellknown_response;
   coap_write;
   coap_write_block_opt;
+  dtls_package_version;
 local:
   *;
 };

@@ -309,6 +309,14 @@ AC_ARG_ENABLE([dtls],
               [build_dtls="$enableval"],
               [build_dtls="yes"])
 
+AC_ARG_ENABLE([integrate_tinydtls],
+              [AS_HELP_STRING([--enable-integrate_tinydtls],
+                              [Enable inclusion of libtinydtls objects in libcoap library [default=no]])],
+              [do_integrate_tinydtls="$enableval"],
+              [do_integrate_tinydtls="no"])
+
+AM_CONDITIONAL(INTEGRATE_TINYDTLS, [test "x$do_integrate_tinydtls" = "xyes"])
+
 AC_ARG_WITH([gnutls],
             [AS_HELP_STRING([--with-gnutls],
                             [Use GnuTLS for DTLS functions])],
@@ -394,7 +402,9 @@ if test "x$build_dtls" = "xyes"; then
     # The user wants to use explicit OpenSSL if '--with-tinydtls was set'.
     if test "x$with_tinydtls" = "xyes" ; then
         if test -d "$srcdir/ext/tinydtls"; then
-           AC_CONFIG_SUBDIRS([ext/tinydtls])
+           if test "x$do_integrate_tinydtls" != "xyes"; then
+              AC_CONFIG_SUBDIRS([ext/tinydtls])
+           fi
            have_tinydtls="yes"
          else
            have_tinydtls="no"
@@ -441,15 +451,24 @@ if test "x$build_dtls" = "xyes"; then
         AC_DEFINE(HAVE_OPENSSL, [1], [Define if the system has libssl1.1])
     fi
     if test "x$with_tinydtls" = "xyes"; then
-        DTLS_CFLAGS="-I \$(top_srcdir)/ext/tinydtls"
-        if test "x$enable_shared" = "xyes"; then
-            DTLS_LIBS="-L\$(top_builddir)/ext/tinydtls -ltinydtls"
+        if test "x$do_integrate_tinydtls" = "xyes"; then
+            DTLS_CFLAGS="-I \$(top_srcdir)/ext/tinydtls -DDTLSv12 -DWITH_SHA256"
+            DTLS_LIBS=
         else
-            # Needed as TinyDTLS compiling does not recognize --disable-shared
-            # and still builds libtinydtls.so which gets linked in otherwise
-            DTLS_LIBS="-L\$(top_builddir)/ext/tinydtls -l:libtinydtls.a"
+            DTLS_CFLAGS="-I \$(top_srcdir)/ext/tinydtls"
+            if test "x$enable_shared" = "xyes"; then
+                DTLS_LIBS="-L\$(top_builddir)/ext/tinydtls -ltinydtls"
+            else
+                # Needed as TinyDTLS compiling does not recognize --disable-shared
+                # and still builds libtinydtls.so which gets linked in otherwise
+                DTLS_LIBS="-L\$(top_builddir)/ext/tinydtls -l:libtinydtls.a"
+            fi
         fi
         AC_DEFINE(HAVE_LIBTINYDTLS, [1], [Define if the system has libtinydtls])
+    else
+        if test "x$do_integrate_tinydtls" = "xyes"; then
+          AC_MSG_ERROR([==> Option --enable-integrate_tinydtls is set, but --with-tinydtls is not set.])
+        fi
     fi
     AC_SUBST(DTLS_CFLAGS)
     AC_SUBST(DTLS_LIBS)
@@ -461,7 +480,11 @@ if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
 elif test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-gnutls
 elif test "x$with_tinydtls" = "xyes"; then
-    LIBCOAP_DTLS_LIB_EXTENSION_NAME=-tinydtls
+    if test "x$do_integrate_tinydtls" = "xyes"; then
+        LIBCOAP_DTLS_LIB_EXTENSION_NAME=-tinydtls-int
+    else
+        LIBCOAP_DTLS_LIB_EXTENSION_NAME=-tinydtls
+    fi
 else
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=
 fi
@@ -696,6 +719,11 @@ if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
 fi
 if test "x$with_tinydtls" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support      : "yes"])
+    if test "x$do_integrate_tinydtls" = "xyes"; then
+        AC_MSG_RESULT([      integrate tinyDTLS      : "yes"])
+    else
+        AC_MSG_RESULT([      integrate tinyDTLS      : "no"])
+    fi
     AC_MSG_RESULT([         -->  tinyDTLS around : "yes"])
     AC_MSG_RESULT([              TINYDTLS_CFLAGS : "$DTLS_CFLAGS"])
     AC_MSG_RESULT([              TINYDTLS_LIBS   : "$DTLS_LIBS"])
