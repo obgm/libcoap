@@ -37,8 +37,7 @@ AM_PROG_AR
 
 AC_C_BIGENDIAN
 
-# enable the automatically build of shared and static libraries, the unit
-# tests needs the static library
+# enable the automatically build of shared and static libraries
 LT_INIT([shared static])
 
 # Setting the libtool versioning
