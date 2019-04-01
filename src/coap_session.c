@@ -173,6 +173,7 @@ void coap_session_free(coap_session_t *session) {
   assert(session->ref == 0);
   if (session->ref)
     return;
+  coap_session_mfree(session);
   if (session->endpoint) {
     if (session->endpoint->sessions)
       LL_DELETE(session->endpoint->sessions, session);
@@ -180,7 +181,6 @@ void coap_session_free(coap_session_t *session) {
     if (session->context->sessions)
       LL_DELETE(session->context->sessions, session);
   }
-  coap_session_mfree(session);
   coap_log(LOG_DEBUG, "***%s: session closed\n", coap_session_str(session));
 
   coap_free_type(COAP_SESSION, session);
