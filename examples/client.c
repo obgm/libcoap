@@ -103,6 +103,7 @@ handle_sigint(int signum UNUSED_PARAM) {
 static int
 append_to_output(const uint8_t *data, size_t len) {
   size_t written;
+  unsigned char newline = '\n';
 
   if (!file) {
     if (!output_file.s || (output_file.length && output_file.s[0] == '-'))
@@ -120,6 +121,9 @@ append_to_output(const uint8_t *data, size_t len) {
     len -= written;
     data += written;
   } while ( written && len );
+
+  if(file == stdout)
+    fwrite(&newline, 1, 1, file);
   fflush(file);
 
   return 0;
