@@ -510,6 +510,13 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     session = coap_make_session(endpoint->proto, COAP_SESSION_TYPE_SERVER,
       NULL, &packet->dst, &packet->src, packet->ifindex, endpoint->context,
       endpoint);
+    if (!endpoint->context->max_idle_sessions && !session && oldest) {
+      /* max_idle_sessions not set, session failed but have an idle entry */
+      coap_session_free(oldest);
+      session = coap_make_session(endpoint->proto, COAP_SESSION_TYPE_SERVER,
+        NULL, &packet->dst, &packet->src, packet->ifindex, endpoint->context,
+        endpoint);
+    }
     if (session) {
       session->last_rx_tx = now;
       if (endpoint->proto == COAP_PROTO_UDP)
