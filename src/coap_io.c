@@ -964,6 +964,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 #if !defined(WITH_CONTIKI)
     /* a buffer large enough to hold all packet info types, ipv6 is the largest */
     char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+    struct cmsghdr *cmsg;
     struct msghdr mhdr;
     struct iovec iov[1];
 
@@ -980,6 +981,12 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 
     mhdr.msg_control = buf;
     mhdr.msg_controllen = sizeof(buf);
+    /* set a big first length incase recvmsg() does not implement updating
+       msg_control as well as preset the first cmsg with bad data */
+    cmsg = (struct cmsghdr *)buf;
+    cmsg->cmsg_len = CMSG_LEN(sizeof(buf));
+    cmsg->cmsg_level = -1;
+    cmsg->cmsg_type = -1;
 
 #if defined(_WIN32)
     if (!lpWSARecvMsg) {
@@ -1009,7 +1016,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       coap_log(LOG_WARNING, "coap_network_read: %s\n", coap_socket_strerror());
       goto error;
     } else {
-      struct cmsghdr *cmsg;
+      int dst_found = 0;
 
       packet->src.size = mhdr.msg_namelen;
       packet->length = (size_t)len;
@@ -1027,6 +1034,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
           u.c = CMSG_DATA(cmsg);
           packet->ifindex = (int)(u.p->ipi6_ifindex);
           memcpy(&packet->dst.addr.sin6.sin6_addr, &u.p->ipi6_addr, sizeof(struct in6_addr));
+          dst_found = 1;
           break;
         }
 
@@ -1047,15 +1055,34 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
           } else {
             memcpy(&packet->dst.addr.sin.sin_addr, &u.p->ipi_addr, sizeof(struct in_addr));
           }
+          dst_found = 1;
           break;
         }
 #elif defined(IP_RECVDSTADDR)
         if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR) {
-          packet->ifindex = 0;
+          packet->ifindex = sock->fd;
           memcpy(&packet->dst.addr.sin.sin_addr, CMSG_DATA(cmsg), sizeof(struct in_addr));
+          dst_found = 1;
           break;
         }
 #endif /* IP_PKTINFO */
+        if (!dst_found) {
+          /* cmsg_level / cmsg_type combination we do not understand
+             (ignore preset case for bad recvmsg() not updating cmsg) */
+          if (cmsg->cmsg_level != -1 && cmsg->cmsg_type != -1) {
+            coap_log(LOG_DEBUG,
+                     "cmsg_level = %d and cmsg_type = %d not supported - fix\n",
+                     cmsg->cmsg_level, cmsg->cmsg_type);
+          }
+        }
+      }
+      if (!dst_found) {
+        /* Not expected, but cmsg_level and cmsg_type don't match above and
+           may need a new case */
+        packet->ifindex = sock->fd;
+        if (getsockname(sock->fd, &packet->dst.addr.sa, &packet->dst.size) < 0) {
+          coap_log(LOG_DEBUG, "Cannot determine local port\n");
+        }
       }
     }
 #endif /* !defined(WITH_CONTIKI) */
