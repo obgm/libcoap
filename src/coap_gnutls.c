@@ -404,7 +404,7 @@ psk_client_callback(gnutls_session_t g_session,
   *username = gnutls_malloc(identity_len+1);
   if (*username) {
     memcpy(*username, identity, identity_len);
-    username[identity_len] = '\0';
+    (*username)[identity_len] = '\0';
   }
 
   key->data = gnutls_malloc(psk_len);
