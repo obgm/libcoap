@@ -19,6 +19,20 @@
  * g_env      A coap_gnutls_env_t * (held in c_session->tls)
  */
 
+/*
+ * Notes
+ *
+ * There is a memory leak in GnuTLS prior to 3.3.26 when hint is not freed off
+ * when server psk credentials are freed off.
+ *
+ * ca_path in coap_dtls_context_set_pki_root_cas() is not supported until 3.3.6
+ *
+ * hint is not provided if using DH and versions prior to 3.4.4
+ *
+ * 3.5.5 or later is required to interoperate with TinyDTLS as CCM algorithm
+ * support is required.
+ */
+
 #include "coap_internal.h"
 
 #ifdef HAVE_LIBGNUTLS
@@ -253,12 +267,32 @@ coap_dtls_context_set_pki_root_cas(struct coap_context_t *c_context,
  *        1 passed
  */
 int
-coap_dtls_context_set_psk(coap_context_t *c_context,
-                          const char *identity_hint UNUSED,
-                          coap_dtls_role_t role UNUSED
+coap_dtls_context_set_spsk(coap_context_t *c_context,
+                              coap_dtls_spsk_t *setup_data
 ) {
   coap_gnutls_context_t *g_context =
                          ((coap_gnutls_context_t *)c_context->dtls_context);
+
+  if (!g_context || !setup_data)
+    return 0;
+
+  g_context->psk_pki_enabled |= IS_PSK;
+  return 1;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_context_set_cpsk(coap_context_t *c_context,
+                          coap_dtls_cpsk_t *setup_data
+) {
+  coap_gnutls_context_t *g_context =
+                         ((coap_gnutls_context_t *)c_context->dtls_context);
+
+  if (!g_context || !setup_data)
+    return 0;
 
   g_context->psk_pki_enabled |= IS_PSK;
   return 1;

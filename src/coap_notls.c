@@ -52,9 +52,15 @@ coap_dtls_context_set_pki_root_cas(struct coap_context_t *ctx UNUSED,
 }
 
 int
-coap_dtls_context_set_psk(coap_context_t *ctx UNUSED,
-                          const char *hint UNUSED,
-                          coap_dtls_role_t role UNUSED
+coap_dtls_context_set_cpsk(coap_context_t *ctx UNUSED,
+                          coap_dtls_cpsk_t* setup_data UNUSED
+) {
+  return 0;
+}
+
+int
+coap_dtls_context_set_spsk(coap_context_t *ctx UNUSED,
+                          coap_dtls_spsk_t* setup_data UNUSED
 ) {
   return 0;
 }

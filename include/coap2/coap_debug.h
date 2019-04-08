@@ -72,7 +72,7 @@ coap_log_t coap_get_log_level(void);
 void coap_set_log_level(coap_log_t level);
 
 /**
- * Logging call-back handler definition.
+ * Logging callback handler definition.
  *
  * @param level One of the LOG_* values.
  * @param message Zero-terminated string message to log.

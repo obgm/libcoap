@@ -574,36 +574,78 @@ error:
 }
 
 int
-coap_dtls_context_set_psk(coap_context_t *ctx,
-                          const char *identity_hint,
-                          coap_dtls_role_t role
+coap_dtls_context_set_spsk(coap_context_t *c_context,
+                              coap_dtls_spsk_t *setup_data
 ) {
-  coap_openssl_context_t *context = ((coap_openssl_context_t *)ctx->dtls_context);
+  coap_openssl_context_t *o_context =
+                           ((coap_openssl_context_t *)c_context->dtls_context);
   BIO *bio;
 
-  if (role == COAP_DTLS_ROLE_SERVER) {
-    SSL_CTX_set_psk_server_callback(context->dtls.ctx, coap_dtls_psk_server_callback);
-    SSL_CTX_set_psk_server_callback(context->tls.ctx, coap_dtls_psk_server_callback);
-    SSL_CTX_use_psk_identity_hint(context->dtls.ctx, identity_hint ? identity_hint : "");
-    SSL_CTX_use_psk_identity_hint(context->tls.ctx, identity_hint ? identity_hint : "");
+  if (!setup_data)
+    return 0;
+
+  c_context->spsk_setup_data = *setup_data;
+
+  SSL_CTX_set_psk_server_callback(o_context->dtls.ctx,
+                                  coap_dtls_psk_server_callback);
+  SSL_CTX_set_psk_server_callback(o_context->tls.ctx,
+                                  coap_dtls_psk_server_callback);
+  if (setup_data->psk_key.hint) {
+    char hint[128];
+    snprintf(hint, sizeof(hint), "%.*s", (int)setup_data->psk_key.hint_len,
+             setup_data->psk_key.hint);
+    SSL_CTX_use_psk_identity_hint(o_context->dtls.ctx, hint);
+    SSL_CTX_use_psk_identity_hint(o_context->tls.ctx, hint);
   }
-  if (!context->dtls.ssl) {
+
+  if (!o_context->dtls.ssl) {
     /* This is set up to handle new incoming sessions to a server */
-    context->dtls.ssl = SSL_new(context->dtls.ctx);
-    if (!context->dtls.ssl)
+    o_context->dtls.ssl = SSL_new(o_context->dtls.ctx);
+    if (!o_context->dtls.ssl)
       return 0;
-    bio = BIO_new(context->dtls.meth);
+    bio = BIO_new(o_context->dtls.meth);
     if (!bio) {
-      SSL_free (context->dtls.ssl);
-      context->dtls.ssl = NULL;
+      SSL_free (o_context->dtls.ssl);
+      o_context->dtls.ssl = NULL;
       return 0;
     }
-    SSL_set_bio(context->dtls.ssl, bio, bio);
-    SSL_set_app_data(context->dtls.ssl, NULL);
-    SSL_set_options(context->dtls.ssl, SSL_OP_COOKIE_EXCHANGE);
-    SSL_set_mtu(context->dtls.ssl, COAP_DEFAULT_MTU);
+    SSL_set_bio(o_context->dtls.ssl, bio, bio);
+    SSL_set_app_data(o_context->dtls.ssl, NULL);
+    SSL_set_options(o_context->dtls.ssl, SSL_OP_COOKIE_EXCHANGE);
+    SSL_set_mtu(o_context->dtls.ssl, COAP_DEFAULT_MTU);
   }
-  context->psk_pki_enabled |= IS_PSK;
+  o_context->psk_pki_enabled |= IS_PSK;
+  return 1;
+}
+
+int
+coap_dtls_context_set_cpsk(coap_context_t *c_context,
+                              coap_dtls_cpsk_t *setup_data
+) {
+  coap_openssl_context_t *o_context =
+                          ((coap_openssl_context_t *)c_context->dtls_context);
+  BIO *bio;
+
+  if (!setup_data)
+    return 0;
+
+  if (!o_context->dtls.ssl) {
+    /* This is set up to handle new incoming sessions to a server */
+    o_context->dtls.ssl = SSL_new(o_context->dtls.ctx);
+    if (!o_context->dtls.ssl)
+      return 0;
+    bio = BIO_new(o_context->dtls.meth);
+    if (!bio) {
+      SSL_free (o_context->dtls.ssl);
+      o_context->dtls.ssl = NULL;
+      return 0;
+    }
+    SSL_set_bio(o_context->dtls.ssl, bio, bio);
+    SSL_set_app_data(o_context->dtls.ssl, NULL);
+    SSL_set_options(o_context->dtls.ssl, SSL_OP_COOKIE_EXCHANGE);
+    SSL_set_mtu(o_context->dtls.ssl, COAP_DEFAULT_MTU);
+  }
+  o_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
 
@@ -1362,7 +1404,8 @@ tls_client_hello_call_back(SSL *ssl,
   /*
    * See if PSK being requested
    */
-  if (session->context->psk_key && session->context->psk_key_len) {
+  if ((session->psk_key && session->psk_key_len) ||
+      (session->context->spsk_setup_data.psk_key.key && session->context->spsk_setup_data.psk_key.key_len)) {
     int len = SSL_client_hello_get0_ciphers(ssl, &out);
     STACK_OF(SSL_CIPHER) *peer_ciphers = NULL;
     STACK_OF(SSL_CIPHER) *scsvc = NULL;

@@ -86,7 +86,7 @@ struct coap_async_state_t;
 #endif
 
 /**
- * Response handler that is used as call-back in coap_context_t.
+ * Response handler that is used as callback in coap_context_t.
  *
  * @param context CoAP session.
  * @param session CoAP session.
@@ -101,7 +101,7 @@ typedef void (*coap_response_handler_t)(struct coap_context_t *context,
                                         const coap_tid_t id);
 
 /**
- * Negative Acknowedge handler that is used as call-back in coap_context_t.
+ * Negative Acknowedge handler that is used as callback in coap_context_t.
  *
  * @param context CoAP session.
  * @param session CoAP session.
@@ -116,7 +116,7 @@ typedef void (*coap_nack_handler_t)(struct coap_context_t *context,
                                     const coap_tid_t id);
 
 /**
- * Recieved Ping handler that is used as call-back in coap_context_t.
+ * Received Ping handler that is used as callback in coap_context_t.
  *
  * @param context CoAP session.
  * @param session CoAP session.
@@ -129,7 +129,7 @@ typedef void (*coap_ping_handler_t)(struct coap_context_t *context,
                                     const coap_tid_t id);
 
 /**
- * Recieved Pong handler that is used as call-back in coap_context_t.
+ * Received Pong handler that is used as callback in coap_context_t.
  *
  * @param context CoAP session.
  * @param session CoAP session.
@@ -197,10 +197,8 @@ typedef struct coap_context_t {
   size_t(*get_server_hint)(const coap_session_t *session, uint8_t *hint, size_t max_hint_len);
 
   void *dtls_context;
-  uint8_t *psk_hint;
-  size_t psk_hint_len;
-  uint8_t *psk_key;
-  size_t psk_key_len;
+
+  coap_dtls_spsk_t spsk_setup_data;  /**< Contains the initial PSK server setup data */
 
   unsigned int session_timeout;    /**< Number of seconds of inactivity after which an unused session will be closed. 0 means use default. */
   unsigned int max_idle_sessions;  /**< Maximum number of simultaneous unused sessions per endpoint. 0 means no maximum. */
@@ -307,9 +305,9 @@ coap_context_t *coap_new_context(const coap_address_t *listen_addr);
  * Set the context's default PSK hint and/or key for a server.
  *
  * @param context The current coap_context_t object.
- * @param hint    The default PSK server hint sent to a client. If @p NULL, PSK
+ * @param hint    The default PSK server hint sent to a client. If NULL, PSK
  *                authentication is disabled. Empty string is a valid hint.
- * @param key     The default PSK key. If @p NULL, PSK authentication will fail.
+ * @param key     The default PSK key. If NULL, PSK authentication will fail.
  * @param key_len The default PSK key's length. If @p 0, PSK authentication will
  *                fail.
  *
@@ -319,10 +317,22 @@ int coap_context_set_psk( coap_context_t *context, const char *hint,
                            const uint8_t *key, size_t key_len );
 
 /**
+ * Set the context's default PSK hint and/or key for a server.
+ *
+ * @param context    The current coap_context_t object.
+ * @param setup_data If NULL, PSK authentication will fail. PSK
+ *                   information required.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+int coap_context_set_psk2(coap_context_t *context,
+                          coap_dtls_spsk_t *setup_data);
+
+/**
  * Set the context's default PKI information for a server.
  *
  * @param context        The current coap_context_t object.
- * @param setup_data     If @p NULL, PKI authentication will fail. Certificate
+ * @param setup_data     If NULL, PKI authentication will fail. Certificate
  *                       information required.
  *
  * @return @c 1 if successful, else @c 0.
@@ -335,9 +345,9 @@ coap_context_set_pki(coap_context_t *context,
  * Set the context's default Root CA information for a client or server.
  *
  * @param context        The current coap_context_t object.
- * @param ca_file        If not @p NULL, is the full path name of a PEM encoded
+ * @param ca_file        If not NULL, is the full path name of a PEM encoded
  *                       file containing all the Root CAs to be used.
- * @param ca_dir         If not @p NULL, points to a directory containing PEM
+ * @param ca_dir         If not NULL, points to a directory containing PEM
  *                       encoded files containing all the Root CAs to be used.
  *
  * @return @c 1 if successful, else @c 0.
@@ -351,7 +361,7 @@ coap_context_set_pki_root_cas(coap_context_t *context,
  * Set the context keepalive timer for sessions.
  * A keepalive message will be sent after if a session has been inactive,
  * i.e. no packet sent or received, for the given number of seconds.
- * For unreliable protocols, a CoAP Empty message will be sent. If a 
+ * For unreliable protocols, a CoAP Empty message will be sent. If a
  * CoAP RST is not received, the CoAP Empty messages will get resent based
  * on the Confirmable retry parameters until there is a failure timeout,
  * at which point the session will be considered as disconnected.

@@ -157,6 +157,8 @@ void coap_session_mfree(coap_session_t *session) {
     coap_free(session->psk_identity);
   if (session->psk_key)
     coap_free(session->psk_key);
+  if (session->psk_hint)
+    coap_free(session->psk_hint);
 
   LL_FOREACH_SAFE(session->delayqueue, q, tmp) {
     if (q->pdu->type==COAP_MESSAGE_CON && session->context && session->context->nack_handler)
@@ -787,17 +789,45 @@ coap_session_t *coap_new_client_session_psk(
   const uint8_t *key,
   unsigned key_len
 ) {
-  coap_session_t *session = coap_session_create_client(ctx, local_if, server, proto);
+  coap_dtls_cpsk_t setup_data;
+
+  memset (&setup_data, 0, sizeof(setup_data));
+
+  if (identity) {
+    setup_data.psk_key.identity = (const uint8_t *)identity;
+    setup_data.psk_key.identity_len = strlen(identity);
+  }
+
+  if (key && key_len > 0) {
+    setup_data.psk_key.key = key;
+    setup_data.psk_key.key_len = key_len;
+  }
+
+  return coap_new_client_session_psk2(ctx, local_if, server,
+                                      proto, &setup_data);
+}
+
+coap_session_t *coap_new_client_session_psk2(
+  struct coap_context_t *ctx,
+  const coap_address_t *local_if,
+  const coap_address_t *server,
+  coap_proto_t proto,
+  coap_dtls_cpsk_t *setup_data
+) {
+  coap_session_t *session = coap_session_create_client(ctx, local_if,
+                                                       server, proto);
 
   if (!session)
     return NULL;
 
-  if (identity && (strlen(identity) > 0)) {
-    size_t identity_len = strlen(identity);
-    session->psk_identity = (uint8_t*)coap_malloc(identity_len);
+  session->cpsk_setup_data = *setup_data;
+  if (setup_data->psk_key.identity && setup_data->psk_key.identity_len) {
+    session->psk_identity =
+                      (uint8_t*)coap_malloc(setup_data->psk_key.identity_len);
     if (session->psk_identity) {
-      memcpy(session->psk_identity, identity, identity_len);
-      session->psk_identity_len = identity_len;
+      memcpy(session->psk_identity, setup_data->psk_key.identity,
+             setup_data->psk_key.identity_len);
+      session->psk_identity_len = setup_data->psk_key.identity_len;
     } else {
       coap_log(LOG_WARNING, "Cannot store session PSK identity\n");
       coap_session_release(session);
@@ -810,11 +840,12 @@ coap_session_t *coap_new_client_session_psk(
     return NULL;
   }
 
-  if (key && key_len > 0) {
-    session->psk_key = (uint8_t*)coap_malloc(key_len);
+  if (setup_data->psk_key.key && setup_data->psk_key.key_len > 0) {
+    session->psk_key = (uint8_t*)coap_malloc(setup_data->psk_key.key_len);
     if (session->psk_key) {
-      memcpy(session->psk_key, key, key_len);
-      session->psk_key_len = key_len;
+      memcpy(session->psk_key, setup_data->psk_key.key,
+             setup_data->psk_key.key_len);
+      session->psk_key_len = setup_data->psk_key.key_len;
     } else {
       coap_log(LOG_WARNING, "Cannot store session PSK key\n");
       coap_session_release(session);
@@ -828,7 +859,7 @@ coap_session_t *coap_new_client_session_psk(
   }
 
   if (coap_dtls_is_supported()) {
-    if (!coap_dtls_context_set_psk(ctx, NULL, COAP_DTLS_ROLE_CLIENT)) {
+    if (!coap_dtls_context_set_cpsk(ctx, setup_data)) {
       coap_session_release(session);
       return NULL;
     }
@@ -836,6 +867,54 @@ coap_session_t *coap_new_client_session_psk(
   coap_log(LOG_DEBUG, "***%s: new outgoing session\n",
            coap_session_str(session));
   return coap_session_connect(session);
+}
+
+int coap_session_refresh_psk_key(coap_session_t *session,
+  const coap_dtls_spsk_key_t *psk_key
+) {
+  /* We may be refreshing the hint/key with the same hint/key */
+  uint8_t *old_psk_hint = session->psk_hint;
+  uint8_t *old_psk_key = session->psk_key;
+
+  if (psk_key->hint) {
+    session->psk_hint = (uint8_t*)coap_malloc(psk_key->hint_len);
+    if (session->psk_hint) {
+      memcpy(session->psk_hint, psk_key->hint, psk_key->hint_len);
+      session->psk_hint_len = psk_key->hint_len;
+    } else {
+      coap_log(LOG_ERR, "No memory to store PSK hint\n");
+      if (old_psk_hint)
+        coap_free(old_psk_hint);
+      return 0;
+    }
+  }
+  else {
+    session->psk_hint = NULL;
+    session->psk_hint_len = 0;
+  }
+  if (old_psk_hint)
+    coap_free(old_psk_hint);
+
+  if (psk_key->key && psk_key->key_len > 0) {
+    session->psk_key = (uint8_t *)coap_malloc(psk_key->key_len);
+    if (session->psk_key) {
+      memcpy(session->psk_key, psk_key->key, psk_key->key_len);
+      session->psk_key_len = psk_key->key_len;
+    } else {
+      coap_log(LOG_ERR, "No memory to store PSK key\n");
+      if (old_psk_key)
+        coap_free(old_psk_key);
+      return 0;
+    }
+  }
+  else {
+    session->psk_key = NULL;
+    session->psk_key_len = 0;
+  }
+  if (old_psk_key)
+    coap_free(old_psk_key);
+
+  return 1;
 }
 
 coap_session_t *coap_new_client_session_pki(
