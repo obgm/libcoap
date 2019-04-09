@@ -29,26 +29,26 @@
  * the option @c observe.
  */
 typedef struct coap_async_state_t {
-  unsigned char flags;  /**< holds the flags to control behaviour */
 
-  /**
-   * Holds the internal time when the object was registered with a
-   * resource. This field will be updated whenever
-   * coap_register_async() is called for a specific resource.
-   */
-  coap_tick_t created;
 
   /**
    * This field can be used to register opaque application data with the
    * asynchronous state object.
    */
   void *appdata;
-  uint16_t message_id;       /**< id of last message seen */
   coap_session_t *session;         /**< transaction session */
-  coap_tid_t id;                   /**< transaction id */
   struct coap_async_state_t *next; /**< internally used for linking */
   size_t tokenlen;                 /**< length of the token */
   uint8_t token[8];                /**< the token to use in a response */
+  /**
+   * Holds the internal time when the object was registered with a
+   * resource. This field will be updated whenever
+   * coap_register_async() is called for a specific resource.
+   */
+  coap_tick_t created;
+  coap_tid_t id;                   /**< transaction id */
+  uint16_t message_id;       /**< id of last message seen */
+  unsigned char flags;  /**< holds the flags to control behaviour */
 } coap_async_state_t;
 
 /* Definitions for Async Status Flags These flags can be used to control the
