@@ -164,27 +164,18 @@ get_psk_info(struct dtls_context_t *dtls_context,
   dtls_credentials_type_t type,
   const uint8_t *id, size_t id_len,
   unsigned char *result, size_t result_length) {
+
   coap_context_t *coap_context;
   coap_session_t *coap_session;
   int fatal_error = DTLS_ALERT_INTERNAL_ERROR;
   size_t identity_length;
-  static int client = 0;
-  static uint8_t psk[128];
-  static size_t psk_len = 0;
+  uint8_t psk[128];
+  size_t psk_len = 0;
   coap_address_t remote_addr;
+  coap_dtls_cpsk_t *setup_cdata;
+  coap_dtls_spsk_t *setup_sdata;
+  coap_bin_const_t temp;
 
-
-  if (type == DTLS_PSK_KEY && client) {
-    if (psk_len > result_length) {
-      coap_log(LOG_WARNING, "cannot set psk -- buffer too small\n");
-      goto error;
-    }
-    memcpy(result, psk, psk_len);
-    client = 0;
-    return (int)psk_len;
-  }
-
-  client = 0;
   coap_context = (coap_context_t *)dtls_get_app_data(dtls_context);
   get_session_addr(dtls_session, &remote_addr);
   coap_session = coap_session_get_by_peer(coap_context, &remote_addr, dtls_session->ifindex);
@@ -196,11 +187,46 @@ get_psk_info(struct dtls_context_t *dtls_context,
   switch (type) {
   case DTLS_PSK_IDENTITY:
 
-    if (id_len)
-      coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)id_len, id);
-
-    if (!coap_context || !coap_context->get_client_psk)
+    if (!coap_context || !coap_context->get_client_psk ||
+        coap_session->type != COAP_SESSION_TYPE_CLIENT)
       goto error;
+
+    setup_cdata = &coap_session->cpsk_setup_data;
+
+    temp.s = id;
+    temp.length = id_len;
+    coap_session_refresh_psk_hint(coap_session, &temp);
+
+    coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)id_len, id ? (const char*)id : "");
+
+    if (setup_cdata->validate_ih_call_back) {
+      coap_str_const_t lhint;
+      lhint.length = id_len;
+      lhint.s = id;
+      const coap_dtls_cpsk_info_t *psk_info =
+               setup_cdata->validate_ih_call_back(&lhint,
+                                                  coap_session,
+                                                  setup_cdata->ih_call_back_arg);
+
+      if (psk_info == NULL)
+        return 0;
+      if (psk_info->identity.length >= result_length)
+        return 0;
+      if (psk_info->key.length > sizeof(psk))
+        return 0;
+
+      if (coap_session->psk_identity) {
+        coap_delete_bin_const(coap_session->psk_identity);
+      }
+      identity_length = psk_info->identity.length;
+      coap_session->psk_identity = coap_new_bin_const(psk_info->identity.s, identity_length);
+      memcpy(result, psk_info->identity.s, identity_length);
+      result[identity_length] = '\000';
+
+      coap_session_refresh_psk_key(coap_session, &psk_info->key);
+
+      return identity_length;
+    }
 
     identity_length = 0;
     psk_len = coap_context->get_client_psk(coap_session, (const uint8_t*)id, id_len, (uint8_t*)result, &identity_length, result_length, psk, sizeof(psk));
@@ -209,17 +235,63 @@ get_psk_info(struct dtls_context_t *dtls_context,
       fatal_error = DTLS_ALERT_CLOSE_NOTIFY;
       goto error;
     }
-    client = 1;
     return (int)identity_length;
 
   case DTLS_PSK_KEY:
-    if (coap_context->get_server_psk)
+    if (coap_session->type == COAP_SESSION_TYPE_CLIENT) {
+      if (!coap_context || !coap_context->get_client_psk)
+        goto error;
+      identity_length = 0;
+      psk_len = coap_context->get_client_psk(coap_session, (const uint8_t*)id, id_len, (uint8_t*)result, &identity_length, result_length, psk, sizeof(psk));
+      if (!psk_len) {
+        coap_log(LOG_WARNING, "no pre-shared key for given realm\n");
+        fatal_error = DTLS_ALERT_CLOSE_NOTIFY;
+        goto error;
+      }
+      if (psk_len > result_length) {
+        coap_log(LOG_WARNING, "cannot set psk -- buffer too small\n");
+        goto error;
+      }
+      memcpy(result, psk, psk_len);
+      return (int)psk_len;
+    }
+    if (coap_context->get_server_psk) {
+      setup_sdata = &coap_session->context->spsk_setup_data;
+
+      if (!id)
+        id = (const uint8_t *)"";
+
+      /* Track the Identity being used */
+      if (coap_session->psk_identity)
+        coap_delete_bin_const(coap_session->psk_identity);
+      coap_session->psk_identity = coap_new_bin_const(id, id_len);
+
+      coap_log(LOG_DEBUG, "got psk_identity: '%.*s'\n",
+               (int)id_len, id);
+
+      if (setup_sdata->validate_id_call_back) {
+        coap_bin_const_t lidentity;
+        lidentity.length = id_len;
+        lidentity.s = (const uint8_t*)id;
+        const coap_bin_const_t *psk_key =
+                 setup_sdata->validate_id_call_back(&lidentity,
+                                                    coap_session,
+                                                    setup_sdata->id_call_back_arg);
+
+        if (psk_key == NULL)
+          return 0;
+        if (psk_key->length > result_length)
+          return 0;
+        memcpy(result, psk_key->s, psk_key->length);
+        coap_session_refresh_psk_key(coap_session, psk_key);
+        return psk_key->length;
+      }
+
       return (int)coap_context->get_server_psk(coap_session, (const uint8_t*)id, id_len, (uint8_t*)result, result_length);
+    }
     return 0;
-    break;
 
   case DTLS_PSK_HINT:
-    client = 0;
     if (coap_context->get_server_hint)
       return (int)coap_context->get_server_hint(coap_session, (uint8_t *)result, result_length);
     return 0;
@@ -229,7 +301,6 @@ get_psk_info(struct dtls_context_t *dtls_context,
   }
 
 error:
-  client = 0;
   return dtls_alert_fatal_create(fatal_error);
 }
 
@@ -509,15 +580,26 @@ coap_dtls_context_set_pki_root_cas(struct coap_context_t *ctx UNUSED,
 
 int
 coap_dtls_context_set_cpsk(coap_context_t *c_context UNUSED,
-  coap_dtls_cpsk_t *setup_data UNUSED
+  coap_dtls_cpsk_t *setup_data
 ) {
+  if (!setup_data)
+    return 0;
+
   return 1;
 }
 
 int
 coap_dtls_context_set_spsk(coap_context_t *c_context UNUSED,
-  coap_dtls_spsk_t *setup_data UNUSED
+  coap_dtls_spsk_t *setup_data
 ) {
+  if (!setup_data)
+    return 0;
+
+  if (setup_data->validate_sni_call_back) {
+    coap_log(LOG_WARNING,
+        "CoAP Server with TinyDTLS does not support SNI selection\n");
+  }
+
   return 1;
 }
 

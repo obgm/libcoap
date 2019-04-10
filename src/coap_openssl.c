@@ -18,7 +18,7 @@
  * SSL_CTX_set_tlsext_servername_callback() which is called later in the
  * Client Hello processing - but called every Client Hello.
  * Certificates and Preshared Keys have to be set up in the SSL CTX before
- * SSL_Accept() is called, making the code messy to decide whether this is a
+ * SSL_accept() is called, making the code messy to decide whether this is a
  * PKI or PSK incoming request to handle things accordingly if both are
  * defined.  SNI has to create a new SSL CTX to handle different server names
  * with different crtificates.
@@ -106,6 +106,14 @@ typedef struct sni_entry {
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
 } sni_entry;
 
+typedef struct psk_sni_entry {
+  char *sni;
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
+  SSL_CTX *ctx;
+#endif /* OPENSSL_VERSION_NUMBER < 0x10101000L */
+  coap_dtls_spsk_info_t psk_info;
+} psk_sni_entry;
+
 typedef struct coap_openssl_context_t {
   coap_dtls_context_t dtls;
   coap_tls_context_t tls;
@@ -113,7 +121,15 @@ typedef struct coap_openssl_context_t {
   int psk_pki_enabled;
   size_t sni_count;
   sni_entry *sni_entry_list;
+  size_t psk_sni_count;
+  psk_sni_entry *psk_sni_entry_list;
 } coap_openssl_context_t;
+
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
+static int psk_tls_server_name_call_back(SSL *ssl, int *sd, void *arg);
+#else /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
+static int psk_tls_client_hello_call_back(SSL *ssl, int *al, void *arg);
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
 
 int coap_dtls_is_supported(void) {
   if (SSLeay() < 0x10100000L) {
@@ -315,8 +331,12 @@ static long coap_dgram_ctrl(BIO *a, int cmd, long num, void *ptr) {
   return ret;
 }
 
-static int coap_dtls_generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len) {
-  coap_dtls_context_t *dtls = (coap_dtls_context_t *)SSL_CTX_get_app_data(SSL_get_SSL_CTX(ssl));
+static int
+coap_dtls_generate_cookie(SSL *ssl,
+                         unsigned char *cookie,
+                         unsigned int *cookie_len) {
+  coap_dtls_context_t *dtls =
+            (coap_dtls_context_t *)SSL_CTX_get_app_data(SSL_get_SSL_CTX(ssl));
   coap_ssl_data *data = (coap_ssl_data*)BIO_get_data(SSL_get_rbio(ssl));
   int r = HMAC_Init_ex(dtls->cookie_hmac, NULL, 0, NULL, NULL);
   r &= HMAC_Update(dtls->cookie_hmac,
@@ -329,51 +349,155 @@ static int coap_dtls_generate_cookie(SSL *ssl, unsigned char *cookie, unsigned i
   return r;
 }
 
-static int coap_dtls_verify_cookie(SSL *ssl, const uint8_t *cookie, unsigned int cookie_len) {
+static int
+coap_dtls_verify_cookie(SSL *ssl,
+                        const uint8_t *cookie,
+                        unsigned int cookie_len) {
   uint8_t hmac[32];
   unsigned len = 32;
-  if (coap_dtls_generate_cookie(ssl, hmac, &len) && cookie_len == len && memcmp(cookie, hmac, len) == 0)
+  if (coap_dtls_generate_cookie(ssl, hmac, &len) &&
+      cookie_len == len && memcmp(cookie, hmac, len) == 0)
     return 1;
   else
     return 0;
 }
 
-static unsigned coap_dtls_psk_client_callback(SSL *ssl, const char *hint, char *identity, unsigned int max_identity_len, unsigned char *buf, unsigned max_len) {
+static unsigned
+coap_dtls_psk_client_callback(
+  SSL *ssl,
+  const char *hint,
+  char *identity,
+  unsigned int max_identity_len,
+  unsigned char *psk,
+  unsigned int max_psk_len
+) {
   size_t hint_len = 0, identity_len = 0, psk_len;
-  coap_session_t *session = (coap_session_t*)SSL_get_app_data(ssl);
+  coap_session_t *c_session;
+  coap_openssl_context_t *o_context;
+  coap_dtls_cpsk_t *setup_data;
 
-  if (hint)
+  c_session = (coap_session_t*)SSL_get_app_data(ssl);
+  if (c_session == NULL || c_session->context == NULL ||
+      c_session->context->get_client_psk == NULL)
+    return 0;
+  o_context = (coap_openssl_context_t *)c_session->context->dtls_context;
+  if (o_context == NULL)
+    return 0;
+  setup_data = &c_session->cpsk_setup_data;
+
+  if (c_session->psk_hint) {
+    coap_delete_bin_const(c_session->psk_hint);
+    c_session->psk_hint = NULL;
+  }
+  if (hint) {
     hint_len = strlen(hint);
+    c_session->psk_hint = coap_new_bin_const((const uint8_t *)hint, hint_len);
+  }
   else
     hint = "";
 
   coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)hint_len, hint);
 
-  if (session == NULL || session->context == NULL || session->context->get_client_psk == NULL)
-    return 0;
+  if (setup_data->validate_ih_call_back) {
+    coap_str_const_t lhint;
+    lhint.length = hint_len;
+    lhint.s = (const uint8_t*)hint;
+    const coap_dtls_cpsk_info_t *psk_info =
+             setup_data->validate_ih_call_back(&lhint,
+                                               c_session,
+                                               setup_data->ih_call_back_arg);
 
-  psk_len = session->context->get_client_psk(session, (const uint8_t*)hint, hint_len, (uint8_t*)identity, &identity_len, max_identity_len - 1, (uint8_t*)buf, max_len);
+    if (psk_info == NULL)
+      return 0;
+    if (psk_info->identity.length >= max_identity_len)
+      return 0;
+    if (psk_info->key.length > max_psk_len)
+      return 0;
+
+    if (c_session->psk_identity) {
+      coap_delete_bin_const(c_session->psk_identity);
+    }
+    identity_len = psk_info->identity.length;
+    c_session->psk_identity = coap_new_bin_const(psk_info->identity.s, identity_len);
+    memcpy(identity, psk_info->identity.s, identity_len);
+    identity[identity_len] = '\000';
+
+    if (c_session->psk_key) {
+      coap_delete_bin_const(c_session->psk_key);
+    }
+    psk_len = psk_info->key.length;
+    c_session->psk_key = coap_new_bin_const(psk_info->key.s, psk_len);
+    memcpy(psk, psk_info->key.s, psk_len);
+
+    return psk_len;
+  }
+  psk_len = c_session->context->get_client_psk(c_session,
+                                               (const uint8_t*)hint,
+                                               hint_len,
+                                               (uint8_t*)identity,
+                                               &identity_len,
+                                               max_identity_len - 1,
+                                               (uint8_t*)psk, max_psk_len);
   if (identity_len < max_identity_len)
     identity[identity_len] = 0;
   return (unsigned)psk_len;
 }
 
-static unsigned coap_dtls_psk_server_callback(SSL *ssl, const char *identity, unsigned char *buf, unsigned max_len) {
+static unsigned
+coap_dtls_psk_server_callback(
+  SSL *ssl,
+  const char *identity,
+  unsigned char *psk,
+  unsigned int max_psk_len
+) {
   size_t identity_len = 0;
-  coap_session_t *session = (coap_session_t*)SSL_get_app_data(ssl);
+  coap_session_t *c_session;
+  coap_dtls_spsk_t *setup_data;
+
+  c_session = (coap_session_t*)SSL_get_app_data(ssl);
+  if (c_session == NULL || c_session->context == NULL ||
+      c_session->context->get_server_psk == NULL)
+    return 0;
+
+  setup_data = &c_session->context->spsk_setup_data;
 
   if (identity)
     identity_len = strlen(identity);
   else
     identity = "";
 
+  /* Track the Identity being used */
+  if (c_session->psk_identity)
+    coap_delete_bin_const(c_session->psk_identity);
+  c_session->psk_identity = coap_new_bin_const((const uint8_t *)identity,
+                                               identity_len);
+
   coap_log(LOG_DEBUG, "got psk_identity: '%.*s'\n",
            (int)identity_len, identity);
 
-  if (session == NULL || session->context == NULL || session->context->get_server_psk == NULL)
-    return 0;
+  if (setup_data->validate_id_call_back) {
+    coap_bin_const_t lidentity;
+    lidentity.length = identity_len;
+    lidentity.s = (const uint8_t*)identity;
+    const coap_bin_const_t *psk_key =
+             setup_data->validate_id_call_back(&lidentity,
+                                                c_session,
+                                                setup_data->id_call_back_arg);
 
-  return (unsigned)session->context->get_server_psk(session, (const uint8_t*)identity, identity_len, (uint8_t*)buf, max_len);
+    if (psk_key == NULL)
+      return 0;
+    if (psk_key->length > max_psk_len)
+      return 0;
+    memcpy(psk, psk_key->s, psk_key->length);
+    coap_session_refresh_psk_key(c_session, psk_key);
+    return psk_key->length;
+  }
+
+  return (unsigned)c_session->context->get_server_psk(c_session,
+                                                      (const uint8_t*)identity,
+                                                      identity_len,
+                                                      (uint8_t*)psk,
+                                                      max_psk_len);
 }
 
 static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
@@ -581,21 +705,38 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
                            ((coap_openssl_context_t *)c_context->dtls_context);
   BIO *bio;
 
-  if (!setup_data)
+  if (!setup_data || !o_context)
     return 0;
-
-  c_context->spsk_setup_data = *setup_data;
 
   SSL_CTX_set_psk_server_callback(o_context->dtls.ctx,
                                   coap_dtls_psk_server_callback);
   SSL_CTX_set_psk_server_callback(o_context->tls.ctx,
                                   coap_dtls_psk_server_callback);
-  if (setup_data->psk_key.hint) {
-    char hint[128];
-    snprintf(hint, sizeof(hint), "%.*s", (int)setup_data->psk_key.hint_len,
-             setup_data->psk_key.hint);
+  if (setup_data->psk_info.hint.s) {
+    char hint[COAP_DTLS_HINT_LENGTH];
+    snprintf(hint, sizeof(hint), "%.*s", (int)setup_data->psk_info.hint.length,
+             setup_data->psk_info.hint.s);
     SSL_CTX_use_psk_identity_hint(o_context->dtls.ctx, hint);
     SSL_CTX_use_psk_identity_hint(o_context->tls.ctx, hint);
+  }
+  if (setup_data->validate_sni_call_back) {
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
+    SSL_CTX_set_tlsext_servername_arg(o_context->dtls.ctx,
+                                      &c_context->spsk_setup_data);
+    SSL_CTX_set_tlsext_servername_callback(o_context->dtls.ctx,
+                                           psk_tls_server_name_call_back);
+    SSL_CTX_set_tlsext_servername_arg(o_context->tls.ctx,
+                                      &c_context->spsk_setup_data);
+    SSL_CTX_set_tlsext_servername_callback(o_context->tls.ctx,
+                                           psk_tls_server_name_call_back);
+#else /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
+    SSL_CTX_set_client_hello_cb(o_context->dtls.ctx,
+                                psk_tls_client_hello_call_back,
+                                NULL);
+    SSL_CTX_set_client_hello_cb(o_context->tls.ctx,
+                                psk_tls_client_hello_call_back,
+                                NULL);
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
   }
 
   if (!o_context->dtls.ssl) {
@@ -626,7 +767,7 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
                           ((coap_openssl_context_t *)c_context->dtls_context);
   BIO *bio;
 
-  if (!setup_data)
+  if (!setup_data || !o_context)
     return 0;
 
   if (!o_context->dtls.ssl) {
@@ -1135,7 +1276,7 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
     }
     if (!preverify_ok) {
         coap_log(LOG_WARNING,
-               "    %s: %s: '%s' depth=%d\n",
+               "   %s: %s: '%s' depth=%d\n",
                coap_session_str(session),
                X509_verify_cert_error_string(err), cn ? cn : "?", depth);
         /* Invoke the CN callback function for this failure */
@@ -1143,7 +1284,7 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
     }
     else {
         coap_log(LOG_WARNING,
-               "    %s: %s: overridden: '%s' depth=%d\n",
+               "   %s: %s: overridden: '%s' depth=%d\n",
                coap_session_str(session),
                X509_verify_cert_error_string(err), cn ? cn : "?", depth);
     }
@@ -1183,18 +1324,27 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
  */
 static int
 tls_secret_call_back(SSL *ssl,
-  void *secret UNUSED,
-  int *secretlen UNUSED,
+  void *secret,
+  int *secretlen,
   STACK_OF(SSL_CIPHER) *peer_ciphers,
   const SSL_CIPHER **cipher UNUSED,
   void *arg
 ) {
   int     ii;
   int     psk_requested = 0;
-  coap_session_t *session = SSL_get_app_data(ssl);
+  coap_session_t *session;
   coap_dtls_pki_t *setup_data = (coap_dtls_pki_t*)arg;
 
-  if (session && session->context->psk_key && session->context->psk_key_len) {
+  session = (coap_session_t *)SSL_get_app_data(ssl);
+  assert(session != NULL);
+  assert(session->context != NULL);
+  if (session == NULL ||
+      session->context == NULL)
+    return 0;
+
+  if ((session->psk_key) ||
+      (session->context->spsk_setup_data.psk_info.key.s &&
+       session->context->spsk_setup_data.psk_info.key.length)) {
     /* Is PSK being requested - if so, we need to change algorithms */
     for (ii = 0; ii < sk_SSL_CIPHER_num (peer_ciphers); ii++) {
       const SSL_CIPHER *peer_cipher = sk_SSL_CIPHER_value(peer_ciphers, ii);
@@ -1208,13 +1358,9 @@ tls_secret_call_back(SSL *ssl,
     }
   }
   if (!psk_requested) {
-    if (session) {
-      coap_log(LOG_DEBUG, "   %s: Using PKI ciphers\n",
-                coap_session_str(session));
-    }
-    else {
-      coap_log(LOG_DEBUG, "Using PKI ciphers\n");
-    }
+    coap_log(LOG_DEBUG, "   %s: Using PKI ciphers\n",
+             coap_session_str(session));
+
     if (setup_data->verify_peer_cert) {
       if (setup_data->require_peer_cert) {
         SSL_set_verify(ssl,
@@ -1247,39 +1393,41 @@ tls_secret_call_back(SSL *ssl,
        SSL_set1_param(ssl, param);
        X509_VERIFY_PARAM_free(param);
     }
+    if (setup_data->additional_tls_setup_call_back) {
+      /* Additional application setup wanted */
+      if (!setup_data->additional_tls_setup_call_back(ssl, setup_data))
+       return 0;
+    }
   }
   else {
-    if (session) {
-      if (session->context->psk_key && session->context->psk_key_len) {
-        memcpy(secret, session->context->psk_key, session->context->psk_key_len);
-        *secretlen = session->context->psk_key_len;
-      }
-      coap_log(LOG_DEBUG, "   %s: Setting PSK ciphers\n",
-               coap_session_str(session));
+    if (session->psk_key) {
+      memcpy(secret, session->psk_key->s, session->psk_key->length);
+      *secretlen = session->psk_key->length;
     }
-    else {
-      coap_log(LOG_DEBUG, "Setting PSK ciphers\n");
+    else if (session->context->spsk_setup_data.psk_info.key.s &&
+             session->context->spsk_setup_data.psk_info.key.length) {
+      memcpy(secret, session->context->spsk_setup_data.psk_info.key.s,
+             session->context->spsk_setup_data.psk_info.key.length);
+      *secretlen = session->context->spsk_setup_data.psk_info.key.length;
     }
+    coap_log(LOG_DEBUG, "   %s: Setting PSK ciphers\n",
+             coap_session_str(session));
     /*
      * Force a PSK algorithm to be used, so we do PSK
      */
     SSL_set_cipher_list (ssl, COAP_OPENSSL_PSK_CIPHERS);
     SSL_set_psk_server_callback(ssl, coap_dtls_psk_server_callback);
   }
-  if (setup_data->additional_tls_setup_call_back) {
-    /* Additional application setup wanted */
-    if (!setup_data->additional_tls_setup_call_back(ssl, setup_data))
-     return 0;
-  }
   return 0;
 }
 
 /*
- * During the SSL/TLS initial negotiations, tls_server_name_call_back() is called
- * so it is possible to set up an extra callback to determine whether this is
- * a PKI or PSK incoming request and adjust the ciphers if necessary
+ * During the SSL/TLS initial negotiations, tls_server_name_call_back() is
+ * called so it is possible to set up an extra callback to determine whether
+ * this is a PKI or PSK incoming request and adjust the ciphers if necessary
  *
- * Set up by SSL_CTX_set_tlsext_servername_callback() in coap_dtls_context_set_pki()
+ * Set up by SSL_CTX_set_tlsext_servername_callback() in
+ * coap_dtls_context_set_pki()
  */
 static int
 tls_server_name_call_back(SSL *ssl,
@@ -1304,7 +1452,7 @@ tls_server_name_call_back(SSL *ssl,
       sni = "";
     }
     for (i = 0; i < context->sni_count; i++) {
-      if (!strcmp(sni, context->sni_entry_list[i].sni)) {
+      if (!strcasecmp(sni, context->sni_entry_list[i].sni)) {
         break;
       }
     }
@@ -1369,6 +1517,111 @@ tls_server_name_call_back(SSL *ssl,
 error:
   return SSL_TLSEXT_ERR_ALERT_WARNING;
 }
+
+/*
+ * During the SSL/TLS initial negotiations, psk_tls_server_name_call_back() is
+ * called to see if SNI is being used.
+ *
+ * Set up by SSL_CTX_set_tlsext_servername_callback()
+ * in coap_dtls_context_set_spsk()
+ */
+static int
+psk_tls_server_name_call_back(SSL *ssl,
+                          int *sd UNUSED,
+                          void *arg
+) {
+  coap_dtls_spsk_t *setup_data = (coap_dtls_spsk_t*)arg;
+
+  if (!ssl) {
+    return SSL_TLSEXT_ERR_NOACK;
+  }
+
+  if (setup_data->validate_sni_call_back) {
+    /* SNI checking requested */
+    coap_session_t *c_session = (coap_session_t*)SSL_get_app_data(ssl);
+    coap_openssl_context_t *o_context =
+                  ((coap_openssl_context_t *)c_session->context->dtls_context);
+    const char *sni = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+    size_t i;
+    char lhint[COAP_DTLS_HINT_LENGTH];
+
+    if (!sni || !sni[0]) {
+      sni = "";
+    }
+    for (i = 0; i < o_context->psk_sni_count; i++) {
+      if (!strcasecmp(sni, (char*)o_context->psk_sni_entry_list[i].sni)) {
+        break;
+      }
+    }
+    if (i == o_context->psk_sni_count) {
+      SSL_CTX *ctx;
+      const coap_dtls_spsk_info_t *new_entry =
+         setup_data->validate_sni_call_back(sni,
+                                            c_session,
+                                            setup_data->sni_call_back_arg);
+      if (!new_entry) {
+        return SSL_TLSEXT_ERR_ALERT_FATAL;
+      }
+      /* Need to set up a new SSL_CTX to switch to */
+      if (c_session->proto == COAP_PROTO_DTLS) {
+        /* Set up DTLS context */
+        ctx = SSL_CTX_new(DTLS_method());
+        if (!ctx)
+          goto error;
+        SSL_CTX_set_min_proto_version(ctx, DTLS1_2_VERSION);
+        SSL_CTX_set_app_data(ctx, &o_context->dtls);
+        SSL_CTX_set_read_ahead(ctx, 1);
+        SSL_CTX_set_cipher_list(ctx, COAP_OPENSSL_CIPHERS);
+        SSL_CTX_set_cookie_generate_cb(ctx, coap_dtls_generate_cookie);
+        SSL_CTX_set_cookie_verify_cb(ctx, coap_dtls_verify_cookie);
+        SSL_CTX_set_info_callback(ctx, coap_dtls_info_callback);
+        SSL_CTX_set_options(ctx, SSL_OP_NO_QUERY_MTU);
+      }
+      else {
+        /* Set up TLS context */
+        ctx = SSL_CTX_new(TLS_method());
+        if (!ctx)
+          goto error;
+        SSL_CTX_set_app_data(ctx, &o_context->tls);
+        SSL_CTX_set_min_proto_version(ctx, TLS1_VERSION);
+        SSL_CTX_set_cipher_list(ctx, COAP_OPENSSL_CIPHERS);
+        SSL_CTX_set_info_callback(ctx, coap_dtls_info_callback);
+        SSL_CTX_set_alpn_select_cb(ctx, server_alpn_callback, NULL);
+      }
+
+      o_context->psk_sni_entry_list =
+            OPENSSL_realloc(o_context->psk_sni_entry_list,
+                            (o_context->psk_sni_count+1)*sizeof(psk_sni_entry));
+      o_context->psk_sni_entry_list[o_context->psk_sni_count].sni =
+                                 OPENSSL_strdup(sni);
+      o_context->psk_sni_entry_list[o_context->psk_sni_count].psk_info =
+                                 *new_entry;
+      o_context->psk_sni_entry_list[o_context->psk_sni_count].ctx =
+                                 ctx;
+      o_context->psk_sni_count++;
+    }
+    SSL_set_SSL_CTX (ssl, o_context->psk_sni_entry_list[i].ctx);
+    SSL_clear_options (ssl, 0xFFFFFFFFL);
+    SSL_set_options (ssl,
+                      SSL_CTX_get_options (o_context->psk_sni_entry_list[i].ctx));
+    coap_session_refresh_psk_key(c_session,
+                                 &o_context->psk_sni_entry_list[i].psk_info.key);
+    snprintf(lhint, sizeof(lhint), "%.*s",
+             (int)o_context->psk_sni_entry_list[i].psk_info.hint.length,
+             o_context->psk_sni_entry_list[i].psk_info.hint.s);
+    SSL_use_psk_identity_hint(ssl, lhint);
+  }
+
+  /*
+   * Have to do extra call back next to get client algorithms
+   * SSL_get_client_ciphers() does not work this early on
+   */
+  SSL_set_session_secret_cb(ssl, tls_secret_call_back, arg);
+  return SSL_TLSEXT_ERR_OK;
+
+error:
+  return SSL_TLSEXT_ERR_ALERT_WARNING;
+}
 #else /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
 /*
  * During the SSL/TLS initial negotiations, tls_client_hello_call_back() is
@@ -1398,14 +1651,21 @@ tls_client_hello_call_back(SSL *ssl,
   assert(session != NULL);
   assert(session->context != NULL);
   assert(session->context->dtls_context != NULL);
+  if (session == NULL ||
+      session->context == NULL ||
+      session->context->dtls_context == NULL) {
+    *al = SSL_AD_INTERNAL_ERROR;
+    return SSL_CLIENT_HELLO_ERROR;
+  }
   dtls_context = (coap_openssl_context_t *)session->context->dtls_context;
   setup_data = &dtls_context->setup_data;
 
   /*
    * See if PSK being requested
    */
-  if ((session->psk_key && session->psk_key_len) ||
-      (session->context->spsk_setup_data.psk_key.key && session->context->spsk_setup_data.psk_key.key_len)) {
+  if ((session->psk_key) ||
+      (session->context->spsk_setup_data.psk_info.key.s &&
+       session->context->spsk_setup_data.psk_info.key.length)) {
     int len = SSL_client_hello_get0_ciphers(ssl, &out);
     STACK_OF(SSL_CIPHER) *peer_ciphers = NULL;
     STACK_OF(SSL_CIPHER) *scsvc = NULL;
@@ -1434,13 +1694,8 @@ tls_client_hello_call_back(SSL *ssl,
     /*
      * Client has requested PSK and it is supported
      */
-    if (session) {
-      coap_log(LOG_DEBUG, "   %s: PSK request\n",
-               coap_session_str(session));
-    }
-    else {
-      coap_log(LOG_DEBUG, "PSK request\n");
-    }
+    coap_log(LOG_DEBUG, "   %s: PSK request\n",
+             coap_session_str(session));
     SSL_set_psk_server_callback(ssl, coap_dtls_psk_server_callback);
     if (setup_data->additional_tls_setup_call_back) {
       /* Additional application setup wanted */
@@ -1507,7 +1762,7 @@ is_x509:
     }
     /* Is this a cached entry? */
     for (i = 0; i < context->sni_count; i++) {
-      if (!strcmp(sni, context->sni_entry_list[i].sni)) {
+      if (!strcasecmp(sni, context->sni_entry_list[i].sni)) {
         break;
       }
     }
@@ -1540,13 +1795,9 @@ is_x509:
     setup_pki_ssl(ssl, setup_data, 1);
   }
 
-  if (session) {
-    coap_log(LOG_DEBUG, "   %s: Using PKI ciphers\n",
-              coap_session_str(session));
-  }
-  else {
-    coap_log(LOG_DEBUG, "Using PKI ciphers\n");
-  }
+  coap_log(LOG_DEBUG, "   %s: Using PKI ciphers\n",
+           coap_session_str(session));
+
   if (setup_data->verify_peer_cert) {
     if (setup_data->require_peer_cert) {
       SSL_set_verify(ssl,
@@ -1585,6 +1836,122 @@ is_x509:
      return 0;
   }
   return SSL_CLIENT_HELLO_SUCCESS;
+}
+
+/*
+ * During the SSL/TLS initial negotiations, psk_tls_client_hello_call_back() is
+ * called early in the Client Hello processing so it is possible to determine
+ * whether SNI needs to be handled
+ *
+ * Set up by SSL_CTX_set_client_hello_cb().
+ */
+static int
+psk_tls_client_hello_call_back(SSL *ssl,
+                          int *al,
+                          void *arg UNUSED
+) {
+  coap_session_t *c_session;
+  coap_openssl_context_t *o_context;
+  coap_dtls_spsk_t *setup_data;
+  const unsigned char *out;
+  size_t outlen;
+
+  if (!ssl)
+    goto int_err;
+  c_session = (coap_session_t *)SSL_get_app_data(ssl);
+  if (!c_session || !c_session->context) {
+    goto int_err;
+  }
+  o_context = (coap_openssl_context_t *)c_session->context->dtls_context;
+  if (!o_context) {
+    goto int_err;
+  }
+  setup_data = &c_session->context->spsk_setup_data;
+
+  if (setup_data->validate_sni_call_back) {
+    /*
+     * SNI checking requested
+     */
+    const char *sni = "";
+    char *sni_tmp = NULL;
+    size_t i;
+    char lhint[COAP_DTLS_HINT_LENGTH];
+
+    if (SSL_client_hello_get0_ext (ssl, TLSEXT_TYPE_server_name, &out, &outlen) &&
+        outlen > 5 &&
+        (((out[0]<<8) + out[1] +2) == (int)outlen) &&
+        out[2] == TLSEXT_NAMETYPE_host_name &&
+        (((out[3]<<8) + out[4] +2 +3) == (int)outlen)) {
+      /* Skip over length, type and length */
+      out += 5;
+      outlen -= 5;
+      sni_tmp = OPENSSL_malloc(outlen+1);
+      if (sni_tmp) {
+        sni_tmp[outlen] = '\000';
+        memcpy(sni_tmp, out, outlen);
+        sni = sni_tmp;
+      }
+    }
+
+    /* Is this a cached entry? */
+    for (i = 0; i < o_context->psk_sni_count; i++) {
+      if (strcasecmp(sni, o_context->psk_sni_entry_list[i].sni) == 0) {
+        break;
+      }
+    }
+    if (i == o_context->psk_sni_count) {
+      /*
+       * New SNI request
+       */
+      psk_sni_entry *tmp_entry;
+      const coap_dtls_spsk_info_t *new_entry = setup_data->validate_sni_call_back(
+                                               sni,
+                                               c_session,
+                                               setup_data->sni_call_back_arg);
+      if (!new_entry) {
+        *al = SSL_AD_UNRECOGNIZED_NAME;
+        return SSL_CLIENT_HELLO_ERROR;
+      }
+
+      tmp_entry =
+                OPENSSL_realloc(o_context->psk_sni_entry_list,
+                                (o_context->psk_sni_count+1)*sizeof(sni_entry));
+      if (tmp_entry) {
+        o_context->psk_sni_entry_list = tmp_entry;
+        o_context->psk_sni_entry_list[o_context->psk_sni_count].sni =
+                                   OPENSSL_strdup(sni);
+        if (o_context->psk_sni_entry_list[o_context->psk_sni_count].sni) {
+          o_context->psk_sni_entry_list[o_context->psk_sni_count].psk_info =
+                                     *new_entry;
+          o_context->psk_sni_count++;
+        }
+      }
+    }
+    if (sni_tmp) {
+      OPENSSL_free(sni_tmp);
+    }
+    if (coap_session_refresh_psk_hint(c_session,
+                                    &o_context->psk_sni_entry_list[i].psk_info.hint)
+                                 == 0) {
+      goto int_err;
+    }
+    if (coap_session_refresh_psk_key(c_session,
+                                    &o_context->psk_sni_entry_list[i].psk_info.key)
+                                 == 0) {
+      goto int_err;
+    }
+    if (o_context->psk_sni_entry_list[i].psk_info.hint.s) {
+      snprintf(lhint, sizeof(lhint), "%.*s",
+               (int)o_context->psk_sni_entry_list[i].psk_info.hint.length,
+               o_context->psk_sni_entry_list[i].psk_info.hint.s);
+      SSL_use_psk_identity_hint(ssl, lhint);
+    }
+  }
+  return SSL_CLIENT_HELLO_SUCCESS;
+
+int_err:
+  *al = SSL_AD_INTERNAL_ERROR;
+  return SSL_CLIENT_HELLO_ERROR;
 }
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
 
@@ -1739,6 +2106,14 @@ void coap_dtls_free_context(void *handle) {
   }
   if (context->sni_count)
     OPENSSL_free(context->sni_entry_list);
+  for (i = 0; i < context->psk_sni_count; i++) {
+    OPENSSL_free((char*)context->psk_sni_entry_list[i].sni);
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
+    SSL_CTX_free(context->psk_sni_entry_list[i].ctx);
+#endif /* OPENSSL_VERSION_NUMBER < 0x10101000L */
+  }
+  if (context->psk_sni_count)
+    OPENSSL_free(context->psk_sni_entry_list);
   coap_free(context);
 }
 
@@ -1768,8 +2143,10 @@ void * coap_dtls_new_server_session(coap_session_t *session) {
   data->session = session;
 
   if (session->context->get_server_hint) {
-    char hint[128] = "";
-    size_t hint_len = session->context->get_server_hint(session, (uint8_t*)hint, sizeof(hint) - 1);
+    /* hint may get updated if/when handling SNI callback */
+    char hint[COAP_DTLS_HINT_LENGTH] = "";
+    size_t hint_len = session->context->get_server_hint(session,
+                                            (uint8_t*)hint, sizeof(hint) - 1);
     if (hint_len > 0 && hint_len < sizeof(hint)) {
       hint[hint_len] = 0;
       SSL_use_psk_identity_hint(ssl, hint);
@@ -1799,12 +2176,31 @@ error:
 static int
 setup_client_ssl_session(coap_session_t *session, SSL *ssl
 ) {
-  coap_openssl_context_t *context = ((coap_openssl_context_t *)session->context->dtls_context);
+  coap_openssl_context_t *context =
+                    ((coap_openssl_context_t *)session->context->dtls_context);
 
   if (context->psk_pki_enabled & IS_PSK) {
+    coap_dtls_cpsk_t *setup_data = &session->cpsk_setup_data;
+
+    /* Issue SNI if requested */
+    if (setup_data->client_sni &&
+        SSL_set_tlsext_host_name (ssl, setup_data->client_sni) != 1) {
+          coap_log(LOG_WARNING, "SSL_set_tlsext_host_name: set '%s' failed",
+                   setup_data->client_sni);
+    }
     SSL_set_psk_client_callback(ssl, coap_dtls_psk_client_callback);
     SSL_set_psk_server_callback(ssl, coap_dtls_psk_server_callback);
     SSL_set_cipher_list(ssl, COAP_OPENSSL_PSK_CIPHERS);
+    if (setup_data->validate_ih_call_back) {
+      if (session->proto == COAP_PROTO_DTLS) {
+        SSL_set_max_proto_version(ssl, DTLS1_2_VERSION);
+      }
+      else {
+        SSL_set_max_proto_version(ssl, TLS1_2_VERSION);
+      }
+      coap_log(LOG_DEBUG,
+        "CoAP Client restricted to (D)TLS1.2 with Identity Hint callback\n");
+    }
   }
   if (context->psk_pki_enabled & IS_PKI) {
     coap_dtls_pki_t *setup_data = &context->setup_data;
@@ -2179,7 +2575,7 @@ void *coap_tls_new_server_session(coap_session_t *session, int *connected) {
   SSL_set_app_data(ssl, session);
 
   if (session->context->get_server_hint) {
-    char hint[128] = "";
+    char hint[COAP_DTLS_HINT_LENGTH] = "";
     size_t hint_len = session->context->get_server_hint(session, (uint8_t*)hint, sizeof(hint) - 1);
     if (hint_len > 0 && hint_len < sizeof(hint)) {
       hint[hint_len] = 0;

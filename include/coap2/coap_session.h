@@ -87,18 +87,33 @@ typedef struct coap_session_t {
   coap_tick_t csm_tx;
   coap_dtls_cpsk_t cpsk_setup_data; /**< client provided PSK initial setup
                                          data */
-  uint8_t *psk_identity;            /**< If client, current identity for server.
-                                         If NULL, then in cpsk_setup_data
-                                         If server, client provided identity */
-  size_t psk_identity_len;
-  uint8_t *psk_key;                 /**< If client, current key for server.
-                                         If NULL, then in cpsk_setup_data
-                                         If server, client current key */
-  size_t psk_key_len;
-  uint8_t *psk_hint;                /**< If client, server provided hint.
-                                         If server, client current hint
-                                         If NULL, then in context->spsk_setup_data */
-  size_t psk_hint_len;
+  coap_bin_const_t *psk_identity;   /**< If client, this field contains the
+                                      current identity for server; When this
+                                      field is NULL, the current identity is
+                                      contained in cpsk_setup_data
+
+                                      If server, this field contains the client
+                                      provided identity.
+
+                                      Value maintained internally */
+  coap_bin_const_t *psk_key;        /**< If client, this field contains the
+                                      current pre-shared key for server;
+                                      When this field is NULL, the current
+                                      key is contained in cpsk_setup_data
+
+                                      If server, this field contains the
+                                      client's current key.
+
+                                      Value maintained internally */
+  coap_bin_const_t *psk_hint;       /**< If client, this field contains the
+                                      server provided identity hint.
+
+                                      If server, this field contains the
+                                      current hint for the client; When this
+                                      field is NULL, the current hint is
+                                      contained in context->spsk_setup_data
+
+                                      Value maintained internally */
   void *app;                        /**< application-specific data */
   unsigned int max_retransmit;      /**< maximum re-transmit count (default 4) */
   coap_fixed_point_t ack_timeout;   /**< timeout waiting for ack (default 2 secs) */
@@ -261,7 +276,7 @@ int coap_session_refresh_psk_hint(coap_session_t *session,
  * @return @c 1 if successful, else @c 0.
  */
 int coap_session_refresh_psk_key(coap_session_t *session,
-                                 const struct coap_dtls_spsk_key_t *psk_key);
+                                 const struct coap_bin_const_t *psk_key);
 
 /**
 * Creates a new client session to the designated server with PKI credentials

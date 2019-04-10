@@ -794,13 +794,13 @@ coap_session_t *coap_new_client_session_psk(
   memset (&setup_data, 0, sizeof(setup_data));
 
   if (identity) {
-    setup_data.psk_key.identity = (const uint8_t *)identity;
-    setup_data.psk_key.identity_len = strlen(identity);
+    setup_data.psk_info.identity.s = (const uint8_t *)identity;
+    setup_data.psk_info.identity.length = strlen(identity);
   }
 
   if (key && key_len > 0) {
-    setup_data.psk_key.key = key;
-    setup_data.psk_key.key_len = key_len;
+    setup_data.psk_info.key.s = key;
+    setup_data.psk_info.key.length = key_len;
   }
 
   return coap_new_client_session_psk2(ctx, local_if, server,
@@ -821,39 +821,33 @@ coap_session_t *coap_new_client_session_psk2(
     return NULL;
 
   session->cpsk_setup_data = *setup_data;
-  if (setup_data->psk_key.identity && setup_data->psk_key.identity_len) {
+  if (setup_data->psk_info.identity.s) {
     session->psk_identity =
-                      (uint8_t*)coap_malloc(setup_data->psk_key.identity_len);
-    if (session->psk_identity) {
-      memcpy(session->psk_identity, setup_data->psk_key.identity,
-             setup_data->psk_key.identity_len);
-      session->psk_identity_len = setup_data->psk_key.identity_len;
-    } else {
-      coap_log(LOG_WARNING, "Cannot store session PSK identity\n");
+                      coap_new_bin_const(setup_data->psk_info.identity.s,
+                                         setup_data->psk_info.identity.length);
+    if (!session->psk_identity) {
+      coap_log(LOG_WARNING, "Cannot store session Identity (PSK)\n");
       coap_session_release(session);
       return NULL;
     }
   }
   else if (coap_dtls_is_supported()) {
-    coap_log(LOG_WARNING, "PSK identity not defined\n");
+    coap_log(LOG_WARNING, "Identity (PSK) not defined\n");
     coap_session_release(session);
     return NULL;
   }
 
-  if (setup_data->psk_key.key && setup_data->psk_key.key_len > 0) {
-    session->psk_key = (uint8_t*)coap_malloc(setup_data->psk_key.key_len);
-    if (session->psk_key) {
-      memcpy(session->psk_key, setup_data->psk_key.key,
-             setup_data->psk_key.key_len);
-      session->psk_key_len = setup_data->psk_key.key_len;
-    } else {
-      coap_log(LOG_WARNING, "Cannot store session PSK key\n");
+  if (setup_data->psk_info.key.s && setup_data->psk_info.key.length > 0) {
+    session->psk_key = coap_new_bin_const(setup_data->psk_info.key.s,
+                                          setup_data->psk_info.key.length);
+    if (!session->psk_key) {
+      coap_log(LOG_WARNING, "Cannot store session pre-shared key (PSK)\n");
       coap_session_release(session);
       return NULL;
     }
   }
   else if (coap_dtls_is_supported()) {
-    coap_log(LOG_WARNING, "PSK key not defined\n");
+    coap_log(LOG_WARNING, "Pre-shared key (PSK) not defined\n");
     coap_session_release(session);
     return NULL;
   }
@@ -869,50 +863,59 @@ coap_session_t *coap_new_client_session_psk2(
   return coap_session_connect(session);
 }
 
-int coap_session_refresh_psk_key(coap_session_t *session,
-  const coap_dtls_spsk_key_t *psk_key
+int coap_session_refresh_psk_hint(coap_session_t *session,
+  const coap_bin_const_t *psk_hint
 ) {
-  /* We may be refreshing the hint/key with the same hint/key */
-  uint8_t *old_psk_hint = session->psk_hint;
-  uint8_t *old_psk_key = session->psk_key;
+  /* We may be refreshing the hint with the same hint */
+  coap_bin_const_t *old_psk_hint = session->psk_hint;
 
-  if (psk_key->hint) {
-    session->psk_hint = (uint8_t*)coap_malloc(psk_key->hint_len);
+  if (psk_hint && psk_hint->s) {
     if (session->psk_hint) {
-      memcpy(session->psk_hint, psk_key->hint, psk_key->hint_len);
-      session->psk_hint_len = psk_key->hint_len;
-    } else {
-      coap_log(LOG_ERR, "No memory to store PSK hint\n");
+      if (coap_binary_equal(session->psk_hint, psk_hint))
+        return 1;
+    }
+    session->psk_hint = coap_new_bin_const(psk_hint->s,
+                                           psk_hint->length);
+    if (!session->psk_hint) {
+      coap_log(LOG_ERR, "No memory to store identity hint (PSK)\n");
       if (old_psk_hint)
-        coap_free(old_psk_hint);
+        coap_delete_bin_const(old_psk_hint);
       return 0;
     }
   }
   else {
     session->psk_hint = NULL;
-    session->psk_hint_len = 0;
   }
   if (old_psk_hint)
-    coap_free(old_psk_hint);
+    coap_delete_bin_const(old_psk_hint);
 
-  if (psk_key->key && psk_key->key_len > 0) {
-    session->psk_key = (uint8_t *)coap_malloc(psk_key->key_len);
+  return 1;
+}
+
+int coap_session_refresh_psk_key(coap_session_t *session,
+  const coap_bin_const_t *psk_key
+) {
+  /* We may be refreshing the key with the same key */
+  coap_bin_const_t *old_psk_key = session->psk_key;
+
+  if (psk_key && psk_key->s) {
     if (session->psk_key) {
-      memcpy(session->psk_key, psk_key->key, psk_key->key_len);
-      session->psk_key_len = psk_key->key_len;
-    } else {
-      coap_log(LOG_ERR, "No memory to store PSK key\n");
+      if (coap_binary_equal(session->psk_key, psk_key))
+        return 1;
+    }
+    session->psk_key = coap_new_bin_const(psk_key->s, psk_key->length);
+    if (!session->psk_key) {
+      coap_log(LOG_ERR, "No memory to store pre-shared key (PSK)\n");
       if (old_psk_key)
-        coap_free(old_psk_key);
+        coap_delete_bin_const(old_psk_key);
       return 0;
     }
   }
   else {
     session->psk_key = NULL;
-    session->psk_key_len = 0;
   }
   if (old_psk_key)
-    coap_free(old_psk_key);
+    coap_delete_bin_const(old_psk_key);
 
   return 1;
 }
