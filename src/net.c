@@ -1278,7 +1278,7 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
                coap_session_str(session), bytes_read);
       result = coap_handle_dgram_for_proto(ctx, session, packet);
       if (endpoint->proto == COAP_PROTO_DTLS && session->type == COAP_SESSION_TYPE_HELLO && result == 1)
-        coap_endpoint_new_dtls_session(endpoint, packet, now);
+        coap_session_new_dtls_session(session, now);
     }
   }
 #if COAP_CONSTRAINED_STACK

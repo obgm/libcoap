@@ -452,8 +452,6 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
   coap_session_t *oldest = NULL;
   coap_session_t *oldest_hs = NULL;
 
-  endpoint->hello.ifindex = -1;
-
   LL_FOREACH(endpoint->sessions, session) {
     if (session->ifindex == packet->ifindex &&
       coap_address_equals(&session->local_addr, &packet->dst) &&
@@ -462,15 +460,26 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
       session->last_rx_tx = now;
       return session;
     }
-    if (session->ref == 0 && session->delayqueue == NULL &&
-        session->type == COAP_SESSION_TYPE_SERVER) {
-      ++num_idle;
-      if (oldest==NULL || session->last_rx_tx < oldest->last_rx_tx)
-        oldest = session;
+    if (session->ref == 0 && session->delayqueue == NULL) {
+      if (session->type == COAP_SESSION_TYPE_SERVER) {
+        ++num_idle;
+        if (oldest==NULL || session->last_rx_tx < oldest->last_rx_tx)
+          oldest = session;
 
-      if (session->state == COAP_SESSION_STATE_HANDSHAKE) {
+        if (session->state == COAP_SESSION_STATE_HANDSHAKE) {
+          ++num_hs;
+          /* See if this is a partial (D)TLS session set up
+             which needs to be cleared down to prevent DOS */
+          if ((session->last_rx_tx + COAP_PARTIAL_SESSION_TIMEOUT_TICKS) < now) {
+            if (oldest_hs == NULL ||
+                session->last_rx_tx < oldest_hs->last_rx_tx)
+              oldest_hs = session;
+          }
+        }
+      }
+      else if (session->type == COAP_SESSION_TYPE_HELLO) {
         ++num_hs;
-        /* See if this is a partial SSL session set up
+        /* See if this is a partial (D)TLS session set up for Client Hello
            which needs to be cleared down to prevent DOS */
         if ((session->last_rx_tx + COAP_PARTIAL_SESSION_TIMEOUT_TICKS) < now) {
           if (oldest_hs == NULL ||
@@ -494,7 +503,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
   if (num_hs > (endpoint->context->max_handshake_sessions ?
               endpoint->context->max_handshake_sessions :
               COAP_DEFAULT_MAX_HANDSHAKE_SESSIONS)) {
-    /* Maxed out on number of session in SSL negotiation state */
+    /* Maxed out on number of sessions in (D)TLS negotiation state */
     coap_log(LOG_DEBUG,
              "Oustanding sessions in COAP_SESSION_STATE_HANDSHAKE too "
              "large.  New request ignored\n");
@@ -502,49 +511,75 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
   }
 
   if (endpoint->proto == COAP_PROTO_DTLS) {
-    session = &endpoint->hello;
-    coap_address_copy(&session->local_addr, &packet->dst);
-    coap_address_copy(&session->remote_addr, &packet->src);
-    session->ifindex = packet->ifindex;
-  } else {
-    session = coap_make_session(endpoint->proto, COAP_SESSION_TYPE_SERVER,
-      NULL, &packet->dst, &packet->src, packet->ifindex, endpoint->context,
-      endpoint);
-    if (!endpoint->context->max_idle_sessions && !session && oldest) {
-      /* max_idle_sessions not set, session failed but have an idle entry */
-      coap_session_free(oldest);
-      session = coap_make_session(endpoint->proto, COAP_SESSION_TYPE_SERVER,
-        NULL, &packet->dst, &packet->src, packet->ifindex, endpoint->context,
-        endpoint);
+    /*
+     * Need to check that this actually is a Client Hello before wasting
+     * time allocating and then freeing off session.
+     */
+
+    /*
+     * Generic header structure of the DTLS record layer.
+     * typedef struct __attribute__((__packed__)) {
+     *   uint8_t content_type;           content type of the included message
+     *   uint16_t version;               Protocol version
+     *   uint16_t epoch;                 counter for cipher state changes
+     *   uint8_t sequence_number[6];     sequence number
+     *   uint16_t length;                length of the following fragment
+     *   uint8_t handshake;              If content_type == DTLS_CT_HANDSHAKE
+     * } dtls_record_handshake_t;
+     */
+#define OFF_CONTENT_TYPE      0  /* offset of content_type in dtls_record_handshake_t */
+#define OFF_HANDSHAKE_TYPE   13  /* offset of handshake in dtls_record_handshake_t */
+#define DTLS_CT_HANDSHAKE    22  /* Content Type value */
+#define DTLS_HT_CLIENT_HELLO  1  /* Client Hello handshake type */
+
+#ifdef WITH_LWIP
+    const uint8_t *payload = (const uint8_t*)packet->pbuf->payload;
+    size_t length = packet->pbuf->len;
+#else /* ! WITH_LWIP */
+    const uint8_t *payload = (const uint8_t*)packet->payload;
+    size_t length = packet->length;
+#endif /* ! WITH_LWIP */
+    if (length < (OFF_HANDSHAKE_TYPE + 1)) {
+      coap_log(LOG_DEBUG,
+         "coap_dtls_hello: ContentType %d Short Packet (%ld < %d) dropped\n",
+         payload[OFF_CONTENT_TYPE], length,
+         OFF_HANDSHAKE_TYPE + 1);
+      return NULL;
     }
-    if (session) {
-      session->last_rx_tx = now;
-      if (endpoint->proto == COAP_PROTO_UDP)
-        session->state = COAP_SESSION_STATE_ESTABLISHED;
-      LL_PREPEND(endpoint->sessions, session);
-      coap_log(LOG_DEBUG, "***%s: new incoming session\n",
-               coap_session_str(session));
+    if (payload[OFF_CONTENT_TYPE] != DTLS_CT_HANDSHAKE ||
+        payload[OFF_HANDSHAKE_TYPE] != DTLS_HT_CLIENT_HELLO) {
+      coap_log(LOG_DEBUG,
+         "coap_dtls_hello: ContentType %d Handshake %d dropped\n",
+         payload[OFF_CONTENT_TYPE], payload[OFF_HANDSHAKE_TYPE]);
+      return NULL;
     }
   }
-
+  session = coap_make_session(endpoint->proto, COAP_SESSION_TYPE_SERVER,
+    NULL, &packet->dst, &packet->src, packet->ifindex, endpoint->context,
+    endpoint);
+  if (session) {
+    session->last_rx_tx = now;
+    if (endpoint->proto == COAP_PROTO_UDP)
+      session->state = COAP_SESSION_STATE_ESTABLISHED;
+    else if (endpoint->proto == COAP_PROTO_DTLS) {
+      session->type = COAP_SESSION_TYPE_HELLO;
+    }
+    LL_PREPEND(endpoint->sessions, session);
+    coap_log(LOG_DEBUG, "***%s: new incoming session\n",
+             coap_session_str(session));
+  }
   return session;
 }
 
 coap_session_t *
-coap_endpoint_new_dtls_session(coap_endpoint_t *endpoint,
-  const coap_packet_t *packet, coap_tick_t now) {
-  coap_session_t *session = coap_make_session(COAP_PROTO_DTLS,
-    COAP_SESSION_TYPE_SERVER, NULL, &packet->dst, &packet->src,
-    packet->ifindex, endpoint->context, endpoint);
+coap_session_new_dtls_session(coap_session_t *session,
+  coap_tick_t now) {
   if (session) {
     session->last_rx_tx = now;
-    session->state = COAP_SESSION_STATE_HANDSHAKE;
+    session->type = COAP_SESSION_TYPE_SERVER;
     session->tls = coap_dtls_new_server_session(session);
     if (session->tls) {
       session->state = COAP_SESSION_STATE_HANDSHAKE;
-      LL_PREPEND(endpoint->sessions, session);
-      coap_log(LOG_DEBUG, "***%s: new incoming session\n",
-               coap_session_str(session));
     } else {
       coap_session_free(session);
       session = NULL;
@@ -882,14 +917,6 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
 
   ep->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_BOUND;
 
-  if (proto == COAP_PROTO_DTLS) {
-    ep->hello.proto = proto;
-    ep->hello.type = COAP_SESSION_TYPE_HELLO;
-    ep->hello.mtu = ep->default_mtu;
-    ep->hello.context = context;
-    ep->hello.endpoint = ep;
-  }
-
   ep->default_mtu = COAP_DEFAULT_MTU;
 
   LL_PREPEND(context->endpoint, ep);
@@ -935,8 +962,6 @@ coap_session_get_by_peer(coap_context_t *ctx,
       return s;
   }
   LL_FOREACH(ctx->endpoint, ep) {
-    if (ep->hello.ifindex == ifindex && coap_address_equals(&ep->hello.remote_addr, remote_addr))
-      return &ep->hello;
     LL_FOREACH(ep->sessions, s) {
       if (s->ifindex == ifindex && coap_address_equals(&s->remote_addr, remote_addr))
         return s;
