@@ -70,6 +70,19 @@ static char *cert_file = NULL; /* Combined certificate and private key in PEM */
 static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM */
 static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
 
+typedef struct ih_def_t {
+  char* hint_match;
+  coap_bin_const_t *new_identity;
+  coap_bin_const_t *new_key;
+} ih_def_t;
+
+typedef struct valid_ihs_t {
+  size_t count;
+  ih_def_t *ih_list;
+} valid_ihs_t;
+
+static valid_ihs_t valid_ihs = {0, NULL};
+
 typedef unsigned char method_t;
 method_t method = 1;                    /* the method we are using in our requests */
 
@@ -617,7 +630,7 @@ usage( const char *program, const char *version) {
      "\t\t[-m method] [-o file] [-p port] [-r] [-s duration] [-t type]\n"
      "\t\t[-v num] [-A type] [-B seconds] [-K interval] [-N] [-O num,text]\n"
      "\t\t[-P addr[:port]] [-T token] [-U]\n"
-     "\t\t[[-k key] [-u user]]\n"
+     "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
      "\t\t[[-c certfile] [-C cafile] [-R root_cafile]] URI\n\n"
      "\tURI can be an absolute URI or a URI prefixed with scheme and host\n\n"
      "General Options\n"
@@ -657,6 +670,13 @@ usage( const char *program, const char *version) {
      "\t-T token\tInclude specified token\n"
      "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
      "PSK Options (if supported by underlying (D)TLS library)\n"
+     "\t-h match_hint_file\n"
+     "\t       \t\tThis is a file that contains one or more lines of Identity\n"
+     "\t       \t\tHints to match for new user and new pre-shared key\n"
+     "\t       \t\t(PSK) (comma separated) to be used. E.g., per line\n"
+     "\t       \t\t hint_to_match,new_user,new_key\n"
+     "\t       \t\tNote: -k and -u still need to be defined for the default\n"
+     "\t       \t\tcase\n"
      "\t-k key \t\tPre-shared key for the specified user\n"
      "\t-u user\t\tUser identity for pre-shared key mode\n"
      "PKI Options (if supported by underlying (D)TLS library)\n"
@@ -1160,6 +1180,7 @@ cmdline_read_user(char *arg, unsigned char *buf, size_t maxlen) {
   if (len) {
     memcpy(buf, arg, len);
   }
+  /* 0 length Identity is valid */
   return len;
 }
 
@@ -1170,7 +1191,54 @@ cmdline_read_key(char *arg, unsigned char *buf, size_t maxlen) {
     memcpy(buf, arg, len);
     return len;
   }
+  /* Need at least one byte for the pre-shared key */
   return -1;
+}
+
+static int cmdline_read_hint_check(const char *arg) {
+  FILE *fp = fopen(arg, "r");
+  static char tmpbuf[256];
+  if (fp == NULL) {
+    coap_log(LOG_ERR, "Hint file: %s: Unable to open\n", arg);
+    return 0;
+  }
+  while (fgets(tmpbuf, sizeof(tmpbuf), fp) != NULL) {
+    char *cp = tmpbuf;
+    char *tcp = strchr(cp, '\n');
+
+    if (tmpbuf[0] == '#')
+      continue;
+    if (tcp)
+      *tcp = '\000';
+
+    tcp = strchr(cp, ',');
+    if (tcp) {
+      ih_def_t *new_ih_list;
+      new_ih_list = realloc(valid_ihs.ih_list,
+                          (valid_ihs.count + 1)*sizeof (valid_ihs.ih_list[0]));
+      if (new_ih_list == NULL) {
+        break;
+      }
+      valid_ihs.ih_list = new_ih_list;
+      valid_ihs.ih_list[valid_ihs.count].hint_match = strndup(cp, tcp-cp);
+      cp = tcp+1;
+      tcp = strchr(cp, ',');
+      if (tcp) {
+        valid_ihs.ih_list[valid_ihs.count].new_identity =
+                               coap_new_bin_const((const uint8_t *)cp, tcp-cp);
+        cp = tcp+1;
+        valid_ihs.ih_list[valid_ihs.count].new_key =
+                           coap_new_bin_const((const uint8_t *)cp, strlen(cp));
+        valid_ihs.count++;
+      }
+      else {
+        /* Badly formatted */
+        free(valid_ihs.ih_list[valid_ihs.count].hint_match);
+      }
+    }
+  }
+  fclose(fp);
+  return valid_ihs.count > 0;
 }
 
 static int
@@ -1185,6 +1253,39 @@ verify_cn_callback(const char *cn,
   coap_log(LOG_INFO, "CN '%s' presented by server (%s)\n",
            cn, depth ? "CA" : "Certificate");
   return 1;
+}
+
+static const coap_dtls_cpsk_info_t *
+verify_ih_callback(coap_str_const_t *hint,
+                   coap_session_t *c_session UNUSED_PARAM,
+                   void *arg
+) {
+  coap_dtls_cpsk_info_t *psk_info = (coap_dtls_cpsk_info_t *)arg;
+  char lhint[COAP_DTLS_HINT_LENGTH];
+  static coap_dtls_cpsk_info_t psk_identity_info;
+  size_t i;
+
+  snprintf(lhint, sizeof(lhint), "%.*s", (int)hint->length, hint->s);
+  coap_log(LOG_INFO, "Identity Hint '%s' provided\n", lhint);
+
+  /* Test for hint to possibly change identity + key */
+  for (i = 0; i < valid_ihs.count; i++) {
+    if (strcmp(lhint, valid_ihs.ih_list[i].hint_match) == 0) {
+      /* Preset */
+      psk_identity_info = *psk_info;
+      if (valid_ihs.ih_list[i].new_key) {
+        psk_identity_info.key = *valid_ihs.ih_list[i].new_key;
+      }
+      if (valid_ihs.ih_list[i].new_identity) {
+        psk_identity_info.identity = *valid_ihs.ih_list[i].new_identity;
+      }
+      coap_log(LOG_INFO, "Switching to using '%s' identity + '%s' key\n",
+               psk_identity_info.identity.s, psk_identity_info.key.s);
+      return &psk_identity_info;
+    }
+  }
+  /* Just use the defined key for now as passed in by arg */
+  return psk_info;
 }
 
 static coap_dtls_pki_t *
@@ -1229,7 +1330,8 @@ setup_pki(coap_context_t *ctx) {
     dtls_pki.sni_call_back_arg       = NULL;
     memset(client_sni, 0, sizeof(client_sni));
     if (uri.host.length)
-      memcpy(client_sni, uri.host.s, min(uri.host.length, sizeof(client_sni)));
+      memcpy(client_sni, uri.host.s,
+             min(uri.host.length, sizeof(client_sni) - 1));
     else
       memcpy(client_sni, "localhost", 9);
     dtls_pki.client_sni = client_sni;
@@ -1239,6 +1341,34 @@ setup_pki(coap_context_t *ctx) {
   dtls_pki.pki_key.key.pem.private_key = cert_file;
   dtls_pki.pki_key.key.pem.ca_file = ca_file;
   return &dtls_pki;
+}
+
+static coap_dtls_cpsk_t *
+setup_psk(
+  const uint8_t *identity,
+  size_t identity_len,
+  const uint8_t *key,
+  size_t key_len
+) {
+  static coap_dtls_cpsk_t dtls_psk;
+  static char client_sni[256];
+
+  memset(client_sni, 0, sizeof(client_sni));
+  memset (&dtls_psk, 0, sizeof(dtls_psk));
+  dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
+  dtls_psk.validate_ih_call_back = verify_ih_callback;
+  dtls_psk.ih_call_back_arg = &dtls_psk.psk_info;
+  if (uri.host.length)
+    memcpy(client_sni, uri.host.s,
+           min(uri.host.length, sizeof(client_sni) - 1));
+  else
+    memcpy(client_sni, "localhost", 9);
+  dtls_psk.client_sni = client_sni;
+  dtls_psk.psk_info.identity.s = identity;
+  dtls_psk.psk_info.identity.length = identity_len;
+  dtls_psk.psk_info.key.s = key;
+  dtls_psk.psk_info.key.length = key_len;
+  return &dtls_psk;
 }
 
 #ifdef _WIN32
@@ -1252,9 +1382,10 @@ get_session(
   const char *local_port,
   coap_proto_t proto,
   coap_address_t *dst,
-  const char *identity,
+  const uint8_t *identity,
+  size_t identity_len,
   const uint8_t *key,
-  unsigned key_len
+  size_t key_len
 ) {
   coap_session_t *session = NULL;
 
@@ -1287,9 +1418,11 @@ get_session(
           session = coap_new_client_session_pki(ctx, &bind_addr, dst, proto, dtls_pki);
         }
         else if ((identity || key) &&
-                 (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) ) {
-          session = coap_new_client_session_psk( ctx, &bind_addr, dst, proto,
-                           identity, key, key_len );
+                 (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
+          coap_dtls_cpsk_t *dtls_psk = setup_psk(identity, identity_len,
+                                                   key, key_len);
+          session = coap_new_client_session_psk2(ctx, &bind_addr, dst, proto,
+                                                 dtls_psk);
         }
         else {
           session = coap_new_client_session( ctx, &bind_addr, dst, proto );
@@ -1306,9 +1439,12 @@ get_session(
       session = coap_new_client_session_pki(ctx, NULL, dst, proto, dtls_pki);
     }
     else if ((identity || key) &&
-             (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) )
-      session = coap_new_client_session_psk( ctx, NULL, dst, proto,
-                      identity, key, key_len );
+             (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
+      coap_dtls_cpsk_t *dtls_psk = setup_psk(identity, identity_len,
+                                               key, key_len);
+      session = coap_new_client_session_psk2(ctx, NULL, dst, proto,
+                                             dtls_psk);
+    }
     else
       session = coap_new_client_session( ctx, NULL, dst, proto );
   }
@@ -1331,13 +1467,14 @@ main(int argc, char **argv) {
   int opt, res;
   coap_log_t log_level = LOG_WARNING;
   unsigned char user[MAX_USER + 1], key[MAX_KEY];
-  ssize_t user_length = 0, key_length = 0;
+  ssize_t user_length = -1, key_length = 0;
   int create_uri_opts = 1;
+  size_t i;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "NrUa:b:c:e:f:k:m:p:s:t:o:v:A:B:C:O:P:R:T:u:l:K:")) != -1) {
+  while ((opt = getopt(argc, argv, "NrUa:b:c:e:f:h:k:m:p:s:t:o:v:A:B:C:O:P:R:T:u:l:K:")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1435,6 +1572,12 @@ main(int argc, char **argv) {
     case 'K':
       ping_seconds = atoi(optarg);
       break;
+    case 'h':
+      if (!cmdline_read_hint_check(optarg)) {
+        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+        exit(1);
+      }
+      break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
       exit( 1 );
@@ -1454,8 +1597,8 @@ main(int argc, char **argv) {
     exit( 1 );
   }
 
-  if ( ( user_length < 0 ) || ( key_length < 0 ) ) {
-    coap_log( LOG_CRIT, "Invalid user name or key specified\n" );
+  if (key_length < 0) {
+    coap_log( LOG_CRIT, "Invalid pre-shared key specified\n" );
     goto finish;
   }
 
@@ -1496,8 +1639,10 @@ main(int argc, char **argv) {
         uri.scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_TLS : COAP_PROTO_TCP
       : uri.scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_DTLS : COAP_PROTO_UDP),
     &dst,
-    user_length > 0 ? (const char *)user : NULL,
-    key_length > 0  ? key : NULL, (unsigned)key_length
+    user_length >= 0 ? user : NULL,
+    user_length >= 0 ? user_length : 0,
+    key_length > 0 ? key : NULL,
+    key_length > 0 ? key_length : 0
   );
 
   if ( !session ) {
@@ -1606,6 +1751,13 @@ main(int argc, char **argv) {
 
  finish:
 
+  for (i = 0; i < valid_ihs.count; i++) {
+    free(valid_ihs.ih_list[i].hint_match);
+    coap_delete_bin_const(valid_ihs.ih_list[i].new_identity);
+    coap_delete_bin_const(valid_ihs.ih_list[i].new_key);
+  }
+  if (valid_ihs.count)
+    free(valid_ihs.ih_list);
   coap_delete_optlist(optlist);
   coap_session_release( session );
   coap_free_context( ctx );

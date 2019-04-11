@@ -57,12 +57,38 @@ static char *cert_file = NULL; /* Combined certificate and private key in PEM */
 static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM */
 static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
 static int require_peer_cert = 1; /* By default require peer cert */
-#define MAX_KEY   64 /* Maximum length of a key (i.e., PSK) in bytes. */
+#define MAX_KEY   64 /* Maximum length of a pre-shared key in bytes. */
 static uint8_t key[MAX_KEY];
 static ssize_t key_length = 0;
 int key_defined = 0;
 static const char *hint = "CoAP";
 static int support_dynamic = 0;
+
+typedef struct psk_sni_def_t {
+  char* sni_match;
+  coap_bin_const_t *new_key;
+  coap_bin_const_t *new_hint;
+} psk_sni_def_t;
+
+typedef struct valid_psk_snis_t {
+  size_t count;
+  psk_sni_def_t *psk_sni_list;
+} valid_psk_snis_t;
+
+static valid_psk_snis_t valid_psk_snis = {0, NULL};
+
+typedef struct id_def_t {
+  char *hint_match;
+  coap_bin_const_t *identity_match;
+  coap_bin_const_t *new_key;
+} id_def_t;
+
+typedef struct valid_ids_t {
+  size_t count;
+  id_def_t *id_list;
+} valid_ids_t;
+
+static valid_ids_t valid_ids = {0, NULL};
 
 #ifndef WITHOUT_ASYNC
 /* This variable is used to mimic long-running tasks that require
@@ -666,7 +692,7 @@ verify_cn_callback(const char *cn,
 }
 
 static coap_dtls_key_t *
-verify_sni_callback(const char *sni,
+verify_pki_sni_callback(const char *sni,
                     void *arg UNUSED_PARAM
 ) {
   static coap_dtls_key_t dtls_key;
@@ -686,8 +712,92 @@ verify_sni_callback(const char *sni,
   return &dtls_key;
 }
 
+static const coap_dtls_spsk_info_t *
+verify_psk_sni_callback(const char *sni,
+                    coap_session_t *c_session UNUSED_PARAM,
+                    void *arg UNUSED_PARAM
+) {
+  static coap_dtls_spsk_info_t psk_info;
+
+  /* Preset with the defined keys */
+  memset (&psk_info, 0, sizeof(psk_info));
+  psk_info.hint.s = (const uint8_t *)hint;
+  psk_info.hint.length = hint ? strlen(hint) : 0;
+  psk_info.key.s = key;
+  psk_info.key.length = key_length;
+  if (sni) {
+    size_t i;
+    coap_log(LOG_INFO, "SNI '%s' requested\n", sni);
+    for (i = 0; i < valid_psk_snis.count; i++) {
+      /* Test for identity match to change key */
+      if (strcasecmp(sni,
+                 valid_psk_snis.psk_sni_list[i].sni_match) == 0) {
+        coap_log(LOG_INFO, "Switching to using '%.*s' hint + '%.*s' key\n",
+                 (int)valid_psk_snis.psk_sni_list[i].new_hint->length,
+                 valid_psk_snis.psk_sni_list[i].new_hint->s,
+                 (int)valid_psk_snis.psk_sni_list[i].new_key->length,
+                 valid_psk_snis.psk_sni_list[i].new_key->s);
+        psk_info.hint = *valid_psk_snis.psk_sni_list[i].new_hint;
+        psk_info.key = *valid_psk_snis.psk_sni_list[i].new_key;
+        break;
+      }
+    }
+  }
+  else {
+    coap_log(LOG_DEBUG, "SNI not requested\n");
+  }
+  return &psk_info;
+}
+
+static const coap_bin_const_t *
+verify_id_callback(coap_bin_const_t *identity,
+                   coap_session_t *c_session,
+                   void *arg UNUSED_PARAM
+) {
+  static coap_bin_const_t psk_key;
+  size_t i;
+
+  coap_log(LOG_INFO, "Identity '%.*s' requested, current hint '%.*s'\n", (int)identity->length,
+           identity->s,
+           c_session->psk_hint ? (int)c_session->psk_hint->length : 0,
+           c_session->psk_hint ? (const char *)c_session->psk_hint->s : "");
+
+  for (i = 0; i < valid_ids.count; i++) {
+    /* Check for hint match */
+    if (c_session->psk_hint &&
+        strcmp((const char *)c_session->psk_hint->s,
+               valid_ids.id_list[i].hint_match)) {
+      continue;
+    }
+    /* Test for identity match to change key */
+    if (coap_binary_equal(identity, valid_ids.id_list[i].identity_match)) {
+      coap_log(LOG_INFO, "Switching to using '%.*s' key\n",
+               (int)valid_ids.id_list[i].new_key->length,
+               valid_ids.id_list[i].new_key->s);
+      return valid_ids.id_list[i].new_key;
+    }
+  }
+
+  if (c_session->psk_key) {
+    /* Been updated by SNI callback */
+    psk_key = *c_session->psk_key;
+    return &psk_key;
+  }
+
+  /* Just use the defined keys for now */
+  psk_key.s = key;
+  psk_key.length = key_length;
+  return &psk_key;
+}
+
 static void
 fill_keystore(coap_context_t *ctx) {
+  if (cert_file == NULL && key_defined == 0) {
+    if (coap_dtls_is_supported() || coap_tls_is_supported()) {
+      coap_log(LOG_DEBUG,
+               "(D)TLS not enabled as neither -k or -c options specified\n");
+    }
+  }
   if (cert_file) {
     coap_dtls_pki_t dtls_pki;
     memset (&dtls_pki, 0, sizeof(dtls_pki));
@@ -709,7 +819,7 @@ fill_keystore(coap_context_t *ctx) {
       dtls_pki.allow_expired_crl       = 1;
       dtls_pki.validate_cn_call_back   = verify_cn_callback;
       dtls_pki.cn_call_back_arg        = NULL;
-      dtls_pki.validate_sni_call_back  = verify_sni_callback;
+      dtls_pki.validate_sni_call_back  = verify_pki_sni_callback;
       dtls_pki.sni_call_back_arg       = NULL;
     }
     dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
@@ -725,16 +835,21 @@ fill_keystore(coap_context_t *ctx) {
         coap_context_set_pki_root_cas(ctx, root_ca_file, NULL);
       }
     }
-    if (key_defined)
-      coap_context_set_psk(ctx, hint, key, key_length);
     coap_context_set_pki(ctx, &dtls_pki);
   }
-  else if (key_defined) {
-    coap_context_set_psk(ctx, hint, key, key_length);
-  }
-  else if (coap_dtls_is_supported() || coap_tls_is_supported()) {
-    coap_log(LOG_DEBUG,
-             "(D)TLS not enabled as neither -k or -c options specified\n");
+  if (key_defined) {
+    coap_dtls_spsk_t dtls_psk;
+    memset (&dtls_psk, 0, sizeof(dtls_psk));
+    dtls_psk.version = COAP_DTLS_SPSK_SETUP_VERSION;
+    dtls_psk.validate_id_call_back = valid_ids.count ?
+                                      verify_id_callback : NULL;
+    dtls_psk.validate_sni_call_back = valid_psk_snis.count ?
+                                       verify_psk_sni_callback : NULL;
+    dtls_psk.psk_info.hint.s = (const uint8_t *)hint;
+    dtls_psk.psk_info.hint.length = hint ? strlen(hint) : 0;
+    dtls_psk.psk_info.key.s = key;
+    dtls_psk.psk_info.key.length = key_length;
+    coap_context_set_psk2(ctx, &dtls_psk);
   }
 }
 
@@ -748,12 +863,13 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-     "(c) 2010,2011,2015-2018 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+     "(c) 2010,2011,2015-2019 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
      "%s\n\n"
      "Usage: %s [-d max] [-g group] [-l loss] [-p port] [-v num]\n"
      "\t\t[-A address] [-N]\n"
-     "\t\t[[-k key] [-h hint]]\n"
-     "\t\t[[-c certfile][-C cafile] [-n] [-R root_cafile]]\n"
+     "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
+     "\t\t[-s match_sni_file]]\n"
+     "\t\t[[-c certfile] [-C cafile] [-n] [-R root_cafile]]\n"
      "General Options\n"
      "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
      "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
@@ -773,11 +889,27 @@ usage( const char *program, const char *version) {
      "\t       \t\tevery fifth response will still be sent as a confirmable\n"
      "\t       \t\tresponse (RFC 7641 requirement)\n"
      "PSK Options (if supported by underlying (D)TLS library)\n"
-     "\t-h hint\t\tPSK Hint.  Default is CoAP\n"
-     "\t-k key \t\tPre-shared key. This argument requires (D)TLS with PSK\n"
+     "\t-h hint\t\tIdentity Hint. Default is CoAP. Zero length is no hint\n"
+     "\t-i match_identity_file\n"
+     "\t       \t\tThis option denotes a file that contains one or more lines\n"
+     "\t       \t\tof client Hints and (user) Identities to match for a new\n"
+     "\t       \t\tPre-Shared Key (PSK) (comma separated) to be used. E.g.,\n"
+     "\t       \t\tper line\n"
+     "\t       \t\t hint_to_match,identity_to_match,new_key\n"
+     "\t       \t\tNote: -k still needs to be defined for the default case\n"
+     "\t-k key \t\tPre-Shared Key. This argument requires (D)TLS with PSK\n"
      "\t       \t\tto be available. This cannot be empty if defined.\n"
      "\t       \t\tNote that both -c and -k need to be defined\n"
      "\t       \t\tfor both PSK and PKI to be concurrently supported\n"
+     "\t-s match_sni_file\n"
+     "\t       \t\tThis is a file that contains one or more lines of Subject\n"
+     "\t       \t\tName Identifiers (SNI) to match for new Identity Hint and\n"
+     "\t       \t\tnew Pre-Shared Key (PSK) (comma separated) to be used.\n"
+     "\t       \t\tE.g., per line\n"
+     "\t       \t\t sni_to_match,new_hint,new_key\n"
+     "\t       \t\tNote: -k still needs to be defined for the default case\n"
+     "\t       \t\tNote: the new Pre-Shared Key will get updated if there is\n"
+     "\t       \t\talso a -i match\n"
      "PKI Options (if supported by underlying (D)TLS library)\n"
      "\t-c certfile\tPEM file containing both CERTIFICATE and PRIVATE KEY\n"
      "\t       \t\tThis argument requires (D)TLS with PKI to be available\n"
@@ -891,6 +1023,95 @@ cmdline_read_key(char *arg, unsigned char *buf, size_t maxlen) {
   return -1;
 }
 
+static int cmdline_read_psk_sni_check(char *arg) {
+  FILE *fp = fopen(arg, "r");
+  static char tmpbuf[256];
+  if (fp == NULL) {
+    coap_log(LOG_ERR, "SNI file: %s: Unable to open\n", arg);
+    return 0;
+  }
+  while (fgets(tmpbuf, sizeof(tmpbuf), fp) != NULL) {
+    char *cp = tmpbuf;
+    char *tcp = strchr(cp, '\n');
+
+    if (tmpbuf[0] == '#')
+      continue;
+    if (tcp)
+      *tcp = '\000';
+
+    tcp = strchr(cp, ',');
+    if (tcp) {
+      psk_sni_def_t *new_psk_sni_list;
+      new_psk_sni_list = realloc(valid_psk_snis.psk_sni_list,
+              (valid_psk_snis.count + 1)*sizeof (valid_psk_snis.psk_sni_list[0]));
+      if (new_psk_sni_list == NULL) {
+        break;
+      }
+      valid_psk_snis.psk_sni_list = new_psk_sni_list;
+      valid_psk_snis.psk_sni_list[valid_psk_snis.count].sni_match = strndup(cp, tcp-cp);
+      cp = tcp+1;
+      tcp = strchr(cp, ',');
+      if (tcp) {
+        valid_psk_snis.psk_sni_list[valid_psk_snis.count].new_hint =
+                             coap_new_bin_const((const uint8_t *)cp, tcp-cp);
+        cp = tcp+1;
+        valid_psk_snis.psk_sni_list[valid_psk_snis.count].new_key =
+                             coap_new_bin_const((const uint8_t *)cp, strlen(cp));
+        valid_psk_snis.count++;
+      }
+      else {
+        free(valid_psk_snis.psk_sni_list[valid_psk_snis.count].sni_match);
+      }
+    }
+  }
+  return valid_psk_snis.count > 0;
+}
+
+static int cmdline_read_identity_check(char *arg) {
+  FILE *fp = fopen(arg, "r");
+  static char tmpbuf[256];
+  if (fp == NULL) {
+    coap_log(LOG_ERR, "Identity file: %s: Unable to open\n", arg);
+    return 0;
+  }
+  while (fgets(tmpbuf, sizeof(tmpbuf), fp) != NULL) {
+    char *cp = tmpbuf;
+    char *tcp = strchr(cp, '\n');
+
+    if (tmpbuf[0] == '#')
+      continue;
+    if (tcp)
+      *tcp = '\000';
+
+    tcp = strchr(cp, ',');
+    if (tcp) {
+      id_def_t *new_id_list;
+      new_id_list = realloc(valid_ids.id_list,
+                          (valid_ids.count + 1)*sizeof (valid_ids.id_list[0]));
+      if (new_id_list == NULL) {
+        break;
+      }
+      valid_ids.id_list = new_id_list;
+      valid_ids.id_list[valid_ids.count].hint_match = strndup(cp, tcp-cp);
+      cp = tcp+1;
+      tcp = strchr(cp, ',');
+      if (tcp) {
+        valid_ids.id_list[valid_ids.count].identity_match =
+                               coap_new_bin_const((const uint8_t *)cp, tcp-cp);
+        cp = tcp+1;
+        valid_ids.id_list[valid_ids.count].new_key =
+                           coap_new_bin_const((const uint8_t *)cp, strlen(cp));
+        valid_ids.count++;
+      }
+      else {
+        free(valid_ids.id_list[valid_ids.count].hint_match);
+      }
+    }
+  }
+  fclose(fp);
+  return valid_ids.count > 0;
+}
+
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
@@ -905,13 +1126,14 @@ main(int argc, char **argv) {
   int coap_fd;
   fd_set m_readfds;
   int nfds = 0;
+  size_t i;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "A:d:c:C:g:h:k:l:nNp:R:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:d:c:C:g:h:i:k:l:nNp:R:s:v:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -931,15 +1153,21 @@ main(int argc, char **argv) {
       break;
     case 'h' :
       if (!optarg[0]) {
-        coap_log( LOG_CRIT, "Invalid PSK hint specified\n" );
+        hint = NULL;
         break;
       }
       hint = optarg;
       break;
+    case 'i':
+      if (!cmdline_read_identity_check(optarg)) {
+        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+        exit(1);
+      }
+      break;
     case 'k' :
       key_length = cmdline_read_key(optarg, key, MAX_KEY);
       if (key_length < 0) {
-        coap_log( LOG_CRIT, "Invalid PSK key specified\n" );
+        coap_log( LOG_CRIT, "Invalid Pre-Shared Key specified\n" );
         break;
       }
       key_defined = 1;
@@ -962,6 +1190,12 @@ main(int argc, char **argv) {
       break;
     case 'R' :
       root_ca_file = optarg;
+      break;
+    case 's':
+      if (!cmdline_read_psk_sni_check(optarg)) {
+        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+        exit(1);
+      }
       break;
     case 'v' :
       log_level = strtol(optarg, NULL, 10);
@@ -1069,6 +1303,22 @@ main(int argc, char **argv) {
     check_async(ctx, now);
 #endif /* WITHOUT_ASYNC */
   }
+
+  for (i = 0; i < valid_psk_snis.count; i++) {
+    free(valid_psk_snis.psk_sni_list[i].sni_match);
+    coap_delete_bin_const(valid_psk_snis.psk_sni_list[i].new_hint);
+    coap_delete_bin_const(valid_psk_snis.psk_sni_list[i].new_key);
+  }
+  if (valid_psk_snis.count)
+    free(valid_psk_snis.psk_sni_list);
+
+  for (i = 0; i < valid_ids.count; i++) {
+    free(valid_ids.id_list[i].hint_match);
+    coap_delete_bin_const(valid_ids.id_list[i].identity_match);
+    coap_delete_bin_const(valid_ids.id_list[i].new_key);
+  }
+  if (valid_ids.count)
+    free(valid_ids.id_list);
 
   coap_free_context(ctx);
   coap_cleanup();
