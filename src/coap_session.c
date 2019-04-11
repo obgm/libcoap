@@ -915,8 +915,6 @@ coap_free_endpoint(coap_endpoint_t *ep) {
     LL_FOREACH_SAFE(ep->sessions, session, tmp) {
       assert(session->ref == 0);
       if (session->ref == 0) {
-        session->endpoint = NULL;
-        session->context = NULL;
         coap_session_free(session);
       }
     }
