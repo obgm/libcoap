@@ -178,10 +178,12 @@ coap_socket_bind_udp(coap_socket_t *sock,
          "coap_socket_bind_udp: ioctl FIONBIO: %s\n", coap_socket_strerror());
   }
 
+#ifndef RIOT_VERSION
   if (setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
     coap_log(LOG_WARNING,
              "coap_socket_bind_udp: setsockopt SO_REUSEADDR: %s\n",
               coap_socket_strerror());
+#endif /* RIOT_VERSION */
 
   switch (listen_addr->addr.sa.sa_family) {
   case AF_INET:
@@ -239,8 +241,8 @@ coap_socket_connect_udp(coap_socket_t *sock,
   int default_port,
   coap_address_t *local_addr,
   coap_address_t *remote_addr) {
-  int on = 1;
 #ifndef RIOT_VERSION
+  int on = 1;
   int off = 0;
 #endif /* RIOT_VERSION */
 #ifdef _WIN32
@@ -292,10 +294,12 @@ coap_socket_connect_udp(coap_socket_t *sock,
   }
 
   if (local_if && local_if->addr.sa.sa_family) {
+#ifndef RIOT_VERSION
     if (setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log(LOG_WARNING,
                "coap_socket_connect_udp: setsockopt SO_REUSEADDR: %s\n",
                coap_socket_strerror());
+#endif /* RIOT_VERSION */
     if (bind(sock->fd, &local_if->addr.sa,
              local_if->addr.sa.sa_family == AF_INET ?
               sizeof(struct sockaddr_in) :
