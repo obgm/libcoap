@@ -2617,7 +2617,7 @@ void coap_cleanup(void) {
 #endif
 }
 
-#if ! defined WITH_CONTIKI && ! defined WITH_LWIP
+#if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION
 int
 coap_join_mcast_group(coap_context_t *ctx, const char *group_name) {
   struct ipv6_mreq mreq;
