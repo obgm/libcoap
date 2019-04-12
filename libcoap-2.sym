@@ -72,6 +72,7 @@ coap_hash_impl
 coap_insert_node
 coap_insert_optlist
 coap_is_mcast
+coap_join_mcast_group
 coap_log_impl
 coap_malloc_endpoint
 coap_malloc_type
