@@ -30,7 +30,7 @@ OPTIONS
    Join specified multicast 'group' on startup.
 
 *-p* port::
-   The 'port' on the given address the server will be waitung for connections.
+   The 'port' on the given address the server will be waiting for connections.
    The default port is 5683 if not given any other value.
 
 *-v* num::

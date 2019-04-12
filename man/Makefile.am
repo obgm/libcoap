@@ -56,7 +56,7 @@ man7_MANS = $(MAN7)
 
 # Man pages built byt a2x based on the NAMES section of the .txt file
 A2X_EXTRA_PAGES = @DOLLAR_SIGN@(shell for fil in $(TXT3) ; do sed -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $${fil} | \
-	sed -ne '/coap_/{ s/ *, */\n/g; p }' | sed -ne 's/^\(coap_[a-zA-Z_]\+\).*$$/\1.3/p' ; done)
+	sed -ne '/coap_/{ s/ *, */\n/g; p }' | sed -ne 's/^\(coap_[a-zA-Z_0-9]\+\).*$$/\1.3/p' ; done)
 
 # Extra man pages that need to be installed due to limit of 10
 # names built by a2x

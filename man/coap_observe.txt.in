@@ -90,7 +90,7 @@ _resource_ is no longer observable.
 when libcoap creates a "fake GET request".  The Unknown Resource PUT
 handler must create a new resource and mark the resource as "observable" if
 a specific resource needs to be observable.  The application must then
-manage the deleteion of the resource at the appropriate time.
+manage the deletion of the resource at the appropriate time.
 
 *NOTE:* The type (confirmable or non-confirmable) of the triggered observe
 GET response is determined not by the initial GET request, but independently
@@ -137,25 +137,25 @@ EXAMPLES
 *Simple Time Server*
 
 [source, c]
---
+----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
-coap_resource_t *time_resource = NULL;
+#include <stdio.h>
 
-static int check_if_time_resource_has_changed(coap_resource_t *resource) {
-  return 1;
-}
+coap_resource_t *time_resource = NULL;
 
 /* specific GET "time" handler, called from hnd_get_generic() */
 
 static void
 hnd_get_time(coap_context_t *context, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
 coap_string_t *query, coap_pdu_t *response) {
 
   unsigned char buf[40];
   size_t len;
   time_t now;
+  /* Remove (void) definition if variable is used */
+  (void)context;
 
   /* ... Additional analysis code for resource, request pdu etc.  ... */
 
@@ -206,7 +206,7 @@ coap_string_t *query, coap_pdu_t *response) {
 
 static void
 hnd_get_generic(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
 coap_string_t *query, coap_pdu_t *response) {
 
   coap_str_const_t *uri_path = coap_resource_get_uri_path(resource);
@@ -258,6 +258,10 @@ int main(int argc, char *argv[]){
   coap_endpoint_t *ep = NULL;
   coap_address_t addr;
   unsigned wait_ms;
+  time_t t_last = 0;
+  /* Remove (void) definition if variable is used */
+  (void)argc;
+  (void)argv;
 
   /* Create the libcoap context */
   ctx = coap_new_context(NULL);
@@ -292,7 +296,6 @@ int main(int argc, char *argv[]){
       time_t t_now = time(NULL);
       if (t_last != t_now) {
         /* Happens once per second */
-        int i;
         t_last = t_now;
         if (time_resource) {
           coap_resource_notify_observers(time_resource, NULL);
@@ -307,12 +310,12 @@ int main(int argc, char *argv[]){
   exit(0);
 
 }
---
+----
 
 *Client Observe Request Setup*
 
 [source, c]
---
+----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 /* Usually, requests are sent confirmable */
@@ -326,7 +329,7 @@ coap_new_request(coap_context_t *context, coap_session_t *session, char request_
 coap_optlist_t **options, unsigned char *data, size_t length, int observe) {
 
   coap_pdu_t *pdu;
-  coap_optlist_t *opt;
+  /* Remove (void) definition if variable is used */
   (void)context;
 
   /* Create the pdu with the appropriate options */
@@ -373,7 +376,7 @@ error:
   return NULL;
 
 }
---
+----
 
 SEE ALSO
 --------

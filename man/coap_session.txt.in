@@ -12,7 +12,7 @@ NAME
 ----
 coap_session,
 coap_new_client_session,
-coap_new_client_session_psk,
+coap_new_client_session_psk2,
 coap_new_client_session_pki,
 coap_session_reference,
 coap_session_release,
@@ -28,9 +28,9 @@ SYNOPSIS
 const coap_address_t *_local_if_, const coap_address_t *_server_,
 coap_proto_t _proto_);*
 
-*coap_session_t *coap_new_client_session_psk(coap_context_t *_context_,
+*coap_session_t *coap_new_client_session_psk2(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_, coap_proto_t
-_proto_, const char *_identity_, const uint8_t *_key_, unsigned _key_len_);*
+_proto_, coap_dtls_cpsk_t *_setup_data_);*
 
 *coap_session_t *coap_new_client_session_pki(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_, coap_proto_t
@@ -94,7 +94,7 @@ In principle the set-up sequence for CoAP Servers looks like
 ----
 coap_new_context()
 coap_context_set_pki_root_cas() - if the root CAs need to be updated and PKI
-coap_context_set_pki() and/or coap_context_set_psk() - if encryption is required
+coap_context_set_pki() and/or coap_context_set_psk2() - if encryption is required
 coap_new_endpoint()
 ----
 
@@ -107,7 +107,7 @@ In principle the set-up sequence for CoAP Clients looks like
 ----
 coap_new_context()
 coap_context_set_pki_root_cas() if the root CAs need to be updated and PKI
-coap_new_client_session(), coap_new_client_session_pki() or coap_new_client_session_psk()
+coap_new_client_session(), coap_new_client_session_pki() or coap_new_client_session_psk2()
 ----
 
 Multiple client sessions are supported per Context.
@@ -132,16 +132,23 @@ address or port.  The session will initially have a reference count of 1.
 
 The *coap_new_client_session_pki*() function, for a specific _context_, is
 used to configure the TLS context using the _setup_data_ variables as defined
-in the coap_dtls_pki_t structure - see *coap_encrytion*(3).
-The session will initially have a reference count of 1.
+in the coap_dtls_pki_t structure in the newly created session -
+see *coap_encryption*(3). The connection is to the specified _server_ using
+the CoAP protocol _proto_.  If the port is not specified in _server_, then the
+default CoAP port is used.  Normally _local_if_ would be set to NULL, but by
+specifying _local_if_ the source of the network session can be bound to a
+specific IP address or port. The session will initially have a reference count
+of 1.
 
-The *coap_new_client_session_psk*() function, for a specific _context_, is
-used to configure the TLS context using the client _identity_, Pre-Shared Key
-_key_ with length _key_len_.  All 3 parameters must be defined, NULL is not
-valid.  An empty string is not valid for _identity_.  _key_len_ must be greater
-than 0.  This function also includes the _server_ to connect to,
-optionally the local interface _local_if_ to bind to and the CoAP protocol
-_proto_ to use.  The session will initially have a reference count of 1.
+The *coap_new_client_session_psk2*() function, for a specific _context_, is
+used to configure the TLS context using the _setup_data_ variables as defined
+in the coap_dtls_cpsk_t structure in the newly created session -
+see *coap_encryption*(3). The connection is to the specified _server_ using
+the CoAP protocol _proto_.  If the port is not specified in _server_, then the
+default CoAP port is used.  Normally _local_if_ would be set to NULL, but by
+specifying _local_if_ the source of the network session can be bound to a
+specific IP address or port. The session will initially have a reference count
+of 1.
 
 The *coap_session_reference*() is used to increment the reference count of
 the _session_.  Incrementing the reference count by an application means that
@@ -163,7 +170,7 @@ The *coap_session_max_pdu_size*() funcition is used to get the maximum MTU
 size of the data for the _session_.
 
 The *coap_session_set_app_data*() funstion is used to define a _data_ pointer
-for the _session_ which can then be retieved at a later date.
+for the _session_ which can then be retrieved at a later date.
 
 The *coap_session_get_app_data*() function is used to retrieve the data
 pointer previously defined by *coap_session_set_app_data*().
@@ -173,7 +180,7 @@ information about the _session_.
 
 RETURN VALUES
 -------------
-*coap_new_client_session*(), *coap_new_client_session_psk*(),
+*coap_new_client_session*(), *coap_new_client_session_psk2*(),
 *coap_new_client_session_pki*() functions returns a newly created client
 session or NULL if there is a creation failure.
 
@@ -231,11 +238,20 @@ static int
 verify_cn_callback(const char *cn,
                    const uint8_t *asn1_public_cert,
                    size_t asn1_length,
-                   coap_session_t *session,
-                   unsigned depth,
+                   coap_session_t *c_session,
+                   unsigned int depth,
                    int validated,
                    void *arg
 ) {
+  /* Remove (void) definition if variable is used */
+  (void)cn;
+  (void)asn1_public_cert;
+  (void)asn1_length;
+  (void)c_session;
+  (void)depth;
+  (void)validated;
+  (void)arg;
+
   /* Check that the CN is valid */
 
   /* ... */
@@ -281,7 +297,7 @@ setup_client_session_pki (struct in_addr ip_address,
   dtls_pki.validate_sni_call_back  = NULL;
   dtls_pki.sni_call_back_arg       = NULL;
   dtls_pki.additional_tls_setup_call_back = NULL;
-  dtls_pki.sni                     = NULL;
+  dtls_pki.client_sni              = NULL;
   dtls_pki.pki_key.key_type        = COAP_PKI_KEY_PEM;
   dtls_pki.pki_key.key.pem.ca_file = ca_file;
   dtls_pki.pki_key.key.pem.public_cert = public_cert_file;
@@ -303,13 +319,38 @@ setup_client_session_pki (struct in_addr ip_address,
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <stdio.h>
 #include <netinet/in.h>
 
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
+static const coap_dtls_cpsk_info_t *
+verify_ih_callback(coap_str_const_t *hint,
+                   coap_session_t *c_session,
+                   void *arg
+) {
+  coap_dtls_cpsk_info_t *psk_info = (coap_dtls_cpsk_info_t *)arg;
+  /* Remove (void) definition if variable is used */
+  (void)c_session;
+
+  coap_log(LOG_INFO, "Identity Hint '%.*s' provided\n", (int)hint->length, hint->s);
+
+  /* Just use the defined information for now as passed in by arg */
+  return psk_info;
+}
+
+static coap_dtls_cpsk_t dtls_psk;
+static char client_sni[256];
+
 static coap_session_t *
-setup_client_session_psk (struct in_addr ip_address,
-                          const char *identity,
+setup_client_session_psk (const char *uri,
+                          struct in_addr ip_address,
+                          const uint8_t *identity,
+                          unsigned int identity_len,
                           const uint8_t *key,
-                          unsigned key_len
+                          unsigned int key_len
 ) {
   coap_session_t *session;
   coap_address_t server;
@@ -324,8 +365,22 @@ setup_client_session_psk (struct in_addr ip_address,
   server.addr.sin.sin_addr = ip_address;
   server.addr.sin.sin_port = htons (5684);
 
-  session = coap_new_client_session_psk(context, NULL, &server,
-                                        COAP_PROTO_DTLS, identity, key, key_len);
+  /* See coap_encryption(3) */
+  memset (&dtls_psk, 0, sizeof(dtls_psk));
+  dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
+  dtls_psk.validate_ih_call_back = verify_ih_callback;
+  dtls_psk.ih_call_back_arg = &dtls_psk.psk_info;
+  if (uri)
+    memcpy(client_sni, uri, min(strlen(uri), sizeof(client_sni)-1));
+  else
+    memcpy(client_sni, "localhost", 9);
+  dtls_psk.client_sni = client_sni;
+  dtls_psk.psk_info.identity.s = identity;
+  dtls_psk.psk_info.identity.length = identity_len;
+  dtls_psk.psk_info.key.s = key;
+  dtls_psk.psk_info.key.length = key_len;
+  session = coap_new_client_session_psk2(context, NULL, &server,
+                                        COAP_PROTO_DTLS, &dtls_psk);
   if (!session) {
     coap_free_context(context);
     return NULL;
@@ -335,7 +390,7 @@ setup_client_session_psk (struct in_addr ip_address,
 }
 ----
 
-*CoAP Client Setup*
+*CoAP Client Anonymous PKI Setup*
 [source, c]
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
@@ -343,7 +398,7 @@ setup_client_session_psk (struct in_addr ip_address,
 #include <netinet/in.h>
 
 static coap_session_t *
-setup_client_session (struct in_addr ip_address) {
+setup_client_session_dtls (struct in_addr ip_address) {
   coap_session_t *session;
   coap_address_t server;
   /* See coap_context(3) */

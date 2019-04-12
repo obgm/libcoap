@@ -18,7 +18,7 @@ SYNOPSIS
               [*-m* method] [*-o* file] [*-p* port] [*-r*] [*-s duration*]
               [*-t* type] [*-v* num] [*-A* type] [*-B* seconds] [*-K* interval]
               [*-N*] [*-O* num,text] [*-P* addr[:port]] [*-T* token] [*-U*]
-              [[*-k* key] [*-u* user]]
+              [[*-h* match_hint_file] [*-k* key] [*-u* user]]
               [[*-c* certfile] [*-C* cafile] [*-R* root_cafile]] URI
 
 DESCRIPTION
@@ -61,7 +61,7 @@ OPTIONS - General
    numbers or number ranges (debugging only).
 
 *-l* loss%::
-   Randomly failed to send datagams with the specified probability - 100%
+   Randomly failed to send datagrams with the specified probability - 100%
    all datagrams, 0% no datagrams (debugging only).
 
 *-m* method::
@@ -133,6 +133,15 @@ OPTIONS - General
 OPTIONS - PSK
 -------------
 (If supported by underlying (D)TLS library)
+
+*-h* match_hint_file::
+   This option denotes a file that contains one or more lines of Identity
+   Hints to match for new user and new pre-shared key (PSK) (comma separated)
+   to be used.
+   E.g., entry per line +
+   hint_to_match,new_user,new_key +
+   A line that starts with # is treated as a comment. +
+   Note: *-k key* and *-u user* still need to be defined for the default case.
 
 *-k* key::
    Pre-shared key for the specified user (*-u* option also required).

@@ -182,17 +182,21 @@ EXAMPLES
 *GET Resource Callback Handler*
 
 [source, c]
---
+----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
-void
+#include <stdio.h>
+
+static void
 hnd_get_time(coap_context_t *context, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
 coap_string_t *query, coap_pdu_t *response) {
 
   unsigned char buf[40];
   size_t len;
   time_t now;
+  /* Remove (void) definition if variable is used */
+  (void)context;
 
   /* ... Additional analysis code for resource, request pdu etc.  ... */
 
@@ -238,24 +242,28 @@ coap_string_t *query, coap_pdu_t *response) {
    */
 
 }
---
+----
 *Packet Response Handler*
 
 [source, c]
---
+----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+static int check_token(coap_pdu_t *received) {
+  /* Remove (void) definition if variable is used */
+  (void)received;
+
+  /* Code to validate the token is what we expect */
+
+  return 1;
+}
 
 static void
 response_handler(coap_context_t *ctx, coap_session_t *session,
 coap_pdu_t *sent, coap_pdu_t *received, const coap_tid_t id) {
-
-  coap_pdu_t *pdu = NULL;
-  coap_opt_t *block_opt;
-  coap_opt_iterator_t opt_iter;
-  unsigned char buf[4];
-  size_t len;
-  unsigned char *databuf;
-  coap_tid_t tid;
+  /* Remove (void) definition if variable is used */
+  (void)ctx;
+  (void)id;
 
   /* check if this is a response to our original request */
   if (!check_token(received)) {
@@ -267,7 +275,7 @@ coap_pdu_t *sent, coap_pdu_t *received, const coap_tid_t id) {
   }
 
   if (received->type == COAP_MESSAGE_RST) {
-    info("got RST\n");
+    coap_log(LOG_INFO, "got RST\n");
     return;
   }
 
@@ -279,7 +287,7 @@ coap_pdu_t *sent, coap_pdu_t *received, const coap_tid_t id) {
   return;
 
 }
---
+----
 
 SEE ALSO
 --------

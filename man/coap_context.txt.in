@@ -11,7 +11,7 @@ coap_context(3)
 NAME
 ----
 coap_context, coap_new_context, coap_free_context,
-coap_context_set_pki, coap_context_set_psk, coap_new_endpoint,
+coap_context_set_pki, coap_context_set_psk2, coap_new_endpoint,
 coap_free_endpoint, coap_endpoint_set_default_mtu
 - Work with CoAP contexts
 
@@ -29,8 +29,8 @@ coap_dtls_pki_t *_setup_data_);*
 *int coap_context_set_pki_root_cas(coap_context_t *_context_,
 const char *_ca_file_, const char *_ca_dir_);*
 
-*int coap_context_set_psk(coap_context_t *_context_, const char *_hint_,
-const uint8_t *_key_, size_t _key_len_);*
+*int coap_context_set_psk2(coap_context_t *_context_,
+coap_dtls_spsk_t *setup_data);*
 
 *coap_endpoint_t *coap_new_endpoint(coap_context_t *_context_,
 const coap_address_t *_listen_addr_, coap_proto_t _proto_);*
@@ -80,7 +80,7 @@ In principle the set-up sequence for CoAP Servers looks like
 ----
 coap_new_context()
 coap_context_set_pki_root_cas() - if the root CAs need to be updated and PKI
-coap_context_set_pki() and/or coap_context_set_psk() - if encryption is required
+coap_context_set_pki() and/or coap_context_set_psk2() - if encryption is required
 coap_new_endpoint()
 ----
 
@@ -93,7 +93,7 @@ In principle the set-up sequence for CoAP Clients looks like
 ----
 coap_new_context()
 coap_context_set_pki_root_cas() if the root CAs need to be updated and PKI
-coap_new_client_session(), coap_new_client_session_pki() or coap_new_client_session_psk()
+coap_new_client_session(), coap_new_client_session_pki() or coap_new_client_session_psk2()
 ----
 
 Multiple client sessions are supported per Context.
@@ -111,7 +111,7 @@ attached Sessions and Endpoints.
 
 The *coap_context_set_pki*() function, for a specific _context_, is used to
 configure the TLS context using the _setup_data_ variables as defined in the
-coap_dtls_pki_t structure  - see *coap_encrytion(*3).
+coap_dtls_pki_t structure  - see *coap_encryption*(3).
 
 The *coap_context_set_pki_root_cas*() function is used to define a set of
 root CAs to be used instead of the default set of root CAs provided as a part
@@ -120,11 +120,11 @@ list of CAs.  _ca_file can be NULL.  _ca_dir_ points to a directory
 containing a set of PEM encoded files containing rootCAs.  _ca_dir_ can be
 NULL. One or both of _ca_file_ and _ca_dir_ must be set.
 
-The *coap_context_set_psk*() function is used to configure the TLS context
-using the server _hint_, PreShared Key _key_ with length _key_len_.
-All parameters must be defined, NULL is not valid.  An empty string is valid
-for _hint_.  _key_len_ must be greater than 0.  This function can only be used
-for Servers as it provides a _hint_, not an _identity_.
+The *coap_context_set_psk2*() function is used to configure the TLS context
+using the _setup_data_ variables as defined in the
+coap_dtls_spsk_t structure  - see *coap_encryption*(3).
+This function can only be used for servers as _setup_data_ provides
+a _hint_, not an _identity_.
 
 The *coap_new_endpoint*() function creates a new endpoint for _context_ that
 is listening for new traffic on the IP address and port number defined by
@@ -153,7 +153,7 @@ RETURN VALUES
 NULL if there is a creation failure.
 
 *coap_context_set_pki*(), *coap_context_set_pki_root_cas*() and
-*coap_context_set_psk*() functions return 1 on success, 0 on failure.
+*coap_context_set_psk2*() functions return 1 on success, 0 on failure.
 
 *coap_new_endpoint*() function returns a newly created endpoint or
 NULL if there is a creation failure.
@@ -185,8 +185,7 @@ setup_server_context (void) {
     return NULL;
   }
 
-  /* See coap_resource(3) */
-  init_resources(context);
+  /* Initialize resources - See coap_resource(3) init_resources() example */
 
   return context;
 }
@@ -198,7 +197,7 @@ setup_server_context (void) {
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 typedef struct valid_cns_t {
-  int count;
+  size_t count;
   char **cn_list;
 } valid_cns_t;
 
@@ -209,13 +208,19 @@ static int
 verify_cn_callback(const char *cn,
                    const uint8_t *asn1_public_cert,
                    size_t asn1_length,
-                   coap_session_t *session,
+                   coap_session_t *c_session,
                    unsigned depth,
                    int validated,
                    void *arg
 ) {
-  valid_cns_t *valid_cn_list = ( valid_cns_t*)arg;
-  int i;
+  valid_cns_t *valid_cn_list = (valid_cns_t*)arg;
+  size_t i;
+  /* Remove (void) definition if variable is used */
+  (void)asn1_public_cert;
+  (void)asn1_length;
+  (void)c_session;
+  (void)depth;
+  (void)validated;
 
   /* Check that the CN is valid */
   for (i = 0; i < valid_cn_list->count; i++) {
@@ -232,7 +237,7 @@ typedef struct sni_def_t {
 } sni_def_t;
 
 typedef struct valid_snis_t {
-  int count;
+  size_t count;
   sni_def_t *sni_list;
 } valid_snis_t;
 
@@ -240,11 +245,11 @@ typedef struct valid_snis_t {
  * Subject Name Identifier (SNI) callback verifier
  */
 static coap_dtls_key_t *
-verify_sni_callback(const char *sni,
-                    void *arg
+verify_pki_sni_callback(const char *sni,
+                        void *arg
 ) {
   valid_snis_t *valid_sni_list = (valid_snis_t *)arg;
-  int i;
+  size_t i;
 
   /* Check that the SNI is valid */
   for (i = 0; i < valid_sni_list->count; i++) {
@@ -293,7 +298,7 @@ setup_server_context_pki (const char *public_cert_file,
   dtls_pki.allow_expired_crl       = 1;
   dtls_pki.validate_cn_call_back   = verify_cn_callback;
   dtls_pki.cn_call_back_arg        = valid_cn_list;
-  dtls_pki.validate_sni_call_back  = verify_sni_callback;
+  dtls_pki.validate_sni_call_back  = verify_pki_sni_callback;
   dtls_pki.sni_call_back_arg       = valid_sni_list;
   dtls_pki.additional_tls_setup_call_back = NULL;
   dtls_pki.client_sni              = NULL;
@@ -317,8 +322,7 @@ setup_server_context_pki (const char *public_cert_file,
     return NULL;
   }
 
-  /* See coap_resource(3) */
-  init_resources(context);
+  /* Initialize resources - See coap_resource(3) init_resources() example */
 
   return context;
 }
@@ -329,14 +333,81 @@ setup_server_context_pki (const char *public_cert_file,
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+typedef struct id_def_t {
+  char* id;
+  coap_bin_const_t key;
+} id_def_t;
+
+typedef struct valid_ids_t {
+  int count;
+  id_def_t *id_list;
+} valid_ids_t;
+
+/*
+ * PSK Identity Pre-Shared Key selection Callback function
+ */
+static const coap_bin_const_t *
+verify_id_callback(coap_bin_const_t *identity,
+                   coap_session_t *c_session,
+                   void *arg
+) {
+  valid_ids_t *valid_id_list = (valid_ids_t*)arg;
+  int i;
+  /* Remove (void) definition if variable is used */
+  (void)c_session;
+
+  /* Check that the Identity is valid */
+  for (i = 0; i < valid_id_list->count; i++) {
+    if (!strcasecmp((const char*)identity->s, valid_id_list->id_list[i].id)) {
+      return &valid_id_list->id_list[i].key;
+    }
+  }
+  return NULL;
+}
+
+typedef struct sni_psk_def_t {
+  char* sni;
+  coap_dtls_spsk_info_t psk_info;
+} sni_psk_def_t;
+
+typedef struct valid_psk_snis_t {
+  int count;
+  sni_psk_def_t *sni_list;
+} valid_psk_snis_t;
+
+/*
+ * PSK Subject Name Identifier (SNI) callback verifier
+ */
+static const coap_dtls_spsk_info_t *
+verify_psk_sni_callback(const char *sni,
+                        coap_session_t *c_session,
+                        void *arg
+) {
+  valid_psk_snis_t *valid_sni_list = (valid_psk_snis_t *)arg;
+  int i;
+  /* Remove (void) definition if variable is used */
+  (void)c_session;
+
+  /* Check that the SNI is valid */
+  for (i = 0; i < valid_sni_list->count; i++) {
+    if (!strcasecmp(sni, valid_sni_list->sni_list[i].sni)) {
+      return &valid_sni_list->sni_list[i].psk_info;
+    }
+  }
+  return NULL;
+}
+
 static coap_context_t *
 setup_server_context_psk (const char *hint,
                           const uint8_t *key,
-                          unsigned key_len
+                          unsigned int key_len,
+                          valid_ids_t *valid_id_list,
+                          valid_psk_snis_t *valid_sni_list
 ) {
   coap_endpoint_t *endpoint;
   coap_address_t listen_addr;
   coap_context_t *context;
+  coap_dtls_spsk_t dtls_psk;
 
   /* See coap_tls_library(3) */
   if (!coap_dtls_is_supported())
@@ -346,7 +417,20 @@ setup_server_context_psk (const char *hint,
   if (!context)
     return NULL;
 
-  if (coap_context_set_psk(context, hint, key, key_len)) {
+  memset (&dtls_psk, 0, sizeof (dtls_psk));
+
+  /* see coap_encryption(3) */
+  dtls_psk.version                 = COAP_DTLS_SPSK_SETUP_VERSION;
+  dtls_psk.validate_id_call_back   = verify_id_callback;
+  dtls_psk.id_call_back_arg        = valid_id_list;
+  dtls_psk.validate_sni_call_back  = verify_psk_sni_callback;
+  dtls_psk.sni_call_back_arg       = valid_sni_list;
+  dtls_psk.psk_info.hint.s         = (const uint8_t*)hint;
+  dtls_psk.psk_info.hint.length    = hint ? strlen(hint) : 0;
+  dtls_psk.psk_info.key.s          = key;
+  dtls_psk.psk_info.key.length     = key_len;
+
+  if (coap_context_set_psk2(context, &dtls_psk)) {
     coap_free_context(context);
     return NULL;
   }
@@ -361,11 +445,87 @@ setup_server_context_psk (const char *hint,
     return NULL;
   }
 
-  /* See coap_resource(3) */
-  init_resources(context);
+  /* Initialize resources - See coap_resource(3) init_resources() example */
 
   return context;
 }
+----
+
+*CoAP Client DTLS PSK Setup*
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <stdio.h>
+
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
+static const coap_dtls_cpsk_info_t *
+verify_ih_callback(coap_str_const_t *hint,
+                   coap_session_t *c_session,
+                   void *arg
+) {
+  coap_dtls_cpsk_info_t *psk_info = (coap_dtls_cpsk_info_t *)arg;
+  char lhint[COAP_DTLS_HINT_LENGTH];
+  /* Remove (void) definition if variable is used */
+  (void)c_session;
+
+  snprintf(lhint, sizeof(lhint), "%.*s", (int)hint->length, hint->s);
+  coap_log(LOG_INFO, "Identity Hint '%s' provided\n", lhint);
+
+  /* Just use the defined information for now as passed in by arg */
+  return psk_info;
+}
+
+static coap_dtls_cpsk_t dtls_psk;
+static char client_sni[256];
+
+static coap_session_t *
+setup_client_session_psk (const char *uri,
+                          struct in_addr ip_address,
+                          const uint8_t *identity,
+                          unsigned int identity_len,
+                          const uint8_t *key,
+                          unsigned int key_len
+) {
+  coap_session_t *session;
+  coap_address_t server;
+  coap_context_t *context = coap_new_context(NULL);
+
+  if (!context)
+    return NULL;
+
+  coap_address_init(&server);
+  server.addr.sa.sa_family = AF_INET;
+  server.addr.sin.sin_addr = ip_address;
+  server.addr.sin.sin_port = htons (5684);
+
+  /* See coap_encryption(3) */
+  memset (&dtls_psk, 0, sizeof(dtls_psk));
+  dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
+  dtls_psk.validate_ih_call_back = verify_ih_callback;
+  dtls_psk.ih_call_back_arg = &dtls_psk.psk_info;
+  if (uri)
+    memcpy(client_sni, uri, min(strlen(uri), sizeof(client_sni)-1));
+  else
+    memcpy(client_sni, "localhost", 9);
+  dtls_psk.client_sni = client_sni;
+  dtls_psk.psk_info.identity.s = identity;
+  dtls_psk.psk_info.identity.length = identity_len;
+  dtls_psk.psk_info.key.s = key;
+  dtls_psk.psk_info.key.length = key_len;
+  session = coap_new_client_session_psk2(context, NULL, &server,
+                                        COAP_PROTO_DTLS, &dtls_psk);
+  if (!session) {
+    coap_free_context(context);
+    return NULL;
+  }
+  /* The context is in session->context */
+  return session;
+}
+
 ----
 
 SEE ALSO
