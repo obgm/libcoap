@@ -53,6 +53,7 @@
 #include "pdu.h"
 #include "utlist.h"
 #include "resource.h"
+#include "coap_mutex.h"
 
 #if !defined(WITH_CONTIKI)
  /* define generic PKTINFO for IPv4 */
@@ -1310,13 +1311,23 @@ coap_write(coap_context_t *ctx,
 
 int
 coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
+#if COAP_CONSTRAINED_STACK
+  static coap_mutex_t static_mutex = COAP_MUTEX_INITIALIZER;
+  static fd_set readfds, writefds, exceptfds;
+  static coap_socket_t *sockets[64];
+#else /* ! COAP_CONSTRAINED_STACK */
   fd_set readfds, writefds, exceptfds;
+  coap_socket_t *sockets[64];
+#endif /* ! COAP_CONSTRAINED_STACK */
   coap_fd_t nfds = 0;
   struct timeval tv;
   coap_tick_t before, now;
   int result;
-  coap_socket_t *sockets[64];
   unsigned int num_sockets = 0, i, timeout;
+
+#if COAP_CONSTRAINED_STACK
+  coap_mutex_lock(&static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
 
   coap_ticks(&before);
 
@@ -1356,6 +1367,9 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
     if (errno != EINTR) {
 #endif
       coap_log(LOG_DEBUG, "%s", coap_socket_strerror());
+#if COAP_CONSTRAINED_STACK
+      coap_mutex_unlock(&static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
       return -1;
     }
   }
@@ -1375,6 +1389,10 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
 
   coap_ticks(&now);
   coap_read(ctx, now);
+
+#if COAP_CONSTRAINED_STACK
+  coap_mutex_unlock(&static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
 
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
