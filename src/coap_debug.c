@@ -196,7 +196,8 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
   }
 
   /* Cast needed for Windows, since it doesn't have the correct API signature. */
-  if (inet_ntop(addr->addr.sa.sa_family, addrptr, (char *)p, len) == 0) {
+  if (inet_ntop(addr->addr.sa.sa_family, addrptr, (char *)p,
+                min(len, addr->size)) == 0) {
     perror("coap_print_addr");
     return 0;
   }
