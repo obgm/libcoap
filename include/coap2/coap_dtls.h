@@ -11,9 +11,11 @@
 #ifndef COAP_DTLS_H_
 #define COAP_DTLS_H_
 
-#include "net.h"
-#include "coap_session.h"
-#include "pdu.h"
+#include "coap_time.h"
+
+struct coap_context_t;
+struct coap_session_t;
+struct coap_dtls_pki_t;
 
 /**
  * @defgroup dtls DTLS Support
@@ -57,8 +59,6 @@ typedef struct coap_tls_version_t {
  */
 coap_tls_version_t *coap_get_tls_library_version(void);
 
-struct coap_dtls_pki_t;
-
 /**
  * Additional Security setup handler that can be set up by
  * coap_context_set_pki().
@@ -98,7 +98,7 @@ typedef int (*coap_dtls_security_setup_t)(void* tls_session,
 typedef int (*coap_dtls_cn_callback_t)(const char *cn,
              const uint8_t *asn1_public_cert,
              size_t asn1_length,
-             coap_session_t *coap_session,
+             struct coap_session_t *coap_session,
              unsigned depth,
              int validated,
              void *arg);
@@ -367,7 +367,7 @@ void coap_dtls_free_context(void *dtls_context);
  * @return Opaque handle to underlying TLS library object containing security
  *         parameters for the session.
 */
-void *coap_dtls_new_client_session(coap_session_t *coap_session);
+void *coap_dtls_new_client_session(struct coap_session_t *coap_session);
 
 /**
  * Create a new DTLS server-side session.
@@ -382,7 +382,7 @@ void *coap_dtls_new_client_session(coap_session_t *coap_session);
  * @return Opaque handle to underlying TLS library object containing security
  *         parameters for the DTLS session.
  */
-void *coap_dtls_new_server_session(coap_session_t *coap_session);
+void *coap_dtls_new_server_session(struct coap_session_t *coap_session);
 
 /**
  * Terminates the DTLS session (may send an ALERT if necessary) then frees the
@@ -392,7 +392,7 @@ void *coap_dtls_new_server_session(coap_session_t *coap_session);
  *
  * @param coap_session   The CoAP session.
  */
-void coap_dtls_free_session(coap_session_t *coap_session);
+void coap_dtls_free_session(struct coap_session_t *coap_session);
 
 /**
  * Notify of a change in the CoAP session's MTU, for example after
@@ -402,7 +402,7 @@ void coap_dtls_free_session(coap_session_t *coap_session);
  *
  * @param coap_session   The CoAP session.
  */
-void coap_dtls_session_update_mtu(coap_session_t *coap_session);
+void coap_dtls_session_update_mtu(struct coap_session_t *coap_session);
 
 /**
  * Send data to a DTLS peer.
@@ -416,7 +416,7 @@ void coap_dtls_session_update_mtu(coap_session_t *coap_session);
  * @return @c 0 if this would be blocking, @c -1 if there is an error or the
  *         number of cleartext bytes sent.
  */
-int coap_dtls_send(coap_session_t *coap_session,
+int coap_dtls_send(struct coap_session_t *coap_session,
                    const uint8_t *data,
                    size_t data_len);
 
@@ -450,7 +450,7 @@ coap_tick_t coap_dtls_get_context_timeout(void *dtls_context);
  *
  * @return @c 0 If no event is pending or date of the next retransmit.
  */
-coap_tick_t coap_dtls_get_timeout(coap_session_t *coap_session);
+coap_tick_t coap_dtls_get_timeout(struct coap_session_t *coap_session);
 
 /**
  * Handle a DTLS timeout expiration.
@@ -459,7 +459,7 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *coap_session);
  *
  * @param coap_session The CoAP session.
  */
-void coap_dtls_handle_timeout(coap_session_t *coap_session);
+void coap_dtls_handle_timeout(struct coap_session_t *coap_session);
 
 /**
  * Handling incoming data from a DTLS peer.
@@ -473,7 +473,7 @@ void coap_dtls_handle_timeout(coap_session_t *coap_session);
  * @return Result of coap_handle_dgram on the decrypted CoAP PDU
  *         or @c -1 for error.
  */
-int coap_dtls_receive(coap_session_t *coap_session,
+int coap_dtls_receive(struct coap_session_t *coap_session,
                       const uint8_t *data,
                       size_t data_len);
 
@@ -491,7 +491,7 @@ int coap_dtls_receive(coap_session_t *coap_session,
  *        HELLO contains a valid cookie and a server session should be created,
  *        @c -1 if the message is invalid.
  */
-int coap_dtls_hello(coap_session_t *coap_session,
+int coap_dtls_hello(struct coap_session_t *coap_session,
                     const uint8_t *data,
                     size_t data_len);
 
@@ -504,7 +504,7 @@ int coap_dtls_hello(coap_session_t *coap_session,
  *
  * @return Maximum number of bytes added by DTLS layer.
  */
-unsigned int coap_dtls_get_overhead(coap_session_t *coap_session);
+unsigned int coap_dtls_get_overhead(struct coap_session_t *coap_session);
 
 /**
  * Create a new TLS client-side session.
@@ -518,7 +518,7 @@ unsigned int coap_dtls_get_overhead(coap_session_t *coap_session);
  * @return Opaque handle to underlying TLS library object containing security
  *         parameters for the session.
 */
-void *coap_tls_new_client_session(coap_session_t *coap_session, int *connected);
+void *coap_tls_new_client_session(struct coap_session_t *coap_session, int *connected);
 
 /**
  * Create a TLS new server-side session.
@@ -532,7 +532,7 @@ void *coap_tls_new_client_session(coap_session_t *coap_session, int *connected);
  * @return Opaque handle to underlying TLS library object containing security
  *         parameters for the session.
  */
-void *coap_tls_new_server_session(coap_session_t *coap_session, int *connected);
+void *coap_tls_new_server_session(struct coap_session_t *coap_session, int *connected);
 
 /**
  * Terminates the TLS session (may send an ALERT if necessary) then frees the
@@ -542,7 +542,7 @@ void *coap_tls_new_server_session(coap_session_t *coap_session, int *connected);
  *
  * @param coap_session The CoAP session.
  */
-void coap_tls_free_session( coap_session_t *coap_session );
+void coap_tls_free_session( struct coap_session_t *coap_session );
 
 /**
  * Send data to a TLS peer, with implicit flush.
@@ -556,7 +556,7 @@ void coap_tls_free_session( coap_session_t *coap_session );
  * @return          @c 0 if this should be retried, @c -1 if there is an error
  *                  or the number of cleartext bytes sent.
  */
-ssize_t coap_tls_write(coap_session_t *coap_session,
+ssize_t coap_tls_write(struct coap_session_t *coap_session,
                        const uint8_t *data,
                        size_t data_len
                        );
@@ -573,7 +573,7 @@ ssize_t coap_tls_write(coap_session_t *coap_session,
  * @return          @c 0 if this should be retried, @c -1 if there is an error
  *                  or the number of cleartext bytes read.
  */
-ssize_t coap_tls_read(coap_session_t *coap_session,
+ssize_t coap_tls_read(struct coap_session_t *coap_session,
                       uint8_t *data,
                       size_t data_len
                       );
