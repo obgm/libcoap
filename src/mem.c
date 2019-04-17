@@ -151,6 +151,14 @@
 #define COAP_MAX_OPTIONS            (16U)
 #endif /* COAP_MAX_CONTEXTS */
 
+/**
+ * The maximum size of option values on platforms that allocate
+ * fixed-size memory blocks.
+ */
+#ifndef COAP_MAX_OPTION_SIZE
+#define COAP_MAX_OPTION_SIZE        (16U)
+#endif /* COAP_MAX_OPTION_SIZE */
+
 /* The memstr is the storage for holding coap_string_t structure
  * together with its contents. */
 union memstr_t {
@@ -211,7 +219,12 @@ static memarray_t dtls_storage;
 static coap_session_t session_storage_data[COAP_MAX_SESSIONS];
 static memarray_t session_storage;
 
-static coap_optlist_t option_storage_data[COAP_MAX_OPTIONS];
+/* The optbuf_t is the storage for holding optlist nodes. */
+struct optbuf_t {
+  coap_optlist_t optlist;
+  char optbuf[COAP_MAX_OPTION_SIZE];
+};
+static struct optbuf_t option_storage_data[COAP_MAX_OPTIONS];
 static memarray_t option_storage;
 
 #define INIT_STORAGE(Storage, Count)  \
