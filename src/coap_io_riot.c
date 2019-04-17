@@ -165,6 +165,23 @@ get_port(const coap_address_t *addr) {
   return 0;
 }
 
+static coap_socket_t *
+find_socket(coap_fd_t fd, coap_socket_t *sockets[], unsigned int num_sockets) {
+  for (unsigned int i = 0; i < num_sockets; i++) {
+    if (fd == sockets[i]->fd)
+      return sockets[i];
+  }
+  return NULL;
+}
+
+static bool
+address_equals(const coap_address_t *a, const ipv6_addr_t *b) {
+  assert(a);
+  assert(b);
+  return IN6_IS_ADDR_UNSPECIFIED(&a->addr.sin6.sin6_addr) ||
+    (memcmp(&a->addr.sin6.sin6_addr, b->u8, sizeof(struct in6_addr)) == 0);
+}
+
 int
 coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
   coap_tick_t before, now;
@@ -173,6 +190,7 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
   gnrc_netreg_entry_t coap_reg =
     GNRC_NETREG_ENTRY_INIT_PID(GNRC_NETREG_DEMUX_CTX_ALL, thread_getpid());
   msg_t msg;
+  bool found_port = false;
 
   coap_ticks(&before);
 
@@ -190,23 +208,54 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
   xtimer_msg_receive_timeout(&msg, timeout_ms * US_PER_SEC);
   switch (msg.type) {
   case GNRC_NETAPI_MSG_TYPE_RCV: {
-    coap_endpoint_t *ep;
-    udp_hdr_t *udp_hdr = get_udp_header((gnrc_pktsnip_t *)msg.content.ptr);
-    if (!udp_hdr)
-      break;
+    coap_log(LOG_DEBUG, "coap_run_once: GNRC_NETAPI_MSG_TYPE_RCV\n");
 
-    /* set read flag only for the destination of the received packet */
-    LL_FOREACH(ctx->endpoint, ep) {
-      if (get_port(&ep->bind_addr) == udp_hdr->dst_port.u16) {
-        for (unsigned int i = 0; i < num_sockets; i++) {
-          if ((ep->sock.fd == sockets[i]->fd) &&
-              (sockets[i]->flags & COAP_SOCKET_WANT_READ)) {
-            coap_log(LOG_DEBUG, "fd %d on port %u can read\n",
-                     ep->sock.fd, ntohs(get_port(&ep->bind_addr)));
-            sockets[i]->flags |= COAP_SOCKET_CAN_READ;
-            sockets[i]->pkt = msg.content.ptr;
-            break;              /* found one, finish loop */
-          }
+    coap_session_t *s;
+    udp_hdr_t *udp_hdr = get_udp_header((gnrc_pktsnip_t *)msg.content.ptr);
+    ipv6_hdr_t *ip6_hdr =
+      gnrc_ipv6_get_header((gnrc_pktsnip_t *)msg.content.ptr);
+    if (!udp_hdr || !ip6_hdr)
+      break;
+    coap_log(LOG_DEBUG, "coap_run_once: found UDP header\n");
+
+    /* Traverse all sessions and set COAP_SOCKET_CAN_READ if the
+     * received packet's destination address matches. */
+    LL_FOREACH(ctx->sessions, s) {
+      coap_log(LOG_DEBUG, "coap_run_once: check ctx->sessions %u == %u\n",
+               ntohs(get_port(&s->local_addr)), ntohs(udp_hdr->dst_port.u16));
+      if ((get_port(&s->local_addr) == udp_hdr->dst_port.u16) &&
+          (address_equals(&s->local_addr, &ip6_hdr->dst))) {
+        coap_socket_t *sock = find_socket(s->sock.fd, sockets, num_sockets);
+
+        if (sock && (sock->flags & (COAP_SOCKET_WANT_READ))) {
+          coap_log(LOG_DEBUG, "fd %d on port %u can read\n",
+                   sock->fd, ntohs(get_port(&s->local_addr)));
+          sock->flags |= COAP_SOCKET_CAN_READ;
+          sock->pkt = msg.content.ptr;
+          found_port = true;
+          break;                /* found session, finish loop */
+        }
+      }
+    }
+
+    /* If no session was found for received packet, traverse all
+     * endpoints and set COAP_SOCKET_CAN_READ if the received packet's
+     * destination address matches the endpoint. */
+    if (!found_port) {
+      coap_endpoint_t *ep;
+      LL_FOREACH(ctx->endpoint, ep) {
+        if ((get_port(&ep->bind_addr) == udp_hdr->dst_port.u16) &&
+            (address_equals(&ep->bind_addr, &ip6_hdr->dst))) {
+          coap_socket_t *sock = find_socket(ep->sock.fd, sockets, num_sockets);
+
+          if (sock && (sock->flags & (COAP_SOCKET_WANT_READ))) {
+              coap_log(LOG_DEBUG, "fd %d on port %u can read\n",
+                       sock->fd, ntohs(get_port(&ep->bind_addr)));
+              sock->flags |= COAP_SOCKET_CAN_READ;
+              sock->pkt = msg.content.ptr;
+              found_port = true;
+              break;            /* found session, finish loop */
+            }
         }
       }
     }
