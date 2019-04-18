@@ -157,6 +157,7 @@ int coap_dtls_is_supported(void) {
 }
 
 int coap_tls_is_supported(void) {
+#if ENABLE_TCP
   if (SSLeay() < 0x10100000L) {
     coap_log(LOG_WARNING, "OpenSSL version 1.1.0 or later is required\n");
     return 0;
@@ -168,6 +169,9 @@ int coap_tls_is_supported(void) {
   }
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
   return 1;
+#else /* !ENABLE_TCP */
+  return 0;
+#endif /* !ENABLE_TCP */
 }
 
 coap_tls_version_t *

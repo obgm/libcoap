@@ -660,7 +660,7 @@ usage( const char *program, const char *version) {
      "\t       \t\tdefault is 'get'\n"
      "\t-o file\t\tOutput received data to this file (use '-' for STDOUT)\n"
      "\t-p port\t\tListen on specified port\n"
-     "\t-r     \t\tUse reliable protocol (TCP or TLS)\n"
+     "\t-r     \t\tUse reliable protocol (TCP or TLS); requires TCP support\n"
      "\t-s duration\tSubscribe to / Observe resource for given duration\n"
      "\t       \t\tin seconds\n"
      "\t-t type\t\tContent format for given resource for PUT/POST\n"
@@ -1590,7 +1590,7 @@ main(int argc, char **argv) {
       }
       break;
     case 'r':
-      reliable = 1;
+      reliable = coap_tcp_is_supported();
       break;
     case 'K':
       ping_seconds = atoi(optarg);

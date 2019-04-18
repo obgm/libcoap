@@ -81,6 +81,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_notls.c \
   src/coap_openssl.c \
   src/coap_session.c \
+  src/coap_tcp.c \
   src/coap_time.c \
   src/coap_tinydtls.c \
   src/encode.c \
@@ -118,6 +119,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_io.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_mutex.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_session.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_tcp.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_time.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/encode.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/libcoap.h \

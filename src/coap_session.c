@@ -188,7 +188,7 @@ void coap_session_free(coap_session_t *session) {
 
 size_t coap_session_max_pdu_size(const coap_session_t *session) {
   size_t max_with_header = (size_t)(session->mtu - session->tls_overhead);
-  if (COAP_PROTO_NOT_RELIABLE(session->proto))
+  if (!COAP_DISABLE_TCP || COAP_PROTO_NOT_RELIABLE(session->proto))
     return max_with_header > 4 ? max_with_header - 4 : 0;
   /* we must assume there is no token to be on the safe side */
   if (max_with_header <= 2)
@@ -443,7 +443,7 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
   if (reason != COAP_NACK_ICMP_ISSUE)
     coap_cancel_session_messages(session->context, session, reason);
 
-  if ( COAP_PROTO_RELIABLE(session->proto) ) {
+  if (!COAP_DISABLE_TCP && COAP_PROTO_RELIABLE(session->proto)) {
     if (session->sock.flags != COAP_SOCKET_EMPTY) {
       coap_socket_close(&session->sock);
       coap_handle_event(session->context,
@@ -665,7 +665,8 @@ coap_session_create_client(
       &session->addr_info.local, &session->addr_info.remote)) {
       goto error;
     }
-  } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
+  } else if (!COAP_DISABLE_TCP &&
+             (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS)) {
     if (!coap_socket_connect_tcp1(&session->sock, &session->local_if, server,
       proto == COAP_PROTO_TLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
       &session->addr_info.local, &session->addr_info.remote)) {
@@ -710,27 +711,29 @@ coap_session_connect(coap_session_t *session) {
       coap_session_release(session);
       return NULL;
     }
-  } else if (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS) {
-    if (session->sock.flags & COAP_SOCKET_WANT_CONNECT) {
-      session->state = COAP_SESSION_STATE_CONNECTING;
-    } else if (session->proto == COAP_PROTO_TLS) {
-      int connected = 0;
-      session->tls = coap_tls_new_client_session(session, &connected);
-      if (session->tls) {
-        session->state = COAP_SESSION_STATE_HANDSHAKE;
-        if (connected)
-          coap_session_send_csm(session);
+  } else if (!COAP_DISABLE_TCP) {
+    if (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS) {
+      if (session->sock.flags & COAP_SOCKET_WANT_CONNECT) {
+        session->state = COAP_SESSION_STATE_CONNECTING;
+      } else if (session->proto == COAP_PROTO_TLS) {
+        int connected = 0;
+        session->tls = coap_tls_new_client_session(session, &connected);
+        if (session->tls) {
+          session->state = COAP_SESSION_STATE_HANDSHAKE;
+          if (connected)
+            coap_session_send_csm(session);
+        } else {
+          /* Need to free session object. As a new session may not yet
+           * have been referenced, we call coap_session_reference()
+           * first before trying to release the object.
+           */
+          coap_session_reference(session);
+          coap_session_release(session);
+          return NULL;
+        }
       } else {
-        /* Need to free session object. As a new session may not yet
-         * have been referenced, we call coap_session_reference()
-         * first before trying to release the object.
-         */
-        coap_session_reference(session);
-        coap_session_release(session);
-        return NULL;
+        coap_session_send_csm(session);
       }
-    } else {
-      coap_session_send_csm(session);
     }
   }
   coap_ticks(&session->last_rx_tx);
@@ -739,6 +742,7 @@ coap_session_connect(coap_session_t *session) {
 
 static coap_session_t *
 coap_session_accept(coap_session_t *session) {
+#if !COAP_DISABLE_TCP
   if (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS)
     coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
   if (session->proto == COAP_PROTO_TCP) {
@@ -762,6 +766,7 @@ coap_session_accept(coap_session_t *session) {
       session = NULL;
     }
   }
+#endif /* COAP_DISABLE_TCP */
   return session;
 }
 
@@ -970,10 +975,12 @@ coap_session_t *coap_new_server_session(
   if (!session)
     goto error;
 
+#if !COAP_DISABLE_TCP
   if (!coap_socket_accept_tcp(&ep->sock, &session->sock,
                               &session->addr_info.local,
                               &session->addr_info.remote))
     goto error;
+#endif /* !COAP_DISABLE_TCP */
   session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED
                        | COAP_SOCKET_WANT_READ;
   session->sock.session = session;
@@ -1009,10 +1016,12 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     goto error;
   }
 
+#if !COAP_DISABLE_TCP
   if (proto == COAP_PROTO_TLS && !coap_tls_is_supported()) {
     coap_log(LOG_CRIT, "coap_new_endpoint: TLS not supported\n");
     goto error;
   }
+#endif /* !COAP_DISABLE_TCP */
 
   if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
     if (!coap_dtls_context_check_keys_enabled(context)) {
@@ -1033,7 +1042,7 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
   ep->context = context;
   ep->proto = proto;
 
-  if (proto==COAP_PROTO_TCP || proto==COAP_PROTO_TLS) {
+  if (!COAP_DISABLE_TCP && (proto==COAP_PROTO_TCP || proto==COAP_PROTO_TLS)) {
     if (!coap_socket_bind_tcp(&ep->sock, listen_addr, &ep->bind_addr))
       goto error;
     ep->sock.flags |= COAP_SOCKET_WANT_ACCEPT;

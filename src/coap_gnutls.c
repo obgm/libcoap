@@ -175,11 +175,15 @@ coap_dtls_is_supported(void) {
  */
 int
 coap_tls_is_supported(void) {
+#if ENABLE_TCP
   if (gnutls_check_version(MIN_GNUTLS_VERSION) == NULL) {
     coap_log(LOG_ERR, "GnuTLS " MIN_GNUTLS_VERSION " or later is required\n");
     return 0;
   }
   return 1;
+#else /* !ENABLE_TCP */
+  return 0;
+#endif /* !ENABLE_TCP */
 }
 
 coap_tls_version_t *
