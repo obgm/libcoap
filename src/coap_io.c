@@ -771,12 +771,13 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 #endif
   } else {
 #ifndef WITH_CONTIKI
-    /* a buffer large enough to hold all packet info types, ipv6 is the largest */
-    char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 #ifdef _WIN32
     DWORD dwNumberOfBytesSent = 0;
     int r;
 #endif
+#ifdef HAVE_STRUCT_CMSGHDR
+    /* a buffer large enough to hold all packet info types, ipv6 is the largest */
+    char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
     struct msghdr mhdr;
     struct iovec iov[1];
     const void *addr = &session->remote_addr.addr;
@@ -786,7 +787,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
     memcpy (&iov[0].iov_base, &data, sizeof (iov[0].iov_base));
     iov[0].iov_len = (iov_len_t)datalen;
 
-    memset( buf, 0, sizeof(buf));
+    memset(buf, 0, sizeof (buf));
 
     memset(&mhdr, 0, sizeof(struct msghdr));
     memcpy (&mhdr.msg_name, &addr, sizeof (mhdr.msg_name));
@@ -880,6 +881,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
       coap_log(LOG_WARNING, "protocol not supported\n");
       bytes_written = -1;
     }
+#endif /* HAVE_STRUCT_CMSGHDR */
 
 #ifdef _WIN32
     r = WSASendMsg(sock->fd, &mhdr, 0 /*dwFlags*/, &dwNumberOfBytesSent, NULL /*lpOverlapped*/, NULL /*lpCompletionRoutine*/);
@@ -888,7 +890,11 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
     else
       bytes_written = -1;
 #else
+#ifdef HAVE_STRUCT_CMSGHDR
     bytes_written = sendmsg(sock->fd, &mhdr, 0);
+#else /* ! HAVE_STRUCT_CMSGHDR */
+    bytes_written = sendto(sock->fd, data, datalen, 0, &session->remote_addr.addr.sa, session->remote_addr.size);
+#endif /* ! HAVE_STRUCT_CMSGHDR */
 #endif
 #else /* WITH_CONTIKI */
     /* FIXME: untested */
@@ -963,6 +969,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
     int r;
 #endif
 #if !defined(WITH_CONTIKI)
+#ifdef HAVE_STRUCT_CMSGHDR
     /* a buffer large enough to hold all packet info types, ipv6 is the largest */
     char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
     struct cmsghdr *cmsg;
@@ -1005,6 +1012,11 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
     len = recvmsg(sock->fd, &mhdr, 0);
 #endif
 
+#else /* ! HAVE_STRUCT_CMSGHDR */
+    packet->src.size = packet->src.size;
+    len = recvfrom(sock->fd, packet->payload, COAP_RXBUFFER_SIZE, 0, &packet->src.addr.sa, &packet->src.size);
+#endif /* ! HAVE_STRUCT_CMSGHDR */
+
     if (len < 0) {
 #ifdef _WIN32
       if (WSAGetLastError() == WSAECONNRESET) {
@@ -1017,6 +1029,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       coap_log(LOG_WARNING, "coap_network_read: %s\n", coap_socket_strerror());
       goto error;
     } else {
+#ifdef HAVE_STRUCT_CMSGHDR
       int dst_found = 0;
 
       packet->src.size = mhdr.msg_namelen;
@@ -1085,6 +1098,14 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
           coap_log(LOG_DEBUG, "Cannot determine local port\n");
         }
       }
+#else /* ! HAVE_STRUCT_CMSGHDR */
+      packet->length = (size_t)len;
+      packet->ifindex = 0;
+      if (getsockname(sock->fd, &packet->dst.addr.sa, &packet->dst.size) < 0) {
+         coap_log(LOG_DEBUG, "Cannot determine local port\n");
+         goto error;
+      }
+#endif /* ! HAVE_STRUCT_CMSGHDR */
     }
 #endif /* !defined(WITH_CONTIKI) */
 #ifdef WITH_CONTIKI

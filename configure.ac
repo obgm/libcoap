@@ -584,6 +584,11 @@ AC_SEARCH_LIBS([inet_ntop], [nsl])
 # Check if clock_gettime() requires librt, when available
 AC_SEARCH_LIBS([clock_gettime], [rt])
 
+#check for struct cmsghdr
+AC_CHECK_TYPES([struct cmsghdr],,,[
+AC_INCLUDES_DEFAULT
+#include <sys/socket.h>])
+
 AC_MSG_CHECKING([operating system])
 
 # Set up here some extra platform depended defines and variables.
