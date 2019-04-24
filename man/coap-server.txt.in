@@ -17,8 +17,12 @@ SYNOPSIS
 *coap-server* [*-d* max] [*-g* group] [*-l* loss] [*-p* port] [*-v* num]
               [*-A* address] [*-N*]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
-              [*-s* match_sni_file]]
+              [*-s* match_psk_sni_file]]
               [[*-c* certfile] [*-n*] [*-C* cafile] [*-R* root_cafile]]
+              [*-S* match_pki_sni_file]]
+              [[*-k* key] [*-h* hint]]
+              [[*-c* certfile] [*-n*] [*-C* cafile] [*-R* root_cafile]
+              [*-S* match_sni_file]]
 
 DESCRIPTION
 -----------
@@ -29,8 +33,8 @@ OPTIONS - General
 -----------------
 *-d* max::
    Enable support for creation of dynamic resources when doing a PUT up to a
-   limit of max.  If max is reached, a 4.06 code is returned until one of the
-   dynamic resources has been deleted.
+   limit of 'max'.  If 'max' is reached, a 4.06 code is returned until one of
+   the dynamic resources has been deleted.
 
 *-g* group::
    Join specified multicast 'group' on start up.
@@ -85,7 +89,7 @@ OPTIONS - PSK
    *Note:* if *-c cafile* is defined, you need to define *-k key* as well to
    have the server support both PSK and PKI.
 
-*-s* match_sni_file::
+*-s* match_psk_sni_file::
    This option denotes a file that contains one or more lines of Subject Name
    Identifier (SNI) to match for new Identity Hint and new Pre-Shared Key
    (PSK) (comma separated) to be used.
@@ -123,6 +127,14 @@ OPTIONS - PKI
   this list and is "trusted" for the verification.
   Alternatively, this can point to a directory containing a set of CA PEM files.
 
+*-S* match_pki_sni_file::
+   This option denotes a file that contains one or more lines of Subject Name
+   Identifier (SNI) to match for new Certificate File and new CA File (comma
+   separated) to be used. E.g., entry per line +
+   sni_to_match,new_cert_file,new_ca_file +
+   A line that starts with # is treated as a comment. +
+   Note: *-c certfile* and *-C cafile* still needs to be defined for the
+   default case
 
 EXAMPLES
 --------

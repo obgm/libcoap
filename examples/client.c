@@ -1329,13 +1329,12 @@ setup_pki(coap_context_t *ctx) {
     dtls_pki.validate_sni_call_back  = NULL;
     dtls_pki.sni_call_back_arg       = NULL;
     memset(client_sni, 0, sizeof(client_sni));
-    if (uri.host.length)
-      memcpy(client_sni, uri.host.s,
-             min(uri.host.length, sizeof(client_sni) - 1));
-    else
-      memcpy(client_sni, "localhost", 9);
-    dtls_pki.client_sni = client_sni;
   }
+  if (uri.host.length)
+    memcpy(client_sni, uri.host.s, min(uri.host.length, sizeof(client_sni)-1));
+  else
+    memcpy(client_sni, "localhost", 9);
+  dtls_pki.client_sni = client_sni;
   dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
   dtls_pki.pki_key.key.pem.public_cert = cert_file;
   dtls_pki.pki_key.key.pem.private_key = cert_file;
@@ -1412,8 +1411,8 @@ get_session(
         coap_address_init( &bind_addr );
         bind_addr.size = rp->ai_addrlen;
         memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
-        if ((root_ca_file || ca_file || cert_file) &&
-            (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
+        if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
+          /* Do this, even if certs are not defined */
           coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
           session = coap_new_client_session_pki(ctx, &bind_addr, dst, proto, dtls_pki);
         }
@@ -1433,8 +1432,8 @@ get_session(
     }
     freeaddrinfo( result );
   } else {
-    if ((root_ca_file || ca_file || cert_file) &&
-        (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
+    if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
+      /* Do this, even if certs are not defined */
       coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
       session = coap_new_client_session_pki(ctx, NULL, dst, proto, dtls_pki);
     }
