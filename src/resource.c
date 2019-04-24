@@ -794,7 +794,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       token.length = obs->token_length;
       token.s = obs->token;
 
-      response->tid = coap_new_message_id(obs->session);
+      obs->tid = response->tid = coap_new_message_id(obs->session);
       if ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) == 0
           && obs->non_cnt < COAP_OBS_MAX_NON) {
         response->type = COAP_MESSAGE_NON;

@@ -2227,6 +2227,20 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         if(sent->pdu->type==COAP_MESSAGE_CON && context->nack_handler)
           context->nack_handler(context, sent->session, sent->pdu, COAP_NACK_RST, sent->id);
       }
+      else {
+        /* Need to check is there is a subscription active and delete it */
+        RESOURCES_ITER(context->resources, r) {
+          coap_subscription_t *obs, *tmp;
+          LL_FOREACH_SAFE(r->subscribers, obs, tmp) {
+            if (obs->tid == pdu->tid && obs->session == session) {
+              coap_binary_t token = { 0, NULL };
+              COAP_SET_STR(&token, obs->token_length, obs->token);
+              coap_delete_observer(r, session, &token);
+              goto cleanup;
+            }
+          }
+        }
+      }
       goto cleanup;
 
     case COAP_MESSAGE_NON:        /* check for unknown critical options */
