@@ -55,26 +55,19 @@ typedef uint8_t coap_session_state_t;
 
 typedef struct coap_session_t {
   struct coap_session_t *next;
-  coap_proto_t proto;               /**< protocol used */
-  coap_session_type_t type;         /**< client or server side socket */
-  coap_session_state_t state;       /**< current state of relationaship with peer */
-  unsigned ref;                     /**< reference count from queues */
-  unsigned tls_overhead;            /**< overhead of TLS layer */
-  unsigned mtu;                     /**< path or CSM mtu */
   coap_address_t local_if;          /**< optional local interface address */
   coap_address_t remote_addr;       /**< remote address and port */
   coap_address_t local_addr;        /**< local address and port */
-  int ifindex;                      /**< interface index */
   coap_socket_t sock;               /**< socket object for the session, if any */
+  coap_session_type_t type;		  /**< client or server side socket */
+  coap_session_state_t state; 	  /**< current state of relationaship with peer */
   struct coap_endpoint_t *endpoint; /**< session's endpoint */
   struct coap_context_t *context;   /**< session's context */
   void *tls;                        /**< security parameters */
-  uint16_t tx_mid;                  /**< the last message id that was used in this session */
-  uint8_t con_active;               /**< Active CON request sent */
   struct coap_queue_t *delayqueue;  /**< list of delayed messages waiting to be sent */
   size_t partial_write;             /**< if > 0 indicates number of bytes already written from the pdu at the head of sendqueue */
-  uint8_t read_header[8];           /**< storage space for header of incoming message header */
   size_t partial_read;              /**< if > 0 indicates number of bytes already read for an incoming message */
+  uint8_t read_header[8];           /**< storage space for header of incoming message header */
   coap_pdu_t *partial_pdu;          /**< incomplete incoming pdu */
   coap_tick_t last_rx_tx;
   coap_tick_t last_tx_rst;
@@ -86,11 +79,18 @@ typedef struct coap_session_t {
   uint8_t *psk_key;
   size_t psk_key_len;
   void *app;                        /**< application-specific data */
-  unsigned int max_retransmit;      /**< maximum re-transmit count (default 4) */
   coap_fixed_point_t ack_timeout;   /**< timeout waiting for ack (default 2 secs) */
   coap_fixed_point_t ack_random_factor; /**< ack random factor backoff (default 1.5) */
+  unsigned ref;                     /**< reference count from queues */
+  unsigned tls_overhead;            /**< overhead of TLS layer */
+  unsigned mtu;                     /**< path or CSM mtu */
+  unsigned int max_retransmit;      /**< maximum re-transmit count (default 4) */
   unsigned int dtls_timeout_count;      /**< dtls setup retry counter */
   int dtls_event;                       /**< Tracking any (D)TLS events on this sesison */
+  int ifindex;                      /**< interface index */
+  uint16_t tx_mid;				  /**< the last message id that was used in this session */
+  uint8_t con_active; 			  /**< Active CON request sent */
+  coap_proto_t proto; 			  /**< protocol used */
 } coap_session_t;
 
 /**
@@ -301,12 +301,12 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
 typedef struct coap_endpoint_t {
   struct coap_endpoint_t *next;
   struct coap_context_t *context; /**< endpoint's context */
-  coap_proto_t proto;             /**< protocol used on this interface */
-  uint16_t default_mtu;           /**< default mtu for this interface */
-  coap_socket_t sock;             /**< socket object for the interface, if any */
-  coap_address_t bind_addr;       /**< local interface address */
   coap_session_t *sessions;       /**< list of active sessions */
+  coap_address_t bind_addr;       /**< local interface address */
   coap_session_t hello;           /**< special session of DTLS hello messages */
+  coap_socket_t sock;             /**< socket object for the interface, if any */
+  uint16_t default_mtu;			/**< default mtu for this interface */
+  coap_proto_t proto; 			/**< protocol used on this interface */
 } coap_endpoint_t;
 
 /**
