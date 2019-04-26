@@ -306,7 +306,6 @@ typedef struct coap_endpoint_t {
   coap_socket_t sock;             /**< socket object for the interface, if any */
   coap_address_t bind_addr;       /**< local interface address */
   coap_session_t *sessions;       /**< list of active sessions */
-  coap_session_t hello;           /**< special session of DTLS hello messages */
 } coap_endpoint_t;
 
 /**
@@ -347,24 +346,24 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
 * @param endpoint Active endpoint the packet was received on.
 * @param packet Received packet.
 * @param now The current time in ticks.
-* @return The CoAP session.
+* @return The CoAP session or @c NULL if error.
 */
 coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
   const struct coap_packet_t *packet, coap_tick_t now);
 
 /**
- * Create a new DTLS session for the @p endpoint.
+ * Create a new DTLS session for the @p session.
+ * Note: the @p session is released if no DTLS server session can be created.
  *
  * @ingroup dtls_internal
  *
- * @param endpoint  Endpoint to add DTLS session to
- * @param packet    Received packet information to base session on.
+ * @param session   Session to add DTLS session to
  * @param now       The current time in ticks.
  *
- * @return Created CoAP session or @c NULL if error.
+ * @return CoAP session or @c NULL if error.
  */
-coap_session_t *coap_endpoint_new_dtls_session(coap_endpoint_t *endpoint,
-  const struct coap_packet_t *packet, coap_tick_t now);
+coap_session_t *coap_session_new_dtls_session(coap_session_t *session,
+  coap_tick_t now);
 
 coap_session_t *coap_session_get_by_peer(struct coap_context_t *ctx,
   const struct coap_address_t *remote_addr, int ifindex);

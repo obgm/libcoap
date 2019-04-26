@@ -1223,11 +1223,9 @@ coap_dtls_free_gnutls_env(coap_gnutls_context_t *g_context,
 
 void *coap_dtls_new_server_session(coap_session_t *c_session) {
   coap_gnutls_env_t *g_env =
-         (coap_gnutls_env_t *)c_session->endpoint->hello.tls;
+         (coap_gnutls_env_t *)c_session->tls;
 
   gnutls_transport_set_ptr(g_env->g_session, c_session);
-  /* For the next one */
-  c_session->endpoint->hello.tls = NULL;
 
   return g_env;
 }
@@ -1492,22 +1490,6 @@ coap_dtls_receive(coap_session_t *c_session,
   return ret;
 }
 
-#define DTLS_CT_HANDSHAKE          22
-#define DTLS_HT_CLIENT_HELLO        1
-
-/** Generic header structure of the DTLS record layer. */
-typedef struct __attribute__((__packed__)) {
-  uint8_t content_type;           /**< content type of the included message */
-  uint16_t version;               /**< Protocol version */
-  uint16_t epoch;                 /**< counter for cipher state changes */
-  uint8_t sequence_number[6];     /**< sequence number */
-  uint16_t length;                /**< length of the following fragment */
-  uint8_t handshake;              /**< If content_type == DTLS_CT_HANDSHAKE */
-} dtls_record_handshake_t;
-
-#define OFF_CONTENT_TYPE 0     /* offset of content_type in dtls_record_handshake_t */
-#define OFF_HANDSHAKE_TYPE 13  /* offset of handshake in dtls_record_handshake_t */
-
 /*
  * return 0 failed
  *        1 passed
@@ -1522,24 +1504,6 @@ coap_dtls_hello(coap_session_t *c_session,
   int ret;
 
   if (!g_env) {
-    /*
-     * Need to check that this actually is a Client Hello before wasting
-     * time allocating and then freeing off g_env.
-     */
-    if (data_len < (OFF_HANDSHAKE_TYPE + 1)) {
-      coap_log(LOG_DEBUG,
-         "coap_dtls_hello: ContentType %d Short Packet (%ld < %d) dropped\n",
-         data[OFF_CONTENT_TYPE], data_len, OFF_HANDSHAKE_TYPE + 1);
-      return 0;
-    }
-    if (data[OFF_CONTENT_TYPE] != DTLS_CT_HANDSHAKE ||
-        data[OFF_HANDSHAKE_TYPE] != DTLS_HT_CLIENT_HELLO) {
-      coap_log(LOG_DEBUG,
-         "coap_dtls_hello: ContentType %d Handshake %d dropped\n",
-         data[OFF_CONTENT_TYPE], data[OFF_HANDSHAKE_TYPE]);
-      return 0;
-    }
-
     g_env = coap_dtls_new_gnutls_env(c_session, GNUTLS_SERVER);
     if (g_env) {
       c_session->tls = g_env;
