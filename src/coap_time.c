@@ -6,7 +6,7 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #ifdef HAVE_TIME_H
 #include <time.h>
@@ -20,9 +20,6 @@
 #include <winsock2.h>
 #include <stdint.h>
 #endif
-
-#include "libcoap.h"
-#include "coap_time.h"
 
 static coap_tick_t coap_clock_offset = 0;
 

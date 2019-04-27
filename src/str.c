@@ -6,14 +6,9 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #include <stdio.h>
-
-#include "libcoap.h"
-#include "coap_debug.h"
-#include "mem.h"
-#include "str.h"
 
 coap_string_t *coap_new_string(size_t size) {
   coap_string_t *s =

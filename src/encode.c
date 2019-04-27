@@ -6,14 +6,11 @@
  * README for terms of use.
  */
 
+#include "coap_internal.h"
+
 #ifndef NDEBUG
 #  include <stdio.h>
 #endif
-
-#include "coap_config.h"
-#include "coap.h"
-#include "mem.h"
-#include "encode.h"
 
 /* Carsten suggested this when fls() is not available: */
 #ifndef HAVE_FLS

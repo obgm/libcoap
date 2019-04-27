@@ -24,6 +24,7 @@
 
 #include "uthash.h"
 #include "async.h"
+#include "block.h"
 #include "str.h"
 #include "pdu.h"
 #include "net.h"

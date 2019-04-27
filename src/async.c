@@ -11,14 +11,9 @@
  * @brief state management for asynchronous messages
  */
 
-#ifndef WITHOUT_ASYNC
+#include "coap_internal.h"
 
-#include "coap_config.h"
-#include "coap.h"
-#include "async.h"
-#include "coap_debug.h"
-#include "mem.h"
-#include "utlist.h"
+#ifndef WITHOUT_ASYNC
 
 /* utlist-style macros for searching pairs in linked lists */
 #define SEARCH_PAIR(head,out,field1,val1,field2,val2)   \

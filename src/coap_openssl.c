@@ -8,7 +8,7 @@
 * of use.
 */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #ifdef HAVE_OPENSSL
 
@@ -40,10 +40,6 @@
  * have additional run time checks.
  *
  */
-#include "net.h"
-#include "mem.h"
-#include "coap_debug.h"
-#include "prng.h"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>

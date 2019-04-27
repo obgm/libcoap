@@ -7,9 +7,7 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
-#include "mem.h"
-#include "coap_io.h"
+#include "coap_internal.h"
 #include <lwip/udp.h>
 
 #if NO_SYS

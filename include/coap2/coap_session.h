@@ -6,6 +6,11 @@
 * README for terms of use.
 */
 
+/**
+ * @file coap_session.h
+ * @brief Defines the application visible session information
+ */
+
 #ifndef COAP_SESSION_H_
 #define COAP_SESSION_H_
 
@@ -14,10 +19,6 @@
 #include "coap_time.h"
 #include "pdu.h"
 #include "uthash.h"
-
-struct coap_endpoint_t;
-struct coap_context_t;
-struct coap_queue_t;
 
 /**
 * Abstraction of a fixed point number that can be used where necessary instead
@@ -211,8 +212,6 @@ coap_session_t *coap_new_client_session_psk(
   unsigned key_len
 );
 
-struct coap_dtls_pki_t;
-
 /**
 * Creates a new client session to the designated server with PKI credentials
 * @param ctx The CoAP context.
@@ -305,19 +304,6 @@ const char *coap_session_str(const coap_session_t *session);
 ssize_t
 coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
                        struct coap_queue_t *node);
-/**
-* Abstraction of virtual endpoint that can be attached to coap_context_t. The
-* tuple (handle, addr) must uniquely identify this endpoint.
-*/
-typedef struct coap_endpoint_t {
-  struct coap_endpoint_t *next;
-  struct coap_context_t *context; /**< endpoint's context */
-  coap_proto_t proto;             /**< protocol used on this interface */
-  uint16_t default_mtu;           /**< default mtu for this interface */
-  coap_socket_t sock;             /**< socket object for the interface, if any */
-  coap_address_t bind_addr;       /**< local interface address */
-  coap_session_t *sessions;       /**< hash table or list of active sessions */
-} coap_endpoint_t;
 
 /**
 * Create a new endpoint for communicating with peers.

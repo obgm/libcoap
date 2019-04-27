@@ -6,7 +6,7 @@
  * README for terms of use.
  */
 
-#include "coap_hashkey.h"
+#include "coap_internal.h"
 
 void
 coap_hash_impl(const unsigned char *s, unsigned int len, coap_key_t h) {

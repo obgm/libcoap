@@ -215,13 +215,8 @@ PROCESS_THREAD(coap_server_process, ev, data)
   while(1) {
     PROCESS_YIELD();
     if(ev == tcpip_event) {
-      coap_tick_t now;
-
-      coap_ticks(&now);
       /* There is something to read on the endpoint */
-      coap_context->endpoint->sock.flags |= COAP_SOCKET_CAN_READ;
-      /* read in, and send off any responses */
-      coap_read(coap_context, now);  /* read received data */
+      coap_run_once(coap_context, COAP_RUN_BLOCK);
     } else if (ev == PROCESS_EVENT_TIMER && etimer_expired(&dirty_timer)) {
       coap_resource_notify_observers(time_resource, NULL);
       etimer_reset(&dirty_timer);

@@ -6,7 +6,7 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #if defined(HAVE_ASSERT_H) && !defined(assert)
 # include <assert.h>
@@ -25,14 +25,6 @@
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
 #endif
-
-#include "libcoap.h"
-#include "coap_debug.h"
-#include "pdu.h"
-#include "option.h"
-#include "encode.h"
-#include "mem.h"
-#include "coap_session.h"
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))

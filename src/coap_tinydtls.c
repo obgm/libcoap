@@ -7,14 +7,9 @@
  * of use.
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #ifdef HAVE_LIBTINYDTLS
-
-#include "net.h"
-#include "address.h"
-#include "coap_debug.h"
-#include "mem.h"
 
 /* We want TinyDTLS versions of these, not libcoap versions */
 #undef PACKAGE_BUGREPORT
