@@ -1124,7 +1124,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
   coap_packet_t s_packet;
 #endif /* ! COAP_CONSTRAINED_STACK */
   coap_packet_t *packet = &s_packet;
-
+  memset(&s_packet, 0, sizeof(coap_packet_t));
 #if COAP_CONSTRAINED_STACK
   coap_mutex_lock(&s_static_mutex);
 #endif /* COAP_CONSTRAINED_STACK */
