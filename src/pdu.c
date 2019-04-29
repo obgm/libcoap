@@ -113,11 +113,12 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size) {
 #else /* WITH_LWIP */
   uint8_t *buf;
   pdu->alloc_size = min(size, 256);
-  buf = coap_malloc_type(COAP_PDU_BUF, pdu->alloc_size + pdu->max_hdr_size);
+  buf = coap_malloc_type(COAP_PDU_BUF, pdu->alloc_size + pdu->max_hdr_size + 1);
   if (buf == NULL) {
     coap_free_type(COAP_PDU, pdu);
     return NULL;
   }
+  memset(buf, 0, pdu->alloc_size + pdu->max_hdr_size + 1);
   pdu->token = buf + pdu->max_hdr_size;
 #endif /* WITH_LWIP */
   coap_pdu_clear(pdu, size);
