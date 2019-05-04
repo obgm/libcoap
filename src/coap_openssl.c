@@ -50,6 +50,10 @@
 #include <openssl/hmac.h>
 #include <openssl/x509v3.h>
 
+#ifdef COAP_EPOLL_SUPPORT
+# include <sys/epoll.h>
+#endif /* COAP_EPOLL_SUPPORT */
+
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #error Must be compiled against OpenSSL 1.1.0 or later
 #endif
@@ -2074,8 +2078,16 @@ void *coap_tls_new_client_session(coap_session_t *session, int *connected) {
       r = 0;
     if (ret == SSL_ERROR_WANT_READ)
       session->sock.flags |= COAP_SOCKET_WANT_READ;
-    if (ret == SSL_ERROR_WANT_WRITE)
+    if (ret == SSL_ERROR_WANT_WRITE) {
       session->sock.flags |= COAP_SOCKET_WANT_WRITE;
+#ifdef COAP_EPOLL_SUPPORT
+      coap_epoll_ctl_mod(&session->sock,
+                         EPOLLOUT |
+                          ((session->sock.flags & COAP_SOCKET_WANT_READ) ?
+                           EPOLLIN : 0),
+                         __func__);
+#endif /* COAP_EPOLL_SUPPORT */
+    }
   }
 
   if (r == 0)
@@ -2124,8 +2136,16 @@ void *coap_tls_new_server_session(coap_session_t *session, int *connected) {
       r = 0;
     if (err == SSL_ERROR_WANT_READ)
       session->sock.flags |= COAP_SOCKET_WANT_READ;
-    if (err == SSL_ERROR_WANT_WRITE)
+    if (err == SSL_ERROR_WANT_WRITE) {
       session->sock.flags |= COAP_SOCKET_WANT_WRITE;
+#ifdef COAP_EPOLL_SUPPORT
+      coap_epoll_ctl_mod(&session->sock,
+                         EPOLLOUT |
+                          ((session->sock.flags & COAP_SOCKET_WANT_READ) ?
+                           EPOLLIN : 0),
+                         __func__);
+#endif /* COAP_EPOLL_SUPPORT */
+    }
   }
 
   if (r == 0)
@@ -2178,8 +2198,16 @@ ssize_t coap_tls_write(coap_session_t *session,
       }
       if (err == SSL_ERROR_WANT_READ)
         session->sock.flags |= COAP_SOCKET_WANT_READ;
-      if (err == SSL_ERROR_WANT_WRITE)
+      if (err == SSL_ERROR_WANT_WRITE) {
         session->sock.flags |= COAP_SOCKET_WANT_WRITE;
+#ifdef COAP_EPOLL_SUPPORT
+        coap_epoll_ctl_mod(&session->sock,
+                           EPOLLOUT |
+                            ((session->sock.flags & COAP_SOCKET_WANT_READ) ?
+                             EPOLLIN : 0),
+                           __func__);
+#endif /* COAP_EPOLL_SUPPORT */
+      }
       r = 0;
     } else {
       coap_log(LOG_WARNING, "***%s: coap_tls_write: cannot send PDU\n",
@@ -2231,8 +2259,16 @@ ssize_t coap_tls_read(coap_session_t *session,
       }
       if (err == SSL_ERROR_WANT_READ)
         session->sock.flags |= COAP_SOCKET_WANT_READ;
-      if (err == SSL_ERROR_WANT_WRITE)
+      if (err == SSL_ERROR_WANT_WRITE) {
         session->sock.flags |= COAP_SOCKET_WANT_WRITE;
+#ifdef COAP_EPOLL_SUPPORT
+        coap_epoll_ctl_mod(&session->sock,
+                           EPOLLOUT |
+                            ((session->sock.flags & COAP_SOCKET_WANT_READ) ?
+                             EPOLLIN : 0),
+                           __func__);
+#endif /* COAP_EPOLL_SUPPORT */
+      }
       r = 0;
     } else {
       if (err == SSL_ERROR_ZERO_RETURN)        /* Got a close notify alert from the remote side */

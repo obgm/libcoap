@@ -568,7 +568,12 @@ fi
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
                   stdlib.h string.h strings.h sys/socket.h sys/time.h \
-                  time.h unistd.h sys/unistd.h syslog.h sys/ioctl.h])
+                  time.h unistd.h sys/unistd.h syslog.h sys/ioctl.h sys/epoll.h sys/timerfd.h])
+
+# For epoll, need two headers (sys/epoll.h sys/timerfd.h), but set up one #define
+if test "x$ac_cv_header_sys_epoll_h" != "x" -a "x$ac_cv_header_sys_timerfd_h" != "x"; then
+    AC_DEFINE(COAP_EPOLL_SUPPORT, 1, [Define if the system has epoll support])
+fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
@@ -663,6 +668,7 @@ man/coap_attribute.txt
 man/coap_context.txt
 man/coap_encryption.txt
 man/coap_handler.txt
+man/coap_io.txt
 man/coap_keepalive.txt
 man/coap_logging.txt
 man/coap_observe.txt

@@ -893,6 +893,9 @@ main(int argc, char **argv) {
   coap_log_t log_level = LOG_WARNING;
   unsigned wait_ms;
   time_t t_last = 0;
+  int coap_fd;
+  fd_set m_readfds;
+  int nfds = 0;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
@@ -974,6 +977,14 @@ main(int argc, char **argv) {
   if (group)
     coap_join_mcast_group(ctx, group);
 
+  coap_fd = coap_context_get_coap_fd(ctx);
+  if (coap_fd != -1) {
+    /* if coap_fd is -1, then epoll is not supported within libcoap */
+    FD_ZERO(&m_readfds);
+    FD_SET(coap_fd, &m_readfds);
+    nfds = coap_fd + 1;
+  }
+
 #ifdef _WIN32
   signal(SIGINT, handle_sigint);
 #else
@@ -991,7 +1002,32 @@ main(int argc, char **argv) {
   wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
 
   while ( !quit ) {
-    int result = coap_run_once( ctx, wait_ms );
+    int result;
+
+    if (coap_fd != -1) {
+      fd_set readfds = m_readfds;
+      struct timeval tv;
+
+      tv.tv_sec = wait_ms / 1000;
+      tv.tv_usec = (wait_ms % 1000) * 1000;
+      /* Wait until any i/o takes place */
+      result = select (nfds, &readfds, NULL, NULL, &tv);
+      if (result == -1) {
+        if (errno != EAGAIN) {
+          coap_log(LOG_DEBUG, "select: %s (%d)\n", coap_socket_strerror(), errno);
+          break;
+        }
+      }
+      if (result > 0) {
+        if (FD_ISSET(coap_fd, &readfds)) {
+          result = coap_run_once(ctx, COAP_RUN_NONBLOCK);
+        }
+      }
+    }
+    else {
+      /* epoll is not supported within libcoap */
+      result = coap_run_once( ctx, wait_ms );
+    }
     if ( result < 0 ) {
       break;
     } else if ( result && (unsigned)result < wait_ms ) {
