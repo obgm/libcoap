@@ -469,9 +469,6 @@ coap_new_context(
   /* set default CSM timeout */
   c->csm_timeout = 30;
 
-  /* initialize message id */
-  prng((unsigned char *)&c->message_id, sizeof(uint16_t));
-
   if (listen_addr) {
     coap_endpoint_t *endpoint = coap_new_endpoint(c, listen_addr, COAP_PROTO_UDP);
     if (endpoint == NULL) {
