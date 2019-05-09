@@ -9,7 +9,7 @@
 
 #include "coap_internal.h"
 
-#if !defined(HAVE_LIBTINYDTLS) && !defined(HAVE_OPENSSL) && !defined(HAVE_LIBGNUTLS)
+#if !defined(HAVE_LIBTINYDTLS) && !defined(HAVE_OPENSSL) && !defined(HAVE_LIBGNUTLS) && !defined(HAVE_MBEDTLS)
 
 #ifdef __GNUC__
 #define UNUSED __attribute__((unused))
@@ -191,4 +191,4 @@ ssize_t coap_tls_read(coap_session_t *session UNUSED,
 static inline void dummy(void) {
 }
 
-#endif /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL && !HAVE_LIBGNUTLS */
+#endif /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL && !HAVE_LIBGNUTLS && !HAVE_MBEDTLS */

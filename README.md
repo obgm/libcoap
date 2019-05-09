@@ -4,7 +4,7 @@
 [![Static Analysis](https://scan.coverity.com/projects/10970/badge.svg?flat=1)](https://scan.coverity.com/projects/obgm-libcoap)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/libcoap.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:libcoap)
 
-Copyright (C) 2010—2019 by Olaf Bergmann <bergmann@tzi.org> and others
+Copyright (C) 2010—2020 by Olaf Bergmann <bergmann@tzi.org> and others
 
 ABOUT LIBCOAP
 =============
@@ -49,11 +49,15 @@ The following RFCs are supported
 
 There is (D)TLS support for the following libraries
 
-* OpenSSL (Minimum verion 1.1.0)
+* OpenSSL (Minimum version 1.1.0)
 
 * GnuTLS (Minimum version 3.3.0)
 
+* MbedTLS (Minimum version 2.7.10)
+  [Currently only DTLS]
+
 * TinyDTLS
+  [DTLS Only]
 
 The examples directory contain a CoAP client, CoAP Resource Directory server
 and a CoAP server to demonstrate the use of this library.
