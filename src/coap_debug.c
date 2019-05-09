@@ -174,11 +174,13 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
   const void *addrptr = NULL;
   in_port_t port;
   unsigned char *p = buf;
+  size_t need_buf;
 
   switch (addr->addr.sa.sa_family) {
   case AF_INET:
     addrptr = &addr->addr.sin.sin_addr;
     port = ntohs(addr->addr.sin.sin_port);
+    need_buf = INET_ADDRSTRLEN;
     break;
   case AF_INET6:
     if (len < 7) /* do not proceed if buffer is even too short for [::]:0 */
@@ -188,6 +190,7 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
 
     addrptr = &addr->addr.sin6.sin6_addr;
     port = ntohs(addr->addr.sin6.sin6_port);
+    need_buf = INET6_ADDRSTRLEN;
 
     break;
   default:
@@ -197,7 +200,7 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
 
   /* Cast needed for Windows, since it doesn't have the correct API signature. */
   if (inet_ntop(addr->addr.sa.sa_family, addrptr, (char *)p,
-                min(len, addr->size)) == 0) {
+                min(len, need_buf)) == 0) {
     perror("coap_print_addr");
     return 0;
   }
