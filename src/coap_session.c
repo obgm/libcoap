@@ -541,7 +541,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
 #endif /* ! WITH_LWIP */
     if (length < (OFF_HANDSHAKE_TYPE + 1)) {
       coap_log(LOG_DEBUG,
-         "coap_dtls_hello: ContentType %d Short Packet (%ld < %d) dropped\n",
+         "coap_dtls_hello: ContentType %d Short Packet (%zu < %d) dropped\n",
          payload[OFF_CONTENT_TYPE], length,
          OFF_HANDSHAKE_TYPE + 1);
       return NULL;
