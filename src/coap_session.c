@@ -946,6 +946,9 @@ coap_free_endpoint(coap_endpoint_t *ep) {
       }
     }
 
+    if (ep->context) {
+      LL_DELETE(ep->context->endpoint, ep);
+    }
     coap_mfree_endpoint(ep);
   }
 }
