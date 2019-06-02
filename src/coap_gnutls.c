@@ -2,7 +2,7 @@
  * coap_gnutls.c -- GnuTLS Datagram Transport Layer Support for libcoap
  *
  * Copyright (C) 2017 Dag Bjorklund <dag.bjorklund@comsel.fi>
- * Copyright (C) 2018-2019 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2020 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -55,6 +55,10 @@
 #else /* __GNUC__ */
 #define UNUSED
 #endif /* __GNUC__ */
+
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#endif
 
 typedef struct coap_ssl_t {
   const uint8_t *pdu;
@@ -770,6 +774,99 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
     }
     break;
 
+  case COAP_PKI_KEY_PEM_BUF:
+    if (setup_data->pki_key.key.pem_buf.public_cert &&
+        setup_data->pki_key.key.pem_buf.public_cert_len &&
+        setup_data->pki_key.key.pem_buf.private_key &&
+        setup_data->pki_key.key.pem_buf.private_key_len) {
+      gnutls_datum_t cert;
+      gnutls_datum_t key;
+      int alloced_cert_memory = 0;
+      int alloced_key_memory = 0;
+
+      cert.size = setup_data->pki_key.key.pem_buf.public_cert_len;
+      if (setup_data->pki_key.key.pem_buf.public_cert[cert.size-1] != '\000') {
+        /* Need to allocate memory, rather than just copying pointers across */
+        alloced_cert_memory = 1;
+        cert.data = gnutls_malloc(cert.size + 1);
+        if (!cert.data) {
+          coap_log(LOG_ERR, "gnutls_malloc failure\n");
+          return GNUTLS_E_MEMORY_ERROR;
+        }
+        memcpy(cert.data, setup_data->pki_key.key.pem_buf.public_cert,
+               cert.size);
+        cert.data[cert.size] = '\000';
+        cert.size++;
+      }
+      else {
+        /* To get around const issue */
+        memcpy(&cert.data,
+             &setup_data->pki_key.key.pem_buf.public_cert, sizeof(cert.data));
+      }
+      key.size = setup_data->pki_key.key.pem_buf.private_key_len;
+      if (setup_data->pki_key.key.pem_buf.private_key[key.size-1] != '\000') {
+        /* Need to allocate memory, rather than just copying pointers across */
+        alloced_key_memory = 1;
+        key.data = gnutls_malloc(key.size + 1);
+        if (!key.data) {
+          coap_log(LOG_ERR, "gnutls_malloc failure\n");
+          if (alloced_cert_memory) gnutls_free(cert.data);
+          return GNUTLS_E_MEMORY_ERROR;
+        }
+        memcpy(key.data, setup_data->pki_key.key.pem_buf.private_key, key.size);
+        key.data[key.size] = '\000';
+        key.size++;
+      }
+      else {
+        /* To get around const issue */
+        memcpy(&key.data,
+               &setup_data->pki_key.key.pem_buf.private_key, sizeof(key.data));
+      }
+      G_CHECK(gnutls_certificate_set_x509_key_mem(*pki_credentials,
+                                   &cert,
+                                   &key,
+                                   GNUTLS_X509_FMT_PEM),
+                 "gnutls_certificate_set_x509_key_mem");
+      if (alloced_cert_memory) gnutls_free(cert.data);
+      if (alloced_key_memory) gnutls_free(key.data);
+    }
+    else if (role == COAP_DTLS_ROLE_SERVER) {
+      coap_log(LOG_ERR,
+               "***setup_pki: (D)TLS: No Server Certificate + Private "
+               "Key defined\n");
+      return GNUTLS_E_INSUFFICIENT_CREDENTIALS;
+    }
+    if (setup_data->pki_key.key.pem_buf.ca_cert &&
+        setup_data->pki_key.key.pem_buf.ca_cert_len) {
+      gnutls_datum_t ca;
+      int alloced_ca_memory = 0;
+
+      ca.size = setup_data->pki_key.key.pem_buf.ca_cert_len;
+      if (setup_data->pki_key.key.pem_buf.ca_cert[ca.size-1] != '\000') {
+        /* Need to allocate memory, rather than just copying pointers across */
+        alloced_ca_memory = 1;
+        ca.data = gnutls_malloc(ca.size + 1);
+        if (!ca.data) {
+          coap_log(LOG_ERR, "gnutls_malloc failure\n");
+          return GNUTLS_E_MEMORY_ERROR;
+        }
+        memcpy(ca.data, setup_data->pki_key.key.pem_buf.ca_cert, ca.size);
+        ca.data[ca.size] = '\000';
+        ca.size++;
+      }
+      else {
+        /* To get around const issue */
+        memcpy(&ca.data,
+               &setup_data->pki_key.key.pem_buf.ca_cert, sizeof(ca.data));
+      }
+      G_CHECK(gnutls_certificate_set_x509_trust_mem(*pki_credentials,
+                           &ca,
+                           GNUTLS_X509_FMT_PEM),
+              "gnutls_certificate_set_x509_trust_mem");
+      if (alloced_ca_memory) gnutls_free(ca.data);
+    }
+    break;
+
   case COAP_PKI_KEY_ASN1:
     if (setup_data->pki_key.key.asn1.public_cert &&
         setup_data->pki_key.key.asn1.public_cert_len &&
@@ -1467,7 +1564,8 @@ coap_dtls_new_gnutls_env(coap_session_t *c_session, int type)
           "gnutls_priority_set");
   gnutls_handshake_set_timeout(g_env->g_session,
                                GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
-  gnutls_dtls_set_timeouts(g_env->g_session, 5000, 60000);
+  gnutls_dtls_set_timeouts(g_env->g_session, COAP_DTLS_RETRANSMIT_MS,
+                                             COAP_DTLS_RETRANSMIT_TOTAL_MS);
 
   return g_env;
 
@@ -1832,7 +1930,7 @@ coap_dtls_hello(coap_session_t *c_session,
         /* The test for seen_client_hello gives the ability to setup a new
            coap_session to continue the gnutls_handshake past the client hello
            and safely allow updating of the g_env & g_session and separately
-           letting a new session cleanly start up using endpoint->hello.
+           letting a new session cleanly start up.
          */
         g_env->seen_client_hello = 0;
         return 1;
@@ -1857,7 +1955,7 @@ coap_dtls_hello(coap_session_t *c_session,
     /* The test for seen_client_hello gives the ability to setup a new
        coap_session to continue the gnutls_handshake past the client hello
        and safely allow updating of the g_env & g_session and separately
-       letting a new session cleanly start up using endpoint->hello.
+       letting a new session cleanly start up.
      */
     g_env->seen_client_hello = 0;
     return 1;

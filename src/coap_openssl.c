@@ -948,6 +948,74 @@ setup_pki_server(SSL_CTX *ctx,
     }
     break;
 
+  case COAP_PKI_KEY_PEM_BUF:
+    if (setup_data->pki_key.key.pem_buf.public_cert &&
+        setup_data->pki_key.key.pem_buf.public_cert_len) {
+      BIO *bp = BIO_new_mem_buf(setup_data->pki_key.key.pem_buf.public_cert,
+                           setup_data->pki_key.key.pem_buf.public_cert_len);
+      X509 *cert = bp ? PEM_read_bio_X509(bp, NULL, 0, NULL) : NULL;
+
+      if (!cert || !SSL_CTX_use_certificate(ctx, cert)) {
+        coap_log(LOG_WARNING,
+                 "*** setup_pki: (D)TLS: Unable to configure "
+                 "Server PEM Certificate\n");
+        if (bp) BIO_free(bp);
+        if (cert) X509_free(cert);
+        return 0;
+      }
+      if (bp) BIO_free(bp);
+      if (cert) X509_free(cert);
+    }
+    else {
+      coap_log(LOG_ERR,
+             "*** setup_pki: (D)TLS: No Server Certificate defined\n");
+      return 0;
+    }
+
+    if (setup_data->pki_key.key.pem_buf.private_key &&
+        setup_data->pki_key.key.pem_buf.private_key_len) {
+      BIO *bp = BIO_new_mem_buf(setup_data->pki_key.key.pem_buf.private_key,
+                           setup_data->pki_key.key.pem_buf.private_key_len);
+      EVP_PKEY *pkey = bp ? PEM_read_bio_PrivateKey(bp, NULL, 0, NULL) : NULL;
+
+      if (!pkey || !SSL_CTX_use_PrivateKey(ctx, pkey)) {
+        coap_log(LOG_WARNING,
+                 "*** setup_pki: (D)TLS: Unable to configure "
+                 "Server PEM Private Key\n");
+        if (bp) BIO_free(bp);
+        if (pkey) EVP_PKEY_free(pkey);
+        return 0;
+      }
+      if (bp) BIO_free(bp);
+      if (pkey) EVP_PKEY_free(pkey);
+    }
+    else {
+      coap_log(LOG_ERR,
+           "*** setup_pki: (D)TLS: No Server Private Key defined\n");
+      return 0;
+    }
+
+    if (setup_data->pki_key.key.pem_buf.ca_cert &&
+        setup_data->pki_key.key.pem_buf.ca_cert_len) {
+      BIO *bp = BIO_new_mem_buf(setup_data->pki_key.key.pem_buf.ca_cert,
+                           setup_data->pki_key.key.pem_buf.ca_cert_len);
+      X509_STORE *st;
+      X509 *x;
+
+      st = SSL_CTX_get_cert_store(ctx);
+      if (bp) {
+        for (;;) {
+          if ((x = PEM_read_bio_X509(bp, NULL, NULL, NULL)) == NULL)
+            break;
+          add_ca_to_cert_store(st, x);
+          SSL_CTX_add_client_CA(ctx, x);
+          X509_free(x);
+        }
+        BIO_free(bp);
+      }
+    }
+    break;
+
   case COAP_PKI_KEY_ASN1:
     if (setup_data->pki_key.key.asn1.public_cert &&
         setup_data->pki_key.key.asn1.public_cert_len > 0) {
@@ -1103,6 +1171,74 @@ setup_pki_ssl(SSL *ssl,
       }
       BIO_free(in);
       X509_free(x);
+    }
+    break;
+
+  case COAP_PKI_KEY_PEM_BUF:
+    if (setup_data->pki_key.key.pem_buf.public_cert &&
+        setup_data->pki_key.key.pem_buf.public_cert_len) {
+      BIO *bp = BIO_new_mem_buf(setup_data->pki_key.key.pem_buf.public_cert,
+                           setup_data->pki_key.key.pem_buf.public_cert_len);
+      X509 *cert = bp ? PEM_read_bio_X509(bp, NULL, 0, NULL) : NULL;
+
+      if (!cert || !SSL_use_certificate(ssl, cert)) {
+        coap_log(LOG_WARNING,
+                 "*** setup_pki: (D)TLS: Unable to configure "
+                 "Server PEM Certificate\n");
+        if (bp) BIO_free(bp);
+        if (cert) X509_free(cert);
+        return 0;
+      }
+      if (bp) BIO_free(bp);
+      if (cert) X509_free(cert);
+    }
+    else {
+      coap_log(LOG_ERR,
+             "*** setup_pki: (D)TLS: No Server Certificate defined\n");
+      return 0;
+    }
+
+    if (setup_data->pki_key.key.pem_buf.private_key &&
+        setup_data->pki_key.key.pem_buf.private_key_len) {
+      BIO *bp = BIO_new_mem_buf(setup_data->pki_key.key.pem_buf.private_key,
+                           setup_data->pki_key.key.pem_buf.private_key_len);
+      EVP_PKEY *pkey = bp ? PEM_read_bio_PrivateKey(bp, NULL, 0, NULL) : NULL;
+
+      if (!pkey || !SSL_use_PrivateKey(ssl, pkey)) {
+        coap_log(LOG_WARNING,
+                 "*** setup_pki: (D)TLS: Unable to configure "
+                 "Server PEM Private Key\n");
+        if (bp) BIO_free(bp);
+        if (pkey) EVP_PKEY_free(pkey);
+        return 0;
+      }
+      if (bp) BIO_free(bp);
+      if (pkey) EVP_PKEY_free(pkey);
+    }
+    else {
+      coap_log(LOG_ERR,
+           "*** setup_pki: (D)TLS: No Server Private Key defined\n");
+      return 0;
+    }
+
+    if (setup_data->pki_key.key.pem_buf.ca_cert &&
+        setup_data->pki_key.key.pem_buf.ca_cert_len) {
+      BIO *bp = BIO_new_mem_buf(setup_data->pki_key.key.pem_buf.ca_cert,
+                           setup_data->pki_key.key.pem_buf.ca_cert_len);
+      SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
+      X509 *x;
+      X509_STORE *st = SSL_CTX_get_cert_store(ctx);
+
+      if (bp) {
+        for (;;) {
+          if ((x = PEM_read_bio_X509(bp, NULL, 0, NULL)) == NULL)
+            break;
+          add_ca_to_cert_store(st, x);
+          SSL_add_client_CA(ssl, x);
+          X509_free(x);
+        }
+        BIO_free(bp);
+      }
     }
     break;
 
