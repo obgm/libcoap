@@ -24,8 +24,8 @@ SYNOPSIS
 *struct coap_dtls_pki_t*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
-*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
-*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -33,8 +33,9 @@ DESCRIPTION
 This man page focuses on setting up CoAP to use encryption.
 
 When the libcoap library was built, it will have been compiled using a
-specific underlying TLS implementation type (e.g. OpenSSL, GnuTLS, TinyDTLS or
-noTLS).  When the libcoap library is linked into an application, it is possible
+specific underlying TLS implementation type (e.g. OpenSSL, GnuTLS, MbedTLS,
+TinyDTLS or noTLS).
+When the libcoap library is linked into an application, it is possible
 that the application needs to dynamically determine whether DTLS or TLS is
 supported, what type of TLS implementation libcoap was compiled with, as well
 as detect what is the version of the currently loaded TLS library.
@@ -44,6 +45,9 @@ version is 1.1.0.
 
 *NOTE:* If GnuTLS is being used, then the minimum GnuTLS library version is
 3.3.0.
+
+*NOTE:* If MbedTLS is being used, then the minimum MbedTLS library version is
+2.7.10.
 
 *NOTE:* If GnuTLS is going to interoperate with TinyDTLS, then a minimum
 revision of GnuTLS 3.5.5 which supports CCM algorithms is required
@@ -423,7 +427,9 @@ typedef struct coap_dtls_pki_t {
   uint8_t check_cert_revocation;    /* 1 if revocation checks wanted */
   uint8_t allow_no_crl;             /* 1 ignore if CRL not there */
   uint8_t allow_expired_crl;        /* 1 if expired crl is allowed */
-  uint8_t reserved[6];              /* Reserved - must be set to 0 for
+  uint8_t allow_bad_md_hash;        /* 1 if unsupported MD hashes are allowed */
+  uint8_t allow_short_rsa_length;   /* 1 if small RSA keysizes are allowed */
+  uint8_t reserved[4];              /* Reserved - must be set to 0 for
                                        future compatibility */
 
   /** CN check callback function
@@ -504,10 +510,17 @@ no intermediate CA in the chain.
 *check_cert_revocation* Set to 1 to check whether any certificate in the chain
 has been revoked, else 0.
 
-*allow_no_crl* Set to 1 to not check any certificate that does not have a CRL.
+*allow_no_crl* Set to 1 to not check any certificate that does not have a CRL,
+else 0.
 
 *allow_expired_crl* Set to 1 to allow an certificate that has an expired CRL
 definition to be valid, else 0.
+
+*SECTION: PKI: coap_dtls_pki_t: Other*
+
+*allow_bad_md_hash* Set to 1 if unsupported MD hashes are allowed, else 0.
+
+*allow_short_rsa_length* Set to 1 if small RSA keysizes are allowed, else 0.
 
 *SECTION: PKI: coap_dtls_pki_t: Reserved*
 
@@ -559,8 +572,9 @@ An example would be a set of CNs that are allowed.
 typedef struct coap_dtls_key_t {
   coap_pki_key_t key_type;          /* key format type */
   union {
-    coap_pki_key_pem_t pem;         /* for PEM keys */
-    coap_pki_key_asn1_t asn1;       /* for ASN.1 (DER) keys */
+    coap_pki_key_pem_t pem;         /* for PEM file keys */
+    coap_pki_key_pem_buf_t pem_buf; /* for PEM memory keys */
+    coap_pki_key_asn1_t asn1;       /* for ASN.1 (DER) file keys */
   } key;
 } coap_dtls_key_t;
 
@@ -632,13 +646,14 @@ example, a different certificate should be provided.
 [source, c]
 ----
 typedef enum coap_pki_key_t {
-  COAP_PKI_KEY_PEM,    /* PEM type informaiton */
-  COAP_PKI_KEY_ASN1,   /* ASN1 type information */
+  COAP_PKI_KEY_PEM,     /* The PKI key type is PEM file */
+  COAP_PKI_KEY_ASN1,    /* The PKI key type is ASN.1 (DER) */
+  COAP_PKI_KEY_PEM_BUF, /* The PKI key type is PEM buffer */
 } coap_pki_key_t;
 ----
 
 *key_type* defines the format that the certificates / keys are provided in.
-This can be COAP_PKI_KEY_PEM or COAP_PKI_KEY_ASN1.
+This can be COAP_PKI_KEY_PEM, COAP_PKI_KEY_PEM_BUF or COAP_PKI_KEY_ASN1.
 
 *SECTION: PKI: coap_dtls_pki_t: PEM Key Definitions*
 [source, c]
@@ -651,16 +666,52 @@ typedef struct coap_pki_key_pem_t {
 ----
 
 *key.pem.ca_file* points to the CA File location on disk which will be in
-PEM format, or NULL. This file should only contain 1 CA (who signed the
-Public Certificate) as this is passed from the server to the client when
+PEM format, or NULL. This file should only contain one CA (that has signed the
+public certificate) as this is passed from the server to the client when
 requesting the client's certificate. This certificate is also added into
 the valid root CAs list if not already present.
 
-*key.pem.public_cert* points to the Public Certificate location on disk
+*key.pem.public_cert* points to the public certificate location on disk
 which will be in PEM format.
 
-*key.pem.private_key* points to the Private Key location on disk which
+*key.pem.private_key* points to the private key location on disk which
 will be in PEM format.  This file cannot be password protected.
+
+*SECTION: PKI: coap_dtls_pki_t: PEM Memory Key Definitions*
+[source, c]
+----
+typedef struct coap_pki_key_pem_buf_t {
+  const uint8_t *ca_cert;     /* PEM buffer Common CA Cert */
+  const uint8_t *public_cert; /* PEM buffer Public Cert */
+  const uint8_t *private_key; /* PEM buffer Private Key */
+  size_t ca_cert_len;         /* PEM buffer CA Cert length */
+  size_t public_cert_len;     /* PEM buffer Public Cert length */
+  size_t private_key_len;     /* PEM buffer Private Key length */
+} coap_pki_key_pem_buf_t;
+----
+
+*key.pem_buf.ca_cert* points to the CA location in memory which will be in
+PEM format, or NULL. This file should only contain one CA (that has signed the
+public certificate) as this is passed from the server to the client when
+requesting the client's certificate. This certificate is also added into
+the valid root CAs list if not already present.
+
+*key.pem_buf.ca_cert_len* is the length of the CA.
+
+*key.pem_buf.public_cert* points to the public certificate location in memory
+which will be in PEM format.
+
+*key.pem_buf.public_cert_len* is the length of the public certificate.
+
+*key.pem_buf.private_key* points to the private key location in memory which
+will be in PEM format.  This data cannot be password protected.
+
+*key.pem_buf.private_key* is the length of the private key.
+
+* Note:*  The PEM buffer Certs and Key should be be NULL terminated strings for
+performance reasons (to save a potential buffer copy) and the length include
+this NULL terminator. It is not a requirement to have the NULL terminator
+though and the length must then reflect the actual data size.
 
 *SECTION: PKI: coap_dtls_pki_t: ASN1 Key Definitions*
 [source, c]
@@ -701,22 +752,22 @@ when requesting the client's certificate. This certificate is also added into
 the valid root CAs list if not already present.
 
 *key.asn1.public_cert* points to a DER encoded ASN.1 definition of the
-Public Certificate.
+public certificate.
 
 *key.asn1.private_key* points to DER encoded ASN.1 definition of the
-Private Key.
+private key.
 
 *key.asn1.ca_cert_len* is the length of the DER encoded ASN.1 definition of
 the CA Certificate.
 
 *key.asn1.public_cert_len* is the length of the DER encoded ASN.1 definition
-of the Public Certificate.
+of the public certificate.
 
 *key.asn1.private_key_len* is the length of the DER encoded ASN.1 definition
-of the Private Key.
+of the private key.
 
 *key.asn1.private_key_type* is the encoding type of the DER encoded ASN.1
-definition of the Private Key.  This will be one of the COAP_ASN1_PKEY_*
+definition of the private key.  This will be one of the COAP_ASN1_PKEY_*
 definitions.
 
 EXAMPLES
@@ -850,6 +901,8 @@ setup_server_context_pki (const char *public_cert_file,
   dtls_pki.check_cert_revocation   = 1;
   dtls_pki.allow_no_crl            = 1;
   dtls_pki.allow_expired_crl       = 1;
+  dtls_pki.allow_bad_md_hash       = 0;
+  dtls_pki.allow_short_rsa_length  = 0;
   dtls_pki.validate_cn_call_back   = verify_cn_callback;
   dtls_pki.cn_call_back_arg        = valid_cn_list;
   dtls_pki.validate_sni_call_back  = verify_pki_sni_callback;
