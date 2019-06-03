@@ -325,6 +325,26 @@ event_handler(coap_context_t *ctx UNUSED_PARAM,
 }
 
 static void
+nack_handler(coap_context_t *context UNUSED_PARAM,
+             coap_session_t *session UNUSED_PARAM,
+             coap_pdu_t *sent UNUSED_PARAM,
+             coap_nack_reason_t reason,
+             const coap_tid_t id UNUSED_PARAM) {
+
+  switch(reason) {
+  case COAP_NACK_TOO_MANY_RETRIES:
+  case COAP_NACK_NOT_DELIVERABLE:
+  case COAP_NACK_RST:
+  case COAP_NACK_TLS_FAILED:
+    quit = 1;
+    break;
+  default:
+    break;
+  }
+  return;
+}
+
+static void
 message_handler(struct coap_context_t *ctx,
                 coap_session_t *session,
                 coap_pdu_t *sent,
@@ -1425,6 +1445,7 @@ main(int argc, char **argv) {
   coap_register_option(ctx, COAP_OPTION_BLOCK2);
   coap_register_response_handler(ctx, message_handler);
   coap_register_event_handler(ctx, event_handler);
+  coap_register_nack_handler(ctx, nack_handler);
 
   /* construct CoAP message */
 
