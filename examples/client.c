@@ -54,6 +54,9 @@ static unsigned int ping_seconds = 0;
 /* reading is done when this flag is set */
 static int ready = 0;
 
+/* processing a block response when this flag is set */
+static int doing_getting_block = 0;
+
 static coap_string_t output_file = { 0, NULL };   /* output file name */
 static FILE *file = NULL;               /* output file stream */
 
@@ -450,11 +453,14 @@ message_handler(struct coap_context_t *ctx,
           } else {
             wait_ms = wait_seconds * 1000;
             wait_ms_reset = 1;
+            doing_getting_block = 1;
           }
 
           return;
         }
       }
+      /* Failure of some sort */
+      doing_getting_block = 0;
       return;
     } else { /* no Block2 option */
       block_opt = coap_check_option(received, COAP_OPTION_BLOCK1, &opt_iter);
@@ -1492,7 +1498,7 @@ main(int argc, char **argv) {
   sigaction (SIGTERM, &sa, NULL);
 #endif
 
-  while (!quit && !(ready && coap_can_exit(ctx)) ) {
+  while (!quit && !(ready && !doing_getting_block && coap_can_exit(ctx)) ) {
 
     result = coap_run_once( ctx, wait_ms == 0 ?
                                  obs_ms : obs_ms == 0 ?
