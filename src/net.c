@@ -839,11 +839,12 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
   */
   coap_ticks(&now);
   if (context->sendqueue == NULL) {
-    node->t = node->timeout;
+    node->t = node->timeout << node->retransmit_cnt;
     context->sendqueue_basetime = now;
   } else {
     /* make node->t relative to context->sendqueue_basetime */
-    node->t = (now - context->sendqueue_basetime) + node->timeout;
+    node->t = (now - context->sendqueue_basetime) +
+              (node->timeout << node->retransmit_cnt);
   }
 
   coap_insert_node(&context->sendqueue, node);
@@ -867,7 +868,7 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
   }
 #endif /* WITH_CONTIKI */
 
-  coap_log(LOG_DEBUG, "** %s: tid=%d added to retransmit queue (%ums)\n",
+  coap_log(LOG_DEBUG, "** %s: tid=%d: added to retransmit queue (%ums)\n",
     coap_session_str(node->session), node->id,
     (unsigned)(node->t * 1000 / COAP_TICKS_PER_SECOND));
 
@@ -1136,7 +1137,8 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 
     if (bytes_read < 0) {
       if (bytes_read == -2)
-        coap_session_disconnected(session, COAP_NACK_RST);
+        /* Reset the session back to startup defaults */
+        coap_session_disconnected(session, COAP_NACK_ICMP_ISSUE);
       else
         coap_log(LOG_WARNING, "*  %s: read error\n",
                  coap_session_str(session));

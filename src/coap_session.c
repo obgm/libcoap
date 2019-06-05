@@ -405,7 +405,12 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     session->tls = NULL;
   }
 
-  session->state = COAP_SESSION_STATE_NONE;
+  if (session->proto == COAP_PROTO_UDP)
+    session->state = COAP_SESSION_STATE_ESTABLISHED;
+  else
+    session->state = COAP_SESSION_STATE_NONE;
+
+  session->con_active = 0;
 
   if (session->partial_pdu) {
     coap_delete_pdu(session->partial_pdu);
@@ -417,12 +422,13 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     coap_queue_t *q = session->delayqueue;
     session->delayqueue = q->next;
     q->next = NULL;
-    coap_log(LOG_DEBUG, "** %s: tid=%d: not transmitted after delay\n",
+    coap_log(LOG_DEBUG, "** %s: tid=%d: not transmitted after disconnect\n",
              coap_session_str(session), q->id);
     if (q->pdu->type==COAP_MESSAGE_CON
       && COAP_PROTO_NOT_RELIABLE(session->proto)
-      && reason != COAP_NACK_RST)
+      && reason == COAP_NACK_ICMP_ISSUE)
     {
+      /* Make sure that we try a re-transmit later on ICMP error */
       if (coap_wait_ack(session->context, session, q) >= 0)
         q = NULL;
     }
@@ -435,8 +441,8 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     if (q)
       coap_delete_node(q);
   }
-
-  coap_cancel_session_messages(session->context, session, reason);
+  if (reason != COAP_NACK_ICMP_ISSUE)
+    coap_cancel_session_messages(session->context, session, reason);
 
   if ( COAP_PROTO_RELIABLE(session->proto) ) {
     if (session->sock.flags != COAP_SOCKET_EMPTY) {
