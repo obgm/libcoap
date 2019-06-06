@@ -361,7 +361,7 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
   coap_str_const_t *uri_path;
   int i;
   dynamic_resource_t *resource_entry = NULL;
-
+  coap_str_const_t value = { 0, NULL };
   /*
    * request will be NULL if an Observe triggered request, so the uri_path,
    * if needed, must be abstracted from the resource.
@@ -386,10 +386,14 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
 
   resource_entry = &dynamic_entry[i];
 
+  if (resource_entry->value) {
+    value.length = resource_entry->value->length;
+    value.s = resource_entry->value->s;
+  }
   coap_add_data_blocked_response(resource, session, request, response, token,
                                  resource_entry->media_type, -1,
-                                 resource_entry->value->length,
-                                 resource_entry->value->s);
+                                 value.length,
+                                 value.s);
   return;
 }
 
