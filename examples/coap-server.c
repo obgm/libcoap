@@ -478,6 +478,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
     coap_delete_string(uri_path);
     response->code = COAP_RESPONSE_CODE(204);
     dynamic_entry[i].created = 0;
+    coap_resource_notify_observers(dynamic_entry[i].resource, NULL);
   }
 
   resource_entry = &dynamic_entry[i];
@@ -1002,13 +1003,9 @@ main(int argc, char **argv) {
       time_t t_now = time(NULL);
       if (t_last != t_now) {
         /* Happens once per second */
-        int i;
         t_last = t_now;
         if (time_resource) {
           coap_resource_notify_observers(time_resource, NULL);
-        }
-        for (i = 0; i < dynamic_count; i++) {
-          coap_resource_notify_observers(dynamic_entry[i].resource, NULL);
         }
       }
       if (result) {
