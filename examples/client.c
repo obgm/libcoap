@@ -384,6 +384,12 @@ message_handler(struct coap_context_t *ctx,
     return;
   }
 
+  /* the previous block was lost, so re-transmit it again. */
+  if (received->code == COAP_RESPONSE_408) {
+      block.num -= 1;
+      received->code = COAP_RESPONSE_231;
+  }
+
   /* output the received data, if any */
   if (COAP_RESPONSE_CLASS(received->code) == 2) {
 

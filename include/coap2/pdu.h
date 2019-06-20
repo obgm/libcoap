@@ -162,9 +162,11 @@ const char *coap_response_phrase(unsigned char code);
 #define COAP_RESPONSE_200      COAP_RESPONSE_CODE(200)  /* 2.00 OK */
 #define COAP_RESPONSE_201      COAP_RESPONSE_CODE(201)  /* 2.01 Created */
 #define COAP_RESPONSE_304      COAP_RESPONSE_CODE(203)  /* 2.03 Valid */
+#define COAP_RESPONSE_231      COAP_RESPONSE_CODE(231)  /* 2.31 Continue */
 #define COAP_RESPONSE_400      COAP_RESPONSE_CODE(400)  /* 4.00 Bad Request */
 #define COAP_RESPONSE_404      COAP_RESPONSE_CODE(404)  /* 4.04 Not Found */
 #define COAP_RESPONSE_405      COAP_RESPONSE_CODE(405)  /* 4.05 Method Not Allowed */
+#define COAP_RESPONSE_408      COAP_RESPONSE_CODE(408)  /* 4.08 Request Entity Incomplete */
 #define COAP_RESPONSE_415      COAP_RESPONSE_CODE(415)  /* 4.15 Unsupported Media Type */
 #define COAP_RESPONSE_500      COAP_RESPONSE_CODE(500)  /* 5.00 Internal Server Error */
 #define COAP_RESPONSE_501      COAP_RESPONSE_CODE(501)  /* 5.01 Not Implemented */
