@@ -64,6 +64,7 @@ typedef struct coap_gnutls_env_t {
   /* If not set, need to do gnutls_handshake */
   int established;
   int seen_client_hello;
+  int doing_dtls_timeout;
 } coap_gnutls_env_t;
 
 #define IS_PSK (1 << 0)
@@ -1123,13 +1124,22 @@ receive_timeout(gnutls_transport_ptr_t context, unsigned int ms UNUSED) {
     fd_set readfds, writefds, exceptfds;
     struct timeval tv;
     int nfds = c_session->sock.fd +1;
+    coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
+
+    /* If data has been read in by libcoap ahead of GnuTLS, say it is there */
+    if (c_session->proto == COAP_PROTO_DTLS && g_env &&
+        g_env->coap_ssl_data.pdu_len > 0) {
+      return 1;
+    }
 
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
     FD_ZERO(&exceptfds);
     FD_SET (c_session->sock.fd, &readfds);
-    FD_SET (c_session->sock.fd, &writefds);
-    FD_SET (c_session->sock.fd, &exceptfds);
+    if (!(g_env && g_env->doing_dtls_timeout)) {
+      FD_SET (c_session->sock.fd, &writefds);
+      FD_SET (c_session->sock.fd, &exceptfds);
+    }
     /* Polling */
     tv.tv_sec = 0;
     tv.tv_usec = 0;
@@ -1178,6 +1188,7 @@ coap_dtls_new_gnutls_env(coap_session_t *c_session, int type)
           "gnutls_priority_set");
   gnutls_handshake_set_timeout(g_env->g_session,
                                GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
+  gnutls_dtls_set_timeouts(g_env->g_session, 5000, 60000);
 
   return g_env;
 
@@ -1409,18 +1420,40 @@ int coap_dtls_send(coap_session_t *c_session,
 }
 
 int coap_dtls_is_context_timeout(void) {
-  return 1;
+  return 0;
 }
 
 coap_tick_t coap_dtls_get_context_timeout(void *dtls_context UNUSED) {
   return 0;
 }
 
-coap_tick_t coap_dtls_get_timeout(coap_session_t *c_session UNUSED) {
+coap_tick_t coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now) {
+  coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
+
+  if (g_env && g_env->g_session) {
+    unsigned int rem_ms = gnutls_dtls_get_timeout(g_env->g_session);
+
+    return now + rem_ms;
+  }
+
   return 0;
 }
 
-void coap_dtls_handle_timeout(coap_session_t *c_session UNUSED) {
+void coap_dtls_handle_timeout(coap_session_t *c_session) {
+  coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
+
+  assert(g_env != NULL);
+  g_env->doing_dtls_timeout = 1;
+  if (((c_session->state == COAP_SESSION_STATE_HANDSHAKE) &&
+       (++c_session->dtls_timeout_count > c_session->max_retransmit)) ||
+      (do_gnutls_handshake(c_session, g_env) < 0)) {
+    /* Too many retries */
+    g_env->doing_dtls_timeout = 0;
+    coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
+  }
+  else {
+    g_env->doing_dtls_timeout = 0;
+  }
 }
 
 /*
@@ -1569,6 +1602,13 @@ coap_sock_read(gnutls_transport_ptr_t context, void *out, size_t outl) {
 #else
     ret = recv(c_session->sock.fd, out, outl, 0);
 #endif
+    if (ret > 0) {
+      coap_log(LOG_DEBUG, "*  %s: setup: received %d bytes\n",
+               coap_session_str(c_session), ret);
+    } else if (ret < 0 && errno != EAGAIN) {
+      coap_log(LOG_DEBUG,  "*  %s: setup: failed to receive any bytes (%s)\n",
+               coap_session_str(c_session), coap_socket_strerror());
+    }
     if (ret == 0) {
       /* graceful shutdown */
       c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
@@ -1593,6 +1633,13 @@ coap_sock_write(gnutls_transport_ptr_t context, const void *in, size_t inl) {
   coap_session_t *c_session = (struct coap_session_t *)context;
 
   ret = (int)coap_socket_write(&c_session->sock, in, inl);
+  if (ret > 0) {
+    coap_log(LOG_DEBUG, "*  %s: setup: sent %d bytes\n",
+             coap_session_str(c_session), ret);
+  } else if (ret < 0) {
+    coap_log(LOG_DEBUG,  "*  %s: setup: failed to send %d bytes (%s)\n",
+             coap_session_str(c_session), ret, coap_socket_strerror());
+  }
   if (ret == 0) {
     errno = EAGAIN;
     ret = -1;

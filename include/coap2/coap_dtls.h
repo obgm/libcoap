@@ -447,10 +447,12 @@ coap_tick_t coap_dtls_get_context_timeout(void *dtls_context);
  * Internal function.
  *
  * @param coap_session The CoAP session.
+ * @param now The current time in ticks.
  *
- * @return @c 0 If no event is pending or date of the next retransmit.
+ * @return @c 0 If no event is pending or ticks time of the next retransmit.
  */
-coap_tick_t coap_dtls_get_timeout(struct coap_session_t *coap_session);
+coap_tick_t coap_dtls_get_timeout(struct coap_session_t *coap_session,
+                                  coap_tick_t now);
 
 /**
  * Handle a DTLS timeout expiration.
