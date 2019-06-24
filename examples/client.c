@@ -168,8 +168,15 @@ coap_new_request(coap_context_t *ctx,
   if (length) {
     if ((flags & FLAGS_BLOCK) == 0)
       coap_add_data(pdu, length, data);
-    else
+    else {
+      unsigned char buf[4];
+      coap_add_option(pdu,
+                      COAP_OPTION_SIZE1,
+                      coap_encode_var_safe(buf, sizeof(buf), length),
+                      buf);
+
       coap_add_block(pdu, length, data, block.num, block.szx);
+    }
   }
 
   return pdu;
@@ -538,6 +545,11 @@ message_handler(struct coap_context_t *ctx,
                           COAP_OPTION_BLOCK1,
                           coap_encode_var_safe(buf, sizeof(buf),
                           (block.num << 4) | (block.m << 3) | block.szx), buf);
+
+          coap_add_option(pdu,
+                          COAP_OPTION_SIZE1,
+                          coap_encode_var_safe(buf, sizeof(buf), payload.length),
+                          buf);
 
           coap_add_block(pdu,
                          payload.length,
