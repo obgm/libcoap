@@ -63,6 +63,7 @@ typedef struct coap_subscription_t {
                             *   sent (in that case, the resource's partially
                             *   dirty flag is set too) */
   unsigned int has_block2:1; /**< GET request had Block2 definition */
+  uint16_t tid;             /**< transaction id, if any, in regular host byte order */
   coap_block_t block2;     /**< GET request Block2 definition */
   size_t token_length;     /**< actual length of token */
   unsigned char token[8];  /**< token used for subscription */
