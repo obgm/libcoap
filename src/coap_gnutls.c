@@ -1213,7 +1213,9 @@ coap_dtls_free_gnutls_env(coap_gnutls_context_t *g_context,
         g_env->psk_sv_credentials = NULL;
       }
     }
-    if (g_context->psk_pki_enabled & IS_PKI) {
+    if ((g_context->psk_pki_enabled & IS_PKI) ||
+        (g_context->psk_pki_enabled &
+         (IS_PSK | IS_PKI | IS_CLIENT)) == IS_CLIENT) {
       gnutls_certificate_free_credentials(g_env->pki_credentials);
       g_env->pki_credentials = NULL;
     }
