@@ -1637,7 +1637,7 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
   coap_pdu_t *resp;
   coap_opt_iterator_t opt_iter;
   size_t len, wkc_len;
-  uint8_t buf[2];
+  uint8_t buf[4];
   int result = 0;
   int need_block2 = 0;           /* set to 1 if Block2 option is required */
   coap_block_t block;
@@ -1691,18 +1691,10 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
    * and data. We do this before adding the Content-Format option to
    * avoid sending error responses with that option but no actual
    * content. */
-  if (resp->max_size && resp->max_size <= resp->used_size + 3) {
+  if (resp->max_size && resp->max_size <= resp->used_size + 8) {
     coap_log(LOG_DEBUG, "coap_wellknown_response: insufficient storage space\n");
     goto error;
   }
-
-  /* Add Content-Format. As we have checked for available storage,
-   * nothing should go wrong here. */
-  assert(coap_encode_var_safe(buf, sizeof(buf),
-    COAP_MEDIATYPE_APPLICATION_LINK_FORMAT) == 1);
-  coap_add_option(resp, COAP_OPTION_CONTENT_FORMAT,
-    coap_encode_var_safe(buf, sizeof(buf),
-      COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf);
 
   /* check if Block2 option is required even if not requested */
   if (!need_block2 && resp->max_size && resp->max_size - resp->used_size < wkc_len + 1) {
@@ -1725,6 +1717,24 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
     need_block2 = 1;
   }
 
+  if (need_block2) {
+    /* Add in a pseudo etag (use wkc_len) in case .well-known/core
+       changes over time */
+    coap_add_option(resp,
+                    COAP_OPTION_ETAG,
+                    coap_encode_var_safe(buf, sizeof(buf), wkc_len),
+                    buf);
+  }
+
+  /* Add Content-Format. As we have checked for available storage,
+   * nothing should go wrong here. */
+  assert(coap_encode_var_safe(buf, sizeof(buf),
+    COAP_MEDIATYPE_APPLICATION_LINK_FORMAT) == 1);
+  coap_add_option(resp, COAP_OPTION_CONTENT_FORMAT,
+    coap_encode_var_safe(buf, sizeof(buf),
+      COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf);
+
+
   /* write Block2 option if necessary */
   if (need_block2) {
     if (coap_write_block_opt(&block, COAP_OPTION_BLOCK2, resp, wkc_len) < 0) {
@@ -1734,7 +1744,13 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
     }
   }
 
-  len = need_block2 ? SZX_TO_BYTES( block.szx ) :
+  coap_add_option(resp,
+                  COAP_OPTION_SIZE2,
+                  coap_encode_var_safe(buf, sizeof(buf), wkc_len),
+                  buf);
+
+  len = need_block2 ?
+        min(SZX_TO_BYTES(block.szx), wkc_len - (block.num << (block.szx + 4))) :
         resp->max_size && resp->used_size + wkc_len + 1 > resp->max_size ?
         resp->max_size - resp->used_size - 1 : wkc_len;
   data = coap_add_data_after(resp, len);

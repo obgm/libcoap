@@ -756,7 +756,7 @@ get_default_port(const coap_uri_t *u) {
 static int
 cmdline_uri(char *arg, int create_uri_opts) {
   unsigned char portbuf[2];
-#define BUFSIZE 40
+#define BUFSIZE 100
   unsigned char _buf[BUFSIZE];
   unsigned char *buf = _buf;
   size_t buflen;
@@ -807,6 +807,8 @@ cmdline_uri(char *arg, int create_uri_opts) {
 
     if (uri.path.length) {
       buflen = BUFSIZE;
+      if (uri.path.length > BUFSIZE)
+        coap_log(LOG_WARNING, "URI path will be truncated (max buffer %d)\n", BUFSIZE);
       res = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
 
       while (res--) {
