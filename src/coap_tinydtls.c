@@ -381,8 +381,9 @@ coap_tick_t coap_dtls_get_context_timeout(void *dtls_context) {
   return 0;
 }
 
-coap_tick_t coap_dtls_get_timeout(coap_session_t *session) {
+coap_tick_t coap_dtls_get_timeout(coap_session_t *session, coap_tick_t now) {
   (void)session;
+  (void)now;
   return 0;
 }
 

@@ -1887,7 +1887,7 @@ coap_tick_t coap_dtls_get_context_timeout(void *dtls_context) {
   return 0;
 }
 
-coap_tick_t coap_dtls_get_timeout(coap_session_t *session) {
+coap_tick_t coap_dtls_get_timeout(coap_session_t *session, coap_tick_t now UNUSED) {
   SSL *ssl = (SSL *)session->tls;
   coap_ssl_data *ssl_data;
 
