@@ -11,8 +11,6 @@
 #ifndef COAP_H_
 #define COAP_H_
 
-#include "libcoap.h"
-
 /* Define the address where bug reports for libcoap should be sent. */
 #define LIBCOAP_PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"
 
@@ -31,6 +29,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include "libcoap.h"
 
 #include "address.h"
 #include "async.h"
