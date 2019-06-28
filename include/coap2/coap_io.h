@@ -164,9 +164,6 @@ void coap_packet_get_memmapped(struct coap_packet_t *packet,
                                unsigned char **address,
                                size_t *length);
 
-void coap_packet_set_addr( struct coap_packet_t *packet, const coap_address_t *src,
-                           const coap_address_t *dst );
-
 #ifdef WITH_LWIP
 /**
  * Get the pbuf of a packet. The caller takes over responsibility for freeing

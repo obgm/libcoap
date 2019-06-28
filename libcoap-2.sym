@@ -110,7 +110,6 @@ coap_opt_value
 coap_package_name
 coap_package_version
 coap_packet_get_memmapped
-coap_packet_set_addr
 coap_pdu_clear
 coap_pdu_encode_header
 coap_pdu_init

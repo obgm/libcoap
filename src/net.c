@@ -1144,7 +1144,8 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       coap_log(LOG_DEBUG, "*  %s: received %zd bytes\n",
                coap_session_str(session), bytes_read);
       session->last_rx_tx = now;
-      coap_packet_set_addr(packet, &session->remote_addr, &session->local_addr);
+      coap_address_copy(&session->remote_addr, &packet->src);
+      coap_address_copy(&session->local_addr, &packet->dst);
       coap_handle_dgram_for_proto(ctx, session, packet);
     }
   } else {
