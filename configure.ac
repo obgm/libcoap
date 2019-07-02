@@ -22,6 +22,7 @@ AC_INIT([libcoap], [libcoap_version], [libcoap-developers@lists.sourceforge.net]
 AC_PREREQ([2.64])
 AM_INIT_AUTOMAKE([1.10 -Wall no-define no-dist-gzip dist-bzip2])
 PKG_PROG_PKG_CONFIG([0.20])
+AM_SILENT_RULES([yes])
 
 # Generate one configuration header file for building the library itself with
 # an auto generated template. We need later a second one (include/libcoap.h)
