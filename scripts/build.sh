@@ -1,5 +1,7 @@
 #! /bin/sh
 
+SILENT="--disable-silent-rules"
+
 if test "x$TESTS" = "xyes" -o "x$TESTS" = "xtrue" ; then
     WITH_TESTS="`scripts/fix-cunit.sh` --enable-tests"
     test -f `pwd`/cunit.pc && echo cat `pwd`/cunit.pc
@@ -30,8 +32,8 @@ case "x${DOCS}" in
 esac
 
 config() {
-    echo "./configure $*"
-    ./configure $* || cat config.log
+    echo "./configure $SILENT $*"
+    ./configure $SILENT $* || cat config.log
 }
 
 case "${PLATFORM}" in
