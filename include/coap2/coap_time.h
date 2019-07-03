@@ -47,6 +47,10 @@ COAP_STATIC_INLINE coap_time_t coap_ticks_to_rt(coap_tick_t t) {
   return t / COAP_TICKS_PER_SECOND;
 }
 
+COAP_STATIC_INLINE uint64_t coap_ticks_to_rt_us(coap_tick_t t) {
+  return (uint64_t)t * 1000000 / COAP_TICKS_PER_SECOND;
+}
+
 #elif defined(WITH_CONTIKI)
 
 #include "clock.h"
@@ -73,6 +77,10 @@ COAP_STATIC_INLINE void coap_ticks(coap_tick_t *t) {
 
 COAP_STATIC_INLINE coap_time_t coap_ticks_to_rt(coap_tick_t t) {
   return t / COAP_TICKS_PER_SECOND;
+}
+
+COAP_STATIC_INLINE uint64_t coap_ticks_to_rt_us(coap_tick_t t) {
+  return (uint64_t)t * 1000000 / COAP_TICKS_PER_SECOND;
 }
 
 #else

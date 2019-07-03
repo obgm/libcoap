@@ -2358,6 +2358,8 @@ coap_can_exit(coap_context_t *context) {
 static int coap_started = 0;
 
 void coap_startup(void) {
+  coap_tick_t now;
+  uint64_t us;
   if (coap_started)
     return;
   coap_started = 1;
@@ -2367,13 +2369,10 @@ void coap_startup(void) {
   WSAStartup(wVersionRequested, &wsaData);
 #endif
   coap_clock_init();
-#if defined(WITH_LWIP)
-  prng_init(LWIP_RAND());
-#elif defined(WITH_CONTIKI)
-  prng_init(0);
-#elif !defined(_WIN32)
-  prng_init(0);
-#endif
+  coap_ticks(&now);
+  us = coap_ticks_to_rt_us(now);
+  /* Be accurate to the nearest (approx) us */
+  prng_init(us);
   coap_dtls_startup();
 }
 
