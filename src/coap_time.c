@@ -68,13 +68,13 @@ coap_clock_init(void) {
 }
 
 /* creates a Qx.frac from fval */
-#define Q(frac,fval) ((coap_tick_t)(((1 << (frac)) * (fval))))
+#define Q(frac,fval) ((1 << (frac)) * (fval))
 
 /* number of frac bits for sub-seconds */
 #define FRAC 10
 
 /* rounds val up and right shifts by frac positions */
-#define SHR_FP(val,frac) (((val) + (1 << ((frac) - 1))) >> (frac))
+#define SHR_FP(val,frac) (((coap_tick_t)((val) + (1 << ((frac) - 1)))) >> (frac))
 
 void
 coap_ticks(coap_tick_t *t) {
