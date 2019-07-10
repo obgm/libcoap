@@ -663,8 +663,9 @@ man/coap_attribute.txt
 man/coap_context.txt
 man/coap_encryption.txt
 man/coap_handler.txt
-man/coap_observe.txt
+man/coap_keepalive.txt
 man/coap_logging.txt
+man/coap_observe.txt
 man/coap_pdu_setup.txt
 man/coap_recovery.txt
 man/coap_resource.txt

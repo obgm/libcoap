@@ -137,6 +137,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   session->ack_timeout = COAP_DEFAULT_ACK_TIMEOUT;
   session->ack_random_factor = COAP_DEFAULT_ACK_RANDOM_FACTOR;
   session->dtls_event = -1;
+  session->last_ping_mid = COAP_INVALID_TID;
 
   /* initialize message id */
   prng((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));
@@ -316,8 +317,14 @@ void coap_session_send_csm(coap_session_t *session) {
 coap_tid_t coap_session_send_ping(coap_session_t *session) {
   coap_pdu_t *ping;
   if (session->state != COAP_SESSION_STATE_ESTABLISHED)
-    return 0;
-  ping = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_PING, 0, 1);
+    return COAP_INVALID_TID;
+  if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+    uint16_t tid = coap_new_message_id (session);
+    ping = coap_pdu_init(COAP_MESSAGE_CON, 0, tid, 0);
+  }
+  else {
+    ping = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_PING, 0, 1);
+  }
   if (!ping)
     return COAP_INVALID_TID;
   return coap_send(session, ping);

@@ -646,7 +646,6 @@ usage( const char *program, const char *version) {
      "\t-B seconds\tBreak operation after waiting given seconds\n"
      "\t       \t\t(default is %d)\n"
      "\t-K interval\tsend a ping after interval seconds of inactivity\n"
-     "\t       \t\t(TCP only)\n"
      "\t-N     \t\tSend NON-confirmable message\n"
      "\t-O num,text\tAdd option num with contents text to request\n"
      "\t-P addr[:port]\tUse proxy (automatically adds Proxy-Uri option to\n"
