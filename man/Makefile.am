@@ -14,6 +14,7 @@ TXT3 = coap_attribute.txt \
 	coap_context.txt \
 	coap_encryption.txt \
 	coap_handler.txt \
+	coap_keepalive.txt \
 	coap_logging.txt \
 	coap_observe.txt \
 	coap_pdu_setup.txt \

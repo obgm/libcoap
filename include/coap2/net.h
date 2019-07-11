@@ -347,12 +347,16 @@ coap_context_set_pki_root_cas(coap_context_t *context,
  * Set the context keepalive timer for sessions.
  * A keepalive message will be sent after if a session has been inactive,
  * i.e. no packet sent or received, for the given number of seconds.
- * For reliable protocols, a PING message will be sent. If a PONG has not
- * been received before the next PING is due to be sent, the session will
- * considered as disconnected.
+ * For unreliable protocols, a CoAP Empty message will be sent. If a 
+ * CoAP RST is not received, the CoAP Empty messages will get resent based
+ * on the Confirmable retry parameters until there is a failure timeout,
+ * at which point the session will be considered as disconnected.
+ * For reliable protocols, a CoAP PING message will be sent. If a CoAP PONG
+ * has not been received before the next PING is due to be sent, the session
+ * will be considered as disconnected.
  *
  * @param context        The coap_context_t object.
- * @param seconds                 Number of seconds for the inactivity timer, or zero
+ * @param seconds        Number of seconds for the inactivity timer, or zero
  *                       to disable CoAP-level keepalive messages.
  *
  * @return 1 if successful, else 0

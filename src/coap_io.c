@@ -1206,14 +1206,13 @@ coap_write(coap_context_t *ctx,
   LL_FOREACH_SAFE(ctx->sessions, s, tmp) {
     if (
         s->type == COAP_SESSION_TYPE_CLIENT
-     && COAP_PROTO_RELIABLE(s->proto)
      && s->state == COAP_SESSION_STATE_ESTABLISHED
      && ctx->ping_timeout > 0
     ) {
       coap_tick_t s_timeout;
       if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
         if ((s->last_ping > 0 && s->last_pong < s->last_ping)
-          || coap_session_send_ping(s) == COAP_INVALID_TID)
+          || ((s->last_ping_mid = coap_session_send_ping(s)) == COAP_INVALID_TID))
         {
           /* Make sure the session object is not deleted in the callback */
           coap_session_reference(s);

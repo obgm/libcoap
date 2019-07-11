@@ -383,6 +383,7 @@ and *coap_resource*(3)
 FURTHER INFORMATION
 -------------------
 "RFC7252: The Constrained Application Protocol (CoAP)"
+
 "RFC7641: Observing Resources in the Constrained Application Protocol (CoAP)"
 
 BUGS

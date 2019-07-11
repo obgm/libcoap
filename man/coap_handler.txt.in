@@ -114,7 +114,7 @@ typedef void (*coap_ping_handler_t)(coap_context_t *context,
 ----
 
 The *coap_register_pong_handler*() function defines a _handler_ for tracking
-CoAP TCP ping response traffic associated with the _context_.
+CoAP ping response traffic associated with the _context_.
 If _handler_ is NULL, then the handler is de-registered.
 
 The handler function prototype is defined as:

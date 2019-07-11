@@ -2174,6 +2174,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   coap_queue_t *sent = NULL;
   coap_pdu_t *response;
   coap_opt_filter_t opt_filter;
+  int is_ping_rst;
 
 #ifndef NDEBUG
   if (LOG_DEBUG <= coap_get_log_level()) {
@@ -2222,8 +2223,13 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       /* We have sent something the receiver disliked, so we remove
        * not only the transaction but also the subscriptions we might
        * have. */
+      is_ping_rst = 0;
+      if (pdu->tid == session->last_ping_mid &&
+          context->ping_timeout && session->last_ping > 0)
+        is_ping_rst = 1;
 
-      coap_log(LOG_ALERT, "got RST for message %d\n", pdu->tid);
+      if (!is_ping_rst)
+        coap_log(LOG_ALERT, "got RST for message %d\n", pdu->tid);
 
       if (session->con_active) {
         session->con_active--;
@@ -2238,8 +2244,18 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       if (sent) {
         coap_cancel(context, sent);
 
-        if(sent->pdu->type==COAP_MESSAGE_CON && context->nack_handler)
-          context->nack_handler(context, sent->session, sent->pdu, COAP_NACK_RST, sent->id);
+        if (!is_ping_rst) {
+          if(sent->pdu->type==COAP_MESSAGE_CON && context->nack_handler)
+            context->nack_handler(context, sent->session, sent->pdu,
+                                  COAP_NACK_RST, sent->id);
+        }
+        else {
+          if (context->pong_handler) {
+            context->pong_handler(context, session, pdu, pdu->tid);
+          }
+          session->last_pong = session->last_rx_tx;
+          session->last_ping_mid = COAP_INVALID_TID;
+        }
       }
       else {
         /* Need to check is there is a subscription active and delete it */

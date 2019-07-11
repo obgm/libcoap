@@ -109,8 +109,8 @@ OPTIONS - General
    Break operation after waiting given seconds (default is 90).
 
 *-K* interval::
-   Send a ping after interval seconds of inactivity (TCP only).
-   If not specified, keep-alive is disabled (default).
+   Send a ping after interval seconds of inactivity.
+   If not specified (or 0), keep-alive is disabled (default).
 
 *-N* ::
    Send NON-confirmable message. If option *-N* is not specified, a
