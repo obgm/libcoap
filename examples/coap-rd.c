@@ -495,7 +495,7 @@ hnd_post_rd(coap_context_t  *ctx,
     }
   }
 
-  add_source_address(r, &session->remote_addr );
+  add_source_address(r, &session->addr_info.remote);
 
   {
     rd_t *rd;

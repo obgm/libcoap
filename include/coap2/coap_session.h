@@ -13,6 +13,7 @@
 #include "coap_io.h"
 #include "coap_time.h"
 #include "pdu.h"
+#include "uthash.h"
 
 struct coap_endpoint_t;
 struct coap_context_t;
@@ -54,7 +55,6 @@ typedef uint8_t coap_session_state_t;
 #define COAP_SESSION_STATE_ESTABLISHED        4
 
 typedef struct coap_session_t {
-  struct coap_session_t *next;
   coap_proto_t proto;               /**< protocol used */
   coap_session_type_t type;         /**< client or server side socket */
   coap_session_state_t state;       /**< current state of relationaship with peer */
@@ -62,8 +62,8 @@ typedef struct coap_session_t {
   unsigned tls_overhead;            /**< overhead of TLS layer */
   unsigned mtu;                     /**< path or CSM mtu */
   coap_address_t local_if;          /**< optional local interface address */
-  coap_address_t remote_addr;       /**< remote address and port */
-  coap_address_t local_addr;        /**< local address and port */
+  UT_hash_handle hh;
+  coap_addr_tuple_t addr_info;      /**< key: remote/local address info */
   int ifindex;                      /**< interface index */
   coap_socket_t sock;               /**< socket object for the session, if any */
   struct coap_endpoint_t *endpoint; /**< session's endpoint */
@@ -306,7 +306,7 @@ typedef struct coap_endpoint_t {
   uint16_t default_mtu;           /**< default mtu for this interface */
   coap_socket_t sock;             /**< socket object for the interface, if any */
   coap_address_t bind_addr;       /**< local interface address */
-  coap_session_t *sessions;       /**< list of active sessions */
+  coap_session_t *sessions;       /**< hash table or list of active sessions */
 } coap_endpoint_t;
 
 /**
@@ -489,5 +489,21 @@ coap_fixed_point_t coap_session_get_ack_random_factor(coap_session_t *session);
  * @return COAP_INVALID_TID if there is an error
  */
 coap_tid_t coap_session_send_ping(coap_session_t *session);
+
+#define SESSIONS_ADD(e, obj) \
+  HASH_ADD(hh, (e), addr_info, sizeof((obj)->addr_info), (obj))
+
+#define SESSIONS_DELETE(e, obj) \
+  HASH_DELETE(hh, (e), (obj))
+
+#define SESSIONS_ITER(e, el, rtmp)  \
+  HASH_ITER(hh, (e), el, rtmp)
+
+#define SESSIONS_ITER_SAFE(e, el, rtmp) \
+for ((el) = (e); (el) && ((rtmp) = (el)->hh.next, 1); (el) = (rtmp))
+
+#define SESSIONS_FIND(e, k, res) {                     \
+    HASH_FIND(hh, (e), &(k), sizeof(k), (res)); \
+  }
 
 #endif  /* COAP_SESSION_H */

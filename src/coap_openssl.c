@@ -307,8 +307,12 @@ static int coap_dtls_generate_cookie(SSL *ssl, unsigned char *cookie, unsigned i
   coap_dtls_context_t *dtls = (coap_dtls_context_t *)SSL_CTX_get_app_data(SSL_get_SSL_CTX(ssl));
   coap_ssl_data *data = (coap_ssl_data*)BIO_get_data(SSL_get_rbio(ssl));
   int r = HMAC_Init_ex(dtls->cookie_hmac, NULL, 0, NULL, NULL);
-  r &= HMAC_Update(dtls->cookie_hmac, (const uint8_t*)&data->session->local_addr.addr, (size_t)data->session->local_addr.size);
-  r &= HMAC_Update(dtls->cookie_hmac, (const uint8_t*)&data->session->remote_addr.addr, (size_t)data->session->remote_addr.size);
+  r &= HMAC_Update(dtls->cookie_hmac,
+                   (const uint8_t*)&data->session->addr_info.local.addr,
+                   (size_t)data->session->addr_info.local.size);
+  r &= HMAC_Update(dtls->cookie_hmac,
+                   (const uint8_t*)&data->session->addr_info.remote.addr,
+                   (size_t)data->session->addr_info.remote.size);
   r &= HMAC_Final(dtls->cookie_hmac, cookie, cookie_len);
   return r;
 }
