@@ -326,8 +326,11 @@ coap_dtls_session_update_mtu(coap_session_t *session) {
 
 void
 coap_dtls_free_session(coap_session_t *coap_session) {
-  struct dtls_context_t *ctx = (struct dtls_context_t *)coap_session->context->dtls_context;
-  if (coap_session->tls) {
+  struct dtls_context_t *ctx;
+  if (coap_session->context == NULL)
+    return;
+  ctx = (struct dtls_context_t *)coap_session->context->dtls_context;
+  if (coap_session->tls && ctx) {
     dtls_peer_t *peer = dtls_get_peer(ctx, (session_t *)coap_session->tls);
     if ( peer )
       dtls_reset_peer(ctx, peer);
@@ -336,6 +339,7 @@ coap_dtls_free_session(coap_session_t *coap_session) {
     coap_log(LOG_DEBUG, "***removed session %p\n", coap_session->tls);
     coap_free_type(COAP_DTLS_SESSION, coap_session->tls);
     coap_session->tls = NULL;
+    coap_handle_event(coap_session->context, COAP_EVENT_DTLS_CLOSED, coap_session);
   }
 }
 
@@ -359,10 +363,12 @@ coap_dtls_send(coap_session_t *session,
     coap_log(LOG_WARNING, "coap_dtls_send: cannot send PDU\n");
 
   if (coap_event_dtls >= 0) {
-    coap_handle_event(session->context, coap_event_dtls, session);
+    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+    if (coap_event_dtls != COAP_EVENT_DTLS_CLOSED)
+      coap_handle_event(session->context, coap_event_dtls, session);
     if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
       coap_session_connected(session);
-    else if (coap_event_dtls == DTLS_ALERT_CLOSE_NOTIFY || coap_event_dtls == COAP_EVENT_DTLS_ERROR)
+    else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR)
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
   }
 
@@ -413,10 +419,12 @@ coap_dtls_receive(coap_session_t *session,
   }
 
   if (coap_event_dtls >= 0) {
-    coap_handle_event(session->context, coap_event_dtls, session);
+    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+    if (coap_event_dtls != COAP_EVENT_DTLS_CLOSED)
+      coap_handle_event(session->context, coap_event_dtls, session);
     if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
       coap_session_connected(session);
-    else if (coap_event_dtls == DTLS_ALERT_CLOSE_NOTIFY || coap_event_dtls == COAP_EVENT_DTLS_ERROR)
+    else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR)
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
   }
 
