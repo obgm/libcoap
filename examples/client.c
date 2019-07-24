@@ -930,6 +930,49 @@ cmdline_token(char *arg) {
   }
 }
 
+/**
+ * Utility function to convert a hex digit to its corresponding
+ * numerical value.
+ *
+ * param c  The hex digit to convert. Must be in [0-9A-Fa-f].
+ *
+ * return The numerical representation of @p c.
+ */
+static inline uint8_t
+hex2char(char c) {
+  assert(isxdigit(c));
+  if ('a' <= c && c <= 'f')
+    return c - 'a' + 10;
+  else if ('A' <= c && c <= 'F')
+    return c - 'A' + 10;
+  else
+    return c - '0';
+}
+
+/**
+ * Converts the sequence of hex digits in src to a sequence of bytes.
+ *
+ * This function returns the number of bytes that have been written to
+ * @p dst.
+ *
+ * param[in]  src  The null-terminated hex string to convert.
+ * param[out] dst  Conversion result.
+ *
+ * return The length of @p dst.
+ */
+static size_t
+convert_hex_string(const char *src, uint8_t *dst) {
+  uint8_t *p = dst;
+  while (isxdigit(src[0]) && isxdigit(src[1])) {
+    *p++ = (hex2char(src[0]) << 4) + hex2char(src[1]);
+    src += 2;
+  }
+  if (src[0] != '\0') { /* error in hex input */
+    coap_log(LOG_WARNING, "invalid hex string in option '%s'\n", src);
+  }
+  return p - dst;
+}
+
 static void
 cmdline_option(char *arg) {
   unsigned int num = 0;
@@ -941,8 +984,19 @@ cmdline_option(char *arg) {
   if (*arg == ',')
     ++arg;
 
-  coap_insert_optlist(&optlist,
-              coap_new_optlist(num, strlen(arg), (unsigned char *)arg));
+   /* read hex string when arg starts with "0x" */
+  if (arg[0] == '0' && arg[1] == 'x') {
+    /* As the command line option is part of our environment we can do
+     * the conversion in place. */
+    size_t len = convert_hex_string(arg + 2, (uint8_t *)arg);
+
+    /* On success, 2 * len + 2 == strlen(arg) */
+    coap_insert_optlist(&optlist,
+                        coap_new_optlist(num, len, (unsigned char *)arg));
+  } else { /* null-terminated character string */
+    coap_insert_optlist(&optlist,
+                        coap_new_optlist(num, strlen(arg), (unsigned char *)arg));
+  }
 }
 
 /**
