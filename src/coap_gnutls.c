@@ -1351,6 +1351,7 @@ void coap_dtls_free_session(coap_session_t *c_session) {
                 COAP_PROTO_NOT_RELIABLE(c_session->proto) ?
                  COAP_FREE_BYE_AS_UDP : COAP_FREE_BYE_AS_TCP);
     c_session->tls = NULL;
+    coap_handle_event(c_session->context, COAP_EVENT_DTLS_CLOSED, c_session);
   }
 }
 
@@ -1785,7 +1786,9 @@ ssize_t coap_tls_write(coap_session_t *c_session,
   }
 
   if (c_session->dtls_event >= 0) {
-    coap_handle_event(c_session->context, c_session->dtls_event, c_session);
+    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+    if (c_session->dtls_event != COAP_EVENT_DTLS_CLOSED)
+      coap_handle_event(c_session->context, c_session->dtls_event, c_session);
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
@@ -1846,7 +1849,9 @@ ssize_t coap_tls_read(coap_session_t *c_session,
   }
 
   if (c_session->dtls_event >= 0) {
-    coap_handle_event(c_session->context, c_session->dtls_event, c_session);
+    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+    if (c_session->dtls_event != COAP_EVENT_DTLS_CLOSED)
+      coap_handle_event(c_session->context, c_session->dtls_event, c_session);
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);

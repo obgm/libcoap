@@ -538,8 +538,9 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
      * } dtls_record_handshake_t;
      */
 #define OFF_CONTENT_TYPE      0  /* offset of content_type in dtls_record_handshake_t */
+#define DTLS_CT_ALERT        21  /* Content Type Alert */
+#define DTLS_CT_HANDSHAKE    22  /* Content Type Handshake */
 #define OFF_HANDSHAKE_TYPE   13  /* offset of handshake in dtls_record_handshake_t */
-#define DTLS_CT_HANDSHAKE    22  /* Content Type value */
 #define DTLS_HT_CLIENT_HELLO  1  /* Client Hello handshake type */
 
 #ifdef WITH_LWIP
@@ -558,7 +559,9 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     }
     if (payload[OFF_CONTENT_TYPE] != DTLS_CT_HANDSHAKE ||
         payload[OFF_HANDSHAKE_TYPE] != DTLS_HT_CLIENT_HELLO) {
-      coap_log(LOG_DEBUG,
+      /* only log if not a late alert */
+      if (payload[OFF_CONTENT_TYPE] != DTLS_CT_ALERT)
+        coap_log(LOG_DEBUG,
          "coap_dtls_hello: ContentType %d Handshake %d dropped\n",
          payload[OFF_CONTENT_TYPE], payload[OFF_HANDSHAKE_TYPE]);
       return NULL;

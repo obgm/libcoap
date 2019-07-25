@@ -1839,6 +1839,8 @@ void coap_dtls_free_session(coap_session_t *session) {
     }
     SSL_free(ssl);
     session->tls = NULL;
+    if (session->context)
+      coap_handle_event(session->context, COAP_EVENT_DTLS_CLOSED, session);
   }
 }
 
@@ -1867,7 +1869,9 @@ int coap_dtls_send(coap_session_t *session,
   }
 
   if (session->dtls_event >= 0) {
-    coap_handle_event(session->context, session->dtls_event, session);
+    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+    if (session->dtls_event != COAP_EVENT_DTLS_CLOSED)
+      coap_handle_event(session->context, session->dtls_event, session);
     if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
@@ -1968,7 +1972,9 @@ int coap_dtls_receive(coap_session_t *session,
       r = -1;
     }
     if (session->dtls_event >= 0) {
-      coap_handle_event(session->context, session->dtls_event, session);
+      /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+      if (session->dtls_event != COAP_EVENT_DTLS_CLOSED)
+        coap_handle_event(session->context, session->dtls_event, session);
       if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
           session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
         coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
@@ -2140,6 +2146,8 @@ void coap_tls_free_session(coap_session_t *session) {
     }
     SSL_free(ssl);
     session->tls = NULL;
+    if (session->context)
+      coap_handle_event(session->context, COAP_EVENT_DTLS_CLOSED, session);
   }
 }
 
@@ -2184,7 +2192,9 @@ ssize_t coap_tls_write(coap_session_t *session,
   }
 
   if (session->dtls_event >= 0) {
-    coap_handle_event(session->context, session->dtls_event, session);
+    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+    if (session->dtls_event != COAP_EVENT_DTLS_CLOSED)
+      coap_handle_event(session->context, session->dtls_event, session);
     if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
@@ -2233,7 +2243,9 @@ ssize_t coap_tls_read(coap_session_t *session,
   }
 
   if (session->dtls_event >= 0) {
-    coap_handle_event(session->context, session->dtls_event, session);
+    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+    if (session->dtls_event != COAP_EVENT_DTLS_CLOSED)
+      coap_handle_event(session->context, session->dtls_event, session);
     if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
