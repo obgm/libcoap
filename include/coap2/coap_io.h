@@ -37,6 +37,11 @@ struct coap_pdu_t;
 
 typedef uint16_t coap_socket_flags_t;
 
+typedef struct coap_addr_tuple_t {
+  coap_address_t remote;       /**< remote address and port */
+  coap_address_t local;        /**< local address and port */
+} coap_addr_tuple_t;
+
 typedef struct coap_socket_t {
 #if defined(WITH_LWIP)
   struct udp_pcb *pcb;
@@ -184,15 +189,13 @@ struct pbuf *coap_packet_extract_pbuf(struct coap_packet_t *packet);
 struct coap_packet_t {
   struct pbuf *pbuf;
   const struct coap_endpoint_t *local_interface;
-  coap_address_t src;              /**< the packet's source address */
-  coap_address_t dst;              /**< the packet's destination address */
+  coap_addr_tuple_t addr_info; /**< local and remote addresses */
   int ifindex;                /**< the interface index */
 //  uint16_t srcport;
 };
 #else
 struct coap_packet_t {
-  coap_address_t src;              /**< the packet's source address */
-  coap_address_t dst;              /**< the packet's destination address */
+  coap_addr_tuple_t addr_info; /**< local and remote addresses */
   int ifindex;                /**< the interface index */
   size_t length;              /**< length of payload */
   unsigned char payload[COAP_RXBUFFER_SIZE]; /**< payload */

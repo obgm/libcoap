@@ -519,7 +519,7 @@ coap_get_app_data(const coap_context_t *ctx) {
 void
 coap_free_context(coap_context_t *context) {
   coap_endpoint_t *ep, *tmp;
-  coap_session_t *sp, *stmp;
+  coap_session_t *sp, *rtmp;
 
   if (!context)
     return;
@@ -537,7 +537,7 @@ coap_free_context(coap_context_t *context) {
     coap_free_endpoint(ep);
   }
 
-  LL_FOREACH_SAFE(context->sessions, sp, stmp) {
+  SESSIONS_ITER_SAFE(context->sessions, sp, rtmp) {
     coap_session_release(sp);
   }
 
@@ -679,7 +679,7 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
   * IP multicast.
   * FIXME: If No-Response option indicates interest, these responses
   *        must not be dropped. */
-  if (coap_is_mcast(&session->local_addr) &&
+  if (coap_is_mcast(&session->addr_info.local) &&
     COAP_RESPONSE_CLASS(pdu->code) > 2) {
     return COAP_DROPPED_RESPONSE;
   }
@@ -695,9 +695,9 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
       return -1;
     } else if(COAP_PROTO_RELIABLE(session->proto)) {
       if (!coap_socket_connect_tcp1(
-        &session->sock, &session->local_if, &session->remote_addr,
+        &session->sock, &session->local_if, &session->addr_info.remote,
         session->proto == COAP_PROTO_TLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
-        &session->local_addr, &session->remote_addr
+        &session->addr_info.local, &session->addr_info.remote
       )) {
         coap_handle_event(session->context, COAP_EVENT_TCP_FAILED, session);
         return -1;
@@ -1044,7 +1044,8 @@ coap_handle_dgram_for_proto(coap_context_t *ctx, coap_session_t *session, coap_p
 static void
 coap_connect_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
   (void)ctx;
-  if (coap_socket_connect_tcp2(&session->sock, &session->local_addr, &session->remote_addr)) {
+  if (coap_socket_connect_tcp2(&session->sock, &session->addr_info.local,
+                               &session->addr_info.remote)) {
     session->last_rx_tx = now;
     coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
     if (session->proto == COAP_PROTO_TCP) {
@@ -1130,8 +1131,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
     ssize_t bytes_read;
-    coap_address_copy(&packet->src, &session->remote_addr);
-    coap_address_copy(&packet->dst, &session->local_addr);
+    memcpy(&packet->addr_info, &session->addr_info, sizeof(packet->addr_info));
     bytes_read = ctx->network_read(&session->sock, packet);
 
     if (bytes_read < 0) {
@@ -1144,8 +1144,8 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       coap_log(LOG_DEBUG, "*  %s: received %zd bytes\n",
                coap_session_str(session), bytes_read);
       session->last_rx_tx = now;
-      coap_address_copy(&session->remote_addr, &packet->src);
-      coap_address_copy(&session->local_addr, &packet->dst);
+      memcpy(&session->addr_info, &packet->addr_info,
+             sizeof(session->addr_info));
       coap_handle_dgram_for_proto(ctx, session, packet);
     }
   } else {
@@ -1263,8 +1263,10 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
   coap_mutex_lock(&e_static_mutex);
 #endif /* COAP_CONSTRAINED_STACK */
 
-  coap_address_init(&packet->src);
-  coap_address_copy(&packet->dst, &endpoint->bind_addr);
+  /* Need to do this as there may be holes in addr_info */
+  memset(&packet->addr_info, 0, sizeof(packet->addr_info));
+  coap_address_init(&packet->addr_info.remote);
+  coap_address_copy(&packet->addr_info.local, &endpoint->bind_addr);
   bytes_read = ctx->network_read(&endpoint->sock, packet);
 
   if (bytes_read < 0) {
@@ -1305,7 +1307,7 @@ coap_accept_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint,
 void
 coap_read(coap_context_t *ctx, coap_tick_t now) {
   coap_endpoint_t *ep, *tmp;
-  coap_session_t *s, *tmp_s;
+  coap_session_t *s, *rtmp;
 
   LL_FOREACH_SAFE(ctx->endpoint, ep, tmp) {
     if ((ep->sock.flags & COAP_SOCKET_CAN_READ) != 0)
@@ -1314,7 +1316,7 @@ coap_read(coap_context_t *ctx, coap_tick_t now) {
       coap_write_endpoint(ctx, ep, now);
     if ((ep->sock.flags & COAP_SOCKET_CAN_ACCEPT) != 0)
       coap_accept_endpoint(ctx, ep, now);
-    LL_FOREACH_SAFE(ep->sessions, s, tmp_s) {
+    SESSIONS_ITER_SAFE(ep->sessions, s, rtmp) {
       if ((s->sock.flags & COAP_SOCKET_CAN_READ) != 0) {
         /* Make sure the session object is not deleted in one of the callbacks  */
         coap_session_reference(s);
@@ -1330,7 +1332,7 @@ coap_read(coap_context_t *ctx, coap_tick_t now) {
     }
   }
 
-  LL_FOREACH_SAFE(ctx->sessions, s, tmp_s) {
+  SESSIONS_ITER_SAFE(ctx->sessions, s, rtmp) {
     if ((s->sock.flags & COAP_SOCKET_CAN_CONNECT) != 0) {
       /* Make sure the session object is not deleted in one of the callbacks  */
       coap_session_reference(s);
@@ -2318,7 +2320,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
              COAP_RESPONSE_CLASS(pdu->code),
       pdu->code & 0x1f);
 
-    if (!coap_is_mcast(&session->local_addr)) {
+    if (!coap_is_mcast(&session->addr_info.local)) {
       if (COAP_PDU_IS_EMPTY(pdu)) {
         if (session->proto != COAP_PROTO_TCP && session->proto != COAP_PROTO_TLS) {
           coap_tick_t now;
@@ -2353,18 +2355,18 @@ coap_handle_event(coap_context_t *context, coap_event_t event, coap_session_t *s
 int
 coap_can_exit(coap_context_t *context) {
   coap_endpoint_t *ep;
-  coap_session_t *s;
+  coap_session_t *s, *rtmp;
   if (!context)
     return 1;
   if (context->sendqueue)
     return 0;
   LL_FOREACH(context->endpoint, ep) {
-    LL_FOREACH(ep->sessions, s) {
+    SESSIONS_ITER(ep->sessions, s, rtmp) {
       if (s->delayqueue)
         return 0;
     }
   }
-  LL_FOREACH(context->sessions, s) {
+  SESSIONS_ITER(context->sessions, s, rtmp) {
     if (s->delayqueue)
       return 0;
   }

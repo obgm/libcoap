@@ -910,7 +910,8 @@ coap_remove_failed_observers(coap_context_t *context,
 #endif
           unsigned char addr[INET6_ADDRSTRLEN+8];
 
-          if (coap_print_addr(&obs->session->remote_addr, addr, INET6_ADDRSTRLEN+8))
+          if (coap_print_addr(&obs->session->addr_info.remote,
+                              addr, INET6_ADDRSTRLEN+8))
             coap_log(LOG_DEBUG, "** removed observer %s\n", addr);
         }
 #endif

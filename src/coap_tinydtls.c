@@ -277,7 +277,7 @@ coap_dtls_new_session(coap_session_t *session) {
     /* create tinydtls session object from remote address and local
     * endpoint handle */
     dtls_session_init(dtls_session);
-    put_session_addr(&session->remote_addr, dtls_session);
+    put_session_addr(&session->addr_info.remote, dtls_session);
     dtls_session->ifindex = session->ifindex;
     coap_log(LOG_DEBUG, "***new session %p\n", (void *)dtls_session);
   }
@@ -442,7 +442,7 @@ coap_dtls_hello(coap_session_t *session,
   uint8_t *data_rw;
 
   dtls_session_init(&dtls_session);
-  put_session_addr(&session->remote_addr, &dtls_session);
+  put_session_addr(&session->addr_info.remote, &dtls_session);
   dtls_session.ifindex = session->ifindex;
   /* Need to do this to not get a compiler warning about const parameters */
   memcpy (&data_rw, &data, sizeof(data_rw));

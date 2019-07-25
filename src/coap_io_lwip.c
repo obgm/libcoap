@@ -65,10 +65,12 @@ static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_
   /* this is fatal because due to the short life of the packet, never should there be more than one coap_packet_t required */
   LWIP_ASSERT("Insufficient coap_packet_t resources.", packet != NULL);
   packet->pbuf = p;
-  packet->src.port = port;
-  packet->src.addr = *addr;
-  packet->dst.port = upcb->local_port;
-  packet->dst.addr = *ip_current_dest_addr();
+  /* Need to do this as there may be holes in addr_info */
+  memset(&packet->addr_info, 0, sizeof(packet->addr_info));
+  packet->addr_info.remote.port = port;
+  packet->addr_info.remote.addr = *addr;
+  packet->addr_info.local.port = upcb->local_port;
+  packet->addr_info.local.addr = *ip_current_dest_addr();
   packet->ifindex = netif_get_index(ip_current_netif());
 
   pdu = coap_pdu_from_pbuf(p);
@@ -146,8 +148,8 @@ coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
   * respective pbuf is already exclusively owned by the pdu. */
 
   pbuf_realloc(pdu->pbuf, pdu->used_size + coap_pdu_parse_header_size(session->proto, pdu->pbuf->payload));
-  udp_sendto(sock->pcb, pdu->pbuf, &session->remote_addr.addr,
-    session->remote_addr.port);
+  udp_sendto(sock->pcb, pdu->pbuf, &session->addr_info.remote.addr,
+    session->addr_info.remote.port);
   return pdu->used_size;
 }
 

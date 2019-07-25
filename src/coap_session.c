@@ -112,13 +112,13 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   else
     coap_address_init(&session->local_if);
   if (local_addr)
-    coap_address_copy(&session->local_addr, local_addr);
+    coap_address_copy(&session->addr_info.local, local_addr);
   else
-    coap_address_init(&session->local_addr);
+    coap_address_init(&session->addr_info.local);
   if (remote_addr)
-    coap_address_copy(&session->remote_addr, remote_addr);
+    coap_address_copy(&session->addr_info.remote, remote_addr);
   else
-    coap_address_init(&session->remote_addr);
+    coap_address_init(&session->addr_info.remote);
   session->ifindex = ifindex;
   session->context = context;
   session->endpoint = endpoint;
@@ -177,10 +177,10 @@ void coap_session_free(coap_session_t *session) {
   coap_session_mfree(session);
   if (session->endpoint) {
     if (session->endpoint->sessions)
-      LL_DELETE(session->endpoint->sessions, session);
+      SESSIONS_DELETE(session->endpoint->sessions, session);
   } else if (session->context) {
     if (session->context->sessions)
-      LL_DELETE(session->context->sessions, session);
+      SESSIONS_DELETE(session->context->sessions, session);
   }
   coap_log(LOG_DEBUG, "***%s: session closed\n", coap_session_str(session));
 
@@ -456,20 +456,20 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
 coap_session_t *
 coap_endpoint_get_session(coap_endpoint_t *endpoint,
   const coap_packet_t *packet, coap_tick_t now) {
-  coap_session_t *session = NULL;
+  coap_session_t *session;
+  coap_session_t *rtmp;
   unsigned int num_idle = 0;
   unsigned int num_hs = 0;
   coap_session_t *oldest = NULL;
   coap_session_t *oldest_hs = NULL;
 
-  LL_FOREACH(endpoint->sessions, session) {
-    if (session->ifindex == packet->ifindex &&
-      coap_address_equals(&session->local_addr, &packet->dst) &&
-      coap_address_equals(&session->remote_addr, &packet->src))
-    {
-      session->last_rx_tx = now;
-      return session;
-    }
+  SESSIONS_FIND(endpoint->sessions, packet->addr_info, session);
+  if (session) {
+    session->last_rx_tx = now;
+    return session;
+  }
+
+  SESSIONS_ITER(endpoint->sessions, session, rtmp) {
     if (session->ref == 0 && session->delayqueue == NULL) {
       if (session->type == COAP_SESSION_TYPE_SERVER) {
         ++num_idle;
@@ -568,8 +568,9 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     }
   }
   session = coap_make_session(endpoint->proto, COAP_SESSION_TYPE_SERVER,
-    NULL, &packet->dst, &packet->src, packet->ifindex, endpoint->context,
-    endpoint);
+                              NULL, &packet->addr_info.local,
+                              &packet->addr_info.remote,
+                              packet->ifindex, endpoint->context, endpoint);
   if (session) {
     session->last_rx_tx = now;
     if (endpoint->proto == COAP_PROTO_UDP)
@@ -577,7 +578,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     else if (endpoint->proto == COAP_PROTO_DTLS) {
       session->type = COAP_SESSION_TYPE_HELLO;
     }
-    LL_PREPEND(endpoint->sessions, session);
+    SESSIONS_ADD(endpoint->sessions, session);
     coap_log(LOG_DEBUG, "***%s: new incoming session\n",
              coap_session_str(session));
   }
@@ -623,13 +624,13 @@ coap_session_create_client(
   if (proto == COAP_PROTO_UDP || proto == COAP_PROTO_DTLS) {
     if (!coap_socket_connect_udp(&session->sock, &session->local_if, server,
       proto == COAP_PROTO_DTLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
-      &session->local_addr, &session->remote_addr)) {
+      &session->addr_info.local, &session->addr_info.remote)) {
       goto error;
     }
   } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
     if (!coap_socket_connect_tcp1(&session->sock, &session->local_if, server,
       proto == COAP_PROTO_TLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
-      &session->local_addr, &session->remote_addr)) {
+      &session->addr_info.local, &session->addr_info.remote)) {
       goto error;
     }
   }
@@ -637,7 +638,7 @@ coap_session_create_client(
   session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_WANT_READ;
   if (local_if)
     session->sock.flags |= COAP_SOCKET_BOUND;
-  LL_PREPEND(ctx->sessions, session);
+  SESSIONS_ADD(ctx->sessions, session);
   return session;
 
 error:
@@ -843,11 +844,12 @@ coap_session_t *coap_new_server_session(
     goto error;
 
   if (!coap_socket_accept_tcp(&ep->sock, &session->sock,
-                              &session->local_addr, &session->remote_addr))
+                              &session->addr_info.local,
+                              &session->addr_info.remote))
     goto error;
   session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED
                        | COAP_SOCKET_WANT_READ;
-  LL_PREPEND(ep->sessions, session);
+  SESSIONS_ADD(ep->sessions, session);
   if (session) {
     coap_log(LOG_DEBUG, "***%s: new incoming session\n",
              coap_session_str(session));
@@ -947,12 +949,12 @@ void coap_endpoint_set_default_mtu(coap_endpoint_t *ep, unsigned mtu) {
 void
 coap_free_endpoint(coap_endpoint_t *ep) {
   if (ep) {
-    coap_session_t *session, *tmp;
+    coap_session_t *session, *rtmp;
 
     if (ep->sock.flags != COAP_SOCKET_EMPTY)
       coap_socket_close(&ep->sock);
 
-    LL_FOREACH_SAFE(ep->sessions, session, tmp) {
+    SESSIONS_ITER_SAFE(ep->sessions, session, rtmp) {
       assert(session->ref == 0);
       if (session->ref == 0) {
         coap_session_free(session);
@@ -971,15 +973,17 @@ coap_session_t *
 coap_session_get_by_peer(coap_context_t *ctx,
   const coap_address_t *remote_addr,
   int ifindex) {
-  coap_session_t *s;
+  coap_session_t *s, *rtmp;
   coap_endpoint_t *ep;
-  LL_FOREACH(ctx->sessions, s) {
-    if (s->ifindex == ifindex && coap_address_equals(&s->remote_addr, remote_addr))
+  SESSIONS_ITER(ctx->sessions, s, rtmp) {
+    if (s->ifindex == ifindex && coap_address_equals(&s->addr_info.remote,
+                                                     remote_addr))
       return s;
   }
   LL_FOREACH(ctx->endpoint, ep) {
-    LL_FOREACH(ep->sessions, s) {
-      if (s->ifindex == ifindex && coap_address_equals(&s->remote_addr, remote_addr))
+    SESSIONS_ITER(ep->sessions, s, rtmp) {
+      if (s->ifindex == ifindex && coap_address_equals(&s->addr_info.remote,
+                                                       remote_addr))
         return s;
     }
   }
@@ -989,14 +993,16 @@ coap_session_get_by_peer(coap_context_t *ctx,
 const char *coap_session_str(const coap_session_t *session) {
   static char szSession[256];
   char *p = szSession, *end = szSession + sizeof(szSession);
-  if (coap_print_addr(&session->local_addr, (unsigned char*)p, end - p) > 0)
+  if (coap_print_addr(&session->addr_info.local,
+                      (unsigned char*)p, end - p) > 0)
     p += strlen(p);
   if (p + 6 < end) {
     strcpy(p, " <-> ");
     p += 5;
   }
   if (p + 1 < end) {
-    if (coap_print_addr(&session->remote_addr, (unsigned char*)p, end - p) > 0)
+    if (coap_print_addr(&session->addr_info.remote,
+                        (unsigned char*)p, end - p) > 0)
       p += strlen(p);
   }
   if (session->ifindex > 0 && p + 1 < end)
