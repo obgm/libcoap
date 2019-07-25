@@ -986,7 +986,7 @@ setup_pki_ssl(SSL *ssl,
 }
 
 static char*
-get_common_name_from_cert(X509* x509) {
+get_san_or_cn_from_cert(X509* x509) {
   if (x509) {
     char *cn;
     int n;
@@ -1053,7 +1053,7 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
   int depth = X509_STORE_CTX_get_error_depth(ctx);
   int err = X509_STORE_CTX_get_error(ctx);
   X509 *x509 = X509_STORE_CTX_get_current_cert(ctx);
-  char *cn = get_common_name_from_cert(x509);
+  char *cn = get_san_or_cn_from_cert(x509);
   int keep_preverify_ok = preverify_ok;
 
   if (!preverify_ok) {
