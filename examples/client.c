@@ -348,6 +348,7 @@ nack_handler(coap_context_t *context UNUSED_PARAM,
   case COAP_NACK_TLS_FAILED:
     quit = 1;
     break;
+  case COAP_NACK_ICMP_ISSUE:
   default:
     break;
   }

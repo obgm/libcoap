@@ -99,10 +99,18 @@ typedef void (*coap_nack_handler_t)(coap_context_t *context,
                                     coap_nack_reason_t reason,
                                     const coap_tid_t id);
 ----
+NACKs can be one of the following
+----
+COAP_NACK_TOO_MANY_RETRIES
+COAP_NACK_NOT_DELIVERABLE
+COAP_NACK_RST
+COAP_NACK_TLS_FAILED
+COAP_NACK_ICMP_ISSUE
+----
 
 The *coap_register_ping_handler*() function defines a _handler_ for tracking
-CoAP ping traffic associated with the _context_. If _handler_ is NULL, then
-the handler is de-registered.
+receipt of CoAP ping traffic associated with the _context_. If _handler_ is
+NULL, then the handler is de-registered.
 
 The handler function prototype is defined as:
 [source, c]
@@ -114,7 +122,7 @@ typedef void (*coap_ping_handler_t)(coap_context_t *context,
 ----
 
 The *coap_register_pong_handler*() function defines a _handler_ for tracking
-CoAP ping response traffic associated with the _context_.
+receipt of CoAP ping response traffic associated with the _context_.
 If _handler_ is NULL, then the handler is de-registered.
 
 The handler function prototype is defined as:
