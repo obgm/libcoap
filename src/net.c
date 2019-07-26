@@ -1802,8 +1802,8 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
   COAP_SET_STR(&token, sent->pdu->token_length, sent->pdu->token);
 
   RESOURCES_ITER(context->resources, r) {
-    num_cancelled += coap_delete_observer(r, sent->session, &token);
     coap_cancel_all_messages(context, sent->session, token.s, token.length);
+    num_cancelled += coap_delete_observer(r, sent->session, &token);
   }
 
   return num_cancelled;
