@@ -117,7 +117,8 @@ OPTIONS - General
    confirmable message will be sent.
 
 *-O* num,text::
-   Add option 'num' with contents of 'text' to the request.
+   Add option 'num' with contents of 'text' to the request. If the text begins
+   with 0x, then the hex text is converted to binary data.
 
 *-P* addr[:port]::
    Address (and port) for proxy to use (automatically adds Proxy-Uri option
