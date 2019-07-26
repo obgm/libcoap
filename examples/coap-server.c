@@ -440,6 +440,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
     if (dynamic_count >= support_dynamic) {
       /* Should have been caught in hnd_unknown_put() */
       response->code = COAP_RESPONSE_CODE(406);
+      coap_delete_string(uri_path);
       return;
     }
     dynamic_count++;
