@@ -16,6 +16,7 @@
 #include <limits.h>
 #endif
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -150,11 +151,11 @@ coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
     if (p < q) {                /* explicit port number given */
       int uri_port = 0;
 
-      while (p < q)
+      while ((p < q) && (uri_port <= UINT16_MAX))
               uri_port = uri_port * 10 + (*p++ - '0');
 
       /* check if port number is in allowed range */
-      if (uri_port > 65535) {
+      if (uri_port > UINT16_MAX) {
               res = -4;
               goto error;
       }
