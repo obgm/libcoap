@@ -91,16 +91,13 @@ void coap_delete_str_const(coap_str_const_t *string);
  * @param string The const byte array to convert to a coap_str_const_t *
  */
 #ifdef __cplusplus
-extern "C++" {
-#include <utility>
-template <typename T>
-coap_str_const_t *coap_make_str_const(T cstr) {
-  coap_str_const_t s;
-  s.length = sizeof(cstr)-1;
-  s.s = reinterpret_cast<const uint8_t *>(cstr);
-  return std::move(&s);
+namespace libcoap {
+  struct CoAPStrConst : coap_str_const_t {
+    operator coap_str_const_t *() { return this; }
+  };
 }
-}
+#define coap_make_str_const(CStr)                                       \
+  libcoap::CoAPStrConst{sizeof(CStr)-1, reinterpret_cast<const uint8_t *>(CStr)}
 #else /* __cplusplus */
 #define coap_make_str_const(string)                                     \
   (&(coap_str_const_t){sizeof(string)-1,(const uint8_t *)(string)})
