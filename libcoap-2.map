@@ -76,6 +76,7 @@ global:
   coap_is_mcast;
   coap_join_mcast_group;
   coap_log_impl;
+  coap_make_str_const;
   coap_malloc_endpoint;
   coap_malloc_type;
   coap_memory_init;

@@ -48,3 +48,13 @@ void coap_delete_str_const(coap_str_const_t *s) {
   coap_free_type(COAP_STRING, s);
 }
 
+coap_str_const_t *coap_make_str_const(const char *string)
+{
+  static int ofs = 0;
+  static coap_str_const_t var[COAP_MAX_STR_CONST_FUNC];
+  if (++ofs == COAP_MAX_STR_CONST_FUNC) ofs = 0;
+  var[ofs].length = strlen(string);
+  var[ofs].s = (const uint8_t *)string;
+  return &var[ofs];
+}
+

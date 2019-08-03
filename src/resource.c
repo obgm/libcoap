@@ -294,7 +294,8 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
   return result;
 }
 
-static coap_str_const_t *null_path = coap_make_str_const("");
+static coap_str_const_t null_path_value = {0, (const uint8_t*)""};
+static coap_str_const_t *null_path = &null_path_value;
 
 coap_resource_t *
 coap_resource_init(coap_str_const_t *uri_path, int flags) {

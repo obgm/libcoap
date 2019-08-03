@@ -467,7 +467,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
       buf[sizeof(buf) - 1] = '\0';
       coap_add_attr(resource,
                     coap_make_str_const("ct"),
-                    coap_make_str_const(buf),
+                    coap_make_str_const((char*)buf),
                     0);
     } else {
       dynamic_count--;
