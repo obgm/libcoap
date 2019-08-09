@@ -33,7 +33,7 @@ man-page-start: man-page-prepare
 	@echo '   <table class="directory">' >> $(top_builddir)/doc/man_tmp/manpage.dox
 
 man-page-build: man-page-start
-	@MAN_FILES=`find $(top_srcdir)/man/ -type f -name "coap*.in"` ;\
+	@MAN_FILES=`find $(top_srcdir)/man/ -type f -name "coap.txt.in" ; find $(top_srcdir)/man/ -type f -name "coap_*.in" | ALL=C sort ; find $(top_srcdir)/man/ -type f -name "coap-*.in" | LC_ALL=C sort` ;\
 	HTML_FILES=`find $(top_builddir)/man/ -type f -name "*.html"` ;\
 	COUNT_MAN_FILES=`echo $${MAN_FILES} | wc -w` ;\
 	COUNT_HTML_FILES=`echo $${HTML_FILES} | wc -w` ;\
