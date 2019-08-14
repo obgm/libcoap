@@ -1,5 +1,5 @@
-#ifndef _COAP_CONFIG_H_
-#define _COAP_CONFIG_H_
+#ifndef COAP_CONFIG_H_
+#define COAP_CONFIG_H_
 
 #if defined(_WIN32)
 
@@ -110,4 +110,4 @@
 
 #endif
 
-#endif /* _COAP_CONFIG_H_ */
+#endif /* COAP_CONFIG_H_ */
