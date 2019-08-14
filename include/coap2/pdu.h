@@ -336,15 +336,23 @@ typedef struct coap_pdu_t {
 coap_pdu_t * coap_pdu_from_pbuf(struct pbuf *pbuf);
 #endif
 
-typedef uint8_t coap_proto_t;
 /**
 * coap_proto_t values
 */
-#define COAP_PROTO_NONE         0
-#define COAP_PROTO_UDP          1
-#define COAP_PROTO_DTLS         2
-#define COAP_PROTO_TCP          3
-#define COAP_PROTO_TLS          4
+#if defined(_MSC_VER)
+typedef enum
+coap_proto_t : unsigned char
+#else /* !_MSC_VER */
+typedef enum
+__attribute__ ((__packed__))
+#endif /* !_MSC_VER */
+{
+  COAP_PROTO_NONE = 0,
+  COAP_PROTO_UDP,
+  COAP_PROTO_DTLS,
+  COAP_PROTO_TCP,
+  COAP_PROTO_TLS,
+} coap_proto_t;
 
 /**
  * Creates a new CoAP PDU with at least enough storage space for the given

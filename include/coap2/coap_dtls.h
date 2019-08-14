@@ -37,10 +37,12 @@ int coap_dtls_is_supported(void);
  */
 int coap_tls_is_supported(void);
 
-#define COAP_TLS_LIBRARY_NOTLS 0 /**< No DTLS library */
-#define COAP_TLS_LIBRARY_TINYDTLS 1 /**< Using TinyDTLS library */
-#define COAP_TLS_LIBRARY_OPENSSL 2 /**< Using OpenSSL library */
-#define COAP_TLS_LIBRARY_GNUTLS 3 /**< Using GnuTLS library */
+typedef enum coap_tls_library_t {
+  COAP_TLS_LIBRARY_NOTLS = 0, /**< No DTLS library */
+  COAP_TLS_LIBRARY_TINYDTLS,  /**< Using TinyDTLS library */
+  COAP_TLS_LIBRARY_OPENSSL,   /**< Using OpenSSL library */
+  COAP_TLS_LIBRARY_GNUTLS,    /**< Using GnuTLS library */
+} coap_tls_library_t;
 
 /**
  * The structure used for returning the underlying (D)TLS library
@@ -48,7 +50,7 @@ int coap_tls_is_supported(void);
  */
 typedef struct coap_tls_version_t {
   uint64_t version; /**< (D)TLS runtime Library Version */
-  int type; /**< Library type. One of COAP_TLS_LIBRARY_* */
+  coap_tls_library_t type; /**< Library type. One of COAP_TLS_LIBRARY_* */
   uint64_t built_version; /**< (D)TLS Built against Library Version */
 } coap_tls_version_t;
 
@@ -183,13 +185,25 @@ typedef coap_dtls_key_t *(*coap_dtls_sni_callback_t)(const char *sni,
              void* arg);
 
 
-#define COAP_DTLS_PKI_SETUP_VERSION 1 /**< Latest PKI setup version */
+#if defined(_MSC_VER)
+typedef enum
+coap_dtls_pki_version_t : unsigned char
+#else /* !_MSC_VER */
+typedef enum
+__attribute__ ((__packed__))
+#endif /* !_MSC_VER */
+{
+  COAP_DTLS_PKI_SETUP_VERSION_V1 = 1,
+  COAP_DTLS_PKI_SETUP_VERSION =
+              COAP_DTLS_PKI_SETUP_VERSION_V1, /**< Latest PKI setup version */
+} coap_dtls_pki_version_t;
 
 /**
  * The structure used for defining the PKI setup data to be used.
  */
 typedef struct coap_dtls_pki_t {
-  uint8_t version; /** Set to 1 to support this version of the struct */
+  coap_dtls_pki_version_t version; /** Set to COAP_DTLS_PKI_SETUP_VERSION to
+                                   support the version of the struct */
 
   /* Options to enable different TLS functionality in libcoap */
   uint8_t verify_peer_cert;        /**< 1 if peer cert is to be verified */

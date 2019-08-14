@@ -36,23 +36,33 @@ typedef struct coap_fixed_point_t {
 #define COAP_PROTO_NOT_RELIABLE(p) ((p)==COAP_PROTO_UDP || (p)==COAP_PROTO_DTLS)
 #define COAP_PROTO_RELIABLE(p) ((p)==COAP_PROTO_TCP || (p)==COAP_PROTO_TLS)
 
-typedef uint8_t coap_session_type_t;
-/**
- * coap_session_type_t values
- */
-#define COAP_SESSION_TYPE_CLIENT 1  /**< client-side */
-#define COAP_SESSION_TYPE_SERVER 2  /**< server-side */
-#define COAP_SESSION_TYPE_HELLO  3  /**< server-side ephemeral session for responding to a client hello */
+#if defined(_MSC_VER)
+typedef enum
+coap_session_type_t : unsigned char
+#else /* !_MSC_VER */
+typedef enum
+__attribute__ ((__packed__))
+#endif /* !_MSC_VER */
+{
+  COAP_SESSION_TYPE_CLIENT = 1, /**< client-side */
+  COAP_SESSION_TYPE_SERVER, /**< server-side */
+  COAP_SESSION_TYPE_HELLO, /**< server-side ephemeral session for responding to a client hello */
+} coap_session_type_t;
 
-typedef uint8_t coap_session_state_t;
-/**
- * coap_session_state_t values
- */
-#define COAP_SESSION_STATE_NONE                0
-#define COAP_SESSION_STATE_CONNECTING        1
-#define COAP_SESSION_STATE_HANDSHAKE        2
-#define COAP_SESSION_STATE_CSM                3
-#define COAP_SESSION_STATE_ESTABLISHED        4
+#if defined(_MSC_VER)
+typedef enum
+coap_session_state_t : unsigned char
+#else /* !_MSC_VER */
+typedef enum
+__attribute__ ((__packed__))
+#endif /* !_MSC_VER */
+{
+  COAP_SESSION_STATE_NONE = 0,
+  COAP_SESSION_STATE_CONNECTING,
+  COAP_SESSION_STATE_HANDSHAKE,
+  COAP_SESSION_STATE_CSM,
+  COAP_SESSION_STATE_ESTABLISHED,
+} coap_session_state_t;
 
 typedef struct coap_session_t {
   coap_proto_t proto;               /**< protocol used */

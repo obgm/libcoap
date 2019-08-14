@@ -84,14 +84,16 @@ for this information to be output using coap_log().
 
 [source, c]
 ----
-#define COAP_TLS_LIBRARY_NOTLS    0
-#define COAP_TLS_LIBRARY_TINYDTLS 1
-#define COAP_TLS_LIBRARY_OPENSSL  2
-#define COAP_TLS_LIBRARY_GNUTLS   3
+typedef enum coap_tls_library_t {
+  COAP_TLS_LIBRARY_NOTLS = 0, /**< No DTLS library */
+  COAP_TLS_LIBRARY_TINYDTLS,  /**< Using TinyDTLS library */
+  COAP_TLS_LIBRARY_OPENSSL,   /**< Using OpenSSL library */
+  COAP_TLS_LIBRARY_GNUTLS,    /**< Using GnuTLS library */
+} coap_tls_library_t;
 
 typedef struct coap_tls_version_t {
   uint64_t version; /* (D)TLS runtime Library Version */
-  int type; /* Library type. One of COAP_TLS_LIBRARY_* */
+  coap_tls_library_t type; /**< Library type. One of COAP_TLS_LIBRARY_* */
   uint64_t built_version; /* (D)TLS Built against Library Version */
 }
 ----
