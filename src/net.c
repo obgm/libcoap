@@ -1147,11 +1147,11 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
         coap_log(LOG_WARNING, "*  %s: read error\n",
                  coap_session_str(session));
     } else if (bytes_read > 0) {
-      coap_log(LOG_DEBUG, "*  %s: received %zd bytes\n",
-               coap_session_str(session), bytes_read);
       session->last_rx_tx = now;
       memcpy(&session->addr_info, &packet->addr_info,
              sizeof(session->addr_info));
+      coap_log(LOG_DEBUG, "*  %s: received %zd bytes\n",
+               coap_session_str(session), bytes_read);
       coap_handle_dgram_for_proto(ctx, session, packet);
     }
   } else {
