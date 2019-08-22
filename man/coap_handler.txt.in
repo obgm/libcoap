@@ -70,6 +70,10 @@ typedef void (*coap_method_handler_t)(coap_context_t *context,
                                       coap_pdu_t *response_pdu);
 ----
 
+*NOTE:* _incoming_pdu_ will be NULL for the GET Handler if this is an
+internally generated Observe Response.  *coap_find_observer()* can be used
+to determine the subscription information in this case.
+
 The *coap_register_response_handler*() function defines a request's response
 _handler_ for traffic associated with the _context_.  The application can use
 this for handling any response packets, including sending a RST packet if this
@@ -85,6 +89,11 @@ typedef void (*coap_response_handler_t)(coap_context_t *context,
                                         coap_pdu_t *received,
                                         const coap_tid_t id);
 ----
+
+*NOTE:* _sent_ will only be non NULL when the request PDU is Confirmable and
+this is an ACK or RST response to the request.  In general, matching of
+Requests and Responses whould be done generating unique Tokens for each Request
+and then matching up based on the Token in _received_ Response.
 
 The *coap_register_nack_handler*() function defines a request's negative
 response _handler_ for traffic associated with the _context_.
@@ -274,7 +283,7 @@ coap_pdu_t *sent, coap_pdu_t *received, const coap_tid_t id) {
 
 SEE ALSO
 --------
-*coap_resource*(3)
+*coap_observe*(3) and *coap_resource*(3)
 
 FURTHER INFORMATION
 -------------------
