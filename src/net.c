@@ -734,6 +734,14 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
     }
   }
 
+  if (pdu->type == COAP_MESSAGE_CON &&
+      (session->sock.flags & COAP_SOCKET_NOT_EMPTY) &&
+      (session->sock.flags & COAP_SOCKET_MULTICAST)) {
+    /* Violates RFC72522 8.1 */
+    coap_log(LOG_ERR, "Multicast requests cannot be Confirmable (RFC7252 8.1)\n");
+    return -1;
+  }
+
   if (session->state != COAP_SESSION_STATE_ESTABLISHED ||
       (pdu->type == COAP_MESSAGE_CON && session->con_active >= COAP_DEFAULT_NSTART)) {
     return coap_session_delay_pdu(session, pdu, node);
