@@ -497,11 +497,6 @@ message_handler(struct coap_context_t *ctx,
           }
         }
 
-        if (payload.length <= (block.num+1) * (1 << (block.szx + 4))) {
-          coap_log(LOG_DEBUG, "upload ready\n");
-          ready = 1;
-          return;
-        }
         if (last_block1_tid == received->tid) {
           /*
            * Duplicate BLOCK1 ACK
@@ -516,7 +511,15 @@ message_handler(struct coap_context_t *ctx,
         }
         last_block1_tid = received->tid;
 
-        /* create pdu with request for next block */
+        if (payload.length <= (block.num+1) * (1 << (block.szx + 4))) {
+          coap_log(LOG_DEBUG, "upload ready\n");
+          if (coap_get_data(received, &len, &databuf))
+            append_to_output(databuf, len);
+          ready = 1;
+          return;
+        }
+
+       /* create pdu with request for next block */
         pdu = coap_new_request(ctx, session, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
         if (pdu) {
 
