@@ -85,8 +85,13 @@ rd_delete(rd_t *rd) {
   }
 }
 
-/* temporary storage for dynamic resource representations */
 static int quit = 0;
+
+/* SIGINT handler: set quit to 1 for graceful termination */
+static void
+handle_sigint(int signum UNUSED_PARAM) {
+  quit = 1;
+}
 
 static void
 hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
@@ -620,6 +625,9 @@ main(int argc, char **argv) {
   char *group = NULL;
   int opt;
   coap_log_t log_level = LOG_WARNING;
+#ifndef _WIN32
+  struct sigaction sa;
+#endif
 
   while ((opt = getopt(argc, argv, "A:g:p:v:")) != -1) {
     switch (opt) {
@@ -655,6 +663,20 @@ main(int argc, char **argv) {
     coap_join_mcast_group(ctx, group);
 
   init_resources(ctx);
+
+#ifdef _WIN32
+  signal(SIGINT, handle_sigint);
+#else
+  memset (&sa, 0, sizeof(sa));
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = handle_sigint;
+  sa.sa_flags = 0;
+  sigaction (SIGINT, &sa, NULL);
+  sigaction (SIGTERM, &sa, NULL);
+  /* So we do not exit on a SIGPIPE */
+  sa.sa_handler = SIG_IGN;
+  sigaction (SIGPIPE, &sa, NULL);
+#endif
 
   while ( !quit ) {
     result = coap_run_once( ctx, COAP_RESOURCE_CHECK_TIME * 1000 );

@@ -1569,6 +1569,9 @@ main(int argc, char **argv) {
   sa.sa_flags = 0;
   sigaction (SIGINT, &sa, NULL);
   sigaction (SIGTERM, &sa, NULL);
+  /* So we do not exit on a SIGPIPE */
+  sa.sa_handler = SIG_IGN;
+  sigaction (SIGPIPE, &sa, NULL);
 #endif
 
   while (!quit && !(ready && !doing_getting_block && coap_can_exit(ctx)) ) {
