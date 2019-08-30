@@ -21,6 +21,11 @@
 #include "encode.h"
 #include <stdio.h>
 
+#ifdef COAP_EPOLL_SUPPORT
+#include <sys/epoll.h>
+#include <sys/timerfd.h>
+#endif /* COAP_EPOLL_SUPPORT */
+#include <errno.h>
 
 void
 coap_session_set_max_retransmit (coap_session_t *session, unsigned int value) {
@@ -608,6 +613,39 @@ coap_session_new_dtls_session(coap_session_t *session,
   return session;
 }
 
+#ifdef COAP_EPOLL_SUPPORT
+static void
+coap_epoll_ctl_add(coap_socket_t *sock,
+                   uint32_t events,
+                   const char *func
+) {
+  int ret;
+  struct epoll_event event;
+  coap_context_t *context;
+
+  if (sock == NULL)
+    return;
+
+  context = sock->session ? sock->session->context :
+                            sock->endpoint ? sock->endpoint->context : NULL;
+  if (context == NULL)
+    return;
+
+  /* Needed if running 32bit as ptr is only 32bit */
+  memset(&event, 0, sizeof(event));
+  event.events = events;
+  event.data.ptr = sock;
+
+  ret = epoll_ctl(context->epfd, EPOLL_CTL_ADD, sock->fd, &event);
+  if (ret == -1) {
+     coap_log(LOG_ERR,
+              "%s: epoll_ctl ADD failed: %s (%d)\n",
+              func,
+              coap_socket_strerror(), errno);
+  }
+}
+#endif /* COAP_EPOLL_SUPPORT */
+
 static coap_session_t *
 coap_session_create_client(
   coap_context_t *ctx,
@@ -640,6 +678,15 @@ coap_session_create_client(
       goto error;
     }
   }
+
+  session->sock.session = session;
+#ifdef COAP_EPOLL_SUPPORT
+  coap_epoll_ctl_add(&session->sock,
+                     EPOLLIN |
+                      ((session->sock.flags & COAP_SOCKET_WANT_CONNECT) ?
+                       EPOLLOUT : 0),
+                   __func__);
+#endif /* COAP_EPOLL_SUPPORT */
 
   session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_WANT_READ;
   if (local_if)
@@ -855,6 +902,12 @@ coap_session_t *coap_new_server_session(
     goto error;
   session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED
                        | COAP_SOCKET_WANT_READ;
+  session->sock.session = session;
+#ifdef COAP_EPOLL_SUPPORT
+  coap_epoll_ctl_add(&session->sock,
+                     EPOLLIN,
+                   __func__);
+#endif /* COAP_EPOLL_SUPPORT */
   SESSIONS_ADD(ep->sessions, session);
   if (session) {
     coap_log(LOG_DEBUG, "***%s: new incoming session\n",
@@ -939,6 +992,13 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
   ep->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_BOUND;
 
   ep->default_mtu = COAP_DEFAULT_MTU;
+
+  ep->sock.endpoint = ep;
+#ifdef COAP_EPOLL_SUPPORT
+  coap_epoll_ctl_add(&ep->sock,
+                     EPOLLIN,
+                   __func__);
+#endif /* COAP_EPOLL_SUPPORT */
 
   LL_PREPEND(context->endpoint, ep);
   return ep;

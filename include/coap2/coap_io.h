@@ -19,6 +19,15 @@
 #define COAP_RXBUFFER_SIZE 1472
 #endif /* COAP_RXBUFFER_SIZE */
 
+/*
+ * It may may make sense to define this larger on busy systems
+ * (lots of sessions, large number of which are active), by using
+ * -DCOAP_MAX_EPOLL_EVENTS=nn at compile time.
+ */
+#ifndef COAP_MAX_EPOLL_EVENTS
+#define COAP_MAX_EPOLL_EVENTS 10
+#endif /* COAP_MAX_EPOLL_EVENTS */
+
 #ifdef _WIN32
 typedef SOCKET coap_fd_t;
 #define coap_closesocket closesocket
@@ -33,6 +42,7 @@ typedef int coap_fd_t;
 
 struct coap_packet_t;
 struct coap_session_t;
+struct coap_context_t;
 struct coap_pdu_t;
 
 typedef uint16_t coap_socket_flags_t;
@@ -51,6 +61,14 @@ typedef struct coap_socket_t {
   coap_fd_t fd;
 #endif /* WITH_LWIP */
   coap_socket_flags_t flags;
+  struct coap_session_t *session; /* Used by the epoll logic for an active session.
+                                     Note: It must mot be wrapped with COAP_EPOLL_SUPPORT as
+                                     coap_socket_t is seen in applications embedded in
+                                     coap_session_t etc. */
+  struct coap_endpoint_t *endpoint; /* Used by the epoll logic for a listening endpoint.
+                                       Note: It must mot be wrapped with COAP_EPOLL_SUPPORT as
+                                       coap_socket_t is seen in applications embedded in
+                                       coap_session_t etc. */
 } coap_socket_t;
 
 /**
@@ -121,6 +139,9 @@ coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len);
 
 ssize_t
 coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len);
+
+void
+coap_epoll_ctl_mod(coap_socket_t *sock, uint32_t events, const char *func);
 
 #ifdef WITH_LWIP
 ssize_t
