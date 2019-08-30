@@ -466,10 +466,10 @@ void
 coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 #if COAP_CONSTRAINED_STACK
   static coap_mutex_t static_show_pdu_mutex = COAP_MUTEX_INITIALIZER;
-  static unsigned char buf[1024]; /* need some space for output creation */
+  static unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1024)]; /* need some space for output creation */
   static char outbuf[COAP_DEBUG_BUF_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
-  unsigned char buf[1024]; /* need some space for output creation */
+  unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1024)]; /* need some space for output creation */
   char outbuf[COAP_DEBUG_BUF_SIZE];
 #endif /* ! COAP_CONSTRAINED_STACK */
   size_t buf_len = 0; /* takes the number of bytes written to buf */
@@ -652,8 +652,11 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ">>");
     } else {
       if (print_readable(data, data_len, buf, sizeof(buf), 0)) {
+        size_t max_length;
         outbuflen = strlen(outbuf);
-        snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "'%s'", buf);
+        max_length = sizeof(outbuf)-outbuflen;
+        if (snprintf(&outbuf[outbuflen], max_length,  "'%s'", buf) >= (int)max_length)
+          outbuf[sizeof(outbuf)-1] = '\000';
       }
     }
   }
