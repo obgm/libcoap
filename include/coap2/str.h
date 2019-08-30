@@ -81,27 +81,21 @@ coap_str_const_t *coap_new_str_const(const uint8_t *data, size_t size);
  */
 void coap_delete_str_const(coap_str_const_t *string);
 
+#define COAP_MAX_STR_CONST_FUNC 2
 /**
- * Take the specified byte array (text) and create a coap_str_const_t *
+ * Take the specified string and create a coap_str_const_t *
  *
- * WARNING: The byte array must be in the local scope and not a
- * parameter in the function call as sizeof() will return the size of the
- * pointer, not the size of the byte array, leading to unxepected results.
+ * Note: the array is 2 deep as there are up to two callings of
+ * coap_make_str_const in a function call. e.g. coap_add_attr().
+ * Caution: If there are local variable assignments, these will cycle around
+ * the var[COAP_MAX_STR_CONST_FUNC] set.  No current examples do this.
  *
- * @param string The const byte array to convert to a coap_str_const_t *
+ * @param string The const string to convert to a coap_str_const_t *
+ *
+ * @return       A pointer to one of two static variables containing the
+ *               coap_str_const_t * result
  */
-#ifdef __cplusplus
-namespace libcoap {
-  struct CoAPStrConst : coap_str_const_t {
-    operator coap_str_const_t *() { return this; }
-  };
-}
-#define coap_make_str_const(CStr)                                       \
-  libcoap::CoAPStrConst{sizeof(CStr)-1, reinterpret_cast<const uint8_t *>(CStr)}
-#else /* __cplusplus */
-#define coap_make_str_const(string)                                     \
-  (&(coap_str_const_t){sizeof(string)-1,(const uint8_t *)(string)})
-#endif  /* __cplusplus */
+coap_str_const_t *coap_make_str_const(const char *string);
 
 /**
  * Compares the two strings for equality
