@@ -264,13 +264,13 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
 }
 
 #ifdef WITH_CONTIKI
-# define fprintf(fd, ...) PRINTF(__VA_ARGS__)
+# define fprintf(fd, ...) { (void)fd; PRINTF(__VA_ARGS__); }
 # define fflush(...)
 
 # ifdef HAVE_VPRINTF
-#  define vfprintf(fd, ...) vprintf(__VA_ARGS__)
+#  define vfprintf(fd, ...) { (void)fd; vprintf(__VA_ARGS__); }
 # else /* HAVE_VPRINTF */
-#  define vfprintf(fd, ...) PRINTF(__VA_ARGS__)
+#  define vfprintf(fd, ...) { (void)fd; PRINTF(__VA_ARGS__); }
 # endif /* HAVE_VPRINTF */
 #endif /* WITH_CONTIKI */
 
