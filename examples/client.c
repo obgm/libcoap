@@ -944,7 +944,7 @@ cmdline_token(char *arg) {
  *
  * return The numerical representation of @p c.
  */
-static inline uint8_t
+static uint8_t
 hex2char(char c) {
   assert(isxdigit(c));
   if ('a' <= c && c <= 'f')
