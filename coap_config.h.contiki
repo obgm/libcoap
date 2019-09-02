@@ -1,5 +1,5 @@
-#ifndef _COAP_CONFIG_H_
-#define _COAP_CONFIG_H_
+#ifndef COAP_CONFIG_H_
+#define COAP_CONFIG_H_
 
 #include "contiki.h"
 #include "contiki-lib.h"
@@ -164,5 +164,5 @@ typedef void FILE;
 #include <stdio.h>
 #define coap_log(fd, ...) printf(__VA_ARGS__)
 
-#endif /* _COAP_CONFIG_H_ */
+#endif /* COAP_CONFIG_H_ */
 
