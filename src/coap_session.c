@@ -6,19 +6,11 @@
 * README for terms of use.
 */
 
+#include "coap_internal.h"
+
 #ifndef COAP_SESSION_C_
 #define COAP_SESSION_C_
 
-
-#include "coap_config.h"
-#include "coap_io.h"
-#include "coap_session.h"
-#include "net.h"
-#include "coap_debug.h"
-#include "mem.h"
-#include "resource.h"
-#include "utlist.h"
-#include "encode.h"
 #include <stdio.h>
 
 #ifdef COAP_EPOLL_SUPPORT

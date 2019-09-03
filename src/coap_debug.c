@@ -6,7 +6,7 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #if defined(HAVE_STRNLEN) && defined(__GNUC__) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE 1
@@ -31,13 +31,6 @@
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
-
-#include "libcoap.h"
-#include "block.h"
-#include "coap_debug.h"
-#include "encode.h"
-#include "net.h"
-#include "coap_mutex.h"
 
 #ifdef WITH_LWIP
 # define fprintf(fd, ...) LWIP_PLATFORM_DIAG((__VA_ARGS__))

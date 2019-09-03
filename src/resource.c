@@ -6,15 +6,9 @@
  * README for terms of use.
  */
 
+#include "coap_internal.h"
+
 #include <stdio.h>
-#include "coap_config.h"
-#include "coap.h"
-#include "coap_debug.h"
-#include "mem.h"
-#include "net.h"
-#include "resource.h"
-#include "subscribe.h"
-#include "utlist.h"
 
 #if defined(WITH_LWIP)
 /* mem.h is only needed for the string free calls for

@@ -22,6 +22,9 @@ EXTRA_DIST = \
   libcoap-$(LIBCOAP_API_VERSION).sym \
   examples/coap_list.h \
   examples/getopt.c \
+  include/coap$(LIBCOAP_API_VERSION)/coap_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/utlist.h \
   tests/test_error_response.h \
   tests/test_options.h \
@@ -68,6 +71,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/address.c \
   src/async.c \
   src/block.c \
+  src/coap_debug.c \
   src/coap_event.c \
   src/coap_hashkey.c \
   src/coap_gnutls.c \
@@ -77,7 +81,6 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_session.c \
   src/coap_time.c \
   src/coap_tinydtls.c \
-  src/coap_debug.c \
   src/encode.c \
   src/mem.c \
   src/net.c \
@@ -108,6 +111,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_debug.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_dtls.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_event.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_forward_decls.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_hashkey.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_io.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_mutex.h \

@@ -6,7 +6,7 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
 #ifdef HAVE_ASSERT_H
@@ -24,8 +24,6 @@
 #ifdef HAVE_WS2TCPIP_H
 #include <ws2tcpip.h>
 #endif
-
-#include "address.h"
 
 #ifdef RIOT_VERSION
 /* FIXME */

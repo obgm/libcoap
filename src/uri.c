@@ -6,7 +6,7 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #if defined(HAVE_ASSERT_H) && !defined(assert)
 # include <assert.h>
@@ -20,13 +20,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-
-#include "libcoap.h"
-#include "mem.h"
-#include "coap_debug.h"
-#include "pdu.h"
-#include "option.h"
-#include "uri.h"
 
 /**
  * A length-safe version of strchr(). This function returns a pointer

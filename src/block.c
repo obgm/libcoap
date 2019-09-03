@@ -6,17 +6,11 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #if defined(HAVE_ASSERT_H) && !defined(assert)
 # include <assert.h>
 #endif
-
-#include "libcoap.h"
-#include "coap_debug.h"
-#include "block.h"
-#include "resource.h"
-#include "coap_hashkey.h"
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))

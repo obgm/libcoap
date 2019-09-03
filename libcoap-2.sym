@@ -179,7 +179,6 @@ coap_split_query
 coap_split_uri
 coap_startup
 coap_string_tls_version
-coap_subscription_init
 coap_ticks
 coap_ticks_from_rt_us
 coap_ticks_to_rt

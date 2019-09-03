@@ -32,6 +32,7 @@ extern "C" {
 
 #include "libcoap.h"
 
+#include "coap_forward_decls.h"
 #include "address.h"
 #include "async.h"
 #include "bits.h"

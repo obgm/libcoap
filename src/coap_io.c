@@ -6,7 +6,7 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #ifdef HAVE_STDIO_H
 #  include <stdio.h>
@@ -48,16 +48,6 @@
 #ifdef WITH_CONTIKI
 # include "uip.h"
 #endif
-
-#include "libcoap.h"
-#include "coap_debug.h"
-#include "mem.h"
-#include "net.h"
-#include "coap_io.h"
-#include "pdu.h"
-#include "utlist.h"
-#include "resource.h"
-#include "coap_mutex.h"
 
 #if !defined(WITH_CONTIKI)
  /* define generic PKTINFO for IPv4 */
@@ -1587,8 +1577,15 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
 
-#else
+#else /* WITH_CONTIKI */
 int coap_run_once(coap_context_t *ctx, unsigned int timeout_ms) {
+  coap_tick_t now;
+
+  coap_ticks(&now);
+  /* There is something to read on the endpoint */
+  ctx->endpoint->sock.flags |= COAP_SOCKET_CAN_READ;
+  /* read in, and send off any responses */
+  coap_read(ctx, now);  /* read received data */
   return -1;
 }
 
@@ -1602,7 +1599,7 @@ coap_write(coap_context_t *ctx,
   *num_sockets = 0;
   return 0;
 }
-#endif
+#endif /* WITH_CONTIKI */
 
 #ifdef _WIN32
 static const char *coap_socket_format_errno(int error) {
