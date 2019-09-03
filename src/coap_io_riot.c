@@ -206,7 +206,7 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
   case GNRC_NETAPI_MSG_TYPE_RCV: {
     coap_log(LOG_DEBUG, "coap_run_once: GNRC_NETAPI_MSG_TYPE_RCV\n");
 
-    coap_session_t *s;
+    coap_session_t *s, *rtmp;
     udp_hdr_t *udp_hdr = get_udp_header((gnrc_pktsnip_t *)msg.content.ptr);
     ipv6_hdr_t *ip6_hdr =
       gnrc_ipv6_get_header((gnrc_pktsnip_t *)msg.content.ptr);
@@ -216,7 +216,7 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
 
     /* Traverse all sessions and set COAP_SOCKET_CAN_READ if the
      * received packet's destination address matches. */
-    LL_FOREACH(ctx->sessions, s) {
+    SESSIONS_ITER(ctx->sessions, s, rtmp) {
       coap_log(LOG_DEBUG, "coap_run_once: check ctx->sessions %u == %u\n",
                ntohs(get_port(&s->addr_info.local)),
                ntohs(udp_hdr->dst_port.u16));
