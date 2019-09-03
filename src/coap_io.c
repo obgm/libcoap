@@ -691,7 +691,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 #else
 #ifdef HAVE_STRUCT_CMSGHDR
     bytes_written = sendmsg(sock->fd, &mhdr, 0);
-#else /* ! HAVE_STRUCT_CMSGHDR */
+#elif !defined(CONTIKI) /* ! HAVE_STRUCT_CMSGHDR */
     bytes_written = sendto(sock->fd, data, datalen, 0,
                            &session->addr_info.remote.addr.sa,
                            session->addr_info.remote.size);
@@ -705,11 +705,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
     uip_udp_packet_sendto((struct uip_udp_conn *)sock->conn, data, datalen,
       &session->addr_info.remote.addr, session->addr_info.remote.port);
     bytes_written = datalen;
-#elif defined(RIOT_VERSION)
-    bytes_written = sendto(sock->fd, data, datalen, 0,
-                           &session->remote_addr.addr.sa,
-                           session->remote_addr.size);
-#endif /* WITH_CONTIKI || RIOT_VERSION */
+#endif /* WITH_CONTIKI */
   }
 
   if (bytes_written < 0)
