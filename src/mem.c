@@ -7,10 +7,7 @@
  */
 
 
-#include "coap_config.h"
-#include "libcoap.h"
-#include "mem.h"
-#include "coap_debug.h"
+#include "coap_internal.h"
 
 #ifdef HAVE_ASSERT_H
 #include <assert.h>
@@ -67,12 +64,6 @@ struct coap_stringbuf_t {
   char data[COAP_MAX_STRING_SIZE];
 };
 
-#include "coap_config.h"
-#include "net.h"
-#include "pdu.h"
-#include "coap_io.h"
-#include "resource.h"
-#include "coap_session.h"
 
 #define COAP_MAX_PACKET_SIZE (sizeof(coap_packet_t) + COAP_RXBUFFER_SIZE)
 #ifndef COAP_MAX_PACKETS

@@ -6,7 +6,7 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -48,20 +48,6 @@
 #include <lwip/udp.h>
 #include <lwip/timeouts.h>
 #endif
-
-#include "libcoap.h"
-#include "utlist.h"
-#include "coap_debug.h"
-#include "mem.h"
-#include "str.h"
-#include "async.h"
-#include "resource.h"
-#include "option.h"
-#include "encode.h"
-#include "block.h"
-#include "net.h"
-#include "utlist.h"
-#include "coap_mutex.h"
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -132,7 +118,6 @@ coap_free_node(coap_queue_t *node) {
 #  define DEBUG DEBUG_PRINT
 # endif /* DEBUG */
 
-#include "mem.h"
 #include "net/ip/uip-debug.h"
 
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])

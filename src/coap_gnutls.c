@@ -19,16 +19,12 @@
  * g_env      A coap_gnutls_env_t * (held in c_session->tls)
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #ifdef HAVE_LIBGNUTLS
 
 #define MIN_GNUTLS_VERSION "3.3.0"
 
-#include "net.h"
-#include "mem.h"
-#include "coap_debug.h"
-#include "prng.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <errno.h>
