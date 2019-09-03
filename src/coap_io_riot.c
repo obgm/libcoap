@@ -6,7 +6,7 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #ifdef HAVE_STDIO_H
 #  include <stdio.h>
@@ -35,15 +35,6 @@
 #include "net/gnrc/ipv6.h"
 #include "net/gnrc/netreg.h"
 #include "net/udp.h"
-
-#include "libcoap.h"
-#include "coap_debug.h"
-#include "mem.h"
-#include "net.h"
-#include "coap_io.h"
-#include "pdu.h"
-#include "utlist.h"
-#include "resource.h"
 
 #include "coap_riot.h"
 
