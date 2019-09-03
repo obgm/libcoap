@@ -51,8 +51,8 @@ coap_network_send(coap_socket_t *sock,
     bytes_written = send(sock->fd, data, datalen, 0);
   } else {
     bytes_written = sendto(sock->fd, data, datalen, 0,
-                           &session->remote_addr.addr.sa,
-                           session->remote_addr.size);
+                           &session->addr_info.remote.addr.sa,
+                           session->addr_info.remote.size);
   }
 
   if (bytes_written < 0)
@@ -107,17 +107,22 @@ coap_network_read(coap_socket_t *sock, struct coap_packet_t *packet) {
   packet->ifindex = sock->fd;
 
   assert(sizeof(struct in6_addr) == sizeof(ipv6_addr_t));
-  packet->src.size = sizeof(struct sockaddr_in6);
-  memset(&packet->src.addr, 0, sizeof(packet->src.addr));
-  packet->src.addr.sin6.sin6_family = AF_INET6;
-  memcpy(&packet->src.addr.sin6.sin6_addr, &ipv6_hdr->src, sizeof(ipv6_addr_t));
-  memcpy(&packet->src.addr.sin6.sin6_port, &udp_hdr->src_port, sizeof(udp_hdr->src_port));
+  packet->addr_info.remote.size = sizeof(struct sockaddr_in6);
+  memset(&packet->addr_info.remote.addr, 0,
+         sizeof(packet->addr_info.remote.addr));
+  packet->addr_info.remote.addr.sin6.sin6_family = AF_INET6;
+  memcpy(&packet->addr_info.remote.addr.sin6.sin6_addr,
+         &ipv6_hdr->src, sizeof(ipv6_addr_t));
+  memcpy(&packet->addr_info.remote.addr.sin6.sin6_port,
+         &udp_hdr->src_port, sizeof(udp_hdr->src_port));
 
-  packet->dst.size = sizeof(struct sockaddr_in6);
-  memset(&packet->dst.addr, 0, sizeof(packet->dst.addr));
-  packet->dst.addr.sin6.sin6_family = AF_INET6;
-  memcpy(&packet->dst.addr.sin6.sin6_addr, &ipv6_hdr->dst, sizeof(ipv6_addr_t));
-  memcpy(&packet->dst.addr.sin6.sin6_port, &udp_hdr->dst_port, sizeof(udp_hdr->src_port));
+  packet->addr_info.local.size = sizeof(struct sockaddr_in6);
+  memset(&packet->addr_info.local.addr, 0, sizeof(packet->addr_info.local.addr));
+  packet->addr_info.local.addr.sin6.sin6_family = AF_INET6;
+  memcpy(&packet->addr_info.local.addr.sin6.sin6_addr,
+         &ipv6_hdr->dst, sizeof(ipv6_addr_t));
+  memcpy(&packet->addr_info.local
+         .addr.sin6.sin6_port, &udp_hdr->dst_port, sizeof(udp_hdr->src_port));
 
   packet->ifindex = sock->fd;
   packet->length = (len > 0) ? len : 0;
@@ -125,7 +130,7 @@ coap_network_read(coap_socket_t *sock, struct coap_packet_t *packet) {
   if (LOG_DEBUG <= coap_get_log_level()) {
     unsigned char addr_str[INET6_ADDRSTRLEN + 8];
 
-    if (coap_print_addr(&packet->src, addr_str, INET6_ADDRSTRLEN + 8)) {
+    if (coap_print_addr(&packet->addr_info.remote, addr_str, INET6_ADDRSTRLEN + 8)) {
       coap_log(LOG_DEBUG, "received %zd bytes from %s\n", len, addr_str);
     }
   }
@@ -213,14 +218,15 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
      * received packet's destination address matches. */
     LL_FOREACH(ctx->sessions, s) {
       coap_log(LOG_DEBUG, "coap_run_once: check ctx->sessions %u == %u\n",
-               ntohs(get_port(&s->local_addr)), ntohs(udp_hdr->dst_port.u16));
-      if ((get_port(&s->local_addr) == udp_hdr->dst_port.u16) &&
-          (address_equals(&s->local_addr, &ip6_hdr->dst))) {
+               ntohs(get_port(&s->addr_info.local)),
+               ntohs(udp_hdr->dst_port.u16));
+      if ((get_port(&s->addr_info.local) == udp_hdr->dst_port.u16) &&
+          (address_equals(&s->addr_info.local, &ip6_hdr->dst))) {
         coap_socket_t *sock = find_socket(s->sock.fd, sockets, num_sockets);
 
         if (sock && (sock->flags & (COAP_SOCKET_WANT_READ))) {
           coap_log(LOG_DEBUG, "fd %d on port %u can read\n",
-                   sock->fd, ntohs(get_port(&s->local_addr)));
+                   sock->fd, ntohs(get_port(&s->addr_info.local)));
           sock->flags |= COAP_SOCKET_CAN_READ;
           sock->pkt = msg.content.ptr;
           found_port = true;
