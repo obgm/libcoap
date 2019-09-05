@@ -568,10 +568,27 @@ fi
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
                   stdlib.h string.h strings.h sys/socket.h sys/time.h \
-                  time.h unistd.h sys/unistd.h syslog.h sys/ioctl.h sys/epoll.h sys/timerfd.h])
+                  time.h unistd.h sys/unistd.h syslog.h sys/ioctl.h])
 
 # For epoll, need two headers (sys/epoll.h sys/timerfd.h), but set up one #define
+AC_CHECK_HEADER([sys/epoll.h])
+AC_CHECK_HEADER([sys/timerfd.h])
 if test "x$ac_cv_header_sys_epoll_h" != "x" -a "x$ac_cv_header_sys_timerfd_h" != "x"; then
+    have_epoll="yes"
+    AC_ARG_WITH([epoll],
+            [AS_HELP_STRING([--with-epoll],
+                            [Use epoll for I/O handling [if O/S supports it]])],
+            [with_epoll="$withval"],
+            [with_epoll="yes"])
+else
+    have_epoll="no"
+    if test "x$with_epoll" = "xyes"; then
+        AC_MSG_WARN([==> Underlying O/S does not support epoll - --with-epoll ignored.])
+        with_epoll="no"
+    fi
+fi
+
+if test "x$with_epoll" = "xyes"; then
     AC_DEFINE(COAP_EPOLL_SUPPORT, 1, [Define if the system has epoll support])
 fi
 
@@ -715,6 +732,9 @@ if test "x$with_tinydtls" = "xyes"; then
 fi
 if test "x$build_dtls" != "xyes"; then
     AC_MSG_RESULT([      build DTLS support      : "no"])
+fi
+if test "x$have_epoll" = "xyes"; then
+    AC_MSG_RESULT([      build using epoll       : "$with_epoll"])
 fi
 if test "x$build_doxygen" = "xyes"; then
     AC_MSG_RESULT([      build doxygen pages     : "yes"])
