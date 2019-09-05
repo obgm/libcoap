@@ -82,7 +82,7 @@ coap_find_payload(coap_resource_t *resource) {
   return p;
 }
 
-static inline void
+static void
 coap_add_payload(coap_resource_t *resource, coap_payload_t *payload){
   assert(payload);
 

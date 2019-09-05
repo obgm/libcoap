@@ -100,15 +100,7 @@ _coap_address_isany_impl(const coap_address_t *a) {
  *
  * @param addr The coap_address_t object to initialize.
  */
-COAP_STATIC_INLINE void
-coap_address_init(coap_address_t *addr) {
-  assert(addr);
-  memset(addr, 0, sizeof(coap_address_t));
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
-  /* lwip and Contiki have constant address sizes and doesn't need the .size part */
-  addr->size = sizeof(addr->addr);
-#endif
-}
+void coap_address_init(coap_address_t *addr);
 
 /* Convenience function to copy IPv6 addresses without garbage. */
 
