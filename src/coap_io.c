@@ -1246,6 +1246,50 @@ error:
   return -1;
 }
 
+unsigned int
+coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
+#ifndef COAP_EPOLL_SUPPORT
+  (void)ctx;
+  (void)now;
+   coap_log(LOG_EMERG,
+            "coap_io_prepare_epoll() requires libcoap compiled for using epoll\n");
+  return 0;
+#else /* COAP_EPOLL_SUPPORT */
+  coap_socket_t *sockets[1];
+  unsigned int max_sockets = sizeof(sockets)/sizeof(sockets[0]);
+  unsigned int num_sockets;
+  unsigned int timeout;
+
+  /* Use the common logic */
+  timeout = coap_write(ctx, sockets, max_sockets, &num_sockets, now);
+  /* Save when the next expected I/O is to take place */
+  ctx->next_timeout = timeout ? now + timeout : 0;
+  if (ctx->eptimerfd != -1) {
+    struct itimerspec new_value;
+    int ret;
+
+    memset(&new_value, 0, sizeof(new_value));
+    coap_ticks(&now);
+    if (ctx->next_timeout != 0 && ctx->next_timeout > now) {
+      coap_tick_t rem_timeout = ctx->next_timeout - now;
+      /* Need to trigger an event on ctx->epfd in the future */
+      new_value.it_value.tv_sec = rem_timeout / COAP_TICKS_PER_SECOND;
+      new_value.it_value.tv_nsec = (rem_timeout % COAP_TICKS_PER_SECOND) *
+                                   1000000;
+    }
+    /* reset, or specify a future time for eptimerfd to trigger */
+    ret = timerfd_settime(ctx->eptimerfd, 0, &new_value, NULL);
+    if (ret == -1) {
+      coap_log(LOG_ERR,
+                "%s: timerfd_settime failed: %s (%d)\n",
+                "coap_io_prepare_epoll",
+                coap_socket_strerror(), errno);
+    }
+  }
+  return timeout;
+#endif /* COAP_EPOLL_SUPPORT */
+}
+
 #if !defined(WITH_CONTIKI)
 
 unsigned int
@@ -1430,17 +1474,19 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
   static coap_mutex_t static_mutex = COAP_MUTEX_INITIALIZER;
 # ifndef COAP_EPOLL_SUPPORT
   static fd_set readfds, writefds, exceptfds;
-# endif /* ! COAP_EPOLL_SUPPORT */
   static coap_socket_t *sockets[64];
+  unsigned int num_sockets = 0;
+# endif /* ! COAP_EPOLL_SUPPORT */
 #else /* ! COAP_CONSTRAINED_STACK */
 # ifndef COAP_EPOLL_SUPPORT
   fd_set readfds, writefds, exceptfds;
-# endif /* ! COAP_EPOLL_SUPPORT */
   coap_socket_t *sockets[64];
+  unsigned int num_sockets = 0;
+# endif /* ! COAP_EPOLL_SUPPORT */
 #endif /* ! COAP_CONSTRAINED_STACK */
   coap_fd_t nfds = 0;
   coap_tick_t before, now;
-  unsigned int num_sockets = 0, timeout;
+  unsigned int timeout;
 #ifndef COAP_EPOLL_SUPPORT
   struct timeval tv;
   int result;
@@ -1453,15 +1499,11 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
 
   coap_ticks(&before);
 
+#ifndef COAP_EPOLL_SUPPORT
   timeout = coap_write(ctx, sockets, (unsigned int)(sizeof(sockets) / sizeof(sockets[0])), &num_sockets, before);
-#ifdef COAP_EPOLL_SUPPORT
-  /* Save when the next expected I/O is to take place */
-  ctx->next_timeout = timeout ? before + timeout : 0;
-#endif /* COAP_EPOLL_SUPPORT */
   if (timeout == 0 || timeout_ms < timeout)
     timeout = timeout_ms;
 
-#ifndef COAP_EPOLL_SUPPORT
   FD_ZERO(&readfds);
   FD_ZERO(&writefds);
   FD_ZERO(&exceptfds);
@@ -1520,6 +1562,11 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
   coap_read(ctx, now);
 
 #else /* COAP_EPOLL_SUPPORT */
+  timeout = coap_io_prepare_epoll(ctx, before);
+
+  if (timeout == 0 || timeout_ms < timeout)
+    timeout = timeout_ms;
+
   do {
     struct epoll_event events[COAP_MAX_EPOLL_EVENTS];
     int etimeout = timeout;
@@ -1539,46 +1586,18 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
       break;
     }
 
-    if (coap_io_do_events(ctx, events, nfds)) {
-      /* timeout event occurred, need to see what timedout for processing */
-      coap_ticks(&now);
-      coap_write(ctx, sockets,
-                 (unsigned int)(sizeof(sockets) / sizeof(sockets[0])),
-                  &num_sockets, now);
-      /* fake nfds so we go around the loop again */
-      nfds = COAP_MAX_EPOLL_EVENTS;
-    }
+    coap_io_do_events(ctx, events, nfds);
 
     /*
      * reset to COAP_RUN_NONBLOCK (which causes etimeout to become 0)
      * incase we have to do another iteration
+     * (COAP_MAX_EPOLL_EVENTS insufficient)
      */
     timeout_ms = COAP_RUN_NONBLOCK;
+
     /* Keep retrying until less than COAP_MAX_EPOLL_EVENTS are returned */
   } while (nfds == COAP_MAX_EPOLL_EVENTS);
 
-  if (ctx->eptimerfd != -1) {
-    struct itimerspec new_value;
-    int ret;
-
-    memset(&new_value, 0, sizeof(new_value));
-    coap_ticks(&now);
-    if (ctx->next_timeout != 0 && ctx->next_timeout > now) {
-      coap_tick_t rem_timeout = ctx->next_timeout - now;
-      /* Need to trigger an event on ctx->epfd in the future */
-      new_value.it_value.tv_sec = rem_timeout / COAP_TICKS_PER_SECOND;
-      new_value.it_value.tv_nsec = (rem_timeout % COAP_TICKS_PER_SECOND) *
-                                   1000000;
-    }
-    /* reset, or specify a future time for eptimerfd to trigger */
-    ret = timerfd_settime(ctx->eptimerfd, 0, &new_value, NULL);
-    if (ret == -1) {
-      coap_log(LOG_ERR,
-                "%s: timerfd_settime failed: %s (%d)\n",
-                "coap_run_once",
-                coap_socket_strerror(), errno);
-    }
-  }
   coap_ticks(&now);
 #endif /* COAP_EPOLL_SUPPORT */
 

@@ -588,6 +588,28 @@ void coap_read(coap_context_t *ctx, coap_tick_t now);
 
 int coap_run_once( coap_context_t *ctx, unsigned int timeout_ms );
 
+/**
+ * Any now timed out delayed packet is transmitted, along with any packets
+ * associated with requested observable response.
+ *
+ * In addition, it returns when the next expected I/O is expected to take place
+ * (e.g. a packet retransmit).
+ *
+ * Note: If epoll support is compiled into libcoap, coap_io_prepare_epoll() must
+ * be used instead of coap_write().
+ *
+ * Internal function.
+ *
+ * @param ctx The CoAP context
+ * @param now Current time.
+ *
+ * @return timeout Maxmimum number of milliseconds that can be used by a
+ *                 epoll_wait() to wait for network events or 0 if wait should be
+ *                 forever.
+ */
+unsigned int
+coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now);
+
 struct epoll_event;
 /**
  * Process all the epoll events
@@ -598,9 +620,8 @@ struct epoll_event;
  * @param events The list of events returned from an epoll_wait() call.
  * @param nevents The number of events.
  *
- * @return 1 if timeout event, else 0
  */
-int coap_io_do_events(coap_context_t *ctx, struct epoll_event* events,
+void coap_io_do_events(coap_context_t *ctx, struct epoll_event* events,
                       size_t nevents);
 
 /**
