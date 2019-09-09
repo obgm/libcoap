@@ -15,6 +15,7 @@
 #define COAP_SESSION_H_
 
 
+#include "coap_forward_decls.h"
 #include "coap_io.h"
 #include "coap_time.h"
 #include "pdu.h"

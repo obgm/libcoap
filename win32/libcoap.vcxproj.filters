@@ -110,6 +110,15 @@
     <ClInclude Include="..\include\coap2\coap_event.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\coap2\coap_forward_decls.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\coap2\coap_hashkey.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\coap2\coap_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\coap2\coap_io.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -70,6 +70,7 @@
     <ClInclude Include="..\include\coap2\coap_event.h" />
     <ClInclude Include="..\include\coap2\coap_forward_decls.h" />
     <ClInclude Include="..\include\coap2\coap_hashkey.h" />
+    <ClInclude Include="..\include\coap2\coap_internal.h" />
     <ClInclude Include="..\include\coap2\coap_io.h" />
     <ClInclude Include="..\include\coap2\coap_mutex.h" />
     <ClInclude Include="..\include\coap2\coap_session.h" />
