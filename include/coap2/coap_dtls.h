@@ -185,25 +185,13 @@ typedef coap_dtls_key_t *(*coap_dtls_sni_callback_t)(const char *sni,
              void* arg);
 
 
-#if defined(_MSC_VER)
-typedef enum
-coap_dtls_pki_version_t : unsigned char
-#else /* !_MSC_VER */
-typedef enum
-__attribute__ ((__packed__))
-#endif /* !_MSC_VER */
-{
-  COAP_DTLS_PKI_SETUP_VERSION_V1 = 1,
-  COAP_DTLS_PKI_SETUP_VERSION =
-              COAP_DTLS_PKI_SETUP_VERSION_V1, /**< Latest PKI setup version */
-} coap_dtls_pki_version_t;
+#define COAP_DTLS_PKI_SETUP_VERSION 1 /**< Latest PKI setup version */
 
 /**
  * The structure used for defining the PKI setup data to be used.
  */
 typedef struct coap_dtls_pki_t {
-  coap_dtls_pki_version_t version; /** Set to COAP_DTLS_PKI_SETUP_VERSION to
-                                   support the version of the struct */
+  uint8_t version; /** Set to 1 to support this version of the struct */
 
   /* Options to enable different TLS functionality in libcoap */
   uint8_t verify_peer_cert;        /**< 1 if peer cert is to be verified */

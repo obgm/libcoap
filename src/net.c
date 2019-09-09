@@ -701,7 +701,6 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
       bytes_written = coap_tls_write(session, pdu->token - pdu->hdr_size,
                                      pdu->used_size + pdu->hdr_size);
       break;
-    case COAP_PROTO_NONE:
     default:
       break;
   }
@@ -1186,9 +1185,6 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
           q->pdu->used_size + q->pdu->hdr_size - session->partial_write
         );
         break;
-      case COAP_PROTO_NONE:
-      case COAP_PROTO_UDP:
-      case COAP_PROTO_DTLS:
       default:
         bytes_written = -1;
         break;
