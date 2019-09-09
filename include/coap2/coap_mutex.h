@@ -15,6 +15,13 @@
 #ifndef COAP_MUTEX_H_
 #define COAP_MUTEX_H_
 
+/*
+ * Mutexes are currently only used if there is a Constrained Stack, and
+ * large static variables (instead of the large variable being on the stack)
+ * need to be protected.
+ */
+#if COAP_CONSTRAINED_STACK
+
 #if defined(RIOT_VERSION)
 
 #include <mutex.h>
@@ -35,7 +42,20 @@ typedef int coap_mutex_t;
 #define coap_mutex_trylock(a) *(a) = 1
 #define coap_mutex_unlock(a) *(a) = 0
 
-#else /* ! RIOT_VERSION && ! WITH_CONTIKI */
+#elif defined(_MSC_VER)
+
+/*
+ * _MSC_VER does not easily support mutex and mutexes are currently only
+ * used for Constrained Stacks, so the below should not be needed.
+ */
+
+typedef int coap_mutex_t;
+#define COAP_MUTEX_INITIALIZER 0
+#define coap_mutex_lock(a) *(a) = 1
+#define coap_mutex_trylock(a) *(a) = 1
+#define coap_mutex_unlock(a) *(a) = 0
+
+#else /* ! RIOT_VERSION && ! WITH_CONTIKI && ! _MSC_VER */
 
 #include <pthread.h>
 
@@ -45,6 +65,8 @@ typedef pthread_mutex_t coap_mutex_t;
 #define coap_mutex_trylock(a) pthread_mutex_trylock(a)
 #define coap_mutex_unlock(a) pthread_mutex_unlock(a)
 
-#endif /* ! RIOT_VERSION && ! WITH_CONTIKI */
+#endif /* ! RIOT_VERSION && ! WITH_CONTIKI && ! _MSC_VER */
+
+#endif /* COAP_CONSTRAINED_STACK */
 
 #endif /* COAP_MUTEX_H_ */
