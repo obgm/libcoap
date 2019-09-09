@@ -50,10 +50,10 @@ typedef uint8_t coap_session_state_t;
  * coap_session_state_t values
  */
 #define COAP_SESSION_STATE_NONE                0
-#define COAP_SESSION_STATE_CONNECTING        1
-#define COAP_SESSION_STATE_HANDSHAKE        2
-#define COAP_SESSION_STATE_CSM                3
-#define COAP_SESSION_STATE_ESTABLISHED        4
+#define COAP_SESSION_STATE_CONNECTING          1
+#define COAP_SESSION_STATE_HANDSHAKE           2
+#define COAP_SESSION_STATE_CSM                 3
+#define COAP_SESSION_STATE_ESTABLISHED         4
 
 typedef struct coap_session_t {
   coap_proto_t proto;               /**< protocol used */
