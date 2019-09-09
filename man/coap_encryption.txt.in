@@ -120,7 +120,7 @@ below.
 [source, c]
 ----
 typedef struct coap_dtls_pki_t {
-  coap_dtls_pki_version_t version;  /* Set to COAP_DTLS_PKI_SETUP_VERSION */
+  uint8_t version;            /* COAP_DTLS_PKI_SETUP_VERSION */
 
   /* Options to enable different TLS functionality in libcoap */
   uint8_t verify_peer_cert;         /* 1 if peer cert is to be verified */
@@ -178,12 +178,7 @@ enabled.
 *SECTION: coap_dtls_pki_t Version*
 [source, c]
 ----
-typedef enum
-{
-  COAP_DTLS_PKI_SETUP_VERSION_V1 = 1,
-  COAP_DTLS_PKI_SETUP_VERSION =
-              COAP_DTLS_PKI_SETUP_VERSION_V1, /**< Latest PKI setup version */
-} coap_dtls_pki_version_t;
+#define COAP_DTLS_PKI_SETUP_VERSION 1
 ----
 
 *version* is set to COAP_DTLS_PKI_SETUP_VERSION.  This will then allow support
