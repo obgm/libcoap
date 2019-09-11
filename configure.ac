@@ -567,6 +567,7 @@ fi
 
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
+                  pthread.h \
                   stdlib.h string.h strings.h sys/socket.h sys/time.h \
                   time.h unistd.h sys/unistd.h syslog.h sys/ioctl.h])
 
@@ -598,7 +599,7 @@ AC_TYPE_SSIZE_T
 
 # Checks for library functions.
 AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo \
-                strnlen malloc])
+                strnlen malloc pthread_mutex_lock])
 
 # Check if -lsocket -lnsl is required (specifically Solaris)
 AC_SEARCH_LIBS([socket], [socket])
