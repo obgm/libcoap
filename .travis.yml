@@ -10,8 +10,11 @@ services:
 
 env:
   - PLATFORM=posix TESTS=yes TLS=no
+  - PLATFORM=posix TESTS=yes TLS=gnutls SMALL_STACK=yes
+  - PLATFORM=posix TESTS=yes TLS=gnutls SMALL_STACK=no
+  - PLATFORM=posix TESTS=yes TLS=gnutls SMALL_STACK=yes EPOLL=no
+  - PLATFORM=posix TESTS=yes TLS=gnutls SMALL_STACK=no  EPOLL=no
   - PLATFORM=posix TESTS=yes TLS=openssl
-  - PLATFORM=posix TESTS=yes TLS=gnutls
   - PLATFORM=posix TESTS=yes TLS=tinydtls
 
 matrix:
@@ -20,6 +23,10 @@ matrix:
       env: PLATFORM=posix TESTS=yes TLS=no
     - compiler: clang
       env: PLATFORM=posix TESTS=yes TLS=tinydtls
+    - compiler: clang
+      env: PLATFORM=posix TESTS=yes TLS=gnutls SMALL_STACK=yes EPOLL=no
+    - compiler: clang
+      env: PLATFORM=posix TESTS=yes TLS=gnutls SMALL_STACK=no  EPOLL=no
 
 before_install:
   - docker build -t obgm/libcoap:travis-env .
@@ -72,4 +79,4 @@ before_script:
   # Paranoia log: what if our config got overwritten?
   - sudo cat /etc/docker/daemon.json
 script:
-  - docker run -e CC -e PLATFORM -e TESTS -e DOCS -e TLS obgm/libcoap:travis-env /bin/sh -c "scripts/build.sh"
+  - docker run -e CC -e PLATFORM -e TESTS -e DOCS -e TLS -e EPOLL -e SMALL_STACK obgm/libcoap:travis-env /bin/sh -c "scripts/build.sh"
