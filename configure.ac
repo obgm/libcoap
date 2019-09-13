@@ -593,6 +593,16 @@ if test "x$with_epoll" = "xyes"; then
     AC_DEFINE(COAP_EPOLL_SUPPORT, 1, [Define if the system has epoll support])
 fi
 
+AC_ARG_ENABLE([small-stack],
+        [AS_HELP_STRING([--enable-small-stack],
+                        [Use small-stack if the available stack space is restricted [default=no]])],
+        [enable_small_stack="$enableval"],
+        [enable_small_stack="no"])
+
+if test "x$enable_small_stack" = "xyes"; then
+    AC_DEFINE(COAP_CONSTRAINED_STACK, 1, [Define if the system has small stack size])
+fi
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
@@ -737,6 +747,7 @@ fi
 if test "x$have_epoll" = "xyes"; then
     AC_MSG_RESULT([      build using epoll       : "$with_epoll"])
 fi
+AC_MSG_RESULT([      enable small stack size : "$enable_small_stack"])
 if test "x$build_doxygen" = "xyes"; then
     AC_MSG_RESULT([      build doxygen pages     : "yes"])
     AC_MSG_RESULT([          --> Doxygen around  : "yes" ($DOXYGEN $doxygen_version)])
