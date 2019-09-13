@@ -31,6 +31,17 @@ case "x${DOCS}" in
                ;;
 esac
 
+# Building with epoll support can be disabled by setting EPOLL=no.
+# Otherwise, it is enabled by default and used if available.
+if test "x$EPOLL" = "xno" ; then
+    OTHER_OPTS="$OTHER_OPTS --without-epoll"
+fi
+
+# Enable constrained stack build when SMALL_STACK is set to yes.
+if test "x$SMALL_STACK" = "xyes" ; then
+    OTHER_OPTS="$OTHER_OPTS --enable-small-stack"
+fi
+
 config() {
     echo "./configure $SILENT $*"
     ./configure $SILENT $* || cat config.log
@@ -43,7 +54,7 @@ case "${PLATFORM}" in
     lwip)    config "--disable-tests $WITH_DOCS --disable-examples $WITH_TLS" && \
                make -C examples/lwip
              ;;
-    posix|*) config "$WITH_TESTS $WITH_DOCS --enable-examples $WITH_TLS" && \
+    posix|*) config "$WITH_TESTS $WITH_DOCS --enable-examples $WITH_TLS $OTHER_OPTS" && \
                make && make check
              ;;
 esac
