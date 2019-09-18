@@ -58,3 +58,33 @@ coap_encode_var_safe(uint8_t *buf, size_t length, unsigned int val) {
   return n;
 }
 
+uint64_t
+coap_decode_var_bytes8(const uint8_t *buf,unsigned int len) {
+  unsigned int i;
+  uint64_t n = 0;
+  for (i = 0; i < len; ++i)
+    n = (n << 8) + buf[i];
+
+  return n;
+}
+
+unsigned int
+coap_encode_var_safe8(uint8_t *buf, size_t length, uint64_t val) {
+  unsigned int n, i;
+  uint64_t tval = val;
+
+  for (n = 0; tval && n < sizeof(val); ++n)
+    tval >>= 8;
+
+  if (n > length) {
+    assert (n <= length);
+    return 0;
+  }
+  i = n;
+  while (i--) {
+    buf[i] = val & 0xff;
+    val >>= 8;
+  }
+
+  return n;
+}
