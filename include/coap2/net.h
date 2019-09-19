@@ -10,7 +10,6 @@
 #ifndef COAP_NET_H_
 #define COAP_NET_H_
 
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #ifndef _WIN32

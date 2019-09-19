@@ -1213,7 +1213,6 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       }
 
       ((char *)uip_appdata)[len] = 0;
-#ifndef NDEBUG
       if (LOG_DEBUG <= coap_get_log_level()) {
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 40
@@ -1225,7 +1224,6 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
           coap_log(LOG_DEBUG, "received %zd bytes from %s\n", len, addr_str);
         }
       }
-#endif /* NDEBUG */
 
       packet->length = len;
       memcpy(&packet->payload, uip_appdata, len);

@@ -10,7 +10,6 @@
 #ifndef COAP_IO_H_
 #define COAP_IO_H_
 
-#include <assert.h>
 #include <sys/types.h>
 
 #include "address.h"

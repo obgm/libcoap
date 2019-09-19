@@ -8,10 +8,6 @@
 
 #include "coap_internal.h"
 
-#if defined(HAVE_ASSERT_H) && !defined(assert)
-# include <assert.h>
-#endif
-
 #if defined(HAVE_LIMITS_H)
 #include <limits.h>
 #endif

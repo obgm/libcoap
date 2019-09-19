@@ -9,9 +9,6 @@
 #include "coap_internal.h"
 
 #if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
-#ifdef HAVE_ASSERT_H
-#include <assert.h>
-#endif
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif

@@ -371,12 +371,10 @@ message_handler(struct coap_context_t *ctx,
   unsigned char *databuf;
   coap_tid_t tid;
 
-#ifndef NDEBUG
   coap_log(LOG_DEBUG, "** process incoming %d.%02d response:\n",
            (received->code >> 5), received->code & 0x1F);
   if (coap_get_log_level() < LOG_DEBUG)
     coap_show_pdu(LOG_INFO, received);
-#endif
 
   /* check if this is a response to our original request */
   if (!check_token(received)) {
@@ -1549,11 +1547,9 @@ main(int argc, char **argv) {
     goto finish;
   }
 
-#ifndef NDEBUG
   coap_log(LOG_DEBUG, "sending CoAP request:\n");
   if (coap_get_log_level() < LOG_DEBUG)
     coap_show_pdu(LOG_INFO, pdu);
-#endif
 
   coap_send(session, pdu);
 

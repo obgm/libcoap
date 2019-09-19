@@ -1,4 +1,4 @@
-This is a simple file for all kinds of stuff related on devlopment for
+This is a simple file for all kinds of stuff related on development for
 libcoap. Please append (and remove) any issue you think its worthy.
 
 Classification of issues:
@@ -11,7 +11,6 @@ Classification of issues:
 =================
 * CRITICAL ISSUES
 =================
--> Remove #ifdef HAVE_ASSERT_H and so on from the public headers.
 -> Proxy functionality
  -> A coap-server should be able to act as proxy server
 

@@ -250,9 +250,7 @@ coap_new_node(void) {
   node = coap_malloc_node();
 
   if (!node) {
-#ifndef NDEBUG
-    coap_log(LOG_WARNING, "coap_new_node: malloc\n");
-#endif
+    coap_log(LOG_WARNING, "coap_new_node: malloc failed\n");
     return NULL;
   }
 
@@ -439,9 +437,7 @@ coap_new_context(
 
 #ifndef WITH_CONTIKI
   if (!c) {
-#ifndef NDEBUG
-    coap_log(LOG_EMERG, "coap_init: malloc:\n");
-#endif
+    coap_log(LOG_EMERG, "coap_init: malloc: failed\n");
     return NULL;
   }
 #endif /* not WITH_CONTIKI */
@@ -2365,7 +2361,6 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   coap_opt_filter_t opt_filter;
   int is_ping_rst;
 
-#ifndef NDEBUG
   if (LOG_DEBUG <= coap_get_log_level()) {
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 40
@@ -2380,7 +2375,6 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
             */
     coap_show_pdu(LOG_DEBUG, pdu);
   }
-#endif
 
   memset(opt_filter, 0, sizeof(coap_opt_filter_t));
 
