@@ -25,6 +25,14 @@
 #define COAP_INTERNAL_H_
 
 #include "coap_config.h"
+
+/*
+ * Correctly set up assert() based on NDEBUG for libcoap
+ */
+#if defined(HAVE_ASSERT_H) && !defined(assert)
+# include <assert.h>
+#endif
+
 #include "coap.h"
 
 /*

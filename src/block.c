@@ -8,10 +8,6 @@
 
 #include "coap_internal.h"
 
-#if defined(HAVE_ASSERT_H) && !defined(assert)
-# include <assert.h>
-#endif
-
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif

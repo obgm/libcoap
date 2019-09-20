@@ -12,10 +12,6 @@
 #define _GNU_SOURCE 1
 #endif
 
-#if defined(HAVE_ASSERT_H) && !defined(assert)
-# include <assert.h>
-#endif
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>

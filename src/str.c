@@ -14,9 +14,7 @@ coap_string_t *coap_new_string(size_t size) {
   coap_string_t *s =
             (coap_string_t *)coap_malloc_type(COAP_STRING, sizeof(coap_string_t) + size + 1);
   if ( !s ) {
-#ifndef NDEBUG
-    coap_log(LOG_CRIT, "coap_new_string: malloc\n");
-#endif
+    coap_log(LOG_CRIT, "coap_new_string: malloc: failed\n");
     return NULL;
   }
 

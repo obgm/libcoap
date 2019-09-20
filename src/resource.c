@@ -898,7 +898,6 @@ coap_remove_failed_observers(coap_context_t *context,
         LL_DELETE(resource->subscribers, obs);
         obs->fail_cnt = 0;
 
-#ifndef NDEBUG
         if (LOG_DEBUG <= coap_get_log_level()) {
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 40
@@ -909,7 +908,6 @@ coap_remove_failed_observers(coap_context_t *context,
                               addr, INET6_ADDRSTRLEN+8))
             coap_log(LOG_DEBUG, "** removed observer %s\n", addr);
         }
-#endif
         coap_cancel_all_messages(context, obs->session,
                                  obs->token, obs->token_length);
         coap_session_release( obs->session );

@@ -9,10 +9,6 @@
 
 #include "coap_internal.h"
 
-#if defined(HAVE_ASSERT_H) && !defined(assert)
-# include <assert.h>
-#endif
-
 void
 coap_subscription_init(coap_subscription_t *s) {
   assert(s);

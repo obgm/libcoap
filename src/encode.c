@@ -8,10 +8,6 @@
 
 #include "coap_internal.h"
 
-#ifndef NDEBUG
-#  include <stdio.h>
-#endif
-
 /* Carsten suggested this when fls() is not available: */
 #ifndef HAVE_FLS
 int coap_fls(unsigned int i) {
