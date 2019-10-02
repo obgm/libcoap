@@ -6,6 +6,7 @@
 /* #include <coap.h> */
 
 #include "test_uri.h"
+#include "test_encode.h"
 #include "test_options.h"
 #include "test_pdu.h"
 #include "test_error_response.h"
@@ -33,6 +34,7 @@ main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM) {
 
   coap_startup();
   t_init_uri_tests();
+  t_init_encode_tests();
   t_init_option_tests();
   t_init_pdu_tests();
   t_init_error_response_tests();

@@ -27,6 +27,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/utlist.h \
   tests/test_error_response.h \
+  tests/test_encode.h \
   tests/test_options.h \
   tests/test_pdu.h \
   tests/test_sendqueue.h \
