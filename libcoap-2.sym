@@ -30,6 +30,7 @@ coap_context_set_psk
 coap_debug_send_packet
 coap_debug_set_packet_loss
 coap_decode_var_bytes
+coap_decode_var_bytes8
 coap_delete_all
 coap_delete_all_resources
 coap_delete_attr
@@ -46,6 +47,7 @@ coap_dtls_get_log_level
 coap_dtls_is_supported
 coap_dtls_set_log_level
 coap_encode_var_safe
+coap_encode_var_safe8
 coap_endpoint_get_session
 coap_endpoint_set_default_mtu
 coap_endpoint_str
