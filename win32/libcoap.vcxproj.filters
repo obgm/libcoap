@@ -51,6 +51,9 @@
     <ClCompile Include="..\src\coap_session.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_tcp.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_time.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -135,6 +138,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\coap2\coap_subscribe_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\coap2\coap_tcp_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\coap2\coap_time.h">

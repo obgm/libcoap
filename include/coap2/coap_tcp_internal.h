@@ -1,29 +1,27 @@
 /*
- * coap_tcp.h -- TCP functions for libcoap
+ * coap_tcp_internal.h -- TCP functions for libcoap
  *
- * Copyright (C) 2019 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2019--2020 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
  */
 
-#ifndef COAP_TCP_H_
-#define COAP_TCP_H_
+/**
+ * @file coap_tcp_internal.h
+ * @brief COAP tcp internal information
+ */
+
+#ifndef COAP_TCP_INTERNAL_H_
+#define COAP_TCP_INTERNAL_H_
 
 #include "coap_io.h"
 
 /**
  * @defgroup tcp TCP Support
- * API functions for interfacing with the system TCP stack.
+ * Internal API functions for interfacing with the system TCP stack.
  * @{
  */
-
-/**
- * Check whether TCP is available.
- *
- * @return @c 1 if support for TCP is enabled, or @c 0 otherwise.
- */
-int coap_tcp_is_supported(void);
 
 int
 coap_socket_connect_tcp1(coap_socket_t *sock,
@@ -51,4 +49,4 @@ coap_socket_accept_tcp(coap_socket_t *server,
 
 /** @} */
 
-#endif /* COAP_TCP_H_ */
+#endif /* COAP_TCP_INTERNAL_H_ */

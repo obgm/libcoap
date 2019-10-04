@@ -1251,7 +1251,7 @@ coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
       FD_SET(sockets[i]->fd, &writefds);
       FD_SET(sockets[i]->fd, &exceptfds);
     }
-#endif /* COAP_DISABLE_TCP */
+#endif /* !COAP_DISABLE_TCP */
   }
 
   if ( timeout > 0 ) {

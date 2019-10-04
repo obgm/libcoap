@@ -182,7 +182,6 @@ coap_set_log_level
 coap_set_show_pdu_output
 coap_show_pdu
 coap_show_tls_version
-coap_socket_format_errno
 coap_socket_strerror
 coap_split_path
 coap_split_query

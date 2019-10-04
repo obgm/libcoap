@@ -120,7 +120,9 @@ typedef struct psk_sni_entry {
 
 typedef struct coap_openssl_context_t {
   coap_dtls_context_t dtls;
+#if !COAP_DISABLE_TCP
   coap_tls_context_t tls;
+#endif /* !COAP_DISABLE_TCP */
   coap_dtls_pki_t setup_data;
   int psk_pki_enabled;
   size_t sni_count;
@@ -157,7 +159,7 @@ int coap_dtls_is_supported(void) {
 }
 
 int coap_tls_is_supported(void) {
-#if ENABLE_TCP
+#if !COAP_DISABLE_TCP
   if (SSLeay() < 0x10100000L) {
     coap_log(LOG_WARNING, "OpenSSL version 1.1.0 or later is required\n");
     return 0;
@@ -169,9 +171,9 @@ int coap_tls_is_supported(void) {
   }
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
   return 1;
-#else /* !ENABLE_TCP */
+#else /* COAP_DISABLE_TCP */
   return 0;
-#endif /* !ENABLE_TCP */
+#endif /* COAP_DISABLE_TCP */
 }
 
 coap_tls_version_t *
@@ -565,6 +567,7 @@ static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
     session->dtls_event = COAP_EVENT_DTLS_RENEGOTIATE;
 }
 
+#if !COAP_DISABLE_TCP
 static int coap_sock_create(BIO *a) {
   BIO_set_init(a, 1);
   return 1;
@@ -633,6 +636,7 @@ static long coap_sock_ctrl(BIO *a, int cmd, long num, void *ptr) {
   }
   return r;
 }
+#endif /* !COAP_DISABLE_TCP */
 
 void *coap_dtls_new_context(struct coap_context_t *coap_context) {
   coap_openssl_context_t *context;
@@ -679,6 +683,7 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
     BIO_meth_set_create(context->dtls.meth, coap_dgram_create);
     BIO_meth_set_destroy(context->dtls.meth, coap_dgram_destroy);
 
+#if !COAP_DISABLE_TCP
     /* Set up TLS context */
     context->tls.ctx = SSL_CTX_new(TLS_method());
     if (!context->tls.ctx)
@@ -696,6 +701,7 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
     BIO_meth_set_ctrl(context->tls.meth, coap_sock_ctrl);
     BIO_meth_set_create(context->tls.meth, coap_sock_create);
     BIO_meth_set_destroy(context->tls.meth, coap_sock_destroy);
+#endif /* !COAP_DISABLE_TCP */
   }
 
   return context;
@@ -718,14 +724,18 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
 
   SSL_CTX_set_psk_server_callback(o_context->dtls.ctx,
                                   coap_dtls_psk_server_callback);
+#if !COAP_DISABLE_TCP
   SSL_CTX_set_psk_server_callback(o_context->tls.ctx,
                                   coap_dtls_psk_server_callback);
+#endif /* !COAP_DISABLE_TCP */
   if (setup_data->psk_info.hint.s) {
     char hint[COAP_DTLS_HINT_LENGTH];
     snprintf(hint, sizeof(hint), "%.*s", (int)setup_data->psk_info.hint.length,
              setup_data->psk_info.hint.s);
     SSL_CTX_use_psk_identity_hint(o_context->dtls.ctx, hint);
+#if !COAP_DISABLE_TCP
     SSL_CTX_use_psk_identity_hint(o_context->tls.ctx, hint);
+#endif /* !COAP_DISABLE_TCP */
   }
   if (setup_data->validate_sni_call_back) {
 #if OPENSSL_VERSION_NUMBER < 0x10101000L
@@ -733,17 +743,21 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
                                       &c_context->spsk_setup_data);
     SSL_CTX_set_tlsext_servername_callback(o_context->dtls.ctx,
                                            psk_tls_server_name_call_back);
+#if !COAP_DISABLE_TCP
     SSL_CTX_set_tlsext_servername_arg(o_context->tls.ctx,
                                       &c_context->spsk_setup_data);
     SSL_CTX_set_tlsext_servername_callback(o_context->tls.ctx,
                                            psk_tls_server_name_call_back);
+#endif /* !COAP_DISABLE_TCP */
 #else /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
     SSL_CTX_set_client_hello_cb(o_context->dtls.ctx,
                                 psk_tls_client_hello_call_back,
                                 NULL);
+#if !COAP_DISABLE_TCP
     SSL_CTX_set_client_hello_cb(o_context->tls.ctx,
                                 psk_tls_client_hello_call_back,
                                 NULL);
+#endif /* !COAP_DISABLE_TCP */
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
   }
 
@@ -825,6 +839,7 @@ map_key_type(int asn1_private_key_type
   }
   return 0;
 }
+#if !COAP_DISABLE_TCP
 static uint8_t coap_alpn[] = { 4, 'c', 'o', 'a', 'p' };
 
 static int
@@ -848,6 +863,7 @@ server_alpn_callback (SSL *ssl UNUSED,
   *out = tout;
   return (ret != OPENSSL_NPN_NEGOTIATED) ? SSL_TLSEXT_ERR_NOACK : SSL_TLSEXT_ERR_OK;
 }
+#endif /* !COAP_DISABLE_TCP */
 
 static void
 add_ca_to_cert_store(X509_STORE *st, X509 *x509)
@@ -1623,6 +1639,7 @@ tls_server_name_call_back(SSL *ssl,
         SSL_CTX_set_info_callback(ctx, coap_dtls_info_callback);
         SSL_CTX_set_options(ctx, SSL_OP_NO_QUERY_MTU);
       }
+#if !COAP_DISABLE_TCP
       else {
         /* Set up TLS context */
         ctx = SSL_CTX_new(TLS_method());
@@ -1634,6 +1651,7 @@ tls_server_name_call_back(SSL *ssl,
         SSL_CTX_set_info_callback(ctx, coap_dtls_info_callback);
         SSL_CTX_set_alpn_select_cb(ctx, server_alpn_callback, NULL);
       }
+#endif /* !COAP_DISABLE_TCP */
       memset(&sni_setup_data, 0, sizeof(sni_setup_data));
       sni_setup_data.pki_key.key_type = new_entry->key_type;
       sni_setup_data.pki_key.key.pem = new_entry->key.pem;
@@ -2139,6 +2157,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
                                     NULL);
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
     }
+#if !COAP_DISABLE_TCP
     if (context->tls.ctx) {
       /* SERVER TLS */
 #if OPENSSL_VERSION_NUMBER < 0x10101000L
@@ -2169,6 +2188,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
       /* TLS Only */
       SSL_CTX_set_alpn_select_cb(context->tls.ctx, server_alpn_callback, NULL);
     }
+#endif /* !COAP_DISABLE_TCP */
   }
 
   if (!context->dtls.ssl) {
@@ -2205,6 +2225,7 @@ coap_dtls_context_set_pki_root_cas(struct coap_context_t *ctx,
       return 0;
     }
   }
+#if !COAP_DISABLE_TCP
   if (context->tls.ctx) {
     if (!SSL_CTX_load_verify_locations(context->tls.ctx, ca_file, ca_dir)) {
       coap_log(LOG_WARNING, "Unable to install root CAs (%s/%s)\n",
@@ -2212,6 +2233,7 @@ coap_dtls_context_set_pki_root_cas(struct coap_context_t *ctx,
       return 0;
     }
   }
+#endif /* !COAP_DISABLE_TCP */
   return 1;
 }
 
@@ -2238,10 +2260,12 @@ void coap_dtls_free_context(void *handle) {
     BIO_meth_free(context->dtls.meth);
   if (context->dtls.bio_addr)
     BIO_ADDR_free(context->dtls.bio_addr);
+#if !COAP_DISABLE_TCP
   if ( context->tls.ctx )
       SSL_CTX_free( context->tls.ctx );
   if ( context->tls.meth )
       BIO_meth_free( context->tls.meth );
+#endif /* !COAP_DISABLE_TCP */
   for (i = 0; i < context->sni_count; i++) {
     OPENSSL_free(context->sni_entry_list[i].sni);
 #if OPENSSL_VERSION_NUMBER < 0x10101000L
@@ -2339,9 +2363,11 @@ setup_client_ssl_session(coap_session_t *session, SSL *ssl
       if (session->proto == COAP_PROTO_DTLS) {
         SSL_set_max_proto_version(ssl, DTLS1_2_VERSION);
       }
+#if !COAP_DISABLE_TCP
       else {
         SSL_set_max_proto_version(ssl, TLS1_2_VERSION);
       }
+#endif /* !COAP_DISABLE_TCP */
       coap_log(LOG_DEBUG,
         "CoAP Client restricted to (D)TLS1.2 with Identity Hint callback\n");
     }
@@ -2351,8 +2377,10 @@ setup_client_ssl_session(coap_session_t *session, SSL *ssl
     if (!setup_pki_ssl(ssl, setup_data, 0))
       return 0;
     /* libcoap is managing (D)TLS connection based on setup_data options */
+#if !COAP_DISABLE_TCP
     if (session->proto == COAP_PROTO_TLS)
       SSL_set_alpn_protos(ssl, coap_alpn, sizeof(coap_alpn));
+#endif /* !COAP_DISABLE_TCP */
 
     /* Issue SNI if requested */
     if (setup_data->client_sni &&
@@ -2648,6 +2676,7 @@ unsigned int coap_dtls_get_overhead(coap_session_t *session) {
   return overhead;
 }
 
+#if !COAP_DISABLE_TCP
 void *coap_tls_new_client_session(coap_session_t *session, int *connected) {
   BIO *bio = NULL;
   SSL *ssl = NULL;
@@ -2901,6 +2930,7 @@ ssize_t coap_tls_read(coap_session_t *session,
 
   return r;
 }
+#endif /* !COAP_DISABLE_TCP */
 
 #else /* !HAVE_OPENSSL */
 

@@ -129,6 +129,13 @@ const char *coap_socket_strerror( void );
 const char *coap_socket_format_errno(int error);
 
 /**
+ * Check whether TCP is available.
+ *
+ * @return @c 1 if support for TCP is enabled, or @c 0 otherwise.
+ */
+int coap_tcp_is_supported(void);
+
+/**
  * Function interface for data transmission. This function returns the number of
  * bytes that have been transmitted, or a value less than zero on error.
  *

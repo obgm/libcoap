@@ -40,7 +40,6 @@ extern "C" {
 #include "coap_dtls.h"
 #include "coap_event.h"
 #include "coap_io.h"
-#include "coap_tcp.h"
 #include "coap_time.h"
 #include "coap_debug.h"
 #include "encode.h"

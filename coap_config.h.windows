@@ -69,6 +69,10 @@
 
 #define HAVE_OPENSSL 1
 
+#ifndef COAP_DISABLE_TCP
+#define COAP_DISABLE_TCP 0
+#endif
+
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"
 

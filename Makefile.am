@@ -25,6 +25,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/utlist.h \
   tests/test_error_response.h \
   tests/test_encode.h \
@@ -119,7 +120,6 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_io.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_mutex.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_session.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_tcp.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_time.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/encode.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/libcoap.h \
@@ -182,6 +182,7 @@ coap_socket_close \
 coap_socket_connect_tcp1 \
 coap_socket_connect_tcp2 \
 coap_socket_connect_udp \
+coap_socket_format_errno \
 coap_socket_read \
 coap_socket_send \
 coap_socket_send_pdu \

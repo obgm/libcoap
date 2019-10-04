@@ -149,8 +149,10 @@ void coap_session_mfree(coap_session_t *session) {
     coap_delete_pdu(session->partial_pdu);
   if (session->proto == COAP_PROTO_DTLS)
     coap_dtls_free_session(session);
+#if !COAP_DISABLE_TCP
   else if (session->proto == COAP_PROTO_TLS)
     coap_tls_free_session(session);
+#endif /* !COAP_DISABLE_TCP */
   if (session->sock.flags != COAP_SOCKET_EMPTY)
     coap_socket_close(&session->sock);
   if (session->psk_identity)
@@ -287,6 +289,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
   return COAP_PDU_DELAYED;
 }
 
+#if !COAP_DISABLE_TCP 
 void coap_session_send_csm(coap_session_t *session) {
   coap_pdu_t *pdu;
   uint8_t buf[4];
@@ -312,18 +315,21 @@ void coap_session_send_csm(coap_session_t *session) {
   if (pdu)
     coap_delete_pdu(pdu);
 }
+#endif /* !COAP_DISABLE_TCP */
 
 coap_tid_t coap_session_send_ping(coap_session_t *session) {
-  coap_pdu_t *ping;
+  coap_pdu_t *ping = NULL;
   if (session->state != COAP_SESSION_STATE_ESTABLISHED)
     return COAP_INVALID_TID;
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
     uint16_t tid = coap_new_message_id (session);
     ping = coap_pdu_init(COAP_MESSAGE_CON, 0, tid, 0);
   }
+#if !COAP_DISABLE_TCP 
   else {
     ping = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_PING, 0, 1);
   }
+#endif /* !COAP_DISABLE_TCP */
   if (!ping)
     return COAP_INVALID_TID;
   return coap_send(session, ping);
@@ -399,8 +405,10 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
   if ( session->tls) {
     if (session->proto == COAP_PROTO_DTLS)
       coap_dtls_free_session(session);
+#if !COAP_DISABLE_TCP
     else if (session->proto == COAP_PROTO_TLS)
       coap_tls_free_session(session);
+#endif /* !COAP_DISABLE_TCP */
     session->tls = NULL;
   }
 

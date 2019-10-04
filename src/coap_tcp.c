@@ -7,7 +7,7 @@
  * of use.
  */
 
-#include "coap_config.h"
+#include "coap_internal.h"
 
 #include <errno.h>
 #include <sys/types.h>
@@ -26,10 +26,6 @@
 # undef CMSG_DATA
 # define CMSG_DATA WSA_CMSG_DATA
 #endif
-
-#include "libcoap.h"
-#include "coap_debug.h"
-#include "coap_tcp.h"
 
 int
 coap_tcp_is_supported(void) {
@@ -96,7 +92,10 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
       coap_log(LOG_WARNING,
                "coap_socket_connect_tcp1: setsockopt SO_REUSEADDR: %s\n",
                coap_socket_strerror());
-    if (bind(sock->fd, &local_if->addr.sa, local_if->size) == COAP_SOCKET_ERROR) {
+    if (bind(sock->fd, &local_if->addr.sa,
+             local_if->addr.sa.sa_family == AF_INET ?
+              sizeof(struct sockaddr_in) :
+              local_if->size) == COAP_SOCKET_ERROR) {
       coap_log(LOG_WARNING, "coap_socket_connect_tcp1: bind: %s\n",
                coap_socket_strerror());
       goto error;
@@ -233,7 +232,10 @@ coap_socket_bind_tcp(coap_socket_t *sock,
     coap_log(LOG_ALERT, "coap_socket_bind_tcp: unsupported sa_family\n");
   }
 
-  if (bind(sock->fd, &listen_addr->addr.sa, listen_addr->size) == COAP_SOCKET_ERROR) {
+  if (bind(sock->fd, &listen_addr->addr.sa,
+           listen_addr->addr.sa.sa_family == AF_INET ?
+            sizeof(struct sockaddr_in) :
+            listen_addr->size) == COAP_SOCKET_ERROR) {
     coap_log(LOG_ALERT, "coap_socket_bind_tcp: bind: %s\n",
              coap_socket_strerror());
     goto error;
