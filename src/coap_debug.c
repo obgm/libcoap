@@ -69,7 +69,7 @@ coap_set_log_level(coap_log_t level) {
 
 /* this array has the same order as the type log_t */
 static const char *loglevels[] = {
-  "EMRG", "ALRT", "CRIT", "ERR ", "WARN", "NOTE", "INFO", "DEBG"
+  "EMRG", "ALRT", "CRIT", "ERR ", "WARN", "NOTE", "INFO", "DEBG", "????", "CIPH"
 };
 
 #ifdef HAVE_TIME_H
@@ -791,7 +791,7 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     if (print_timestamp(timebuf,sizeof(timebuf), now))
       fprintf(log_fd, "%s ", timebuf);
 
-    if (level <= LOG_DEBUG)
+    if (level <= COAP_LOG_CIPHERS)
       fprintf(log_fd, "%s ", loglevels[level]);
 
     va_start(ap, format);

@@ -36,8 +36,14 @@
  * Logging type.  One of LOG_* from @b syslog.
  */
 typedef short coap_log_t;
+/*
+   LOG_DEBUG+2 gives ciphers in GnuTLS
+   Use COAP_LOG_CIPHERS to output Cipher Info in OpenSSL etc.
+ */
+#define COAP_LOG_CIPHERS (LOG_DEBUG+2)
 #else
-/** Pre-defined log levels akin to what is used in \b syslog. */
+/** Pre-defined log levels akin to what is used in \b syslog
+    with LOG_CIPHERS added. */
 typedef enum {
   LOG_EMERG=0, /**< Emergency */
   LOG_ALERT,   /**< Alert */
@@ -46,7 +52,8 @@ typedef enum {
   LOG_WARNING, /**< Warning */
   LOG_NOTICE,  /**< Notice */
   LOG_INFO,    /**< Information */
-  LOG_DEBUG    /**< Debug */
+  LOG_DEBUG,   /**< Debug */
+  COAP_LOG_CIPHERS=LOG_DEBUG+2 /**< CipherInfo */
 } coap_log_t;
 #endif
 
