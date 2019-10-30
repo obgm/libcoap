@@ -575,7 +575,7 @@ AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
 # For epoll, need two headers (sys/epoll.h sys/timerfd.h), but set up one #define
 AC_CHECK_HEADER([sys/epoll.h])
 AC_CHECK_HEADER([sys/timerfd.h])
-if test "x$ac_cv_header_sys_epoll_h" != "x" -a "x$ac_cv_header_sys_timerfd_h" != "x"; then
+if test "x$ac_cv_header_sys_epoll_h" = "xyes" -a "x$ac_cv_header_sys_timerfd_h" = "xyes"; then
     have_epoll="yes"
     AC_ARG_WITH([epoll],
             [AS_HELP_STRING([--with-epoll],
