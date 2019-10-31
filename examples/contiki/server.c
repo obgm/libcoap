@@ -216,7 +216,7 @@ PROCESS_THREAD(coap_server_process, ev, data)
     PROCESS_YIELD();
     if(ev == tcpip_event) {
       /* There is something to read on the endpoint */
-      coap_run_once(coap_context, COAP_RUN_BLOCK);
+      coap_io_process(coap_context, COAP_RUN_BLOCK);
     } else if (ev == PROCESS_EVENT_TIMER && etimer_expired(&dirty_timer)) {
       coap_resource_notify_observers(time_resource, NULL);
       etimer_reset(&dirty_timer);

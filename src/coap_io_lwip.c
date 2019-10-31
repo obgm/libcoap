@@ -48,9 +48,9 @@ struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet)
  *
  * The current implementation deals this to coap_dispatch immediately, but
  * other mechanisms (as storing the package in a queue and later fetching it
- * when coap_read is called) can be envisioned.
+ * when coap_io_do_io is called) can be envisioned.
  *
- * It handles everything coap_read does on other implementations.
+ * It handles everything coap_io_do_io does on other implementations.
  */
 static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_addr_t *addr, u16_t port)
 {

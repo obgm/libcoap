@@ -1740,7 +1740,7 @@ main(int argc, char **argv) {
 
   while (!quit && !(ready && !doing_getting_block && coap_can_exit(ctx)) ) {
 
-    result = coap_run_once( ctx, wait_ms == 0 ?
+    result = coap_io_process( ctx, wait_ms == 0 ?
                                  obs_ms : obs_ms == 0 ?
                                  min(wait_ms, 1000) : min( wait_ms, obs_ms ) );
 

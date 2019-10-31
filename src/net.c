@@ -1125,7 +1125,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 #ifdef WITH_LWIP
 /* WITH_LWIP, this is handled by coap_recv in a different way */
 void
-coap_read(coap_context_t *ctx, coap_tick_t now) {
+coap_io_do_io(coap_context_t *ctx, coap_tick_t now) {
   return;
 }
 #else /* WITH_LWIP */
@@ -1419,12 +1419,12 @@ coap_accept_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint,
 }
 
 void
-coap_read(coap_context_t *ctx, coap_tick_t now) {
+coap_io_do_io(coap_context_t *ctx, coap_tick_t now) {
 #ifdef COAP_EPOLL_SUPPORT
   (void)ctx;
   (void)now;
    coap_log(LOG_EMERG,
-            "coap_read() requires libcoap not compiled for using epoll\n");
+            "coap_io_do_io() requires libcoap not compiled for using epoll\n");
 #else /* ! COAP_EPOLL_SUPPORT */
   coap_endpoint_t *ep, *tmp;
   coap_session_t *s, *rtmp;
@@ -1476,17 +1476,17 @@ coap_read(coap_context_t *ctx, coap_tick_t now) {
 }
 
 /*
- * While this code in part replicates coap_read(), doing the functions
+ * While this code in part replicates coap_io_do_io(), doing the functions
  * directly saves having to iterate through the endpoints / sessions.
  */
 void
-coap_io_do_events(coap_context_t *ctx, struct epoll_event *events, size_t nevents) {
+coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events, size_t nevents) {
 #ifndef COAP_EPOLL_SUPPORT
   (void)ctx;
   (void)events;
   (void)nevents;
    coap_log(LOG_EMERG,
-            "coap_io_do_events() requires libcoap compiled for using epoll\n");
+            "coap_io_do_epoll() requires libcoap compiled for using epoll\n");
 #else /* COAP_EPOLL_SUPPORT */
   coap_tick_t now;
   size_t j;

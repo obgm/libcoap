@@ -10,20 +10,33 @@ coap_io(3)
 
 NAME
 ----
-coap_io, coap_run_once, coap_io_process_with_fds, coap_context_get_coap_fd
+coap_io, coap_io_process, coap_io_process_with_fds, coap_context_get_coap_fd,
+coap_io_prepare_io, coap_io_do_io, coap_io_prepare_epoll, coap_io_do_epoll
 - Work with CoAP I/O to do the packet send and receives
 
 SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*int coap_run_once(coap_context_t *_context_, unsigned int _timeout_ms_)*;
+*int coap_io_process(coap_context_t *_context_, unsigned int _timeout_ms_)*;
 
 *int coap_io_process_with_fds(coap_context_t *_context_,
 unsigned int _timeout_ms_, int _nfds_, fd_set *_readfds_, fd_set *_writefds_,
 fd_set *_exceptfds_)*;
 
 *int coap_context_get_coap_fd(coap_context_t *_context_)*;
+
+*unsigned int coap_io_prepare_io(coap_context_t *_context_,
+coap_socket_t *_sockets[]_, unsigned int _max_sockets_,
+unsigned int *_num_sockets_, coap_tick_t _now_)*;
+
+*void coap_io_do_io(coap_context_t *_context_, coap_tick_t _now_)*;
+
+*unsigned int coap_io_prepare_epoll(coap_context_t *_context_,
+coap_tick_t _now_)*;
+
+*int coap_io_do_epoll(coap_context_t *_context_, struct epoll_event *_events_,
+size_t _nevents_)*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl* or
@@ -36,39 +49,92 @@ After setting up all the contexts, resources, endpoints sessions etc., the
 underlying CoAP and (D)TLS need to send (and possible re-send) created packets
 as well as receive packets for processing.
 
-The *coap_run_once*() function will process any outstanding packets to send
-for the specified _context_ and wait for processing any input packets for up to
-_timeout_ms_ milli-seconds before returning. Once any outstanding input packets
-have been processed, the function will return. There are 2 special case
+The *coap_io_process*() function will process any outstanding packets to send
+for the specified _context_, process any available input packets and then wait
+for processing any new input packets, or for when to re-transmit a packet, for
+up to _timeout_ms_ milli-seconds before returning. There are 2 special case
 _timeout_ms_ values.
 [source, c]
 ----
 #define COAP_RUN_BLOCK    0
 #define COAP_RUN_NONBLOCK 1
 ----
-If _timeout_ms_ is set to COAP_RUN_BLOCK, then *coap_run_once*() will wait
-indefinitely for the first new input packet to come in. If _timeout_ms_ is set
-to COAP_RUN_NONBLOCK, then there is no wait if there are no more input packets.
+If _timeout_ms_ is set to COAP_RUN_BLOCK, then *coap_io_process*() will wait
+indefinitely for the first new input packet to come in, or for when to
+re-transmit a packet. If _timeout_ms_ is set to COAP_RUN_NONBLOCK, then there
+is no wait if there is no more input or output to process.
 
-There are two methods of how to call *coap_run_once*().
+There are two methods of how to call *coap_io_process*().
 
-1. Have *coap_run_once*() called from within a while() loop.  Under idle
-conditions (no input traffic) *coap_run_once*() will then get called every
-_timeout_ms_, but more frequently if there is input traffic.
+1. Have *coap_io_process*() called from within a while() loop.  Under idle
+conditions (no input traffic) *coap_io_process*() will then get called every
+_timeout_ms_, but more frequently if there is input / retransmission traffic.
 
 2. Wait on the file descriptor returned by *coap_context_get_coap_fd*()
-using select() or an event returned by epoll_wait(). If 'read' is available on
-the file descriptor, call *coap_run_once*() with _timeout_ms_ set to
-COAP_RUN_NONBLOCK.  See EXAMPLES below.
+using *select*() or an event returned by epoll_wait(). If 'read' is available on
+the file descriptor, call *coap_io_process*() with _timeout_ms_ set to
+COAP_RUN_NONBLOCK. +
+*NOTE*: This second method is only available for environments that support epoll
+(mostly Linux) with libcoap compiled to use *epoll* (the default) as libcoap
+will then be using *epoll* internally to process all the file descriptors of
+the different sessions.
 
-NOTE: This method is only available for environments that support epoll
-(mostly Linux) as libcoap will then be using epoll internally to process all
-the file descriptors of the different sessions.
+See EXAMPLES below.
 
-The *coap_io_process_with_fds*() function is the same as *coap_run_once*()
+The *coap_io_process*() function is the primary function applications should
+use. There are internal functions that *coap_io_process*() calls which are
+available to use if absolutely necessary.  These internal functions and how to
+use them is different depending on whether libcoap has been compiled to use
+*epoll* (Linux systems only) or not.
+
+For *epoll* libcoap, *coap_io_process*() in simple terms calls
+*coap_io_prepare_epoll()*, does an *epoll_wait*() and then calls
+*coap_io_do_epoll*() if needed to make sure that all event based i/o has been
+completed.
+
+For *non-epoll* libcoap, *coap_io_process*() in simple terms calls
+*coap_io_prepare_io*() to set up sockets[], sets up all of the *select*()
+parameters based on the COAP_SOCKET_WANT* values in the sockets[], does a
+*select*(), updates the sockets[] with COAP_SOCKET_CAN_* as appropriate and
+then calls *coap_io_do_io*() to make sure that all current i/o has been
+completed.
+
+The *coap_io_prepare_epoll*() function for the specified _context_ will
+iterate through the endpoints and sessions to transmit any triggered observer
+responses as well as handling any timed out packet re-transmissions.  Returned,
+based on _now_, is the number of milli-secs needed to delay until the next
+time that *coap_io_prepare_epoll*() needs to get called.  After this call an
+*epoll_wait*() should done.
+
+The *coap_io_do_epoll*() function for the specified _context_ will
+iterate through the _nevents_ of _events_ returned by *epoll_wait*() and
+execute the appropriate low level i/o function to send / receive / process the
+packets. Where appropriate, structure information (endpoints, sessions etc.)
+is updated with the value of _now_ in the lower level functions.
+
+The *coap_io_prepare_io*() function for the specified _context_ will iterate
+through the endpoints and sessions to add all of sockets waiting for network
+traffic (COAP_SOCKET_WANT_* is set) found to _sockets_ (limited by
+_max_sockets_) and updates _num_sockets_ with the number of sockets found.
+Furthermore, any triggered observer responses are transmitted
+as well as handling any timed out packet re-transmissions.  Returned, based on
+_now_, is the number of milli-secs needed to delay until the next time that
+*coap_io_prepare_io*() needs to get called.  After this call a *select*() should
+done on all the file descriptors (COAP_WANT_READ for readfds etc.), and any
+that are returned active should set the appropriate COAP_SOCKET_CAN_* in the
+_sockets_.
+
+The *coap_io_do_io*() function for the specified _context_ will
+iterate through the endpoints and sessions to find all of sockets that have
+COAP_SOCKET_CAN_* set and then execute the appropriate low level i/o function
+to send / receive / process the packets. Where appropriate, structure
+information (endpoints, sessions etc.) is updated with the value of _now_ in
+the lower level functions.
+
+The *coap_io_process_with_fds*() function is the same as *coap_process_io*()
 but supports additional select() style parameters _nfds_, _readfds_,
 _writefds_ and _exceptfds_. This provides the ability to add in additional
-non libcoap FDs to test for in the internal select() call which can then 
+non libcoap FDs to test for in the internal select() call which can then
 tested after the return from coap_io_process_with_fds(). _readfds_,
 _writefds_ and _exceptfds_ can either point to a defined and pre-filled fd_set
 structure or NULL if not required. _nfds_ needs to be set to the maximum FD to
@@ -81,24 +147,26 @@ if there is no epoll support in libcoap. If there is epoll support, then
 other non libcoap FDs can separately be monitored using method 2 above.
 
 The *coap_context_get_coap_fd*() function obtains from the specified
-_context_ a single file descriptor that can be monitored by a select() or
-as an event returned from a epoll_wait() call.  This file descriptor will get
+_context_ a single file descriptor that can be monitored by a *select*() or
+as an event returned from a *epoll_wait*() call.  This file descriptor will get
 updated with information (read, write etc. available) whenever any of the
 internal to libcoap file descriptors (sockets) change state.
 
 RETURN VALUES
 -------------
-*coap_run_once*() and *coap_io_process_with_fds*() returns the time, in
+*coap_io_process*() and *coap_io_process_with_fds*() returns the time, in
 milli-seconds, that was spent in the function. If -1 is returned, there was
 an unexpected error.
 
 *coap_context_get_coap_fd*() returns a non-negative number as the file
-descriptor to monitor, or -1 if epoll is not supported by the host
-environment.
+descriptor to monitor, or -1 if epoll is not configured in libcoap.
+
+*coap_io_prepare_io*() and *coap_io_prepare_epoll*() returns the number of
+milli-seconds that need to be waited before the function should next be called.
 
 EXAMPLES
 --------
-*Method One - coap_run_once*
+*Method One - use coap_io_process()*
 
 [source, c]
 ----
@@ -108,6 +176,9 @@ int main(int argc, char *argv[]){
 
   coap_context_t *ctx = NULL;
   unsigned wait_ms;
+
+  (void)argc;
+  (void)argv;
 
   /* Create the libcoap context */
   ctx = coap_new_context(NULL);
@@ -120,7 +191,7 @@ int main(int argc, char *argv[]){
   wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
 
   while (1) {
-    int result = coap_run_once(ctx, wait_ms);
+    int result = coap_io_process(ctx, wait_ms);
     if (result < 0) {
       /* There is an internal issue */
       break;
@@ -148,6 +219,9 @@ int main(int argc, char *argv[]){
   unsigned wait_ms;
   fd_set readfds;
   int nfds = 0;
+
+  (void)argc;
+  (void)argv;
 
   /* Create the libcoap context */
   ctx = coap_new_context(NULL);
@@ -181,7 +255,7 @@ int main(int argc, char *argv[]){
 }
 ----
 
-*Method Two - select*
+*Method Two - select() based on monitorable file descriptor*
 
 [source, c]
 ----
@@ -195,6 +269,9 @@ int main(int argc, char *argv[]){
   int coap_fd;
   fd_set m_readfds;
   int nfds;
+
+  (void)argc;
+  (void)argv;
 
   /* Create the libcoap context */
   ctx = coap_new_context(NULL);
@@ -224,7 +301,7 @@ int main(int argc, char *argv[]){
     }
     if (result > 0) {
       if (FD_ISSET(coap_fd, &readfds)) {
-        result = coap_run_once(ctx, COAP_RUN_NONBLOCK);
+        result = coap_io_process(ctx, COAP_RUN_NONBLOCK);
         if (result < 0) {
           /* There is an internal issue */
           break;
@@ -242,7 +319,7 @@ int main(int argc, char *argv[]){
 }
 ----
 
-*Method Two - epoll*
+*Method Two - epoll_wait() based on monitorable file descriptor*
 
 [source, c]
 ----
@@ -263,6 +340,9 @@ int main(int argc, char *argv[]){
   struct epoll_event events[MAX_EVENTS];
   int nevents;
   int i;
+
+  (void)argc;
+  (void)argv;
 
   /* Create the libcoap context */
   ctx = coap_new_context(NULL);
@@ -297,7 +377,7 @@ int main(int argc, char *argv[]){
     }
     for (i = 0; i < nevents; i++) {
       if (events[i].data.fd == coap_fd) {
-        result = coap_run_once(ctx, COAP_RUN_NONBLOCK);
+        result = coap_io_process(ctx, COAP_RUN_NONBLOCK);
         if (result < 0) {
           /* There is an internal issue */
           break;

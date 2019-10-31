@@ -667,7 +667,7 @@ main(int argc, char **argv) {
   sigaction (SIGPIPE, &sa, NULL);
 
   while ( !quit ) {
-    result = coap_run_once( ctx, COAP_RESOURCE_CHECK_TIME * 1000 );
+    result = coap_io_process( ctx, COAP_RESOURCE_CHECK_TIME * 1000 );
     if ( result >= 0 ) {
       /* coap_check_resource_list( ctx ); */
     }

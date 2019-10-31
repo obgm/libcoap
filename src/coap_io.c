@@ -945,6 +945,8 @@ error:
   return -1;
 }
 
+#if !defined(WITH_CONTIKI)
+
 unsigned int
 coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
 #ifndef COAP_EPOLL_SUPPORT
@@ -960,7 +962,7 @@ coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
   unsigned int timeout;
 
   /* Use the common logic */
-  timeout = coap_write(ctx, sockets, max_sockets, &num_sockets, now);
+  timeout = coap_io_prepare_io(ctx, sockets, max_sockets, &num_sockets, now);
   /* Save when the next expected I/O is to take place */
   ctx->next_timeout = timeout ? now + timeout : 0;
   if (ctx->eptimerfd != -1) {
@@ -989,10 +991,8 @@ coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
 #endif /* COAP_EPOLL_SUPPORT */
 }
 
-#if !defined(WITH_CONTIKI)
-
 unsigned int
-coap_write(coap_context_t *ctx,
+coap_io_prepare_io(coap_context_t *ctx,
            coap_socket_t *sockets[],
            unsigned int max_sockets,
            unsigned int *num_sockets,
@@ -1174,7 +1174,7 @@ coap_write(coap_context_t *ctx,
 }
 
 int
-coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
+coap_io_process(coap_context_t *ctx, unsigned timeout_ms) {
   return coap_io_process_with_fds(ctx, timeout_ms, 0, NULL, NULL, NULL);
 }
 
@@ -1212,7 +1212,9 @@ coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
   coap_ticks(&before);
 
 #ifndef COAP_EPOLL_SUPPORT
-  timeout = coap_write(ctx, sockets, (unsigned int)(sizeof(sockets) / sizeof(sockets[0])), &num_sockets, before);
+  timeout = coap_io_prepare_io(ctx, sockets,
+                            (sizeof(sockets) / sizeof(sockets[0])),
+                            &num_sockets, before);
   if (timeout == 0 || timeout_ms < timeout)
     timeout = timeout_ms;
 
@@ -1293,7 +1295,7 @@ coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
   }
 
   coap_ticks(&now);
-  coap_read(ctx, now);
+  coap_io_do_io(ctx, now);
   if (ereadfds) {
     *ereadfds = readfds;
   }
@@ -1334,7 +1336,7 @@ coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
       break;
     }
 
-    coap_io_do_events(ctx, events, nfds);
+    coap_io_do_epoll(ctx, events, nfds);
 
     /*
      * reset to COAP_RUN_NONBLOCK (which causes etimeout to become 0)
@@ -1357,23 +1359,23 @@ coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
 }
 
 #else /* WITH_CONTIKI */
-int coap_run_once(coap_context_t *ctx, unsigned int timeout_ms) {
+int coap_io_process(coap_context_t *ctx, unsigned int timeout_ms) {
   coap_tick_t now;
 
   coap_ticks(&now);
   /* There is something to read on the endpoint */
   ctx->endpoint->sock.flags |= COAP_SOCKET_CAN_READ;
   /* read in, and send off any responses */
-  coap_read(ctx, now);  /* read received data */
+  coap_io_do_io(ctx, now);  /* read received data */
   return -1;
 }
 
 unsigned int
-coap_write(coap_context_t *ctx,
-           coap_socket_t *sockets[],
-           unsigned int max_sockets,
-           unsigned int *num_sockets,
-           coap_tick_t now)
+coap_io_prepare(coap_context_t *ctx,
+                coap_socket_t *sockets[],
+                unsigned int max_sockets,
+                unsigned int *num_sockets,
+                coap_tick_t now)
 {
   *num_sockets = 0;
   return 0;

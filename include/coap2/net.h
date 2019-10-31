@@ -542,126 +542,6 @@ coap_tid_t coap_send( coap_session_t *session, coap_pdu_t *pdu );
 coap_tid_t coap_retransmit(coap_context_t *context, coap_queue_t *node);
 
 /**
-* For applications with their own message loop, send all pending retransmits and
-* return the list of sockets with events to wait for and the next timeout
-* The application should call coap_read, then coap_write again when any condition below is true:
-* - data is available on any of the sockets with the COAP_SOCKET_WANT_READ
-* - an incoming connection is pending in the listen queue and the COAP_SOCKET_WANT_ACCEPT flag is set
-* - at least some data can be written without blocking on any of the sockets with the COAP_SOCKET_WANT_WRITE flag set
-* - a connection event occured (success or failure) and the COAP_SOCKET_WANT_CONNECT flag is set
-* - the timeout has expired
-* Before calling coap_read or coap_write again, the application should position COAP_SOCKET_CAN_READ and COAP_SOCKET_CAN_WRITE flags as applicable.
-*
-* @param ctx The CoAP context
-* @param sockets array of socket descriptors, filled on output
-* @param max_sockets size of socket array.
-* @param num_sockets pointer to the number of valid entries in the socket arrays on output
-* @param now Current time.
-*
-* @return timeout as maxmimum number of milliseconds that the application should wait for network events or 0 if the application should wait forever.
-*/
-
-unsigned int
-coap_write(coap_context_t *ctx,
-  coap_socket_t *sockets[],
-  unsigned int max_sockets,
-  unsigned int *num_sockets,
-  coap_tick_t now
-);
-
-/**
- * For applications with their own message loop, reads all data from the network.
- *
- * @param ctx The CoAP context
- * @param now Current time
- */
-void coap_read(coap_context_t *ctx, coap_tick_t now);
-
-#define COAP_RUN_BLOCK    0
-#define COAP_RUN_NONBLOCK 1
-
-/**
- * The main message processing loop.
- *
- * @param ctx The CoAP context
- * @param timeout_ms Minimum number of milliseconds to wait for new packets
- *                   before returning. If COAP_RUN_BLOCK, the call will block
- *                   until at least one new packet is received. If
- *                   COAP_RUN_NONBLOCK, the function will return immediately
- *                   following without waiting for any new input not already
- *                   available.
- *
- * @return Number of milliseconds spent in coap_run_once, or @c -1 if there
- *         was an error
- */
-int coap_run_once( coap_context_t *ctx, unsigned int timeout_ms );
-
-/**
- * The main message processing loop with additional fds for internal select.
- *
- * @param ctx The CoAP context
- * @param timeout_ms Minimum number of milliseconds to wait for new packets
- *                   before returning. If COAP_RUN_BLOCK, the call will block
- *                   until at least one new packet is received. If
- *                   COAP_RUN_NONBLOCK, the function will return immediately
- *                   following without waiting for any new input not already
- *                   available.
- * @param nfds      The maximum FD set in readfds, writefds or exceptfds
- *                  plus one,
- * @param readfds   Read FDs to additionally check for in internal select()
- *                  or NULL if not required.
- * @param writefds  Write FDs to additionally check for in internal select()
- *                  or NULL if not required.
- * @param exceptfds Except FDs to additionally check for in internal select()
- *                  or NULL if not required.
- *
- *
- * @return Number of milliseconds spent in coap_io_process_with_fds, or @c -1
- *         if there was an error.  If defined, readfds, writefds, exceptfds
- *         are updated as returned by the internal select() call.
- */
-int coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
-                        int nfds, fd_set *readfds, fd_set *writefds,
-                        fd_set *exceptfds);
-
-/**
- * Any now timed out delayed packet is transmitted, along with any packets
- * associated with requested observable response.
- *
- * In addition, it returns when the next expected I/O is expected to take place
- * (e.g. a packet retransmit).
- *
- * Note: If epoll support is compiled into libcoap, coap_io_prepare_epoll() must
- * be used instead of coap_write().
- *
- * Internal function.
- *
- * @param ctx The CoAP context
- * @param now Current time.
- *
- * @return timeout Maxmimum number of milliseconds that can be used by a
- *                 epoll_wait() to wait for network events or 0 if wait should be
- *                 forever.
- */
-unsigned int
-coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now);
-
-struct epoll_event;
-
-/**
- * Process all the epoll events
- *
- * Internal function
- *
- * @param ctx    The current CoAP context.
- * @param events The list of events returned from an epoll_wait() call.
- * @param nevents The number of events.
- *
- */
-void coap_io_do_events(coap_context_t *ctx, struct epoll_event* events,
-                      size_t nevents);
-
-/**
  * Parses and interprets a CoAP datagram with context @p ctx. This function
  * returns @c 0 if the datagram was handled, or a value less than zero on
  * error.
@@ -843,5 +723,232 @@ unsigned int coap_calc_timeout(coap_session_t *session, unsigned char r);
  */
 int
 coap_join_mcast_group(coap_context_t *ctx, const char *groupname);
+
+/**
+ * @defgroup app_io Application I/O Handling
+ * API functions for Application Input / Output
+ * @{
+ */
+
+#define COAP_RUN_BLOCK    0
+#define COAP_RUN_NONBLOCK 1
+
+/**
+ * The main I/O processing function.  All pending network I/O is completed,
+ * and then optionally waits for the next input packet.
+ *
+ * This internally calls coap_io_prepare_io(), then select() for the appropriate
+ * sockets, updates COAP_SOCKET_CAN_xxx where appropriate and then calls
+ * coap_io_do_io() before returning with the time spent in the function.
+ *
+ * Alternatively, if libcoap is compiled with epoll support, this internally
+ * calls coap_io_prepare_epoll(), then epoll_wait() for waiting for any file
+ * descriptors that have (internally) been set up with epoll_ctl() and
+ * finally coap_io_do_epoll() before returning with the time spent in the
+ * function.
+ *
+ * @param ctx The CoAP context
+ * @param timeout_ms Minimum number of milliseconds to wait for new packets
+ *                   before returning. If COAP_RUN_BLOCK, the call will block
+ *                   until at least one new packet is received. If
+ *                   COAP_RUN_NONBLOCK, the function will return immediately
+ *                   following without waiting for any new input not already
+ *                   available.
+ *
+ * @return Number of milliseconds spent in function or @c -1 if there was
+ *         an error
+ */
+int coap_io_process(coap_context_t *ctx, unsigned int timeout_ms);
+
+/**
+ * @deprecated Use coap_io_process() instead.
+ *
+ * This function just calls coap_io_process().
+ *
+ * @param ctx The CoAP context
+ * @param timeout_ms Minimum number of milliseconds to wait for new packets
+ *                   before returning. If COAP_RUN_BLOCK, the call will block
+ *                   until at least one new packet is received. If
+ *                   COAP_RUN_NONBLOCK, the function will return immediately
+ *                   following without waiting for any new input not already
+ *                   available.
+ *
+ * @return Number of milliseconds spent in function or @c -1 if there was
+ *         an error
+ */
+COAP_STATIC_INLINE COAP_DEPRECATED int
+coap_run_once(coap_context_t *ctx, unsigned int timeout_ms)
+{
+  return coap_io_process(ctx, timeout_ms);
+}
+
+/**
+ * The main message processing loop with additional fds for internal select.
+ *
+ * @param ctx The CoAP context
+ * @param timeout_ms Minimum number of milliseconds to wait for new packets
+ *                   before returning. If COAP_RUN_BLOCK, the call will block
+ *                   until at least one new packet is received. If
+ *                   COAP_RUN_NONBLOCK, the function will return immediately
+ *                   after processing any existing input packets.
+ * @param nfds      The maximum FD set in readfds, writefds or exceptfds
+ *                  plus one,
+ * @param readfds   Read FDs to additionally check for in internal select()
+ *                  or NULL if not required.
+ * @param writefds  Write FDs to additionally check for in internal select()
+ *                  or NULL if not required.
+ * @param exceptfds Except FDs to additionally check for in internal select()
+ *                  or NULL if not required.
+ *
+ *
+ * @return Number of milliseconds spent in coap_io_process_with_fds, or @c -1
+ *         if there was an error.  If defined, readfds, writefds, exceptfds
+ *         are updated as returned by the internal select() call.
+ */
+int coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
+                        int nfds, fd_set *readfds, fd_set *writefds,
+                        fd_set *exceptfds);
+
+/**
+* Iterates through all the coap_socket_t structures embedded in endpoints or
+* sessions associated with the @p ctx to determine which are wanting any
+* read, write, accept or connect I/O (COAP_SOCKET_WANT_xxx is set). If set,
+* the coap_socket_t is added to the @p sockets.
+*
+* Any now timed out delayed packet is transmitted, along with any packets
+* associated with requested observable response.
+*
+* In addition, it returns when the next expected I/O is expected to take place
+* (e.g. a packet retransmit).
+*
+* Prior to calling coap_io_do_io(), the @p sockets must be tested to see
+* if any of the COAP_SOCKET_WANT_xxx have the appropriate information and if
+* so, COAP_SOCKET_CAN_xxx is set. This typically will be done after using a
+* select() call.
+*
+* Note: If epoll support is compiled into libcoap, coap_io_prepare_epoll() must
+* be used instead of coap_io_prepare_io().
+*
+* Internal function.
+*
+* @param ctx The CoAP context
+* @param sockets Array of socket descriptors, filled on output
+* @param max_sockets Size of socket array.
+* @param num_sockets Pointer to the number of valid entries in the socket
+*                    arrays on output.
+* @param now Current time.
+*
+* @return timeout Maxmimum number of milliseconds that can be used by a
+*                 select() to wait for network events or 0 if wait should be
+*                 forever.
+*/
+unsigned int
+coap_io_prepare_io(coap_context_t *ctx,
+  coap_socket_t *sockets[],
+  unsigned int max_sockets,
+  unsigned int *num_sockets,
+  coap_tick_t now
+);
+
+/**
+* @deprecated Use coap_io_prepare_io() instead.
+*
+* This function just calls coap_io_prepare_io().
+*
+* Internal function.
+*
+* @param ctx The CoAP context
+* @param sockets Array of socket descriptors, filled on output
+* @param max_sockets Size of socket array.
+* @param num_sockets Pointer to the number of valid entries in the socket
+*                    arrays on output.
+* @param now Current time.
+*
+* @return timeout Maxmimum number of milliseconds that can be used by a
+*                 select() to wait for network events or 0 if wait should be
+*                 forever.
+*/
+COAP_STATIC_INLINE COAP_DEPRECATED unsigned int
+coap_write(coap_context_t *ctx,
+  coap_socket_t *sockets[],
+  unsigned int max_sockets,
+  unsigned int *num_sockets,
+  coap_tick_t now
+) {
+  return coap_io_prepare_io(ctx, sockets, max_sockets, num_sockets, now);
+}
+
+/**
+ * Processes any outstanding read, write, accept or connect I/O as indicated
+ * in the coap_socket_t structures (COAP_SOCKET_CAN_xxx set) embedded in
+ * endpoints or sessions associated with @p ctx.
+ *
+ * Note: If epoll support is compiled into libcoap, coap_io_do_epoll() must
+ * be used instead of coap_io_do_io().
+ *
+ * Internal function.
+ *
+ * @param ctx The CoAP context
+ * @param now Current time
+ */
+void coap_io_do_io(coap_context_t *ctx, coap_tick_t now);
+
+/**
+ * @deprecated Use coap_io_do_io() instead.
+ *
+ * This function just calls coap_io_do_io().
+ *
+ * Internal function.
+ *
+ * @param ctx The CoAP context
+ * @param now Current time
+ */
+COAP_STATIC_INLINE COAP_DEPRECATED void
+coap_read(coap_context_t *ctx, coap_tick_t now
+) {
+  coap_io_do_io(ctx, now);
+}
+
+/**
+ * Any now timed out delayed packet is transmitted, along with any packets
+ * associated with requested observable response.
+ *
+ * In addition, it returns when the next expected I/O is expected to take place
+ * (e.g. a packet retransmit).
+ *
+ * Note: If epoll support is compiled into libcoap, coap_io_prepare_epoll() must
+ * be used instead of coap_io_prepare_io().
+ *
+ * Internal function.
+ *
+ * @param ctx The CoAP context
+ * @param now Current time.
+ *
+ * @return timeout Maxmimum number of milliseconds that can be used by a
+ *                 epoll_wait() to wait for network events or 0 if wait should be
+ *                 forever.
+ */
+unsigned int
+coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now);
+
+struct epoll_event;
+
+/**
+ * Process all the epoll events
+ *
+ * Note: If epoll support is compiled into libcoap, coap_io_do_epoll() must
+ * be used instead of coap_io_do_io().
+ *
+ * Internal function
+ *
+ * @param ctx    The current CoAP context.
+ * @param events The list of events returned from an epoll_wait() call.
+ * @param nevents The number of events.
+ *
+ */
+void coap_io_do_epoll(coap_context_t *ctx, struct epoll_event* events,
+                      size_t nevents);
+
+/**@}*/
 
 #endif /* COAP_NET_H_ */

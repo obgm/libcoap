@@ -1453,13 +1453,13 @@ main(int argc, char **argv) {
       }
       if (result > 0) {
         if (FD_ISSET(coap_fd, &readfds)) {
-          result = coap_run_once(ctx, COAP_RUN_NONBLOCK);
+          result = coap_io_process(ctx, COAP_RUN_NONBLOCK);
         }
       }
     }
     else {
       /* epoll is not supported within libcoap */
-      result = coap_run_once( ctx, wait_ms );
+      result = coap_io_process(ctx, wait_ms);
     }
     if ( result < 0 ) {
       break;
@@ -1470,7 +1470,7 @@ main(int argc, char **argv) {
       /*
        * result == 0, or result >= wait_ms
        * (wait_ms could have decremented to a small value, below
-       * the granularity of the timer in coap_run_once() and hence
+       * the granularity of the timer in coap_io_process() and hence
        * result == 0)
        */
       time_t t_now = time(NULL);
