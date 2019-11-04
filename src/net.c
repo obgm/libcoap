@@ -457,6 +457,7 @@ coap_new_context(
     coap_log(LOG_ERR, "coap_new_context: Unable to epoll_create: %s (%d)\n",
              coap_socket_strerror(),
              errno);
+    goto onerror;
   }
   if (c->epfd != -1) {
     c->eptimerfd = timerfd_create(CLOCK_REALTIME, TFD_NONBLOCK);
@@ -464,6 +465,7 @@ coap_new_context(
       coap_log(LOG_ERR, "coap_new_context: Unable to timerfd_create: %s (%d)\n",
                coap_socket_strerror(),
                errno);
+      goto onerror;
     }
     else {
       int ret;
@@ -481,6 +483,7 @@ coap_new_context(
                   "%s: epoll_ctl ADD failed: %s (%d)\n",
                   "coap_new_context",
                   coap_socket_strerror(), errno);
+        goto onerror;
       }
     }
   }
@@ -1392,6 +1395,12 @@ coap_accept_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint,
 
 void
 coap_read(coap_context_t *ctx, coap_tick_t now) {
+#ifdef COAP_EPOLL_SUPPORT
+  (void)ctx;
+  (void)now;
+   coap_log(LOG_EMERG,
+            "coap_read() requires libcoap not compiled for using epoll\n");
+#else /* ! COAP_EPOLL_SUPPORT */
   coap_endpoint_t *ep, *tmp;
   coap_session_t *s, *rtmp;
 
@@ -1438,18 +1447,24 @@ coap_read(coap_context_t *ctx, coap_tick_t now) {
       coap_session_release( s );
     }
   }
+#endif /* ! COAP_EPOLL_SUPPORT */
 }
 
-#ifdef COAP_EPOLL_SUPPORT
 /*
  * While this code in part replicates coap_read(), doing the functions
  * directly saves having to iterate through the endpoints / sessions.
  */
-int
+void
 coap_io_do_events(coap_context_t *ctx, struct epoll_event *events, size_t nevents) {
+#ifndef COAP_EPOLL_SUPPORT
+  (void)ctx;
+  (void)events;
+  (void)nevents;
+   coap_log(LOG_EMERG,
+            "coap_io_do_events() requires libcoap compiled for using epoll\n");
+#else /* COAP_EPOLL_SUPPORT */
   coap_tick_t now;
   size_t j;
-  int timer_trig = 0;
 
   coap_ticks(&now);
   for(j = 0; j < nevents; j++) {
@@ -1530,12 +1545,13 @@ coap_io_do_events(coap_context_t *ctx, struct epoll_event *events, size_t nevent
       uint64_t count;
 
       read(ctx->eptimerfd, &count, sizeof(count));
-      timer_trig = 1;
+      /* And process any timed out events */
+      coap_ticks(&now);
+      coap_io_prepare_epoll(ctx, now);
     }
   }
-  return timer_trig;
-}
 #endif /* COAP_EPOLL_SUPPORT */
+}
 
 int
 coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
