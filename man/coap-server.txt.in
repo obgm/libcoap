@@ -50,7 +50,7 @@ OPTIONS - General
 
 *-v* num::
    The verbosity level to use (default 3, maximum is 9). Above 7, there is
-   increased verbosity in GnuTLS logging.
+   increased verbosity in GnuTLS and OpenSSL logging.
 
 *-A* addr::
    The local address of the interface which the server has to listen.
