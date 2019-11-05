@@ -9,7 +9,7 @@
 # defined later.
 m4_define([libcoap_major_version], [4])
 m4_define([libcoap_minor_version], [2])
-m4_define([libcoap_micro_version], [0])
+m4_define([libcoap_micro_version], [1])
 
 # define an appending release state if needed, for example for pre-releases
 # like 'alpha' or 'rc1', for a full release keep the value empty!
@@ -57,7 +57,7 @@ LT_INIT([shared static])
 #
 # How to work with the libtool versioning?
 #
-# Follow the followings steps from top to bottom. This means always start at point 1
+# Follow the following steps from top to bottom. This means always start at point 1
 # if you plan to make a release and change the values.
 # Every new library starts with a version 'current'  (short 'c') = 0
 #                                         'revision' (short 'r') = 0
@@ -89,7 +89,7 @@ LT_INIT([shared static])
 #
 # 3. Interfaces were added but none removed or changed
 #    If any interfaces have been added since the last public release and non of the
-#    existing interfaces were removed and existing interfaces have not changed internally
+#    existing interfaces were removed and existing interfaces have not changed internal
 #    functionality then the new library is backward compatible. Existing binaries can
 #    use the new library the same than as the existing old library without loosing
 #    existing functionality or breakage.
@@ -105,9 +105,9 @@ LT_INIT([shared static])
 #
 #  --> Set 'LT_LIBCOAP_AGE' to 0.
 
-LT_LIBCOAP_CURRENT=1
-LT_LIBCOAP_REVISION=0
-LT_LIBCOAP_AGE=1
+LT_LIBCOAP_CURRENT=2
+LT_LIBCOAP_REVISION=1
+LT_LIBCOAP_AGE=0
 LIBCOAP_SO_VERSION=$LT_LIBCOAP_CURRENT.$LT_LIBCOAP_REVISION.$LT_LIBCOAP_AGE
 
 # Announce the libtool version
