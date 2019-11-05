@@ -68,6 +68,18 @@
 #define TLSEXT_TYPE_server_certificate_type 20
 #endif
 
+#ifndef COAP_OPENSSL_CIPHERS
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+#define COAP_OPENSSL_CIPHERS "TLSv1.3:TLSv1.2:!NULL"
+#else /* OPENSSL_VERSION_NUMBER < 0x10101000L */
+#define COAP_OPENSSL_CIPHERS "TLSv1.2:!NULL"
+#endif /* OPENSSL_VERSION_NUMBER < 0x10101000L */
+#endif /*COAP_OPENSSL_CIPHERS */
+
+#ifndef COAP_OPENSSL_PSK_CIPHERS
+#define COAP_OPENSSL_PSK_CIPHERS "PSK:!NULL"
+#endif /*COAP_OPENSSL_PSK_CIPHERS */
+
 /* This structure encapsulates the OpenSSL context object. */
 typedef struct coap_dtls_context_t {
   SSL_CTX *ctx;
@@ -507,7 +519,7 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
     SSL_CTX_set_min_proto_version(context->dtls.ctx, DTLS1_2_VERSION);
     SSL_CTX_set_app_data(context->dtls.ctx, &context->dtls);
     SSL_CTX_set_read_ahead(context->dtls.ctx, 1);
-    SSL_CTX_set_cipher_list(context->dtls.ctx, "TLSv1.2:TLSv1.0");
+    SSL_CTX_set_cipher_list(context->dtls.ctx, COAP_OPENSSL_CIPHERS);
     memset(cookie_secret, 0, sizeof(cookie_secret));
     if (!RAND_bytes(cookie_secret, (int)sizeof(cookie_secret))) {
       if (dtls_log_level >= LOG_WARNING)
@@ -541,7 +553,7 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
       goto error;
     SSL_CTX_set_app_data(context->tls.ctx, &context->tls);
     SSL_CTX_set_min_proto_version(context->tls.ctx, TLS1_VERSION);
-    SSL_CTX_set_cipher_list(context->tls.ctx, "TLSv1.2:TLSv1.0");
+    SSL_CTX_set_cipher_list(context->tls.ctx, COAP_OPENSSL_CIPHERS);
     SSL_CTX_set_info_callback(context->tls.ctx, coap_dtls_info_callback);
     context->tls.meth = BIO_meth_new(BIO_TYPE_SOCKET, "coapsock");
     if (!context->tls.meth)
@@ -1123,7 +1135,7 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
 /*
  * During the SSL/TLS initial negotiations, tls_secret_call_back() is called so
  * it is possible to determine whether this is a PKI or PSK incoming
- * request and adjust the Ciphers if necessary
+ * request and adjust the ciphers if necessary
  *
  * Set up by SSL_set_session_secret_cb() in tls_server_name_call_back()
  */
@@ -1145,6 +1157,8 @@ tls_secret_call_back(SSL *ssl,
     for (ii = 0; ii < sk_SSL_CIPHER_num (peer_ciphers); ii++) {
       const SSL_CIPHER *peer_cipher = sk_SSL_CIPHER_value(peer_ciphers, ii);
 
+      coap_log(COAP_LOG_CIPHERS, "Client cipher: %s\n",
+                            SSL_CIPHER_get_name(peer_cipher));
       if (strstr (SSL_CIPHER_get_name (peer_cipher), "PSK")) {
         psk_requested = 1;
         break;
@@ -1207,7 +1221,7 @@ tls_secret_call_back(SSL *ssl,
     /*
      * Force a PSK algorithm to be used, so we do PSK
      */
-    SSL_set_cipher_list (ssl, "PSK:!NULL");
+    SSL_set_cipher_list (ssl, COAP_OPENSSL_PSK_CIPHERS);
     SSL_set_psk_server_callback(ssl, coap_dtls_psk_server_callback);
   }
   if (setup_data->additional_tls_setup_call_back) {
@@ -1221,7 +1235,7 @@ tls_secret_call_back(SSL *ssl,
 /*
  * During the SSL/TLS initial negotiations, tls_server_name_call_back() is called
  * so it is possible to set up an extra callback to determine whether this is
- * a PKI or PSK incoming request and adjust the Ciphers if necessary
+ * a PKI or PSK incoming request and adjust the ciphers if necessary
  *
  * Set up by SSL_CTX_set_tlsext_servername_callback() in coap_dtls_context_set_pki()
  */
@@ -1269,7 +1283,7 @@ tls_server_name_call_back(SSL *ssl,
         SSL_CTX_set_min_proto_version(ctx, DTLS1_2_VERSION);
         SSL_CTX_set_app_data(ctx, &context->dtls);
         SSL_CTX_set_read_ahead(ctx, 1);
-        SSL_CTX_set_cipher_list(ctx, "TLSv1.2:TLSv1.0");
+        SSL_CTX_set_cipher_list(ctx, COAP_OPENSSL_CIPHERS);
         SSL_CTX_set_cookie_generate_cb(ctx, coap_dtls_generate_cookie);
         SSL_CTX_set_cookie_verify_cb(ctx, coap_dtls_verify_cookie);
         SSL_CTX_set_info_callback(ctx, coap_dtls_info_callback);
@@ -1282,7 +1296,7 @@ tls_server_name_call_back(SSL *ssl,
           goto error;
         SSL_CTX_set_app_data(ctx, &context->tls);
         SSL_CTX_set_min_proto_version(ctx, TLS1_VERSION);
-        SSL_CTX_set_cipher_list(ctx, "TLSv1.2:TLSv1.0");
+        SSL_CTX_set_cipher_list(ctx, COAP_OPENSSL_CIPHERS);
         SSL_CTX_set_info_callback(ctx, coap_dtls_info_callback);
         SSL_CTX_set_alpn_select_cb(ctx, server_alpn_callback, NULL);
       }
@@ -1317,7 +1331,7 @@ error:
 /*
  * During the SSL/TLS initial negotiations, tls_client_hello_call_back() is
  * called early in the Client Hello processing so it is possible to determine
- * whether this is a PKI or PSK incoming request and adjust the Ciphers if
+ * whether this is a PKI or PSK incoming request and adjust the ciphers if
  * necessary.
  *
  * Set up by SSL_CTX_set_client_hello_cb().
@@ -1360,6 +1374,9 @@ tls_client_hello_call_back(SSL *ssl,
       for (ii = 0; ii < sk_SSL_CIPHER_num (peer_ciphers); ii++) {
         const SSL_CIPHER *peer_cipher = sk_SSL_CIPHER_value(peer_ciphers, ii);
 
+        coap_log(COAP_LOG_CIPHERS, "Client cipher: %s (%04x)\n",
+                               SSL_CIPHER_get_name(peer_cipher),
+                               SSL_CIPHER_get_protocol_id(peer_cipher));
         if (strstr (SSL_CIPHER_get_name (peer_cipher), "PSK")) {
           psk_requested = 1;
           break;
@@ -1744,7 +1761,7 @@ setup_client_ssl_session(coap_session_t *session, SSL *ssl
   if (context->psk_pki_enabled & IS_PSK) {
     SSL_set_psk_client_callback(ssl, coap_dtls_psk_client_callback);
     SSL_set_psk_server_callback(ssl, coap_dtls_psk_server_callback);
-    SSL_set_cipher_list(ssl, "PSK:!NULL");
+    SSL_set_cipher_list(ssl, COAP_OPENSSL_PSK_CIPHERS);
   }
   if (context->psk_pki_enabled & IS_PKI) {
     coap_dtls_pki_t *setup_data = &context->setup_data;
@@ -1964,6 +1981,8 @@ int coap_dtls_receive(coap_session_t *session,
     int err = SSL_get_error(ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
       if (in_init && SSL_is_init_finished(ssl)) {
+        coap_log(COAP_LOG_CIPHERS, "*  %s: Using cipher: %s\n",
+                 coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
         coap_session_connected(session);
       }
@@ -2189,6 +2208,8 @@ ssize_t coap_tls_write(coap_session_t *session,
     int err = SSL_get_error(ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
       if (in_init && SSL_is_init_finished(ssl)) {
+        coap_log(COAP_LOG_CIPHERS, "*  %s: Using cipher: %s\n",
+                 coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
         coap_session_send_csm(session);
       }
@@ -2215,6 +2236,8 @@ ssize_t coap_tls_write(coap_session_t *session,
       r = -1;
     }
   } else if (in_init && SSL_is_init_finished(ssl)) {
+    coap_log(COAP_LOG_CIPHERS, "*  %s: Using cipher: %s\n",
+             coap_session_str(session), SSL_get_cipher_name(ssl));
     coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
     coap_session_send_csm(session);
   }
@@ -2250,6 +2273,8 @@ ssize_t coap_tls_read(coap_session_t *session,
     int err = SSL_get_error(ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
       if (in_init && SSL_is_init_finished(ssl)) {
+        coap_log(COAP_LOG_CIPHERS, "*  %s: Using cipher: %s\n",
+                 coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
         coap_session_send_csm(session);
       }
@@ -2274,6 +2299,8 @@ ssize_t coap_tls_read(coap_session_t *session,
       r = -1;
     }
   } else if (in_init && SSL_is_init_finished(ssl)) {
+    coap_log(COAP_LOG_CIPHERS, "*  %s: Using cipher: %s\n",
+             coap_session_str(session), SSL_get_cipher_name(ssl));
     coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
     coap_session_send_csm(session);
   }
