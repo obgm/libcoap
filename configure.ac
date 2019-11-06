@@ -8,8 +8,8 @@
 # Define the libcoap software version here. Note! The libtool versions are
 # defined later.
 m4_define([libcoap_major_version], [4])
-m4_define([libcoap_minor_version], [2])
-m4_define([libcoap_micro_version], [1])
+m4_define([libcoap_minor_version], [3])
+m4_define([libcoap_micro_version], [0alpha])
 
 # define an appending release state if needed, for example for pre-releases
 # like 'alpha' or 'rc1', for a full release keep the value empty!
