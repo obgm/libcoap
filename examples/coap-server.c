@@ -68,6 +68,12 @@ static int support_dynamic = 0;
 /* This variable is used to mimic long-running tasks that require
  * asynchronous responses. */
 static coap_async_state_t *async = NULL;
+
+/* A typedef for transfering a value in a void pointer */
+typedef union {
+  unsigned int val;
+  void *ptr;
+} async_data_t;
 #endif /* WITHOUT_ASYNC */
 
 #ifdef __GNUC__
@@ -244,11 +250,13 @@ hnd_get_async(coap_context_t *ctx,
       delay = delay * 10 + (*p - '0');
   }
 
+  async_data_t data;
+  data.val = COAP_TICKS_PER_SECOND * delay;
   async = coap_register_async(ctx,
                               session,
                               request,
                               COAP_ASYNC_SEPARATE | COAP_ASYNC_CONFIRM,
-                              (void *)(COAP_TICKS_PER_SECOND * delay));
+                              data.ptr);
 }
 
 static void
@@ -268,8 +276,9 @@ check_async(coap_context_t *ctx,
              COAP_RESPONSE_CODE(205), 0, size);
   if (!response) {
     coap_log(LOG_DEBUG, "check_async: insufficient memory, we'll try later\n");
-    async->appdata =
-      (void *)((unsigned long)async->appdata + 15 * COAP_TICKS_PER_SECOND);
+    async_data_t data = { .ptr = async->appdata };
+    data.val = data.val + 15 * COAP_TICKS_PER_SECOND;
+    async->appdata = data.ptr;
     return;
   }
 
