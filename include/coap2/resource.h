@@ -29,7 +29,13 @@
 #include "subscribe.h"
 
 /**
- * Definition of message handler function (@sa coap_resource_t).
+ * @defgroup coap_resource Resource Configuraton
+ * API functions for setting up resources
+ * @{
+ */
+
+/**
+ * Definition of message handler function
  */
 typedef void (*coap_method_handler_t)
   (coap_context_t  *,
@@ -191,26 +197,26 @@ coap_resource_set_mode(coap_resource_t *resource, int mode) {
  * Sets the user_data. The user_data is exclusively used by the library-user
  * and can be used as context in the handler functions.
  *
- * @param r       Resource to attach the data to
- * @param data    Data to attach to the user_data field. This pointer is only used for
- *                storage, the data remains under user control
+ * @param resource Resource to attach the data to
+ * @param data     Data to attach to the user_data field. This pointer is
+ *                 only used for storage, the data remains under user control
  */
 COAP_STATIC_INLINE void
-coap_resource_set_userdata(coap_resource_t *r, void *data) {
-  r->user_data = data;
+coap_resource_set_userdata(coap_resource_t *resource, void *data) {
+  resource->user_data = data;
 }
 
 /**
  * Gets the user_data. The user_data is exclusively used by the library-user
  * and can be used as context in the handler functions.
  *
- * @param r        Resource to retrieve the user_darta from
+ * @param resource Resource to retrieve the user_darta from
  *
  * @return        The user_data pointer
  */
 COAP_STATIC_INLINE void *
-coap_resource_get_userdata(coap_resource_t *r) {
-  return r->user_data;
+coap_resource_get_userdata(coap_resource_t *resource) {
+  return resource->user_data;
 }
 
 /**
@@ -352,6 +358,8 @@ void coap_register_handler(coap_resource_t *resource,
                            unsigned char method,
                            coap_method_handler_t handler);
 
+/** @} */
+
 /**
  * Returns the resource identified by the unique string @p uri_path. If no
  * resource was found, this function returns @c NULL.
@@ -364,8 +372,23 @@ void coap_register_handler(coap_resource_t *resource,
 coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
                                                 coap_str_const_t *uri_path);
 
+#define RESOURCES_ADD(r, obj) \
+  HASH_ADD(hh, (r), uri_path->s[0], (obj)->uri_path->length, (obj))
+
+#define RESOURCES_DELETE(r, obj) \
+  HASH_DELETE(hh, (r), (obj))
+
+#define RESOURCES_ITER(r,tmp)  \
+  coap_resource_t *tmp, *rtmp; \
+  HASH_ITER(hh, (r), tmp, rtmp)
+
+#define RESOURCES_FIND(r, k, res) {                     \
+    HASH_FIND(hh, (r), (k)->s, (k)->length, (res)); \
+  }
+
 /**
  * @addtogroup observe
+ * @{
  */
 
 /**
@@ -405,7 +428,7 @@ coap_subscription_t *coap_find_observer(coap_resource_t *resource,
                                         const coap_binary_t *token);
 
 /**
- * Marks an observer as alive.
+ * Flags that data is ready to be sent to observers.
  *
  * @param context  The CoAP context to use.
  * @param session  The observer's session
@@ -438,38 +461,6 @@ int coap_delete_observer(coap_resource_t *resource,
  * @param session  The observer's session.
  */
 void coap_delete_observers(coap_context_t *context, coap_session_t *session);
-
-/**
- * Checks for all known resources, if they are dirty and notifies subscribed
- * observers.
- */
-void coap_check_notify(coap_context_t *context);
-
-#define RESOURCES_ADD(r, obj) \
-  HASH_ADD(hh, (r), uri_path->s[0], (obj)->uri_path->length, (obj))
-
-#define RESOURCES_DELETE(r, obj) \
-  HASH_DELETE(hh, (r), (obj))
-
-#define RESOURCES_ITER(r,tmp)  \
-  coap_resource_t *tmp, *rtmp; \
-  HASH_ITER(hh, (r), tmp, rtmp)
-
-#define RESOURCES_FIND(r, k, res) {                     \
-    HASH_FIND(hh, (r), (k)->s, (k)->length, (res)); \
-  }
-
-/** @} */
-
-coap_print_status_t coap_print_wellknown(coap_context_t *,
-                                         unsigned char *,
-                                         size_t *, size_t,
-                                         coap_opt_t *);
-
-void
-coap_handle_failed_notify(coap_context_t *,
-                          coap_session_t *,
-                          const coap_binary_t *);
 
 /**
  * Set whether a @p resource is observable.  If the resource is observable
@@ -512,6 +503,24 @@ coap_resource_get_uri_path(coap_resource_t *resource) {
     return resource->uri_path;
   return NULL;
 }
+
+/** @} */
+
+/**
+ * Checks for all known resources, if they are dirty and notifies subscribed
+ * observers.
+ */
+void coap_check_notify(coap_context_t *context);
+
+coap_print_status_t coap_print_wellknown(coap_context_t *,
+                                         unsigned char *,
+                                         size_t *, size_t,
+                                         coap_opt_t *);
+
+void
+coap_handle_failed_notify(coap_context_t *,
+                          coap_session_t *,
+                          const coap_binary_t *);
 
 /**
  * @deprecated use coap_resource_notify_observers() instead.
