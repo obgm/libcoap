@@ -1551,11 +1551,15 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
   } else if (bytes_read > 0) {
     coap_session_t *session = coap_endpoint_get_session(endpoint, packet, now);
     if (session) {
+      /* Fix CID 1484382 */
+      coap_session_reference(session);
       coap_log(LOG_DEBUG, "*  %s: received %zd bytes\n",
                coap_session_str(session), bytes_read);
       result = coap_handle_dgram_for_proto(ctx, session, packet);
       if (endpoint->proto == COAP_PROTO_DTLS && session->type == COAP_SESSION_TYPE_HELLO && result == 1)
         coap_session_new_dtls_session(session, now);
+      /* Fix CID 1484382 bump of session ref */
+      coap_session_release(session);
     }
   }
 #if COAP_CONSTRAINED_STACK
@@ -2683,8 +2687,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       coap_remove_from_queue(&context->sendqueue, session, pdu->tid, &sent);
 
       if (sent) {
-        coap_cancel(context, sent);
-
+        /* session and sent->session are pointing to the same thing */
         if (!is_ping_rst) {
           if(sent->pdu->type==COAP_MESSAGE_CON && context->nack_handler)
             context->nack_handler(context, sent->session, sent->pdu,
@@ -2697,6 +2700,11 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
           session->last_pong = session->last_rx_tx;
           session->last_ping_mid = COAP_INVALID_TID;
         }
+        /*
+         * sent->session may have a coap_session_release() performed on it,
+         * so coap_cancel() done last (CID 1484381)
+         */
+        coap_cancel(context, sent);
       }
       else {
         /* Need to check is there is a subscription active and delete it */

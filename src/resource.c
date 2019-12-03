@@ -645,6 +645,8 @@ coap_add_observer(coap_resource_t *resource,
 
   assert( session );
 
+  /* Fix CID 1484383 */
+  coap_session_reference(session);
   /* Check if there is already a subscription for this peer. */
   s = coap_find_observer(resource, session, token);
   if (!s) {
@@ -668,6 +670,8 @@ coap_add_observer(coap_resource_t *resource,
       coap_delete_string(s->query);
     s->query = query;
     s->code = code;
+    /* Fix CID 1484383 bump of session ref */
+    coap_session_release(session);
     return s;
   }
 
@@ -678,11 +682,15 @@ coap_add_observer(coap_resource_t *resource,
     /* query is not deleted so it can be used in the calling function
      * which must give up ownership of query only if this function
      * does not return NULL. */
+    /* Fix CID 1484383 bump of session ref */
+    coap_session_release(session);
     return NULL;
   }
 
   coap_subscription_init(s);
   s->session = coap_session_reference( session );
+  /* Fix CID 1484383 bump of session ref */
+  coap_session_release(session);
 
   if (token && token->length) {
     s->token_length = token->length;

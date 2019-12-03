@@ -416,6 +416,8 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
   coap_session_state_t state = session->state;
 #endif /* !COAP_DISABLE_TCP */
 
+  /* Fix CID 1484385 */
+  coap_session_reference(session);
   coap_log(LOG_DEBUG, "***%s: session disconnected (reason %d)\n",
            coap_session_str(session), reason);
 #ifndef WITHOUT_OBSERVE
@@ -486,6 +488,7 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     }
   }
 #endif /* !COAP_DISABLE_TCP */
+  coap_session_release(session);
 }
 
 coap_session_t *
