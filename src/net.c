@@ -1501,24 +1501,19 @@ coap_io_do_events(coap_context_t *ctx, struct epoll_event *events, size_t nevent
       else if (sock->session) {
         coap_session_t *session = sock->session;
 
+        /* Make sure the session object is not deleted
+           in one of the callbacks  */
+        coap_session_reference(session);
         if ((sock->flags & COAP_SOCKET_WANT_CONNECT) &&
             (events[j].events & (EPOLLOUT|EPOLLERR|EPOLLHUP|EPOLLRDHUP))) {
           sock->flags |= COAP_SOCKET_CAN_CONNECT;
-          /* Make sure the session object is not deleted
-             in one of the callbacks  */
-          coap_session_reference(session);
           coap_connect_session(session->context, session, now);
-          coap_session_release(session);
         }
 
         if ((sock->flags & COAP_SOCKET_WANT_READ) &&
             (events[j].events & (EPOLLIN|EPOLLERR|EPOLLHUP|EPOLLRDHUP))) {
           sock->flags |= COAP_SOCKET_CAN_READ;
-          /* Make sure the session object is not deleted
-             in one of the callbacks  */
-          coap_session_reference(session);
           coap_read_session(session->context, session, now);
-          coap_session_release(session);
         }
 
         if ((sock->flags & COAP_SOCKET_WANT_WRITE) &&
@@ -1529,12 +1524,10 @@ coap_io_do_events(coap_context_t *ctx, struct epoll_event *events, size_t nevent
            */
           coap_epoll_ctl_mod(sock, EPOLLIN, __func__);
           sock->flags |= COAP_SOCKET_CAN_WRITE;
-          /* Make sure the session object is not deleted
-             in one of the callbacks  */
-          coap_session_reference(session);
           coap_write_session(session->context, session, now);
-          coap_session_release(session);
         }
+        /* Now dereference session so it can go away if needed */
+        coap_session_release(session);
       }
     }
     else if (ctx->eptimerfd != -1) {
