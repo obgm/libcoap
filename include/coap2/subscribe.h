@@ -17,7 +17,7 @@
 #define COAP_SUBSCRIBE_H_
 
 /**
- * @defgroup observe Resource observation
+ * @defgroup observe Resource Observation
  * API functions for interfacing with the observe handling (RFC7641)
  * @{
  */

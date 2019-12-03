@@ -12,7 +12,8 @@ NAME
 ----
 coap_resource, coap_resource_init, coap_resource_unknown_init,
 coap_add_resource, coap_delete_resource, coap_delete_all_resources,
-coap_resource_set_mode - Work with CoAP resources
+coap_resource_set_mode, coap_resource_set_userdata,
+coap_resource_get_userdata - Work with CoAP resources
 
 SYNOPSIS
 --------
@@ -33,6 +34,10 @@ coap_resource_t _resource_);*
 *void coap_delete_all_resources(coap_context_t *_context_);*
 
 *void coap_resource_set_mode(coap_resource_t *_resource_, int _mode_);*
+
+*void coap_resource_set_userdata(coap_resource_t *_resource_, void *_data_);*
+
+*void *coap_resource_get_userdata(coap_resource_t *_resource_);*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl* or
@@ -117,6 +122,16 @@ The *coap_resource_set_mode*() changes the notification message type of
 _resource_ to the given _mode_ which must be one of
 COAP_RESOURCE_FLAGS_NOTIFY_NON or COAP_RESOURCE_FLAGS_NOTIFY_CON.
 
+The *coap_resource_set_userdata*() function allows a pointer to user _data_
+to be associated with a _resource_ that can accessed in any callback that
+includes _resource_ as a parameter.
+
+*NOTE:* _data_ must point to a static, or allocated, block of memory.
+
+The *coap_resource_get_userdata*() function obtains the user data pointer
+from the _resource_ that had previously been set up by
+*coap_resource_set_userdata*().
+
 RETURN VALUES
 -------------
 The *coap_resource_init*() and *coap_resource_unknown_init*() functions
@@ -124,6 +139,9 @@ return a newly created resource or NULL if there is a malloc failure.
 
 The *coap_delete_resource*() function return 0 on failure (_resource_ not
 found), 1 on success.
+
+The *coap_resource_get_userdata*() function returns the value previously set
+by the *coap_resource_set_userdata*() function or NULL.
 
 EXAMPLES
 --------
