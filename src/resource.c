@@ -760,8 +760,11 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
         continue;
       if (obs->session->con_active >= COAP_DEFAULT_NSTART &&
           ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) ||
-           (obs->non_cnt >= COAP_OBS_MAX_NON)))
+           (obs->non_cnt >= COAP_OBS_MAX_NON))) {
+        r->partiallydirty = 1;
+        obs->dirty = 1;
         continue;
+      }
 
       coap_tid_t tid = COAP_INVALID_TID;
       obs->dirty = 0;
