@@ -55,7 +55,7 @@ the selected logging level, outputs the appropriate information.
 
 Logging by default is to stderr or stdout depending on the logging level of
 the log entry.  It ia possible to send the logging information to an
-application logging call-back handler for processing by the application.
+application logging callback handler for processing by the application.
 
 The *coap_log*() function is used to log information at the appropriate _level_.
 The rest of the parameters follow the standard *printf*() function format.
@@ -89,7 +89,7 @@ Debug level (7).
 
 The *coap_set_log_level*() function is used to set the current logging _level_
 for output by any subsequent *coap_log*() calls.  Output is only logged if the
-*coap_log*() _level_ definition is smaller than or equal to the curent logging
+*coap_log*() _level_ definition is smaller than or equal to the current logging
 _level_.
 
 The *coap_get_log_level*() function is used to get the current logging level.

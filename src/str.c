@@ -51,3 +51,16 @@ coap_str_const_t *coap_make_str_const(const char *string)
   return &var[ofs];
 }
 
+coap_bin_const_t *coap_new_bin_const(const uint8_t *data, size_t size) {
+  coap_string_t *s = coap_new_string(size);
+  if (!s)
+    return NULL;
+  memcpy (s->s, data, size);
+  s->length = size;
+  return (coap_bin_const_t *)s;
+}
+
+void coap_delete_bin_const(coap_bin_const_t *s) {
+  coap_free_type(COAP_STRING, s);
+}
+

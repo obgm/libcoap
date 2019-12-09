@@ -20,6 +20,7 @@
 #include "coap_time.h"
 #include "pdu.h"
 #include "uthash.h"
+#include "coap_dtls.h"
 
 /**
 * Abstraction of a fixed point number that can be used where necessary instead
@@ -84,10 +85,35 @@ typedef struct coap_session_t {
   coap_tick_t last_ping;
   coap_tick_t last_pong;
   coap_tick_t csm_tx;
-  uint8_t *psk_identity;
-  size_t psk_identity_len;
-  uint8_t *psk_key;
-  size_t psk_key_len;
+  coap_dtls_cpsk_t cpsk_setup_data; /**< client provided PSK initial setup
+                                         data */
+  coap_bin_const_t *psk_identity;   /**< If client, this field contains the
+                                      current identity for server; When this
+                                      field is NULL, the current identity is
+                                      contained in cpsk_setup_data
+
+                                      If server, this field contains the client
+                                      provided identity.
+
+                                      Value maintained internally */
+  coap_bin_const_t *psk_key;        /**< If client, this field contains the
+                                      current pre-shared key for server;
+                                      When this field is NULL, the current
+                                      key is contained in cpsk_setup_data
+
+                                      If server, this field contains the
+                                      client's current key.
+
+                                      Value maintained internally */
+  coap_bin_const_t *psk_hint;       /**< If client, this field contains the
+                                      server provided identity hint.
+
+                                      If server, this field contains the
+                                      current hint for the client; When this
+                                      field is NULL, the current hint is
+                                      contained in context->spsk_setup_data
+
+                                      Value maintained internally */
   void *app;                        /**< application-specific data */
   unsigned int max_retransmit;      /**< maximum re-transmit count (default 4) */
   coap_fixed_point_t ack_timeout;   /**< timeout waiting for ack (default 2 secs) */
@@ -202,6 +228,55 @@ coap_session_t *coap_new_client_session_psk(
   const uint8_t *key,
   unsigned key_len
 );
+
+/**
+* Creates a new client session to the designated server with PSK credentials
+* @param ctx The CoAP context.
+* @param local_if Address of local interface. It is recommended to use NULL to
+*                 let the operating system choose a suitable local interface.
+*                 If an address is specified, the port number should be zero,
+*                 which means that a free port is automatically selected.
+* @param server The server's address. If the port number is zero, the default
+*               port for the protocol will be used.
+* @param proto CoAP Protocol.
+* @param setup_data PSK parameters.
+*
+* @return A new CoAP session or NULL if failed. Call coap_session_release()
+*         to free.
+*/
+coap_session_t *coap_new_client_session_psk2(
+  struct coap_context_t *ctx,
+  const coap_address_t *local_if,
+  const coap_address_t *server,
+  coap_proto_t proto,
+  struct coap_dtls_cpsk_t *setup_data
+);
+
+/**
+ * Refresh the session's current Identity Hint (PSK).
+ * Note: A copy of @p psk_hint is maintained in the session by libcoap.
+ *
+ * @param session  The current coap_session_t object.
+ * @param psk_hint If NULL, the Identity Hint will revert to the
+ *                 initial Identity Hint used at session setup.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+int coap_session_refresh_psk_hint(coap_session_t *session,
+                                 const struct coap_bin_const_t *psk_hint);
+
+/**
+ * Refresh the session's current pre-shared key (PSK).
+ * Note: A copy of @p psk_key is maintained in the session by libcoap.
+ *
+ * @param session  The current coap_session_t object.
+ * @param psk_key  If NULL, the pre-shared key will revert to the
+ *                 initial pre-shared key used as session setup.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+int coap_session_refresh_psk_key(coap_session_t *session,
+                                 const struct coap_bin_const_t *psk_key);
 
 /**
 * Creates a new client session to the designated server with PKI credentials

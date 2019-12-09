@@ -146,7 +146,8 @@ CTAGS_IGNORE=-I " \
 coap_dtls_context_check_keys_enabled \
 coap_dtls_context_set_pki \
 coap_dtls_context_set_pki_root_cas \
-coap_dtls_context_set_psk \
+coap_dtls_context_set_cpsk \
+coap_dtls_context_set_spsk \
 coap_dtls_free_context \
 coap_dtls_free_session \
 coap_dtls_get_context_timeout \
@@ -169,6 +170,8 @@ coap_packet_extract_pbuf \
 coap_pdu_from_pbuf \
 coap_session_mfree \
 coap_session_new_dtls_session \
+coap_session_refresh_psk_hint \
+coap_session_refresh_psk_key \
 coap_socket_accept_tcp \
 coap_socket_bind_tcp \
 coap_socket_bind_udp \

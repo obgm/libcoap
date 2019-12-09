@@ -19,6 +19,23 @@
  * g_env      A coap_gnutls_env_t * (held in c_session->tls)
  */
 
+/*
+ * Notes
+ *
+ * There is a memory leak in GnuTLS prior to 3.3.26 when hint is not freed off
+ * when server psk credentials are freed off.
+ *
+ * ca_path in coap_dtls_context_set_pki_root_cas() is not supported until 3.3.6
+ *
+ * Identity Hint is not provided if using DH and versions prior to 3.4.4
+ *
+ * 3.5.5 or later is required to interoperate with TinyDTLS as CCM algorithm
+ * support is required.
+ *
+ * TLS 1.3 is properly supported from 3.6.5 onwards
+ * (but is not enabled by default in 3.6.4)
+ */
+
 #include "coap_internal.h"
 
 #ifdef HAVE_LIBGNUTLS
@@ -68,17 +85,25 @@ typedef struct coap_gnutls_env_t {
 #define IS_CLIENT (1 << 6)
 #define IS_SERVER (1 << 7)
 
-typedef struct sni_entry {
+typedef struct pki_sni_entry {
   char *sni;
   coap_dtls_key_t pki_key;
   gnutls_certificate_credentials_t pki_credentials;
-} sni_entry;
+} pki_sni_entry;
+
+typedef struct psk_sni_entry {
+  char *sni;
+  coap_dtls_spsk_info_t psk_info;
+  gnutls_psk_server_credentials_t psk_credentials;
+} psk_sni_entry;
 
 typedef struct coap_gnutls_context_t {
   coap_dtls_pki_t setup_data;
   int psk_pki_enabled;
-  size_t sni_count;
-  sni_entry *sni_entry_list;
+  size_t pki_sni_count;
+  pki_sni_entry *pki_sni_entry_list;
+  size_t psk_sni_count;
+  psk_sni_entry *psk_sni_entry_list;
   gnutls_datum_t alpn_proto;    /* Will be "coap", but that is a const */
   char *root_ca_file;
   char *root_ca_path;
@@ -95,6 +120,12 @@ typedef enum coap_free_bye_t {
 #define VARIANTS "NORMAL:+ECDHE-PSK:+PSK:+ECDHE-ECDSA:+AES-128-CCM-8"
 #else
 #define VARIANTS "NORMAL:+ECDHE-PSK:+PSK"
+#endif
+
+#if (GNUTLS_VERSION_NUMBER >= 0x030604)
+#define VARIANTS_NO_TLS13 VARIANTS ":!VERS-TLS1.3"
+#else
+#define VARIANTS_NO_TLS13 VARIANTS
 #endif
 
 #define G_ACTION(xx) do { \
@@ -117,6 +148,9 @@ static int dtls_log_level = 0;
 
 static int post_client_hello_gnutls_pki(gnutls_session_t g_session);
 static int post_client_hello_gnutls_psk(gnutls_session_t g_session);
+static int psk_server_callback(gnutls_session_t g_session,
+                               const char *identity,
+                               gnutls_datum_t *key);
 
 /*
  * return 0 failed
@@ -253,12 +287,32 @@ coap_dtls_context_set_pki_root_cas(struct coap_context_t *c_context,
  *        1 passed
  */
 int
-coap_dtls_context_set_psk(coap_context_t *c_context,
-                          const char *identity_hint UNUSED,
-                          coap_dtls_role_t role UNUSED
+coap_dtls_context_set_spsk(coap_context_t *c_context,
+                              coap_dtls_spsk_t *setup_data
 ) {
   coap_gnutls_context_t *g_context =
                          ((coap_gnutls_context_t *)c_context->dtls_context);
+
+  if (!g_context || !setup_data)
+    return 0;
+
+  g_context->psk_pki_enabled |= IS_PSK;
+  return 1;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_context_set_cpsk(coap_context_t *c_context,
+                          coap_dtls_cpsk_t *setup_data
+) {
+  coap_gnutls_context_t *g_context =
+                         ((coap_gnutls_context_t *)c_context->dtls_context);
+
+  if (!g_context || !setup_data)
+    return 0;
 
   g_context->psk_pki_enabled |= IS_PSK;
   return 1;
@@ -340,15 +394,22 @@ coap_dtls_free_context(void *handle) {
   gnutls_free(g_context->alpn_proto.data);
   gnutls_free(g_context->root_ca_file);
   gnutls_free(g_context->root_ca_path);
-  for (i = 0; i < g_context->sni_count; i++) {
-    gnutls_free(g_context->sni_entry_list[i].sni);
-    if (g_context->psk_pki_enabled & IS_PKI) {
-      gnutls_certificate_free_credentials(
-          g_context->sni_entry_list[i].pki_credentials);
-    }
+  for (i = 0; i < g_context->pki_sni_count; i++) {
+    gnutls_free(g_context->pki_sni_entry_list[i].sni);
+    gnutls_certificate_free_credentials(
+        g_context->pki_sni_entry_list[i].pki_credentials);
   }
-  if (g_context->sni_count)
-    gnutls_free(g_context->sni_entry_list);
+  if (g_context->pki_sni_entry_list)
+    gnutls_free(g_context->pki_sni_entry_list);
+
+  for (i = 0; i < g_context->psk_sni_count; i++) {
+    gnutls_free(g_context->psk_sni_entry_list[i].sni);
+    /* YUK - A memory leak in 3.3.0 (fixed by 3.3.26) of hint */
+    gnutls_psk_free_server_credentials(
+          g_context->psk_sni_entry_list[i].psk_credentials);
+  }
+  if (g_context->psk_sni_entry_list)
+    gnutls_free(g_context->psk_sni_entry_list);
 
   gnutls_priority_deinit(g_context->priority_cache);
 
@@ -368,10 +429,14 @@ psk_client_callback(gnutls_session_t g_session,
                     char **username, gnutls_datum_t *key) {
   coap_session_t *c_session =
                   (coap_session_t *)gnutls_transport_get_ptr(g_session);
+  coap_gnutls_context_t *g_context;
+  coap_dtls_cpsk_t *setup_data;
   uint8_t identity[64];
   size_t identity_len;
-  uint8_t psk_key[64];
+  uint8_t psk[64];
   size_t psk_len;
+  const char *hint = gnutls_psk_client_get_hint(g_session);
+  size_t hint_len = 0;
 
   /* Constant passed to get_client_psk callback. The final byte is
    * reserved for a terminating 0. */
@@ -386,31 +451,76 @@ psk_client_callback(gnutls_session_t g_session,
     return -1;
   }
 
+  g_context = (coap_gnutls_context_t *)c_session->context->dtls_context;
+  if (g_context == NULL)
+    return -1;
+
+  setup_data = &c_session->cpsk_setup_data;
+
+  if (hint)
+    hint_len = strlen(hint);
+  else
+    hint = "";
+
+  coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)hint_len, hint);
+
+  if (setup_data->validate_ih_call_back) {
+    coap_str_const_t lhint;
+    lhint.length = hint_len;
+    lhint.s = (const uint8_t*)hint;
+    const coap_dtls_cpsk_info_t *psk_info =
+             setup_data->validate_ih_call_back(&lhint,
+                                               c_session,
+                                               setup_data->ih_call_back_arg);
+
+    if (psk_info == NULL)
+      return -1;
+
+    *username = gnutls_malloc(psk_info->identity.length+1);
+    if (*username == NULL)
+      return -1;
+    memcpy(*username, psk_info->identity.s, psk_info->identity.length);
+    (*username)[psk_info->identity.length] = '\000';
+
+    key->data = gnutls_malloc(psk_info->key.length);
+    if (key->data == NULL) {
+      gnutls_free(*username);
+      *username = NULL;
+      return -1;
+    }
+    memcpy(key->data, psk_info->key.s, psk_info->key.length);
+    key->size = psk_info->key.length;
+    return 0;
+  }
+
   psk_len = c_session->context->get_client_psk(c_session,
                                                NULL,
                                                0,
                                                identity,
                                                &identity_len,
                                                max_identity_len,
-                                               psk_key,
-                                               sizeof(psk_key));
+                                               psk,
+                                               sizeof(psk));
   assert(identity_len < sizeof(identity));
 
   /* Reserve dynamic memory to hold the identity and a terminating
    * zero. */
   *username = gnutls_malloc(identity_len+1);
-  if (*username) {
-    memcpy(*username, identity, identity_len);
-    (*username)[identity_len] = '\0';
-  }
+  if (*username == NULL)
+    return -1;
+  memcpy(*username, identity, identity_len);
+  (*username)[identity_len] = '\0';
 
   key->data = gnutls_malloc(psk_len);
-  if (key->data) {
-    memcpy(key->data, psk_key, psk_len);
-    key->size = psk_len;
+  if (key->data == NULL) {
+    gnutls_free(*username);
+    *username = NULL;
+    return -1;
   }
+  memcpy(key->data, psk, psk_len);
+  key->size = psk_len;
 
-  return (*username && key->data) ? 0 : -1;
+  return 0;
 }
 
 /*
@@ -764,7 +874,37 @@ fail:
  *        neg GNUTLS_E_* error code
  */
 static int
-post_client_hello_gnutls_pki(gnutls_session_t g_session)
+setup_psk_credentials(gnutls_psk_server_credentials_t *psk_credentials,
+                      coap_gnutls_context_t *g_context UNUSED,
+                      coap_dtls_spsk_t *setup_data)
+{
+  int ret;
+  char hint[COAP_DTLS_HINT_LENGTH];
+
+  G_CHECK(gnutls_psk_allocate_server_credentials(psk_credentials),
+          "gnutls_psk_allocate_server_credentials");
+  gnutls_psk_set_server_credentials_function(*psk_credentials,
+                                                    psk_server_callback);
+  if (setup_data->psk_info.hint.s) {
+    snprintf(hint, sizeof(hint), "%.*s", (int)setup_data->psk_info.hint.length,
+             setup_data->psk_info.hint.s);
+    G_CHECK(gnutls_psk_set_server_credentials_hint(*psk_credentials, hint),
+          "gnutls_psk_set_server_credentials_hint");
+  }
+
+  return GNUTLS_E_SUCCESS;
+
+fail:
+  return ret;
+}
+
+
+/*
+ * return 0   Success (GNUTLS_E_SUCCESS)
+ *        neg GNUTLS_E_* error code
+ */
+static int
+post_client_hello_gnutls_psk(gnutls_session_t g_session)
 {
   coap_session_t *c_session =
                 (coap_session_t *)gnutls_transport_get_ptr(g_session);
@@ -776,12 +916,12 @@ post_client_hello_gnutls_pki(gnutls_session_t g_session)
 
   g_env->seen_client_hello = 1;
 
-  if (g_context->setup_data.validate_sni_call_back) {
+  if (c_session->context->spsk_setup_data.validate_sni_call_back) {
+    coap_dtls_spsk_t sni_setup_data;
     /* DNS names (only type supported) may be at most 256 byte long */
     size_t len = 256;
     unsigned int type;
     unsigned int i;
-    coap_dtls_pki_t sni_setup_data;
 
     name = gnutls_malloc(len);
     if (name == NULL)
@@ -818,12 +958,126 @@ post_client_hello_gnutls_pki(gnutls_session_t g_session)
     }
 
     /* Is this a cached entry? */
-    for (i = 0; i < g_context->sni_count; i++) {
-      if (strcmp(name, g_context->sni_entry_list[i].sni) == 0) {
+    for (i = 0; i < g_context->psk_sni_count; i++) {
+      if (strcasecmp(name, g_context->psk_sni_entry_list[i].sni) == 0) {
         break;
       }
     }
-    if (i == g_context->sni_count) {
+    if (i == g_context->psk_sni_count) {
+      /*
+       * New SNI request
+       */
+      const coap_dtls_spsk_info_t *new_entry =
+        c_session->context->spsk_setup_data.validate_sni_call_back(name,
+                        c_session,
+                        c_session->context->spsk_setup_data.sni_call_back_arg);
+      if (!new_entry) {
+        G_ACTION(gnutls_alert_send(g_session, GNUTLS_AL_FATAL,
+                                   GNUTLS_A_UNRECOGNIZED_NAME));
+        ret = GNUTLS_E_NO_CERTIFICATE_FOUND;
+        goto end;
+      }
+
+      g_context->psk_sni_entry_list =
+                            gnutls_realloc(g_context->psk_sni_entry_list,
+                                           (i+1)*sizeof(psk_sni_entry));
+      g_context->psk_sni_entry_list[i].sni = gnutls_strdup(name);
+      g_context->psk_sni_entry_list[i].psk_info = *new_entry;
+      sni_setup_data = c_session->context->spsk_setup_data;
+      sni_setup_data.psk_info = *new_entry;
+      if ((ret = setup_psk_credentials(
+                           &g_context->psk_sni_entry_list[i].psk_credentials,
+                           g_context,
+                           &sni_setup_data)) < 0) {
+        int keep_ret = ret;
+        G_ACTION(gnutls_alert_send(g_session, GNUTLS_AL_FATAL,
+                                   GNUTLS_A_BAD_CERTIFICATE));
+        ret = keep_ret;
+        goto end;
+      }
+      g_context->psk_sni_count++;
+    }
+    G_CHECK(gnutls_credentials_set(g_env->g_session, GNUTLS_CRD_PSK,
+                             g_context->psk_sni_entry_list[i].psk_credentials),
+            "gnutls_credentials_set");
+    coap_session_refresh_psk_hint(c_session,
+                                 &g_context->psk_sni_entry_list[i].psk_info.hint);
+    coap_session_refresh_psk_key(c_session,
+                                 &g_context->psk_sni_entry_list[i].psk_info.key);
+  }
+
+end:
+  free(name);
+  return ret;
+
+fail:
+  return ret;
+}
+
+/*
+ * return 0   Success (GNUTLS_E_SUCCESS)
+ *        neg GNUTLS_E_* error code
+ */
+static int
+post_client_hello_gnutls_pki(gnutls_session_t g_session)
+{
+  coap_session_t *c_session =
+                (coap_session_t *)gnutls_transport_get_ptr(g_session);
+  coap_gnutls_context_t *g_context =
+             (coap_gnutls_context_t *)c_session->context->dtls_context;
+  coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
+  int ret = GNUTLS_E_SUCCESS;
+  char *name = NULL;
+  if (g_context->setup_data.validate_sni_call_back) {
+    /* DNS names (only type supported) may be at most 256 byte long */
+    size_t len = 256;
+    unsigned int type;
+    unsigned int i;
+    coap_dtls_pki_t sni_setup_data;
+
+    g_env->seen_client_hello = 1;
+
+    name = gnutls_malloc(len);
+    if (name == NULL)
+      return GNUTLS_E_MEMORY_ERROR;
+
+    for (i=0; ; ) {
+      ret = gnutls_server_name_get(g_session, name, &len, &type, i);
+      if (ret == GNUTLS_E_SHORT_MEMORY_BUFFER) {
+        char *new_name;
+        new_name = gnutls_realloc(name, len);
+        if (new_name == NULL) {
+          ret = GNUTLS_E_MEMORY_ERROR;
+          goto end;
+        }
+        name = new_name;
+        continue; /* retry call with same index */
+      }
+
+      /* check if it is the last entry in list */
+      if (ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE)
+        break;
+      i++;
+      if (ret != GNUTLS_E_SUCCESS)
+        goto end;
+      /* unknown types need to be ignored */
+      if (type != GNUTLS_NAME_DNS)
+        continue;
+
+    }
+    /* If no extension provided, make it a dummy entry */
+    if (i == 0) {
+      name[0] = '\000';
+      len = 0;
+    }
+
+    /* Is this a cached entry? */
+    for (i = 0; i < g_context->pki_sni_count; i++) {
+      if (strcasecmp(name, g_context->pki_sni_entry_list[i].sni) == 0) {
+        break;
+      }
+    }
+    if (i == g_context->pki_sni_count) {
       /*
        * New SNI request
        */
@@ -837,14 +1091,15 @@ post_client_hello_gnutls_pki(gnutls_session_t g_session)
         goto end;
       }
 
-      g_context->sni_entry_list = gnutls_realloc(g_context->sni_entry_list,
-                                     (i+1)*sizeof(sni_entry));
-      g_context->sni_entry_list[i].sni = gnutls_strdup(name);
-      g_context->sni_entry_list[i].pki_key = *new_entry;
+      g_context->pki_sni_entry_list = gnutls_realloc(
+                                            g_context->pki_sni_entry_list,
+                                            (i+1)*sizeof(pki_sni_entry));
+      g_context->pki_sni_entry_list[i].sni = gnutls_strdup(name);
+      g_context->pki_sni_entry_list[i].pki_key = *new_entry;
       sni_setup_data = g_context->setup_data;
       sni_setup_data.pki_key = *new_entry;
       if ((ret = setup_pki_credentials(
-                           &g_context->sni_entry_list[i].pki_credentials,
+                           &g_context->pki_sni_entry_list[i].pki_credentials,
                            g_context,
                            &sni_setup_data, COAP_DTLS_ROLE_CLIENT)) < 0) {
         int keep_ret = ret;
@@ -853,10 +1108,10 @@ post_client_hello_gnutls_pki(gnutls_session_t g_session)
         ret = keep_ret;
         goto end;
       }
-      g_context->sni_count++;
+      g_context->pki_sni_count++;
     }
     G_CHECK(gnutls_credentials_set(g_env->g_session, GNUTLS_CRD_CERTIFICATE,
-                               g_context->sni_entry_list[i].pki_credentials),
+                               g_context->pki_sni_entry_list[i].pki_credentials),
             "gnutls_credentials_set");
   }
 
@@ -873,21 +1128,6 @@ fail:
  *        neg GNUTLS_E_* error code
  */
 static int
-post_client_hello_gnutls_psk(gnutls_session_t g_session)
-{
-  coap_session_t *c_session =
-                (coap_session_t *)gnutls_transport_get_ptr(g_session);
-  coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
-
-  g_env->seen_client_hello = 1;
-  return GNUTLS_E_SUCCESS;
-}
-
-/*
- * return 0   Success (GNUTLS_E_SUCCESS)
- *        neg GNUTLS_E_* error code
- */
-static int
 setup_client_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
 {
   coap_gnutls_context_t *g_context =
@@ -896,22 +1136,30 @@ setup_client_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
 
   g_context->psk_pki_enabled |= IS_CLIENT;
   if (g_context->psk_pki_enabled & IS_PSK) {
-    char *identity = NULL;
-    gnutls_datum_t psk_key;
-
+    coap_dtls_cpsk_t *setup_data = &c_session->cpsk_setup_data;
     G_CHECK(gnutls_psk_allocate_client_credentials(&g_env->psk_cl_credentials),
             "gnutls_psk_allocate_client_credentials");
-    psk_client_callback(g_env->g_session, &identity, &psk_key);
-    G_CHECK(gnutls_psk_set_client_credentials(g_env->psk_cl_credentials,
-                                              identity,
-                                              &psk_key,
-                                              GNUTLS_PSK_KEY_RAW),
-            "gnutls_psk_set_client_credentials");
+    gnutls_psk_set_client_credentials_function(g_env->psk_cl_credentials,
+                                               psk_client_callback);
     G_CHECK(gnutls_credentials_set(g_env->g_session, GNUTLS_CRD_PSK,
                                    g_env->psk_cl_credentials),
             "gnutls_credentials_set");
-    gnutls_free(identity);
-    gnutls_free(psk_key.data);
+    /* Issue SNI if requested */
+    if (setup_data->client_sni) {
+      G_CHECK(gnutls_server_name_set(g_env->g_session, GNUTLS_NAME_DNS,
+                                     setup_data->client_sni,
+                                     strlen(setup_data->client_sni)),
+              "gnutls_server_name_set");
+    }
+    if (setup_data->validate_ih_call_back) {
+      const char *err;
+
+      G_CHECK(gnutls_priority_set_direct(g_env->g_session,
+            VARIANTS_NO_TLS13, &err),
+            "gnutls_priority_set_direct");
+      coap_log(LOG_DEBUG,
+        "CoAP Client restricted to (D)TLS1.2 with Identity Hint callback\n");
+    }
   }
 
   if ((g_context->psk_pki_enabled & IS_PKI) ||
@@ -962,21 +1210,54 @@ psk_server_callback(gnutls_session_t g_session,
 {
   coap_session_t *c_session =
                 (coap_session_t *)gnutls_transport_get_ptr(g_session);
+  coap_gnutls_context_t *g_context;
+  coap_dtls_spsk_t *setup_data;
   size_t identity_len = 0;
   uint8_t buf[64];
   size_t psk_len;
+
+  if (c_session == NULL || c_session->context == NULL ||
+      c_session->context->get_server_psk == NULL)
+    return -1;
+
+  g_context = (coap_gnutls_context_t *)c_session->context->dtls_context;
+  if (g_context == NULL)
+    return -1;
+  setup_data = &c_session->context->spsk_setup_data;
 
   if (identity)
     identity_len = strlen(identity);
   else
     identity = "";
 
+  /* Track the Identity being used */
+  if (c_session->psk_identity)
+    coap_delete_bin_const(c_session->psk_identity);
+  c_session->psk_identity = coap_new_bin_const((const uint8_t *)identity,
+                                               identity_len);
+
   coap_log(LOG_DEBUG, "got psk_identity: '%.*s'\n",
                       (int)identity_len, identity);
 
-  if (c_session == NULL || c_session->context == NULL ||
-      c_session->context->get_server_psk == NULL)
-    return -1;
+  if (setup_data->validate_id_call_back) {
+    coap_bin_const_t lidentity;
+    lidentity.length = identity_len;
+    lidentity.s = (const uint8_t*)identity;
+    const coap_bin_const_t *psk_key =
+             setup_data->validate_id_call_back(&lidentity,
+                                               c_session,
+                                               setup_data->id_call_back_arg);
+
+    if (psk_key == NULL)
+      return -1;
+    key->data = gnutls_malloc(psk_key->length);
+    if (key->data == NULL)
+      return -1;
+    memcpy(key->data, psk_key->s, psk_key->length);
+    key->size = psk_key->length;
+    coap_session_refresh_psk_key(c_session, psk_key);
+    return 0;
+  }
 
   psk_len = c_session->context->get_server_psk(c_session,
                                (const uint8_t*)identity,
@@ -1001,18 +1282,17 @@ setup_server_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
 
   g_context->psk_pki_enabled |= IS_SERVER;
   if (g_context->psk_pki_enabled & IS_PSK) {
-    G_CHECK(gnutls_psk_allocate_server_credentials(&g_env->psk_sv_credentials),
-            "gnutls_psk_allocate_server_credentials");
-    gnutls_psk_set_server_credentials_function(g_env->psk_sv_credentials,
-                                                      psk_server_callback);
-
-    gnutls_handshake_set_post_client_hello_function(g_env->g_session,
-                                                 post_client_hello_gnutls_psk);
-
+    G_CHECK(setup_psk_credentials(
+                             &g_env->psk_sv_credentials,
+                             g_context,
+                             &c_session->context->spsk_setup_data),
+            "setup_psk_credentials\n");
     G_CHECK(gnutls_credentials_set(g_env->g_session,
                                    GNUTLS_CRD_PSK,
                                    g_env->psk_sv_credentials),
             "gnutls_credentials_set\n");
+    gnutls_handshake_set_post_client_hello_function(g_env->g_session,
+                                                post_client_hello_gnutls_psk);
   }
 
   if (g_context->psk_pki_enabled & IS_PKI) {
@@ -1026,11 +1306,14 @@ setup_server_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
                                             GNUTLS_CERT_REQUIRE);
     }
     else {
-      gnutls_certificate_server_set_request(g_env->g_session, GNUTLS_CERT_IGNORE);
+      gnutls_certificate_server_set_request(g_env->g_session,
+                                            GNUTLS_CERT_IGNORE);
     }
 
-    gnutls_handshake_set_post_client_hello_function(g_env->g_session,
-                                                 post_client_hello_gnutls_pki);
+    if (g_context->setup_data.validate_sni_call_back) {
+      gnutls_handshake_set_post_client_hello_function(g_env->g_session,
+                                                post_client_hello_gnutls_pki);
+    }
 
     G_CHECK(gnutls_credentials_set(g_env->g_session, GNUTLS_CRD_CERTIFICATE,
                                    g_env->pki_credentials),
@@ -1216,6 +1499,7 @@ coap_dtls_free_gnutls_env(coap_gnutls_context_t *g_context,
         g_env->psk_cl_credentials = NULL;
       }
       else {
+        /* YUK - A memory leak in 3.3.0 (fixed by 3.3.26) of hint */
         gnutls_psk_free_server_credentials(g_env->psk_sv_credentials);
         g_env->psk_sv_credentials = NULL;
       }

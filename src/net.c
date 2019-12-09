@@ -289,22 +289,31 @@ coap_get_session_client_psk(
   uint8_t *identity, size_t *identity_len, size_t max_identity_len,
   uint8_t *psk, size_t max_psk_len
 ) {
+  const coap_dtls_cpsk_info_t *psk_info;
   (void)hint;
   (void)hint_len;
-  if (session->psk_identity && session->psk_identity_len > 0 && session->psk_key && session->psk_key_len > 0) {
-    if (session->psk_identity_len <= max_identity_len && session->psk_key_len <= max_psk_len) {
-      memcpy(identity, session->psk_identity, session->psk_identity_len);
-      memcpy(psk, session->psk_key, session->psk_key_len);
-      *identity_len = session->psk_identity_len;
-      return session->psk_key_len;
-    }
-  } else if (session->context && session->context->psk_key && session->context->psk_key_len > 0) {
-    if (session->context->psk_key_len <= max_psk_len) {
-      *identity_len = 0;
-      memcpy(psk, session->context->psk_key, session->context->psk_key_len);
-      return session->context->psk_key_len;
+
+  if (session->psk_identity && session->psk_key) {
+    if (session->psk_identity->length <= max_identity_len &&
+        session->psk_key->length <= max_psk_len) {
+      memcpy(identity, session->psk_identity->s, session->psk_identity->length);
+      memcpy(psk, session->psk_key->s, session->psk_key->length);
+      *identity_len = session->psk_identity->length;
+      return session->psk_key->length;
     }
   }
+  psk_info = &session->cpsk_setup_data.psk_info;
+  if (psk_info->identity.s && psk_info->identity.length > 0 &&
+      psk_info->key.s && psk_info->key.length > 0) {
+    if (psk_info->identity.length <= max_identity_len &&
+      psk_info->key.length <= max_psk_len) {
+      memcpy(identity, psk_info->identity.s, psk_info->identity.length);
+      memcpy(psk, psk_info->key.s, psk_info->key.length);
+      *identity_len = psk_info->identity.length;
+      return psk_info->key.length;
+    }
+  }
+  /* Not defined in coap_new_client_session_psk2() */
   *identity_len = 0;
   return 0;
 }
@@ -315,13 +324,22 @@ coap_get_context_server_psk(
   const uint8_t *identity, size_t identity_len,
   uint8_t *psk, size_t max_psk_len
 ) {
+  const coap_dtls_spsk_info_t *psk_info;
   (void)identity;
   (void)identity_len;
-  const coap_context_t *ctx = session->context;
-  if (ctx && ctx->psk_key && ctx->psk_key_len > 0 && ctx->psk_key_len <= max_psk_len) {
-    memcpy(psk, ctx->psk_key, ctx->psk_key_len);
-    return ctx->psk_key_len;
+
+  if (session && session->psk_key &&
+      session->psk_key->length <= max_psk_len) {
+    memcpy(psk, session->psk_key->s, session->psk_key->length);
+    return session->psk_key->length;
   }
+  psk_info = &session->context->spsk_setup_data.psk_info;
+  if (psk_info->key.s && psk_info->key.length > 0 &&
+      psk_info->key.length <= max_psk_len) {
+    memcpy(psk, psk_info->key.s, psk_info->key.length);
+    return psk_info->key.length;
+  }
+  /* Not defined in coap_context_set_psk2() */
   return 0;
 }
 
@@ -330,11 +348,22 @@ coap_get_context_server_hint(
   const coap_session_t *session,
   uint8_t *hint, size_t max_hint_len
 ) {
-  const coap_context_t *ctx = session->context;
-  if (ctx && ctx->psk_hint && ctx->psk_hint_len > 0 && ctx->psk_hint_len <= max_hint_len) {
-    memcpy(hint, ctx->psk_hint, ctx->psk_hint_len);
-    return ctx->psk_hint_len;
+  const coap_dtls_spsk_info_t *psk_info;
+
+  if (session && session->psk_hint &&
+      session->psk_hint->s && session->psk_hint->length > 0 &&
+      session->psk_hint->length <= max_hint_len) {
+    memcpy(hint, session->psk_hint->s, session->psk_hint->length);
+    return session->psk_hint->length;
   }
+  psk_info = &session->context->spsk_setup_data.psk_info;
+  if (psk_info->hint.s &&
+      psk_info->hint.length > 0 &&
+      psk_info->hint.length <= max_hint_len) {
+    memcpy(hint, psk_info->hint.s, psk_info->hint.length);
+    return psk_info->hint.length;
+  }
+  /* Not defined in coap_context_set_psk2() */
   return 0;
 }
 
@@ -342,41 +371,32 @@ int coap_context_set_psk(coap_context_t *ctx,
   const char *hint,
   const uint8_t *key, size_t key_len
 ) {
+  coap_dtls_spsk_t setup_data;
 
-  if (ctx->psk_hint)
-    coap_free(ctx->psk_hint);
-  ctx->psk_hint = NULL;
-  ctx->psk_hint_len = 0;
-
+  memset (&setup_data, 0, sizeof(setup_data));
   if (hint) {
-    size_t hint_len = strlen(hint);
-    ctx->psk_hint = (uint8_t*)coap_malloc(hint_len);
-    if (ctx->psk_hint) {
-      memcpy(ctx->psk_hint, hint, hint_len);
-      ctx->psk_hint_len = hint_len;
-    } else {
-      coap_log(LOG_ERR, "No memory to store PSK hint\n");
-      return 0;
-    }
+    setup_data.psk_info.hint.s = (const uint8_t *)hint;
+    setup_data.psk_info.hint.length = strlen(hint);
   }
-
-  if (ctx->psk_key)
-    coap_free(ctx->psk_key);
-  ctx->psk_key = NULL;
-  ctx->psk_key_len = 0;
 
   if (key && key_len > 0) {
-    ctx->psk_key = (uint8_t *)coap_malloc(key_len);
-    if (ctx->psk_key) {
-      memcpy(ctx->psk_key, key, key_len);
-      ctx->psk_key_len = key_len;
-    } else {
-      coap_log(LOG_ERR, "No memory to store PSK key\n");
-      return 0;
-    }
+    setup_data.psk_info.key.s = key;
+    setup_data.psk_info.key.length = key_len;
   }
+
+  return coap_context_set_psk2(ctx, &setup_data);
+}
+
+int coap_context_set_psk2(coap_context_t *ctx,
+  coap_dtls_spsk_t *setup_data
+) {
+  if (!setup_data)
+    return 0;
+
+  ctx->spsk_setup_data = *setup_data;
+
   if (coap_dtls_is_supported()) {
-    return coap_dtls_context_set_psk(ctx, hint, COAP_DTLS_ROLE_SERVER);
+    return coap_dtls_context_set_spsk(ctx, setup_data);
   }
   return 0;
 }
@@ -576,12 +596,6 @@ coap_free_context(coap_context_t *context) {
   if (context->dtls_context)
     coap_dtls_free_context(context->dtls_context);
 
-  if (context->psk_hint)
-    coap_free(context->psk_hint);
-
-  if (context->psk_key)
-    coap_free(context->psk_key);
-
 #ifdef COAP_EPOLL_SUPPORT
   if (context->eptimerfd != -1) {
     int ret;
@@ -606,8 +620,7 @@ coap_free_context(coap_context_t *context) {
 
 #ifndef WITH_CONTIKI
   coap_free_type(COAP_CONTEXT, context);
-#endif/* not WITH_CONTIKI */
-#ifdef WITH_CONTIKI
+#else /* WITH_CONTIKI */
   memset(&the_coap_context, 0, sizeof(coap_context_t));
   initialized = 0;
 #endif /* WITH_CONTIKI */

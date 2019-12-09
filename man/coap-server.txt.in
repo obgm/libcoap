@@ -16,7 +16,8 @@ SYNOPSIS
 --------
 *coap-server* [*-d* max] [*-g* group] [*-l* loss] [*-p* port] [*-v* num]
               [*-A* address] [*-N*]
-              [[*-k* key] [*-h* hint]]
+              [[*-h* hint] [*-i* match_identity_file] [*-k* key]
+              [*-s* match_sni_file]]
               [[*-c* certfile] [*-n*] [*-C* cafile] [*-R* root_cafile]]
 
 DESCRIPTION
@@ -32,21 +33,21 @@ OPTIONS - General
    dynamic resources has been deleted.
 
 *-g* group::
-   Join specified multicast 'group' on startup.
-
-*-p* port::
-   The 'port' on the given address will be listening for incoming connections.
-   If (D)TLS is supported, then 'port' + 1 will also be listened on for
-   (D)TLS connections.
-   The default port is 5683 if not given any other value.
+   Join specified multicast 'group' on start up.
 
 *-l* list::
    Fail to send some datagrams specified by a comma separated list of
    numbers or number ranges (debugging only).
 
 *-l* loss%::
-   Randomly failed to send datagams with the specified probability - 100%
+   Randomly failed to send datagrams with the specified probability - 100%
    all datagrams, 0% no datagrams (debugging only).
+
+*-p* port::
+   The 'port' on the given address will be listening for incoming connections.
+   If (D)TLS is supported, then 'port' + 1 will also be listened on for
+   (D)TLS connections.
+   The default port is 5683 if not given any other value.
 
 *-v* num::
    The verbosity level to use (default 3, maximum is 9). Above 7, there is
@@ -66,14 +67,33 @@ OPTIONS - PSK
 (If supported by underlying (D)TLS library)
 
 *-h* hint::
-   Pre-shared key hint to use for inbound connections. The default is 'CoAP'.
+   Identity hint to use for inbound connections. The default is 'CoAP'.
    This cannot be empty if defined.
+
+*-i* match_identiity_file::
+   This option denotes a file that contains one or more lines of client Hints
+   and (user) Identities to match for a new Pre-Shared key (PSK)
+   (comma separated) to be used.
+   E.g., entry per line +
+   hint_to_match,identity_to_match,new_key +
+   A line that starts with # is treated as a comment. +
+   Note: -k still needs to be defined for the default case +
 
 *-k* key::
    Pre-shared key to use for inbound connections. This cannot be empty if
    defined.
    *Note:* if *-c cafile* is defined, you need to define *-k key* as well to
    have the server support both PSK and PKI.
+
+*-s* match_sni_file::
+   This option denotes a file that contains one or more lines of Subject Name
+   Identifier (SNI) to match for new Identity Hint and new Pre-Shared Key
+   (PSK) (comma separated) to be used.
+   E.g., entry per line +
+   sni_to_match,new_hint,new_key +
+   A line that starts with # is treated as a comment. +
+   Note: -k still needs to be defined for the default case +
+   Note: the new Pre-Shared Key will get updated if there is also a -i match
 
 OPTIONS - PKI
 -------------

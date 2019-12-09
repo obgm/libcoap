@@ -233,23 +233,24 @@ EXAMPLES
 *Setup PDU and Transmit*
 
 [source, c]
---
+----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 static int token = 0;
 
-int
+static int
 build_send_pdu(coap_context_t *context, coap_session_t *session,
 uint8_t msgtype, uint8_t request_code, const char *uri, const char *query,
 unsigned char *data, size_t length, int observe) {
 
   coap_pdu_t *pdu;
-  (void)context;
-  char buf[1024];
+  uint8_t buf[1024];
   size_t buflen;
-  char *sbuf = buf;
+  uint8_t *sbuf = buf;
   int res;
   coap_optlist_t *optlist_chain = NULL;
+  /* Remove (void) definition if variable is used */
+  (void)context;
 
   /* Create the pdu with the appropriate options */
   pdu = coap_pdu_init(msgtype, request_code, coap_new_message_id(session),
@@ -320,26 +321,30 @@ unsigned char *data, size_t length, int observe) {
 error:
 
   if (pdu)
-    coap_pdu_delete(pdu);
+    coap_delete_pdu(pdu);
   return 0;
 
 }
---
+----
 
 *Resource Handler Response PDU Update*
 
 [source, c]
---
+----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <stdio.h>
 
 static void
 hnd_get_time(coap_context_t *context, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
+coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
 coap_string_t *query, coap_pdu_t *response) {
 
   unsigned char buf[40];
   size_t len;
   time_t now;
+  /* Remove (void) definition if variable is used */
+  (void)context;
 
   /* ... Additional analysis code for resource, request pdu etc.  ... */
 
@@ -385,7 +390,7 @@ coap_string_t *query, coap_pdu_t *response) {
    */
 
 }
---
+----
 
 SEE ALSO
 --------
