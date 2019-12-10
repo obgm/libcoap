@@ -39,6 +39,9 @@
     <ClCompile Include="..\src\coap_io.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_mbedtls.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_notls.c">
       <Filter>Source Files</Filter>
     </ClCompile>

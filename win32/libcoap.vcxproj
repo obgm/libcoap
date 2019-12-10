@@ -43,6 +43,7 @@
     <ClCompile Include="..\src\coap_hashkey.c" />
     <ClCompile Include="..\src\coap_gnutls.c" />
     <ClCompile Include="..\src\coap_io.c" />
+    <ClCompile Include="..\src\coap_mbedtls.c" />
     <ClCompile Include="..\src\coap_notls.c" />
     <ClCompile Include="..\src\coap_openssl.c" />
     <ClCompile Include="..\src\coap_session.c" />
