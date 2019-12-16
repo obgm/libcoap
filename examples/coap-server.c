@@ -89,6 +89,18 @@ typedef struct valid_ids_t {
 } valid_ids_t;
 
 static valid_ids_t valid_ids = {0, NULL};
+typedef struct pki_sni_def_t {
+  char* sni_match;
+  char *new_cert;
+  char *new_ca;
+} pki_sni_def_t;
+
+typedef struct valid_pki_snis_t {
+  size_t count;
+  pki_sni_def_t *pki_sni_list;
+} valid_pki_snis_t;
+
+static valid_pki_snis_t valid_pki_snis = {0, NULL};
 
 #ifndef WITHOUT_ASYNC
 /* This variable is used to mimic long-running tasks that require
@@ -697,14 +709,27 @@ verify_pki_sni_callback(const char *sni,
 ) {
   static coap_dtls_key_t dtls_key;
 
-  /* Just use the defined keys for now */
+  /* Preset with the defined keys */
   memset (&dtls_key, 0, sizeof(dtls_key));
   dtls_key.key_type = COAP_PKI_KEY_PEM;
   dtls_key.key.pem.public_cert = cert_file;
   dtls_key.key.pem.private_key = cert_file;
   dtls_key.key.pem.ca_file = ca_file;
   if (sni[0]) {
+    size_t i;
     coap_log(LOG_INFO, "SNI '%s' requested\n", sni);
+    for (i = 0; i < valid_pki_snis.count; i++) {
+      /* Test for SNI to change cert + ca */
+      if (strcasecmp(sni, valid_pki_snis.pki_sni_list[i].sni_match) == 0) {
+        coap_log(LOG_INFO, "Switching to using cert '%s' + ca '%s'\n",
+                 valid_pki_snis.pki_sni_list[i].new_cert,
+                 valid_pki_snis.pki_sni_list[i].new_ca);
+        dtls_key.key.pem.public_cert = valid_pki_snis.pki_sni_list[i].new_cert;
+        dtls_key.key.pem.private_key = valid_pki_snis.pki_sni_list[i].new_cert;
+        dtls_key.key.pem.ca_file = valid_pki_snis.pki_sni_list[i].new_ca;
+        break;
+      }
+    }
   }
   else {
     coap_log(LOG_DEBUG, "SNI not requested\n");
@@ -868,8 +893,9 @@ usage( const char *program, const char *version) {
      "Usage: %s [-d max] [-g group] [-l loss] [-p port] [-v num]\n"
      "\t\t[-A address] [-N]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
-     "\t\t[-s match_sni_file]]\n"
+     "\t\t[-s match_psk_sni_file]]\n"
      "\t\t[[-c certfile] [-C cafile] [-n] [-R root_cafile]]\n"
+     "\t\t[-S match_pki_sni_file]]\n"
      "General Options\n"
      "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
      "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
@@ -901,7 +927,7 @@ usage( const char *program, const char *version) {
      "\t       \t\tto be available. This cannot be empty if defined.\n"
      "\t       \t\tNote that both -c and -k need to be defined\n"
      "\t       \t\tfor both PSK and PKI to be concurrently supported\n"
-     "\t-s match_sni_file\n"
+     "\t-s match_psk_sni_file\n"
      "\t       \t\tThis is a file that contains one or more lines of Subject\n"
      "\t       \t\tName Identifiers (SNI) to match for new Identity Hint and\n"
      "\t       \t\tnew Pre-Shared Key (PSK) (comma separated) to be used.\n"
@@ -930,6 +956,13 @@ usage( const char *program, const char *version) {
      "\t       \t\t'trusted' for the verification.\n"
      "\t       \t\tAlternatively, this can point to a directory containing\n"
      "\t       \t\ta set of CA PEM files\n"
+     "\t-S match_pki_sni_file\n"
+     "\t       \t\tThis option denotes a file that contains one or more lines\n"
+     "\t       \t\tof Subject Name Identifier (SNI) to match for new Cert\n"
+     "\t       \t\tfile and new CA file (comma separated) to be used.\n"
+     "\t       \t\tE.g., per line\n"
+     "\t       \t\t sni_to_match,new_cert_file,new_ca_file\n"
+     "\t       \t\tNote: -c and -C still needs to be defined for the default case\n"
     , program, version, coap_string_tls_version(buffer, sizeof(buffer)),
     program);
 }
@@ -1112,6 +1145,73 @@ static int cmdline_read_identity_check(char *arg) {
   return valid_ids.count > 0;
 }
 
+static int cmdline_read_pki_sni_check(char *arg) {
+  FILE *fp = fopen(arg, "r");
+  static char tmpbuf[256];
+  if (fp == NULL) {
+    coap_log(LOG_ERR, "SNI file: %s: Unable to open\n", arg);
+    return 0;
+  }
+  while (fgets(tmpbuf, sizeof(tmpbuf), fp) != NULL) {
+    char *cp = tmpbuf;
+    char *tcp = strchr(cp, '\n');
+
+    if (tmpbuf[0] == '#')
+      continue;
+    if (tcp)
+      *tcp = '\000';
+
+    tcp = strchr(cp, ',');
+    if (tcp) {
+      pki_sni_def_t *new_pki_sni_list;
+      new_pki_sni_list = realloc(valid_pki_snis.pki_sni_list,
+            (valid_pki_snis.count + 1)*sizeof (valid_pki_snis.pki_sni_list[0]));
+      if (new_pki_sni_list == NULL) {
+        break;
+      }
+      valid_pki_snis.pki_sni_list = new_pki_sni_list;
+      valid_pki_snis.pki_sni_list[valid_pki_snis.count].sni_match =
+                                                           strndup(cp, tcp-cp);
+      cp = tcp+1;
+      tcp = strchr(cp, ',');
+      if (tcp) {
+        int fail = 0;
+        valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_cert =
+                             strndup(cp, tcp-cp);
+        cp = tcp+1;
+        valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_ca =
+                             strndup(cp, strlen(cp));
+        if (access(valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_cert,
+            R_OK)) {
+          coap_log(LOG_ERR, "SNI file: Cert File: %s: Unable to access\n",
+                   valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_cert);
+          fail = 1;
+        }
+        if (access(valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_ca,
+            R_OK)) {
+          coap_log(LOG_ERR, "SNI file: CA File: %s: Unable to access\n",
+                   valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_ca);
+          fail = 1;
+        }
+        if (fail) {
+          free(valid_pki_snis.pki_sni_list[valid_pki_snis.count].sni_match);
+          free(valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_cert);
+          free(valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_ca);
+        }
+        else {
+          valid_pki_snis.count++;
+        }
+      }
+      else {
+        coap_log(LOG_ERR,
+                "SNI file: SNI_match,Use_Cert_file,Use_CA_file not defined\n");
+        free(valid_pki_snis.pki_sni_list[valid_pki_snis.count].sni_match);
+      }
+    }
+  }
+  return valid_pki_snis.count > 0;
+}
+
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
@@ -1133,7 +1233,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "A:d:c:C:g:h:i:k:l:nNp:R:s:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:d:c:C:g:h:i:k:l:nNp:R:s:S:v:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -1193,6 +1293,12 @@ main(int argc, char **argv) {
       break;
     case 's':
       if (!cmdline_read_psk_sni_check(optarg)) {
+        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+        exit(1);
+      }
+      break;
+    case 'S':
+      if (!cmdline_read_pki_sni_check(optarg)) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
         exit(1);
       }
@@ -1319,6 +1425,13 @@ main(int argc, char **argv) {
   }
   if (valid_ids.count)
     free(valid_ids.id_list);
+  for (i = 0; i < valid_pki_snis.count; i++) {
+    free(valid_pki_snis.pki_sni_list[i].sni_match);
+    free(valid_pki_snis.pki_sni_list[i].new_cert);
+    free(valid_pki_snis.pki_sni_list[i].new_ca);
+  }
+  if (valid_pki_snis.count)
+    free(valid_pki_snis.pki_sni_list);
 
   coap_free_context(ctx);
   coap_cleanup();
