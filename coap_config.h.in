@@ -1,10 +1,10 @@
 /* coap_config.h.  Generated from coap_config.h.in by cmake.  */
 
-/* Define if building universal (internal helper macro) */
-/* #undef AC_APPLE_UNIVERSAL_BUILD */
-
 /* Define if the system has small stack size */
-/* #undef COAP_CONSTRAINED_STACK */
+#cmakedefine COAP_CONSTRAINED_STACK "@COAP_CONSTRAINED_STACK@"
+
+/* Define to 1 if you have <winsock2.h> header file. */
+#cmakedefine HAVE_WINSOCK2_H "@HAVE_WINSOCK2_H@"
 
 /* Define if the system has epoll support */
 #cmakedefine COAP_EPOLL_SUPPORT "@COAP_EPOLL_SUPPORT@"
@@ -88,7 +88,7 @@
 #cmakedefine HAVE_STRRCHR "@HAVE_STRRCHR@"
 
 /* Define to 1 if the system has the type `struct cmsghdr'. */
-#define HAVE_STRUCT_CMSGHDR 1
+#cmakedefine HAVE_STRUCT_CMSGHDR "@HAVE_STRUCT_CMSGHDR@"
 
 /* Define to 1 if you have the <syslog.h> header file. */
 #cmakedefine HAVE_SYSLOG_H "@HAVE_SYSLOG_H@"
@@ -118,16 +118,16 @@
 #cmakedefine HAVE_UNISTD_H "@HAVE_UNISTD_H@"
 
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"
+#cmakedefine PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME "libcoap"
+#cmakedefine PACKAGE_NAME "@PACKAGE_NAME@"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libcoap 4.3.0alpha"
+#cmakedefine PACKAGE_STRING "@PACKAGE_STRING@"
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "libcoap"
+#cmakedefine PACKAGE_TARNAME "@PACKAGE_TARNAME@"
 
 /* Define to the home page for this package. */
 #cmakedefine PACKAGE_URL "@PACKAGE_URL@"
@@ -137,24 +137,3 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
-
-/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
-   significant byte first (like Motorola and SPARC, unlike Intel). */
-#if defined AC_APPLE_UNIVERSAL_BUILD
-#if defined __BIG_ENDIAN__
-#define WORDS_BIGENDIAN 1
-#endif
-#else
-#ifndef WORDS_BIGENDIAN
-/* #  undef WORDS_BIGENDIAN */
-#endif
-#endif
-
-/* Define this to 1 for ancillary data on MacOS */
-/* #undef __APPLE_USE_RFC_3542 */
-
-/* Define to `unsigned int' if <sys/types.h> does not define. */
-/* #undef size_t */
-
-/* Define to `int' if <sys/types.h> does not define. */
-/* #undef ssize_t */

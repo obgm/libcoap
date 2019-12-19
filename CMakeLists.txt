@@ -14,6 +14,9 @@ option(WITH_GNUTLS
 option(WITH_OPENSSL
        "compile with OPENSSL support"
        ON)
+option(ENABLE_SMALL_STACK
+       "Define if the system has small stack size"
+       OFF)
 
 include(CheckCSourceCompiles)
 include(CheckFunctionExists)
@@ -23,7 +26,6 @@ include(CheckTypeSize)
 include(TestBigEndian)
 
 # check for headers
-
 check_include_file(byteswap.h
                    HAVE_BYTESWAP_H)
 check_include_file(inttypes.h
@@ -79,8 +81,10 @@ check_include_file(time.h
 check_include_file(unistd.h
                    HAVE_UNISTD_H)
 
-# check for functions
+check_include_file(winsock2.h
+                   HAVE_WINSOCK2_H)
 
+# check for functions
 check_function_exists(malloc
                       HAVE_MALLOC)
 check_function_exists(memset
@@ -100,6 +104,11 @@ check_function_exists(strnlen
 check_function_exists(strrchr
                       HAVE_STRRCHR)
 
+# check for symbols
+check_symbol_exists(cmsghdr
+                    sys/socket.h
+                    HAVE_STRUCT_CMSGHDR)
+
 if(${WITH_EPOLL} AND ${HAVE_EPOLL_H} AND ${HAVE_TIMERFD_H})
   set(COAP_EPOLL_SUPPORT "1")
   message(STATUS "compiling with epoll support")
@@ -110,7 +119,13 @@ if(WITH_OPENSSL)
   message(STATUS "compiling with openssl support")
 endif()
 
+if(ENABLE_SMALL_STACK)
+  set(ENABLE_SMALL_STACK "${ENABLE_SMALL_STACK}")
+endif()
+
 set(PACKAGE_URL "https://libcoap.net/")
+set(PACKAGE_NAME "${PROJECT_NAME}")
+set(PACKAGE_TARNAME "${PROJECT_NAME}")
 set(PACKAGE_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
 set(LIBCOAP_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(LIBCOAP_PACKAGE_URL "${PACKAGE_URL}")
