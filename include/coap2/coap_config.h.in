@@ -1,5 +1,11 @@
 /* coap_config.h.  Generated from coap_config.h.in by cmake.  */
 
+#ifndef COAP_CONFIG_H_
+#define COAP_CONFIG_H_
+
+/* Define to 1 if you have <ws2tcpip.h> header file. */
+#cmakedefine HAVE_WS2TCPIP_H "@HAVE_WS2TCPIP_H@"
+
 /* Define if the system has small stack size */
 #cmakedefine COAP_CONSTRAINED_STACK "@COAP_CONSTRAINED_STACK@"
 
@@ -132,3 +138,8 @@
 /* Define to the version of this package. */
 #cmakedefine PACKAGE_VERSION "@PACKAGE_VERSION@"
 
+#if defined(_MSC_VER) && (_MSC_VER < 1900) && !defined(snprintf)
+#define snprintf _snprintf
+#endif
+
+#endif /* COAP_CONFIG_H_ */

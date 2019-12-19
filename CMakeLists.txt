@@ -60,6 +60,7 @@ check_include_file(unistd.h HAVE_UNISTD_H)
 check_include_file(winsock2.h HAVE_WINSOCK2_H)
 check_include_file(float.h HAVE_FLOAT_H)
 check_include_file(stddef.h HAVE_STDDEF_H)
+check_include_file(ws2tcpip.h HAVE_WS2TCPIP_H)
 
 if(HAVE_STRING_H
    AND HAVE_STRINGS_H
@@ -262,8 +263,8 @@ if(ENABLE_EXAMPLES)
   add_executable(coap-server ${CMAKE_CURRENT_LIST_DIR}/examples/coap-server.c)
   target_link_libraries(coap-server PUBLIC ${PROJECT_NAME})
 
-  add_executable(etsi_iot_01 ${CMAKE_CURRENT_LIST_DIR}/examples/etsi_iot_01.c)
-  target_link_libraries(etsi_iot_01 PUBLIC ${PROJECT_NAME})
+  # add_executable(etsi_iot_01 ${CMAKE_CURRENT_LIST_DIR}/examples/etsi_iot_01.c)
+  # target_link_libraries(etsi_iot_01 PUBLIC ${PROJECT_NAME})
 
   add_executable(tiny ${CMAKE_CURRENT_LIST_DIR}/examples/tiny.c)
   target_link_libraries(tiny PUBLIC ${PROJECT_NAME})

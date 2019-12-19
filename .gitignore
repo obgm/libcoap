@@ -92,4 +92,7 @@ TAGS
 **/*.gcno
 **/*.gcov
 
+# IDE files
 CMakeLists.txt.user
+/.vs/
+/out/
