@@ -39,7 +39,18 @@ get the TinyDTLS code into your project, so the TinyDTLS library can be used.
  git submodule init
  git submodule update
 
-General Building (not for LwIP or Contiki - see below)
+General Building with cmake for linux/windows/macos/android (not for LwIP or Contiki - see below)
+================
+
+ mkdir build
+ cd build
+ cmake ..
+ cmake --build . -j
+ [sudo] cmake --build . -- install
+ to see possible options (TLS lib, doc, tests, examples etc.):
+ cmake -LH .
+
+General Building with autoconf (not for LwIP or Contiki - see below)
 ================
 
  ./autogen.sh
@@ -53,7 +64,7 @@ that is missing. Install the missing package and try ./autogen.sh again.
 It is possible that you may need to provide some options to ./configure
 to customize your installation.
 
-In particular you may need to define which (D)TLS ligrary to use as well as
+In particular you may need to define which (D)TLS library to use as well as
 disable some building of documentation.
 
 General configure instructions can be found in INSTALL, which is built
