@@ -60,7 +60,6 @@ typedef struct coap_ssl_t {
   const uint8_t *pdu;
   unsigned pdu_len;
   unsigned peekmode;
-  coap_tick_t timeout;
 } coap_ssl_t;
 
 /*
@@ -78,6 +77,7 @@ typedef struct coap_gnutls_env_t {
   int established;
   int seen_client_hello;
   int doing_dtls_timeout;
+  coap_tick_t last_timeout;
 } coap_gnutls_env_t;
 
 #define IS_PSK (1 << 0)
@@ -1467,7 +1467,8 @@ coap_dtls_new_gnutls_env(coap_session_t *c_session, int type)
           "gnutls_priority_set");
   gnutls_handshake_set_timeout(g_env->g_session,
                                GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
-  gnutls_dtls_set_timeouts(g_env->g_session, 5000, 60000);
+  gnutls_dtls_set_timeouts(g_env->g_session, COAP_DTLS_RETRANSMIT_MS,
+                                             COAP_DTLS_RETRANSMIT_TOTAL_MS);
 
   return g_env;
 
@@ -1716,6 +1717,18 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now) {
   if (g_env && g_env->g_session) {
     unsigned int rem_ms = gnutls_dtls_get_timeout(g_env->g_session);
 
+    if (rem_ms == 0) {
+      /*
+       * Need to make sure that we do not do this too frequently as some
+       * versions of gnutls reset retransmit if a spurious packet is received
+       * (e.g. duplicate Client Hello), but last_transmit does not get updated
+       * when gnutls_handshake() is called and there is 'nothing' to resend.
+       */
+      if (g_env->last_timeout + COAP_DTLS_RETRANSMIT_COAP_TICKS > now)
+        return g_env->last_timeout + COAP_DTLS_RETRANSMIT_COAP_TICKS;
+    }
+    /* Reset for the next time */
+    g_env->last_timeout = now;
     return now + rem_ms;
   }
 
@@ -1832,7 +1845,7 @@ coap_dtls_hello(coap_session_t *c_session,
         /* The test for seen_client_hello gives the ability to setup a new
            coap_session to continue the gnutls_handshake past the client hello
            and safely allow updating of the g_env & g_session and separately
-           letting a new session cleanly start up using endpoint->hello.
+           letting a new session cleanly start up.
          */
         g_env->seen_client_hello = 0;
         return 1;
@@ -1857,7 +1870,7 @@ coap_dtls_hello(coap_session_t *c_session,
     /* The test for seen_client_hello gives the ability to setup a new
        coap_session to continue the gnutls_handshake past the client hello
        and safely allow updating of the g_env & g_session and separately
-       letting a new session cleanly start up using endpoint->hello.
+       letting a new session cleanly start up.
      */
     g_env->seen_client_hello = 0;
     return 1;

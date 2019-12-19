@@ -30,6 +30,16 @@ struct coap_dtls_pki_t;
 #define COAP_DTLS_HINT_LENGTH 128
 #endif
 
+/* https://tools.ietf.org/html/rfc6347#section-4.2.4.1 */
+#ifndef COAP_DTLS_RETRANSMIT_MS
+#define COAP_DTLS_RETRANSMIT_MS 1000
+#endif
+#ifndef COAP_DTLS_RETRANSMIT_TOTAL_MS
+#define COAP_DTLS_RETRANSMIT_TOTAL_MS 60000
+#endif
+
+#define COAP_DTLS_RETRANSMIT_COAP_TICKS (COAP_DTLS_RETRANSMIT_MS * COAP_TICKS_PER_SECOND / 1000)
+
 /**
  * Check whether DTLS is available.
  *
