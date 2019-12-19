@@ -42,10 +42,10 @@ get the TinyDTLS code into your project, so the TinyDTLS library can be used.
 General Building with cmake for linux/windows/macos/android (not for LwIP or Contiki - see below)
 ================
 
- mkdir build
- cd build
- cmake ..
- cmake --build . -j
+ cmake -E remove_directory build
+ cmake -E make_directory build
+ cmake -S . -B build
+ cmake --build build -j
  [sudo] cmake --build . -- install
  to see possible options (TLS lib, doc, tests, examples etc.):
  cmake -LH .
