@@ -24,14 +24,14 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H "@HAVE_INTTYPES_H@"
 
-/* Define if the system has libcunit */
-/* #undef HAVE_LIBCUNIT */
+/* Define if the system has openssl */
+#cmakedefine HAVE_OPENSSL "@HAVE_OPENSSL@"
 
 /* Define if the system has libgnutls28 */
-/* #undef HAVE_LIBGNUTLS */
+#cmakedefine HAVE_LIBGNUTLS "@HAVE_LIBGNUTLS@"
 
 /* Define if the system has libtinydtls */
-/* #undef HAVE_LIBTINYDTLS */
+#cmakedefine HAVE_LIBTINYDTLS "@HAVE_LIBTINYDTLS@"
 
 /* Define to 1 if you have the <limits.h> header file. */
 #cmakedefine HAVE_LIMITS_H "@HAVE_LIMITS_H@"
@@ -50,9 +50,6 @@
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #cmakedefine HAVE_NETINET_IN_H "@HAVE_NETINET_IN_H@"
-
-/* Define if the system has libssl1.1 */
-#cmakedefine HAVE_OPENSSL "@HAVE_OPENSSL@"
 
 /* Define to 1 if you have the <pthread.h> header file. */
 #cmakedefine HAVE_PTHREAD_H "@HAVE_PTHREAD_H@"
@@ -135,5 +132,3 @@
 /* Define to the version of this package. */
 #cmakedefine PACKAGE_VERSION "@PACKAGE_VERSION@"
 
-/* Define to 1 if you have the ANSI C header files. */
-#define STDC_HEADERS 1
