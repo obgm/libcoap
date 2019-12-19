@@ -89,7 +89,11 @@ check_function_exists(strnlen HAVE_STRNLEN)
 check_function_exists(strrchr HAVE_STRRCHR)
 
 # check for symbols
-check_symbol_exists(cmsghdr sys/socket.h HAVE_STRUCT_CMSGHDR)
+if(WIN32)
+  set(HAVE_STRUCT_CMSGHDR 1)
+else()
+  check_symbol_exists(cmsghdr sys/socket.h HAVE_STRUCT_CMSGHDR)
+endif()
 
 option(WITH_OPENSSL "Use OpenSSL for DTLS functions" ON)
 option(WITH_GNUTLS "Use GnuTLS for DTLS functions" OFF)
@@ -153,6 +157,12 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap_config.h)
+
+
+if (WIN32 AND MSVC AND BUILD_SHARED_LIBS)
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+  set(WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
 
 #
 # library
@@ -224,6 +234,8 @@ target_link_libraries(${PROJECT_NAME}
                               $<$<BOOL:${WITH_TINYDTLS}>:-ltinydtls>)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
+
+
 #
 # tests
 #
@@ -270,8 +282,10 @@ if(ENABLE_EXAMPLES)
   # add_executable(etsi_iot_01 ${CMAKE_CURRENT_LIST_DIR}/examples/etsi_iot_01.c)
   # target_link_libraries(etsi_iot_01 PUBLIC ${PROJECT_NAME})
 
-  add_executable(tiny ${CMAKE_CURRENT_LIST_DIR}/examples/tiny.c)
-  target_link_libraries(tiny PUBLIC ${PROJECT_NAME})
+  if(NOT WIN32)
+    add_executable(tiny ${CMAKE_CURRENT_LIST_DIR}/examples/tiny.c)
+    target_link_libraries(tiny PUBLIC ${PROJECT_NAME})
+  endif()
 endif()
 
 #
