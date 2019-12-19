@@ -2619,10 +2619,10 @@ coap_join_mcast_group(coap_context_t *ctx, const char *group_name) {
 
   result = getaddrinfo("::", NULL, &hints, &reslocal);
   if (result != 0) {
-    coap_log(LOG_ERR,
-             "coap_join_mcast_group: cannot resolve link-local interface: %s\n",
-             gai_strerror(result));
-    goto finish;
+      coap_log(LOG_ERR,
+               "coap_join_mcast_group: cannot resolve link-local interface: %s\n",
+               gai_strerror(result));
+      goto finish;
   }
 
   /* get the first suitable interface identifier */
@@ -2642,10 +2642,10 @@ coap_join_mcast_group(coap_context_t *ctx, const char *group_name) {
   result = getaddrinfo(group_name, NULL, &hints, &resmulti);
 
   if (result != 0) {
-    coap_log(LOG_ERR,
-             "coap_join_mcast_group: cannot resolve multicast address: %d\n",
-             gai_strerror(result));
-    goto finish;
+      coap_log(LOG_ERR,
+               "coap_join_mcast_group: cannot resolve multicast address: %s\n",
+               gai_strerror(result));
+      goto finish;
   }
 
   for (ainfo = resmulti; ainfo != NULL; ainfo = ainfo->ai_next) {

@@ -1,18 +1,122 @@
 cmake_minimum_required(VERSION 3.12)
 
 project(libcoap
-        VERSION 4.2.1
+        VERSION 4.3.0
         LANGUAGES CXX
                   C)
 
-message(STATUS "building libcoap with cmake")
+option(WITH_EPOLL
+       "compile with epoll support"
+       OFF)
+option(WITH_GNUTLS
+       "compile with gnutls support"
+       OFF)
+option(WITH_OPENSSL
+       "compile with OPENSSL support"
+       ON)
 
+include(CheckCSourceCompiles)
+include(CheckFunctionExists)
+include(CheckIncludeFile)
+include(CheckSymbolExists)
+include(CheckTypeSize)
+include(TestBigEndian)
+
+# check for headers
+
+check_include_file(byteswap.h
+                   HAVE_BYTESWAP_H)
+check_include_file(inttypes.h
+                   HAVE_INTTYPES_H)
+check_include_file(limits.h
+                   HAVE_LIMITS_H)
+check_include_file(memory.h
+                   HAVE_MEMORY_H)
+check_include_file(strings.h
+                   HAVE_STRINGS_H)
+check_include_file(string.h
+                   HAVE_STRING_H)
+check_include_file(sys/sysctl.h
+                   HAVE_SYS_SYSCTL_H)
+check_include_file(netinet/in.h
+                   HAVE_NETINET_IN_H)
+check_include_file(sys/epoll.h
+                   HAVE_EPOLL_H)
+check_include_file(sys/timerfd.h
+                   HAVE_TIMERFD_H)
+check_include_file(arp/inet.h
+                   HAVE_ARPA_INET_H)
+check_include_file(stdbool.h
+                   HAVE_STDBOOL_H)
+check_include_file(netdb.h
+                   HAVE_NETDB_H)
+check_include_file(pthread.h
+                   HAVE_PTHREAD_H)
+check_include_file(strings.h
+                   HAVE_STRINGS_H)
+check_include_file(stdlib.h
+                   HAVE_STDINT_H)
+check_include_file(stdint.h
+                   HAVE_STDLIB_H)
+check_include_file(inttypes.h
+                   HAVE_INTTYPES_H)
+check_include_file(syslog.h
+                   HAVE_SYSLOG_H)
+check_include_file(sys/ioctl.h
+                   HAVE_SYS_IOCTL_H)
+check_include_file(sys/socket.h
+                   HAVE_SYS_SOCKET_H)
+check_include_file(sys/stat.h
+                   HAVE_SYS_STAT_H)
+check_include_file(sys/time.h
+                   HAVE_SYS_TIME_H)
+check_include_file(sys/types.h
+                   HAVE_SYS_TYPES_H)
+check_include_file(sys/unistd.h
+                   HAVE_SYS_UNISTD_H)
+check_include_file(time.h
+                   HAVE_TIME_H)
+check_include_file(unistd.h
+                   HAVE_UNISTD_H)
+
+# check for functions
+
+check_function_exists(malloc
+                      HAVE_MALLOC)
+check_function_exists(memset
+                      HAVE_MEMSET)
+check_function_exists(select
+                      HAVE_SELECT)
+check_function_exists(socket
+                      HAVE_SOCKET)
+check_function_exists(strcasecmp
+                      HAVE_STRCASECMP)
+check_function_exists(pthread_mutex_lock
+                      HAVE_PTHREAD_MUTEX_LOCK)
+check_function_exists(getaddrinfo
+                      HAVE_GETADDRINFO)
+check_function_exists(strnlen
+                      HAVE_STRNLEN)
+check_function_exists(strrchr
+                      HAVE_STRRCHR)
+
+if(${WITH_EPOLL} AND ${HAVE_EPOLL_H} AND ${HAVE_TIMERFD_H})
+  set(COAP_EPOLL_SUPPORT "1")
+  message(STATUS "compiling with epoll support")
+endif()
+
+if(WITH_OPENSSL)
+  set(WITH_OPENSSL "${WITH_OPENSSL}")
+  message(STATUS "compiling with openssl support")
+endif()
+
+set(PACKAGE_URL "https://libcoap.net/")
 set(PACKAGE_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
 set(LIBCOAP_PACKAGE_VERSION "${PROJECT_VERSION}")
-set(LIBCOAP_PACKAGE_URL "TODO")
+set(LIBCOAP_PACKAGE_URL "${PACKAGE_URL}")
 set(LIBCOAP_PACKAGE_NAME "${PROJECT_NAME}")
 set(LIBCOAP_PACKAGE_STRING "TODO")
-set(LIBCOAP_PACKAGE_BUGREPORT "${PROJECT_NAME} ${PROJECT_VERSION}")
+set(LIBCOAP_PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net")
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap.h)

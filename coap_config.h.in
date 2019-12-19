@@ -1,166 +1,160 @@
-/* coap_config.h.in.  Generated from configure.ac by autoheader.  */
+/* coap_config.h.  Generated from coap_config.h.in by cmake.  */
 
 /* Define if building universal (internal helper macro) */
-#undef AC_APPLE_UNIVERSAL_BUILD
+/* #undef AC_APPLE_UNIVERSAL_BUILD */
 
 /* Define if the system has small stack size */
-#undef COAP_CONSTRAINED_STACK
+/* #undef COAP_CONSTRAINED_STACK */
 
 /* Define if the system has epoll support */
-#undef COAP_EPOLL_SUPPORT
+#cmakedefine COAP_EPOLL_SUPPORT "@COAP_EPOLL_SUPPORT@"
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
-#undef HAVE_ARPA_INET_H
+#cmakedefine HAVE_ARPA_INET_H "@HAVE_ARPA_INET_H@"
 
 /* Define to 1 if you have the <assert.h> header file. */
-#undef HAVE_ASSERT_H
+#cmakedefine HAVE_ASSERT_H "@HAVE_ASSERT_H@"
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
-#undef HAVE_DLFCN_H
+#cmakedefine HAVE_DLFCN_H "@HAVE_DLFCN_H@"
 
 /* Define to 1 if you have the `getaddrinfo' function. */
-#undef HAVE_GETADDRINFO
+#cmakedefine HAVE_GETADDRINFO "@HAVE_GETADDRINFO@"
 
 /* Define to 1 if you have the <inttypes.h> header file. */
-#undef HAVE_INTTYPES_H
+#cmakedefine HAVE_INTTYPES_H "@HAVE_INTTYPES_H@"
 
 /* Define if the system has libcunit */
-#undef HAVE_LIBCUNIT
+/* #undef HAVE_LIBCUNIT */
 
 /* Define if the system has libgnutls28 */
-#undef HAVE_LIBGNUTLS
+/* #undef HAVE_LIBGNUTLS */
 
 /* Define if the system has libtinydtls */
-#undef HAVE_LIBTINYDTLS
+/* #undef HAVE_LIBTINYDTLS */
 
 /* Define to 1 if you have the <limits.h> header file. */
-#undef HAVE_LIMITS_H
+#cmakedefine HAVE_LIMITS_H "@HAVE_LIMITS_H@"
 
 /* Define to 1 if you have the `malloc' function. */
-#undef HAVE_MALLOC
+#cmakedefine HAVE_MALLOC "@HAVE_MALLOC@"
 
 /* Define to 1 if you have the <memory.h> header file. */
-#undef HAVE_MEMORY_H
+#cmakedefine HAVE_MEMORY_H "@HAVE_MEMORY_H@"
 
 /* Define to 1 if you have the `memset' function. */
-#undef HAVE_MEMSET
+#cmakedefine HAVE_MEMSET "@HAVE_MEMSET@"
 
 /* Define to 1 if you have the <netdb.h> header file. */
-#undef HAVE_NETDB_H
+#cmakedefine HAVE_NETDB_H "@HAVE_NETDB_H@"
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
-#undef HAVE_NETINET_IN_H
+#cmakedefine HAVE_NETINET_IN_H "@HAVE_NETINET_IN_H@"
 
 /* Define if the system has libssl1.1 */
-#undef HAVE_OPENSSL
+#cmakedefine HAVE_OPENSSL "@HAVE_OPENSSL@"
 
 /* Define to 1 if you have the <pthread.h> header file. */
-#undef HAVE_PTHREAD_H
+#cmakedefine HAVE_PTHREAD_H "@HAVE_PTHREAD_H@"
 
 /* Define to 1 if you have the `pthread_mutex_lock' function. */
-#undef HAVE_PTHREAD_MUTEX_LOCK
+#cmakedefine HAVE_PTHREAD_MUTEX_LOCK "@HAVE_PTHREAD_MUTEX_LOCK@"
 
 /* Define to 1 if you have the `select' function. */
-#undef HAVE_SELECT
+#cmakedefine HAVE_SELECT "@HAVE_SOCKET@"
 
 /* Define to 1 if you have the `socket' function. */
-#undef HAVE_SOCKET
+#cmakedefine HAVE_SOCKET "@HAVE_SOCKET@"
 
 /* Define to 1 if you have the <stdint.h> header file. */
-#undef HAVE_STDINT_H
+#cmakedefine HAVE_STDINT_H "@HAVE_STDLIB_H@"
 
 /* Define to 1 if you have the <stdlib.h> header file. */
-#undef HAVE_STDLIB_H
+#cmakedefine HAVE_STDLIB_H "@HAVE_STDLIB_H@"
 
 /* Define to 1 if you have the `strcasecmp' function. */
-#undef HAVE_STRCASECMP
+#cmakedefine HAVE_STRCASECMP "@HAVE_STRCASECMP@"
 
 /* Define to 1 if you have the <strings.h> header file. */
-#undef HAVE_STRINGS_H
+#cmakedefine HAVE_STRINGS_H "@HAVE_STRINGS_H@"
 
 /* Define to 1 if you have the <string.h> header file. */
-#undef HAVE_STRING_H
+#cmakedefine HAVE_STRING_H "@HAVE_STRING_H@"
 
 /* Define to 1 if you have the `strnlen' function. */
-#undef HAVE_STRNLEN
+#cmakedefine HAVE_STRNLEN "@HAVE_STRNLEN@"
 
 /* Define to 1 if you have the `strrchr' function. */
-#undef HAVE_STRRCHR
+#cmakedefine HAVE_STRRCHR "@HAVE_STRRCHR@"
 
 /* Define to 1 if the system has the type `struct cmsghdr'. */
-#undef HAVE_STRUCT_CMSGHDR
+#define HAVE_STRUCT_CMSGHDR 1
 
 /* Define to 1 if you have the <syslog.h> header file. */
-#undef HAVE_SYSLOG_H
+#cmakedefine HAVE_SYSLOG_H "@HAVE_SYSLOG_H@"
 
 /* Define to 1 if you have the <sys/ioctl.h> header file. */
-#undef HAVE_SYS_IOCTL_H
+#cmakedefine HAVE_SYS_IOCTL_H "@HAVE_SYS_IOCTL_H@"
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
-#undef HAVE_SYS_SOCKET_H
+#cmakedefine HAVE_SYS_SOCKET_H "@HAVE_SYS_SOCKET_H@"
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
-#undef HAVE_SYS_STAT_H
+#cmakedefine HAVE_SYS_STAT_H "@HAVE_SYS_STAT_H@"
 
 /* Define to 1 if you have the <sys/time.h> header file. */
-#undef HAVE_SYS_TIME_H
+#cmakedefine HAVE_SYS_TIME_H "@HAVE_SYS_TIME_H@"
 
 /* Define to 1 if you have the <sys/types.h> header file. */
-#undef HAVE_SYS_TYPES_H
+#cmakedefine HAVE_SYS_TYPES_H "@HAVE_SYS_TYPES_H@"
 
 /* Define to 1 if you have the <sys/unistd.h> header file. */
-#undef HAVE_SYS_UNISTD_H
+#cmakedefine HAVE_SYS_UNISTD_H "@HAVE_SYS_UNISTD_H@"
 
 /* Define to 1 if you have the <time.h> header file. */
-#undef HAVE_TIME_H
+#cmakedefine HAVE_TIME_H "@HAVE_TIME_H@"
 
 /* Define to 1 if you have the <unistd.h> header file. */
-#undef HAVE_UNISTD_H
-
-/* Define to the sub-directory where libtool stores uninstalled libraries. */
-#undef LT_OBJDIR
-
-/* Define to 1 if assertions should be disabled. */
-#undef NDEBUG
+#cmakedefine HAVE_UNISTD_H "@HAVE_UNISTD_H@"
 
 /* Define to the address where bug reports for this package should be sent. */
-#undef PACKAGE_BUGREPORT
+#define PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME "@PACKAGE_NAME@"
+#define PACKAGE_NAME "libcoap"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "@PACKAGE_STRING@"
+#define PACKAGE_STRING "libcoap 4.3.0alpha"
 
 /* Define to the one symbol short name of this package. */
-#undef PACKAGE_TARNAME
+#define PACKAGE_TARNAME "libcoap"
 
 /* Define to the home page for this package. */
-#undef PACKAGE_URL
+#cmakedefine PACKAGE_URL "@PACKAGE_URL@"
 
 /* Define to the version of this package. */
-#undef PACKAGE_VERSION
+#cmakedefine PACKAGE_VERSION "@PACKAGE_VERSION@"
 
 /* Define to 1 if you have the ANSI C header files. */
-#undef STDC_HEADERS
+#define STDC_HEADERS 1
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
 #if defined AC_APPLE_UNIVERSAL_BUILD
-# if defined __BIG_ENDIAN__
-#  define WORDS_BIGENDIAN 1
-# endif
+#if defined __BIG_ENDIAN__
+#define WORDS_BIGENDIAN 1
+#endif
 #else
-# ifndef WORDS_BIGENDIAN
-#  undef WORDS_BIGENDIAN
-# endif
+#ifndef WORDS_BIGENDIAN
+/* #  undef WORDS_BIGENDIAN */
+#endif
 #endif
 
 /* Define this to 1 for ancillary data on MacOS */
-#undef __APPLE_USE_RFC_3542
+/* #undef __APPLE_USE_RFC_3542 */
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
-#undef size_t
+/* #undef size_t */
 
 /* Define to `int' if <sys/types.h> does not define. */
-#undef ssize_t
+/* #undef ssize_t */

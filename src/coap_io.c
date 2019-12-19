@@ -775,7 +775,7 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
 
 #endif  /* WITH_CONTIKI */
 
-#if (!defined(WITH_CONTIKI)) != ( defined(HAVE_NETINET_IN_H) || defined(HAVE_WS2TCPIP_H) )
+//#if (!defined(WITH_CONTIKI)) != ( defined(HAVE_NETINET_IN_H) || defined(HAVE_WS2TCPIP_H) )
 /* define struct in6_pktinfo and struct in_pktinfo if not available
    FIXME: check with configure
 */
@@ -784,12 +784,12 @@ struct in6_pktinfo {
   unsigned int ipi6_ifindex;        /* send/recv interface index */
 };
 
-struct in_pktinfo {
-  int ipi_ifindex;
-  struct in_addr ipi_spec_dst;
-  struct in_addr ipi_addr;
-};
-#endif
+//struct in_pktinfo {
+//  int ipi_ifindex;
+//  struct in_addr ipi_spec_dst;
+//  struct in_addr ipi_addr;
+//};
+//#endif
 
 #if !defined(WITH_CONTIKI) && !defined(SOL_IP)
 /* Solaris expects level IPPROTO_IP for ancillary data. */
