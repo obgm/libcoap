@@ -2643,7 +2643,7 @@ coap_join_mcast_group(coap_context_t *ctx, const char *group_name) {
 
   if (result != 0) {
     coap_log(LOG_ERR,
-             "coap_join_mcast_group: cannot resolve multicast address: %s\n",
+             "coap_join_mcast_group: cannot resolve multicast address: %d\n",
              gai_strerror(result));
     goto finish;
   }
