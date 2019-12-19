@@ -1303,6 +1303,7 @@ setup_pki(coap_context_t *ctx) {
     }
   }
 
+  memset(client_sni, 0, sizeof(client_sni));
   memset (&dtls_pki, 0, sizeof(dtls_pki));
   dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
   if (ca_file || root_ca_file) {
@@ -1328,7 +1329,6 @@ setup_pki(coap_context_t *ctx) {
     dtls_pki.cn_call_back_arg        = NULL;
     dtls_pki.validate_sni_call_back  = NULL;
     dtls_pki.sni_call_back_arg       = NULL;
-    memset(client_sni, 0, sizeof(client_sni));
   }
   if (uri.host.length)
     memcpy(client_sni, uri.host.s, min(uri.host.length, sizeof(client_sni)-1));
@@ -1374,6 +1374,46 @@ setup_psk(
 #define S_ISDIR(x) (((x) & S_IFMT) == S_IFDIR)
 #endif
 
+static coap_session_t*
+open_session(
+  coap_context_t *ctx,
+  coap_proto_t proto,
+  coap_address_t *bind_addr,
+  coap_address_t *dst,
+  const uint8_t *identity,
+  size_t identity_len,
+  const uint8_t *key,
+  size_t key_len
+) {
+  coap_session_t *session;
+
+  if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
+    /* Encrypted session */
+    if (root_ca_file || ca_file || cert_file) {
+      /* Setup PKI session */
+      coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
+      session = coap_new_client_session_pki(ctx, bind_addr, dst, proto, dtls_pki);
+    }
+    else if (identity || key) {
+      /* Setup PSK session */
+      coap_dtls_cpsk_t *dtls_psk = setup_psk(identity, identity_len,
+                                               key, key_len);
+      session = coap_new_client_session_psk2(ctx, bind_addr, dst, proto,
+                                           dtls_psk);
+    }
+    else {
+      /* No PKI or PSK defined, as encrypted, use PKI */
+      coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
+      session = coap_new_client_session_pki(ctx, bind_addr, dst, proto, dtls_pki);
+    }
+  }
+  else {
+    /* Non-encrypted session */
+    session = coap_new_client_session(ctx, bind_addr, dst, proto);
+  }
+  return session;
+}
+
 static coap_session_t *
 get_session(
   coap_context_t *ctx,
@@ -1411,41 +1451,16 @@ get_session(
         coap_address_init( &bind_addr );
         bind_addr.size = rp->ai_addrlen;
         memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
-        if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
-          /* Do this, even if certs are not defined */
-          coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
-          session = coap_new_client_session_pki(ctx, &bind_addr, dst, proto, dtls_pki);
-        }
-        else if ((identity || key) &&
-                 (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
-          coap_dtls_cpsk_t *dtls_psk = setup_psk(identity, identity_len,
-                                                   key, key_len);
-          session = coap_new_client_session_psk2(ctx, &bind_addr, dst, proto,
-                                                 dtls_psk);
-        }
-        else {
-          session = coap_new_client_session( ctx, &bind_addr, dst, proto );
-        }
+        session = open_session(ctx, proto, &bind_addr, dst,
+                               identity, identity_len, key, key_len);
         if ( session )
           break;
       }
     }
     freeaddrinfo( result );
   } else {
-    if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
-      /* Do this, even if certs are not defined */
-      coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
-      session = coap_new_client_session_pki(ctx, NULL, dst, proto, dtls_pki);
-    }
-    else if ((identity || key) &&
-             (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS)) {
-      coap_dtls_cpsk_t *dtls_psk = setup_psk(identity, identity_len,
-                                               key, key_len);
-      session = coap_new_client_session_psk2(ctx, NULL, dst, proto,
-                                             dtls_psk);
-    }
-    else
-      session = coap_new_client_session( ctx, NULL, dst, proto );
+    session = open_session(ctx, proto, NULL, dst,
+                               identity, identity_len, key, key_len);
   }
   return session;
 }
