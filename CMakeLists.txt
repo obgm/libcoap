@@ -17,6 +17,16 @@ option(WITH_OPENSSL
 option(ENABLE_SMALL_STACK
        "Define if the system has small stack size"
        OFF)
+option(ENABLE_TESTS
+       "build also tests"
+       OFF)
+option(ENABLE_EXAMPLES
+       "build also examples"
+       OFF)
+
+if(NOT CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 11)
+endif()
 
 include(CheckCSourceCompiles)
 include(CheckFunctionExists)
@@ -157,6 +167,9 @@ add_library(libcoap
             ${CMAKE_CURRENT_LIST_DIR}/src/coap_session.c
             ${CMAKE_CURRENT_LIST_DIR}/src/coap_notls.c
             ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
+            ${CMAKE_CURRENT_LIST_DIR}/src/address.c
+            ${CMAKE_CURRENT_LIST_DIR}/src/coap_time.c
+            ${CMAKE_CURRENT_LIST_DIR}/src/coap_event.c
             # headers
             ${CMAKE_CURRENT_LIST_DIR}/include/coap2/address.h
             ${CMAKE_CURRENT_LIST_DIR}/include/coap2/async.h
@@ -168,7 +181,6 @@ add_library(libcoap
             ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h
             ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_hashkey.h
             ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in
-            #     ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.windows
             ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_io.h
             ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_session.h
             ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_time.h
@@ -188,8 +200,59 @@ add_library(libcoap
             ${CMAKE_CURRENT_LIST_DIR}/include/coap2/utlist.h)
 target_include_directories(libcoap
                            PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
-                                  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/>
                                   $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/coap2>
                                   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/>
                                   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/coap2/>
                                   $<INSTALL_INTERFACE:include/>)
+
+if(ENABLE_TESTS)
+  find_package(PkgConfig
+               REQUIRED)
+
+  pkg_check_modules(cunit
+                    REQUIRED
+                    IMPORTED_TARGET
+                    cunit)
+
+  add_executable(libcoap_tests
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/testdriver.c
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_encode.c
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_encode.h
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_error_response.c
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_error_response.h
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_options.c
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_options.h
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_pdu.c
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_pdu.h
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_sendqueue.c
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_sendqueue.h
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_session.c
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_session.h
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_tls.c
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_tls.h
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_uri.c
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_uri.h
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_wellknown.c
+                 ${CMAKE_CURRENT_LIST_DIR}/tests/test_wellknown.h)
+  target_link_libraries(libcoap_tests
+                        PUBLIC libcoap
+                               PkgConfig::cunit)
+endif()
+
+if(ENABLE_EXAMPLES)
+  add_executable(client ${CMAKE_CURRENT_LIST_DIR}/examples/client.c)
+  target_link_libraries(client PUBLIC libcoap)
+
+  add_executable(coap-rd ${CMAKE_CURRENT_LIST_DIR}/examples/coap-rd.c)
+  target_link_libraries(coap-rd PUBLIC libcoap)
+
+  add_executable(coap-server ${CMAKE_CURRENT_LIST_DIR}/examples/coap-server.c)
+  target_link_libraries(coap-server PUBLIC libcoap)
+
+  add_executable(etsi_iot_01 ${CMAKE_CURRENT_LIST_DIR}/examples/etsi_iot_01.c)
+  target_link_libraries(etsi_iot_01 PUBLIC libcoap)
+
+  add_executable(tiny ${CMAKE_CURRENT_LIST_DIR}/examples/tiny.c)
+  target_link_libraries(tiny PUBLIC libcoap)
+
+endif()
