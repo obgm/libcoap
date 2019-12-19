@@ -48,7 +48,6 @@ check_include_file(arpa/inet.h HAVE_ARPA_INET_H)
 check_include_file(stdbool.h HAVE_STDBOOL_H)
 check_include_file(netdb.h HAVE_NETDB_H)
 check_include_file(pthread.h HAVE_PTHREAD_H)
-check_include_file(strings.h HAVE_STRINGS_H)
 check_include_file(stdlib.h HAVE_STDINT_H)
 check_include_file(stdint.h HAVE_STDLIB_H)
 check_include_file(inttypes.h HAVE_INTTYPES_H)
@@ -61,21 +60,10 @@ check_include_file(sys/types.h HAVE_SYS_TYPES_H)
 check_include_file(sys/unistd.h HAVE_SYS_UNISTD_H)
 check_include_file(time.h HAVE_TIME_H)
 check_include_file(unistd.h HAVE_UNISTD_H)
-check_include_file(winsock2.h HAVE_WINSOCK2_H)
 check_include_file(float.h HAVE_FLOAT_H)
 check_include_file(stddef.h HAVE_STDDEF_H)
+check_include_file(winsock2.h HAVE_WINSOCK2_H)
 check_include_file(ws2tcpip.h HAVE_WS2TCPIP_H)
-
-if(HAVE_STRING_H
-   AND HAVE_STRINGS_H
-   AND HAVE_FLOAT_H
-   AND HAVE_STDLIB_H
-   AND HAVE_STDDEF_H
-   AND HAVE_STDINT_H
-   AND HAVE_INTTYPES_H
-   AND HAVE_DLFCN_H)
-  set(STDC_HEADERS 1)
-endif()
 
 # check for functions
 check_function_exists(malloc HAVE_MALLOC)
@@ -157,12 +145,6 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap_config.h)
-
-
-if (WIN32 AND MSVC AND BUILD_SHARED_LIBS)
-  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-  set(WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
 
 #
 # library
