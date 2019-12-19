@@ -40,6 +40,8 @@ src/*.o
 src/.deps/
 src/.dirstamp
 src/.libs/
+_build/*
+build/*
 
 # the doc/ folder
 doc/Doxyfile
@@ -89,3 +91,5 @@ TAGS
 **/*.gcda
 **/*.gcno
 **/*.gcov
+
+CMakeLists.txt.user
