@@ -4,7 +4,10 @@ project(libcoap VERSION 4.3.0 LANGUAGES CXX C)
 
 set(LIBCOAP_API_VERSION 2)
 
-# available options to tweak the library
+#
+# options to tweak the library
+#
+
 option(ENABLE_DTLS "Enable building with DTLS support" ON)
 option(WITH_OPENSSL "Use OpenSSL for DTLS functions" ON)
 option(WITH_GNUTLS "Use GnuTLS for DTLS functions" OFF)
@@ -130,10 +133,12 @@ set(PACKAGE_NAME "${PROJECT_NAME}")
 set(PACKAGE_TARNAME "${PROJECT_NAME}")
 set(PACKAGE_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
 set(LIBCOAP_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(PACKAGE_VERSION "${PROJECT_VERSION}")
 set(LIBCOAP_PACKAGE_URL "${PACKAGE_URL}")
 set(LIBCOAP_PACKAGE_NAME "${PROJECT_NAME}")
 set(LIBCOAP_PACKAGE_STRING "TODO")
 set(LIBCOAP_PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net")
+set(PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net")
 set(top_srcdir "${CMAKE_CURRENT_LIST_DIR}")
 set(top_builddir "${CMAKE_CURRENT_BINARY_DIR}")
 
@@ -141,8 +146,12 @@ set(top_builddir "${CMAKE_CURRENT_BINARY_DIR}")
 configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap.h)
 
-configure_file(${CMAKE_CURRENT_LIST_DIR}/coap_config.h.in
+configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap_config.h)
+
+#
+# library
+#
 
 add_library(${PROJECT_NAME}
             # sources
@@ -196,7 +205,7 @@ add_library(${PROJECT_NAME}
 target_include_directories(
   ${PROJECT_NAME}
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/coap2>
-         # some *.c  are still including the filename instead of
+         # some *.c are still including the filename instead of
          # "coap2/header.h"
          $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
          # config headers are generated during configuration time
@@ -207,11 +216,12 @@ target_link_libraries(${PROJECT_NAME}
                       PRIVATE $<$<BOOL:${WITH_OPENSSL}>:OpenSSL::SSL>
                               $<$<BOOL:${WITH_OPENSSL}>:OpenSSL::Crypto>
                               $<$<BOOL:${WITH_GNUTLS}>:GnuTLS::GnuTLS>
-                              $<$<BOOL:${WITH_TINYDTLS}>:-ltinydtls>
-                              
-                              
-                              
-                              )
+                              $<$<BOOL:${WITH_TINYDTLS}>:-ltinydtls>)
+add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+
+#
+# tests
+#
 
 if(ENABLE_TESTS)
   add_executable(libcoap_tests
@@ -238,6 +248,10 @@ if(ENABLE_TESTS)
   target_link_libraries(libcoap_tests PUBLIC ${PROJECT_NAME} -lcunit)
 endif()
 
+#
+# examples
+#
+
 if(ENABLE_EXAMPLES)
   add_executable(client ${CMAKE_CURRENT_LIST_DIR}/examples/client.c)
   target_link_libraries(client PUBLIC ${PROJECT_NAME})
@@ -254,6 +268,10 @@ if(ENABLE_EXAMPLES)
   add_executable(tiny ${CMAKE_CURRENT_LIST_DIR}/examples/tiny.c)
   target_link_libraries(tiny PUBLIC ${PROJECT_NAME})
 endif()
+
+#
+# docs
+#
 
 if(ENABLE_DOCS)
   find_package(Doxygen)
@@ -283,3 +301,43 @@ if(ENABLE_DOCS)
   endif(Doxygen_FOUND)
 
 endif()
+
+#
+# install
+#
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+set(LIBMBUS_CONFIG_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+install(TARGETS ${PROJECT_NAME}
+        EXPORT ${PROJECT_NAME}Targets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT lib
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT lib)
+
+install(EXPORT ${PROJECT_NAME}Targets
+        DESTINATION ${LIBMBUS_CONFIG_INSTALL_DIR}
+        NAMESPACE ${PROJECT_NAME}::
+        COMPONENT dev)
+
+configure_package_config_file(cmake/Config.cmake.in
+                              ${PROJECT_NAME}Config.cmake
+                              INSTALL_DESTINATION
+                              ${LIBMBUS_CONFIG_INSTALL_DIR})
+write_basic_package_version_file(${PROJECT_NAME}ConfigVersion.cmake
+                                 COMPATIBILITY SameMajorVersion)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+              ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+        DESTINATION ${LIBMBUS_CONFIG_INSTALL_DIR}
+        COMPONENT dev)
+
+install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        COMPONENT dev
+        FILES_MATCHING
+        PATTERN "*.h")
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        COMPONENT dev
+        FILES_MATCHING
+        PATTERN "*.h")
