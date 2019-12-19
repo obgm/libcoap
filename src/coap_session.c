@@ -1089,14 +1089,27 @@ coap_free_endpoint(coap_endpoint_t *ep) {
   if (ep) {
     coap_session_t *session, *rtmp;
 
-    if (ep->sock.flags != COAP_SOCKET_EMPTY)
-      coap_socket_close(&ep->sock);
-
     SESSIONS_ITER_SAFE(ep->sessions, session, rtmp) {
       assert(session->ref == 0);
       if (session->ref == 0) {
         coap_session_free(session);
       }
+    }
+    if (ep->sock.flags != COAP_SOCKET_EMPTY) {
+      /*
+       * ep->sock.endpoint is set in coap_new_endpoint().
+       * ep->sock.session is never set.
+       *
+       * session->sock.session is set for both clients and servers (when a
+       * new session is accepted), but does not affect the endpoint.
+       *
+       * So, it is safe to call coap_socket_close() after all the sessions
+       * have been freed above as we are only working with the endpoint sock.
+       */
+#ifdef COAP_EPOLL_SUPPORT
+       assert(ep->sock.session == NULL);
+#endif /* COAP_EPOLL_SUPPORT */
+      coap_socket_close(&ep->sock);
     }
 
     if (ep->context) {
