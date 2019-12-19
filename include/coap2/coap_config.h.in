@@ -64,7 +64,7 @@
 #cmakedefine HAVE_PTHREAD_MUTEX_LOCK "@HAVE_PTHREAD_MUTEX_LOCK@"
 
 /* Define to 1 if you have the `select' function. */
-#cmakedefine HAVE_SELECT "@HAVE_SOCKET@"
+#cmakedefine HAVE_SELECT "@HAVE_SELECT@"
 
 /* Define to 1 if you have the `socket' function. */
 #cmakedefine HAVE_SOCKET "@HAVE_SOCKET@"
