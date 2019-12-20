@@ -594,8 +594,35 @@ void coap_read(coap_context_t *ctx, coap_tick_t now);
  * @return Number of milliseconds spent in coap_run_once, or @c -1 if there
  *         was an error
  */
-
 int coap_run_once( coap_context_t *ctx, unsigned int timeout_ms );
+
+/**
+ * The main message processing loop with additional fds for internal select.
+ *
+ * @param ctx The CoAP context
+ * @param timeout_ms Minimum number of milliseconds to wait for new packets
+ *                   before returning. If COAP_RUN_BLOCK, the call will block
+ *                   until at least one new packet is received. If
+ *                   COAP_RUN_NONBLOCK, the function will return immediately
+ *                   following without waiting for any new input not already
+ *                   available.
+ * @param nfds      The maximum FD set in readfds, writefds or exceptfds
+ *                  plus one,
+ * @param readfds   Read FDs to additionally check for in internal select()
+ *                  or NULL if not required.
+ * @param writefds  Write FDs to additionally check for in internal select()
+ *                  or NULL if not required.
+ * @param exceptfds Except FDs to additionally check for in internal select()
+ *                  or NULL if not required.
+ *
+ *
+ * @return Number of milliseconds spent in coap_io_process_with_fds, or @c -1
+ *         if there was an error.  If defined, readfds, writefds, exceptfds
+ *         are updated as returned by the internal select() call.
+ */
+int coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
+                        int nfds, fd_set *readfds, fd_set *writefds,
+                        fd_set *exceptfds);
 
 /**
  * Any now timed out delayed packet is transmitted, along with any packets
@@ -620,6 +647,7 @@ unsigned int
 coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now);
 
 struct epoll_event;
+
 /**
  * Process all the epoll events
  *

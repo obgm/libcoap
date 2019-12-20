@@ -10,7 +10,7 @@ coap_io(3)
 
 NAME
 ----
-coap_io, coap_run_once, coap_context_get_coap_fd
+coap_io, coap_run_once, coap_io_process_with_fds, coap_context_get_coap_fd
 - Work with CoAP I/O to do the packet send and receives
 
 SYNOPSIS
@@ -18,6 +18,10 @@ SYNOPSIS
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *int coap_run_once(coap_context_t *_context_, unsigned int _timeout_ms_)*;
+
+*int coap_io_process_with_fds(coap_context_t *_context_,
+unsigned int _timeout_ms_, int _nfds_, fd_set *_readfds_, fd_set *_writefds_,
+fd_set *_exceptfds_)*;
 
 *int coap_context_get_coap_fd(coap_context_t *_context_)*;
 
@@ -61,6 +65,21 @@ NOTE: This method is only available for environments that support epoll
 (mostly Linux) as libcoap will then be using epoll internally to process all
 the file descriptors of the different sessions.
 
+The *coap_io_process_with_fds*() function is the same as *coap_run_once*()
+but supports additional select() style parameters _nfds_, _readfds_,
+_writefds_ and _exceptfds_. This provides the ability to add in additional
+non libcoap FDs to test for in the internal select() call which can then 
+tested after the return from coap_io_process_with_fds(). _readfds_,
+_writefds_ and _exceptfds_ can either point to a defined and pre-filled fd_set
+structure or NULL if not required. _nfds_ needs to be set to the maximum FD to
+test for in _readfds_, _writefds_ or _exceptfds_ if any of them are set plus 1.
+If none of them are set, then _nfds_ should be set to 0.
+
+NOTE: The additional parameters for *coap_io_process_with_fds*() are only used
+if there is no epoll support in libcoap. If there is epoll support, then
+*coap_context_get_coap_fd*() should be used and this returned FD along with
+other non libcoap FDs can separately be monitored using method 2 above.
+
 The *coap_context_get_coap_fd*() function obtains from the specified
 _context_ a single file descriptor that can be monitored by a select() or
 as an event returned from a epoll_wait() call.  This file descriptor will get
@@ -69,8 +88,9 @@ internal to libcoap file descriptors (sockets) change state.
 
 RETURN VALUES
 -------------
-*coap_run_once*() returns the time, in milli-seconds, that was spent in the
-function. If -1 is returned, there was an unexpected error.
+*coap_run_once*() and *coap_io_process_with_fds*() returns the time, in
+milli-seconds, that was spent in the function. If -1 is returned, there was
+an unexpected error.
 
 *coap_context_get_coap_fd*() returns a non-negative number as the file
 descriptor to monitor, or -1 if epoll is not supported by the host
@@ -78,7 +98,7 @@ environment.
 
 EXAMPLES
 --------
-*Method One*
+*Method One - coap_run_once*
 
 [source, c]
 ----
@@ -105,6 +125,51 @@ int main(int argc, char *argv[]){
       /* There is an internal issue */
       break;
     }
+    /* Do any other housekeeping */
+  }
+  coap_free_context(ctx);
+
+  /* Do any other cleanup */
+
+  exit(0);
+
+}
+----
+
+*Method One - coap_io_process_with_fds*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+int main(int argc, char *argv[]){
+
+  coap_context_t *ctx = NULL;
+  unsigned wait_ms;
+  fd_set readfds;
+  int nfds = 0;
+
+  /* Create the libcoap context */
+  ctx = coap_new_context(NULL);
+  if (!ctx) {
+    exit(1);
+  }
+
+  FD_ZERO(&readfds);
+  /* Set up readfds and nfds to handle other non libcoap FDs */
+
+  /* Other Set up Code */
+
+  wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+
+  while (1) {
+    int result = coap_io_process_with_fds(ctx, wait_ms, nfds, &readfds, NULL, NULL);
+    if (result < 0) {
+      /* There is an internal issue */
+      break;
+    }
+    /* Check if set non libcoap FDs and process accordingly */
+
     /* Do any other housekeeping */
   }
   coap_free_context(ctx);

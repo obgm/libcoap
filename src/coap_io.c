@@ -1468,6 +1468,13 @@ coap_write(coap_context_t *ctx,
 
 int
 coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
+  return coap_io_process_with_fds(ctx, timeout_ms, 0, NULL, NULL, NULL);
+}
+
+int
+coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
+                         int enfds, fd_set *ereadfds, fd_set *ewritefds,
+                         fd_set *eexceptfds) {
 #if COAP_CONSTRAINED_STACK
   static coap_mutex_t static_mutex = COAP_MUTEX_INITIALIZER;
 # ifndef COAP_EPOLL_SUPPORT
@@ -1502,9 +1509,27 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
   if (timeout == 0 || timeout_ms < timeout)
     timeout = timeout_ms;
 
-  FD_ZERO(&readfds);
-  FD_ZERO(&writefds);
-  FD_ZERO(&exceptfds);
+  if (ereadfds) {
+    readfds = *ereadfds;
+    nfds = enfds;
+  }
+  else {
+    FD_ZERO(&readfds);
+  }
+  if (ewritefds) {
+    writefds = *ewritefds;
+    nfds = enfds;
+  }
+  else {
+    FD_ZERO(&writefds);
+  }
+  if (eexceptfds) {
+    exceptfds = *eexceptfds;
+    nfds = enfds;
+  }
+  else {
+    FD_ZERO(&exceptfds);
+  }
   for (i = 0; i < num_sockets; i++) {
     if (sockets[i]->fd + 1 > nfds)
       nfds = sockets[i]->fd + 1;
@@ -1558,8 +1583,22 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
 
   coap_ticks(&now);
   coap_read(ctx, now);
+  if (ereadfds) {
+    *ereadfds = readfds;
+  }
+  if (ewritefds) {
+    *ewritefds = writefds;
+  }
+  if (eexceptfds) {
+    *eexceptfds = exceptfds;
+  }
 
 #else /* COAP_EPOLL_SUPPORT */
+  (void)ereadfds;
+  (void)ewritefds;
+  (void)eexceptfds;
+  (void)enfds;
+
   timeout = coap_io_prepare_epoll(ctx, before);
 
   if (timeout == 0 || timeout_ms < timeout)
