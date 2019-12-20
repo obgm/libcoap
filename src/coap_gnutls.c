@@ -36,7 +36,7 @@
  * (but is not enabled by default in 3.6.4)
  */
 
-#include "coap_internal.h"
+#include "coap2/coap_internal.h"
 
 #ifdef HAVE_LIBGNUTLS
 

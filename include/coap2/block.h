@@ -10,9 +10,9 @@
 #ifndef COAP_BLOCK_H_
 #define COAP_BLOCK_H_
 
-#include "encode.h"
-#include "option.h"
-#include "pdu.h"
+#include "coap2/encode.h"
+#include "coap2/option.h"
+#include "coap2/pdu.h"
 
 struct coap_resource_t;
 struct coap_session_t;

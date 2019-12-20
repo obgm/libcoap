@@ -20,13 +20,13 @@
 #define COAP_RESOURCE_CHECK_TIME 2
 #endif /* COAP_RESOURCE_CHECK_TIME */
 
-#include "uthash.h"
-#include "async.h"
-#include "block.h"
-#include "str.h"
-#include "pdu.h"
-#include "net.h"
-#include "subscribe.h"
+#include "coap2/uthash.h"
+#include "coap2/async.h"
+#include "coap2/block.h"
+#include "coap2/str.h"
+#include "coap2/pdu.h"
+#include "coap2/net.h"
+#include "coap2/subscribe.h"
 
 /**
  * @defgroup coap_resource Resource Configuraton

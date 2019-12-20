@@ -23,7 +23,7 @@ if(NOT CMAKE_C_STANDARD)
 endif()
 
 if(MSVC)
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 include(CheckCSourceCompiles)
@@ -201,13 +201,9 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_LIST_DIR}/include/coap2/utlist.h)
 target_include_directories(
   ${PROJECT_NAME}
-  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/coap2>
-         # some *.c are still including the filename instead of
-         # "coap2/header.h"
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
+  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
          # config headers are generated during configuration time
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/coap2/>
          $<INSTALL_INTERFACE:include/>)
 target_link_libraries(${PROJECT_NAME}
                       PRIVATE $<$<BOOL:${WITH_OPENSSL}>:OpenSSL::SSL>
@@ -215,8 +211,6 @@ target_link_libraries(${PROJECT_NAME}
                               $<$<BOOL:${WITH_GNUTLS}>:GnuTLS::GnuTLS>
                               $<$<BOOL:${WITH_TINYDTLS}>:-ltinydtls>)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-
-
 
 #
 # tests

@@ -15,9 +15,9 @@
 #ifndef COAP_HASHKEY_H_
 #define COAP_HASHKEY_H_
 
-#include "libcoap.h"
-#include "uthash.h"
-#include "str.h"
+#include "coap2/libcoap.h"
+#include "coap2/uthash.h"
+#include "coap2/str.h"
 
 typedef unsigned char coap_key_t[4];
 

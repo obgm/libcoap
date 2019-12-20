@@ -12,7 +12,7 @@
 
 #include <sys/types.h>
 
-#include "address.h"
+#include "coap2/address.h"
 
 #ifndef COAP_RXBUFFER_SIZE
 #define COAP_RXBUFFER_SIZE 1472

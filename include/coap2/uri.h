@@ -12,7 +12,7 @@
 
 #include <stdint.h>
 
-#include "str.h"
+#include "coap2/str.h"
 struct coap_pdu_t;
 
 /**

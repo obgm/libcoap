@@ -15,8 +15,8 @@
 #ifndef COAP_OPTION_H_
 #define COAP_OPTION_H_
 
-#include "bits.h"
-#include "pdu.h"
+#include "coap2/bits.h"
+#include "coap2/pdu.h"
 
 /**
  * Use byte-oriented access methods here because sliding a complex struct

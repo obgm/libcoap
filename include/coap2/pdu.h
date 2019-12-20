@@ -15,7 +15,7 @@
 #ifndef COAP_PDU_H_
 #define COAP_PDU_H_
 
-#include "uri.h"
+#include "coap2/uri.h"
 
 struct coap_session_t;
 

@@ -14,7 +14,7 @@
 #include "test_sendqueue.h"
 #include "test_wellknown.h"
 #include "test_tls.h"
-#include "libcoap.h"
+#include "coap2/libcoap.h"
 
 #ifdef __GNUC__
 #define UNUSED_PARAM __attribute__ ((unused))
