@@ -77,9 +77,15 @@ static const char *loglevels[] = {
 COAP_STATIC_INLINE size_t
 print_timestamp(char *s, size_t len, coap_tick_t t) {
   struct tm *tmp;
+  size_t lensofar;
   time_t now = coap_ticks_to_rt(t);
   tmp = localtime(&now);
-  return strftime(s, len, "%b %d %H:%M:%S", tmp);
+  lensofar = strftime(s, len, "%b %d %H:%M:%S", tmp);
+  if (len > lensofar + 4) {
+    lensofar += snprintf(&s[lensofar], len-lensofar, ".%03u",
+             (unsigned int)((coap_ticks_to_rt_us(t) % 1000000)/1000));
+  }
+  return lensofar;
 }
 
 #else /* alternative implementation: just print the timestamp */
@@ -89,7 +95,7 @@ print_timestamp(char *s, size_t len, coap_tick_t t) {
 #ifdef HAVE_SNPRINTF
   return snprintf(s, len, "%u.%03u",
                   (unsigned int)coap_ticks_to_rt(t),
-                  (unsigned int)(t % COAP_TICKS_PER_SECOND));
+                  (unsigned int)((coap_ticks_to_rt_us(t) % 1000000)/1000));
 #else /* HAVE_SNPRINTF */
   /* @todo do manual conversion of timestamp */
   return 0;
