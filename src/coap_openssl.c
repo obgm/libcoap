@@ -60,6 +60,10 @@
 #define UNUSED
 #endif /* __GNUC__ */
 
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#endif
+
 /* RFC6091/RFC7250 */
 #ifndef TLSEXT_TYPE_client_certificate_type
 #define TLSEXT_TYPE_client_certificate_type 19
