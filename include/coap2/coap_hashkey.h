@@ -31,7 +31,7 @@ typedef unsigned char coap_key_t[4];
  * @param len The length of @p s.
  * @param h   The result buffer to store the calculated hash key.
  */
-void coap_hash_impl(const unsigned char *s, unsigned int len, coap_key_t h);
+void coap_hash_impl(const unsigned char *s, size_t len, coap_key_t h);
 
 #define coap_hash(String,Length,Result) \
   coap_hash_impl((String),(Length),(Result))

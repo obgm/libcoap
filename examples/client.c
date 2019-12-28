@@ -194,7 +194,7 @@ coap_new_request(coap_context_t *ctx,
       unsigned char buf[4];
       coap_add_option(pdu,
                       COAP_OPTION_SIZE1,
-                      coap_encode_var_safe(buf, sizeof(buf), length),
+                      coap_encode_var_safe8(buf, sizeof(buf), length),
                       buf);
 
       coap_add_block(pdu, length, data, block.num, block.szx);
@@ -314,7 +314,7 @@ resolve_address(const coap_str_const_t *server, struct sockaddr *dst) {
     switch (ainfo->ai_family) {
     case AF_INET6:
     case AF_INET:
-      len = ainfo->ai_addrlen;
+      len = (int)ainfo->ai_addrlen;
       memcpy(dst, ainfo->ai_addr, len);
       goto finish;
     default:
@@ -572,7 +572,7 @@ message_handler(struct coap_context_t *ctx,
 
           coap_add_option(pdu,
                           COAP_OPTION_SIZE1,
-                          coap_encode_var_safe(buf, sizeof(buf), payload.length),
+                          coap_encode_var_safe8(buf, sizeof(buf), payload.length),
                           buf);
 
           coap_add_block(pdu,
@@ -906,7 +906,7 @@ set_blocksize(void) {
     opt = method == COAP_REQUEST_GET ? COAP_OPTION_BLOCK2 : COAP_OPTION_BLOCK1;
 
     block.m = (opt == COAP_OPTION_BLOCK1) &&
-      ((1u << (block.szx + 4)) < payload.length);
+      ((1ull << (block.szx + 4)) < payload.length);
 
     opt_length = coap_encode_var_safe(buf, sizeof(buf),
           (block.num << 4 | block.m << 3 | block.szx));
@@ -1078,7 +1078,7 @@ decode_segment(const uint8_t *seg, size_t length, unsigned char *buf) {
 static int
 check_segment(const uint8_t *s, size_t length) {
 
-  size_t n = 0;
+  int n = 0;
 
   while (length) {
     if (*s == '%') {
@@ -1458,7 +1458,7 @@ get_session(
       coap_address_t bind_addr;
       if ( rp->ai_addrlen <= sizeof( bind_addr.addr ) ) {
         coap_address_init( &bind_addr );
-        bind_addr.size = rp->ai_addrlen;
+        bind_addr.size = (socklen_t)rp->ai_addrlen;
         memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
         session = open_session(ctx, proto, &bind_addr, dst,
                                identity, identity_len, key, key_len);

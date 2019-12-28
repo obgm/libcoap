@@ -122,7 +122,7 @@ coap_write_block_opt(coap_block_t *block, uint16_t type,
 }
 
 int
-coap_add_block(coap_pdu_t *pdu, unsigned int len, const uint8_t *data,
+coap_add_block(coap_pdu_t *pdu, size_t len, const uint8_t *data,
                unsigned int block_num, unsigned char block_szx) {
   unsigned int start;
   start = block_num << (block_szx + 4);
@@ -131,7 +131,7 @@ coap_add_block(coap_pdu_t *pdu, unsigned int len, const uint8_t *data,
     return 0;
 
   return coap_add_data(pdu,
-                       min(len - start, (1U << (block_szx + 4))),
+                       min(len - start, (1ULL << (block_szx + 4))),
                        data + start);
 }
 
@@ -223,7 +223,7 @@ coap_add_data_blocked_response(coap_resource_t *resource,
 
     coap_add_option(response,
                     COAP_OPTION_SIZE2,
-                    coap_encode_var_safe(buf, sizeof(buf), length),
+                    coap_encode_var_safe8(buf, sizeof(buf), length),
                     buf);
 
     coap_add_block(response, length, data,
@@ -244,7 +244,7 @@ coap_add_data_blocked_response(coap_resource_t *resource,
 
     coap_add_option(response,
                     COAP_OPTION_SIZE2,
-                    coap_encode_var_safe(buf, sizeof(buf), length),
+                    coap_encode_var_safe8(buf, sizeof(buf), length),
                     buf);
 
     coap_add_block(response, length, data,

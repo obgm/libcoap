@@ -1942,7 +1942,7 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
        changes over time */
     coap_add_option(resp,
                     COAP_OPTION_ETAG,
-                    coap_encode_var_safe(buf, sizeof(buf), wkc_len),
+                    coap_encode_var_safe8(buf, sizeof(buf), wkc_len),
                     buf);
   }
 
@@ -1966,7 +1966,7 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
 
   coap_add_option(resp,
                   COAP_OPTION_SIZE2,
-                  coap_encode_var_safe(buf, sizeof(buf), wkc_len),
+                  coap_encode_var_safe8(buf, sizeof(buf), wkc_len),
                   buf);
 
   len = need_block2 ?

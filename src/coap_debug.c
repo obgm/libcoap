@@ -468,7 +468,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   int content_format = -1;
   size_t data_len;
   unsigned char *data;
-  int outbuflen = 0;
+  size_t outbuflen = 0;
 
   /* Save time if not needed */
   if (level > coap_get_log_level())
@@ -601,7 +601,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
     snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " :: ");
 
     if (is_binary(content_format)) {
-      int keep_data_len = data_len;
+      size_t keep_data_len = data_len;
       uint8_t *keep_data = data;
 
       outbuflen = strlen(outbuf);

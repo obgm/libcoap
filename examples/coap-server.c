@@ -35,6 +35,8 @@ static char* strndup(const char* s1, size_t n)
   }
   return copy;
 };
+#include <io.h>
+#define access _access
 #else
 #include <unistd.h>
 #include <sys/select.h>
@@ -320,10 +322,11 @@ check_async(coap_context_t *ctx,
             coap_tick_t now) {
   coap_pdu_t *response;
   coap_async_state_t *tmp;
+  async_data_t data = { .ptr = async ? async->appdata : NULL };
 
   size_t size = 13;
 
-  if (!async || now < async->created + (unsigned long)async->appdata)
+  if (!async || now < async->created + data.val)
     return;
 
   response = coap_pdu_init(async->flags & COAP_ASYNC_CONFIRM
@@ -332,7 +335,6 @@ check_async(coap_context_t *ctx,
              COAP_RESPONSE_CODE(205), 0, size);
   if (!response) {
     coap_log(LOG_DEBUG, "check_async: insufficient memory, we'll try later\n");
-    async_data_t data = { .ptr = async->appdata };
     data.val = data.val + 15 * COAP_TICKS_PER_SECOND;
     async->appdata = data.ptr;
     return;
@@ -1075,7 +1077,7 @@ get_context(const char *node, const char *port) {
 
     if (rp->ai_addrlen <= sizeof(addr.addr)) {
       coap_address_init(&addr);
-      addr.size = rp->ai_addrlen;
+      addr.size = (socklen_t)rp->ai_addrlen;
       memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
       addrs = addr;
       if (addr.addr.sa.sa_family == AF_INET) {
