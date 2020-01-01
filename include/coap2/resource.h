@@ -119,6 +119,11 @@ typedef struct coap_resource_t {
   unsigned int observe;
 
   /**
+   * Pointer back to the context that 'owns' this resource.
+   */
+  coap_context_t *context;
+
+  /**
    * This pointer is under user control. It can be used to store context for
    * the coap handler.
    */

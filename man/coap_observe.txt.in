@@ -22,12 +22,12 @@ SYNOPSIS
 int _mode_);*
 
 *int coap_resource_notify_observers(coap_resource_t *_resource_,
-const const_string_t *_query_);*
+const coap_string_t *_query_);*
 
-*const coap_string_t *coap_resource_get_uri_path(coap_resource_t *_resource_);*
+*coap_str_const_t *coap_resource_get_uri_path(coap_resource_t *_resource_);*
 
 *coap_subscription_t *coap_find_observer(coap_resource_t *_resource_,
-coap_session_t *_session_, const const_string_t *_token_);*
+coap_session_t *_session_, const coap_binary_t *_token_);*
 
 *int coap_delete_observer(coap_resource_t *_resource_, coap_session_t *_session_,
 const coap_binary_t *_token_);*
@@ -264,10 +264,12 @@ int main(int argc, char *argv[]){
   coap_endpoint_t *ep = NULL;
   coap_address_t addr;
   unsigned wait_ms;
-  time_t t_last = 0;
+  struct timeval tv_last = {0, 0};
   /* Remove (void) definition if variable is used */
   (void)argc;
   (void)argv;
+
+  memset (&tv_last, 0, sizeof(tv_last));
 
   /* Create the libcoap context */
   ctx = coap_new_context(NULL);
@@ -299,17 +301,21 @@ int main(int argc, char *argv[]){
        * the granularity of the timer in coap_io_process() and hence
        * result == 0)
        */
-      time_t t_now = time(NULL);
-      if (t_last != t_now) {
-        /* Happens once per second */
-        t_last = t_now;
-        if (time_resource) {
+      wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+    }
+    if (time_resource) {
+      struct timeval tv_now;
+      if (gettimeofday (&tv_now, NULL) == 0) {
+        if (tv_last.tv_sec != tv_now.tv_sec) {
+          /* Happens once per second */
+          tv_last = tv_now;
           coap_resource_notify_observers(time_resource, NULL);
         }
-      }
-      if (result) {
-        /* result must have been >= wait_ms, so reset wait_ms */
-        wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+        /* need to wait until next second starts if wait_ms is too large */
+        unsigned next_sec_ms = 1000 - (tv_now.tv_usec / 1000);
+
+        if (next_sec_ms && next_sec_ms < wait_ms)
+          wait_ms = next_sec_ms;
       }
     }
   }

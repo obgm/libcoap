@@ -205,6 +205,7 @@ typedef struct coap_context_t {
   unsigned int max_handshake_sessions; /**< Maximum number of simultaneous negotating sessions per endpoint. 0 means use default. */
   unsigned int ping_timeout;           /**< Minimum inactivity time before sending a ping message. 0 means disabled. */
   unsigned int csm_timeout;           /**< Timeout for waiting for a CSM from the remote side. 0 means disabled. */
+  int observe_pending;             /**< Observe response pending */
 
   void *app;                       /**< application-specific data */
 #ifdef COAP_EPOLL_SUPPORT
