@@ -44,6 +44,8 @@ AUTOGEN_DIRS="
 .libs autom4te.cache/
 doc/html/
 examples/.deps/ examples/.libs
+man/.deps
+man/tmp
 src/.deps/ src/.libs/
 tests/.deps/
 "

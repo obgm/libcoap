@@ -28,8 +28,8 @@ _put_handler_);*
 *void coap_add_resource(coap_context_t *_context_,
 coap_resource_t *_resource_);*
 
-*int coap_delete_resource(coap_context_t _context_,
-coap_resource_t _resource_);*
+*int coap_delete_resource(coap_context_t *_context_,
+coap_resource_t *_resource_);*
 
 *void coap_delete_all_resources(coap_context_t *_context_);*
 

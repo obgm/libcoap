@@ -42,7 +42,7 @@ _proto_, coap_dtls_pki_t *_setup_data_);*
 
 *void coap_session_set_mtu(coap_session_t *_session_, unsigned _mtu_);*
 
-*size_t coap_session_max_pdu_size(coap_session_t *_session_);*
+*size_t coap_session_max_pdu_size(const coap_session_t *_session_);*
 
 *void coap_session_set_app_data(coap_session_t *_session_, void *_data_);*
 

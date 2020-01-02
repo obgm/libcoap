@@ -1,9 +1,17 @@
 # man/Makefile.am
 #
-# Copyright (C)      2018 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2018-2020 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.
+
+# picking up the default warning CFLAGS into AM_CFLAGS
+AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include \
+            -I$(top_srcdir)/include/coap$(LIBCOAP_API_VERSION) \
+            $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
+
+# Build, not install
+noinst_PROGRAMS = examples-code-check
 
 # build manuals only if 'BUILD_MANPAGES' is defined
 if BUILD_MANPAGES
@@ -102,6 +110,9 @@ install-man: install-man3 install-man5 install-man7
 uninstall-man: uninstall-man3 uninstall-man5 uninstall-man7
 	-(cd $(DESTDIR)$(man3dir) ; rm -f $(EXTRA_PAGES) $(A2X_EXTRA_PAGES) )
 
-CLEANFILES = *.3 *.5 *.7 *.xml *.html docbook-xsl.css
-
 endif # BUILD_MANPAGES
+
+CLEANFILES = *.3 *.5 *.7 *.xml *.html docbook-xsl.css *.o examples-code-check
+
+clean-local:
+	-rm -rf tmp

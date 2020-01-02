@@ -75,4 +75,12 @@ if test $err = 0 -a -n "$WITH_TESTS" ; then
     err=$?
 fi
 
+# invoke man page examples code compiles checks
+if test $err = 0 -a -n "$WITH_TESTS" ; then
+    make -C man
+    EXEC_FILE=man/examples-code-check
+    $EXEC_FILE man
+    err=$?
+fi
+
 exit $err

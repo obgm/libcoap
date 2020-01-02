@@ -17,11 +17,11 @@ SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*struct coap_dtls_cpsk_t*
+*struct coap_dtls_cpsk_t;*
 
-*struct coap_dtls_spsk_t*
+*struct coap_dtls_spsk_t;*
 
-*struct coap_dtls_pki_t*
+*struct coap_dtls_pki_t;*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*

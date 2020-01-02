@@ -54,8 +54,12 @@ doc/man_tmp/
 
 # the man/ folder
 man/docbook-xsl.css
+man/examples-code-check
+man/examples-code-check.o
 man/Makefile
 man/Makefile.in
+man/tmp
+man/.deps/
 man/*.html
 man/*.txt
 man/*.xml

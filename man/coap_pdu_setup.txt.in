@@ -42,7 +42,7 @@ const uint8_t *_data_);*
 *void coap_add_data_blocked_response(coap_resource_t *_resource_,
 coap_session_t *_session_, coap_pdu_t *_request_, coap_pdu_t *_response_,
 const coap_binary_t *_token_, uint16_t _media_type_, int _maxage_,
-size_t _length_, const uint8_t* _data_);
+size_t _length_, const uint8_t *_data_);*
 
 *unsigned int coap_encode_var_safe(uint8_t *_buffer_, size_t _size_,
 unsigned int _value_);*
