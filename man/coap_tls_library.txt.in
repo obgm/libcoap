@@ -12,7 +12,7 @@ NAME
 ----
 coap_tls_library, coap_dtls_is_supported, coap_tls_is_supported,
 coap_get_tls_library_version, coap_string_tls_version, coap_show_tls_version
-- Work with CoAP contexts
+- Work with CoAP TLS libraries
 
 SYNOPSIS
 --------
@@ -112,7 +112,7 @@ and library version in a coap_tls_version_t* structure.
 
 SEE ALSO
 --------
-*coap_context*(3) and *coap_logging*(3).
+*coap_encryption*(3).
 
 FURTHER INFORMATION
 -------------------
