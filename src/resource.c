@@ -793,8 +793,9 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       token.s = obs->token;
 
       obs->tid = response->tid = coap_new_message_id(obs->session);
-      if ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) == 0
-          && obs->non_cnt < COAP_OBS_MAX_NON) {
+      if ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) == 0 &&
+          ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS) ||
+           obs->non_cnt < COAP_OBS_MAX_NON)) {
         response->type = COAP_MESSAGE_NON;
       } else {
         response->type = COAP_MESSAGE_CON;
@@ -805,7 +806,8 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       /* TODO: do not send response and remove observer when
        *  COAP_RESPONSE_CLASS(response->hdr->code) > 2
        */
-      if (response->type == COAP_MESSAGE_CON) {
+      if (response->type == COAP_MESSAGE_CON ||
+          (r->flags & COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS)) {
         obs->non_cnt = 0;
       } else {
         obs->non_cnt++;

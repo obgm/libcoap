@@ -84,7 +84,13 @@ _flags_ can be one of the following definitions or'ed together.
 [horizontal]
 *COAP_RESOURCE_FLAGS_NOTIFY_NON*::
 Set the notification message type to non-confirmable for any trigggered
-"observe" responses.
+"observe" responses with type set to confirmable every 5 packets as required by
+https://tools.ietf.org/html/rfc7641#section-4.5.
+//-
+*COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS*::
+Set the notification message type to always non-confirmable for any trigggered
+"observe" responses. This should only be used if a upper layer protocol
+requires it.
 //-
 *COAP_RESOURCE_FLAGS_NOTIFY_CON*::
 Set the notification message type to confirmable for any trigggered
@@ -120,7 +126,8 @@ _context_ and frees their storage.
 
 The *coap_resource_set_mode*() changes the notification message type of
 _resource_ to the given _mode_ which must be one of
-COAP_RESOURCE_FLAGS_NOTIFY_NON or COAP_RESOURCE_FLAGS_NOTIFY_CON.
+COAP_RESOURCE_FLAGS_NOTIFY_NON, COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS or
+COAP_RESOURCE_FLAGS_NOTIFY_CON.
 
 The *coap_resource_set_userdata*() function allows a pointer to user _data_
 to be associated with a _resource_ that can accessed in any callback that
