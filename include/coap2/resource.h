@@ -62,14 +62,25 @@ typedef struct coap_attr_t {
 /**
  * Notifications will be sent non-confirmable by default. RFC 7641 Section 4.5
  * https://tools.ietf.org/html/rfc7641#section-4.5
+ * Libcoap will always send every fifth packet as confirmable.
  */
 #define COAP_RESOURCE_FLAGS_NOTIFY_NON  0x0
 
 /**
- * Notifications will be sent confirmable by default. RFC 7641 Section 4.5
+ * Notifications will be sent confirmable. RFC 7641 Section 4.5
  * https://tools.ietf.org/html/rfc7641#section-4.5
  */
 #define COAP_RESOURCE_FLAGS_NOTIFY_CON  0x2
+
+/**
+ * Notifications will always be sent non-confirmable. This is in
+ * violation of RFC 7641 Section 4.5
+ * https://tools.ietf.org/html/rfc7641#section-4.5
+ * but required by the DOTS signal channel protocol which needs to operate in
+ * lossy DDoS attack environments.
+ * https://tools.ietf.org/html/draft-ietf-dots-signal-channel-41#section-4.4.2.1
+ */
+#define COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS  0x4
 
 typedef struct coap_resource_t {
   unsigned int dirty:1;          /**< set to 1 if resource has changed */

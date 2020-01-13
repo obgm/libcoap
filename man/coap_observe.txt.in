@@ -94,13 +94,19 @@ manage the deletion of the resource at the appropriate time.
 
 *NOTE:* The type (confirmable or non-confirmable) of the triggered observe
 GET response is determined not by the initial GET request, but independently
-by the server as per RFC 7641 3.5. Transmission.  This is controlled by the
-flags (one of COAP_RESOURCE_FLAGS_NOTIFY_NON or COAP_RESOURCE_FLAGS_NOTIFY_CON)
+by the server as per https://tools.ietf.org/html/rfc7641#section-3.5.
+This is controlled by the flags (one of COAP_RESOURCE_FLAGS_NOTIFY_NON,
+COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS or COAP_RESOURCE_FLAGS_NOTIFY_CON)
 used when creating the resource using *coap_resource_init*(3).
-Furthermore, the server must send at least one "observe" response as
-confirmable, when generally sending non-confirmable,  every 24 hours.
-libcoap handles this by sending every fifth (COAP_OBS_MAX_NON) response as a
-confirmable response for detection that the client is still responding.
+
+*NOTE:* Furthermore, the server must send at least one "observe" response as
+confirmable, when generally sending non-confirmable, at least every 24 hours
+as per https://tools.ietf.org/html/rfc7641#section-4.5.
+Libcoap automatically handles this by sending every fifth (COAP_OBS_MAX_NON)
+response as a confirmable response for detection that the client is still
+responding unless if COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS is set, which is a
+RFC7641 violation, where non-confirmable "observe" responses are always sent
+as required by some higher layer protocols.
 
 The *coap_resource_notify_observers*() function needs to be called whenever the
 server application determines that there has been a change to the state of
