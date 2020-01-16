@@ -14,7 +14,9 @@ coap-rd - A CoAP Resource Directory based on libcoap
 
 SYNOPSIS
 --------
-*coap-rd* [*-A* addr] [*-g* group] [*-p* port] [*-v* num]
+*coap-rd* [*-g* group] [*-p* port] [*-v* num] [*-A* address]
+          [[*-h* hint] [*-k* key]]
+          [[*-c* certfile] [*-n*] [*-C* cafile] [*-R* root_cafile]]
 
 DESCRIPTION
 -----------
@@ -23,19 +25,64 @@ registrations using the protocol CoAP (RFC 7252).
 
 OPTIONS
 -------
-*-A* addr::
-   The local address of the interface which the server has to listen.
-
 *-g* group::
    Join specified multicast 'group' on startup.
+   *Note:* DTLS over multicast is not currently supported.
 
 *-p* port::
-   The 'port' on the given address the server will be waiting for connections.
+   The 'port' on the given address will be listening for incoming connections.
+   If (D)TLS is supported, then 'port' + 1 will also be listened on for
+   (D)TLS connections.
    The default port is 5683 if not given any other value.
 
 *-v* num::
    The verbosity level to use (default: 3, maximum is 9). Above 7, there is
    increased verbosity in GnuTLS and OpenSSL logging.
+
+*-A* address::
+   The local address of the interface which the server has to listen on.
+
+OPTIONS - PSK
+-------------
+(If supported by underlying (D)TLS library)
+
+*-h* hint::
+   Identity hint to use for inbound connections. The default is 'CoAP'.
+   This cannot be empty if defined.
+
+*-k* key::
+   Pre-shared key to use for inbound connections. This cannot be empty if
+   defined.
+   *Note:* if *-c cafile* is defined, you need to define *-k key* as well to
+   have the server support both PSK and PKI.
+
+OPTIONS - PKI
+-------------
+(If supported by underlying (D)TLS library)
+
+*-c* certfile::
+   Use the specified PEM file which contains the CERTIFICATE and PRIVATE
+   KEY information.
+   *Note:* if *-k key* is defined, you need to define *-c cafile* as well to
+   have the server support both PSK and PKI.
+
+*-n* ::
+   Disable the requirement for clients to have defined client certificates.
+
+*-C* cafile::
+  PEM file containing the CA Certificate that was used to sign the certfile
+  defined using *-c certfile*.
+  If defined, then the client will be given this CA Certificate during the TLS
+  set up. Furthermore, this will trigger the validation of the client
+  certificate. If certfile is self-signed (as defined by *-c certfile*), then
+  you need to have on the command line the same filename for both the certfile
+  and cafile (as in  *-c certfile -C certfile*) to trigger validation.
+
+*-R* root_cafile::
+  PEM file containing the set of trusted root CAs that are to be used to
+  validate the server certificate.  The *-C cafile* does not have to be in
+  this list and is "trusted" for the verification.
+  Alternatively, this can point to a directory containing a set of CA PEM files.
 
 EXAMPLES
 --------
@@ -44,6 +91,13 @@ EXAMPLES
 coap-rd -A ::1
 ----
 Let the server listen on localhost (port 5683).
+
+* Example
+----
+coap-rd -A ::1 -k mysecretKey -h myhint
+----
+Let the server listen on localhost (port '5683' and '5684') with the server
+set up for PSK authentication.
 
 * Example
 ----
