@@ -41,8 +41,8 @@ const coap_address_t *_listen_addr_, coap_proto_t _proto_);*
 unsigned _mtu_);*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
-*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
-*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -296,6 +296,8 @@ setup_server_context_pki (const char *public_cert_file,
   dtls_pki.check_cert_revocation   = 1;
   dtls_pki.allow_no_crl            = 1;
   dtls_pki.allow_expired_crl       = 1;
+  dtls_pki.allow_bad_md_hash       = 0;
+  dtls_pki.allow_short_rsa_length  = 0;
   dtls_pki.validate_cn_call_back   = verify_cn_callback;
   dtls_pki.cn_call_back_arg        = valid_cn_list;
   dtls_pki.validate_sni_call_back  = verify_pki_sni_callback;

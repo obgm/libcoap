@@ -304,6 +304,7 @@ AM_CONDITIONAL(BUILD_MANPAGES, [test "x$build_manpages" = "xyes"])
 
 gnutls_version_required=3.3.0
 openssl_version_required=1.1.0
+mbedtls_version_required=2.7.10
 
 AC_ARG_ENABLE([dtls],
               [AS_HELP_STRING([--enable-dtls],
@@ -323,25 +324,44 @@ AC_ARG_WITH([openssl],
             [with_openssl="$withval"],
             [with_openssl="no"])
 
+AC_ARG_WITH([mbedtls],
+            [AS_HELP_STRING([--with-mbedtls],
+                            [Use mbed TLS for DTLS functions])],
+            [with_mbedtls="$withval"],
+            [with_mbedtls="no"])
+
 AC_ARG_WITH([tinydtls],
            [AS_HELP_STRING([--with-tinydtls],
                            [Use TinyDTLS for DTLS functions])],
            [with_tinydtls="$withval"],
            [with_tinydtls="no"])
 
-if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes"; then
+if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes" -o "x$with_mbedtls" = "xyes" -o "x$with_tinydtls" = "xyes"; then
     if test "x$build_dtls" = "x"; then
-        # Give an advice that '--with_gnutls' or '--with_openssl' was used but
+        # Give an advice that '--with_gnutls', '--with_openssl', '--with-mbedtls' or '--with-tinydtls' was used but
         # DTLS support isn't configured.
-        AC_MSG_NOTICE([==> Using the configure options '--with-gnutls' or '--with-openssl' without '--enable-dtls' is useles and will be ignored.])
+        AC_MSG_NOTICE([==> Using the configure options '--with-gnutls', '--with-openssl', '--with-mbedtls' or '--with-tinydtls' without '--enable-dtls' is useles and will be ignored.])
     fi
 fi
 
 # O.K. the user hasn't de-selected DTLS
 if test "x$build_dtls" = "xyes"; then
     # The user can't select multiple crypto libraries.
-    if test "x$with_gnutls" = "xyes" -a "x$with_openssl" = "xyes"; then
-        AC_MSG_ERROR([==> You can't use the options '--with-gnutls' and '--with-openssl' at the same time while '--enable-dtls' is selected!
+    TLSCOUNT=0
+    if test "x$with_gnutls" = "xyes"; then
+        TLSCOUNT=`expr $TLSCOUNT + 1`
+    fi
+    if test "x$with_openssl" = "xyes"; then
+        TLSCOUNT=`expr $TLSCOUNT + 1`
+    fi
+    if test "x$with_mbedtls" = "xyes"; then
+        TLSCOUNT=`expr $TLSCOUNT + 1`
+    fi
+    if test "x$with_tinydtls" = "xyes"; then
+        TLSCOUNT=`expr $TLSCOUNT + 1`
+    fi
+    if test "$TLSCOUNT" -gt 1; then
+        AC_MSG_ERROR([==> You can't use more than 1 of the options '--with-gnutls', '--with-openssl', '--with-mbedtls' or '--with-tinydtls' at the same time while '--enable-dtls' is selected!
                   ==> Please note, the option '--enable-dtls' is turned on by default if not explicitly disabled!])
     fi
 
@@ -358,6 +378,11 @@ if test "x$build_dtls" = "xyes"; then
                       [have_openssl="yes"],
                       [have_openssl="no"])
 
+    # mbed TLS [does not have mbedtls.pc pkg-config file]
+    AC_CHECK_LIB(mbedtls, mbedtls_ssl_handshake,
+                 [have_mbedtls="yes"; MbedTLS_CFLAGS="" ; MbedTLS_LIBS="-lmbedtls -lmbedcrypto -lmbedx509"],
+                 [have_mbedtls="no"])
+
     # TinyDTLS ?
     # TBD ?
 
@@ -367,14 +392,16 @@ if test "x$build_dtls" = "xyes"; then
         if test "x$have_gnutls" != "xyes"; then
             AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the GnuTLS library but pkg-config file 'gnutls.pc' could not be found!
                       Install the package(s) that contains the development files for GnuTLS,
-                      or use '--with-openssl' or disable the DTLS support using '--disable-dtls'.])
+                      or select a different TLS library or disable the DTLS support using '--disable-dtls'.])
         fi
-        AC_MSG_NOTICE([The use of GnuTLS was explicit requested due configure option '--with-gnutls'!])
+        AC_MSG_NOTICE([The use of GnuTLS was explicitly requested with configure option '--with-gnutls'!])
 
         # check for valid GnuTLS version
         gnutls_version=`pkg-config --modversion gnutls`
         AX_CHECK_GNUTLS_VERSION
         have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
 
     # The user wants to use explicit OpenSSL if '--with-openssl was set'.
@@ -383,52 +410,89 @@ if test "x$build_dtls" = "xyes"; then
         if test "x$have_openssl" != "xyes"; then
             AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the OpenSSL library but pkg-config file 'openssl.pc' could not be found!
                       Install the package(s) that contains the development files for OpenSSL,
-                      or use '--with-gnutls' or disable the DTLS support using '--disable-dtls'.])
+                      or select a different TLS library or disable the DTLS support using '--disable-dtls'.])
         fi
-        AC_MSG_NOTICE([The use of OpenSSL was explicit requested due configure option '--with-openssl'!])
+        AC_MSG_NOTICE([The use of OpenSSL was explicitly requested with configure option '--with-openssl'!])
 
         # check for valid OpenSSL version
         openssl_version=`pkg-config --modversion openssl`
         AX_CHECK_OPENSSL_VERSION
         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
 
-    # The user wants to use explicit OpenSSL if '--with-tinydtls was set'.
+    # The user wants to use explicit mbed TLS if '--with-mbedtls was set'.
+    if test "x$with_mbedtls" = "xyes"; then
+        # Some more sanity checking.
+        if test "x$have_mbedtls" != "xyes"; then
+            AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the mbed TLS library but library 'mbedtls' could not be found!
+                      Install the package(s) that contains the development files for mbed TLS,
+                      or select a different TLS library or disable the DTLS support using '--disable-dtls'.])
+        fi
+        AC_MSG_NOTICE([The use of mbed TLS was explicitly requested with configure option '--with-mbedtls'!])
+
+        # check for valid mbed TLS version (mbedtls.pc does not exist - hmm)
+        # mbedtls_version=`pkg-config --modversion mbedtls`
+        # AX_CHECK_MBEDTLS_VERSION
+        have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+    fi
+
+    # The user wants to use explicit TinyDTLS if '--with-tinydtls was set'.
     if test "x$with_tinydtls" = "xyes" ; then
         if test -d "$srcdir/ext/tinydtls"; then
            AC_CONFIG_SUBDIRS([ext/tinydtls])
            have_tinydtls="yes"
          else
-           have_tinydtls="no"
+           have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
          fi
+         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+         have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+         have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
 
-    # The user hasn't requested the use of a specific cryptography library
-    # we try first GnuTLS for usability ...
-    if test "x$have_gnutls" = "xyes" -a "x$with_gnutls" = "xno" -a "x$with_tinydtls" = "xno"; then
-        gnutls_version=`pkg-config --modversion gnutls`
-        AX_CHECK_GNUTLS_VERSION
-        AC_MSG_NOTICE([Using auto selected library GnuTLS for DTLS support!])
-        with_gnutls_auto="yes"
-        have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
-    fi
+    if test "$TLSCOUNT" -eq 0; then
+      # The user hasn't requested the use of a specific cryptography library
+      # we try first GnuTLS for usability ...
+      if test "x$have_gnutls" = "xyes"; then
+          gnutls_version=`pkg-config --modversion gnutls`
+          AX_CHECK_GNUTLS_VERSION
+          AC_MSG_NOTICE([Using auto selected library GnuTLS for DTLS support!])
+          with_gnutls_auto="yes"
+          have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+          have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+          have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
 
-    # ... and if not found check OpenSSL is suitable.
-    if test "x$have_openssl" = "xyes" -a "x$with_openssl" = "xno" -a "x$with_gnutls_auto" = "x" -a "x$with_tinydtls" = "xno"; then
-        openssl_version=`pkg-config --modversion openssl`
-        AX_CHECK_OPENSSL_VERSION
-        AC_MSG_NOTICE([Using auto selected library OpenSSL for DTLS support!])
-        with_openssl_auto="yes"
-        have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
-    fi
+      # ... and if not found check OpenSSL is suitable.
+      elif test "x$have_openssl" = "xyes"; then
+          openssl_version=`pkg-config --modversion openssl`
+          AX_CHECK_OPENSSL_VERSION
+          AC_MSG_NOTICE([Using auto selected library OpenSSL for DTLS support!])
+          with_openssl_auto="yes"
+          have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+          have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+          have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
 
-    # Note that tinyDTLS is used only when explicitly requested.
+      # ... and if not found check mbed TLS is suitable.
+      elif test "x$have_mbedtls" = "xyes"; then
+          # mbed TLS [does not have mbedtls.pc pkg-config file]
+          # mbedtls_version=`pkg-config --modversion mbedtls`
+          # AX_CHECK_MBEDTLS_VERSION
+          AC_MSG_NOTICE([Using auto selected library mbed TLS for DTLS support!])
+          with_mbedtls_auto="yes"
+          have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+          have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+          have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
 
-    # Giving out an error message if we haven't found at least one crypto library.
-    if test "x$have_gnutls" = "xno" -a "x$have_openssl" = "xno" -a "x$have_tinydtls" = "xno"; then
-        AC_MSG_ERROR([==> Option '--enable-dtls' is set but one of the needed cryptography library GnuTLS nor OpenSSL nor tinyDTLS could be found!
-                      Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required) or OpenSSL(>= $openssl_version_required)
-                      or disable the DTLS support using '--disable-dtls'.])
+      # Note that tinyDTLS is used only when explicitly requested.
+      # Giving out an error message if we haven't found at least one crypto library.
+      else
+          AC_MSG_ERROR([==> Option '--enable-dtls' is set but none of the needed cryptography libraries GnuTLS, OpenSSL or mbed TLS could be found!
+                        Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required), OpenSSL(>= $openssl_version_required), or mbed TLS(>= $mbedtls_version_required)
+                        or disable the DTLS support using '--disable-dtls'.])
+      fi
     fi
 
     # Saving the DTLS related Compiler flags.
@@ -441,6 +505,11 @@ if test "x$build_dtls" = "xyes"; then
         DTLS_CFLAGS="$OpenSSL_CFLAGS"
         DTLS_LIBS="$OpenSSL_LIBS"
         AC_DEFINE(HAVE_OPENSSL, [1], [Define if the system has libssl1.1])
+    fi
+    if test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
+        DTLS_CFLAGS="$MbedTLS_CFLAGS"
+        DTLS_LIBS="$MbedTLS_LIBS"
+        AC_DEFINE(HAVE_MBEDTLS, [1], [Define if the system has libmbedtls2.7.10])
     fi
     if test "x$with_tinydtls" = "xyes"; then
         DTLS_CFLAGS="-I \$(top_srcdir)/ext/tinydtls"
@@ -462,6 +531,8 @@ if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-openssl
 elif test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-gnutls
+elif test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=-mbedtls
 elif test "x$with_tinydtls" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-tinydtls
 else
@@ -735,6 +806,13 @@ if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
     AC_MSG_RESULT([         -->  OpenSSL around  : "yes" (found OpenSSL $openssl_version)])
     AC_MSG_RESULT([              OPENSSL_CFLAGS  : "$OpenSSL_CFLAGS"])
     AC_MSG_RESULT([              OPENSSL_LIBS    : "$OpenSSL_LIBS"])
+fi
+if test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
+    AC_MSG_RESULT([      build DTLS support      : "yes"])
+    # mbed TLS [does not have mbedtls.pc pkg-config file, hence no mbedtls_version]
+    AC_MSG_RESULT([         -->  mbed TLS around : "yes" (found mbed TLS)])
+    AC_MSG_RESULT([              MBEDTLS_CFLAGS  : "$MbedTLS_CFLAGS"])
+    AC_MSG_RESULT([              MBEDTLS_LIBS    : "$MbedTLS_LIBS"])
 fi
 if test "x$with_tinydtls" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support      : "yes"])

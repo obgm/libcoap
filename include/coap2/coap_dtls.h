@@ -30,6 +30,16 @@ struct coap_dtls_pki_t;
 #define COAP_DTLS_HINT_LENGTH 128
 #endif
 
+/* https://tools.ietf.org/html/rfc6347#section-4.2.4.1 */
+#ifndef COAP_DTLS_RETRANSMIT_MS
+#define COAP_DTLS_RETRANSMIT_MS 1000
+#endif
+#ifndef COAP_DTLS_RETRANSMIT_TOTAL_MS
+#define COAP_DTLS_RETRANSMIT_TOTAL_MS 60000
+#endif
+
+#define COAP_DTLS_RETRANSMIT_COAP_TICKS (COAP_DTLS_RETRANSMIT_MS * COAP_TICKS_PER_SECOND / 1000)
+
 /**
  * Check whether DTLS is available.
  *
@@ -49,6 +59,7 @@ typedef enum coap_tls_library_t {
   COAP_TLS_LIBRARY_TINYDTLS,  /**< Using TinyDTLS library */
   COAP_TLS_LIBRARY_OPENSSL,   /**< Using OpenSSL library */
   COAP_TLS_LIBRARY_GNUTLS,    /**< Using GnuTLS library */
+  COAP_TLS_LIBRARY_MBEDTLS,   /**< Using MbedTLS library */
 } coap_tls_library_t;
 
 /**
@@ -138,8 +149,9 @@ typedef enum coap_asn1_privatekey_type_t {
  * The enum used for determining the PKI key formats.
  */
 typedef enum coap_pki_key_t {
-  COAP_PKI_KEY_PEM = 0,   /**< The PKI key type is PEM */
-  COAP_PKI_KEY_ASN1,      /**< The PKI key type is ASN.1 (DER) */
+  COAP_PKI_KEY_PEM = 0,        /**< The PKI key type is PEM file */
+  COAP_PKI_KEY_ASN1,           /**< The PKI key type is ASN.1 (DER) */
+  COAP_PKI_KEY_PEM_BUF,        /**< The PKI key type is PEM buffer */
 } coap_pki_key_t;
 
 /**
@@ -150,6 +162,24 @@ typedef struct coap_pki_key_pem_t {
   const char *public_cert;   /**< File location of Public Cert in PEM format */
   const char *private_key;   /**< File location of Private Key in PEM format */
 } coap_pki_key_pem_t;
+
+/**
+ * The structure that holds the PKI PEM buffer definitions.
+ * The certificates and private key data must be in PEM format.
+ *
+ * Note:  The Certs and Key should be NULL terminated strings for
+ * performance reasons (to save a potential buffer copy) and the length include
+ * this NULL terminator. It is not a requirement to have the NULL terminator
+ * though and the length must then reflect the actual data size.
+ */
+typedef struct coap_pki_key_pem_buf_t {
+  const uint8_t *ca_cert;     /**< PEM buffer Common CA Cert */
+  const uint8_t *public_cert; /**< PEM buffer Public Cert */
+  const uint8_t *private_key; /**< PEM buffer Private Key */
+  size_t ca_cert_len;         /**< PEM buffer CA Cert length */
+  size_t public_cert_len;     /**< PEM buffer Public Cert length */
+  size_t private_key_len;     /**< PEM buffer Private Key length */
+} coap_pki_key_pem_buf_t;
 
 /**
  * The structure that holds the PKI ASN.1 (DER) definitions.
@@ -170,8 +200,9 @@ typedef struct coap_pki_key_asn1_t {
 typedef struct coap_dtls_key_t {
   coap_pki_key_t key_type;          /**< key format type */
   union {
-    coap_pki_key_pem_t pem;         /**< for PEM keys */
-    coap_pki_key_asn1_t asn1;       /**< for ASN.1 (DER) keys */
+    coap_pki_key_pem_t pem;          /**< for PEM file keys */
+    coap_pki_key_pem_buf_t pem_buf;  /**< for PEM memory keys */
+    coap_pki_key_asn1_t asn1;        /**< for ASN.1 (DER) file keys */
   } key;
 } coap_dtls_key_t;
 
@@ -211,9 +242,11 @@ typedef struct coap_dtls_pki_t {
   uint8_t check_cert_revocation;   /**< 1 if revocation checks wanted */
   uint8_t allow_no_crl;            /**< 1 ignore if CRL not there */
   uint8_t allow_expired_crl;       /**< 1 if expired crl is allowed */
-  uint8_t reserved[6];             /**< Reserved - must be set to 0 for
+  uint8_t allow_bad_md_hash;       /**< 1 if unsupported MD hashes are allowed */
+  uint8_t allow_short_rsa_length;  /**< 1 if small RSA keysizes are allowed */
+  uint8_t reserved[4];             /**< Reserved - must be set to 0 for
                                         future compatibility */
-                                   /* Size of 6 chosen to align to next
+                                   /* Size of 4 chosen to align to next
                                     * parameter, so if newly defined option
                                     * it can use one of the reserverd slot so
                                     * no need to change

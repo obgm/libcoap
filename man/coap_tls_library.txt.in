@@ -29,14 +29,15 @@ SYNOPSIS
 *void coap_show_tls_version(coap_log_t _level_);*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
-*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
-*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
 -----------
 When the libcoap library was built, it will have been compiled using a
-specific TLS implementation type (e.g. OpenSSL, GnuTLS, TinyDTLS or noTLS).
+specific TLS implementation type (e.g. OpenSSL, GnuTLS, MbedTLS, TinyDTLS or
+noTLS).
 When the libcoap library is linked into an application, it is possible that
 the application needs to dynamically determine whether DTLS or TLS is
 supported, what type of TLS implementation libcoap was compiled with, as well
@@ -89,6 +90,7 @@ typedef enum coap_tls_library_t {
   COAP_TLS_LIBRARY_TINYDTLS,  /**< Using TinyDTLS library */
   COAP_TLS_LIBRARY_OPENSSL,   /**< Using OpenSSL library */
   COAP_TLS_LIBRARY_GNUTLS,    /**< Using GnuTLS library */
+  COAP_TLS_LIBRARY_MBEDTLS,   /**< Using MbedTLS library */
 } coap_tls_library_t;
 
 typedef struct coap_tls_version_t {

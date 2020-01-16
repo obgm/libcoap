@@ -3,7 +3,7 @@
 /* coap -- simple implementation of the Constrained Application Protocol (CoAP)
  *         as defined in RFC 7252
  *
- * Copyright (C) 2010--2019 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2010--2020 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -68,6 +68,12 @@ static int resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_CON;
 static char *cert_file = NULL; /* Combined certificate and private key in PEM */
 static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM */
 static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
+static int use_pem_buf = 0; /* Map these cert/key files into memory to test
+                               PEM_BUF logic if set */
+static uint8_t *cert_mem = NULL; /* certificate and private key in PEM_BUF */
+static uint8_t *ca_mem = NULL;   /* CA for cert checking in PEM_BUF */
+static size_t cert_mem_len = 0;
+static size_t ca_mem_len = 0;
 static int require_peer_cert = 1; /* By default require peer cert */
 #define MAX_KEY   64 /* Maximum length of a pre-shared key in bytes. */
 static uint8_t key[MAX_KEY];
@@ -139,7 +145,7 @@ handle_sigint(int signum UNUSED_PARAM) {
 }
 
 #define INDEX "This is a test server made with libcoap (see https://libcoap.net)\n" \
-              "Copyright (C) 2010--2019 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+              "Copyright (C) 2010--2020 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
 
 static void
 hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
@@ -715,6 +721,35 @@ verify_cn_callback(const char *cn,
   return 1;
 }
 
+static uint8_t *read_file_mem(const char* file, size_t *length) {
+  FILE *f = fopen(file, "r");
+  uint8_t *buf;
+  struct stat statbuf;
+
+  *length = 0;
+  if (!f)
+    return NULL;
+
+  if (fstat(fileno(f), &statbuf) == -1) {
+    fclose(f); 
+    return NULL;
+  }
+
+  buf = malloc(statbuf.st_size+1);
+  if (!buf)
+    return NULL;
+
+  if (fread(buf, 1, statbuf.st_size, f) != (size_t)statbuf.st_size) {
+    fclose(f);
+    free(buf);
+    return NULL;
+  }
+  buf[statbuf.st_size] = '\000';
+  *length = (size_t)(statbuf.st_size + 1);
+  fclose(f);
+  return buf;
+}
+
 static coap_dtls_key_t *
 verify_pki_sni_callback(const char *sni,
                     void *arg UNUSED_PARAM
@@ -723,10 +758,21 @@ verify_pki_sni_callback(const char *sni,
 
   /* Preset with the defined keys */
   memset (&dtls_key, 0, sizeof(dtls_key));
-  dtls_key.key_type = COAP_PKI_KEY_PEM;
-  dtls_key.key.pem.public_cert = cert_file;
-  dtls_key.key.pem.private_key = cert_file;
-  dtls_key.key.pem.ca_file = ca_file;
+  if (!use_pem_buf) {
+    dtls_key.key_type = COAP_PKI_KEY_PEM;
+    dtls_key.key.pem.public_cert = cert_file;
+    dtls_key.key.pem.private_key = cert_file;
+    dtls_key.key.pem.ca_file = ca_file;
+  }
+  else {
+    dtls_key.key_type = COAP_PKI_KEY_PEM_BUF;
+    dtls_key.key.pem_buf.ca_cert = ca_mem;
+    dtls_key.key.pem_buf.public_cert = cert_mem;
+    dtls_key.key.pem_buf.private_key = cert_mem;
+    dtls_key.key.pem_buf.ca_cert_len = ca_mem_len;
+    dtls_key.key.pem_buf.public_cert_len = cert_mem_len;
+    dtls_key.key.pem_buf.private_key_len = cert_mem_len;
+  }
   if (sni[0]) {
     size_t i;
     coap_log(LOG_INFO, "SNI '%s' requested\n", sni);
@@ -736,6 +782,7 @@ verify_pki_sni_callback(const char *sni,
         coap_log(LOG_INFO, "Switching to using cert '%s' + ca '%s'\n",
                  valid_pki_snis.pki_sni_list[i].new_cert,
                  valid_pki_snis.pki_sni_list[i].new_ca);
+        dtls_key.key_type = COAP_PKI_KEY_PEM;
         dtls_key.key.pem.public_cert = valid_pki_snis.pki_sni_list[i].new_cert;
         dtls_key.key.pem.private_key = valid_pki_snis.pki_sni_list[i].new_cert;
         dtls_key.key.pem.ca_file = valid_pki_snis.pki_sni_list[i].new_ca;
@@ -859,10 +906,24 @@ fill_keystore(coap_context_t *ctx) {
       dtls_pki.validate_sni_call_back  = verify_pki_sni_callback;
       dtls_pki.sni_call_back_arg       = NULL;
     }
-    dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
-    dtls_pki.pki_key.key.pem.public_cert = cert_file;
-    dtls_pki.pki_key.key.pem.private_key = cert_file;
-    dtls_pki.pki_key.key.pem.ca_file = ca_file;
+    if (!use_pem_buf) {
+      dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
+      dtls_pki.pki_key.key.pem.public_cert = cert_file;
+      dtls_pki.pki_key.key.pem.private_key = cert_file;
+      dtls_pki.pki_key.key.pem.ca_file = ca_file;
+    }
+    else {
+      ca_mem = read_file_mem(ca_file, &ca_mem_len);
+      cert_mem = read_file_mem(cert_file, &cert_mem_len);
+      dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM_BUF;
+      dtls_pki.pki_key.key.pem_buf.ca_cert = ca_mem;
+      dtls_pki.pki_key.key.pem_buf.public_cert = cert_mem;
+      dtls_pki.pki_key.key.pem_buf.private_key = cert_mem;
+      dtls_pki.pki_key.key.pem_buf.ca_cert_len = ca_mem_len;
+      dtls_pki.pki_key.key.pem_buf.public_cert_len = cert_mem_len;
+      dtls_pki.pki_key.key.pem_buf.private_key_len = cert_mem_len;
+    }
+
     /* If general root CAs are defined */
     if (root_ca_file) {
       struct stat stbuf;
@@ -900,13 +961,13 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-     "(c) 2010,2011,2015-2019 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+     "(c) 2010,2011,2015-2020 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
      "%s\n\n"
      "Usage: %s [-d max] [-g group] [-l loss] [-p port] [-v num]\n"
      "\t\t[-A address] [-N]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
      "\t\t[-s match_psk_sni_file]]\n"
-     "\t\t[[-c certfile] [-C cafile] [-n] [-R root_cafile]\n"
+     "\t\t[[-c certfile] [-C cafile] [-m] [-n] [-R root_cafile]]\n"
      "\t\t[-S match_pki_sni_file]]\n"
      "General Options\n"
      "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
@@ -951,6 +1012,8 @@ usage( const char *program, const char *version) {
      "PKI Options (if supported by underlying (D)TLS library)\n"
      "\t-c certfile\tPEM file containing both CERTIFICATE and PRIVATE KEY\n"
      "\t       \t\tThis argument requires (D)TLS with PKI to be available\n"
+     "\t-m     \t\tUse COAP_PKI_KEY_PEM_BUF instead of COAP_PKI_KEY_PEM i/f\n"
+     "\t       \t\tby reading in the Cert / CA file (for testing)\n"
      "\t-n     \t\tDisable the requirement for clients to have defined\n"
      "\t       \t\tclient certificates\n"
      "\t-C cafile\tPEM file containing the CA Certificate that was used to\n"
@@ -1245,7 +1308,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "A:d:c:C:g:h:i:k:l:nNp:R:s:S:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:d:c:C:g:h:i:k:l:mnNp:R:s:S:v:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -1289,6 +1352,9 @@ main(int argc, char **argv) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
         exit(1);
       }
+      break;
+    case 'm':
+      use_pem_buf = 1;
       break;
     case 'n':
       require_peer_cert = 0;
@@ -1422,6 +1488,10 @@ main(int argc, char **argv) {
 #endif /* WITHOUT_ASYNC */
   }
 
+  if (ca_mem)
+    free(ca_mem);
+  if (cert_mem)
+    free(cert_mem);
   for (i = 0; i < valid_psk_snis.count; i++) {
     free(valid_psk_snis.psk_sni_list[i].sni_match);
     coap_delete_bin_const(valid_psk_snis.psk_sni_list[i].new_hint);

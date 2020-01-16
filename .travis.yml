@@ -16,6 +16,7 @@ env:
   - PLATFORM=posix TESTS=yes TLS=gnutls SMALL_STACK=no  EPOLL=no
   - PLATFORM=posix TESTS=yes TLS=openssl
   - PLATFORM=posix TESTS=yes TLS=tinydtls
+  - PLATFORM=posix TESTS=yes TLS=mbedtls
 
 matrix:
   exclude:
