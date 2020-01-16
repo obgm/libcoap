@@ -1071,7 +1071,7 @@ get_context(const char *node, const char *port) {
   /* iterate through results until success */
   for (rp = result; rp != NULL; rp = rp->ai_next) {
     coap_address_t addr, addrs;
-    coap_endpoint_t *ep_udp = NULL, *ep_dtls = NULL, *ep_tcp = NULL, *ep_tls = NULL;
+    coap_endpoint_t *ep_udp = NULL, *ep_dtls = NULL;
 
     if (rp->ai_addrlen <= sizeof(addr.addr)) {
       coap_address_init(&addr);
@@ -1099,15 +1099,19 @@ get_context(const char *node, const char *port) {
         coap_log(LOG_CRIT, "cannot create UDP endpoint\n");
         continue;
       }
-      ep_tcp = coap_new_endpoint(ctx, &addr, COAP_PROTO_TCP);
-      if (ep_tcp) {
-        if (coap_tls_is_supported() && (key_defined || cert_file)) {
-          ep_tls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_TLS);
-          if (!ep_tls)
-            coap_log(LOG_CRIT, "cannot create TLS endpoint\n");
+      if (coap_tcp_is_supported()) {
+        coap_endpoint_t *ep_tcp;
+        ep_tcp = coap_new_endpoint(ctx, &addr, COAP_PROTO_TCP);
+        if (ep_tcp) {
+          if (coap_tls_is_supported() && (key_defined || cert_file)) {
+            coap_endpoint_t *ep_tls;
+            ep_tls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_TLS);
+            if (!ep_tls)
+              coap_log(LOG_CRIT, "cannot create TLS endpoint\n");
+          }
+        } else {
+          coap_log(LOG_CRIT, "cannot create TCP endpoint\n");
         }
-      } else {
-        coap_log(LOG_CRIT, "cannot create TCP endpoint\n");
       }
       if (ep_udp)
         goto finish;

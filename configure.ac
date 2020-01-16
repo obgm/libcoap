@@ -600,6 +600,18 @@ if test "x$build_gcov" = "xyes"; then
    fi
 fi
 
+# configure options
+# __tcp__
+AC_ARG_ENABLE([tcp],
+              [AS_HELP_STRING([--enable-tcp],
+                              [Enable building with TCP support [default=yes]])],
+              [build_tcp="$enableval"],
+              [build_tcp="yes"])
+
+AC_DEFINE(COAP_DISABLE_TCP, [0], [Define to 1 to build without TCP support.])
+AS_IF([test "x$build_tcp" != "xyes"], [AC_DEFINE(COAP_DISABLE_TCP, [1])])
+AC_SUBST(COAP_DISABLE_TCP)
+
 # end configure options
 #######################
 
@@ -795,6 +807,11 @@ libcoap configuration summary:
       libcoap API version     : "$LIBCOAP_API_VERSION"
       libcoap DTLS lib extn   : "$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
       host system             : "$host"]);
+if test "x$build_tcp" != "xno"; then
+    AC_MSG_RESULT([      build with TCP support  : "yes"])
+else
+    AC_MSG_RESULT([      build with TCP support  : "no"])
+fi
 if test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support      : "yes"])
     AC_MSG_RESULT([          -->  GnuTLS around  : "yes" (found GnuTLS $gnutls_version)])

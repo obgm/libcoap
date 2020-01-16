@@ -103,30 +103,6 @@ coap_socket_bind_udp(coap_socket_t *sock,
                      const coap_address_t *listen_addr,
                      coap_address_t *bound_addr );
 
-int
-coap_socket_connect_tcp1(coap_socket_t *sock,
-                         const coap_address_t *local_if,
-                         const coap_address_t *server,
-                         int default_port,
-                         coap_address_t *local_addr,
-                         coap_address_t *remote_addr);
-
-int
-coap_socket_connect_tcp2(coap_socket_t *sock,
-                         coap_address_t *local_addr,
-                         coap_address_t *remote_addr);
-
-int
-coap_socket_bind_tcp(coap_socket_t *sock,
-                     const coap_address_t *listen_addr,
-                     coap_address_t *bound_addr);
-
-int
-coap_socket_accept_tcp(coap_socket_t *server,
-                       coap_socket_t *new_client,
-                       coap_address_t *local_addr,
-                       coap_address_t *remote_addr);
-
 void coap_socket_close(coap_socket_t *sock);
 
 ssize_t
@@ -149,6 +125,15 @@ coap_socket_send_pdu( coap_socket_t *sock, struct coap_session_t *session,
 #endif
 
 const char *coap_socket_strerror( void );
+
+const char *coap_socket_format_errno(int error);
+
+/**
+ * Check whether TCP is available.
+ *
+ * @return @c 1 if support for TCP is enabled, or @c 0 otherwise.
+ */
+int coap_tcp_is_supported(void);
 
 /**
  * Function interface for data transmission. This function returns the number of

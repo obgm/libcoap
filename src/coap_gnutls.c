@@ -175,11 +175,15 @@ coap_dtls_is_supported(void) {
  */
 int
 coap_tls_is_supported(void) {
+#if !COAP_DISABLE_TCP
   if (gnutls_check_version(MIN_GNUTLS_VERSION) == NULL) {
     coap_log(LOG_ERR, "GnuTLS " MIN_GNUTLS_VERSION " or later is required\n");
     return 0;
   }
   return 1;
+#else /* COAP_DISABLE_TCP */
+  return 0;
+#endif /* COAP_DISABLE_TCP */
 }
 
 coap_tls_version_t *
@@ -1967,6 +1971,7 @@ unsigned int coap_dtls_get_overhead(coap_session_t *c_session UNUSED) {
   return 37;
 }
 
+#if !COAP_DISABLE_TCP
 /*
  * return +ve data amount
  *        0   no more
@@ -2238,6 +2243,7 @@ ssize_t coap_tls_read(coap_session_t *c_session,
   }
   return ret;
 }
+#endif /* !COAP_DISABLE_TCP */
 
 #else /* !HAVE_LIBGNUTLS */
 

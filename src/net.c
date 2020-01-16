@@ -706,12 +706,16 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
                                      pdu->used_size + pdu->hdr_size);
       break;
     case COAP_PROTO_TCP:
+#if !COAP_DISABLE_TCP
       bytes_written = coap_session_write(session, pdu->token - pdu->hdr_size,
                                          pdu->used_size + pdu->hdr_size);
+#endif /* !COAP_DISABLE_TCP */
       break;
     case COAP_PROTO_TLS:
+#if !COAP_DISABLE_TCP
       bytes_written = coap_tls_write(session, pdu->token - pdu->hdr_size,
                                      pdu->used_size + pdu->hdr_size);
+#endif /* !COAP_DISABLE_TCP */
       break;
     default:
       break;
@@ -760,7 +764,7 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
       }
       coap_handle_event(session->context, COAP_EVENT_DTLS_ERROR, session);
       return -1;
-    } else if(COAP_PROTO_RELIABLE(session->proto)) {
+    } else if(!COAP_DISABLE_TCP && COAP_PROTO_RELIABLE(session->proto)) {
       if (!coap_socket_connect_tcp1(
         &session->sock, &session->local_if, &session->addr_info.remote,
         session->proto == COAP_PROTO_TLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
@@ -996,7 +1000,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     return (coap_tid_t)bytes_written;
   }
 
-  if (COAP_PROTO_RELIABLE(session->proto) &&
+  if (!COAP_DISABLE_TCP && COAP_PROTO_RELIABLE(session->proto) &&
     (size_t)bytes_written < pdu->used_size + pdu->hdr_size) {
     if (coap_session_delay_pdu(session, pdu, NULL) == COAP_PDU_DELAYED) {
       session->partial_write = (size_t)bytes_written;
@@ -1007,7 +1011,8 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     }
   }
 
-  if (pdu->type != COAP_MESSAGE_CON || COAP_PROTO_RELIABLE(session->proto)) {
+  if (pdu->type != COAP_MESSAGE_CON
+      || (!COAP_DISABLE_TCP && COAP_PROTO_RELIABLE(session->proto))) {
     coap_tid_t id = pdu->tid;
     coap_delete_pdu(pdu);
     return id;
@@ -1145,7 +1150,8 @@ coap_handle_dgram_for_proto(coap_context_t *ctx, coap_session_t *session, coap_p
 static void
 coap_connect_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
   (void)ctx;
-  if (coap_socket_connect_tcp2(&session->sock, &session->addr_info.local,
+  if (!COAP_DISABLE_TCP &&
+      coap_socket_connect_tcp2(&session->sock, &session->addr_info.local,
                                &session->addr_info.remote)) {
     session->last_rx_tx = now;
     coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
@@ -1184,18 +1190,22 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
     assert(session->partial_write < q->pdu->used_size + q->pdu->hdr_size);
     switch (session->proto) {
       case COAP_PROTO_TCP:
+#if !COAP_DISABLE_TCP
         bytes_written = coap_session_write(
           session,
           q->pdu->token - q->pdu->hdr_size - session->partial_write,
           q->pdu->used_size + q->pdu->hdr_size - session->partial_write
         );
+#endif /* !COAP_DISABLE_TCP */
         break;
       case COAP_PROTO_TLS:
+#if !COAP_DISABLE_TCP
         bytes_written = coap_tls_write(
           session,
           q->pdu->token - q->pdu->hdr_size - session->partial_write,
           q->pdu->used_size + q->pdu->hdr_size - session->partial_write
         );
+#endif /* !COAP_DISABLE_TCP */
         break;
       default:
         bytes_written = -1;
@@ -1230,7 +1240,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 
   assert(session->sock.flags & (COAP_SOCKET_CONNECTED | COAP_SOCKET_MULTICAST));
 
-  if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+  if (COAP_DISABLE_TCP || COAP_PROTO_NOT_RELIABLE(session->proto)) {
     ssize_t bytes_read;
     memcpy(&packet->addr_info, &session->addr_info, sizeof(packet->addr_info));
     bytes_read = ctx->network_read(&session->sock, packet);
@@ -2506,7 +2516,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
   /* Pass message to upper layer if a specific handler was
     * registered for a request that should be handled locally. */
-  if (COAP_PDU_IS_SIGNALING(pdu))
+  if (!COAP_DISABLE_TCP && COAP_PDU_IS_SIGNALING(pdu))
     handle_signaling(context, session, pdu);
   else if (COAP_PDU_IS_REQUEST(pdu))
     handle_request(context, session, pdu);

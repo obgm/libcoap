@@ -25,6 +25,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/utlist.h \
   tests/test_error_response.h \
   tests/test_encode.h \
@@ -81,6 +82,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_notls.c \
   src/coap_openssl.c \
   src/coap_session.c \
+  src/coap_tcp.c \
   src/coap_time.c \
   src/coap_tinydtls.c \
   src/encode.c \
@@ -180,6 +182,7 @@ coap_socket_close \
 coap_socket_connect_tcp1 \
 coap_socket_connect_tcp2 \
 coap_socket_connect_udp \
+coap_socket_format_errno \
 coap_socket_read \
 coap_socket_send \
 coap_socket_send_pdu \
