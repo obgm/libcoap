@@ -28,6 +28,9 @@
 #ifdef _WIN32
 #define strcasecmp _stricmp
 #include "getopt.c"
+#if !defined(S_ISDIR)
+#define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+#endif
 #else
 #include <unistd.h>
 #include <sys/select.h>
