@@ -64,7 +64,6 @@ typedef struct coap_ssl_t {
   const uint8_t *pdu;
   unsigned pdu_len;
   unsigned peekmode;
-  coap_tick_t timeout;
 } coap_ssl_t;
 
 /*
@@ -82,6 +81,7 @@ typedef struct coap_gnutls_env_t {
   int established;
   int seen_client_hello;
   int doing_dtls_timeout;
+  coap_tick_t last_timeout;
 } coap_gnutls_env_t;
 
 #define IS_PSK (1 << 0)
@@ -1818,6 +1818,18 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now) {
   if (g_env && g_env->g_session) {
     unsigned int rem_ms = gnutls_dtls_get_timeout(g_env->g_session);
 
+    if (rem_ms == 0) {
+      /*
+       * Need to make sure that we do not do this too frequently as some
+       * versions of gnutls reset retransmit if a spurious packet is received
+       * (e.g. duplicate Client Hello), but last_transmit does not get updated
+       * when gnutls_handshake() is called and there is 'nothing' to resend.
+       */
+      if (g_env->last_timeout + COAP_DTLS_RETRANSMIT_COAP_TICKS > now)
+        return g_env->last_timeout + COAP_DTLS_RETRANSMIT_COAP_TICKS;
+    }
+    /* Reset for the next time */
+    g_env->last_timeout = now;
     return now + rem_ms;
   }
 
