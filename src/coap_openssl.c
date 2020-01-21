@@ -1418,6 +1418,7 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
       if (setup_data->allow_expired_certs)
         preverify_ok = 1;
       break;
+    case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
     case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
       if (setup_data->allow_self_signed)
         preverify_ok = 1;
