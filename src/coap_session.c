@@ -289,7 +289,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
   return COAP_PDU_DELAYED;
 }
 
-#if !COAP_DISABLE_TCP 
+#if !COAP_DISABLE_TCP
 void coap_session_send_csm(coap_session_t *session) {
   coap_pdu_t *pdu;
   uint8_t buf[4];
@@ -325,7 +325,7 @@ coap_tid_t coap_session_send_ping(coap_session_t *session) {
     uint16_t tid = coap_new_message_id (session);
     ping = coap_pdu_init(COAP_MESSAGE_CON, 0, tid, 0);
   }
-#if !COAP_DISABLE_TCP 
+#if !COAP_DISABLE_TCP
   else {
     ping = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_PING, 0, 1);
   }

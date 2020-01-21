@@ -1739,6 +1739,7 @@ psk_tls_server_name_call_back(SSL *ssl,
         SSL_CTX_set_info_callback(ctx, coap_dtls_info_callback);
         SSL_CTX_set_options(ctx, SSL_OP_NO_QUERY_MTU);
       }
+#if !COAP_DISABLE_TCP
       else {
         /* Set up TLS context */
         ctx = SSL_CTX_new(TLS_method());
@@ -1750,6 +1751,7 @@ psk_tls_server_name_call_back(SSL *ssl,
         SSL_CTX_set_info_callback(ctx, coap_dtls_info_callback);
         SSL_CTX_set_alpn_select_cb(ctx, server_alpn_callback, NULL);
       }
+#endif /* !COAP_DISABLE_TCP */
 
       o_context->psk_sni_entry_list =
             OPENSSL_realloc(o_context->psk_sni_entry_list,
