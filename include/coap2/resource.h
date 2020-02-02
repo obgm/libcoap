@@ -366,7 +366,7 @@ coap_print_status_t coap_print_link(const coap_resource_t *resource,
  * @param handler  The handler to register with @p resource.
  */
 void coap_register_handler(coap_resource_t *resource,
-                           unsigned char method,
+                           coap_request_t method,
                            coap_method_handler_t handler);
 
 /** @} */

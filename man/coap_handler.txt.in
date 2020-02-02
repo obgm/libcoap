@@ -19,7 +19,7 @@ SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*void coap_register_handler(coap_resource_t *_resource_, unsigned char
+*void coap_register_handler(coap_resource_t *_resource_, coap_request_t
 _method_, coap_method_handler_t _handler_);*
 
 *void coap_register_response_handler(coap_context_t *_context_,
