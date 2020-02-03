@@ -76,13 +76,15 @@ struct coap_session_t;
 
 /* CoAP request methods */
 
-#define COAP_REQUEST_GET       1
-#define COAP_REQUEST_POST      2
-#define COAP_REQUEST_PUT       3
-#define COAP_REQUEST_DELETE    4
-#define COAP_REQUEST_FETCH     5 /* RFC 8132 */
-#define COAP_REQUEST_PATCH     6 /* RFC 8132 */
-#define COAP_REQUEST_IPATCH    7 /* RFC 8132 */
+typedef enum coap_request_t {
+  COAP_REQUEST_GET = 1,
+  COAP_REQUEST_POST,      /* 2 */
+  COAP_REQUEST_PUT,       /* 3 */
+  COAP_REQUEST_DELETE,    /* 4 */
+  COAP_REQUEST_FETCH,     /* 5 RFC 8132 */
+  COAP_REQUEST_PATCH,     /* 6 RFC 8132 */
+  COAP_REQUEST_IPATCH,    /* 7 RFC 8132 */
+} coap_request_t;
 
 /*
  * CoAP option types (be sure to update coap_option_check_critical() when
@@ -286,7 +288,7 @@ COAP_DEPRECATED typedef struct {
 
 typedef struct coap_pdu_t {
   uint8_t type;             /**< message type */
-  uint8_t code;             /**< request method (value 1--10) or response code (value 40-255) */
+  uint8_t code;             /**< request method (value 1--31) or response code (value 64-255) */
   uint8_t max_hdr_size;     /**< space reserved for protocol-specific header */
   uint8_t hdr_size;         /**< actaul size used for protocol-specific header */
   uint8_t token_length;     /**< length of Token */
