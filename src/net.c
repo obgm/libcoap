@@ -735,10 +735,12 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
     assert(session->endpoint != NULL);
     sock = &session->endpoint->sock;
   }
-  if (pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto))
-    session->con_active++;
 
   bytes_written = coap_socket_send_pdu(sock, session, pdu);
+  if (bytes_written >= 0 && pdu->type == COAP_MESSAGE_CON &&
+      COAP_PROTO_NOT_RELIABLE(session->proto))
+    session->con_active++;
+
   if (LOG_DEBUG <= coap_get_log_level()) {
     coap_show_pdu(LOG_DEBUG, pdu);
   }
@@ -821,10 +823,10 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
     (session->sock.flags & COAP_SOCKET_WANT_WRITE))
     return coap_session_delay_pdu(session, pdu, node);
 
-  if (pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto))
-    session->con_active++;
-
   bytes_written = coap_session_send_pdu(session, pdu);
+  if (bytes_written >= 0 && pdu->type == COAP_MESSAGE_CON &&
+      COAP_PROTO_NOT_RELIABLE(session->proto))
+    session->con_active++;
 
 #endif /* WITH_LWIP */
 
