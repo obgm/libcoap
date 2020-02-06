@@ -609,7 +609,7 @@ coap_dtls_context_check_keys_enabled(coap_context_t *ctx UNUSED)
   return 1;
 }
 
-#if !COAP_DISABLE_TCP 
+#if !COAP_DISABLE_TCP
 void *coap_tls_new_client_session(coap_session_t *session UNUSED, int *connected UNUSED) {
   return NULL;
 }
