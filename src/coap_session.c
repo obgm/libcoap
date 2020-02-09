@@ -1129,7 +1129,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
       coap_socket_close(&ep->sock);
     }
 
-    if (ep->context) {
+    if (ep->context && ep->context->endpoint) {
       LL_DELETE(ep->context->endpoint, ep);
     }
     coap_mfree_endpoint(ep);
