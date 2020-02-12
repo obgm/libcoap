@@ -1119,6 +1119,8 @@ get_context(const char *node, const char *port) {
   }
 
   fprintf(stderr, "no context available for interface '%s'\n", node);
+  coap_free_context(ctx);
+  ctx = NULL;
 
 finish:
   freeaddrinfo(result);
