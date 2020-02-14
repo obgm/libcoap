@@ -79,7 +79,11 @@ global:
   coap_hash_impl;
   coap_insert_node;
   coap_insert_optlist;
+  coap_io_do_epoll;
+  coap_io_do_io;
   coap_io_prepare_epoll;
+  coap_io_prepare_io;
+  coap_io_process;
   coap_io_process_with_fds;
   coap_is_mcast;
   coap_join_mcast_group;
@@ -137,7 +141,6 @@ global:
   coap_print_addr;
   coap_print_link;
   coap_print_wellknown;
-  coap_read;
   coap_register_async;
   coap_register_event_handler;
   coap_register_handler;
@@ -149,7 +152,6 @@ global:
   coap_resource_unknown_init;
   coap_response_phrase;
   coap_retransmit;
-  coap_run_once;
   coap_send;
   coap_send_ack;
   coap_send_error;
@@ -199,7 +201,6 @@ global:
   coap_touch_observer;
   coap_wait_ack;
   coap_wellknown_response;
-  coap_write;
   coap_write_block_opt;
 local:
   *;

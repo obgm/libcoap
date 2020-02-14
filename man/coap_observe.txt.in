@@ -70,7 +70,7 @@ appropriate GET handler within the server application is called to fill in the
 response packet with the appropriate information. This "fake GET request" is
 triggered by a call to *coap_resource_notify_observers*().
 
-The call to *coap_run_once*() in the main server application i/o loop will do
+The call to *coap_io_process*() in the main server application i/o loop will do
 all the necessary processing of sending any outstanding "fake GET requests".
 
 Whenever the server sends a copy of the state of the "observed" resource to
@@ -286,7 +286,7 @@ int main(int argc, char *argv[]){
   wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
 
   while (1) {
-    int result = coap_run_once( ctx, wait_ms );
+    int result = coap_io_process( ctx, wait_ms );
     if ( result < 0 ) {
       break;
     } else if ( result && (unsigned)result < wait_ms ) {
@@ -296,7 +296,7 @@ int main(int argc, char *argv[]){
       /*
        * result == 0, or result >= wait_ms
        * (wait_ms could have decremented to a small value, below
-       * the granularity of the timer in coap_run_once() and hence
+       * the granularity of the timer in coap_io_process() and hence
        * result == 0)
        */
       time_t t_now = time(NULL);

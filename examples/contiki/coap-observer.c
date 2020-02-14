@@ -176,7 +176,7 @@ PROCESS_THREAD(coap_server_process, ev, data)
   while(1) {
     PROCESS_YIELD();
     if(ev == tcpip_event) {
-      coap_read(coap_context);        /* read received data */
+      coap_io_do_io(coap_context);        /* read received data */
       coap_dispatch(coap_context); /* and dispatch PDUs from receivequeue */
     }
   }
