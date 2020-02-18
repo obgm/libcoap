@@ -157,27 +157,6 @@ const char *coap_response_phrase(unsigned char code);
 #define COAP_ERROR_PHRASE_LENGTH    0 /**< maximum length of error phrase */
 #endif /* SHORT_ERROR_RESPONSE */
 
-/* The following definitions exist for backwards compatibility */
-#if 0 /* this does not exist any more */
-#define COAP_RESPONSE_100      40 /* 100 Continue */
-#endif
-#define COAP_RESPONSE_200      COAP_RESPONSE_CODE(200)  /* 2.00 OK */
-#define COAP_RESPONSE_201      COAP_RESPONSE_CODE(201)  /* 2.01 Created */
-#define COAP_RESPONSE_304      COAP_RESPONSE_CODE(203)  /* 2.03 Valid */
-#define COAP_RESPONSE_400      COAP_RESPONSE_CODE(400)  /* 4.00 Bad Request */
-#define COAP_RESPONSE_404      COAP_RESPONSE_CODE(404)  /* 4.04 Not Found */
-#define COAP_RESPONSE_405      COAP_RESPONSE_CODE(405)  /* 4.05 Method Not Allowed */
-#define COAP_RESPONSE_415      COAP_RESPONSE_CODE(415)  /* 4.15 Unsupported Media Type */
-#define COAP_RESPONSE_500      COAP_RESPONSE_CODE(500)  /* 5.00 Internal Server Error */
-#define COAP_RESPONSE_501      COAP_RESPONSE_CODE(501)  /* 5.01 Not Implemented */
-#define COAP_RESPONSE_503      COAP_RESPONSE_CODE(503)  /* 5.03 Service Unavailable */
-#define COAP_RESPONSE_504      COAP_RESPONSE_CODE(504)  /* 5.04 Gateway Timeout */
-#if 0  /* these response codes do not have a valid code any more */
-#  define COAP_RESPONSE_X_240    240   /* Token Option required by server */
-#  define COAP_RESPONSE_X_241    241   /* Uri-Authority Option required by server */
-#endif
-#define COAP_RESPONSE_X_242    COAP_RESPONSE_CODE(402)  /* Critical Option not supported */
-
 #define COAP_SIGNALING_CODE(N) (((N)/100 << 5) | (N)%100)
 #define COAP_SIGNALING_CSM     COAP_SIGNALING_CODE(701)
 #define COAP_SIGNALING_PING    COAP_SIGNALING_CODE(702)
