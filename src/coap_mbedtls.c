@@ -759,8 +759,8 @@ pki_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
                               &m_context->pki_sni_entry_list[i].public_cert,
                               &m_context->pki_sni_entry_list[i].private_key);
 }
-#endif /* MBEDTLS_SSL_SRV_C */
 
+#if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
 /*
  * PSK SNI callback.
  */
@@ -823,8 +823,7 @@ psk_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
                        m_context->psk_sni_entry_list[i].psk_info.key.s,
                        m_context->psk_sni_entry_list[i].psk_info.key.length);
 }
-
-#if defined(MBEDTLS_SSL_SRV_C)
+#endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
 
 static int setup_server_ssl_session(coap_session_t *c_session,
                                     coap_mbedtls_env_t *m_env)
