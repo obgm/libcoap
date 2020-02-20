@@ -11,7 +11,9 @@ global:
   coap_add_optlist_pdu;
   coap_add_resource;
   coap_address_equals;
+  coap_address_get_port;
   coap_address_init;
+  coap_address_set_port;
   coap_add_token;
   coap_adjust_basetime;
   coap_calc_timeout;
