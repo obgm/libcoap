@@ -1256,14 +1256,15 @@ coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
 #endif /* !COAP_DISABLE_TCP */
   }
 
-  if ( timeout > 0 ) {
-    if (timeout == COAP_RUN_NONBLOCK)
-      timeout = 0;
+  if (timeout == COAP_RUN_NONBLOCK) {
+    tv.tv_usec = 0;
+    tv.tv_sec = 0;
+  } else if (timeout > 0) {
     tv.tv_usec = (timeout % 1000) * 1000;
     tv.tv_sec = (long)(timeout / 1000);
   }
 
-  result = select(nfds, &readfds, &writefds, &exceptfds, timeout > 0 ? &tv : NULL);
+  result = select(nfds, &readfds, &writefds, &exceptfds, timeout == COAP_RUN_BLOCK ? NULL : &tv);
 
   if (result < 0) {   /* error */
 #ifdef _WIN32
