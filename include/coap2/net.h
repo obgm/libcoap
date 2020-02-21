@@ -209,6 +209,7 @@ typedef struct coap_context_t {
   unsigned int csm_timeout;           /**< Timeout for waiting for a CSM from the remote side. 0 means disabled. */
   int observe_pending;             /**< Observe response pending */
 
+  struct coap_cache_entry_t *cache; /**< CoAP message cache */
   void *app;                       /**< application-specific data */
 #ifdef COAP_EPOLL_SUPPORT
   int epfd;                        /**< External FD for epoll */
