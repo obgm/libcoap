@@ -28,6 +28,7 @@ struct coap_queue_t;
 struct coap_session_t;
 struct coap_string_t;
 struct coap_subscription_t;
+struct coap_cache_entry_t;
 
 /*
  * typedef all the structures that are defined in coap_*_internal.h
