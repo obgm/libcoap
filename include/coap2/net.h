@@ -730,8 +730,8 @@ coap_join_mcast_group(coap_context_t *ctx, const char *groupname);
  * @{
  */
 
-#define COAP_RUN_BLOCK    0
-#define COAP_RUN_NONBLOCK 1
+#define COAP_IO_WAIT    0
+#define COAP_IO_NO_WAIT ((uint32_t)-1)
 
 /**
  * The main I/O processing function.  All pending network I/O is completed,
@@ -749,16 +749,19 @@ coap_join_mcast_group(coap_context_t *ctx, const char *groupname);
  *
  * @param ctx The CoAP context
  * @param timeout_ms Minimum number of milliseconds to wait for new packets
- *                   before returning. If COAP_RUN_BLOCK, the call will block
- *                   until at least one new packet is received. If
- *                   COAP_RUN_NONBLOCK, the function will return immediately
- *                   following without waiting for any new input not already
- *                   available.
+ *                   before returning after doing any processing.
+ *                   If COAP_IO_WAIT, the call will block until the next
+ *                   internal action (e.g. packet retransmit) if any, or block
+ *                   until the next packet is received whichever is the sooner
+ *                   and do the necessary processing.
+ *                   If COAP_IO_NO_WAIT, the function will return immediately
+ *                   after processing without waiting for any new input
+ *                   packets to arrive.
  *
  * @return Number of milliseconds spent in function or @c -1 if there was
  *         an error
  */
-int coap_io_process(coap_context_t *ctx, unsigned int timeout_ms);
+int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms);
 
 /**
  * @deprecated Use coap_io_process() instead.
@@ -767,17 +770,20 @@ int coap_io_process(coap_context_t *ctx, unsigned int timeout_ms);
  *
  * @param ctx The CoAP context
  * @param timeout_ms Minimum number of milliseconds to wait for new packets
- *                   before returning. If COAP_RUN_BLOCK, the call will block
- *                   until at least one new packet is received. If
- *                   COAP_RUN_NONBLOCK, the function will return immediately
- *                   following without waiting for any new input not already
- *                   available.
+ *                   before returning after doing any processing.
+ *                   If COAP_IO_WAIT, the call will block until the next
+ *                   internal action (e.g. packet retransmit) if any, or block
+ *                   until the next packet is received whichever is the sooner
+ *                   and do the necessary processing.
+ *                   If COAP_IO_NO_WAIT, the function will return immediately
+ *                   after processing without waiting for any new input
+ *                   packets to arrive.
  *
  * @return Number of milliseconds spent in function or @c -1 if there was
  *         an error
  */
 COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_run_once(coap_context_t *ctx, unsigned int timeout_ms)
+coap_run_once(coap_context_t *ctx, uint32_t timeout_ms)
 {
   return coap_io_process(ctx, timeout_ms);
 }
@@ -787,10 +793,14 @@ coap_run_once(coap_context_t *ctx, unsigned int timeout_ms)
  *
  * @param ctx The CoAP context
  * @param timeout_ms Minimum number of milliseconds to wait for new packets
- *                   before returning. If COAP_RUN_BLOCK, the call will block
- *                   until at least one new packet is received. If
- *                   COAP_RUN_NONBLOCK, the function will return immediately
- *                   after processing any existing input packets.
+ *                   before returning after doing any processing.
+ *                   If COAP_IO_WAIT, the call will block until the next
+ *                   internal action (e.g. packet retransmit) if any, or block
+ *                   until the next packet is received whichever is the sooner
+ *                   and do the necessary processing.
+ *                   If COAP_IO_NO_WAIT, the function will return immediately
+ *                   after processing without waiting for any new input
+ *                   packets to arrive.
  * @param nfds      The maximum FD set in readfds, writefds or exceptfds
  *                  plus one,
  * @param readfds   Read FDs to additionally check for in internal select()
@@ -805,7 +815,7 @@ coap_run_once(coap_context_t *ctx, unsigned int timeout_ms)
  *         if there was an error.  If defined, readfds, writefds, exceptfds
  *         are updated as returned by the internal select() call.
  */
-int coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
+int coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
                         int nfds, fd_set *readfds, fd_set *writefds,
                         fd_set *exceptfds);
 

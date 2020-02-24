@@ -43,6 +43,9 @@
 #ifdef COAP_EPOLL_SUPPORT
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
 #endif /* COAP_EPOLL_SUPPORT */
 
 #ifdef WITH_CONTIKI
@@ -991,6 +994,10 @@ coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
 #endif /* COAP_EPOLL_SUPPORT */
 }
 
+/*
+ * return  0 No i/o pending
+ *       +ve millisecs to next i/o activity
+ */
 unsigned int
 coap_io_prepare_io(coap_context_t *ctx,
            coap_socket_t *sockets[],
@@ -1174,12 +1181,12 @@ coap_io_prepare_io(coap_context_t *ctx,
 }
 
 int
-coap_io_process(coap_context_t *ctx, unsigned timeout_ms) {
+coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   return coap_io_process_with_fds(ctx, timeout_ms, 0, NULL, NULL, NULL);
 }
 
 int
-coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
+coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
                          int enfds, fd_set *ereadfds, fd_set *ewritefds,
                          fd_set *eexceptfds) {
 #if COAP_CONSTRAINED_STACK
@@ -1256,9 +1263,12 @@ coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
 #endif /* !COAP_DISABLE_TCP */
   }
 
-  if ( timeout > 0 ) {
-    if (timeout == COAP_RUN_NONBLOCK)
-      timeout = 0;
+  if (timeout_ms == COAP_IO_NO_WAIT) {
+    tv.tv_usec = 0;
+    tv.tv_sec = 0;
+    timeout = 1;
+  }
+  else if (timeout > 0) {
     tv.tv_usec = (timeout % 1000) * 1000;
     tv.tv_sec = (long)(timeout / 1000);
   }
@@ -1322,10 +1332,17 @@ coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
     int etimeout = timeout;
 
     /* Potentially adjust based on what the caller wants */
-    if (timeout_ms == COAP_RUN_BLOCK)
-      etimeout = -1;
-    else if (timeout_ms == COAP_RUN_NONBLOCK)
+    if (timeout_ms == COAP_IO_NO_WAIT) {
       etimeout = 0;
+    }
+    else if (timeout == COAP_IO_WAIT) {
+      /* coap_io_prepare_epoll() returned 0 and timeout_ms COAP_IO_WAIT (0) */
+      etimeout = -1;
+    }
+    else if (etimeout < 0) {
+     /* epoll_wait cannot wait longer than this as int timeout parameter */
+      etimeout = INT_MAX;
+    }
 
     nfds = epoll_wait(ctx->epfd, events, COAP_MAX_EPOLL_EVENTS, etimeout);
     if (nfds < 0) {
@@ -1339,11 +1356,11 @@ coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
     coap_io_do_epoll(ctx, events, nfds);
 
     /*
-     * reset to COAP_RUN_NONBLOCK (which causes etimeout to become 0)
+     * reset to COAP_IO_NO_WAIT (which causes etimeout to become 0)
      * incase we have to do another iteration
      * (COAP_MAX_EPOLL_EVENTS insufficient)
      */
-    timeout_ms = COAP_RUN_NONBLOCK;
+    timeout_ms = COAP_IO_NO_WAIT;
 
     /* Keep retrying until less than COAP_MAX_EPOLL_EVENTS are returned */
   } while (nfds == COAP_MAX_EPOLL_EVENTS);
@@ -1359,7 +1376,7 @@ coap_io_process_with_fds(coap_context_t *ctx, unsigned int timeout_ms,
 }
 
 #else /* WITH_CONTIKI */
-int coap_io_process(coap_context_t *ctx, unsigned int timeout_ms) {
+int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   coap_tick_t now;
 
   coap_ticks(&now);
