@@ -800,12 +800,14 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     coap_tick_t now;
     va_list ap;
     FILE *log_fd;
+    size_t len;
 
     log_fd = level <= LOG_CRIT ? COAP_ERR_FD : COAP_DEBUG_FD;
 
     coap_ticks(&now);
-    if (print_timestamp(timebuf,sizeof(timebuf), now))
-      fprintf(log_fd, "%s ", timebuf);
+    len = print_timestamp(timebuf,sizeof(timebuf), now);
+    if (len)
+      fprintf(log_fd, "%.*s ", (int)len, timebuf);
 
     if (level <= COAP_LOG_CIPHERS)
       fprintf(log_fd, "%s ", loglevels[level]);
