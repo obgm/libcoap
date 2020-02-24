@@ -658,8 +658,33 @@ coap_session_create_client(
   coap_session_t *session = NULL;
 
   assert(server);
-  assert(proto != COAP_PROTO_NONE);
 
+  switch(proto) {
+  case COAP_PROTO_UDP:
+    break;
+  case COAP_PROTO_DTLS:
+    if (!coap_dtls_is_supported()) {
+      coap_log(LOG_CRIT, "coap_new_client_session*: DTLS not supported\n");
+      return NULL;
+    }
+    break;
+  case COAP_PROTO_TCP:
+    if (!coap_tcp_is_supported()) {
+      coap_log(LOG_CRIT, "coap_new_client_session*: TCP not supported\n");
+      return NULL;
+    }
+    break;
+  case COAP_PROTO_TLS:
+    if (!coap_tls_is_supported()) {
+      coap_log(LOG_CRIT, "coap_new_client_session*: TLS not supported\n");
+      return NULL;
+    }
+    break;
+  case COAP_PROTO_NONE:
+  default:
+    assert(0);
+    break;
+  }
   session = coap_make_session(proto, COAP_SESSION_TYPE_CLIENT, local_if,
     local_if, server, 0, ctx, NULL);
   if (!session)
@@ -1024,12 +1049,15 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     goto error;
   }
 
-#if !COAP_DISABLE_TCP
   if (proto == COAP_PROTO_TLS && !coap_tls_is_supported()) {
     coap_log(LOG_CRIT, "coap_new_endpoint: TLS not supported\n");
     goto error;
   }
-#endif /* !COAP_DISABLE_TCP */
+
+  if (proto == COAP_PROTO_TCP && !coap_tcp_is_supported()) {
+    coap_log(LOG_CRIT, "coap_new_endpoint: TCP not supported\n");
+    goto error;
+  }
 
   if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
     if (!coap_dtls_context_check_keys_enabled(context)) {

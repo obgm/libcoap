@@ -829,6 +829,13 @@ cmdline_uri(char *arg, int create_uri_opts) {
       return -1;
     }
 
+    if (uri.scheme==COAP_URI_SCHEME_COAP_TCP && !coap_tcp_is_supported()) {
+      /* coaps+tcp caught above */
+      coap_log(LOG_EMERG,
+            "coap+tcp URI scheme not supported in this version of libcoap\n");
+      return -1;
+    }
+
     if (uri.port != get_default_port(&uri) && create_uri_opts) {
       coap_insert_optlist(&optlist,
                   coap_new_optlist(COAP_OPTION_URI_PORT,

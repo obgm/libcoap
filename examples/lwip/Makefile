@@ -39,7 +39,7 @@ CFLAGS += -I$(top_srcdir)/include/coap2
 
 vpath %.c $(top_srcdir)/src
 
-COAPOBJS = net.o coap_debug.o option.o resource.o pdu.o encode.o subscribe.o coap_io_lwip.o block.o uri.o str.o coap_session.o coap_notls.o coap_hashkey.o address.o
+COAPOBJS = net.o coap_debug.o option.o resource.o pdu.o encode.o subscribe.o coap_io_lwip.o block.o uri.o str.o coap_session.o coap_notls.o coap_hashkey.o address.o coap_tcp.o
 
 CFLAGS += -g3 -Wall -Wextra -pedantic -O0 -fpack-struct
 # not sorted out yet
