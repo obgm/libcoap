@@ -16,8 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-coap_pdu_t *pdu;              /* Holds the request PDU for most tests */
-coap_opt_filter_t opts;              /* option filter used for generating responses */
+static coap_pdu_t *pdu;          /* Holds the request PDU for most tests */
+static coap_opt_filter_t opts;   /* option filter used for generating responses */
 
 /************************************************************************
  ** PDU decoder

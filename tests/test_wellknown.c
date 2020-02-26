@@ -22,10 +22,10 @@
 #define TEST_PDU_SIZE 120
 #define TEST_URI_LEN    4
 
-coap_context_t *ctx;           /* Holds the coap context for most tests */
-coap_pdu_t *pdu;           /* Holds the parsed PDU for most tests */
-coap_session_t *session;   /* Holds a reference-counted session object
-                            * that is passed to coap_wellknown_response(). */
+static coap_context_t *ctx;       /* Holds the coap context for most tests */
+static coap_pdu_t *pdu;           /* Holds the parsed PDU for most tests */
+static coap_session_t *session;   /* Holds a reference-counted session object
+                                   * that is passed to coap_wellknown_response(). */
 
 static void
 t_wellknown1(void) {
