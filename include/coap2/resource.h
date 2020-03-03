@@ -260,6 +260,8 @@ int coap_delete_resource(coap_context_t *context, coap_resource_t *resource);
 /**
  * Deletes all resources from given @p context and frees their storage.
  *
+ * Internal function.
+ *
  * @param context The CoAP context with the resources to be deleted.
  */
 void coap_delete_all_resources(coap_context_t *context);

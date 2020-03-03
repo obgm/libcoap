@@ -105,6 +105,16 @@ coap_free_async(coap_async_state_t *s) {
   }
 }
 
+void
+coap_delete_all_async(coap_context_t *context) {
+  coap_async_state_t *astate, *tmp;
+
+  LL_FOREACH_SAFE(context->async_state, astate, tmp) {
+    coap_free_async(astate);
+  }
+  context->async_state = NULL;
+}
+
 #else
 void does_not_exist(void);        /* make some compilers happy */
 #endif /* WITHOUT_ASYNC */

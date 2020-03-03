@@ -68,6 +68,8 @@ int coap_delete_node(coap_queue_t *node);
 /**
  * Removes all items from given @p queue and frees the allocated storage.
  *
+ * Internal function.
+ *
  * @param queue The queue to delete.
  */
 void coap_delete_all(coap_queue_t *queue);

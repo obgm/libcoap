@@ -34,8 +34,6 @@ coap_debug_send_packet
 coap_debug_set_packet_loss
 coap_decode_var_bytes
 coap_decode_var_bytes8
-coap_delete_all
-coap_delete_all_resources
 coap_delete_attr
 coap_delete_bin_const
 coap_delete_node

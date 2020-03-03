@@ -586,6 +586,10 @@ coap_free_context(coap_context_t *context) {
 
   coap_delete_all_resources(context);
 
+#ifndef WITHOUT_ASYNC
+  coap_delete_all_async(context);
+#endif /* WITHOUT_ASYNC */
+
   LL_FOREACH_SAFE(context->endpoint, ep, tmp) {
     coap_free_endpoint(ep);
   }
