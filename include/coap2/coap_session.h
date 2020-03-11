@@ -134,10 +134,13 @@ coap_session_t *coap_session_reference(coap_session_t *session);
 * Decrement reference counter on a session.
 * Note that the session may be deleted as a result and should not be used
 * after this call.
-*
+* The v2 version was created as a "bugfix" when the associated coap sessions
+* were not fully released when deleting a resource. This fix is more a workaround
+* that a proper solution.
 * @param session The CoAP session.
 */
 void coap_session_release(coap_session_t *session);
+void coap_session_release_v2(coap_session_t *session);
 
 /**
 * Stores @p data with the given session. This function overwrites any value

@@ -70,6 +70,7 @@ coap_session_reference(coap_session_t *session) {
   return session;
 }
 
+
 void
 coap_session_release(coap_session_t *session) {
   if (session) {
@@ -77,6 +78,17 @@ coap_session_release(coap_session_t *session) {
     if (session->ref > 0)
       --session->ref;
     if (session->ref == 0 && session->type == COAP_SESSION_TYPE_CLIENT)
+      coap_session_free(session);
+  }
+}
+
+void
+coap_session_release_v2(coap_session_t *session) {
+  if (session) {
+    assert(session->ref > 0);
+    if (session->ref > 0)
+      --session->ref;
+    if (session->ref == 0)
       coap_session_free(session);
   }
 }

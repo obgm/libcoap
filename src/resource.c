@@ -429,7 +429,7 @@ coap_free_resource(coap_resource_t *resource) {
 
   /* free all elements from resource->subscribers */
   LL_FOREACH_SAFE( resource->subscribers, obs, otmp ) {
-    coap_session_release( obs->session );
+    coap_session_release_v2( obs->session );
     if (obs->query)
       coap_delete_string(obs->query);
     COAP_FREE_TYPE( subscription, obs );
