@@ -111,7 +111,7 @@ typedef struct coap_resource_t {
    * resource.
    */
   coap_str_const_t *uri_path;  /**< the key used for hash lookup for this resource */
-  int flags;
+  int flags;                   /**< Or'd set of COAP_RESOURCE_FLAGS_ */
 
   /**
   * The next value for the Observe option. This field must be increased each
@@ -451,7 +451,7 @@ coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
  *                        take ownership of the string unless this
  *                        function returns NULL.
  * @param has_block2      If Option Block2 defined.
- * @param block2          Contents of Block2 if Block 2 defined.
+ * @param block           Contents of Block2 if has_block2 defined.
  * @param code            Request type code.
  *
  * @return                A pointer to the added/updated subscription
@@ -462,7 +462,7 @@ coap_subscription_t *coap_add_observer(coap_resource_t *resource,
                                        const coap_binary_t *token,
                                        coap_string_t *query,
                                        int has_block2,
-                                       coap_block_t block2,
+                                       coap_block_t block,
                                        uint8_t code);
 
 /**

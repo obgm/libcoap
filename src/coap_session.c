@@ -130,6 +130,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   session->ifindex = ifindex;
   session->context = context;
   session->endpoint = endpoint;
+  session->block_mode = context->block_mode;
   if (endpoint)
     session->mtu = endpoint->default_mtu;
   else
@@ -156,6 +157,30 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
 void coap_session_mfree(coap_session_t *session) {
   coap_queue_t *q, *tmp;
   coap_cache_entry_t *cp, *ctmp;
+  coap_lg_xmit_t *lq, *ltmp;
+  coap_lg_crcv_t *cq, *etmp;
+  coap_lg_srcv_t *sq, *stmp;
+
+  /* Need to do this before (D)TLS and socket is closed down */
+  LL_FOREACH_SAFE(session->lg_crcv, cq, etmp) {
+    if (cq->observe_set) {
+      /* Need to close down observe */
+      if (coap_cancel_observe(session, cq->app_token, COAP_MESSAGE_NON)) {
+        /* Need to delete node we set up for NON */
+        coap_queue_t *queue = session->context->sendqueue;
+
+        while (queue) {
+          if (queue->session == session) {
+            coap_delete_node(queue);
+            break;
+          }
+          queue = queue->next;
+        }
+      }
+    }
+    LL_DELETE(session->lg_crcv, cq);
+    coap_block_delete_lg_crcv(session, cq);
+  }
 
   if (session->partial_pdu)
     coap_delete_pdu(session->partial_pdu);
@@ -184,6 +209,14 @@ void coap_session_mfree(coap_session_t *session) {
     if (q->pdu->type==COAP_MESSAGE_CON && session->context && session->context->nack_handler)
       session->context->nack_handler(session->context, session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);
     coap_delete_node(q);
+  }
+  LL_FOREACH_SAFE(session->lg_xmit, lq, ltmp) {
+    LL_DELETE(session->lg_xmit, lq);
+    coap_block_delete_lg_xmit(session, lq);
+  }
+  LL_FOREACH_SAFE(session->lg_srcv, sq, stmp) {
+    LL_DELETE(session->lg_srcv, sq);
+    coap_block_delete_lg_srcv(session, sq);
   }
 }
 
@@ -1066,6 +1099,18 @@ coap_session_t *coap_new_server_session(
 error:
   coap_session_free(session);
   return NULL;
+}
+
+void
+coap_session_init_token(coap_session_t *session, size_t len,
+                             const uint8_t *data) {
+  session->tx_token = coap_decode_var_bytes8(data, len);
+}
+
+void coap_session_new_token(coap_session_t *session, size_t *len,
+                                      uint8_t *data) {
+  *len = coap_encode_var_safe8(data,
+                               sizeof(session->tx_token), ++session->tx_token);
 }
 
 #ifndef WITH_LWIP

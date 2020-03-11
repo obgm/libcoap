@@ -225,8 +225,9 @@ coap_string_t *query, coap_pdu_t *response) {
     }
     len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
   }
+  response->code = COAP_RESPONSE_CODE_CONTENT;
   /*
-   * Invoke coap_add_data_blocked_response() to do all the hard work.
+   * Invoke coap_add_data_large_response() to do all the hard work.
    *
    * Define the format - COAP_MEDIATYPE_TEXT_PLAIN - to add in
    * Define how long this response is valid for (secs) - 1 - to add in.
@@ -235,15 +236,10 @@ coap_string_t *query, coap_pdu_t *response) {
    * BLOCK2 Option added internally if output too large
    * ETAG Option added internally
    */
-  coap_add_data_blocked_response(resource, session, request, response, token,
-                                 COAP_MEDIATYPE_TEXT_PLAIN, 1,
-                                 len,
-                                 buf);
-
-  /*
-   * As resource->code has been updated in coap_add_data_blocked_response(),
-   * the response pdu will be transmitted by the underlying library.
-   */
+  coap_add_data_large_response(resource, session, request, response, token,
+                               query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
+                               len,
+                               buf, NULL, 0);
 
 }
 ----

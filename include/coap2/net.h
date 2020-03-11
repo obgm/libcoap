@@ -201,7 +201,9 @@ typedef struct coap_context_t {
   unsigned int max_handshake_sessions; /**< Maximum number of simultaneous negotating sessions per endpoint. 0 means use default. */
   unsigned int ping_timeout;           /**< Minimum inactivity time before sending a ping message. 0 means disabled. */
   unsigned int csm_timeout;           /**< Timeout for waiting for a CSM from the remote side. 0 means disabled. */
-  int observe_pending;             /**< Observe response pending */
+  uint8_t observe_pending;         /**< Observe response pending */
+  uint8_t block_mode;              /**< Zero or more COAP_BLOCK_ or'd options */
+  uint64_t etag;                   /**< Next ETag to use */
 
   coap_cache_entry_t *cache;       /**< CoAP cache-entry cache */
   uint16_t *cache_ignore_options;  /**< CoAP options to ignore when creating a cache-key */
@@ -372,8 +374,6 @@ coap_context_set_pki_root_cas(coap_context_t *context,
  * @param context        The coap_context_t object.
  * @param seconds        Number of seconds for the inactivity timer, or zero
  *                       to disable CoAP-level keepalive messages.
- *
- * @return 1 if successful, else 0
  */
 void coap_context_set_keepalive(coap_context_t *context, unsigned int seconds);
 
@@ -440,7 +440,7 @@ void *coap_get_app_data(const coap_context_t *context);
  * time, the textual reason phrase for @p code will be added as payload, with
  * Content-Type @c 0.
  * This function returns a pointer to the new response message, or @c NULL on
- * error. The storage allocated for the new message must be relased with
+ * error. The storage allocated for the new message must be released with
  * coap_free().
  *
  * @param request Specification of the received (confirmable) request.
@@ -475,7 +475,7 @@ coap_tid_t coap_send_error(coap_session_t *session,
                            coap_opt_filter_t opts);
 
 /**
- * Helper funktion to create and send a message with @p type (usually ACK or
+ * Helper function to create and send a message with @p type (usually ACK or
  * RST). This function returns @c COAP_INVALID_TID when the message was not
  * sent, a valid transaction id otherwise.
  *
@@ -519,7 +519,7 @@ coap_send_rst(coap_session_t *session, coap_pdu_t *request) {
 
 /**
 * Sends a CoAP message to given peer. The memory that is
-* allocated by pdu will be released by coap_send().
+* allocated for the pdu will be released by coap_send().
 * The caller must not use the pdu after calling coap_send().
 *
 * @param session         The CoAP session.
@@ -529,6 +529,23 @@ coap_send_rst(coap_session_t *session, coap_pdu_t *request) {
 *                        COAP_INVALID_TID on error.
 */
 coap_tid_t coap_send( coap_session_t *session, coap_pdu_t *pdu );
+
+/**
+ * Sends a CoAP message to given peer. The memory that is
+ * allocated for the pdu will be released by coap_send_large().
+ * The caller must not use the pdu after calling coap_send_large().
+ *
+ * If the response body is split into multiple payloads using blocks, libcoap
+ * will handle asking for the subsequent blocks and any necessary recovery
+ * needed.
+ *
+ * @param session   The CoAP session.
+ * @param pdu       The CoAP PDU to send.
+ *
+ * @return          The message id of the sent message or @c
+ *                  COAP_INVALID_TID on error.
+ */
+coap_tid_t coap_send_large(coap_session_t *session, coap_pdu_t *pdu);
 
 /**
  * Handles retransmissions of confirmable messages

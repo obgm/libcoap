@@ -3,6 +3,8 @@ coap_add_block
 coap_add_data
 coap_add_data_after
 coap_add_data_blocked_response
+coap_add_data_large_request
+coap_add_data_large_response
 coap_add_observer
 coap_add_option
 coap_add_optlist_pdu
@@ -13,6 +15,7 @@ coap_address_init
 coap_address_set_port
 coap_add_token
 coap_adjust_basetime
+coap_block_build_body
 coap_cache_derive_key
 coap_cache_get_app_data
 coap_cache_get_by_key
@@ -22,6 +25,7 @@ coap_cache_ignore_options
 coap_cache_set_app_data
 coap_calc_timeout
 coap_cancel_all_messages
+coap_cancel_observe
 coap_cancel_session_messages
 coap_can_exit
 coap_check_notify
@@ -31,6 +35,7 @@ coap_clear_event_handler
 coap_clock_init
 coap_clone_uri
 coap_context_get_coap_fd
+coap_context_set_block_mode
 coap_context_set_keepalive
 coap_context_set_pki
 coap_context_set_pki_root_cas
@@ -75,6 +80,7 @@ coap_free_type
 coap_get_app_data
 coap_get_block
 coap_get_data
+coap_get_data_large
 coap_get_log_level
 coap_get_query
 coap_get_resource_from_uri_path
@@ -136,6 +142,7 @@ coap_package_name
 coap_package_version
 coap_packet_get_memmapped
 coap_pdu_clear
+coap_pdu_duplicate
 coap_pdu_encode_header
 coap_pdu_init
 coap_pdu_parse
@@ -168,6 +175,7 @@ coap_retransmit
 coap_send
 coap_send_ack
 coap_send_error
+coap_send_large
 coap_send_message_type
 coap_session_connected
 coap_session_delay_pdu
@@ -178,7 +186,9 @@ coap_session_get_ack_timeout
 coap_session_get_app_data
 coap_session_get_by_peer
 coap_session_get_max_transmit
+coap_session_init_token
 coap_session_max_pdu_size
+coap_session_new_token
 coap_session_reference
 coap_session_release
 coap_session_send

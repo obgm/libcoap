@@ -120,6 +120,9 @@ void coap_delete_binary(coap_binary_t *binary);
  * It is the responsibility of the caller to fill in all the appropriate
  * additional information.
  *
+ * Note: If there is an error, @p binary will separately need to be released by
+ * coap_delete_binary().
+ *
  * @param binary The coap_binary_t object to resize.
  * @param new_size The new size to allocate for the binary data.
  *

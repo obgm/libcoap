@@ -80,6 +80,27 @@
 #endif /* COAP_MAX_CACHE_ENTRIES */
 
 /**
+ * Maximum number of large body transmissions.
+ */
+#ifndef COAP_MAX_LG_XMIT
+#define COAP_MAX_LG_XMIT 2
+#endif /* COAP_MAX_LG_XMIT */
+
+/**
+ * Maximum number of large body client receives.
+ */
+#ifndef COAP_MAX_LG_CRCV
+#define COAP_MAX_LG_CRCV 2
+#endif /* COAP_MAX_LG_CRCV */
+
+/**
+ * Maximum number of large body server receives.
+ */
+#ifndef COAP_MAX_LG_SRCV
+#define COAP_MAX_LG_SRCV 2
+#endif /* COAP_MAX_LG_SRCV */
+
+/**
  * Number of notifications that may be sent non-confirmable before a
  * confirmable message is sent to detect if observers are alive. The
  * maximum allowed value here is @c 15.

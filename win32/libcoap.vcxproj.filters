@@ -113,6 +113,9 @@
     <ClInclude Include="..\include\coap2\coap_cache.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\coap2\coap_block_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\coap2\coap_cache_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>

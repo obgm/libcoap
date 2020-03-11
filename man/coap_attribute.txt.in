@@ -88,7 +88,7 @@ init_resources(coap_context_t *ctx) {
   r = coap_resource_init(NULL, 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
-  /* Document resource for .well-known/core request */
+  /* Document resource for '.well-known/core' request */
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
   coap_add_attr(r, coap_make_str_const("title"),
                 coap_make_str_const("\"General Info\""), 0);
@@ -103,7 +103,7 @@ init_resources(coap_context_t *ctx) {
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
 
-  /* Document resource for .well-known/core request */
+  /* Document resource for 'time' request */
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
   coap_add_attr(r, coap_make_str_const("title"),
                 coap_make_str_const("\"Internal Clock\""), 0);

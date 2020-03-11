@@ -16,6 +16,7 @@
 #define COAP_PDU_H_
 
 #include "uri.h"
+#include "option.h"
 
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
@@ -111,8 +112,8 @@ typedef enum coap_request_t {
  * --+---+---+---+---+---+---+---+
  *
  * https://tools.ietf.org/html/rfc8613#section-4 goes on to define E, I and U
- * properties Encrypted and Integrity Protected, Integrity Protected Only and
- * Unprotected respectively.  Integretity Protected Only is not currently used.
+ * properties Encrypted and Integrity Protected, Integrity Protected Only, and
+ * Unprotected respectively.  Integrity Protected Only is not currently used.
  *
  * An Option is tagged with CUNREIU with any of the letters replaced with _ if
  * not set, or - for N if U is set (see above) for aiding understanding of the
@@ -284,7 +285,7 @@ COAP_DEPRECATED typedef struct {
  * payload starts at data, its length is used_size - (data - token)
  */
 
-typedef struct coap_pdu_t {
+struct coap_pdu_t {
   uint8_t type;             /**< message type */
   uint8_t code;             /**< request method (value 1--31) or response code (value 64-255) */
   uint8_t max_hdr_size;     /**< space reserved for protocol-specific header */
@@ -307,7 +308,13 @@ typedef struct coap_pdu_t {
                              *   to the pdu, and the pbuf stays exclusive to
                              *   this pdu. */
 #endif
-} coap_pdu_t;
+  const uint8_t *body_data; /**< Holds ptr to re-assembled data or NULL */
+  size_t body_length;       /**< Holds body data length */
+  size_t body_offset;       /**< Holds body data offset */
+  size_t body_total;        /**< Holds body data total size */
+  coap_lg_xmit_t *lg_xmit;  /**< Holds ptr to lg_xmit if sending a set of
+                                 blocks */
+};
 
 #define COAP_PDU_IS_EMPTY(pdu)     ((pdu)->code == 0)
 #define COAP_PDU_IS_REQUEST(pdu)   (!COAP_PDU_IS_EMPTY(pdu) && (pdu)->code < 32)
@@ -371,7 +378,7 @@ enum coap_response_code {
   COAP_RESPONSE_CODE_PRECONDITION_FAILED = COAP_RESPONSE_CODE(412),
   COAP_RESPONSE_CODE_REQUEST_TOO_LARGE = COAP_RESPONSE_CODE(413),
   COAP_RESPONSE_CODE_UNSUPPORTED_CONTENT_FORMAT =
-					COAP_RESPONSE_CODE(415),
+                                        COAP_RESPONSE_CODE(415),
   COAP_RESPONSE_CODE_UNPROCESSABLE = COAP_RESPONSE_CODE(422),
   COAP_RESPONSE_CODE_TOO_MANY_REQUESTS = COAP_RESPONSE_CODE(429),
   COAP_RESPONSE_CODE_INTERNAL_ERROR = COAP_RESPONSE_CODE(500),
@@ -380,7 +387,7 @@ enum coap_response_code {
   COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE = COAP_RESPONSE_CODE(503),
   COAP_RESPONSE_CODE_GATEWAY_TIMEOUT = COAP_RESPONSE_CODE(504),
   COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED =
-					COAP_RESPONSE_CODE(505),
+                                        COAP_RESPONSE_CODE(505),
   COAP_RESPONSE_CODE_HOP_LIMIT_REACHED = COAP_RESPONSE_CODE(508)
 };
 
@@ -388,8 +395,8 @@ enum coap_response_code {
  * Creates a new CoAP PDU with at least enough storage space for the given
  * @p size maximum message size. The function returns a pointer to the
  * node coap_pdu_t object on success, or @c NULL on error. The storage allocated
- * for the result must be released with coap_delete_pdu() if coap_send() is not
- * called.
+ * for the result must be released with coap_delete_pdu() if coap_send() or
+ * coap_send_large() is not called.
  *
  * @param type The type of the PDU (one of COAP_MESSAGE_CON, COAP_MESSAGE_NON,
  *             COAP_MESSAGE_ACK, COAP_MESSAGE_RST).
@@ -414,7 +421,7 @@ int coap_pdu_resize(coap_pdu_t *pdu, size_t new_size);
 
 /**
  * Dynamically grows the size of @p pdu to @p new_size if needed. The new size
- * must not exceed the PDU's configure maximum size. On success, this
+ * must not exceed the PDU's configured maximum size. On success, this
  * function returns 1, otherwise 0.
  *
  * Internal use only.
@@ -435,17 +442,42 @@ void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
 
 /**
  * Creates a new CoAP PDU.
+ *
+ * @param session The session that will be using this PDU
+ *
+ * @return The skeletal PDU or @c NULL if failure.
  */
 coap_pdu_t *coap_new_pdu(const struct coap_session_t *session);
 
 /**
  * Dispose of an CoAP PDU and frees associated storage.
  * Not that in general you should not call this function directly.
- * When a PDU is sent with coap_send(), coap_delete_pdu() will be
- * called automatically for you.
+ * When a PDU is sent with coap_send() or coap_send_large(), coap_delete_pdu()
+ * will be called automatically for you.
+ *
+ * @param pdu The PDU for free off.
  */
+void coap_delete_pdu(coap_pdu_t *pdu);
 
-void coap_delete_pdu(coap_pdu_t *);
+/**
+ * Duplicate an existing PDU. Specific options can be ignored and not copied
+ * across.  The PDU data payload is not copied across.
+ *
+ * @param old_pdu      The PDU to duplicate
+ * @param session      The session that will be using this PDU.
+ * @param token_length The length of the token to use in this duplicated PDU.
+ * @param token        The token to use in this duplicated PDU.
+ * @param drop_options A list of options not to copy into the duplicated PDU.
+ *                     If @c NULL, then all options are copied across.
+ *
+ * @return The duplicated PDU or @c NULL if failure.
+ */
+coap_pdu_t *
+coap_pdu_duplicate(const coap_pdu_t *old_pdu,
+                   struct coap_session_t *session,
+                   size_t token_length,
+                   uint8_t *token,
+                   coap_opt_filter_t drop_options);
 
 /**
 * Interprets @p data to determine the number of bytes in the header.
@@ -534,6 +566,22 @@ int coap_add_token(coap_pdu_t *pdu,
 size_t coap_insert_option(coap_pdu_t *, uint16_t, size_t, const uint8_t *);
 
 /**
+ * Updates token in @p pdu with length @p len and @p data.
+ * This function returns @c 0 on error or a value greater than zero on success.
+ *
+ * Internal use only
+ *
+ * @param pdu  The PDU where the token is to be updated.
+ * @param len  The length of the new token.
+ * @param data The token to add.
+ *
+ * @return     A value greater than zero on success, or @c 0 on error.
+ */
+int coap_update_token(coap_pdu_t *pdu,
+                      size_t len,
+                      const uint8_t *data);
+
+/**
  * Adds option of given type to pdu that is passed as first
  * parameter.
  * coap_add_option() destroys the PDU's data, so coap_add_data() must be called
@@ -549,8 +597,16 @@ size_t coap_add_option(coap_pdu_t *pdu,
 
 
 /**
+ * Removes option of given type from the @p pdu.
+ *
+ * Internal use only.
+ */
+int coap_remove_option(coap_pdu_t *pdu, uint16_t type);
+
+/**
  * Inserts option of given type in the @p pdu with the appropriate data.
- * The option will be inserted in the appropriate place in the options in the pdu.
+ * The option will be inserted in the appropriate place in the options in
+ * the pdu.
  *
  * Internal use only.
  */
@@ -592,6 +648,29 @@ uint8_t *coap_add_data_after(coap_pdu_t *pdu, size_t len);
 int coap_get_data(const coap_pdu_t *pdu,
                   size_t *len,
                   uint8_t **data);
+
+/**
+ * Retrieves the data from a PDU, with support for large bodies of data that
+ * spans multiple PDUs.
+ *
+ * Note: The data pointed to on return is destroyed when the PDU is destroyed.
+ *
+ * @param pdu    The specified PDU.
+ * @param len    Returns the length of the current data
+ * @param data   Returns the ptr to the current data
+ * @param offset Returns the offset of the current data from the start of the
+ *               body comprising of many blocks (RFC7959)
+ * @param total  Returns the total size of the body.
+ *               If offset + length < total, then there is more data to follow.
+ *
+ * @return @c 1 if len, data, offset and total are correctly filled in, else
+ *         @c 0 if there is no data.
+ */
+int coap_get_data_large(const coap_pdu_t *pdu,
+                        size_t *len,
+                        const uint8_t **data,
+                        size_t *offset,
+                        size_t *total);
 
 /**
  * Compose the protocol specific header for the specified PDU.

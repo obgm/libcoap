@@ -402,6 +402,9 @@ MEMB(resource_storage, coap_resource_t, COAP_MAX_RESOURCES);
 MEMB(attribute_storage, coap_attr_t, COAP_MAX_ATTRIBUTES);
 MEMB(cache_key_storage, coap_cache_key_t, COAP_MAX_CACHE_KEYS);
 MEMB(cache_entry_storage, coap_cache_entry_t, COAP_MAX_CACHE_ENTRIES);
+MEMB(lg_xmit_storage, coap_lg_xmit_t, COAP_MAX_LG_XMIT);
+MEMB(lg_crcv_storage, coap_lg_crcv_t, COAP_MAX_LG_CRCV);
+MEMB(lg_srcv_storage, coap_lg_srcv_t, COAP_MAX_LG_SRCV);
 
 static struct memb *
 get_container(coap_memory_tag_t type) {
@@ -415,6 +418,9 @@ get_container(coap_memory_tag_t type) {
   case COAP_RESOURCEATTR: return &attribute_storage;
   case COAP_CACHE_KEY:    return &cache_key_storage;
   case COAP_CACHE_ENTRY:  return &cache_entry_storage;
+  case COAP_LG_XMIT: return &lg_xmit_storage;
+  case COAP_LG_CRCV: return &lg_crcv_storage;
+  case COAP_LG_SRCV: return &lg_srcv_storage;
   default:
     return &string_storage;
   }
@@ -432,6 +438,9 @@ coap_memory_init(void) {
   memb_init(&attribute_storage);
   memb_init(&cache_key_storage);
   memb_init(&cache_entry_storage);
+  memb_init(&lg_xmit_storage);
+  memb_init(&lg_crcv_storage);
+  memb_init(&lg_srcv_storage);
 }
 
 void *

@@ -25,6 +25,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_riot.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_asn1_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_block_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_cache_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
@@ -185,6 +186,7 @@ coap_mfree_endpoint \
 coap_packet_extract_pbuf \
 coap_pdu_check_resize \
 coap_pdu_from_pbuf \
+coap_remove_option \
 coap_session_mfree \
 coap_session_new_dtls_session \
 coap_session_refresh_psk_hint \
@@ -207,6 +209,7 @@ coap_tls_new_server_session \
 coap_tls_read \
 coap_tls_write \
 coap_update_option \
+coap_update_token \
 "
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if

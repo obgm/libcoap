@@ -77,6 +77,9 @@ typedef struct coap_session_t {
   uint8_t csm_block_supported;      /**< CSM TCP blocks supported */
   coap_tid_t last_ping_mid;         /**< the last keepalive message id that was used in this session */
   struct coap_queue_t *delayqueue;  /**< list of delayed messages waiting to be sent */
+  coap_lg_xmit_t *lg_xmit;          /**< list of large transmissions */
+  coap_lg_crcv_t *lg_crcv;       /**< Client list of expected large receives */
+  coap_lg_srcv_t *lg_srcv;       /**< Server list of expected large receives */
   size_t partial_write;             /**< if > 0 indicates number of bytes already written from the pdu at the head of sendqueue */
   uint8_t read_header[8];           /**< storage space for header of incoming message header */
   size_t partial_read;              /**< if > 0 indicates number of bytes already read for an incoming message */
@@ -121,6 +124,8 @@ typedef struct coap_session_t {
   coap_fixed_point_t ack_random_factor; /**< ack random factor backoff (default 1.5) */
   unsigned int dtls_timeout_count;      /**< dtls setup retry counter */
   int dtls_event;                       /**< Tracking any (D)TLS events on this sesison */
+  uint8_t block_mode;             /**< Zero or more COAP_BLOCK_ or'd options */
+  uint64_t tx_token;              /**< Next token number to use */
 } coap_session_t;
 
 /**
@@ -358,6 +363,27 @@ ssize_t coap_session_write(coap_session_t *session,
 */
 ssize_t coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu);
 
+/**
+ * Initializes the token value to use as a starting point.
+ *
+ * @param session The current coap_session_t object.
+ * @param length  The length of the token (0 - 8 bytes).
+ * @param token   The token data.
+ *
+ */
+void coap_session_init_token(coap_session_t *session, size_t length,
+                             const uint8_t *token);
+
+/**
+ * Creates a new token for use.
+ *
+ * @param session The current coap_session_t object.
+ * @param length  Updated with the length of the new token.
+ * @param token   Updated with the new token data (must be 8 bytes long).
+ *
+ */
+void coap_session_new_token(coap_session_t *session, size_t *length,
+                                      uint8_t *token);
 
 /**
  * @ingroup logging

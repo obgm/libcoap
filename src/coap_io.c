@@ -1018,6 +1018,10 @@ coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
       new_value.it_value.tv_nsec = (rem_timeout % COAP_TICKS_PER_SECOND) *
                                    1000000;
     }
+#ifdef COAP_DEBUG_WAKEUP_TIMES
+    coap_log(LOG_INFO, "****** Next wakeup time %ld.%09ld\n",
+             new_value.it_value.tv_sec, new_value.it_value.tv_nsec);
+#endif /* COAP_DEBUG_WAKEUP_TIMES */
     /* reset, or specify a future time for eptimerfd to trigger */
     ret = timerfd_settime(ctx->eptimerfd, 0, &new_value, NULL);
     if (ret == -1) {
@@ -1081,6 +1085,13 @@ coap_io_prepare_io(coap_context_t *ctx,
           if (timeout == 0 || s_timeout < timeout)
             timeout = s_timeout;
         }
+        /* Check if any server large receives have timed out */
+        if (s->lg_srcv) {
+          coap_tick_t s_timeout;
+          s_timeout = coap_block_check_lg_srcv_timeouts(s, now);
+          if (timeout == 0 || s_timeout < timeout)
+            timeout = s_timeout;
+        }
 #ifndef COAP_EPOLL_SUPPORT
         if (s->sock.flags & (COAP_SOCKET_WANT_READ | COAP_SOCKET_WANT_WRITE)) {
           if (*num_sockets < max_sockets)
@@ -1132,6 +1143,14 @@ coap_io_prepare_io(coap_context_t *ctx,
         continue;
       }
       s_timeout = (s->csm_tx + ctx->csm_timeout * COAP_TICKS_PER_SECOND) - now;
+      if (timeout == 0 || s_timeout < timeout)
+        timeout = s_timeout;
+    }
+
+    /* Check if any client large receives have timed out */
+    if (s->lg_crcv) {
+      coap_tick_t s_timeout;
+      s_timeout = coap_block_check_lg_crcv_timeouts(s, now);
       if (timeout == 0 || s_timeout < timeout)
         timeout = s_timeout;
     }

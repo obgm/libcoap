@@ -496,6 +496,8 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   int content_format = -1;
   size_t data_len;
   unsigned char *data;
+  uint32_t opt_len;
+  const uint8_t* opt_val;
   size_t outbuflen = 0;
 
   /* Save time if not needed */
@@ -568,6 +570,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
       break;
     } else switch (opt_iter.type) {
     case COAP_OPTION_CONTENT_FORMAT:
+    case COAP_OPTION_ACCEPT:
       content_format = (int)coap_decode_var_bytes(coap_opt_value(option),
                                                   coap_opt_length(option));
 
@@ -597,6 +600,18 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
                                                coap_opt_length(option)));
       break;
 
+    case COAP_OPTION_IF_MATCH:
+    case COAP_OPTION_ETAG:
+      opt_len = coap_opt_length(option);
+      opt_val = coap_opt_value(option);
+      snprintf((char *)buf, sizeof(buf), "0x");
+      for (i = 0; (uint32_t)i < opt_len; i++) {
+        buf_len = strlen((char *)buf);
+        snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
+                  "%02x", opt_val[i]);
+      }
+      buf_len = strlen((char *)buf);
+      break;
     default:
       /* generic output function for all other option types */
       if (opt_iter.type == COAP_OPTION_URI_PATH ||
@@ -909,15 +924,19 @@ int coap_debug_send_packet(void) {
     int i;
     for (i = 0; i < num_packet_loss_intervals; i++) {
       if (send_packet_count >= packet_loss_intervals[i].start
-        && send_packet_count <= packet_loss_intervals[i].end)
+        && send_packet_count <= packet_loss_intervals[i].end) {
+        coap_log(LOG_DEBUG, "Packet %u dropped\n", send_packet_count);
         return 0;
+      }
     }
   }
   if ( packet_loss_level > 0 ) {
     uint16_t r = 0;
     coap_prng( (uint8_t*)&r, 2 );
-    if ( r < packet_loss_level )
+    if ( r < packet_loss_level ) {
+      coap_log(LOG_DEBUG, "Packet %u dropped\n", send_packet_count);
       return 0;
+    }
   }
   return 1;
 }
