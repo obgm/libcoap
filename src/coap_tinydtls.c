@@ -37,6 +37,9 @@ void coap_dtls_startup(void) {
   coap_ticks(&coap_tick_0);
 }
 
+void coap_dtls_shutdown(void) {
+}
+
 void
 coap_dtls_set_log_level(int level) {
   dtls_set_log_level(level);

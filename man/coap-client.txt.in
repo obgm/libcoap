@@ -19,7 +19,8 @@ SYNOPSIS
               [*-t* type] [*-v* num] [*-A* type] [*-B* seconds] [*-K* interval]
               [*-N*] [*-O* num,text] [*-P* addr[:port]] [*-T* token] [*-U*]
               [[*-h* match_hint_file] [*-k* key] [*-u* user]]
-              [[*-c* certfile] [*-C* cafile] [*-R* root_cafile]] URI
+              [[*-c* certfile] [*-j* keyfile] [*-C* cafile] [*-J* pkcs11_pin]
+              [*-R* root_cafile]] URI
 
 DESCRIPTION
 -----------
@@ -30,8 +31,8 @@ command line. The URI must have the scheme 'coap', 'coap+tcp', 'coaps' or
 built with support for secure (D)TLS communication.
 
 If 'coaps' or 'coap+tcp' is being used, provided the CoAP server supports PKI
-and is configured with a Certificate and Private Key, the coap-client does not
-need to have a Pre-Shared Key (-k) or Certificate (-c) configured.
+and is configured with a certificate and private key, the coap-client does not
+need to have a Pre-Shared Key (-k) or certificate (-c) configured.
 
 The URI's host part may be a DNS name or a literal IP address. Note that, for
 IPv6 address references, angle brackets are required (c.f. EXAMPLES).
@@ -153,17 +154,30 @@ OPTIONS - PKI
 -------------
 (If supported by underlying (D)TLS library)
 
+*Note:* If any one of *certfile*, *keyfile* or *cafile* is in PKCS11 URI
+naming format (pkcs11: prefix), then any remaining non PKCS11 URI file
+definitions have to be in DER, not PEM, format.  Otherwise all of
+*certfile*, *keyfile* or *cafile* are in PEM format.
+
 *-c* certfile::
-   Use the specified PEM file which contains the CERTIFICATE and PRIVATE
-   KEY information.
+   PEM file or PKCS11 URI for the certificate. The private key can be in the
+   PEM file, or use the same PKCS11 URI. If not, the private key is defined
+   by *-j keyfile*.
+
+*-j* keyfile::
+   PEM file or PKCS11 URI for the private key for the certificate in *-c
+   certfile* if the parameter is different from certfile in *-c certfile*.
 
 *-C* cafile::
-  PEM file containing the CA Certificate that was used to sign the certfile
-  defined using *-c certfile*.
+  PEM file or PKCS11 URI for the CA certificate that was used to sign the
+  certfile defined using *-c certfile*.
   This will trigger the validation of the server certificate.
   If certfile is self-signed (as defined by *-c certfile*), then you need to
   have on the command line the same filename for both the certfile and cafile
-  (as in  *-c certfile -C certfile*) to trigger validation.
+  (as in *-c certfile -C certfile*) to trigger validation.
+
+*-J* pkcs11_pin::
+  The user pin to unlock access to the PKCS11 token.
 
 *-R* root_cafile::
   PEM file containing the set of trusted root CAs that are to be used to

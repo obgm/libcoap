@@ -150,8 +150,9 @@ typedef enum coap_asn1_privatekey_type_t {
  */
 typedef enum coap_pki_key_t {
   COAP_PKI_KEY_PEM = 0,        /**< The PKI key type is PEM file */
-  COAP_PKI_KEY_ASN1,           /**< The PKI key type is ASN.1 (DER) */
+  COAP_PKI_KEY_ASN1,           /**< The PKI key type is ASN.1 (DER) buffer */
   COAP_PKI_KEY_PEM_BUF,        /**< The PKI key type is PEM buffer */
+  COAP_PKI_KEY_PKCS11,         /**< The PKI key type is PKCS11 (DER) */
 } coap_pki_key_t;
 
 /**
@@ -195,6 +196,18 @@ typedef struct coap_pki_key_asn1_t {
 } coap_pki_key_asn1_t;
 
 /**
+ * The structure that holds the PKI PKCS11 definitions.
+ */
+typedef struct coap_pki_key_pkcs11_t {
+  const char *ca;            /**< pkcs11: URI for Common CA Certificate */
+  const char *public_cert;   /**< pkcs11: URI for Public Cert */
+  const char *private_key;   /**< pkcs11: URI for Private Key */
+  const char *user_pin;      /**< User pin to access PKCS11.  If NULL, then
+                                  pin-value= parameter must be set in
+                                  pkcs11: URI as a query. */
+} coap_pki_key_pkcs11_t;
+
+/**
  * The structure that holds the PKI key information.
  */
 typedef struct coap_dtls_key_t {
@@ -202,7 +215,8 @@ typedef struct coap_dtls_key_t {
   union {
     coap_pki_key_pem_t pem;          /**< for PEM file keys */
     coap_pki_key_pem_buf_t pem_buf;  /**< for PEM memory keys */
-    coap_pki_key_asn1_t asn1;        /**< for ASN.1 (DER) file keys */
+    coap_pki_key_asn1_t asn1;        /**< for ASN.1 (DER) memory keys */
+    coap_pki_key_pkcs11_t pkcs11;    /**< for PKCS11 keys */
   } key;
 } coap_dtls_key_t;
 
@@ -399,7 +413,7 @@ typedef const coap_dtls_spsk_info_t *(*coap_dtls_psk_sni_callback_t)(
                                  struct coap_session_t *coap_session,
                                  void *arg);
 
-#define COAP_DTLS_SPSK_SETUP_VERSION 1 /**< Latest CPSK setup version */
+#define COAP_DTLS_SPSK_SETUP_VERSION 1 /**< Latest SPSK setup version */
 
 /**
  * The structure used for defining the Server PSK setup data to be used.
@@ -793,6 +807,14 @@ ssize_t coap_tls_read(struct coap_session_t *coap_session,
  *
  */
 void coap_dtls_startup(void);
+
+/**
+ * Close down the underlying (D)TLS Library layer.
+ *
+ * Internal function.
+ *
+ */
+void coap_dtls_shutdown(void);
 
 /** @} */
 

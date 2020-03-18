@@ -48,6 +48,7 @@
 #include <gnutls/gnutls.h>
 #include <gnutls/x509.h>
 #include <gnutls/dtls.h>
+#include <gnutls/pkcs11.h>
 #include <unistd.h>
 
 #ifdef __GNUC__
@@ -341,6 +342,9 @@ coap_dtls_context_check_keys_enabled(coap_context_t *c_context)
 void coap_dtls_startup(void) {
   gnutls_global_set_audit_log_function(coap_gnutls_audit_log_func);
   gnutls_global_set_log_function(coap_gnutls_log_func);
+}
+
+void coap_dtls_shutdown(void) {
 }
 
 void
@@ -736,6 +740,29 @@ static int cert_verify_callback_gnutls(gnutls_session_t g_session)
   return 0;
 }
 
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
+static int
+pin_callback(void *user_data, int attempt,
+             const char *token_url UNUSED,
+             const char *token_label UNUSED, unsigned int flags UNUSED,
+             char *pin,
+             size_t pin_max)
+{
+  coap_dtls_pki_t *setup_data = (coap_dtls_pki_t *)user_data;
+
+  /* Only do this on first attempt to prevent token lockout */
+  if (attempt == 0 && setup_data && setup_data->pki_key.key.pkcs11.user_pin) {
+    int len = min(pin_max - 1, strlen(setup_data->pki_key.key.pkcs11.user_pin));
+    memcpy(pin, setup_data->pki_key.key.pkcs11.user_pin, len);
+    pin[len] = 0;
+    return 0;
+  }
+  return -1;
+}
+
 /*
  * return 0   Success (GNUTLS_E_SUCCESS)
  *        neg GNUTLS_E_* error code
@@ -913,6 +940,36 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
               "gnutls_certificate_set_x509_trust_mem");
     }
     break;
+
+  case COAP_PKI_KEY_PKCS11:
+    if (setup_data->pki_key.key.pkcs11.public_cert &&
+        setup_data->pki_key.key.pkcs11.public_cert[0] &&
+        setup_data->pki_key.key.pkcs11.private_key &&
+        setup_data->pki_key.key.pkcs11.private_key[0]) {
+
+      gnutls_pkcs11_set_pin_function(pin_callback, setup_data);
+      G_CHECK(gnutls_certificate_set_x509_key_file(*pki_credentials,
+                                   setup_data->pki_key.key.pkcs11.public_cert,
+                                   setup_data->pki_key.key.pkcs11.private_key,
+                                   GNUTLS_X509_FMT_DER),
+                 "gnutls_certificate_set_x509_key_file");
+    }
+    else if (role == COAP_DTLS_ROLE_SERVER) {
+      coap_log(LOG_ERR,
+               "***setup_pki: (D)TLS: No %s Certificate + Private "
+               "Key defined\n",
+               role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+      return GNUTLS_E_INSUFFICIENT_CREDENTIALS;
+    }
+    if (setup_data->pki_key.key.pkcs11.ca &&
+        setup_data->pki_key.key.pkcs11.ca[0]) {
+      G_CHECK(gnutls_certificate_set_x509_trust_file(*pki_credentials,
+                           setup_data->pki_key.key.pkcs11.ca,
+                           GNUTLS_X509_FMT_DER),
+              "gnutls_certificate_set_x509_trust_file");
+    }
+    break;
+
   default:
     coap_log(LOG_ERR,
              "***setup_pki: (D)TLS: Unknown key type %d\n",

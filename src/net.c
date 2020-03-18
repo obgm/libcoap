@@ -2678,6 +2678,7 @@ void coap_cleanup(void) {
 #if defined(HAVE_WINSOCK2_H)
   WSACleanup();
 #endif
+  coap_dtls_shutdown();
 }
 
 #if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION
