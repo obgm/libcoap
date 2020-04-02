@@ -257,6 +257,7 @@ add_library(
   ${CMAKE_CURRENT_LIST_DIR}/src/coap_time.c
   ${CMAKE_CURRENT_LIST_DIR}/src/coap_event.c
   ${CMAKE_CURRENT_LIST_DIR}/src/coap_notls.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/coap_tcp.c
   # no need to parse those files if we do not need them
   $<$<BOOL:${HAVE_OPENSSL}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openssl.c>
   $<$<BOOL:${HAVE_LIBTINYDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tinydtls.c>
