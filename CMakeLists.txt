@@ -12,6 +12,10 @@ set(LIBCOAP_API_VERSION 2)
 #
 
 option(
+  DTLS_BACKEND
+  "name of the dtls backend, if specified then WITH_[OPENSSL, GNUTLS, TYNYDTLS, MBEDTLS] are overriden"
+  "")
+option(
   ENABLE_DTLS
   "Enable building with DTLS support"
   ON)
@@ -63,6 +67,10 @@ endif()
 if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_BINARY_DIR})
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 include(CheckCSourceCompiles)
 include(CheckFunctionExists)
@@ -125,36 +133,70 @@ else()
 endif()
 
 if(ENABLE_DTLS)
-  if(WITH_GNUTLS
-     OR WITH_TINYDTLS
-     OR WITH_MBEDTLS)
-    set(WITH_OPENSSL OFF)
-  endif()
 
-  # loop over the possible cryto backends to make sure we only use one
-  foreach(
-    LIB1
-    WITH_GNUTLS
-    WITH_TINYDTLS
-    WITH_MBEDTLS)
-    if(${${LIB1}})
-      message(STATUS "LIB1: ${LIB1} is ON")
-      foreach(
-        LIB2
-        WITH_GNUTLS
-        WITH_TINYDTLS
-        WITH_MBEDTLS)
-        # if name of both libs is different and second is also on, fail fast
-        if(NOT
-           "${LIB1}"
-           STREQUAL
-           "${LIB2}"
-           AND ${${LIB2}})
-          message(FATAL_ERROR "cannot build with ${LIB1} and ${LIB2}")
-        endif()
-      endforeach()
+  if(NOT
+     DTLS_BACKEND
+     STREQUAL
+     "")
+    message(STATUS "DTLS_BACKEND: ${DTLS_BACKEND}")
+    # DTLS_BACKEND is not empty so set all to false and set the only right to true
+    set(WITH_GNUTLS OFF)
+    set(WITH_TINYDTLS OFF)
+    set(WITH_MBEDTLS OFF)
+    set(WITH_OPENSSL OFF)
+
+    if(DTLS_BACKEND
+       STREQUAL
+       "openssl")
+      set(WITH_OPENSSL ON)
     endif()
-  endforeach()
+
+    if(DTLS_BACKEND
+       STREQUAL
+       "gnutls")
+      set(WITH_GNUTLS ON)
+    endif()
+
+    if(DTLS_BACKEND
+       STREQUAL
+       "mbedtls")
+      set(WITH_MBEDTLS ON)
+    endif()
+
+  else()
+
+    if(WITH_GNUTLS
+       OR WITH_TINYDTLS
+       OR WITH_MBEDTLS)
+      set(WITH_OPENSSL OFF)
+    endif()
+
+    # loop over the possible cryto backends to make sure we only use one
+    foreach(
+      LIB1
+      WITH_GNUTLS
+      WITH_TINYDTLS
+      WITH_MBEDTLS)
+      if(${${LIB1}})
+        message(STATUS "LIB1: ${LIB1} is ON")
+        foreach(
+          LIB2
+          WITH_GNUTLS
+          WITH_TINYDTLS
+          WITH_MBEDTLS)
+          # if name of both libs is different and second is also on, fail fast
+          if(NOT
+             "${LIB1}"
+             STREQUAL
+             "${LIB2}"
+             AND ${${LIB2}})
+            message(FATAL_ERROR "cannot build with ${LIB1} and ${LIB2}")
+          endif()
+        endforeach()
+      endif()
+    endforeach()
+
+  endif()
 
   if(WITH_OPENSSL)
     set(WITH_OPENSSL "${WITH_OPENSSL}")
@@ -180,10 +222,10 @@ if(ENABLE_DTLS)
   if(WITH_MBEDTLS)
     set(WITH_MBEDTLS "${WITH_MBEDTLS}")
     message(STATUS "compiling with mbedtls support")
+    find_package(MbedTLS REQUIRED)
     # required libmbedtls (e.g. debian libmbedtls-dev)
     set(HAVE_MBEDTLS 1)
   endif()
-
 endif()
 
 message(STATUS "ENABLE_DTLS: ${ENABLE_DTLS}")
@@ -300,14 +342,17 @@ target_include_directories(
          $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/coap2>
          $<INSTALL_INTERFACE:include/>
-         $<$<BOOL:${HAVE_LIBGNUTLS}>:${GNUTLS_INCLUDE_DIR}>)
+         $<$<BOOL:${HAVE_LIBGNUTLS}>:${GNUTLS_INCLUDE_DIR}>
+         $<$<BOOL:${HAVE_LIBGNUTLS}>:${MBEDTLS_INCLUDE_DIRS}>)
 target_link_libraries(
   ${COAP_LIBRARY_NAME}
   PUBLIC $<$<BOOL:${HAVE_OPENSSL}>:OpenSSL::SSL>
          $<$<BOOL:${HAVE_OPENSSL}>:OpenSSL::Crypto>
          $<$<BOOL:${HAVE_LIBGNUTLS}>:${GNUTLS_LIBRARIES}>
          $<$<BOOL:${HAVE_LIBTINYDTLS}>:-ltinydtls>
-         $<$<BOOL:${HAVE_MBEDTLS}>:-lmbedtls>)
+         $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDTLS_LIBRARY}>
+         $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDX509_LIBRARY}>
+         $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDCRYPTO_LIBRARY}>)
 add_library(
   ${PROJECT_NAME}::${COAP_LIBRARY_NAME}
   ALIAS
