@@ -38,7 +38,7 @@ option(
 option(
   WITH_EPOLL
   "compile with epoll support"
-  OFF)
+  ON)
 option(
   ENABLE_SMALL_STACK
   "Define if the system has small stack size"
@@ -243,6 +243,8 @@ if(${WITH_EPOLL}
    AND ${HAVE_TIMERFD_H})
   set(COAP_EPOLL_SUPPORT "1")
   message(STATUS "compiling with epoll support")
+else()
+  message(STATUS "compiling without epoll support")
 endif()
 
 if(ENABLE_SMALL_STACK)
