@@ -9,6 +9,10 @@ set(MBEDTLS_LIBRARIES
     "${MBEDX509_LIBRARY}"
     "${MBEDCRYPTO_LIBRARY}")
 
+if(MBEDTLS_LIBRARY)
+  set(MbedTLS_FOUND TRUE)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
   MBEDTLS

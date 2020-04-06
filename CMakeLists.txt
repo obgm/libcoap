@@ -187,7 +187,7 @@ if(ENABLE_DTLS)
           set(HAVE_MBEDTLS 1)
         else()
           # mbedtls not found
-          find_package(TINYDTLS)
+          find_package(TinyDTLS)
           if(TINYDTLS_FOUND)
             set(WITH_TINYDTLS ON)
             message(STATUS "compiling with tinydtls support")
@@ -213,6 +213,7 @@ if(ENABLE_DTLS)
     if(DTLS_BACKEND
        STREQUAL
        "gnutls")
+      # libgnutls (e.g. debian libgnutls28-dev)
       find_package(GnuTLS REQUIRED)
       set(WITH_GNUTLS ON)
       message(STATUS "compiling with gnutls support")
@@ -222,6 +223,7 @@ if(ENABLE_DTLS)
     if(DTLS_BACKEND
        STREQUAL
        "openssl")
+      # libssl (e.g. debian libssl1.0-dev)
       find_package(OpenSSL REQUIRED)
       set(WITH_OPENSSL ON)
       message(STATUS "compiling with openssl support")
@@ -241,7 +243,7 @@ if(ENABLE_DTLS)
     if(DTLS_BACKEND
        STREQUAL
        "tinydtls")
-      find_package(TINYDTLS REQUIRED)
+      find_package(TinyDTLS REQUIRED)
       message(STATUS "compiling with tinydtls support")
       set(WITH_TINYDTLS ON)
       set(HAVE_LIBTINYDTLS 1)
@@ -364,7 +366,7 @@ target_link_libraries(
   PUBLIC $<$<BOOL:${HAVE_OPENSSL}>:OpenSSL::SSL>
          $<$<BOOL:${HAVE_OPENSSL}>:OpenSSL::Crypto>
          $<$<BOOL:${HAVE_LIBGNUTLS}>:${GNUTLS_LIBRARIES}>
-         $<$<BOOL:${HAVE_LIBTINYDTLS}>:-ltinydtls>
+         $<$<BOOL:${HAVE_LIBTINYDTLS}>:tinydtls>
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDTLS_LIBRARY}>
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDX509_LIBRARY}>
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDCRYPTO_LIBRARY}>)
