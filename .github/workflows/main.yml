@@ -11,7 +11,7 @@ jobs:
         BUILD_SHARED_LIBS: ["ON", "OFF"]
         ENABLE_DTLS: ["ON", "OFF"]
         ENABLE_TCP: ["ON", "OFF"]
-        DTLS_BACKEND: ["openssl", "gnutls", "mbedtls"]
+        DTLS_BACKEND: ["openssl", "gnutls", "mbedtls", "tinydtls"]
 
     steps:
       - uses: actions/checkout@v1
