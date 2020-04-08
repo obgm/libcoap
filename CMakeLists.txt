@@ -6,6 +6,9 @@ project(
   LANGUAGES CXX C)
 
 set(LIBCOAP_API_VERSION 2)
+set(COAP_LIBRARY_NAME "coap")
+
+add_library(${COAP_LIBRARY_NAME})
 
 #
 # options to tweak the library
@@ -35,6 +38,10 @@ set_property(
            gnutls
            tinydtls
            mbedtls)
+option(
+  USE_VENDORED_TINYDTLS
+  "compile with the tinydtls project in the submodule if on, otherwise try to find the compiled lib with find_package"
+  ON)
 option(
   WITH_EPOLL
   "compile with epoll support"
@@ -155,6 +162,65 @@ set(WITH_OPENSSL OFF)
 set(WITH_TINYDTLS OFF)
 set(WITH_MBEDTLS OFF)
 
+function(compile_tinydtls)
+  set(TINYDTLS_SOURCES_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/tinydtls)
+  set(TINYDTLS_SOURCES_GENERATED ${TINYDTLS_SOURCES_DIR}/dtls_config.h)
+
+  message(STATUS "compiling the tinydtls lib")
+
+  include(ExternalProject)
+
+  externalproject_add(
+    external_tinydtls
+    SOURCE_DIR "${TINYDTLS_SOURCES_DIR}"
+    BUILD_IN_SOURCE 1
+    DOWNLOAD_COMMAND ""
+    UPDATE_COMMAND ""
+    CONFIGURE_COMMAND
+      ${TINYDTLS_SOURCES_DIR}/configure
+      --disable-manpages
+      --prefix=${CMAKE_BINARY_DIR}
+    BUILD_COMMAND make install
+    INSTALL_COMMAND ""
+    LOG_DOWNLOAD 1
+    LOG_CONFIGURE 1)
+
+  externalproject_add_step(
+    external_tinydtls autoheader
+    COMMAND "autoheader"
+    ALWAYS 1
+    WORKING_DIRECTORY "${TINYDTLS_SOURCES_DIR}"
+    DEPENDERS configure
+    DEPENDEES autoconf)
+
+  externalproject_add_step(
+    external_tinydtls autoconf
+    COMMAND "autoconf"
+    ALWAYS 1
+    WORKING_DIRECTORY "${TINYDTLS_SOURCES_DIR}"
+    DEPENDERS autoheader
+    DEPENDEES download)
+
+  # Let cmake know that it needs to execute the external_tinydtls target to generate those files.
+  add_custom_command(
+    OUTPUT ${TINYDTLS_SOURCES_GENERATED}
+    WORKING_DIRECTORY "${TINYDTLS_SOURCES_DIR}"
+    COMMAND "make install"
+    DEPENDS external_tinydtls)
+
+  add_library(
+    tinydtls
+    UNKNOWN
+    IMPORTED)
+  set_target_properties(
+    tinydtls
+    PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_BINARY_DIR}/include/"
+               IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+               IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/lib/libtinydtls.a")
+  add_dependencies(${COAP_LIBRARY_NAME} external_tinydtls)
+
+endfunction()
+
 if(ENABLE_DTLS)
   message(STATUS "compiling with DTLS support")
   message(STATUS "DTLS_BACKEND: ${DTLS_BACKEND}")
@@ -187,15 +253,21 @@ if(ENABLE_DTLS)
           set(HAVE_MBEDTLS 1)
         else()
           # mbedtls not found
-          find_package(TinyDTLS)
-          if(TINYDTLS_FOUND)
-            set(WITH_TINYDTLS ON)
-            message(STATUS "compiling with tinydtls support")
-            set(HAVE_LIBTINYDTLS 1)
+          if(USE_VENDORED_TINYDTLS)
+            compile_tinydtls()
           else()
-            # no cryto lib found
-            message(FATAL_ERROR "cannot found any cryto lib, either install one or compile without DTLS support")
+            find_package(TinyDTLS)
+            if(TINYDTLS_FOUND)
+
+            else()
+              # no cryto lib found
+              message(FATAL_ERROR "cannot find any cryto lib, either install one or compile without DTLS support")
+            endif()
+
           endif()
+          set(WITH_TINYDTLS ON)
+          message(STATUS "compiling with tinydtls support")
+          set(HAVE_LIBTINYDTLS 1)
 
         endif()
 
@@ -243,7 +315,13 @@ if(ENABLE_DTLS)
     if(DTLS_BACKEND
        STREQUAL
        "tinydtls")
-      find_package(TinyDTLS REQUIRED)
+
+      if(USE_VENDORED_TINYDTLS)
+        compile_tinydtls()
+      else(USE_VENDORED_TINYDTLS)
+        find_package(TinyDTLS REQUIRED)
+      endif(USE_VENDORED_TINYDTLS)
+
       message(STATUS "compiling with tinydtls support")
       set(WITH_TINYDTLS ON)
       set(HAVE_LIBTINYDTLS 1)
@@ -289,67 +367,64 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap_config.h)
 
 #
-# library
+# sources
 #
 
-set(COAP_LIBRARY_NAME "coap")
-
-add_library(
+target_sources(
   ${COAP_LIBRARY_NAME}
-  # sources
-  ${CMAKE_CURRENT_LIST_DIR}/src/pdu.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/net.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/coap_debug.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/encode.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/uri.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/subscribe.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/resource.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/str.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/option.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/async.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/block.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/mem.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/coap_io.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/coap_session.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/address.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/coap_time.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/coap_event.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/coap_notls.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/coap_tcp.c
-  # no need to parse those files if we do not need them
-  $<$<BOOL:${HAVE_OPENSSL}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openssl.c>
-  $<$<BOOL:${HAVE_LIBTINYDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tinydtls.c>
-  $<$<BOOL:${HAVE_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
-  $<$<BOOL:${HAVE_MBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
-  # headers
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/address.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/async.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/bits.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/block.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_debug.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_dtls.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_event.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_hashkey.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_io.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_session.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_time.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/encode.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/libcoap.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/lwippools.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/mem.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/net.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/option.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/pdu.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/prng.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/resource.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/str.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/subscribe.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/uri.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/uthash.h
-  ${CMAKE_CURRENT_LIST_DIR}/include/coap2/utlist.h)
+  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/pdu.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/net.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_debug.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/encode.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/uri.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/subscribe.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/resource.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/str.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/option.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/async.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/block.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/mem.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_io.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_session.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/address.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_time.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_event.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_notls.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_tcp.c
+          # no need to parse those files if we do not need them
+          $<$<BOOL:${HAVE_OPENSSL}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openssl.c>
+          $<$<BOOL:${HAVE_LIBTINYDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tinydtls.c>
+          $<$<BOOL:${HAVE_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
+          $<$<BOOL:${HAVE_MBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
+          # headers
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/address.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/async.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/bits.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/block.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_debug.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_dtls.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_event.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_hashkey.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_io.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_session.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_time.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/encode.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/libcoap.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/lwippools.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/mem.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/net.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/option.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/pdu.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/prng.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/resource.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/str.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/subscribe.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/uri.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/uthash.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/utlist.h)
 # TODO: some *.c are still including the filename instead of "coap2/header.h"
 target_include_directories(
   ${COAP_LIBRARY_NAME}
@@ -358,9 +433,15 @@ target_include_directories(
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/coap2/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/coap2>
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/coap2>
+         $<$<BOOL:${USE_VENDORED_TINYDTLS}>:${CMAKE_BINARY_DIR}/include/tinydtls>
          $<INSTALL_INTERFACE:include/>
          $<$<BOOL:${HAVE_LIBGNUTLS}>:${GNUTLS_INCLUDE_DIR}>
          $<$<BOOL:${HAVE_LIBGNUTLS}>:${MBEDTLS_INCLUDE_DIRS}>)
+# target_link_directories(
+#   ${COAP_LIBRARY_NAME}
+#   PRIVATE
+#   $<$<BOOL:${USE_VENDORED_TINYDTLS}>:${CMAKE_BINARY_DIR}/lib/>)
 target_link_libraries(
   ${COAP_LIBRARY_NAME}
   PUBLIC $<$<BOOL:${HAVE_OPENSSL}>:OpenSSL::SSL>
@@ -370,6 +451,7 @@ target_link_libraries(
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDTLS_LIBRARY}>
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDX509_LIBRARY}>
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDCRYPTO_LIBRARY}>)
+
 add_library(
   ${PROJECT_NAME}::${COAP_LIBRARY_NAME}
   ALIAS

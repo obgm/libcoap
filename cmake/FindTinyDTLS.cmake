@@ -36,16 +36,29 @@ find_path(
   TINYDTLS_INCLUDE_DIR
   NAMES tinydtls/dtls.h
   PATH_SUFFIXES include
-  HINTS ${TINYDTLS_ROOT_DIR} ${_EXTRA_FIND_ARGS})
+  HINTS ${PROJECT_SOURCE_DIR}
+        ${CMAKE_CURRENT_BINARY_DIR}
+        ${TINYDTLS_ROOT_DIR}
+        ${_EXTRA_FIND_ARGS})
 
 find_library(
   TINYDTLS_LIBRARIES
   NAMES tinydtls
   PATH_SUFFIXES lib
-  HINTS ${TINYDTLS_ROOT_DIR} ${_EXTRA_FIND_ARGS})
+  HINTS ${PROJECT_SOURCE_DIR}
+        ${CMAKE_CURRENT_BINARY_DIR}
+        ${TINYDTLS_ROOT_DIR}
+        ${_EXTRA_FIND_ARGS})
 
 if(TINYDTLS_LIBRARIES)
   set(TINYDTLS_FOUND TRUE)
+  message(FATAL_ERROR "Tinydtls could be found")
+else()
+  set(TINYDTLS_FOUND FALSE)
+  # TODO fix me
+  if(TinyDTLS_REQUIRED)
+    message(FATAL_ERROR "Tinydtls could not be found")
+  endif()
 endif()
 
 include(FindPackageHandleStandardArgs)
@@ -74,3 +87,4 @@ endif()
 
 message(STATUS "TINYDTLS_INCLUDE_DIR: ${TINYDTLS_INCLUDE_DIR}")
 message(STATUS "TINYDTLS_LIBRARIES: ${TINYDTLS_LIBRARIES}")
+message(STATUS "TINYDTLS_ROOT_DIR: ${TINYDTLS_ROOT_DIR}")
