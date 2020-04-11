@@ -74,6 +74,8 @@ static coap_string_t payload = { 0, NULL };       /* optional payload to send */
 
 static int reliable = 0;
 
+static int add_nl = 0;
+
 unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
 
 static char *cert_file = NULL; /* certificate and optional private key in PEM,
@@ -462,8 +464,11 @@ message_handler(struct coap_context_t *ctx,
       uint16_t blktype = opt_iter.type;
 
       /* TODO: check if we are looking at the correct block number */
-      if (coap_get_data(received, &len, &databuf))
+      if (coap_get_data(received, &len, &databuf)) {
         append_to_output(databuf, len);
+        if (!COAP_OPT_BLOCK_MORE(block_opt) && add_nl)
+          append_to_output((const uint8_t*)"\n", 1);
+      }
 
       if (coap_opt_block_num(block_opt) == 0) {
         /* See if observe is set in first response */
@@ -575,8 +580,11 @@ message_handler(struct coap_context_t *ctx,
 
         if (payload.length <= (block.num+1) * (1 << (block.szx + 4))) {
           coap_log(LOG_DEBUG, "upload ready\n");
-          if (coap_get_data(received, &len, &databuf))
+          if (coap_get_data(received, &len, &databuf)) {
             append_to_output(databuf, len);
+            if (add_nl)
+              append_to_output((const uint8_t*)"\n", 1);
+          }
           ready = 1;
           return;
         }
@@ -651,8 +659,11 @@ message_handler(struct coap_context_t *ctx,
         }
       } else {
         /* There is no block option set, just read the data and we are done. */
-        if (coap_get_data(received, &len, &databuf))
+        if (coap_get_data(received, &len, &databuf)) {
           append_to_output(databuf, len);
+          if (add_nl)
+            append_to_output((const uint8_t*)"\n", 1);
+        }
       }
     }
   } else {      /* no 2.05 */
@@ -692,8 +703,8 @@ usage( const char *program, const char *version) {
      "%s\n\n"
      "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-l loss]\n"
      "\t\t[-m method] [-o file] [-p port] [-r] [-s duration] [-t type]\n"
-     "\t\t[-v num] [-A type] [-B seconds] [-H hoplimit] [-K interval] [-N]\n"
-     "\t\t[-O num,text] [-P scheme://address[:port]] [-T token] [-U]\n"
+     "\t\t[-v num] [-w] [-A type] [-B seconds] [-H hoplimit] [-K interval]\n"
+     "\t\t[-N] [-O num,text] [-P scheme://address[:port]] [-T token] [-U]\n"
      "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-C cafile] [-J pkcs11_pin]\n"
      "\t\t[-M raw_pk] [-R root_cafile] [-S match_pki_sni_file]] URI\n"
@@ -722,6 +733,7 @@ usage( const char *program, const char *version) {
      "\t-t type\t\tContent format for given resource for PUT/POST\n"
      "\t-v num \t\tVerbosity level (default 3, maximum is 9). Above 7,\n"
      "\t       \t\tthere is increased verbosity in GnuTLS logging\n"
+     "\t-w     \t\tAppend a newline to received data\n"
      "\t-A type\t\tAccepted media type\n"
      "\t-B seconds\tBreak operation after waiting given seconds\n"
      "\t       \t\t(default is %d)\n"
@@ -1668,7 +1680,7 @@ main(int argc, char **argv) {
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:o:p:rs:t:u:v:A:B:C:J:K:H:M:NO:P:R:T:U")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:o:p:rs:t:u:v:wA:B:C:H:J:K:M:NO:P:R:T:U")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1712,6 +1724,9 @@ main(int argc, char **argv) {
       break;
     case 'm':
       method = cmdline_method(optarg);
+      break;
+    case 'w':
+      add_nl = 1;
       break;
     case 'N':
       msgtype = COAP_MESSAGE_NON;
