@@ -34,6 +34,10 @@
  *
  * TLS 1.3 is properly supported from 3.6.5 onwards
  * (but is not enabled by default in 3.6.4)
+ *
+ * Starting with 3.6.3, fixed in 3.6.13, Client Hellos may fail with some
+ * server implementations (e.g. Californium) as random value is all zeros
+ * - CVE-2020-11501 - a security weakness.
  */
 
 #include "coap_internal.h"
@@ -1815,6 +1819,7 @@ coap_tick_t coap_dtls_get_context_timeout(void *dtls_context UNUSED) {
 coap_tick_t coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now) {
   coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
 
+  assert(c_session->state == COAP_SESSION_STATE_HANDSHAKE);
   if (g_env && g_env->g_session) {
     unsigned int rem_ms = gnutls_dtls_get_timeout(g_env->g_session);
 
@@ -1839,10 +1844,9 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now) {
 void coap_dtls_handle_timeout(coap_session_t *c_session) {
   coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
 
-  assert(g_env != NULL);
+  assert(g_env != NULL && c_session->state == COAP_SESSION_STATE_HANDSHAKE);
   g_env->doing_dtls_timeout = 1;
-  if (((c_session->state == COAP_SESSION_STATE_HANDSHAKE) &&
-       (++c_session->dtls_timeout_count > c_session->max_retransmit)) ||
+  if ((++c_session->dtls_timeout_count > c_session->max_retransmit) ||
       (do_gnutls_handshake(c_session, g_env) < 0)) {
     /* Too many retries */
     g_env->doing_dtls_timeout = 0;

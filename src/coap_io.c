@@ -1125,7 +1125,8 @@ coap_io_prepare_io(coap_context_t *ctx,
       LL_FOREACH(ctx->endpoint, ep) {
         if (ep->proto == COAP_PROTO_DTLS) {
           SESSIONS_ITER(ep->sessions, s, rtmp) {
-            if (s->proto == COAP_PROTO_DTLS && s->tls) {
+            if (s->state == COAP_SESSION_STATE_HANDSHAKE &&
+                s->proto == COAP_PROTO_DTLS && s->tls) {
               coap_tick_t tls_timeout = coap_dtls_get_timeout(s, now);
               while (tls_timeout > 0 && tls_timeout <= now) {
                 coap_log(LOG_DEBUG, "** %s: DTLS retransmit timeout\n",
@@ -1148,7 +1149,8 @@ coap_io_prepare_io(coap_context_t *ctx,
         }
       }
       SESSIONS_ITER(ctx->sessions, s, rtmp) {
-        if (s->proto == COAP_PROTO_DTLS && s->tls) {
+        if (s->state == COAP_SESSION_STATE_HANDSHAKE &&
+            s->proto == COAP_PROTO_DTLS && s->tls) {
           coap_tick_t tls_timeout = coap_dtls_get_timeout(s, now);
           while (tls_timeout > 0 && tls_timeout <= now) {
             coap_log(LOG_DEBUG, "** %s: DTLS retransmit timeout\n", coap_session_str(s));
