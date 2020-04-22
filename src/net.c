@@ -16,8 +16,10 @@
 #endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#elif HAVE_SYS_UNISTD_H
+#else
+#ifdef HAVE_SYS_UNISTD_H
 #include <sys/unistd.h>
+#endif
 #endif
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
