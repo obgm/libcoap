@@ -1453,7 +1453,7 @@ main(int argc, char **argv) {
       }
       if (result > 0) {
         if (FD_ISSET(coap_fd, &readfds)) {
-          result = coap_io_process(ctx, COAP_RUN_NONBLOCK);
+          result = coap_io_process(ctx, COAP_IO_NO_WAIT);
         }
       }
     }

@@ -18,16 +18,16 @@ SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*int coap_io_process(coap_context_t *_context_, unsigned int _timeout_ms_)*;
+*int coap_io_process(coap_context_t *_context_, uint32_t _timeout_ms_)*;
 
 *int coap_io_process_with_fds(coap_context_t *_context_,
-unsigned int _timeout_ms_, int _nfds_, fd_set *_readfds_, fd_set *_writefds_,
+uint32_t _timeout_ms_, int _nfds_, fd_set *_readfds_, fd_set *_writefds_,
 fd_set *_exceptfds_)*;
 
 *int coap_context_get_coap_fd(coap_context_t *_context_)*;
 
 *unsigned int coap_io_prepare_io(coap_context_t *_context_,
-coap_socket_t *_sockets[]_, unsigned int _max_sockets_,
+coap_socket_t *_sockets_[], unsigned int _max_sockets_,
 unsigned int *_num_sockets_, coap_tick_t _now_)*;
 
 *void coap_io_do_io(coap_context_t *_context_, coap_tick_t _now_)*;
@@ -35,12 +35,12 @@ unsigned int *_num_sockets_, coap_tick_t _now_)*;
 *unsigned int coap_io_prepare_epoll(coap_context_t *_context_,
 coap_tick_t _now_)*;
 
-*int coap_io_do_epoll(coap_context_t *_context_, struct epoll_event *_events_,
-size_t _nevents_)*
+*void coap_io_do_epoll(coap_context_t *_context_, struct epoll_event *_events_,
+size_t _nevents_)*;
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
-*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
-*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
 type.
 
 DESCRIPTION
@@ -56,13 +56,15 @@ up to _timeout_ms_ milli-seconds before returning. There are 2 special case
 _timeout_ms_ values.
 [source, c]
 ----
-#define COAP_RUN_BLOCK    0
-#define COAP_RUN_NONBLOCK 1
+#define COAP_IO_WAIT    0
+#define COAP_IO_NO_WAIT ((uint32_t)-1)
 ----
-If _timeout_ms_ is set to COAP_RUN_BLOCK, then *coap_io_process*() will wait
-indefinitely for the first new input packet to come in, or for when to
-re-transmit a packet. If _timeout_ms_ is set to COAP_RUN_NONBLOCK, then there
-is no wait if there is no more input or output to process.
+If _timeout_ms_ is set to COAP_IO_WAIT, then *coap_io_process*() will block
+until the next internal action (e.g. packet retransmit) if any, or block until
+the next packet is received whichever is the sooner and do the necessary
+processing. If _timeout_ms_ is set to COAP_IO_NO_WAIT, then *coap_io_process*()
+will return immediately after processing without waiting for any new input
+packets to arrive.
 
 There are two methods of how to call *coap_io_process*().
 
@@ -73,7 +75,7 @@ _timeout_ms_, but more frequently if there is input / retransmission traffic.
 2. Wait on the file descriptor returned by *coap_context_get_coap_fd*()
 using *select*() or an event returned by epoll_wait(). If 'read' is available on
 the file descriptor, call *coap_io_process*() with _timeout_ms_ set to
-COAP_RUN_NONBLOCK. +
+COAP_IO_NO_WAIT. +
 *NOTE*: This second method is only available for environments that support epoll
 (mostly Linux) with libcoap compiled to use *epoll* (the default) as libcoap
 will then be using *epoll* internally to process all the file descriptors of
@@ -176,7 +178,7 @@ int main(int argc, char *argv[]){
 
   coap_context_t *ctx = NULL;
   unsigned wait_ms;
-
+  /* Remove (void) definition if variable is used */
   (void)argc;
   (void)argv;
 
@@ -219,7 +221,7 @@ int main(int argc, char *argv[]){
   unsigned wait_ms;
   fd_set readfds;
   int nfds = 0;
-
+  /* Remove (void) definition if variable is used */
   (void)argc;
   (void)argv;
 
@@ -269,7 +271,7 @@ int main(int argc, char *argv[]){
   int coap_fd;
   fd_set m_readfds;
   int nfds;
-
+  /* Remove (void) definition if variable is used */
   (void)argc;
   (void)argv;
 
@@ -280,6 +282,7 @@ int main(int argc, char *argv[]){
   }
   coap_fd = coap_context_get_coap_fd(ctx);
   if (coap_fd == -1) {
+    /* epoll is not supported */
     exit(1);
   }
   FD_ZERO(&m_readfds);
@@ -301,7 +304,7 @@ int main(int argc, char *argv[]){
     }
     if (result > 0) {
       if (FD_ISSET(coap_fd, &readfds)) {
-        result = coap_io_process(ctx, COAP_RUN_NONBLOCK);
+        result = coap_io_process(ctx, COAP_IO_NO_WAIT);
         if (result < 0) {
           /* There is an internal issue */
           break;
@@ -340,7 +343,7 @@ int main(int argc, char *argv[]){
   struct epoll_event events[MAX_EVENTS];
   int nevents;
   int i;
-
+  /* Remove (void) definition if variable is used */
   (void)argc;
   (void)argv;
 
@@ -377,7 +380,7 @@ int main(int argc, char *argv[]){
     }
     for (i = 0; i < nevents; i++) {
       if (events[i].data.fd == coap_fd) {
-        result = coap_io_process(ctx, COAP_RUN_NONBLOCK);
+        result = coap_io_process(ctx, COAP_IO_NO_WAIT);
         if (result < 0) {
           /* There is an internal issue */
           break;
