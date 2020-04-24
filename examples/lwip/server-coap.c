@@ -1,5 +1,5 @@
-#include "coap_config.h"
-#include <coap.h>
+#include "coap2/coap_config.h"
+#include <coap2/coap.h>
 
 coap_context_t *main_coap_context;
 

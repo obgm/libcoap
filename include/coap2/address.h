@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
-#include "libcoap.h"
+#include "coap2/libcoap.h"
 
 #if defined(WITH_LWIP)
 
@@ -40,7 +40,7 @@ typedef struct coap_address_t {
 
 #elif defined(WITH_CONTIKI)
 
-#include "uip.h"
+#include "coap2/uip.h"
 
 typedef struct coap_address_t {
   uip_ipaddr_t addr;

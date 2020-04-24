@@ -7,7 +7,7 @@
  * README for terms of use.
  */
 
-#include "coap_internal.h"
+#include "coap2/coap_internal.h"
 
 void
 coap_subscription_init(coap_subscription_t *s) {

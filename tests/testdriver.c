@@ -3,8 +3,6 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
-/* #include <coap.h> */
-
 #include "test_uri.h"
 #include "test_encode.h"
 #include "test_options.h"
@@ -14,7 +12,7 @@
 #include "test_sendqueue.h"
 #include "test_wellknown.h"
 #include "test_tls.h"
-#include "libcoap.h"
+#include "coap2/libcoap.h"
 
 #ifdef __GNUC__
 #define UNUSED_PARAM __attribute__ ((unused))

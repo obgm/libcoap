@@ -10,7 +10,7 @@
 #ifndef COAP_EVENT_H_
 #define COAP_EVENT_H_
 
-#include "libcoap.h"
+#include "coap2/libcoap.h"
 
 struct coap_context_t;
 struct coap_session_t;

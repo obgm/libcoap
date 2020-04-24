@@ -6,7 +6,7 @@
  * README for terms of use.
  */
 
-#include "coap_internal.h"
+#include "coap2/coap_internal.h"
 
 /* Carsten suggested this when fls() is not available: */
 #ifndef HAVE_FLS

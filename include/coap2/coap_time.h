@@ -53,7 +53,7 @@ COAP_STATIC_INLINE uint64_t coap_ticks_to_rt_us(coap_tick_t t) {
 
 #elif defined(WITH_CONTIKI)
 
-#include "clock.h"
+#include "coap2/clock.h"
 
 typedef clock_time_t coap_tick_t;
 typedef clock_time_t coap_time_t;

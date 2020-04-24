@@ -11,8 +11,8 @@
 #ifndef COAP_DTLS_H_
 #define COAP_DTLS_H_
 
-#include "coap_time.h"
-#include "str.h"
+#include "coap2/coap_time.h"
+#include "coap2/str.h"
 
 struct coap_str_const_t;
 struct coap_bin_const_t;

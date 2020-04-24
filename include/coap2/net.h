@@ -21,14 +21,14 @@
 #include <lwip/ip_addr.h>
 #endif
 
-#include "coap_io.h"
-#include "coap_dtls.h"
-#include "coap_event.h"
-#include "coap_time.h"
-#include "option.h"
-#include "pdu.h"
-#include "prng.h"
-#include "coap_session.h"
+#include "coap2/coap_io.h"
+#include "coap2/coap_dtls.h"
+#include "coap2/coap_event.h"
+#include "coap2/coap_time.h"
+#include "coap2/option.h"
+#include "coap2/pdu.h"
+#include "coap2/prng.h"
+#include "coap2/coap_session.h"
 
 struct coap_queue_t;
 

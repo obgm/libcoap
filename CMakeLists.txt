@@ -448,9 +448,7 @@ target_include_directories(
   ${COAP_LIBRARY_NAME}
   PUBLIC # config headers are generated during configuration time
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/coap2/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/coap2>
          $<INSTALL_INTERFACE:include/>
          $<$<BOOL:${USE_VENDORED_TINYDTLS}>:${CMAKE_BINARY_DIR}/include/tinydtls>
          $<$<BOOL:${HAVE_LIBGNUTLS}>:${GNUTLS_INCLUDE_DIR}>

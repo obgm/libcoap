@@ -6,10 +6,10 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "coap2/coap_config.h"
 #include "test_error_response.h"
 
-#include <coap.h>
+#include <coap2/coap.h>
 
 #include <assert.h>
 #include <stdio.h>

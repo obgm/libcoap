@@ -25,7 +25,7 @@
  * of coap-client
  */
 
-/* #include "coap_config.h" */
+/* #include "coap2/coap_config.h" */
 
 #include <stdio.h>
 #include <string.h>

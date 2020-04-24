@@ -30,12 +30,12 @@
  *
  */
 
-#include "coap_config.h"
+#include "coap2/coap_config.h"
 #include "net/uip-debug.h"
 
 #include <string.h>
 
-#include "coap.h"
+#include "coap2/coap.h"
 
 static coap_context_t *coap_context;
 
