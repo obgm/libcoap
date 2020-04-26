@@ -35,19 +35,7 @@ EXTRA_DIST = \
   tests/test_session.h \
   tests/test_tls.h \
   tests/test_uri.h \
-  tests/test_wellknown.h \
-  win32/coap-client/coap-client.vcxproj \
-  win32/coap-client/coap-client.vcxproj.filters \
-  win32/coap-rd/coap-rd.vcxproj \
-  win32/coap-rd/coap-rd.vcxproj.filters \
-  win32/coap-server/coap-server.vcxproj \
-  win32/coap-server/coap-server.vcxproj.filters \
-  win32/libcoap.sln \
-  win32/libcoap.vcxproj \
-  win32/libcoap.vcxproj.filters \
-  win32/testdriver/testdriver.vcxproj \
-  win32/testdriver/testdriver.vcxproj.filters \
-  win32/testdriver/testdriver.vcxproj.user
+  tests/test_wellknown.h
 
 AM_CFLAGS = -I$(top_builddir)/include/coap$(LIBCOAP_API_VERSION) -I$(top_srcdir)/include/coap$(LIBCOAP_API_VERSION) $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
 

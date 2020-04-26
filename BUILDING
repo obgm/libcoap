@@ -139,14 +139,4 @@ not already installed.
 Within Visual Studio, "Clone or check out code" using the repository
 https://github.com/obgm/libcoap.git
 
-You may need to update the SDK version of the libcoap Windows Project files to
-match that of the SDK version of the Visual Studio you are using.  In Solution
-Explorer with the view set to libcoap.sln, right click "Solution 'libcoap'"
-and then "Retarget solution".
-
-You may need to edit win32\libcoap.props to update the OpenSSLRootDir and
-OpenSSLRootDirDbg variables to point to the top level directory where OpenSSL
-is installed so that the include, lib etc. directories are correctly set up.
-Note: Make sure that you include a trailing \ in the variable definitions.
-
-Alternatively you can build everything in Visual Studio with CMake.
+Open the CMakeLists.txt file and click on generate
