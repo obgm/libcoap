@@ -583,6 +583,7 @@ void
 coap_free_context(coap_context_t *context) {
   coap_endpoint_t *ep, *tmp;
   coap_session_t *sp, *rtmp;
+  coap_cache_entry_t *cp, *ctmp;
 
   if (!context)
     return;
@@ -599,6 +600,12 @@ coap_free_context(coap_context_t *context) {
 #ifndef WITHOUT_ASYNC
   coap_delete_all_async(context);
 #endif /* WITHOUT_ASYNC */
+  HASH_ITER(hh, context->cache, cp, ctmp) {
+    coap_delete_cache_entry(context, cp);
+  }
+  if (context->cache_ignore_count) {
+    coap_free(context->cache_ignore_options);
+  }
 
   LL_FOREACH_SAFE(context->endpoint, ep, tmp) {
     coap_free_endpoint(ep);
@@ -610,7 +617,6 @@ coap_free_context(coap_context_t *context) {
 
   if (context->dtls_context)
     coap_dtls_free_context(context->dtls_context);
-
 #ifdef COAP_EPOLL_SUPPORT
   if (context->eptimerfd != -1) {
     int ret;

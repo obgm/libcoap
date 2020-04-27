@@ -155,6 +155,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
 
 void coap_session_mfree(coap_session_t *session) {
   coap_queue_t *q, *tmp;
+  coap_cache_entry_t *cp, *ctmp;
 
   if (session->partial_pdu)
     coap_delete_pdu(session->partial_pdu);
@@ -173,6 +174,12 @@ void coap_session_mfree(coap_session_t *session) {
   if (session->psk_hint)
     coap_free(session->psk_hint);
 
+  HASH_ITER(hh, session->context->cache, cp, ctmp) {
+    /* cp->session is NULL if not session based */
+    if (cp->session == session) {
+      coap_delete_cache_entry(session->context, cp);
+    }
+  }
   LL_FOREACH_SAFE(session->delayqueue, q, tmp) {
     if (q->pdu->type==COAP_MESSAGE_CON && session->context && session->context->nack_handler)
       session->context->nack_handler(session->context, session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);

@@ -8,82 +8,183 @@
 
 /**
  * @file coap_cache.h
- * @brief Provides a simple request storage for CoAP requests
+ * @brief Provides a simple cache request storage for CoAP requests
  */
 
 #ifndef COAP_CACHE_H_
 #define COAP_CACHE_H_
 
-#include <limits.h>
-
 #include "coap_forward_decls.h"
 
-typedef enum {
-              COAP_CACHE_INVALID=-1,
-              COAP_CACHE_MAXKEY=INT_MAX
-} coap_cache_key_t;
+/**
+ * Callback to free off the app data when the cache-entry is
+ * being deleted / freed off.
+ *
+ * @param data  The app data to be freed off.
+ */
+typedef void (*coap_cache_app_data_free_callback_t)(void *data);
+
+typedef enum coap_cache_session_based_t {
+  COAP_CACHE_NOT_SESSION_BASED,
+  COAP_CACHE_IS_SESSION_BASED
+} coap_cache_session_based_t;
+
+typedef enum coap_cache_record_pdu_t {
+  COAP_CACHE_NOT_RECORD_PDU,
+  COAP_CACHE_RECORD_PDU
+} coap_cache_record_pdu_t;
 
 /**
- * Calculates a cache key for the given CoAP PDU. See
+ * Calculates a cache-key for the given CoAP PDU. See
  * https://tools.ietf.org/html/rfc7252#section-5.6
  * for an explanation of CoAP cache keys.
  *
- * @param pdu The CoAP PDU for which a cache key is to be
- *            calculated.
+ * Specific CoAP options can be removed from the cache-key.  Examples of
+ * this are the BLOCK1 and BLOCK2 options - which make no real sense including
+ * them in a client or server environment, but should be included in a proxy
+ * caching environment where things are cached on a per block basis.
+ * This is done globally by calling the coap_cache_ignore_options()
+ * function.
  *
- * @return The calculcated cache key.
+ * NOTE: The returned cache-key needs to be freed off by the caller by
+ * calling coap_cache_delete_key().
+ *
+ * @param session The session to add into cache-key if @p session_based
+ *                is set.
+ * @param pdu     The CoAP PDU for which a cache-key is to be
+ *                calculated.
+ * @param session_based COAP_CACHE_IS_SESSION_BASED if session based
+ *                      cache-key, else COAP_CACHE_NOT_SESSION_BASED.
+ *
+ * @return        The returned cache-key or @c NULL if failure.
  */
-coap_cache_key_t coap_cache_key(const coap_pdu_t *pdu);
+coap_cache_key_t *coap_cache_derive_key(const coap_session_t *session,
+                                        const coap_pdu_t *pdu,
+                                   coap_cache_session_based_t session_based);
 
 /**
- * Marks a request for permanent storage. The request may be retrieved
- * through its cache-key.
+ * Delete the cache-key.
  *
- * @param ctx     The context to use.
- * @param request The request to be stored.
- *
- * @return The cache key that corresponds to the newly stored
- *         request or @c COAP_CACHE_INVALID if the request could
- *         not be stored.
+ * @param cache_key The cache-key to delete.
  */
-coap_cache_key_t coap_cache_mark_request(coap_context_t *ctx,
-                                         const coap_pdu_t *request);
+void coap_delete_cache_key(coap_cache_key_t *cache_key);
 
 /**
- * Clears a mark from a request.
+ * Define the CoAP options that are not to be included when calculating
+ * the cache-key. Options that are defined as Non-Cache and the Observe
+ * option are always ignored.
  *
- * @param ctx        The context to use.
- * @param cache_key  The cache key for the request which can be
- *                   unmarked.
+ * @param context   The context to save the ignored options information in.
+ * @param options   The array of options to ignore.
+ * @param count     The number of options to ignore.  Use 0 to reset the
+ *                  options matching.
+ *
+ * @return          @return @c 1 if successful, else @c 0.
  */
-void coap_cache_unmark_request(coap_context_t *ctx,
-                               coap_cache_key_t cache_key);
+int coap_cache_ignore_options(coap_context_t *context,
+                              const uint16_t *options, size_t count);
 
 /**
- * Searches for a cache entry identified by @p cache_key. This
- * function returns the corresponding cache entry or @c NULL
+ * Create a new cache-entry hash keyed by cache-key derived from the PDU.
+ *
+ * If @p session_based is set, then this cache-entry will get deleted when
+ * the session is freed off.
+ * If @p record_pdu is set, then the copied PDU will get freed off when
+ * this cache-entry is deleted.
+ *
+ * The cache-entry is maintained on a context hash list.
+ *
+ * @param session   The session to use to derive the context from.
+ * @param pdu       The pdu to use to generate the cache-key.
+ * @param record_pdu COAP_CACHE_RECORD_PDU if to take a copy of the PDU for
+ *                   later use, else COAP_CACHE_NOT_RECORD_PDU.
+ * @param session_based COAP_CACHE_IS_SESSION_BASED if to associate this
+ *                      cache-entry with the the session (which is embedded
+ *                      in the cache-entry), else COAP_CACHE_NOT_SESSION_BASED.
+ * @param idle_time Idle time in seconds before cache-entry is expired.
+ *                  If set to 0, it does not expire (but will get
+ *                  deleted if the session is deleted and it is session_based).
+ *
+ * @return          The returned cache-key or @c NULL if failure.
+ */
+coap_cache_entry_t *coap_new_cache_entry(coap_session_t *session,
+                                 const coap_pdu_t *pdu,
+                                 coap_cache_record_pdu_t record_pdu,
+                                 coap_cache_session_based_t session_based,
+                                 unsigned int idle_time);
+
+/**
+ * Remove a cache-entry from the hash list and free off all the appropriate
+ * contents apart from app_data.
+ *
+ * @param context     The context to use.
+ * @param cache_entry The cache-entry to remove.
+ */
+void coap_delete_cache_entry(coap_context_t *context,
+                             coap_cache_entry_t *cache_entry);
+
+/**
+ * Searches for a cache-entry identified by @p cache_key. This
+ * function returns the corresponding cache-entry or @c NULL
  * if not found.
  *
- * @param ctx        The context to use.
- * @param cache_key  The cache key to look up.
+ * @param context    The context to use.
+ * @param cache_key  The cache-key to get the hashed coap-entry.
  *
- * @return The cache entry for @p cache_key or @c NULL if not found.
+ * @return The cache-entry for @p cache_key or @c NULL if not found.
  */
-struct coap_cache_entry_t *coap_cache_lookup_key(coap_context_t *ctx,
-                                                 coap_cache_key_t cache_key);
+coap_cache_entry_t *coap_cache_get_by_key(coap_context_t *context,
+                                          const coap_cache_key_t *cache_key);
 
 /**
- * Searches for a cache entry corresponding to @p request. This
- * function returns the corresponding cache entry or @c NULL if not
+ * Searches for a cache-entry corresponding to @p pdu. This
+ * function returns the corresponding cache-entry or @c NULL if not
  * found.
  *
- * @param ctx        The context to use.
- * @param request    The CoAP request to search for.
+ * @param session    The session to use.
+ * @param pdu        The CoAP request to search for.
+ * @param session_based COAP_CACHE_IS_SESSION_BASED if session based
+ *                     cache-key to be used, else COAP_CACHE_NOT_SESSION_BASED.
  *
- * @return The cache entry for @p request or @c NULL if not found.
+ * @return The cache-entry for @p request or @c NULL if not found.
  */
-struct coap_cache_entry_t *coap_cache_lookup_request(coap_context_t *ctx,
-                                                     const coap_pdu_t *request);
+coap_cache_entry_t *coap_cache_get_by_pdu(coap_session_t *session,
+                                          const coap_pdu_t *pdu,
+                                   coap_cache_session_based_t session_based);
 
+/**
+ * Returns the PDU information stored in the @p coap_cache entry.
+ *
+ * @param cache_entry The CoAP cache entry.
+ *
+ * @return The PDU information stored in the cache_entry or NULL
+ *         if the PDU was not initially copied.
+ */
+const coap_pdu_t *coap_cache_get_pdu(const coap_cache_entry_t *cache_entry);
+
+/**
+ * Stores @p data with the given cache entry. This function
+ * overwrites any value that has previously been stored with @p
+ * cache_entry.
+ *
+ * @param cache_entry The CoAP cache entry.
+ * @param data The data pointer to store with wih the cache entry. Note that
+ *             this data must be valid during the lifetime of @p cache_entry.
+ * @param callback The callback to call to free off this data when the
+ *                 cache-entry is deleted, or @c NULL if not required.
+ */
+void coap_cache_set_app_data(coap_cache_entry_t *cache_entry, void *data,
+                             coap_cache_app_data_free_callback_t callback);
+
+/**
+ * Returns any application-specific data that has been stored with @p
+ * cache_entry using the function coap_cache_set_app_data(). This function will
+ * return @c NULL if no data has been stored.
+ *
+ * @param cache_entry The CoAP cache entry.
+ *
+ * @return The data pointer previously stored or @c NULL if no data stored.
+ */
+void *coap_cache_get_app_data(const coap_cache_entry_t *cache_entry);
 
 #endif  /* COAP_CACHE_H */

@@ -10,10 +10,20 @@ coap_string(3)
 
 NAME
 ----
-coap_string, coap_new_string, coap_delete_string, coap_new_str_const,
-coap_delete_str_const, coap_new_binary, coap_delete_binary, coap_resize_binary,
-coap_new_bin_const, coap_delete_bin_const, coap_make_str_const,
-coap_string_equal, coap_binary_equal - string functions
+coap_string,
+coap_new_string,
+coap_delete_string,
+coap_new_str_const,
+coap_delete_str_const,
+coap_new_binary,
+coap_delete_binary,
+coap_resize_binary,
+coap_new_bin_const,
+coap_delete_bin_const,
+coap_make_str_const,
+coap_string_equal,
+coap_binary_equal
+- string functions
 
 SYNOPSIS
 --------

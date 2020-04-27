@@ -181,6 +181,51 @@ ssize_t coap_tls_read(coap_session_t *session UNUSED,
   return -1;
 }
 
+typedef struct coap_local_hash_t {
+  size_t ofs;
+  coap_key_t key[8];   /* 32 bytes in total */
+} coap_local_hash_t;
+
+coap_digest_ctx_t *
+coap_digest_setup(void) {
+  coap_key_t *digest_ctx = coap_malloc(sizeof(coap_local_hash_t));
+
+  if (digest_ctx) {
+    memset(digest_ctx, 0, sizeof(coap_local_hash_t));
+  }
+
+  return digest_ctx;
+}
+
+void
+coap_digest_free(coap_digest_ctx_t *digest_ctx) {
+  coap_free(digest_ctx);
+}
+
+int
+coap_digest_update(coap_digest_ctx_t *digest_ctx,
+                   const uint8_t *data,
+                   size_t data_len) {
+  coap_local_hash_t *local = (coap_local_hash_t*)digest_ctx;
+
+  coap_hash(data, data_len, local->key[local->ofs]);
+
+  local->ofs = (local->ofs + 1) % 7;
+  return 1;
+}
+
+int
+coap_digest_final(coap_digest_ctx_t *digest_ctx,
+                  coap_digest_t *digest_buffer) {
+  coap_local_hash_t *local = (coap_local_hash_t*)digest_ctx;
+
+  memcpy(digest_buffer, local->key, sizeof(coap_digest_t));
+
+  coap_digest_free(digest_ctx);
+  return 1;
+}
+
+
 #undef UNUSED
 
 #else /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL && !HAVE_LIBGNUTLS */

@@ -788,6 +788,7 @@ examples/Makefile
 include/coap2/coap.h
 man/coap.txt
 man/coap_attribute.txt
+man/coap_cache.txt
 man/coap_context.txt
 man/coap_encryption.txt
 man/coap_handler.txt

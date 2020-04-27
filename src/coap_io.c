@@ -1397,6 +1397,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
     /* Keep retrying until less than COAP_MAX_EPOLL_EVENTS are returned */
   } while (nfds == COAP_MAX_EPOLL_EVENTS);
 
+  coap_expire_cache_entries(ctx);
   coap_ticks(&now);
 #endif /* COAP_EPOLL_SUPPORT */
 

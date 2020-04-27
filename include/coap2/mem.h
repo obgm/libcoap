@@ -62,9 +62,9 @@ typedef enum {
 void *coap_malloc_type(coap_memory_tag_t type, size_t size);
 
 /**
- * Reallocates a chunk of @p p bytes created by coap_malloc_type() or
+ * Reallocates a chunk @p p of bytes created by coap_malloc_type() or
  * coap_realloc_type() and returns a pointer to the newly allocated memory of
- * @p size..
+ * @p size.
  * The @p type is used to select the appropriate storage
  * container on constrained devices. The storage allocated by coap_malloc_type()
  * coap_realloc_type() must be released with coap_free_type().

@@ -14,6 +14,13 @@ coap_address_init
 coap_address_set_port
 coap_add_token
 coap_adjust_basetime
+coap_cache_derive_key
+coap_cache_get_app_data
+coap_cache_get_by_key
+coap_cache_get_by_pdu
+coap_cache_get_pdu
+coap_cache_ignore_options
+coap_cache_set_app_data
 coap_calc_timeout
 coap_cancel_all_messages
 coap_cancel_session_messages
@@ -37,6 +44,8 @@ coap_decode_var_bytes8
 coap_delete_attr
 coap_delete_binary
 coap_delete_bin_const
+coap_delete_cache_entry
+coap_delete_cache_key
 coap_delete_node
 coap_delete_observer
 coap_delete_observers
@@ -95,6 +104,7 @@ coap_network_read
 coap_network_send
 coap_new_binary
 coap_new_bin_const
+coap_new_cache_entry
 coap_new_client_session
 coap_new_client_session_pki
 coap_new_client_session_psk

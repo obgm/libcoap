@@ -38,10 +38,10 @@ examples directory.
 
 SEE ALSO
 --------
-*coap_attribute*(3), *coap_context*(3), *coap_encryption*(3), *coap_handler*(3),
-*coap_io*(3), *coap_keepalive*(3), *coap_logging*(3), *coap_observe*(3),
-*coap_pdu_setup*(3), *coap_recovery*(3), *coap_resource*(3), *coap_session*(3),
-*coap_string*(3) and *coap_tls_library*(3)
+*coap_attribute*(3), *coap_cache*(3,) *coap_context*(3), *coap_encryption*(3),
+*coap_handler*(3), *coap_io*(3), *coap_keepalive*(3), *coap_logging*(3),
+*coap_observe*(3), *coap_pdu_setup*(3), *coap_recovery*(3), *coap_resource*(3),
+*coap_session*(3), *coap_string*(3) and *coap_tls_library*(3)
 
 For example executables, see *coap-client*(5), *coap-rd*(5) and *coap-server*(5)
 
@@ -68,7 +68,8 @@ for further information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

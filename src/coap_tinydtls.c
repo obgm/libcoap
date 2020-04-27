@@ -636,6 +636,40 @@ ssize_t coap_tls_read(coap_session_t *session UNUSED,
 }
 #endif /* !COAP_DISABLE_TCP */
 
+coap_digest_ctx_t *
+coap_digest_setup(void) {
+  dtls_sha256_ctx *digest_ctx = coap_malloc(sizeof(dtls_sha256_ctx));
+
+  if (digest_ctx) {
+    dtls_sha256_init(digest_ctx);
+  }
+
+  return digest_ctx;
+}
+
+void
+coap_digest_free(coap_digest_ctx_t *digest_ctx) {
+  coap_free(digest_ctx);
+}
+
+int
+coap_digest_update(coap_digest_ctx_t *digest_ctx,
+                   const uint8_t *data,
+                   size_t data_len) {
+  dtls_sha256_update(digest_ctx, data, data_len);
+
+  return 1;
+}
+
+int
+coap_digest_final(coap_digest_ctx_t *digest_ctx,
+                  coap_digest_t *digest_buffer) {
+  dtls_sha256_final((uint8_t*)digest_buffer, digest_ctx);
+
+  coap_digest_free(digest_ctx);
+  return 1;
+}
+
 #undef UNUSED
 
 #else /* !HAVE_LIBTINYDTLS */

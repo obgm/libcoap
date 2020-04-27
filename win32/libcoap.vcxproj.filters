@@ -24,6 +24,9 @@
     <ClCompile Include="..\src\block.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_cache.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_debug.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -105,6 +108,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\coap2\coap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\coap2\coap_cache.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\coap2\coap_cache_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\coap2\coap_debug.h">

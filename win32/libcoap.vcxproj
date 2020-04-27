@@ -38,6 +38,7 @@
     <ClCompile Include="..\src\address.c" />
     <ClCompile Include="..\src\async.c" />
     <ClCompile Include="..\src\block.c" />
+    <ClCompile Include="..\src\coap_cache.c" />
     <ClCompile Include="..\src\coap_debug.c" />
     <ClCompile Include="..\src\coap_event.c" />
     <ClCompile Include="..\src\coap_hashkey.c" />
@@ -67,6 +68,8 @@
     <ClInclude Include="..\include\coap2\bits.h" />
     <ClInclude Include="..\include\coap2\block.h" />
     <ClInclude Include="..\include\coap2\coap.h" />
+    <ClInclude Include="..\include\coap2\coap_cache.h" />
+    <ClInclude Include="..\include\coap2\coap_cache_internal.h" />
     <ClInclude Include="..\include\coap2\coap_debug.h" />
     <ClInclude Include="..\include\coap2\coap_dtls.h" />
     <ClInclude Include="..\include\coap2\coap_event.h" />

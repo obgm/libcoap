@@ -8,34 +8,90 @@
 
 #include "coap_internal.h"
 
-#include "murmur3.h"
-
 /* Determines if the given option_type denotes an option type that can
  * be used as CacheKey. Options that can be cache keys are not Unsafe
  * and not marked explicitly as NoCacheKey. */
 static int
-is_cache_key(uint16_t option_type) {
-  const uint16_t unsafe = 0x02;
-  const uint16_t no_cache_key = 0x04;
+is_cache_key(const coap_context_t *ctx, uint16_t option_type) {
+  int nocachekey = (option_type & 0x1e) == 0x1c;
+  size_t i;
 
-  return (option_type & (unsafe | no_cache_key)) == 0;
-}
-
-coap_cache_key_t
-coap_cache_key(const coap_pdu_t *pdu) {
-  coap_opt_t *option;
-  coap_opt_iterator_t opt_iter;
-  murmur3_context_t mctx;
-
-  if (!coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL)) {
-    return COAP_CACHE_INVALID;
+  /*
+   * https://tools.ietf.org/html/rfc7641#section-2 Observe is not a
+   * part of the cache-key.
+   */
+  if (option_type == COAP_OPTION_OBSERVE) {
+    nocachekey = 1;
   }
 
-  murmur3_32_init(&mctx);
+  /* Check for option user has defined as not part of cache-key */
+  for (i = 0; i < ctx->cache_ignore_count; i++) {
+    if (ctx->cache_ignore_options[i] == option_type) {
+      nocachekey = 1;
+      break;
+    }
+  }
 
+  return nocachekey == 0;
+}
+
+int
+coap_cache_ignore_options(coap_context_t *ctx,
+                          const uint16_t *options,
+                          size_t count) {
+  if (ctx->cache_ignore_options) {
+    coap_free(ctx->cache_ignore_options);
+  }
+  if (count) {
+    assert(options);
+    ctx->cache_ignore_options = coap_malloc(count * sizeof(options[0]));
+    if (ctx->cache_ignore_options) {
+      memcpy(ctx->cache_ignore_options, options, count * sizeof(options[0]));
+      ctx->cache_ignore_count = count;
+    }
+    else {
+      coap_log(LOG_WARNING, "Unable to create cache_ignore_options\n");
+      return 0;
+    }
+  }
+  else {
+    ctx->cache_ignore_options = NULL;
+    ctx->cache_ignore_count = count;
+  }
+  return 1;
+}
+
+coap_cache_key_t *
+coap_cache_derive_key(const coap_session_t *session,
+                      const coap_pdu_t *pdu,
+                      coap_cache_session_based_t session_based) {
+  coap_opt_t *option;
+  coap_opt_iterator_t opt_iter;
+  coap_digest_ctx_t *dctx;
+  coap_digest_t digest;
+  coap_cache_key_t *cache_key;
+
+  if (!coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL)) {
+    return NULL;
+  }
+
+  dctx = coap_digest_setup();
+  if (!dctx)
+    return NULL;
+
+  if (session_based == COAP_CACHE_IS_SESSION_BASED) {
+    /* Include the session ptr */
+    if (!coap_digest_update(dctx, (const uint8_t*)session, sizeof(session))) {
+      coap_digest_free(dctx);
+      return NULL;
+    }
+  }
   while ((option = coap_option_next(&opt_iter))) {
-    if (is_cache_key(opt_iter.type)) {
-      murmur3_32_update(&mctx, option, coap_opt_size(option));
+    if (is_cache_key(session->context, opt_iter.type)) {
+      if (!coap_digest_update(dctx, option, coap_opt_size(option))) {
+        coap_digest_free(dctx);
+        return NULL;
+      }
     }
   }
 
@@ -45,66 +101,152 @@ coap_cache_key(const coap_pdu_t *pdu) {
     size_t len;
     uint8_t *data;
     if (coap_get_data(pdu, &len, &data)) {
-      murmur3_32_update(&mctx, option, coap_opt_size(option));
+      if (!coap_digest_update(dctx, data, len)) {
+        coap_digest_free(dctx);
+        return NULL;
+      }
     }
   }
 
-  return murmur3_32_finalize(&mctx);
+  if (!coap_digest_final(dctx, &digest)) {
+    /* coap_digest_final() is guaranteed to free off dctx no matter what */
+    return NULL;
+  }
+  cache_key = coap_malloc_type(COAP_CACHE_KEY, sizeof(coap_cache_key_t));
+  if (cache_key) {
+    memcpy(cache_key->key, digest.key, sizeof(cache_key->key));
+  }
+  return cache_key;
 }
 
-typedef struct coap_cache_entry_t {
-  UT_hash_handle hh;
-  const coap_pdu_t *pdu;
-  coap_cache_key_t cache_key;
-} coap_cache_entry_t;
-
-/**
- * Marks a request for permanent storage. The request may be retrieved
- * through its cache-key.
- *
- * @param ctx     The context to use.
- * @param request The request to be stored.
- *
- * @return The cache key that corresponds to the newly stored
- *         request or @c COAP_CACHE_INVALID if the request could
- *         not be stored.
- */
-coap_cache_key_t
-coap_cache_mark_request(coap_context_t *ctx, const coap_pdu_t *request) {
-  coap_cache_entry_t *entry = coap_malloc(sizeof(coap_cache_entry_t));
-  if (!entry) {
-    return COAP_CACHE_INVALID;
-  }
-
-  entry->pdu = request;
-  entry->cache_key = coap_cache_key(request);
-  HASH_ADD(hh, ctx->cache, cache_key, sizeof(coap_cache_key_t), entry);
-  return entry->cache_key;
+void
+coap_delete_cache_key(coap_cache_key_t *cache_key) {
+  coap_free_type(COAP_CACHE_KEY, cache_key);
 }
 
 coap_cache_entry_t *
-coap_cache_lookup_key(coap_context_t *ctx, coap_cache_key_t key) {
-  coap_cache_entry_t *entry = NULL;
-  if (key != COAP_CACHE_INVALID) {
-    HASH_FIND(hh, ctx->cache, &key, sizeof(coap_cache_key_t), entry);
+coap_new_cache_entry(coap_session_t *session, const coap_pdu_t *pdu,
+               coap_cache_record_pdu_t record_pdu,
+               coap_cache_session_based_t session_based,
+               unsigned int idle_timeout) {
+  coap_cache_entry_t *entry = coap_malloc_type(COAP_CACHE_ENTRY,
+                                               sizeof(coap_cache_entry_t));
+  if (!entry) {
+    return NULL;
   }
+
+  memset(entry, 0, sizeof(coap_cache_entry_t));
+  if (session_based == COAP_CACHE_IS_SESSION_BASED) {
+    entry->session = session;
+  }
+  if (record_pdu == COAP_CACHE_RECORD_PDU) {
+    entry->pdu = coap_pdu_init(pdu->type, pdu->code, pdu->tid, pdu->alloc_size);
+    if (entry->pdu) {
+      coap_pdu_resize(entry->pdu, pdu->alloc_size);
+      /* Need to get the appropriate data across */
+      memcpy(entry->pdu, pdu, offsetof(coap_pdu_t, token));
+      memcpy(entry->pdu->token, pdu->token, pdu->used_size);
+      /* And adjust all the pointers etc. */
+      entry->pdu->data = entry->pdu->token + (pdu->data - pdu->token);
+    }
+  }
+  entry->cache_key = coap_cache_derive_key(session, pdu, session_based);
+  if (!entry->cache_key) {
+    coap_free_type(COAP_CACHE_ENTRY, entry);
+    return NULL;
+  }
+  entry->idle_timeout = idle_timeout;
+  if (idle_timeout > 0) {
+    coap_ticks(&entry->expire_ticks);
+    entry->expire_ticks += idle_timeout * COAP_TICKS_PER_SECOND;
+  }
+
+  HASH_ADD(hh, session->context->cache, cache_key[0], sizeof(coap_cache_key_t), entry);
   return entry;
 }
 
 coap_cache_entry_t *
-coap_cache_lookup_request(coap_context_t *ctx, const coap_pdu_t *request) {
-  return coap_cache_lookup_key(ctx, coap_cache_key(request));
+coap_cache_get_by_key(coap_context_t *ctx, const coap_cache_key_t *cache_key) {
+  coap_cache_entry_t *cache_entry = NULL;
+
+  assert(cache_key);
+  if (cache_key) {
+    HASH_FIND(hh, ctx->cache, cache_key, sizeof(coap_cache_key_t), cache_entry);
+  }
+  if (cache_entry && cache_entry->idle_timeout > 0) {
+    coap_ticks(&cache_entry->expire_ticks);
+    cache_entry->expire_ticks += cache_entry->idle_timeout * COAP_TICKS_PER_SECOND;
+  }
+  return cache_entry;
 }
 
-/**
- * Clears a mark from a request.
- *
- * @param ctx        The context to use.
- * @param cache_key  The cache key for the request which can be
- *                   unmarked.
- */
-void
-coap_cache_unmark_request(coap_context_t *ctx, coap_cache_key_t cache_key) {
-  (void)ctx;
-  (void)cache_key;
+coap_cache_entry_t *
+coap_cache_get_by_pdu(coap_session_t *session,
+                      const coap_pdu_t *request,
+                      coap_cache_session_based_t session_based) {
+  coap_cache_key_t *cache_key = coap_cache_derive_key(session, request, session_based);
+  coap_cache_entry_t *cache_entry;
+
+  if (!cache_key)
+    return NULL;
+
+  cache_entry = coap_cache_get_by_key(session->context, cache_key);
+  coap_delete_cache_key(cache_key);
+  if (cache_entry && cache_entry->idle_timeout > 0) {
+    coap_ticks(&cache_entry->expire_ticks);
+    cache_entry->expire_ticks += cache_entry->idle_timeout * COAP_TICKS_PER_SECOND;
+  }
+  return cache_entry;
 }
+
+void
+coap_delete_cache_entry(coap_context_t *ctx, coap_cache_entry_t *cache_entry) {
+
+  assert(cache_entry);
+
+  if (cache_entry) {
+    HASH_DELETE(hh, ctx->cache, cache_entry);
+  }
+  if (cache_entry->pdu) {
+    coap_delete_pdu(cache_entry->pdu);
+  }
+  coap_delete_cache_key(cache_entry->cache_key);
+  if (cache_entry->callback && cache_entry->app_data) {
+    cache_entry->callback(cache_entry->app_data);
+  }
+  coap_free_type(COAP_CACHE_ENTRY, cache_entry);
+}
+
+const coap_pdu_t *
+coap_cache_get_pdu(const coap_cache_entry_t *cache_entry) {
+        return cache_entry->pdu;
+}
+
+void
+coap_cache_set_app_data(coap_cache_entry_t *cache_entry,
+                        void *data,
+                        coap_cache_app_data_free_callback_t callback) {
+  cache_entry->app_data = data;
+  cache_entry->callback = callback;
+}
+
+void *
+coap_cache_get_app_data(const coap_cache_entry_t *cache_entry) {
+  return cache_entry->app_data;
+}
+
+void
+coap_expire_cache_entries(coap_context_t *ctx) {
+  coap_tick_t now;
+  coap_cache_entry_t *cp, *ctmp;
+
+  coap_ticks(&now);
+  HASH_ITER(hh, ctx->cache, cp, ctmp) {
+    if (cp->idle_timeout > 0) {
+      if (cp->expire_ticks <= now) {
+        coap_delete_cache_entry(ctx, cp);
+      }
+    }
+  }
+}
+

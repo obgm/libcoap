@@ -48,6 +48,7 @@
 #include <mbedtls/ssl_cookie.h>
 #include <mbedtls/oid.h>
 #include <mbedtls/debug.h>
+#include <mbedtls/sha256.h>
 #if defined(ESPIDF_VERSION) && defined(CONFIG_MBEDTLS_DEBUG)
 #include <mbedtls/esp_debug.h>
 #endif /* ESPIDF_VERSION && CONFIG_MBEDTLS_DEBUG */
@@ -1835,6 +1836,41 @@ coap_tls_version_t * coap_get_tls_library_version(void)
   version.built_version = MBEDTLS_VERSION_NUMBER;
   version.type = COAP_TLS_LIBRARY_MBEDTLS;
   return &version;
+}
+
+coap_digest_ctx_t *
+coap_digest_setup(void) {
+  mbedtls_sha256_context *digest_ctx = mbedtls_malloc(sizeof(mbedtls_sha256_context));
+
+  if (digest_ctx) {
+    mbedtls_sha256_init(digest_ctx);
+    mbedtls_sha256_starts_ret(digest_ctx, 0);
+  }
+  return digest_ctx;
+}
+
+void
+coap_digest_free(coap_digest_ctx_t *digest_ctx) {
+  mbedtls_sha256_free(digest_ctx);
+  mbedtls_free(digest_ctx);
+}
+
+int
+coap_digest_update(coap_digest_ctx_t *digest_ctx,
+                   const uint8_t *data,
+                   size_t data_len) {
+  int ret = mbedtls_sha256_update_ret(digest_ctx, data, data_len);
+
+  return ret == 0;
+}
+
+int
+coap_digest_final(coap_digest_ctx_t *digest_ctx,
+                         coap_digest_t *digest_buffer) {
+  int ret = mbedtls_sha256_finish_ret(digest_ctx, (uint8_t*)digest_buffer);
+
+  coap_digest_free(digest_ctx);
+  return ret == 0;
 }
 
 #else /* !HAVE_MBEDTLS */

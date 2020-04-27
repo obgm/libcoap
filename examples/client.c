@@ -1858,6 +1858,7 @@ main(int argc, char **argv) {
   if (valid_ihs.count)
     free(valid_ihs.ih_list);
   coap_delete_optlist(optlist);
+  if (payload.s) coap_free(payload.s);
   coap_session_release( session );
   coap_free_context( ctx );
   coap_cleanup();

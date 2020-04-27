@@ -21,6 +21,8 @@
  * so that applications (using coap.h) as well as libcoap builds
  * can reference them (and makes .h file dependencies a lot simpler).
  */
+struct coap_cache_entry_t;
+struct coap_cache_key_t;
 struct coap_context_t;
 struct coap_dtls_pki_t;
 struct coap_endpoint_t;
@@ -28,11 +30,16 @@ struct coap_queue_t;
 struct coap_session_t;
 struct coap_string_t;
 struct coap_subscription_t;
-struct coap_cache_entry_t;
 
 /*
- * typedef all the structures that are defined in coap_*_internal.h
+ * typedef all the opaque structures that are defined in coap_*_internal.h
  */
+
+/* ************* coap_cache_internal.h ***************** */
+
+/** Cache Entry information */
+typedef struct coap_cache_entry_t coap_cache_entry_t;
+typedef struct coap_cache_key_t coap_cache_key_t;
 
 /* ************* coap_session_internal.h ***************** */
 

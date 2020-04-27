@@ -24,6 +24,7 @@ EXTRA_DIST = \
   examples/getopt.c \
   include/coap$(LIBCOAP_API_VERSION)/coap_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_riot.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_cache_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
@@ -91,7 +92,6 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_tinydtls.c \
   src/encode.c \
   src/mem.c \
-  src/murmur3.c \
   src/net.c \
   src/option.c \
   src/pdu.c \

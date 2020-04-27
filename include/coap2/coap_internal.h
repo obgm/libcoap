@@ -2,7 +2,7 @@
  * coap_internal.h -- Structures, Enums & Functions that are not exposed to
  * application programming
  *
- * Copyright (C) 2019 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2019-2020 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -46,6 +46,7 @@
 #include "coap_mutex.h"
 
 /* Specifically defined internal .h files */
+#include "coap_cache_internal.h"
 #include "coap_session_internal.h"
 #include "coap_subscribe_internal.h"
 #include "coap_tcp_internal.h"
