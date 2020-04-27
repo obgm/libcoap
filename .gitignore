@@ -8,7 +8,7 @@ aclocal.m4
 ar-lib
 autom4te.cache/
 coap_config.h
-/coap_config.h.in
+coap_config.h.in
 compile
 config.*
 configure

@@ -28,7 +28,7 @@ AC_HEADER_ASSERT
 # Generate one configuration header file for building the library itself with
 # an auto generated template. We need later a second one (include/libcoap.h)
 # that will be installed alongside the library.
-AC_CONFIG_HEADERS([coap_config.h])
+AC_CONFIG_HEADERS([include/coap2/coap_config.h])
 
 AC_PROG_CC
 AM_PROG_CC_C_O

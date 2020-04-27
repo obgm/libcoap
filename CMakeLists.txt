@@ -381,7 +381,7 @@ set(COAP_DISABLE_TCP NOT "${ENABLE_TCP}")
 # creates config header file in build directory
 configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap.h)
 
-configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_config.h.in
+configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/cmake_coap_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap_config.h)
 
 #
