@@ -30,7 +30,7 @@
  *
  */
 
-#include "coap2/coap_config.h"
+#include "coap_config.h"
 
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"

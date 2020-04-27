@@ -25,16 +25,10 @@
  * of coap-client
  */
 
-/* #include "coap2/coap_config.h" */
-
 #include <stdio.h>
 #include <string.h>
 
-#include <coap2/libcoap.h>
-#include <coap2/debug.h>
-#include <coap2/mem.h>
-#include "coap_list.h"
-
+#include <coap2/coap.h>
 
 int
 coap_insert(coap_list_t **head, coap_list_t *node) {

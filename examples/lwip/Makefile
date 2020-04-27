@@ -35,7 +35,7 @@ LWIPOBJS += mld6.o ip6.o icmp6.o ethip6.o nd6.o ip6_addr.o ip6_frag.o
 
 CFLAGS += -std=gnu99
 
-CFLAGS += -I$(top_srcdir)/include
+CFLAGS += -I$(top_srcdir)/include -I$(top_srcdir)/include/coap2
 
 vpath %.c $(top_srcdir)/src
 

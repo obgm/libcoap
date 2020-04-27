@@ -24,7 +24,7 @@
 #ifndef COAP_INTERNAL_H_
 #define COAP_INTERNAL_H_
 
-#include "coap2/coap_config.h"
+#include "coap_config.h"
 
 /*
  * Correctly set up assert() based on NDEBUG for libcoap

@@ -1,4 +1,4 @@
-#include "coap2/coap_config.h"
+#include "coap_config.h"
 #include <coap2/coap.h>
 
 void server_coap_init(void);

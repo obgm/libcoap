@@ -40,7 +40,7 @@ typedef struct coap_address_t {
 
 #elif defined(WITH_CONTIKI)
 
-#include "coap2/uip.h"
+#include "uip.h"
 
 typedef struct coap_address_t {
   uip_ipaddr_t addr;
