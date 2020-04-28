@@ -732,6 +732,9 @@ coap_join_mcast_group(coap_context_t *ctx, const char *groupname);
 
 #define COAP_IO_WAIT    0
 #define COAP_IO_NO_WAIT ((uint32_t)-1)
+/* Old definitions which may be hanging around in old code - be helpful! */
+#define COAP_RUN_NONBLOCK COAP_RUN_NONBLOCK_deprecated_use_COAP_IO_NO_WAIT
+#define COAP_RUN_BLOCK COAP_RUN_BLOCK_deprecated_use_COAP_IO_WAIT
 
 /**
  * The main I/O processing function.  All pending network I/O is completed,
