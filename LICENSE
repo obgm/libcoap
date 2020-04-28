@@ -1,4 +1,4 @@
-Copyright (c) 2010--2019, Olaf Bergmann and others
+Copyright (c) 2010--2020, Olaf Bergmann and others
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,14 @@ builds of the executables in the examples folder:
  */
 
 ========================================================================
+uthash
+
+libcoap uses uthash.h and utlist.h from Troy D. Hanson
+(http://troydhanson.github.com/uthash/). These files use the revised
+BSD license (BSD-1-Clause license) as included in these two source
+files.
+
+========================================================================
 OpenSSL
 
 Binaries that are linked against OpenSSL include software developed
@@ -67,4 +75,11 @@ tinyDTLS
 When compiled with tinyDTLS support, this software includes components
 that are licensed under the terms of the Eclipse Distribution License 1.0
 (http://www.eclipse.org/org/documents/edl-v10.php).
+
+========================================================================
+MbedTLS
+
+When compiled with MbedTLS support, this software includes components
+that are licensed under the terms of the Apache 2.0 license
+(http://www.apache.org/licenses/LICENSE-2.0).
 
