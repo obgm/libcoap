@@ -190,7 +190,10 @@ void coap_session_free(coap_session_t *session) {
 
 size_t coap_session_max_pdu_size(const coap_session_t *session) {
   size_t max_with_header = (size_t)(session->mtu - session->tls_overhead);
-  if (!COAP_DISABLE_TCP || COAP_PROTO_NOT_RELIABLE(session->proto))
+#if COAP_DISABLE_TCP
+  return max_with_header > 4 ? max_with_header - 4 : 0;
+#else /* !COAP_DISABLE_TCP */
+  if (COAP_PROTO_NOT_RELIABLE(session->proto))
     return max_with_header > 4 ? max_with_header - 4 : 0;
   /* we must assume there is no token to be on the safe side */
   if (max_with_header <= 2)
@@ -203,6 +206,7 @@ size_t coap_session_max_pdu_size(const coap_session_t *session) {
     return max_with_header - 4;
   else
     return max_with_header - 6;
+#endif /* !COAP_DISABLE_TCP */
 }
 
 void coap_session_set_mtu(coap_session_t *session, unsigned mtu) {
@@ -394,7 +398,9 @@ void coap_session_connected(coap_session_t *session) {
 
 void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
   (void)reason;
+#if !COAP_DISABLE_TCP
   coap_session_state_t state = session->state;
+#endif /* !COAP_DISABLE_TCP */
 
   coap_log(LOG_DEBUG, "***%s: session disconnected (reason %d)\n",
            coap_session_str(session), reason);
@@ -451,7 +457,8 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
   if (reason != COAP_NACK_ICMP_ISSUE)
     coap_cancel_session_messages(session->context, session, reason);
 
-  if (!COAP_DISABLE_TCP && COAP_PROTO_RELIABLE(session->proto)) {
+#if !COAP_DISABLE_TCP
+  if (COAP_PROTO_RELIABLE(session->proto)) {
     if (session->sock.flags != COAP_SOCKET_EMPTY) {
       coap_socket_close(&session->sock);
       coap_handle_event(session->context,
@@ -464,6 +471,7 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
         COAP_EVENT_SESSION_CLOSED : COAP_EVENT_SESSION_FAILED, session);
     }
   }
+#endif /* !COAP_DISABLE_TCP */
 }
 
 coap_session_t *
@@ -698,13 +706,14 @@ coap_session_create_client(
       &session->addr_info.local, &session->addr_info.remote)) {
       goto error;
     }
-  } else if (!COAP_DISABLE_TCP &&
-             (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS)) {
+#if !COAP_DISABLE_TCP
+  } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
     if (!coap_socket_connect_tcp1(&session->sock, &session->local_if, server,
       proto == COAP_PROTO_TLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
       &session->addr_info.local, &session->addr_info.remote)) {
       goto error;
     }
+#endif /* !COAP_DISABLE_TCP */
   }
 
   session->sock.session = session;
@@ -744,7 +753,8 @@ coap_session_connect(coap_session_t *session) {
       coap_session_release(session);
       return NULL;
     }
-  } else if (!COAP_DISABLE_TCP) {
+#if !COAP_DISABLE_TCP
+  } else {
     if (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS) {
       if (session->sock.flags & COAP_SOCKET_WANT_CONNECT) {
         session->state = COAP_SESSION_STATE_CONNECTING;
@@ -768,6 +778,7 @@ coap_session_connect(coap_session_t *session) {
         coap_session_send_csm(session);
       }
     }
+#endif /* !COAP_DISABLE_TCP */
   }
   coap_ticks(&session->last_rx_tx);
   return session;
@@ -1078,14 +1089,16 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
   ep->context = context;
   ep->proto = proto;
 
-  if (!COAP_DISABLE_TCP && (proto==COAP_PROTO_TCP || proto==COAP_PROTO_TLS)) {
-    if (!coap_socket_bind_tcp(&ep->sock, listen_addr, &ep->bind_addr))
-      goto error;
-    ep->sock.flags |= COAP_SOCKET_WANT_ACCEPT;
-  } else if (proto==COAP_PROTO_UDP || proto==COAP_PROTO_DTLS) {
+  if (proto==COAP_PROTO_UDP || proto==COAP_PROTO_DTLS) {
     if (!coap_socket_bind_udp(&ep->sock, listen_addr, &ep->bind_addr))
       goto error;
     ep->sock.flags |= COAP_SOCKET_WANT_READ;
+#if !COAP_DISABLE_TCP
+  } else if (proto==COAP_PROTO_TCP || proto==COAP_PROTO_TLS) {
+    if (!coap_socket_bind_tcp(&ep->sock, listen_addr, &ep->bind_addr))
+      goto error;
+    ep->sock.flags |= COAP_SOCKET_WANT_ACCEPT;
+#endif /* !COAP_DISABLE_TCP */
   } else {
     coap_log(LOG_CRIT, "coap_new_endpoint: protocol not supported\n");
     goto error;
