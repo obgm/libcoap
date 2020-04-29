@@ -229,9 +229,10 @@ get_psk_info(struct dtls_context_t *dtls_context,
     }
 
     identity_length = 0;
+    /* result_length is max size of the returned identity */
     psk_len = coap_context->get_client_psk(coap_session, (const uint8_t*)id, id_len, (uint8_t*)result, &identity_length, result_length, psk, sizeof(psk));
     if (!psk_len) {
-      coap_log(LOG_WARNING, "no PSK identity for given realm\n");
+      coap_log(LOG_WARNING, "no PSK identity for given realm or buffer too small\n");
       fatal_error = DTLS_ALERT_CLOSE_NOTIFY;
       goto error;
     }
@@ -242,17 +243,13 @@ get_psk_info(struct dtls_context_t *dtls_context,
       if (!coap_context || !coap_context->get_client_psk)
         goto error;
       identity_length = 0;
-      psk_len = coap_context->get_client_psk(coap_session, (const uint8_t*)id, id_len, (uint8_t*)result, &identity_length, result_length, psk, sizeof(psk));
+      /* Use psk[] as a scratch area for returning the unused identity */
+      psk_len = coap_context->get_client_psk(coap_session, (const uint8_t*)id, id_len, psk, &identity_length, sizeof(psk), result, result_length);
       if (!psk_len) {
-        coap_log(LOG_WARNING, "no pre-shared key for given realm\n");
+        coap_log(LOG_WARNING, "no pre-shared key for given realm or buffer too small\n");
         fatal_error = DTLS_ALERT_CLOSE_NOTIFY;
         goto error;
       }
-      if (psk_len > result_length) {
-        coap_log(LOG_WARNING, "cannot set psk -- buffer too small\n");
-        goto error;
-      }
-      memcpy(result, psk, psk_len);
       return (int)psk_len;
     }
     if (coap_context->get_server_psk) {
