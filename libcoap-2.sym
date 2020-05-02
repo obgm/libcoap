@@ -35,6 +35,7 @@ coap_debug_set_packet_loss
 coap_decode_var_bytes
 coap_decode_var_bytes8
 coap_delete_attr
+coap_delete_binary
 coap_delete_bin_const
 coap_delete_node
 coap_delete_observer
@@ -92,6 +93,7 @@ coap_malloc_type
 coap_memory_init
 coap_network_read
 coap_network_send
+coap_new_binary
 coap_new_bin_const
 coap_new_client_session
 coap_new_client_session_pki
@@ -141,11 +143,13 @@ coap_print_link
 coap_print_wellknown
 coap_prng
 coap_prng_init
+coap_realloc_type
 coap_register_async
 coap_register_event_handler
 coap_register_handler
 coap_remove_async
 coap_remove_from_queue
+coap_resize_binary
 coap_resource_init
 coap_resource_notify_observers
 coap_resource_set_dirty

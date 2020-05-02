@@ -153,6 +153,22 @@
 #define COAP_MAX_OPTION_SIZE        (16U)
 #endif /* COAP_MAX_OPTION_SIZE */
 
+/**
+ * The maximum number of cache-key entries that allocate
+ * fixed-size memory blocks.
+ */
+#ifndef COAP_MAX_CACHE_KEYS
+#define COAP_MAX_CACHE_KEYS        (2U)
+#endif /* COAP_MAX_CACHE_KEYS */
+
+/**
+ * The maximum number of cache-entry entries that allocate
+ * fixed-size memory blocks.
+ */
+#ifndef COAP_MAX_CACHE_ENTRIES
+#define COAP_MAX_CACHE_ENTRIES        (2U)
+#endif /* COAP_MAX_CACHE_ENTRIES */
+
 /* The memstr is the storage for holding coap_string_t structure
  * together with its contents. */
 union memstr_t {
@@ -221,6 +237,12 @@ struct optbuf_t {
 static struct optbuf_t option_storage_data[COAP_MAX_OPTIONS];
 static memarray_t option_storage;
 
+static coap_cache_key_t cache_key_storage_data[COAP_MAX_CACHE_KEYS];
+static memarray_t cache_key_storage;
+
+static coap_cache_entry_t cache_entry_storage_data[COAP_MAX_CACHE_ENTRIES];
+static memarray_t cache_entry_storage;
+
 #define INIT_STORAGE(Storage, Count)  \
   memarray_init(&(Storage ## _storage), (Storage ## _storage_data), sizeof(Storage ## _storage_data[0]), (Count));
 
@@ -243,6 +265,8 @@ coap_memory_init(void) {
 #endif
   INIT_STORAGE(session, COAP_MAX_SESSIONS);
   INIT_STORAGE(option, COAP_MAX_OPTIONS);
+  INIT_STORAGE(cache_key, COAP_MAX_CACHE_KEYS);
+  INIT_STORAGE(cache_entry, COAP_MAX_CACHE_ENTRIES);
 }
 
 static memarray_t *
@@ -264,6 +288,8 @@ get_container(coap_memory_tag_t type) {
 #endif
   case COAP_SESSION:         return &session_storage;
   case COAP_OPTLIST:         return &option_storage;
+  case COAP_CACHE_KEY:       return &cache_key_storage;
+  case COAP_CACHE_ENTRY:     return &cache_key_entry;
   case COAP_STRING:
     /* fall through */
   default:
@@ -298,7 +324,7 @@ coap_free_type(coap_memory_tag_t type, void *object) {
   if (object != NULL)
     memarray_free(get_container(type), object);
 }
-#else /* RIOT_VERSION */
+#else /* ! RIOT_VERSION */
 
 #ifdef HAVE_MALLOC
 #include <stdlib.h>
@@ -319,13 +345,19 @@ coap_malloc_type(coap_memory_tag_t type, size_t size) {
   return malloc(size);
 }
 
+void *
+coap_realloc_type(coap_memory_tag_t type, void* p, size_t size) {
+  (void)type;
+  return realloc(p, size);
+}
+
 void
 coap_free_type(coap_memory_tag_t type, void *p) {
   (void)type;
   free(p);
 }
 
-#else /* HAVE_MALLOC */
+#else /* ! HAVE_MALLOC */
 
 #ifdef WITH_CONTIKI
 
@@ -368,6 +400,8 @@ MEMB(pdu_storage, coap_pdu_t, COAP_PDU_MAXCNT);
 MEMB(pdu_buf_storage, coap_packetbuf_t, COAP_PDU_MAXCNT);
 MEMB(resource_storage, coap_resource_t, COAP_MAX_RESOURCES);
 MEMB(attribute_storage, coap_attr_t, COAP_MAX_ATTRIBUTES);
+MEMB(cache_key_storage, coap_cache_key_t, COAP_MAX_CACHE_KEYS);
+MEMB(cache_entry_storage, coap_cache_entry_t, COAP_MAX_CACHE_ENTRIES);
 
 static struct memb *
 get_container(coap_memory_tag_t type) {
@@ -379,6 +413,8 @@ get_container(coap_memory_tag_t type) {
   case COAP_PDU_BUF: return &pdu_buf_storage;
   case COAP_RESOURCE: return &resource_storage;
   case COAP_RESOURCEATTR: return &attribute_storage;
+  case COAP_CACHE_KEY:    return &cache_key_storage;
+  case COAP_CACHE_ENTRY:  return &cache_entry_storage;
   default:
     return &string_storage;
   }
@@ -394,6 +430,8 @@ coap_memory_init(void) {
   memb_init(&pdu_buf_storage);
   memb_init(&resource_storage);
   memb_init(&attribute_storage);
+  memb_init(&cache_key_storage);
+  memb_init(&cache_entry_storage);
 }
 
 void *
@@ -425,6 +463,6 @@ coap_free_type(coap_memory_tag_t type, void *object) {
 }
 #endif /* WITH_CONTIKI */
 
-#endif /* HAVE_MALLOC */
+#endif /* ! HAVE_MALLOC */
 
-#endif /* RIOT_VERSION */
+#endif /* ! RIOT_VERSION */

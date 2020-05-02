@@ -30,6 +30,7 @@ TXT3 = coap_attribute.txt \
 	coap_recovery.txt \
 	coap_resource.txt \
 	coap_session.txt \
+	coap_string.txt \
 	coap_tls_library.txt
 
 MAN3 = $(TXT3:%.txt=%.3)
@@ -86,6 +87,10 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_session.3" > coap_session_get_app_data.3
 	@echo ".so man3/coap_session.3" > coap_session_set_app_data.3
 	@echo ".so man3/coap_session.3" > coap_tcp_is_supported.3
+	@echo ".so man3/coap_string.3" > coap_delete_bin_const.3
+	@echo ".so man3/coap_string.3" > coap_make_str_const.3
+	@echo ".so man3/coap_string.3" > coap_string_equal.3
+	@echo ".so man3/coap_string.3" > coap_binary_equal.3
 	@echo ".so man3/coap_logging.3" > coap_endpoint_str.3
 	@echo ".so man3/coap_logging.3" > coap_session_str.3
 	$(INSTALL_DATA) $(A2X_EXTRA_PAGES) "$(DESTDIR)$(man3dir)"
