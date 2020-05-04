@@ -286,8 +286,6 @@ if test "x$build_manpages" = "xyes"; then
             AC_MSG_ERROR([==> Install the packages that contains the docbook DTD and XSL stylesheets (presumably docbook, docbook-xml) or disable the build of the manpages using '--disable-manpages'.])
             build_manpages="no"
         ])
-        MAN_DIR=man
-        AC_SUBST(MAN_DIR)
     fi
 fi
 AM_CONDITIONAL(BUILD_MANPAGES, [test "x$build_manpages" = "xyes"])
