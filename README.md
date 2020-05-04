@@ -4,6 +4,7 @@
 [![Build Status: develop](https://travis-ci.com/obgm/libcoap.svg?branch=develop)](https://travis-ci.com/obgm/libcoap)
 [![Static Analysis](https://scan.coverity.com/projects/10970/badge.svg?flat=1)](https://scan.coverity.com/projects/obgm-libcoap)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/libcoap.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:libcoap)
+![CMake](https://github.com/obgm/libcoap/workflows/CMake/badge.svg)
 
 Copyright (C) 2010—2020 by Olaf Bergmann <bergmann@tzi.org> and others
 
