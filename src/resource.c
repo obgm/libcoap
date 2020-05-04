@@ -9,6 +9,12 @@
 #include "coap_internal.h"
 
 #include <stdio.h>
+#include <errno.h>
+
+#ifdef COAP_EPOLL_SUPPORT
+#include <sys/epoll.h>
+#include <sys/timerfd.h>
+#endif /* COAP_EPOLL_SUPPORT */
 
 #if defined(WITH_LWIP)
 /* mem.h is only needed for the string free calls for
@@ -463,6 +469,8 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
     }
     RESOURCES_ADD(context->resources, resource);
   }
+  assert(resource->context == NULL);
+  resource->context = context;
 }
 
 int
@@ -752,17 +760,20 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
                          * GET handler is defined */
 
     LL_FOREACH(r->subscribers, obs) {
-      if (r->dirty == 0 && obs->dirty == 0)
+      if (r->dirty == 0 && obs->dirty == 0) {
         /*
          * running this resource due to partiallydirty, but this observation's
          * notification was already enqueued
          */
+        context->observe_pending = 1;
         continue;
+      }
       if (obs->session->con_active >= COAP_DEFAULT_NSTART &&
           ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) ||
            (obs->non_cnt >= COAP_OBS_MAX_NON))) {
         r->partiallydirty = 1;
         obs->dirty = 1;
+        context->observe_pending = 1;
         continue;
       }
 
@@ -773,6 +784,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       if (!response) {
         obs->dirty = 1;
         r->partiallydirty = 1;
+        context->observe_pending = 1;
         coap_log(LOG_DEBUG,
                  "coap_check_notify: pdu init failed, resource stays "
                  "partially dirty\n");
@@ -782,6 +794,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       if (!coap_add_token(response, obs->token_length, obs->token)) {
         obs->dirty = 1;
         r->partiallydirty = 1;
+        context->observe_pending = 1;
         coap_log(LOG_DEBUG,
                  "coap_check_notify: cannot add token, resource stays "
                  "partially dirty\n");
@@ -821,6 +834,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
                  "partially dirty\n");
         obs->dirty = 1;
         r->partiallydirty = 1;
+        context->observe_pending = 1;
       }
 
     }
@@ -862,14 +876,36 @@ coap_resource_notify_observers(coap_resource_t *r, const coap_string_t *query) {
   /* Increment value for next Observe use. Observe value must be < 2^24 */
   r->observe = (r->observe + 1) & 0xFFFFFF;
 
+  assert(r->context);
+  r->context->observe_pending = 1;
+#ifdef COAP_EPOLL_SUPPORT
+  if (r->context->eptimerfd != -1) {
+    /* Need to immediately trigger any epoll_wait() */
+    struct itimerspec new_value;
+    int ret;
+
+    memset(&new_value, 0, sizeof(new_value));
+    new_value.it_value.tv_nsec = 1; /* small that is not zero */
+    ret = timerfd_settime(r->context->eptimerfd, 0, &new_value, NULL);
+    if (ret == -1) {
+      coap_log(LOG_ERR,
+                "%s: timerfd_settime failed: %s (%d)\n",
+                "coap_resource_notify_observers",
+                coap_socket_strerror(), errno);
+    }
+  }
+#endif /* COAP_EPOLL_SUPPORT */
   return 1;
 }
 
 void
 coap_check_notify(coap_context_t *context) {
 
-  RESOURCES_ITER(context->resources, r) {
-    coap_notify_observers(context, r);
+  if (context->observe_pending) {
+    context->observe_pending = 0;
+    RESOURCES_ITER(context->resources, r) {
+      coap_notify_observers(context, r);
+    }
   }
 }
 

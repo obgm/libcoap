@@ -1303,7 +1303,7 @@ main(int argc, char **argv) {
   int opt;
   coap_log_t log_level = LOG_WARNING;
   unsigned wait_ms;
-  time_t t_last = 0;
+  coap_time_t t_last = 0;
   int coap_fd;
   fd_set m_readfds;
   int nfds = 0;
@@ -1438,12 +1438,21 @@ main(int argc, char **argv) {
     int result;
 
     if (coap_fd != -1) {
+      /*
+       * Using epoll.  It is more usual to call coap_io_process() with wait_ms
+       * (as in the non-epoll branch), but doing it this way gives the
+       * flexibility of potentially working with other file descriptors that
+       * are not a part of libcoap.
+       */
       fd_set readfds = m_readfds;
       struct timeval tv;
+      coap_tick_t begin, end;
+
+      coap_ticks(&begin);
 
       tv.tv_sec = wait_ms / 1000;
       tv.tv_usec = (wait_ms % 1000) * 1000;
-      /* Wait until any i/o takes place */
+      /* Wait until any i/o takes place or timeout */
       result = select (nfds, &readfds, NULL, NULL, &tv);
       if (result == -1) {
         if (errno != EAGAIN) {
@@ -1456,10 +1465,19 @@ main(int argc, char **argv) {
           result = coap_io_process(ctx, COAP_IO_NO_WAIT);
         }
       }
+      if (result >= 0) {
+        coap_ticks(&end);
+        /* Track the overall time spent in select() and coap_io_process() */
+        result = end - begin;
+      }
     }
     else {
-      /* epoll is not supported within libcoap */
-      result = coap_io_process(ctx, wait_ms);
+      /*
+       * epoll is not supported within libcoap
+       *
+       * result is time spent in coap_io_process()
+       */
+      result = coap_io_process( ctx, wait_ms );
     }
     if ( result < 0 ) {
       break;
@@ -1473,18 +1491,24 @@ main(int argc, char **argv) {
        * the granularity of the timer in coap_io_process() and hence
        * result == 0)
        */
-      time_t t_now = time(NULL);
+      wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+    }
+    if (time_resource) {
+      coap_time_t t_now;
+      unsigned int next_sec_ms;
+
+      coap_ticks(&now);
+      t_now = coap_ticks_to_rt(now);
       if (t_last != t_now) {
         /* Happens once per second */
         t_last = t_now;
-        if (time_resource) {
-          coap_resource_notify_observers(time_resource, NULL);
-        }
+        coap_resource_notify_observers(time_resource, NULL);
       }
-      if (result) {
-        /* result must have been >= wait_ms, so reset wait_ms */
-        wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
-      }
+      /* need to wait until next second starts if wait_ms is too large */
+      next_sec_ms = 1000 - (now % COAP_TICKS_PER_SECOND) *
+                           1000 / COAP_TICKS_PER_SECOND;
+      if (next_sec_ms && next_sec_ms < wait_ms)
+        wait_ms = next_sec_ms;
     }
 
 #ifndef WITHOUT_ASYNC
