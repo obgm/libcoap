@@ -39,6 +39,22 @@
  * exclude code based on whether compiled against 1.1.0 or 1.1.1, as well as
  * have additional run time checks.
  *
+ * It is possible to override the Ciphers, define the Algorithms or Groups
+ * to use for the SSL negotiations at compile time. This is done by the adding
+ * of the appropriate -D option to the CPPFLAGS parameter that is used on the
+ * ./configure command line.
+ * E.g.  ./configure CPPFLAGS="-DXX=\"YY\" -DUU=\"VV\""
+ * The parameter value is case-sensitive.
+ *
+ * The ciphers can be overridden with (example)
+ *  -DCOAP_OPENSSL_CIPHERS=\"ECDHE-ECDSA-AES256-GCM-SHA384\"
+ *
+ * The Algorithms can be defined by (example)
+ *  -DCOAP_OPENSSL_SIGALGS=\"ed25519\"
+ *
+ * The Groups (OpenSSL 1.1.1 or later) can be defined by (example)
+ *  -DCOAP_OPENSSL_GROUPS=\"X25519\"
+ *
  */
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -638,6 +654,19 @@ static long coap_sock_ctrl(BIO *a, int cmd, long num, void *ptr) {
 }
 #endif /* !COAP_DISABLE_TCP */
 
+static void coap_set_user_prefs(SSL_CTX *ctx) {
+  SSL_CTX_set_cipher_list(ctx, COAP_OPENSSL_CIPHERS);
+
+#ifdef COAP_OPENSSL_SIGALGS
+  SSL_CTX_set1_sigalgs_list(ctx, COAP_OPENSSL_SIGALGS);
+  SSL_CTX_set1_client_sigalgs_list(ctx, COAP_OPENSSL_SIGALGS);
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L && defined(COAP_OPENSSL_GROUPS)
+  SSL_CTX_set1_groups_list(ctx, COAP_OPENSSL_GROUPS);
+#endif
+}
+
 void *coap_dtls_new_context(struct coap_context_t *coap_context) {
   coap_openssl_context_t *context;
   (void)coap_context;
@@ -655,7 +684,7 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
     SSL_CTX_set_min_proto_version(context->dtls.ctx, DTLS1_2_VERSION);
     SSL_CTX_set_app_data(context->dtls.ctx, &context->dtls);
     SSL_CTX_set_read_ahead(context->dtls.ctx, 1);
-    SSL_CTX_set_cipher_list(context->dtls.ctx, COAP_OPENSSL_CIPHERS);
+    coap_set_user_prefs(context->dtls.ctx);
     memset(cookie_secret, 0, sizeof(cookie_secret));
     if (!RAND_bytes(cookie_secret, (int)sizeof(cookie_secret))) {
       if (dtls_log_level >= LOG_WARNING)
@@ -690,7 +719,7 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
       goto error;
     SSL_CTX_set_app_data(context->tls.ctx, &context->tls);
     SSL_CTX_set_min_proto_version(context->tls.ctx, TLS1_VERSION);
-    SSL_CTX_set_cipher_list(context->tls.ctx, COAP_OPENSSL_CIPHERS);
+    coap_set_user_prefs(context->tls.ctx);
     SSL_CTX_set_info_callback(context->tls.ctx, coap_dtls_info_callback);
     context->tls.meth = BIO_meth_new(BIO_TYPE_SOCKET, "coapsock");
     if (!context->tls.meth)
@@ -1634,7 +1663,7 @@ tls_server_name_call_back(SSL *ssl,
         SSL_CTX_set_min_proto_version(ctx, DTLS1_2_VERSION);
         SSL_CTX_set_app_data(ctx, &context->dtls);
         SSL_CTX_set_read_ahead(ctx, 1);
-        SSL_CTX_set_cipher_list(ctx, COAP_OPENSSL_CIPHERS);
+        coap_set_user_prefs(ctx);
         SSL_CTX_set_cookie_generate_cb(ctx, coap_dtls_generate_cookie);
         SSL_CTX_set_cookie_verify_cb(ctx, coap_dtls_verify_cookie);
         SSL_CTX_set_info_callback(ctx, coap_dtls_info_callback);
@@ -1648,7 +1677,7 @@ tls_server_name_call_back(SSL *ssl,
           goto error;
         SSL_CTX_set_app_data(ctx, &context->tls);
         SSL_CTX_set_min_proto_version(ctx, TLS1_VERSION);
-        SSL_CTX_set_cipher_list(ctx, COAP_OPENSSL_CIPHERS);
+        coap_set_user_prefs(ctx);
         SSL_CTX_set_info_callback(ctx, coap_dtls_info_callback);
         SSL_CTX_set_alpn_select_cb(ctx, server_alpn_callback, NULL);
       }
