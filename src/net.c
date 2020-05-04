@@ -2238,15 +2238,16 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       coap_opt_t *observe = NULL;
       int observe_action = COAP_OBSERVE_CANCEL;
 
-      /* check for Observe option */
-      if (resource->observable) {
+      /* check for Observe option RFC7641 and RFC8132 */
+      if (resource->observable &&
+          (pdu->code == COAP_REQUEST_GET || pdu->code == COAP_REQUEST_FETCH)) {
         observe = coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter);
         if (observe) {
           observe_action =
             coap_decode_var_bytes(coap_opt_value(observe),
               coap_opt_length(observe));
 
-          if ((observe_action & COAP_OBSERVE_CANCEL) == 0) {
+          if (observe_action == COAP_OBSERVE_ESTABLISH) {
             coap_subscription_t *subscription;
             coap_block_t block2;
             int has_block2 = 0;
@@ -2259,8 +2260,12 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
             if (subscription) {
               coap_touch_observer(context, session, &token);
             }
-          } else {
+          }
+          else if (observe_action == COAP_OBSERVE_CANCEL) {
             coap_delete_observer(resource, session, &token);
+          }
+          else {
+            coap_log(LOG_INFO, "observe: unexpected action %d\n", observe_action);
           }
         }
       }
