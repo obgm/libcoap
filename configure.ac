@@ -9,7 +9,7 @@
 # defined later.
 m4_define([libcoap_major_version], [4])
 m4_define([libcoap_minor_version], [3])
-m4_define([libcoap_micro_version], [0alpha])
+m4_define([libcoap_micro_version], [0beta])
 
 # define an appending release state if needed, for example for pre-releases
 # like 'alpha' or 'rc1', for a full release keep the value empty!
