@@ -60,7 +60,9 @@ A2X_EXTRA_PAGES = @DOLLAR_SIGN@(shell for fil in $(TXT3) ; do sed -ne '/^NAME/,/
 
 # Extra man pages that need to be installed due to limit of 10
 # names built by a2x
+#
 # These files are created in install-man
+#
 EXTRA_PAGES = \
 	coap_context_set_pki_root_cas.3 \
 	coap_add_data_blocked_response.3 \
@@ -69,13 +71,17 @@ EXTRA_PAGES = \
 	coap_split_query.3 \
 	coap_session_get_app_data.3 \
 	coap_session_set_app_data.3 \
-	coap_endpoint_str.3
+	coap_is_tcp_supported.3 \
+	coap_endpoint_str.3 \
+	coap_session_str.3
 
 # a2x builds alternative .3 files up to a limit of 10 names from the
 # NAME section, so that 'man' works against the alternative different
 # function names.
+#
 # However, if there are more alternative names, they need to be defined
-# as per below.
+# as per below as well as in EXTRA_PAGES above.
+#
 # Then all the alternative names as well as the extras defined below need
 # to be cleaned up in a 'make unistall'.
 install-man: install-man3 install-man5 install-man7
@@ -86,6 +92,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_query.3
 	@echo ".so man3/coap_session.3" > coap_session_get_app_data.3
 	@echo ".so man3/coap_session.3" > coap_session_set_app_data.3
+	@echo ".so man3/coap_session.3" > coap_is_tcp_supported.3
 	@echo ".so man3/coap_logging.3" > coap_endpoint_str.3
 	@echo ".so man3/coap_logging.3" > coap_session_str.3
 	$(INSTALL_DATA) $(EXTRA_PAGES) $(A2X_EXTRA_PAGES) "$(DESTDIR)$(man3dir)"

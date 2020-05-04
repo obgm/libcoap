@@ -17,8 +17,8 @@ coap_new_client_session_pki,
 coap_session_reference,
 coap_session_release,
 coap_session_set_mtu,
-coap_session_max_pdu_size,
-coap_session_str - Work with CoAP sessions
+coap_session_max_pdu_size
+- Work with CoAP sessions
 
 SYNOPSIS
 --------
@@ -48,7 +48,7 @@ _proto_, coap_dtls_pki_t *_setup_data_);*
 
 *void *coap_session_get_app_data(const coap_session_t *_session_);*
 
-*const char *coap_session_str(const coap_session_t *_session_);*
+*int coap_tcp_is_supported(void);*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
@@ -123,6 +123,12 @@ COAP_PROTO_TCP
 COAP_PROTO_TLS
 ----
 
+The *coap_tcp_is_supported*() function returns 1 if support for TCP is
+enabled, otherwise 0. Likewise *coap_dtls_is_supported*() and
+*coap_tls_is_supported*() can be used for checking whether the underlying
+(D)TLS protocol support is available.  See *coap_tls_library(3)* for further
+information.
+
 The *coap_new_client_session*() function initiates a new client session
 associated with _context_ to the specified _server_ using the CoAP protocol
 _proto_.  If the port is not specified in _server_, then the default CoAP
@@ -175,9 +181,6 @@ for the _session_ which can then be retrieved at a later date.
 The *coap_session_get_app_data*() function is used to retrieve the data
 pointer previously defined by *coap_session_set_app_data*().
 
-The *coap_session_str*() function is used to get a string containing the
-information about the _session_.
-
 RETURN VALUES
 -------------
 *coap_new_client_session*(), *coap_new_client_session_psk2*(),
@@ -190,8 +193,8 @@ session or NULL if there is a creation failure.
 
 *coap_session_max_pdu_size*() function returns the MTU size.
 
-*coap_session_str*() function returns a description string of the
-session.
+The *coap_tcp_is_supported*() function returns 1 if support for TCP is
+enabled, otherwise 0.
 
 EXAMPLES
 --------
