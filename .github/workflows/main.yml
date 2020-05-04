@@ -20,7 +20,7 @@ jobs:
       - name: setup (linux)
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          sudo apt install libcunit1-dev libmbedtls-dev libgnutls28-dev
+          sudo apt-get update && sudo apt-get install libcunit1-dev libmbedtls-dev libgnutls28-dev
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
