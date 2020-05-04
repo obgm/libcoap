@@ -372,7 +372,7 @@ coap_dtls_verify_cookie(SSL *ssl,
     return 0;
 }
 
-static unsigned
+static unsigned int
 coap_dtls_psk_client_callback(
   SSL *ssl,
   const char *hint,
@@ -439,7 +439,7 @@ coap_dtls_psk_client_callback(
     c_session->psk_key = coap_new_bin_const(psk_info->key.s, psk_len);
     memcpy(psk, psk_info->key.s, psk_len);
 
-    return psk_len;
+    return (unsigned int)psk_len;
   }
   psk_len = c_session->context->get_client_psk(c_session,
                                                (const uint8_t*)hint,
@@ -453,7 +453,7 @@ coap_dtls_psk_client_callback(
   return (unsigned)psk_len;
 }
 
-static unsigned
+static unsigned int
 coap_dtls_psk_server_callback(
   SSL *ssl,
   const char *identity,
@@ -500,7 +500,7 @@ coap_dtls_psk_server_callback(
       return 0;
     memcpy(psk, psk_key->s, psk_key->length);
     coap_session_refresh_psk_key(c_session, psk_key);
-    return psk_key->length;
+    return (unsigned int)psk_key->length;
   }
 
   return (unsigned)c_session->context->get_server_psk(c_session,
@@ -1267,7 +1267,7 @@ setup_pki_ssl(SSL *ssl,
         setup_data->pki_key.key.asn1.public_cert_len > 0) {
       if (!(SSL_use_certificate_ASN1(ssl,
                            setup_data->pki_key.key.asn1.public_cert,
-                           setup_data->pki_key.key.asn1.public_cert_len))) {
+                           (int)setup_data->pki_key.key.asn1.public_cert_len))) {
         coap_log(LOG_WARNING,
                  "*** setup_pki: (D)TLS: %s: Unable to configure "
                  "%s Certificate\n",
@@ -1289,7 +1289,7 @@ setup_pki_ssl(SSL *ssl,
       int pkey_type = map_key_type(setup_data->pki_key.key.asn1.private_key_type);
       if (!(SSL_use_PrivateKey_ASN1(pkey_type, ssl,
                         setup_data->pki_key.key.asn1.private_key,
-                        setup_data->pki_key.key.asn1.private_key_len))) {
+                        (long)setup_data->pki_key.key.asn1.private_key_len))) {
         coap_log(LOG_WARNING,
                  "*** setup_pki: (D)TLS: %s: Unable to configure "
                  "%s Private Key\n",
@@ -1310,7 +1310,7 @@ setup_pki_ssl(SSL *ssl,
         setup_data->pki_key.key.asn1.ca_cert_len > 0) {
       /* Need to use a temp variable as it gets incremented*/
       const uint8_t *p = setup_data->pki_key.key.asn1.ca_cert;
-      X509* x509 = d2i_X509(NULL, &p, setup_data->pki_key.key.asn1.ca_cert_len);
+      X509* x509 = d2i_X509(NULL, &p, (long)setup_data->pki_key.key.asn1.ca_cert_len);
       X509_STORE *st;
       SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
 
@@ -1372,7 +1372,7 @@ get_san_or_cn_from_cert(X509* x509) {
     X509_NAME_oneline(X509_get_subject_name(x509), buffer, sizeof(buffer));
 
     /* Need to emulate strcasestr() here.  Looking for CN= */
-    n = strlen(buffer) - 3;
+    n = (int)strlen(buffer) - 3;
     cn = buffer;
     while (n > 0) {
       if (((cn[0] == 'C') || (cn[0] == 'c')) &&
@@ -1831,7 +1831,7 @@ tls_client_hello_call_back(SSL *ssl,
   if ((session->psk_key) ||
       (session->context->spsk_setup_data.psk_info.key.s &&
        session->context->spsk_setup_data.psk_info.key.length)) {
-    int len = SSL_client_hello_get0_ciphers(ssl, &out);
+    size_t len = SSL_client_hello_get0_ciphers(ssl, &out);
     STACK_OF(SSL_CIPHER) *peer_ciphers = NULL;
     STACK_OF(SSL_CIPHER) *scsvc = NULL;
 

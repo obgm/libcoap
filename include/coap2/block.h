@@ -133,7 +133,7 @@ int coap_write_block_opt(coap_block_t *block,
  * @return          @c 1 on success, @c 0 otherwise.
  */
 int coap_add_block(coap_pdu_t *pdu,
-                   unsigned int len,
+                   size_t len,
                    const uint8_t *data,
                    unsigned int block_num,
                    unsigned char block_szx);

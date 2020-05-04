@@ -880,7 +880,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       if (!dst_found) {
         /* Not expected, but cmsg_level and cmsg_type don't match above and
            may need a new case */
-        packet->ifindex = sock->fd;
+        packet->ifindex = (int)sock->fd;
         if (getsockname(sock->fd, &packet->addr_info.local.addr.sa,
             &packet->addr_info.local.size) < 0) {
           coap_log(LOG_DEBUG, "Cannot determine local port\n");
@@ -1273,7 +1273,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
     tv.tv_sec = (long)(timeout / 1000);
   }
 
-  result = select(nfds, &readfds, &writefds, &exceptfds, timeout > 0 ? &tv : NULL);
+  result = select((int)nfds, &readfds, &writefds, &exceptfds, timeout > 0 ? &tv : NULL);
 
   if (result < 0) {   /* error */
 #ifdef _WIN32

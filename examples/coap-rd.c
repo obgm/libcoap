@@ -723,7 +723,7 @@ get_context(const char *node, const char *port) {
 
     if (rp->ai_addrlen <= sizeof(addr.addr)) {
       coap_address_init(&addr);
-      addr.size = rp->ai_addrlen;
+      addr.size = (socklen_t)rp->ai_addrlen;
       memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
       addrs = addr;
       if (addr.addr.sa.sa_family == AF_INET) {
