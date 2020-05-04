@@ -420,12 +420,23 @@ coap_delete_attr(coap_attr_t *attr) {
 #endif
 }
 
+typedef enum coap_deleting_resource_t {
+  COAP_DELETING_RESOURCE,
+  COAP_NOT_DELETING_RESOURCE
+} coap_deleting_resource_t;
+
+static void coap_notify_observers(coap_context_t *context, coap_resource_t *r,
+                                  coap_deleting_resource_t deleting);
+
 static void
 coap_free_resource(coap_resource_t *resource) {
   coap_attr_t *attr, *tmp;
   coap_subscription_t *obs, *otmp;
 
   assert(resource);
+
+  coap_resource_notify_observers(resource, NULL);
+  coap_notify_observers(resource->context, resource, COAP_DELETING_RESOURCE);
 
   /* delete registered attributes */
   LL_FOREACH_SAFE(resource->link_attr, attr, tmp) coap_delete_attr(attr);
@@ -745,7 +756,8 @@ coap_delete_observers(coap_context_t *context, coap_session_t *session) {
 }
 
 static void
-coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
+coap_notify_observers(coap_context_t *context, coap_resource_t *r,
+                      coap_deleting_resource_t deleting) {
   coap_method_handler_t h;
   coap_subscription_t *obs;
   coap_binary_t token;
@@ -813,8 +825,16 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r) {
       } else {
         response->type = COAP_MESSAGE_CON;
       }
-      /* fill with observer-specific data */
-      h(context, r, obs->session, NULL, &token, obs->query, response);
+      switch (deleting) {
+      case COAP_NOT_DELETING_RESOURCE:
+        /* fill with observer-specific data */
+        h(context, r, obs->session, NULL, &token, obs->query, response);
+        break;
+      case COAP_DELETING_RESOURCE:
+      default:
+        response->code = COAP_RESPONSE_CODE(404);
+        break;
+      }
 
       /* TODO: do not send response and remove observer when
        *  COAP_RESPONSE_CLASS(response->hdr->code) > 2
@@ -904,7 +924,7 @@ coap_check_notify(coap_context_t *context) {
   if (context->observe_pending) {
     context->observe_pending = 0;
     RESOURCES_ITER(context->resources, r) {
-      coap_notify_observers(context, r);
+      coap_notify_observers(context, r, COAP_NOT_DELETING_RESOURCE);
     }
   }
 }
