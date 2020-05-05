@@ -1,6 +1,6 @@
 /* mem.c -- CoAP memory handling
  *
- * Copyright (C) 2014--2015,2019 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2014--2015,2019--2020 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
@@ -8,12 +8,6 @@
 
 
 #include "coap_internal.h"
-
-#ifdef HAVE_ASSERT_H
-#include <assert.h>
-#else /* HAVE_ASSERT_H */
-#define assert(...)
-#endif /* HAVE_ASSERT_H */
 
 #if defined(RIOT_VERSION) && defined(MODULE_MEMARRAY)
 #include <memarray.h>
