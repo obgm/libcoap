@@ -27,6 +27,33 @@
 #define IN_MULTICAST(Address) (0)
 #endif /* RIOT_VERSION */
 
+uint16_t
+coap_address_get_port(const coap_address_t *addr) {
+  assert(addr != NULL);
+  switch (addr->addr.sa.sa_family) {
+  case AF_INET: return ntohs(addr->addr.sin.sin_port);
+  case AF_INET6: return ntohs(addr->addr.sin6.sin6_port);
+  default: /* undefined */
+    ;
+  }
+  return 0;
+}
+
+void
+coap_address_set_port(coap_address_t *addr, uint16_t port) {
+  assert(addr != NULL);
+  switch (addr->addr.sa.sa_family) {
+  case AF_INET:
+    addr->addr.sin.sin_port = htons(port);
+    break;
+  case AF_INET6:
+    addr->addr.sin6.sin6_port = htons(port);
+    break;
+  default: /* undefined */
+    ;
+  }
+}
+
 int
 coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
   assert(a); assert(b);

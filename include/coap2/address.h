@@ -30,6 +30,22 @@ typedef struct coap_address_t {
   ip_addr_t addr;
 } coap_address_t;
 
+/**
+ * Returns the port from @p addr in host byte order.
+ */
+COAP_STATIC_INLINE uint16_t
+coap_address_get_port(const coap_address_t *addr) {
+  return ntohs(addr->port);
+}
+
+/**
+ * Sets the port field of @p addr to @p port (in host byte order).
+ */
+COAP_STATIC_INLINE void
+coap_address_set_port(coap_address_t *addr, uint16_t port) {
+  addr->port = htons(port);
+}
+
 #define _coap_address_equals_impl(A, B) \
         ((A)->port == (B)->port        \
         && (!!ip_addr_cmp(&(A)->addr,&(B)->addr)))
@@ -46,6 +62,22 @@ typedef struct coap_address_t {
   uip_ipaddr_t addr;
   uint16_t port;
 } coap_address_t;
+
+/**
+ * Returns the port from @p addr in host byte order.
+ */
+COAP_STATIC_INLINE uint16_t
+coap_address_get_port(const coap_address_t *addr) {
+  return uip_ntohs(addr->port);
+}
+
+/**
+ * Sets the port field of @p addr to @p port (in host byte order).
+ */
+COAP_STATIC_INLINE void
+coap_address_set_port(coap_address_t *addr, uint16_t port) {
+  addr->port = uip_htons(port);
+}
 
 #define _coap_address_equals_impl(A,B) \
         ((A)->port == (B)->port        \
@@ -67,6 +99,16 @@ typedef struct coap_address_t {
     struct sockaddr_in6     sin6;
   } addr;
 } coap_address_t;
+
+/**
+ * Returns the port from @p addr in host byte order.
+ */
+uint16_t coap_address_get_port(const coap_address_t *addr);
+
+/**
+ * Set the port field of @p addr to @p port (in host byte order).
+ */
+void coap_address_set_port(coap_address_t *addr, uint16_t port);
 
 /**
  * Compares given address objects @p a and @p b. This function returns @c 1 if

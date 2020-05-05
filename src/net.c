@@ -1,6 +1,6 @@
 /* net.c -- CoAP network interface
  *
- * Copyright (C) 2010--2019 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2019 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
@@ -465,7 +465,6 @@ coap_new_context(
 #endif /* not WITH_CONTIKI */
 #ifdef WITH_CONTIKI
   coap_resources_init();
-  coap_memory_init();
 
   c = &the_coap_context;
   initialized = 1;
@@ -2613,6 +2612,7 @@ void coap_startup(void) {
   us = coap_ticks_to_rt_us(now);
   /* Be accurate to the nearest (approx) us */
   prng_init(us);
+  coap_memory_init();
   coap_dtls_startup();
 }
 
@@ -2622,7 +2622,7 @@ void coap_cleanup(void) {
 #endif
 }
 
-#if ! defined WITH_CONTIKI && ! defined WITH_LWIP
+#if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION
 int
 coap_join_mcast_group(coap_context_t *ctx, const char *group_name) {
   struct ipv6_mreq mreq;

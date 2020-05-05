@@ -14,6 +14,10 @@
 
 #include "address.h"
 
+#ifdef RIOT_VERSION
+#include "net/gnrc.h"
+#endif /* RIOT_VERSION */
+
 #ifndef COAP_RXBUFFER_SIZE
 #define COAP_RXBUFFER_SIZE 1472
 #endif /* COAP_RXBUFFER_SIZE */
@@ -59,6 +63,9 @@ typedef struct coap_socket_t {
 #else
   coap_fd_t fd;
 #endif /* WITH_LWIP */
+#if defined(RIOT_VERSION)
+  gnrc_pktsnip_t *pkt; /* pointer to received packet for processing */
+#endif /* RIOT_VERSION */
   coap_socket_flags_t flags;
   struct coap_session_t *session; /* Used by the epoll logic for an active session.
                                      Note: It must mot be wrapped with COAP_EPOLL_SUPPORT as
