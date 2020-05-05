@@ -179,7 +179,7 @@ address_equals(const coap_address_t *a, const ipv6_addr_t *b) {
 }
 
 int
-coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
+coap_io_process(coap_context_t *ctx, unsigned timeout_ms) {
   coap_tick_t before, now;
   coap_socket_t *sockets[LIBCOAP_MAX_SOCKETS];
   unsigned int num_sockets = 0, timeout;
@@ -190,7 +190,8 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
 
   coap_ticks(&before);
 
-  timeout = coap_write(ctx, sockets, (unsigned int)(sizeof(sockets) / sizeof(sockets[0])), &num_sockets, before);
+  timeout =
+    coap_io_prepare_io(ctx, sockets, ARRAY_SIZE(sockets), &num_sockets, now);
   if (timeout == 0 || timeout_ms < timeout)
     timeout = timeout_ms;
 
@@ -269,7 +270,7 @@ coap_run_once(coap_context_t *ctx, unsigned timeout_ms) {
   }
 
   coap_ticks(&now);
-  coap_read(ctx, now);
+  coap_io_do_io(ctx, now);
 
   /* cleanup */
   gnrc_netreg_unregister(GNRC_NETTYPE_UDP, &coap_reg);
