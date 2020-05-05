@@ -10,10 +10,16 @@ coap_resource(3)
 
 NAME
 ----
-coap_resource, coap_resource_init, coap_resource_unknown_init,
-coap_add_resource, coap_delete_resource, coap_delete_all_resources,
-coap_resource_set_mode, coap_resource_set_userdata,
-coap_resource_get_userdata - Work with CoAP resources
+coap_resource,
+coap_resource_init,
+coap_resource_unknown_init,
+coap_add_resource,
+coap_delete_resource,
+coap_delete_all_resources,
+coap_resource_set_mode,
+coap_resource_set_userdata,
+coap_resource_get_userdata
+- Work with CoAP resources
 
 SYNOPSIS
 --------
@@ -456,7 +462,8 @@ information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

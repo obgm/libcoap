@@ -10,7 +10,10 @@ coap_encryption(3)
 
 NAME
 ----
-coap_encryption, coap_dtls_cpsk_t, coap_dtls_spsk_t, coap_dtls_pki_t
+coap_encryption,
+coap_dtls_cpsk_t,
+coap_dtls_spsk_t,
+coap_dtls_pki_t
 - Work with CoAP TLS/DTLS
 
 SYNOPSIS
@@ -1152,7 +1155,8 @@ information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

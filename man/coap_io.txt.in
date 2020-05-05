@@ -10,8 +10,14 @@ coap_io(3)
 
 NAME
 ----
-coap_io, coap_io_process, coap_io_process_with_fds, coap_context_get_coap_fd,
-coap_io_prepare_io, coap_io_do_io, coap_io_prepare_epoll, coap_io_do_epoll
+coap_io,
+coap_io_process,
+coap_io_process_with_fds,
+coap_context_get_coap_fd,
+coap_io_prepare_io,
+coap_io_do_io,
+coap_io_prepare_epoll,
+coap_io_do_epoll
 - Work with CoAP I/O to do the packet send and receives
 
 SYNOPSIS
@@ -417,7 +423,8 @@ information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

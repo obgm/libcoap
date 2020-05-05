@@ -10,7 +10,9 @@ coap_attribute(3)
 
 NAME
 ----
-coap_attribute, coap_add_attr, coap_find_attr
+coap_attribute,
+coap_add_attr,
+coap_find_attr
 - Work with CoAP attributes
 
 SYNOPSIS
@@ -127,7 +129,8 @@ information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------
