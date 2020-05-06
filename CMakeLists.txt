@@ -6,7 +6,7 @@ project(
   LANGUAGES CXX C)
 
 set(LIBCOAP_API_VERSION 2)
-set(COAP_LIBRARY_NAME "coap")
+set(COAP_LIBRARY_NAME "coap-${LIBCOAP_API_VERSION}")
 
 add_library(${COAP_LIBRARY_NAME})
 
