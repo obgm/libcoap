@@ -376,7 +376,11 @@ set(LIBCOAP_PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net")
 set(PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net")
 set(top_srcdir "${CMAKE_CURRENT_LIST_DIR}")
 set(top_builddir "${CMAKE_CURRENT_BINARY_DIR}")
-set(COAP_DISABLE_TCP NOT "${ENABLE_TCP}")
+if(ENABLE_TCP)
+  set(COAP_DISABLE_TCP 0)
+else(ENABLE_TCP)
+  set(COAP_DISABLE_TCP 1)
+endif(ENABLE_TCP)
 
 # creates config header file in build directory
 configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap.h)
@@ -390,26 +394,26 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_config.h.in
 
 target_sources(
   ${COAP_LIBRARY_NAME}
-  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/pdu.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/net.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/coap_debug.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/encode.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/uri.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/subscribe.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/resource.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/str.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/option.c
+  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/address.c
           ${CMAKE_CURRENT_LIST_DIR}/src/async.c
           ${CMAKE_CURRENT_LIST_DIR}/src/block.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/mem.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/coap_io.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/coap_session.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/address.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/coap_time.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_debug.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_event.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_io.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_notls.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_session.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_tcp.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_time.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/encode.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/mem.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/net.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/option.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/pdu.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/resource.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/str.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/subscribe.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/uri.c
           # no need to parse those files if we do not need them
           $<$<BOOL:${HAVE_OPENSSL}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openssl.c>
           $<$<BOOL:${HAVE_LIBTINYDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tinydtls.c>
@@ -475,8 +479,8 @@ add_library(
 #
 
 add_compile_options(
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wall>
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-pedantic>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wall>
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wcast-qual>
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wextra>
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wformat-security>
