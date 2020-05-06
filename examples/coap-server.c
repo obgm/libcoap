@@ -37,6 +37,7 @@ static char* strndup(const char* s1, size_t n)
 };
 #include <io.h>
 #define access _access
+#define fileno _fileno
 #else
 #include <unistd.h>
 #include <sys/select.h>
@@ -1470,7 +1471,7 @@ main(int argc, char **argv) {
       if (result >= 0) {
         coap_ticks(&end);
         /* Track the overall time spent in select() and coap_io_process() */
-        result = end - begin;
+        result = (int)(end - begin);
       }
     }
     else {

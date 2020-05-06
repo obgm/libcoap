@@ -1227,7 +1227,7 @@ setup_pki_ssl(SSL *ssl,
     if (setup_data->pki_key.key.pem_buf.public_cert &&
         setup_data->pki_key.key.pem_buf.public_cert_len) {
       BIO *bp = BIO_new_mem_buf(setup_data->pki_key.key.pem_buf.public_cert,
-                           setup_data->pki_key.key.pem_buf.public_cert_len);
+                         (int)setup_data->pki_key.key.pem_buf.public_cert_len);
       X509 *cert = bp ? PEM_read_bio_X509(bp, NULL, 0, NULL) : NULL;
 
       if (!cert || !SSL_use_certificate(ssl, cert)) {
@@ -1250,7 +1250,7 @@ setup_pki_ssl(SSL *ssl,
     if (setup_data->pki_key.key.pem_buf.private_key &&
         setup_data->pki_key.key.pem_buf.private_key_len) {
       BIO *bp = BIO_new_mem_buf(setup_data->pki_key.key.pem_buf.private_key,
-                           setup_data->pki_key.key.pem_buf.private_key_len);
+                        (int)setup_data->pki_key.key.pem_buf.private_key_len);
       EVP_PKEY *pkey = bp ? PEM_read_bio_PrivateKey(bp, NULL, 0, NULL) : NULL;
 
       if (!pkey || !SSL_use_PrivateKey(ssl, pkey)) {
@@ -1273,7 +1273,7 @@ setup_pki_ssl(SSL *ssl,
     if (setup_data->pki_key.key.pem_buf.ca_cert &&
         setup_data->pki_key.key.pem_buf.ca_cert_len) {
       BIO *bp = BIO_new_mem_buf(setup_data->pki_key.key.pem_buf.ca_cert,
-                           setup_data->pki_key.key.pem_buf.ca_cert_len);
+                        (int)setup_data->pki_key.key.pem_buf.ca_cert_len);
       SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
       X509 *x;
       X509_STORE *st = SSL_CTX_get_cert_store(ctx);
