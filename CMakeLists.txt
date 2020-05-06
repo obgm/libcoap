@@ -386,7 +386,7 @@ endif(ENABLE_TCP)
 configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap.h)
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_config.h.in
-               ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap_config.h)
+               ${CMAKE_CURRENT_BINARY_DIR}/coap_config.h)
 
 #
 # sources
@@ -451,6 +451,7 @@ target_sources(
 target_include_directories(
   ${COAP_LIBRARY_NAME}
   PUBLIC # config headers are generated during configuration time
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/coap2/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
