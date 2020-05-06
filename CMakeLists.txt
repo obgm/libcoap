@@ -537,7 +537,7 @@ endif()
 #
 
 if(ENABLE_EXAMPLES)
-  add_executable(coap-client ${CMAKE_CURRENT_LIST_DIR}/examples/client.c)
+  add_executable(coap-client ${CMAKE_CURRENT_LIST_DIR}/examples/coap-client.c)
   target_link_libraries(coap-client PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
 
   add_executable(coap-rd ${CMAKE_CURRENT_LIST_DIR}/examples/coap-rd.c)
