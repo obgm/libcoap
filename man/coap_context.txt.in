@@ -10,9 +10,15 @@ coap_context(3)
 
 NAME
 ----
-coap_context, coap_new_context, coap_free_context,
-coap_context_set_pki, coap_context_set_psk2, coap_new_endpoint,
-coap_free_endpoint, coap_endpoint_set_default_mtu
+coap_context,
+coap_new_context,
+coap_free_context,
+coap_context_set_pki,
+coap_context_set_pki_root_cas,
+coap_context_set_psk2,
+coap_new_endpoint,
+coap_free_endpoint,
+coap_endpoint_set_default_mtu
 - Work with CoAP contexts
 
 SYNOPSIS
@@ -542,7 +548,8 @@ information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

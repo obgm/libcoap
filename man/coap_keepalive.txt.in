@@ -10,7 +10,9 @@ coap_keepalive(3)
 
 NAME
 ----
-coap_keepalive, coap_context_set_keepalive - work with CoAP keepalive
+coap_keepalive,
+coap_context_set_keepalive
+- work with CoAP keepalive
 
 SYNOPSIS
 --------
@@ -66,7 +68,8 @@ FURTHER INFORMATION
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

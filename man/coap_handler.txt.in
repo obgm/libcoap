@@ -10,9 +10,13 @@ coap_handler(3)
 
 NAME
 ----
-coap_handler, coap_register_handler, coap_register_response_handler,
-coap_register_nack_handler, coap_register_ping_handler,
-coap_register_pong_handler, coap_register_event_handler
+coap_handler,
+coap_register_handler,
+coap_register_response_handler,
+coap_register_nack_handler,
+coap_register_ping_handler,
+coap_register_pong_handler,
+coap_register_event_handler
 - work with CoAP handlers
 
 SYNOPSIS
@@ -301,7 +305,8 @@ information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

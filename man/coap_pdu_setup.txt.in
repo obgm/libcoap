@@ -10,9 +10,21 @@ coap_pdu_setup(3)
 
 NAME
 ----
-coap_pdu_setup, coap_pdu_init, coap_add_token, coap_new_optlist,
-coap_insert_optlist, coap_delete_optlist, coap_add_optlist_pdu,
-coap_add_option, coap_add_data - Work with CoAP PDUs
+coap_pdu_setup,
+coap_pdu_init,
+coap_add_token,
+coap_new_optlist,
+coap_insert_optlist,
+coap_delete_optlist,
+coap_add_optlist_pdu,
+coap_add_option,
+coap_add_data,
+coap_add_data_blocked_response,
+coap_encode_var_safe,
+coap_encode_var_safe8,
+coap_split_path,
+coap_split_query
+- Work with CoAP PDUs
 
 SYNOPSIS
 --------
@@ -47,11 +59,14 @@ size_t _length_, const uint8_t *_data_);*
 *unsigned int coap_encode_var_safe(uint8_t *_buffer_, size_t _size_,
 unsigned int _value_);*
 
+*unsigned int coap_encode_var_safe8(uint8_t *_buffer_, size_t _size_,
+uint64_t _value_);*
+
 *int coap_split_path(const uint8_t *_path_, size_t _length_, uint8_t *_buffer_,
 size_t *_buflen_);*
 
-*int coap_split_query(const uint8_t *_query_, size_t _length_, uint8_t *_buffer_,
-size_t *_buflen_);*
+*int coap_split_query(const uint8_t *_query_, size_t _length_,
+uint8_t *_buffer_, size_t *_buflen_);*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
@@ -200,6 +215,10 @@ The *coap_encode_var_safe*() function encodes _value_ into _buffer_ which has
 a size of _size_ in bytes.  Normally, the _buffer_ size should be at least
 the sizeof(int) bytes unless you definitely know less space is required.
 
+The *coap_encode_var_safe8*() function encodes 8 byte _value_ into _buffer_
+which has a size of _size_ in bytes.  Normally, the _buffer_ size should be at
+least 8 bytes unless you definitely know less space is required.
+
 The *coap_split_path*() function splits up _path_ of length _length_ and
 places the result in _buffer_ which has a size of _buflen_.  _buflen_ needs
 to be preset with the size of _buffer_ before the function call, and then
@@ -226,6 +245,9 @@ The *coap_add_optlist*() function returns either the length of the option
 or 0 on failure.
 
 The *coap_encode_var_safe*() function returns either the length of bytes
+encoded or 0 on failure.
+
+The *coap_encode_var_safe8*() function returns either the length of bytes
 encoded or 0 on failure.
 
 EXAMPLES
@@ -407,7 +429,8 @@ for the current set of defined CoAP Options.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

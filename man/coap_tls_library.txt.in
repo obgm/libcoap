@@ -10,8 +10,12 @@ coap_tls_library(3)
 
 NAME
 ----
-coap_tls_library, coap_dtls_is_supported, coap_tls_is_supported,
-coap_get_tls_library_version, coap_string_tls_version, coap_show_tls_version
+coap_tls_library,
+coap_dtls_is_supported,
+coap_tls_is_supported,
+coap_get_tls_library_version,
+coap_string_tls_version,
+coap_show_tls_version
 - Work with CoAP TLS libraries
 
 SYNOPSIS
@@ -24,7 +28,7 @@ SYNOPSIS
 
 *coap_tls_version_t *coap_get_tls_library_version(void);*
 
-*char *coap_string_tls_version(char *_buffer_, size_t _bufsize_);
+*char *coap_string_tls_version(char *_buffer_, size_t _bufsize_);*
 
 *void coap_show_tls_version(coap_log_t _level_);*
 
@@ -86,17 +90,17 @@ for this information to be output using coap_log().
 [source, c]
 ----
 typedef enum coap_tls_library_t {
-  COAP_TLS_LIBRARY_NOTLS = 0, /**< No DTLS library */
-  COAP_TLS_LIBRARY_TINYDTLS,  /**< Using TinyDTLS library */
-  COAP_TLS_LIBRARY_OPENSSL,   /**< Using OpenSSL library */
-  COAP_TLS_LIBRARY_GNUTLS,    /**< Using GnuTLS library */
-  COAP_TLS_LIBRARY_MBEDTLS,   /**< Using MbedTLS library */
+  COAP_TLS_LIBRARY_NOTLS = 0, /* No DTLS library */
+  COAP_TLS_LIBRARY_TINYDTLS,  /* Using TinyDTLS library */
+  COAP_TLS_LIBRARY_OPENSSL,   /* Using OpenSSL library */
+  COAP_TLS_LIBRARY_GNUTLS,    /* Using GnuTLS library */
+  COAP_TLS_LIBRARY_MBEDTLS,   /* Using MbedTLS library */
 } coap_tls_library_t;
 
 typedef struct coap_tls_version_t {
-  uint64_t version; /* (D)TLS runtime Library Version */
-  coap_tls_library_t type; /**< Library type. One of COAP_TLS_LIBRARY_* */
-  uint64_t built_version; /* (D)TLS Built against Library Version */
+  uint64_t version;        /* (D)TLS runtime Library Version */
+  coap_tls_library_t type; /* Library type. One of COAP_TLS_LIBRARY_* */
+  uint64_t built_version;  /* (D)TLS Built against Library Version */
 }
 ----
 
@@ -122,7 +126,8 @@ information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

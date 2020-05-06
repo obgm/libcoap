@@ -10,9 +10,14 @@ coap_observe(3)
 
 NAME
 ----
-coap_observe, coap_resource_set_get_observable, coap_resource_notify_observers,
-coap_resource_get_uri_path, coap_find_observer, coap_delete_observer,
-coap_delete_observers - work with CoAP observe
+coap_observe,
+coap_resource_set_get_observable,
+coap_resource_notify_observers,
+coap_resource_get_uri_path,
+coap_find_observer,
+coap_delete_observer,
+coap_delete_observers
+- work with CoAP observe
 
 SYNOPSIS
 --------
@@ -404,7 +409,8 @@ FURTHER INFORMATION
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

@@ -10,9 +10,17 @@ coap_logging(3)
 
 NAME
 ----
-coap_logging, coap_log, coap_get_log_level, coap_set_log_level,
-coap_set_log_handler, coap_package_name, coap_package_version,
-coap_set_show_pdu_output, coap_show_pdu
+coap_logging,
+coap_log,
+coap_get_log_level,
+coap_set_log_level,
+coap_set_log_handler,
+coap_package_name,
+coap_package_version,
+coap_set_show_pdu_output,
+coap_show_pdu,
+coap_endpoint_str,
+coap_session_str
 - Work with CoAP logging
 
 SYNOPSIS
@@ -160,7 +168,8 @@ information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------
