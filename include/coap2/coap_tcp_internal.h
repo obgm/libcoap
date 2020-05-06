@@ -23,6 +23,8 @@
  * @{
  */
 
+#if !COAP_DISABLE_TCP
+
 /**
  * Create a new TCP socket and initiate the connection
  *
@@ -98,6 +100,8 @@ coap_socket_accept_tcp(coap_socket_t *server,
                        coap_socket_t *new_client,
                        coap_address_t *local_addr,
                        coap_address_t *remote_addr);
+
+#endif /* !COAP_DISABLE_TCP */
 
 /** @} */
 
