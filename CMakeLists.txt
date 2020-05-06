@@ -8,6 +8,11 @@ project(
 set(LIBCOAP_API_VERSION 2)
 set(COAP_LIBRARY_NAME "coap-${LIBCOAP_API_VERSION}")
 
+option(
+  BUILD_SHARED_LIBS
+  "Build shared libs"
+  OFF)
+
 add_library(${COAP_LIBRARY_NAME})
 
 #
@@ -66,10 +71,6 @@ option(
   ENABLE_DOCS
   "build also doxygen documentation"
   ON)
-option(
-  BUILD_SHARED_LIBS
-  "Build shared libs"
-  OFF)
 
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 11)

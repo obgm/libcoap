@@ -45,16 +45,21 @@ General Building with cmake for linux/windows/macos/android (not for LwIP or Con
  cmake -E remove_directory build
  cmake -E make_directory build
  cd build
- cmake .. -DENABLE_EXAMPLES=ON
+ cmake .. -DENABLE_TESTS=ON
  cmake --build .
  [sudo] cmake --build . -- install
+ cd ..
+
  Note: to see possible options (TLS lib, doc, tests, examples etc.):
- cmake -LH .
- Note: For windows, this is supported by Visual Studio Code with CMake extension
- Note: You should use cmake version >=3.10.
+ cmake -LH build
 
- Note: you can use cmake's find package after installation: find_package(libcoap REQUIRED), and target_link_libraries(myTarget PRIVATE libcoap::coap)
+ Note: For Windows, this is supported by Visual Studio Code with CMake extension
+ Note: You must use cmake version >=3.10.
 
+ Note: you can use cmake's find package after installation: find_package(libcoap-2 REQUIRED),
+ and target_link_libraries(myTarget PRIVATE libcoap::coap-2)
+
+ Note: Shared Library support is not currently available for Windows.
 
 General Building with autoconf (not for LwIP or Contiki - see below)
 ================
