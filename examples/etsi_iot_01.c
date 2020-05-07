@@ -55,6 +55,12 @@ typedef struct {
  * asynchronous responses. */
 static coap_async_state_t *async = NULL;
 
+/* A typedef for transfering a value in a void pointer */
+typedef union {
+  unsigned int val;
+  void *ptr;
+} async_data_t;
+
 /* SIGINT handler: set quit to 1 for graceful termination */
 static void
 handle_sigint(int signum UNUSED_PARAM) {
@@ -400,8 +406,17 @@ hnd_get_separate(coap_context_t *ctx,
     }
   }
 
+  /*
+   * This is so we can use a local variable to hold the remaining time.
+   * The alternative is to malloc the variable and set COAP_ASYNC_RELEASE_DATA
+   * in the flags parameter in the call to coap_register_async() and handle
+   * the required time as appropriate in check_async() below.
+   */
+  async_data_t data;
+  data.val = COAP_TICKS_PER_SECOND * delay;
+
   async = coap_register_async(ctx, session, request, COAP_ASYNC_SEPARATE,
-                              (void *)(COAP_TICKS_PER_SECOND * delay));
+                              data.ptr);
 }
 
 static void
@@ -409,10 +424,15 @@ check_async(coap_context_t *ctx,
             coap_tick_t now) {
   coap_pdu_t *response;
   coap_async_state_t *tmp;
+  async_data_t data;
 
   size_t size = 8;
 
-  if (!async || now < async->created + (unsigned long)async->appdata)
+  if (!async)
+    return;
+
+  data.ptr = async->appdata;
+  if (now < async->created + data.val)
     return;
 
   response = coap_pdu_init(async->flags & COAP_ASYNC_CONFIRM

@@ -309,6 +309,12 @@ hnd_get_async(coap_context_t *ctx,
       delay = delay * 10 + (*p - '0');
   }
 
+  /*
+   * This is so we can use a local variable to hold the remaining time.
+   * The alternative is to malloc the variable and set COAP_ASYNC_RELEASE_DATA
+   * in the flags parameter in the call to coap_register_async() and handle
+   * the required time as appropriate in check_async() below.
+   */
   async_data_t data;
   data.val = COAP_TICKS_PER_SECOND * delay;
   async = coap_register_async(ctx,
@@ -323,11 +329,15 @@ check_async(coap_context_t *ctx,
             coap_tick_t now) {
   coap_pdu_t *response;
   coap_async_state_t *tmp;
-  async_data_t data = { .ptr = async ? async->appdata : NULL };
+  async_data_t data;
 
   size_t size = 13;
 
-  if (!async || now < async->created + data.val)
+  if (!async)
+    return;
+
+  data.ptr = async->appdata;
+  if (now < async->created + data.val)
     return;
 
   response = coap_pdu_init(async->flags & COAP_ASYNC_CONFIRM
@@ -734,7 +744,7 @@ static uint8_t *read_file_mem(const char* file, size_t *length) {
     return NULL;
 
   if (fstat(fileno(f), &statbuf) == -1) {
-    fclose(f); 
+    fclose(f);
     return NULL;
   }
 
