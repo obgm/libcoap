@@ -41,9 +41,11 @@ typedef short coap_log_t;
    Use COAP_LOG_CIPHERS to output Cipher Info in OpenSSL etc.
  */
 #define COAP_LOG_CIPHERS (LOG_DEBUG+2)
-#else
+#else /* !HAVE_SYSLOG_H */
 /** Pre-defined log levels akin to what is used in \b syslog
     with LOG_CIPHERS added. */
+
+#if !defined(RIOT_VERSION)
 typedef enum {
   LOG_EMERG=0, /**< Emergency */
   LOG_ALERT,   /**< Alert */
@@ -55,7 +57,26 @@ typedef enum {
   LOG_DEBUG,   /**< Debug */
   COAP_LOG_CIPHERS=LOG_DEBUG+2 /**< CipherInfo */
 } coap_log_t;
-#endif
+#else /* RIOT_VERSION */
+/* RIOT defines a subset of the syslog levels in log.h with different
+ * numeric values. The remaining levels are defined here. Note that
+ * output granularity differs from what would be expected when
+ * adhering to the syslog levels.
+ */
+#include <log.h>
+typedef short coap_log_t;
+#define LOG_EMERG  (0)
+#define LOG_ALERT  (1)
+#define LOG_CRIT   (2)
+#define LOG_ERR    (3)
+/*  LOG_WARNING    (4) */
+#define LOG_NOTICE (5)
+/*  LOG_INFO       (6) */
+/*  LOG_DEBUG      (7) */
+#define COAP_LOG_CIPHERS (9)
+#endif /* RIOT_VERSION */
+
+#endif /* !HAVE_SYSLOG_H */
 
 /**
  * Get the current logging level.
