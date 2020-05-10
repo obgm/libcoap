@@ -794,6 +794,7 @@ coap_run_once(coap_context_t *ctx, uint32_t timeout_ms)
   return coap_io_process(ctx, timeout_ms);
 }
 
+#ifndef RIOT_VERSION
 /**
  * The main message processing loop with additional fds for internal select.
  *
@@ -824,6 +825,7 @@ coap_run_once(coap_context_t *ctx, uint32_t timeout_ms)
 int coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
                         int nfds, fd_set *readfds, fd_set *writefds,
                         fd_set *exceptfds);
+#endif /* !RIOT_VERSION */
 
 /**
 * Iterates through all the coap_socket_t structures embedded in endpoints or
