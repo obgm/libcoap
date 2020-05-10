@@ -179,7 +179,7 @@ address_equals(const coap_address_t *a, const ipv6_addr_t *b) {
 }
 
 int
-coap_io_process(coap_context_t *ctx, unsigned timeout_ms) {
+coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   coap_tick_t before, now;
   coap_socket_t *sockets[LIBCOAP_MAX_SOCKETS];
   unsigned int num_sockets = 0, timeout;
