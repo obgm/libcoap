@@ -191,7 +191,7 @@ coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   coap_ticks(&before);
 
   timeout =
-    coap_io_prepare_io(ctx, sockets, ARRAY_SIZE(sockets), &num_sockets, now);
+    coap_io_prepare_io(ctx, sockets, ARRAY_SIZE(sockets), &num_sockets, before);
   if (timeout == 0 || timeout_ms < timeout)
     timeout = timeout_ms;
 
