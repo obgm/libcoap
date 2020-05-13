@@ -185,6 +185,7 @@ const char *coap_response_phrase(unsigned char code);
 #define COAP_MEDIATYPE_APPLICATION_EXI           47 /* application/exi  */
 #define COAP_MEDIATYPE_APPLICATION_JSON          50 /* application/json  */
 #define COAP_MEDIATYPE_APPLICATION_CBOR          60 /* application/cbor  */
+#define COAP_MEDIATYPE_APPLICATION_CWT           61 /* application/cwt, RFC 8392  */
 
 /* Content formats from RFC 8152 */
 #define COAP_MEDIATYPE_APPLICATION_COSE_SIGN     98 /* application/cose; cose-type="cose-sign"     */
