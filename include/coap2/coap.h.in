@@ -26,6 +26,9 @@
 /* Define the version of libcoap this file belongs to. */
 #define LIBCOAP_PACKAGE_VERSION "@PACKAGE_VERSION@"
 
+/* Define the numeric version identifier for libcoap */
+#define LIBCOAP_VERSION (@LIBCOAP_VERSION@U)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
