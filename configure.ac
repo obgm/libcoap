@@ -9,11 +9,11 @@
 # defined later.
 m4_define([libcoap_major_version], [4])
 m4_define([libcoap_minor_version], [3])
-m4_define([libcoap_micro_version], [0beta])
+m4_define([libcoap_micro_version], [0])
 
 # define an appending release state if needed, for example for pre-releases
 # like 'alpha' or 'rc1', for a full release keep the value empty!
-m4_define([libcoap_release_state], [])
+m4_define([libcoap_release_state], [beta])
 
 # concatenate the full libcoap version string
 m4_define([libcoap_version], [m4_format([%s.%s.%s%s], libcoap_major_version, libcoap_minor_version, libcoap_micro_version, libcoap_release_state)])
@@ -119,6 +119,15 @@ AC_SUBST(LIBCOAP_SO_VERSION)
 # Defining the API Version
 LIBCOAP_API_VERSION=2
 AC_SUBST(LIBCOAP_API_VERSION)
+
+# Define a numeric version string
+m4_define([version_number],
+          [m4_format([%u%03u%03u],
+                     libcoap_major_version,
+                     libcoap_minor_version,
+                     libcoap_micro_version)])
+LIBCOAP_VERSION=version_number
+AC_SUBST(LIBCOAP_VERSION)
 
 # Adding some default warning options for code QS
 # see https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
