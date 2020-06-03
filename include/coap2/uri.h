@@ -1,7 +1,7 @@
 /*
  * uri.h -- helper functions for URI treatment
  *
- * Copyright (C) 2010-2011,2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2020 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -131,14 +131,20 @@ int coap_split_query(const uint8_t *s,
 /**
  * Extract query string from request PDU according to escape rules in 6.5.8.
  * @param request Request PDU.
- * @return        Reconstructed and escaped query string part.
+ * @return        Reconstructed and escaped query string part or @c NULL if
+ *                no query was contained in @p request. The coap_string_t
+ *                object returned by this function must be released with
+ *                coap_delete_string.
  */
 coap_string_t *coap_get_query(const struct coap_pdu_t *request);
 
 /**
  * Extract uri_path string from request PDU
  * @param request Request PDU.
- * @return        Reconstructed and escaped uri path string part.
+ * @return        Reconstructed and escaped uri path string part or @c NULL
+ *                if no URI-Path was contained in @p request. The
+ *                coap_string_t object returned by this function must be
+ *                released with coap_delete_string.
  */
 coap_string_t *coap_get_uri_path(const struct coap_pdu_t *request);
 
