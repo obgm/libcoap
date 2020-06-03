@@ -78,7 +78,7 @@ typedef struct coap_attr_t {
  * https://tools.ietf.org/html/rfc7641#section-4.5
  * but required by the DOTS signal channel protocol which needs to operate in
  * lossy DDoS attack environments.
- * https://tools.ietf.org/html/draft-ietf-dots-signal-channel-41#section-4.4.2.1
+ * https://tools.ietf.org/html/rfc8782#section-4.4.2.1
  */
 #define COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS  0x4
 
