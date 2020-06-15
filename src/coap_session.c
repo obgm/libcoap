@@ -303,11 +303,14 @@ void coap_session_send_csm(coap_session_t *session) {
   session->partial_write = 0;
   if (session->mtu == 0)
     session->mtu = COAP_DEFAULT_MTU;  /* base value */
-  pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CSM, 0, 16);
+  pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CSM, 0, 20);
   if ( pdu == NULL
     || coap_add_option(pdu, COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE,
          coap_encode_var_safe(buf, sizeof(buf),
                                 COAP_DEFAULT_MAX_PDU_RX_SIZE), buf) == 0
+    || coap_add_option(pdu, COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER,
+         coap_encode_var_safe(buf, sizeof(buf),
+                                0), buf) == 0
     || coap_pdu_encode_header(pdu, session->proto) == 0
   ) {
     coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
