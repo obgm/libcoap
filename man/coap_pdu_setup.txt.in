@@ -149,26 +149,54 @@ of the data of the option, and _data_ points to the content of the option.
 
 The following is the current list of options with their numeric value
 ----
-#define COAP_OPTION_IF_MATCH        1 /* opaque, 0-8 B */
-#define COAP_OPTION_URI_HOST        3 /* String, 1-255 B */
-#define COAP_OPTION_ETAG            4 /* opaque, 1-8 B */
-#define COAP_OPTION_IF_NONE_MATCH   5 /* empty,  0 B */
-#define COAP_OPTION_OBSERVE         6 /* empty/uint, 0 B/0-3 B */
-#define COAP_OPTION_URI_PORT        7 /* uint, 0-2 B */
-#define COAP_OPTION_LOCATION_PATH   8 /* String, 0-255 B */
-#define COAP_OPTION_URI_PATH       11 /* String, 0-255 B */
-#define COAP_OPTION_CONTENT_FORMAT 12 /* uint, 0-2 B */
-#define COAP_OPTION_MAXAGE         14 /* uint, 0-4 B, default 60 Seconds */
-#define COAP_OPTION_URI_QUERY      15 /* String, 1-255 B */
-#define COAP_OPTION_ACCEPT         17 /* uint, 0-2 B */
-#define COAP_OPTION_LOCATION_QUERY 20 /* String, 0-255 B */
-#define COAP_OPTION_BLOCK2         23 /* uint, 0-3 B */
-#define COAP_OPTION_BLOCK1         27 /* uint, 0-3 B */
-#define COAP_OPTION_SIZE2          28 /* uint, 0-4 B */
-#define COAP_OPTION_PROXY_URI      35 /* String, 1-1034 B */
-#define COAP_OPTION_PROXY_SCHEME   39 /* String, 1-255 B */
-#define COAP_OPTION_SIZE1          60 /* uint, 0-4 B */
-#define COAP_OPTION_NORESPONSE    258 /* uint, 0-1 B */
+/*
+ * The C, U, and N flags indicate the properties
+ * Critical, Unsafe, and NoCacheKey, respectively.
+ * If U is set, then N has no meaning as per
+ * https://tools.ietf.org/html/rfc7252#section-5.10
+ * and is set to a -.
+ * Separately, R is for the options that can be repeated
+ *
+ * The least significant byte of the option is set as followed
+ * as per https://tools.ietf.org/html/rfc7252#section-5.4.6
+ *
+ *   0   1   2   3   4   5   6   7
+ * --+---+---+---+---+---+---+---+
+ *           | NoCacheKey| U | C |
+ * --+---+---+---+---+---+---+---+
+ *
+ * https://tools.ietf.org/html/rfc8613#section-4 goes on to define E, I and U
+ * properties Encrypted and Integrity Protected, Integrity Protected Only and
+ * Unprotected respectively.  Integretity Protected Only is not currently used.
+ *
+ * An Option is tagged with CUNREIU with any of the letters replaced with _ if
+ * not set, or - for N if U is set (see above) for aiding understanding of the
+ * Option.
+ */
+
+#define COAP_OPTION_IF_MATCH        1 /* C__RE__, opaque,    0-8 B, RFC7252 */
+#define COAP_OPTION_URI_HOST        3 /* CU-___U, String,  1-255 B, RFC7252 */
+#define COAP_OPTION_ETAG            4 /* ___RE__, opaque,    1-8 B, RFC7252 */
+#define COAP_OPTION_IF_NONE_MATCH   5 /* C___E__, empty,       0 B, RFC7252 */
+#define COAP_OPTION_OBSERVE         6 /* _U-_E_U, empty/uint,  0 B/0-3 B, RFC7641 */
+#define COAP_OPTION_URI_PORT        7 /* CU-___U, uint,      0-2 B, RFC7252 */
+#define COAP_OPTION_LOCATION_PATH   8 /* ___RE__, String,  0-255 B, RFC7252 */
+#define COAP_OPTION_OSCORE          9 /* C_____U, *,       0-255 B, RFC8613 */
+#define COAP_OPTION_URI_PATH       11 /* CU-RE__, String,  0-255 B, RFC7252 */
+#define COAP_OPTION_CONTENT_FORMAT 12 /* ____E__, uint,      0-2 B, RFC7252 */
+/* COAP_OPTION_MAXAGE default 60 seconds if not set */
+#define COAP_OPTION_MAXAGE         14 /* _U-_E_U, uint,      0-4 B, RFC7252 */
+#define COAP_OPTION_URI_QUERY      15 /* CU-RE__, String,  1-255 B, RFC7252 */
+#define COAP_OPTION_HOP_LIMIT      16 /* ______U, uint,        1 B, RFC8768 */
+#define COAP_OPTION_ACCEPT         17 /* C___E__, uint,      0-2 B, RFC7252 */
+#define COAP_OPTION_LOCATION_QUERY 20 /* ___RE__, String,  0-255 B, RFC7252 */
+#define COAP_OPTION_BLOCK2         23 /* CU-_E_U, uint,      0-3 B, RFC7959 */
+#define COAP_OPTION_BLOCK1         27 /* CU-_E_U, uint,      0-3 B, RFC7959 */
+#define COAP_OPTION_SIZE2          28 /* __N_E_U, uint,      0-4 B, RFC7959 */
+#define COAP_OPTION_PROXY_URI      35 /* CU-___U, String, 1-1034 B, RFC7252 */
+#define COAP_OPTION_PROXY_SCHEME   39 /* CU-___U, String,  1-255 B, RFC7252 */
+#define COAP_OPTION_SIZE1          60 /* __N_E_U, uint,      0-4 B, RFC7252 */
+#define COAP_OPTION_NORESPONSE    258 /* _U-_E_U, uint,      0-1 B, RFC7967 */
 ----
 See FURTHER INFORMATION as to how to get the latest list.
 

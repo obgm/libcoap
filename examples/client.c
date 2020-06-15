@@ -251,15 +251,16 @@ clear_obs(coap_context_t *ctx, coap_session_t *session) {
 
   for (option = optlist; option; option = option->next ) {
     switch (option->number) {
-    case COAP_OPTION_URI_PORT :
-    case COAP_OPTION_URI_PATH :
-    case COAP_OPTION_URI_QUERY :
+    case COAP_OPTION_URI_PORT :  /*  7 */
+    case COAP_OPTION_URI_PATH :  /* 11 */
+    case COAP_OPTION_URI_QUERY : /* 15 */
+    case COAP_OPTION_HOP_LIMIT : /* 16 */
       if (!coap_add_option(pdu, option->number, option->length,
                            option->data)) {
         goto error;
       }
       break;
-      default:
+    default:
       ;
     }
   }
@@ -453,13 +454,14 @@ message_handler(struct coap_context_t *ctx,
         /* create pdu with request for next block */
         pdu = coap_new_request(ctx, session, method, NULL, NULL, 0); /* first, create bare PDU w/o any option  */
         if ( pdu ) {
-          /* add URI components from optlist */
+          /* add URI components from optlist in ascending order */
           for (option = optlist; option; option = option->next ) {
             switch (option->number) {
-              case COAP_OPTION_URI_HOST :
-              case COAP_OPTION_URI_PORT :
-              case COAP_OPTION_URI_PATH :
-              case COAP_OPTION_URI_QUERY :
+              case COAP_OPTION_URI_HOST :  /*  3 */
+              case COAP_OPTION_URI_PORT :  /*  7 */
+              case COAP_OPTION_URI_PATH :  /* 11 */
+              case COAP_OPTION_URI_QUERY : /* 15 */
+              case COAP_OPTION_HOP_LIMIT : /* 16 */
                 coap_add_option(pdu, option->number, option->length,
                                 option->data);
                 break;
@@ -550,11 +552,12 @@ message_handler(struct coap_context_t *ctx,
           /* add URI components from optlist */
           for (option = optlist; option; option = option->next ) {
             switch (option->number) {
-              case COAP_OPTION_URI_HOST :
-              case COAP_OPTION_URI_PORT :
-              case COAP_OPTION_URI_PATH :
-              case COAP_OPTION_CONTENT_FORMAT :
-              case COAP_OPTION_URI_QUERY :
+              case COAP_OPTION_URI_HOST :       /*  3 */
+              case COAP_OPTION_URI_PORT :       /*  7 */
+              case COAP_OPTION_URI_PATH :       /* 11 */
+              case COAP_OPTION_CONTENT_FORMAT : /* 12 */
+              case COAP_OPTION_URI_QUERY :      /* 15 */
+              case COAP_OPTION_HOP_LIMIT :      /* 16 */
                 coap_add_option(pdu, option->number, option->length,
                                 option->data);
                 break;
@@ -641,8 +644,8 @@ usage( const char *program, const char *version) {
      "%s\n\n"
      "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-l loss]\n"
      "\t\t[-m method] [-o file] [-p port] [-r] [-s duration] [-t type]\n"
-     "\t\t[-v num] [-A type] [-B seconds] [-K interval] [-N] [-O num,text]\n"
-     "\t\t[-P addr[:port]] [-T token] [-U]\n"
+     "\t\t[-v num] [-A type] [-B seconds] [-H hoplimit] [-K interval] [-N]\n"
+     "\t\t[-O num,text] [-P addr[:port]] [-T token] [-U]\n"
      "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-C cafile] [-J pkcs11_pin]\n"
      "\t\t[-R root_cafile] [-S match_pki_sni_file]] URI\n"
@@ -674,6 +677,9 @@ usage( const char *program, const char *version) {
      "\t-A type\t\tAccepted media type\n"
      "\t-B seconds\tBreak operation after waiting given seconds\n"
      "\t       \t\t(default is %d)\n"
+     "\t-H hoplimit\tSet the Hop Limit count to hoplimit for proxies. Must\n"
+     "\t       \t\thave a value between 1 and 255 inclusive.\n"
+     "\t       \t\tDefault is '16'\n"
      "\t-K interval\tsend a ping after interval seconds of inactivity\n"
      "\t-N     \t\tSend NON-confirmable message\n"
      "\t-O num,text\tAdd option num with contents text to request. If the\n"
@@ -722,7 +728,8 @@ usage( const char *program, const char *version) {
      "\t       \t\t'trusted' for the verification.\n"
      "\t       \t\tAlternatively, this can point to a directory containing\n"
      "\t       \t\ta set of CA PEM files\n"
-     "\n"
+     );
+  fprintf( stderr,
      "Examples:\n"
      "\tcoap-client -m get coap://[::1]/\n"
      "\tcoap-client -m get coap://[::1]/.well-known/core\n"
@@ -787,6 +794,24 @@ cmdline_content_type(char *arg, uint16_t key) {
     coap_insert_optlist(&optlist, node);
   }
 }
+
+static int
+cmdline_hop_limit(char *arg) {
+  coap_optlist_t *node;
+  uint32_t value;
+  uint8_t buf[4];
+
+  value = strtol(arg, NULL, 10);
+  if (value < 1 || value > 255) {
+    return 0;
+  }
+  node = coap_new_optlist(COAP_OPTION_HOP_LIMIT, coap_encode_var_safe(buf, sizeof(buf), value), buf);
+  if (node) {
+    coap_insert_optlist(&optlist, node);
+  }
+  return 1;
+}
+
 
 static uint16_t
 get_default_port(const coap_uri_t *u) {
@@ -1533,7 +1558,7 @@ main(int argc, char **argv) {
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:o:p:rs:t:u:v:A:B:C:J:K:NO:P:R:T:U")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:o:p:rs:t:u:v:A:B:C:J:K:H:NO:P:R:T:U")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1642,6 +1667,10 @@ main(int argc, char **argv) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
         exit(1);
       }
+      break;
+    case 'H':
+      if (!cmdline_hop_limit(optarg))
+        fprintf(stderr, "Hop Limit has to be > 0 and < 256\n");
       break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );

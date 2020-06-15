@@ -48,6 +48,9 @@ The following RFCs are supported
 * RFC8132: PATCH and FETCH Methods for the Constrained Application Protocol (CoAP)
 
 * RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets
+  [No WebSockets support]
+
+* RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option
 
 There is (D)TLS support for the following libraries
 

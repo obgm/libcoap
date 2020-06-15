@@ -170,7 +170,7 @@ coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
   return 1;
 }
 
-static int
+int
 coap_pdu_check_resize(coap_pdu_t *pdu, size_t size) {
   if (size > pdu->alloc_size) {
     size_t new_size = max(256, pdu->alloc_size * 2);
@@ -210,19 +210,182 @@ coap_add_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
   return 1;
 }
 
+size_t
+coap_insert_option(coap_pdu_t *pdu, uint16_t type, size_t len,
+                   const uint8_t *data) {
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *option;
+  uint16_t prev_type = 0;
+  size_t shift;
+  size_t opt_delta;
+  coap_option_t decode;
+  size_t shrink = 0;
+
+  if (type >= pdu->max_delta)
+    return coap_add_option(pdu, type, len, data);
+
+  /* Need to locate where in current options to insert this one */
+  coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
+  while ((option = coap_option_next(&opt_iter))) {
+    if (opt_iter.type > type) {
+      /* Found where to insert */
+      break;
+    }
+    prev_type = opt_iter.type;
+  }
+  assert(option != NULL);
+  /* size of option inc header to insert */
+  shift = coap_opt_encode_size(type - prev_type, len);
+
+  /* size of next option (header may shrink in size as delta changes */
+  if (!coap_opt_parse(option, opt_iter.length + 5, &decode))
+    return 0;
+  opt_delta = opt_iter.type - type;
+
+  if (!coap_pdu_check_resize(pdu,
+                         pdu->used_size + shift - shrink))
+    return 0;
+
+  /* Possible a re-size took place with a realloc() */
+  /* Need to locate where in current options to insert this one */
+  coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
+  while ((option = coap_option_next(&opt_iter))) {
+    if (opt_iter.type > type) {
+      /* Found where to insert */
+      break;
+    }
+  }
+  assert(option != NULL);
+
+  if (decode.delta <= 12) {
+    /* can simply patch in the new delta of next option */
+    option[0] = (option[0] & 0x0f) + (opt_delta << 4);
+  }
+  else if (decode.delta <= 269 && opt_delta <= 12) {
+    /* option header is going to shrink by one byte */
+    option[1] = (option[0] & 0x0f) + (opt_delta << 4);
+    shrink = 1;
+  }
+  else if (decode.delta <= 269 && opt_delta <= 269) {
+    /* can simply patch in the new delta of next option */
+    option[1] = opt_delta - 13;
+  }
+  else if (opt_delta <= 12) {
+    /* option header is going to shrink by two bytes */
+    option[2] = (option[0] & 0x0f) + (opt_delta << 4);
+    shrink = 2;
+  }
+  else if (opt_delta <= 269) {
+    /* option header is going to shrink by one bytes */
+    option[1] = (option[0] & 0x0f) + 0xd0;
+    option[2] = opt_delta - 13;
+    shrink = 1;
+  }
+  else {
+    /* can simply patch in the new delta of next option */
+    option[1] = (opt_delta - 269) >> 8;
+    option[2] = (opt_delta - 269) & 0xff;
+  }
+
+  memmove(&option[shift], &option[shrink],
+          pdu->used_size - (option - pdu->token) - shrink);
+  if (!coap_opt_encode(option, pdu->alloc_size - pdu->used_size,
+                            type - prev_type, data, len))
+    return 0;
+
+  pdu->used_size += shift - shrink;
+  if (pdu->data)
+    pdu->data += shift - shrink;
+  return shift;
+}
+
+int
+coap_update_option(coap_pdu_t *pdu, uint16_t type, size_t len,
+                   const uint8_t *data) {
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *option;
+  coap_option_t decode;
+  size_t new_length = 0;
+  size_t old_length = 0;
+
+  option = coap_check_option(pdu, type, &opt_iter);
+  if (!option)
+    return coap_insert_option(pdu, type, len, data);
+
+  old_length = coap_opt_parse(option, (size_t)-1, &decode);
+  if (old_length == 0)
+    return 0;
+  new_length = coap_opt_encode_size(decode.delta, len);
+
+  if (new_length > old_length) {
+    if (!coap_pdu_check_resize(pdu,
+                         pdu->used_size + new_length - old_length))
+      return 0;
+    /* Possible a re-size took place with a realloc() */
+    option = coap_check_option(pdu, type, &opt_iter);
+  }
+
+  if (new_length != old_length)
+    memmove(&option[new_length], &option[old_length],
+            pdu->used_size - (option - pdu->token) - old_length);
+
+  if (!coap_opt_encode(option, new_length,
+                            decode.delta, data, len))
+    return 0;
+
+  pdu->used_size += new_length - old_length;
+  if (pdu->data)
+    pdu->data += new_length - old_length;
+  return 1;
+}
+
 /* FIXME: de-duplicate code with coap_add_option_later */
 size_t
-coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len, const uint8_t *data) {
+coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len,
+                const uint8_t *data) {
   size_t optsize;
   coap_opt_t *opt;
 
   assert(pdu);
   pdu->data = NULL;
 
+  if (type == pdu->max_delta) {
+    /* Validate that the option is repeatable */
+    switch (type) {
+    /* Ignore list of genuine repeatable */
+    case COAP_OPTION_IF_MATCH:
+    case COAP_OPTION_ETAG:
+    case COAP_OPTION_LOCATION_PATH:
+    case COAP_OPTION_URI_PATH:
+    case COAP_OPTION_URI_QUERY:
+    case COAP_OPTION_LOCATION_QUERY:
+      break;
+    default:
+      coap_log(LOG_INFO, "Option %d is not defined as repeatable\n", type);
+      /* Accepting it after warning as there may be user defineable options */
+      break;
+    }
+  }
+
+  if (COAP_PDU_IS_REQUEST(pdu) &&
+      (type == COAP_OPTION_PROXY_URI || type == COAP_OPTION_PROXY_SCHEME)) {
+    /*
+     * Need to check whether there is a hop-limit option.  If not, it needs
+     * to be inserted by default (RFC 8768).
+     */
+    coap_opt_iterator_t opt_iter;
+
+    if (coap_check_option(pdu, COAP_OPTION_HOP_LIMIT, &opt_iter) == NULL) {
+      size_t hop_limit = COAP_OPTION_HOP_LIMIT;
+
+      coap_insert_option(pdu, COAP_OPTION_HOP_LIMIT, 1, (uint8_t *)&hop_limit);
+    }
+  }
+
   if (type < pdu->max_delta) {
-    coap_log(LOG_WARNING,
+    coap_log(LOG_DEBUG,
              "coap_add_option: options are not in correct order\n");
-    return 0;
+    return coap_insert_option(pdu, type, len, data);
   }
 
   if (!coap_pdu_check_resize(pdu,
@@ -363,6 +526,7 @@ error_desc_t coap_error[] = {
   { COAP_RESPONSE_CODE(503), "Service Unavailable" },
   { COAP_RESPONSE_CODE(504), "Gateway Timeout" },
   { COAP_RESPONSE_CODE(505), "Proxying Not Supported" },
+  { COAP_RESPONSE_CODE(508), "Hop Limit Reached" },
   { 0, NULL }                        /* end marker */
 };
 

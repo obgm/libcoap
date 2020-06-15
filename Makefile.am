@@ -174,9 +174,11 @@ coap_dtls_session_update_mtu \
 coap_dtls_shutdown \
 coap_dtls_startup \
 coap_epoll_ctl_mod \
+coap_insert_option \
 coap_io_do_events \
 coap_mfree_endpoint \
 coap_packet_extract_pbuf \
+coap_pdu_check_resize \
 coap_pdu_from_pbuf \
 coap_session_mfree \
 coap_session_new_dtls_session \
@@ -199,6 +201,7 @@ coap_tls_new_client_session \
 coap_tls_new_server_session \
 coap_tls_read \
 coap_tls_write \
+coap_update_option \
 "
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if
