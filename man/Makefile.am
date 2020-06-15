@@ -87,6 +87,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe8.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_path.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_query.3
+	@echo ".so man3/coap_resource.3" > coap_resource_get_userdata.3
 	@echo ".so man3/coap_session.3" > coap_session_get_app_data.3
 	@echo ".so man3/coap_session.3" > coap_session_set_app_data.3
 	@echo ".so man3/coap_session.3" > coap_tcp_is_supported.3

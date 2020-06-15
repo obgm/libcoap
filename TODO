@@ -11,8 +11,6 @@ Classification of issues:
 =================
 * CRITICAL ISSUES
 =================
--> Proxy functionality
- -> A coap-server should be able to act as proxy server
 
 ================
 * SERIOUS ISSUES
