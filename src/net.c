@@ -330,7 +330,10 @@ coap_get_context_server_psk(
   (void)identity;
   (void)identity_len;
 
-  if (session && session->psk_key &&
+  if (!session)
+    return 0;
+
+  if (session->psk_key &&
       session->psk_key->length <= max_psk_len) {
     memcpy(psk, session->psk_key->s, session->psk_key->length);
     return session->psk_key->length;
@@ -352,7 +355,10 @@ coap_get_context_server_hint(
 ) {
   const coap_dtls_spsk_info_t *psk_info;
 
-  if (session && session->psk_hint &&
+  if (!session)
+    return 0;
+
+  if (session->psk_hint &&
       session->psk_hint->s && session->psk_hint->length > 0 &&
       session->psk_hint->length <= max_hint_len) {
     memcpy(hint, session->psk_hint->s, session->psk_hint->length);
