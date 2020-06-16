@@ -330,7 +330,10 @@ coap_get_context_server_psk(
   (void)identity;
   (void)identity_len;
 
-  if (session && session->psk_key &&
+  if (!session)
+    return 0;
+
+  if (session->psk_key &&
       session->psk_key->length <= max_psk_len) {
     memcpy(psk, session->psk_key->s, session->psk_key->length);
     return session->psk_key->length;
