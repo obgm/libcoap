@@ -721,7 +721,7 @@ get_context(const char *node, const char *port) {
     coap_address_t addr, addrs;
     coap_endpoint_t *ep_udp = NULL, *ep_dtls = NULL, *ep_tcp = NULL, *ep_tls = NULL;
 
-    if (rp->ai_addrlen <= sizeof(addr.addr)) {
+    if (rp->ai_addrlen <= (socklen_t)sizeof(addr.addr)) {
       coap_address_init(&addr);
       addr.size = (socklen_t)rp->ai_addrlen;
       memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);

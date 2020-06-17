@@ -55,6 +55,7 @@ doc/man_tmp/
 # the man/ folder
 man/docbook-xsl.css
 man/examples-code-check
+man/examples-code-check.exe
 man/examples-code-check.o
 man/Makefile
 man/Makefile.in
@@ -75,6 +76,7 @@ examples/coap-etsi_iot_01
 examples/coap-rd
 examples/coap-server
 examples/coap-tiny
+examples/*.exe
 
 # the include/ folder
 include/coap2/coap.h

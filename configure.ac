@@ -733,6 +733,12 @@ case $host in
     #AC_SUBST(OS_LINUX)
     ;;
 
+    *-cygwin*)
+    AC_MSG_RESULT([Cygwin])
+    ADDITIONAL_CFLAGS="-D_GNU_SOURCE -D_CYGWIN_ENV"
+    LDFLAGS="-no-undefined $LDFLAGS"
+    ;;
+
     *-solaris*)
     AC_MSG_RESULT([Solaris])
     # set _XOPEN_SOURCE and _XOPEN_SOURCE_EXTENDED to enable XPG4v2 (POSIX 2004)
