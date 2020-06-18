@@ -207,7 +207,7 @@ get_psk_info(struct dtls_context_t *dtls_context,
   coap_session_t *coap_session;
   int fatal_error = DTLS_ALERT_INTERNAL_ERROR;
   size_t identity_length;
-  uint8_t psk[128];
+  uint8_t psk[COAP_DTLS_MAX_PSK];
   size_t psk_len = 0;
   coap_address_t remote_addr;
   coap_dtls_cpsk_t *setup_cdata;

@@ -213,7 +213,7 @@ static int psk_server_callback(void *p_info, mbedtls_ssl_context *ssl,
                   const unsigned char *name, size_t name_len )
 {
   coap_session_t *c_session = (coap_session_t *)p_info;
-  uint8_t buf[128];
+  uint8_t buf[COAP_DTLS_MAX_PSK];
   size_t psk_len;
   coap_dtls_spsk_t *setup_data;
   coap_mbedtls_env_t *m_env;
@@ -1062,9 +1062,9 @@ static int setup_client_ssl_session(coap_session_t *c_session,
 
   if (m_context->psk_pki_enabled & IS_PSK) {
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
-    uint8_t identity[64];
+    uint8_t identity[COAP_DTLS_MAX_PSK_IDENTITY];
     size_t identity_len;
-    uint8_t psk_key[64];
+    uint8_t psk_key[COAP_DTLS_MAX_PSK];
     size_t psk_len;
     size_t max_identity_len = sizeof(identity);
 
