@@ -749,8 +749,10 @@ static uint8_t *read_file_mem(const char* file, size_t *length) {
   }
 
   buf = malloc(statbuf.st_size+1);
-  if (!buf)
+  if (!buf) {
+    fclose(f);
     return NULL;
+  }
 
   if (fread(buf, 1, statbuf.st_size, f) != (size_t)statbuf.st_size) {
     fclose(f);
