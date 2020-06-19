@@ -2278,8 +2278,11 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
               has_block2 = 1;
             }
             subscription = coap_add_observer(resource, session, &token, query, has_block2, block2);
-            owns_query = 0;
             if (subscription) {
+              /* Ownership of query is taken by subscription if not
+               * NULL. In this case, we must not delete query here
+               * hence owns_query is cleared. */
+              owns_query = 0;
               coap_touch_observer(context, session, &token);
             }
           }

@@ -674,8 +674,9 @@ coap_add_observer(coap_resource_t *resource,
   s = COAP_MALLOC_TYPE(subscription);
 
   if (!s) {
-    if (query)
-      coap_delete_string(query);
+    /* query is not deleted so it can be used in the calling function
+     * which must give up ownership of query only if this function
+     * does not return NULL. */
     return NULL;
   }
 

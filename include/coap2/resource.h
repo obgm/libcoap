@@ -419,7 +419,8 @@ coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
  * @param session         The observer's session
  * @param token           The token that identifies this subscription.
  * @param query           The query string, if any. subscription will
-                          take ownership of the string.
+ *                        take ownership of the string unless this
+ *                        function returns NULL.
  * @param has_block2      If Option Block2 defined.
  * @param block2          Contents of Block2 if Block 2 defined.
  * @return                A pointer to the added/updated subscription
