@@ -130,7 +130,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/net.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/option.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/pdu.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/prng.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_prng.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/resource.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/str.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/subscribe.h \

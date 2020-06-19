@@ -50,7 +50,7 @@ extern "C" {
 #include "net.h"
 #include "option.h"
 #include "pdu.h"
-#include "prng.h"
+#include "coap_prng.h"
 #include "resource.h"
 #include "str.h"
 #include "subscribe.h"

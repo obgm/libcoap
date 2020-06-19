@@ -27,7 +27,7 @@
 #include "coap_time.h"
 #include "option.h"
 #include "pdu.h"
-#include "prng.h"
+#include "coap_prng.h"
 #include "coap_session.h"
 
 struct coap_queue_t;
