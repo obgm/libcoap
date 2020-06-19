@@ -2242,8 +2242,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     h = resource->handler[pdu->code - 1];
 
   if (h) {
-    coap_string_t *query = coap_get_query(pdu);
-    int owns_query = 1;
      coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
               (int)resource->uri_path->length, (int)resource->uri_path->length,
               resource->uri_path->s);
@@ -2259,6 +2257,8 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       coap_opt_iterator_t opt_iter;
       coap_opt_t *observe = NULL;
       int observe_action = COAP_OBSERVE_CANCEL;
+      coap_string_t *query = coap_get_query(pdu);
+      int owns_query = 1;
 
       /* check for Observe option RFC7641 and RFC8132 */
       if (resource->observable &&
