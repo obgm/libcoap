@@ -108,7 +108,8 @@ int main(int argc, char* argv[])
         }
         if (strncmp(buffer, "DESCRIPTION", sizeof("DESCRIPTION")-1) == 0) {
           in_synopsis = 0;
-          fclose(fpheader);
+          if (fpheader)
+            fclose(fpheader);
           continue;
         }
         if (strncmp(buffer, "EXAMPLES", sizeof("EXAMPLES")-1) == 0) {
