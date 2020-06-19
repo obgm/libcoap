@@ -73,11 +73,22 @@ coap_session_reference(coap_session_t *session) {
 void
 coap_session_release(coap_session_t *session) {
   if (session) {
+#ifndef __COVERITY__
     assert(session->ref > 0);
     if (session->ref > 0)
       --session->ref;
     if (session->ref == 0 && session->type == COAP_SESSION_TYPE_CLIENT)
       coap_session_free(session);
+#else /* __COVERITY__ */
+    /* Coverity scan is fooled by the reference counter leading to
+     * false positives for USE_AFTER_FREE. */
+    --session->ref;
+    __coverity_negative_sink__(session->ref);
+    /* Indicate that resources are released properly. */
+    if (session->ref == 0 && session->type == COAP_SESSION_TYPE_CLIENT) {
+      __coverity_free__(session);
+    }
+#endif /* __COVERITY__ */
   }
 }
 
