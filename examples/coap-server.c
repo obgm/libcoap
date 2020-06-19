@@ -550,6 +550,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
     } else {
       dynamic_count--;
       response->code = COAP_RESPONSE_CODE(500);
+      coap_delete_string(uri_path);
       return;
     }
   } else {
