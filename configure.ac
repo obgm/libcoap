@@ -700,7 +700,7 @@ AC_TYPE_SSIZE_T
 
 # Checks for library functions.
 AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo \
-                strnlen malloc pthread_mutex_lock])
+                strnlen malloc pthread_mutex_lock getrandom])
 
 # Check if -lsocket -lnsl is required (specifically Solaris)
 AC_SEARCH_LIBS([socket], [socket])
