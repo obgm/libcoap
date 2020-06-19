@@ -137,6 +137,7 @@ check_function_exists(pthread_mutex_lock HAVE_PTHREAD_MUTEX_LOCK)
 check_function_exists(getaddrinfo HAVE_GETADDRINFO)
 check_function_exists(strnlen HAVE_STRNLEN)
 check_function_exists(strrchr HAVE_STRRCHR)
+check_function_exists(getrandom HAVE_GETRANDOM)
 
 # check for symbols
 if(WIN32)
@@ -403,6 +404,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_io.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_notls.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_prng.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_session.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_tcp.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_time.c
@@ -441,7 +443,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/include/coap2/net.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap2/option.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap2/pdu.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/prng.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_prng.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap2/resource.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap2/str.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap2/subscribe.h
