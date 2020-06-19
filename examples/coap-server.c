@@ -418,8 +418,8 @@ hnd_delete(coap_context_t *ctx,
 
   /* Dynamic resource no longer required - delete it */
   coap_delete_resource(ctx, resource);
+  coap_delete_string(uri_path);
   response->code = COAP_RESPONSE_CODE(202);
-  return;
 }
 
 /*
@@ -472,7 +472,6 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
                                  resource_entry->media_type, -1,
                                  value.length,
                                  value.s);
-  return;
 }
 
 /*
