@@ -1586,7 +1586,7 @@ coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events, size_t nevents
        */
       uint64_t count;
 
-      read(ctx->eptimerfd, &count, sizeof(count));
+      (void)read(ctx->eptimerfd, &count, sizeof(count));
       /* And process any timed out events */
       coap_ticks(&now);
       coap_io_prepare_epoll(ctx, now);
