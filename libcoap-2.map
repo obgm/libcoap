@@ -141,6 +141,8 @@ global:
   coap_print_addr;
   coap_print_link;
   coap_print_wellknown;
+  coap_prng;
+  coap_prng_init;
   coap_register_async;
   coap_register_event_handler;
   coap_register_handler;
@@ -183,6 +185,7 @@ global:
   coap_set_event_handler;
   coap_set_log_handler;
   coap_set_log_level;
+  coap_set_prng;
   coap_set_show_pdu_output;
   coap_show_pdu;
   coap_show_tls_version;

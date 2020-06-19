@@ -83,6 +83,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_mbedtls.c \
   src/coap_notls.c \
   src/coap_openssl.c \
+  src/coap_prng.c \
   src/coap_session.c \
   src/coap_tcp.c \
   src/coap_time.c \

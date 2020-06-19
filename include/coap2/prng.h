@@ -87,29 +87,52 @@ coap_prng_impl( unsigned char *buf, size_t len ) {
 }
 
 #else
-#include <stdlib.h>
 
- /**
- * Fills \p buf with \p len random bytes. This is the default implementation for
- * prng(). You might want to change prng() to use a better PRNG on your specific
- * platform.
+/**
+ * Data type for random number generator function. The function must
+ * fill @p len bytes of random data into the buffer starting at @p
+ * out.  On success, the function should return 1, zero otherwise.
  */
-COAP_STATIC_INLINE int
-coap_prng_impl( unsigned char *buf, size_t len ) {
-        while ( len-- )
-                *buf++ = rand() & 0xFF;
-        return 1;
-}
-#endif
+typedef int (*coap_rand_func_t)(void *out, size_t len);
 
+/**
+ * Replaces the current random number generation function with the
+ * default function @p rng.
+ *
+ * @param rng  The random number generation function to use.
+ */
+void coap_set_prng(coap_rand_func_t rng);
+
+/**
+ * Seeds the default random number generation function with the given
+ * @p seed. The default random number generation function will use
+ * getrandom() if available, ignoring the seed.
+ *
+ * @param seed  The seed for the pseudo random number generator.
+ */
+void coap_prng_init(unsigned long seed);
+
+/**
+ * Fills @p buf with @p len random bytes using the default pseudo
+ * random number generator. The default PRNG can be changed with
+ * coap_set_prng(). This function returns 1 when @p len random bytes
+ * have been written to @buf, zero otherwise.
+ *
+ * @param buf  The buffer to fill with random bytes.
+ * @param len  The number of random bytes to write into @p buf.
+ *
+ * @param 1 on success, 0 otherwise.
+ */
+int coap_prng(void *buf, size_t len);
 
 #ifndef prng
 /**
  * Fills \p Buf with \p Length bytes of random data.
  *
+ * @deprecated Use coap_prng() instead.
  * @hideinitializer
  */
-#define prng(Buf,Length) coap_prng_impl((Buf), (Length))
+#define prng(Buf,Length) coap_prng((Buf), (Length))
 #endif
 
 #ifndef prng_init
@@ -117,10 +140,13 @@ coap_prng_impl( unsigned char *buf, size_t len ) {
  * Called to set the PRNG seed. You may want to re-define this to allow for a
  * better PRNG.
  *
+ * @deprecated Use coap_prng_init() instead.
  * @hideinitializer
  */
-#define prng_init(Value) srand((unsigned long)(Value))
+#define prng_init(Value) coap_prng_init((unsigned long)(Value))
 #endif
+
+#endif /* POSIX */
 
 /** @} */
 
