@@ -1191,6 +1191,7 @@ static int cmdline_read_psk_sni_check(char *arg) {
       }
     }
   }
+  fclose(fp);
   return valid_psk_snis.count > 0;
 }
 
@@ -1303,6 +1304,7 @@ static int cmdline_read_pki_sni_check(char *arg) {
       }
     }
   }
+  fclose(fp);
   return valid_pki_snis.count > 0;
 }
 
