@@ -735,12 +735,12 @@ verify_cn_callback(const char *cn,
 }
 
 static uint8_t *read_file_mem(const char* file, size_t *length) {
-  FILE *f = fopen(file, "r");
+  FILE *f;
   uint8_t *buf;
   struct stat statbuf;
 
   *length = 0;
-  if (!f)
+  if (!file || !(f = fopen(file, "r")))
     return NULL;
 
   if (fstat(fileno(f), &statbuf) == -1) {
