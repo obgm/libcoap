@@ -647,15 +647,16 @@ hnd_unknown_put(coap_context_t *ctx,
   coap_resource_t *r;
   coap_string_t *uri_path;
 
-  /* get the uri_path - will will get used by coap_resource_init() */
-  uri_path = coap_get_uri_path(request);
-  if (!uri_path) {
-    response->code = COAP_RESPONSE_CODE(404);
+  /* check if creating a new resource is allowed */
+  if (dynamic_count >= support_dynamic) {
+    response->code = COAP_RESPONSE_CODE(406);
     return;
   }
 
-  if (dynamic_count >= support_dynamic) {
-    response->code = COAP_RESPONSE_CODE(406);
+  /* get the uri_path - will get used by coap_resource_init() */
+  uri_path = coap_get_uri_path(request);
+  if (!uri_path) {
+    response->code = COAP_RESPONSE_CODE(404);
     return;
   }
 
@@ -675,8 +676,6 @@ hnd_unknown_put(coap_context_t *ctx,
 
   /* Do the PUT for this first call */
   hnd_put(ctx, r, session, request, token, query, response);
-
-  return;
 }
 
 static void
