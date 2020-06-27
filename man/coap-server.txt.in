@@ -171,21 +171,22 @@ EXAMPLES
 ----
 coap-server -A ::1
 ----
-Let the server listen on localhost (port '5683').
+Let the server listen on localhost (port '5683') for UDP/TCP.
 
 * Example
 ----
 coap-server -A ::1 -k mysecretKey -h myhint
 ----
-Let the server listen on localhost (port '5683' and '5684') with the server
-set up for PSK authentication.
+Let the server listen on localhost (port '5683' for UDP/TCP and port '5684' for
+DTLS/TLS) with the server set up for PSK authentication if the client uses
+coaps:// or coaps+tcp://.
 
 * Example
 ----
-coap-server -A ::1 -p 13011
+coap-server -A ::1 -k mysecretKey -h myhint -p 13011
 ----
-The same, except the listening port is '13011' (and not the default port
-'5683').
+The same, except the UDP/TCP listening port is '13011' and the DTLS/TLS
+listening port is '13012' (and not the default ports '5683' and '5684').
 
 * Example
 ----
