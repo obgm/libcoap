@@ -56,14 +56,19 @@ version is 1.1.0.
 revision of GnuTLS 3.5.5 which supports CCM algorithms is required
 by TinyDTLS as TinyDTLS currently only supports CCM.
 
+*NOTE:* For Raw Public Key support, GnuTLS library version must be 3.6.6 or
+later. TinyDTLS only supports TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8, curve
+secp256r1 and hash SHA-256.  There currently is no OpenSSL or MbedTLS RPK support
+(respective library limitations).
+
 Network traffic can be un-encrypted or encrypted with libcoap if there is an
 underlying TLS library.
 
 If TLS is going to be used for encrypting the network traffic, then the TLS
-information for Pre-Shared Keys (PSK) or Public Key Infrastructure (PKI) needs
-to be configured before any network traffic starts to flow. For Servers, this
-has to be done before the Endpoint is created, for Clients, this is done
-during the Client Session set up.
+information for Pre-Shared Keys (PSK), Public Key Infrastructure (PKI) or
+Raw Public Key (RPK) needs to be configured before any network traffic starts
+to flow. For Servers, this has to be done before the Endpoint is created,
+for Clients, this is done during the Client Session set up.
 
 For Servers, all the encryption information is held internally by the TLS
 Context level and the CoAP Context level as the Server is listening for new
@@ -383,12 +388,12 @@ typedef struct coap_dtls_spsk_info_t {
 
 *key* defines the Pre-Shared Key to use
 
-PKI CLIENT AND SERVER INFORMATION
----------------------------------
+PKI/RPK CLIENT AND SERVER INFORMATION
+-------------------------------------
 
-For PKI setup, if the libcoap PKI configuration options do not handle a specific
-requirement as defined by the available options, then an application defined
-Callback can called to do the additional specific checks.
+For PKI or RPK setup, if the libcoap PKI/RPK configuration options do not
+handle a specific requirement as defined by the available options, then an
+application defined Callback can called to do the additional specific checks.
 
 The information passed to this Application Callback will be the
 TLS session (as well the configuration information), but the structures
@@ -396,15 +401,15 @@ containing this information will be different as they will be based on the
 underlying TLS library type. coap_get_tls_library_version() is provided to help
 here.
 
-Libcoap will add in the defined Certificate, Private Key and CA Certificate
-into the TLS environment.  The CA Certificate is also added in to the list of
-valid CAs for Certificate checking.
+Libcoap will add in the defined Certificate (or Public Key), Private Key and
+CA Certificate into the TLS environment.  The CA Certificate is also added
+in to the list of valid CAs for Certificate checking.
 
 The internal Callbacks (and optionally the Application Callback) will then
 check the required information as defined in the coap_dtls_pki_t described
 below.
 
-*SECTION: PKI: coap_dtls_pki_t*
+*SECTION: PKI/RPK: coap_dtls_pki_t*
 [source, c]
 ----
 typedef struct coap_dtls_pki_t {
@@ -422,7 +427,8 @@ typedef struct coap_dtls_pki_t {
   uint8_t allow_expired_crl;        /* 1 if expired crl is allowed */
   uint8_t allow_bad_md_hash;        /* 1 if unsupported MD hashes are allowed */
   uint8_t allow_short_rsa_length;   /* 1 if small RSA keysizes are allowed */
-  uint8_t reserved[4];              /* Reserved - must be set to 0 for
+  uint8_t is_rpk_not_cert;          /* 1 if RPK instead of Public Certificate */
+  uint8_t reserved[3];              /* Reserved - must be set to 0 for
                                        future compatibility */
 
   /** CN check callback function
@@ -459,14 +465,14 @@ More detailed explanation of the coap_dtls_pki_t structure follows.
 
 *WARNING*: For all the parameter definitions that are pointers to other
 locations, these locations must remain valid during the lifetime of all the
-underlying TLS sessions that are, or will get created based on this PKI
+underlying TLS sessions that are, or will get created based on this PKI/RPK
 definition.
 
 The first parameter in each subsection enables/disables the functionality, the
 remaining parameter(s) control what happens when the functionality is
 enabled.
 
-*SECTION: PKI: coap_dtls_pki_t: Version*
+*SECTION: PKI/RPK: coap_dtls_pki_t: Version*
 [source, c]
 ----
 #define COAP_DTLS_PKI_SETUP_VERSION 1
@@ -475,13 +481,13 @@ enabled.
 *version* is set to COAP_DTLS_PKI_SETUP_VERSION.  This will then allow support
 for different versions of the coap_dtls_pki_t structure in the future.
 
-*SECTION: PKI: coap_dtls_pki_t: Peer Certificate Checking*
+*SECTION: PKI/RPK: coap_dtls_pki_t: Peer Certificate Checking*
 
 *verify_peer_cert* Set to 1 to check that the peer's certificate is valid if
 provided, else 0.
 
 *require_peer_cert* Set to 1 to enforce that the peer provides a certificate,
-else 0.  If the Server, this initates a request for the peer certificate.
+else 0.  If the Server, this initiates a request for the peer certificate.
 
 *allow_self_signed* Set to 1 to allow the peer (or any certificate in the
 certificate chain) to be a self-signed certificate, else 0.
@@ -489,7 +495,7 @@ certificate chain) to be a self-signed certificate, else 0.
 *allow_expired_certs* Set to 1 to allow certificates that have either expired,
 or are not yet valid to be allowed, else 0.
 
-*SECTION: PKI: coap_dtls_pki_t: Certificate Chain Validation*
+*SECTION: PKI/RPK: coap_dtls_pki_t: Certificate Chain Validation*
 
 *cert_chain_validation* Set to 1 to check that the certificate chain is valid,
 else 0.
@@ -498,7 +504,7 @@ else 0.
 is the number of intermediate CAs in the chain. If set to 0, then there can be
 no intermediate CA in the chain.
 
-*SECTION: PKI: coap_dtls_pki_t: Certificate Revocation*
+*SECTION: PKI/RPK: coap_dtls_pki_t: Certificate Revocation*
 
 *check_cert_revocation* Set to 1 to check whether any certificate in the chain
 has been revoked, else 0.
@@ -509,26 +515,32 @@ else 0.
 *allow_expired_crl* Set to 1 to allow an certificate that has an expired CRL
 definition to be valid, else 0.
 
-*SECTION: PKI: coap_dtls_pki_t: Other*
+*SECTION: PKI/RPK: coap_dtls_pki_t: Other*
 
 *allow_bad_md_hash* Set to 1 if unsupported MD hashes are allowed, else 0.
 
 *allow_short_rsa_length* Set to 1 if small RSA keysizes are allowed, else 0.
 
-*SECTION: PKI: coap_dtls_pki_t: Reserved*
+*is_rpk_not_cert* Set to 1 if the Certificate is actually a Raw Public Key.
+
+*SECTION: PKI/RPK: coap_dtls_pki_t: Reserved*
 
 *reserved* All must be set to 0.  Future functionality updates will make use of
 these reserved definitions.
 
-*SECTION: PKI: coap_dtls_pki_t: Common Name (CN) Callback*
+*SECTION: PKI/RPK: coap_dtls_pki_t: Common Name (CN) Callback*
 [source, c]
 ----
+#define COAP_DTLS_RPK_CERT_CN "RPK"
+
 /**
  * CN Validation callback that can be set up by coap_context_set_pki().
  * Invoked when libcoap has done the validation checks at the TLS level,
  * but the application needs to check that the CN is allowed.
  * CN is the SubjectAltName in the cert, if not present, then the leftmost
- * Common Name (CN) component of the subject name
+ * Common Name (CN) component of the subject name.
+ * NOTE: If using RPK, then the Public Key does not contain a CN, but the 
+ * content of COAP_DTLS_RPK_CERT_CN is presented for the @p cn parameter.
  *
  * @param cn  The determined CN from the certificate
  * @param asn1_public_cert  The ASN.1 encoded (DER) X.509 certificate
@@ -559,7 +571,7 @@ The Callback returns 1 on success, 0 if the TLS connection is to be aborted.
 in to the validate_cn_call_back() function and can be used by that function.
 An example would be a set of CNs that are allowed.
 
-*SECTION: PKI: coap_dtls_pki_t: Subject Name Identifier (SNI) Callback*
+*SECTION: PKI/RPK: coap_dtls_pki_t: Subject Name Identifier (SNI) Callback*
 [source, c]
 ----
 typedef struct coap_dtls_key_t {
@@ -602,7 +614,7 @@ in to the validate_sni_call_back() function and can be used by that function.
 An example would be a set of SNIs that are allowed with their matching
 certificate sets.
 
-*SECTION: PKI: coap_dtls_pki_t: Application Additional Setup Callback*
+*SECTION: PKI/RPK: coap_dtls_pki_t: Application Additional Setup Callback*
 [source, c]
 ----
 /**
@@ -627,7 +639,7 @@ function that will do additional checking/changes/updates after libcoap has
 done all of the configured TLS setup checking, or NULL to do no additional
 checking.
 
-*SECTION: PKI: coap_dtls_pki_t: Subject Name Indicator (SNI) Definition*
+*SECTION: PKI/RPK: coap_dtls_pki_t: Subject Name Indicator (SNI) Definition*
 
 *client_sni* points to the SNI name that will be added in as a TLS extension,
 or set NULL.  This typically is the DNS name of the server that the client is
@@ -635,7 +647,7 @@ trying to contact.  This is only used by a client application and the server
 is then able to decide, based on the name in the SNI extension, whether, for
 example, a different certificate should be provided.
 
-*SECTION: PKI: coap_dtls_pki_t: Key Type Definition*
+*SECTION: PKI/RPK: coap_dtls_pki_t: Key Type Definition*
 [source, c]
 ----
 typedef enum coap_pki_key_t {
@@ -650,13 +662,16 @@ typedef enum coap_pki_key_t {
 This can be COAP_PKI_KEY_PEM, COAP_PKI_KEY_PEM_BUF, COAP_PKI_KEY_ASN1 or
 COAP_PKI_KEY_PKCS11.
 
-*SECTION: PKI: coap_dtls_pki_t: PEM Key Definitions*
+*SECTION: PKI/RPK: coap_dtls_pki_t: PEM Key Definitions*
 [source, c]
 ----
 typedef struct coap_pki_key_pem_t {
   const char *ca_file;       /* File location of Common CA in PEM format */
-  const char *public_cert;   /* File location of Public Cert in PEM format */
-  const char *private_key;   /* File location of Private Key in PEM format */
+  const char *public_cert;   /* File location of Public Cert, or Public
+                                Key if RPK, in PEM format */
+  const char *private_key;   /* File location of Private Key in PEM format.
+                                If RPK and 'EC PRIVATE KEY' this can be used
+                                for both the public_cert and private_key */
 } coap_pki_key_pem_t;
 ----
 
@@ -666,18 +681,18 @@ public certificate) as this is passed from the server to the client when
 requesting the client's certificate. This certificate is also added into
 the valid root CAs list if not already present.
 
-*key.pem.public_cert* points to the public certificate location on disk
-which will be in PEM format.
+*key.pem.public_cert* points to the public certificate (or public key if RPK)
+location on disk which will be in PEM format.
 
 *key.pem.private_key* points to the private key location on disk which
 will be in PEM format.  This file cannot be password protected.
 
-*SECTION: PKI: coap_dtls_pki_t: PEM Memory Key Definitions*
+*SECTION: PKI/RPK: coap_dtls_pki_t: PEM Memory Key Definitions*
 [source, c]
 ----
 typedef struct coap_pki_key_pem_buf_t {
   const uint8_t *ca_cert;     /* PEM buffer Common CA Cert */
-  const uint8_t *public_cert; /* PEM buffer Public Cert */
+  const uint8_t *public_cert; /* PEM buffer Public Cert, or Public Key if RPK */
   const uint8_t *private_key; /* PEM buffer Private Key */
   size_t ca_cert_len;         /* PEM buffer CA Cert length */
   size_t public_cert_len;     /* PEM buffer Public Cert length */
@@ -693,8 +708,8 @@ the valid root CAs list if not already present.
 
 *key.pem_buf.ca_cert_len* is the length of the CA.
 
-*key.pem_buf.public_cert* points to the public certificate location in memory
-which will be in PEM format.
+*key.pem_buf.public_cert* points to the public certificate (or public key if
+RPK) location in memory which will be in PEM format.
 
 *key.pem_buf.public_cert_len* is the length of the public certificate.
 
@@ -708,12 +723,12 @@ performance reasons (to save a potential buffer copy) and the length include
 this NULL terminator. It is not a requirement to have the NULL terminator
 though and the length must then reflect the actual data size.
 
-*SECTION: PKI: coap_dtls_pki_t: ASN1 Key Definitions*
+*SECTION: PKI/RPK: coap_dtls_pki_t: ASN1 Key Definitions*
 [source, c]
 ----
 typedef struct coap_pki_key_asn1_t {
   const uint8_t *ca_cert;     /* ASN1 Common CA Certificate */
-  const uint8_t *public_cert; /* ASN1 Public Certificate */
+  const uint8_t *public_cert; /* ASN1 (DER) Public Cert, or Public Key if RPK */
   const uint8_t *private_key; /* ASN1 Private Key */
   int ca_cert_len;            /* ASN1 CA Certificate length */
   int public_cert_len;        /* ASN1 Public Certificate length */
@@ -747,7 +762,7 @@ when requesting the client's certificate. This certificate is also added into
 the valid root CAs list if not already present.
 
 *key.asn1.public_cert* points to a DER encoded ASN.1 definition of the
-public certificate.
+public certificate (or public key if RPK).
 
 *key.asn1.private_key* points to DER encoded ASN.1 definition of the
 private key.
@@ -810,11 +825,13 @@ typedef struct valid_cns_t {
 } valid_cns_t;
 
 /**
- * CN Validation callback that is set up by coap_context_set_pki().
+ * CN Validation callback that can be set up by coap_context_set_pki().
  * Invoked when libcoap has done the validation checks at the TLS level,
  * but the application needs to check that the CN is allowed.
  * CN is the SubjectAltName in the cert, if not present, then the leftmost
- * Common Name (CN) component of the subject name
+ * Common Name (CN) component of the subject name.
+ * NOTE: If using RPK, then the Public Key does not contain a CN, but "RPK"
+ * is presented for the cn parameter.
  *
  * @param cn  The determined CN from the certificate
  * @param asn1_public_cert  The ASN.1 encoded (DER) X.509 certificate
@@ -930,6 +947,7 @@ setup_server_context_pki (const char *public_cert_file,
   dtls_pki.allow_expired_crl       = 1;
   dtls_pki.allow_bad_md_hash       = 0;
   dtls_pki.allow_short_rsa_length  = 0;
+  dtls_pki.is_rpk_not_cert         = 0; /* Set to 1 if RPK */
   dtls_pki.validate_cn_call_back   = verify_cn_callback;
   dtls_pki.cn_call_back_arg        = valid_cn_list;
   dtls_pki.validate_sni_call_back  = verify_pki_sni_callback;

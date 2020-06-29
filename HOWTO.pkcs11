@@ -74,7 +74,7 @@ pkcs11-tool --module=/usr/local/lib/softhsm/libsofthsm2.so --list-objects \
   --pin 1234 --token-label "token-0"
 
 #
-# Run coap-server using PKCS11
+# Run coap-server using PKCS11 (-C option may need to be -C cert.der)
 #
 coap-server -C 'pkcs11:token=token-0;id=%cc%00?pin-value=1234' \
   -c 'pkcs11:token=token-0;id=%aa%01?pin-value=1234' \
@@ -91,7 +91,7 @@ coap-server -C 'pkcs11:token=token-0;object=ca-cert' \
   -j 'pkcs11:token=token-0;object=server-key' -J 1234 -v9 -n
 
 #
-# Run coap-client using PKCS11
+# Run coap-client using PKCS11 (-C option may need to be -C cert.der)
 #
 coap-client -C 'pkcs11:token=token-0;id=%cc%00?pin-value=1234' \
   -c 'pkcs11:token=token-0;id=%bb%01?pin-value=1234' \
@@ -107,3 +107,9 @@ coap-client -C 'pkcs11:token=token-0;object=ca-cert' \
   -c 'pkcs11:token=token-0;object=client-cert' \
   -j 'pkcs11:token=token-0;object=client-key' -J 1234 -v9 coaps://[::1]
 
+#
+# Client and Server using RPK (GnuTLS only)
+#
+coap-server -M 'pkcs11:token=token-0;object=server-key' -J 1234 -v9 -n
+# and
+coap-client -M 'pkcs11:token=token-0;object=client-key' -J 1234 -v9 coaps://[::1]
