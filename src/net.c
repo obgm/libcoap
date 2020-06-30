@@ -1003,6 +1003,25 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     goto error;
   }
 
+#if !COAP_DISABLE_TCP
+  if (COAP_PROTO_RELIABLE(session->proto) && !session->csm_block_supported) {
+    /*
+     * Need to check that this instance is not sending any block options as the
+     * remote end via CSM has not informed us that there is support
+     * https://tools.ietf.org/html/rfc8323#section-5.3.2
+     * Note that this also includes BERT which is application specific.
+     */
+    coap_opt_iterator_t opt_iter;
+
+    if (coap_check_option(pdu, COAP_OPTION_BLOCK1, &opt_iter) != NULL) {
+      goto error;
+    }
+    if (coap_check_option(pdu, COAP_OPTION_BLOCK2, &opt_iter) != NULL) {
+      goto error;
+    }
+  }
+#endif /* !COAP_DISABLE_TCP */
+
   bytes_written = coap_send_pdu( session, pdu, NULL );
 
   if (bytes_written == COAP_PDU_DELAYED) {
@@ -1337,6 +1356,14 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
           if (n == len) {
             size_t size = coap_pdu_parse_size(session->proto, session->read_header,
               hdr_size);
+            if (size > COAP_DEFAULT_MAX_PDU_RX_SIZE) {
+              coap_log(LOG_WARNING,
+                       "** %s: incoming PDU length too large (%zu > %lu)\n",
+                       coap_session_str(session),
+                       size, COAP_DEFAULT_MAX_PDU_RX_SIZE);
+              bytes_read = -1;
+              break;
+            }
             session->partial_pdu = coap_pdu_init(0, 0, 0, size);
             if (session->partial_pdu == NULL) {
               bytes_read = -1;
@@ -2395,7 +2422,7 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
         coap_session_set_mtu(session, coap_decode_var_bytes(coap_opt_value(option),
           coap_opt_length(option)));
       } else if (opt_iter.type == COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER) {
-        /* ... */
+        session->csm_block_supported = 1;
       }
     }
     if (session->state == COAP_SESSION_STATE_CSM)

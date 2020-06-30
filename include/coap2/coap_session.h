@@ -63,7 +63,7 @@ typedef struct coap_session_t {
   coap_session_state_t state;       /**< current state of relationaship with peer */
   unsigned ref;                     /**< reference count from queues */
   unsigned tls_overhead;            /**< overhead of TLS layer */
-  unsigned mtu;                     /**< path or CSM mtu */
+  uint64_t mtu;                     /**< path or CSM mtu */
   coap_address_t local_if;          /**< optional local interface address */
   UT_hash_handle hh;
   coap_addr_tuple_t addr_info;      /**< key: remote/local address info */
@@ -74,6 +74,7 @@ typedef struct coap_session_t {
   void *tls;                        /**< security parameters */
   uint16_t tx_mid;                  /**< the last message id that was used in this session */
   uint8_t con_active;               /**< Active CON request sent */
+  uint8_t csm_block_supported;      /**< CSM TCP blocks supported */
   coap_tid_t last_ping_mid;         /**< the last keepalive message id that was used in this session */
   struct coap_queue_t *delayqueue;  /**< list of delayed messages waiting to be sent */
   size_t partial_write;             /**< if > 0 indicates number of bytes already written from the pdu at the head of sendqueue */
