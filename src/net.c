@@ -1004,7 +1004,9 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   }
 
 #if !COAP_DISABLE_TCP
-  if (COAP_PROTO_RELIABLE(session->proto) && !session->csm_block_supported) {
+  if (COAP_PROTO_RELIABLE(session->proto) &&
+      session->state == COAP_SESSION_STATE_ESTABLISHED &&
+      !session->csm_block_supported) {
     /*
      * Need to check that this instance is not sending any block options as the
      * remote end via CSM has not informed us that there is support
@@ -1014,10 +1016,12 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     coap_opt_iterator_t opt_iter;
 
     if (coap_check_option(pdu, COAP_OPTION_BLOCK1, &opt_iter) != NULL) {
-      goto error;
+      coap_log(LOG_DEBUG,
+               "Remote end did not indicate CSM support for BLOCK1 enabled\n");
     }
     if (coap_check_option(pdu, COAP_OPTION_BLOCK2, &opt_iter) != NULL) {
-      goto error;
+      coap_log(LOG_DEBUG,
+               "Remote end did not indicate CSM support for BLOCK2 enabled\n");
     }
   }
 #endif /* !COAP_DISABLE_TCP */
