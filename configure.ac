@@ -560,7 +560,7 @@ AC_SUBST([DOLLAR_SIGN],[$])
 # __tests__
 AC_ARG_ENABLE([tests],
               [AS_HELP_STRING([--enable-tests],
-                              [Enable building the binary testsuite [default=no]])],
+                              [Enable building the binary testsuite. Requires --enable-static  [default=no]])],
               [build_tests="$enableval"],
               [build_tests="no"])
 
@@ -573,6 +573,10 @@ if test "x$build_tests" = "xyes"; then
                        AC_MSG_WARN([==> You want to build the testing binary but the pkg-config file cunit.pc could not be found or installed CUnit version is too old!])
                        AC_MSG_ERROR([==> Install the package(s) that contains the development files for CUnit or disable the testing binary using '--disable-tests'.])
                       ])
+    if test "x$enable_static" = "xno"; then
+        enable_static=yes
+        AC_MSG_WARN([--enable-tests requires --enable-static which is now enabled.])
+    fi
 fi
 AM_CONDITIONAL(HAVE_CUNIT, [test "x$CUNIT_LIBS" != "x"])
 
