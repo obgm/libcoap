@@ -57,6 +57,7 @@
  *
  */
 #include <openssl/ssl.h>
+#include <openssl/engine.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
@@ -201,9 +202,22 @@ coap_get_tls_library_version(void) {
   return &version;
 }
 
+static ENGINE* ssl_engine = NULL;
+
 void coap_dtls_startup(void) {
   SSL_load_error_strings();
   SSL_library_init();
+  ENGINE_load_dynamic();
+}
+
+void coap_dtls_shutdown(void) {
+  if (ssl_engine) {
+    /* Release the functional reference from ENGINE_init() */
+    ENGINE_finish(ssl_engine);
+    /* Release the structural reference from ENGINE_by_id() */
+    ENGINE_free(ssl_engine);
+    ssl_engine = NULL;
+  }
 }
 
 static int dtls_log_level = 0;
@@ -917,6 +931,24 @@ add_ca_to_cert_store(X509_STORE *st, X509 *x509)
   }
 }
 
+static X509 *
+missing_ENGINE_load_cert (const char *cert_id)
+{
+  struct {
+    const char *cert_id;
+    X509 *cert;
+  } params;
+
+  params.cert_id = cert_id;
+  params.cert = NULL;
+
+  /* There is no ENGINE_load_cert() */
+  if (!ENGINE_ctrl_cmd(ssl_engine, "LOAD_CERT_CTRL", 0, &params, NULL, 1)) {
+    params.cert = NULL;
+  }
+  return params.cert;
+}
+
 #if OPENSSL_VERSION_NUMBER < 0x10101000L
 static int
 setup_pki_server(SSL_CTX *ctx,
@@ -1114,7 +1146,7 @@ setup_pki_server(SSL_CTX *ctx,
                  "*** setup_pki: (D)TLS: %s: Unable to configure "
                  "client CA File\n",
                   "ASN1");
-        X509_free(x509);
+        if (x509) X509_free(x509);
         return 0;
       }
       st = SSL_CTX_get_cert_store(ctx);
@@ -1122,6 +1154,169 @@ setup_pki_server(SSL_CTX *ctx,
       X509_free(x509);
     }
     break;
+
+  case COAP_PKI_KEY_PKCS11:
+    if (!ssl_engine) {
+      ssl_engine = ENGINE_by_id("pkcs11");
+      if (!ssl_engine) {
+        coap_log(LOG_ERR,
+           "*** setup_pki: (D)TLS: No PKCS11 support\nn");
+        return 0;
+      }
+      if (!ENGINE_init(ssl_engine)) {
+        /* the engine couldn't initialise, release 'ssl_engine' */
+        ENGINE_free(ssl_engine);
+        ssl_engine = NULL;
+        coap_log(LOG_ERR,
+           "*** setup_pki: (D)TLS: PKCS11 engine initialize failed\n");
+        return 0;
+      }
+    }
+
+    if (setup_data->pki_key.key.pkcs11.user_pin) {
+      /* If not set, pin may be held in pkcs11: URI */
+      if (ENGINE_ctrl_cmd_string(ssl_engine, "PIN",
+                  setup_data->pki_key.key.pkcs11.user_pin, 0) == 0) {
+        coap_log(LOG_WARNING,
+                 "*** setup_pki: (D)TLS: PKCS11: %s: Unable to set pin\n",
+                  setup_data->pki_key.key.pkcs11.user_pin);
+        return 0;
+      }
+    }
+
+    if (setup_data->pki_key.key.pkcs11.private_key &&
+        setup_data->pki_key.key.pkcs11.private_key[0]) {
+      if (strncasecmp (setup_data->pki_key.key.pkcs11.private_key,
+                   "pkcs11:", 7) == 0) {
+        EVP_PKEY* pkey = ENGINE_load_private_key(ssl_engine,
+                                setup_data->pki_key.key.pkcs11.private_key,
+                                NULL, NULL);
+
+        if (!pkey) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to load "
+                   "Server Private Key\n",
+                   setup_data->pki_key.key.pkcs11.private_key);
+          return 0;
+        }
+        if (!SSL_CTX_use_PrivateKey(ctx, pkey)) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "Server Private Key\n",
+                   setup_data->pki_key.key.pkcs11.private_key);
+          EVP_PKEY_free(pkey);
+          return 0;
+        }
+        EVP_PKEY_free(pkey);
+      }
+      else {
+        if (!(SSL_CTX_use_PrivateKey_file(ctx,
+                                    setup_data->pki_key.key.pkcs11.private_key,
+                                    SSL_FILETYPE_ASN1))) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "Server Private Key\n",
+                   setup_data->pki_key.key.pkcs11.private_key);
+          return 0;
+        }
+      }
+    }
+    else {
+      coap_log(LOG_ERR,
+           "*** setup_pki: (D)TLS: No Server Private Key defined\n");
+      return 0;
+    }
+
+    if (setup_data->pki_key.key.pkcs11.public_cert &&
+        setup_data->pki_key.key.pkcs11.public_cert[0]) {
+      if (strncasecmp (setup_data->pki_key.key.pkcs11.public_cert,
+                   "pkcs11:", 7) == 0) {
+        X509 *x509;
+
+        x509 = missing_ENGINE_load_cert(
+                             setup_data->pki_key.key.pkcs11.public_cert);
+        if (!x509) {
+            coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to load "
+                   "Server Certificate\n",
+                   setup_data->pki_key.key.pkcs11.public_cert);
+          return 0;
+        }
+        if (!SSL_CTX_use_certificate(ctx, x509)) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "Server Certificate\n",
+                   setup_data->pki_key.key.pkcs11.public_cert);
+          X509_free (x509);
+          return 0;
+        }
+        X509_free (x509);
+      }
+      else {
+        if (!(SSL_CTX_use_certificate_file(ctx,
+                                     setup_data->pki_key.key.pkcs11.public_cert,
+                                     SSL_FILETYPE_ASN1))) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "Server Certificate\n",
+                   setup_data->pki_key.key.pkcs11.public_cert);
+          return 0;
+        }
+      }
+    }
+    else {
+      coap_log(LOG_ERR,
+             "*** setup_pki: (D)TLS: No Server Certificate defined\n");
+      return 0;
+    }
+
+    if (setup_data->pki_key.key.pkcs11.ca &&
+        setup_data->pki_key.key.pkcs11.ca[0]) {
+      X509_STORE *st;
+
+      if (strncasecmp (setup_data->pki_key.key.pkcs11.ca, "pkcs11:", 7) == 0) {
+        X509 *x509;
+
+        x509 = missing_ENGINE_load_cert (
+                          setup_data->pki_key.key.pkcs11.ca);
+        if (!x509) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to load "
+                   "Server CA Certificate\n",
+                    setup_data->pki_key.key.pkcs11.ca);
+          return 0;
+        }
+        if (!SSL_CTX_add_client_CA(ctx, x509)) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "Server CA File\n",
+                   setup_data->pki_key.key.pkcs11.ca);
+          X509_free(x509);
+          return 0;
+        }
+        st = SSL_CTX_get_cert_store(ctx);
+        add_ca_to_cert_store(st, x509);
+        X509_free(x509);
+      }
+      else {
+        FILE *fp = fopen(setup_data->pki_key.key.pkcs11.ca, "r");
+        X509 *x509 = fp ? d2i_X509_fp(fp, NULL) : NULL;
+
+        if (!x509 || !SSL_CTX_add_client_CA(ctx, x509)) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "client CA File\n",
+                    setup_data->pki_key.key.pkcs11.ca);
+          if (x509) X509_free(x509);
+          return 0;
+        }
+        st = SSL_CTX_get_cert_store(ctx);
+        add_ca_to_cert_store(st, x509);
+        X509_free(x509);
+      }
+    }
+    break;
+
   default:
     coap_log(LOG_ERR,
              "*** setup_pki: (D)TLS: Unknown key type %d\n",
@@ -1360,6 +1555,181 @@ setup_pki_ssl(SSL *ssl,
       X509_free(x509);
     }
     break;
+
+  case COAP_PKI_KEY_PKCS11:
+    if (!ssl_engine) {
+      ssl_engine = ENGINE_by_id("pkcs11");
+      if (!ssl_engine) {
+        coap_log(LOG_ERR,
+           "*** setup_pki: (D)TLS: No PKCS11 support\nn");
+        return 0;
+      }
+      if (!ENGINE_init(ssl_engine)) {
+        /* the engine couldn't initialise, release 'ssl_engine' */
+        ENGINE_free(ssl_engine);
+        ssl_engine = NULL;
+        coap_log(LOG_ERR,
+           "*** setup_pki: (D)TLS: PKCS11 engine initialize failed\nn");
+        return 0;
+      }
+    }
+
+    if (setup_data->pki_key.key.pkcs11.user_pin) {
+      /* If not set, pin may be held in pkcs11: URI */
+      if (ENGINE_ctrl_cmd_string(ssl_engine,
+                          "PIN",
+                          setup_data->pki_key.key.pkcs11.user_pin, 0) == 0) {
+        coap_log(LOG_WARNING,
+                 "*** setup_pki: (D)TLS: PKCS11: %s: Unable to set pin\n",
+                  setup_data->pki_key.key.pkcs11.user_pin);
+        return 0;
+      }
+    }
+
+    if (setup_data->pki_key.key.pkcs11.private_key &&
+        setup_data->pki_key.key.pkcs11.private_key[0]) {
+      if (strncasecmp (setup_data->pki_key.key.pkcs11.private_key,
+                       "pkcs11:", 7) == 0) {
+        EVP_PKEY* pkey = ENGINE_load_private_key(ssl_engine,
+                                setup_data->pki_key.key.pkcs11.private_key,
+                                NULL, NULL);
+
+        if (!pkey) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to load "
+                   "%s Private Key\n",
+                   setup_data->pki_key.key.pkcs11.private_key,
+                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+          return 0;
+        }
+        if (!SSL_use_PrivateKey(ssl, pkey)) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "%s Private Key\n",
+                   setup_data->pki_key.key.pkcs11.private_key,
+                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+          EVP_PKEY_free(pkey);
+          return 0;
+        }
+        EVP_PKEY_free(pkey);
+      }
+      else {
+        if (!(SSL_use_PrivateKey_file(ssl,
+                                    setup_data->pki_key.key.pkcs11.private_key,
+                                    SSL_FILETYPE_ASN1))) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "%s Private Key\n",
+                   setup_data->pki_key.key.pkcs11.private_key,
+                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+          return 0;
+        }
+      }
+    }
+    else if (role == COAP_DTLS_ROLE_SERVER) {
+      coap_log(LOG_ERR,
+           "*** setup_pki: (D)TLS: No Server Private Key defined\n");
+      return 0;
+    }
+
+    if (setup_data->pki_key.key.pkcs11.public_cert &&
+        setup_data->pki_key.key.pkcs11.public_cert[0]) {
+      if (strncasecmp (setup_data->pki_key.key.pkcs11.public_cert,
+                       "pkcs11:", 7) == 0) {
+        X509 *x509;
+
+        x509 = missing_ENGINE_load_cert(
+                             setup_data->pki_key.key.pkcs11.public_cert);
+        if (!x509) {
+            coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to load "
+                   "%s Certificate\n",
+                   setup_data->pki_key.key.pkcs11.public_cert,
+                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+          return 0;
+        }
+        if (!SSL_use_certificate(ssl, x509)) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "%s Certificate\n",
+                   setup_data->pki_key.key.pkcs11.public_cert,
+                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+          X509_free (x509);
+          return 0;
+        }
+        X509_free (x509);
+      }
+      else {
+        if (!(SSL_use_certificate_file(ssl,
+                                     setup_data->pki_key.key.pkcs11.public_cert,
+                                     SSL_FILETYPE_ASN1))) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "%s Certificate\n",
+                   setup_data->pki_key.key.pkcs11.public_cert,
+                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+          return 0;
+        }
+      }
+    }
+    else if (role == COAP_DTLS_ROLE_SERVER) {
+      coap_log(LOG_ERR,
+             "*** setup_pki: (D)TLS: No Server Certificate defined\n");
+      return 0;
+    }
+
+    if (setup_data->pki_key.key.pkcs11.ca &&
+        setup_data->pki_key.key.pkcs11.ca[0]) {
+      X509_STORE *st;
+
+      if (strncasecmp (setup_data->pki_key.key.pkcs11.ca, "pkcs11:", 7) == 0) {
+        X509 *x509;
+        SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
+
+        x509 = missing_ENGINE_load_cert(
+                           setup_data->pki_key.key.pkcs11.public_cert);
+        if (!x509) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to load "
+                   "%s CA Certificate\n",
+                   setup_data->pki_key.key.pkcs11.ca,
+                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+          return 0;
+        }
+        if (!SSL_add_client_CA(ssl, x509)) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "%s CA Certificate\n",
+                   setup_data->pki_key.key.pkcs11.ca,
+                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+          X509_free(x509);
+          return 0;
+        }
+        st = SSL_CTX_get_cert_store(ctx);
+        add_ca_to_cert_store(st, x509);
+        X509_free(x509);
+      }
+      else {
+        FILE *fp = fopen(setup_data->pki_key.key.pkcs11.ca, "r");
+        X509 *x509 = fp ? d2i_X509_fp(fp, NULL) : NULL;
+        SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
+
+        if (!x509 || !SSL_add_client_CA(ssl, x509)) {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "%s CA File\n",
+                    setup_data->pki_key.key.pkcs11.ca,
+                    role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+          if (x509) X509_free(x509);
+          return 0;
+        }
+        st = SSL_CTX_get_cert_store(ctx);
+        add_ca_to_cert_store(st, x509);
+        X509_free(x509);
+      }
+    }
+    break;
+
   default:
     coap_log(LOG_ERR,
              "*** setup_pki: (D)TLS: Unknown key type %d\n",
@@ -1683,9 +2053,7 @@ tls_server_name_call_back(SSL *ssl,
       }
 #endif /* !COAP_DISABLE_TCP */
       memset(&sni_setup_data, 0, sizeof(sni_setup_data));
-      sni_setup_data.pki_key.key_type = new_entry->key_type;
-      sni_setup_data.pki_key.key.pem = new_entry->key.pem;
-      sni_setup_data.pki_key.key.asn1 = new_entry->key.asn1;
+      sni_setup_data.pki_key = *new_entry;
       setup_pki_server(ctx, &sni_setup_data);
 
       context->sni_entry_list = OPENSSL_realloc(context->sni_entry_list,

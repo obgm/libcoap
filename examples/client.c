@@ -75,8 +75,12 @@ static int reliable = 0;
 
 unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
 
-static char *cert_file = NULL; /* Combined certificate and private key in PEM */
-static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM */
+static char *cert_file = NULL; /* certificate and optional private key in PEM,
+                                  or PKCS11 URI*/
+static char *key_file = NULL; /* private key in PEM, DER or PKCS11 URI */
+static char *pkcs11_pin = NULL; /* PKCS11 pin to unlock access to token */
+static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM,
+                                  DER or PKCS11 URI */
 static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
 
 typedef struct ih_def_t {
@@ -640,7 +644,8 @@ usage( const char *program, const char *version) {
      "\t\t[-v num] [-A type] [-B seconds] [-K interval] [-N] [-O num,text]\n"
      "\t\t[-P addr[:port]] [-T token] [-U]\n"
      "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
-     "\t\t[[-c certfile] [-C cafile] [-R root_cafile]] URI\n\n"
+     "\t\t[[-c certfile] [-j keyfile] [-C cafile] [-J pkcs11_pin]\n"
+     "\t\t[-R root_cafile] [-S match_pki_sni_file]] URI\n"
      "\tURI can be an absolute URI or a URI prefixed with scheme and host\n\n"
      "General Options\n"
      "\t-a addr\t\tThe local interface address to use\n"
@@ -678,6 +683,9 @@ usage( const char *program, const char *version) {
      "\t       \t\trequest)\n"
      "\t-T token\tInclude specified token\n"
      "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
+     ,program, version, coap_string_tls_version(buffer, sizeof(buffer))
+     ,program, wait_seconds);
+  fprintf( stderr,
      "PSK Options (if supported by underlying (D)TLS library)\n"
      "\t-h match_hint_file\n"
      "\t       \t\tThis is a file that contains one or more lines of Identity\n"
@@ -689,15 +697,25 @@ usage( const char *program, const char *version) {
      "\t-k key \t\tPre-shared key for the specified user\n"
      "\t-u user\t\tUser identity for pre-shared key mode\n"
      "PKI Options (if supported by underlying (D)TLS library)\n"
-     "\t-c certfile\tPEM file containing both CERTIFICATE and PRIVATE KEY\n"
-     "\t       \t\tThis argument requires (D)TLS with PKI to be available\n"
-     "\t-C cafile\tPEM file containing the CA Certificate that was used to\n"
-     "\t       \t\tsign the certfile. This will trigger the validation of\n"
-     "\t       \t\tthe server certificate.  If certfile is self-signed (as\n"
-     "\t       \t\tdefined by '-c certfile'), then you need to have on the\n"
-     "\t       \t\tcommand line the same filename for both the certfile and\n"
-     "\t       \t\tcafile (as in '-c certfile -C certfile') to trigger\n"
-     "\t       \t\tvalidation\n"
+     "\tNote: If any one of '-c certfile', '-j keyfile' or '-C cafile' is in\n"
+     "\tPKCS11 URI naming format (pkcs11: prefix), then any remaining non\n"
+     "\tPKCS11 URI file definitions have to be in DER, not PEM, format.\n"
+     "\tOtherwise all of '-c certfile', '-j keyfile' or '-C cafile' are in\n"
+     "\tPEM format.\n\n"
+     "\t-c certfile\tPEM file or PKCS11 URI for the Certificate. The private\n"
+     "\t       \t\tkey can be in the PEM file, or use the same PKCS11 URI.\n"
+     "\t       \t\tIf not, the private ney is defined by '-j keyfile'\n"
+     "\t-j keyfile\tPEM file or PKCS11 URI for the private key for the\n"
+     "\t       \t\tnertificate in '-c certfile' if the parameter is different\n"
+     "\t       \t\tfrom certfile in '-c certfile'\n"
+     "\t-C cafile\tPEM file or PKCS11 URI for the CA Certificate that was\n"
+     "\t       \t\tused to sign the certfile. This will trigger\n"
+     "\t       \t\tthe validation of the server certificate.  If certfile is\n"
+     "\t       \t\tself-signed (as defined by '-c certfile'), then you need\n"
+     "\t       \t\tto have on the command line the same filename for both\n"
+     "\t       \t\tthe certfile and cafile (as in '-c certfile -C certfile')\n"
+     "\t       \t\tto trigger validation\n"
+     "\t-J pkcs11_pin\tThe user pin to unlock access to the PKCS11 token\n"
      "\t-R root_cafile\tPEM file containing the set of trusted root CAs that\n"
      "\t       \t\tare to be used to validate the server certificate.\n"
      "\t       \t\tThe '-C cafile' does not have to be in this list and is\n"
@@ -713,8 +731,7 @@ usage( const char *program, const char *version) {
      "\tcoap-client -m get coaps+tcp://[::1]/.well-known/core\n"
      "\tcoap-client -m get -T cafe coap://[::1]/time\n"
      "\techo -n 1000 | coap-client -m put -T cafe coap://[::1]/time -f -\n"
-     ,program, version, coap_string_tls_version(buffer, sizeof(buffer))
-     ,program, wait_seconds);
+     );
 }
 
 typedef struct {
@@ -1351,10 +1368,22 @@ setup_pki(coap_context_t *ctx) {
   else
     memcpy(client_sni, "localhost", 9);
   dtls_pki.client_sni = client_sni;
-  dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
-  dtls_pki.pki_key.key.pem.public_cert = cert_file;
-  dtls_pki.pki_key.key.pem.private_key = cert_file;
-  dtls_pki.pki_key.key.pem.ca_file = ca_file;
+  if ((key_file && strncasecmp (key_file, "pkcs11:", 7) == 0) ||
+      (cert_file && strncasecmp (cert_file, "pkcs11:", 7) == 0) ||
+      (ca_file && strncasecmp (ca_file, "pkcs11:", 7) == 0)) {
+    dtls_pki.pki_key.key_type = COAP_PKI_KEY_PKCS11;
+    dtls_pki.pki_key.key.pkcs11.public_cert = cert_file;
+    dtls_pki.pki_key.key.pkcs11.private_key = key_file ?
+                                                     key_file : cert_file;
+    dtls_pki.pki_key.key.pkcs11.ca = ca_file;
+    dtls_pki.pki_key.key.pkcs11.user_pin = pkcs11_pin;
+  }
+  else {
+    dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
+    dtls_pki.pki_key.key.pem.public_cert = cert_file;
+    dtls_pki.pki_key.key.pem.private_key = key_file ? key_file : cert_file;
+    dtls_pki.pki_key.key.pem.ca_file = ca_file;
+  }
   return &dtls_pki;
 }
 
@@ -1504,7 +1533,7 @@ main(int argc, char **argv) {
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "NrUa:b:c:e:f:h:k:m:p:s:t:o:v:A:B:C:O:P:R:T:u:l:K:")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:o:p:rs:t:u:v:A:B:C:J:K:NO:P:R:T:U")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1532,6 +1561,12 @@ main(int argc, char **argv) {
     case 'f':
       if (!cmdline_input_from_file(optarg, &payload))
         payload.length = 0;
+      break;
+    case 'j' :
+      key_file = optarg;
+      break;
+    case 'J' :
+      pkcs11_pin = optarg;
       break;
     case 'k':
       key_length = cmdline_read_key(optarg, key, MAX_KEY);

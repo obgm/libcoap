@@ -171,6 +171,7 @@ coap_dtls_new_server_session \
 coap_dtls_receive \
 coap_dtls_send \
 coap_dtls_session_update_mtu \
+coap_dtls_shutdown \
 coap_dtls_startup \
 coap_epoll_ctl_mod \
 coap_io_do_events \

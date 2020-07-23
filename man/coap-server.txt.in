@@ -18,8 +18,8 @@ SYNOPSIS
               [*-A* address] [*-N*]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
               [*-s* match_psk_sni_file]]
-              [[*-c* certfile] [*-n*] [*-C* cafile] [*-R* root_cafile]
-              [*-S* match_pki_sni_file]]
+              [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
+              [*-J* pkcs11_pin] [*-R* root_cafile] [*-S* match_pki_sni_file]]
 
 DESCRIPTION
 -----------
@@ -82,8 +82,8 @@ OPTIONS - PSK
 
 *-k* key::
    Pre-shared key to use for inbound connections. This cannot be empty if
-   defined.
-   *Note:* if *-c cafile* is defined, you need to define *-k key* as well to
+   defined. +
+   Note: if *-c cafile* is defined, you need to define *-k key* as well to
    have the server support both PSK and PKI.
 
 *-s* match_psk_sni_file::
@@ -100,23 +100,36 @@ OPTIONS - PKI
 -------------
 (If supported by underlying (D)TLS library)
 
+*Note:* If any one of *certfile*, *keyfile* or *cafile* is in PKCS11 URI
+naming format (pkcs11: prefix), then any remaining non PKCS11 URI file
+definitions have to be in DER, not PEM, format.  Otherwise all of
+*certfile*, *keyfile* or *cafile* are in PEM format.
+
 *-c* certfile::
-   Use the specified PEM file which contains the CERTIFICATE and PRIVATE
-   KEY information.
-   *Note:* if *-k key* is defined, you need to define *-c cafile* as well to
+   PEM file or PKCS11 URI for the certificate. The private key can be in
+   the PEM file, or use the same PKCS11 URI. If not, the private key is defined
+   by *-j keyfile*. +
+   Note: if *-k key* is defined, you need to define *-c certfile* as well to
    have the server support both PSK and PKI.
+
+*-j* keyfile::
+   PEM file or PKCS11 URI for the private key for the certificate in *-c
+   certfile* if the parameter is different from certfile in *-c certfile*.
 
 *-n* ::
    Disable the requirement for clients to have defined client certificates.
 
 *-C* cafile::
-  PEM file containing the CA Certificate that was used to sign the certfile
-  defined using *-c certfile*.
-  If defined, then the client will be given this CA Certificate during the TLS
-  set up. Furthermore, this will trigger the validation of the client
-  certificate. If certfile is self-signed (as defined by *-c certfile*), then
-  you need to have on the command line the same filename for both the certfile
-  and cafile (as in  *-c certfile -C certfile*) to trigger validation.
+  PEM file or PKCS11 URI for the CA certificate that was used to sign the
+  certfile. If defined, then the client will be given this CA certificate
+  during the TLS set up. Furthermore, this will trigger the validation of the
+  client certificate.  If certfile is self-signed (as defined by *-c
+  certfile*), then you need to have on the command line the same filename for
+  both the certfile and cafile (as in  *-c certfile -C certfile*) to trigger
+  validation.
+
+*-J* pkcs11_pin::
+   The user pin to unlock access to the PKCS11 token.
 
 *-R* root_cafile::
   PEM file containing the set of trusted root CAs that are to be used to
@@ -126,7 +139,7 @@ OPTIONS - PKI
 
 *-S* match_pki_sni_file::
    This option denotes a file that contains one or more lines of Subject Name
-   Identifier (SNI) to match for new Certificate File and new CA File (comma
+   Identifier (SNI) to match for new certificate File and new CA File (comma
    separated) to be used. E.g., entry per line +
    sni_to_match,new_cert_file,new_ca_file +
    A line that starts with # is treated as a comment. +

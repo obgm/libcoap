@@ -649,11 +649,17 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
       mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
     }
     break;
+
+  case COAP_PKI_KEY_PKCS11:
+    coap_log(LOG_ERR,
+             "***setup_pki: (D)TLS: PKCS11 not currently supported\n");
+    return -1;
+
   default:
     coap_log(LOG_ERR,
              "***setup_pki: (D)TLS: Unknown key type %d\n",
              setup_data->pki_key.key_type);
-      return -1;
+    return -1;
   }
 
   if (m_context->root_ca_file) {
@@ -1786,6 +1792,9 @@ ssize_t coap_tls_read(coap_session_t *c_session UNUSED,
 
 void coap_dtls_startup(void)
 {
+}
+
+void coap_dtls_shutdown(void) {
 }
 
 static int keep_log_level = 0;

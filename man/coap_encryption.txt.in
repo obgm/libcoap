@@ -117,8 +117,8 @@ environment.
 [source, c]
 ----
 typedef struct coap_dtls_cpsk_t {
-  coap_dtls_cpsk_version_t version; /** Set to COAP_DTLS_CPSK_SETUP_VERSION
-                                   to support the version of the struct */
+  uint8_t version; /** Set to COAP_DTLS_CPSK_SETUP_VERSION
+                       to support the version of the struct */
 
   /* Options to enable different TLS functionality in libcoap */
   uint8_t reserved[7];             /* Reserved - must be set to 0 for
@@ -152,12 +152,7 @@ definition.
 *SECTION: PSK Client: coap_dtls_cpsk_t: Version*
 [source, c]
 ----
-typedef enum
-{
-  COAP_DTLS_CPSK_SETUP_VERSION_V1 = 1,
-  COAP_DTLS_CPSK_SETUP_VERSION =
-             COAP_DTLS_CPSK_SETUP_VERSION_V1, /**< Latest CPSK setup version */
-} coap_dtls_cpsk_version_t;
+#define COAP_DTLS_CPSK_SETUP_VERSION 1 /**< Latest CPSK setup version */
 ----
 
 *version* is set to COAP_DTLS_CPSK_SETUP_VERSION.  This will then allow
@@ -245,8 +240,8 @@ environment.
 [source, c]
 ----
 typedef struct coap_dtls_spsk_t {
-  coap_dtls_spsk_version_t version; /** Set to COAP_DTLS_SPSK_SETUP_VERSION
-                                   to support the version of the struct */
+  uint8_t version; /** Set to COAP_DTLS_SPSK_SETUP_VERSION
+                       to support the version of the struct */
 
   /* Options to enable different TLS functionality in libcoap */
   uint8_t reserved[7];             /* Reserved - must be set to 0 for
@@ -281,12 +276,7 @@ definition.
 *SECTION: PSK Server: coap_dtls_spsk_t: Version*
 [source, c]
 ----
-typedef enum
-{
-  COAP_DTLS_SPSK_SETUP_VERSION_V1 = 1,
-  COAP_DTLS_SPSK_SETUP_VERSION =
-       COAP_DTLS_SPSK_SETUP_VERSION_V1, /**< Latest SPSK setup version */
-} coap_dtls_spsk_version_t;
+#define COAP_DTLS_SPSK_SETUP_VERSION 1 /**< Latest SPSK setup version */
 ----
 
 *version* is set to COAP_DTLS_SPSK_SETUP_VERSION.  This will then allow
@@ -650,13 +640,15 @@ example, a different certificate should be provided.
 ----
 typedef enum coap_pki_key_t {
   COAP_PKI_KEY_PEM,     /* The PKI key type is PEM file */
-  COAP_PKI_KEY_ASN1,    /* The PKI key type is ASN.1 (DER) */
+  COAP_PKI_KEY_ASN1,    /* The PKI key type is ASN.1 (DER) buffer */
   COAP_PKI_KEY_PEM_BUF, /* The PKI key type is PEM buffer */
+  COAP_PKI_KEY_PKCS11,  /* The PKI key type is PKCS11 (DER) */
 } coap_pki_key_t;
 ----
 
 *key_type* defines the format that the certificates / keys are provided in.
-This can be COAP_PKI_KEY_PEM, COAP_PKI_KEY_PEM_BUF or COAP_PKI_KEY_ASN1.
+This can be COAP_PKI_KEY_PEM, COAP_PKI_KEY_PEM_BUF, COAP_PKI_KEY_ASN1 or
+COAP_PKI_KEY_PKCS11.
 
 *SECTION: PKI: coap_dtls_pki_t: PEM Key Definitions*
 [source, c]
@@ -772,6 +764,38 @@ of the private key.
 *key.asn1.private_key_type* is the encoding type of the DER encoded ASN.1
 definition of the private key.  This will be one of the COAP_ASN1_PKEY_*
 definitions.
+
+*SECTION: PKI: coap_dtls_pki_t: PKCS11 Key Definitions*
+[source, c]
+----
+typedef struct coap_pki_key_pkcs11_t {
+  const char *ca;            /* pkcs11: URI for Common CA Certificate */
+  const char *public_cert;   /* pkcs11: URI for Public Cert */
+  const char *private_key;   /* pkcs11: URI for Private Key */
+  const char *pin;           /* pin to access PKCS11.  If NULL, then
+                                pin-value= parameter must be set in
+                                pkcs11: URI as a query. */
+} coap_pki_key_pkcs11_t;
+----
+
+*key.pkcs11.ca* is a pkcs11: URI for the CA certificate or NULL.  This is for
+the CA (that has signed the public certificate) as this is passed from the
+server to the client when requesting the client's certificate. This certificate
+is also added into the valid root CAs list if not already present.
+An example URI is 'pkcs11:pkcs11:token=My%20Token;id=%aa%bb%cc%dd' which is
+for token 'My Token' and (hex) id of 'aabbccdd'.
+
+*key.pkcs11.public_cert* is a pkcs11: URI for the Public Certificate which
+was signed by *key.pkcs11.ca* or NULL.
+
+*key.pkcs11.private_key* is a pkcs11: URI for the Private Key for the
+public certificate defined by *key.pkcs11.public_cert* or NULL.
+
+*key.pkcs11.user_pin* is the user pin used to unlock the token or NULL.
+If NULL, the pin can be defined on the other pkcs11: URI entries by using
+pin-value=XXX as a query - e.g.
+'pkcs11:pkcs11:token=My%20Token;id=%aa%bb%cc%dd?pin-value=XXX' where XXX is
+the user pin.
 
 EXAMPLES
 --------

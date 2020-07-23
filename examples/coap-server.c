@@ -68,8 +68,18 @@ struct coap_resource_t *time_resource = NULL;
 
 static int resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_CON;
 
-static char *cert_file = NULL; /* Combined certificate and private key in PEM */
-static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM */
+/*
+ * For PKI, if one or more of cert_file, key_file and ca_file is in PKCS11 URI
+ * format, then the remainder of cert_file, key_file and ca_file are treated
+ * as being in DER format to provide consistency across the underlying (D)TLS
+ * libraries.
+ */
+static char *cert_file = NULL; /* certificate and optional private key in PEM,
+                                  or PKCS11 URI*/
+static char *key_file = NULL; /* private key in PEM, DER or PKCS11 URI */
+static char *pkcs11_pin = NULL; /* PKCS11 pin to unlock access to token */
+static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM,
+                                  DER or PKCS11 URI */
 static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
 static int use_pem_buf = 0; /* Map these cert/key files into memory to test
                                PEM_BUF logic if set */
@@ -773,10 +783,21 @@ verify_pki_sni_callback(const char *sni,
   /* Preset with the defined keys */
   memset (&dtls_key, 0, sizeof(dtls_key));
   if (!use_pem_buf) {
-    dtls_key.key_type = COAP_PKI_KEY_PEM;
-    dtls_key.key.pem.public_cert = cert_file;
-    dtls_key.key.pem.private_key = cert_file;
-    dtls_key.key.pem.ca_file = ca_file;
+    if ((key_file && strncasecmp (key_file, "pkcs11:", 7) == 0) ||
+        (cert_file && strncasecmp (cert_file, "pkcs11:", 7) == 0) ||
+        (ca_file && strncasecmp (ca_file, "pkcs11:", 7) == 0)) {
+      dtls_key.key_type = COAP_PKI_KEY_PKCS11;
+      dtls_key.key.pkcs11.public_cert = cert_file;
+      dtls_key.key.pkcs11.private_key = key_file ? key_file : cert_file;
+      dtls_key.key.pkcs11.ca = ca_file;
+      dtls_key.key.pkcs11.user_pin = pkcs11_pin;
+    }
+    else {
+      dtls_key.key_type = COAP_PKI_KEY_PEM;
+      dtls_key.key.pem.public_cert = cert_file;
+      dtls_key.key.pem.private_key = key_file ? key_file : cert_file;
+      dtls_key.key.pem.ca_file = ca_file;
+    }
   }
   else {
     dtls_key.key_type = COAP_PKI_KEY_PEM_BUF;
@@ -921,10 +942,22 @@ fill_keystore(coap_context_t *ctx) {
       dtls_pki.sni_call_back_arg       = NULL;
     }
     if (!use_pem_buf) {
-      dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
-      dtls_pki.pki_key.key.pem.public_cert = cert_file;
-      dtls_pki.pki_key.key.pem.private_key = cert_file;
-      dtls_pki.pki_key.key.pem.ca_file = ca_file;
+      if ((key_file && strncasecmp (key_file, "pkcs11:", 7) == 0) ||
+          (cert_file && strncasecmp (cert_file, "pkcs11:", 7) == 0) ||
+          (ca_file && strncasecmp (ca_file, "pkcs11:", 7) == 0)) {
+        dtls_pki.pki_key.key_type = COAP_PKI_KEY_PKCS11;
+        dtls_pki.pki_key.key.pkcs11.public_cert = cert_file;
+        dtls_pki.pki_key.key.pkcs11.private_key = key_file ?
+                                                         key_file : cert_file;
+        dtls_pki.pki_key.key.pkcs11.ca = ca_file;
+        dtls_pki.pki_key.key.pkcs11.user_pin = pkcs11_pin;
+      }
+      else {
+        dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
+        dtls_pki.pki_key.key.pem.public_cert = cert_file;
+        dtls_pki.pki_key.key.pem.private_key = key_file ? key_file : cert_file;
+        dtls_pki.pki_key.key.pem.ca_file = ca_file;
+      }
     }
     else {
       ca_mem = read_file_mem(ca_file, &ca_mem_len);
@@ -981,8 +1014,8 @@ usage( const char *program, const char *version) {
      "\t\t[-A address] [-N]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
      "\t\t[-s match_psk_sni_file]]\n"
-     "\t\t[[-c certfile] [-C cafile] [-m] [-n] [-R root_cafile]]\n"
-     "\t\t[-S match_pki_sni_file]]\n"
+     "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile] [-J pkcs11_pin]\n"
+     "\t\t[-R root_cafile] [-S match_pki_sni_file]]\n"
      "General Options\n"
      "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
      "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
@@ -1001,6 +1034,9 @@ usage( const char *program, const char *version) {
      "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
      "\t       \t\tevery fifth response will still be sent as a confirmable\n"
      "\t       \t\tresponse (RFC 7641 requirement)\n"
+    , program, version, coap_string_tls_version(buffer, sizeof(buffer)),
+    program);
+  fprintf( stderr,
      "PSK Options (if supported by underlying (D)TLS library)\n"
      "\t-h hint\t\tIdentity Hint. Default is CoAP. Zero length is no hint\n"
      "\t-i match_identity_file\n"
@@ -1024,21 +1060,33 @@ usage( const char *program, const char *version) {
      "\t       \t\tNote: the new Pre-Shared Key will get updated if there is\n"
      "\t       \t\talso a -i match\n"
      "PKI Options (if supported by underlying (D)TLS library)\n"
-     "\t-c certfile\tPEM file containing both CERTIFICATE and PRIVATE KEY\n"
-     "\t       \t\tThis argument requires (D)TLS with PKI to be available\n"
+     "\tNote: If any one of '-c certfile', '-j keyfile' or '-C cafile' is in\n"
+     "\tPKCS11 URI naming format (pkcs11: prefix), then any remaining non\n"
+     "\tPKCS11 URI file definitions have to be in DER, not PEM, format.\n"
+     "\tOtherwise all of '-c certfile', '-j keyfile' or '-C cafile' are in\n"
+     "\tPEM format.\n\n"
+     "\t-c certfile\tPEM file or PKCS11 URI for the certificate. The private\n"
+     "\t       \t\tkey can be in the PEM file, or use the same PKCS11 URI.\n"
+     "\t       \t\tIf not, the private key is defined by '-j keyfile'\n"
+     "\t       \t\tNote that both -c and -k need to be defined\n"
+     "\t       \t\tfor both PSK and PKI to be concurrently supported\n"
+     "\t-j keyfile\tPEM file or PKCS11 URI for the private key for the\n"
+     "\t       \t\tcertificate in '-c certfile' if the parameter is different\n"
+     "\t       \t\tfrom certfile in '-c certfile'\n"
      "\t-m     \t\tUse COAP_PKI_KEY_PEM_BUF instead of COAP_PKI_KEY_PEM i/f\n"
-     "\t       \t\tby reading in the Cert / CA file (for testing)\n"
+     "\t       \t\tby reading into memory the Cert / CA file (for testing)\n"
      "\t-n     \t\tDisable the requirement for clients to have defined\n"
      "\t       \t\tclient certificates\n"
-     "\t-C cafile\tPEM file containing the CA Certificate that was used to\n"
-     "\t       \t\tsign the certfile. If defined, then the client will be\n"
-     "\t       \t\tgiven this CA Certificate during the TLS set up.\n"
+     "\t-C cafile\tPEM file or PKCS11 URI for the CA certificate that was\n"
+     "\t       \t\tused to sign the certfile. If defined, then the client\n"
+     "\t       \t\twill be given this CA certificate during the TLS set up.\n"
      "\t       \t\tFurthermore, this will trigger the validation of the\n"
      "\t       \t\tclient certificate.  If certfile is self-signed (as\n"
      "\t       \t\tdefined by '-c certfile'), then you need to have on the\n"
      "\t       \t\tcommand line the same filename for both the certfile and\n"
      "\t       \t\tcafile (as in  '-c certfile -C certfile') to trigger\n"
      "\t       \t\tvalidation\n"
+     "\t-J pkcs11_pin\tThe user pin to unlock access to the PKCS11 token\n"
      "\t-R root_cafile\tPEM file containing the set of trusted root CAs that\n"
      "\t       \t\tare to be used to validate the client certificate.\n"
      "\t       \t\tThe '-C cafile' does not have to be in this list and is\n"
@@ -1052,8 +1100,7 @@ usage( const char *program, const char *version) {
      "\t       \t\tE.g., per line\n"
      "\t       \t\t sni_to_match,new_cert_file,new_ca_file\n"
      "\t       \t\tNote: -c and -C still needs to be defined for the default case\n"
-    , program, version, coap_string_tls_version(buffer, sizeof(buffer)),
-    program);
+    );
 }
 
 static coap_context_t *
@@ -1330,7 +1377,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "A:d:c:C:g:h:i:k:l:mnNp:R:s:S:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "c:d:g:h:i:j:J:k:l:mnp:s:v:A:C:NR:S:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -1360,6 +1407,12 @@ main(int argc, char **argv) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
         exit(1);
       }
+      break;
+    case 'j' :
+      key_file = optarg;
+      break;
+    case 'J' :
+      pkcs11_pin = optarg;
       break;
     case 'k' :
       key_length = cmdline_read_key(optarg, key, MAX_KEY);

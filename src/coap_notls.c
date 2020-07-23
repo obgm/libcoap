@@ -76,6 +76,9 @@ static int dtls_log_level = 0;
 void coap_dtls_startup(void) {
 }
 
+void coap_dtls_shutdown(void) {
+}
+
 void
 coap_dtls_set_log_level(int level) {
   dtls_log_level = level;
