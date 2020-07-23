@@ -192,19 +192,11 @@ function(compile_tinydtls)
     LOG_CONFIGURE 1)
 
   externalproject_add_step(
-    external_tinydtls autoheader
-    COMMAND "autoheader"
+    external_tinydtls autoreconf
+    COMMAND autoreconf --force --install
     ALWAYS 1
     WORKING_DIRECTORY "${TINYDTLS_SOURCES_DIR}"
     DEPENDERS configure
-    DEPENDEES autoconf)
-
-  externalproject_add_step(
-    external_tinydtls autoconf
-    COMMAND "autoconf"
-    ALWAYS 1
-    WORKING_DIRECTORY "${TINYDTLS_SOURCES_DIR}"
-    DEPENDERS autoheader
     DEPENDEES download)
 
   # Let cmake know that it needs to execute the external_tinydtls target to generate those files.
