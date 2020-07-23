@@ -888,3 +888,13 @@ if test "x$build_gcov" = "xyes"; then
 else
     AC_MSG_RESULT([      build with gcov support : "no"])
 fi
+if test "x$enable_shared" = "xyes"; then
+    AC_MSG_RESULT([      build shared library    : "yes"])
+else
+    AC_MSG_RESULT([      build shared library    : "no"])
+fi
+if test "x$enable_static" = "xyes"; then
+    AC_MSG_RESULT([      build static library    : "yes"])
+else
+    AC_MSG_RESULT([      build static library    : "no"])
+fi
