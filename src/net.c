@@ -2363,10 +2363,11 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       } else {
         coap_delete_pdu(response);
       }
-      response = NULL;
     } else {
       coap_log(LOG_WARNING, "cannot generate response\r\n");
+      coap_delete_pdu(response);
     }
+    response = NULL;
   } else {
     if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
       /* request for .well-known/core */
