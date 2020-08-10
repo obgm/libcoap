@@ -148,7 +148,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   session->last_ping_mid = COAP_INVALID_TID;
 
   /* initialize message id */
-  prng((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));
+  coap_prng((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));
 
   return session;
 }
@@ -293,7 +293,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     node->pdu = pdu;
     if (pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       uint8_t r;
-      prng(&r, sizeof(r));
+      coap_prng(&r, sizeof(r));
       /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
       node->timeout = coap_calc_timeout(session, r);
     }

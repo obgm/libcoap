@@ -630,7 +630,7 @@ t_iterate_option6(void) {
   coap_opt_filter_t filter;
 
   coap_option_filter_clear(filter);
-  coap_option_setb(filter, 10);        /* option nr 10 only */
+  coap_option_filter_set(filter, 10);        /* option nr 10 only */
   result = coap_option_iterator_init(&pdu, &oi, filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
@@ -676,8 +676,8 @@ t_iterate_option7(void) {
 
   /* search options nr 8 and 22 */
   coap_option_filter_clear(filter);
-  coap_option_setb(filter, 8);
-  coap_option_setb(filter, 22);
+  coap_option_filter_set(filter, 8);
+  coap_option_filter_set(filter, 22);
   result = coap_option_iterator_init(&pdu, &oi, filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
@@ -723,7 +723,7 @@ t_iterate_option8(void) {
 
   /* search option nr 36 */
   coap_option_filter_clear(filter);
-  coap_option_setb(filter, 36);
+  coap_option_filter_set(filter, 36);
   result = coap_option_iterator_init(&pdu, &oi, filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
@@ -754,7 +754,7 @@ t_iterate_option9(void) {
 
   /* search option nr 100 */
   coap_option_filter_clear(filter);
-  coap_option_setb(filter, 100);
+  coap_option_filter_set(filter, 100);
   result = coap_option_iterator_init(&pdu, &oi, filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
@@ -785,7 +785,7 @@ t_iterate_option10(void) {
 
   /* search option nr 61 */
   coap_option_filter_clear(filter);
-  coap_option_setb(filter, 61);
+  coap_option_filter_set(filter, 61);
   result = coap_option_iterator_init(&pdu, &oi, filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);

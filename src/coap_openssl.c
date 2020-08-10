@@ -704,7 +704,7 @@ void *coap_dtls_new_context(struct coap_context_t *coap_context) {
       if (dtls_log_level >= LOG_WARNING)
         coap_log(LOG_WARNING,
                  "Insufficient entropy for random cookie generation");
-      prng(cookie_secret, sizeof(cookie_secret));
+      coap_prng(cookie_secret, sizeof(cookie_secret));
     }
     context->dtls.cookie_hmac = HMAC_CTX_new();
     if (!HMAC_Init_ex(context->dtls.cookie_hmac, cookie_secret, (int)sizeof(cookie_secret), EVP_sha256(), NULL))

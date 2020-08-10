@@ -279,7 +279,7 @@ coap_register_pong_handler(coap_context_t *context,
  */
 COAP_STATIC_INLINE void
 coap_register_option(coap_context_t *ctx, uint16_t type) {
-  coap_option_setb(ctx->known_options, type);
+  coap_option_filter_set(ctx->known_options, type);
 }
 
 /**
