@@ -58,7 +58,14 @@ static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_
   coap_pdu_t *pdu = NULL;
   coap_session_t *session;
   coap_tick_t now;
-  coap_packet_t *packet = coap_malloc_type(COAP_PACKET, sizeof(coap_packet_t));
+  coap_packet_t *packet;
+
+  if (p->len < 4) {
+    /* Minimum size of CoAP header - ignore runt */
+    return;
+  }
+
+  packet = coap_malloc_type(COAP_PACKET, sizeof(coap_packet_t));
 
   /* this is fatal because due to the short life of the packet, never should there be more than one coap_packet_t required */
   LWIP_ASSERT("Insufficient coap_packet_t resources.", packet != NULL);
@@ -92,8 +99,12 @@ static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_
   return;
 
 error:
-  /* FIXME: send back RST? */
-  if (pdu) coap_delete_pdu(pdu);
+  /*
+   * https://tools.ietf.org/html/rfc7252#section-4.2 MUST send RST
+   * https://tools.ietf.org/html/rfc7252#section-4.3 MAY send RST
+   */
+  coap_send_rst(session, pdu);
+  coap_delete_pdu(pdu);
   if (packet) {
     packet->pbuf = NULL;
     coap_free_packet(packet);

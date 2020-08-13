@@ -42,7 +42,7 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   pdu->hdr_size = 0;
   pdu->token_length = 0;
   pdu->tid = 0;
-  pdu->max_delta = 0;
+  pdu->max_opt = 0;
   pdu->max_size = size;
   pdu->used_size = 0;
   pdu->data = NULL;
@@ -203,7 +203,7 @@ coap_add_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
   pdu->token_length = (uint8_t)len;
   if (len)
     memcpy(pdu->token, data, len);
-  pdu->max_delta = 0;
+  pdu->max_opt = 0;
   pdu->used_size = len;
   pdu->data = NULL;
 
@@ -221,7 +221,7 @@ coap_insert_option(coap_pdu_t *pdu, uint16_t type, size_t len,
   coap_option_t decode;
   size_t shrink = 0;
 
-  if (type >= pdu->max_delta)
+  if (type >= pdu->max_opt)
     return coap_add_option(pdu, type, len, data);
 
   /* Need to locate where in current options to insert this one */
@@ -349,7 +349,7 @@ coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len,
   assert(pdu);
   pdu->data = NULL;
 
-  if (type == pdu->max_delta) {
+  if (type == pdu->max_opt) {
     /* Validate that the option is repeatable */
     switch (type) {
     /* Ignore list of genuine repeatable */
@@ -382,69 +382,32 @@ coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len,
     }
   }
 
-  if (type < pdu->max_delta) {
-    coap_log(LOG_DEBUG,
+  if (type < pdu->max_opt) {
+    coap_log(LOG_WARNING,
              "coap_add_option: options are not in correct order\n");
     return coap_insert_option(pdu, type, len, data);
   }
 
   if (!coap_pdu_check_resize(pdu,
-      pdu->used_size + coap_opt_encode_size(type - pdu->max_delta, len)))
+      pdu->used_size + coap_opt_encode_size(type - pdu->max_opt, len)))
     return 0;
 
   opt = pdu->token + pdu->used_size;
 
   /* encode option and check length */
   optsize = coap_opt_encode(opt, pdu->alloc_size - pdu->used_size,
-                            type - pdu->max_delta, data, len);
+                            type - pdu->max_opt, data, len);
 
   if (!optsize) {
     coap_log(LOG_WARNING, "coap_add_option: cannot add option\n");
     /* error */
     return 0;
   } else {
-    pdu->max_delta = type;
+    pdu->max_opt = type;
     pdu->used_size += optsize;
   }
 
   return optsize;
-}
-
-/* FIXME: de-duplicate code with coap_add_option */
-uint8_t*
-coap_add_option_later(coap_pdu_t *pdu, uint16_t type, size_t len) {
-  size_t optsize;
-  coap_opt_t *opt;
-
-  assert(pdu);
-  pdu->data = NULL;
-
-  if (type < pdu->max_delta) {
-    coap_log(LOG_WARNING,
-             "coap_add_option: options are not in correct order\n");
-    return NULL;
-  }
-
-  if (!coap_pdu_check_resize(pdu,
-      pdu->used_size + coap_opt_encode_size(type - pdu->max_delta, len)))
-    return 0;
-
-  opt = pdu->token + pdu->used_size;
-
-  /* encode option and check length */
-  optsize = coap_opt_encode(opt, pdu->alloc_size - pdu->used_size,
-                            type - pdu->max_delta, NULL, len);
-
-  if (!optsize) {
-    coap_log(LOG_WARNING, "coap_add_option: cannot add option\n");
-    /* error */
-    return NULL;
-  } else {
-    pdu->max_delta = type;
-    pdu->used_size += (uint16_t)optsize;
-  }
-
-  return opt + optsize - len;
 }
 
 int
@@ -547,7 +510,7 @@ coap_response_phrase(unsigned char code) {
  * on error.
  */
 static size_t
-next_option_safe(coap_opt_t **optp, size_t *length) {
+next_option_safe(coap_opt_t **optp, size_t *length, uint16_t *max_opt) {
   coap_option_t option;
   size_t optsize;
 
@@ -558,6 +521,7 @@ next_option_safe(coap_opt_t **optp, size_t *length) {
   if (optsize) {
     assert(optsize <= *length);
 
+    *max_opt += option.delta;
     *optp += optsize;
     *length -= optsize;
   }
@@ -652,9 +616,64 @@ coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
   return 1;
 }
 
+static int
+coap_pdu_parse_opt_csm(coap_pdu_t *pdu, uint16_t len) {
+  switch (pdu->code) {
+  case COAP_SIGNALING_CSM:
+    switch (pdu->max_opt) {
+    case COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE:
+      if (len > 4) goto bad;
+      break;
+    case COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER:
+      if (len > 0) goto bad;
+      break;
+    default:
+      ;
+    }
+    break;
+  case COAP_SIGNALING_PING:
+  case COAP_SIGNALING_PONG:
+    switch (pdu->max_opt) {
+    case COAP_SIGNALING_OPTION_CUSTODY:
+      if (len > 0) goto bad;
+      break;
+    default:
+      ;
+    }
+    break;
+  case COAP_SIGNALING_RELEASE:
+    switch (pdu->max_opt) {
+    case COAP_SIGNALING_OPTION_ALTERNATIVE_ADDRESS:
+      if (len < 1 || len > 255) goto bad;
+      break;
+    case COAP_SIGNALING_OPTION_HOLD_OFF:
+      if (len > 3) goto bad;
+      break;
+    default:
+      ;
+    }
+    break;
+  case COAP_SIGNALING_ABORT:
+    switch (pdu->max_opt) {
+    case COAP_SIGNALING_OPTION_BAD_CSM_OPTION:
+      if (len > 2) goto bad;
+      break;
+    default:
+      ;
+    }
+    break;
+  default:
+    ;
+  }
+  return 1;
+bad:
+  return 0;
+}
+
 int
 coap_pdu_parse_opt(coap_pdu_t *pdu) {
 
+  int good = 1;
   /* sanity checks */
   if (pdu->code == 0) {
     if (pdu->used_size != 0 || pdu->token_length) {
@@ -676,12 +695,52 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
     /* skip header + token */
     coap_opt_t *opt = pdu->token + pdu->token_length;
     size_t length = pdu->used_size - pdu->token_length;
+    uint16_t len;
 
+    pdu->max_opt = 0;
     while (length > 0 && *opt != COAP_PAYLOAD_START) {
-      if ( !next_option_safe( &opt, (size_t *)&length ) ) {
+      len = coap_opt_length(opt);
+      if ( !next_option_safe( &opt, &length, &pdu->max_opt ) ) {
         coap_log(LOG_DEBUG, "coap_pdu_parse: missing payload start code\n");
         return 0;
       }
+      if (COAP_PDU_IS_SIGNALING(pdu)) {
+        if (!coap_pdu_parse_opt_csm(pdu, len))
+          goto bad;
+        continue;
+      }
+      switch (pdu->max_opt) {
+      case COAP_OPTION_IF_MATCH:      if (len > 8) goto bad;              break;
+      case COAP_OPTION_URI_HOST:      if (len < 1 || len > 255) goto bad; break;
+      case COAP_OPTION_ETAG:          if (len < 1 || len > 8) goto bad;   break;
+      case COAP_OPTION_IF_NONE_MATCH: if (len != 0) goto bad;             break;
+      case COAP_OPTION_OBSERVE:       if (len > 3) goto bad;              break;
+      case COAP_OPTION_URI_PORT:      if (len > 2) goto bad;              break;
+      case COAP_OPTION_LOCATION_PATH: if (len > 255) goto bad;            break;
+      case COAP_OPTION_OSCORE:        if (len > 255) goto bad;            break;
+      case COAP_OPTION_URI_PATH:      if (len > 255) goto bad;            break;
+      case COAP_OPTION_CONTENT_FORMAT:if (len > 2) goto bad;              break;
+      case COAP_OPTION_MAXAGE:        if (len > 4) goto bad;              break;
+      case COAP_OPTION_URI_QUERY:     if (len < 1 || len > 255) goto bad; break;
+      case COAP_OPTION_HOP_LIMIT:     if (len < 1 || len > 1) goto bad;   break;
+      case COAP_OPTION_ACCEPT:        if (len > 2) goto bad;              break;
+      case COAP_OPTION_LOCATION_QUERY:if (len > 255) goto bad;            break;
+      case COAP_OPTION_BLOCK2:        if (len > 3) goto bad;              break;
+      case COAP_OPTION_BLOCK1:        if (len > 3) goto bad;              break;
+      case COAP_OPTION_SIZE2:         if (len > 4) goto bad;              break;
+      case COAP_OPTION_PROXY_URI:    if (len < 1 || len > 1034) goto bad; break;
+      case COAP_OPTION_PROXY_SCHEME:  if (len < 1 || len > 255) goto bad; break;
+      case COAP_OPTION_SIZE1:         if (len > 4) goto bad;              break;
+      case COAP_OPTION_NORESPONSE:    if (len > 1) goto bad;              break;
+      default:
+        ;
+      }
+      continue;
+bad:
+      coap_log(LOG_DEBUG,
+               "coap_pdu_parse: %d.%02d: option %u has bad length %u\n",
+               pdu->code >> 5, pdu->code & 0x1F, pdu->max_opt, len);
+      good = 0;
     }
 
     if (length > 0) {
@@ -700,7 +759,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
       pdu->data = NULL;
   }
 
-  return 1;
+  return good;
 }
 
 int

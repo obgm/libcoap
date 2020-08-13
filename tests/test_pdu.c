@@ -382,7 +382,7 @@ t_encode_pdu4(void) {
        18, (const uint8_t *)"fancyproxy.coap.me");
 
   CU_ASSERT(result == 20);
-  CU_ASSERT(pdu->max_delta == 3);
+  CU_ASSERT(pdu->max_opt == 3);
   CU_ASSERT(pdu->used_size == 20);
   CU_ASSERT_PTR_NULL(pdu->data);
 
@@ -390,21 +390,21 @@ t_encode_pdu4(void) {
                            4, (const uint8_t *)"path");
 
   CU_ASSERT(result == 5);
-  CU_ASSERT(pdu->max_delta == 11);
+  CU_ASSERT(pdu->max_opt == 11);
   CU_ASSERT(pdu->used_size == 25);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_URI_PATH, 0, NULL);
 
   CU_ASSERT(result == 1);
-  CU_ASSERT(pdu->max_delta == 11);
+  CU_ASSERT(pdu->max_opt == 11);
   CU_ASSERT(pdu->used_size == 26);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, 8000, 8, (const uint8_t *)"fancyopt");
 
   CU_ASSERT(result == 11);
-  CU_ASSERT(pdu->max_delta == 8000);
+  CU_ASSERT(pdu->max_opt == 8000);
   CU_ASSERT(pdu->used_size == 37);
   CU_ASSERT_PTR_NULL(pdu->data);
 
@@ -437,7 +437,7 @@ t_encode_pdu5(void) {
                            8, (const uint8_t *)"ABCDEFGH");
 
   CU_ASSERT(result == 9);
-  CU_ASSERT(pdu->max_delta == 1);
+  CU_ASSERT(pdu->max_opt == 1);
   CU_ASSERT(pdu->used_size == 17);
   CU_ASSERT_PTR_NULL(pdu->data);
 
@@ -445,7 +445,7 @@ t_encode_pdu5(void) {
                            1, (const uint8_t *)"\x12");
 
   CU_ASSERT(result == 3);
-  CU_ASSERT(pdu->max_delta == 17);
+  CU_ASSERT(pdu->max_opt == 17);
   CU_ASSERT(pdu->used_size == 20);
   CU_ASSERT_PTR_NULL(pdu->data);
 
@@ -547,14 +547,14 @@ t_encode_pdu9(void) {
   result = coap_add_option(pdu, COAP_OPTION_ETAG, 8, (const uint8_t *)"someetag");
 
   CU_ASSERT(result == 9);
-  CU_ASSERT(pdu->max_delta == 4);
+  CU_ASSERT(pdu->max_opt == 4);
   CU_ASSERT(pdu->used_size == 9);
   CU_ASSERT_PTR_NULL(pdu->data);
 
   result = coap_add_option(pdu, COAP_OPTION_IF_NONE_MATCH, 0, NULL);
 
   CU_ASSERT(result == 1);
-  CU_ASSERT(pdu->max_delta == 5);
+  CU_ASSERT(pdu->max_opt == 5);
   CU_ASSERT(pdu->used_size == 10);
   CU_ASSERT_PTR_NULL(pdu->data);
 
@@ -562,7 +562,7 @@ t_encode_pdu9(void) {
                            17, (const uint8_t *)"someratherlonguri");
 
   CU_ASSERT(result == 20);
-  CU_ASSERT(pdu->max_delta == 35);
+  CU_ASSERT(pdu->max_opt == 35);
   CU_ASSERT(pdu->used_size == 30);
   CU_ASSERT_PTR_NULL(pdu->data);
 
@@ -633,7 +633,7 @@ t_encode_pdu10(void) {
                            (const uint8_t *)"coap://example.com/12345/%3Fxyz/3048234234/23402348234/239084234-23/%AB%30%af/+123/hfksdh/23480-234-98235/1204/243546345345243/0198sdn3-a-3///aff0934/97u2141/0002/3932423532/56234023/----/=1234=/098141-9564643/21970-----/82364923472wererewr0-921-39123-34/");
 
   CU_ASSERT(result == 257);
-  CU_ASSERT(pdu->max_delta == 8);
+  CU_ASSERT(pdu->max_opt == 8);
   CU_ASSERT(pdu->used_size == 259);
   CU_ASSERT_PTR_NULL(pdu->data);
 
@@ -641,7 +641,7 @@ t_encode_pdu10(void) {
                            (const uint8_t *)"//492403--098/");
 
   CU_ASSERT(result == 16);
-  CU_ASSERT(pdu->max_delta == 8);
+  CU_ASSERT(pdu->max_opt == 8);
   CU_ASSERT(pdu->used_size == 275);
   CU_ASSERT_PTR_NULL(pdu->data);
 
@@ -649,7 +649,7 @@ t_encode_pdu10(void) {
                            1, (const uint8_t *)"*");
 
   CU_ASSERT(result == 2);
-  CU_ASSERT(pdu->max_delta == 20);
+  CU_ASSERT(pdu->max_opt == 20);
   CU_ASSERT(pdu->used_size == 277);
   CU_ASSERT_PTR_NULL(pdu->data);
 

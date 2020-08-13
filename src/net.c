@@ -1744,6 +1744,10 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
   coap_pdu_t *pdu = NULL;
 
   assert(COAP_PROTO_NOT_RELIABLE(session->proto));
+  if (msg_len < 4) {
+    /* Minimum size of CoAP header - ignore runt */
+    return -1;
+  }
 
   pdu = coap_pdu_init(0, 0, 0, msg_len - 4);
   if (!pdu)
@@ -1759,7 +1763,11 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
   return 0;
 
 error:
-  /* FIXME: send back RST? */
+  /*
+   * https://tools.ietf.org/html/rfc7252#section-4.2 MUST send RST
+   * https://tools.ietf.org/html/rfc7252#section-4.3 MAY send RST
+   */
+  coap_send_rst(session, pdu);
   coap_delete_pdu(pdu);
   return -1;
 }
