@@ -14,9 +14,6 @@
 #include "option.h"
 #include "pdu.h"
 
-struct coap_resource_t;
-struct coap_session_t;
-
 /**
  * @defgroup block Block Transfer
  * API functions for handling PDUs using CoAP BLOCK options

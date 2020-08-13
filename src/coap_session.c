@@ -1070,7 +1070,7 @@ error:
 #ifndef WITH_LWIP
 coap_endpoint_t *
 coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto) {
-  struct coap_endpoint_t *ep = NULL;
+  coap_endpoint_t *ep = NULL;
 
   assert(context);
   assert(listen_addr);
@@ -1106,7 +1106,7 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     goto error;
   }
 
-  memset(ep, 0, sizeof(struct coap_endpoint_t));
+  memset(ep, 0, sizeof(coap_endpoint_t));
   ep->context = context;
   ep->proto = proto;
 

@@ -14,12 +14,6 @@
 #include "coap_time.h"
 #include "str.h"
 
-struct coap_str_const_t;
-struct coap_bin_const_t;
-struct coap_context_t;
-struct coap_session_t;
-struct coap_dtls_pki_t;
-
 /**
  * @defgroup dtls DTLS Support
  * API functions for interfacing with DTLS libraries.

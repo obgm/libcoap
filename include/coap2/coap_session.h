@@ -69,7 +69,7 @@ typedef struct coap_session_t {
   coap_addr_tuple_t addr_info;      /**< key: remote/local address info */
   int ifindex;                      /**< interface index */
   coap_socket_t sock;               /**< socket object for the session, if any */
-  struct coap_endpoint_t *endpoint; /**< session's endpoint */
+  coap_endpoint_t *endpoint;        /**< session's endpoint */
   struct coap_context_t *context;   /**< session's context */
   void *tls;                        /**< security parameters */
   uint16_t tx_mid;                  /**< the last message id that was used in this session */
@@ -311,7 +311,7 @@ coap_session_t *coap_new_client_session_pki(
 */
 coap_session_t *coap_new_server_session(
   struct coap_context_t *ctx,
-  struct coap_endpoint_t *ep
+  coap_endpoint_t *ep
 );
 
 /**

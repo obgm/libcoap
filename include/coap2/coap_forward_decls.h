@@ -23,13 +23,17 @@
  */
 struct coap_cache_entry_t;
 struct coap_cache_key_t;
+struct coap_address_t;
+struct coap_bin_const_t;
 struct coap_context_t;
 struct coap_dtls_pki_t;
-struct coap_endpoint_t;
+struct coap_packet_t;
+struct coap_pdu_t;
 struct coap_queue_t;
+struct coap_resource_t;
 struct coap_session_t;
+struct coap_str_const_t;
 struct coap_string_t;
-struct coap_subscription_t;
 
 /*
  * typedef all the opaque structures that are defined in coap_*_internal.h
@@ -44,13 +48,15 @@ typedef struct coap_cache_key_t coap_cache_key_t;
 /* ************* coap_session_internal.h ***************** */
 
 /**
-* Abstraction of virtual endpoint that can be attached to coap_context_t.
-*/
+ * Abstraction of virtual endpoint that can be attached to coap_context_t.
+ */
 typedef struct coap_endpoint_t coap_endpoint_t;
 
 /* ************* coap_subscribe_internal.h ***************** */
 
-/** Subscriber information */
+/**
+ * Subscriber information
+ */
 typedef struct coap_subscription_t coap_subscription_t;
 
 #endif /* COAP_FORWARD_DECLS_H_ */

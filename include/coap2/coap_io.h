@@ -43,11 +43,6 @@ typedef int coap_fd_t;
 #define COAP_INVALID_SOCKET (-1)
 #endif
 
-struct coap_packet_t;
-struct coap_session_t;
-struct coap_context_t;
-struct coap_pdu_t;
-
 typedef uint16_t coap_socket_flags_t;
 
 typedef struct coap_addr_tuple_t {
@@ -71,10 +66,11 @@ typedef struct coap_socket_t {
                                      Note: It must mot be wrapped with COAP_EPOLL_SUPPORT as
                                      coap_socket_t is seen in applications embedded in
                                      coap_session_t etc. */
-  struct coap_endpoint_t *endpoint; /* Used by the epoll logic for a listening endpoint.
-                                       Note: It must mot be wrapped with COAP_EPOLL_SUPPORT as
-                                       coap_socket_t is seen in applications embedded in
-                                       coap_session_t etc. */
+  coap_endpoint_t *endpoint; /* Used by the epoll logic for a listening
+                                endpoint.
+                                Note: It must mot be wrapped with
+                                COAP_EPOLL_SUPPORT as coap_socket_t is seen in
+                                applications embedded in coap_session_t etc. */
 } coap_socket_t;
 
 /**
@@ -94,8 +90,8 @@ typedef struct coap_socket_t {
 #define COAP_SOCKET_CAN_CONNECT  0x0800  /**< non blocking client socket can now connect without blocking */
 #define COAP_SOCKET_MULTICAST    0x1000  /**< socket is used for multicast communication */
 
-struct coap_endpoint_t *coap_malloc_endpoint( void );
-void coap_mfree_endpoint( struct coap_endpoint_t *ep );
+coap_endpoint_t *coap_malloc_endpoint( void );
+void coap_mfree_endpoint( coap_endpoint_t *ep );
 
 int
 coap_socket_connect_udp(coap_socket_t *sock,
@@ -200,7 +196,7 @@ struct pbuf *coap_packet_extract_pbuf(struct coap_packet_t *packet);
  */
 struct coap_packet_t {
   struct pbuf *pbuf;
-  const struct coap_endpoint_t *local_interface;
+  const coap_endpoint_t *local_interface;
   coap_addr_tuple_t addr_info; /**< local and remote addresses */
   int ifindex;                /**< the interface index */
 //  uint16_t srcport;

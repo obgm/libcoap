@@ -30,8 +30,6 @@
 #include "coap_prng.h"
 #include "coap_session.h"
 
-struct coap_queue_t;
-
 /**
  * Queue entry
  */
@@ -80,12 +78,6 @@ void coap_delete_all(coap_queue_t *queue);
  * @return New node entry, or @c NULL if failure.
  */
 coap_queue_t *coap_new_node(void);
-
-struct coap_resource_t;
-struct coap_context_t;
-#ifndef WITHOUT_ASYNC
-struct coap_async_state_t;
-#endif
 
 /**
  * Response handler that is used as callback in coap_context_t.

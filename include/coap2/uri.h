@@ -13,7 +13,6 @@
 #include <stdint.h>
 
 #include "str.h"
-struct coap_pdu_t;
 
 /**
  * The scheme specifiers. Secure schemes have an odd numeric value,
