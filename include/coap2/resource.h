@@ -423,6 +423,8 @@ coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
  *                        function returns NULL.
  * @param has_block2      If Option Block2 defined.
  * @param block2          Contents of Block2 if Block 2 defined.
+ * @param code            Request type code.
+ *
  * @return                A pointer to the added/updated subscription
  *                        information or @c NULL on error.
  */
@@ -431,7 +433,8 @@ coap_subscription_t *coap_add_observer(coap_resource_t *resource,
                                        const coap_binary_t *token,
                                        coap_string_t *query,
                                        int has_block2,
-                                       coap_block_t block2);
+                                       coap_block_t block2,
+                                       uint8_t code);
 
 /**
  * Returns a subscription object for given @p peer.
