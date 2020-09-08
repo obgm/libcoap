@@ -61,6 +61,8 @@ See
 
 "RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets"
 
+"RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option"
+
 for further information.
 
 BUGS

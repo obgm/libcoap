@@ -32,6 +32,10 @@ struct coap_session_t;
 #define COAP_DEFAULT_MTU       1152
 #endif /* COAP_DEFAULT_MTU */
 
+#ifndef COAP_DEFAULT_HOP_LIMIT
+#define COAP_DEFAULT_HOP_LIMIT       16
+#endif /* COAP_DEFAULT_HOP_LIMIT */
+
 /* TCP Message format constants, do not modify */
 #define COAP_MESSAGE_SIZE_OFFSET_TCP8 13
 #define COAP_MESSAGE_SIZE_OFFSET_TCP16 269 /* 13 + 256 */
@@ -87,41 +91,60 @@ typedef enum coap_request_t {
 } coap_request_t;
 
 /*
- * CoAP option types (be sure to update coap_option_check_critical() when
- * adding options
+ * CoAP option types (be sure to update coap_option_check_critical() and
+ * coap_add_option() when adding options
  */
 
-#define COAP_OPTION_IF_MATCH        1 /* C, opaque, 0-8 B, (none) */
-#define COAP_OPTION_URI_HOST        3 /* C, String, 1-255 B, destination address */
-#define COAP_OPTION_ETAG            4 /* E, opaque, 1-8 B, (none) */
-#define COAP_OPTION_IF_NONE_MATCH   5 /* empty, 0 B, (none) */
-#define COAP_OPTION_URI_PORT        7 /* C, uint, 0-2 B, destination port */
-#define COAP_OPTION_LOCATION_PATH   8 /* E, String, 0-255 B, - */
-#define COAP_OPTION_URI_PATH       11 /* C, String, 0-255 B, (none) */
-#define COAP_OPTION_CONTENT_FORMAT 12 /* E, uint, 0-2 B, (none) */
+/*
+ * The C, U, and N flags indicate the properties
+ * Critical, Unsafe, and NoCacheKey, respectively.
+ * If U is set, then N has no meaning as per
+ * https://tools.ietf.org/html/rfc7252#section-5.10
+ * and is set to a -.
+ *
+ * Separately, R is for the options that can be repeated
+ *
+ * The least significant byte of the option is set as followed
+ * as per https://tools.ietf.org/html/rfc7252#section-5.4.6
+ *
+ *   0   1   2   3   4   5   6   7
+ * --+---+---+---+---+---+---+---+
+ *           | NoCacheKey| U | C |
+ * --+---+---+---+---+---+---+---+
+ *
+ * https://tools.ietf.org/html/rfc8613#section-4 goes on to define E, I and U
+ * properties Encrypted and Integrity Protected, Integrity Protected Only and
+ * Unprotected respectively.  Integretity Protected Only is not currently used.
+ *
+ * An Option is tagged with CUNREIU with any of the letters replaced with _ if
+ * not set, or - for N if U is set (see above) for aiding understanding of the
+ * Option.
+ */
+
+#define COAP_OPTION_IF_MATCH        1 /* C__RE__, opaque,    0-8 B, RFC7252 */
+#define COAP_OPTION_URI_HOST        3 /* CU-___U, String,  1-255 B, RFC7252 */
+#define COAP_OPTION_ETAG            4 /* ___RE__, opaque,    1-8 B, RFC7252 */
+#define COAP_OPTION_IF_NONE_MATCH   5 /* C___E__, empty,       0 B, RFC7252 */
+#define COAP_OPTION_OBSERVE         6 /* _U-_E_U, empty/uint,0/0-3 B, RFC7641 */
+#define COAP_OPTION_URI_PORT        7 /* CU-___U, uint,      0-2 B, RFC7252 */
+#define COAP_OPTION_LOCATION_PATH   8 /* ___RE__, String,  0-255 B, RFC7252 */
+#define COAP_OPTION_OSCORE          9 /* C_____U, *,       0-255 B, RFC8613 */
+#define COAP_OPTION_URI_PATH       11 /* CU-RE__, String,  0-255 B, RFC7252 */
+#define COAP_OPTION_CONTENT_FORMAT 12 /* ____E__, uint,      0-2 B, RFC7252 */
 #define COAP_OPTION_CONTENT_TYPE COAP_OPTION_CONTENT_FORMAT
-#define COAP_OPTION_MAXAGE         14 /* E, uint, 0--4 B, 60 Seconds */
-#define COAP_OPTION_URI_QUERY      15 /* C, String, 1-255 B, (none) */
-#define COAP_OPTION_ACCEPT         17 /* C, uint,   0-2 B, (none) */
-#define COAP_OPTION_LOCATION_QUERY 20 /* E, String,   0-255 B, (none) */
-#define COAP_OPTION_SIZE2          28 /* E, uint, 0-4 B, (none) */
-#define COAP_OPTION_PROXY_URI      35 /* C, String, 1-1034 B, (none) */
-#define COAP_OPTION_PROXY_SCHEME   39 /* C, String, 1-255 B, (none) */
-#define COAP_OPTION_SIZE1          60 /* E, uint, 0-4 B, (none) */
-
-/* option types from RFC 7641 */
-
-#define COAP_OPTION_OBSERVE         6 /* E, empty/uint, 0 B/0-3 B, (none) */
-#define COAP_OPTION_SUBSCRIPTION  COAP_OPTION_OBSERVE
-
-/* selected option types from RFC 7959 */
-
-#define COAP_OPTION_BLOCK2         23 /* C, uint, 0--3 B, (none) */
-#define COAP_OPTION_BLOCK1         27 /* C, uint, 0--3 B, (none) */
-
-/* selected option types from RFC 7967 */
-
-#define COAP_OPTION_NORESPONSE    258 /* N, uint, 0--1 B, 0 */
+/* COAP_OPTION_MAXAGE default 60 seconds if not set */
+#define COAP_OPTION_MAXAGE         14 /* _U-_E_U, uint,      0-4 B, RFC7252 */
+#define COAP_OPTION_URI_QUERY      15 /* CU-RE__, String,  1-255 B, RFC7252 */
+#define COAP_OPTION_HOP_LIMIT      16 /* ______U, uint,        1 B, RFC8768 */
+#define COAP_OPTION_ACCEPT         17 /* C___E__, uint,      0-2 B, RFC7252 */
+#define COAP_OPTION_LOCATION_QUERY 20 /* ___RE__, String,  0-255 B, RFC7252 */
+#define COAP_OPTION_BLOCK2         23 /* CU-_E_U, uint,      0-3 B, RFC7959 */
+#define COAP_OPTION_BLOCK1         27 /* CU-_E_U, uint,      0-3 B, RFC7959 */
+#define COAP_OPTION_SIZE2          28 /* __N_E_U, uint,      0-4 B, RFC7959 */
+#define COAP_OPTION_PROXY_URI      35 /* CU-___U, String, 1-1034 B, RFC7252 */
+#define COAP_OPTION_PROXY_SCHEME   39 /* CU-___U, String,  1-255 B, RFC7252 */
+#define COAP_OPTION_SIZE1          60 /* __N_E_U, uint,      0-4 B, RFC7252 */
+#define COAP_OPTION_NORESPONSE    258 /* _U-_E_U, uint,      0-1 B, RFC7967 */
 
 #define COAP_MAX_OPT            65535 /**< the highest option number we know */
 
@@ -273,7 +296,7 @@ typedef struct coap_pdu_t {
   uint8_t type;             /**< message type */
   uint8_t code;             /**< request method (value 1--31) or response code (value 64-255) */
   uint8_t max_hdr_size;     /**< space reserved for protocol-specific header */
-  uint8_t hdr_size;         /**< actaul size used for protocol-specific header */
+  uint8_t hdr_size;         /**< actual size used for protocol-specific header */
   uint8_t token_length;     /**< length of Token */
   uint16_t tid;             /**< transaction id, if any, in regular host byte order */
   uint16_t max_delta;       /**< highest option number */
@@ -358,6 +381,19 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size);
  * @return         1 if the operation succeeded, 0 otherwise.
  */
 int coap_pdu_resize(coap_pdu_t *pdu, size_t new_size);
+
+/**
+ * Dynamically grows the size of @p pdu to @p new_size if needed. The new size
+ * must not exceed the PDU's configure maximum size. On success, this
+ * function returns 1, otherwise 0.
+ *
+ * Internal use only.
+ *
+ * @param pdu      The PDU to resize.
+ * @param new_size The new size in bytes.
+ * @return         1 if the operation succeeded, 0 otherwise.
+ */
+int coap_pdu_check_resize(coap_pdu_t *pdu, size_t new_size);
 
 /**
  * Clears any contents from @p pdu and resets @c used_size,
@@ -489,6 +525,25 @@ uint8_t *coap_add_option_later(coap_pdu_t *pdu,
                                uint16_t type,
                                size_t len);
 
+
+/**
+ * Inserts option of given type in the @p pdu with the appropriate data.
+ * The option will be inserted in the appropriate place in the options in the pdu.
+ *
+ * Internal use only.
+ */
+size_t coap_insert_option(coap_pdu_t *pdu, uint16_t type,
+                          size_t len, const uint8_t *data);
+
+/**
+ * Updates existing first option of given type in the @p pdu with the new data.
+ *
+ * Internal use only.
+ */
+int coap_update_option(coap_pdu_t *pdu,
+                       uint16_t type,
+                       size_t len,
+                       const uint8_t *data);
 /**
  * Adds given data to the pdu that is passed as first parameter. Note that the
  * PDU's data is destroyed by coap_add_option(). coap_add_data() must be called
@@ -500,7 +555,7 @@ int coap_add_data(coap_pdu_t *pdu,
 
 /**
  * Adds given data to the pdu that is passed as first parameter but does not
- * copyt it. Note that the PDU's data is destroyed by coap_add_option().
+ * copy it. Note that the PDU's data is destroyed by coap_add_option().
  * coap_add_data() must be have been called once for this PDU, otherwise the
  * result is undefined.
  * The actual data must be copied at the returned location.

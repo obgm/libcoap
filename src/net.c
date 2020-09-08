@@ -51,6 +51,10 @@
 #include <lwip/timeouts.h>
 #endif
 
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN 40
+#endif
+
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -999,6 +1003,110 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   uint8_t r;
   ssize_t bytes_written;
 
+  if (pdu->code == COAP_RESPONSE_CODE(508)) {
+    /*
+     * Need to prepend our IP identifier to the data as per
+     * https://www.rfc-editor.org/rfc/rfc8768.html#section-4
+     */
+    char addr_str[INET6_ADDRSTRLEN + 8 + 1];
+    coap_opt_iterator_t opt_iter;
+    coap_opt_t *opt;
+    size_t hop_limit;
+
+    addr_str[sizeof(addr_str)-1] = '\000';
+    if (coap_print_addr(&session->addr_info.local, (uint8_t*)addr_str,
+                            sizeof(addr_str) - 1)) {
+      char *cp;
+      int len;
+
+      if (addr_str[0] == '[') {
+        cp = strchr(addr_str, ']');
+        if (cp) *cp = '\000';
+        if (memcmp(&addr_str[1], "::ffff:", 7) == 0) {
+          /* IPv4 embedded into IPv6 */
+          cp = &addr_str[8];
+        }
+        else {
+          cp = &addr_str[1];
+        }
+      }
+      else {
+        cp = strchr(addr_str, ':');
+        if (cp) *cp = '\000';
+        cp = addr_str;
+      }
+      len = strlen(cp);
+
+      /* See if Hop Limit option is being used in return path */
+      opt = coap_check_option(pdu, COAP_OPTION_HOP_LIMIT, &opt_iter);
+      if (opt) {
+        uint8_t buf[4];
+
+        hop_limit =
+          coap_decode_var_bytes (coap_opt_value (opt), coap_opt_length (opt));
+        if (hop_limit == 1) {
+          coap_log(LOG_WARNING, "Proxy loop detected '%s'\n",
+                   (char*)pdu->data);
+          coap_delete_pdu(pdu);
+          return (coap_tid_t)COAP_DROPPED_RESPONSE;
+        }
+        else if (hop_limit < 1 || hop_limit > 255) {
+          /* Something is bad - need to drop this pdu (TODO or delete option) */
+          coap_log(LOG_WARNING, "Proxy return has bad hop limit count '%zu'\n",
+                                 hop_limit);
+          coap_delete_pdu(pdu);
+          return (coap_tid_t)COAP_DROPPED_RESPONSE;
+        }
+        hop_limit--;
+        coap_update_option(pdu, COAP_OPTION_HOP_LIMIT,
+                           coap_encode_var_safe8(buf, sizeof(buf), hop_limit),
+                           buf);
+      }
+
+      /* Need to check that we are not seeing this proxy in the return loop */
+      if (pdu->data && opt == NULL) {
+        if (pdu->used_size + 1 <= pdu->max_size) {
+          char *a_match;
+          size_t data_len = pdu->used_size - (pdu->data - pdu->token);
+          pdu->data[data_len] = '\000';
+          a_match = strstr((char*)pdu->data, cp);
+          if (a_match && (a_match == (char*)pdu->data || a_match[-1] == ' ') &&
+              ((size_t)(a_match - (char*)pdu->data + len) == data_len ||
+               a_match[len] == ' ')) {
+            coap_log(LOG_WARNING, "Proxy loop detected '%s'\n",
+                     (char*)pdu->data);
+            coap_delete_pdu(pdu);
+            return (coap_tid_t)COAP_DROPPED_RESPONSE;
+          }
+        }
+      }
+      if (pdu->used_size + len + 1 <= pdu->max_size) {
+        size_t old_size = pdu->used_size;
+        if (coap_pdu_resize(pdu, pdu->used_size + len + 1)) {
+          if (pdu->data == NULL) {
+            /*
+             * Set Hop Limit to max for return path.  If this libcoap is in
+             * a proxy loop path, it will always decrement hop limit in code
+             * above and hence timeout / drop the response as appropriate
+             */
+            hop_limit = 255;
+            coap_insert_option(pdu, COAP_OPTION_HOP_LIMIT, 1,
+                               (uint8_t *)&hop_limit);
+            coap_add_data(pdu, len, (uint8_t*)cp);
+          }
+          else {
+            /* prepend with space separator, leaving hop limit "as is" */
+            memmove(pdu->data + len + 1, pdu->data,
+                    old_size - (pdu->data - pdu->token));
+            memcpy(pdu->data, cp, len);
+            pdu->data[len] = ' ';
+            pdu->used_size += len + 1;
+          }
+        }
+      }
+    }
+  }
+
   if (!coap_pdu_encode_header(pdu, session->proto)) {
     goto error;
   }
@@ -1801,11 +1909,22 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
   uint16_t opt_type = 0;        /* used for calculating delta-storage */
 
 #if COAP_ERROR_PHRASE_LENGTH > 0
-  const char *phrase = coap_response_phrase(code);
+  const char *phrase;
+  if (code != COAP_RESPONSE_CODE(508)) {
+    phrase = coap_response_phrase(code);
 
-  /* Need some more space for the error phrase and payload start marker */
-  if (phrase)
-    size += strlen(phrase) + 1;
+    /* Need some more space for the error phrase and payload start marker */
+    if (phrase)
+      size += strlen(phrase) + 1;
+  }
+  else {
+    /*
+     * Need space for IP for 5.08 response which is filled in in coap_send()
+     * https://www.rfc-editor.org/rfc/rfc8768.html#section-4
+     */
+    phrase = NULL;
+    size += INET6_ADDRSTRLEN;
+  }
 #endif
 
   assert(request);
@@ -1819,6 +1938,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
    * request. We always need the Token, for 4.02 the unknown critical
    * options must be included as well. */
   coap_option_clrb(opts, COAP_OPTION_CONTENT_TYPE); /* we do not want this */
+  coap_option_clrb(opts, COAP_OPTION_HOP_LIMIT); /* we do not want this */
 
   coap_option_iterator_init(request, &opt_iter, opts);
 
@@ -2161,14 +2281,45 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_method_handler_t h = NULL;
   coap_pdu_t *response = NULL;
   coap_opt_filter_t opt_filter;
-  coap_resource_t *resource;
+  coap_resource_t *resource = NULL;
   /* The respond field indicates whether a response must be treated
    * specially due to a No-Response option that declares disinterest
    * or interest in a specific response class. DEFAULT indicates that
    * No-Response has not been specified. */
   enum respond_t respond = RESPONSE_DEFAULT;
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *opt;
+  int skip_hop_limit_check = 0;
+  int resp;
 
   coap_option_filter_clear(opt_filter);
+
+  /* If !skip_hop_limit_check test placeholder for Proxy-Uri: code */
+  if (!skip_hop_limit_check) {
+    opt = coap_check_option(pdu, COAP_OPTION_HOP_LIMIT, &opt_iter);
+    if (opt) {
+      size_t hop_limit;
+      uint8_t buf[4];
+
+      hop_limit =
+        coap_decode_var_bytes (coap_opt_value (opt), coap_opt_length (opt));
+      if (hop_limit == 1) {
+        /* coap_send() will fill in the IP address for us */
+        resp = 508;
+        goto fail_response;
+      }
+      else if (hop_limit < 1 || hop_limit > 255) {
+        /* Need to return a 4.00 RFC8768 Section 3 */
+        coap_log(LOG_INFO, "Invalid Hop Limit\n");
+        resp = 400;
+        goto fail_response;
+      }
+      hop_limit--;
+      coap_update_option(pdu, COAP_OPTION_HOP_LIMIT,
+                         coap_encode_var_safe8(buf, sizeof(buf), hop_limit),
+                         buf);
+    }
+  }
 
   /* try to find the resource from the request URI */
   coap_string_t *uri_path = coap_get_uri_path(pdu);
@@ -2285,7 +2436,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
        if response == NULL */
     if (coap_add_token(response, pdu->token_length, pdu->token)) {
       coap_binary_t token = { pdu->token_length, pdu->token };
-      coap_opt_iterator_t opt_iter;
       coap_opt_t *observe = NULL;
       int observe_action = COAP_OBSERVE_CANCEL;
       coap_string_t *query = coap_get_query(pdu);
@@ -2391,6 +2541,17 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
   assert(response == NULL);
   coap_delete_string(uri_path);
+  return;
+
+fail_response:
+  response =
+     coap_new_error_response(pdu, COAP_RESPONSE_CODE(resp),
+       opt_filter);
+  if (response) {
+    if (coap_send(session, response) == COAP_INVALID_TID)
+      coap_log(LOG_WARNING, "cannot send response for transaction %u\n",
+               pdu->tid);
+  }
 }
 
 static void
@@ -2462,9 +2623,6 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   int is_ping_rst;
 
   if (LOG_DEBUG <= coap_get_log_level()) {
-#ifndef INET6_ADDRSTRLEN
-#define INET6_ADDRSTRLEN 40
-#endif
     /* FIXME: get debug to work again **
     unsigned char addr[INET6_ADDRSTRLEN+8], localaddr[INET6_ADDRSTRLEN+8];
     if (coap_print_addr(remote, addr, INET6_ADDRSTRLEN+8) &&

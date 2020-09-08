@@ -316,14 +316,15 @@ msg_option_string(uint8_t code, uint16_t option_type) {
     { COAP_OPTION_CONTENT_FORMAT, "Content-Format" },
     { COAP_OPTION_MAXAGE, "Max-Age" },
     { COAP_OPTION_URI_QUERY, "Uri-Query" },
+    { COAP_OPTION_HOP_LIMIT, "Hop-Limit" },
     { COAP_OPTION_ACCEPT, "Accept" },
     { COAP_OPTION_LOCATION_QUERY, "Location-Query" },
     { COAP_OPTION_BLOCK2, "Block2" },
     { COAP_OPTION_BLOCK1, "Block1" },
+    { COAP_OPTION_SIZE2, "Size2" },
     { COAP_OPTION_PROXY_URI, "Proxy-Uri" },
     { COAP_OPTION_PROXY_SCHEME, "Proxy-Scheme" },
     { COAP_OPTION_SIZE1, "Size1" },
-    { COAP_OPTION_SIZE2, "Size2" },
     { COAP_OPTION_NORESPONSE, "No-Response" }
   };
 
@@ -571,6 +572,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
     case COAP_OPTION_OBSERVE:
     case COAP_OPTION_SIZE1:
     case COAP_OPTION_SIZE2:
+    case COAP_OPTION_HOP_LIMIT:
       /* show values as unsigned decimal value */
       buf_len = snprintf((char *)buf, sizeof(buf), "%u",
                          coap_decode_var_bytes(coap_opt_value(option),
@@ -584,6 +586,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
           opt_iter.type == COAP_OPTION_URI_HOST ||
           opt_iter.type == COAP_OPTION_LOCATION_PATH ||
           opt_iter.type == COAP_OPTION_LOCATION_QUERY ||
+          opt_iter.type == COAP_OPTION_PROXY_SCHEME ||
           opt_iter.type == COAP_OPTION_URI_QUERY) {
         encode = 0;
       } else {

@@ -16,8 +16,9 @@ SYNOPSIS
 --------
 *coap-client* [*-a* addr] [*-b* [num,]size] [*-e* text] [*-f* file] [*-l* loss]
               [*-m* method] [*-o* file] [*-p* port] [*-r*] [*-s duration*]
-              [*-t* type] [*-v* num] [*-A* type] [*-B* seconds] [*-K* interval]
-              [*-N*] [*-O* num,text] [*-P* addr[:port]] [*-T* token] [*-U*]
+              [*-t* type] [*-v* num] [*-A* type] [*-B* seconds]
+              [*-H* hoplimit] [*-K* interval] [*-N*] [*-O* num,text]
+              [*-P* addr[:port]] [*-T* token] [*-U*]
               [[*-h* match_hint_file] [*-k* key] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [*-C* cafile] [*-J* pkcs11_pin]
               [*-R* root_cafile]] URI
@@ -108,6 +109,10 @@ OPTIONS - General
 
 *-B* seconds::
    Break operation after waiting given seconds (default is 90).
+
+*-H* hoplimit::
+   Set the Hop Limit count to hoplimit for proxies. Must have a value between
+   1 and 255 inclusive. Default is '16'.
 
 *-K* interval::
    Send a ping after interval seconds of inactivity.
