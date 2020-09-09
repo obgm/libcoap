@@ -1259,7 +1259,7 @@ post_client_hello_gnutls_pki(gnutls_session_t g_session)
       if ((ret = setup_pki_credentials(
                            &g_context->pki_sni_entry_list[i].pki_credentials,
                            g_context,
-                           &sni_setup_data, COAP_DTLS_ROLE_CLIENT)) < 0) {
+                           &sni_setup_data, COAP_DTLS_ROLE_SERVER)) < 0) {
         int keep_ret = ret;
         G_ACTION(gnutls_alert_send(g_session, GNUTLS_AL_FATAL,
                                    GNUTLS_A_BAD_CERTIFICATE));
@@ -1612,6 +1612,9 @@ coap_dtls_new_gnutls_env(coap_session_t *c_session, int type)
   /* So we can track the coap_session_t in callbacks */
   gnutls_transport_set_ptr(g_env->g_session, c_session);
 
+  G_CHECK(gnutls_priority_set(g_env->g_session, g_context->priority_cache),
+          "gnutls_priority_set");
+
   if (type == GNUTLS_SERVER) {
     G_CHECK(setup_server_ssl_session(c_session, g_env),
             "setup_server_ssl_session");
@@ -1621,8 +1624,6 @@ coap_dtls_new_gnutls_env(coap_session_t *c_session, int type)
             "setup_client_ssl_session");
   }
 
-  G_CHECK(gnutls_priority_set(g_env->g_session, g_context->priority_cache),
-          "gnutls_priority_set");
   gnutls_handshake_set_timeout(g_env->g_session,
                                GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
   gnutls_dtls_set_timeouts(g_env->g_session, COAP_DTLS_RETRANSMIT_MS,
@@ -1929,10 +1930,10 @@ coap_dtls_receive(coap_session_t *c_session,
   assert(g_env != NULL);
 
   if (ssl_data->pdu_len)
-    coap_log(LOG_INFO, "** %s: Previous data not read %u bytes\n",
+    coap_log(LOG_ERR, "** %s: Previous data not read %u bytes\n",
              coap_session_str(c_session), ssl_data->pdu_len);
   ssl_data->pdu = data;
-  ssl_data->pdu_len = (unsigned)data_len;
+  ssl_data->pdu_len = data_len;
 
   c_session->dtls_event = -1;
   if (g_env->established) {
@@ -1950,9 +1951,23 @@ coap_dtls_receive(coap_session_t *c_session,
       c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
     }
     else {
-      coap_log(LOG_WARNING,
-               "coap_dtls_receive: gnutls_record_recv returned %d\n", ret);
-      ret = -1;
+      switch (ret) {
+      case GNUTLS_E_FATAL_ALERT_RECEIVED:
+        log_last_alert(g_env->g_session);
+        c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+        ret = -1;
+        break;
+      case GNUTLS_E_WARNING_ALERT_RECEIVED:
+        log_last_alert(g_env->g_session);
+        c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
+        ret = 0;
+        break;
+      default:
+        coap_log(LOG_WARNING,
+                 "coap_dtls_receive: gnutls_record_recv returned %d\n", ret);
+        ret = -1;
+        break;
+      }
     }
   }
   else {
@@ -1962,6 +1977,14 @@ coap_dtls_receive(coap_session_t *c_session,
     }
     else {
       ret = -1;
+      if (ssl_data->pdu_len) {
+        /* Do the handshake again incase of internal timeout */
+        ret = do_gnutls_handshake(c_session, g_env);
+        if (ret == 1) {
+          /* Just connected, so send the data */
+           coap_session_connected(c_session);
+        }
+      }
     }
   }
 
@@ -1970,16 +1993,23 @@ coap_dtls_receive(coap_session_t *c_session,
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
+      ssl_data = NULL;
       ret = -1;
     }
   }
-
+  if (ssl_data && ssl_data->pdu_len) {
+    /* pdu data is held on stack which will not stay there */
+    coap_log(LOG_DEBUG, "coap_dtls_receive: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
+    ssl_data->pdu_len = 0;
+    ssl_data->pdu = NULL;
+  }
   return ret;
 }
 
 /*
- * return 0 failed
- *        1 passed
+ * return -1  failure
+ *         0  not completed
+ *         1  client hello seen
  */
 int
 coap_dtls_hello(coap_session_t *c_session,
@@ -2123,16 +2153,17 @@ void *coap_tls_new_client_session(coap_session_t *c_session, int *connected) {
   /* So we can track the coap_session_t in callbacks */
   gnutls_transport_set_ptr(g_env->g_session, c_session);
 
+  gnutls_priority_set(g_env->g_session, g_context->priority_cache);
   setup_client_ssl_session(c_session, g_env);
 
-  gnutls_priority_set(g_env->g_session, g_context->priority_cache);
   gnutls_handshake_set_timeout(g_env->g_session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
 
+  c_session->tls = g_env;
   ret = do_gnutls_handshake(c_session, g_env);
   if (ret == 1) {
     *connected = 1;
     coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
-    coap_session_connected(c_session);
+    coap_session_send_csm(c_session);
   }
   return g_env;
 
