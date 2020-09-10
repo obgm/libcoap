@@ -1542,6 +1542,7 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now)
   int ret = mbedtls_timing_get_delay(&m_env->timer);
   unsigned int scalar = 1 << m_env->retry_scalar;
 
+  assert(c_session->state == COAP_SESSION_STATE_HANDSHAKE);
   switch (ret) {
   case 0:
     /* int_ms has not timed out */
@@ -1578,10 +1579,9 @@ void coap_dtls_handle_timeout(coap_session_t *c_session)
 {
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
 
-  assert(m_env != NULL);
+  assert(m_env != NULL && c_session->state == COAP_SESSION_STATE_HANDSHAKE);
   m_env->retry_scalar++;
-  if (((c_session->state == COAP_SESSION_STATE_HANDSHAKE) &&
-       (++c_session->dtls_timeout_count > c_session->max_retransmit)) ||
+  if ((++c_session->dtls_timeout_count > c_session->max_retransmit) ||
       (do_mbedtls_handshake(c_session, m_env) < 0)) {
     /* Too many retries */
     coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);

@@ -2927,7 +2927,7 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *session, coap_tick_t now UNUSE
   SSL *ssl = (SSL *)session->tls;
   coap_ssl_data *ssl_data;
 
-  assert(ssl != NULL);
+  assert(ssl != NULL && session->state == COAP_SESSION_STATE_HANDSHAKE);
   ssl_data = (coap_ssl_data*)BIO_get_data(SSL_get_rbio(ssl));
   return ssl_data->timeout;
 }
@@ -2935,9 +2935,8 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *session, coap_tick_t now UNUSE
 void coap_dtls_handle_timeout(coap_session_t *session) {
   SSL *ssl = (SSL *)session->tls;
 
-  assert(ssl != NULL);
-  if (((session->state == COAP_SESSION_STATE_HANDSHAKE) &&
-       (++session->dtls_timeout_count > session->max_retransmit)) ||
+  assert(ssl != NULL && session->state == COAP_SESSION_STATE_HANDSHAKE);
+  if ((++session->dtls_timeout_count > session->max_retransmit) ||
       (DTLSv1_handle_timeout(ssl) < 0)) {
     /* Too many retries */
     coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
