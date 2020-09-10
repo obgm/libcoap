@@ -348,7 +348,9 @@ unsigned char *data, size_t length, int observe) {
     /* Indicate that we want to observe this resource */
     if (!coap_insert_optlist(&optlist_chain,
                              coap_new_optlist(COAP_OPTION_OBSERVE,
-                                         COAP_OBSERVE_ESTABLISH, NULL)))
+                               coap_encode_var_safe(buf, sizeof(buf),
+                               COAP_OBSERVE_ESTABLISH), buf)
+                             ))
       goto error;
   }
 

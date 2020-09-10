@@ -639,7 +639,8 @@ coap_add_observer(coap_resource_t *resource,
                   const coap_binary_t *token,
                   coap_string_t *query,
                   int has_block2,
-                  coap_block_t block2) {
+                  coap_block_t block2,
+                  uint8_t code) {
   coap_subscription_t *s;
 
   assert( session );
@@ -666,11 +667,11 @@ coap_add_observer(coap_resource_t *resource,
     if (s->query)
       coap_delete_string(s->query);
     s->query = query;
+    s->code = code;
     return s;
   }
 
-  /* s points to a different subscription, so we have to create
-   * another one. */
+  /* Create a new subscription */
   s = COAP_MALLOC_TYPE(subscription);
 
   if (!s) {
@@ -692,6 +693,8 @@ coap_add_observer(coap_resource_t *resource,
 
   s->has_block2 = has_block2;
   s->block2 = block2;
+
+  s->code = code;
 
   /* add subscriber to resource */
   LL_PREPEND(resource->subscribers, s);
@@ -767,11 +770,6 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
   if (r->observable && (r->dirty || r->partiallydirty)) {
     r->partiallydirty = 0;
 
-    /* retrieve GET handler, prepare response */
-    h = r->handler[COAP_REQUEST_GET - 1];
-    assert(h);                /* we do not allow subscriptions if no
-                         * GET handler is defined */
-
     LL_FOREACH(r->subscribers, obs) {
       if (r->dirty == 0 && obs->dirty == 0) {
         /*
@@ -829,6 +827,10 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       switch (deleting) {
       case COAP_NOT_DELETING_RESOURCE:
         /* fill with observer-specific data */
+
+        h = r->handler[obs->code - 1];
+        assert(h);      /* we do not allow subscriptions if no
+                         * GET/FETCH handler is defined */
         h(context, r, obs->session, NULL, &token, obs->query, response);
         break;
       case COAP_DELETING_RESOURCE:

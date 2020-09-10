@@ -966,9 +966,14 @@ set_blocksize(void) {
 
 static void
 cmdline_subscribe(char *arg) {
+  uint8_t buf[4];
+
   obs_seconds = atoi(arg);
-  coap_insert_optlist(&optlist, coap_new_optlist(COAP_OPTION_OBSERVE,
-                      COAP_OBSERVE_ESTABLISH, NULL));
+  coap_insert_optlist(&optlist,
+                      coap_new_optlist(COAP_OPTION_OBSERVE,
+                        coap_encode_var_safe(buf, sizeof(buf),
+                        COAP_OBSERVE_ESTABLISH), buf)
+                      );
 }
 
 static int

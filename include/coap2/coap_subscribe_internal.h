@@ -50,9 +50,10 @@ struct coap_subscription_t {
   unsigned int dirty:1;    /**< set if the notification temporarily could not be
                             *   sent (in that case, the resource's partially
                             *   dirty flag is set too) */
-  unsigned int has_block2:1; /**< GET request had Block2 definition */
+  unsigned int has_block2:1; /**< request had Block2 definition */
+  uint8_t code;            /** request type code (GET/FETCH)*/
   uint16_t tid;             /**< transaction id, if any, in regular host byte order */
-  coap_block_t block2;     /**< GET request Block2 definition */
+  coap_block_t block2;     /**< request Block2 definition */
   size_t token_length;     /**< actual length of token */
   unsigned char token[8];  /**< token used for subscription */
   struct coap_string_t *query; /**< query string used for subscription, if any */

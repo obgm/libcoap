@@ -2458,7 +2458,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
             if (coap_get_block(pdu, COAP_OPTION_BLOCK2, &block2)) {
               has_block2 = 1;
             }
-            subscription = coap_add_observer(resource, session, &token, query, has_block2, block2);
+            subscription = coap_add_observer(resource, session, &token, query, has_block2, block2, pdu->code);
             if (subscription) {
               /* Ownership of query is taken by subscription if not
                * NULL. In this case, we must not delete query here
