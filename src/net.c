@@ -2647,9 +2647,6 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
           /* Flush out any entries on session->delayqueue */
           coap_session_connected(session);
       }
-      if (pdu->code == 0)
-        goto cleanup;
-
       /* if sent code was >= 64 the message might have been a
        * notification. Then, we must flag the observer to be alive
        * by setting obs->fail_cnt = 0. */
@@ -2658,6 +2655,11 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         { sent->pdu->token_length, sent->pdu->token };
         coap_touch_observer(context, sent->session, &token);
       }
+
+      /* an empty ACK needs no further handling */
+      if (pdu->code == 0)
+        goto cleanup;
+
       break;
 
     case COAP_MESSAGE_RST:
