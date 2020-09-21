@@ -87,17 +87,26 @@ de-registered.
 The handler function prototype is defined as:
 [source, c]
 ----
-typedef void (*coap_response_handler_t)(coap_context_t *context,
-                                        coap_session_t *session,
-                                        coap_pdu_t *sent,
-                                        coap_pdu_t *received,
-                                        const coap_tid_t id);
+typedef enum coap_response_t {
+  COAP_RESPONSE_FAIL, /* Response not liked - send CoAP RST packet */
+  COAP_RESPONSE_OK    /* Response is fine */
+} coap_response_t;
+
+typedef coap_response_t (*coap_response_handler_t)(coap_context_t *context,
+                                                   coap_session_t *session,
+                                                   coap_pdu_t *sent,
+                                                   coap_pdu_t *received,
+                                                   const coap_tid_t id);
 ----
 
 *NOTE:* _sent_ will only be non NULL when the request PDU is Confirmable and
 this is an ACK or RST response to the request.  In general, matching of
-Requests and Responses whould be done generating unique Tokens for each Request
+Requests and Responses whould be done by generating unique Tokens for each Request
 and then matching up based on the Token in _received_ Response.
+
+*NOTE:* If the returned value is COAP_RESPONSE_FAIL, then a CoAP RST packet will get
+sent to the server by libcoap.  The returned value of COAP_RESPONSE_OK indicates
+that all is OK.
 
 The *coap_register_nack_handler*() function defines a request's negative
 response _handler_ for traffic associated with the _context_.
@@ -258,25 +267,28 @@ static int check_token(coap_pdu_t *received) {
   return 1;
 }
 
-static void
+static coap_response_t
 response_handler(coap_context_t *ctx, coap_session_t *session,
 coap_pdu_t *sent, coap_pdu_t *received, const coap_tid_t id) {
   /* Remove (void) definition if variable is used */
   (void)ctx;
+  (void)session;
   (void)id;
 
   /* check if this is a response to our original request */
   if (!check_token(received)) {
     /* drop if this was just some message, or send RST in case of notification */
     if (!sent && (received->type == COAP_MESSAGE_CON ||
-                  received->type == COAP_MESSAGE_NON))
-      coap_send_rst(session, received);
-    return;
+                  received->type == COAP_MESSAGE_NON)) {
+      /* Cause a CoAP RST to be sent */
+      return COAP_RESPONSE_FAIL;
+    }
+    return COAP_RESPONSE_OK;
   }
 
   if (received->type == COAP_MESSAGE_RST) {
     coap_log(LOG_INFO, "got RST\n");
-    return;
+    return COAP_RESPONSE_OK;
   }
 
   /* Output the received data, if any */
@@ -284,7 +296,7 @@ coap_pdu_t *sent, coap_pdu_t *received, const coap_tid_t id) {
     /* Additional code to deal with the response */
 
   }
-  return;
+  return COAP_RESPONSE_OK;
 
 }
 ----

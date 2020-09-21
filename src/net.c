@@ -2747,8 +2747,6 @@ static void
 handle_response(coap_context_t *context, coap_session_t *session,
   coap_pdu_t *sent, coap_pdu_t *rcvd) {
 
-  coap_send_ack(session, rcvd);
-
   /* In a lossy context, the ACK of a separate response may have
    * been lost, so we need to stop retransmitting requests with the
    * same token.
@@ -2772,7 +2770,14 @@ handle_response(coap_context_t *context, coap_session_t *session,
 
   /* Call application-specific response handler when available. */
   if (context->response_handler) {
-    context->response_handler(context, session, sent, rcvd, rcvd->tid);
+    if (context->response_handler(context, session, sent, rcvd,
+                                  rcvd->tid) == COAP_RESPONSE_FAIL)
+      coap_send_rst(session, rcvd);
+    else
+      coap_send_ack(session, rcvd);
+  }
+  else {
+    coap_send_ack(session, rcvd);
   }
 }
 

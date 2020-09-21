@@ -1541,7 +1541,7 @@ proxy_event_handler(coap_context_t *ctx UNUSED_PARAM,
   return 0;
 }
 
-static void
+static coap_response_t
 proxy_message_handler(struct coap_context_t *ctx UNUSED_PARAM,
                 coap_session_t *session,
                 coap_pdu_t *sent UNUSED_PARAM,
@@ -1572,7 +1572,7 @@ proxy_message_handler(struct coap_context_t *ctx UNUSED_PARAM,
   }
   if (i == proxy_list_count) {
     coap_log(LOG_DEBUG, "Unknown proxy ongoing session response received\n");
-    return;
+    return COAP_RESPONSE_OK;
   }
 
   coap_log(LOG_DEBUG, "** process upstream incoming %d.%02d response:\n",
@@ -1590,10 +1590,10 @@ proxy_message_handler(struct coap_context_t *ctx UNUSED_PARAM,
     size, data, offset, total);
     if (!proxy_entry->body_data) {
       coap_log(LOG_DEBUG, "body build memory error\n");
-      return;
+      return COAP_RESPONSE_OK;
     }
     if (offset + size != total)
-      return;
+      return COAP_RESPONSE_OK;
     data = proxy_entry->body_data->s;
     size = proxy_entry->body_data->length;
   }
@@ -1606,7 +1606,7 @@ proxy_message_handler(struct coap_context_t *ctx UNUSED_PARAM,
                       coap_session_max_pdu_size(incoming));
   if (!pdu) {
     coap_log(LOG_DEBUG, "Failed to create ongoing proxy response PDU\n");
-    return;
+    return COAP_RESPONSE_OK;
   }
 
   if (!coap_add_token(pdu, received->token_length, received->token)) {
@@ -1659,7 +1659,7 @@ proxy_message_handler(struct coap_context_t *ctx UNUSED_PARAM,
     coap_show_pdu(LOG_INFO, pdu);
 
   coap_send_large(incoming, pdu);
-  return;
+  return COAP_RESPONSE_OK;
 }
 
 static void

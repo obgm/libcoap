@@ -316,9 +316,9 @@ nack_handler(coap_context_t *context UNUSED_PARAM,
 /*
  * Response handler used for coap_send_large() responses
  */
-static void
+static coap_response_t
 message_handler(struct coap_context_t *ctx UNUSED_PARAM,
-                coap_session_t *session,
+                coap_session_t *session UNUSED_PARAM,
                 coap_pdu_t *sent,
                 coap_pdu_t *received,
                 const coap_tid_t id UNUSED_PARAM) {
@@ -339,14 +339,16 @@ message_handler(struct coap_context_t *ctx UNUSED_PARAM,
   if (!check_token(received)) {
     /* drop if this was just some message, or send RST in case of notification */
     if (!sent && (received->type == COAP_MESSAGE_CON ||
-                  received->type == COAP_MESSAGE_NON))
-      coap_send_rst(session, received);
-    return;
+                  received->type == COAP_MESSAGE_NON)) {
+      /* Cause a CoAP RST to be sent */
+      return COAP_RESPONSE_FAIL;
+    }
+    return COAP_RESPONSE_OK;
   }
 
   if (received->type == COAP_MESSAGE_RST) {
     coap_log(LOG_INFO, "got RST\n");
-    return;
+    return COAP_RESPONSE_OK;
   }
 
   /* output the received data, if any */
@@ -387,7 +389,7 @@ message_handler(struct coap_context_t *ctx UNUSED_PARAM,
       else {
         doing_getting_block = 0;
       }
-      return;
+      return COAP_RESPONSE_OK;
     }
   } else {      /* no 2.05 */
 
@@ -410,7 +412,7 @@ message_handler(struct coap_context_t *ctx UNUSED_PARAM,
   /* our job is done, we can exit at any time */
   ready = doing_observe ? coap_check_option(received,
                                   COAP_OPTION_OBSERVE, &opt_iter) == NULL : 1;
-  return;
+  return COAP_RESPONSE_OK;
 }
 
 static void
