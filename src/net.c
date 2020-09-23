@@ -1696,6 +1696,9 @@ coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events, size_t nevents
             (events[j].events & (EPOLLOUT|EPOLLERR|EPOLLHUP|EPOLLRDHUP))) {
           sock->flags |= COAP_SOCKET_CAN_CONNECT;
           coap_connect_session(session->context, session, now);
+          if (!(sock->flags & COAP_SOCKET_WANT_WRITE)) {
+            coap_epoll_ctl_mod(sock, EPOLLIN, __func__);
+          }
         }
 
         if ((sock->flags & COAP_SOCKET_WANT_READ) &&
