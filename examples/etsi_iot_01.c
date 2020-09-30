@@ -114,7 +114,7 @@ hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
               coap_pdu_t *response) {
   unsigned char buf[3];
 
-  response->code = COAP_RESPONSE_CODE(205);
+  response->code = COAP_RESPONSE_CODE_CONTENT;
 
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
                   coap_encode_var_safe(buf, sizeof(buf),
@@ -140,12 +140,12 @@ hnd_get_resource(coap_context_t *ctx UNUSED_PARAM,
 
   test_payload = coap_find_payload(resource);
   if (!test_payload) {
-    response->code = COAP_RESPONSE_CODE(500);
+    response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
 
     return;
   }
 
-  response->code = COAP_RESPONSE_CODE(205);
+  response->code = COAP_RESPONSE_CODE_CONTENT;
 
   coap_add_data_blocked_response(resource, session, request, response, token,
                                  test_payload->media_type, -1,
@@ -172,7 +172,7 @@ hnd_delete_resource(coap_context_t *ctx,
 
   coap_delete_resource(ctx, resource);
 
-  response->code = COAP_RESPONSE_CODE(202);
+  response->code = COAP_RESPONSE_CODE_DELETED;
 }
 
 static void
@@ -204,7 +204,7 @@ hnd_post_test(coap_context_t *ctx,
   uri = coap_new_str_const(buf, strlen((char *)buf));
   if (!(test_payload && uri)) {
     coap_log(LOG_CRIT, "cannot allocate new resource under /test");
-    response->code = COAP_RESPONSE_CODE(500);
+    response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
     coap_free(test_payload);
     coap_free(uri);
   } else {
@@ -238,7 +238,7 @@ hnd_post_test(coap_context_t *ctx,
       buf += coap_opt_size(buf);
     }
 
-    response->code = COAP_RESPONSE_CODE(201);
+    response->code = COAP_RESPONSE_CODE_CREATED;
   }
 
 }
@@ -257,7 +257,7 @@ hnd_put_test(coap_context_t *ctx UNUSED_PARAM,
   size_t len;
   unsigned char *data;
 
-  response->code = COAP_RESPONSE_CODE(204);
+  response->code = COAP_RESPONSE_CODE_CHANGED;
 
   coap_get_data(request, &len, &data);
 
@@ -295,7 +295,7 @@ hnd_put_test(coap_context_t *ctx UNUSED_PARAM,
   return;
  error:
   coap_log(LOG_WARNING, "cannot modify resource\n");
-  response->code = COAP_RESPONSE_CODE(500);
+  response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
 }
 
 static void
@@ -315,7 +315,7 @@ hnd_delete_test(coap_context_t *ctx UNUSED_PARAM,
     payload->length = 0;
 #endif
 
-  response->code = COAP_RESPONSE_CODE(202);
+  response->code = COAP_RESPONSE_CODE_DELETED;
 }
 
 static void
@@ -332,7 +332,7 @@ hnd_get_query(coap_context_t *ctx UNUSED_PARAM,
   size_t len, L;
   unsigned char buf[70];
 
-  response->code = COAP_RESPONSE_CODE(205);
+  response->code = COAP_RESPONSE_CODE_CONTENT;
 
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
                   coap_encode_var_safe(buf, sizeof(buf),
@@ -378,7 +378,7 @@ hnd_get_separate(coap_context_t *ctx,
   if (async) {
     if (async->id != request->tid) {
       coap_option_filter_clear(f);
-      response->code = COAP_RESPONSE_CODE(503);
+      response->code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
     }
     return;
   }
@@ -438,7 +438,7 @@ check_async(coap_context_t *ctx,
   response = coap_pdu_init(async->flags & COAP_ASYNC_CONFIRM
                            ? COAP_MESSAGE_CON
                            : COAP_MESSAGE_NON,
-                           COAP_RESPONSE_CODE(205), 0, size);
+                           COAP_RESPONSE_CODE_CONTENT, 0, size);
   if (!response) {
     coap_log(LOG_DEBUG, "check_async: insufficient memory, we'll try later\n");
     async->appdata =

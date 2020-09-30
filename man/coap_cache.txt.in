@@ -150,7 +150,7 @@ was set.  If a PDU was not initially stored, NULL is returned. +
 *NOTE:* A copy of the returned PDU must be taken for using in sending a CoAP
 packet.
 
-The *coap_cache_set_app_data*() function is used to asssociate _data_ with the
+The *coap_cache_set_app_data*() function is used to associate _data_ with the
 _cache_entry_.  If _callback_ is not NULL, it points to a function to free off
 _data_ when the _cache_entry_ is deleted.  If any data has been previously
 stored in the _cache_entry_, the pointer to the old data will get overwritten,
@@ -212,136 +212,114 @@ hnd_put_example_data(coap_context_t *ctx,
         coap_pdu_t *response
 ) {
   size_t size;
-  uint8_t *data;
-  coap_block_t block1;
-  unsigned char buf[6];  /* space to hold encoded/decoded uints */
+  const uint8_t *data;
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
+  size_t offset;
+  size_t total;
+  coap_binary_t *data_so_far;
+
+  /* Remove (void) definition if variable is used */
   (void)ctx;
   (void)token;
   (void)query;
 
-  if (coap_get_block(request, COAP_OPTION_BLOCK1, &block1)) {
-    /* handle BLOCK1 */
+  if (coap_get_data_large(request, &size, &data, &offset, &total) &&
+    size != total) {
+    /*
+     * A part of the data has been received (COAP_BLOCK_SINGLE_BODY not set).
+     * However, total unfortunately is only an indication, so it is not safe to
+     * allocate a block based on total.  As per
+     * https://tools.ietf.org/html/rfc7959#section-4
+     *   o  In a request carrying a Block1 Option, to indicate the current
+     *         estimate the client has of the total size of the resource
+     *         representation, measured in bytes ("size indication").
+     */
     coap_cache_entry_t *cache_entry = coap_cache_get_by_pdu(session,
                                                             request,
-                                                COAP_CACHE_IS_SESSION_BASED);
-    size_t offset = block1.num << (block1.szx + 4);
-    coap_binary_t *data_so_far;
+                                              COAP_CACHE_IS_SESSION_BASED);
 
-    if (!cache_entry && block1.num == 0) {
-      /*
-       * Set idle_timeout parameter to COAP_MAX_TRANSMIT_WAIT if you want
-       * early removal on transmission failure. 0 means only delete when
-       * the session is deleted as session_based is set here.
-       */
-      cache_entry = coap_new_cache_entry(session, request,
+    if (offset == 0) {
+      if (!cache_entry) {
+        /*
+         * Set idle_timeout parameter to COAP_MAX_TRANSMIT_WAIT if you want
+         * early removal on transmission failure. 0 means only delete when
+         * the session is deleted as session_based is set here.
+         */
+        cache_entry = coap_new_cache_entry(session, request,
                                          COAP_CACHE_NOT_RECORD_PDU,
                                          COAP_CACHE_IS_SESSION_BASED, 0);
+      }
+      else {
+        data_so_far = coap_cache_get_app_data(cache_entry);
+        if (data_so_far) {
+          coap_delete_binary(data_so_far);
+          data_so_far = NULL;
+        }
+        coap_cache_set_app_data(cache_entry, NULL, NULL);
+      }
     }
     if (!cache_entry) {
-      if (block1.num == 0) {
+      if (offset == 0) {
         coap_log(LOG_WARNING, "Unable to create a new cache entry\n");
       }
       else {
         coap_log(LOG_WARNING,
-                 "No cache entry available for the non-first BLOCK1\n");
+                 "No cache entry available for the non-first BLOCK\n");
       }
       response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
       return;
     }
 
-    data_so_far = coap_cache_get_app_data(cache_entry);
-    if (offset == 0) {
-      if (data_so_far) {
-        coap_delete_binary(data_so_far);
-        data_so_far = NULL;
-      }
+    if (size) {
+      /* Add in the new data to cache entry */
+      data_so_far = coap_cache_get_app_data(cache_entry);
+      data_so_far = coap_block_build_body(data_so_far, size, data,
+                                          offset, total);
+      /* Yes, data_so_far can be NULL if error */
+      coap_cache_set_app_data(cache_entry, data_so_far, cache_free_app_data);
     }
-    else if (offset >
-             (data_so_far ? data_so_far->length : 0)) {
-      /* Upload is not sequential - block missing */
-      response->code = COAP_RESPONSE_CODE_INCOMPLETE;
+    if (offset + size == total) {
+      /* All the data is now in */
+      data_so_far = coap_cache_get_app_data(cache_entry);
+      coap_cache_set_app_data(cache_entry, NULL, NULL);
+    }
+    else {
+      /* Give us the next block response */
+      response->code = COAP_RESPONSE_CODE_CONTINUE;
       return;
     }
-    else if (offset <
-             (data_so_far ? data_so_far->length : 0)) {
-      /* Upload is not sequential - block duplicated */
-      goto just_respond;
-    }
-
-    if (coap_get_data(request, &size, &data) && (size > 0)) {
-      if (!data_so_far) {
-        data_so_far = coap_new_binary(size);
-        memcpy(data_so_far->s, data, size);
-      }
-      else {
-        /* Add in new block to end of current data */
-        data_so_far = coap_resize_binary(data_so_far, offset + size);
-        memcpy(&data_so_far->s[offset], data, size);
-      }
-    }
-
-    if (!block1.m) {
-      /* all the data in - now update the resource */
-      coap_delete_binary(example_data_ptr);
-      example_data_ptr = data_so_far;
-      coap_cache_set_app_data(cache_entry, NULL, NULL);
-      if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
-                                      &opt_iter)) != NULL) {
-        example_data_media_type =
-            coap_decode_var_bytes (coap_opt_value (option),
-                                   coap_opt_length (option));
-      }
-      else {
-        example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
-      }
-      coap_resource_notify_observers(resource, NULL);
-    }
-    else {
-      /* save the updated data for the next block */
-      coap_cache_set_app_data(cache_entry,data_so_far, cache_free_app_data);
-    }
-
-just_respond:
-    if (block1.m) {
-      response->code = COAP_RESPONSE_CODE_CONTINUE;
-    }
-    else {
-      response->code = COAP_RESPONSE_CODE_CHANGED;
-    }
-    coap_add_option(response,
-                    COAP_OPTION_BLOCK1,
-                    coap_encode_var_safe(buf, sizeof(buf),
-                                         ((block1.num << 4) |
-                                          (block1.m << 3) |
-                                          block1.szx)),
-                    buf);
-  }
-  else if (coap_get_data(request, &size, &data) && (size > 0)) {
-    /* Not a BLOCK1 with data */
-    if (example_data_ptr) {
-      coap_delete_binary(example_data_ptr);
-    }
-    example_data_ptr = coap_new_binary(size);
-    memcpy (example_data_ptr->s, data, size);
-    if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
-                                    &opt_iter)) != NULL) {
-      example_data_media_type = coap_decode_var_bytes (coap_opt_value (option),
-                                                      coap_opt_length (option));
-    }
-    else {
-      example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
-    }
-    coap_resource_notify_observers(resource, NULL);
   }
   else {
-    /* Not a BLOCK1 and no data */
-    if (example_data_ptr) {
-      coap_delete_binary(example_data_ptr);
-      example_data_ptr = NULL;
+    /* single body of data received */
+    data_so_far = coap_new_binary(size);
+    if (data_so_far) {
+      memcpy(data_so_far->s, data, size);
     }
   }
+
+  if (example_data_ptr) {
+    /* pre-existed response */
+    response->code = COAP_RESPONSE_CODE_CHANGED;
+    coap_delete_binary(example_data_ptr);
+  }
+  else
+    /* just generated response */
+    response->code = COAP_RESPONSE_CODE_CREATED;
+
+  example_data_ptr = data_so_far;
+  if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
+                                  &opt_iter)) != NULL) {
+    example_data_media_type =
+            coap_decode_var_bytes (coap_opt_value (option),
+                                   coap_opt_length (option));
+  }
+  else {
+    example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
+  }
+
+  response->code = COAP_RESPONSE_CODE_CHANGED;
+  coap_resource_notify_observers(resource, NULL);
 }
 
 int main(int argc, char* argv[]){
@@ -367,12 +345,17 @@ int main(int argc, char* argv[]){
 
 SEE ALSO
 --------
-*coap_pdu_setup*(3), *coap_resource*(3) and *coap_string*(3)
+*coap_block*(3), *coap_pdu_setup*(3), *coap_resource*(3) and *coap_string*(3)
 
 FURTHER INFORMATION
 -------------------
-See "RFC7252: The Constrained Application Protocol (CoAP)" for further
-information.
+See
+
+"RFC7252: The Constrained Application Protocol (CoAP)"
+
+"RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)"
+
+for further information.
 
 BUGS
 ----

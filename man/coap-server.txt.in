@@ -15,7 +15,8 @@ coap-server - CoAP Server based on libcoap
 SYNOPSIS
 --------
 *coap-server* [*-d* max] [*-g* group] [*-l* loss] [*-p* port] [*-v* num]
-              [*-A* address] [*-N*] [*-P* scheme://addr[:port],name1[,name2..]]
+              [*-A* address] [*-L* value] [*-N*]
+              [*-P* scheme://addr[:port],name1[,name2..]]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
               [*-s* match_psk_sni_file] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
@@ -57,6 +58,13 @@ OPTIONS - General
 
 *-A* address::
    The local address of the interface which the server has to listen on.
+
+*-L* value::
+   Sum of one or more COAP_BLOCK_* flag values for different block handling
+   methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP).
+
+     COAP_BLOCK_USE_LIBCOAP  1
+     COAP_BLOCK_SINGLE_BODY  2
 
 *-N* ::
    Send NON-confirmable message for "observe" responses. If option *-N* is
