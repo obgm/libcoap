@@ -148,7 +148,7 @@ coap_touch_async(coap_async_state_t *s) { coap_ticks(&s->created); }
  *
  * Internal function.
  *
- * @param state The context to remove all async entries from.
+ * @param context The context to remove all async entries from.
  */
 void
 coap_delete_all_async(coap_context_t *context);

@@ -8,7 +8,7 @@
  */
 
 /**
- * @file prng.h
+ * @file coap_prng.h
  * @brief Pseudo Random Numbers
  */
 
@@ -116,12 +116,12 @@ void coap_prng_init(unsigned long seed);
  * Fills @p buf with @p len random bytes using the default pseudo
  * random number generator. The default PRNG can be changed with
  * coap_set_prng(). This function returns 1 when @p len random bytes
- * have been written to @buf, zero otherwise.
+ * have been written to @p buf, zero otherwise.
  *
  * @param buf  The buffer to fill with random bytes.
  * @param len  The number of random bytes to write into @p buf.
  *
- * @param 1 on success, 0 otherwise.
+ * @return 1 on success, 0 otherwise.
  */
 int coap_prng(void *buf, size_t len);
 
