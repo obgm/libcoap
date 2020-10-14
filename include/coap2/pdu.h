@@ -256,12 +256,6 @@ typedef int coap_tid_t;
 
 #define COAP_PDU_DELAYED -3
 
-#define COAP_OPT_LONG 0x0F      /* OC == 0b1111 indicates that the option list
-                                 * in a CoAP message is limited by 0b11110000
-                                 * marker */
-
-#define COAP_OPT_END 0xF0       /* end marker */
-
 #define COAP_PAYLOAD_START 0xFF /* payload marker */
 
 /**
@@ -299,7 +293,7 @@ typedef struct coap_pdu_t {
   uint8_t hdr_size;         /**< actual size used for protocol-specific header */
   uint8_t token_length;     /**< length of Token */
   uint16_t tid;             /**< transaction id, if any, in regular host byte order */
-  uint16_t max_delta;       /**< highest option number */
+  uint16_t max_opt;         /**< highest option number in PDU */
   size_t alloc_size;        /**< allocated storage for token, options and payload */
   size_t used_size;         /**< used bytes of storage for token, options and payload */
   size_t max_size;          /**< maximum size for token, options and payload, or zero for variable size pdu */

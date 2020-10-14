@@ -531,9 +531,7 @@ coap_option_filter_unset(coap_opt_filter_t filter, uint16_t type) {
 
 int
 coap_option_filter_get(coap_opt_filter_t filter, uint16_t type) {
-  /* Ugly cast to make the const go away (FILTER_GET wont change filter
-   * but as _set and _unset do, the function does not take a const). */
-  return coap_option_filter_op((uint16_t *)filter, type, FILTER_GET);
+  return coap_option_filter_op(filter, type, FILTER_GET);
 }
 
 coap_optlist_t *
