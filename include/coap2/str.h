@@ -15,8 +15,13 @@
 
 /**
  * @defgroup string String handling support
- * API functions for handling strings
+ * API functions for handling strings and binary data
  * @{
+ */
+
+/*
+ * Note: string and binary use equivalent objects.
+ * string is likely to contain readable textual information, binary will not.
  */
 
 /**
@@ -32,7 +37,7 @@ typedef struct coap_string_t {
  */
 typedef struct coap_str_const_t {
   size_t length;    /**< length of string */
-  const uint8_t *s; /**< string data */
+  const uint8_t *s; /**< read-only string data */
 } coap_str_const_t;
 
 #define COAP_SET_STR(st,l,v) { (st)->length = (l), (st)->s = (v); }
@@ -50,14 +55,16 @@ typedef struct coap_binary_t {
  */
 typedef struct coap_bin_const_t {
   size_t length;    /**< length of binary data */
-  const uint8_t *s; /**< binary data */
+  const uint8_t *s; /**< read-only binary data */
 } coap_bin_const_t;
 
 /**
  * Returns a new string object with at least size+1 bytes storage allocated.
+ * It is the responsibility of the caller to fill in all the appropriate
+ * information.
  * The string must be released using coap_delete_string().
  *
- * @param size The size to allocate for the binary string data.
+ * @param size The size to allocate for the string data.
  *
  * @return       A pointer to the new object or @c NULL on error.
  */
@@ -89,7 +96,37 @@ coap_str_const_t *coap_new_str_const(const uint8_t *data, size_t size);
  */
 void coap_delete_str_const(coap_str_const_t *string);
 
-#define COAP_MAX_STR_CONST_FUNC 2
+/**
+ * Returns a new binary object with at least size bytes storage allocated.
+ * It is the responsibility of the caller to fill in all the appropriate
+ * information.
+ * The coap_binary_t object must be released using coap_delete_binary().
+ *
+ * @param size The size to allocate for the binary data.
+ *
+ * @return       A pointer to the new object or @c NULL on error.
+ */
+coap_binary_t *coap_new_binary(size_t size);
+
+/**
+ * Deletes the given coap_binary_t object and releases any memory allocated.
+ *
+ * @param binary The coap_binary_t object to free off.
+ */
+void coap_delete_binary(coap_binary_t *binary);
+
+/**
+ * Resizes the given coap_binary_t object.
+ * It is the responsibility of the caller to fill in all the appropriate
+ * additional information.
+ *
+ * @param binary The coap_binary_t object to resize.
+ * @param new_size The new size to allocate for the binary data.
+ *
+ * @return       A pointer to the new object or @c NULL on error.
+ */
+coap_binary_t *coap_resize_binary(coap_binary_t *binary, size_t new_size);
+
 /**
  * Take the specified byte array (text) and create a coap_bin_const_t *
  * Returns a new const binary object with at least size bytes storage
@@ -109,6 +146,8 @@ coap_bin_const_t *coap_new_bin_const(const uint8_t *data, size_t size);
  * @param binary The binary data to free off.
  */
 void coap_delete_bin_const(coap_bin_const_t *binary);
+
+#define COAP_MAX_STR_CONST_FUNC 2
 
 /**
  * Take the specified byte array (text) and create a coap_str_const_t *

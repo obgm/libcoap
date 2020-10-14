@@ -788,6 +788,7 @@ examples/Makefile
 include/coap2/coap.h
 man/coap.txt
 man/coap_attribute.txt
+man/coap_cache.txt
 man/coap_context.txt
 man/coap_encryption.txt
 man/coap_handler.txt
@@ -799,6 +800,7 @@ man/coap_pdu_setup.txt
 man/coap_recovery.txt
 man/coap_resource.txt
 man/coap_session.txt
+man/coap_string.txt
 man/coap_tls_library.txt
 man/coap-client.txt
 man/coap-server.txt

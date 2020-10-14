@@ -53,6 +53,7 @@
 #include <gnutls/x509.h>
 #include <gnutls/dtls.h>
 #include <gnutls/pkcs11.h>
+#include <gnutls/crypto.h>
 #include <unistd.h>
 
 #ifdef __GNUC__
@@ -2348,6 +2349,39 @@ ssize_t coap_tls_read(coap_session_t *c_session,
   return ret;
 }
 #endif /* !COAP_DISABLE_TCP */
+
+coap_digest_ctx_t *
+coap_digest_setup(void) {
+  gnutls_hash_hd_t digest_ctx;
+
+  if (gnutls_hash_init(&digest_ctx, GNUTLS_DIG_SHA256)) {
+    return NULL;
+  }
+  return digest_ctx;
+}
+
+void
+coap_digest_free(coap_digest_ctx_t *digest_ctx) {
+  gnutls_hash_deinit(digest_ctx, NULL);
+}
+
+int
+coap_digest_update(coap_digest_ctx_t *digest_ctx,
+                   const uint8_t *data,
+                   size_t data_len) {
+  int ret = gnutls_hash(digest_ctx, data, data_len);
+
+  return ret == 0;
+}
+
+int
+coap_digest_final(coap_digest_ctx_t *digest_ctx,
+                  coap_digest_t *digest_buffer) {
+  gnutls_hash_output(digest_ctx, (uint8_t*)digest_buffer);
+
+  coap_digest_free(digest_ctx);
+  return 1;
+}
 
 #else /* !HAVE_LIBGNUTLS */
 

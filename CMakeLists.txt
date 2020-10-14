@@ -389,8 +389,17 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_config.h.in
 target_sources(
   ${COAP_LIBRARY_NAME}
   PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/address.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/net.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_debug.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/encode.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/uri.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/subscribe.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/resource.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/str.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/option.c
           ${CMAKE_CURRENT_LIST_DIR}/src/async.c
           ${CMAKE_CURRENT_LIST_DIR}/src/block.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_cache.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_debug.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_event.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
@@ -419,6 +428,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/include/coap2/async.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap2/bits.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap2/block.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_cache.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_debug.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_dtls.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_event.h

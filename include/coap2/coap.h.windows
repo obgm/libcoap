@@ -37,6 +37,7 @@ extern "C" {
 #include "async.h"
 #include "bits.h"
 #include "block.h"
+#include "coap_cache.h"
 #include "coap_debug.h"
 #include "coap_dtls.h"
 #include "coap_event.h"

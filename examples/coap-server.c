@@ -66,6 +66,9 @@ static time_t my_clock_base = 0;
 
 struct coap_resource_t *time_resource = NULL;
 
+static coap_binary_t *example_data_ptr = NULL;
+static int example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
+
 static int resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_CON;
 
 /*
@@ -377,9 +380,200 @@ check_async(coap_context_t *ctx,
 }
 #endif /* WITHOUT_ASYNC */
 
+/*
+ * Large Data GET handler
+ */
+
+static void
+hnd_get_example_data(coap_context_t *ctx UNUSED_PARAM,
+        coap_resource_t *resource,
+        coap_session_t *session,
+        coap_pdu_t *request,
+        coap_binary_t *token,
+        coap_string_t *query UNUSED_PARAM,
+        coap_pdu_t *response
+) {
+  if (!example_data_ptr) {
+    /* Initialise for the first time */
+    int i;
+    example_data_ptr = coap_new_binary(1500);
+    if (example_data_ptr) {
+      example_data_ptr->length = 1500;
+      for (i = 0; i < 1500; i++) {
+        if ((i % 10) == 0) {
+          example_data_ptr->s[i] = 'a' + (i/10) % 26;
+        }
+        else {
+          example_data_ptr->s[i] = '0' + i%10;
+        }
+      }
+    }
+  }
+  coap_add_data_blocked_response(resource, session, request, response, token,
+                                 example_data_media_type, -1,
+                                 example_data_ptr ? example_data_ptr->length : 0,
+                                 example_data_ptr ? example_data_ptr->s : NULL);
+}
+
+static void
+cache_free_app_data(void *data) {
+  coap_binary_t *bdata = (coap_binary_t*)data;
+  coap_delete_binary(bdata);
+}
+
+/*
+ * Large Data PUT handler
+ */
+
+static void
+hnd_put_example_data(coap_context_t *ctx UNUSED_PARAM,
+        coap_resource_t *resource,
+        coap_session_t *session,
+        coap_pdu_t *request,
+        coap_binary_t *token UNUSED_PARAM,
+        coap_string_t *query UNUSED_PARAM,
+        coap_pdu_t *response
+) {
+  size_t size;
+  uint8_t *data;
+  coap_block_t block1;
+  unsigned char buf[6];      /* space to hold encoded/decoded uints */
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *option;
+
+  if (coap_get_block(request, COAP_OPTION_BLOCK1, &block1)) {
+    /* handle BLOCK1 */
+    coap_cache_entry_t *cache_entry = coap_cache_get_by_pdu(session,
+                                                            request,
+                                                COAP_CACHE_IS_SESSION_BASED);
+    size_t offset = block1.num << (block1.szx + 4);
+    coap_binary_t *data_so_far;
+
+    if (!cache_entry && block1.num == 0) {
+      cache_entry = coap_new_cache_entry(session, request,
+                                         COAP_CACHE_NOT_RECORD_PDU,
+                                         COAP_CACHE_IS_SESSION_BASED, 0);
+    }
+    if (!cache_entry) {
+      if (block1.num == 0) {
+        coap_log(LOG_WARNING, "Unable to create a new cache entry\n");
+      }
+      else {
+        coap_log(LOG_WARNING,
+                 "No cache entry available for the non-first BLOCK1\n");
+      }
+      response->code = COAP_RESPONSE_CODE(500);
+      return;
+    }
+
+    data_so_far = coap_cache_get_app_data(cache_entry);
+    if (offset == 0) {
+      if (data_so_far) {
+        coap_delete_binary(data_so_far);
+        data_so_far = NULL;
+      }
+    }
+    else if (offset >
+             (data_so_far ? data_so_far->length : 0)) {
+      /* Upload is not sequential - block missing */
+      response->code = COAP_RESPONSE_CODE(408);
+      return;
+    }
+    else if (offset <
+             (data_so_far ? data_so_far->length : 0)) {
+      /* Upload is not sequential - block duplicated */
+      goto just_respond;
+    }
+
+    if (coap_get_data(request, &size, &data) && (size > 0)) {
+      if (!data_so_far) {
+        data_so_far = coap_new_binary(size);
+        if (data_so_far)
+          memcpy(data_so_far->s, data, size);
+      }
+      else {
+        /* Add in new block to end of current data */
+        data_so_far = coap_resize_binary(data_so_far, offset + size);
+        if (data_so_far)
+          memcpy(&data_so_far->s[offset], data, size);
+      }
+    }
+    else if (!block1.m && block1.num == 0) {
+      /* Empty first and only block */
+      if (data_so_far) {
+        coap_delete_binary(example_data_ptr);
+      }
+      data_so_far = coap_new_binary(0);
+    }
+
+    if (!block1.m) {
+      /* all the data in - now update the resource */
+      coap_delete_binary(example_data_ptr);
+      example_data_ptr = data_so_far;
+      coap_cache_set_app_data(cache_entry, NULL, NULL);
+      if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
+                                      &opt_iter)) != NULL) {
+        example_data_media_type =
+            coap_decode_var_bytes (coap_opt_value (option),
+                                   coap_opt_length (option));
+      }
+      else {
+        example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
+      }
+      coap_resource_notify_observers(resource, NULL);
+    }
+    else {
+      /* save the updated data for the next block */
+      coap_cache_set_app_data(cache_entry,data_so_far, cache_free_app_data);
+    }
+
+just_respond:
+    if (block1.m) {
+      response->code = COAP_RESPONSE_CODE(231);
+    }
+    else {
+      response->code = COAP_RESPONSE_CODE(204);
+    }
+    coap_add_option(response,
+                    COAP_OPTION_BLOCK1,
+                    coap_encode_var_safe(buf, sizeof(buf),
+                                         ((block1.num << 4) |
+                                          (block1.m << 3) |
+                                          block1.szx)),
+                    buf);
+  }
+  else if (coap_get_data(request, &size, &data) && (size > 0)) {
+    /* Not a BLOCK1 with data */
+    if (example_data_ptr) {
+      coap_delete_binary(example_data_ptr);
+    }
+    example_data_ptr = coap_new_binary(size);
+    if (example_data_ptr)
+      memcpy (example_data_ptr->s, data, size);
+    if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
+                                    &opt_iter)) != NULL) {
+      example_data_media_type = coap_decode_var_bytes (coap_opt_value (option),
+                                                      coap_opt_length (option));
+    }
+    else {
+      example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
+    }
+    response->code = COAP_RESPONSE_CODE(204);
+    coap_resource_notify_observers(resource, NULL);
+  }
+  else {
+    /* Not a BLOCK1 and no data */
+    if (example_data_ptr) {
+      coap_delete_binary(example_data_ptr);
+    }
+    example_data_ptr = coap_new_binary(0);
+    response->code = COAP_RESPONSE_CODE(204);
+  }
+}
+
 typedef struct dynamic_resource_t {
   coap_string_t *uri_path;
-  coap_string_t *value;
+  coap_binary_t *value;
   coap_resource_t *resource;
   int created;
   uint16_t media_type;
@@ -397,10 +591,10 @@ static void
 hnd_delete(coap_context_t *ctx,
            coap_resource_t *resource,
            coap_session_t *session UNUSED_PARAM,
-           coap_pdu_t *request UNUSED_PARAM,
+           coap_pdu_t *request,
            coap_binary_t *token UNUSED_PARAM,
            coap_string_t *query UNUSED_PARAM,
-           coap_pdu_t *response UNUSED_PARAM
+           coap_pdu_t *response
 ) {
   int i;
   coap_string_t *uri_path;
@@ -415,7 +609,7 @@ hnd_delete(coap_context_t *ctx,
   for (i = 0; i < dynamic_count; i++) {
     if (coap_string_equal(uri_path, dynamic_entry[i].uri_path)) {
       /* Dynamic entry no longer required - delete it */
-      coap_delete_string(dynamic_entry[i].value);
+      coap_delete_binary(dynamic_entry[i].value);
       if (dynamic_count-i > 1) {
          memmove (&dynamic_entry[i],
                   &dynamic_entry[i+1],
@@ -449,7 +643,7 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
   coap_str_const_t *uri_path;
   int i;
   dynamic_resource_t *resource_entry = NULL;
-  coap_str_const_t value = { 0, NULL };
+  coap_bin_const_t value = { 0, NULL };
   /*
    * request will be NULL if an Observe triggered request, so the uri_path,
    * if needed, must be abstracted from the resource.
@@ -492,7 +686,7 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
 static void
 hnd_put(coap_context_t *ctx UNUSED_PARAM,
         coap_resource_t *resource,
-        coap_session_t *session UNUSED_PARAM,
+        coap_session_t *session,
         coap_pdu_t *request,
         coap_binary_t *token UNUSED_PARAM,
         coap_string_t *query UNUSED_PARAM,
@@ -531,16 +725,19 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
       return;
     }
     dynamic_count++;
-    dynamic_entry = realloc (dynamic_entry, dynamic_count * sizeof(dynamic_entry[0]));
+    dynamic_entry = realloc (dynamic_entry,
+                             dynamic_count * sizeof(dynamic_entry[0]));
     if (dynamic_entry) {
       dynamic_entry[i].uri_path = uri_path;
       dynamic_entry[i].value = NULL;
       dynamic_entry[i].resource = resource;
       dynamic_entry[i].created = 1;
       response->code = COAP_RESPONSE_CODE(201);
-      if ((option = coap_check_option(request, COAP_OPTION_CONTENT_TYPE, &opt_iter)) != NULL) {
+      if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
+                                      &opt_iter)) != NULL) {
         dynamic_entry[i].media_type =
-            coap_decode_var_bytes (coap_opt_value (option), coap_opt_length (option));
+            coap_decode_var_bytes (coap_opt_value (option),
+                                   coap_opt_length (option));
       }
       else {
         dynamic_entry[i].media_type = COAP_MEDIATYPE_TEXT_PLAIN;
@@ -566,49 +763,87 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
     /* Need to do this as coap_get_uri_path() created it */
     coap_delete_string(uri_path);
     response->code = COAP_RESPONSE_CODE(204);
-    dynamic_entry[i].created = 0;
-    coap_resource_notify_observers(dynamic_entry[i].resource, NULL);
   }
 
   resource_entry = &dynamic_entry[i];
 
   if (coap_get_block(request, COAP_OPTION_BLOCK1, &block1)) {
     /* handle BLOCK1 */
-    if (coap_get_data(request, &size, &data) && (size > 0)) {
-      size_t offset = block1.num << (block1.szx + 4);
-      coap_string_t *value = resource_entry->value;
-      if (offset == 0) {
-        if (value) {
-          coap_delete_string(value);
-          value = NULL;
-        }
+    coap_cache_entry_t *cache_entry = coap_cache_get_by_pdu(session,
+                                                            request,
+                                                 COAP_CACHE_IS_SESSION_BASED);
+    size_t offset = block1.num << (block1.szx + 4);
+    coap_binary_t *data_so_far;
+
+    if (!cache_entry && block1.num == 0) {
+      cache_entry = coap_new_cache_entry(session, request,
+                                         COAP_CACHE_NOT_RECORD_PDU,
+                                         COAP_CACHE_IS_SESSION_BASED, 0);
+    }
+    if (!cache_entry) {
+      if ( block1.num == 0) {
+        coap_log(LOG_WARNING, "Unable to create a new cache entry\n");
       }
-      else if (offset >
-            (resource_entry->value ? resource_entry->value->length : 0)) {
-        /* Upload is not sequential - block missing */
-        response->code = COAP_RESPONSE_CODE(408);
-        return;
+      else {
+        coap_log(LOG_WARNING,
+                 "No cache entry available for the non-first BLOCK1\n");
       }
-      else if (offset <
-            (resource_entry->value ? resource_entry->value->length : 0)) {
-        /* Upload is not sequential - block duplicated */
-        goto just_respond;
-      }
-      /* Add in new block to end of current data */
-      resource_entry->value = coap_new_string(offset + size);
-      memcpy (&resource_entry->value->s[offset], data, size);
-      resource_entry->value->length = offset + size;
-      if (value) {
-        memcpy (resource_entry->value->s, value->s, value->length);
-        coap_delete_string(value);
+      response->code = COAP_RESPONSE_CODE(500);
+      return;
+    }
+
+    data_so_far = coap_cache_get_app_data(cache_entry);
+    if (offset == 0) {
+      if (data_so_far) {
+        coap_delete_binary(data_so_far);
+        data_so_far = NULL;
       }
     }
+    else if (offset >
+          (data_so_far ? data_so_far->length : 0)) {
+      /* Upload is not sequential - block missing */
+      response->code = COAP_RESPONSE_CODE(408);
+      return;
+    }
+    else if (offset <
+          (data_so_far ? data_so_far->length : 0)) {
+      /* Upload is not sequential - block duplicated */
+      goto just_respond;
+    }
+
+    if (coap_get_data(request, &size, &data) && (size > 0)) {
+      if (!data_so_far) {
+        data_so_far = coap_new_binary(size);
+        if (data_so_far)
+          memcpy(data_so_far->s, data, size);
+      }
+      else {
+        /* Add in new block to end of current data */
+        data_so_far = coap_resize_binary(data_so_far, offset + size);
+        if (data_so_far)
+          memcpy(&data_so_far->s[offset], data, size);
+      }
+    }
+
+    if (!block1.m) {
+      /* all the data in - now update the resource */
+      coap_delete_binary(resource_entry->value);
+      resource_entry->value = data_so_far;
+      coap_cache_set_app_data(cache_entry, NULL, NULL);
+      coap_resource_notify_observers(resource_entry->resource, NULL);
+    }
+    else {
+      /* save the updated data for the next block */
+      coap_cache_set_app_data(cache_entry, data_so_far, cache_free_app_data);
+    }
+
 just_respond:
     if (block1.m) {
       response->code = COAP_RESPONSE_CODE(231);
     }
     else if (resource_entry->created) {
       response->code = COAP_RESPONSE_CODE(201);
+      resource_entry->created = 0;
     }
     else {
       response->code = COAP_RESPONSE_CODE(204);
@@ -624,19 +859,29 @@ just_respond:
   else if (coap_get_data(request, &size, &data) && (size > 0)) {
     /* Not a BLOCK1 with data */
     if (resource_entry->value) {
-      coap_delete_string(resource_entry->value);
-      resource_entry->value = NULL;
+      coap_delete_binary(resource_entry->value);
     }
-    resource_entry->value = coap_new_string(size);
-    memcpy (resource_entry->value->s, data, size);
-    resource_entry->value->length = size;
+    resource_entry->value = coap_new_binary(size);
+    if (resource_entry->value)
+      memcpy (resource_entry->value->s, data, size);
+    if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
+                                    &opt_iter)) != NULL) {
+      resource_entry->media_type = coap_decode_var_bytes (coap_opt_value (option),
+                                                      coap_opt_length (option));
+    }
+    else {
+      resource_entry->media_type = COAP_MEDIATYPE_TEXT_PLAIN;
+    }
+    coap_resource_notify_observers(resource_entry->resource, NULL);
+    resource_entry->created = 0;
   }
   else {
     /* Not a BLOCK1 and no data */
     if (resource_entry->value) {
-      coap_delete_string(resource_entry->value);
+      coap_delete_binary(resource_entry->value);
       resource_entry->value = NULL;
     }
+    resource_entry->created = 0;
   }
 }
 
@@ -727,6 +972,14 @@ init_resources(coap_context_t *ctx) {
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
   coap_add_resource(ctx, r);
 #endif /* WITHOUT_ASYNC */
+  r = coap_resource_init(coap_make_str_const("example_data"), 0);
+  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_example_data);
+  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_example_data);
+  coap_resource_set_get_observable(r, 1);
+
+  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+  coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Example Data\""), 0);
+  coap_add_resource(ctx, r);
 }
 
 static int
@@ -1371,6 +1624,12 @@ main(int argc, char **argv) {
   fd_set m_readfds;
   int nfds = 0;
   size_t i;
+  uint16_t cache_ignore_options[] = { COAP_OPTION_BLOCK1,
+                                      COAP_OPTION_BLOCK2,
+                    /* See https://tools.ietf.org/html/rfc7959#section-2.10 */
+                                      COAP_OPTION_MAXAGE,
+                    /* See https://tools.ietf.org/html/rfc7959#section-2.10 */
+                                      COAP_OPTION_IF_NONE_MATCH };
 #ifndef _WIN32
   struct sigaction sa;
 #endif
@@ -1475,6 +1734,9 @@ main(int argc, char **argv) {
 
   init_resources(ctx);
 
+  /* Define the options to ignore when setting up cache-keys */
+  coap_cache_ignore_options(ctx, cache_ignore_options,
+             sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
   /* join multicast group if requested at command line */
   if (group)
     coap_join_mcast_group(ctx, group);
@@ -1613,6 +1875,13 @@ main(int argc, char **argv) {
   }
   if (valid_pki_snis.count)
     free(valid_pki_snis.pki_sni_list);
+
+  for (i = 0; i < (size_t)dynamic_count; i++) {
+    coap_delete_string(dynamic_entry[i].uri_path);
+    coap_delete_binary(dynamic_entry[i].value);
+  }
+  if (dynamic_entry) free(dynamic_entry);
+  if (example_data_ptr) coap_delete_binary(example_data_ptr);
 
   coap_free_context(ctx);
   coap_cleanup();

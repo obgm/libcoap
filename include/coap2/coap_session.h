@@ -447,28 +447,103 @@ void coap_session_mfree(coap_session_t *session);
    * Number of seconds when to expect an ACK or a response to an
    * outstanding CON message.
    * RFC 7252, Section 4.8 Default value of ACK_TIMEOUT is 2
+   *
+   * Configurable using coap_session_set_ack_timeout()
    */
 #define COAP_DEFAULT_ACK_TIMEOUT ((coap_fixed_point_t){2,0})
 
-   /**
-    * A factor that is used to randomize the wait time before a message
-    * is retransmitted to prevent synchronization effects.
-    * RFC 7252, Section 4.8 Default value of ACK_RANDOM_FACTOR is 1.5
-    */
+  /**
+   * A factor that is used to randomize the wait time before a message
+   * is retransmitted to prevent synchronization effects.
+   * RFC 7252, Section 4.8 Default value of ACK_RANDOM_FACTOR is 1.5
+   *
+   * Configurable using coap_session_set_ack_random_factor()
+   */
 #define COAP_DEFAULT_ACK_RANDOM_FACTOR ((coap_fixed_point_t){1,500})
 
-    /**
-     * Number of message retransmissions before message sending is stopped
-     * RFC 7252, Section 4.8 Default value of MAX_RETRANSMIT is 4
-     */
+  /**
+   * Number of message retransmissions before message sending is stopped
+   * RFC 7252, Section 4.8 Default value of MAX_RETRANSMIT is 4
+   *
+   * Configurable using coap_session_set_max_retransmit()
+   */
 #define COAP_DEFAULT_MAX_RETRANSMIT  4
 
-     /**
-      * The number of simultaneous outstanding interactions that a client
-      * maintains to a given server.
-      * RFC 7252, Section 4.8 Default value of NSTART is 1
-      */
+  /**
+   * The number of simultaneous outstanding interactions that a client
+   * maintains to a given server.
+   * RFC 7252, Section 4.8 Default value of NSTART is 1
+   */
 #define COAP_DEFAULT_NSTART 1
+
+  /**
+   * The MAX_TRANSMIT_SPAN definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_SPAN
+   *  ACK_TIMEOUT * ((2 ** (MAX_RETRANSMIT)) - 1) * ACK_RANDOM_FACTOR
+   */
+#define COAP_MAX_TRANSMIT_SPAN(s) \
+ ((s->ack_timeout.integer_part * 1000 + s->ack_timeout.fractional_part) * \
+  ((1 << (s->max_retransmit)) -1) * \
+  (s->ack_random_factor.integer_part * 1000 + \
+   s->ack_random_factor.fractional_part) \
+  / 1000000)
+
+  /**
+   * The MAX_TRANSMIT_WAIT definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_WAIT
+   *  ACK_TIMEOUT * ((2 ** (MAX_RETRANSMIT + 1)) - 1) * ACK_RANDOM_FACTOR
+   */
+#define COAP_MAX_TRANSMIT_WAIT(s) \
+ ((s->ack_timeout.integer_part * 1000 + s->ack_timeout.fractional_part) * \
+  ((1 << (s->max_retransmit + 1)) -1) * \
+  (s->ack_random_factor.integer_part * 1000 + \
+   s->ack_random_factor.fractional_part) \
+  / 1000000)
+
+  /**
+   * The MAX_LATENCY definition.
+   * RFC 7252, Section 4.8.2 MAX_LATENCY is 100.
+   */
+#define COAP_MAX_LATENCY 100
+
+  /**
+   * The PROCESSING_DELAY definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of PROCESSING_DELAY
+   *  PROCESSING_DELAY set to ACK_TIMEOUT
+   */
+#define COAP_PROCESSING_DELAY(s) \
+ ((s->ack_timeout.integer_part * 1000 + s->ack_timeout.fractional_part + 500) \
+  / 1000)
+
+  /**
+   * The MAX_RTT definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of MAX_RTT
+   *  (2 * MAX_LATENCY) + PROCESSING_DELAY
+   */
+#define COAP_MAX_RTT(s) \
+ ((2 * COAP_MAX_LATENCY) + COAP_PROCESSING_DELAY(s))
+
+  /**
+   * The EXCHANGE_LIFETIME definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of EXCHANGE_LIFETIME
+   *  MAX_TRANSMIT_SPAN + (2 * MAX_LATENCY) + PROCESSING_DELAY
+   */
+#define COAP_EXCHANGE_LIFETIME(s) \
+ (COAP_MAX_TRANSMIT_SPAN(s) + (2 * COAP_MAX_LATENCY) + COAP_PROCESSING_DELAY(s))
+
+  /**
+   * The NON_LIFETIME definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of NON_LIFETIME
+   *  MAX_TRANSMIT_SPAN + MAX_LATENCY
+   */
+#define COAP_NON_LIFETIME(s) \
+ (COAP_MAX_TRANSMIT_SPAN(s) + COAP_MAX_LATENCY)
 
       /** @} */
 

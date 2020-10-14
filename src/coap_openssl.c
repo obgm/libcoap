@@ -3331,6 +3331,37 @@ ssize_t coap_tls_read(coap_session_t *session,
 }
 #endif /* !COAP_DISABLE_TCP */
 
+coap_digest_ctx_t *
+coap_digest_setup(void) {
+  SHA256_CTX *digest_ctx = OPENSSL_malloc(sizeof(SHA256_CTX));
+
+  if (digest_ctx) {
+    SHA256_Init(digest_ctx);
+  }
+  return digest_ctx;
+}
+
+void
+coap_digest_free(coap_digest_ctx_t *digest_ctx) {
+  OPENSSL_free(digest_ctx);
+}
+
+int
+coap_digest_update(coap_digest_ctx_t *digest_ctx,
+                   const uint8_t *data,
+                   size_t data_len) {
+  return SHA256_Update(digest_ctx, data, data_len);
+}
+
+int
+coap_digest_final(coap_digest_ctx_t *digest_ctx,
+                  coap_digest_t *digest_buffer) {
+  int ret = SHA256_Final((uint8_t*)digest_buffer, digest_ctx);
+
+  coap_digest_free(digest_ctx);
+  return ret;
+}
+
 #else /* !HAVE_OPENSSL */
 
 #ifdef __clang__

@@ -64,6 +64,22 @@
 #endif /* COAP_MAX_SUBSCRIBERS */
 
 /**
+ * The maximum number of cache-key entries that allocate
+ * fixed-size memory blocks.
+ */
+#ifndef COAP_MAX_CACHE_KEYS
+#define COAP_MAX_CACHE_KEYS        (2U)
+#endif /* COAP_MAX_CACHE_KEYS */
+
+/**
+ * The maximum number of cache-entry entries that allocate
+ * fixed-size memory blocks.
+ */
+#ifndef COAP_MAX_CACHE_ENTRIES
+#define COAP_MAX_CACHE_ENTRIES        (2U)
+#endif /* COAP_MAX_CACHE_ENTRIES */
+
+/**
  * Number of notifications that may be sent non-confirmable before a
  * confirmable message is sent to detect if observers are alive. The
  * maximum allowed value here is @c 15.
