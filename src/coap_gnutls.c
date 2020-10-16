@@ -1691,8 +1691,12 @@ void *coap_dtls_new_server_session(coap_session_t *c_session) {
 static void log_last_alert(gnutls_session_t g_session) {
   int last_alert = gnutls_alert_get(g_session);
 
-  coap_log(LOG_WARNING, "Received alert '%d': '%s'\n",
-                        last_alert, gnutls_alert_get_name(last_alert));
+  if (last_alert == GNUTLS_A_CLOSE_NOTIFY)
+    coap_log(LOG_DEBUG, "Received alert '%d': '%s'\n",
+                         last_alert, gnutls_alert_get_name(last_alert));
+  else
+    coap_log(LOG_WARNING, "Received alert '%d': '%s'\n",
+                          last_alert, gnutls_alert_get_name(last_alert));
 }
 
 /*
