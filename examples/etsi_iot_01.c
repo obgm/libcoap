@@ -391,7 +391,7 @@ hnd_get_separate(coap_context_t *ctx,
 
   while ((option = coap_option_next(&opt_iter))) {
     if (strncmp("delay=", (const char *)coap_opt_value(option), 6) == 0) {
-      int i;
+      unsigned int i;
       unsigned long d = 0;
 
       for (i = 6; i < coap_opt_length(option); ++i)
