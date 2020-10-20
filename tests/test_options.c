@@ -357,8 +357,11 @@ t_encode_option9(void) {
 static void
 t_access_option1(void) {
   const uint8_t teststr[] = { 0x12, 'a', 'b' };
+  coap_option_t opt;
 
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 1);
+  CU_ASSERT(sizeof(teststr) == coap_opt_parse((const coap_opt_t *)teststr,
+                                              sizeof(teststr), &opt));
+  CU_ASSERT(opt.delta == 1);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 2);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), teststr + 1);
   CU_ASSERT(coap_opt_size((const coap_opt_t *)teststr) == sizeof(teststr));
@@ -367,8 +370,11 @@ t_access_option1(void) {
 static void
 t_access_option2(void) {
   const uint8_t teststr[] = { 0xe2, 0x18, 0xfd, 'a', 'b' };
+  coap_option_t opt;
 
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 6666);
+  CU_ASSERT(sizeof(teststr) == coap_opt_parse((const coap_opt_t *)teststr,
+                                              sizeof(teststr), &opt));
+  CU_ASSERT(opt.delta == 6666);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 2);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), teststr + 3);
   CU_ASSERT(coap_opt_size((const coap_opt_t *)teststr) == sizeof(teststr));
@@ -380,8 +386,11 @@ t_access_option3(void) {
                            'e',  'f',  'g',  'h',  'i', 'j', 'k', 'l',
                            'm'
   };
+  coap_option_t opt;
 
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 6423);
+  CU_ASSERT(sizeof(teststr) == coap_opt_parse((const coap_opt_t *)teststr,
+                                              sizeof(teststr), &opt));
+  CU_ASSERT(opt.delta == 6423);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 13);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), teststr + 4);
   CU_ASSERT(coap_opt_size((const coap_opt_t *)teststr) == sizeof(teststr));
@@ -390,8 +399,11 @@ t_access_option3(void) {
 static void
 t_access_option4(void) {
   const uint8_t teststr[] = { 0xde, 0xff, 0xfe, 0xf2, 'a', 'b', 'c' };
+  coap_option_t opt;
 
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 268);
+  CU_ASSERT(0 == coap_opt_parse((const coap_opt_t *)teststr,
+                                sizeof(teststr), &opt));
+  CU_ASSERT(opt.delta == 268);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 65535);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), teststr + 4);
   CU_ASSERT(coap_opt_size((const coap_opt_t *)teststr) == 65535 + 4);
@@ -400,8 +412,11 @@ t_access_option4(void) {
 static void
 t_access_option5(void) {
   const uint8_t teststr[] = { 0xee, 0xfe, 0xf2, 0x00, 0xdd, 'a', 'b', 'c' };
+  coap_option_t opt;
 
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 65535);
+  CU_ASSERT(0 == coap_opt_parse((const coap_opt_t *)teststr,
+                                sizeof(teststr), &opt));
+  CU_ASSERT(opt.delta == 65535);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 490);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), teststr + 5);
   CU_ASSERT(coap_opt_size((const coap_opt_t *)teststr) == 495);
@@ -411,9 +426,12 @@ static void
 t_access_option6(void) {
   coap_log_t level = coap_get_log_level();
   const uint8_t teststr[] = { 0xf2, 'a', 'b' };
+  coap_option_t opt;
 
   coap_set_log_level(LOG_CRIT);
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 0);
+
+  CU_ASSERT(0 == coap_opt_parse((const coap_opt_t *)teststr,
+                                sizeof(teststr), &opt));
   coap_set_log_level(level);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 0);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), NULL);
@@ -423,8 +441,11 @@ t_access_option6(void) {
 static void
 t_access_option7(void) {
   const uint8_t teststr[] = { 0x2f, 'a', 'b' };
+  coap_option_t opt;
 
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 2);
+  CU_ASSERT(0 == coap_opt_parse((const coap_opt_t *)teststr,
+                                sizeof(teststr), &opt));
+  CU_ASSERT(opt.delta == 2);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 0);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), NULL);
   CU_ASSERT(coap_opt_size((const coap_opt_t *)teststr) == 0);

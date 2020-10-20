@@ -308,6 +308,23 @@ t_parse_pdu16(void) {
   coap_delete_pdu(testpdu);
 }
 
+static void
+t_parse_pdu17(void) {
+  uint8_t teststr[512] = {  0x40, 0x01, 0x93, 0x34 };
+  size_t idx;
+  int result;
+
+  /* 245 * option delta 268 > 65535, causing a overflow in the option
+   * number */
+  for (idx = 4; idx < sizeof(teststr) - 4; idx += 2) {
+    teststr[idx] = 0xd0;     /* 1 byte option delta follows */
+    teststr[idx + 1] = 0xff; /* option delta 268 */
+  }
+
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
+  CU_ASSERT(result == 0);
+}
+
 /************************************************************************
  ** PDU encoder
  ************************************************************************/
@@ -999,7 +1016,7 @@ t_encode_pdu18(void) {
                            (const uint8_t *)"coap://example.com/12345/%3Fxyz/3048234234/23402348234/239084234-23/%AB%30%af/+123/hfksdh/23480-234-98235/1204/243546345345243/0198sdn3-a-3///aff0934/97u2141/0002/3932423532/56234023/----/=1234=/098141-9564643/21970-----/82364923472wererewr0-921-39123-34/");
 
   CU_ASSERT(result == 257);
-  CU_ASSERT(pdu->max_delta == 8);
+  CU_ASSERT(pdu->max_opt == 8);
   CU_ASSERT(pdu->used_size == 259);
   CU_ASSERT_PTR_NULL(pdu->data);
 
@@ -1025,23 +1042,6 @@ t_encode_pdu18(void) {
 
   CU_ASSERT(coap_pdu_encode_header(pdu, COAP_PROTO_UDP) == 4);
   CU_ASSERT(memcmp(pdu->token - 4, teststr, sizeof(teststr)) == 0);
-}
-
-static void
-t_parse_pdu19(void) {
-  uint8_t teststr[512] = {  0x40, 0x01, 0x93, 0x34 };
-  size_t idx;
-  int result;
-
-  /* 245 * option delta 268 > 65535, causing a overflow in the option
-   * number */
-  for (idx = 4; idx < sizeof(teststr) - 4; idx += 2) {
-    teststr[idx] = 0xd0;     /* 1 byte option delta follows */
-    teststr[idx + 1] = 0xff; /* option delta 268 */
-  }
-
-  result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
-  CU_ASSERT(result == 0);
 }
 
 static int
@@ -1118,7 +1118,6 @@ t_init_pdu_tests(void) {
     PDU_ENCODER_TEST(suite[1], t_encode_pdu16);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu17);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu18);
-    PDU_ENCODER_TEST(suite[1], t_encode_pdu19);
 
   } else                         /* signal error */
     fprintf(stderr, "W: cannot add pdu parser test suite (%s)\n",
