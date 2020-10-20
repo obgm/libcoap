@@ -205,35 +205,6 @@ coap_check_option(coap_pdu_t *pdu, uint16_t type,
   return coap_option_next(oi);
 }
 
-uint16_t
-coap_opt_delta(const coap_opt_t *opt) {
-  uint16_t n;
-
-  n = (*opt++ & 0xf0) >> 4;
-
-  switch (n) {
-  case 15: /* error */
-    coap_log(LOG_WARNING, "coap_opt_delta: illegal option delta\n");
-
-    /* This case usually should not happen, hence we do not have a
-     * proper way to indicate an error. */
-    return 0;
-  case 14:
-    /* Handle two-byte value: First, the MSB + 269 is stored as delta value.
-     * After that, the option pointer is advanced to the LSB which is handled
-     * just like case delta == 13. */
-    n = ((*opt++ & 0xff) << 8) + 269;
-    /* fall through */
-  case 13:
-    n += *opt & 0xff;
-    break;
-  default: /* n already contains the actual delta value */
-    ;
-  }
-
-  return n;
-}
-
 uint32_t
 coap_opt_length(const coap_opt_t *opt) {
   uint32_t length;

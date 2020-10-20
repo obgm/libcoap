@@ -350,18 +350,6 @@ size_t coap_opt_encode(coap_opt_t *opt,
                        size_t length);
 
 /**
- * Decodes the delta value of the next option. This function returns the number
- * of bytes read or @c 0 on error. The caller of this function must ensure that
- * it does not read over the boundaries of @p opt (e.g. by calling
- * coap_opt_check_delta().
- *
- * @param opt The option to examine.
- *
- * @return    The number of bytes read or @c 0 on error.
- */
-uint16_t coap_opt_delta(const coap_opt_t *opt);
-
-/**
  * Returns the length of the given option. @p opt must point to an option jump
  * or the beginning of the option. This function returns @c 0 when @p opt is not
  * an option or the actual length of @p opt (which can be @c 0 as well).
