@@ -495,6 +495,8 @@ int coap_add_token(coap_pdu_t *pdu,
                   size_t len,
                   const uint8_t *data);
 
+size_t coap_insert_option(coap_pdu_t *, uint16_t, size_t, const uint8_t *);
+
 /**
  * Adds option of given type to pdu that is passed as first
  * parameter.

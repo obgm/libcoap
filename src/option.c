@@ -234,9 +234,9 @@ coap_opt_delta(const coap_opt_t *opt) {
   return n;
 }
 
-uint16_t
+uint32_t
 coap_opt_length(const coap_opt_t *opt) {
-  uint16_t length;
+  uint32_t length;
 
   length = *opt & 0x0f;
   switch (*opt & 0xf0) {

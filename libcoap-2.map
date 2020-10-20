@@ -88,6 +88,7 @@ global:
   coap_handle_failed_notify;
   coap_hash_impl;
   coap_insert_node;
+  coap_insert_option;
   coap_insert_optlist;
   coap_io_do_epoll;
   coap_io_do_io;

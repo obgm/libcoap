@@ -521,6 +521,11 @@ next_option_safe(coap_opt_t **optp, size_t *length, uint16_t *max_opt) {
   if (optsize) {
     assert(optsize <= *length);
 
+    /* signal an error if this option would exceed the
+     * allowed number space */
+    if (*max_opt + option.delta > COAP_MAX_OPT) {
+      return 0;
+    }
     *max_opt += option.delta;
     *optp += optsize;
     *length -= optsize;
@@ -687,6 +692,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
     return 0;
   }
 
+  pdu->max_opt = 0;
   if (pdu->code == 0) {
     /* empty packet */
     pdu->used_size = 0;
@@ -695,9 +701,8 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
     /* skip header + token */
     coap_opt_t *opt = pdu->token + pdu->token_length;
     size_t length = pdu->used_size - pdu->token_length;
-    uint16_t len;
+    uint32_t len;
 
-    pdu->max_opt = 0;
     while (length > 0 && *opt != COAP_PAYLOAD_START) {
       len = coap_opt_length(opt);
       if ( !next_option_safe( &opt, &length, &pdu->max_opt ) ) {

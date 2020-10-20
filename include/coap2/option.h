@@ -374,7 +374,7 @@ uint16_t coap_opt_delta(const coap_opt_t *opt);
  *
  * @return     The option's length or @c 0 when undefined.
  */
-uint16_t coap_opt_length(const coap_opt_t *opt);
+uint32_t coap_opt_length(const coap_opt_t *opt);
 
 /**
  * Returns a pointer to the value of the given option. @p opt must point to an
