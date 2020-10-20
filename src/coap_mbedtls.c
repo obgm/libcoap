@@ -1109,10 +1109,24 @@ coap_dtls_free_mbedtls_env(coap_mbedtls_env_t *m_env) {
 static int do_mbedtls_handshake(coap_session_t *c_session,
                                 coap_mbedtls_env_t *m_env) {
   int ret;
+  uint32_t flags = 0;
 
   ret = mbedtls_ssl_handshake(&m_env->ssl);
   switch (ret) {
-  case 0:
+  case 0: /* success */
+    /* try certificate verification */
+    flags = mbedtls_ssl_get_verify_result(&(m_env->ssl));
+    if (flags != 0) {
+      char vrfy_buf[COAP_DEBUG_BUF_SIZE];
+      int length;
+      length = mbedtls_x509_crt_verify_info(vrfy_buf,
+                                            sizeof(vrfy_buf),
+                                            " ! ",
+                                            flags);
+      coap_log(LOG_WARNING, "certificate verification failed: %*.s\n",
+               length, vrfy_buf);
+    }
+
     m_env->established = 1;
     coap_log(LOG_DEBUG, "*  %s: MbedTLS established\n",
                                             coap_session_str(c_session));
