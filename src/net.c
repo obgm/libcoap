@@ -1180,7 +1180,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
 
   node->id = pdu->tid;
   node->pdu = pdu;
-  prng(&r, sizeof(r));
+  coap_prng(&r, sizeof(r));
   /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
   node->timeout = coap_calc_timeout(session, r);
   return coap_wait_ack(session->context, session, node);
@@ -1954,8 +1954,10 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
   /* Estimate how much space we need for options to copy from
    * request. We always need the Token, for 4.02 the unknown critical
    * options must be included as well. */
-  coap_option_clrb(opts, COAP_OPTION_CONTENT_TYPE); /* we do not want this */
-  coap_option_clrb(opts, COAP_OPTION_HOP_LIMIT); /* we do not want this */
+
+  /* we do not want these */
+  coap_option_filter_unset(opts, COAP_OPTION_CONTENT_TYPE);
+  coap_option_filter_unset(opts, COAP_OPTION_HOP_LIMIT);
 
   coap_option_iterator_init(request, &opt_iter, opts);
 
@@ -2851,7 +2853,7 @@ void coap_startup(void) {
   coap_ticks(&now);
   us = coap_ticks_to_rt_us(now);
   /* Be accurate to the nearest (approx) us */
-  prng_init(us);
+  coap_prng_init(us);
   coap_memory_init();
   coap_dtls_startup();
 }

@@ -181,7 +181,7 @@ coap_option_next(coap_opt_iterator_t *oi) {
      *   - the filter is too small for the current option number
      */
     if (!oi->filtered ||
-        (b = coap_option_getb(oi->filter, oi->type)) > 0)
+        (b = coap_option_filter_get(oi->filter, oi->type)) > 0)
       break;
     else if (b < 0) {                /* filter too small, cannot proceed */
       oi->bad = 1;
@@ -198,7 +198,7 @@ coap_check_option(coap_pdu_t *pdu, uint16_t type,
   coap_opt_filter_t f;
 
   coap_option_filter_clear(f);
-  coap_option_setb(f, type);
+  coap_option_filter_set(f, type);
 
   coap_option_iterator_init(pdu, oi, f);
 

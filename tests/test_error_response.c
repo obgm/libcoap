@@ -101,7 +101,7 @@ t_error_response3(void) {
   coap_add_option(pdu, 9, 0, NULL);
 
   coap_option_filter_clear(opts);
-  coap_option_setb(opts, 9);
+  coap_option_filter_set(opts, 9);
   response = coap_new_error_response(pdu, code, opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
@@ -140,7 +140,7 @@ t_error_response4(void) {
   coap_add_option(pdu, 9, sizeof(optval), optval);
 
   coap_option_filter_clear(opts);
-  coap_option_setb(opts, 9);
+  coap_option_filter_set(opts, 9);
   response = coap_new_error_response(pdu, code, opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
@@ -181,7 +181,7 @@ t_error_response5(void) {
   coap_add_option(pdu, 9, sizeof(optval), optval);
 
   coap_option_filter_clear(opts);
-  coap_option_setb(opts, 9);
+  coap_option_filter_set(opts, 9);
   response = coap_new_error_response(pdu, code, opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
@@ -222,7 +222,7 @@ t_error_response6(void) {
   coap_add_option(pdu, 23, sizeof(optval), optval);
 
   coap_option_filter_clear(opts);
-  coap_option_setb(opts, 23);
+  coap_option_filter_set(opts, 23);
   response = coap_new_error_response(pdu, code, opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
@@ -264,7 +264,7 @@ t_error_response7(void) {
   coap_add_option(pdu, 23, sizeof(optval), optval);
 
   coap_option_filter_clear(opts);
-  coap_option_setb(opts, 23);
+  coap_option_filter_set(opts, 23);
   response = coap_new_error_response(pdu, code, opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
@@ -304,8 +304,8 @@ t_error_response8(void) {
   coap_add_option(pdu, 2000, 0, NULL);
 
   coap_option_filter_clear(opts);
-  coap_option_setb(opts, 1001);
-  coap_option_setb(opts, 1014);
+  coap_option_filter_set(opts, 1001);
+  coap_option_filter_set(opts, 1014);
   response = coap_new_error_response(pdu, code, opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);

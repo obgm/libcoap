@@ -166,7 +166,7 @@ PROCESS_THREAD(coap_server_process, ev, data)
   coap_add_option(request, COAP_OPTION_OBSERVE, 0, NULL);
   {
     unsigned char buf[2];
-    prng(buf, 2);
+    coap_prng(buf, 2);
     coap_add_option(request, COAP_OPTION_TOKEN, 2, buf);
   }
 

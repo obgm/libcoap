@@ -140,6 +140,9 @@
     <ClInclude Include="..\include\coap2\coap_mutex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\coap2\coap_prng.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\coap2\coap_session.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -171,9 +174,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\coap2\pdu.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\coap2\prng.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\coap2\resource.h">

@@ -885,7 +885,7 @@ int coap_debug_send_packet(void) {
   }
   if ( packet_loss_level > 0 ) {
     uint16_t r = 0;
-    prng( (uint8_t*)&r, 2 );
+    coap_prng( (uint8_t*)&r, 2 );
     if ( r < packet_loss_level )
       return 0;
   }

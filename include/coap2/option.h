@@ -179,7 +179,7 @@ int coap_option_filter_get(coap_opt_filter_t filter, uint16_t type);
  *
  * @return       @c 1 if bit was set, @c -1 otherwise.
  */
-COAP_STATIC_INLINE int
+COAP_STATIC_INLINE COAP_DEPRECATED int
 coap_option_setb(coap_opt_filter_t filter, uint16_t type) {
   return coap_option_filter_set(filter, type) ? 1 : -1;
 }
@@ -196,7 +196,7 @@ coap_option_setb(coap_opt_filter_t filter, uint16_t type) {
  *
  * @return       @c 1 if bit was set, @c -1 otherwise.
  */
-COAP_STATIC_INLINE int
+COAP_STATIC_INLINE COAP_DEPRECATED int
 coap_option_clrb(coap_opt_filter_t filter, uint16_t type) {
   return coap_option_filter_unset(filter, type) ? 1 : -1;
 }
@@ -213,7 +213,7 @@ coap_option_clrb(coap_opt_filter_t filter, uint16_t type) {
  *
  * @return       @c 1 if bit was set, @c 0 if not, @c -1 on error.
  */
-COAP_STATIC_INLINE int
+COAP_STATIC_INLINE COAP_DEPRECATED int
 coap_option_getb(coap_opt_filter_t filter, uint16_t type) {
   return coap_option_filter_get(filter, type);
 }

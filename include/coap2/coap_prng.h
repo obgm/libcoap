@@ -1,7 +1,7 @@
 /*
- * prng.h -- Pseudo Random Numbers
+ * coap_prng.h -- Pseudo Random Numbers
  *
- * Copyright (C) 2010-2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2020 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -16,7 +16,7 @@
 #define COAP_PRNG_H_
 
 /**
- * @defgroup prng Pseudo Random Numbers
+ * @defgroup coap_prng Pseudo Random Numbers
  * API functions for gerating pseudo random numbers
  * @{
  */
@@ -26,8 +26,8 @@
 
 /**
  * Fills \p buf with \p len random bytes. This is the default implementation for
- * prng(). You might want to change prng() to use a better PRNG on your specific
- * platform.
+ * coap_prng(). You might want to change contiki_prng_impl() to use a better
+ * PRNG on your specific platform.
  */
 COAP_STATIC_INLINE int
 contiki_prng_impl(unsigned char *buf, size_t len) {
@@ -43,9 +43,11 @@ contiki_prng_impl(unsigned char *buf, size_t len) {
   return 1;
 }
 
-#define prng(Buf,Length) contiki_prng_impl((Buf), (Length))
-#define prng_init(Value) random_init((uint16_t)(Value))
+#define coap_prng(Buf,Length) contiki_prng_impl((Buf), (Length))
+#define coap_prng_init(Value) random_init((uint16_t)(Value))
+
 #elif defined(WITH_LWIP) && defined(LWIP_RAND)
+
 COAP_STATIC_INLINE int
 lwip_prng_impl(unsigned char *buf, size_t len) {
   u32_t v = LWIP_RAND();
@@ -60,15 +62,16 @@ lwip_prng_impl(unsigned char *buf, size_t len) {
   return 1;
 }
 
-#define prng(Buf,Length) lwip_prng_impl((Buf), (Length))
-#define prng_init(Value)
+#define coap_prng(Buf,Length) lwip_prng_impl((Buf), (Length))
+#define coap_prng_init(Value)
+
 #elif defined(_WIN32)
-#define prng_init(Value)
+
 errno_t __cdecl rand_s( _Out_ unsigned int* _RandomValue );
- /**
+/**
  * Fills \p buf with \p len random bytes. This is the default implementation for
- * prng(). You might want to change prng() to use a better PRNG on your specific
- * platform.
+ * coap_prng(). You might want to change coap_prng_impl() to use a better
+ * PRNG on your specific platform.
  */
 COAP_STATIC_INLINE int
 coap_prng_impl( unsigned char *buf, size_t len ) {
@@ -85,6 +88,9 @@ coap_prng_impl( unsigned char *buf, size_t len ) {
         }
         return 1;
 }
+
+#define coap_prng(Buf,Length) coap_prng_impl((Buf), (Length))
+#define coap_prng_init(Value)
 
 #else
 
@@ -124,27 +130,6 @@ void coap_prng_init(unsigned long seed);
  * @return 1 on success, 0 otherwise.
  */
 int coap_prng(void *buf, size_t len);
-
-#ifndef prng
-/**
- * Fills \p Buf with \p Length bytes of random data.
- *
- * @deprecated Use coap_prng() instead.
- * @hideinitializer
- */
-#define prng(Buf,Length) coap_prng((Buf), (Length))
-#endif
-
-#ifndef prng_init
-/**
- * Called to set the PRNG seed. You may want to re-define this to allow for a
- * better PRNG.
- *
- * @deprecated Use coap_prng_init() instead.
- * @hideinitializer
- */
-#define prng_init(Value) coap_prng_init((unsigned long)(Value))
-#endif
 
 #endif /* POSIX */
 

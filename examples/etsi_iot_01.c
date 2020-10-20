@@ -340,7 +340,7 @@ hnd_get_query(coap_context_t *ctx UNUSED_PARAM,
                   buf);
 
   coap_option_filter_clear(f);
-  coap_option_setb(f, COAP_OPTION_URI_QUERY);
+  coap_option_filter_set(f, COAP_OPTION_URI_QUERY);
 
   coap_option_iterator_init(request, &opt_iter, f);
 
@@ -385,7 +385,7 @@ hnd_get_separate(coap_context_t *ctx,
 
   /* search for option delay in query list */
   coap_option_filter_clear(f);
-  coap_option_setb(f, COAP_OPTION_URI_QUERY);
+  coap_option_filter_set(f, COAP_OPTION_URI_QUERY);
 
   coap_option_iterator_init(request, &opt_iter, f);
 

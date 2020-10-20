@@ -78,6 +78,7 @@
     <ClInclude Include="..\include\coap2\coap_internal.h" />
     <ClInclude Include="..\include\coap2\coap_io.h" />
     <ClInclude Include="..\include\coap2\coap_mutex.h" />
+    <ClInclude Include="..\include\coap2\coap_prng.h" />
     <ClInclude Include="..\include\coap2\coap_session.h" />
     <ClInclude Include="..\include\coap2\coap_session_internal.h" />
     <ClInclude Include="..\include\coap2\coap_subscribe_internal.h" />
@@ -89,7 +90,6 @@
     <ClInclude Include="..\include\coap2\net.h" />
     <ClInclude Include="..\include\coap2\option.h" />
     <ClInclude Include="..\include\coap2\pdu.h" />
-    <ClInclude Include="..\include\coap2\prng.h" />
     <ClInclude Include="..\include\coap2\resource.h" />
     <ClInclude Include="..\include\coap2\str.h" />
     <ClInclude Include="..\include\coap2\subscribe.h" />
