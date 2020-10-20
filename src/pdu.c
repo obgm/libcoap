@@ -383,7 +383,7 @@ coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len,
   }
 
   if (type < pdu->max_opt) {
-    coap_log(LOG_WARNING,
+    coap_log(LOG_DEBUG,
              "coap_add_option: options are not in correct order\n");
     return coap_insert_option(pdu, type, len, data);
   }
