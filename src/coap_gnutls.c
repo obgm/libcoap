@@ -576,7 +576,7 @@ typedef struct {
 
 /*
  * return Type of certificate and SAN or CN if appropriate derived from
- *        certificate. COAP_GNUTLS_CRT_ERROR if failure.
+ *        certificate. GNUTLS_CRT_UNKNOWN if failure.
  */
 static gnutls_certificate_type_t get_san_or_cn(gnutls_session_t g_session,
                                      coap_gnutls_certificate_info_t *cert_info)
@@ -674,7 +674,7 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
   coap_gnutls_certificate_info_t cert_info;
   gnutls_certificate_type_t cert_type;
 
-  cert_info.san_or_cn = NULL;
+  memset(&cert_info, 0, sizeof(cert_info));
 
   G_CHECK(gnutls_certificate_verify_peers(g_session, NULL, 0, &status),
           "gnutls_certificate_verify_peers");
@@ -978,75 +978,9 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
         setup_data->pki_key.key.pem.private_key &&
         setup_data->pki_key.key.pem.private_key[0]) {
       if (setup_data->is_rpk_not_cert) {
-#if (GNUTLS_VERSION_NUMBER >= 0x030606)
-        FILE *f = fopen(setup_data->pki_key.key.pem.private_key, "r");
-        uint8_t *buf;
-        struct stat statbuf;
-        int have_done_key = 0;
-
-        if (f) {
-          if (fstat(fileno(f), &statbuf) == -1) {
-            fclose(f);
-            goto bad_file_pem;
-          }
-
-          buf = gnutls_malloc(statbuf.st_size+1);
-          if (!buf) {
-            fclose(f);
-            goto bad_file_pem;
-          }
-
-          if (fread(buf, 1, statbuf.st_size, f) != (size_t)statbuf.st_size) {
-            fclose(f);
-            gnutls_free(buf);
-            goto bad_file_pem;
-          }
-          buf[statbuf.st_size] = '\000';
-          fclose(f);
-
-          if (strstr ((char*)buf, "-----BEGIN EC PRIVATE KEY-----")) {
-            gnutls_datum_t der_private;
-            gnutls_datum_t key;
-
-            key.data = buf;
-            key.size = statbuf.st_size;
-            if (gnutls_pem_base64_decode2("EC PRIVATE KEY", &key,
-                                          &der_private) == 0) {
-              gnutls_datum_t *spki = get_asn1_spki(der_private.data,
-                                                  der_private.size);
-
-              if (spki) {
-                ret = gnutls_certificate_set_rawpk_key_mem(*pki_credentials,
-                                         spki,
-                                         &der_private,
-                                         GNUTLS_X509_FMT_DER, NULL,
-                                         COAP_GNUTLS_KEY_RPK,
-                                         NULL, 0, 0);
-                if (ret >= 0) {
-                  have_done_key = 1;
-                }
-                gnutls_free(spki);
-              }
-              gnutls_free(der_private.data);
-            }
-          }
-          gnutls_free(buf);
-        }
-bad_file_pem:
-        if (!have_done_key) {
-          G_CHECK(gnutls_certificate_set_rawpk_key_file(*pki_credentials,
-                                   setup_data->pki_key.key.pem.public_cert,
-                                   setup_data->pki_key.key.pem.private_key,
-                                   GNUTLS_X509_FMT_PEM, NULL,
-                                   COAP_GNUTLS_KEY_RPK,
-                                   NULL, 0, GNUTLS_PKCS_PLAIN, 0),
-                 "gnutls_certificate_set_rawpk_key_file");
-        }
-#else /* GNUTLS_VERSION_NUMBER < 0x030606 */
-        coap_log(LOG_ERR,
-              "RPK Support not available (needs gnutls 3.6.6 or later)\n");
+        coap_log(LOG_WARNING,
+                 "RPK keys cannot be in COAP_PKI_KEY_PEM format\n");
         return GNUTLS_E_INSUFFICIENT_CREDENTIALS;
-#endif /* GNUTLS_VERSION_NUMBER < 0x030606 */
       }
       else {
         G_CHECK(gnutls_certificate_set_x509_key_file(*pki_credentials,

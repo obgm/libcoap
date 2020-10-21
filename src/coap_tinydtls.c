@@ -1061,60 +1061,6 @@ pem_decode_mem_asn1(const char *begstr, const uint8_t *str)
   return NULL;
 }
 
-#include <stdio.h>
-#include <sys/stat.h>
-
-static uint8_t *read_file_mem(const char* file, size_t *length) {
-  FILE *f = fopen(file, "r");
-  uint8_t *buf;
-  struct stat statbuf;
-
-  *length = 0;
-  if (!f)
-    return NULL;
-
-  if (fstat(fileno(f), &statbuf) == -1) {
-    fclose(f);
-    return NULL;
-  }
-
-  buf = coap_malloc(statbuf.st_size+1);
-  if (!buf)
-    return NULL;
-
-  if (fread(buf, 1, statbuf.st_size, f) != (size_t)statbuf.st_size) {
-    fclose(f);
-    free(buf);
-    return NULL;
-  }
-  buf[statbuf.st_size] = '\000';
-  *length = (size_t)(statbuf.st_size + 1);
-  fclose(f);
-  return buf;
-}
-
-static coap_binary_t *
-pem_decode_file_asn1(const char *begstr, const char *file)
-{
-  size_t length;
-  uint8_t *str = read_file_mem(file, &length);
-  char *bcp;
-  char *tcp;
-  coap_binary_t *decoded = NULL;
-
-  if (!str) {
-    return NULL;
-  }
-
-  bcp = strstr((const char*)str, begstr);
-  tcp = bcp ? strstr(bcp, "-----END ") : NULL;
-  if (bcp && tcp) {
-    bcp += strlen(begstr);
-    decoded = pem_base64_decode ((const uint8_t *)bcp, tcp - bcp);
-  }
-  coap_free(str);
-  return decoded;
-}
 #endif /* DTLS_ECC */
 
 int
@@ -1155,67 +1101,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
   /* All should be RPK only now */
   switch (setup_data->pki_key.key_type) {
   case COAP_PKI_KEY_PEM:
-    if (setup_data->pki_key.key.pem.private_key &&
-        setup_data->pki_key.key.pem.private_key[0]) {
-      /* Need to read in the PEM information and convert to binary */
-      asn1_priv = pem_decode_file_asn1("-----BEGIN EC PRIVATE KEY-----",
-                                 setup_data->pki_key.key.pem.private_key);
-      if (!asn1_priv) {
-        asn1_priv = pem_decode_file_asn1("-----BEGIN PRIVATE KEY-----",
-                                 setup_data->pki_key.key.pem.private_key);
-        if (!asn1_priv) {
-          coap_log(LOG_INFO, "Private Key (RPK) invalid\n");
-          return 0;
-        }
-        asn1_temp = ec_abstract_pkcs8_asn1(asn1_priv->s, asn1_priv->length);
-        if (!asn1_temp) {
-          coap_log(LOG_INFO, "PKCS#8 Private Key (RPK) invalid\n");
-          coap_delete_binary(asn1_priv);
-          return 0;
-        }
-        coap_delete_binary(asn1_priv);
-        asn1_priv = asn1_temp;
-        is_pkcs8 = 1;
-      }
-      /* See if public key has been explicitly provided */
-      asn1_pub = pem_decode_file_asn1( "-----BEGIN PUBLIC KEY-----",
-                                 setup_data->pki_key.key.pem.public_cert);
-      if (!asn1_pub) {
-        /* Else use public key embedded into EC Private key */
-        asn1_pub = pem_decode_file_asn1("-----BEGIN EC PRIVATE KEY-----",
-                                 setup_data->pki_key.key.pem.private_key);
-        if (!asn1_pub) {
-          asn1_pub = pem_decode_file_asn1("-----BEGIN PRIVATE KEY-----",
-                                 setup_data->pki_key.key.pem.private_key);
-          if (!asn1_pub) {
-            coap_log(LOG_INFO, "Public Key (RPK) invalid\n");
-            coap_delete_binary(asn1_priv);
-            return 0;
-          }
-          asn1_temp = ec_abstract_pkcs8_asn1(asn1_pub->s, asn1_pub->length);
-          if (!asn1_temp) {
-            coap_log(LOG_INFO, "PKCS#8 Private Key (RPK) invalid\n");
-            coap_delete_binary(asn1_priv);
-            coap_delete_binary(asn1_pub);
-            return 0;
-          }
-          coap_delete_binary(asn1_pub);
-          asn1_pub = asn1_temp;
-          is_pkcs8 = 1;
-        }
-      }
-
-      if (!asn1_derive_keys(t_context, asn1_priv->s, asn1_priv->length,
-                            asn1_pub->s, asn1_pub->length, is_pkcs8)) {
-        coap_log(LOG_INFO, "Unable to derive Public/Private Keys\n");
-        coap_delete_binary(asn1_priv);
-        coap_delete_binary(asn1_pub);
-        return 0;
-      }
-      coap_delete_binary(asn1_priv);
-      coap_delete_binary(asn1_pub);
-      return 1;
-    }
+    coap_log(LOG_WARNING, "RPK keys cannot be in COAP_PKI_KEY_PEM format\n");
     break;
   case COAP_PKI_KEY_PEM_BUF:
     if (setup_data->pki_key.key.pem_buf.public_cert &&
@@ -1326,6 +1212,8 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
     }
     break;
   case COAP_PKI_KEY_PKCS11:
+    coap_log(LOG_WARNING, "RPK keys cannot be in COAP_PKI_KEY_PCKS11 format\n");
+    break;
   default:
     break;
   }

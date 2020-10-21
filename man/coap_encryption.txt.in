@@ -427,7 +427,9 @@ typedef struct coap_dtls_pki_t {
   uint8_t allow_expired_crl;        /* 1 if expired crl is allowed */
   uint8_t allow_bad_md_hash;        /* 1 if unsupported MD hashes are allowed */
   uint8_t allow_short_rsa_length;   /* 1 if small RSA keysizes are allowed */
-  uint8_t is_rpk_not_cert;          /* 1 if RPK instead of Public Certificate */
+  uint8_t is_rpk_not_cert;          /* 1 is RPK instead of Public Certificate.
+                                     *   If set, PKI key format type cannot be
+                                     *   COAP_PKI_KEY_PEM */
   uint8_t reserved[3];              /* Reserved - must be set to 0 for
                                        future compatibility */
 
@@ -522,6 +524,7 @@ definition to be valid, else 0.
 *allow_short_rsa_length* Set to 1 if small RSA keysizes are allowed, else 0.
 
 *is_rpk_not_cert* Set to 1 if the Certificate is actually a Raw Public Key.
+If set, PKI key format type cannot be COAP_PKI_KEY_PEM.
 
 *SECTION: PKI/RPK: coap_dtls_pki_t: Reserved*
 
@@ -539,7 +542,7 @@ these reserved definitions.
  * but the application needs to check that the CN is allowed.
  * CN is the SubjectAltName in the cert, if not present, then the leftmost
  * Common Name (CN) component of the subject name.
- * NOTE: If using RPK, then the Public Key does not contain a CN, but the 
+ * NOTE: If using RPK, then the Public Key does not contain a CN, but the
  * content of COAP_DTLS_RPK_CERT_CN is presented for the @p cn parameter.
  *
  * @param cn  The determined CN from the certificate
@@ -579,7 +582,8 @@ typedef struct coap_dtls_key_t {
   union {
     coap_pki_key_pem_t pem;         /* for PEM file keys */
     coap_pki_key_pem_buf_t pem_buf; /* for PEM memory keys */
-    coap_pki_key_asn1_t asn1;       /* for ASN.1 (DER) file keys */
+    coap_pki_key_asn1_t asn1;       /* for ASN.1 (DER) memory keys */
+    coap_pki_key_pkcs11_t pkcs11;   /* for PKCS11 keys */
   } key;
 } coap_dtls_key_t;
 
@@ -662,16 +666,13 @@ typedef enum coap_pki_key_t {
 This can be COAP_PKI_KEY_PEM, COAP_PKI_KEY_PEM_BUF, COAP_PKI_KEY_ASN1 or
 COAP_PKI_KEY_PKCS11.
 
-*SECTION: PKI/RPK: coap_dtls_pki_t: PEM Key Definitions*
+*SECTION: PKI: coap_dtls_pki_t: PEM Key Definitions*
 [source, c]
 ----
 typedef struct coap_pki_key_pem_t {
   const char *ca_file;       /* File location of Common CA in PEM format */
-  const char *public_cert;   /* File location of Public Cert, or Public
-                                Key if RPK, in PEM format */
-  const char *private_key;   /* File location of Private Key in PEM format.
-                                If RPK and 'EC PRIVATE KEY' this can be used
-                                for both the public_cert and private_key */
+  const char *public_cert;   /* File location of Public Cert */
+  const char *private_key;   /* File location of Private Key in PEM format */
 } coap_pki_key_pem_t;
 ----
 
@@ -681,8 +682,8 @@ public certificate) as this is passed from the server to the client when
 requesting the client's certificate. This certificate is also added into
 the valid root CAs list if not already present.
 
-*key.pem.public_cert* points to the public certificate (or public key if RPK)
-location on disk which will be in PEM format.
+*key.pem.public_cert* points to the public certificate location on disk which
+will be in PEM format.
 
 *key.pem.private_key* points to the private key location on disk which
 will be in PEM format.  This file cannot be password protected.
@@ -694,6 +695,8 @@ typedef struct coap_pki_key_pem_buf_t {
   const uint8_t *ca_cert;     /* PEM buffer Common CA Cert */
   const uint8_t *public_cert; /* PEM buffer Public Cert, or Public Key if RPK */
   const uint8_t *private_key; /* PEM buffer Private Key */
+                                 If RPK and 'EC PRIVATE KEY' this can be used
+                                 for both the public_cert and private_key */
   size_t ca_cert_len;         /* PEM buffer CA Cert length */
   size_t public_cert_len;     /* PEM buffer Public Cert length */
   size_t private_key_len;     /* PEM buffer Private Key length */
@@ -714,7 +717,8 @@ RPK) location in memory which will be in PEM format.
 *key.pem_buf.public_cert_len* is the length of the public certificate.
 
 *key.pem_buf.private_key* points to the private key location in memory which
-will be in PEM format.  This data cannot be password protected.
+will be in PEM format.  This data cannot be password protected. If RPK and
+'EC PRIVATE KEY' this can be used for both the public_cert and private_key.
 
 *key.pem_buf.private_key* is the length of the private key.
 

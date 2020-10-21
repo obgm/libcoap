@@ -1011,7 +1011,7 @@ static uint8_t *read_file_mem(const char* file, size_t *length) {
     return NULL;
   }
 
-  buf = malloc(statbuf.st_size+1);
+  buf = coap_malloc(statbuf.st_size+1);
   if (!buf) {
     fclose(f);
     return NULL;
@@ -1019,7 +1019,7 @@ static uint8_t *read_file_mem(const char* file, size_t *length) {
 
   if (fread(buf, 1, statbuf.st_size, f) != (size_t)statbuf.st_size) {
     fclose(f);
-    free(buf);
+    coap_free(buf);
     return NULL;
   }
   buf[statbuf.st_size] = '\000';
@@ -1196,25 +1196,24 @@ fill_keystore(coap_context_t *ctx) {
     }
     dtls_pki.require_peer_cert = require_peer_cert;
     dtls_pki.is_rpk_not_cert   = is_rpk_not_cert;
-    if (!use_pem_buf) {
-      if ((key_file && strncasecmp (key_file, "pkcs11:", 7) == 0) ||
-          (cert_file && strncasecmp (cert_file, "pkcs11:", 7) == 0) ||
-          (ca_file && strncasecmp (ca_file, "pkcs11:", 7) == 0)) {
-        dtls_pki.pki_key.key_type = COAP_PKI_KEY_PKCS11;
-        dtls_pki.pki_key.key.pkcs11.public_cert = cert_file;
-        dtls_pki.pki_key.key.pkcs11.private_key = key_file ?
-                                                         key_file : cert_file;
-        dtls_pki.pki_key.key.pkcs11.ca = ca_file;
-        dtls_pki.pki_key.key.pkcs11.user_pin = pkcs11_pin;
-      }
-      else {
-        dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
-        dtls_pki.pki_key.key.pem.public_cert = cert_file;
-        dtls_pki.pki_key.key.pem.private_key = key_file ? key_file : cert_file;
-        dtls_pki.pki_key.key.pem.ca_file = ca_file;
-      }
+    if ((key_file && strncasecmp (key_file, "pkcs11:", 7) == 0) ||
+        (cert_file && strncasecmp (cert_file, "pkcs11:", 7) == 0) ||
+        (ca_file && strncasecmp (ca_file, "pkcs11:", 7) == 0)) {
+      dtls_pki.pki_key.key_type = COAP_PKI_KEY_PKCS11;
+      dtls_pki.pki_key.key.pkcs11.public_cert = cert_file;
+      dtls_pki.pki_key.key.pkcs11.private_key = key_file ?
+                                                       key_file : cert_file;
+      dtls_pki.pki_key.key.pkcs11.ca = ca_file;
+      dtls_pki.pki_key.key.pkcs11.user_pin = pkcs11_pin;
+    }
+    else if (!use_pem_buf && !is_rpk_not_cert) {
+      dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
+      dtls_pki.pki_key.key.pem.public_cert = cert_file;
+      dtls_pki.pki_key.key.pem.private_key = key_file ? key_file : cert_file;
+      dtls_pki.pki_key.key.pem.ca_file = ca_file;
     }
     else {
+      /* Map file into memory */
       ca_mem = read_file_mem(ca_file, &ca_mem_len);
       cert_mem = read_file_mem(cert_file, &cert_mem_len);
       dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM_BUF;
@@ -1863,9 +1862,9 @@ main(int argc, char **argv) {
   }
 
   if (ca_mem)
-    free(ca_mem);
+    coap_free(ca_mem);
   if (cert_mem)
-    free(cert_mem);
+    coap_free(cert_mem);
   for (i = 0; i < valid_psk_snis.count; i++) {
     free(valid_psk_snis.psk_sni_list[i].sni_match);
     coap_delete_bin_const(valid_psk_snis.psk_sni_list[i].new_hint);

@@ -105,7 +105,7 @@ typedef int (*coap_dtls_security_setup_t)(void* tls_session,
  * but the application needs to check that the CN is allowed.
  * CN is the SubjectAltName in the cert, if not present, then the leftmost
  * Common Name (CN) component of the subject name.
- * NOTE: If using RPK, then the Public Key does not contain a CN, but the 
+ * NOTE: If using RPK, then the Public Key does not contain a CN, but the
  * content of COAP_DTLS_RPK_CERT_CN is presented for the @p cn parameter.
  *
  * @param cn  The determined CN from the certificate
@@ -164,11 +164,8 @@ typedef enum coap_pki_key_t {
  */
 typedef struct coap_pki_key_pem_t {
   const char *ca_file;       /**< File location of Common CA in PEM format */
-  const char *public_cert;   /**< File location of Public Cert, or Public
-                                  Key if RPK, in PEM format */
-  const char *private_key;   /**< File location of Private Key in PEM format.
-                                  If RPK and 'EC PRIVATE KEY' this can be used
-                                  for both the public_cert and private_key */
+  const char *public_cert;   /**< File location of Public Cert */
+  const char *private_key;   /**< File location of Private Key in PEM format */
 } coap_pki_key_pem_t;
 
 /**
@@ -183,7 +180,9 @@ typedef struct coap_pki_key_pem_t {
 typedef struct coap_pki_key_pem_buf_t {
   const uint8_t *ca_cert;     /**< PEM buffer Common CA Cert */
   const uint8_t *public_cert; /**< PEM buffer Public Cert, or Public Key if RPK */
-  const uint8_t *private_key; /**< PEM buffer Private Key */
+  const uint8_t *private_key; /**< PEM buffer Private Key
+                                  If RPK and 'EC PRIVATE KEY' this can be used
+                                  for both the public_cert and private_key */
   size_t ca_cert_len;         /**< PEM buffer CA Cert length */
   size_t public_cert_len;     /**< PEM buffer Public Cert length */
   size_t private_key_len;     /**< PEM buffer Private Key length */
@@ -263,9 +262,11 @@ typedef struct coap_dtls_pki_t {
   uint8_t check_cert_revocation;   /**< 1 if revocation checks wanted */
   uint8_t allow_no_crl;            /**< 1 ignore if CRL not there */
   uint8_t allow_expired_crl;       /**< 1 if expired crl is allowed */
-  uint8_t allow_bad_md_hash;       /**< 1 if unsupported MD hashes are allowed */
-  uint8_t allow_short_rsa_length;  /**< 1 if small RSA keysizes are allowed */
-  uint8_t is_rpk_not_cert;         /**< 1 is RPK instead of Public Certificate */
+  uint8_t allow_bad_md_hash;      /**< 1 if unsupported MD hashes are allowed */
+  uint8_t allow_short_rsa_length; /**< 1 if small RSA keysizes are allowed */
+  uint8_t is_rpk_not_cert;        /**< 1 is RPK instead of Public Certificate.
+                                   *     If set, PKI key format type cannot be
+                                   *     COAP_PKI_KEY_PEM */
   uint8_t reserved[3];             /**< Reserved - must be set to 0 for
                                         future compatibility */
                                    /* Size of 3 chosen to align to next
