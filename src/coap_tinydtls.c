@@ -786,61 +786,11 @@ end:
   return decoded;
 }
 
-static size_t
-asn1_len(const uint8_t **ptr)
-{
-  size_t len = 0;
-
-  if ((**ptr) & 0x80) {
-    size_t octets = (**ptr) & 0x7f;
-    (*ptr)++;
-    while (octets) {
-      len = (len << 8) + (**ptr);
-      (*ptr)++;
-      octets--;
-    }
-  }
-  else {
-    len = (**ptr) & 0x7f;
-    (*ptr)++;
-  }
-  return len;
-}
-
-static size_t
-asn1_tag_c(const uint8_t **ptr, int *constructed, int *class)
-{
-  size_t tag = 0;
-  uint8_t byte;
-
-  byte = (**ptr);
-  *constructed = (byte & 0x20) ? 1 : 0;
-  *class = byte >> 6;
-  tag = byte & 0x1F;
-  (*ptr)++;
-  if (tag < 0x1F)
-    return tag;
-
-  /* Tag can be one byte or more based on B8 */
-  byte = (**ptr);
-  while (byte & 0x80) {
-    tag = (tag << 7) + (byte & 0x7F);
-    (*ptr)++;
-    byte = (**ptr);
-  }
-  /* Do the final one */
-  tag = (tag << 7) + (byte & 0x7F);
-  (*ptr)++;
-  return tag;
-}
-
 typedef coap_binary_t * (*asn1_callback)(const uint8_t *data, size_t size);
 
-static coap_binary_t *
-asn1_callback_privkey(const uint8_t *data, size_t size)
+static int
+asn1_verify_privkey(const uint8_t *data, size_t size)
 {
-  coap_binary_t *priv_key;
-
   /* Check if we have the private key (with optional leading 0x00) */
   /* skip leading 0x00 */
   if (size - 1 == DTLS_EC_KEY_SIZE && *data == '\000') {
@@ -850,38 +800,27 @@ asn1_callback_privkey(const uint8_t *data, size_t size)
 
   /* Check if we have the private key */
   if (size != DTLS_EC_KEY_SIZE)
-    return NULL;
+    return 0;
 
-  priv_key = coap_new_binary(DTLS_EC_KEY_SIZE);
-  if (!priv_key)
-    return NULL;
-
-  memcpy(priv_key->s, data, DTLS_EC_KEY_SIZE);
-  return priv_key;
+  return 1;
 }
 
-static coap_binary_t *
-asn1_callback_pubkey(const uint8_t *data, size_t size)
+static int
+asn1_verify_pubkey(const uint8_t *data, size_t size)
 {
-  coap_binary_t *pub_key;
+  (void)data;
 
   /* We have the public key
      (with a leading 0x00 (no unused bits) 0x04 (not compressed() */
   if (size - 2 != 2 * DTLS_EC_KEY_SIZE)
-    return NULL;
+    return 0;
 
-  pub_key = coap_new_binary(size-2);
-  if (!pub_key)
-    return NULL;
-
-  memcpy(pub_key->s, data+2, size-2);
-  return pub_key;
+  return 1;
 }
 
-static coap_binary_t *
-asn1_callback_curve(const uint8_t *data, size_t size)
+static int
+asn1_verify_curve(const uint8_t *data, size_t size)
 {
-  coap_binary_t *curve_key;
   static uint8_t prime256v1_oid[] =
          /* OID 1.2.840.10045.3.1.7 */
          { 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07 };
@@ -889,29 +828,24 @@ asn1_callback_curve(const uint8_t *data, size_t size)
   /* Check that we have the correct EC (only one supported) */
   if (size != sizeof(prime256v1_oid) ||
       memcmp(data, prime256v1_oid, size) != 0)
-    return NULL;
+    return 0;
 
-  curve_key = coap_new_binary(0);
-  return curve_key;
+  return 1;
 }
 
-static coap_binary_t *
-asn1_callback_pkcs8_version(const uint8_t *data, size_t size)
+static int
+asn1_verify_pkcs8_version(const uint8_t *data, size_t size)
 {
-  coap_binary_t *version_key;
-
   /* Check that we have the version */
   if (size != 1 || *data != 0)
-    return NULL;
+    return 0;
 
-  version_key = coap_new_binary(0);
-  return version_key;
+  return 1;
 }
 
-static coap_binary_t *
-asn1_callback_ec_identifier(const uint8_t *data, size_t size)
+static int
+asn1_verify_ec_identifier(const uint8_t *data, size_t size)
 {
-  coap_binary_t *id_key;
   static uint8_t ec_public_key_oid[] =
          /* OID 1.2.840.10045.2.1 */
          { 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01 };
@@ -919,62 +853,20 @@ asn1_callback_ec_identifier(const uint8_t *data, size_t size)
   /* Check that we have the correct ecPublicKey */
   if (size != sizeof(ec_public_key_oid) ||
       memcmp(data, ec_public_key_oid, size) != 0)
-    return NULL;
+    return 0;
 
-  id_key = coap_new_binary(0);
-  return id_key;
+  return 1;
 }
 
-static coap_binary_t *
-asn1_callback_ec_key(const uint8_t *data, size_t size)
+static int
+asn1_verify_ec_key(const uint8_t *data, size_t size)
 {
-  coap_binary_t *ec_key;
+  (void)data;
 
   if (size == 0)
-    return NULL;
+    return 0;
 
-  ec_key = coap_new_binary(size);
-  if (!ec_key)
-    return NULL;
-
-  memcpy(ec_key->s, data, size);
-  return ec_key;
-}
-
-/* caller must free off returned coap_binary_t* */
-static coap_binary_t *
-asn1_abstract_tag(const uint8_t *ptr, size_t tlen, uint8_t ltag, asn1_callback callback)
-{
-  int constructed;
-  int class;
-  const uint8_t *acp = ptr;
-  uint8_t tag = asn1_tag_c(&acp, &constructed, &class);
-  size_t len = asn1_len(&acp);
-  coap_binary_t *tag_data;
-
-  while (tlen > 0 && len <= tlen) {
-    if (class == 2 && constructed == 1) {
-      /* Skip over element description */
-      tag = asn1_tag_c(&acp, &constructed, &class);
-      len = asn1_len(&acp);
-    }
-    if (tag == ltag) {
-      tag_data = callback(acp, len);
-      if (tag_data)
-        return tag_data;
-    }
-    if (tag == 0x10 && constructed == 1) {
-      /* SEQUENCE or SEQUENCE OF */
-      tag_data = asn1_abstract_tag(acp, len, ltag, callback);
-      if (tag_data)
-        return tag_data;
-    }
-    acp += len;
-    tlen -= len;
-    tag = asn1_tag_c(&acp, &constructed, &class);
-    len = asn1_len(&acp);
-  }
-  return NULL;
+  return 1;
 }
 
 static int
@@ -985,17 +877,23 @@ asn1_derive_keys(coap_tiny_context_t *t_context,
 {
   coap_binary_t *test;
 
-  t_context->priv_key = asn1_abstract_tag(priv_data, priv_len,
-                                              0x04, asn1_callback_privkey);
+  t_context->priv_key = get_asn1_tag(COAP_ASN1_OCTETSTRING, priv_data,
+                                     priv_len, asn1_verify_privkey);
   if (!t_context->priv_key) {
     coap_log(LOG_INFO, "EC Private Key (RPK) invalid\n");
     return 0;
   }
+  /* skip leading 0x00 */
+  if (t_context->priv_key->length - 1 == DTLS_EC_KEY_SIZE &&
+      t_context->priv_key->s[0] == '\000') {
+        t_context->priv_key->length--;
+        t_context->priv_key->s++;
+  }
 
   if (!is_pkcs8) {
     /* pkcs8 abstraction tested for valid eliptic curve */
-    test = asn1_abstract_tag(priv_data, priv_len,
-                                    0x06, asn1_callback_curve);
+    test = get_asn1_tag(COAP_ASN1_IDENTIFIER, priv_data, priv_len,
+                                    asn1_verify_curve);
     if (!test) {
       coap_log(LOG_INFO, "EC Private Key (RPK) invalid elliptic curve\n");
       coap_delete_binary(t_context->priv_key);
@@ -1005,14 +903,17 @@ asn1_derive_keys(coap_tiny_context_t *t_context,
     coap_delete_binary(test);
   }
 
-  t_context->pub_key = asn1_abstract_tag(pub_data, pub_len,
-                                              0x03, asn1_callback_pubkey);
+  t_context->pub_key = get_asn1_tag(COAP_ASN1_BITSTRING, pub_data, pub_len,
+                                              asn1_verify_pubkey);
   if (!t_context->pub_key) {
     coap_log(LOG_INFO, "EC Public Key (RPK) invalid\n");
     coap_delete_binary(t_context->priv_key);
     t_context->priv_key = NULL;
     return 0;
   }
+  /* Drop leading 0x00 and 0x04 */
+  t_context->pub_key->s += 2;
+  t_context->pub_key->length -= 2;
   dtls_set_handler(t_context->dtls_context, &ec_cb);
   return 1;
 }
@@ -1022,29 +923,29 @@ ec_abstract_pkcs8_asn1(const uint8_t *asn1_ptr, size_t asn1_length)
 {
   coap_binary_t *test;
 
-  test = asn1_abstract_tag(asn1_ptr, asn1_length,
-                               0x02, asn1_callback_pkcs8_version);
+  test = get_asn1_tag(COAP_ASN1_INTEGER, asn1_ptr, asn1_length,
+                               asn1_verify_pkcs8_version);
   if (!test)
     return 0;
 
   coap_delete_binary(test);
 
-  test = asn1_abstract_tag(asn1_ptr, asn1_length,
-                               0x06, asn1_callback_ec_identifier);
+  test = get_asn1_tag(COAP_ASN1_IDENTIFIER, asn1_ptr, asn1_length,
+                               asn1_verify_ec_identifier);
   if (!test)
     return 0;
   coap_delete_binary(test);
 
-  test = asn1_abstract_tag(asn1_ptr, asn1_length,
-                               0x06, asn1_callback_curve);
+  test = get_asn1_tag(COAP_ASN1_IDENTIFIER, asn1_ptr, asn1_length,
+                               asn1_verify_curve);
   if (!test) {
     coap_log(LOG_INFO, "EC Private Key (RPK) invalid elliptic curve\n");
     return 0;
   }
   coap_delete_binary(test);
 
-  test = asn1_abstract_tag(asn1_ptr, asn1_length,
-                               0x04, asn1_callback_ec_key);
+  test = get_asn1_tag(COAP_ASN1_OCTETSTRING, asn1_ptr, asn1_length,
+                               asn1_verify_ec_key);
   return test;
 }
 

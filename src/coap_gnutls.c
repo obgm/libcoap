@@ -57,8 +57,6 @@
 #include <gnutls/crypto.h>
 #include <unistd.h>
 #if (GNUTLS_VERSION_NUMBER >= 0x030606)
-#include <sys/stat.h>
-#include <nettle/asn1.h>
 #define COAP_GNUTLS_KEY_RPK GNUTLS_KEY_DIGITAL_SIGNATURE | \
                             GNUTLS_KEY_NON_REPUDIATION | \
                             GNUTLS_KEY_KEY_ENCIPHERMENT | \
@@ -813,96 +811,6 @@ pin_callback(void *user_data, int attempt,
   return -1;
 }
 #if (GNUTLS_VERSION_NUMBER >= 0x030606)
-static size_t
-asn1_len(const uint8_t **ptr)
-{
-  size_t len = 0;
-
-  if ((**ptr) & 0x80) {
-    size_t octets = (**ptr) & 0x7f;
-    (*ptr)++;
-    while (octets) {
-      len = (len << 8) + (**ptr);
-      (*ptr)++;
-      octets--;
-    }
-  }
-  else {
-    len = (**ptr) & 0x7f;
-    (*ptr)++;
-  }
-  return len;
-}
-
-static size_t
-asn1_tag_c(const uint8_t **ptr, int *constructed, int *class)
-{
-  size_t tag = 0;
-  uint8_t byte;
-
-  byte = (**ptr);
-  *constructed = (byte & 0x20) ? 1 : 0;
-  *class = byte >> 6;
-  tag = byte & 0x1F;
-  (*ptr)++;
-  if (tag < 0x1F)
-    return tag;
-
-  /* Tag can be one byte or more based on B8 */
-  byte = (**ptr);
-  while (byte & 0x80) {
-    tag = (tag << 7) + (byte & 0x7F);
-    (*ptr)++;
-    byte = (**ptr);
-  }
-  /* Do the final one */
-  tag = (tag << 7) + (byte & 0x7F);
-  (*ptr)++;
-  return tag;
-}
-
-/* caller must free off returned gnutls_datum_t* */
-static gnutls_datum_t *
-get_asn1_tag(uint8_t ltag, const uint8_t *ptr, size_t tlen)
-{
-  int constructed;
-  int class;
-  const uint8_t *acp = ptr;
-  uint8_t tag = asn1_tag_c(&acp, &constructed, &class);
-  size_t len = asn1_len(&acp);
-  gnutls_datum_t *tag_data;
-
-  while (tlen > 0 && len <= tlen) {
-    if (class == 2 && constructed == 1) {
-      /* Skip over element description */
-      tag = asn1_tag_c(&acp, &constructed, &class);
-      len = asn1_len(&acp);
-    }
-    if (tag == ltag) {
-      uint8_t *tmp = gnutls_malloc(sizeof(gnutls_datum_t) +
-                                   len);
-      tag_data = (gnutls_datum_t *)tmp;
-      if (tag_data == NULL)
-        return NULL;
-      tag_data->size = len;
-      tag_data->data = &tmp[sizeof(gnutls_datum_t)];
-      memcpy(tag_data->data, acp, len);
-      return tag_data;
-    }
-    if (tag == 0x10 && constructed == 1) {
-      /* SEQUENCE or SEQUENCE OF */
-      tag_data = get_asn1_tag(ltag, acp, len);
-      if (tag_data)
-        return tag_data;
-    }
-    acp += len;
-    tlen -= len;
-    tag = asn1_tag_c(&acp, &constructed, &class);
-    len = asn1_len(&acp);
-  }
-  return NULL;
-}
-
 /* first part of Raw public key, this is the start of the Subject Public Key */
 static const unsigned char cert_asn1_header1[] = {
   0x30, 0x59, /* SEQUENCE, length 89 bytes */
@@ -923,37 +831,36 @@ static const unsigned char cert_asn1_header2[] = {
 static gnutls_datum_t *
 get_asn1_spki(const uint8_t *data, size_t size)
 {
-  gnutls_datum_t *pub_key = get_asn1_tag(ASN1_BITSTRING, data, size);
-  gnutls_datum_t *prime = get_asn1_tag(ASN1_IDENTIFIER, data, size);
+  coap_binary_t *pub_key = get_asn1_tag(COAP_ASN1_BITSTRING, data, size, NULL);
+  coap_binary_t *prime = get_asn1_tag(COAP_ASN1_IDENTIFIER, data, size, NULL);
+  gnutls_datum_t *spki = NULL;
 
   if (pub_key && prime) {
     size_t header_size = sizeof(cert_asn1_header1) +
                          2 +
-                         prime->size +
+                         prime->length +
                          sizeof(cert_asn1_header2);
-    uint8_t *tmp = gnutls_realloc(pub_key, sizeof(gnutls_datum_t) +
-                                           header_size +
-                                           pub_key->size);
+    uint8_t *tmp = gnutls_malloc(sizeof(gnutls_datum_t) +
+                                 header_size +
+                                 pub_key->length);
 
     if (tmp) {
-      pub_key = (gnutls_datum_t *)tmp;
-      pub_key->data = &tmp[sizeof(gnutls_datum_t)];
-      memmove(&pub_key->data[header_size], pub_key->data, pub_key->size);
-      memcpy(pub_key->data, cert_asn1_header1, sizeof(cert_asn1_header1));
-      pub_key->data[sizeof(cert_asn1_header1)] = ASN1_IDENTIFIER;
-      pub_key->data[sizeof(cert_asn1_header1)+1] = prime->size;
-      memcpy(&pub_key->data[sizeof(cert_asn1_header1)+2],
-             prime->data, prime->size);
-      memcpy(&pub_key->data[sizeof(cert_asn1_header1)+2+prime->size],
+      spki = (gnutls_datum_t *)tmp;
+      spki->data = &tmp[sizeof(gnutls_datum_t)];
+      memcpy(&spki->data[header_size], pub_key->s, pub_key->length);
+      memcpy(spki->data, cert_asn1_header1, sizeof(cert_asn1_header1));
+      spki->data[sizeof(cert_asn1_header1)] = COAP_ASN1_IDENTIFIER;
+      spki->data[sizeof(cert_asn1_header1)+1] = prime->length;
+      memcpy(&spki->data[sizeof(cert_asn1_header1)+2],
+             prime->s, prime->length);
+      memcpy(&spki->data[sizeof(cert_asn1_header1)+2+prime->length],
              cert_asn1_header2, sizeof(cert_asn1_header2));
-      pub_key->size += header_size;
-      gnutls_free(prime);
-      return pub_key;
+      spki->size = header_size + pub_key->length;
     }
   }
-  if (pub_key) gnutls_free(pub_key);
-  if (prime) gnutls_free(prime);
-  return NULL;
+  if (pub_key) coap_delete_binary(pub_key);
+  if (prime) coap_delete_binary(prime);
+  return spki;
 }
 #endif /* GNUTLS_VERSION_NUMBER >= 0x030606 */
 
