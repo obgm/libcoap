@@ -54,15 +54,13 @@ The following RFCs are supported
 
 There is (D)TLS support for the following libraries
 
-* OpenSSL (Minimum version 1.1.0)
+* OpenSSL (Minimum version 1.1.0) [PKI, PSK and PKCS11]
 
-* GnuTLS (Minimum version 3.3.0)
+* GnuTLS (Minimum version 3.3.0) [PKI, PSK, RPK(3.6.6+) and PKCS11]
 
-* MbedTLS (Minimum version 2.7.10)
-  [Currently only DTLS]
+* MbedTLS (Minimum version 2.7.10) [PKI and PSK] [Currently only DTLS]
 
-* TinyDTLS
-  [DTLS Only]
+* TinyDTLS [PSK and RPK] [DTLS Only]
 
 The examples directory contain a CoAP client, CoAP Resource Directory server
 and a CoAP server to demonstrate the use of this library.
