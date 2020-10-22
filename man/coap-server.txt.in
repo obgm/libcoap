@@ -19,7 +19,8 @@ SYNOPSIS
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
               [*-s* match_psk_sni_file]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
-              [*-J* pkcs11_pin] [*-R* root_cafile] [*-S* match_pki_sni_file]]
+              [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* root_cafile]
+              [*-S* match_pki_sni_file]]
 
 DESCRIPTION
 -----------
@@ -130,6 +131,11 @@ definitions have to be in DER, not PEM, format.  Otherwise all of
 
 *-J* pkcs11_pin::
    The user pin to unlock access to the PKCS11 token.
+
+*-M*::
+  Raw Public Key (RPK) PEM file that contains both PUBLIC KEY and PRIVATE KEY
+  or just EC PRIVATE KEY.
+  (GnuTLS and TinyDTLS support only) '-C cafile' not required.
 
 *-R* root_cafile::
   PEM file containing the set of trusted root CAs that are to be used to

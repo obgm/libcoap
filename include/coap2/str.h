@@ -147,7 +147,9 @@ coap_bin_const_t *coap_new_bin_const(const uint8_t *data, size_t size);
  */
 void coap_delete_bin_const(coap_bin_const_t *binary);
 
+#ifndef COAP_MAX_STR_CONST_FUNC
 #define COAP_MAX_STR_CONST_FUNC 2
+#endif /* COAP_MAX_STR_CONST_FUNC */
 
 /**
  * Take the specified byte array (text) and create a coap_str_const_t *

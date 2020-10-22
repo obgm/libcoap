@@ -1332,6 +1332,11 @@ static int
 setup_pki_ssl(SSL *ssl,
                  coap_dtls_pki_t* setup_data, coap_dtls_role_t role
 ) {
+  if (setup_data->is_rpk_not_cert) {
+    coap_log(LOG_ERR,
+          "RPK Support not available in OpenSSL\n");
+    return 0;
+  }
   switch (setup_data->pki_key.key_type) {
   case COAP_PKI_KEY_PEM:
     if (setup_data->pki_key.key.pem.public_cert &&
@@ -2951,6 +2956,11 @@ int coap_dtls_hello(coap_session_t *session,
 
   SSL_set_mtu(dtls->ssl, session->mtu);
   ssl_data = (coap_ssl_data*)BIO_get_data(SSL_get_rbio(dtls->ssl));
+  assert(ssl_data != NULL);
+  if (ssl_data->pdu_len) {
+    coap_log(LOG_ERR, "** %s: Previous data not read %u bytes\n",
+             coap_session_str(session), ssl_data->pdu_len);
+  }
   ssl_data->session = session;
   ssl_data->pdu = data;
   ssl_data->pdu_len = (unsigned)data_len;
@@ -2966,6 +2976,11 @@ int coap_dtls_hello(coap_session_t *session,
     r = 1;
   }
 
+  /*
+   * Cannot check if data is left on the stack in error as DTLSv1_listen()
+   * only does a 'peek' read of the incoming data.
+   *
+   */
   return r;
 }
 
@@ -2980,13 +2995,20 @@ int coap_dtls_receive(coap_session_t *session,
   int in_init = SSL_in_init(ssl);
   uint8_t pdu[COAP_RXBUFFER_SIZE];
   ssl_data = (coap_ssl_data*)BIO_get_data(SSL_get_rbio(ssl));
+  assert(ssl_data != NULL);
+
+  if (ssl_data->pdu_len) {
+    coap_log(LOG_ERR, "** %s: Previous data not read %u bytes\n",
+             coap_session_str(session), ssl_data->pdu_len);
+  }
   ssl_data->pdu = data;
   ssl_data->pdu_len = (unsigned)data_len;
 
   session->dtls_event = -1;
   r = SSL_read(ssl, pdu, (int)sizeof(pdu));
   if (r > 0) {
-    return coap_handle_dgram(session->context, session, pdu, (size_t)r);
+    r =  coap_handle_dgram(session->context, session, pdu, (size_t)r);
+    goto finished;
   } else {
     int err = SSL_get_error(ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
@@ -3011,11 +3033,19 @@ int coap_dtls_receive(coap_session_t *session,
       if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
           session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
         coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
+        ssl_data = NULL;
         r = -1;
       }
     }
   }
 
+finished:
+  if (ssl_data && ssl_data->pdu_len) {
+    /* pdu data is held on stack which will not stay there */
+    coap_log(LOG_DEBUG, "coap_dtls_receive: ret %d: remaining data %u\n", r, ssl_data->pdu_len);
+    ssl_data->pdu_len = 0;
+    ssl_data->pdu = NULL;
+  }
   return r;
 }
 

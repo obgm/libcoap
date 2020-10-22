@@ -82,6 +82,11 @@ static char *pkcs11_pin = NULL; /* PKCS11 pin to unlock access to token */
 static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM,
                                   DER or PKCS11 URI */
 static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
+static int is_rpk_not_cert = 0; /* Cert is RPK if set */
+static uint8_t *cert_mem = NULL; /* certificate and private key in PEM_BUF */
+static uint8_t *ca_mem = NULL;   /* CA for cert checking in PEM_BUF */
+static size_t cert_mem_len = 0;
+static size_t ca_mem_len = 0;
 
 typedef struct ih_def_t {
   char* hint_match;
@@ -648,7 +653,7 @@ usage( const char *program, const char *version) {
      "\t\t[-O num,text] [-P addr[:port]] [-T token] [-U]\n"
      "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-C cafile] [-J pkcs11_pin]\n"
-     "\t\t[-R root_cafile] [-S match_pki_sni_file]] URI\n"
+     "\t\t[-M raw_pk] [-R root_cafile] [-S match_pki_sni_file]] URI\n"
      "\tURI can be an absolute URI or a URI prefixed with scheme and host\n\n"
      "General Options\n"
      "\t-a addr\t\tThe local interface address to use\n"
@@ -722,6 +727,9 @@ usage( const char *program, const char *version) {
      "\t       \t\tthe certfile and cafile (as in '-c certfile -C certfile')\n"
      "\t       \t\tto trigger validation\n"
      "\t-J pkcs11_pin\tThe user pin to unlock access to the PKCS11 token\n"
+     "\t-M rpk_file\tRaw Public Key (RPK) PEM file or PKCS11 URI that contains\n"
+     "\t       \t\tboth PUBLIC KEY and PRIVATE KEY or just EC PRIVATE KEY.\n"
+     "\t       \t\t(GnuTLS and TinyDTLS support only) '-C cafile' not required\n"
      "\t-R root_cafile\tPEM file containing the set of trusted root CAs that\n"
      "\t       \t\tare to be used to validate the server certificate.\n"
      "\t       \t\tThe '-C cafile' does not have to be in this list and is\n"
@@ -1304,6 +1312,37 @@ static int cmdline_read_hint_check(const char *arg) {
   return valid_ihs.count > 0;
 }
 
+static uint8_t *read_file_mem(const char* filename, size_t *length) {
+  FILE *f;
+  uint8_t *buf;
+  struct stat statbuf;
+
+  *length = 0;
+  if (!filename || !(f = fopen(filename, "r")))
+    return NULL;
+
+  if (fstat(fileno(f), &statbuf) == -1) {
+    fclose(f);
+    return NULL;
+  }
+
+  buf = coap_malloc(statbuf.st_size+1);
+  if (!buf) {
+    fclose(f);
+    return NULL;
+  }
+
+  if (fread(buf, 1, statbuf.st_size, f) != (size_t)statbuf.st_size) {
+    fclose(f);
+    coap_free(buf);
+    return NULL;
+  }
+  buf[statbuf.st_size] = '\000';
+  *length = (size_t)(statbuf.st_size + 1);
+  fclose(f);
+  return buf;
+}
+
 static int
 verify_cn_callback(const char *cn,
                    const uint8_t *asn1_public_cert UNUSED_PARAM,
@@ -1379,7 +1418,7 @@ setup_pki(coap_context_t *ctx) {
      * coap_context_set_pki_root_cas(), but this is used to define what
      * checking actually takes place.
      */
-    dtls_pki.verify_peer_cert        = 1;
+    dtls_pki.verify_peer_cert        = !is_rpk_not_cert;
     dtls_pki.require_peer_cert       = 1;
     dtls_pki.allow_self_signed       = 1;
     dtls_pki.allow_expired_certs     = 1;
@@ -1393,10 +1432,13 @@ setup_pki(coap_context_t *ctx) {
     dtls_pki.validate_sni_call_back  = NULL;
     dtls_pki.sni_call_back_arg       = NULL;
   }
-  if (uri.host.length)
+  if ((uri.host.length == 3 && memcmp(uri.host.s, "::1", 3) != 0) ||
+      (uri.host.length == 9 && memcmp(uri.host.s, "127.0.0.1", 9) != 0))
     memcpy(client_sni, uri.host.s, min(uri.host.length, sizeof(client_sni)-1));
   else
     memcpy(client_sni, "localhost", 9);
+
+  dtls_pki.is_rpk_not_cert = is_rpk_not_cert;
   dtls_pki.client_sni = client_sni;
   if ((key_file && strncasecmp (key_file, "pkcs11:", 7) == 0) ||
       (cert_file && strncasecmp (cert_file, "pkcs11:", 7) == 0) ||
@@ -1408,11 +1450,23 @@ setup_pki(coap_context_t *ctx) {
     dtls_pki.pki_key.key.pkcs11.ca = ca_file;
     dtls_pki.pki_key.key.pkcs11.user_pin = pkcs11_pin;
   }
-  else {
+  else if (!is_rpk_not_cert) {
     dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
     dtls_pki.pki_key.key.pem.public_cert = cert_file;
     dtls_pki.pki_key.key.pem.private_key = key_file ? key_file : cert_file;
     dtls_pki.pki_key.key.pem.ca_file = ca_file;
+  }
+  else {
+    /* Map file into memory */
+    ca_mem = read_file_mem(ca_file, &ca_mem_len);
+    cert_mem = read_file_mem(cert_file, &cert_mem_len);
+    dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM_BUF;
+    dtls_pki.pki_key.key.pem_buf.ca_cert = ca_mem;
+    dtls_pki.pki_key.key.pem_buf.public_cert = cert_mem;
+    dtls_pki.pki_key.key.pem_buf.private_key = cert_mem;
+    dtls_pki.pki_key.key.pem_buf.ca_cert_len = ca_mem_len;
+    dtls_pki.pki_key.key.pem_buf.public_cert_len = cert_mem_len;
+    dtls_pki.pki_key.key.pem_buf.private_key_len = cert_mem_len;
   }
   return &dtls_pki;
 }
@@ -1563,7 +1617,7 @@ main(int argc, char **argv) {
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:o:p:rs:t:u:v:A:B:C:J:K:H:NO:P:R:T:U")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:o:p:rs:t:u:v:A:B:C:J:K:H:M:NO:P:R:T:U")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1631,6 +1685,10 @@ main(int argc, char **argv) {
       break;
     case 't':
       cmdline_content_type(optarg, COAP_OPTION_CONTENT_TYPE);
+      break;
+    case 'M':
+      cert_file = optarg;
+      is_rpk_not_cert = 1;
       break;
     case 'O':
       cmdline_option(optarg);
@@ -1850,6 +1908,10 @@ main(int argc, char **argv) {
 
  finish:
 
+  if (ca_mem)
+    coap_free(ca_mem);
+  if (cert_mem)
+    coap_free(cert_mem);
   for (i = 0; i < valid_ihs.count; i++) {
     free(valid_ihs.ih_list[i].hint_match);
     coap_delete_bin_const(valid_ihs.ih_list[i].new_identity);

@@ -428,6 +428,11 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
 {
   int ret;
 
+  if (setup_data->is_rpk_not_cert) {
+    coap_log(LOG_ERR,
+          "RPK Support not available in MbedTLS\n");
+    return -1;
+  }
   switch (setup_data->pki_key.key_type) {
   case COAP_PKI_KEY_PEM:
     if (setup_data->pki_key.key.pem.public_cert &&
@@ -1128,6 +1133,11 @@ static int do_mbedtls_handshake(coap_session_t *c_session,
     ret = -1;
     mbedtls_ssl_session_reset(&m_env->ssl);
     break;
+  case MBEDTLS_ERR_SSL_INVALID_MAC:
+    coap_log(LOG_INFO, "MAC verification failed\n");
+    ret = -1;
+    mbedtls_ssl_session_reset(&m_env->ssl);
+    break;
   case MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE:
   case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
@@ -1435,7 +1445,6 @@ void *coap_dtls_new_server_session(coap_session_t *c_session)
   coap_mbedtls_env_t *m_env =
          (coap_mbedtls_env_t *)c_session->tls;
   if (m_env) {
-    m_env->seen_client_hello = 1;
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 #if MBEDTLS_VERSION_NUMBER >= 0x02100100
     mbedtls_ssl_set_mtu(&m_env->ssl, c_session->mtu);
@@ -1590,6 +1599,11 @@ void coap_dtls_handle_timeout(coap_session_t *c_session)
   return;
 }
 
+/*
+ * return +ve data amount
+ *          0 no more
+ *         -1 error
+ */
 int coap_dtls_receive(coap_session_t *c_session,
                       const uint8_t *data,
                       size_t data_len)
@@ -1598,11 +1612,13 @@ int coap_dtls_receive(coap_session_t *c_session,
 
   c_session->dtls_event = -1;
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
+  coap_ssl_t *ssl_data;
+
   assert(m_env != NULL);
 
-  coap_ssl_t *ssl_data = &m_env->coap_ssl_data;
+  ssl_data = &m_env->coap_ssl_data;
   if (ssl_data->pdu_len) {
-    coap_log(LOG_INFO, "** %s: Previous data not read %u bytes\n",
+    coap_log(LOG_ERR, "** %s: Previous data not read %u bytes\n",
              coap_session_str(c_session), ssl_data->pdu_len);
   }
   ssl_data->pdu = data;
@@ -1632,16 +1648,22 @@ int coap_dtls_receive(coap_session_t *c_session,
 #if COAP_CONSTRAINED_STACK
       coap_mutex_unlock(&b_static_mutex);
 #endif /* COAP_CONSTRAINED_STACK */
-      return ret;
+      goto finish;
     }
-    else if (ret == 0 || ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
+    switch (ret) {
+    case 0:
+    case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+    case MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE:
       c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
-    }
-    else if (ret != MBEDTLS_ERR_SSL_WANT_READ) {
+      break;
+    case MBEDTLS_ERR_SSL_WANT_READ:
+      break;
+    default:
       coap_log(LOG_WARNING,
                "coap_dtls_receive: "
                "returned -0x%x: '%s' (length %zd)\n",
                -ret, get_error_string(ret), data_len);
+      break;
     }
 #if COAP_CONSTRAINED_STACK
     coap_mutex_unlock(&b_static_mutex);
@@ -1674,12 +1696,25 @@ int coap_dtls_receive(coap_session_t *c_session,
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
       c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
+      ssl_data = NULL;
       ret = -1;
     }
+  }
+finish:
+  if (ssl_data && ssl_data->pdu_len) {
+    /* pdu data is held on stack which will not stay there */
+    coap_log(LOG_DEBUG, "coap_dtls_receive: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
+    ssl_data->pdu_len = 0;
+    ssl_data->pdu = NULL;
   }
   return ret;
 }
 
+/*
+ * return -1  failure
+ *         0  not completed
+ *         1  client hello seen
+ */
 int coap_dtls_hello(coap_session_t *c_session,
                     const uint8_t *data,
                     size_t data_len)
@@ -1694,46 +1729,37 @@ int coap_dtls_hello(coap_session_t *c_session,
   return -1;
 #else /* MBEDTLS_SSL_PROTO_DTLS && MBEDTLS_SSL_SRV_C */
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
-  coap_ssl_t *ssl_data = m_env ? &m_env->coap_ssl_data : NULL;
+  coap_ssl_t *ssl_data;
   int ret;
-
-  if (m_env) {
-    if((ret = mbedtls_ssl_set_client_transport_id(&m_env->ssl,
-                              (unsigned char *)&c_session->addr_info.remote,
-                              sizeof(c_session->addr_info.remote))) != 0) {
-      coap_log(LOG_ERR,
-               "mbedtls_ssl_set_client_transport_id() returned -0x%x: '%s'\n",
-               -ret, get_error_string(ret));
-      return -1;
-    }
-  }
 
   if (!m_env) {
     m_env = coap_dtls_new_mbedtls_env(c_session, COAP_DTLS_ROLE_SERVER);
     if (m_env) {
       c_session->tls = m_env;
-      ssl_data = &m_env->coap_ssl_data;
-      ssl_data->pdu = data;
-      ssl_data->pdu_len = (unsigned)data_len;
-      if((ret = mbedtls_ssl_set_client_transport_id(&m_env->ssl,
-                              (unsigned char *)&c_session->addr_info.remote,
-                              sizeof(c_session->addr_info.remote))) != 0) {
-        coap_log(LOG_ERR,
-                   "mbedtls_ssl_set_client_transport_id() returned -0x%x: '%s'\n",
-                   -ret, get_error_string(ret));
-        return -1;
-      }
-      ret = do_mbedtls_handshake(c_session, m_env);
-      if (ret == 0 || m_env->seen_client_hello) {
-        m_env->seen_client_hello = 0;
-        return 1;
-      }
     }
-    return 0;
+    else {
+      /* error should have already been reported */
+      return -1;
+    }
   }
 
+  if((ret = mbedtls_ssl_set_client_transport_id(&m_env->ssl,
+                            (unsigned char *)&c_session->addr_info.remote,
+                            sizeof(c_session->addr_info.remote))) != 0) {
+    coap_log(LOG_ERR,
+             "mbedtls_ssl_set_client_transport_id() returned -0x%x: '%s'\n",
+             -ret, get_error_string(ret));
+    return -1;
+  }
+
+  ssl_data = &m_env->coap_ssl_data;
+  if (ssl_data->pdu_len) {
+    coap_log(LOG_ERR, "** %s: Previous data not read %u bytes\n",
+             coap_session_str(c_session), ssl_data->pdu_len);
+  }
   ssl_data->pdu = data;
   ssl_data->pdu_len = (unsigned)data_len;
+
   ret = do_mbedtls_handshake(c_session, m_env);
   if (ret == 0 || m_env->seen_client_hello) {
     /* The test for seen_client_hello gives the ability to setup a new
@@ -1741,10 +1767,20 @@ int coap_dtls_hello(coap_session_t *c_session,
        and safely allow updating of the m_env and separately
        letting a new session cleanly start up.
      */
-     m_env->seen_client_hello = 0;
-     return 1;
+    m_env->seen_client_hello = 0;
+    ret = 1;
   }
-  return 0;
+  else {
+    ret = 0;
+  }
+
+  if (ssl_data && ssl_data->pdu_len) {
+    /* pdu data is held on stack which will not stay there */
+    coap_log(LOG_DEBUG, "coap_dtls_hello: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
+    ssl_data->pdu_len = 0;
+    ssl_data->pdu = NULL;
+  }
+  return ret;
 #endif /* MBEDTLS_SSL_PROTO_DTLS && MBEDTLS_SSL_SRV_C */
 }
 

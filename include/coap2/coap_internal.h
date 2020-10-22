@@ -46,6 +46,7 @@
 #include "coap_mutex.h"
 
 /* Specifically defined internal .h files */
+#include "coap_asn1_internal.h"
 #include "coap_cache_internal.h"
 #include "coap_session_internal.h"
 #include "coap_subscribe_internal.h"
