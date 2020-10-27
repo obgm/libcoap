@@ -30,7 +30,7 @@ SYNOPSIS
 *void coap_free_context(coap_context_t *_context_);*
 
 *int coap_context_set_pki(coap_context_t *_context_,
-coap_dtls_pki_t *_setup_data_);*
+const coap_dtls_pki_t *_setup_data_);*
 
 *int coap_context_set_pki_root_cas(coap_context_t *_context_,
 const char *_ca_file_, const char *_ca_dir_);*
@@ -124,7 +124,12 @@ root CAs to be used instead of the default set of root CAs provided as a part
 of the TLS library.  _ca_file_ points to a PEM encoded file containing the
 list of CAs.  _ca_file can be NULL.  _ca_dir_ points to a directory
 containing a set of PEM encoded files containing rootCAs.  _ca_dir_ can be
-NULL. One or both of _ca_file_ and _ca_dir_ must be set.
+NULL. One or both of _ca_file_ and _ca_dir_ must be set. +
+*NOTE:* Some TLS libraries send the full list of CAs added by this function
+during the (D)TLS session setup handshakes. To stop this, either provide a
+single CA using the _ca_file_ definition in _pki_key_ in _setup_data_ variable
+when calling *coap_context_set_pki*(), or set _check_common_ca to 0 in
+_setup_data_ variable. See *coap_encryption*(3).
 
 The *coap_context_set_psk2*() function is used to configure the TLS context
 using the _setup_data_ variables as defined in the
@@ -294,7 +299,7 @@ setup_server_context_pki (const char *public_cert_file,
   /* see coap_encryption(3) */
   dtls_pki.version                 = COAP_DTLS_PKI_SETUP_VERSION;
   dtls_pki.verify_peer_cert        = 1;
-  dtls_pki.require_peer_cert       = 1;
+  dtls_pki.check_common_ca         = 1;
   dtls_pki.allow_self_signed       = 1;
   dtls_pki.allow_expired_certs     = 1;
   dtls_pki.cert_chain_validation   = 1;

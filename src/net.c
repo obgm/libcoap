@@ -412,7 +412,7 @@ int coap_context_set_psk2(coap_context_t *ctx,
 }
 
 int coap_context_set_pki(coap_context_t *ctx,
-  coap_dtls_pki_t* setup_data
+  const coap_dtls_pki_t* setup_data
 ) {
   if (!setup_data)
     return 0;
@@ -1508,7 +1508,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
           session->read_header[0] = *p++;
           bytes_read -= 1;
           if (!coap_pdu_parse_header_size(session->proto,
-            session->read_header)) {
+                                          session->read_header)) {
             bytes_read = -1;
             break;
           }

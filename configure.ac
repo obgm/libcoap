@@ -388,7 +388,7 @@ if test "x$build_dtls" = "xyes"; then
     # mbed TLS [does not have mbedtls.pc pkg-config file]
     AC_CHECK_LIB(mbedtls, mbedtls_ssl_handshake,
                  [have_mbedtls="yes"; MbedTLS_CFLAGS="" ; MbedTLS_LIBS="-lmbedtls -lmbedcrypto -lmbedx509"],
-                 [have_mbedtls="no"])
+                 [have_mbedtls="no"], -lmbedx509 -lmbedcrypto)
 
     # TinyDTLS ?
     # TBD ?

@@ -290,7 +290,7 @@ setup_client_session_pki (struct in_addr ip_address,
   /* See coap_encryption(3) */
   dtls_pki.version                 = COAP_DTLS_PKI_SETUP_VERSION;
   dtls_pki.verify_peer_cert        = 1;
-  dtls_pki.require_peer_cert       = 1;
+  dtls_pki.check_common_ca         = 1;
   dtls_pki.allow_self_signed       = 1;
   dtls_pki.allow_expired_certs     = 1;
   dtls_pki.cert_chain_validation   = 1;

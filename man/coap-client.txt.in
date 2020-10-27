@@ -20,8 +20,8 @@ SYNOPSIS
               [*-H* hoplimit] [*-K* interval] [*-N*] [*-O* num,text]
               [*-P* scheme://addr[:port]] [*-T* token] [*-U*]
               [[*-h* match_hint_file] [*-k* key] [*-u* user]]
-              [[*-c* certfile] [*-j* keyfile] [*-C* cafile] [*-J* pkcs11_pin]
-              [*-M* rpk_file] [*-R* root_cafile]] URI
+              [[*-c* certfile] [*-j* keyfile] [-n] [*-C* cafile]
+              [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]] URI
 
 DESCRIPTION
 -----------
@@ -148,19 +148,20 @@ OPTIONS - PSK
 (If supported by underlying (D)TLS library)
 
 *-h* match_hint_file::
-   This option denotes a file that contains one or more lines of Identity
-   Hints to match for new user and new pre-shared key (PSK) (comma separated)
-   to be used.
-   E.g., entry per line +
-   hint_to_match,new_user,new_key +
+   This is a file that contains one or more lines of received Identity Hints
+   to match to use different user identity and associated pre-shared key (PSK)
+   (comma separated) instead of the *-k key* and *-u user* options. E.g., per
+   line +
+   hint_to_match,use_user,with_key +
    A line that starts with # is treated as a comment. +
-   Note: *-k key* and *-u user* still need to be defined for the default case.
+   Note: *-k key* and *-u user* still need to be defined for the default case in
+   case there is no match.
 
 *-k* key::
-   Pre-shared key for the specified user (*-u* option also required).
+   Pre-shared key for the specified user identity (*-u* option also required).
 
 *-u* user::
-   User identity for pre-shared key mode (*-k* option also required).
+   User identity to send for pre-shared key mode (*-k* option also required).
 
 OPTIONS - PKI
 -------------
@@ -172,35 +173,41 @@ definitions have to be in DER, not PEM, format.  Otherwise all of
 *certfile*, *keyfile* or *cafile* are in PEM format.
 
 *-c* certfile::
-   PEM file or PKCS11 URI for the certificate. The private key can be in the
-   PEM file, or use the same PKCS11 URI. If not, the private key is defined
+   PEM file or PKCS11 URI for the certificate. The private key can also be in
+   the PEM file, or has the same PKCS11 URI. If not, the private key is defined
    by *-j keyfile*.
 
 *-j* keyfile::
    PEM file or PKCS11 URI for the private key for the certificate in *-c
    certfile* if the parameter is different from certfile in *-c certfile*.
 
+*-n* ::
+  Disable remote peer certificate checking.
+
 *-C* cafile::
-  PEM file or PKCS11 URI for the CA certificate that was used to sign the
-  certfile defined using *-c certfile*.
-  This will trigger the validation of the server certificate.
-  If certfile is self-signed (as defined by *-c certfile*), then you need to
-  have on the command line the same filename for both the certfile and cafile
-  (as in *-c certfile -C certfile*) to trigger validation.
+PEM file or PKCS11 URI for the CA certificate that was used to sign the server
+  certfile. Ideally the client certificate should be signed by the same CA so
+  that mutual authentication can take place. The contents of cafile are added
+  to the trusted store of root CAs. Using the *-C* or *-R* options will trigger
+  the validation of the server certificate unless overridden by the *-n* option.
 
 *-J* pkcs11_pin::
   The user pin to unlock access to the PKCS11 token.
 
 *-M* rpk_file::
-  Raw Public Key (RPK) PEM file that contains both PUBLIC KEY and PRIVATE KEY
-  or just EC PRIVATE KEY.
-  (GnuTLS and TinyDTLS support only) '-C cafile' not required.
+  Raw Public Key (RPK) PEM file or PKCS11 URI that contains both PUBLIC KEY
+  and PRIVATE KEY or just EC PRIVATE KEY. (GnuTLS and TinyDTLS(PEM) support
+  only).  *-C cafile* or *-R trust_casfile* are not required.
 
-*-R* root_cafile::
+*-R* trust_casfile::
   PEM file containing the set of trusted root CAs that are to be used to
-  validate the server certificate.  The *-C cafile* does not have to be in
-  this list and is "trusted" for the verification.
-  Alternatively, this can point to a directory containing a set of CA PEM files.
+  validate the server certificate. Alternatively, this can point to a
+  directory containing a set of CA PEM files. The *-C cafile* CA does not have
+  to be in this list and is trusted for the validation. Using
+  *-R trust_casfile* disables common CA mutual authentication which can only
+  be done by using *-C cafile*. Using the *-C* or *-R* options will will
+  trigger the validation of the server certificate unless overridden by the
+  *-n* option.
 
 EXAMPLES
 --------

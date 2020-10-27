@@ -417,8 +417,11 @@ typedef struct coap_dtls_pki_t {
 
   /* Options to enable different TLS functionality in libcoap */
   uint8_t verify_peer_cert;         /* 1 if peer cert is to be verified */
-  uint8_t require_peer_cert;        /* 1 if peer cert is required */
-  uint8_t allow_self_signed;        /* 1 if self signed certs are allowed */
+  uint8_t check_common_ca;          /* 1 if peer cert is to be signed by
+                                     * the same CA as the local cert */
+  uint8_t allow_self_signed;        /* 1 if self-signed certs are allowed */
+  uint8_t allow_self_signed;        /* 1 if self-signed certs are allowed.
+                                     * Ignored if check_common_ca set */
   uint8_t allow_expired_certs;      /* 1 if expired certs are allowed */
   uint8_t cert_chain_validation;    /* 1 if to check cert_chain_verify_depth */
   uint8_t cert_chain_verify_depth;  /* recommended depth is 3 */
@@ -486,13 +489,20 @@ for different versions of the coap_dtls_pki_t structure in the future.
 *SECTION: PKI/RPK: coap_dtls_pki_t: Peer Certificate Checking*
 
 *verify_peer_cert* Set to 1 to check that the peer's certificate is valid if
-provided, else 0.
+provided, else 0. If not set, check_common_ca, allow_self_signed,
+allow_expired_certs, cert_chain_validation, cert_chain_verify_depth,
+check_cert_revocation, allow_no_crl, allow_expired_crl, allow_bad_md_hash
+and allow_short_rsa_length settings are all ignored.
 
-*require_peer_cert* Set to 1 to enforce that the peer provides a certificate,
-else 0.  If the Server, this initiates a request for the peer certificate.
+*check_common_ca* Set to 1 to check that the CA that signed the peer's
+certificate is the same CA that signed the local certificate
+else 0.  If set to 1 and *verify_peer_cert* is set to 1, then for the server, a
+list of valid CAs are sent to client.  For the client, the logic will check
+that both the client and server certificates are signed by the same CA.
 
 *allow_self_signed* Set to 1 to allow the peer (or any certificate in the
-certificate chain) to be a self-signed certificate, else 0.
+certificate chain) to be a self-signed certificate, else 0. If
+*check_common_ca* is set, then a self-signed certificate will not be allowed.
 
 *allow_expired_certs* Set to 1 to allow certificates that have either expired,
 or are not yet valid to be allowed, else 0.
@@ -524,7 +534,11 @@ definition to be valid, else 0.
 *allow_short_rsa_length* Set to 1 if small RSA keysizes are allowed, else 0.
 
 *is_rpk_not_cert* Set to 1 if the Certificate is actually a Raw Public Key.
-If set, PKI key format type cannot be COAP_PKI_KEY_PEM.
+If set, PKI key format type cannot be COAP_PKI_KEY_PEM.  If set,
+check_common_ca, allow_self_signed, allow_expired_certs,
+cert_chain_validation, cert_chain_verify_depth, check_cert_revocation,
+allow_no_crl, allow_expired_crl, allow_bad_md_hash and
+allow_short_rsa_length settings are all ignored.
 
 *SECTION: PKI/RPK: coap_dtls_pki_t: Reserved*
 
@@ -941,7 +955,7 @@ setup_server_context_pki (const char *public_cert_file,
 
   dtls_pki.version                 = COAP_DTLS_PKI_SETUP_VERSION;
   dtls_pki.verify_peer_cert        = 1;
-  dtls_pki.require_peer_cert       = 1;
+  dtls_pki.check_common_ca         = 1;
   dtls_pki.allow_self_signed       = 1;
   dtls_pki.allow_expired_certs     = 1;
   dtls_pki.cert_chain_validation   = 1;

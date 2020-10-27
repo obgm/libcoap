@@ -2,7 +2,7 @@
  * coap_gnutls.c -- GnuTLS Datagram Transport Layer Support for libcoap
  *
  * Copyright (C) 2017 Dag Bjorklund <dag.bjorklund@comsel.fi>
- * Copyright (C) 2018-2020 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -97,6 +97,7 @@ typedef struct coap_gnutls_env_t {
   int established;
   int doing_dtls_timeout;
   coap_tick_t last_timeout;
+  int sent_alert;
 } coap_gnutls_env_t;
 
 #define IS_PSK (1 << 0)
@@ -241,8 +242,8 @@ coap_gnutls_log_func(int level, const char* text)
  */
 int
 coap_dtls_context_set_pki(coap_context_t *c_context,
-                          coap_dtls_pki_t* setup_data,
-                          coap_dtls_role_t role UNUSED)
+                          const coap_dtls_pki_t* setup_data,
+                          const coap_dtls_role_t role UNUSED)
 {
   coap_gnutls_context_t *g_context =
                          ((coap_gnutls_context_t *)c_context->dtls_context);
@@ -251,6 +252,34 @@ coap_dtls_context_set_pki(coap_context_t *c_context,
     return 0;
 
   g_context->setup_data = *setup_data;
+  if (!g_context->setup_data.verify_peer_cert) {
+    /* Needs to be clear so that no CA DNs are transmitted */
+    g_context->setup_data.check_common_ca = 0;
+    if (g_context->setup_data.is_rpk_not_cert) {
+      /* Disable all of these as they cannot be checked */
+      g_context->setup_data.allow_self_signed = 0;
+      g_context->setup_data.allow_expired_certs = 0;
+      g_context->setup_data.cert_chain_validation = 0;
+      g_context->setup_data.cert_chain_verify_depth = 0;
+      g_context->setup_data.check_cert_revocation = 0;
+      g_context->setup_data.allow_no_crl = 0;
+      g_context->setup_data.allow_expired_crl = 0;
+      g_context->setup_data.allow_bad_md_hash = 0;
+      g_context->setup_data.allow_short_rsa_length = 0;
+    }
+    else {
+      /* Allow all of these but warn if issue */
+      g_context->setup_data.allow_self_signed = 1;
+      g_context->setup_data.allow_expired_certs = 1;
+      g_context->setup_data.cert_chain_validation = 1;
+      g_context->setup_data.cert_chain_verify_depth = 10;
+      g_context->setup_data.check_cert_revocation = 1;
+      g_context->setup_data.allow_no_crl = 1;
+      g_context->setup_data.allow_expired_crl = 1;
+      g_context->setup_data.allow_bad_md_hash = 1;
+      g_context->setup_data.allow_short_rsa_length = 1;
+    }
+  }
   g_context->psk_pki_enabled |= IS_PKI;
   return 1;
 }
@@ -570,6 +599,7 @@ typedef struct {
   char *san_or_cn;
   const gnutls_datum_t *cert_list;
   unsigned int cert_list_size;
+  int self_signed; /* 1 if cert self-signed, 0 otherwise */
 } coap_gnutls_certificate_info_t;
 
 /*
@@ -586,7 +616,12 @@ static gnutls_certificate_type_t get_san_or_cn(gnutls_session_t g_session,
   char *cn;
   int ret;
 
+#if (GNUTLS_VERSION_NUMBER >= 0x030606)
+  cert_info->certificate_type = gnutls_certificate_type_get2(g_session,
+                                                           GNUTLS_CTYPE_PEERS);
+#else /* < 3.6.6 */
   cert_info->certificate_type = gnutls_certificate_type_get(g_session);
+#endif /* < 3.6.6 */
   if (cert_info->certificate_type != GNUTLS_CRT_X509)
     return cert_info->certificate_type;
 
@@ -603,6 +638,8 @@ static gnutls_certificate_type_t get_san_or_cn(gnutls_session_t g_session,
   /* Interested only in first cert in chain */
   G_CHECK(gnutls_x509_crt_import(cert, &cert_info->cert_list[0],
           GNUTLS_X509_FMT_DER), "gnutls_x509_crt_import");
+
+  cert_info->self_signed = gnutls_x509_crt_check_issuer(cert, cert);
 
   size = sizeof(dn) -1;
   /* See if there is a Subject Alt Name first */
@@ -663,29 +700,42 @@ fail:
 static int cert_verify_gnutls(gnutls_session_t g_session)
 {
   unsigned int status = 0;
+  unsigned int fail = 0;
   coap_session_t *c_session =
                 (coap_session_t *)gnutls_transport_get_ptr(g_session);
   coap_gnutls_context_t *g_context =
              (coap_gnutls_context_t *)c_session->context->dtls_context;
+  coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
   int alert = GNUTLS_A_BAD_CERTIFICATE;
   int ret;
   coap_gnutls_certificate_info_t cert_info;
   gnutls_certificate_type_t cert_type;
 
   memset(&cert_info, 0, sizeof(cert_info));
+  cert_type = get_san_or_cn(g_session, &cert_info);
+#if (GNUTLS_VERSION_NUMBER >= 0x030606)
+  if (cert_type == GNUTLS_CRT_RAW)
+    goto finish;
+#endif /* >= 3.6.6 */
 
   G_CHECK(gnutls_certificate_verify_peers(g_session, NULL, 0, &status),
           "gnutls_certificate_verify_peers");
 
-  cert_type = get_san_or_cn(g_session, &cert_info);
-
   if (status) {
     status &= ~(GNUTLS_CERT_INVALID);
     if (status & (GNUTLS_CERT_NOT_ACTIVATED|GNUTLS_CERT_EXPIRED)) {
+      status &= ~(GNUTLS_CERT_NOT_ACTIVATED|GNUTLS_CERT_EXPIRED);
       if (g_context->setup_data.allow_expired_certs) {
-        status &= ~(GNUTLS_CERT_NOT_ACTIVATED|GNUTLS_CERT_EXPIRED);
-        coap_log(LOG_WARNING,
+        coap_log(LOG_INFO,
                  "   %s: %s: overridden: '%s'\n",
+                 coap_session_str(c_session),
+                 "The certificate has an invalid usage date",
+                 OUTPUT_CERT_NAME);
+      }
+      else {
+        fail = 1;
+        coap_log(LOG_WARNING,
+                 "   %s: %s: '%s'\n",
                  coap_session_str(c_session),
                  "The certificate has an invalid usage date",
                  OUTPUT_CERT_NAME);
@@ -693,26 +743,75 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
     }
     if (status & (GNUTLS_CERT_REVOCATION_DATA_SUPERSEDED|
                   GNUTLS_CERT_REVOCATION_DATA_ISSUED_IN_FUTURE)) {
+      status &= ~(GNUTLS_CERT_REVOCATION_DATA_SUPERSEDED|
+                  GNUTLS_CERT_REVOCATION_DATA_ISSUED_IN_FUTURE);
       if (g_context->setup_data.allow_expired_crl) {
-        status &= ~(GNUTLS_CERT_REVOCATION_DATA_SUPERSEDED|
-                    GNUTLS_CERT_REVOCATION_DATA_ISSUED_IN_FUTURE);
-        coap_log(LOG_WARNING,
+        coap_log(LOG_INFO,
                  "   %s: %s: overridden: '%s'\n",
                  coap_session_str(c_session),
                  "The certificate's CRL entry has an invalid usage date",
                  OUTPUT_CERT_NAME);
       }
+      else {
+        fail = 1;
+        coap_log(LOG_WARNING,
+                 "   %s: %s: '%s'\n",
+                 coap_session_str(c_session),
+                 "The certificate's CRL entry has an invalid usage date",
+                 OUTPUT_CERT_NAME);
+      }
+    }
+    if (status & (GNUTLS_CERT_SIGNER_NOT_FOUND)) {
+      status &= ~(GNUTLS_CERT_SIGNER_NOT_FOUND);
+      if (cert_info.self_signed) {
+        if (g_context->setup_data.allow_self_signed &&
+            !g_context->setup_data.check_common_ca) {
+          coap_log(LOG_INFO,
+                   "   %s: %s: overridden: '%s'\n",
+                   coap_session_str(c_session),
+                   "Self-signed",
+                   OUTPUT_CERT_NAME);
+        }
+        else {
+          fail = 1;
+          alert = GNUTLS_A_UNKNOWN_CA;
+          coap_log(LOG_WARNING,
+                   "   %s: %s: '%s'\n",
+                   coap_session_str(c_session),
+                   "Self-signed",
+                   OUTPUT_CERT_NAME);
+        }
+      }
+      else {
+        if (!g_context->setup_data.verify_peer_cert) {
+          coap_log(LOG_INFO,
+                   "   %s: %s: overridden: '%s'\n",
+                   coap_session_str(c_session),
+                   "The peer certificate's CA is unknown",
+                   OUTPUT_CERT_NAME);
+        }
+        else {
+          fail = 1;
+          alert = GNUTLS_A_UNKNOWN_CA;
+          coap_log(LOG_WARNING,
+                   "   %s: %s: '%s'\n",
+                   coap_session_str(c_session),
+                   "The peer certificate's CA is unknown",
+                   OUTPUT_CERT_NAME);
+        }
+      }
     }
 
     if (status) {
+        fail = 1;
         coap_log(LOG_WARNING,
-                 "   %s: status 0x%x: '%s'\n",
+                 "   %s: gnutls_certificate_verify_peers() status 0x%x: '%s'\n",
                  coap_session_str(c_session),
                  status, OUTPUT_CERT_NAME);
     }
   }
 
-  if (status)
+  if (fail)
     goto fail;
 
   if (g_context->setup_data.validate_cn_call_back) {
@@ -753,6 +852,9 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
     }
   }
 
+#if (GNUTLS_VERSION_NUMBER >= 0x030606)
+finish:
+#endif /* >= 3.6.6 */
   if (cert_info.san_or_cn)
     gnutls_free(cert_info.san_or_cn);
 
@@ -762,7 +864,11 @@ fail:
   if (cert_info.san_or_cn)
     gnutls_free(cert_info.san_or_cn);
 
-  G_ACTION(gnutls_alert_send(g_session, GNUTLS_AL_FATAL, alert));
+  if (!g_env->sent_alert) {
+    G_ACTION(gnutls_alert_send(g_session, GNUTLS_AL_FATAL, alert));
+    g_env->sent_alert = 1;
+  }
+  c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
   return 0;
 }
 
@@ -775,13 +881,8 @@ fail:
  */
 static int cert_verify_callback_gnutls(gnutls_session_t g_session)
 {
-  int ret;
-
   if (gnutls_auth_get_type(g_session) == GNUTLS_CRD_CERTIFICATE) {
     if (cert_verify_gnutls(g_session) == 0) {
-      G_ACTION(gnutls_alert_send(g_session,
-                                 GNUTLS_AL_FATAL,
-                                 GNUTLS_A_ACCESS_DENIED));
       return -1;
     }
   }
@@ -870,6 +971,7 @@ get_asn1_spki(const uint8_t *data, size_t size)
  */
 static int
 setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
+                      gnutls_session_t g_session,
                       coap_gnutls_context_t *g_context,
                       coap_dtls_pki_t *setup_data, coap_dtls_role_t role)
 {
@@ -1239,6 +1341,8 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
             "gnutls_certificate_set_x509_trust_dir");
 #endif
   }
+  gnutls_certificate_send_x509_rdn_sequence(g_session,
+                                      setup_data->check_common_ca ? 0 : 1);
   if (!(g_context->psk_pki_enabled & IS_PKI)) {
     /* No PKI defined at all - still need a trust set up for 3.6.0 or later */
     G_CHECK(gnutls_certificate_set_x509_system_trust(*pki_credentials),
@@ -1246,10 +1350,8 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
   }
 
   /* Verify Peer */
-  if (setup_data->verify_peer_cert) {
-    gnutls_certificate_set_verify_function(*pki_credentials,
-                                           cert_verify_callback_gnutls);
-  }
+  gnutls_certificate_set_verify_function(*pki_credentials,
+                                         cert_verify_callback_gnutls);
 
   /* Cert chain checking (can raise GNUTLS_E_CONSTRAINT_ERROR) */
   if (setup_data->cert_chain_validation) {
@@ -1263,8 +1365,6 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
    *           CRL checking (can raise GNUTLS_CERT_MISSING_OCSP_STATUS)
    */
   gnutls_certificate_set_verify_flags(*pki_credentials,
-            (setup_data->allow_self_signed == 0 ?
-             GNUTLS_VERIFY_DO_NOT_ALLOW_SAME : 0) |
             (setup_data->check_cert_revocation == 0 ?
              GNUTLS_VERIFY_DISABLE_CRL_CHECKS : 0)
             );
@@ -1378,6 +1478,7 @@ post_client_hello_gnutls_psk(gnutls_session_t g_session)
       if (!new_entry) {
         G_ACTION(gnutls_alert_send(g_session, GNUTLS_AL_FATAL,
                                    GNUTLS_A_UNRECOGNIZED_NAME));
+        g_env->sent_alert = 1;
         ret = GNUTLS_E_NO_CERTIFICATE_FOUND;
         goto end;
       }
@@ -1396,6 +1497,7 @@ post_client_hello_gnutls_psk(gnutls_session_t g_session)
         int keep_ret = ret;
         G_ACTION(gnutls_alert_send(g_session, GNUTLS_AL_FATAL,
                                    GNUTLS_A_BAD_CERTIFICATE));
+        g_env->sent_alert = 1;
         ret = keep_ret;
         goto end;
       }
@@ -1490,6 +1592,7 @@ post_client_hello_gnutls_pki(gnutls_session_t g_session)
       if (!new_entry) {
         G_ACTION(gnutls_alert_send(g_session, GNUTLS_AL_FATAL,
                                    GNUTLS_A_UNRECOGNIZED_NAME));
+        g_env->sent_alert = 1;
         ret = GNUTLS_E_NO_CERTIFICATE_FOUND;
         goto end;
       }
@@ -1503,11 +1606,13 @@ post_client_hello_gnutls_pki(gnutls_session_t g_session)
       sni_setup_data.pki_key = *new_entry;
       if ((ret = setup_pki_credentials(
                            &g_context->pki_sni_entry_list[i].pki_credentials,
+                           g_session,
                            g_context,
                            &sni_setup_data, COAP_DTLS_ROLE_SERVER)) < 0) {
         int keep_ret = ret;
         G_ACTION(gnutls_alert_send(g_session, GNUTLS_AL_FATAL,
                                    GNUTLS_A_BAD_CERTIFICATE));
+        g_env->sent_alert = 1;
         ret = keep_ret;
         goto end;
       }
@@ -1590,8 +1695,9 @@ setup_client_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
      * This works providing COAP_PKI_KEY_PEM has a value of 0.
      */
     coap_dtls_pki_t *setup_data = &g_context->setup_data;
-    G_CHECK(setup_pki_credentials(&g_env->pki_credentials, g_context,
-                                  setup_data, COAP_DTLS_ROLE_CLIENT),
+    G_CHECK(setup_pki_credentials(&g_env->pki_credentials, g_env->g_session,
+                                  g_context, setup_data,
+                                  COAP_DTLS_ROLE_CLIENT),
             "setup_pki_credentials");
 
     G_CHECK(gnutls_credentials_set(g_env->g_session, GNUTLS_CRD_CERTIFICATE,
@@ -1718,11 +1824,12 @@ setup_server_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
 
   if (g_context->psk_pki_enabled & IS_PKI) {
     coap_dtls_pki_t *setup_data = &g_context->setup_data;
-    G_CHECK(setup_pki_credentials(&g_env->pki_credentials, g_context,
-                                  setup_data, COAP_DTLS_ROLE_SERVER),
+    G_CHECK(setup_pki_credentials(&g_env->pki_credentials, g_env->g_session,
+                                  g_context, setup_data,
+                                  COAP_DTLS_ROLE_SERVER),
             "setup_pki_credentials");
 
-    if (setup_data->require_peer_cert) {
+    if (setup_data->verify_peer_cert) {
       gnutls_certificate_server_set_request(g_env->g_session,
                                             GNUTLS_CERT_REQUIRE);
     }
@@ -1913,7 +2020,7 @@ coap_dtls_free_gnutls_env(coap_gnutls_context_t *g_context,
     /* It is suggested not to use GNUTLS_SHUT_RDWR in DTLS
      * connections because the peer's closure message might
      * be lost */
-    if (free_bye != COAP_FREE_BYE_NONE) {
+    if (free_bye != COAP_FREE_BYE_NONE && !g_env->sent_alert) {
       /* Only do this if appropriate */
       gnutls_bye(g_env->g_session, free_bye == COAP_FREE_BYE_AS_UDP ?
                                        GNUTLS_SHUT_WR : GNUTLS_SHUT_RDWR);
@@ -1953,14 +2060,17 @@ void *coap_dtls_new_server_session(coap_session_t *c_session) {
   return g_env;
 }
 
-static void log_last_alert(gnutls_session_t g_session) {
+static void log_last_alert(coap_session_t *c_session,
+                           gnutls_session_t g_session) {
   int last_alert = gnutls_alert_get(g_session);
 
   if (last_alert == GNUTLS_A_CLOSE_NOTIFY)
-    coap_log(LOG_DEBUG, "Received alert '%d': '%s'\n",
+    coap_log(LOG_DEBUG, "***%s: Alert '%d': %s\n",
+                         coap_session_str(c_session),
                          last_alert, gnutls_alert_get_name(last_alert));
   else
-    coap_log(LOG_WARNING, "Received alert '%d': '%s'\n",
+    coap_log(LOG_WARNING, "***%s: Alert '%d': %s\n",
+                          coap_session_str(c_session),
                           last_alert, gnutls_alert_get_name(last_alert));
 }
 
@@ -1994,50 +2104,70 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
              "Insufficient credentials provided.\n");
     ret = -1;
     break;
-  case GNUTLS_E_UNEXPECTED_HANDSHAKE_PACKET:
   case GNUTLS_E_FATAL_ALERT_RECEIVED:
-    log_last_alert(g_env->g_session);
+    /* Stop the sending of an alert on closedown */
+    g_env->sent_alert = 1;
+    log_last_alert(c_session, g_env->g_session);
+    /* Fall through */
+  case GNUTLS_E_UNEXPECTED_HANDSHAKE_PACKET:
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
     ret = -1;
     break;
   case GNUTLS_E_WARNING_ALERT_RECEIVED:
-    log_last_alert(g_env->g_session);
+    log_last_alert(c_session, g_env->g_session);
     c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
     ret = 0;
     break;
   case GNUTLS_E_NO_CERTIFICATE_FOUND:
+#if (GNUTLS_VERSION_NUMBER > 0x030606)
+  case GNUTLS_E_CERTIFICATE_REQUIRED:
+#endif /* GNUTLS_VERSION_NUMBER > 0x030606 */
     coap_log(LOG_WARNING,
              "Client Certificate requested and required, but not provided\n"
              );
     G_ACTION(gnutls_alert_send(g_env->g_session, GNUTLS_AL_FATAL,
                                                  GNUTLS_A_BAD_CERTIFICATE));
+    g_env->sent_alert = 1;
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
     ret = -1;
     break;
   case GNUTLS_E_DECRYPTION_FAILED:
     coap_log(LOG_WARNING,
              "do_gnutls_handshake: session establish "
-             "returned %d: '%s'\n",
-             ret, gnutls_strerror(ret));
+             "returned '%s'\n",
+             gnutls_strerror(ret));
     G_ACTION(gnutls_alert_send(g_env->g_session, GNUTLS_AL_FATAL,
                                                  GNUTLS_A_DECRYPT_ERROR));
+    g_env->sent_alert = 1;
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
     ret = -1;
     break;
+  case GNUTLS_E_CERTIFICATE_ERROR:
+    if (g_env->sent_alert) {
+      c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+      ret = -1;
+      break;
+    }
+    /* Fall through */
   case GNUTLS_E_UNKNOWN_CIPHER_SUITE:
   case GNUTLS_E_NO_CIPHER_SUITES:
+  case GNUTLS_E_INVALID_SESSION:
     coap_log(LOG_WARNING,
              "do_gnutls_handshake: session establish "
-             "returned %d: '%s'\n",
-             ret, gnutls_strerror(ret));
-    G_ACTION(gnutls_alert_send(g_env->g_session, GNUTLS_AL_FATAL,
-                                                 GNUTLS_A_HANDSHAKE_FAILURE));
+             "returned '%s'\n",
+             gnutls_strerror(ret));
+    if (!g_env->sent_alert) {
+      G_ACTION(gnutls_alert_send(g_env->g_session, GNUTLS_AL_FATAL,
+                                                   GNUTLS_A_HANDSHAKE_FAILURE));
+      g_env->sent_alert = 1;
+    }
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
     ret = -1;
     break;
   case GNUTLS_E_SESSION_EOF:
-  /* fall through */
   case GNUTLS_E_TIMEDOUT:
+  case GNUTLS_E_PULL_ERROR:
+  case GNUTLS_E_PUSH_ERROR:
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
     ret = -1;
     break;
@@ -2070,7 +2200,7 @@ void *coap_dtls_new_client_session(coap_session_t *c_session) {
 }
 
 void coap_dtls_free_session(coap_session_t *c_session) {
-  if (c_session && c_session->context) {
+  if (c_session && c_session->context && c_session->tls) {
     coap_dtls_free_gnutls_env(c_session->context->dtls_context,
                 c_session->tls,
                 COAP_PROTO_NOT_RELIABLE(c_session->proto) ?
@@ -2113,11 +2243,17 @@ int coap_dtls_send(coap_session_t *c_session,
         ret = 0;
         break;
       case GNUTLS_E_FATAL_ALERT_RECEIVED:
-        log_last_alert(g_env->g_session);
-        c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
+        /* Stop the sending of an alert on closedown */
+        g_env->sent_alert = 1;
+        log_last_alert(c_session, g_env->g_session);
+        c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
         ret = -1;
         break;
       default:
+        coap_log(LOG_DEBUG,
+                 "coap_dtls_send: gnutls_record_send "
+                 "returned %d: '%s'\n",
+                 ret, gnutls_strerror(ret));
         ret = -1;
         break;
       }
@@ -2238,12 +2374,14 @@ coap_dtls_receive(coap_session_t *c_session,
     else {
       switch (ret) {
       case GNUTLS_E_FATAL_ALERT_RECEIVED:
-        log_last_alert(g_env->g_session);
+        /* Stop the sending of an alert on closedown */
+        g_env->sent_alert = 1;
+        log_last_alert(c_session, g_env->g_session);
         c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
         ret = -1;
         break;
       case GNUTLS_E_WARNING_ALERT_RECEIVED:
-        log_last_alert(g_env->g_session);
+        log_last_alert(c_session, g_env->g_session);
         c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
         ret = 0;
         break;
@@ -2262,7 +2400,7 @@ coap_dtls_receive(coap_session_t *c_session,
     }
     else {
       ret = -1;
-      if (ssl_data->pdu_len) {
+      if (ssl_data->pdu_len && !g_env->sent_alert) {
         /* Do the handshake again incase of internal timeout */
         ret = do_gnutls_handshake(c_session, g_env);
         if (ret == 1) {
@@ -2274,7 +2412,9 @@ coap_dtls_receive(coap_session_t *c_session,
   }
 
   if (c_session->dtls_event >= 0) {
-    coap_handle_event(c_session->context, c_session->dtls_event, c_session);
+    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+    if (c_session->dtls_event != COAP_EVENT_DTLS_CLOSED)
+      coap_handle_event(c_session->context, c_session->dtls_event, c_session);
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
@@ -2395,10 +2535,10 @@ coap_sock_read(gnutls_transport_ptr_t context, void *out, size_t outl) {
     ret = recv(c_session->sock.fd, out, outl, 0);
 #endif
     if (ret > 0) {
-      coap_log(LOG_DEBUG, "*  %s: setup: received %d bytes\n",
+      coap_log(LOG_DEBUG, "*  %s: received %d bytes\n",
                coap_session_str(c_session), ret);
     } else if (ret < 0 && errno != EAGAIN) {
-      coap_log(LOG_DEBUG,  "*  %s: setup: failed to receive any bytes (%s)\n",
+      coap_log(LOG_DEBUG,  "*  %s: failed to receive any bytes (%s)\n",
                coap_session_str(c_session), coap_socket_strerror());
     }
     if (ret == 0) {
@@ -2426,11 +2566,30 @@ coap_sock_write(gnutls_transport_ptr_t context, const void *in, size_t inl) {
 
   ret = (int)coap_socket_write(&c_session->sock, in, inl);
   if (ret > 0) {
-    coap_log(LOG_DEBUG, "*  %s: setup: sent %d bytes\n",
+    coap_log(LOG_DEBUG, "*  %s: sent %d bytes\n",
              coap_session_str(c_session), ret);
   } else if (ret < 0) {
-    coap_log(LOG_DEBUG,  "*  %s: setup: failed to send %d bytes (%s)\n",
-             coap_session_str(c_session), ret, coap_socket_strerror());
+    if ((c_session->state == COAP_SESSION_STATE_CSM ||
+         c_session->state == COAP_SESSION_STATE_HANDSHAKE) &&
+        (errno == EPIPE || errno == ECONNRESET)) {
+      /*
+       * Need to handle a TCP timing window where an agent continues with
+       * the sending of the next handshake or a CSM.
+       * However, the peer does not like a certificate and so sends a
+       * fatal alert and closes the TCP session.
+       * The sending of the next handshake or CSM may get terminated because
+       * of the closed TCP session, but there is still an outstanding alert
+       * to be read in and reported on.
+       * In this case, pretend that sending the info was fine so that the
+       * alert can be read (which effectively is what happens with DTLS).
+       */
+      ret = inl;
+    }
+    else {
+      coap_log(LOG_DEBUG,  "*  %s: failed to send %zd bytes (%s) state %d\n",
+               coap_session_str(c_session), inl, coap_socket_strerror(),
+               c_session->state);
+    }
   }
   if (ret == 0) {
     errno = EAGAIN;
@@ -2553,9 +2712,17 @@ ssize_t coap_tls_write(coap_session_t *c_session,
       case GNUTLS_E_AGAIN:
         ret = 0;
         break;
+      case GNUTLS_E_PUSH_ERROR:
+      case GNUTLS_E_PULL_ERROR:
+      case GNUTLS_E_PREMATURE_TERMINATION:
+        c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+        ret = -1;
+        break;
       case GNUTLS_E_FATAL_ALERT_RECEIVED:
-        log_last_alert(g_env->g_session);
-        c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
+        /* Stop the sending of an alert on closedown */
+        g_env->sent_alert = 1;
+        log_last_alert(c_session, g_env->g_session);
+        c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
         ret = -1;
         break;
       default:
@@ -2567,7 +2734,7 @@ ssize_t coap_tls_write(coap_session_t *c_session,
         break;
       }
       if (ret == -1) {
-        coap_log(LOG_WARNING, "coap_dtls_send: cannot send PDU\n");
+        coap_log(LOG_INFO, "coap_tls_write: cannot send PDU\n");
       }
     }
   }
@@ -2607,13 +2774,13 @@ ssize_t coap_tls_read(coap_session_t *c_session,
                       size_t data_len
 ) {
   coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
-  int ret;
+  int ret = -1;
 
   if (!g_env)
     return -1;
 
   c_session->dtls_event = -1;
-  if (!g_env->established) {
+  if (!g_env->established && !g_env->sent_alert) {
     ret = do_gnutls_handshake(c_session, g_env);
     if (ret == 1) {
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
@@ -2621,7 +2788,7 @@ ssize_t coap_tls_read(coap_session_t *c_session,
       coap_session_send_csm(c_session);
     }
   }
-  if (g_env->established) {
+  if (c_session->state != COAP_SESSION_STATE_NONE && g_env->established) {
     ret = gnutls_record_recv(g_env->g_session, data, (int)data_len);
     if (ret <= 0) {
       switch (ret) {
@@ -2634,6 +2801,18 @@ ssize_t coap_tls_read(coap_session_t *c_session,
         break;
       case GNUTLS_E_PULL_ERROR:
         c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
+        break;
+      case GNUTLS_E_FATAL_ALERT_RECEIVED:
+        /* Stop the sending of an alert on closedown */
+        g_env->sent_alert = 1;
+        log_last_alert(c_session, g_env->g_session);
+        c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+        ret = -1;
+        break;
+      case GNUTLS_E_WARNING_ALERT_RECEIVED:
+        log_last_alert(c_session, g_env->g_session);
+        c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
+        ret = 0;
         break;
       default:
         coap_log(LOG_WARNING,

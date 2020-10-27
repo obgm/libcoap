@@ -966,8 +966,8 @@ pem_decode_mem_asn1(const char *begstr, const uint8_t *str)
 
 int
 coap_dtls_context_set_pki(coap_context_t *ctx,
-  coap_dtls_pki_t* setup_data,
-  coap_dtls_role_t role UNUSED
+                          const coap_dtls_pki_t* setup_data,
+                          const coap_dtls_role_t role UNUSED
 ) {
 #ifdef DTLS_ECC
   coap_tiny_context_t *t_context;
@@ -1130,6 +1130,7 @@ coap_dtls_context_set_pki_root_cas(struct coap_context_t *ctx UNUSED,
   const char *ca_file UNUSED,
   const char *ca_path UNUSED
 ) {
+  coap_log(LOG_WARNING, "Root CAs PKI not supported\n");
   return 0;
 }
 

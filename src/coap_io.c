@@ -430,8 +430,14 @@ coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
 #endif /* COAP_EPOLL_SUPPORT */
       return 0;
     }
-    coap_log(LOG_WARNING, "coap_socket_write: send: %s\n",
-             coap_socket_strerror());
+    if (errno == EPIPE || errno == ECONNRESET) {
+      coap_log(LOG_INFO, "coap_socket_write: send: %s\n",
+               coap_socket_strerror());
+    }
+    else {
+      coap_log(LOG_WARNING, "coap_socket_write: send: %s\n",
+               coap_socket_strerror());
+    }
     return -1;
   }
   if (r < (ssize_t)data_len) {

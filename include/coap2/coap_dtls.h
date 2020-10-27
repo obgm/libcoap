@@ -248,8 +248,10 @@ typedef struct coap_dtls_pki_t {
 
   /* Options to enable different TLS functionality in libcoap */
   uint8_t verify_peer_cert;        /**< 1 if peer cert is to be verified */
-  uint8_t require_peer_cert;       /**< 1 if peer cert is required */
-  uint8_t allow_self_signed;       /**< 1 if self signed certs are allowed */
+  uint8_t check_common_ca;         /**< 1 if peer cert is to be signed by
+                                    * the same CA as the local cert */
+  uint8_t allow_self_signed;       /**< 1 if self-signed certs are allowed.
+                                    *     Ignored if check_common_ca set */
   uint8_t allow_expired_certs;     /**< 1 if expired certs are allowed */
   uint8_t cert_chain_validation;   /**< 1 if to check cert_chain_verify_depth */
   uint8_t cert_chain_verify_depth; /**< recommended depth is 3 */
@@ -536,8 +538,8 @@ coap_dtls_context_set_cpsk(struct coap_context_t *coap_context,
 
 int
 coap_dtls_context_set_pki(struct coap_context_t *coap_context,
-                          coap_dtls_pki_t *setup_data,
-                          coap_dtls_role_t role);
+                          const coap_dtls_pki_t *setup_data,
+                          const coap_dtls_role_t role);
 
 /**
  * Set the dtls context's default Root CA information for a client or server.

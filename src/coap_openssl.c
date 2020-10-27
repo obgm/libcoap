@@ -558,15 +558,19 @@ static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
       coap_log(LOG_DEBUG, "*  %s: %s:%s\n",
                coap_session_str(session), pstr, SSL_state_string_long(ssl));
   } else if (where & SSL_CB_ALERT) {
+    int log_level = LOG_INFO;
     pstr = (where & SSL_CB_READ) ? "read" : "write";
-    if (dtls_log_level >= LOG_INFO)
-      coap_log(LOG_INFO, "*  %s: SSL3 alert %s:%s:%s\n",
+    if ((where & (SSL_CB_WRITE|SSL_CB_READ)) && (ret >> 8) == SSL3_AL_FATAL) {
+      session->dtls_event = COAP_EVENT_DTLS_ERROR;
+      if ((ret & 0xff) != SSL3_AD_CLOSE_NOTIFY)
+        log_level = LOG_WARNING;
+    }
+    if (dtls_log_level >= log_level)
+      coap_log(log_level, "*  %s: SSL3 alert %s:%s:%s\n",
                coap_session_str(session),
                pstr,
                SSL_alert_type_string_long(ret),
                SSL_alert_desc_string_long(ret));
-    if ((where & (SSL_CB_WRITE|SSL_CB_READ)) && (ret >> 8) == SSL3_AL_FATAL)
-      session->dtls_event = COAP_EVENT_DTLS_ERROR;
   } else if (where & SSL_CB_EXIT) {
     if (ret == 0) {
       if (dtls_log_level >= LOG_WARNING) {
@@ -636,6 +640,29 @@ static int coap_sock_write(BIO *a, const char *in, int inl) {
     ret = -1;
   } else {
     BIO_clear_retry_flags(a);
+    if (ret == -1) {
+      if ((session->state == COAP_SESSION_STATE_CSM ||
+           session->state == COAP_SESSION_STATE_HANDSHAKE) &&
+          (errno == EPIPE || errno == ECONNRESET)) {
+        /*
+         * Need to handle a TCP timing window where an agent continues with
+         * the sending of the next handshake or a CSM.
+         * However, the peer does not like a certificate and so sends a
+         * fatal alert and closes the TCP session.
+         * The sending of the next handshake or CSM may get terminated because
+         * of the closed TCP session, but there is still an outstanding alert
+         * to be read in and reported on.
+         * In this case, pretend that sending the info was fine so that the
+         * alert can be read (which effectively is what happens with DTLS).
+         */
+        ret = inl;
+      }
+      else {
+        coap_log(LOG_DEBUG,  "*  %s: failed to send %d bytes (%s) state %d\n",
+                 coap_session_str(session), inl, coap_socket_strerror(),
+                 session->state);
+      }
+    }
   }
   return ret;
 }
@@ -953,7 +980,7 @@ missing_ENGINE_load_cert (const char *cert_id)
 #if OPENSSL_VERSION_NUMBER < 0x10101000L
 static int
 setup_pki_server(SSL_CTX *ctx,
-                 coap_dtls_pki_t* setup_data
+                 const coap_dtls_pki_t* setup_data
 ) {
   switch (setup_data->pki_key.key_type) {
   case COAP_PKI_KEY_PEM:
@@ -993,23 +1020,27 @@ setup_pki_server(SSL_CTX *ctx,
       return 0;
     }
 
-    if (setup_data->pki_key.key.pem.ca_file &&
+    if (setup_data->check_common_ca && setup_data->pki_key.key.pem.ca_file &&
         setup_data->pki_key.key.pem.ca_file[0]) {
       STACK_OF(X509_NAME) *cert_names;
       X509_STORE *st;
       BIO *in;
       X509 *x = NULL;
       char *rw_var = NULL;
-      cert_names = SSL_load_client_CA_file(setup_data->pki_key.key.pem.ca_file);
-      if (cert_names != NULL)
-        SSL_CTX_set_client_CA_list(ctx, cert_names);
-      else {
-        coap_log(LOG_WARNING,
-                 "*** setup_pki: (D)TLS: %s: Unable to configure "
-                 "client CA File\n",
-                  setup_data->pki_key.key.pem.ca_file);
-        return 0;
+      if (role == COAP_DTLS_ROLE_SERVER) {
+        cert_names = SSL_load_client_CA_file(setup_data->pki_key.key.pem.ca_file);
+        if (cert_names != NULL)
+          SSL_CTX_set_client_CA_list(ctx, cert_names);
+        else {
+          coap_log(LOG_WARNING,
+                   "*** setup_pki: (D)TLS: %s: Unable to configure "
+                   "client CA File\n",
+                    setup_data->pki_key.key.pem.ca_file);
+          return 0;
+        }
       }
+
+      /* Add CA to the trusted root CA store */
       st = SSL_CTX_get_cert_store(ctx);
       in = BIO_new(BIO_s_file());
       /* Need to do this to not get a compiler warning about const parameters */
@@ -1381,7 +1412,7 @@ setup_pki_ssl(SSL *ssl,
              role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
       return 0;
     }
-    if (setup_data->pki_key.key.pem.ca_file &&
+    if (setup_data->check_common_ca && setup_data->pki_key.key.pem.ca_file &&
         setup_data->pki_key.key.pem.ca_file[0]) {
       X509_STORE *st;
       BIO *in;
@@ -1824,8 +1855,11 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
         preverify_ok = 1;
       break;
     case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
-    case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
-      if (setup_data->allow_self_signed)
+      if (setup_data->allow_self_signed && !setup_data->check_common_ca)
+        preverify_ok = 1;
+      break;
+    case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN: /* Set if the CA is not known */
+      if (!setup_data->verify_peer_cert)
         preverify_ok = 1;
       break;
     case X509_V_ERR_UNABLE_TO_GET_CRL:
@@ -1837,19 +1871,36 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
       if (setup_data->allow_expired_crl)
         preverify_ok = 1;
       break;
+    case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
+    case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE:
+      if (!setup_data->verify_peer_cert)
+        preverify_ok = 1;
+      break;
     default:
       break;
     }
+    if (setup_data->cert_chain_validation &&
+        depth > (setup_data->cert_chain_verify_depth)) {
+       preverify_ok = 0;
+       err = X509_V_ERR_CERT_CHAIN_TOO_LONG;
+       X509_STORE_CTX_set_error(ctx, err);
+    }
     if (!preverify_ok) {
+      if (err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) {
+        coap_log(LOG_WARNING,
+               "   %s: %s: '%s' depth=%d\n",
+               coap_session_str(session),
+               "Unknown CA", cn ? cn : "?", depth);
+      }
+      else {
         coap_log(LOG_WARNING,
                "   %s: %s: '%s' depth=%d\n",
                coap_session_str(session),
                X509_verify_cert_error_string(err), cn ? cn : "?", depth);
-        /* Invoke the CN callback function for this failure */
-        keep_preverify_ok = 1;
+      }
     }
     else {
-        coap_log(LOG_WARNING,
+      coap_log(LOG_INFO,
                "   %s: %s: overridden: '%s' depth=%d\n",
                coap_session_str(session),
                X509_verify_cert_error_string(err), cn ? cn : "?", depth);
@@ -1928,27 +1979,19 @@ tls_secret_call_back(SSL *ssl,
              coap_session_str(session));
 
     if (setup_data->verify_peer_cert) {
-      if (setup_data->require_peer_cert) {
-        SSL_set_verify(ssl,
-                       SSL_VERIFY_PEER |
-                       SSL_VERIFY_CLIENT_ONCE |
-                       SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                       tls_verify_call_back);
-      }
-      else {
-        SSL_set_verify(ssl,
-                       SSL_VERIFY_PEER |
-                       SSL_VERIFY_CLIENT_ONCE,
-                       tls_verify_call_back);
-      }
+      SSL_set_verify(ssl,
+                     SSL_VERIFY_PEER |
+                     SSL_VERIFY_CLIENT_ONCE |
+                     SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     tls_verify_call_back);
     }
     else {
-      SSL_set_verify(ssl, SSL_VERIFY_NONE, NULL);
+      SSL_set_verify(ssl, SSL_VERIFY_NONE, tls_verify_call_back);
     }
 
     /* Check CA Chain */
     if (setup_data->cert_chain_validation)
-      SSL_set_verify_depth(ssl, setup_data->cert_chain_verify_depth);
+      SSL_set_verify_depth(ssl, setup_data->cert_chain_verify_depth + 1);
 
     /* Certificate Revocation */
     if (setup_data->check_cert_revocation) {
@@ -2058,7 +2101,7 @@ tls_server_name_call_back(SSL *ssl,
         SSL_CTX_set_alpn_select_cb(ctx, server_alpn_callback, NULL);
       }
 #endif /* !COAP_DISABLE_TCP */
-      memset(&sni_setup_data, 0, sizeof(sni_setup_data));
+      sni_setup_data = *setup_data;
       sni_setup_data.pki_key = *new_entry;
       setup_pki_server(ctx, &sni_setup_data);
 
@@ -2355,7 +2398,7 @@ is_x509:
     if (sni_tmp) {
       OPENSSL_free(sni_tmp);
     }
-    memset(&sni_setup_data, 0, sizeof(sni_setup_data));
+    sni_setup_data = *setup_data;
     sni_setup_data.pki_key = context->sni_entry_list[i].pki_key;
     setup_pki_ssl(ssl, &sni_setup_data, 1);
   }
@@ -2367,27 +2410,19 @@ is_x509:
            coap_session_str(session));
 
   if (setup_data->verify_peer_cert) {
-    if (setup_data->require_peer_cert) {
-      SSL_set_verify(ssl,
-                     SSL_VERIFY_PEER |
-                     SSL_VERIFY_CLIENT_ONCE |
-                     SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                     tls_verify_call_back);
-    }
-    else {
-      SSL_set_verify(ssl,
-                     SSL_VERIFY_PEER |
-                     SSL_VERIFY_CLIENT_ONCE,
-                     tls_verify_call_back);
-    }
+    SSL_set_verify(ssl,
+                   SSL_VERIFY_PEER |
+                   SSL_VERIFY_CLIENT_ONCE |
+                   SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                   tls_verify_call_back);
   }
   else {
-    SSL_set_verify(ssl, SSL_VERIFY_NONE, NULL);
+    SSL_set_verify(ssl, SSL_VERIFY_NONE, tls_verify_call_back);
   }
 
   /* Check CA Chain */
   if (setup_data->cert_chain_validation)
-    SSL_set_verify_depth(ssl, setup_data->cert_chain_verify_depth);
+    SSL_set_verify_depth(ssl, setup_data->cert_chain_verify_depth + 1);
 
   /* Certificate Revocation */
   if (setup_data->check_cert_revocation) {
@@ -2525,8 +2560,8 @@ int_err:
 
 int
 coap_dtls_context_set_pki(coap_context_t *ctx,
-                          coap_dtls_pki_t *setup_data,
-                          coap_dtls_role_t role
+                          const coap_dtls_pki_t *setup_data,
+                          const coap_dtls_role_t role
 ) {
   coap_openssl_context_t *context =
                                 ((coap_openssl_context_t *)ctx->dtls_context);
@@ -2534,6 +2569,20 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
   if (!setup_data)
     return 0;
   context->setup_data = *setup_data;
+  if (!context->setup_data.verify_peer_cert) {
+    /* Needs to be clear so that no CA DNs are transmitted */
+    context->setup_data.check_common_ca = 0;
+    /* Allow all of these but warn if issue */
+    context->setup_data.allow_self_signed = 1;
+    context->setup_data.allow_expired_certs = 1;
+    context->setup_data.cert_chain_validation = 1;
+    context->setup_data.cert_chain_verify_depth = 10;
+    context->setup_data.check_cert_revocation = 1;
+    context->setup_data.allow_no_crl = 1;
+    context->setup_data.allow_expired_crl = 1;
+    context->setup_data.allow_bad_md_hash = 1;
+    context->setup_data.allow_short_rsa_length = 1;
+  }
   if (role == COAP_DTLS_ROLE_SERVER) {
     if (context->dtls.ctx) {
       /* SERVER DTLS */
@@ -2806,13 +2855,17 @@ setup_client_ssl_session(coap_session_t *session, SSL *ssl
 
     /* Verify Peer */
     if (setup_data->verify_peer_cert)
-      SSL_set_verify(ssl, SSL_VERIFY_PEER, tls_verify_call_back);
+      SSL_set_verify(ssl,
+                     SSL_VERIFY_PEER |
+                     SSL_VERIFY_CLIENT_ONCE |
+                     SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     tls_verify_call_back);
     else
-      SSL_set_verify(ssl, SSL_VERIFY_NONE, NULL);
+      SSL_set_verify(ssl, SSL_VERIFY_NONE, tls_verify_call_back);
 
     /* Check CA Chain */
     if (setup_data->cert_chain_validation)
-      SSL_set_verify_depth(ssl, setup_data->cert_chain_verify_depth);
+      SSL_set_verify_depth(ssl, setup_data->cert_chain_verify_depth + 1);
 
   }
   return 1;
@@ -3269,7 +3322,7 @@ ssize_t coap_tls_write(coap_session_t *session,
       }
       r = 0;
     } else {
-      coap_log(LOG_WARNING, "***%s: coap_tls_write: cannot send PDU\n",
+      coap_log(LOG_INFO, "***%s: coap_tls_write: cannot send PDU\n",
                coap_session_str(session));
       if (err == SSL_ERROR_ZERO_RETURN)
         session->dtls_event = COAP_EVENT_DTLS_CLOSED;
