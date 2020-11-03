@@ -507,6 +507,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
 
   SESSIONS_FIND(endpoint->sessions, packet->addr_info, session);
   if (session) {
+    session->ifindex = packet->ifindex;
     session->last_rx_tx = now;
     return session;
   }

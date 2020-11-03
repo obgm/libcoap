@@ -41,7 +41,10 @@ IPv6 address references, angle brackets are required (c.f. EXAMPLES).
 OPTIONS - General
 -----------------
 *-a* addr::
-   The local address of the interface that has to be used.
+   The local address of the interface that has to be used. +
+   Note: Do not use this option if the interface is likely to be transient -
+   i.e. it is a tunnel interface that may come and go, as this is likely to
+   cause "No such device" errors on transmission.
 
 *-b* [num,]size::
    The block size to be used in GET/PUT/POST requests (value must be a
