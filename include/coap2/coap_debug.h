@@ -191,8 +191,6 @@ void coap_show_tls_version(coap_log_t level);
  */
 char *coap_string_tls_version(char *buffer, size_t bufsize);
 
-struct coap_address_t;
-
 /**
  * Print the address into the defined buffer.
  *

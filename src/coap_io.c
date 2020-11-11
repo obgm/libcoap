@@ -72,14 +72,12 @@
 #endif /* IPV6_RECVPKTINFO */
 #endif /* !(WITH_CONTIKI || RIOT_VERSION) */
 
-void coap_free_endpoint(coap_endpoint_t *ep);
-
 #ifdef WITH_CONTIKI
 static int ep_initialized = 0;
 
-struct coap_endpoint_t *
+coap_endpoint_t *
   coap_malloc_endpoint() {
-  static struct coap_endpoint_t ep;
+  static coap_endpoint_t ep;
 
   if (ep_initialized) {
     return NULL;
@@ -90,7 +88,7 @@ struct coap_endpoint_t *
 }
 
 void
-coap_mfree_endpoint(struct coap_endpoint_t *ep) {
+coap_mfree_endpoint(coap_endpoint_t *ep) {
   ep_initialized = 0;
 }
 
@@ -140,13 +138,13 @@ void coap_socket_close(coap_socket_t *sock) {
 
 #else
 
-struct coap_endpoint_t *
+coap_endpoint_t *
   coap_malloc_endpoint(void) {
-  return (struct coap_endpoint_t *)coap_malloc_type(COAP_ENDPOINT, sizeof(struct coap_endpoint_t));
+  return (coap_endpoint_t *)coap_malloc_type(COAP_ENDPOINT, sizeof(coap_endpoint_t));
 }
 
 void
-coap_mfree_endpoint(struct coap_endpoint_t *ep) {
+coap_mfree_endpoint(coap_endpoint_t *ep) {
   coap_free_type(COAP_ENDPOINT, ep);
 }
 

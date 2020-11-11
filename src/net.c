@@ -99,8 +99,6 @@ coap_free_node(coap_queue_t *node) {
 }
 #endif /* !defined(WITH_LWIP) && !defined(WITH_CONTIKI) */
 
-void coap_free_endpoint(coap_endpoint_t *ep);
-
 #ifdef WITH_LWIP
 
 #include <lwip/memp.h>

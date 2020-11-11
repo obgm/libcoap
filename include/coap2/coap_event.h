@@ -12,9 +12,6 @@
 
 #include "libcoap.h"
 
-struct coap_context_t;
-struct coap_session_t;
-
 /**
  * @defgroup events Event API
  * API functions for event delivery from lower-layer library functions.
