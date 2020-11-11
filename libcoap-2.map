@@ -163,6 +163,7 @@ global:
   coap_resize_binary;
   coap_resource_init;
   coap_resource_notify_observers;
+  coap_resource_proxy_uri_init;
   coap_resource_set_dirty;
   coap_resource_unknown_init;
   coap_response_phrase;
@@ -204,6 +205,7 @@ global:
   coap_show_tls_version;
   coap_socket_strerror;
   coap_split_path;
+  coap_split_proxy_uri;
   coap_split_query;
   coap_split_uri;
   coap_startup;

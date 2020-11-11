@@ -56,8 +56,9 @@ static coap_optlist_t *optlist = NULL;
 /* Request URI.
  * TODO: associate the resources with transaction id and make it expireable */
 static coap_uri_t uri;
-static coap_string_t proxy = { 0, NULL };
-static uint16_t proxy_port = COAP_DEFAULT_PORT;
+static coap_uri_t proxy = { {0, NULL}, 0, {0, NULL}, {0, NULL}, 0 };
+static int proxy_scheme_option = 0;
+static int uri_host_option = 0;
 static unsigned int ping_seconds = 0;
 
 /* reading is done when this flag is set */
@@ -84,8 +85,10 @@ static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM,
 static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
 static int is_rpk_not_cert = 0; /* Cert is RPK if set */
 static uint8_t *cert_mem = NULL; /* certificate and private key in PEM_BUF */
+static uint8_t *key_mem = NULL; /* private key in PEM_BUF */
 static uint8_t *ca_mem = NULL;   /* CA for cert checking in PEM_BUF */
 static size_t cert_mem_len = 0;
+static size_t key_mem_len = 0;
 static size_t ca_mem_len = 0;
 
 typedef struct ih_def_t {
@@ -202,7 +205,7 @@ coap_new_request(coap_context_t *ctx,
     else {
       unsigned char buf[4];
       coap_add_option(pdu,
-                      COAP_OPTION_SIZE1,
+                      COAP_OPTION_SIZE1,  /* 60 */
                       coap_encode_var_safe8(buf, sizeof(buf), length),
                       buf);
 
@@ -237,17 +240,21 @@ clear_obs(coap_context_t *ctx, coap_session_t *session) {
   }
 
   for (option = optlist; option; option = option->next ) {
-    if (option->number == COAP_OPTION_URI_HOST) {
+    switch (option->number) {
+    case COAP_OPTION_URI_HOST : /*  3 */
       if (!coap_add_option(pdu, option->number, option->length,
                            option->data)) {
         goto error;
       }
       break;
+    default:
+      ;
     }
   }
 
+  /* Observe option comes after Uri-Host, but before the others */
   if (!coap_add_option(pdu,
-      COAP_OPTION_OBSERVE,
+      COAP_OPTION_OBSERVE,  /* 6 */
       coap_encode_var_safe(buf, sizeof(buf), COAP_OBSERVE_CANCEL),
       buf)) {
     coap_log(LOG_CRIT, "cannot add option Observe: %u\n", COAP_OBSERVE_CANCEL);
@@ -274,9 +281,22 @@ clear_obs(coap_context_t *ctx, coap_session_t *session) {
     block.num = 0;
     block.m = 0;
     coap_add_option(pdu,
-      COAP_OPTION_BLOCK2,
+      COAP_OPTION_BLOCK2,  /* 23 */
       coap_encode_var_safe(buf, sizeof(buf), (block.num << 4 | block.m << 3 | block.szx)),
       buf);
+  }
+  for (option = optlist; option; option = option->next ) {
+    switch (option->number) {
+    case COAP_OPTION_PROXY_URI :    /* 35 */
+    case COAP_OPTION_PROXY_SCHEME : /* 39 */
+      if (!coap_add_option(pdu, option->number, option->length,
+                           option->data)) {
+        goto error;
+      }
+      break;
+    default:
+      ;
+    }
   }
 
   if (coap_get_log_level() < LOG_DEBUG)
@@ -382,7 +402,7 @@ nack_handler(coap_context_t *context UNUSED_PARAM,
     break;
   case COAP_NACK_ICMP_ISSUE:
   default:
-    break;
+    ;
   }
   return;
 }
@@ -404,7 +424,7 @@ message_handler(struct coap_context_t *ctx,
   coap_tid_t tid;
 
   coap_log(LOG_DEBUG, "** process incoming %d.%02d response:\n",
-           (received->code >> 5), received->code & 0x1F);
+           COAP_RESPONSE_CLASS(received->code), received->code & 0x1F);
   if (coap_get_log_level() < LOG_DEBUG)
     coap_show_pdu(LOG_INFO, received);
 
@@ -480,11 +500,22 @@ message_handler(struct coap_context_t *ctx,
           coap_log(LOG_DEBUG, "query block %d\n",
                    (coap_opt_block_num(block_opt) + 1));
           coap_add_option(pdu,
-                          blktype,
+                          blktype,     /* 23 or 27 */
                           coap_encode_var_safe(buf, sizeof(buf),
                                  ((coap_opt_block_num(block_opt) + 1) << 4) |
                                   COAP_OPT_BLOCK_SZX(block_opt)), buf);
 
+          for (option = optlist; option; option = option->next ) {
+            switch (option->number) {
+              case COAP_OPTION_PROXY_URI :    /* 35 */
+              case COAP_OPTION_PROXY_SCHEME : /* 39 */
+                coap_add_option(pdu, option->number, option->length,
+                                option->data);
+                break;
+              default:
+                ;     /* skip other options */
+            }
+          }
           tid = coap_send(session, pdu);
 
           if (tid == COAP_INVALID_TID) {
@@ -567,7 +598,7 @@ message_handler(struct coap_context_t *ctx,
                                 option->data);
                 break;
               default:
-              ;     /* skip other options */
+                ;     /* skip other options */
             }
           }
 
@@ -578,12 +609,24 @@ message_handler(struct coap_context_t *ctx,
 
           coap_log(LOG_DEBUG, "send block %d\n", block.num);
           coap_add_option(pdu,
-                          COAP_OPTION_BLOCK1,
+                          COAP_OPTION_BLOCK1,  /* 27 */
                           coap_encode_var_safe(buf, sizeof(buf),
                           (block.num << 4) | (block.m << 3) | block.szx), buf);
 
+          for (option = optlist; option; option = option->next ) {
+            switch (option->number) {
+              case COAP_OPTION_PROXY_URI :    /* 35 */
+              case COAP_OPTION_PROXY_SCHEME : /* 39 */
+                coap_add_option(pdu, option->number, option->length,
+                                option->data);
+                break;
+              default:
+                ;     /* skip other options */
+            }
+          }
+
           coap_add_option(pdu,
-                          COAP_OPTION_SIZE1,
+                          COAP_OPTION_SIZE1,  /* 60 */
                           coap_encode_var_safe8(buf, sizeof(buf), payload.length),
                           buf);
 
@@ -650,7 +693,7 @@ usage( const char *program, const char *version) {
      "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-l loss]\n"
      "\t\t[-m method] [-o file] [-p port] [-r] [-s duration] [-t type]\n"
      "\t\t[-v num] [-A type] [-B seconds] [-H hoplimit] [-K interval] [-N]\n"
-     "\t\t[-O num,text] [-P addr[:port]] [-T token] [-U]\n"
+     "\t\t[-O num,text] [-P scheme://address[:port]] [-T token] [-U]\n"
      "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-C cafile] [-J pkcs11_pin]\n"
      "\t\t[-M raw_pk] [-R root_cafile] [-S match_pki_sni_file]] URI\n"
@@ -685,13 +728,15 @@ usage( const char *program, const char *version) {
      "\t-H hoplimit\tSet the Hop Limit count to hoplimit for proxies. Must\n"
      "\t       \t\thave a value between 1 and 255 inclusive.\n"
      "\t       \t\tDefault is '16'\n"
-     "\t-K interval\tsend a ping after interval seconds of inactivity\n"
+     "\t-K interval\tSend a ping after interval seconds of inactivity\n"
      "\t-N     \t\tSend NON-confirmable message\n"
      "\t-O num,text\tAdd option num with contents text to request. If the\n"
      "\t       \t\ttext begins with 0x, then the hex text is converted to\n"
      "\t       \t\tbinary data\n"
-     "\t-P addr[:port]\tUse proxy (automatically adds Proxy-Uri option to\n"
-     "\t       \t\trequest)\n"
+     "\t-P scheme://address[:port]\tScheme, address and optional port to\n"
+     "\t       \t\tdefine how to connect to a CoAP proxy (automatically adds\n"
+     "\t       \t\tProxy-Uri option to request) to forward the request to.\n"
+     "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
      "\t-T token\tInclude specified token\n"
      "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
      ,program, version, coap_string_tls_version(buffer, sizeof(buffer))
@@ -844,16 +889,12 @@ cmdline_uri(char *arg, int create_uri_opts) {
   size_t buflen;
   int res;
 
-  if (proxy.length) {   /* create Proxy-Uri from argument */
+  if (!proxy_scheme_option && proxy.host.length) {
+    /* create Proxy-Uri from argument */
     size_t len = strlen(arg);
-    while (len > 270) {
-      coap_insert_optlist(&optlist,
-                  coap_new_optlist(COAP_OPTION_PROXY_URI,
-                  270,
-                  (unsigned char *)arg));
-
-      len -= 270;
-      arg += 270;
+    if (len > 1034) {
+      coap_log(LOG_ERR, "Absolute URI length must be <= 1034 bytes for a proxy\n");
+      return -1;
     }
 
     coap_insert_optlist(&optlist,
@@ -986,34 +1027,11 @@ cmdline_subscribe(char *arg) {
 
 static int
 cmdline_proxy(char *arg) {
-  char *proxy_port_str = strrchr((const char *)arg, ':'); /* explicit port ? */
-  if (proxy_port_str) {
-    char *ipv6_delimiter = strrchr((const char *)arg, ']');
-    if (!ipv6_delimiter) {
-      if (proxy_port_str == strchr((const char *)arg, ':')) {
-        /* host:port format - host not in ipv6 hexadecimal string format */
-        *proxy_port_str++ = '\0'; /* split */
-        proxy_port = atoi(proxy_port_str);
-      }
-    } else {
-      arg = strchr((const char *)arg, '[');
-      if (!arg) return 0;
-      arg++;
-      *ipv6_delimiter = '\0'; /* split */
-      if (ipv6_delimiter + 1 == proxy_port_str++) {
-        /* [ipv6 address]:port */
-        proxy_port = atoi(proxy_port_str);
-      }
-    }
-  }
-
-  proxy.length = strlen(arg);
-  if ( (proxy.s = coap_malloc(proxy.length + 1)) == NULL) {
-    proxy.length = 0;
+  if (coap_split_uri((unsigned char *)arg, strlen(arg), &proxy) < 0 ||
+      proxy.path.length != 0 || proxy.query.length != 0) {
+    coap_log(LOG_ERR, "invalid CoAP Proxy definition\n");
     return 0;
   }
-
-  memcpy(proxy.s, arg, proxy.length+1);
   return 1;
 }
 
@@ -1091,6 +1109,31 @@ cmdline_option(char *arg) {
   } else { /* null-terminated character string */
     coap_insert_optlist(&optlist,
                         coap_new_optlist(num, strlen(arg), (unsigned char *)arg));
+  }
+  if (num == COAP_OPTION_PROXY_SCHEME) {
+    proxy_scheme_option = 1;
+    if (strcasecmp(arg, "coaps+tcp") == 0) {
+      proxy.scheme = COAP_URI_SCHEME_COAPS_TCP;
+      proxy.port = COAPS_DEFAULT_PORT;
+    }
+    else if (strcasecmp(arg, "coap+tcp") == 0) {
+      proxy.scheme = COAP_URI_SCHEME_COAP_TCP;
+      proxy.port = COAP_DEFAULT_PORT;
+    }
+    else if (strcasecmp(arg, "coaps") == 0) {
+      proxy.scheme = COAP_URI_SCHEME_COAPS;
+      proxy.port = COAPS_DEFAULT_PORT;
+    }
+    else if (strcasecmp(arg, "coap") == 0) {
+      proxy.scheme = COAP_URI_SCHEME_COAP;
+      proxy.port = COAP_DEFAULT_PORT;
+    }
+    else {
+      coap_log(LOG_WARNING, "%s is not a supported CoAP Proxy-Scheme\n", arg);
+    }
+  }
+  if (num == COAP_OPTION_URI_HOST) {
+    uri_host_option = 1;
   }
 }
 
@@ -1246,23 +1289,26 @@ cmdline_method(char *arg) {
 }
 
 static ssize_t
-cmdline_read_user(char *arg, unsigned char *buf, size_t maxlen) {
+cmdline_read_user(char *arg, unsigned char **buf, size_t maxlen) {
   size_t len = strnlen(arg, maxlen);
   if (len) {
-    memcpy(buf, arg, len);
+    *buf = (unsigned char *)arg;
+    /* len is the size or less, so 0 terminate to maxlen */
+    buf[len] = '\000';
   }
   /* 0 length Identity is valid */
   return len;
 }
 
 static ssize_t
-cmdline_read_key(char *arg, unsigned char *buf, size_t maxlen) {
+cmdline_read_key(char *arg, unsigned char **buf, size_t maxlen) {
   size_t len = strnlen(arg, maxlen);
   if (len) {
-    memcpy(buf, arg, len);
+    *buf = (unsigned char *)arg;
     return len;
   }
   /* Need at least one byte for the pre-shared key */
+  coap_log( LOG_CRIT, "Invalid Pre-Shared Key specified\n" );
   return -1;
 }
 
@@ -1458,15 +1504,19 @@ setup_pki(coap_context_t *ctx) {
   }
   else {
     /* Map file into memory */
-    ca_mem = read_file_mem(ca_file, &ca_mem_len);
-    cert_mem = read_file_mem(cert_file, &cert_mem_len);
+    if (ca_mem == 0 && cert_mem == 0 && key_mem == 0) {
+      ca_mem = read_file_mem(ca_file, &ca_mem_len);
+      cert_mem = read_file_mem(cert_file, &cert_mem_len);
+      key_mem = read_file_mem(key_file, &key_mem_len);
+    }
     dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM_BUF;
     dtls_pki.pki_key.key.pem_buf.ca_cert = ca_mem;
     dtls_pki.pki_key.key.pem_buf.public_cert = cert_mem;
-    dtls_pki.pki_key.key.pem_buf.private_key = cert_mem;
+    dtls_pki.pki_key.key.pem_buf.private_key = key_mem ? key_mem : cert_mem;
     dtls_pki.pki_key.key.pem_buf.ca_cert_len = ca_mem_len;
     dtls_pki.pki_key.key.pem_buf.public_cert_len = cert_mem_len;
-    dtls_pki.pki_key.key.pem_buf.private_key_len = cert_mem_len;
+    dtls_pki.pki_key.key.pem_buf.private_key_len = key_mem ?
+                                                    key_mem_len : cert_mem_len;
   }
   return &dtls_pki;
 }
@@ -1609,10 +1659,11 @@ main(int argc, char **argv) {
   char node_str[NI_MAXHOST] = "";
   int opt, res;
   coap_log_t log_level = LOG_WARNING;
-  unsigned char user[MAX_USER + 1], key[MAX_KEY];
+  unsigned char *user = NULL, *key = NULL;
   ssize_t user_length = -1, key_length = 0;
   int create_uri_opts = 1;
   size_t i;
+  coap_uri_scheme_t scheme;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
@@ -1653,7 +1704,7 @@ main(int argc, char **argv) {
       pkcs11_pin = optarg;
       break;
     case 'k':
-      key_length = cmdline_read_key(optarg, key, MAX_KEY);
+      key_length = cmdline_read_key(optarg, &key, MAX_KEY);
       break;
     case 'p':
       strncpy(port_str, optarg, NI_MAXSERV - 1);
@@ -1703,9 +1754,7 @@ main(int argc, char **argv) {
       cmdline_token(optarg);
       break;
     case 'u':
-      user_length = cmdline_read_user(optarg, user, MAX_USER);
-      if (user_length >= 0)
-        user[user_length] = 0;
+      user_length = cmdline_read_user(optarg, &user, MAX_USER);
       break;
     case 'U':
       create_uri_opts = 0;
@@ -1759,13 +1808,14 @@ main(int argc, char **argv) {
     goto finish;
   }
 
-  if (proxy.length) {
-    server.length = proxy.length;
-    server.s = proxy.s;
-    port = proxy_port;
+  if (proxy.host.length) {
+    server = proxy.host;
+    port = proxy.port;
+    scheme = proxy.scheme;
   } else {
     server = uri.host;
-    port = uri.port;
+    port = proxy_scheme_option ? proxy.port : uri.port;
+    scheme = proxy_scheme_option ? proxy.scheme : uri.scheme;
   }
 
   /* resolve destination address where server should be sent */
@@ -1790,11 +1840,11 @@ main(int argc, char **argv) {
   session = get_session(
     ctx,
     node_str[0] ? node_str : NULL, port_str,
-    uri.scheme==COAP_URI_SCHEME_COAP_TCP ? COAP_PROTO_TCP :
-    uri.scheme==COAP_URI_SCHEME_COAPS_TCP ? COAP_PROTO_TLS :
+    scheme==COAP_URI_SCHEME_COAP_TCP ? COAP_PROTO_TCP :
+    scheme==COAP_URI_SCHEME_COAPS_TCP ? COAP_PROTO_TLS :
     (reliable ?
-        uri.scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_TLS : COAP_PROTO_TCP
-      : uri.scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_DTLS : COAP_PROTO_UDP),
+        scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_TLS : COAP_PROTO_TCP
+      : scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_DTLS : COAP_PROTO_UDP),
     &dst,
     user_length >= 0 ? user : NULL,
     user_length >= 0 ? user_length : 0,
@@ -1828,11 +1878,11 @@ main(int argc, char **argv) {
 
   /* construct CoAP message */
 
-  if (!proxy.length && addrptr
+  if (!uri_host_option && (!proxy.host.length && addrptr
       && (inet_ntop(dst.addr.sa.sa_family, addrptr, addr, sizeof(addr)) != 0)
       && (strlen(addr) != uri.host.length
       || memcmp(addr, uri.host.s, uri.host.length) != 0)
-      && create_uri_opts) {
+      && create_uri_opts)) {
         /* add Uri-Host */
 
         coap_insert_optlist(&optlist,
@@ -1908,10 +1958,9 @@ main(int argc, char **argv) {
 
  finish:
 
-  if (ca_mem)
-    coap_free(ca_mem);
-  if (cert_mem)
-    coap_free(cert_mem);
+  coap_free(ca_mem);
+  coap_free(cert_mem);
+  coap_free(key_mem);
   for (i = 0; i < valid_ihs.count; i++) {
     free(valid_ihs.ih_list[i].hint_match);
     coap_delete_bin_const(valid_ihs.ih_list[i].new_identity);

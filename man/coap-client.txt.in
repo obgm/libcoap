@@ -18,7 +18,7 @@ SYNOPSIS
               [*-m* method] [*-o* file] [*-p* port] [*-r*] [*-s duration*]
               [*-t* type] [*-v* num] [*-A* type] [*-B* seconds]
               [*-H* hoplimit] [*-K* interval] [*-N*] [*-O* num,text]
-              [*-P* addr[:port]] [*-T* token] [*-U*]
+              [*-P* scheme://addr[:port]] [*-T* token] [*-U*]
               [[*-h* match_hint_file] [*-k* key] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [*-C* cafile] [*-J* pkcs11_pin]
               [*-M* rpk_file] [*-R* root_cafile]] URI
@@ -129,9 +129,10 @@ OPTIONS - General
    Add option 'num' with contents of 'text' to the request. If the text begins
    with 0x, then the hex text is converted to binary data.
 
-*-P* addr[:port]::
-   Address (and port) for proxy to use (automatically adds Proxy-Uri option
-   to request).
+*-P* scheme://addr[:port]::
+   Scheme, address and optional port to define how to connect to a CoAP proxy
+   (automatically adds Proxy-Uri option to request) to forward the request to.
+   Scheme is one of coap, coaps, coap+tcp and coaps+tcp.
 
 *-T* token::
    Include the 'token' to the request.

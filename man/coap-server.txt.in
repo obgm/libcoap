@@ -15,9 +15,9 @@ coap-server - CoAP Server based on libcoap
 SYNOPSIS
 --------
 *coap-server* [*-d* max] [*-g* group] [*-l* loss] [*-p* port] [*-v* num]
-              [*-A* address] [*-N*]
+              [*-A* address] [*-N*] [*-P* scheme://addr[:port],name1[,name2..]]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
-              [*-s* match_psk_sni_file]]
+              [*-s* match_psk_sni_file] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* root_cafile]
               [*-S* match_pki_sni_file]]
@@ -64,6 +64,16 @@ OPTIONS - General
    fifth response will still be sent as a confirmable response
    (RFC 7641 requirement).
 
+*-P* scheme://address[:port],name1[,name2[,name3..]] ::
+   Scheme, address, optional port of how to connect to the next proxy server
+   and one or more names (comma separated) that this proxy server is known by.
+   If the hostname of the incoming proxy request matches one of these names,
+   then this server is considered to be the final endpoint. If
+   scheme://address[:port] is not defined before the leading , (comma) of the
+   first name, then the ongoing connection will be a direct connection.
+   Scheme is one of coap, coaps, coap+tcp and coaps+tcp.
+
+
 OPTIONS - PSK
 -------------
 (If supported by underlying (D)TLS library)
@@ -96,6 +106,9 @@ OPTIONS - PSK
    A line that starts with # is treated as a comment. +
    Note: -k still needs to be defined for the default case +
    Note: the new Pre-Shared Key will get updated if there is also a -i match
+
+*-u* user ::
+   User identity for pre-shared key mode (only used if option P is set).
 
 OPTIONS - PKI
 -------------

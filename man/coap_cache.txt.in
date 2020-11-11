@@ -232,7 +232,7 @@ hnd_put_example_data(coap_context_t *ctx,
     if (!cache_entry && block1.num == 0) {
       /*
        * Set idle_timeout parameter to COAP_MAX_TRANSMIT_WAIT if you want
-       * early removal on transmission failure. -1 means only delete when
+       * early removal on transmission failure. 0 means only delete when
        * the session is deleted as session_based is set here.
        */
       cache_entry = coap_new_cache_entry(session, request,

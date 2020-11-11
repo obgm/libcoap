@@ -152,6 +152,8 @@ typedef struct coap_context_t {
                                           resources */
   struct coap_resource_t *unknown_resource; /**< can be used for handling
                                                  unknown resources */
+  struct coap_resource_t *proxy_uri_resource; /**< can be used for handling
+                                                 proxy URI resources */
 
 #ifndef WITHOUT_ASYNC
   /**

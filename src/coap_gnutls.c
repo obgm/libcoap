@@ -1921,13 +1921,15 @@ coap_dtls_free_gnutls_env(coap_gnutls_context_t *g_context,
     gnutls_deinit(g_env->g_session);
     g_env->g_session = NULL;
     if (g_context->psk_pki_enabled & IS_PSK) {
-      if (g_context->psk_pki_enabled & IS_CLIENT) {
+      if ((g_context->psk_pki_enabled & IS_CLIENT) &&
+          g_env->psk_cl_credentials != NULL) {
         gnutls_psk_free_client_credentials(g_env->psk_cl_credentials);
         g_env->psk_cl_credentials = NULL;
       }
       else {
         /* YUK - A memory leak in 3.3.0 (fixed by 3.3.26) of hint */
-        gnutls_psk_free_server_credentials(g_env->psk_sv_credentials);
+        if (g_env->psk_sv_credentials != NULL)
+          gnutls_psk_free_server_credentials(g_env->psk_sv_credentials);
         g_env->psk_sv_credentials = NULL;
       }
     }

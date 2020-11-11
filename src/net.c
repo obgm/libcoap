@@ -2308,12 +2308,77 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   enum respond_t respond = RESPONSE_DEFAULT;
   coap_opt_iterator_t opt_iter;
   coap_opt_t *opt;
+  int is_proxy_uri = 0;
+  int is_proxy_scheme = 0;
   int skip_hop_limit_check = 0;
   int resp;
 
   coap_option_filter_clear(opt_filter);
+  opt = coap_check_option(pdu, COAP_OPTION_PROXY_SCHEME, &opt_iter);
+  if (opt)
+    is_proxy_scheme = 1;
 
-  /* If !skip_hop_limit_check test placeholder for Proxy-Uri: code */
+  opt = coap_check_option(pdu, COAP_OPTION_PROXY_URI, &opt_iter);
+  if (opt)
+    is_proxy_uri = 1;
+
+  if (is_proxy_scheme || is_proxy_uri) {
+    coap_uri_t uri;
+
+    if (!context->proxy_uri_resource) {
+      /* Need to return a 5.05 RFC7252 Section 5.7.2 */
+      coap_log(LOG_DEBUG, "Proxy-%s support not configured\n",
+               is_proxy_scheme ? "Scheme" : "Uri");
+      resp = 505;
+      goto fail_response;
+    }
+    if (((size_t)pdu->code - 1 <
+                (sizeof(resource->handler) / sizeof(resource->handler[0]))) &&
+        !(context->proxy_uri_resource->handler[pdu->code - 1])) {
+      /* Need to return a 5.05 RFC7252 Section 5.7.2 */
+      coap_log(LOG_DEBUG, "Proxy-%s code %d.%02d handler not supported\n",
+               is_proxy_scheme ? "Scheme" : "Uri",
+               pdu->code/100,  pdu->code%100);
+      resp = 505;
+      goto fail_response;
+    }
+
+    /* Need to check if authority is the proxy endpoint RFC7252 Section 5.7.2 */
+    if (is_proxy_uri) {
+      if (coap_split_proxy_uri(coap_opt_value(opt),
+                               coap_opt_length(opt), &uri) < 0) {
+        /* Need to return a 5.05 RFC7252 Section 5.7.2 */
+        coap_log(LOG_DEBUG, "Proxy-URI not decodable\n");
+        resp = 505;
+        goto fail_response;
+      }
+    }
+    else {
+      memset(&uri, 0, sizeof(uri));
+      opt = coap_check_option(pdu, COAP_OPTION_URI_HOST, &opt_iter);
+      if (opt) {
+        uri.host.length = coap_opt_length(opt);
+        uri.host.s = coap_opt_value(opt);
+      }
+    }
+    resource = context->proxy_uri_resource;
+    if (uri.host.length && resource->proxy_name_count && resource->proxy_name_list) {
+      size_t i;
+      for (i = 0; i < resource->proxy_name_count; i++) {
+        if (coap_string_equal(&uri.host, resource->proxy_name_list[i])) {
+          break;
+        }
+      }
+      if (i != resource->proxy_name_count) {
+        /* This server is hosting the proxy connection endpoint */
+        is_proxy_uri = 0;
+        is_proxy_scheme = 0;
+        skip_hop_limit_check = 1;
+      }
+    }
+    resource = NULL;
+  }
+
   if (!skip_hop_limit_check) {
     opt = coap_check_option(pdu, COAP_OPTION_HOP_LIMIT, &opt_iter);
     if (opt) {
@@ -2340,21 +2405,28 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     }
   }
 
-  /* try to find the resource from the request URI */
   coap_string_t *uri_path = coap_get_uri_path(pdu);
   if (!uri_path)
     return;
-  coap_str_const_t uri_path_c = { uri_path->length, uri_path->s };
-  resource = coap_get_resource_from_uri_path(context, &uri_path_c);
 
-  if ((resource == NULL) || (resource->is_unknown == 1)) {
+  if (!is_proxy_uri && !is_proxy_scheme) {
+    /* try to find the resource from the request URI */
+    coap_str_const_t uri_path_c = { uri_path->length, uri_path->s };
+    resource = coap_get_resource_from_uri_path(context, &uri_path_c);
+  }
+
+  if ((resource == NULL) || (resource->is_unknown == 1) ||
+      (resource->is_proxy_uri == 1)) {
     /* The resource was not found or there is an unexpected match against the
-     * resource defined for handling unknown URIs.
+     * resource defined for handling unknown or proxy URIs.
      * Check if the request URI happens to be the well-known URI, or if the
      * unknown resource handler is defined, a PUT or optionally other methods,
      * if configured, for the unknown handler.
      *
      * if well-known URI generate a default response
+     *
+     * else if a PROXY URI/Scheme request and proxy URI handler defined, call the
+     *  proxy URI handler
      *
      * else if unknown URI handler defined, call the unknown
      *  URI handler (to allow for potential generation of resource
@@ -2375,6 +2447,8 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
         response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(405),
           opt_filter);
       }
+    } else if (is_proxy_uri || is_proxy_scheme) {
+      resource = context->proxy_uri_resource;
     } else if ((context->unknown_resource != NULL) &&
                ((size_t)pdu->code - 1 <
                 (sizeof(resource->handler) / sizeof(coap_method_handler_t))) &&

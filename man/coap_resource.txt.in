@@ -13,6 +13,7 @@ NAME
 coap_resource,
 coap_resource_init,
 coap_resource_unknown_init,
+coap_resource_proxy_uri_init,
 coap_add_resource,
 coap_delete_resource,
 coap_delete_all_resources,
@@ -30,6 +31,9 @@ int _flags_);*
 
 *coap_resource_t *coap_resource_unknown_init(coap_method_handler_t
 _put_handler_);*
+
+*coap_resource_t *coap_resource_proxy_uri_init(coap_method_handler_t
+_proxy_handler_, size_t _host_name_count_, const char *_host_name_list_[]);*
 
 *void coap_add_resource(coap_context_t *_context_,
 coap_resource_t *_resource_);*
@@ -108,10 +112,19 @@ Free off the coap_str_const_t for _uri_path_ when the _resource_ is deleted.
 *NOTE:* _uri_path_, if not 7 bit readable ASCII, binary bytes must be hex
 encoded according to the rules defined in RFC3968 Section 2.1.
 
-The *coap_resource_unknown_init*() returns a newly created _resource_ of
-type _coap_resource_t_ *. _put_handler_ is automatically added to the
+The *coap_resource_unknown_init*() function returns a newly created _resource_
+of type _coap_resource_t_ *. _put_handler_ is automatically added to the
 _resource_ to handle PUT requests to resources that are unknown. Additional
 handlers can be added to this resource if required.
+
+The *coap_resource_proxy_uri_init*() function returns a newly created
+_resource_ of type _coap_resource_t_ *. _proxy_handler_ is automatically added
+to the _resource_ to handle PUT/POST/GET etc. requests that use the Proxy-Uri:
+option.  There is no need to add explicit request type handlers. One or more
+names by which the proxy is known by (IP address, DNS name etc.) must be
+supplied in the array defined by _host_name_list_[] which has a count of
+_host_name_count_.  This is used to check whether the current endpoint is
+the proxy target address.
 
 The *coap_add_resource*() function registers the given _resource_ with the
 _context_. The _resource_ must have been created by *coap_resource_init*(),
@@ -147,8 +160,9 @@ from the _resource_ that had previously been set up by
 
 RETURN VALUES
 -------------
-The *coap_resource_init*() and *coap_resource_unknown_init*() functions
-return a newly created resource or NULL if there is a malloc failure.
+The *coap_resource_init*(), *coap_resource_unknown_init*() and
+*coap_resource_proxy_uri_init*() functions return a newly created resource
+or NULL if there is a malloc failure.
 
 The *coap_delete_resource*() function return 0 on failure (_resource_ not
 found), 1 on success.

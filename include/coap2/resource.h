@@ -89,6 +89,7 @@ typedef struct coap_resource_t {
   unsigned int observable:1;     /**< can be observed */
   unsigned int cacheable:1;      /**< can be cached */
   unsigned int is_unknown:1;     /**< resource created for unknown handler */
+  unsigned int is_proxy_uri:1;   /**< resource created for proxy URI handler */
 
   /**
    * Used to store handlers for the seven coap methods @c GET, @c POST, @c PUT,
@@ -122,6 +123,16 @@ typedef struct coap_resource_t {
    * Pointer back to the context that 'owns' this resource.
    */
   coap_context_t *context;
+
+  /**
+   * Count of valid names this host is known by (proxy support)
+   */
+  size_t proxy_name_count;
+
+  /**
+   * Array valid names this host is known by (proxy support)
+   */
+  coap_str_const_t ** proxy_name_list;
 
   /**
    * This pointer is under user control. It can be used to store context for
@@ -193,6 +204,24 @@ coap_resource_t *coap_resource_init(coap_str_const_t *uri_path,
  * @return       A pointer to the new object or @c NULL on error.
  */
 coap_resource_t *coap_resource_unknown_init(coap_method_handler_t put_handler);
+
+/**
+ * Creates a new resource object for handling proxy URIs.
+ * This function returns the new coap_resource_t object.
+ *
+ * Note: There can only be one proxy resource handler per context - attaching
+ *       a new one overrides the previous definition.
+ *
+ * @param handler The PUT/POST/GET etc. handler that handles all request types.
+ * @param host_name_count The number of provided host_name_list entries. A
+ *                        minimum of 1 must be provided.
+ * @param host_name_list Array of depth host_name_count names that this proxy
+ *                       is known by.
+ *
+ * @return         A pointer to the new object or @c NULL on error.
+ */
+coap_resource_t *coap_resource_proxy_uri_init(coap_method_handler_t handler,
+                      size_t host_name_count, const char *host_name_list[]);
 
 /**
  * Sets the notification message type of resource @p resource to given

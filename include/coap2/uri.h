@@ -19,19 +19,22 @@ struct coap_pdu_t;
  * The scheme specifiers. Secure schemes have an odd numeric value,
  * others are even.
  */
-enum coap_uri_scheme_t {
-  COAP_URI_SCHEME_COAP=0,
-  COAP_URI_SCHEME_COAPS=1,
-  COAP_URI_SCHEME_COAP_TCP=2,
-  COAP_URI_SCHEME_COAPS_TCP=3
-};
+typedef enum coap_uri_scheme_t {
+  COAP_URI_SCHEME_COAP = 0,
+  COAP_URI_SCHEME_COAPS,     /* 1 */
+  COAP_URI_SCHEME_COAP_TCP,  /* 2 */
+  COAP_URI_SCHEME_COAPS_TCP, /* 3 */
+  COAP_URI_SCHEME_HTTP,      /* 4 Proxy-Uri only */
+  COAP_URI_SCHEME_HTTPS      /* 5 Proxy-Uri only */
+} coap_uri_scheme_t;
 
 /** This mask can be used to check if a parsed URI scheme is secure. */
 #define COAP_URI_SCHEME_SECURE_MASK 0x01
 
 /**
  * Representation of parsed URI. Components may be filled from a string with
- * coap_split_uri() and can be used as input for option-creation functions.
+ * coap_split_uri() or coap_split_proxy_uri() and can be used as input for
+ * option-creation functions.
  */
 typedef struct {
   coap_str_const_t host;  /**< host part of the URI */
@@ -79,16 +82,35 @@ coap_uri_t *coap_clone_uri(const coap_uri_t *uri);
  * Parses a given string into URI components. The identified syntactic
  * components are stored in the result parameter @p uri. Optional URI
  * components that are not specified will be set to { 0, 0 }, except for the
- * port which is set to @c COAP_DEFAULT_PORT. This function returns @p 0 if
- * parsing succeeded, a value less than zero otherwise.
+ * port which is set to the default port for the protocol. This function
+ * returns @p 0 if parsing succeeded, a value less than zero otherwise.
  *
  * @param str_var The string to split up.
  * @param len     The actual length of @p str_var
  * @param uri     The coap_uri_t object to store the result.
+ *
  * @return        @c 0 on success, or < 0 on error.
  *
  */
 int coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri);
+
+/**
+ * Parses a given string into URI components. The identified syntactic
+ * components are stored in the result parameter @p uri. Optional URI
+ * components that are not specified will be set to { 0, 0 }, except for the
+ * port which is set to default port for the protocol. This function returns
+ * @p 0 if parsing succeeded, a value less than zero otherwise.
+ * Note: This function enforces that the given string is in Proxy-Uri format
+ *       as well as supports different schema such as http.
+ *
+ * @param str_var The string to split up.
+ * @param len     The actual length of @p str_var
+ * @param uri     The coap_uri_t object to store the result.
+ *
+ * @return        @c 0 on success, or < 0 on error.
+ *
+ */
+int coap_split_proxy_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri);
 
 /**
  * Splits the given URI path into segments. Each segment is preceded
