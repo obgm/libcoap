@@ -718,11 +718,16 @@ unsigned int coap_calc_timeout(coap_session_t *session, unsigned char r);
  *
  * @param ctx   The current context
  * @param groupname The name of the group that is to be joined for listening
+ * @param intf_index Index of network interface to join the group on
  *
  * @return       0 on success, -1 on error
  */
 int
-coap_join_mcast_group(coap_context_t *ctx, const char *groupname);
+coap_join_mcast_group_intf(coap_context_t *ctx, const char *groupname,
+                           unsigned int intf_index);
+
+#define coap_join_mcast_group(ctx, groupname) \
+	    (coap_join_mcast_group_intf(ctx, groupname, 0))
 
 /**
  * @defgroup app_io Application I/O Handling
