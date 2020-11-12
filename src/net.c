@@ -2933,9 +2933,11 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
 }
 #else /* defined WITH_CONTIKI || defined WITH_LWIP */
 int
-coap_join_mcast_group(coap_context_t *ctx, const char *group_name) {
+coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
+  unsigned int intf_index) {
   (void)ctx;
   (void)group_name;
+  (void)intf_index;
   return -1;
 }
 #endif /* defined WITH_CONTIKI || defined WITH_LWIP */
