@@ -86,7 +86,9 @@ int coap_is_mcast(const coap_address_t *a) {
  case AF_INET:
    return IN_MULTICAST(ntohl(a->addr.sin.sin_addr.s_addr));
  case  AF_INET6:
-   return IN6_IS_ADDR_MULTICAST(&a->addr.sin6.sin6_addr);
+   return IN6_IS_ADDR_MULTICAST(&a->addr.sin6.sin6_addr) ||
+       (IN6_IS_ADDR_V4MAPPED(&a->addr.sin6.sin6_addr) &&
+           IN_MULTICAST(ntohl(a->addr.sin6.sin6_addr.s6_addr[12])));
  default:  /* fall through and signal error */
    ;
   }

@@ -2543,7 +2543,7 @@ main(int argc, char **argv) {
              sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
   /* join multicast group if requested at command line */
   if (group)
-    coap_join_mcast_group(ctx, group);
+    coap_join_mcast_group_intf(ctx, group, NULL);
 
   coap_fd = coap_context_get_coap_fd(ctx);
   if (coap_fd != -1) {
