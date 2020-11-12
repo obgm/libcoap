@@ -2851,34 +2851,38 @@ void coap_cleanup(void) {
 
 #if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION
 int
-coap_join_mcast_group(coap_context_t *ctx, const char *group_name) {
+coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
+  unsigned int intf_index) {
   struct ipv6_mreq mreq;
   struct addrinfo   *reslocal = NULL, *resmulti = NULL, hints, *ainfo;
   int result = -1;
   coap_endpoint_t *endpoint;
   int mgroup_setup = 0;
 
-  /* we have to resolve the link-local interface to get the interface id */
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_INET6;
-  hints.ai_socktype = SOCK_DGRAM;
+  if (!intf_index) {
+    /* we have to resolve the link-local interface to get the interface id */
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET6;
+    hints.ai_socktype = SOCK_DGRAM;
 
-  result = getaddrinfo("::", NULL, &hints, &reslocal);
-  if (result != 0) {
-    coap_log(LOG_ERR,
-             "coap_join_mcast_group: cannot resolve link-local interface: %s\n",
-             gai_strerror(result));
-    goto finish;
-  }
+    result = getaddrinfo("::", NULL, &hints, &reslocal);
+    if (result != 0) {
+      coap_log(LOG_ERR,
+              "coap_join_mcast_group: cannot resolve link-local interface: %s\n",
+              gai_strerror(result));
+      goto finish;
+    }
 
-  /* get the first suitable interface identifier */
-  for (ainfo = reslocal; ainfo != NULL; ainfo = ainfo->ai_next) {
-    if (ainfo->ai_family == AF_INET6) {
-      mreq.ipv6mr_interface =
-                ((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_scope_id;
-      break;
+    /* get the first suitable interface identifier */
+    for (ainfo = reslocal; ainfo != NULL; ainfo = ainfo->ai_next) {
+      if (ainfo->ai_family == AF_INET6) {
+        intf_index = ((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_scope_id;
+        break;
+      }
     }
   }
+
+  mreq.ipv6mr_interface = intf_index;
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET6;
