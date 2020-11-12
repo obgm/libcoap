@@ -16,7 +16,7 @@ SYNOPSIS
 --------
 *coap-client* [*-a* addr] [*-b* [num,]size] [*-e* text] [*-f* file] [*-l* loss]
               [*-m* method] [*-o* file] [*-p* port] [*-r*] [*-s duration*]
-              [*-t* type] [*-v* num] [*-A* type] [*-B* seconds]
+              [*-t* type] [*-v* num] [*-w*] [*-A* type] [*-B* seconds]
               [*-H* hoplimit] [*-K* interval] [*-N*] [*-O* num,text]
               [*-P* scheme://addr[:port]] [*-T* token] [*-U*]
               [[*-h* match_hint_file] [*-k* key] [*-u* user]]
@@ -104,6 +104,9 @@ OPTIONS - General
 *-v* num::
    The verbosity level to use (default 3, maximum is 9). Above 7, there is
    increased verbosity in GnuTLS and OpenSSL logging.
+
+*-w*::
+   Append a newline to received data.
 
 *-A* type::
    Accepted media type. 'type' must be either a numeric value reflecting a
