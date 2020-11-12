@@ -869,7 +869,7 @@ main(int argc, char **argv) {
     return -1;
 
   if (group)
-    coap_join_mcast_group(ctx, group);
+    coap_join_mcast_group_intf(ctx, group, NULL);
 
   init_resources(ctx);
 
