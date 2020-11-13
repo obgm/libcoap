@@ -473,6 +473,10 @@ is_binary(int content_format) {
  *
  */
 
+#if COAP_DEBUG_BUF_SIZE < 5
+#error "COAP_DEBUG_BUF_SIZE must be at least 5, should be >= 32 to be useful"
+#endif /* COAP_DEBUG_BUF_SIZE < 5 */
+
 void
 coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 #if COAP_CONSTRAINED_STACK
