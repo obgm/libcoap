@@ -2222,7 +2222,7 @@ cmdline_read_user(char *arg, unsigned char **buf, size_t maxlen) {
   if (len) {
     *buf = (unsigned char *)arg;
     /* len is the size or less, so 0 terminate to maxlen */
-    buf[len] = '\000';
+    (*buf)[len] = '\000';
   }
   /* 0 length Identity is valid */
   return len;
