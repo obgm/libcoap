@@ -837,7 +837,7 @@ cmdline_content_type(char *arg, uint16_t key) {
   uint16_t value;
   uint8_t buf[2];
 
-  if (isdigit(*arg)) {
+  if (isdigit((int)arg[0])) {
     value = atoi(arg);
   } else {
     for (i=0;
@@ -1088,7 +1088,7 @@ hex2char(char c) {
 static size_t
 convert_hex_string(const char *src, uint8_t *dst) {
   uint8_t *p = dst;
-  while (isxdigit(src[0]) && isxdigit(src[1])) {
+  while (isxdigit((int)src[0]) && isxdigit((int)src[1])) {
     *p++ = (hex2char(src[0]) << 4) + hex2char(src[1]);
     src += 2;
   }
@@ -1638,7 +1638,7 @@ get_session(
     /* iterate through results until success */
     for ( rp = result; rp != NULL; rp = rp->ai_next ) {
       coap_address_t bind_addr;
-      if ( rp->ai_addrlen <= sizeof( bind_addr.addr ) ) {
+      if ( rp->ai_addrlen <= (socklen_t)sizeof( bind_addr.addr ) ) {
         coap_address_init( &bind_addr );
         bind_addr.size = (socklen_t)rp->ai_addrlen;
         memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );

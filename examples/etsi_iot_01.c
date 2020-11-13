@@ -616,7 +616,7 @@ get_context(const char *node, const char *port) {
   for (rp = result; rp != NULL; rp = rp->ai_next) {
     coap_address_t addr;
 
-    if (rp->ai_addrlen <= sizeof(addr.addr)) {
+    if (rp->ai_addrlen <= (socklen_t)sizeof(addr.addr)) {
       coap_address_init(&addr);
       addr.size = rp->ai_addrlen;
       memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);

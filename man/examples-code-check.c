@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
   DIR *pdir;
   struct dirent *pdir_ent;
   int exit_code = 0;
-  char buffer[512];
+  char buffer[1024];
 
   if (argc != 2) {
     fprintf(stderr, "usage: %s man_directory\n", argv[0]);
@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
       char  keep_line[1024] = {0};
       FILE*  fpcode = NULL;
       FILE*  fpheader = NULL;
-      char  file_name[512];
+      char  file_name[300];
 
       fprintf(stderr, "Processing: %s\n", pdir_ent->d_name);
 

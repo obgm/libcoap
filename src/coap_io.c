@@ -210,8 +210,8 @@ coap_socket_bind_udp(coap_socket_t *sock,
 
   if (bind(sock->fd, &listen_addr->addr.sa,
            listen_addr->addr.sa.sa_family == AF_INET ?
-            sizeof(struct sockaddr_in) :
-            listen_addr->size) == COAP_SOCKET_ERROR) {
+            (socklen_t)sizeof(struct sockaddr_in) :
+            (socklen_t)listen_addr->size) == COAP_SOCKET_ERROR) {
     coap_log(LOG_WARNING, "coap_socket_bind_udp: bind: %s\n",
              coap_socket_strerror());
     goto error;
@@ -300,8 +300,8 @@ coap_socket_connect_udp(coap_socket_t *sock,
 #endif /* RIOT_VERSION */
     if (bind(sock->fd, &local_if->addr.sa,
              local_if->addr.sa.sa_family == AF_INET ?
-              sizeof(struct sockaddr_in) :
-              local_if->size) == COAP_SOCKET_ERROR) {
+              (socklen_t)sizeof(struct sockaddr_in) :
+              (socklen_t)local_if->size) == COAP_SOCKET_ERROR) {
       coap_log(LOG_WARNING, "coap_socket_connect_udp: bind: %s\n",
                coap_socket_strerror());
       goto error;
@@ -538,6 +538,10 @@ static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
 #define ipi_spec_dst ipi_addr
 #else
 #define iov_len_t size_t
+#endif
+
+#if defined(_CYGWIN_ENV)
+#define ipi_spec_dst ipi_addr
 #endif
 
 #ifndef RIOT_VERSION
