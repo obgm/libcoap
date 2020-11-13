@@ -461,14 +461,28 @@ is_binary(int content_format) {
    }                                       \
  } while (0)
 
+/*
+ * It is possible to override the output debug buffer size and hence control
+ * the amount of information printed out about a CoAP PDU.
+ * Note: Adding a byte may be insufficient to output the next byte of the PDU.
+ *
+ * This is done by the adding of a -DCOAP_DEBUG_BUF_SIZE=nnnn option to the
+ * CPPFLAGS parameter that is optionally used on the ./configure command line.
+ *
+ * E.g.  ./configure CPPFLAGS="-DCOAP_DEBUG_BUF_SIZE=4096"
+ *
+ */
+
 void
 coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 #if COAP_CONSTRAINED_STACK
   static coap_mutex_t static_show_pdu_mutex = COAP_MUTEX_INITIALIZER;
-  static unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1024)]; /* need some space for output creation */
+  /* Proxy-Uri: can be 1034 bytes long */
+  static unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1035)];
   static char outbuf[COAP_DEBUG_BUF_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
-  unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1024)]; /* need some space for output creation */
+  /* Proxy-Uri: can be 1034 bytes long */
+  unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1035)];
   char outbuf[COAP_DEBUG_BUF_SIZE];
 #endif /* ! COAP_CONSTRAINED_STACK */
   size_t buf_len = 0; /* takes the number of bytes written to buf */
@@ -612,7 +626,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
     outbuflen = strlen(outbuf);
     snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " :: ");
 
-    if (is_binary(content_format)) {
+    if (is_binary(content_format) || !isprint(data[0])) {
       size_t keep_data_len = data_len;
       uint8_t *keep_data = data;
 
@@ -652,17 +666,29 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
       outbuflen = strlen(outbuf);
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ">>");
     } else {
-      if (print_readable(data, data_len, buf, sizeof(buf), 0)) {
-        size_t max_length;
-        outbuflen = strlen(outbuf);
-        max_length = sizeof(outbuf)-outbuflen;
-        if (snprintf(&outbuf[outbuflen], max_length,  "'%s'", buf) >= (int)max_length)
-          outbuf[sizeof(outbuf)-1] = '\000';
+      size_t max_length;
+      outbuflen = strlen(outbuf);
+      max_length = sizeof(outbuf)-outbuflen;
+      if (max_length > 1) {
+        outbuf[outbuflen++] = '\'';
+        outbuf[outbuflen] = '\000';
+        max_length--;
+      }
+      if (max_length > 1) {
+        outbuflen += print_readable(data, data_len,
+                                    (unsigned char*)&outbuf[outbuflen],
+                                    max_length, 0);
+      }
+      /* print_readable may be handling unprintables - hence headroom of 4 */
+      if (outbuflen < sizeof(outbuf)-4-1) {
+        outbuf[outbuflen++] = '\'';
+        outbuf[outbuflen] = '\000';
       }
     }
   }
 
   outbuflen = strlen(outbuf);
+  if (outbuflen == sizeof(outbuf)-1) outbuflen--;
   snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "\n");
   COAP_DO_SHOW_OUTPUT_LINE;
 
