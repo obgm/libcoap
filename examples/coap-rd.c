@@ -129,7 +129,7 @@ hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
 
   HASH_FIND(hh, resources, resource->uri_path->s, resource->uri_path->length, rd);
 
-  response->code = COAP_RESPONSE_CODE(205);
+  response->code = COAP_RESPONSE_CODE_CONTENT;
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
@@ -153,7 +153,7 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
                  coap_string_t *query UNUSED_PARAM,
                  coap_pdu_t *response) {
 #if 1
-  response->code = COAP_RESPONSE_CODE(501);
+  response->code = COAP_RESPONSE_CODE_NOT_IMPLEMENTED;
 #else /* FIXME */
   coap_opt_iterator_t opt_iter;
   coap_opt_t *token, *etag;
@@ -179,7 +179,7 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
         if (!tmp.s) {
           coap_log(LOG_DEBUG,
                    "hnd_put_rd: cannot allocate storage for new rd\n");
-          code = COAP_RESPONSE_CODE(503);
+          code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
           goto finish;
         }
 
@@ -195,12 +195,12 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
       memcpy(rd->etag, COAP_OPT_VALUE(etag), rd->etag_len);
     }
 
-    code = COAP_RESPONSE_CODE(204);
+    code = COAP_RESPONSE_CODE_CHANGED;
     /* FIXME: update lifetime */
 
     } else {
 
-    code = COAP_RESPONSE_CODE(503);
+    code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
   }
 
   finish:
@@ -242,7 +242,7 @@ hnd_delete_resource(coap_context_t  *ctx,
    * using coap_malloc() and must be released. */
   coap_delete_resource(ctx, resource);
 
-  response->code = COAP_RESPONSE_CODE(202);
+  response->code = COAP_RESPONSE_CODE_DELETED;
 }
 
 static void
@@ -255,7 +255,7 @@ hnd_get_rd(coap_context_t  *ctx UNUSED_PARAM,
            coap_pdu_t *response) {
   unsigned char buf[3];
 
-  response->code = COAP_RESPONSE_CODE(205);
+  response->code = COAP_RESPONSE_CODE_CONTENT;
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
@@ -429,7 +429,7 @@ hnd_post_rd(coap_context_t  *ctx,
 
   loc = (unsigned char *)coap_malloc(LOCSIZE);
   if (!loc) {
-    response->code = COAP_RESPONSE_CODE(500);
+    response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
     return;
   }
   memcpy(loc, RD_ROOT_STR, RD_ROOT_SIZE);
@@ -542,7 +542,7 @@ hnd_post_rd(coap_context_t  *ctx,
 
   /* create response */
 
-  response->code = COAP_RESPONSE_CODE(201);
+  response->code = COAP_RESPONSE_CODE_CREATED;
 
   { /* split path into segments and add Location-Path options */
     unsigned char _b[LOCSIZE];

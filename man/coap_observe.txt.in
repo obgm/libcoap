@@ -186,7 +186,7 @@ coap_string_t *query, coap_pdu_t *response) {
     tmp = gmtime(&now);
     if (!tmp) {
       /* If 'now' is not valid */
-      response->code = COAP_RESPONSE_CODE(404);
+      response->code = COAP_RESPONSE_CODE_NOT_FOUND;
       return;
     }
     len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
@@ -224,7 +224,7 @@ coap_string_t *query, coap_pdu_t *response) {
 
   if (!uri_path) {
     /* Unexpected Failure */
-    response->code = COAP_RESPONSE_CODE(400);
+    response->code = COAP_RESPONSE_CODE_BAD_REQUEST;
     return;
   }
 
@@ -238,7 +238,7 @@ coap_string_t *query, coap_pdu_t *response) {
   /* Other resources code */
 
   /* Failure response */
-  response->code = COAP_RESPONSE_CODE(400);
+  response->code = COAP_RESPONSE_CODE_BAD_REQUEST;
 }
 
 /* Initialize generic GET handler */
