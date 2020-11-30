@@ -1,7 +1,7 @@
 /*
-* coap_mbedtls.c -- mbedTLS Datagram Transport Layer Support for libcoap
+* coap_mbedtls.c -- Mbed TLS Datagram Transport Layer Support for libcoap
 *
-* Copyright (C) 2019-2020 Jon Shallow <supjps-libcoap@jpshallow.com>
+* Copyright (C) 2019-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
 *               2019 Jitin George <jitin@espressif.com>
 *
 * This file is part of the CoAP library libcoap. Please see README for terms
@@ -81,7 +81,7 @@ typedef struct coap_ssl_t {
 } coap_ssl_t;
 
 /*
- * This structure encapsulates the mbedTLS session object.
+ * This structure encapsulates the Mbed TLS session object.
  * It handles both TLS and DTLS.
  * c_session->tls points to this.
  */
@@ -430,7 +430,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
 
   if (setup_data->is_rpk_not_cert) {
     coap_log(LOG_ERR,
-          "RPK Support not available in MbedTLS\n");
+          "RPK Support not available in Mbed TLS\n");
     return -1;
   }
   switch (setup_data->pki_key.key_type) {
@@ -1036,7 +1036,7 @@ static int setup_client_ssl_session(coap_session_t *c_session,
       mbedtls_ssl_set_hostname(&m_env->ssl,
                                c_session->cpsk_setup_data.client_sni);
     }
-    /* Identity Hint currently not supported in MbedTLS so code removed */
+    /* Identity Hint currently not supported in Mbed TLS so code removed */
 
     set_ciphersuites(&m_env->conf, COAP_ENC_PSK);
 #endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
@@ -1119,7 +1119,7 @@ static int do_mbedtls_handshake(coap_session_t *c_session,
   switch (ret) {
   case 0:
     m_env->established = 1;
-    coap_log(LOG_DEBUG, "*  %s: MbedTLS established\n",
+    coap_log(LOG_DEBUG, "*  %s: Mbed TLS established\n",
                                             coap_session_str(c_session));
     ret = 1;
     break;
@@ -1253,8 +1253,8 @@ int coap_dtls_is_supported(void) {
   return 1;
 #else /* !MBEDTLS_SSL_PROTO_DTLS */
   coap_log(LOG_EMERG,
-        "libcoap not compiled for DTLS with MbedTLS"
-        " - update MbedTLS to include DTLS\n");
+        "libcoap not compiled for DTLS with Mbed TLS"
+        " - update Mbed TLS to include DTLS\n");
   return 0;
 #endif /* !MBEDTLS_SSL_PROTO_DTLS */
 }
@@ -1289,8 +1289,8 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
 
 #if !defined(MBEDTLS_SSL_SRV_C)
   coap_log(LOG_EMERG, "coap_context_set_spsk:"
-           " libcoap not compiled for Server Mode for MbedTLS"
-           " - update MbedTLS to include Server Mode\n");
+           " libcoap not compiled for Server Mode for Mbed TLS"
+           " - update Mbed TLS to include Server Mode\n");
   return 0;
 #endif /* !MBEDTLS_SSL_SRV_C */
   if (!m_context || !setup_data)
@@ -1310,8 +1310,8 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
 ) {
 #if !defined(MBEDTLS_SSL_CLI_C)
   coap_log(LOG_EMERG, "coap_context_set_spsk:"
-           " libcoap not compiled for Client Mode for MbedTLS"
-           " - update MbedTLS to include Client Mode\n");
+           " libcoap not compiled for Client Mode for Mbed TLS"
+           " - update Mbed TLS to include Client Mode\n");
   return 0;
 #endif /* !MBEDTLS_SSL_CLI_C */
   coap_mbedtls_context_t *m_context =
@@ -1322,7 +1322,7 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
 
   if (setup_data->validate_ih_call_back) {
     coap_log(LOG_WARNING,
-        "CoAP Client with MbedTLS does not support Identity Hint selection\n");
+        "CoAP Client with Mbed TLS does not support Identity Hint selection\n");
   }
   m_context->psk_pki_enabled |= IS_PSK;
   return 1;
@@ -1418,8 +1418,8 @@ void *coap_dtls_new_client_session(coap_session_t *c_session)
 #if !defined(MBEDTLS_SSL_CLI_C)
   (void)c_session;
   coap_log(LOG_EMERG, "coap_dtls_new_client_session:"
-           " libcoap not compiled for Client Mode for MbedTLS"
-           " - update MbedTLS to include Client Mode\n");
+           " libcoap not compiled for Client Mode for Mbed TLS"
+           " - update Mbed TLS to include Client Mode\n");
   return NULL;
 #else /* MBEDTLS_SSL_CLI_C */
   coap_mbedtls_env_t *m_env = coap_dtls_new_mbedtls_env(c_session,
@@ -1724,8 +1724,8 @@ int coap_dtls_hello(coap_session_t *c_session,
   (void)data;
   (void)data_len;
   coap_log(LOG_EMERG, "coap_dtls_hello:"
-           " libcoap not compiled for DTLS or Server Mode for MbedTLS"
-           " - update MbedTLS to include DTLS and Server Mode\n");
+           " libcoap not compiled for DTLS or Server Mode for Mbed TLS"
+           " - update Mbed TLS to include DTLS and Server Mode\n");
   return -1;
 #else /* MBEDTLS_SSL_PROTO_DTLS && MBEDTLS_SSL_SRV_C */
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
@@ -1841,7 +1841,7 @@ void coap_dtls_set_log_level(int level)
 #if !defined(ESPIDF_VERSION)
   int use_level;
   /*
-   * MbedTLS debug levels filter
+   * Mbed TLS debug levels filter
    *  0 No debug
    *  1 Error
    *  2 State change

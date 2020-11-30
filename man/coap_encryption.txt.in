@@ -36,7 +36,7 @@ DESCRIPTION
 This man page focuses on setting up CoAP to use encryption.
 
 When the libcoap library was built, it will have been compiled using a
-specific underlying TLS implementation type (e.g. OpenSSL, GnuTLS, MbedTLS,
+specific underlying TLS implementation type (e.g. OpenSSL, GnuTLS, Mbed TLS,
 TinyDTLS or noTLS).
 When the libcoap library is linked into an application, it is possible
 that the application needs to dynamically determine whether DTLS or TLS is
@@ -49,7 +49,7 @@ version is 1.1.0.
 *NOTE:* If GnuTLS is being used, then the minimum GnuTLS library version is
 3.3.0.
 
-*NOTE:* If MbedTLS is being used, then the minimum MbedTLS library version is
+*NOTE:* If Mbed TLS is being used, then the minimum Mbed TLS library version is
 2.7.10.
 
 *NOTE:* If GnuTLS is going to interoperate with TinyDTLS, then a minimum
@@ -58,7 +58,7 @@ by TinyDTLS as TinyDTLS currently only supports CCM.
 
 *NOTE:* For Raw Public Key support, GnuTLS library version must be 3.6.6 or
 later. TinyDTLS only supports TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8, curve
-secp256r1 and hash SHA-256.  There currently is no OpenSSL or MbedTLS RPK support
+secp256r1 and hash SHA-256.  There currently is no OpenSSL or Mbed TLS RPK support
 (respective library limitations).
 
 Network traffic can be un-encrypted or encrypted with libcoap if there is an
