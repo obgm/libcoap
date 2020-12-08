@@ -586,14 +586,15 @@ coap_free_context(coap_context_t *context) {
   if (!context)
     return;
 
+  /* Removing a resource may cause a CON observe to be sent */
+  coap_delete_all_resources(context);
+
   coap_delete_all(context->sendqueue);
 
 #ifdef WITH_LWIP
   context->sendqueue = NULL;
   coap_retransmittimer_restart(context);
 #endif
-
-  coap_delete_all_resources(context);
 
 #ifndef WITHOUT_ASYNC
   coap_delete_all_async(context);

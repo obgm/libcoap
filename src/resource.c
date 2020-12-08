@@ -906,6 +906,9 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         assert(h);      /* we do not allow subscriptions if no
                          * GET/FETCH handler is defined */
         h(context, r, obs->session, NULL, &token, obs->query, response);
+        if (COAP_RESPONSE_CLASS(response->code) > 2) {
+          coap_delete_observer(r, obs->session, &token);
+        }
         break;
       case COAP_DELETING_RESOURCE:
       default:
@@ -913,9 +916,6 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         break;
       }
 
-      /* TODO: do not send response and remove observer when
-       *  COAP_RESPONSE_CLASS(response->hdr->code) > 2
-       */
       if (response->type == COAP_MESSAGE_CON ||
           (r->flags & COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS)) {
         obs->non_cnt = 0;
