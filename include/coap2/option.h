@@ -168,57 +168,6 @@ int coap_option_filter_unset(coap_opt_filter_t filter, uint16_t type);
 int coap_option_filter_get(coap_opt_filter_t filter, uint16_t type);
 
 /**
- * Sets the corresponding bit for @p type in @p filter. This function returns @c
- * 1 if bit was set or @c -1 on error (i.e. when the given type does not fit in
- * the filter).
- *
- * @deprecated Use coap_option_filter_set() instead.
- *
- * @param filter The filter object to change.
- * @param type   The type for which the bit should be set.
- *
- * @return       @c 1 if bit was set, @c -1 otherwise.
- */
-COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_option_setb(coap_opt_filter_t filter, uint16_t type) {
-  return coap_option_filter_set(filter, type) ? 1 : -1;
-}
-
-/**
- * Clears the corresponding bit for @p type in @p filter. This function returns
- * @c 1 if bit was cleared or @c -1 on error (i.e. when the given type does not
- * fit in the filter).
- *
- * @deprecated Use coap_option_filter_unset() instead.
- *
- * @param filter The filter object to change.
- * @param type   The type for which the bit should be cleared.
- *
- * @return       @c 1 if bit was set, @c -1 otherwise.
- */
-COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_option_clrb(coap_opt_filter_t filter, uint16_t type) {
-  return coap_option_filter_unset(filter, type) ? 1 : -1;
-}
-
-/**
- * Gets the corresponding bit for @p type in @p filter. This function returns @c
- * 1 if the bit is set @c 0 if not, or @c -1 on error (i.e. when the given type
- * does not fit in the filter).
- *
- * @deprecated Use coap_option_filter_get() instead.
- *
- * @param filter The filter object to read bit from.
- * @param type   The type for which the bit should be read.
- *
- * @return       @c 1 if bit was set, @c 0 if not, @c -1 on error.
- */
-COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_option_getb(coap_opt_filter_t filter, uint16_t type) {
-  return coap_option_filter_get(filter, type);
-}
-
-/**
  * Iterator to run through PDU options. This object must be
  * initialized with coap_option_iterator_init(). Call
  * coap_option_next() to walk through the list of options until
@@ -375,8 +324,6 @@ uint32_t coap_opt_length(const coap_opt_t *opt);
  */
 const uint8_t *coap_opt_value(const coap_opt_t *opt);
 
-/** @} */
-
 /**
  * Representation of chained list of CoAP options to install.
  *
@@ -445,5 +392,58 @@ int coap_insert_optlist(coap_optlist_t **optlist_chain,
  * @param optlist_chain The optlist chain to remove all the entries from
  */
 void coap_delete_optlist(coap_optlist_t *optlist_chain);
+
+/** @} */
+
+/**
+ * Sets the corresponding bit for @p type in @p filter. This function returns @c
+ * 1 if bit was set or @c -1 on error (i.e. when the given type does not fit in
+ * the filter).
+ *
+ * @deprecated Use coap_option_filter_set() instead.
+ *
+ * @param filter The filter object to change.
+ * @param type   The type for which the bit should be set.
+ *
+ * @return       @c 1 if bit was set, @c -1 otherwise.
+ */
+COAP_STATIC_INLINE COAP_DEPRECATED int
+coap_option_setb(coap_opt_filter_t filter, uint16_t type) {
+  return coap_option_filter_set(filter, type) ? 1 : -1;
+}
+
+/**
+ * Clears the corresponding bit for @p type in @p filter. This function returns
+ * @c 1 if bit was cleared or @c -1 on error (i.e. when the given type does not
+ * fit in the filter).
+ *
+ * @deprecated Use coap_option_filter_unset() instead.
+ *
+ * @param filter The filter object to change.
+ * @param type   The type for which the bit should be cleared.
+ *
+ * @return       @c 1 if bit was set, @c -1 otherwise.
+ */
+COAP_STATIC_INLINE COAP_DEPRECATED int
+coap_option_clrb(coap_opt_filter_t filter, uint16_t type) {
+  return coap_option_filter_unset(filter, type) ? 1 : -1;
+}
+
+/**
+ * Gets the corresponding bit for @p type in @p filter. This function returns @c
+ * 1 if the bit is set @c 0 if not, or @c -1 on error (i.e. when the given type
+ * does not fit in the filter).
+ *
+ * @deprecated Use coap_option_filter_get() instead.
+ *
+ * @param filter The filter object to read bit from.
+ * @param type   The type for which the bit should be read.
+ *
+ * @return       @c 1 if bit was set, @c 0 if not, @c -1 on error.
+ */
+COAP_STATIC_INLINE COAP_DEPRECATED int
+coap_option_getb(coap_opt_filter_t filter, uint16_t type) {
+  return coap_option_filter_get(filter, type);
+}
 
 #endif /* COAP_OPTION_H_ */

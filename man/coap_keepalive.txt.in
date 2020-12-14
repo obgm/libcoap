@@ -12,7 +12,7 @@ NAME
 ----
 coap_keepalive,
 coap_context_set_keepalive
-- work with CoAP keepalive
+- Work with CoAP keepalive
 
 SYNOPSIS
 --------

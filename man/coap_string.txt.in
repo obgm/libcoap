@@ -23,7 +23,7 @@ coap_delete_bin_const,
 coap_make_str_const,
 coap_string_equal,
 coap_binary_equal
-- string functions
+- Work with CoAP string functions
 
 SYNOPSIS
 --------

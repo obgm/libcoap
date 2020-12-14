@@ -459,7 +459,7 @@ typedef struct coap_dtls_spsk_t {
 
 /**
  * @defgroup dtls_internal DTLS Support (Internal)
- * Internal API functions for interfacing with DTLS libraries.
+ * Internal API functions for interfacing with DTLS library wrappers.
  * @{
  */
 

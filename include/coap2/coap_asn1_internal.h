@@ -18,7 +18,8 @@
 
 /**
  * @defgroup asn1 ASN.1 Support (Internal)
- * API functions for CoAP ASN.1
+ * CoAP ASN.1 Structures, Enums and Functions that are not exposed to
+ * applications
  * @{
  */
 
@@ -33,6 +34,8 @@ typedef enum {
 /**
  * Callback to validate the asn1 tag and data.
  *
+ * Internal function.
+ *
  * @param data  The start of the tag and data
  * @param size  The size of the tag and data
  *
@@ -43,6 +46,8 @@ typedef int (*asn1_validate)(const uint8_t *data, size_t size);
 /**
  * Get the asn1 length from the current @p ptr.
  *
+ * Internal function.
+ *
  * @param ptr  The current asn.1 object length pointer
  *
  * @return The length of the asn.1 object. @p ptr is udated to past the length.
@@ -51,6 +56,8 @@ size_t asn1_len(const uint8_t **ptr);
 
 /**
  * Get the asn1 tag from the current @p ptr.
+ *
+ * Internal function.
  *
  * @param ptr  The current asn.1 object tag pointer
  * @param constructed  1 if current tag is constructed
@@ -62,6 +69,8 @@ coap_asn1_tag_t asn1_tag_c(const uint8_t **ptr, int *constructed, int *class);
 
 /**
  * Get the asn1 tag and data from the current @p ptr.
+ *
+ * Internal function.
  *
  * @param ltag The tag to look for
  * @param ptr  The current asn.1 object pointer

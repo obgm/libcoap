@@ -17,6 +17,12 @@
 #include "coap_forward_decls.h"
 
 /**
+ * @defgroup cache Cache Support
+ * API functions for CoAP Caching
+ * @{
+ */
+
+/**
  * Callback to free off the app data when the cache-entry is
  * being deleted / freed off.
  *
@@ -186,5 +192,7 @@ void coap_cache_set_app_data(coap_cache_entry_t *cache_entry, void *data,
  * @return The data pointer previously stored or @c NULL if no data stored.
  */
 void *coap_cache_get_app_data(const coap_cache_entry_t *cache_entry);
+
+/** @} */
 
 #endif  /* COAP_CACHE_H */
