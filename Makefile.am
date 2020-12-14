@@ -27,6 +27,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_asn1_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_block_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_cache_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_resource_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
@@ -157,7 +158,6 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_LDFLAGS =					\
 CTAGS_IGNORE=-I " \
 coap_delete_all \
 coap_delete_all_async \
-coap_delete_all_resources \
 coap_dtls_context_check_keys_enabled \
 coap_dtls_context_set_pki \
 coap_dtls_context_set_pki_root_cas \
@@ -191,12 +191,8 @@ coap_session_mfree \
 coap_session_new_dtls_session \
 coap_session_refresh_psk_hint \
 coap_session_refresh_psk_key \
-coap_socket_accept_tcp \
-coap_socket_bind_tcp \
 coap_socket_bind_udp \
 coap_socket_close \
-coap_socket_connect_tcp1 \
-coap_socket_connect_tcp2 \
 coap_socket_connect_udp \
 coap_socket_format_errno \
 coap_socket_read \

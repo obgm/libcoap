@@ -146,6 +146,9 @@
     <ClInclude Include="..\include\coap2\coap_prng.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\coap2\coap_resource_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\coap2\coap_session.h">
       <Filter>Header Files</Filter>
     </ClInclude>

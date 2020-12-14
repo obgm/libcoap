@@ -1,6 +1,6 @@
 /* resource.c -- generic resource handling
  *
- * Copyright (C) 2010--2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2021 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
@@ -455,6 +455,13 @@ coap_find_attr(coap_resource_t *resource,
   return NULL;
 }
 
+coap_str_const_t *
+coap_attr_get_value(coap_attr_t *attr) {
+  if (attr)
+    return attr->value;
+  return NULL;
+}
+
 void
 coap_delete_attr(coap_attr_t *attr) {
   if (!attr)
@@ -489,6 +496,9 @@ coap_free_resource(coap_resource_t *resource) {
 
   coap_resource_notify_observers(resource, NULL);
   coap_notify_observers(resource->context, resource, COAP_DELETING_RESOURCE);
+
+  if (resource->context->release_userdata && resource->user_data)
+    resource->context->release_userdata(resource->user_data);
 
   /* delete registered attributes */
   LL_FOREACH_SAFE(resource->link_attr, attr, tmp) coap_delete_attr(attr);
@@ -993,6 +1003,41 @@ coap_resource_notify_observers(coap_resource_t *r, const coap_string_t *query) {
   }
 #endif /* COAP_EPOLL_SUPPORT */
   return 1;
+}
+
+void
+coap_resource_set_mode(coap_resource_t *resource, int mode) {
+  resource->flags = (resource->flags &
+    ~(COAP_RESOURCE_FLAGS_NOTIFY_CON|COAP_RESOURCE_FLAGS_NOTIFY_NON)) |
+    (mode & (COAP_RESOURCE_FLAGS_NOTIFY_CON|COAP_RESOURCE_FLAGS_NOTIFY_NON));
+}
+
+void
+coap_resource_set_userdata(coap_resource_t *resource, void *data) {
+  resource->user_data = data;
+}
+
+void *
+coap_resource_get_userdata(coap_resource_t *resource) {
+  return resource->user_data;
+}
+
+void
+coap_resource_release_userdata_handler(coap_context_t *context,
+                          coap_resource_release_userdata_handler_t callback) {
+  context->release_userdata = callback;
+}
+
+void
+coap_resource_set_get_observable(coap_resource_t *resource, int mode) {
+  resource->observable = mode ? 1 : 0;
+}
+
+coap_str_const_t*
+coap_resource_get_uri_path(coap_resource_t *resource) {
+  if (resource)
+    return resource->uri_path;
+  return NULL;
 }
 
 void

@@ -15,6 +15,7 @@ coap_address_init
 coap_address_set_port
 coap_add_token
 coap_adjust_basetime
+coap_attr_get_value
 coap_block_build_body
 coap_cache_derive_key
 coap_cache_get_app_data
@@ -28,7 +29,6 @@ coap_cancel_all_messages
 coap_cancel_observe
 coap_cancel_session_messages
 coap_can_exit
-coap_check_notify
 coap_check_option
 coap_cleanup
 coap_clear_event_handler
@@ -45,7 +45,6 @@ coap_debug_send_packet
 coap_debug_set_packet_loss
 coap_decode_var_bytes
 coap_decode_var_bytes8
-coap_delete_attr
 coap_delete_binary
 coap_delete_bin_const
 coap_delete_cache_entry
@@ -88,7 +87,6 @@ coap_get_tls_library_version
 coap_get_uri_path
 coap_handle_dgram
 coap_handle_event
-coap_handle_failed_notify
 coap_hash_impl
 coap_insert_node
 coap_insert_optlist
@@ -155,7 +153,6 @@ coap_peek_next
 coap_pop_next
 coap_print_addr
 coap_print_link
-coap_print_wellknown
 coap_prng
 coap_prng_init
 coap_realloc_type
@@ -165,10 +162,16 @@ coap_register_handler
 coap_remove_async
 coap_remove_from_queue
 coap_resize_binary
+coap_resource_get_uri_path
+coap_resource_get_userdata
 coap_resource_init
 coap_resource_notify_observers
 coap_resource_proxy_uri_init
+coap_resource_release_userdata_handler
 coap_resource_set_dirty
+coap_resource_set_get_observable
+coap_resource_set_mode
+coap_resource_set_userdata
 coap_resource_unknown_init
 coap_response_phrase
 coap_retransmit

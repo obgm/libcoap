@@ -13,10 +13,6 @@ NAME
 coap_observe,
 coap_resource_set_get_observable,
 coap_resource_notify_observers,
-coap_resource_get_uri_path,
-coap_find_observer,
-coap_delete_observer,
-coap_delete_observers,
 coap_cancel_observe
 - work with CoAP observe
 
@@ -29,17 +25,6 @@ int _mode_);*
 
 *int coap_resource_notify_observers(coap_resource_t *_resource_,
 const coap_string_t *_query_);*
-
-*coap_str_const_t *coap_resource_get_uri_path(coap_resource_t *_resource_);*
-
-*coap_subscription_t *coap_find_observer(coap_resource_t *_resource_,
-coap_session_t *_session_, const coap_binary_t *_token_);*
-
-*int coap_delete_observer(coap_resource_t *_resource_,
-coap_session_t *_session_, const coap_binary_t *_token_);*
-
-*void coap_delete_observers(coap_context_t *_context_,
-coap_session_t *_session_);*
 
 *int coap_cancel_observe(coap_session_t *_session_, coap_binary_t *_token_,
 uint8_t _message_type_);*
@@ -69,12 +54,8 @@ request with the COAP_OPTION_OBSERVE Option with a value of COAP_OBSERVE_CANCEL.
 If the request to "observe" had been sent using *coap_send_large*(), the
 "observe" can be cancelled using *coap_cancel_observe*() instead.
 
-Alternatively, the server can remove a subscription by calling
-*coap_delete_observer*() or *coap_delete_observers*(), but this does not
-notify the client that the subscription has been removed.
-
-The underlying library adds in and removes "subscribers" to the resource as
-appropriate in the server side logic.
+The underlying library adds in and removes "subscribers" to "observe" the
+resource as appropriate in the server side logic.
 
 Within the server application, it needs to determine that there is a change of
 state of the resource under observation, and then cause the CoAP library
@@ -128,19 +109,6 @@ The *coap_resource_notify_observers*() function needs to be called whenever the
 server application determines that there has been a change to the state of
 _resource_, possibly only matching a specific _query_ if _query_ is not NULL.
 
-The *coap_resource_get_uri_path*() function is used by the server to obtain
-the UriPath of the _resource_ definion.
-
-The *coap_find_observer*() function is used by the server to check whether the
-current GET/FETCH request as determined from _resource_, _session_ and _token_
-is currently being observed or not.
-
-The *coap_delete_observer*() function is used by the server to delete the
-specific observer associated with _resource_, _session_ and has _token_.
-
-The *coap_delete_observers*() function is used to by the server todelete all
-observers associated with the _session_ that is a part of the _context_.
-
 The *coap_cancel_observe*() function can be used by the client to cancel an
 observe request that is being tracked following the use of *coap_send_large*()
 (See *coap_block*(3)) to send the initial "observe" PDU. This will cause the
@@ -150,17 +118,10 @@ _message_type_ (use COAP_MESSAGE_NON or COAP_MESSAGE_CON).
 
 RETURN VALUES
 -------------
-The *coap_resource_get_uri_path*() function returns the uri_path or NULL if
-there was a failure.
-
-The *coap_find_observer*() function returns the subscription or NULL if there
-was a failure.
-
 The *coap_resource_set_get_observable*() function return 0 on failure, 1 on
 success.
 
-The *coap_delete_observer*() and *coap_cancel_observe*() functions return 0
-on failure, 1 on success.
+The *coap_cancel_observe*() function return 0 on failure, 1 on success.
 
 EXAMPLES
 --------

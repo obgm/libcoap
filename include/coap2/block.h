@@ -178,7 +178,7 @@ coap_block_build_body(coap_binary_t *body_data, size_t length,
  *
  */
 void
-coap_add_data_blocked_response(struct coap_resource_t *resource,
+coap_add_data_blocked_response(coap_resource_t *resource,
                                struct coap_session_t *session,
                                coap_pdu_t *request,
                                coap_pdu_t *response,
@@ -297,7 +297,7 @@ int coap_add_data_large_request(struct coap_session_t *session,
  * @return @c 1 if addition is successful, else @c 0.
  */
 int
-coap_add_data_large_response(struct coap_resource_t *resource,
+coap_add_data_large_response(coap_resource_t *resource,
                              struct coap_session_t *session,
                              coap_pdu_t *request,
                              coap_pdu_t *response,

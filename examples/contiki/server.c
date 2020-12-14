@@ -101,42 +101,38 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   coap_tick_t now;
   coap_tick_t t;
 
-  /* FIXME: return time, e.g. in human-readable by default and ticks
-   * when query ?ticks is given. */
-
-  /* if my_clock_base was deleted, we pretend to have no such resource */
-  response->code =
-    my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
-
-  if (coap_find_observer(resource, session, token)) {
-    coap_add_option(response, COAP_OPTION_OBSERVE,
-                    coap_encode_var_safe(buf, sizeof(buf),
-                                         resource->observe),
-                    buf);
-  }
-
-  if (my_clock_base)
-    coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
-                    coap_encode_var_safe(buf, sizeof(buf),
-                    COAP_MEDIATYPE_TEXT_PLAIN),
-                    buf);
-
-  coap_add_option(response, COAP_OPTION_MAXAGE,
-          coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
-
   if (my_clock_base) {
 
     /* calculate current time */
     coap_ticks(&t);
     now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
 
-
     if (query != NULL
         && coap_string_equal(query, coap_make_str_const("ticks"))) {
-      /* output ticks */
-      len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
-      coap_add_data(response, len, buf);
+          /* output ticks */
+          len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
+
+    } else {      /* output human-readable time */
+      struct tm *tmp;
+      time_t tnow = now;
+      tmp = gmtime(&tnow);
+      if (!tmp) {
+        /* If 'tnow' is not valid */
+        response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+        return;
+      }
+      else {
+        len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
+      }
     }
+    coap_add_data_blocked_response(resource, session, request, response, token,
+                                   COAP_MEDIATYPE_TEXT_PLAIN, 1,
+                                   len,
+                                   buf);
+  }
+  else {
+    /* if my_clock_base was deleted, we pretend to have no such resource */
+    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
   }
 }
 
