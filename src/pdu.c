@@ -147,7 +147,7 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
                    coap_session_t *session,
                    size_t token_length,
                    uint8_t *token,
-                   coap_opt_filter_t drop_options) {
+                   coap_opt_filter_t *drop_options) {
   coap_pdu_t *pdu = coap_pdu_init(old_pdu->type,
                                   old_pdu->code,
                                   coap_new_message_id(session),

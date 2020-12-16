@@ -319,7 +319,7 @@ hnd_get_async(coap_context_t *ctx,
   if (async) {
     if (async->id != request->tid) {
       coap_opt_filter_t f;
-      coap_option_filter_clear(f);
+      coap_option_filter_clear(&f);
       response->code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
     }
     return;

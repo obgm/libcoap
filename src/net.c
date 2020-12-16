@@ -678,14 +678,14 @@ coap_option_check_critical(coap_context_t *ctx,
       case COAP_OPTION_BLOCK1:
         break;
       default:
-        if (coap_option_filter_get(ctx->known_options, opt_iter.type) <= 0) {
+        if (coap_option_filter_get(&ctx->known_options, opt_iter.type) <= 0) {
           coap_log(LOG_DEBUG, "unknown critical option %d\n", opt_iter.type);
           ok = 0;
 
           /* When opt_iter.type is beyond our known option range,
            * coap_option_filter_set() will return -1 and we are safe to leave
            * this loop. */
-          if (coap_option_filter_set(unknown, opt_iter.type) == -1) {
+          if (coap_option_filter_set(&unknown, opt_iter.type) == -1) {
             break;
           }
         }
@@ -857,7 +857,7 @@ coap_tid_t
 coap_send_error(coap_session_t *session,
   coap_pdu_t *request,
   unsigned char code,
-  coap_opt_filter_t opts) {
+  coap_opt_filter_t *opts) {
   coap_pdu_t *response;
   coap_tid_t result = COAP_INVALID_TID;
 
@@ -1995,7 +1995,7 @@ coap_find_transaction(coap_queue_t *queue, coap_session_t *session, coap_tid_t i
 
 coap_pdu_t *
 coap_new_error_response(coap_pdu_t *request, unsigned char code,
-  coap_opt_filter_t opts) {
+  coap_opt_filter_t *opts) {
   coap_opt_iterator_t opt_iter;
   coap_pdu_t *response;
   size_t size = request->token_length;
@@ -2387,7 +2387,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   int skip_hop_limit_check = 0;
   int resp;
 
-  coap_option_filter_clear(opt_filter);
+  coap_option_filter_clear(&opt_filter);
   opt = coap_check_option(pdu, COAP_OPTION_PROXY_SCHEME, &opt_iter);
   if (opt)
     is_proxy_scheme = 1;
@@ -2519,7 +2519,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       } else {
         coap_log(LOG_DEBUG, "method not allowed for .well-known/core\n");
         response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(405),
-          opt_filter);
+          &opt_filter);
       }
     } else if (is_proxy_uri || is_proxy_scheme) {
       resource = context->proxy_uri_resource;
@@ -2554,14 +2554,14 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
                           uri_path->s);
       response =
         coap_new_error_response(pdu, COAP_RESPONSE_CODE(202),
-          opt_filter);
+          &opt_filter);
     } else { /* request for any another resource, return 4.04 */
 
       coap_log(LOG_DEBUG, "request for unknown resource '%*.*s', return 4.04\n",
                (int)uri_path->length, (int)uri_path->length, uri_path->s);
       response =
         coap_new_error_response(pdu, COAP_RESPONSE_CODE(404),
-          opt_filter);
+          &opt_filter);
     }
 
     if (!resource) {
@@ -2716,7 +2716,7 @@ skip_handler:
       coap_log(LOG_DEBUG, "have wellknown response %p\n", (void *)response);
     } else
       response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(405),
-        opt_filter);
+        &opt_filter);
 
     if (response && (no_response(pdu, response) != RESPONSE_DROP)) {
       coap_tid_t mid = pdu->tid;
@@ -2735,7 +2735,7 @@ skip_handler:
 fail_response:
   response =
      coap_new_error_response(pdu, COAP_RESPONSE_CODE(resp),
-       opt_filter);
+       &opt_filter);
   if (response) {
     coap_tid_t mid = pdu->tid;
     if (coap_send(session, response) == COAP_INVALID_TID)
@@ -2838,7 +2838,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     coap_show_pdu(LOG_DEBUG, pdu);
   }
 
-  memset(opt_filter, 0, sizeof(coap_opt_filter_t));
+  memset(&opt_filter, 0, sizeof(coap_opt_filter_t));
 
   switch (pdu->type) {
     case COAP_MESSAGE_ACK:
@@ -2940,7 +2940,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
         if (COAP_PDU_IS_REQUEST(pdu)) {
           response =
-            coap_new_error_response(pdu, COAP_RESPONSE_CODE(402), opt_filter);
+            coap_new_error_response(pdu, COAP_RESPONSE_CODE(402), &opt_filter);
 
           if (!response) {
             coap_log(LOG_WARNING,
