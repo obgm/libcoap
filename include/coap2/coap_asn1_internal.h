@@ -45,7 +45,7 @@ typedef int (*asn1_validate)(const uint8_t *data, size_t size);
  *
  * @param ptr  The current asn.1 object length pointer
  *
- * @return The length of the asn.1 object. @p ptr is udated to past the length.
+ * @return The length of the asn.1 object. @p ptr is updated to be after the length.
  */
 size_t asn1_len(const uint8_t **ptr);
 
@@ -56,7 +56,7 @@ size_t asn1_len(const uint8_t **ptr);
  * @param constructed  1 if current tag is constructed
  * @param class  The current class of the tag
  *
- * @return The tag value.@p ptr is udated to pass the tag.
+ * @return The tag value.@p ptr is updated to be after the tag.
  */
 coap_asn1_tag_t asn1_tag_c(const uint8_t **ptr, int *constructed, int *class);
 
