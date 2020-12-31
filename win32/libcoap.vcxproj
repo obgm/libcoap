@@ -47,6 +47,7 @@
     <ClCompile Include="..\src\coap_mbedtls.c" />
     <ClCompile Include="..\src\coap_notls.c" />
     <ClCompile Include="..\src\coap_openssl.c" />
+    <ClCompile Include="..\src\coap_prng.c" />
     <ClCompile Include="..\src\coap_session.c" />
     <ClCompile Include="..\src\coap_time.c" />
     <ClCompile Include="..\src\coap_tcp.c" />

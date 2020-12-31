@@ -79,6 +79,7 @@
 
 #ifdef _WIN32
 #define strcasecmp _stricmp
+#define strncasecmp _strnicmp
 #endif
 
 /* RFC6091/RFC7250 */

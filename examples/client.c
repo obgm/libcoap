@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #ifdef _WIN32
 #define strcasecmp _stricmp
+#define strncasecmp _strnicmp
 #include "getopt.c"
 #if !defined(S_ISDIR)
 #define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)

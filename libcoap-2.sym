@@ -5,7 +5,6 @@ coap_add_data_after
 coap_add_data_blocked_response
 coap_add_observer
 coap_add_option
-coap_add_option_later
 coap_add_optlist_pdu
 coap_add_resource
 coap_address_equals
