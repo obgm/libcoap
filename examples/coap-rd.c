@@ -587,7 +587,7 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- CoRE Resource Directory implementation\n"
-     "(c) 2011-2012,2019 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+     "(c) 2011-2012,2019-2021 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
      "%s\n\n"
      "Usage: %s [-g group] [-p port] [-v num] [-A address]\n"
      "\t       [[-h hint] [-k key]]\n"

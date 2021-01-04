@@ -699,7 +699,7 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-     "Copyright (C) 2010-2019 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+     "Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
      "%s\n\n"
      "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-l loss]\n"
      "\t\t[-m method] [-o file] [-p port] [-r] [-s duration] [-t type]\n"
