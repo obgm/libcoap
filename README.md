@@ -6,7 +6,7 @@
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/libcoap.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:libcoap)
 ![CMake](https://github.com/obgm/libcoap/workflows/CMake/badge.svg)
 
-Copyright (C) 2010—2020 by Olaf Bergmann <bergmann@tzi.org> and others
+Copyright (C) 2010—2021 by Olaf Bergmann <bergmann@tzi.org> and others
 
 ABOUT LIBCOAP
 =============
