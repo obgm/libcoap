@@ -701,12 +701,13 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
     /* skip header + token */
     coap_opt_t *opt = pdu->token + pdu->token_length;
     size_t length = pdu->used_size - pdu->token_length;
-    uint32_t len;
 
     while (length > 0 && *opt != COAP_PAYLOAD_START) {
-      len = coap_opt_length(opt);
-      if ( !next_option_safe( &opt, &length, &pdu->max_opt ) ) {
-        coap_log(LOG_DEBUG, "coap_pdu_parse: missing payload start code\n");
+      size_t optsize = next_option_safe(&opt, &length, &pdu->max_opt);
+      const uint32_t len =
+        optsize ? coap_opt_length((const uint8_t *)opt - optsize) : 0;
+      if (optsize == 0) {
+        coap_log(LOG_DEBUG, "coap_pdu_parse: malformed option\n");
         return 0;
       }
       if (COAP_PDU_IS_SIGNALING(pdu)) {
