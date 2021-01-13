@@ -1669,10 +1669,13 @@ verify_cn_callback(const char *cn,
                    int validated UNUSED_PARAM,
                    void *arg
 ) {
-  coap_dtls_role_t role = (coap_dtls_role_t)arg;
+  union {
+    coap_dtls_role_t r;
+    void *v;
+  } role = { .v = arg };
 
   coap_log(LOG_INFO, "CN '%s' presented by %s (%s)\n",
-           cn, role == COAP_DTLS_ROLE_SERVER ? "client" : "server",
+           cn, role.r == COAP_DTLS_ROLE_SERVER ? "client" : "server",
            depth ? "CA" : "Certificate");
   return 1;
 }
