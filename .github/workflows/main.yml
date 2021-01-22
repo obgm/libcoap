@@ -1,0 +1,48 @@
+name: CMake
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        BUILD_SHARED_LIBS: ["ON", "OFF"]
+        ENABLE_DTLS: ["ON", "OFF"]
+        ENABLE_TCP: ["ON", "OFF"]
+        DTLS_BACKEND: ["openssl", "gnutls", "mbedtls", "tinydtls"]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: setup (linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update && sudo apt-get install libcunit1-dev libmbedtls-dev libgnutls28-dev
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE \
+          -DENABLE_EXAMPLES=ON \
+          -DENABLE_TESTS=ON \
+          -DBUILD_SHARED_LIBS=${{matrix.BUILD_SHARED_LIBS}} \
+          -DENABLE_DTLS=${{matrix.ENABLE_DTLS}} \
+          -DENABLE_TCP=${{matrix.ENABLE_TCP}} \
+          -DDTLS_BACKEND=${{matrix.DTLS_BACKEND}}
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake --build .
+    # TODO: add tests to the pipeline
+    # - name: Test
+    #   working-directory: ${{runner.workspace}}/build
+    #   shell: bash
+    #   run: ctest .
