@@ -1,6 +1,6 @@
 #! /bin/sh
 
-SILENT="--disable-silent-rules"
+#SILENT="--disable-silent-rules"
 
 if test "x$TESTS" = "xyes" -o "x$TESTS" = "xtrue" ; then
     WITH_TESTS="`scripts/fix-cunit.sh` --enable-tests"

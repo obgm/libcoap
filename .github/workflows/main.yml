@@ -1,48 +1,55 @@
-name: CMake
+name: Build Tests
 
-on: [push, pull_request]
+on:
+  push:
+    # for now, trigger only on push to test branch gh-workflows
+    # later, will be push/pull_request to all main, develop, and 'release-*'
+    branches:
+      - gh-workflows
+
+env:
+  PLATFORM: posix
+  TESTS: yes
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  build-linux:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        BUILD_SHARED_LIBS: ["ON", "OFF"]
-        ENABLE_DTLS: ["ON", "OFF"]
-        ENABLE_TCP: ["ON", "OFF"]
-        DTLS_BACKEND: ["openssl", "gnutls", "mbedtls", "tinydtls"]
-
+        CC: ["gcc", "clang"]
+        TLS: ["no", "openssl", "gnutls", "mbedtls"]
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: setup (linux)
-        if: startsWith(matrix.os, 'ubuntu')
+      - name: setup
         run: |
-          sudo apt-get update && sudo apt-get install libcunit1-dev libmbedtls-dev libgnutls28-dev
-
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libtool libtool-bin exuberant-ctags valgrind graphviz doxygen libxml2-utils xsltproc docbook-xml docbook-xsl asciidoc
+          ./autogen.sh
+      - name: configure no-TLS
+        if: matrix.TLS == 'no'
         run: |
-          cmake $GITHUB_WORKSPACE \
-          -DENABLE_EXAMPLES=ON \
-          -DENABLE_TESTS=ON \
-          -DBUILD_SHARED_LIBS=${{matrix.BUILD_SHARED_LIBS}} \
-          -DENABLE_DTLS=${{matrix.ENABLE_DTLS}} \
-          -DENABLE_TCP=${{matrix.ENABLE_TCP}} \
-          -DDTLS_BACKEND=${{matrix.DTLS_BACKEND}}
-
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        run: cmake --build .
-    # TODO: add tests to the pipeline
-    # - name: Test
-    #   working-directory: ${{runner.workspace}}/build
-    #   shell: bash
-    #   run: ctest .
+          mkdir build-${{matrix.TLS}}-${{matrix.CC}}
+          cd build-${{matrix.TLS}}-${{matrix.CC}}
+          $GITHUB_WORKSPACE/configure --enable-tests --disable-dtls CC=${{matrix.CC}}
+      - name: configure TLS
+        if: matrix.TLS != 'no'
+        run: |
+          mkdir build-${{matrix.TLS}}-${{matrix.CC}}
+          cd build-${{matrix.TLS}}-${{matrix.CC}}
+          "$GITHUB_WORKSPACE/configure" --enable-tests --with-${{matrix.TLS}} CC=${{matrix.CC}}
+      - name: compile
+        run: |
+          cd build-${{matrix.TLS}}-${{matrix.CC}}
+          make
+      - name: test
+        if: matrix.TLS != 'tinydtls'
+        run: |
+          cd build-${{matrix.TLS}}-${{matrix.CC}}
+          libtool --mode=execute tests/testdriver
+      - name: test tinydtls
+        if: matrix.TLS == 'tinydtls'
+        run: |
+          cd build-${{matrix.TLS}}-${{matrix.CC}}
+          LD_LIBRARY_PATH="ext/tinydtls" libtool --mode=execute tests/testdriver
+        
