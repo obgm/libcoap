@@ -43,13 +43,17 @@ jobs:
           cd build-${{matrix.TLS}}-${{matrix.CC}}
           make
       - name: test
-        if: matrix.TLS != 'tinydtls'
         run: |
           cd build-${{matrix.TLS}}-${{matrix.CC}}
-          libtool --mode=execute tests/testdriver
-      - name: test tinydtls
-        if: matrix.TLS == 'tinydtls'
+          libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
+      - name: OSS Fuzz
+        if: matrix.TLS == 'openssl'    # run only once for each compiler
         run: |
           cd build-${{matrix.TLS}}-${{matrix.CC}}
-          LD_LIBRARY_PATH="ext/tinydtls" libtool --mode=execute tests/testdriver
-        
+          make -C tests/oss-fuzz -f Makefile.ci check clean
+      - name: manual page examples check
+        if: matrix.TLS == 'openssl'    # run only once for each compiler
+        run: |
+          cd build-${{matrix.TLS}}-${{matrix.CC}}
+          make -C man
+          man/examples-code-check man
