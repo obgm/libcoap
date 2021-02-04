@@ -41,7 +41,7 @@ jobs:
       - name: compile
         run: |
           cd build-${{matrix.TLS}}-${{matrix.CC}}
-          make
+          make EXTRA_CFLAGS=-Werror
       - name: test
         run: |
           cd build-${{matrix.TLS}}-${{matrix.CC}}
