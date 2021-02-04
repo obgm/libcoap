@@ -31,13 +31,13 @@ jobs:
         run: |
           mkdir build-${{matrix.TLS}}-${{matrix.CC}}
           cd build-${{matrix.TLS}}-${{matrix.CC}}
-          $GITHUB_WORKSPACE/configure --enable-tests --disable-dtls CC=${{matrix.CC}}
+          $GITHUB_WORKSPACE/configure --enable-examples --enable-tests --disable-dtls CC=${{matrix.CC}}
       - name: configure TLS
         if: matrix.TLS != 'no'
         run: |
           mkdir build-${{matrix.TLS}}-${{matrix.CC}}
           cd build-${{matrix.TLS}}-${{matrix.CC}}
-          "$GITHUB_WORKSPACE/configure" --enable-tests --with-${{matrix.TLS}} CC=${{matrix.CC}}
+          "$GITHUB_WORKSPACE/configure" --enable-examples --enable-tests --with-${{matrix.TLS}} CC=${{matrix.CC}}
       - name: compile
         run: |
           cd build-${{matrix.TLS}}-${{matrix.CC}}
@@ -46,14 +46,35 @@ jobs:
         run: |
           cd build-${{matrix.TLS}}-${{matrix.CC}}
           libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
-      - name: OSS Fuzz
-        if: matrix.TLS == 'openssl'    # run only once for each compiler
+  additional-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: setup
         run: |
-          cd build-${{matrix.TLS}}-${{matrix.CC}}
+          sudo apt-get update && sudo apt-get install -y libgnutls28-dev libtool libtool-bin exuberant-ctags
+          ./autogen.sh
+      - name: configure
+        run: ./configure --disable-tests --disable-documentation
+      - name: build
+        run: |
+          make
           make -C tests/oss-fuzz -f Makefile.ci check clean
-      - name: manual page examples check
-        if: matrix.TLS == 'openssl'    # run only once for each compiler
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: setup
         run: |
-          cd build-${{matrix.TLS}}-${{matrix.CC}}
+          sudo apt-get update && sudo apt-get install -y libtool libtool-bin exuberant-ctags graphviz doxygen libxml2-utils xsltproc docbook-xml docbook-xsl asciidoc
+          ./autogen.sh
+      - name: configure
+        run: ./configure --disable-tests --enable-documentation
+      - name: manual page examples check
+        run: |
           make -C man
           man/examples-code-check man
