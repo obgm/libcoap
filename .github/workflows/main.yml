@@ -2,10 +2,15 @@ name: Build Tests
 
 on:
   push:
-    # for now, trigger only on push to test branch gh-workflows
-    # later, will be push/pull_request to all main, develop, and 'release-*'
     branches:
+      - master
+      - develop
+      - release-*
       - gh-workflows
+  pull_request:
+    branches:
+      - master
+      - develop
 
 env:
   PLATFORM: posix
