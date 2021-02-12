@@ -65,33 +65,6 @@ lwip_prng_impl(unsigned char *buf, size_t len) {
 #define coap_prng(Buf,Length) lwip_prng_impl((Buf), (Length))
 #define coap_prng_init(Value)
 
-#elif defined(_WIN32)
-
-errno_t __cdecl rand_s( _Out_ unsigned int* _RandomValue );
-/**
- * Fills \p buf with \p len random bytes. This is the default implementation for
- * coap_prng(). You might want to change coap_prng_impl() to use a better
- * PRNG on your specific platform.
- */
-COAP_STATIC_INLINE int
-coap_prng_impl( unsigned char *buf, size_t len ) {
-        while ( len != 0 ) {
-                uint32_t r = 0;
-                size_t i;
-                if ( rand_s( &r ) != 0 )
-                        return 0;
-                for ( i = 0; i < len && i < 4; i++ ) {
-                        *buf++ = (uint8_t)r;
-                        r >>= 8;
-                }
-                len -= i;
-        }
-        return 1;
-}
-
-#define coap_prng(Buf,Length) coap_prng_impl((Buf), (Length))
-#define coap_prng_init(Value)
-
 #else
 
 /**
