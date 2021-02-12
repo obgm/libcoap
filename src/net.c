@@ -1732,7 +1732,11 @@ coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events, size_t nevents
        */
       uint64_t count;
 
-      (void)read(ctx->eptimerfd, &count, sizeof(count));
+      /* Check the result from read() to suppress the warning on
+       * systems that declare read() with warn_unused_result. */
+      if (read(ctx->eptimerfd, &count, sizeof(count)) == -1) {
+        /* do nothing */;
+      }
       /* And process any timed out events */
       coap_ticks(&now);
       coap_io_prepare_epoll(ctx, now);
