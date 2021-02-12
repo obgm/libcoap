@@ -39,14 +39,21 @@ coap_prng_impl( unsigned char *buf, size_t len ) {
         return 1;
 }
 
-#endif
+#endif /* _WIN32 */
 
 static int
 coap_prng_default(void *buf, size_t len) {
 #ifdef HAVE_GETRANDOM
   return getrandom(buf, len, 0);
 #else /* !HAVE_GETRANDOM */
+#if defined(_WIN32)
   return coap_prng_impl(buf,len);
+#else /* !_WIN32 */
+  unsigned char *dst = (unsigned char *)buf;
+  while (len--)
+    *dst++ = rand() & 0xFF;
+  return 1;
+#endif /* !_WIN32 */
 #endif /* !HAVE_GETRANDOM */
 }
 
