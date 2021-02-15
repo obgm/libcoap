@@ -766,15 +766,6 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
 
 #else
 
-  /* Do not send error responses for requests that were received via
-  * IP multicast.
-  * FIXME: If No-Response option indicates interest, these responses
-  *        must not be dropped. */
-  if (coap_is_mcast(&session->addr_info.local) &&
-    COAP_RESPONSE_CLASS(pdu->code) > 2) {
-    return COAP_DROPPED_RESPONSE;
-  }
-
   if (session->state == COAP_SESSION_STATE_NONE) {
     if (session->proto == COAP_PROTO_DTLS && !session->tls) {
       session->tls = coap_dtls_new_client_session(session);
@@ -2303,8 +2294,21 @@ enum respond_t { RESPONSE_DEFAULT, RESPONSE_DROP, RESPONSE_SEND };
 
 /**
  * Checks for No-Response option in given @p request and
- * returns @c 1 if @p response should be suppressed
+ * returns @c RESPONSE_DROP if @p response should be suppressed
  * according to RFC 7967.
+ *
+ * If the response is a confirmable piggybacked response and RESPONSE_DROP,
+ * change it to an empty ACK and @c RESPONSE_SEND so the client does not keep
+ * on retrying.
+ *
+ * Checks if the response code is 0.00 and if either the session is reliable or
+ * non-confirmable, @c RESPONSE_DROP is also returned.
+ *
+ * Multicast response checking is also carried out.
+ *
+ * NOTE: It is the responsibility of the application to determine whether
+ * a delayed separate response should be sent as the original requesting packet
+ * containing the No-Response option has long since gone.
  *
  * The value of the No-Response option is encoded as
  * follows:
@@ -2332,7 +2336,8 @@ enum respond_t { RESPONSE_DEFAULT, RESPONSE_DROP, RESPONSE_SEND };
  *         RESPONSE_SEND    when the response must be sent.
  */
 static enum respond_t
-no_response(coap_pdu_t *request, coap_pdu_t *response) {
+no_response(coap_pdu_t *request, coap_pdu_t *response,
+            coap_session_t *session) {
   coap_opt_t *nores;
   coap_opt_iterator_t opt_iter;
   unsigned int val = 0;
@@ -2352,11 +2357,44 @@ no_response(coap_pdu_t *request, coap_pdu_t *response) {
        * bit is not set, the sender explicitly indicates interest in
        * this response. */
       if (((1 << (COAP_RESPONSE_CLASS(response->code) - 1)) & val) > 0) {
-        return RESPONSE_DROP;
+        /* Should be dropping hte response */
+        if (response->type == COAP_MESSAGE_ACK &&
+            COAP_PROTO_NOT_RELIABLE(session->proto)) {
+          /* Still need to ACK the request */
+          response->code = 0;
+          /* Remove token/data from piggybacked acknowledgment PDU */
+          response->token_length = 0;
+          response->used_size = 0;
+          return RESPONSE_SEND;
+        }
+        else {
+          return RESPONSE_DROP;
+        }
       } else {
+        /* True for mcast as well RFC7967 2.1 */
         return RESPONSE_SEND;
       }
     }
+  }
+  else if (COAP_PDU_IS_EMPTY(response) &&
+           (response->type == COAP_MESSAGE_NON ||
+            COAP_PROTO_RELIABLE(session->proto))) {
+    /* response is 0.00, and this is reliable or non-confirmable */
+    return RESPONSE_DROP;
+  }
+
+  /*
+   * Do not send error responses for requests that were received via
+   * IP multicast.  RFC7252 8.1
+   */
+
+  if (coap_is_mcast(&session->addr_info.local)) {
+    if (request->type == COAP_MESSAGE_NON &&
+        response->type == COAP_MESSAGE_RST)
+      return RESPONSE_DROP;
+
+    if (COAP_RESPONSE_CLASS(response->code) > 2)
+      return RESPONSE_DROP;
   }
 
   /* Default behavior applies when we are not dealing with a response
@@ -2565,7 +2603,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     }
 
     if (!resource) {
-      if (response && (no_response(pdu, response) != RESPONSE_DROP)) {
+      if (response && (no_response(pdu, response, session) != RESPONSE_DROP)) {
         coap_tid_t mid = pdu->tid;
         if (coap_send(session, response) == COAP_INVALID_TID)
           coap_log(LOG_WARNING, "cannot send response for mid=0x%x\n", mid);
@@ -2665,7 +2703,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       h(context, resource, session, pdu, &token, query, response);
 
 skip_handler:
-      respond = no_response(pdu, response);
+      respond = no_response(pdu, response, session);
       if (respond != RESPONSE_DROP) {
         coap_tid_t mid = pdu->tid;
         if (COAP_RESPONSE_CLASS(response->code) > 2) {
@@ -2686,16 +2724,8 @@ skip_handler:
           response->used_size = 0;
         }
 
-        if ((respond == RESPONSE_SEND)
-          || /* RESPOND_DEFAULT */
-          (response->type != COAP_MESSAGE_NON ||
-          (response->code >= 64
-            && !coap_mcast_interface(&node->local_if)))) {
-
-          if (coap_send(session, response) == COAP_INVALID_TID)
-            coap_log(LOG_DEBUG, "cannot send response for mid=0x%x\n", mid);
-        } else {
-          coap_delete_pdu(response);
+        if (coap_send(session, response) == COAP_INVALID_TID) {
+          coap_log(LOG_DEBUG, "cannot send response for mid=0x%x\n", mid);
         }
       } else {
         coap_delete_pdu(response);
@@ -2718,7 +2748,7 @@ skip_handler:
       response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(405),
         &opt_filter);
 
-    if (response && (no_response(pdu, response) != RESPONSE_DROP)) {
+    if (response && (no_response(pdu, response, session) != RESPONSE_DROP)) {
       coap_tid_t mid = pdu->tid;
       if (coap_send(session, response) == COAP_INVALID_TID)
         coap_log(LOG_DEBUG, "cannot send response for mid=0x%x\n", mid);
