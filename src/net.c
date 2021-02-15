@@ -970,7 +970,7 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
   }
 #endif /* WITH_CONTIKI */
 
-  coap_log(LOG_DEBUG, "** %s: tid=%d: added to retransmit queue (%ums)\n",
+  coap_log(LOG_DEBUG, "** %s: mid=0x%x: added to retransmit queue (%ums)\n",
     coap_session_str(node->session), node->id,
     (unsigned)(node->t * 1000 / COAP_TICKS_PER_SECOND));
 
@@ -1212,7 +1212,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
       coap_retransmittimer_restart(context);
 #endif
 
-    coap_log(LOG_DEBUG, "** %s: tid=%d: retransmission #%d\n",
+    coap_log(LOG_DEBUG, "** %s: mid=0x%x: retransmission #%d\n",
              coap_session_str(node->session), node->id, node->retransmit_cnt);
 
     if (node->session->con_active)
@@ -1234,7 +1234,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   /* no more retransmissions, remove node from system */
 
 #ifndef WITH_CONTIKI
-  coap_log(LOG_DEBUG, "** %s: tid=%d: give up after %d attempts\n",
+  coap_log(LOG_DEBUG, "** %s: mid=0x%x: give up after %d attempts\n",
            coap_session_str(node->session), node->id, node->retransmit_cnt);
 #endif
 
@@ -1344,7 +1344,7 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
   while (session->delayqueue) {
     ssize_t bytes_written;
     coap_queue_t *q = session->delayqueue;
-    coap_log(LOG_DEBUG, "** %s: tid=%d: transmitted after delay\n",
+    coap_log(LOG_DEBUG, "** %s: mid=0x%x: transmitted after delay\n",
              coap_session_str(session), (int)q->pdu->tid);
     assert(session->partial_write < q->pdu->used_size + q->pdu->hdr_size);
     switch (session->proto) {
@@ -1797,7 +1797,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_tid_t
       (*queue)->t += (*node)->t;
     }
     (*node)->next = NULL;
-    coap_log(LOG_DEBUG, "** %s: tid=%d: removed\n",
+    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
              coap_session_str(session), id);
     return 1;
   }
@@ -1816,7 +1816,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_tid_t
     }
     q->next = NULL;
     *node = q;
-    coap_log(LOG_DEBUG, "** %s: tid=%d: removed\n",
+    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
              coap_session_str(session), id);
     return 1;
   }
@@ -1839,7 +1839,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
   while (context->sendqueue && context->sendqueue->session == session) {
     q = context->sendqueue;
     context->sendqueue = q->next;
-    coap_log(LOG_DEBUG, "** %s: tid=%d: removed\n",
+    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
              coap_session_str(session), q->id);
     if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
       context->nack_handler(context, session, q->pdu, reason, q->id);
@@ -1855,7 +1855,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
   while (q) {
     if (q->session == session) {
       p->next = q->next;
-      coap_log(LOG_DEBUG, "** %s: tid=%d: removed\n",
+      coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
                coap_session_str(session), q->id);
       if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
         context->nack_handler(context, session, q->pdu, reason, q->id);
@@ -1881,7 +1881,7 @@ coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
       context->sendqueue->pdu->token_length)) {
     q = context->sendqueue;
     context->sendqueue = q->next;
-    coap_log(LOG_DEBUG, "** %s: tid=%d: removed\n",
+    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
              coap_session_str(session), q->id);
     coap_delete_node(q);
   }
@@ -1898,7 +1898,7 @@ coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
       token_match(token, token_length,
         q->pdu->token, q->pdu->token_length)) {
       p->next = q->next;
-      coap_log(LOG_DEBUG, "** %s: tid=%d: removed\n",
+      coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
                coap_session_str(session), q->id);
       coap_delete_node(q);
       q = p->next;
@@ -2495,7 +2495,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     if (!resource) {
       if (response && (no_response(pdu, response) != RESPONSE_DROP)) {
         if (coap_send(session, response) == COAP_INVALID_TID)
-          coap_log(LOG_WARNING, "cannot send response for transaction %u\n",
+          coap_log(LOG_WARNING, "cannot send response for mid=0x%x\n",
                    pdu->tid);
       } else {
         coap_delete_pdu(response);
@@ -2600,7 +2600,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
             && !coap_mcast_interface(&node->local_if)))) {
 
           if (coap_send(session, response) == COAP_INVALID_TID)
-            coap_log(LOG_DEBUG, "cannot send response for message %d\n",
+            coap_log(LOG_DEBUG, "cannot send response for mid=0x%x\n",
                      pdu->tid);
         } else {
           coap_delete_pdu(response);
@@ -2626,7 +2626,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
     if (response && (no_response(pdu, response) != RESPONSE_DROP)) {
       if (coap_send(session, response) == COAP_INVALID_TID)
-        coap_log(LOG_DEBUG, "cannot send response for transaction %d\n",
+        coap_log(LOG_DEBUG, "cannot send response for mid=0x%x\n",
                  pdu->tid);
     } else {
       coap_delete_pdu(response);
@@ -2644,7 +2644,7 @@ fail_response:
        opt_filter);
   if (response) {
     if (coap_send(session, response) == COAP_INVALID_TID)
-      coap_log(LOG_WARNING, "cannot send response for transaction %u\n",
+      coap_log(LOG_WARNING, "cannot send response for mid=0x%x\n",
                pdu->tid);
   }
 }
@@ -2767,7 +2767,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         is_ping_rst = 1;
 
       if (!is_ping_rst)
-        coap_log(LOG_ALERT, "got RST for message %d\n", pdu->tid);
+        coap_log(LOG_ALERT, "got RST for mid=0x%x\n", pdu->tid);
 
       if (session->con_active) {
         session->con_active--;

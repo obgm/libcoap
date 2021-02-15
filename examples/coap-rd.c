@@ -208,7 +208,7 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
   response = coap_pdu_init(type, code, request->hdr->id, size);
 
   if (!response) {
-    coap_log(LOG_DEBUG, "cannot create response for message %d\n",
+    coap_log(LOG_DEBUG, "cannot create response for mid=0x%x\n",
              request->hdr->id);
     return;
   }
@@ -217,7 +217,7 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
     coap_add_token(response, request->hdr->token_length, request->hdr->token);
 
   if (coap_send(ctx, peer, response) == COAP_INVALID_TID) {
-    coap_log(LOG_DEBUG, "hnd_get_rd: cannot send response for message %d\n",
+    coap_log(LOG_DEBUG, "hnd_get_rd: cannot send response for mid=0x%x\n",
     request->hdr->id);
   }
 #endif
