@@ -289,7 +289,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     /* Check that the same tid is not getting re-used in violation of RFC7252 */
     LL_FOREACH(session->delayqueue, q) {
       if (q->id == pdu->tid) {
-        coap_log(LOG_ERR, "**  %s: tid=%d: already in-use - dropped\n", coap_session_str(session), pdu->tid);
+        coap_log(LOG_ERR, "**  %s: mid=0x%x: already in-use - dropped\n", coap_session_str(session), pdu->tid);
         return COAP_INVALID_TID;
       }
     }
@@ -306,7 +306,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     }
   }
   LL_APPEND(session->delayqueue, node);
-  coap_log(LOG_DEBUG, "** %s: tid=%d: delayed\n",
+  coap_log(LOG_DEBUG, "** %s: mid=0x%x: delayed\n",
            coap_session_str(session), node->id);
   return COAP_PDU_DELAYED;
 }
@@ -391,7 +391,7 @@ void coap_session_connected(coap_session_t *session) {
     session->delayqueue = q->next;
     q->next = NULL;
 
-    coap_log(LOG_DEBUG, "** %s: tid=%d: transmitted after delay\n",
+    coap_log(LOG_DEBUG, "** %s: mid=0x%x: transmitted after delay\n",
              coap_session_str(session), (int)q->pdu->tid);
     bytes_written = coap_session_send_pdu(session, q->pdu);
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
@@ -456,7 +456,7 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     coap_queue_t *q = session->delayqueue;
     session->delayqueue = q->next;
     q->next = NULL;
-    coap_log(LOG_DEBUG, "** %s: tid=%d: not transmitted after disconnect\n",
+    coap_log(LOG_DEBUG, "** %s: mid=0x%x: not transmitted after disconnect\n",
              coap_session_str(session), q->id);
     if (q->pdu->type==COAP_MESSAGE_CON
       && COAP_PROTO_NOT_RELIABLE(session->proto)

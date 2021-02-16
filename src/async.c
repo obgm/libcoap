@@ -38,7 +38,7 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
     /* We must return NULL here as the caller must know that he is
      * responsible for releasing @p data. */
     coap_log(LOG_DEBUG,
-         "asynchronous state for transaction %d already registered\n", id);
+         "asynchronous state for mid=0x%x already registered\n", id);
     return NULL;
   }
 
