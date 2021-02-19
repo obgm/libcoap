@@ -77,9 +77,9 @@ that are licensed under the terms of the Eclipse Distribution License 1.0
 (http://www.eclipse.org/org/documents/edl-v10.php).
 
 ========================================================================
-MbedTLS
+Mbed TLS
 
-When compiled with MbedTLS support, this software includes components
+When compiled with Mbed TLS support, this software includes components
 that are licensed under the terms of the Apache 2.0 license
 (http://www.apache.org/licenses/LICENSE-2.0).
 

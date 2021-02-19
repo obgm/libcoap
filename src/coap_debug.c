@@ -784,7 +784,7 @@ char *coap_string_tls_version(char *buffer, size_t bufsize)
              (unsigned long)(tls_version->built_version & 0xff));
     break;
   case COAP_TLS_LIBRARY_MBEDTLS:
-    snprintf(buffer, bufsize, "TLS Library: MbedTLS - runtime %lu.%lu.%lu, "
+    snprintf(buffer, bufsize, "TLS Library: Mbed TLS - runtime %lu.%lu.%lu, "
              "libcoap built for %lu.%lu.%lu",
              (unsigned long)(tls_version->version >> 24),
              (unsigned long)((tls_version->version >> 16) & 0xff),

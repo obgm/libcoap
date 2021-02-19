@@ -55,7 +55,7 @@ typedef enum coap_tls_library_t {
   COAP_TLS_LIBRARY_TINYDTLS,  /**< Using TinyDTLS library */
   COAP_TLS_LIBRARY_OPENSSL,   /**< Using OpenSSL library */
   COAP_TLS_LIBRARY_GNUTLS,    /**< Using GnuTLS library */
-  COAP_TLS_LIBRARY_MBEDTLS,   /**< Using MbedTLS library */
+  COAP_TLS_LIBRARY_MBEDTLS,   /**< Using Mbed TLS library */
 } coap_tls_library_t;
 
 /**

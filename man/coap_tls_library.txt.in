@@ -40,7 +40,7 @@ type.
 DESCRIPTION
 -----------
 When the libcoap library was built, it will have been compiled using a
-specific TLS implementation type (e.g. OpenSSL, GnuTLS, MbedTLS, TinyDTLS or
+specific TLS implementation type (e.g. OpenSSL, GnuTLS, Mbed TLS, TinyDTLS or
 noTLS).
 When the libcoap library is linked into an application, it is possible that
 the application needs to dynamically determine whether DTLS or TLS is
@@ -94,7 +94,7 @@ typedef enum coap_tls_library_t {
   COAP_TLS_LIBRARY_TINYDTLS,  /* Using TinyDTLS library */
   COAP_TLS_LIBRARY_OPENSSL,   /* Using OpenSSL library */
   COAP_TLS_LIBRARY_GNUTLS,    /* Using GnuTLS library */
-  COAP_TLS_LIBRARY_MBEDTLS,   /* Using MbedTLS library */
+  COAP_TLS_LIBRARY_MBEDTLS,   /* Using Mbed TLS library */
 } coap_tls_library_t;
 
 typedef struct coap_tls_version_t {
