@@ -6,9 +6,10 @@
 # DESCRIPTION
 #
 #   This m4 file contains helper functions for checking the version of the
-#   respective cryptographic library version of GnuTLS or OpenSSL on the
-#   host. The variables '$gnutls_version_require', '$openssl_version_required',
-#   hold the minimum required version and are set up externaly in configure.ac.
+#   respective cryptographic library version of GnuTLS, Mbed TLS or OpenSSL on
+#   the host. The variables '$gnutls_version_required',
+#   '$mbedtls_version_required' and '$openssl_version_required' hold the
+#   minimum required version and are set up externaly in configure.ac.
 #
 #   Example:
 #
@@ -53,4 +54,18 @@ AC_DEFUN([AX_CHECK_OPENSSL_VERSION],
               AC_MSG_ERROR([==> OpenSSL $openssl_version too old. OpenSSL >= $openssl_version_required required for suitable DTLS support build.])
           fi
 ]) dnl AX_CHECK_OPENSSL_VERSION
+
+AC_DEFUN([AX_CHECK_MBEDTLS_VERSION],
+         [AC_MSG_CHECKING([for compatible Mbed TLS version (>= $mbedtls_version_required)])
+          AS_VERSION_COMPARE([$mbedtls_version], [$mbedtls_version_required],
+                             [AC_MSG_RESULT([no])
+                              MBEDTLSV=""],
+                             [AC_MSG_RESULT([yes $mbedtls_version])
+                              MBEDTLSV="$mbedtls_version"],
+                             [AC_MSG_RESULT([yes $mbedtls_version])
+                              MBEDTLSV="$mbedtls_version"])
+          if test "x$MBEDTLSV" = "x"; then
+              AC_MSG_ERROR([==> Mbed TLS $mbedtls_version too old. Mbed TLS >= $mbedtls_version_required required for suitable DTLS support build.])
+          fi
+]) dnl AX_CHECK_MBEDTLS_VERSION
 

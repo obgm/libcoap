@@ -333,7 +333,7 @@ AC_ARG_WITH([openssl],
 
 AC_ARG_WITH([mbedtls],
             [AS_HELP_STRING([--with-mbedtls],
-                            [Use mbed TLS for DTLS functions])],
+                            [Use Mbed TLS for DTLS functions])],
             [with_mbedtls="$withval"],
             [with_mbedtls="no"])
 
@@ -385,10 +385,35 @@ if test "x$build_dtls" = "xyes"; then
                       [have_openssl="yes"],
                       [have_openssl="no"])
 
-    # mbed TLS [does not have mbedtls.pc pkg-config file]
-    AC_CHECK_LIB(mbedtls, mbedtls_ssl_handshake,
+    # Mbed TLS [does not have mbedtls.pc pkg-config file]
+    AC_CHECK_LIB(mbedtls, mbedtls_version_get_string,
                  [have_mbedtls="yes"; MbedTLS_CFLAGS="" ; MbedTLS_LIBS="-lmbedtls -lmbedcrypto -lmbedx509"],
                  [have_mbedtls="no"], -lmbedx509 -lmbedcrypto)
+    if test "x$have_mbedtls" = "xyes"; then
+        if test "x$cross_compiling" = "xyes" ; then
+            # Have no option but to do this
+            mbedtls_version=$mbedtls_version_required
+        else
+            # Get actual library version
+            AC_LANG_PUSH(C)
+            local_MbedTLS_save_LIBS=$LIBS
+            LIBS="$MbedTLS_LIBS $LIBS"
+            AC_LINK_IFELSE([dnl
+                AC_LANG_SOURCE(
+                    [[#include <stdio.h>
+                     #include <mbedtls/version.h>
+                     int main () {
+                       char str[20];
+                       mbedtls_version_get_string(str);
+                       fprintf(stdout,"%s\n",str);
+                       return 0;
+                     }]])],
+               [mbedtls_version=$(./conftest$EXEEXT)],
+               [AC_MSG_ERROR(Failed to determine Mbed TLS version)])
+            LIBS=$local_MbedTLS_save_LIBS
+            AC_LANG_POP(C)
+        fi
+    fi
 
     # TinyDTLS ?
     # TBD ?
@@ -429,19 +454,19 @@ if test "x$build_dtls" = "xyes"; then
         have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
 
-    # The user wants to use explicit mbed TLS if '--with-mbedtls was set'.
+    # The user wants to use explicit Mbed TLS if '--with-mbedtls was set'.
     if test "x$with_mbedtls" = "xyes"; then
         # Some more sanity checking.
         if test "x$have_mbedtls" != "xyes"; then
-            AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the mbed TLS library but library 'mbedtls' could not be found!
-                      Install the package(s) that contains the development files for mbed TLS,
+            AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the Mbed TLS library but library 'mbedtls' could not be found!
+                      Install the package(s) that contains the development files for Mbed TLS,
                       or select a different TLS library or disable the DTLS support using '--disable-dtls'.])
         fi
-        AC_MSG_NOTICE([The use of mbed TLS was explicitly requested with configure option '--with-mbedtls'!])
+        AC_MSG_NOTICE([The use of Mbed TLS was explicitly requested with configure option '--with-mbedtls'!])
 
-        # check for valid mbed TLS version (mbedtls.pc does not exist - hmm)
-        # mbedtls_version=`pkg-config --modversion mbedtls`
-        # AX_CHECK_MBEDTLS_VERSION
+        # check for valid Mbed TLS version (mbedtls.pc does not exist - hmm)
+        # mbedtls_version determined previously
+        AX_CHECK_MBEDTLS_VERSION
         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
@@ -482,12 +507,12 @@ if test "x$build_dtls" = "xyes"; then
           have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
           have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
 
-      # ... and if not found check mbed TLS is suitable.
+      # ... and if not found check Mbed TLS is suitable.
       elif test "x$have_mbedtls" = "xyes"; then
-          # mbed TLS [does not have mbedtls.pc pkg-config file]
-          # mbedtls_version=`pkg-config --modversion mbedtls`
-          # AX_CHECK_MBEDTLS_VERSION
-          AC_MSG_NOTICE([Using auto selected library mbed TLS for DTLS support!])
+          # Mbed TLS [does not have mbedtls.pc pkg-config file]
+          # mbedtls_version determined previously
+          AX_CHECK_MBEDTLS_VERSION
+          AC_MSG_NOTICE([Using auto selected library Mbed TLS for DTLS support!])
           with_mbedtls_auto="yes"
           have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
           have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
@@ -496,8 +521,8 @@ if test "x$build_dtls" = "xyes"; then
       # Note that tinyDTLS is used only when explicitly requested.
       # Giving out an error message if we haven't found at least one crypto library.
       else
-          AC_MSG_ERROR([==> Option '--enable-dtls' is set but none of the needed cryptography libraries GnuTLS, OpenSSL or mbed TLS could be found!
-                        Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required), OpenSSL(>= $openssl_version_required), or mbed TLS(>= $mbedtls_version_required)
+          AC_MSG_ERROR([==> Option '--enable-dtls' is set but none of the needed cryptography libraries GnuTLS, OpenSSL or Mbed TLS could be found!
+                        Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required), OpenSSL(>= $openssl_version_required), or Mbed TLS(>= $mbedtls_version_required)
                         or disable the DTLS support using '--disable-dtls'.])
       fi
     fi
@@ -845,8 +870,7 @@ if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
 fi
 if test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support      : "yes"])
-    # mbed TLS [does not have mbedtls.pc pkg-config file, hence no mbedtls_version]
-    AC_MSG_RESULT([         -->  mbed TLS around : "yes" (found mbed TLS)])
+    AC_MSG_RESULT([         -->  Mbed TLS around : "yes" (found Mbed TLS $mbedtls_version)])
     AC_MSG_RESULT([              MBEDTLS_CFLAGS  : "$MbedTLS_CFLAGS"])
     AC_MSG_RESULT([              MBEDTLS_LIBS    : "$MbedTLS_LIBS"])
 fi
