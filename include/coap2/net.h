@@ -339,7 +339,7 @@ int coap_context_set_psk2(coap_context_t *context,
  */
 int
 coap_context_set_pki(coap_context_t *context,
-                     coap_dtls_pki_t *setup_data);
+                     const coap_dtls_pki_t *setup_data);
 
 /**
  * Set the context's default Root CA information for a client or server.

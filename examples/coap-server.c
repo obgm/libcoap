@@ -98,7 +98,7 @@ static uint8_t *ca_mem = NULL;   /* CA for cert checking in PEM_BUF */
 static size_t cert_mem_len = 0;
 static size_t key_mem_len = 0;
 static size_t ca_mem_len = 0;
-static int require_peer_cert = 1; /* By default require peer cert */
+static int verify_peer_cert = 1; /* PKI granularity - by default set */
 #define MAX_KEY   64 /* Maximum length of a pre-shared key in bytes. */
 static uint8_t *key = NULL;
 static ssize_t key_length = 0;
@@ -1873,7 +1873,8 @@ setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *client_sni) {
      * coap_context_set_pki_root_cas(), but this is used to define what
      * checking actually takes place.
      */
-    dtls_pki.verify_peer_cert        = !is_rpk_not_cert;
+    dtls_pki.verify_peer_cert        = verify_peer_cert;
+    dtls_pki.check_common_ca         = !root_ca_file;
     dtls_pki.allow_self_signed       = 1;
     dtls_pki.allow_expired_certs     = 1;
     dtls_pki.cert_chain_validation   = 1;
@@ -1887,7 +1888,6 @@ setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *client_sni) {
                                        verify_pki_sni_callback : NULL;
     dtls_pki.sni_call_back_arg       = NULL;
   }
-  dtls_pki.require_peer_cert = require_peer_cert;
   dtls_pki.is_rpk_not_cert   = is_rpk_not_cert;
 
   if (role == COAP_DTLS_ROLE_CLIENT) {
@@ -1977,6 +1977,7 @@ static void
 usage( const char *program, const char *version) {
   const char *p;
   char buffer[64];
+  coap_tls_version_t *tls_version = coap_get_tls_library_version();
 
   p = strrchr( program, '/' );
   if ( p )
@@ -1984,13 +1985,37 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
      "(c) 2010,2011,2015-2021 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
-     "%s\n\n"
+     "%s\n"
+    , program, version, coap_string_tls_version(buffer, sizeof(buffer)));
+  switch (tls_version->type) {
+  case COAP_TLS_LIBRARY_NOTLS:
+    break;
+  case COAP_TLS_LIBRARY_TINYDTLS:
+    fprintf(stderr, "(DTLS and no TLS support; PSK and RPK support)\n");
+    break;
+  case COAP_TLS_LIBRARY_OPENSSL:
+    fprintf(stderr, "(DTLS and TLS support; PSK, PKI and no RPK support)\n");
+    break;
+  case COAP_TLS_LIBRARY_GNUTLS:
+    if (tls_version->version >= 0x030606)
+      fprintf(stderr, "(DTLS and TLS support; PSK, PKI and RPK support)\n");
+    else
+      fprintf(stderr, "(DTLS and TLS support; PSK, PKI and no RPK support)\n");
+    break;
+  case COAP_TLS_LIBRARY_MBEDTLS:
+    fprintf(stderr, "(DTLS and no TLS support; PSK, PKI and no RPK support)\n");
+    break;
+  default:
+    break;
+  }
+  fprintf(stderr, "\n"
      "Usage: %s [-d max] [-g group] [-l loss] [-p port] [-v num]\n"
      "\t\t[-A address] [-N] [-P scheme://address[:port],name1[,name2..]]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
      "\t\t[-s match_psk_sni_file] [-u user]]\n"
-     "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile] [-J pkcs11_pin]\n"
-     "\t\t[-M rpk_file] [-R root_cafile] [-S match_pki_sni_file]]\n"
+     "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
+     "\t\t[-J pkcs11_pin] [-M rpk_file] [-R trust_casfile]\n"
+     "\t\t[-S match_pki_sni_file]]\n"
      "General Options\n"
      "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
      "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
@@ -2006,13 +2031,13 @@ usage( const char *program, const char *version) {
      "\t       \t\tenabled, then the coap-server will also listen on\n"
      "\t       \t\t 'port'+1 for DTLS and TLS.  The default port is 5683\n"
      "\t-v num \t\tVerbosity level (default 3, maximum is 9). Above 7,\n"
-     "\t       \t\tthere is increased verbosity in GnuTLS and OpenSSL logging\n"
+     "\t       \t\tthere is increased verbosity in GnuTLS and OpenSSL\n"
+     "\t       \t\tlogging\n"
      "\t-A address\tInterface address to bind to\n"
      "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
      "\t       \t\tevery fifth response will still be sent as a confirmable\n"
      "\t       \t\tresponse (RFC 7641 requirement)\n"
-    , program, version, coap_string_tls_version(buffer, sizeof(buffer)),
-    program);
+    , program);
   fprintf( stderr,
      "\t-P scheme://address[:port],name1[,name2[,name3..]]\tScheme, address,\n"
      "\t       \t\toptional port of how to connect to the next proxy server\n"
@@ -2025,29 +2050,35 @@ usage( const char *program, const char *version) {
      "\t       \t\twill be a direct connection.\n"
      "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
      "PSK Options (if supported by underlying (D)TLS library)\n"
-     "\t-h hint\t\tIdentity Hint. Default is CoAP. Zero length is no hint\n"
+     "\t-h hint\t\tIdentity Hint to send. Default is CoAP. Zero length is\n"
+     "\t       \t\tno hint\n"
      "\t-i match_identity_file\n"
-     "\t       \t\tThis option denotes a file that contains one or more lines\n"
-     "\t       \t\tof client Hints and (user) Identities to match for a new\n"
-     "\t       \t\tPre-Shared Key (PSK) (comma separated) to be used. E.g.,\n"
-     "\t       \t\tper line\n"
-     "\t       \t\t hint_to_match,identity_to_match,new_key\n"
+     "\t       \t\tThis is a file that contains one or more lines of\n"
+     "\t       \t\tIdentity Hints and (user) Identities to match for\n"
+     "\t       \t\ta different new Pre-Shared Key (PSK) (comma separated)\n"
+     "\t       \t\tto be used. E.g., per line\n"
+     "\t       \t\t hint_to_match,identity_to_match,use_key\n"
      "\t       \t\tNote: -k still needs to be defined for the default case\n"
+     "\t       \t\tNote: A match using the -s option may mean that the\n"
+     "\t       \t\tcurrent Identity Hint is different to that defined by -h\n"
      "\t-k key \t\tPre-Shared Key. This argument requires (D)TLS with PSK\n"
      "\t       \t\tto be available. This cannot be empty if defined.\n"
-     "\t       \t\tNote that both -c and -k need to be defined\n"
-     "\t       \t\tfor both PSK and PKI to be concurrently supported\n"
+     "\t       \t\tNote that both -c and -k need to be defined for both\n"
+     "\t       \t\tPSK and PKI to be concurrently supported\n"
      "\t-s match_psk_sni_file\n"
-     "\t       \t\tThis is a file that contains one or more lines of Subject\n"
-     "\t       \t\tName Identifiers (SNI) to match for new Identity Hint and\n"
-     "\t       \t\tnew Pre-Shared Key (PSK) (comma separated) to be used.\n"
-     "\t       \t\tE.g., per line\n"
-     "\t       \t\t sni_to_match,new_hint,new_key\n"
+     "\t       \t\tThis is a file that contains one or more lines of\n"
+     "\t       \t\treceived Subject Name Identifier (SNI) to match to use\n"
+     "\t       \t\ta different Identity Hint and associated Pre-Shared Key\n"
+     "\t       \t\t(PSK) (comma separated) instead of the '-h hint' and\n"
+     "\t       \t\t'-k key' options. E.g., per line\n"
+     "\t       \t\t sni_to_match,use_hint,with_key\n"
      "\t       \t\tNote: -k still needs to be defined for the default case\n"
-     "\t       \t\tNote: the new Pre-Shared Key will get updated if there is\n"
-     "\t       \t\talso a -i match\n"
-     "\t-u user\t\tUser identity for pre-shared key mode (only used if option P\n"
-     "\t       \t\t is set)\n"
+     "\t       \t\tif there is not a match\n"
+     "\t       \t\tNote: The associated Pre-Shared Key will get updated if\n"
+     "\t       \t\tthere is also a -i match.  The update checking order is\n"
+     "\t       \t\t-s followed by -i\n"
+     "\t-u user\t\tUser identity for pre-shared key mode (only used if\n"
+     "\t       \t\toption -P is set)\n"
      );
   fprintf(stderr,
      "PKI Options (if supported by underlying (D)TLS library)\n"
@@ -2057,43 +2088,52 @@ usage( const char *program, const char *version) {
      "\tOtherwise all of '-c certfile', '-j keyfile' or '-C cafile' are in\n"
      "\tPEM format.\n\n"
      "\t-c certfile\tPEM file or PKCS11 URI for the certificate. The private\n"
-     "\t       \t\tkey can be in the PEM file, or use the same PKCS11 URI.\n"
-     "\t       \t\tIf not, the private key is defined by '-j keyfile'\n"
-     "\t       \t\tNote that both -c and -k need to be defined\n"
-     "\t       \t\tfor both PSK and PKI to be concurrently supported\n"
+     "\t       \t\tkey can also be in the PEM file, or has the same PKCS11\n"
+     "\t       \t\tURI. If not, the private key is defined by '-j keyfile'.\n"
+     "\t       \t\tNote that both -c and -k need to be defined for both\n"
+     "\t       \t\tPSK and PKI to be concurrently supported\n"
      "\t-j keyfile\tPEM file or PKCS11 URI for the private key for the\n"
-     "\t       \t\tcertificate in '-c certfile' if the parameter is different\n"
-     "\t       \t\tfrom certfile in '-c certfile'\n"
+     "\t       \t\tcertificate in '-c certfile' if the parameter is\n"
+     "\t       \t\tdifferent from certfile in '-c certfile'\n"
      "\t-m     \t\tUse COAP_PKI_KEY_PEM_BUF instead of COAP_PKI_KEY_PEM i/f\n"
      "\t       \t\tby reading into memory the Cert / CA file (for testing)\n"
-     "\t-n     \t\tDisable the requirement for clients to have defined\n"
-     "\t       \t\tclient certificates\n"
-     "\t-C cafile\tPEM file or PKCS11 URI for the CA certificate that was\n"
-     "\t       \t\tused to sign the certfile. If defined, then the client\n"
-     "\t       \t\twill be given this CA certificate during the TLS set up.\n"
-     "\t       \t\tFurthermore, this will trigger the validation of the\n"
-     "\t       \t\tclient certificate.  If certfile is self-signed (as\n"
-     "\t       \t\tdefined by '-c certfile'), then you need to have on the\n"
-     "\t       \t\tcommand line the same filename for both the certfile and\n"
-     "\t       \t\tcafile (as in  '-c certfile -C certfile') to trigger\n"
-     "\t       \t\tvalidation\n"
+     "\t-n     \t\tDisable remote peer certificate checking. This gives\n"
+     "\t       \t\tclients the ability to use PKI, but without any defined\n"
+     "\t       \t\tcertificates\n"
+     "\t-C cafile\tPEM file or PKCS11 URI that contains a list of one or\n"
+     "\t       \t\tmore CAs that are to be passed to the client for the\n"
+     "\t       \t\tclient to determine what client certificate to use.\n"
+     "\t       \t\tNormally, this list of CAs would be the root CA and and\n"
+     "\t       \t\tany intermediate CAs. Ideally the server certificate\n"
+     "\t       \t\tshould be signed by the same CA so that mutual\n"
+     "\t       \t\tauthentication can take place. The contents of cafile\n"
+     "\t       \t\tare added to the trusted store of root CAs.\n"
+     "\t       \t\tUsing the -C or -R options will will trigger the\n"
+     "\t       \t\tvalidation of the client certificate unless overridden\n"
+     "\t       \t\tby the -n option\n"
      "\t-J pkcs11_pin\tThe user pin to unlock access to the PKCS11 token\n"
-     "\t-M rpk_file\tRaw Public Key (RPK) PEM file that contains both\n"
-     "\t       \t\tPUBLIC KEY and PRIVATE KEY or just EC PRIVATE KEY.\n"
-     "\t       \t\t(GnuTLS and TinyDTLS support only) '-C cafile' not required\n"
-     "\t-R root_cafile\tPEM file containing the set of trusted root CAs that\n"
-     "\t       \t\tare to be used to validate the client certificate.\n"
-     "\t       \t\tThe '-C cafile' does not have to be in this list and is\n"
-     "\t       \t\t'trusted' for the verification.\n"
+     "\t-M rpk_file\tRaw Public Key (RPK) PEM file or PKCS11 URI that\n"
+     "\t       \t\tcontains both PUBLIC KEY and PRIVATE KEY or just\n"
+     "\t       \t\tEC PRIVATE KEY. (GnuTLS and TinyDTLS(PEM) support only).\n"
+     "\t       \t\t'-C cafile' or '-R trust_casfile' are not required\n"
+     "\t-R trust_casfile\tPEM file containing the set of trusted root CAs\n"
+     "\t       \t\tthat are to be used to validate the client certificate.\n"
      "\t       \t\tAlternatively, this can point to a directory containing\n"
-     "\t       \t\ta set of CA PEM files\n"
+     "\t       \t\ta set of CA PEM files.\n"
+     "\t       \t\tUsing '-R trust_casfile' disables common CA mutual\n"
+     "\t       \t\tauthentication which can only be done by using\n"
+     "\t       \t\t'-C cafile'.\n"
+     "\t       \t\tUsing the -C or -R options will will trigger the\n"
+     "\t       \t\tvalidation of the client certificate unless overridden\n"
+     "\t       \t\tby the -n option\n"
      "\t-S match_pki_sni_file\n"
-     "\t       \t\tThis option denotes a file that contains one or more lines\n"
-     "\t       \t\tof Subject Name Identifier (SNI) to match for new Cert\n"
-     "\t       \t\tfile and new CA file (comma separated) to be used.\n"
+     "\t       \t\tThis option denotes a file that contains one or more\n"
+     "\t       \t\tlines of Subject Name Identifier (SNI) to match for new\n"
+     "\t       \t\tCert file and new CA file (comma separated) to be used.\n"
      "\t       \t\tE.g., per line\n"
      "\t       \t\t sni_to_match,new_cert_file,new_ca_file\n"
-     "\t       \t\tNote: -c and -C still needs to be defined for the default case\n"
+     "\t       \t\tNote: -c and -C still need to be defined for the default\n"
+     "\t       \t\tcase\n"
     );
 }
 
@@ -2486,9 +2526,10 @@ main(int argc, char **argv) {
     case 'M':
       cert_file = optarg;
       is_rpk_not_cert = 1;
+      verify_peer_cert = 0; /* This does not work for RPK */
       break;
     case 'n':
-      require_peer_cert = 0;
+      verify_peer_cert = 0;
       break;
     case 'N':
       resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_NON;

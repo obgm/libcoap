@@ -51,7 +51,7 @@
 static char *cert_file = NULL; /* Combined certificate and private key in PEM */
 static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM */
 static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
-static int require_peer_cert = 1; /* By default require peer cert */
+static int verify_peer_cert = 1; /* PKI granularity - by default set */
 #define MAX_KEY   64 /* Maximum length of a pre-shared key in bytes. */
 static uint8_t key[MAX_KEY];
 static ssize_t key_length = 0;
@@ -581,6 +581,7 @@ static void
 usage( const char *program, const char *version) {
   const char *p;
   char buffer[64];
+  coap_tls_version_t *tls_version = coap_get_tls_library_version();
 
   p = strrchr( program, '/' );
   if ( p )
@@ -588,10 +589,33 @@ usage( const char *program, const char *version) {
 
   fprintf( stderr, "%s v%s -- CoRE Resource Directory implementation\n"
      "(c) 2011-2012,2019-2021 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
-     "%s\n\n"
+     "%s\n"
+    , program, version, coap_string_tls_version(buffer, sizeof(buffer)));
+  switch (tls_version->type) {
+  case COAP_TLS_LIBRARY_NOTLS:
+    break;
+  case COAP_TLS_LIBRARY_TINYDTLS:
+    fprintf(stderr, "(DTLS and no TLS support; PSK and RPK support)\n");
+    break;
+  case COAP_TLS_LIBRARY_OPENSSL:
+    fprintf(stderr, "(DTLS and TLS support; PSK, PKI and no RPK support)\n");
+    break;
+  case COAP_TLS_LIBRARY_GNUTLS:
+    if (tls_version->version >= 0x030606)
+      fprintf(stderr, "(DTLS and TLS support; PSK, PKI and RPK support)\n");
+    else
+      fprintf(stderr, "(DTLS and TLS support; PSK, PKI and no RPK support)\n");
+    break;
+  case COAP_TLS_LIBRARY_MBEDTLS:
+    fprintf(stderr, "(DTLS and no TLS support; PSK, PKI and no RPK support)\n");
+    break;
+  default:
+    break;
+  }
+  fprintf(stderr, "\n"
      "Usage: %s [-g group] [-p port] [-v num] [-A address]\n"
      "\t       [[-h hint] [-k key]]\n"
-     "\t       [[-c certfile] [-C cafile] [-n] [-R root_cafile]]\n"
+     "\t       [[-c certfile] [-C cafile] [-n] [-R trust_casfile]]\n"
      "General Options\n"
      "\t-g group\tJoin the given multicast group.\n"
      "\t       \t\tNote: DTLS over multicast is not currently supported\n"
@@ -608,24 +632,31 @@ usage( const char *program, const char *version) {
      "PKI Options (if supported by underlying (D)TLS library)\n"
      "\t-c certfile\tPEM file containing both CERTIFICATE and PRIVATE KEY\n"
      "\t       \t\tThis argument requires (D)TLS with PKI to be available\n"
-     "\t-n     \t\tDisable the requirement for clients to have defined\n"
-     "\t       \t\tclient certificates\n"
-     "\t-C cafile\tPEM file containing the CA Certificate that was used to\n"
-     "\t       \t\tsign the certfile. If defined, then the client will be\n"
-     "\t       \t\tgiven this CA Certificate during the TLS set up.\n"
-     "\t       \t\tFurthermore, this will trigger the validation of the\n"
-     "\t       \t\tclient certificate.  If certfile is self-signed (as\n"
-     "\t       \t\tdefined by '-c certfile'), then you need to have on the\n"
-     "\t       \t\tcommand line the same filename for both the certfile and\n"
-     "\t       \t\tcafile (as in  '-c certfile -C certfile') to trigger\n"
-     "\t       \t\tvalidation\n"
-     "\t-R root_cafile\tPEM file containing the set of trusted root CAs that\n"
-     "\t       \t\tare to be used to validate the client certificate.\n"
-     "\t       \t\tThe '-C cafile' does not have to be in this list and is\n"
-     "\t       \t\t'trusted' for the verification.\n"
+     "\t-n     \t\tDisable remote peer certificate checking. This gives\n"
+     "\t       \t\tclients the ability to use PKI, but without any defined\n"
+     "\t       \t\tcertificates\n"
+     "\t-C cafile\tPEM file that contains a list of one or\n"
+     "\t       \t\tmore CAs that are to be passed to the client for the\n"
+     "\t       \t\tclient to determine what client certificate to use.\n"
+     "\t       \t\tNormally, this list of CAs would be the root CA and and\n"
+     "\t       \t\tany intermediate CAs. Ideally the server certificate\n"
+     "\t       \t\tshould be signed by the same CA so that mutual\n"
+     "\t       \t\tauthentication can take place. The contents of cafile\n"
+     "\t       \t\tare added to the trusted store of root CAs.\n"
+     "\t       \t\tUsing the -C or -R options will will trigger the\n"
+     "\t       \t\tvalidation of the client certificate unless overridden\n"
+     "\t       \t\tby the -n option\n"
+     "\t-R trust_casfile\tPEM file containing the set of trusted root CAs\n"
+     "\t       \t\tthat are to be used to validate the client certificate.\n"
      "\t       \t\tAlternatively, this can point to a directory containing\n"
-     "\t       \t\ta set of CA PEM files\n",
-     program, version, coap_string_tls_version(buffer, sizeof(buffer)),
+     "\t       \t\ta set of CA PEM files.\n"
+     "\t       \t\tUsing '-R trust_casfile' disables common CA mutual\n"
+     "\t       \t\tauthentication which can only be done by using\n"
+     "\t       \t\t'-C cafile'.\n"
+     "\t       \t\tUsing the -C or -R options will will trigger the\n"
+     "\t       \t\tvalidation of the client certificate unless overridden\n"
+     "\t       \t\tby the -n option\n"
+     ,
      program);
 }
 
@@ -641,14 +672,14 @@ fill_keystore(coap_context_t *ctx) {
     coap_dtls_pki_t dtls_pki;
     memset (&dtls_pki, 0, sizeof(dtls_pki));
     dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
-    if (ca_file) {
+    if (ca_file || root_ca_file) {
       /*
        * Add in additional certificate checking.
        * This list of enabled can be tuned for the specific
        * requirements - see 'man coap_encryption'.
        */
-      dtls_pki.verify_peer_cert        = 1;
-      dtls_pki.require_peer_cert       = require_peer_cert;
+      dtls_pki.verify_peer_cert        = verify_peer_cert;
+      dtls_pki.check_common_ca         = !root_ca_file;
       dtls_pki.allow_self_signed       = 1;
       dtls_pki.allow_expired_certs     = 1;
       dtls_pki.cert_chain_validation   = 1;
@@ -813,7 +844,7 @@ main(int argc, char **argv) {
       key_defined = 1;
       break;
     case 'n':
-      require_peer_cert = 0;
+      verify_peer_cert = 0;
       break;
     case 'R' :
       root_ca_file = optarg;

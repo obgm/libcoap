@@ -37,8 +37,8 @@ coap_get_tls_library_version(void) {
 
 int
 coap_dtls_context_set_pki(coap_context_t *ctx UNUSED,
-                          coap_dtls_pki_t* setup_data UNUSED,
-                          coap_dtls_role_t role UNUSED
+                          const coap_dtls_pki_t* setup_data UNUSED,
+                          const coap_dtls_role_t role UNUSED
 ) {
   return 0;
 }
