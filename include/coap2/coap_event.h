@@ -70,6 +70,8 @@ typedef int (*coap_event_handler_t)(struct coap_context_t *,
 void coap_register_event_handler(struct coap_context_t *context,
                             coap_event_handler_t hnd);
 
+/** @} */
+
 /**
  * Registers the function @p hnd as callback for events from the given
  * CoAP context @p context. Any event handler that has previously been
@@ -93,7 +95,5 @@ void coap_set_event_handler(struct coap_context_t *context,
  */
 COAP_DEPRECATED
 void coap_clear_event_handler(struct coap_context_t *context);
-
-/** @} */
 
 #endif /* COAP_EVENT_H */

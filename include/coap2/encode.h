@@ -46,6 +46,12 @@ extern int coap_flsll(long long i);
 #define COAP_PSEUDOFP_ENCODE_8_4_UP(v,ls,s) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (s = (((v + ((1<<ENCODE_HEADER_SIZE<<ls)-1)) >> ls) & MMASK)), s == 0 ? HIBIT + ls + 1 : s + ls))
 
 /**
+ * @defgroup encode Encode / Decode API
+ * API functions for endoding/decoding CoAP options.
+ * @{
+ */
+
+/**
  * Decodes multiple-length byte sequences. @p buf points to an input byte
  * sequence of length @p length. Returns the up to 4 byte decoded value.
  *
@@ -98,6 +104,8 @@ unsigned int coap_encode_var_safe(uint8_t *buf,
 unsigned int coap_encode_var_safe8(uint8_t *buf,
                                   size_t length,
                                   uint64_t value);
+
+/** @} */
 
 /**
  * @deprecated Use coap_encode_var_safe() instead.

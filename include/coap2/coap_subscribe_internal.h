@@ -17,8 +17,9 @@
 #define COAP_SUBSCRIBE_INTERNAL_H_
 
 /**
- * @defgroup subscribe_internal Subscribe (Internal)
- * Structures, Enums and Functions that are not exposed to applications
+ * @defgroup subscribe_internal Observe Subscription (Internal)
+ * CoAP Observe Subscription Structures, Enums and Functions that are not
+ * exposed to applications
  * @{
  */
 

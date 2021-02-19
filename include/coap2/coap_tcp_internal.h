@@ -19,7 +19,8 @@
 
 /**
  * @defgroup tcp TCP Support (Internal)
- * API functions for interfacing with the system TCP stack.
+ * CoAP TCP Structures, Enums and Functions that are not exposed to
+ * applications
  * @{
  */
 

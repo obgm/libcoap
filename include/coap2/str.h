@@ -25,7 +25,7 @@
  */
 
 /**
- * Coap string data definition
+ * CoAP string data definition
  */
 typedef struct coap_string_t {
   size_t length;    /**< length of string */
@@ -33,7 +33,7 @@ typedef struct coap_string_t {
 } coap_string_t;
 
 /**
- * Coap string data definition with const data
+ * CoAP string data definition with const data
  */
 typedef struct coap_str_const_t {
   size_t length;    /**< length of string */
@@ -43,7 +43,7 @@ typedef struct coap_str_const_t {
 #define COAP_SET_STR(st,l,v) { (st)->length = (l), (st)->s = (v); }
 
 /**
- * Coap binary data definition
+ * CoAP binary data definition
  */
 typedef struct coap_binary_t {
   size_t length;    /**< length of binary data */
@@ -51,7 +51,7 @@ typedef struct coap_binary_t {
 } coap_binary_t;
 
 /**
- * Coap binary data definition with const data
+ * CoAP binary data definition with const data
  */
 typedef struct coap_bin_const_t {
   size_t length;    /**< length of binary data */

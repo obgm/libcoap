@@ -18,13 +18,14 @@
 
 /**
  * @defgroup session_internal Sessions (Internal)
- * Structures, Enums and Functions that are not exposed to applications
+ * CoAP Session Structures, Enums and Functions that are not exposed to
+ * applications
  * @{
  */
 
 /**
 * Abstraction of virtual endpoint that can be attached to coap_context_t. The
-* tuple (handle, addr) must uniquely identify this endpoint.
+* keys (port, bind_addr) must uniquely identify this endpoint.
 */
 struct coap_endpoint_t {
   struct coap_endpoint_t *next;

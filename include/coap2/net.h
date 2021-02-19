@@ -732,9 +732,6 @@ coap_join_mcast_group(coap_context_t *ctx, const char *groupname);
 
 #define COAP_IO_WAIT    0
 #define COAP_IO_NO_WAIT ((uint32_t)-1)
-/* Old definitions which may be hanging around in old code - be helpful! */
-#define COAP_RUN_NONBLOCK COAP_RUN_NONBLOCK_deprecated_use_COAP_IO_NO_WAIT
-#define COAP_RUN_BLOCK COAP_RUN_BLOCK_deprecated_use_COAP_IO_WAIT
 
 /**
  * The main I/O processing function.  All pending network I/O is completed,
@@ -765,31 +762,6 @@ coap_join_mcast_group(coap_context_t *ctx, const char *groupname);
  *         an error
  */
 int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms);
-
-/**
- * @deprecated Use coap_io_process() instead.
- *
- * This function just calls coap_io_process().
- *
- * @param ctx The CoAP context
- * @param timeout_ms Minimum number of milliseconds to wait for new packets
- *                   before returning after doing any processing.
- *                   If COAP_IO_WAIT, the call will block until the next
- *                   internal action (e.g. packet retransmit) if any, or block
- *                   until the next packet is received whichever is the sooner
- *                   and do the necessary processing.
- *                   If COAP_IO_NO_WAIT, the function will return immediately
- *                   after processing without waiting for any new input
- *                   packets to arrive.
- *
- * @return Number of milliseconds spent in function or @c -1 if there was
- *         an error
- */
-COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_run_once(coap_context_t *ctx, uint32_t timeout_ms)
-{
-  return coap_io_process(ctx, timeout_ms);
-}
 
 #ifndef RIOT_VERSION
 /**
@@ -823,6 +795,14 @@ int coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
                         int nfds, fd_set *readfds, fd_set *writefds,
                         fd_set *exceptfds);
 #endif /* !RIOT_VERSION */
+
+/**@}*/
+
+/**
+ * @defgroup app_io_internal Application I/O Handling (Internal)
+ * Internal API functions for Application Input / Output
+ * @{
+ */
 
 /**
 * Iterates through all the coap_socket_t structures embedded in endpoints or
@@ -866,34 +846,6 @@ coap_io_prepare_io(coap_context_t *ctx,
 );
 
 /**
-* @deprecated Use coap_io_prepare_io() instead.
-*
-* This function just calls coap_io_prepare_io().
-*
-* Internal function.
-*
-* @param ctx The CoAP context
-* @param sockets Array of socket descriptors, filled on output
-* @param max_sockets Size of socket array.
-* @param num_sockets Pointer to the number of valid entries in the socket
-*                    arrays on output.
-* @param now Current time.
-*
-* @return timeout Maxmimum number of milliseconds that can be used by a
-*                 select() to wait for network events or 0 if wait should be
-*                 forever.
-*/
-COAP_STATIC_INLINE COAP_DEPRECATED unsigned int
-coap_write(coap_context_t *ctx,
-  coap_socket_t *sockets[],
-  unsigned int max_sockets,
-  unsigned int *num_sockets,
-  coap_tick_t now
-) {
-  return coap_io_prepare_io(ctx, sockets, max_sockets, num_sockets, now);
-}
-
-/**
  * Processes any outstanding read, write, accept or connect I/O as indicated
  * in the coap_socket_t structures (COAP_SOCKET_CAN_xxx set) embedded in
  * endpoints or sessions associated with @p ctx.
@@ -907,22 +859,6 @@ coap_write(coap_context_t *ctx,
  * @param now Current time
  */
 void coap_io_do_io(coap_context_t *ctx, coap_tick_t now);
-
-/**
- * @deprecated Use coap_io_do_io() instead.
- *
- * This function just calls coap_io_do_io().
- *
- * Internal function.
- *
- * @param ctx The CoAP context
- * @param now Current time
- */
-COAP_STATIC_INLINE COAP_DEPRECATED void
-coap_read(coap_context_t *ctx, coap_tick_t now
-) {
-  coap_io_do_io(ctx, now);
-}
 
 /**
  * Any now timed out delayed packet is transmitted, along with any packets
@@ -965,5 +901,78 @@ void coap_io_do_epoll(coap_context_t *ctx, struct epoll_event* events,
                       size_t nevents);
 
 /**@}*/
+
+/**
+ * @deprecated Use coap_io_process() instead.
+ *
+ * This function just calls coap_io_process().
+ *
+ * @param ctx The CoAP context
+ * @param timeout_ms Minimum number of milliseconds to wait for new packets
+ *                   before returning after doing any processing.
+ *                   If COAP_IO_WAIT, the call will block until the next
+ *                   internal action (e.g. packet retransmit) if any, or block
+ *                   until the next packet is received whichever is the sooner
+ *                   and do the necessary processing.
+ *                   If COAP_IO_NO_WAIT, the function will return immediately
+ *                   after processing without waiting for any new input
+ *                   packets to arrive.
+ *
+ * @return Number of milliseconds spent in function or @c -1 if there was
+ *         an error
+ */
+COAP_STATIC_INLINE COAP_DEPRECATED int
+coap_run_once(coap_context_t *ctx, uint32_t timeout_ms)
+{
+  return coap_io_process(ctx, timeout_ms);
+}
+
+/**
+* @deprecated Use coap_io_prepare_io() instead.
+*
+* This function just calls coap_io_prepare_io().
+*
+* Internal function.
+*
+* @param ctx The CoAP context
+* @param sockets Array of socket descriptors, filled on output
+* @param max_sockets Size of socket array.
+* @param num_sockets Pointer to the number of valid entries in the socket
+*                    arrays on output.
+* @param now Current time.
+*
+* @return timeout Maxmimum number of milliseconds that can be used by a
+*                 select() to wait for network events or 0 if wait should be
+*                 forever.
+*/
+COAP_STATIC_INLINE COAP_DEPRECATED unsigned int
+coap_write(coap_context_t *ctx,
+  coap_socket_t *sockets[],
+  unsigned int max_sockets,
+  unsigned int *num_sockets,
+  coap_tick_t now
+) {
+  return coap_io_prepare_io(ctx, sockets, max_sockets, num_sockets, now);
+}
+
+/**
+ * @deprecated Use coap_io_do_io() instead.
+ *
+ * This function just calls coap_io_do_io().
+ *
+ * Internal function.
+ *
+ * @param ctx The CoAP context
+ * @param now Current time
+ */
+COAP_STATIC_INLINE COAP_DEPRECATED void
+coap_read(coap_context_t *ctx, coap_tick_t now
+) {
+  coap_io_do_io(ctx, now);
+}
+
+/* Old definitions which may be hanging around in old code - be helpful! */
+#define COAP_RUN_NONBLOCK COAP_RUN_NONBLOCK_deprecated_use_COAP_IO_NO_WAIT
+#define COAP_RUN_BLOCK COAP_RUN_BLOCK_deprecated_use_COAP_IO_WAIT
 
 #endif /* COAP_NET_H_ */

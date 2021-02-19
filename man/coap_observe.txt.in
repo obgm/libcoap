@@ -17,7 +17,7 @@ coap_resource_get_uri_path,
 coap_find_observer,
 coap_delete_observer,
 coap_delete_observers
-- work with CoAP observe
+- Work with CoAP observe
 
 SYNOPSIS
 --------

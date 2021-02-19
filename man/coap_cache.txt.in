@@ -21,7 +21,7 @@ coap_cache_get_by_pdu,
 coap_cache_get_pdu,
 coap_cache_set_app_data,
 coap_cache_get_app_data
-- cache functions
+- Work with CoAP cache functions
 
 SYNOPSIS
 --------

@@ -18,8 +18,9 @@
 #include "coap_io.h"
 
 /**
- * @defgroup cache Cache Support (Internal)
- * API functions for CoAP Caching
+ * @defgroup cache_internal Cache Support (Internal)
+ * CoAP Cache Structures, Enums and Functions that are not exposed to
+ * applications
  * @{
  */
 
