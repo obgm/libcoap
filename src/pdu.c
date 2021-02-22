@@ -897,6 +897,72 @@ bad:
   return 0;
 }
 
+static int
+coap_pdu_parse_opt_base(coap_pdu_t *pdu, uint16_t len) {
+  int res = 1;
+
+  switch (pdu->max_opt) {
+  case COAP_OPTION_IF_MATCH:      if (len > 8) res = 0;               break;
+  case COAP_OPTION_URI_HOST:      if (len < 1 || len > 255) res = 0;  break;
+  case COAP_OPTION_ETAG:          if (len < 1 || len > 8) res = 0;    break;
+  case COAP_OPTION_IF_NONE_MATCH: if (len != 0) res = 0;              break;
+  case COAP_OPTION_OBSERVE:       if (len > 3) res = 0;               break;
+  case COAP_OPTION_URI_PORT:      if (len > 2) res = 0;               break;
+  case COAP_OPTION_LOCATION_PATH: if (len > 255) res = 0;             break;
+  case COAP_OPTION_OSCORE:        if (len > 255) res = 0;             break;
+  case COAP_OPTION_URI_PATH:      if (len > 255) res = 0;             break;
+  case COAP_OPTION_CONTENT_FORMAT:if (len > 2) res = 0;               break;
+  case COAP_OPTION_MAXAGE:        if (len > 4) res = 0;               break;
+  case COAP_OPTION_URI_QUERY:     if (len < 1 || len > 255) res = 0;  break;
+  case COAP_OPTION_HOP_LIMIT:     if (len != 1) res = 0;              break;
+  case COAP_OPTION_ACCEPT:        if (len > 2) res = 0;               break;
+  case COAP_OPTION_LOCATION_QUERY:if (len > 255) res = 0;             break;
+  case COAP_OPTION_BLOCK2:        if (len > 3) res = 0;               break;
+  case COAP_OPTION_BLOCK1:        if (len > 3) res = 0;               break;
+  case COAP_OPTION_SIZE2:         if (len > 4) res = 0;               break;
+  case COAP_OPTION_PROXY_URI:     if (len < 1 || len > 1034) res = 0; break;
+  case COAP_OPTION_PROXY_SCHEME:  if (len < 1 || len > 255) res = 0;  break;
+  case COAP_OPTION_SIZE1:         if (len > 4) res = 0;               break;
+  case COAP_OPTION_NORESPONSE:    if (len > 1) res = 0;               break;
+  default:
+    ;
+  }
+  return res;
+}
+
+static inline int
+write_prefix(char **obp, size_t *len, const char *prf, size_t prflen) {
+  /* Make sure space for null terminating byte */
+  if (*len + 1 < prflen) {
+    return 0;
+  }
+
+  memcpy(*obp, prf, prflen);
+  *obp += prflen;
+  *len -= prflen;
+  return 1;    
+}
+
+static inline int
+write_char(char **obp, size_t *len, char c, int printable) {
+  /* Make sure space for null terminating byte */
+  if (*len + 1 < 2) {
+    return 0;
+  }
+
+  if (!printable) {
+    const uint8_t hex[] = "0123456789abcdef";
+    (*obp)[0] = hex[(c & 0xf0) >> 4];
+    (*obp)[1] = hex[c & 0x0f];
+  } else {
+    (*obp)[0] = isprint(c) ? c : '.';
+    (*obp)[1] = ' ';
+  }
+  *obp += 2;
+  *len -= 2;
+  return 1;
+}
+
 int
 coap_pdu_parse_opt(coap_pdu_t *pdu) {
 
@@ -925,50 +991,82 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
     size_t length = pdu->used_size - pdu->token_length;
 
     while (length > 0 && *opt != COAP_PAYLOAD_START) {
+      coap_opt_t *opt_last = opt;
       size_t optsize = next_option_safe(&opt, &length, &pdu->max_opt);
       const uint32_t len =
         optsize ? coap_opt_length((const uint8_t *)opt - optsize) : 0;
       if (optsize == 0) {
-        coap_log(LOG_DEBUG, "coap_pdu_parse: malformed option\n");
-        return 0;
+        coap_log(LOG_DEBUG,
+            "coap_pdu_parse: %d.%02d: offset %u malformed option\n",
+               pdu->code >> 5, pdu->code & 0x1F,
+               (int)(opt_last - pdu->token - pdu->token_length));
+        good = 0;
+        break;
       }
-      if (COAP_PDU_IS_SIGNALING(pdu)) {
-        if (!coap_pdu_parse_opt_csm(pdu, len))
-          goto bad;
-        continue;
+      if (COAP_PDU_IS_SIGNALING(pdu) ?
+           !coap_pdu_parse_opt_csm(pdu, len) :
+           !coap_pdu_parse_opt_base(pdu, len)) {
+        coap_log(LOG_WARNING,
+            "coap_pdu_parse: %d.%02d: offset %u option %u has bad length %u\n",
+                 pdu->code >> 5, pdu->code & 0x1F,
+                 (int)(opt_last - pdu->token - pdu->token_length), pdu->max_opt,
+                 len);
+        good = 0;
       }
-      switch (pdu->max_opt) {
-      case COAP_OPTION_IF_MATCH:      if (len > 8) goto bad;              break;
-      case COAP_OPTION_URI_HOST:      if (len < 1 || len > 255) goto bad; break;
-      case COAP_OPTION_ETAG:          if (len < 1 || len > 8) goto bad;   break;
-      case COAP_OPTION_IF_NONE_MATCH: if (len != 0) goto bad;             break;
-      case COAP_OPTION_OBSERVE:       if (len > 3) goto bad;              break;
-      case COAP_OPTION_URI_PORT:      if (len > 2) goto bad;              break;
-      case COAP_OPTION_LOCATION_PATH: if (len > 255) goto bad;            break;
-      case COAP_OPTION_OSCORE:        if (len > 255) goto bad;            break;
-      case COAP_OPTION_URI_PATH:      if (len > 255) goto bad;            break;
-      case COAP_OPTION_CONTENT_FORMAT:if (len > 2) goto bad;              break;
-      case COAP_OPTION_MAXAGE:        if (len > 4) goto bad;              break;
-      case COAP_OPTION_URI_QUERY:     if (len < 1 || len > 255) goto bad; break;
-      case COAP_OPTION_HOP_LIMIT:     if (len < 1 || len > 1) goto bad;   break;
-      case COAP_OPTION_ACCEPT:        if (len > 2) goto bad;              break;
-      case COAP_OPTION_LOCATION_QUERY:if (len > 255) goto bad;            break;
-      case COAP_OPTION_BLOCK2:        if (len > 3) goto bad;              break;
-      case COAP_OPTION_BLOCK1:        if (len > 3) goto bad;              break;
-      case COAP_OPTION_SIZE2:         if (len > 4) goto bad;              break;
-      case COAP_OPTION_PROXY_URI:    if (len < 1 || len > 1034) goto bad; break;
-      case COAP_OPTION_PROXY_SCHEME:  if (len < 1 || len > 255) goto bad; break;
-      case COAP_OPTION_SIZE1:         if (len > 4) goto bad;              break;
-      case COAP_OPTION_NORESPONSE:    if (len > 1) goto bad;              break;
-      default:
-        ;
+    }
+
+    if (!good) {
+      /*
+       * Dump the options in the PDU for analysis, space separated except
+       * error options which are prefixed by *
+       * Two rows - hex and ascii (if printable)
+       */
+      static char outbuf[COAP_DEBUG_BUF_SIZE];
+      char *obp;
+      uint32_t tlen;
+      size_t outbuflen;
+      size_t i;
+      int ok;
+
+      for (i = 0; i < 2; i++) {
+        opt = pdu->token + pdu->token_length;
+        length = pdu->used_size - pdu->token_length;
+        pdu->max_opt = 0;
+
+        outbuflen = sizeof(outbuf);
+        obp = outbuf;
+        ok = write_prefix(&obp, &outbuflen, "O: ", 3);
+        while (length > 0 && *opt != COAP_PAYLOAD_START) {
+          coap_opt_t *opt_last = opt;
+          size_t optsize = next_option_safe(&opt, &length, &pdu->max_opt);
+          const uint32_t len =
+            optsize ? coap_opt_length((const uint8_t *)opt - optsize) : 0;
+          if (!optsize || (COAP_PDU_IS_SIGNALING(pdu) ?
+               !coap_pdu_parse_opt_csm(pdu, len) :
+               !coap_pdu_parse_opt_base(pdu, len))) {
+            ok = ok && write_prefix(&obp, &outbuflen, "*", 1);
+            if (!optsize) {
+              /* Skip to end of options to output all data */
+              opt = pdu->token + pdu->used_size;
+              length = 0;
+            }
+          }
+          else {
+            ok = ok && write_prefix(&obp, &outbuflen, " ", 1);
+          }
+          tlen = opt - opt_last;
+          while (tlen--) {
+            ok = ok && write_char(&obp, &outbuflen, *opt_last, i);
+            opt_last++;
+          }
+        }
+        if (length && *opt == COAP_PAYLOAD_START) {
+          ok = ok && write_char(&obp, &outbuflen, *opt, i);
+        }
+        /* write_*() always leaves a spare byte to null terminate */
+        *obp = '\000';
+        coap_log(LOG_DEBUG, "%s\n", outbuf);
       }
-      continue;
-bad:
-      coap_log(LOG_DEBUG,
-               "coap_pdu_parse: %d.%02d: option %u has bad length %u\n",
-               pdu->code >> 5, pdu->code & 0x1F, pdu->max_opt, len);
-      good = 0;
     }
 
     if (length > 0) {
@@ -982,7 +1080,7 @@ bad:
       }
     }
     if (length > 0)
-                pdu->data = (uint8_t*)opt;
+      pdu->data = (uint8_t*)opt;
     else
       pdu->data = NULL;
   }
