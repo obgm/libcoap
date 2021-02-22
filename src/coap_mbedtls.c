@@ -906,7 +906,7 @@ static int setup_server_ssl_session(coap_session_t *c_session,
       mbedtls_ssl_conf_sni(&m_env->conf, psk_sni_callback, c_session);
     }
 #else /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
-    coap_log(LOG_WARNING, "PSK not enabled in MbedTLS library\n");
+    coap_log(LOG_WARNING, "PSK not enabled in Mbed TLS library\n");
 #endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
   }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
@@ -1078,7 +1078,7 @@ static int setup_client_ssl_session(coap_session_t *c_session,
 
     set_ciphersuites(&m_env->conf, COAP_ENC_PSK);
 #else /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
-    coap_log(LOG_WARNING, "PSK not enabled in MbedTLS library\n");
+    coap_log(LOG_WARNING, "PSK not enabled in Mbed TLS library\n");
 #endif /* ! MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
   }
   else if ((m_context->psk_pki_enabled & IS_PKI) ||
