@@ -193,7 +193,7 @@ coap_string_t *query, coap_pdu_t *response) {
   (void)token;
   (void)query;
 
-  response->code = COAP_RESPONSE_CODE(205);
+  response->code = COAP_RESPONSE_CODE_CONTENT;
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
@@ -223,7 +223,7 @@ coap_string_t *query, coap_pdu_t *response) {
 
   /* .. code .. */
 
-  response->code = COAP_RESPONSE_CODE(202);
+  response->code = COAP_RESPONSE_CODE_DELETED;
 }
 
 static void
@@ -376,7 +376,7 @@ coap_string_t *query, coap_pdu_t *response) {
   /* get the uri_path */
   put_uri_path = coap_get_uri_path(request);
   if (!put_uri_path) {
-    response->code = COAP_RESPONSE_CODE(404);
+    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
     return;
   }
 
@@ -413,13 +413,13 @@ coap_string_t *query, coap_pdu_t *response) {
   /* get the uri_path - which will get used by coap_resource_init() */
   uri_path = coap_get_uri_path(request);
   if (!uri_path) {
-    response->code = COAP_RESPONSE_CODE(404);
+    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
     return;
   }
 
   /* Check if new URI Path is valid */
   if (!check_url_fn (uri_path, request->code)) {
-    response->code = COAP_RESPONSE_CODE(404);
+    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
     coap_delete_string(uri_path);
     return;
   }

@@ -364,8 +364,8 @@ resolve_address(const coap_str_const_t *server, struct sockaddr *dst) {
 #define HANDLE_BLOCK1(Pdu)                                        \
   ((method == COAP_REQUEST_PUT || method == COAP_REQUEST_POST) && \
    ((flags & FLAGS_BLOCK) == 0) &&                                \
-   ((Pdu)->hdr->code == COAP_RESPONSE_CODE(201) ||                \
-    (Pdu)->hdr->code == COAP_RESPONSE_CODE(204)))
+   ((Pdu)->hdr->code == COAP_RESPONSE_CODE_CREATED ||                \
+    (Pdu)->hdr->code == COAP_RESPONSE_CODE_CHANGED))
 
 static inline int
 check_token(coap_pdu_t *received) {

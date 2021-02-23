@@ -247,7 +247,7 @@ hnd_put_example_data(coap_context_t *ctx,
         coap_log(LOG_WARNING,
                  "No cache entry available for the non-first BLOCK1\n");
       }
-      response->code = COAP_RESPONSE_CODE(500);
+      response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
       return;
     }
 
@@ -261,7 +261,7 @@ hnd_put_example_data(coap_context_t *ctx,
     else if (offset >
              (data_so_far ? data_so_far->length : 0)) {
       /* Upload is not sequential - block missing */
-      response->code = COAP_RESPONSE_CODE(408);
+      response->code = COAP_RESPONSE_CODE_INCOMPLETE;
       return;
     }
     else if (offset <
@@ -305,10 +305,10 @@ hnd_put_example_data(coap_context_t *ctx,
 
 just_respond:
     if (block1.m) {
-      response->code = COAP_RESPONSE_CODE(231);
+      response->code = COAP_RESPONSE_CODE_CONTINUE;
     }
     else {
-      response->code = COAP_RESPONSE_CODE(204);
+      response->code = COAP_RESPONSE_CODE_CHANGED;
     }
     coap_add_option(response,
                     COAP_OPTION_BLOCK1,
