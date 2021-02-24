@@ -550,9 +550,7 @@ coap_new_context(
   process_start(&coap_retransmit_process, (char *)c);
 
   PROCESS_CONTEXT_BEGIN(&coap_retransmit_process);
-#ifndef WITHOUT_OBSERVE
   etimer_set(&c->notify_timer, COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND);
-#endif /* WITHOUT_OBSERVE */
   /* the retransmit timer must be initialized to some large value */
   etimer_set(&the_coap_context.retransmit_timer, 0xFFFF);
   PROCESS_CONTEXT_END(&coap_retransmit_process);
@@ -1321,7 +1319,6 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
            coap_session_str(node->session), node->id, node->retransmit_cnt);
 #endif
 
-#ifndef WITHOUT_OBSERVE
   /* Check if subscriptions exist that should be canceled after
      COAP_MAX_NOTIFY_FAILURES */
   if (node->pdu->code >= 64) {
@@ -1332,7 +1329,6 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 
     coap_handle_failed_notify(context, node->session, &token);
   }
-#endif /* WITHOUT_OBSERVE */
   if (node->session->con_active) {
     node->session->con_active--;
     if (node->session->state == COAP_SESSION_STATE_ESTABLISHED) {
@@ -2282,7 +2278,6 @@ error:
  */
 static int
 coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
-#ifndef WITHOUT_OBSERVE
   coap_binary_t token = { 0, NULL };
   int num_cancelled = 0;    /* the number of observers cancelled */
 
@@ -2298,9 +2293,6 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
   }
 
   return num_cancelled;
-#else /* WITOUT_OBSERVE */
-  return 0;
-#endif /* WITOUT_OBSERVE */
 }
 
 /**
@@ -3192,12 +3184,10 @@ PROCESS_THREAD(coap_retransmit_process, ev, data) {
         etimer_set(&the_coap_context.retransmit_timer,
           nextpdu ? nextpdu->t - now : 0xFFFF);
       }
-#ifndef WITHOUT_OBSERVE
       if (etimer_expired(&the_coap_context.notify_timer)) {
         coap_check_notify(&the_coap_context);
         etimer_reset(&the_coap_context.notify_timer);
       }
-#endif /* WITHOUT_OBSERVE */
     }
   }
 

@@ -670,7 +670,6 @@ coap_register_handler(coap_resource_t *resource,
   resource->handler[method-1] = handler;
 }
 
-#ifndef WITHOUT_OBSERVE
 coap_subscription_t *
 coap_find_observer(coap_resource_t *resource, coap_session_t *session,
                      const coap_binary_t *token) {
@@ -1068,4 +1067,3 @@ coap_handle_failed_notify(coap_context_t *context,
         coap_remove_failed_observers(context, r, session, token);
   }
 }
-#endif /* WITHOUT_NOTIFY */

@@ -458,9 +458,7 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
 
   coap_log(LOG_DEBUG, "***%s: session disconnected (reason %d)\n",
            coap_session_str(session), reason);
-#ifndef WITHOUT_OBSERVE
   coap_delete_observers( session->context, session );
-#endif
 
   if ( session->tls) {
     if (session->proto == COAP_PROTO_DTLS)

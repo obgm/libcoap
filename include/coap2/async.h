@@ -23,10 +23,9 @@
  * @defgroup coap_async Asynchronous Messaging
  * @{
  * Structure for managing asynchronous state of CoAP resources. A
- * coap_resource_t object holds a list of coap_async_state_t objects that can be
+ * coap_context_t object holds a list of coap_async_state_t objects that can be
  * used to generate a separate response in case a result of an operation cannot
- * be delivered in time, or the resource has been explicitly subscribed to with
- * the option @c observe.
+ * be delivered in time.
  */
 typedef struct coap_async_state_t {
   unsigned char flags;  /**< holds the flags to control behaviour */
@@ -55,7 +54,6 @@ typedef struct coap_async_state_t {
  */
 #define COAP_ASYNC_CONFIRM   0x01  /**< send confirmable response */
 #define COAP_ASYNC_SEPARATE  0x02  /**< send separate response */
-#define COAP_ASYNC_OBSERVED  0x04  /**< the resource is being observed */
 
 /** release application data on destruction */
 #define COAP_ASYNC_RELEASE_DATA  0x08
