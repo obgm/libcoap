@@ -25,7 +25,7 @@ SYNOPSIS
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *void coap_session_set_max_retransmit(coap_session_t *_session_,
-unsigned int _value_)*;
+uint16_t _value_)*;
 
 *void coap_session_set_ack_timeout(coap_session_t *_session_,
 coap_fixed_point_t _value_)*;
@@ -33,7 +33,7 @@ coap_fixed_point_t _value_)*;
 *void coap_session_set_ack_random_factor(coap_session_t *_session_,
 coap_fixed_point_t _value_)*;
 
-*unsigned int coap_session_get_max_retransmit(const coap_session_t *_session_)*;
+*uint16_t coap_session_get_max_retransmit(const coap_session_t *_session_)*;
 
 *coap_fixed_point_t coap_session_get_ack_timeout(
 const coap_session_t *_session_)*;

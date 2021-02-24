@@ -323,6 +323,7 @@ coap_resource_init(coap_str_const_t *uri_path, int flags) {
       r->uri_path = uri_path;
 
     r->flags = flags;
+    r->observe = 2;
   } else {
     coap_log(LOG_DEBUG, "coap_resource_init: no memory left\n");
   }
@@ -877,7 +878,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         context->observe_pending = 1;
         continue;
       }
-      if (obs->session->con_active >= COAP_DEFAULT_NSTART &&
+      if (obs->session->con_active >= COAP_NSTART(obs->session) &&
           ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) ||
            (obs->non_cnt >= COAP_OBS_MAX_NON))) {
         r->partiallydirty = 1;
@@ -938,6 +939,15 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                                                 block.szx)),
                           buf);
         }
+        else if (coap_get_block(obs->pdu, COAP_OPTION_Q_BLOCK2, &block)) {
+          /* Will get updated later (e.g. M bit) if appropriate */
+          coap_add_option(response, COAP_OPTION_Q_BLOCK2,
+                          coap_encode_var_safe(buf, sizeof(buf),
+                                               ((0 << 4) |
+                                                (0 << 3) |
+                                                block.szx)),
+                          buf);
+        }
 
         h = r->handler[obs->pdu->code - 1];
         assert(h);      /* we do not allow subscriptions if no
@@ -956,6 +966,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         break;
       case COAP_DELETING_RESOURCE:
       default:
+        /* Don't worry if it does not get there */
         response->type = COAP_MESSAGE_NON;
         response->code = COAP_RESPONSE_CODE(404);
         break;
@@ -968,8 +979,17 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         obs->non_cnt++;
       }
 
+      if (response->code == COAP_RESPONSE_CODE(205) &&
+          coap_get_block(response, COAP_OPTION_Q_BLOCK2, &block) &&
+          block.m) {
+        query = coap_get_query(obs->pdu);
+        mid = coap_send_q_block2(obs->session, r, query, block, response, 1);
+        coap_delete_string(query);
+        goto finish;
+      }
       mid = coap_send_internal( obs->session, response );
 
+finish:
       if (COAP_INVALID_MID == mid) {
         coap_log(LOG_DEBUG,
                  "coap_check_notify: sending failed, resource stays "

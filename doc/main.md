@@ -36,6 +36,8 @@ The following RFCs are supported
 
 * RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option
 
+* draft-ietf-core-new-block: Constrained Application Protocol (CoAP) Block-Wise Transfer Options Supporting Robust Transmission
+
 There is (D)TLS support for the following libraries
 
 * OpenSSL (Minimum version 1.1.0) [PKI, PSK and PKCS11]

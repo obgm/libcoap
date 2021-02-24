@@ -557,6 +557,7 @@ coap_add_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
     case COAP_OPTION_URI_PATH:
     case COAP_OPTION_URI_QUERY:
     case COAP_OPTION_LOCATION_QUERY:
+    case COAP_OPTION_Q_BLOCK2:
       break;
     default:
       coap_log(LOG_INFO, "Option number %d is not defined as repeatable\n",

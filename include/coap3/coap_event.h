@@ -49,7 +49,7 @@
 #define COAP_EVENT_SESSION_FAILED     0x2003
 
 /**
- * BLOCK2 receive errors
+ * (Q-)BLOCK receive errors
  */
 #define COAP_EVENT_PARTIAL_BLOCK      0x3001
 

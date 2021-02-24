@@ -338,6 +338,7 @@ msg_option_string(uint8_t code, uint16_t option_type) {
     { COAP_OPTION_OBSERVE, "Observe" },
     { COAP_OPTION_URI_PORT, "Uri-Port" },
     { COAP_OPTION_LOCATION_PATH, "Location-Path" },
+    { COAP_OPTION_OSCORE, "OSCORE" },
     { COAP_OPTION_URI_PATH, "Uri-Path" },
     { COAP_OPTION_CONTENT_FORMAT, "Content-Format" },
     { COAP_OPTION_MAXAGE, "Max-Age" },
@@ -351,12 +352,15 @@ msg_option_string(uint8_t code, uint16_t option_type) {
     { COAP_OPTION_PROXY_URI, "Proxy-Uri" },
     { COAP_OPTION_PROXY_SCHEME, "Proxy-Scheme" },
     { COAP_OPTION_SIZE1, "Size1" },
-    { COAP_OPTION_NORESPONSE, "No-Response" }
+    { COAP_OPTION_NORESPONSE, "No-Response" },
+    { COAP_OPTION_RTAG, "RTag" },
+    { COAP_OPTION_Q_BLOCK1, "Q-Block1" },
+    { COAP_OPTION_Q_BLOCK2, "Q-Block2" }
   };
 
   static struct option_desc_t options_csm[] = {
     { COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE, "Max-Message-Size" },
-    { COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER, "Block-wise-Transfer" }
+    { COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER, "Block-Wise-Transfer" }
   };
 
   static struct option_desc_t options_pingpong[] = {
@@ -447,6 +451,8 @@ print_content_format(unsigned int format_type,
     { COAP_MEDIATYPE_APPLICATION_SENML_XML, "application/senml+xml" },
     { COAP_MEDIATYPE_APPLICATION_SENSML_XML, "application/sensml+xml" },
     { COAP_MEDIATYPE_APPLICATION_DOTS_CBOR, "application/dots+cbor" },
+    { COAP_MEDIATYPE_APPLICATION_MB_CBOR_SEQ, "application/missing-blocks+cbor-seq" },
+    { COAP_MEDIATYPE_APPLICATION_OSCORE, "application/oscore" },
     { 75, "application/dcaf+cbor" }
   };
 
@@ -606,6 +612,8 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 
     case COAP_OPTION_BLOCK1:
     case COAP_OPTION_BLOCK2:
+    case COAP_OPTION_Q_BLOCK1:
+    case COAP_OPTION_Q_BLOCK2:
       /* split block option into number/more/size where more is the
        * letter M if set, the _ otherwise */
       buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
@@ -629,6 +637,9 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 
     case COAP_OPTION_IF_MATCH:
     case COAP_OPTION_ETAG:
+    case COAP_OPTION_NORESPONSE:
+    case COAP_OPTION_ECHO:
+    case COAP_OPTION_RTAG:
       opt_len = coap_opt_length(option);
       opt_val = coap_opt_value(option);
       snprintf((char *)buf, sizeof(buf), "0x");

@@ -80,6 +80,7 @@ const char *number_list[] = {
   "coap_session_state_t ",
   "coap_session_type_t ",
   "int ",
+  "uint16_t ",
   "uint32_t ",
   "uint64_t ",
   "unsigned int ",
