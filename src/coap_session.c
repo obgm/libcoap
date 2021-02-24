@@ -496,8 +496,13 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
       && reason == COAP_NACK_ICMP_ISSUE)
     {
       /* Make sure that we try a re-transmit later on ICMP error */
-      if (coap_wait_ack(session->context, session, q) >= 0)
+      if (coap_wait_ack(session->context, session, q) >= 0) {
+        if (session->context->nack_handler) {
+          session->context->nack_handler(session->context, session, q->pdu,
+                                         reason, q->id);
+        }
         q = NULL;
+      }
     }
     if (q && q->pdu->type == COAP_MESSAGE_CON
       && session->context->nack_handler)
@@ -508,8 +513,19 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     if (q)
       coap_delete_node(q);
   }
-  if (reason != COAP_NACK_ICMP_ISSUE)
+  if (reason != COAP_NACK_ICMP_ISSUE) {
     coap_cancel_session_messages(session->context, session, reason);
+  }
+  else if (session->context->nack_handler) {
+    coap_queue_t *q = session->context->sendqueue;
+    while (q) {
+      if (q->session == session) {
+        session->context->nack_handler(session->context, session, q->pdu,
+                                       reason, q->id);
+      }
+      q = q->next;
+    }
+  }
 
 #if !COAP_DISABLE_TCP
   if (COAP_PROTO_RELIABLE(session->proto)) {
