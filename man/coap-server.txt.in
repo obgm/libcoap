@@ -97,7 +97,7 @@ OPTIONS - General
    numbers continue to increase and are not reset to prevent anti-replay
    mechanisms being triggered.
 
-*-G group_if::
+*-G* group_if::
    Use this interface for listening for the multicast group. This can be
    different from the implied interface if the *-A* option is used.
 
@@ -107,6 +107,7 @@ OPTIONS - General
 
      COAP_BLOCK_USE_LIBCOAP  1
      COAP_BLOCK_SINGLE_BODY  2
+     COAP_BLOCK_TRY_Q_BLOCK  4
 
 *-N* ::
    Send NON-confirmable message for "observe" responses. If option *-N* is

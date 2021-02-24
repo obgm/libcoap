@@ -156,6 +156,10 @@ option(
   "enable building with async separate response support"
   ON)
 option(
+  ENABLE_Q_BLOCK
+  "enable building with Q-Block (RFC9177) support"
+  ON)
+option(
   ENABLE_TESTS
   "build also tests"
   OFF)
@@ -337,6 +341,14 @@ if(${ENABLE_AF_UNIX})
 else()
   message(STATUS "compiling without Unix socket support")
 endif()
+
+if(${ENABLE_Q_BLOCK})
+  set(COAP_Q_BLOCK_SUPPORT "1")
+  message(STATUS "compiling with Q-Block (RFC9177) support")
+else()
+  message(STATUS "compiling without Q-Block (RFC9177) support")
+endif()
+
 
 if(${WITH_OBSERVE_PERSIST})
   set(COAP_WITH_OBSERVE_PERSIST "1")
@@ -583,6 +595,7 @@ message(STATUS "ENABLE_IPV4:.....................${ENABLE_IPV4}")
 message(STATUS "ENABLE_IPV6:.....................${ENABLE_IPV6}")
 message(STATUS "ENABLE_AF_UNIX:..................${ENABLE_AF_UNIX}")
 message(STATUS "ENABLE_WEBSOCKETS:...............${ENABLE_WS}")
+message(STATUS "ENABLE_Q_BLOCK:..................${ENABLE_Q_BLOCK}")
 message(STATUS "ENABLE_CLIENT_MODE:..............${ENABLE_CLIENT_MODE}")
 message(STATUS "ENABLE_SERVER_MODE:..............${ENABLE_SERVER_MODE}")
 message(STATUS "ENABLE_OSCORE:...................${ENABLE_OSCORE}")

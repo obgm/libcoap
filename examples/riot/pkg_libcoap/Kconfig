@@ -56,7 +56,7 @@ config LIBCOAP_IPV4_SUPPORT
     help
         Enable IPv4 functionality for CoAP.
 
-        If this option is disabled, redundent CoAP IPv4 code is removed.
+        If this option is disabled, redundant CoAP IPv4 code is removed.
 
 config LIBCOAP_IPV6_SUPPORT
     bool "Enable IPv6 support within CoAP"
@@ -64,7 +64,7 @@ config LIBCOAP_IPV6_SUPPORT
     help
         Enable IPv6 functionality for CoAP.
 
-        If this option is disabled, redundent CoAP IPv6 code is removed.
+        If this option is disabled, redundant CoAP IPv6 code is removed.
 
 config LIBCOAP_TCP_SUPPORT
     bool "Enable TCP support within CoAP"
@@ -73,7 +73,7 @@ config LIBCOAP_TCP_SUPPORT
         Enable TCP functionality for CoAP. This is required if TLS sessions
         are to be used. Note that RIOT TCP support also needs to be enabled.
 
-        If this option is disabled, redundent CoAP TCP code is removed.
+        If this option is disabled, redundant CoAP TCP code is removed.
 
 config LIBCOAP_OSCORE_SUPPORT
     bool "Enable OSCORE support within CoAP"
@@ -81,7 +81,31 @@ config LIBCOAP_OSCORE_SUPPORT
     help
         Enable OSCORE functionality for CoAP.
 
-        If this option is disabled, redundent CoAP OSCORE code is removed.
+        If this option is disabled, redundant CoAP OSCORE code is removed.
+
+config LIBCOAP_OBSERVE_PERSIST
+    bool "Enable Observe persist support within CoAP"
+    default n
+    help
+        Enable Observe persist functionality for CoAP.
+
+        If this option is disabled, redundant CoAP Observe persist code is removed.
+
+config LIBCOAP_WS_SOCKET
+    bool "Enable WebSocket support within CoAP"
+    default n
+    help
+        Enable WebSocket functionality for CoAP.
+
+        If this option is disabled, redundant CoAP WebSocket code is removed.
+
+config LIBCOAP_Q_BLOCK_SUPPORT
+    bool "Enable Q-Block (RFC9177) support within CoAP"
+    default n
+    help
+        Enable Q-Block (RFC9177) functionality for CoAP.
+
+        If this option is disabled, redundant CoAP Q-Block code is removed.
 
 config LIBCOAP_ASYNC_SUPPORT
     bool "Enable separate responses support within CoAP"
@@ -100,7 +124,7 @@ config LIBCOAP_CLIENT_SUPPORT
         this needs to be enabled to support the ongoing session going to
         the next hop.
 
-        If this option is disabled, redundent CoAP client only code is
+        If this option is disabled, redundant CoAP client only code is
         removed.
         If both this option and LIBCOAP_SERVER_SUPPORT are disabled, then
         both are automatically enabled for backwards compatability.
@@ -112,7 +136,7 @@ config LIBCOAP_SERVER_SUPPORT
         Enable server functionality (ability to receive requests and send
         responses) for CoAP.
 
-        If this option is disabled, redundent CoAP server only code is
+        If this option is disabled, redundant CoAP server only code is
         removed.
         If both this option and LIBCOAP_CLIENT_SUPPORT are disabled, then
         both are automatically enabled for backwards compatability.

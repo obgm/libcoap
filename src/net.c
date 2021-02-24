@@ -660,6 +660,17 @@ coap_option_check_critical(coap_session_t *session,
     if (opt_iter.number & 0x01) {
       /* first check the known built-in critical options */
       switch (opt_iter.number) {
+#if COAP_Q_BLOCK_SUPPORT
+      case COAP_OPTION_Q_BLOCK1:
+      case COAP_OPTION_Q_BLOCK2:
+        if(!(ctx->block_mode & COAP_BLOCK_TRY_Q_BLOCK)) {
+          coap_log_debug("disabled support for critical option %u\n",
+                   opt_iter.number);
+          ok = 0;
+          coap_option_filter_set(unknown, opt_iter.number);
+        }
+        break;
+#endif /* COAP_Q_BLOCK_SUPPORT */
       case COAP_OPTION_IF_MATCH:
       case COAP_OPTION_URI_HOST:
       case COAP_OPTION_IF_NONE_MATCH:
@@ -961,7 +972,7 @@ coap_send_test_extended_token(coap_session_t *session) {
   session->max_token_checked = COAP_EXT_T_CHECKING; /* Checking out this one */
   if ((mid = coap_send_internal(session, pdu)) == COAP_INVALID_MID)
     return COAP_INVALID_MID;
-  session->max_token_mid = mid;
+  session->remote_test_mid = mid;
   return mid;
 }
 #endif /* COAP_CLIENT_SUPPORT */
@@ -1120,8 +1131,20 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     }
 
     if (coap_get_block_b(session, pdu, COAP_OPTION_BLOCK1, &block) &&
-        (block.m == 1 || block.bert == 1))
+                         (block.m == 1 || block.bert == 1)) {
       have_block1 = 1;
+    }
+#if COAP_Q_BLOCK_SUPPORT
+    if (coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK1, &block) &&
+                         (block.m == 1 || block.bert == 1)) {
+      if (have_block1) {
+        coap_log_warn(
+                       "Block1 and Q-Block1 cannot be in the same request\n");
+        coap_remove_option(pdu, COAP_OPTION_BLOCK1);
+      }
+      have_block1 = 1;
+    }
+#endif /* COAP_Q_BLOCK_SUPPORT */
     if (observe_action != COAP_OBSERVE_CANCEL) {
       /* Warn about re-use of tokens */
       if (session->last_token &&
@@ -1144,11 +1167,109 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     memset(&block, 0, sizeof(block));
   }
 
+#if COAP_Q_BLOCK_SUPPORT
+  /* Indicate support for Q-Block if appropriate */
+  if (session->block_mode & COAP_BLOCK_TRY_Q_BLOCK &&
+      session->type == COAP_SESSION_TYPE_CLIENT &&
+      COAP_PDU_IS_REQUEST(pdu)) {
+    if (coap_block_test_q_block(session, pdu) == COAP_INVALID_MID) {
+      coap_delete_pdu(pdu);
+      return COAP_INVALID_MID;
+    }
+    session->doing_first = 1;
+    if (!coap_client_delay_first(session)) {
+      /* Q-Block test Session has failed for some reason */
+      set_block_mode_drop_q(session->block_mode);
+      coap_delete_pdu(pdu);
+      return COAP_INVALID_MID;
+    }
+  }
+#endif /* COAP_Q_BLOCK_SUPPORT */
+
+#if COAP_Q_BLOCK_SUPPORT
+  if (!(session->block_mode & COAP_BLOCK_HAS_Q_BLOCK))
+#endif /* COAP_Q_BLOCK_SUPPORT */
+  {
+    /* Need to check if we need to reset Q-Block to Block */
+    uint8_t buf[4];
+
+    if (coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK2, &block)) {
+      coap_remove_option(pdu, COAP_OPTION_Q_BLOCK2);
+      coap_insert_option(pdu, COAP_OPTION_BLOCK2,
+                         coap_encode_var_safe(buf, sizeof(buf),
+                               (block.num << 4) | (0 << 3) | block.szx),
+                         buf);
+      coap_log_debug("Replaced option Q-Block2 with Block2\n");
+    }
+    if (coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK1, &block)) {
+      coap_remove_option(pdu, COAP_OPTION_Q_BLOCK1);
+      coap_insert_option(pdu, COAP_OPTION_BLOCK1,
+                         coap_encode_var_safe(buf, sizeof(buf),
+                               (block.num << 4) | (block.m << 3) | block.szx),
+                         buf);
+      coap_log_debug("Replaced option Q-Block1 with Block1\n");
+      /* Need to update associated lg_xmit */
+      coap_lg_xmit_t *lg_xmit;
+
+      LL_FOREACH(session->lg_xmit, lg_xmit) {
+        if (COAP_PDU_IS_REQUEST(&lg_xmit->pdu) &&
+            lg_xmit->b.b1.app_token &&
+            coap_binary_equal(&pdu->actual_token, lg_xmit->b.b1.app_token)) {
+          /* Update the skeletal PDU with the block1 option */
+          coap_remove_option(&lg_xmit->pdu, COAP_OPTION_Q_BLOCK1);
+          coap_update_option(&lg_xmit->pdu, COAP_OPTION_BLOCK1,
+                             coap_encode_var_safe(buf, sizeof(buf),
+                               (block.num << 4) |
+                               (block.m << 3) |
+                               block.szx),
+                             buf);
+          /* Update as this is a Request */
+          lg_xmit->option = COAP_OPTION_BLOCK1;
+          break;
+        }
+      }
+    }
+  }
+
+#if COAP_Q_BLOCK_SUPPORT
+  if (COAP_PDU_IS_REQUEST(pdu) &&
+           coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK2, &block)) {
+    if (block.num == 0 && block.m == 0) {
+      uint8_t buf[4];
+
+      /* M needs to be set as asking for all the blocks */
+      coap_update_option(pdu, COAP_OPTION_Q_BLOCK2,
+                         coap_encode_var_safe(buf, sizeof(buf),
+                                    (0 << 4) | (1 << 3) | block.szx),
+                         buf);
+    }
+  }
+  if (pdu->type == COAP_MESSAGE_NON && pdu->code == COAP_REQUEST_CODE_FETCH &&
+      coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter) &&
+      coap_check_option(pdu, COAP_OPTION_Q_BLOCK1, &opt_iter)) {
+    /* Issue with Fetch + Observe + Q-Block1 + NON if there are
+     * retransmits as potential for Token confusion */
+    pdu->type = COAP_MESSAGE_CON;
+    /* Need to update associated lg_xmit */
+    coap_lg_xmit_t *lg_xmit;
+
+    LL_FOREACH(session->lg_xmit, lg_xmit) {
+      if (lg_xmit->pdu.code == COAP_REQUEST_CODE_FETCH &&
+          lg_xmit->b.b1.app_token &&
+          coap_binary_equal(&pdu->actual_token, lg_xmit->b.b1.app_token)) {
+        /* Update as this is a Request */
+        lg_xmit->pdu.type = COAP_MESSAGE_CON;
+        break;
+      }
+    }
+  }
+#endif /* COAP_Q_BLOCK_SUPPORT */
+
   /*
    * If type is CON and protocol is not reliable, there is no need to set up
    * lg_crcv here as it can be built up based on sent PDU if there is a
-   * Block2 in the response.  However, still need it for Observe, Oscore and
-   * Block1.
+   * (Q-)Block2 in the response.  However, still need it for Observe, Oscore and
+   * (Q-)Block1.
    */
   if (observe_action != -1 || have_block1 ||
 #if COAP_OSCORE_SUPPORT
@@ -1216,8 +1337,17 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     coap_address_copy(&session->addr_info.remote, &session->sock.mcast_addr);
 
 send_it:
-#endif /* COAP_CLIENT_SUPPORT */
+#if COAP_Q_BLOCK_SUPPORT
+  /* See if large xmit using Q-Block1 (but not testing Q-Block1) */
+  if (coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK1, &block)) {
+    mid = coap_send_q_block1(session, block, pdu, COAP_SEND_INC_PDU);
+  }
+  else
+#endif /* COAP_Q_BLOCK_SUPPORT */
+    mid = coap_send_internal(session, pdu);
+#else /* !COAP_CLIENT_SUPPORT */
   mid = coap_send_internal(session, pdu);
+#endif /* !COAP_CLIENT_SUPPORT */
 #if COAP_CLIENT_SUPPORT
   if (lg_crcv) {
     if (mid != COAP_INVALID_MID) {
@@ -2626,7 +2756,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   int is_proxy_uri = 0;
   int is_proxy_scheme = 0;
   int skip_hop_limit_check = 0;
-  int resp;
+  int resp = 0;
   int send_early_empty_ack = 0;
   coap_string_t *query = NULL;
   coap_opt_t *observe = NULL;
@@ -2635,6 +2765,9 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_block_b_t block;
   int added_block = 0;
   coap_lg_srcv_t *free_lg_srcv = NULL;
+#if COAP_Q_BLOCK_SUPPORT
+  int lg_xmit_ctrl = 0;
+#endif /* COAP_Q_BLOCK_SUPPORT */
 #if COAP_ASYNC_SUPPORT
   coap_async_t *async;
 #endif /* COAP_ASYNC_SUPPORT */
@@ -2953,6 +3086,9 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
     if (coap_handle_request_send_block(session, pdu, response, resource,
                                        query)) {
+#if COAP_Q_BLOCK_SUPPORT
+      lg_xmit_ctrl = 1;
+#endif /* COAP_Q_BLOCK_SUPPORT */
       goto skip_handler;
     }
   }
@@ -2970,6 +3106,14 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
           response->code = COAP_RESPONSE_CODE(400);
           goto skip_handler;
         }
+#if COAP_Q_BLOCK_SUPPORT
+      } else if (coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK2,
+                                  &block)) {
+        if (block.num != 0) {
+          response->code = COAP_RESPONSE_CODE(400);
+          goto skip_handler;
+        }
+#endif /* COAP_Q_BLOCK_SUPPORT */
       }
       subscription = coap_add_observer(resource, session, &pdu->actual_token,
                                        pdu);
@@ -3081,12 +3225,29 @@ skip_handler:
       response->actual_token.length = 0;
       response->e_token_length = 0;
       response->used_size = 0;
+      response->data = NULL;
     }
 
     if (!coap_is_mcast(&session->addr_info.local) ||
         (context->mcast_per_resource &&
           resource &&
           (resource->flags & COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS))) {
+        /* No delays to response */
+#if COAP_Q_BLOCK_SUPPORT
+      if (session->block_mode & COAP_BLOCK_USE_LIBCOAP &&
+          !lg_xmit_ctrl && response->code == COAP_RESPONSE_CODE(205) &&
+          coap_get_block_b(session, response, COAP_OPTION_Q_BLOCK2, &block) &&
+          block.m) {
+        if (coap_send_q_block2(session, resource, query, pdu->code, block,
+                               response,
+                               COAP_SEND_INC_PDU) == COAP_INVALID_MID)
+          coap_log_debug("cannot send response for mid=0x%x\n", mid);
+        response = NULL;
+        if (query)
+          coap_delete_string(query);
+        goto finish;
+      }
+#endif /* COAP_Q_BLOCK_SUPPORT */
       if (coap_send_internal(session, response) == COAP_INVALID_MID) {
         coap_log_debug("cannot send response for mid=0x%04x\n", mid);
       }
@@ -3132,6 +3293,25 @@ drop_it_no_debug:
 clean_up:
   if (query)
     coap_delete_string(query);
+#if COAP_Q_BLOCK_SUPPORT
+  if (coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK1, &block)) {
+    if (COAP_PROTO_RELIABLE(session->proto)) {
+      if (block.m) {
+        /* All of the sequence not in yet */
+        goto finish;
+      }
+    } else if (pdu->type == COAP_MESSAGE_NON) {
+      /* More to go and not at a payload break */
+      if (block.m && ((block.num + 1) % COAP_MAX_PAYLOADS(session))) {
+        goto finish;
+      }
+    }
+  }
+#endif /* COAP_Q_BLOCK_SUPPORT */
+
+#if COAP_Q_BLOCK_SUPPORT
+finish:
+#endif /* COAP_Q_BLOCK_SUPPORT */
   coap_delete_string(uri_path);
   return;
 
@@ -3176,7 +3356,7 @@ handle_response(coap_context_t *context, coap_session_t *session,
   }
   /* Check to see if checking out extended token support */
   if (session->max_token_checked == COAP_EXT_T_CHECKING &&
-      session->max_token_mid == rcvd->mid) {
+      session->remote_test_mid == rcvd->mid) {
 
     if (rcvd->actual_token.length != session->max_token_size ||
         rcvd->code == COAP_RESPONSE_CODE(400) ||
@@ -3191,6 +3371,30 @@ handle_response(coap_context_t *context, coap_session_t *session,
     session->doing_first = 0;
     return;
   }
+#if COAP_Q_BLOCK_SUPPORT
+  /* Check to see if checking out Q-Block support */
+  if (session->block_mode & COAP_BLOCK_PROBE_Q_BLOCK &&
+      session->remote_test_mid == rcvd->mid) {
+    if (rcvd->code == COAP_RESPONSE_CODE(402)) {
+      coap_log_debug("Q-Block support not available\n");
+      set_block_mode_drop_q(session->block_mode);
+    }
+    else {
+      coap_block_b_t qblock;
+
+      if (coap_get_block_b(session, rcvd, COAP_OPTION_Q_BLOCK2, &qblock)) {
+        coap_log_debug("Q-Block support available\n");
+        set_block_mode_has_q(session->block_mode);
+      }
+      else {
+        coap_log_debug("Q-Block support not available\n");
+        set_block_mode_drop_q(session->block_mode);
+      }
+    }
+    session->doing_first = 0;
+    return;
+  }
+#endif /* COAP_Q_BLOCK_SUPPORT */
 
   if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
     /* See if need to send next block to server */
@@ -3448,6 +3652,29 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 #endif /* COAP_SERVER_SUPPORT */
 
       if (pdu->code == 0) {
+#if COAP_Q_BLOCK_SUPPORT
+        if (sent) {
+          coap_block_b_t block;
+
+          if (sent->pdu->type == COAP_MESSAGE_CON &&
+              COAP_PROTO_NOT_RELIABLE(session->proto) &&
+              coap_get_block_b(session, sent->pdu,
+                             COAP_PDU_IS_REQUEST(sent->pdu) ?
+                               COAP_OPTION_Q_BLOCK1 : COAP_OPTION_Q_BLOCK2,
+                             &block)) {
+            if (block.m) {
+#if COAP_CLIENT_SUPPORT
+              if (COAP_PDU_IS_REQUEST(sent->pdu))
+                coap_send_q_block1(session, block, sent->pdu,
+                                   COAP_SEND_SKIP_PDU);
+#endif /* COAP_CLIENT_SUPPORT */
+              if (COAP_PDU_IS_RESPONSE(sent->pdu))
+                coap_send_q_blocks(session, sent->pdu->lg_xmit, block,
+                                   sent->pdu, COAP_SEND_SKIP_PDU);
+            }
+          }
+        }
+#endif /* COAP_Q_BLOCK_SUPPORT */
         /* an empty ACK needs no further handling */
         goto cleanup;
       }
@@ -3463,16 +3690,26 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
           context->ping_timeout && session->last_ping > 0)
         is_ping_rst = 1;
 
+#if COAP_Q_BLOCK_SUPPORT
+      /* Check to see if checking out Q-Block support */
+      if (session->block_mode & COAP_BLOCK_PROBE_Q_BLOCK &&
+          session->remote_test_mid == pdu->mid) {
+        coap_log_debug("Q-Block support not available\n");
+        set_block_mode_drop_q(session->block_mode);
+      }
+#endif /* COAP_Q_BLOCK_SUPPORT */
+
       /* Check to see if checking out extended token support */
       is_ext_token_rst = 0;
       if (session->max_token_checked == COAP_EXT_T_CHECKING &&
-          session->max_token_mid == pdu->mid) {
+          session->remote_test_mid == pdu->mid) {
         coap_log_debug("Extended Token support not available\n");
         session->max_token_size = COAP_TOKEN_DEFAULT_MAX;
         session->max_token_checked = COAP_EXT_T_CHECKED;
         session->doing_first = 0;
         is_ext_token_rst = 1;
       }
+
       if (!is_ping_rst && !is_ext_token_rst)
         coap_log_alert("got RST for mid=0x%04x\n", pdu->mid);
 

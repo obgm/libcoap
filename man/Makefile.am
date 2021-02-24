@@ -157,6 +157,14 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_mid.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_code.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_type.3
+	@echo ".so man3/coap_recovery.3" > coap_session_set_max_retransmit.3
+	@echo ".so man3/coap_recovery.3" > coap_session_get_max_retransmit.3
+	@echo ".so man3/coap_recovery.3" > coap_session_set_non_max_retransmit.3
+	@echo ".so man3/coap_recovery.3" > coap_session_get_non_max_retransmit.3
+	@echo ".so man3/coap_recovery.3" > coap_session_set_non_receive_timeout.3
+	@echo ".so man3/coap_recovery.3" > coap_session_get_non_receive_timeout.3
+	@echo ".so man3/coap_recovery.3" > coap_session_set_non_timeout.3
+	@echo ".so man3/coap_recovery.3" > coap_session_get_non_timeout.3
 	@echo ".so man3/coap_recovery.3" > coap_session_set_nstart.3
 	@echo ".so man3/coap_recovery.3" > coap_session_get_nstart.3
 	@echo ".so man3/coap_recovery.3" > coap_session_set_probing_rate.3

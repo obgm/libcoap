@@ -20,24 +20,28 @@
 
 #ifdef CONFIG_LIBCOAP_MAX_LOGGING_LEVEL
 #ifndef COAP_MAX_LOGGING_LEVEL
+/* Define to 1 to build without TCP support. */
 #define COAP_MAX_LOGGING_LEVEL CONFIG_LIBCOAP_MAX_LOGGING_LEVEL
 #endif /* COAP_MAX_LOGGING_LEVEL */
 #endif /* CONFIG_LIBCOAP_MAX_LOGGING_LEVEL */
 
 #ifdef CONFIG_LIBCOAP_IPV4_SUPPORT
 #ifndef COAP_IPV4_SUPPORT
+/* Define to 1 to build with IPv4 support. */
 #define COAP_IPV4_SUPPORT 1
 #endif /* COAP_IPV4_SUPPORT */
 #endif /* CONFIG_LIBCOAP_IPV4_SUPPORT */
 
 #ifdef CONFIG_LIBCOAP_IPV6_SUPPORT
 #ifndef COAP_IPV6_SUPPORT
+/* Define to 1 to build with IPv6 support. */
 #define COAP_IPV6_SUPPORT 1
 #endif /* COAP_IPV6_SUPPORT */
 #endif /* CONFIG_LIBCOAP_IPV6_SUPPORT */
 
 #ifdef CONFIG_LIBCOAP_AF_UNIX_SUPPORT
 #ifndef COAP_AF_UNIX_SUPPORT
+/* Define to 1 to build with Unix socket support. */
 #define COAP_AF_UNIX_SUPPORT 1
 #endif /* COAP_AF_UNIX_SUPPORT */
 #endif /* CONFIG_LIBCOAP_AF_UNIX_SUPPORT */
@@ -55,6 +59,27 @@
 #define COAP_OSCORE_SUPPORT 1
 #endif /* COAP_OSCORE_SUPPORT */
 #endif /* CONFIG_LIBCOAP_OSCORE_SUPPORT */
+
+#ifdef CONFIG_LIBCOAP_WITH_OBSERVE_PERSIST
+#ifndef COAP_WITH_OBSERVE_PERSIST
+/* Define to 1 if the library has Observe persist support. */
+#define COAP_WITH_OBSERVE_PERSIST 0
+#endif /* COAP_WITH_OBSERVE_PERSIST */
+#endif /* CONFIG_LIBCOAP_WITH_OBSERVE_PERSIST */
+
+#ifdef CONFIG_LIBCOAP_WS_SUPPORT
+#ifndef COAP_WS_SUPPORT
+/* Define to 1 if the library has WebSockets support. */
+#define COAP_WS_SUPPORT 0
+#endif /* COAP_WS_SUPPORT */
+#endif /* CONFIG_LIBCOAP_WS_SUPPORT */
+
+#ifdef CONFIG_LIBCOAP_Q_BLOCK_SUPPORT
+#ifndef COAP_Q_BLOCK_SUPPORT
+/* Define to 1 to build with Q-Block (RFC9177) support. */
+#define COAP_Q_BLOCK_SUPPORT 0
+#endif /* COAP_Q_BLOCK_SUPPORT */
+#endif /* CONFIG_LIBCOAP_Q_BLOCK_SUPPORT */
 
 #ifdef CONFIG_LIBCOAP_CLIENT_SUPPORT
 #ifndef COAP_CLIENT_SUPPORT

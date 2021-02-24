@@ -15,7 +15,8 @@ coap_context_set_block_mode,
 coap_add_data_large_request,
 coap_add_data_large_response,
 coap_get_data_large,
-coap_block_build_body
+coap_block_build_body,
+coap_q_block_is_supported
 - Work with CoAP Blocks
 
 SYNOPSIS
@@ -41,6 +42,8 @@ const uint8_t **_data_, size_t *_offset_, size_t *_total_);*
 *coap_binary_t *coap_block_build_body(coap_binary_t *_body_data_,
 size_t _length_, const uint8_t *_data_, size_t _offset_, size_t _total_);*
 
+*int coap_q_block_is_supported(void);*
+
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
@@ -53,7 +56,8 @@ Regular setting up of a PDU and transmission is covered in *coap_pdu_setup*(3)
 where all the payload data can fit in a single packet.  This man page covers
 how to work with PDUs where the overall body of information may need to be
 split across several packets by using CoAP Block-Wise Transfers
-(https://rfc-editor.org/rfc/rfc7959[RFC7959]).
+(https://rfc-editor.org/rfc/rfc7959[RFC7959] and
+https://rfc-editor.org/rfc/rfc9177[RFC9177]).
 
 The block-wise transfers can be controlled by the application, or libcoap is
 instructed to do all the requests for the next blocks and only present the
@@ -141,8 +145,10 @@ session _block_mode_.
 
 [source, c]
 ----
-#define COAP_BLOCK_USE_LIBCOAP        0x01 /* Use libcoap to do block requests */
-#define COAP_BLOCK_SINGLE_BODY        0x02 /* Deliver the data as a single body */
+#define COAP_BLOCK_USE_LIBCOAP   0x01 /* Use libcoap to do block requests */
+#define COAP_BLOCK_SINGLE_BODY   0x02 /* Deliver the data as a single body */
+#define COAP_BLOCK_TRY_Q_BLOCK   0x04 /* Try Q-Block method */
+#define COAP_BLOCK_USE_M_Q_BLOCK 0x08 /* Use M bit when recovering Q-Block2 */
 #define COAP_BLOCK_NO_PREEMPTIVE_RTAG 0x10 /* Don't use pre-emptive Request-Tags */
 ----
 _block_mode_ is an or'd set of zero or more COAP_BLOCK_* definitions.
@@ -167,11 +173,18 @@ COAP_RESPONSE_CODE_CONTINUE 2.31 (Continue) response code if the received data
 is not for the final block, otherwise a COAP_RESPONSE_CODE_CREATED 2.01
 (Created) or COAP_RESPONSE_CODE_CHANGED 2.04 (Changed) should be returned.
 
+To indicate support for Q-Block-1 and Q-Block2, *COAP_BLOCK_TRY_Q_BLOCK* needs
+to be set on both the client and server.  *COAP_BLOCK_SINGLE_BODY* is assumed to
+be set if using Q-Block as the data will always be presented as a single body.
+If *COAP_BLOCK_USE_M_Q_BLOCK* is defined, then the 'M' bit version of recovery
+will be used if possible.
+
 If *COAP_BLOCK_USE_LIBCOAP* is set, then any PDUs presented to the application
 handlers will get the tokens set back to the initiating token so that requests
 can be matched with responses even if different tokens had to be used for the
 series of packet interchanges.  Furthermore, if *COAP_BLOCK_SINGLE_BODY* is set,
-then the PDU that presents the entire body will have any BlockX option removed.
+then the PDU that presents the entire body will have any BlockX or Q-BlockX
+option removed.
 
 *NOTE:* *COAP_BLOCK_USE_LIBCOAP* must be set if libcoap is to do all the
 block tracking and requesting, otherwise the application will have to do all
@@ -191,7 +204,7 @@ but supports the transmission of data that has a body size that is potentially
 larger than can be fitted into a single client request PDU. The specified
 payload _data_ of length _length_ is associated with the _session_ with the
 first block of data added to the PDU _pdu_ along with the appropriate CoAP
-options such as Block1, Size1 and Request-Tag if the data does not fit in
+options such as (Q-)Block1, Size1 and Request-Tag if the data does not fit in
 a single PDU.
 
 When the block receipt has been acknowledged by the peer, the library
@@ -278,6 +291,11 @@ blocks. If there is a change of data during the blocks receipt (e.g., ETag
 value changes), then the entire set of data is re-requested and the partial
 body dropped.
 
+*Function: coap_q_block_is_supported()*
+
+The *coap_q_block_is_supported*() function is used to determine whether
+libcoap has been build with Q-Block support or not.
+
 RETURN VALUES
 -------------
 *coap_add_data_large_request*(), *coap_add_data_large_response*(), and
@@ -285,6 +303,8 @@ RETURN VALUES
 
 *coap_block_build_body*() returns the current state of the body's data
 (which may have some missing gaps) or NULL on error.
+
+*coap_q_block_is_supported*() returns 0 on failure, 1 on success.
 
 EXAMPLES
 --------

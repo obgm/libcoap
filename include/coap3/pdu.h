@@ -128,10 +128,12 @@ typedef enum coap_request_t {
 #define COAP_OPTION_URI_QUERY      15 /* CU-RE__, String,  1-255 B, RFC7252 */
 #define COAP_OPTION_HOP_LIMIT      16 /* ______U, uint,        1 B, RFC8768 */
 #define COAP_OPTION_ACCEPT         17 /* C___E__, uint,      0-2 B, RFC7252 */
+#define COAP_OPTION_Q_BLOCK1       19 /* CU__E_U, uint,      0-3 B, RFC9177 */
 #define COAP_OPTION_LOCATION_QUERY 20 /* ___RE__, String,  0-255 B, RFC7252 */
 #define COAP_OPTION_BLOCK2         23 /* CU-_E_U, uint,      0-3 B, RFC7959 */
 #define COAP_OPTION_BLOCK1         27 /* CU-_E_U, uint,      0-3 B, RFC7959 */
 #define COAP_OPTION_SIZE2          28 /* __N_E_U, uint,      0-4 B, RFC7959 */
+#define COAP_OPTION_Q_BLOCK2       31 /* CU_RE_U, uint,      0-3 B, RFC9177 */
 #define COAP_OPTION_PROXY_URI      35 /* CU-___U, String, 1-1034 B, RFC7252 */
 #define COAP_OPTION_PROXY_SCHEME   39 /* CU-___U, String,  1-255 B, RFC7252 */
 #define COAP_OPTION_SIZE1          60 /* __N_E_U, uint,      0-4 B, RFC7252 */
@@ -239,6 +241,10 @@ typedef enum coap_pdu_signaling_proto_t {
 
 /* Content formats from RFC 9200 */
 #define COAP_MEDIATYPE_APPLICATION_ACE_CBOR      19 /* application/ace+cbor  */
+
+/* Content formats from RFC9177 */
+#define COAP_MEDIATYPE_APPLICATION_MB_CBOR_SEQ  272 /* application/missing-blocks+cbor-seq */
+
 /* Content formats from RFC 8613 */
 #define COAP_MEDIATYPE_APPLICATION_OSCORE     10001 /* application/oscore */
 

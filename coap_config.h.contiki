@@ -25,6 +25,15 @@
 /* Define to 1 to build with support for async separate responses. */
 #define COAP_ASYNC_SUPPORT 1
 
+/* Define to 1 to build support for persisting observes. */
+/* #undef COAP_WITH_OBSERVE_PERSIST 1 */
+
+/* Define to 1 to build with WebSockets support. */
+/* #undef COAP_WS_SUPPORT 1 */
+
+/* Define to 1 to build with Q-Block (RFC9177) support. */
+/* #undef COAP_Q_BLOCK_SUPPORT 1 */
+
 /* Define to 1 if you have the <assert.h> header file. */
 #define HAVE_ASSERT_H 1
 
