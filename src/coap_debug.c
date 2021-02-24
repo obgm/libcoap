@@ -535,7 +535,9 @@ msg_option_string(uint8_t code, uint16_t option_type) {
     { COAP_OPTION_SIZE1, "Size1" },
     { COAP_OPTION_ECHO, "Echo" },
     { COAP_OPTION_NORESPONSE, "No-Response" },
-    { COAP_OPTION_RTAG, "Request-Tag" }
+    { COAP_OPTION_RTAG, "Request-Tag" },
+    { COAP_OPTION_Q_BLOCK1, "Q-Block1" },
+    { COAP_OPTION_Q_BLOCK2, "Q-Block2" }
   };
 
   static struct option_desc_t options_csm[] = {
@@ -634,7 +636,8 @@ print_content_format(unsigned int format_type,
     { COAP_MEDIATYPE_APPLICATION_SENSML_XML, "application/sensml+xml" },
     { COAP_MEDIATYPE_APPLICATION_DOTS_CBOR, "application/dots+cbor" },
     { COAP_MEDIATYPE_APPLICATION_ACE_CBOR, "application/ace+cbor" },
-    { COAP_MEDIATYPE_APPLICATION_OSCORE, "application/oscore"},
+    { COAP_MEDIATYPE_APPLICATION_MB_CBOR_SEQ, "application/missing-blocks+cbor-seq" },
+    { COAP_MEDIATYPE_APPLICATION_OSCORE, "application/oscore" },
     { 75, "application/dcaf+cbor" }
   };
 
@@ -810,6 +813,8 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 
     case COAP_OPTION_BLOCK1:
     case COAP_OPTION_BLOCK2:
+    case COAP_OPTION_Q_BLOCK1:
+    case COAP_OPTION_Q_BLOCK2:
       /* split block option into number/more/size where more is the
        * letter M if set, the _ otherwise */
       if (COAP_OPT_BLOCK_SZX(option) == 7) {

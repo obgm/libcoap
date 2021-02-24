@@ -1083,6 +1083,18 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                                                          block.aszx)),
                                    buf);
         }
+#if COAP_Q_BLOCK_SUPPORT
+        else if (coap_get_block_b(obs->session, obs->pdu, COAP_OPTION_Q_BLOCK2,
+                                  &block)) {
+          /* Will get updated later (e.g. M bit) if appropriate */
+          coap_add_option_internal(response, COAP_OPTION_Q_BLOCK2,
+                                   coap_encode_var_safe(buf, sizeof(buf),
+                                               ((0 << 4) |
+                                                (0 << 3) |
+                                                block.szx)),
+                                   buf);
+        }
+#endif /* COAP_Q_BLOCK_SUPPORT */
 
         h = r->handler[obs->pdu->code - 1];
         assert(h);      /* we do not allow subscriptions if no
@@ -1120,10 +1132,25 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         } else {
           obs->non_cnt++;
         }
-      }
 
+#if COAP_Q_BLOCK_SUPPORT
+        if (response->code == COAP_RESPONSE_CODE(205) &&
+            coap_get_block_b(obs->session, response, COAP_OPTION_Q_BLOCK2,
+                             &block) &&
+            block.m) {
+          query = coap_get_query(obs->pdu);
+          mid = coap_send_q_block2(obs->session, r, query, obs->pdu->code,
+                                   block, response, 1);
+          coap_delete_string(query);
+          goto finish;
+        }
+#endif /* COAP_Q_BLOCK_SUPPORT */
+      }
       mid = coap_send_internal(obs_session, response);
 
+#if COAP_Q_BLOCK_SUPPORT
+finish:
+#endif /* COAP_Q_BLOCK_SUPPORT */
       if (COAP_INVALID_MID == mid && obs) {
         coap_subscription_t *s;
         coap_log_debug(

@@ -839,6 +839,18 @@ AS_IF([test "x$build_observe_persist" = "xyes"],
       [AC_DEFINE(COAP_WITH_OBSERVE_PERSIST, [1], [Define to 1 to build support for persisting observes.])])
 
 # configure options
+# __q_block__
+# Support for Q-Block according to RFC 9177.
+AC_ARG_ENABLE([q-block],
+              [AS_HELP_STRING([--enable-q-block],
+                              [Enable building with Q-Block support [default=yes]])],
+              [build_q_block="$enableval"],
+              [build_q_block="yes"])
+
+AS_IF([test "x$build_q_block" = "xyes"],
+     [AC_DEFINE(COAP_Q_BLOCK_SUPPORT, [1], [Define to 1 to build with Q-Block support.])])
+
+# configure options
 # __add_default_names__
 AC_ARG_ENABLE([add-default-names],
               [AS_HELP_STRING([--enable-add-default-names],
@@ -1214,6 +1226,11 @@ if test "x$build_oscore" != "xno"; then
     AC_MSG_RESULT([      enable OSCORE support          : "yes"])
 else
     AC_MSG_RESULT([      enable OSCORE support          : "no"])
+fi
+if test "x$build_q_block" != "xno"; then
+    AC_MSG_RESULT([      enable Q-Block support   : "yes"])
+else
+    AC_MSG_RESULT([      enable Q-Block support   : "no"])
 fi
 if test "x$enable_max_logging_level" != "x8"; then
     AC_MSG_RESULT([      enable max logging level       : "$enable_max_logging_level"])

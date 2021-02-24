@@ -902,7 +902,7 @@ cmdline_blocksize(char *arg) {
 }
 
 /* Called after processing the options from the commandline to set
- * Block1 or Block2 depending on method. */
+ * Block1, Block2, Q-Block1 or Q-Block2 depending on method. */
 static void
 set_blocksize(void) {
   static unsigned char buf[4];        /* hack: temporarily take encoded bytes */
@@ -911,12 +911,18 @@ set_blocksize(void) {
 
   if (method != COAP_REQUEST_DELETE) {
     if (method == COAP_REQUEST_GET || method == COAP_REQUEST_FETCH) {
-      opt = COAP_OPTION_BLOCK2;
+      if (coap_q_block_is_supported() && block_mode & COAP_BLOCK_TRY_Q_BLOCK)
+        opt = COAP_OPTION_Q_BLOCK2;
+      else
+        opt = COAP_OPTION_BLOCK2;
     } else {
-      opt = COAP_OPTION_BLOCK1;
+      if (coap_q_block_is_supported() && block_mode & COAP_BLOCK_TRY_Q_BLOCK)
+        opt = COAP_OPTION_Q_BLOCK1;
+      else
+        opt = COAP_OPTION_BLOCK1;
     }
 
-    block.m = (opt == COAP_OPTION_BLOCK1) &&
+    block.m = (opt == COAP_OPTION_BLOCK1 || opt == COAP_OPTION_Q_BLOCK1) &&
       ((1ull << (block.szx + 4)) < payload.length);
 
     opt_length = coap_encode_var_safe(buf, sizeof(buf),

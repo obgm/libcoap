@@ -60,7 +60,16 @@ typedef struct {
 
 #define COAP_BLOCK_USE_LIBCOAP  0x01 /* Use libcoap to do block requests */
 #define COAP_BLOCK_SINGLE_BODY  0x02 /* Deliver the data as a single body */
+#define COAP_BLOCK_TRY_Q_BLOCK   0x04 /* Try Q-Block method */
+#define COAP_BLOCK_USE_M_Q_BLOCK 0x08 /* Use M bit when recovering Q-Block2 */
 #define COAP_BLOCK_NO_PREEMPTIVE_RTAG 0x10 /* Don't use pre-emptive Request-Tags */
+/* Note 0x40 and 0x80 are internally defined elsewhere */
+
+/**
+ * Returns @c 1 if libcoap was built with option Q-BlockX support,
+ * @c 0 otherwise.
+ */
+int coap_q_block_is_supported(void);
 
 /**
  * Returns the value of the least significant byte of a Block option @p opt.
@@ -294,7 +303,7 @@ typedef void (*coap_release_large_data_t)(coap_session_t *session,
  * Used for a client request.
  *
  * If the data spans multiple PDUs, then the data will get transmitted using
- * Block1 option with the addition of the Size1 and Request-Tag options.
+ * (Q-)Block1 option with the addition of the Size1 and Request-Tag options.
  * The underlying library will handle the transmission of the individual blocks.
  * Once the body of data has been transmitted (or a failure occurred), then
  * @p release_func (if not NULL) will get called so the application can
@@ -302,7 +311,7 @@ typedef void (*coap_release_large_data_t)(coap_session_t *session,
  * the application not to change the contents of @p data until the data
  * transfer has completed.
  *
- * There is no need for the application to include the Block1 option in the
+ * There is no need for the application to include the (Q-)Block1 option in the
  * @p pdu.
  *
  * coap_add_data_large_request() (or the alternative coap_add_data_large_*()
@@ -345,7 +354,7 @@ int coap_add_data_large_request(coap_session_t *session,
  * Used by a server request handler to create the response.
  *
  * If the data spans multiple PDUs, then the data will get transmitted using
- * Block2 (response) option with the addition of the Size2 and ETag
+ * (Q-)Block2 (response) option with the addition of the Size2 and ETag
  * options. The underlying library will handle the transmission of the
  * individual blocks. Once the body of data has been transmitted (or a
  * failure occurred), then @p release_func (if not NULL) will get called so the
@@ -353,7 +362,7 @@ int coap_add_data_large_request(coap_session_t *session,
  * responsibility of the application not to change the contents of @p data
  * until the data transfer has completed.
  *
- * There is no need for the application to include the Block2 option in the
+ * There is no need for the application to include the (Q-)Block2 option in the
  * @p pdu.
  *
  * coap_add_data_large_response() (or the alternative coap_add_data_large_*()

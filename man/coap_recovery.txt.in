@@ -17,8 +17,16 @@ coap_session_set_ack_timeout,
 coap_session_get_ack_timeout,
 coap_session_set_default_leisure,
 coap_session_get_default_leisure,
+coap_session_set_max_payloads,
+coap_session_get_max_payloads,
 coap_session_set_max_retransmit,
 coap_session_get_max_retransmit,
+coap_session_set_non_max_retransmit,
+coap_session_get_non_max_retransmit,
+coap_session_set_non_receive_timeout,
+coap_session_get_non_receive_timeout,
+coap_session_set_non_timeout,
+coap_session_get_non_timeout,
 coap_session_set_nstart,
 coap_session_get_nstart,
 coap_session_set_probing_rate,
@@ -48,10 +56,32 @@ coap_fixed_point_t _value_)*;
 *coap_fixed_point_t coap_session_get_default_leisure(
 const coap_session_t *_session_)*;
 
+*void coap_session_set_max_payloads(coap_session_t *_session_,
+uint16_t _value_)*;
+
+*uint16_t coap_session_get_max_payloads(const coap_session_t *_session_)*;
+
 *void coap_session_set_max_retransmit(coap_session_t *_session_,
 uint16_t _value_)*;
 
 *uint16_t coap_session_get_max_retransmit(const coap_session_t *_session_)*;
+
+*void coap_session_set_non_max_retransmit(coap_session_t *_session_,
+uint16_t _value_)*;
+
+*uint16_t coap_session_get_non_max_retransmit(const coap_session_t *_session_)*;
+
+*void coap_session_set_non_receive_timeout(coap_session_t *_session_,
+coap_fixed_point_t _value_)*;
+
+*coap_fixed_point_t coap_session_get_non_receive_timeout(
+const coap_session_t *_session_)*;
+
+*void coap_session_set_non_timeout(coap_session_t *_session_,
+coap_fixed_point_t _value_)*;
+
+*coap_fixed_point_t coap_session_get_non_timeout(
+const coap_session_t *_session_)*;
 
 *void coap_session_set_nstart(coap_session_t *_session_, uint16_t _value_)*;
 
@@ -72,6 +102,11 @@ or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
 
 DESCRIPTION
 -----------
+There is CoAP Confirmable message transmission recovery as defined in
+https://rfc-editor.org/rfc/rfc7252[RFC7252], as well CoAP Non-Confirmable
+split into blocks  message transmission recovery support as defined in
+https://rfc-editor.org/rfc/rfc9177[RFC9177].
+
 For CoAP Confirmable messages, it is possible to define the retry counts,
 repeat rate etc. for error recovery.  Further information can be found in
 "https://rfc-editor.org/rfc/rfc7252#section-4.2[RFC7272 4.2. Messages
@@ -94,7 +129,8 @@ typedef struct coap_fixed_point_t {
 } coap_fixed_point_t;
 ----
 
-The CoAP message retry rules are (with the default values to compute the time)
+The CoAP Confirmable message retry rules are (with the default values to
+compute the time)
 ----
 1st retransmit after 1 * ack_timeout * ack_random factor (3 seconds)
 2nd retransmit after 2 * ack_timeout * ack_random factor (6 seconds)
@@ -104,8 +140,9 @@ The CoAP message retry rules are (with the default values to compute the time)
 
 As max_retransmit (by default) is 4, then the 5th retransmit does not get sent,
 but at that point COAP_NACK_TOO_MANY_RETRIES gets raised in the nack_handler
-(if defined). Note that the sum of the seconds is 93 matching RFC7252 4.8.2.
-MAX_TRANSMIT_WAIT.
+(if defined). Note that the sum of the seconds is 93 matching
+"https://rfc-editor.org/rfc/rfc7252#section-4.8.2[RFC7252 4.8.2.
+MAX_TRANSMIT_WAIT]".
 ----
 
 It should be noted that these retries are separate from the DTLS or TLS
@@ -113,76 +150,132 @@ encrypted session setup retry timeouts. For DTLS, the initial requesting
 packet will get sent max_retransmit times before reporting failure.
 For TLS the initial TCP connection will timeout before reporting failure.
 
+For CoAP Non-Confirmable messages with
+https://rfc-editor.org/rfc/rfc9177[RFC9177] enabled at both ends of a
+session, it is possible to define the retry counts etc. for data recovery.
+Further information can be found in
+"https://rfc-editor.org/rfc/rfc9177#section-7.2[RFC9177
+7.2. Non-confirmable (NON)]".
+
 It is also possible to set up packet losses, for both confirmable, and
 non-confirmable messages.  This can be used for stress testing packet
 transmission recovery as well as application handling of lossy networks.
 
-The following functions reflect the RFC7252 uppercase names in lowercase
-following the coap_session[sg]_ function prefix.
-
 FUNCTIONS
 ---------
+
+The following functions reflect the https://rfc-editor.org/rfc/rfc7252[RFC7252]
+and https://rfc-editor.org/rfc/rfc9177[RFC9177] uppercase names
+in lowercase following the coap_session_set_ or coap_session_get_ function
+prefix.
 
 *Function: coap_session_set_ack_random_factor()*
 
 The *coap_session_set_ack_random_factor*() function updates the _session_ ack
 random wait factor, used to randomize re-transmissions, with the new _value_.
-The default value is 1.5.
+The default value is 1.5 (RFC7252).
 
 *Function: coap_session_get_ack_random_factor()*
 
 The *coap_session_get_ack_random_factor*() function returns the current
-_session_ ack random wait factor.
+_session_ ack random wait factor (RFC7252).
 
 *Function: coap_session_set_ack_timeout()*
 
 The *coap_session_set_ack_timeout*() function updates the _session_ initial
-ack or response timeout with the new _value_.  The default value is 2.0.
+ack or response timeout with the new _value_.  The default value is 2.0
+(RFC7252).
 
 *Function: coap_session_get_ack_timeout()*
 
 The *coap_session_get_ack_timeout*() function returns the current _session_
-initial ack or response timeout.
+initial ack or response timeout (RFC7252).
 
 *Function: coap_session_set_default_leisure()*
 
 The *coap_session_set_default_leisure*() function updates the _session_
-default leisure time with the new _value_.  The initial default value is 5.0.
+default leisure time with the new _value_.  The default value is 5.0 (RFC7252).
 
 *Function: coap_session_get_default_leisure()*
 
 The *coap_session_get_default_leisure*() function returns the current _session_
-default leisure time.
+default leisure time (RFC7252).
+
+*Function: coap_session_set_max_payloads()*
+
+The *coap_session_set_max_payloads*() function updates the _session_ maximum
+payloads count with the new _value_.  The default value is 10 (RFC9177).
+
+*NOTE:* Both ends of the session must have the same maximum payloads value to
+minimize any recovery times.
+
+*Function: coap_session_get_max_payloads()*
+
+The *coap_session_get_max_payloads*() function returns the current _session_
+maximum payloads count (RFC9177).
 
 *Function: coap_session_set_max_retransmit()*
 
 The *coap_session_set_max_retransmit*() function updates the _session_ maximum
-retransmit count with the new _value_.  The default value is 4.
+retransmit count with the new _value_.  The default value is 4 (RFC7252).
 
 *Function: coap_session_get_max_retransmit()*
 
 The *coap_session_get_max_retransmit*() function returns the current _session_
-maximum retransmit count.
+maximum retransmit count (RFC7252).
+
+*Function: coap_session_set_non_max_retransmit()*
+
+The *coap_session_set_non_max_retransmit*() function updates the _session_
+maximum non retransmit count with the new _value_.  The default value is 4
+(RFC9177).
+
+*Function: coap_session_get_non_max_retransmit()*
+
+The *coap_session_get_non_max_retransmit*() function returns the current
+_session_ maximum non retransmit count (RFC9177).
+
+*Function: coap_session_set_non_receive_timeout()*
+
+The *coap_session_set_non_receive_timeout*() function updates the _session_
+non receive timeout with the new _value_.  The default value is 4.0
+(RFC9177).
+
+*Function: coap_session_get_non_receive_timeout()*
+
+The *coap_session_get_non_receive_timeout*() function returns the current
+_session_ non receive timeout (RFC9177).
+
+*Function: coap_session_set_non_timeout()*
+
+The *coap_session_set_non_timeout*() function updates the _session_
+non timeout with the new _value_.  The default value is 2.0
+(RFC9177).
+
+*Function: coap_session_get_non_timeout()*
+
+The *coap_session_get_non_timeout*() function returns the current
+_session_ non timeout (RFC9177).
 
 *Function: coap_session_set_nstart()*
 
 The *coap_session_set_nstart*() function updates the _session_ nstart
-with the new _value_.  The default value is 1.
+with the new _value_.  The default value is 1 (RFC7252).
 
 *Function: coap_session_set_probing_rate()*
 
 The *coap_session_get_nstart*() function returns the current _session_
+nstart value (RFC7252).
 
 *Function: coap_session_set_probing_rate()*
-nstart value.
 
 The *coap_session_set_probing_rate*() function updates the _session_ probing
-rate with the new _value_.  The default value is 1 byte per second.
+rate with the new _value_.  The default value is 1 byte per second (RFC7252).
 
 *Function: coap_session_get_probing_rate()*
 
 The *coap_session_get_probing_rate*() function returns the current _session_
-probing rate value.
+probing rate value (RFC7252).
 
 *Function: coap_debug_set_packet_loss()*
 
@@ -199,7 +292,9 @@ To remove any packet losses, set the _loss_level_ to "0%".
 RETURN VALUES
 -------------
 *coap_session_get_ack_random_factor*(), *coap_session_get_ack_timeout*(),
-*coap_session_get_default_leisure*(), *coap_session_get_max_retransmit*(),
+*coap_session_get_default_leisure*(), *coap_session_get_max_payloads*(),
+*coap_session_get_max_retransmit*(), *coap_session_get_non_max_retransmit*(),
+*coap_session_get_non_receive_timeout*(), *coap_session_get_non_timeout*(),
 *coap_session_get_nstart*() and *coap_session_get_probing_rate*() return their
 respective current values.
 
@@ -209,14 +304,14 @@ correctly, otherwise 1 if successful.
 TESTING
 -------
 
-The libcoap recovery/re-transmit logic will only work for confirmable requests.
+The libcoap RFC7252 recovery/re-transmit logic will only work for confirmable
+requests or if RFC9177 support is enabled for non-confirmable large body
+transmissions that need to span multiple packets.
 
 To see what is happening (other than by sniffing the network traffic), the
 logging level needs to be set to COAP_LOG_DEBUG in the client by using
 *coap_set_log_level*(COAP_LOG_DEBUG) and
 *coap_dtls_set_log_level*(COAP_LOG_DEBUG).
-
-The client needs to be sending confirmable requests during the test.
 
 The server can either be stopped, or if packet loss levels are set to 100% by
 using *coap_debug_set_packet_loss*("100%") when receiving the client requests.
@@ -228,10 +323,16 @@ this is the case, then you need to make use of (on the server)
 *coap_debug_set_packet_loss*("100%") or put in some packet filtering to drop the
 packets.
 
-The client should then restart transmitting the requests based on the
-ack_timeout, ack_random_factor and max_retransmit values.  The client's
-nack_handler will get called with COAP_NACK_TOO_MANY_RETRIES when the
-confirmable request cannot be successfully transmitted.
+For confirmable transmissions, the client should then restart transmitting the
+requests based on the ack_timeout, ack_random_factor and max_retransmit values.
+The client's nack_handler will get called with COAP_NACK_TOO_MANY_RETRIES when
+the confirmable request cannot be successfully transmitted.
+
+For non-confirmable block transmissions (RFC9177 enabled), the client should
+then restart transmitting the missing requests based on the max_payloads,
+non_timeout, non_receive_timeout, and non_max_retransmit values. The client's
+nack_handler will get called with COAP_NACK_TOO_MANY_RETRIES when
+the non-confirmable large body request cannot be successfully transmitted.
 
 
 FURTHER INFORMATION
@@ -239,6 +340,8 @@ FURTHER INFORMATION
 See
 
 "https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+"https://rfc-editor.org/rfc/rfc9177[RFC9177: Constrained Application Protocol (CoAP) Block-Wise Transfer Options Supporting Robust Transmission]"
 
 for further information.
 

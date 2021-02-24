@@ -41,6 +41,21 @@
 #define COAP_ASYNC_SUPPORT 1
 #endif
 
+#ifndef COAP_WITH_OBSERVE_PERSIST
+/* Define to 1 to build support for persisting observes. */
+#define COAP_WITH_OBSERVE_PERSIST 0
+#endif
+
+#ifndef COAP_WS_SUPPORT
+/* Define to 1 to build with WebSockets support. */
+#define COAP_WS_SUPPORT 0
+#endif
+
+#ifndef COAP_Q_BLOCK_SUPPORT
+/* Define to 1 to build with Q-Block (RFC9177) support. */
+#define COAP_Q_BLOCK_SUPPORT 0
+#endif
+
 #define PACKAGE_NAME "libcoap"
 #define PACKAGE_VERSION "4.3.1"
 #define PACKAGE_STRING "libcoap 4.3.1"

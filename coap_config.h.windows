@@ -118,6 +118,11 @@
 #define COAP_WS_SUPPORT 0
 #endif
 
+#ifndef COAP_Q_BLOCK_SUPPORT
+/* Define to 1 to build with Q-Block (RFC9177) support. */
+#define COAP_Q_BLOCK_SUPPORT 0
+#endif
+
 #ifndef COAP_MAX_LOGGING_LEVEL
 /* Define to 0-8 for maximum logging level. */
 #define COAP_MAX_LOGGING_LEVEL 8

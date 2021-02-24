@@ -442,7 +442,8 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
   * API for updating transmission parameters for CoAP rate control.
   * The transmission parameters for CoAP rate control ("Congestion
   * Control" in stream-oriented protocols) are defined in
-  * https://rfc-editor.org/rfc/rfc7252#section-4.8
+  * https://rfc-editor.org/rfc/rfc7252#section-4.8 and
+  * https://rfc-editor.org/rfc/rfc9177#section-6.2
   * @{
   */
 
@@ -496,6 +497,42 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
    * Configurable using coap_session_set_probing_rate()
    */
 #define COAP_DEFAULT_PROBING_RATE (1U)
+
+  /**
+   * Number of Q-Block1 or Q-Block2 payloads that can be sent in a burst
+   * before a delay has to kick in.
+   * RFC9177 Section 6.2 Default value of MAX_PAYLOAD is 10
+   *
+   * Configurable using coap_session_set_max_payloads()
+   */
+#define COAP_DEFAULT_MAX_PAYLOADS (10U)
+
+  /**
+   * The number of times for requests for re-transmission of missing Q-Block1
+   * when no response has been received.
+   * RFC9177 Section 6.2 Default value of NON_MAX_RETRANSMIT is 4
+   *
+   * Configurable using coap_session_set_non_max_retransmit()
+   */
+#define COAP_DEFAULT_NON_MAX_RETRANSMIT (4U)
+
+  /**
+   * The delay (+ ACK_RANDOM_FACTOR) to introduce once NON MAX_PAYLOADS
+   * Q-Block1 or Q-Block2 have been sent to reduce congestion control.
+   * RFC9177 Section 6.2 Default value of NON_TIMEOUT is 2.
+   *
+   * Configurable using coap_session_set_non_timeout()
+   */
+#define COAP_DEFAULT_NON_TIMEOUT ((coap_fixed_point_t){2,0})
+
+  /**
+   * The time to wait for any missing Q-Block1 or Q-Block2 packets before
+   * requesting re-transmission of missing packets.
+   * RFC9177 Section 6.2 Default value of NON_RECEIVE_TIMEOUT is 4.
+   *
+   * Configurable using coap_session_set_non_receive_timeout()
+   */
+#define COAP_DEFAULT_NON_RECEIVE_TIMEOUT ((coap_fixed_point_t){4,0})
 
   /**
    * The MAX_LATENCY definition.
@@ -645,6 +682,105 @@ void coap_session_set_probing_rate(coap_session_t *session, uint32_t value);
 * @return Current probing_rate value
 */
 uint32_t coap_session_get_probing_rate(const coap_session_t *session);
+
+/**
+* Set the CoAP maximum payloads count of Q-Block1 or Q-Block2 before delay
+* is introduced
+* RFC9177 MAX_PAYLOADS
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 10 and should not normally
+*              get changed.
+*/
+void coap_session_set_max_payloads(coap_session_t *session,
+                                     uint16_t value);
+
+/**
+* Get the CoAP maximum payloads count of Q-Block1 or Q-Block2 before delay
+* is introduced
+* RFC9177 MAX_PAYLOADS
+*
+* @param session The CoAP session.
+*
+* @return Current maximum payloads value
+*/
+uint16_t coap_session_get_max_payloads(const coap_session_t *session);
+
+/**
+* Set the CoAP NON maximum retransmit count of missing Q-Block1 or Q-Block2
+* requested before there is any response
+* RFC9177 NON_MAX_RETRANSMIT
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 4 and should not normally
+*              get changed.
+*/
+void coap_session_set_non_max_retransmit(coap_session_t *session,
+                                     uint16_t value);
+
+/**
+* Get the CoAP NON maximum retransmit count of missing Q-Block1 or Q-Block2
+* requested before there is any response
+* RFC9177 NON_MAX_RETRANSMIT
+*
+* @param session The CoAP session.
+*
+* @return Current maximum NON max retransmit value
+*/
+uint16_t coap_session_get_non_max_retransmit(const coap_session_t *session);
+
+/**
+* Set the CoAP non timeout delay timeout
+*
+* Number of seconds to delay (+ ACK_RANDOM_FACTOR) before sending off the next
+* set of NON MAX_PAYLOADS
+* RFC9177 NON_TIMEOUT
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 2.0 and should not normally
+*              get changed.
+*/
+void coap_session_set_non_timeout(coap_session_t *session,
+                                  coap_fixed_point_t value);
+
+/**
+* Get the CoAP MAX_PAYLOADS limit delay timeout
+*
+* Number of seconds to delay (+ ACK_RANDOM_FACTOR) before sending off the next
+* set of NON MAX_PAYLOADS
+* RFC9177 NON_TIMEOUT
+*
+* @param session The CoAP session.
+*
+* @return NON MAX_PAYLOADS delay
+*/
+coap_fixed_point_t coap_session_get_non_timeout(const coap_session_t *session);
+
+/**
+* Set the CoAP non receive timeout delay timeout
+*
+* Number of seconds to delay before requesting missing packets
+* RFC9177 NON_RECEIVE_TIMEOUT
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 4.0 and should not normally
+*              get changed.  Must be 1 sec greater than NON_TIMEOUT_RANDOM
+*/
+void coap_session_set_non_receive_timeout(coap_session_t *session,
+                                          coap_fixed_point_t value);
+
+/**
+* Get the CoAP non receive timeout delay timeout
+*
+* Number of seconds to delay before requesting missing packets
+* RFC9177 NON_RECEIVE_TIMEOUT
+*
+* @param session The CoAP session.
+*
+* @return NON_RECEIVE_TIMEOUT delay
+*/
+coap_fixed_point_t coap_session_get_non_receive_timeout(
+                                               const coap_session_t *session);
 
       /** @} */
 /**

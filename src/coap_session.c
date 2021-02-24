@@ -26,6 +26,126 @@
 #include <sys/timerfd.h>
 #endif /* COAP_EPOLL_SUPPORT */
 
+coap_fixed_point_t
+coap_multi_fixed_fixed(coap_fixed_point_t fp1, coap_fixed_point_t fp2) {
+  coap_fixed_point_t res;
+  uint32_t fr = fp1.fractional_part * fp2.fractional_part;
+
+  res.integer_part = fp1.integer_part * fp2.integer_part + fr/1000;
+  res.fractional_part = fr % 1000;
+  return res;
+}
+
+coap_fixed_point_t
+coap_multi_fixed_uint(coap_fixed_point_t fp1, uint32_t u2) {
+  coap_fixed_point_t res;
+  uint32_t fr = fp1.fractional_part * u2;
+
+  res.integer_part = fp1.integer_part * u2 + fr/1000;
+  res.fractional_part = fr % 1000;
+  return res;
+}
+
+coap_fixed_point_t
+coap_add_fixed_fixed(coap_fixed_point_t fp1, coap_fixed_point_t fp2) {
+  coap_fixed_point_t res;
+  uint32_t fr = fp1.fractional_part + fp2.fractional_part;
+
+  res.integer_part = fp1.integer_part + fp2.integer_part + fr/1000;
+  res.fractional_part = fr % 1000;
+  return res;
+}
+
+coap_fixed_point_t
+coap_add_fixed_uint(coap_fixed_point_t fp1, uint32_t u2) {
+  coap_fixed_point_t res = fp1;
+
+  res.integer_part += u2;
+  return res;
+}
+
+coap_fixed_point_t
+coap_sub_fixed_uint(coap_fixed_point_t fp1, uint32_t u2) {
+  coap_fixed_point_t res = fp1;
+
+  res.integer_part -= u2;
+  return res;
+}
+
+coap_fixed_point_t
+coap_div_fixed_uint(coap_fixed_point_t fp1, uint32_t u2) {
+  coap_fixed_point_t res;
+  uint32_t num = (fp1.integer_part * 1000 + fp1.fractional_part) / u2;
+
+  res.integer_part = num / 1000;
+  res.fractional_part = num % 1000;
+  return res;
+}
+
+#if COAP_Q_BLOCK_SUPPORT
+coap_fixed_point_t
+coap_get_non_timeout_random(coap_session_t *session) {
+  coap_fixed_point_t res;
+  uint8_t ran;
+
+  coap_prng(&ran, sizeof(ran));
+  res = coap_sub_fixed_uint(COAP_ACK_RANDOM_FACTOR(session), 1);
+  res = coap_multi_fixed_uint(res, ran);
+  res = coap_div_fixed_uint(res, 0xff);
+  res = coap_add_fixed_fixed(COAP_NON_TIMEOUT(session), res);
+  return res;
+}
+
+coap_tick_t
+coap_get_non_timeout_random_ticks(coap_session_t *session) {
+  coap_fixed_point_t res = coap_get_non_timeout_random(session);
+  coap_tick_t ticks = (res.integer_part * COAP_TICKS_PER_SECOND +
+                       res.fractional_part * COAP_TICKS_PER_SECOND / 1000);
+
+  return ticks;
+}
+
+/*
+ * Save away derived Congestion Control parameters for speed of access.
+ * They will get updated whenever a component variable is updated.
+ */
+
+/*
+ * NON_PROBING_WAIT = NON_TIMEOUT * ((2 ** NON_MAX_RETRANSMIT) - 1) *
+ * ACK_RANDOM_FACTOR + (2 * MAX_LATENCY) + NON_TIMEOUT_RANDOM
+ *
+ * Do not include NON_TIMEOUT_RANDOM as that changes
+ */
+static void
+coap_session_fix_non_probing_wait_base(coap_session_t *s)
+{
+  coap_fixed_point_t res;
+
+  res = coap_multi_fixed_uint(COAP_NON_TIMEOUT(s),
+                               ((1 << (COAP_NON_MAX_RETRANSMIT(s) + 1)) -1));
+  res = coap_multi_fixed_fixed(res, COAP_ACK_RANDOM_FACTOR(s));
+  res = coap_add_fixed_uint(res, 2 * COAP_DEFAULT_MAX_LATENCY);
+  COAP_NON_PROBING_WAIT_BASE(s) = res;
+}
+
+/*
+ * NON_PARTIAL_TIMEOUT = NON_TIMEOUT * ((2 ** NON_MAX_RETRANSMIT) - 1) *
+ * ACK_RANDOM_FACTOR + (2 * MAX_LATENCY) + NON_TIMEOUT
+ */
+static void
+coap_session_fix_non_partial_timeout(coap_session_t *s)
+{
+  coap_fixed_point_t res;
+
+  res = coap_multi_fixed_uint(COAP_NON_TIMEOUT(s),
+                               ((1 << (COAP_NON_MAX_RETRANSMIT(s) + 1)) -1));
+  res = coap_multi_fixed_fixed(res, COAP_ACK_RANDOM_FACTOR(s));
+  res = coap_add_fixed_uint(res, 2 * COAP_DEFAULT_MAX_LATENCY);
+  res = coap_add_fixed_fixed(res, COAP_NON_TIMEOUT(s));
+  COAP_NON_PARTIAL_TIMEOUT(s) = res;
+}
+#endif /* COAP_Q_BLOCK_SUPPORT */
+
 void
 coap_session_set_ack_timeout(coap_session_t *session, coap_fixed_point_t value) {
   if (value.integer_part > 0 && value.fractional_part < 1000) {
@@ -44,7 +164,12 @@ coap_session_set_ack_random_factor(coap_session_t *session,
     coap_log_debug("***%s: session ack_random_factor set to %u.%03u\n",
            coap_session_str(session), session->ack_random_factor.integer_part,
            session->ack_random_factor.fractional_part);
+#if COAP_Q_BLOCK_SUPPORT
+    coap_session_fix_non_probing_wait_base(session);
+    coap_session_fix_non_partial_timeout(session);
+#endif /* COAP_Q_BLOCK_SUPPORT */
   }
+  return;
 }
 
 void
@@ -85,6 +210,72 @@ coap_session_set_probing_rate(coap_session_t *session, uint32_t value) {
   }
 }
 
+void
+coap_session_set_max_payloads(coap_session_t *session, uint16_t value) {
+#if COAP_Q_BLOCK_SUPPORT
+  if (value > 0) {
+    session->max_payloads = value;
+    coap_log_debug("***%s: session max_payloads set to %u\n",
+           coap_session_str(session), session->max_payloads);
+    coap_session_fix_non_probing_wait_base(session);
+    coap_session_fix_non_partial_timeout(session);
+  }
+#else /* ! COAP_Q_BLOCK_SUPPORT */
+  (void)session;
+  (void)value;
+#endif /* ! COAP_Q_BLOCK_SUPPORT */
+}
+
+void
+coap_session_set_non_max_retransmit(coap_session_t *session, uint16_t value) {
+#if COAP_Q_BLOCK_SUPPORT
+  if (value > 0) {
+    session->non_max_retransmit = value;
+    coap_log_debug("***%s: session non_max_retransmit set to %u\n",
+           coap_session_str(session), session->non_max_retransmit);
+    coap_session_fix_non_probing_wait_base(session);
+    coap_session_fix_non_partial_timeout(session);
+  }
+#else /* ! COAP_Q_BLOCK_SUPPORT */
+  (void)session;
+  (void)value;
+#endif /* ! COAP_Q_BLOCK_SUPPORT */
+}
+
+void
+coap_session_set_non_timeout(coap_session_t *session,
+                             coap_fixed_point_t value) {
+#if COAP_Q_BLOCK_SUPPORT
+  if (value.integer_part > 0 && value.fractional_part < 1000) {
+    session->non_timeout = value;
+    coap_log_debug("***%s: session non_timeout set to %u.%03u\n",
+           coap_session_str(session), session->non_timeout.integer_part,
+           session->non_timeout.fractional_part);
+    coap_session_fix_non_probing_wait_base(session);
+    coap_session_fix_non_partial_timeout(session);
+  }
+#else /* ! COAP_Q_BLOCK_SUPPORT */
+  (void)session;
+  (void)value;
+#endif /* ! COAP_Q_BLOCK_SUPPORT */
+}
+
+void
+coap_session_set_non_receive_timeout(coap_session_t *session,
+                                     coap_fixed_point_t value) {
+#if COAP_Q_BLOCK_SUPPORT
+  if (value.integer_part > 0 && value.fractional_part < 1000)
+    session->non_receive_timeout = value;
+  coap_log_debug("***%s: session non_receive_timeout set to %u.%03u\n",
+           coap_session_str(session),
+           session->non_receive_timeout.integer_part,
+           session->non_receive_timeout.fractional_part);
+#else /* ! COAP_Q_BLOCK_SUPPORT */
+  (void)session;
+  (void)value;
+#endif /* ! COAP_Q_BLOCK_SUPPORT */
+}
+
 coap_fixed_point_t
 coap_session_get_ack_timeout(const coap_session_t *session) {
   return session->ack_timeout;
@@ -113,6 +304,46 @@ coap_session_get_default_leisure(const coap_session_t *session) {
 uint32_t
 coap_session_get_probing_rate(const coap_session_t *session) {
   return session->probing_rate;
+}
+
+uint16_t
+coap_session_get_max_payloads(const coap_session_t *session) {
+#if COAP_Q_BLOCK_SUPPORT
+  return session->max_payloads;
+#else /* ! COAP_Q_BLOCK_SUPPORT */
+  (void)session;
+  return COAP_DEFAULT_MAX_PAYLOADS;
+#endif /* ! COAP_Q_BLOCK_SUPPORT */
+}
+
+uint16_t
+coap_session_get_non_max_retransmit(const coap_session_t *session) {
+#if COAP_Q_BLOCK_SUPPORT
+  return session->non_max_retransmit;
+#else /* ! COAP_Q_BLOCK_SUPPORT */
+  (void)session;
+  return COAP_DEFAULT_NON_MAX_RETRANSMIT;
+#endif /* ! COAP_Q_BLOCK_SUPPORT */
+}
+
+coap_fixed_point_t
+coap_session_get_non_timeout(const coap_session_t *session) {
+#if COAP_Q_BLOCK_SUPPORT
+  return session->non_timeout;
+#else /* ! COAP_Q_BLOCK_SUPPORT */
+  (void)session;
+  return COAP_DEFAULT_NON_TIMEOUT;
+#endif /* ! COAP_Q_BLOCK_SUPPORT */
+}
+
+coap_fixed_point_t
+coap_session_get_non_receive_timeout(const coap_session_t *session) {
+#if COAP_Q_BLOCK_SUPPORT
+  return session->non_receive_timeout;
+#else /* ! COAP_Q_BLOCK_SUPPORT */
+  (void)session;
+  return COAP_DEFAULT_NON_RECEIVE_TIMEOUT;
+#endif /* ! COAP_Q_BLOCK_SUPPORT */
 }
 
 coap_session_t *
@@ -206,6 +437,14 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   session->nstart = COAP_DEFAULT_NSTART;
   session->default_leisure = COAP_DEFAULT_DEFAULT_LEISURE;
   session->probing_rate = COAP_DEFAULT_PROBING_RATE;
+#if COAP_Q_BLOCK_SUPPORT
+  session->max_payloads = COAP_DEFAULT_MAX_PAYLOADS;
+  session->non_max_retransmit = COAP_DEFAULT_NON_MAX_RETRANSMIT;
+  session->non_timeout = COAP_DEFAULT_NON_TIMEOUT;
+  session->non_receive_timeout = COAP_DEFAULT_NON_RECEIVE_TIMEOUT;
+  coap_session_fix_non_probing_wait_base(session);
+  coap_session_fix_non_partial_timeout(session);
+#endif /* COAP_Q_BLOCK_SUPPORT */
   session->dtls_event = -1;
   session->last_ping_mid = COAP_INVALID_MID;
   session->last_ack_mid = COAP_INVALID_MID;
@@ -255,9 +494,7 @@ coap_session_mfree(coap_session_t *session) {
 
   if (session->partial_pdu)
     coap_delete_pdu(session->partial_pdu);
-
   session->sock.lfunc[COAP_LAYER_SESSION].close(session);
-
   if (session->psk_identity)
     coap_delete_bin_const(session->psk_identity);
   if (session->psk_key)
