@@ -1,7 +1,7 @@
 /*
  * resource.h -- generic resource handling
  *
- * Copyright (C) 2010,2011,2014,2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011,2014-2021 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -39,7 +39,7 @@
  */
 typedef void (*coap_method_handler_t)
   (coap_context_t  *,
-   struct coap_resource_t *,
+   coap_resource_t *,
    coap_session_t *,
    coap_pdu_t *,
    coap_binary_t * /* token */,
@@ -48,13 +48,6 @@ typedef void (*coap_method_handler_t)
 
 #define COAP_ATTR_FLAGS_RELEASE_NAME  0x1
 #define COAP_ATTR_FLAGS_RELEASE_VALUE 0x2
-
-typedef struct coap_attr_t {
-  struct coap_attr_t *next;
-  coap_str_const_t *name;
-  coap_str_const_t *value;
-  int flags;
-} coap_attr_t;
 
 /** The URI passed to coap_resource_init() is free'd by coap_delete_resource(). */
 #define COAP_RESOURCE_FLAGS_RELEASE_URI 0x1
@@ -81,66 +74,6 @@ typedef struct coap_attr_t {
  * https://tools.ietf.org/html/rfc8782#section-4.4.2.1
  */
 #define COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS  0x4
-
-typedef struct coap_resource_t {
-  unsigned int dirty:1;          /**< set to 1 if resource has changed */
-  unsigned int partiallydirty:1; /**< set to 1 if some subscribers have not yet
-                                  *   been notified of the last change */
-  unsigned int observable:1;     /**< can be observed */
-  unsigned int cacheable:1;      /**< can be cached */
-  unsigned int is_unknown:1;     /**< resource created for unknown handler */
-  unsigned int is_proxy_uri:1;   /**< resource created for proxy URI handler */
-
-  /**
-   * Used to store handlers for the seven coap methods @c GET, @c POST, @c PUT,
-   * @c DELETE, @c FETCH, @c PATCH and @c IPATCH.
-   * coap_dispatch() will pass incoming requests to the handler
-   * that corresponds to its request method or generate a 4.05 response if no
-   * handler is available.
-   */
-  coap_method_handler_t handler[7];
-
-  UT_hash_handle hh;
-
-  coap_attr_t *link_attr; /**< attributes to be included with the link format */
-  coap_subscription_t *subscribers;  /**< list of observers for this resource */
-
-  /**
-   * Request URI Path for this resource. This field will point into static
-   * or allocated memory which must remain there for the duration of the
-   * resource.
-   */
-  coap_str_const_t *uri_path;  /**< the key used for hash lookup for this resource */
-  int flags;                   /**< Or'd set of COAP_RESOURCE_FLAGS_ */
-
-  /**
-  * The next value for the Observe option. This field must be increased each
-  * time the resource changes. Only the lower 24 bits are sent.
-  */
-  unsigned int observe;
-
-  /**
-   * Pointer back to the context that 'owns' this resource.
-   */
-  coap_context_t *context;
-
-  /**
-   * Count of valid names this host is known by (proxy support)
-   */
-  size_t proxy_name_count;
-
-  /**
-   * Array valid names this host is known by (proxy support)
-   */
-  coap_str_const_t ** proxy_name_list;
-
-  /**
-   * This pointer is under user control. It can be used to store context for
-   * the coap handler.
-   */
-  void *user_data;
-
-} coap_resource_t;
 
 /**
  * Creates a new resource object and initializes the link field to the string
@@ -224,6 +157,27 @@ coap_resource_t *coap_resource_proxy_uri_init(coap_method_handler_t handler,
                       size_t host_name_count, const char *host_name_list[]);
 
 /**
+ * Returns the resource identified by the unique string @p uri_path. If no
+ * resource was found, this function returns @c NULL.
+ *
+ * @param context  The context to look for this resource.
+ * @param uri_path  The unique string uri of the resource.
+ *
+ * @return         A pointer to the resource or @c NULL if not found.
+ */
+coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
+                                                coap_str_const_t *uri_path);
+
+/**
+ * Get the uri_path from a @p resource.
+ *
+ * @param resource The CoAP resource to check.
+ *
+ * @return         The uri_path if it exists or @c NULL otherwise.
+ */
+coap_str_const_t* coap_resource_get_uri_path(coap_resource_t *resource);
+
+/**
  * Sets the notification message type of resource @p resource to given
  * @p mode
 
@@ -231,38 +185,43 @@ coap_resource_t *coap_resource_proxy_uri_init(coap_method_handler_t handler,
  * @param mode     Must be one of @c COAP_RESOURCE_FLAGS_NOTIFY_NON
  *                 or @c COAP_RESOURCE_FLAGS_NOTIFY_CON.
  */
-COAP_STATIC_INLINE void
-coap_resource_set_mode(coap_resource_t *resource, int mode) {
-  resource->flags = (resource->flags &
-    ~(COAP_RESOURCE_FLAGS_NOTIFY_CON|COAP_RESOURCE_FLAGS_NOTIFY_NON)) |
-    (mode & (COAP_RESOURCE_FLAGS_NOTIFY_CON|COAP_RESOURCE_FLAGS_NOTIFY_NON));
-}
+void coap_resource_set_mode(coap_resource_t *resource, int mode);
 
 /**
  * Sets the user_data. The user_data is exclusively used by the library-user
- * and can be used as context in the handler functions.
+ * and can be used as user defined context in the handler functions.
  *
  * @param resource Resource to attach the data to
  * @param data     Data to attach to the user_data field. This pointer is
  *                 only used for storage, the data remains under user control
  */
-COAP_STATIC_INLINE void
-coap_resource_set_userdata(coap_resource_t *resource, void *data) {
-  resource->user_data = data;
-}
+void coap_resource_set_userdata(coap_resource_t *resource, void *data);
 
 /**
  * Gets the user_data. The user_data is exclusively used by the library-user
  * and can be used as context in the handler functions.
  *
- * @param resource Resource to retrieve the user_darta from
+ * @param resource Resource to retrieve the user_data from
  *
  * @return        The user_data pointer
  */
-COAP_STATIC_INLINE void *
-coap_resource_get_userdata(coap_resource_t *resource) {
-  return resource->user_data;
-}
+void *coap_resource_get_userdata(coap_resource_t *resource);
+
+/**
+ * Definition of release resource user_data callback function
+ */
+typedef void (*coap_resource_release_userdata_handler_t)(void *user_data);
+
+/**
+ * Defines the context wide callback to use to when the resource is deleted
+ * to release the data held in the resource's user_data.
+ *
+ * @param context  The context to associate the release callback with
+ * @param callback The callback to invoke when the resource is deleted or NULL
+ *
+ */
+void coap_resource_release_userdata_handler(coap_context_t *context,
+                          coap_resource_release_userdata_handler_t callback);
 
 /**
  * Registers the given @p resource for @p context. The resource must have been
@@ -287,13 +246,16 @@ void coap_add_resource(coap_context_t *context, coap_resource_t *resource);
 int coap_delete_resource(coap_context_t *context, coap_resource_t *resource);
 
 /**
- * Deletes all resources from given @p context and frees their storage.
+ * Registers the specified @p handler as message handler for the request type @p
+ * method
  *
- * Internal function.
- *
- * @param context The CoAP context with the resources to be deleted.
+ * @param resource The resource for which the handler shall be registered.
+ * @param method   The CoAP request method to handle.
+ * @param handler  The handler to register with @p resource.
  */
-void coap_delete_all_resources(coap_context_t *context);
+void coap_register_handler(coap_resource_t *resource,
+                           coap_request_t method,
+                           coap_method_handler_t handler);
 
 /**
  * Registers a new attribute with the given @p resource. As the
@@ -343,13 +305,13 @@ coap_attr_t *coap_find_attr(coap_resource_t *resource,
                             coap_str_const_t *name);
 
 /**
- * Deletes an attribute.
- * Note: This is for internal use only, as it is not deleted from its chain.
+ * Returns @p attribute's value.
  *
- * @param attr Pointer to a previously created attribute.
+ * @param attribute Pointer to attribute.
  *
+ * @return Attribute's value or @c NULL.
  */
-void coap_delete_attr(coap_attr_t *attr);
+coap_str_const_t *coap_attr_get_value(coap_attr_t *attribute);
 
 /**
  * Status word to encode the result of conditional print or copy operations such
@@ -513,65 +475,7 @@ int coap_delete_observer(coap_resource_t *resource,
  */
 void coap_delete_observers(coap_context_t *context, coap_session_t *session);
 
-/**
- * Set whether a @p resource is observable.  If the resource is observable
- * and the client has set the COAP_OPTION_OBSERVE in a request packet, then
- * whenever the state of the resource changes (a call to
- * coap_resource_trigger_observe()), an Observer response will get sent.
- *
- * @param resource The CoAP resource to use.
- * @param mode     @c 1 if Observable is to be set, @c 0 otherwise.
- *
- */
-COAP_STATIC_INLINE void
-coap_resource_set_get_observable(coap_resource_t *resource, int mode) {
-  resource->observable = mode ? 1 : 0;
-}
-
-/**
- * Initiate the sending of an Observe packet for all observers of @p resource,
- * optionally matching @p query if not NULL
- *
- * @param resource The CoAP resource to use.
- * @param query    The Query to match against or NULL
- *
- * @return         @c 1 if the Observe has been triggered, @c 0 otherwise.
- */
-int
-coap_resource_notify_observers(coap_resource_t *resource,
-                               const coap_string_t *query);
-
-/**
- * Get the UriPath from a @p resource.
- *
- * @param resource The CoAP resource to check.
- *
- * @return         The UriPath if it exists or @c NULL otherwise.
- */
-COAP_STATIC_INLINE coap_str_const_t*
-coap_resource_get_uri_path(coap_resource_t *resource) {
-  if (resource)
-    return resource->uri_path;
-  return NULL;
-}
-
 /** @} */
-
-/**
- * Checks for all known resources, if they are dirty and notifies subscribed
- * observers.
- */
-void coap_check_notify(coap_context_t *context);
-
-coap_print_status_t coap_print_wellknown(coap_context_t *,
-                                         unsigned char *,
-                                         size_t *, size_t,
-                                         coap_opt_t *);
-
-void
-coap_handle_failed_notify(coap_context_t *,
-                          coap_session_t *,
-                          const coap_binary_t *);
 
 /**
  * @deprecated use coap_resource_notify_observers() instead.

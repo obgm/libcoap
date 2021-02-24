@@ -62,7 +62,7 @@ typedef struct coap_l_block1_t {
  * (Responses)
  */
 typedef struct coap_l_block2_t {
-  struct coap_resource_t *resource; /**< associated resource */
+  coap_resource_t *resource; /**< associated resource */
   coap_string_t *query;  /**< Associated query for the resource */
   uint64_t etag;         /**< ETag value */
   coap_time_t maxage_expire; /**< When this entry expires */
@@ -135,7 +135,7 @@ struct coap_lg_srcv_t {
   uint32_t total_len;    /**< Length as indicated by SIZE1 option */
   coap_binary_t *body_data; /**< Used for re-assembling entire body */
   size_t amount_so_far;  /**< Amount of data seen so far */
-  struct coap_resource_t *resource; /**< associated resource */
+  coap_resource_t *resource; /**< associated resource */
   coap_str_const_t *uri_path; /** set to uri_path if unknown resource */
   coap_rblock_t rec_blocks; /** < list of received blocks */
   uint8_t last_token[8]; /**< last used token */
@@ -211,7 +211,7 @@ void coap_block_delete_lg_xmit(coap_session_t *session,
  */
 int coap_add_data_large_internal(struct coap_session_t *session,
                         coap_pdu_t *pdu,
-                        struct coap_resource_t *resource,
+                        coap_resource_t *resource,
                         const coap_string_t *query,
                         int maxage,
                         uint64_t etag,

@@ -42,6 +42,7 @@ struct coap_string_t;
  *
  */
 typedef struct coap_pdu_t coap_pdu_t;
+typedef struct coap_context_t coap_context_t;
 
 /*
  * typedef all the opaque structures that are defined in coap_*_internal.h
@@ -49,7 +50,9 @@ typedef struct coap_pdu_t coap_pdu_t;
 
 /* ************* coap_cache_internal.h ***************** */
 
-/** Cache Entry information */
+/**
+ * Cache Entry information
+ */
 typedef struct coap_cache_entry_t coap_cache_entry_t;
 typedef struct coap_cache_key_t coap_cache_key_t;
 
@@ -60,7 +63,16 @@ typedef struct coap_cache_key_t coap_cache_key_t;
 */
 typedef struct coap_lg_xmit_t coap_lg_xmit_t;
 typedef struct coap_lg_crcv_t coap_lg_crcv_t;
+
 typedef struct coap_lg_srcv_t coap_lg_srcv_t;
+
+/* ************* coap_cache_internal.h ***************** */
+
+/**
+ * Resource information
+ */
+typedef struct coap_attr_t coap_attr_t;
+typedef struct coap_resource_t coap_resource_t;
 
 /* ************* coap_session_internal.h ***************** */
 

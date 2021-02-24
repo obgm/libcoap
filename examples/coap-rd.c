@@ -118,7 +118,7 @@ handle_sigint(int signum UNUSED_PARAM) {
 
 static void
 hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
-                 struct coap_resource_t *resource,
+                 coap_resource_t *resource,
                  coap_session_t *session UNUSED_PARAM,
                  coap_pdu_t *request UNUSED_PARAM,
                  coap_binary_t *token UNUSED_PARAM,
@@ -126,8 +126,10 @@ hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
                  coap_pdu_t *response) {
   rd_t *rd = NULL;
   unsigned char buf[3];
+  coap_str_const_t* uri_path = coap_resource_get_uri_path(resource);
 
-  HASH_FIND(hh, resources, resource->uri_path->s, resource->uri_path->length, rd);
+  if (uri_path)
+    HASH_FIND(hh, resources, uri_path->s, uri_path->length, rd);
 
   response->code = COAP_RESPONSE_CODE_CONTENT;
 
@@ -146,7 +148,7 @@ hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
 
 static void
 hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
-                 struct coap_resource_t *resource UNUSED_PARAM,
+                 coap_resource_t *resource UNUSED_PARAM,
                  coap_session_t *session UNUSED_PARAM,
                  coap_pdu_t *request UNUSED_PARAM,
                  coap_binary_t *token UNUSED_PARAM,
@@ -225,15 +227,17 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
 
 static void
 hnd_delete_resource(coap_context_t  *ctx,
-                    struct coap_resource_t *resource,
+                    coap_resource_t *resource,
                     coap_session_t *session UNUSED_PARAM,
                     coap_pdu_t *request UNUSED_PARAM,
                     coap_binary_t *token UNUSED_PARAM,
                     coap_string_t *query UNUSED_PARAM,
                     coap_pdu_t *response) {
   rd_t *rd = NULL;
+  coap_str_const_t* uri_path = coap_resource_get_uri_path(resource);
 
-  HASH_FIND(hh, resources, resource->uri_path->s, resource->uri_path->length, rd);
+  if (uri_path)
+    HASH_FIND(hh, resources, uri_path->s, uri_path->length, rd);
   if (rd) {
     HASH_DELETE(hh, resources, rd);
     rd_delete(rd);
@@ -247,7 +251,7 @@ hnd_delete_resource(coap_context_t  *ctx,
 
 static void
 hnd_get_rd(coap_context_t  *ctx UNUSED_PARAM,
-           struct coap_resource_t *resource UNUSED_PARAM,
+           coap_resource_t *resource UNUSED_PARAM,
            coap_session_t *session UNUSED_PARAM,
            coap_pdu_t *request UNUSED_PARAM,
            coap_binary_t *token UNUSED_PARAM,
@@ -316,7 +320,7 @@ parse_param(const uint8_t *search,
 }
 
 static void
-add_source_address(struct coap_resource_t *resource,
+add_source_address(coap_resource_t *resource,
                    coap_address_t *peer) {
 #define BUFSIZE 64
   char *buf;
@@ -412,7 +416,7 @@ make_rd(coap_pdu_t *pdu) {
 
 static void
 hnd_post_rd(coap_context_t  *ctx,
-            struct coap_resource_t *resource UNUSED_PARAM,
+            coap_resource_t *resource UNUSED_PARAM,
             coap_session_t *session,
             coap_pdu_t *request,
             coap_binary_t *token UNUSED_PARAM,

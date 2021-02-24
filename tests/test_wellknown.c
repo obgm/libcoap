@@ -1,6 +1,6 @@
 /* libcoap unit tests
  *
- * Copyright (C) 2013--2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2013--2021 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
@@ -8,6 +8,7 @@
 
 #include "coap_config.h"
 #include "test_wellknown.h"
+#include "coap_internal.h"
 
 #include <coap.h>
 
@@ -90,7 +91,7 @@ t_wellknown2(void) {
   };
 
   r = coap_resource_init(coap_make_str_const("abcd"), 0);
-  r->observable = 1;
+  coap_resource_set_get_observable(r, 1);
   coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"one\""), 0);
 
   coap_add_resource(ctx, r);

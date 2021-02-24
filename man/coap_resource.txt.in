@@ -16,10 +16,11 @@ coap_resource_unknown_init,
 coap_resource_proxy_uri_init,
 coap_add_resource,
 coap_delete_resource,
-coap_delete_all_resources,
 coap_resource_set_mode,
 coap_resource_set_userdata,
-coap_resource_get_userdata
+coap_resource_get_userdata,
+coap_resource_release_userdata_handler,
+coap_resource_get_uri_path
 - Work with CoAP resources
 
 SYNOPSIS
@@ -41,13 +42,16 @@ coap_resource_t *_resource_);*
 *int coap_delete_resource(coap_context_t *_context_,
 coap_resource_t *_resource_);*
 
-*void coap_delete_all_resources(coap_context_t *_context_);*
-
 *void coap_resource_set_mode(coap_resource_t *_resource_, int _mode_);*
 
 *void coap_resource_set_userdata(coap_resource_t *_resource_, void *_data_);*
 
 *void *coap_resource_get_userdata(coap_resource_t *_resource_);*
+
+*void coap_resource_release_userdata_handler(coap_context_t *_context_,
+coap_resource_release_userdata_handler_t _callback_);*
+
+*coap_str_const_t *coap_resource_get_uri_path(coap_resource_t *_resource_);*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
@@ -140,9 +144,6 @@ The *coap_delete_resource*() function deletes a _resource_ identified by
 _resource_ from _context_. The storage allocated for that _resource_ is freed,
 along with any attrigutes associated with the _resource_.
 
-The *coap_delete_all_resources*() function deletes all resources from
-_context_ and frees their storage.
-
 The *coap_resource_set_mode*() changes the notification message type of
 _resource_ to the given _mode_ which must be one of
 COAP_RESOURCE_FLAGS_NOTIFY_NON, COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS or
@@ -158,6 +159,15 @@ The *coap_resource_get_userdata*() function obtains the user data pointer
 from the _resource_ that had previously been set up by
 *coap_resource_set_userdata*().
 
+The *coap_resource_release_userdata_handler*() function defines the _context_
+wide _callback_ handler to call to release the allocated user data that has
+been added to the resource using *coap_resource_set_userdata*() when the
+resource is deleted. _callback_ can be NULL (which is the default) if nothing
+needs to be freed off.
+
+The *coap_resource_get_uri_path*() function is used to obtain the UriPath of
+the _resource_ definion.
+
 RETURN VALUES
 -------------
 The *coap_resource_init*(), *coap_resource_unknown_init*() and
@@ -169,6 +179,9 @@ found), 1 on success.
 
 The *coap_resource_get_userdata*() function returns the value previously set
 by the *coap_resource_set_userdata*() function or NULL.
+
+The *coap_resource_get_uri_path*() function returns the uri_path or NULL if
+there was a failure.
 
 EXAMPLES
 --------

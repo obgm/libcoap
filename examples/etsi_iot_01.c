@@ -84,23 +84,25 @@ coap_new_payload(size_t size) {
 
 static inline coap_payload_t *
 coap_find_payload(coap_resource_t *resource) {
-  coap_payload_t *p = (coap_payload_t *)resource->user_data;
-  return p;
+  return coap_resource_get_userdata(resource);
 }
 
 static void
 coap_add_payload(coap_resource_t *resource, coap_payload_t *payload){
   assert(payload);
 
-  resource->user_data = payload;
+  coap_resource_set_userdata(resource, payload);
 }
 
 static inline void
 coap_delete_payload(coap_resource_t *resource) {
-  if (resource->user_data) {
-    coap_free(resource->user_data);
-    resource->user_data = NULL;
-  }
+  coap_free(coap_resource_get_userdata(resource));
+  coap_resource_set_userdata(resource, NULL);
+}
+
+static void
+coap_free_userdata(void *data) {
+  coap_free(data);
 }
 
 #if 0
@@ -522,6 +524,7 @@ init_resources(coap_context_t *ctx) {
     coap_add_attr(r, coap_make_str_const("obs"), NULL, 0);
 #endif
     coap_add_resource(ctx, r);
+    coap_resource_release_userdata_handler(ctx, coap_free_userdata);
     coap_add_payload(r, test_payload);
   }
 
@@ -672,8 +675,6 @@ main(int argc, char **argv) {
   if (!ctx)
     return -1;
 
-  coap_register_option(ctx, COAP_OPTION_BLOCK2);
-
   init_resources(ctx);
 
   memset (&sa, 0, sizeof(sa));
@@ -696,9 +697,6 @@ main(int argc, char **argv) {
     check_async(ctx, now);
   }
 
-  RESOURCES_ITER(ctx->resources, r) {
-    coap_delete_payload(r);
-  }
   coap_free_context( ctx );
   coap_cleanup();
 

@@ -69,7 +69,7 @@ static int quit = 0;
 static time_t clock_offset;
 static time_t my_clock_base = 0;
 
-struct coap_resource_t *time_resource = NULL;
+coap_resource_t *time_resource = NULL;
 
 static coap_binary_t *example_data_ptr = NULL;
 static int example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
@@ -177,7 +177,7 @@ handle_sigint(int signum UNUSED_PARAM) {
 
 static void
 hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
-              struct coap_resource_t *resource,
+              coap_resource_t *resource,
               coap_session_t *session,
               coap_pdu_t *request,
               coap_binary_t *token,
@@ -193,7 +193,7 @@ hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
 
 static void
 hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
-             struct coap_resource_t *resource,
+             coap_resource_t *resource,
              coap_session_t *session,
              coap_pdu_t *request,
              coap_binary_t *token,
@@ -242,7 +242,7 @@ hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
 
 static void
 hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
-             struct coap_resource_t *resource,
+             coap_resource_t *resource,
              coap_session_t *session UNUSED_PARAM,
              coap_pdu_t *request,
              coap_binary_t *token UNUSED_PARAM,
@@ -292,7 +292,7 @@ hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
 
 static void
 hnd_delete_time(coap_context_t *ctx UNUSED_PARAM,
-                struct coap_resource_t *resource UNUSED_PARAM,
+                coap_resource_t *resource UNUSED_PARAM,
                 coap_session_t *session UNUSED_PARAM,
                 coap_pdu_t *request UNUSED_PARAM,
                 coap_binary_t *token UNUSED_PARAM,
@@ -307,7 +307,7 @@ hnd_delete_time(coap_context_t *ctx UNUSED_PARAM,
 #ifndef WITHOUT_ASYNC
 static void
 hnd_get_async(coap_context_t *ctx,
-              struct coap_resource_t *resource UNUSED_PARAM,
+              coap_resource_t *resource UNUSED_PARAM,
               coap_session_t *session,
               coap_pdu_t *request,
               coap_binary_t *token UNUSED_PARAM,
@@ -945,7 +945,7 @@ release_proxy_body_data(coap_session_t *session UNUSED_PARAM,
 
 static void
 hnd_proxy_uri(coap_context_t *ctx UNUSED_PARAM,
-                struct coap_resource_t *resource UNUSED_PARAM,
+                coap_resource_t *resource UNUSED_PARAM,
                 coap_session_t *session,
                 coap_pdu_t *request,
                 coap_binary_t *token,

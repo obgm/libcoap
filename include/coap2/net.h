@@ -1,7 +1,7 @@
 /*
  * net.h -- CoAP network interface
  *
- * Copyright (C) 2010-2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -29,6 +29,7 @@
 #include "pdu.h"
 #include "coap_prng.h"
 #include "coap_session.h"
+#include "resource.h"
 
 /**
  * Queue entry
@@ -138,14 +139,17 @@ typedef void (*coap_pong_handler_t)(struct coap_context_t *context,
 /**
  * The CoAP stack's global state is stored in a coap_context_t object.
  */
-typedef struct coap_context_t {
+struct coap_context_t {
   coap_opt_filter_t known_options;
-  struct coap_resource_t *resources; /**< hash table or list of known
-                                          resources */
-  struct coap_resource_t *unknown_resource; /**< can be used for handling
-                                                 unknown resources */
-  struct coap_resource_t *proxy_uri_resource; /**< can be used for handling
-                                                 proxy URI resources */
+  coap_resource_t *resources; /**< hash table or list of known
+                                   resources */
+  coap_resource_t *unknown_resource; /**< can be used for handling
+                                          unknown resources */
+  coap_resource_t *proxy_uri_resource; /**< can be used for handling
+                                            proxy URI resources */
+  coap_resource_release_userdata_handler_t release_userdata;
+                                        /**< function to  release user_data
+                                             when resource is deleted */
 
 #ifndef WITHOUT_ASYNC
   /**
@@ -214,7 +218,7 @@ typedef struct coap_context_t {
   int eptimerfd;                   /**< Internal FD for timeout */
   coap_tick_t next_timeout;        /**< When the next timeout is to occur */
 #endif /* COAP_EPOLL_SUPPORT */
-} coap_context_t;
+};
 
 /**
  * Registers a new message handler that is called whenever a response was

@@ -2,7 +2,7 @@
  * coap_subscribe_internal.h -- Structures, Enums & Functions that are not
  * exposed to application programming
  *
- * Copyright (C) 2010-2019 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -61,6 +61,101 @@ struct coap_subscription_t {
 };
 
 void coap_subscription_init(coap_subscription_t *);
+
+/**
+ * Handles a failed observe notify.
+ *
+ * @param context The context holding the resource.
+ * @param session The session that the observe notify failed on.
+ * @param token The token used when the observe notify failed.
+ */
+void
+coap_handle_failed_notify(coap_context_t *context,
+                          coap_session_t *session,
+                          const coap_binary_t *token);
+
+/**
+ * Checks all known resources to see if they are dirty and then notifies
+ * subscribed observers.
+ *
+ * @param context The context to check for dirty resources.
+ */
+void coap_check_notify(coap_context_t *context);
+
+/**
+ * Adds the specified peer as observer for @p resource. The subscription is
+ * identified by the given @p token. This function returns the registered
+ * subscription information if the @p observer has been added, or @c NULL on
+ * error.
+ *
+ * @param resource        The observed resource.
+ * @param session         The observer's session
+ * @param token           The token that identifies this subscription.
+ * @param query           The query string, if any. subscription will
+ *                        take ownership of the string unless this
+ *                        function returns NULL.
+ * @param has_block2      If Option Block2 defined.
+ * @param block2          Contents of Block2 if Block 2 defined.
+ * @param code            Request type code.
+ *
+ * @return                A pointer to the added/updated subscription
+ *                        information or @c NULL on error.
+ */
+coap_subscription_t *coap_add_observer(coap_resource_t *resource,
+                                       coap_session_t *session,
+                                       const coap_binary_t *token,
+                                       coap_string_t *query,
+                                       int has_block2,
+                                       coap_block_t block2,
+                                       uint8_t code);
+
+/**
+ * Returns a subscription object for given @p peer.
+ *
+ * @param resource The observed resource.
+ * @param session  The observer's session
+ * @param token    The token that identifies this subscription or @c NULL for
+ *                 any token.
+ * @return         A valid subscription if exists or @c NULL otherwise.
+ */
+coap_subscription_t *coap_find_observer(coap_resource_t *resource,
+                                        coap_session_t *session,
+                                        const coap_binary_t *token);
+
+/**
+ * Flags that data is ready to be sent to observers.
+ *
+ * @param context  The CoAP context to use.
+ * @param session  The observer's session
+ * @param token    The corresponding token that has been used for the
+ *                 subscription.
+ */
+void coap_touch_observer(coap_context_t *context,
+                         coap_session_t *session,
+                         const coap_binary_t *token);
+
+/**
+ * Removes any subscription for @p observer from @p resource and releases the
+ * allocated storage. The result is @c 1 if an observation relationship with @p
+ * observer and @p token existed, @c 0 otherwise.
+ *
+ * @param resource The observed resource.
+ * @param session  The observer's session.
+ * @param token    The token that identifies this subscription or @c NULL for
+ *                 any token.
+ * @return         @c 1 if the observer has been deleted, @c 0 otherwise.
+ */
+int coap_delete_observer(coap_resource_t *resource,
+                         coap_session_t *session,
+                         const coap_binary_t *token);
+
+/**
+ * Removes any subscription for @p session and releases the allocated storage.
+ *
+ * @param context  The CoAP context to use.
+ * @param session  The observer's session.
+ */
+void coap_delete_observers(coap_context_t *context, coap_session_t *session);
 
 /** @} */
 

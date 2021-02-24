@@ -1,6 +1,6 @@
 # man/Makefile.am
 #
-# Copyright (C) 2018-2020 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2018-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.
@@ -93,6 +93,8 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_path.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_query.3
 	@echo ".so man3/coap_resource.3" > coap_resource_get_userdata.3
+	@echo ".so man3/coap_resource.3" > coap_resource_release_userdata_handler.3
+	@echo ".so man3/coap_resource.3" > coap_resource_get_uri_path.3
 	@echo ".so man3/coap_session.3" > coap_session_get_app_data.3
 	@echo ".so man3/coap_session.3" > coap_session_set_app_data.3
 	@echo ".so man3/coap_session.3" > coap_tcp_is_supported.3
