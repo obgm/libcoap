@@ -1042,6 +1042,161 @@ t_encode_pdu18(void) {
 
   CU_ASSERT(coap_pdu_encode_header(pdu, COAP_PROTO_UDP) == 4);
   CU_ASSERT(memcmp(pdu->token - 4, teststr, sizeof(teststr)) == 0);
+
+}
+
+/* Remove an option (no data) */
+static void
+t_encode_pdu19(void) {
+  size_t n;
+  uint8_t  token[] = { 't' };
+  uint16_t opt_num[] = { 300,   7,  21,  25 };
+  uint8_t  opt_val[] = {  54,  50,  52,  53 };
+  uint8_t  data1[] = { 0x74, 0x71, 0x32, 0xd1, 0x01, 0x34, 0x41, 0x35,
+                       0xe1, 0x00, 0x06, 0x36 };
+  uint8_t  data2[] = { 0x74, 0x71, 0x32, 0xd1, 0x05, 0x35, 0xe1, 0x00,
+                       0x06, 0x36 };
+  uint8_t  data3[] = { 0x74, 0xd1, 0x0c, 0x35, 0xe1, 0x00, 0x06, 0x36 };
+  uint8_t  data4[] = { 0x74, 0xd1, 0x0c, 0x35 };
+  uint8_t  data5[] = { 0x74 };
+  uint8_t  data6[] = { 0x74, 0xd1, 0x0c, 0x0a };
+  int new_val;
+  unsigned char buf[4];
+
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
+
+  CU_ASSERT(pdu->data == NULL);
+
+  coap_add_token(pdu, sizeof(token), token);
+  for (n = 0; n < (sizeof(opt_num)/sizeof(opt_num[0])); n++) {
+    coap_add_option(pdu, opt_num[n],
+                     sizeof(opt_val[n]), &opt_val[n]);
+  }
+  CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
+
+  /* Now remove an option in the middle */
+  coap_remove_option(pdu, 21);
+  CU_ASSERT(memcmp(pdu->token, data2, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 7);
+  CU_ASSERT(memcmp(pdu->token, data3, pdu->used_size) == 0);
+
+  /* Now remove an option from the end */
+  coap_remove_option(pdu, 300);
+  CU_ASSERT(memcmp(pdu->token, data4, pdu->used_size) == 0);
+
+  /* Now remove the final option */
+  coap_remove_option(pdu, 25);
+  CU_ASSERT(memcmp(pdu->token, data5, pdu->used_size) == 0);
+
+  /* Now insert an option */
+  new_val = 10;
+  coap_update_option(pdu, 25,
+                     coap_encode_var_safe(buf, sizeof(buf), new_val), buf);
+  CU_ASSERT(memcmp(pdu->token, data6, pdu->used_size) == 0);
+}
+
+/* Remove an option (with data) */
+static void
+t_encode_pdu20(void) {
+  size_t n;
+  uint8_t  token[] = { 't' };
+  uint16_t opt_num[] = { 300,   7,  21,  25 };
+  uint8_t  opt_val[] = {  54,  50,  52,  53 };
+  uint8_t  data[] = { 'd', 'a', 't', 'a' };
+  uint8_t  data1[] = { 0x74, 0x71, 0x32, 0xd1, 0x01, 0x34, 0x41, 0x35,
+                       0xe1, 0x00, 0x06, 0x36, 0xff, 0x64, 0x61, 0x74,
+                       0x61 };
+  uint8_t  data2[] = { 0x74, 0x71, 0x32, 0xd1, 0x05, 0x35, 0xe1, 0x00,
+                       0x06, 0x36, 0xff, 0x64, 0x61, 0x74, 0x61 };
+  uint8_t  data3[] = { 0x74, 0xd1, 0x0c, 0x35, 0xe1, 0x00, 0x06, 0x36,
+                       0xff, 0x64, 0x61, 0x74, 0x61 };
+  uint8_t  data4[] = { 0x74, 0xd1, 0x0c, 0x35, 0xff, 0x64, 0x61, 0x74,
+                       0x61 };
+  uint8_t  data5[] = { 0x74, 0xff, 0x64, 0x61, 0x74, 0x61 };
+  uint8_t  data6[] = { 0x74, 0xd1, 0x0c, 0x0a, 0xff, 0x64, 0x61, 0x74,
+                       0x61 };
+  int new_val;
+  unsigned char buf[4];
+
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
+
+  CU_ASSERT(pdu->data == NULL);
+
+  coap_add_token(pdu, sizeof(token), token);
+  for (n = 0; n < (sizeof(opt_num)/sizeof(opt_num[0])); n++) {
+    coap_add_option(pdu, opt_num[n],
+                     sizeof(opt_val[n]), &opt_val[n]);
+  }
+  coap_add_data(pdu, sizeof(data), data);
+  CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
+
+  /* Now remove an option in the middle */
+  coap_remove_option(pdu, 21);
+  CU_ASSERT(memcmp(pdu->token, data2, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 7);
+  CU_ASSERT(memcmp(pdu->token, data3, pdu->used_size) == 0);
+
+  /* Now remove an option from the end */
+  coap_remove_option(pdu, 300);
+  CU_ASSERT(memcmp(pdu->token, data4, pdu->used_size) == 0);
+
+  /* Now remove the final option */
+  coap_remove_option(pdu, 25);
+  CU_ASSERT(memcmp(pdu->token, data5, pdu->used_size) == 0);
+
+  /* Now insert an option */
+  new_val = 10;
+  coap_update_option(pdu, 25,
+                     coap_encode_var_safe(buf, sizeof(buf), new_val), buf);
+  CU_ASSERT(memcmp(pdu->token, data6, pdu->used_size) == 0);
+}
+
+/* Update token */
+static void
+t_encode_pdu21(void) {
+  size_t n;
+  uint8_t  token[] = { 't' };
+  uint8_t  new_token[] = { 't', 'o', 'k', 'e', 'n' };
+  uint16_t opt_num[] = { 300,  10,   7,  21,  25 };
+  uint8_t  opt_val[] = {  54,  51,  50,  52,  53 };
+  uint8_t  data[] = { 'd', 'a', 't', 'a' };
+  uint8_t  data1[] = { 0x74, 0x71, 0x32, 0x31, 0x33, 0xb1, 0x34, 0x41,
+                       0x35, 0xe1, 0x00, 0x06, 0x36, 0xff, 0x64, 0x61,
+                       0x74, 0x61 };
+  uint8_t  data2[] = { 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x71, 0x32, 0x31,
+                       0x33, 0xb1, 0x34, 0x41, 0x35, 0xe1, 0x00, 0x06,
+                       0x36, 0xff, 0x64, 0x61, 0x74, 0x61 };
+  uint8_t  data3[] = { 0x71, 0x32, 0x31, 0x33, 0xb1, 0x34, 0x41, 0x35,
+                       0xe1, 0x00, 0x06, 0x36, 0xff, 0x64, 0x61, 0x74,
+                       0x61 };
+
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
+
+  CU_ASSERT(pdu->data == NULL);
+
+  coap_add_token(pdu, sizeof(token), token);
+  for (n = 0; n < (sizeof(opt_num)/sizeof(opt_num[0])); n++) {
+    coap_add_option(pdu, opt_num[n],
+                     sizeof(opt_val[n]), &opt_val[n]);
+  }
+  coap_add_data(pdu, sizeof(data), data);
+  CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
+
+  /* Now update token */
+  coap_update_token(pdu, sizeof(new_token), new_token);
+  CU_ASSERT(memcmp(pdu->token, data2, pdu->used_size) == 0);
+
+  /* Now restore token */
+  coap_update_token(pdu, sizeof(token), token);
+  CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
+
+  /* Now set token to zero length */
+  coap_update_token(pdu, 0, NULL);
+  CU_ASSERT(memcmp(pdu->token, data3, pdu->used_size) == 0);
 }
 
 static int
@@ -1118,6 +1273,9 @@ t_init_pdu_tests(void) {
     PDU_ENCODER_TEST(suite[1], t_encode_pdu16);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu17);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu18);
+    PDU_ENCODER_TEST(suite[1], t_encode_pdu19);
+    PDU_ENCODER_TEST(suite[1], t_encode_pdu20);
+    PDU_ENCODER_TEST(suite[1], t_encode_pdu21);
 
   } else                         /* signal error */
     fprintf(stderr, "W: cannot add pdu parser test suite (%s)\n",

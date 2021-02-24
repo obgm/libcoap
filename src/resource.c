@@ -713,7 +713,7 @@ coap_add_observer(coap_resource_t *resource,
                   const coap_binary_t *token,
                   coap_string_t *query,
                   int has_block2,
-                  coap_block_t block2,
+                  coap_block_t block,
                   uint8_t code) {
   coap_subscription_t *s;
 
@@ -766,7 +766,7 @@ coap_add_observer(coap_resource_t *resource,
   s->query = query;
 
   s->has_block2 = has_block2;
-  s->block2 = block2;
+  s->block = block;
 
   s->code = code;
 
@@ -803,7 +803,7 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
     unsigned int i;
     for ( i = 0; i < s->token_length; i++ )
       snprintf( &outbuf[2 * i], 3, "%02x", s->token[i] );
-    coap_log(LOG_DEBUG, "removed observer tid %s\n", outbuf);
+    coap_log(LOG_DEBUG, "removed observer with token '%s'\n", outbuf);
   }
 
   if (resource->subscribers && s) {
@@ -909,6 +909,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         break;
       case COAP_DELETING_RESOURCE:
       default:
+        response->type = COAP_MESSAGE_NON;
         response->code = COAP_RESPONSE_CODE(404);
         break;
       }

@@ -19,6 +19,7 @@ if BUILD_MANPAGES
 # building the manpages
 
 TXT3 = coap_attribute.txt \
+	coap_block.txt \
 	coap_cache.txt \
 	coap_context.txt \
 	coap_encryption.txt \
@@ -82,9 +83,13 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_cache.3" > coap_cache_get_app_data.3
 	@echo ".so man3/coap_cache.3" > coap_cache_set_app_data.3
 	@echo ".so man3/coap_context.3" > coap_context_set_pki_root_cas.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_add_data_blocked_response.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe8.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_add_optlist_pdu.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_add_option.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_add_data.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_add_data_blocked_response.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_send.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_path.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_query.3
 	@echo ".so man3/coap_resource.3" > coap_resource_get_userdata.3

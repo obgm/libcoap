@@ -45,6 +45,9 @@ typedef enum {
   COAP_OPTLIST,
   COAP_CACHE_KEY,
   COAP_CACHE_ENTRY,
+  COAP_LG_XMIT,
+  COAP_LG_CRCV,
+  COAP_LG_SRCV,
 } coap_memory_tag_t;
 
 #ifndef WITH_LWIP
@@ -65,10 +68,10 @@ void *coap_malloc_type(coap_memory_tag_t type, size_t size);
  * Reallocates a chunk @p p of bytes created by coap_malloc_type() or
  * coap_realloc_type() and returns a pointer to the newly allocated memory of
  * @p size.
- * The @p type is used to select the appropriate storage
- * container on constrained devices. The storage allocated by coap_malloc_type()
- * coap_realloc_type() must be released with coap_free_type().
- * Typically, this only makes sense for COAP_STRING types.
+ * Only COAP_STRING type is supported.
+ *
+ * Note: If there is an error, @p p will separately need to be released by
+ * coap_free_type().
  *
  * @param type The type of object to be stored.
  * @param p    A pointer to memory that was allocated by coap_malloc_type().

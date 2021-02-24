@@ -2,7 +2,7 @@
  * coap_forward_decls.h -- Forward declarations of structures that are
  * opaque to application programming that use libcoap.
  *
- * Copyright (C) 2019 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2019-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -36,6 +36,14 @@ struct coap_str_const_t;
 struct coap_string_t;
 
 /*
+ * Just to get rid of #include circular references
+ *
+ * When (If) the struct becomes opaque, then move it to the correct place
+ *
+ */
+typedef struct coap_pdu_t coap_pdu_t;
+
+/*
  * typedef all the opaque structures that are defined in coap_*_internal.h
  */
 
@@ -44,6 +52,15 @@ struct coap_string_t;
 /** Cache Entry information */
 typedef struct coap_cache_entry_t coap_cache_entry_t;
 typedef struct coap_cache_key_t coap_cache_key_t;
+
+/* ************* coap_block_internal.h ***************** */
+
+/**
+* Block handling information.
+*/
+typedef struct coap_lg_xmit_t coap_lg_xmit_t;
+typedef struct coap_lg_crcv_t coap_lg_crcv_t;
+typedef struct coap_lg_srcv_t coap_lg_srcv_t;
 
 /* ************* coap_session_internal.h ***************** */
 

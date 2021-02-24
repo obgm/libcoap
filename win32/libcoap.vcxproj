@@ -69,6 +69,7 @@
     <ClInclude Include="..\include\coap2\bits.h" />
     <ClInclude Include="..\include\coap2\block.h" />
     <ClInclude Include="..\include\coap2\coap.h" />
+    <ClInclude Include="..\include\coap2\coap_block_internal.h" />
     <ClInclude Include="..\include\coap2\coap_cache.h" />
     <ClInclude Include="..\include\coap2\coap_cache_internal.h" />
     <ClInclude Include="..\include\coap2\coap_debug.h" />

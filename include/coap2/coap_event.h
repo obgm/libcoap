@@ -47,6 +47,11 @@
 #define COAP_EVENT_SESSION_FAILED     0x2003
 
 /**
+ * BLOCK2 receive errors
+ */
+#define COAP_EVENT_PARTIAL_BLOCK      0x3001
+
+/**
  * Type for event handler functions that can be registered with a CoAP
  * context using the unction coap_set_event_handler(). When called by
  * the library, the first argument will be the coap_context_t object

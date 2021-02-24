@@ -21,6 +21,7 @@
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
 #endif
+#include <ctype.h>
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -46,6 +47,11 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   pdu->max_size = size;
   pdu->used_size = 0;
   pdu->data = NULL;
+  pdu->body_data = NULL;
+  pdu->body_length = 0;
+  pdu->body_offset = 0;
+  pdu->body_total = 0;
+  pdu->lg_xmit = NULL;
 }
 
 #ifdef WITH_LWIP
@@ -136,6 +142,58 @@ coap_delete_pdu(coap_pdu_t *pdu) {
   }
 }
 
+coap_pdu_t *
+coap_pdu_duplicate(const coap_pdu_t *old_pdu,
+                   coap_session_t *session,
+                   size_t token_length,
+                   uint8_t *token,
+                   coap_opt_filter_t drop_options) {
+  coap_pdu_t *pdu = coap_pdu_init(old_pdu->type,
+                                  old_pdu->code,
+                                  coap_new_message_id(session),
+                                  coap_session_max_pdu_size(session));
+
+  if (pdu == NULL)
+    return NULL;
+
+  coap_add_token(pdu, token_length, token);
+  pdu->lg_xmit = old_pdu->lg_xmit;
+
+  if (drop_options == NULL) {
+    /* Drop COAP_PAYLOAD_START as well if data */
+    size_t length = old_pdu->used_size - old_pdu->token_length -
+          (old_pdu->data ?
+                 old_pdu->used_size - (old_pdu->data - old_pdu->token) +1 : 0);
+    if (!coap_pdu_resize(pdu, length + old_pdu->hdr_size))
+      goto fail;
+    /* Copy the options and any data across */
+    memcpy(pdu->token + pdu->token_length,
+           old_pdu->token + old_pdu->token_length, length);
+    pdu->used_size += length;
+    pdu->max_opt = old_pdu->max_opt;
+  }
+  else {
+    /* Copy across all the options the slow way */
+    coap_opt_iterator_t opt_iter;
+    coap_opt_t *option;
+
+    coap_option_iterator_init(old_pdu, &opt_iter, COAP_OPT_ALL);
+    while ((option = coap_option_next(&opt_iter))) {
+      if (drop_options && coap_option_filter_get(drop_options, opt_iter.type))
+        continue;
+      if (!coap_add_option(pdu, opt_iter.type,
+                           coap_opt_length(option),
+                           coap_opt_value(option)))
+        goto fail;
+    }
+  }
+  return pdu;
+
+fail:
+  coap_delete_pdu(pdu);
+  return NULL;
+}
+
 int
 coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
   if (new_size > pdu->alloc_size) {
@@ -207,6 +265,139 @@ coap_add_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
   pdu->used_size = len;
   pdu->data = NULL;
 
+  return 1;
+}
+
+/* It is assumed that coap_encode_var_safe8() has been called to reduce data */
+int
+coap_update_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
+  /* must allow for pdu == NULL as callers may rely on this */
+  if (!pdu || len > 8)
+    return 0;
+
+  if (pdu->used_size == 0) {
+    return coap_add_token(pdu, len, data);
+  }
+  if (len == pdu->token_length) {
+    /* Easy case - just data has changed */
+  }
+  else if (len > pdu->token_length) {
+    if (!coap_pdu_check_resize(pdu, pdu->used_size + len - pdu->token_length))
+      return 0;
+    memmove(&pdu->token[len - pdu->token_length], pdu->token, pdu->used_size);
+    pdu->used_size += len - pdu->token_length;
+  }
+  else {
+    pdu->used_size -= pdu->token_length - len;
+    memmove(pdu->token, &pdu->token[pdu->token_length - len], pdu->used_size);
+  }
+  if (pdu->data) {
+    pdu->data += len - pdu->token_length;
+  }
+  pdu->token_length = (uint8_t)len;
+  if (len)
+    memcpy(pdu->token, data, len);
+
+  return 1;
+}
+
+int
+coap_remove_option(coap_pdu_t *pdu, uint16_t type) {
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *option;
+  coap_opt_t *next_option = NULL;
+  size_t opt_delta;
+  coap_option_t decode_this;
+  coap_option_t decode_next;
+
+  /* Need to locate where in current options to remove this one */
+  coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
+  while ((option = coap_option_next(&opt_iter))) {
+    if (opt_iter.type == type) {
+      /* Found option to delete */
+      break;
+    }
+  }
+  if (!option)
+    return 0;
+
+  if (!coap_opt_parse(option, pdu->used_size - (option - pdu->token),
+                      &decode_this))
+    return 0;
+
+  next_option = coap_option_next(&opt_iter);
+  if (next_option) {
+    if (!coap_opt_parse(next_option,
+                        pdu->used_size - (next_option - pdu->token),
+                        &decode_next))
+      return 0;
+    opt_delta = decode_this.delta + decode_next.delta;
+    if (opt_delta <= 12) {
+      /* can simply update the delta of next option */
+      next_option[0] = (next_option[0] & 0x0f) + (opt_delta << 4);
+    }
+    else if (opt_delta <= 269 && decode_next.delta <= 12) {
+      /* next option delta size increase */
+      next_option -= 1;
+      next_option[0] = (next_option[1] & 0x0f) + (13 << 4);
+      next_option[1] = opt_delta - 13;
+    }
+    else if (opt_delta <= 269) {
+      /* can simply update the delta of next option */
+      next_option[1] = opt_delta - 13;
+    }
+    else if (decode_next.delta <= 12) {
+      /* next option delta size increase */
+      if (next_option - option < 2) {
+        /* Need to shuffle everything up by 1 before decrement */
+        if (!coap_pdu_check_resize(pdu, pdu->used_size + 1))
+          return 0;
+        /* Possible a re-size took place with a realloc() */
+        /* Need to rediscover this and next options */
+        coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
+        while ((option = coap_option_next(&opt_iter))) {
+          if (opt_iter.type == type) {
+            /* Found option to delete */
+            break;
+          }
+        }
+        next_option = coap_option_next(&opt_iter);
+        assert(option != NULL);
+        assert(next_option != NULL);
+        memmove(&next_option[1], next_option,
+                pdu->used_size - (next_option - pdu->token));
+        pdu->used_size++;
+        if (pdu->data)
+          pdu->data++;
+        next_option++;
+      }
+      next_option -= 2;
+      next_option[0] = (next_option[2] & 0x0f) + (14 << 4);
+      next_option[1] = (opt_delta - 269) >> 8;
+      next_option[2] = (opt_delta - 269) & 0xff;
+    }
+    else if (decode_next.delta <= 269) {
+      /* next option delta size increase */
+      next_option -= 1;
+      next_option[0] = (next_option[1] & 0x0f) + (14 << 4);
+      next_option[1] = (opt_delta - 269) >> 8;
+      next_option[2] = (opt_delta - 269) & 0xff;
+    }
+    else {
+      next_option[1] = (opt_delta - 269) >> 8;
+      next_option[2] = (opt_delta - 269) & 0xff;
+    }
+  }
+  else {
+    next_option = option + coap_opt_encode_size(decode_this.delta,
+                                                coap_opt_length(option));
+    pdu->max_opt -= decode_this.delta;
+  }
+  if (pdu->used_size - (next_option - pdu->token))
+    memmove(option, next_option, pdu->used_size - (next_option - pdu->token));
+  pdu->used_size -= next_option - option;
+  if (pdu->data)
+    pdu->data -= next_option - option;
   return 1;
 }
 
@@ -347,7 +538,6 @@ coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len,
   coap_opt_t *opt;
 
   assert(pdu);
-  pdu->data = NULL;
 
   if (type == pdu->max_opt) {
     /* Validate that the option is repeatable */
@@ -388,11 +578,21 @@ coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len,
     return coap_insert_option(pdu, type, len, data);
   }
 
+  optsize = coap_opt_encode_size(type - pdu->max_opt, len);
   if (!coap_pdu_check_resize(pdu,
-      pdu->used_size + coap_opt_encode_size(type - pdu->max_opt, len)))
+      pdu->used_size + optsize))
     return 0;
 
-  opt = pdu->token + pdu->used_size;
+  if (pdu->data) {
+    /* include option delimiter */
+    memmove (&pdu->data[optsize-1], &pdu->data[-1],
+             pdu->used_size - (pdu->data - pdu->token) + 1);
+    opt = pdu->data -1;
+    pdu->data += optsize;
+  }
+  else {
+    opt = pdu->token + pdu->used_size;
+  }
 
   /* encode option and check length */
   optsize = coap_opt_encode(opt, pdu->alloc_size - pdu->used_size,
@@ -442,17 +642,39 @@ coap_add_data_after(coap_pdu_t *pdu, size_t len) {
 
 int
 coap_get_data(const coap_pdu_t *pdu, size_t *len, uint8_t **data) {
+  size_t offset;
+  size_t total;
+  const uint8_t **cdata = NULL;
+
+  /* Really, coap_get_data() should be using a const */
+  memcpy(&cdata, &data, sizeof(cdata));
+  return coap_get_data_large(pdu, len, cdata, &offset, &total);
+}
+
+int
+coap_get_data_large(const coap_pdu_t *pdu, size_t *len, const uint8_t **data,
+                    size_t *offset, size_t *total) {
   assert(pdu);
   assert(len);
   assert(data);
 
+  *offset = pdu->body_offset;
+  *total = pdu->body_total;
+  if (pdu->body_data) {
+    *data = pdu->body_data;
+    *len = pdu->body_length;
+    return 1;
+  }
   *data = pdu->data;
   if(pdu->data == NULL) {
      *len = 0;
+     *total = 0;
      return 0;
   }
 
   *len = pdu->used_size - (pdu->data - pdu->token);
+  if (*total == 0)
+    *total = *len;
 
   return 1;
 }

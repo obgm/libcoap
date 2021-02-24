@@ -17,8 +17,8 @@ SYNOPSIS
 *coap-client* [*-a* addr] [*-b* [num,]size] [*-e* text] [*-f* file] [*-l* loss]
               [*-m* method] [*-o* file] [*-p* port] [*-r*] [*-s duration*]
               [*-t* type] [*-v* num] [*-w*] [*-A* type] [*-B* seconds]
-              [*-H* hoplimit] [*-K* interval] [*-N*] [*-O* num,text]
-              [*-P* scheme://addr[:port]] [*-T* token] [*-U*]
+              [*-H* hoplimit] [*-K* interval] [*-L* value] [*-N*]
+              [*-O* num,text] [*-P* scheme://addr[:port]] [*-T* token] [*-U*]
               [[*-h* match_hint_file] [*-k* key] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [-n] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]] URI
@@ -124,13 +124,21 @@ OPTIONS - General
    Send a ping after interval seconds of inactivity.
    If not specified (or 0), keep-alive is disabled (default).
 
+*-L* value::
+   Sum of one or more COAP_BLOCK_* flag values for different block handling
+   methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP).
+
+     COAP_BLOCK_USE_LIBCOAP  1
+     COAP_BLOCK_SINGLE_BODY  2
+
 *-N* ::
    Send NON-confirmable message. If option *-N* is not specified, a
    confirmable message will be sent.
 
 *-O* num,text::
    Add option 'num' with contents of 'text' to the request. If the text begins
-   with 0x, then the hex text is converted to binary data.
+   with 0x, then the hex text (two [0-9a-f] per byte) is converted to binary
+   data.
 
 *-P* scheme://addr[:port]::
    Scheme, address and optional port to define how to connect to a CoAP proxy
@@ -138,7 +146,7 @@ OPTIONS - General
    Scheme is one of coap, coaps, coap+tcp and coaps+tcp.
 
 *-T* token::
-   Include the 'token' to the request.
+   Define the initial starting 'token' for the request.
 
 *-U* ::
    Never include Uri-Host or Uri-Port options.
