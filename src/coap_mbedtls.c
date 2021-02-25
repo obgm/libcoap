@@ -401,7 +401,7 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
     }
   }
   if (setup_data->cert_chain_validation &&
-      depth > (setup_data->cert_chain_verify_depth)) {
+      depth > (setup_data->cert_chain_verify_depth + 1)) {
     *flags |= MBEDTLS_X509_BADCERT_OTHER;
     coap_log(LOG_WARNING,
              "   %s: %s: '%s' depth %d\n",
