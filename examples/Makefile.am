@@ -17,7 +17,7 @@ AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include \
 bin_PROGRAMS = coap-client coap-server coap-rd
 check_PROGRAMS = coap-etsi_iot_01 coap-tiny
 
-coap_client_SOURCES = client.c
+coap_client_SOURCES = coap-client.c
 coap_client_LDADD =  $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
 
 coap_server_SOURCES = coap-server.c
