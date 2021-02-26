@@ -80,6 +80,11 @@ void coap_delete_all(coap_queue_t *queue);
  */
 coap_queue_t *coap_new_node(void);
 
+typedef enum coap_response_t {
+  COAP_RESPONSE_FAIL, /**< Response not liked - send CoAP RST packet */
+  COAP_RESPONSE_OK    /**< Response is fine */
+} coap_response_t;
+
 /**
  * Response handler that is used as callback in coap_context_t.
  *
@@ -88,12 +93,15 @@ coap_queue_t *coap_new_node(void);
  * @param sent The PDU that was transmitted.
  * @param received The PDU that was received.
  * @param id CoAP transaction ID.
+
+ * @return @c COAP_RESPONSE_OK if successful, else @c COAP_RESPONSE_FAIL which
+ *         triggers sending a RST packet.
  */
-typedef void (*coap_response_handler_t)(struct coap_context_t *context,
-                                        coap_session_t *session,
-                                        coap_pdu_t *sent,
-                                        coap_pdu_t *received,
-                                        const coap_tid_t id);
+typedef coap_response_t (*coap_response_handler_t)(struct coap_context_t *context,
+                                                   coap_session_t *session,
+                                                   coap_pdu_t *sent,
+                                                   coap_pdu_t *received,
+                                                   const coap_tid_t id);
 
 /**
  * Negative Acknowedge handler that is used as callback in coap_context_t.
