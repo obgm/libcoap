@@ -19,7 +19,7 @@
 #include <netdb.h>
 #include <signal.h>
 
-#include "coap.h"
+#include <coap2/coap.h>
 
 #ifdef __GNUC__
 #define UNUSED_PARAM __attribute__ ((unused))
