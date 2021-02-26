@@ -7,7 +7,6 @@ global:
   coap_add_data_blocked_response;
   coap_add_data_large_request;
   coap_add_data_large_response;
-  coap_add_observer;
   coap_add_option;
   coap_add_optlist_pdu;
   coap_add_resource;
@@ -52,8 +51,6 @@ global:
   coap_delete_cache_entry;
   coap_delete_cache_key;
   coap_delete_node;
-  coap_delete_observer;
-  coap_delete_observers;
   coap_delete_optlist;
   coap_delete_pdu;
   coap_delete_resource;
@@ -70,7 +67,6 @@ global:
   coap_endpoint_str;
   coap_find_async;
   coap_find_attr;
-  coap_find_observer;
   coap_find_transaction;
   coap_fls;
   coap_flsll;
@@ -228,7 +224,6 @@ global:
   coap_ticks_to_rt;
   coap_ticks_to_rt_us;
   coap_tls_is_supported;
-  coap_touch_observer;
   coap_wait_ack;
   coap_wellknown_response;
   coap_write_block_opt;
