@@ -108,7 +108,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 
 coap_opt_iterator_t *
 coap_option_iterator_init(const coap_pdu_t *pdu, coap_opt_iterator_t *oi,
-                          const coap_opt_filter_t filter) {
+                          const coap_opt_filter_t *filter) {
   assert(pdu);
   assert(pdu->token);
   assert(oi);
@@ -124,7 +124,7 @@ coap_option_iterator_init(const coap_pdu_t *pdu, coap_opt_iterator_t *oi,
   oi->length = pdu->used_size - pdu->token_length;
 
   if (filter) {
-    memcpy(oi->filter, filter, sizeof(coap_opt_filter_t));
+    memcpy(&oi->filter, filter, sizeof(coap_opt_filter_t));
     oi->filtered = 1;
   }
   return oi;
@@ -181,7 +181,7 @@ coap_option_next(coap_opt_iterator_t *oi) {
      *   - the filter is too small for the current option number
      */
     if (!oi->filtered ||
-        (b = coap_option_filter_get(oi->filter, oi->type)) > 0)
+        (b = coap_option_filter_get(&oi->filter, oi->type)) > 0)
       break;
     else if (b < 0) {                /* filter too small, cannot proceed */
       oi->bad = 1;
@@ -197,10 +197,10 @@ coap_check_option(coap_pdu_t *pdu, uint16_t type,
                   coap_opt_iterator_t *oi) {
   coap_opt_filter_t f;
 
-  coap_option_filter_clear(f);
-  coap_option_filter_set(f, type);
+  coap_option_filter_clear(&f);
+  coap_option_filter_set(&f, type);
 
-  coap_option_iterator_init(pdu, oi, f);
+  coap_option_iterator_init(pdu, oi, &f);
 
   return coap_option_next(oi);
 }
@@ -392,17 +392,9 @@ coap_opt_encode(coap_opt_t *opt, size_t maxlen, uint16_t delta,
   return l + length;
 }
 
-/* coap_opt_filter_t has the following internal structure: */
-typedef struct {
-  uint16_t mask;
-
 #define LONG_MASK ((1 << COAP_OPT_FILTER_LONG) - 1)
 #define SHORT_MASK \
   (~LONG_MASK & ((1 << (COAP_OPT_FILTER_LONG + COAP_OPT_FILTER_SHORT)) - 1))
-
-  uint16_t long_opts[COAP_OPT_FILTER_LONG];
-  uint8_t short_opts[COAP_OPT_FILTER_SHORT];
-} opt_filter;
 
 /** Returns true iff @p type denotes an option type larger than 255. */
 COAP_STATIC_INLINE int
@@ -431,11 +423,11 @@ enum filter_op_t { FILTER_SET, FILTER_CLEAR, FILTER_GET };
  * hit or no free slot is available to store @p type with FILTER_SET.
  */
 static int
-coap_option_filter_op(coap_opt_filter_t filter,
+coap_option_filter_op(coap_opt_filter_t *filter,
                       uint16_t type,
                       enum filter_op_t op) {
   size_t lindex = 0;
-  opt_filter *of = (opt_filter *)filter;
+  coap_opt_filter_t *of = filter;
   uint16_t nr, mask = 0;
 
   if (is_long_option(type)) {
@@ -491,17 +483,19 @@ coap_option_filter_op(coap_opt_filter_t filter,
 }
 
 int
-coap_option_filter_set(coap_opt_filter_t filter, uint16_t type) {
+coap_option_filter_set(coap_opt_filter_t *filter, uint16_t type) {
   return coap_option_filter_op(filter, type, FILTER_SET);
 }
 
 int
-coap_option_filter_unset(coap_opt_filter_t filter, uint16_t type) {
+coap_option_filter_unset(coap_opt_filter_t *filter, uint16_t type) {
   return coap_option_filter_op(filter, type, FILTER_CLEAR);
 }
 
 int
-coap_option_filter_get(coap_opt_filter_t filter, uint16_t type) {
+coap_option_filter_get(coap_opt_filter_t *filter, uint16_t type) {
+  /* Ugly cast to make the const go away (FILTER_GET wont change filter
+   * but as _set and _unset do, the function does not take a const). */
   return coap_option_filter_op(filter, type, FILTER_GET);
 }
 

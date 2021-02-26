@@ -559,9 +559,9 @@ coap_string_t *coap_get_query(const coap_pdu_t *request) {
   size_t length = 0;
   static const uint8_t hex[] = "0123456789ABCDEF";
 
-  coap_option_filter_clear(f);
-  coap_option_filter_set(f, COAP_OPTION_URI_QUERY);
-  coap_option_iterator_init(request, &opt_iter, f);
+  coap_option_filter_clear(&f);
+  coap_option_filter_set(&f, COAP_OPTION_URI_QUERY);
+  coap_option_iterator_init(request, &opt_iter, &f);
   while ((q = coap_option_next(&opt_iter))) {
     uint16_t seg_len = coap_opt_length(q), i;
     const uint8_t *seg= coap_opt_value(q);
@@ -580,7 +580,7 @@ coap_string_t *coap_get_query(const coap_pdu_t *request) {
     if (query) {
       query->length = length;
       unsigned char *s = query->s;
-      coap_option_iterator_init(request, &opt_iter, f);
+      coap_option_iterator_init(request, &opt_iter, &f);
       while ((q = coap_option_next(&opt_iter))) {
         if (s != query->s)
           *s++ = '&';
@@ -609,9 +609,9 @@ coap_string_t *coap_get_uri_path(const coap_pdu_t *request) {
   size_t length = 0;
   static const uint8_t hex[] = "0123456789ABCDEF";
 
-  coap_option_filter_clear(f);
-  coap_option_filter_set(f, COAP_OPTION_URI_PATH);
-  coap_option_iterator_init(request, &opt_iter, f);
+  coap_option_filter_clear(&f);
+  coap_option_filter_set(&f, COAP_OPTION_URI_PATH);
+  coap_option_iterator_init(request, &opt_iter, &f);
   while ((q = coap_option_next(&opt_iter))) {
     uint16_t seg_len = coap_opt_length(q), i;
     const uint8_t *seg= coap_opt_value(q);
@@ -634,7 +634,7 @@ coap_string_t *coap_get_uri_path(const coap_pdu_t *request) {
     uri_path->length = length;
     unsigned char *s = uri_path->s;
     int n = 0;
-    coap_option_iterator_init(request, &opt_iter, f);
+    coap_option_iterator_init(request, &opt_iter, &f);
     while ((q = coap_option_next(&opt_iter))) {
       if (n++) {
         *s++ = '/';

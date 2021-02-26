@@ -341,10 +341,10 @@ hnd_get_query(coap_context_t *ctx UNUSED_PARAM,
                                        COAP_MEDIATYPE_TEXT_PLAIN),
                   buf);
 
-  coap_option_filter_clear(f);
-  coap_option_filter_set(f, COAP_OPTION_URI_QUERY);
+  coap_option_filter_clear(&f);
+  coap_option_filter_set(&f, COAP_OPTION_URI_QUERY);
 
-  coap_option_iterator_init(request, &opt_iter, f);
+  coap_option_iterator_init(request, &opt_iter, &f);
 
   len = 0;
   while ((len < sizeof(buf)) && (q = coap_option_next(&opt_iter))) {
@@ -379,17 +379,17 @@ hnd_get_separate(coap_context_t *ctx,
 
   if (async) {
     if (async->id != request->tid) {
-      coap_option_filter_clear(f);
+      coap_option_filter_clear(&f);
       response->code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
     }
     return;
   }
 
   /* search for option delay in query list */
-  coap_option_filter_clear(f);
-  coap_option_filter_set(f, COAP_OPTION_URI_QUERY);
+  coap_option_filter_clear(&f);
+  coap_option_filter_set(&f, COAP_OPTION_URI_QUERY);
 
-  coap_option_iterator_init(request, &opt_iter, f);
+  coap_option_iterator_init(request, &opt_iter, &f);
 
   while ((option = coap_option_next(&opt_iter))) {
     if (strncmp("delay=", (const char *)coap_opt_value(option), 6) == 0) {

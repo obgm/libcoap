@@ -38,8 +38,8 @@ t_error_response1(void) {
   pdu->tid = 0x1234;
 
   /* result = coap_add_token(pdu, 5, (unsigned char *)"token"); */
-  coap_option_filter_clear(opts);
-  response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(400), opts);
+  coap_option_filter_clear(&opts);
+  response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(400), &opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -68,8 +68,8 @@ t_error_response2(void) {
   coap_add_token(pdu, 5, (const uint8_t *)"token");
   coap_add_option(pdu, COAP_OPTION_URI_HOST, 4, (const uint8_t *)"time");
 
-  coap_option_filter_clear(opts);
-  response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(404), opts);
+  coap_option_filter_clear(&opts);
+  response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(404), &opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -100,9 +100,9 @@ t_error_response3(void) {
   /* unknown critical option 9 */
   coap_add_option(pdu, 9, 0, NULL);
 
-  coap_option_filter_clear(opts);
-  coap_option_filter_set(opts, 9);
-  response = coap_new_error_response(pdu, code, opts);
+  coap_option_filter_clear(&opts);
+  coap_option_filter_set(&opts, 9);
+  response = coap_new_error_response(pdu, code, &opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -139,9 +139,9 @@ t_error_response4(void) {
   /* unknown critical option 9 */
   coap_add_option(pdu, 9, sizeof(optval), optval);
 
-  coap_option_filter_clear(opts);
-  coap_option_filter_set(opts, 9);
-  response = coap_new_error_response(pdu, code, opts);
+  coap_option_filter_clear(&opts);
+  coap_option_filter_set(&opts, 9);
+  response = coap_new_error_response(pdu, code, &opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -180,9 +180,9 @@ t_error_response5(void) {
   /* unknown critical option 9 */
   coap_add_option(pdu, 9, sizeof(optval), optval);
 
-  coap_option_filter_clear(opts);
-  coap_option_filter_set(opts, 9);
-  response = coap_new_error_response(pdu, code, opts);
+  coap_option_filter_clear(&opts);
+  coap_option_filter_set(&opts, 9);
+  response = coap_new_error_response(pdu, code, &opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -221,9 +221,9 @@ t_error_response6(void) {
   /* unknown critical option 23 */
   coap_add_option(pdu, 23, sizeof(optval), optval);
 
-  coap_option_filter_clear(opts);
-  coap_option_filter_set(opts, 23);
-  response = coap_new_error_response(pdu, code, opts);
+  coap_option_filter_clear(&opts);
+  coap_option_filter_set(&opts, 23);
+  response = coap_new_error_response(pdu, code, &opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -263,9 +263,9 @@ t_error_response7(void) {
   /* unknown critical option 23 */
   coap_add_option(pdu, 23, sizeof(optval), optval);
 
-  coap_option_filter_clear(opts);
-  coap_option_filter_set(opts, 23);
-  response = coap_new_error_response(pdu, code, opts);
+  coap_option_filter_clear(&opts);
+  coap_option_filter_set(&opts, 23);
+  response = coap_new_error_response(pdu, code, &opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 
@@ -303,10 +303,10 @@ t_error_response8(void) {
   /* known option 2000 */
   coap_add_option(pdu, 2000, 0, NULL);
 
-  coap_option_filter_clear(opts);
-  coap_option_filter_set(opts, 1001);
-  coap_option_filter_set(opts, 1014);
-  response = coap_new_error_response(pdu, code, opts);
+  coap_option_filter_clear(&opts);
+  coap_option_filter_set(&opts, 1001);
+  coap_option_filter_set(&opts, 1014);
+  response = coap_new_error_response(pdu, code, &opts);
 
   CU_ASSERT_PTR_NOT_NULL(response);
 

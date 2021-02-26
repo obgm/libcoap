@@ -650,9 +650,9 @@ t_iterate_option6(void) {
   coap_opt_t *option;
   coap_opt_filter_t filter;
 
-  coap_option_filter_clear(filter);
-  coap_option_filter_set(filter, 10);        /* option nr 10 only */
-  result = coap_option_iterator_init(&pdu, &oi, filter);
+  coap_option_filter_clear(&filter);
+  coap_option_filter_set(&filter, 10);        /* option nr 10 only */
+  result = coap_option_iterator_init(&pdu, &oi, &filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
   CU_ASSERT(oi.bad == 0);
@@ -696,10 +696,10 @@ t_iterate_option7(void) {
   coap_opt_filter_t filter;
 
   /* search options nr 8 and 22 */
-  coap_option_filter_clear(filter);
-  coap_option_filter_set(filter, 8);
-  coap_option_filter_set(filter, 22);
-  result = coap_option_iterator_init(&pdu, &oi, filter);
+  coap_option_filter_clear(&filter);
+  coap_option_filter_set(&filter, 8);
+  coap_option_filter_set(&filter, 22);
+  result = coap_option_iterator_init(&pdu, &oi, &filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
   CU_ASSERT(oi.bad == 0);
@@ -743,9 +743,9 @@ t_iterate_option8(void) {
   coap_opt_filter_t filter;
 
   /* search option nr 36 */
-  coap_option_filter_clear(filter);
-  coap_option_filter_set(filter, 36);
-  result = coap_option_iterator_init(&pdu, &oi, filter);
+  coap_option_filter_clear(&filter);
+  coap_option_filter_set(&filter, 36);
+  result = coap_option_iterator_init(&pdu, &oi, &filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
   CU_ASSERT(oi.bad == 0);
@@ -774,9 +774,9 @@ t_iterate_option9(void) {
   coap_opt_filter_t filter;
 
   /* search option nr 100 */
-  coap_option_filter_clear(filter);
-  coap_option_filter_set(filter, 100);
-  result = coap_option_iterator_init(&pdu, &oi, filter);
+  coap_option_filter_clear(&filter);
+  coap_option_filter_set(&filter, 100);
+  result = coap_option_iterator_init(&pdu, &oi, &filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
   CU_ASSERT(oi.bad == 0);
@@ -805,9 +805,9 @@ t_iterate_option10(void) {
   coap_opt_filter_t filter;
 
   /* search option nr 61 */
-  coap_option_filter_clear(filter);
-  coap_option_filter_set(filter, 61);
-  result = coap_option_iterator_init(&pdu, &oi, filter);
+  coap_option_filter_clear(&filter);
+  coap_option_filter_set(&filter, 61);
+  result = coap_option_iterator_init(&pdu, &oi, &filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
   CU_ASSERT(oi.bad == 0);
@@ -829,30 +829,30 @@ static void
 t_filter_option1(void) {
   coap_opt_filter_t filter;
 
-  coap_option_filter_clear(filter);
+  coap_option_filter_clear(&filter);
 
-  CU_ASSERT(coap_option_filter_set(filter, 0) == 1);
-  CU_ASSERT(coap_option_filter_set(filter, 37) == 1);
-  CU_ASSERT(coap_option_filter_set(filter, 37) == 1);
-  CU_ASSERT(coap_option_filter_set(filter, 43) == 1);
-  CU_ASSERT(coap_option_filter_set(filter, 290) == 1);
-  CU_ASSERT(coap_option_filter_set(filter, 65535) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 0) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 37) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 37) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 43) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 290) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 65535) == 1);
 
-  CU_ASSERT(coap_option_filter_get(filter, 0) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 37) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 43) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 290) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 65535) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 0) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 37) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 43) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 290) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 65535) == 1);
 
-  CU_ASSERT(coap_option_filter_unset(filter, 37) == 1);
+  CU_ASSERT(coap_option_filter_unset(&filter, 37) == 1);
 
-  CU_ASSERT(coap_option_filter_get(filter, 0) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 43) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 290) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 65535) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 0) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 43) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 290) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 65535) == 1);
 
-  CU_ASSERT(coap_option_filter_get(filter, 37) == 0);
-  CU_ASSERT(coap_option_filter_get(filter, 89) == 0);
+  CU_ASSERT(coap_option_filter_get(&filter, 37) == 0);
+  CU_ASSERT(coap_option_filter_get(&filter, 89) == 0);
 }
 
 static void
@@ -860,18 +860,18 @@ t_filter_option2(void) {
   coap_opt_filter_t filter;
   int s;
 
-  coap_option_filter_clear(filter);
+  coap_option_filter_clear(&filter);
 
   /* fill all COAP_OPT_FILTER_SHORT slots */
   for (s = 0; s < COAP_OPT_FILTER_SHORT; s++) {
-    CU_ASSERT(coap_option_filter_set(filter, s));
+    CU_ASSERT(coap_option_filter_set(&filter, s));
   }
 
   /* adding a short option type must fail */
-  CU_ASSERT(coap_option_filter_set(filter, COAP_OPT_FILTER_SHORT) == 0);
+  CU_ASSERT(coap_option_filter_set(&filter, COAP_OPT_FILTER_SHORT) == 0);
 
   /* adding a long option type must succeed */
-  CU_ASSERT(coap_option_filter_set(filter, 256) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 256) == 1);
 }
 
 static void
@@ -879,50 +879,50 @@ t_filter_option3(void) {
   coap_opt_filter_t filter;
   int l;
 
-  coap_option_filter_clear(filter);
+  coap_option_filter_clear(&filter);
 
   /* set COAP_OPT_FILTER_LONG long filters */
   for (l = 0; l < COAP_OPT_FILTER_LONG; l++) {
-    CU_ASSERT(coap_option_filter_set(filter, 256 + l) == 1);
+    CU_ASSERT(coap_option_filter_set(&filter, 256 + l) == 1);
   }
 
   /* the next must fail and must not be found */
-  CU_ASSERT(coap_option_filter_set(filter, 256 + COAP_OPT_FILTER_LONG) == 0);
-  CU_ASSERT(coap_option_filter_get(filter, 256 + COAP_OPT_FILTER_LONG) == 0);
+  CU_ASSERT(coap_option_filter_set(&filter, 256 + COAP_OPT_FILTER_LONG) == 0);
+  CU_ASSERT(coap_option_filter_get(&filter, 256 + COAP_OPT_FILTER_LONG) == 0);
 
   /* remove one item */
-  CU_ASSERT(coap_option_filter_unset(filter, 256) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 256) == 0);
+  CU_ASSERT(coap_option_filter_unset(&filter, 256) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 256) == 0);
 
   /* now, storing a new filter must succeed */
-  CU_ASSERT(coap_option_filter_set(filter, 256 + COAP_OPT_FILTER_LONG) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 256 + COAP_OPT_FILTER_LONG) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 256 + COAP_OPT_FILTER_LONG) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 256 + COAP_OPT_FILTER_LONG) == 1);
 
   /* and all other items must be available as well */
   for (l = 0; l < COAP_OPT_FILTER_LONG; l++) {
-    CU_ASSERT(coap_option_filter_get(filter, 256 + l + 1) == 1);
+    CU_ASSERT(coap_option_filter_get(&filter, 256 + l + 1) == 1);
   }
 
   /* set COAP_OPT_FILTER_SHORT short filters */
   for (l = 0; l < COAP_OPT_FILTER_SHORT; l++) {
-    CU_ASSERT(coap_option_filter_set(filter, l) == 1);
+    CU_ASSERT(coap_option_filter_set(&filter, l) == 1);
   }
 
   /* the next must fail and must not be found */
-  CU_ASSERT(coap_option_filter_set(filter, COAP_OPT_FILTER_SHORT) == 0);
-  CU_ASSERT(coap_option_filter_get(filter, COAP_OPT_FILTER_SHORT) == 0);
+  CU_ASSERT(coap_option_filter_set(&filter, COAP_OPT_FILTER_SHORT) == 0);
+  CU_ASSERT(coap_option_filter_get(&filter, COAP_OPT_FILTER_SHORT) == 0);
 
   /* remove one item */
-  CU_ASSERT(coap_option_filter_unset(filter, 0) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 0) == 0);
+  CU_ASSERT(coap_option_filter_unset(&filter, 0) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 0) == 0);
 
   /* now, storing a new filter must succeed */
-  CU_ASSERT(coap_option_filter_set(filter, COAP_OPT_FILTER_SHORT) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, COAP_OPT_FILTER_SHORT) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, COAP_OPT_FILTER_SHORT) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, COAP_OPT_FILTER_SHORT) == 1);
 
   /* and all other items must be available as well */
   for (l = 0; l < COAP_OPT_FILTER_SHORT; l++) {
-    CU_ASSERT(coap_option_filter_get(filter, l + 1) == 1);
+    CU_ASSERT(coap_option_filter_get(&filter, l + 1) == 1);
   }
 }
 

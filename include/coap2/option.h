@@ -88,34 +88,18 @@ size_t coap_opt_size(const coap_opt_t *opt);
 #error COAP_OPT_FILTER_SHORT + COAP_OPT_FILTER_LONG must be less or equal 16
 #endif /* (COAP_OPT_FILTER_SHORT + COAP_OPT_FILTER_LONG > 16) */
 
-/** The number of elements in coap_opt_filter_t. */
-#define COAP_OPT_FILTER_SIZE                                        \
-  (((COAP_OPT_FILTER_SHORT + 1) >> 1) + COAP_OPT_FILTER_LONG) +1
-
-/**
- * Fixed-size vector we use for option filtering. It is large enough
- * to hold COAP_OPT_FILTER_SHORT entries with an option number between
- * 0 and 255, and COAP_OPT_FILTER_LONG entries with an option number
- * between 256 and 65535. Its internal structure is
- *
- * @code
-struct {
+/*
+ * mask contains a bit vector that indicates which fields in the long_opts[]
+ * and subsequent short_opts[] are used. The first COAP_OPT_FILTER_LONG bits
+ * correspond to the long option types that are stored in long_opts[]
+ * elements. The next COAP_OPT_FILTER_SHORT bits correspond to the short
+ * option types that are stored in short_opts[].
+ */
+typedef struct coap_opt_filter_t {
   uint16_t mask;
   uint16_t long_opts[COAP_OPT_FILTER_LONG];
   uint8_t short_opts[COAP_OPT_FILTER_SHORT];
-}
- * @endcode
- *
- * The first element contains a bit vector that indicates which fields
- * in the remaining array are used. The first COAP_OPT_FILTER_LONG
- * bits correspond to the long option types that are stored in the
- * elements from index 1 to COAP_OPT_FILTER_LONG. The next
- * COAP_OPT_FILTER_SHORT bits correspond to the short option types
- * that are stored in the elements from index COAP_OPT_FILTER_LONG + 1
- * to COAP_OPT_FILTER_LONG + COAP_OPT_FILTER_SHORT. The latter
- * elements are treated as bytes.
- */
-typedef uint16_t coap_opt_filter_t[COAP_OPT_FILTER_SIZE];
+} coap_opt_filter_t;
 
 /** Pre-defined filter that includes all options. */
 #define COAP_OPT_ALL NULL
@@ -126,7 +110,7 @@ typedef uint16_t coap_opt_filter_t[COAP_OPT_FILTER_SIZE];
  * @param f The filter to clear.
  */
 COAP_STATIC_INLINE void
-coap_option_filter_clear(coap_opt_filter_t f) {
+coap_option_filter_clear(coap_opt_filter_t *f) {
   memset(f, 0, sizeof(coap_opt_filter_t));
 }
 
@@ -140,7 +124,7 @@ coap_option_filter_clear(coap_opt_filter_t f) {
  *
  * @return       @c 1 if bit was set, @c 0 otherwise.
  */
-int coap_option_filter_set(coap_opt_filter_t filter, uint16_t type);
+int coap_option_filter_set(coap_opt_filter_t *filter, uint16_t type);
 
 /**
  * Clears the corresponding entry for @p type in @p filter. This
@@ -152,7 +136,7 @@ int coap_option_filter_set(coap_opt_filter_t filter, uint16_t type);
  *
  * @return       @c 1 if bit was set, @c 0 otherwise.
  */
-int coap_option_filter_unset(coap_opt_filter_t filter, uint16_t type);
+int coap_option_filter_unset(coap_opt_filter_t *filter, uint16_t type);
 
 /**
  * Checks if @p type is contained in @p filter. This function returns
@@ -164,7 +148,7 @@ int coap_option_filter_unset(coap_opt_filter_t filter, uint16_t type);
  *
  * @return       @c 1 if @p type was found, @c 0 otherwise, or @c -1 on error.
  */
-int coap_option_filter_get(coap_opt_filter_t filter, uint16_t type);
+int coap_option_filter_get(coap_opt_filter_t *filter, uint16_t type);
 
 /**
  * Iterator to run through PDU options. This object must be
@@ -209,7 +193,7 @@ typedef struct {
  */
 coap_opt_iterator_t *coap_option_iterator_init(const coap_pdu_t *pdu,
                                                coap_opt_iterator_t *oi,
-                                               const coap_opt_filter_t filter);
+                                               const coap_opt_filter_t *filter);
 
 /**
  * Updates the iterator @p oi to point to the next option. This function returns
@@ -407,7 +391,7 @@ void coap_delete_optlist(coap_optlist_t *optlist_chain);
  * @return       @c 1 if bit was set, @c -1 otherwise.
  */
 COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_option_setb(coap_opt_filter_t filter, uint16_t type) {
+coap_option_setb(coap_opt_filter_t *filter, uint16_t type) {
   return coap_option_filter_set(filter, type) ? 1 : -1;
 }
 
@@ -424,7 +408,7 @@ coap_option_setb(coap_opt_filter_t filter, uint16_t type) {
  * @return       @c 1 if bit was set, @c -1 otherwise.
  */
 COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_option_clrb(coap_opt_filter_t filter, uint16_t type) {
+coap_option_clrb(coap_opt_filter_t *filter, uint16_t type) {
   return coap_option_filter_unset(filter, type) ? 1 : -1;
 }
 
@@ -441,7 +425,7 @@ coap_option_clrb(coap_opt_filter_t filter, uint16_t type) {
  * @return       @c 1 if bit was set, @c 0 if not, @c -1 on error.
  */
 COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_option_getb(coap_opt_filter_t filter, uint16_t type) {
+coap_option_getb(coap_opt_filter_t *filter, uint16_t type) {
   return coap_option_filter_get(filter, type);
 }
 

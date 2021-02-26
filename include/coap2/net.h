@@ -282,7 +282,7 @@ coap_register_pong_handler(coap_context_t *context,
  */
 COAP_STATIC_INLINE void
 coap_register_option(coap_context_t *ctx, uint16_t type) {
-  coap_option_filter_set(ctx->known_options, type);
+  coap_option_filter_set(&ctx->known_options, type);
 }
 
 /**
@@ -456,7 +456,7 @@ void *coap_get_app_data(const coap_context_t *context);
  */
 coap_pdu_t *coap_new_error_response(coap_pdu_t *request,
                                     unsigned char code,
-                                    coap_opt_filter_t opts);
+                                    coap_opt_filter_t *opts);
 
 /**
  * Sends an error response with code @p code for request @p request to @p dst.
@@ -476,7 +476,7 @@ coap_pdu_t *coap_new_error_response(coap_pdu_t *request,
 coap_tid_t coap_send_error(coap_session_t *session,
                            coap_pdu_t *request,
                            unsigned char code,
-                           coap_opt_filter_t opts);
+                           coap_opt_filter_t *opts);
 
 /**
  * Helper function to create and send a message with @p type (usually ACK or

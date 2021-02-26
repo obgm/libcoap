@@ -1071,11 +1071,11 @@ coap_handle_request_send_block(coap_session_t *session,
         /* Need to set up a copy of the pdu to send */
         coap_opt_filter_t drop_options;
 
-        memset(drop_options, 0, sizeof(coap_opt_filter_t));
+        memset(&drop_options, 0, sizeof(coap_opt_filter_t));
         if (block.num != 0)
-          coap_option_filter_set(drop_options, COAP_OPTION_OBSERVE);
+          coap_option_filter_set(&drop_options, COAP_OPTION_OBSERVE);
         out_pdu = coap_pdu_duplicate(&p->pdu, session, pdu->token_length,
-                                     pdu->token, drop_options);
+                                     pdu->token, &drop_options);
         if (!out_pdu) {
           response->code = COAP_RESPONSE_CODE(500);
           goto fail;
