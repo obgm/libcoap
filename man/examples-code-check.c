@@ -46,6 +46,13 @@
   "
 #endif /* ! _WIN32 */
 
+const char *inline_list[] = {
+  "coap_register_response_handler(",
+  "coap_register_nack_handler(",
+  "coap_register_ping_handler(",
+  "coap_register_pong_handler(",
+};
+
 int main(int argc, char* argv[])
 {
   DIR *pdir;
@@ -84,6 +91,12 @@ int main(int argc, char* argv[])
       FILE*  fpcode = NULL;
       FILE*  fpheader = NULL;
       char  file_name[300];
+      int is_void_func = 0;
+      int is_number_func = 0;
+      int is_inline_func = 0;
+      int is_struct = 0;
+      char *func_start = NULL;
+      unsigned int i;
 
       fprintf(stderr, "Processing: %s\n", pdir_ent->d_name);
 
@@ -110,6 +123,7 @@ int main(int argc, char* argv[])
           in_synopsis = 0;
           if (fpheader)
             fclose(fpheader);
+          fpheader = NULL;
           continue;
         }
         if (strncmp(buffer, "EXAMPLES", sizeof("EXAMPLES")-1) == 0) {
@@ -123,6 +137,10 @@ int main(int argc, char* argv[])
         if (in_synopsis) {
           /* Working in SYNOPSIS section */
           size_t len;
+          char outbuf[512];
+          char *cp;
+          char *ecp;
+
           if (buffer[0] == '\n')
             continue;
           if (buffer[0] == '-')
@@ -134,24 +152,110 @@ int main(int argc, char* argv[])
           }
           if (buffer[0] == '*' && buffer[1] == '#')
             continue;
-
-          len = strlen(buffer);
-          if (len > 3 && buffer[len-3] == ';' && buffer[len-2] == '*') {
-            /* Delete terminating * */
-            buffer[len-2] = '\n';
-            buffer[len-1] = '\000';
-          }
-          if (len > 3 && buffer[len-3] == '*' && buffer[len-2] == ';') {
-            /* Delete trailing * */
-            buffer[len-3] = ';';
-            buffer[len-2] = '\n';
-            buffer[len-1] = '\000';
-          }
           if (buffer[0] == '*') {
-            fprintf(fpheader, "%s", &buffer[1]);
+            /* start of a new function */
+            is_void_func = 0;
+            is_number_func = 0;
+            is_struct = 0;
+            is_inline_func = 0;
+            func_start = NULL;
+
+            if (strncmp(buffer, "*void ", sizeof("*void ")-1) == 0 &&
+                strncmp(buffer, "*void *", sizeof("*void *")-1) != 0) {
+              is_void_func = 1;
+              func_start = &buffer[sizeof("*void ")-1];
+            }
+            else if (strncmp(buffer, "*struct ", sizeof("*struct ")-1) == 0) {
+              is_struct = 1;
+            }
+            else if (strncmp(buffer, "*int ", sizeof("*int ")-1) == 0 &&
+                strncmp(buffer, "*int *", sizeof("*int *")-1) != 0) {
+              is_number_func = 1;
+            }
+            else if (strncmp(buffer, "*size_t ", sizeof("*size_t ")-1) == 0 &&
+                strncmp(buffer, "*size_t *", sizeof("*size_t *")-1) != 0) {
+              is_number_func = 1;
+            }
+            else if (strncmp(buffer, "*unsigned int ",
+                              sizeof("*unsigned int ")-1) == 0 &&
+                strncmp(buffer, "*unsigned int *",
+                         sizeof("*unsigned int *")-1) != 0) {
+              is_number_func = 1;
+            }
+            else if (strncmp(buffer, "*coap_tid_t ",
+                              sizeof("*coap_tid_t ")-1) == 0 &&
+                strncmp(buffer, "*coap_tid_t *",
+                         sizeof("*coap_tid_t *")-1) != 0) {
+              is_number_func = 1;
+            }
+            /* Look specifically for inline prefixes */
+            else if (strncmp(buffer, "*void *", sizeof("*void *")-1) == 0) {
+              func_start = &buffer[sizeof("*void *")-1];
+            }
+            else if (strncmp(buffer, "*coap_str_const_t *",
+                              sizeof("*coap_str_const_t *")-1) == 0) {
+              func_start = &buffer[sizeof("*coap_str_const_t *")-1];
+            }
+          }
+
+          if (func_start) {
+            /* see if COAP_STATIC_INLINE function */
+            for (i = 0; i < sizeof(inline_list)/sizeof(inline_list[0]); i++) {
+              if (strncmp(func_start, inline_list[i], strlen(inline_list[i])) == 0) {
+                is_inline_func = 1;
+                break;
+              }
+            }
+          }
+
+          /* Need to include use of U for unused parameters just before comma */
+          cp = buffer;
+          ecp = strchr(cp, ',');
+          if (!ecp) ecp = strchr(cp, ')');
+          outbuf[0] = '\000';
+          while (ecp) {
+            len = strlen(outbuf);
+            snprintf(&outbuf[len], sizeof(outbuf)-len, "%*.*s U%c",
+                    (int)(ecp-cp), (int)(ecp-cp), cp, *ecp);
+            cp = ecp+1;
+            if(*cp) {
+              ecp = strchr(cp, ',');
+              if (!ecp) ecp = strchr(cp, ')');
+            }
+            else {
+              ecp = NULL; 
+            }
+          }
+          if (*cp) {
+            len = strlen(outbuf);
+            snprintf(&outbuf[len], sizeof(outbuf)-len, "%s", cp);
+          }
+
+          len = strlen(outbuf);
+          if (len > 3 && ((outbuf[len-3] == ';' && outbuf[len-2] == '*') ||
+                          (outbuf[len-3] == '*' && outbuf[len-2] == ';'))) {
+            if (is_inline_func) {
+              strcpy(&outbuf[len-3], ";\n");
+            }
+            /* Replace ;* or ;* with simple function definition */
+            else if (is_void_func) {
+              strcpy(&outbuf[len-3], "{}\n");
+            }
+            else if (is_number_func) {
+              strcpy(&outbuf[len-3], "{return 0;}\n");
+            }
+            else if (is_struct) {
+              strcpy(&outbuf[len-3], ";\n");
+            }
+            else {
+              strcpy(&outbuf[len-3], "{return NULL;}\n");
+            }
+          }
+          if (outbuf[0] == '*') {
+            fprintf(fpheader, "%s", &outbuf[1]);
           }
           else {
-            fprintf(fpheader, "%s", buffer);
+            fprintf(fpheader, "%s", outbuf);
           }
           continue;
         }
@@ -213,7 +317,13 @@ int main(int argc, char* argv[])
         if (fpcode) {
           if (strstr (buffer, "LIBCOAP_API_VERSION")) {
             fprintf(fpcode, "#include <coap2/coap.h>\n");
+            fprintf(fpcode, "#ifdef __GNUC__\n");
+            fprintf(fpcode, "#define U __attribute__ ((unused))\n");
+            fprintf(fpcode, "#else /* not a GCC */\n");
+            fprintf(fpcode, "#define U\n");
+            fprintf(fpcode, "#endif /* GCC */\n");
             fprintf(fpcode, "#include \"%s.h\"\n", pdir_ent->d_name);
+            fprintf(fpcode, "#undef U\n");
             continue;
           }
           fprintf(fpcode, "%s", buffer);
