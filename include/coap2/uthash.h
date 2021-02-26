@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2017, Troy D. Hanson     http://troydhanson.github.com/uthash/
+Copyright (c) 2003-2021, Troy D. Hanson     http://troydhanson.github.com/uthash/
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -24,11 +24,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef UTHASH_H
 #define UTHASH_H
 
-#define UTHASH_VERSION 2.0.2
+#define UTHASH_VERSION 2.3.0
 
 #include <string.h>   /* memcmp, memset, strlen */
 #include <stddef.h>   /* ptrdiff_t */
 #include <stdlib.h>   /* exit */
+
+#if defined(HASH_DEFINE_OWN_STDINT) && HASH_DEFINE_OWN_STDINT
+/* This codepath is provided for backward compatibility, but I plan to remove it. */
+#warning "HASH_DEFINE_OWN_STDINT is deprecated; please use HASH_NO_STDINT instead"
+typedef unsigned int uint32_t;
+typedef unsigned char uint8_t;
+#elif defined(HASH_NO_STDINT) && HASH_NO_STDINT
+#else
+#include <stdint.h>   /* uint8_t, uint32_t */
+#endif
 
 /* These macros use decltype or the earlier __typeof GNU extension.
    As decltype is only available in newer compilers (VS2010 or gcc 4.3+
@@ -62,26 +72,6 @@ do {                                                                            
 } while (0)
 #endif
 
-/* a number of the hash function use uint32_t which isn't defined on Pre VS2010 */
-#if defined(_WIN32)
-#if defined(_MSC_VER) && _MSC_VER >= 1600
-#include <stdint.h>
-#elif defined(__WATCOMC__) || defined(__MINGW32__) || defined(__CYGWIN__)
-#include <stdint.h>
-#else
-typedef unsigned int uint32_t;
-typedef unsigned char uint8_t;
-#endif
-#elif defined(__GNUC__) && !defined(__VXWORKS__)
-#include <stdint.h>
-#else
-typedef unsigned int uint32_t;
-typedef unsigned char uint8_t;
-#endif
-
-#ifndef uthash_fatal
-#define uthash_fatal(msg) exit(-1)        /* fatal error (out of memory,etc) */
-#endif
 #ifndef uthash_malloc
 #define uthash_malloc(sz) malloc(sz)      /* malloc fcn                      */
 #endif
@@ -91,11 +81,16 @@ typedef unsigned char uint8_t;
 #ifndef uthash_bzero
 #define uthash_bzero(a,n) memset(a,'\0',n)
 #endif
-#ifndef uthash_memcmp
-#define uthash_memcmp(a,b,n) memcmp(a,b,n)
-#endif
 #ifndef uthash_strlen
 #define uthash_strlen(s) strlen(s)
+#endif
+
+#ifndef HASH_FUNCTION
+#define HASH_FUNCTION(keyptr,keylen,hashv) HASH_JEN(keyptr, keylen, hashv)
+#endif
+
+#ifndef HASH_KEYCMP
+#define HASH_KEYCMP(a,b,n) memcmp(a,b,n)
 #endif
 
 #ifndef uthash_noexpand_fyi
@@ -103,6 +98,32 @@ typedef unsigned char uint8_t;
 #endif
 #ifndef uthash_expand_fyi
 #define uthash_expand_fyi(tbl)            /* can be defined to log expands   */
+#endif
+
+#ifndef HASH_NONFATAL_OOM
+#define HASH_NONFATAL_OOM 0
+#endif
+
+#if HASH_NONFATAL_OOM
+/* malloc failures can be recovered from */
+
+#ifndef uthash_nonfatal_oom
+#define uthash_nonfatal_oom(obj) do {} while (0)    /* non-fatal OOM error */
+#endif
+
+#define HASH_RECORD_OOM(oomed) do { (oomed) = 1; } while (0)
+#define IF_HASH_NONFATAL_OOM(x) x
+
+#else
+/* malloc failures result in lost memory, hash tables are unusable */
+
+#ifndef uthash_fatal
+#define uthash_fatal(msg) exit(-1)        /* fatal OOM error */
+#endif
+
+#define HASH_RECORD_OOM(oomed) uthash_fatal("out of memory")
+#define IF_HASH_NONFATAL_OOM(x)
+
 #endif
 
 /* initial number of buckets */
@@ -113,11 +134,21 @@ typedef unsigned char uint8_t;
 /* calculate the element whose hash handle address is hhp */
 #define ELMT_FROM_HH(tbl,hhp) ((void*)(((char*)(hhp)) - ((tbl)->hho)))
 /* calculate the hash handle from element address elp */
-#define HH_FROM_ELMT(tbl,elp) ((UT_hash_handle *)(((char*)(elp)) + ((tbl)->hho)))
+#define HH_FROM_ELMT(tbl,elp) ((UT_hash_handle*)(void*)(((char*)(elp)) + ((tbl)->hho)))
+
+#define HASH_ROLLBACK_BKT(hh, head, itemptrhh)                                   \
+do {                                                                             \
+  struct UT_hash_handle *_hd_hh_item = (itemptrhh);                              \
+  unsigned _hd_bkt;                                                              \
+  HASH_TO_BKT(_hd_hh_item->hashv, (head)->hh.tbl->num_buckets, _hd_bkt);         \
+  (head)->hh.tbl->buckets[_hd_bkt].count++;                                      \
+  _hd_hh_item->hh_next = NULL;                                                   \
+  _hd_hh_item->hh_prev = NULL;                                                   \
+} while (0)
 
 #define HASH_VALUE(keyptr,keylen,hashv)                                          \
 do {                                                                             \
-  HASH_FCN(keyptr, keylen, hashv);                                               \
+  HASH_FUNCTION(keyptr, keylen, hashv);                                          \
 } while (0)
 
 #define HASH_FIND_BYHASHVALUE(hh,head,keyptr,keylen,hashval,out)                 \
@@ -134,23 +165,27 @@ do {                                                                            
 
 #define HASH_FIND(hh,head,keyptr,keylen,out)                                     \
 do {                                                                             \
-  unsigned _hf_hashv;                                                            \
-  HASH_VALUE(keyptr, keylen, _hf_hashv);                                         \
-  HASH_FIND_BYHASHVALUE(hh, head, keyptr, keylen, _hf_hashv, out);               \
+  (out) = NULL;                                                                  \
+  if (head) {                                                                    \
+    unsigned _hf_hashv;                                                          \
+    HASH_VALUE(keyptr, keylen, _hf_hashv);                                       \
+    HASH_FIND_BYHASHVALUE(hh, head, keyptr, keylen, _hf_hashv, out);             \
+  }                                                                              \
 } while (0)
 
 #ifdef HASH_BLOOM
 #define HASH_BLOOM_BITLEN (1UL << HASH_BLOOM)
 #define HASH_BLOOM_BYTELEN (HASH_BLOOM_BITLEN/8UL) + (((HASH_BLOOM_BITLEN%8UL)!=0UL) ? 1UL : 0UL)
-#define HASH_BLOOM_MAKE(tbl)                                                     \
+#define HASH_BLOOM_MAKE(tbl,oomed)                                               \
 do {                                                                             \
   (tbl)->bloom_nbits = HASH_BLOOM;                                               \
   (tbl)->bloom_bv = (uint8_t*)uthash_malloc(HASH_BLOOM_BYTELEN);                 \
   if (!(tbl)->bloom_bv) {                                                        \
-    uthash_fatal("out of memory");                                               \
+    HASH_RECORD_OOM(oomed);                                                      \
+  } else {                                                                       \
+    uthash_bzero((tbl)->bloom_bv, HASH_BLOOM_BYTELEN);                           \
+    (tbl)->bloom_sig = HASH_BLOOM_SIGNATURE;                                     \
   }                                                                              \
-  uthash_bzero((tbl)->bloom_bv, HASH_BLOOM_BYTELEN);                             \
-  (tbl)->bloom_sig = HASH_BLOOM_SIGNATURE;                                       \
 } while (0)
 
 #define HASH_BLOOM_FREE(tbl)                                                     \
@@ -162,39 +197,49 @@ do {                                                                            
 #define HASH_BLOOM_BITTEST(bv,idx) (bv[(idx)/8U] & (1U << ((idx)%8U)))
 
 #define HASH_BLOOM_ADD(tbl,hashv)                                                \
-  HASH_BLOOM_BITSET((tbl)->bloom_bv, (hashv & (uint32_t)((1UL << (tbl)->bloom_nbits) - 1U)))
+  HASH_BLOOM_BITSET((tbl)->bloom_bv, ((hashv) & (uint32_t)((1UL << (tbl)->bloom_nbits) - 1U)))
 
 #define HASH_BLOOM_TEST(tbl,hashv)                                               \
-  HASH_BLOOM_BITTEST((tbl)->bloom_bv, (hashv & (uint32_t)((1UL << (tbl)->bloom_nbits) - 1U)))
+  HASH_BLOOM_BITTEST((tbl)->bloom_bv, ((hashv) & (uint32_t)((1UL << (tbl)->bloom_nbits) - 1U)))
 
 #else
-#define HASH_BLOOM_MAKE(tbl)
+#define HASH_BLOOM_MAKE(tbl,oomed)
 #define HASH_BLOOM_FREE(tbl)
 #define HASH_BLOOM_ADD(tbl,hashv)
 #define HASH_BLOOM_TEST(tbl,hashv) (1)
 #define HASH_BLOOM_BYTELEN 0U
 #endif
 
-#define HASH_MAKE_TABLE(hh,head)                                                 \
+#define HASH_MAKE_TABLE(hh,head,oomed)                                           \
 do {                                                                             \
   (head)->hh.tbl = (UT_hash_table*)uthash_malloc(sizeof(UT_hash_table));         \
   if (!(head)->hh.tbl) {                                                         \
-    uthash_fatal("out of memory");                                               \
+    HASH_RECORD_OOM(oomed);                                                      \
+  } else {                                                                       \
+    uthash_bzero((head)->hh.tbl, sizeof(UT_hash_table));                         \
+    (head)->hh.tbl->tail = &((head)->hh);                                        \
+    (head)->hh.tbl->num_buckets = HASH_INITIAL_NUM_BUCKETS;                      \
+    (head)->hh.tbl->log2_num_buckets = HASH_INITIAL_NUM_BUCKETS_LOG2;            \
+    (head)->hh.tbl->hho = (char*)(&(head)->hh) - (char*)(head);                  \
+    (head)->hh.tbl->buckets = (UT_hash_bucket*)uthash_malloc(                    \
+        HASH_INITIAL_NUM_BUCKETS * sizeof(struct UT_hash_bucket));               \
+    (head)->hh.tbl->signature = HASH_SIGNATURE;                                  \
+    if (!(head)->hh.tbl->buckets) {                                              \
+      HASH_RECORD_OOM(oomed);                                                    \
+      uthash_free((head)->hh.tbl, sizeof(UT_hash_table));                        \
+    } else {                                                                     \
+      uthash_bzero((head)->hh.tbl->buckets,                                      \
+          HASH_INITIAL_NUM_BUCKETS * sizeof(struct UT_hash_bucket));             \
+      HASH_BLOOM_MAKE((head)->hh.tbl, oomed);                                    \
+      IF_HASH_NONFATAL_OOM(                                                      \
+        if (oomed) {                                                             \
+          uthash_free((head)->hh.tbl->buckets,                                   \
+              HASH_INITIAL_NUM_BUCKETS*sizeof(struct UT_hash_bucket));           \
+          uthash_free((head)->hh.tbl, sizeof(UT_hash_table));                    \
+        }                                                                        \
+      )                                                                          \
+    }                                                                            \
   }                                                                              \
-  uthash_bzero((head)->hh.tbl, sizeof(UT_hash_table));                           \
-  (head)->hh.tbl->tail = &((head)->hh);                                          \
-  (head)->hh.tbl->num_buckets = HASH_INITIAL_NUM_BUCKETS;                        \
-  (head)->hh.tbl->log2_num_buckets = HASH_INITIAL_NUM_BUCKETS_LOG2;              \
-  (head)->hh.tbl->hho = (char*)(&(head)->hh) - (char*)(head);                    \
-  (head)->hh.tbl->buckets = (UT_hash_bucket*)uthash_malloc(                      \
-      HASH_INITIAL_NUM_BUCKETS * sizeof(struct UT_hash_bucket));                 \
-  if (!(head)->hh.tbl->buckets) {                                                \
-    uthash_fatal("out of memory");                                               \
-  }                                                                              \
-  uthash_bzero((head)->hh.tbl->buckets,                                          \
-      HASH_INITIAL_NUM_BUCKETS * sizeof(struct UT_hash_bucket));                 \
-  HASH_BLOOM_MAKE((head)->hh.tbl);                                               \
-  (head)->hh.tbl->signature = HASH_SIGNATURE;                                    \
 } while (0)
 
 #define HASH_REPLACE_BYHASHVALUE_INORDER(hh,head,fieldname,keylen_in,hashval,add,replaced,cmpfcn) \
@@ -264,17 +309,58 @@ do {                                                                            
 } while (0)
 #endif
 
-#define HASH_ADD_KEYPTR_BYHASHVALUE_INORDER(hh,head,keyptr,keylen_in,hashval,add,cmpfcn) \
+#if HASH_NONFATAL_OOM
+
+#define HASH_ADD_TO_TABLE(hh,head,keyptr,keylen_in,hashval,add,oomed)            \
+do {                                                                             \
+  if (!(oomed)) {                                                                \
+    unsigned _ha_bkt;                                                            \
+    (head)->hh.tbl->num_items++;                                                 \
+    HASH_TO_BKT(hashval, (head)->hh.tbl->num_buckets, _ha_bkt);                  \
+    HASH_ADD_TO_BKT((head)->hh.tbl->buckets[_ha_bkt], hh, &(add)->hh, oomed);    \
+    if (oomed) {                                                                 \
+      HASH_ROLLBACK_BKT(hh, head, &(add)->hh);                                   \
+      HASH_DELETE_HH(hh, head, &(add)->hh);                                      \
+      (add)->hh.tbl = NULL;                                                      \
+      uthash_nonfatal_oom(add);                                                  \
+    } else {                                                                     \
+      HASH_BLOOM_ADD((head)->hh.tbl, hashval);                                   \
+      HASH_EMIT_KEY(hh, head, keyptr, keylen_in);                                \
+    }                                                                            \
+  } else {                                                                       \
+    (add)->hh.tbl = NULL;                                                        \
+    uthash_nonfatal_oom(add);                                                    \
+  }                                                                              \
+} while (0)
+
+#else
+
+#define HASH_ADD_TO_TABLE(hh,head,keyptr,keylen_in,hashval,add,oomed)            \
 do {                                                                             \
   unsigned _ha_bkt;                                                              \
+  (head)->hh.tbl->num_items++;                                                   \
+  HASH_TO_BKT(hashval, (head)->hh.tbl->num_buckets, _ha_bkt);                    \
+  HASH_ADD_TO_BKT((head)->hh.tbl->buckets[_ha_bkt], hh, &(add)->hh, oomed);      \
+  HASH_BLOOM_ADD((head)->hh.tbl, hashval);                                       \
+  HASH_EMIT_KEY(hh, head, keyptr, keylen_in);                                    \
+} while (0)
+
+#endif
+
+
+#define HASH_ADD_KEYPTR_BYHASHVALUE_INORDER(hh,head,keyptr,keylen_in,hashval,add,cmpfcn) \
+do {                                                                             \
+  IF_HASH_NONFATAL_OOM( int _ha_oomed = 0; )                                     \
   (add)->hh.hashv = (hashval);                                                   \
   (add)->hh.key = (char*) (keyptr);                                              \
   (add)->hh.keylen = (unsigned) (keylen_in);                                     \
   if (!(head)) {                                                                 \
     (add)->hh.next = NULL;                                                       \
     (add)->hh.prev = NULL;                                                       \
-    (head) = (add);                                                              \
-    HASH_MAKE_TABLE(hh, head);                                                   \
+    HASH_MAKE_TABLE(hh, add, _ha_oomed);                                         \
+    IF_HASH_NONFATAL_OOM( if (!_ha_oomed) { )                                    \
+      (head) = (add);                                                            \
+    IF_HASH_NONFATAL_OOM( } )                                                    \
   } else {                                                                       \
     void *_hs_iter = (head);                                                     \
     (add)->hh.tbl = (head)->hh.tbl;                                              \
@@ -291,11 +377,7 @@ do {                                                                            
       HASH_APPEND_LIST(hh, head, add);                                           \
     }                                                                            \
   }                                                                              \
-  (head)->hh.tbl->num_items++;                                                   \
-  HASH_TO_BKT(hashval, (head)->hh.tbl->num_buckets, _ha_bkt);                    \
-  HASH_ADD_TO_BKT((head)->hh.tbl->buckets[_ha_bkt], &(add)->hh);                 \
-  HASH_BLOOM_ADD((head)->hh.tbl, hashval);                                       \
-  HASH_EMIT_KEY(hh, head, keyptr, keylen_in);                                    \
+  HASH_ADD_TO_TABLE(hh, head, keyptr, keylen_in, hashval, add, _ha_oomed);       \
   HASH_FSCK(hh, head, "HASH_ADD_KEYPTR_BYHASHVALUE_INORDER");                    \
 } while (0)
 
@@ -314,24 +396,22 @@ do {                                                                            
 
 #define HASH_ADD_KEYPTR_BYHASHVALUE(hh,head,keyptr,keylen_in,hashval,add)        \
 do {                                                                             \
-  unsigned _ha_bkt;                                                              \
+  IF_HASH_NONFATAL_OOM( int _ha_oomed = 0; )                                     \
   (add)->hh.hashv = (hashval);                                                   \
-  (add)->hh.key = (const void *) (keyptr);                                       \
+  (add)->hh.key = (const void*) (keyptr);                                        \
   (add)->hh.keylen = (unsigned) (keylen_in);                                     \
   if (!(head)) {                                                                 \
     (add)->hh.next = NULL;                                                       \
     (add)->hh.prev = NULL;                                                       \
-    (head) = (add);                                                              \
-    HASH_MAKE_TABLE(hh, head);                                                   \
+    HASH_MAKE_TABLE(hh, add, _ha_oomed);                                         \
+    IF_HASH_NONFATAL_OOM( if (!_ha_oomed) { )                                    \
+      (head) = (add);                                                            \
+    IF_HASH_NONFATAL_OOM( } )                                                    \
   } else {                                                                       \
     (add)->hh.tbl = (head)->hh.tbl;                                              \
     HASH_APPEND_LIST(hh, head, add);                                             \
   }                                                                              \
-  (head)->hh.tbl->num_items++;                                                   \
-  HASH_TO_BKT(hashval, (head)->hh.tbl->num_buckets, _ha_bkt);                    \
-  HASH_ADD_TO_BKT((head)->hh.tbl->buckets[_ha_bkt], &(add)->hh);                 \
-  HASH_BLOOM_ADD((head)->hh.tbl, hashval);                                       \
-  HASH_EMIT_KEY(hh, head, keyptr, keylen_in);                                    \
+  HASH_ADD_TO_TABLE(hh, head, keyptr, keylen_in, hashval, add, _ha_oomed);       \
   HASH_FSCK(hh, head, "HASH_ADD_KEYPTR_BYHASHVALUE");                            \
 } while (0)
 
@@ -394,17 +474,25 @@ do {                                                                            
     HASH_DEL_IN_BKT((head)->hh.tbl->buckets[_hd_bkt], _hd_hh_del);               \
     (head)->hh.tbl->num_items--;                                                 \
   }                                                                              \
-  HASH_FSCK(hh, head, "HASH_DELETE");                                            \
+  HASH_FSCK(hh, head, "HASH_DELETE_HH");                                         \
 } while (0)
-
 
 /* convenience forms of HASH_FIND/HASH_ADD/HASH_DEL */
 #define HASH_FIND_STR(head,findstr,out)                                          \
-    HASH_FIND(hh,head,findstr,(unsigned)uthash_strlen(findstr),out)
+do {                                                                             \
+    unsigned _uthash_hfstr_keylen = (unsigned)uthash_strlen(findstr);            \
+    HASH_FIND(hh, head, findstr, _uthash_hfstr_keylen, out);                     \
+} while (0)
 #define HASH_ADD_STR(head,strfield,add)                                          \
-    HASH_ADD(hh,head,strfield[0],(unsigned)uthash_strlen(add->strfield),add)
+do {                                                                             \
+    unsigned _uthash_hastr_keylen = (unsigned)uthash_strlen((add)->strfield);    \
+    HASH_ADD(hh, head, strfield[0], _uthash_hastr_keylen, add);                  \
+} while (0)
 #define HASH_REPLACE_STR(head,strfield,add,replaced)                             \
-    HASH_REPLACE(hh,head,strfield[0],(unsigned)uthash_strlen(add->strfield),add,replaced)
+do {                                                                             \
+    unsigned _uthash_hrstr_keylen = (unsigned)uthash_strlen((add)->strfield);    \
+    HASH_REPLACE(hh, head, strfield[0], _uthash_hrstr_keylen, add, replaced);    \
+} while (0)
 #define HASH_FIND_INT(head,findint,out)                                          \
     HASH_FIND(hh,head,findint,sizeof(int),out)
 #define HASH_ADD_INT(head,intfield,add)                                          \
@@ -424,7 +512,8 @@ do {                                                                            
  * This is for uthash developer only; it compiles away if HASH_DEBUG isn't defined.
  */
 #ifdef HASH_DEBUG
-#define HASH_OOPS(...) do { fprintf(stderr,__VA_ARGS__); exit(-1); } while (0)
+#include <stdio.h>   /* fprintf, stderr */
+#define HASH_OOPS(...) do { fprintf(stderr, __VA_ARGS__); exit(-1); } while (0)
 #define HASH_FSCK(hh,head,where)                                                 \
 do {                                                                             \
   struct UT_hash_handle *_thh;                                                   \
@@ -489,13 +578,6 @@ do {                                                                            
 } while (0)
 #else
 #define HASH_EMIT_KEY(hh,head,keyptr,fieldlen)
-#endif
-
-/* default to Jenkin's hash unless overridden e.g. DHASH_FUNCTION=HASH_SAX */
-#ifdef HASH_FUNCTION
-#define HASH_FCN HASH_FUNCTION
-#else
-#define HASH_FCN HASH_JEN
 #endif
 
 /* The Bernstein hash function, used in Perl prior to v5.6. Note (x<<5+x)=x*33. */
@@ -596,8 +678,8 @@ do {                                                                            
     case 4:  _hj_i += ( (unsigned)_hj_key[3] << 24 );  /* FALLTHROUGH */         \
     case 3:  _hj_i += ( (unsigned)_hj_key[2] << 16 );  /* FALLTHROUGH */         \
     case 2:  _hj_i += ( (unsigned)_hj_key[1] << 8 );   /* FALLTHROUGH */         \
-    case 1:  _hj_i += _hj_key[0];                                                \
-    default: ;                                         /* does not happen */     \
+    case 1:  _hj_i += _hj_key[0];                      /* FALLTHROUGH */         \
+    default: ;                                                                   \
   }                                                                              \
   HASH_JEN_MIX(_hj_i, _hj_j, hashv);                                             \
 } while (0)
@@ -645,6 +727,8 @@ do {                                                                            
     case 1: hashv += *_sfh_key;                                                  \
             hashv ^= hashv << 10;                                                \
             hashv += hashv >> 1;                                                 \
+            break;                                                               \
+    default: ;                                                                   \
   }                                                                              \
                                                                                  \
   /* Force "avalanching" of final 127 bits */                                    \
@@ -656,87 +740,6 @@ do {                                                                            
   hashv += hashv >> 6;                                                           \
 } while (0)
 
-#ifdef HASH_USING_NO_STRICT_ALIASING
-/* The MurmurHash exploits some CPU's (x86,x86_64) tolerance for unaligned reads.
- * For other types of CPU's (e.g. Sparc) an unaligned read causes a bus error.
- * MurmurHash uses the faster approach only on CPU's where we know it's safe.
- *
- * Note the preprocessor built-in defines can be emitted using:
- *
- *   gcc -m64 -dM -E - < /dev/null                  (on gcc)
- *   cc -## a.c (where a.c is a simple test file)   (Sun Studio)
- */
-#if (defined(__i386__) || defined(__x86_64__)  || defined(_M_IX86))
-#define MUR_GETBLOCK(p,i) p[i]
-#else /* non intel */
-#define MUR_PLUS0_ALIGNED(p) (((unsigned long)p & 3UL) == 0UL)
-#define MUR_PLUS1_ALIGNED(p) (((unsigned long)p & 3UL) == 1UL)
-#define MUR_PLUS2_ALIGNED(p) (((unsigned long)p & 3UL) == 2UL)
-#define MUR_PLUS3_ALIGNED(p) (((unsigned long)p & 3UL) == 3UL)
-#define WP(p) ((uint32_t*)((unsigned long)(p) & ~3UL))
-#if (defined(__BIG_ENDIAN__) || defined(SPARC) || defined(__ppc__) || defined(__ppc64__))
-#define MUR_THREE_ONE(p) ((((*WP(p))&0x00ffffff) << 8) | (((*(WP(p)+1))&0xff000000) >> 24))
-#define MUR_TWO_TWO(p)   ((((*WP(p))&0x0000ffff) <<16) | (((*(WP(p)+1))&0xffff0000) >> 16))
-#define MUR_ONE_THREE(p) ((((*WP(p))&0x000000ff) <<24) | (((*(WP(p)+1))&0xffffff00) >>  8))
-#else /* assume little endian non-intel */
-#define MUR_THREE_ONE(p) ((((*WP(p))&0xffffff00) >> 8) | (((*(WP(p)+1))&0x000000ff) << 24))
-#define MUR_TWO_TWO(p)   ((((*WP(p))&0xffff0000) >>16) | (((*(WP(p)+1))&0x0000ffff) << 16))
-#define MUR_ONE_THREE(p) ((((*WP(p))&0xff000000) >>24) | (((*(WP(p)+1))&0x00ffffff) <<  8))
-#endif
-#define MUR_GETBLOCK(p,i) (MUR_PLUS0_ALIGNED(p) ? ((p)[i]) :           \
-                            (MUR_PLUS1_ALIGNED(p) ? MUR_THREE_ONE(p) : \
-                             (MUR_PLUS2_ALIGNED(p) ? MUR_TWO_TWO(p) :  \
-                                                      MUR_ONE_THREE(p))))
-#endif
-#define MUR_ROTL32(x,r) (((x) << (r)) | ((x) >> (32 - (r))))
-#define MUR_FMIX(_h) \
-do {                 \
-  _h ^= _h >> 16;    \
-  _h *= 0x85ebca6bu; \
-  _h ^= _h >> 13;    \
-  _h *= 0xc2b2ae35u; \
-  _h ^= _h >> 16;    \
-} while (0)
-
-#define HASH_MUR(key,keylen,hashv)                                     \
-do {                                                                   \
-  const uint8_t *_mur_data = (const uint8_t*)(key);                    \
-  const int _mur_nblocks = (int)(keylen) / 4;                          \
-  uint32_t _mur_h1 = 0xf88D5353u;                                      \
-  uint32_t _mur_c1 = 0xcc9e2d51u;                                      \
-  uint32_t _mur_c2 = 0x1b873593u;                                      \
-  uint32_t _mur_k1 = 0;                                                \
-  const uint8_t *_mur_tail;                                            \
-  const uint32_t *_mur_blocks = (const uint32_t*)(_mur_data+(_mur_nblocks*4)); \
-  int _mur_i;                                                          \
-  for (_mur_i = -_mur_nblocks; _mur_i != 0; _mur_i++) {                \
-    _mur_k1 = MUR_GETBLOCK(_mur_blocks,_mur_i);                        \
-    _mur_k1 *= _mur_c1;                                                \
-    _mur_k1 = MUR_ROTL32(_mur_k1,15);                                  \
-    _mur_k1 *= _mur_c2;                                                \
-                                                                       \
-    _mur_h1 ^= _mur_k1;                                                \
-    _mur_h1 = MUR_ROTL32(_mur_h1,13);                                  \
-    _mur_h1 = (_mur_h1*5U) + 0xe6546b64u;                              \
-  }                                                                    \
-  _mur_tail = (const uint8_t*)(_mur_data + (_mur_nblocks*4));          \
-  _mur_k1=0;                                                           \
-  switch ((keylen) & 3U) {                                             \
-    case 0: break;                                                     \
-    case 3: _mur_k1 ^= (uint32_t)_mur_tail[2] << 16; /* FALLTHROUGH */ \
-    case 2: _mur_k1 ^= (uint32_t)_mur_tail[1] << 8;  /* FALLTHROUGH */ \
-    case 1: _mur_k1 ^= (uint32_t)_mur_tail[0];                         \
-    _mur_k1 *= _mur_c1;                                                \
-    _mur_k1 = MUR_ROTL32(_mur_k1,15);                                  \
-    _mur_k1 *= _mur_c2;                                                \
-    _mur_h1 ^= _mur_k1;                                                \
-  }                                                                    \
-  _mur_h1 ^= (uint32_t)(keylen);                                       \
-  MUR_FMIX(_mur_h1);                                                   \
-  hashv = _mur_h1;                                                     \
-} while (0)
-#endif  /* HASH_USING_NO_STRICT_ALIASING */
-
 /* iterate over items in a known bucket to find desired item */
 #define HASH_FIND_IN_BKT(tbl,hh,head,keyptr,keylen_in,hashval,out)               \
 do {                                                                             \
@@ -747,7 +750,7 @@ do {                                                                            
   }                                                                              \
   while ((out) != NULL) {                                                        \
     if ((out)->hh.hashv == (hashval) && (out)->hh.keylen == (keylen_in)) {       \
-      if (uthash_memcmp((out)->hh.key, keyptr, keylen_in) == 0) {                \
+      if (HASH_KEYCMP((out)->hh.key, keyptr, keylen_in) == 0) {                  \
         break;                                                                   \
       }                                                                          \
     }                                                                            \
@@ -760,7 +763,7 @@ do {                                                                            
 } while (0)
 
 /* add an item to a bucket  */
-#define HASH_ADD_TO_BKT(head,addhh)                                              \
+#define HASH_ADD_TO_BKT(head,hh,addhh,oomed)                                     \
 do {                                                                             \
   UT_hash_bucket *_ha_head = &(head);                                            \
   _ha_head->count++;                                                             \
@@ -772,7 +775,12 @@ do {                                                                            
   _ha_head->hh_head = (addhh);                                                   \
   if ((_ha_head->count >= ((_ha_head->expand_mult + 1U) * HASH_BKT_CAPACITY_THRESH)) \
       && !(addhh)->tbl->noexpand) {                                              \
-    HASH_EXPAND_BUCKETS((addhh)->tbl);                                           \
+    HASH_EXPAND_BUCKETS(addhh,(addhh)->tbl, oomed);                              \
+    IF_HASH_NONFATAL_OOM(                                                        \
+      if (oomed) {                                                               \
+        HASH_DEL_IN_BKT(head,addhh);                                             \
+      }                                                                          \
+    )                                                                            \
   }                                                                              \
 } while (0)
 
@@ -821,53 +829,56 @@ do {                                                                            
  *      ceil(n/b) = (n>>lb) + ( (n & (b-1)) ? 1:0)
  *
  */
-#define HASH_EXPAND_BUCKETS(tbl)                                                 \
+#define HASH_EXPAND_BUCKETS(hh,tbl,oomed)                                        \
 do {                                                                             \
   unsigned _he_bkt;                                                              \
   unsigned _he_bkt_i;                                                            \
   struct UT_hash_handle *_he_thh, *_he_hh_nxt;                                   \
   UT_hash_bucket *_he_new_buckets, *_he_newbkt;                                  \
   _he_new_buckets = (UT_hash_bucket*)uthash_malloc(                              \
-           2UL * (tbl)->num_buckets * sizeof(struct UT_hash_bucket));            \
+           sizeof(struct UT_hash_bucket) * (tbl)->num_buckets * 2U);             \
   if (!_he_new_buckets) {                                                        \
-    uthash_fatal("out of memory");                                               \
-  }                                                                              \
-  uthash_bzero(_he_new_buckets,                                                  \
-          2UL * (tbl)->num_buckets * sizeof(struct UT_hash_bucket));             \
-  (tbl)->ideal_chain_maxlen =                                                    \
-     ((tbl)->num_items >> ((tbl)->log2_num_buckets+1U)) +                        \
-     ((((tbl)->num_items & (((tbl)->num_buckets*2U)-1U)) != 0U) ? 1U : 0U);      \
-  (tbl)->nonideal_items = 0;                                                     \
-  for (_he_bkt_i = 0; _he_bkt_i < (tbl)->num_buckets; _he_bkt_i++) {             \
-    _he_thh = (tbl)->buckets[ _he_bkt_i ].hh_head;                               \
-    while (_he_thh != NULL) {                                                    \
-      _he_hh_nxt = _he_thh->hh_next;                                             \
-      HASH_TO_BKT(_he_thh->hashv, (tbl)->num_buckets * 2U, _he_bkt);             \
-      _he_newbkt = &(_he_new_buckets[_he_bkt]);                                  \
-      if (++(_he_newbkt->count) > (tbl)->ideal_chain_maxlen) {                   \
-        (tbl)->nonideal_items++;                                                 \
-        _he_newbkt->expand_mult = _he_newbkt->count / (tbl)->ideal_chain_maxlen; \
+    HASH_RECORD_OOM(oomed);                                                      \
+  } else {                                                                       \
+    uthash_bzero(_he_new_buckets,                                                \
+        sizeof(struct UT_hash_bucket) * (tbl)->num_buckets * 2U);                \
+    (tbl)->ideal_chain_maxlen =                                                  \
+       ((tbl)->num_items >> ((tbl)->log2_num_buckets+1U)) +                      \
+       ((((tbl)->num_items & (((tbl)->num_buckets*2U)-1U)) != 0U) ? 1U : 0U);    \
+    (tbl)->nonideal_items = 0;                                                   \
+    for (_he_bkt_i = 0; _he_bkt_i < (tbl)->num_buckets; _he_bkt_i++) {           \
+      _he_thh = (tbl)->buckets[ _he_bkt_i ].hh_head;                             \
+      while (_he_thh != NULL) {                                                  \
+        _he_hh_nxt = _he_thh->hh_next;                                           \
+        HASH_TO_BKT(_he_thh->hashv, (tbl)->num_buckets * 2U, _he_bkt);           \
+        _he_newbkt = &(_he_new_buckets[_he_bkt]);                                \
+        if (++(_he_newbkt->count) > (tbl)->ideal_chain_maxlen) {                 \
+          (tbl)->nonideal_items++;                                               \
+          if (_he_newbkt->count > _he_newbkt->expand_mult * (tbl)->ideal_chain_maxlen) { \
+            _he_newbkt->expand_mult++;                                           \
+          }                                                                      \
+        }                                                                        \
+        _he_thh->hh_prev = NULL;                                                 \
+        _he_thh->hh_next = _he_newbkt->hh_head;                                  \
+        if (_he_newbkt->hh_head != NULL) {                                       \
+          _he_newbkt->hh_head->hh_prev = _he_thh;                                \
+        }                                                                        \
+        _he_newbkt->hh_head = _he_thh;                                           \
+        _he_thh = _he_hh_nxt;                                                    \
       }                                                                          \
-      _he_thh->hh_prev = NULL;                                                   \
-      _he_thh->hh_next = _he_newbkt->hh_head;                                    \
-      if (_he_newbkt->hh_head != NULL) {                                         \
-        _he_newbkt->hh_head->hh_prev = _he_thh;                                  \
-      }                                                                          \
-      _he_newbkt->hh_head = _he_thh;                                             \
-      _he_thh = _he_hh_nxt;                                                      \
     }                                                                            \
+    uthash_free((tbl)->buckets, (tbl)->num_buckets * sizeof(struct UT_hash_bucket)); \
+    (tbl)->num_buckets *= 2U;                                                    \
+    (tbl)->log2_num_buckets++;                                                   \
+    (tbl)->buckets = _he_new_buckets;                                            \
+    (tbl)->ineff_expands = ((tbl)->nonideal_items > ((tbl)->num_items >> 1)) ?   \
+        ((tbl)->ineff_expands+1U) : 0U;                                          \
+    if ((tbl)->ineff_expands > 1U) {                                             \
+      (tbl)->noexpand = 1;                                                       \
+      uthash_noexpand_fyi(tbl);                                                  \
+    }                                                                            \
+    uthash_expand_fyi(tbl);                                                      \
   }                                                                              \
-  uthash_free((tbl)->buckets, (tbl)->num_buckets * sizeof(struct UT_hash_bucket)); \
-  (tbl)->num_buckets *= 2U;                                                      \
-  (tbl)->log2_num_buckets++;                                                     \
-  (tbl)->buckets = _he_new_buckets;                                              \
-  (tbl)->ineff_expands = ((tbl)->nonideal_items > ((tbl)->num_items >> 1)) ?     \
-      ((tbl)->ineff_expands+1U) : 0U;                                            \
-  if ((tbl)->ineff_expands > 1U) {                                               \
-    (tbl)->noexpand = 1;                                                         \
-    uthash_noexpand_fyi(tbl);                                                    \
-  }                                                                              \
-  uthash_expand_fyi(tbl);                                                        \
 } while (0)
 
 
@@ -977,7 +988,8 @@ do {                                                                            
         _src_hh = _src_hh->hh_next) {                                            \
         _elt = ELMT_FROM_HH((src)->hh_src.tbl, _src_hh);                         \
         if (cond(_elt)) {                                                        \
-          _dst_hh = (UT_hash_handle*)(((char*)_elt) + _dst_hho);                 \
+          IF_HASH_NONFATAL_OOM( int _hs_oomed = 0; )                             \
+          _dst_hh = (UT_hash_handle*)(void*)(((char*)_elt) + _dst_hho);          \
           _dst_hh->key = _src_hh->key;                                           \
           _dst_hh->keylen = _src_hh->keylen;                                     \
           _dst_hh->hashv = _src_hh->hashv;                                       \
@@ -988,14 +1000,30 @@ do {                                                                            
           }                                                                      \
           if ((dst) == NULL) {                                                   \
             DECLTYPE_ASSIGN(dst, _elt);                                          \
-            HASH_MAKE_TABLE(hh_dst, dst);                                        \
+            HASH_MAKE_TABLE(hh_dst, dst, _hs_oomed);                             \
+            IF_HASH_NONFATAL_OOM(                                                \
+              if (_hs_oomed) {                                                   \
+                uthash_nonfatal_oom(_elt);                                       \
+                (dst) = NULL;                                                    \
+                continue;                                                        \
+              }                                                                  \
+            )                                                                    \
           } else {                                                               \
             _dst_hh->tbl = (dst)->hh_dst.tbl;                                    \
           }                                                                      \
           HASH_TO_BKT(_dst_hh->hashv, _dst_hh->tbl->num_buckets, _dst_bkt);      \
-          HASH_ADD_TO_BKT(_dst_hh->tbl->buckets[_dst_bkt], _dst_hh);             \
-          HASH_BLOOM_ADD(_dst_hh->tbl, _dst_hh->hashv);                          \
+          HASH_ADD_TO_BKT(_dst_hh->tbl->buckets[_dst_bkt], hh_dst, _dst_hh, _hs_oomed); \
           (dst)->hh_dst.tbl->num_items++;                                        \
+          IF_HASH_NONFATAL_OOM(                                                  \
+            if (_hs_oomed) {                                                     \
+              HASH_ROLLBACK_BKT(hh_dst, dst, _dst_hh);                           \
+              HASH_DELETE_HH(hh_dst, dst, _dst_hh);                              \
+              _dst_hh->tbl = NULL;                                               \
+              uthash_nonfatal_oom(_elt);                                         \
+              continue;                                                          \
+            }                                                                    \
+          )                                                                      \
+          HASH_BLOOM_ADD(_dst_hh->tbl, _dst_hh->hashv);                          \
           _last_elt = _elt;                                                      \
           _last_elt_hh = _dst_hh;                                                \
         }                                                                        \
