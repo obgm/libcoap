@@ -7,7 +7,7 @@
 * of use.
 */
 
-#include "coap_internal.h"
+#include "coap2/coap_internal.h"
 
 #if !defined(HAVE_LIBTINYDTLS) && !defined(HAVE_OPENSSL) && !defined(HAVE_LIBGNUTLS) && !defined(HAVE_MBEDTLS)
 

@@ -8,7 +8,7 @@
  */
 
 
-#include "coap_internal.h"
+#include "coap2/coap_internal.h"
 
 #include <stdio.h>
 #include <string.h>

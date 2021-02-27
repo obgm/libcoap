@@ -8,9 +8,9 @@
 
 #include "coap_config.h"
 #include "test_wellknown.h"
-#include "coap_internal.h"
+#include "coap2/coap_internal.h"
 
-#include <coap.h>
+#include <coap2/coap.h>
 
 #include <assert.h>
 #ifdef HAVE_NETINET_IN_H

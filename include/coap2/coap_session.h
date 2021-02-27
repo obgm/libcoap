@@ -15,12 +15,12 @@
 #define COAP_SESSION_H_
 
 
-#include "coap_forward_decls.h"
-#include "coap_io.h"
-#include "coap_time.h"
-#include "pdu.h"
-#include "uthash.h"
-#include "coap_dtls.h"
+#include "coap2/coap_forward_decls.h"
+#include "coap2/coap_io.h"
+#include "coap2/coap_time.h"
+#include "coap2/pdu.h"
+#include "coap2/uthash.h"
+#include "coap2/coap_dtls.h"
 
 /**
 * Abstraction of a fixed point number that can be used where necessary instead

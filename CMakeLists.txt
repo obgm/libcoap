@@ -27,13 +27,13 @@ set(DTLS_BACKEND
     "default"
     CACHE
       STRING
-      " \
-    Name of the dtls backend, only relevant if `ENABLE_DTLS` is ON which is default. \
-    Possible values: default, gnutls, openssl, tinydtls and mbedtls. \
-    If specified then this library will be searched and if found also used. \
-    If not found then the cmake configuration will stop with an error. \
-    If not specified, then cmake will try to use the first one found in the following order: \
-    gnutls, openssl, tinydtls, mbedtls \
+      "\
+Name of the dtls backend, only relevant if `ENABLE_DTLS` is ON which is default. \
+Possible values: default, gnutls, openssl, tinydtls and mbedtls. \
+If specified then this library will be searched and if found also used. \
+If not found then the cmake configuration will stop with an error. \
+If not specified, then cmake will try to use the first one found in the following order: \
+gnutls, openssl, tinydtls, mbedtls \
     ")
 set_property(
   CACHE DTLS_BACKEND
@@ -220,7 +220,8 @@ function(compile_tinydtls)
     IMPORTED)
   set_target_properties(
     tinydtls
-    PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_BINARY_DIR}/include"
+    PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+               "${CMAKE_CURRENT_BINARY_DIR}/include"
                IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                IMPORTED_LOCATION "${LIBTINYDTLS_PATH}")
 
@@ -266,7 +267,10 @@ if(ENABLE_DTLS)
 
             else()
               # no cryto lib found
-              message(FATAL_ERROR "cannot find any cryto lib, either install one or compile without DTLS support")
+              message(
+                FATAL_ERROR
+                  "cannot find any cryto lib, either install one or compile without DTLS support"
+              )
             endif()
 
           endif()
@@ -377,9 +381,10 @@ else(ENABLE_TCP)
 endif(ENABLE_TCP)
 
 # creates config header file in build directory
-configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap.h)
+configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap.h)
 
-configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_config.h.in
+configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake_coap_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/coap_config.h)
 
 #
@@ -459,9 +464,7 @@ target_include_directories(
   PUBLIC # config headers are generated during configuration time
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/coap2/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/coap2>
          $<INSTALL_INTERFACE:include/>
          $<$<BOOL:${USE_VENDORED_TINYDTLS}>:${CMAKE_BINARY_DIR}/include/tinydtls>
          $<$<BOOL:${HAVE_LIBGNUTLS}>:${GNUTLS_INCLUDE_DIR}>
@@ -530,7 +533,8 @@ if(ENABLE_TESTS)
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_wellknown.c
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_wellknown.h)
   # tests require libcunit (e.g. debian libcunit1-dev)
-  target_link_libraries(testdriver PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME} -lcunit)
+  target_link_libraries(testdriver PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME}
+                                          -lcunit)
 endif()
 
 #
@@ -539,17 +543,20 @@ endif()
 
 if(ENABLE_EXAMPLES)
   add_executable(coap-client ${CMAKE_CURRENT_LIST_DIR}/examples/coap-client.c)
-  target_link_libraries(coap-client PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+  target_link_libraries(coap-client
+                        PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
 
   add_executable(coap-rd ${CMAKE_CURRENT_LIST_DIR}/examples/coap-rd.c)
   target_link_libraries(coap-rd PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
 
   add_executable(coap-server ${CMAKE_CURRENT_LIST_DIR}/examples/coap-server.c)
-  target_link_libraries(coap-server PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+  target_link_libraries(coap-server
+                        PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
 
   if(NOT WIN32)
     add_executable(etsi_iot_01 ${CMAKE_CURRENT_LIST_DIR}/examples/etsi_iot_01.c)
-    target_link_libraries(etsi_iot_01 PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+    target_link_libraries(etsi_iot_01
+                          PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
 
     add_executable(tiny ${CMAKE_CURRENT_LIST_DIR}/examples/tiny.c)
     target_link_libraries(tiny PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
@@ -586,7 +593,9 @@ if(ENABLE_DOCS)
     message(STATUS "Setup up the Doxygen documention build")
 
   else(Doxygen_FOUND)
-    message(WARNING "Doxygen need to be installed to generate the doxygen documentation")
+    message(
+      WARNING
+        "Doxygen need to be installed to generate the doxygen documentation")
   endif(Doxygen_FOUND)
 
 endif()
@@ -616,7 +625,9 @@ configure_package_config_file(
   ${PROJECT_NAME}Config.cmake
   INSTALL_DESTINATION
   ${LIBCOAP_CONFIG_INSTALL_DIR})
-write_basic_package_version_file(${PROJECT_NAME}ConfigVersion.cmake COMPATIBILITY SameMajorVersion)
+write_basic_package_version_file(
+  ${PROJECT_NAME}ConfigVersion.cmake
+  COMPATIBILITY SameMajorVersion)
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
@@ -629,6 +640,8 @@ install(
   COMPONENT dev
   FILES_MATCHING
   PATTERN "*.h"
+  PATTERN "coap.h" EXCLUDE
+  PATTERN "utlist.h" EXCLUDE
   PATTERN "*internal.h" EXCLUDE)
 install(
   DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/

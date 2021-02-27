@@ -15,7 +15,7 @@
 #ifndef COAP_TCP_INTERNAL_H_
 #define COAP_TCP_INTERNAL_H_
 
-#include "coap_io.h"
+#include "coap2/coap_io.h"
 
 /**
  * @defgroup tcp TCP Support (Internal)
