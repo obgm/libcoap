@@ -2292,7 +2292,7 @@ coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
  */
 enum respond_t { RESPONSE_DEFAULT, RESPONSE_DROP, RESPONSE_SEND };
 
-/**
+/*
  * Checks for No-Response option in given @p request and
  * returns @c RESPONSE_DROP if @p response should be suppressed
  * according to RFC 7967.
@@ -2331,6 +2331,8 @@ enum respond_t { RESPONSE_DEFAULT, RESPONSE_DROP, RESPONSE_SEND };
  *                 This parameter must not be NULL.
  * @param response The response that is potentially suppressed.
  *                 This parameter must not be NULL.
+ * @param session  The session this request/response are associated with.
+ *                 This parameter must not be NULL.
  * @return RESPONSE_DEFAULT when no special treatment is requested,
  *         RESPONSE_DROP    when the response must be discarded, or
  *         RESPONSE_SEND    when the response must be sent.
@@ -2357,7 +2359,7 @@ no_response(coap_pdu_t *request, coap_pdu_t *response,
        * bit is not set, the sender explicitly indicates interest in
        * this response. */
       if (((1 << (COAP_RESPONSE_CLASS(response->code) - 1)) & val) > 0) {
-        /* Should be dropping hte response */
+        /* Should be dropping the response */
         if (response->type == COAP_MESSAGE_ACK &&
             COAP_PROTO_NOT_RELIABLE(session->proto)) {
           /* Still need to ACK the request */
@@ -2787,6 +2789,7 @@ handle_response(coap_context_t *context, coap_session_t *session,
     /* See if need to send next block to server */
     if (coap_handle_response_send_block(session, rcvd)) {
       /* Next block transmitted, no need to inform app */
+      coap_send_ack(session, rcvd);
       return;
     }
 
@@ -2794,6 +2797,7 @@ handle_response(coap_context_t *context, coap_session_t *session,
     if (coap_handle_response_get_block(context, session, sent, rcvd,
                                        COAP_RECURSE_OK)) {
       /* Next block requested, no need to inform app */
+      coap_send_ack(session, rcvd);
       return;
     }
   }
