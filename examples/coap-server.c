@@ -71,9 +71,6 @@ static time_t my_clock_base = 0;
 
 coap_resource_t *time_resource = NULL;
 
-static coap_binary_t *example_data_ptr = NULL;
-static int example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
-
 static int resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_CON;
 
 /*
@@ -160,6 +157,14 @@ typedef union {
 } async_data_t;
 #endif /* WITHOUT_ASYNC */
 
+typedef struct transient_value_t {
+  coap_binary_t *value;
+  size_t ref_cnt;
+} transient_value_t;
+
+static transient_value_t *example_data_value = NULL;
+static int example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
+
 #ifdef __GNUC__
 #define UNUSED_PARAM __attribute__ ((unused))
 #else /* not a GCC */
@@ -170,6 +175,44 @@ typedef union {
 static void
 handle_sigint(int signum UNUSED_PARAM) {
   quit = 1;
+}
+
+/*
+ * This will return a correctly formed transient_value_t *, or NULL.
+ * If an error, the passed in coap_binary_t * will get deleted.
+ * Note: transient_value->value will never be returned as NULL.
+ */
+static transient_value_t *
+alloc_resource_data(coap_binary_t *value) {
+  transient_value_t *transient_value;
+  if (!value)
+    return NULL;
+  transient_value = coap_malloc(sizeof(transient_value_t));
+  if (!transient_value) {
+    coap_delete_binary(value);
+    return NULL;
+  }
+  transient_value->ref_cnt = 1;
+  transient_value->value = value;
+  return transient_value;
+}
+
+/*
+ * Need to handle race conditions of data being updated (by PUT) and
+ * being read by a blocked response to GET.
+ */
+static void
+release_resource_data(coap_session_t *session UNUSED_PARAM,
+                      void *app_ptr) {
+  transient_value_t *transient_value = (transient_value_t *)app_ptr;
+
+  if (!transient_value)
+    return;
+
+  if (--transient_value->ref_cnt > 0)
+    return;
+  coap_delete_binary(transient_value->value);
+  coap_free(transient_value);
 }
 
 #define INDEX "This is a test server made with libcoap (see https://libcoap.net)\n" \
@@ -404,28 +447,29 @@ hnd_get_example_data(coap_context_t *ctx UNUSED_PARAM,
         coap_string_t *query,
         coap_pdu_t *response
 ) {
-  if (!example_data_ptr) {
+  if (!example_data_value) {
     /* Initialise for the first time */
     int i;
-    example_data_ptr = coap_new_binary(1500);
-    if (example_data_ptr) {
-      example_data_ptr->length = 1500;
+    coap_binary_t *value = coap_new_binary(1500);
+    if (value) {
+      value->length = 1500;
       for (i = 0; i < 1500; i++) {
         if ((i % 10) == 0) {
-          example_data_ptr->s[i] = 'a' + (i/10) % 26;
+          value->s[i] = 'a' + (i/10) % 26;
         }
         else {
-          example_data_ptr->s[i] = '0' + i%10;
+          value->s[i] = '0' + i%10;
         }
       }
     }
+    example_data_value = alloc_resource_data(value);
   }
   response->code = COAP_RESPONSE_CODE_CONTENT;
   coap_add_data_large_response(resource, session, request, response, token,
                                query, example_data_media_type, -1, 0,
-                               example_data_ptr ? example_data_ptr->length : 0,
-                               example_data_ptr ? example_data_ptr->s : NULL,
-                               NULL, NULL);
+                    example_data_value ? example_data_value->value->length : 0,
+                    example_data_value ? example_data_value->value->s : NULL,
+                               release_resource_data, example_data_value);
 }
 
 static void
@@ -529,16 +573,21 @@ hnd_put_example_data(coap_context_t *ctx UNUSED_PARAM,
     }
   }
 
-  if (example_data_ptr) {
+  if (example_data_value) {
     /* pre-existed response */
     response->code = COAP_RESPONSE_CODE_CHANGED;
-    coap_delete_binary(example_data_ptr);
+    /* Need to de-reference as value may be in use elsewhere */
+    release_resource_data(session, example_data_value);
   }
   else
     /* just generated response */
     response->code = COAP_RESPONSE_CODE_CREATED;
 
-  example_data_ptr = data_so_far;
+  example_data_value = alloc_resource_data(data_so_far);
+  if (!example_data_value) {
+    response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+    return;
+  }
   if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
                                   &opt_iter)) != NULL) {
     example_data_media_type =
@@ -549,7 +598,6 @@ hnd_put_example_data(coap_context_t *ctx UNUSED_PARAM,
     example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
   }
 
-  response->code = COAP_RESPONSE_CODE_CHANGED;
   coap_resource_notify_observers(resource, NULL);
 }
 
@@ -1179,7 +1227,7 @@ cleanup:
 
 typedef struct dynamic_resource_t {
   coap_string_t *uri_path;
-  coap_binary_t *value;
+  transient_value_t *value;
   coap_resource_t *resource;
   int created;
   uint16_t media_type;
@@ -1196,7 +1244,7 @@ static dynamic_resource_t *dynamic_entry = NULL;
 static void
 hnd_delete(coap_context_t *ctx,
            coap_resource_t *resource,
-           coap_session_t *session UNUSED_PARAM,
+           coap_session_t *session,
            coap_pdu_t *request,
            coap_binary_t *token UNUSED_PARAM,
            coap_string_t *query UNUSED_PARAM,
@@ -1215,7 +1263,7 @@ hnd_delete(coap_context_t *ctx,
   for (i = 0; i < dynamic_count; i++) {
     if (coap_string_equal(uri_path, dynamic_entry[i].uri_path)) {
       /* Dynamic entry no longer required - delete it */
-      coap_delete_binary(dynamic_entry[i].value);
+      release_resource_data(session, dynamic_entry[i].value);
       coap_delete_string(dynamic_entry[i].uri_path);
       if (dynamic_count-i > 1) {
          memmove (&dynamic_entry[i],
@@ -1276,15 +1324,17 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
   resource_entry = &dynamic_entry[i];
 
   if (resource_entry->value) {
-    value.length = resource_entry->value->length;
-    value.s = resource_entry->value->s;
+    /* Bump reference so not removed elsewhere */
+    resource_entry->value->ref_cnt++;
+    value.length = resource_entry->value->value->length;
+    value.s = resource_entry->value->value->s;
   }
   response->code = COAP_RESPONSE_CODE_CONTENT;
   coap_add_data_large_response(resource, session, request, response, token,
                                query, resource_entry->media_type, -1, 0,
                                value.length,
                                value.s,
-                               NULL, NULL);
+                               release_resource_data, resource_entry->value);
 }
 
 /*
@@ -1312,6 +1362,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
   coap_binary_t *data_so_far;
+  transient_value_t *value;
 
   /* get the uri_path */
   uri_path = coap_get_uri_path(request);
@@ -1462,8 +1513,14 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
       memcpy(data_so_far->s, data, size);
     }
   }
-  coap_delete_binary(resource_entry->value);
-  resource_entry->value = data_so_far;
+  /* Need to de-reference as value may be in use elsewhere */
+  release_resource_data(session, resource_entry->value);
+  value = alloc_resource_data(data_so_far);
+  if (!value) {
+    response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+    return;
+  }
+  resource_entry->value = value;
 
   if (resource_entry->created) {
     resource_entry->created = 0;
@@ -2828,10 +2885,10 @@ main(int argc, char **argv) {
 
   for (i = 0; i < (size_t)dynamic_count; i++) {
     coap_delete_string(dynamic_entry[i].uri_path);
-    coap_delete_binary(dynamic_entry[i].value);
+    release_resource_data(NULL, dynamic_entry[i].value);
   }
   free(dynamic_entry);
-  coap_delete_binary(example_data_ptr);
+  release_resource_data(NULL, example_data_value);
 #if SERVER_CAN_PROXY
   for (i = 0; i < proxy_list_count; i++) {
     coap_delete_binary(proxy_list[i].token);
