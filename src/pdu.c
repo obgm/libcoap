@@ -933,7 +933,7 @@ coap_pdu_parse_opt_base(coap_pdu_t *pdu, uint16_t len) {
 static int
 write_prefix(char **obp, size_t *len, const char *prf, size_t prflen) {
   /* Make sure space for null terminating byte */
-  if (*len + 1 < prflen) {
+  if (*len < prflen + 1) {
     return 0;
   }
 
@@ -946,7 +946,7 @@ write_prefix(char **obp, size_t *len, const char *prf, size_t prflen) {
 static int
 write_char(char **obp, size_t *len, char c, int printable) {
   /* Make sure space for null terminating byte */
-  if (*len + 1 < 2) {
+  if (*len < 3) {
     return 0;
   }
 
