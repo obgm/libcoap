@@ -399,6 +399,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/option.c
           ${CMAKE_CURRENT_LIST_DIR}/src/async.c
           ${CMAKE_CURRENT_LIST_DIR}/src/block.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_asn1.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_cache.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_debug.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_event.c

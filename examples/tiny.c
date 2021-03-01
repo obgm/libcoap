@@ -27,6 +27,25 @@
 #define UNUSED_PARAM
 #endif /* GCC */
 
+#define Nn 8  /* duplicate definition of N if built on sky motes */
+#define ENCODE_HEADER_SIZE 4
+#define HIBIT (1 << (Nn - 1))
+#define EMASK ((1 << ENCODE_HEADER_SIZE) - 1)
+#define MMASK ((1 << Nn) - 1 - EMASK)
+#define MAX_VALUE ( (1 << Nn) - (1 << ENCODE_HEADER_SIZE) ) * (1 << ((1 << ENCODE_HEADER_SIZE) - 1))
+
+#define COAP_PSEUDOFP_DECODE_8_4(r) (r < HIBIT ? r : (r & MMASK) << (r & EMASK))
+
+/* ls and s must be integer variables */
+/* #define COAP_PSEUDOFP_ENCODE_8_4_DOWN(v,ls) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (v >> ls) & MMASK) + ls) */
+COAP_STATIC_INLINE unsigned char
+COAP_PSEUDOFP_ENCODE_8_4_DOWN(unsigned int v, int *ls) {
+  if (v < HIBIT) return v;
+  *ls = coap_fls(v) - Nn;
+  return ((v >> *ls) & MMASK) + *ls;
+}
+#define COAP_PSEUDOFP_ENCODE_8_4_UP(v,ls,s) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (s = (((v + ((1<<ENCODE_HEADER_SIZE<<ls)-1)) >> ls) & MMASK)), s == 0 ? HIBIT + ls + 1 : s + ls))
+
 static coap_tid_t id;
 static int quit = 0;
 
@@ -50,7 +69,7 @@ make_pdu( unsigned int value ) {
   pdu->code = COAP_REQUEST_POST;
   pdu->tid = id++;
 
-  enc = COAP_PSEUDOFP_ENCODE_8_4_DOWN(value,ls);
+  enc = COAP_PSEUDOFP_ENCODE_8_4_DOWN(value, &ls);
 
   len = sprintf((char *)buf, "%c%u", enc, COAP_PSEUDOFP_DECODE_8_4(enc));
   coap_add_data( pdu, len, buf );

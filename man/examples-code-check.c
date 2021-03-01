@@ -43,6 +43,8 @@
   -Wunused \
   -Wwrite-strings \
   -Wno-unused-function \
+  -Wno-unused-but-set-variable \
+  -Werror \
   "
 #endif /* ! _WIN32 */
 
@@ -137,7 +139,7 @@ int main(int argc, char* argv[])
         if (in_synopsis) {
           /* Working in SYNOPSIS section */
           size_t len;
-          char outbuf[512];
+          char outbuf[1024];
           char *cp;
           char *ecp;
 
