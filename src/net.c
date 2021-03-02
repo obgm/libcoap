@@ -1095,7 +1095,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     if (coap_print_addr(&session->addr_info.local, (uint8_t*)addr_str,
                             sizeof(addr_str) - 1)) {
       char *cp;
-      int len;
+      size_t len;
 
       if (addr_str[0] == '[') {
         cp = strchr(addr_str, ']');
@@ -3094,7 +3094,7 @@ void coap_startup(void) {
   coap_ticks(&now);
   us = coap_ticks_to_rt_us(now);
   /* Be accurate to the nearest (approx) us */
-  coap_prng_init(us);
+  coap_prng_init((unsigned int)us);
   coap_memory_init();
   coap_dtls_startup();
 }

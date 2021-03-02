@@ -62,8 +62,8 @@ typedef struct coap_session_t {
   coap_session_type_t type;         /**< client or server side socket */
   coap_session_state_t state;       /**< current state of relationaship with peer */
   unsigned ref;                     /**< reference count from queues */
-  unsigned tls_overhead;            /**< overhead of TLS layer */
-  uint64_t mtu;                     /**< path or CSM mtu */
+  size_t tls_overhead;              /**< overhead of TLS layer */
+  size_t mtu;                     /**< path or CSM mtu */
   coap_address_t local_if;          /**< optional local interface address */
   UT_hash_handle hh;
   coap_addr_tuple_t addr_info;      /**< key: remote/local address info */

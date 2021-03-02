@@ -618,7 +618,7 @@ size_t coap_insert_option(coap_pdu_t *pdu, uint16_t type,
  *
  * Internal use only.
  */
-int coap_update_option(coap_pdu_t *pdu,
+size_t coap_update_option(coap_pdu_t *pdu,
                        uint16_t type,
                        size_t len,
                        const uint8_t *data);

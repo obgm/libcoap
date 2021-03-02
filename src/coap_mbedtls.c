@@ -938,7 +938,7 @@ static int setup_server_ssl_session(coap_session_t *c_session,
                                 mbedtls_ssl_cookie_check,
                                 &m_env->cookie_ctx );
 #if MBEDTLS_VERSION_NUMBER >= 0x02100100
-  mbedtls_ssl_set_mtu(&m_env->ssl, c_session->mtu);
+  mbedtls_ssl_set_mtu(&m_env->ssl, (uint16_t)c_session->mtu);
 #endif /* MBEDTLS_VERSION_NUMBER >= 0x02100100 */
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 fail:
@@ -1111,7 +1111,7 @@ static int setup_client_ssl_session(coap_session_t *c_session,
     }
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 #if MBEDTLS_VERSION_NUMBER >= 0x02100100
-    mbedtls_ssl_set_mtu(&m_env->ssl, c_session->mtu);
+    mbedtls_ssl_set_mtu(&m_env->ssl, (uint16_t)c_session->mtu);
 #endif /* MBEDTLS_VERSION_NUMBER >= 0x02100100 */
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
     set_ciphersuites(&m_env->conf, COAP_ENC_PKI);
@@ -1543,7 +1543,7 @@ void *coap_dtls_new_server_session(coap_session_t *c_session)
   if (m_env) {
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 #if MBEDTLS_VERSION_NUMBER >= 0x02100100
-    mbedtls_ssl_set_mtu(&m_env->ssl, c_session->mtu);
+    mbedtls_ssl_set_mtu(&m_env->ssl, (uint16_t)c_session->mtu);
 #endif /* MBEDTLS_VERSION_NUMBER >= 0x02100100 */
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
   }
@@ -1567,7 +1567,7 @@ void coap_dtls_session_update_mtu(coap_session_t *c_session)
          (coap_mbedtls_env_t *)c_session->tls;
   if (m_env) {
 #if MBEDTLS_VERSION_NUMBER >= 0x02100100
-    mbedtls_ssl_set_mtu(&m_env->ssl, c_session->mtu);
+    mbedtls_ssl_set_mtu(&m_env->ssl, (uint16_t)c_session->mtu);
 #endif /* MBEDTLS_VERSION_NUMBER >= 0x02100100 */
   }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */

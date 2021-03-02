@@ -130,7 +130,7 @@ coap_add_block(coap_pdu_t *pdu, size_t len, const uint8_t *data,
     return 0;
 
   return coap_add_data(pdu,
-                       min(len - start, (1ULL << (block_szx + 4))),
+                       min(len - start, ((size_t)1 << (block_szx + 4))),
                        data + start);
 }
 
@@ -276,7 +276,7 @@ coap_context_set_block_mode(coap_context_t *context,
 COAP_STATIC_INLINE int
 block_token_match(const uint8_t *a, size_t alen,
   const uint8_t *b, size_t blen) {
-  uint32_t bias;
+  size_t bias;
   if (blen < 4)
     return alen == blen && memcmp(a, b, blen) == 0;
   bias = blen - 4;
@@ -494,7 +494,8 @@ coap_add_data_large_internal(coap_session_t *session,
       coap_update_token(pdu, lg_xmit->b.b1.token_length, lg_xmit->b.b1.token);
       coap_update_option(pdu,
                          COAP_OPTION_SIZE1,
-                         coap_encode_var_safe(buf, sizeof(buf), length),
+                         coap_encode_var_safe(buf, sizeof(buf),
+                                              (unsigned int)length),
                          buf);
     }
     else {
@@ -524,7 +525,8 @@ coap_add_data_large_internal(coap_session_t *session,
       }
       coap_update_option(pdu,
                          COAP_OPTION_SIZE2,
-                         coap_encode_var_safe(buf, sizeof(buf), length),
+                         coap_encode_var_safe(buf, sizeof(buf),
+                                              (unsigned int)length),
                          buf);
       if (etag == 0) {
         if (++session->context->etag == 0)
@@ -778,7 +780,7 @@ check_if_received_block(coap_rblock_t *rec_blocks, uint32_t block_num) {
 }
 
 static int
-check_all_blocks_in(coap_rblock_t *rec_blocks, uint32_t total_blocks) {
+check_all_blocks_in(coap_rblock_t *rec_blocks, size_t total_blocks) {
   uint32_t i;
   uint32_t block = 0;
 
@@ -1007,15 +1009,15 @@ coap_handle_request_send_block(coap_session_t *session,
     chunk = (size_t)1 << (p->blk_size + 4);
     if (block_opt) {
       coap_log(LOG_DEBUG,
-               "found Block option, block size is %u, block nr. %u, M %d\n",
-               1 << (block.szx + 4), block.num, block.m);
+               "found Block option, block size is %zu, block nr. %u, M %d\n",
+               (size_t)1 << (block.szx + 4), block.num, block.m);
       if (block.szx != p->blk_size) {
-        if ((p->offset + chunk) % (1 << (block.szx + 4)) == 0) {
+        if ((p->offset + chunk) % ((size_t)1 << (block.szx + 4)) == 0) {
           /*
            * Recompute the block number of the previous packet given
            * the new block size
            */
-          block.num = ((p->offset + chunk) >> (block.szx + 4)) - 1;
+          block.num = (uint32_t)(((p->offset + chunk) >> (block.szx + 4)) - 1);
           p->blk_size = block.szx;
           chunk = (size_t)1 << (p->blk_size + 4);
           p->offset = block.num * chunk;
@@ -1029,7 +1031,7 @@ coap_handle_request_send_block(coap_session_t *session,
                    "boundary. (%zu x %u mod %u = %zu (which is not 0)\n",
                    p->offset/chunk + 1, (1 << (p->blk_size + 4)),
                    (1 << (block.szx + 4)),
-                   (p->offset + chunk) % (1 << (block.szx + 4)));
+                   (p->offset + chunk) % ((size_t)1 << (block.szx + 4)));
         }
       }
     }
@@ -1345,7 +1347,7 @@ coap_handle_request_put_block(coap_context_t *context,
 
         }
         if (!check_all_blocks_in(&p->rec_blocks,
-                                (p->total_len + chunk -1)/chunk)) {
+                                (uint32_t)(p->total_len + chunk -1)/chunk)) {
           /* Not all the payloads of the body have arrived */
           if (block.m) {
             uint8_t buf[4];
@@ -1470,12 +1472,12 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *rcvd) {
                "found Block option, block size is %u, block nr. %u\n",
                1 << (block.szx + 4), block.num);
       if (block.szx != p->blk_size) {
-        if ((p->offset + chunk) % (1 << (block.szx + 4)) == 0) {
+        if ((p->offset + chunk) % ((size_t)1 << (block.szx + 4)) == 0) {
           /*
            * Recompute the block number of the previous packet given the
            * new block size
            */
-          block.num = ((p->offset + chunk) >> (block.szx + 4)) - 1;
+          block.num = (uint32_t)(((p->offset + chunk) >> (block.szx + 4)) - 1);
           p->blk_size = block.szx;
           chunk = (size_t)1 << (p->blk_size + 4);
           p->offset = block.num * chunk;
@@ -1488,7 +1490,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *rcvd) {
              "(%zu x %u mod %u = %zu != 0)\n",
              p->offset/chunk + 1, (1 << (p->blk_size + 4)),
              (1 << (block.szx + 4)),
-             (p->offset + chunk) % (1 << (block.szx + 4)));
+             (p->offset + chunk) % ((size_t)1 << (block.szx + 4)));
         }
       }
       if (p->last_block == (int)block.num) {
@@ -1645,7 +1647,7 @@ coap_handle_response_get_block(coap_context_t *context,
       uint8_t *data;
       coap_opt_t *size_opt = coap_check_option(rcvd, COAP_OPTION_SIZE2,
                                                &opt_iter);
-      uint32_t size2 = size_opt ?
+      size_t size2 = size_opt ?
                   coap_decode_var_bytes(coap_opt_value(size_opt),
                                         coap_opt_length(size_opt)) : 0;
 
