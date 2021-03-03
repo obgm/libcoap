@@ -578,7 +578,7 @@ static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
         coap_log(LOG_WARNING, "*  %s: %s:failed in %s\n",
                  coap_session_str(session), pstr, SSL_state_string_long(ssl));
         while ((e = ERR_get_error()))
-          coap_log(LOG_WARNING, "*  %s:   %s at %s:%s\n",
+          coap_log(LOG_WARNING, "*  %s: %s at %s:%s\n",
                    coap_session_str(session), ERR_reason_error_string(e),
                    ERR_lib_error_string(e), ERR_func_error_string(e));
       }
@@ -1027,17 +1027,15 @@ setup_pki_server(SSL_CTX *ctx,
       BIO *in;
       X509 *x = NULL;
       char *rw_var = NULL;
-      if (role == COAP_DTLS_ROLE_SERVER) {
-        cert_names = SSL_load_client_CA_file(setup_data->pki_key.key.pem.ca_file);
-        if (cert_names != NULL)
-          SSL_CTX_set_client_CA_list(ctx, cert_names);
-        else {
-          coap_log(LOG_WARNING,
-                   "*** setup_pki: (D)TLS: %s: Unable to configure "
-                   "client CA File\n",
-                    setup_data->pki_key.key.pem.ca_file);
-          return 0;
-        }
+      cert_names = SSL_load_client_CA_file(setup_data->pki_key.key.pem.ca_file);
+      if (cert_names != NULL)
+        SSL_CTX_set_client_CA_list(ctx, cert_names);
+      else {
+        coap_log(LOG_WARNING,
+                 "*** setup_pki: (D)TLS: %s: Unable to configure "
+                 "client CA File\n",
+                  setup_data->pki_key.key.pem.ca_file);
+        return 0;
       }
 
       /* Add CA to the trusted root CA store */
@@ -1880,7 +1878,7 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
       break;
     }
     if (setup_data->cert_chain_validation &&
-        depth > (setup_data->cert_chain_verify_depth)) {
+        depth > (setup_data->cert_chain_verify_depth + 1)) {
        preverify_ok = 0;
        err = X509_V_ERR_CERT_CHAIN_TOO_LONG;
        X509_STORE_CTX_set_error(ctx, err);
@@ -1991,7 +1989,7 @@ tls_secret_call_back(SSL *ssl,
 
     /* Check CA Chain */
     if (setup_data->cert_chain_validation)
-      SSL_set_verify_depth(ssl, setup_data->cert_chain_verify_depth + 1);
+      SSL_set_verify_depth(ssl, setup_data->cert_chain_verify_depth + 2);
 
     /* Certificate Revocation */
     if (setup_data->check_cert_revocation) {
@@ -2422,7 +2420,7 @@ is_x509:
 
   /* Check CA Chain */
   if (setup_data->cert_chain_validation)
-    SSL_set_verify_depth(ssl, setup_data->cert_chain_verify_depth + 1);
+    SSL_set_verify_depth(ssl, setup_data->cert_chain_verify_depth + 2);
 
   /* Certificate Revocation */
   if (setup_data->check_cert_revocation) {

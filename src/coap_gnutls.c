@@ -1357,7 +1357,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
   if (setup_data->cert_chain_validation) {
     gnutls_certificate_set_verify_limits(*pki_credentials,
                                          0,
-                                         setup_data->cert_chain_verify_depth);
+                                      setup_data->cert_chain_verify_depth + 2);
   }
 
   /*
