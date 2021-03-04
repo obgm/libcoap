@@ -334,17 +334,17 @@ coap_remove_option(coap_pdu_t *pdu, uint16_t type) {
     opt_delta = decode_this.delta + decode_next.delta;
     if (opt_delta <= 12) {
       /* can simply update the delta of next option */
-      next_option[0] = (next_option[0] & 0x0f) + (opt_delta << 4);
+      next_option[0] = (next_option[0] & 0x0f) + (coap_opt_t)(opt_delta << 4);
     }
     else if (opt_delta <= 269 && decode_next.delta <= 12) {
       /* next option delta size increase */
       next_option -= 1;
       next_option[0] = (next_option[1] & 0x0f) + (13 << 4);
-      next_option[1] = opt_delta - 13;
+      next_option[1] = (coap_opt_t)(opt_delta - 13);
     }
     else if (opt_delta <= 269) {
       /* can simply update the delta of next option */
-      next_option[1] = opt_delta - 13;
+      next_option[1] = (coap_opt_t)(opt_delta - 13);
     }
     else if (decode_next.delta <= 12) {
       /* next option delta size increase */
@@ -373,18 +373,18 @@ coap_remove_option(coap_pdu_t *pdu, uint16_t type) {
       }
       next_option -= 2;
       next_option[0] = (next_option[2] & 0x0f) + (14 << 4);
-      next_option[1] = (opt_delta - 269) >> 8;
+      next_option[1] = (coap_opt_t)((opt_delta - 269) >> 8);
       next_option[2] = (opt_delta - 269) & 0xff;
     }
     else if (decode_next.delta <= 269) {
       /* next option delta size increase */
       next_option -= 1;
       next_option[0] = (next_option[1] & 0x0f) + (14 << 4);
-      next_option[1] = (opt_delta - 269) >> 8;
+      next_option[1] = (coap_opt_t)((opt_delta - 269) >> 8);
       next_option[2] = (opt_delta - 269) & 0xff;
     }
     else {
-      next_option[1] = (opt_delta - 269) >> 8;
+      next_option[1] = (coap_opt_t)((opt_delta - 269) >> 8);
       next_option[2] = (opt_delta - 269) & 0xff;
     }
   }
@@ -450,31 +450,31 @@ coap_insert_option(coap_pdu_t *pdu, uint16_t type, size_t len,
 
   if (decode.delta <= 12) {
     /* can simply patch in the new delta of next option */
-    option[0] = (option[0] & 0x0f) + (opt_delta << 4);
+    option[0] = (option[0] & 0x0f) + (coap_opt_t)(opt_delta << 4);
   }
   else if (decode.delta <= 269 && opt_delta <= 12) {
     /* option header is going to shrink by one byte */
-    option[1] = (option[0] & 0x0f) + (opt_delta << 4);
+    option[1] = (option[0] & 0x0f) + (coap_opt_t)(opt_delta << 4);
     shrink = 1;
   }
   else if (decode.delta <= 269 && opt_delta <= 269) {
     /* can simply patch in the new delta of next option */
-    option[1] = opt_delta - 13;
+    option[1] = (coap_opt_t)(opt_delta - 13);
   }
   else if (opt_delta <= 12) {
     /* option header is going to shrink by two bytes */
-    option[2] = (option[0] & 0x0f) + (opt_delta << 4);
+    option[2] = (option[0] & 0x0f) + (coap_opt_t)(opt_delta << 4);
     shrink = 2;
   }
   else if (opt_delta <= 269) {
     /* option header is going to shrink by one bytes */
     option[1] = (option[0] & 0x0f) + 0xd0;
-    option[2] = opt_delta - 13;
+    option[2] = (coap_opt_t)(opt_delta - 13);
     shrink = 1;
   }
   else {
     /* can simply patch in the new delta of next option */
-    option[1] = (opt_delta - 269) >> 8;
+    option[1] = (coap_opt_t)((opt_delta - 269) >> 8);
     option[2] = (opt_delta - 269) & 0xff;
   }
 
@@ -490,7 +490,7 @@ coap_insert_option(coap_pdu_t *pdu, uint16_t type, size_t len,
   return shift;
 }
 
-int
+size_t
 coap_update_option(coap_pdu_t *pdu, uint16_t type, size_t len,
                    const uint8_t *data) {
   coap_opt_iterator_t opt_iter;
@@ -646,6 +646,9 @@ coap_get_data(const coap_pdu_t *pdu, size_t *len, uint8_t **data) {
   size_t total;
   const uint8_t **cdata = NULL;
 
+#ifdef _WIN32
+#pragma warning( disable : 4090 )
+#endif
   /* Really, coap_get_data() should be using a const */
   memcpy(&cdata, &data, sizeof(cdata));
   return coap_get_data_large(pdu, len, cdata, &offset, &total);
@@ -1023,9 +1026,9 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
        */
       static char outbuf[COAP_DEBUG_BUF_SIZE];
       char *obp;
-      uint32_t tlen;
+      size_t tlen;
       size_t outbuflen;
-      size_t i;
+      int i;
       int ok;
 
       for (i = 0; i < 2; i++) {

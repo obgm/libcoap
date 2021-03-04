@@ -631,7 +631,7 @@ resolve_address(const coap_str_const_t *server, struct sockaddr *dst) {
     switch (ainfo->ai_family) {
     case AF_INET6:
     case AF_INET:
-      len = ainfo->ai_addrlen;
+      len = (int)ainfo->ai_addrlen;
       memcpy(dst, ainfo->ai_addr, len);
       goto finish;
     default:
@@ -2898,6 +2898,9 @@ main(int argc, char **argv) {
   free(proxy_list);
   proxy_list = NULL;
   proxy_list_count = 0;
+#ifdef _WIN32
+#pragma warning( disable : 4090 )
+#endif
   coap_free(proxy_host_name_list);
 #endif /* SERVER_CAN_PROXY */
 

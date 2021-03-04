@@ -2215,7 +2215,8 @@ void coap_dtls_session_update_mtu(coap_session_t *c_session) {
   int ret;
 
   if (g_env)
-    G_CHECK(gnutls_dtls_set_data_mtu(g_env->g_session, c_session->mtu),
+    G_CHECK(gnutls_dtls_set_data_mtu(g_env->g_session,
+                                     (unsigned int)c_session->mtu),
             "gnutls_dtls_set_data_mtu");
 fail:
   ;;

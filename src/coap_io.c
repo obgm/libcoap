@@ -542,6 +542,7 @@ static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
 #undef CMSG_DATA
 #define CMSG_DATA WSA_CMSG_DATA
 #define ipi_spec_dst ipi_addr
+#pragma warning( disable : 4116 )
 #else
 #define iov_len_t size_t
 #endif

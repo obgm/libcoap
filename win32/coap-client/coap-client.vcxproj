@@ -333,7 +333,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\examples\client.c" />
+    <ClCompile Include="..\..\examples\coap-client.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\libcoap.vcxproj">

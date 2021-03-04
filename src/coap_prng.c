@@ -71,7 +71,7 @@ coap_set_prng(coap_rand_func_t rng) {
 }
 
 void
-coap_prng_init(unsigned long seed) {
+coap_prng_init(unsigned int seed) {
 #ifdef HAVE_GETRANDOM
   /* No seed to seed the random source if getrandom() is used,
    * see dtls_prng(). */

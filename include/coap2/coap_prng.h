@@ -89,7 +89,7 @@ void coap_set_prng(coap_rand_func_t rng);
  *
  * @param seed  The seed for the pseudo random number generator.
  */
-void coap_prng_init(unsigned long seed);
+void coap_prng_init(unsigned int seed);
 
 /**
  * Fills @p buf with @p len random bytes using the default pseudo

@@ -105,7 +105,7 @@ struct coap_lg_crcv_t {
   uint8_t last_type;     /**< Last request type (CON/NON) */
   uint8_t initial;       /**< If set, has not been used yet */
   uint8_t szx;           /**< size of individual blocks */
-  uint32_t total_len;    /**< Length as indicated by SIZE2 option */
+  size_t total_len;      /**< Length as indicated by SIZE2 option */
   coap_binary_t *body_data; /**< Used for re-assembling entire body */
   coap_binary_t *app_token; /**< app requesting PDU token */
   uint8_t base_token[8]; /**< established base PDU token */
@@ -132,7 +132,7 @@ struct coap_lg_srcv_t {
   uint16_t content_format; /**< Content format for the set of blocks */
   uint8_t last_type;     /**< Last request type (CON/NON) */
   uint8_t szx;           /**< size of individual blocks */
-  uint32_t total_len;    /**< Length as indicated by SIZE1 option */
+  size_t total_len;      /**< Length as indicated by SIZE1 option */
   coap_binary_t *body_data; /**< Used for re-assembling entire body */
   size_t amount_so_far;  /**< Amount of data seen so far */
   coap_resource_t *resource; /**< associated resource */

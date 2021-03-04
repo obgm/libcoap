@@ -47,7 +47,7 @@ extern int coap_flsll(long long i);
  *
  * @return      The decoded value
  */
-unsigned int coap_decode_var_bytes(const uint8_t *buf, unsigned int length);
+unsigned int coap_decode_var_bytes(const uint8_t *buf, size_t length);
 
 /**
  * Decodes multiple-length byte sequences. @p buf points to an input byte
@@ -58,7 +58,7 @@ unsigned int coap_decode_var_bytes(const uint8_t *buf, unsigned int length);
  *
  * @return      The decoded value
  */
-uint64_t coap_decode_var_bytes8(const uint8_t *buf, unsigned int length);
+uint64_t coap_decode_var_bytes8(const uint8_t *buf, size_t length);
 
 /**
  * Encodes multiple-length byte sequences. @p buf points to an output buffer of

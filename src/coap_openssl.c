@@ -2754,7 +2754,7 @@ void * coap_dtls_new_server_session(coap_session_t *session) {
   SSL_set_bio(nssl, nbio, nbio);
   SSL_set_app_data(nssl, NULL);
   SSL_set_options(nssl, SSL_OP_COOKIE_EXCHANGE);
-  SSL_set_mtu(nssl, session->mtu);
+  SSL_set_mtu(nssl, (long)session->mtu);
   ssl = dtls->ssl;
   dtls->ssl = nssl;
   nssl = NULL;
@@ -2888,7 +2888,7 @@ void *coap_dtls_new_client_session(coap_session_t *session) {
   SSL_set_bio(ssl, bio, bio);
   SSL_set_app_data(ssl, session);
   SSL_set_options(ssl, SSL_OP_COOKIE_EXCHANGE);
-  SSL_set_mtu(ssl, session->mtu);
+  SSL_set_mtu(ssl, (long)session->mtu);
 
   if (!setup_client_ssl_session(session, ssl))
     goto error;
@@ -2916,7 +2916,7 @@ error:
 void coap_dtls_session_update_mtu(coap_session_t *session) {
   SSL *ssl = (SSL *)session->tls;
   if (ssl)
-    SSL_set_mtu(ssl, session->mtu);
+    SSL_set_mtu(ssl, (long)session->mtu);
 }
 
 void coap_dtls_free_session(coap_session_t *session) {
@@ -3006,7 +3006,7 @@ int coap_dtls_hello(coap_session_t *session,
   coap_ssl_data *ssl_data;
   int r;
 
-  SSL_set_mtu(dtls->ssl, session->mtu);
+  SSL_set_mtu(dtls->ssl, (long)session->mtu);
   ssl_data = (coap_ssl_data*)BIO_get_data(SSL_get_rbio(dtls->ssl));
   assert(ssl_data != NULL);
   if (ssl_data->pdu_len) {
