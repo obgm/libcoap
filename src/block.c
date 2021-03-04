@@ -383,6 +383,7 @@ coap_add_data_large_internal(coap_session_t *session,
         /* Unfortunately need to free this off as potential size change */
         LL_DELETE(session->lg_xmit, lg_xmit);
         coap_block_delete_lg_xmit(session, lg_xmit);
+        lg_xmit = NULL;
         break;
       }
     }
@@ -403,6 +404,7 @@ coap_add_data_large_internal(coap_session_t *session,
         /* Unfortunately need to free this off as potential size change */
         LL_DELETE(session->lg_xmit, lg_xmit);
         coap_block_delete_lg_xmit(session, lg_xmit);
+        lg_xmit = NULL;
         break;
       }
     }
@@ -491,7 +493,10 @@ coap_add_data_large_internal(coap_session_t *session,
       memset(lg_xmit->b.b1.token, 0, sizeof(lg_xmit->b.b1.token));
       lg_xmit->b.b1.token_length = coap_encode_var_safe8(lg_xmit->b.b1.token,
                                                          sizeof(token), token);
-      coap_update_token(pdu, lg_xmit->b.b1.token_length, lg_xmit->b.b1.token);
+      /*
+       * Token will be updated in pdu later as original pdu may be needed in
+       * coap_send_large()
+       */
       coap_update_option(pdu,
                          COAP_OPTION_SIZE1,
                          coap_encode_var_safe(buf, sizeof(buf),
@@ -865,6 +870,8 @@ coap_block_new_lg_crcv(coap_session_t *session, coap_pdu_t *pdu) {
     return NULL;
   }
   memcpy(lg_crcv->app_token->s, pdu->token, lg_crcv->token_length);
+  /* In case it is there - must not be in continuing request PDUs */
+  coap_remove_option(&lg_crcv->pdu, COAP_OPTION_BLOCK1);
 
   return lg_crcv;
 }
@@ -983,7 +990,7 @@ coap_handle_request_send_block(coap_session_t *session,
     coap_pdu_t *out_pdu = response;
     static coap_string_t empty = { 0, NULL};
 
-    if (!COAP_PDU_IS_RESPONSE(&p->pdu) || resource != p->b.b2.resource ||
+    if (COAP_PDU_IS_REQUEST(&p->pdu) || resource != p->b.b2.resource ||
         !coap_string_equal(query ? query : &empty,
                            p->b.b2.query ? p->b.b2.query : &empty)) {
       /* try out the next one */
@@ -1258,6 +1265,8 @@ coap_handle_request_put_block(coap_context_t *context,
   }
   if (block_option) {
     coap_lg_srcv_t *p;
+    coap_lg_xmit_t *lg_xmit;
+    coap_string_t empty = { 0, NULL};
     coap_opt_t *size_opt = coap_check_option(pdu,
                                              COAP_OPTION_SIZE1,
                                              &opt_iter);
@@ -1383,7 +1392,17 @@ coap_handle_request_put_block(coap_context_t *context,
         coap_show_pdu(LOG_DEBUG, pdu);
         /* Need to do this here as we need to free off p */
         h(context, resource, session, pdu, token, query, response);
-
+        /* Check if lg_xmit generated and update PDU code if so */
+        LL_FOREACH(session->lg_xmit, lg_xmit) {
+          if (!COAP_PDU_IS_REQUEST(&lg_xmit->pdu) &&
+              lg_xmit->b.b2.resource == resource &&
+              coap_string_equal(query ? query : &empty,
+                         lg_xmit->b.b2.query ? lg_xmit->b.b2.query : &empty)) {
+            /* lg_xmit found */
+            lg_xmit->pdu.code = response->code;
+            break;
+          }
+        }
         /* Last chunk - free off shortly */
         coap_ticks(&p->last_used);
         goto skip_app_handler;
@@ -1407,7 +1426,7 @@ coap_handle_request_put_block(coap_context_t *context,
                              block.szx),
                            buf);
           h(context, resource, session, pdu, token, query, response);
-          if (COAP_RESPONSE_CLASS(response->code == 2)) {
+          if (COAP_RESPONSE_CLASS(response->code) == 2) {
             /* Just in case, as there are more to go */
             response->code = COAP_RESPONSE_CODE(231);
           }
