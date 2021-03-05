@@ -510,7 +510,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 
   snprintf(outbuf, sizeof(outbuf), "v:%d t:%s c:%s i:%04x {",
           COAP_DEFAULT_VERSION, msg_type_string(pdu->type),
-          msg_code_string(pdu->code), pdu->tid);
+          msg_code_string(pdu->code), pdu->mid);
 
   for (i = 0; i < pdu->token_length; i++) {
     outbuflen = strlen(outbuf);

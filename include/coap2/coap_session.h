@@ -75,7 +75,7 @@ typedef struct coap_session_t {
   uint16_t tx_mid;                  /**< the last message id that was used in this session */
   uint8_t con_active;               /**< Active CON request sent */
   uint8_t csm_block_supported;      /**< CSM TCP blocks supported */
-  coap_tid_t last_ping_mid;         /**< the last keepalive message id that was used in this session */
+  coap_mid_t last_ping_mid;         /**< the last keepalive message id that was used in this session */
   struct coap_queue_t *delayqueue;  /**< list of delayed messages waiting to be sent */
   coap_lg_xmit_t *lg_xmit;          /**< list of large transmissions */
   coap_lg_crcv_t *lg_crcv;       /**< Client list of expected large receives */
@@ -650,9 +650,9 @@ coap_fixed_point_t coap_session_get_ack_random_factor(coap_session_t *session);
  * Send a ping message for the session.
  * @param session The CoAP session.
  *
- * @return COAP_INVALID_TID if there is an error
+ * @return COAP_INVALID_MID if there is an error
  */
-coap_tid_t coap_session_send_ping(coap_session_t *session);
+coap_mid_t coap_session_send_ping(coap_session_t *session);
 
 #define SESSIONS_ADD(e, obj) \
   HASH_ADD(hh, (e), addr_info, sizeof((obj)->addr_info), (obj))

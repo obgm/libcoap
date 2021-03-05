@@ -375,7 +375,7 @@ hnd_get_async(coap_context_t *ctx,
   size_t size;
 
   if (async) {
-    if (async->id != request->tid) {
+    if (async->id != request->mid) {
       coap_opt_filter_t f;
       coap_option_filter_clear(&f);
       response->code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
@@ -433,14 +433,14 @@ check_async(coap_context_t *ctx,
     return;
   }
 
-  response->tid = coap_new_message_id(async->session);
+  response->mid = coap_new_message_id(async->session);
 
   if (async->tokenlen)
     coap_add_token(response, async->tokenlen, async->token);
 
   coap_add_data(response, 4, (const uint8_t *)"done");
 
-  if (coap_send_large(async->session, response) == COAP_INVALID_TID) {
+  if (coap_send_large(async->session, response) == COAP_INVALID_MID) {
     coap_log(LOG_DEBUG, "check_async: cannot send response for message\n");
   }
   coap_remove_async(ctx, async->session, async->id, &tmp);
@@ -895,7 +895,7 @@ remove_proxy_association(coap_session_t *session, int send_failure) {
       }
 
       if (coap_send_large(proxy_list[i].incoming, response) ==
-                                                          COAP_INVALID_TID) {
+                                                          COAP_INVALID_MID) {
         coap_log(LOG_INFO, "Failed to send PDU with 5.02 gateway issue\n");
       }
       break;
@@ -1636,7 +1636,7 @@ proxy_message_handler(struct coap_context_t *ctx COAP_UNUSED,
                 coap_session_t *session,
                 coap_pdu_t *sent COAP_UNUSED,
                 coap_pdu_t *received,
-                const coap_tid_t id COAP_UNUSED) {
+                const coap_mid_t id COAP_UNUSED) {
 
   coap_pdu_t *pdu = NULL;
   coap_session_t *incoming = NULL;
@@ -1757,7 +1757,7 @@ proxy_nack_handler(coap_context_t *context COAP_UNUSED,
              coap_session_t *session,
              coap_pdu_t *sent COAP_UNUSED,
              coap_nack_reason_t reason,
-             const coap_tid_t id COAP_UNUSED) {
+             const coap_mid_t id COAP_UNUSED) {
 
   switch(reason) {
   case COAP_NACK_TOO_MANY_RETRIES:

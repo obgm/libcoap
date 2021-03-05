@@ -304,7 +304,7 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
           full_match(token->s, token->length, cq->app_token->s,
                      cq->app_token->length)) {
         uint8_t buf[4];
-        coap_tid_t mid;
+        coap_mid_t mid;
         coap_pdu_t * pdu = coap_pdu_duplicate(&cq->pdu,
                                               session,
                                               cq->base_token_length,
@@ -322,7 +322,7 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
                                                 COAP_OBSERVE_CANCEL),
                            buf);
         mid = coap_send(session, pdu);
-        if (mid != COAP_INVALID_TID)
+        if (mid != COAP_INVALID_MID)
           return 1;
         break;
       }
@@ -1333,7 +1333,7 @@ coap_handle_request_put_block(coap_context_t *context,
         response->code = COAP_RESPONSE_CODE(408);
         goto free_lg_recv;
       }
-      p->last_mid = pdu->tid;
+      p->last_mid = pdu->mid;
       p->last_type = pdu->type;
       memcpy(p->last_token, pdu->token, pdu->token_length);
       p->last_token_length = pdu->token_length;
@@ -1556,7 +1556,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *rcvd) {
                             block.num,
                             block.szx))
           goto fail_body;
-        if (coap_send(session, pdu) == COAP_INVALID_TID)
+        if (coap_send(session, pdu) == COAP_INVALID_MID)
           goto fail_body;
         return 1;
       }
@@ -1748,7 +1748,7 @@ coap_handle_response_get_block(coap_context_t *context,
                                       (0 << 4) | (0 << 3) | block.szx),
                                buf);
 
-            if (coap_send(session, pdu) == COAP_INVALID_TID)
+            if (coap_send(session, pdu) == COAP_INVALID_MID)
               goto fail_resp;
 
             goto skip_app_handler;
@@ -1825,7 +1825,7 @@ coap_handle_response_get_block(coap_context_t *context,
                                     (block.m << 3) | block.szx),
                                  buf);
 
-              if (coap_send(session, pdu) == COAP_INVALID_TID)
+              if (coap_send(session, pdu) == COAP_INVALID_MID)
                 goto fail_resp;
             }
             if (session->block_mode & (COAP_BLOCK_SINGLE_BODY))
@@ -1862,7 +1862,7 @@ coap_handle_response_get_block(coap_context_t *context,
               coap_show_pdu(LOG_DEBUG, rcvd);
             }
             context->response_handler(context, session, sent, rcvd,
-                                      rcvd->tid);
+                                      rcvd->mid);
           }
           app_has_response = 1;
           /* Set up for the next data body if observing */
@@ -1900,7 +1900,7 @@ block_mode:
             coap_log(LOG_DEBUG, "Client app vesion of updated PDU\n");
             coap_show_pdu(LOG_DEBUG, rcvd);
             context->response_handler(context, session, sent, rcvd,
-                                        rcvd->tid);
+                                        rcvd->mid);
           }
           app_has_response = 1;
         }

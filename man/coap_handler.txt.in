@@ -102,7 +102,7 @@ typedef coap_response_t (*coap_response_handler_t)(coap_context_t *context,
                                                    coap_session_t *session,
                                                    coap_pdu_t *sent,
                                                    coap_pdu_t *received,
-                                                   const coap_tid_t id);
+                                                   const coap_mid_t id);
 ----
 
 *NOTE:* _sent_ will only be non NULL when the request PDU is Confirmable and
@@ -125,7 +125,7 @@ typedef void (*coap_nack_handler_t)(coap_context_t *context,
                                     coap_session_t *session,
                                     coap_pdu_t *sent,
                                     coap_nack_reason_t reason,
-                                    const coap_tid_t id);
+                                    const coap_mid_t mid);
 ----
 NACKs can be one of the following
 ----
@@ -146,7 +146,7 @@ The ping handler function prototype is defined as:
 typedef void (*coap_ping_handler_t)(coap_context_t *context,
                                     coap_session_t *session,
                                     coap_pdu_t *received,
-                                    const coap_tid_t id);
+                                    const coap_mid_t mid);
 ----
 
 The *coap_register_pong_handler*() function defines a _handler_ for tracking
@@ -159,7 +159,7 @@ The pong handler function prototype is defined as:
 typedef void (*coap_pong_handler_t)(coap_context_t *context,
                                     coap_session_t *session,
                                     coap_pdu_t *received,
-                                    const coap_tid_t id);
+                                    const coap_mid_t mid);
 ----
 
 The *coap_register_event_handler*() function defines a _handler_ for tracking
@@ -275,11 +275,11 @@ static int check_token(coap_pdu_t *received) {
 
 static coap_response_t
 response_handler(coap_context_t *ctx, coap_session_t *session,
-coap_pdu_t *sent, coap_pdu_t *received, const coap_tid_t id) {
+coap_pdu_t *sent, coap_pdu_t *received, const coap_mid_t mid) {
   /* Remove (void) definition if variable is used */
   (void)ctx;
   (void)session;
-  (void)id;
+  (void)mid;
 
   /* check if this is a response to our original request */
   if (!check_token(received)) {

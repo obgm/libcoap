@@ -227,7 +227,7 @@ t_wellknown6(void) {
 
     pdu->type = COAP_MESSAGE_NON;
     pdu->code = COAP_REQUEST_GET;
-    pdu->tid = 0x1234;
+    pdu->mid = 0x1234;
 
     CU_ASSERT_PTR_NOT_NULL(pdu);
 

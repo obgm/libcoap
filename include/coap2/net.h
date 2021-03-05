@@ -41,7 +41,7 @@ typedef struct coap_queue_t {
                                  *    when zero */
   unsigned int timeout;         /**< the randomized timeout value */
   coap_session_t *session;      /**< the CoAP session */
-  coap_tid_t id;                /**< CoAP transaction id */
+  coap_mid_t id;                /**< CoAP message id */
   coap_pdu_t *pdu;              /**< the CoAP PDU to send */
 } coap_queue_t;
 
@@ -101,7 +101,7 @@ typedef coap_response_t (*coap_response_handler_t)(struct coap_context_t *contex
                                                    coap_session_t *session,
                                                    coap_pdu_t *sent,
                                                    coap_pdu_t *received,
-                                                   const coap_tid_t id);
+                                                   const coap_mid_t id);
 
 /**
  * Negative Acknowedge handler that is used as callback in coap_context_t.
@@ -110,13 +110,13 @@ typedef coap_response_t (*coap_response_handler_t)(struct coap_context_t *contex
  * @param session CoAP session.
  * @param sent The PDU that was transmitted.
  * @param reason The reason for the NACK.
- * @param id CoAP transaction ID.
+ * @param id CoAP message ID.
  */
 typedef void (*coap_nack_handler_t)(struct coap_context_t *context,
                                     coap_session_t *session,
                                     coap_pdu_t *sent,
                                     coap_nack_reason_t reason,
-                                    const coap_tid_t id);
+                                    const coap_mid_t id);
 
 /**
  * Received Ping handler that is used as callback in coap_context_t.
@@ -124,12 +124,12 @@ typedef void (*coap_nack_handler_t)(struct coap_context_t *context,
  * @param context CoAP session.
  * @param session CoAP session.
  * @param received The PDU that was received.
- * @param id CoAP transaction ID.
+ * @param id CoAP message ID.
  */
 typedef void (*coap_ping_handler_t)(struct coap_context_t *context,
                                     coap_session_t *session,
                                     coap_pdu_t *received,
-                                    const coap_tid_t id);
+                                    const coap_mid_t id);
 
 /**
  * Received Pong handler that is used as callback in coap_context_t.
@@ -137,12 +137,12 @@ typedef void (*coap_ping_handler_t)(struct coap_context_t *context,
  * @param context CoAP session.
  * @param session CoAP session.
  * @param received The PDU that was received.
- * @param id CoAP transaction ID.
+ * @param id CoAP message ID.
  */
 typedef void (*coap_pong_handler_t)(struct coap_context_t *context,
                                     coap_session_t *session,
                                     coap_pdu_t *received,
-                                    const coap_tid_t id);
+                                    const coap_mid_t id);
 
 /**
  * The CoAP stack's global state is stored in a coap_context_t object.
@@ -161,7 +161,7 @@ struct coap_context_t {
 
 #ifndef WITHOUT_ASYNC
   /**
-   * list of asynchronous transactions */
+   * list of asynchronous message ids */
   struct coap_async_state_t *async_state;
 #endif /* WITHOUT_ASYNC */
 
@@ -229,8 +229,8 @@ struct coap_context_t {
 };
 
 /**
- * Registers a new message handler that is called whenever a response was
- * received that matches an ongoing transaction.
+ * Registers a new message handler that is called whenever a response is
+ * received.
  *
  * @param context The context to register the handler for.
  * @param handler The response handler to register.
@@ -469,8 +469,8 @@ coap_pdu_t *coap_new_error_response(coap_pdu_t *request,
 /**
  * Sends an error response with code @p code for request @p request to @p dst.
  * @p opts will be passed to coap_new_error_response() to copy marked options
- * from the request. This function returns the transaction id if the message was
- * sent, or @c COAP_INVALID_TID otherwise.
+ * from the request. This function returns the message id if the message was
+ * sent, or @c COAP_INVALID_MID otherwise.
  *
  * @param session         The CoAP session.
  * @param request         The original request to respond to.
@@ -478,53 +478,53 @@ coap_pdu_t *coap_new_error_response(coap_pdu_t *request,
  * @param opts            A filter that specifies the options to copy from the
  *                        @p request.
  *
- * @return                The transaction id if the message was sent, or @c
- *                        COAP_INVALID_TID otherwise.
+ * @return                The message id if the message was sent, or @c
+ *                        COAP_INVALID_MID otherwise.
  */
-coap_tid_t coap_send_error(coap_session_t *session,
+coap_mid_t coap_send_error(coap_session_t *session,
                            coap_pdu_t *request,
                            unsigned char code,
                            coap_opt_filter_t *opts);
 
 /**
  * Helper function to create and send a message with @p type (usually ACK or
- * RST). This function returns @c COAP_INVALID_TID when the message was not
+ * RST). This function returns @c COAP_INVALID_MID when the message was not
  * sent, a valid transaction id otherwise.
  *
  * @param session         The CoAP session.
  * @param request         The request that should be responded to.
  * @param type            Which type to set.
- * @return                transaction id on success or @c COAP_INVALID_TID
+ * @return                message id on success or @c COAP_INVALID_MID
  *                        otherwise.
  */
-coap_tid_t
+coap_mid_t
 coap_send_message_type(coap_session_t *session, coap_pdu_t *request, unsigned char type);
 
 /**
  * Sends an ACK message with code @c 0 for the specified @p request to @p dst.
- * This function returns the corresponding transaction id if the message was
- * sent or @c COAP_INVALID_TID on error.
+ * This function returns the corresponding message id if the message was
+ * sent or @c COAP_INVALID_MID on error.
  *
  * @param session         The CoAP session.
  * @param request         The request to be acknowledged.
  *
- * @return                The transaction id if ACK was sent or @c
- *                        COAP_INVALID_TID on error.
+ * @return                The message id if ACK was sent or @c
+ *                        COAP_INVALID_MID on error.
  */
-coap_tid_t coap_send_ack(coap_session_t *session, coap_pdu_t *request);
+coap_mid_t coap_send_ack(coap_session_t *session, coap_pdu_t *request);
 
 /**
  * Sends an RST message with code @c 0 for the specified @p request to @p dst.
- * This function returns the corresponding transaction id if the message was
- * sent or @c COAP_INVALID_TID on error.
+ * This function returns the corresponding message id if the message was
+ * sent or @c COAP_INVALID_MID on error.
  *
  * @param session         The CoAP session.
  * @param request         The request to be reset.
  *
- * @return                The transaction id if RST was sent or @c
- *                        COAP_INVALID_TID on error.
+ * @return                The message id if RST was sent or @c
+ *                        COAP_INVALID_MID on error.
  */
-COAP_STATIC_INLINE coap_tid_t
+COAP_STATIC_INLINE coap_mid_t
 coap_send_rst(coap_session_t *session, coap_pdu_t *request) {
   return coap_send_message_type(session, request, COAP_MESSAGE_RST);
 }
@@ -538,9 +538,9 @@ coap_send_rst(coap_session_t *session, coap_pdu_t *request) {
 * @param pdu             The CoAP PDU to send.
 *
 * @return                The message id of the sent message or @c
-*                        COAP_INVALID_TID on error.
+*                        COAP_INVALID_MID on error.
 */
-coap_tid_t coap_send( coap_session_t *session, coap_pdu_t *pdu );
+coap_mid_t coap_send( coap_session_t *session, coap_pdu_t *pdu );
 
 /**
  * Sends a CoAP message to given peer. The memory that is
@@ -555,9 +555,9 @@ coap_tid_t coap_send( coap_session_t *session, coap_pdu_t *pdu );
  * @param pdu       The CoAP PDU to send.
  *
  * @return          The message id of the sent message or @c
- *                  COAP_INVALID_TID on error.
+ *                  COAP_INVALID_MID on error.
  */
-coap_tid_t coap_send_large(coap_session_t *session, coap_pdu_t *pdu);
+coap_mid_t coap_send_large(coap_session_t *session, coap_pdu_t *pdu);
 
 /**
  * Handles retransmissions of confirmable messages
@@ -566,9 +566,9 @@ coap_tid_t coap_send_large(coap_session_t *session, coap_pdu_t *pdu);
  * @param node         The node to retransmit.
  *
  * @return             The message id of the sent message or @c
- *                     COAP_INVALID_TID on error.
+ *                     COAP_INVALID_MID on error.
  */
-coap_tid_t coap_retransmit(coap_context_t *context, coap_queue_t *node);
+coap_mid_t coap_retransmit(coap_context_t *context, coap_queue_t *node);
 
 /**
  * Parses and interprets a CoAP datagram with context @p ctx. This function
@@ -608,7 +608,7 @@ int coap_handle_event(coap_context_t *context,
  *
  * @param queue The queue to search for @p id.
  * @param session The session to look for.
- * @param id    The transaction id to look for.
+ * @param id    The message id to look for.
  * @param node  If found, @p node is updated to point to the removed node. You
  *              must release the storage pointed to by @p node manually.
  *
@@ -616,23 +616,12 @@ int coap_handle_event(coap_context_t *context,
  */
 int coap_remove_from_queue(coap_queue_t **queue,
                            coap_session_t *session,
-                           coap_tid_t id,
+                           coap_mid_t id,
                            coap_queue_t **node);
 
-coap_tid_t
+coap_mid_t
 coap_wait_ack( coap_context_t *context, coap_session_t *session,
                coap_queue_t *node);
-
-/**
- * Retrieves transaction from the queue.
- *
- * @param queue The transaction queue to be searched.
- * @param session The session to find.
- * @param id    The transaction id to find.
- *
- * @return      A pointer to the transaction object or @c NULL if not found.
- */
-coap_queue_t *coap_find_transaction(coap_queue_t *queue, coap_session_t *session, coap_tid_t id);
 
 /**
  * Cancels all outstanding messages for session @p session that have the specified

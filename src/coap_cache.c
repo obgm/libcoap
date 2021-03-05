@@ -138,7 +138,7 @@ coap_new_cache_entry(coap_session_t *session, const coap_pdu_t *pdu,
   memset(entry, 0, sizeof(coap_cache_entry_t));
   entry->session = session;
   if (record_pdu == COAP_CACHE_RECORD_PDU) {
-    entry->pdu = coap_pdu_init(pdu->type, pdu->code, pdu->tid, pdu->alloc_size);
+    entry->pdu = coap_pdu_init(pdu->type, pdu->code, pdu->mid, pdu->alloc_size);
     if (entry->pdu) {
       coap_pdu_resize(entry->pdu, pdu->alloc_size);
       /* Need to get the appropriate data across */

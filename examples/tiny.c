@@ -40,7 +40,7 @@ COAP_PSEUDOFP_ENCODE_8_4_DOWN(unsigned int v, int *ls) {
 }
 #define COAP_PSEUDOFP_ENCODE_8_4_UP(v,ls,s) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (s = (((v + ((1<<ENCODE_HEADER_SIZE<<ls)-1)) >> ls) & MMASK)), s == 0 ? HIBIT + ls + 1 : s + ls))
 
-static coap_tid_t id;
+static coap_mid_t id;
 static int quit = 0;
 
 /* SIGINT handler: set quit to 1 for graceful termination */
@@ -61,7 +61,7 @@ make_pdu( unsigned int value ) {
 
   pdu->type = COAP_MESSAGE_NON;
   pdu->code = COAP_REQUEST_POST;
-  pdu->tid = id++;
+  pdu->mid = id++;
 
   enc = COAP_PSEUDOFP_ENCODE_8_4_DOWN(value, &ls);
 

@@ -42,7 +42,7 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   pdu->code = 0;
   pdu->hdr_size = 0;
   pdu->token_length = 0;
-  pdu->tid = 0;
+  pdu->mid = 0;
   pdu->max_opt = 0;
   pdu->max_size = size;
   pdu->used_size = 0;
@@ -82,7 +82,7 @@ coap_pdu_from_pbuf( struct pbuf *pbuf )
 #endif
 
 coap_pdu_t *
-coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size) {
+coap_pdu_init(uint8_t type, uint8_t code, uint16_t mid, size_t size) {
   coap_pdu_t *pdu;
 
   pdu = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
@@ -115,7 +115,7 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size) {
   pdu->token = buf + pdu->max_hdr_size;
 #endif /* WITH_LWIP */
   coap_pdu_clear(pdu, size);
-  pdu->tid = tid;
+  pdu->mid = mid;
   pdu->type = type;
   pdu->code = code;
   return pdu;
@@ -826,13 +826,13 @@ coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
     pdu->type = (hdr[0] >> 4) & 0x03;
     pdu->token_length = hdr[0] & 0x0f;
     pdu->code = hdr[1];
-    pdu->tid = (uint16_t)hdr[2] << 8 | hdr[3];
+    pdu->mid = (uint16_t)hdr[2] << 8 | hdr[3];
   } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
     assert(pdu->hdr_size >= 2 && pdu->hdr_size <= 6);
     pdu->type = COAP_MESSAGE_CON;
     pdu->token_length = hdr[0] & 0x0f;
     pdu->code = hdr[pdu->hdr_size-1];
-    pdu->tid = 0;
+    pdu->mid = 0;
   } else {
     coap_log(LOG_DEBUG, "coap_pdu_parse: unsupported protocol\n");
     return 0;
@@ -1129,8 +1129,8 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
                    | pdu->type << 4
                    | pdu->token_length;
     pdu->token[-3] = pdu->code;
-    pdu->token[-2] = (uint8_t)(pdu->tid >> 8);
-    pdu->token[-1] = (uint8_t)(pdu->tid);
+    pdu->token[-2] = (uint8_t)(pdu->mid >> 8);
+    pdu->token[-1] = (uint8_t)(pdu->mid);
     pdu->hdr_size = 4;
   } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
     size_t len;
