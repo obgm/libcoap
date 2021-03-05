@@ -16,14 +16,8 @@
 #include "test_tls.h"
 #include "libcoap.h"
 
-#ifdef __GNUC__
-#define UNUSED_PARAM __attribute__ ((unused))
-#else /* not a GCC */
-#define UNUSED_PARAM
-#endif /* GCC */
-
 int
-main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM) {
+main(int argc COAP_UNUSED, char **argv COAP_UNUSED) {
   CU_ErrorCode result;
   CU_BasicRunMode run_mode = CU_BRM_VERBOSE;
 

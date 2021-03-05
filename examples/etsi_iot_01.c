@@ -27,12 +27,6 @@
 
 #define COAP_RESOURCE_CHECK_TIME_SEC  1
 
-#ifdef __GNUC__
-#define UNUSED_PARAM __attribute__ ((unused))
-#else /* not a GCC */
-#define UNUSED_PARAM
-#endif /* GCC */
-
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -63,7 +57,7 @@ typedef union {
 
 /* SIGINT handler: set quit to 1 for graceful termination */
 static void
-handle_sigint(int signum UNUSED_PARAM) {
+handle_sigint(int signum COAP_UNUSED) {
   quit = 1;
 }
 
@@ -107,12 +101,12 @@ coap_free_userdata(void *data) {
 
 #if 0
 static void
-hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
-              coap_resource_t *resource UNUSED_PARAM,
-              coap_session_t *session UNUSED_PARAM,
-              coap_pdu_t *request UNUSED_PARAM,
-              coap_binary_t *token UNUSED_PARAM,
-              coap_string_t *query UNUSED_PARAM,
+hnd_get_index(coap_context_t *ctx COAP_UNUSED,
+              coap_resource_t *resource COAP_UNUSED,
+              coap_session_t *session COAP_UNUSED,
+              coap_pdu_t *request COAP_UNUSED,
+              coap_binary_t *token COAP_UNUSED,
+              coap_string_t *query COAP_UNUSED,
               coap_pdu_t *response) {
   unsigned char buf[3];
 
@@ -131,12 +125,12 @@ hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
 #endif
 
 static void
-hnd_get_resource(coap_context_t *ctx UNUSED_PARAM,
+hnd_get_resource(coap_context_t *ctx COAP_UNUSED,
                  coap_resource_t *resource,
-                 coap_session_t *session UNUSED_PARAM,
+                 coap_session_t *session COAP_UNUSED,
                  coap_pdu_t *request,
-                 coap_binary_t *token UNUSED_PARAM,
-                 coap_string_t *query UNUSED_PARAM,
+                 coap_binary_t *token COAP_UNUSED,
+                 coap_string_t *query COAP_UNUSED,
                  coap_pdu_t *response) {
   coap_payload_t *test_payload;
 
@@ -160,10 +154,10 @@ hnd_get_resource(coap_context_t *ctx UNUSED_PARAM,
 static void
 hnd_delete_resource(coap_context_t *ctx,
                     coap_resource_t *resource,
-                    coap_session_t *session UNUSED_PARAM,
-                    coap_pdu_t *request UNUSED_PARAM,
-                    coap_binary_t *token UNUSED_PARAM,
-                    coap_string_t *query UNUSED_PARAM,
+                    coap_session_t *session COAP_UNUSED,
+                    coap_pdu_t *request COAP_UNUSED,
+                    coap_binary_t *token COAP_UNUSED,
+                    coap_string_t *query COAP_UNUSED,
                     coap_pdu_t *response) {
   coap_payload_t *payload;
 
@@ -179,11 +173,11 @@ hnd_delete_resource(coap_context_t *ctx,
 
 static void
 hnd_post_test(coap_context_t *ctx,
-              coap_resource_t *resource UNUSED_PARAM,
-              coap_session_t *session UNUSED_PARAM,
+              coap_resource_t *resource COAP_UNUSED,
+              coap_session_t *session COAP_UNUSED,
               coap_pdu_t *request,
-              coap_binary_t *token UNUSED_PARAM,
-              coap_string_t *query UNUSED_PARAM,
+              coap_binary_t *token COAP_UNUSED,
+              coap_string_t *query COAP_UNUSED,
               coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
@@ -246,12 +240,12 @@ hnd_post_test(coap_context_t *ctx,
 }
 
 static void
-hnd_put_test(coap_context_t *ctx UNUSED_PARAM,
+hnd_put_test(coap_context_t *ctx COAP_UNUSED,
              coap_resource_t *resource,
-             coap_session_t *session UNUSED_PARAM,
+             coap_session_t *session COAP_UNUSED,
              coap_pdu_t *request,
-             coap_binary_t *token UNUSED_PARAM,
-             coap_string_t *query UNUSED_PARAM,
+             coap_binary_t *token COAP_UNUSED,
+             coap_string_t *query COAP_UNUSED,
              coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
@@ -301,12 +295,12 @@ hnd_put_test(coap_context_t *ctx UNUSED_PARAM,
 }
 
 static void
-hnd_delete_test(coap_context_t *ctx UNUSED_PARAM,
-                coap_resource_t *resource UNUSED_PARAM,
-                coap_session_t *session UNUSED_PARAM,
-                coap_pdu_t *request UNUSED_PARAM,
-                coap_binary_t *token UNUSED_PARAM,
-                coap_string_t *query UNUSED_PARAM,
+hnd_delete_test(coap_context_t *ctx COAP_UNUSED,
+                coap_resource_t *resource COAP_UNUSED,
+                coap_session_t *session COAP_UNUSED,
+                coap_pdu_t *request COAP_UNUSED,
+                coap_binary_t *token COAP_UNUSED,
+                coap_string_t *query COAP_UNUSED,
                 coap_pdu_t *response) {
   /* the ETSI validation tool does not like empty resources... */
 #if 0
@@ -321,12 +315,12 @@ hnd_delete_test(coap_context_t *ctx UNUSED_PARAM,
 }
 
 static void
-hnd_get_query(coap_context_t *ctx UNUSED_PARAM,
-              coap_resource_t *resource UNUSED_PARAM,
-              coap_session_t *session UNUSED_PARAM,
+hnd_get_query(coap_context_t *ctx COAP_UNUSED,
+              coap_resource_t *resource COAP_UNUSED,
+              coap_session_t *session COAP_UNUSED,
               coap_pdu_t *request,
-              coap_binary_t *token UNUSED_PARAM,
-              coap_string_t *query UNUSED_PARAM,
+              coap_binary_t *token COAP_UNUSED,
+              coap_string_t *query COAP_UNUSED,
               coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   coap_opt_filter_t f;
@@ -366,11 +360,11 @@ hnd_get_query(coap_context_t *ctx UNUSED_PARAM,
 /* handler for TD_COAP_CORE_16 */
 static void
 hnd_get_separate(coap_context_t *ctx,
-                 coap_resource_t *resource UNUSED_PARAM,
+                 coap_resource_t *resource COAP_UNUSED,
                  coap_session_t *session,
                  coap_pdu_t *request,
-                 coap_binary_t *token UNUSED_PARAM,
-                 coap_string_t *query UNUSED_PARAM,
+                 coap_binary_t *token COAP_UNUSED,
+                 coap_string_t *query COAP_UNUSED,
                  coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;

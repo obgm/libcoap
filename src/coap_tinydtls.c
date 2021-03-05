@@ -967,7 +967,7 @@ pem_decode_mem_asn1(const char *begstr, const uint8_t *str)
 int
 coap_dtls_context_set_pki(coap_context_t *ctx,
                           const coap_dtls_pki_t* setup_data,
-                          const coap_dtls_role_t role UNUSED
+                          const coap_dtls_role_t role COAP_UNUSED
 ) {
 #ifdef DTLS_ECC
   coap_tiny_context_t *t_context;
@@ -1126,16 +1126,16 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
 }
 
 int
-coap_dtls_context_set_pki_root_cas(struct coap_context_t *ctx UNUSED,
-  const char *ca_file UNUSED,
-  const char *ca_path UNUSED
+coap_dtls_context_set_pki_root_cas(struct coap_context_t *ctx COAP_UNUSED,
+  const char *ca_file COAP_UNUSED,
+  const char *ca_path COAP_UNUSED
 ) {
   coap_log(LOG_WARNING, "Root CAs PKI not supported\n");
   return 0;
 }
 
 int
-coap_dtls_context_set_cpsk(coap_context_t *coap_context UNUSED,
+coap_dtls_context_set_cpsk(coap_context_t *coap_context COAP_UNUSED,
   coap_dtls_cpsk_t *setup_data
 ) {
   if (!setup_data)
@@ -1145,7 +1145,7 @@ coap_dtls_context_set_cpsk(coap_context_t *coap_context UNUSED,
 }
 
 int
-coap_dtls_context_set_spsk(coap_context_t *coap_context UNUSED,
+coap_dtls_context_set_spsk(coap_context_t *coap_context COAP_UNUSED,
   coap_dtls_spsk_t *setup_data
 ) {
   if (!setup_data)
@@ -1160,33 +1160,33 @@ coap_dtls_context_set_spsk(coap_context_t *coap_context UNUSED,
 }
 
 int
-coap_dtls_context_check_keys_enabled(coap_context_t *ctx UNUSED)
+coap_dtls_context_check_keys_enabled(coap_context_t *ctx COAP_UNUSED)
 {
   return 1;
 }
 
 #if !COAP_DISABLE_TCP
-void *coap_tls_new_client_session(coap_session_t *session UNUSED, int *connected UNUSED) {
+void *coap_tls_new_client_session(coap_session_t *session COAP_UNUSED, int *connected COAP_UNUSED) {
   return NULL;
 }
 
-void *coap_tls_new_server_session(coap_session_t *session UNUSED, int *connected UNUSED) {
+void *coap_tls_new_server_session(coap_session_t *session COAP_UNUSED, int *connected COAP_UNUSED) {
   return NULL;
 }
 
-void coap_tls_free_session(coap_session_t *coap_session UNUSED) {
+void coap_tls_free_session(coap_session_t *coap_session COAP_UNUSED) {
 }
 
-ssize_t coap_tls_write(coap_session_t *session UNUSED,
-                       const uint8_t *data UNUSED,
-                       size_t data_len UNUSED
+ssize_t coap_tls_write(coap_session_t *session COAP_UNUSED,
+                       const uint8_t *data COAP_UNUSED,
+                       size_t data_len COAP_UNUSED
 ) {
   return -1;
 }
 
-ssize_t coap_tls_read(coap_session_t *session UNUSED,
-                      uint8_t *data UNUSED,
-                      size_t data_len UNUSED
+ssize_t coap_tls_read(coap_session_t *session COAP_UNUSED,
+                      uint8_t *data COAP_UNUSED,
+                      size_t data_len COAP_UNUSED
 ) {
   return -1;
 }
@@ -1225,8 +1225,6 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
   coap_digest_free(digest_ctx);
   return 1;
 }
-
-#undef UNUSED
 
 #else /* !HAVE_LIBTINYDTLS */
 

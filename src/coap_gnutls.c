@@ -65,12 +65,6 @@
                             GNUTLS_KEY_KEY_CERT_SIGN
 #endif /* GNUTLS_VERSION_NUMBER >= 0x030606 */
 
-#ifdef __GNUC__
-#define UNUSED __attribute__((unused))
-#else /* __GNUC__ */
-#define UNUSED
-#endif /* __GNUC__ */
-
 #ifdef _WIN32
 #define strcasecmp _stricmp
 #endif
@@ -243,7 +237,7 @@ coap_gnutls_log_func(int level, const char* text)
 int
 coap_dtls_context_set_pki(coap_context_t *c_context,
                           const coap_dtls_pki_t* setup_data,
-                          const coap_dtls_role_t role UNUSED)
+                          const coap_dtls_role_t role COAP_UNUSED)
 {
   coap_gnutls_context_t *g_context =
                          ((coap_gnutls_context_t *)c_context->dtls_context);
@@ -410,7 +404,7 @@ coap_dtls_get_log_level(void) {
  *        NULL failure
  */
 void *
-coap_dtls_new_context(struct coap_context_t *c_context UNUSED) {
+coap_dtls_new_context(struct coap_context_t *c_context COAP_UNUSED) {
   const char *err;
   int ret;
   struct coap_gnutls_context_t *g_context =
@@ -895,8 +889,9 @@ static int cert_verify_callback_gnutls(gnutls_session_t g_session)
 
 static int
 pin_callback(void *user_data, int attempt,
-             const char *token_url UNUSED,
-             const char *token_label UNUSED, unsigned int flags UNUSED,
+             const char *token_url COAP_UNUSED,
+             const char *token_label COAP_UNUSED,
+             unsigned int flags COAP_UNUSED,
              char *pin,
              size_t pin_max)
 {
@@ -1381,7 +1376,7 @@ fail:
  */
 static int
 setup_psk_credentials(gnutls_psk_server_credentials_t *psk_credentials,
-                      coap_gnutls_context_t *g_context UNUSED,
+                      coap_gnutls_context_t *g_context COAP_UNUSED,
                       coap_dtls_spsk_t *setup_data)
 {
   int ret;
@@ -1924,7 +1919,7 @@ coap_dgram_write(gnutls_transport_ptr_t context, const void *send_buffer,
  *        -1 error (error in errno)
  */
 static int
-receive_timeout(gnutls_transport_ptr_t context, unsigned int ms UNUSED) {
+receive_timeout(gnutls_transport_ptr_t context, unsigned int ms COAP_UNUSED) {
   coap_session_t *c_session = (struct coap_session_t *)context;
 
   if (c_session) {
@@ -2288,7 +2283,7 @@ int coap_dtls_is_context_timeout(void) {
   return 0;
 }
 
-coap_tick_t coap_dtls_get_context_timeout(void *dtls_context UNUSED) {
+coap_tick_t coap_dtls_get_context_timeout(void *dtls_context COAP_UNUSED) {
   return 0;
 }
 
@@ -2514,7 +2509,7 @@ coap_dtls_hello(coap_session_t *c_session,
   return ret;
 }
 
-unsigned int coap_dtls_get_overhead(coap_session_t *c_session UNUSED) {
+unsigned int coap_dtls_get_overhead(coap_session_t *c_session COAP_UNUSED) {
   return 37;
 }
 
