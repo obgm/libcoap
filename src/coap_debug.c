@@ -526,6 +526,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   outbuflen = strlen(outbuf);
   snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " [");
   while ((option = coap_option_next(&opt_iter))) {
+    buf[0] = '\000';
     if (!have_options) {
       have_options = 1;
     } else {
