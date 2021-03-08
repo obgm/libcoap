@@ -71,12 +71,6 @@
 #error Must be compiled against OpenSSL 1.1.0 or later
 #endif
 
-#ifdef __GNUC__
-#define UNUSED __attribute__((unused))
-#else
-#define UNUSED
-#endif /* __GNUC__ */
-
 #ifdef _WIN32
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
@@ -914,12 +908,12 @@ map_key_type(int asn1_private_key_type
 static uint8_t coap_alpn[] = { 4, 'c', 'o', 'a', 'p' };
 
 static int
-server_alpn_callback (SSL *ssl UNUSED,
+server_alpn_callback (SSL *ssl COAP_UNUSED,
                       const unsigned char **out,
                       unsigned char *outlen,
                       const unsigned char *in,
                       unsigned int inlen,
-                      void *arg UNUSED
+                      void *arg COAP_UNUSED
 ) {
   unsigned char *tout = NULL;
   int ret;
@@ -1942,7 +1936,7 @@ tls_secret_call_back(SSL *ssl,
   void *secret,
   int *secretlen,
   STACK_OF(SSL_CIPHER) *peer_ciphers,
-  const SSL_CIPHER **cipher UNUSED,
+  const SSL_CIPHER **cipher COAP_UNUSED,
   void *arg
 ) {
   int     ii;
@@ -2038,7 +2032,7 @@ tls_secret_call_back(SSL *ssl,
  */
 static int
 tls_server_name_call_back(SSL *ssl,
-                          int *sd UNUSED,
+                          int *sd COAP_UNUSED,
                           void *arg
 ) {
   coap_dtls_pki_t *setup_data = (coap_dtls_pki_t*)arg;
@@ -2134,7 +2128,7 @@ error:
  */
 static int
 psk_tls_server_name_call_back(SSL *ssl,
-                          int *sd UNUSED,
+                          int *sd COAP_UNUSED,
                           void *arg
 ) {
   coap_dtls_spsk_t *setup_data = (coap_dtls_spsk_t*)arg;
@@ -2243,7 +2237,7 @@ error:
 static int
 tls_client_hello_call_back(SSL *ssl,
                           int *al,
-                          void *arg UNUSED
+                          void *arg COAP_UNUSED
 ) {
   coap_session_t *session;
   coap_openssl_context_t *dtls_context;
@@ -2449,7 +2443,7 @@ is_x509:
 static int
 psk_tls_client_hello_call_back(SSL *ssl,
                           int *al,
-                          void *arg UNUSED
+                          void *arg COAP_UNUSED
 ) {
   coap_session_t *c_session;
   coap_openssl_context_t *o_context;
@@ -2980,7 +2974,7 @@ coap_tick_t coap_dtls_get_context_timeout(void *dtls_context) {
   return 0;
 }
 
-coap_tick_t coap_dtls_get_timeout(coap_session_t *session, coap_tick_t now UNUSED) {
+coap_tick_t coap_dtls_get_timeout(coap_session_t *session, coap_tick_t now COAP_UNUSED) {
   SSL *ssl = (SSL *)session->tls;
   coap_ssl_data *ssl_data;
 

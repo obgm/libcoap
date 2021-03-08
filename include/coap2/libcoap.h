@@ -46,6 +46,13 @@ typedef USHORT in_port_t;
 #    define COAP_DEPRECATED __attribute__ ((deprecated))
 #  endif
 #endif
+#ifndef COAP_UNUSED
+#  ifdef __GNUC__
+#    define COAP_UNUSED __attribute__((unused))
+#  else /* __GNUC__ */
+#    define COAP_UNUSED
+#  endif /* __GNUC__ */
+#endif /* COAP_UNUSED */
 
 void coap_startup(void);
 

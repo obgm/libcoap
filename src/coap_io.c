@@ -518,12 +518,6 @@ struct in_pktinfo {
 #define SOL_IP IPPROTO_IP
 #endif
 
-#ifdef __GNUC__
-#define UNUSED_PARAM __attribute__ ((unused))
-#else /* not a GCC */
-#define UNUSED_PARAM
-#endif /* GCC */
-
 #if defined(_WIN32)
 #include <mswsock.h>
 static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;

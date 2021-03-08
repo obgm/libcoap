@@ -163,7 +163,7 @@ match(const coap_str_const_t *text, const coap_str_const_t *pattern, int match_p
 coap_print_status_t
 coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
                 size_t offset,
-                coap_opt_t *query_filter __attribute__ ((unused))) {
+                coap_opt_t *query_filter COAP_UNUSED) {
 #else /* not a GCC */
 coap_print_status_t
 coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,

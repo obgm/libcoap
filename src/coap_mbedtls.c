@@ -67,12 +67,6 @@
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 #endif /* ! MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
 
-#ifdef __GNUC__
-#define UNUSED __attribute__((unused))
-#else /* __GNUC__ */
-#define UNUSED
-#endif /* __GNUC__ */
-
 #ifdef _WIN32
 #define strcasecmp _stricmp
 #endif
@@ -1232,7 +1226,7 @@ reset:
 }
 
 static void
-mbedtls_debug_out(void *ctx UNUSED, int level,
+mbedtls_debug_out(void *ctx COAP_UNUSED, int level,
                   const char *file, int line, const char *str) {
   int log_level;
   /*
@@ -1407,7 +1401,7 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
 
 int coap_dtls_context_set_pki(coap_context_t *c_context,
                               const coap_dtls_pki_t *setup_data,
-                              const coap_dtls_role_t role UNUSED)
+                              const coap_dtls_role_t role COAP_UNUSED)
 {
   coap_mbedtls_context_t *m_context =
              ((coap_mbedtls_context_t *)c_context->dtls_context);
@@ -1637,7 +1631,7 @@ int coap_dtls_is_context_timeout(void)
   return 0;
 }
 
-coap_tick_t coap_dtls_get_context_timeout(void *dtls_context UNUSED)
+coap_tick_t coap_dtls_get_context_timeout(void *dtls_context COAP_UNUSED)
 {
   return 0;
 }
@@ -1892,31 +1886,33 @@ unsigned int coap_dtls_get_overhead(coap_session_t *c_session)
 }
 
 #if !COAP_DISABLE_TCP
-void *coap_tls_new_client_session(coap_session_t *c_session UNUSED, int *connected UNUSED)
+void *coap_tls_new_client_session(coap_session_t *c_session COAP_UNUSED,
+                                  int *connected COAP_UNUSED)
 {
   return NULL;
 }
 
-void *coap_tls_new_server_session(coap_session_t *c_session UNUSED, int *connected UNUSED)
+void *coap_tls_new_server_session(coap_session_t *c_session COAP_UNUSED,
+                                  int *connected COAP_UNUSED)
 {
   return NULL;
 }
 
-void coap_tls_free_session( coap_session_t *c_session UNUSED)
+void coap_tls_free_session( coap_session_t *c_session COAP_UNUSED)
 {
 }
 
-ssize_t coap_tls_write(coap_session_t *c_session UNUSED,
-                       const uint8_t *data UNUSED,
-                       size_t data_len UNUSED
+ssize_t coap_tls_write(coap_session_t *c_session COAP_UNUSED,
+                       const uint8_t *data COAP_UNUSED,
+                       size_t data_len COAP_UNUSED
                        )
 {
   return 0;
 }
 
-ssize_t coap_tls_read(coap_session_t *c_session UNUSED,
-                      uint8_t *data UNUSED,
-                      size_t data_len UNUSED
+ssize_t coap_tls_read(coap_session_t *c_session COAP_UNUSED,
+                      uint8_t *data COAP_UNUSED,
+                      size_t data_len COAP_UNUSED
                       )
 {
   return 0;

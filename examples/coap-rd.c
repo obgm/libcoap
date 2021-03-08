@@ -74,12 +74,6 @@ typedef struct rd_t {
 
 rd_t *resources = NULL;
 
-#ifdef __GNUC__
-#define UNUSED_PARAM __attribute__ ((unused))
-#else /* not a GCC */
-#define UNUSED_PARAM
-#endif /* GCC */
-
 static ssize_t
 cmdline_read_key(char *arg, unsigned char *buf, size_t maxlen) {
   size_t len = strnlen(arg, maxlen);
@@ -112,17 +106,17 @@ static int quit = 0;
 
 /* SIGINT handler: set quit to 1 for graceful termination */
 static void
-handle_sigint(int signum UNUSED_PARAM) {
+handle_sigint(int signum COAP_UNUSED) {
   quit = 1;
 }
 
 static void
-hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
+hnd_get_resource(coap_context_t  *ctx COAP_UNUSED,
                  coap_resource_t *resource,
-                 coap_session_t *session UNUSED_PARAM,
-                 coap_pdu_t *request UNUSED_PARAM,
-                 coap_binary_t *token UNUSED_PARAM,
-                 coap_string_t *query UNUSED_PARAM,
+                 coap_session_t *session COAP_UNUSED,
+                 coap_pdu_t *request COAP_UNUSED,
+                 coap_binary_t *token COAP_UNUSED,
+                 coap_string_t *query COAP_UNUSED,
                  coap_pdu_t *response) {
   rd_t *rd = NULL;
   unsigned char buf[3];
@@ -147,12 +141,12 @@ hnd_get_resource(coap_context_t  *ctx UNUSED_PARAM,
 }
 
 static void
-hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
-                 coap_resource_t *resource UNUSED_PARAM,
-                 coap_session_t *session UNUSED_PARAM,
-                 coap_pdu_t *request UNUSED_PARAM,
-                 coap_binary_t *token UNUSED_PARAM,
-                 coap_string_t *query UNUSED_PARAM,
+hnd_put_resource(coap_context_t  *ctx COAP_UNUSED,
+                 coap_resource_t *resource COAP_UNUSED,
+                 coap_session_t *session COAP_UNUSED,
+                 coap_pdu_t *request COAP_UNUSED,
+                 coap_binary_t *token COAP_UNUSED,
+                 coap_string_t *query COAP_UNUSED,
                  coap_pdu_t *response) {
 #if 1
   response->code = COAP_RESPONSE_CODE_NOT_IMPLEMENTED;
@@ -228,10 +222,10 @@ hnd_put_resource(coap_context_t  *ctx UNUSED_PARAM,
 static void
 hnd_delete_resource(coap_context_t  *ctx,
                     coap_resource_t *resource,
-                    coap_session_t *session UNUSED_PARAM,
-                    coap_pdu_t *request UNUSED_PARAM,
-                    coap_binary_t *token UNUSED_PARAM,
-                    coap_string_t *query UNUSED_PARAM,
+                    coap_session_t *session COAP_UNUSED,
+                    coap_pdu_t *request COAP_UNUSED,
+                    coap_binary_t *token COAP_UNUSED,
+                    coap_string_t *query COAP_UNUSED,
                     coap_pdu_t *response) {
   rd_t *rd = NULL;
   coap_str_const_t* uri_path = coap_resource_get_uri_path(resource);
@@ -250,12 +244,12 @@ hnd_delete_resource(coap_context_t  *ctx,
 }
 
 static void
-hnd_get_rd(coap_context_t  *ctx UNUSED_PARAM,
-           coap_resource_t *resource UNUSED_PARAM,
-           coap_session_t *session UNUSED_PARAM,
-           coap_pdu_t *request UNUSED_PARAM,
-           coap_binary_t *token UNUSED_PARAM,
-           coap_string_t *query UNUSED_PARAM,
+hnd_get_rd(coap_context_t  *ctx COAP_UNUSED,
+           coap_resource_t *resource COAP_UNUSED,
+           coap_session_t *session COAP_UNUSED,
+           coap_pdu_t *request COAP_UNUSED,
+           coap_binary_t *token COAP_UNUSED,
+           coap_string_t *query COAP_UNUSED,
            coap_pdu_t *response) {
   unsigned char buf[3];
 
@@ -416,11 +410,11 @@ make_rd(coap_pdu_t *pdu) {
 
 static void
 hnd_post_rd(coap_context_t  *ctx,
-            coap_resource_t *resource UNUSED_PARAM,
+            coap_resource_t *resource COAP_UNUSED,
             coap_session_t *session,
             coap_pdu_t *request,
-            coap_binary_t *token UNUSED_PARAM,
-            coap_string_t *query UNUSED_PARAM,
+            coap_binary_t *token COAP_UNUSED,
+            coap_string_t *query COAP_UNUSED,
             coap_pdu_t *response) {
   coap_resource_t *r;
 #define LOCSIZE 68

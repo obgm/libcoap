@@ -21,12 +21,6 @@
 
 #include <coap2/coap.h>
 
-#ifdef __GNUC__
-#define UNUSED_PARAM __attribute__ ((unused))
-#else /* not a GCC */
-#define UNUSED_PARAM
-#endif /* GCC */
-
 #define Nn 8  /* duplicate definition of N if built on sky motes */
 #define ENCODE_HEADER_SIZE 4
 #define HIBIT (1 << (Nn - 1))
@@ -51,7 +45,7 @@ static int quit = 0;
 
 /* SIGINT handler: set quit to 1 for graceful termination */
 static void
-handle_sigint(int signum UNUSED_PARAM) {
+handle_sigint(int signum COAP_UNUSED) {
   quit = 1;
 }
 

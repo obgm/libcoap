@@ -131,17 +131,11 @@ int doing_observe = 0;
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
-#ifdef __GNUC__
-#define UNUSED_PARAM __attribute__ ((unused))
-#else /* not a GCC */
-#define UNUSED_PARAM
-#endif /* GCC */
-
 static int quit = 0;
 
 /* SIGINT handler: set quit to 1 for graceful termination */
 static void
-handle_sigint(int signum UNUSED_PARAM) {
+handle_sigint(int signum COAP_UNUSED) {
   quit = 1;
 }
 
@@ -184,7 +178,7 @@ close_output(void) {
 }
 
 static void
-free_xmit_data(coap_session_t *session UNUSED_PARAM, void *app_ptr) {
+free_xmit_data(coap_session_t *session COAP_UNUSED, void *app_ptr) {
   coap_free(app_ptr);
   return;
 }
@@ -277,9 +271,9 @@ check_token(coap_pdu_t *received) {
 }
 
 static int
-event_handler(coap_context_t *ctx UNUSED_PARAM,
+event_handler(coap_context_t *ctx COAP_UNUSED,
               coap_event_t event,
-              struct coap_session_t *session UNUSED_PARAM) {
+              struct coap_session_t *session COAP_UNUSED) {
 
   switch(event) {
   case COAP_EVENT_DTLS_CLOSED:
@@ -294,11 +288,11 @@ event_handler(coap_context_t *ctx UNUSED_PARAM,
 }
 
 static void
-nack_handler(coap_context_t *context UNUSED_PARAM,
-             coap_session_t *session UNUSED_PARAM,
-             coap_pdu_t *sent UNUSED_PARAM,
+nack_handler(coap_context_t *context COAP_UNUSED,
+             coap_session_t *session COAP_UNUSED,
+             coap_pdu_t *sent COAP_UNUSED,
              coap_nack_reason_t reason,
-             const coap_tid_t id UNUSED_PARAM) {
+             const coap_tid_t id COAP_UNUSED) {
 
   switch(reason) {
   case COAP_NACK_TOO_MANY_RETRIES:
@@ -318,11 +312,11 @@ nack_handler(coap_context_t *context UNUSED_PARAM,
  * Response handler used for coap_send_large() responses
  */
 static coap_response_t
-message_handler(struct coap_context_t *ctx UNUSED_PARAM,
-                coap_session_t *session UNUSED_PARAM,
+message_handler(struct coap_context_t *ctx COAP_UNUSED,
+                coap_session_t *session COAP_UNUSED,
                 coap_pdu_t *sent,
                 coap_pdu_t *received,
-                const coap_tid_t id UNUSED_PARAM) {
+                const coap_tid_t id COAP_UNUSED) {
 
   coap_opt_t *block_opt;
   coap_opt_iterator_t opt_iter;
@@ -1176,12 +1170,12 @@ static uint8_t *read_file_mem(const char* filename, size_t *length) {
 
 static int
 verify_cn_callback(const char *cn,
-                   const uint8_t *asn1_public_cert UNUSED_PARAM,
-                   size_t asn1_length UNUSED_PARAM,
-                   coap_session_t *session UNUSED_PARAM,
+                   const uint8_t *asn1_public_cert COAP_UNUSED,
+                   size_t asn1_length COAP_UNUSED,
+                   coap_session_t *session COAP_UNUSED,
                    unsigned depth,
-                   int validated UNUSED_PARAM,
-                   void *arg UNUSED_PARAM
+                   int validated COAP_UNUSED,
+                   void *arg COAP_UNUSED
 ) {
   coap_log(LOG_INFO, "CN '%s' presented by server (%s)\n",
            cn, depth ? "CA" : "Certificate");
@@ -1190,7 +1184,7 @@ verify_cn_callback(const char *cn,
 
 static const coap_dtls_cpsk_info_t *
 verify_ih_callback(coap_str_const_t *hint,
-                   coap_session_t *c_session UNUSED_PARAM,
+                   coap_session_t *c_session COAP_UNUSED,
                    void *arg
 ) {
   coap_dtls_cpsk_info_t *psk_info = (coap_dtls_cpsk_info_t *)arg;

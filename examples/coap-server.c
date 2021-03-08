@@ -166,15 +166,9 @@ typedef struct transient_value_t {
 static transient_value_t *example_data_value = NULL;
 static int example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
 
-#ifdef __GNUC__
-#define UNUSED_PARAM __attribute__ ((unused))
-#else /* not a GCC */
-#define UNUSED_PARAM
-#endif /* GCC */
-
 /* SIGINT handler: set quit to 1 for graceful termination */
 static void
-handle_sigint(int signum UNUSED_PARAM) {
+handle_sigint(int signum COAP_UNUSED) {
   quit = 1;
 }
 
@@ -203,7 +197,7 @@ alloc_resource_data(coap_binary_t *value) {
  * being read by a blocked response to GET.
  */
 static void
-release_resource_data(coap_session_t *session UNUSED_PARAM,
+release_resource_data(coap_session_t *session COAP_UNUSED,
                       void *app_ptr) {
   transient_value_t *transient_value = (transient_value_t *)app_ptr;
 
@@ -240,12 +234,12 @@ reference_resource_data(transient_value_t *entry) {
               "Copyright (C) 2010--2021 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
 
 static void
-hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
+hnd_get_index(coap_context_t *ctx COAP_UNUSED,
               coap_resource_t *resource,
               coap_session_t *session,
               coap_pdu_t *request,
               coap_binary_t *token,
-              coap_string_t *query UNUSED_PARAM,
+              coap_string_t *query COAP_UNUSED,
               coap_pdu_t *response) {
 
   response->code = COAP_RESPONSE_CODE_CONTENT;
@@ -256,7 +250,7 @@ hnd_get_index(coap_context_t *ctx UNUSED_PARAM,
 }
 
 static void
-hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
+hnd_get_time(coap_context_t  *ctx COAP_UNUSED,
              coap_resource_t *resource,
              coap_session_t *session,
              coap_pdu_t *request,
@@ -305,12 +299,12 @@ hnd_get_time(coap_context_t  *ctx UNUSED_PARAM,
 }
 
 static void
-hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
+hnd_put_time(coap_context_t *ctx COAP_UNUSED,
              coap_resource_t *resource,
-             coap_session_t *session UNUSED_PARAM,
+             coap_session_t *session COAP_UNUSED,
              coap_pdu_t *request,
-             coap_binary_t *token UNUSED_PARAM,
-             coap_string_t *query UNUSED_PARAM,
+             coap_binary_t *token COAP_UNUSED,
+             coap_string_t *query COAP_UNUSED,
              coap_pdu_t *response) {
   coap_tick_t t;
   size_t size;
@@ -355,13 +349,13 @@ hnd_put_time(coap_context_t *ctx UNUSED_PARAM,
 }
 
 static void
-hnd_delete_time(coap_context_t *ctx UNUSED_PARAM,
-                coap_resource_t *resource UNUSED_PARAM,
-                coap_session_t *session UNUSED_PARAM,
-                coap_pdu_t *request UNUSED_PARAM,
-                coap_binary_t *token UNUSED_PARAM,
-                coap_string_t *query UNUSED_PARAM,
-                coap_pdu_t *response UNUSED_PARAM) {
+hnd_delete_time(coap_context_t *ctx COAP_UNUSED,
+                coap_resource_t *resource COAP_UNUSED,
+                coap_session_t *session COAP_UNUSED,
+                coap_pdu_t *request COAP_UNUSED,
+                coap_binary_t *token COAP_UNUSED,
+                coap_string_t *query COAP_UNUSED,
+                coap_pdu_t *response COAP_UNUSED) {
   my_clock_base = 0;    /* mark clock as "deleted" */
 
   /* type = request->hdr->type == COAP_MESSAGE_CON  */
@@ -371,11 +365,11 @@ hnd_delete_time(coap_context_t *ctx UNUSED_PARAM,
 #ifndef WITHOUT_ASYNC
 static void
 hnd_get_async(coap_context_t *ctx,
-              coap_resource_t *resource UNUSED_PARAM,
+              coap_resource_t *resource COAP_UNUSED,
               coap_session_t *session,
               coap_pdu_t *request,
-              coap_binary_t *token UNUSED_PARAM,
-              coap_string_t *query UNUSED_PARAM,
+              coap_binary_t *token COAP_UNUSED,
+              coap_string_t *query COAP_UNUSED,
               coap_pdu_t *response) {
   unsigned long delay = 5;
   size_t size;
@@ -460,7 +454,7 @@ check_async(coap_context_t *ctx,
  */
 
 static void
-hnd_get_example_data(coap_context_t *ctx UNUSED_PARAM,
+hnd_get_example_data(coap_context_t *ctx COAP_UNUSED,
         coap_resource_t *resource,
         coap_session_t *session,
         coap_pdu_t *request,
@@ -506,12 +500,12 @@ cache_free_app_data(void *data) {
  */
 
 static void
-hnd_put_example_data(coap_context_t *ctx UNUSED_PARAM,
+hnd_put_example_data(coap_context_t *ctx COAP_UNUSED,
         coap_resource_t *resource,
         coap_session_t *session,
         coap_pdu_t *request,
-        coap_binary_t *token UNUSED_PARAM,
-        coap_string_t *query UNUSED_PARAM,
+        coap_binary_t *token COAP_UNUSED,
+        coap_string_t *query COAP_UNUSED,
         coap_pdu_t *response
 ) {
   size_t size;
@@ -1019,14 +1013,14 @@ get_ongoing_proxy_session(coap_session_t *session, coap_pdu_t *response,
 }
 
 static void
-release_proxy_body_data(coap_session_t *session UNUSED_PARAM,
+release_proxy_body_data(coap_session_t *session COAP_UNUSED,
                        void *app_ptr) {
   coap_delete_binary(app_ptr);
 }
 
 static void
-hnd_proxy_uri(coap_context_t *ctx UNUSED_PARAM,
-                coap_resource_t *resource UNUSED_PARAM,
+hnd_proxy_uri(coap_context_t *ctx COAP_UNUSED,
+                coap_resource_t *resource COAP_UNUSED,
                 coap_session_t *session,
                 coap_pdu_t *request,
                 coap_binary_t *token,
@@ -1277,10 +1271,10 @@ static dynamic_resource_t *dynamic_entry = NULL;
 static void
 hnd_delete(coap_context_t *ctx,
            coap_resource_t *resource,
-           coap_session_t *session,
+           coap_session_t *session COAP_UNUSED,
            coap_pdu_t *request,
-           coap_binary_t *token UNUSED_PARAM,
-           coap_string_t *query UNUSED_PARAM,
+           coap_binary_t *token COAP_UNUSED,
+           coap_string_t *query COAP_UNUSED,
            coap_pdu_t *response
 ) {
   int i;
@@ -1320,7 +1314,7 @@ hnd_delete(coap_context_t *ctx,
  */
 
 static void
-hnd_get(coap_context_t *ctx UNUSED_PARAM,
+hnd_get(coap_context_t *ctx COAP_UNUSED,
         coap_resource_t *resource,
         coap_session_t *session,
         coap_pdu_t *request,
@@ -1371,12 +1365,12 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
  */
 
 static void
-hnd_put(coap_context_t *ctx UNUSED_PARAM,
+hnd_put(coap_context_t *ctx COAP_UNUSED,
         coap_resource_t *resource,
-        coap_session_t *session UNUSED_PARAM,
+        coap_session_t *session,
         coap_pdu_t *request,
-        coap_binary_t *token UNUSED_PARAM,
-        coap_string_t *query UNUSED_PARAM,
+        coap_binary_t *token COAP_UNUSED,
+        coap_string_t *query COAP_UNUSED,
         coap_pdu_t *response
 ) {
   coap_string_t *uri_path;
@@ -1577,7 +1571,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
 
 static void
 hnd_unknown_put(coap_context_t *ctx,
-                coap_resource_t *resource UNUSED_PARAM,
+                coap_resource_t *resource COAP_UNUSED,
                 coap_session_t *session,
                 coap_pdu_t *request,
                 coap_binary_t *token,
@@ -1620,7 +1614,7 @@ hnd_unknown_put(coap_context_t *ctx,
 
 #if SERVER_CAN_PROXY
 static int
-proxy_event_handler(coap_context_t *ctx UNUSED_PARAM,
+proxy_event_handler(coap_context_t *ctx COAP_UNUSED,
               coap_event_t event,
               struct coap_session_t *session) {
 
@@ -1638,11 +1632,11 @@ proxy_event_handler(coap_context_t *ctx UNUSED_PARAM,
 }
 
 static coap_response_t
-proxy_message_handler(struct coap_context_t *ctx UNUSED_PARAM,
+proxy_message_handler(struct coap_context_t *ctx COAP_UNUSED,
                 coap_session_t *session,
-                coap_pdu_t *sent UNUSED_PARAM,
+                coap_pdu_t *sent COAP_UNUSED,
                 coap_pdu_t *received,
-                const coap_tid_t id UNUSED_PARAM) {
+                const coap_tid_t id COAP_UNUSED) {
 
   coap_pdu_t *pdu = NULL;
   coap_session_t *incoming = NULL;
@@ -1759,11 +1753,11 @@ proxy_message_handler(struct coap_context_t *ctx UNUSED_PARAM,
 }
 
 static void
-proxy_nack_handler(coap_context_t *context UNUSED_PARAM,
+proxy_nack_handler(coap_context_t *context COAP_UNUSED,
              coap_session_t *session,
-             coap_pdu_t *sent UNUSED_PARAM,
+             coap_pdu_t *sent COAP_UNUSED,
              coap_nack_reason_t reason,
-             const coap_tid_t id UNUSED_PARAM) {
+             const coap_tid_t id COAP_UNUSED) {
 
   switch(reason) {
   case COAP_NACK_TOO_MANY_RETRIES:
@@ -1846,11 +1840,11 @@ init_resources(coap_context_t *ctx) {
 
 static int
 verify_cn_callback(const char *cn,
-                   const uint8_t *asn1_public_cert UNUSED_PARAM,
-                   size_t asn1_length UNUSED_PARAM,
-                   coap_session_t *session UNUSED_PARAM,
+                   const uint8_t *asn1_public_cert COAP_UNUSED,
+                   size_t asn1_length COAP_UNUSED,
+                   coap_session_t *session COAP_UNUSED,
                    unsigned depth,
-                   int validated UNUSED_PARAM,
+                   int validated COAP_UNUSED,
                    void *arg
 ) {
   union {
@@ -1897,7 +1891,7 @@ static uint8_t *read_file_mem(const char* file, size_t *length) {
 
 static coap_dtls_key_t *
 verify_pki_sni_callback(const char *sni,
-                    void *arg UNUSED_PARAM
+                    void *arg COAP_UNUSED
 ) {
   static coap_dtls_key_t dtls_key;
 
@@ -1954,8 +1948,8 @@ verify_pki_sni_callback(const char *sni,
 
 static const coap_dtls_spsk_info_t *
 verify_psk_sni_callback(const char *sni,
-                    coap_session_t *c_session UNUSED_PARAM,
-                    void *arg UNUSED_PARAM
+                    coap_session_t *c_session COAP_UNUSED,
+                    void *arg COAP_UNUSED
 ) {
   static coap_dtls_spsk_info_t psk_info;
 
@@ -1992,7 +1986,7 @@ verify_psk_sni_callback(const char *sni,
 static const coap_bin_const_t *
 verify_id_callback(coap_bin_const_t *identity,
                    coap_session_t *c_session,
-                   void *arg UNUSED_PARAM
+                   void *arg COAP_UNUSED
 ) {
   static coap_bin_const_t psk_key;
   size_t i;
