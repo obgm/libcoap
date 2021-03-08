@@ -10,7 +10,7 @@
 #ifndef COAP_EVENT_H_
 #define COAP_EVENT_H_
 
-#include "libcoap.h"
+#include "coap2/libcoap.h"
 
 /**
  * @defgroup events Event API

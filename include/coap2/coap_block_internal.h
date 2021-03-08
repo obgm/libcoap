@@ -17,7 +17,7 @@
 #ifndef COAP_BLOCK_INTERNAL_H_
 #define COAP_BLOCK_INTERNAL_H_
 
-#include <resource.h>
+#include "coap2/resource.h"
 
 /**
  * @defgroup block_internal Block (Internal)

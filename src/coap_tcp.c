@@ -7,7 +7,7 @@
  * of use.
  */
 
-#include "coap_internal.h"
+#include "coap2/coap_internal.h"
 
 #include <errno.h>
 #include <sys/types.h>

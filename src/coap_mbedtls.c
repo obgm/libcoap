@@ -18,7 +18,7 @@
  * m_env      A coap_mbedtls_env_t * (held in c_session->tls)
  */
 
-#include "coap_internal.h"
+#include "coap2/coap_internal.h"
 
 #ifdef HAVE_MBEDTLS
 

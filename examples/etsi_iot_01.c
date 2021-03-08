@@ -22,7 +22,6 @@
 #include <errno.h>
 #include <signal.h>
 
-#include "uthash.h"
 #include <coap2/coap.h>
 
 #define COAP_RESOURCE_CHECK_TIME_SEC  1

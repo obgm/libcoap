@@ -1,4 +1,3 @@
-/* coap_config.h.  Generated from coap_config.h.in by cmake.  */
 
 #ifndef COAP_CONFIG_H_
 #define COAP_CONFIG_H_

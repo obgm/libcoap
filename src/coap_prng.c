@@ -7,7 +7,7 @@
  * for terms of use.
  */
 
-#include "coap_internal.h"
+#include "coap2/coap_internal.h"
 
 #ifdef HAVE_GETRANDOM
 #include <sys/random.h>
