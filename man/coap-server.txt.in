@@ -14,7 +14,7 @@ coap-server - CoAP Server based on libcoap
 
 SYNOPSIS
 --------
-*coap-server* [*-d* max] [*-g* group] [*-l* loss] [*-p* port] [*-v* num]
+*coap-server* [*-d* max] [*-e*] [*-g* group] [*-l* loss] [*-p* port] [*-v* num]
               [*-A* address] [*-L* value] [*-N*]
               [*-P* scheme://addr[:port],name1[,name2..]]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
@@ -34,6 +34,9 @@ OPTIONS - General
    Enable support for creation of dynamic resources when doing a PUT up to a
    limit of 'max'.  If 'max' is reached, a 4.06 code is returned until one of
    the dynamic resources has been deleted.
+
+*-e* ::
+   Echo back the data sent with a PUT.
 
 *-g* group::
    Join specified multicast 'group' on start up.

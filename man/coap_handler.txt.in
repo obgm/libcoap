@@ -62,7 +62,7 @@ COAP_REQUEST_PATCH
 COAP_REQUEST_IPATCH
 ----
 
-The handler function prototype is defined as:
+The method handler function prototype is defined as:
 [source, c]
 ----
 typedef void (*coap_method_handler_t)(coap_context_t *context,
@@ -75,8 +75,14 @@ typedef void (*coap_method_handler_t)(coap_context_t *context,
 ----
 
 *NOTE:* _incoming_pdu_ will be NULL for the GET Handler if this is an
-internally generated Observe Response.  *coap_find_observer()* can be used
-to determine the subscription information in this case.
+internally generated Observe Response.  *coap_resource_get_uri_path*()
+can be used to determine the URI in this case.
+
+*NOTE:* Any data associated with _incoming_pdu_ is no longer be available after
+exiting this function as _incoming_pdu_ is deleted, unless *coap_add_data*()
+was used to update _response_pdu_ where a copy of the data is taken.  In
+particular _incoming_pdu_'s data must not be used if calling
+*coap_add_data_large_response*().
 
 The *coap_register_response_handler*() function defines a request's response
 _handler_ for traffic associated with the _context_.  The application can use
@@ -84,7 +90,7 @@ this for handling any response packets, including sending a RST packet if this
 response was unexpected.  If _handler_ is NULL, then the handler is
 de-registered.
 
-The handler function prototype is defined as:
+The response handler function prototype is defined as:
 [source, c]
 ----
 typedef enum coap_response_t {
@@ -112,7 +118,7 @@ The *coap_register_nack_handler*() function defines a request's negative
 response _handler_ for traffic associated with the _context_.
 If _handler_ is NULL, then the handler is de-registered.
 
-The handler function prototype is defined as:
+The nack handler function prototype is defined as:
 [source, c]
 ----
 typedef void (*coap_nack_handler_t)(coap_context_t *context,
@@ -134,7 +140,7 @@ The *coap_register_ping_handler*() function defines a _handler_ for tracking
 receipt of CoAP ping traffic associated with the _context_. If _handler_ is
 NULL, then the handler is de-registered.
 
-The handler function prototype is defined as:
+The ping handler function prototype is defined as:
 [source, c]
 ----
 typedef void (*coap_ping_handler_t)(coap_context_t *context,
@@ -147,7 +153,7 @@ The *coap_register_pong_handler*() function defines a _handler_ for tracking
 receipt of CoAP ping response traffic associated with the _context_.
 If _handler_ is NULL, then the handler is de-registered.
 
-The handler function prototype is defined as:
+The pong handler function prototype is defined as:
 [source, c]
 ----
 typedef void (*coap_pong_handler_t)(coap_context_t *context,
@@ -160,7 +166,7 @@ The *coap_register_event_handler*() function defines a _handler_ for tracking
 (D)TLS events associated with the _context_. If _handler_ is NULL, then
 the handler is de-registered.
 
-The handler function prototype is defined as:
+The event handler function prototype is defined as:
 [source, c]
 ----
 typedef void (*coap_event_handler_t)(coap_context_t *context,
@@ -303,7 +309,7 @@ coap_pdu_t *sent, coap_pdu_t *received, const coap_tid_t id) {
 
 SEE ALSO
 --------
-*coap_observe*(3) and *coap_resource*(3)
+*coap_block*(3), *coap_observe*(3) and *coap_resource*(3)
 
 FURTHER INFORMATION
 -------------------

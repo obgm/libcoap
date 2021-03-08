@@ -103,6 +103,7 @@ int key_defined = 0;
 static const char *hint = "CoAP";
 static int support_dynamic = 0;
 static uint32_t block_mode = COAP_BLOCK_USE_LIBCOAP;
+static int echo_back = 0;
 
 static coap_dtls_pki_t *
 setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
@@ -213,6 +214,26 @@ release_resource_data(coap_session_t *session UNUSED_PARAM,
     return;
   coap_delete_binary(transient_value->value);
   coap_free(transient_value);
+}
+
+/*
+ * Bump the reference count and return reference to data
+ */
+static coap_binary_t
+reference_resource_data(transient_value_t *entry) {
+  coap_binary_t body;
+  if (entry) {
+    /* Bump reference so not removed elsewhere */
+    entry->ref_cnt++;
+    assert(entry->value);
+    body.length = entry->value->length;
+    body.s = entry->value->s;
+  }
+  else {
+    body.length = 0;
+    body.s = NULL;
+  }
+  return body;
 }
 
 #define INDEX "This is a test server made with libcoap (see https://libcoap.net)\n" \
@@ -447,6 +468,7 @@ hnd_get_example_data(coap_context_t *ctx UNUSED_PARAM,
         coap_string_t *query,
         coap_pdu_t *response
 ) {
+  coap_binary_t body;
   if (!example_data_value) {
     /* Initialise for the first time */
     int i;
@@ -465,10 +487,11 @@ hnd_get_example_data(coap_context_t *ctx UNUSED_PARAM,
     example_data_value = alloc_resource_data(value);
   }
   response->code = COAP_RESPONSE_CODE_CONTENT;
+  body = reference_resource_data(example_data_value);
   coap_add_data_large_response(resource, session, request, response, token,
                                query, example_data_media_type, -1, 0,
-                    example_data_value ? example_data_value->value->length : 0,
-                    example_data_value ? example_data_value->value->s : NULL,
+                               body.length,
+                               body.s,
                                release_resource_data, example_data_value);
 }
 
@@ -599,6 +622,16 @@ hnd_put_example_data(coap_context_t *ctx UNUSED_PARAM,
   }
 
   coap_resource_notify_observers(resource, NULL);
+  if (echo_back) {
+    coap_binary_t body;
+
+    body = reference_resource_data(example_data_value);
+    coap_add_data_large_response(resource, session, request, response, token,
+                                 query, example_data_media_type, -1, 0,
+                                 body.length,
+                                 body.s,
+                                 release_resource_data, example_data_value);
+  }
 }
 
 #if SERVER_CAN_PROXY
@@ -1298,7 +1331,7 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
   coap_str_const_t *uri_path;
   int i;
   dynamic_resource_t *resource_entry = NULL;
-  coap_binary_t value = { 0, NULL };
+  coap_binary_t body;
   /*
    * request will be NULL if an Observe triggered request, so the uri_path,
    * if needed, must be abstracted from the resource.
@@ -1323,17 +1356,12 @@ hnd_get(coap_context_t *ctx UNUSED_PARAM,
 
   resource_entry = &dynamic_entry[i];
 
-  if (resource_entry->value) {
-    /* Bump reference so not removed elsewhere */
-    resource_entry->value->ref_cnt++;
-    value.length = resource_entry->value->value->length;
-    value.s = resource_entry->value->value->s;
-  }
   response->code = COAP_RESPONSE_CODE_CONTENT;
+  body = reference_resource_data(resource_entry->value);
   coap_add_data_large_response(resource, session, request, response, token,
                                query, resource_entry->media_type, -1, 0,
-                               value.length,
-                               value.s,
+                               body.length,
+                               body.s,
                                release_resource_data, resource_entry->value);
 }
 
@@ -1362,7 +1390,7 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
   coap_binary_t *data_so_far;
-  transient_value_t *value;
+  transient_value_t *transient_value;
 
   /* get the uri_path */
   uri_path = coap_get_uri_path(request);
@@ -1509,18 +1537,18 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
   else {
     /* single body of data received */
     data_so_far = coap_new_binary(size);
-    if (data_so_far) {
+    if (data_so_far && size) {
       memcpy(data_so_far->s, data, size);
     }
   }
   /* Need to de-reference as value may be in use elsewhere */
   release_resource_data(session, resource_entry->value);
-  value = alloc_resource_data(data_so_far);
-  if (!value) {
+  transient_value = alloc_resource_data(data_so_far);
+  if (!transient_value) {
     response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
     return;
   }
-  resource_entry->value = value;
+  resource_entry->value = transient_value;
 
   if (resource_entry->created) {
     resource_entry->created = 0;
@@ -1529,6 +1557,17 @@ hnd_put(coap_context_t *ctx UNUSED_PARAM,
   else {
     response->code = COAP_RESPONSE_CODE_CHANGED;
     coap_resource_notify_observers(resource_entry->resource, NULL);
+  }
+
+  if (echo_back) {
+    coap_binary_t body;
+
+    body = reference_resource_data(resource_entry->value);
+    coap_add_data_large_response(resource, session, request, response, token,
+                                 query, resource_entry->media_type, -1, 0,
+                                 body.length,
+                                 body.s,
+                                 release_resource_data, resource_entry->value);
   }
 }
 
@@ -2153,7 +2192,7 @@ usage( const char *program, const char *version) {
     break;
   }
   fprintf(stderr, "\n"
-     "Usage: %s [-d max] [-g group] [-l loss] [-p port] [-v num]\n"
+     "Usage: %s [-d max] [-e] [-g group] [-l loss] [-p port] [-v num]\n"
      "\t\t[-A address] [-L value] [-N]\n"
      "\t\t[-P scheme://address[:port],name1[,name2..]]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
@@ -2165,6 +2204,7 @@ usage( const char *program, const char *version) {
      "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
      "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
      "\t       \t\tuntil one of the dynamic resources has been deleted\n"
+     "\t-e     \t\tEcho back the data sent with a PUT\n"
      "\t-g group\tJoin the given multicast group\n"
      "\t-l list\t\tFail to send some datagrams specified by a comma\n"
      "\t       \t\tseparated list of numbers or number ranges\n"
@@ -2618,7 +2658,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "c:d:g:h:i:j:J:k:l:mnp:s:u:v:A:C:L:M:NP:R:S:")) != -1) {
+  while ((opt = getopt(argc, argv, "c:d:eg:h:i:j:J:k:l:mnp:s:u:v:A:C:L:M:NP:R:S:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -2632,6 +2672,9 @@ main(int argc, char **argv) {
       break;
     case 'd' :
       support_dynamic = atoi(optarg);
+      break;
+    case 'e':
+      echo_back = 1;
       break;
     case 'g' :
       group = optarg;

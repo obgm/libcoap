@@ -1004,6 +1004,7 @@ coap_send_large(coap_session_t *session, coap_pdu_t *pdu) {
   coap_lg_crcv_t *lg_crcv = NULL;
   coap_opt_iterator_t opt_iter;
   int observe_action = -1;
+  int have_block1 = 0;
   coap_opt_t *opt;
 
   assert(pdu);
@@ -1016,20 +1017,25 @@ coap_send_large(coap_session_t *session, coap_pdu_t *pdu) {
   }
 
   if (COAP_PDU_IS_REQUEST(pdu)) {
+    coap_block_t block;
+
     opt = coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter);
 
     if (opt) {
       observe_action = coap_decode_var_bytes(coap_opt_value(opt),
                                                      coap_opt_length(opt));
     }
+
+    if (coap_get_block(pdu, COAP_OPTION_BLOCK1, &block) && block.m == 1)
+      have_block1 = 1;
   }
 
   /*
    * If type is CON and protocol is not reliable, there is no need to set up
    * lg_crcv here as it can be built up based on sent PDU if there is a
-   * Block2 in the response.
+   * Block2 in the response.  However, still need it for observe and block1.
    */
-  if (observe_action != -1 ||
+  if (observe_action != -1 || have_block1 ||
       ((pdu->type == COAP_MESSAGE_NON || COAP_PROTO_RELIABLE(session->proto)) &&
        COAP_PDU_IS_REQUEST(pdu) && pdu->code != COAP_REQUEST_DELETE)) {
     /* See if this token is already in use for large body responses */
@@ -1061,6 +1067,22 @@ coap_send_large(coap_session_t *session, coap_pdu_t *pdu) {
     lg_crcv = coap_block_new_lg_crcv(session, pdu);
     if (lg_crcv == NULL)
       return COAP_INVALID_TID;
+    if (have_block1 && session->lg_xmit) {
+      coap_lg_xmit_t *lg_xmit;
+
+      LL_FOREACH(session->lg_xmit, lg_xmit) {
+        if (COAP_PDU_IS_REQUEST(&lg_xmit->pdu) &&
+            lg_xmit->b.b1.app_token &&
+            token_match(pdu->token, pdu->token_length,
+                        lg_xmit->b.b1.app_token->s,
+                        lg_xmit->b.b1.app_token->length)) {
+          /* Need to update the token as set up in the session->lg_xmit */
+          coap_update_token(pdu, session->lg_xmit->b.b1.token_length,
+                            session->lg_xmit->b.b1.token);
+          break;
+        }
+      }
+    }
   }
 
 send_it:
