@@ -778,8 +778,9 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
 #if !COAP_DISABLE_TCP
     } else if(COAP_PROTO_RELIABLE(session->proto)) {
       if (!coap_socket_connect_tcp1(
-        &session->sock, &session->local_if, &session->addr_info.remote,
-        session->proto == COAP_PROTO_TLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
+        &session->sock, &session->addr_info.local, &session->addr_info.remote,
+        session->proto == COAP_PROTO_TLS ? COAPS_DEFAULT_PORT :
+                                           COAP_DEFAULT_PORT,
         &session->addr_info.local, &session->addr_info.remote
       )) {
         coap_handle_event(session->context, COAP_EVENT_TCP_FAILED, session);

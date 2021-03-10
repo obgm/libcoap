@@ -45,6 +45,15 @@ typedef int coap_fd_t;
 
 typedef uint16_t coap_socket_flags_t;
 
+/**
+ * Only used for servers for hashing incoming packets. Cannot have local
+ * address as this may be an initial multicast and subsequent unicast address
+ */
+typedef struct coap_addr_hash_t {
+  coap_address_t remote;       /**< remote address and port */
+  uint16_t lport;              /**< local port */
+} coap_addr_hash_t;
+
 typedef struct coap_addr_tuple_t {
   coap_address_t remote;       /**< remote address and port */
   coap_address_t local;        /**< local address and port */

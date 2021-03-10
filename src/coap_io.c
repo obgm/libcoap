@@ -310,6 +310,21 @@ coap_socket_connect_udp(coap_socket_t *sock,
 
   /* special treatment for sockets that are used for multicast communication */
   if (is_mcast) {
+    if (!(local_if && local_if->addr.sa.sa_family)) {
+      /* Bind to a (unused) port to simplify logging */
+      coap_address_t bind_addr;
+
+      coap_address_init(&bind_addr);
+      bind_addr.addr.sa.sa_family = connect_addr.addr.sa.sa_family;
+      if (bind(sock->fd, &bind_addr.addr.sa,
+               bind_addr.addr.sa.sa_family == AF_INET ?
+                (socklen_t)sizeof(struct sockaddr_in) :
+                (socklen_t)bind_addr.size) == COAP_SOCKET_ERROR) {
+        coap_log(LOG_WARNING, "coap_socket_connect_udp: bind: %s\n",
+                 coap_socket_strerror());
+        goto error;
+      }
+    }
     if (getsockname(sock->fd, &local_addr->addr.sa, &local_addr->size) == COAP_SOCKET_ERROR) {
       coap_log(LOG_WARNING,
               "coap_socket_connect_udp: getsockname for multicast socket: %s\n",
