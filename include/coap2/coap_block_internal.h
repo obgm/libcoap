@@ -220,6 +220,18 @@ int coap_add_data_large_internal(struct coap_session_t *session,
                         coap_release_large_data_t release_func,
                         void *app_ptr);
 
+/**
+ * The function checks that the code in a newly formed lg_xmit created by
+ * coap_add_data_large_response() is updated.
+ *
+ * @param session  The session
+ * @param response The response PDU to to check
+ * @param resource The requested resource
+ * @param query    The requested query
+ */
+void coap_check_code_lg_xmit(coap_session_t *session, coap_pdu_t *response,
+                             coap_resource_t *resource, coap_string_t *query);
+
 /** @} */
 
 #endif /* COAP_BLOCK_INTERNAL_H_ */

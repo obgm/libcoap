@@ -1265,8 +1265,6 @@ coap_handle_request_put_block(coap_context_t *context,
   }
   if (block_option) {
     coap_lg_srcv_t *p;
-    coap_lg_xmit_t *lg_xmit;
-    coap_string_t empty = { 0, NULL};
     coap_opt_t *size_opt = coap_check_option(pdu,
                                              COAP_OPTION_SIZE1,
                                              &opt_iter);
@@ -1393,16 +1391,7 @@ coap_handle_request_put_block(coap_context_t *context,
         /* Need to do this here as we need to free off p */
         h(context, resource, session, pdu, token, query, response);
         /* Check if lg_xmit generated and update PDU code if so */
-        LL_FOREACH(session->lg_xmit, lg_xmit) {
-          if (!COAP_PDU_IS_REQUEST(&lg_xmit->pdu) &&
-              lg_xmit->b.b2.resource == resource &&
-              coap_string_equal(query ? query : &empty,
-                         lg_xmit->b.b2.query ? lg_xmit->b.b2.query : &empty)) {
-            /* lg_xmit found */
-            lg_xmit->pdu.code = response->code;
-            break;
-          }
-        }
+        coap_check_code_lg_xmit(session, response, resource, query);
         /* Last chunk - free off shortly */
         coap_ticks(&p->last_used);
         goto skip_app_handler;
@@ -1426,6 +1415,8 @@ coap_handle_request_put_block(coap_context_t *context,
                              block.szx),
                            buf);
           h(context, resource, session, pdu, token, query, response);
+          /* Check if lg_xmit generated and update PDU code if so */
+          coap_check_code_lg_xmit(session, response, resource, query);
           if (COAP_RESPONSE_CLASS(response->code) == 2) {
             /* Just in case, as there are more to go */
             response->code = COAP_RESPONSE_CODE(231);
@@ -1974,3 +1965,25 @@ skip_app_handler:
   return 1;
 }
 
+/* Check if lg_xmit generated and update PDU code if so */
+void
+coap_check_code_lg_xmit(coap_session_t *session, coap_pdu_t *response,
+                        coap_resource_t *resource, coap_string_t *query) {
+  coap_lg_xmit_t *lg_xmit;
+  coap_string_t empty = { 0, NULL};
+
+  if (response->code == 0)
+    return;
+  LL_FOREACH(session->lg_xmit, lg_xmit) {
+    if (!COAP_PDU_IS_REQUEST(&lg_xmit->pdu) &&
+        lg_xmit->b.b2.resource == resource &&
+        coap_string_equal(query ? query : &empty,
+                   lg_xmit->b.b2.query ? lg_xmit->b.b2.query : &empty)) {
+      /* lg_xmit found */
+      if (lg_xmit->pdu.code == 0) {
+        lg_xmit->pdu.code = response->code;
+        return;
+      }
+    }
+  }
+}

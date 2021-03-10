@@ -915,6 +915,8 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         assert(h);      /* we do not allow subscriptions if no
                          * GET/FETCH handler is defined */
         h(context, r, obs->session, NULL, &token, obs->query, response);
+        /* Check if lg_xmit generated and update PDU code if so */
+        coap_check_code_lg_xmit(obs->session, response, r, obs->query);
         if (COAP_RESPONSE_CLASS(response->code) > 2) {
           coap_delete_observer(r, obs->session, &token);
         }
