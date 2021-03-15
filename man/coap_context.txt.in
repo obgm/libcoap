@@ -18,7 +18,8 @@ coap_context_set_pki_root_cas,
 coap_context_set_psk2,
 coap_new_endpoint,
 coap_free_endpoint,
-coap_endpoint_set_default_mtu
+coap_endpoint_set_default_mtu,
+coap_join_mcast_group_intf
 - Work with CoAP contexts
 
 SYNOPSIS
@@ -45,6 +46,9 @@ const coap_address_t *_listen_addr_, coap_proto_t _proto_);*
 
 *void coap_endpoint_set_default_mtu(coap_endpoint_t *_endpoint_,
 unsigned _mtu_);*
+
+*int coap_join_mcast_group_intf(coap_context_t *_context_,
+const char *_groupname_, const char *_ifname_);*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
@@ -158,6 +162,15 @@ The *coap_endpoint_set_default_mtu*() function is used to set the MTU size
 (the maximum message size) of the data in a packet, excluding any IP or
 TCP/UDP overhead to _mtu_ for the _endpoint_.  A sensible default is 1280.
 
+The *coap_join_mcast_group_intf*() function is used to join the currently
+defined endpoints that are UDP, associated with _context_, to the defined
+multicast group _groupname_.  If _ifname_ is not NULL, then the multicast group
+is associated with this interface, otherwise the underlying O/S will choose the
+first appropriate interface. When the endpoint is freed off, the associated
+multicast group will be removed. The registered multicast addresses for CoAP
+are 224.0.1.187, ff0x::fd (Variable-Scope) - i.e. ff02::fd (Link-Local) and
+ff05::fd (Site-Local).
+
 RETURN VALUES
 -------------
 *coap_new_context*() function returns a newly created context or
@@ -168,6 +181,8 @@ NULL if there is a creation failure.
 
 *coap_new_endpoint*() function returns a newly created endpoint or
 NULL if there is a creation failure.
+
+*coap_join_mcast_group_intf*() returns 0 on success, -1 on failure.
 
 EXAMPLES
 --------

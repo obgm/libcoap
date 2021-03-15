@@ -611,12 +611,15 @@ usage( const char *program, const char *version) {
     break;
   }
   fprintf(stderr, "\n"
-     "Usage: %s [-g group] [-p port] [-v num] [-A address]\n"
+     "Usage: %s [-g group] [-G group_if] [-p port] [-v num] [-A address]\n"
      "\t       [[-h hint] [-k key]]\n"
      "\t       [[-c certfile] [-C cafile] [-n] [-R trust_casfile]]\n"
      "General Options\n"
      "\t-g group\tJoin the given multicast group.\n"
      "\t       \t\tNote: DTLS over multicast is not currently supported\n"
+     "\t-G group_if\tUse this interface for listening for the multicast\n"
+     "\t       \t\tgroup. This can be different from the implied interface\n"
+     "\t       \t\tif the -A option is used\n"
      "\t-p port\t\tListen on specified port\n"
      "\t-v num \t\tVerbosity level (default 3, maximum is 9). Above 7,\n"
      "\t       \t\tthere is increased verbosity in GnuTLS and OpenSSL logging\n"
@@ -805,13 +808,14 @@ main(int argc, char **argv) {
   char addr_str[NI_MAXHOST] = "::";
   char port_str[NI_MAXSERV] = "5683";
   char *group = NULL;
+  char *group_if = NULL;
   int opt;
   coap_log_t log_level = LOG_WARNING;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "A:c:C:g:h:k:n:R:p:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:c:C:g:G:h:k:n:R:p:v:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -825,6 +829,9 @@ main(int argc, char **argv) {
       break;
     case 'g' :
       group = optarg;
+      break;
+    case 'G' :
+      group_if = optarg;
       break;
     case 'h' :
       if (!optarg[0]) {
@@ -869,7 +876,7 @@ main(int argc, char **argv) {
     return -1;
 
   if (group)
-    coap_join_mcast_group_intf(ctx, group, NULL);
+    coap_join_mcast_group_intf(ctx, group, group_if);
 
   init_resources(ctx);
 

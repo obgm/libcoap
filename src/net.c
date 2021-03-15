@@ -3140,67 +3140,22 @@ void coap_cleanup(void) {
 #if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION
 int
 coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
-  const char *ifname) {
+                           const char *ifname) {
   struct ip_mreq mreq4;
   struct ipv6_mreq mreq6;
-  struct addrinfo   *reslocal = NULL, *resmulti = NULL, hints, *ainfo;
-  struct ifreq ifr;
+  struct addrinfo *resmulti = NULL, hints, *ainfo;
   int result = -1;
   coap_endpoint_t *endpoint;
   int mgroup_setup = 0;
 
-  mreq6.ipv6mr_interface = -1U;
-  mreq4.imr_interface.s_addr = INADDR_BROADCAST;
+  /* Need to have at least one endpoint! */
+  assert(ctx->endpoint);
+  if (!ctx->endpoint)
+    return -1;
 
-  if (!ifname) {
-    /* no interface specified */
-    /* we have to resolve the link-local interface to get the interface id */
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET6;
-    hints.ai_socktype = SOCK_DGRAM;
-
-    result = getaddrinfo("::", NULL, &hints, &reslocal);
-    if (result != 0) {
-      coap_log(LOG_WARNING, "coap_join_mcast_group_intf: "
-               "cannot resolve link-local interface: %s\n",
-               gai_strerror(result));
-    }
-    else {
-      /* get the first suitable interface identifier */
-      for (ainfo = reslocal; ainfo != NULL; ainfo = ainfo->ai_next) {
-        if (ainfo->ai_family == AF_INET6) {
-            mreq6.ipv6mr_interface =
-                ((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_scope_id;
-          break;
-        }
-      }
-    }
-
-    mreq4.imr_interface.s_addr = INADDR_ANY;
-  }
-  else {
-    /* interface specified */
-    /* get interface index for IPv6 and address for IPv4 */
-    strncpy(ifr.ifr_name, ifname, IFNAMSIZ - 1);
-
-    result = ioctl(ctx->endpoint->sock.fd, SIOCGIFINDEX, &ifr);
-    if (result != 0) {
-      coap_log(LOG_WARNING, "coap_join_mcast_group_intf: "
-               "cannot get interface index for '%s': %d\n", ifname, result);
-    }
-    else {
-      mreq6.ipv6mr_interface = ifr.ifr_ifindex;
-    }
-
-    result = ioctl(ctx->endpoint->sock.fd, SIOCGIFADDR, &ifr);
-    if (result != 0) {
-      coap_log(LOG_WARNING, "coap_join_mcast_group_intf: "
-               "cannot get IPv4 address for '%s': %d\n", ifname, result);
-    }
-    else {
-      mreq4.imr_interface = ((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr;
-    }
-  }
+  /* Default is let the kernel choose */
+  mreq6.ipv6mr_interface = 0;
+  mreq4.imr_interface.s_addr = INADDR_ANY;
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_socktype = SOCK_DGRAM;
@@ -3210,27 +3165,127 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
 
   if (result != 0) {
     coap_log(LOG_ERR,
-             "coap_join_mcast_group: cannot resolve multicast address: %s\n",
-             gai_strerror(result));
+             "coap_join_mcast_group_intf: %s: "
+              "Cannot resolve multicast address: %s\n",
+             group_name, gai_strerror(result));
     goto finish;
   }
 
+/* Need to do a windows equivalent at some point */
+#ifndef _WIN32
+  if (ifname) {
+    /* interface specified - check if we have correct IPv4/IPv6 information */
+    int done_ip4 = 0;
+    int done_ip6 = 0;
+    int ip4fd;
+    struct ifreq ifr;
+
+    /* See which mcast address family types are being asked for */
+    for (ainfo = resmulti; ainfo != NULL && !(done_ip4 == 1 && done_ip6 == 1);
+         ainfo = ainfo->ai_next) {
+      switch (ainfo->ai_family) {
+      case AF_INET6:
+        if (done_ip6)
+          break;
+        done_ip6 = 1;
+        memset (&ifr, 0, sizeof(ifr));
+        strncpy(ifr.ifr_name, ifname, IFNAMSIZ - 1);
+        ifr.ifr_name[IFNAMSIZ - 1] = '\000';
+
+        result = ioctl(ctx->endpoint->sock.fd, SIOCGIFINDEX, &ifr);
+        if (result != 0) {
+          coap_log(LOG_WARNING, "coap_join_mcast_group_intf: "
+                    "cannot get interface index for '%s': %s\n",
+                   ifname, coap_socket_strerror());
+        }
+        else {
+          /* Capture the IPv6 if_index for later */
+          mreq6.ipv6mr_interface = ifr.ifr_ifindex;
+        }
+        break;
+      case AF_INET:
+        if (done_ip4)
+          break;
+        done_ip4 = 1;
+        /*
+         * Need an AF_INET socket to do this unfortunately to stop
+         * "Invalid argument" error if AF_INET6 socket is used for SIOCGIFADDR
+         */
+        ip4fd = socket(AF_INET, SOCK_DGRAM, 0);
+        if (ip4fd == -1) {
+          coap_log(LOG_ERR,
+                   "coap_join_mcast_group_intf: %s: socket: %s\n",
+                   ifname, coap_socket_strerror());
+          continue;
+        }
+        memset (&ifr, 0, sizeof(ifr));
+        strncpy(ifr.ifr_name, ifname, IFNAMSIZ - 1);
+        ifr.ifr_name[IFNAMSIZ - 1] = '\000';
+        result = ioctl(ip4fd, SIOCGIFADDR, &ifr);
+        if (result != 0) {
+          coap_log(LOG_ERR,
+                   "coap_join_mcast_group_intf: %s: "
+                    "Cannot get IPv4 address: %s\n",
+                    ifname, coap_socket_strerror());
+        }
+        else {
+          /* Capture the IPv4 address for later */
+          mreq4.imr_interface = ((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr;
+        }
+        close(ip4fd);
+        break;
+      default:
+        break;
+      } 
+    }
+  }
+#endif /* ! _WIN32 */
+
+  /* Add in mcast address(es) to appropriate interface */
   for (ainfo = resmulti; ainfo != NULL; ainfo = ainfo->ai_next) {
     LL_FOREACH(ctx->endpoint, endpoint) {
-      if (endpoint->proto == COAP_PROTO_UDP ||
-          endpoint->proto == COAP_PROTO_DTLS) {
+      /* Only UDP currently supported */
+      if (endpoint->proto == COAP_PROTO_UDP) {
+        coap_address_t gaddr;
+
+        coap_address_init(&gaddr);
         if (ainfo->ai_family == AF_INET6) {
-          if (mreq6.ipv6mr_interface == -1U)
-            continue;
-          mreq6.ipv6mr_multiaddr =
+          if (!ifname) {
+            if(endpoint->bind_addr.addr.sa.sa_family == AF_INET6) {
+              /*
+               * Do it on the ifindex that the server is listening on
+               * (sin6_scope_id could still be 0)
+               */
+              mreq6.ipv6mr_interface =
+                                 endpoint->bind_addr.addr.sin6.sin6_scope_id;
+            }
+            else {
+              mreq6.ipv6mr_interface = 0;
+            }
+          }
+          gaddr.addr.sin6.sin6_family = AF_INET6;
+          gaddr.addr.sin6.sin6_port = endpoint->bind_addr.addr.sin6.sin6_port;
+          gaddr.addr.sin6.sin6_addr = mreq6.ipv6mr_multiaddr =
                     ((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_addr;
           result = setsockopt(endpoint->sock.fd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
                               (char *)&mreq6, sizeof(mreq6));
         }
         else if (ainfo->ai_family == AF_INET) {
-          if (mreq4.imr_interface.s_addr == INADDR_BROADCAST)
-            continue;
-          mreq4.imr_multiaddr.s_addr =
+          if (!ifname) {
+            if(endpoint->bind_addr.addr.sa.sa_family == AF_INET) {
+              /*
+               * Do it on the interface that the server is listening on
+               * (sin_addr could still be INADDR_ANY)
+               */
+              mreq4.imr_interface = endpoint->bind_addr.addr.sin.sin_addr;
+            }
+            else {
+              mreq4.imr_interface.s_addr = INADDR_ANY;
+            }
+          }
+          gaddr.addr.sin.sin_family = AF_INET;
+          gaddr.addr.sin.sin_port = endpoint->bind_addr.addr.sin.sin_port;
+          gaddr.addr.sin.sin_addr.s_addr = mreq4.imr_multiaddr.s_addr =
               ((struct sockaddr_in *)ainfo->ai_addr)->sin_addr.s_addr;
           result = setsockopt(endpoint->sock.fd, IPPROTO_IP, IP_ADD_MEMBERSHIP,
                               (char *)&mreq4, sizeof(mreq4));
@@ -3241,10 +3296,21 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
 
         if (result == COAP_SOCKET_ERROR) {
           coap_log(LOG_ERR,
-                   "coap_join_mcast_group: setsockopt: %s: '%s'\n",
-                   coap_socket_strerror(), group_name);
+                   "coap_join_mcast_group_intf: %s: setsockopt: %s\n",
+                   group_name, coap_socket_strerror());
         }
         else {
+          char addr_str[INET6_ADDRSTRLEN + 8 + 1];
+
+          addr_str[sizeof(addr_str)-1] = '\000';
+          if (coap_print_addr(&gaddr, (uint8_t*)addr_str,
+                            sizeof(addr_str) - 1)) {
+            if (ifname)
+              coap_log(LOG_DEBUG, "added mcast group %s i/f %s\n", addr_str,
+                       ifname);
+            else
+              coap_log(LOG_DEBUG, "added mcast group %s\n", addr_str);
+          }
           mgroup_setup = 1;
         }
       }
@@ -3256,14 +3322,13 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
 
  finish:
   freeaddrinfo(resmulti);
-  freeaddrinfo(reslocal);
 
   return result;
 }
 #else /* defined WITH_CONTIKI || defined WITH_LWIP */
 int
 coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
-  const char *ifname) {
+                           const char *ifname) {
   (void)ctx;
   (void)group_name;
   (void)ifname;
