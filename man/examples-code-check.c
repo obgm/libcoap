@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
               if (!ecp) ecp = strchr(cp, ')');
             }
             else {
-              ecp = NULL; 
+              ecp = NULL;
             }
           }
           if (*cp) {

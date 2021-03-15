@@ -313,7 +313,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <MinimalRebuild>false</MinimalRebuild>
       <CompileAs>CompileAsC</CompileAs>
@@ -352,7 +352,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
       <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
@@ -395,7 +395,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <CompileAs>CompileAsC</CompileAs>
       <MinimalRebuild>false</MinimalRebuild>
@@ -417,7 +417,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <CompileAs>CompileAsC</CompileAs>
       <MinimalRebuild>false</MinimalRebuild>
@@ -443,7 +443,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
@@ -484,7 +484,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
       <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
     <Link>
@@ -529,7 +529,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <CompileAs>CompileAsC</CompileAs>
       <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
@@ -553,7 +553,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <CompileAs>CompileAsC</CompileAs>
     </ClCompile>

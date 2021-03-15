@@ -10,7 +10,7 @@ LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         coap_string_t *uri_path = coap_get_uri_path(pdu);
         coap_show_pdu(LOG_DEBUG, pdu);
         coap_pdu_encode_header(pdu, COAP_PROTO_UDP);
-        
+
         coap_delete_string(query);
         coap_delete_string(uri_path);
         coap_delete_pdu(pdu);

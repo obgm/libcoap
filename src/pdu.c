@@ -943,7 +943,7 @@ write_prefix(char **obp, size_t *len, const char *prf, size_t prflen) {
   memcpy(*obp, prf, prflen);
   *obp += prflen;
   *len -= prflen;
-  return 1;    
+  return 1;
 }
 
 static int

@@ -34,12 +34,6 @@ typedef struct coap_tiny_context_t {
 #endif /* DTLS_ECC */
 } coap_tiny_context_t;
 
-#ifdef __GNUC__
-#define UNUSED __attribute__((unused))
-#else /* __GNUC__ */
-#define UNUSED
-#endif /* __GNUC__ */
-
 static dtls_tick_t dtls_tick_0 = 0;
 static coap_tick_t coap_tick_0 = 0;
 
@@ -332,7 +326,7 @@ error:
 #ifdef DTLS_ECC
 static int
 get_ecdsa_key(struct dtls_context_t *dtls_context,
-              const session_t *dtls_session UNUSED,
+              const session_t *dtls_session COAP_UNUSED,
               const dtls_ecdsa_key_t **result) {
   static dtls_ecdsa_key_t ecdsa_key;
   coap_tiny_context_t *t_context =
@@ -362,8 +356,8 @@ static const unsigned char cert_asn1_header[] = {
 #define DTLS_EC_SUBJECTPUBLICKEY_SIZE (2 * key_size + sizeof(cert_asn1_header))
 
 static int
-verify_ecdsa_key(struct dtls_context_t *dtls_context UNUSED,
-                 const session_t *dtls_session UNUSED,
+verify_ecdsa_key(struct dtls_context_t *dtls_context COAP_UNUSED,
+                 const session_t *dtls_session COAP_UNUSED,
                  const uint8_t *other_pub_x,
                  const uint8_t *other_pub_y,
                  size_t key_size) {
