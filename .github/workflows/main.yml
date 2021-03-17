@@ -111,6 +111,19 @@ jobs:
       - name: compile
         run: |
           make -C examples/${{matrix.OS}}
+  ms-build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v1
+
+      - name: Build sln
+        shell: cmd
+        run: call .\scripts\msbuild.sln.cmd
+
   additional-tests:
     runs-on: ubuntu-latest
     steps:

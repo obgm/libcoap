@@ -33,6 +33,10 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="NoTLS|x64">
+      <Configuration>NoTLS</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -81,6 +85,11 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -118,6 +127,10 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\libcoap.props" />
   </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\libcoap.props" />
+  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
@@ -148,6 +161,10 @@
     <OutDir>$(InstallDir)</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">
+    <NMakePreprocessorDefinitions>NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <OutDir>$(InstallDir)</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">
     <NMakePreprocessorDefinitions>NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <OutDir>$(InstallDir)</OutDir>
   </PropertyGroup>
@@ -244,6 +261,18 @@ for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coa
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
 copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap-2-openssl.lib" "$(OutDir)lib"
 </Command>
+      <Message>Installing</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">
+    <PostBuildEvent>
+      <Command>if not exist "$(OutDir)include\coap2" mkdir "$(OutDir)include\coap2"
+copy "$(SolutionDir)..\include\coap2\*.h" "$(OutDir)include\coap2"
+if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
+for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coap-rd.exe coap-rd.pdb ) do copy "$(SolutionDir)$(Platform)\$(Configuration)\%%f" "$(OutDir)bin"
+if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
+copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap-2.lib" "$(OutDir)lib"
+copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap-2.pdb" "$(OutDir)lib"</Command>
       <Message>Installing</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
