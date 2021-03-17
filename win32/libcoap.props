@@ -5,8 +5,8 @@
     <InstallDir>$(SolutionDir)out\</InstallDir>
     <InstallDirDbg>$(SolutionDir)dbg\</InstallDirDbg>
     <DbgSuffix />
-    <OpenSSLRootDir>$(InstallDir)</OpenSSLRootDir>
-    <OpenSSLRootDirDbg>$(InstallDirDbg)</OpenSSLRootDirDbg>
+    <OpenSSLRootDir>$(OPENSSL_INSTALL_PATH)</OpenSSLRootDir>
+    <OpenSSLRootDirDbg>$(OPENSSL_INSTALL_PATH)</OpenSSLRootDirDbg>
     <OpenSSLIncludeDir>$(OpenSSLRootDir)include</OpenSSLIncludeDir>
     <OpenSSLIncludeDirDbg>$(OpenSSLRootDirDbg)include</OpenSSLIncludeDirDbg>
     <OpenSSLLibDir>$(OpenSSLRootDir)lib</OpenSSLLibDir>
