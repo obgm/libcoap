@@ -14,7 +14,7 @@ coap-rd - A CoAP Resource Directory based on libcoap
 
 SYNOPSIS
 --------
-*coap-rd* [*-g* group] [*-p* port] [*-v* num] [*-A* address]
+*coap-rd* [*-g* group] [*-G* group_if] [*-p* port] [*-v* num] [*-A* address]
           [[*-h* hint] [*-k* key]]
           [[*-c* certfile] [*-n*] [*-C* cafile] [*-R* trusted_casfile]]
 
@@ -28,6 +28,10 @@ OPTIONS
 *-g* group::
    Join specified multicast 'group' on startup.
    *Note:* DTLS over multicast is not currently supported.
+
+*-G* group_if::
+   Use this interface for listening for the multicast group. This can be
+   different from the implied interface if the *-A* option is used.
 
 *-p* port::
    The 'port' on the given address will be listening for incoming connections.

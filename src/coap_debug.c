@@ -163,6 +163,10 @@ print_readable( const uint8_t *data, size_t len,
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+/*
+ * Returned buf is always NULL terminated.
+ * Returned size is number of characters, not including NULL terminator.
+ */
 size_t
 coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t len) {
 #if defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )
@@ -171,14 +175,20 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
   unsigned char *p = buf;
   size_t need_buf;
 
+  assert(buf);
+  assert(len);
+  buf[0] = '\000';
+
   switch (addr->addr.sa.sa_family) {
   case AF_INET:
+    if (len < INET_ADDRSTRLEN + 1) /* Include : */
+      return 0;
     addrptr = &addr->addr.sin.sin_addr;
     port = ntohs(addr->addr.sin.sin_port);
     need_buf = INET_ADDRSTRLEN;
     break;
   case AF_INET6:
-    if (len < 7) /* do not proceed if buffer is even too short for [::]:0 */
+    if (len < INET6_ADDRSTRLEN + 3) /* Include [ ] : */
       return 0;
 
     *p++ = '[';
@@ -189,7 +199,9 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
 
     break;
   default:
-    memcpy(buf, "(unknown address type)", min(22, len));
+    /* Include trailing NULL if possible */
+    memcpy(buf, "(unknown address type)", min(22+1, len));
+    buf[len-1] = '\000';
     return min(22, len);
   }
 
@@ -197,21 +209,23 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
   if (inet_ntop(addr->addr.sa.sa_family, addrptr, (char *)p,
                 min(len, need_buf)) == 0) {
     perror("coap_print_addr");
+    buf[0] = '\000';
     return 0;
   }
 
-  p += strnlen((char *)p, len);
+  p += strlen((char *)p);
 
   if (addr->addr.sa.sa_family == AF_INET6) {
-    if (p < buf + len) {
+    if (p + 1 < buf + len) {
       *p++ = ']';
     } else
-      return 0;
+      return p - buf; /* Already NULL terminated */
   }
 
-  p += snprintf((char *)p, buf + len - p + 1, ":%d", port);
+  /* Cannot rely on snprintf() return value for short buffers */
+  snprintf((char *)p, buf + len - p, ":%d", port);
 
-  return buf + len - p;
+  return strlen((char *)buf);
 #else /* HAVE_ARPA_INET_H */
 # if WITH_CONTIKI
   unsigned char *p = buf;
@@ -219,7 +233,10 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
 #  if NETSTACK_CONF_WITH_IPV6
   const uint8_t hex[] = "0123456789ABCDEF";
 
-  if (len < 41)
+  assert(buf);
+  assert(len);
+  buf[0] = '\000';
+  if (len < 42)
     return 0;
 
   *p++ = '[';
@@ -237,23 +254,30 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
 #  else /* WITH_UIP6 */
 #   warning "IPv4 network addresses will not be included in debug output"
 
-  if (len < 21)
+  if (len < 21) {
+    *p = '\000';
     return 0;
+  }
 #  endif /* WITH_UIP6 */
-  if (buf + len - p < 6)
-    return 0;
+  if (buf + len - p < 6) {
+    *p = '\000';
+    return p - buf;
+  }
 
 #ifdef HAVE_SNPRINTF
-  p += snprintf((char *)p, buf + len - p + 1, ":%d", uip_htons(addr->port));
+  /* Cannot rely on snprintf() return value for short buffers */
+  snprintf((char *)p, buf + len - p, ":%d", uip_htons(addr->port));
 #else /* HAVE_SNPRINTF */
   /* @todo manual conversion of port number */
+  *p = '\000';
 #endif /* HAVE_SNPRINTF */
 
-  return p - buf;
+  return strlen((char *)p);
 # else /* WITH_CONTIKI */
   /* TODO: output addresses manually */
 #   warning "inet_ntop() not available, network addresses will not be included in debug output"
 # endif /* WITH_CONTIKI */
+  buf[0] = '\000';
   return 0;
 #endif
 }

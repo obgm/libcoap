@@ -82,7 +82,7 @@ A2X_EXTRA_PAGES = @DOLLAR_SIGN@(shell for fil in $(TXT3) ; do sed -ne '/^NAME/,/
 install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_cache.3" > coap_cache_get_app_data.3
 	@echo ".so man3/coap_cache.3" > coap_cache_set_app_data.3
-	@echo ".so man3/coap_context.3" > coap_context_set_pki_root_cas.3
+	@echo ".so man3/coap_context.3" > coap_join_mcast_group_intf.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe8.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_add_optlist_pdu.3

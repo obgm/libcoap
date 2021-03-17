@@ -14,8 +14,8 @@ coap-server - CoAP Server based on libcoap
 
 SYNOPSIS
 --------
-*coap-server* [*-d* max] [*-e*] [*-g* group] [*-l* loss] [*-p* port] [*-v* num]
-              [*-A* address] [*-L* value] [*-N*]
+*coap-server* [*-d* max] [*-e*] [*-g* group] [*-G* group_if] [*-l* loss]
+              [*-p* port] [*-v* num] [*-A* address] [*-L* value] [*-N*]
               [*-P* scheme://addr[:port],name1[,name2..]]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
               [*-s* match_psk_sni_file] [*-u* user]]
@@ -40,6 +40,11 @@ OPTIONS - General
 
 *-g* group::
    Join specified multicast 'group' on start up.
+   *Note:* DTLS over multicast is not currently supported.
+
+*-G* group_if::
+   Use this interface for listening for the multicast group. This can be
+   different from the implied interface if the *-A* option is used.
 
 *-l* list::
    Fail to send some datagrams specified by a comma separated list of

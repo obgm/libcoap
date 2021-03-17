@@ -2187,8 +2187,8 @@ usage( const char *program, const char *version) {
     break;
   }
   fprintf(stderr, "\n"
-     "Usage: %s [-d max] [-e] [-g group] [-l loss] [-p port] [-v num]\n"
-     "\t\t[-A address] [-L value] [-N]\n"
+     "Usage: %s [-d max] [-e] [-g group] [-G group_if] [-l loss] [-p port]\n"
+     "\t\t[-v num] [-A address] [-L value] [-N]\n"
      "\t\t[-P scheme://address[:port],name1[,name2..]]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
      "\t\t[-s match_psk_sni_file] [-u user]]\n"
@@ -2201,6 +2201,10 @@ usage( const char *program, const char *version) {
      "\t       \t\tuntil one of the dynamic resources has been deleted\n"
      "\t-e     \t\tEcho back the data sent with a PUT\n"
      "\t-g group\tJoin the given multicast group\n"
+     "\t       \t\tNote: DTLS over multicast is not currently supported\n"
+     "\t-G group_if\tUse this interface for listening for the multicast\n"
+     "\t       \t\tgroup. This can be different from the implied interface\n"
+     "\t       \t\tif the -A option is used\n"
      "\t-l list\t\tFail to send some datagrams specified by a comma\n"
      "\t       \t\tseparated list of numbers or number ranges\n"
      "\t       \t\t(for debugging only)\n"
@@ -2630,6 +2634,7 @@ int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
   char *group = NULL;
+  char *group_if = NULL;
   coap_tick_t now;
   char addr_str[NI_MAXHOST] = "::";
   char port_str[NI_MAXSERV] = "5683";
@@ -2653,7 +2658,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "c:d:eg:h:i:j:J:k:l:mnp:s:u:v:A:C:L:M:NP:R:S:")) != -1) {
+  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:s:u:v:A:C:L:M:NP:R:S:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -2673,6 +2678,9 @@ main(int argc, char **argv) {
       break;
     case 'g' :
       group = optarg;
+      break;
+    case 'G' :
+      group_if = optarg;
       break;
     case 'h' :
       if (!optarg[0]) {
@@ -2784,7 +2792,7 @@ main(int argc, char **argv) {
              sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
   /* join multicast group if requested at command line */
   if (group)
-    coap_join_mcast_group(ctx, group);
+    coap_join_mcast_group_intf(ctx, group, group_if);
 
   coap_fd = coap_context_get_coap_fd(ctx);
   if (coap_fd != -1) {
