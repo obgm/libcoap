@@ -1146,6 +1146,7 @@ hnd_proxy_uri(coap_context_t *ctx COAP_UNUSED,
     if (token && !coap_add_token(pdu, token->length, token->s)) {
       coap_log(LOG_DEBUG, "cannot add token to proxy request\n");
       response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+      coap_delete_pdu(pdu);
       goto cleanup;
     }
 

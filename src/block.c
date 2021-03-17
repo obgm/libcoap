@@ -300,9 +300,9 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
 
   LL_FOREACH(session->lg_crcv, cq) {
     if (cq->observe_set) {
-      if ((!token && !cq->app_token->length) ||
+      if ((!token && !cq->app_token->length) || (token &&
           full_match(token->s, token->length, cq->app_token->s,
-                     cq->app_token->length)) {
+                     cq->app_token->length))) {
         uint8_t buf[4];
         coap_tid_t mid;
         coap_pdu_t * pdu = coap_pdu_duplicate(&cq->pdu,
