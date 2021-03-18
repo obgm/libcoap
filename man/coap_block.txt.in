@@ -43,7 +43,7 @@ const uint8_t **_data_, size_t *_offset_, size_t *_total_);*
 coap_block_build_body(coap_binary_t *_body_data_, size_t _length_,
 const uint8_t *_data_, size_t _offset_, size_t _total_);*
 
-*coap_tid_t coap_send_large(coap_session_t *_session_, coap_pdu_t *_pdu_);*
+*coap_mid_t coap_send_large(coap_session_t *_session_, coap_pdu_t *_pdu_);*
 
 Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
@@ -192,7 +192,7 @@ The *coap_add_data_large_request*(), *coap_add_data_large_response*(), and
 *coap_get_data_large*() functions return 0 on failure, 1 on success.
 
 The *coap_send_large*() function returns the CoAP message ID on success or
-COAP_INVALID_TID on failure.
+COAP_INVALID_MID on failure.
 
 The  *coap_block_build_body*() returns the current state of the body's data
 (which may have some missing gaps) or NULL on error.
@@ -283,7 +283,7 @@ unsigned char *data, size_t length, int observe) {
       goto error;
   }
 
-  if (coap_send_large(session, pdu) == COAP_INVALID_TID)
+  if (coap_send_large(session, pdu) == COAP_INVALID_MID)
     goto error;
   return 1;
 

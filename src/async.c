@@ -30,7 +30,7 @@ coap_async_state_t *
 coap_register_async(coap_context_t *context, coap_session_t *session,
                     coap_pdu_t *request, unsigned char flags, void *data) {
   coap_async_state_t *s;
-  coap_tid_t id = request->tid;
+  coap_mid_t id = request->mid;
 
   SEARCH_PAIR(context->async_state,s,session,session,id,id);
 
@@ -74,7 +74,7 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
 }
 
 coap_async_state_t *
-coap_find_async(coap_context_t *context, coap_session_t *session, coap_tid_t id) {
+coap_find_async(coap_context_t *context, coap_session_t *session, coap_mid_t id) {
   coap_async_state_t *tmp;
   SEARCH_PAIR(context->async_state,tmp,session,session,id,id);
   return tmp;
@@ -82,7 +82,7 @@ coap_find_async(coap_context_t *context, coap_session_t *session, coap_tid_t id)
 
 int
 coap_remove_async(coap_context_t *context, coap_session_t *session,
-                  coap_tid_t id, coap_async_state_t **s) {
+                  coap_mid_t id, coap_async_state_t **s) {
   coap_async_state_t *tmp = coap_find_async(context, session, id);
 
   if (tmp)

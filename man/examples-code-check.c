@@ -184,10 +184,10 @@ int main(int argc, char* argv[])
                          sizeof("*unsigned int *")-1) != 0) {
               is_number_func = 1;
             }
-            else if (strncmp(buffer, "*coap_tid_t ",
-                              sizeof("*coap_tid_t ")-1) == 0 &&
-                strncmp(buffer, "*coap_tid_t *",
-                         sizeof("*coap_tid_t *")-1) != 0) {
+            else if (strncmp(buffer, "*coap_mid_t ",
+                              sizeof("*coap_mid_t ")-1) == 0 &&
+                strncmp(buffer, "*coap_mid_t *",
+                         sizeof("*coap_mid_t *")-1) != 0) {
               is_number_func = 1;
             }
             /* Look specifically for inline prefixes */

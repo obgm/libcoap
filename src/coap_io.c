@@ -1120,7 +1120,7 @@ coap_io_prepare_io(coap_context_t *ctx,
       coap_tick_t s_timeout;
       if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
         if ((s->last_ping > 0 && s->last_pong < s->last_ping)
-          || ((s->last_ping_mid = coap_session_send_ping(s)) == COAP_INVALID_TID))
+          || ((s->last_ping_mid = coap_session_send_ping(s)) == COAP_INVALID_MID))
         {
           /* Make sure the session object is not deleted in the callback */
           coap_session_reference(s);

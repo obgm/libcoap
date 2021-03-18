@@ -371,7 +371,7 @@ hnd_get_separate(coap_context_t *ctx,
   unsigned long delay = 5;
 
   if (async) {
-    if (async->id != request->tid) {
+    if (async->id != request->mid) {
       coap_option_filter_clear(&f);
       response->code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
     }
@@ -441,16 +441,16 @@ check_async(coap_context_t *ctx,
     return;
   }
 
-  response->tid = coap_new_message_id(async->session);
+  response->mid = coap_new_message_id(async->session);
 
   if (async->tokenlen)
     coap_add_token(response, async->tokenlen, async->token);
 
   coap_add_data(response, 4, (const uint8_t *)"done");
 
-  if (coap_send(async->session, response) == COAP_INVALID_TID) {
+  if (coap_send(async->session, response) == COAP_INVALID_MID) {
     coap_log(LOG_DEBUG, "check_async: cannot send response for mid=0x%x\n",
-          response->tid);
+          response->mid);
   }
   coap_remove_async(ctx, async->session, async->id, &tmp);
   coap_free_async(async);

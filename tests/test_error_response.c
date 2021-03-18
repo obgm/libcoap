@@ -35,7 +35,7 @@ t_error_response1(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);
   pdu->type = COAP_MESSAGE_CON;
-  pdu->tid = 0x1234;
+  pdu->mid = 0x1234;
 
   /* result = coap_add_token(pdu, 5, (unsigned char *)"token"); */
   coap_option_filter_clear(&opts);
@@ -47,7 +47,7 @@ t_error_response1(void) {
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
   CU_ASSERT(response->token_length == 0);
   CU_ASSERT(response->code == 0x80);
-  CU_ASSERT(response->tid == 0x1234);
+  CU_ASSERT(response->mid == 0x1234);
   CU_ASSERT(coap_pdu_encode_header(response, COAP_PROTO_UDP) == 4);
   CU_ASSERT(memcmp(response->token - 4, teststr, sizeof(teststr)) == 0);
   coap_delete_pdu(response);
@@ -64,7 +64,7 @@ t_error_response2(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);
   pdu->type = COAP_MESSAGE_NON;
-  pdu->tid = 0x1234;
+  pdu->mid = 0x1234;
   coap_add_token(pdu, 5, (const uint8_t *)"token");
   coap_add_option(pdu, COAP_OPTION_URI_HOST, 4, (const uint8_t *)"time");
 

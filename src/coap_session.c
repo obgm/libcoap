@@ -146,7 +146,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   session->ack_timeout = COAP_DEFAULT_ACK_TIMEOUT;
   session->ack_random_factor = COAP_DEFAULT_ACK_RANDOM_FACTOR;
   session->dtls_event = -1;
-  session->last_ping_mid = COAP_INVALID_TID;
+  session->last_ping_mid = COAP_INVALID_MID;
 
   /* initialize message id */
   coap_prng((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));
@@ -319,17 +319,18 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     node->t = 0;
   } else {
     coap_queue_t *q = NULL;
-    /* Check that the same tid is not getting re-used in violation of RFC7252 */
+    /* Check that the same mid is not getting re-used in violation of RFC7252 */
     LL_FOREACH(session->delayqueue, q) {
-      if (q->id == pdu->tid) {
-        coap_log(LOG_ERR, "**  %s: mid=0x%x: already in-use - dropped\n", coap_session_str(session), pdu->tid);
-        return COAP_INVALID_TID;
+      if (q->id == pdu->mid) {
+        coap_log(LOG_ERR, "**  %s: mid=0x%x: already in-use - dropped\n",
+                 coap_session_str(session), pdu->mid);
+        return COAP_INVALID_MID;
       }
     }
     node = coap_new_node();
     if (node == NULL)
-      return COAP_INVALID_TID;
-    node->id = pdu->tid;
+      return COAP_INVALID_MID;
+    node->id = pdu->mid;
     node->pdu = pdu;
     if (pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       uint8_t r;
@@ -375,13 +376,13 @@ void coap_session_send_csm(coap_session_t *session) {
 }
 #endif /* !COAP_DISABLE_TCP */
 
-coap_tid_t coap_session_send_ping(coap_session_t *session) {
+coap_mid_t coap_session_send_ping(coap_session_t *session) {
   coap_pdu_t *ping = NULL;
   if (session->state != COAP_SESSION_STATE_ESTABLISHED)
-    return COAP_INVALID_TID;
+    return COAP_INVALID_MID;
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
-    uint16_t tid = coap_new_message_id (session);
-    ping = coap_pdu_init(COAP_MESSAGE_CON, 0, tid, 0);
+    uint16_t mid = coap_new_message_id (session);
+    ping = coap_pdu_init(COAP_MESSAGE_CON, 0, mid, 0);
   }
 #if !COAP_DISABLE_TCP
   else {
@@ -389,7 +390,7 @@ coap_tid_t coap_session_send_ping(coap_session_t *session) {
   }
 #endif /* !COAP_DISABLE_TCP */
   if (!ping)
-    return COAP_INVALID_TID;
+    return COAP_INVALID_MID;
   return coap_send(session, ping);
 }
 
@@ -425,7 +426,7 @@ void coap_session_connected(coap_session_t *session) {
     q->next = NULL;
 
     coap_log(LOG_DEBUG, "** %s: mid=0x%x: transmitted after delay\n",
-             coap_session_str(session), (int)q->pdu->tid);
+             coap_session_str(session), (int)q->pdu->mid);
     bytes_written = coap_session_send_pdu(session, q->pdu);
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (coap_wait_ack(session->context, session, q) >= 0)

@@ -238,14 +238,13 @@ const char *coap_response_phrase(unsigned char code);
 #define COAP_MEDIATYPE_ANY                         0xff /* any media type */
 
 /**
- * coap_tid_t is used to store CoAP transaction id, i.e. a hash value
- * built from the remote transport address and the message id of a
- * CoAP PDU.  Valid transaction ids are greater or equal zero.
+ * coap_mid_t is used to store the CoAP Message ID of a CoAP PDU.
+ * Valid message ids are 0 to 2^16.  Negative values are error codes.
  */
-typedef int coap_tid_t;
+typedef int coap_mid_t;
 
-/** Indicates an invalid transaction id. */
-#define COAP_INVALID_TID -1
+/** Indicates an invalid message id. */
+#define COAP_INVALID_MID -1
 
 /**
  * Indicates that a response is suppressed. This will occur for error
@@ -291,7 +290,7 @@ struct coap_pdu_t {
   uint8_t max_hdr_size;     /**< space reserved for protocol-specific header */
   uint8_t hdr_size;         /**< actual size used for protocol-specific header */
   uint8_t token_length;     /**< length of Token */
-  uint16_t tid;             /**< transaction id, if any, in regular host byte order */
+  uint16_t mid;             /**< message id, if any, in regular host byte order */
   uint16_t max_opt;         /**< highest option number in PDU */
   size_t alloc_size;        /**< allocated storage for token, options and payload */
   size_t used_size;         /**< used bytes of storage for token, options and payload */
@@ -401,12 +400,12 @@ enum coap_response_code {
  * @param type The type of the PDU (one of COAP_MESSAGE_CON, COAP_MESSAGE_NON,
  *             COAP_MESSAGE_ACK, COAP_MESSAGE_RST).
  * @param code The message code.
- * @param tid  The transcation id to set or 0 if unknown / not applicable.
+ * @param mid  The transcation id to set or 0 if unknown / not applicable.
  * @param size The maximum allowed number of byte for the message.
  * @return     A pointer to the new PDU object or @c NULL on error.
  */
 coap_pdu_t *
-coap_pdu_init(uint8_t type, uint8_t code, uint16_t tid, size_t size);
+coap_pdu_init(uint8_t type, uint8_t code, uint16_t mid, size_t size);
 
 /**
  * Dynamically grows the size of @p pdu to @p new_size. The new size

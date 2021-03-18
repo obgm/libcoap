@@ -43,7 +43,7 @@ typedef struct coap_async_state_t {
    */
   void *appdata;
   coap_session_t *session;         /**< transaction session */
-  coap_tid_t id;                   /**< transaction id */
+  coap_mid_t id;                   /**< message id */
   struct coap_async_state_t *next; /**< internally used for linking */
   size_t tokenlen;                 /**< length of the token */
   uint8_t token[8];                /**< the token to use in a response */
@@ -103,7 +103,7 @@ coap_register_async(coap_context_t *context,
  */
 int coap_remove_async(coap_context_t *context,
                       coap_session_t *session,
-                      coap_tid_t id,
+                      coap_mid_t id,
                       coap_async_state_t **s);
 
 /**
@@ -129,7 +129,7 @@ coap_free_async(coap_async_state_t *state);
  * @return        A pointer to the object identified by @p id or @c NULL if
  *                not found.
  */
-coap_async_state_t *coap_find_async(coap_context_t *context, coap_session_t *session, coap_tid_t id);
+coap_async_state_t *coap_find_async(coap_context_t *context, coap_session_t *session, coap_mid_t id);
 
 /**
  * Updates the time stamp of @p s.

@@ -115,7 +115,7 @@ typedef unsigned char method_t;
 method_t method = 1;                    /* the method we are using in our requests */
 
 coap_block_t block = { .num = 0, .m = 0, .szx = 6 };
-uint16_t last_block1_tid = 0;
+uint16_t last_block1_mid = 0;
 
 
 unsigned int wait_seconds = 90;                /* default timeout in seconds */
@@ -197,7 +197,7 @@ coap_new_request(coap_context_t *ctx,
     return NULL;
 
   pdu->type = msgtype;
-  pdu->tid = coap_new_message_id(session);
+  pdu->mid = coap_new_message_id(session);
   pdu->code = m;
 
   if ( !coap_add_token(pdu, the_token.length, the_token.s)) {
@@ -292,7 +292,7 @@ nack_handler(coap_context_t *context COAP_UNUSED,
              coap_session_t *session COAP_UNUSED,
              coap_pdu_t *sent COAP_UNUSED,
              coap_nack_reason_t reason,
-             const coap_tid_t id COAP_UNUSED) {
+             const coap_mid_t id COAP_UNUSED) {
 
   switch(reason) {
   case COAP_NACK_TOO_MANY_RETRIES:
@@ -316,7 +316,7 @@ message_handler(struct coap_context_t *ctx COAP_UNUSED,
                 coap_session_t *session COAP_UNUSED,
                 coap_pdu_t *sent,
                 coap_pdu_t *received,
-                const coap_tid_t id COAP_UNUSED) {
+                const coap_mid_t id COAP_UNUSED) {
 
   coap_opt_t *block_opt;
   coap_opt_iterator_t opt_iter;

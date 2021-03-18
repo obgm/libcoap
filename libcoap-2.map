@@ -67,7 +67,6 @@ global:
   coap_endpoint_str;
   coap_find_async;
   coap_find_attr;
-  coap_find_transaction;
   coap_fls;
   coap_flsll;
   coap_free_async;

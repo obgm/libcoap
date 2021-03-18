@@ -212,7 +212,7 @@ hnd_put_resource(coap_context_t  *ctx COAP_UNUSED,
   if (request->hdr->token_length)
     coap_add_token(response, request->hdr->token_length, request->hdr->token);
 
-  if (coap_send(ctx, peer, response) == COAP_INVALID_TID) {
+  if (coap_send(ctx, peer, response) == COAP_INVALID_MID) {
     coap_log(LOG_DEBUG, "hnd_get_rd: cannot send response for mid=0x%x\n",
     request->hdr->id);
   }
@@ -457,7 +457,7 @@ hnd_post_rd(coap_context_t  *ctx,
   } else {      /* generate node identifier */
     loc_size +=
       snprintf((char *)(loc + loc_size), LOCSIZE - loc_size - 1,
-               "%x", request->tid);
+               "%x", request->mid);
 
     if (loc_size > 1) {
       if (ins.length) {

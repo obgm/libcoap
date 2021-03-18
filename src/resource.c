@@ -871,7 +871,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         continue;
       }
 
-      coap_tid_t tid = COAP_INVALID_TID;
+      coap_mid_t mid = COAP_INVALID_MID;
       obs->dirty = 0;
       /* initialize response */
       response = coap_pdu_init(COAP_MESSAGE_CON, 0, 0, coap_session_max_pdu_size(obs->session));
@@ -899,7 +899,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       token.length = obs->token_length;
       token.s = obs->token;
 
-      obs->tid = response->tid = coap_new_message_id(obs->session);
+      obs->mid = response->mid = coap_new_message_id(obs->session);
       if ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) == 0 &&
           ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS) ||
            obs->non_cnt < COAP_OBS_MAX_NON)) {
@@ -935,9 +935,9 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         obs->non_cnt++;
       }
 
-      tid = coap_send( obs->session, response );
+      mid = coap_send( obs->session, response );
 
-      if (COAP_INVALID_TID == tid) {
+      if (COAP_INVALID_MID == mid) {
         coap_log(LOG_DEBUG,
                  "coap_check_notify: sending failed, resource stays "
                  "partially dirty\n");

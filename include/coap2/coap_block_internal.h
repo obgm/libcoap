@@ -140,7 +140,7 @@ struct coap_lg_srcv_t {
   coap_rblock_t rec_blocks; /** < list of received blocks */
   uint8_t last_token[8]; /**< last used token */
   size_t last_token_length; /**< length of token */
-  coap_tid_t last_mid;   /**< Last received mid for this set of packets */
+  coap_mid_t last_mid;   /**< Last received mid for this set of packets */
   coap_tick_t last_used; /**< Last time data sent or 0 */
   uint16_t block_option; /**< Block option in use */
 };
