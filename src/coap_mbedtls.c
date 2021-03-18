@@ -760,6 +760,7 @@ pki_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
      * New PKI SNI request
      */
     coap_dtls_key_t *new_entry;
+    pki_sni_entry *pki_sni_entry_list;
 
     new_entry =
       m_context->setup_data.validate_sni_call_back(name,
@@ -769,9 +770,14 @@ pki_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
       return -1;
     }
 
-    m_context->pki_sni_entry_list =
-             mbedtls_realloc(m_context->pki_sni_entry_list,
-                                   (i+1)*sizeof(pki_sni_entry));
+    pki_sni_entry_list = mbedtls_realloc(m_context->pki_sni_entry_list,
+                                         (i+1)*sizeof(pki_sni_entry));
+
+    if (pki_sni_entry_list == NULL) {
+      mbedtls_free(name);
+      return -1;
+    }
+    m_context->pki_sni_entry_list = pki_sni_entry_list;
     memset(&m_context->pki_sni_entry_list[i], 0,
            sizeof(m_context->pki_sni_entry_list[i]));
     m_context->pki_sni_entry_list[i].sni = name;
@@ -834,6 +840,7 @@ psk_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
      * New PSK SNI request
      */
     const coap_dtls_spsk_info_t *new_entry;
+    psk_sni_entry *psk_sni_entry_list;
 
     new_entry =
       c_session->context->spsk_setup_data.validate_sni_call_back(name,
@@ -844,10 +851,14 @@ psk_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
       return -1;
     }
 
-    m_context->psk_sni_entry_list =
-             mbedtls_realloc(m_context->psk_sni_entry_list,
-                                   (i+1)*sizeof(psk_sni_entry));
+    psk_sni_entry_list = mbedtls_realloc(m_context->psk_sni_entry_list,
+                                         (i+1)*sizeof(psk_sni_entry));
 
+    if (psk_sni_entry_list == NULL) {
+      mbedtls_free(name);
+      return -1;
+    }
+    m_context->psk_sni_entry_list = psk_sni_entry_list;
     m_context->psk_sni_entry_list[i].sni = name;
     m_context->psk_sni_entry_list[i].psk_info = *new_entry;
     /* name has been absorbed into psk_sni_entry_list[].sni entry */
