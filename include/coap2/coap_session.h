@@ -63,8 +63,8 @@ typedef struct coap_session_t {
   coap_session_state_t state;       /**< current state of relationaship with peer */
   unsigned ref;                     /**< reference count from queues */
   size_t tls_overhead;              /**< overhead of TLS layer */
-  size_t mtu;                     /**< path or CSM mtu */
-  coap_address_t local_if;          /**< optional local interface address */
+  size_t mtu;                       /**< path or CSM mtu */
+  coap_addr_hash_t addr_hash;  /**< Address hash for server incoming packets */
   UT_hash_handle hh;
   coap_addr_tuple_t addr_info;      /**< key: remote/local address info */
   int ifindex;                      /**< interface index */
@@ -655,7 +655,7 @@ coap_fixed_point_t coap_session_get_ack_random_factor(coap_session_t *session);
 coap_tid_t coap_session_send_ping(coap_session_t *session);
 
 #define SESSIONS_ADD(e, obj) \
-  HASH_ADD(hh, (e), addr_info, sizeof((obj)->addr_info), (obj))
+  HASH_ADD(hh, (e), addr_hash, sizeof((obj)->addr_hash), (obj))
 
 #define SESSIONS_DELETE(e, obj) \
   HASH_DELETE(hh, (e), (obj))

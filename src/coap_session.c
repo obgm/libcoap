@@ -106,7 +106,7 @@ coap_session_get_app_data(const coap_session_t *session) {
 
 static coap_session_t *
 coap_make_session(coap_proto_t proto, coap_session_type_t type,
-  const coap_address_t *local_if, const coap_address_t *local_addr,
+  const coap_addr_hash_t *addr_hash, const coap_address_t *local_addr,
   const coap_address_t *remote_addr, int ifindex, coap_context_t *context,
   coap_endpoint_t *endpoint) {
   coap_session_t *session = (coap_session_t*)coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
@@ -115,10 +115,10 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   memset(session, 0, sizeof(*session));
   session->proto = proto;
   session->type = type;
-  if (local_if)
-    coap_address_copy(&session->local_if, local_if);
+  if (addr_hash)
+    memcpy(&session->addr_hash, addr_hash, sizeof(session->addr_hash));
   else
-    coap_address_init(&session->local_if);
+    memset(&session->addr_hash, 0, sizeof(session->addr_hash));
   if (local_addr)
     coap_address_copy(&session->addr_info.local, local_addr);
   else
@@ -542,6 +542,14 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
 #endif /* !COAP_DISABLE_TCP */
 }
 
+static void
+coap_make_addr_hash(coap_addr_hash_t *addr_hash,
+                    const coap_addr_tuple_t *addr_info) {
+  memset(addr_hash, 0, sizeof(coap_addr_hash_t));
+  coap_address_copy(&addr_hash->remote, &addr_info->remote);
+  addr_hash->lport = coap_address_get_port(&addr_info->local);
+}
+
 coap_session_t *
 coap_endpoint_get_session(coap_endpoint_t *endpoint,
   const coap_packet_t *packet, coap_tick_t now) {
@@ -551,9 +559,13 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
   unsigned int num_hs = 0;
   coap_session_t *oldest = NULL;
   coap_session_t *oldest_hs = NULL;
+  coap_addr_hash_t addr_hash;
 
-  SESSIONS_FIND(endpoint->sessions, packet->addr_info, session);
+  coap_make_addr_hash(&addr_hash, &packet->addr_info);
+  SESSIONS_FIND(endpoint->sessions, addr_hash, session);
   if (session) {
+    /* Maybe mcast or unicast IP address which is not in the hash */
+    coap_address_copy(&session->addr_info.local, &packet->addr_info.local);
     session->ifindex = packet->ifindex;
     session->last_rx_tx = now;
     return session;
@@ -658,7 +670,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     }
   }
   session = coap_make_session(endpoint->proto, COAP_SESSION_TYPE_SERVER,
-                              NULL, &packet->addr_info.local,
+                              &addr_hash, &packet->addr_info.local,
                               &packet->addr_info.remote,
                               packet->ifindex, endpoint->context, endpoint);
   if (session) {
@@ -762,7 +774,7 @@ coap_session_create_client(
     assert(0);
     break;
   }
-  session = coap_make_session(proto, COAP_SESSION_TYPE_CLIENT, local_if,
+  session = coap_make_session(proto, COAP_SESSION_TYPE_CLIENT, NULL,
     local_if, server, 0, ctx, NULL);
   if (!session)
     goto error;
@@ -770,14 +782,14 @@ coap_session_create_client(
   coap_session_reference(session);
 
   if (proto == COAP_PROTO_UDP || proto == COAP_PROTO_DTLS) {
-    if (!coap_socket_connect_udp(&session->sock, &session->local_if, server,
+    if (!coap_socket_connect_udp(&session->sock, local_if, server,
       proto == COAP_PROTO_DTLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
       &session->addr_info.local, &session->addr_info.remote)) {
       goto error;
     }
 #if !COAP_DISABLE_TCP
   } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
-    if (!coap_socket_connect_tcp1(&session->sock, &session->local_if, server,
+    if (!coap_socket_connect_tcp1(&session->sock, local_if, server,
       proto == COAP_PROTO_TLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
       &session->addr_info.local, &session->addr_info.remote)) {
       goto error;
@@ -1077,14 +1089,13 @@ coap_session_t *coap_new_client_session_pki(
   return coap_session_connect(session);
 }
 
-
 coap_session_t *coap_new_server_session(
   struct coap_context_t *ctx,
   coap_endpoint_t *ep
 ) {
   coap_session_t *session;
   session = coap_make_session( ep->proto, COAP_SESSION_TYPE_SERVER,
-                               &ep->bind_addr, NULL, NULL, 0, ctx, ep );
+                               NULL, NULL, NULL, 0, ctx, ep );
   if (!session)
     goto error;
 
@@ -1093,6 +1104,8 @@ coap_session_t *coap_new_server_session(
                               &session->addr_info.local,
                               &session->addr_info.remote))
     goto error;
+  coap_make_addr_hash(&session->addr_hash, &session->addr_info);
+  
 #endif /* !COAP_DISABLE_TCP */
   session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED
                        | COAP_SOCKET_WANT_READ;
