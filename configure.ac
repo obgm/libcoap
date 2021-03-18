@@ -1,6 +1,6 @@
 # configure.ac for the libcoap package
 #
-# Copyright (C) 2010-2015 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
 #           (C) 2015-2018 Carsten Schoenert <c.schoenert@t-online.de>
 #
 # Please run 'autogen.sh' to let autoconf produce a configure script.
@@ -13,7 +13,7 @@ m4_define([libcoap_micro_version], [0])
 
 # define an appending release state if needed, for example for pre-releases
 # like 'alpha' or 'rc1', for a full release keep the value empty!
-m4_define([libcoap_release_state], [beta])
+m4_define([libcoap_release_state], [rc1])
 
 # concatenate the full libcoap version string
 m4_define([libcoap_version], [m4_format([%s.%s.%s%s], libcoap_major_version, libcoap_minor_version, libcoap_micro_version, libcoap_release_state)])
@@ -105,8 +105,8 @@ LT_INIT([shared static])
 #
 #  --> Set 'LT_LIBCOAP_AGE' to 0.
 
-LT_LIBCOAP_CURRENT=2
-LT_LIBCOAP_REVISION=1
+LT_LIBCOAP_CURRENT=3
+LT_LIBCOAP_REVISION=0
 LT_LIBCOAP_AGE=0
 LIBCOAP_SO_VERSION=$LT_LIBCOAP_CURRENT.$LT_LIBCOAP_REVISION.$LT_LIBCOAP_AGE
 
