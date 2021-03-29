@@ -11,8 +11,8 @@
 #ifndef COAP_DTLS_H_
 #define COAP_DTLS_H_
 
-#include "coap2/coap_time.h"
-#include "coap2/str.h"
+#include "coap_time.h"
+#include "str.h"
 
 /**
  * @defgroup dtls DTLS Support

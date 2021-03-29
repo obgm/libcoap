@@ -94,16 +94,16 @@
 #define HAVE_UNISTD_H 1
 
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"
+#define PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME "libcoap"
+#define PACKAGE_NAME "@PACKAGE_NAME@"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "4.3.0rc1"
+#define PACKAGE_VERSION "@PACKAGE_VERSION@"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libcoap 4.3.0rc1"
+#define PACKAGE_STRING "@PACKAGE_STRING@"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1

@@ -6,10 +6,8 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "test_common.h"
 #include "test_uri.h"
-
-#include <coap2/coap.h>
 
 #include <stdio.h>
 

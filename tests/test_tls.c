@@ -6,10 +6,8 @@
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "test_common.h"
 #include "test_tls.h"
-
-#include <coap2/coap.h>
 
 #undef HAVE_DTLS
 

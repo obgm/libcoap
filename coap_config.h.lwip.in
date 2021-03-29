@@ -15,9 +15,9 @@
 #define COAP_DISABLE_TCP 1
 #endif
 
-#define PACKAGE_NAME "libcoap"
-#define PACKAGE_VERSION "4.3.0rc1"
-#define PACKAGE_STRING "libcoap 4.3.0rc1"
+#define PACKAGE_NAME "@PACKAGE_NAME@"
+#define PACKAGE_VERSION "@PACKAGE_VERSION@"
+#define PACKAGE_STRING "@PACKAGE_STRING@"
 
 #define assert(x) LWIP_ASSERT("CoAP assert failed", x)
 

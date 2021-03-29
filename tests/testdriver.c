@@ -3,6 +3,7 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
+#include "test_common.h"
 #include "test_uri.h"
 #include "test_encode.h"
 #include "test_options.h"
@@ -12,7 +13,6 @@
 #include "test_sendqueue.h"
 #include "test_wellknown.h"
 #include "test_tls.h"
-#include "coap2/libcoap.h"
 
 int
 main(int argc COAP_UNUSED, char **argv COAP_UNUSED) {

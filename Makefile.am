@@ -17,6 +17,9 @@ EXTRA_DIST = \
   CONTRIBUTE \
   TODO \
   LICENSE \
+  coap_config.h.lwip \
+  coap_config.h.riot \
+  coap_config.h.windows \
   libcoap-$(LIBCOAP_API_VERSION).pc.in \
   libcoap-$(LIBCOAP_API_VERSION).map \
   libcoap-$(LIBCOAP_API_VERSION).sym \
@@ -31,6 +34,9 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap.h.in \
+  include/coap$(LIBCOAP_API_VERSION)/coap.h.windows \
+  include/coap$(LIBCOAP_API_VERSION)/coap.h.windows.in \
   include/coap$(LIBCOAP_API_VERSION)/utlist.h \
   src/coap_io_riot.c \
   tests/test_error_response.h \

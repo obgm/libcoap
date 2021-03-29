@@ -171,8 +171,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <PostBuildEvent>
       <Message>Installing</Message>
-      <Command>if not exist "$(OutDir)include\coap2" mkdir "$(OutDir)include\coap2"
-copy "$(SolutionDir)..\include\coap2\*.h" "$(OutDir)include\coap2"
+      <Command>if not exist "$(OutDir)$(LibCoAPIncludeDir)" mkdir "$(OutDir)$(LibCoAPIncludeDir)"
+copy "$(SolutionDir)..\$(LibCoAPIncludeDir)\*.h" "$(OutDir)$(LibCoAPIncludeDir)"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client$(DbgSuffix).exe coap-client$(DbgSuffix).pdb coap-server$(DbgSuffix).exe coap-server$(DbgSuffix).pdb coap-rd$(DbgSuffix).exe coap-rd$(DbgSuffix).pdb ) do copy "$(SolutionDir)$(Configuration)%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
@@ -183,8 +183,8 @@ copy "$(SolutionDir)$(Configuration)\libcoap$(DbgSuffix).pdb" "$(OutDir)lib"</Co
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">
     <PostBuildEvent>
       <Message>Installing</Message>
-      <Command>if not exist "$(OutDir)include\coap2" mkdir "$(OutDir)include\coap2"
-copy "$(SolutionDir)..\include\coap2\*.h" "$(OutDir)include\coap2"
+      <Command>if not exist "$(OutDir)$(LibCoAPIncludeDir)" mkdir "$(OutDir)$(LibCoAPIncludeDir)"
+copy "$(SolutionDir)..\$(LibCoAPIncludeDir)\*.h" "$(OutDir)$(LibCoAPIncludeDir)"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client$(DbgSuffix).exe coap-client$(DbgSuffix).pdb coap-server$(DbgSuffix).exe coap-server$(DbgSuffix).pdb coap-rd$(DbgSuffix).exe coap-rd$(DbgSuffix).pdb libcoap-2$(DbgSuffix)-openssl.dll libcoap-2$(DbgSuffix)-openssl.pdb ) do copy "$(SolutionDir)$(Configuration)\%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
@@ -195,8 +195,8 @@ copy "$(SolutionDir)$(Configuration)\libcoap-2$(DbgSuffix)-openssl.lib" "$(OutDi
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <PostBuildEvent>
       <Message>Installing</Message>
-      <Command>if not exist "$(OutDir)include\coap2" mkdir "$(OutDir)include\coap2"
-copy "$(SolutionDir)..\include\coap2\*.h" "$(OutDir)include\coap2"
+      <Command>if not exist "$(OutDir)$(LibCoAPIncludeDir)" mkdir "$(OutDir)$(LibCoAPIncludeDir)"
+copy "$(SolutionDir)..\$(LibCoAPIncludeDir)\*.h" "$(OutDir)$(LibCoAPIncludeDir)"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coap-rd.exe coap-rd.pdb ) do copy "$(SolutionDir)$(Configuration)\%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
@@ -207,8 +207,8 @@ copy "$(SolutionDir)$(Configuration)\libcoap.pdb" "$(OutDir)lib"</Command>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">
     <PostBuildEvent>
       <Message>Installing</Message>
-      <Command>if not exist "$(OutDir)include\coap2" mkdir "$(OutDir)include\coap2"
-copy "$(SolutionDir)..\include\coap2\*.h" "$(OutDir)include\coap2"
+      <Command>if not exist "$(OutDir)$(LibCoAPIncludeDir)" mkdir "$(OutDir)$(LibCoAPIncludeDir)"
+copy "$(SolutionDir)..\$(LibCoAPIncludeDir)\*.h" "$(OutDir)$(LibCoAPIncludeDir)"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coap-rd.exe coap-rd.pdb libcoap-2-openssl.dll libcoap-2-openssl.pdb ) do copy "$(SolutionDir)$(Configuration)\%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
@@ -218,8 +218,8 @@ copy "$(SolutionDir)$(Configuration)\libcoap-2-openssl.lib" "$(OutDir)lib"
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <PostBuildEvent>
-      <Command>if not exist "$(OutDir)include\coap2" mkdir "$(OutDir)include\coap2"
-copy "$(SolutionDir)..\include\coap2\*.h" "$(OutDir)include\coap2"
+      <Command>if not exist "$(OutDir)$(LibCoAPIncludeDir)" mkdir "$(OutDir)$(LibCoAPIncludeDir)"
+copy "$(SolutionDir)..\$(LibCoAPIncludeDir)\*.h" "$(OutDir)$(LibCoAPIncludeDir)"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client$(DbgSuffix).exe coap-client$(DbgSuffix).pdb coap-server$(DbgSuffix).exe coap-server$(DbgSuffix).pdb coap-rd$(DbgSuffix).exe coap-rd$(DbgSuffix).pdb ) do copy "$(SolutionDir)$(Platform)\$(Configuration)\%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
@@ -230,8 +230,8 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap$(DbgSuffix).pdb" "$(Out
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">
     <PostBuildEvent>
-      <Command>if not exist "$(OutDir)include\coap2" mkdir "$(OutDir)include\coap2"
-copy "$(SolutionDir)..\include\coap2\*.h" "$(OutDir)include\coap2"
+      <Command>if not exist "$(OutDir)$(LibCoAPIncludeDir)" mkdir "$(OutDir)$(LibCoAPIncludeDir)"
+copy "$(SolutionDir)..\$(LibCoAPIncludeDir)\*.h" "$(OutDir)$(LibCoAPIncludeDir)"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client$(DbgSuffix).exe coap-client$(DbgSuffix).pdb coap-server$(DbgSuffix).exe coap-server$(DbgSuffix).pdb coap-rd$(DbgSuffix).exe coap-rd$(DbgSuffix).pdb libcoap-2$(DbgSuffix)-openssl.dll libcoap-2$(DbgSuffix)-openssl.pdb ) do copy "$(SolutionDir)$(Platform)\$(Configuration)\%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
@@ -242,8 +242,8 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap-2$(DbgSuffix)-openssl.l
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <PostBuildEvent>
-      <Command>if not exist "$(OutDir)include\coap2" mkdir "$(OutDir)include\coap2"
-copy "$(SolutionDir)..\include\coap2\*.h" "$(OutDir)include\coap2"
+      <Command>if not exist "$(OutDir)$(LibCoAPIncludeDir)" mkdir "$(OutDir)$(LibCoAPIncludeDir)"
+copy "$(SolutionDir)..\$(LibCoAPIncludeDir)\*.h" "$(OutDir)$(LibCoAPIncludeDir)"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coap-rd.exe coap-rd.pdb ) do copy "$(SolutionDir)$(Platform)\$(Configuration)\%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
@@ -254,8 +254,8 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap.pdb" "$(OutDir)lib"</Co
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">
     <PostBuildEvent>
-      <Command>if not exist "$(OutDir)include\coap2" mkdir "$(OutDir)include\coap2"
-copy "$(SolutionDir)..\include\coap2\*.h" "$(OutDir)include\coap2"
+      <Command>if not exist "$(OutDir)$(LibCoAPIncludeDir)" mkdir "$(OutDir)$(LibCoAPIncludeDir)"
+copy "$(SolutionDir)..\$(LibCoAPIncludeDir)\*.h" "$(OutDir)$(LibCoAPIncludeDir)"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coap-rd.exe coap-rd.pdb libcoap-2-openssl.dll libcoap-2-openssl.pdb ) do copy "$(SolutionDir)$(Platform)\$(Configuration)\%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"
@@ -266,8 +266,8 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\libcoap-2-openssl.lib" "$(OutDi
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">
     <PostBuildEvent>
-      <Command>if not exist "$(OutDir)include\coap2" mkdir "$(OutDir)include\coap2"
-copy "$(SolutionDir)..\include\coap2\*.h" "$(OutDir)include\coap2"
+      <Command>if not exist "$(OutDir)$(LibCoAPIncludeDir)" mkdir "$(OutDir)$(LibCoAPIncludeDir)"
+copy "$(SolutionDir)..\$(LibCoAPIncludeDir)\*.h" "$(OutDir)$(LibCoAPIncludeDir)"
 if not exist "$(OutDir)bin" mkdir "$(OutDir)bin"
 for %%f in ( coap-client.exe coap-client.pdb coap-server.exe coap-server.pdb coap-rd.exe coap-rd.pdb ) do copy "$(SolutionDir)$(Platform)\$(Configuration)\%%f" "$(OutDir)bin"
 if not exist "$(OutDir)lib" mkdir "$(OutDir)lib"

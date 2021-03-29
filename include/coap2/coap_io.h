@@ -12,7 +12,7 @@
 
 #include <sys/types.h>
 
-#include "coap2/address.h"
+#include "address.h"
 
 #ifdef RIOT_VERSION
 #include "net/gnrc.h"
