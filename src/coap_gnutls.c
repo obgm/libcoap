@@ -1855,7 +1855,7 @@ static ssize_t
 coap_dgram_read(gnutls_transport_ptr_t context, void *out, size_t outl)
 {
   ssize_t ret = 0;
-  coap_session_t *c_session = (struct coap_session_t *)context;
+  coap_session_t *c_session = (coap_session_t *)context;
   coap_ssl_t *data;
 
   if (!c_session->tls) {
@@ -1900,7 +1900,7 @@ static ssize_t
 coap_dgram_write(gnutls_transport_ptr_t context, const void *send_buffer,
                   size_t send_buffer_length) {
   ssize_t result = -1;
-  coap_session_t *c_session = (struct coap_session_t *)context;
+  coap_session_t *c_session = (coap_session_t *)context;
 
   if (c_session) {
     result = coap_session_send(c_session, send_buffer, send_buffer_length);
@@ -1921,7 +1921,7 @@ coap_dgram_write(gnutls_transport_ptr_t context, const void *send_buffer,
  */
 static int
 receive_timeout(gnutls_transport_ptr_t context, unsigned int ms COAP_UNUSED) {
-  coap_session_t *c_session = (struct coap_session_t *)context;
+  coap_session_t *c_session = (coap_session_t *)context;
 
   if (c_session) {
     fd_set readfds, writefds, exceptfds;
@@ -2523,7 +2523,7 @@ unsigned int coap_dtls_get_overhead(coap_session_t *c_session COAP_UNUSED) {
 static ssize_t
 coap_sock_read(gnutls_transport_ptr_t context, void *out, size_t outl) {
   int ret = 0;
-  coap_session_t *c_session = (struct coap_session_t *)context;
+  coap_session_t *c_session = (coap_session_t *)context;
 
   if (out != NULL) {
 #ifdef _WIN32
@@ -2559,7 +2559,7 @@ coap_sock_read(gnutls_transport_ptr_t context, void *out, size_t outl) {
 static ssize_t
 coap_sock_write(gnutls_transport_ptr_t context, const void *in, size_t inl) {
   int ret = 0;
-  coap_session_t *c_session = (struct coap_session_t *)context;
+  coap_session_t *c_session = (coap_session_t *)context;
 
   ret = (int)coap_socket_write(&c_session->sock, in, inl);
   if (ret > 0) {

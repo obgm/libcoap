@@ -45,15 +45,6 @@ typedef int coap_fd_t;
 
 typedef uint16_t coap_socket_flags_t;
 
-/**
- * Only used for servers for hashing incoming packets. Cannot have local
- * address as this may be an initial multicast and subsequent unicast address
- */
-typedef struct coap_addr_hash_t {
-  coap_address_t remote;       /**< remote address and port */
-  uint16_t lport;              /**< local port */
-} coap_addr_hash_t;
-
 typedef struct coap_addr_tuple_t {
   coap_address_t remote;       /**< remote address and port */
   coap_address_t local;        /**< local address and port */
@@ -71,15 +62,11 @@ typedef struct coap_socket_t {
   gnrc_pktsnip_t *pkt; /* pointer to received packet for processing */
 #endif /* RIOT_VERSION */
   coap_socket_flags_t flags;
-  struct coap_session_t *session; /* Used by the epoll logic for an active session.
-                                     Note: It must mot be wrapped with COAP_EPOLL_SUPPORT as
-                                     coap_socket_t is seen in applications embedded in
-                                     coap_session_t etc. */
+#ifdef COAP_EPOLL_SUPPORT
+  coap_session_t *session; /* Used by the epoll logic for an active session. */
   coap_endpoint_t *endpoint; /* Used by the epoll logic for a listening
-                                endpoint.
-                                Note: It must mot be wrapped with
-                                COAP_EPOLL_SUPPORT as coap_socket_t is seen in
-                                applications embedded in coap_session_t etc. */
+                                endpoint. */
+#endif /* COAP_EPOLL_SUPPORT */
 } coap_socket_t;
 
 /**
@@ -118,7 +105,7 @@ coap_socket_bind_udp(coap_socket_t *sock,
 void coap_socket_close(coap_socket_t *sock);
 
 ssize_t
-coap_socket_send( coap_socket_t *sock, struct coap_session_t *session,
+coap_socket_send( coap_socket_t *sock, coap_session_t *session,
                   const uint8_t *data, size_t data_len );
 
 ssize_t
@@ -132,7 +119,7 @@ coap_epoll_ctl_mod(coap_socket_t *sock, uint32_t events, const char *func);
 
 #ifdef WITH_LWIP
 ssize_t
-coap_socket_send_pdu( coap_socket_t *sock, struct coap_session_t *session,
+coap_socket_send_pdu( coap_socket_t *sock, coap_session_t *session,
                       struct coap_pdu_t *pdu );
 #endif
 
@@ -159,7 +146,8 @@ int coap_tcp_is_supported(void);
  * @return                 The number of bytes written on success, or a value
  *                         less than zero on error.
  */
-ssize_t coap_network_send( coap_socket_t *sock, const struct coap_session_t *session, const uint8_t *data, size_t datalen );
+ssize_t coap_network_send(coap_socket_t *sock, const coap_session_t *session,
+                          const uint8_t *data, size_t datalen );
 
 /**
  * Function interface for reading data. This function returns the number of

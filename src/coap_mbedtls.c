@@ -137,7 +137,7 @@ typedef enum coap_enc_method_t {
 static int coap_dgram_read(void *ctx, unsigned char *out, size_t outl)
 {
   ssize_t ret = 0;
-  coap_session_t *c_session = (struct coap_session_t *)ctx;
+  coap_session_t *c_session = (coap_session_t *)ctx;
   coap_ssl_t *data;
 
   if (!c_session->tls) {
@@ -182,7 +182,7 @@ coap_dgram_write(void *ctx, const unsigned char *send_buffer,
                  size_t send_buffer_length)
 {
   ssize_t result = -1;
-  coap_session_t *c_session = (struct coap_session_t *)ctx;
+  coap_session_t *c_session = (coap_session_t *)ctx;
 
   if (c_session) {
     coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;

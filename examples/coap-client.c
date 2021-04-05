@@ -273,7 +273,7 @@ check_token(coap_pdu_t *received) {
 static int
 event_handler(coap_context_t *ctx COAP_UNUSED,
               coap_event_t event,
-              struct coap_session_t *session COAP_UNUSED) {
+              coap_session_t *session COAP_UNUSED) {
 
   switch(event) {
   case COAP_EVENT_DTLS_CLOSED:

@@ -58,7 +58,7 @@
 
 /* Define to 1 if you have the <netdb.h> header file. */
 #cmakedefine HAVE_NETDB_H "@HAVE_NETDB_H@"
- 
+
 /* Define to 1 if you have the <net/if.h> header file. */
 #cmakedefine HAVE_NET_IF_H "@HAVE_NET_IF_H@"
 

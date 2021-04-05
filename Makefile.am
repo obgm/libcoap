@@ -193,10 +193,6 @@ coap_packet_extract_pbuf \
 coap_pdu_check_resize \
 coap_pdu_from_pbuf \
 coap_remove_option \
-coap_session_mfree \
-coap_session_new_dtls_session \
-coap_session_refresh_psk_hint \
-coap_session_refresh_psk_key \
 coap_socket_bind_udp \
 coap_socket_close \
 coap_socket_connect_udp \

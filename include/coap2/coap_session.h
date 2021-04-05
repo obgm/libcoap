@@ -14,14 +14,6 @@
 #ifndef COAP_SESSION_H_
 #define COAP_SESSION_H_
 
-
-#include "coap_forward_decls.h"
-#include "coap_io.h"
-#include "coap_time.h"
-#include "pdu.h"
-#include "uthash.h"
-#include "coap_dtls.h"
-
 /**
 * Abstraction of a fixed point number that can be used where necessary instead
 * of a float.  1,000 fractional bits equals one integer
@@ -32,161 +24,177 @@ typedef struct coap_fixed_point_t {
                                 1/1000 (3 points) precision */
 } coap_fixed_point_t;
 
-#define COAP_DEFAULT_SESSION_TIMEOUT 300
-#define COAP_PARTIAL_SESSION_TIMEOUT_TICKS (30 * COAP_TICKS_PER_SECOND)
-#define COAP_DEFAULT_MAX_HANDSHAKE_SESSIONS 100
-
 #define COAP_PROTO_NOT_RELIABLE(p) ((p)==COAP_PROTO_UDP || (p)==COAP_PROTO_DTLS)
 #define COAP_PROTO_RELIABLE(p) ((p)==COAP_PROTO_TCP || (p)==COAP_PROTO_TLS)
 
-typedef uint8_t coap_session_type_t;
 /**
  * coap_session_type_t values
  */
-#define COAP_SESSION_TYPE_CLIENT 1  /**< client-side */
-#define COAP_SESSION_TYPE_SERVER 2  /**< server-side */
-#define COAP_SESSION_TYPE_HELLO  3  /**< server-side ephemeral session for responding to a client hello */
+typedef enum coap_session_type_t {
+  COAP_SESSION_TYPE_NONE = 0, /**< Not defined */
+  COAP_SESSION_TYPE_CLIENT,   /**< client-side */
+  COAP_SESSION_TYPE_SERVER,   /**< server-side */
+  COAP_SESSION_TYPE_HELLO,    /**< server-side ephemeral session for
+                                   responding to a client hello */
+} coap_session_type_t;
 
-typedef uint8_t coap_session_state_t;
 /**
  * coap_session_state_t values
  */
-#define COAP_SESSION_STATE_NONE                0
-#define COAP_SESSION_STATE_CONNECTING          1
-#define COAP_SESSION_STATE_HANDSHAKE           2
-#define COAP_SESSION_STATE_CSM                 3
-#define COAP_SESSION_STATE_ESTABLISHED         4
-
-typedef struct coap_session_t {
-  coap_proto_t proto;               /**< protocol used */
-  coap_session_type_t type;         /**< client or server side socket */
-  coap_session_state_t state;       /**< current state of relationaship with peer */
-  unsigned ref;                     /**< reference count from queues */
-  size_t tls_overhead;              /**< overhead of TLS layer */
-  size_t mtu;                       /**< path or CSM mtu */
-  coap_addr_hash_t addr_hash;  /**< Address hash for server incoming packets */
-  UT_hash_handle hh;
-  coap_addr_tuple_t addr_info;      /**< key: remote/local address info */
-  int ifindex;                      /**< interface index */
-  coap_socket_t sock;               /**< socket object for the session, if any */
-  coap_endpoint_t *endpoint;        /**< session's endpoint */
-  struct coap_context_t *context;   /**< session's context */
-  void *tls;                        /**< security parameters */
-  uint16_t tx_mid;                  /**< the last message id that was used in this session */
-  uint8_t con_active;               /**< Active CON request sent */
-  uint8_t csm_block_supported;      /**< CSM TCP blocks supported */
-  coap_mid_t last_ping_mid;         /**< the last keepalive message id that was used in this session */
-  struct coap_queue_t *delayqueue;  /**< list of delayed messages waiting to be sent */
-  coap_lg_xmit_t *lg_xmit;          /**< list of large transmissions */
-  coap_lg_crcv_t *lg_crcv;       /**< Client list of expected large receives */
-  coap_lg_srcv_t *lg_srcv;       /**< Server list of expected large receives */
-  size_t partial_write;             /**< if > 0 indicates number of bytes already written from the pdu at the head of sendqueue */
-  uint8_t read_header[8];           /**< storage space for header of incoming message header */
-  size_t partial_read;              /**< if > 0 indicates number of bytes already read for an incoming message */
-  coap_pdu_t *partial_pdu;          /**< incomplete incoming pdu */
-  coap_tick_t last_rx_tx;
-  coap_tick_t last_tx_rst;
-  coap_tick_t last_ping;
-  coap_tick_t last_pong;
-  coap_tick_t csm_tx;
-  coap_dtls_cpsk_t cpsk_setup_data; /**< client provided PSK initial setup
-                                         data */
-  coap_bin_const_t *psk_identity;   /**< If client, this field contains the
-                                      current identity for server; When this
-                                      field is NULL, the current identity is
-                                      contained in cpsk_setup_data
-
-                                      If server, this field contains the client
-                                      provided identity.
-
-                                      Value maintained internally */
-  coap_bin_const_t *psk_key;        /**< If client, this field contains the
-                                      current pre-shared key for server;
-                                      When this field is NULL, the current
-                                      key is contained in cpsk_setup_data
-
-                                      If server, this field contains the
-                                      client's current key.
-
-                                      Value maintained internally */
-  coap_bin_const_t *psk_hint;       /**< If client, this field contains the
-                                      server provided identity hint.
-
-                                      If server, this field contains the
-                                      current hint for the client; When this
-                                      field is NULL, the current hint is
-                                      contained in context->spsk_setup_data
-
-                                      Value maintained internally */
-  void *app;                        /**< application-specific data */
-  unsigned int max_retransmit;      /**< maximum re-transmit count (default 4) */
-  coap_fixed_point_t ack_timeout;   /**< timeout waiting for ack (default 2 secs) */
-  coap_fixed_point_t ack_random_factor; /**< ack random factor backoff (default 1.5) */
-  unsigned int dtls_timeout_count;      /**< dtls setup retry counter */
-  int dtls_event;                       /**< Tracking any (D)TLS events on this sesison */
-  uint8_t block_mode;             /**< Zero or more COAP_BLOCK_ or'd options */
-  uint64_t tx_token;              /**< Next token number to use */
-} coap_session_t;
+typedef enum coap_session_state_t {
+  COAP_SESSION_STATE_NONE = 0,
+  COAP_SESSION_STATE_CONNECTING,
+  COAP_SESSION_STATE_HANDSHAKE,
+  COAP_SESSION_STATE_CSM,
+  COAP_SESSION_STATE_ESTABLISHED,
+} coap_session_state_t;
 
 /**
-* Increment reference counter on a session.
-*
-* @param session The CoAP session.
-* @return same as session
-*/
+ * Increment reference counter on a session.
+ *
+ * @param session The CoAP session.
+ * @return same as session
+ */
 coap_session_t *coap_session_reference(coap_session_t *session);
 
 /**
-* Decrement reference counter on a session.
-* Note that the session may be deleted as a result and should not be used
-* after this call.
-*
-* @param session The CoAP session.
-*/
+ * Decrement reference counter on a session.
+ * Note that the session may be deleted as a result and should not be used
+ * after this call.
+ *
+ * @param session The CoAP session.
+ */
 void coap_session_release(coap_session_t *session);
 
 /**
-* Stores @p data with the given session. This function overwrites any value
-* that has previously been stored with @p session.
-*/
+ * Notify session that it has failed.  This cleans up any outstanding / queued
+ * transmissions, observations etc..
+ *
+ * @param session The CoAP session.
+ * @param reason The reason why the session was disconnected.
+ */
+void coap_session_disconnected(coap_session_t *session,
+                               coap_nack_reason_t reason);
+
+/**
+ * Stores @p data with the given session. This function overwrites any value
+ * that has previously been stored with @p session.
+ *
+ * @param session The CoAP session.
+ * @param data The pointer to the data to store.
+ */
 void coap_session_set_app_data(coap_session_t *session, void *data);
 
 /**
-* Returns any application-specific data that has been stored with @p
-* session using the function coap_session_set_app_data(). This function will
-* return @c NULL if no data has been stored.
-*/
+ * Returns any application-specific data that has been stored with @p
+ * session using the function coap_session_set_app_data(). This function will
+ * return @c NULL if no data has been stored.
+ *
+ * @param session The CoAP session.
+ *
+ * @return Pointer to the stored data or @c NULL.
+ */
 void *coap_session_get_app_data(const coap_session_t *session);
 
 /**
-* Notify session that it has failed.
-*
-* @param session The CoAP session.
-* @param reason The reason why the session was disconnected.
-*/
-void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason);
+ * Get the remote IP address from the session.
+ *
+ * @param session The CoAP session.
+ *
+ * @return The session's remote address or @c NULL on failure.
+ */
+const coap_address_t *coap_session_get_addr_remote(
+                                               const coap_session_t *session);
 
 /**
-* Notify session transport has just connected and CSM exchange can now start.
-*
-* @param session The CoAP session.
-*/
-void coap_session_send_csm(coap_session_t *session);
+ * Get the local IP address from the session.
+ *
+ * @param session The CoAP session.
+ *
+ * @return The session's local address or @c NULL on failure.
+ */
+const coap_address_t *coap_session_get_addr_local(
+                                               const coap_session_t *session);
 
 /**
-* Notify session that it has just connected or reconnected.
-*
-* @param session The CoAP session.
-*/
-void coap_session_connected(coap_session_t *session);
+ * Get the session protocol type
+ *
+ * @param session The CoAP session.
+ *
+ * @return The session's protocol type
+ */
+coap_proto_t coap_session_get_proto(const coap_session_t *session);
 
 /**
-* Set the session MTU. This is the maximum message size that can be sent,
-* excluding IP and UDP overhead.
-*
-* @param session The CoAP session.
-* @param mtu maximum message size
-*/
+ * Get the session type
+ *
+ * @param session The CoAP session.
+ *
+ * @return The session's type
+ */
+coap_session_type_t coap_session_get_type(const coap_session_t *session);
+
+/**
+ * Get the session state
+ *
+ * @param session The CoAP session.
+ *
+ * @return The session's state
+ */
+coap_session_state_t coap_session_get_state(const coap_session_t *session);
+
+/**
+ * Get the session if index
+ *
+ * @param session The CoAP session.
+ *
+ * @return The session's if index, or @c -1 on error.
+ */
+int coap_session_get_ifindex(const coap_session_t *session);
+
+/**
+ * Get the session TLS security ptr (TLS type dependent)
+ *
+ * OpenSSL:  SSL*
+ * GnuTLS:   coap_gnutls_env_t*
+ * Mbed TLS: coap_mbedtls_env_t*
+ * TinyDTLS: session_t*
+ *
+ * @param session The CoAP session.
+ *
+ * @return The session TLS ptr or @c NULL if not set up
+ */
+void *coap_session_get_tls(const coap_session_t *session);
+
+/**
+ * Get the session context
+ *
+ * @param session The CoAP session.
+ *
+ * @return The session's context
+ */
+coap_context_t *coap_session_get_context(const coap_session_t *session);
+
+/**
+ * Set the session type to client. Typically used in a call-home server.
+ * The session needs to be of type COAP_SESSION_TYPE_SERVER.
+ * Note: If this function is successful, the session reference count is
+ * incremented and a subsequent coap_session_release() taking the
+ * reference count to 0 will cause the session to be freed off.
+ *
+ * @param session The CoAP session.
+ *
+ * @return @c 1 if updated, @c 0 on failure.
+ */
+int coap_session_set_type_client(coap_session_t *session);
+
+/**
+ * Set the session MTU. This is the maximum message size that can be sent,
+ * excluding IP and UDP overhead.
+ *
+ * @param session The CoAP session.
+ * @param mtu maximum message size
+ */
 void coap_session_set_mtu(coap_session_t *session, unsigned mtu);
 
 /**
@@ -207,7 +215,7 @@ size_t coap_session_max_pdu_size(const coap_session_t *session);
 * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
 */
 coap_session_t *coap_new_client_session(
-  struct coap_context_t *ctx,
+  coap_context_t *ctx,
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto
@@ -226,7 +234,7 @@ coap_session_t *coap_new_client_session(
 * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
 */
 coap_session_t *coap_new_client_session_psk(
-  struct coap_context_t *ctx,
+  coap_context_t *ctx,
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto,
@@ -251,38 +259,32 @@ coap_session_t *coap_new_client_session_psk(
 *         to free.
 */
 coap_session_t *coap_new_client_session_psk2(
-  struct coap_context_t *ctx,
+  coap_context_t *ctx,
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto,
-  struct coap_dtls_cpsk_t *setup_data
+  coap_dtls_cpsk_t *setup_data
 );
 
 /**
- * Refresh the session's current Identity Hint (PSK).
- * Note: A copy of @p psk_hint is maintained in the session by libcoap.
+ * Get the server session's current Identity Hint (PSK).
  *
  * @param session  The current coap_session_t object.
- * @param psk_hint If NULL, the Identity Hint will revert to the
- *                 initial Identity Hint used at session setup.
  *
- * @return @c 1 if successful, else @c 0.
+ * @return @c hint if successful, else @c NULL.
  */
-int coap_session_refresh_psk_hint(coap_session_t *session,
-                                 const struct coap_bin_const_t *psk_hint);
+const coap_bin_const_t * coap_session_get_psk_hint(
+                                               const coap_session_t *session);
 
 /**
- * Refresh the session's current pre-shared key (PSK).
- * Note: A copy of @p psk_key is maintained in the session by libcoap.
+ * Get the session's current pre-shared key (PSK).
  *
  * @param session  The current coap_session_t object.
- * @param psk_key  If NULL, the pre-shared key will revert to the
- *                 initial pre-shared key used as session setup.
  *
- * @return @c 1 if successful, else @c 0.
+ * @return @c psk_key if successful, else @c NULL.
  */
-int coap_session_refresh_psk_key(coap_session_t *session,
-                                 const struct coap_bin_const_t *psk_key);
+const coap_bin_const_t * coap_session_get_psk_key(
+                                               const coap_session_t *session);
 
 /**
 * Creates a new client session to the designated server with PKI credentials
@@ -300,68 +302,12 @@ int coap_session_refresh_psk_key(coap_session_t *session,
 *         to free.
 */
 coap_session_t *coap_new_client_session_pki(
-  struct coap_context_t *ctx,
+  coap_context_t *ctx,
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto,
-  struct coap_dtls_pki_t *setup_data
+  coap_dtls_pki_t *setup_data
 );
-
-/**
-* Creates a new server session for the specified endpoint.
-* @param ctx The CoAP context.
-* @param ep An endpoint where an incoming connection request is pending.
-*
-* @return A new CoAP session or NULL if failed. Call coap_session_release to free.
-*/
-coap_session_t *coap_new_server_session(
-  struct coap_context_t *ctx,
-  coap_endpoint_t *ep
-);
-
-/**
-* Function interface for datagram data transmission. This function returns
-* the number of bytes that have been transmitted, or a value less than zero
-* on error.
-*
-* @param session          Session to send data on.
-* @param data             The data to send.
-* @param datalen          The actual length of @p data.
-*
-* @return                 The number of bytes written on success, or a value
-*                         less than zero on error.
-*/
-ssize_t coap_session_send(coap_session_t *session,
-  const uint8_t *data, size_t datalen);
-
-/**
-* Function interface for stream data transmission. This function returns
-* the number of bytes that have been transmitted, or a value less than zero
-* on error. The number of bytes written may be less than datalen because of
-* congestion control.
-*
-* @param session          Session to send data on.
-* @param data             The data to send.
-* @param datalen          The actual length of @p data.
-*
-* @return                 The number of bytes written on success, or a value
-*                         less than zero on error.
-*/
-ssize_t coap_session_write(coap_session_t *session,
-  const uint8_t *data, size_t datalen);
-
-/**
-* Send a pdu according to the session's protocol. This function returns
-* the number of bytes that have been transmitted, or a value less than zero
-* on error.
-*
-* @param session          Session to send pdu on.
-* @param pdu              The pdu to send.
-*
-* @return                 The number of bytes written on success, or a value
-*                         less than zero on error.
-*/
-ssize_t coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu);
 
 /**
  * Initializes the token value to use as a starting point.
@@ -394,10 +340,6 @@ void coap_session_new_token(coap_session_t *session, size_t *length,
  */
 const char *coap_session_str(const coap_session_t *session);
 
-ssize_t
-coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
-                       struct coap_queue_t *node);
-
 /**
 * Create a new endpoint for communicating with peers.
 *
@@ -406,7 +348,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
 * @param proto          Protocol used on this endpoint
 */
 
-coap_endpoint_t *coap_new_endpoint(struct coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto);
+coap_endpoint_t *coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto);
 
 /**
 * Set the endpoint's default MTU. This is the maximum message size that can be
@@ -429,37 +371,8 @@ void coap_free_endpoint(coap_endpoint_t *ep);
 */
 const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
 
-/**
-* Lookup the server session for the packet received on an endpoint, or create
-* a new one.
-*
-* @param endpoint Active endpoint the packet was received on.
-* @param packet Received packet.
-* @param now The current time in ticks.
-* @return The CoAP session or @c NULL if error.
-*/
-coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
-  const struct coap_packet_t *packet, coap_tick_t now);
-
-/**
- * Create a new DTLS session for the @p session.
- * Note: the @p session is released if no DTLS server session can be created.
- *
- * @ingroup dtls_internal
- *
- * @param session   Session to add DTLS session to
- * @param now       The current time in ticks.
- *
- * @return CoAP session or @c NULL if error.
- */
-coap_session_t *coap_session_new_dtls_session(coap_session_t *session,
-  coap_tick_t now);
-
-coap_session_t *coap_session_get_by_peer(struct coap_context_t *ctx,
-  const struct coap_address_t *remote_addr, int ifindex);
-
-void coap_session_free(coap_session_t *session);
-void coap_session_mfree(coap_session_t *session);
+coap_session_t *coap_session_get_by_peer(const coap_context_t *ctx,
+  const coap_address_t *remote_addr, int ifindex);
 
  /**
   * @defgroup cc Rate Control
@@ -620,7 +533,7 @@ void coap_session_set_ack_random_factor(coap_session_t *session,
 *
 * @return Current maximum retransmit value
 */
-unsigned int coap_session_get_max_transmit(coap_session_t *session);
+unsigned int coap_session_get_max_transmit(const coap_session_t *session);
 
 /**
 * Get the CoAP initial ack response timeout before the next re-transmit
@@ -632,7 +545,7 @@ unsigned int coap_session_get_max_transmit(coap_session_t *session);
 *
 * @return Current ack response timeout value
 */
-coap_fixed_point_t coap_session_get_ack_timeout(coap_session_t *session);
+coap_fixed_point_t coap_session_get_ack_timeout(const coap_session_t *session);
 
 /**
 * Get the CoAP ack randomize factor
@@ -644,7 +557,8 @@ coap_fixed_point_t coap_session_get_ack_timeout(coap_session_t *session);
 *
 * @return Current ack randomize value
 */
-coap_fixed_point_t coap_session_get_ack_random_factor(coap_session_t *session);
+coap_fixed_point_t coap_session_get_ack_random_factor(
+                                               const coap_session_t *session);
 
 /**
  * Send a ping message for the session.
@@ -653,21 +567,5 @@ coap_fixed_point_t coap_session_get_ack_random_factor(coap_session_t *session);
  * @return COAP_INVALID_MID if there is an error
  */
 coap_mid_t coap_session_send_ping(coap_session_t *session);
-
-#define SESSIONS_ADD(e, obj) \
-  HASH_ADD(hh, (e), addr_hash, sizeof((obj)->addr_hash), (obj))
-
-#define SESSIONS_DELETE(e, obj) \
-  HASH_DELETE(hh, (e), (obj))
-
-#define SESSIONS_ITER(e, el, rtmp)  \
-  HASH_ITER(hh, (e), el, rtmp)
-
-#define SESSIONS_ITER_SAFE(e, el, rtmp) \
-for ((el) = (e); (el) && ((rtmp) = (el)->hh.next, 1); (el) = (rtmp))
-
-#define SESSIONS_FIND(e, k, res) {                     \
-    HASH_FIND(hh, (e), &(k), sizeof(k), (res)); \
-  }
 
 #endif  /* COAP_SESSION_H */

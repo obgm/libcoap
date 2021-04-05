@@ -50,17 +50,17 @@ coap_session_set_ack_random_factor (coap_session_t *session,
 }
 
 unsigned int
-coap_session_get_max_transmit (coap_session_t *session) {
+coap_session_get_max_transmit (const coap_session_t *session) {
   return session->max_retransmit;
 }
 
 coap_fixed_point_t
-coap_session_get_ack_timeout (coap_session_t *session) {
+coap_session_get_ack_timeout (const coap_session_t *session) {
   return session->ack_timeout;
 }
 
 coap_fixed_point_t
-coap_session_get_ack_random_factor (coap_session_t *session) {
+coap_session_get_ack_random_factor (const coap_session_t *session) {
   return session->ack_random_factor;
 }
 
@@ -452,7 +452,6 @@ void coap_session_connected(coap_session_t *session) {
 }
 
 void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
-  (void)reason;
 #if !COAP_DISABLE_TCP
   coap_session_state_t state = session->state;
 #endif /* !COAP_DISABLE_TCP */
@@ -544,11 +543,12 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
 }
 
 static void
-coap_make_addr_hash(coap_addr_hash_t *addr_hash,
+coap_make_addr_hash(coap_addr_hash_t *addr_hash, coap_proto_t proto,
                     const coap_addr_tuple_t *addr_info) {
   memset(addr_hash, 0, sizeof(coap_addr_hash_t));
   coap_address_copy(&addr_hash->remote, &addr_info->remote);
   addr_hash->lport = coap_address_get_port(&addr_info->local);
+  addr_hash->proto = proto;
 }
 
 coap_session_t *
@@ -562,7 +562,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
   coap_session_t *oldest_hs = NULL;
   coap_addr_hash_t addr_hash;
 
-  coap_make_addr_hash(&addr_hash, &packet->addr_info);
+  coap_make_addr_hash(&addr_hash, endpoint->proto, &packet->addr_info);
   SESSIONS_FIND(endpoint->sessions, addr_hash, session);
   if (session) {
     /* Maybe mcast or unicast IP address which is not in the hash */
@@ -798,8 +798,8 @@ coap_session_create_client(
 #endif /* !COAP_DISABLE_TCP */
   }
 
-  session->sock.session = session;
 #ifdef COAP_EPOLL_SUPPORT
+  session->sock.session = session;
   coap_epoll_ctl_add(&session->sock,
                      EPOLLIN |
                       ((session->sock.flags & COAP_SOCKET_WANT_CONNECT) ?
@@ -1051,6 +1051,20 @@ int coap_session_refresh_psk_key(coap_session_t *session,
   return 1;
 }
 
+const coap_bin_const_t *
+coap_session_get_psk_hint(const coap_session_t *session) {
+  if (session)
+    return session->psk_hint;
+  return NULL;
+}
+
+const coap_bin_const_t *
+coap_session_get_psk_key(const coap_session_t *session) {
+  if (session)
+    return session->psk_key;
+  return NULL;
+}
+
 coap_session_t *coap_new_client_session_pki(
   struct coap_context_t *ctx,
   const coap_address_t *local_if,
@@ -1105,13 +1119,13 @@ coap_session_t *coap_new_server_session(
                               &session->addr_info.local,
                               &session->addr_info.remote))
     goto error;
-  coap_make_addr_hash(&session->addr_hash, &session->addr_info);
-  
+  coap_make_addr_hash(&session->addr_hash, session->proto, &session->addr_info);
+
 #endif /* !COAP_DISABLE_TCP */
   session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED
                        | COAP_SOCKET_WANT_READ;
-  session->sock.session = session;
 #ifdef COAP_EPOLL_SUPPORT
+  session->sock.session = session;
   coap_epoll_ctl_add(&session->sock,
                      EPOLLIN,
                    __func__);
@@ -1139,6 +1153,75 @@ void coap_session_new_token(coap_session_t *session, size_t *len,
                                       uint8_t *data) {
   *len = coap_encode_var_safe8(data,
                                sizeof(session->tx_token), ++session->tx_token);
+}
+
+uint16_t
+coap_new_message_id(coap_session_t *session) {
+  return ++session->tx_mid;
+}
+
+const coap_address_t *
+coap_session_get_addr_remote(const coap_session_t *session) {
+  if (session)
+    return &session->addr_info.remote;
+  return NULL;
+}
+
+const coap_address_t *
+coap_session_get_addr_local(const coap_session_t *session) {
+  if (session)
+    return &session->addr_info.local;
+  return NULL;
+}
+
+coap_context_t *
+coap_session_get_context(const coap_session_t *session) {
+  if (session)
+    return session->context;
+  return NULL;
+}
+
+coap_proto_t
+coap_session_get_proto(const coap_session_t *session) {
+  if (session)
+    return session->proto;
+  return 0;
+}
+
+coap_session_type_t
+coap_session_get_type(const coap_session_t *session) {
+  if (session)
+    return session->type;
+  return 0;
+}
+
+int
+coap_session_set_type_client(coap_session_t *session) {
+  if (session && session->type == COAP_SESSION_TYPE_SERVER) {
+    coap_session_reference(session);
+    session->type = COAP_SESSION_TYPE_CLIENT;
+    return 1;
+  }
+  return 0;
+}
+
+coap_session_state_t
+coap_session_get_state(const coap_session_t *session) {
+  if (session)
+    return session->state;
+  return 0;
+}
+
+int coap_session_get_ifindex(const coap_session_t *session) {
+  if (session)
+    return session->ifindex;
+  return -1;
+}
+
+void *coap_session_get_tls(const coap_session_t *session) {
+  if (session)
+    return session->tls;
+  return NULL;
 }
 
 #ifndef WITH_LWIP
@@ -1218,8 +1301,8 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
 
   ep->default_mtu = COAP_DEFAULT_MTU;
 
-  ep->sock.endpoint = ep;
 #ifdef COAP_EPOLL_SUPPORT
+  ep->sock.endpoint = ep;
   coap_epoll_ctl_add(&ep->sock,
                      EPOLLIN,
                    __func__);
@@ -1274,7 +1357,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
 #endif /* WITH_LWIP */
 
 coap_session_t *
-coap_session_get_by_peer(coap_context_t *ctx,
+coap_session_get_by_peer(const coap_context_t *ctx,
   const coap_address_t *remote_addr,
   int ifindex) {
   coap_session_t *s, *rtmp;

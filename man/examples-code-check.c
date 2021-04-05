@@ -190,6 +190,24 @@ int main(int argc, char* argv[])
                          sizeof("*coap_mid_t *")-1) != 0) {
               is_number_func = 1;
             }
+            else if (strncmp(buffer, "*coap_proto_t ",
+                              sizeof("*coap_proto_t ")-1) == 0 &&
+                strncmp(buffer, "*coap_proto_t *",
+                         sizeof("*coap_proto_t *")-1) != 0) {
+              is_number_func = 1;
+            }
+            else if (strncmp(buffer, "*coap_session_state_t ",
+                              sizeof("*coap_session_state_t ")-1) == 0 &&
+                strncmp(buffer, "*coap_session_state_t *",
+                         sizeof("*coap_session_state_t *")-1) != 0) {
+              is_number_func = 1;
+            }
+            else if (strncmp(buffer, "*coap_session_type_t ",
+                              sizeof("*coap_session_type_t ")-1) == 0 &&
+                strncmp(buffer, "*coap_session_type_t *",
+                         sizeof("*coap_session_type_t *")-1) != 0) {
+              is_number_func = 1;
+            }
             /* Look specifically for inline prefixes */
             else if (strncmp(buffer, "*void *", sizeof("*void *")-1) == 0) {
               func_start = &buffer[sizeof("*void *")-1];

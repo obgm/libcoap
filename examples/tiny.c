@@ -87,8 +87,7 @@ usage( const char *program ) {
 }
 
 static coap_session_t *
-get_session(const char *group) {
-  coap_context_t *ctx = coap_new_context(NULL);
+get_session(coap_context_t *ctx, const char *group) {
   int s;
   struct addrinfo hints;
   struct addrinfo *result, *rp;
@@ -122,8 +121,7 @@ get_session(const char *group) {
 
     if (IN6_IS_ADDR_MULTICAST(&addr.addr.sin6.sin6_addr) ) {
       /* set socket options for multicast */
-      if ( setsockopt(session->sock.fd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
-                       (char *)&hops, sizeof(hops) ) < 0 )
+      if (!coap_mcast_set_hops(session, hops))
         perror("setsockopt: IPV6_MULTICAST_HOPS");
 
     }
@@ -142,13 +140,18 @@ main(int argc, char **argv) {
   coap_pdu_t  *pdu;
   coap_session_t *session;
   struct sigaction sa;
+  coap_context_t *ctx;
 
   if ( argc > 1 && strncmp(argv[1], "-h", 2) == 0 ) {
     usage( argv[0] );
     exit( 1 );
   }
 
-  session = get_session(argc > 1 ? argv[1] : "::1");
+  ctx = coap_new_context(NULL);
+  if (!ctx)
+    return -1;
+
+  session = get_session(ctx, argc > 1 ? argv[1] : "::1");
 
   if ( !session )
     return -1;
@@ -178,7 +181,7 @@ main(int argc, char **argv) {
 
   }
 
-  coap_free_context( session->context );
+  coap_free_context(ctx);
 
   return 0;
 }

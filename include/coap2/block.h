@@ -179,7 +179,7 @@ coap_block_build_body(coap_binary_t *body_data, size_t length,
  */
 void
 coap_add_data_blocked_response(coap_resource_t *resource,
-                               struct coap_session_t *session,
+                               coap_session_t *session,
                                coap_pdu_t *request,
                                coap_pdu_t *response,
                                const coap_binary_t *token,
@@ -197,7 +197,7 @@ coap_add_data_blocked_response(coap_resource_t *resource,
  * @param app_ptr The application provided pointer provided to the
  *                coap_add_data_large_* functions.
  */
-typedef void (*coap_release_large_data_t)(struct coap_session_t *session,
+typedef void (*coap_release_large_data_t)(coap_session_t *session,
                                           void *app_ptr);
 
 /**
@@ -240,7 +240,7 @@ typedef void (*coap_release_large_data_t)(struct coap_session_t *session,
  *
  * @return @c 1 if addition is successful, else @c 0.
  */
-int coap_add_data_large_request(struct coap_session_t *session,
+int coap_add_data_large_request(coap_session_t *session,
                                 coap_pdu_t *pdu,
                                 size_t length,
                                 const uint8_t *data,
@@ -298,7 +298,7 @@ int coap_add_data_large_request(struct coap_session_t *session,
  */
 int
 coap_add_data_large_response(coap_resource_t *resource,
-                             struct coap_session_t *session,
+                             coap_session_t *session,
                              coap_pdu_t *request,
                              coap_pdu_t *response,
                              const coap_binary_t *token,
