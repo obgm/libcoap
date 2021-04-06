@@ -49,10 +49,8 @@
 #endif /* ! _WIN32 */
 
 const char *inline_list[] = {
-  "coap_register_response_handler(",
-  "coap_register_nack_handler(",
-  "coap_register_ping_handler(",
-  "coap_register_pong_handler(",
+  "coap_malloc(",
+  "coap_free(",
 };
 
 int main(int argc, char* argv[])

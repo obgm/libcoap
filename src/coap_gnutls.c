@@ -283,7 +283,7 @@ coap_dtls_context_set_pki(coap_context_t *c_context,
  *        1 passed
  */
 int
-coap_dtls_context_set_pki_root_cas(struct coap_context_t *c_context,
+coap_dtls_context_set_pki_root_cas(coap_context_t *c_context,
                                    const char *ca_file,
                                    const char *ca_path)
 {
@@ -404,7 +404,7 @@ coap_dtls_get_log_level(void) {
  *        NULL failure
  */
 void *
-coap_dtls_new_context(struct coap_context_t *c_context COAP_UNUSED) {
+coap_dtls_new_context(coap_context_t *c_context COAP_UNUSED) {
   const char *err;
   int ret;
   struct coap_gnutls_context_t *g_context =

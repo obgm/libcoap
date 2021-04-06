@@ -30,7 +30,7 @@ SYNOPSIS
 uint32_t _timeout_ms_, int _nfds_, fd_set *_readfds_, fd_set *_writefds_,
 fd_set *_exceptfds_)*;
 
-*int coap_context_get_coap_fd(coap_context_t *_context_)*;
+*int coap_context_get_coap_fd(const coap_context_t *_context_)*;
 
 *unsigned int coap_io_prepare_io(coap_context_t *_context_,
 coap_socket_t *_sockets_[], unsigned int _max_sockets_,

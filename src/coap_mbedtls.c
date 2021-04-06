@@ -1346,7 +1346,7 @@ int coap_tls_is_supported(void)
   return 0;
 }
 
-void *coap_dtls_new_context(struct coap_context_t *c_context)
+void *coap_dtls_new_context(coap_context_t *c_context)
 {
   coap_mbedtls_context_t *m_context;
   (void)c_context;
@@ -1436,7 +1436,7 @@ int coap_dtls_context_set_pki(coap_context_t *c_context,
   return 1;
 }
 
-int coap_dtls_context_set_pki_root_cas(struct coap_context_t *c_context,
+int coap_dtls_context_set_pki_root_cas(coap_context_t *c_context,
                                    const char *ca_file,
                                    const char *ca_path)
 {
@@ -1476,7 +1476,7 @@ int coap_dtls_context_set_pki_root_cas(struct coap_context_t *c_context,
   return 1;
 }
 
-int coap_dtls_context_check_keys_enabled(struct coap_context_t *c_context)
+int coap_dtls_context_check_keys_enabled(coap_context_t *c_context)
 {
   coap_mbedtls_context_t *m_context =
                         ((coap_mbedtls_context_t *)c_context->dtls_context);

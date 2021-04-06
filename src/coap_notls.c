@@ -38,7 +38,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx COAP_UNUSED,
 }
 
 int
-coap_dtls_context_set_pki_root_cas(struct coap_context_t *ctx COAP_UNUSED,
+coap_dtls_context_set_pki_root_cas(coap_context_t *ctx COAP_UNUSED,
                                    const char *ca_file COAP_UNUSED,
                                    const char *ca_path COAP_UNUSED
 ) {
@@ -84,7 +84,7 @@ coap_dtls_get_log_level(void) {
 }
 
 void *
-coap_dtls_new_context(struct coap_context_t *coap_context COAP_UNUSED) {
+coap_dtls_new_context(coap_context_t *coap_context COAP_UNUSED) {
   return NULL;
 }
 

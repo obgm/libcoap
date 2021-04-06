@@ -703,7 +703,7 @@ static void coap_set_user_prefs(SSL_CTX *ctx) {
 #endif
 }
 
-void *coap_dtls_new_context(struct coap_context_t *coap_context) {
+void *coap_dtls_new_context(coap_context_t *coap_context) {
   coap_openssl_context_t *context;
   (void)coap_context;
 
@@ -2659,7 +2659,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
 }
 
 int
-coap_dtls_context_set_pki_root_cas(struct coap_context_t *ctx,
+coap_dtls_context_set_pki_root_cas(coap_context_t *ctx,
                                    const char *ca_file,
                                    const char *ca_dir
 ) {

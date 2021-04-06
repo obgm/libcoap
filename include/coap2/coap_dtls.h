@@ -476,7 +476,7 @@ typedef struct coap_dtls_spsk_t {
  * @return A DTLS context object or @c NULL on error.
  */
 void *
-coap_dtls_new_context(struct coap_context_t *coap_context);
+coap_dtls_new_context(coap_context_t *coap_context);
 
 typedef enum coap_dtls_role_t {
   COAP_DTLS_ROLE_CLIENT, /**< Internal function invoked for client */
@@ -497,7 +497,7 @@ typedef enum coap_dtls_role_t {
  */
 
 int
-coap_dtls_context_set_spsk(struct coap_context_t *coap_context,
+coap_dtls_context_set_spsk(coap_context_t *coap_context,
                           coap_dtls_spsk_t *setup_data);
 
 /**
@@ -514,7 +514,7 @@ coap_dtls_context_set_spsk(struct coap_context_t *coap_context,
  */
 
 int
-coap_dtls_context_set_cpsk(struct coap_context_t *coap_context,
+coap_dtls_context_set_cpsk(coap_context_t *coap_context,
                           coap_dtls_cpsk_t *setup_data);
 
 /**
@@ -537,7 +537,7 @@ coap_dtls_context_set_cpsk(struct coap_context_t *coap_context,
  */
 
 int
-coap_dtls_context_set_pki(struct coap_context_t *coap_context,
+coap_dtls_context_set_pki(coap_context_t *coap_context,
                           const coap_dtls_pki_t *setup_data,
                           const coap_dtls_role_t role);
 
@@ -556,7 +556,7 @@ coap_dtls_context_set_pki(struct coap_context_t *coap_context,
  */
 
 int
-coap_dtls_context_set_pki_root_cas(struct coap_context_t *coap_context,
+coap_dtls_context_set_pki_root_cas(coap_context_t *coap_context,
                                    const char *ca_file,
                                    const char *ca_dir);
 
@@ -571,7 +571,7 @@ coap_dtls_context_set_pki_root_cas(struct coap_context_t *coap_context,
  * @return @c 1 if coap_dtls_context_set_{psk|pki}() called, else @c 0.
  */
 
-int coap_dtls_context_check_keys_enabled(struct coap_context_t *coap_context);
+int coap_dtls_context_check_keys_enabled(coap_context_t *coap_context);
 
 /**
  * Releases the storage allocated for @p dtls_context.

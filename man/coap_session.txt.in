@@ -45,25 +45,35 @@ SYNOPSIS
 
 *void *coap_session_get_app_data(const coap_session_t *_session_);*
 
-*const coap_address_t *coap_session_get_addr_local(coap_session_t *_session_);*
+*const coap_address_t *coap_session_get_addr_local(
+const coap_session_t *_session_);*
 
-*const coap_address_t *coap_session_get_addr_remote(coap_session_t *_session_);*
+*const coap_address_t *coap_session_get_addr_remote(
+const coap_session_t *_session_);*
 
-*coap_context_t *coap_session_get_context(coap_session_t *_session_);*
+*coap_context_t *coap_session_get_context(
+const coap_session_t *_session_);*
 
-*int coap_session_get_ifindex(coap_session_t *_session_);*
+*int coap_session_get_ifindex(
+const coap_session_t *_session_);*
 
-*coap_proto_t coap_session_get_proto(coap_session_t *_session_);*
+*coap_proto_t coap_session_get_proto(
+const coap_session_t *_session_);*
 
-*coap_session_state_t coap_session_get_state(coap_session_t *_session_);*
+*coap_session_state_t coap_session_get_state(
+const coap_session_t *_session_);*
 
-*void *coap_session_get_tls(coap_session_t *_session_);*
+*void *coap_session_get_tls(
+const coap_session_t *_session_);*
 
-*coap_session_type_t coap_session_get_type(coap_session_t *_session_);*
+*coap_session_type_t coap_session_get_type(
+const coap_session_t *_session_);*
 
-*coap_session_get_psk_hint(coap_session_t *_session_);*
+*const coap_bin_const_t *coap_session_get_psk_hint(
+const coap_session_t *_session_);*
 
-*coap_session_get_psk_key(coap_session_t *_session_);*
+*const coap_bin_const_t *coap_session_get_psk_key(
+const coap_session_t *_session_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -214,7 +224,7 @@ key information, or NULL if not defined.
 
 SEE ALSO
 --------
-*coap_context*(3), *coap_endpoint_client*(3)
+*coap_context*(3), *coap_endpoint_client*(3) and *coap_endpoint_server*(3)
 
 FURTHER INFORMATION
 -------------------

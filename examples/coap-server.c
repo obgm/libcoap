@@ -1633,7 +1633,7 @@ proxy_event_handler(coap_context_t *ctx COAP_UNUSED,
 }
 
 static coap_response_t
-proxy_message_handler(struct coap_context_t *ctx COAP_UNUSED,
+proxy_message_handler(coap_context_t *ctx COAP_UNUSED,
                 coap_session_t *session,
                 coap_pdu_t *sent COAP_UNUSED,
                 coap_pdu_t *received,

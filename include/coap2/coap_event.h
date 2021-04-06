@@ -59,7 +59,7 @@
  * is the event type that may be complemented by event-specific data
  * passed as the third argument.
  */
-typedef int (*coap_event_handler_t)(struct coap_context_t *,
+typedef int (*coap_event_handler_t)(coap_context_t *,
                                     coap_event_t event,
                                     coap_session_t *session);
 
@@ -72,7 +72,7 @@ typedef int (*coap_event_handler_t)(struct coap_context_t *,
  * @param hnd     The event handler to be registered.  @c NULL if to be
  *                de-registered.
  */
-void coap_register_event_handler(struct coap_context_t *context,
+void coap_register_event_handler(coap_context_t *context,
                             coap_event_handler_t hnd);
 
 /** @} */
@@ -88,7 +88,7 @@ void coap_register_event_handler(struct coap_context_t *context,
  * @param hnd     The event handler to be registered.
  */
 COAP_DEPRECATED
-void coap_set_event_handler(struct coap_context_t *context,
+void coap_set_event_handler(coap_context_t *context,
                             coap_event_handler_t hnd);
 
 /**
@@ -99,6 +99,6 @@ void coap_set_event_handler(struct coap_context_t *context,
  * @param context The CoAP context whose event handler is to be removed.
  */
 COAP_DEPRECATED
-void coap_clear_event_handler(struct coap_context_t *context);
+void coap_clear_event_handler(coap_context_t *context);
 
 #endif /* COAP_EVENT_H */
