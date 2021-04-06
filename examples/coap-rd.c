@@ -580,6 +580,7 @@ usage( const char *program, const char *version) {
   const char *p;
   char buffer[64];
   coap_tls_version_t *tls_version = coap_get_tls_library_version();
+  const char *lib_version = coap_package_version();
 
   p = strrchr( program, '/' );
   if ( p )
@@ -588,7 +589,9 @@ usage( const char *program, const char *version) {
   fprintf( stderr, "%s v%s -- CoRE Resource Directory implementation\n"
      "(c) 2011-2012,2019-2021 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
      "%s\n"
-    , program, version, coap_string_tls_version(buffer, sizeof(buffer)));
+     "%s\n"
+    , program, version, lib_version,
+    coap_string_tls_version(buffer, sizeof(buffer)));
   switch (tls_version->type) {
   case COAP_TLS_LIBRARY_NOTLS:
     break;
