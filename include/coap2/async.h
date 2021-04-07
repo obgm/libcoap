@@ -22,134 +22,95 @@
 /**
  * @defgroup coap_async Asynchronous Messaging
  * @{
- * Structure for managing asynchronous state of CoAP resources. A
- * coap_context_t object holds a list of coap_async_state_t objects that can be
- * used to generate a separate response in case a result of an operation cannot
- * be delivered in time.
+ * API functions for  Async "separate" messages.
+ * A coap_context_t object holds a list of coap_async_t objects that can
+ * be used to generate a separate response in the case a result of a request
+ * cannot be delivered immediately.
  */
-typedef struct coap_async_state_t {
-  unsigned char flags;  /**< holds the flags to control behaviour */
-
-  /**
-   * Holds the internal time when the object was registered with a
-   * resource. This field will be updated whenever
-   * coap_register_async() is called for a specific resource.
-   */
-  coap_tick_t created;
-
-  /**
-   * This field can be used to register opaque application data with the
-   * asynchronous state object.
-   */
-  void *appdata;
-  coap_session_t *session;         /**< transaction session */
-  coap_mid_t id;                   /**< message id */
-  struct coap_async_state_t *next; /**< internally used for linking */
-  size_t tokenlen;                 /**< length of the token */
-  uint8_t token[8];                /**< the token to use in a response */
-} coap_async_state_t;
-
-/* Definitions for Async Status Flags These flags can be used to control the
- * behaviour of asynchronous response generation.
- */
-#define COAP_ASYNC_CONFIRM   0x01  /**< send confirmable response */
-#define COAP_ASYNC_SEPARATE  0x02  /**< send separate response */
-
-/** release application data on destruction */
-#define COAP_ASYNC_RELEASE_DATA  0x08
 
 /**
- * Allocates a new coap_async_state_t object and fills its fields according to
- * the given @p request. The @p flags are used to control generation of empty
- * ACK responses to stop retransmissions and to release registered @p data when
- * the resource is deleted by coap_free_async(). This function returns a pointer
- * to the registered coap_async_t object or @c NULL on error. Note that this
- * function will return @c NULL in case that an object with the same identifier
- * is already registered.
+ * Allocates a new coap_async_t object and fills its fields according to
+ * the given @p request. This function returns a pointer to the registered
+ * coap_async_t object or @c NULL on error. Note that this function will
+ * return @c NULL in case that an object with the same identifier is already
+ * registered.
+ *
+ * When the delay expires, a copy of the @p request will get sent to the
+ * appropriate request handler.
  *
  * @param context  The context to use.
  * @param session  The session that is used for asynchronous transmissions.
  * @param request  The request that is handled asynchronously.
- * @param flags    Flags to control state management.
- * @param data     Opaque application data to register. Note that the
- *                 storage occupied by @p data is released on destruction
- *                 only if flag COAP_ASYNC_RELEASE_DATA is set.
+ * @param delay    The amount of time to delay before sending response, 0 means
+ *                 wait forever.
  *
- * @return         A pointer to the registered coap_async_state_t object or @c
+ * @return         A pointer to the registered coap_async_t object or @c
  *                 NULL in case of an error.
  */
-coap_async_state_t *
+coap_async_t *
 coap_register_async(coap_context_t *context,
                     coap_session_t *session,
                     coap_pdu_t *request,
-                    unsigned char flags,
-                    void *data);
+                    coap_tick_t delay);
 
 /**
- * Removes the state object identified by @p id from @p context. The removed
- * object is returned in @p s, if found. Otherwise, @p s is undefined. This
- * function returns @c 1 if the object was removed, @c 0 otherwise. Note that
- * the storage allocated for the stored object is not released by this
- * functions. You will have to call coap_free_async() to do so.
+ * Update the delay timeout, so changing when the registered @p async triggers.
  *
- * @param context The context where the async object is registered.
- * @param session  The session that is used for asynchronous transmissions.
- * @param id      The identifier of the asynchronous transaction.
- * @param s       Will be set to the object identified by @p id after removal.
+ * When the new delay expires, a copy of the original request will get sent to
+ * the appropriate request handler.
  *
- * @return        @c 1 if object was removed and @p s updated, or @c 0 if no
- *                object was found with the given id. @p s is valid only if the
- *                return value is @c 1.
+ * @param async The object to update.
+ * @param delay    The amount of time to delay before sending response, 0 means
+ *                 wait forever.
  */
-int coap_remove_async(coap_context_t *context,
-                      coap_session_t *session,
-                      coap_mid_t id,
-                      coap_async_state_t **s);
+void
+coap_async_set_delay(coap_async_t *async, coap_tick_t delay);
 
 /**
  * Releases the memory that was allocated by coap_async_state_init() for the
- * object @p s. The registered application data will be released automatically
- * if COAP_ASYNC_RELEASE_DATA is set.
+ * object @p async.
  *
- * @param state The object to delete.
+ * @param context  The context to use.
+ * @param async The object to delete.
  */
 void
-coap_free_async(coap_async_state_t *state);
+coap_free_async(coap_context_t *context, coap_async_t *async);
 
 /**
- * Retrieves the object identified by @p id from the list of asynchronous
+ * Retrieves the object identified by @p mid from the list of asynchronous
  * transactions that are registered with @p context. This function returns a
  * pointer to that object or @c NULL if not found.
  *
  * @param context The context where the asynchronous objects are registered
  *                with.
- * @param session  The session that is used for asynchronous transmissions.
- * @param id      The id of the object to retrieve.
+ * @param session The session that is used for asynchronous transmissions.
+ * @param mid     The mid of the object to retrieve.
  *
- * @return        A pointer to the object identified by @p id or @c NULL if
+ * @return        A pointer to the object identified by @p mid or @c NULL if
  *                not found.
  */
-coap_async_state_t *coap_find_async(coap_context_t *context, coap_session_t *session, coap_mid_t id);
+coap_async_t *coap_find_async(coap_context_t *context,
+                                    coap_session_t *session, coap_mid_t mid);
 
 /**
- * Updates the time stamp of @p s.
+ * Set the application data pointer held in @p async. This overwrites any
+ * existing data pointer.
  *
- * @param s The state object to update.
+ * @param async The async state object.
+ * @param app_data The pointer to the data.
  */
-COAP_STATIC_INLINE void
-coap_touch_async(coap_async_state_t *s) { coap_ticks(&s->created); }
+void coap_async_set_app_data(coap_async_t *async, void *app_data);
+
+/**
+ * Gets the application data pointer held in @p async.
+ *
+ * @param async The async state object.
+ *
+ * @return The applicaton data pointer.
+ */
+void *coap_async_get_app_data(const coap_async_t *async);
 
 /** @} */
-
-/**
- * Removes and frees off all of the async entries for the given context.
- *
- * Internal function.
- *
- * @param context The context to remove all async entries from.
- */
-void
-coap_delete_all_async(coap_context_t *context);
 
 #endif /*  WITHOUT_ASYNC */
 

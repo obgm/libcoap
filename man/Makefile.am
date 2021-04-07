@@ -18,7 +18,8 @@ if BUILD_MANPAGES
 
 # building the manpages
 
-TXT3 = coap_attribute.txt \
+TXT3 = coap_async.txt \
+        coap_attribute.txt \
 	coap_block.txt \
 	coap_cache.txt \
 	coap_context.txt \

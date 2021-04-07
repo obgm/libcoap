@@ -44,16 +44,6 @@ typedef struct {
   unsigned char data[];           /* the actual contents */
 } coap_payload_t;
 
-/* This variable is used to mimic long-running tasks that require
- * asynchronous responses. */
-static coap_async_state_t *async = NULL;
-
-/* A typedef for transfering a value in a void pointer */
-typedef union {
-  unsigned int val;
-  void *ptr;
-} async_data_t;
-
 /* SIGINT handler: set quit to 1 for graceful termination */
 static void
 handle_sigint(int signum COAP_UNUSED) {
@@ -369,92 +359,52 @@ hnd_get_separate(coap_context_t *ctx,
   coap_opt_t *option;
   coap_opt_filter_t f;
   unsigned long delay = 5;
+  coap_async_t *async;
 
-  if (async) {
-    if (async->id != request->mid) {
-      coap_option_filter_clear(&f);
+  async = coap_find_async(ctx, session, request->mid);
+  if (!async) {
+    /* Set up an async request to trigger delay in the future */
+
+    /* search for option delay in query list */
+    coap_option_filter_clear(&f);
+    coap_option_filter_set(&f, COAP_OPTION_URI_QUERY);
+
+    coap_option_iterator_init(request, &opt_iter, &f);
+
+    while ((option = coap_option_next(&opt_iter))) {
+      if (strncmp("delay=", (const char *)coap_opt_value(option), 6) == 0) {
+        unsigned int i;
+        unsigned long d = 0;
+
+        for (i = 6; i < coap_opt_length(option); ++i)
+          d = d * 10 + coap_opt_value(option)[i] - '0';
+
+        /* don't allow delay to be less than COAP_RESOURCE_CHECK_TIME*/
+        delay = d < COAP_RESOURCE_CHECK_TIME_SEC
+          ? COAP_RESOURCE_CHECK_TIME_SEC
+          : d;
+        coap_log(LOG_DEBUG, "set delay to %lu\n", delay);
+        break;
+      }
+    }
+    async = coap_register_async(ctx,
+                                session,
+                                request,
+                                COAP_TICKS_PER_SECOND * delay);
+    if (async == NULL) {
       response->code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
+      return;
     }
+    /* Not setting response code will cause empty ACK to be sent
+       if Confirmable */
     return;
   }
 
-  /* search for option delay in query list */
-  coap_option_filter_clear(&f);
-  coap_option_filter_set(&f, COAP_OPTION_URI_QUERY);
-
-  coap_option_iterator_init(request, &opt_iter, &f);
-
-  while ((option = coap_option_next(&opt_iter))) {
-    if (strncmp("delay=", (const char *)coap_opt_value(option), 6) == 0) {
-      unsigned int i;
-      unsigned long d = 0;
-
-      for (i = 6; i < coap_opt_length(option); ++i)
-        d = d * 10 + coap_opt_value(option)[i] - '0';
-
-      /* don't allow delay to be less than COAP_RESOURCE_CHECK_TIME*/
-      delay = d < COAP_RESOURCE_CHECK_TIME_SEC
-        ? COAP_RESOURCE_CHECK_TIME_SEC
-        : d;
-      coap_log(LOG_DEBUG, "set delay to %lu\n", delay);
-      break;
-    }
-  }
-
-  /*
-   * This is so we can use a local variable to hold the remaining time.
-   * The alternative is to malloc the variable and set COAP_ASYNC_RELEASE_DATA
-   * in the flags parameter in the call to coap_register_async() and handle
-   * the required time as appropriate in check_async() below.
-   */
-  async_data_t data;
-  data.val = COAP_TICKS_PER_SECOND * delay;
-
-  async = coap_register_async(ctx, session, request, COAP_ASYNC_SEPARATE,
-                              data.ptr);
-}
-
-static void
-check_async(coap_context_t *ctx,
-            coap_tick_t now) {
-  coap_pdu_t *response;
-  coap_async_state_t *tmp;
-  async_data_t data;
-
-  size_t size = 8;
-
-  if (!async)
-    return;
-
-  data.ptr = async->appdata;
-  if (now < async->created + data.val)
-    return;
-
-  response = coap_pdu_init(async->flags & COAP_ASYNC_CONFIRM
-                           ? COAP_MESSAGE_CON
-                           : COAP_MESSAGE_NON,
-                           COAP_RESPONSE_CODE_CONTENT, 0, size);
-  if (!response) {
-    coap_log(LOG_DEBUG, "check_async: insufficient memory, we'll try later\n");
-    async->appdata =
-      (void *)((unsigned long)async->appdata + 15 * COAP_TICKS_PER_SECOND);
-    return;
-  }
-
-  response->mid = coap_new_message_id(async->session);
-
-  if (async->tokenlen)
-    coap_add_token(response, async->tokenlen, async->token);
-
+  /* This is the delayed response.  Send back the appropriate data */
   coap_add_data(response, 4, (const uint8_t *)"done");
+  response->code = COAP_RESPONSE_CODE_CONTENT;
 
-  if (coap_send(async->session, response) == COAP_INVALID_MID) {
-    coap_log(LOG_DEBUG, "check_async: cannot send response for mid=0x%x\n",
-          response->mid);
-  }
-  coap_remove_async(ctx, async->session, async->id, &tmp);
-  coap_free_async(async);
-  async = NULL;
+  /* async is automatically removed by libcoap */
 }
 
 static coap_payload_t *
@@ -636,7 +586,6 @@ int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
   int result;
-  coap_tick_t now;
   char addr_str[NI_MAXHOST] = "::";
   char port_str[NI_MAXSERV] = "5683";
   int opt;
@@ -685,9 +634,6 @@ main(int argc, char **argv) {
     if ( result >= 0 ) {
       /* coap_check_resource_list( ctx ); */
     }
-    /* check if we have to send asynchronous responses */
-    coap_ticks(&now);
-    check_async(ctx, now);
   }
 
   coap_free_context( ctx );

@@ -1065,6 +1065,7 @@ coap_io_prepare_io(coap_context_t *ctx,
   coap_session_t *s, *rtmp;
   coap_tick_t session_timeout;
   coap_tick_t timeout = 0;
+  coap_tick_t s_timeout;
 #ifdef COAP_EPOLL_SUPPORT
   (void)sockets;
   (void)max_sockets;
@@ -1079,6 +1080,15 @@ coap_io_prepare_io(coap_context_t *ctx,
     session_timeout = ctx->session_timeout * COAP_TICKS_PER_SECOND;
   else
     session_timeout = COAP_DEFAULT_SESSION_TIMEOUT * COAP_TICKS_PER_SECOND;
+
+#ifndef WITHOUT_ASYNC
+  /* Check to see if we need to send off any Async requests */
+  s_timeout = coap_check_async(ctx, now);
+  if (s_timeout) {
+    if (timeout == 0 || s_timeout < timeout)
+      timeout = s_timeout;
+  }
+#endif /* WITHOUT_ASYNC */
 
   LL_FOREACH(ctx->endpoint, ep) {
 #ifndef COAP_EPOLL_SUPPORT
@@ -1095,13 +1105,12 @@ coap_io_prepare_io(coap_context_t *ctx,
         coap_session_free(s);
       } else {
         if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 && s->delayqueue == NULL) {
-          coap_tick_t s_timeout = (s->last_rx_tx + session_timeout) - now;
+          s_timeout = (s->last_rx_tx + session_timeout) - now;
           if (timeout == 0 || s_timeout < timeout)
             timeout = s_timeout;
         }
         /* Check if any server large receives have timed out */
         if (s->lg_srcv) {
-          coap_tick_t s_timeout;
           s_timeout = coap_block_check_lg_srcv_timeouts(s, now);
           if (timeout == 0 || s_timeout < timeout)
             timeout = s_timeout;
@@ -1121,7 +1130,6 @@ coap_io_prepare_io(coap_context_t *ctx,
      && s->state == COAP_SESSION_STATE_ESTABLISHED
      && ctx->ping_timeout > 0
     ) {
-      coap_tick_t s_timeout;
       if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
         if ((s->last_ping > 0 && s->last_pong < s->last_ping)
           || ((s->last_ping_mid = coap_session_send_ping(s)) == COAP_INVALID_MID))
@@ -1146,7 +1154,6 @@ coap_io_prepare_io(coap_context_t *ctx,
      && s->state == COAP_SESSION_STATE_CSM
      && ctx->csm_timeout > 0
     ) {
-      coap_tick_t s_timeout;
       if (s->csm_tx == 0) {
         s->csm_tx = now;
       } else if (s->csm_tx + ctx->csm_timeout * COAP_TICKS_PER_SECOND <= now) {
@@ -1163,7 +1170,6 @@ coap_io_prepare_io(coap_context_t *ctx,
 
     /* Check if any client large receives have timed out */
     if (s->lg_crcv) {
-      coap_tick_t s_timeout;
       s_timeout = coap_block_check_lg_crcv_timeouts(s, now);
       if (timeout == 0 || s_timeout < timeout)
         timeout = s_timeout;
@@ -1438,9 +1444,15 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
     /* Keep retrying until less than COAP_MAX_EPOLL_EVENTS are returned */
   } while (nfds == COAP_MAX_EPOLL_EVENTS);
 
+#endif /* COAP_EPOLL_SUPPORT */
   coap_expire_cache_entries(ctx);
   coap_ticks(&now);
-#endif /* COAP_EPOLL_SUPPORT */
+#ifndef WITHOUT_ASYNC
+  /* Check to see if we need to send off any Async requests as delay might
+     have been updated */
+  coap_check_async(ctx, now);
+  coap_ticks(&now);
+#endif /* WITHOUT_ASYNC */
 
 #if COAP_CONSTRAINED_STACK
   coap_mutex_unlock(&static_mutex);

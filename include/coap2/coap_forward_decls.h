@@ -40,6 +40,13 @@ typedef struct coap_pdu_t coap_pdu_t;
  * typedef all the opaque structures that are defined in coap_*_internal.h
  */
 
+/* ************* coap_async_internal.h ***************** */
+
+/**
+ * Async Entry information.
+ */
+typedef struct coap_async_t coap_async_t;
+
 /* ************* coap_cache_internal.h ***************** */
 
 /*
