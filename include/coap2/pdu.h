@@ -247,6 +247,12 @@ typedef int coap_mid_t;
 #define COAP_INVALID_MID -1
 
 /**
+ * Indicates an invalid message id.
+ * @deprecated Use COAP_INVALID_MID instead.
+ */
+#define COAP_INVALID_TID COAP_INVALID_MID
+
+/**
  * Indicates that a response is suppressed. This will occur for error
  * responses if the request was received via IP multicast.
  */
