@@ -1856,12 +1856,13 @@ coap_dgram_read(gnutls_transport_ptr_t context, void *out, size_t outl)
 {
   ssize_t ret = 0;
   coap_session_t *c_session = (struct coap_session_t *)context;
-  coap_ssl_t *data = &((coap_gnutls_env_t *)c_session->tls)->coap_ssl_data;
+  coap_ssl_t *data;
 
   if (!c_session->tls) {
     errno = EAGAIN;
     return -1;
   }
+  data = &((coap_gnutls_env_t *)c_session->tls)->coap_ssl_data;
 
   if (out != NULL) {
     if (data != NULL && data->pdu_len > 0) {

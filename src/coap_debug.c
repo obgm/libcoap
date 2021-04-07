@@ -743,7 +743,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 
 void coap_show_tls_version(coap_log_t level)
 {
-  char buffer[64];
+  char buffer[128];
   coap_string_tls_version(buffer, sizeof(buffer));
   coap_log(level, "%s\n", buffer);
 }
