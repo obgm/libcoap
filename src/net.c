@@ -2926,7 +2926,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         coap_touch_observer(context, sent->session, &token);
       }
 
-      if (pdu->code == 0 && sent) {
+      if (pdu->code == 0) {
         /* an empty ACK needs no further handling */
         goto cleanup;
       }
