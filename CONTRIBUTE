@@ -51,7 +51,7 @@ The archive of the list can be found on:
 ~~~~~~~~~~~~~~~~~~~~~~~~
 As written above libcoap is maintained with the Git tools so you should be
 familiar with the various git commands.
-The libcoap project is using just two main branches, the 'master' branch is
+The libcoap project is using just two main branches, the 'main' branch is
 holding the point releases, all the development process is going on in the
 'develop' branch.
 To start any contributing you first have to clone the git tree from the main

@@ -7,8 +7,8 @@ To get the libcoap library source, you need to do either the following
 
 * Obtain the latest distribution package file from
   https://github.com/obgm/libcoap/archive/develop.zip
-  [There is a stable master version at
-   https://github.com/obgm/libcoap/archive/master.zip]
+  [There is a stable version at
+   https://github.com/obgm/libcoap/archive/main.zip]
 * Change to the directory that you want to install the libcoap sub-directory
   into
 * Unpack the distribution package file
@@ -21,8 +21,8 @@ or alternatively, clone the libcoap git repository from github
 * Then clone the latest (develop) version of the code:-
    git clone https://github.com/obgm/libcoap.git
 * Change into the top level directory of the cloned files
-* Optionally, change the branch from develop to the stable master branch:-
-   git checkout master
+* Optionally, change the branch from develop to the stable main branch:-
+   git checkout main
 
 Building Libcoap Libraries and Examples
 =======================================
