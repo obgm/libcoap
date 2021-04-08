@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
             continue;
           if (buffer[0] == '-')
             continue;
-          if (buffer[0] == 'L') {
+          if (buffer[0] == 'F') {
             /* Link with ..... is the end */
             in_synopsis = 0;
             continue;

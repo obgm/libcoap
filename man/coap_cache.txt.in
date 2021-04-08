@@ -55,10 +55,11 @@ coap_cache_app_data_free_callback_t _callback_);*
 
 *void *coap_cache_get_app_data(const coap_cache_entry_t *_cache_entry_);*
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
-or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
-type.
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
 
 DESCRIPTION
 -----------
