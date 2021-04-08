@@ -382,11 +382,14 @@ else(ENABLE_TCP)
 endif(ENABLE_TCP)
 
 # creates config header file in build directory
-configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in
-               ${CMAKE_CURRENT_BINARY_DIR}/include/coap2/coap.h)
+configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h)
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake_coap_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/coap_config.h)
+
+configure_file(${CMAKE_CURRENT_LIST_DIR}/tests/test_common.h.in
+               ${CMAKE_CURRENT_LIST_DIR}/tests/test_common.h)
 
 #
 # sources
@@ -431,35 +434,34 @@ target_sources(
           $<$<BOOL:${HAVE_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
           $<$<BOOL:${HAVE_MBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
           # headers
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/address.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/async.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/bits.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/block.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_cache.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_debug.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_dtls.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_event.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_hashkey.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap.h.in
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_io.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_session.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_time.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/encode.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/libcoap.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/lwippools.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/mem.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/net.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/option.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/pdu.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/coap_prng.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/resource.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/str.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/subscribe.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/uri.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/uthash.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap2/utlist.h)
-# TODO: some *.c are still including the filename instead of "coap2/header.h"
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/address.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/async.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/bits.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/block.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_cache.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_debug.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_dtls.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_event.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_hashkey.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h.in
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_io.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_session.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_time.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/encode.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/libcoap.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/lwippools.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/mem.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/net.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/option.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/pdu.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_prng.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/resource.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/str.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/subscribe.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/uri.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/uthash.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/utlist.h)
 target_include_directories(
   ${COAP_LIBRARY_NAME}
   PUBLIC # config headers are generated during configuration time
@@ -515,6 +517,7 @@ if(ENABLE_TESTS)
   add_executable(
     testdriver
     ${CMAKE_CURRENT_LIST_DIR}/tests/testdriver.c
+    ${CMAKE_CURRENT_LIST_DIR}/tests/test_common.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_encode.c
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_encode.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_error_response.c

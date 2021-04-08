@@ -26,8 +26,8 @@ AM_SILENT_RULES([yes])
 AC_HEADER_ASSERT
 
 # Generate one configuration header file for building the library itself with
-# an auto generated template. We need later a second one (include/libcoap.h)
-# that will be installed alongside the library.
+# an auto generated template. We need later a second one
+# (include/coap$LIBCOAP_API_VERSION/libcoap.h) that will be installed alongside the library.
 AC_CONFIG_HEADERS([coap_config.h])
 
 AC_PROG_CC
@@ -814,9 +814,13 @@ CFLAGS="$CFLAGS $ADDITIONAL_CFLAGS"
 #
 AC_CONFIG_FILES([
 Makefile
+coap_config.h.lwip
+coap_config.h.riot
+coap_config.h.windows
 doc/Makefile
 examples/Makefile
-include/coap2/coap.h
+include/coap$LIBCOAP_API_VERSION/coap.h
+include/coap$LIBCOAP_API_VERSION/coap.h.windows
 man/coap.txt
 man/coap_attribute.txt
 man/coap_block.txt
@@ -838,6 +842,7 @@ man/coap-client.txt
 man/coap-server.txt
 man/coap-rd.txt
 man/Makefile
+tests/test_common.h
 tests/Makefile
 tests/oss-fuzz/Makefile.ci
 libcoap-$LIBCOAP_NAME_SUFFIX.pc:libcoap-$LIBCOAP_API_VERSION.pc.in

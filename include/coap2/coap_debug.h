@@ -153,7 +153,7 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
 } while(0)
 #endif
 
-#include "coap2/pdu.h"
+#include "pdu.h"
 
 /**
  * Defines the output mode for the coap_show_pdu() function.

@@ -90,6 +90,7 @@ tests/.deps
 tests/oss-fuzz/Makefile.ci
 tests/testdriver
 tests/*.o
+tests/test_common.h
 
 # ctags - Sublime plugin
 tags

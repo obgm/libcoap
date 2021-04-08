@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
-#include "coap2/libcoap.h"
+#include "libcoap.h"
 
 #if defined(WITH_LWIP)
 
