@@ -196,11 +196,15 @@ coap_socket_bind_udp(coap_socket_t *sock,
       coap_log(LOG_ALERT,
                "coap_socket_bind_udp: setsockopt IPV6_V6ONLY: %s\n",
                 coap_socket_strerror());
+#if !defined(ESPIDF_VERSION)
     if (setsockopt(sock->fd, IPPROTO_IPV6, GEN_IPV6_PKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log(LOG_ALERT,
                "coap_socket_bind_udp: setsockopt IPV6_PKTINFO: %s\n",
                 coap_socket_strerror());
-    setsockopt(sock->fd, IPPROTO_IP, GEN_IP_PKTINFO, OPTVAL_T(&on), sizeof(on)); /* ignore error, because the likely cause is that IPv4 is disabled at the os level */
+#endif /* !defined(ESPIDF_VERSION) */
+    setsockopt(sock->fd, IPPROTO_IP, GEN_IP_PKTINFO, OPTVAL_T(&on), sizeof(on));
+    /* ignore error, because likely cause is that IPv4 is disabled at the os
+       level */
     break;
   default:
     coap_log(LOG_ALERT, "coap_socket_bind_udp: unsupported sa_family\n");

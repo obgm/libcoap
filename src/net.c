@@ -3170,8 +3170,12 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
     /* interface specified - check if we have correct IPv4/IPv6 information */
     int done_ip4 = 0;
     int done_ip6 = 0;
+#if defined(ESPIDF_VERSION)
+    struct netif *netif;
+#else /* !ESPIDF_VERSION */
     int ip4fd;
     struct ifreq ifr;
+#endif /* !ESPIDF_VERSION */
 
     /* See which mcast address family types are being asked for */
     for (ainfo = resmulti; ainfo != NULL && !(done_ip4 == 1 && done_ip6 == 1);
@@ -3181,6 +3185,16 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
         if (done_ip6)
           break;
         done_ip6 = 1;
+#if defined(ESPIDF_VERSION)
+        netif = netif_find(ifname);
+        if (netif)
+          mreq6.ipv6mr_interface = netif_get_index(netif);
+        else
+          coap_log(LOG_ERR,
+                   "coap_join_mcast_group_intf: %s: "
+                    "Cannot get IPv4 address: %s\n",
+                    ifname, coap_socket_strerror());
+#else /* !ESPIDF_VERSION */
         memset (&ifr, 0, sizeof(ifr));
         strncpy(ifr.ifr_name, ifname, IFNAMSIZ - 1);
         ifr.ifr_name[IFNAMSIZ - 1] = '\000';
@@ -3195,11 +3209,22 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
           /* Capture the IPv6 if_index for later */
           mreq6.ipv6mr_interface = ifr.ifr_ifindex;
         }
+#endif /* !ESPIDF_VERSION */
         break;
       case AF_INET:
         if (done_ip4)
           break;
         done_ip4 = 1;
+#if defined(ESPIDF_VERSION)
+        netif = netif_find(ifname);
+        if (netif)
+          mreq4.imr_interface.s_addr = netif_ip4_addr(netif)->addr;
+        else
+          coap_log(LOG_ERR,
+                   "coap_join_mcast_group_intf: %s: "
+                    "Cannot get IPv4 address: %s\n",
+                    ifname, coap_socket_strerror());
+#else /* !ESPIDF_VERSION */
         /*
          * Need an AF_INET socket to do this unfortunately to stop
          * "Invalid argument" error if AF_INET6 socket is used for SIOCGIFADDR
@@ -3226,6 +3251,7 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
           mreq4.imr_interface = ((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr;
         }
         close(ip4fd);
+#endif /* !ESPIDF_VERSION */
         break;
       default:
         break;
