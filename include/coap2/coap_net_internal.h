@@ -93,7 +93,7 @@ struct coap_context_t {
   ssize_t (*network_send)(coap_socket_t *sock, const coap_session_t *session,
                           const uint8_t *data, size_t datalen);
 
-  ssize_t (*network_read)(coap_socket_t *sock, struct coap_packet_t *packet);
+  ssize_t (*network_read)(coap_socket_t *sock, coap_packet_t *packet);
 
   size_t(*get_client_psk)(const coap_session_t *session, const uint8_t *hint,
                           size_t hint_len, uint8_t *identity,

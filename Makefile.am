@@ -32,6 +32,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_block_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_cache_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_net_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_io_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_resource_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
@@ -187,21 +188,10 @@ coap_dtls_send \
 coap_dtls_session_update_mtu \
 coap_dtls_shutdown \
 coap_dtls_startup \
-coap_epoll_ctl_mod \
 coap_insert_option \
-coap_mfree_endpoint \
-coap_packet_extract_pbuf \
 coap_pdu_check_resize \
 coap_pdu_from_pbuf \
 coap_remove_option \
-coap_socket_bind_udp \
-coap_socket_close \
-coap_socket_connect_udp \
-coap_socket_format_errno \
-coap_socket_read \
-coap_socket_send \
-coap_socket_send_pdu \
-coap_socket_write \
 coap_tls_free_session \
 coap_tls_new_client_session \
 coap_tls_new_server_session \
