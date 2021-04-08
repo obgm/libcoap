@@ -73,7 +73,7 @@ coap_socket_bind_udp(coap_socket_t *sock,
 void coap_socket_close(coap_socket_t *sock);
 
 ssize_t
-coap_socket_send( coap_socket_t *sock, struct coap_session_t *session,
+coap_socket_send( coap_socket_t *sock, coap_session_t *session,
                   const uint8_t *data, size_t data_len );
 
 ssize_t
@@ -87,8 +87,8 @@ coap_epoll_ctl_mod(coap_socket_t *sock, uint32_t events, const char *func);
 
 #ifdef WITH_LWIP
 ssize_t
-coap_socket_send_pdu( coap_socket_t *sock, struct coap_session_t *session,
-                      struct coap_pdu_t *pdu );
+coap_socket_send_pdu( coap_socket_t *sock, coap_session_t *session,
+                      coap_pdu_t *pdu );
 #endif
 
 /**
@@ -103,7 +103,7 @@ coap_socket_send_pdu( coap_socket_t *sock, struct coap_session_t *session,
  * @return                 The number of bytes written on success, or a value
  *                         less than zero on error.
  */
-ssize_t coap_network_send( coap_socket_t *sock, const struct coap_session_t *session, const uint8_t *data, size_t datalen );
+ssize_t coap_network_send( coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen );
 
 /**
  * Function interface for reading data. This function returns the number of

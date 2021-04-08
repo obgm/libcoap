@@ -363,12 +363,12 @@ coap_string_t *query, coap_pdu_t *response) {
     tmp = gmtime(&now);
     if (!tmp) {
       /* If 'now' is not valid */
-      response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
       return;
     }
     len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
   }
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   /*
    * Invoke coap_add_data_large_response() to do all the hard work.
    * [A good practice, even though ins this case, the amount of data is small]

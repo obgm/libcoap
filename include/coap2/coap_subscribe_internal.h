@@ -52,8 +52,8 @@ struct coap_subscription_t {
                             *   sent (in that case, the resource's partially
                             *   dirty flag is set too) */
   unsigned int has_block2:1; /**< GET request had Block2 definition */
-  uint8_t code;            /** request type code (GET/FETCH)*/
-  uint16_t mid;             /**< message id, if any, in regular host byte order */
+  coap_pdu_code_t code;    /** request type code (GET/FETCH)*/
+  coap_mid_t mid;          /**< message id, if any, in regular host byte order */
   coap_block_t block;      /**< GET/FETCH request Block definition */
   size_t token_length;     /**< actual length of token */
   unsigned char token[8];  /**< token used for subscription */
@@ -107,7 +107,7 @@ coap_subscription_t *coap_add_observer(coap_resource_t *resource,
                                        coap_string_t *query,
                                        int has_block2,
                                        coap_block_t block2,
-                                       uint8_t code);
+                                       coap_pdu_code_t code);
 
 /**
  * Returns a subscription object for given @p peer.

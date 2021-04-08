@@ -833,6 +833,7 @@ man/coap_io.txt
 man/coap_keepalive.txt
 man/coap_logging.txt
 man/coap_observe.txt
+man/coap_pdu_access.txt
 man/coap_pdu_setup.txt
 man/coap_recovery.txt
 man/coap_resource.txt

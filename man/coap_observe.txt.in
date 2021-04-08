@@ -27,7 +27,7 @@ int _mode_);*
 const coap_string_t *_query_);*
 
 *int coap_cancel_observe(coap_session_t *_session_, coap_binary_t *_token_,
-uint8_t _message_type_);*
+coap_pdu_type_t _message_type_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -167,12 +167,12 @@ coap_string_t *query, coap_pdu_t *response) {
     tmp = gmtime(&now);
     if (!tmp) {
       /* If 'now' is not valid */
-      response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
       return;
     }
     len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
   }
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   /*
    * Invoke coap_add_data_blocked_response() to do all the hard work.
    *
@@ -201,7 +201,7 @@ coap_string_t *query, coap_pdu_t *response) {
 
   if (!uri_path) {
     /* Unexpected Failure */
-    response->code = COAP_RESPONSE_CODE_BAD_REQUEST;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
     return;
   }
 
@@ -215,7 +215,7 @@ coap_string_t *query, coap_pdu_t *response) {
   /* Other resources code */
 
   /* Failure response */
-  response->code = COAP_RESPONSE_CODE_BAD_REQUEST;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
 }
 
 /* Initialize generic GET handler */

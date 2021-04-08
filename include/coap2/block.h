@@ -81,22 +81,23 @@ coap_opt_block_set_m(coap_opt_t *block_opt, int m) {
 #endif
 
 /**
- * Initializes @p block from @p pdu. @p type must be either COAP_OPTION_BLOCK1
- * or COAP_OPTION_BLOCK2. When option @p type was found in @p pdu, @p block is
+ * Initializes @p block from @p pdu. @p number must be either COAP_OPTION_BLOCK1
+ * or COAP_OPTION_BLOCK2. When option @p number was found in @p pdu, @p block is
  * initialized with values from this option and the function returns the value
  * @c 1. Otherwise, @c 0 is returned.
  *
- * @param pdu   The pdu to search for option @p type.
- * @param type  The option to search for (must be COAP_OPTION_BLOCK1 or
- *              COAP_OPTION_BLOCK2).
- * @param block The block structure to initilize.
+ * @param pdu    The pdu to search for option @p number.
+ * @param number The option number to search for (must be COAP_OPTION_BLOCK1 or
+ *               COAP_OPTION_BLOCK2).
+ * @param block  The block structure to initilize.
  *
- * @return      @c 1 on success, @c 0 otherwise.
+ * @return       @c 1 on success, @c 0 otherwise.
  */
-int coap_get_block(coap_pdu_t *pdu, uint16_t type, coap_block_t *block);
+int coap_get_block(coap_pdu_t *pdu, coap_option_num_t number,
+                   coap_block_t *block);
 
 /**
- * Writes a block option of type @p type to message @p pdu. If the requested
+ * Writes a block option of type @p number to message @p pdu. If the requested
  * block size is too large to fit in @p pdu, it is reduced accordingly. An
  * exception is made for the final block when less space is required. The actual
  * length of the resource is specified in @p data_length.
@@ -108,7 +109,7 @@ int coap_get_block(coap_pdu_t *pdu, uint16_t type, coap_block_t *block);
  * @param block       The block structure to use. On return, this object is
  *                    updated according to the values that have been written to
  *                    @p pdu.
- * @param type        COAP_OPTION_BLOCK1 or COAP_OPTION_BLOCK2.
+ * @param number      COAP_OPTION_BLOCK1 or COAP_OPTION_BLOCK2.
  * @param pdu         The message where the block option should be written.
  * @param data_length The length of the actual data that will be added the @p
  *                    pdu by calling coap_add_block().
@@ -116,7 +117,7 @@ int coap_get_block(coap_pdu_t *pdu, uint16_t type, coap_block_t *block);
  * @return            @c 1 on success, or a negative value on error.
  */
 int coap_write_block_opt(coap_block_t *block,
-                         uint16_t type,
+                         coap_option_num_t number,
                          coap_pdu_t *pdu,
                          size_t data_length);
 
@@ -346,7 +347,7 @@ void coap_context_set_block_mode(coap_context_t *context,
  *         else @c 0.
  */
 int coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
-                    uint8_t message_type);
+                    coap_pdu_type_t message_type);
 
 /**@}*/
 

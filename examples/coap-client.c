@@ -193,12 +193,8 @@ coap_new_request(coap_context_t *ctx,
   coap_pdu_t *pdu;
   (void)ctx;
 
-  if (!(pdu = coap_new_pdu(session)))
+  if (!(pdu = coap_new_pdu(msgtype, m, session)))
     return NULL;
-
-  pdu->type = msgtype;
-  pdu->mid = coap_new_message_id(session);
-  pdu->code = m;
 
   if ( !coap_add_token(pdu, the_token.length, the_token.s)) {
     coap_log(LOG_DEBUG, "cannot add token to request\n");
@@ -266,8 +262,10 @@ resolve_address(const coap_str_const_t *server, struct sockaddr *dst) {
 
 static inline int
 check_token(coap_pdu_t *received) {
-  return received->token_length == the_token.length &&
-    memcmp(received->token, the_token.s, the_token.length) == 0;
+  coap_bin_const_t token = coap_pdu_get_token(received);
+
+  return token.length == the_token.length &&
+    memcmp(token.s, the_token.s, the_token.length) == 0;
 }
 
 static int
@@ -324,30 +322,32 @@ message_handler(coap_context_t *ctx COAP_UNUSED,
   const uint8_t *databuf;
   size_t offset;
   size_t total;
+  coap_pdu_code_t rcv_code = coap_pdu_get_code(received);
+  coap_pdu_type_t rcv_type = coap_pdu_get_type(received);
 
   coap_log(LOG_DEBUG, "** process incoming %d.%02d response:\n",
-           COAP_RESPONSE_CLASS(received->code), received->code & 0x1F);
+           COAP_RESPONSE_CLASS(rcv_code), rcv_code & 0x1F);
   if (coap_get_log_level() < LOG_DEBUG)
     coap_show_pdu(LOG_INFO, received);
 
   /* check if this is a response to our original request */
   if (!check_token(received)) {
     /* drop if this was just some message, or send RST in case of notification */
-    if (!sent && (received->type == COAP_MESSAGE_CON ||
-                  received->type == COAP_MESSAGE_NON)) {
+    if (!sent && (rcv_type == COAP_MESSAGE_CON ||
+                  rcv_type == COAP_MESSAGE_NON)) {
       /* Cause a CoAP RST to be sent */
       return COAP_RESPONSE_FAIL;
     }
     return COAP_RESPONSE_OK;
   }
 
-  if (received->type == COAP_MESSAGE_RST) {
+  if (rcv_type == COAP_MESSAGE_RST) {
     coap_log(LOG_INFO, "got RST\n");
     return COAP_RESPONSE_OK;
   }
 
   /* output the received data, if any */
-  if (COAP_RESPONSE_CLASS(received->code) == 2) {
+  if (COAP_RESPONSE_CLASS(rcv_code) == 2) {
 
     /* set obs timer if we have successfully subscribed a resource */
     if (doing_observe && !obs_started &&
@@ -387,11 +387,10 @@ message_handler(coap_context_t *ctx COAP_UNUSED,
       return COAP_RESPONSE_OK;
     }
   } else {      /* no 2.05 */
-
     /* check if an error was signaled and output payload if so */
-    if (COAP_RESPONSE_CLASS(received->code) >= 4) {
-      fprintf(stderr, "%d.%02d",
-              (received->code >> 5), received->code & 0x1F);
+    if (COAP_RESPONSE_CLASS(rcv_code) >= 4) {
+      fprintf(stderr, "%d.%02d", COAP_RESPONSE_CLASS(rcv_code),
+              rcv_code & 0x1F);
       if (coap_get_data_large(received, &len, &databuf, &offset, &total)) {
         fprintf(stderr, " ");
         while(len--) {

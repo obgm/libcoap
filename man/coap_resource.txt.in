@@ -207,7 +207,7 @@ coap_string_t *query, coap_pdu_t *response) {
   (void)token;
   (void)query;
 
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
@@ -221,7 +221,7 @@ coap_string_t *query, coap_pdu_t *response) {
 
   coap_add_data(response, strlen(INDEX), (const uint8_t *)INDEX);
 
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 }
 
 static void
@@ -238,7 +238,7 @@ coap_string_t *query, coap_pdu_t *response) {
 
   /* .. code .. */
 
-  response->code = COAP_RESPONSE_CODE_DELETED;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
 
 static void
@@ -256,7 +256,7 @@ coap_string_t *query, coap_pdu_t *response) {
 
   /* .. code .. */
 
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 }
 
 static void
@@ -274,7 +274,7 @@ coap_string_t *query, coap_pdu_t *response) {
 
   /* .. code .. */
 
-  response->code = COAP_RESPONSE_CODE_CHANGED;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
 }
 
 static void
@@ -340,7 +340,7 @@ coap_string_t *query, coap_pdu_t *response) {
   /* Dynamic resource no longer required - delete it */
   coap_delete_resource(ctx, resource);
 
-  response->code = COAP_RESPONSE_CODE_DELETED;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
 
 /* Regular GET handler - used by resources created by the
@@ -371,7 +371,7 @@ coap_string_t *query, coap_pdu_t *response) {
 
   /* .. code .. */
 
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 }
 
 /* Regular PUT handler - used by resources created by the
@@ -398,7 +398,7 @@ coap_string_t *query, coap_pdu_t *response) {
   /* get the uri_path */
   put_uri_path = coap_get_uri_path(request);
   if (!put_uri_path) {
-    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     return;
   }
   coap_get_data_large(request, &length, &data, &offset, &total);
@@ -409,11 +409,11 @@ coap_string_t *query, coap_pdu_t *response) {
   coap_delete_string(put_uri_path);
 
   if (length + offset < total)
-    response->code = COAP_RESPONSE_CODE_CONTINUE;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTINUE);
   else if (new_resource)
-    response->code = COAP_RESPONSE_CODE_CREATED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
   else
-    response->code = COAP_RESPONSE_CODE_CHANGED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
 }
 
 static int
@@ -436,6 +436,7 @@ coap_string_t *query, coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
   (void)ctx;
   (void)resource;
+  coap_pdu_code_t req_code = coap_pdu_get_code(request);
 
   coap_resource_t *r;
   coap_string_t *uri_path;
@@ -443,13 +444,13 @@ coap_string_t *query, coap_pdu_t *response) {
   /* get the uri_path - which will get used by coap_resource_init() */
   uri_path = coap_get_uri_path(request);
   if (!uri_path) {
-    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     return;
   }
 
   /* Check if new URI Path is valid */
-  if (!check_url_fn (uri_path, request->code)) {
-    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+  if (!check_url_fn (uri_path, req_code)) {
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     coap_delete_string(uri_path);
     return;
   }

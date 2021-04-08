@@ -268,7 +268,7 @@ hnd_put_example_data(coap_context_t *ctx,
         coap_log(LOG_WARNING,
                  "No cache entry available for the non-first BLOCK\n");
       }
-      response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       return;
     }
 
@@ -287,7 +287,7 @@ hnd_put_example_data(coap_context_t *ctx,
     }
     else {
       /* Give us the next block response */
-      response->code = COAP_RESPONSE_CODE_CONTINUE;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTINUE);
       return;
     }
   }
@@ -301,12 +301,12 @@ hnd_put_example_data(coap_context_t *ctx,
 
   if (example_data_ptr) {
     /* pre-existed response */
-    response->code = COAP_RESPONSE_CODE_CHANGED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
     coap_delete_binary(example_data_ptr);
   }
   else
     /* just generated response */
-    response->code = COAP_RESPONSE_CODE_CREATED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
 
   example_data_ptr = data_so_far;
   if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
@@ -319,7 +319,7 @@ hnd_put_example_data(coap_context_t *ctx,
     example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
   }
 
-  response->code = COAP_RESPONSE_CODE_CHANGED;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
   coap_resource_notify_observers(resource, NULL);
 }
 

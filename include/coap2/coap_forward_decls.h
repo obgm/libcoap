@@ -28,14 +28,6 @@ struct coap_str_const_t;
 struct coap_string_t;
 
 /*
- * Just to get rid of #include circular references
- *
- * When (If) the struct becomes opaque, then move it to the correct place
- *
- */
-typedef struct coap_pdu_t coap_pdu_t;
-
-/*
  * typedef all the opaque structures that are defined in coap_*_internal.h
  */
 
@@ -78,6 +70,13 @@ typedef struct coap_socket_t coap_socket_t;
  */
 typedef struct coap_context_t coap_context_t;
 typedef struct coap_queue_t coap_queue_t;
+
+/* ************* coap_pdu_internal.h ***************** */
+
+/**
+ * PDU information.
+ */
+typedef struct coap_pdu_t coap_pdu_t;
 
 /* ************* coap_resource_internal.h ***************** */
 

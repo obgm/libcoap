@@ -99,7 +99,7 @@ hnd_get_index(coap_context_t *ctx COAP_UNUSED,
               coap_pdu_t *response) {
   unsigned char buf[3];
 
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
                   coap_encode_var_safe(buf, sizeof(buf),
@@ -125,12 +125,12 @@ hnd_get_resource(coap_context_t *ctx COAP_UNUSED,
 
   test_payload = coap_find_payload(resource);
   if (!test_payload) {
-    response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
 
     return;
   }
 
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
   coap_add_data_blocked_response(resource, session, request, response, token,
                                  test_payload->media_type, -1,
@@ -157,7 +157,7 @@ hnd_delete_resource(coap_context_t *ctx,
 
   coap_delete_resource(ctx, resource);
 
-  response->code = COAP_RESPONSE_CODE_DELETED;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
 
 static void
@@ -173,7 +173,7 @@ hnd_post_test(coap_context_t *ctx,
   coap_payload_t *test_payload;
   size_t len;
   coap_str_const_t *uri;
-  unsigned char *data;
+  const uint8_t *data;
 
 #define BUFSIZE 20
   int res;
@@ -189,7 +189,7 @@ hnd_post_test(coap_context_t *ctx,
   uri = coap_new_str_const(buf, strlen((char *)buf));
   if (!(test_payload && uri)) {
     coap_log(LOG_CRIT, "cannot allocate new resource under /test");
-    response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
     coap_free(test_payload);
     coap_free(uri);
   } else {
@@ -223,7 +223,7 @@ hnd_post_test(coap_context_t *ctx,
       buf += coap_opt_size(buf);
     }
 
-    response->code = COAP_RESPONSE_CODE_CREATED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
   }
 
 }
@@ -240,9 +240,9 @@ hnd_put_test(coap_context_t *ctx COAP_UNUSED,
   coap_opt_t *option;
   coap_payload_t *payload;
   size_t len;
-  unsigned char *data;
+  const uint8_t *data;
 
-  response->code = COAP_RESPONSE_CODE_CHANGED;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
 
   coap_get_data(request, &len, &data);
 
@@ -280,7 +280,7 @@ hnd_put_test(coap_context_t *ctx COAP_UNUSED,
   return;
  error:
   coap_log(LOG_WARNING, "cannot modify resource\n");
-  response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
 }
 
 static void
@@ -300,7 +300,7 @@ hnd_delete_test(coap_context_t *ctx COAP_UNUSED,
     payload->length = 0;
 #endif
 
-  response->code = COAP_RESPONSE_CODE_DELETED;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
 
 static void
@@ -317,7 +317,7 @@ hnd_get_query(coap_context_t *ctx COAP_UNUSED,
   size_t len, L;
   unsigned char buf[70];
 
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
   coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
                   coap_encode_var_safe(buf, sizeof(buf),
@@ -393,7 +393,7 @@ hnd_get_separate(coap_context_t *ctx,
                                 request,
                                 COAP_TICKS_PER_SECOND * delay);
     if (async == NULL) {
-      response->code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
       return;
     }
     /* Not setting response code will cause empty ACK to be sent
@@ -403,7 +403,7 @@ hnd_get_separate(coap_context_t *ctx,
 
   /* This is the delayed response.  Send back the appropriate data */
   coap_add_data(response, 4, (const uint8_t *)"done");
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
   /* async is automatically removed by libcoap */
 }

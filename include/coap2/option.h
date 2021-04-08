@@ -17,6 +17,8 @@
 
 #include "bits.h"
 
+typedef uint16_t coap_option_num_t;
+
 /**
  * Use byte-oriented access methods here because sliding a complex struct
  * coap_opt_t over the data buffer may cause bus error on certain platforms.
@@ -105,50 +107,49 @@ typedef struct coap_opt_filter_t {
 #define COAP_OPT_ALL NULL
 
 /**
- * Clears filter @p f.
+ * Clears filter @p filter.
  *
- * @param f The filter to clear.
+ * @param filter The filter to clear.
  */
-COAP_STATIC_INLINE void
-coap_option_filter_clear(coap_opt_filter_t *f) {
-  memset(f, 0, sizeof(coap_opt_filter_t));
-}
+void
+coap_option_filter_clear(coap_opt_filter_t *filter);
 
 /**
- * Sets the corresponding entry for @p type in @p filter. This
+ * Sets the corresponding entry for @p number in @p filter. This
  * function returns @c 1 if bit was set or @c 0 on error (i.e. when
- * the given type does not fit in the filter).
+ * the given number does not fit in the filter).
  *
  * @param filter The filter object to change.
- * @param type   The type for which the bit should be set.
+ * @param number The option number for which the bit should be set.
  *
  * @return       @c 1 if bit was set, @c 0 otherwise.
  */
-int coap_option_filter_set(coap_opt_filter_t *filter, uint16_t type);
+int coap_option_filter_set(coap_opt_filter_t *filter, coap_option_num_t number);
 
 /**
- * Clears the corresponding entry for @p type in @p filter. This
+ * Clears the corresponding entry for @p number in @p filter. This
  * function returns @c 1 if bit was set or @c 0 on error (i.e. when
- * the given type does not fit in the filter).
+ * the given number does not fit in the filter).
  *
  * @param filter The filter object to change.
- * @param type   The type that should be cleared from the filter.
+ * @param number The option number that should be cleared from the filter.
  *
  * @return       @c 1 if bit was set, @c 0 otherwise.
  */
-int coap_option_filter_unset(coap_opt_filter_t *filter, uint16_t type);
+int coap_option_filter_unset(coap_opt_filter_t *filter,
+                             coap_option_num_t number);
 
 /**
- * Checks if @p type is contained in @p filter. This function returns
+ * Checks if @p number is contained in @p filter. This function returns
  * @c 1 if found, @c 0 if not, or @c -1 on error (i.e. when the given
- * type does not fit in the filter).
+ * number does not fit in the filter).
  *
  * @param filter The filter object to search.
- * @param type   The type to search for.
+ * @param number The option number to search for.
  *
- * @return       @c 1 if @p type was found, @c 0 otherwise, or @c -1 on error.
+ * @return       @c 1 if @p number was found, @c 0 otherwise, or @c -1 on error.
  */
-int coap_option_filter_get(coap_opt_filter_t *filter, uint16_t type);
+int coap_option_filter_get(coap_opt_filter_t *filter, coap_option_num_t number);
 
 /**
  * Iterator to run through PDU options. This object must be
@@ -168,7 +169,7 @@ int coap_option_filter_get(coap_opt_filter_t *filter, uint16_t type);
  */
 typedef struct {
   size_t length;                /**< remaining length of PDU */
-  uint16_t type;                /**< decoded option type */
+  coap_option_num_t number;     /**< decoded option number */
   unsigned int bad:1;           /**< iterator object is ok if not set */
   unsigned int filtered:1;      /**< denotes whether or not filter is used */
   coap_opt_t *next_option;      /**< pointer to the unparsed next option */
@@ -183,8 +184,8 @@ typedef struct {
  *
  * @param pdu    The PDU the options of which should be walked through.
  * @param oi     An iterator object that will be initilized.
- * @param filter An optional option type filter.
- *               With @p type != @c COAP_OPT_ALL, coap_option_next()
+ * @param filter An optional option number filter.
+ *               With @p number != @c COAP_OPT_ALL, coap_option_next()
  *               will return only options matching this bitmask.
  *               Fence-post options @c 14, @c 28, @c 42, ... are always
  *               skipped.
@@ -199,12 +200,12 @@ coap_opt_iterator_t *coap_option_iterator_init(const coap_pdu_t *pdu,
  * Updates the iterator @p oi to point to the next option. This function returns
  * a pointer to that option or @c NULL if no more options exist. The contents of
  * @p oi will be updated. In particular, @c oi->n specifies the current option's
- * ordinal number (counted from @c 1), @c oi->type is the option's type code,
- * and @c oi->option points to the beginning of the current option itself. When
- * advanced past the last option, @c oi->option will be @c NULL.
+ * ordinal number (counted from @c 1), @c oi->number is the option's number
+ * value, and @c oi->option points to the beginning of the current option
+ * itself. When * advanced past the last option, @c oi->option will be @c NULL.
  *
  * Note that options are skipped whose corresponding bits in the filter
- * specified with coap_option_iterator_init() are @c 0. Options with type codes
+ * specified with coap_option_iterator_init() are @c 0. Options with numbers
  * that do not fit in this filter hence will always be returned.
  *
  * @param oi The option iterator to update.
@@ -214,20 +215,20 @@ coap_opt_iterator_t *coap_option_iterator_init(const coap_pdu_t *pdu,
 coap_opt_t *coap_option_next(coap_opt_iterator_t *oi);
 
 /**
- * Retrieves the first option of type @p type from @p pdu. @p oi must point to a
- * coap_opt_iterator_t object that will be initialized by this function to
- * filter only options with code @p type. This function returns the first option
- * with this type, or @c NULL if not found.
+ * Retrieves the first option of number @p number from @p pdu. @p oi must
+ * point to a coap_opt_iterator_t object that will be initialized by this
+ * function to filter only options with number @p number. This function returns
+ * the first option with this number, or @c NULL if not found.
  *
  * @param pdu  The PDU to parse for options.
- * @param type The option type code to search for.
+ * @param number The option number to search for.
  * @param oi   An iterator object to use.
  *
- * @return     A pointer to the first option of type @p type, or @c NULL if
+ * @return     A pointer to the first option of number @p number, or @c NULL if
  *             not found.
  */
-coap_opt_t *coap_check_option(coap_pdu_t *pdu,
-                              uint16_t type,
+coap_opt_t *coap_check_option(const coap_pdu_t *pdu,
+                              coap_option_num_t number,
                               coap_opt_iterator_t *oi);
 
 /**
@@ -332,6 +333,12 @@ typedef struct coap_optlist_t {
 
 /**
  * Create a new optlist entry.
+ *
+ * Note: Where possible, the option data needs to be stripped of leading zeros
+ * (big endian) to reduce the amount of data needed in the PDU, as well as in
+ * some cases the maximum data size of an opton can be exceeded if not stripped
+ * and hence be illegal.  This is done by using coap_encode_var_safe() or
+ * coap_encode_var_safe8().
  *
  * @param number    The option number (COAP_OPTION_*)
  * @param length    The option length

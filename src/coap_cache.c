@@ -87,7 +87,7 @@ coap_cache_derive_key(const coap_session_t *session,
     }
   }
   while ((option = coap_option_next(&opt_iter))) {
-    if (is_cache_key(session->context, opt_iter.type)) {
+    if (is_cache_key(session->context, opt_iter.number)) {
       if (!coap_digest_update(dctx, option, coap_opt_size(option))) {
         coap_digest_free(dctx);
         return NULL;
@@ -97,9 +97,9 @@ coap_cache_derive_key(const coap_session_t *session,
 
   /* The body of a FETCH payload is part of the cache key,
    * see https://tools.ietf.org/html/rfc8132#section-2 */
-  if (pdu->code == COAP_REQUEST_FETCH) {
+  if (pdu->code == COAP_REQUEST_CODE_FETCH) {
     size_t len;
-    uint8_t *data;
+    const uint8_t *data;
     if (coap_get_data(pdu, &len, &data)) {
       if (!coap_digest_update(dctx, data, len)) {
         coap_digest_free(dctx);

@@ -536,17 +536,17 @@ t_iterate_option3(void) {
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 1);
+  CU_ASSERT(oi.number == 1);
   CU_ASSERT_PTR_EQUAL(option, teststr + 3);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 1);
+  CU_ASSERT(oi.number == 1);
   CU_ASSERT_PTR_EQUAL(option, teststr + 7);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 30);
+  CU_ASSERT(oi.number == 30);
   CU_ASSERT_PTR_EQUAL(option, teststr + 8);
 
   option = coap_option_next(&oi);
@@ -579,17 +579,17 @@ t_iterate_option4(void) {
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 1);
+  CU_ASSERT(oi.number == 1);
   CU_ASSERT_PTR_EQUAL(option, teststr + 3);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 1);
+  CU_ASSERT(oi.number == 1);
   CU_ASSERT_PTR_EQUAL(option, teststr + 7);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 30);
+  CU_ASSERT(oi.number == 30);
   CU_ASSERT_PTR_EQUAL(option, teststr + 8);
 
   option = coap_option_next(&oi);
@@ -621,7 +621,7 @@ t_iterate_option5(void) {
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 5);
+  CU_ASSERT(oi.number == 5);
   CU_ASSERT_PTR_EQUAL(option, teststr);
 
   option = coap_option_next(&oi);
@@ -657,17 +657,17 @@ t_iterate_option6(void) {
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 10);
+  CU_ASSERT(oi.number == 10);
   CU_ASSERT_PTR_EQUAL(option, teststr + 1);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 10);
+  CU_ASSERT(oi.number == 10);
   CU_ASSERT_PTR_EQUAL(option, teststr + 2);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 10);
+  CU_ASSERT(oi.number == 10);
   CU_ASSERT_PTR_EQUAL(option, teststr + 3);
 
   option = coap_option_next(&oi);
@@ -704,17 +704,17 @@ t_iterate_option7(void) {
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 8);
+  CU_ASSERT(oi.number == 8);
   CU_ASSERT_PTR_EQUAL(option, teststr);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 22);
+  CU_ASSERT(oi.number == 22);
   CU_ASSERT_PTR_EQUAL(option, teststr + 4);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 22);
+  CU_ASSERT(oi.number == 22);
   CU_ASSERT_PTR_EQUAL(option, teststr + 5);
 
   option = coap_option_next(&oi);

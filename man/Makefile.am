@@ -31,6 +31,7 @@ TXT3 = coap_async.txt \
 	coap_keepalive.txt \
 	coap_logging.txt \
 	coap_observe.txt \
+	coap_pdu_access.txt \
 	coap_pdu_setup.txt \
 	coap_recovery.txt \
 	coap_resource.txt \
@@ -90,6 +91,15 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_context.3" > coap_context_get_csm_timeout.3
 	@echo ".so man3/coap_logging.3" > coap_endpoint_str.3
 	@echo ".so man3/coap_logging.3" > coap_session_str.3
+	@echo ".so man3/coap_pdu_access.3" > coap_option_filter_set.3
+	@echo ".so man3/coap_pdu_access.3" > coap_option_filter_unset.3
+	@echo ".so man3/coap_pdu_access.3" > coap_option_iterator_init.3
+	@echo ".so man3/coap_pdu_access.3" > coap_option_next.3
+	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_code.3
+	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_mid.3
+	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_token.3
+	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_type.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_delete_optlist.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe8.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_add_optlist_pdu.3
@@ -99,6 +109,9 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_setup.3" > coap_send.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_path.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_query.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_mid.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_code.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_type.3
 	@echo ".so man3/coap_resource.3" > coap_resource_get_userdata.3
 	@echo ".so man3/coap_resource.3" > coap_resource_release_userdata_handler.3
 	@echo ".so man3/coap_resource.3" > coap_resource_get_uri_path.3
