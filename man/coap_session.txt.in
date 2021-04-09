@@ -51,23 +51,17 @@ const coap_session_t *_session_);*
 *const coap_address_t *coap_session_get_addr_remote(
 const coap_session_t *_session_);*
 
-*coap_context_t *coap_session_get_context(
-const coap_session_t *_session_);*
+*coap_context_t *coap_session_get_context(const coap_session_t *_session_);*
 
-*int coap_session_get_ifindex(
-const coap_session_t *_session_);*
+*int coap_session_get_ifindex(const coap_session_t *_session_);*
 
-*coap_proto_t coap_session_get_proto(
-const coap_session_t *_session_);*
+*coap_proto_t coap_session_get_proto(const coap_session_t *_session_);*
 
-*coap_session_state_t coap_session_get_state(
-const coap_session_t *_session_);*
+*coap_session_state_t coap_session_get_state(const coap_session_t *_session_);*
 
-*void *coap_session_get_tls(
-const coap_session_t *_session_);*
+*void *coap_session_get_tls(const coap_session_t *_session_);*
 
-*coap_session_type_t coap_session_get_type(
-const coap_session_t *_session_);*
+*coap_session_type_t coap_session_get_type(const coap_session_t *_session_);*
 
 *const coap_bin_const_t *coap_session_get_psk_hint(
 const coap_session_t *_session_);*

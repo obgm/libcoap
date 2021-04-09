@@ -18,7 +18,7 @@ SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*void void coap_context_set_keepalive(coap_context_t *_context_,
+*void coap_context_set_keepalive(coap_context_t *_context_,
 unsigned int _seconds_);*
 
 For specific (D)TLS library support, link with
