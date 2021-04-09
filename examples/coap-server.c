@@ -916,9 +916,9 @@ remove_proxy_association(coap_session_t *session, int send_failure) {
 
 
 static coap_session_t *
-get_ongoing_proxy_session(coap_session_t *session, coap_pdu_t *response,
-                          coap_binary_t *token, coap_string_t *query,
-                          coap_uri_t *uri) {
+get_ongoing_proxy_session(coap_context_t *ctx, coap_session_t *session,
+                          coap_pdu_t *response, coap_binary_t *token,
+                          coap_string_t *query, coap_uri_t *uri) {
 
   coap_address_t dst;
   coap_uri_scheme_t scheme;
@@ -964,7 +964,7 @@ get_ongoing_proxy_session(coap_session_t *session, coap_pdu_t *response,
   case COAP_URI_SCHEME_COAP:
   case COAP_URI_SCHEME_COAP_TCP:
     new_proxy_list->ongoing =
-       coap_new_client_session(session->context, NULL, &dst,
+       coap_new_client_session(ctx, NULL, &dst,
                                scheme == COAP_URI_SCHEME_COAP ?
                                 COAP_PROTO_UDP : COAP_PROTO_TCP);
     break;
@@ -979,10 +979,10 @@ get_ongoing_proxy_session(coap_session_t *session, coap_pdu_t *response,
 
     if (!key_defined) {
       /* Use our defined PKI certs (or NULL)  */
-      coap_dtls_pki_t *dtls_pki = setup_pki(session->context,
-                                            COAP_DTLS_ROLE_CLIENT, client_sni);
+      coap_dtls_pki_t *dtls_pki = setup_pki(ctx, COAP_DTLS_ROLE_CLIENT,
+                                            client_sni);
       new_proxy_list->ongoing =
-           coap_new_client_session_pki(session->context, NULL, &dst,
+           coap_new_client_session_pki(ctx, NULL, &dst,
                  scheme == COAP_URI_SCHEME_COAPS ?
                   COAP_PROTO_DTLS : COAP_PROTO_TLS,
                  dtls_pki);
@@ -992,7 +992,7 @@ get_ongoing_proxy_session(coap_session_t *session, coap_pdu_t *response,
       coap_dtls_cpsk_t *dtls_cpsk = setup_cpsk(client_sni);
 
       new_proxy_list->ongoing =
-           coap_new_client_session_psk2(session->context, NULL, &dst,
+           coap_new_client_session_psk2(ctx, NULL, &dst,
                  scheme == COAP_URI_SCHEME_COAPS ?
                   COAP_PROTO_DTLS : COAP_PROTO_TLS,
                  dtls_cpsk);
@@ -1019,7 +1019,7 @@ release_proxy_body_data(coap_session_t *session COAP_UNUSED,
 }
 
 static void
-hnd_proxy_uri(coap_context_t *ctx COAP_UNUSED,
+hnd_proxy_uri(coap_context_t *ctx,
                 coap_resource_t *resource COAP_UNUSED,
                 coap_session_t *session,
                 coap_pdu_t *request,
@@ -1130,7 +1130,7 @@ hnd_proxy_uri(coap_context_t *ctx COAP_UNUSED,
 
     /* Send data on (opening session if appropriate) now that it is all in */
 
-    ongoing = get_ongoing_proxy_session(session, response, token,
+    ongoing = get_ongoing_proxy_session(ctx, session, response, token,
                                         query, &uri);
     /*
      * Build up the ongoing PDU that we are going to send
@@ -1617,7 +1617,7 @@ hnd_unknown_put(coap_context_t *ctx,
 static int
 proxy_event_handler(coap_context_t *ctx COAP_UNUSED,
               coap_event_t event,
-              struct coap_session_t *session) {
+              coap_session_t *session) {
 
   switch(event) {
   case COAP_EVENT_DTLS_CLOSED:
@@ -1990,17 +1990,19 @@ verify_id_callback(coap_bin_const_t *identity,
                    void *arg COAP_UNUSED
 ) {
   static coap_bin_const_t psk_key;
+  const coap_bin_const_t *s_psk_hint = coap_session_get_psk_hint(c_session);
+  const coap_bin_const_t *s_psk_key;
   size_t i;
 
   coap_log(LOG_INFO, "Identity '%.*s' requested, current hint '%.*s'\n", (int)identity->length,
            identity->s,
-           c_session->psk_hint ? (int)c_session->psk_hint->length : 0,
-           c_session->psk_hint ? (const char *)c_session->psk_hint->s : "");
+           s_psk_hint ? (int)s_psk_hint->length : 0,
+           s_psk_hint ? (const char *)s_psk_hint->s : "");
 
   for (i = 0; i < valid_ids.count; i++) {
     /* Check for hint match */
-    if (c_session->psk_hint &&
-        strcmp((const char *)c_session->psk_hint->s,
+    if (s_psk_hint &&
+        strcmp((const char *)s_psk_hint->s,
                valid_ids.id_list[i].hint_match)) {
       continue;
     }
@@ -2013,13 +2015,14 @@ verify_id_callback(coap_bin_const_t *identity,
     }
   }
 
-  if (c_session->psk_key) {
+  s_psk_key = coap_session_get_psk_key(c_session);
+  if (s_psk_key) {
     /* Been updated by SNI callback */
-    psk_key = *c_session->psk_key;
+    psk_key = *s_psk_key;
     return &psk_key;
   }
 
-  /* Just use the defined keys for now */
+  /* Just use the defined key for now */
   psk_key.s = key;
   psk_key.length = key_length;
   return &psk_key;

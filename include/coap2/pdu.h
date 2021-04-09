@@ -452,7 +452,7 @@ void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
  *
  * @return The skeletal PDU or @c NULL if failure.
  */
-coap_pdu_t *coap_new_pdu(const struct coap_session_t *session);
+coap_pdu_t *coap_new_pdu(const coap_session_t *session);
 
 /**
  * Dispose of an CoAP PDU and frees associated storage.
@@ -479,7 +479,7 @@ void coap_delete_pdu(coap_pdu_t *pdu);
  */
 coap_pdu_t *
 coap_pdu_duplicate(const coap_pdu_t *old_pdu,
-                   struct coap_session_t *session,
+                   coap_session_t *session,
                    size_t token_length,
                    uint8_t *token,
                    coap_opt_filter_t *drop_options);

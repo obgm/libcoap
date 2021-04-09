@@ -381,9 +381,9 @@ void coap_socket_close(coap_socket_t *sock) {
                   coap_socket_strerror(), errno);
       }
     }
-#endif /* COAP_EPOLL_SUPPORT */
     sock->endpoint = NULL;
     sock->session = NULL;
+#endif /* COAP_EPOLL_SUPPORT */
     coap_closesocket(sock->fd);
     sock->fd = COAP_INVALID_SOCKET;
   }

@@ -1013,7 +1013,7 @@ typedef struct id_def_t {
 } id_def_t;
 
 typedef struct valid_ids_t {
-  int count;
+  size_t count;
   id_def_t *id_list;
 } valid_ids_t;
 
@@ -1026,12 +1026,13 @@ verify_id_callback(coap_bin_const_t *identity,
                    void *arg
 ) {
   valid_ids_t *valid_id_list = (valid_ids_t*)arg;
-  int i;
+  const coap_bin_const_t *s_psk_hint = coap_session_get_psk_hint(c_session);
+  size_t i;
 
   /* Check that the Identity is valid */
   for (i = 0; i < valid_id_list->count; i++) {
-    if (c_session->psk_hint &&
-        strcmp((const char *)c_session->psk_hint->s,
+    if (s_psk_hint &&
+        strcmp((const char *)s_psk_hint->s,
                valid_id_list->id_list[i].hint_match)) {
       continue;
     }

@@ -209,7 +209,7 @@ void coap_block_delete_lg_xmit(coap_session_t *session,
  *
  * @return @c 1 if transmission initiation is successful, else @c 0.
  */
-int coap_add_data_large_internal(struct coap_session_t *session,
+int coap_add_data_large_internal(coap_session_t *session,
                         coap_pdu_t *pdu,
                         coap_resource_t *resource,
                         const coap_string_t *query,

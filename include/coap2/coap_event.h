@@ -61,7 +61,7 @@
  */
 typedef int (*coap_event_handler_t)(struct coap_context_t *,
                                     coap_event_t event,
-                                    struct coap_session_t *session);
+                                    coap_session_t *session);
 
 /**
  * Registers the function @p hnd as callback for events from the given

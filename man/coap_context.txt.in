@@ -65,6 +65,10 @@ Resources, Endpoints and Sessions are associated with this context object.
 There can be more than one coap_context_t object per application, it is up to
 the application to manage each one accordingly.
 
+A CoAP Session maintains the state of an ongoing connection between a Client
+and Server which is stored in a coap_session_t Session object. A CoAP session
+is tracked by local port, CoAP protocol, remote IP address and remote port.
+
 The Session network traffic can be encrypted or un-encrypted if there is an
 underlying TLS library.
 
@@ -155,6 +159,12 @@ COAP_PROTO_DTLS
 COAP_PROTO_TCP
 COAP_PROTO_TLS
 ----
+
+When traffic starts to come in from a client, a server CoAP Session is created
+associated with this endpoint. This CoAP Session is created with a reference
+count of 0. This means that if the server session is not used for 5 minutes,
+then it will get completely freed off.  See coap_session_reference(3) and
+coap_session_release(3) for further information.
 
 The *coap_free_endpoint*() function must be used to free off the _endpoint_.
 It clears out all the sessions associated with this endpoint.

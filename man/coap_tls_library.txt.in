@@ -13,6 +13,7 @@ NAME
 coap_tls_library,
 coap_dtls_is_supported,
 coap_tls_is_supported,
+coap_tcp_is_supported,
 coap_get_tls_library_version,
 coap_string_tls_version,
 coap_show_tls_version
@@ -25,6 +26,8 @@ SYNOPSIS
 *int coap_dtls_is_supported(void);*
 
 *int coap_tls_is_supported(void);*
+
+*int coap_tcp_is_supported(void);*
 
 *coap_tls_version_t *coap_get_tls_library_version(void);*
 
@@ -74,6 +77,9 @@ enabled, otherwise 0;
 The *coap_tls_is_supported*() function returns 1 if support for TLS is
 enabled, otherwise 0;
 
+The *coap_tcp_is_supported*() function returns 1 if support for TCP is
+enabled, otherwise 0.
+
 The *coap_get_tls_library_version*() function returns the TLS implementation
 type and library version in a coap_tls_version_t* structure.
 
@@ -112,6 +118,9 @@ return 0 if there is no support, 1 if support is available.
 
 *coap_get_tls_library_version*() function returns the TLS implementation type
 and library version in a coap_tls_version_t* structure.
+
+The *coap_tcp_is_supported*() function returns 1 if support for TCP is
+enabled, otherwise 0.
 
 *coap_string_tls_version*() function returns a pointer to the provided buffer.
 

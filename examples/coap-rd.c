@@ -315,7 +315,7 @@ parse_param(const uint8_t *search,
 
 static void
 add_source_address(coap_resource_t *resource,
-                   coap_address_t *peer) {
+                   const coap_address_t *peer) {
 #define BUFSIZE 64
   char *buf;
   size_t n = 1;
@@ -521,7 +521,7 @@ hnd_post_rd(coap_context_t  *ctx,
     }
   }
 
-  add_source_address(r, &session->addr_info.remote);
+  add_source_address(r, coap_session_get_addr_remote(session));
 
   {
     rd_t *rd;

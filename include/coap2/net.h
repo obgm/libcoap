@@ -408,10 +408,7 @@ int coap_context_get_coap_fd(coap_context_t *context);
  *
  * @return        Incremented message id in network byte order.
  */
-COAP_STATIC_INLINE uint16_t
-coap_new_message_id(coap_session_t *session) {
-  return ++session->tx_mid;
-}
+uint16_t coap_new_message_id(coap_session_t *session);
 
 /**
  * CoAP stack context must be released with coap_free_context(). This function
@@ -747,7 +744,20 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *groupname,
                            const char *ifname);
 
 #define coap_join_mcast_group(ctx, groupname) \
-	    (coap_join_mcast_group_intf(ctx, groupname, NULL))
+            (coap_join_mcast_group_intf(ctx, groupname, NULL))
+
+/**
+ * Function interface for defining the hop count (ttl) for sending
+ * multicast traffic
+ *
+ * @param session The current contexsion.
+ * @param hops    The number of hops (ttl) to use before the multicast
+ *                packet expires.
+ *
+ * @return       1 on success, 0 on error
+ */
+int
+coap_mcast_set_hops(coap_session_t *session, size_t hops);
 
 /**
  * @defgroup app_io Application I/O Handling

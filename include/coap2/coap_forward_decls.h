@@ -21,17 +21,11 @@
  * so that applications (using coap.h) as well as libcoap builds
  * can reference them (and makes .h file dependencies a lot simpler).
  */
-struct coap_cache_entry_t;
-struct coap_cache_key_t;
 struct coap_address_t;
 struct coap_bin_const_t;
-struct coap_context_t;
 struct coap_dtls_pki_t;
 struct coap_packet_t;
-struct coap_pdu_t;
 struct coap_queue_t;
-struct coap_resource_t;
-struct coap_session_t;
 struct coap_str_const_t;
 struct coap_string_t;
 
@@ -50,41 +44,42 @@ typedef struct coap_context_t coap_context_t;
 
 /* ************* coap_cache_internal.h ***************** */
 
-/**
- * Cache Entry information
+/*
+ * Cache Entry information.
  */
 typedef struct coap_cache_entry_t coap_cache_entry_t;
 typedef struct coap_cache_key_t coap_cache_key_t;
 
 /* ************* coap_block_internal.h ***************** */
 
-/**
-* Block handling information.
-*/
+/*
+ * Block handling information.
+ */
 typedef struct coap_lg_xmit_t coap_lg_xmit_t;
 typedef struct coap_lg_crcv_t coap_lg_crcv_t;
-
 typedef struct coap_lg_srcv_t coap_lg_srcv_t;
 
-/* ************* coap_cache_internal.h ***************** */
+/* ************* coap_resource_internal.h ***************** */
 
-/**
- * Resource information
+/*
+ * Resource information.
  */
 typedef struct coap_attr_t coap_attr_t;
 typedef struct coap_resource_t coap_resource_t;
 
 /* ************* coap_session_internal.h ***************** */
 
-/**
- * Abstraction of virtual endpoint that can be attached to coap_context_t.
+/*
+ * Session information.
  */
+typedef struct coap_addr_hash_t coap_addr_hash_t;
 typedef struct coap_endpoint_t coap_endpoint_t;
+typedef struct coap_session_t coap_session_t;
 
 /* ************* coap_subscribe_internal.h ***************** */
 
-/**
- * Subscriber information
+/*
+ * Observe subscriber information.
  */
 typedef struct coap_subscription_t coap_subscription_t;
 

@@ -3255,7 +3255,7 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
         break;
       default:
         break;
-      } 
+      }
     }
   }
 #endif /* ! _WIN32 */
@@ -3344,14 +3344,44 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
 
   return result;
 }
+
+int
+coap_mcast_set_hops(coap_session_t *session, size_t hops) {
+  if (session && coap_is_mcast(&session->addr_info.remote)) {
+    switch (session->addr_info.remote.addr.sa.sa_family) {
+    case AF_INET:
+      if (setsockopt(session->sock.fd, IPPROTO_IP, IP_MULTICAST_TTL,
+          (const char *)&hops, sizeof(hops)) < 0) {
+        coap_log(LOG_INFO, "coap_mcast_set_hops: %zu: setsockopt: %s\n",
+                 hops, coap_socket_strerror());
+        return 0;
+      }
+      return 1;
+    case AF_INET6:
+      if (setsockopt(session->sock.fd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
+          (const char *)&hops, sizeof(hops)) < 0) {
+        coap_log(LOG_INFO, "coap_mcast_set_hops: %zu: setsockopt: %s\n",
+                 hops, coap_socket_strerror());
+        return 0;
+      }
+      return 1;
+    default:
+      break;
+    }
+  }
+  return 0;
+}
 #else /* defined WITH_CONTIKI || defined WITH_LWIP */
 int
-coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
-                           const char *ifname) {
-  (void)ctx;
-  (void)group_name;
-  (void)ifname;
+coap_join_mcast_group_intf(coap_context_t *ctx COAP_UNUSED,
+                           const char *group_name COAP_UNUSED,
+                           const char *ifname COAP_UNUSED) {
   return -1;
+}
+int
+coap_mcast_set_hops(coap_session_t *session COAP_UNUSED,
+                    size_t hops COAP_UNUSED) {
+  return 0;
 }
 #endif /* defined WITH_CONTIKI || defined WITH_LWIP */
 
