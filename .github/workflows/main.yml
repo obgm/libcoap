@@ -151,7 +151,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y libtool libtool-bin exuberant-ctags graphviz doxygen libxml2-utils xsltproc docbook-xml docbook-xsl asciidoc
           ./autogen.sh
       - name: configure
-        run: ./configure --disable-tests --enable-documentation
+        run: ./configure --disable-tests --enable-documentation --prefix $GITHUB_WORKSPACE/test-install
       - name: manuals check
         run: |
           make -C man
@@ -161,6 +161,9 @@ jobs:
       - name: doxygen check
         run: |
           make -C doc
+      - name: installation check
+        run: |
+          make install && ls -lR $GITHUB_WORKSPACE/test-install
   distribution:
     runs-on: ubuntu-latest
     steps:
