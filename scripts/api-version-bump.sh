@@ -6,7 +6,12 @@ if ! test -f configure.ac; then
 fi
 
 declare $(sed -ne '/^LIBCOAP_API_VERSION=[0-9]\+/{p; q}' configure.ac)
-NEW_VERSION=${1:-$((LIBCOAP_API_VERSION + 1))}
+NEW_VERSION=${1:-$LIBCOAP_API_VERSION}
+
+if test "x$NEW_VERSION" = "x$LIBCOAP_API_VERSION"; then
+    >&2 echo "no version change requested, exiting (current version is $LIBCOAP_API_VERSION)"
+    exit 1
+fi
 
 echo $(basename $0): increase version $LIBCOAP_API_VERSION to $NEW_VERSION
 
