@@ -29,11 +29,14 @@ move libcoap-$LIBCOAP_API_VERSION.map libcoap-$NEW_VERSION.map
 move libcoap-$LIBCOAP_API_VERSION.sym libcoap-$NEW_VERSION.sym
 
 # sed pattern for include path prefix substitution
-pat='^\(#include ["<]coap\)'$LIBCOAP_API_VERSION/
+pat='\(#\s*include ["<]coap\)'$LIBCOAP_API_VERSION/
 
 find \( -name \*.h -o -name \*.c \) \
-     -exec grep -q '^#include ["<]coap'$LIBCOAP_API_VERSION/ {} \; -print | \
-    (while read fn ; do test -f ${fn}.in || sed -i "s,$pat,\1$NEW_VERSION/,"  $fn ; done )
+     -exec grep -q "^$pat" {} \; -print | \
+    (while read fn ; do test -f ${fn}.in || sed -i "s,^$pat,\1$NEW_VERSION/,"  $fn ; done )
+
+# examples-code-check.c generates new files with include statements
+sed -i "s,$pat,\1$NEW_VERSION/," man/examples-code-check.c
 
 # Adjust LIBCOAP_API_VERSION in CMakeLists.txt
 sed -i "s/^\(set(LIBCOAP_API_VERSION \+\)$LIBCOAP_API_VERSION\( *)\)/\1$NEW_VERSION\2/" CMakeLists.txt
@@ -41,5 +44,5 @@ sed -i "s/^\(set(LIBCOAP_API_VERSION \+\)$LIBCOAP_API_VERSION\( *)\)/\1$NEW_VERS
 # Adjust LibCoAPIncludeDir in win32/libcoap.props
 sed -i "s/\(<LibCoAPIncludeDir>include\\\coap\)$LIBCOAP_API_VERSION/\1$NEW_VERSION/" win32/libcoap.props
 
-# Finally, increase LIBCOAP_API_VERSION in configure.ac
-sed -i "s/^\(LIBCOAP_API_VERSION=\)$LIBCOAP_API_VERSION/\1$NEW_VERSION/" configure.ac
+# Finally, increase LIBCOAP_API_VERSION in configure.ac and re-run autoconf
+sed -i "s/^\(LIBCOAP_API_VERSION=\)$LIBCOAP_API_VERSION/\1$NEW_VERSION/" configure.ac && autoreconf
