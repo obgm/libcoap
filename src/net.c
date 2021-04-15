@@ -3199,6 +3199,14 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
         strncpy(ifr.ifr_name, ifname, IFNAMSIZ - 1);
         ifr.ifr_name[IFNAMSIZ - 1] = '\000';
 
+#ifdef HAVE_IF_NAMETOINDEX
+        mreq6.ipv6mr_interface = if_nametoindex(ifr.ifr_name);
+        if (mreq6.ipv6mr_interface == 0) {
+          coap_log(LOG_WARNING, "coap_join_mcast_group_intf: "
+                    "cannot get interface index for '%s'\n",
+                   ifname);
+        }
+#else /* !HAVE_IF_NAMETOINDEX */
         result = ioctl(ctx->endpoint->sock.fd, SIOCGIFINDEX, &ifr);
         if (result != 0) {
           coap_log(LOG_WARNING, "coap_join_mcast_group_intf: "
@@ -3209,6 +3217,7 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
           /* Capture the IPv6 if_index for later */
           mreq6.ipv6mr_interface = ifr.ifr_ifindex;
         }
+#endif /* !HAVE_IF_NAMETOINDEX */
 #endif /* !ESPIDF_VERSION */
         break;
       case AF_INET:
