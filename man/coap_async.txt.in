@@ -31,7 +31,7 @@ coap_session_t *_session_, coap_pdu_t *_request_, coap_tick_t _delay_);*
 *void coap_free_async(coap_context_t *_context_, coap_async_t *_async_);*
 
 *coap_async_t *coap_find_async(coap_context_t *_context_,
-coap_session_t *_session_, coap_mid_t _mid_);*
+coap_session_t *_session_, coap_binary_t _token_);*
 
 *void coap_async_set_app_data(coap_async_t *_async_, void *_app_data_);*
 
@@ -75,7 +75,7 @@ then when the response is ready at an indeterminate point in the future,
 The *coap_free_async*() function is used to delete an _async_ definition.
 
 The *coap_find_async*() function is used to determine if there is an async
-definition based on the _context_, _session_ and message id _mid_.
+definition based on the _context_, _session_ and token _token_.
 
 The *coap_async_set_app_data*() function is used to add in user defined
 _app_data_ to the _async_ definition.  It is the responsibility of the
@@ -115,11 +115,12 @@ hnd_get_with_delay(coap_context_t *context,
   unsigned long delay = 5;
   size_t size;
   coap_async_t *async;
+  coap_binary_t zero_token = {0, NULL};
 
   /*
    * See if this is the initial, or delayed request
    */
-  async = coap_find_async(context, session, request->mid);
+  async = coap_find_async(context, session, token ? *token : zero_token);
   if (!async) {
     /* Set up an async request to trigger delay in the future */
     if (query) {

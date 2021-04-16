@@ -77,20 +77,20 @@ void
 coap_free_async(coap_context_t *context, coap_async_t *async);
 
 /**
- * Retrieves the object identified by @p mid from the list of asynchronous
+ * Retrieves the object identified by @p token from the list of asynchronous
  * transactions that are registered with @p context. This function returns a
  * pointer to that object or @c NULL if not found.
  *
  * @param context The context where the asynchronous objects are registered
  *                with.
  * @param session The session that is used for asynchronous transmissions.
- * @param mid     The mid of the object to retrieve.
+ * @param token   The PDU's token of the object to retrieve.
  *
- * @return        A pointer to the object identified by @p mid or @c NULL if
+ * @return        A pointer to the object identified by @p token or @c NULL if
  *                not found.
  */
 coap_async_t *coap_find_async(coap_context_t *context,
-                                    coap_session_t *session, coap_mid_t mid);
+                              coap_session_t *session, coap_binary_t token);
 
 /**
  * Set the application data pointer held in @p async. This overwrites any

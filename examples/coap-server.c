@@ -366,11 +366,12 @@ hnd_get_async(coap_context_t *context,
   unsigned long delay = 5;
   size_t size;
   coap_async_t *async;
+  coap_binary_t zero_token = {0, NULL};
 
   /*
    * See if this is the initial, or delayed request
    */
-  async = coap_find_async(context, session, request->mid);
+  async = coap_find_async(context, session, token ? *token : zero_token);
   if (!async) {
     /* Set up an async request to trigger delay in the future */
     if (query) {

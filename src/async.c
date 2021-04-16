@@ -1,6 +1,6 @@
 /* async.c -- state management for asynchronous messages
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011,2021 Olaf Bergmann <bergmann@tzi.org>
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
@@ -16,13 +16,14 @@
 #ifndef WITHOUT_ASYNC
 
 /* utlist-style macros for searching pairs in linked lists */
-#define SEARCH_PAIR(head,out,field1,val1,field2,val2)   \
-  SEARCH_PAIR2(head,out,field1,val1,field2,val2,next)
+#define SEARCH_PAIR(head,out,field1,val1,field2,val2,field3,val3)   \
+  SEARCH_PAIR3(head,out,field1,val1,field2,val2,field3,val3,next)
 
-#define SEARCH_PAIR2(head,out,field1,val1,field2,val2,next)             \
+#define SEARCH_PAIR3(head,out,field1,val1,field2,val2,field3,val3,next) \
   do {                                                                  \
     LL_FOREACH2(head,out,next) {                                        \
-      if ((out)->field1 == (val1) && (out)->field2 == (val2)) break;    \
+      if ((out)->field1 == (val1) && (out)->field2 == (val2) &&         \
+          ((val2) == 0 || memcmp((out)->field3, (val3), (val2)) == 0)) break; \
     }                                                                   \
 } while(0)
 
@@ -37,7 +38,10 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
   if (!COAP_PDU_IS_REQUEST(request))
     return NULL;
 
-  SEARCH_PAIR(context->async_state,s,session,session,pdu->mid,mid);
+  SEARCH_PAIR(context->async_state, s,
+              session, session,
+              pdu->token_length, request->token_length,
+              pdu->token, request->token);
 
   if (s != NULL) {
     coap_log(LOG_DEBUG,
@@ -73,6 +77,8 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
     coap_ticks(&s->delay);
     s->delay += delay;
   }
+  coap_log(LOG_DEBUG, "   %s: Request for delayed for %lu ticks\n",
+           coap_session_str(session), delay);
 
   LL_PREPEND(context->async_state, s);
 
@@ -89,14 +95,19 @@ coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
   }
   else
     async->delay = 0;
+  coap_log(LOG_DEBUG, "   %s: Request for delayed for %lu ticks\n",
+           coap_session_str(async->session), delay);
 }
 
 
 coap_async_t *
 coap_find_async(coap_context_t *context, coap_session_t *session,
-                coap_mid_t mid) {
+                coap_binary_t token) {
   coap_async_t *tmp;
-  SEARCH_PAIR(context->async_state,tmp,session,session,pdu->mid,mid);
+  SEARCH_PAIR(context->async_state, tmp,
+              session, session,
+              pdu->token_length, token.length,
+              pdu->token, token.s);
   return tmp;
 }
 

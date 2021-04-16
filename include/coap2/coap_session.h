@@ -416,6 +416,15 @@ coap_session_t *coap_session_get_by_peer(const coap_context_t *ctx,
 #define COAP_DEFAULT_NSTART 1
 
   /**
+   * The maximum number of seconds before sending back a response to a
+   * multicast request.
+   * RFC 7252, Section 4.8 DEFAULT_LEISURE is 5.
+   */
+#ifndef COAP_DEFAULT_LEISURE
+#define COAP_DEFAULT_LEISURE (5U)
+#endif /* COAP_DEFAULT_LEISURE */
+
+  /**
    * The MAX_TRANSMIT_SPAN definition for the session (s).
    *
    * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_SPAN
