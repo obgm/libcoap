@@ -50,6 +50,7 @@
 #include "coap_async_internal.h"
 #include "coap_block_internal.h"
 #include "coap_cache_internal.h"
+#include "coap_dtls_internal.h"
 #include "coap_io_internal.h"
 #include "coap_net_internal.h"
 #include "coap_pdu_internal.h"
