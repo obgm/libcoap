@@ -146,18 +146,6 @@ typedef struct valid_pki_snis_t {
 
 static valid_pki_snis_t valid_pki_snis = {0, NULL};
 
-#ifndef WITHOUT_ASYNC
-/* This variable is used to mimic long-running tasks that require
- * asynchronous responses. */
-static coap_async_state_t *async = NULL;
-
-/* A typedef for transfering a value in a void pointer */
-typedef union {
-  unsigned int val;
-  void *ptr;
-} async_data_t;
-#endif /* WITHOUT_ASYNC */
-
 typedef struct transient_value_t {
   coap_binary_t *value;
   size_t ref_cnt;
@@ -363,89 +351,63 @@ hnd_delete_time(coap_context_t *ctx COAP_UNUSED,
 }
 
 #ifndef WITHOUT_ASYNC
+/*
+ * This logic is used to test out that the client correctly handles a
+ * "separate" response (empty ACK followed by data response at a later stage).
+ */
 static void
-hnd_get_async(coap_context_t *ctx,
-              coap_resource_t *resource COAP_UNUSED,
+hnd_get_async(coap_context_t *context,
+              coap_resource_t *resource,
               coap_session_t *session,
               coap_pdu_t *request,
-              coap_binary_t *token COAP_UNUSED,
-              coap_string_t *query COAP_UNUSED,
+              coap_binary_t *token,
+              coap_string_t *query,
               coap_pdu_t *response) {
   unsigned long delay = 5;
   size_t size;
-
-  if (async) {
-    if (async->id != request->mid) {
-      coap_opt_filter_t f;
-      coap_option_filter_clear(&f);
-      response->code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
-    }
-    return;
-  }
-
-  if (query) {
-    const uint8_t *p = query->s;
-
-    delay = 0;
-    for (size = query->length; size; --size, ++p)
-      delay = delay * 10 + (*p - '0');
-  }
+  coap_async_t *async;
 
   /*
-   * This is so we can use a local variable to hold the remaining time.
-   * The alternative is to malloc the variable and set COAP_ASYNC_RELEASE_DATA
-   * in the flags parameter in the call to coap_register_async() and handle
-   * the required time as appropriate in check_async() below.
+   * See if this is the initial, or delayed request
    */
-  async_data_t data;
-  data.val = COAP_TICKS_PER_SECOND * delay;
-  async = coap_register_async(ctx,
-                              session,
-                              request,
-                              COAP_ASYNC_SEPARATE | COAP_ASYNC_CONFIRM,
-                              data.ptr);
-}
+  async = coap_find_async(context, session, request->mid);
+  if (!async) {
+    /* Set up an async request to trigger delay in the future */
+    if (query) {
+      const uint8_t *p = query->s;
 
-static void
-check_async(coap_context_t *ctx,
-            coap_tick_t now) {
-  coap_pdu_t *response;
-  coap_async_state_t *tmp;
-  async_data_t data;
-
-  size_t size = 13;
-
-  if (!async)
-    return;
-
-  data.ptr = async->appdata;
-  if (now < async->created + data.val)
-    return;
-
-  response = coap_pdu_init(async->flags & COAP_ASYNC_CONFIRM
-             ? COAP_MESSAGE_CON
-             : COAP_MESSAGE_NON,
-             COAP_RESPONSE_CODE_CONTENT, 0, size);
-  if (!response) {
-    coap_log(LOG_DEBUG, "check_async: insufficient memory, we'll try later\n");
-    data.val = data.val + 15 * COAP_TICKS_PER_SECOND;
-    async->appdata = data.ptr;
+      delay = 0;
+      for (size = query->length; size; --size, ++p)
+        delay = delay * 10 + (*p - '0');
+      if (delay == 0) {
+        coap_log(LOG_INFO, "async: delay of 0 not supported\n");
+        response->code = COAP_RESPONSE_CODE_BAD_REQUEST;
+        return;
+      }
+    }
+    async = coap_register_async(context,
+                                session,
+                                request,
+                                COAP_TICKS_PER_SECOND * delay);
+    if (async == NULL) {
+      response->code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
+      return;
+    }
+    /*
+     * Not setting response code will cause empty ACK to be sent
+     * if Confirmable
+     */
     return;
   }
+  /* async set up, so this is the delayed request */
 
-  response->mid = coap_new_message_id(async->session);
+  /* Send back the appropriate data */
+  coap_add_data_large_response(resource, session, request, response, token,
+                               query, COAP_MEDIATYPE_TEXT_PLAIN, -1, 0, 4,
+                               (const uint8_t *)"done", NULL, NULL);
+  response->code = COAP_RESPONSE_CODE_CONTENT;
 
-  if (async->tokenlen)
-    coap_add_token(response, async->tokenlen, async->token);
-
-  coap_add_data(response, 4, (const uint8_t *)"done");
-
-  if (coap_send_large(async->session, response) == COAP_INVALID_MID) {
-    coap_log(LOG_DEBUG, "check_async: cannot send response for message\n");
-  }
-  coap_remove_async(ctx, async->session, async->id, &tmp);
-  coap_free_async(async);
-  async = NULL;
+  /* async is automatically removed by libcoap on return from this handler */
 }
 #endif /* WITHOUT_ASYNC */
 
@@ -2900,12 +2862,6 @@ main(int argc, char **argv) {
       if (next_sec_ms && next_sec_ms < wait_ms)
         wait_ms = next_sec_ms;
     }
-
-#ifndef WITHOUT_ASYNC
-    /* check if we have to send asynchronous responses */
-    coap_ticks( &now );
-    check_async(ctx, now);
-#endif /* WITHOUT_ASYNC */
   }
 
   coap_free(ca_mem);

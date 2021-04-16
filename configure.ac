@@ -820,6 +820,7 @@ examples/Makefile
 include/coap$LIBCOAP_API_VERSION/coap.h
 include/coap$LIBCOAP_API_VERSION/coap.h.windows
 man/coap.txt
+man/coap_async.txt
 man/coap_attribute.txt
 man/coap_block.txt
 man/coap_cache.txt

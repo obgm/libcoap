@@ -55,7 +55,7 @@ struct coap_context_t {
 #ifndef WITHOUT_ASYNC
   /**
    * list of asynchronous message ids */
-  struct coap_async_state_t *async_state;
+  coap_async_t *async_state;
 #endif /* WITHOUT_ASYNC */
 
   /**

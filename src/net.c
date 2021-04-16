@@ -2492,6 +2492,23 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   int skip_hop_limit_check = 0;
   int resp;
 
+#ifndef WITHOUT_ASYNC
+  /* Need to check for duplicate request in case of network issues */
+  if (!COAP_PROTO_RELIABLE(session->proto) && pdu->type == COAP_MESSAGE_CON) {
+    coap_async_t *async = coap_find_async(context, session, pdu->mid);
+
+    if (async) {
+      coap_tick_t now;
+
+      coap_ticks(&now);
+      if (async->delay == 0 || async->delay > now) {
+        /* re-transmit missing ACK */
+        coap_send_ack(session, pdu);
+      }
+    }
+  }
+#endif /* WITHOUT_ASYNC */
+
   coap_option_filter_clear(&opt_filter);
   opt = coap_check_option(pdu, COAP_OPTION_PROXY_SCHEME, &opt_iter);
   if (opt)
@@ -3144,6 +3161,28 @@ coap_can_exit(coap_context_t *context) {
   }
   return 1;
 }
+#ifndef WITHOUT_ASYNC
+coap_tick_t
+coap_check_async(coap_context_t *context, coap_tick_t now) {
+  coap_tick_t next_due = 0;
+  coap_async_t *async, *tmp;
+
+  LL_FOREACH_SAFE(context->async_state, async, tmp) {
+    if (async->delay <= now) {
+      /* Send off the request to the application */
+      handle_request(context, async->session, async->pdu);
+
+      /* Remove this async entry as it has now fired */
+      coap_free_async(context, async);
+    }
+    else {
+      if (next_due == 0 || next_due > async->delay - now)
+        next_due = async->delay - now;
+    }
+  }
+  return next_due;
+}
+#endif /* WITHOUT_ASYNC */
 
 static int coap_started = 0;
 

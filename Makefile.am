@@ -28,6 +28,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_riot.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_asn1_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_async_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_block_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_cache_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_net_internal.h \
@@ -164,6 +165,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_LDFLAGS =					\
 ## libcoap-$(LIBCOAP_API_VERSION).{map,sym} for the linker.
 CTAGS_IGNORE=-I " \
 coap_delete_all_async \
+coap_delete_all \
 coap_dtls_context_check_keys_enabled \
 coap_dtls_context_set_pki \
 coap_dtls_context_set_pki_root_cas \

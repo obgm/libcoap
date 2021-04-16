@@ -13,6 +13,9 @@ coap_address_get_port
 coap_address_init
 coap_address_set_port
 coap_add_token
+coap_async_get_app_data
+coap_async_set_app_data
+coap_async_set_delay
 coap_attr_get_value
 coap_block_build_body
 coap_cache_derive_key
@@ -155,7 +158,6 @@ coap_register_option
 coap_register_ping_handler
 coap_register_pong_handler
 coap_register_response_handler
-coap_remove_async
 coap_resize_binary
 coap_resource_get_uri_path
 coap_resource_get_userdata
