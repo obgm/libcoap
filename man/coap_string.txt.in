@@ -39,7 +39,7 @@ SYNOPSIS
 
 *coap_str_const_t *coap_make_str_const(const char *_string_);*
 
-*int coap_string_equal(coap_string_t _string1_, coap_string_t _string2_);*
+*int coap_string_equal(coap_string_t *_string1_, coap_string_t *_string2_);*
 
 *coap_binary_t *coap_new_binary(size_t _size_);*
 
@@ -51,7 +51,7 @@ SYNOPSIS
 
 *void coap_delete_bin_const(coap_bin_const_t *_binary_);*
 
-*int coap_binary_equal(coap_binary_t _binary1_, coap_binary_t _binary2_);*
+*int coap_binary_equal(coap_binary_t *_binary1_, coap_binary_t *_binary2_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,

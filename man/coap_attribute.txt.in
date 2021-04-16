@@ -19,11 +19,11 @@ SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*coap_attr_t *coap_add_attr(coap_resource_t *_resource_, coap_str_const_t
-*_name_, coap_str_const_t *_value_, int _flags_);*
+*coap_attr_t *coap_add_attr(coap_resource_t *_resource_,
+coap_str_const_t *_name_, coap_str_const_t *_value_, int _flags_);*
 
-*coap_attr_t *coap_find_attr(coap_resource_t *_resource_, coap_str_const_t
-*_name_);*
+*coap_attr_t *coap_find_attr(coap_resource_t *_resource_,
+coap_str_const_t *_name_);*
 
 *coap_str_const_t *coap_attr_get_value(coap_attr_t *_attribute_);*
 

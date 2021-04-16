@@ -33,12 +33,13 @@ coap_fixed_point_t _value_)*;
 *void coap_session_set_ack_random_factor(coap_session_t *_session_,
 coap_fixed_point_t _value_)*;
 
-*unsigned int coap_session_get_max_transmit(coap_session_t *_session_)*;
+*unsigned int coap_session_get_max_transmit(const coap_session_t *_session_)*;
 
-*coap_fixed_point_t coap_session_get_ack_timeout(coap_session_t *_session_)*;
+*coap_fixed_point_t coap_session_get_ack_timeout(
+const coap_session_t *_session_)*;
 
-*coap_fixed_point_t coap_session_get_ack_random_factor(coap_session_t
-*_session_)*;
+*coap_fixed_point_t coap_session_get_ack_random_factor(
+const coap_session_t *_session_)*;
 
 *int coap_debug_set_packet_loss(const char *_loss_level_)*;
 
