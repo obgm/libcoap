@@ -897,7 +897,7 @@ coap_session_accept(coap_session_t *session) {
 }
 
 coap_session_t *coap_new_client_session(
-  struct coap_context_t *ctx,
+  coap_context_t *ctx,
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto
@@ -912,7 +912,7 @@ coap_session_t *coap_new_client_session(
 }
 
 coap_session_t *coap_new_client_session_psk(
-  struct coap_context_t *ctx,
+  coap_context_t *ctx,
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto,
@@ -939,7 +939,7 @@ coap_session_t *coap_new_client_session_psk(
 }
 
 coap_session_t *coap_new_client_session_psk2(
-  struct coap_context_t *ctx,
+  coap_context_t *ctx,
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto,
@@ -1066,7 +1066,7 @@ coap_session_get_psk_key(const coap_session_t *session) {
 }
 
 coap_session_t *coap_new_client_session_pki(
-  struct coap_context_t *ctx,
+  coap_context_t *ctx,
   const coap_address_t *local_if,
   const coap_address_t *server,
   coap_proto_t proto,
@@ -1105,7 +1105,7 @@ coap_session_t *coap_new_client_session_pki(
 }
 
 coap_session_t *coap_new_server_session(
-  struct coap_context_t *ctx,
+  coap_context_t *ctx,
   coap_endpoint_t *ep
 ) {
   coap_session_t *session;

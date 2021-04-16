@@ -92,7 +92,7 @@ init_coap() {
 }
 
 void
-message_handler(struct coap_context_t  *ctx,
+message_handler(coap_context_t  *ctx,
                 const coap_address_t *remote,
                 coap_pdu_t *sent,
                 coap_pdu_t *received,

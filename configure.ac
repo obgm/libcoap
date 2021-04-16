@@ -826,6 +826,7 @@ man/coap_cache.txt
 man/coap_context.txt
 man/coap_encryption.txt
 man/coap_endpoint_client.txt
+man/coap_endpoint_server.txt
 man/coap_handler.txt
 man/coap_io.txt
 man/coap_keepalive.txt

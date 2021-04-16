@@ -14,18 +14,18 @@
  * consistent in the naming.
  */
 void
-coap_register_event_handler(struct coap_context_t *context,
+coap_register_event_handler(coap_context_t *context,
                             coap_event_handler_t hnd) {
   context->handle_event = hnd;
 }
 
 void
-coap_set_event_handler(struct coap_context_t *context,
+coap_set_event_handler(coap_context_t *context,
                        coap_event_handler_t hnd) {
   context->handle_event = hnd;
 }
 
 void
-coap_clear_event_handler(struct coap_context_t *context) {
+coap_clear_event_handler(coap_context_t *context) {
   context->handle_event = NULL;
 }

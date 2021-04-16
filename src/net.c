@@ -446,7 +446,51 @@ void coap_context_set_keepalive(coap_context_t *context, unsigned int seconds) {
   context->ping_timeout = seconds;
 }
 
-int coap_context_get_coap_fd(coap_context_t *context) {
+void
+coap_context_set_max_idle_sessions(coap_context_t *context,
+                                   unsigned int max_idle_sessions) {
+  context->max_idle_sessions = max_idle_sessions;
+}
+
+unsigned int
+coap_context_get_max_idle_sessions(const coap_context_t *context) {
+  return context->max_idle_sessions;
+}
+
+void
+coap_context_set_max_handshake_sessions(coap_context_t *context,
+                                        unsigned int max_handshake_sessions) {
+  context->max_handshake_sessions = max_handshake_sessions;
+}
+
+unsigned int
+coap_context_get_max_handshake_sessions(const coap_context_t *context) {
+  return context->max_handshake_sessions;
+}
+
+void
+coap_context_set_csm_timeout(coap_context_t *context,
+                             unsigned int csm_timeout) {
+  context->csm_timeout = csm_timeout;
+}
+
+unsigned int
+coap_context_get_csm_timeout(const coap_context_t *context) {
+  return context->csm_timeout;
+}
+
+void
+coap_context_set_session_timeout(coap_context_t *context,
+                                   unsigned int session_timeout) {
+  context->session_timeout = session_timeout;
+}
+
+unsigned int
+coap_context_get_session_timeout(const coap_context_t *context) {
+  return context->session_timeout;
+}
+
+int coap_context_get_coap_fd(const coap_context_t *context) {
 #ifdef COAP_EPOLL_SUPPORT
   return context->epfd;
 #else /* ! COAP_EPOLL_SUPPORT */
@@ -3128,6 +3172,35 @@ void coap_cleanup(void) {
   WSACleanup();
 #endif
   coap_dtls_shutdown();
+}
+
+void
+coap_register_response_handler(coap_context_t *context,
+                               coap_response_handler_t handler) {
+  context->response_handler = handler;
+}
+
+void
+coap_register_nack_handler(coap_context_t *context,
+                           coap_nack_handler_t handler) {
+  context->nack_handler = handler;
+}
+
+void
+coap_register_ping_handler(coap_context_t *context,
+                           coap_ping_handler_t handler) {
+  context->ping_handler = handler;
+}
+
+void
+coap_register_pong_handler(coap_context_t *context,
+                           coap_pong_handler_t handler) {
+  context->pong_handler = handler;
+}
+
+void
+coap_register_option(coap_context_t *ctx, uint16_t type) {
+  coap_option_filter_set(&ctx->known_options, type);
 }
 
 #if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION

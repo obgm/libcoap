@@ -49,6 +49,7 @@
 #include "coap_asn1_internal.h"
 #include "coap_block_internal.h"
 #include "coap_cache_internal.h"
+#include "coap_net_internal.h"
 #include "coap_session_internal.h"
 #include "coap_resource_internal.h"
 #include "coap_subscribe_internal.h"

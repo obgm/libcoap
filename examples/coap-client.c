@@ -312,7 +312,7 @@ nack_handler(coap_context_t *context COAP_UNUSED,
  * Response handler used for coap_send_large() responses
  */
 static coap_response_t
-message_handler(struct coap_context_t *ctx COAP_UNUSED,
+message_handler(coap_context_t *ctx COAP_UNUSED,
                 coap_session_t *session COAP_UNUSED,
                 coap_pdu_t *sent,
                 coap_pdu_t *received,

@@ -424,7 +424,7 @@ static dtls_handler_t psk_cb = {
 };
 
 void *
-coap_dtls_new_context(struct coap_context_t *coap_context) {
+coap_dtls_new_context(coap_context_t *coap_context) {
   coap_tiny_context_t *t_context = coap_malloc(sizeof(coap_tiny_context_t));
   struct dtls_context_t *dtls_context = t_context ? dtls_new_context(t_context) : NULL;
   if (!dtls_context)
@@ -1120,7 +1120,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
 }
 
 int
-coap_dtls_context_set_pki_root_cas(struct coap_context_t *ctx COAP_UNUSED,
+coap_dtls_context_set_pki_root_cas(coap_context_t *ctx COAP_UNUSED,
   const char *ca_file COAP_UNUSED,
   const char *ca_path COAP_UNUSED
 ) {

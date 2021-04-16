@@ -25,7 +25,6 @@ struct coap_address_t;
 struct coap_bin_const_t;
 struct coap_dtls_pki_t;
 struct coap_packet_t;
-struct coap_queue_t;
 struct coap_str_const_t;
 struct coap_string_t;
 
@@ -36,7 +35,6 @@ struct coap_string_t;
  *
  */
 typedef struct coap_pdu_t coap_pdu_t;
-typedef struct coap_context_t coap_context_t;
 
 /*
  * typedef all the opaque structures that are defined in coap_*_internal.h
@@ -58,6 +56,14 @@ typedef struct coap_cache_key_t coap_cache_key_t;
 typedef struct coap_lg_xmit_t coap_lg_xmit_t;
 typedef struct coap_lg_crcv_t coap_lg_crcv_t;
 typedef struct coap_lg_srcv_t coap_lg_srcv_t;
+
+/* ************* coap_net_internal.h ***************** */
+
+/*
+ * Net information.
+ */
+typedef struct coap_context_t coap_context_t;
+typedef struct coap_queue_t coap_queue_t;
 
 /* ************* coap_resource_internal.h ***************** */
 
