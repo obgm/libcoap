@@ -341,5 +341,7 @@ coap_pdu_t *coap_wellknown_response(coap_context_t *context,
  */
 unsigned int coap_calc_timeout(coap_session_t *session, unsigned char r);
 
+/** @} */
+
 #endif /* COAP_NET_INTERNAL_H_ */
 
