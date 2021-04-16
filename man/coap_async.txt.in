@@ -64,9 +64,13 @@ application request handler will get called with a copy of _request_ after
 _delay_ ticks which will then cause a response to be sent.  If _delay_ is 0,
 then the application request handler will not get called.
 
-The coap_async_set_delay*() function is used to update the reamining _delay_
+The *coap_async_set_delay*() function is used to update the remaining _delay_
 before the application request handler is called for the _async_ definition. If
 _delay_ is set to 0, then the application request handler will not get called.
+
+An example of usage here is *coap_register_async*() sets _delay_ to 0, and
+then when the response is ready at an indeterminate point in the future,
+*coap_async_set_delay*() is called setting _delay_ to 1.
 
 The *coap_free_async*() function is used to delete an _async_ definition.
 
