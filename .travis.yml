@@ -41,17 +41,17 @@ jobs:
       env: PLATFORM=contiki TLS=no
       before_script:
       script:
-        - docker run -e CC -e PLATFORM -e TLS obgm/libcoap:travis-env /bin/sh -c "scripts/build.sh"
+        - docker run --privileged -e CC -e PLATFORM -e TLS obgm/libcoap:travis-env /bin/sh -c "scripts/build.sh"
     - stage: other platforms
       env: PLATFORM=lwip TLS=no
       before_script:
       script:
-        - docker run -e CC -e PLATFORM -e TLS obgm/libcoap:travis-env /bin/sh -c "scripts/build.sh"
+        - docker run --privileged -e CC -e PLATFORM -e TLS obgm/libcoap:travis-env /bin/sh -c "scripts/build.sh"
     - stage: dist
       env: PLATFORM=posix TESTS=yes TLS=no DOCS=yes
       before_script:
       script:
-        - docker run -e CC -e PLATFORM -e TESTS -e DOCS -e TLS obgm/libcoap:travis-env /bin/sh -c "scripts/dist.sh"
+        - docker run --privileged -e CC -e PLATFORM -e TESTS -e DOCS -e TLS obgm/libcoap:travis-env /bin/sh -c "scripts/dist.sh"
 
 # Docker disables IPv6 in containers by default, so re-enable it.
 before_script:
@@ -67,4 +67,4 @@ before_script:
   # Paranoia log: what if our config got overwritten?
   - sudo cat /etc/docker/daemon.json
 script:
-  - docker run -e CC -e PLATFORM -e TESTS -e DOCS -e TLS -e EPOLL -e SMALL_STACK obgm/libcoap:travis-env /bin/sh -c "scripts/build.sh"
+  - docker run --privileged -e CC -e PLATFORM -e TESTS -e DOCS -e TLS -e EPOLL -e SMALL_STACK obgm/libcoap:travis-env /bin/sh -c "scripts/build.sh"
