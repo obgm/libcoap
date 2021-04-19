@@ -207,7 +207,7 @@ void coap_session_mfree(coap_session_t *session) {
   }
   LL_FOREACH_SAFE(session->delayqueue, q, tmp) {
     if (q->pdu->type==COAP_MESSAGE_CON && session->context && session->context->nack_handler)
-      session->context->nack_handler(session->context, session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);
+      session->context->nack_handler(session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);
     coap_delete_node(q);
   }
   LL_FOREACH_SAFE(session->lg_xmit, lq, ltmp) {
@@ -496,8 +496,7 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
       /* Make sure that we try a re-transmit later on ICMP error */
       if (coap_wait_ack(session->context, session, q) >= 0) {
         if (session->context->nack_handler) {
-          session->context->nack_handler(session->context, session, q->pdu,
-                                         reason, q->id);
+          session->context->nack_handler(session, q->pdu, reason, q->id);
         }
         q = NULL;
       }
@@ -505,8 +504,7 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     if (q && q->pdu->type == COAP_MESSAGE_CON
       && session->context->nack_handler)
     {
-      session->context->nack_handler(session->context, session, q->pdu,
-                                     reason, q->id);
+      session->context->nack_handler(session, q->pdu, reason, q->id);
     }
     if (q)
       coap_delete_node(q);
@@ -518,8 +516,7 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     coap_queue_t *q = session->context->sendqueue;
     while (q) {
       if (q->session == session) {
-        session->context->nack_handler(session->context, session, q->pdu,
-                                       reason, q->id);
+        session->context->nack_handler(session, q->pdu, reason, q->id);
       }
       q = q->next;
     }

@@ -41,60 +41,52 @@ typedef enum coap_response_t {
 /**
  * Response handler that is used as callback in coap_context_t.
  *
- * @param context CoAP session.
  * @param session CoAP session.
  * @param sent The PDU that was transmitted.
  * @param received The PDU that was received.
- * @param id CoAP transaction ID.
+ * @param mid CoAP transaction ID.
 
  * @return @c COAP_RESPONSE_OK if successful, else @c COAP_RESPONSE_FAIL which
  *         triggers sending a RST packet.
  */
-typedef coap_response_t (*coap_response_handler_t)(coap_context_t *context,
-                                                   coap_session_t *session,
-                                                   coap_pdu_t *sent,
-                                                   coap_pdu_t *received,
-                                                   const coap_mid_t id);
+typedef coap_response_t (*coap_response_handler_t)(coap_session_t *session,
+                                                   const coap_pdu_t *sent,
+                                                   const coap_pdu_t *received,
+                                                   const coap_mid_t mid);
 
 /**
  * Negative Acknowedge handler that is used as callback in coap_context_t.
  *
- * @param context CoAP session.
  * @param session CoAP session.
  * @param sent The PDU that was transmitted.
  * @param reason The reason for the NACK.
  * @param id CoAP message ID.
  */
-typedef void (*coap_nack_handler_t)(coap_context_t *context,
-                                    coap_session_t *session,
-                                    coap_pdu_t *sent,
-                                    coap_nack_reason_t reason,
+typedef void (*coap_nack_handler_t)(coap_session_t *session,
+                                    const coap_pdu_t *sent,
+                                    const coap_nack_reason_t reason,
                                     const coap_mid_t id);
 
 /**
  * Received Ping handler that is used as callback in coap_context_t.
  *
- * @param context CoAP session.
  * @param session CoAP session.
  * @param received The PDU that was received.
  * @param id CoAP message ID.
  */
-typedef void (*coap_ping_handler_t)(coap_context_t *context,
-                                    coap_session_t *session,
-                                    coap_pdu_t *received,
+typedef void (*coap_ping_handler_t)(coap_session_t *session,
+                                    const coap_pdu_t *received,
                                     const coap_mid_t id);
 
 /**
  * Received Pong handler that is used as callback in coap_context_t.
  *
- * @param context CoAP session.
  * @param session CoAP session.
  * @param received The PDU that was received.
  * @param id CoAP message ID.
  */
-typedef void (*coap_pong_handler_t)(coap_context_t *context,
-                                    coap_session_t *session,
-                                    coap_pdu_t *received,
+typedef void (*coap_pong_handler_t)(coap_session_t *session,
+                                    const coap_pdu_t *received,
                                     const coap_mid_t id);
 
 /**

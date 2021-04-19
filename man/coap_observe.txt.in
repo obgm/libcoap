@@ -139,15 +139,14 @@ coap_resource_t *time_resource = NULL;
 /* specific GET "time" handler, called from hnd_get_generic() */
 
 static void
-hnd_get_time(coap_context_t *context, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_get_time(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
   unsigned char buf[40];
   size_t len;
   time_t now;
-  /* Remove (void) definition if variable is used */
-  (void)context;
+  (void)resource;
+  (void)session;
 
   /* ... Additional analysis code for resource, request pdu etc.  ... */
 
@@ -184,18 +183,15 @@ coap_string_t *query, coap_pdu_t *response) {
    * SIZE2 Option added internally
    * ETAG Option added internally
    */
-  coap_add_data_blocked_response(resource, session, request, response, token,
-                                 COAP_MEDIATYPE_TEXT_PLAIN, 1,
-                                 len,
-                                 buf);
+  coap_add_data_blocked_response(request, response, COAP_MEDIATYPE_TEXT_PLAIN,
+                                 1, len, buf);
 }
 
 /* Generic GET handler */
 
 static void
-hnd_get_generic(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_get_generic(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
   coap_str_const_t *uri_path = coap_resource_get_uri_path(resource);
 
@@ -207,8 +203,7 @@ coap_string_t *query, coap_pdu_t *response) {
 
   /* Is this the "time" resource" ? */
   if (coap_string_equal(uri_path, coap_make_str_const("time"))) {
-    hnd_get_time(ctx, resource, session, request, token, query,
-                 response);
+    hnd_get_time(resource, session, request, query, response);
     return;
   }
 

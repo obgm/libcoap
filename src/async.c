@@ -33,8 +33,8 @@ coap_async_is_supported(void) {
 }
 
 coap_async_t *
-coap_register_async(coap_context_t *context, coap_session_t *session,
-                    coap_pdu_t *request, coap_tick_t delay) {
+coap_register_async(coap_session_t *session,
+                    const coap_pdu_t *request, coap_tick_t delay) {
   coap_async_t *s;
   coap_mid_t mid = request->mid;
   size_t len;
@@ -43,7 +43,7 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
   if (!COAP_PDU_IS_REQUEST(request))
     return NULL;
 
-  SEARCH_PAIR(context->async_state, s,
+  SEARCH_PAIR(session->context->async_state, s,
               session, session,
               pdu->token_length, request->token_length,
               pdu->token, request->token);
@@ -66,7 +66,7 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
   s->pdu = coap_pdu_duplicate(request, session, request->token_length,
                               request->token, NULL);
   if (s->pdu == NULL) {
-    coap_free_async(context, s);
+    coap_free_async(session, s);
     coap_log(LOG_CRIT, "coap_register_async: insufficient memory\n");
     return NULL;
   }
@@ -80,7 +80,7 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
 
   coap_async_set_delay(s, delay);
 
-  LL_PREPEND(context->async_state, s);
+  LL_PREPEND(session->context->async_state, s);
 
   return s;
 }
@@ -104,18 +104,17 @@ coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
 
 
 coap_async_t *
-coap_find_async(coap_context_t *context, coap_session_t *session,
-                coap_binary_t token) {
+coap_find_async(coap_session_t *session, coap_bin_const_t token) {
   coap_async_t *tmp;
-  SEARCH_PAIR(context->async_state, tmp,
+  SEARCH_PAIR(session->context->async_state, tmp,
               session, session,
               pdu->token_length, token.length,
               pdu->token, token.s);
   return tmp;
 }
 
-void
-coap_free_async(coap_context_t *context, coap_async_t *s) {
+static void
+coap_free_async_sub(coap_context_t *context, coap_async_t *s) {
   if (s) {
     LL_DELETE(context->async_state,s);
     if (s->session) {
@@ -130,11 +129,16 @@ coap_free_async(coap_context_t *context, coap_async_t *s) {
 }
 
 void
+coap_free_async(coap_session_t *session, coap_async_t *s) {
+  coap_free_async_sub(session->context, s);
+}
+
+void
 coap_delete_all_async(coap_context_t *context) {
   coap_async_t *astate, *tmp;
 
   LL_FOREACH_SAFE(context->async_state, astate, tmp) {
-    coap_free_async(context, astate);
+    coap_free_async_sub(context, astate);
   }
   context->async_state = NULL;
 }
@@ -183,7 +187,7 @@ coap_free_async(coap_context_t *context, coap_async_t *async) {
 coap_async_t *
 coap_find_async(coap_context_t *context,
                 coap_session_t *session,
-                coap_binary_t token) {
+                coap_bin_const_t token) {
   (void)context;
   (void)session;
   (void)token;

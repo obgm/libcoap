@@ -32,7 +32,8 @@ coap_opt_block_num(const coap_opt_t *block_opt) {
 }
 
 int
-coap_get_block(coap_pdu_t *pdu, coap_option_num_t number, coap_block_t *block) {
+coap_get_block(const coap_pdu_t *pdu, coap_option_num_t number,
+               coap_block_t *block) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
 
@@ -111,10 +112,10 @@ coap_write_block_opt(coap_block_t *block, coap_option_num_t number,
   }
 
   /* to re-encode the block option */
-  coap_add_option(pdu, number, coap_encode_var_safe(buf, sizeof(buf),
-                                                    ((block->num << 4) |
-                                                    (block->m << 3) |
-                                                    block->szx)),
+  coap_insert_option(pdu, number, coap_encode_var_safe(buf, sizeof(buf),
+                                                       ((block->num << 4) |
+                                                       (block->m << 3) |
+                                                       block->szx)),
                   buf);
 
   return 1;
@@ -138,11 +139,8 @@ coap_add_block(coap_pdu_t *pdu, size_t len, const uint8_t *data,
  * Note that the COAP_OPTION_ have to be added in the correct order
  */
 void
-coap_add_data_blocked_response(coap_resource_t *resource,
-                       coap_session_t *session,
-                       coap_pdu_t *request,
+coap_add_data_blocked_response(const coap_pdu_t *request,
                        coap_pdu_t *response,
-                       const coap_binary_t *token,
                        uint16_t media_type,
                        int maxage,
                        size_t length,
@@ -152,8 +150,6 @@ coap_add_data_blocked_response(coap_resource_t *resource,
   unsigned char buf[4];
   coap_block_t block2 = { 0, 0, 0 };
   int block2_requested = 0;
-  coap_subscription_t *subscription = coap_find_observer(resource,
-                                                         session, token);
 
   /*
    * Need to check that a valid block is getting asked for so that the
@@ -171,11 +167,6 @@ coap_add_data_blocked_response(coap_resource_t *resource,
       }
     }
   }
-  else if (subscription && subscription->has_block2) {
-    block2 = subscription->block;
-    block2.num = 0;
-    block2_requested = 1;
-  }
   response->code = COAP_RESPONSE_CODE(205);
 
   /* add etag for the resource */
@@ -183,20 +174,13 @@ coap_add_data_blocked_response(coap_resource_t *resource,
   coap_hash(data, length, etag);
   coap_add_option(response, COAP_OPTION_ETAG, sizeof(etag), etag);
 
-  if ((block2.num == 0) && subscription) {
-    coap_add_option(response, COAP_OPTION_OBSERVE,
-                    coap_encode_var_safe(buf, sizeof (buf),
-                                         resource->observe),
-                    buf);
-  }
-
-  coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
+  coap_insert_option(response, COAP_OPTION_CONTENT_FORMAT,
                   coap_encode_var_safe(buf, sizeof(buf),
                                        media_type),
                   buf);
 
   if (maxage >= 0) {
-    coap_add_option(response,
+    coap_insert_option(response,
                     COAP_OPTION_MAXAGE,
                     coap_encode_var_safe(buf, sizeof(buf), maxage), buf);
   }
@@ -639,9 +623,8 @@ coap_add_data_large_request(coap_session_t *session,
 int
 coap_add_data_large_response(coap_resource_t *resource,
                              coap_session_t *session,
-                             coap_pdu_t *request,
+                             const coap_pdu_t *request,
                              coap_pdu_t *response,
-                             const coap_binary_t *token,
                              const coap_string_t *query,
                              uint16_t media_type,
                              int maxage,
@@ -654,8 +637,6 @@ coap_add_data_large_response(coap_resource_t *resource,
   unsigned char buf[4];
   coap_block_t block = { 0, 0, 0 };
   int block_requested = 0;
-  coap_subscription_t *subscription = coap_find_observer(resource, session,
-                                                         token);
   uint16_t block_opt = COAP_OPTION_BLOCK2;
 
   /*
@@ -674,29 +655,16 @@ coap_add_data_large_response(coap_resource_t *resource,
       }
     }
   }
-  else if (subscription && subscription->has_block2) {
-    block = subscription->block;
-    block.num = 0;
-    block_requested = 1;
-    block_opt = COAP_OPTION_BLOCK2;
-  }
 
-  if ((block.num == 0) && subscription) {
-    coap_add_option(response, COAP_OPTION_OBSERVE,
-                    coap_encode_var_safe(buf, sizeof (buf),
-                                         resource->observe),
-                    buf);
-  }
-
-  coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
-                  coap_encode_var_safe(buf, sizeof(buf),
-                                       media_type),
-                  buf);
+  coap_insert_option(response, COAP_OPTION_CONTENT_TYPE,
+                     coap_encode_var_safe(buf, sizeof(buf),
+                                          media_type),
+                     buf);
 
   if (maxage >= 0) {
-    coap_add_option(response,
-                    COAP_OPTION_MAXAGE,
-                    coap_encode_var_safe(buf, sizeof(buf), maxage), buf);
+    coap_insert_option(response,
+                       COAP_OPTION_MAXAGE,
+                       coap_encode_var_safe(buf, sizeof(buf), maxage), buf);
   }
 
   if (block_requested) {
@@ -1244,7 +1212,6 @@ coap_handle_request_put_block(coap_context_t *context,
                               coap_resource_t *resource,
                               coap_string_t *uri_path,
                               coap_opt_t *observe,
-                              coap_binary_t *token,
                               coap_string_t *query,
                               coap_method_handler_t h,
                               int *added_block) {
@@ -1389,7 +1356,7 @@ coap_handle_request_put_block(coap_context_t *context,
         coap_log(LOG_DEBUG, "Server app vesion of updated PDU\n");
         coap_show_pdu(LOG_DEBUG, pdu);
         /* Need to do this here as we need to free off p */
-        h(context, resource, session, pdu, token, query, response);
+        h(resource, session, pdu, query, response);
         /* Check if lg_xmit generated and update PDU code if so */
         coap_check_code_lg_xmit(session, response, resource, query);
         /* Last chunk - free off shortly */
@@ -1414,7 +1381,7 @@ coap_handle_request_put_block(coap_context_t *context,
                              (block.m << 3) |
                              block.szx),
                            buf);
-          h(context, resource, session, pdu, token, query, response);
+          h(resource, session, pdu, query, response);
           /* Check if lg_xmit generated and update PDU code if so */
           coap_check_code_lg_xmit(session, response, resource, query);
           if (COAP_RESPONSE_CLASS(response->code) == 2) {
@@ -1852,8 +1819,7 @@ coap_handle_response_get_block(coap_context_t *context,
               coap_log(LOG_DEBUG, "Client app vesion of updated PDU\n");
               coap_show_pdu(LOG_DEBUG, rcvd);
             }
-            context->response_handler(context, session, sent, rcvd,
-                                      rcvd->mid);
+            context->response_handler(session, sent, rcvd, rcvd->mid);
           }
           app_has_response = 1;
           /* Set up for the next data body if observing */
@@ -1890,8 +1856,7 @@ block_mode:
           if (context->response_handler) {
             coap_log(LOG_DEBUG, "Client app vesion of updated PDU\n");
             coap_show_pdu(LOG_DEBUG, rcvd);
-            context->response_handler(context, session, sent, rcvd,
-                                        rcvd->mid);
+            context->response_handler(session, sent, rcvd, rcvd->mid);
           }
           app_has_response = 1;
         }

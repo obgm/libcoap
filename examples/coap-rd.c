@@ -111,12 +111,10 @@ handle_sigint(int signum COAP_UNUSED) {
 }
 
 static void
-hnd_get_resource(coap_context_t  *ctx COAP_UNUSED,
-                 coap_resource_t *resource,
+hnd_get_resource(coap_resource_t *resource,
                  coap_session_t *session COAP_UNUSED,
-                 coap_pdu_t *request COAP_UNUSED,
-                 coap_binary_t *token COAP_UNUSED,
-                 coap_string_t *query COAP_UNUSED,
+                 const coap_pdu_t *request COAP_UNUSED,
+                 const coap_string_t *query COAP_UNUSED,
                  coap_pdu_t *response) {
   rd_t *rd = NULL;
   unsigned char buf[3];
@@ -141,12 +139,10 @@ hnd_get_resource(coap_context_t  *ctx COAP_UNUSED,
 }
 
 static void
-hnd_put_resource(coap_context_t  *ctx COAP_UNUSED,
-                 coap_resource_t *resource COAP_UNUSED,
+hnd_put_resource(coap_resource_t *resource COAP_UNUSED,
                  coap_session_t *session COAP_UNUSED,
-                 coap_pdu_t *request COAP_UNUSED,
-                 coap_binary_t *token COAP_UNUSED,
-                 coap_string_t *query COAP_UNUSED,
+                 const coap_pdu_t *request COAP_UNUSED,
+                 const coap_string_t *query COAP_UNUSED,
                  coap_pdu_t *response) {
 #if 1
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_IMPLEMENTED);
@@ -220,12 +216,10 @@ hnd_put_resource(coap_context_t  *ctx COAP_UNUSED,
 }
 
 static void
-hnd_delete_resource(coap_context_t  *ctx,
-                    coap_resource_t *resource,
+hnd_delete_resource(coap_resource_t *resource,
                     coap_session_t *session COAP_UNUSED,
-                    coap_pdu_t *request COAP_UNUSED,
-                    coap_binary_t *token COAP_UNUSED,
-                    coap_string_t *query COAP_UNUSED,
+                    const coap_pdu_t *request COAP_UNUSED,
+                    const coap_string_t *query COAP_UNUSED,
                     coap_pdu_t *response) {
   rd_t *rd = NULL;
   coap_str_const_t* uri_path = coap_resource_get_uri_path(resource);
@@ -238,18 +232,16 @@ hnd_delete_resource(coap_context_t  *ctx,
   }
   /* FIXME: link attributes for resource have been created dynamically
    * using coap_malloc() and must be released. */
-  coap_delete_resource(ctx, resource);
+  coap_delete_resource(coap_session_get_context(session), resource);
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
 
 static void
-hnd_get_rd(coap_context_t  *ctx COAP_UNUSED,
-           coap_resource_t *resource COAP_UNUSED,
+hnd_get_rd(coap_resource_t *resource COAP_UNUSED,
            coap_session_t *session COAP_UNUSED,
-           coap_pdu_t *request COAP_UNUSED,
-           coap_binary_t *token COAP_UNUSED,
-           coap_string_t *query COAP_UNUSED,
+           const coap_pdu_t *request COAP_UNUSED,
+           const coap_string_t *query COAP_UNUSED,
            coap_pdu_t *response) {
   unsigned char buf[3];
 
@@ -376,7 +368,7 @@ add_source_address(coap_resource_t *resource,
 }
 
 static rd_t *
-make_rd(coap_pdu_t *pdu) {
+make_rd(const coap_pdu_t *pdu) {
   rd_t *rd;
   const uint8_t *data;
   coap_opt_iterator_t opt_iter;
@@ -409,12 +401,10 @@ make_rd(coap_pdu_t *pdu) {
 }
 
 static void
-hnd_post_rd(coap_context_t  *ctx,
-            coap_resource_t *resource COAP_UNUSED,
+hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
             coap_session_t *session,
-            coap_pdu_t *request,
-            coap_binary_t *token COAP_UNUSED,
-            coap_string_t *query COAP_UNUSED,
+            const coap_pdu_t *request,
+            const coap_string_t *query COAP_UNUSED,
             coap_pdu_t *response) {
   coap_resource_t *r;
 #define LOCSIZE 68
@@ -535,7 +525,7 @@ hnd_post_rd(coap_context_t  *ctx,
     }
   }
 
-  coap_add_resource(ctx, r);
+  coap_add_resource(coap_session_get_context(session), r);
 
 
   /* create response */

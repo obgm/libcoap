@@ -208,21 +208,16 @@ EXAMPLES
 #include <stdio.h>
 
 static void
-hnd_get_time(coap_context_t *context, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_get_time(coap_resource_t *resource, coap_session_t *session,
+coap_pdu_t *request, coap_string_t *query, coap_pdu_t *response) {
 
   unsigned char buf[40];
   size_t len;
   time_t now;
-  /* Remove (void) definition if variable is used */
-  (void)context;
 
   /* ... Additional analysis code for resource, request pdu etc.  ... */
 
   /* After analysis, generate a suitable response */
-
-  /* Note that token, if set, is already in the response pdu */
 
   now = time(NULL);
 
@@ -252,7 +247,7 @@ coap_string_t *query, coap_pdu_t *response) {
    * BLOCK2 Option added internally if output too large
    * ETAG Option added internally
    */
-  coap_add_data_large_response(resource, session, request, response, token,
+  coap_add_data_large_response(resource, session, request, response,
                                query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
                                len,
                                buf, NULL, 0);

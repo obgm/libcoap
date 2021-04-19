@@ -26,14 +26,14 @@ SYNOPSIS
 *void coap_context_set_block_mode(coap_context_t *_context_,
 uint8_t _block_mode_);*
 
-*int coap_add_data_large_request(coap_session_t *_session_, coap_pdu_t *_pdu_,
-size_t _length_, const uint8_t *_data_,
+*int coap_add_data_large_request(coap_session_t *_session_,
+coap_pdu_t *_pdu_, size_t _length_, const uint8_t *_data_,
 coap_release_large_data_t _release_func_, void *_app_ptr_);*
 
 *int coap_add_data_large_response(coap_resource_t *_resource_,
-coap_session_t *_session_, coap_pdu_t *_request_, coap_pdu_t *_response_,
-const coap_binary_t *_token_, const coap_string_t *query, uint16_t _media_type_,
-int _maxage_, uint64_t etag, size_t _length_, const uint8_t *_data_,
+coap_session_t *_session_, const coap_pdu_t *_request_, coap_pdu_t *_response_,
+const coap_string_t *query, uint16_t _media_type_, int _maxage_,
+uint64_t etag, size_t _length_, const uint8_t *_data_,
 coap_release_large_data_t _release_func_, void *_app_ptr_);*
 
 *int coap_get_data_large(const coap_pdu_t *_pdu_, size_t *_length,
@@ -143,7 +143,7 @@ _length_ to the PDU _pdu_. _release_func_ (if not NULL) and _app_ptr_ are
 used for releasing the data when the body transfer is complete.  It also adds
 in the appropriate CoAP options such as BLOCK2, SIZE2 and ETAG to handle
 Block-Wise transfer if the data does not fit into a single PDU.
-_resource_, _query_, _session_, _request_, _response_ and _token_ are the same
+_resource_, _query_, _session_, _request_, and _response_ are the same
 parameters as in the called resource handler that invokes
 *coap_add_data_large_response*(). If _etag_ is 0, then a unique ETag value will
 be generated, else is the ETag value to use.
@@ -333,19 +333,14 @@ int main(int argc, char *argv[]) {
 #include <stdio.h>
 
 static void
-hnd_get_time(coap_context_t *context, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_get_time(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
   unsigned char buf[40];
   size_t len;
   time_t now;
-  /* Remove (void) definition if variable is used */
-  (void)context;
 
   /* Note that request may be NULL if triggered by an observe response */
-
-  /* Note that token is already in the response pdu */
 
   /* ... Additional analysis code for resource, request pdu etc.  ... */
 
@@ -381,7 +376,7 @@ coap_string_t *query, coap_pdu_t *response) {
    * SIZE2 Option added internally
    * ETAG Option added internally
    */
-  coap_add_data_large_response(resource, session, request, response, token,
+  coap_add_data_large_response(resource, session, request, response,
                                query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
                                len,
                                buf,

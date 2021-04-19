@@ -849,6 +849,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
   coap_subscription_t *obs;
   coap_binary_t token;
   coap_pdu_t *response;
+  uint8_t buf[4];
 
   if (r->observable && (r->dirty || r->partiallydirty)) {
     r->partiallydirty = 0;
@@ -910,11 +911,24 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       switch (deleting) {
       case COAP_NOT_DELETING_RESOURCE:
         /* fill with observer-specific data */
+        coap_add_option(response, COAP_OPTION_OBSERVE,
+                        coap_encode_var_safe(buf, sizeof (buf),
+                                             r->observe),
+                        buf);
+        if (obs->has_block2) {
+          /* Will get updated later (e.g. M bit) if appropriate */
+          coap_add_option(response, COAP_OPTION_BLOCK2,
+                          coap_encode_var_safe(buf, sizeof(buf),
+                                               ((0 << 4) |
+                                                (0 << 3) |
+                                                obs->block.szx)),
+                          buf);
+        }
 
         h = r->handler[obs->code - 1];
         assert(h);      /* we do not allow subscriptions if no
                          * GET/FETCH handler is defined */
-        h(context, r, obs->session, NULL, &token, obs->query, response);
+        h(r, obs->session, NULL, obs->query, response);
         /* Check if lg_xmit generated and update PDU code if so */
         coap_check_code_lg_xmit(obs->session, response, r, obs->query);
         if (COAP_RESPONSE_CLASS(response->code) > 2) {

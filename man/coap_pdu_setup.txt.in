@@ -73,10 +73,9 @@ const uint8_t *_data_);*
 
 *int coap_add_data(coap_pdu_t *_pdu_, size_t _length_, const uint8_t *_data_);*
 
-*void coap_add_data_blocked_response(coap_resource_t *_resource_,
-coap_session_t *_session_, coap_pdu_t *_request_, coap_pdu_t *_response_,
-const coap_binary_t *_token_, uint16_t _media_type_, int _maxage_,
-size_t _length_, const uint8_t *_data_);*
+*void coap_add_data_blocked_response(const coap_pdu_t *_request_,
+coap_pdu_t *_response_, uint16_t _media_type_, int _maxage_, size_t _length_,
+const uint8_t *_data_);*
 
 *coap_mid_t coap_send(coap_session_t *_session_, coap_pdu_t *_pdu_);*
 
@@ -361,9 +360,8 @@ of the payload _data_ of length _length_ to the PDU _pdu_. It should be used
 as a direct replacement for *coap_add_data*() if it is possible that the data
 will not fit into a single pdu. It also adds in the appropriate
 CoAP options to handle Block-Wise transfer. This function is usually used for
-a server's GET / FETCH response.  The _resource_, _session_, _request_,
-_response_ and _token_ are the same parameters for the registered GET / FETCH
-resource handler.
+a server's GET / FETCH response.  The _request_ and _response_ are the same
+parameters for the registered GET / FETCH resource handler.
 The _media_type_ is for the format of the _data_ and _maxage_ defines the
 lifetime of the response.  If set to -1,  then the MAXAGE option does not get
 included.  This function must only be called once per _pdu_.
@@ -512,21 +510,18 @@ error:
 #include <stdio.h>
 
 static void
-hnd_get_time(coap_context_t *context, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_get_time(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
   unsigned char buf[40];
   size_t len;
   time_t now;
-  /* Remove (void) definition if variable is used */
-  (void)context;
+  (void)resource;
+  (void)session;
 
   /* ... Additional analysis code for resource, request pdu etc.  ... */
 
   /* After analysis, generate a suitable response */
-
-  /* Note that token is already in the response pdu */
 
   now = time(NULL);
 
@@ -557,10 +552,8 @@ coap_string_t *query, coap_pdu_t *response) {
    * SIZE2 Option added internally
    * ETAG Option added internally
    */
-  coap_add_data_blocked_response(resource, session, request, response, token,
-                                 COAP_MEDIATYPE_TEXT_PLAIN, 1,
-                                 len,
-                                 buf);
+  coap_add_data_blocked_response(request, response, COAP_MEDIATYPE_TEXT_PLAIN,
+                                 1, len, buf);
 
 }
 ----

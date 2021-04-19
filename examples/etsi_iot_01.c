@@ -90,11 +90,9 @@ coap_free_userdata(void *data) {
 
 #if 0
 static void
-hnd_get_index(coap_context_t *ctx COAP_UNUSED,
-              coap_resource_t *resource COAP_UNUSED,
+hnd_get_index(coap_resource_t *resource COAP_UNUSED,
               coap_session_t *session COAP_UNUSED,
               coap_pdu_t *request COAP_UNUSED,
-              coap_binary_t *token COAP_UNUSED,
               coap_string_t *query COAP_UNUSED,
               coap_pdu_t *response) {
   unsigned char buf[3];
@@ -114,12 +112,10 @@ hnd_get_index(coap_context_t *ctx COAP_UNUSED,
 #endif
 
 static void
-hnd_get_resource(coap_context_t *ctx COAP_UNUSED,
-                 coap_resource_t *resource,
+hnd_get_resource(coap_resource_t *resource,
                  coap_session_t *session COAP_UNUSED,
-                 coap_pdu_t *request,
-                 coap_binary_t *token COAP_UNUSED,
-                 coap_string_t *query COAP_UNUSED,
+                 const coap_pdu_t *request,
+                 const coap_string_t *query COAP_UNUSED,
                  coap_pdu_t *response) {
   coap_payload_t *test_payload;
 
@@ -132,7 +128,7 @@ hnd_get_resource(coap_context_t *ctx COAP_UNUSED,
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
-  coap_add_data_blocked_response(resource, session, request, response, token,
+  coap_add_data_blocked_response(request, response,
                                  test_payload->media_type, -1,
                                  test_payload->length,
                                  test_payload->data);
@@ -141,12 +137,10 @@ hnd_get_resource(coap_context_t *ctx COAP_UNUSED,
 
 /* DELETE handler for dynamic resources created by POST /test */
 static void
-hnd_delete_resource(coap_context_t *ctx,
-                    coap_resource_t *resource,
+hnd_delete_resource(coap_resource_t *resource,
                     coap_session_t *session COAP_UNUSED,
-                    coap_pdu_t *request COAP_UNUSED,
-                    coap_binary_t *token COAP_UNUSED,
-                    coap_string_t *query COAP_UNUSED,
+                    const coap_pdu_t *request COAP_UNUSED,
+                    const coap_string_t *query COAP_UNUSED,
                     coap_pdu_t *response) {
   coap_payload_t *payload;
 
@@ -155,18 +149,16 @@ hnd_delete_resource(coap_context_t *ctx,
   if (payload)
     coap_delete_payload(resource);
 
-  coap_delete_resource(ctx, resource);
+  coap_delete_resource(coap_session_get_context(session), resource);
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
 
 static void
-hnd_post_test(coap_context_t *ctx,
-              coap_resource_t *resource COAP_UNUSED,
+hnd_post_test(coap_resource_t *resource COAP_UNUSED,
               coap_session_t *session COAP_UNUSED,
-              coap_pdu_t *request,
-              coap_binary_t *token COAP_UNUSED,
-              coap_string_t *query COAP_UNUSED,
+              const coap_pdu_t *request,
+              const coap_string_t *query COAP_UNUSED,
               coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
@@ -210,7 +202,7 @@ hnd_post_test(coap_context_t *ctx,
         coap_decode_var_bytes(coap_opt_value(option), coap_opt_length(option));
     }
 
-    coap_add_resource(ctx, r);
+    coap_add_resource(coap_session_get_context(session), r);
     coap_add_payload(r, test_payload);
 
     /* add Location-Path */
@@ -229,12 +221,10 @@ hnd_post_test(coap_context_t *ctx,
 }
 
 static void
-hnd_put_test(coap_context_t *ctx COAP_UNUSED,
-             coap_resource_t *resource,
+hnd_put_test(coap_resource_t *resource,
              coap_session_t *session COAP_UNUSED,
-             coap_pdu_t *request,
-             coap_binary_t *token COAP_UNUSED,
-             coap_string_t *query COAP_UNUSED,
+             const coap_pdu_t *request,
+             const coap_string_t *query COAP_UNUSED,
              coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
@@ -284,12 +274,10 @@ hnd_put_test(coap_context_t *ctx COAP_UNUSED,
 }
 
 static void
-hnd_delete_test(coap_context_t *ctx COAP_UNUSED,
-                coap_resource_t *resource COAP_UNUSED,
+hnd_delete_test(coap_resource_t *resource COAP_UNUSED,
                 coap_session_t *session COAP_UNUSED,
-                coap_pdu_t *request COAP_UNUSED,
-                coap_binary_t *token COAP_UNUSED,
-                coap_string_t *query COAP_UNUSED,
+                const coap_pdu_t *request COAP_UNUSED,
+                const coap_string_t *query COAP_UNUSED,
                 coap_pdu_t *response) {
   /* the ETSI validation tool does not like empty resources... */
 #if 0
@@ -304,12 +292,10 @@ hnd_delete_test(coap_context_t *ctx COAP_UNUSED,
 }
 
 static void
-hnd_get_query(coap_context_t *ctx COAP_UNUSED,
-              coap_resource_t *resource COAP_UNUSED,
+hnd_get_query(coap_resource_t *resource COAP_UNUSED,
               coap_session_t *session COAP_UNUSED,
-              coap_pdu_t *request,
-              coap_binary_t *token COAP_UNUSED,
-              coap_string_t *query COAP_UNUSED,
+              const coap_pdu_t *request,
+              const coap_string_t *query COAP_UNUSED,
               coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   coap_opt_filter_t f;
@@ -348,60 +334,61 @@ hnd_get_query(coap_context_t *ctx COAP_UNUSED,
 
 /* handler for TD_COAP_CORE_16 */
 static void
-hnd_get_separate(coap_context_t *ctx,
-                 coap_resource_t *resource COAP_UNUSED,
+hnd_get_separate(coap_resource_t *resource COAP_UNUSED,
                  coap_session_t *session,
-                 coap_pdu_t *request,
-                 coap_binary_t *token COAP_UNUSED,
-                 coap_string_t *query COAP_UNUSED,
+                 const coap_pdu_t *request,
+                 const coap_string_t *query COAP_UNUSED,
                  coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
   coap_opt_filter_t f;
   unsigned long delay = 5;
-  coap_async_t *async;
-  coap_binary_t zero_token = {0, NULL};
 
-  async = coap_find_async(ctx, session, token ? *token : zero_token);
-  if (!async) {
-    /* Set up an async request to trigger delay in the future */
+  if (request) {
+    coap_async_t *async;
+    coap_bin_const_t token = coap_pdu_get_token(request);
 
-    /* search for option delay in query list */
-    coap_option_filter_clear(&f);
-    coap_option_filter_set(&f, COAP_OPTION_URI_QUERY);
+    async = coap_find_async(session, token);
 
-    coap_option_iterator_init(request, &opt_iter, &f);
+    if (!async) {
+      /* Set up an async request to trigger delay in the future */
 
-    while ((option = coap_option_next(&opt_iter))) {
-      if (strncmp("delay=", (const char *)coap_opt_value(option), 6) == 0) {
-        unsigned int i;
-        unsigned long d = 0;
+      /* search for option delay in query list */
+      coap_option_filter_clear(&f);
+      coap_option_filter_set(&f, COAP_OPTION_URI_QUERY);
 
-        for (i = 6; i < coap_opt_length(option); ++i)
-          d = d * 10 + coap_opt_value(option)[i] - '0';
+      coap_option_iterator_init(request, &opt_iter, &f);
 
-        /* don't allow delay to be less than COAP_RESOURCE_CHECK_TIME*/
-        delay = d < COAP_RESOURCE_CHECK_TIME_SEC
-          ? COAP_RESOURCE_CHECK_TIME_SEC
-          : d;
-        coap_log(LOG_DEBUG, "set delay to %lu\n", delay);
-        break;
+      while ((option = coap_option_next(&opt_iter))) {
+        if (strncmp("delay=", (const char *)coap_opt_value(option), 6) == 0) {
+          unsigned int i;
+          unsigned long d = 0;
+
+          for (i = 6; i < coap_opt_length(option); ++i)
+            d = d * 10 + coap_opt_value(option)[i] - '0';
+
+          /* don't allow delay to be less than COAP_RESOURCE_CHECK_TIME*/
+          delay = d < COAP_RESOURCE_CHECK_TIME_SEC
+            ? COAP_RESOURCE_CHECK_TIME_SEC
+            : d;
+          coap_log(LOG_DEBUG, "set delay to %lu\n", delay);
+          break;
+        }
       }
-    }
-    async = coap_register_async(ctx,
-                                session,
-                                request,
-                                COAP_TICKS_PER_SECOND * delay);
-    if (async == NULL) {
-      coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
+      async = coap_register_async(session,
+                                  request,
+                                  COAP_TICKS_PER_SECOND * delay);
+      if (async == NULL) {
+        coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
+        return;
+      }
+      /* Not setting response code will cause empty ACK to be sent
+         if Confirmable */
       return;
     }
-    /* Not setting response code will cause empty ACK to be sent
-       if Confirmable */
-    return;
   }
 
-  /* This is the delayed response.  Send back the appropriate data */
+  /* no request (observe) or async set up, so this is the delayed request */
   coap_add_data(response, 4, (const uint8_t *)"done");
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
