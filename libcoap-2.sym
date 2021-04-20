@@ -14,6 +14,7 @@ coap_address_init
 coap_address_set_port
 coap_add_token
 coap_async_get_app_data
+coap_async_is_supported
 coap_async_set_app_data
 coap_async_set_delay
 coap_attr_get_value

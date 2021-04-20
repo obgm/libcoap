@@ -350,7 +350,6 @@ hnd_delete_time(coap_context_t *ctx COAP_UNUSED,
   /*   ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON; */
 }
 
-#ifndef WITHOUT_ASYNC
 /*
  * This logic is used to test out that the client correctly handles a
  * "separate" response (empty ACK followed by data response at a later stage).
@@ -410,7 +409,6 @@ hnd_get_async(coap_context_t *context,
 
   /* async is automatically removed by libcoap on return from this handler */
 }
-#endif /* WITHOUT_ASYNC */
 
 /*
  * Large Data GET handler
@@ -1773,13 +1771,15 @@ init_resources(coap_context_t *ctx) {
     r = coap_resource_unknown_init(hnd_unknown_put);
     coap_add_resource(ctx, r);
   }
-#ifndef WITHOUT_ASYNC
-  r = coap_resource_init(coap_make_str_const("async"), 0);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
 
-  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
-  coap_add_resource(ctx, r);
-#endif /* WITHOUT_ASYNC */
+  if (coap_async_is_supported()) {
+    r = coap_resource_init(coap_make_str_const("async"), 0);
+    coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
+
+    coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+    coap_add_resource(ctx, r);
+  }
+
   r = coap_resource_init(coap_make_str_const("example_data"), 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_example_data);
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_example_data);

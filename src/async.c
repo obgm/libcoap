@@ -27,6 +27,11 @@
     }                                                                   \
 } while(0)
 
+int
+coap_async_is_supported(void) {
+  return 1;
+}
+
 coap_async_t *
 coap_register_async(coap_context_t *context, coap_session_t *session,
                     coap_pdu_t *request, coap_tick_t delay) {
@@ -147,5 +152,56 @@ coap_async_get_app_data(const coap_async_t *async) {
 }
 
 #else
-void does_not_exist(void);        /* make some compilers happy */
+
+int
+coap_async_is_supported(void) {
+  return 0;
+}
+
+coap_async_t *
+coap_register_async(coap_context_t *context,
+                    coap_session_t *session,
+                    coap_pdu_t *request,
+                    coap_tick_t delay) {
+  (void)context;
+  (void)session;
+  (void)request;
+  (void)delay;
+  return NULL;
+}
+
+void
+coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
+  (void)async;
+  (void)delay;
+}
+
+void
+coap_free_async(coap_context_t *context, coap_async_t *async) {
+  (void)context;
+  (void)async;
+}
+
+coap_async_t *
+coap_find_async(coap_context_t *context,
+                coap_session_t *session,
+                coap_binary_t token) {
+  (void)context;
+  (void)session;
+  (void)token;
+  return NULL;
+}
+
+void
+coap_async_set_app_data(coap_async_t *async, void *app_data) {
+  (void)async;
+  (void)app_data;
+}
+
+void *
+coap_async_get_app_data(const coap_async_t *async) {
+  (void)async;
+  return NULL;
+}
+
 #endif /* WITHOUT_ASYNC */

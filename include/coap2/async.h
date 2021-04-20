@@ -17,8 +17,6 @@
 
 #include "net.h"
 
-#ifndef WITHOUT_ASYNC
-
 /**
  * @defgroup coap_async Asynchronous Messaging
  * @{
@@ -27,6 +25,12 @@
  * be used to generate a separate response in the case a result of a request
  * cannot be delivered immediately.
  */
+
+/**
+ * Returns @c 1 if libcoap was built with separate messages enabled,
+ * @c 0 otherwise.
+ */
+int coap_async_is_supported(void);
 
 /**
  * Allocates a new coap_async_t object and fills its fields according to
@@ -111,7 +115,5 @@ void coap_async_set_app_data(coap_async_t *async, void *app_data);
 void *coap_async_get_app_data(const coap_async_t *async);
 
 /** @} */
-
-#endif /*  WITHOUT_ASYNC */
 
 #endif /* COAP_ASYNC_H_ */
