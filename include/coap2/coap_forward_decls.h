@@ -24,7 +24,6 @@
 struct coap_address_t;
 struct coap_bin_const_t;
 struct coap_dtls_pki_t;
-struct coap_packet_t;
 struct coap_str_const_t;
 struct coap_string_t;
 
@@ -47,14 +46,6 @@ typedef struct coap_pdu_t coap_pdu_t;
  */
 typedef struct coap_async_t coap_async_t;
 
-/* ************* coap_cache_internal.h ***************** */
-
-/*
- * Cache Entry information.
- */
-typedef struct coap_cache_entry_t coap_cache_entry_t;
-typedef struct coap_cache_key_t coap_cache_key_t;
-
 /* ************* coap_block_internal.h ***************** */
 
 /*
@@ -63,6 +54,22 @@ typedef struct coap_cache_key_t coap_cache_key_t;
 typedef struct coap_lg_xmit_t coap_lg_xmit_t;
 typedef struct coap_lg_crcv_t coap_lg_crcv_t;
 typedef struct coap_lg_srcv_t coap_lg_srcv_t;
+
+/* ************* coap_cache_internal.h ***************** */
+
+/*
+ * Cache Entry information.
+ */
+typedef struct coap_cache_entry_t coap_cache_entry_t;
+typedef struct coap_cache_key_t coap_cache_key_t;
+
+/* ************* coap_io_internal.h ***************** */
+
+/**
+ * coap_socket_t and coap_packet_t information.
+ */
+typedef struct coap_packet_t coap_packet_t;
+typedef struct coap_socket_t coap_socket_t;
 
 /* ************* coap_net_internal.h ***************** */
 

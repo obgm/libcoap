@@ -99,12 +99,9 @@ global:
   coap_join_mcast_group_intf;
   coap_log_impl;
   coap_make_str_const;
-  coap_malloc_endpoint;
   coap_malloc_type;
   coap_mcast_set_hops;
   coap_memory_init;
-  coap_network_read;
-  coap_network_send;
   coap_new_binary;
   coap_new_bin_const;
   coap_new_cache_entry;
@@ -136,7 +133,6 @@ global:
   coap_opt_value;
   coap_package_name;
   coap_package_version;
-  coap_packet_get_memmapped;
   coap_pdu_clear;
   coap_pdu_duplicate;
   coap_pdu_encode_header;

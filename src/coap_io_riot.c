@@ -68,7 +68,7 @@ get_udp_header(gnrc_pktsnip_t *pkt) {
 }
 
 ssize_t
-coap_network_read(coap_socket_t *sock, struct coap_packet_t *packet) {
+coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   size_t len;
   ipv6_hdr_t *ipv6_hdr;
   /* The GNRC API currently only supports UDP. */
