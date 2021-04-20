@@ -78,12 +78,7 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
 
   s->session = coap_session_reference( session );
 
-  if (delay) {
-    coap_ticks(&s->delay);
-    s->delay += delay;
-  }
-  coap_log(LOG_DEBUG, "   %s: Request for delayed for %lu ticks\n",
-           coap_session_str(session), delay);
+  coap_async_set_delay(s, delay);
 
   LL_PREPEND(context->async_state, s);
 
@@ -100,8 +95,11 @@ coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
   }
   else
     async->delay = 0;
-  coap_log(LOG_DEBUG, "   %s: Request for delayed for %lu ticks\n",
-           coap_session_str(async->session), delay);
+  coap_log(LOG_DEBUG, "   %s: Request for delayed for %u.%03u secs\n",
+           coap_session_str(async->session),
+           (unsigned int)(delay / COAP_TICKS_PER_SECOND),
+           (unsigned int)((delay % COAP_TICKS_PER_SECOND) *
+               1000 / COAP_TICKS_PER_SECOND));
 }
 
 
