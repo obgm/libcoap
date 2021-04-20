@@ -2491,21 +2491,42 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   int is_proxy_scheme = 0;
   int skip_hop_limit_check = 0;
   int resp;
-
+  coap_binary_t token = { pdu->token_length, pdu->token };
 #ifndef WITHOUT_ASYNC
-  /* Need to check for duplicate request in case of network issues */
-  if (!COAP_PROTO_RELIABLE(session->proto) && pdu->type == COAP_MESSAGE_CON) {
-    coap_async_t *async = coap_find_async(context, session, pdu->mid);
+  coap_async_t *async;
+#endif /* WITHOUT_ASYNC */
 
-    if (async) {
-      coap_tick_t now;
-
-      coap_ticks(&now);
-      if (async->delay == 0 || async->delay > now) {
-        /* re-transmit missing ACK */
-        coap_send_ack(session, pdu);
-      }
+  if (coap_is_mcast(&session->addr_info.local)) {
+    if (COAP_PROTO_RELIABLE(session->proto) || pdu->type != COAP_MESSAGE_NON) {
+      coap_log(LOG_INFO, "Invalid multicast packet received RFC7252 8.1\n");
+      return;
     }
+  }
+#ifndef WITHOUT_ASYNC
+  async = coap_find_async(context, session, token);
+  if (async) {
+    coap_tick_t now;
+
+    coap_ticks(&now);
+    if (async->delay == 0 || async->delay > now) {
+      /* re-transmit missing ACK (only if CON) */
+      coap_log(LOG_INFO, "Retransmit async response\n");
+      coap_send_ack(session, pdu);
+      /* and do not pass on to the upper layers */
+      return;
+    }
+  }
+  else if (coap_is_mcast(&session->addr_info.local)) {
+    uint8_t r;
+    coap_tick_t delay;
+
+    /* Need to delay sending mcast request to application layer, so response
+       is not immediate. */
+    coap_prng(&r, sizeof(r));
+    delay = (COAP_DEFAULT_LEISURE * COAP_TICKS_PER_SECOND * r) / 256;
+    /* Register request to be internally re-transmitted after delay */
+    if (coap_register_async(context, session, pdu, delay))
+      return;
   }
 #endif /* WITHOUT_ASYNC */
 
@@ -2724,7 +2745,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     /* Implementation detail: coap_add_token() immediately returns 0
        if response == NULL */
     if (coap_add_token(response, pdu->token_length, pdu->token)) {
-      coap_binary_t token = { pdu->token_length, pdu->token };
       coap_opt_t *observe = NULL;
       int observe_action = COAP_OBSERVE_CANCEL;
       coap_string_t *query = coap_get_query(pdu);

@@ -360,8 +360,9 @@ hnd_get_separate(coap_context_t *ctx,
   coap_opt_filter_t f;
   unsigned long delay = 5;
   coap_async_t *async;
+  coap_binary_t zero_token = {0, NULL};
 
-  async = coap_find_async(ctx, session, request->mid);
+  async = coap_find_async(ctx, session, token ? *token : zero_token);
   if (!async) {
     /* Set up an async request to trigger delay in the future */
 
