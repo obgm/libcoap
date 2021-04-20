@@ -465,7 +465,7 @@ typedef struct coap_dtls_spsk_t {
  * @{
  */
 
-/**
+/*
  * Creates a new DTLS context for the given @p coap_context. This function
  * returns a pointer to a new DTLS context object or @c NULL on error.
  *
