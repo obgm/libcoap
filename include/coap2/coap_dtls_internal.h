@@ -327,6 +327,17 @@ void coap_dtls_startup(void);
  */
 void coap_dtls_shutdown(void);
 
+/**
+ * Get the actual (D)TLS object for the session.
+ *
+ * @param session The session.
+ * @param tls_lib Updated with the library type.
+ *
+ * @return The TLS information.
+ */
+void *coap_dtls_get_tls(const coap_session_t *session,
+                        coap_tls_library_t *tls_lib);
+
 /** @} */
 
 #endif /* COAP_DTLS_INTERNAL_H */

@@ -215,6 +215,17 @@ void coap_dtls_shutdown(void) {
   }
 }
 
+void *
+coap_dtls_get_tls(const coap_session_t *c_session,
+                  coap_tls_library_t *tls_lib) {
+  if (tls_lib)
+    *tls_lib = COAP_TLS_LIBRARY_OPENSSL;
+  if (c_session) {
+    return c_session->tls;
+  }
+  return NULL;
+}
+
 static int dtls_log_level = 0;
 
 void coap_dtls_set_log_level(int level) {
