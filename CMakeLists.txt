@@ -645,8 +645,10 @@ install(
   FILES_MATCHING
   PATTERN "*.h"
   PATTERN "coap.h" EXCLUDE
+  PATTERN "coap_riot.h" EXCLUDE
+  PATTERN "lwippools.h" EXCLUDE
   PATTERN "utlist.h" EXCLUDE
-  PATTERN "*internal.h" EXCLUDE)
+  PATTERN "*_internal.h" EXCLUDE)
 install(
   DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
