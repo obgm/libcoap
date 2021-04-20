@@ -223,7 +223,7 @@ t_wellknown6(void) {
     coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
     pdu->type = COAP_MESSAGE_NON;
-    pdu->code = COAP_REQUEST_GET;
+    pdu->code = COAP_REQUEST_CODE_GET;
     pdu->mid = 0x1234;
 
     CU_ASSERT_PTR_NOT_NULL(pdu);

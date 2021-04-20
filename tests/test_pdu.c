@@ -334,7 +334,7 @@ t_encode_pdu1(void) {
 
   coap_pdu_clear(pdu, pdu->max_size);
   pdu->type = COAP_MESSAGE_CON;
-  pdu->code = COAP_REQUEST_GET;
+  pdu->code = COAP_REQUEST_CODE_GET;
   pdu->mid = 0x1234;
 
   result = coap_add_token(pdu, 5, (const uint8_t *)"token");
@@ -354,7 +354,7 @@ t_encode_pdu2(void) {
   coap_pdu_clear(pdu, 3);        /* set very small PDU size */
 
   pdu->type = COAP_MESSAGE_CON;
-  pdu->code = COAP_REQUEST_GET;
+  pdu->code = COAP_REQUEST_CODE_GET;
   pdu->mid = 0x1234;
 
   result = coap_add_token(pdu, 5, (const uint8_t *)"token");
@@ -477,7 +477,7 @@ t_encode_pdu6(void) {
   coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   pdu->type = COAP_MESSAGE_NON;
-  pdu->code = COAP_REQUEST_POST;
+  pdu->code = COAP_REQUEST_CODE_POST;
   pdu->mid = 0x1234;
 
   CU_ASSERT(pdu->used_size == 0);
