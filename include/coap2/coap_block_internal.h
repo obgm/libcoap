@@ -17,6 +17,7 @@
 #ifndef COAP_BLOCK_INTERNAL_H_
 #define COAP_BLOCK_INTERNAL_H_
 
+#include "coap_pdu_internal.h"
 #include "resource.h"
 
 /**

@@ -157,7 +157,7 @@ int coap_split_query(const uint8_t *s,
  *                object returned by this function must be released with
  *                coap_delete_string.
  */
-coap_string_t *coap_get_query(const struct coap_pdu_t *request);
+coap_string_t *coap_get_query(const coap_pdu_t *request);
 
 /**
  * Extract uri_path string from request PDU
@@ -167,7 +167,7 @@ coap_string_t *coap_get_query(const struct coap_pdu_t *request);
  *                coap_string_t object returned by this function must be
  *                released with coap_delete_string.
  */
-coap_string_t *coap_get_uri_path(const struct coap_pdu_t *request);
+coap_string_t *coap_get_uri_path(const coap_pdu_t *request);
 
 /** @} */
 

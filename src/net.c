@@ -712,9 +712,9 @@ coap_option_check_critical(coap_context_t *ctx,
      * the largest known option, we know that everything beyond is
      * bad.
      */
-    if (opt_iter.type & 0x01) {
+    if (opt_iter.number & 0x01) {
       /* first check the built-in critical options */
-      switch (opt_iter.type) {
+      switch (opt_iter.number) {
       case COAP_OPTION_IF_MATCH:
       case COAP_OPTION_URI_HOST:
       case COAP_OPTION_IF_NONE_MATCH:
@@ -728,14 +728,14 @@ coap_option_check_critical(coap_context_t *ctx,
       case COAP_OPTION_BLOCK1:
         break;
       default:
-        if (coap_option_filter_get(&ctx->known_options, opt_iter.type) <= 0) {
-          coap_log(LOG_DEBUG, "unknown critical option %d\n", opt_iter.type);
+        if (coap_option_filter_get(&ctx->known_options, opt_iter.number) <= 0) {
+          coap_log(LOG_DEBUG, "unknown critical option %d\n", opt_iter.number);
           ok = 0;
 
-          /* When opt_iter.type is beyond our known option range,
+          /* When opt_iter.number is beyond our known option range,
            * coap_option_filter_set() will return -1 and we are safe to leave
            * this loop. */
-          if (coap_option_filter_set(&unknown, opt_iter.type) == -1) {
+          if (coap_option_filter_set(&unknown, opt_iter.number) == -1) {
             break;
           }
         }
@@ -785,6 +785,7 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
                                      pdu->used_size + pdu->hdr_size);
 #endif /* !COAP_DISABLE_TCP */
       break;
+    case COAP_PROTO_NONE:
     default:
       break;
   }
@@ -1088,7 +1089,7 @@ coap_send_large(coap_session_t *session, coap_pdu_t *pdu) {
    */
   if (observe_action != -1 || have_block1 ||
       ((pdu->type == COAP_MESSAGE_NON || COAP_PROTO_RELIABLE(session->proto)) &&
-       COAP_PDU_IS_REQUEST(pdu) && pdu->code != COAP_REQUEST_DELETE)) {
+       COAP_PDU_IS_REQUEST(pdu) && pdu->code != COAP_REQUEST_CODE_DELETE)) {
     /* See if this token is already in use for large body responses */
     LL_FOREACH(session->lg_crcv, lg_crcv) {
       if (token_match(pdu->token, pdu->token_length,
@@ -1509,6 +1510,9 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
         );
 #endif /* !COAP_DISABLE_TCP */
         break;
+      case COAP_PROTO_NONE:
+      case COAP_PROTO_UDP:
+      case COAP_PROTO_DTLS:
       default:
         bytes_written = -1;
         break;
@@ -2057,7 +2061,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
   size_t size = request->token_length;
   unsigned char type;
   coap_opt_t *option;
-  uint16_t opt_type = 0;        /* used for calculating delta-storage */
+  coap_option_num_t opt_num = 0;        /* used for calculating delta-storage */
 
 #if COAP_ERROR_PHRASE_LENGTH > 0
   const char *phrase;
@@ -2100,8 +2104,8 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
      value might grow.
    */
   while ((option = coap_option_next(&opt_iter))) {
-    uint16_t delta = opt_iter.type - opt_type;
-    /* calculate space required to encode (opt_iter.type - opt_type) */
+    uint16_t delta = opt_iter.number - opt_num;
+    /* calculate space required to encode (opt_iter.number - opt_num) */
     if (delta < 13) {
       size++;
     } else if (delta < 269) {
@@ -2125,7 +2129,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
       ;
     }
 
-    opt_type = opt_iter.type;
+    opt_num = opt_iter.number;
   }
 
   /* Now create the response and fill with options and payload data. */
@@ -2142,7 +2146,7 @@ coap_new_error_response(coap_pdu_t *request, unsigned char code,
     /* copy all options */
     coap_option_iterator_init(request, &opt_iter, opts);
     while ((option = coap_option_next(&opt_iter))) {
-      coap_add_option(response, opt_iter.type,
+      coap_add_option(response, opt_iter.number,
         coap_opt_length(option),
         coap_opt_value(option));
     }
@@ -2655,7 +2659,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
     if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
       /* request for .well-known/core */
-      if (pdu->code == COAP_REQUEST_GET) { /* GET */
+      if (pdu->code == COAP_REQUEST_CODE_GET) { /* GET */
         coap_log(LOG_INFO, "create default response for %s\n",
                  COAP_DEFAULT_URI_WELLKNOWN);
         response = coap_wellknown_response(context, session, pdu);
@@ -2686,7 +2690,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
        *       handler to be observed
        */
       resource = context->unknown_resource;
-    } else if (pdu->code == COAP_REQUEST_DELETE) {
+    } else if (pdu->code == COAP_REQUEST_CODE_DELETE) {
       /*
        * Request for DELETE on non-existant resource (RFC7252: 5.8.4.  DELETE)
        */
@@ -2754,7 +2758,8 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
       /* check for Observe option RFC7641 and RFC8132 */
       if (resource->observable &&
-          (pdu->code == COAP_REQUEST_GET || pdu->code == COAP_REQUEST_FETCH)) {
+          (pdu->code == COAP_REQUEST_CODE_GET ||
+           pdu->code == COAP_REQUEST_CODE_FETCH)) {
         observe = coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter);
         if (observe) {
           observe_action =
@@ -2930,19 +2935,19 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
 
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
-  if (pdu->code == COAP_SIGNALING_CSM) {
+  if (pdu->code == COAP_SIGNALING_CODE_CSM) {
     while ((option = coap_option_next(&opt_iter))) {
-      if (opt_iter.type == COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE) {
+      if (opt_iter.number == COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE) {
         coap_session_set_mtu(session, coap_decode_var_bytes(coap_opt_value(option),
           coap_opt_length(option)));
-      } else if (opt_iter.type == COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER) {
+      } else if (opt_iter.number == COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER) {
         session->csm_block_supported = 1;
       }
     }
     if (session->state == COAP_SESSION_STATE_CSM)
       coap_session_connected(session);
-  } else if (pdu->code == COAP_SIGNALING_PING) {
-    coap_pdu_t *pong = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_PONG, 0, 1);
+  } else if (pdu->code == COAP_SIGNALING_CODE_PING) {
+    coap_pdu_t *pong = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_PONG, 0, 1);
     if (context->ping_handler) {
       context->ping_handler(context, session, pdu, pdu->mid);
     }
@@ -2950,13 +2955,13 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
       coap_add_option(pong, COAP_SIGNALING_OPTION_CUSTODY, 0, NULL);
       coap_send(session, pong);
     }
-  } else if (pdu->code == COAP_SIGNALING_PONG) {
+  } else if (pdu->code == COAP_SIGNALING_CODE_PONG) {
     session->last_pong = session->last_rx_tx;
     if (context->pong_handler) {
       context->pong_handler(context, session, pdu, pdu->mid);
     }
-  } else if (pdu->code == COAP_SIGNALING_RELEASE
-          || pdu->code == COAP_SIGNALING_ABORT) {
+  } else if (pdu->code == COAP_SIGNALING_CODE_RELEASE
+          || pdu->code == COAP_SIGNALING_CODE_ABORT) {
     coap_session_disconnected(session, COAP_NACK_RST);
   }
 }

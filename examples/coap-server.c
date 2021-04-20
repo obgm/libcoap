@@ -230,7 +230,7 @@ hnd_get_index(coap_context_t *ctx COAP_UNUSED,
               coap_string_t *query COAP_UNUSED,
               coap_pdu_t *response) {
 
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   coap_add_data_large_response(resource, session, request, response,
                                token, query, COAP_MEDIATYPE_TEXT_PLAIN,
                                0x2ffff, 0, strlen(INDEX),
@@ -267,14 +267,14 @@ hnd_get_time(coap_context_t  *ctx COAP_UNUSED,
       tmp = gmtime(&now);
       if (!tmp) {
         /* If 'now' is not valid */
-        response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+        coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
         return;
       }
       else {
         len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
       }
     }
-    response->code = COAP_RESPONSE_CODE_CONTENT;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
     coap_add_data_large_response(resource, session, request, response, token,
                                  query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
                                  len,
@@ -282,7 +282,7 @@ hnd_get_time(coap_context_t  *ctx COAP_UNUSED,
   }
   else {
     /* if my_clock_base was deleted, we pretend to have no such resource */
-    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
   }
 }
 
@@ -296,7 +296,7 @@ hnd_put_time(coap_context_t *ctx COAP_UNUSED,
              coap_pdu_t *response) {
   coap_tick_t t;
   size_t size;
-  unsigned char *data;
+  const uint8_t *data;
 
   /* FIXME: re-set my_clock_base to clock_offset if my_clock_base == 0
    * and request is empty. When not empty, set to value in request payload
@@ -304,8 +304,8 @@ hnd_put_time(coap_context_t *ctx COAP_UNUSED,
    */
 
   /* if my_clock_base was deleted, we pretend to have no such resource */
-  response->code =
-    my_clock_base ? COAP_RESPONSE_CODE_CHANGED : COAP_RESPONSE_CODE_CREATED;
+  coap_pdu_set_code(response, my_clock_base ? COAP_RESPONSE_CODE_CHANGED :
+                                                   COAP_RESPONSE_CODE_CREATED);
 
   coap_resource_notify_observers(resource, NULL);
 
@@ -324,7 +324,7 @@ hnd_put_time(coap_context_t *ctx COAP_UNUSED,
     /* Sanity check input value */
     if (!gmtime(&my_clock_base)) {
       unsigned char buf[3];
-      response->code = COAP_RESPONSE_CODE_BAD_REQUEST;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
       coap_add_option(response,
                       COAP_OPTION_CONTENT_FORMAT,
                       coap_encode_var_safe(buf, sizeof(buf),
@@ -381,7 +381,7 @@ hnd_get_async(coap_context_t *context,
         delay = delay * 10 + (*p - '0');
       if (delay == 0) {
         coap_log(LOG_INFO, "async: delay of 0 not supported\n");
-        response->code = COAP_RESPONSE_CODE_BAD_REQUEST;
+        coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
         return;
       }
     }
@@ -390,7 +390,7 @@ hnd_get_async(coap_context_t *context,
                                 request,
                                 COAP_TICKS_PER_SECOND * delay);
     if (async == NULL) {
-      response->code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
+        coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
       return;
     }
     /*
@@ -405,7 +405,7 @@ hnd_get_async(coap_context_t *context,
   coap_add_data_large_response(resource, session, request, response, token,
                                query, COAP_MEDIATYPE_TEXT_PLAIN, -1, 0, 4,
                                (const uint8_t *)"done", NULL, NULL);
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
   /* async is automatically removed by libcoap on return from this handler */
 }
@@ -441,7 +441,7 @@ hnd_get_example_data(coap_context_t *ctx COAP_UNUSED,
     }
     example_data_value = alloc_resource_data(value);
   }
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   body = reference_resource_data(example_data_value);
   coap_add_data_large_response(resource, session, request, response, token,
                                query, example_data_media_type, -1, 0,
@@ -520,7 +520,7 @@ hnd_put_example_data(coap_context_t *ctx COAP_UNUSED,
         coap_log(LOG_WARNING,
                  "No cache entry available for the non-first BLOCK\n");
       }
-      response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       return;
     }
 
@@ -539,7 +539,7 @@ hnd_put_example_data(coap_context_t *ctx COAP_UNUSED,
     }
     else {
       /* Give us the next block response */
-      response->code = COAP_RESPONSE_CODE_CONTINUE;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTINUE);
       return;
     }
   }
@@ -553,17 +553,17 @@ hnd_put_example_data(coap_context_t *ctx COAP_UNUSED,
 
   if (example_data_value) {
     /* pre-existed response */
-    response->code = COAP_RESPONSE_CODE_CHANGED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
     /* Need to de-reference as value may be in use elsewhere */
     release_resource_data(session, example_data_value);
   }
   else
     /* just generated response */
-    response->code = COAP_RESPONSE_CODE_CREATED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
 
   example_data_value = alloc_resource_data(data_so_far);
   if (!example_data_value) {
-    response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
     return;
   }
   if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
@@ -790,7 +790,7 @@ get_proxy_session(coap_session_t *session, coap_pdu_t *response,
   new_proxy_list = realloc(proxy_list, (i+1)*sizeof(proxy_list[0]));
 
   if (new_proxy_list == NULL) {
-    response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
     return NULL;
   }
   proxy_list = new_proxy_list;
@@ -798,7 +798,7 @@ get_proxy_session(coap_session_t *session, coap_pdu_t *response,
   if (token) {
     proxy_list[i].token = coap_new_binary(token->length);
     if (!proxy_list[i].token) {
-      response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       return NULL;
     }
     memcpy(proxy_list[i].token->s, token->s, token->length);
@@ -809,7 +809,7 @@ get_proxy_session(coap_session_t *session, coap_pdu_t *response,
   if (query) {
     proxy_list[i].query = coap_new_string(query->length);
     if (!proxy_list[i].query) {
-      response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       return NULL;
     }
     memcpy(proxy_list[i].query->s, query->s, query->length);
@@ -907,7 +907,7 @@ get_ongoing_proxy_session(coap_context_t *ctx, coap_session_t *session,
     scheme = uri->scheme;
   }
   if (resolve_address(&server, &dst.addr.sa) < 0) {
-    response->code = COAP_RESPONSE_CODE_BAD_GATEWAY;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_GATEWAY);
     remove_proxy_association(session, 0);
     return NULL;
   }
@@ -966,7 +966,7 @@ get_ongoing_proxy_session(coap_context_t *ctx, coap_session_t *session,
     break;
   }
   if (new_proxy_list->ongoing == NULL) {
-    response->code = COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
     remove_proxy_association(session, 0);
     return NULL;
   }
@@ -1019,7 +1019,8 @@ hnd_proxy_uri(coap_context_t *ctx,
   if (opt) {
     if (!get_uri_proxy_scheme_info(request, opt, &uri, &uri_path,
                                    &uri_query)) {
-      response->code = COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED;
+      coap_pdu_set_code(response,
+                             COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
       goto cleanup;
     }
     proxy_scheme_option = 1;
@@ -1037,24 +1038,25 @@ hnd_proxy_uri(coap_context_t *ctx,
                              &uri) < 0) {
       /* Need to return a 5.05 RFC7252 Section 5.7.2 */
       coap_log(LOG_WARNING, "Proxy URI not decodable\n");
-      response->code = COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED;
+      coap_pdu_set_code(response,
+                             COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
       goto cleanup;
     }
   }
 
   if (!(proxy_scheme_option || proxy_uri)) {
-    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     goto cleanup;
   }
 
   if (uri.host.length == 0) {
     /* Ongoing connection not well formed */
-    response->code = COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
     goto cleanup;
   }
 
   if (!verify_proxy_scheme_supported(uri.scheme)) {
-    response->code = COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
     goto cleanup;
   }
 
@@ -1063,6 +1065,7 @@ hnd_proxy_uri(coap_context_t *ctx,
       uri.scheme == COAP_URI_SCHEME_COAPS ||
       uri.scheme == COAP_URI_SCHEME_COAP_TCP ||
       uri.scheme == COAP_URI_SCHEME_COAPS_TCP) {
+    coap_pdu_code_t req_code = coap_pdu_get_code(request);
 
     tmp_proxy_list = get_proxy_session(session, response, token, query);
     if (!tmp_proxy_list)
@@ -1081,7 +1084,7 @@ hnd_proxy_uri(coap_context_t *ctx,
         goto cleanup;
       }
       if (offset + size != total) {
-        response->code = COAP_RESPONSE_CODE_CONTINUE;
+        coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTINUE);
         goto cleanup;
       }
       data = body_data->s;
@@ -1096,17 +1099,17 @@ hnd_proxy_uri(coap_context_t *ctx,
     /*
      * Build up the ongoing PDU that we are going to send
      */
-    pdu = coap_pdu_init(request->type, request->code,
+    pdu = coap_pdu_init(coap_pdu_get_type(request), req_code,
                         coap_new_message_id(ongoing),
                         coap_session_max_pdu_size(session));
     if (!pdu) {
-      response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       goto cleanup;
     }
 
     if (token && !coap_add_token(pdu, token->length, token->s)) {
       coap_log(LOG_DEBUG, "cannot add token to proxy request\n");
-      response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       coap_delete_pdu(pdu);
       goto cleanup;
     }
@@ -1164,7 +1167,7 @@ hnd_proxy_uri(coap_context_t *ctx,
     /* Copy the remaining options across */
     coap_option_iterator_init(request, &opt_iter, COAP_OPT_ALL);
     while ((option = coap_option_next(&opt_iter))) {
-      switch (opt_iter.type) {
+      switch (opt_iter.number) {
       case COAP_OPTION_PROXY_URI:
       case COAP_OPTION_PROXY_SCHEME:
       case COAP_OPTION_URI_PATH:
@@ -1178,7 +1181,7 @@ hnd_proxy_uri(coap_context_t *ctx,
         break;
       default:
         coap_insert_optlist(&optlist,
-                    coap_new_optlist(opt_iter.type,
+                    coap_new_optlist(opt_iter.number,
                     coap_opt_length(option),
                     coap_opt_value(option)));
         break;
@@ -1245,7 +1248,7 @@ hnd_delete(coap_context_t *ctx,
   /* get the uri_path */
   uri_path = coap_get_uri_path(request);
   if (!uri_path) {
-    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     return;
   }
 
@@ -1267,7 +1270,7 @@ hnd_delete(coap_context_t *ctx,
   /* Dynamic resource no longer required - delete it */
   coap_delete_resource(ctx, resource);
   coap_delete_string(uri_path);
-  response->code = COAP_RESPONSE_CODE_DELETED;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
 
 /*
@@ -1296,7 +1299,7 @@ hnd_get(coap_context_t *ctx COAP_UNUSED,
 
   uri_path = coap_resource_get_uri_path(resource);
   if (!uri_path) {
-    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     return;
   }
 
@@ -1306,13 +1309,13 @@ hnd_get(coap_context_t *ctx COAP_UNUSED,
     }
   }
   if (i == dynamic_count) {
-    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     return;
   }
 
   resource_entry = &dynamic_entry[i];
 
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   body = reference_resource_data(resource_entry->value);
   coap_add_data_large_response(resource, session, request, response, token,
                                query, resource_entry->media_type, -1, 0,
@@ -1351,7 +1354,7 @@ hnd_put(coap_context_t *ctx COAP_UNUSED,
   /* get the uri_path */
   uri_path = coap_get_uri_path(request);
   if (!uri_path) {
-    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     return;
   }
 
@@ -1366,7 +1369,7 @@ hnd_put(coap_context_t *ctx COAP_UNUSED,
   if (i == dynamic_count) {
     if (dynamic_count >= support_dynamic) {
       /* Should have been caught in hnd_unknown_put() */
-      response->code = COAP_RESPONSE_CODE_NOT_ACCEPTABLE;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_ACCEPTABLE);
       coap_delete_string(uri_path);
       return;
     }
@@ -1378,7 +1381,7 @@ hnd_put(coap_context_t *ctx COAP_UNUSED,
       dynamic_entry[i].value = NULL;
       dynamic_entry[i].resource = resource;
       dynamic_entry[i].created = 1;
-      response->code = COAP_RESPONSE_CODE_CREATED;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
       if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
                                       &opt_iter)) != NULL) {
         dynamic_entry[i].media_type =
@@ -1401,14 +1404,14 @@ hnd_put(coap_context_t *ctx COAP_UNUSED,
                     0);
     } else {
       dynamic_count--;
-      response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       coap_delete_string(uri_path);
       return;
     }
   } else {
     /* Need to do this as coap_get_uri_path() created it */
     coap_delete_string(uri_path);
-    response->code = COAP_RESPONSE_CODE_CHANGED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
   }
 
   resource_entry = &dynamic_entry[i];
@@ -1451,7 +1454,7 @@ hnd_put(coap_context_t *ctx COAP_UNUSED,
         coap_log(LOG_WARNING,
                  "No cache entry available for the non-first BLOCK\n");
       }
-      response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       return;
     }
 
@@ -1486,7 +1489,7 @@ hnd_put(coap_context_t *ctx COAP_UNUSED,
       coap_cache_set_app_data(cache_entry, NULL, NULL);
     }
     else {
-      response->code = COAP_RESPONSE_CODE_CONTINUE;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTINUE);
       return;
     }
   }
@@ -1501,17 +1504,17 @@ hnd_put(coap_context_t *ctx COAP_UNUSED,
   release_resource_data(session, resource_entry->value);
   transient_value = alloc_resource_data(data_so_far);
   if (!transient_value) {
-    response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
     return;
   }
   resource_entry->value = transient_value;
 
   if (resource_entry->created) {
     resource_entry->created = 0;
-    response->code = COAP_RESPONSE_CODE_CREATED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
   }
   else {
-    response->code = COAP_RESPONSE_CODE_CHANGED;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
     coap_resource_notify_observers(resource_entry->resource, NULL);
   }
 
@@ -1545,14 +1548,14 @@ hnd_unknown_put(coap_context_t *ctx,
 
   /* check if creating a new resource is allowed */
   if (dynamic_count >= support_dynamic) {
-    response->code = COAP_RESPONSE_CODE_NOT_ACCEPTABLE;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_ACCEPTABLE);
     return;
   }
 
   /* get the uri_path - will get used by coap_resource_init() */
   uri_path = coap_get_uri_path(request);
   if (!uri_path) {
-    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     return;
   }
 
@@ -1614,6 +1617,8 @@ proxy_message_handler(coap_context_t *ctx COAP_UNUSED,
   uint16_t media_type = COAP_MEDIATYPE_TEXT_PLAIN;
   int maxage = -1;
   uint64_t etag = 0;
+  coap_pdu_code_t rcv_code = coap_pdu_get_code(received);
+  coap_bin_const_t rcv_token = coap_pdu_get_token(received);
 
   for (i = 0; i < proxy_list_count; i++) {
     if (proxy_list[i].ongoing == session) {
@@ -1628,7 +1633,7 @@ proxy_message_handler(coap_context_t *ctx COAP_UNUSED,
   }
 
   coap_log(LOG_DEBUG, "** process upstream incoming %d.%02d response:\n",
-           COAP_RESPONSE_CLASS(received->code), received->code & 0x1F);
+           COAP_RESPONSE_CLASS(rcv_code), rcv_code & 0x1F);
   if (coap_get_log_level() < LOG_DEBUG)
     coap_show_pdu(LOG_INFO, received);
 
@@ -1653,7 +1658,7 @@ proxy_message_handler(coap_context_t *ctx COAP_UNUSED,
   /*
    * Build up the ongoing PDU that we are going to send to proxy originator
    */
-  pdu = coap_pdu_init(received->type, received->code,
+  pdu = coap_pdu_init(coap_pdu_get_type(received), rcv_code,
                       coap_new_message_id(incoming),
                       coap_session_max_pdu_size(incoming));
   if (!pdu) {
@@ -1661,7 +1666,7 @@ proxy_message_handler(coap_context_t *ctx COAP_UNUSED,
     return COAP_RESPONSE_OK;
   }
 
-  if (!coap_add_token(pdu, received->token_length, received->token)) {
+  if (!coap_add_token(pdu, rcv_token.length, rcv_token.s)) {
     coap_log(LOG_DEBUG, "cannot add token to ongoing proxy response PDU\n");
   }
 
@@ -1671,7 +1676,7 @@ proxy_message_handler(coap_context_t *ctx COAP_UNUSED,
    */
   coap_option_iterator_init(received, &opt_iter, COAP_OPT_ALL);
   while ((option = coap_option_next(&opt_iter))) {
-    switch (opt_iter.type) {
+    switch (opt_iter.number) {
     case COAP_OPTION_CONTENT_FORMAT:
       media_type = coap_decode_var_bytes(coap_opt_value (option),
                                          coap_opt_length (option));
@@ -1689,7 +1694,7 @@ proxy_message_handler(coap_context_t *ctx COAP_UNUSED,
       break;
     default:
       coap_insert_optlist(&optlist,
-                  coap_new_optlist(opt_iter.type,
+                  coap_new_optlist(opt_iter.number,
                   coap_opt_length(option),
                   coap_opt_value(option)));
       break;

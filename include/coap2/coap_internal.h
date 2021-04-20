@@ -52,6 +52,7 @@
 #include "coap_cache_internal.h"
 #include "coap_io_internal.h"
 #include "coap_net_internal.h"
+#include "coap_pdu_internal.h"
 #include "coap_session_internal.h"
 #include "coap_resource_internal.h"
 #include "coap_session_internal.h"

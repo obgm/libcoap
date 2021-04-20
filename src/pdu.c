@@ -82,8 +82,13 @@ coap_pdu_from_pbuf( struct pbuf *pbuf )
 #endif
 
 coap_pdu_t *
-coap_pdu_init(uint8_t type, uint8_t code, uint16_t mid, size_t size) {
+coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
+              size_t size) {
   coap_pdu_t *pdu;
+
+  assert(type <= 0x3);
+  assert(code <= 0xff);
+  assert(mid >= 0 && mid <= 0xffff);
 
   pdu = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
   if (!pdu) return NULL;
@@ -122,8 +127,10 @@ coap_pdu_init(uint8_t type, uint8_t code, uint16_t mid, size_t size) {
 }
 
 coap_pdu_t *
-coap_new_pdu(const coap_session_t *session) {
-  coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, coap_session_max_pdu_size(session));
+coap_new_pdu(coap_pdu_type_t type, coap_pdu_code_t code,
+             coap_session_t *session) {
+  coap_pdu_t *pdu = coap_pdu_init(type, code, coap_new_message_id(session),
+                                  coap_session_max_pdu_size(session));
   if (!pdu)
     coap_log(LOG_CRIT, "coap_new_pdu: cannot allocate memory for new PDU\n");
   return pdu;
@@ -179,9 +186,9 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
 
     coap_option_iterator_init(old_pdu, &opt_iter, COAP_OPT_ALL);
     while ((option = coap_option_next(&opt_iter))) {
-      if (drop_options && coap_option_filter_get(drop_options, opt_iter.type))
+      if (drop_options && coap_option_filter_get(drop_options, opt_iter.number))
         continue;
-      if (!coap_add_option(pdu, opt_iter.type,
+      if (!coap_add_option(pdu, opt_iter.number,
                            coap_opt_length(option),
                            coap_opt_value(option)))
         goto fail;
@@ -302,7 +309,7 @@ coap_update_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
 }
 
 int
-coap_remove_option(coap_pdu_t *pdu, uint16_t type) {
+coap_remove_option(coap_pdu_t *pdu, coap_option_num_t number) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
   coap_opt_t *next_option = NULL;
@@ -313,7 +320,7 @@ coap_remove_option(coap_pdu_t *pdu, uint16_t type) {
   /* Need to locate where in current options to remove this one */
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
   while ((option = coap_option_next(&opt_iter))) {
-    if (opt_iter.type == type) {
+    if (opt_iter.number == number) {
       /* Found option to delete */
       break;
     }
@@ -356,7 +363,7 @@ coap_remove_option(coap_pdu_t *pdu, uint16_t type) {
         /* Need to rediscover this and next options */
         coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
         while ((option = coap_option_next(&opt_iter))) {
-          if (opt_iter.type == type) {
+          if (opt_iter.number == number) {
             /* Found option to delete */
             break;
           }
@@ -402,36 +409,36 @@ coap_remove_option(coap_pdu_t *pdu, uint16_t type) {
 }
 
 size_t
-coap_insert_option(coap_pdu_t *pdu, uint16_t type, size_t len,
+coap_insert_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
                    const uint8_t *data) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
-  uint16_t prev_type = 0;
+  uint16_t prev_number = 0;
   size_t shift;
   size_t opt_delta;
   coap_option_t decode;
   size_t shrink = 0;
 
-  if (type >= pdu->max_opt)
-    return coap_add_option(pdu, type, len, data);
+  if (number >= pdu->max_opt)
+    return coap_add_option(pdu, number, len, data);
 
   /* Need to locate where in current options to insert this one */
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
   while ((option = coap_option_next(&opt_iter))) {
-    if (opt_iter.type > type) {
+    if (opt_iter.number > number) {
       /* Found where to insert */
       break;
     }
-    prev_type = opt_iter.type;
+    prev_number = opt_iter.number;
   }
   assert(option != NULL);
   /* size of option inc header to insert */
-  shift = coap_opt_encode_size(type - prev_type, len);
+  shift = coap_opt_encode_size(number - prev_number, len);
 
   /* size of next option (header may shrink in size as delta changes */
   if (!coap_opt_parse(option, opt_iter.length + 5, &decode))
     return 0;
-  opt_delta = opt_iter.type - type;
+  opt_delta = opt_iter.number - number;
 
   if (!coap_pdu_check_resize(pdu,
                          pdu->used_size + shift - shrink))
@@ -441,7 +448,7 @@ coap_insert_option(coap_pdu_t *pdu, uint16_t type, size_t len,
   /* Need to locate where in current options to insert this one */
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
   while ((option = coap_option_next(&opt_iter))) {
-    if (opt_iter.type > type) {
+    if (opt_iter.number > number) {
       /* Found where to insert */
       break;
     }
@@ -481,7 +488,7 @@ coap_insert_option(coap_pdu_t *pdu, uint16_t type, size_t len,
   memmove(&option[shift], &option[shrink],
           pdu->used_size - (option - pdu->token) - shrink);
   if (!coap_opt_encode(option, pdu->alloc_size - pdu->used_size,
-                            type - prev_type, data, len))
+                            number - prev_number, data, len))
     return 0;
 
   pdu->used_size += shift - shrink;
@@ -491,7 +498,7 @@ coap_insert_option(coap_pdu_t *pdu, uint16_t type, size_t len,
 }
 
 size_t
-coap_update_option(coap_pdu_t *pdu, uint16_t type, size_t len,
+coap_update_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
                    const uint8_t *data) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
@@ -499,9 +506,9 @@ coap_update_option(coap_pdu_t *pdu, uint16_t type, size_t len,
   size_t new_length = 0;
   size_t old_length = 0;
 
-  option = coap_check_option(pdu, type, &opt_iter);
+  option = coap_check_option(pdu, number, &opt_iter);
   if (!option)
-    return coap_insert_option(pdu, type, len, data);
+    return coap_insert_option(pdu, number, len, data);
 
   old_length = coap_opt_parse(option, (size_t)-1, &decode);
   if (old_length == 0)
@@ -513,7 +520,7 @@ coap_update_option(coap_pdu_t *pdu, uint16_t type, size_t len,
                          pdu->used_size + new_length - old_length))
       return 0;
     /* Possible a re-size took place with a realloc() */
-    option = coap_check_option(pdu, type, &opt_iter);
+    option = coap_check_option(pdu, number, &opt_iter);
   }
 
   if (new_length != old_length)
@@ -530,18 +537,17 @@ coap_update_option(coap_pdu_t *pdu, uint16_t type, size_t len,
   return 1;
 }
 
-/* FIXME: de-duplicate code with coap_add_option_later */
 size_t
-coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len,
+coap_add_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
                 const uint8_t *data) {
   size_t optsize;
   coap_opt_t *opt;
 
   assert(pdu);
 
-  if (type == pdu->max_opt) {
+  if (number == pdu->max_opt) {
     /* Validate that the option is repeatable */
-    switch (type) {
+    switch (number) {
     /* Ignore list of genuine repeatable */
     case COAP_OPTION_IF_MATCH:
     case COAP_OPTION_ETAG:
@@ -551,14 +557,16 @@ coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len,
     case COAP_OPTION_LOCATION_QUERY:
       break;
     default:
-      coap_log(LOG_INFO, "Option %d is not defined as repeatable\n", type);
+      coap_log(LOG_INFO, "Option number %d is not defined as repeatable\n",
+               number);
       /* Accepting it after warning as there may be user defineable options */
       break;
     }
   }
 
   if (COAP_PDU_IS_REQUEST(pdu) &&
-      (type == COAP_OPTION_PROXY_URI || type == COAP_OPTION_PROXY_SCHEME)) {
+      (number == COAP_OPTION_PROXY_URI ||
+       number == COAP_OPTION_PROXY_SCHEME)) {
     /*
      * Need to check whether there is a hop-limit option.  If not, it needs
      * to be inserted by default (RFC 8768).
@@ -572,13 +580,13 @@ coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len,
     }
   }
 
-  if (type < pdu->max_opt) {
+  if (number < pdu->max_opt) {
     coap_log(LOG_DEBUG,
              "coap_add_option: options are not in correct order\n");
-    return coap_insert_option(pdu, type, len, data);
+    return coap_insert_option(pdu, number, len, data);
   }
 
-  optsize = coap_opt_encode_size(type - pdu->max_opt, len);
+  optsize = coap_opt_encode_size(number - pdu->max_opt, len);
   if (!coap_pdu_check_resize(pdu,
       pdu->used_size + optsize))
     return 0;
@@ -596,14 +604,14 @@ coap_add_option(coap_pdu_t *pdu, uint16_t type, size_t len,
 
   /* encode option and check length */
   optsize = coap_opt_encode(opt, pdu->alloc_size - pdu->used_size,
-                            type - pdu->max_opt, data, len);
+                            number - pdu->max_opt, data, len);
 
   if (!optsize) {
     coap_log(LOG_WARNING, "coap_add_option: cannot add option\n");
     /* error */
     return 0;
   } else {
-    pdu->max_opt = type;
+    pdu->max_opt = number;
     pdu->used_size += optsize;
   }
 
@@ -641,17 +649,11 @@ coap_add_data_after(coap_pdu_t *pdu, size_t len) {
 }
 
 int
-coap_get_data(const coap_pdu_t *pdu, size_t *len, uint8_t **data) {
+coap_get_data(const coap_pdu_t *pdu, size_t *len, const uint8_t **data) {
   size_t offset;
   size_t total;
-  const uint8_t **cdata = NULL;
 
-#ifdef _WIN32
-#pragma warning( disable : 4090 )
-#endif
-  /* Really, coap_get_data() should be using a const */
-  memcpy(&cdata, &data, sizeof(cdata));
-  return coap_get_data_large(pdu, len, cdata, &offset, &total);
+  return coap_get_data_large(pdu, len, data, &offset, &total);
 }
 
 int
@@ -705,9 +707,12 @@ error_desc_t coap_error[] = {
   { COAP_RESPONSE_CODE(405), "Method Not Allowed" },
   { COAP_RESPONSE_CODE(406), "Not Acceptable" },
   { COAP_RESPONSE_CODE(408), "Request Entity Incomplete" },
+  { COAP_RESPONSE_CODE(409), "Conflict" },
   { COAP_RESPONSE_CODE(412), "Precondition Failed" },
   { COAP_RESPONSE_CODE(413), "Request Entity Too Large" },
   { COAP_RESPONSE_CODE(415), "Unsupported Content-Format" },
+  { COAP_RESPONSE_CODE(422), "Unprocessable" },
+  { COAP_RESPONSE_CODE(429), "Too Many Requests" },
   { COAP_RESPONSE_CODE(500), "Internal Server Error" },
   { COAP_RESPONSE_CODE(501), "Not Implemented" },
   { COAP_RESPONSE_CODE(502), "Bad Gateway" },
@@ -848,7 +853,7 @@ coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
 
 static int
 coap_pdu_parse_opt_csm(coap_pdu_t *pdu, uint16_t len) {
-  switch (pdu->code) {
+  switch ((coap_pdu_signaling_proto_t)pdu->code) {
   case COAP_SIGNALING_CSM:
     switch (pdu->max_opt) {
     case COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE:
@@ -1193,4 +1198,41 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
     coap_log(LOG_WARNING, "coap_pdu_encode_header: unsupported protocol\n");
   }
   return pdu->hdr_size;
+}
+
+coap_pdu_code_t
+coap_pdu_get_code(const coap_pdu_t *pdu) {
+  return pdu->code;
+}
+
+void
+coap_pdu_set_code(coap_pdu_t *pdu, coap_pdu_code_t code) {
+  assert(code <= 0xff);
+  pdu->code = code;
+}
+
+coap_pdu_type_t coap_pdu_get_type(const coap_pdu_t *pdu) {
+  return pdu->type;
+}
+
+void coap_pdu_set_type(coap_pdu_t *pdu, coap_pdu_type_t type) {
+  assert(type <= 0x3);
+  pdu->type = type;
+}
+
+coap_bin_const_t coap_pdu_get_token(const coap_pdu_t *pdu) {
+  coap_bin_const_t token;
+
+  token.length = pdu->token_length;
+  token.s = pdu->token;
+  return token;
+}
+
+coap_mid_t coap_pdu_get_mid(const coap_pdu_t *pdu) {
+  return pdu->mid;
+}
+
+void coap_pdu_set_mid(coap_pdu_t *pdu, coap_mid_t mid) {
+  assert(mid >= 0 && mid <= 0xffff);
+  pdu->mid = mid;
 }

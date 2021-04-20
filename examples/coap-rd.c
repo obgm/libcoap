@@ -125,7 +125,7 @@ hnd_get_resource(coap_context_t  *ctx COAP_UNUSED,
   if (uri_path)
     HASH_FIND(hh, resources, uri_path->s, uri_path->length, rd);
 
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
@@ -149,7 +149,7 @@ hnd_put_resource(coap_context_t  *ctx COAP_UNUSED,
                  coap_string_t *query COAP_UNUSED,
                  coap_pdu_t *response) {
 #if 1
-  response->code = COAP_RESPONSE_CODE_NOT_IMPLEMENTED;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_IMPLEMENTED);
 #else /* FIXME */
   coap_opt_iterator_t opt_iter;
   coap_opt_t *token, *etag;
@@ -159,7 +159,7 @@ hnd_put_resource(coap_context_t  *ctx COAP_UNUSED,
     ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
   rd_t *rd = NULL;
   unsigned char code;     /* result code */
-  unsigned char *data;
+  const uint8_t *data;
   coap_string_t tmp;
 
   HASH_FIND(hh, resources, resource->uri_path.s, resource->uri_path.length, rd);
@@ -240,7 +240,7 @@ hnd_delete_resource(coap_context_t  *ctx,
    * using coap_malloc() and must be released. */
   coap_delete_resource(ctx, resource);
 
-  response->code = COAP_RESPONSE_CODE_DELETED;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
 
 static void
@@ -253,7 +253,7 @@ hnd_get_rd(coap_context_t  *ctx COAP_UNUSED,
            coap_pdu_t *response) {
   unsigned char buf[3];
 
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
@@ -378,7 +378,7 @@ add_source_address(coap_resource_t *resource,
 static rd_t *
 make_rd(coap_pdu_t *pdu) {
   rd_t *rd;
-  unsigned char *data;
+  const uint8_t *data;
   coap_opt_iterator_t opt_iter;
   coap_opt_t *etag;
 
@@ -427,7 +427,7 @@ hnd_post_rd(coap_context_t  *ctx,
 
   loc = (unsigned char *)coap_malloc(LOCSIZE);
   if (!loc) {
-    response->code = COAP_RESPONSE_CODE_INTERNAL_ERROR;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
     return;
   }
   memcpy(loc, RD_ROOT_STR, RD_ROOT_SIZE);
@@ -457,7 +457,7 @@ hnd_post_rd(coap_context_t  *ctx,
   } else {      /* generate node identifier */
     loc_size +=
       snprintf((char *)(loc + loc_size), LOCSIZE - loc_size - 1,
-               "%x", request->mid);
+               "%x", coap_pdu_get_mid(request));
 
     if (loc_size > 1) {
       if (ins.length) {
@@ -540,7 +540,7 @@ hnd_post_rd(coap_context_t  *ctx,
 
   /* create response */
 
-  response->code = COAP_RESPONSE_CODE_CREATED;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
 
   { /* split path into segments and add Location-Path options */
     unsigned char _b[LOCSIZE];

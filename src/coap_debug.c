@@ -519,7 +519,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   coap_opt_t *option;
   int content_format = -1;
   size_t data_len;
-  unsigned char *data;
+  const uint8_t *data;
   uint32_t opt_len;
   const uint8_t* opt_val;
   size_t outbuflen = 0;
@@ -558,7 +558,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ",");
     }
 
-    if (pdu->code == COAP_SIGNALING_CSM) switch(opt_iter.type) {
+    if (pdu->code == COAP_SIGNALING_CODE_CSM) switch(opt_iter.number) {
     case COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE:
       buf_len = snprintf((char *)buf, sizeof(buf), "%u",
                          coap_decode_var_bytes(coap_opt_value(option),
@@ -567,10 +567,10 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
     default:
       buf_len = 0;
       break;
-    } else if (pdu->code == COAP_SIGNALING_PING
-            || pdu->code == COAP_SIGNALING_PONG) {
+    } else if (pdu->code == COAP_SIGNALING_CODE_PING
+            || pdu->code == COAP_SIGNALING_CODE_PONG) {
       buf_len = 0;
-    } else if (pdu->code == COAP_SIGNALING_RELEASE) switch(opt_iter.type) {
+    } else if (pdu->code == COAP_SIGNALING_CODE_RELEASE) switch(opt_iter.number) {
     case COAP_SIGNALING_OPTION_ALTERNATIVE_ADDRESS:
       buf_len = print_readable(coap_opt_value(option),
                                coap_opt_length(option),
@@ -584,7 +584,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
     default:
       buf_len = 0;
       break;
-    } else if (pdu->code == COAP_SIGNALING_ABORT) switch(opt_iter.type) {
+    } else if (pdu->code == COAP_SIGNALING_CODE_ABORT) switch(opt_iter.number) {
     case COAP_SIGNALING_OPTION_BAD_CSM_OPTION:
       buf_len = snprintf((char *)buf, sizeof(buf), "%u",
                          coap_decode_var_bytes(coap_opt_value(option),
@@ -593,7 +593,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
     default:
       buf_len = 0;
       break;
-    } else switch (opt_iter.type) {
+    } else switch (opt_iter.number) {
     case COAP_OPTION_CONTENT_FORMAT:
     case COAP_OPTION_ACCEPT:
       content_format = (int)coap_decode_var_bytes(coap_opt_value(option),
@@ -639,13 +639,13 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
       break;
     default:
       /* generic output function for all other option types */
-      if (opt_iter.type == COAP_OPTION_URI_PATH ||
-          opt_iter.type == COAP_OPTION_PROXY_URI ||
-          opt_iter.type == COAP_OPTION_URI_HOST ||
-          opt_iter.type == COAP_OPTION_LOCATION_PATH ||
-          opt_iter.type == COAP_OPTION_LOCATION_QUERY ||
-          opt_iter.type == COAP_OPTION_PROXY_SCHEME ||
-          opt_iter.type == COAP_OPTION_URI_QUERY) {
+      if (opt_iter.number == COAP_OPTION_URI_PATH ||
+          opt_iter.number == COAP_OPTION_PROXY_URI ||
+          opt_iter.number == COAP_OPTION_URI_HOST ||
+          opt_iter.number == COAP_OPTION_LOCATION_PATH ||
+          opt_iter.number == COAP_OPTION_LOCATION_QUERY ||
+          opt_iter.number == COAP_OPTION_PROXY_SCHEME ||
+          opt_iter.number == COAP_OPTION_URI_QUERY) {
         encode = 0;
       } else {
         encode = 1;
@@ -658,7 +658,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 
     outbuflen = strlen(outbuf);
     snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-              " %s:%.*s", msg_option_string(pdu->code, opt_iter.type),
+              " %s:%.*s", msg_option_string(pdu->code, opt_iter.number),
               (int)buf_len, buf);
   }
 
@@ -672,7 +672,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 
     if (is_binary(content_format) || !isprint(data[0])) {
       size_t keep_data_len = data_len;
-      uint8_t *keep_data = data;
+      const uint8_t *keep_data = data;
 
       outbuflen = strlen(outbuf);
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,

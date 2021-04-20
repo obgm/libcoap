@@ -355,7 +355,7 @@ void coap_session_send_csm(coap_session_t *session) {
   session->partial_write = 0;
   if (session->mtu == 0)
     session->mtu = COAP_DEFAULT_MTU;  /* base value */
-  pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CSM, 0, 20);
+  pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_CSM, 0, 20);
   if ( pdu == NULL
     || coap_add_option(pdu, COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE,
          coap_encode_var_safe(buf, sizeof(buf),
@@ -386,7 +386,7 @@ coap_mid_t coap_session_send_ping(coap_session_t *session) {
   }
 #if !COAP_DISABLE_TCP
   else {
-    ping = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_PING, 0, 1);
+    ping = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_PING, 0, 1);
   }
 #endif /* !COAP_DISABLE_TCP */
   if (!ping)

@@ -723,7 +723,7 @@ coap_add_observer(coap_resource_t *resource,
                   coap_string_t *query,
                   int has_block2,
                   coap_block_t block,
-                  uint8_t code) {
+                  coap_pdu_code_t code) {
   coap_subscription_t *s;
 
   assert( session );

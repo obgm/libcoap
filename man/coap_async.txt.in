@@ -131,7 +131,7 @@ hnd_get_with_delay(coap_context_t *context,
         delay = delay * 10 + (*p - '0');
       if (delay == 0) {
         coap_log(LOG_INFO, "async: delay of 0 not supported\n");
-        response->code = COAP_RESPONSE_CODE_BAD_REQUEST;
+        coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
         return;
       }
     }
@@ -140,7 +140,7 @@ hnd_get_with_delay(coap_context_t *context,
                                 request,
                                 COAP_TICKS_PER_SECOND * delay);
     if (async == NULL) {
-      response->code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
       return;
     }
     /*
@@ -155,7 +155,7 @@ hnd_get_with_delay(coap_context_t *context,
   coap_add_data_large_response(resource, session, request, response, token,
                                query, COAP_MEDIATYPE_TEXT_PLAIN, -1, 0, 4,
                                (const uint8_t *)"done", NULL, NULL);
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
   /* async is automatically removed by libcoap on return from this handler */
 }

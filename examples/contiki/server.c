@@ -118,7 +118,7 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
       tmp = gmtime(&tnow);
       if (!tmp) {
         /* If 'tnow' is not valid */
-        response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+        coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
         return;
       }
       else {
@@ -132,7 +132,7 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   }
   else {
     /* if my_clock_base was deleted, we pretend to have no such resource */
-    response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
   }
 }
 

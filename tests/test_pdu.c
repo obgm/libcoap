@@ -31,7 +31,7 @@ t_parse_pdu1(void) {
   CU_ASSERT(pdu->used_size == sizeof(teststr) - 4);
   CU_ASSERT(pdu->type == COAP_MESSAGE_CON);
   CU_ASSERT(pdu->token_length == 0);
-  CU_ASSERT(pdu->code == COAP_REQUEST_GET);
+  CU_ASSERT(pdu->code == COAP_REQUEST_CODE_GET);
   CU_ASSERT(pdu->mid == 0x9334);
   CU_ASSERT_PTR_NULL(pdu->data);
 }

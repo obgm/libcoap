@@ -236,12 +236,12 @@ coap_string_t *query, coap_pdu_t *response) {
     tmp = gmtime(&now);
     if (!tmp) {
       /* If 'now' is not valid */
-      response->code = COAP_RESPONSE_CODE_NOT_FOUND;
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
       return;
     }
     len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
   }
-  response->code = COAP_RESPONSE_CODE_CONTENT;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   /*
    * Invoke coap_add_data_large_response() to do all the hard work.
    *
@@ -281,25 +281,27 @@ coap_pdu_t *sent, coap_pdu_t *received, const coap_mid_t mid) {
   (void)ctx;
   (void)session;
   (void)mid;
+  coap_pdu_type_t rcv_type = coap_pdu_get_type(received);
+  coap_pdu_code_t rcv_code = coap_pdu_get_code(received);
 
   /* check if this is a response to our original request */
   if (!check_token(received)) {
     /* drop if this was just some message, or send RST in case of notification */
-    if (!sent && (received->type == COAP_MESSAGE_CON ||
-                  received->type == COAP_MESSAGE_NON)) {
+    if (!sent && (rcv_type == COAP_MESSAGE_CON ||
+                  rcv_type == COAP_MESSAGE_NON)) {
       /* Cause a CoAP RST to be sent */
       return COAP_RESPONSE_FAIL;
     }
     return COAP_RESPONSE_OK;
   }
 
-  if (received->type == COAP_MESSAGE_RST) {
+  if (rcv_type == COAP_MESSAGE_RST) {
     coap_log(LOG_INFO, "got RST\n");
     return COAP_RESPONSE_OK;
   }
 
   /* Output the received data, if any */
-  if (COAP_RESPONSE_CLASS(received->code) == 2) {
+  if (COAP_RESPONSE_CLASS(rcv_code) == 2) {
     /* Additional code to deal with the response */
 
   }

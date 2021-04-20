@@ -38,7 +38,7 @@ coap_register_async(coap_context_t *context, coap_session_t *session,
   coap_async_t *s;
   coap_mid_t mid = request->mid;
   size_t len;
-  uint8_t *data;
+  const uint8_t *data;
 
   if (!COAP_PDU_IS_REQUEST(request))
     return NULL;

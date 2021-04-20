@@ -15,6 +15,12 @@
 #define COAP_SESSION_H_
 
 /**
+ * @defgroup session Sessions
+ * API functions for CoAP Sessions
+ * @{
+ */
+
+/**
 * Abstraction of a fixed point number that can be used where necessary instead
 * of a float.  1,000 fractional bits equals one integer
 */
@@ -361,6 +367,7 @@ void coap_endpoint_set_default_mtu(coap_endpoint_t *endpoint, unsigned mtu);
 
 void coap_free_endpoint(coap_endpoint_t *ep);
 
+/** @} */
 
 /**
  * @ingroup logging

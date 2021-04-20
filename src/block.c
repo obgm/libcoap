@@ -32,14 +32,14 @@ coap_opt_block_num(const coap_opt_t *block_opt) {
 }
 
 int
-coap_get_block(coap_pdu_t *pdu, uint16_t type, coap_block_t *block) {
+coap_get_block(coap_pdu_t *pdu, coap_option_num_t number, coap_block_t *block) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
 
   assert(block);
   memset(block, 0, sizeof(coap_block_t));
 
-  if (pdu && (option = coap_check_option(pdu, type, &opt_iter)) != NULL) {
+  if (pdu && (option = coap_check_option(pdu, number, &opt_iter)) != NULL) {
     unsigned int num;
 
     block->szx = COAP_OPT_BLOCK_SZX(option);
@@ -60,7 +60,7 @@ coap_get_block(coap_pdu_t *pdu, uint16_t type, coap_block_t *block) {
 }
 
 int
-coap_write_block_opt(coap_block_t *block, uint16_t type,
+coap_write_block_opt(coap_block_t *block, coap_option_num_t number,
                      coap_pdu_t *pdu, size_t data_length) {
   size_t start, want, avail;
   unsigned char buf[4];
@@ -111,10 +111,10 @@ coap_write_block_opt(coap_block_t *block, uint16_t type,
   }
 
   /* to re-encode the block option */
-  coap_add_option(pdu, type, coap_encode_var_safe(buf, sizeof(buf),
-                                                  ((block->num << 4) |
-                                                   (block->m << 3) |
-                                                   block->szx)),
+  coap_add_option(pdu, number, coap_encode_var_safe(buf, sizeof(buf),
+                                                    ((block->num << 4) |
+                                                    (block->m << 3) |
+                                                    block->szx)),
                   buf);
 
   return 1;
@@ -190,7 +190,7 @@ coap_add_data_blocked_response(coap_resource_t *resource,
                     buf);
   }
 
-  coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
+  coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
                   coap_encode_var_safe(buf, sizeof(buf),
                                        media_type),
                   buf);
@@ -291,7 +291,7 @@ full_match(const uint8_t *a, size_t alen,
 
 int
 coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
-                    uint8_t type) {
+                    coap_pdu_type_t type) {
   coap_lg_crcv_t *cq;
 
   assert(session);
@@ -1047,7 +1047,7 @@ coap_handle_request_send_block(coap_session_t *session,
     coap_option_iterator_init(pdu, &opt_b_iter, COAP_OPT_ALL);
     while ((option = coap_option_next(&opt_b_iter))) {
       unsigned int num;
-      if (opt_b_iter.type != p->option)
+      if (opt_b_iter.number != p->option)
         continue;
       num = coap_opt_block_num(option);
       if (num > 0xFFFFF) /* 20 bits max for num */
@@ -1098,9 +1098,9 @@ coap_handle_request_send_block(coap_session_t *session,
          */
         coap_option_iterator_init(&p->pdu, &opt_iter, COAP_OPT_ALL);
         while ((option = coap_option_next(&opt_iter))) {
-          if (opt_iter.type == COAP_OPTION_OBSERVE && block.num != 0)
+          if (opt_iter.number == COAP_OPTION_OBSERVE && block.num != 0)
             continue;
-          if (!coap_add_option(response, opt_iter.type,
+          if (!coap_add_option(response, opt_iter.number,
                                coap_opt_length(option),
                                coap_opt_value(option))) {
             goto internal_issue;
@@ -1654,7 +1654,7 @@ coap_handle_response_get_block(coap_context_t *context,
 
     if (COAP_RESPONSE_CLASS(rcvd->code) == 2) {
       size_t length;
-      uint8_t *data;
+      const uint8_t *data;
       coap_opt_t *size_opt = coap_check_option(rcvd, COAP_OPTION_SIZE2,
                                                &opt_iter);
       size_t size2 = size_opt ?
@@ -1936,7 +1936,7 @@ fail_resp:
         if (block.num != 0) {
           /* Assume random access and just give the single response to app */
           size_t length;
-          uint8_t *data;
+          const uint8_t *data;
           size_t chunk = (size_t)1 << (block.szx + 4);
 
           coap_get_data(rcvd, &length, &data);
