@@ -63,7 +63,7 @@ lwip_prng_impl(unsigned char *buf, size_t len) {
 }
 
 #define coap_prng(Buf,Length) lwip_prng_impl((Buf), (Length))
-#define coap_prng_init(Value)
+#define coap_prng_init(Value) (void)Value
 
 #else
 
