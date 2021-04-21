@@ -59,7 +59,8 @@ const coap_session_t *_session_);*
 
 *coap_session_state_t coap_session_get_state(const coap_session_t *_session_);*
 
-*void *coap_session_get_tls(const coap_session_t *_session_);*
+*void *coap_session_get_tls(const coap_session_t *_session_,
+coap_tls_library_t *tls_lib);*
 
 *coap_session_type_t coap_session_get_type(const coap_session_t *_session_);*
 
@@ -158,13 +159,14 @@ of the _session_.
 [source, c]
 ----
 OpenSSL:  SSL*
-GnuTLS:   coap_gnutls_env_t*
-Mbed TLS: coap_mbedtls_env_t*
-TinyDTLS: session_t*
+GnuTLS:   gnutls_session_t (implicit *)
+Mbed TLS: mbedtls_ssl_context*
+TinyDTLS: struct dtls_context*
 ----
 
 The *coap_session_get_tls*() function is used to get the pointer to the TLS
-information from the _session_.  This is TLS library specific.
+information from the _session_.  This is TLS library specific. _tls_lib_ is
+updated with the underlying (D)TLS library type.
 
 [source, c]
 ----

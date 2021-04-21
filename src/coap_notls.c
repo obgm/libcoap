@@ -70,6 +70,14 @@ static int dtls_log_level = 0;
 void coap_dtls_startup(void) {
 }
 
+void *
+coap_dtls_get_tls(const coap_session_t *c_session COAP_UNUSED,
+                  coap_tls_library_t *tls_lib) {
+  if (tls_lib)
+    *tls_lib = COAP_TLS_LIBRARY_NOTLS;
+  return NULL;
+}
+
 void coap_dtls_shutdown(void) {
 }
 

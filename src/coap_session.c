@@ -1218,9 +1218,10 @@ int coap_session_get_ifindex(const coap_session_t *session) {
   return -1;
 }
 
-void *coap_session_get_tls(const coap_session_t *session) {
+void *coap_session_get_tls(const coap_session_t *session,
+                           coap_tls_library_t *tls_lib) {
   if (session)
-    return session->tls;
+    return coap_dtls_get_tls(session, tls_lib);
   return NULL;
 }
 

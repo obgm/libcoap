@@ -1937,6 +1937,22 @@ void coap_dtls_startup(void)
 void coap_dtls_shutdown(void) {
 }
 
+void *
+coap_dtls_get_tls(const coap_session_t *c_session,
+                  coap_tls_library_t *tls_lib) {
+  if (tls_lib)
+    *tls_lib = COAP_TLS_LIBRARY_MBEDTLS;
+  if (c_session && c_session->tls) {
+     coap_mbedtls_env_t *m_env;
+
+    /* To get around const issue */
+    memcpy(&m_env, &c_session->tls, sizeof(m_env));
+    
+    return (void *)&m_env->ssl;
+  }
+  return NULL;
+}
+
 static int keep_log_level = 0;
 
 void coap_dtls_set_log_level(int level)

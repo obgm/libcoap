@@ -162,15 +162,17 @@ int coap_session_get_ifindex(const coap_session_t *session);
  * Get the session TLS security ptr (TLS type dependent)
  *
  * OpenSSL:  SSL*
- * GnuTLS:   coap_gnutls_env_t*
- * Mbed TLS: coap_mbedtls_env_t*
- * TinyDTLS: session_t*
+ * GnuTLS:   gnutls_session_t (implicit *)
+ * Mbed TLS: mbedtls_ssl_context*
+ * TinyDTLS: struct dtls_context*
  *
  * @param session The CoAP session.
+ * @param tls_lib Updated with the library type.
  *
  * @return The session TLS ptr or @c NULL if not set up
  */
-void *coap_session_get_tls(const coap_session_t *session);
+void *coap_session_get_tls(const coap_session_t *session,
+                           coap_tls_library_t *tls_lib);
 
 /**
  * Get the session context
