@@ -31,6 +31,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_async_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_block_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_cache_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_dtls_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_io_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_net_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_pdu_internal.h \
@@ -166,33 +167,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_LDFLAGS =					\
 ## Collect symbols here we want to ignore while building the helper files
 ## libcoap-$(LIBCOAP_API_VERSION).{map,sym} for the linker.
 CTAGS_IGNORE=-I " \
-coap_dtls_context_check_keys_enabled \
-coap_dtls_context_set_pki \
-coap_dtls_context_set_pki_root_cas \
-coap_dtls_context_set_cpsk \
-coap_dtls_context_set_spsk \
-coap_dtls_free_context \
-coap_dtls_free_session \
-coap_dtls_get_context_timeout \
-coap_dtls_get_overhead \
-coap_dtls_get_timeout \
-coap_dtls_handle_timeout \
-coap_dtls_hello \
-coap_dtls_is_context_timeout \
-coap_dtls_new_client_session \
-coap_dtls_new_context \
-coap_dtls_new_server_session \
-coap_dtls_receive \
-coap_dtls_send \
-coap_dtls_session_update_mtu \
-coap_dtls_shutdown \
-coap_dtls_startup \
 coap_pdu_from_pbuf \
-coap_tls_free_session \
-coap_tls_new_client_session \
-coap_tls_new_server_session \
-coap_tls_read \
-coap_tls_write \
 "
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if
