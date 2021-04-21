@@ -6,7 +6,7 @@
  * README for terms of use.
  */
 
-#include "coap2/coap_internal.h"
+#include "coap3/coap_internal.h"
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))

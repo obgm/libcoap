@@ -41,7 +41,7 @@ static char* strndup(const char* s1, size_t n)
 #include <netdb.h>
 #endif
 
-#include <coap2/coap.h>
+#include <coap3/coap.h>
 
 #define MAX_USER 128 /* Maximum length of a user name (i.e., PSK
                       * identity) in bytes. */

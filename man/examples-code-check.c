@@ -100,7 +100,7 @@ static void check_synopsis(const char* file) {
     exit_code = 1;
     return;
   }
-  fprintf(fpcode, "#include <coap2/coap.h>\n");
+  fprintf(fpcode, "#include <coap3/coap.h>\n");
   fprintf(fpcode, "#ifdef __GNUC__\n");
   fprintf(fpcode, "#define U __attribute__ ((unused))\n");
   fprintf(fpcode, "#else /* not a GCC */\n");
@@ -412,7 +412,7 @@ int main(int argc, char* argv[])
         }
         if (fpcode) {
           if (strstr (buffer, "LIBCOAP_API_VERSION")) {
-            fprintf(fpcode, "#include <coap2/coap.h>\n");
+            fprintf(fpcode, "#include <coap3/coap.h>\n");
             fprintf(fpcode, "#ifdef __GNUC__\n");
             fprintf(fpcode, "#define U __attribute__ ((unused))\n");
             fprintf(fpcode, "#else /* not a GCC */\n");

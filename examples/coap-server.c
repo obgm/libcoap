@@ -56,7 +56,7 @@ static char* strndup(const char* s1, size_t n)
 /* Need to refresh time once per sec */
 #define COAP_RESOURCE_CHECK_TIME 1
 
-#include <coap2/coap.h>
+#include <coap3/coap.h>
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))

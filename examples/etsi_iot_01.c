@@ -22,7 +22,7 @@
 #include <errno.h>
 #include <signal.h>
 
-#include <coap2/coap.h>
+#include <coap3/coap.h>
 
 #define COAP_RESOURCE_CHECK_TIME_SEC  1
 

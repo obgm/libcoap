@@ -7,7 +7,7 @@
  * of use.
  */
 
-#include "coap2/coap_internal.h"
+#include "coap3/coap_internal.h"
 
 /*
  * This replaces coap_set_event_handler() so that handler registration is

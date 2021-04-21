@@ -6,7 +6,7 @@
 * README for terms of use.
 */
 
-#include "coap2/coap_internal.h"
+#include "coap3/coap_internal.h"
 
 #ifndef COAP_SESSION_C_
 #define COAP_SESSION_C_

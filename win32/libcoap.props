@@ -17,7 +17,7 @@
     <CUnitIncludeDirDbg>$(CUnitRootDirDbg)include</CUnitIncludeDirDbg>
     <CUnitLibDir>$(CUnitRootDir)lib</CUnitLibDir>
     <CUnitLibDirDbg>$(CUnitRootDirDbg)lib</CUnitLibDirDbg>
-    <LibCoAPIncludeDir>include\coap2</LibCoAPIncludeDir>
+    <LibCoAPIncludeDir>include\coap3</LibCoAPIncludeDir>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />

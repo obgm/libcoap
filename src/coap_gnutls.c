@@ -41,7 +41,7 @@
  * 3.6.6 or later is required to support Raw Public Key(RPK)
  */
 
-#include "coap2/coap_internal.h"
+#include "coap3/coap_internal.h"
 
 #ifdef HAVE_LIBGNUTLS
 

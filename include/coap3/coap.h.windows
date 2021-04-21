@@ -18,13 +18,13 @@
 #define LIBCOAP_PACKAGE_NAME "libcoap"
 
 /* Define the full name and version of libcoap. */
-#define LIBCOAP_PACKAGE_STRING "libcoap 4.3.0rc1"
+#define LIBCOAP_PACKAGE_STRING "libcoap 4.3.0rc2"
 
 /* Define the home page for libcoap. */
 #define LIBCOAP_PACKAGE_URL "https://libcoap.net/"
 
 /* Define the version of libcoap this file belongs to. */
-#define LIBCOAP_PACKAGE_VERSION "4.3.0rc1"
+#define LIBCOAP_PACKAGE_VERSION "4.3.0rc2"
 
 /* Define the numeric version identifier for libcoap */
 #define LIBCOAP_VERSION (4003000U)
@@ -33,29 +33,29 @@
 extern "C" {
 #endif
 
-#include "coap2/libcoap.h"
+#include "coap3/libcoap.h"
 
-#include "coap2/coap_forward_decls.h"
-#include "coap2/address.h"
-#include "coap2/async.h"
-#include "coap2/bits.h"
-#include "coap2/block.h"
-#include "coap2/coap_cache.h"
-#include "coap2/coap_debug.h"
-#include "coap2/coap_dtls.h"
-#include "coap2/coap_event.h"
-#include "coap2/coap_io.h"
-#include "coap2/coap_prng.h"
-#include "coap2/coap_time.h"
-#include "coap2/encode.h"
-#include "coap2/mem.h"
-#include "coap2/net.h"
-#include "coap2/option.h"
-#include "coap2/pdu.h"
-#include "coap2/resource.h"
-#include "coap2/str.h"
-#include "coap2/subscribe.h"
-#include "coap2/uri.h"
+#include "coap3/coap_forward_decls.h"
+#include "coap3/address.h"
+#include "coap3/async.h"
+#include "coap3/bits.h"
+#include "coap3/block.h"
+#include "coap3/coap_cache.h"
+#include "coap3/coap_debug.h"
+#include "coap3/coap_dtls.h"
+#include "coap3/coap_event.h"
+#include "coap3/coap_io.h"
+#include "coap3/coap_prng.h"
+#include "coap3/coap_time.h"
+#include "coap3/encode.h"
+#include "coap3/mem.h"
+#include "coap3/net.h"
+#include "coap3/option.h"
+#include "coap3/pdu.h"
+#include "coap3/resource.h"
+#include "coap3/str.h"
+#include "coap3/subscribe.h"
+#include "coap3/uri.h"
 
 #ifdef __cplusplus
 }

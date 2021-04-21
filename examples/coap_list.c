@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <coap2/coap.h>
+#include <coap3/coap.h>
 
 int
 coap_insert(coap_list_t **head, coap_list_t *node) {

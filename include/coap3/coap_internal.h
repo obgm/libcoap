@@ -33,7 +33,7 @@
 # include <assert.h>
 #endif
 
-#include "coap2/coap.h"
+#include "coap3/coap.h"
 
 /*
  * Include all the header files that are for internal use only.

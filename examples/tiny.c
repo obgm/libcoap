@@ -19,7 +19,7 @@
 #include <netdb.h>
 #include <signal.h>
 
-#include <coap2/coap.h>
+#include <coap3/coap.h>
 
 #define Nn 8  /* duplicate definition of N if built on sky motes */
 #define ENCODE_HEADER_SIZE 4

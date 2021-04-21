@@ -6,7 +6,7 @@
  * README for terms of use.
  */
 
-#include "coap2/coap_internal.h"
+#include "coap3/coap_internal.h"
 
 #if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
 #ifdef HAVE_ARPA_INET_H

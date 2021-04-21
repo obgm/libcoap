@@ -41,7 +41,7 @@
 #include <dirent.h>
 #endif
 
-#include <coap2/coap.h>
+#include <coap3/coap.h>
 
 #define COAP_RESOURCE_CHECK_TIME 2
 

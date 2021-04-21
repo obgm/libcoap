@@ -6,7 +6,7 @@
 * README for terms of use.
 */
 
-#include "coap2/coap_internal.h"
+#include "coap3/coap_internal.h"
 
 /* Determines if the given option_type denotes an option type that can
  * be used as CacheKey. Options that can be cache keys are not Unsafe
