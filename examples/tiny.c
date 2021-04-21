@@ -56,7 +56,7 @@ make_pdu( unsigned int value ) {
   static unsigned char buf[20];
   int len, ls;
 
-  if (!(pdu = coap_pdu_init(COAP_MESSAGE_NON, COAP_REQUEST_POST, id++,
+  if (!(pdu = coap_pdu_init(COAP_MESSAGE_NON, COAP_REQUEST_CODE_POST, id++,
                             COAP_DEFAULT_MTU)))
     return NULL;
 
