@@ -386,7 +386,7 @@ coap_dtls_get_tls(const coap_session_t *c_session,
     *tls_lib = COAP_TLS_LIBRARY_GNUTLS;
   if (c_session && c_session->tls) {
     const coap_gnutls_env_t *g_env = (const coap_gnutls_env_t *)c_session->tls;
-   
+
     return g_env->g_session;
   }
   return NULL;

@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y autoconf automake gcc g++ gdb libtool l
 RUN apt-get install -y iproute2 lsof net-tools inetutils-ping netcat-openbsd less vim
 RUN apt-get clean
 
-COPY --from=0 /usr/local/include/coap2 /usr/local/include/coap2
+COPY --from=0 /usr/local/include/coap3 /usr/local/include/coap3
 COPY --from=0 /usr/local/lib /usr/local/lib
 COPY --from=0 /usr/local/bin/coap-client /usr/local/bin/
 COPY --from=0 /usr/local/include/cn-cbor /usr/local/include/cn-cbor
