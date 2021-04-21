@@ -38,6 +38,13 @@ find \( -name \*.h -o -name \*.c \) \
 # examples-code-check.c generates new files with include statements
 sed -i "s,$pat,\1$NEW_VERSION/," man/examples-code-check.c
 
+pathpat='\(include/coap\)'$LIBCOAP_API_VERSION
+
+# autogen.sh
+for fn in autogen.sh .gitignore build-env/Dockerfile.* ; do
+    sed -i "s,$pathpat,\1$NEW_VERSION,g" $fn
+done
+
 # Adjust LIBCOAP_API_VERSION in CMakeLists.txt
 sed -i "s/^\(set(LIBCOAP_API_VERSION \+\)$LIBCOAP_API_VERSION\( *)\)/\1$NEW_VERSION\2/" CMakeLists.txt
 
