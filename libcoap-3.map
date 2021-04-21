@@ -1,4 +1,4 @@
-VER_2 {
+VER_3 {
 global:
   coap_add_attr;
   coap_add_block;

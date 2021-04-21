@@ -1947,7 +1947,7 @@ coap_dtls_get_tls(const coap_session_t *c_session,
 
     /* To get around const issue */
     memcpy(&m_env, &c_session->tls, sizeof(m_env));
-    
+
     return (void *)&m_env->ssl;
   }
   return NULL;

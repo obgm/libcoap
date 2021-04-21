@@ -59,7 +59,7 @@ coap_dtls_get_tls(const coap_session_t *c_session,
   if (c_session && c_session->context && c_session->context->dtls_context) {
     const coap_tiny_context_t *t_context =
                   (const coap_tiny_context_t *)c_session->context->dtls_context;
-    
+
     return t_context->dtls_context;
   }
   return NULL;

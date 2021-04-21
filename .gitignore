@@ -83,7 +83,7 @@ examples/coap-tiny
 examples/*.exe
 
 # the include/ folder
-include/coap2/coap.h
+include/coap3/coap.h
 
 # the tests/ folder
 tests/.deps
