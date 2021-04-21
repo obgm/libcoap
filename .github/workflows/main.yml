@@ -3,13 +3,13 @@ name: Build Tests
 on:
   push:
     branches:
-      - master
+      - main
       - develop
       - release-*
       - gh-workflows
   pull_request:
     branches:
-      - master
+      - main
       - develop
 
 env:
