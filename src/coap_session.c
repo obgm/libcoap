@@ -50,7 +50,7 @@ coap_session_set_ack_random_factor (coap_session_t *session,
 }
 
 unsigned int
-coap_session_get_max_transmit (const coap_session_t *session) {
+coap_session_get_max_retransmit (const coap_session_t *session) {
   return session->max_retransmit;
 }
 

@@ -51,7 +51,7 @@ t_session2(void) {
   CU_ASSERT(fpeq(session->ack_timeout, COAP_DEFAULT_ACK_TIMEOUT));
   CU_ASSERT(fpeq(session->ack_random_factor, COAP_DEFAULT_ACK_RANDOM_FACTOR));
 
-  CU_ASSERT(coap_session_get_max_transmit(session) == COAP_DEFAULT_MAX_RETRANSMIT);
+  CU_ASSERT(coap_session_get_max_retransmit(session) == COAP_DEFAULT_MAX_RETRANSMIT);
   CU_ASSERT(fpeq(coap_session_get_ack_timeout(session), COAP_DEFAULT_ACK_TIMEOUT));
   CU_ASSERT(fpeq(coap_session_get_ack_random_factor(session), COAP_DEFAULT_ACK_RANDOM_FACTOR));
 }
