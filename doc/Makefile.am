@@ -66,6 +66,7 @@ man-page-build: man-page-start
 	## Close off the insert_file
 	echo '    </tab>' >> $(top_builddir)/doc/insert_file ;\
 	echo '    <tab type="user" visible="yes" url="@ref deprecated" title="Deprecated Items" intro=""/>' >> $(top_builddir)/doc/insert_file ;\
+	echo '    <tab type="user" visible="yes" url="@ref bug" title="Bug List" intro=""/>' >> $(top_builddir)/doc/insert_file ;\
 	## Create and Update the DoxygenLayout.xml file
 	$(DOXYGEN) -l ;\
 	$(SED) -i 's/<tab type="pages" visible="yes" /<tab type="pages" visible="no" /g' $(top_builddir)/doc/DoxygenLayout.xml ;\
