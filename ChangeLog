@@ -1,3 +1,65 @@
+2021-04-22  Olaf Bergmann  <bergmann@tzi.org>
+
+	Change summary for version 4.3.0:
+
+        * Include directory updated from include/coap2 to include/coap3 as
+          this is a major version change.
+            * Other code references updated from coap2 to coap3.
+        * Many call-back handlers have had their parameter lists changed, some
+          variables are made const and other ones removed as they can be easily
+          reconstructed if needed.
+        * Some functions have their parameters changed to const.
+        * Internal structures made opaque to applications, requiring the
+          applications to access the structure information via a new set of
+          functions.  The new functions are of the form coap_X_get_Y() or
+          coap_X_set_Y() where X is  the structure (e.g. session) and Y is
+          the variable.
+            * coap_async_state_t
+            * coap_attr_t
+            * coap_context_t
+            * coap_packet_t
+            * coap_pdu_t
+            * coap_resource_t
+            * coap_session_t
+            * coap_socket_t
+        * Header files are moved into libcoap space and so are accessed by coap
+          sub-directory - e.g.  #include <coap3/coap.h>.
+        * RFC7959 (Block handling) moved into libcoap from application code
+          considerably simplifying application code. See coap_block(3) man page.
+        * CoAP Cache Key support.
+        * Support for cmake builds.
+        * Support for RIOT builds.
+        * Support for Cygwin builds.
+        * Proxy support for coap-server, enhanced coap-client capabilities
+        * Updated async support.
+            * Multicast requests now randomly delayed befor ethe response is
+              sent.
+        * Additional RFC support - RFC8768.
+        * Mbed TLS DTLS library support.
+        * (D)TLS support for RPK and PKCS11.
+        * Additional (D)TLS support for PSK (e.g. Identity Hints).
+        * PKI support consistent across all supported (D)TLS libraries.
+        * Support for disabling TCP for code reduction.
+        * More rigorous checking and appropriate rejection of inbound PDU
+          options.
+        * Additional unit tests.
+        * Reported bugs fixed.
+        * Example applications help reports on (D)TLS library capabilities
+          and versions.
+        * Documentation added and updated (Doxygen and man).
+
+2019-11-05  Olaf Bergmann  <bergmann@tzi.org>
+
+	Change summary for version 4.2.1:
+
+        * Builds now support silent rules
+        * Support building with TinyDTLS as a shared library
+        * Added in EPOLL support
+        * Added in support for constrained stacks
+        * Server sessions hashed for performance lookup
+        * coap_endpoint_t and coap_subscription_t made opaque to applications
+        * Documentation updated
+
 2019-02-11  Olaf Bergmann  <bergmann@tzi.org>
 
 	Change summary for version 4.2.0:
