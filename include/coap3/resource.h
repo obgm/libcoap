@@ -353,18 +353,6 @@ coap_print_status_t coap_print_link(const coap_resource_t *resource,
                                     size_t *len,
                                     size_t *offset);
 
-/**
- * Registers the specified @p handler as message handler for the request type @p
- * method
- *
- * @param resource The resource for which the handler shall be registered.
- * @param method   The CoAP request method to handle.
- * @param handler  The handler to register with @p resource.
- */
-void coap_register_handler(coap_resource_t *resource,
-                           coap_request_t method,
-                           coap_method_handler_t handler);
-
 /** @} */
 
 /**

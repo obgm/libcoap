@@ -60,34 +60,34 @@ typedef coap_response_t (*coap_response_handler_t)(coap_session_t *session,
  * @param session CoAP session.
  * @param sent The PDU that was transmitted.
  * @param reason The reason for the NACK.
- * @param id CoAP message ID.
+ * @param mid CoAP message ID.
  */
 typedef void (*coap_nack_handler_t)(coap_session_t *session,
                                     const coap_pdu_t *sent,
                                     const coap_nack_reason_t reason,
-                                    const coap_mid_t id);
+                                    const coap_mid_t mid);
 
 /**
  * Received Ping handler that is used as callback in coap_context_t.
  *
  * @param session CoAP session.
  * @param received The PDU that was received.
- * @param id CoAP message ID.
+ * @param mid CoAP message ID.
  */
 typedef void (*coap_ping_handler_t)(coap_session_t *session,
                                     const coap_pdu_t *received,
-                                    const coap_mid_t id);
+                                    const coap_mid_t mid);
 
 /**
  * Received Pong handler that is used as callback in coap_context_t.
  *
  * @param session CoAP session.
  * @param received The PDU that was received.
- * @param id CoAP message ID.
+ * @param mid CoAP message ID.
  */
 typedef void (*coap_pong_handler_t)(coap_session_t *session,
                                     const coap_pdu_t *received,
-                                    const coap_mid_t id);
+                                    const coap_mid_t mid);
 
 /**
  * Registers a new message handler that is called whenever a response is

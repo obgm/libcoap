@@ -66,12 +66,10 @@ COAP_REQUEST_IPATCH
 The method handler function prototype is defined as:
 [source, c]
 ----
-typedef void (*coap_method_handler_t)(coap_context_t *context,
-                                      coap_resource_t *resource,
+typedef void (*coap_method_handler_t)(coap_resource_t *resource,
                                       coap_session_t *session,
-                                      coap_pdu_t *incoming_pdu,
-                                      coap_string_t *token,
-                                      coap_string_t *query,
+                                      const coap_pdu_t *incoming_pdu,
+                                      const coap_string_t *query,
                                       coap_pdu_t *response_pdu);
 ----
 
@@ -99,10 +97,9 @@ typedef enum coap_response_t {
   COAP_RESPONSE_OK    /* Response is fine */
 } coap_response_t;
 
-typedef coap_response_t (*coap_response_handler_t)(coap_context_t *context,
-                                                   coap_session_t *session,
-                                                   coap_pdu_t *sent,
-                                                   coap_pdu_t *received,
+typedef coap_response_t (*coap_response_handler_t)(coap_session_t *session,
+                                                   const coap_pdu_t *sent,
+                                                   const coap_pdu_t *received,
                                                    const coap_mid_t id);
 ----
 
@@ -122,10 +119,9 @@ If _handler_ is NULL, then the handler is de-registered.
 The nack handler function prototype is defined as:
 [source, c]
 ----
-typedef void (*coap_nack_handler_t)(coap_context_t *context,
-                                    coap_session_t *session,
-                                    coap_pdu_t *sent,
-                                    coap_nack_reason_t reason,
+typedef void (*coap_nack_handler_t)(coap_session_t *session,
+                                    const coap_pdu_t *sent,
+                                    const coap_nack_reason_t reason,
                                     const coap_mid_t mid);
 ----
 NACKs can be one of the following
@@ -144,9 +140,8 @@ NULL, then the handler is de-registered.
 The ping handler function prototype is defined as:
 [source, c]
 ----
-typedef void (*coap_ping_handler_t)(coap_context_t *context,
-                                    coap_session_t *session,
-                                    coap_pdu_t *received,
+typedef void (*coap_ping_handler_t)(coap_session_t *session,
+                                    const coap_pdu_t *received,
                                     const coap_mid_t mid);
 ----
 
@@ -157,9 +152,8 @@ If _handler_ is NULL, then the handler is de-registered.
 The pong handler function prototype is defined as:
 [source, c]
 ----
-typedef void (*coap_pong_handler_t)(coap_context_t *context,
-                                    coap_session_t *session,
-                                    coap_pdu_t *received,
+typedef void (*coap_pong_handler_t)(coap_session_t *session,
+                                    const coap_pdu_t *received,
                                     const coap_mid_t mid);
 ----
 
@@ -170,9 +164,8 @@ the handler is de-registered.
 The event handler function prototype is defined as:
 [source, c]
 ----
-typedef void (*coap_event_handler_t)(coap_context_t *context,
-                                     coap_event_t event,
-                                     coap_session_t *session);
+typedef void (*coap_event_handler_t)(coap_session_t *session,
+                                     const coap_event_t event);
 ----
 Events can be one of the following
 ----
