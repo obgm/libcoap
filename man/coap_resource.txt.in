@@ -195,16 +195,13 @@ EXAMPLES
 #define INDEX "This is an example server using libcoap\n"
 
 static void
-hnd_get_index(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_get_index(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   unsigned char buf[3];
   /* Remove (void) definition if variable is used */
-  (void)ctx;
   (void)resource;
   (void)session;
   (void)request;
-  (void)token;
   (void)query;
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
@@ -225,15 +222,12 @@ coap_string_t *query, coap_pdu_t *response) {
 }
 
 static void
-hnd_delete_time(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_delete_time(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
-  (void)ctx;
   (void)resource;
   (void)session;
   (void)request;
-  (void)token;
   (void)query;
 
   /* .. code .. */
@@ -242,15 +236,12 @@ coap_string_t *query, coap_pdu_t *response) {
 }
 
 static void
-hnd_get_time(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_get_time(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
-  (void)ctx;
   (void)resource;
   (void)session;
   (void)request;
-  (void)token;
   (void)query;
   (void)response;
 
@@ -260,15 +251,12 @@ coap_string_t *query, coap_pdu_t *response) {
 }
 
 static void
-hnd_put_time(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_put_time(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
-  (void)ctx;
   (void)resource;
   (void)session;
   (void)request;
-  (void)token;
   (void)query;
   (void)response;
 
@@ -325,20 +313,18 @@ init_resources(coap_context_t *ctx) {
  * Unknown Resource PUT handler */
 
 static void
-hnd_delete(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_delete(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
   (void)session;
   (void)request;
-  (void)token;
   (void)query;
   (void)response;
 
   /* .. code .. */
 
   /* Dynamic resource no longer required - delete it */
-  coap_delete_resource(ctx, resource);
+  coap_delete_resource(coap_session_get_context(session), resource);
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
@@ -347,17 +333,14 @@ coap_string_t *query, coap_pdu_t *response) {
  * Unknown Resource PUT handler */
 
 static void
-hnd_get(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_get(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
   coap_str_const_t *get_uri_path;
   /* Remove (void) definition if variable is used */
-  (void)ctx;
   (void)resource;
   (void)session;
   (void)request;
-  (void)token;
   (void)query;
   (void)response;
 
@@ -378,14 +361,11 @@ coap_string_t *query, coap_pdu_t *response) {
  * Unknown Resource PUT handler */
 
 static void
-hnd_put(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_put(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
-  (void)ctx;
   (void)resource;
   (void)session;
-  (void)token;
   (void)query;
 
   coap_string_t *put_uri_path;
@@ -430,11 +410,9 @@ check_url_fn(coap_string_t *uri_path, uint8_t code) {
 /* Unknown Resource PUT handler */
 
 static void
-hnd_unknown_put(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_binary_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_unknown_put(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
-  (void)ctx;
   (void)resource;
   coap_pdu_code_t req_code = coap_pdu_get_code(request);
 
@@ -466,10 +444,10 @@ coap_string_t *query, coap_pdu_t *response) {
   /* We possibly want to Observe the GETs */
   coap_resource_set_get_observable(r, 1);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get);
-  coap_add_resource(ctx, r);
+  coap_add_resource(coap_session_get_context(session), r);
 
   /* Do the PUT for this first call */
-  hnd_put(ctx, r, session, request, token, query, response);
+  hnd_put(r, session, request, query, response);
 
   return;
 

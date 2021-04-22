@@ -222,28 +222,24 @@ reference_resource_data(transient_value_t *entry) {
               "Copyright (C) 2010--2021 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
 
 static void
-hnd_get_index(coap_context_t *ctx COAP_UNUSED,
-              coap_resource_t *resource,
+hnd_get_index(coap_resource_t *resource,
               coap_session_t *session,
-              coap_pdu_t *request,
-              coap_binary_t *token,
-              coap_string_t *query COAP_UNUSED,
+              const coap_pdu_t *request,
+              const coap_string_t *query COAP_UNUSED,
               coap_pdu_t *response) {
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   coap_add_data_large_response(resource, session, request, response,
-                               token, query, COAP_MEDIATYPE_TEXT_PLAIN,
+                               query, COAP_MEDIATYPE_TEXT_PLAIN,
                                0x2ffff, 0, strlen(INDEX),
                                (const uint8_t *)INDEX, NULL, NULL);
 }
 
 static void
-hnd_get_time(coap_context_t  *ctx COAP_UNUSED,
-             coap_resource_t *resource,
+hnd_get_time(coap_resource_t *resource,
              coap_session_t *session,
-             coap_pdu_t *request,
-             coap_binary_t *token,
-             coap_string_t *query,
+             const coap_pdu_t *request,
+             const coap_string_t *query,
              coap_pdu_t *response) {
   unsigned char buf[40];
   size_t len;
@@ -275,7 +271,7 @@ hnd_get_time(coap_context_t  *ctx COAP_UNUSED,
       }
     }
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
-    coap_add_data_large_response(resource, session, request, response, token,
+    coap_add_data_large_response(resource, session, request, response,
                                  query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
                                  len,
                                  buf, NULL, NULL);
@@ -287,12 +283,10 @@ hnd_get_time(coap_context_t  *ctx COAP_UNUSED,
 }
 
 static void
-hnd_put_time(coap_context_t *ctx COAP_UNUSED,
-             coap_resource_t *resource,
+hnd_put_time(coap_resource_t *resource,
              coap_session_t *session COAP_UNUSED,
-             coap_pdu_t *request,
-             coap_binary_t *token COAP_UNUSED,
-             coap_string_t *query COAP_UNUSED,
+             const coap_pdu_t *request,
+             const coap_string_t *query COAP_UNUSED,
              coap_pdu_t *response) {
   coap_tick_t t;
   size_t size;
@@ -337,12 +331,10 @@ hnd_put_time(coap_context_t *ctx COAP_UNUSED,
 }
 
 static void
-hnd_delete_time(coap_context_t *ctx COAP_UNUSED,
-                coap_resource_t *resource COAP_UNUSED,
+hnd_delete_time(coap_resource_t *resource COAP_UNUSED,
                 coap_session_t *session COAP_UNUSED,
-                coap_pdu_t *request COAP_UNUSED,
-                coap_binary_t *token COAP_UNUSED,
-                coap_string_t *query COAP_UNUSED,
+                const coap_pdu_t *request COAP_UNUSED,
+                const coap_string_t *query COAP_UNUSED,
                 coap_pdu_t *response COAP_UNUSED) {
   my_clock_base = 0;    /* mark clock as "deleted" */
 
@@ -355,54 +347,54 @@ hnd_delete_time(coap_context_t *ctx COAP_UNUSED,
  * "separate" response (empty ACK followed by data response at a later stage).
  */
 static void
-hnd_get_async(coap_context_t *context,
-              coap_resource_t *resource,
+hnd_get_async(coap_resource_t *resource,
               coap_session_t *session,
-              coap_pdu_t *request,
-              coap_binary_t *token,
-              coap_string_t *query,
+              const coap_pdu_t *request,
+              const coap_string_t *query,
               coap_pdu_t *response) {
   unsigned long delay = 5;
   size_t size;
-  coap_async_t *async;
-  coap_binary_t zero_token = {0, NULL};
 
   /*
    * See if this is the initial, or delayed request
    */
-  async = coap_find_async(context, session, token ? *token : zero_token);
-  if (!async) {
-    /* Set up an async request to trigger delay in the future */
-    if (query) {
-      const uint8_t *p = query->s;
+  if (request) {
+    coap_async_t *async;
+    coap_bin_const_t token = coap_pdu_get_token(request);
 
-      delay = 0;
-      for (size = query->length; size; --size, ++p)
-        delay = delay * 10 + (*p - '0');
-      if (delay == 0) {
-        coap_log(LOG_INFO, "async: delay of 0 not supported\n");
-        coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
+    async = coap_find_async(session, token);
+    if (!async) {
+      /* Set up an async request to trigger delay in the future */
+      if (query) {
+        const uint8_t *p = query->s;
+
+        delay = 0;
+        for (size = query->length; size; --size, ++p)
+          delay = delay * 10 + (*p - '0');
+        if (delay == 0) {
+          coap_log(LOG_INFO, "async: delay of 0 not supported\n");
+          coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
+          return;
+        }
+      }
+      async = coap_register_async(session,
+                                  request,
+                                  COAP_TICKS_PER_SECOND * delay);
+      if (async == NULL) {
+          coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
         return;
       }
-    }
-    async = coap_register_async(context,
-                                session,
-                                request,
-                                COAP_TICKS_PER_SECOND * delay);
-    if (async == NULL) {
-        coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
+      /*
+       * Not setting response code will cause empty ACK to be sent
+       * if Confirmable
+       */
       return;
     }
-    /*
-     * Not setting response code will cause empty ACK to be sent
-     * if Confirmable
-     */
-    return;
   }
-  /* async set up, so this is the delayed request */
+  /* no request (observe) or async set up, so this is the delayed request */
 
   /* Send back the appropriate data */
-  coap_add_data_large_response(resource, session, request, response, token,
+  coap_add_data_large_response(resource, session, request, response,
                                query, COAP_MEDIATYPE_TEXT_PLAIN, -1, 0, 4,
                                (const uint8_t *)"done", NULL, NULL);
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
@@ -415,12 +407,10 @@ hnd_get_async(coap_context_t *context,
  */
 
 static void
-hnd_get_example_data(coap_context_t *ctx COAP_UNUSED,
-        coap_resource_t *resource,
+hnd_get_example_data(coap_resource_t *resource,
         coap_session_t *session,
-        coap_pdu_t *request,
-        coap_binary_t *token,
-        coap_string_t *query,
+        const coap_pdu_t *request,
+        const coap_string_t *query,
         coap_pdu_t *response
 ) {
   coap_binary_t body;
@@ -443,7 +433,7 @@ hnd_get_example_data(coap_context_t *ctx COAP_UNUSED,
   }
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   body = reference_resource_data(example_data_value);
-  coap_add_data_large_response(resource, session, request, response, token,
+  coap_add_data_large_response(resource, session, request, response,
                                query, example_data_media_type, -1, 0,
                                body.length,
                                body.s,
@@ -461,12 +451,10 @@ cache_free_app_data(void *data) {
  */
 
 static void
-hnd_put_example_data(coap_context_t *ctx COAP_UNUSED,
-        coap_resource_t *resource,
+hnd_put_example_data(coap_resource_t *resource,
         coap_session_t *session,
-        coap_pdu_t *request,
-        coap_binary_t *token COAP_UNUSED,
-        coap_string_t *query COAP_UNUSED,
+        const coap_pdu_t *request,
+        const coap_string_t *query COAP_UNUSED,
         coap_pdu_t *response
 ) {
   size_t size;
@@ -581,7 +569,7 @@ hnd_put_example_data(coap_context_t *ctx COAP_UNUSED,
     coap_binary_t body;
 
     body = reference_resource_data(example_data_value);
-    coap_add_data_large_response(resource, session, request, response, token,
+    coap_add_data_large_response(resource, session, request, response,
                                  query, example_data_media_type, -1, 0,
                                  body.length,
                                  body.s,
@@ -654,7 +642,7 @@ static size_t proxy_list_count = 0;
 static coap_resource_t *proxy_resource = NULL;
 
 static int
-get_uri_proxy_scheme_info(coap_pdu_t *request,
+get_uri_proxy_scheme_info(const coap_pdu_t *request,
                           coap_opt_t *opt,
                           coap_uri_t *uri,
                           coap_string_t **uri_path,
@@ -774,7 +762,7 @@ setup_cpsk(char *client_sni) {
 
 static proxy_list_t *
 get_proxy_session(coap_session_t *session, coap_pdu_t *response,
-                  coap_binary_t *token, coap_string_t *query) {
+                  const coap_bin_const_t *token, const coap_string_t *query) {
 
   size_t i;
   proxy_list_t *new_proxy_list;
@@ -877,9 +865,9 @@ remove_proxy_association(coap_session_t *session, int send_failure) {
 
 
 static coap_session_t *
-get_ongoing_proxy_session(coap_context_t *ctx, coap_session_t *session,
-                          coap_pdu_t *response, coap_binary_t *token,
-                          coap_string_t *query, coap_uri_t *uri) {
+get_ongoing_proxy_session(coap_session_t *session,
+                          coap_pdu_t *response, const coap_bin_const_t *token,
+                          const coap_string_t *query, const coap_uri_t *uri) {
 
   coap_address_t dst;
   coap_uri_scheme_t scheme;
@@ -887,6 +875,7 @@ get_ongoing_proxy_session(coap_context_t *ctx, coap_session_t *session,
   coap_str_const_t server;
   uint16_t port = COAP_DEFAULT_PORT;
   proxy_list_t *new_proxy_list;
+  coap_context_t *context = coap_session_get_context(session);
 
   new_proxy_list = get_proxy_session(session, response, token, query);
   if (!new_proxy_list)
@@ -925,7 +914,7 @@ get_ongoing_proxy_session(coap_context_t *ctx, coap_session_t *session,
   case COAP_URI_SCHEME_COAP:
   case COAP_URI_SCHEME_COAP_TCP:
     new_proxy_list->ongoing =
-       coap_new_client_session(ctx, NULL, &dst,
+       coap_new_client_session(context, NULL, &dst,
                                scheme == COAP_URI_SCHEME_COAP ?
                                 COAP_PROTO_UDP : COAP_PROTO_TCP);
     break;
@@ -940,10 +929,10 @@ get_ongoing_proxy_session(coap_context_t *ctx, coap_session_t *session,
 
     if (!key_defined) {
       /* Use our defined PKI certs (or NULL)  */
-      coap_dtls_pki_t *dtls_pki = setup_pki(ctx, COAP_DTLS_ROLE_CLIENT,
+      coap_dtls_pki_t *dtls_pki = setup_pki(context, COAP_DTLS_ROLE_CLIENT,
                                             client_sni);
       new_proxy_list->ongoing =
-           coap_new_client_session_pki(ctx, NULL, &dst,
+           coap_new_client_session_pki(context, NULL, &dst,
                  scheme == COAP_URI_SCHEME_COAPS ?
                   COAP_PROTO_DTLS : COAP_PROTO_TLS,
                  dtls_pki);
@@ -953,7 +942,7 @@ get_ongoing_proxy_session(coap_context_t *ctx, coap_session_t *session,
       coap_dtls_cpsk_t *dtls_cpsk = setup_cpsk(client_sni);
 
       new_proxy_list->ongoing =
-           coap_new_client_session_psk2(ctx, NULL, &dst,
+           coap_new_client_session_psk2(context, NULL, &dst,
                  scheme == COAP_URI_SCHEME_COAPS ?
                   COAP_PROTO_DTLS : COAP_PROTO_TLS,
                  dtls_cpsk);
@@ -980,12 +969,10 @@ release_proxy_body_data(coap_session_t *session COAP_UNUSED,
 }
 
 static void
-hnd_proxy_uri(coap_context_t *ctx,
-                coap_resource_t *resource COAP_UNUSED,
+hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
                 coap_session_t *session,
-                coap_pdu_t *request,
-                coap_binary_t *token,
-                coap_string_t *query,
+                const coap_pdu_t *request,
+                const coap_string_t *query,
                 coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *opt;
@@ -1010,6 +997,7 @@ hnd_proxy_uri(coap_context_t *ctx,
   unsigned char *buf = _buf;
   size_t buflen;
   int res;
+  coap_bin_const_t token = coap_pdu_get_token(request);
 
   memset(&uri, 0, sizeof(uri));
   /*
@@ -1067,7 +1055,7 @@ hnd_proxy_uri(coap_context_t *ctx,
       uri.scheme == COAP_URI_SCHEME_COAPS_TCP) {
     coap_pdu_code_t req_code = coap_pdu_get_code(request);
 
-    tmp_proxy_list = get_proxy_session(session, response, token, query);
+    tmp_proxy_list = get_proxy_session(session, response, &token, query);
     if (!tmp_proxy_list)
       goto cleanup;
     body_data = tmp_proxy_list->body_data;
@@ -1094,7 +1082,7 @@ hnd_proxy_uri(coap_context_t *ctx,
 
     /* Send data on (opening session if appropriate) now that it is all in */
 
-    ongoing = get_ongoing_proxy_session(ctx, session, response, token,
+    ongoing = get_ongoing_proxy_session(session, response, &token,
                                         query, &uri);
     /*
      * Build up the ongoing PDU that we are going to send
@@ -1107,7 +1095,7 @@ hnd_proxy_uri(coap_context_t *ctx,
       goto cleanup;
     }
 
-    if (token && !coap_add_token(pdu, token->length, token->s)) {
+    if (!coap_add_token(pdu, token.length, token.s)) {
       coap_log(LOG_DEBUG, "cannot add token to proxy request\n");
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       coap_delete_pdu(pdu);
@@ -1234,12 +1222,10 @@ static dynamic_resource_t *dynamic_entry = NULL;
  */
 
 static void
-hnd_delete(coap_context_t *ctx,
-           coap_resource_t *resource,
+hnd_delete(coap_resource_t *resource,
            coap_session_t *session COAP_UNUSED,
-           coap_pdu_t *request,
-           coap_binary_t *token COAP_UNUSED,
-           coap_string_t *query COAP_UNUSED,
+           const coap_pdu_t *request,
+           const coap_string_t *query COAP_UNUSED,
            coap_pdu_t *response
 ) {
   int i;
@@ -1268,7 +1254,7 @@ hnd_delete(coap_context_t *ctx,
   }
 
   /* Dynamic resource no longer required - delete it */
-  coap_delete_resource(ctx, resource);
+  coap_delete_resource(coap_session_get_context(session), resource);
   coap_delete_string(uri_path);
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
@@ -1279,12 +1265,10 @@ hnd_delete(coap_context_t *ctx,
  */
 
 static void
-hnd_get(coap_context_t *ctx COAP_UNUSED,
-        coap_resource_t *resource,
+hnd_get(coap_resource_t *resource,
         coap_session_t *session,
-        coap_pdu_t *request,
-        coap_binary_t *token,
-        coap_string_t *query,
+        const coap_pdu_t *request,
+        const coap_string_t *query,
         coap_pdu_t *response
 ) {
   coap_str_const_t *uri_path;
@@ -1317,7 +1301,7 @@ hnd_get(coap_context_t *ctx COAP_UNUSED,
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   body = reference_resource_data(resource_entry->value);
-  coap_add_data_large_response(resource, session, request, response, token,
+  coap_add_data_large_response(resource, session, request, response,
                                query, resource_entry->media_type, -1, 0,
                                body.length,
                                body.s,
@@ -1330,12 +1314,10 @@ hnd_get(coap_context_t *ctx COAP_UNUSED,
  */
 
 static void
-hnd_put(coap_context_t *ctx COAP_UNUSED,
-        coap_resource_t *resource,
+hnd_put(coap_resource_t *resource,
         coap_session_t *session,
-        coap_pdu_t *request,
-        coap_binary_t *token COAP_UNUSED,
-        coap_string_t *query COAP_UNUSED,
+        const coap_pdu_t *request,
+        const coap_string_t *query COAP_UNUSED,
         coap_pdu_t *response
 ) {
   coap_string_t *uri_path;
@@ -1522,7 +1504,7 @@ hnd_put(coap_context_t *ctx COAP_UNUSED,
     coap_binary_t body;
 
     body = reference_resource_data(resource_entry->value);
-    coap_add_data_large_response(resource, session, request, response, token,
+    coap_add_data_large_response(resource, session, request, response,
                                  query, resource_entry->media_type, -1, 0,
                                  body.length,
                                  body.s,
@@ -1535,12 +1517,10 @@ hnd_put(coap_context_t *ctx COAP_UNUSED,
  */
 
 static void
-hnd_unknown_put(coap_context_t *ctx,
-                coap_resource_t *resource COAP_UNUSED,
+hnd_unknown_put(coap_resource_t *resource COAP_UNUSED,
                 coap_session_t *session,
-                coap_pdu_t *request,
-                coap_binary_t *token,
-                coap_string_t *query,
+                const coap_pdu_t *request,
+                const coap_string_t *query,
                 coap_pdu_t *response
 ) {
   coap_resource_t *r;
@@ -1571,17 +1551,16 @@ hnd_unknown_put(coap_context_t *ctx,
   /* We possibly want to Observe the GETs */
   coap_resource_set_get_observable(r, 1);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get);
-  coap_add_resource(ctx, r);
+  coap_add_resource(coap_session_get_context(session), r);
 
   /* Do the PUT for this first call */
-  hnd_put(ctx, r, session, request, token, query, response);
+  hnd_put(r, session, request, query, response);
 }
 
 #if SERVER_CAN_PROXY
 static int
-proxy_event_handler(coap_context_t *ctx COAP_UNUSED,
-              coap_event_t event,
-              coap_session_t *session) {
+proxy_event_handler(coap_session_t *session,
+              coap_event_t event) {
 
   switch(event) {
   case COAP_EVENT_DTLS_CLOSED:
@@ -1597,10 +1576,9 @@ proxy_event_handler(coap_context_t *ctx COAP_UNUSED,
 }
 
 static coap_response_t
-proxy_message_handler(coap_context_t *ctx COAP_UNUSED,
-                coap_session_t *session,
-                coap_pdu_t *sent COAP_UNUSED,
-                coap_pdu_t *received,
+proxy_message_handler(coap_session_t *session,
+                const coap_pdu_t *sent COAP_UNUSED,
+                const coap_pdu_t *received,
                 const coap_mid_t id COAP_UNUSED) {
 
   coap_pdu_t *pdu = NULL;
@@ -1705,7 +1683,7 @@ proxy_message_handler(coap_context_t *ctx COAP_UNUSED,
 
   if (size > 0) {
     coap_add_data_large_response(proxy_resource, incoming, NULL, pdu,
-                                 proxy_entry->token, proxy_entry->query,
+                                 proxy_entry->query,
                                  media_type, maxage, etag, size, data,
                                  release_proxy_body_data,
                                  proxy_entry->body_data);
@@ -1720,10 +1698,9 @@ proxy_message_handler(coap_context_t *ctx COAP_UNUSED,
 }
 
 static void
-proxy_nack_handler(coap_context_t *context COAP_UNUSED,
-             coap_session_t *session,
-             coap_pdu_t *sent COAP_UNUSED,
-             coap_nack_reason_t reason,
+proxy_nack_handler(coap_session_t *session,
+             const coap_pdu_t *sent COAP_UNUSED,
+             const coap_nack_reason_t reason,
              const coap_mid_t id COAP_UNUSED) {
 
   switch(reason) {

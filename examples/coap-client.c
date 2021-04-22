@@ -261,7 +261,7 @@ resolve_address(const coap_str_const_t *server, struct sockaddr *dst) {
     (Pdu)->hdr->code == COAP_RESPONSE_CODE_CHANGED))
 
 static inline int
-check_token(coap_pdu_t *received) {
+check_token(const coap_pdu_t *received) {
   coap_bin_const_t token = coap_pdu_get_token(received);
 
   return token.length == the_token.length &&
@@ -269,9 +269,8 @@ check_token(coap_pdu_t *received) {
 }
 
 static int
-event_handler(coap_context_t *ctx COAP_UNUSED,
-              coap_event_t event,
-              coap_session_t *session COAP_UNUSED) {
+event_handler(coap_session_t *session COAP_UNUSED,
+              const coap_event_t event) {
 
   switch(event) {
   case COAP_EVENT_DTLS_CLOSED:
@@ -286,10 +285,9 @@ event_handler(coap_context_t *ctx COAP_UNUSED,
 }
 
 static void
-nack_handler(coap_context_t *context COAP_UNUSED,
-             coap_session_t *session COAP_UNUSED,
-             coap_pdu_t *sent COAP_UNUSED,
-             coap_nack_reason_t reason,
+nack_handler(coap_session_t *session COAP_UNUSED,
+             const coap_pdu_t *sent COAP_UNUSED,
+             const coap_nack_reason_t reason,
              const coap_mid_t id COAP_UNUSED) {
 
   switch(reason) {
@@ -310,10 +308,9 @@ nack_handler(coap_context_t *context COAP_UNUSED,
  * Response handler used for coap_send_large() responses
  */
 static coap_response_t
-message_handler(coap_context_t *ctx COAP_UNUSED,
-                coap_session_t *session COAP_UNUSED,
-                coap_pdu_t *sent,
-                coap_pdu_t *received,
+message_handler(coap_session_t *session COAP_UNUSED,
+                const coap_pdu_t *sent,
+                const coap_pdu_t *received,
                 const coap_mid_t id COAP_UNUSED) {
 
   coap_opt_t *block_opt;

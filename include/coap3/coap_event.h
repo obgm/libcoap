@@ -54,14 +54,12 @@
 /**
  * Type for event handler functions that can be registered with a CoAP
  * context using the unction coap_set_event_handler(). When called by
- * the library, the first argument will be the coap_context_t object
- * where the handler function has been registered. The second argument
- * is the event type that may be complemented by event-specific data
- * passed as the third argument.
+ * the library, the first argument will be the current coap_session_t object
+ * which is associated with the original CoAP context. The second parameter
+ * is the event type.
  */
-typedef int (*coap_event_handler_t)(coap_context_t *,
-                                    coap_event_t event,
-                                    coap_session_t *session);
+typedef int (*coap_event_handler_t)(coap_session_t *session,
+                                    const coap_event_t event);
 
 /**
  * Registers the function @p hnd as callback for events from the given

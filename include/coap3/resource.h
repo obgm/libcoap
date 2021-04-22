@@ -38,12 +38,10 @@
  * Definition of message handler function
  */
 typedef void (*coap_method_handler_t)
-  (coap_context_t  *,
-   coap_resource_t *,
+  (coap_resource_t *,
    coap_session_t *,
-   coap_pdu_t *,
-   coap_binary_t * /* token */,
-   coap_string_t * /* query string */,
+   const coap_pdu_t * /* request */,
+   const coap_string_t * /* query string */,
    coap_pdu_t * /* response */);
 
 #define COAP_ATTR_FLAGS_RELEASE_NAME  0x1

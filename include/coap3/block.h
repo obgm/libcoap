@@ -93,7 +93,7 @@ coap_opt_block_set_m(coap_opt_t *block_opt, int m) {
  *
  * @return       @c 1 on success, @c 0 otherwise.
  */
-int coap_get_block(coap_pdu_t *pdu, coap_option_num_t number,
+int coap_get_block(const coap_pdu_t *pdu, coap_option_num_t number,
                    coap_block_t *block);
 
 /**
@@ -166,11 +166,8 @@ coap_block_build_body(coap_binary_t *body_data, size_t length,
  * Note: The application will get called for every packet of a large body to
  * process. Consider using coap_add_data_response_large() instead.
  *
- * @param resource   The resource the data is associated with.
- * @param session    The coap session.
  * @param request    The requesting pdu.
  * @param response   The response pdu.
- * @param token      The token taken from the (original) requesting pdu.
  * @param media_type The format of the data.
  * @param maxage     The maxmimum life of the data. If @c -1, then there
  *                   is no maxage.
@@ -179,11 +176,8 @@ coap_block_build_body(coap_binary_t *body_data, size_t length,
  *
  */
 void
-coap_add_data_blocked_response(coap_resource_t *resource,
-                               coap_session_t *session,
-                               coap_pdu_t *request,
+coap_add_data_blocked_response(const coap_pdu_t *request,
                                coap_pdu_t *response,
-                               const coap_binary_t *token,
                                uint16_t media_type,
                                int maxage,
                                size_t length,
@@ -282,7 +276,6 @@ int coap_add_data_large_request(coap_session_t *session,
  * @param session    The coap session.
  * @param request    The requesting pdu.
  * @param response   The response pdu.
- * @param token      The token taken from the (original) requesting pdu.
  * @param query      The query taken from the (original) requesting pdu.
  * @param media_type The format of the data.
  * @param maxage     The maxmimum life of the data. If @c -1, then there
@@ -300,9 +293,8 @@ int coap_add_data_large_request(coap_session_t *session,
 int
 coap_add_data_large_response(coap_resource_t *resource,
                              coap_session_t *session,
-                             coap_pdu_t *request,
+                             const coap_pdu_t *request,
                              coap_pdu_t *response,
-                             const coap_binary_t *token,
                              const coap_string_t *query,
                              uint16_t media_type,
                              int maxage,

@@ -1411,7 +1411,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 
   /* And finally delete the node */
   if (node->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
-    context->nack_handler(context, node->session, node->pdu, COAP_NACK_TOO_MANY_RETRIES, node->id);
+    context->nack_handler(node->session, node->pdu, COAP_NACK_TOO_MANY_RETRIES, node->id);
   coap_delete_node(node);
   return COAP_INVALID_MID;
 }
@@ -1986,7 +1986,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
     coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
              coap_session_str(session), q->id);
     if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
-      context->nack_handler(context, session, q->pdu, reason, q->id);
+      context->nack_handler(session, q->pdu, reason, q->id);
     coap_delete_node(q);
   }
 
@@ -2002,7 +2002,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
       coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
                coap_session_str(session), q->id);
       if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
-        context->nack_handler(context, session, q->pdu, reason, q->id);
+        context->nack_handler(session, q->pdu, reason, q->id);
       coap_delete_node(q);
       q = p->next;
     } else {
@@ -2496,6 +2496,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   int skip_hop_limit_check = 0;
   int resp;
   coap_binary_t token = { pdu->token_length, pdu->token };
+  coap_bin_const_t tokenc = { pdu->token_length, pdu->token };
 #ifndef WITHOUT_ASYNC
   coap_async_t *async;
 #endif /* WITHOUT_ASYNC */
@@ -2507,7 +2508,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     }
   }
 #ifndef WITHOUT_ASYNC
-  async = coap_find_async(context, session, token);
+  async = coap_find_async(session, tokenc);
   if (async) {
     coap_tick_t now;
 
@@ -2529,7 +2530,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     coap_prng(&r, sizeof(r));
     delay = (COAP_DEFAULT_LEISURE * COAP_TICKS_PER_SECOND * r) / 256;
     /* Register request to be internally re-transmitted after delay */
-    if (coap_register_async(context, session, pdu, delay))
+    if (coap_register_async(session, pdu, delay))
       return;
   }
 #endif /* WITHOUT_ASYNC */
@@ -2772,16 +2773,26 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
             if (coap_get_block(pdu, COAP_OPTION_BLOCK2, &block)) {
               has_block2 = 1;
+              if (block.num != 0) {
+                response->code = COAP_RESPONSE_CODE(400);
+                goto skip_handler;
+              }
             }
             subscription = coap_add_observer(resource, session, &token,
                                              query, has_block2,
                                              block, pdu->code);
             if (subscription) {
+              uint8_t buf[4];
+
               /* Ownership of query is taken by subscription if not
                * NULL. In this case, we must not delete query here
                * hence owns_query is cleared. */
               owns_query = 0;
               coap_touch_observer(context, session, &token);
+              coap_add_option(response, COAP_OPTION_OBSERVE,
+                              coap_encode_var_safe(buf, sizeof (buf),
+                                                   resource->observe),
+                              buf);
             }
           }
           else if (observe_action == COAP_OBSERVE_CANCEL) {
@@ -2795,7 +2806,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
       if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
         if (coap_handle_request_put_block(context, session, pdu, response,
-                                          resource, uri_path, observe, &token,
+                                          resource, uri_path, observe,
                                           query, h, &added_block)) {
           goto skip_handler;
         }
@@ -2809,7 +2820,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       /*
        * Call the request handler with everything set up
        */
-      h(context, resource, session, pdu, &token, query, response);
+      h(resource, session, pdu, query, response);
 
       /* Check if lg_xmit generated and update PDU code if so */
       coap_check_code_lg_xmit(session, response, resource, query);
@@ -2914,7 +2925,7 @@ handle_response(coap_context_t *context, coap_session_t *session,
 
   /* Call application-specific response handler when available. */
   if (context->response_handler) {
-    if (context->response_handler(context, session, sent, rcvd,
+    if (context->response_handler(session, sent, rcvd,
                                   rcvd->mid) == COAP_RESPONSE_FAIL)
       coap_send_rst(session, rcvd);
     else
@@ -2949,7 +2960,7 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
   } else if (pdu->code == COAP_SIGNALING_CODE_PING) {
     coap_pdu_t *pong = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_PONG, 0, 1);
     if (context->ping_handler) {
-      context->ping_handler(context, session, pdu, pdu->mid);
+      context->ping_handler(session, pdu, pdu->mid);
     }
     if (pong) {
       coap_add_option(pong, COAP_SIGNALING_OPTION_CUSTODY, 0, NULL);
@@ -2958,7 +2969,7 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
   } else if (pdu->code == COAP_SIGNALING_CODE_PONG) {
     session->last_pong = session->last_rx_tx;
     if (context->pong_handler) {
-      context->pong_handler(context, session, pdu, pdu->mid);
+      context->pong_handler(session, pdu, pdu->mid);
     }
   } else if (pdu->code == COAP_SIGNALING_CODE_RELEASE
           || pdu->code == COAP_SIGNALING_CODE_ABORT) {
@@ -3047,12 +3058,12 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
         if (!is_ping_rst) {
           if(sent->pdu->type==COAP_MESSAGE_CON && context->nack_handler)
-            context->nack_handler(context, sent->session, sent->pdu,
+            context->nack_handler(sent->session, sent->pdu,
                                   COAP_NACK_RST, sent->id);
         }
         else {
           if (context->pong_handler) {
-            context->pong_handler(context, session, pdu, pdu->mid);
+            context->pong_handler(session, pdu, pdu->mid);
           }
           session->last_pong = session->last_rx_tx;
           session->last_ping_mid = COAP_INVALID_MID;
@@ -3122,8 +3133,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   else {
     if (COAP_PDU_IS_EMPTY(pdu)) {
       if (context->ping_handler) {
-        context->ping_handler(context, session,
-          pdu, pdu->mid);
+        context->ping_handler(session, pdu, pdu->mid);
       }
     }
     coap_log(LOG_DEBUG, "dropped message with invalid code (%d.%02d)\n",
@@ -3156,7 +3166,7 @@ coap_handle_event(coap_context_t *context, coap_event_t event, coap_session_t *s
   coap_log(LOG_DEBUG, "***EVENT: 0x%04x\n", event);
 
   if (context->handle_event) {
-    return context->handle_event(context, event, session);
+    return context->handle_event(session, event);
   } else {
     return 0;
   }
@@ -3198,7 +3208,7 @@ coap_check_async(coap_context_t *context, coap_tick_t now) {
       handle_request(context, async->session, async->pdu);
 
       /* Remove this async entry as it has now fired */
-      coap_free_async(context, async);
+      coap_free_async(async->session, async);
     }
     else {
       if (next_due == 0 || next_due > async->delay - now)

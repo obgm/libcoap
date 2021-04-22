@@ -23,15 +23,15 @@ SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*coap_async_t *coap_register_async(coap_context_t *_context_,
-coap_session_t *_session_, coap_pdu_t *_request_, coap_tick_t _delay_);*
+*coap_async_t *coap_register_async(coap_session_t *_session_,
+const coap_pdu_t *_request_, coap_tick_t _delay_);*
 
 *void coap_async_set_delay(coap_async_t *_async_, coap_tick_t _delay_);*
 
-*void coap_free_async(coap_context_t *_context_, coap_async_t *_async_);*
+*void coap_free_async(coap_session_t *_session_, coap_async_t *_async_);*
 
-*coap_async_t *coap_find_async(coap_context_t *_context_,
-coap_session_t *_session_, coap_binary_t _token_);*
+*coap_async_t *coap_find_async(coap_session_t *_session_,
+coap_bin_const_t _token_);*
 
 *void coap_async_set_app_data(coap_async_t *_async_, void *_app_data_);*
 
@@ -59,7 +59,7 @@ Usually responses are piggybacked, but this man page focuses on separate
 (async) support.
 
 The *coap_register_async*() function is used to set up an asynchronous delayed
-request for the _request_ PDU associated with the _context_ and _session_. The
+request for the _request_ PDU associated with the _session_. The
 application request handler will get called with a copy of _request_ after
 _delay_ ticks which will then cause a response to be sent.  If _delay_ is 0,
 then the application request handler will not get called.
@@ -75,7 +75,7 @@ then when the response is ready at an indeterminate point in the future,
 The *coap_free_async*() function is used to delete an _async_ definition.
 
 The *coap_find_async*() function is used to determine if there is an async
-definition based on the _context_, _session_ and token _token_.
+definition based on the _session_ and token _token_.
 
 The *coap_async_set_app_data*() function is used to add in user defined
 _app_data_ to the _async_ definition.  It is the responsibility of the
@@ -105,54 +105,54 @@ EXAMPLES
  * response (empty ACK followed by data response at a later stage).
  */
 static void
-hnd_get_with_delay(coap_context_t *context,
+hnd_get_with_delay(coap_session_t *session,
               coap_resource_t *resource,
-              coap_session_t *session,
               coap_pdu_t *request,
-              coap_binary_t *token,
               coap_string_t *query,
               coap_pdu_t *response) {
   unsigned long delay = 5;
   size_t size;
-  coap_async_t *async;
-  coap_binary_t zero_token = {0, NULL};
 
   /*
    * See if this is the initial, or delayed request
    */
-  async = coap_find_async(context, session, token ? *token : zero_token);
-  if (!async) {
-    /* Set up an async request to trigger delay in the future */
-    if (query) {
-      const uint8_t *p = query->s;
+  if (request) {
+    coap_async_t *async;
+    coap_bin_const_t token = coap_pdu_get_token(request);
 
-      delay = 0;
-      for (size = query->length; size; --size, ++p)
-        delay = delay * 10 + (*p - '0');
-      if (delay == 0) {
-        coap_log(LOG_INFO, "async: delay of 0 not supported\n");
-        coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
+    async = coap_find_async(session, token);
+    if (!async) {
+      /* Set up an async request to trigger delay in the future */
+      if (query) {
+        const uint8_t *p = query->s;
+
+        delay = 0;
+        for (size = query->length; size; --size, ++p)
+          delay = delay * 10 + (*p - '0');
+        if (delay == 0) {
+          coap_log(LOG_INFO, "async: delay of 0 not supported\n");
+          coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
+          return;
+        }
+      }
+      async = coap_register_async(session,
+                                  request,
+                                  COAP_TICKS_PER_SECOND * delay);
+      if (async == NULL) {
+        coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
         return;
       }
-    }
-    async = coap_register_async(context,
-                                session,
-                                request,
-                                COAP_TICKS_PER_SECOND * delay);
-    if (async == NULL) {
-      coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
+      /*
+       * Not setting response code will cause empty ACK to be sent
+       * if Confirmable
+       */
       return;
     }
-    /*
-     * Not setting response code will cause empty ACK to be sent
-     * if Confirmable
-     */
-    return;
   }
-  /* async set up, so this is the delayed request */
+  /* no request (observe) or async set up, so this is the delayed request */
 
   /* Send back the appropriate data */
-  coap_add_data_large_response(resource, session, request, response, token,
+  coap_add_data_large_response(resource, session, request, response,
                                query, COAP_MEDIATYPE_TEXT_PLAIN, -1, 0, 4,
                                (const uint8_t *)"done", NULL, NULL);
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);

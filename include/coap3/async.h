@@ -42,7 +42,6 @@ int coap_async_is_supported(void);
  * When the delay expires, a copy of the @p request will get sent to the
  * appropriate request handler.
  *
- * @param context  The context to use.
  * @param session  The session that is used for asynchronous transmissions.
  * @param request  The request that is handled asynchronously.
  * @param delay    The amount of time to delay before sending response, 0 means
@@ -52,9 +51,8 @@ int coap_async_is_supported(void);
  *                 NULL in case of an error.
  */
 coap_async_t *
-coap_register_async(coap_context_t *context,
-                    coap_session_t *session,
-                    coap_pdu_t *request,
+coap_register_async(coap_session_t *session,
+                    const coap_pdu_t *request,
                     coap_tick_t delay);
 
 /**
@@ -71,30 +69,27 @@ void
 coap_async_set_delay(coap_async_t *async, coap_tick_t delay);
 
 /**
- * Releases the memory that was allocated by coap_async_state_init() for the
+ * Releases the memory that was allocated by coap_register_async() for the
  * object @p async.
  *
- * @param context  The context to use.
+ * @param session  The session to use.
  * @param async The object to delete.
  */
 void
-coap_free_async(coap_context_t *context, coap_async_t *async);
+coap_free_async(coap_session_t *session, coap_async_t *async);
 
 /**
  * Retrieves the object identified by @p token from the list of asynchronous
  * transactions that are registered with @p context. This function returns a
  * pointer to that object or @c NULL if not found.
  *
- * @param context The context where the asynchronous objects are registered
- *                with.
  * @param session The session that is used for asynchronous transmissions.
  * @param token   The PDU's token of the object to retrieve.
  *
  * @return        A pointer to the object identified by @p token or @c NULL if
  *                not found.
  */
-coap_async_t *coap_find_async(coap_context_t *context,
-                              coap_session_t *session, coap_binary_t token);
+coap_async_t *coap_find_async(coap_session_t *session, coap_bin_const_t token);
 
 /**
  * Set the application data pointer held in @p async. This overwrites any

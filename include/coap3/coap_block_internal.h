@@ -174,7 +174,6 @@ int coap_handle_request_put_block(coap_context_t *context,
                                   coap_resource_t *resource,
                                   coap_string_t *uri_path,
                                   coap_opt_t *observe,
-                                  coap_binary_t *token,
                                   coap_string_t *query,
                                   coap_method_handler_t h,
                                   int *added_block);

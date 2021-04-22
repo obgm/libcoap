@@ -91,10 +91,8 @@ init_coap_server(coap_context_t **ctx) {
 #endif
 
 void
-hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
-             coap_session_t *session,
-             coap_pdu_t *request, coap_binary_t *token,
-             coap_string_t *query,
+hnd_get_time(coap_resource_t *resource, coap_session_t *session,
+             const coap_pdu_t *request, const coap_string_t *query,
              coap_pdu_t *response) {
   unsigned char buf[40];
   size_t len;
@@ -125,7 +123,7 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
         len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
       }
     }
-    coap_add_data_blocked_response(resource, session, request, response, token,
+    coap_add_data_blocked_response(request, response,
                                    COAP_MEDIATYPE_TEXT_PLAIN, 1,
                                    len,
                                    buf);
