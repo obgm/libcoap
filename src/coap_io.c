@@ -1083,11 +1083,7 @@ coap_io_prepare_io(coap_context_t *ctx,
 
 #ifndef WITHOUT_ASYNC
   /* Check to see if we need to send off any Async requests */
-  s_timeout = coap_check_async(ctx, now);
-  if (s_timeout) {
-    if (timeout == 0 || s_timeout < timeout)
-      timeout = s_timeout;
-  }
+  timeout = coap_check_async(ctx, now);
 #endif /* WITHOUT_ASYNC */
 
   LL_FOREACH(ctx->endpoint, ep) {
