@@ -1353,7 +1353,7 @@ coap_handle_request_put_block(coap_context_t *context,
         pdu->body_length = p->total_len;
         pdu->body_offset = 0;
         pdu->body_total = p->total_len;
-        coap_log(LOG_DEBUG, "Server app vesion of updated PDU\n");
+        coap_log(LOG_DEBUG, "Server app version of updated PDU\n");
         coap_show_pdu(LOG_DEBUG, pdu);
         /* Need to do this here as we need to free off p */
         h(resource, session, pdu, query, response);
@@ -1816,7 +1816,7 @@ coap_handle_response_get_block(coap_context_t *context,
           if (context->response_handler) {
             if (session->block_mode &
                   (COAP_BLOCK_SINGLE_BODY)) {
-              coap_log(LOG_DEBUG, "Client app vesion of updated PDU\n");
+              coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
               coap_show_pdu(LOG_DEBUG, rcvd);
             }
             context->response_handler(session, sent, rcvd, rcvd->mid);
@@ -1854,7 +1854,7 @@ block_mode:
             p->token_length = p->base_token_length;
           }
           if (context->response_handler) {
-            coap_log(LOG_DEBUG, "Client app vesion of updated PDU\n");
+            coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
             coap_show_pdu(LOG_DEBUG, rcvd);
             context->response_handler(session, sent, rcvd, rcvd->mid);
           }
