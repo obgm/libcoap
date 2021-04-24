@@ -173,7 +173,7 @@ RETURN VALUES
 *coap_cache_derive_key*() function returns a newly created Cache Key or
 NULL if there is a creation failure.
 
-*coap_cache_ignore_options*() function returs 1 if success, 0 on failure.
+*coap_cache_ignore_options*() function returns 1 if success, 0 on failure.
 
 *coap_new_cache_entry*(), *coap_cache_get_by_key*() and
 *coap_cache_get_by_pdu*() functions return the Cache Entry or NULL if there
