@@ -383,8 +383,8 @@ void *coap_get_app_data(const coap_context_t *context);
  *
  * @return        A pointer to the new message or @c NULL on error.
  */
-coap_pdu_t *coap_new_error_response(coap_pdu_t *request,
-                                    unsigned char code,
+coap_pdu_t *coap_new_error_response(const coap_pdu_t *request,
+                                    coap_pdu_code_t code,
                                     coap_opt_filter_t *opts);
 
 /**
@@ -403,8 +403,8 @@ coap_pdu_t *coap_new_error_response(coap_pdu_t *request,
  *                        COAP_INVALID_MID otherwise.
  */
 coap_mid_t coap_send_error(coap_session_t *session,
-                           coap_pdu_t *request,
-                           unsigned char code,
+                           const coap_pdu_t *request,
+                           coap_pdu_code_t code,
                            coap_opt_filter_t *opts);
 
 /**
@@ -419,7 +419,8 @@ coap_mid_t coap_send_error(coap_session_t *session,
  *                        otherwise.
  */
 coap_mid_t
-coap_send_message_type(coap_session_t *session, coap_pdu_t *request, unsigned char type);
+coap_send_message_type(coap_session_t *session, const coap_pdu_t *request,
+                       coap_pdu_type_t type);
 
 /**
  * Sends an ACK message with code @c 0 for the specified @p request to @p dst.
@@ -432,7 +433,7 @@ coap_send_message_type(coap_session_t *session, coap_pdu_t *request, unsigned ch
  * @return                The message id if ACK was sent or @c
  *                        COAP_INVALID_MID on error.
  */
-coap_mid_t coap_send_ack(coap_session_t *session, coap_pdu_t *request);
+coap_mid_t coap_send_ack(coap_session_t *session, const coap_pdu_t *request);
 
 /**
  * Sends an RST message with code @c 0 for the specified @p request to @p dst.
@@ -446,7 +447,7 @@ coap_mid_t coap_send_ack(coap_session_t *session, coap_pdu_t *request);
  *                        COAP_INVALID_MID on error.
  */
 COAP_STATIC_INLINE coap_mid_t
-coap_send_rst(coap_session_t *session, coap_pdu_t *request) {
+coap_send_rst(coap_session_t *session, const coap_pdu_t *request) {
   return coap_send_message_type(session, request, COAP_MESSAGE_RST);
 }
 
