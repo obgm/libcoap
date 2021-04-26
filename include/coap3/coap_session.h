@@ -551,7 +551,7 @@ void coap_session_set_ack_random_factor(coap_session_t *session,
 *
 * @return Current maximum retransmit value
 */
-unsigned int coap_session_get_max_transmit(const coap_session_t *session);
+unsigned int coap_session_get_max_retransmit(const coap_session_t *session);
 
 /**
 * Get the CoAP initial ack response timeout before the next re-transmit
