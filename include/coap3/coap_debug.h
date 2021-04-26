@@ -202,7 +202,7 @@ char *coap_string_tls_version(char *buffer, size_t bufsize);
  *
  * @return The amount written into the buffer.
  */
-size_t coap_print_addr(const struct coap_address_t *address,
+size_t coap_print_addr(const coap_address_t *address,
                        unsigned char *buffer, size_t size);
 
 /** @} */

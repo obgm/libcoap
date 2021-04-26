@@ -188,7 +188,7 @@ these reserved definitions.
  * @return New coap_dtls_cpsk_info_t object or @c NULL on error.
  */
 typedef const coap_dtls_cpsk_info_t *(*coap_dtls_ih_callback_t)(
-                                struct coap_str_const_t *hint,
+                                coap_str_const_t *hint,
                                 coap_session_t *coap_session,
                                 void *arg);
 ----
@@ -311,8 +311,8 @@ these reserved definitions.
  * @return New coap_bin_const_t Pre-Shared Key object or @c NULL on error.
  */
 typedef const coap_bin_const_t *(*coap_dtls_id_callback_t)(
-                                 struct coap_bin_const_t *identity,
-                                 struct coap_session_t *coap_session,
+                                 coap_bin_const_t *identity,
+                                 coap_session_t *coap_session,
                                  void *arg);
 ----
 
@@ -650,7 +650,7 @@ certificate sets.
  * @return 1 if successful, else 0
  */
 typedef int (*coap_dtls_security_setup_t)(void *context, void* session,
-                                        struct coap_dtls_pki_t *setup_data);
+                                          coap_dtls_pki_t *setup_data);
 ----
 
 *additional_tls_setup_call_back* points to an application provided callback
