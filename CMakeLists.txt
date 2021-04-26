@@ -469,7 +469,7 @@ target_include_directories(
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
          $<INSTALL_INTERFACE:include/>
-         $<$<BOOL:${USE_VENDORED_TINYDTLS}>:${CMAKE_BINARY_DIR}/include/tinydtls>
+         $<$<AND:$<BOOL:${HAVE_LIBTINYDTLS}>,$<BOOL:${USE_VENDORED_TINYDTLS}>>:${CMAKE_BINARY_DIR}/include/tinydtls>
          $<$<BOOL:${HAVE_LIBGNUTLS}>:${GNUTLS_INCLUDE_DIR}>
          $<$<BOOL:${HAVE_LIBGNUTLS}>:${MBEDTLS_INCLUDE_DIRS}>)
 target_link_libraries(
