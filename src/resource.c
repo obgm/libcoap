@@ -931,6 +931,9 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         h(r, obs->session, NULL, obs->query, response);
         /* Check if lg_xmit generated and update PDU code if so */
         coap_check_code_lg_xmit(obs->session, response, r, obs->query);
+        if (COAP_RESPONSE_CLASS(response->code) != 2) {
+          coap_remove_option(response, COAP_OPTION_OBSERVE);
+        }
         if (COAP_RESPONSE_CLASS(response->code) > 2) {
           coap_delete_observer(r, obs->session, &token);
         }
