@@ -420,8 +420,8 @@ void *
 coap_dtls_new_context(coap_context_t *c_context COAP_UNUSED) {
   const char *err;
   int ret;
-  struct coap_gnutls_context_t *g_context =
-                                (struct coap_gnutls_context_t *)
+  coap_gnutls_context_t *g_context =
+                                (coap_gnutls_context_t *)
                                 gnutls_malloc(sizeof(coap_gnutls_context_t));
 
   if (g_context) {
@@ -429,7 +429,7 @@ coap_dtls_new_context(coap_context_t *c_context COAP_UNUSED) {
     const char *priority;
 
     G_CHECK(gnutls_global_init(), "gnutls_global_init");
-    memset(g_context, 0, sizeof(struct coap_gnutls_context_t));
+    memset(g_context, 0, sizeof(coap_gnutls_context_t));
     g_context->alpn_proto.data = gnutls_malloc(4);
     if (g_context->alpn_proto.data) {
       memcpy(g_context->alpn_proto.data, "coap", 4);
@@ -1985,7 +1985,7 @@ coap_dtls_new_gnutls_env(coap_session_t *c_session, int type)
   if (!g_env)
     return NULL;
 
-  memset(g_env, 0, sizeof(struct coap_gnutls_env_t));
+  memset(g_env, 0, sizeof(coap_gnutls_env_t));
 
   G_CHECK(gnutls_init(&g_env->g_session, flags), "gnutls_init");
 
@@ -2622,7 +2622,7 @@ void *coap_tls_new_client_session(coap_session_t *c_session, int *connected) {
   if (!g_env) {
     return NULL;
   }
-  memset(g_env, 0, sizeof(struct coap_gnutls_env_t));
+  memset(g_env, 0, sizeof(coap_gnutls_env_t));
 
   *connected = 0;
   G_CHECK(gnutls_init(&g_env->g_session, flags), "gnutls_init");
@@ -2666,7 +2666,7 @@ void *coap_tls_new_server_session(coap_session_t *c_session, int *connected) {
 
   if (!g_env)
     return NULL;
-  memset(g_env, 0, sizeof(struct coap_gnutls_env_t));
+  memset(g_env, 0, sizeof(coap_gnutls_env_t));
 
   *connected = 0;
   G_CHECK(gnutls_init(&g_env->g_session, flags), "gnutls_init");

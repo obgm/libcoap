@@ -20,6 +20,8 @@
  * @{
  */
 
+typedef struct coap_dtls_pki_t coap_dtls_pki_t;
+
 #ifndef COAP_DTLS_HINT_LENGTH
 #define COAP_DTLS_HINT_LENGTH 128
 #endif
@@ -86,7 +88,7 @@ coap_tls_version_t *coap_get_tls_library_version(void);
  * @return @c 1 if successful, else @c 0.
  */
 typedef int (*coap_dtls_security_setup_t)(void* tls_session,
-                                        struct coap_dtls_pki_t *setup_data);
+                                          coap_dtls_pki_t *setup_data);
 
 /**
  * CN Validation callback that can be set up by coap_context_set_pki().
@@ -237,7 +239,7 @@ typedef coap_dtls_key_t *(*coap_dtls_pki_sni_callback_t)(const char *sni,
 /**
  * The structure used for defining the PKI setup data to be used.
  */
-typedef struct coap_dtls_pki_t {
+struct coap_dtls_pki_t {
   uint8_t version; /** Set to COAP_DTLS_PKI_SETUP_VERSION
                        to support this version of the struct */
 
@@ -295,7 +297,7 @@ typedef struct coap_dtls_pki_t {
                              during the call to coap_new_client_session_pki() */
 
   coap_dtls_key_t pki_key;  /**< PKI key definition */
-} coap_dtls_pki_t;
+};
 
 /**
  * The structure that holds the Client PSK information.
@@ -322,9 +324,9 @@ typedef struct coap_dtls_cpsk_info_t {
  * @return New coap_dtls_cpsk_info_t object or @c NULL on error.
  */
 typedef const coap_dtls_cpsk_info_t *(*coap_dtls_ih_callback_t)(
-                                struct coap_str_const_t *hint,
-                                coap_session_t *coap_session,
-                                void *arg);
+                                      coap_str_const_t *hint,
+                                      coap_session_t *coap_session,
+                                      void *arg);
 
 #define COAP_DTLS_CPSK_SETUP_VERSION 1 /**< Latest CPSK setup version */
 
@@ -391,7 +393,7 @@ typedef struct coap_dtls_spsk_info_t {
  *               structure.
  */
 typedef const coap_bin_const_t *(*coap_dtls_id_callback_t)(
-                                 struct coap_bin_const_t *identity,
+                                 coap_bin_const_t *identity,
                                  coap_session_t *coap_session,
                                  void *arg);
 /**

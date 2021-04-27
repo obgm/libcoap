@@ -118,7 +118,7 @@ of this work (the default if *coap_context_set_block_mode*() is not called).
  * @param app_ptr The application provided pointer to the
  *                coap_add_data_large_*() functions
  */
-typedef void (*coap_release_large_data_t)(struct coap_session_t *session,
+typedef void (*coap_release_large_data_t)(coap_session_t *session,
                                           void *app_ptr);
 ----
 
