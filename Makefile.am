@@ -1,6 +1,6 @@
 # Makefile.am for libcoap
 #
-# Copyright (C) 2010-2019 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010-2019,2021 Olaf Bergmann <bergmann@tzi.org>
 #           (C) 2015-2017 Carsten Schoenert <c.schoenert@t-online.de>
 #
 # This file is part of the CoAP C library libcoap. Please see README and
@@ -42,6 +42,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.in \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows.in \
+  include/coap$(LIBCOAP_API_VERSION)/uthash.h \
   include/coap$(LIBCOAP_API_VERSION)/utlist.h \
   src/coap_io_riot.c \
   tests/test_error_response.h \
@@ -152,8 +153,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/resource.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/str.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/subscribe.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/uri.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/uthash.h
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/uri.h
 
 ## Instruct libtool to include API version information in the generated shared
 ## library file (.so). The library ABI version will later defined in configure.ac,
