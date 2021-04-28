@@ -7,6 +7,9 @@ throw up many errors as the API has been updated to make future coding simpler,
 adds more functionality and adds more rigorous coding checks.  Updating your
 code with the following steps will significantly reduce the reported issues.
 
+The examples are now also named with the (D)TLS library type as a suffix.
+E.g. coap-client is now coap-client-openssl.
+
 == Include directory changes
 
 Because of the API changes, the libcoap's include file directory has changed from `coap2/` to `coap3/`. Also, there is now no need to define additional include paths to the compiler options such as `-I include/coap3`.
@@ -184,13 +187,13 @@ their calling parameters. Note that `coap_tid_t` has been replaced with
 Example
 ----
 4.2.1
-  void 
+  void
   pong_handler(coap_context_t *context,
                coap_session_t *session,
                coap_pdu_t *received,
                const coap_tid_t id);
 4.3.0
-  void 
+  void
   pong_handler(coap_session_t *session,
                const coap_pdu_t *received,
                const coap_mid_t mid);

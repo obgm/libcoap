@@ -10,7 +10,11 @@ coap-server(5)
 
 NAME
 -----
-coap-server - CoAP Server based on libcoap
+coap-server,
+coap-server-gnutls,
+coap-server-mbedtls,
+coap-server-openssl,
+coap-server-notls - CoAP Server based on libcoap
 
 SYNOPSIS
 --------
@@ -22,6 +26,11 @@ SYNOPSIS
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]
               [*-S* match_pki_sni_file]]
+
+For *coap-server* versions that use libcoap compiled for different
+(D)TLS libraries, *coap-server-notls*, *coap-server-gnutls*,
+*coap-server-openssl*, *coap-server-mbedtls* or *coap-server-tinydtls* may be
+available.  Otherwise, *coap-server* uses the default libcoap (D)TLS support.
 
 DESCRIPTION
 -----------

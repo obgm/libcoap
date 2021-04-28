@@ -675,6 +675,16 @@ AC_ARG_ENABLE([async],
 AS_IF([test "x$build_async" != "xyes"],
       [AC_DEFINE(WITHOUT_ASYNC, [1], [Define to build without support for separate responses.])])
 
+# configure options
+# __add_default_names__
+AC_ARG_ENABLE([add-default-names],
+              [AS_HELP_STRING([--enable-add-default-names],
+                              [Enable adding libraries / examples with default names [default=yes]])],
+              [build_add_default_names="$enableval"],
+              [build_add_default_names="yes"])
+
+AM_CONDITIONAL(BUILD_ADD_DEFAULT_NAMES, [test "x$build_add_default_names" = "xyes"])
+
 # end configure options
 #######################
 
@@ -919,6 +929,11 @@ if test "x$with_tinydtls" = "xyes"; then
 fi
 if test "x$build_dtls" != "xyes"; then
     AC_MSG_RESULT([      build DTLS support       : "no"])
+fi
+if test "x$build_add_default_names" = "xyes"; then
+    AC_MSG_RESULT([      add default names        : "yes"])
+else
+    AC_MSG_RESULT([      add default names        : "no"])
 fi
 if test "x$have_epoll" = "xyes"; then
     AC_MSG_RESULT([      build using epoll        : "$with_epoll"])
