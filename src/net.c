@@ -2830,6 +2830,11 @@ skip_handler:
       respond = no_response(pdu, response, session);
       if (respond != RESPONSE_DROP) {
         coap_mid_t mid = pdu->mid;
+        if (COAP_RESPONSE_CLASS(response->code) != 2) {
+          if (observe) {
+            coap_remove_option(response, COAP_OPTION_OBSERVE);
+          }
+        }
         if (COAP_RESPONSE_CLASS(response->code) > 2) {
           if (observe)
             coap_delete_observer(resource, session, &token);
