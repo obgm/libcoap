@@ -11,7 +11,7 @@
 
 
 /**
- * @file rd.c
+ * @file coap-rd.c
  * @brief CoRE resource directory
  *
  * @see https://tools.ietf.org/html/draft-ietf-core-resource-directory
