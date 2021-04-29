@@ -20,7 +20,6 @@
 #define COAP_RESOURCE_CHECK_TIME 2
 #endif /* COAP_RESOURCE_CHECK_TIME */
 
-#include "uthash.h"
 #include "async.h"
 #include "block.h"
 #include "str.h"
@@ -366,20 +365,6 @@ coap_print_status_t coap_print_link(const coap_resource_t *resource,
  */
 coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
                                                 coap_str_const_t *uri_path);
-
-#define RESOURCES_ADD(r, obj) \
-  HASH_ADD(hh, (r), uri_path->s[0], (obj)->uri_path->length, (obj))
-
-#define RESOURCES_DELETE(r, obj) \
-  HASH_DELETE(hh, (r), (obj))
-
-#define RESOURCES_ITER(r,tmp)  \
-  coap_resource_t *tmp, *rtmp; \
-  HASH_ITER(hh, (r), tmp, rtmp)
-
-#define RESOURCES_FIND(r, k, res) {                     \
-    HASH_FIND(hh, (r), (k)->s, (k)->length, (res)); \
-  }
 
 /**
  * @deprecated use coap_resource_notify_observers() instead.
