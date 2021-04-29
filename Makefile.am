@@ -14,9 +14,15 @@ ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
 ## Additional files for the distribution archive
 EXTRA_DIST = \
+  BUILDING \
   CONTRIBUTE \
   TODO \
   LICENSE \
+  CMakeLists.txt \
+  cmake_coap_config.h.in \
+  cmake/Config.cmake.in \
+  cmake/FindMbedTLS.cmake \
+  cmake/FindTinyDTLS.cmake \
   coap_config.h.lwip \
   coap_config.h.riot \
   coap_config.h.windows \
@@ -42,6 +48,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.in \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows.in \
+  include/coap$(LIBCOAP_API_VERSION)/lwippools.h \
   include/coap$(LIBCOAP_API_VERSION)/uthash.h \
   include/coap$(LIBCOAP_API_VERSION)/utlist.h \
   src/coap_io_riot.c \
