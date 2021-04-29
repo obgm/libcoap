@@ -39,7 +39,7 @@ man-page-start: man-page-prepare
 	@echo '  Upgrading between libcoap versions:' >> $(top_builddir)/doc/man_tmp/upgrading.dox
 	@echo '   <table class="directory">' >> $(top_builddir)/doc/man_tmp/upgrading.dox
 
-man-page-build: man-page-start
+man-page-build: upg-page-build man-page-start
 	@MAN_FILES=`find $(top_srcdir)/man/ -type f -name "coap.txt.in" ; find $(top_srcdir)/man/ -type f -name "coap_*.in" | ALL=C sort ; find $(top_srcdir)/man/ -type f -name "coap-*.in" | LC_ALL=C sort` ;\
 	UPG_FILES=`find $(top_srcdir)/doc/ -type f -name "upgrade_*.txt" | ALL=C sort` ;\
 	HTML_FILES=`find $(top_builddir)/man/ -type f -name "*.html"` ;\
@@ -159,7 +159,7 @@ upg-page-build:
 		$(A2X) -d article --format xhtml -D $(top_builddir)/doc/ $(top_srcdir)/doc/$${FILE} ;\
 	done
 
-all: upg-page-build man-page-build
+all: man-page-build
 	$(DOXYGEN) Doxyfile
 	@cp -f $(top_srcdir)/doc/docbook.local.css $(top_builddir)/doc/html/docbook-xsl.css
 
