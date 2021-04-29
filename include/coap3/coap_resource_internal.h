@@ -15,6 +15,8 @@
 #ifndef COAP_RESOURCE_INTERNAL_H_
 #define COAP_RESOURCE_INTERNAL_H_
 
+#include "uthash.h"
+
 /**
  * @defgroup coap_resource_internal Resources (Internal)
  * Structures, Enums and Functions that are not exposed to applications
