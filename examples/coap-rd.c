@@ -42,6 +42,7 @@
 #endif
 
 #include <coap3/coap.h>
+#include "uthash.h"
 
 #define COAP_RESOURCE_CHECK_TIME 2
 
