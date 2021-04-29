@@ -10,10 +10,11 @@ if BUILD_EXAMPLES
 
 # picking up the default warning CFLAGS into AM_CFLAGS
 AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include \
-            -I$(top_srcdir)/include/coap$(LIBCOAP_API_VERSION) \
             $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
 
-#
+# add coap include path for coap_rd for uthash.h
+coap_rd_CPPFLAGS=-I$(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)
+
 bin_PROGRAMS = coap-client coap-server coap-rd
 check_PROGRAMS = coap-etsi_iot_01 coap-tiny
 
