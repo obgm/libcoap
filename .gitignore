@@ -49,9 +49,11 @@ build/
 # the doc/ folder
 doc/Doxyfile
 doc/Makefile.in
+doc/docbook-xsl.css
 doc/doxyfile.stamp
 doc/doxygen_sqlite3.db
 doc/DoxygenLayout.xml
+doc/upgrade_*.html
 doc/html/
 doc/man_html/
 doc/man_tmp/

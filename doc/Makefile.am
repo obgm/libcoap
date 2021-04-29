@@ -15,25 +15,33 @@ CLEANFILES = \
   doxygen_sqlite3.db
 
 EXTRA_DIST = \
+  docbook.local.css \
+  upgrade_4.2.1_4.3.0.txt \
   main.md
 
 man-page-cleanup:
-	rm -f $(top_builddir)/doc/DoxygenLayout.xml
-	rm -rf $(top_builddir)/doc/man_tmp
-	rm -rf $(top_builddir)/doc/man_html
+	@rm -f $(top_builddir)/doc/DoxygenLayout.xml
+	@rm -rf $(top_builddir)/doc/man_tmp
+	@rm -rf $(top_builddir)/doc/man_html
 
 man-page-prepare: man-page-cleanup
-	$(MKDIR_P) $(top_builddir)/doc/man_tmp
-	$(MKDIR_P) $(top_builddir)/doc/man_html
+	@$(MKDIR_P) $(top_builddir)/doc/man_tmp
+	@$(MKDIR_P) $(top_builddir)/doc/man_html
 
 man-page-start: man-page-prepare
-	@echo '    <tab type="usergroup" visible="yes" url="@ref manpage" title="Manual Pages" intro="">' > $(top_builddir)/doc/insert_file
+	## Setup the man page tab
+	@echo '    <tab type="usergroup" visible="yes" url="@ref manpage" title="Manual Pages">' > $(top_builddir)/doc/insert_file
 	@echo '/** @page manpage Manual Pages' > $(top_builddir)/doc/man_tmp/manpage.dox
 	@echo '  Here is a list of libcoap API manual pages, some of which have code examples:' >> $(top_builddir)/doc/man_tmp/manpage.dox
 	@echo '   <table class="directory">' >> $(top_builddir)/doc/man_tmp/manpage.dox
+	## Setup the upgrading tab
+	@echo '/** @page upgrading Upgrading' > $(top_builddir)/doc/man_tmp/upgrading.dox
+	@echo '  Upgrading between libcoap versions:' >> $(top_builddir)/doc/man_tmp/upgrading.dox
+	@echo '   <table class="directory">' >> $(top_builddir)/doc/man_tmp/upgrading.dox
 
 man-page-build: man-page-start
 	@MAN_FILES=`find $(top_srcdir)/man/ -type f -name "coap.txt.in" ; find $(top_srcdir)/man/ -type f -name "coap_*.in" | ALL=C sort ; find $(top_srcdir)/man/ -type f -name "coap-*.in" | LC_ALL=C sort` ;\
+	UPG_FILES=`find $(top_srcdir)/doc/ -type f -name "upgrade_*.txt" | ALL=C sort` ;\
 	HTML_FILES=`find $(top_builddir)/man/ -type f -name "*.html"` ;\
 	COUNT_MAN_FILES=`echo $${MAN_FILES} | wc -w` ;\
 	COUNT_HTML_FILES=`echo $${HTML_FILES} | wc -w` ;\
@@ -63,10 +71,43 @@ man-page-build: man-page-start
 	## Close off the man page file
 	echo '   </table>' >> $(top_builddir)/doc/man_tmp/manpage.dox ;\
 	echo ' */' >> $(top_builddir)/doc/man_tmp/manpage.dox ;\
-	## Close off the insert_file
 	echo '    </tab>' >> $(top_builddir)/doc/insert_file ;\
+	## Add in the deprecated tab
 	echo '    <tab type="user" visible="yes" url="@ref deprecated" title="Deprecated Items" intro=""/>' >> $(top_builddir)/doc/insert_file ;\
-	echo '    <tab type="user" visible="yes" url="@ref bug" title="Bug List" intro=""/>' >> $(top_builddir)/doc/insert_file ;\
+	## Start the upgrade tab
+	echo '    <tab type="usergroup" visible="yes" url="@ref upgrading" title="Upgrading">' >> $(top_builddir)/doc/insert_file ;\
+	for FILE in $${UPG_FILES} ; do \
+		BASE=`basename $${FILE} | $(SED) "s/\.txt$$//g"`; \
+		UPGRADE=`echo $${BASE} | $(SED) "s/^upgrade_//g"`; \
+		CUPGRADE=`echo $${UPGRADE} | $(SED) "s/\./-/g"`; \
+		SUMMARY=`head -1 $${FILE} | sed 's/^= //g'` ;\
+		## Build the upgrade insert page
+		echo "/// @page upg_$${CUPGRADE} $${UPGRADE}" > $(top_builddir)/doc/man_tmp/$${UPGRADE}.dox ;\
+		echo "/// @htmlinclude $${BASE}.html $${UPGRADE}" >> $(top_builddir)/doc/man_tmp/$${UPGRADE}.dox ;\
+		## Update insert_file
+		echo "      <tab type=\"user\" visible=\"yes\" url=\"@ref upg_$${CUPGRADE}\" title=\"$${SUMMARY}\" intro=\"\"/>" >> $(top_builddir)/doc/insert_file ;\
+		## Update the upgrading page
+		echo "   <tr id=\"row_$${ID}_\"$${ROW_EVEN}>" >> $(top_builddir)/doc/man_tmp/upgrading.dox ;\
+		echo "   <td class=\"entry\" align=\"left\"> @ref upg_$${CUPGRADE} </td><td class=\"desc\" align=\"left\">$${SUMMARY}</td>" >> $(top_builddir)/doc/man_tmp/upgrading.dox ;\
+		echo "   </tr>" >> $(top_builddir)/doc/man_tmp/upgrading.dox ;\
+		if [ -z $${ROW_EVEN} ] ; then \
+			ROW_EVEN=" class=\"even\"" ;\
+		else \
+			ROW_EVEN= ;\
+		fi ;\
+		if [ -f $(top_builddir)/doc/$${BASE}.html ]; then \
+			cp -f $(top_builddir)/doc/$${BASE}.html $(top_builddir)/doc/man_html/$${BASE}.html ;\
+			## Correct case sensitive Name and Synopsis
+			$(SED) -i 's^<div class="toc"><p><strong>^<div class="section"><p><strong>^' $(top_builddir)/doc/man_html/$${BASE}.html ;\
+		else \
+			echo "ERROR: $(top_builddir)/doc/$${BASE}.html not found!";\
+			exit 1 ;\
+		fi \
+	done ;\
+	## Close off the upgrading tab
+	echo '   </table>' >> $(top_builddir)/doc/man_tmp/upgrading.dox ;\
+	echo ' */' >> $(top_builddir)/doc/man_tmp/upgrading.dox ;\
+	echo '    </tab>' >> $(top_builddir)/doc/insert_file ;\
 	## Create and Update the DoxygenLayout.xml file
 	$(DOXYGEN) -l ;\
 	$(SED) -i 's/<tab type="pages" visible="yes" /<tab type="pages" visible="no" /g' $(top_builddir)/doc/DoxygenLayout.xml ;\
@@ -111,8 +152,16 @@ uninstall-am:
 	-rm -rf $(DESTDIR)$(htmldir)/html
 
 if BUILD_MANPAGES
-all: man-page-build
+UPG_LIST = upgrade_4.2.1_4.3.0.txt
+
+upg-page-build:
+	@for FILE in $(UPG_LIST) ; do \
+		$(A2X) -d article --format xhtml -D $(top_builddir)/doc/ $(top_srcdir)/doc/$${FILE} ;\
+	done
+
+all: upg-page-build man-page-build
 	$(DOXYGEN) Doxyfile
+	@cp -f $(top_srcdir)/doc/docbook.local.css $(top_builddir)/doc/html/docbook-xsl.css
 
 else
 #
@@ -122,7 +171,7 @@ all: man-page-prepare
 endif # BUILD_MANPAGES
 
 clean-local:
-	-rm -rf $(top_builddir)/doc/html  $(top_builddir)/doc/man_tmp  $(top_builddir)/doc/man_html  $(top_builddir)/doc/DoxygenLayout.xml
+	-rm -rf $(top_builddir)/doc/html $(top_builddir)/doc/man_tmp $(top_builddir)/doc/man_html $(top_builddir)/doc/DoxygenLayout.xml $(top_builddir)/doc/docbook-xsl.css $(top_builddir)/doc/*.html
 
 distclean-local: clean-local
 
