@@ -409,7 +409,7 @@ message_handler(coap_session_t *session COAP_UNUSED,
 static void
 usage( const char *program, const char *version) {
   const char *p;
-  char buffer[64];
+  char buffer[72];
   coap_tls_version_t *tls_version = coap_get_tls_library_version();
   const char *lib_version = coap_package_version();
 
