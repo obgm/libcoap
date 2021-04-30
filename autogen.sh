@@ -34,7 +34,7 @@ man/coap*.[357] man/coap*.txt man/Makefile man/Makefile.in
 missing
 Makefile Makefile.in
 stamp-h1 src/.dirstamp libcoap*.la* src/*.*o
-tests/*.o tests/Makefile tests/Makefile.in tests/testdriver
+tests/*.o tests/Makefile tests/Makefile.in tests/testdriver tests/test_common.h
 tests/oss-fuzz/Makefile.ci
 m4/libtool.m4 m4/lt~obsolete.m4 m4/ltoptions.m4 m4/ltsugar.m4 m4/ltversion.m4
 "
