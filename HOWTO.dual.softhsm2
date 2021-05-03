@@ -50,13 +50,17 @@ cd ..
 #
 #  module: /usr/local/lib/softhsm/libsofthsm2.so
 
-# If /var/lib/softhsm/tokens is owned by user ods (because softhsm2 package is
-# alread installed), make the logged in <user> a part of the group ods so
-# that the tokens can be accessed.
-sudo usermod -a -G ods <user>
-# log out and then log back in again
-# Confirm that you have ods in your group
-id
+# The user you are running this as needs to be in the group defined for
+# /var/lib/softhsm/tokens/.  E.g.
+#  $ sudo ls -ld  /var/lib/softhsm/tokens/
+#  drwxrws--- 3 root softhsm 4096 May  3 09:52 /var/lib/softhsm/tokens/
+# which is softhsm in this case (It could be ods). To verify if you are in
+# the correct group
+#  $ id
+# To add user to this group
+#  $ sudo usermod -a -G softhsm <user>
+# and log out and back in again.
+#
 
 ############################################################################
 #

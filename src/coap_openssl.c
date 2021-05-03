@@ -1601,7 +1601,7 @@ setup_pki_ssl(SSL *ssl,
       ssl_engine = ENGINE_by_id("pkcs11");
       if (!ssl_engine) {
         coap_log(LOG_ERR,
-           "*** setup_pki: (D)TLS: No PKCS11 support\nn");
+           "*** setup_pki: (D)TLS: No PKCS11 support - need OpenSSL pkcs11 engine\n");
         return 0;
       }
       if (!ENGINE_init(ssl_engine)) {
@@ -1609,7 +1609,7 @@ setup_pki_ssl(SSL *ssl,
         ENGINE_free(ssl_engine);
         ssl_engine = NULL;
         coap_log(LOG_ERR,
-           "*** setup_pki: (D)TLS: PKCS11 engine initialize failed\nn");
+           "*** setup_pki: (D)TLS: PKCS11 engine initialize failed\n");
         return 0;
       }
     }
@@ -1727,7 +1727,7 @@ setup_pki_ssl(SSL *ssl,
         SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
 
         x509 = missing_ENGINE_load_cert(
-                           setup_data->pki_key.key.pkcs11.public_cert);
+                           setup_data->pki_key.key.pkcs11.ca);
         if (!x509) {
           coap_log(LOG_WARNING,
                    "*** setup_pki: (D)TLS: %s: Unable to load "
