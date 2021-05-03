@@ -55,6 +55,7 @@
 #include <gnutls/dtls.h>
 #include <gnutls/pkcs11.h>
 #include <gnutls/crypto.h>
+#include <gnutls/abstract.h>
 #include <unistd.h>
 #if (GNUTLS_VERSION_NUMBER >= 0x030606)
 #define COAP_GNUTLS_KEY_RPK GNUTLS_KEY_DIGITAL_SIGNATURE | \
@@ -629,8 +630,6 @@ static gnutls_certificate_type_t get_san_or_cn(gnutls_session_t g_session,
 #else /* < 3.6.6 */
   cert_info->certificate_type = gnutls_certificate_type_get(g_session);
 #endif /* < 3.6.6 */
-  if (cert_info->certificate_type != GNUTLS_CRT_X509)
-    return cert_info->certificate_type;
 
   cert_info->san_or_cn = NULL;
 
@@ -639,6 +638,9 @@ static gnutls_certificate_type_t get_san_or_cn(gnutls_session_t g_session,
   if (cert_info->cert_list_size == 0) {
     return GNUTLS_CRT_UNKNOWN;
   }
+
+  if (cert_info->certificate_type != GNUTLS_CRT_X509)
+    return cert_info->certificate_type;
 
   G_CHECK(gnutls_x509_crt_init(&cert), "gnutls_x509_crt_init");
 
@@ -700,6 +702,42 @@ fail:
                           cert_info.san_or_cn : "?")
 #endif /* GNUTLS_VERSION_NUMBER < 0x030606 */
 
+#if (GNUTLS_VERSION_NUMBER >= 0x030606)
+static int
+check_rpk_cert(coap_gnutls_context_t *g_context,
+               coap_gnutls_certificate_info_t *cert_info,
+               coap_session_t *c_session) {
+  int ret;
+
+  if (g_context->setup_data.validate_cn_call_back) {
+    gnutls_pcert_st pcert;
+    uint8_t der[2048];
+    size_t size;
+
+    G_CHECK(gnutls_pcert_import_rawpk_raw(&pcert, &cert_info->cert_list[0],
+                                          GNUTLS_X509_FMT_DER, 0, 0),
+            "gnutls_pcert_import_rawpk_raw");
+
+    size = sizeof(der);
+    G_CHECK(gnutls_pubkey_export(pcert.pubkey, GNUTLS_X509_FMT_DER, der, &size),
+            "gnutls_pubkey_export");
+    gnutls_pcert_deinit(&pcert);
+    if (!g_context->setup_data.validate_cn_call_back(COAP_DTLS_RPK_CERT_CN,
+           der,
+           size,
+           c_session,
+           0,
+           1,
+           g_context->setup_data.cn_call_back_arg)) {
+      return 0;
+    }
+  }
+  return 1;
+fail:
+  return 0;
+}
+#endif /* >= 3.6.6 */
+
 /*
  * return 0 failed
  *        1 passed
@@ -722,8 +760,15 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
   cert_type = get_san_or_cn(g_session, &cert_info);
 #if (GNUTLS_VERSION_NUMBER >= 0x030606)
   if (cert_type == GNUTLS_CRT_RAW)
-    goto finish;
+     if (!check_rpk_cert(g_context, &cert_info, c_session)) {
+        alert = GNUTLS_A_ACCESS_DENIED;
+        goto fail;
+    }
+    return 1;
 #endif /* >= 3.6.6 */
+
+  if (cert_info.cert_list_size == 0 && !g_context->setup_data.verify_peer_cert)
+    return 1;
 
   G_CHECK(gnutls_certificate_verify_peers(g_session, NULL, 0, &status),
           "gnutls_certificate_verify_peers");
@@ -859,9 +904,6 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
     }
   }
 
-#if (GNUTLS_VERSION_NUMBER >= 0x030606)
-finish:
-#endif /* >= 3.6.6 */
   if (cert_info.san_or_cn)
     gnutls_free(cert_info.san_or_cn);
 
@@ -1840,6 +1882,10 @@ setup_server_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
     if (setup_data->verify_peer_cert) {
       gnutls_certificate_server_set_request(g_env->g_session,
                                             GNUTLS_CERT_REQUIRE);
+    }
+    else if (setup_data->is_rpk_not_cert) {
+      gnutls_certificate_server_set_request(g_env->g_session,
+                                            GNUTLS_CERT_REQUEST);
     }
     else {
       gnutls_certificate_server_set_request(g_env->g_session,
