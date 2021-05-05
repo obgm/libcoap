@@ -2754,7 +2754,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       coap_opt_t *observe = NULL;
       int observe_action = COAP_OBSERVE_CANCEL;
       coap_string_t *query = coap_get_query(pdu);
-      int owns_query = 1;
       coap_block_t block;
       int added_block = 0;
 
@@ -2770,25 +2769,18 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
           if (observe_action == COAP_OBSERVE_ESTABLISH) {
             coap_subscription_t *subscription;
-            int has_block2 = 0;
 
             if (coap_get_block(pdu, COAP_OPTION_BLOCK2, &block)) {
-              has_block2 = 1;
               if (block.num != 0) {
                 response->code = COAP_RESPONSE_CODE(400);
                 goto skip_handler;
               }
             }
             subscription = coap_add_observer(resource, session, &token,
-                                             query, has_block2,
-                                             block, pdu->code);
+                                             pdu);
             if (subscription) {
               uint8_t buf[4];
 
-              /* Ownership of query is taken by subscription if not
-               * NULL. In this case, we must not delete query here
-               * hence owns_query is cleared. */
-              owns_query = 0;
               coap_touch_observer(context, session, &token);
               coap_add_option(response, COAP_OPTION_OBSERVE,
                               coap_encode_var_safe(buf, sizeof (buf),
@@ -2859,7 +2851,7 @@ skip_handler:
       } else {
         coap_delete_pdu(response);
       }
-      if (query && owns_query)
+      if (query)
         coap_delete_string(query);
     } else {
       coap_log(LOG_WARNING, "cannot generate response\r\n");
@@ -3080,9 +3072,9 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         RESOURCES_ITER(context->resources, r) {
           coap_subscription_t *obs, *tmp;
           LL_FOREACH_SAFE(r->subscribers, obs, tmp) {
-            if (obs->mid == pdu->mid && obs->session == session) {
+            if (obs->pdu->mid == pdu->mid && obs->session == session) {
               coap_binary_t token = { 0, NULL };
-              COAP_SET_STR(&token, obs->token_length, obs->token);
+              COAP_SET_STR(&token, obs->pdu->token_length, obs->pdu->token);
               coap_delete_observer(r, session, &token);
               goto cleanup;
             }
