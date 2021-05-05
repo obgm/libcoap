@@ -214,8 +214,6 @@ if test "x$build_doxygen" = "xyes"; then
             AC_MSG_ERROR([==> Install required doxygen version or disable the doxygen documentation using '--disable-doxygen'.])
         else
             # we found doxygen and the version is valid
-            DOC_DIR=doc
-            AC_SUBST(DOC_DIR)
             # now checking dot (needed for graphics)
             AC_PATH_PROG([DOT], [dot])
             if test "x$DOT" = "x"; then
@@ -643,6 +641,16 @@ if test "x$build_gcov" = "xyes"; then
         AX_CHECK_COMPILE_FLAG([--coverage], [CFLAGS="$CFLAGS --coverage -O0" LDFLAGS="$LDFLAGS --coverage"])
    fi
 fi
+
+# configure options
+# __license-install__
+AC_ARG_ENABLE([license-install],
+              [AS_HELP_STRING([--enable-license-install],
+                              [Enable installing LICENSE to DOCDIR [default=yes]])],
+              [build_license_install="$enableval"],
+              [build_license_install="yes"])
+
+AM_CONDITIONAL(BUILD_LICENSE_INSTALL, [test "x$build_license_install" = "xyes"])
 
 # configure options
 # __tcp__
