@@ -366,8 +366,7 @@ static const unsigned char cert_asn1_header[] = {
       0x03, 0x42, 0x00, /* BIT STRING, length 66 bytes, 0 bits unused */
          0x04 /* uncompressed, followed by the r and s values of the public key */
 };
-#define DTLS_CE_LENGTH (3 + 27 + key_size + key_size)
-#define DTLS_EC_SUBJECTPUBLICKEY_SIZE (2 * key_size + sizeof(cert_asn1_header))
+#define DTLS_CE_LENGTH (sizeof(cert_asn1_header) + key_size + key_size)
 
 static int
 verify_ecdsa_key(struct dtls_context_t *dtls_context COAP_UNUSED,
@@ -388,10 +387,6 @@ verify_ecdsa_key(struct dtls_context_t *dtls_context COAP_UNUSED,
      *
      * Start message construction at beginning of buffer. */
     p = buf;
-
-    /* length of this certificate */
-    dtls_int_to_uint24(p, DTLS_EC_SUBJECTPUBLICKEY_SIZE);
-    p += sizeof(uint24);
 
     memcpy(p, &cert_asn1_header, sizeof(cert_asn1_header));
     p += sizeof(cert_asn1_header);
