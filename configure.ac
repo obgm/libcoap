@@ -614,6 +614,16 @@ AC_ARG_ENABLE([examples],
 AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$build_examples" = "xyes"])
 
 # configure options
+# __examples-source
+AC_ARG_ENABLE([examples-source],
+              [AS_HELP_STRING([--enable-examples-source],
+                              [Enable installing example source to DATAROOTDIR/libcoap/examples [default=yes]])],
+              [build_examples_source="$enableval"],
+              [build_examples_source="yes"])
+
+AM_CONDITIONAL(BUILD_EXAMPLES_SOURCE, [test "x$build_examples_source" = "xyes"])
+
+# configure options
 # __gcov__
 AC_ARG_ENABLE([gcov],
               [AS_HELP_STRING([--enable-gcov],
@@ -938,6 +948,11 @@ if test "x$build_examples" = "xyes"; then
     AC_MSG_RESULT([      build examples           : "yes"])
 else
     AC_MSG_RESULT([      build examples           : "no"])
+fi
+if test "x$build_examples_source" = "xyes"; then
+    AC_MSG_RESULT([      install examples source  : "yes"])
+else
+    AC_MSG_RESULT([      install examples source  : "no"])
 fi
 if test "x$build_gcov" = "xyes"; then
     AC_MSG_RESULT([      build with gcov support  : "yes"])
