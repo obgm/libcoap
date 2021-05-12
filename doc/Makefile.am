@@ -134,23 +134,6 @@ man-page-build: upg-page-build man-page-start
 		echo "finalized addition $${BASE}.html" ;\
 	done
 
-# This target has no check for automated install data! It's simply assumed that
-# that the 'all' target is running before, in short: the user has to run first
-# 'make' before running 'make install'!
-install-data-am:
-	@if [ ! -d $(top_builddir)/doc/html ]; then \
-		echo ;\
-		echo "     No install data in '$(top_builddir)/doc/html'found! Please run 'make all' first." ;\
-		echo ;\
-		exit 1 ;\
-	fi
-	$(MKDIR_P) $(DESTDIR)$(htmldir)/html || exit 1
-	cp -a -f $(top_builddir)/doc/html $(DESTDIR)$(htmldir)
-	find $(DESTDIR)$(htmldir) -type f -name "*.md5" -exec rm {} \;
-
-uninstall-am:
-	-rm -rf $(DESTDIR)$(htmldir)/html
-
 if BUILD_MANPAGES
 UPG_LIST = upgrade_4.2.1_4.3.0.txt
 
@@ -175,6 +158,35 @@ clean-local:
 
 distclean-local: clean-local
 
+endif # HAVE_DOXYGEN
+
+install-data-hook:
+if HAVE_DOXYGEN
+	@if [ ! -d $(top_builddir)/doc/html ]; then \
+		echo ;\
+		echo "     No install data in '$(top_builddir)/doc/html'found! Please run 'make all' first." ;\
+		echo ;\
+		exit 1 ;\
+	fi
+	$(MKDIR_P) $(DESTDIR)$(htmldir)/html || exit 1
+	cp -a -f $(top_builddir)/doc/html $(DESTDIR)$(htmldir)
+	find $(DESTDIR)$(htmldir) -type f -name "*.md5" -delete
+endif # HAVE_DOXYGEN
+if BUILD_LICENSE_INSTALL
+	$(MKDIR_P) $(DESTDIR)$(docdir) || exit 1
+	$(INSTALL_DATA) $(top_srcdir)/LICENSE $(DESTDIR)$(docdir)
+	$(INSTALL_DATA) $(top_srcdir)/COPYING $(DESTDIR)$(docdir)
+	$(INSTALL_DATA) $(top_srcdir)/README $(DESTDIR)$(docdir)
+endif # BUILD_LICENSE_INSTALL
+
+uninstall-hook:
+if BUILD_LICENSE_INSTALL
+	@if [ -d $(DESTDIR)$(docdir) ] ; then \
+		(cd $(DESTDIR)$(docdir) ; rm -f LICENSE README COPYING) ; \
+	fi
+endif # BUILD_LICENSE_INSTALL
+if HAVE_DOXYGEN
+	-rm -rf $(DESTDIR)$(htmldir)/html
 endif # HAVE_DOXYGEN
 
 .PHONY: man-page-cleanup man-page-prepare man-page-start man-page-build
