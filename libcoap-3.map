@@ -218,6 +218,7 @@ global:
   coap_split_query;
   coap_split_uri;
   coap_startup;
+  coap_string_tls_support;
   coap_string_tls_version;
   coap_tcp_is_supported;
   coap_ticks;

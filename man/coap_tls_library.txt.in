@@ -15,6 +15,7 @@ coap_dtls_is_supported,
 coap_tls_is_supported,
 coap_tcp_is_supported,
 coap_get_tls_library_version,
+coap_string_tls_support,
 coap_string_tls_version,
 coap_show_tls_version
 - Work with CoAP TLS libraries
@@ -30,6 +31,8 @@ SYNOPSIS
 *int coap_tcp_is_supported(void);*
 
 *coap_tls_version_t *coap_get_tls_library_version(void);*
+
+*char *coap_string_tls_support(char *_buffer_, size_t _bufsize_);*
 
 *char *coap_string_tls_version(char *_buffer_, size_t _bufsize_);*
 
@@ -82,6 +85,12 @@ enabled, otherwise 0.
 
 The *coap_get_tls_library_version*() function returns the TLS implementation
 type and library version in a coap_tls_version_t* structure.
+
+The *coap_string_tls_support*() function is used to update the provided buffer
+with ascii readable information about what type of PSK, PKI etc. keys the
+current (D)TLS library supports.
+_buffer_ defines the buffer to provide the information and _bufsize_ is the
+size of _buffer_.
 
 The *coap_string_tls_version*() function is used to update the provided buffer
 with information about the current (D)TLS library that libcoap was built

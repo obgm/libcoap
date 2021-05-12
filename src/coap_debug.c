@@ -840,6 +840,41 @@ char *coap_string_tls_version(char *buffer, size_t bufsize)
   return buffer;
 }
 
+char *coap_string_tls_support(char *buffer, size_t bufsize)
+{
+  coap_tls_version_t *tls_version = coap_get_tls_library_version();
+
+  switch (tls_version->type) {
+  case COAP_TLS_LIBRARY_NOTLS:
+    snprintf(buffer, bufsize, "(No DTLS or TLS support)");
+    break;
+  case COAP_TLS_LIBRARY_TINYDTLS:
+    snprintf(buffer, bufsize,
+             "(DTLS and no TLS support; PSK and RPK support)");
+    break;
+  case COAP_TLS_LIBRARY_OPENSSL:
+    snprintf(buffer, bufsize,
+             "(DTLS and TLS support; PSK, PKI, PKCS11 and no RPK support)");
+    break;
+  case COAP_TLS_LIBRARY_GNUTLS:
+    if (tls_version->version >= 0x030606)
+      snprintf(buffer, bufsize,
+               "(DTLS and TLS support; PSK, PKI, PKCS11 and RPK support)");
+    else
+      snprintf(buffer, bufsize,
+               "(DTLS and TLS support; PSK, PKI, PKCS11 and no RPK support)");
+    break;
+  case COAP_TLS_LIBRARY_MBEDTLS:
+    snprintf(buffer, bufsize,
+             "(DTLS and no TLS support; PSK, PKI and no RPK support)");
+    break;
+  default:
+    buffer[0] = '\000';
+    break;
+  }
+  return buffer;
+}
+
 static coap_log_handler_t log_handler = NULL;
 
 void coap_set_log_handler(coap_log_handler_t handler) {
