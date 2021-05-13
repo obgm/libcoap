@@ -42,7 +42,6 @@
 #endif
 
 #include <coap3/coap.h>
-#include "uthash.h"
 
 #define COAP_RESOURCE_CHECK_TIME 2
 
@@ -64,9 +63,6 @@ static const char *hint = "CoAP";
 #endif
 
 typedef struct rd_t {
-  UT_hash_handle hh;      /**< hash handle (for internal use only) */
-  coap_string_t uri_path; /**< the actual key for this resource */
-
   size_t etag_len;        /**< actual length of @c etag */
   unsigned char etag[8];  /**< ETag for current description */
 
@@ -95,7 +91,7 @@ rd_new(void) {
   return rd;
 }
 
-static inline void
+static void
 rd_delete(rd_t *rd) {
   if (rd) {
     coap_free(rd->data.s);
@@ -117,12 +113,8 @@ hnd_get_resource(coap_resource_t *resource,
                  const coap_pdu_t *request COAP_UNUSED,
                  const coap_string_t *query COAP_UNUSED,
                  coap_pdu_t *response) {
-  rd_t *rd = NULL;
+  rd_t *rd = coap_resource_get_userdata(resource);
   unsigned char buf[3];
-  coap_str_const_t* uri_path = coap_resource_get_uri_path(resource);
-
-  if (uri_path)
-    HASH_FIND(hh, resources, uri_path->s, uri_path->length, rd);
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
@@ -222,13 +214,9 @@ hnd_delete_resource(coap_resource_t *resource,
                     const coap_pdu_t *request COAP_UNUSED,
                     const coap_string_t *query COAP_UNUSED,
                     coap_pdu_t *response) {
-  rd_t *rd = NULL;
-  coap_str_const_t* uri_path = coap_resource_get_uri_path(resource);
+  rd_t *rd = coap_resource_get_userdata(resource);
 
-  if (uri_path)
-    HASH_FIND(hh, resources, uri_path->s, uri_path->length, rd);
   if (rd) {
-    HASH_DELETE(hh, resources, rd);
     rd_delete(rd);
   }
   /* FIXME: link attributes for resource have been created dynamically
@@ -518,9 +506,7 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
     rd_t *rd;
     rd = make_rd(request);
     if (rd) {
-      rd->uri_path.s = loc;
-      rd->uri_path.length = loc_size;
-      HASH_ADD(hh, resources, uri_path.s[0], rd->uri_path.length, rd);
+      coap_resource_set_userdata(r, rd);
     } else {
       /* FIXME: send error response and delete r */
     }
