@@ -241,16 +241,20 @@ hnd_get_index(coap_resource_t *resource,
 }
 
 static void
-hnd_get_time(coap_resource_t *resource,
-             coap_session_t *session,
-             const coap_pdu_t *request,
-             const coap_string_t *query,
-             coap_pdu_t *response) {
+hnd_get_fetch_time(coap_resource_t *resource,
+                   coap_session_t *session,
+                   const coap_pdu_t *request,
+                   const coap_string_t *query,
+                   coap_pdu_t *response) {
   unsigned char buf[40];
   size_t len;
   time_t now;
   coap_tick_t t;
   (void)request;
+  coap_pdu_code_t code = coap_pdu_get_code(request);
+  size_t size;
+  const uint8_t *data;
+  coap_str_const_t *ticks = coap_make_str_const("ticks");
 
   if (my_clock_base) {
 
@@ -258,11 +262,18 @@ hnd_get_time(coap_resource_t *resource,
     coap_ticks(&t);
     now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
 
-    if (query != NULL
-        && coap_string_equal(query, coap_make_str_const("ticks"))) {
-          /* output ticks */
-          len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
+    /* coap_get_data() sets size to 0 on error */
+    (void)coap_get_data(request, &size, &data);
 
+    if (code == COAP_REQUEST_CODE_GET && query != NULL &&
+        coap_string_equal(query, ticks)) {
+      /* parameter is in query, output ticks */
+      len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
+    }
+    else if (code == COAP_REQUEST_CODE_FETCH && size == ticks->length &&
+             memcmp(data, ticks->s, ticks->length) == 0) {
+      /* parameter is in data, output ticks */
+      len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
     } else {      /* output human-readable time */
       struct tm *tmp;
       tmp = gmtime(&now);
@@ -1738,7 +1749,8 @@ init_resources(coap_context_t *ctx) {
   my_clock_base = clock_offset;
 
   r = coap_resource_init(coap_make_str_const("time"), resource_flags);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
+  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_fetch_time);
+  coap_register_handler(r, COAP_REQUEST_FETCH, hnd_get_fetch_time);
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
   coap_resource_set_get_observable(r, 1);
