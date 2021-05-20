@@ -42,7 +42,6 @@
 #endif
 
 #include <coap3/coap.h>
-#include "uthash.h"
 
 #define COAP_RESOURCE_CHECK_TIME 2
 
@@ -64,9 +63,6 @@ static const char *hint = "CoAP";
 #endif
 
 typedef struct rd_t {
-  UT_hash_handle hh;      /**< hash handle (for internal use only) */
-  coap_string_t uri_path; /**< the actual key for this resource */
-
   size_t etag_len;        /**< actual length of @c etag */
   unsigned char etag[8];  /**< ETag for current description */
 
@@ -95,12 +91,17 @@ rd_new(void) {
   return rd;
 }
 
-static inline void
+static void
 rd_delete(rd_t *rd) {
   if (rd) {
     coap_free(rd->data.s);
     coap_free(rd);
   }
+}
+
+static void
+resource_rd_delete(void *ptr) {
+  rd_delete(ptr);
 }
 
 static int quit = 0;
@@ -117,12 +118,8 @@ hnd_get_resource(coap_resource_t *resource,
                  const coap_pdu_t *request COAP_UNUSED,
                  const coap_string_t *query COAP_UNUSED,
                  coap_pdu_t *response) {
-  rd_t *rd = NULL;
+  rd_t *rd = coap_resource_get_userdata(resource);
   unsigned char buf[3];
-  coap_str_const_t* uri_path = coap_resource_get_uri_path(resource);
-
-  if (uri_path)
-    HASH_FIND(hh, resources, uri_path->s, uri_path->length, rd);
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
@@ -222,13 +219,9 @@ hnd_delete_resource(coap_resource_t *resource,
                     const coap_pdu_t *request COAP_UNUSED,
                     const coap_string_t *query COAP_UNUSED,
                     coap_pdu_t *response) {
-  rd_t *rd = NULL;
-  coap_str_const_t* uri_path = coap_resource_get_uri_path(resource);
+  rd_t *rd = coap_resource_get_userdata(resource);
 
-  if (uri_path)
-    HASH_FIND(hh, resources, uri_path->s, uri_path->length, rd);
   if (rd) {
-    HASH_DELETE(hh, resources, rd);
     rd_delete(rd);
   }
   /* FIXME: link attributes for resource have been created dynamically
@@ -364,7 +357,8 @@ add_source_address(coap_resource_t *resource,
   coap_add_attr(resource,
                 coap_make_str_const("A"),
                 &attr_val,
-                COAP_ATTR_FLAGS_RELEASE_VALUE);
+                0);
+  coap_free(buf);
 #undef BUFSIZE
 }
 
@@ -475,7 +469,7 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
 
   resource_val.s = loc;
   resource_val.length = loc_size;
-  r = coap_resource_init(&resource_val, COAP_RESOURCE_FLAGS_RELEASE_URI);
+  r = coap_resource_init(&resource_val, 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_resource);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_resource);
@@ -492,7 +486,8 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
       coap_add_attr(r,
                     coap_make_str_const("ins"),
                     &attr_val,
-                    COAP_ATTR_FLAGS_RELEASE_VALUE);
+                    0);
+      coap_free(buf);
     }
   }
 
@@ -508,7 +503,8 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
       coap_add_attr(r,
                     coap_make_str_const("rt"),
                     &attr_val,
-                    COAP_ATTR_FLAGS_RELEASE_VALUE);
+                    0);
+      coap_free(buf);
     }
   }
 
@@ -518,9 +514,7 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
     rd_t *rd;
     rd = make_rd(request);
     if (rd) {
-      rd->uri_path.s = loc;
-      rd->uri_path.length = loc_size;
-      HASH_ADD(hh, resources, uri_path.s[0], rd->uri_path.length, rd);
+      coap_resource_set_userdata(r, rd);
     } else {
       /* FIXME: send error response and delete r */
     }
@@ -548,6 +542,7 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
       b += coap_opt_size(b);
     }
   }
+  coap_free(loc);
 }
 
 static void
@@ -564,6 +559,7 @@ init_resources(coap_context_t *ctx) {
 
   coap_add_resource(ctx, r);
 
+  coap_resource_release_userdata_handler(ctx, resource_rd_delete);
 }
 
 static void
