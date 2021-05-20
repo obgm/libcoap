@@ -89,6 +89,11 @@ static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
 static int use_pem_buf = 0; /* Map these cert/key files into memory to test
                                PEM_BUF logic if set */
 static int is_rpk_not_cert = 0; /* Cert is RPK if set */
+/* Used to hold initial PEM_BUF setup */
+static uint8_t *cert_mem_base = NULL; /* certificate and private key in PEM_BUF */
+static uint8_t *key_mem_base = NULL; /* private key in PEM_BUF */
+static uint8_t *ca_mem_base = NULL;   /* CA for cert checking in PEM_BUF */
+/* Used for verify_pki_sni_callback PEM_BUF temporary holding */
 static uint8_t *cert_mem = NULL; /* certificate and private key in PEM_BUF */
 static uint8_t *key_mem = NULL; /* private key in PEM_BUF */
 static uint8_t *ca_mem = NULL;   /* CA for cert checking in PEM_BUF */
@@ -1835,40 +1840,53 @@ static uint8_t *read_file_mem(const char* file, size_t *length) {
   return buf;
 }
 
+static void
+update_pki_key(coap_dtls_key_t *dtls_key, const char *key_name,
+               const char *cert_name, const char *ca_name) {;
+  memset (dtls_key, 0, sizeof(*dtls_key));
+  if ((key_name && strncasecmp (key_name, "pkcs11:", 7) == 0) ||
+      (cert_name && strncasecmp (cert_name, "pkcs11:", 7) == 0) ||
+      (ca_name && strncasecmp (ca_name, "pkcs11:", 7) == 0)) {
+    dtls_key->key_type = COAP_PKI_KEY_PKCS11;
+    dtls_key->key.pkcs11.public_cert = cert_name;
+    dtls_key->key.pkcs11.private_key = key_name ?  key_name : cert_name;
+    dtls_key->key.pkcs11.ca = ca_name;
+    dtls_key->key.pkcs11.user_pin = pkcs11_pin;
+  }
+  else if (!use_pem_buf && !is_rpk_not_cert) {
+    dtls_key->key_type = COAP_PKI_KEY_PEM;
+    dtls_key->key.pem.public_cert = cert_name;
+    dtls_key->key.pem.private_key = key_name ? key_name : cert_name;
+    dtls_key->key.pem.ca_file = ca_name;
+  }
+  else {
+    /* Map file into memory */
+    coap_free(ca_mem);
+    coap_free(cert_mem);
+    coap_free(key_mem);
+    ca_mem = read_file_mem(ca_name, &ca_mem_len);
+    cert_mem = read_file_mem(cert_name, &cert_mem_len);
+    key_mem = read_file_mem(key_name, &key_mem_len);
+
+    dtls_key->key_type = COAP_PKI_KEY_PEM_BUF;
+    dtls_key->key.pem_buf.ca_cert = ca_mem;
+    dtls_key->key.pem_buf.public_cert = cert_mem;
+    dtls_key->key.pem_buf.private_key = key_mem ? key_mem : cert_mem;
+    dtls_key->key.pem_buf.ca_cert_len = ca_mem_len;
+    dtls_key->key.pem_buf.public_cert_len = cert_mem_len;
+    dtls_key->key.pem_buf.private_key_len = key_mem ?
+                                             key_mem_len : cert_mem_len;
+  }
+}
+
 static coap_dtls_key_t *
 verify_pki_sni_callback(const char *sni,
                     void *arg COAP_UNUSED
 ) {
   static coap_dtls_key_t dtls_key;
 
-  /* Preset with the defined keys */
-  memset (&dtls_key, 0, sizeof(dtls_key));
-  if (!use_pem_buf) {
-    if ((key_file && strncasecmp (key_file, "pkcs11:", 7) == 0) ||
-        (cert_file && strncasecmp (cert_file, "pkcs11:", 7) == 0) ||
-        (ca_file && strncasecmp (ca_file, "pkcs11:", 7) == 0)) {
-      dtls_key.key_type = COAP_PKI_KEY_PKCS11;
-      dtls_key.key.pkcs11.public_cert = cert_file;
-      dtls_key.key.pkcs11.private_key = key_file ? key_file : cert_file;
-      dtls_key.key.pkcs11.ca = ca_file;
-      dtls_key.key.pkcs11.user_pin = pkcs11_pin;
-    }
-    else {
-      dtls_key.key_type = COAP_PKI_KEY_PEM;
-      dtls_key.key.pem.public_cert = cert_file;
-      dtls_key.key.pem.private_key = key_file ? key_file : cert_file;
-      dtls_key.key.pem.ca_file = ca_file;
-    }
-  }
-  else {
-    dtls_key.key_type = COAP_PKI_KEY_PEM_BUF;
-    dtls_key.key.pem_buf.ca_cert = ca_mem;
-    dtls_key.key.pem_buf.public_cert = cert_mem;
-    dtls_key.key.pem_buf.private_key = cert_mem;
-    dtls_key.key.pem_buf.ca_cert_len = ca_mem_len;
-    dtls_key.key.pem_buf.public_cert_len = cert_mem_len;
-    dtls_key.key.pem_buf.private_key_len = cert_mem_len;
-  }
+  update_pki_key(&dtls_key, key_file, cert_file, ca_file);
+
   if (sni[0]) {
     size_t i;
     coap_log(LOG_INFO, "SNI '%s' requested\n", sni);
@@ -1878,10 +1896,9 @@ verify_pki_sni_callback(const char *sni,
         coap_log(LOG_INFO, "Switching to using cert '%s' + ca '%s'\n",
                  valid_pki_snis.pki_sni_list[i].new_cert,
                  valid_pki_snis.pki_sni_list[i].new_ca);
-        dtls_key.key_type = COAP_PKI_KEY_PEM;
-        dtls_key.key.pem.public_cert = valid_pki_snis.pki_sni_list[i].new_cert;
-        dtls_key.key.pem.private_key = valid_pki_snis.pki_sni_list[i].new_cert;
-        dtls_key.key.pem.ca_file = valid_pki_snis.pki_sni_list[i].new_ca;
+        update_pki_key(&dtls_key, valid_pki_snis.pki_sni_list[i].new_cert,
+                       valid_pki_snis.pki_sni_list[i].new_cert,
+                       valid_pki_snis.pki_sni_list[i].new_ca);
         break;
       }
     }
@@ -2008,50 +2025,29 @@ setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *client_sni) {
     dtls_pki.check_cert_revocation   = 1;
     dtls_pki.allow_no_crl            = 1;
     dtls_pki.allow_expired_crl       = 1;
-    dtls_pki.validate_cn_call_back   = verify_cn_callback;
-    dtls_pki.cn_call_back_arg        = (void*)role;
-    dtls_pki.validate_sni_call_back  = role == COAP_DTLS_ROLE_SERVER ?
-                                       verify_pki_sni_callback : NULL;
-    dtls_pki.sni_call_back_arg       = NULL;
   }
-  dtls_pki.is_rpk_not_cert   = is_rpk_not_cert;
+  else if (is_rpk_not_cert) {
+    dtls_pki.verify_peer_cert        = verify_peer_cert;
+  }
+  dtls_pki.is_rpk_not_cert        = is_rpk_not_cert;
+  dtls_pki.validate_cn_call_back  = verify_cn_callback;
+  dtls_pki.cn_call_back_arg       = (void*)role;
+  dtls_pki.validate_sni_call_back = role == COAP_DTLS_ROLE_SERVER ?
+                                    verify_pki_sni_callback : NULL;
+  dtls_pki.sni_call_back_arg      = NULL;
 
   if (role == COAP_DTLS_ROLE_CLIENT) {
     dtls_pki.client_sni = client_sni;
   }
 
-  if ((key_file && strncasecmp (key_file, "pkcs11:", 7) == 0) ||
-      (cert_file && strncasecmp (cert_file, "pkcs11:", 7) == 0) ||
-      (ca_file && strncasecmp (ca_file, "pkcs11:", 7) == 0)) {
-    dtls_pki.pki_key.key_type = COAP_PKI_KEY_PKCS11;
-    dtls_pki.pki_key.key.pkcs11.public_cert = cert_file;
-    dtls_pki.pki_key.key.pkcs11.private_key = key_file ?
-                                                     key_file : cert_file;
-    dtls_pki.pki_key.key.pkcs11.ca = ca_file;
-    dtls_pki.pki_key.key.pkcs11.user_pin = pkcs11_pin;
-  }
-  else if (!use_pem_buf && !is_rpk_not_cert) {
-    dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
-    dtls_pki.pki_key.key.pem.public_cert = cert_file;
-    dtls_pki.pki_key.key.pem.private_key = key_file ? key_file : cert_file;
-    dtls_pki.pki_key.key.pem.ca_file = ca_file;
-  }
-  else {
-    /* Map file into memory */
-    if (ca_mem == 0 && cert_mem == 0 && key_mem == 0) {
-      ca_mem = read_file_mem(ca_file, &ca_mem_len);
-      cert_mem = read_file_mem(cert_file, &cert_mem_len);
-      key_mem = read_file_mem(key_file, &key_mem_len);
-    }
-    dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM_BUF;
-    dtls_pki.pki_key.key.pem_buf.ca_cert = ca_mem;
-    dtls_pki.pki_key.key.pem_buf.public_cert = cert_mem;
-    dtls_pki.pki_key.key.pem_buf.private_key = key_mem ? key_mem : cert_mem;
-    dtls_pki.pki_key.key.pem_buf.ca_cert_len = ca_mem_len;
-    dtls_pki.pki_key.key.pem_buf.public_cert_len = cert_mem_len;
-    dtls_pki.pki_key.key.pem_buf.private_key_len = key_mem ?
-                                                    key_mem_len : cert_mem_len;
-  }
+  update_pki_key(&dtls_pki.pki_key, key_file, cert_file, ca_file);
+  /* Need to keep base initialization copies of any COAP_PKI_KEY_PEM_BUF */
+  ca_mem_base = ca_mem;
+  cert_mem_base = cert_mem;
+  key_mem_base = key_mem;
+  ca_mem = NULL;
+  cert_mem = NULL;
+  key_mem = NULL;
   return &dtls_pki;
 }
 
@@ -2678,7 +2674,6 @@ main(int argc, char **argv) {
     case 'M':
       cert_file = optarg;
       is_rpk_not_cert = 1;
-      verify_peer_cert = 0; /* This does not work for RPK */
       break;
     case 'n':
       verify_peer_cert = 0;
@@ -2850,6 +2845,9 @@ main(int argc, char **argv) {
   coap_free(ca_mem);
   coap_free(cert_mem);
   coap_free(key_mem);
+  coap_free(ca_mem_base);
+  coap_free(cert_mem_base);
+  coap_free(key_mem_base);
   for (i = 0; i < valid_psk_snis.count; i++) {
     free(valid_psk_snis.psk_sni_list[i].sni_match);
     coap_delete_bin_const(valid_psk_snis.psk_sni_list[i].new_hint);

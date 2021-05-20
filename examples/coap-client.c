@@ -1251,18 +1251,18 @@ setup_pki(coap_context_t *ctx) {
     dtls_pki.check_cert_revocation   = 1;
     dtls_pki.allow_no_crl            = 1;
     dtls_pki.allow_expired_crl       = 1;
-    dtls_pki.validate_cn_call_back   = verify_cn_callback;
-    dtls_pki.cn_call_back_arg        = NULL;
-    dtls_pki.validate_sni_call_back  = NULL;
-    dtls_pki.sni_call_back_arg       = NULL;
   }
+  else if (is_rpk_not_cert) {
+    dtls_pki.verify_peer_cert        = verify_peer_cert;
+  }
+  dtls_pki.is_rpk_not_cert = is_rpk_not_cert;
+  dtls_pki.validate_cn_call_back = verify_cn_callback;
   if ((uri.host.length == 3 && memcmp(uri.host.s, "::1", 3) != 0) ||
       (uri.host.length == 9 && memcmp(uri.host.s, "127.0.0.1", 9) != 0))
     memcpy(client_sni, uri.host.s, min(uri.host.length, sizeof(client_sni)-1));
   else
     memcpy(client_sni, "localhost", 9);
 
-  dtls_pki.is_rpk_not_cert = is_rpk_not_cert;
   dtls_pki.client_sni = client_sni;
   if ((key_file && strncasecmp (key_file, "pkcs11:", 7) == 0) ||
       (cert_file && strncasecmp (cert_file, "pkcs11:", 7) == 0) ||
@@ -1528,7 +1528,6 @@ main(int argc, char **argv) {
     case 'M':
       cert_file = optarg;
       is_rpk_not_cert = 1;
-      verify_peer_cert = 0; /* This does not work for RPK */
       break;
     case 'O':
       cmdline_option(optarg);
