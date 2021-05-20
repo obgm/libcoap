@@ -9,8 +9,6 @@
 
 # We can only perfom the targets in this directory if doxygen is present.
 
-if HAVE_DOXYGEN
-
 CLEANFILES = \
   doxygen_sqlite3.db
 
@@ -18,6 +16,8 @@ EXTRA_DIST = \
   docbook.local.css \
   upgrade_4.2.1_4.3.0.txt \
   main.md
+
+if HAVE_DOXYGEN
 
 man-page-cleanup:
 	@rm -f $(top_builddir)/doc/DoxygenLayout.xml
