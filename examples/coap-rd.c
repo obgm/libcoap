@@ -99,6 +99,11 @@ rd_delete(rd_t *rd) {
   }
 }
 
+static void
+resource_rd_delete(void *ptr) {
+  rd_delete(ptr);
+}
+
 static int quit = 0;
 
 /* SIGINT handler: set quit to 1 for graceful termination */
@@ -352,7 +357,8 @@ add_source_address(coap_resource_t *resource,
   coap_add_attr(resource,
                 coap_make_str_const("A"),
                 &attr_val,
-                COAP_ATTR_FLAGS_RELEASE_VALUE);
+                0);
+  coap_free(buf);
 #undef BUFSIZE
 }
 
@@ -463,7 +469,7 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
 
   resource_val.s = loc;
   resource_val.length = loc_size;
-  r = coap_resource_init(&resource_val, COAP_RESOURCE_FLAGS_RELEASE_URI);
+  r = coap_resource_init(&resource_val, 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_resource);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_resource);
@@ -480,7 +486,8 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
       coap_add_attr(r,
                     coap_make_str_const("ins"),
                     &attr_val,
-                    COAP_ATTR_FLAGS_RELEASE_VALUE);
+                    0);
+      coap_free(buf);
     }
   }
 
@@ -496,7 +503,8 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
       coap_add_attr(r,
                     coap_make_str_const("rt"),
                     &attr_val,
-                    COAP_ATTR_FLAGS_RELEASE_VALUE);
+                    0);
+      coap_free(buf);
     }
   }
 
@@ -534,6 +542,7 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
       b += coap_opt_size(b);
     }
   }
+  coap_free(loc);
 }
 
 static void
@@ -550,6 +559,7 @@ init_resources(coap_context_t *ctx) {
 
   coap_add_resource(ctx, r);
 
+  coap_resource_release_userdata_handler(ctx, resource_rd_delete);
 }
 
 static void
