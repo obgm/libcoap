@@ -1197,6 +1197,46 @@ t_encode_pdu21(void) {
   CU_ASSERT(memcmp(pdu->token, data3, pdu->used_size) == 0);
 }
 
+/* insert option before (large) final one */
+static void
+t_encode_pdu22(void) {
+  size_t n;
+  uint8_t  token[] = { 't' };
+  uint8_t  buf[4];
+  uint16_t opt_num[] = { 28,  28,    28,      28 };
+  uint32_t opt_val[] = { 0x1, 0x100, 0x10000, 0x1000000 };
+  uint8_t data1[][8] = {
+                        { 0x74, 0xd1, 0x0f, 0x01 },
+                        { 0x74, 0xd2, 0x0f, 0x01, 0x00 },
+                        { 0x74, 0xd3, 0x0f, 0x01, 0x00, 0x00 },
+                        { 0x74, 0xd4, 0x0f, 0x01, 0x00, 0x00, 0x00 }};
+  uint8_t  data2[][16] = {
+                        { 0x74, 0xd3, 0x0a, 0xff, 0xff, 0xf6, 0x51, 0x01 },
+                        { 0x74, 0xd3, 0x0a, 0xff, 0xff, 0xf6, 0x52, 0x01,
+                          0x00 },
+                        { 0x74, 0xd3, 0x0a, 0xff, 0xff, 0xf6, 0x53, 0x01,
+                          0x00, 0x00 },
+                        { 0x74, 0xd3, 0x0a, 0xff, 0xff, 0xf6, 0x54, 0x01,
+                          0x00, 0x00, 0x00 }};
+
+  for (n = 0; n < (sizeof(opt_num)/sizeof(opt_num[0])); n++) {
+    coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
+
+    CU_ASSERT(pdu->data == NULL);
+
+    coap_add_token(pdu, sizeof(token), token);
+    coap_add_option(pdu, opt_num[n],
+                    coap_encode_var_safe(buf, sizeof(buf), opt_val[n]), buf);
+    CU_ASSERT(memcmp(pdu->token, data1[n], pdu->used_size) == 0);
+
+    /* Now insert option */
+    coap_insert_option(pdu, 23, 
+                       coap_encode_var_safe(buf, sizeof(buf), 0xfffff6), buf);
+    CU_ASSERT(memcmp(pdu->token, data2[n], pdu->used_size) == 0);
+  }
+}
+
+
 static int
 t_pdu_tests_create(void) {
   pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
@@ -1274,6 +1314,7 @@ t_init_pdu_tests(void) {
     PDU_ENCODER_TEST(suite[1], t_encode_pdu19);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu20);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu21);
+    PDU_ENCODER_TEST(suite[1], t_encode_pdu22);
 
   } else                         /* signal error */
     fprintf(stderr, "W: cannot add pdu parser test suite (%s)\n",

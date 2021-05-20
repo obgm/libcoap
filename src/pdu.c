@@ -436,7 +436,7 @@ coap_insert_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
   shift = coap_opt_encode_size(number - prev_number, len);
 
   /* size of next option (header may shrink in size as delta changes */
-  if (!coap_opt_parse(option, opt_iter.length + 5, &decode))
+  if (!coap_opt_parse(option, pdu->used_size - (option - pdu->token), &decode))
     return 0;
   opt_delta = opt_iter.number - number;
 
