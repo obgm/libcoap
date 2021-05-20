@@ -192,6 +192,16 @@ void coap_show_tls_version(coap_log_t level);
 char *coap_string_tls_version(char *buffer, size_t bufsize);
 
 /**
+ * Build a string containing the current (D)TLS library support
+ *
+ * @param buffer The buffer to put the string into.
+ * @param bufsize The size of the buffer to put the string into.
+ *
+ * @return A pointer to the provided buffer.
+ */
+char *coap_string_tls_support(char *buffer, size_t bufsize);
+
+/**
  * Print the address into the defined buffer.
  *
  * Internal Function.

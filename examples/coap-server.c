@@ -2099,7 +2099,6 @@ static void
 usage( const char *program, const char *version) {
   const char *p;
   char buffer[72];
-  coap_tls_version_t *tls_version = coap_get_tls_library_version();
   const char *lib_version = coap_package_version();
 
   p = strrchr( program, '/' );
@@ -2112,27 +2111,7 @@ usage( const char *program, const char *version) {
      "%s\n"
     , program, version, lib_version,
     coap_string_tls_version(buffer, sizeof(buffer)));
-  switch (tls_version->type) {
-  case COAP_TLS_LIBRARY_NOTLS:
-    break;
-  case COAP_TLS_LIBRARY_TINYDTLS:
-    fprintf(stderr, "(DTLS and no TLS support; PSK and RPK support)\n");
-    break;
-  case COAP_TLS_LIBRARY_OPENSSL:
-    fprintf(stderr, "(DTLS and TLS support; PSK, PKI and no RPK support)\n");
-    break;
-  case COAP_TLS_LIBRARY_GNUTLS:
-    if (tls_version->version >= 0x030606)
-      fprintf(stderr, "(DTLS and TLS support; PSK, PKI and RPK support)\n");
-    else
-      fprintf(stderr, "(DTLS and TLS support; PSK, PKI and no RPK support)\n");
-    break;
-  case COAP_TLS_LIBRARY_MBEDTLS:
-    fprintf(stderr, "(DTLS and no TLS support; PSK, PKI and no RPK support)\n");
-    break;
-  default:
-    break;
-  }
+  fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
      "Usage: %s [-d max] [-e] [-g group] [-G group_if] [-l loss] [-p port]\n"
      "\t\t[-v num] [-A address] [-L value] [-N]\n"
