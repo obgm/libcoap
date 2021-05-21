@@ -12,27 +12,28 @@
  * be used as CacheKey. Options that can be cache keys are not Unsafe
  * and not marked explicitly as NoCacheKey. */
 static int
-is_cache_key(const coap_context_t *ctx, uint16_t option_type) {
-  int nocachekey = (option_type & 0x1e) == 0x1c;
+is_cache_key(uint16_t option_type, size_t cache_ignore_count,
+             const uint16_t *cache_ignore_options) {
   size_t i;
 
+  /* https://tools.ietf.org/html/rfc7252#section-5.4.6 Nocachekey definition */
+  if ((option_type & 0x1e) == 0x1c)
+    return 0;
   /*
    * https://tools.ietf.org/html/rfc7641#section-2 Observe is not a
    * part of the cache-key.
    */
-  if (option_type == COAP_OPTION_OBSERVE) {
-    nocachekey = 1;
-  }
+  if (option_type == COAP_OPTION_OBSERVE)
+    return 0;
 
   /* Check for option user has defined as not part of cache-key */
-  for (i = 0; i < ctx->cache_ignore_count; i++) {
-    if (ctx->cache_ignore_options[i] == option_type) {
-      nocachekey = 1;
-      break;
+  for (i = 0; i < cache_ignore_count; i++) {
+    if (cache_ignore_options[i] == option_type) {
+      return 0;
     }
   }
 
-  return nocachekey == 0;
+  return 1;
 }
 
 int
@@ -62,9 +63,11 @@ coap_cache_ignore_options(coap_context_t *ctx,
 }
 
 coap_cache_key_t *
-coap_cache_derive_key(const coap_session_t *session,
-                      const coap_pdu_t *pdu,
-                      coap_cache_session_based_t session_based) {
+coap_cache_derive_key_w_ignore(const coap_session_t *session,
+                               const coap_pdu_t *pdu,
+                               coap_cache_session_based_t session_based,
+                               const uint16_t *cache_ignore_options,
+                               size_t cache_ignore_count) {
   coap_opt_t *option;
   coap_opt_iterator_t opt_iter;
   coap_digest_ctx_t *dctx;
@@ -87,7 +90,8 @@ coap_cache_derive_key(const coap_session_t *session,
     }
   }
   while ((option = coap_option_next(&opt_iter))) {
-    if (is_cache_key(session->context, opt_iter.number)) {
+    if (is_cache_key(opt_iter.number, cache_ignore_count,
+                     cache_ignore_options)) {
       if (!coap_digest_update(dctx, option, coap_opt_size(option))) {
         coap_digest_free(dctx);
         return NULL;
@@ -117,6 +121,15 @@ coap_cache_derive_key(const coap_session_t *session,
     memcpy(cache_key->key, digest.key, sizeof(cache_key->key));
   }
   return cache_key;
+}
+
+coap_cache_key_t *
+coap_cache_derive_key(const coap_session_t *session,
+                      const coap_pdu_t *pdu,
+                      coap_cache_session_based_t session_based) {
+  return coap_cache_derive_key_w_ignore(session, pdu, session_based,
+                                        session->context->cache_ignore_options,
+                                        session->context->cache_ignore_count);
 }
 
 void

@@ -241,16 +241,20 @@ hnd_get_index(coap_resource_t *resource,
 }
 
 static void
-hnd_get_time(coap_resource_t *resource,
-             coap_session_t *session,
-             const coap_pdu_t *request,
-             const coap_string_t *query,
-             coap_pdu_t *response) {
+hnd_get_fetch_time(coap_resource_t *resource,
+                   coap_session_t *session,
+                   const coap_pdu_t *request,
+                   const coap_string_t *query,
+                   coap_pdu_t *response) {
   unsigned char buf[40];
   size_t len;
   time_t now;
   coap_tick_t t;
   (void)request;
+  coap_pdu_code_t code = coap_pdu_get_code(request);
+  size_t size;
+  const uint8_t *data;
+  coap_str_const_t *ticks = coap_make_str_const("ticks");
 
   if (my_clock_base) {
 
@@ -258,11 +262,18 @@ hnd_get_time(coap_resource_t *resource,
     coap_ticks(&t);
     now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
 
-    if (query != NULL
-        && coap_string_equal(query, coap_make_str_const("ticks"))) {
-          /* output ticks */
-          len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
+    /* coap_get_data() sets size to 0 on error */
+    (void)coap_get_data(request, &size, &data);
 
+    if (code == COAP_REQUEST_CODE_GET && query != NULL &&
+        coap_string_equal(query, ticks)) {
+      /* parameter is in query, output ticks */
+      len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
+    }
+    else if (code == COAP_REQUEST_CODE_FETCH && size == ticks->length &&
+             memcmp(data, ticks->s, ticks->length) == 0) {
+      /* parameter is in data, output ticks */
+      len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
     } else {      /* output human-readable time */
       struct tm *tmp;
       tmp = gmtime(&now);
@@ -359,42 +370,40 @@ hnd_get_async(coap_resource_t *resource,
               coap_pdu_t *response) {
   unsigned long delay = 5;
   size_t size;
+  coap_async_t *async;
+  coap_bin_const_t token = coap_pdu_get_token(request);
 
   /*
    * See if this is the initial, or delayed request
    */
-  if (request) {
-    coap_async_t *async;
-    coap_bin_const_t token = coap_pdu_get_token(request);
 
-    async = coap_find_async(session, token);
-    if (!async) {
-      /* Set up an async request to trigger delay in the future */
-      if (query) {
-        const uint8_t *p = query->s;
+  async = coap_find_async(session, token);
+  if (!async) {
+    /* Set up an async request to trigger delay in the future */
+    if (query) {
+      const uint8_t *p = query->s;
 
-        delay = 0;
-        for (size = query->length; size; --size, ++p)
-          delay = delay * 10 + (*p - '0');
-        if (delay == 0) {
-          coap_log(LOG_INFO, "async: delay of 0 not supported\n");
-          coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
-          return;
-        }
-      }
-      async = coap_register_async(session,
-                                  request,
-                                  COAP_TICKS_PER_SECOND * delay);
-      if (async == NULL) {
-          coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
+      delay = 0;
+      for (size = query->length; size; --size, ++p)
+        delay = delay * 10 + (*p - '0');
+      if (delay == 0) {
+        coap_log(LOG_INFO, "async: delay of 0 not supported\n");
+        coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
         return;
       }
-      /*
-       * Not setting response code will cause empty ACK to be sent
-       * if Confirmable
-       */
+    }
+    async = coap_register_async(session,
+                                request,
+                                COAP_TICKS_PER_SECOND * delay);
+    if (async == NULL) {
+        coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
       return;
     }
+    /*
+     * Not setting response code will cause empty ACK to be sent
+     * if Confirmable
+     */
+    return;
   }
   /* no request (observe) or async set up, so this is the delayed request */
 
@@ -1740,7 +1749,8 @@ init_resources(coap_context_t *ctx) {
   my_clock_base = clock_offset;
 
   r = coap_resource_init(coap_make_str_const("time"), resource_flags);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
+  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_fetch_time);
+  coap_register_handler(r, COAP_REQUEST_FETCH, hnd_get_fetch_time);
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
   coap_resource_set_get_observable(r, 1);

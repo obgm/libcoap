@@ -289,6 +289,8 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
                      cq->app_token->length))) {
         uint8_t buf[4];
         coap_mid_t mid;
+        size_t size;
+        const uint8_t *data;
         coap_pdu_t * pdu = coap_pdu_duplicate(&cq->pdu,
                                               session,
                                               cq->base_token_length,
@@ -301,6 +303,9 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
         /* Need to make sure that this is the correct type */
         pdu->type = type;
 
+        if (coap_get_data(&cq->pdu, &size, &data)) {
+          coap_add_data(pdu, size, data);
+        }
         coap_update_option(pdu, COAP_OPTION_OBSERVE,
                            coap_encode_var_safe(buf, sizeof(buf),
                                                 COAP_OBSERVE_CANCEL),

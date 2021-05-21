@@ -51,13 +51,8 @@ struct coap_subscription_t {
   unsigned int dirty:1;    /**< set if the notification temporarily could not be
                             *   sent (in that case, the resource's partially
                             *   dirty flag is set too) */
-  unsigned int has_block2:1; /**< GET request had Block2 definition */
-  coap_pdu_code_t code;    /** request type code (GET/FETCH)*/
-  coap_mid_t mid;          /**< message id, if any, in regular host byte order */
-  coap_block_t block;      /**< GET/FETCH request Block definition */
-  size_t token_length;     /**< actual length of token */
-  unsigned char token[8];  /**< token used for subscription */
-  struct coap_string_t *query; /**< query string used for subscription, if any */
+  coap_cache_key_t *cache_key; /** cache_key to identify requester */
+  coap_pdu_t *pdu;         /**< PDU to use for additional requests */
 };
 
 void coap_subscription_init(coap_subscription_t *);
@@ -91,12 +86,7 @@ void coap_check_notify(coap_context_t *context);
  * @param resource        The observed resource.
  * @param session         The observer's session
  * @param token           The token that identifies this subscription.
- * @param query           The query string, if any. subscription will
- *                        take ownership of the string unless this
- *                        function returns NULL.
- * @param has_block2      If Option Block2 defined.
- * @param block2          Contents of Block2 if Block 2 defined.
- * @param code            Request type code.
+ * @param pdu             The requesting pdu.
  *
  * @return                A pointer to the added/updated subscription
  *                        information or @c NULL on error.
@@ -104,10 +94,7 @@ void coap_check_notify(coap_context_t *context);
 coap_subscription_t *coap_add_observer(coap_resource_t *resource,
                                        coap_session_t *session,
                                        const coap_binary_t *token,
-                                       coap_string_t *query,
-                                       int has_block2,
-                                       coap_block_t block2,
-                                       coap_pdu_code_t code);
+                                       const coap_pdu_t *pdu);
 
 /**
  * Returns a subscription object for given @p peer.

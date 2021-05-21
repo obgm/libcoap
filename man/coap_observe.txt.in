@@ -108,7 +108,7 @@ as required by some higher layer protocols.
 
 The *coap_resource_notify_observers*() function needs to be called whenever the
 server application determines that there has been a change to the state of
-_resource_, possibly only matching a specific _query_ if _query_ is not NULL.
+_resource_.  The _query_ parameter is obsolete and ignored.
 
 The *coap_cancel_observe*() function can be used by the client to cancel an
 observe request that is being tracked following the use of *coap_send_large*()

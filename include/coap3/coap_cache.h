@@ -69,6 +69,38 @@ coap_cache_key_t *coap_cache_derive_key(const coap_session_t *session,
                                    coap_cache_session_based_t session_based);
 
 /**
+ * Calculates a cache-key for the given CoAP PDU. See
+ * https://tools.ietf.org/html/rfc7252#section-5.6
+ * for an explanation of CoAP cache keys.
+ *
+ * Specific CoAP options can be removed from the cache-key.  Examples of
+ * this are the BLOCK1 and BLOCK2 options - which make no real sense including
+ * them in a client or server environment, but should be included in a proxy
+ * caching environment where things are cached on a per block basis.
+ * This is done individually by specifying @p cache_ignore_count and
+ * @p cache_ignore_options .
+ *
+ * NOTE: The returned cache-key needs to be freed off by the caller by
+ * calling coap_cache_delete_key().
+ *
+ * @param session The session to add into cache-key if @p session_based
+ *                is set.
+ * @param pdu     The CoAP PDU for which a cache-key is to be
+ *                calculated.
+ * @param session_based COAP_CACHE_IS_SESSION_BASED if session based
+ *                      cache-key, else COAP_CACHE_NOT_SESSION_BASED.
+ * @param ignore_options The array of options to ignore.
+ * @param ignore_count   The number of options to ignore.
+ *
+ * @return        The returned cache-key or @c NULL if failure.
+ */
+coap_cache_key_t *coap_cache_derive_key_w_ignore(const coap_session_t *session,
+                                      const coap_pdu_t *pdu,
+                                      coap_cache_session_based_t session_based,
+                                      const uint16_t *ignore_options,
+                                      size_t ignore_count);
+
+/**
  * Delete the cache-key.
  *
  * @param cache_key The cache-key to delete.

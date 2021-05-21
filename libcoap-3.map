@@ -22,6 +22,7 @@ global:
   coap_attr_get_value;
   coap_block_build_body;
   coap_cache_derive_key;
+  coap_cache_derive_key_w_ignore;
   coap_cache_get_app_data;
   coap_cache_get_by_key;
   coap_cache_get_by_pdu;

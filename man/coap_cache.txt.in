@@ -12,6 +12,7 @@ NAME
 ----
 coap_cache,
 coap_cache_derive_key,
+coap_cache_derive_key_w_ignore,
 coap_cache_delete_key,
 coap_cache_ignore_options,
 coap_new_cache_entry,
@@ -29,6 +30,11 @@ SYNOPSIS
 
 *coap_cache_key_t *coap_cache_derive_key(const coap_session_t *_session_,
 const coap_pdu_t *_pdu_, coap_cache_session_based_t _session_based_);*
+
+*coap_cache_key_t *coap_cache_derive_key_w_ignore(
+const coap_session_t *_session_, const coap_pdu_t *_pdu_,
+coap_cache_session_based_t _session_based_,
+const uint16_t *_ignore_options_, size_t _ignore_count_);*
 
 *void coap_delete_cache_key(coap_cache_key_t *_cache_key_);*
 
@@ -109,9 +115,16 @@ typedef enum coap_cache_record_pdu_t {
 
 The *coap_cache_derive_key*() function abstracts all the non NoCacheKey CoAP
 options, ignores the CoAP Observer option and includes a FETCH body from _pdu_.
-If _session_based_ is COAP_CACHE_IS_SESSION_BASED, then _session_ is also
-included. CoAP options can be specifically ignored by the use of
+If _session_based_ is COAP_CACHE_IS_SESSION_BASED, then _session_ pointer is
+also included. CoAP options can be specifically ignored by the use of
 *coap_cache_ignore_options*().  A digest is then built from all of the
+information and returned. NULL is returned on error.
+
+The *coap_cache_derive_key_w_ignore*() function abstracts all the non
+NoCacheKey CoAP options, ignores the CoAP Observer option and includes a FETCH
+body from _pdu_. Further options to ignore are specified by the _ignore_count_
+of _ignore_options_.  If _session_based_ is COAP_CACHE_IS_SESSION_BASED, then
+_session_ pointer is also included. A digest is then built from all of the
 information and returned. NULL is returned on error.
 
 The *coap_delete_cache_key*() function deletes the _cache_key_ that was
@@ -170,8 +183,8 @@ _data_ in the _cache_entry_.
 
 RETURN VALUES
 -------------
-*coap_cache_derive_key*() function returns a newly created Cache Key or
-NULL if there is a creation failure.
+*coap_cache_derive_key*() and *coap_cache_derive_key_w_ignore*() functions
+returns a newly created Cache Key or NULL if there is a creation failure.
 
 *coap_cache_ignore_options*() function returns 1 if success, 0 on failure.
 
