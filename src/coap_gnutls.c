@@ -759,12 +759,13 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
   memset(&cert_info, 0, sizeof(cert_info));
   cert_type = get_san_or_cn(g_session, &cert_info);
 #if (GNUTLS_VERSION_NUMBER >= 0x030606)
-  if (cert_type == GNUTLS_CRT_RAW)
-     if (!check_rpk_cert(g_context, &cert_info, c_session)) {
-        alert = GNUTLS_A_ACCESS_DENIED;
-        goto fail;
+  if (cert_type == GNUTLS_CRT_RAW) {
+    if (!check_rpk_cert(g_context, &cert_info, c_session)) {
+      alert = GNUTLS_A_ACCESS_DENIED;
+      goto fail;
     }
     return 1;
+  }
 #endif /* >= 3.6.6 */
 
   if (cert_info.cert_list_size == 0 && !g_context->setup_data.verify_peer_cert)
