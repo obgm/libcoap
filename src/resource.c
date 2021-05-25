@@ -759,6 +759,7 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG };
   s = COAP_MALLOC_TYPE(subscription);
 
   if (!s) {
+    coap_delete_cache_key(cache_key);
     return NULL;
   }
 
