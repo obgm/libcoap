@@ -764,12 +764,12 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
       alert = GNUTLS_A_ACCESS_DENIED;
       goto fail;
     }
-    return 1;
+    goto ok;
   }
 #endif /* >= 3.6.6 */
 
   if (cert_info.cert_list_size == 0 && !g_context->setup_data.verify_peer_cert)
-    return 1;
+    goto ok;
 
   G_CHECK(gnutls_certificate_verify_peers(g_session, NULL, 0, &status),
           "gnutls_certificate_verify_peers");
@@ -905,6 +905,7 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
     }
   }
 
+ok:
   if (cert_info.san_or_cn)
     gnutls_free(cert_info.san_or_cn);
 
