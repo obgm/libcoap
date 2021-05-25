@@ -1875,7 +1875,7 @@ int coap_dtls_hello(coap_session_t *c_session,
     ret = 0;
   }
 
-  if (ssl_data && ssl_data->pdu_len) {
+  if (ssl_data->pdu_len) {
     /* pdu data is held on stack which will not stay there */
     coap_log(LOG_DEBUG, "coap_dtls_hello: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
     ssl_data->pdu_len = 0;
