@@ -697,7 +697,7 @@ coap_free_context(coap_context_t *context) {
 int
 coap_option_check_critical(coap_context_t *ctx,
   coap_pdu_t *pdu,
-  coap_opt_filter_t unknown) {
+  coap_opt_filter_t *unknown) {
 
   coap_opt_iterator_t opt_iter;
   int ok = 1;
@@ -735,7 +735,7 @@ coap_option_check_critical(coap_context_t *ctx,
           /* When opt_iter.number is beyond our known option range,
            * coap_option_filter_set() will return -1 and we are safe to leave
            * this loop. */
-          if (coap_option_filter_set(&unknown, opt_iter.number) == -1) {
+          if (coap_option_filter_set(unknown, opt_iter.number) == -1) {
             break;
           }
         }
@@ -3009,7 +3009,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
           /* Flush out any entries on session->delayqueue */
           coap_session_connected(session);
       }
-      if (coap_option_check_critical(context, pdu, opt_filter) == 0)
+      if (coap_option_check_critical(context, pdu, &opt_filter) == 0)
         goto cleanup;
 
       /* if sent code was >= 64 the message might have been a
@@ -3087,14 +3087,14 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       /* find transaction in sendqueue in case large response */
       coap_remove_from_queue(&context->sendqueue, session, pdu->mid, &sent);
       /* check for unknown critical options */
-      if (coap_option_check_critical(context, pdu, opt_filter) == 0) {
+      if (coap_option_check_critical(context, pdu, &opt_filter) == 0) {
         coap_send_rst(session, pdu);
         goto cleanup;
       }
       break;
 
     case COAP_MESSAGE_CON:        /* check for unknown critical options */
-      if (coap_option_check_critical(context, pdu, opt_filter) == 0) {
+      if (coap_option_check_critical(context, pdu, &opt_filter) == 0) {
 
         if (COAP_PDU_IS_REQUEST(pdu)) {
           response =

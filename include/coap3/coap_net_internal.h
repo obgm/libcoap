@@ -309,7 +309,7 @@ void coap_dispatch(coap_context_t *context, coap_session_t *session,
  */
 int coap_option_check_critical(coap_context_t *ctx,
                                coap_pdu_t *pdu,
-                               coap_opt_filter_t unknown);
+                               coap_opt_filter_t *unknown);
 
 /**
  * Creates a new response for given @p request with the contents of @c
