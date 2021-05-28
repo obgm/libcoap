@@ -71,8 +71,10 @@ man7_MANS = $(MAN7)
 
 # Man pages built by a2x based on the NAMES section of the .txt file.
 # Note - this list includes all the defined entries, but a2x only builds the first 10.
-A2X_EXTRA_PAGES = @DOLLAR_SIGN@(shell for fil in $(TXT3) ; do sed -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $${fil} | \
+A2X_EXTRA_PAGES_3 = @DOLLAR_SIGN@(shell for fil in $(TXT3) ; do sed -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $${fil} | \
 	sed -ne '/coap_/{ s/ *, */\n/g; p }' | sed -ne 's/^\(coap_[a-zA-Z_0-9]\+\).*$$/\1.3/p' ; done)
+A2X_EXTRA_PAGES_5 = @DOLLAR_SIGN@(shell for fil in $(TXT5) ; do sed -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $${fil} | \
+	sed -ne '/coap-/{ s/ *, */\n/g; p }' | sed -ne 's/^\(coap-[a-zA-Z0-9-]\+\).*$$/\1.5/p' ; done)
 
 # a2x builds alternative .3 files up to a limit of 10 names from the
 # NAME section, so that 'man' works against the alternative different
@@ -128,12 +130,13 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_string.3" > coap_make_str_const.3
 	@echo ".so man3/coap_string.3" > coap_string_equal.3
 	@echo ".so man3/coap_string.3" > coap_binary_equal.3
-	$(INSTALL_DATA) $(A2X_EXTRA_PAGES) "$(DESTDIR)$(man3dir)"
+	$(INSTALL_DATA) $(A2X_EXTRA_PAGES_3) "$(DESTDIR)$(man3dir)"
+	$(INSTALL_DATA) $(A2X_EXTRA_PAGES_5) "$(DESTDIR)$(man5dir)"
 
 # As well as removing the base 'man' pages, remove other .3 files built by
 # a2x, as well as build by install-man specials.
 uninstall-man: uninstall-man3 uninstall-man5 uninstall-man7
-	-(cd $(DESTDIR)$(man3dir) ; rm -f $(A2X_EXTRA_PAGES) )
+	-(cd $(DESTDIR)$(man3dir) ; rm -f $(A2X_EXTRA_PAGES_3) $(A2X_EXTRA_PAGES_5) )
 
 endif # BUILD_MANPAGES
 

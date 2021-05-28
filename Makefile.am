@@ -221,14 +221,17 @@ dist_noinst_SCRIPTS = autogen.sh
 
 ## Set up a common library that causes linking against the common library
 ## to link with the actual library with (D)TLS support
+if BUILD_ADD_DEFAULT_NAMES
 install-exec-hook:
 	(cd $(DESTDIR)$(libdir) ; \
+	if [ -f libcoap-$(LIBCOAP_NAME_SUFFIX).so ] ; then \
+		rm -f libcoap-$(LIBCOAP_API_VERSION).so ; \
+		$(LN_S) libcoap-$(LIBCOAP_NAME_SUFFIX).so libcoap-$(LIBCOAP_API_VERSION).so ; \
+	fi ; \
 	rm -f libcoap-$(LIBCOAP_API_VERSION).a ; \
 	rm -f libcoap-$(LIBCOAP_API_VERSION).la ; \
-	rm -f libcoap-$(LIBCOAP_API_VERSION).so ; \
 	$(LN_S) libcoap-$(LIBCOAP_NAME_SUFFIX).a libcoap-$(LIBCOAP_API_VERSION).a ; \
 	$(LN_S) libcoap-$(LIBCOAP_NAME_SUFFIX).la libcoap-$(LIBCOAP_API_VERSION).la ; \
-	$(LN_S) libcoap-$(LIBCOAP_NAME_SUFFIX).so libcoap-$(LIBCOAP_API_VERSION).so ; \
 	$(MKDIR_P) $(DESTDIR)$(pkgconfigdir) ; \
 	cd $(DESTDIR)$(pkgconfigdir) ; \
 	rm -f libcoap-$(LIBCOAP_API_VERSION).pc ; \
@@ -241,6 +244,7 @@ uninstall-hook:
 	rm -f libcoap-$(LIBCOAP_API_VERSION).so ; \
 	cd $(DESTDIR)$(pkgconfigdir) ; \
 	rm -f libcoap-$(LIBCOAP_API_VERSION).pc)
+endif # BUILD_ADD_DEFAULT_NAMES
 
 ## various *-local targets
 ## Remove the helper files for the linker and the pkg-config file if there

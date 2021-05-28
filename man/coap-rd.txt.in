@@ -10,13 +10,22 @@ coap-rd(5)
 
 NAME
 -----
-coap-rd - A CoAP Resource Directory based on libcoap
+coap-rd,
+coap-rd-gnutls ,
+coap-rd-mbedtls,
+coap-rd-openssl,
+coap-rd-notls - A CoAP Resource Directory based on libcoap
 
 SYNOPSIS
 --------
 *coap-rd* [*-g* group] [*-G* group_if] [*-p* port] [*-v* num] [*-A* address]
           [[*-h* hint] [*-k* key]]
           [[*-c* certfile] [*-n*] [*-C* cafile] [*-R* trusted_casfile]]
+
+For *coap-rd* versions that use libcoap compiled for different
+(D)TLS libraries, *coap-rd-notls*, *coap-rd-gnutls*,
+*coap-rd-openssl*, *coap-rd-mbedtls* or *coap-rd-tinydtls* may be
+available.  Otherwise, *coap-rd* uses the default libcoap (D)TLS support.
 
 DESCRIPTION
 -----------

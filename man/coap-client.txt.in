@@ -10,7 +10,11 @@ coap-client(5)
 
 NAME
 -----
-coap-client - CoAP Client based on libcoap
+coap-client,
+coap-client-gnutls,
+coap-client-mbedtls,
+coap-client-openssl,
+coap-client-notls - CoAP Client based on libcoap
 
 SYNOPSIS
 --------
@@ -22,6 +26,11 @@ SYNOPSIS
               [[*-h* match_hint_file] [*-k* key] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [-n] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]] URI
+
+For *coap-client* versions that use libcoap compiled for different
+(D)TLS libraries, *coap-client-notls*, *coap-client-gnutls*,
+*coap-client-openssl*, *coap-client-mbedtls* or *coap-client-tinydtls* may be
+available.  Otherwise, *coap-client* uses the default libcoap (D)TLS support.
 
 DESCRIPTION
 -----------

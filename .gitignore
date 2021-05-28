@@ -78,9 +78,12 @@ man/*.7
 examples/.deps/
 examples/*.o
 examples/coap-client
+examples/coap-client-*
 examples/coap-etsi_iot_01
 examples/coap-rd
+examples/coap-rd-*
 examples/coap-server
+examples/coap-server-*
 examples/coap-tiny
 examples/*.exe
 
