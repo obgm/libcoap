@@ -464,22 +464,7 @@ coap_send_rst(coap_session_t *session, const coap_pdu_t *request) {
 */
 coap_mid_t coap_send( coap_session_t *session, coap_pdu_t *pdu );
 
-/**
- * Sends a CoAP message to given peer. The memory that is
- * allocated for the pdu will be released by coap_send_large().
- * The caller must not use the pdu after calling coap_send_large().
- *
- * If the response body is split into multiple payloads using blocks, libcoap
- * will handle asking for the subsequent blocks and any necessary recovery
- * needed.
- *
- * @param session   The CoAP session.
- * @param pdu       The CoAP PDU to send.
- *
- * @return          The message id of the sent message or @c
- *                  COAP_INVALID_MID on error.
- */
-coap_mid_t coap_send_large(coap_session_t *session, coap_pdu_t *pdu);
+#define coap_send_large(session, pdu) coap_send(session, pdu)
 
 /**
  * Invokes the event handler of @p context for the given @p event and

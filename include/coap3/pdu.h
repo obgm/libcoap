@@ -337,8 +337,8 @@ typedef enum coap_pdu_code_t {
  * Creates a new CoAP PDU with at least enough storage space for the given
  * @p size maximum message size. The function returns a pointer to the
  * node coap_pdu_t object on success, or @c NULL on error. The storage allocated
- * for the result must be released with coap_delete_pdu() if coap_send() or
- * coap_send_large() is not called.
+ * for the result must be released with coap_delete_pdu() if coap_send()
+ * is not called.
  *
  * @param type The type of the PDU (one of COAP_MESSAGE_CON, COAP_MESSAGE_NON,
  *             COAP_MESSAGE_ACK, COAP_MESSAGE_RST).
@@ -366,8 +366,8 @@ coap_pdu_t *coap_new_pdu(coap_pdu_type_t type, coap_pdu_code_t code,
 /**
  * Dispose of an CoAP PDU and frees associated storage.
  * Not that in general you should not call this function directly.
- * When a PDU is sent with coap_send() or coap_send_large(), coap_delete_pdu()
- * will be called automatically for you.
+ * When a PDU is sent with coap_send(), coap_delete_pdu() will be called
+ * automatically for you.
  *
  * @param pdu The PDU for free off.
  */

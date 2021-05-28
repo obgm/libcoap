@@ -305,7 +305,7 @@ nack_handler(coap_session_t *session COAP_UNUSED,
 }
 
 /*
- * Response handler used for coap_send_large() responses
+ * Response handler used for coap_send() responses
  */
 static coap_response_t
 message_handler(coap_session_t *session COAP_UNUSED,
@@ -1675,7 +1675,7 @@ main(int argc, char **argv) {
   if (coap_get_log_level() < LOG_DEBUG)
     coap_show_pdu(LOG_INFO, pdu);
 
-  coap_send_large(session, pdu);
+  coap_send(session, pdu);
 
   wait_ms = wait_seconds * 1000;
   coap_log(LOG_DEBUG, "timeout is set to %u seconds\n", wait_seconds);

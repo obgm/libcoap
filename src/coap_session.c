@@ -391,7 +391,7 @@ coap_mid_t coap_session_send_ping(coap_session_t *session) {
 #endif /* !COAP_DISABLE_TCP */
   if (!ping)
     return COAP_INVALID_MID;
-  return coap_send(session, ping);
+  return coap_send_internal(session, ping);
 }
 
 void coap_session_connected(coap_session_t *session) {
