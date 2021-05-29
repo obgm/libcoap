@@ -181,6 +181,10 @@ setup_server_context (void) {
 
   if (!context)
     return NULL;
+  /* See coap_block(3) */
+  coap_context_set_block_mode(context,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
 
   coap_address_init(&listen_addr);
   listen_addr.addr.sa.sa_family = AF_INET;
@@ -289,6 +293,10 @@ setup_server_context_pki (const char *public_cert_file,
   context = coap_new_context(NULL);
   if (!context)
     return NULL;
+  /* See coap_block(3) */
+  coap_context_set_block_mode(context,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
 
   memset (&dtls_pki, 0, sizeof (dtls_pki));
 
@@ -426,6 +434,10 @@ setup_server_context_psk (const char *hint,
   context = coap_new_context(NULL);
   if (!context)
     return NULL;
+  /* See coap_block(3) */
+  coap_context_set_block_mode(context,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
 
   memset (&dtls_psk, 0, sizeof (dtls_psk));
 
@@ -506,6 +518,10 @@ setup_client_session_psk (const char *uri,
 
   if (!context)
     return NULL;
+  /* See coap_block(3) */
+  coap_context_set_block_mode(context,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
 
   coap_address_init(&server);
   server.addr.sa.sa_family = AF_INET;
@@ -540,8 +556,9 @@ setup_client_session_psk (const char *uri,
 
 SEE ALSO
 --------
-*coap_context*(3), *coap_encryption*(3), *coap_endpoint_client*()3),
-*coap_resource*(3), *coap_session*(3) and *coap_tls_library*(3)
+*coap_block*(3), *coap_context*(3), *coap_encryption*(3),
+*coap_endpoint_client*()3), *coap_resource*(3), *coap_session*(3) and
+*coap_tls_library*(3)
 
 FURTHER INFORMATION
 -------------------
