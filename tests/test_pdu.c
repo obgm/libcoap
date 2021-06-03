@@ -1230,7 +1230,7 @@ t_encode_pdu22(void) {
     CU_ASSERT(memcmp(pdu->token, data1[n], pdu->used_size) == 0);
 
     /* Now insert option */
-    coap_insert_option(pdu, 23, 
+    coap_insert_option(pdu, 23,
                        coap_encode_var_safe(buf, sizeof(buf), 0xfffff6), buf);
     CU_ASSERT(memcmp(pdu->token, data2[n], pdu->used_size) == 0);
   }
