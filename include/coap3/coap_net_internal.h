@@ -341,6 +341,23 @@ coap_pdu_t *coap_wellknown_response(coap_context_t *context,
  */
 unsigned int coap_calc_timeout(coap_session_t *session, unsigned char r);
 
+/**
+ * Sends a CoAP message to given peer. The memory that is
+ * allocated for the pdu will be released by coap_send_internal().
+ * The caller must not use the pdu after calling coap_send_internal().
+ *
+ * If the response body is split into multiple payloads using blocks, libcoap
+ * will handle asking for the subsequent blocks and any necessary recovery
+ * needed.
+ *
+ * @param session   The CoAP session.
+ * @param pdu       The CoAP PDU to send.
+ *
+ * @return          The message id of the sent message or @c
+ *                  COAP_INVALID_MID on error.
+ */
+coap_mid_t coap_send_internal(coap_session_t *session, coap_pdu_t *pdu);
+
 /** @} */
 
 #endif /* COAP_NET_INTERNAL_H_ */

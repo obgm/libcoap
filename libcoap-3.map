@@ -174,7 +174,6 @@ global:
   coap_send;
   coap_send_ack;
   coap_send_error;
-  coap_send_large;
   coap_send_message_type;
   coap_session_disconnected;
   coap_session_get_ack_random_factor;

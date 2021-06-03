@@ -857,7 +857,7 @@ remove_proxy_association(coap_session_t *session, int send_failure) {
                        "Cannot add token to incoming proxy response PDU\n");
       }
 
-      if (coap_send_large(proxy_list[i].incoming, response) ==
+      if (coap_send(proxy_list[i].incoming, response) ==
                                                           COAP_INVALID_MID) {
         coap_log(LOG_INFO, "Failed to send PDU with 5.02 gateway issue\n");
       }
@@ -1204,7 +1204,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
     if (coap_get_log_level() < LOG_DEBUG)
       coap_show_pdu(LOG_INFO, pdu);
 
-    coap_send_large(ongoing, pdu);
+    coap_send(ongoing, pdu);
     goto cleanup;
   }
   else {
@@ -1707,7 +1707,7 @@ proxy_message_handler(coap_session_t *session,
   if (coap_get_log_level() < LOG_DEBUG)
     coap_show_pdu(LOG_INFO, pdu);
 
-  coap_send_large(incoming, pdu);
+  coap_send(incoming, pdu);
   return COAP_RESPONSE_OK;
 }
 

@@ -966,7 +966,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         obs->non_cnt++;
       }
 
-      mid = coap_send( obs->session, response );
+      mid = coap_send_internal( obs->session, response );
 
       if (COAP_INVALID_MID == mid) {
         coap_log(LOG_DEBUG,

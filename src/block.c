@@ -282,6 +282,13 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
   if (!session)
     return 0;
 
+  if (!(session->block_mode & COAP_BLOCK_USE_LIBCOAP)) {
+    coap_log(LOG_DEBUG,
+             "** %s: coap_cancel_observe: COAP_BLOCK_USE_LIBCOAP not enabled\n",
+             coap_session_str(session));
+    return 0;
+  }
+
   LL_FOREACH(session->lg_crcv, cq) {
     if (cq->observe_set) {
       if ((!token && !cq->app_token->length) || (token &&
@@ -310,7 +317,7 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
                            coap_encode_var_safe(buf, sizeof(buf),
                                                 COAP_OBSERVE_CANCEL),
                            buf);
-        mid = coap_send(session, pdu);
+        mid = coap_send_internal(session, pdu);
         if (mid != COAP_INVALID_MID)
           return 1;
         break;
@@ -345,7 +352,7 @@ coap_add_data_large_internal(coap_session_t *session,
 
   if (!(session->block_mode & COAP_BLOCK_USE_LIBCOAP)) {
     coap_log(LOG_DEBUG,
-             "** %s: coap_send_large: COAP_BLOCK_USE_LIBCOAP not enabled\n",
+             "** %s: coap_add_data_large: COAP_BLOCK_USE_LIBCOAP not enabled\n",
              coap_session_str(session));
     goto add_data;
   }
@@ -484,7 +491,7 @@ coap_add_data_large_internal(coap_session_t *session,
                                                          sizeof(token), token);
       /*
        * Token will be updated in pdu later as original pdu may be needed in
-       * coap_send_large()
+       * coap_send()
        */
       coap_update_option(pdu,
                          COAP_OPTION_SIZE1,
@@ -1123,7 +1130,7 @@ coap_handle_request_send_block(coap_session_t *session,
         goto internal_issue;
       }
       if (i + 1 < request_cnt) {
-        coap_send(session, out_pdu);
+        coap_send_internal(session, out_pdu);
       }
     }
     goto skip_app_handler;
@@ -1519,7 +1526,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *rcvd) {
                             block.num,
                             block.szx))
           goto fail_body;
-        if (coap_send(session, pdu) == COAP_INVALID_MID)
+        if (coap_send_internal(session, pdu) == COAP_INVALID_MID)
           goto fail_body;
         return 1;
       }
@@ -1592,7 +1599,7 @@ coap_block_build_body(coap_binary_t *body_data, size_t length,
  * need to initiate the request for the next block and not trouble the
  * application.  Note that Token must unique per request/response.
  *
- * This is set up using coap_send_large()
+ * This is set up using coap_send()
  * Client receives large data from server (BLOCK2)
  *
  * Return: 0 Call application handler
@@ -1711,7 +1718,7 @@ coap_handle_response_get_block(coap_context_t *context,
                                       (0 << 4) | (0 << 3) | block.szx),
                                buf);
 
-            if (coap_send(session, pdu) == COAP_INVALID_MID)
+            if (coap_send_internal(session, pdu) == COAP_INVALID_MID)
               goto fail_resp;
 
             goto skip_app_handler;
@@ -1788,7 +1795,7 @@ coap_handle_response_get_block(coap_context_t *context,
                                     (block.m << 3) | block.szx),
                                  buf);
 
-              if (coap_send(session, pdu) == COAP_INVALID_MID)
+              if (coap_send_internal(session, pdu) == COAP_INVALID_MID)
                 goto fail_resp;
             }
             if (session->block_mode & (COAP_BLOCK_SINGLE_BODY))
@@ -1894,9 +1901,8 @@ fail_resp:
   if (recursive == COAP_RECURSE_OK && !p) {
     if (!sent) {
       if (coap_get_block(rcvd, COAP_OPTION_BLOCK2, &block)) {
-        coap_log(LOG_DEBUG, "** %s: large body receive not supported by "
-                 "libcoap unless coap_send_large() is used to transmit "
-                 "request\n", coap_session_str(session));
+        coap_log(LOG_DEBUG, "** %s: large body receive internal issue\n",
+                 coap_session_str(session));
       }
     }
     else if (COAP_RESPONSE_CLASS(rcvd->code) == 2) {

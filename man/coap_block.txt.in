@@ -15,8 +15,7 @@ coap_context_set_block_mode,
 coap_add_data_large_request,
 coap_add_data_large_response,
 coap_get_data_large,
-coap_block_build_body,
-coap_send_large
+coap_block_build_body
 - Work with CoAP Blocks
 
 SYNOPSIS
@@ -42,8 +41,6 @@ const uint8_t **_data_, size_t *_offset_, size_t *_total_);*
 *coap_binary_t *
 coap_block_build_body(coap_binary_t *_body_data_, size_t _length_,
 const uint8_t *_data_, size_t _offset_, size_t _total_);*
-
-*coap_mid_t coap_send_large(coap_session_t *_session_, coap_pdu_t *_pdu_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -172,28 +169,17 @@ is NULL, or _total_ is larger than the current size of _body_data_, then
 _body_data_ is re-allocated and returned.  If there is an error, _body_data_
 gets de-allocated.
 
-The *coap_send_large*() function is used to initiate the transmission of a
-request type _pdu_ associated with the _session_ in the same way as
-*coap_send*() but also sets up a mechanism for handling a (potentially) large
-response of data that spans multiple blocks.  To get the start of the data
-offset and total size, *coap_get_data_large*() needs to be called in the
-response handler. If the request includes the OBSERVE option with the observe
-value set to 0, then any response that are observe triggered are also handled.
-
 If _block_mode_ (as set by *coap_context_set_block_mode*()) includes
-COAP_BLOCK_SINGLE_BODY and *coap_send_large*() is used, then the response
-handler will only get called once with the entire body containing the data
-from all of the individual blocks. If there is a change of data during the
-blocks receipt (e.g. ETag value changes), then the entire set of data is
-re-requested and the partial body dropped.
+COAP_BLOCK_SINGLE_BODY is used, then the response handler will only get called
+once with the entire body containing the data from all of the individual
+blocks. If there is a change of data during the blocks receipt (e.g. ETag
+value changes), then the entire set of data is re-requested and the partial
+body dropped.
 
 RETURN VALUES
 -------------
 The *coap_add_data_large_request*(), *coap_add_data_large_response*(), and
 *coap_get_data_large*() functions return 0 on failure, 1 on success.
-
-The *coap_send_large*() function returns the CoAP message ID on success or
-COAP_INVALID_MID on failure.
 
 The  *coap_block_build_body*() returns the current state of the body's data
 (which may have some missing gaps) or NULL on error.
@@ -284,7 +270,7 @@ unsigned char *data, size_t length, int observe) {
       goto error;
   }
 
-  if (coap_send_large(session, pdu) == COAP_INVALID_MID)
+  if (coap_send(session, pdu) == COAP_INVALID_MID)
     goto error;
   return 1;
 

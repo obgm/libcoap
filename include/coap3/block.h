@@ -219,7 +219,7 @@ typedef void (*coap_release_large_data_t)(coap_session_t *session,
  * coap_add_data_large_request() (or the alternative coap_add_data_large_*()
  * functions) must be called only once per PDU and must be the last PDU update
  * before the PDU is transmitted. The (potentially) initial data will get
- * transmitted when coap_send() or preferably coap_send_large() is invoked.
+ * transmitted when coap_send() is invoked.
  *
  * Note: COAP_BLOCK_USE_LIBCOAP must be set by coap_context_set_block_mode()
  * for libcoap to work correctly when using this function.
@@ -326,8 +326,8 @@ void coap_context_set_block_mode(coap_context_t *context,
                                   uint8_t block_mode);
 
 /**
- * Cancel an observe that is being tracked by the client large receive logic
- * when using coap_send_large().
+ * Cancel an observe that is being tracked by the client large receive logic.
+ * (coap_context_set_block_mode() has to be called)
  * This will trigger the sending of an observe cancel pdu to the server.
  *
  * @param session  The session that is being used for the observe.

@@ -351,8 +351,7 @@ Splitting up large data transmission into blocks (RFC7959) can now all be
 handled by internally by libcoap, removing the need for applications to know
 anything about how to work with blocks, or need to do any block packet loss
 recovery. In simple terms, `coap_context_set_block_mode()` must be called,
-`coap_send_large()` used instead of `coap_send()`, `coap_add_data()` (or
-`coap_add_data_blocked_response()`) is replaced by
+`coap_add_data()` (or `coap_add_data_blocked_response()`) is replaced by
 `coap_add_data_large_response()` or `coap_add_data_large_request()`, and
 `coap_get_data_large()` used instead of `coap_get_data()`.  See man page
 `coap_block(3)` for further information.
@@ -363,7 +362,7 @@ There are 3 ways of handling the block transfers
 
 This is how things were done in 4.2.1.  The application recognizes the next
 block request coming in and then generates the next block response (including
-setting up the PDU if client).  To continue this,
+setting up the PDU if client).  To continue using this method,
 `coap_context_set_block_mode()` must not be called and none of the `_large`
 functions used.
 
@@ -408,8 +407,8 @@ second time in the call-back handler will throw up a Informational warning.
 
 For the client, there is a new function `coap_cancel_observe()` that can be
 called to cancel an observation on the server. To use it,
-`coap_context_set_block_mode()` has to be called and `coap_send_large()` has to
-be used to send the initial request containing the Observe option.
+`coap_context_set_block_mode()` has to be called prior to sending the initial
+request containing the Observe option.
 
 == Unused function parameters
 

@@ -51,9 +51,10 @@ Optionally, the client can specify query options for the resource, or by using
 a FETCH request instead of a GET to define a query (RFC8132).
 
 To remove the "observe" subscription, the client has to issue a GET (or FETCH)
-request with the COAP_OPTION_OBSERVE Option with a value of COAP_OBSERVE_CANCEL.
-If the request to "observe" had been sent using *coap_send_large*(), the
-"observe" can be cancelled using *coap_cancel_observe*() instead.
+request with the COAP_OPTION_OBSERVE Option with a value of
+COAP_OBSERVE_CANCEL using the same token and other options used for making the
+initial "observe" request. Alternatively, "observe" can be cancelled using
+*coap_cancel_observe*() instead.
 
 The underlying library adds in and removes "subscribers" to "observe" the
 resource as appropriate in the server side logic.
@@ -111,8 +112,7 @@ server application determines that there has been a change to the state of
 _resource_.  The _query_ parameter is obsolete and ignored.
 
 The *coap_cancel_observe*() function can be used by the client to cancel an
-observe request that is being tracked following the use of *coap_send_large*()
-(See *coap_block*(3)) to send the initial "observe" PDU. This will cause the
+observe request that is being tracked. This will cause the
 appropriate PDU to be sent to the server to cancel the observation, based on
 the _session_ and _token_ used to set up the observe and the PDU is of type
 _message_type_ (use COAP_MESSAGE_NON or COAP_MESSAGE_CON).
