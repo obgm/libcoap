@@ -15,6 +15,7 @@ coap_config.h
 coap_config.h.in
 compile
 config.*
+!config.yml
 configure
 debian/
 depcomp
