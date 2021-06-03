@@ -194,6 +194,10 @@ int main(int argc, char *argv[]){
   if (!ctx) {
     exit(1);
   }
+  /* See coap_block(3) */
+  coap_context_set_block_mode(ctx,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
 
   /* Other Set up Code */
 
@@ -237,6 +241,10 @@ int main(int argc, char *argv[]){
   if (!ctx) {
     exit(1);
   }
+  /* See coap_block(3) */
+  coap_context_set_block_mode(ctx,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
 
   FD_ZERO(&readfds);
   /* Set up readfds and nfds to handle other non libcoap FDs */
@@ -287,6 +295,10 @@ int main(int argc, char *argv[]){
   if (!ctx) {
     exit(1);
   }
+  /* See coap_block(3) */
+  coap_context_set_block_mode(ctx,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
   coap_fd = coap_context_get_coap_fd(ctx);
   if (coap_fd == -1) {
     /* epoll is not supported */
@@ -359,6 +371,10 @@ int main(int argc, char *argv[]){
   if (!ctx) {
     exit(1);
   }
+  /* See coap_block(3) */
+  coap_context_set_block_mode(ctx,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
   coap_fd = coap_context_get_coap_fd(ctx);
   if (coap_fd == -1) {
     exit(1);
@@ -414,7 +430,7 @@ int main(int argc, char *argv[]){
 
 SEE ALSO
 --------
-*coap_context*(3)
+*coap_block*(3), *coap_context*(3)
 
 FURTHER INFORMATION
 -------------------

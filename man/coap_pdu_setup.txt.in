@@ -516,8 +516,6 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   unsigned char buf[40];
   size_t len;
   time_t now;
-  (void)resource;
-  (void)session;
 
   /* ... Additional analysis code for resource, request pdu etc.  ... */
 
@@ -542,18 +540,20 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   }
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   /*
-   * Invoke coap_add_data_blocked_response() to do all the hard work.
+   * Invoke coap_add_data_large_response() to do all the hard work.
    *
    * Define the format - COAP_MEDIATYPE_TEXT_PLAIN - to add in
    * Define how long this response is valid for (secs) - 1 - to add in.
+   * ETAG Option added internally with unique value as param set to 0
    *
    * OBSERVE Option added internally if needed within the function
    * BLOCK2 Option added internally if output too large
    * SIZE2 Option added internally
-   * ETAG Option added internally
    */
-  coap_add_data_blocked_response(request, response, COAP_MEDIATYPE_TEXT_PLAIN,
-                                 1, len, buf);
+  coap_add_data_large_response(resource, session, request, response,
+                               query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
+                               len,
+                               buf, NULL, NULL);
 
 }
 ----
