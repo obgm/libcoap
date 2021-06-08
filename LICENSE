@@ -49,7 +49,7 @@ builds of the executables in the examples folder:
 uthash
 
 libcoap uses uthash.h and utlist.h from Troy D. Hanson
-(http://troydhanson.github.com/uthash/). These files use the revised
+(https://troydhanson.github.io/uthash/). These files use the revised
 BSD license (BSD-1-Clause license) as included in these two source
 files.
 
