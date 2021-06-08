@@ -137,7 +137,6 @@ libcoap_includedir = $(includedir)/coap$(LIBCOAP_API_VERSION)/
 libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/address.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/async.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/bits.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/block.h \
   $(top_builddir)/include/coap$(LIBCOAP_API_VERSION)/coap.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_cache.h \

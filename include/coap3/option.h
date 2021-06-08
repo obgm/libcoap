@@ -15,8 +15,6 @@
 #ifndef COAP_OPTION_H_
 #define COAP_OPTION_H_
 
-#include "bits.h"
-
 typedef uint16_t coap_option_num_t;
 
 /**
