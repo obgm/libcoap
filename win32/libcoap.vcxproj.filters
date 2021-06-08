@@ -101,9 +101,6 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\async.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\bits.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\block.h">
       <Filter>Header Files</Filter>
     </ClInclude>

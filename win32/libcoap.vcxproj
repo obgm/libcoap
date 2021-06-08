@@ -70,7 +70,6 @@
     <ClInclude Include="..\coap_config.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\address.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\async.h" />
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\bits.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\block.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_block_internal.h" />
