@@ -4,6 +4,8 @@
  * Copyright (C) 2016-2020 Olaf Bergmann <bergmann@tzi.org>
  * Copyright (C) 2020 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
  */

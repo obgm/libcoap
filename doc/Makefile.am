@@ -3,6 +3,8 @@
 # Copyright (C) 2015-2018 Carsten Schoenert <c.schoenert@t-online.de>
 #                    2018 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
+# SPDX-License-Identifier: BSD-2-Clause
+#
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.
 

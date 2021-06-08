@@ -1,7 +1,10 @@
 # Makefile.am for libcoap
 #
-# Copyright (C) 2010-2019,2021 Olaf Bergmann <bergmann@tzi.org>
-#           (C) 2015-2017 Carsten Schoenert <c.schoenert@t-online.de>
+# Copyright (C) 2010-2021,2021 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2015-2017 Carsten Schoenert <c.schoenert@t-online.de>
+# Copyright (C) 2018-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+#
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.

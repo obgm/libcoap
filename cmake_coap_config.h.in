@@ -1,3 +1,13 @@
+/*
+ * cmake_coap_config.h -- cmake configuration for libcoap
+ *
+ * Copyright (C) 2020 Carlos Gomes Martinho <carlos.gomes_martinho@siemens.com>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
+ */
 
 #ifndef COAP_CONFIG_H_
 #define COAP_CONFIG_H_

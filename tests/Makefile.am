@@ -1,6 +1,8 @@
-# doc/Makefile.am
+# tests/Makefile.am
 #
 # Copyright (C) 2015-2016 Carsten Schoenert <c.schoenert@t-online.de>
+#
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.

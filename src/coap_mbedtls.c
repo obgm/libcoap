@@ -4,6 +4,8 @@
 * Copyright (C) 2019-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
 *               2019 Jitin George <jitin@espressif.com>
 *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
 * This file is part of the CoAP library libcoap. Please see README for terms
 * of use.
 */

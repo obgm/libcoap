@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2015 Carsten Schoenert <c.schoenert@t-online.de>
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
  */

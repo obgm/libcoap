@@ -1,3 +1,15 @@
+/*
+ * lwipopts.h -- LwIP example
+ *
+ * Copyright (C) 2013-2016 Christian Amsüss <chrysn@fsfe.org>
+ * Copyright (C) 2018 John Shallow <supjps-libcoap@jpshallow.com>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
+ */
+
 typedef unsigned int sys_prot_t;
 
 #define NO_SYS                     1

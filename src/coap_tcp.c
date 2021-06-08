@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2019 Olaf Bergmann <bergmann@tzi.org> and others
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
  */
