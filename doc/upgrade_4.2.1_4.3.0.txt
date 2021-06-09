@@ -421,4 +421,11 @@ then the definition for `UNUSED_PARAM` can be removed.
 has been replaced with `COAP_MID_INVALID`. This is so that the Message ID aligns
 with the definition in RFC7252.
 
+== Async Support
 
+The `async` support has been re-written to simplify usage, and allows the
+underlying libcoap to do the main management / work. A primary change is to
+register the async request with a defined delay time before triggering - which
+if set to 0 is an infinite time and the delay time subsequently updated if
+required.  Consequently the `coap_async_*()` functions now have different
+parameters.

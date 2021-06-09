@@ -11,6 +11,7 @@ coap_async(3)
 NAME
 ----
 coap_async,
+coap_async_is_supported,
 coap_register_async,
 coap_async_set_delay,
 coap_find_async,
@@ -22,6 +23,8 @@ coap_async_get_app_data
 SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*int coap_async_is_supported(void);*
 
 *coap_async_t *coap_register_async(coap_session_t *_session_,
 const coap_pdu_t *_request_, coap_tick_t _delay_);*
@@ -58,6 +61,9 @@ by the packet containing the status and any data.
 Usually responses are piggybacked, but this man page focuses on separate
 (async) support.
 
+The function *coap_async_is_supported*() is used to determine if there is
+async support or not.
+
 The *coap_register_async*() function is used to set up an asynchronous delayed
 request for the _request_ PDU associated with the _session_. The
 application request handler will get called with a copy of _request_ after
@@ -79,13 +85,16 @@ definition based on the _session_ and token _token_.
 
 The *coap_async_set_app_data*() function is used to add in user defined
 _app_data_ to the _async_ definition.  It is the responsibility of the
-application to release this data if appropriate.
+application to release this data if appropriate.  This would usually be done
+when the application request handler is called under 'async' control.
 
-The *coap_async_get_app_data*() function is used to retrieve any defines
+The *coap_async_get_app_data*() function is used to retrieve any defined
 application data from the  _async_ definition.
 
 RETURN VALUES
 -------------
+
+*coap_async_is_supported*() returns 1 if support is available, 0 otherwise.
 
 *coap_register_async*() and *coap_find_async*() return a pointer to an async
 definition or NULL if there is an error.
@@ -112,44 +121,44 @@ hnd_get_with_delay(coap_session_t *session,
               coap_pdu_t *response) {
   unsigned long delay = 5;
   size_t size;
+  coap_async_t *async;
+  coap_bin_const_t token = coap_pdu_get_token(request);
 
   /*
    * See if this is the initial, or delayed request
    */
-  if (request) {
-    coap_async_t *async;
-    coap_bin_const_t token = coap_pdu_get_token(request);
 
-    async = coap_find_async(session, token);
-    if (!async) {
-      /* Set up an async request to trigger delay in the future */
-      if (query) {
-        const uint8_t *p = query->s;
+  async = coap_find_async(session, token);
+  if (!async) {
+    /* Set up an async request to trigger delay in the future */
+    if (query) {
+      const uint8_t *p = query->s;
 
-        delay = 0;
-        for (size = query->length; size; --size, ++p)
-          delay = delay * 10 + (*p - '0');
-        if (delay == 0) {
-          coap_log(LOG_INFO, "async: delay of 0 not supported\n");
-          coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
-          return;
-        }
-      }
-      async = coap_register_async(session,
-                                  request,
-                                  COAP_TICKS_PER_SECOND * delay);
-      if (async == NULL) {
-        coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
+      delay = 0;
+      for (size = query->length; size; --size, ++p)
+        delay = delay * 10 + (*p - '0');
+      if (delay == 0) {
+        coap_log(LOG_INFO, "async: delay of 0 not supported\n");
+        coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
         return;
       }
-      /*
-       * Not setting response code will cause empty ACK to be sent
-       * if Confirmable
-       */
+    }
+    async = coap_register_async(session,
+                                request,
+                                COAP_TICKS_PER_SECOND * delay);
+    if (async == NULL) {
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
       return;
     }
+    /*
+     * Not setting response code will cause empty ACK to be sent
+     * if Confirmable
+     */
+    return;
   }
-  /* no request (observe) or async set up, so this is the delayed request */
+  /* async is set up, so this is the delayed request */
+
+  /* remove any stored app data associated with 'async' here */
 
   /* Send back the appropriate data */
   coap_add_data_large_response(resource, session, request, response,

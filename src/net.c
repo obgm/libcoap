@@ -2497,8 +2497,8 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   int skip_hop_limit_check = 0;
   int resp;
   coap_binary_t token = { pdu->token_length, pdu->token };
-  coap_bin_const_t tokenc = { pdu->token_length, pdu->token };
 #ifndef WITHOUT_ASYNC
+  coap_bin_const_t tokenc = { pdu->token_length, pdu->token };
   coap_async_t *async;
 #endif /* WITHOUT_ASYNC */
 
