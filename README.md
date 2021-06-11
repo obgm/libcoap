@@ -57,7 +57,7 @@ There is (D)TLS support for the following libraries
 
 * GnuTLS (Minimum version 3.3.0) [PKI, PSK, RPK(3.6.6+) and PKCS11]
 
-* Mbed TLS (Minimum version 2.7.10) [PKI and PSK] [Currently only DTLS]
+* Mbed TLS (Minimum version 2.7.10) [PKI and PSK]
 
 * TinyDTLS [PSK and RPK] [DTLS Only]
 

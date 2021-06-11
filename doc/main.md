@@ -42,7 +42,7 @@ There is (D)TLS support for the following libraries
 
 * GnuTLS (Minimum version 3.3.0) [PKI, PSK, RPK(3.6.6+) and PKCS11]
 
-* Mbed TLS (Minimum version 2.7.10) [PKI and PSK] [Currently only DTLS]
+* Mbed TLS (Minimum version 2.7.10) [PKI and PSK]
 
 * TinyDTLS [PSK and RPK] [DTLS Only]
 
@@ -58,4 +58,6 @@ This library is published as open-source software without any warranty
 of any kind. Use is permitted under the terms of the simplified BSD
 license. It includes public domain software. libcoap binaries may also
 include open-source software with their respective licensing terms.
-Please refer to LICENSE for further details in the source.
+Please refer to
+[LICENSE](https://raw.githubusercontent.com/obgm/libcoap/develop/LICENSE)
+for further details in the source.
