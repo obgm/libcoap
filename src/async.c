@@ -163,11 +163,9 @@ coap_async_is_supported(void) {
 }
 
 coap_async_t *
-coap_register_async(coap_context_t *context,
-                    coap_session_t *session,
-                    coap_pdu_t *request,
+coap_register_async(coap_session_t *session,
+                    const coap_pdu_t *request,
                     coap_tick_t delay) {
-  (void)context;
   (void)session;
   (void)request;
   (void)delay;
@@ -181,16 +179,14 @@ coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
 }
 
 void
-coap_free_async(coap_context_t *context, coap_async_t *async) {
-  (void)context;
+coap_free_async(coap_session_t *session, coap_async_t *async) {
+  (void)session;
   (void)async;
 }
 
 coap_async_t *
-coap_find_async(coap_context_t *context,
-                coap_session_t *session,
+coap_find_async(coap_session_t *session,
                 coap_bin_const_t token) {
-  (void)context;
   (void)session;
   (void)token;
   return NULL;
