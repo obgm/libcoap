@@ -2,14 +2,14 @@
  *
  * Copyright (C) 2019 Olaf Bergmann <bergmann@tzi.org>
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "test_common.h"
 #include "test_encode.h"
-
-#include <coap.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,7 +25,7 @@ t_decode1(void) {
   unsigned int result;
 
   result = coap_decode_var_bytes(teststr.s, teststr.length);
-  
+
   CU_ASSERT(result == 0);
 }
 
@@ -36,7 +36,7 @@ t_decode2(void) {
   unsigned int result;
 
   result = coap_decode_var_bytes8(teststr.s, teststr.length);
-  
+
   CU_ASSERT(result == 1);
 }
 
@@ -47,7 +47,7 @@ t_decode3(void) {
   unsigned int result;
 
   result = coap_decode_var_bytes(teststr.s, teststr.length);
-  
+
   CU_ASSERT(result == 0x01000000);
 }
 
@@ -58,7 +58,7 @@ t_decode4(void) {
   unsigned int result;
 
   result = coap_decode_var_bytes(teststr.s, teststr.length);
-  
+
   CU_ASSERT(result == 0x05060708);
 }
 
@@ -68,7 +68,7 @@ t_decode5(void) {
   uint64_t result;
 
   result = coap_decode_var_bytes8(teststr.s, teststr.length);
-  
+
   CU_ASSERT(result == 0);
 }
 
@@ -79,7 +79,7 @@ t_decode6(void) {
   uint64_t result;
 
   result = coap_decode_var_bytes8(teststr.s, teststr.length);
-  
+
   CU_ASSERT(result == 1);
 }
 
@@ -90,7 +90,7 @@ t_decode7(void) {
   uint64_t result;
 
   result = coap_decode_var_bytes8(teststr.s, teststr.length);
-  
+
   CU_ASSERT(result == 0x0100000000000000);
 }
 
@@ -101,7 +101,7 @@ t_decode8(void) {
   uint64_t result;
 
   result = coap_decode_var_bytes8(teststr.s, teststr.length);
-  
+
   CU_ASSERT(result == 0x0102030405060708);
 }
 
@@ -116,7 +116,7 @@ t_encode1(void) {
   unsigned int result;
 
   result = coap_encode_var_safe(buf, sizeof(buf), 0x00);
-  
+
   CU_ASSERT(result == 0);
 
   CU_ASSERT(memcmp(buf, data, result) == 0);
@@ -129,7 +129,7 @@ t_encode2(void) {
   unsigned int result;
 
   result = coap_encode_var_safe(buf, sizeof(buf), 0x01);
-  
+
   CU_ASSERT(result == sizeof(data));
 
   CU_ASSERT(memcmp(buf, data, result) == 0);
@@ -166,7 +166,7 @@ t_encode5(void) {
   unsigned int result;
 
   result = coap_encode_var_safe8(buf, sizeof(buf), 0x00);
-  
+
   CU_ASSERT(result == 0);
 
   CU_ASSERT(memcmp(buf, data, result) == 0);
@@ -179,7 +179,7 @@ t_encode6(void) {
   unsigned int result;
 
   result = coap_encode_var_safe8(buf, sizeof(buf), 0x01);
-  
+
   CU_ASSERT(result == sizeof(data));
 
   CU_ASSERT(memcmp(buf, data, result) == 0);

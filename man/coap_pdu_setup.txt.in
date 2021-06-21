@@ -10,16 +10,44 @@ coap_pdu_setup(3)
 
 NAME
 ----
-coap_pdu_setup, coap_pdu_init, coap_add_token, coap_new_optlist,
-coap_insert_optlist, coap_delete_optlist, coap_add_optlist_pdu,
-coap_add_option, coap_add_data - Work with CoAP PDUs
+coap_pdu_setup,
+coap_new_pdu,
+coap_pdu_init,
+coap_session_init_token,
+coap_session_new_token,
+coap_add_token,
+coap_new_optlist,
+coap_insert_optlist,
+coap_delete_optlist,
+coap_encode_var_safe,
+coap_encode_var_safe8,
+coap_add_optlist_pdu,
+coap_add_option,
+coap_add_data,
+coap_add_data_blocked_response,
+coap_send,
+coap_split_path,
+coap_split_query,
+coap_pdu_set_mid,
+coap_pdu_set_code,
+coap_pdu_set_type
+- Setting up CoAP PDUs
 
 SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*coap_pdu_t *coap_pdu_init(uint8_t _type_, uint8_t _code_,
-uint16_t _message_id_, size_t _max_size_);*
+*coap_pdu_t *coap_new_pdu(coap_pdu_type_t _type_, coap_pdu_code_t _code_,
+coap_session_t *_session_);*
+
+*coap_pdu_t *coap_pdu_init(coap_pdu_type_t _type_, coap_pdu_code_t _code_,
+coap_mid_t _message_id_, size_t _max_size_);*
+
+*void coap_session_init_token(coap_session_t *_session_, size_t _length_,
+const uint8_t *_token_);*
+
+*void coap_session_new_token(coap_session_t *_session_, size_t *_length_,
+uint8_t *_token_);*
 
 *int coap_add_token(coap_pdu_t *_pdu_, size_t _length_,
 const uint8_t *_data_);*
@@ -32,6 +60,12 @@ coap_optlist_t *_optlist_);*
 
 *void coap_delete_optlist(coap_optlist_t *_optlist_chain_);*
 
+*unsigned int coap_encode_var_safe(uint8_t *_buffer_, size_t _size_,
+unsigned int _value_);*
+
+*unsigned int coap_encode_var_safe8(uint8_t *_buffer_, size_t _size_,
+uint64_t _value_);*
+
 *int coap_add_optlist_pdu(coap_pdu_t *_pdu_, coap_optlist_t **_optlist_chain_);*
 
 *size_t coap_add_option(coap_pdu_t *_pdu_, uint16_t _number_, size_t _length_,
@@ -39,30 +73,38 @@ const uint8_t *_data_);*
 
 *int coap_add_data(coap_pdu_t *_pdu_, size_t _length_, const uint8_t *_data_);*
 
-*void coap_add_data_blocked_response(coap_resource_t *_resource_,
-coap_session_t *_session_, coap_pdu_t *_request_, coap_pdu_t *_response_,
-const coap_binary_t *_token_, uint16_t _media_type_, int _maxage_,
-size_t _length_, const uint8_t* _data_);
+*void coap_add_data_blocked_response(const coap_pdu_t *_request_,
+coap_pdu_t *_response_, uint16_t _media_type_, int _maxage_, size_t _length_,
+const uint8_t *_data_);*
 
-*unsigned int coap_encode_var_safe(uint8_t *_buffer_, size_t _size_,
-unsigned int _value_);*
+*coap_mid_t coap_send(coap_session_t *_session_, coap_pdu_t *_pdu_);*
 
 *int coap_split_path(const uint8_t *_path_, size_t _length_, uint8_t *_buffer_,
 size_t *_buflen_);*
 
-*int coap_split_query(const uint8_t *_query_, size_t _length_, uint8_t *_buffer_,
-size_t *_buflen_);*
+*int coap_split_query(const uint8_t *_query_, size_t _length_,
+uint8_t *_buffer_, size_t *_buflen_);*
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
-*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
-*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
-type.
+*void coap_pdu_set_mid(coap_pdu_t *_pdu_, coap_mid_t _mid_);*
+
+*void coap_pdu_set_code(coap_pdu_t *_pdu_, coap_pdu_code_t _code_);*
+
+*void coap_pdu_set_type(coap_pdu_t *_pdu_, coap_pdu_type_t _type_);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
 
 DESCRIPTION
 -----------
 The CoAP PDU is of the form
 
 --header--|--optional token--|--optional options--|--optional payload--
+
+The terminology used is taken mainly from
+https://tools.ietf.org/html/rfc7252#section-1.2
 
 The PDU must be built in the correct order, from left to right.  In particular,
 the options need to be added in the correct numerical option order as they are
@@ -80,46 +122,113 @@ Typically with a server, the response PDU, with the optional token already added
 in, will already be created before the response handler is called, and the
 response PDU will need to be updated as appropriate starting with the optional
 options.  Note that updating the response pdu's code variable will cause the
-response pdu to get transmitted.  If code does not get updated, then the
-response pdu is freed off by the underlying library.
+response pdu to get transmitted.  If code does not get updated, and the PDU is
+of type CONFIRMABLE, then the response PDU is transmitted as an empty ACK
+packet. The response pdu is always freed off by the underlying library.
 
-The *coap_pdu_init*() function returns a newly created _PDU_ of type
-_coap_pdu_t_*.  _type_ is one of the following
+For handling situations where the data to be transmitted does not fit into a
+single packet, see coap_block(3).
 
-[horizontal]
-*COAP_MESSAGE_CON*::
-Set the _PDU_ to be of type confirmable.
-*COAP_MESSAGE_NON*::
-Set the _PDU_ to be of type non-confirmable.
-*COAP_MESSAGE_ACK*::
-Set the _PDU_ to be of type acknowledge (for internal use).
-*COAP_MESSAGE_RST*::
-Set the _PDU_ to be of type reset.
+*Create and Header:*
+
+The *coap_new_pdu*() function returns a newly created PDU of type
+_coap_pdu_t_*.  The _type_ is one of the following
+
+[source, c]
+----
+COAP_MESSAGE_CON Set the _PDU_ to be of type confirmable.
+COAP_MESSAGE_NON Set the _PDU_ to be of type non-confirmable.
+COAP_MESSAGE_ACK Set the _PDU_ to be of type acknowledge (for internal use).
+COAP_MESSAGE_RST Set the _PDU_ to be of type reset.
+----
 
 The _code_ is one of the following
 
-[horizontal]
-*COAP_REQUEST_GET*::
-Set the _PDU_ request to be of type GET.
-*COAP_REQUEST_POST*::
-Set the _PDU_ request to be of type POST.
-*COAP_REQUEST_PUT*::
-Set the _PDU_ request to be of type PUT.
-*COAP_REQUEST_DELETE*::
-Set the _PDU_ request to be of type DELETE.
-*COAP_REQUEST_FETCH*::
-Set the _PDU_ request to be of type FETCH.
-*COAP_REQUEST_PATCH*::
-Set the _PDU_ request to be of type PATCH.
-*COAP_REQUEST_IPATCH*::
-Set the _PDU_ request to be of type IPATCH.
+[source, c]
+----
+COAP_EMPTY_CODE                               0.00
+COAP_REQUEST_CODE_GET                         0.01
+COAP_REQUEST_CODE_POST                        0.02
+COAP_REQUEST_CODE_PUT                         0.03
+COAP_REQUEST_CODE_DELETE                      0.04
+COAP_REQUEST_CODE_FETCH                       0.05
+COAP_REQUEST_CODE_PATCH                       0.06
+COAP_REQUEST_CODE_IPATCH                      0.07
+COAP_RESPONSE_CODE_OK                         2.00
+COAP_RESPONSE_CODE_CREATED                    2.01
+COAP_RESPONSE_CODE_DELETED                    2.02
+COAP_RESPONSE_CODE_VALID                      2.03
+COAP_RESPONSE_CODE_CHANGED                    2.04
+COAP_RESPONSE_CODE_CONTENT                    2.05
+COAP_RESPONSE_CODE_CONTINUE                   2.31
+COAP_RESPONSE_CODE_BAD_REQUEST                4.00
+COAP_RESPONSE_CODE_UNAUTHORIZED               4.01
+COAP_RESPONSE_CODE_BAD_OPTION                 4.02
+COAP_RESPONSE_CODE_FORBIDDEN                  4.03
+COAP_RESPONSE_CODE_NOT_FOUND                  4.04
+COAP_RESPONSE_CODE_NOT_ALLOWED                4.05
+COAP_RESPONSE_CODE_NOT_ACCEPTABLE             4.06
+COAP_RESPONSE_CODE_INCOMPLETE                 4.08
+COAP_RESPONSE_CODE_CONFLICT                   4.09
+COAP_RESPONSE_CODE_PRECONDITION_FAILED        4.12
+COAP_RESPONSE_CODE_REQUEST_TOO_LARGE          4.13
+COAP_RESPONSE_CODE_UNSUPPORTED_CONTENT_FORMAT 4.15
+COAP_RESPONSE_CODE_UNPROCESSABLE              4.22
+COAP_RESPONSE_CODE_TOO_MANY_REQUESTS          4.29
+COAP_RESPONSE_CODE_INTERNAL_ERROR             5.00
+COAP_RESPONSE_CODE_NOT_IMPLEMENTED            5.01
+COAP_RESPONSE_CODE_BAD_GATEWAY                5.02
+COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE        5.03
+COAP_RESPONSE_CODE_GATEWAY_TIMEOUT            5.04
+COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED     5.05
+COAP_RESPONSE_CODE_HOP_LIMIT_REACHED          5.08
+COAP_SIGNALING_CODE_CSM                       7.01
+COAP_SIGNALING_CODE_PING                      7.02
+COAP_SIGNALING_CODE_PONG                      7.03
+COAP_SIGNALING_CODE_RELEASE                   7.04
+COAP_SIGNALING_CODE_ABORT                     7.05
+----
+
+and _session_ is used to set up other default values.
+
+The *coap_pdu_init*() function does the same work as *coap_new_pdu*() but gives
+the additional ability to define the default values for _message_id_ and
+_max_size_ that *coap_new_pdu*() creates.
 
 The _message_id_ must be unique per request (which is not the same as the
 token), and must not be reused within EXCHANGE_LIFETIME (usually 247 seconds).
 To automate this, the function coap_new_message_id(session) should be called.
 
+At the CoAP protocol level, requests and responses are matched by _message_id_
+which is why it needs to be unique.  At the application level, for "separate"
+responses, the initial empty ACK response matches the _message_id_ of the
+request (handled by libcoap) but the actual response has the same token as the
+request and this must be used for the match.  For "piggybacked" responses the
+token must still be used as the valid match for request and response. and the
+_message_id_ just happens to match (but unsafe in case the server is sending
+back a "separate" response).
+
 The _max_size_ parameter defines the maximum size of a _PDU_ and is usually
 determined by calling coap_session_max_pdu_size(session);
+
+The *coap_pdu_set_mid*() function is used to set the message id _mid_ in the
+PDU _pdu_.
+
+The *coap_pdu_set_code*() function is used to set the code _code_ in the PDU
+_pdu_.
+
+The *coap_pdu_set_type*() function is used to set the _type_ of the PDU _pdu_.
+
+*Token:*
+
+The *coap_session_init_token*() function is used to initialize the starting
+_token_ of _length_ for the _session_.
+
+The *coap_session_new_token*() function is used to obtain the next available
+_token_ of _length_ for the _session_.  Note that the same token must be used
+for doing an observe cancellation that was used for doing the observe
+registration.  Otherwise tokens should be unique for each request/response so
+that they can be correctly matched.
 
 The *coap_add_token*() function adds in the specified token's _data_ of length
 _length_ to the PDU _pdu_.  The maximum length of the token is 8 bytes.
@@ -127,33 +236,72 @@ Adding the token must be done before any options or data are added.
 This function must only be called once per _pdu_, and must not be called
 in the appropriate response handler.
 
+If a token is not added, then the token in the PDU is zero length, but still a
+valid token which is used for matching.  The exception is an empty ACK packet.
+
+*Options:*
+
 The *coap_new_optlist*() function returns a newly created _optlist_ entry of
 type _coap_optlist_t_*.  The _number_ specifies which CoAP option is to be
 used, and is one of the COAP_OPTION_* definitions.  The _length_ is the length
 of the data of the option, and _data_ points to the content of the option.
 
+*NOTE:* Where possible, the option data needs to be stripped of leading zeros
+(big endian) to reduce the amount of data needed in the PDU, as well as in
+some cases the maximum data size of an opton can be exceeded if not stripped
+and hence be illegal.  This is done by using coap_encode_var_safe() or
+coap_encode_var_safe8().
+
 The following is the current list of options with their numeric value
 ----
-#define COAP_OPTION_IF_MATCH        1 /* opaque, 0-8 B */
-#define COAP_OPTION_URI_HOST        3 /* String, 1-255 B */
-#define COAP_OPTION_ETAG            4 /* opaque, 1-8 B */
-#define COAP_OPTION_IF_NONE_MATCH   5 /* empty,  0 B */
-#define COAP_OPTION_OBSERVE         6 /* empty/uint, 0 B/0-3 B */
-#define COAP_OPTION_URI_PORT        7 /* uint, 0-2 B */
-#define COAP_OPTION_LOCATION_PATH   8 /* String, 0-255 B */
-#define COAP_OPTION_URI_PATH       11 /* String, 0-255 B */
-#define COAP_OPTION_CONTENT_FORMAT 12 /* uint, 0-2 B */
-#define COAP_OPTION_MAXAGE         14 /* uint, 0-4 B, default 60 Seconds */
-#define COAP_OPTION_URI_QUERY      15 /* String, 1-255 B */
-#define COAP_OPTION_ACCEPT         17 /* uint, 0-2 B */
-#define COAP_OPTION_LOCATION_QUERY 20 /* String, 0-255 B */
-#define COAP_OPTION_BLOCK2         23 /* uint, 0-3 B */
-#define COAP_OPTION_BLOCK1         27 /* uint, 0-3 B */
-#define COAP_OPTION_SIZE2          28 /* uint, 0-4 B */
-#define COAP_OPTION_PROXY_URI      35 /* String, 1-1034 B */
-#define COAP_OPTION_PROXY_SCHEME   39 /* String, 1-255 B */
-#define COAP_OPTION_SIZE1          60 /* uint, 0-4 B */
-#define COAP_OPTION_NORESPONSE    258 /* uint, 0-1 B */
+/*
+ * The C, U, and N flags indicate the properties
+ * Critical, Unsafe, and NoCacheKey, respectively.
+ * If U is set, then N has no meaning as per
+ * https://tools.ietf.org/html/rfc7252#section-5.10
+ * and is set to a -.
+ * Separately, R is for the options that can be repeated
+ *
+ * The least significant byte of the option is set as followed
+ * as per https://tools.ietf.org/html/rfc7252#section-5.4.6
+ *
+ *   0   1   2   3   4   5   6   7
+ * --+---+---+---+---+---+---+---+
+ *           | NoCacheKey| U | C |
+ * --+---+---+---+---+---+---+---+
+ *
+ * https://tools.ietf.org/html/rfc8613#section-4 goes on to define E, I and U
+ * properties Encrypted and Integrity Protected, Integrity Protected Only and
+ * Unprotected respectively.  Integrity Protected Only is not currently used.
+ *
+ * An Option is tagged with CUNREIU with any of the letters replaced with _ if
+ * not set, or - for N if U is set (see above) for aiding understanding of the
+ * Option.
+ */
+
+COAP_OPTION_IF_MATCH        1 /* C__RE__, opaque,    0-8 B, RFC7252 */
+COAP_OPTION_URI_HOST        3 /* CU-___U, String,  1-255 B, RFC7252 */
+COAP_OPTION_ETAG            4 /* ___RE__, opaque,    1-8 B, RFC7252 */
+ION_IF_NONE_MATCH   5 /* C___E__, empty,       0 B, RFC7252 */
+COAP_OPTION_OBSERVE         6 /* _U-_E_U, empty/uint,  0 B/0-3 B, RFC7641 */
+COAP_OPTION_URI_PORT        7 /* CU-___U, uint,      0-2 B, RFC7252 */
+COAP_OPTION_LOCATION_PATH   8 /* ___RE__, String,  0-255 B, RFC7252 */
+COAP_OPTION_OSCORE          9 /* C_____U, *,       0-255 B, RFC8613 */
+COAP_OPTION_URI_PATH       11 /* CU-RE__, String,  0-255 B, RFC7252 */
+COAP_OPTION_CONTENT_FORMAT 12 /* ____E__, uint,      0-2 B, RFC7252 */
+/* COAP_OPTION_MAXAGE default 60 seconds if not set */
+COAP_OPTION_MAXAGE         14 /* _U-_E_U, uint,      0-4 B, RFC7252 */
+COAP_OPTION_URI_QUERY      15 /* CU-RE__, String,  1-255 B, RFC7252 */
+COAP_OPTION_HOP_LIMIT      16 /* ______U, uint,        1 B, RFC8768 */
+COAP_OPTION_ACCEPT         17 /* C___E__, uint,      0-2 B, RFC7252 */
+COAP_OPTION_LOCATION_QUERY 20 /* ___RE__, String,  0-255 B, RFC7252 */
+COAP_OPTION_BLOCK2         23 /* CU-_E_U, uint,      0-3 B, RFC7959 */
+COAP_OPTION_BLOCK1         27 /* CU-_E_U, uint,      0-3 B, RFC7959 */
+COAP_OPTION_SIZE2          28 /* __N_E_U, uint,      0-4 B, RFC7959 */
+COAP_OPTION_PROXY_URI      35 /* CU-___U, String, 1-1034 B, RFC7252 */
+COAP_OPTION_PROXY_SCHEME   39 /* CU-___U, String,  1-255 B, RFC7252 */
+COAP_OPTION_SIZE1          60 /* __N_E_U, uint,      0-4 B, RFC7252 */
+COAP_OPTION_NORESPONSE    258 /* _U-_E_U, uint,      0-1 B, RFC7967 */
 ----
 See FURTHER INFORMATION as to how to get the latest list.
 
@@ -174,31 +322,22 @@ payload data.
 
 The *coap_add_option*() function adds in the specified option of type _number_
 with _data_ of length _length_ to the PDU _pdu_.
-It is critical that options are added to the _pdu_ with _number_ either
+It is important that options are added to the _pdu_ with _number_ either
 being the same or greater than the previous option _number_ that was added.
 
-The *coap_add_data*() function adds in the specified payload _data_ of length
-_length_ to the PDU _pdu_. Adding the payload data must be done after any
-token or options are added.  This function must only be called once per _pdu_.
-
-The *coap_add_data_blocked_response*() function adds in the appropriate part
-of the payload _data_ of length _length_ to the PDU _pdu_. It should be used
-as a direct replacement for *coap_add_data*() if it is possible that the data
-will not fit into a single pdu. It also adds in the appropriate
-CoAP options to handle Block-Wise transfer. This function is usually used for
-a server's GET response.  The _resource_, _session_, _request_, _response_
-and _token_ are the same parameters for the registered GET resource handler.
-The _media_type_ is for the format of the _data_ and _maxage_ defines the
-lifetime of the response.  If set to -1,  then the MAXAGE option does not get
-included.  This function must only be called once per _pdu_.
-It is the responsibility of the client to recognize that it has only
-received a part of the data and request the next block (with the appropriate
-Block options) from the server.  Returning the next requested block is handled
-by this function.
+*NOTE:* Where possible, the option data needs to be stripped of leading zeros
+(big endian) to reduce the amount of data needed in the PDU, as well as in
+some cases the maximum data size of an opton can be exceeded if not stripped
+and hence be illegal.  This is done by using coap_encode_var_safe() or
+coap_encode_var_safe8().
 
 The *coap_encode_var_safe*() function encodes _value_ into _buffer_ which has
 a size of _size_ in bytes.  Normally, the _buffer_ size should be at least
 the sizeof(int) bytes unless you definitely know less space is required.
+
+The *coap_encode_var_safe8*() function encodes 8 byte _value_ into _buffer_
+which has a size of _size_ in bytes.  Normally, the _buffer_ size should be at
+least 8 bytes unless you definitely know less space is required.
 
 The *coap_split_path*() function splits up _path_ of length _length_ and
 places the result in _buffer_ which has a size of _buflen_.  _buflen_ needs
@@ -210,10 +349,39 @@ places the result in _buffer_ which has a size of _buflen_.  _buflen_ needs
 to be preset with the size of _buffer_ before the function call, and then
 _buflen_ is updated with the actual size of _buffer_ used.
 
+*Payload Data:*
+
+The *coap_add_data*() function adds in the specified payload _data_ of length
+_length_ to the PDU _pdu_. Adding the payload data must be done after any
+token or options are added.  This function must only be called once per _pdu_.
+
+The *coap_add_data_blocked_response*() function adds in the appropriate part
+of the payload _data_ of length _length_ to the PDU _pdu_. It should be used
+as a direct replacement for *coap_add_data*() if it is possible that the data
+will not fit into a single pdu. It also adds in the appropriate
+CoAP options to handle Block-Wise transfer. This function is usually used for
+a server's GET / FETCH response.  The _request_ and _response_ are the same
+parameters for the registered GET / FETCH resource handler.
+The _media_type_ is for the format of the _data_ and _maxage_ defines the
+lifetime of the response.  If set to -1,  then the MAXAGE option does not get
+included.  This function must only be called once per _pdu_.
+It is the responsibility of the client to recognize that it has only
+received a part of the data and request the next block (with the appropriate
+Block options) from the server.  Returning the next requested block is handled
+by this function.
+
+*NOTE:* This function has been superseded by *coap_add_data_response_large*().
+See coap_block(3).
+
+*Transmit:*
+
+The *coap_send*() function is used to initiate the transmission of the _pdu_
+associated with the _session_.
+
 RETURN VALUES
 -------------
-The *coap_pdu_init*() function returns a newly created _PDU_ or NULL if there
-is a malloc or parameter failure.
+The *coap_new_pdu*() and *coap_pdu_init*() function returns a newly created
+_PDU_ or NULL if there is a malloc or parameter failure.
 
 The *coap_new_optlist*() function returns a newly created _optlist_ or NULL
 if there is a malloc failure.
@@ -228,28 +396,33 @@ or 0 on failure.
 The *coap_encode_var_safe*() function returns either the length of bytes
 encoded or 0 on failure.
 
+The *coap_encode_var_safe8*() function returns either the length of bytes
+encoded or 0 on failure.
+
+The *coap_send*() function returns the CoAP message ID on success or
+COAP_INVALID_MID on failure.
+
 EXAMPLES
 --------
 *Setup PDU and Transmit*
 
 [source, c]
---
+----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
-static int token = 0;
-
-int
+static int
 build_send_pdu(coap_context_t *context, coap_session_t *session,
 uint8_t msgtype, uint8_t request_code, const char *uri, const char *query,
 unsigned char *data, size_t length, int observe) {
 
   coap_pdu_t *pdu;
-  (void)context;
-  char buf[1024];
+  uint8_t buf[1024];
   size_t buflen;
-  char *sbuf = buf;
+  uint8_t *sbuf = buf;
   int res;
   coap_optlist_t *optlist_chain = NULL;
+  /* Remove (void) definition if variable is used */
+  (void)context;
 
   /* Create the pdu with the appropriate options */
   pdu = coap_pdu_init(msgtype, request_code, coap_new_message_id(session),
@@ -258,11 +431,11 @@ unsigned char *data, size_t length, int observe) {
     return 0;
 
   /*
-   * Create uniqueness token for this request for handling unsolicited /
+   * Create unique token for this request for handling unsolicited /
    * delayed responses
    */
-  token++;
-  if (!coap_add_token(pdu, sizeof(token), (unsigned char*)&token)) {
+  coap_session_new_token(session, &buflen, buf);
+  if (!coap_add_token(pdu, buflen, buf)) {
     coap_log(LOG_DEBUG, "cannot add token to request\n");
     goto error;
   }
@@ -297,7 +470,9 @@ unsigned char *data, size_t length, int observe) {
     /* Indicate that we want to observe this resource */
     if (!coap_insert_optlist(&optlist_chain,
                              coap_new_optlist(COAP_OPTION_OBSERVE,
-                                         COAP_OBSERVE_ESTABLISH, NULL)))
+                               coap_encode_var_safe(buf, sizeof(buf),
+                               COAP_OBSERVE_ESTABLISH), buf)
+                             ))
       goto error;
   }
 
@@ -313,29 +488,30 @@ unsigned char *data, size_t length, int observe) {
       goto error;
   }
 
-  if (coap_send(session, pdu) == COAP_INVALID_TID)
+  if (coap_send(session, pdu) == COAP_INVALID_MID)
     goto error;
   return 1;
 
 error:
 
   if (pdu)
-    coap_pdu_delete(pdu);
+    coap_delete_pdu(pdu);
   return 0;
 
 }
---
+----
 
 *Resource Handler Response PDU Update*
 
 [source, c]
---
+----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <stdio.h>
+
 static void
-hnd_get_time(coap_context_t *context, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+hnd_get_time(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
   unsigned char buf[40];
   size_t len;
@@ -344,8 +520,6 @@ coap_string_t *query, coap_pdu_t *response) {
   /* ... Additional analysis code for resource, request pdu etc.  ... */
 
   /* After analysis, generate a suitable response */
-
-  /* Note that token, if set, is already in the response pdu */
 
   now = time(NULL);
 
@@ -359,42 +533,44 @@ coap_string_t *query, coap_pdu_t *response) {
     tmp = gmtime(&now);
     if (!tmp) {
       /* If 'now' is not valid */
-      response->code = COAP_RESPONSE_CODE(404);
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
       return;
     }
     len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
   }
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   /*
-   * Invoke coap_add_data_blocked_response() to do all the hard work.
+   * Invoke coap_add_data_large_response() to do all the hard work.
    *
    * Define the format - COAP_MEDIATYPE_TEXT_PLAIN - to add in
    * Define how long this response is valid for (secs) - 1 - to add in.
+   * ETAG Option added internally with unique value as param set to 0
    *
    * OBSERVE Option added internally if needed within the function
    * BLOCK2 Option added internally if output too large
-   * ETAG Option added internally
+   * SIZE2 Option added internally
    */
-  coap_add_data_blocked_response(resource, session, request, response, token,
-                                 COAP_MEDIATYPE_TEXT_PLAIN, 1,
-                                 len,
-                                 buf);
-
-  /*
-   * As resource->code has been updated in coap_add_data_blocked_response(),
-   * the response pdu will be transmitted by the underlying library.
-   */
+  coap_add_data_large_response(resource, session, request, response,
+                               query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
+                               len,
+                               buf, NULL, NULL);
 
 }
---
+----
 
 SEE ALSO
 --------
-*coap_observe*(3), *coap_resource*(3)
+*coap_block*(3), *coap_observe*(3), *coap_pdu_access*(3) and *coap_resource*(3)
 
 FURTHER INFORMATION
 -------------------
-See "RFC7252: The Constrained Application Protocol (CoAP)" for further
-information.
+See
+
+"RFC7252: The Constrained Application Protocol (CoAP)"
+
+"RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)"
+
+for further information.
 
 See https://www.iana.org/assignments/core-parameters/core-parameters.xhtml#option-numbers
 for the current set of defined CoAP Options.
@@ -402,7 +578,8 @@ for the current set of defined CoAP Options.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

@@ -11,6 +11,10 @@
 #define COAP_CONSTRAINED_STACK 1
 #endif
 
+#ifndef COAP_DISABLE_TCP
+#define COAP_DISABLE_TCP 1
+#endif
+
 #define PACKAGE_STRING "libcoap"
 #define PACKAGE_NAME "libcoap"
 
@@ -58,6 +62,43 @@
 #ifndef COAP_MAX_SUBSCRIBERS
 #define COAP_MAX_SUBSCRIBERS 3
 #endif /* COAP_MAX_SUBSCRIBERS */
+
+/**
+ * The maximum number of cache-key entries that allocate
+ * fixed-size memory blocks.
+ */
+#ifndef COAP_MAX_CACHE_KEYS
+#define COAP_MAX_CACHE_KEYS        (2U)
+#endif /* COAP_MAX_CACHE_KEYS */
+
+/**
+ * The maximum number of cache-entry entries that allocate
+ * fixed-size memory blocks.
+ */
+#ifndef COAP_MAX_CACHE_ENTRIES
+#define COAP_MAX_CACHE_ENTRIES        (2U)
+#endif /* COAP_MAX_CACHE_ENTRIES */
+
+/**
+ * Maximum number of large body transmissions.
+ */
+#ifndef COAP_MAX_LG_XMIT
+#define COAP_MAX_LG_XMIT 2
+#endif /* COAP_MAX_LG_XMIT */
+
+/**
+ * Maximum number of large body client receives.
+ */
+#ifndef COAP_MAX_LG_CRCV
+#define COAP_MAX_LG_CRCV 2
+#endif /* COAP_MAX_LG_CRCV */
+
+/**
+ * Maximum number of large body server receives.
+ */
+#ifndef COAP_MAX_LG_SRCV
+#define COAP_MAX_LG_SRCV 2
+#endif /* COAP_MAX_LG_SRCV */
 
 /**
  * Number of notifications that may be sent non-confirmable before a

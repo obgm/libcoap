@@ -1,15 +1,15 @@
 /* libcoap unit tests
  *
- * Copyright (C) 2013--2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2013--2021 Olaf Bergmann <bergmann@tzi.org>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "test_common.h"
 #include "test_wellknown.h"
-
-#include <coap.h>
 
 #include <assert.h>
 #ifdef HAVE_NETINET_IN_H
@@ -22,10 +22,10 @@
 #define TEST_PDU_SIZE 120
 #define TEST_URI_LEN    4
 
-coap_context_t *ctx;           /* Holds the coap context for most tests */
-coap_pdu_t *pdu;           /* Holds the parsed PDU for most tests */
-coap_session_t *session;   /* Holds a reference-counted session object
-                            * that is passed to coap_wellknown_response(). */
+static coap_context_t *ctx;       /* Holds the coap context for most tests */
+static coap_pdu_t *pdu;           /* Holds the parsed PDU for most tests */
+static coap_session_t *session;   /* Holds a reference-counted session object
+                                   * that is passed to coap_wellknown_response(). */
 
 static void
 t_wellknown1(void) {
@@ -90,7 +90,7 @@ t_wellknown2(void) {
   };
 
   r = coap_resource_init(coap_make_str_const("abcd"), 0);
-  r->observable = 1;
+  coap_resource_set_get_observable(r, 1);
   coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"one\""), 0);
 
   coap_add_resource(ctx, r);
@@ -225,8 +225,8 @@ t_wellknown6(void) {
     coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
     pdu->type = COAP_MESSAGE_NON;
-    pdu->code = COAP_REQUEST_GET;
-    pdu->tid = 0x1234;
+    pdu->code = COAP_REQUEST_CODE_GET;
+    pdu->mid = 0x1234;
 
     CU_ASSERT_PTR_NOT_NULL(pdu);
 

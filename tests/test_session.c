@@ -2,14 +2,14 @@
  *
  * Copyright (C) 2013,2015-2018 Olaf Bergmann <bergmann@tzi.org>
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "test_common.h"
 #include "test_session.h"
-
-#include <coap.h>
 
 #include <stdio.h>
 
@@ -53,7 +53,7 @@ t_session2(void) {
   CU_ASSERT(fpeq(session->ack_timeout, COAP_DEFAULT_ACK_TIMEOUT));
   CU_ASSERT(fpeq(session->ack_random_factor, COAP_DEFAULT_ACK_RANDOM_FACTOR));
 
-  CU_ASSERT(coap_session_get_max_transmit(session) == COAP_DEFAULT_MAX_RETRANSMIT);
+  CU_ASSERT(coap_session_get_max_retransmit(session) == COAP_DEFAULT_MAX_RETRANSMIT);
   CU_ASSERT(fpeq(coap_session_get_ack_timeout(session), COAP_DEFAULT_ACK_TIMEOUT));
   CU_ASSERT(fpeq(coap_session_get_ack_random_factor(session), COAP_DEFAULT_ACK_RANDOM_FACTOR));
 }

@@ -2,14 +2,14 @@
  *
  * Copyright (C) 2012,2015 Olaf Bergmann <bergmann@tzi.org>
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "test_common.h"
 #include "test_options.h"
-
-#include <coap.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -357,8 +357,11 @@ t_encode_option9(void) {
 static void
 t_access_option1(void) {
   const uint8_t teststr[] = { 0x12, 'a', 'b' };
+  coap_option_t opt;
 
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 1);
+  CU_ASSERT(sizeof(teststr) == coap_opt_parse((const coap_opt_t *)teststr,
+                                              sizeof(teststr), &opt));
+  CU_ASSERT(opt.delta == 1);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 2);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), teststr + 1);
   CU_ASSERT(coap_opt_size((const coap_opt_t *)teststr) == sizeof(teststr));
@@ -367,8 +370,11 @@ t_access_option1(void) {
 static void
 t_access_option2(void) {
   const uint8_t teststr[] = { 0xe2, 0x18, 0xfd, 'a', 'b' };
+  coap_option_t opt;
 
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 6666);
+  CU_ASSERT(sizeof(teststr) == coap_opt_parse((const coap_opt_t *)teststr,
+                                              sizeof(teststr), &opt));
+  CU_ASSERT(opt.delta == 6666);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 2);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), teststr + 3);
   CU_ASSERT(coap_opt_size((const coap_opt_t *)teststr) == sizeof(teststr));
@@ -380,8 +386,11 @@ t_access_option3(void) {
                            'e',  'f',  'g',  'h',  'i', 'j', 'k', 'l',
                            'm'
   };
+  coap_option_t opt;
 
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 6423);
+  CU_ASSERT(sizeof(teststr) == coap_opt_parse((const coap_opt_t *)teststr,
+                                              sizeof(teststr), &opt));
+  CU_ASSERT(opt.delta == 6423);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 13);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), teststr + 4);
   CU_ASSERT(coap_opt_size((const coap_opt_t *)teststr) == sizeof(teststr));
@@ -390,8 +399,11 @@ t_access_option3(void) {
 static void
 t_access_option4(void) {
   const uint8_t teststr[] = { 0xde, 0xff, 0xfe, 0xf2, 'a', 'b', 'c' };
+  coap_option_t opt;
 
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 268);
+  CU_ASSERT(0 == coap_opt_parse((const coap_opt_t *)teststr,
+                                sizeof(teststr), &opt));
+  CU_ASSERT(opt.delta == 268);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 65535);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), teststr + 4);
   CU_ASSERT(coap_opt_size((const coap_opt_t *)teststr) == 65535 + 4);
@@ -400,8 +412,11 @@ t_access_option4(void) {
 static void
 t_access_option5(void) {
   const uint8_t teststr[] = { 0xee, 0xfe, 0xf2, 0x00, 0xdd, 'a', 'b', 'c' };
+  coap_option_t opt;
 
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 65535);
+  CU_ASSERT(0 == coap_opt_parse((const coap_opt_t *)teststr,
+                                sizeof(teststr), &opt));
+  CU_ASSERT(opt.delta == 65535);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 490);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), teststr + 5);
   CU_ASSERT(coap_opt_size((const coap_opt_t *)teststr) == 495);
@@ -411,9 +426,12 @@ static void
 t_access_option6(void) {
   coap_log_t level = coap_get_log_level();
   const uint8_t teststr[] = { 0xf2, 'a', 'b' };
+  coap_option_t opt;
 
   coap_set_log_level(LOG_CRIT);
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 0);
+
+  CU_ASSERT(0 == coap_opt_parse((const coap_opt_t *)teststr,
+                                sizeof(teststr), &opt));
   coap_set_log_level(level);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 0);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), NULL);
@@ -423,8 +441,11 @@ t_access_option6(void) {
 static void
 t_access_option7(void) {
   const uint8_t teststr[] = { 0x2f, 'a', 'b' };
+  coap_option_t opt;
 
-  CU_ASSERT(coap_opt_delta((const coap_opt_t *)teststr) == 2);
+  CU_ASSERT(0 == coap_opt_parse((const coap_opt_t *)teststr,
+                                sizeof(teststr), &opt));
+  CU_ASSERT(opt.delta == 2);
   CU_ASSERT(coap_opt_length((const coap_opt_t *)teststr) == 0);
   CU_ASSERT_PTR_EQUAL_C(coap_opt_value((const coap_opt_t *)teststr), NULL);
   CU_ASSERT(coap_opt_size((const coap_opt_t *)teststr) == 0);
@@ -517,17 +538,17 @@ t_iterate_option3(void) {
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 1);
+  CU_ASSERT(oi.number == 1);
   CU_ASSERT_PTR_EQUAL(option, teststr + 3);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 1);
+  CU_ASSERT(oi.number == 1);
   CU_ASSERT_PTR_EQUAL(option, teststr + 7);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 30);
+  CU_ASSERT(oi.number == 30);
   CU_ASSERT_PTR_EQUAL(option, teststr + 8);
 
   option = coap_option_next(&oi);
@@ -560,17 +581,17 @@ t_iterate_option4(void) {
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 1);
+  CU_ASSERT(oi.number == 1);
   CU_ASSERT_PTR_EQUAL(option, teststr + 3);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 1);
+  CU_ASSERT(oi.number == 1);
   CU_ASSERT_PTR_EQUAL(option, teststr + 7);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 30);
+  CU_ASSERT(oi.number == 30);
   CU_ASSERT_PTR_EQUAL(option, teststr + 8);
 
   option = coap_option_next(&oi);
@@ -602,7 +623,7 @@ t_iterate_option5(void) {
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 5);
+  CU_ASSERT(oi.number == 5);
   CU_ASSERT_PTR_EQUAL(option, teststr);
 
   option = coap_option_next(&oi);
@@ -629,26 +650,26 @@ t_iterate_option6(void) {
   coap_opt_t *option;
   coap_opt_filter_t filter;
 
-  coap_option_filter_clear(filter);
-  coap_option_setb(filter, 10);        /* option nr 10 only */
-  result = coap_option_iterator_init(&pdu, &oi, filter);
+  coap_option_filter_clear(&filter);
+  coap_option_filter_set(&filter, 10);        /* option nr 10 only */
+  result = coap_option_iterator_init(&pdu, &oi, &filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
   CU_ASSERT(oi.bad == 0);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 10);
+  CU_ASSERT(oi.number == 10);
   CU_ASSERT_PTR_EQUAL(option, teststr + 1);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 10);
+  CU_ASSERT(oi.number == 10);
   CU_ASSERT_PTR_EQUAL(option, teststr + 2);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 10);
+  CU_ASSERT(oi.number == 10);
   CU_ASSERT_PTR_EQUAL(option, teststr + 3);
 
   option = coap_option_next(&oi);
@@ -675,27 +696,27 @@ t_iterate_option7(void) {
   coap_opt_filter_t filter;
 
   /* search options nr 8 and 22 */
-  coap_option_filter_clear(filter);
-  coap_option_setb(filter, 8);
-  coap_option_setb(filter, 22);
-  result = coap_option_iterator_init(&pdu, &oi, filter);
+  coap_option_filter_clear(&filter);
+  coap_option_filter_set(&filter, 8);
+  coap_option_filter_set(&filter, 22);
+  result = coap_option_iterator_init(&pdu, &oi, &filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
   CU_ASSERT(oi.bad == 0);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 8);
+  CU_ASSERT(oi.number == 8);
   CU_ASSERT_PTR_EQUAL(option, teststr);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 22);
+  CU_ASSERT(oi.number == 22);
   CU_ASSERT_PTR_EQUAL(option, teststr + 4);
 
   option = coap_option_next(&oi);
   CU_ASSERT(oi.bad == 0);
-  CU_ASSERT(oi.type == 22);
+  CU_ASSERT(oi.number == 22);
   CU_ASSERT_PTR_EQUAL(option, teststr + 5);
 
   option = coap_option_next(&oi);
@@ -722,9 +743,9 @@ t_iterate_option8(void) {
   coap_opt_filter_t filter;
 
   /* search option nr 36 */
-  coap_option_filter_clear(filter);
-  coap_option_setb(filter, 36);
-  result = coap_option_iterator_init(&pdu, &oi, filter);
+  coap_option_filter_clear(&filter);
+  coap_option_filter_set(&filter, 36);
+  result = coap_option_iterator_init(&pdu, &oi, &filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
   CU_ASSERT(oi.bad == 0);
@@ -753,9 +774,9 @@ t_iterate_option9(void) {
   coap_opt_filter_t filter;
 
   /* search option nr 100 */
-  coap_option_filter_clear(filter);
-  coap_option_setb(filter, 100);
-  result = coap_option_iterator_init(&pdu, &oi, filter);
+  coap_option_filter_clear(&filter);
+  coap_option_filter_set(&filter, 100);
+  result = coap_option_iterator_init(&pdu, &oi, &filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
   CU_ASSERT(oi.bad == 0);
@@ -784,9 +805,9 @@ t_iterate_option10(void) {
   coap_opt_filter_t filter;
 
   /* search option nr 61 */
-  coap_option_filter_clear(filter);
-  coap_option_setb(filter, 61);
-  result = coap_option_iterator_init(&pdu, &oi, filter);
+  coap_option_filter_clear(&filter);
+  coap_option_filter_set(&filter, 61);
+  result = coap_option_iterator_init(&pdu, &oi, &filter);
 
   CU_ASSERT_PTR_EQUAL(result, &oi);
   CU_ASSERT(oi.bad == 0);
@@ -808,30 +829,30 @@ static void
 t_filter_option1(void) {
   coap_opt_filter_t filter;
 
-  coap_option_filter_clear(filter);
+  coap_option_filter_clear(&filter);
 
-  CU_ASSERT(coap_option_filter_set(filter, 0) == 1);
-  CU_ASSERT(coap_option_filter_set(filter, 37) == 1);
-  CU_ASSERT(coap_option_filter_set(filter, 37) == 1);
-  CU_ASSERT(coap_option_filter_set(filter, 43) == 1);
-  CU_ASSERT(coap_option_filter_set(filter, 290) == 1);
-  CU_ASSERT(coap_option_filter_set(filter, 65535) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 0) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 37) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 37) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 43) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 290) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 65535) == 1);
 
-  CU_ASSERT(coap_option_filter_get(filter, 0) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 37) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 43) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 290) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 65535) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 0) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 37) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 43) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 290) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 65535) == 1);
 
-  CU_ASSERT(coap_option_filter_unset(filter, 37) == 1);
+  CU_ASSERT(coap_option_filter_unset(&filter, 37) == 1);
 
-  CU_ASSERT(coap_option_filter_get(filter, 0) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 43) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 290) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 65535) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 0) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 43) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 290) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 65535) == 1);
 
-  CU_ASSERT(coap_option_filter_get(filter, 37) == 0);
-  CU_ASSERT(coap_option_filter_get(filter, 89) == 0);
+  CU_ASSERT(coap_option_filter_get(&filter, 37) == 0);
+  CU_ASSERT(coap_option_filter_get(&filter, 89) == 0);
 }
 
 static void
@@ -839,18 +860,18 @@ t_filter_option2(void) {
   coap_opt_filter_t filter;
   int s;
 
-  coap_option_filter_clear(filter);
+  coap_option_filter_clear(&filter);
 
   /* fill all COAP_OPT_FILTER_SHORT slots */
   for (s = 0; s < COAP_OPT_FILTER_SHORT; s++) {
-    CU_ASSERT(coap_option_filter_set(filter, s));
+    CU_ASSERT(coap_option_filter_set(&filter, s));
   }
 
   /* adding a short option type must fail */
-  CU_ASSERT(coap_option_filter_set(filter, COAP_OPT_FILTER_SHORT) == 0);
+  CU_ASSERT(coap_option_filter_set(&filter, COAP_OPT_FILTER_SHORT) == 0);
 
   /* adding a long option type must succeed */
-  CU_ASSERT(coap_option_filter_set(filter, 256) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 256) == 1);
 }
 
 static void
@@ -858,50 +879,50 @@ t_filter_option3(void) {
   coap_opt_filter_t filter;
   int l;
 
-  coap_option_filter_clear(filter);
+  coap_option_filter_clear(&filter);
 
   /* set COAP_OPT_FILTER_LONG long filters */
   for (l = 0; l < COAP_OPT_FILTER_LONG; l++) {
-    CU_ASSERT(coap_option_filter_set(filter, 256 + l) == 1);
+    CU_ASSERT(coap_option_filter_set(&filter, 256 + l) == 1);
   }
 
   /* the next must fail and must not be found */
-  CU_ASSERT(coap_option_filter_set(filter, 256 + COAP_OPT_FILTER_LONG) == 0);
-  CU_ASSERT(coap_option_filter_get(filter, 256 + COAP_OPT_FILTER_LONG) == 0);
+  CU_ASSERT(coap_option_filter_set(&filter, 256 + COAP_OPT_FILTER_LONG) == 0);
+  CU_ASSERT(coap_option_filter_get(&filter, 256 + COAP_OPT_FILTER_LONG) == 0);
 
   /* remove one item */
-  CU_ASSERT(coap_option_filter_unset(filter, 256) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 256) == 0);
+  CU_ASSERT(coap_option_filter_unset(&filter, 256) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 256) == 0);
 
   /* now, storing a new filter must succeed */
-  CU_ASSERT(coap_option_filter_set(filter, 256 + COAP_OPT_FILTER_LONG) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 256 + COAP_OPT_FILTER_LONG) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, 256 + COAP_OPT_FILTER_LONG) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 256 + COAP_OPT_FILTER_LONG) == 1);
 
   /* and all other items must be available as well */
   for (l = 0; l < COAP_OPT_FILTER_LONG; l++) {
-    CU_ASSERT(coap_option_filter_get(filter, 256 + l + 1) == 1);
+    CU_ASSERT(coap_option_filter_get(&filter, 256 + l + 1) == 1);
   }
 
   /* set COAP_OPT_FILTER_SHORT short filters */
   for (l = 0; l < COAP_OPT_FILTER_SHORT; l++) {
-    CU_ASSERT(coap_option_filter_set(filter, l) == 1);
+    CU_ASSERT(coap_option_filter_set(&filter, l) == 1);
   }
 
   /* the next must fail and must not be found */
-  CU_ASSERT(coap_option_filter_set(filter, COAP_OPT_FILTER_SHORT) == 0);
-  CU_ASSERT(coap_option_filter_get(filter, COAP_OPT_FILTER_SHORT) == 0);
+  CU_ASSERT(coap_option_filter_set(&filter, COAP_OPT_FILTER_SHORT) == 0);
+  CU_ASSERT(coap_option_filter_get(&filter, COAP_OPT_FILTER_SHORT) == 0);
 
   /* remove one item */
-  CU_ASSERT(coap_option_filter_unset(filter, 0) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, 0) == 0);
+  CU_ASSERT(coap_option_filter_unset(&filter, 0) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, 0) == 0);
 
   /* now, storing a new filter must succeed */
-  CU_ASSERT(coap_option_filter_set(filter, COAP_OPT_FILTER_SHORT) == 1);
-  CU_ASSERT(coap_option_filter_get(filter, COAP_OPT_FILTER_SHORT) == 1);
+  CU_ASSERT(coap_option_filter_set(&filter, COAP_OPT_FILTER_SHORT) == 1);
+  CU_ASSERT(coap_option_filter_get(&filter, COAP_OPT_FILTER_SHORT) == 1);
 
   /* and all other items must be available as well */
   for (l = 0; l < COAP_OPT_FILTER_SHORT; l++) {
-    CU_ASSERT(coap_option_filter_get(filter, l + 1) == 1);
+    CU_ASSERT(coap_option_filter_get(&filter, l + 1) == 1);
   }
 }
 

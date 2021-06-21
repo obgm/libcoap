@@ -10,9 +10,17 @@ coap_logging(3)
 
 NAME
 ----
-coap_logging, coap_log, coap_get_log_level, coap_set_log_level,
-coap_set_log_handler, coap_package_name, coap_package_version,
-coap_set_show_pdu_output, coap_show_pdu
+coap_logging,
+coap_log,
+coap_get_log_level,
+coap_set_log_level,
+coap_set_log_handler,
+coap_package_name,
+coap_package_version,
+coap_set_show_pdu_output,
+coap_show_pdu,
+coap_endpoint_str,
+coap_session_str
 - Work with CoAP logging
 
 SYNOPSIS
@@ -43,10 +51,11 @@ SYNOPSIS
 
 *const char *coap_session_str(const coap_session_t *_session_);*
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
-*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
-*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
-type.
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
 
 DESCRIPTION
 -----------
@@ -55,7 +64,7 @@ the selected logging level, outputs the appropriate information.
 
 Logging by default is to stderr or stdout depending on the logging level of
 the log entry.  It ia possible to send the logging information to an
-application logging call-back handler for processing by the application.
+application logging callback handler for processing by the application.
 
 The *coap_log*() function is used to log information at the appropriate _level_.
 The rest of the parameters follow the standard *printf*() function format.
@@ -89,7 +98,7 @@ Debug level (7).
 
 The *coap_set_log_level*() function is used to set the current logging _level_
 for output by any subsequent *coap_log*() calls.  Output is only logged if the
-*coap_log*() _level_ definition is smaller than or equal to the curent logging
+*coap_log*() _level_ definition is smaller than or equal to the current logging
 _level_.
 
 The *coap_get_log_level*() function is used to get the current logging level.
@@ -160,7 +169,8 @@ information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

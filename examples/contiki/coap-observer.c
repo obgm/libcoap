@@ -35,7 +35,7 @@
 
 #include <string.h>
 
-#include "coap.h"
+#include "coap3/coap.h"
 
 static coap_context_t *coap_context;
 
@@ -92,7 +92,7 @@ init_coap() {
 }
 
 void
-message_handler(struct coap_context_t  *ctx,
+message_handler(coap_context_t  *ctx,
                 const coap_address_t *remote,
                 coap_pdu_t *sent,
                 coap_pdu_t *received,
@@ -166,7 +166,7 @@ PROCESS_THREAD(coap_server_process, ev, data)
   coap_add_option(request, COAP_OPTION_OBSERVE, 0, NULL);
   {
     unsigned char buf[2];
-    prng(buf, 2);
+    coap_prng(buf, 2);
     coap_add_option(request, COAP_OPTION_TOKEN, 2, buf);
   }
 
@@ -176,7 +176,7 @@ PROCESS_THREAD(coap_server_process, ev, data)
   while(1) {
     PROCESS_YIELD();
     if(ev == tcpip_event) {
-      coap_read(coap_context);        /* read received data */
+      coap_io_do_io(coap_context);        /* read received data */
       coap_dispatch(coap_context); /* and dispatch PDUs from receivequeue */
     }
   }

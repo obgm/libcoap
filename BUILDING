@@ -7,8 +7,8 @@ To get the libcoap library source, you need to do either the following
 
 * Obtain the latest distribution package file from
   https://github.com/obgm/libcoap/archive/develop.zip
-  [There is a stable master version at
-   https://github.com/obgm/libcoap/archive/master.zip]
+  [There is a stable version at
+   https://github.com/obgm/libcoap/archive/main.zip]
 * Change to the directory that you want to install the libcoap sub-directory
   into
 * Unpack the distribution package file
@@ -21,8 +21,8 @@ or alternatively, clone the libcoap git repository from github
 * Then clone the latest (develop) version of the code:-
    git clone https://github.com/obgm/libcoap.git
 * Change into the top level directory of the cloned files
-* Optionally, change the branch from develop to the stable master branch:-
-   git checkout master
+* Optionally, change the branch from develop to the stable main branch:-
+   git checkout main
 
 Building Libcoap Libraries and Examples
 =======================================
@@ -39,7 +39,29 @@ get the TinyDTLS code into your project, so the TinyDTLS library can be used.
  git submodule init
  git submodule update
 
-General Building (not for LwIP or Contiki - see below)
+General Building with cmake for linux/windows/macos/android (not for LwIP or Contiki - see below)
+================
+
+ cmake -E remove_directory build
+ cmake -E make_directory build
+ cd build
+ cmake .. -DENABLE_TESTS=ON
+ cmake --build .
+ [sudo] cmake --build . -- install
+ cd ..
+
+ Note: to see possible options (TLS lib, doc, tests, examples etc.):
+ cmake -LH build
+
+ Note: For Windows, this is supported by Visual Studio Code with CMake extension
+ Note: You must use cmake version >=3.10.
+
+ Note: you can use cmake's find package after installation: find_package(libcoap-2 REQUIRED),
+ and target_link_libraries(myTarget PRIVATE libcoap::coap-2)
+
+ Note: Shared Library support is not currently available for Windows.
+
+General Building with autoconf (not for LwIP or Contiki - see below)
 ================
 
  ./autogen.sh
@@ -53,7 +75,7 @@ that is missing. Install the missing package and try ./autogen.sh again.
 It is possible that you may need to provide some options to ./configure
 to customize your installation.
 
-In particular you may need to define which (D)TLS ligrary to use as well as
+In particular you may need to define which (D)TLS library to use as well as
 disable some building of documentation.
 
 General configure instructions can be found in INSTALL, which is built
@@ -131,3 +153,5 @@ You may need to edit win32\libcoap.props to update the OpenSSLRootDir and
 OpenSSLRootDirDbg variables to point to the top level directory where OpenSSL
 is installed so that the include, lib etc. directories are correctly set up.
 Note: Make sure that you include a trailing \ in the variable definitions.
+
+Alternatively you can build everything in Visual Studio with CMake.

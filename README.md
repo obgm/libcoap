@@ -1,10 +1,11 @@
 # libcoap: A C implementation of the Constrained Application Protocol (RFC 7252)
 
-[![Build Status](https://travis-ci.org/obgm/libcoap.svg?branch=master)](https://travis-ci.org/obgm/libcoap)
+[![Build Status: main](https://github.com/obgm/libcoap/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/obgm/libcoap/actions?query=branch:main)
+[![Build Status: develop](https://github.com/obgm/libcoap/actions/workflows/main.yml/badge.svg?branch=develop)](https://github.com/obgm/libcoap/actions?query=branch:develop)
 [![Static Analysis](https://scan.coverity.com/projects/10970/badge.svg?flat=1)](https://scan.coverity.com/projects/obgm-libcoap)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/libcoap.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:libcoap)
 
-Copyright (C) 2010—2019 by Olaf Bergmann <bergmann@tzi.org> and others
+Copyright (C) 2010—2021 by Olaf Bergmann <bergmann@tzi.org> and others
 
 ABOUT LIBCOAP
 =============
@@ -46,14 +47,19 @@ The following RFCs are supported
 * RFC8132: PATCH and FETCH Methods for the Constrained Application Protocol (CoAP)
 
 * RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets
+  [No WebSockets support]
+
+* RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option
 
 There is (D)TLS support for the following libraries
 
-* OpenSSL (Minimum verion 1.1.0)
+* OpenSSL (Minimum version 1.1.0) [PKI, PSK and PKCS11]
 
-* GnuTLS (Minimum version 3.3.0)
+* GnuTLS (Minimum version 3.3.0) [PKI, PSK, RPK(3.6.6+) and PKCS11]
 
-* TinyDTLS
+* Mbed TLS (Minimum version 2.7.10) [PKI and PSK] [Currently only DTLS]
+
+* TinyDTLS [PSK and RPK] [DTLS Only]
 
 The examples directory contain a CoAP client, CoAP Resource Directory server
 and a CoAP server to demonstrate the use of this library.

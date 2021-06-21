@@ -1,5 +1,17 @@
+/*
+ * server-coap.h -- LwIP example
+ *
+ * Copyright (C) 2013-2016 Christian Amsüss <chrysn@fsfe.org>
+ * Copyright (C) 2018-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
+ */
+
 #include "coap_config.h"
-#include <coap.h>
+#include <coap3/coap.h>
 
 coap_context_t *main_coap_context;
 
@@ -13,10 +25,8 @@ static coap_resource_t *time_resource = NULL; /* just for testing */
 #endif
 
 void
-hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
-             coap_session_t *session,
-             coap_pdu_t *request, coap_binary_t *token,
-             coap_string_t *query,
+hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
+             const coap_pdu_t *request, const coap_string_t *query,
              coap_pdu_t *response) {
   unsigned char buf[40];
   size_t len;
@@ -29,13 +39,6 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
   /* if my_clock_base was deleted, we pretend to have no such resource */
   response->code =
     my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
-
-  if (coap_find_observer(resource, session, token)) {
-    coap_add_option(response, COAP_OPTION_OBSERVE,
-                    coap_encode_var_safe(buf, sizeof(buf),
-                                         resource->observe),
-                    buf);
-  }
 
   if (my_clock_base)
     coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,

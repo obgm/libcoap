@@ -2,14 +2,14 @@
  *
  * Copyright (C) 2018 Olaf Bergmann <bergmann@tzi.org>
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "test_common.h"
 #include "test_tls.h"
-
-#include <coap.h>
 
 #undef HAVE_DTLS
 
@@ -38,6 +38,11 @@
 #define HAVE_DTLS 1
 #include <gnutls/gnutls.h>
 #endif /* HAVE_LIBGNUTLS */
+
+#ifdef HAVE_MBEDTLS
+#define HAVE_DTLS 1
+#include <mbedtls/version.h>
+#endif /* HAVE_MBEDTLS */
 
 static void
 t_tls1(void) {
@@ -79,6 +84,9 @@ t_tls2(void) {
 #elif defined(HAVE_LIBGNUTLS)
   version.version = GNUTLS_VERSION_NUMBER;
   version.type = COAP_TLS_LIBRARY_GNUTLS;
+#elif defined(HAVE_MBEDTLS)
+  version.version = MBEDTLS_VERSION_NUMBER;
+  version.type = COAP_TLS_LIBRARY_MBEDTLS;
 #else /* no DTLS */
   version.version = 0;
   version.type = COAP_TLS_LIBRARY_NOTLS;

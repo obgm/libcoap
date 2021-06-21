@@ -10,9 +10,18 @@ coap_resource(3)
 
 NAME
 ----
-coap_resource, coap_resource_init, coap_resource_unknown_init,
-coap_add_resource, coap_delete_resource, coap_delete_all_resources,
-coap_resource_set_mode - Work with CoAP resources
+coap_resource,
+coap_resource_init,
+coap_resource_unknown_init,
+coap_resource_proxy_uri_init,
+coap_add_resource,
+coap_delete_resource,
+coap_resource_set_mode,
+coap_resource_set_userdata,
+coap_resource_get_userdata,
+coap_resource_release_userdata_handler,
+coap_resource_get_uri_path
+- Work with CoAP resources
 
 SYNOPSIS
 --------
@@ -24,20 +33,31 @@ int _flags_);*
 *coap_resource_t *coap_resource_unknown_init(coap_method_handler_t
 _put_handler_);*
 
+*coap_resource_t *coap_resource_proxy_uri_init(coap_method_handler_t
+_proxy_handler_, size_t _host_name_count_, const char *_host_name_list_[]);*
+
 *void coap_add_resource(coap_context_t *_context_,
 coap_resource_t *_resource_);*
 
-*int coap_delete_resource(coap_context_t _context_,
-coap_resource_t _resource_);*
-
-*void coap_delete_all_resources(coap_context_t *_context_);*
+*int coap_delete_resource(coap_context_t *_context_,
+coap_resource_t *_resource_);*
 
 *void coap_resource_set_mode(coap_resource_t *_resource_, int _mode_);*
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
-*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
-*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
-type.
+*void coap_resource_set_userdata(coap_resource_t *_resource_, void *_data_);*
+
+*void *coap_resource_get_userdata(coap_resource_t *_resource_);*
+
+*void coap_resource_release_userdata_handler(coap_context_t *_context_,
+coap_resource_release_userdata_handler_t _callback_);*
+
+*coap_str_const_t *coap_resource_get_uri_path(coap_resource_t *_resource_);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
 
 DESCRIPTION
 -----------
@@ -79,27 +99,42 @@ _flags_ can be one of the following definitions or'ed together.
 [horizontal]
 *COAP_RESOURCE_FLAGS_NOTIFY_NON*::
 Set the notification message type to non-confirmable for any trigggered
-"observe" responses.
-//-
+"observe" responses with type set to confirmable every 5 packets as required by
+RFC7641 section-4.5.
+
+*COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS*::
+Set the notification message type to always non-confirmable for any trigggered
+"observe" responses. This should only be used if a upper layer protocol
+requires it.
+
 *COAP_RESOURCE_FLAGS_NOTIFY_CON*::
 Set the notification message type to confirmable for any trigggered
 "observe" responses.
-//-
+
 *COAP_RESOURCE_FLAGS_RELEASE_URI*::
 Free off the coap_str_const_t for _uri_path_ when the _resource_ is deleted.
 
 *NOTE:* _uri_path_, if not 7 bit readable ASCII, binary bytes must be hex
 encoded according to the rules defined in RFC3968 Section 2.1.
 
-The *coap_resource_unknown_init*() returns a newly created _resource_ of
-type _coap_resource_t_ *. _put_handler_ is automatically added to the
+The *coap_resource_unknown_init*() function returns a newly created _resource_
+of type _coap_resource_t_ *. _put_handler_ is automatically added to the
 _resource_ to handle PUT requests to resources that are unknown. Additional
 handlers can be added to this resource if required.
 
+The *coap_resource_proxy_uri_init*() function returns a newly created
+_resource_ of type _coap_resource_t_ *. _proxy_handler_ is automatically added
+to the _resource_ to handle PUT/POST/GET etc. requests that use the Proxy-Uri:
+option.  There is no need to add explicit request type handlers. One or more
+names by which the proxy is known by (IP address, DNS name etc.) must be
+supplied in the array defined by _host_name_list_[] which has a count of
+_host_name_count_.  This is used to check whether the current endpoint is
+the proxy target address.
+
 The *coap_add_resource*() function registers the given _resource_ with the
 _context_. The _resource_ must have been created by *coap_resource_init*(),
-or *coap_resource_unknown_init*(). The storage allocated for the _resource_
-will be released by *coap_delete_resource*().
+*coap_resource_unknown_init*() or *coap_resource_proxy_uri_init*(). The storage
+allocated for the _resource_ will be released by *coap_delete_resource*().
 
 As the _uri_path_ of the resource has to be unique across all of the resources
 associated with a _context_, *coap_add_resource*() (or
@@ -110,38 +145,66 @@ The *coap_delete_resource*() function deletes a _resource_ identified by
 _resource_ from _context_. The storage allocated for that _resource_ is freed,
 along with any attrigutes associated with the _resource_.
 
-The *coap_delete_all_resources*() function deletes all resources from
-_context_ and frees their storage.
-
 The *coap_resource_set_mode*() changes the notification message type of
 _resource_ to the given _mode_ which must be one of
-COAP_RESOURCE_FLAGS_NOTIFY_NON or COAP_RESOURCE_FLAGS_NOTIFY_CON.
+COAP_RESOURCE_FLAGS_NOTIFY_NON, COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS or
+COAP_RESOURCE_FLAGS_NOTIFY_CON.
+
+The *coap_resource_set_userdata*() function allows a pointer to user _data_
+to be associated with a _resource_ that can accessed in any callback that
+includes _resource_ as a parameter.
+
+*NOTE:* _data_ must point to a static, or allocated, block of memory.
+
+The *coap_resource_get_userdata*() function obtains the user data pointer
+from the _resource_ that had previously been set up by
+*coap_resource_set_userdata*().
+
+The *coap_resource_release_userdata_handler*() function defines the _context_
+wide _callback_ handler to call to release the allocated user data that has
+been added to the resource using *coap_resource_set_userdata*() when the
+resource is deleted. _callback_ can be NULL (which is the default) if nothing
+needs to be freed off.
+
+The *coap_resource_get_uri_path*() function is used to obtain the UriPath of
+the _resource_ definion.
 
 RETURN VALUES
 -------------
-The *coap_resource_init*() and *coap_resource_unknown_init*() functions
-return a newly created resource or NULL if there is a malloc failure.
+The *coap_resource_init*(), *coap_resource_unknown_init*() and
+*coap_resource_proxy_uri_init*() functions return a newly created resource
+or NULL if there is a malloc failure.
 
 The *coap_delete_resource*() function return 0 on failure (_resource_ not
 found), 1 on success.
+
+The *coap_resource_get_userdata*() function returns the value previously set
+by the *coap_resource_set_userdata*() function or NULL.
+
+The *coap_resource_get_uri_path*() function returns the uri_path or NULL if
+there was a failure.
 
 EXAMPLES
 --------
 *Fixed Resources Set Up*
 
 [source, c]
---
+----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #define INDEX "This is an example server using libcoap\n"
 
-void
-hnd_get_index(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+static void
+hnd_get_index(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   unsigned char buf[3];
+  /* Remove (void) definition if variable is used */
+  (void)resource;
+  (void)session;
+  (void)request;
+  (void)query;
 
-  response->code = COAP_RESPONSE_CODE(205);
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
   coap_add_option(response,
                   COAP_OPTION_CONTENT_TYPE,
@@ -155,33 +218,51 @@ coap_string_t *query, coap_pdu_t *response) {
 
   coap_add_data(response, strlen(INDEX), (const uint8_t *)INDEX);
 
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 }
 
-void
-hnd_delete_time(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+static void
+hnd_delete_time(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+  /* Remove (void) definition if variable is used */
+  (void)resource;
+  (void)session;
+  (void)request;
+  (void)query;
 
   /* .. code .. */
 
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
 
-void
-hnd_get_time(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+static void
+hnd_get_time(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+  /* Remove (void) definition if variable is used */
+  (void)resource;
+  (void)session;
+  (void)request;
+  (void)query;
+  (void)response;
 
   /* .. code .. */
 
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 }
 
-void
-hnd_put_time(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+static void
+hnd_put_time(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+  /* Remove (void) definition if variable is used */
+  (void)resource;
+  (void)session;
+  (void)request;
+  (void)query;
+  (void)response;
 
   /* .. code .. */
 
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
 }
 
 static void
@@ -193,7 +274,7 @@ init_resources(coap_context_t *ctx) {
   r = coap_resource_init(NULL, 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
-  /* Document resource for .well-known/core request */
+  /* Document resource for '.well-known/core' request */
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
   coap_add_attr(r, coap_make_str_const("title"),
                 coap_make_str_const("\"General Info\""), 0);
@@ -208,7 +289,7 @@ init_resources(coap_context_t *ctx) {
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
 
-  /* Document resource for .well-known/core request */
+  /* Document resource for 'time' request */
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
   coap_add_attr(r, coap_make_str_const("title"),
                 coap_make_str_const("\"Internal Clock\""), 0);
@@ -220,43 +301,48 @@ init_resources(coap_context_t *ctx) {
   coap_add_resource(ctx, r);
 
 }
---
+----
 
 *Dynamic Resources Set Up*
 
 [source, c]
---
+----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 /* Regular DELETE handler - used by resources created by the
  * Unknown Resource PUT handler */
 
-void
-hnd_delete(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+static void
+hnd_delete(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+  /* Remove (void) definition if variable is used */
+  (void)session;
+  (void)request;
+  (void)query;
+  (void)response;
 
   /* .. code .. */
 
   /* Dynamic resource no longer required - delete it */
-  coap_delete_resource(ctx, resource);
+  coap_delete_resource(coap_session_get_context(session), resource);
 
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
 
 /* Regular GET handler - used by resources created by the
  * Unknown Resource PUT handler */
 
-void
-hnd_get(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+static void
+hnd_get(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
   coap_str_const_t *get_uri_path;
-  coap_string_t *get_query;
-  coap_opt_iterator_t opt_iter;
-  coap_opt_filter_t filter;
-  coap_opt_t *option;
-  int len;
+  /* Remove (void) definition if variable is used */
+  (void)resource;
+  (void)session;
+  (void)request;
+  (void)query;
+  (void)response;
 
   /*
    * request will be NULL if an Observe triggered request, so the uri_path,
@@ -265,57 +351,84 @@ coap_string_t *query, coap_pdu_t *response) {
    */
 
   get_uri_path = coap_resource_get_uri_path(resource);
-  get_query = query;
 
   /* .. code .. */
 
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 }
 
 /* Regular PUT handler - used by resources created by the
  * Unknown Resource PUT handler */
 
-void
-hnd_put(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+static void
+hnd_put(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+  /* Remove (void) definition if variable is used */
+  (void)resource;
+  (void)session;
+  (void)query;
 
   coap_string_t *put_uri_path;
+  size_t length;
+  const uint8_t *data;
+  size_t offset;
+  size_t total;
+  int new_resource = 0;
 
   /* get the uri_path */
   put_uri_path = coap_get_uri_path(request);
   if (!put_uri_path) {
-    response->code = COAP_RESPONSE_CODE(404);
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     return;
   }
+  coap_get_data_large(request, &length, &data, &offset, &total);
 
   /* .. code .. */
 
   /* Need to do this as coap_get_uri_path() created it */
   coap_delete_string(put_uri_path);
 
+  if (length + offset < total)
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTINUE);
+  else if (new_resource)
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
+  else
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
+}
+
+static int
+check_url_fn(coap_string_t *uri_path, uint8_t code) {
+  /* Remove (void) definition if variable is used */
+  (void)uri_path;
+  (void)code;
+
+  /* Code to determine whether the uri is valid or not */
+
+  return 1;
 }
 
 /* Unknown Resource PUT handler */
 
-void
-hnd_unknown_put(coap_context_t *ctx, coap_resource_t *resource,
-coap_session_t *session, coap_pdu_t *request, coap_string_t *token,
-coap_string_t *query, coap_pdu_t *response) {
+static void
+hnd_unknown_put(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+  /* Remove (void) definition if variable is used */
+  (void)resource;
+  coap_pdu_code_t req_code = coap_pdu_get_code(request);
 
   coap_resource_t *r;
-  int len;
   coap_string_t *uri_path;
 
   /* get the uri_path - which will get used by coap_resource_init() */
   uri_path = coap_get_uri_path(request);
   if (!uri_path) {
-    response->code = COAP_RESPONSE_CODE(404);
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     return;
   }
 
   /* Check if new URI Path is valid */
-  if (!check_url_fn (uri_path, request->code)) {
-    response->code = COAP_RESPONSE_CODE(404);
+  if (!check_url_fn (uri_path, req_code)) {
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     coap_delete_string(uri_path);
     return;
   }
@@ -331,10 +444,10 @@ coap_string_t *query, coap_pdu_t *response) {
   /* We possibly want to Observe the GETs */
   coap_resource_set_get_observable(r, 1);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get);
-  coap_add_resource(ctx, r);
+  coap_add_resource(coap_session_get_context(session), r);
 
   /* Do the PUT for this first call */
-  hnd_put(ctx, r, session, request, token, query, response);
+  hnd_put(r, session, request, query, response);
 
   return;
 
@@ -358,7 +471,7 @@ init_resources(coap_context_t *ctx) {
   coap_add_resource(ctx, r);
 
 }
---
+----
 
 SEE ALSO
 --------
@@ -372,7 +485,8 @@ information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

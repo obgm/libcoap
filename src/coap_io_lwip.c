@@ -3,11 +3,13 @@
  * Copyright (C) 2012,2014 Olaf Bergmann <bergmann@tzi.org>
  *               2014 chrysn <chrysn@fsfe.org>
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
  */
 
-#include "coap_internal.h"
+#include "coap3/coap_internal.h"
 #include <lwip/udp.h>
 
 #if NO_SYS
@@ -48,9 +50,9 @@ struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet)
  *
  * The current implementation deals this to coap_dispatch immediately, but
  * other mechanisms (as storing the package in a queue and later fetching it
- * when coap_read is called) can be envisioned.
+ * when coap_io_do_io is called) can be envisioned.
  *
- * It handles everything coap_read does on other implementations.
+ * It handles everything coap_io_do_io does on other implementations.
  */
 static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_addr_t *addr, u16_t port)
 {
@@ -58,7 +60,14 @@ static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_
   coap_pdu_t *pdu = NULL;
   coap_session_t *session;
   coap_tick_t now;
-  coap_packet_t *packet = coap_malloc_type(COAP_PACKET, sizeof(coap_packet_t));
+  coap_packet_t *packet;
+
+  if (p->len < 4) {
+    /* Minimum size of CoAP header - ignore runt */
+    return;
+  }
+
+  packet = coap_malloc_type(COAP_PACKET, sizeof(coap_packet_t));
 
   /* this is fatal because due to the short life of the packet, never should there be more than one coap_packet_t required */
   LWIP_ASSERT("Insufficient coap_packet_t resources.", packet != NULL);
@@ -92,8 +101,12 @@ static void coap_recv(void *arg, struct udp_pcb *upcb, struct pbuf *p, const ip_
   return;
 
 error:
-  /* FIXME: send back RST? */
-  if (pdu) coap_delete_pdu(pdu);
+  /*
+   * https://tools.ietf.org/html/rfc7252#section-4.2 MUST send RST
+   * https://tools.ietf.org/html/rfc7252#section-4.3 MAY send RST
+   */
+  coap_send_rst(session, pdu);
+  coap_delete_pdu(pdu);
   if (packet) {
     packet->pbuf = NULL;
     coap_free_packet(packet);

@@ -1,7 +1,10 @@
 # Makefile.am for libcoap
 #
-# Copyright (C) 2010-2017 Olaf Bergmann <bergmann@tzi.org>
-#           (C) 2015-2017 Carsten Schoenert <c.schoenert@t-online.de>
+# Copyright (C) 2010-2021,2021 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2015-2017 Carsten Schoenert <c.schoenert@t-online.de>
+# Copyright (C) 2018-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+#
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.
@@ -14,18 +17,44 @@ ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
 ## Additional files for the distribution archive
 EXTRA_DIST = \
+  BUILDING \
   CONTRIBUTE \
   TODO \
   LICENSE \
+  CMakeLists.txt \
+  cmake_coap_config.h.in \
+  cmake/Config.cmake.in \
+  cmake/FindMbedTLS.cmake \
+  cmake/FindTinyDTLS.cmake \
+  coap_config.h.lwip \
+  coap_config.h.riot \
+  coap_config.h.windows \
   libcoap-$(LIBCOAP_API_VERSION).pc.in \
   libcoap-$(LIBCOAP_API_VERSION).map \
   libcoap-$(LIBCOAP_API_VERSION).sym \
   examples/coap_list.h \
   examples/getopt.c \
   include/coap$(LIBCOAP_API_VERSION)/coap_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_riot.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_asn1_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_async_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_block_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_cache_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_dtls_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_io_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_net_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_pdu_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_resource_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap.h.in \
+  include/coap$(LIBCOAP_API_VERSION)/coap.h.windows \
+  include/coap$(LIBCOAP_API_VERSION)/coap.h.windows.in \
+  include/coap$(LIBCOAP_API_VERSION)/lwippools.h \
+  include/coap$(LIBCOAP_API_VERSION)/uthash.h \
   include/coap$(LIBCOAP_API_VERSION)/utlist.h \
+  src/coap_io_riot.c \
   tests/test_error_response.h \
   tests/test_encode.h \
   tests/test_options.h \
@@ -48,9 +77,9 @@ EXTRA_DIST = \
   win32/testdriver/testdriver.vcxproj.filters \
   win32/testdriver/testdriver.vcxproj.user
 
-AM_CFLAGS = -I$(top_builddir)/include/coap$(LIBCOAP_API_VERSION) -I$(top_srcdir)/include/coap$(LIBCOAP_API_VERSION) $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
+AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99 $(EXTRA_CFLAGS)
 
-SUBDIRS = $(subdirs) . $(MAN_DIR) $(DOC_DIR) tests examples
+SUBDIRS = $(subdirs) . man doc tests examples
 
 ## Define a libtool archive target "libcoap-@LIBCOAP_NAME_SUFFIX@.la", with
 ## @LIBCOAP_NAME_SUFFIX@ substituted into the generated Makefile at configure
@@ -72,14 +101,19 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/address.c \
   src/async.c \
   src/block.c \
+  src/coap_asn1.c \
+  src/coap_cache.c \
   src/coap_debug.c \
   src/coap_event.c \
   src/coap_hashkey.c \
   src/coap_gnutls.c \
   src/coap_io.c \
+  src/coap_mbedtls.c \
   src/coap_notls.c \
   src/coap_openssl.c \
+  src/coap_prng.c \
   src/coap_session.c \
+  src/coap_tcp.c \
   src/coap_time.c \
   src/coap_tinydtls.c \
   src/encode.c \
@@ -106,9 +140,9 @@ libcoap_includedir = $(includedir)/coap$(LIBCOAP_API_VERSION)/
 libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/address.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/async.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/bits.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/block.h \
   $(top_builddir)/include/coap$(LIBCOAP_API_VERSION)/coap.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_cache.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_debug.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_dtls.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_event.h \
@@ -124,12 +158,11 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/net.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/option.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/pdu.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/prng.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_prng.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/resource.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/str.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/subscribe.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/uri.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/uthash.h
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/uri.h
 
 ## Instruct libtool to include API version information in the generated shared
 ## library file (.so). The library ABI version will later defined in configure.ac,
@@ -143,48 +176,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_LDFLAGS =					\
 ## Collect symbols here we want to ignore while building the helper files
 ## libcoap-$(LIBCOAP_API_VERSION).{map,sym} for the linker.
 CTAGS_IGNORE=-I " \
-coap_dtls_context_check_keys_enabled \
-coap_dtls_context_set_pki \
-coap_dtls_context_set_pki_root_cas \
-coap_dtls_context_set_psk \
-coap_dtls_free_context \
-coap_dtls_free_session \
-coap_dtls_get_context_timeout \
-coap_dtls_get_overhead \
-coap_dtls_get_timeout \
-coap_dtls_handle_timeout \
-coap_dtls_hello \
-coap_dtls_is_context_timeout \
-coap_dtls_new_client_session \
-coap_dtls_new_context \
-coap_dtls_new_server_session \
-coap_dtls_receive \
-coap_dtls_send \
-coap_dtls_session_update_mtu \
-coap_dtls_startup \
-coap_epoll_ctl_mod \
-coap_io_do_events \
-coap_mfree_endpoint \
-coap_packet_extract_pbuf \
 coap_pdu_from_pbuf \
-coap_session_mfree \
-coap_session_new_dtls_session \
-coap_socket_accept_tcp \
-coap_socket_bind_tcp \
-coap_socket_bind_udp \
-coap_socket_close \
-coap_socket_connect_tcp1 \
-coap_socket_connect_tcp2 \
-coap_socket_connect_udp \
-coap_socket_read \
-coap_socket_send \
-coap_socket_send_pdu \
-coap_socket_write \
-coap_tls_free_session \
-coap_tls_new_client_session \
-coap_tls_new_server_session \
-coap_tls_read \
-coap_tls_write \
 "
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if
@@ -228,6 +220,33 @@ pkgconfig_DATA = libcoap-$(LIBCOAP_NAME_SUFFIX).pc
 ## archive.  However, it will not be installed on an end user's system due to
 ## the noinst_ prefix.
 dist_noinst_SCRIPTS = autogen.sh
+
+## Set up a common library that causes linking against the common library
+## to link with the actual library with (D)TLS support
+if BUILD_ADD_DEFAULT_NAMES
+install-exec-hook:
+	(cd $(DESTDIR)$(libdir) ; \
+	if [ -f libcoap-$(LIBCOAP_NAME_SUFFIX).so ] ; then \
+		rm -f libcoap-$(LIBCOAP_API_VERSION).so ; \
+		$(LN_S) libcoap-$(LIBCOAP_NAME_SUFFIX).so libcoap-$(LIBCOAP_API_VERSION).so ; \
+	fi ; \
+	rm -f libcoap-$(LIBCOAP_API_VERSION).a ; \
+	rm -f libcoap-$(LIBCOAP_API_VERSION).la ; \
+	$(LN_S) libcoap-$(LIBCOAP_NAME_SUFFIX).a libcoap-$(LIBCOAP_API_VERSION).a ; \
+	$(LN_S) libcoap-$(LIBCOAP_NAME_SUFFIX).la libcoap-$(LIBCOAP_API_VERSION).la ; \
+	$(MKDIR_P) $(DESTDIR)$(pkgconfigdir) ; \
+	cd $(DESTDIR)$(pkgconfigdir) ; \
+	rm -f libcoap-$(LIBCOAP_API_VERSION).pc ; \
+	$(LN_S) libcoap-$(LIBCOAP_NAME_SUFFIX).pc libcoap-$(LIBCOAP_API_VERSION).pc)
+
+uninstall-hook:
+	(cd $(DESTDIR)$(libdir) ; \
+	rm -f libcoap-$(LIBCOAP_API_VERSION).a ; \
+	rm -f libcoap-$(LIBCOAP_API_VERSION).la ; \
+	rm -f libcoap-$(LIBCOAP_API_VERSION).so ; \
+	cd $(DESTDIR)$(pkgconfigdir) ; \
+	rm -f libcoap-$(LIBCOAP_API_VERSION).pc)
+endif # BUILD_ADD_DEFAULT_NAMES
 
 ## various *-local targets
 ## Remove the helper files for the linker and the pkg-config file if there

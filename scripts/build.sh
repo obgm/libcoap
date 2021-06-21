@@ -1,6 +1,6 @@
 #! /bin/sh
 
-SILENT="--disable-silent-rules"
+#SILENT="--disable-silent-rules"
 
 if test "x$TESTS" = "xyes" -o "x$TESTS" = "xtrue" ; then
     WITH_TESTS="`scripts/fix-cunit.sh` --enable-tests"
@@ -14,6 +14,8 @@ case "x${TLS}" in
     xopenssl)  WITH_TLS="--with-openssl"
                ;;
     xgnutls)   WITH_TLS="--with-gnutls"
+               ;;
+    xmbedtls)  WITH_TLS="--with-mbedtls"
                ;;
     xtinydtls) WITH_TLS="--with-tinydtls"
                # Need this as libtinydtls.so has not been installed
@@ -70,6 +72,14 @@ fi
 # invoke OSS-Fuzz syntax checks
 if test $err = 0 -a -n "$WITH_TESTS" ; then
     make -C tests/oss-fuzz -f Makefile.ci check clean
+    err=$?
+fi
+
+# invoke man page examples code compiles checks
+if test $err = 0 -a -n "$WITH_TESTS" ; then
+    make -C man
+    EXEC_FILE=man/examples-code-check
+    $EXEC_FILE man
     err=$?
 fi
 

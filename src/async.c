@@ -1,6 +1,8 @@
 /* async.c -- state management for asynchronous messages
  *
- * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011,2021 Olaf Bergmann <bergmann@tzi.org>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
@@ -11,100 +13,195 @@
  * @brief state management for asynchronous messages
  */
 
-#include "coap_internal.h"
+#include "coap3/coap_internal.h"
 
 #ifndef WITHOUT_ASYNC
 
 /* utlist-style macros for searching pairs in linked lists */
-#define SEARCH_PAIR(head,out,field1,val1,field2,val2)   \
-  SEARCH_PAIR2(head,out,field1,val1,field2,val2,next)
+#define SEARCH_PAIR(head,out,field1,val1,field2,val2,field3,val3)   \
+  SEARCH_PAIR3(head,out,field1,val1,field2,val2,field3,val3,next)
 
-#define SEARCH_PAIR2(head,out,field1,val1,field2,val2,next)             \
+#define SEARCH_PAIR3(head,out,field1,val1,field2,val2,field3,val3,next) \
   do {                                                                  \
     LL_FOREACH2(head,out,next) {                                        \
-      if ((out)->field1 == (val1) && (out)->field2 == (val2)) break;    \
+      if ((out)->field1 == (val1) && (out)->field2 == (val2) &&         \
+          ((val2) == 0 || memcmp((out)->field3, (val3), (val2)) == 0)) break; \
     }                                                                   \
 } while(0)
 
-coap_async_state_t *
-coap_register_async(coap_context_t *context, coap_session_t *session,
-                    coap_pdu_t *request, unsigned char flags, void *data) {
-  coap_async_state_t *s;
-  coap_tid_t id = request->tid;
+int
+coap_async_is_supported(void) {
+  return 1;
+}
 
-  SEARCH_PAIR(context->async_state,s,session,session,id,id);
+coap_async_t *
+coap_register_async(coap_session_t *session,
+                    const coap_pdu_t *request, coap_tick_t delay) {
+  coap_async_t *s;
+  coap_mid_t mid = request->mid;
+  size_t len;
+  const uint8_t *data;
+
+  if (!COAP_PDU_IS_REQUEST(request))
+    return NULL;
+
+  SEARCH_PAIR(session->context->async_state, s,
+              session, session,
+              pdu->token_length, request->token_length,
+              pdu->token, request->token);
 
   if (s != NULL) {
-    /* We must return NULL here as the caller must know that he is
-     * responsible for releasing @p data. */
     coap_log(LOG_DEBUG,
-         "asynchronous state for transaction %d already registered\n", id);
+         "asynchronous state for mid=0x%x already registered\n", mid);
     return NULL;
   }
 
   /* store information for handling the asynchronous task */
-  s = (coap_async_state_t *)coap_malloc(sizeof(coap_async_state_t));
+  s = (coap_async_t *)coap_malloc(sizeof(coap_async_t));
   if (!s) {
     coap_log(LOG_CRIT, "coap_register_async: insufficient memory\n");
     return NULL;
   }
 
-  memset(s, 0, sizeof(coap_async_state_t));
+  memset(s, 0, sizeof(coap_async_t));
 
-  /* set COAP_ASYNC_CONFIRM according to request's type */
-  s->flags = flags & ~COAP_ASYNC_CONFIRM;
-  if (request->type == COAP_MESSAGE_CON)
-    s->flags |= COAP_ASYNC_CONFIRM;
+  s->pdu = coap_pdu_duplicate(request, session, request->token_length,
+                              request->token, NULL);
+  if (s->pdu == NULL) {
+    coap_free_async(session, s);
+    coap_log(LOG_CRIT, "coap_register_async: insufficient memory\n");
+    return NULL;
+  }
+  s->pdu->mid = mid; /* coap_pdu_duplicate() created one */
 
-  s->appdata = data;
-  s->session = coap_session_reference( session );
-  s->id = id;
-
-  if (request->token_length) {
-    /* A token can be up to 8 bytes */
-    s->tokenlen = (request->token_length > 8) ? 8 : request->token_length;
-    memcpy(s->token, request->token, s->tokenlen);
+  if (coap_get_data(request, &len, &data)) {
+    coap_add_data(s->pdu, len, data);
   }
 
-  coap_touch_async(s);
+  s->session = coap_session_reference( session );
 
-  LL_PREPEND(context->async_state, s);
+  coap_async_set_delay(s, delay);
+
+  LL_PREPEND(session->context->async_state, s);
 
   return s;
 }
 
-coap_async_state_t *
-coap_find_async(coap_context_t *context, coap_session_t *session, coap_tid_t id) {
-  coap_async_state_t *tmp;
-  SEARCH_PAIR(context->async_state,tmp,session,session,id,id);
+void
+coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
+  assert(async != NULL);
+
+  if (delay) {
+    coap_ticks(&async->delay);
+    async->delay += delay;
+  }
+  else
+    async->delay = 0;
+  coap_log(LOG_DEBUG, "   %s: Request for delayed for %u.%03u secs\n",
+           coap_session_str(async->session),
+           (unsigned int)(delay / COAP_TICKS_PER_SECOND),
+           (unsigned int)((delay % COAP_TICKS_PER_SECOND) *
+               1000 / COAP_TICKS_PER_SECOND));
+}
+
+
+coap_async_t *
+coap_find_async(coap_session_t *session, coap_bin_const_t token) {
+  coap_async_t *tmp;
+  SEARCH_PAIR(session->context->async_state, tmp,
+              session, session,
+              pdu->token_length, token.length,
+              pdu->token, token.s);
   return tmp;
 }
 
-int
-coap_remove_async(coap_context_t *context, coap_session_t *session,
-                  coap_tid_t id, coap_async_state_t **s) {
-  coap_async_state_t *tmp = coap_find_async(context, session, id);
-
-  if (tmp)
-    LL_DELETE(context->async_state,tmp);
-
-  *s = tmp;
-  return tmp != NULL;
-}
-
-void
-coap_free_async(coap_async_state_t *s) {
+static void
+coap_free_async_sub(coap_context_t *context, coap_async_t *s) {
   if (s) {
+    LL_DELETE(context->async_state,s);
     if (s->session) {
       coap_session_release(s->session);
     }
-    if ((s->flags & COAP_ASYNC_RELEASE_DATA) != 0) {
-      coap_free(s->appdata);
+    if (s->pdu) {
+      coap_delete_pdu(s->pdu);
+      s->pdu = NULL;
     }
     coap_free(s);
   }
 }
 
+void
+coap_free_async(coap_session_t *session, coap_async_t *s) {
+  coap_free_async_sub(session->context, s);
+}
+
+void
+coap_delete_all_async(coap_context_t *context) {
+  coap_async_t *astate, *tmp;
+
+  LL_FOREACH_SAFE(context->async_state, astate, tmp) {
+    coap_free_async_sub(context, astate);
+  }
+  context->async_state = NULL;
+}
+
+void
+coap_async_set_app_data(coap_async_t *async, void *app_data) {
+  async->appdata = app_data;
+}
+
+void *
+coap_async_get_app_data(const coap_async_t *async) {
+  return async->appdata;
+}
+
 #else
-void does_not_exist(void);        /* make some compilers happy */
+
+int
+coap_async_is_supported(void) {
+  return 0;
+}
+
+coap_async_t *
+coap_register_async(coap_session_t *session,
+                    const coap_pdu_t *request,
+                    coap_tick_t delay) {
+  (void)session;
+  (void)request;
+  (void)delay;
+  return NULL;
+}
+
+void
+coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
+  (void)async;
+  (void)delay;
+}
+
+void
+coap_free_async(coap_session_t *session, coap_async_t *async) {
+  (void)session;
+  (void)async;
+}
+
+coap_async_t *
+coap_find_async(coap_session_t *session,
+                coap_bin_const_t token) {
+  (void)session;
+  (void)token;
+  return NULL;
+}
+
+void
+coap_async_set_app_data(coap_async_t *async, void *app_data) {
+  (void)async;
+  (void)app_data;
+}
+
+void *
+coap_async_get_app_data(const coap_async_t *async) {
+  (void)async;
+  return NULL;
+}
+
 #endif /* WITHOUT_ASYNC */

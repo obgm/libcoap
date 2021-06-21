@@ -1,6 +1,8 @@
-# doc/Makefile.am
+# tests/Makefile.am
 #
 # Copyright (C) 2015-2016 Carsten Schoenert <c.schoenert@t-online.de>
+#
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.
@@ -9,7 +11,7 @@
 if HAVE_CUNIT
 
 # picking up the default warning CFLAGS
-AM_CFLAGS = -I$(top_builddir)/include/coap$(LIBCOAP_API_VERSION) -I$(top_srcdir)/include/coap$(LIBCOAP_API_VERSION) $(WARNING_CFLAGS) $(CUNIT_CFLAGS) $(DTLS_CFLAGS) -std=c99
+AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include $(WARNING_CFLAGS) $(CUNIT_CFLAGS) $(DTLS_CFLAGS) -std=c99
 
 noinst_PROGRAMS = \
  testdriver
@@ -26,7 +28,9 @@ testdriver_SOURCES = \
  test_wellknown.c \
  test_tls.c
 
-testdriver_LDADD = $(CUNIT_LIBS) $(DTLS_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
+# The .a file is uses instead of .la so that testdriver can always access the
+# internal functions that are not globaly exposed in a .so file.
+testdriver_LDADD = $(CUNIT_LIBS) $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).a ${DTLS_LIBS}
 
 # If there is a API change to something $(LIBCOAP_API_VERSION) > 1 there is
 # nothing to adopt here. No needed to implement something here because the test

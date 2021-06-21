@@ -67,7 +67,9 @@
 #define snprintf _snprintf
 #endif
 
-#define HAVE_OPENSSL 1
+#ifndef COAP_DISABLE_TCP
+#define COAP_DISABLE_TCP 0
+#endif
 
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"
@@ -76,7 +78,7 @@
 #define PACKAGE_NAME "libcoap"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libcoap 4.2.0"
+#define PACKAGE_STRING "libcoap 4.3.0"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "libcoap"
@@ -85,7 +87,7 @@
 #define PACKAGE_URL "https://libcoap.net/"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "4.2.0"
+#define PACKAGE_VERSION "4.3.0"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1

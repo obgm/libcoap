@@ -33,20 +33,28 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="NoTLS|x64">
+      <Configuration>NoTLS</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\address.c" />
     <ClCompile Include="..\src\async.c" />
     <ClCompile Include="..\src\block.c" />
+    <ClCompile Include="..\src\coap_cache.c" />
     <ClCompile Include="..\src\coap_debug.c" />
     <ClCompile Include="..\src\coap_event.c" />
     <ClCompile Include="..\src\coap_hashkey.c" />
     <ClCompile Include="..\src\coap_gnutls.c" />
     <ClCompile Include="..\src\coap_io.c" />
+    <ClCompile Include="..\src\coap_mbedtls.c" />
     <ClCompile Include="..\src\coap_notls.c" />
     <ClCompile Include="..\src\coap_openssl.c" />
+    <ClCompile Include="..\src\coap_prng.c" />
     <ClCompile Include="..\src\coap_session.c" />
     <ClCompile Include="..\src\coap_time.c" />
+    <ClCompile Include="..\src\coap_tcp.c" />
     <ClCompile Include="..\src\coap_tinydtls.c" />
     <ClCompile Include="..\src\encode.c" />
     <ClCompile Include="..\src\mem.c" />
@@ -60,36 +68,40 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\coap_config.h" />
-    <ClInclude Include="..\include\coap2\address.h" />
-    <ClInclude Include="..\include\coap2\async.h" />
-    <ClInclude Include="..\include\coap2\bits.h" />
-    <ClInclude Include="..\include\coap2\block.h" />
-    <ClInclude Include="..\include\coap2\coap.h" />
-    <ClInclude Include="..\include\coap2\coap_debug.h" />
-    <ClInclude Include="..\include\coap2\coap_dtls.h" />
-    <ClInclude Include="..\include\coap2\coap_event.h" />
-    <ClInclude Include="..\include\coap2\coap_forward_decls.h" />
-    <ClInclude Include="..\include\coap2\coap_hashkey.h" />
-    <ClInclude Include="..\include\coap2\coap_internal.h" />
-    <ClInclude Include="..\include\coap2\coap_io.h" />
-    <ClInclude Include="..\include\coap2\coap_mutex.h" />
-    <ClInclude Include="..\include\coap2\coap_session.h" />
-    <ClInclude Include="..\include\coap2\coap_session_internal.h" />
-    <ClInclude Include="..\include\coap2\coap_subscribe_internal.h" />
-    <ClInclude Include="..\include\coap2\coap_time.h" />
-    <ClInclude Include="..\include\coap2\encode.h" />
-    <ClInclude Include="..\include\coap2\libcoap.h" />
-    <ClInclude Include="..\include\coap2\mem.h" />
-    <ClInclude Include="..\include\coap2\net.h" />
-    <ClInclude Include="..\include\coap2\option.h" />
-    <ClInclude Include="..\include\coap2\pdu.h" />
-    <ClInclude Include="..\include\coap2\prng.h" />
-    <ClInclude Include="..\include\coap2\resource.h" />
-    <ClInclude Include="..\include\coap2\str.h" />
-    <ClInclude Include="..\include\coap2\subscribe.h" />
-    <ClInclude Include="..\include\coap2\uri.h" />
-    <ClInclude Include="..\include\coap2\uthash.h" />
-    <ClInclude Include="..\include\coap2\utlist.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\address.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\async.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\block.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_block_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_debug.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_dtls.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_event.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_forward_decls.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_hashkey.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_io.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_mutex.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_prng.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_resource_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_session.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_session_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_tcp_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_time.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\encode.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\libcoap.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\mem.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\net.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\option.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\pdu.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\resource.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\str.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\subscribe.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\uri.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\uthash.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\utlist.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\libcoap-2.sym">
@@ -98,6 +110,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">true</ExcludedFromBuild>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ECHO LIBRARY $(TargetName) &gt; "$(IntDir)$(TargetName).def"
 ECHO EXPORTS &gt;&gt;  "$(IntDir)$(TargetName).def"
 TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
@@ -122,6 +135,9 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ECHO LIBRARY $(TargetName) &gt; "$(IntDir)$(TargetName).def"
 ECHO EXPORTS &gt;&gt;  "$(IntDir)$(TargetName).def"
 TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">ECHO LIBRARY $(TargetName) &gt; "$(IntDir)$(TargetName).def"
+ECHO EXPORTS &gt;&gt;  "$(IntDir)$(TargetName).def"
+TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Creating module definition file</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">Creating module definition file</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">Creating module definition file</Message>
@@ -130,6 +146,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">Creating module definition file</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">Creating module definition file</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Creating module definition file</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">Creating module definition file</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)$(TargetName).def</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">$(IntDir)$(TargetName).def</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">$(IntDir)$(TargetName).def</Outputs>
@@ -138,6 +155,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">$(IntDir)$(TargetName).def</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">$(IntDir)$(TargetName).def</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)$(TargetName).def</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">$(IntDir)$(TargetName).def</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkObjects>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">false</LinkObjects>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">false</LinkObjects>
@@ -146,6 +164,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">false</LinkObjects>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">false</LinkObjects>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -207,6 +226,13 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -241,6 +267,10 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     <Import Project="libcoap.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="libcoap.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="libcoap.props" />
   </ImportGroup>
@@ -297,14 +327,19 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">
+    <TargetName>$(ProjectName)-2</TargetName>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <MinimalRebuild>false</MinimalRebuild>
       <CompileAs>CompileAsC</CompileAs>
@@ -314,7 +349,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Copying config files for windows</Message>
@@ -341,9 +376,9 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
       <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
@@ -357,7 +392,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Copying config files for windows</Message>
@@ -384,9 +419,9 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <CompileAs>CompileAsC</CompileAs>
       <MinimalRebuild>false</MinimalRebuild>
@@ -397,7 +432,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -406,9 +441,9 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <CompileAs>CompileAsC</CompileAs>
       <MinimalRebuild>false</MinimalRebuild>
@@ -422,7 +457,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -433,8 +468,8 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
@@ -445,7 +480,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Copying config files for windows</Message>
@@ -474,8 +509,8 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
       <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
     <Link>
@@ -490,7 +525,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Copying config files for windows</Message>
@@ -519,8 +554,8 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <CompileAs>CompileAsC</CompileAs>
       <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
@@ -532,7 +567,7 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -543,8 +578,8 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../include/coap2;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
@@ -560,7 +595,31 @@ copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\include\coap2\coap.h.windows ..\include\coap2\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
+      <Message>Copying config files for windows</Message>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../include;..</AdditionalIncludeDirectories>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <CompileAs>CompileAsC</CompileAs>
+      <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <PreBuildEvent>
+      <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>

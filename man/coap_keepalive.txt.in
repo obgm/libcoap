@@ -10,19 +10,22 @@ coap_keepalive(3)
 
 NAME
 ----
-coap_keepalive, coap_context_set_keepalive - work with CoAP keepalive
+coap_keepalive,
+coap_context_set_keepalive
+- Work with CoAP keepalive
 
 SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*void void coap_context_set_keepalive(coap_context_t *_context_,
+*void coap_context_set_keepalive(coap_context_t *_context_,
 unsigned int _seconds_);*
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
-*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
-*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
-type.
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
 
 DESCRIPTION
 -----------
@@ -32,25 +35,26 @@ say, an interim NAT device "warm" with the NAT translation state, or to
 periodically check whether the device at the other end of the session
 has "gone away".
 
-For DTLS, this is done with the confirmable CoAP (0.00) Ping packet, which
-solicits a CoAP RST response.  For TLS, this is done with Coap (7.02) Ping
+For UDP/DTLS, this is done with the confirmable CoAP (0.00) Ping packet, which
+solicits a CoAP RST response.  For TCP/TLS, this is done with CoAP (7.02) Ping
 packet, which solicits a CoAP (7.03) Pong response, all handled by libcoap.
 
 The *coap_context_set_keepalive*() function needs to be called to update the
 _context_ with the keepalive for idle traffic timeout of _seconds_.  If
-_seconds_ is set to 0, then the sending of keepalives is disabled.  Any sessions
-created from this _context_ will use the same _seconds_ value to determine
-whether a keepalive "ping" is to be sent out or not.
+_seconds_ is set to 0 (the default), then the sending of keepalives is
+disabled.  Any sessions created from this _context_ will use the same
+_seconds_ value to determine whether a keepalive "ping" is to be sent out or
+not.
 
 Applications can track the usage of the receipt of "pings" and receipt of
 "responses" by defining the respective handlers to use by using
-coap_register_ping_handler() and coap_register_pong_handler().
+*coap_register_ping_handler*() and *coap_register_pong_handler*().
 
 If the keepalive fails to solicit a response, then this can be tracked by
-defining the handler to use by using coap_register_nack_handler() which will
+defining the handler to use by using *coap_register_nack_handler*() which will
 be called with a reason of COAP_NACK_TOO_MANY_RETRIES.
 
-NOTE: *coap_context_set_keepalive*() is supported by both the CoAP client and
+*NOTE:* *coap_context_set_keepalive*() is supported by both the CoAP client and
 CoAP server.
 
 SEE ALSO
@@ -66,7 +70,8 @@ FURTHER INFORMATION
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

@@ -2,6 +2,8 @@
  *
  * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
  */
@@ -19,20 +21,33 @@
 #include <netdb.h>
 #include <signal.h>
 
-#include "coap.h"
+#include <coap3/coap.h>
 
-#ifdef __GNUC__
-#define UNUSED_PARAM __attribute__ ((unused))
-#else /* not a GCC */
-#define UNUSED_PARAM
-#endif /* GCC */
+#define Nn 8  /* duplicate definition of N if built on sky motes */
+#define ENCODE_HEADER_SIZE 4
+#define HIBIT (1 << (Nn - 1))
+#define EMASK ((1 << ENCODE_HEADER_SIZE) - 1)
+#define MMASK ((1 << Nn) - 1 - EMASK)
+#define MAX_VALUE ( (1 << Nn) - (1 << ENCODE_HEADER_SIZE) ) * (1 << ((1 << ENCODE_HEADER_SIZE) - 1))
 
-static coap_tid_t id;
+#define COAP_PSEUDOFP_DECODE_8_4(r) (r < HIBIT ? r : (r & MMASK) << (r & EMASK))
+
+/* ls and s must be integer variables */
+/* #define COAP_PSEUDOFP_ENCODE_8_4_DOWN(v,ls) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (v >> ls) & MMASK) + ls) */
+COAP_STATIC_INLINE unsigned char
+COAP_PSEUDOFP_ENCODE_8_4_DOWN(unsigned int v, int *ls) {
+  if (v < HIBIT) return v;
+  *ls = coap_fls(v) - Nn;
+  return ((v >> *ls) & MMASK) + *ls;
+}
+#define COAP_PSEUDOFP_ENCODE_8_4_UP(v,ls,s) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (s = (((v + ((1<<ENCODE_HEADER_SIZE<<ls)-1)) >> ls) & MMASK)), s == 0 ? HIBIT + ls + 1 : s + ls))
+
+static coap_mid_t id;
 static int quit = 0;
 
 /* SIGINT handler: set quit to 1 for graceful termination */
 static void
-handle_sigint(int signum UNUSED_PARAM) {
+handle_sigint(int signum COAP_UNUSED) {
   quit = 1;
 }
 
@@ -43,14 +58,11 @@ make_pdu( unsigned int value ) {
   static unsigned char buf[20];
   int len, ls;
 
-  if (!(pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU)))
+  if (!(pdu = coap_pdu_init(COAP_MESSAGE_NON, COAP_REQUEST_CODE_POST, id++,
+                            COAP_DEFAULT_MTU)))
     return NULL;
 
-  pdu->type = COAP_MESSAGE_NON;
-  pdu->code = COAP_REQUEST_POST;
-  pdu->tid = id++;
-
-  enc = COAP_PSEUDOFP_ENCODE_8_4_DOWN(value,ls);
+  enc = COAP_PSEUDOFP_ENCODE_8_4_DOWN(value, &ls);
 
   len = sprintf((char *)buf, "%c%u", enc, COAP_PSEUDOFP_DECODE_8_4(enc));
   coap_add_data( pdu, len, buf );
@@ -74,8 +86,7 @@ usage( const char *program ) {
 }
 
 static coap_session_t *
-get_session(const char *group) {
-  coap_context_t *ctx = coap_new_context(NULL);
+get_session(coap_context_t *ctx, const char *group) {
   int s;
   struct addrinfo hints;
   struct addrinfo *result, *rp;
@@ -109,8 +120,7 @@ get_session(const char *group) {
 
     if (IN6_IS_ADDR_MULTICAST(&addr.addr.sin6.sin6_addr) ) {
       /* set socket options for multicast */
-      if ( setsockopt(session->sock.fd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
-                       (char *)&hops, sizeof(hops) ) < 0 )
+      if (!coap_mcast_set_hops(session, hops))
         perror("setsockopt: IPV6_MULTICAST_HOPS");
 
     }
@@ -129,13 +139,18 @@ main(int argc, char **argv) {
   coap_pdu_t  *pdu;
   coap_session_t *session;
   struct sigaction sa;
+  coap_context_t *ctx;
 
   if ( argc > 1 && strncmp(argv[1], "-h", 2) == 0 ) {
     usage( argv[0] );
     exit( 1 );
   }
 
-  session = get_session(argc > 1 ? argv[1] : "::1");
+  ctx = coap_new_context(NULL);
+  if (!ctx)
+    return -1;
+
+  session = get_session(ctx, argc > 1 ? argv[1] : "::1");
 
   if ( !session )
     return -1;
@@ -165,7 +180,7 @@ main(int argc, char **argv) {
 
   }
 
-  coap_free_context( session->context );
+  coap_free_context(ctx);
 
   return 0;
 }

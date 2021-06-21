@@ -2,11 +2,13 @@
  *
  * Copyright (C) 2010--2012,2015-2016 Olaf Bergmann <bergmann@tzi.org>
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
  */
 
-#include "coap_internal.h"
+#include "coap3/coap_internal.h"
 
 #if defined(HAVE_LIMITS_H)
 #include <limits.h>
@@ -39,10 +41,20 @@ strnchr(const uint8_t *s, size_t len, unsigned char c) {
 #define ISEQUAL_CI(a,b) \
   ((a) == (b) || (islower(b) && ((a) == ((b) - 0x20))))
 
-int
-coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
+typedef enum coap_uri_check_t {
+  COAP_URI_CHECK_URI,
+  COAP_URI_CHECK_PROXY
+} coap_uri_check_t;
+
+static int
+coap_split_uri_sub(const uint8_t *str_var,
+                   size_t len,
+                   coap_uri_t *uri,
+                   coap_uri_check_t check_proxy) {
   const uint8_t *p, *q;
   int res = 0;
+  int is_http_proxy_scheme = 0;
+  size_t keep_len = len;
 
   if (!str_var || !uri)
     return -1;
@@ -53,6 +65,8 @@ coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
   /* search for scheme */
   p = str_var;
   if (*p == '/') {
+    if (check_proxy == COAP_URI_CHECK_PROXY)
+      return -1;
     q = p;
     goto path;
   }
@@ -60,6 +74,34 @@ coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
   q = (const uint8_t *)COAP_DEFAULT_SCHEME;
   while (len && *q && ISEQUAL_CI(*p, *q)) {
     ++p; ++q; --len;
+  }
+  if (*q && check_proxy == COAP_URI_CHECK_PROXY) {
+    /* Scheme could be something other than coap */
+    len = keep_len;
+    p = str_var;
+    q = (const uint8_t *)"http";
+    while (len && *q && ISEQUAL_CI(*p, *q)) {
+      ++p; ++q; --len;
+    }
+    if (*q == 0) {
+      if (len && ISEQUAL_CI(*p, 's')) {
+        /* https:// */
+        ++p; --len;
+        uri->scheme = COAP_URI_SCHEME_HTTPS;
+        uri->port = 443;
+      }
+      else {
+        /* http:// */
+        uri->scheme = COAP_URI_SCHEME_HTTP;
+        uri->port = 80;
+      }
+    }
+    else {
+      /* Unknown scheme */
+      res = -1;
+      goto error;
+    }
+    is_http_proxy_scheme = 1;
   }
 
   /* If q does not point to the string end marker '\0', the schema
@@ -69,23 +111,25 @@ coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
     goto error;
   }
 
-  /* There might be an additional 's', indicating the secure version: */
-  if (len && (*p == 's')) {
-    ++p; --len;
-    uri->scheme = COAP_URI_SCHEME_COAPS;
-    uri->port = COAPS_DEFAULT_PORT;
-  } else {
-    uri->scheme = COAP_URI_SCHEME_COAP;
-  }
+  if (is_http_proxy_scheme == 0) {
+    /* There might be an additional 's', indicating the secure version: */
+    if (len && (*p == 's')) {
+      ++p; --len;
+      uri->scheme = COAP_URI_SCHEME_COAPS;
+      uri->port = COAPS_DEFAULT_PORT;
+    } else {
+      uri->scheme = COAP_URI_SCHEME_COAP;
+    }
 
-  /* There might be and addition "+tcp", indicating reliable transport: */
-  if (len>=4 && p[0] == '+' && p[1] == 't' && p[2] == 'c' && p[3] == 'p' ) {
-    p += 4;
-    len -= 4;
-    if (uri->scheme == COAP_URI_SCHEME_COAPS)
-      uri->scheme = COAP_URI_SCHEME_COAPS_TCP;
-    else
-      uri->scheme = COAP_URI_SCHEME_COAP_TCP;
+    /* There might be an addition "+tcp", indicating reliable transport: */
+    if (len>=4 && p[0] == '+' && p[1] == 't' && p[2] == 'c' && p[3] == 'p' ) {
+      p += 4;
+      len -= 4;
+      if (uri->scheme == COAP_URI_SCHEME_COAPS)
+        uri->scheme = COAP_URI_SCHEME_COAPS_TCP;
+      else
+        uri->scheme = COAP_URI_SCHEME_COAP_TCP;
+    }
   }
   q = (const uint8_t *)"://";
   while (len && *q && *p == *q) {
@@ -186,6 +230,16 @@ coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
 
   error:
   return res;
+}
+
+int
+coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
+  return coap_split_uri_sub(str_var, len, uri, COAP_URI_CHECK_URI);
+}
+
+int
+coap_split_proxy_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
+  return coap_split_uri_sub(str_var, len, uri, COAP_URI_CHECK_PROXY);
 }
 
 /**
@@ -507,9 +561,9 @@ coap_string_t *coap_get_query(const coap_pdu_t *request) {
   size_t length = 0;
   static const uint8_t hex[] = "0123456789ABCDEF";
 
-  coap_option_filter_clear(f);
-  coap_option_filter_set(f, COAP_OPTION_URI_QUERY);
-  coap_option_iterator_init(request, &opt_iter, f);
+  coap_option_filter_clear(&f);
+  coap_option_filter_set(&f, COAP_OPTION_URI_QUERY);
+  coap_option_iterator_init(request, &opt_iter, &f);
   while ((q = coap_option_next(&opt_iter))) {
     uint16_t seg_len = coap_opt_length(q), i;
     const uint8_t *seg= coap_opt_value(q);
@@ -528,7 +582,7 @@ coap_string_t *coap_get_query(const coap_pdu_t *request) {
     if (query) {
       query->length = length;
       unsigned char *s = query->s;
-      coap_option_iterator_init(request, &opt_iter, f);
+      coap_option_iterator_init(request, &opt_iter, &f);
       while ((q = coap_option_next(&opt_iter))) {
         if (s != query->s)
           *s++ = '&';
@@ -557,9 +611,9 @@ coap_string_t *coap_get_uri_path(const coap_pdu_t *request) {
   size_t length = 0;
   static const uint8_t hex[] = "0123456789ABCDEF";
 
-  coap_option_filter_clear(f);
-  coap_option_filter_set(f, COAP_OPTION_URI_PATH);
-  coap_option_iterator_init(request, &opt_iter, f);
+  coap_option_filter_clear(&f);
+  coap_option_filter_set(&f, COAP_OPTION_URI_PATH);
+  coap_option_iterator_init(request, &opt_iter, &f);
   while ((q = coap_option_next(&opt_iter))) {
     uint16_t seg_len = coap_opt_length(q), i;
     const uint8_t *seg= coap_opt_value(q);
@@ -582,7 +636,7 @@ coap_string_t *coap_get_uri_path(const coap_pdu_t *request) {
     uri_path->length = length;
     unsigned char *s = uri_path->s;
     int n = 0;
-    coap_option_iterator_init(request, &opt_iter, f);
+    coap_option_iterator_init(request, &opt_iter, &f);
     while ((q = coap_option_next(&opt_iter))) {
       if (n++) {
         *s++ = '/';

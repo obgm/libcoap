@@ -38,7 +38,7 @@
 
 #include <string.h>
 
-#include "coap.h"
+#include "coap3/coap.h"
 
 static coap_context_t *coap_context;
 
@@ -91,38 +91,13 @@ init_coap_server(coap_context_t **ctx) {
 #endif
 
 void
-hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
-             coap_session_t *session,
-             coap_pdu_t *request, coap_binary_t *token,
-             coap_string_t *query,
+hnd_get_time(coap_resource_t *resource, coap_session_t *session,
+             const coap_pdu_t *request, const coap_string_t *query,
              coap_pdu_t *response) {
   unsigned char buf[40];
   size_t len;
   coap_tick_t now;
   coap_tick_t t;
-
-  /* FIXME: return time, e.g. in human-readable by default and ticks
-   * when query ?ticks is given. */
-
-  /* if my_clock_base was deleted, we pretend to have no such resource */
-  response->code =
-    my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
-
-  if (coap_find_observer(resource, session, token)) {
-    coap_add_option(response, COAP_OPTION_OBSERVE,
-                    coap_encode_var_safe(buf, sizeof(buf),
-                                         resource->observe),
-                    buf);
-  }
-
-  if (my_clock_base)
-    coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
-                    coap_encode_var_safe(buf, sizeof(buf),
-                    COAP_MEDIATYPE_TEXT_PLAIN),
-                    buf);
-
-  coap_add_option(response, COAP_OPTION_MAXAGE,
-          coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
 
   if (my_clock_base) {
 
@@ -130,13 +105,32 @@ hnd_get_time(coap_context_t  *ctx, struct coap_resource_t *resource,
     coap_ticks(&t);
     now = my_clock_base + (t / COAP_TICKS_PER_SECOND);
 
-
     if (query != NULL
         && coap_string_equal(query, coap_make_str_const("ticks"))) {
-      /* output ticks */
-      len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
-      coap_add_data(response, len, buf);
+          /* output ticks */
+          len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
+
+    } else {      /* output human-readable time */
+      struct tm *tmp;
+      time_t tnow = now;
+      tmp = gmtime(&tnow);
+      if (!tmp) {
+        /* If 'tnow' is not valid */
+        coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
+        return;
+      }
+      else {
+        len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
+      }
     }
+    coap_add_data_blocked_response(request, response,
+                                   COAP_MEDIATYPE_TEXT_PLAIN, 1,
+                                   len,
+                                   buf);
+  }
+  else {
+    /* if my_clock_base was deleted, we pretend to have no such resource */
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
   }
 }
 
@@ -216,7 +210,7 @@ PROCESS_THREAD(coap_server_process, ev, data)
     PROCESS_YIELD();
     if(ev == tcpip_event) {
       /* There is something to read on the endpoint */
-      coap_run_once(coap_context, COAP_RUN_BLOCK);
+      coap_io_process(coap_context, COAP_IO_WAIT);
     } else if (ev == PROCESS_EVENT_TIMER && etimer_expired(&dirty_timer)) {
       coap_resource_notify_observers(time_resource, NULL);
       etimer_reset(&dirty_timer);

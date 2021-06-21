@@ -24,6 +24,9 @@
     <ClCompile Include="..\src\block.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_cache.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_debug.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -39,6 +42,9 @@
     <ClCompile Include="..\src\coap_io.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_mbedtls.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_notls.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -46,6 +52,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\coap_session.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_tcp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\coap_time.c">
@@ -86,94 +95,106 @@
     <ClInclude Include="..\coap_config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\address.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\address.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\async.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\async.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\bits.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\block.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\block.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap_debug.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_block_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap_dtls.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap_event.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_debug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap_forward_decls.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_dtls.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap_hashkey.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_event.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap_internal.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_forward_decls.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap_io.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_hashkey.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap_mutex.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap_session.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_io.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap_session_internal.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_mutex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap_subscribe_internal.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_prng.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\coap_time.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_resource_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\encode.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_session.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\libcoap.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_session_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\mem.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\net.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_tcp_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\option.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_time.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\pdu.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\encode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\prng.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\libcoap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\resource.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\mem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\str.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\net.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\subscribe.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\option.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\uri.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\pdu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\uthash.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\coap2\utlist.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\str.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\subscribe.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\uri.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\uthash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\utlist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

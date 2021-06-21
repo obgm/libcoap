@@ -10,9 +10,13 @@ coap_recovery(3)
 
 NAME
 ----
-coap_recovery, coap_session_set_max_retransmit, coap_session_set_ack_timeout,
-coap_session_set_ack_random_factor, coap_session_get_max_transmit,
-coap_session_get_ack_timeout, coap_session_get_ack_random_factor,
+coap_recovery,
+coap_session_set_max_retransmit,
+coap_session_set_ack_timeout,
+coap_session_set_ack_random_factor,
+coap_session_get_max_retransmit,
+coap_session_get_ack_timeout,
+coap_session_get_ack_random_factor,
 coap_debug_set_packet_loss
 - Work with CoAP packet transmissions
 
@@ -29,19 +33,21 @@ coap_fixed_point_t _value_)*;
 *void coap_session_set_ack_random_factor(coap_session_t *_session_,
 coap_fixed_point_t _value_)*;
 
-*unsigned int coap_session_get_max_transmit(coap_session_t *_session_)*;
+*unsigned int coap_session_get_max_retransmit(const coap_session_t *_session_)*;
 
-*coap_fixed_point_t coap_session_get_ack_timeout(coap_session_t *_session_)*;
+*coap_fixed_point_t coap_session_get_ack_timeout(
+const coap_session_t *_session_)*;
 
-*coap_fixed_point_t coap_session_get_ack_random_factor(coap_session_t
-*_session_)*;
+*coap_fixed_point_t coap_session_get_ack_random_factor(
+const coap_session_t *_session_)*;
 
 *int coap_debug_set_packet_loss(const char *_loss_level_)*;
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
-*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
-*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
-type.
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
 
 DESCRIPTION
 -----------
@@ -73,7 +79,7 @@ The CoAP message retry rules are (with the default values to compute the time)
 4th retransmit after 4 * ack_timeout * ack_random factor (24 seconds)
 5th retransmit after 5 * ack_timeout * ack_random factor (48 seconds)
 
-As max_transmit (by default) is 4, then the 5th retransmit does not get sent,
+As max_retransmit (by default) is 4, then the 5th retransmit does not get sent,
 but at that point COAP_NACK_TOO_MANY_RETRIES gets raised in the nack_handler
 (if defined). Note that the sum of the seconds is 93 matching RFC7252.
 ----
@@ -159,7 +165,8 @@ information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

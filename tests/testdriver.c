@@ -1,10 +1,19 @@
+/* libcoap unit tests
+ *
+ * Copyright (C) 2012-2021 Olaf Bergmann <bergmann@tzi.org>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
+ * This file is part of the CoAP library libcoap. Please see
+ * README for terms of use.
+ */
+
 #include <stdio.h>
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
-/* #include <coap.h> */
-
+#include "test_common.h"
 #include "test_uri.h"
 #include "test_encode.h"
 #include "test_options.h"
@@ -14,16 +23,9 @@
 #include "test_sendqueue.h"
 #include "test_wellknown.h"
 #include "test_tls.h"
-#include "libcoap.h"
-
-#ifdef __GNUC__
-#define UNUSED_PARAM __attribute__ ((unused))
-#else /* not a GCC */
-#define UNUSED_PARAM
-#endif /* GCC */
 
 int
-main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM) {
+main(int argc COAP_UNUSED, char **argv COAP_UNUSED) {
   CU_ErrorCode result;
   CU_BasicRunMode run_mode = CU_BRM_VERBOSE;
 

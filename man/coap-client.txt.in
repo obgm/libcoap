@@ -10,16 +10,27 @@ coap-client(5)
 
 NAME
 -----
-coap-client - CoAP Client based on libcoap
+coap-client,
+coap-client-gnutls,
+coap-client-mbedtls,
+coap-client-openssl,
+coap-client-notls - CoAP Client based on libcoap
 
 SYNOPSIS
 --------
 *coap-client* [*-a* addr] [*-b* [num,]size] [*-e* text] [*-f* file] [*-l* loss]
               [*-m* method] [*-o* file] [*-p* port] [*-r*] [*-s duration*]
-              [*-t* type] [*-v* num] [*-A* type] [*-B* seconds] [*-K* interval]
-              [*-N*] [*-O* num,text] [*-P* addr[:port]] [*-T* token] [*-U*]
-              [[*-k* key] [*-u* user]]
-              [[*-c* certfile] [*-C* cafile] [*-R* root_cafile]] URI
+              [*-t* type] [*-v* num] [*-w*] [*-A* type] [*-B* seconds]
+              [*-H* hoplimit] [*-K* interval] [*-L* value] [*-N*]
+              [*-O* num,text] [*-P* scheme://addr[:port]] [*-T* token] [*-U*]
+              [[*-h* match_hint_file] [*-k* key] [*-u* user]]
+              [[*-c* certfile] [*-j* keyfile] [-n] [*-C* cafile]
+              [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]] URI
+
+For *coap-client* versions that use libcoap compiled for different
+(D)TLS libraries, *coap-client-notls*, *coap-client-gnutls*,
+*coap-client-openssl*, *coap-client-mbedtls* or *coap-client-tinydtls* may be
+available.  Otherwise, *coap-client* uses the default libcoap (D)TLS support.
 
 DESCRIPTION
 -----------
@@ -30,8 +41,8 @@ command line. The URI must have the scheme 'coap', 'coap+tcp', 'coaps' or
 built with support for secure (D)TLS communication.
 
 If 'coaps' or 'coap+tcp' is being used, provided the CoAP server supports PKI
-and is configured with a Certificate and Private Key, the coap-client does not
-need to have a Pre-Shared Key (-k) or Certificate (-c) configured.
+and is configured with a certificate and private key, the coap-client does not
+need to have a Pre-Shared Key (-k) or certificate (-c) configured.
 
 The URI's host part may be a DNS name or a literal IP address. Note that, for
 IPv6 address references, angle brackets are required (c.f. EXAMPLES).
@@ -39,7 +50,10 @@ IPv6 address references, angle brackets are required (c.f. EXAMPLES).
 OPTIONS - General
 -----------------
 *-a* addr::
-   The local address of the interface that has to be used.
+   The local address of the interface that has to be used. +
+   Note: Do not use this option if the interface is likely to be transient -
+   i.e. it is a tunnel interface that may come and go, as this is likely to
+   cause "No such device" errors on transmission.
 
 *-b* [num,]size::
    The block size to be used in GET/PUT/POST requests (value must be a
@@ -61,7 +75,7 @@ OPTIONS - General
    numbers or number ranges (debugging only).
 
 *-l* loss%::
-   Randomly failed to send datagams with the specified probability - 100%
+   Randomly failed to send datagrams with the specified probability - 100%
    all datagrams, 0% no datagrams (debugging only).
 
 *-m* method::
@@ -100,6 +114,9 @@ OPTIONS - General
    The verbosity level to use (default 3, maximum is 9). Above 7, there is
    increased verbosity in GnuTLS and OpenSSL logging.
 
+*-w*::
+   Append a newline to received data.
+
 *-A* type::
    Accepted media type. 'type' must be either a numeric value reflecting a
    valid CoAP content format or a string that specifies a registered format as
@@ -108,9 +125,20 @@ OPTIONS - General
 *-B* seconds::
    Break operation after waiting given seconds (default is 90).
 
+*-H* hoplimit::
+   Set the Hop Limit count to hoplimit for proxies. Must have a value between
+   1 and 255 inclusive. Default is '16'.
+
 *-K* interval::
    Send a ping after interval seconds of inactivity.
    If not specified (or 0), keep-alive is disabled (default).
+
+*-L* value::
+   Sum of one or more COAP_BLOCK_* flag values for different block handling
+   methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP).
+
+     COAP_BLOCK_USE_LIBCOAP  1
+     COAP_BLOCK_SINGLE_BODY  2
 
 *-N* ::
    Send NON-confirmable message. If option *-N* is not specified, a
@@ -118,14 +146,16 @@ OPTIONS - General
 
 *-O* num,text::
    Add option 'num' with contents of 'text' to the request. If the text begins
-   with 0x, then the hex text is converted to binary data.
+   with 0x, then the hex text (two [0-9a-f] per byte) is converted to binary
+   data.
 
-*-P* addr[:port]::
-   Address (and port) for proxy to use (automatically adds Proxy-Uri option
-   to request).
+*-P* scheme://addr[:port]::
+   Scheme, address and optional port to define how to connect to a CoAP proxy
+   (automatically adds Proxy-Uri option to request) to forward the request to.
+   Scheme is one of coap, coaps, coap+tcp and coaps+tcp.
 
 *-T* token::
-   Include the 'token' to the request.
+   Define the initial starting 'token' for the request.
 
 *-U* ::
    Never include Uri-Host or Uri-Port options.
@@ -134,33 +164,67 @@ OPTIONS - PSK
 -------------
 (If supported by underlying (D)TLS library)
 
+*-h* match_hint_file::
+   This is a file that contains one or more lines of received Identity Hints
+   to match to use different user identity and associated pre-shared key (PSK)
+   (comma separated) instead of the *-k key* and *-u user* options. E.g., per
+   line +
+   hint_to_match,use_user,with_key +
+   A line that starts with # is treated as a comment. +
+   Note: *-k key* and *-u user* still need to be defined for the default case in
+   case there is no match.
+
 *-k* key::
-   Pre-shared key for the specified user (*-u* option also required).
+   Pre-shared key for the specified user identity (*-u* option also required).
 
 *-u* user::
-   User identity for pre-shared key mode (*-k* option also required).
+   User identity to send for pre-shared key mode (*-k* option also required).
 
 OPTIONS - PKI
 -------------
 (If supported by underlying (D)TLS library)
 
+*Note:* If any one of *certfile*, *keyfile* or *cafile* is in PKCS11 URI
+naming format (pkcs11: prefix), then any remaining non PKCS11 URI file
+definitions have to be in DER, not PEM, format.  Otherwise all of
+*certfile*, *keyfile* or *cafile* are in PEM format.
+
 *-c* certfile::
-   Use the specified PEM file which contains the CERTIFICATE and PRIVATE
-   KEY information.
+   PEM file or PKCS11 URI for the certificate. The private key can also be in
+   the PEM file, or has the same PKCS11 URI. If not, the private key is defined
+   by *-j keyfile*.
+
+*-j* keyfile::
+   PEM file or PKCS11 URI for the private key for the certificate in *-c
+   certfile* if the parameter is different from certfile in *-c certfile*.
+
+*-n* ::
+  Disable remote peer certificate checking.
 
 *-C* cafile::
-  PEM file containing the CA Certificate that was used to sign the certfile
-  defined using *-c certfile*.
-  This will trigger the validation of the server certificate.
-  If certfile is self-signed (as defined by *-c certfile*), then you need to
-  have on the command line the same filename for both the certfile and cafile
-  (as in  *-c certfile -C certfile*) to trigger validation.
+PEM file or PKCS11 URI for the CA certificate that was used to sign the server
+  certfile. Ideally the client certificate should be signed by the same CA so
+  that mutual authentication can take place. The contents of cafile are added
+  to the trusted store of root CAs. Using the *-C* or *-R* options will trigger
+  the validation of the server certificate unless overridden by the *-n* option.
 
-*-R* root_cafile::
+*-J* pkcs11_pin::
+  The user pin to unlock access to the PKCS11 token.
+
+*-M* rpk_file::
+  Raw Public Key (RPK) PEM file or PKCS11 URI that contains both PUBLIC KEY
+  and PRIVATE KEY or just EC PRIVATE KEY. (GnuTLS and TinyDTLS(PEM) support
+  only).  *-C cafile* or *-R trust_casfile* are not required.
+
+*-R* trust_casfile::
   PEM file containing the set of trusted root CAs that are to be used to
-  validate the server certificate.  The *-C cafile* does not have to be in
-  this list and is "trusted" for the verification.
-  Alternatively, this can point to a directory containing a set of CA PEM files.
+  validate the server certificate. Alternatively, this can point to a
+  directory containing a set of CA PEM files. The *-C cafile* CA does not have
+  to be in this list and is trusted for the validation. Using
+  *-R trust_casfile* disables common CA mutual authentication which can only
+  be done by using *-C cafile*. Using the *-C* or *-R* options will will
+  trigger the validation of the server certificate unless overridden by the
+  *-n* option.
 
 EXAMPLES
 --------
@@ -217,7 +281,8 @@ EXIT STATUS
 BUGS
 -----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

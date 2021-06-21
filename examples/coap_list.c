@@ -4,6 +4,8 @@
  *
  * Copyright (C) 2010,2011,2015 Olaf Bergmann <bergmann@tzi.org>
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see README for terms of
  * use.
  */
@@ -25,16 +27,10 @@
  * of coap-client
  */
 
-/* #include "coap_config.h" */
-
 #include <stdio.h>
 #include <string.h>
 
-#include <coap2/libcoap.h>
-#include <coap2/debug.h>
-#include <coap2/mem.h>
-#include "coap_list.h"
-
+#include <coap3/coap.h>
 
 int
 coap_insert(coap_list_t **head, coap_list_t *node) {

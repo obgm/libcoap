@@ -10,9 +10,15 @@ coap_tls_library(3)
 
 NAME
 ----
-coap_tls_library, coap_dtls_is_supported, coap_tls_is_supported,
-coap_get_tls_library_version, coap_string_tls_version, coap_show_tls_version
-- Work with CoAP contexts
+coap_tls_library,
+coap_dtls_is_supported,
+coap_tls_is_supported,
+coap_tcp_is_supported,
+coap_get_tls_library_version,
+coap_string_tls_support,
+coap_string_tls_version,
+coap_show_tls_version
+- Work with CoAP TLS libraries
 
 SYNOPSIS
 --------
@@ -22,21 +28,27 @@ SYNOPSIS
 
 *int coap_tls_is_supported(void);*
 
+*int coap_tcp_is_supported(void);*
+
 *coap_tls_version_t *coap_get_tls_library_version(void);*
 
-*char *coap_string_tls_version(char *_buffer_, size_t _bufsize_);
+*char *coap_string_tls_support(char *_buffer_, size_t _bufsize_);*
+
+*char *coap_string_tls_version(char *_buffer_, size_t _bufsize_);*
 
 *void coap_show_tls_version(coap_log_t _level_);*
 
-Link with *-lcoap-@LIBCOAP_API_VERSION@*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
-*-lcoap-@LIBCOAP_API_VERSION@-openssl* or
-*-lcoap-@LIBCOAP_API_VERSION@-tinydtls* depending on your (D)TLS library
-type.
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
 
 DESCRIPTION
 -----------
 When the libcoap library was built, it will have been compiled using a
-specific TLS implementation type (e.g. OpenSSL, GnuTLS, TinyDTLS or noTLS).
+specific TLS implementation type (e.g. OpenSSL, GnuTLS, Mbed TLS, TinyDTLS or
+noTLS).
 When the libcoap library is linked into an application, it is possible that
 the application needs to dynamically determine whether DTLS or TLS is
 supported, what type of TLS implementation libcoap was compiled with, as well
@@ -68,8 +80,17 @@ enabled, otherwise 0;
 The *coap_tls_is_supported*() function returns 1 if support for TLS is
 enabled, otherwise 0;
 
+The *coap_tcp_is_supported*() function returns 1 if support for TCP is
+enabled, otherwise 0.
+
 The *coap_get_tls_library_version*() function returns the TLS implementation
 type and library version in a coap_tls_version_t* structure.
+
+The *coap_string_tls_support*() function is used to update the provided buffer
+with ascii readable information about what type of PSK, PKI etc. keys the
+current (D)TLS library supports.
+_buffer_ defines the buffer to provide the information and _bufsize_ is the
+size of _buffer_.
 
 The *coap_string_tls_version*() function is used to update the provided buffer
 with information about the current (D)TLS library that libcoap was built
@@ -85,16 +106,17 @@ for this information to be output using coap_log().
 [source, c]
 ----
 typedef enum coap_tls_library_t {
-  COAP_TLS_LIBRARY_NOTLS = 0, /**< No DTLS library */
-  COAP_TLS_LIBRARY_TINYDTLS,  /**< Using TinyDTLS library */
-  COAP_TLS_LIBRARY_OPENSSL,   /**< Using OpenSSL library */
-  COAP_TLS_LIBRARY_GNUTLS,    /**< Using GnuTLS library */
+  COAP_TLS_LIBRARY_NOTLS = 0, /* No DTLS library */
+  COAP_TLS_LIBRARY_TINYDTLS,  /* Using TinyDTLS library */
+  COAP_TLS_LIBRARY_OPENSSL,   /* Using OpenSSL library */
+  COAP_TLS_LIBRARY_GNUTLS,    /* Using GnuTLS library */
+  COAP_TLS_LIBRARY_MBEDTLS,   /* Using Mbed TLS library */
 } coap_tls_library_t;
 
 typedef struct coap_tls_version_t {
-  uint64_t version; /* (D)TLS runtime Library Version */
-  coap_tls_library_t type; /**< Library type. One of COAP_TLS_LIBRARY_* */
-  uint64_t built_version; /* (D)TLS Built against Library Version */
+  uint64_t version;        /* (D)TLS runtime Library Version */
+  coap_tls_library_t type; /* Library type. One of COAP_TLS_LIBRARY_* */
+  uint64_t built_version;  /* (D)TLS Built against Library Version */
 }
 ----
 
@@ -106,11 +128,14 @@ return 0 if there is no support, 1 if support is available.
 *coap_get_tls_library_version*() function returns the TLS implementation type
 and library version in a coap_tls_version_t* structure.
 
+The *coap_tcp_is_supported*() function returns 1 if support for TCP is
+enabled, otherwise 0.
+
 *coap_string_tls_version*() function returns a pointer to the provided buffer.
 
 SEE ALSO
 --------
-*coap_context*(3) and *coap_logging*(3).
+*coap_encryption*(3).
 
 FURTHER INFORMATION
 -------------------
@@ -120,7 +145,8 @@ information.
 BUGS
 ----
 Please report bugs on the mailing list for libcoap:
-libcoap-developers@lists.sourceforge.net
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
 
 AUTHORS
 -------

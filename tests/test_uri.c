@@ -2,14 +2,14 @@
  *
  * Copyright (C) 2012,2015 Olaf Bergmann <bergmann@tzi.org>
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
  */
 
-#include "coap_config.h"
+#include "test_common.h"
 #include "test_uri.h"
-
-#include <coap.h>
 
 #include <stdio.h>
 

@@ -4,6 +4,8 @@
  *
  * Copyright (C) 2010,2011,2015 Olaf Bergmann <bergmann@tzi.org>
  *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * This file is part of the CoAP library libcoap. Please see README for terms of
  * use.
  */
@@ -28,7 +30,7 @@
 #ifndef COAP_LIST_H_
 #define COAP_LIST_H_
 
-#include <coap2/utlist.h>
+#include <coap3/utlist.h>
 
 typedef struct coap_list_t {
   struct coap_list_t *next;
