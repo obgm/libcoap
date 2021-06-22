@@ -480,7 +480,7 @@ target_include_directories(
          $<INSTALL_INTERFACE:include/>
          $<$<AND:$<BOOL:${HAVE_LIBTINYDTLS}>,$<BOOL:${USE_VENDORED_TINYDTLS}>>:${CMAKE_BINARY_DIR}/include/tinydtls>
          $<$<BOOL:${HAVE_LIBGNUTLS}>:${GNUTLS_INCLUDE_DIR}>
-         $<$<BOOL:${HAVE_LIBGNUTLS}>:${MBEDTLS_INCLUDE_DIRS}>)
+         $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDTLS_INCLUDE_DIRS}>)
 target_link_libraries(
   ${COAP_LIBRARY_NAME}
   PUBLIC $<$<BOOL:${HAVE_OPENSSL}>:OpenSSL::SSL>
