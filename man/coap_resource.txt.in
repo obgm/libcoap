@@ -338,16 +338,15 @@ hnd_get(coap_resource_t *resource, coap_session_t *session,
 const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
   coap_str_const_t *get_uri_path;
+
   /* Remove (void) definition if variable is used */
   (void)resource;
   (void)session;
   (void)request;
   (void)query;
-  (void)response;
 
   /*
-   * request will be NULL if an Observe triggered request, so the uri_path,
-   * if needed, must be abstracted from the resource.
+   * Get the specific resouce being requested to determine what the response is
    * The uri_path string is a const pointer
    */
 
