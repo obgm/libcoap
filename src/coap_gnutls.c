@@ -1641,7 +1641,7 @@ post_client_hello_gnutls_pki(gnutls_session_t g_session)
        * New SNI request
        */
       coap_dtls_key_t *new_entry =
-        g_context->setup_data.validate_sni_call_back(name,
+        g_context->setup_data.validate_sni_call_back(name, c_session,
                                    g_context->setup_data.sni_call_back_arg);
       if (!new_entry) {
         G_ACTION(gnutls_alert_send(g_session, GNUTLS_AL_FATAL,

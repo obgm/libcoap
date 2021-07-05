@@ -2074,7 +2074,7 @@ tls_server_name_call_back(SSL *ssl,
       SSL_CTX *ctx;
       coap_dtls_pki_t sni_setup_data;
       coap_dtls_key_t *new_entry = setup_data->validate_sni_call_back(sni,
-                                               setup_data->sni_call_back_arg);
+                                       session, setup_data->sni_call_back_arg);
       if (!new_entry) {
         return SSL_TLSEXT_ERR_ALERT_FATAL;
       }
@@ -2387,7 +2387,7 @@ is_x509:
        * New SNI request
        */
       coap_dtls_key_t *new_entry = setup_data->validate_sni_call_back(sni,
-                                               setup_data->sni_call_back_arg);
+                                       session, setup_data->sni_call_back_arg);
       if (!new_entry) {
         *al = SSL_AD_UNRECOGNIZED_NAME;
         return SSL_CLIENT_HELLO_ERROR;

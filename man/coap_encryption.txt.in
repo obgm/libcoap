@@ -449,7 +449,7 @@ typedef struct coap_dtls_pki_t {
    * a certificate set back to the client so that the appropriate certificate
    * set can be used based on the requesting SNI.
    */
-  coap_dtls_sni_callback_t validate_sni_call_back;
+  coap_dtls_pki_sni_callback_t validate_sni_call_back;
   void *sni_call_back_arg;  /* Passed in to the SNI callback function */
 
   /** Additional Security callback handler that is invoked when libcoap has
@@ -609,13 +609,15 @@ typedef struct coap_dtls_key_t {
  * based on the requesting SNI.
  *
  * @param sni  The requested SNI
+ * @param coap_session  The CoAP session associated with the SNI
  * @param arg  The same as was passed into coap_context_set_pki()
  *             in setup_data->sni_call_back_arg
  *
  * @return new set of certificates to use, or NULL if SNI is to be rejected.
  */
 typedef coap_dtls_key_t *(*coap_dtls_sni_callback_t)(const char *sni,
-             void* arg);
+                                 coap_session_t *coap_session,
+                                 void* arg);
 ----
 
 *validate_sni_call_back* points to an application provided SNI callback
@@ -914,10 +916,13 @@ typedef struct valid_snis_t {
  */
 static coap_dtls_key_t *
 verify_pki_sni_callback(const char *sni,
+                        coap_session_t *session,
                         void *arg
 ) {
   valid_snis_t *valid_sni_list = (valid_snis_t *)arg;
   int i;
+  /* Remove (void) definition if variable is used */
+  (void)session;
 
   /* Check that the SNI is valid */
   for (i = 0; i < valid_sni_list->count; i++) {

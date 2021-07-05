@@ -1893,7 +1893,8 @@ update_pki_key(coap_dtls_key_t *dtls_key, const char *key_name,
 
 static coap_dtls_key_t *
 verify_pki_sni_callback(const char *sni,
-                    void *arg COAP_UNUSED
+                        coap_session_t *c_session COAP_UNUSED,
+                        void *arg COAP_UNUSED
 ) {
   static coap_dtls_key_t dtls_key;
 
@@ -1923,8 +1924,8 @@ verify_pki_sni_callback(const char *sni,
 
 static const coap_dtls_spsk_info_t *
 verify_psk_sni_callback(const char *sni,
-                    coap_session_t *c_session COAP_UNUSED,
-                    void *arg COAP_UNUSED
+                        coap_session_t *c_session COAP_UNUSED,
+                        void *arg COAP_UNUSED
 ) {
   static coap_dtls_spsk_info_t psk_info;
 

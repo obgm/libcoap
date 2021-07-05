@@ -256,11 +256,13 @@ typedef struct valid_snis_t {
  * Subject Name Identifier (SNI) callback verifier
  */
 static coap_dtls_key_t *
-verify_pki_sni_callback(const char *sni,
+verify_pki_sni_callback(const char *sni, coap_session_t *session,
                         void *arg
 ) {
   valid_snis_t *valid_sni_list = (valid_snis_t *)arg;
   size_t i;
+  /* Remove (void) definition if variable is used */
+  (void)session;
 
   /* Check that the SNI is valid */
   for (i = 0; i < valid_sni_list->count; i++) {

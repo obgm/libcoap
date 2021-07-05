@@ -765,7 +765,7 @@ pki_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
     pki_sni_entry *pki_sni_entry_list;
 
     new_entry =
-      m_context->setup_data.validate_sni_call_back(name,
+      m_context->setup_data.validate_sni_call_back(name, c_session,
                                  m_context->setup_data.sni_call_back_arg);
     if (!new_entry) {
       mbedtls_free(name);

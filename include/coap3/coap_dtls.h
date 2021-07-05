@@ -227,13 +227,16 @@ typedef struct coap_dtls_key_t {
  * based on the requesting SNI.
  *
  * @param sni  The requested SNI
+ * @param coap_session  The CoAP session associated with the SNI
  * @param arg  The same as was passed into coap_context_set_pki()
  *             in setup_data->sni_call_back_arg
  *
  * @return New set of certificates to use, or @c NULL if SNI is to be rejected.
  */
-typedef coap_dtls_key_t *(*coap_dtls_pki_sni_callback_t)(const char *sni,
-             void* arg);
+typedef coap_dtls_key_t *(*coap_dtls_pki_sni_callback_t)(
+                                 const char *sni,
+                                 coap_session_t *coap_session,
+                                 void *arg);
 
 
 #define COAP_DTLS_PKI_SETUP_VERSION 1 /**< Latest PKI setup version */
