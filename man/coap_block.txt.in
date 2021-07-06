@@ -50,22 +50,61 @@ or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
 
 DESCRIPTION
 -----------
-Regular setting up of a PDU and transmission is covered in coap_pdu_setup(3)
-where all the payload data can fit into a single packet.  This man page covers
+Regular setting up of a PDU and transmission is covered in *coap_pdu_setup*(3)
+where all the payload data can fit in a single packet.  This man page covers
 how to work with PDUs where the overall body of information may need to be
 split across several packets by using CoAP Block-Wise Transfers (RFC 7959).
 
 The block-wise transfers can be controlled by the application, or libcoap is
 instructed to do all the requests for the next blocks and only present the
-final body of the result to the application.  This man page focuses on getting
-libcoap to do all the work, not how to do it all in the application.
+final body of the result to the application.  In summary, the following three
+ways handle processing a body of data that has to be split across multiple
+payloads (blocks).
+
+1. Application does all the work +
+It is the responsibility of the application to analyze each block transmission
+at receipt and then generate the next request as per RFC 7959.  In this case,
+*coap_context_set_block_mode*() function MUST NOT be called to maintain
+backward compatability with applications that did the block handling within the
+application.
+
+2. Application sees individual blocks +
+By calling *coap_context_set_block_mode(context, COAP_BLOCK_USE_LIBCOAP)* and
+using the appropriate functions, the requests for the next block of data is
+handled automatically by the libcoap layer.  Each individual block of data is
+presented to the application for processing. +
+By calling *coap_get_data_large*(), the application can determine if this is
+the first block or not (using _offset_ value), whether the first block is all
+the data (_offset_ = 0, _length_ = _total_) and whether this is the last block
+(_offset_ + _length_ = _total_). It is the responsibility of the application to
+re-assemble the individual blocks into a single body of data. +
+*NOTE:* _total_ is only an approximation (it will be > _offset_ + _length_)
+until the final block is received. +
+If this is the request handler in a server, the server still needs to return a
+COAP_RESPONSE_CODE_CONTINUE 2.31 (Continue) response code if the received data
+is not for the final block, otherwise a COAP_RESPONSE_CODE_CREATED 2.01
+(Created) or COAP_RESPONSE_CODE_CHANGED 2.04 (Changed) should be returned.
+
+3. Application only sees all of the body +
+By calling *coap_context_set_block_mode(context,
+COAP_BLOCK_USE_LIBCOAP|COAP_BLOCK_SINGLE_BODY)* and using the appropriate
+functions, the requests for all the blocks of data is handled automatically by
+the libcoap layer.  Only the complete body of the data is presented to the
+application, unless there is an error. +
+*coap_get_data_large*() will only return the entire body of data (_offset_
+always 0, _length_ = _total_) and there is no need to re-assemble individual
+blocks into a large body of data. +
+In RAM constrained environments, option 2 may be the preferred method.
+
+This man page focuses on getting libcoap to do all the work, not how to do it
+all in the application.
 
 However, if the client supplies a BLOCK1 or BLOCK2 Option in the PDU where the
 block number is not 0, this is assumed to be a random access request and any
 other blocks will not be requested by libcoap even if instructed otherwise.
 
 The functions that are named *_large* are intended as replacements for the
-equivalent functions as described in coap_pdu_setup(3).
+equivalent functions as described in *coap_pdu_setup*(3).
 
 The *coap_context_set_block_mode*() function is used to set up the _context_
 level _block_mode_ block handling bits for supporting RFC7959. _block_mode_
@@ -87,12 +126,14 @@ be used instead of *coap_get_data*().  It may be appropriate not to set
 COAP_BLOCK_SINGLE_BODY if there are RAM limitations.
 
 *NOTE:* It is the responsibility of the receiving application to re-assemble
-the _data_ as appropriate (using *coap_block_build_body*()) if
+the _data_ as appropriate (e.g., using *coap_block_build_body*()) if
 COAP_BLOCK_SINGLE_BODY is not set.
 
 *NOTE:* If COAP_BLOCK_SINGLE_BODY is not set, then the CoAP server on receiving
-request data split over multiple blocks data must respond with 2.31 (more data
-still to come), 2.01 or 2.04 (all data successfully received) as appropriate.
+request data that is split over multiple data blocks must respond with
+COAP_RESPONSE_CODE_CONTINUE 2.31 (Continue) response code if the received data
+is not for the final block, otherwise a COAP_RESPONSE_CODE_CREATED 2.01
+(Created) or COAP_RESPONSE_CODE_CHANGED 2.04 (Changed) should be returned.
 
 If COAP_BLOCK_USE_LIBCOAP is set, then any PDUs presented to the application
 handlers will get the tokens set back to the initiating token so that requests
@@ -124,22 +165,32 @@ but supports the transmission of data that has a body size that is potentially
 larger than can be fitted into a single client request PDU. The specified
 payload _data_ of length _length_ is associated with the _session_ with the
 first block of data added to the PDU _pdu_ along with the appropriate CoAP
-options such as BLOCK1, and SIZE1 if the data does not fit into
+options such as BLOCK1, and SIZE1 if the data does not fit in
 a single PDU.  When the block has been acknowledged by the peer, the library
 will then send the next block of data until all the data has been transmitted.
-This function must only be called once per _pdu_.  When the final block is
-transmitted, the callback function _release_func_ (if not NULL) with the user
-defined parameter of _app_ptr_ is called so that the data can be released.
+This function must only be called once per _pdu_.  The _data_ passed to the
+function *coap_add_data_large_request*() must exist until all blocks have been
+transmitted. The callback function _release_func_ can be used to release
+storage that has been dynamically allocated to hold the transmit data. If not
+NULL, the callback function is called once the final block of _data_ has been
+transmitted. The user-defined parameter _app_ptr_ is the same value that was
+passed to *coap_add_data_large_request*().
 
 The *coap_add_data_large_response*() function is responsible for handling
 the server's large responses to requests. *coap_add_data_large_response*()
 should be used as a direct replacement for *coap_add_data*() if it is possible
-that the _length_ of _data_ will not fit into a single server's response pdu.
+that the _length_ of _data_ will not fit in a single server's response pdu.
 This function adds in the initial part of the payload _data_ of length
-_length_ to the PDU _pdu_. _release_func_ (if not NULL) and _app_ptr_ are
-used for releasing the data when the body transfer is complete.  It also adds
-in the appropriate CoAP options such as BLOCK2, SIZE2 and ETAG to handle
-Block-Wise transfer if the data does not fit into a single PDU.
+_length_ to the PDU _pdu_. The _data_ passed to the function
+*coap_add_data_large_response*() must exist until all blocks have been
+transmitted. The callback function _release_func_ can be used to release
+storage that has been dynamically allocated to hold the transmit data. If not
+NULL, the callback function is called once the final block of _data_ has been
+transmitted. The user-defined parameter _app_ptr_ is the same value that was
+passed to *coap_add_data_large_response*().
+
+It also adds in the appropriate CoAP options such as BLOCK2, SIZE2 and ETAG to
+handle block-wise transfer if the data does not fit in a single PDU.
 _resource_, _query_, _session_, _request_, and _response_ are the same
 parameters as in the called resource handler that invokes
 *coap_add_data_large_response*(). If _etag_ is 0, then a unique ETag value will
@@ -170,9 +221,9 @@ _body_data_ is re-allocated and returned.  If there is an error, _body_data_
 gets de-allocated.
 
 If _block_mode_ (as set by *coap_context_set_block_mode*()) includes
-COAP_BLOCK_SINGLE_BODY is used, then the response handler will only get called
+COAP_BLOCK_SINGLE_BODY, then the response handler will only get called
 once with the entire body containing the data from all of the individual
-blocks. If there is a change of data during the blocks receipt (e.g. ETag
+blocks. If there is a change of data during the blocks receipt (e.g., ETag
 value changes), then the entire set of data is re-requested and the partial
 body dropped.
 
@@ -326,8 +377,6 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   size_t len;
   time_t now;
 
-  /* Note that request may be NULL if triggered by an observe response */
-
   /* ... Additional analysis code for resource, request pdu etc.  ... */
 
   /* After analysis, generate a failure response and return if needed */
@@ -372,6 +421,8 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 int main(int argc, char *argv[]) {
   coap_context_t *context = NULL;
   coap_resource_t *r;
+  coap_resource_t *time_resource;
+  int not_exit = 1;
 
   (void)argc;
   (void)argv;
@@ -398,8 +449,20 @@ int main(int argc, char *argv[]) {
                 0);
 
   coap_add_resource(context, r);
+  time_resource = r;
 
   /* ... Loop waiting for incoming traffic ... */
+  while (!not_exit) {
+    coap_io_process(context, 1000);
+
+    /* Cause a notification to anyone Observing 'time' */
+    coap_resource_notify_observers(time_resource, NULL);
+  }
+
+  /* Clean up */
+
+  coap_free_context(context);
+  coap_cleanup();
 
 }
 ----
@@ -417,9 +480,6 @@ See
 "RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)"
 
 for further information.
-
-See https://www.iana.org/assignments/core-parameters/core-parameters.xhtml#option-numbers
-for the current set of defined CoAP Options.
 
 BUGS
 ----
