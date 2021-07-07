@@ -1113,6 +1113,12 @@ coap_io_prepare_io(coap_context_t *ctx,
           if (timeout == 0 || s_timeout < timeout)
             timeout = s_timeout;
         }
+        /* Check if any server large sending have timed out */
+        if (s->lg_xmit) {
+          s_timeout = coap_block_check_lg_xmit_timeouts(s, now);
+          if (timeout == 0 || s_timeout < timeout)
+            timeout = s_timeout;
+        }
 #ifndef COAP_EPOLL_SUPPORT
         if (s->sock.flags & (COAP_SOCKET_WANT_READ | COAP_SOCKET_WANT_WRITE)) {
           if (*num_sockets < max_sockets)

@@ -731,6 +731,31 @@ error:
 }
 
 coap_tick_t
+coap_block_check_lg_xmit_timeouts(coap_session_t *session, coap_tick_t now) {
+  coap_lg_xmit_t *p;
+  coap_lg_xmit_t *q;
+  coap_tick_t partial_timeout = 8 * COAP_TICKS_PER_SECOND;
+  coap_tick_t tim_rem = -1;
+
+  LL_FOREACH_SAFE(session->lg_xmit, p, q) {
+    if (p->last_used == 0) {
+      continue;
+    }
+    if (p->last_used + partial_timeout <= now) {
+      /* Expire this entry */
+      LL_DELETE(session->lg_xmit, p);
+      coap_block_delete_lg_xmit(session, p);
+    }
+    else {
+      /* Delay until the lg_xmit needs to expire */
+      if (tim_rem > p->last_used + partial_timeout - now)
+        tim_rem = p->last_used + partial_timeout - now;
+    }
+  }
+  return tim_rem;
+}
+
+coap_tick_t
 coap_block_check_lg_crcv_timeouts(coap_session_t *session, coap_tick_t now) {
   coap_lg_crcv_t *p;
   coap_lg_crcv_t *q;
@@ -940,7 +965,7 @@ add_block_send(uint32_t num, uint32_t *out_blocks,
  * If additional responses needed, then these are expicitly sent out and
  * 'response' is updated to be the last response to be sent.
  *
- * This is set up using coap_add_data_response_large()
+ * This is set up using coap_add_data_large_response()
  *
  * Server is sending a large data response to GET / observe (BLOCK2)
  *
@@ -1068,8 +1093,7 @@ coap_handle_request_send_block(coap_session_t *session,
         out_pdu = coap_pdu_duplicate(&p->pdu, session, pdu->token_length,
                                      pdu->token, &drop_options);
         if (!out_pdu) {
-          response->code = COAP_RESPONSE_CODE(500);
-          goto fail;
+          goto internal_issue;
         }
       }
       else {
@@ -1100,6 +1124,10 @@ coap_handle_request_send_block(coap_session_t *session,
                            block.szx),
                           buf)) {
         goto internal_issue;
+      }
+      if (!(p->offset + chunk < p->length)) {
+        /* Last block - keep in cache for 4 * ACK_TIMOUT */
+        coap_ticks(&p->last_used);
       }
       if (p->b.b2.maxage_expire) {
         coap_tick_t now;
@@ -1137,7 +1165,11 @@ coap_handle_request_send_block(coap_session_t *session,
     }
     goto skip_app_handler;
 
-fail:
+internal_issue:
+    response->code = COAP_RESPONSE_CODE(500);
+    error_phrase = coap_response_phrase(response->code);
+    coap_add_data(response, strlen(error_phrase),
+                  (const uint8_t *)error_phrase);
     /* Keep in cache for 4 * ACK_TIMOUT */
     coap_ticks(&p->last_used);
     goto skip_app_handler;
@@ -1146,13 +1178,6 @@ fail:
 
 skip_app_handler:
   return 1;
-
-internal_issue:
-  response->code = COAP_RESPONSE_CODE(500);
-  error_phrase = coap_response_phrase(response->code);
-  coap_add_data(response, strlen(error_phrase),
-                (const uint8_t *)error_phrase);
-  goto fail;
 }
 
 static int
@@ -1436,7 +1461,7 @@ skip_app_handler:
  *
  * Client receives large data acknowledgement from server (BLOCK1)
  *
- * This is set up using coap_add_data_request_large()
+ * This is set up using coap_add_data_large_request()
  *
  * Client is sending a large data request using GET etc.
  *
