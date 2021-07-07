@@ -68,6 +68,10 @@
                             GNUTLS_KEY_KEY_CERT_SIGN
 #endif /* GNUTLS_VERSION_NUMBER >= 0x030606 */
 
+#ifndef GNUTLS_CRT_RAW
+#define GNUTLS_CRT_RAW GNUTLS_CRT_RAWPK
+#endif /* GNUTLS_CRT_RAW */
+
 #ifdef _WIN32
 #define strcasecmp _stricmp
 #endif
