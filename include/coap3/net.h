@@ -14,6 +14,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <sys/select.h>
 #ifndef _WIN32
 #include <sys/time.h>
 #endif
