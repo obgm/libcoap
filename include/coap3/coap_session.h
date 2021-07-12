@@ -389,7 +389,8 @@ coap_session_t *coap_session_get_by_peer(const coap_context_t *ctx,
   * @defgroup cc Rate Control
   * The transmission parameters for CoAP rate control ("Congestion
   * Control" in stream-oriented protocols) are defined in
-  * https://tools.ietf.org/html/rfc7252#section-4.8
+  * https://tools.ietf.org/html/rfc7252#section-4.8 and
+  * https://datatracker.ietf.org/doc/html/draft-ietf-core-new-block#section-6.2
   * @{
   */
 
@@ -398,7 +399,7 @@ coap_session_t *coap_session_get_by_peer(const coap_context_t *ctx,
    * outstanding CON message.
    * RFC 7252, Section 4.8 Default value of ACK_TIMEOUT is 2
    *
-   * Configurable using coap_session_set_ack_timeout()
+   * Configurable using coap_session_[gs]et_ack_timeout()
    */
 #define COAP_DEFAULT_ACK_TIMEOUT ((coap_fixed_point_t){2,0})
 
@@ -407,135 +408,120 @@ coap_session_t *coap_session_get_by_peer(const coap_context_t *ctx,
    * is retransmitted to prevent synchronization effects.
    * RFC 7252, Section 4.8 Default value of ACK_RANDOM_FACTOR is 1.5
    *
-   * Configurable using coap_session_set_ack_random_factor()
+   * Configurable using coap_session_[gs]et_ack_random_factor()
    */
 #define COAP_DEFAULT_ACK_RANDOM_FACTOR ((coap_fixed_point_t){1,500})
 
   /**
-   * Number of message retransmissions before message sending is stopped
+   * Number of message retransmissions before message sending is stopped.
    * RFC 7252, Section 4.8 Default value of MAX_RETRANSMIT is 4
    *
-   * Configurable using coap_session_set_max_retransmit()
+   * Configurable using coap_session_[gs]et_max_retransmit()
    */
-#define COAP_DEFAULT_MAX_RETRANSMIT  4
+#define COAP_DEFAULT_MAX_RETRANSMIT  (4U)
 
   /**
    * The number of simultaneous outstanding interactions that a client
    * maintains to a given server.
    * RFC 7252, Section 4.8 Default value of NSTART is 1
-   */
-#define COAP_DEFAULT_NSTART 1
-
-  /**
-   * The maximum number of seconds before sending back a response to a
-   * multicast request.
-   * RFC 7252, Section 4.8 DEFAULT_LEISURE is 5.
-   */
-#ifndef COAP_DEFAULT_LEISURE
-#define COAP_DEFAULT_LEISURE (5U)
-#endif /* COAP_DEFAULT_LEISURE */
-
-  /**
-   * The MAX_TRANSMIT_SPAN definition for the session (s).
    *
-   * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_SPAN
-   *  ACK_TIMEOUT * ((2 ** (MAX_RETRANSMIT)) - 1) * ACK_RANDOM_FACTOR
+   * Configurable using coap_session_[gs]et_nstart()
    */
-#define COAP_MAX_TRANSMIT_SPAN(s) \
- ((s->ack_timeout.integer_part * 1000 + s->ack_timeout.fractional_part) * \
-  ((1 << (s->max_retransmit)) -1) * \
-  (s->ack_random_factor.integer_part * 1000 + \
-   s->ack_random_factor.fractional_part) \
-  / 1000000)
+#define COAP_DEFAULT_NSTART (1U)
 
   /**
-   * The MAX_TRANSMIT_WAIT definition for the session (s).
+   * The number of seconds to use as bounds for multicast traffic
+   * RFC 7252, Section 4.8 Default value of DEFAULT_LEISURE is 5.0
    *
-   * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_WAIT
-   *  ACK_TIMEOUT * ((2 ** (MAX_RETRANSMIT + 1)) - 1) * ACK_RANDOM_FACTOR
+   * Configurable using coap_session_[gs]et_default_leisure()
    */
-#define COAP_MAX_TRANSMIT_WAIT(s) \
- ((s->ack_timeout.integer_part * 1000 + s->ack_timeout.fractional_part) * \
-  ((1 << (s->max_retransmit + 1)) -1) * \
-  (s->ack_random_factor.integer_part * 1000 + \
-   s->ack_random_factor.fractional_part) \
-  / 1000000)
+#define COAP_DEFAULT_DEFAULT_LEISURE ((coap_fixed_point_t){5,0})
+
+  /**
+   * The number of bytes/second allowed when there is no response
+   * RFC 7252, Section 4.8 Default value of PROBING_RATE is 1
+   *
+   * Configurable using coap_session_[gs]et_probing_rate()
+   */
+#define COAP_DEFAULT_PROBING_RATE (1U)
+
+  /**
+   * Number of Q-Block1 or Q-Block2 payloads that can be sent in a burst
+   * before a delay has to kick in.
+   * draft-ietf-core-new-block, Section 6.2 Default value of MAX_PAYLOAD is 10
+   *
+   * Configurable using coap_session_[gs]et_max_payloads()
+   */
+#define COAP_DEFAULT_MAX_PAYLOADS (10U)
+
+  /**
+   * The number of times for requests for re-transmission of missing Q-Block1
+   * when no response has been received.
+   * draft-ietf-core-new-block, Section 6.2 Default value of NON_MAX_RETRANSMIT
+   * is 4
+   *
+   * Configurable using coap_session_[gs]et_non_max_retransmit()
+   */
+#define COAP_DEFAULT_NON_MAX_RETRANSMIT (4U)
+
+  /**
+   * The delay (+ ACK_RANDOM_FACTOR) to introduce once NON MAX_PAYLOADS
+   * Q-Block1 or Q-Block2 have been sent to reduce congestion control.
+   * draft-ietf-core-new-block, Section 6.2 Default value of NON_TIMEOUT is 2.
+   *
+   * Configurable using coap_session_[gs]et_non_timeout()
+   */
+#define COAP_DEFAULT_NON_TIMEOUT ((coap_fixed_point_t){2,0})
+
+  /**
+   * The time to wait for any missing Q-Block1 or Q-Block2 packets before
+   * requesting re-transmission of missing packets.
+   * draft-ietf-core-new-block, Section 6.2 Default value of
+   * NON_RECEIVE_TIMEOUT is 4.
+   *
+   * Configurable using coap_session_[gs]et_non_receive_timeout()
+   */
+#define COAP_DEFAULT_NON_RECEIVE_TIMEOUT ((coap_fixed_point_t){4,0})
 
   /**
    * The MAX_LATENCY definition.
    * RFC 7252, Section 4.8.2 MAX_LATENCY is 100.
    */
-#define COAP_MAX_LATENCY 100
-
-  /**
-   * The PROCESSING_DELAY definition for the session (s).
-   *
-   * RFC 7252, Section 4.8.2 Calculation of PROCESSING_DELAY
-   *  PROCESSING_DELAY set to ACK_TIMEOUT
-   */
-#define COAP_PROCESSING_DELAY(s) \
- ((s->ack_timeout.integer_part * 1000 + s->ack_timeout.fractional_part + 500) \
-  / 1000)
-
-  /**
-   * The MAX_RTT definition for the session (s).
-   *
-   * RFC 7252, Section 4.8.2 Calculation of MAX_RTT
-   *  (2 * MAX_LATENCY) + PROCESSING_DELAY
-   */
-#define COAP_MAX_RTT(s) \
- ((2 * COAP_MAX_LATENCY) + COAP_PROCESSING_DELAY(s))
-
-  /**
-   * The EXCHANGE_LIFETIME definition for the session (s).
-   *
-   * RFC 7252, Section 4.8.2 Calculation of EXCHANGE_LIFETIME
-   *  MAX_TRANSMIT_SPAN + (2 * MAX_LATENCY) + PROCESSING_DELAY
-   */
-#define COAP_EXCHANGE_LIFETIME(s) \
- (COAP_MAX_TRANSMIT_SPAN(s) + (2 * COAP_MAX_LATENCY) + COAP_PROCESSING_DELAY(s))
-
-  /**
-   * The NON_LIFETIME definition for the session (s).
-   *
-   * RFC 7252, Section 4.8.2 Calculation of NON_LIFETIME
-   *  MAX_TRANSMIT_SPAN + MAX_LATENCY
-   */
-#define COAP_NON_LIFETIME(s) \
- (COAP_MAX_TRANSMIT_SPAN(s) + COAP_MAX_LATENCY)
-
-      /** @} */
-
-/**
-* Set the CoAP maximum retransmit count before failure
-*
-* Number of message retransmissions before message sending is stopped
-*
-* @param session The CoAP session.
-* @param value The value to set to. The default is 4 and should not normally
-*              get changed.
-*/
-void coap_session_set_max_retransmit(coap_session_t *session,
-                                     unsigned int value);
+#define COAP_DEFAULT_MAX_LATENCY (100U)
 
 /**
 * Set the CoAP initial ack response timeout before the next re-transmit
 *
 * Number of seconds when to expect an ACK or a response to an
 * outstanding CON message.
+* RFC7252 ACK_TIMEOUT
 *
 * @param session The CoAP session.
-* @param value The value to set to. The default is 2 and should not normally
+* @param value The value to set to. The default is 2.0 and should not normally
 *              get changed.
 */
 void coap_session_set_ack_timeout(coap_session_t *session,
                                   coap_fixed_point_t value);
 
 /**
+* Get the CoAP initial ack response timeout before the next re-transmit
+*
+* Number of seconds when to expect an ACK or a response to an
+* outstanding CON message.
+* RFC7252 ACK_TIMEOUT
+*
+* @param session The CoAP session.
+*
+* @return Current ack response timeout value
+*/
+coap_fixed_point_t coap_session_get_ack_timeout(const coap_session_t *session);
+
+/**
 * Set the CoAP ack randomize factor
 *
 * A factor that is used to randomize the wait time before a message
 * is retransmitted to prevent synchronization effects.
+* RFC7252 ACK_RANDOM_FACTOR
 *
 * @param session The CoAP session.
 * @param value The value to set to. The default is 1.5 and should not normally
@@ -545,33 +531,11 @@ void coap_session_set_ack_random_factor(coap_session_t *session,
                                         coap_fixed_point_t value);
 
 /**
-* Get the CoAP maximum retransmit before failure
-*
-* Number of message retransmissions before message sending is stopped
-*
-* @param session The CoAP session.
-*
-* @return Current maximum retransmit value
-*/
-unsigned int coap_session_get_max_retransmit(const coap_session_t *session);
-
-/**
-* Get the CoAP initial ack response timeout before the next re-transmit
-*
-* Number of seconds when to expect an ACK or a response to an
-* outstanding CON message.
-*
-* @param session The CoAP session.
-*
-* @return Current ack response timeout value
-*/
-coap_fixed_point_t coap_session_get_ack_timeout(const coap_session_t *session);
-
-/**
 * Get the CoAP ack randomize factor
 *
 * A factor that is used to randomize the wait time before a message
 * is retransmitted to prevent synchronization effects.
+* RFC7252 ACK_RANDOM_FACTOR
 *
 * @param session The CoAP session.
 *
@@ -580,6 +544,194 @@ coap_fixed_point_t coap_session_get_ack_timeout(const coap_session_t *session);
 coap_fixed_point_t coap_session_get_ack_random_factor(
                                                const coap_session_t *session);
 
+/**
+* Set the CoAP maximum retransmit count before failure
+*
+* Number of message retransmissions before message sending is stopped
+* RFC7252 MAX_RETRANSMIT
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 4 and should not normally
+*              get changed.
+*/
+void coap_session_set_max_retransmit(coap_session_t *session,
+                                     uint16_t value);
+
+/**
+* Get the CoAP maximum retransmit before failure
+*
+* Number of message retransmissions before message sending is stopped
+* RFC7252 MAX_RETRANSMIT
+*
+* @param session The CoAP session.
+*
+* @return Current maximum retransmit value
+*/
+uint16_t coap_session_get_max_retransmit(const coap_session_t *session);
+
+/**
+* Set the CoAP maximum concurrent transmission count of Confirmable messages
+* RFC7252 NSTART
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 1 and should not normally
+*              get changed.
+*/
+void coap_session_set_nstart(coap_session_t *session,
+                             uint16_t value);
+
+/**
+* Get the CoAP maximum concurrent transmission count of Confirmable messages
+* RFC7252 NSTART
+*
+* @param session The CoAP session.
+*
+* @return Current nstart value
+*/
+uint16_t coap_session_get_nstart(const coap_session_t *session);
+
+/**
+* Set the CoAP default leisure time (for multicast)
+* RFC7252 DEFAULT_LEISURE
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 5.0 and should not normally
+*              get changed.
+*/
+void coap_session_set_default_leisure(coap_session_t *session,
+                                      coap_fixed_point_t value);
+
+/**
+* Get the CoAP default leisure time
+* RFC7252 DEFAULT_LEISURE
+*
+* @param session The CoAP session.
+*
+* @return Current default_leisure value
+*/
+coap_fixed_point_t coap_session_get_default_leisure(
+                                               const coap_session_t *session);
+
+/**
+* Set the CoAP probing rate when there is no response
+* RFC7252 PROBING_RATE
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 1 and should not normally
+*              get changed.
+*/
+void coap_session_set_probing_rate(coap_session_t *session, uint32_t value);
+
+/**
+* Get the CoAP probing rate when there is no response
+* RFC7252 PROBING_RATE
+*
+* @param session The CoAP session.
+*
+* @return Current probing_rate value
+*/
+uint32_t coap_session_get_probing_rate(const coap_session_t *session);
+
+/**
+* Set the CoAP maximum payloads count of Q-Block1 or Q-Block2 before delay
+* is introduced
+* draft-ietf-core-new-block MAX_PAYLOADS
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 10 and should not normally
+*              get changed.
+*/
+void coap_session_set_max_payloads(coap_session_t *session,
+                                     uint16_t value);
+
+/**
+* Get the CoAP maximum payloads count of Q-Block1 or Q-Block2 before delay
+* is introduced
+* draft-ietf-core-new-block MAX_PAYLOADS
+*
+* @param session The CoAP session.
+*
+* @return Current maximum payloads value
+*/
+uint16_t coap_session_get_max_payloads(const coap_session_t *session);
+
+/**
+* Set the CoAP NON maximum retransmit count of missing Q-Block1 or Q-Block2
+* requested before there is any response
+* draft-ietf-core-new-block NON_MAX_RETRANSMIT
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 4 and should not normally
+*              get changed.
+*/
+void coap_session_set_non_max_retransmit(coap_session_t *session,
+                                     uint16_t value);
+
+/**
+* Get the CoAP NON maximum retransmit count of missing Q-Block1 or Q-Block2
+* requested before there is any response
+* draft-ietf-core-new-block NON_MAX_RETRANSMIT
+*
+* @param session The CoAP session.
+*
+* @return Current maximum NON max retransmit value
+*/
+uint16_t coap_session_get_non_max_retransmit(const coap_session_t *session);
+
+/**
+* Set the CoAP non timeout delay timeout
+*
+* Number of seconds to delay (+ ACK_RANDOM_FACTOR) before sending off the next
+* set of NON MAX_PAYLOADS
+* draft-ietf-core-new-block NON_TIMEOUT
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 2.0 and should not normally
+*              get changed.
+*/
+void coap_session_set_non_timeout(coap_session_t *session,
+                                  coap_fixed_point_t value);
+
+/**
+* Get the CoAP MAX_PAYLOADS limit delay timeout
+*
+* Number of seconds to delay (+ ACK_RANDOM_FACTOR) before sending off the next
+* set of NON MAX_PAYLOADS
+* draft-ietf-core-new-block NON_TIMEOUT
+*
+* @param session The CoAP session.
+*
+* @return NON MAX_PAYLOADS delay
+*/
+coap_fixed_point_t coap_session_get_non_timeout(const coap_session_t *session);
+
+/**
+* Set the CoAP non receive timeout delay timeout
+*
+* Number of seconds to delay before requesting missing packets
+* draft-ietf-core-new-block NON_RECEIVE_TIMEOUT
+*
+* @param session The CoAP session.
+* @param value The value to set to. The default is 4.0 and should not normally
+*              get changed.  Must be 1 sec greater than NON_TIMEOUT_RANDOM
+*/
+void coap_session_set_non_receive_timeout(coap_session_t *session,
+                                          coap_fixed_point_t value);
+
+/**
+* Get the CoAP non receive timeout delay timeout
+*
+* Number of seconds to delay before requesting missing packets
+* draft-ietf-core-new-block NON_RECEIVE_TIMEOUT
+*
+* @param session The CoAP session.
+*
+* @return NON_RECEIVE_TIMEOUT delay
+*/
+coap_fixed_point_t coap_session_get_non_receive_timeout(
+                                               const coap_session_t *session);
+
+      /** @} */
 /**
  * Send a ping message for the session.
  * @param session The CoAP session.

@@ -21,49 +21,289 @@
 #endif /* COAP_EPOLL_SUPPORT */
 #include <errno.h>
 
-void
-coap_session_set_max_retransmit (coap_session_t *session, unsigned int value) {
-  if (value > 0)
-    session->max_retransmit = value;
-  coap_log(LOG_DEBUG, "***%s: session max_retransmit set to %d\n",
-           coap_session_str(session), session->max_retransmit);
-  return;
-}
+coap_fixed_point_t
+coap_multi_fixed_fixed(coap_fixed_point_t fp1, coap_fixed_point_t fp2) {
+  coap_fixed_point_t res;
+  uint32_t fr = fp1.fractional_part * fp2.fractional_part;
 
-void
-coap_session_set_ack_timeout (coap_session_t *session, coap_fixed_point_t value) {
-  if (value.integer_part > 0 && value.fractional_part < 1000)
-    session->ack_timeout = value;
-  coap_log(LOG_DEBUG, "***%s: session ack_timeout set to %d.%03d\n",
-           coap_session_str(session), session->ack_timeout.integer_part,
-           session->ack_timeout.fractional_part);
-  return;
-}
-
-void
-coap_session_set_ack_random_factor (coap_session_t *session,
-                                    coap_fixed_point_t value) {
-  if (value.integer_part > 0 && value.fractional_part < 1000)
-    session->ack_random_factor = value;
-  coap_log(LOG_DEBUG, "***%s: session ack_random_factor set to %d.%03d\n",
-           coap_session_str(session), session->ack_random_factor.integer_part,
-           session->ack_random_factor.fractional_part);
-  return;
-}
-
-unsigned int
-coap_session_get_max_retransmit (const coap_session_t *session) {
-  return session->max_retransmit;
+  res.integer_part = fp1.integer_part * fp2.integer_part + fr/1000;
+  res.fractional_part = fr % 1000;
+  return res;
 }
 
 coap_fixed_point_t
-coap_session_get_ack_timeout (const coap_session_t *session) {
+coap_multi_fixed_uint(coap_fixed_point_t fp1, uint32_t u2) {
+  coap_fixed_point_t res;
+  uint32_t fr = fp1.fractional_part * u2;
+
+  res.integer_part = fp1.integer_part * u2 + fr/1000;
+  res.fractional_part = fr % 1000;
+  return res;
+}
+
+coap_fixed_point_t
+coap_add_fixed_fixed(coap_fixed_point_t fp1, coap_fixed_point_t fp2) {
+  coap_fixed_point_t res;
+  uint32_t fr = fp1.fractional_part + fp2.fractional_part;
+
+  res.integer_part = fp1.integer_part + fp2.integer_part + fr/1000;
+  res.fractional_part = fr % 1000;
+  return res;
+}
+
+coap_fixed_point_t
+coap_add_fixed_uint(coap_fixed_point_t fp1, uint32_t u2) {
+  coap_fixed_point_t res = fp1;
+
+  res.integer_part += u2;
+  return res;
+}
+
+coap_fixed_point_t
+coap_sub_fixed_uint(coap_fixed_point_t fp1, uint32_t u2) {
+  coap_fixed_point_t res = fp1;
+
+  res.integer_part -= u2;
+  return res;
+}
+
+coap_fixed_point_t
+coap_div_fixed_uint(coap_fixed_point_t fp1, uint32_t u2) {
+  coap_fixed_point_t res;
+  uint32_t num = (fp1.integer_part * 1000 + fp1.fractional_part) / u2;
+
+  res.integer_part = num / 1000;
+  res.fractional_part = num % 1000;
+  return res;
+}
+
+coap_fixed_point_t
+coap_get_non_timeout_random(coap_session_t *session) {
+  coap_fixed_point_t res;
+  uint8_t ran;
+
+  coap_prng(&ran, sizeof(ran));
+  res = coap_sub_fixed_uint(COAP_ACK_RANDOM_FACTOR(session), 1);
+  res = coap_multi_fixed_uint(res, ran);
+  res = coap_div_fixed_uint(res, 0xff);
+  res = coap_add_fixed_fixed(COAP_NON_TIMEOUT(session), res);
+  return res;
+}
+
+coap_tick_t
+coap_get_non_timeout_random_ticks(coap_session_t *session) {
+  coap_fixed_point_t res = coap_get_non_timeout_random(session);
+  coap_tick_t ticks = (res.integer_part * COAP_TICKS_PER_SECOND +
+                       res.fractional_part * COAP_TICKS_PER_SECOND / 1000);
+
+  return ticks;
+}
+
+/*
+ * Save away derived Congestion Control parameters for speed of access.
+ * They will get updated whenever a component variable is updated.
+ */
+
+/*
+ * NON_PROBING_WAIT = NON_TIMEOUT * ((2 ** NON_MAX_RETRANSMIT) - 1) *
+ * ACK_RANDOM_FACTOR + (2 * MAX_LATENCY) + NON_TIMEOUT_RANDOM
+ *
+ * Do not include NON_TIMEOUT_RANDOM as that changes
+ */
+static void
+coap_session_fix_non_probing_wait_base(coap_session_t *s)
+{
+  coap_fixed_point_t res;
+
+  res = coap_multi_fixed_uint(COAP_NON_TIMEOUT(s),
+                               ((1 << (COAP_NON_MAX_RETRANSMIT(s) + 1)) -1));
+  res = coap_multi_fixed_fixed(res, COAP_ACK_RANDOM_FACTOR(s));
+  res = coap_add_fixed_uint(res, 2 * COAP_DEFAULT_MAX_LATENCY);
+  COAP_NON_PROBING_WAIT_BASE(s) = res;
+}
+
+/*
+ * NON_PARTIAL_TIMEOUT = NON_TIMEOUT * ((2 ** NON_MAX_RETRANSMIT) - 1) *
+ * ACK_RANDOM_FACTOR + (2 * MAX_LATENCY) + NON_TIMEOUT
+ */
+static void
+coap_session_fix_non_partial_timeout(coap_session_t *s)
+{
+  coap_fixed_point_t res;
+
+  res = coap_multi_fixed_uint(COAP_NON_TIMEOUT(s),
+                               ((1 << (COAP_NON_MAX_RETRANSMIT(s) + 1)) -1));
+  res = coap_multi_fixed_fixed(res, COAP_ACK_RANDOM_FACTOR(s));
+  res = coap_add_fixed_uint(res, 2 * COAP_DEFAULT_MAX_LATENCY);
+  res = coap_add_fixed_fixed(res, COAP_NON_TIMEOUT(s));
+  COAP_NON_PARTIAL_TIMEOUT(s) = res;
+}
+
+void
+coap_session_set_ack_timeout(coap_session_t *session, coap_fixed_point_t value) {
+  if (value.integer_part > 0 && value.fractional_part < 1000) {
+    session->ack_timeout = value;
+    coap_log(LOG_DEBUG, "***%s: session ack_timeout set to %u.%03u\n",
+           coap_session_str(session), session->ack_timeout.integer_part,
+           session->ack_timeout.fractional_part);
+  }
+  return;
+}
+
+void
+coap_session_set_ack_random_factor(coap_session_t *session,
+                                   coap_fixed_point_t value) {
+  if (value.integer_part > 0 && value.fractional_part < 1000) {
+    session->ack_random_factor = value;
+    coap_log(LOG_DEBUG, "***%s: session ack_random_factor set to %u.%03u\n",
+           coap_session_str(session), session->ack_random_factor.integer_part,
+           session->ack_random_factor.fractional_part);
+    coap_session_fix_non_probing_wait_base(session);
+    coap_session_fix_non_partial_timeout(session);
+  }
+  return;
+}
+
+void
+coap_session_set_max_retransmit(coap_session_t *session, uint16_t value) {
+  if (value > 0) {
+    session->max_retransmit = value;
+    coap_log(LOG_DEBUG, "***%s: session max_retransmit set to %u\n",
+           coap_session_str(session), session->max_retransmit);
+  }
+  return;
+}
+
+void
+coap_session_set_nstart(coap_session_t *session, uint16_t value) {
+  if (value > 0) {
+    session->nstart = value;
+    coap_log(LOG_DEBUG, "***%s: session nstart set to %u\n",
+           coap_session_str(session), session->nstart);
+  }
+  return;
+}
+
+void
+coap_session_set_default_leisure(coap_session_t *session,
+                                 coap_fixed_point_t value) {
+  if (value.integer_part > 0 && value.fractional_part < 1000) {
+    session->default_leisure = value;
+    coap_log(LOG_DEBUG, "***%s: session default_leisure set to %u.%03u\n",
+           coap_session_str(session), session->default_leisure.integer_part,
+           session->default_leisure.fractional_part);
+  }
+  return;
+}
+
+void
+coap_session_set_probing_rate(coap_session_t *session, uint32_t value) {
+  if (value > 0) {
+    session->probing_rate = value;
+    coap_log(LOG_DEBUG, "***%s: session probing_rate set to %u\n",
+           coap_session_str(session), session->probing_rate);
+  }
+  return;
+}
+
+void
+coap_session_set_max_payloads(coap_session_t *session, uint16_t value) {
+  if (value > 0) {
+    session->max_payloads = value;
+    coap_log(LOG_DEBUG, "***%s: session max_payloads set to %u\n",
+           coap_session_str(session), session->max_payloads);
+    coap_session_fix_non_probing_wait_base(session);
+    coap_session_fix_non_partial_timeout(session);
+  }
+  return;
+}
+
+void
+coap_session_set_non_max_retransmit(coap_session_t *session, uint16_t value) {
+  if (value > 0) {
+    session->non_max_retransmit = value;
+    coap_log(LOG_DEBUG, "***%s: session non_max_retransmit set to %u\n",
+           coap_session_str(session), session->non_max_retransmit);
+    coap_session_fix_non_probing_wait_base(session);
+    coap_session_fix_non_partial_timeout(session);
+  }
+  return;
+}
+
+void
+coap_session_set_non_timeout(coap_session_t *session,
+                             coap_fixed_point_t value) {
+  if (value.integer_part > 0 && value.fractional_part < 1000) {
+    session->non_timeout = value;
+    coap_log(LOG_DEBUG, "***%s: session non_timeout set to %u.%03u\n",
+           coap_session_str(session), session->non_timeout.integer_part,
+           session->non_timeout.fractional_part);
+    coap_session_fix_non_probing_wait_base(session);
+    coap_session_fix_non_partial_timeout(session);
+  }
+  return;
+}
+
+void
+coap_session_set_non_receive_timeout(coap_session_t *session,
+                                     coap_fixed_point_t value) {
+  if (value.integer_part > 0 && value.fractional_part < 1000)
+    session->non_receive_timeout = value;
+  coap_log(LOG_DEBUG, "***%s: session non_receive_timeout set to %u.%03u\n",
+           coap_session_str(session),
+           session->non_receive_timeout.integer_part,
+           session->non_receive_timeout.fractional_part);
+  return;
+}
+
+coap_fixed_point_t
+coap_session_get_ack_timeout(const coap_session_t *session) {
   return session->ack_timeout;
 }
 
 coap_fixed_point_t
-coap_session_get_ack_random_factor (const coap_session_t *session) {
+coap_session_get_ack_random_factor(const coap_session_t *session) {
   return session->ack_random_factor;
+}
+
+uint16_t
+coap_session_get_max_retransmit(const coap_session_t *session) {
+  return session->max_retransmit;
+}
+
+uint16_t
+coap_session_get_nstart(const coap_session_t *session) {
+  return session->nstart;
+}
+
+coap_fixed_point_t
+coap_session_get_default_leisure(const coap_session_t *session) {
+  return session->default_leisure;
+}
+
+uint32_t
+coap_session_get_probing_rate(const coap_session_t *session) {
+  return session->probing_rate;
+}
+
+uint16_t
+coap_session_get_max_payloads(const coap_session_t *session) {
+  return session->max_payloads;
+}
+
+uint16_t
+coap_session_get_non_max_retransmit(const coap_session_t *session) {
+  return session->non_max_retransmit;
+}
+
+coap_fixed_point_t
+coap_session_get_non_timeout(const coap_session_t *session) {
+  return session->non_timeout;
+}
+
+coap_fixed_point_t
+coap_session_get_non_receive_timeout(const coap_session_t *session) {
+  return session->non_receive_timeout;
 }
 
 coap_session_t *
@@ -133,6 +373,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   session->context = context;
   session->endpoint = endpoint;
   session->block_mode = context->block_mode;
+
   if (endpoint)
     session->mtu = endpoint->default_mtu;
   else
@@ -144,9 +385,18 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
       coap_log(LOG_ERR, "DTLS overhead exceeds MTU\n");
     }
   }
-  session->max_retransmit = COAP_DEFAULT_MAX_RETRANSMIT;
   session->ack_timeout = COAP_DEFAULT_ACK_TIMEOUT;
   session->ack_random_factor = COAP_DEFAULT_ACK_RANDOM_FACTOR;
+  session->max_retransmit = COAP_DEFAULT_MAX_RETRANSMIT;
+  session->nstart = COAP_DEFAULT_NSTART;
+  session->default_leisure = COAP_DEFAULT_DEFAULT_LEISURE;
+  session->probing_rate = COAP_DEFAULT_PROBING_RATE;
+  session->max_payloads = COAP_DEFAULT_MAX_PAYLOADS;
+  session->non_max_retransmit = COAP_DEFAULT_NON_MAX_RETRANSMIT;
+  session->non_timeout = COAP_DEFAULT_NON_TIMEOUT;
+  session->non_receive_timeout = COAP_DEFAULT_NON_RECEIVE_TIMEOUT;
+  coap_session_fix_non_probing_wait_base(session);
+  coap_session_fix_non_partial_timeout(session);
   session->dtls_event = -1;
   session->last_ping_mid = COAP_INVALID_MID;
 
@@ -186,6 +436,8 @@ void coap_session_mfree(coap_session_t *session) {
 
   if (session->partial_pdu)
     coap_delete_pdu(session->partial_pdu);
+  if (session->saved_pdu)
+    coap_delete_pdu(session->saved_pdu);
   if (session->proto == COAP_PROTO_DTLS)
     coap_dtls_free_session(session);
 #if !COAP_DISABLE_TCP
@@ -419,7 +671,7 @@ void coap_session_connected(coap_session_t *session) {
     ssize_t bytes_written;
     coap_queue_t *q = session->delayqueue;
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
-      if (session->con_active >= COAP_DEFAULT_NSTART)
+      if (session->con_active >= COAP_NSTART(session))
         break;
       session->con_active++;
     }

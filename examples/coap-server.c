@@ -1181,6 +1181,8 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
         break;
       case COAP_OPTION_BLOCK1:
       case COAP_OPTION_BLOCK2:
+      case COAP_OPTION_Q_BLOCK1:
+      case COAP_OPTION_Q_BLOCK2:
         /* These are not passed on */
         break;
       default:
@@ -1684,6 +1686,7 @@ proxy_message_handler(coap_session_t *session,
                                     coap_opt_length (option));
       break;
     case COAP_OPTION_BLOCK2:
+    case COAP_OPTION_Q_BLOCK2:
     case COAP_OPTION_SIZE2:
       break;
     default:
@@ -1772,14 +1775,14 @@ init_resources(coap_context_t *ctx) {
   }
 
   if (coap_async_is_supported()) {
-    r = coap_resource_init(coap_make_str_const("async"), 0);
+    r = coap_resource_init(coap_make_str_const("async"), resource_flags);
     coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
 
     coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
     coap_add_resource(ctx, r);
   }
 
-  r = coap_resource_init(coap_make_str_const("example_data"), 0);
+  r = coap_resource_init(coap_make_str_const("example_data"), resource_flags);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_example_data);
   coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_example_data);
   coap_resource_set_get_observable(r, 1);

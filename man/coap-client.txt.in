@@ -139,6 +139,7 @@ OPTIONS - General
 
      COAP_BLOCK_USE_LIBCOAP  1
      COAP_BLOCK_SINGLE_BODY  2
+     COAP_BLOCK_TRY_Q_BLOCK  4
 
 *-N* ::
    Send NON-confirmable message. If option *-N* is not specified, a

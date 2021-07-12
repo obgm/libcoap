@@ -129,6 +129,14 @@ typedef enum coap_request_t {
 #define COAP_OPTION_SIZE1          60 /* __N_E_U, uint,      0-4 B, RFC7252 */
 #define COAP_OPTION_NORESPONSE    258 /* _U-_E_U, uint,      0-1 B, RFC7967 */
 
+/* selected option types from draft-ietf-core-echo-request-tag */
+#define COAP_OPTION_ECHO          252 /* _N__E_U, opaque,   0-40 B, ?? */
+#define COAP_OPTION_RTAG          292 /* ___RE_U, opaque,    0-8 B, ?? */
+
+/* selected option types from draft-ietf-core-new-block */
+#define COAP_OPTION_Q_BLOCK1       19 /* CU__E_U, uint,      0-3 B, ?? */
+#define COAP_OPTION_Q_BLOCK2       31 /* CU_RE_U, uint,      0-3 B, ?? */
+
 #define COAP_MAX_OPT            65535 /**< the highest option number we know */
 
 /* CoAP result codes (HTTP-Code / 100 * 40 + HTTP-Code % 100) */
@@ -176,11 +184,14 @@ typedef enum coap_pdu_signaling_proto_t {
 /* Applies to COAP_SIGNALING_CSM */
 #define COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE 2
 #define COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER 4
+
 /* Applies to COAP_SIGNALING_PING / COAP_SIGNALING_PONG */
 #define COAP_SIGNALING_OPTION_CUSTODY 2
+
 /* Applies to COAP_SIGNALING_RELEASE */
 #define COAP_SIGNALING_OPTION_ALTERNATIVE_ADDRESS 2
 #define COAP_SIGNALING_OPTION_HOLD_OFF 4
+
 /* Applies to COAP_SIGNALING_ABORT */
 #define COAP_SIGNALING_OPTION_BAD_CSM_OPTION 2
 
@@ -219,6 +230,12 @@ typedef enum coap_pdu_signaling_proto_t {
 
 /* Content formats from RFC 8782 */
 #define COAP_MEDIATYPE_APPLICATION_DOTS_CBOR    271 /* application/dots+cbor */
+
+/* Content formats from draft-ietf-core-new-block */
+#define COAP_MEDIATYPE_APPLICATION_MB_CBOR_SEQ 272 /* application/missing-blocks+cbor-seq */
+
+/* Content formats from RFC 8613 */
+#define COAP_MEDIATYPE_APPLICATION_OSCORE     10001 /* application/oscore */
 
 /* Note that identifiers for registered media types are in the range 0-65535. We
  * use an unallocated type here and hope for the best. */

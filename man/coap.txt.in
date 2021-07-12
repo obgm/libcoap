@@ -68,6 +68,8 @@ See
 
 "RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option"
 
+"draft-ietf-core-new-block: Constrained Application Protocol (CoAP) Block-Wise Transfer Options Supporting Robust Transmission"
+
 for further information.
 
 BUGS
