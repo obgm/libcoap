@@ -2956,7 +2956,7 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
     if (session->state == COAP_SESSION_STATE_CSM)
       coap_session_connected(session);
   } else if (pdu->code == COAP_SIGNALING_CODE_PING) {
-    coap_pdu_t *pong = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_PONG, 0, 1);
+    coap_pdu_t *pong = coap_pdu_init(COAP_MESSAGE_ACK, COAP_SIGNALING_CODE_PONG, pdu->mid, 1);
     if (context->ping_handler) {
       context->ping_handler(session, pdu, pdu->mid);
     }
