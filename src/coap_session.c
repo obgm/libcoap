@@ -384,7 +384,7 @@ coap_mid_t coap_session_send_ping(coap_session_t *session) {
     return COAP_INVALID_MID;
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
     uint16_t mid = coap_new_message_id (session);
-    ping = coap_pdu_init(COAP_MESSAGE_CON, 0, mid, 0);
+    ping = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_PING, mid, 0);
   }
 #if !COAP_DISABLE_TCP
   else {
@@ -478,6 +478,8 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     session->state = COAP_SESSION_STATE_NONE;
 
   session->con_active = 0;
+  session->last_ping = 0;
+  session->last_pong = 0;
 
   if (session->partial_pdu) {
     coap_delete_pdu(session->partial_pdu);
