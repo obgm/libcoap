@@ -845,6 +845,7 @@ char *coap_string_tls_version(char *buffer, size_t bufsize)
 char *coap_string_tls_support(char *buffer, size_t bufsize)
 {
   coap_tls_version_t *tls_version = coap_get_tls_library_version();
+  int have_tls = coap_tls_is_supported();
 
   switch (tls_version->type) {
   case COAP_TLS_LIBRARY_NOTLS:
@@ -852,23 +853,28 @@ char *coap_string_tls_support(char *buffer, size_t bufsize)
     break;
   case COAP_TLS_LIBRARY_TINYDTLS:
     snprintf(buffer, bufsize,
-             "(DTLS and no TLS support; PSK and RPK support)");
+             "(DTLS and%s TLS support; PSK, no PKI, no PKCS11, and RPK support)",
+             have_tls ? "" : " no");
     break;
   case COAP_TLS_LIBRARY_OPENSSL:
     snprintf(buffer, bufsize,
-             "(DTLS and TLS support; PSK, PKI, PKCS11 and no RPK support)");
+             "(DTLS and%s TLS support; PSK, PKI, PKCS11, and no RPK support)",
+             have_tls ? "" : " no");
     break;
   case COAP_TLS_LIBRARY_GNUTLS:
     if (tls_version->version >= 0x030606)
       snprintf(buffer, bufsize,
-               "(DTLS and TLS support; PSK, PKI, PKCS11 and RPK support)");
+               "(DTLS and%s TLS support; PSK, PKI, PKCS11, and RPK support)",
+               have_tls ? "" : " no");
     else
       snprintf(buffer, bufsize,
-               "(DTLS and TLS support; PSK, PKI, PKCS11 and no RPK support)");
+               "(DTLS and%s TLS support; PSK, PKI, PKCS11, and no RPK support)",
+               have_tls ? "" : " no");
     break;
   case COAP_TLS_LIBRARY_MBEDTLS:
     snprintf(buffer, bufsize,
-             "(DTLS and no TLS support; PSK, PKI and no RPK support)");
+             "(DTLS and%s TLS support; PSK, PKI, no PKCS11, and no RPK support)",
+             have_tls ? "" : " no");
     break;
   default:
     buffer[0] = '\000';
