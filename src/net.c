@@ -2525,14 +2525,18 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   else if (coap_is_mcast(&session->addr_info.local)) {
     uint8_t r;
     coap_tick_t delay;
+    coap_mid_t mid = pdu->mid;
 
     /* Need to delay sending mcast request to application layer, so response
        is not immediate. */
     coap_prng(&r, sizeof(r));
     delay = (COAP_DEFAULT_LEISURE * COAP_TICKS_PER_SECOND * r) / 256;
     /* Register request to be internally re-transmitted after delay */
-    if (coap_register_async(session, pdu, delay))
+    if ((async = coap_register_async(session, pdu, delay))) {
+      /* Need to restore MID so delayed response can be matched up */
+      async->pdu->mid = mid;
       return;
+    }
   }
 #endif /* WITHOUT_ASYNC */
 
