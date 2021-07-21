@@ -38,7 +38,6 @@ coap_async_t *
 coap_register_async(coap_session_t *session,
                     const coap_pdu_t *request, coap_tick_t delay) {
   coap_async_t *s;
-  coap_mid_t mid = request->mid;
   size_t len;
   const uint8_t *data;
 
@@ -52,7 +51,7 @@ coap_register_async(coap_session_t *session,
 
   if (s != NULL) {
     coap_log(LOG_DEBUG,
-         "asynchronous state for mid=0x%x already registered\n", mid);
+         "asynchronous state for mid=0x%x already registered\n", request->mid);
     return NULL;
   }
 
@@ -65,6 +64,7 @@ coap_register_async(coap_session_t *session,
 
   memset(s, 0, sizeof(coap_async_t));
 
+  /* Note that this generates a new MID */
   s->pdu = coap_pdu_duplicate(request, session, request->token_length,
                               request->token, NULL);
   if (s->pdu == NULL) {
@@ -72,7 +72,6 @@ coap_register_async(coap_session_t *session,
     coap_log(LOG_CRIT, "coap_register_async: insufficient memory\n");
     return NULL;
   }
-  s->pdu->mid = mid; /* coap_pdu_duplicate() created one */
 
   if (coap_get_data(request, &len, &data)) {
     coap_add_data(s->pdu, len, data);
