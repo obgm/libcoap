@@ -17,6 +17,7 @@
 #ifndef COAP_TCP_INTERNAL_H_
 #define COAP_TCP_INTERNAL_H_
 
+#include "coap_internal.h"
 #include "coap_io.h"
 
 /**

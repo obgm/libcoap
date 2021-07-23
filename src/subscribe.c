@@ -11,8 +11,10 @@
 
 #include "coap3/coap_internal.h"
 
+#if COAP_SERVER_SUPPORT
 void
 coap_subscription_init(coap_subscription_t *s) {
   assert(s);
   memset(s, 0, sizeof(coap_subscription_t));
 }
+#endif /* COAP_SERVER_SUPPORT */

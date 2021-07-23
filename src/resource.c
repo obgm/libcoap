@@ -10,6 +10,7 @@
 
 #include "coap3/coap_internal.h"
 
+#if COAP_SERVER_SUPPORT
 #include <stdio.h>
 #include <errno.h>
 
@@ -1141,3 +1142,5 @@ coap_handle_failed_notify(coap_context_t *context,
         coap_remove_failed_observers(context, r, session, token);
   }
 }
+
+#endif /* ! COAP_SERVER_SUPPORT */

@@ -17,6 +17,7 @@
 #ifndef COAP_ASN1_INTERNAL_H_
 #define COAP_ASN1_INTERNAL_H_
 
+#include "coap_internal.h"
 
 /**
  * @defgroup asn1 ASN.1 Support (Internal)

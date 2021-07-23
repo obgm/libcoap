@@ -162,11 +162,13 @@ typedef enum coap_free_bye_t {
 
 static int dtls_log_level = 0;
 
+#if COAP_SERVER_SUPPORT
 static int post_client_hello_gnutls_pki(gnutls_session_t g_session);
 static int post_client_hello_gnutls_psk(gnutls_session_t g_session);
 static int psk_server_callback(gnutls_session_t g_session,
                                const char *identity,
                                gnutls_datum_t *key);
+#endif /* COAP_SERVER_SUPPORT */
 
 /*
  * return 0 failed
@@ -330,6 +332,7 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *c_context,
   return 1;
 }
 
+#if COAP_SERVER_SUPPORT
 /*
  * return 0 failed
  *        1 passed
@@ -347,7 +350,9 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
   g_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 /*
  * return 0 failed
  *        1 passed
@@ -365,6 +370,7 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
   g_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 /*
  * return 0 failed
@@ -502,6 +508,7 @@ coap_dtls_free_context(void *handle) {
   gnutls_free(g_context);
 }
 
+#if COAP_CLIENT_SUPPORT
 /*
  * gnutls_psk_client_credentials_function return values
  * (see gnutls_psk_set_client_credentials_function())
@@ -607,6 +614,7 @@ psk_client_callback(gnutls_session_t g_session,
 
   return 0;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 typedef struct {
   gnutls_certificate_type_t certificate_type;
@@ -1433,6 +1441,7 @@ fail:
   return ret;
 }
 
+#if COAP_SERVER_SUPPORT
 /*
  * return 0   Success (GNUTLS_E_SUCCESS)
  *        neg GNUTLS_E_* error code
@@ -1461,7 +1470,6 @@ setup_psk_credentials(gnutls_psk_server_credentials_t *psk_credentials,
 fail:
   return ret;
 }
-
 
 /*
  * return 0   Success (GNUTLS_E_SUCCESS)
@@ -1688,7 +1696,9 @@ end:
 fail:
   return ret;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 /*
  * return 0   Success (GNUTLS_E_SUCCESS)
  *        neg GNUTLS_E_* error code
@@ -1780,7 +1790,9 @@ setup_client_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
 fail:
   return ret;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 /*
  * gnutls_psk_server_credentials_function return values
  * (see gnutls_psk_set_server_credentials_function())
@@ -1912,6 +1924,7 @@ setup_server_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
 fail:
   return ret;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 /*
  * return +ve data amount
@@ -2053,12 +2066,20 @@ coap_dtls_new_gnutls_env(coap_session_t *c_session, int type)
           "gnutls_priority_set");
 
   if (type == GNUTLS_SERVER) {
+#if COAP_SERVER_SUPPORT
     G_CHECK(setup_server_ssl_session(c_session, g_env),
             "setup_server_ssl_session");
+#else /* ! COAP_SERVER_SUPPORT */
+    goto fail;
+#endif /* ! COAP_SERVER_SUPPORT */
   }
   else {
+#if COAP_CLIENT_SUPPORT
     G_CHECK(setup_client_ssl_session(c_session, g_env),
             "setup_client_ssl_session");
+#else /* COAP_CLIENT_SUPPORT */
+    goto fail;
+#endif /* COAP_CLIENT_SUPPORT */
   }
 
   gnutls_handshake_set_timeout(g_env->g_session,
@@ -2114,6 +2135,7 @@ coap_dtls_free_gnutls_env(coap_gnutls_context_t *g_context,
   }
 }
 
+#if COAP_SERVER_SUPPORT
 void *coap_dtls_new_server_session(coap_session_t *c_session) {
   coap_gnutls_env_t *g_env =
          (coap_gnutls_env_t *)c_session->tls;
@@ -2122,6 +2144,7 @@ void *coap_dtls_new_server_session(coap_session_t *c_session) {
 
   return g_env;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 static void log_last_alert(coap_session_t *c_session,
                            gnutls_session_t g_session) {
@@ -2245,6 +2268,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
   return ret;
 }
 
+#if COAP_CLIENT_SUPPORT
 void *coap_dtls_new_client_session(coap_session_t *c_session) {
   coap_gnutls_env_t *g_env = coap_dtls_new_gnutls_env(c_session, GNUTLS_CLIENT);
   int ret;
@@ -2261,6 +2285,7 @@ void *coap_dtls_new_client_session(coap_session_t *c_session) {
   }
   return g_env;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 void coap_dtls_free_session(coap_session_t *c_session) {
   if (c_session && c_session->context && c_session->tls) {
@@ -2495,6 +2520,7 @@ coap_dtls_receive(coap_session_t *c_session,
   return ret;
 }
 
+#if COAP_SERVER_SUPPORT
 /*
  * return -1  failure
  *         0  not completed
@@ -2576,6 +2602,7 @@ coap_dtls_hello(coap_session_t *c_session,
   }
   return ret;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 unsigned int coap_dtls_get_overhead(coap_session_t *c_session COAP_UNUSED) {
   return 37;
@@ -2662,6 +2689,7 @@ coap_sock_write(gnutls_transport_ptr_t context, const void *in, size_t inl) {
   return ret;
 }
 
+#if COAP_CLIENT_SUPPORT
 void *coap_tls_new_client_session(coap_session_t *c_session, int *connected) {
   coap_gnutls_env_t *g_env = gnutls_malloc(sizeof(coap_gnutls_env_t));
   coap_gnutls_context_t *g_context =
@@ -2706,7 +2734,9 @@ fail:
     gnutls_free(g_env);
   return NULL;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 void *coap_tls_new_server_session(coap_session_t *c_session, int *connected) {
   coap_gnutls_env_t *g_env = gnutls_malloc(sizeof(coap_gnutls_env_t));
   coap_gnutls_context_t *g_context =
@@ -2747,6 +2777,7 @@ void *coap_tls_new_server_session(coap_session_t *c_session, int *connected) {
 fail:
   return NULL;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 void coap_tls_free_session(coap_session_t *c_session) {
   coap_dtls_free_session(c_session);
@@ -2903,6 +2934,7 @@ ssize_t coap_tls_read(coap_session_t *c_session,
 }
 #endif /* !COAP_DISABLE_TCP */
 
+#if COAP_SERVER_SUPPORT
 coap_digest_ctx_t *
 coap_digest_setup(void) {
   gnutls_hash_hd_t digest_ctx;
@@ -2935,6 +2967,7 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
   coap_digest_free(digest_ctx);
   return 1;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 #else /* !HAVE_LIBGNUTLS */
 

@@ -40,9 +40,13 @@ main(int argc COAP_UNUSED, char **argv COAP_UNUSED) {
   t_init_option_tests();
   t_init_pdu_tests();
   t_init_error_response_tests();
+#if COAP_CLIENT_SUPPORT
   t_init_session_tests();
   t_init_sendqueue_tests();
+#endif /* COAP_CLIENT_SUPPORT */
+#if COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT
   t_init_wellknown_tests();
+#endif /* COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT */
   t_init_tls_tests();
 
   CU_basic_set_mode(run_mode);

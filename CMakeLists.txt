@@ -58,6 +58,14 @@ option(
   "compile with the tinydtls project in the submodule if on, otherwise try to find the compiled lib with find_package"
   ON)
 option(
+  ENABLE_CLIENT_MODE
+  "compile with support for client mode code"
+  ON)
+option(
+  ENABLE_SERVER_MODE
+  "compile with support for server mode code"
+  ON)
+option(
   WITH_EPOLL
   "compile with epoll support"
   ON)
@@ -162,6 +170,20 @@ else()
     cmsghdr
     sys/socket.h
     HAVE_STRUCT_CMSGHDR)
+endif()
+
+if(${ENABLE_CLIENT_MODE})
+  set(COAP_CLIENT_SUPPORT "1")
+  message(STATUS "compiling with client support")
+else()
+  message(STATUS "compiling without client support")
+endif()
+
+if(${ENABLE_SERVER_MODE})
+  set(COAP_SERVER_SUPPORT "1")
+  message(STATUS "compiling with server support")
+else()
+  message(STATUS "compiling without server support")
 endif()
 
 if(${WITH_EPOLL}
@@ -359,6 +381,8 @@ endif()
 
 message(STATUS "ENABLE_DTLS:.....................${ENABLE_DTLS}")
 message(STATUS "ENABLE_TCP:......................${ENABLE_TCP}")
+message(STATUS "ENABLE_CLIENT_MODE:..............${ENABLE_CLIENT_MODE}")
+message(STATUS "ENABLE_SERVER_MODE:..............${ENABLE_SERVER_MODE}")
 message(STATUS "ENABLE_DOCS:.....................${ENABLE_DOCS}")
 message(STATUS "ENABLE_EXAMPLES:.................${ENABLE_EXAMPLES}")
 message(STATUS "DTLS_BACKEND:....................${DTLS_BACKEND}")
@@ -370,7 +394,7 @@ message(STATUS "HAVE_LIBTINYDTLS:................${HAVE_LIBTINYDTLS}")
 message(STATUS "HAVE_LIBGNUTLS:..................${HAVE_LIBGNUTLS}")
 message(STATUS "HAVE_OPENSSL:....................${HAVE_OPENSSL}")
 message(STATUS "HAVE_MBEDTLS:....................${HAVE_MBEDTLS}")
-message(STATUS "COAP_EPOLL_SUPPORT:..............${COAP_EPOLL_SUPPORT}")
+message(STATUS "WITH_EPOLL:......................${WITH_EPOLL}")
 message(STATUS "CMAKE_C_COMPILER:................${CMAKE_C_COMPILER}")
 message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
 message(STATUS "CMAKE_BUILD_TYPE:................${CMAKE_BUILD_TYPE}")

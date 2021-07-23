@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 
+#if COAP_CLIENT_SUPPORT
 static coap_context_t *ctx; /* Holds the coap context for most tests */
 static coap_session_t *session; /* Holds a reference-counted session object */
 
@@ -362,4 +363,5 @@ t_init_sendqueue_tests(void) {
 
   return suite;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 

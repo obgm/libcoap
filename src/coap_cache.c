@@ -10,6 +10,7 @@
 
 #include "coap3/coap_internal.h"
 
+#if COAP_SERVER_SUPPORT
 /* Determines if the given option_type denotes an option type that can
  * be used as CacheKey. Options that can be cache keys are not Unsafe
  * and not marked explicitly as NoCacheKey. */
@@ -267,3 +268,4 @@ coap_expire_cache_entries(coap_context_t *ctx) {
   }
 }
 
+#endif /* ! COAP_SERVER_SUPPORT */

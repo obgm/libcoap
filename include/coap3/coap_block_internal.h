@@ -19,6 +19,7 @@
 #ifndef COAP_BLOCK_INTERNAL_H_
 #define COAP_BLOCK_INTERNAL_H_
 
+#include "coap_internal.h"
 #include "coap_pdu_internal.h"
 #include "resource.h"
 
@@ -93,6 +94,7 @@ struct coap_lg_xmit_t {
   void *app_ptr;         /**< applicaton provided ptr for de-alloc function */
 };
 
+#if COAP_CLIENT_SUPPORT
 /**
  * Structure to hold large body (many blocks) client receive information
  */
@@ -120,7 +122,9 @@ struct coap_lg_crcv_t {
   coap_tick_t last_used; /**< Last time all data sent or 0 */
   uint16_t block_option; /**< Block option in use */
 };
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 /**
  * Structure to hold large body (many blocks) server receive information
  */
@@ -147,7 +151,9 @@ struct coap_lg_srcv_t {
   coap_tick_t last_used; /**< Last time data sent or 0 */
   uint16_t block_option; /**< Block option in use */
 };
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 coap_lg_crcv_t * coap_block_new_lg_crcv(coap_session_t *session,
                                         coap_pdu_t *pdu);
 
@@ -156,7 +162,9 @@ void coap_block_delete_lg_crcv(coap_session_t *session,
 
 coap_tick_t coap_block_check_lg_crcv_timeouts(coap_session_t *session,
                                               coap_tick_t now);
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 void coap_block_delete_lg_srcv(coap_session_t *session,
                                coap_lg_srcv_t *lg_srcv);
 
@@ -179,7 +187,9 @@ int coap_handle_request_put_block(coap_context_t *context,
                                   coap_string_t *query,
                                   coap_method_handler_t h,
                                   int *added_block);
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 int coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *rcvd);
 
 int coap_handle_response_get_block(coap_context_t *context,
@@ -187,6 +197,7 @@ int coap_handle_response_get_block(coap_context_t *context,
                                    coap_pdu_t *sent,
                                    coap_pdu_t *rcvd,
                                    coap_recurse_t recursive);
+#endif /* COAP_CLIENT_SUPPORT */
 
 void coap_block_delete_lg_xmit(coap_session_t *session,
                                coap_lg_xmit_t *lg_xmit);

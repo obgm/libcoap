@@ -11,6 +11,7 @@
 #include "test_common.h"
 #include "test_session.h"
 
+#if COAP_CLIENT_SUPPORT
 #include <stdio.h>
 
 /* The error threshold for timeout calculations. The precision of
@@ -222,3 +223,4 @@ t_init_session_tests(void) {
 
   return suite;
 }
+#endif /* COAP_CLIENT_SUPPORT */

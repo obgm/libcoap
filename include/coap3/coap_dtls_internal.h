@@ -13,6 +13,8 @@
 #ifndef COAP_DTLS_INTERNAL_H_
 #define COAP_DTLS_INTERNAL_H_
 
+#include "coap_internal.h"
+
 /**
  * @defgroup dtls_internal DTLS Support (Internal)
  * CoAP DTLS Structures, Enums and Functions that are not exposed to
@@ -41,6 +43,7 @@
 void *
 coap_dtls_new_context(coap_context_t *coap_context);
 
+#if COAP_SERVER_SUPPORT
 /**
  * Set the DTLS context's default server PSK information.
  * This does the PSK specifics following coap_dtls_new_context().
@@ -55,7 +58,9 @@ coap_dtls_new_context(coap_context_t *coap_context);
 int
 coap_dtls_context_set_spsk(coap_context_t *coap_context,
                           coap_dtls_spsk_t *setup_data);
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 /**
  * Set the DTLS context's default client PSK information.
  * This does the PSK specifics following coap_dtls_new_context().
@@ -70,6 +75,7 @@ coap_dtls_context_set_spsk(coap_context_t *coap_context,
 int
 coap_dtls_context_set_cpsk(coap_context_t *coap_context,
                           coap_dtls_cpsk_t *setup_data);
+#endif /* COAP_CLIENT_SUPPORT */
 
 /**
  * Set the DTLS context's default server PKI information.
@@ -128,6 +134,7 @@ int coap_dtls_context_check_keys_enabled(coap_context_t *coap_context);
  */
 void coap_dtls_free_context(void *dtls_context);
 
+#if COAP_CLIENT_SUPPORT
 /**
  * Create a new client-side session. This should send a HELLO to the server.
  *
@@ -137,7 +144,9 @@ void coap_dtls_free_context(void *dtls_context);
  *         parameters for the session.
 */
 void *coap_dtls_new_client_session(coap_session_t *coap_session);
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 /**
  * Create a new DTLS server-side session.
  * Called after coap_dtls_hello() has returned @c 1, signalling that a validated
@@ -150,6 +159,7 @@ void *coap_dtls_new_client_session(coap_session_t *coap_session);
  *         parameters for the DTLS session.
  */
 void *coap_dtls_new_server_session(coap_session_t *coap_session);
+#endif /* COAP_SERVER_SUPPORT */
 
 /**
  * Terminates the DTLS session (may send an ALERT if necessary) then frees the
@@ -230,6 +240,7 @@ int coap_dtls_receive(coap_session_t *coap_session,
                       const uint8_t *data,
                       size_t data_len);
 
+#if COAP_SERVER_SUPPORT
 /**
  * Handling client HELLO messages from a new candiate peer.
  * Note that session->tls is empty.
@@ -245,6 +256,7 @@ int coap_dtls_receive(coap_session_t *coap_session,
 int coap_dtls_hello(coap_session_t *coap_session,
                     const uint8_t *data,
                     size_t data_len);
+#endif /* COAP_SERVER_SUPPORT */
 
 /**
  * Get DTLS overhead over cleartext PDUs.
@@ -255,6 +267,7 @@ int coap_dtls_hello(coap_session_t *coap_session,
  */
 unsigned int coap_dtls_get_overhead(coap_session_t *coap_session);
 
+#if COAP_CLIENT_SUPPORT
 /**
  * Create a new TLS client-side session.
  *
@@ -266,7 +279,9 @@ unsigned int coap_dtls_get_overhead(coap_session_t *coap_session);
  *         parameters for the session.
 */
 void *coap_tls_new_client_session(coap_session_t *coap_session, int *connected);
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 /**
  * Create a TLS new server-side session.
  *
@@ -278,6 +293,7 @@ void *coap_tls_new_client_session(coap_session_t *coap_session, int *connected);
  *         parameters for the session.
  */
 void *coap_tls_new_server_session(coap_session_t *coap_session, int *connected);
+#endif /* COAP_SERVER_SUPPORT */
 
 /**
  * Terminates the TLS session (may send an ALERT if necessary) then frees the

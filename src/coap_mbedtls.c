@@ -68,6 +68,13 @@
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 #endif /* ! MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
 
+#if ! COAP_SERVER_SUPPORT
+#undef MBEDTLS_SSL_SRV_C
+#endif /* ! COAP_SERVER_SUPPORT */
+#if ! COAP_CLIENT_SUPPORT
+#undef MBEDTLS_SSL_CLI_C
+#endif /* ! COAP_CLIENT_SUPPORT */
+
 #ifdef _WIN32
 #define strcasecmp _stricmp
 #endif
@@ -955,6 +962,7 @@ fail:
 }
 #endif /* MBEDTLS_SSL_SRV_C */
 
+#if COAP_CLIENT_SUPPORT
 static int *psk_ciphers = NULL;
 static int *pki_ciphers = NULL;
 static int processed_ciphers = 0;
@@ -1134,6 +1142,7 @@ static int setup_client_ssl_session(coap_session_t *c_session,
 fail:
   return ret;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 static void mbedtls_cleanup(coap_mbedtls_env_t *m_env)
 {
@@ -1432,15 +1441,21 @@ static coap_mbedtls_env_t *coap_dtls_new_mbedtls_env(coap_session_t *c_session,
   }
 
   if (role == COAP_DTLS_ROLE_CLIENT) {
+#if COAP_CLIENT_SUPPORT
     if (setup_client_ssl_session(c_session, m_env) != 0) {
       goto fail;
     }
-#if defined(MBEDTLS_SSL_SRV_C)
+#else /* !COAP_CLIENT_SUPPORT */
+    goto fail;
+#endif /* !COAP_CLIENT_SUPPORT */
   } else if (role == COAP_DTLS_ROLE_SERVER) {
+#if defined(MBEDTLS_SSL_SRV_C)
     if (setup_server_ssl_session(c_session, m_env) != 0) {
       goto fail;
     }
-#endif /* MBEDTLS_SSL_SRV_C */
+#else /* ! MBEDTLS_SSL_SRV_C */
+    goto fail;
+#endif /* ! MBEDTLS_SSL_SRV_C */
   } else {
     goto fail;
   }
@@ -1512,6 +1527,7 @@ void *coap_dtls_new_context(coap_context_t *c_context)
   return m_context;
 }
 
+#if COAP_SERVER_SUPPORT
 /*
  * return 0 failed
  *        1 passed
@@ -1535,7 +1551,9 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
   m_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 /*
  * return 0 failed
  *        1 passed
@@ -1545,11 +1563,11 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
                           coap_dtls_cpsk_t *setup_data
 ) {
 #if !defined(MBEDTLS_SSL_CLI_C)
-  coap_log(LOG_EMERG, "coap_context_set_spsk:"
+  coap_log(LOG_EMERG, "coap_context_set_cpsk:"
            " libcoap not compiled for Client Mode for Mbed TLS"
            " - update Mbed TLS to include Client Mode\n");
   return 0;
-#endif /* !MBEDTLS_SSL_CLI_C */
+#else /* MBEDTLS_SSL_CLI_C */
   coap_mbedtls_context_t *m_context =
                          ((coap_mbedtls_context_t *)c_context->dtls_context);
 
@@ -1563,6 +1581,8 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
   m_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
+#endif /* MBEDTLS_SSL_CLI_C */
+#endif /* COAP_CLIENT_SUPPORT */
 
 int coap_dtls_context_set_pki(coap_context_t *c_context,
                               const coap_dtls_pki_t *setup_data,
@@ -1668,6 +1688,7 @@ void coap_dtls_free_context(void *dtls_context)
   mbedtls_free(m_context);
 }
 
+#if COAP_CLIENT_SUPPORT
 void *coap_dtls_new_client_session(coap_session_t *c_session)
 {
 #if !defined(MBEDTLS_SSL_CLI_C)
@@ -1695,7 +1716,9 @@ void *coap_dtls_new_client_session(coap_session_t *c_session)
   return m_env;
 #endif /* MBEDTLS_SSL_CLI_C */
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 void *coap_dtls_new_server_session(coap_session_t *c_session)
 {
 #if !defined(MBEDTLS_SSL_SRV_C)
@@ -1717,6 +1740,7 @@ void *coap_dtls_new_server_session(coap_session_t *c_session)
   return m_env;
 #endif /* MBEDTLS_SSL_SRV_C */
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 void coap_dtls_free_session(coap_session_t *c_session)
 {
@@ -1976,6 +2000,7 @@ finish:
   return ret;
 }
 
+#if COAP_SERVER_SUPPORT
 /*
  * return -1  failure
  *         0  not completed
@@ -2050,6 +2075,7 @@ int coap_dtls_hello(coap_session_t *c_session,
   return ret;
 #endif /* MBEDTLS_SSL_PROTO_DTLS && MBEDTLS_SSL_SRV_C */
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 unsigned int coap_dtls_get_overhead(coap_session_t *c_session)
 {
@@ -2063,11 +2089,13 @@ unsigned int coap_dtls_get_overhead(coap_session_t *c_session)
 }
 
 #if !COAP_DISABLE_TCP
+#if COAP_CLIENT_SUPPORT
 void *coap_tls_new_client_session(coap_session_t *c_session,
                                   int *connected)
 {
 #if !defined(MBEDTLS_SSL_CLI_C)
   (void)c_session;
+  *connected = 0;
   coap_log(LOG_EMERG, "coap_tls_new_client_session:"
            " libcoap not compiled for Client Mode for Mbed TLS"
            " - update Mbed TLS to include Client Mode\n");
@@ -2095,7 +2123,9 @@ void *coap_tls_new_client_session(coap_session_t *c_session,
   return m_env;
 #endif /* MBEDTLS_SSL_CLI_C */
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 void *coap_tls_new_server_session(coap_session_t *c_session COAP_UNUSED,
                                   int *connected COAP_UNUSED)
 {
@@ -2119,6 +2149,7 @@ void *coap_tls_new_server_session(coap_session_t *c_session COAP_UNUSED,
   return m_env;
 #endif /* MBEDTLS_SSL_SRV_C */
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 void coap_tls_free_session(coap_session_t *c_session)
 {
@@ -2329,6 +2360,7 @@ coap_tls_version_t * coap_get_tls_library_version(void)
   return &version;
 }
 
+#if COAP_SERVER_SUPPORT
 coap_digest_ctx_t *
 coap_digest_setup(void) {
   mbedtls_sha256_context *digest_ctx = mbedtls_malloc(sizeof(mbedtls_sha256_context));
@@ -2363,6 +2395,7 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
   coap_digest_free(digest_ctx);
   return ret == 0;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 #else /* !HAVE_MBEDTLS */
 

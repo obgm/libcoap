@@ -11,6 +11,8 @@
 #include "test_common.h"
 #include "test_wellknown.h"
 
+#if COAP_SERVER_SUPPORT
+#if COAP_CLIENT_SUPPORT
 #include <assert.h>
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
@@ -337,4 +339,6 @@ t_init_wellknown_tests(void) {
 
   return suite;
 }
+#endif /* COAP_CLIENT_SUPPORT */
+#endif /* COAP_SERVER_SUPPORT */
 

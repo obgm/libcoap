@@ -1,4 +1,4 @@
-/* session.c -- Session management for libcoap
+/* coap_session.c -- Session management for libcoap
 *
 * Copyright (C) 2017 Jean-Claue Michelou <jcm@spinetix.com>
 *
@@ -112,6 +112,9 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   const coap_address_t *remote_addr, int ifindex, coap_context_t *context,
   coap_endpoint_t *endpoint) {
   coap_session_t *session = (coap_session_t*)coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
+#if ! COAP_SERVER_SUPPORT
+  (void)endpoint;
+#endif /* ! COAP_SERVER_SUPPORT */
   if (!session)
     return NULL;
   memset(session, 0, sizeof(*session));
@@ -131,12 +134,14 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
     coap_address_init(&session->addr_info.remote);
   session->ifindex = ifindex;
   session->context = context;
+#if COAP_SERVER_SUPPORT
   session->endpoint = endpoint;
-  session->block_mode = context->block_mode;
   if (endpoint)
     session->mtu = endpoint->default_mtu;
   else
+#endif /* COAP_SERVER_SUPPORT */
     session->mtu = COAP_DEFAULT_MTU;
+  session->block_mode = context->block_mode;
   if (proto == COAP_PROTO_DTLS) {
     session->tls_overhead = 29;
     if (session->tls_overhead >= session->mtu) {
@@ -158,10 +163,10 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
 
 void coap_session_mfree(coap_session_t *session) {
   coap_queue_t *q, *tmp;
-  coap_cache_entry_t *cp, *ctmp;
   coap_lg_xmit_t *lq, *ltmp;
+
+#if COAP_CLIENT_SUPPORT
   coap_lg_crcv_t *cq, *etmp;
-  coap_lg_srcv_t *sq, *stmp;
 
   /* Need to do this before (D)TLS and socket is closed down */
   LL_FOREACH_SAFE(session->lg_crcv, cq, etmp) {
@@ -183,6 +188,7 @@ void coap_session_mfree(coap_session_t *session) {
     LL_DELETE(session->lg_crcv, cq);
     coap_block_delete_lg_crcv(session, cq);
   }
+#endif /* COAP_CLIENT_SUPPORT */
 
   if (session->partial_pdu)
     coap_delete_pdu(session->partial_pdu);
@@ -201,12 +207,15 @@ void coap_session_mfree(coap_session_t *session) {
   if (session->psk_hint)
     coap_free(session->psk_hint);
 
+#if COAP_SERVER_SUPPORT
+  coap_cache_entry_t *cp, *ctmp;
   HASH_ITER(hh, session->context->cache, cp, ctmp) {
     /* cp->session is NULL if not session based */
     if (cp->session == session) {
       coap_delete_cache_entry(session->context, cp);
     }
   }
+#endif /* COAP_SERVER_SUPPORT */
   LL_FOREACH_SAFE(session->delayqueue, q, tmp) {
     if (q->pdu->type==COAP_MESSAGE_CON && session->context && session->context->nack_handler)
       session->context->nack_handler(session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);
@@ -216,10 +225,14 @@ void coap_session_mfree(coap_session_t *session) {
     LL_DELETE(session->lg_xmit, lq);
     coap_block_delete_lg_xmit(session, lq);
   }
+#if COAP_SERVER_SUPPORT
+  coap_lg_srcv_t *sq, *stmp;
+
   LL_FOREACH_SAFE(session->lg_srcv, sq, stmp) {
     LL_DELETE(session->lg_srcv, sq);
     coap_block_delete_lg_srcv(session, sq);
   }
+#endif /* COAP_SERVER_SUPPORT */
 }
 
 void coap_session_free(coap_session_t *session) {
@@ -229,13 +242,18 @@ void coap_session_free(coap_session_t *session) {
   if (session->ref)
     return;
   coap_session_mfree(session);
+#if COAP_SERVER_SUPPORT
   if (session->endpoint) {
     if (session->endpoint->sessions)
       SESSIONS_DELETE(session->endpoint->sessions, session);
-  } else if (session->context) {
+  } else
+#endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
+  if (session->context) {
     if (session->context->sessions)
       SESSIONS_DELETE(session->context->sessions, session);
   }
+#endif /* COAP_CLIENT_SUPPORT */
   coap_log(LOG_DEBUG, "***%s: session closed\n", coap_session_str(session));
 
   coap_free_type(COAP_SESSION, session);
@@ -278,10 +296,12 @@ ssize_t coap_session_send(coap_session_t *session, const uint8_t *data, size_t d
   ssize_t bytes_written;
 
   coap_socket_t *sock = &session->sock;
+#if COAP_SERVER_SUPPORT
   if (sock->flags == COAP_SOCKET_EMPTY) {
     assert(session->endpoint != NULL);
     sock = &session->endpoint->sock;
   }
+#endif /* COAP_SERVER_SUPPORT */
 
   bytes_written = coap_socket_send(sock, session, data, datalen);
   if (bytes_written == (ssize_t)datalen) {
@@ -460,7 +480,9 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
 
   coap_log(LOG_DEBUG, "***%s: session disconnected (reason %d)\n",
            coap_session_str(session), reason);
+#if COAP_SERVER_SUPPORT
   coap_delete_observers( session->context, session );
+#endif /* COAP_SERVER_SUPPORT */
 
   if ( session->tls) {
     if (session->proto == COAP_PROTO_DTLS)
@@ -541,6 +563,7 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
 #endif /* !COAP_DISABLE_TCP */
 }
 
+#if COAP_SERVER_SUPPORT
 static void
 coap_make_addr_hash(coap_addr_hash_t *addr_hash, coap_proto_t proto,
                     const coap_addr_tuple_t *addr_info) {
@@ -703,6 +726,7 @@ coap_session_new_dtls_session(coap_session_t *session,
   }
   return session;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 #ifdef COAP_EPOLL_SUPPORT
 static void
@@ -717,8 +741,12 @@ coap_epoll_ctl_add(coap_socket_t *sock,
   if (sock == NULL)
     return;
 
+#if COAP_SERVER_SUPPORT
   context = sock->session ? sock->session->context :
                             sock->endpoint ? sock->endpoint->context : NULL;
+#else /* ! COAP_SERVER_SUPPORT */
+  context = sock->session ? sock->session->context : NULL;
+#endif /* ! COAP_SERVER_SUPPORT */
   if (context == NULL)
     return;
 
@@ -737,6 +765,7 @@ coap_epoll_ctl_add(coap_socket_t *sock,
 }
 #endif /* COAP_EPOLL_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 static coap_session_t *
 coap_session_create_client(
   coap_context_t *ctx,
@@ -864,7 +893,9 @@ coap_session_connect(coap_session_t *session) {
   coap_ticks(&session->last_rx_tx);
   return session;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 static coap_session_t *
 coap_session_accept(coap_session_t *session) {
 #if !COAP_DISABLE_TCP
@@ -894,7 +925,9 @@ coap_session_accept(coap_session_t *session) {
 #endif /* COAP_DISABLE_TCP */
   return session;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 coap_session_t *coap_new_client_session(
   coap_context_t *ctx,
   const coap_address_t *local_if,
@@ -992,7 +1025,9 @@ coap_session_t *coap_new_client_session_psk2(
            coap_session_str(session));
   return coap_session_connect(session);
 }
+#endif /* ! COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 int coap_session_refresh_psk_hint(coap_session_t *session,
   const coap_bin_const_t *psk_hint
 ) {
@@ -1021,6 +1056,7 @@ int coap_session_refresh_psk_hint(coap_session_t *session,
 
   return 1;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 int coap_session_refresh_psk_key(coap_session_t *session,
   const coap_bin_const_t *psk_key
@@ -1064,6 +1100,7 @@ coap_session_get_psk_key(const coap_session_t *session) {
   return NULL;
 }
 
+#if COAP_CLIENT_SUPPORT
 coap_session_t *coap_new_client_session_pki(
   coap_context_t *ctx,
   const coap_address_t *local_if,
@@ -1102,7 +1139,9 @@ coap_session_t *coap_new_client_session_pki(
            coap_session_str(session));
   return coap_session_connect(session);
 }
+#endif /* ! COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 coap_session_t *coap_new_server_session(
   coap_context_t *ctx,
   coap_endpoint_t *ep
@@ -1141,6 +1180,7 @@ error:
   coap_session_free(session);
   return NULL;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 void
 coap_session_init_token(coap_session_t *session, size_t len,
@@ -1194,15 +1234,21 @@ coap_session_get_type(const coap_session_t *session) {
   return 0;
 }
 
+#if COAP_CLIENT_SUPPORT
 int
 coap_session_set_type_client(coap_session_t *session) {
+#if COAP_SERVER_SUPPORT
   if (session && session->type == COAP_SESSION_TYPE_SERVER) {
     coap_session_reference(session);
     session->type = COAP_SESSION_TYPE_CLIENT;
     return 1;
   }
+#else /* ! COAP_SERVER_SUPPORT */
+  (void)session;
+#endif /* ! COAP_SERVER_SUPPORT */
   return 0;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 coap_session_state_t
 coap_session_get_state(const coap_session_t *session) {
@@ -1225,6 +1271,7 @@ void *coap_session_get_tls(const coap_session_t *session,
 }
 
 #ifndef WITH_LWIP
+#if COAP_SERVER_SUPPORT
 coap_endpoint_t *
 coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto) {
   coap_endpoint_t *ep = NULL;
@@ -1354,6 +1401,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
     coap_mfree_endpoint(ep);
   }
 }
+#endif /* COAP_SERVER_SUPPORT */
 #endif /* WITH_LWIP */
 
 coap_session_t *
@@ -1361,12 +1409,16 @@ coap_session_get_by_peer(const coap_context_t *ctx,
   const coap_address_t *remote_addr,
   int ifindex) {
   coap_session_t *s, *rtmp;
-  coap_endpoint_t *ep;
+#if COAP_CLIENT_SUPPORT
   SESSIONS_ITER(ctx->sessions, s, rtmp) {
     if (s->ifindex == ifindex && coap_address_equals(&s->addr_info.remote,
                                                      remote_addr))
       return s;
   }
+#endif /* COAP_CLIENT_SUPPORT */
+#if COAP_SERVER_SUPPORT
+  coap_endpoint_t *ep;
+
   LL_FOREACH(ctx->endpoint, ep) {
     SESSIONS_ITER(ep->sessions, s, rtmp) {
       if (s->ifindex == ifindex && coap_address_equals(&s->addr_info.remote,
@@ -1374,6 +1426,7 @@ coap_session_get_by_peer(const coap_context_t *ctx,
         return s;
     }
   }
+#endif /* COAP_SERVER_SUPPORT */
   return NULL;
 }
 
@@ -1416,6 +1469,7 @@ const char *coap_session_str(const coap_session_t *session) {
   return szSession;
 }
 
+#if COAP_SERVER_SUPPORT
 const char *coap_endpoint_str(const coap_endpoint_t *endpoint) {
   static char szEndpoint[128];
   char *p = szEndpoint, *end = szEndpoint + sizeof(szEndpoint);
@@ -1436,5 +1490,5 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint) {
 
   return szEndpoint;
 }
-
+#endif /* ! COAP_SERVER_SUPPORT */
 #endif  /* COAP_SESSION_C_ */

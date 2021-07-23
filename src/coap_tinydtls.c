@@ -206,13 +206,13 @@ get_psk_info(struct dtls_context_t *dtls_context,
   coap_context_t *coap_context = t_context ? t_context->coap_context : NULL;
   coap_session_t *coap_session;
   int fatal_error = DTLS_ALERT_INTERNAL_ERROR;
+#if COAP_CLIENT_SUPPORT
   size_t identity_length;
   uint8_t psk[COAP_DTLS_MAX_PSK];
   size_t psk_len = 0;
-  coap_address_t remote_addr;
   coap_dtls_cpsk_t *setup_cdata;
-  coap_dtls_spsk_t *setup_sdata;
-  coap_bin_const_t temp;
+#endif /* COAP_CLIENT_SUPPORT */
+  coap_address_t remote_addr;
 
   assert(coap_context);
   get_session_addr(dtls_session, &remote_addr);
@@ -225,15 +225,19 @@ get_psk_info(struct dtls_context_t *dtls_context,
   switch (type) {
   case DTLS_PSK_IDENTITY:
 
+#if COAP_CLIENT_SUPPORT
     if (!coap_context || !coap_context->get_client_psk ||
         coap_session->type != COAP_SESSION_TYPE_CLIENT)
       goto error;
 
     setup_cdata = &coap_session->cpsk_setup_data;
 
+#if COAP_SERVER_SUPPORT
+    coap_bin_const_t temp;
     temp.s = id;
     temp.length = id_len;
     coap_session_refresh_psk_hint(coap_session, &temp);
+#endif /* COAP_SERVER_SUPPORT */
 
     coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)id_len, id ? (const char*)id : "");
 
@@ -275,8 +279,12 @@ get_psk_info(struct dtls_context_t *dtls_context,
       goto error;
     }
     return (int)identity_length;
+#else /* ! COAP_CLIENT_SUPPORT */
+    return 0;
+#endif /* ! COAP_CLIENT_SUPPORT */
 
   case DTLS_PSK_KEY:
+#if COAP_CLIENT_SUPPORT
     if (coap_session->type == COAP_SESSION_TYPE_CLIENT) {
       if (!coap_context || !coap_context->get_client_psk)
         goto error;
@@ -290,7 +298,10 @@ get_psk_info(struct dtls_context_t *dtls_context,
       }
       return (int)psk_len;
     }
+#endif /* COAP_CLIENT_SUPPORT */
+#if COAP_SERVER_SUPPORT
     if (coap_context->get_server_psk) {
+      coap_dtls_spsk_t *setup_sdata;
       setup_sdata = &coap_session->context->spsk_setup_data;
 
       if (!id)
@@ -324,11 +335,14 @@ get_psk_info(struct dtls_context_t *dtls_context,
 
       return (int)coap_context->get_server_psk(coap_session, (const uint8_t*)id, id_len, (uint8_t*)result, result_length);
     }
+#endif /* COAP_SERVER_SUPPORT */
     return 0;
 
   case DTLS_PSK_HINT:
+#if COAP_SERVER_SUPPORT
     if (coap_context->get_server_hint)
       return (int)coap_context->get_server_hint(coap_session, (uint8_t *)result, result_length);
+#endif /* COAP_SERVER_SUPPORT */
     return 0;
 
   default:
@@ -489,10 +503,13 @@ coap_dtls_new_session(coap_session_t *session) {
   return dtls_session;
 }
 
+#if COAP_SERVER_SUPPORT
 void *coap_dtls_new_server_session(coap_session_t *session) {
   return coap_dtls_new_session(session);
 }
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 void *coap_dtls_new_client_session(coap_session_t *session) {
   dtls_peer_t *peer;
   coap_tiny_context_t *t_context = (coap_tiny_context_t *)session->context->dtls_context;
@@ -522,6 +539,7 @@ void *coap_dtls_new_client_session(coap_session_t *session) {
 
   return dtls_session;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 void
 coap_dtls_session_update_mtu(coap_session_t *session) {
@@ -644,6 +662,7 @@ coap_dtls_receive(coap_session_t *session,
   return err;
 }
 
+#if COAP_SERVER_SUPPORT
 int
 coap_dtls_hello(coap_session_t *session,
   const uint8_t *data,
@@ -670,6 +689,7 @@ coap_dtls_hello(coap_session_t *session,
   }
   return res;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 unsigned int coap_dtls_get_overhead(coap_session_t *session) {
   (void)session;
@@ -1139,6 +1159,7 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *ctx COAP_UNUSED,
   return 0;
 }
 
+#if COAP_CLIENT_SUPPORT
 int
 coap_dtls_context_set_cpsk(coap_context_t *coap_context COAP_UNUSED,
   coap_dtls_cpsk_t *setup_data
@@ -1148,7 +1169,9 @@ coap_dtls_context_set_cpsk(coap_context_t *coap_context COAP_UNUSED,
 
   return 1;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 int
 coap_dtls_context_set_spsk(coap_context_t *coap_context COAP_UNUSED,
   coap_dtls_spsk_t *setup_data
@@ -1163,6 +1186,7 @@ coap_dtls_context_set_spsk(coap_context_t *coap_context COAP_UNUSED,
 
   return 1;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 int
 coap_dtls_context_check_keys_enabled(coap_context_t *ctx COAP_UNUSED)
@@ -1171,13 +1195,17 @@ coap_dtls_context_check_keys_enabled(coap_context_t *ctx COAP_UNUSED)
 }
 
 #if !COAP_DISABLE_TCP
+#if COAP_CLIENT_SUPPORT
 void *coap_tls_new_client_session(coap_session_t *session COAP_UNUSED, int *connected COAP_UNUSED) {
   return NULL;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 void *coap_tls_new_server_session(coap_session_t *session COAP_UNUSED, int *connected COAP_UNUSED) {
   return NULL;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 void coap_tls_free_session(coap_session_t *coap_session COAP_UNUSED) {
 }
@@ -1197,6 +1225,7 @@ ssize_t coap_tls_read(coap_session_t *session COAP_UNUSED,
 }
 #endif /* !COAP_DISABLE_TCP */
 
+#if COAP_SERVER_SUPPORT
 coap_digest_ctx_t *
 coap_digest_setup(void) {
   dtls_sha256_ctx *digest_ctx = coap_malloc(sizeof(dtls_sha256_ctx));
@@ -1230,6 +1259,7 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
   coap_digest_free(digest_ctx);
   return 1;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 #else /* !HAVE_LIBTINYDTLS */
 

@@ -19,14 +19,37 @@ AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include \
 
 #
 
-bin_PROGRAMS = coap-client@LIBCOAP_DTLS_LIB_EXTENSION_NAME@ \
-               coap-server@LIBCOAP_DTLS_LIB_EXTENSION_NAME@ \
-               coap-rd@LIBCOAP_DTLS_LIB_EXTENSION_NAME@
+bin_PROGRAMS =
+noinst_PROGRAMS =
+check_PROGRAMS =
 
-check_PROGRAMS = coap-etsi_iot_01 coap-tiny
+if HAVE_CLIENT_SUPPORT
+
+bin_PROGRAMS += coap-client@LIBCOAP_DTLS_LIB_EXTENSION_NAME@
+check_PROGRAMS += coap-tiny
 
 if BUILD_ADD_DEFAULT_NAMES
-noinst_PROGRAMS = coap-client coap-server coap-rd
+noinst_PROGRAMS += coap-client
+endif # BUILD_ADD_DEFAULT_NAMES
+
+endif # HAVE_CLIENT_SUPPORT
+
+if HAVE_SERVER_SUPPORT
+
+bin_PROGRAMS += coap-server@LIBCOAP_DTLS_LIB_EXTENSION_NAME@ \
+                coap-rd@LIBCOAP_DTLS_LIB_EXTENSION_NAME@
+check_PROGRAMS += coap-etsi_iot_01
+
+if BUILD_ADD_DEFAULT_NAMES
+noinst_PROGRAMS += coap-server coap-rd
+endif # BUILD_ADD_DEFAULT_NAMES
+
+if ! HAVE_CLIENT_SUPPORT
+coap_server_CPPFLAGS=-DSERVER_CAN_PROXY=0
+coap_server@LIBCOAP_DTLS_LIB_EXTENSION_NAME@_CPPFLAGS=-DSERVER_CAN_PROXY=0
+endif # HAVE_CLIENT_SUPPORT
+
+endif # HAVE_SERVER_SUPPORT
 
 coap_client_SOURCES = coap-client.c
 coap_client_LDADD =  $(DTLS_LIBS) \
@@ -39,7 +62,6 @@ coap_server_LDADD = $(DTLS_LIBS) \
 coap_rd_SOURCES = coap-rd.c
 coap_rd_LDADD = $(DTLS_LIBS) \
              $(top_builddir)/.libs/libcoap-$(LIBCOAP_NAME_SUFFIX).la
-endif # BUILD_ADD_DEFAULT_NAMES
 
 coap_client@LIBCOAP_DTLS_LIB_EXTENSION_NAME@_SOURCES = coap-client.c
 coap_client@LIBCOAP_DTLS_LIB_EXTENSION_NAME@_LDADD =  $(DTLS_LIBS) \

@@ -18,6 +18,10 @@
 #ifndef COAP_SUBSCRIBE_INTERNAL_H_
 #define COAP_SUBSCRIBE_INTERNAL_H_
 
+#include "coap_internal.h"
+
+#if COAP_SERVER_SUPPORT
+
 /**
  * @defgroup subscribe_internal Observe Subscription (Internal)
  * CoAP Observe Subscription Structures, Enums and Functions that are not
@@ -148,4 +152,5 @@ void coap_delete_observers(coap_context_t *context, coap_session_t *session);
 
 /** @} */
 
+#endif /* COAP_SERVER_SUPPORT */
 #endif /* COAP_SUBSCRIBE_INTERNAL_H_ */

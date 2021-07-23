@@ -154,7 +154,7 @@ coap_async_get_app_data(const coap_async_t *async) {
   return async->appdata;
 }
 
-#else
+#else /* WITHOUT_ASYNC */
 
 int
 coap_async_is_supported(void) {
