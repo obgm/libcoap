@@ -323,6 +323,7 @@ coap_resource_init(coap_str_const_t *uri_path, int flags) {
       r->uri_path = uri_path;
 
     r->flags = flags;
+    r->observe = 2;
   } else {
     coap_log(LOG_DEBUG, "coap_resource_init: no memory left\n");
   }
@@ -710,7 +711,7 @@ coap_find_observer_cache_key(coap_resource_t *resource, coap_session_t *session,
 
   LL_FOREACH(resource->subscribers, s) {
     if (s->session == session
-        && (memcmp(cache_key, &s->cache_key, sizeof(s->cache_key)) == 0))
+        && (memcmp(cache_key, s->cache_key, sizeof(coap_cache_key_t)) == 0))
       return s;
   }
 
@@ -743,12 +744,14 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG };
                                                COAP_CACHE_IS_SESSION_BASED,
                                                cache_ignore_options,
                   sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
-    s = coap_find_observer_cache_key(resource, session, cache_key);
-    if (s) {
-      /* Delete old entry with old token */
-      coap_binary_t tmp_token = { s->pdu->token_length, s->pdu->token };
-      coap_delete_observer(resource, session, &tmp_token);
-      s = NULL;
+    if (cache_key) {
+      s = coap_find_observer_cache_key(resource, session, cache_key);
+      if (s) {
+        /* Delete old entry with old token */
+        coap_binary_t tmp_token = { s->pdu->token_length, s->pdu->token };
+        coap_delete_observer(resource, session, &tmp_token);
+        s = NULL;
+      }
     }
   }
 
@@ -794,7 +797,9 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG };
   /* add subscriber to resource */
   LL_PREPEND(resource->subscribers, s);
 
-  coap_log(LOG_DEBUG, "create new subscription\n");
+  coap_log(LOG_DEBUG, "create new subscription %p key 0x%02x%02x%02x%02x\n",
+           (void*)s, s->cache_key->key[0], s->cache_key->key[1],
+           s->cache_key->key[2], s->cache_key->key[3]);
 
   return s;
 }
@@ -824,7 +829,10 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
     unsigned int i;
     for ( i = 0; i < s->pdu->token_length; i++ )
       snprintf( &outbuf[2 * i], 3, "%02x", s->pdu->token[i] );
-    coap_log(LOG_DEBUG, "removed observer with token '%s'\n", outbuf);
+    coap_log(LOG_DEBUG,
+             "removed subscription %p with token '%s' key 0x%02x%02x%02x%02x\n",
+             (void*)s, outbuf, s->cache_key->key[0], s->cache_key->key[1],
+             s->cache_key->key[2], s-> cache_key->key[3]);
   }
 
   if (resource->subscribers && s) {
@@ -943,6 +951,8 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         assert(h);      /* we do not allow subscriptions if no
                          * GET/FETCH handler is defined */
         query = coap_get_query(obs->pdu);
+        coap_log(LOG_DEBUG, "Observe PDU presented to app.\n");
+        coap_show_pdu(LOG_DEBUG, obs->pdu);
         h(r, obs->session, obs->pdu, query, response);
         /* Check if lg_xmit generated and update PDU code if so */
         coap_check_code_lg_xmit(obs->session, response, r, query);
@@ -956,6 +966,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         break;
       case COAP_DELETING_RESOURCE:
       default:
+        /* Don't worry if it does not get there */
         response->type = COAP_MESSAGE_NON;
         response->code = COAP_RESPONSE_CODE(404);
         break;
