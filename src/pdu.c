@@ -1,4 +1,4 @@
-/* pdu.c -- CoAP message structure
+/* pdu.c -- CoAP PDU handling
  *
  * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -6,6 +6,11 @@
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
+ */
+
+/**
+ * @file pdu.c
+ * @brief CoAP PDU handling
  */
 
 #include "coap3/coap_internal.h"

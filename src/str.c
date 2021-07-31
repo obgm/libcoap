@@ -8,6 +8,11 @@
  * README for terms of use.
  */
 
+/**
+ * @file str.c
+ * @brief String handling functions
+ */
+
 #include "coap3/coap_internal.h"
 
 #include <stdio.h>

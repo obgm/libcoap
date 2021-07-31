@@ -18,8 +18,9 @@
 #define COAP_PRNG_H_
 
 /**
+ * @ingroup application_api
  * @defgroup coap_prng Pseudo Random Numbers
- * API functions for gerating pseudo random numbers
+ * API for generating pseudo random numbers
  * @{
  */
 

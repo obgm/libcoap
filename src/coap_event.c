@@ -9,6 +9,11 @@
  * of use.
  */
 
+/**
+ * @file coap_event.c
+ * @brief Event handling
+ */
+
 #include "coap3/coap_internal.h"
 
 /*

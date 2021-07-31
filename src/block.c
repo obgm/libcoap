@@ -8,6 +8,11 @@
  * README for terms of use.
  */
 
+/**
+ * @file block.c
+ * @brief CoAP Block handling
+ */
+
 #include "coap3/coap_internal.h"
 
 #ifndef min

@@ -10,6 +10,11 @@
  * of use.
  */
 
+/**
+ * @file coap_tinydtls.c
+ * @brief TinyDTLS specific handling functions
+ */
+
 #include "coap3/coap_internal.h"
 
 #ifdef HAVE_LIBTINYDTLS

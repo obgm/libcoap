@@ -8,6 +8,11 @@
  * README for terms of use.
  */
 
+/**
+ * @file coap_io_riot.c
+ * @brief RIOT specific I/O functions
+ */
+
 #include "coap3/coap_internal.h"
 
 #ifdef HAVE_STDIO_H

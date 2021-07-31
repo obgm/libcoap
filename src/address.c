@@ -8,6 +8,11 @@
  * README for terms of use.
  */
 
+/**
+ * @file address.c
+ * @brief Handling of network addresses
+ */
+
 #include "coap3/coap_internal.h"
 
 #if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)

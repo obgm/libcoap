@@ -1,12 +1,17 @@
 /* coap_session.c -- Session management for libcoap
-*
-* Copyright (C) 2017 Jean-Claue Michelou <jcm@spinetix.com>
-*
+ *
+ * Copyright (C) 2017 Jean-Claue Michelou <jcm@spinetix.com>
+ *
  * SPDX-License-Identifier: BSD-2-Clause
  *
-* This file is part of the CoAP library libcoap. Please see
-* README for terms of use.
-*/
+ * This file is part of the CoAP library libcoap. Please see
+ * README for terms of use.
+ */
+
+/**
+ * @file coap_session.c
+ * @brief Session handling functions
+ */
 
 #include "coap3/coap_internal.h"
 

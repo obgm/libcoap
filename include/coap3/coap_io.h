@@ -9,6 +9,11 @@
  * of use.
  */
 
+/**
+ * @file coap_io.h
+ * @brief Default network I/O functions
+ */
+
 #ifndef COAP_IO_H_
 #define COAP_IO_H_
 

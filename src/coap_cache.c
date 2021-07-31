@@ -8,6 +8,11 @@
 * README for terms of use.
 */
 
+/**
+ * @file coap_cache.c
+ * @brief CoAP Cache handling
+ */
+
 #include "coap3/coap_internal.h"
 
 #if COAP_SERVER_SUPPORT

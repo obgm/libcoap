@@ -17,8 +17,9 @@
 #define COAP_SESSION_H_
 
 /**
+ * @ingroup application_api
  * @defgroup session Sessions
- * API functions for CoAP Sessions
+ * API for CoAP Session access
  * @{
  */
 
@@ -386,7 +387,9 @@ coap_session_t *coap_session_get_by_peer(const coap_context_t *ctx,
   const coap_address_t *remote_addr, int ifindex);
 
  /**
+  * @ingroup application_api
   * @defgroup cc Rate Control
+  * API for updating transmission parameters for CoAP rate control.
   * The transmission parameters for CoAP rate control ("Congestion
   * Control" in stream-oriented protocols) are defined in
   * https://tools.ietf.org/html/rfc7252#section-4.8

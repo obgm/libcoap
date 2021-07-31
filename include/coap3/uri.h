@@ -9,6 +9,11 @@
  * of use.
  */
 
+/**
+ * @file uri.h
+ * @brief Helper functions for URI treatment
+ */
+
 #ifndef COAP_URI_H_
 #define COAP_URI_H_
 
@@ -72,8 +77,9 @@ coap_uri_t *coap_new_uri(const uint8_t *uri, unsigned int length);
 coap_uri_t *coap_clone_uri(const coap_uri_t *uri);
 
 /**
+ * @ingroup application_api
  * @defgroup uri_parse URI Parsing Functions
- *
+ * API for parsing URIs.
  * CoAP PDUs contain normalized URIs with their path and query split into
  * multiple segments. The functions in this module help splitting strings.
  * @{

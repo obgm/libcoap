@@ -10,6 +10,11 @@
  * of use.
  */
 
+/**
+ * @file coap_dtls.h
+ * @brief CoAP DTLS support
+ */
+
 #ifndef COAP_DTLS_H_
 #define COAP_DTLS_H_
 
@@ -17,8 +22,9 @@
 #include "str.h"
 
 /**
+ * @ingroup application_api
  * @defgroup dtls DTLS Support
- * API functions for interfacing with DTLS libraries.
+ * API for interfacing with DTLS libraries.
  * @{
  */
 

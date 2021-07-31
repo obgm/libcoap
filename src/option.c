@@ -9,6 +9,10 @@
  * README for terms of use.
  */
 
+/**
+ * @file option.c
+ * @brief CoAP option handling functions
+ */
 
 #include "coap3/coap_internal.h"
 

@@ -11,7 +11,7 @@
 
 /**
  * @file coap_cache_internal.h
- * @brief COAP cache internal information
+ * @brief CoAP cache internal information
  */
 
 #ifndef COAP_CACHE_INTERNAL_H_
@@ -22,9 +22,9 @@
 
 #if COAP_SERVER_SUPPORT
 /**
- * @defgroup cache_internal Cache Support (Internal)
- * CoAP Cache Structures, Enums and Functions that are not exposed to
- * applications
+ * @ingroup internal_api
+ * @defgroup cache_internal Cache Support
+ * Internal API for Cache-Key and Cache-Entry support
  * @{
  */
 

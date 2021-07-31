@@ -1,5 +1,5 @@
 /*
- * coap_context_internal.h -- Structures, Enums & Functions that are not
+ * coap_net_internal.h -- CoAP context internal information
  * exposed to application programming
  *
  * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
@@ -12,7 +12,7 @@
 
 /**
  * @file coap_net_internal.h
- * @brief COAP net internal information
+ * @brief CoAP context internal information
  */
 
 #ifndef COAP_NET_INTERNAL_H_
@@ -21,9 +21,9 @@
 #include "coap_internal.h"
 
 /**
- * @defgroup context_internal Context Handling (Internal)
- * CoAP Context Structures, Enums and Functions that are not exposed to
- * applications
+ * @ingroup internal_api
+ * @defgroup context_internal Context Handling
+ * Internal API for Context Handling
  * @{
  */
 

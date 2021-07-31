@@ -9,12 +9,18 @@
  * of use.
  */
 
+/**
+ * @file coap_debug.h
+ * @brief CoAP Logging support
+ */
+
 #ifndef COAP_DEBUG_H_
 #define COAP_DEBUG_H_
 
 /**
+ * @ingroup application_api
  * @defgroup logging Logging Support
- * API functions for logging support
+ * API for logging support
  * @{
  */
 

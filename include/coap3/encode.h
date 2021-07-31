@@ -9,6 +9,11 @@
  * of use.
  */
 
+/**
+ * @file encode.h
+ * @brief Encoding and decoding of CoAP data types
+ */
+
 #ifndef COAP_ENCODE_H_
 #define COAP_ENCODE_H_
 
@@ -35,8 +40,9 @@ extern int coap_flsll(long long i);
 #endif
 
 /**
+ * @ingroup application_api
  * @defgroup encode Encode / Decode API
- * API functions for endoding/decoding CoAP options.
+ * API for endoding/decoding CoAP options.
  * @{
  */
 

@@ -12,7 +12,7 @@
 
 /**
  * @file coap_session_internal.h
- * @brief COAP session internal information
+ * @brief CoAP session internal information
  */
 
 #ifndef COAP_SESSION_INTERNAL_H_
@@ -26,9 +26,9 @@
 #define COAP_DEFAULT_MAX_HANDSHAKE_SESSIONS 100
 
 /**
- * @defgroup session_internal Sessions (Internal)
- * CoAP Session Structures, Enums and Functions that are not exposed to
- * applications
+ * @ingroup internal_api
+ * @defgroup session_internal Sessions
+ * Internal API for handling Sessions
  * @{
  */
 

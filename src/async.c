@@ -10,7 +10,7 @@
 
 /**
  * @file async.c
- * @brief state management for asynchronous messages
+ * @brief State handling for asynchronous messages
  */
 
 #include "coap3/coap_internal.h"

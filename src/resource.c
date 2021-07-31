@@ -8,6 +8,11 @@
  * README for terms of use.
  */
 
+/**
+ * @file resource.c
+ * @brief Server resource handling functions
+ */
+
 #include "coap3/coap_internal.h"
 
 #if COAP_SERVER_SUPPORT

@@ -20,9 +20,10 @@
 #include "net.h"
 
 /**
+ * @ingroup application_api
  * @defgroup coap_async Asynchronous Messaging
  * @{
- * API functions for  Async "separate" messages.
+ * API for delayed "separate" messages.
  * A coap_context_t object holds a list of coap_async_t objects that can
  * be used to generate a separate response in the case a result of a request
  * cannot be delivered immediately.

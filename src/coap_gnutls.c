@@ -10,6 +10,11 @@
  * of use.
  */
 
+/**
+ * @file coap_gnutls.c
+ * @brief GndTLS interafe functions
+ */
+
 /*
  * Naming used to prevent confusion between coap sessions, gnutls sessions etc.
  * when reading the code.

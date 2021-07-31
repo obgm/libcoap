@@ -24,10 +24,10 @@
 #ifndef WITHOUT_ASYNC
 
 /**
- * @defgroup coap_async_internal Asynchronous Messaging (Internal)
+ * @ingroup internal_api
+ * @defgroup coap_async_internal Asynchronous Messaging
  * @{
- * CoAP Async Structures, Enums and Functions that are not exposed to
- * applications.
+ * Internal API for CoAP Asynchronous processing.
  * A coap_context_t object holds a list of coap_async_t objects that can be
  * used to generate a separate response in the case a result of a request cannot
  * be delivered immediately.

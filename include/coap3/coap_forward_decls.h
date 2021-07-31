@@ -12,7 +12,7 @@
 
 /**
  * @file coap_forward_decls.h
- * @brief COAP forward definitions
+ * @brief CoAP forward definitions
  */
 
 #ifndef COAP_FORWARD_DECLS_H_

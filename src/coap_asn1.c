@@ -8,6 +8,11 @@
 * README for terms of use.
 */
 
+/**
+ * @file coap_asn1.c
+ * @brief CoAP specific ASN.1 handling
+ */
+
 #include "coap3/coap_internal.h"
 
 size_t

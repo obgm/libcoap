@@ -8,6 +8,11 @@
  * README for terms of use.
  */
 
+/**
+ * @file encode.c
+ * @brief Encoding and decoding Coap data types functions
+ */
+
 #include "coap3/coap_internal.h"
 
 /* Carsten suggested this when fls() is not available: */
