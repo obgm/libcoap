@@ -94,6 +94,10 @@ if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
+if(APPLE)
+  add_definitions(-D__APPLE_USE_RFC_3542=1)
+endif()
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_BINARY_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -123,7 +127,6 @@ check_include_file(netdb.h HAVE_NETDB_H)
 check_include_file(pthread.h HAVE_PTHREAD_H)
 check_include_file(stdlib.h HAVE_STDINT_H)
 check_include_file(stdint.h HAVE_STDLIB_H)
-check_include_file(inttypes.h HAVE_INTTYPES_H)
 check_include_file(syslog.h HAVE_SYSLOG_H)
 check_include_file(sys/ioctl.h HAVE_SYS_IOCTL_H)
 check_include_file(sys/socket.h HAVE_SYS_SOCKET_H)
@@ -149,6 +152,7 @@ check_function_exists(getaddrinfo HAVE_GETADDRINFO)
 check_function_exists(strnlen HAVE_STRNLEN)
 check_function_exists(strrchr HAVE_STRRCHR)
 check_function_exists(getrandom HAVE_GETRANDOM)
+check_function_exists(if_nametoindex HAVE_IF_NAMETOINDEX)
 
 # check for symbols
 if(WIN32)
@@ -453,7 +457,6 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_event.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_hashkey.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h.in
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_io.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_session.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_time.h
@@ -664,6 +667,7 @@ install(
   PATTERN "coap_riot.h" EXCLUDE
   PATTERN "lwippools.h" EXCLUDE
   PATTERN "utlist.h" EXCLUDE
+  PATTERN "uthash.h" EXCLUDE
   PATTERN "*_internal.h" EXCLUDE)
 install(
   DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
