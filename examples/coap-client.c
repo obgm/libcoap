@@ -280,6 +280,14 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_SESSION_CLOSED:
     quit = 1;
     break;
+  case COAP_EVENT_DTLS_CONNECTED:
+  case COAP_EVENT_DTLS_RENEGOTIATE:
+  case COAP_EVENT_DTLS_ERROR:
+  case COAP_EVENT_TCP_CONNECTED:
+  case COAP_EVENT_TCP_FAILED:
+  case COAP_EVENT_SESSION_CONNECTED:
+  case COAP_EVENT_SESSION_FAILED:
+  case COAP_EVENT_PARTIAL_BLOCK:
   default:
     break;
   }
