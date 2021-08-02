@@ -42,7 +42,6 @@ COAP_PSEUDOFP_ENCODE_8_4_DOWN(unsigned int v, int *ls) {
 }
 #define COAP_PSEUDOFP_ENCODE_8_4_UP(v,ls,s) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (s = (((v + ((1<<ENCODE_HEADER_SIZE<<ls)-1)) >> ls) & MMASK)), s == 0 ? HIBIT + ls + 1 : s + ls))
 
-static coap_mid_t id;
 static int quit = 0;
 
 /* SIGINT handler: set quit to 1 for graceful termination */
@@ -52,14 +51,14 @@ handle_sigint(int signum COAP_UNUSED) {
 }
 
 static coap_pdu_t *
-make_pdu( unsigned int value ) {
+make_pdu( coap_session_t *session, unsigned int value ) {
   coap_pdu_t *pdu;
   unsigned char enc;
   static unsigned char buf[20];
   int len, ls;
 
-  if (!(pdu = coap_pdu_init(COAP_MESSAGE_NON, COAP_REQUEST_CODE_POST, id++,
-                            COAP_DEFAULT_MTU)))
+  if (!(pdu = coap_pdu_init(COAP_MESSAGE_NON, COAP_REQUEST_CODE_POST,
+                            coap_new_message_id(session), COAP_DEFAULT_MTU)))
     return NULL;
 
   enc = COAP_PSEUDOFP_ENCODE_8_4_DOWN(value, &ls);
@@ -155,8 +154,6 @@ main(int argc, char **argv) {
   if ( !session )
     return -1;
 
-  id = rand() & INT_MAX;
-
   memset (&sa, 0, sizeof(sa));
   sigemptyset(&sa.sa_mask);
   sa.sa_handler = handle_sigint;
@@ -169,7 +166,7 @@ main(int argc, char **argv) {
 
   while ( !quit ) {
 
-    if (! (pdu = make_pdu( rand() & 0xfff ) ) )
+    if (! (pdu = make_pdu( session, rand() & 0xfff ) ) )
       break;
 
     coap_send(session, pdu);
