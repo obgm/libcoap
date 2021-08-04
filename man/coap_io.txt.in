@@ -44,6 +44,8 @@ coap_tick_t _now_)*;
 *void coap_io_do_epoll(coap_context_t *_context_, struct epoll_event *_events_,
 size_t _nevents_)*;
 
+*int coap_can_exit(coap_context_t *_context_)*;
+
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
@@ -72,6 +74,10 @@ the next packet is received whichever is the sooner and do the necessary
 processing. If _timeout_ms_ is set to COAP_IO_NO_WAIT, then *coap_io_process*()
 will return immediately after processing without waiting for any new input
 packets to arrive.
+
+*NOTE:* *coap_io_process*() should not be called from within a callback
+handler as defined using the coap_register_*_handler() as *coap_io_process*()
+will likely recursively call the same handler.
 
 There are two methods of how to call *coap_io_process*().
 
@@ -161,6 +167,11 @@ as an event returned from a *epoll_wait*() call.  This file descriptor will get
 updated with information (read, write etc. available) whenever any of the
 internal to libcoap file descriptors (sockets) change state.
 
+The *coap_can_exit*() function checks to see if there are any outstanding
+PDUs to transmit associated with _context_ and returns 1 if there is nothing
+outstanding else 0. This function does not check that all requests transmitted
+have been responded to.
+
 RETURN VALUES
 -------------
 *coap_io_process*() and *coap_io_process_with_fds*() returns the time, in
@@ -172,6 +183,9 @@ descriptor to monitor, or -1 if epoll is not configured in libcoap.
 
 *coap_io_prepare_io*() and *coap_io_prepare_epoll*() returns the number of
 milli-seconds that need to be waited before the function should next be called.
+
+*coap_can_exit*() returns 1 if there is nothing outstanding to transmit else
+returns 0.
 
 EXAMPLES
 --------
