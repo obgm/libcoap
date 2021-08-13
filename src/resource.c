@@ -903,7 +903,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         context->observe_pending = 1;
         continue;
       }
-      if (obs->session->con_active >= COAP_DEFAULT_NSTART &&
+      if (obs->session->con_active >= COAP_NSTART(obs->session) &&
           ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) ||
            (obs->non_cnt >= COAP_OBS_MAX_NON))) {
         r->partiallydirty = 1;

@@ -27,48 +27,92 @@
 #include <errno.h>
 
 void
-coap_session_set_max_retransmit (coap_session_t *session, unsigned int value) {
-  if (value > 0)
-    session->max_retransmit = value;
-  coap_log(LOG_DEBUG, "***%s: session max_retransmit set to %d\n",
-           coap_session_str(session), session->max_retransmit);
-  return;
-}
-
-void
-coap_session_set_ack_timeout (coap_session_t *session, coap_fixed_point_t value) {
-  if (value.integer_part > 0 && value.fractional_part < 1000)
+coap_session_set_ack_timeout(coap_session_t *session, coap_fixed_point_t value) {
+  if (value.integer_part > 0 && value.fractional_part < 1000) {
     session->ack_timeout = value;
-  coap_log(LOG_DEBUG, "***%s: session ack_timeout set to %d.%03d\n",
+    coap_log(LOG_DEBUG, "***%s: session ack_timeout set to %u.%03u\n",
            coap_session_str(session), session->ack_timeout.integer_part,
            session->ack_timeout.fractional_part);
-  return;
+  }
 }
 
 void
-coap_session_set_ack_random_factor (coap_session_t *session,
-                                    coap_fixed_point_t value) {
-  if (value.integer_part > 0 && value.fractional_part < 1000)
+coap_session_set_ack_random_factor(coap_session_t *session,
+                                   coap_fixed_point_t value) {
+  if (value.integer_part > 0 && value.fractional_part < 1000) {
     session->ack_random_factor = value;
-  coap_log(LOG_DEBUG, "***%s: session ack_random_factor set to %d.%03d\n",
+    coap_log(LOG_DEBUG, "***%s: session ack_random_factor set to %u.%03u\n",
            coap_session_str(session), session->ack_random_factor.integer_part,
            session->ack_random_factor.fractional_part);
-  return;
+  }
 }
 
-unsigned int
-coap_session_get_max_retransmit (const coap_session_t *session) {
-  return session->max_retransmit;
+void
+coap_session_set_max_retransmit(coap_session_t *session, uint16_t value) {
+  if (value > 0) {
+    session->max_retransmit = value;
+    coap_log(LOG_DEBUG, "***%s: session max_retransmit set to %u\n",
+           coap_session_str(session), session->max_retransmit);
+  }
+}
+
+void
+coap_session_set_nstart(coap_session_t *session, uint16_t value) {
+  if (value > 0) {
+    session->nstart = value;
+    coap_log(LOG_DEBUG, "***%s: session nstart set to %u\n",
+           coap_session_str(session), session->nstart);
+  }
+}
+
+void
+coap_session_set_default_leisure(coap_session_t *session,
+                                 coap_fixed_point_t value) {
+  if (value.integer_part > 0 && value.fractional_part < 1000) {
+    session->default_leisure = value;
+    coap_log(LOG_DEBUG, "***%s: session default_leisure set to %u.%03u\n",
+           coap_session_str(session), session->default_leisure.integer_part,
+           session->default_leisure.fractional_part);
+  }
+}
+
+void
+coap_session_set_probing_rate(coap_session_t *session, uint32_t value) {
+  if (value > 0) {
+    session->probing_rate = value;
+    coap_log(LOG_DEBUG, "***%s: session probing_rate set to %u\n",
+           coap_session_str(session), session->probing_rate);
+  }
 }
 
 coap_fixed_point_t
-coap_session_get_ack_timeout (const coap_session_t *session) {
+coap_session_get_ack_timeout(const coap_session_t *session) {
   return session->ack_timeout;
 }
 
 coap_fixed_point_t
-coap_session_get_ack_random_factor (const coap_session_t *session) {
+coap_session_get_ack_random_factor(const coap_session_t *session) {
   return session->ack_random_factor;
+}
+
+uint16_t
+coap_session_get_max_retransmit(const coap_session_t *session) {
+  return session->max_retransmit;
+}
+
+uint16_t
+coap_session_get_nstart(const coap_session_t *session) {
+  return session->nstart;
+}
+
+coap_fixed_point_t
+coap_session_get_default_leisure(const coap_session_t *session) {
+  return session->default_leisure;
+}
+
+uint32_t
+coap_session_get_probing_rate(const coap_session_t *session) {
+  return session->probing_rate;
 }
 
 coap_session_t *
@@ -156,9 +200,12 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
       coap_log(LOG_ERR, "DTLS overhead exceeds MTU\n");
     }
   }
-  session->max_retransmit = COAP_DEFAULT_MAX_RETRANSMIT;
   session->ack_timeout = COAP_DEFAULT_ACK_TIMEOUT;
   session->ack_random_factor = COAP_DEFAULT_ACK_RANDOM_FACTOR;
+  session->max_retransmit = COAP_DEFAULT_MAX_RETRANSMIT;
+  session->nstart = COAP_DEFAULT_NSTART;
+  session->default_leisure = COAP_DEFAULT_DEFAULT_LEISURE;
+  session->probing_rate = COAP_DEFAULT_PROBING_RATE;
   session->dtls_event = -1;
   session->last_ping_mid = COAP_INVALID_MID;
 
@@ -498,7 +545,7 @@ void coap_session_connected(coap_session_t *session) {
     ssize_t bytes_written;
     coap_queue_t *q = session->delayqueue;
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
-      if (session->con_active >= COAP_DEFAULT_NSTART)
+      if (session->con_active >= COAP_NSTART(session))
         break;
       session->con_active++;
     }

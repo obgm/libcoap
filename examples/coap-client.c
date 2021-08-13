@@ -1819,7 +1819,7 @@ main(int argc, char **argv) {
 
   if (is_mcast && wait_seconds == DEFAULT_WAIT_TIME)
     /* Allow for other servers to respond within DEFAULT_LEISURE RFC7252 8.2 */
-    wait_seconds = COAP_DEFAULT_LEISURE;
+    wait_seconds = coap_session_get_default_leisure(session).integer_part;
 
   wait_ms = wait_seconds * 1000;
   coap_log(LOG_DEBUG, "timeout is set to %u seconds\n", wait_seconds);

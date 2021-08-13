@@ -888,7 +888,8 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
   }
 
   if (session->state != COAP_SESSION_STATE_ESTABLISHED ||
-      (pdu->type == COAP_MESSAGE_CON && session->con_active >= COAP_DEFAULT_NSTART)) {
+      (pdu->type == COAP_MESSAGE_CON &&
+       session->con_active >= COAP_NSTART(session))) {
     return coap_session_delay_pdu(session, pdu, node);
   }
 
@@ -2563,7 +2564,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     /* Need to delay sending mcast request to application layer, so response
        is not immediate. */
     coap_prng(&r, sizeof(r));
-    delay = (COAP_DEFAULT_LEISURE * COAP_TICKS_PER_SECOND * r) / 256;
+    delay = (COAP_DEFAULT_LEISURE_TICKS(session) * r) / 256;
     /* Register request to be internally re-transmitted after delay */
     if ((async = coap_register_async(session, pdu, delay))) {
       /* Need to restore MID so delayed response can be matched up */
