@@ -124,12 +124,18 @@ struct coap_session_t {
 
                                       Value maintained internally */
   void *app;                        /**< application-specific data */
-  unsigned int max_retransmit;      /**< maximum re-transmit count (default
-                                         4) */
-  coap_fixed_point_t ack_timeout;   /**< timeout waiting for ack (default 2
-                                         secs) */
+  coap_fixed_point_t ack_timeout;   /**< timeout waiting for ack
+                                         (default 2.0 secs) */
   coap_fixed_point_t ack_random_factor; /**< ack random factor backoff (default
                                              1.5) */
+  uint16_t max_retransmit;          /**< maximum re-transmit count
+                                         (default 4) */
+  uint16_t nstart;                  /**< maximum concurrent confirmable xmits
+                                         (default 1) */
+  coap_fixed_point_t default_leisure; /**< Mcast leisure time
+                                           (default 5.0 secs) */
+  uint32_t probing_rate;            /**< Max transfer wait when remote is not
+                                         respoding (default 1 byte/sec) */
   unsigned int dtls_timeout_count;      /**< dtls setup retry counter */
   int dtls_event;                       /**< Tracking any (D)TLS events on this
                                              sesison */
@@ -313,6 +319,89 @@ coap_session_t *coap_session_new_dtls_session(coap_session_t *session,
 
 void coap_session_free(coap_session_t *session);
 void coap_session_mfree(coap_session_t *session);
+
+#define COAP_SESSION_REF(s) ((s)->ref
+
+/* RFC7252 */
+#define COAP_ACK_TIMEOUT(s) ((s)->ack_timeout)
+#define COAP_ACK_RANDOM_FACTOR(s) ((s)->ack_random_factor)
+#define COAP_MAX_RETRANSMIT(s) ((s)->max_retransmit)
+#define COAP_NSTART(s) ((s)->nstart)
+#define COAP_DEFAULT_LEISURE(s) ((s)->default_leisure)
+#define COAP_PROBING_RATE(s) ((s)->probing_rate)
+
+  /**
+   * The DEFAULT_LEISURE definition for the session (s).
+   *
+   * RFC 7252, Section 4.8
+   * Initial value 5.0 seconds
+   */
+#define COAP_DEFAULT_LEISURE_TICKS(s) \
+     (COAP_DEFAULT_LEISURE(s).integer_part * COAP_TICKS_PER_SECOND + \
+      COAP_DEFAULT_LEISURE(s).fractional_part * COAP_TICKS_PER_SECOND / 1000)
+  /**
+   * The MAX_TRANSMIT_SPAN definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_SPAN
+   *  ACK_TIMEOUT * ((2 ** (MAX_RETRANSMIT)) - 1) * ACK_RANDOM_FACTOR
+   */
+#define COAP_MAX_TRANSMIT_SPAN(s) \
+ (((s)->ack_timeout.integer_part * 1000 + (s)->ack_timeout.fractional_part) * \
+  ((1 << ((s)->max_retransmit)) -1) * \
+  ((s)->ack_random_factor.integer_part * 1000 + \
+   (s)->ack_random_factor.fractional_part) \
+  / 1000000)
+
+  /**
+   * The MAX_TRANSMIT_WAIT definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_WAIT
+   *  ACK_TIMEOUT * ((2 ** (MAX_RETRANSMIT + 1)) - 1) * ACK_RANDOM_FACTOR
+   */
+#define COAP_MAX_TRANSMIT_WAIT(s) \
+ (((s)->ack_timeout.integer_part * 1000 + (s)->ack_timeout.fractional_part) * \
+  ((1 << ((s)->max_retransmit + 1)) -1) * \
+  ((s)->ack_random_factor.integer_part * 1000 + \
+   (s)->ack_random_factor.fractional_part) \
+  / 1000000)
+
+  /**
+   * The PROCESSING_DELAY definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of PROCESSING_DELAY
+   *  PROCESSING_DELAY set to ACK_TIMEOUT
+   */
+#define COAP_PROCESSING_DELAY(s) \
+ (((s)->ack_timeout.integer_part * 1000 + (s)->ack_timeout.fractional_part + \
+   500) / 1000)
+
+  /**
+   * The MAX_RTT definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of MAX_RTT
+   *  (2 * MAX_LATENCY) + PROCESSING_DELAY
+   */
+#define COAP_MAX_RTT(s) \
+ ((2 * COAP_DEFAULT_MAX_LATENCY) + COAP_PROCESSING_DELAY(s))
+
+  /**
+   * The EXCHANGE_LIFETIME definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of EXCHANGE_LIFETIME
+   *  MAX_TRANSMIT_SPAN + (2 * MAX_LATENCY) + PROCESSING_DELAY
+   */
+#define COAP_EXCHANGE_LIFETIME(s) \
+ (COAP_MAX_TRANSMIT_SPAN(s) + (2 * COAP_DEFAULT_MAX_LATENCY) + \
+ COAP_PROCESSING_DELAY(s))
+
+  /**
+   * The NON_LIFETIME definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of NON_LIFETIME
+   *  MAX_TRANSMIT_SPAN + MAX_LATENCY
+   */
+#define COAP_NON_LIFETIME(s) \
+ (COAP_MAX_TRANSMIT_SPAN(s) + COAP_DEFAULT_MAX_LATENCY)
 
 /** @} */
 

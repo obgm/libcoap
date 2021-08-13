@@ -11,12 +11,18 @@ coap_recovery(3)
 NAME
 ----
 coap_recovery,
-coap_session_set_max_retransmit,
-coap_session_set_ack_timeout,
 coap_session_set_ack_random_factor,
-coap_session_get_max_retransmit,
-coap_session_get_ack_timeout,
 coap_session_get_ack_random_factor,
+coap_session_set_ack_timeout,
+coap_session_get_ack_timeout,
+coap_session_set_default_leisure,
+coap_session_get_default_leisure,
+coap_session_set_max_retransmit,
+coap_session_get_max_retransmit,
+coap_session_set_nstart,
+coap_session_get_nstart,
+coap_session_set_probing_wait,
+coap_session_get_probing_wait,
 coap_debug_set_packet_loss
 - Work with CoAP packet transmissions
 
@@ -24,22 +30,37 @@ SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*void coap_session_set_max_retransmit(coap_session_t *_session_,
-unsigned int _value_)*;
+*void coap_session_set_ack_random_factor(coap_session_t *_session_,
+coap_fixed_point_t _value_)*;
+
+*coap_fixed_point_t coap_session_get_ack_random_factor(
+const coap_session_t *_session_)*;
 
 *void coap_session_set_ack_timeout(coap_session_t *_session_,
 coap_fixed_point_t _value_)*;
 
-*void coap_session_set_ack_random_factor(coap_session_t *_session_,
-coap_fixed_point_t _value_)*;
-
-*unsigned int coap_session_get_max_retransmit(const coap_session_t *_session_)*;
-
 *coap_fixed_point_t coap_session_get_ack_timeout(
 const coap_session_t *_session_)*;
 
-*coap_fixed_point_t coap_session_get_ack_random_factor(
+*void coap_session_set_default_leisure(coap_session_t *_session_,
+coap_fixed_point_t _value_)*;
+
+*coap_fixed_point_t coap_session_get_default_leisure(
 const coap_session_t *_session_)*;
+
+*void coap_session_set_max_retransmit(coap_session_t *_session_,
+uint16_t _value_)*;
+
+*uint16_t coap_session_get_max_retransmit(const coap_session_t *_session_)*;
+
+*void coap_session_set_nstart(coap_session_t *_session_, uint16_t _value_)*;
+
+*uint16_t coap_session_get_nstart(const coap_session_t *_session_)*;
+
+*void coap_session_set_probing_rate(coap_session_t *_session_,
+uint32_t _value_)*;
+
+*uint32_t coap_session_get_probing_rate(const coap_session_t *_session_)*;
 
 *int coap_debug_set_packet_loss(const char *_loss_level_)*;
 
@@ -53,13 +74,12 @@ DESCRIPTION
 -----------
 For CoAP Confirmable messages, it is possible to define the retry counts,
 repeat rate etc. for error recovery.  Further information can be found in
-"RFC7272: 4.2. Messages Transmitted Reliably".
+"RFC7272: 4.2. Messages Transmitted Reliably", with the default values
+defined in "RFC7272: 4.8 Transmission Parameters".
 
 It is not recommended that the suggested default setting are changed, but
 there may be some special requirements that need different values and the
 consequences of changing these values is fully understood.
-
-Changing the default values for multicast packets is not supported.
 
 Some of the parameters or return values are in fixed point format as defined
 by the coap_fixed_point_t structure as below
@@ -93,24 +113,45 @@ It is also possible to set up packet losses, for both confirmable, and
 non-confirmable messages.  This can be used for stress testing packet
 transmission recovery as well as application handling of lossy networks.
 
-The *coap_session_set_max_retransmit*() function updates the _session_ maximum
-retransmit count with the new _value_.  The default value is 4.
-
-The *coap_session_set_ack_timeout*() function updates the _session_ initial
-ack or response timeout with the new _value_.  The default value is 2.0.
+The following functions reflect the RFC7252 uppercase names in lowercase
+following the coap_session[sg]_ function prefix.
 
 The *coap_session_set_ack_random_factor*() function updates the _session_ ack
 random wait factor, used to randomize re-transmissions, with the new _value_.
 The default value is 1.5.
 
-The *coap_session_get_max_retransmit*() function returns the current _session_
-maximum retransmit count.
+The *coap_session_get_ack_random_factor*() function returns the current
+_session_ ack random wait factor.
+
+The *coap_session_set_ack_timeout*() function updates the _session_ initial
+ack or response timeout with the new _value_.  The default value is 2.0.
 
 The *coap_session_get_ack_timeout*() function returns the current _session_
 initial ack or response timeout.
 
-The *coap_session_get_ack_random_factor*() function returns the current
-_session_ ack random wait factor.
+The *coap_session_set_default_leisure*() function updates the _session_
+default leisure time with the new _value_.  The initial default value is 5.0.
+
+The *coap_session_get_default_leisure*() function returns the current _session_
+default leisure time.
+
+The *coap_session_set_max_retransmit*() function updates the _session_ maximum
+retransmit count with the new _value_.  The default value is 4.
+
+The *coap_session_get_max_retransmit*() function returns the current _session_
+maximum retransmit count.
+
+The *coap_session_set_nstart*() function updates the _session_ nstart
+with the new _value_.  The default value is 1.
+
+The *coap_session_get_nstart*() function returns the current _session_
+nstart value.
+
+The *coap_session_set_probing_rate*() function updates the _session_ probing
+rate with the new _value_.  The default value is 1 byte per second.
+
+The *coap_session_get_probing_rate*() function returns the current _session_
+probing rate value.
 
 The *coap_debug_set_packet_loss*() function is uses to set the packet loss
 levels as defined in _loss_level_.  _loss_level_ can be set as a percentage
@@ -124,8 +165,10 @@ To remove any packet losses, set the _loss_level_ to "0%".
 
 RETURN VALUES
 -------------
-*coap_session_get_max_retransmit*(), *coap_session_get_ack_timeout*() and
-*coap_session_get_ack_random_factor*() return their respective current values.
+*coap_session_get_ack_random_factor*(), *coap_session_get_ack_timeout*(),
+*coap_session_get_default_leisure*(), *coap_session_get_max_retransmit*(),
+*coap_session_get_nstart*() *and coap_session_get_probing_rate*() return their
+respective current values.
 
 *coap_debug_set_packet_loss*() returns 0 if _loss_level_ does not parse
 correctly, otherwise 1 if successful.
@@ -144,8 +187,8 @@ The client needs to be sending confirmable requests during the test.
 The server can either be stopped, or if packet loss levels are set to 100% by
 using coap_debug_set_packet_loss("100%") when receiving the client requests.
 
-*NOTE:* If the server end of the connection is returning ICMP unreachable packets
-after being turned off, you will get a debug message of the form
+*NOTE:* If the server end of the connection is returning ICMP unreachable
+packets after being turned off, you will get a debug message of the form
 "coap_network_read: unreachable", so libcoap will stop doing the retries.  If
 this is the case, then you need to make use of (on the server)
 coap_debug_set_packet_loss("100%") or put in some packet filtering to drop the
