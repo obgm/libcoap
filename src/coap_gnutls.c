@@ -523,25 +523,18 @@ psk_client_callback(gnutls_session_t g_session,
                   (coap_session_t *)gnutls_transport_get_ptr(g_session);
   coap_gnutls_context_t *g_context;
   coap_dtls_cpsk_t *setup_data;
-  uint8_t identity[COAP_DTLS_MAX_PSK_IDENTITY];
-  size_t identity_len;
-  uint8_t psk[COAP_DTLS_MAX_PSK];
-  size_t psk_len;
   const char *hint = gnutls_psk_client_get_hint(g_session);
-  size_t hint_len = 0;
-
-  /* Constant passed to get_client_psk callback. The final byte is
-   * reserved for a terminating 0. */
-  const size_t max_identity_len = sizeof(identity) - 1;
+  coap_bin_const_t temp;
+  const coap_bin_const_t *psk_key;
+  const coap_bin_const_t *psk_identity;
+  const coap_dtls_cpsk_info_t *cpsk_info;
 
   /* Initialize result parameters. */
   *username = NULL;
   key->data = NULL;
 
-  if (c_session == NULL || c_session->context == NULL ||
-      c_session->context->get_client_psk == NULL) {
+  if (c_session == NULL)
     return -1;
-  }
 
   g_context = (coap_gnutls_context_t *)c_session->context->dtls_context;
   if (g_context == NULL)
@@ -549,69 +542,55 @@ psk_client_callback(gnutls_session_t g_session,
 
   setup_data = &c_session->cpsk_setup_data;
 
-  if (hint)
-    hint_len = strlen(hint);
-  else
-    hint = "";
+  temp.s = hint ? (const uint8_t*)hint : (const uint8_t*)"";
+  temp.length = strlen((const char*)temp.s);
+  coap_session_refresh_psk_hint(c_session, &temp);
 
-  coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)hint_len, hint);
+  coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)temp.length,
+             (const char *)temp.s);
 
   if (setup_data->validate_ih_call_back) {
     coap_str_const_t lhint;
-    lhint.length = hint_len;
-    lhint.s = (const uint8_t*)hint;
-    const coap_dtls_cpsk_info_t *psk_info =
+
+    lhint.length = temp.length;
+    lhint.s = temp.s;
+    cpsk_info =
              setup_data->validate_ih_call_back(&lhint,
                                                c_session,
                                                setup_data->ih_call_back_arg);
 
-    if (psk_info == NULL)
+    if (cpsk_info == NULL)
       return -1;
 
-    *username = gnutls_malloc(psk_info->identity.length+1);
-    if (*username == NULL)
-      return -1;
-    memcpy(*username, psk_info->identity.s, psk_info->identity.length);
-    (*username)[psk_info->identity.length] = '\000';
-
-    key->data = gnutls_malloc(psk_info->key.length);
-    if (key->data == NULL) {
-      gnutls_free(*username);
-      *username = NULL;
-      return -1;
-    }
-    memcpy(key->data, psk_info->key.s, psk_info->key.length);
-    key->size = psk_info->key.length;
-    return 0;
+    coap_session_refresh_psk_identity(c_session, &cpsk_info->identity);
+    coap_session_refresh_psk_key(c_session, &cpsk_info->key);
+    psk_identity = &cpsk_info->identity;
+    psk_key = &cpsk_info->key;
+  }
+  else {
+    psk_identity = coap_get_session_client_psk_identity(c_session);
+    psk_key = coap_get_session_client_psk_key(c_session);
   }
 
-  psk_len = c_session->context->get_client_psk(c_session,
-                                               NULL,
-                                               0,
-                                               identity,
-                                               &identity_len,
-                                               max_identity_len,
-                                               psk,
-                                               sizeof(psk));
-  assert(identity_len < sizeof(identity));
+  if (psk_identity == NULL || psk_key == NULL) {
+    coap_log(LOG_WARNING, "no PSK available\n");
+    return -1;
+  }
 
-  /* Reserve dynamic memory to hold the identity and a terminating
-   * zero. */
-  *username = gnutls_malloc(identity_len+1);
+  *username = gnutls_malloc(psk_identity->length+1);
   if (*username == NULL)
     return -1;
-  memcpy(*username, identity, identity_len);
-  (*username)[identity_len] = '\0';
+  memcpy(*username, psk_identity->s, psk_identity->length);
+  (*username)[psk_identity->length] = '\000';
 
-  key->data = gnutls_malloc(psk_len);
+  key->data = gnutls_malloc(psk_key->length);
   if (key->data == NULL) {
     gnutls_free(*username);
     *username = NULL;
     return -1;
   }
-  memcpy(key->data, psk, psk_len);
-  key->size = psk_len;
-
+  memcpy(key->data, psk_key->s, psk_key->length);
+  key->size = psk_key->length;
   return 0;
 }
 #endif /* COAP_CLIENT_SUPPORT */
@@ -1809,12 +1788,10 @@ psk_server_callback(gnutls_session_t g_session,
                 (coap_session_t *)gnutls_transport_get_ptr(g_session);
   coap_gnutls_context_t *g_context;
   coap_dtls_spsk_t *setup_data;
-  size_t identity_len = 0;
-  uint8_t buf[COAP_DTLS_MAX_PSK];
-  size_t psk_len;
+  coap_bin_const_t lidentity;
+  const coap_bin_const_t *psk_key;
 
-  if (c_session == NULL || c_session->context == NULL ||
-      c_session->context->get_server_psk == NULL)
+  if (c_session == NULL)
     return -1;
 
   g_context = (coap_gnutls_context_t *)c_session->context->dtls_context;
@@ -1822,47 +1799,34 @@ psk_server_callback(gnutls_session_t g_session,
     return -1;
   setup_data = &c_session->context->spsk_setup_data;
 
-  if (identity)
-    identity_len = strlen(identity);
-  else
-    identity = "";
 
   /* Track the Identity being used */
-  if (c_session->psk_identity)
-    coap_delete_bin_const(c_session->psk_identity);
-  c_session->psk_identity = coap_new_bin_const((const uint8_t *)identity,
-                                               identity_len);
+  lidentity.s = identity ? (const uint8_t*)identity : (const uint8_t*)"";
+  lidentity.length = strlen((const char*)lidentity.s);
+  coap_session_refresh_psk_identity(c_session, &lidentity);
 
   coap_log(LOG_DEBUG, "got psk_identity: '%.*s'\n",
-                      (int)identity_len, identity);
+                      (int)lidentity.length, (const char *)lidentity.s);
 
   if (setup_data->validate_id_call_back) {
-    coap_bin_const_t lidentity;
-    lidentity.length = identity_len;
-    lidentity.s = (const uint8_t*)identity;
-    const coap_bin_const_t *psk_key =
-             setup_data->validate_id_call_back(&lidentity,
-                                               c_session,
-                                               setup_data->id_call_back_arg);
+    psk_key = setup_data->validate_id_call_back(&lidentity,
+                                                c_session,
+                                                setup_data->id_call_back_arg);
 
-    if (psk_key == NULL)
-      return -1;
-    key->data = gnutls_malloc(psk_key->length);
-    if (key->data == NULL)
-      return -1;
-    memcpy(key->data, psk_key->s, psk_key->length);
-    key->size = psk_key->length;
     coap_session_refresh_psk_key(c_session, psk_key);
-    return 0;
+  }
+  else {
+    psk_key = coap_get_session_server_psk_key(c_session);
   }
 
-  psk_len = c_session->context->get_server_psk(c_session,
-                               (const uint8_t*)identity,
-                               identity_len,
-                               (uint8_t*)buf, sizeof(buf));
-  key->data = gnutls_malloc(psk_len);
-  memcpy(key->data, buf, psk_len);
-  key->size = psk_len;
+  if (psk_key == NULL)
+    return -1;
+
+  key->data = gnutls_malloc(psk_key->length);
+  if (key->data == NULL)
+    return -1;
+  memcpy(key->data, psk_key->s, psk_key->length);
+  key->size = psk_key->length;
   return 0;
 }
 

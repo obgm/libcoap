@@ -955,6 +955,7 @@ coap_session_t *coap_new_client_session_psk(
   coap_dtls_cpsk_t setup_data;
 
   memset (&setup_data, 0, sizeof(setup_data));
+  setup_data.version = COAP_DTLS_CPSK_SETUP_VERSION;
 
   if (identity) {
     setup_data.psk_info.identity.s = (const uint8_t *)identity;
@@ -1027,8 +1028,8 @@ coap_session_t *coap_new_client_session_psk2(
 }
 #endif /* ! COAP_CLIENT_SUPPORT */
 
-#if COAP_SERVER_SUPPORT
-int coap_session_refresh_psk_hint(coap_session_t *session,
+int
+coap_session_refresh_psk_hint(coap_session_t *session,
   const coap_bin_const_t *psk_hint
 ) {
   /* We may be refreshing the hint with the same hint */
@@ -1056,9 +1057,9 @@ int coap_session_refresh_psk_hint(coap_session_t *session,
 
   return 1;
 }
-#endif /* COAP_SERVER_SUPPORT */
 
-int coap_session_refresh_psk_key(coap_session_t *session,
+int
+coap_session_refresh_psk_key(coap_session_t *session,
   const coap_bin_const_t *psk_key
 ) {
   /* We may be refreshing the key with the same key */
@@ -1086,12 +1087,44 @@ int coap_session_refresh_psk_key(coap_session_t *session,
   return 1;
 }
 
+int
+coap_session_refresh_psk_identity(coap_session_t *session,
+  const coap_bin_const_t *psk_identity
+) {
+  /* We may be refreshing the identity with the same identity */
+  coap_bin_const_t *old_psk_identity = session->psk_identity;
+
+  if (psk_identity && psk_identity->s) {
+    if (session->psk_identity) {
+      if (coap_binary_equal(session->psk_identity, psk_identity))
+        return 1;
+    }
+    session->psk_identity = coap_new_bin_const(psk_identity->s,
+                                               psk_identity->length);
+    if (!session->psk_identity) {
+      coap_log(LOG_ERR, "No memory to store pre-shared key identity (PSK)\n");
+      if (old_psk_identity)
+        coap_delete_bin_const(old_psk_identity);
+      return 0;
+    }
+  }
+  else {
+    session->psk_identity = NULL;
+  }
+  if (old_psk_identity)
+    coap_delete_bin_const(old_psk_identity);
+
+  return 1;
+}
+
+#if COAP_SERVER_SUPPORT
 const coap_bin_const_t *
 coap_session_get_psk_hint(const coap_session_t *session) {
   if (session)
     return session->psk_hint;
   return NULL;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 const coap_bin_const_t *
 coap_session_get_psk_key(const coap_session_t *session) {

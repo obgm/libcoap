@@ -206,13 +206,17 @@ get_psk_info(struct dtls_context_t *dtls_context,
   coap_context_t *coap_context = t_context ? t_context->coap_context : NULL;
   coap_session_t *coap_session;
   int fatal_error = DTLS_ALERT_INTERNAL_ERROR;
-#if COAP_CLIENT_SUPPORT
-  size_t identity_length;
-  uint8_t psk[COAP_DTLS_MAX_PSK];
-  size_t psk_len = 0;
-  coap_dtls_cpsk_t *setup_cdata;
-#endif /* COAP_CLIENT_SUPPORT */
   coap_address_t remote_addr;
+#if COAP_CLIENT_SUPPORT
+  coap_dtls_cpsk_t *setup_cdata;
+  const coap_bin_const_t *psk_identity;
+  const coap_dtls_cpsk_info_t *cpsk_info;
+#endif /* COAP_CLIENT_SUPPORT */
+  const coap_bin_const_t *psk_key;
+#if COAP_SERVER_SUPPORT
+  coap_dtls_spsk_t *setup_sdata;
+  const coap_bin_const_t *psk_hint;
+#endif /* COAP_SERVER_SUPPORT */
 
   assert(coap_context);
   get_session_addr(dtls_session, &remote_addr);
@@ -226,59 +230,56 @@ get_psk_info(struct dtls_context_t *dtls_context,
   case DTLS_PSK_IDENTITY:
 
 #if COAP_CLIENT_SUPPORT
-    if (!coap_context || !coap_context->get_client_psk ||
-        coap_session->type != COAP_SESSION_TYPE_CLIENT)
+    if (coap_session->type != COAP_SESSION_TYPE_CLIENT)
       goto error;
 
     setup_cdata = &coap_session->cpsk_setup_data;
 
-#if COAP_SERVER_SUPPORT
     coap_bin_const_t temp;
     temp.s = id;
     temp.length = id_len;
     coap_session_refresh_psk_hint(coap_session, &temp);
-#endif /* COAP_SERVER_SUPPORT */
 
-    coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)id_len, id ? (const char*)id : "");
+    coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)id_len,
+             id ? (const char*)id : "");
 
     if (setup_cdata->validate_ih_call_back) {
       coap_str_const_t lhint;
+
       lhint.length = id_len;
       lhint.s = id;
-      const coap_dtls_cpsk_info_t *psk_info =
-               setup_cdata->validate_ih_call_back(&lhint,
-                                                  coap_session,
-                                                  setup_cdata->ih_call_back_arg);
-
-      if (psk_info == NULL)
-        return 0;
-      if (psk_info->identity.length >= result_length)
-        return 0;
-      if (psk_info->key.length > sizeof(psk))
-        return 0;
-
-      if (coap_session->psk_identity) {
-        coap_delete_bin_const(coap_session->psk_identity);
+      cpsk_info =
+             setup_cdata->validate_ih_call_back(&lhint,
+                                                coap_session,
+                                                setup_cdata->ih_call_back_arg);
+      if (cpsk_info) {
+        psk_identity = &cpsk_info->identity;
+        coap_session_refresh_psk_identity(coap_session, &cpsk_info->identity);
+        coap_session_refresh_psk_key(coap_session, &cpsk_info->key);
       }
-      identity_length = psk_info->identity.length;
-      coap_session->psk_identity = coap_new_bin_const(psk_info->identity.s, identity_length);
-      memcpy(result, psk_info->identity.s, identity_length);
-      result[identity_length] = '\000';
-
-      coap_session_refresh_psk_key(coap_session, &psk_info->key);
-
-      return identity_length;
+      else {
+        psk_identity = NULL;
+      }
     }
-
-    identity_length = 0;
-    /* result_length is max size of the returned identity */
-    psk_len = coap_context->get_client_psk(coap_session, (const uint8_t*)id, id_len, (uint8_t*)result, &identity_length, result_length, psk, sizeof(psk));
-    if (!psk_len) {
-      coap_log(LOG_WARNING, "no PSK identity for given realm or buffer too small\n");
+    else {
+      psk_identity = coap_get_session_client_psk_identity(coap_session);
+    }
+    if (psk_identity == NULL) {
+      coap_log(LOG_WARNING, "no PSK identity given\n");
       fatal_error = DTLS_ALERT_CLOSE_NOTIFY;
       goto error;
     }
-    return (int)identity_length;
+    if (psk_identity->length > result_length) {
+      coap_log(LOG_WARNING,
+               "psk_identity too large, truncated to %zd bytes\n",
+               result_length);
+    }
+    else {
+      /* Reduce to match */
+      result_length = psk_identity->length;
+    }
+    memcpy(result, psk_identity->s, result_length);
+    return result_length;
 #else /* ! COAP_CLIENT_SUPPORT */
     return 0;
 #endif /* ! COAP_CLIENT_SUPPORT */
@@ -286,64 +287,89 @@ get_psk_info(struct dtls_context_t *dtls_context,
   case DTLS_PSK_KEY:
 #if COAP_CLIENT_SUPPORT
     if (coap_session->type == COAP_SESSION_TYPE_CLIENT) {
-      if (!coap_context || !coap_context->get_client_psk)
-        goto error;
-      identity_length = 0;
-      /* Use psk[] as a scratch area for returning the unused identity */
-      psk_len = coap_context->get_client_psk(coap_session, (const uint8_t*)id, id_len, psk, &identity_length, sizeof(psk), result, result_length);
-      if (!psk_len) {
-        coap_log(LOG_WARNING, "no pre-shared key for given realm or buffer too small\n");
+      psk_key = coap_get_session_client_psk_key(coap_session);
+      if (psk_key == NULL) {
+        coap_log(LOG_WARNING, "no PSK key given\n");
         fatal_error = DTLS_ALERT_CLOSE_NOTIFY;
         goto error;
       }
-      return (int)psk_len;
+      if (psk_key->length > result_length) {
+        coap_log(LOG_WARNING,
+                 "psk_key too large, truncated to %zd bytes\n",
+                 result_length);
+      }
+      else {
+        /* Reduce to match */
+        result_length = psk_key->length;
+      }
+      memcpy(result, psk_key->s, result_length);
+      return result_length;
     }
 #endif /* COAP_CLIENT_SUPPORT */
 #if COAP_SERVER_SUPPORT
-    if (coap_context->get_server_psk) {
-      coap_dtls_spsk_t *setup_sdata;
+    if (coap_session->type != COAP_SESSION_TYPE_CLIENT) {
+      coap_bin_const_t lidentity;
+
+      lidentity.length = id ? id_len : 0;
+      lidentity.s = id ? (const uint8_t*)id : (const uint8_t *)"";
       setup_sdata = &coap_session->context->spsk_setup_data;
 
-      if (!id)
-        id = (const uint8_t *)"";
-
       /* Track the Identity being used */
-      if (coap_session->psk_identity)
-        coap_delete_bin_const(coap_session->psk_identity);
-      coap_session->psk_identity = coap_new_bin_const(id, id_len);
+      coap_session_refresh_psk_identity(coap_session, &lidentity);
 
       coap_log(LOG_DEBUG, "got psk_identity: '%.*s'\n",
-               (int)id_len, id);
+               (int)lidentity.length, lidentity.s);
 
       if (setup_sdata->validate_id_call_back) {
-        coap_bin_const_t lidentity;
-        lidentity.length = id_len;
-        lidentity.s = (const uint8_t*)id;
-        const coap_bin_const_t *psk_key =
-                 setup_sdata->validate_id_call_back(&lidentity,
-                                                    coap_session,
-                                                    setup_sdata->id_call_back_arg);
-
-        if (psk_key == NULL)
-          return 0;
-        if (psk_key->length > result_length)
-          return 0;
-        memcpy(result, psk_key->s, psk_key->length);
-        coap_session_refresh_psk_key(coap_session, psk_key);
-        return psk_key->length;
+        psk_key =
+              setup_sdata->validate_id_call_back(&lidentity,
+                                                 coap_session,
+                                                 setup_sdata->id_call_back_arg);
+      }
+      else {
+        psk_key = coap_get_session_server_psk_key(coap_session);
       }
 
-      return (int)coap_context->get_server_psk(coap_session, (const uint8_t*)id, id_len, (uint8_t*)result, result_length);
+      if (psk_key == NULL) {
+        coap_log(LOG_WARNING, "no PSK key given\n");
+        return 0;
+      }
+      if (setup_sdata->validate_id_call_back)
+        coap_session_refresh_psk_key(coap_session, psk_key);
+      if (psk_key->length > result_length) {
+        coap_log(LOG_WARNING,
+                 "psk_key too large, truncated to %zd bytes\n",
+                 result_length);
+      }
+      else {
+        /* Reduce to match */
+        result_length = psk_key->length;
+      }
+      memcpy(result, psk_key->s, result_length);
+      return result_length;
     }
 #endif /* COAP_SERVER_SUPPORT */
     return 0;
 
   case DTLS_PSK_HINT:
 #if COAP_SERVER_SUPPORT
-    if (coap_context->get_server_hint)
-      return (int)coap_context->get_server_hint(coap_session, (uint8_t *)result, result_length);
-#endif /* COAP_SERVER_SUPPORT */
+    psk_hint = coap_get_session_server_psk_hint(coap_session);
+    if (psk_hint == NULL)
+      return 0;
+    if (psk_hint->length > result_length) {
+      coap_log(LOG_WARNING,
+               "psk_hint too large, truncated to %zd bytes\n",
+               result_length);
+    }
+    else {
+      /* Reduce to match */
+      result_length = psk_hint->length;
+    }
+    memcpy(result, psk_hint->s, result_length);
+    return result_length;
+#else /* COAP_SERVER_SUPPORT */
     return 0;
+#endif /* COAP_SERVER_SUPPORT */
 
   default:
     coap_log(LOG_WARNING, "unsupported request type: %d\n", type);
