@@ -14,7 +14,8 @@ coap-client,
 coap-client-gnutls,
 coap-client-mbedtls,
 coap-client-openssl,
-coap-client-notls - CoAP Client based on libcoap
+coap-client-notls
+- CoAP Client based on libcoap
 
 SYNOPSIS
 --------

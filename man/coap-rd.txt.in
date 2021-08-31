@@ -14,7 +14,8 @@ coap-rd,
 coap-rd-gnutls ,
 coap-rd-mbedtls,
 coap-rd-openssl,
-coap-rd-notls - A CoAP Resource Directory based on libcoap
+coap-rd-notls
+- A CoAP Resource Directory based on libcoap
 
 SYNOPSIS
 --------

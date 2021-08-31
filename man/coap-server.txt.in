@@ -14,7 +14,8 @@ coap-server,
 coap-server-gnutls,
 coap-server-mbedtls,
 coap-server-openssl,
-coap-server-notls - CoAP Server based on libcoap
+coap-server-notls
+- CoAP Server based on libcoap
 
 SYNOPSIS
 --------
