@@ -1753,40 +1753,31 @@ coap_io_do_io(coap_context_t *ctx, coap_tick_t now) {
     if ((ep->sock.flags & COAP_SOCKET_CAN_ACCEPT) != 0)
       coap_accept_endpoint(ctx, ep, now);
     SESSIONS_ITER_SAFE(ep->sessions, s, rtmp) {
+      /* Make sure the session object is not deleted in one of the callbacks  */
+      coap_session_reference(s);
       if ((s->sock.flags & COAP_SOCKET_CAN_READ) != 0) {
-        /* Make sure the session object is not deleted in one of the callbacks  */
-        coap_session_reference(s);
         coap_read_session(ctx, s, now);
-        coap_session_release(s);
       }
       if ((s->sock.flags & COAP_SOCKET_CAN_WRITE) != 0) {
-        /* Make sure the session object is not deleted in one of the callbacks  */
-        coap_session_reference(s);
         coap_write_session(ctx, s, now);
-        coap_session_release(s);
       }
+      coap_session_release(s);
     }
   }
 
   SESSIONS_ITER_SAFE(ctx->sessions, s, rtmp) {
+    /* Make sure the session object is not deleted in one of the callbacks  */
+    coap_session_reference(s);
     if ((s->sock.flags & COAP_SOCKET_CAN_CONNECT) != 0) {
-      /* Make sure the session object is not deleted in one of the callbacks  */
-      coap_session_reference(s);
       coap_connect_session(ctx, s, now);
-      coap_session_release( s );
     }
-    if ((s->sock.flags & COAP_SOCKET_CAN_READ) != 0) {
-      /* Make sure the session object is not deleted in one of the callbacks  */
-      coap_session_reference(s);
+    if ((s->sock.flags & COAP_SOCKET_CAN_READ) != 0 && s->ref > 1) {
       coap_read_session(ctx, s, now);
-      coap_session_release(s);
     }
-    if ((s->sock.flags & COAP_SOCKET_CAN_WRITE) != 0) {
-      /* Make sure the session object is not deleted in one of the callbacks  */
-      coap_session_reference(s);
+    if ((s->sock.flags & COAP_SOCKET_CAN_WRITE) != 0 && s->ref > 1) {
       coap_write_session(ctx, s, now);
-      coap_session_release( s );
     }
+    coap_session_release( s );
   }
 #endif /* ! COAP_EPOLL_SUPPORT */
 }
