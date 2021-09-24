@@ -39,7 +39,7 @@ get the TinyDTLS code into your project, so the TinyDTLS library can be used.
  git submodule init
  git submodule update
 
-General Building with cmake for linux/windows/macos/android (not for LwIP or Contiki - see below)
+General Building with cmake for linux/windows/macos/android (not for LwIP or Contiki-NG - see below)
 ================
 
  cmake -E remove_directory build
@@ -61,7 +61,7 @@ General Building with cmake for linux/windows/macos/android (not for LwIP or Con
 
  Note: Shared Library support is not currently available for Windows.
 
-General Building with autoconf (not for LwIP or Contiki - see below)
+General Building with autoconf (not for LwIP or Contiki-NG - see below)
 ================
 
  ./autogen.sh
@@ -124,15 +124,15 @@ LwIP
 
 Executable is ./server. See examples/lwip/README for further information
 
-Contiki
-=======
+Contiki-NG
+==========
 
  ./autogen.sh
  ./configure --disable-tests --disable-documentation --disable-examples --disable-dtls
  cd examples/contiki
  make
 
-Executable is ./server.minimal-net. See examples/contiki/README for further
+Executable is ./server.native. See examples/contiki/README for further
 information
 
 Windows

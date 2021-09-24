@@ -904,7 +904,8 @@ RECURSIVE              = NO
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE                = @top_srcdir@/src/coap_io_lwip.c \
+EXCLUDE                = @top_srcdir@/src/coap_io_contiki.c \
+                         @top_srcdir@/src/coap_io_lwip.c \
                          @top_srcdir@/src/coap_io_riot.c \
                          @top_srcdir@/include/coap@LIBCOAP_API_VERSION@/coap_uthash_internal.h \
                          @top_srcdir@/include/coap@LIBCOAP_API_VERSION@/coap_utlist_internal.h

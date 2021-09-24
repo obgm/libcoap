@@ -190,6 +190,23 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
 #endif
 
 #ifndef coap_log
+#ifdef WITH_CONTIKI
+#include <stdio.h>
+
+#ifndef LOG_CONF_LEVEL_COAP
+#define LOG_CONF_LEVEL_COAP 0 /* = LOG_LEVEL_NONE */
+#endif
+
+void coap_print_contiki_prefix(coap_log_t level);
+
+#define coap_log(level, ...) do { \
+  if (LOG_CONF_LEVEL_COAP \
+       && ((int)((level)) <= (int)coap_get_log_level())) { \
+     coap_print_contiki_prefix(level); \
+     printf(__VA_ARGS__); \
+  } \
+} while(0)
+#else /* !WITH_CONTIKI */
 /**
  * Logging function.
  * Writes the given text to @c COAP_ERR_FD (for @p level <= @c COAP_LOG_CRIT) or @c
@@ -202,6 +219,7 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
   if ((int)((level))<=(int)coap_get_log_level()) \
      coap_log_impl((level), __VA_ARGS__); \
 } while(0)
+#endif /* !WITH_CONTIKI */
 #endif
 
 #ifndef coap_dtls_log

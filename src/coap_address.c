@@ -113,19 +113,20 @@ void coap_address_init(coap_address_t *addr) {
 #endif
 }
 
+#ifndef WITH_CONTIKI
 static void
 update_port(coap_address_t *addr, uint16_t port, uint16_t default_port) {
   if (port == 0)
     port = default_port;
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP)
  if (addr->addr.sa.sa_family == AF_INET)
    addr->addr.sin.sin_port = htons(port);
  else if (addr->addr.sa.sa_family == AF_INET6)
    addr->addr.sin6.sin6_port = htons(port);
-#else /* defined(WITH_LWIP) || defined(WITH_CONTIKI) */
+#else /* defined(WITH_LWIP) */
   addr->port = port;
-#endif /* defined(WITH_LWIP) || defined(WITH_CONTIKI) */
+#endif /* defined(WITH_LWIP) */
   return;
 }
 
@@ -233,10 +234,10 @@ coap_resolve_address_info(const coap_str_const_t *server,
 
           info->scheme = scheme;
           coap_address_init(&info->addr);
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP)
           info->addr.size = (socklen_t)ainfo->ai_addrlen;
           memcpy(&info->addr.addr, ainfo->ai_addr, ainfo->ai_addrlen);
-#else /* defined(WITH_LWIP) || defined(WITH_CONTIKI) */
+#else /* defined(WITH_LWIP) */
           memset(&info->addr, 0, sizeof(info->addr));
           switch (ainfo->ai_family) {
             struct sockaddr_in *sock4;
@@ -260,7 +261,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
           default:
             ;
           }
-#endif /* defined(WITH_LWIP) || defined(WITH_CONTIKI) */
+#endif /* defined(WITH_LWIP) */
           switch (scheme) {
           case COAP_URI_SCHEME_COAP:
             update_port(&info->addr, port, 5683);
@@ -295,6 +296,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
   freeaddrinfo(res);
   return info_list;
 }
+#endif /* !WITH_CONTIKI */
 
 void
 coap_free_address_info(coap_addr_info_t *info) {

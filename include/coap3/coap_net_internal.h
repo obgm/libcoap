@@ -79,9 +79,8 @@ struct coap_context_t {
 
 #ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;      /**< uIP connection object */
-  struct etimer retransmit_timer; /**< fires when the next packet must be
-                                       sent */
-  struct etimer notify_timer;     /**< used to check resources periodically */
+  struct ctimer prepare_timer;    /**< fires when it's time to call
+                                       coap_io_prepare_io */
 #endif /* WITH_CONTIKI */
 
 #ifdef WITH_LWIP

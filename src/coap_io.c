@@ -55,10 +55,6 @@
 #endif
 #endif /* COAP_EPOLL_SUPPORT */
 
-#ifdef WITH_CONTIKI
-# include "uip.h"
-#endif
-
 #if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION) && !(WITH_LWIP)
  /* define generic PKTINFO for IPv4 */
 #if defined(IP_PKTINFO)
@@ -79,72 +75,6 @@
 #endif /* IPV6_RECVPKTINFO */
 #endif /* !(WITH_CONTIKI || RIOT_VERSION) */
 
-#ifdef WITH_CONTIKI
-static int ep_initialized = 0;
-
-coap_endpoint_t *
-  coap_malloc_endpoint() {
-  static coap_endpoint_t ep;
-
-  if (ep_initialized) {
-    return NULL;
-  } else {
-    ep_initialized = 1;
-    return &ep;
-  }
-}
-
-void
-coap_mfree_endpoint(coap_endpoint_t *ep) {
-  ep_initialized = 0;
-}
-
-int
-coap_socket_bind_udp(coap_socket_t *sock,
-  const coap_address_t *listen_addr,
-  coap_address_t *bound_addr) {
-  sock->conn = udp_new(NULL, 0, NULL);
-
-  if (!sock->conn) {
-    coap_log_warn("coap_socket_bind_udp");
-    return 0;
-  }
-
-  coap_address_init(bound_addr);
-  uip_ipaddr_copy(&bound_addr->addr, &listen_addr->addr);
-  bound_addr->port = listen_addr->port;
-  udp_bind((struct uip_udp_conn *)sock->conn, bound_addr->port);
-  return 1;
-}
-
-int
-coap_socket_connect_udp(coap_socket_t *sock,
-  const coap_address_t *local_if,
-  const coap_address_t *server,
-  int default_port,
-  coap_address_t *local_addr,
-  coap_address_t *remote_addr) {
-  return 0;
-}
-
-ssize_t
-coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
-  return -1;
-}
-
-ssize_t
-coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
-  return -1;
-}
-
-void coap_socket_close(coap_socket_t *sock) {
-  if (sock->conn)
-    uip_udp_remove((struct uip_udp_conn *)sock->conn);
-  sock->flags = COAP_SOCKET_EMPTY;
-}
-
-#else
-
 #if COAP_SERVER_SUPPORT
 coap_endpoint_t *
   coap_malloc_endpoint(void) {
@@ -157,7 +87,7 @@ coap_mfree_endpoint(coap_endpoint_t *ep) {
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-#ifndef WITH_LWIP
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
 
 int
 coap_socket_bind_udp(coap_socket_t *sock,
@@ -577,8 +507,7 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
   return r;
 }
 
-#endif /* ! WITH_LWIP */
-#endif  /* ! WITH_CONTIKI */
+#endif /* ! WITH_CONTIKI && ! WITH_LWIP */
 
 #if !defined(WITH_LWIP)
 #if (!defined(WITH_CONTIKI)) != ( defined(HAVE_NETINET_IN_H) || defined(HAVE_WS2TCPIP_H) )
@@ -630,20 +559,18 @@ static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
 #define ipi_spec_dst ipi_addr
 #endif
 
-#if !defined(RIOT_VERSION) && !defined(WITH_LWIP)
+#if !defined(RIOT_VERSION) && !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 ssize_t
 coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen) {
   ssize_t bytes_written = 0;
 
   if (!coap_debug_send_packet()) {
     bytes_written = (ssize_t)datalen;
-#ifndef WITH_CONTIKI
   } else if (sock->flags & COAP_SOCKET_CONNECTED) {
 #ifdef _WIN32
     bytes_written = send(sock->fd, (const char *)data, (int)datalen, 0);
 #else
     bytes_written = send(sock->fd, data, datalen, 0);
-#endif
 #endif
   } else {
 #ifdef _WIN32
@@ -779,21 +706,12 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 #else
 #ifdef HAVE_STRUCT_CMSGHDR
     bytes_written = sendmsg(sock->fd, &mhdr, 0);
-#elif !defined(CONTIKI) /* ! HAVE_STRUCT_CMSGHDR */
+#else /* ! HAVE_STRUCT_CMSGHDR */
     bytes_written = sendto(sock->fd, data, datalen, 0,
                            &session->addr_info.remote.addr.sa,
                            session->addr_info.remote.size);
 #endif /* ! HAVE_STRUCT_CMSGHDR */
 #endif
-#if defined(WITH_CONTIKI)
-    /* FIXME: untested */
-    /* FIXME: is there a way to check if send was successful? */
-    (void)datalen;
-    (void)data;
-    uip_udp_packet_sendto((struct uip_udp_conn *)sock->conn, data, datalen,
-      &session->addr_info.remote.addr, session->addr_info.remote.port);
-    bytes_written = datalen;
-#endif /* WITH_CONTIKI */
   }
 
   if (bytes_written < 0)
@@ -801,7 +719,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 
   return bytes_written;
 }
-#endif /* ! RIOT_VERSION && ! WITH_LWIP */
+#endif /* ! RIOT_VERSION && ! WITH_LWIP && ! WITH_CONTIKI */
 
 #define SIN6(A) ((struct sockaddr_in6 *)(A))
 
@@ -813,7 +731,7 @@ coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t
 }
 #endif /* ! WITH_LWIP */
 
-#if !defined(RIOT_VERSION) && !defined(WITH_LWIP)
+#if !defined(RIOT_VERSION) && !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 ssize_t
 coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   ssize_t len = -1;
@@ -828,7 +746,6 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
     sock->flags &= ~COAP_SOCKET_CAN_READ;
   }
 
-#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
   if (sock->flags & COAP_SOCKET_CONNECTED) {
 #ifdef _WIN32
     len = recv(sock->fd, (char *)packet->payload, COAP_RXBUFFER_SIZE, 0);
@@ -858,12 +775,10 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       packet->length = (size_t)len;
     }
   } else {
-#endif /* !(WITH_CONTIKI || RIOT_VERSION) */
 #if defined(_WIN32)
     DWORD dwNumberOfBytesRecvd = 0;
     int r;
 #endif
-#if !defined(WITH_CONTIKI)
 #ifdef HAVE_STRUCT_CMSGHDR
     /* a buffer large enough to hold all packet info types, ipv6 is the largest */
     char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
@@ -1009,72 +924,14 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       }
 #endif /* ! HAVE_STRUCT_CMSGHDR */
     }
-#endif /* !defined(WITH_CONTIKI) && !defined(RIOT_VERSION) */
-#ifdef WITH_CONTIKI
-    /* FIXME: untested, make this work */
-#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
-#define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
-
-    if (uip_newdata()) {
-      uip_ipaddr_copy(&packet->addr_info.remote.addr, &UIP_IP_BUF->srcipaddr);
-      packet->addr_info.remote.port = UIP_UDP_BUF->srcport;
-      uip_ipaddr_copy(&(packet)->addr_info.local.addr, &UIP_IP_BUF->destipaddr);
-      packet->addr_info.local.port = UIP_UDP_BUF->destport;
-
-      len = uip_datalen();
-
-      if (len > COAP_RXBUFFER_SIZE) {
-        /* FIXME: we might want to send back a response */
-        coap_log_warn("discarded oversized packet\n");
-        return -1;
-      }
-
-      ((char *)uip_appdata)[len] = 0;
-      if (COAP_LOG_DEBUG <= coap_get_log_level()) {
-#ifndef INET6_ADDRSTRLEN
-#define INET6_ADDRSTRLEN 40
-#endif
-        unsigned char addr_str[INET6_ADDRSTRLEN + 8];
-
-        if (coap_print_addr(&packet->addr_info.remote, addr_str,
-                            INET6_ADDRSTRLEN + 8)) {
-          coap_log_debug("received %zd bytes from %s\n", len, addr_str);
-        }
-      }
-
-      packet->length = len;
-      memcpy(&packet->payload, uip_appdata, len);
-    }
-
-#undef UIP_IP_BUF
-#undef UIP_UDP_BUF
-#endif /* WITH_CONTIKI */
-#ifdef RIOT_VERSION
-    packet->src.size = sizeof(packet->src.addr);
-    len = recvfrom (sock->fd, packet->payload, COAP_RXBUFFER_SIZE,
-                    0, &packet->src.addr.sa, &packet->src.size);
-    if (COAP_LOG_DEBUG <= coap_get_log_level()) {
-      unsigned char addr_str[INET6_ADDRSTRLEN + 8];
-
-      if (coap_print_addr(&packet->src, addr_str, INET6_ADDRSTRLEN + 8)) {
-        coap_log_debug("received %zd bytes from %s\n", len, addr_str);
-      }
-    }
-#endif /* RIOT_VERSION */
-#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
   }
-#endif /* !(WITH_CONTIKI || RIOT_VERSION) */
 
   if (len >= 0)
     return len;
-#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
 error:
-#endif
   return -1;
 }
-#endif /* RIOT_VERSION */
-
-#if !defined(WITH_CONTIKI)
+#endif /* ! RIOT_VERSION && ! WITH_LWIP && ! WITH_CONTIKI */
 
 unsigned int
 coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
@@ -1361,7 +1218,7 @@ release_2:
   return (unsigned int)((timeout * 1000 + COAP_TICKS_PER_SECOND - 1) / COAP_TICKS_PER_SECOND);
 }
 
-#if !defined(RIOT_VERSION) && !defined(WITH_LWIP)
+#if !defined(RIOT_VERSION) && !defined(WITH_LWIP) && !defined(CONTIKI)
 int
 coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   return coap_io_process_with_fds(ctx, timeout_ms, 0, NULL, NULL, NULL);
@@ -1548,33 +1405,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
-#endif /* ! RIOT_VERSION  && ! WITH_LWIP */
-
-#else /* WITH_CONTIKI */
-int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
-  coap_tick_t now;
-  coap_tick_t after;
-
-  coap_ticks(&now);
-  /* There is something to read on the endpoint */
-  ctx->endpoint->sock.flags |= COAP_SOCKET_CAN_READ;
-  /* read in, and send off any responses */
-  coap_io_do_io(ctx, now);  /* read received data */
-  coap_ticks(&after);
-  return (int)(((after - now) * 1000) / COAP_TICKS_PER_SECOND);
-}
-
-unsigned int
-coap_io_prepare(coap_context_t *ctx,
-                coap_socket_t *sockets[],
-                unsigned int max_sockets,
-                unsigned int *num_sockets,
-                coap_tick_t now)
-{
-  *num_sockets = 0;
-  return 0;
-}
-#endif /* WITH_CONTIKI */
+#endif /* ! RIOT_VERSION && ! WITH_LWIP && ! WITH_CONTIKI */
 
 /*
  * return 1  I/O pending

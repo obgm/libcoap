@@ -22,6 +22,10 @@
 
 #include "coap_address.h"
 
+#ifdef WITH_CONTIKI
+struct uip_udp_conn;
+#endif /* WITH_CONTIKI */
+
 #ifdef RIOT_VERSION
 #include "net/gnrc.h"
 #endif /* RIOT_VERSION */
@@ -30,7 +34,8 @@ struct coap_socket_t {
 #if defined(WITH_LWIP)
   struct udp_pcb *pcb;
 #elif defined(WITH_CONTIKI)
-  void *conn;
+  struct uip_udp_conn *udp_conn;
+  coap_context_t *context;
 #else
   coap_fd_t fd;
 #endif /* WITH_LWIP */
@@ -186,5 +191,10 @@ struct coap_packet_t {
   unsigned char payload[COAP_RXBUFFER_SIZE]; /**< payload */
 };
 #endif
+#ifdef WITH_CONTIKI
+void coap_start_io_process(void);
+void coap_stop_io_process(void);
+#endif /* COAP_IO_INTERNAL_H_ */
 
 #endif /* COAP_IO_INTERNAL_H_ */
+
