@@ -30,14 +30,7 @@
  *
  */
 
-#include "coap_config.h"
-
-#define DEBUG DEBUG_PRINT
-#include "net/ip/uip-debug.h"
-#include "net/net-debug.h"
-
-#include <string.h>
-
+#include "contiki-net.h"
 #include "coap3/coap.h"
 
 static coap_context_t *coap_context;
@@ -52,37 +45,21 @@ AUTOSTART_PROCESSES(&coap_server_process);
 /*---------------------------------------------------------------------------*/
 void
 init_coap_server(coap_context_t **ctx) {
+  uip_ds6_addr_t *my_address;
   coap_address_t listen_addr;
-  uip_ipaddr_t gw_addr;
 
   assert(ctx);
 
-  coap_set_log_level(COAP_LOG_DEBUG);
-
-  coap_address_init(&listen_addr);
-  listen_addr.port = UIP_HTONS(COAP_DEFAULT_PORT);
-
-  uip_ip6addr(&listen_addr.addr, 0xaaaa, 0, 0, 0, 0, 0, 0, NODE_ADDR);
-#ifndef CONTIKI_TARGET_MINIMAL_NET
-  uip_ds6_prefix_add(&listen_addr.addr, 64, 0, 0, 0, 0);
-#endif /* not CONTIKI_TARGET_MINIMAL_NET */
-
-  uip_ds6_addr_add(&listen_addr.addr, 0, ADDR_MANUAL);
-
-  /* set default route to gateway aaaa::1 */
-  uip_ip6addr(&gw_addr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0x0001);
-  uip_ds6_defrt_add(&gw_addr, 0);
-
-  PRINTLLADDR(&uip_lladdr);
-  printf("\r\n");
-  PRINT6ADDR(&listen_addr.addr);
-  printf("\r\n");
+  my_address = uip_ds6_get_global(ADDR_PREFERRED);
+  uip_ipaddr_copy(&listen_addr.addr, &my_address->ipaddr);
+  coap_address_set_port(&listen_addr, COAP_DEFAULT_PORT);
 
   *ctx = coap_new_context(&listen_addr);
 
   if (!*ctx) {
     coap_log_crit("cannot create CoAP context\r\n");
   }
+  coap_context_set_max_idle_sessions(*ctx, 2);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -198,20 +175,12 @@ PROCESS_THREAD(coap_server_process, ev, data)
 
   init_coap_resources(coap_context);
 
-  if (!coap_context) {
-    coap_log_emerg("cannot create context\n");
-    PROCESS_EXIT();
-  }
-
   /* etimer_set(&notify_timer, 5 * CLOCK_SECOND); */
   etimer_set(&dirty_timer, 30 * CLOCK_SECOND);
 
   while(1) {
     PROCESS_YIELD();
-    if(ev == tcpip_event) {
-      /* There is something to read on the endpoint */
-      coap_io_process(coap_context, COAP_IO_WAIT);
-    } else if (ev == PROCESS_EVENT_TIMER && etimer_expired(&dirty_timer)) {
+    if (ev == PROCESS_EVENT_TIMER && etimer_expired(&dirty_timer)) {
       coap_resource_notify_observers(time_resource, NULL);
       etimer_reset(&dirty_timer);
     }

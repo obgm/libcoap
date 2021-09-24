@@ -41,13 +41,25 @@
 #endif
 
 #ifdef WITH_CONTIKI
-# ifndef DEBUG
-#  define DEBUG DEBUG_PRINT
-# endif /* DEBUG */
-#include "net/ip/uip-debug.h"
-#endif
+# define fprintf(fd, ...) { (void)fd; printf(__VA_ARGS__); }
+# define fflush(...)
+# define vfprintf(fd, ...) { (void)fd; printf(__VA_ARGS__); }
 
+# ifndef LOG_CONF_LEVEL_COAP
+#  define LOG_CONF_LEVEL_COAP 2 /* = LOG_LEVEL_WARN */
+# endif
+static coap_log_t maxlog = LOG_CONF_LEVEL_COAP == 0 /* = LOG_LEVEL_NONE */
+    ? COAP_LOG_EMERG
+    : (LOG_CONF_LEVEL_COAP == 1 /* = LOG_LEVEL_ERR */
+        ? COAP_LOG_ERR
+        : (LOG_CONF_LEVEL_COAP == 2 /* = LOG_LEVEL_WARN */
+            ? COAP_LOG_WARN
+            : (LOG_CONF_LEVEL_COAP == 3 /* = LOG_LEVEL_INFO */
+                ? COAP_LOG_INFO
+                : COAP_LOG_DEBUG)));
+#else /* WITH_CONTIKI */
 static coap_log_t maxlog = COAP_LOG_WARN;  /* default maximum CoAP log level */
+#endif /* WITH_CONTIKI */
 
 static int use_fprintf_for_show_pdu = 1; /* non zero to output with fprintf */
 
@@ -90,6 +102,14 @@ static const char *loglevels[] = {
   /* (D)TLS logging */
   "Emrg", "Alrt", "Crit", "Err ", "Warn", "Note", "Info", "Debg"
 };
+
+#ifdef WITH_CONTIKI
+void
+coap_print_contiki_prefix(coap_log_t level)
+{
+  printf("[%s: COAP      ] ", loglevels[level]);
+}
+#endif /* WITH_CONTIKI */
 
 #ifdef HAVE_TIME_H
 
@@ -285,7 +305,7 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
 
 #ifdef HAVE_SNPRINTF
   /* Cannot rely on snprintf() return value for short buffers */
-  snprintf((char *)p, buf + len - p, ":%d", uip_htons(addr->port));
+  snprintf((char *)p, buf + len - p, ":%d", coap_address_get_port(addr));
 #else /* HAVE_SNPRINTF */
   /* @todo manual conversion of port number */
   *p = '\000';
@@ -360,17 +380,6 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
   return 0;
 #endif
 }
-
-#ifdef WITH_CONTIKI
-# define fprintf(fd, ...) { (void)fd; PRINTF(__VA_ARGS__); }
-# define fflush(...)
-
-# ifdef HAVE_VPRINTF
-#  define vfprintf(fd, ...) { (void)fd; vprintf(__VA_ARGS__); }
-# else /* HAVE_VPRINTF */
-#  define vfprintf(fd, ...) { (void)fd; PRINTF(__VA_ARGS__); }
-# endif /* HAVE_VPRINTF */
-#endif /* WITH_CONTIKI */
 
 /** Returns a textual description of the message type @p t. */
 static const char *

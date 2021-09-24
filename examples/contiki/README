@@ -1,21 +1,17 @@
-Example of libcoap running on contiki
-=====================================
+Example of libcoap running on Contiki-NG
+========================================
 
 To run the example, do
 
     $ make
-    $ sudo ./server.minimal-net
+    $ sudo ./server.native
 
-(and in a second terminal)
-
-    $ sudo ip -6 a a aaaa::1/64 dev tap0
-
-and query `coap://[aaaa::1000]/time?ticks` with any coap tool,
-or query `coap://[aaaa::1000]/.well-known/core`
+and query `coap://[fd00::302:304:506:708]/time?ticks` with any coap tool,
+or query `coap://[fd00::302:304:506:708]/.well-known/core`
 
 This will
 
-* download contiki from the upstream git sources
+* download Contiki-NG from the upstream git sources
 * build the server application
 * run the server application, creating a virtual network device tap0 (unless
   that exists)
@@ -25,6 +21,4 @@ This will
 
 The server creates a resource for 'time' with a query 'ticks'.  This is
 reported for `.well-known/core`. The work flow for adding more resources does
-not differ from regular libcoap usage. If you seem to run out of memory
-creating the resources, tweak the number of pre-allocated resources
-in `coap_config.h.contiki`.
+not differ from regular libcoap usage.

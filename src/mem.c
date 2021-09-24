@@ -383,138 +383,29 @@ coap_free_type(coap_memory_tag_t type, void *p) {
 #else /* ! HAVE_MALLOC */
 
 #ifdef WITH_CONTIKI
-
-/**
- * The maximum size of a string on platforms that allocate fixed-size
- * memory blocks.
- */
-#ifndef COAP_MAX_STRING_SIZE
-#define COAP_MAX_STRING_SIZE 64
-#endif /* COAP_MAX_STRING_SIZE */
-
-/**
- * The maximum number of a strings on platforms that allocate
- * fixed-size memory blocks.
- */
-#ifndef COAP_MAX_STRINGS
-#define COAP_MAX_STRINGS      10
-#endif /* COAP_MAX_STRINGS */
-
-struct coap_stringbuf_t {
-  char data[COAP_MAX_STRING_SIZE];
-};
-
-
-#define COAP_MAX_PACKET_SIZE (sizeof(coap_packet_t) + COAP_RXBUFFER_SIZE)
-#ifndef COAP_MAX_PACKETS
-#define COAP_MAX_PACKETS     2
-#endif /* COAP_MAX_PACKETS */
-
-typedef union {
-  coap_pdu_t packet; /* try to convince the compiler to word-align this structure  */
-  char buf[COAP_MAX_PACKET_SIZE];
-} coap_packetbuf_t;
-
-MEMB(string_storage, struct coap_stringbuf_t, COAP_MAX_STRINGS);
-MEMB(packet_storage, coap_packetbuf_t, COAP_MAX_PACKETS);
-MEMB(session_storage, coap_session_t, COAP_MAX_SESSIONS);
-MEMB(node_storage, coap_queue_t, COAP_PDU_MAXCNT);
-MEMB(pdu_storage, coap_pdu_t, COAP_PDU_MAXCNT);
-MEMB(pdu_buf_storage, coap_packetbuf_t, COAP_PDU_MAXCNT);
-MEMB(resource_storage, coap_resource_t, COAP_MAX_RESOURCES);
-MEMB(attribute_storage, coap_attr_t, COAP_MAX_ATTRIBUTES);
-MEMB(cache_key_storage, coap_cache_key_t, COAP_MAX_CACHE_KEYS);
-MEMB(cache_entry_storage, coap_cache_entry_t, COAP_MAX_CACHE_ENTRIES);
-MEMB(lg_xmit_storage, coap_lg_xmit_t, COAP_MAX_LG_XMIT);
-MEMB(lg_crcv_storage, coap_lg_crcv_t, COAP_MAX_LG_CRCV);
-MEMB(lg_srcv_storage, coap_lg_srcv_t, COAP_MAX_LG_SRCV);
-
-static struct memb *
-get_container(coap_memory_tag_t type) {
-  switch(type) {
-  case COAP_PACKET: return &packet_storage;
-  case COAP_NODE:   return &node_storage;
-  case COAP_SESSION: return &session_storage;
-  case COAP_PDU:     return &pdu_storage;
-  case COAP_PDU_BUF: return &pdu_buf_storage;
-  case COAP_RESOURCE: return &resource_storage;
-  case COAP_RESOURCEATTR: return &attribute_storage;
-  case COAP_CACHE_KEY:    return &cache_key_storage;
-  case COAP_CACHE_ENTRY:  return &cache_entry_storage;
-  case COAP_LG_XMIT: return &lg_xmit_storage;
-  case COAP_LG_CRCV: return &lg_crcv_storage;
-  case COAP_LG_SRCV: return &lg_srcv_storage;
-  default:
-    return &string_storage;
-  }
-}
+#include "lib/heapmem.h"
 
 void
-coap_memory_init(void) {
-  memb_init(&string_storage);
-  memb_init(&packet_storage);
-  memb_init(&node_storage);
-  memb_init(&session_storage);
-  memb_init(&pdu_storage);
-  memb_init(&pdu_buf_storage);
-  memb_init(&resource_storage);
-  memb_init(&attribute_storage);
-  memb_init(&cache_key_storage);
-  memb_init(&cache_entry_storage);
-  memb_init(&lg_xmit_storage);
-  memb_init(&lg_crcv_storage);
-  memb_init(&lg_srcv_storage);
+coap_memory_init(void)
+{
 }
 
 void *
-coap_malloc_type(coap_memory_tag_t type, size_t size) {
-  struct memb *container =  get_container(type);
-  void *ptr;
-
-  assert(container);
-
-  if (size > container->size) {
-    coap_log_warn(
-             "coap_malloc_type: Requested memory exceeds maximum object "
-             "size (type %d, size %d, max %d)\n",
-             type, (int)size, container->size);
-    return NULL;
-  }
-
-  ptr = memb_alloc(container);
-  if (!ptr)
-    coap_log_warn(
-             "coap_malloc_type: Failure (no free blocks) for type %d\n",
-             type);
-  return ptr;
-}
-
-void
-coap_free_type(coap_memory_tag_t type, void *object) {
-  memb_free(get_container(type), object);
+coap_malloc_type(coap_memory_tag_t type, size_t size)
+{
+  return heapmem_alloc(size);
 }
 
 void *
-coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
-  struct memb *container = get_container(type);
+coap_realloc_type(coap_memory_tag_t type, void* p, size_t size)
+{
+  return heapmem_realloc(p, size);
+}
 
-  assert(container);
-  /* The fixed container is all we have to work with */
-  if (p) {
-    if (size > container->size) {
-      coap_log_warn(
-               "coap_realloc_type: Requested memory exceeds maximum object "
-               "size (type %d, size %zu, max %d)\n",
-               type, size, container->size);
-      return NULL;
-    }
-    if (size == 0) {
-      coap_free_type(type, p);
-      return NULL;
-    }
-    return p;
-  }
-  return coap_malloc_type(type, size);
+void
+coap_free_type(coap_memory_tag_t type, void *ptr)
+{
+  heapmem_free(ptr);
 }
 #endif /* WITH_CONTIKI */
 

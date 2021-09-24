@@ -403,8 +403,8 @@ coap_session_max_pdu_size(const coap_session_t *session) {
 
 void coap_session_set_mtu(coap_session_t *session, unsigned mtu) {
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
-  if (mtu > COAP_MAX_MESSAGE_SIZE_TCP16 + 4)
-    mtu = COAP_MAX_MESSAGE_SIZE_TCP16 + 4;
+  if (mtu > COAP_DEFAULT_MAX_PDU_RX_SIZE)
+    mtu = COAP_DEFAULT_MAX_PDU_RX_SIZE;
 #endif
   if (mtu < 64)
     mtu = 64;
@@ -1009,6 +1009,9 @@ coap_session_create_client(
         goto error;
       }
     }
+#ifdef WITH_CONTIKI
+    session->sock.context = ctx;
+#endif /* WITH_CONTIKI */
 #if !COAP_DISABLE_TCP
   } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
     if (!coap_socket_connect_tcp1(&session->sock, local_if, server,
@@ -1587,6 +1590,9 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
   if (proto==COAP_PROTO_UDP || proto==COAP_PROTO_DTLS) {
     if (!coap_socket_bind_udp(&ep->sock, listen_addr, &ep->bind_addr))
       goto error;
+#ifdef WITH_CONTIKI
+    ep->sock.context = context;
+#endif /* WITH_CONTIKI */
     ep->sock.flags |= COAP_SOCKET_WANT_READ;
 #if !COAP_DISABLE_TCP
   } else if (proto==COAP_PROTO_TCP || proto==COAP_PROTO_TLS) {

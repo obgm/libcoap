@@ -99,7 +99,7 @@
 /** creates a Qx.FRAC_BITS from session's 'ack_timeout' */
 #define ACK_TIMEOUT Q(FRAC_BITS, session->ack_timeout)
 
-#if !defined(WITH_CONTIKI)
+#ifndef WITH_LWIP
 
 COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node(void) {
@@ -110,35 +110,20 @@ COAP_STATIC_INLINE void
 coap_free_node(coap_queue_t *node) {
   coap_free_type(COAP_NODE, node);
 }
-#endif /* ! WITH_CONTIKI */
+#else /* !WITH_LWIP */
 
-#ifdef WITH_CONTIKI
-# ifndef DEBUG
-#  define DEBUG DEBUG_PRINT
-# endif /* DEBUG */
-
-#include "net/ip/uip-debug.h"
-
-#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
-#define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
-
-void coap_resources_init();
-
-unsigned char initialized = 0;
-coap_context_t the_coap_context;
-
-PROCESS(coap_retransmit_process, "message retransmit process");
+#include <lwip/memp.h>
 
 COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node() {
-  return (coap_queue_t *)coap_malloc_type(COAP_NODE, 0);
+  return (coap_queue_t *)memp_malloc(MEMP_COAP_NODE);
 }
 
 COAP_STATIC_INLINE void
 coap_free_node(coap_queue_t *node) {
-  coap_free_type(COAP_NODE, node);
+  memp_free(MEMP_COAP_NODE, node);
 }
-#endif /* WITH_CONTIKI */
+#endif /* WITH_LWIP */
 
 unsigned int
 coap_adjust_basetime(coap_context_t *ctx, coap_tick_t now) {
@@ -478,27 +463,13 @@ coap_new_context(
   (void)listen_addr;
 #endif /* COAP_SERVER_SUPPORT */
 
-#ifdef WITH_CONTIKI
-  if (initialized)
-    return NULL;
-#endif /* WITH_CONTIKI */
-
   coap_startup();
 
-#ifndef WITH_CONTIKI
   c = coap_malloc_type(COAP_CONTEXT, sizeof(coap_context_t));
   if (!c) {
     coap_log_emerg("coap_init: malloc: failed\n");
     return NULL;
   }
-#endif /* not WITH_CONTIKI */
-#ifdef WITH_CONTIKI
-  coap_resources_init();
-
-  c = &the_coap_context;
-  initialized = 1;
-#endif /* WITH_CONTIKI */
-
   memset(c, 0, sizeof(coap_context_t));
 
 #ifdef COAP_EPOLL_SUPPORT
@@ -566,15 +537,6 @@ coap_new_context(
   c->network_read = coap_network_read;
 #endif
 
-#ifdef WITH_CONTIKI
-  process_start(&coap_retransmit_process, (char *)c);
-
-  PROCESS_CONTEXT_BEGIN(&coap_retransmit_process);
-  etimer_set(&c->notify_timer, COAP_RESOURCE_CHECK_TIME * COAP_TICKS_PER_SECOND);
-  /* the retransmit timer must be initialized to some large value */
-  etimer_set(&the_coap_context.retransmit_timer, 0xFFFF);
-  PROCESS_CONTEXT_END(&coap_retransmit_process);
-#endif /* WITH_CONTIKI */
   c->max_token_size = COAP_TOKEN_DEFAULT_MAX; /* RFC8974 */
 
   return c;
@@ -675,12 +637,7 @@ coap_free_context(coap_context_t *context) {
   }
 #endif /* COAP_EPOLL_SUPPORT */
 
-#ifndef WITH_CONTIKI
   coap_free_type(COAP_CONTEXT, context);
-#else /* WITH_CONTIKI */
-  memset(&the_coap_context, 0, sizeof(coap_context_t));
-  initialized = 0;
-#endif /* WITH_CONTIKI */
 #ifdef WITH_LWIP
   coap_lwip_dump_memory_pools(COAP_LOG_DEBUG);
 #endif /* WITH_LWIP */
@@ -1022,20 +979,6 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
   }
 
   coap_insert_node(&context->sendqueue, node);
-
-#ifdef WITH_CONTIKI
-  {                            /* (re-)initialize retransmission timer */
-    coap_queue_t *nextpdu;
-
-    nextpdu = coap_peek_next(context);
-    assert(nextpdu);                /* we have just inserted a node */
-
-                                /* must set timer within the context of the retransmit process */
-    PROCESS_CONTEXT_BEGIN(&coap_retransmit_process);
-    etimer_set(&context->retransmit_timer, nextpdu->t);
-    PROCESS_CONTEXT_END(&coap_retransmit_process);
-  }
-#endif /* WITH_CONTIKI */
 
   coap_log_debug("** %s: mid=0x%x: added to retransmit queue (%ums)\n",
     coap_session_str(node->session), node->id,
@@ -1631,11 +1574,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   }
 
   /* no more retransmissions, remove node from system */
-
-#ifndef WITH_CONTIKI
   coap_log_debug("** %s: mid=0x%x: give up after %d attempts\n",
            coap_session_str(node->session), node->id, node->retransmit_cnt);
-#endif
 
 #if COAP_SERVER_SUPPORT
   /* Check if subscriptions exist that should be canceled after
@@ -3777,7 +3717,9 @@ static int coap_started = 0;
 
 void coap_startup(void) {
   coap_tick_t now;
+#ifndef WITH_CONTIKI
   uint64_t us;
+#endif /* !WITH_CONTIKI */
 
   if (coap_started)
     return;
@@ -3789,9 +3731,13 @@ void coap_startup(void) {
 #endif
   coap_clock_init();
   coap_ticks(&now);
+#ifndef WITH_CONTIKI
   us = coap_ticks_to_rt_us(now);
   /* Be accurate to the nearest (approx) us */
   coap_prng_init((unsigned int)us);
+#else /* WITH_CONTIKI */
+  coap_start_io_process();
+#endif /* WITH_CONTIKI */
   coap_memory_init();
   coap_dtls_startup();
 #if COAP_SERVER_SUPPORT
@@ -3807,6 +3753,8 @@ void coap_startup(void) {
 void coap_cleanup(void) {
 #if defined(HAVE_WINSOCK2_H)
   WSACleanup();
+#elif defined(WITH_CONTIKI)
+  coap_stop_io_process();
 #endif
   coap_dtls_shutdown();
 }
@@ -4124,46 +4072,3 @@ void
 coap_mcast_per_resource(coap_context_t *context COAP_UNUSED) {
 }
 #endif /* defined WITH_CONTIKI || defined WITH_LWIP */
-
-#ifdef WITH_CONTIKI
-
-/*---------------------------------------------------------------------------*/
-/* CoAP message retransmission */
-/*---------------------------------------------------------------------------*/
-PROCESS_THREAD(coap_retransmit_process, ev, data) {
-  coap_tick_t now;
-  coap_queue_t *nextpdu;
-
-  PROCESS_BEGIN();
-
-  coap_log_debug("Started retransmit process\n");
-
-  while (1) {
-    PROCESS_YIELD();
-    if (ev == PROCESS_EVENT_TIMER) {
-      if (etimer_expired(&the_coap_context.retransmit_timer)) {
-
-        nextpdu = coap_peek_next(&the_coap_context);
-
-        coap_ticks(&now);
-        while (nextpdu && nextpdu->t <= now) {
-          coap_retransmit(&the_coap_context, coap_pop_next(&the_coap_context));
-          nextpdu = coap_peek_next(&the_coap_context);
-        }
-
-        /* need to set timer to some value even if no nextpdu is available */
-        etimer_set(&the_coap_context.retransmit_timer,
-          nextpdu ? nextpdu->t - now : 0xFFFF);
-      }
-      if (etimer_expired(&the_coap_context.notify_timer)) {
-        coap_check_notify(&the_coap_context);
-        etimer_reset(&the_coap_context.notify_timer);
-      }
-    }
-  }
-
-  PROCESS_END();
-}
-/*---------------------------------------------------------------------------*/
-
-#endif /* WITH_CONTIKI */

@@ -24,28 +24,6 @@
 #include <sys/timerfd.h>
 #endif /* COAP_EPOLL_SUPPORT */
 
-#if defined(WITH_CONTIKI)
-#include "memb.h"
-
-MEMB(subscription_storage, coap_subscription_t, COAP_MAX_SUBSCRIBERS);
-
-void
-coap_resources_init() {
-  memb_init(&subscription_storage);
-}
-
-COAP_STATIC_INLINE coap_subscription_t *
-coap_malloc_subscription() {
-  return memb_alloc(&subscription_storage);
-}
-
-COAP_STATIC_INLINE void
-coap_free_subscription(coap_subscription_t *subscription) {
-  memb_free(&subscription_storage, subscription);
-}
-
-#endif
-
 #define COAP_PRINT_STATUS_MAX (~COAP_PRINT_STATUS_MASK)
 
 #ifndef min

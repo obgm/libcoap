@@ -119,8 +119,8 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
   if (!pdu) return NULL;
 
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
-  assert(size <= COAP_MAX_MESSAGE_SIZE_TCP16 + 4);
-  if (size > COAP_MAX_MESSAGE_SIZE_TCP16 + 4)
+  assert(size <= COAP_DEFAULT_MAX_PDU_RX_SIZE);
+  if (size > COAP_DEFAULT_MAX_PDU_RX_SIZE)
     return NULL;
   pdu->max_hdr_size = COAP_PDU_MAX_UDP_HEADER_SIZE;
 #else
@@ -246,7 +246,7 @@ fail:
 int
 coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
   if (new_size > pdu->alloc_size) {
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP)
     uint8_t *new_hdr;
     size_t offset;
 #endif
@@ -254,15 +254,16 @@ coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
       coap_log_warn("coap_pdu_resize: pdu too big\n");
       return 0;
     }
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP)
     if (pdu->data != NULL) {
       assert(pdu->data > pdu->token);
       offset = pdu->data - pdu->token;
     } else {
       offset = 0;
     }
-    new_hdr = (uint8_t*)realloc(pdu->token - pdu->max_hdr_size,
-                                new_size + pdu->max_hdr_size);
+    new_hdr = (uint8_t*)coap_realloc_type(COAP_PDU_BUF,
+                                          pdu->token - pdu->max_hdr_size,
+                                          new_size + pdu->max_hdr_size);
     if (new_hdr == NULL) {
       coap_log_warn("coap_pdu_resize: realloc failed\n");
       return 0;

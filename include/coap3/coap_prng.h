@@ -24,32 +24,7 @@
  * @{
  */
 
-#if defined(WITH_CONTIKI)
-#include <string.h>
-
-/**
- * Fills \p buf with \p len random bytes. This is the default implementation for
- * coap_prng(). You might want to change contiki_prng_impl() to use a better
- * PRNG on your specific platform.
- */
-COAP_STATIC_INLINE int
-contiki_prng_impl(unsigned char *buf, size_t len) {
-  uint16_t v = random_rand();
-  while (len > sizeof(v)) {
-    memcpy(buf, &v, sizeof(v));
-    len -= sizeof(v);
-    buf += sizeof(v);
-    v = random_rand();
-  }
-
-  memcpy(buf, &v, len);
-  return 1;
-}
-
-#define coap_prng(Buf,Length) contiki_prng_impl((Buf), (Length))
-#define coap_prng_init(Value) random_init((uint16_t)(Value))
-
-#elif defined(WITH_LWIP) && defined(LWIP_RAND)
+#if defined(WITH_LWIP) && defined(LWIP_RAND)
 
 COAP_STATIC_INLINE int
 lwip_prng_impl(unsigned char *buf, size_t len) {

@@ -66,8 +66,10 @@
 #endif /* COAP_DEBUG_BUF_SIZE */
 
 #ifndef COAP_DEFAULT_MAX_PDU_RX_SIZE
-#if defined(WITH_CONTIKI) || defined(WITH_LWIP)
+#if defined(WITH_LWIP)
 #define COAP_DEFAULT_MAX_PDU_RX_SIZE (COAP_MAX_MESSAGE_SIZE_TCP16+4UL)
+#elif defined(WITH_CONTIKI)
+#define COAP_DEFAULT_MAX_PDU_RX_SIZE (sizeof(coap_packet_t) + UIP_APPDATA_SIZE)
 #else
 /* 8 MiB max-message-size plus some space for options */
 #define COAP_DEFAULT_MAX_PDU_RX_SIZE (8UL*1024*1024+256)

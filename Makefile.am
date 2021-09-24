@@ -45,10 +45,9 @@ EXTRA_DIST = \
   examples/coap_list.h \
   examples/getopt.c \
   examples/contiki/coap_config.h \
-  examples/contiki/coap-observer.c \
   examples/contiki/Makefile \
   examples/contiki/Makefile.contiki \
-  examples/contiki/radvd.conf.sample \
+  examples/contiki/project-conf.h \
   examples/contiki/README \
   examples/contiki/server.c \
   examples/lwip/client.c \
@@ -93,6 +92,7 @@ EXTRA_DIST = \
   include/oscore/oscore_cose.h \
   include/oscore/oscore_crypto.h \
   include/oscore/oscore.h \
+  src/coap_io_contiki.c \
   src/coap_io_lwip.c \
   src/coap_io_riot.c \
   tests/test_error_response.h \
@@ -234,6 +234,7 @@ CTAGS_IGNORE=-I " \
 coap_pdu_from_pbuf \
 coap_lwip_dump_memory_pools \
 coap_lwip_set_input_wait_handler \
+coap_print_contiki_prefix \
 "
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if

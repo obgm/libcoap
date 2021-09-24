@@ -18,9 +18,11 @@
 
 #ifdef HAVE_GETRANDOM
 #include <sys/random.h>
-#else /* !HAVE_GETRANDOM */
+#elif defined(WITH_CONTIKI)
+#include "lib/random.h"
+#else /* !WITH_CONTIKI */
 #include <stdlib.h>
-#endif /* !HAVE_GETRANDOM */
+#endif /* !WITH_CONTIKI */
 
 #if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
 #include <entropy_poll.h>
@@ -89,6 +91,20 @@ coap_prng_default(void *buf, size_t len) {
   }
   return 1;
 
+#elif defined(WITH_CONTIKI)
+  size_t i;
+  uint_fast8_t j;
+  unsigned short r;
+
+  for(i = 0; i < len;) {
+    r = random_rand();
+    for(j = 0; (i < len) && (j < sizeof(r)); i++, j++) {
+      ((uint8_t *)buf)[i] = r & 0xFF;
+      r >>= 8;
+    }
+  }
+  return 1;
+
 #elif defined(_WIN32)
   return coap_prng_impl(buf,len);
 
@@ -106,9 +122,7 @@ coap_prng_default(void *buf, size_t len) {
 
 static coap_rand_func_t rand_func = coap_prng_default;
 
-#if defined(WITH_CONTIKI)
-
-#elif defined(WITH_LWIP) && defined(LWIP_RAND)
+#if defined(WITH_LWIP) && defined(LWIP_RAND)
 
 #else
 

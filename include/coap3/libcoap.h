@@ -17,13 +17,13 @@
 #ifndef COAP_LIBCOAP_H_
 #define COAP_LIBCOAP_H_
 
-/* The non posix embedded platforms like Contiki, TinyOS, RIOT, ... doesn't have
+/* The non posix embedded platforms like Contiki-NG, TinyOS, RIOT, ... don't have
  * a POSIX compatible header structure so we have to slightly do some platform
- * related things. Currently there is only Contiki available so we check for a
+ * related things. Currently there is only Contiki-NG available so we check for a
  * CONTIKI environment and do *not* include the POSIX related network stuff. If
  * there are other platforms in future there need to be analogous environments.
  *
- * The CONTIKI variable is within the Contiki build environment! */
+ * The CONTIKI variable is within the Contiki-NG build environment! */
 
 #if defined(_WIN32)
 #pragma comment(lib,"Ws2_32.lib")
