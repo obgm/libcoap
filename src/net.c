@@ -413,7 +413,7 @@ int coap_context_set_psk2(coap_context_t *ctx,
 
   ctx->spsk_setup_data = *setup_data;
 
-  if (coap_dtls_is_supported()) {
+  if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     return coap_dtls_context_set_spsk(ctx, setup_data);
   }
   return 0;
@@ -428,7 +428,7 @@ int coap_context_set_pki(coap_context_t *ctx,
     coap_log(LOG_ERR, "coap_context_set_pki: Wrong version of setup_data\n");
     return 0;
   }
-  if (coap_dtls_is_supported()) {
+  if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     return coap_dtls_context_set_pki(ctx, setup_data, COAP_DTLS_ROLE_SERVER);
   }
   return 0;
@@ -438,7 +438,7 @@ int coap_context_set_pki_root_cas(coap_context_t *ctx,
   const char *ca_file,
   const char *ca_dir
 ) {
-  if (coap_dtls_is_supported()) {
+  if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     return coap_dtls_context_set_pki_root_cas(ctx, ca_file, ca_dir);
   }
   return 0;
@@ -570,7 +570,7 @@ coap_new_context(
   }
 #endif /* COAP_EPOLL_SUPPORT */
 
-  if (coap_dtls_is_supported()) {
+  if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     c->dtls_context = coap_dtls_new_context(c);
     if (!c->dtls_context) {
       coap_log(LOG_EMERG, "coap_init: no DTLS context available\n");

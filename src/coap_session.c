@@ -961,7 +961,7 @@ coap_session_t *coap_new_client_session_psk2(
       return NULL;
     }
   }
-  else if (coap_dtls_is_supported()) {
+  else if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     coap_log(LOG_WARNING, "Identity (PSK) not defined\n");
     coap_session_release(session);
     return NULL;
@@ -976,13 +976,13 @@ coap_session_t *coap_new_client_session_psk2(
       return NULL;
     }
   }
-  else if (coap_dtls_is_supported()) {
+  else if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     coap_log(LOG_WARNING, "Pre-shared key (PSK) not defined\n");
     coap_session_release(session);
     return NULL;
   }
 
-  if (coap_dtls_is_supported()) {
+  if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     if (!coap_dtls_context_set_cpsk(ctx, setup_data)) {
       coap_session_release(session);
       return NULL;
@@ -1073,7 +1073,7 @@ coap_session_t *coap_new_client_session_pki(
 ) {
   coap_session_t *session;
 
-  if (coap_dtls_is_supported()) {
+  if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     if (!setup_data) {
       return NULL;
     } else {
@@ -1091,7 +1091,7 @@ coap_session_t *coap_new_client_session_pki(
     return NULL;
   }
 
-  if (coap_dtls_is_supported()) {
+  if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     /* we know that setup_data is not NULL */
     if (!coap_dtls_context_set_pki(ctx, setup_data, COAP_DTLS_ROLE_CLIENT)) {
       coap_session_release(session);
