@@ -710,10 +710,12 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
     mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
   }
 
+#if defined(MBEDTLS_SSL_SRV_C)
   mbedtls_ssl_conf_cert_req_ca_list(&m_env->conf,
                                     setup_data->check_common_ca ?
                                       MBEDTLS_SSL_CERT_REQ_CA_LIST_ENABLED :
                                       MBEDTLS_SSL_CERT_REQ_CA_LIST_DISABLED);
+#endif
   mbedtls_ssl_conf_authmode(&m_env->conf, setup_data->verify_peer_cert ?
                                            MBEDTLS_SSL_VERIFY_REQUIRED :
                                            MBEDTLS_SSL_VERIFY_NONE);
