@@ -36,7 +36,6 @@
  * MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED - defined if PSK is to be supported
  * or MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED - defined if PSK is to be supported
  *
- * Note: TLS is not currently supported until additional code is added
  */
 
 #include <mbedtls/version.h>
@@ -101,6 +100,7 @@ typedef struct coap_mbedtls_env_t {
   mbedtls_ssl_cookie_ctx cookie_ctx;
   /* If not set, need to do do_mbedtls_handshake */
   int established;
+  int sent_alert;
   int seen_client_hello;
   coap_tick_t last_timeout;
   unsigned int retry_scalar;
@@ -176,7 +176,7 @@ static int coap_dgram_read(void *ctx, unsigned char *out, size_t outl)
 /*
  * return +ve data amount
  *        0   no more
- *        -1  error (error in errno)
+ *        -ve  Mbed TLS error
  */
 /* callback function given to mbedtls for sending data over socket */
 static int
@@ -1111,7 +1111,7 @@ static int setup_client_ssl_session(coap_session_t *c_session,
     }
 #if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_ALPN)
     if (c_session->proto == COAP_PROTO_TLS) {
-      const char *alpn_list[] = { "coap", NULL };
+      static const char *alpn_list[] = { "coap", NULL };
 
       ret = mbedtls_ssl_conf_alpn_protocols(&m_env->conf, alpn_list);
       if (ret != 0) {
@@ -1154,6 +1154,8 @@ static void mbedtls_cleanup(coap_mbedtls_env_t *m_env)
 static void
 coap_dtls_free_mbedtls_env(coap_mbedtls_env_t *m_env) {
   if (m_env) {
+    if (!m_env->sent_alert)
+      mbedtls_ssl_close_notify(&m_env->ssl);
     mbedtls_cleanup(m_env);
     mbedtls_free(m_env);
   }
@@ -1233,6 +1235,7 @@ fail_alert:
   mbedtls_ssl_send_alert_message(&m_env->ssl,
                                  MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                                  alert);
+  m_env->sent_alert = 1;
 fail:
   c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
   coap_log(LOG_WARNING,
@@ -1272,8 +1275,134 @@ mbedtls_debug_out(void *ctx COAP_UNUSED, int level,
   coap_log(log_level, "%s:%04d: %s", file, line, str);
 }
 
+#if !COAP_DISABLE_TCP
+/*
+ * return +ve data amount
+ *        0   no more
+ *        -ve  Mbed TLS error
+ */
+static int
+coap_sock_read(void *ctx, unsigned char *out, size_t outl) {
+  ssize_t ret = MBEDTLS_ERR_SSL_CONN_EOF;
+  coap_session_t *c_session = (coap_session_t *)ctx;
+
+  if (out != NULL) {
+#ifdef _WIN32
+    ret = recv(c_session->sock.fd, (char *)out, (int)outl, 0);
+#else
+    ret = recv(c_session->sock.fd, out, outl, 0);
+#endif
+    if (ret > 0) {
+      coap_log(LOG_DEBUG, "*  %s: received %zd bytes\n",
+               coap_session_str(c_session), ret);
+    } else if (ret < 0 && errno != EAGAIN) {
+      coap_log(LOG_DEBUG,  "*  %s: failed to receive any bytes (%s)\n",
+               coap_session_str(c_session), coap_socket_strerror());
+    }
+
+    if (ret == 0) {
+      /* graceful shutdown */
+      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
+      ret = MBEDTLS_ERR_SSL_CONN_EOF;
+    }
+    else if (ret == COAP_SOCKET_ERROR) {
+#ifdef _WIN32
+      int lasterror = WSAGetLastError();
+
+      if (lasterror == WSAEWOULDBLOCK) {
+        ret = MBEDTLS_ERR_SSL_WANT_READ;
+      }
+      else if (lasterror == WSAECONNRESET) {
+        ret = MBEDTLS_ERR_NET_CONN_RESET;
+      }
+#else
+      if (errno == EAGAIN) {
+        ret = MBEDTLS_ERR_SSL_WANT_READ;
+      }
+      else if (errno == EPIPE || errno == ECONNRESET) {
+        ret = MBEDTLS_ERR_NET_CONN_RESET;
+      }
+#endif
+      else {
+        ret = MBEDTLS_ERR_NET_RECV_FAILED;
+      }
+      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
+    }
+    else if (ret < (ssize_t)outl) {
+      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
+    }
+  }
+  return (int)ret;
+}
+
+/*
+ * return +ve data amount
+ *        0   no more
+ *        -ve  Mbed TLS error
+ */
+static int
+coap_sock_write(void *context, const unsigned char *in, size_t inl) {
+  int ret = 0;
+  coap_session_t *c_session = (coap_session_t *)context;
+
+  ret = (int)coap_socket_write(&c_session->sock, in, inl);
+  if (ret > 0) {
+    coap_log(LOG_DEBUG, "*  %s: sent %d bytes\n",
+             coap_session_str(c_session), ret);
+  } else if (ret < 0) {
+    if ((c_session->state == COAP_SESSION_STATE_CSM ||
+         c_session->state == COAP_SESSION_STATE_HANDSHAKE) &&
+        (errno == EPIPE || errno == ECONNRESET)) {
+      /*
+       * Need to handle a TCP timing window where an agent continues with
+       * the sending of the next handshake or a CSM.
+       * However, the peer does not like a certificate and so sends a
+       * fatal alert and closes the TCP session.
+       * The sending of the next handshake or CSM may get terminated because
+       * of the closed TCP session, but there is still an outstanding alert
+       * to be read in and reported on.
+       * In this case, pretend that sending the info was fine so that the
+       * alert can be read (which effectively is what happens with DTLS).
+       */
+      ret = inl;
+    }
+    else {
+#ifdef _WIN32
+      int lasterror = WSAGetLastError();
+
+      if (lasterror == WSAEWOULDBLOCK) {
+        ret = MBEDTLS_ERR_SSL_WANT_WRITE;
+      }
+      else if (lasterror == WSAECONNRESET) {
+        ret = MBEDTLS_ERR_NET_CONN_RESET;
+      }
+#else
+      if (errno == EAGAIN || errno == EINTR) {
+        ret = MBEDTLS_ERR_SSL_WANT_WRITE;
+      }
+      else if (errno == EPIPE || errno == ECONNRESET) {
+        ret = MBEDTLS_ERR_NET_CONN_RESET;
+      }
+#endif
+      else {
+        ret = MBEDTLS_ERR_NET_SEND_FAILED;
+      }
+      coap_log(LOG_DEBUG,  "*  %s: failed to send %zd bytes (%s) state %d\n",
+               coap_session_str(c_session), inl, coap_socket_strerror(),
+               c_session->state);
+    }
+  }
+  if (ret == 0) {
+    errno = EAGAIN;
+    ret = MBEDTLS_ERR_SSL_WANT_WRITE;
+  }
+  return ret;
+}
+#endif /* !COAP_DISABLE_TCP */
+
 static coap_mbedtls_env_t *coap_dtls_new_mbedtls_env(coap_session_t *c_session,
-                                                     coap_dtls_role_t role)
+                                                     coap_dtls_role_t role,
+                                                     coap_proto_t proto)
 {
   int ret = 0;
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
@@ -1322,8 +1451,17 @@ static coap_mbedtls_env_t *coap_dtls_new_mbedtls_env(coap_session_t *c_session,
   if ((ret = mbedtls_ssl_setup(&m_env->ssl, &m_env->conf)) != 0) {
     goto fail;
   }
-  mbedtls_ssl_set_bio(&m_env->ssl, c_session, coap_dgram_write,
-                      coap_dgram_read, NULL);
+  if (proto == COAP_PROTO_DTLS) {
+    mbedtls_ssl_set_bio(&m_env->ssl, c_session, coap_dgram_write,
+                        coap_dgram_read, NULL);
+  }
+#if !COAP_DISABLE_TCP
+  else {
+    assert(proto == COAP_PROTO_TLS);
+    mbedtls_ssl_set_bio(&m_env->ssl, c_session, coap_sock_write,
+                        coap_sock_read, NULL);
+  }
+#endif /* ! COAP_DISABLE_TCP */
   mbedtls_ssl_set_timer_cb(&m_env->ssl, &m_env->timer,
                            mbedtls_timing_set_delay,
                            mbedtls_timing_get_delay);
@@ -1342,16 +1480,24 @@ int coap_dtls_is_supported(void) {
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
   return 1;
 #else /* !MBEDTLS_SSL_PROTO_DTLS */
-  coap_log(LOG_EMERG,
-        "libcoap not compiled for DTLS with Mbed TLS"
-        " - update Mbed TLS to include DTLS\n");
+ static int reported = 0;
+  if (!reported) {
+    reported = 1;
+    coap_log(LOG_EMERG,
+             "libcoap not compiled for DTLS with Mbed TLS"
+             " - update Mbed TLS to include DTLS\n");
+  }
   return 0;
 #endif /* !MBEDTLS_SSL_PROTO_DTLS */
 }
 
 int coap_tls_is_supported(void)
 {
+#if !COAP_DISABLE_TCP
+  return 1;
+#else /* COAP_DISABLE_TCP */
   return 0;
+#endif /* COAP_DISABLE_TCP */
 }
 
 void *coap_dtls_new_context(coap_context_t *c_context)
@@ -1532,7 +1678,8 @@ void *coap_dtls_new_client_session(coap_session_t *c_session)
   return NULL;
 #else /* MBEDTLS_SSL_CLI_C */
   coap_mbedtls_env_t *m_env = coap_dtls_new_mbedtls_env(c_session,
-                                                       COAP_DTLS_ROLE_CLIENT);
+                                                        COAP_DTLS_ROLE_CLIENT,
+                                                        COAP_PROTO_DTLS);
   int ret;
 
   if (m_env) {
@@ -1551,6 +1698,13 @@ void *coap_dtls_new_client_session(coap_session_t *c_session)
 
 void *coap_dtls_new_server_session(coap_session_t *c_session)
 {
+#if !defined(MBEDTLS_SSL_SRV_C)
+  (void)c_session;
+  coap_log(LOG_EMERG, "coap_dtls_new_server_session:"
+           " libcoap not compiled for Server Mode for Mbed TLS"
+           " - update Mbed TLS to include Server Mode\n");
+  return NULL;
+#else /* MBEDTLS_SSL_SRV_C */
   coap_mbedtls_env_t *m_env =
          (coap_mbedtls_env_t *)c_session->tls;
   if (m_env) {
@@ -1561,6 +1715,7 @@ void *coap_dtls_new_server_session(coap_session_t *c_session)
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
   }
   return m_env;
+#endif /* MBEDTLS_SSL_SRV_C */
 }
 
 void coap_dtls_free_session(coap_session_t *c_session)
@@ -1844,7 +1999,8 @@ int coap_dtls_hello(coap_session_t *c_session,
   int ret;
 
   if (!m_env) {
-    m_env = coap_dtls_new_mbedtls_env(c_session, COAP_DTLS_ROLE_SERVER);
+    m_env = coap_dtls_new_mbedtls_env(c_session, COAP_DTLS_ROLE_SERVER,
+                                      COAP_PROTO_DTLS);
     if (m_env) {
       c_session->tls = m_env;
     }
@@ -1907,36 +2063,206 @@ unsigned int coap_dtls_get_overhead(coap_session_t *c_session)
 }
 
 #if !COAP_DISABLE_TCP
-void *coap_tls_new_client_session(coap_session_t *c_session COAP_UNUSED,
-                                  int *connected COAP_UNUSED)
+void *coap_tls_new_client_session(coap_session_t *c_session,
+                                  int *connected)
 {
+#if !defined(MBEDTLS_SSL_CLI_C)
+  (void)c_session;
+  coap_log(LOG_EMERG, "coap_tls_new_client_session:"
+           " libcoap not compiled for Client Mode for Mbed TLS"
+           " - update Mbed TLS to include Client Mode\n");
   return NULL;
+#else /* MBEDTLS_SSL_CLI_C */
+  coap_mbedtls_env_t *m_env = coap_dtls_new_mbedtls_env(c_session,
+                                                       COAP_DTLS_ROLE_CLIENT,
+                                                       COAP_PROTO_TLS);
+  int ret;
+  coap_tick_t now;
+  coap_ticks(&now);
+
+  *connected = 0;
+  if (!m_env)
+    return NULL;
+
+  m_env->last_timeout = now;
+  c_session->tls = m_env;
+  ret = do_mbedtls_handshake(c_session, m_env);
+  if (ret == 1) {
+    *connected = 1;
+    coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
+    coap_session_send_csm(c_session);
+  }
+  return m_env;
+#endif /* MBEDTLS_SSL_CLI_C */
 }
 
 void *coap_tls_new_server_session(coap_session_t *c_session COAP_UNUSED,
                                   int *connected COAP_UNUSED)
 {
+#if !defined(MBEDTLS_SSL_SRV_C)
+  (void)c_session;
+  coap_log(LOG_EMERG, "coap_tls_new_server_session:"
+           " libcoap not compiled for Server Mode for Mbed TLS"
+           " - update Mbed TLS to include Server Mode\n");
   return NULL;
+#else /* MBEDTLS_SSL_SRV_C */
+  coap_mbedtls_env_t *m_env = coap_dtls_new_mbedtls_env(c_session,
+                                                       COAP_DTLS_ROLE_SERVER,
+                                                       COAP_PROTO_TLS);
+  int ret;
+
+  c_session->tls = m_env;
+  ret = do_mbedtls_handshake(c_session, m_env);
+  if (ret == 1) {
+    *connected = 1;
+  }
+  return m_env;
+#endif /* MBEDTLS_SSL_SRV_C */
 }
 
-void coap_tls_free_session( coap_session_t *c_session COAP_UNUSED)
+void coap_tls_free_session(coap_session_t *c_session)
 {
+  coap_dtls_free_session(c_session);
+  return;
 }
 
-ssize_t coap_tls_write(coap_session_t *c_session COAP_UNUSED,
-                       const uint8_t *data COAP_UNUSED,
-                       size_t data_len COAP_UNUSED
+/*
+ * return +ve data amount
+ *        0   no more
+ *        -1  error (error in errno)
+ */
+ssize_t coap_tls_write(coap_session_t *c_session,
+                       const uint8_t *data,
+                       size_t data_len
                        )
 {
-  return 0;
+  int ret;
+  coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
+
+  assert(m_env != NULL);
+
+  if (!m_env) {
+      return -1;
+  }
+  c_session->dtls_event = -1;
+  if (m_env->established) {
+    ret = mbedtls_ssl_write(&m_env->ssl, (const unsigned char*) data, data_len);
+    if (ret <= 0) {
+      switch (ret) {
+      case MBEDTLS_ERR_SSL_WANT_READ:
+      case MBEDTLS_ERR_SSL_WANT_WRITE:
+        ret = 0;
+        break;
+      case MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE:
+        c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+        ret = -1;
+        break;
+      default:
+        coap_log(LOG_WARNING,
+                 "coap_tls_write: "
+                 "returned -0x%x: '%s'\n",
+                 -ret, get_error_string(ret));
+        ret = -1;
+        break;
+      }
+      if (ret == -1) {
+        coap_log(LOG_WARNING, "coap_dtls_send: cannot send PDU\n");
+      }
+    }
+  } else {
+    ret = do_mbedtls_handshake(c_session, m_env);
+    if (ret == 1) {
+      coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
+                                     c_session);
+      coap_session_send_csm(c_session);
+    }
+    else {
+      ret = -1;
+    }
+  }
+
+  if (c_session->dtls_event >= 0) {
+    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+    if (c_session->dtls_event != COAP_EVENT_DTLS_CLOSED)
+      coap_handle_event(c_session->context, c_session->dtls_event, c_session);
+    if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
+      c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
+      coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
+      ret = -1;
+    }
+  }
+  return ret;
 }
 
-ssize_t coap_tls_read(coap_session_t *c_session COAP_UNUSED,
-                      uint8_t *data COAP_UNUSED,
-                      size_t data_len COAP_UNUSED
+/*
+ * return +ve data amount
+ *        0   no more
+ *        -1  error (error in errno)
+ */
+ssize_t coap_tls_read(coap_session_t *c_session,
+                      uint8_t *data,
+                      size_t data_len
                       )
 {
-  return 0;
+  int ret = 1;
+
+  coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
+
+  if (!m_env)
+    return -1;
+
+  c_session->dtls_event = -1;
+
+  if (!m_env->established && !m_env->sent_alert) {
+    ret = do_mbedtls_handshake(c_session, m_env);
+    if (ret == 1) {
+      coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
+                                                               c_session);
+      coap_session_send_csm(c_session);
+    }
+  }
+
+  if (c_session->state != COAP_SESSION_STATE_NONE && m_env->established) {
+    ret = mbedtls_ssl_read(&m_env->ssl, data, data_len);
+    if (ret <= 0) {
+      switch (ret) {
+      case 0:
+      case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+        c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+        ret = -1;
+        break;
+      case MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE:
+        /* Stop the sending of an alert on closedown */
+        m_env->sent_alert = 1;
+        c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+        ret = -1;
+        break;
+      case MBEDTLS_ERR_SSL_WANT_READ:
+        errno = EAGAIN;
+        ret = 0;
+        break;
+      default:
+        coap_log(LOG_WARNING,
+                 "coap_tls_read: "
+                 "returned -0x%x: '%s' (length %zd)\n",
+                 -ret, get_error_string(ret), data_len);
+        ret = -1;
+        break;
+      }
+    }
+  }
+
+  if (c_session->dtls_event >= 0) {
+    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+    if (c_session->dtls_event != COAP_EVENT_DTLS_CLOSED)
+      coap_handle_event(c_session->context, c_session->dtls_event, c_session);
+    if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
+      c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
+      coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
+      ret = -1;
+    }
+  }
+  return ret;
 }
 #endif /* !COAP_DISABLE_TCP */
 
