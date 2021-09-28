@@ -484,7 +484,14 @@ int coap_handle_event(coap_context_t *context,
                       coap_session_t *session);
 /**
  * Returns 1 if there are no messages to send or to dispatch in the context's
- * queues. */
+ * queues.
+ *
+ * @param context The CoAP context to check.
+ *
+ * @return @c 0 if there are still pending transmits else @c 1 if nothing
+ *         queued for transmission.  Note that @c 0 does not mean there has
+ *         been a response to a transmitted request.
+ */
 int coap_can_exit(coap_context_t *context);
 
 /**
