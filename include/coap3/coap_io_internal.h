@@ -12,6 +12,7 @@
 #ifndef COAP_IO_INTERNAL_H_
 #define COAP_IO_INTERNAL_H_
 
+#include "coap_internal.h"
 #include <sys/types.h>
 
 #include "address.h"
@@ -54,11 +55,14 @@ struct coap_socket_t {
 #define COAP_SOCKET_CAN_CONNECT  0x0800  /**< non blocking client socket can now connect without blocking */
 #define COAP_SOCKET_MULTICAST    0x1000  /**< socket is used for multicast communication */
 
+#if COAP_SERVER_SUPPORT
 coap_endpoint_t *coap_malloc_endpoint( void );
 void coap_mfree_endpoint( coap_endpoint_t *ep );
+#endif /* COAP_SERVER_SUPPORT */
 
 const char *coap_socket_format_errno(int error);
 
+#if COAP_CLIENT_SUPPORT
 int
 coap_socket_connect_udp(coap_socket_t *sock,
                         const coap_address_t *local_if,
@@ -66,6 +70,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
                         int default_port,
                         coap_address_t *local_addr,
                         coap_address_t *remote_addr);
+#endif /* COAP_CLIENT_SUPPORT */
 
 int
 coap_socket_bind_udp(coap_socket_t *sock,

@@ -766,6 +766,31 @@ if test "x$enable_small_stack" = "xyes"; then
     AC_DEFINE(COAP_CONSTRAINED_STACK, 1, [Define if the system has small stack size])
 fi
 
+AC_ARG_ENABLE([server-mode],
+        [AS_HELP_STRING([--enable-server-mode],
+                        [Enable CoAP server mode supporting code [default=yes]])],
+        [enable_server_mode="$enableval"],
+        [enable_server_mode="yes"])
+
+if test "x$enable_server_mode" = "xyes"; then
+    AC_DEFINE(COAP_SERVER_SUPPORT, 1, [Define if libcoap supports server mode code])
+fi
+AM_CONDITIONAL(HAVE_SERVER_SUPPORT, [test "x$enable_server_mode" = "xyes"])
+
+AC_ARG_ENABLE([client-mode],
+        [AS_HELP_STRING([--enable-client-mode],
+                        [Enable CoAP client mode supporting code [default=yes]])],
+        [enable_client_mode="$enableval"],
+        [enable_client_mode="yes"])
+
+if test "x$enable_client_mode" = "xyes"; then
+    AC_DEFINE(COAP_CLIENT_SUPPORT, 1, [Define if libcoap supports client mode code])
+fi
+AM_CONDITIONAL(HAVE_CLIENT_SUPPORT, [test "x$enable_client_mode" = "xyes"])
+if test "x$enable_server_mode" != "xyes" -a "x$enable_client_mode" != "xyes" ; then
+    AC_MSG_ERROR([==> One or both of '--enable-server-mode' and '--enable-client-mode' need to be set!])
+fi
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
@@ -904,6 +929,16 @@ libcoap configuration summary:
       libcoap API version      : "$LIBCOAP_API_VERSION"
       libcoap DTLS lib extn    : "$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
       host system              : "$host"]);
+if test "x$enable_server_mode" = "xyes"; then
+    AC_MSG_RESULT([      build with server support: "yes"])
+else
+    AC_MSG_RESULT([      build with server support: "no"])
+fi
+if test "x$enable_client_mode" = "xyes"; then
+    AC_MSG_RESULT([      build with client support: "yes"])
+else
+    AC_MSG_RESULT([      build with client support: "no"])
+fi
 if test "x$build_tcp" != "xno"; then
     AC_MSG_RESULT([      build with TCP support   : "yes"])
 else

@@ -18,6 +18,7 @@
 #ifndef COAP_SESSION_INTERNAL_H_
 #define COAP_SESSION_INTERNAL_H_
 
+#include "coap_internal.h"
 #include "coap_io_internal.h"
 
 #define COAP_DEFAULT_SESSION_TIMEOUT 300
@@ -59,7 +60,9 @@ struct coap_session_t {
   int ifindex;                      /**< interface index */
   coap_socket_t sock;               /**< socket object for the session, if
                                          any */
+#if COAP_SERVER_SUPPORT
   coap_endpoint_t *endpoint;        /**< session's endpoint */
+#endif /* COAP_SERVER_SUPPORT */
   coap_context_t *context;          /**< session's context */
   void *tls;                        /**< security parameters */
   uint16_t tx_mid;                  /**< the last message id that was used in
@@ -71,8 +74,12 @@ struct coap_session_t {
   coap_queue_t *delayqueue;         /**< list of delayed messages waiting to
                                          be sent */
   coap_lg_xmit_t *lg_xmit;          /**< list of large transmissions */
+#if COAP_CLIENT_SUPPORT
   coap_lg_crcv_t *lg_crcv;       /**< Client list of expected large receives */
+#endif /* COAP_CLIENT_SUPPORT */
+#if COAP_SERVER_SUPPORT
   coap_lg_srcv_t *lg_srcv;       /**< Server list of expected large receives */
+#endif /* COAP_SERVER_SUPPORT */
   size_t partial_write;             /**< if > 0 indicates number of bytes
                                          already written from the pdu at the
                                          head of sendqueue */
@@ -129,6 +136,7 @@ struct coap_session_t {
   uint64_t tx_token;              /**< Next token number to use */
 };
 
+#if COAP_SERVER_SUPPORT
 /**
  * Abstraction of virtual endpoint that can be attached to coap_context_t. The
  * keys (port, bind_addr) must uniquely identify this endpoint.
@@ -143,6 +151,7 @@ struct coap_endpoint_t {
   coap_address_t bind_addr;       /**< local interface address */
   coap_session_t *sessions;       /**< hash table or list of active sessions */
 };
+#endif /* COAP_SERVER_SUPPORT */
 
 /**
  * Notify session transport has just connected and CSM exchange can now start.
@@ -184,6 +193,7 @@ int coap_session_refresh_psk_hint(coap_session_t *session,
 int coap_session_refresh_psk_key(coap_session_t *session,
                                  const coap_bin_const_t *psk_key);
 
+#if COAP_SERVER_SUPPORT
 /**
  * Creates a new server session for the specified endpoint.
  * @param ctx The CoAP context.
@@ -196,6 +206,7 @@ coap_session_t *coap_new_server_session(
   coap_context_t *ctx,
   coap_endpoint_t *ep
 );
+#endif /* COAP_SERVER_SUPPORT */
 
 /**
  * Function interface for datagram data transmission. This function returns
@@ -245,6 +256,7 @@ ssize_t
 coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
                        coap_queue_t *node);
 
+#if COAP_SERVER_SUPPORT
 /**
  * Lookup the server session for the packet received on an endpoint, or create
  * a new one.
@@ -256,6 +268,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
  */
 coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
   const coap_packet_t *packet, coap_tick_t now);
+#endif /* COAP_SERVER_SUPPORT */
 
 /**
  * Create a new DTLS session for the @p session.

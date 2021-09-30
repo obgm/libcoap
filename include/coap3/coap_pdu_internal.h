@@ -17,6 +17,8 @@
 #ifndef COAP_COAP_PDU_INTERNAL_H_
 #define COAP_COAP_PDU_INTERNAL_H_
 
+#include "coap_internal.h"
+
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
 #endif

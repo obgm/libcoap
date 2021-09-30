@@ -18,6 +18,8 @@
 #ifndef COAP_NET_INTERNAL_H_
 #define COAP_NET_INTERNAL_H_
 
+#include "coap_internal.h"
+
 /**
  * @defgroup context_internal Context Handling (Internal)
  * CoAP Context Structures, Enums and Functions that are not exposed to
@@ -44,6 +46,7 @@ struct coap_queue_t {
  */
 struct coap_context_t {
   coap_opt_filter_t known_options;
+#if COAP_SERVER_SUPPORT
   coap_resource_t *resources; /**< hash table or list of known
                                    resources */
   coap_resource_t *unknown_resource; /**< can be used for handling
@@ -53,6 +56,7 @@ struct coap_context_t {
   coap_resource_release_userdata_handler_t release_userdata;
                                         /**< function to  release user_data
                                              when resource is deleted */
+#endif /* COAP_SERVER_SUPPORT */
 
 #ifndef WITHOUT_ASYNC
   /**
@@ -65,8 +69,12 @@ struct coap_context_t {
    * to sendqueue_basetime. */
   coap_tick_t sendqueue_basetime;
   coap_queue_t *sendqueue;
+#if COAP_SERVER_SUPPORT
   coap_endpoint_t *endpoint;      /**< the endpoints used for listening  */
+#endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
   coap_session_t *sessions;       /**< client sessions */
+#endif /* COAP_CLIENT_SUPPORT */
 
 #ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;      /**< uIP connection object */
@@ -81,7 +89,9 @@ struct coap_context_t {
                                    *   context, otherwise 0. */
 #endif /* WITH_LWIP */
 
+#if COAP_CLIENT_SUPPORT
   coap_response_handler_t response_handler;
+#endif /* COAP_CLIENT_SUPPORT */
   coap_nack_handler_t nack_handler;
   coap_ping_handler_t ping_handler;
   coap_pong_handler_t pong_handler;
@@ -97,20 +107,26 @@ struct coap_context_t {
 
   ssize_t (*network_read)(coap_socket_t *sock, coap_packet_t *packet);
 
+#if COAP_CLIENT_SUPPORT
   size_t(*get_client_psk)(const coap_session_t *session, const uint8_t *hint,
                           size_t hint_len, uint8_t *identity,
                           size_t *identity_len, size_t max_identity_len,
                           uint8_t *psk, size_t max_psk_len);
+#endif /* COAP_CLIENT_SUPPORT */
+#if COAP_SERVER_SUPPORT
   size_t(*get_server_psk)(const coap_session_t *session,
                           const uint8_t *identity, size_t identity_len,
                           uint8_t *psk, size_t max_psk_len);
   size_t(*get_server_hint)(const coap_session_t *session, uint8_t *hint,
                           size_t max_hint_len);
+#endif /* COAP_SERVER_SUPPORT */
 
   void *dtls_context;
 
+#if COAP_SERVER_SUPPORT
   coap_dtls_spsk_t spsk_setup_data;  /**< Contains the initial PSK server setup
                                           data */
+#endif /* COAP_SERVER_SUPPORT */
 
   unsigned int session_timeout;    /**< Number of seconds of inactivity after
                                         which an unused session will be closed.
@@ -126,15 +142,19 @@ struct coap_context_t {
                                             disabled. */
   unsigned int csm_timeout;           /**< Timeout for waiting for a CSM from
                                            the remote side. 0 means disabled. */
+#if COAP_SERVER_SUPPORT
   uint8_t observe_pending;         /**< Observe response pending */
+#endif /* COAP_SERVER_SUPPORT */
   uint8_t block_mode;              /**< Zero or more COAP_BLOCK_ or'd options */
   uint64_t etag;                   /**< Next ETag to use */
 
+#if COAP_SERVER_SUPPORT
   coap_cache_entry_t *cache;       /**< CoAP cache-entry cache */
   uint16_t *cache_ignore_options;  /**< CoAP options to ignore when creating a
                                         cache-key */
   size_t cache_ignore_count;       /**< The number of CoAP options to ignore
                                         when creating a cache-key */
+#endif /* COAP_SERVER_SUPPORT */
   void *app;                       /**< application-specific data */
 #ifdef COAP_EPOLL_SUPPORT
   int epfd;                        /**< External FD for epoll */

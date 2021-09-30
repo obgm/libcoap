@@ -35,6 +35,21 @@
 # include <assert.h>
 #endif
 
+/* By default without either configured, these need to be set */
+#ifndef COAP_SERVER_SUPPORT
+#ifndef COAP_CLIENT_SUPPORT
+#define COAP_SERVER_SUPPORT 1
+#define COAP_CLIENT_SUPPORT 1
+#endif /* COAP_CLIENT_SUPPORT */
+#endif /* COAP_SERVER_SUPPORT */
+
+#if ! COAP_SERVER_SUPPORT
+#ifndef WITHOUT_ASYNC
+/* ASYNC is only there for Server code */
+#define WITHOUT_ASYNC
+#endif /* WITHOUT_ASYNC */
+#endif /* COAP_SERVER_SUPPORT */
+
 #include "coap3/coap.h"
 
 /*

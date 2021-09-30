@@ -17,8 +17,10 @@
 #ifndef COAP_RESOURCE_INTERNAL_H_
 #define COAP_RESOURCE_INTERNAL_H_
 
+#include "coap_internal.h"
 #include "uthash.h"
 
+#if COAP_SERVER_SUPPORT
 /**
  * @defgroup coap_resource_internal Resources (Internal)
  * Structures, Enums and Functions that are not exposed to applications
@@ -135,7 +137,8 @@ coap_print_status_t coap_print_wellknown(coap_context_t *,
                                          size_t *, size_t,
                                          coap_opt_t *);
 
-
 /** @} */
+
+#endif /* COAP_SERVER_SUPPORT */
 
 #endif /* COAP_RESOURCE_INTERNAL_H_ */

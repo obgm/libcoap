@@ -21,6 +21,12 @@
 /* Define to 1 if you have <winsock2.h> header file. */
 #cmakedefine HAVE_WINSOCK2_H "@HAVE_WINSOCK2_H@"
 
+/* Define if the library has client support */
+#cmakedefine COAP_CLIENT_SUPPORT @COAP_CLIENT_SUPPORT@
+
+/* Define if the library has server support */
+#cmakedefine COAP_SERVER_SUPPORT @COAP_SERVER_SUPPORT@
+
 /* Define if the system has epoll support */
 #cmakedefine COAP_EPOLL_SUPPORT "@COAP_EPOLL_SUPPORT@"
 

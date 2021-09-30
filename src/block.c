@@ -275,6 +275,7 @@ full_match(const uint8_t *a, size_t alen,
   return alen == blen && (alen == 0 || memcmp(a, b, alen) == 0);
 }
 
+#if COAP_CLIENT_SUPPORT
 int
 coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
                     coap_pdu_type_t type) {
@@ -328,6 +329,7 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
   }
   return 0;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 int
 coap_add_data_large_internal(coap_session_t *session,
@@ -623,6 +625,7 @@ fail:
   return 0;
 }
 
+#if COAP_CLIENT_SUPPORT
 int
 coap_add_data_large_request(coap_session_t *session,
                             coap_pdu_t *pdu,
@@ -633,7 +636,9 @@ coap_add_data_large_request(coap_session_t *session,
   return coap_add_data_large_internal(session, pdu, NULL, NULL, -1,
                                  0, length, data, release_func, app_ptr);
 }
+#endif /* ! COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 int
 coap_add_data_large_response(coap_resource_t *resource,
                              coap_session_t *session,
@@ -729,6 +734,7 @@ error:
                 (const unsigned char *)coap_response_phrase(response->code));
   return 0;
 }
+#endif /* ! COAP_SERVER_SUPPORT */
 
 coap_tick_t
 coap_block_check_lg_xmit_timeouts(coap_session_t *session, coap_tick_t now) {
@@ -755,6 +761,7 @@ coap_block_check_lg_xmit_timeouts(coap_session_t *session, coap_tick_t now) {
   return tim_rem;
 }
 
+#if COAP_CLIENT_SUPPORT
 coap_tick_t
 coap_block_check_lg_crcv_timeouts(coap_session_t *session, coap_tick_t now) {
   coap_lg_crcv_t *p;
@@ -777,6 +784,7 @@ coap_block_check_lg_crcv_timeouts(coap_session_t *session, coap_tick_t now) {
   }
   return tim_rem;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 static int
 check_if_received_block(coap_rblock_t *rec_blocks, uint32_t block_num) {
@@ -809,6 +817,7 @@ check_all_blocks_in(coap_rblock_t *rec_blocks, size_t total_blocks) {
   return 1;
 }
 
+#if COAP_SERVER_SUPPORT
 coap_tick_t
 coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now) {
   coap_lg_srcv_t *p;
@@ -830,7 +839,9 @@ coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now) {
   }
   return tim_rem;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 coap_lg_crcv_t *
 coap_block_new_lg_crcv(coap_session_t *session, coap_pdu_t *pdu) {
   coap_lg_crcv_t *lg_crcv;
@@ -897,7 +908,9 @@ coap_block_delete_lg_crcv(coap_session_t *session,
   coap_delete_binary(lg_crcv->app_token);
   coap_free_type(COAP_LG_CRCV, lg_crcv);
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 void
 coap_block_delete_lg_srcv(coap_session_t *session,
                                coap_lg_srcv_t *lg_srcv) {
@@ -910,6 +923,7 @@ coap_block_delete_lg_srcv(coap_session_t *session,
          coap_session_str(session), (void*)lg_srcv);
   coap_free_type(COAP_LG_SRCV, lg_srcv);
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 void
 coap_block_delete_lg_xmit(coap_session_t *session,
@@ -933,6 +947,7 @@ coap_block_delete_lg_xmit(coap_session_t *session,
   coap_free_type(COAP_LG_XMIT, lg_xmit);
 }
 
+#if COAP_SERVER_SUPPORT
 static int
 add_block_send(uint32_t num, uint32_t *out_blocks,
                           uint32_t *count, uint32_t max_count) {
@@ -1179,6 +1194,7 @@ internal_issue:
 skip_app_handler:
   return 1;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 static int
 update_received_blocks(coap_rblock_t *rec_blocks, uint32_t block_num) {
@@ -1235,6 +1251,7 @@ update_received_blocks(coap_rblock_t *rec_blocks, uint32_t block_num) {
   return 1;
 }
 
+#if COAP_SERVER_SUPPORT
 /*
  * Need to check if this is a large PUT / POST using multiple blocks
  *
@@ -1453,7 +1470,9 @@ call_app_handler:
 skip_app_handler:
   return 1;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 /*
  * Need to see if this is a response to a large body request transfer. If so,
  * need to initiate the request containing the next block and not trouble the
@@ -1576,6 +1595,7 @@ fail_body:
   } /* end of LL_FOREACH_SAFE */
   return 0;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 /*
  * Re-assemble payloads into a body
@@ -1621,6 +1641,7 @@ coap_block_build_body(coap_binary_t *body_data, size_t length,
   return body_data;
 }
 
+#if COAP_CLIENT_SUPPORT
 /*
  * Need to see if this is a large body response to a request. If so,
  * need to initiate the request for the next block and not trouble the
@@ -1967,6 +1988,7 @@ call_app_handler:
 skip_app_handler:
   return 1;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 /* Check if lg_xmit generated and update PDU code if so */
 void

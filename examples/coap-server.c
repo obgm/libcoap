@@ -51,6 +51,10 @@ static char* strndup(const char* s1, size_t n)
 #include <dirent.h>
 #endif
 
+/*
+ * SERVER_CAN_PROXY=0 can be set by build system if
+ * "./configure --disable-client-mode" is used.
+ */
 #ifndef SERVER_CAN_PROXY
 #define SERVER_CAN_PROXY 1
 #endif
@@ -1796,7 +1800,7 @@ init_resources(coap_context_t *ctx) {
   coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Example Data\""), 0);
   coap_add_resource(ctx, r);
 
-#ifdef SERVER_CAN_PROXY
+#if SERVER_CAN_PROXY
   if (proxy_host_name_count) {
     r = coap_resource_proxy_uri_init(hnd_proxy_uri, proxy_host_name_count,
                                      proxy_host_name_list);
