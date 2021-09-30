@@ -395,6 +395,25 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
                    coap_opt_filter_t *drop_options);
 
 /**
+ * Parses @p data into the CoAP PDU structure given in @p result.
+ * The target pdu must be large enough to hold the token, options and data.
+ * This function returns @c 0 on error or a number greater than zero on success.
+ *
+ * @param proto   Session's protocol
+ * @param data    The raw data to parse as CoAP PDU.
+ * @param length  The actual size of @p data.
+ * @param pdu     The PDU structure to fill. Note that the structure must
+ *                provide space to hold the token, optional options and
+ *                optional data.
+ *
+ * @return       1 on success or @c 0 on error.
+ */
+int coap_pdu_parse(coap_proto_t proto,
+                   const uint8_t *data,
+                   size_t length,
+                   coap_pdu_t *pdu);
+
+/**
  * Adds token of length @p len to @p pdu.
  * Adding the token destroys any following contents of the pdu. Hence options
  * and data must be added after coap_add_token() has been called. In @p pdu,
