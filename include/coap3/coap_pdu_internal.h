@@ -202,25 +202,6 @@ int coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto);
 int coap_pdu_parse_opt(coap_pdu_t *pdu);
 
 /**
-* Parses @p data into the CoAP PDU structure given in @p result.
-* The target pdu must be large enough to
-* This function returns @c 0 on error or a number greater than zero on success.
-*
-* @param proto   Session's protocol
-* @param data    The raw data to parse as CoAP PDU.
-* @param length  The actual size of @p data.
-* @param pdu     The PDU structure to fill. Note that the structure must
-*                provide space to hold at least the token and options
-*                part of the message.
-*
-* @return       1 on success or @c 0 on error.
-*/
-int coap_pdu_parse(coap_proto_t proto,
-                   const uint8_t *data,
-                   size_t length,
-                   coap_pdu_t *pdu);
-
-/**
  * Clears any contents from @p pdu and resets @c used_size,
  * and @c data pointers. @c max_size is set to @p size, any
  * other field is set to @c 0. Note that @p pdu must be a valid

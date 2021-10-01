@@ -140,6 +140,7 @@ coap_pdu_get_mid
 coap_pdu_get_token
 coap_pdu_get_type
 coap_pdu_init
+coap_pdu_parse
 coap_pdu_set_code
 coap_pdu_set_mid
 coap_pdu_set_type
