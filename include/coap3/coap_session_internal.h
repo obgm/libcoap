@@ -186,12 +186,25 @@ int coap_session_refresh_psk_hint(coap_session_t *session,
  *
  * @param session  The current coap_session_t object.
  * @param psk_key  If NULL, the pre-shared key will revert to the
- *                 initial pre-shared key used as session setup.
+ *                 initial pre-shared key used at session setup.
  *
  * @return @c 1 if successful, else @c 0.
  */
 int coap_session_refresh_psk_key(coap_session_t *session,
                                  const coap_bin_const_t *psk_key);
+
+/**
+ * Refresh the session's current pre-shared identity (PSK).
+ * Note: A copy of @p psk_identity is maintained in the session by libcoap.
+ *
+ * @param session  The current coap_session_t object.
+ * @param psk_identity  If NULL, the pre-shared identity will revert to the
+ *                 initial pre-shared key used as session setup.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+int coap_session_refresh_psk_identity(coap_session_t *session,
+                                 const coap_bin_const_t *psk_identity);
 
 #if COAP_SERVER_SUPPORT
 /**

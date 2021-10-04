@@ -424,76 +424,84 @@ coap_dtls_psk_client_callback(
   unsigned char *psk,
   unsigned int max_psk_len
 ) {
-  size_t hint_len = 0, identity_len = 0, psk_len;
   coap_session_t *c_session;
   coap_openssl_context_t *o_context;
   coap_dtls_cpsk_t *setup_data;
+  coap_bin_const_t temp;
+  const coap_dtls_cpsk_info_t *cpsk_info;
+  const coap_bin_const_t *psk_key;
+  const coap_bin_const_t *psk_identity;
 
   c_session = (coap_session_t*)SSL_get_app_data(ssl);
-  if (c_session == NULL || c_session->context == NULL ||
-      c_session->context->get_client_psk == NULL)
+  if (c_session == NULL)
     return 0;
   o_context = (coap_openssl_context_t *)c_session->context->dtls_context;
   if (o_context == NULL)
     return 0;
   setup_data = &c_session->cpsk_setup_data;
 
-  if (c_session->psk_hint) {
-    coap_delete_bin_const(c_session->psk_hint);
-    c_session->psk_hint = NULL;
-  }
-  if (hint) {
-    hint_len = strlen(hint);
-    c_session->psk_hint = coap_new_bin_const((const uint8_t *)hint, hint_len);
-  }
-  else
-    hint = "";
+  temp.s = hint ? (const uint8_t*)hint : (const uint8_t*)"";
+  temp.length = strlen((const char*)temp.s);
+  coap_session_refresh_psk_hint(c_session, &temp);
 
-  coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)hint_len, hint);
+  coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)temp.length,
+             (const char *)temp.s);
 
   if (setup_data->validate_ih_call_back) {
     coap_str_const_t lhint;
-    lhint.length = hint_len;
-    lhint.s = (const uint8_t*)hint;
-    const coap_dtls_cpsk_info_t *psk_info =
+
+    lhint.s = temp.s;
+    lhint.length = temp.length;
+    cpsk_info =
              setup_data->validate_ih_call_back(&lhint,
                                                c_session,
                                                setup_data->ih_call_back_arg);
 
-    if (psk_info == NULL)
-      return 0;
-    if (psk_info->identity.length >= max_identity_len)
-      return 0;
-    if (psk_info->key.length > max_psk_len)
+    if (cpsk_info == NULL)
       return 0;
 
-    if (c_session->psk_identity) {
-      coap_delete_bin_const(c_session->psk_identity);
-    }
-    identity_len = psk_info->identity.length;
-    c_session->psk_identity = coap_new_bin_const(psk_info->identity.s, identity_len);
-    memcpy(identity, psk_info->identity.s, identity_len);
-    identity[identity_len] = '\000';
-
-    if (c_session->psk_key) {
-      coap_delete_bin_const(c_session->psk_key);
-    }
-    psk_len = psk_info->key.length;
-    c_session->psk_key = coap_new_bin_const(psk_info->key.s, psk_len);
-    memcpy(psk, psk_info->key.s, psk_len);
-
-    return (unsigned int)psk_len;
+    coap_session_refresh_psk_identity(c_session, &cpsk_info->identity);
+    coap_session_refresh_psk_key(c_session, &cpsk_info->key);
+    psk_identity = &cpsk_info->identity;
+    psk_key = &cpsk_info->key;
   }
-  psk_len = c_session->context->get_client_psk(c_session,
-                                               (const uint8_t*)hint,
-                                               hint_len,
-                                               (uint8_t*)identity,
-                                               &identity_len,
-                                               max_identity_len - 1,
-                                               (uint8_t*)psk, max_psk_len);
-  if (identity_len < max_identity_len)
-    identity[identity_len] = 0;
-  return (unsigned)psk_len;
+  else {
+    psk_identity = coap_get_session_client_psk_identity(c_session);
+    psk_key = coap_get_session_client_psk_key(c_session);
+  }
+
+  if (psk_identity == NULL || psk_key == NULL) {
+    coap_log(LOG_WARNING, "no PSK available\n");
+    return 0;
+  }
+
+  /* identity has to be NULL terminated */
+  if (!max_identity_len)
+    return 0;
+  max_identity_len--;
+  if (psk_identity->length > max_identity_len) {
+    coap_log(LOG_WARNING,
+             "psk_identity too large, truncated to %d bytes\n",
+             max_identity_len);
+  }
+  else {
+    /* Reduce to match */
+    max_identity_len = psk_identity->length;
+  }
+  memcpy(identity, psk_identity->s, max_identity_len);
+  identity[max_identity_len] = '\000';
+
+  if (psk_key->length > max_psk_len) {
+    coap_log(LOG_WARNING,
+             "psk_key too large, truncated to %d bytes\n",
+             max_psk_len);
+  }
+  else {
+    /* Reduce to match */
+    max_psk_len = psk_key->length;
+  }
+  memcpy(psk, psk_key->s, max_psk_len);
+  return max_psk_len;
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
@@ -505,54 +513,50 @@ coap_dtls_psk_server_callback(
   unsigned char *psk,
   unsigned int max_psk_len
 ) {
-  size_t identity_len = 0;
   coap_session_t *c_session;
   coap_dtls_spsk_t *setup_data;
+  coap_bin_const_t lidentity;
+  const coap_bin_const_t *psk_key;
 
   c_session = (coap_session_t*)SSL_get_app_data(ssl);
-  if (c_session == NULL || c_session->context == NULL ||
-      c_session->context->get_server_psk == NULL)
+  if (c_session == NULL)
     return 0;
 
   setup_data = &c_session->context->spsk_setup_data;
 
-  if (identity)
-    identity_len = strlen(identity);
-  else
-    identity = "";
-
   /* Track the Identity being used */
-  if (c_session->psk_identity)
-    coap_delete_bin_const(c_session->psk_identity);
-  c_session->psk_identity = coap_new_bin_const((const uint8_t *)identity,
-                                               identity_len);
+  lidentity.s = identity ? (const uint8_t*)identity : (const uint8_t*)"";
+  lidentity.length = strlen((const char*)lidentity.s);
+  coap_session_refresh_psk_identity(c_session, &lidentity);
 
   coap_log(LOG_DEBUG, "got psk_identity: '%.*s'\n",
-           (int)identity_len, identity);
+           (int)lidentity.length, (const char *)lidentity.s);
 
   if (setup_data->validate_id_call_back) {
-    coap_bin_const_t lidentity;
-    lidentity.length = identity_len;
-    lidentity.s = (const uint8_t*)identity;
-    const coap_bin_const_t *psk_key =
-             setup_data->validate_id_call_back(&lidentity,
+    psk_key = setup_data->validate_id_call_back(&lidentity,
                                                 c_session,
                                                 setup_data->id_call_back_arg);
 
-    if (psk_key == NULL)
-      return 0;
-    if (psk_key->length > max_psk_len)
-      return 0;
-    memcpy(psk, psk_key->s, psk_key->length);
     coap_session_refresh_psk_key(c_session, psk_key);
-    return (unsigned int)psk_key->length;
+  }
+  else {
+    psk_key = coap_get_session_server_psk_key(c_session);
   }
 
-  return (unsigned)c_session->context->get_server_psk(c_session,
-                                                      (const uint8_t*)identity,
-                                                      identity_len,
-                                                      (uint8_t*)psk,
-                                                      max_psk_len);
+  if (psk_key == NULL)
+    return 0;
+
+  if (psk_key->length > max_psk_len) {
+    coap_log(LOG_WARNING,
+             "psk_key too large, truncated to %d bytes\n",
+             max_psk_len);
+  }
+  else {
+    /* Reduce to match */
+    max_psk_len = psk_key->length;
+  }
+  memcpy(psk, psk_key->s, max_psk_len);
+  return max_psk_len;
 }
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -2774,6 +2778,7 @@ void * coap_dtls_new_server_session(coap_session_t *session) {
   coap_ssl_data *data;
   coap_dtls_context_t *dtls = &((coap_openssl_context_t *)session->context->dtls_context)->dtls;
   int r;
+  const coap_bin_const_t *psk_hint;
 
   nssl = SSL_new(dtls->ctx);
   if (!nssl)
@@ -2793,15 +2798,14 @@ void * coap_dtls_new_server_session(coap_session_t *session) {
   data = (coap_ssl_data*)BIO_get_data(SSL_get_rbio(ssl));
   data->session = session;
 
-  if (session->context->get_server_hint) {
-    /* hint may get updated if/when handling SNI callback */
-    char hint[COAP_DTLS_HINT_LENGTH] = "";
-    size_t hint_len = session->context->get_server_hint(session,
-                                            (uint8_t*)hint, sizeof(hint) - 1);
-    if (hint_len > 0 && hint_len < sizeof(hint)) {
-      hint[hint_len] = 0;
-      SSL_use_psk_identity_hint(ssl, hint);
-    }
+  /* hint may get updated if/when handling SNI callback */
+  psk_hint = coap_get_session_server_psk_hint(session);
+  if (psk_hint != NULL && psk_hint->length) {
+    char hint[psk_hint->length+1];
+
+    memcpy (hint, psk_hint->s, psk_hint->length);
+    hint[psk_hint->length] = '\000';
+    SSL_use_psk_identity_hint(ssl, hint);
   }
 
   r = SSL_accept(ssl);
@@ -3256,6 +3260,7 @@ void *coap_tls_new_server_session(coap_session_t *session, int *connected) {
   SSL *ssl = NULL;
   coap_tls_context_t *tls = &((coap_openssl_context_t *)session->context->dtls_context)->tls;
   int r;
+  const coap_bin_const_t *psk_hint;
 
   *connected = 0;
   ssl = SSL_new(tls->ctx);
@@ -3268,13 +3273,13 @@ void *coap_tls_new_server_session(coap_session_t *session, int *connected) {
   SSL_set_bio(ssl, bio, bio);
   SSL_set_app_data(ssl, session);
 
-  if (session->context->get_server_hint) {
-    char hint[COAP_DTLS_HINT_LENGTH] = "";
-    size_t hint_len = session->context->get_server_hint(session, (uint8_t*)hint, sizeof(hint) - 1);
-    if (hint_len > 0 && hint_len < sizeof(hint)) {
-      hint[hint_len] = 0;
-      SSL_use_psk_identity_hint(ssl, hint);
-    }
+  psk_hint = coap_get_session_server_psk_hint(session);
+  if (psk_hint != NULL && psk_hint->length) {
+    char hint[psk_hint->length+1];
+
+    memcpy (hint, psk_hint->s, psk_hint->length);
+    hint[psk_hint->length] = '\000';
+    SSL_use_psk_identity_hint(ssl, hint);
   }
 
   r = SSL_accept(ssl);

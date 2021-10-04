@@ -217,47 +217,43 @@ coap_dgram_write(void *ctx, const unsigned char *send_buffer,
  * Server side PSK callback
  */
 static int psk_server_callback(void *p_info, mbedtls_ssl_context *ssl,
-                  const unsigned char *name, size_t name_len )
+                  const unsigned char *identity, size_t identity_len )
 {
   coap_session_t *c_session = (coap_session_t *)p_info;
-  uint8_t buf[COAP_DTLS_MAX_PSK];
-  size_t psk_len;
   coap_dtls_spsk_t *setup_data;
   coap_mbedtls_env_t *m_env;
+  coap_bin_const_t lidentity;
+  const coap_bin_const_t *psk_key;
+
+  if (c_session == NULL)
+    return -1;
+
+  /* Track the Identity being used */
+  lidentity.s = identity ? (const uint8_t*)identity : (const uint8_t*)"";
+  lidentity.length = identity ? identity_len : 0;
+  coap_session_refresh_psk_identity(c_session, &lidentity);
 
   coap_log(LOG_DEBUG, "got psk_identity: '%.*s'\n",
-                      (int)name_len, name);
+           (int)lidentity.length, (const char *)lidentity.s);
 
-  if (c_session == NULL || c_session->context == NULL ||
-    c_session->context->get_server_psk == NULL) {
-    return -1;
-  }
   m_env = (coap_mbedtls_env_t *)c_session->tls;
   setup_data = &c_session->context->spsk_setup_data;
 
   if (setup_data->validate_id_call_back) {
-    coap_bin_const_t lidentity;
-    lidentity.length = name_len;
-    lidentity.s = (const uint8_t*)name;
-    const coap_bin_const_t *psk_key =
-             setup_data->validate_id_call_back(&lidentity,
-                                               c_session,
-                                               setup_data->id_call_back_arg);
+    psk_key = setup_data->validate_id_call_back(&lidentity,
+                                                c_session,
+                                                setup_data->id_call_back_arg);
 
-    if (psk_key == NULL)
-      return -1;
-    mbedtls_ssl_set_hs_psk(ssl, psk_key->s, psk_key->length);
     coap_session_refresh_psk_key(c_session, psk_key);
-    m_env->seen_client_hello = 1;
-    return 0;
+  }
+  else {
+    psk_key = coap_get_session_server_psk_key(c_session);
   }
 
-  psk_len = c_session->context->get_server_psk(c_session,
-                               (const uint8_t*)name,
-                               name_len,
-                               (uint8_t*)buf, sizeof(buf));
+  if (psk_key == NULL)
+    return -1;
+  mbedtls_ssl_set_hs_psk(ssl, psk_key->s, psk_key->length);
   m_env->seen_client_hello = 1;
-  mbedtls_ssl_set_hs_psk(ssl, buf, psk_len);
   return 0;
 }
 #endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED && MBEDTLS_SSL_SRV_C */
@@ -1072,28 +1068,32 @@ static int setup_client_ssl_session(coap_session_t *c_session,
 
   if (m_context->psk_pki_enabled & IS_PSK) {
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
-    uint8_t identity[COAP_DTLS_MAX_PSK_IDENTITY];
-    size_t identity_len;
-    uint8_t psk_key[COAP_DTLS_MAX_PSK];
-    size_t psk_len;
-    size_t max_identity_len = sizeof(identity);
+    const coap_bin_const_t *psk_key;
+    const coap_bin_const_t *psk_identity;
 
     coap_log(LOG_INFO, "Setting PSK key\n");
-    psk_len = c_session->context->get_client_psk(c_session,
-                                             NULL,
-                                             0,
-                                             identity,
-                                             &identity_len,
-                                             max_identity_len,
-                                             psk_key,
-                                             sizeof(psk_key));
-    assert(identity_len <= sizeof(identity));
-    mbedtls_ssl_conf_psk(&m_env->conf, (const unsigned char *)psk_key,
-                         psk_len, (const unsigned char *)identity,
-                         identity_len);
+
+    psk_key = coap_get_session_client_psk_key(c_session);
+    psk_identity = coap_get_session_client_psk_identity(c_session);
+    if (psk_key == NULL || psk_identity == NULL) {
+      ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
+      goto fail;
+    }
+
+    if ((ret = mbedtls_ssl_conf_psk(&m_env->conf, psk_key->s,
+                                    psk_key->length, psk_identity->s,
+                                    psk_identity->length)) != 0) {
+      coap_log(LOG_ERR, "mbedtls_ssl_conf_psk returned -0x%x: '%s'\n",
+               -ret, get_error_string(ret));
+      goto fail;
+    }
     if (c_session->cpsk_setup_data.client_sni) {
-      mbedtls_ssl_set_hostname(&m_env->ssl,
-                               c_session->cpsk_setup_data.client_sni);
+       if ((ret = mbedtls_ssl_set_hostname(&m_env->ssl,
+                               c_session->cpsk_setup_data.client_sni)) != 0) {
+        coap_log(LOG_ERR, "mbedtls_ssl_set_hostname returned -0x%x: '%s'\n",
+                 -ret, get_error_string(ret));
+        goto fail;
+      }
     }
     /* Identity Hint currently not supported in Mbed TLS so code removed */
 

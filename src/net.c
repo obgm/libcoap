@@ -295,103 +295,64 @@ coap_pop_next(coap_context_t *context) {
 }
 
 #if COAP_CLIENT_SUPPORT
-static size_t
-coap_get_session_client_psk(
-  const coap_session_t *session,
-  const uint8_t *hint, size_t hint_len,
-  uint8_t *identity, size_t *identity_len, size_t max_identity_len,
-  uint8_t *psk, size_t max_psk_len
-) {
-  const coap_dtls_cpsk_info_t *psk_info;
-  (void)hint;
-  (void)hint_len;
+const coap_bin_const_t *
+coap_get_session_client_psk_key(const coap_session_t *session) {
 
-  if (session->psk_identity && session->psk_key) {
-    if (session->psk_identity->length <= max_identity_len &&
-        session->psk_key->length <= max_psk_len) {
-      memcpy(identity, session->psk_identity->s, session->psk_identity->length);
-      memcpy(psk, session->psk_key->s, session->psk_key->length);
-      *identity_len = session->psk_identity->length;
-      return session->psk_key->length;
-    }
+  if (session->psk_key) {
+    return session->psk_key;
   }
-  psk_info = &session->cpsk_setup_data.psk_info;
-  if (psk_info->identity.s && psk_info->identity.length > 0 &&
-      psk_info->key.s && psk_info->key.length > 0) {
-    if (psk_info->identity.length <= max_identity_len &&
-      psk_info->key.length <= max_psk_len) {
-      memcpy(identity, psk_info->identity.s, psk_info->identity.length);
-      memcpy(psk, psk_info->key.s, psk_info->key.length);
-      *identity_len = psk_info->identity.length;
-      return psk_info->key.length;
-    }
-  }
+  if (session->cpsk_setup_data.psk_info.key.length)
+    return &session->cpsk_setup_data.psk_info.key;
+
   /* Not defined in coap_new_client_session_psk2() */
-  *identity_len = 0;
-  return 0;
+  return NULL;
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
-#if COAP_SERVER_SUPPORT
-static size_t
-coap_get_context_server_psk(
-  const coap_session_t *session,
-  const uint8_t *identity, size_t identity_len,
-  uint8_t *psk, size_t max_psk_len
-) {
-  const coap_dtls_spsk_info_t *psk_info;
-  (void)identity;
-  (void)identity_len;
+const coap_bin_const_t *
+coap_get_session_client_psk_identity(const coap_session_t *session) {
 
-  if (!session)
-    return 0;
+  if (session->psk_identity) {
+    return session->psk_identity;
+  }
+  if (session->cpsk_setup_data.psk_info.identity.length)
+    return &session->cpsk_setup_data.psk_info.identity;
 
-  if (session->psk_key &&
-      session->psk_key->length <= max_psk_len) {
-    memcpy(psk, session->psk_key->s, session->psk_key->length);
-    return session->psk_key->length;
-  }
-  psk_info = &session->context->spsk_setup_data.psk_info;
-  if (psk_info->key.s && psk_info->key.length > 0 &&
-      psk_info->key.length <= max_psk_len) {
-    memcpy(psk, psk_info->key.s, psk_info->key.length);
-    return psk_info->key.length;
-  }
-  /* Not defined in coap_context_set_psk2() */
-  return 0;
+  /* Not defined in coap_new_client_session_psk2() */
+  return NULL;
 }
 
-static size_t
-coap_get_context_server_hint(
-  const coap_session_t *session,
-  uint8_t *hint, size_t max_hint_len
-) {
-  const coap_dtls_spsk_info_t *psk_info;
+#if COAP_SERVER_SUPPORT
+const coap_bin_const_t *
+coap_get_session_server_psk_key(const coap_session_t *session) {
 
-  if (!session)
-    return 0;
+  if (session->psk_key)
+    return session->psk_key;
 
-  if (session->psk_hint &&
-      session->psk_hint->s && session->psk_hint->length > 0 &&
-      session->psk_hint->length <= max_hint_len) {
-    memcpy(hint, session->psk_hint->s, session->psk_hint->length);
-    return session->psk_hint->length;
-  }
-  psk_info = &session->context->spsk_setup_data.psk_info;
-  if (psk_info->hint.s &&
-      psk_info->hint.length > 0 &&
-      psk_info->hint.length <= max_hint_len) {
-    memcpy(hint, psk_info->hint.s, psk_info->hint.length);
-    return psk_info->hint.length;
-  }
+  if (session->context->spsk_setup_data.psk_info.key.length)
+    return &session->context->spsk_setup_data.psk_info.key;
+
   /* Not defined in coap_context_set_psk2() */
-  return 0;
+  return NULL;
+}
+
+const coap_bin_const_t *
+coap_get_session_server_psk_hint(const coap_session_t *session) {
+
+  if (session->psk_hint)
+    return session->psk_hint;
+
+  if (session->context->spsk_setup_data.psk_info.hint.length)
+    return &session->context->spsk_setup_data.psk_info.hint;
+
+  /* Not defined in coap_context_set_psk2() */
+  return NULL;
 }
 
 int coap_context_set_psk(coap_context_t *ctx,
-  const char *hint,
-  const uint8_t *key, size_t key_len
-) {
+                         const char *hint,
+                         const uint8_t *key,
+                         size_t key_len) {
   coap_dtls_spsk_t setup_data;
 
   memset (&setup_data, 0, sizeof(setup_data));
@@ -408,9 +369,7 @@ int coap_context_set_psk(coap_context_t *ctx,
   return coap_context_set_psk2(ctx, &setup_data);
 }
 
-int coap_context_set_psk2(coap_context_t *ctx,
-  coap_dtls_spsk_t *setup_data
-) {
+int coap_context_set_psk2(coap_context_t *ctx, coap_dtls_spsk_t *setup_data) {
   if (!setup_data)
     return 0;
 
@@ -423,8 +382,7 @@ int coap_context_set_psk2(coap_context_t *ctx,
 }
 
 int coap_context_set_pki(coap_context_t *ctx,
-  const coap_dtls_pki_t* setup_data
-) {
+                         const coap_dtls_pki_t* setup_data) {
   if (!setup_data)
     return 0;
   if (setup_data->version != COAP_DTLS_PKI_SETUP_VERSION) {
@@ -439,9 +397,8 @@ int coap_context_set_pki(coap_context_t *ctx,
 #endif /* ! COAP_SERVER_SUPPORT */
 
 int coap_context_set_pki_root_cas(coap_context_t *ctx,
-  const char *ca_file,
-  const char *ca_dir
-) {
+                                  const char *ca_file,
+                                  const char *ca_dir) {
   if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     return coap_dtls_context_set_pki_root_cas(ctx, ca_file, ca_dir);
   }
@@ -487,7 +444,7 @@ coap_context_get_csm_timeout(const coap_context_t *context) {
 
 void
 coap_context_set_session_timeout(coap_context_t *context,
-                                   unsigned int session_timeout) {
+                                 unsigned int session_timeout) {
   context->session_timeout = session_timeout;
 }
 
@@ -600,14 +557,6 @@ coap_new_context(
   c->network_send = coap_network_send;
   c->network_read = coap_network_read;
 #endif
-
-#if COAP_CLIENT_SUPPORT
-  c->get_client_psk = coap_get_session_client_psk;
-#endif /* COAP_CLIENT_SUPPORT */
-#if COAP_SERVER_SUPPORT
-  c->get_server_psk = coap_get_context_server_psk;
-  c->get_server_hint = coap_get_context_server_hint;
-#endif /* COAP_SERVER_SUPPORT */
 
 #ifdef WITH_CONTIKI
   process_start(&coap_retransmit_process, (char *)c);

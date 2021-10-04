@@ -107,20 +107,6 @@ struct coap_context_t {
 
   ssize_t (*network_read)(coap_socket_t *sock, coap_packet_t *packet);
 
-#if COAP_CLIENT_SUPPORT
-  size_t(*get_client_psk)(const coap_session_t *session, const uint8_t *hint,
-                          size_t hint_len, uint8_t *identity,
-                          size_t *identity_len, size_t max_identity_len,
-                          uint8_t *psk, size_t max_psk_len);
-#endif /* COAP_CLIENT_SUPPORT */
-#if COAP_SERVER_SUPPORT
-  size_t(*get_server_psk)(const coap_session_t *session,
-                          const uint8_t *identity, size_t identity_len,
-                          uint8_t *psk, size_t max_psk_len);
-  size_t(*get_server_hint)(const coap_session_t *session, uint8_t *hint,
-                          size_t max_hint_len);
-#endif /* COAP_SERVER_SUPPORT */
-
   void *dtls_context;
 
 #if COAP_SERVER_SUPPORT

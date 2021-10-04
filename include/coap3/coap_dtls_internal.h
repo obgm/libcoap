@@ -334,6 +334,46 @@ ssize_t coap_tls_read(coap_session_t *coap_session,
                       );
 
 /**
+ * Get the current client's PSK key.
+ *
+ * @param coap_session The CoAP session.
+ *
+ * @return          @c NULL if no key, else a pointer the current key.
+ */
+const coap_bin_const_t *coap_get_session_client_psk_key(
+                                           const coap_session_t *coap_session);
+
+/**
+ * Get the current client's PSK identity.
+ *
+ * @param coap_session The CoAP session.
+ *
+ * @return          @c NULL if no identity, else a pointer the current identity.
+ */
+const coap_bin_const_t *coap_get_session_client_psk_identity(
+                                           const coap_session_t *coap_session);
+
+/**
+ * Get the current server's PSK key.
+ *
+ * @param coap_session The CoAP session.
+ *
+ * @return          @c NULL if no key, else a pointer the current key.
+ */
+const coap_bin_const_t *coap_get_session_server_psk_key(
+                                           const coap_session_t *coap_session);
+
+/**
+ * Get the current server's PSK identity hint.
+ *
+ * @param coap_session The CoAP session.
+ *
+ * @return          @c NULL if no hint, else a pointer the current hint.
+ */
+const coap_bin_const_t *coap_get_session_server_psk_hint(
+                                           const coap_session_t *coap_session);
+
+/**
  * Initialize the underlying (D)TLS Library layer.
  *
  */
