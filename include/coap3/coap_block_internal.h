@@ -13,7 +13,7 @@
 
 /**
  * @file coap_block_internal.h
- * @brief COAP block internal information
+ * @brief CoAP block internal information
  */
 
 #ifndef COAP_BLOCK_INTERNAL_H_
@@ -24,8 +24,9 @@
 #include "resource.h"
 
 /**
- * @defgroup block_internal Block (Internal)
- * Structures, Enums and Functions that are not exposed to applications
+ * @ingroup internal_api
+ * @defgroup block_internal Block Transfer
+ * Internal API for Block Transfer (RC7959)
  * @{
  */
 

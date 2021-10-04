@@ -26,9 +26,9 @@
 #include <stdint.h>
 
 /**
- * @defgroup pdu_internal PDU (Internal)
- * CoAP PDU Structures, Enums and Functions that are not exposed to
- * applications
+ * @ingroup internal_api
+ * @defgroup pdu_internal PDU
+ * Internal API for PDUs
  * @{
  */
 

@@ -9,6 +9,11 @@
  * for terms of use.
  */
 
+/**
+ * @file coap_prng.c
+ * @brief Pseudo Random Number functions
+ */
+
 #include "coap3/coap_internal.h"
 
 #ifdef HAVE_GETRANDOM

@@ -12,7 +12,7 @@
 
 /**
  * @file coap_subscribe_internal.h
- * @brief COAP subscribe internal information
+ * @brief CoAP subscribe internal information
  */
 
 #ifndef COAP_SUBSCRIBE_INTERNAL_H_
@@ -23,9 +23,9 @@
 #if COAP_SERVER_SUPPORT
 
 /**
- * @defgroup subscribe_internal Observe Subscription (Internal)
- * CoAP Observe Subscription Structures, Enums and Functions that are not
- * exposed to applications
+ * @ingroup internal_api
+ * @defgroup subscribe_internal Observe Subscription
+ * Internal API for handling CoAP Observe Subscriptions (RFC7641)
  * @{
  */
 

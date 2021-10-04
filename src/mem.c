@@ -8,6 +8,10 @@
  * README for terms of use.
  */
 
+/**
+ * @file mem.c
+ * @brief Memory handling functions
+ */
 
 #include "coap3/coap_internal.h"
 

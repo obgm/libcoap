@@ -8,6 +8,11 @@
  * README for terms of use.
  */
 
+/**
+ * @file coap_io.c
+ * @brief Network I/O functions
+ */
+
 #include "coap3/coap_internal.h"
 
 #ifdef HAVE_STDIO_H

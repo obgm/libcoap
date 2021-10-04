@@ -30,8 +30,9 @@
 #include "subscribe.h"
 
 /**
+ * @ingroup application_api
  * @defgroup coap_resource Resource Configuraton
- * API functions for setting up resources
+ * API for setting up resources
  * @{
  */
 

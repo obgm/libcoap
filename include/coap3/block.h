@@ -9,6 +9,11 @@
  * of use.
  */
 
+/**
+ * @file block.h
+ * @brief CoAP Block information
+ */
+
 #ifndef COAP_BLOCK_H_
 #define COAP_BLOCK_H_
 
@@ -17,8 +22,9 @@
 #include "pdu.h"
 
 /**
+ * @ingroup application_api
  * @defgroup block Block Transfer
- * API functions for handling PDUs using CoAP BLOCK options
+ * API for handling PDUs using CoAP BLOCK options (RFC7959)
  * @{
  */
 

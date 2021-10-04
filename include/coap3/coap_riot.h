@@ -8,6 +8,11 @@
  * README for terms of use.
  */
 
+/**
+ * @file coap_riot.h
+ * @brief RIOT-specific definitions for libcoap
+ */
+
 #ifndef COAP_RIOT_H_
 #define COAP_RIOT_H_
 

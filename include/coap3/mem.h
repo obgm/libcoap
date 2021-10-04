@@ -9,6 +9,11 @@
  * of use.
  */
 
+/**
+ * @file mem.h
+ * @brief CoAP memory handling
+ */
+
 #ifndef COAP_MEM_H_
 #define COAP_MEM_H_
 

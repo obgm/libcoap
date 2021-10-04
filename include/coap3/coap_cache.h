@@ -19,8 +19,10 @@
 #include "coap_forward_decls.h"
 
 /**
+ * @ingroup application_api
  * @defgroup cache Cache Support
- * API functions for CoAP Caching
+ * API for Cache-Key and Cache-Entry.
+ * See https://datatracker.ietf.org/doc/html/rfc7252#section-5.4.2
  * @{
  */
 
@@ -44,7 +46,7 @@ typedef enum coap_cache_record_pdu_t {
 
 /**
  * Calculates a cache-key for the given CoAP PDU. See
- * https://tools.ietf.org/html/rfc7252#section-5.6
+ * https://tools.ietf.org/html/rfc7252#section-5.4.2
  * for an explanation of CoAP cache keys.
  *
  * Specific CoAP options can be removed from the cache-key.  Examples of
@@ -72,7 +74,7 @@ coap_cache_key_t *coap_cache_derive_key(const coap_session_t *session,
 
 /**
  * Calculates a cache-key for the given CoAP PDU. See
- * https://tools.ietf.org/html/rfc7252#section-5.6
+ * https://tools.ietf.org/html/rfc7252#section-5.4.2
  * for an explanation of CoAP cache keys.
  *
  * Specific CoAP options can be removed from the cache-key.  Examples of

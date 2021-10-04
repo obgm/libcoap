@@ -18,8 +18,9 @@
 #define COAP_TIME_H_
 
 /**
+ * @ingroup application_api
  * @defgroup clock Clock Handling
- * Default implementation of internal clock.
+ * API for internal clock assess
  * @{
  */
 

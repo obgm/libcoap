@@ -27,8 +27,9 @@
 #include <stdint.h>
 
 /**
+ * @ingroup application_api
  * @defgroup pdu PDU
- * API functions for PDUs
+ * API for PDUs
  * @{
  */
 

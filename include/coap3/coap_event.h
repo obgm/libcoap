@@ -9,14 +9,20 @@
  * of use.
  */
 
+/**
+ * @file coap_event.h
+ * @brief Event handling
+ */
+
 #ifndef COAP_EVENT_H_
 #define COAP_EVENT_H_
 
 #include "libcoap.h"
 
 /**
- * @defgroup events Event API
- * API functions for event delivery from lower-layer library functions.
+ * @ingroup application_api
+ * @defgroup events Event Handling
+ * API for event delivery from lower-layer library functions.
  * @{
  */
 

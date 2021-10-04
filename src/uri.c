@@ -8,6 +8,11 @@
  * README for terms of use.
  */
 
+/**
+ * @file uri.c
+ * @brief URI handling functions
+ */
+
 #include "coap3/coap_internal.h"
 
 #if defined(HAVE_LIMITS_H)

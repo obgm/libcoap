@@ -9,6 +9,11 @@
  * of use.
  */
 
+/**
+ * @file libcoap.h
+ * @brief Platform specific header file for CoAP stack
+ */
+
 #ifndef COAP_LIBCOAP_H_
 #define COAP_LIBCOAP_H_
 

@@ -10,15 +10,20 @@
  * of use.
  */
 
+/**
+ * @file coap_dtls_internal.h
+ * @brief Internal CoAP DTLS support
+ */
+
 #ifndef COAP_DTLS_INTERNAL_H_
 #define COAP_DTLS_INTERNAL_H_
 
 #include "coap_internal.h"
 
 /**
- * @defgroup dtls_internal DTLS Support (Internal)
- * CoAP DTLS Structures, Enums and Functions that are not exposed to
- * applications
+ * @ingroup internal_api
+ * @defgroup dtls_internal DTLS Support
+ * Internal API for DTLS Support
  * @{
  */
 

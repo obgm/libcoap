@@ -12,7 +12,7 @@
 
 /**
  * @file coap_mutex.h
- * @brief COAP mutex mechanism wrapper
+ * @brief CoAP mutex mechanism wrapper
  */
 
 #ifndef COAP_MUTEX_H_

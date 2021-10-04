@@ -1,5 +1,5 @@
 /*
- * net.h -- CoAP network interface
+ * net.h -- CoAP context interface
  *
  * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -7,6 +7,11 @@
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
+ */
+
+/**
+ * @file net.h
+ * @brief CoAP context interface
  */
 
 #ifndef COAP_NET_H_
@@ -31,8 +36,9 @@
 #include "coap_session.h"
 
 /**
+ * @ingroup application_api
  * @defgroup context Context Handling
- * API functions for handling PDUs using CoAP Contexts
+ * API for handling PDUs using CoAP Contexts
  * @{
  */
 
@@ -534,8 +540,9 @@ coap_mcast_set_hops(coap_session_t *session, size_t hops);
 /**@}*/
 
 /**
+ * @ingroup application_api
  * @defgroup app_io Application I/O Handling
- * API functions for Application Input / Output
+ * API for Application Input / Output checking
  * @{
  */
 
@@ -608,8 +615,9 @@ int coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 /**@}*/
 
 /**
- * @defgroup app_io_internal Application I/O Handling (Internal)
- * Internal API functions for Application Input / Output
+ * @ingroup internal_api
+ * @defgroup app_io_internal Application I/O Handling
+ * Internal API for Application Input / Output checking
  * @{
  */
 

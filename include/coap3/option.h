@@ -63,8 +63,9 @@ size_t coap_opt_parse(const coap_opt_t *opt,
 size_t coap_opt_size(const coap_opt_t *opt);
 
 /**
+ * @ingroup application_api
  * @defgroup opt_filter Option Filters
- * API functions for access option filters
+ * API for access option filters
  * @{
  */
 

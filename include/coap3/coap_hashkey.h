@@ -11,7 +11,7 @@
 
 /**
  * @file coap_hashkey.h
- * @brief definition of hash key type and helper functions
+ * @brief Definition of hash key type and helper functions
  */
 
 #ifndef COAP_HASHKEY_H_

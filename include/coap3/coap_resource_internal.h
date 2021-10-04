@@ -22,8 +22,9 @@
 
 #if COAP_SERVER_SUPPORT
 /**
- * @defgroup coap_resource_internal Resources (Internal)
- * Structures, Enums and Functions that are not exposed to applications
+ * @ingroup internal_api
+ * @defgroup coap_resource_internal Resources
+ * Internal API for handling resources
  * @{
  */
 
