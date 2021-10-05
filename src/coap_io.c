@@ -187,12 +187,10 @@ coap_socket_bind_udp(coap_socket_t *sock,
          "coap_socket_bind_udp: ioctl FIONBIO: %s\n", coap_socket_strerror());
   }
 
-#ifndef RIOT_VERSION
   if (setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
     coap_log(LOG_WARNING,
              "coap_socket_bind_udp: setsockopt SO_REUSEADDR: %s\n",
               coap_socket_strerror());
-#endif /* RIOT_VERSION */
 
   switch (listen_addr->addr.sa.sa_family) {
   case AF_INET:
