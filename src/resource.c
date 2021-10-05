@@ -495,12 +495,7 @@ coap_delete_attr(coap_attr_t *attr) {
     coap_delete_str_const(attr->value);
   }
 
-#ifdef WITH_LWIP
-  memp_free(MEMP_COAP_RESOURCEATTR, attr);
-#endif
-#ifndef WITH_LWIP
   coap_free_type(COAP_RESOURCEATTR, attr);
-#endif
 }
 
 typedef enum coap_deleting_resource_t {
@@ -546,12 +541,7 @@ coap_free_resource(coap_resource_t *resource) {
     coap_free(resource->proxy_name_list);
   }
 
-#ifdef WITH_LWIP
-  memp_free(MEMP_COAP_RESOURCE, resource);
-#endif
-#ifndef WITH_LWIP
   coap_free_type(COAP_RESOURCE, resource);
-#endif /* WITH_CONTIKI */
 }
 
 void
