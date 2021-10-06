@@ -91,7 +91,8 @@ struct coap_lg_xmit_t {
   } b;
   coap_pdu_t pdu;        /**< skeletal PDU */
   coap_tick_t last_payload; /**< Last time MAX_PAYLOAD was sent or 0 */
-  coap_tick_t last_used; /**< Last time all data sent or 0 */
+  coap_tick_t last_all_sent; /**< Last time all data sent or 0 */
+  coap_tick_t last_obs; /**< Last time used (Observe tracking) or 0 */
   coap_release_large_data_t release_func; /**< large data de-alloc function */
   void *app_ptr;         /**< applicaton provided ptr for de-alloc function */
 };

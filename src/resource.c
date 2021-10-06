@@ -890,6 +890,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
   uint8_t buf[4];
   coap_string_t *query;
   coap_block_b_t block;
+  coap_tick_t now;
 
   if (r->observable && (r->dirty || r->partiallydirty)) {
     r->partiallydirty = 0;
@@ -906,6 +907,17 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       if (obs->session->con_active >= COAP_DEFAULT_NSTART &&
           ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) ||
            (obs->non_cnt >= COAP_OBS_MAX_NON))) {
+        /* Waiting for the previous unsolicited response to finish */
+        r->partiallydirty = 1;
+        obs->dirty = 1;
+        context->observe_pending = 1;
+        continue;
+      }
+      coap_ticks(&now);
+      if (obs->session->lg_xmit && obs->session->lg_xmit->last_all_sent == 0 &&
+          obs->session->lg_xmit->last_obs &&
+          (obs->session->lg_xmit->last_obs + 2*COAP_TICKS_PER_SECOND) > now) {
+        /* Waiting for the previous blocked unsolicited response to finish */
         r->partiallydirty = 1;
         obs->dirty = 1;
         context->observe_pending = 1;

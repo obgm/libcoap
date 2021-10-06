@@ -574,16 +574,15 @@ coap_add_data_large_internal(coap_session_t *session,
     coap_log(LOG_DEBUG, "** %s: lg_xmit %p initialized\n",
              coap_session_str(session), (void*)lg_xmit);
     /* Update lg_xmit with large data information */
+    memset(lg_xmit, 0, sizeof(coap_lg_xmit_t));
     lg_xmit->blk_size = blk_size;
     lg_xmit->option = option;
     lg_xmit->last_block = 0;
     lg_xmit->data = data;
     lg_xmit->length = length;
-    lg_xmit->offset = 0;
-    lg_xmit->last_payload = 0;
-    lg_xmit->last_used = 0;
     lg_xmit->release_func = release_func;
     lg_xmit->app_ptr = app_ptr;
+    coap_ticks(&lg_xmit->last_obs);
     if (COAP_PDU_IS_REQUEST(pdu)) {
       /* Need to keep original token for updating response PDUs */
       lg_xmit->b.b1.app_token = coap_new_binary(pdu->token_length);
@@ -849,18 +848,18 @@ coap_block_check_lg_xmit_timeouts(coap_session_t *session, coap_tick_t now) {
   coap_tick_t tim_rem = -1;
 
   LL_FOREACH_SAFE(session->lg_xmit, p, q) {
-    if (p->last_used == 0 || p->option == COAP_OPTION_BLOCK2) {
+    if (p->last_all_sent == 0 || p->option == COAP_OPTION_BLOCK2) {
       continue;
     }
-    if (p->last_used + idle_timeout <= now) {
+    if (p->last_all_sent + idle_timeout <= now) {
       /* Expire this entry */
       LL_DELETE(session->lg_xmit, p);
       coap_block_delete_lg_xmit(session, p);
     }
     else {
       /* Delay until the lg_xmit needs to expire */
-      if (tim_rem > p->last_used + idle_timeout - now)
-        tim_rem = p->last_used + idle_timeout - now;
+      if (tim_rem > p->last_all_sent + idle_timeout - now)
+        tim_rem = p->last_all_sent + idle_timeout - now;
     }
   }
   return tim_rem;
@@ -1112,6 +1111,10 @@ coap_handle_request_send_block(coap_session_t *session,
 
   if (!coap_get_block_b(session, pdu, COAP_OPTION_BLOCK2, &block))
     return 0;
+  if (block.num == 0) {
+    /* Get a fresh copy of the data */
+    return 0;
+  }
   block_opt = COAP_OPTION_BLOCK2;
   LL_FOREACH(session->lg_xmit, p) {
     size_t chunk;
@@ -1130,7 +1133,7 @@ coap_handle_request_send_block(coap_session_t *session,
       /* try out the next one */
       continue;
     }
-    p->last_used = 0;
+    p->last_all_sent = 0;
     etag_opt = coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter);
     if (etag_opt) {
       uint64_t etag = coap_decode_var_bytes8(coap_opt_value(etag_opt),
@@ -1147,6 +1150,7 @@ coap_handle_request_send_block(coap_session_t *session,
     }
 
     /* lg_xmit (response) found */
+    coap_ticks(&p->last_obs);
 
     chunk = (size_t)1 << (p->blk_size + 4);
     if (block_opt) {
@@ -1222,8 +1226,7 @@ coap_handle_request_send_block(coap_session_t *session,
         coap_opt_filter_t drop_options;
 
         memset(&drop_options, 0, sizeof(coap_opt_filter_t));
-        if (block.num != 0)
-          coap_option_filter_set(&drop_options, COAP_OPTION_OBSERVE);
+        coap_option_filter_set(&drop_options, COAP_OPTION_OBSERVE);
         out_pdu = coap_pdu_duplicate(&p->pdu, session, pdu->token_length,
                                      pdu->token, &drop_options);
         if (!out_pdu) {
@@ -1238,11 +1241,13 @@ coap_handle_request_send_block(coap_session_t *session,
          */
         coap_option_iterator_init(&p->pdu, &opt_iter, COAP_OPT_ALL);
         while ((option = coap_option_next(&opt_iter))) {
-          if (opt_iter.number == COAP_OPTION_OBSERVE && block.num != 0)
+          if (opt_iter.number == COAP_OPTION_OBSERVE)
             continue;
-          if (!coap_add_option_internal(response, opt_iter.number,
-                                        coap_opt_length(option),
-                                        coap_opt_value(option))) {
+          if (opt_iter.number == p->option)
+            continue;
+          if (!coap_insert_option(response, opt_iter.number,
+                                           coap_opt_length(option),
+                                           coap_opt_value(option))) {
             goto internal_issue;
           }
         }
@@ -1267,7 +1272,7 @@ coap_handle_request_send_block(coap_session_t *session,
       }
       if (!(p->offset + chunk < p->length)) {
         /* Last block - keep in cache for 4 * ACK_TIMOUT */
-        coap_ticks(&p->last_used);
+        coap_ticks(&p->last_all_sent);
       }
       if (p->b.b2.maxage_expire) {
         coap_tick_t now;
@@ -1281,7 +1286,7 @@ coap_handle_request_send_block(coap_session_t *session,
         else {
           rem = 0;
           /* Entry needs to be expired */
-          coap_ticks(&p->last_used);
+          coap_ticks(&p->last_all_sent);
         }
         if (!coap_update_option(out_pdu, COAP_OPTION_MAXAGE,
                                 coap_encode_var_safe8(buf,
@@ -1312,7 +1317,7 @@ internal_issue:
                   (const uint8_t *)error_phrase);
     /* Keep in cache for 4 * ACK_TIMOUT */
     if (p)
-      coap_ticks(&p->last_used);
+    coap_ticks(&p->last_all_sent);
     goto skip_app_handler;
   } /* end of LL_FOREACH() */
   return 0;
@@ -1927,6 +1932,7 @@ coap_handle_response_get_block(coap_context_t *context,
             uint64_t token = STATE_TOKEN_FULL(p->state_token,
                                               ++p->retry_counter);
             size_t len = coap_encode_var_safe8(buf, sizeof(token), token);
+            coap_opt_filter_t drop_options;
 
             coap_log(LOG_WARNING,
                  "Data body updated during receipt - new request started\n");
@@ -1937,7 +1943,10 @@ coap_handle_response_get_block(coap_context_t *context,
             coap_free_type(COAP_STRING, p->body_data);
             p->body_data = NULL;
 
-            pdu = coap_pdu_duplicate(&p->pdu, session, len, buf, NULL);
+            coap_session_new_token(session, &len, buf);
+            memset(&drop_options, 0, sizeof(coap_opt_filter_t));
+            coap_option_filter_set(&drop_options, COAP_OPTION_OBSERVE);
+            pdu = coap_pdu_duplicate(&p->pdu, session, len, buf, &drop_options);
             if (!pdu)
               goto fail_resp;
 
@@ -2137,6 +2146,7 @@ fail_resp:
       if (coap_get_block_b(session, rcvd, COAP_OPTION_BLOCK2, &block)) {
         coap_log(LOG_DEBUG, "** %s: large body receive internal issue\n",
                  coap_session_str(session));
+        goto skip_app_handler;
       }
     }
     else if (COAP_RESPONSE_CLASS(rcvd->code) == 2) {
@@ -2152,7 +2162,7 @@ fail_resp:
           coap_get_data(rcvd, &length, &data);
           rcvd->body_offset = block.num*chunk;
           rcvd->body_total = block.num*chunk + length + (block.m ? 1 : 0);
-          return 0;
+          goto call_app_handler;
         }
       }
       if (have_block) {
