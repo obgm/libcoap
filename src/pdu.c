@@ -571,6 +571,27 @@ coap_add_option_internal(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
     case COAP_OPTION_URI_QUERY:
     case COAP_OPTION_LOCATION_QUERY:
       break;
+    /* Protest at the known non-repeatable options and ignore them */
+    case COAP_OPTION_URI_HOST:
+    case COAP_OPTION_IF_NONE_MATCH:
+    case COAP_OPTION_OBSERVE:
+    case COAP_OPTION_URI_PORT:
+    case COAP_OPTION_OSCORE:
+    case COAP_OPTION_CONTENT_FORMAT:
+    case COAP_OPTION_MAXAGE:
+    case COAP_OPTION_HOP_LIMIT:
+    case COAP_OPTION_ACCEPT:
+    case COAP_OPTION_BLOCK2:
+    case COAP_OPTION_BLOCK1:
+    case COAP_OPTION_SIZE2:
+    case COAP_OPTION_PROXY_URI:
+    case COAP_OPTION_PROXY_SCHEME:
+    case COAP_OPTION_SIZE1:
+    case COAP_OPTION_NORESPONSE:
+      coap_log(LOG_INFO,
+               "Option number %d is not defined as repeatable - dropped\n",
+               number);
+      return 0;
     default:
       coap_log(LOG_INFO, "Option number %d is not defined as repeatable\n",
                number);
