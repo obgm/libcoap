@@ -18,6 +18,7 @@
     <CUnitLibDir>$(CUnitRootDir)lib</CUnitLibDir>
     <CUnitLibDirDbg>$(CUnitRootDirDbg)lib</CUnitLibDirDbg>
     <LibCoAPIncludeDir>include\coap3</LibCoAPIncludeDir>
+    <LibCoAPOSCOREIncludeDir>include\oscore</LibCoAPOSCOREIncludeDir>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />

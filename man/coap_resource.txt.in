@@ -138,6 +138,13 @@ COAP_RESOURCE_FLAGS_NOTIFY_CON is not set.
 *COAP_RESOURCE_FLAGS_RELEASE_URI*::
 Free off the coap_str_const_t for _uri_path_ when the _resource_ is deleted.
 
+*COAP_RESOURCE_FLAGS_FORCE_SINGLE_BODY*::
+Force all large traffic to this resource to be presented as a single body
+to the request handler.
+
+*COAP_RESOURCE_FLAGS_OSCORE_ONLY*::
+Define this resource as an OSCORE enabled access only.
+
 *NOTE:* The following flags are only tested against if
 *coap_mcast_per_resource*() has been called.  If *coap_mcast_per_resource*()
 has not been called, then all resources have multicast support, libcoap adds

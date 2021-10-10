@@ -306,7 +306,7 @@ struct coap_dtls_pki_t {
                                         future compatibility */
                                    /* Size of 3 chosen to align to next
                                     * parameter, so if newly defined option
-                                    * it can use one of the reserverd slot so
+                                    * it can use one of the reserved slots so
                                     * no need to change
                                     * COAP_DTLS_PKI_SETUP_VERSION and just
                                     * decrement the reserved[] count.

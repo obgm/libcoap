@@ -415,6 +415,7 @@ msg_option_string(uint8_t code, uint16_t option_type) {
     { COAP_OPTION_OBSERVE, "Observe" },
     { COAP_OPTION_URI_PORT, "Uri-Port" },
     { COAP_OPTION_LOCATION_PATH, "Location-Path" },
+    { COAP_OPTION_OSCORE, "Oscore" },
     { COAP_OPTION_URI_PATH, "Uri-Path" },
     { COAP_OPTION_CONTENT_FORMAT, "Content-Format" },
     { COAP_OPTION_MAXAGE, "Max-Age" },
@@ -528,6 +529,7 @@ print_content_format(unsigned int format_type,
     { COAP_MEDIATYPE_APPLICATION_SENSML_XML, "application/sensml+xml" },
     { COAP_MEDIATYPE_APPLICATION_DOTS_CBOR, "application/dots+cbor" },
     { COAP_MEDIATYPE_APPLICATION_ACE_CBOR, "application/ace+cbor" },
+    { COAP_MEDIATYPE_APPLICATION_OSCORE, "application/oscore"},
     { 75, "application/dcaf+cbor" }
   };
 
@@ -606,6 +608,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   uint32_t opt_len;
   const uint8_t* opt_val;
   size_t outbuflen = 0;
+  int is_oscore_payload = 0;
 
   /* Save time if not needed */
   if (level > coap_get_log_level())
@@ -708,16 +711,81 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 
       break;
 
+    case COAP_OPTION_OSCORE:
+      opt_len = coap_opt_length(option);
+      buf[0] = '\000';
+      if (opt_len) {
+        size_t ofs = 1;
+        size_t cnt;
+
+        opt_val = coap_opt_value(option);
+        if (opt_val[0] & 0x20) {
+          /* Group Flag */
+          snprintf((char *)buf, sizeof(buf), "grp");
+        }
+        if (opt_val[0] & 0x07) {
+          /* Partial IV */
+          cnt = opt_val[0] & 0x07;
+          if (cnt > opt_len - ofs)
+            goto no_more;
+          buf_len = strlen((char *)buf);
+          snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len, "%spIV=0x",
+                   buf_len ? "," : "");
+          for (i = 0; (uint32_t)i < cnt; i++) {
+            buf_len = strlen((char *)buf);
+            snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
+                      "%02x", opt_val[ofs + i]);
+          }
+          ofs += cnt;
+        }
+        if (opt_val[0] & 0x10) {
+          /* kid context */
+          cnt = opt_val[ofs];
+          if (cnt > opt_len - ofs - 1)
+            goto no_more;
+          ofs++;
+          buf_len = strlen((char *)buf);
+          snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len, "%skc=0x",
+                   buf_len ? "," : "");
+          for (i = 0; (uint32_t)i < cnt; i++) {
+            buf_len = strlen((char *)buf);
+            snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
+                      "%02x", opt_val[ofs + i]);
+          }
+          ofs += cnt;
+        }
+        if (opt_val[0] & 0x08) {
+          /* kid */
+          cnt = opt_len - ofs;
+          if (cnt > opt_len - ofs)
+            goto no_more;
+          buf_len = strlen((char *)buf);
+          snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len, "%skid=0x",
+                   buf_len ? "," : "");
+          for (i = 0; (uint32_t)i < cnt; i++) {
+            buf_len = strlen((char *)buf);
+            snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
+                      "%02x", opt_val[ofs + i]);
+          }
+        }
+      }
+no_more:
+      buf_len = strlen((char *)buf);
+      is_oscore_payload = 1;
+      break;
+
     case COAP_OPTION_URI_PORT:
     case COAP_OPTION_MAXAGE:
     case COAP_OPTION_OBSERVE:
     case COAP_OPTION_SIZE1:
     case COAP_OPTION_SIZE2:
     case COAP_OPTION_HOP_LIMIT:
-      /* show values as unsigned decimal value */
-      buf_len = snprintf((char *)buf, sizeof(buf), "%u",
-                         coap_decode_var_bytes(coap_opt_value(option),
-                                               coap_opt_length(option)));
+      if (coap_opt_length(option)) {
+        /* show values as unsigned decimal value */
+        buf_len = snprintf((char *)buf, sizeof(buf), "%u",
+                           coap_decode_var_bytes(coap_opt_value(option),
+                                                 coap_opt_length(option)));
+      }
       break;
 
     case COAP_OPTION_IF_MATCH:
@@ -768,7 +836,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
     outbuflen = strlen(outbuf);
     snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " :: ");
 
-    if (is_binary(content_format) || !isprint(data[0])) {
+    if (is_binary(content_format) || !isprint(data[0]) || is_oscore_payload) {
       size_t keep_data_len = data_len;
       const uint8_t *keep_data = data;
 
@@ -791,6 +859,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
       data_len = keep_data_len;
       data = keep_data;
       outbuflen = strlen(outbuf);
+      if (outbuflen == sizeof(outbuf)-1) outbuflen--;
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "\n");
       COAP_DO_SHOW_OUTPUT_LINE;
       /*
@@ -947,19 +1016,21 @@ char *coap_string_tls_support(char *buffer, size_t bufsize)
   const int have_pki = coap_dtls_pki_is_supported();
   const int have_pkcs11 = coap_dtls_pkcs11_is_supported();
   const int have_rpk = coap_dtls_rpk_is_supported();
+  const int have_oscore = coap_oscore_is_supported();
 
   if (have_dtls == 0 && have_tls == 0) {
     snprintf(buffer, bufsize, "(No DTLS or TLS support)");
     return buffer;
   }
   snprintf(buffer, bufsize,
-           "(%sDTLS and %sTLS support; %sPSK, %sPKI, %sPKCS11, and %sRPK support)",
+           "(%sDTLS and %sTLS support; %sPSK, %sPKI, %sPKCS11, and %sRPK support)\n(%sOSCORE)",
            have_dtls ? "" : "No ",
            have_tls ? "" : "no ",
            have_psk ? "" : "no ",
            have_pki ? "" : "no ",
            have_pkcs11 ? "" : "no ",
-           have_rpk ? "" : "no ");
+           have_rpk ? "" : "no ",
+           have_oscore ? "Have " : "No ");
   return buffer;
 }
 

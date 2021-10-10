@@ -128,7 +128,7 @@ Information level (6).
 *COAP_LOG_DEBUG*::
 Debug level (7).
 
-With an additional level:
+With additional level:
 
 *COAP_LOG_OSCORE*::
 Debug OSCORE information (8).

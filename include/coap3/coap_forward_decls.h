@@ -73,6 +73,13 @@ typedef struct coap_socket_t coap_socket_t;
 typedef struct coap_context_t coap_context_t;
 typedef struct coap_queue_t coap_queue_t;
 
+/* ************* coap_oscore_internal.h ***************** */
+
+/*
+ * OSCORE information.
+ */
+typedef struct coap_oscore_conf_t coap_oscore_conf_t;
+
 /* ************* coap_pdu_internal.h ***************** */
 
 /**

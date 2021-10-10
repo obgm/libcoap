@@ -472,6 +472,12 @@ libcoap client logic, Size2 by libcoap server logic) indication to the
 recipient of the size of the large body that is to be transferred. See
 *coap_block*(3).
 
+*COAP_OPTION_OSCORE*
+
+This option is used during OSCORE enabled communications.  It should not be
+set by any application, but is used internally.  See *coap_oscore*(3) for
+further information on how to set up OSCORE.
+
 PDU PAYLOAD FUNCTIONS
 ---------------------
 
@@ -693,10 +699,12 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
                                query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
                                len,
                                buf, NULL, NULL);
+
   /*
-   * When request handler returns, the response pdu will get automatically
-   * sent, unless the pdu code is not updated and this is a NON or TCP based
-   * request.
+   * Returning from the request handler will cause the response to be
+   * sent off (assuming coap_pdu_set_code() has been called), unless
+   * the response is confirmable and the code is COAP_EMPTY_CODE which
+   * will cause an empty ACK packet to be returned).
    */
 
 }
@@ -704,7 +712,8 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
 SEE ALSO
 --------
-*coap_block*(3), *coap_observe*(3), *coap_pdu_access*(3) and *coap_resource*(3)
+*coap_block*(3), *coap_observe*(3), *coap_oscore*(3), *coap_pdu_access*(3)
+and *coap_resource*(3)
 
 FURTHER INFORMATION
 -------------------
@@ -714,7 +723,7 @@ See
 
 "https://rfc-editor.org/rfc/rfc7959[RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)]"
 
-"https://rfc-editor.org/rfc/rfc9175[RFC9175: CoAP: Echo, Request-Tag, and Token Processing]"
+"https://rfc-editor.org/rfc/rfc8613[RFC8613: Object Security for Constrained RESTful Environments (OSCORE)]"
 
 for further information.
 

@@ -647,13 +647,35 @@ elif test "x$with_tinydtls" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-tinydtls
 else
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-notls
+    AC_DEFINE(HAVE_NOTLS, [1], [Define if libcoap has no tls library support])
 fi
+AM_CONDITIONAL(HAVE_NOTLS, [test "x$LIBCOAP_DTLS_LIB_EXTENSION_NAME" = "x-notls"])
 
 LIBCOAP_NAME_SUFFIX="$LIBCOAP_API_VERSION$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
 
 AC_SUBST(LIBCOAP_NAME_SUFFIX)
 AC_SUBST(LIBCOAP_DTLS_LIB_EXTENSION_NAME)
 AC_SUBST([DOLLAR_SIGN],[$])
+
+# configure options
+# __OSCORE__
+# Support for Object Security according to RFC 8613.
+AC_ARG_ENABLE([oscore],
+              [AS_HELP_STRING([--enable-oscore],
+                              [Enable building with OSCORE support [default=yes]])],
+              [build_oscore="$enableval"],
+              [build_oscore="yes"])
+
+if test "x$build_oscore" = "xyes"; then
+    if test "x$LIBCOAP_DTLS_LIB_EXTENSION_NAME" = "x-notls"; then
+        AC_MSG_WARN([==> --enable-oscore requires crypto support from TLS library or OS])
+    fi
+fi
+
+if test "x$build_oscore" = "xyes"; then
+        AC_DEFINE(HAVE_OSCORE, [1], [Define to build with OSCORE support])
+fi
+AM_CONDITIONAL(HAVE_OSCORE, [test "x$build_oscore" = "xyes"])
 
 # configure options
 # __tests__
@@ -976,6 +998,7 @@ man/coap_keepalive.txt
 man/coap_logging.txt
 man/coap_lwip.txt
 man/coap_observe.txt
+man/coap_oscore.txt
 man/coap_pdu_access.txt
 man/coap_pdu_setup.txt
 man/coap_recovery.txt
@@ -985,6 +1008,7 @@ man/coap_string.txt
 man/coap_tls_library.txt
 man/coap_uri.txt
 man/coap-client.txt
+man/coap-oscore-conf.txt
 man/coap-server.txt
 man/coap-rd.txt
 man/Makefile
@@ -1062,6 +1086,11 @@ if test "x$build_async" != "xno"; then
     AC_MSG_RESULT([      enable separate responses: "yes"])
 else
     AC_MSG_RESULT([      enable separate responses: "no"])
+fi
+if test "x$build_oscore" != "xno"; then
+    AC_MSG_RESULT([      enable OSCORE support    : "yes"])
+else
+    AC_MSG_RESULT([      enable OSCORE support    : "no"])
 fi
 if test "x$build_doxygen" = "xyes"; then
     AC_MSG_RESULT([      build doxygen pages      : "yes"])

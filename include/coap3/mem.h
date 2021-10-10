@@ -17,6 +17,7 @@
 #ifndef COAP_MEM_H_
 #define COAP_MEM_H_
 
+#include "coap3/coap_oscore.h"
 #include <stdlib.h>
 
 #ifndef WITH_LWIP
@@ -56,6 +57,13 @@ typedef enum {
   COAP_DIGEST_CTX,
   COAP_SUBSCRIPTION,
   COAP_DTLS_CONTEXT,
+  COAP_OSCORE_COM,
+  COAP_OSCORE_SEN,
+  COAP_OSCORE_REC,
+  COAP_OSCORE_EX,
+  COAP_OSCORE_EP,
+  COAP_OSCORE_BUF,
+  COAP_COSE,
 } coap_memory_tag_t;
 
 #ifndef WITH_LWIP

@@ -231,6 +231,8 @@ typedef enum coap_pdu_signaling_proto_t {
 
 /* Content formats from RFC 9200 */
 #define COAP_MEDIATYPE_APPLICATION_ACE_CBOR      19 /* application/ace+cbor  */
+/* Content formats from RFC 8613 */
+#define COAP_MEDIATYPE_APPLICATION_OSCORE     10001 /* application/oscore */
 
 /* Note that identifiers for registered media types are in the range 0-65535. We
  * use an unallocated type here and hope for the best. */

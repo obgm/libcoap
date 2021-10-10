@@ -32,6 +32,7 @@ TXT3 = coap_async.txt \
 	coap_logging.txt \
 	coap_lwip.txt \
 	coap_observe.txt \
+	coap_oscore.txt \
 	coap_pdu_access.txt \
 	coap_pdu_setup.txt \
 	coap_recovery.txt \
@@ -47,7 +48,8 @@ man3_MANS = $(MAN3)
 
 TXT5 = coap-client.txt \
        coap-rd.txt \
-       coap-server.txt
+       coap-server.txt \
+       coap-oscore-conf.txt
 
 MAN5 = $(TXT5:%.txt=%.5)
 
@@ -119,6 +121,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_logging.3" > coap_show_pdu.3
 	@echo ".so man3/coap_logging.3" > coap_endpoint_str.3
 	@echo ".so man3/coap_logging.3" > coap_session_str.3
+	@echo ".so man3/coap_oscore.3" > coap_context_oscore_server.3
 	@echo ".so man3/coap_pdu_access.3" > coap_option_filter_set.3
 	@echo ".so man3/coap_pdu_access.3" > coap_option_filter_unset.3
 	@echo ".so man3/coap_pdu_access.3" > coap_option_iterator_init.3

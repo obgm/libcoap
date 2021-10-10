@@ -267,6 +267,7 @@ void coap_dtls_shutdown(void) {
     ENGINE_free(ssl_engine);
     ssl_engine = NULL;
   }
+  ERR_free_strings();
 }
 
 void *
@@ -3578,6 +3579,257 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
   return ret;
 }
 #endif /* COAP_SERVER_SUPPORT */
+
+#if HAVE_OSCORE
+
+int
+coap_oscore_is_supported(void) {
+  return 1;
+}
+
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
+
+/*
+ * The struct cipher_algs and the function get_cipher_alg() are used to
+ * determine which cipher type to use for creating the required cipher
+ * suite object.
+ */
+static struct cipher_algs {
+  cose_alg_t alg;
+  const EVP_CIPHER *(*get_cipher)(void);
+} ciphers[] = {{COSE_ALGORITHM_AES_CCM_16_64_128, EVP_aes_128_ccm},
+               {COSE_ALGORITHM_AES_CCM_16_64_256, EVP_aes_256_ccm}};
+
+static const EVP_CIPHER *
+get_cipher_alg(cose_alg_t alg) {
+  size_t idx;
+
+  for (idx = 0; idx < sizeof(ciphers) / sizeof(struct cipher_algs); idx++) {
+    if (ciphers[idx].alg == alg)
+      return ciphers[idx].get_cipher();
+  }
+  coap_log_debug("get_cipher_alg: COSE cipher %d not supported\n", alg);
+  return NULL;
+}
+
+/*
+ * The struct hmac_algs and the function get_hmac_alg() are used to
+ * determine which hmac type to use for creating the required hmac
+ * suite object.
+ */
+static struct hmac_algs {
+  cose_hmac_alg_t hmac_alg;
+  const EVP_MD *(*get_hmac)(void);
+} hmacs[] = {
+    {COSE_HMAC_ALG_HMAC256_256, EVP_sha256},
+    {COSE_HMAC_ALG_HMAC384_384, EVP_sha384},
+    {COSE_HMAC_ALG_HMAC512_512, EVP_sha512},
+};
+
+static const EVP_MD *
+get_hmac_alg(cose_hmac_alg_t hmac_alg) {
+  size_t idx;
+
+  for (idx = 0; idx < sizeof(hmacs) / sizeof(struct hmac_algs); idx++) {
+    if (hmacs[idx].hmac_alg == hmac_alg)
+      return hmacs[idx].get_hmac();
+  }
+  coap_log_debug("get_hmac_alg: COSE HMAC %d not supported\n", hmac_alg);
+  return NULL;
+}
+
+int
+coap_crypto_check_cipher_alg(cose_alg_t alg) {
+  return get_cipher_alg(alg) != NULL;
+}
+
+int
+coap_crypto_check_hkdf_alg(cose_hkdf_alg_t hkdf_alg) {
+  cose_hmac_alg_t hmac_alg;
+
+  if (!cose_get_hmac_alg_for_hkdf(hkdf_alg, &hmac_alg))
+    return 0;
+  return get_hmac_alg(hmac_alg) != NULL;
+}
+
+#define C(Func)                                                                \
+  if (1 != (Func)) {                                                           \
+    goto error;                                                                \
+  }
+
+static void
+coap_crypto_output_errors(const char *prefix) {
+  unsigned long e;
+
+  while ((e = ERR_get_error()))
+    coap_log_warn(
+             "%s: %s%s\n",
+             prefix,
+             ERR_reason_error_string(e),
+             ssl_function_definition(e));
+}
+
+int
+coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
+                         coap_bin_const_t *data,
+                         coap_bin_const_t *aad,
+                         uint8_t *result,
+                         size_t *max_result_len) {
+  const EVP_CIPHER *cipher;
+  const coap_crypto_aes_ccm_t *ccm;
+  int tmp;
+  int result_len = (int)(*max_result_len & INT_MAX);
+
+  if (data == NULL)
+    return 0;
+
+  assert(params != NULL);
+  if (!params || ((cipher = get_cipher_alg(params->alg)) == NULL)) {
+    return 0;
+  }
+
+  /* TODO: set evp_md depending on params->alg */
+  ccm = &params->params.aes;
+
+  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+  /* EVP_CIPHER_CTX_init(ctx); */
+  C(EVP_EncryptInit_ex(ctx, cipher, NULL, NULL, NULL));
+  C(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_L, (int)ccm->l, NULL));
+  C(EVP_CIPHER_CTX_ctrl(ctx,
+                        EVP_CTRL_AEAD_SET_IVLEN,
+                        (int)(15 - ccm->l),
+                        NULL));
+  C(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, (int)ccm->tag_len, NULL));
+  C(EVP_EncryptInit_ex(ctx, NULL, NULL, ccm->key.s, ccm->nonce));
+  /* C(EVP_CIPHER_CTX_set_padding(ctx, 0)); */
+
+  C(EVP_EncryptUpdate(ctx, NULL, &result_len, NULL, (int)data->length));
+  if (aad && aad->s && (aad->length > 0)) {
+    C(EVP_EncryptUpdate(ctx, NULL, &result_len, aad->s, (int)aad->length));
+  }
+  C(EVP_EncryptUpdate(ctx, result, &result_len, data->s, (int)data->length));
+  /* C(EVP_EncryptFinal_ex(ctx, result + result_len, &tmp)); */
+  tmp = result_len;
+  C(EVP_EncryptFinal_ex(ctx, result + result_len, &tmp));
+  result_len += tmp;
+
+  /* retrieve the tag */
+  C(EVP_CIPHER_CTX_ctrl(ctx,
+                        EVP_CTRL_CCM_GET_TAG,
+                        (int)ccm->tag_len,
+                        result + result_len));
+
+  *max_result_len = result_len + ccm->tag_len;
+  EVP_CIPHER_CTX_free(ctx);
+  return 1;
+
+error:
+  coap_crypto_output_errors("coap_crypto_aead_encrypt");
+  return 0;
+}
+
+int
+coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
+                         coap_bin_const_t *data,
+                         coap_bin_const_t *aad,
+                         uint8_t *result,
+                         size_t *max_result_len) {
+  const EVP_CIPHER *cipher;
+  const coap_crypto_aes_ccm_t *ccm;
+  int tmp;
+  int len;
+  const uint8_t *tag;
+  uint8_t *rwtag;
+
+  if (data == NULL)
+    return 0;
+
+  assert(params != NULL);
+  if (!params || ((cipher = get_cipher_alg(params->alg)) == NULL)) {
+    return 0;
+  }
+
+  ccm = &params->params.aes;
+
+  if (data->length < ccm->tag_len) {
+    return 0;
+  } else {
+    tag = data->s + data->length - ccm->tag_len;
+    data->length -= ccm->tag_len;
+    /* Kludge to stop compiler warning */
+    memcpy(&rwtag, &tag, sizeof(rwtag));
+  }
+
+  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+  C(EVP_DecryptInit_ex(ctx, cipher, NULL, NULL, NULL));
+  C(EVP_CIPHER_CTX_ctrl(ctx,
+                        EVP_CTRL_AEAD_SET_IVLEN,
+                        (int)(15 - ccm->l),
+                        NULL));
+  C(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, (int)ccm->tag_len, rwtag));
+  C(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_L, (int)ccm->l, NULL));
+  /* C(EVP_CIPHER_CTX_set_padding(ctx, 0)); */
+  C(EVP_DecryptInit_ex(ctx, NULL, NULL, ccm->key.s, ccm->nonce));
+
+  C(EVP_DecryptUpdate(ctx, NULL, &len, NULL, (int)data->length));
+  if (aad && aad->s && (aad->length > 0)) {
+    C(EVP_DecryptUpdate(ctx, NULL, &len, aad->s, (int)aad->length));
+  }
+  tmp = EVP_DecryptUpdate(ctx, result, &len, data->s, (int)data->length);
+  EVP_CIPHER_CTX_free(ctx);
+  if (tmp <= 0) {
+    *max_result_len = 0;
+    return 0;
+  }
+  *max_result_len = len;
+  return 1;
+
+error:
+  coap_crypto_output_errors("coap_crypto_aead_decrypt");
+  return 0;
+}
+
+int
+coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
+                 coap_bin_const_t *key,
+                 coap_bin_const_t *data,
+                 coap_bin_const_t **hmac) {
+  unsigned int result_len;
+  const EVP_MD *evp_md;
+  coap_binary_t *dummy = NULL;
+
+  assert(key);
+  assert(data);
+  assert(hmac);
+
+  if ((evp_md = get_hmac_alg(hmac_alg)) == 0) {
+    coap_log_debug("coap_crypto_hmac: algorithm %d not supported\n", hmac_alg);
+    return 0;
+  }
+  dummy = coap_new_binary(EVP_MAX_MD_SIZE);
+  if (dummy == NULL)
+    return 0;
+  result_len = (unsigned int)dummy->length;
+  if (HMAC(evp_md,
+           key->s,
+           (int)key->length,
+           data->s,
+           (int)data->length,
+           dummy->s,
+           &result_len)) {
+    dummy->length = result_len;
+    *hmac = (coap_bin_const_t *)dummy;
+    return 1;
+  }
+
+  coap_crypto_output_errors("coap_crypto_hmac");
+  return 0;
+}
+
+#endif /* HAVE_OSCORE */
 
 #else /* !HAVE_OPENSSL */
 

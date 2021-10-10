@@ -35,6 +35,9 @@
 /* Define if the system has epoll support */
 #cmakedefine COAP_EPOLL_SUPPORT @COAP_EPOLL_SUPPORT@
 
+/* Define if the library has OSCORE support */
+#cmakedefine HAVE_OSCORE @HAVE_OSCORE@
+
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #cmakedefine HAVE_ARPA_INET_H @HAVE_ARPA_INET_H@
 

@@ -24,6 +24,9 @@
     <ClCompile Include="..\..\tests\test_options.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\test_oscore.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\tests\test_pdu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -51,6 +54,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\tests\test_options.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\tests\test_oscore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\tests\test_pdu.h">

@@ -91,6 +91,9 @@ struct coap_context_t {
                                    *   scheduled using lwIP timers for this
                                    *   context, otherwise 0. */
 #endif /* WITH_LWIP */
+#if HAVE_OSCORE
+  struct oscore_ctx_t *p_osc_ctx; /**< primary oscore context  */
+#endif /* HAVE_OSCORE */
 
 #if COAP_CLIENT_SUPPORT
   coap_response_handler_t response_handler;

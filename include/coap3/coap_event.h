@@ -99,8 +99,23 @@ typedef enum {
   /** Triggered when badly formatted packet received */
   COAP_EVENT_BAD_PACKET         = 0x5001,
   /** Triggered when a message is retransmitted */
-  COAP_EVENT_MSG_RETRANSMITTED  = 0x5002
+  COAP_EVENT_MSG_RETRANSMITTED  = 0x5002,
 
+/*
+ * OSCORE events
+ */
+  /** Triggered when there is an OSCORE decryption failure */
+  COAP_EVENT_OSCORE_DECRYPTION_FAILURE = 0x6001,
+  /** Triggered when trying to use OSCORE to decrypt, but it is not enabled */
+  COAP_EVENT_OSCORE_NOT_ENABLED,
+  /** Triggered when there is no OSCORE encrypted payload provided */
+  COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD,
+  /** Triggered when there is no OSCORE security definition found */
+  COAP_EVENT_OSCORE_NO_SECURITY,
+  /** Triggered when there is an OSCORE internal error i.e malloc failed */
+  COAP_EVENT_OSCORE_INTERNAL_ERROR,
+  /** Triggered when there is an OSCORE decode of OSCORE option failure */
+  COAP_EVENT_OSCORE_DECODE_ERROR
 } coap_event_t;
 
 /**

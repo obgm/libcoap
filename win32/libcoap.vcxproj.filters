@@ -54,6 +54,9 @@
     <ClCompile Include="..\src\coap_option.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_oscore.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_session.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -90,6 +93,21 @@
     <ClCompile Include="..\src\uri.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\oscore\oscore.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\oscore\oscore_cbor.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\oscore\oscore_context.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\oscore\oscore_cose.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\oscore\oscore_crypto.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\coap_config.h">
@@ -117,6 +135,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_crypto_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_debug.h">
@@ -153,6 +174,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_option.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_oscore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_oscore_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_prng.h">
@@ -195,6 +222,21 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_utlist_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscore_cbor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscbor_context.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscbor_cose.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscore_crypto.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

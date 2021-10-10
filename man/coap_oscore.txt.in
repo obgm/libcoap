@@ -1,0 +1,394 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc tw=0
+
+coap_oscore(3)
+==============
+:doctype: manpage
+:man source:   coap_oscore
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_oscore,
+coap_oscore_is_supported,
+coap_new_oscore_conf,
+coap_delete_oscore_conf,
+coap_new_oscore_recipient,
+coap_delete_oscore_recipient,
+coap_new_client_session_oscore,
+coap_new_client_session_oscore_pki,
+coap_new_client_session_oscore_psk,
+coap_context_oscore_server,
+- Configuring and using OSCORE
+
+SYNOPSIS
+--------
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*int coap_oscore_is_supported(void);*
+
+*coap_oscore_conf_t *coap_new_oscore_conf(coap_str_const_t _conf_mem_,
+coap_oscore_save_seq_num_t _save_seq_num_func_,
+void *_save_seq_num_func_param_, uint64_t _start_seq_num_);*
+
+*int coap_delete_oscore_conf(coap_oscore_conf_t *_oscore_conf_);*
+
+*int coap_new_oscore_recipient(coap_context_t *_context_,
+coap_bin_const_t *_recipient_id_);*
+
+*int coap_delete_oscore_recipient(coap_context_t *_context_,
+coap_bin_const_t *_recipient_id_);*
+
+*coap_session_t *coap_new_client_session_oscore(coap_context_t *_context_,
+const coap_address_t *_local_if_, const coap_address_t *_server_,
+coap_proto_t _proto_, coap_oscore_conf_t *_oscore_conf_);*
+
+*coap_session_t *coap_new_client_session_oscore_psk(coap_context_t *_context_,
+const coap_address_t *_local_if_, const coap_address_t *_server_,
+coap_proto_t _proto_, coap_dtls_cpsk_t *_psk_data_,
+coap_oscore_conf_t *_oscore_conf_);*
+
+*coap_session_t *coap_new_client_session_oscore_pki(coap_context_t *_context_,
+const coap_address_t *_local_if_, const coap_address_t *_server_,
+coap_proto_t _proto_, coap_dtls_pki_t *_pki_data_,
+coap_oscore_conf_t *_oscore_conf_);*
+
+*int coap_context_oscore_server(coap_context_t *_context_,
+coap_oscore_conf_t *_oscore_conf_);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
+
+DESCRIPTION
+-----------
+This describes libcoap's support for using OSCORE as defined in
+https://rfc-editor.org/rfc/rfc8613[RFC8613].
+
+OSCORE provides end-to-end protection between endpoints communicating using
+CoAP.  (D)TLS can only protect HOP by HOP traffic which allows proxies to
+manipulate information.
+
+CALLBACK HANDLER
+----------------
+
+*Callback Type: coap_oscore_save_seq_num_t*
+
+The coap_oscore_save_seq_num_t method handler function prototype is defined as:
+[source, c]
+----
+typedef int (*coap_oscore_save_seq_num_t)(uint64_t sender_seq_num, void *param);
+----
+and returns 0 on failure, 1 on succes.
+
+FUNCTIONS
+---------
+
+*Function: coap_oscore_is_supported()*
+
+The *coap_oscore_is_supported*() function returns 1 if OSCORE is supported,
+otherwise 0.
+
+*Function: coap_new_oscore_conf()*
+
+The *coap_new_oscore_conf*() function is used to build a new OSCORE
+configuration. It parses the provided OSCORE configuration
+in _conf_mem_. The format of the keywords, encoding types and values is
+documented in *coap-oscore-conf*(5). It also sets an optional function
+_save_seq_num_func_ (which gets _save_seq_num_func_param_ passed in) that is
+called to store the next Sender Sequence Number (SSN) in non-volatile
+storage. The latest next SSN from non-volatile storage (or 0) is then put in
+_start_seq_num_. SSN are used so that anti-replay mechanisms do not kick in
+following application restarts. The rate of calling _save_seq_num_func_ can
+be controlled by the _ssn_freq_ parameter as defined in *coap-oscore-conf*(5).
+
+This OSCORE configuration is then used in the client and server OSCORE version
+of the setup functions.
+
+If the server is proxy enabled and the new incoming session is OSCORE encoded
+with the Outer CoAP ProxyScheme and Host options set, then the libcoap logic
+will determine whether the server is the final endpoint of the session, or
+whether the proxy will be forwarding the session off to another server, based
+on how *coap_resource_proxy_uri_init*(3) configured the proxy logic.  If the
+session is going to forwarded, then the OSCORE protection will not be removed.
+
+If *coap_context_oscore_server*() is not called and the proxy logic (if set)
+indicates the session will get forwarded, then the OSCORE protection is
+untouched, otherwise the session will get dropped with an unknown critical
+option error response.
+
+*Function: coap_new_oscore_recipient()*
+
+The *coap_new_oscore_recipient*() is used to add a new _recipient_id_ to the
+OSCORE information associated with _context_.  The new _recipient_id_ should
+be unique and this function should only be used for server based applications
+as the client will only ever use the first defined _recipient_id_. It is
+assumed that *coap_context_oscore_server*() has already been called to update
+_context_ with the appropriate OSCORE information.
+
+*Function: coap_delete_oscore_recipient()*
+
+The *coap_delete_oscore_recipient*() is used to remove the _recipient_id_ from
+the OSCORE information associated with _context_.  OSCORE Traffic continuing
+to use _recipient_id_ will then fail.
+
+*Function: coap_delete_oscore_conf()*
+
+The *coap_delete_oscore_conf*() function is used to free off the
+coap_oscore_conf_t structure _oscore_conf_ as returned by
+*coap_new_oscore_conf*().  Normally this function never needs to be called
+as _oscore_conf_ is freed off by the call the client or server setup functions.
+
+*Function: coap_new_client_session_oscore()*
+
+The *coap_new_client_session_oscore*() is basically the same as
+*coap_new_client_session*(3), but has an additional parameter _oscore_conf_
+that is created by *coap_new_oscore_conf*(). This function creates a
+client endpoint for a specific _context_ and initiates a new client session
+to the specified _server_ using the CoAP protocol _proto_ and OSCORE
+protected by the _oscore_conf_ definition (which is freed off by this call).
+If the port is set to 0 in _server_, then the default CoAP port is used.
+Normally _local_if_ would be set to NULL, but by specifying _local_if_ the
+source of the network session can be bound to a specific IP address or port.
+The session will initially have a reference count of 1.
+
+*Function: coap_new_client_session_oscore_psk()*
+
+The *coap_new_client_session_oscore_psk*() is basically the same as
+*coap_new_client_session_psk2*(3), but has an additional parameter
+_oscore_conf_ that is created by *coap_new_oscore_conf*(). This
+function, for a specific _context_, is used to configure the TLS context
+using the _setup_data_ variables as defined in the coap_dtls_cpsk_t structure
+in the newly created endpoint session - see *coap_encryption*(3),
+as well as OSCORE protected by the _oscore_conf_ definition (which is freed
+off by this call). The connection is to the specified _server_ using the CoAP
+protocol _proto_.  If the port is set to 0 in _server_, then the default CoAP
+port is used.  Normally _local_if_ would be set to NULL, but by specifying
+_local_if_ the source of the network session can be bound to a specific IP
+address or port. The session will initially have a reference count of 1.
+
+*Function: coap_new_client_session_oscore_pki()*
+
+The *coap_new_client_session_oscore_pki*() is basically the same as
+*coap_new_client_session_pki*(3), but has an additional parameter
+_oscore_conf_ that is created by *coap_new_oscore_conf*(). This
+function, for a specific _context_, is used to configure the TLS context using
+the _setup_data_ variables as defined in the coap_dtls_pki_t structure in the
+newly created endpoint session - see *coap_encryption*(3), as well as OSCORE
+protected by the _oscore_conf_ definition (which is freed off by this call).
+The connection is to the specified _server_ using the CoAP protocol _proto_.
+If the port is set to 0 in _server_, then the default CoAP port is used.
+Normally _local_if_ would be set to NULL, but by specifying _local_if_ the
+source of the network session can be bound to a specific IP address or port.
+The session will initially have a reference count of 1.
+
+*Function: coap_context_oscore_server()*
+
+The *coap_context_oscore_server*() function is used to enable the server to
+support OSCORE incoming sessions. It updates _context_ with the OSCORE
+configure _oscore_conf_ (which is freed off by this call).
+
+RETURN VALUES
+-------------
+The *coap_new_client_session_oscore*(), *coap_new_client_session_oscore_psk*()
+and *coap_new_client_session_oscore_pki*() functions return a newly created
+client session or NULL if there is a malloc or parameter failure.
+
+The *coap_new_oscore_conf*() function returns a _coap_oscore_conf_t_
+or NULL on failure.
+
+The *coap_oscore_is_supported*(), *coap_context_oscore_server*(),
+*coap_delete_oscore_conf*(), *coap_add_oscore_recipient*() and
+*coap_delete_oscore_context*() functions return 0 on failure, 1 on success.
+
+EXAMPLES
+--------
+*Client Setup*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <netinet/in.h>
+#include <stdio.h>
+
+static uint8_t oscore_config[] =
+  "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
+  "master_salt,hex,\"9e7ca92223786340\"\n"
+  "server_id,ascii,\"client\"\n"
+  "recipient_id,ascii,\"server\"\n"
+  "replay_window,integer,30\n"
+  "aead_alg,integer,10\n"
+  "hkdf_alg,integer,-10\n"
+;
+static FILE *oscore_seq_num_fp = NULL;
+/* Not a particularily safe place to keep next Sender Sequence NUmber ... */
+static const char* oscore_seq_save_file = "/tmp/client.seq";
+
+static int
+oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
+  if (oscore_seq_num_fp) {
+    rewind(oscore_seq_num_fp);
+    fprintf(oscore_seq_num_fp, "%lu\n", sender_seq_num);
+    fflush(oscore_seq_num_fp);
+  }
+  return 1;
+}
+
+static coap_session_t *
+setup_client_session (struct in_addr ip_address) {
+  coap_session_t *session;
+  coap_address_t server;
+  /* See coap_context(3) */
+  coap_context_t *context = coap_new_context(NULL);
+
+  if (!context)
+    return NULL;
+
+  /* See coap_block(3) */
+  coap_context_set_block_mode(context,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
+
+  coap_address_init(&server);
+  server.addr.sa.sa_family = AF_INET;
+  server.addr.sin.sin_addr = ip_address;
+  server.addr.sin.sin_port = htons (5683);
+
+  if (coap_oscore_is_supported()) {
+    coap_str_const_t config = { sizeof (oscore_config), oscore_config };
+    uint64_t start_seq_num = 0;
+    coap_oscore_conf_t *oscore_conf;
+
+    if (oscore_seq_save_file) {
+      oscore_seq_num_fp = fopen(oscore_seq_save_file, "r+");
+      if (oscore_seq_num_fp == NULL) {
+        /* Try creating it */
+        oscore_seq_num_fp = fopen(oscore_seq_save_file, "w+");
+        if (oscore_seq_num_fp == NULL) {
+          coap_log(COAP_LOG_ERR, "OSCORE save restart info file error: %s\n",
+                   oscore_seq_save_file);
+          return NULL;
+        }
+      }
+      fscanf(oscore_seq_num_fp, "%ju", &start_seq_num);
+    }
+    oscore_conf = coap_new_oscore_conf(config, oscore_save_seq_num,
+                                       NULL, start_seq_num);
+    if (!oscore_conf) {
+      coap_free_context(context);
+      return NULL;
+    }
+    session = coap_new_client_session_oscore(context, NULL, &server,
+                                             COAP_PROTO_UDP, oscore_conf);
+  } else {
+    session = coap_new_client_session(context, NULL, &server, COAP_PROTO_UDP);
+  }
+  if (!session) {
+    coap_free_context(context);
+    return NULL;
+  }
+  /* The context is in session->context */
+  return session;
+}
+----
+
+*Server Setup*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+#include <stdio.h>
+
+static uint8_t oscore_config[] =
+  "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
+  "master_salt,hex,\"9e7ca92223786340\"\n"
+  "sender_id,ascii,\"server\"\n"
+  "recipient_id,ascii,\"client\"\n"
+  "replay_window,integer,30\n"
+  "aead_alg,integer,10\n"
+  "hkdf_alg,integer,-10\n"
+;
+static FILE *oscore_seq_num_fp = NULL;
+/* Not a particularily safe place to keep next Sender Sequence NUmber ... */
+static const char* oscore_seq_save_file = "/tmp/server.seq";
+
+static int
+oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
+  if (oscore_seq_num_fp) {
+    rewind(oscore_seq_num_fp);
+    fprintf(oscore_seq_num_fp, "%lu\n", sender_seq_num);
+    fflush(oscore_seq_num_fp);
+  }
+  return 1;
+}
+
+static int
+setup_context (void) {
+  /* See coap_context(3) */
+  coap_context_t *context = coap_new_context(NULL);
+
+  if (!context)
+    return 0;
+
+  /* See coap_block(3) */
+  coap_context_set_block_mode(context,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
+  if (coap_oscore_is_supported()) {
+    coap_str_const_t config = { sizeof (oscore_config), oscore_config };
+    uint64_t start_seq_num = 0;
+    coap_oscore_conf_t *oscore_conf;
+
+    if (oscore_seq_save_file) {
+      oscore_seq_num_fp = fopen(oscore_seq_save_file, "r+");
+      if (oscore_seq_num_fp == NULL) {
+        /* Try creating it */
+        oscore_seq_num_fp = fopen(oscore_seq_save_file, "w+");
+        if (oscore_seq_num_fp == NULL) {
+          coap_log(COAP_LOG_ERR, "OSCORE save restart info file error: %s\n",
+                   oscore_seq_save_file);
+          return 0;
+        }
+      }
+      fscanf(oscore_seq_num_fp, "%ju", &start_seq_num);
+    }
+    oscore_conf = coap_new_oscore_conf(config, oscore_save_seq_num,
+                                       NULL, start_seq_num);
+    if (!oscore_conf) {
+      coap_free_context(context);
+      return 0;
+    }
+    coap_context_oscore_server(context, oscore_conf);
+  }
+  return 1;
+}
+
+----
+
+SEE ALSO
+--------
+*coap_endpoint_client*(3), *coap_endpoint_server*(3) and *coap-oscore-conf*(5)
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+"https://rfc-editor.org/rfc/rfc8613[RFC8613: Object Security for Constrained RESTful Environments (OSCORE)]"
+
+for further information.
+
+BUGS
+----
+Please report bugs on the mailing list for libcoap:
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>

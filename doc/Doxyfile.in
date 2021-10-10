@@ -857,7 +857,9 @@ WARN_LOGFILE           =
 INPUT                  = @top_srcdir@/doc/main.md \
                          @top_srcdir@/doc/module_api_wrap.h \
                          @top_srcdir@/src \
+                         @top_srcdir@/src/oscore \
                          @top_srcdir@/include/coap@LIBCOAP_API_VERSION@ \
+                         @top_srcdir@/include/oscore \
                          @top_builddir@/doc/man_tmp
 
 # This tag can be used to specify the character encoding of the source files

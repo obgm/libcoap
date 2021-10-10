@@ -1437,6 +1437,215 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
+#if HAVE_OSCORE
+
+int
+coap_oscore_is_supported(void) {
+  return 1;
+}
+
+/*
+ * The struct cipher_algs and the function get_cipher_alg() are used to
+ * determine which cipher type to use for creating the required cipher
+ * suite object.
+ */
+static struct cipher_algs {
+  cose_alg_t alg;
+  u_int cipher_type;
+} ciphers[] = {
+  { COSE_ALGORITHM_AES_CCM_16_64_128, 1 },
+};
+
+static u_int
+get_cipher_alg(cose_alg_t alg) {
+  size_t idx;
+
+  for (idx = 0; idx < sizeof(ciphers)/sizeof(struct cipher_algs); idx++) {
+    if (ciphers[idx].alg == alg)
+      return ciphers[idx].cipher_type;
+  }
+  coap_log_debug("get_cipher_alg: COSE cipher %d not supported\n", alg);
+  return 0;
+}
+
+/*
+ * The struct hmac_algs and the function get_hmac_alg() are used to
+ * determine which hmac type to use for creating the required hmac
+ * suite object.
+ */
+static struct hmac_algs {
+  cose_hmac_alg_t hmac_alg;
+  u_int hmac_type;
+} hmacs[] = {
+    {COSE_HMAC_ALG_HMAC256_256, 1},
+};
+
+static u_int
+get_hmac_alg(cose_hmac_alg_t hmac_alg) {
+  size_t idx;
+
+  for (idx = 0; idx < sizeof(hmacs)/sizeof(struct hmac_algs); idx++) {
+    if (hmacs[idx].hmac_alg == hmac_alg)
+      return hmacs[idx].hmac_type;
+  }
+  coap_log_debug("get_hmac_alg: COSE HMAC %d not supported\n", hmac_alg);
+  return 0;
+}
+
+int
+coap_crypto_check_cipher_alg(cose_alg_t alg) {
+  return get_cipher_alg(alg);
+}
+
+int
+coap_crypto_check_hkdf_alg(cose_hkdf_alg_t hkdf_alg) {
+  cose_hmac_alg_t hmac_alg;
+
+  if (!cose_get_hmac_alg_for_hkdf(hkdf_alg, &hmac_alg))
+    return 0;
+  return get_hmac_alg(hmac_alg);
+}
+
+int
+coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
+                         coap_bin_const_t *data,
+                         coap_bin_const_t *aad,
+                         uint8_t *result, size_t *max_result_len) {
+  int num_bytes;
+  const coap_crypto_aes_ccm_t *ccm;
+  dtls_ccm_params_t dtls_params;
+  coap_bin_const_t laad;
+
+  if (data == NULL)
+    return 0;
+
+  assert(params);
+
+  if (get_cipher_alg(params->alg) == 0) {
+    coap_log_debug(
+             "coap_crypto_encrypt: algorithm %d not supported\n",
+             params->alg);
+    return 0;
+  }
+
+  ccm = &params->params.aes;
+  if (*max_result_len < (data->length + ccm->tag_len)) {
+    coap_log_warn(
+             "coap_encrypt: result buffer too small\n");
+    return 0;
+  }
+
+  dtls_params.nonce = ccm->nonce;
+  dtls_params.tag_length = ccm->tag_len;
+  dtls_params.l = ccm->l;
+
+  if (aad) {
+    laad = *aad;
+  } else {
+    laad.s = NULL;
+    laad.length = 0;
+  }
+
+  num_bytes = dtls_encrypt_params(&dtls_params,
+                                  data->s, data->length,
+                                  result,
+                                  ccm->key.s, ccm->key.length,
+                                  laad.s, laad.length);
+  if (num_bytes < 0) {
+    return 0;
+  }
+  *max_result_len = num_bytes;
+  return 1;
+}
+
+int
+coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
+                         coap_bin_const_t *data,
+                         coap_bin_const_t *aad,
+                         uint8_t *result, size_t *max_result_len) {
+  int num_bytes;
+  const coap_crypto_aes_ccm_t *ccm;
+  dtls_ccm_params_t dtls_params;
+  coap_bin_const_t laad;
+
+  if (data == NULL)
+    return 0;
+
+  assert(params);
+
+  if (get_cipher_alg(params->alg) == 0) {
+    coap_log_debug(
+             "coap_crypto_decrypt: algorithm %d not supported\n",
+             params->alg);
+    return 0;
+  }
+
+  ccm = &params->params.aes;
+
+  if ((*max_result_len + ccm->tag_len) < data->length) {
+    coap_log_warn(
+             "coap_decrypt: result buffer too small\n");
+    return 0;
+  }
+
+  dtls_params.nonce = ccm->nonce;
+  dtls_params.tag_length = ccm->tag_len;
+  dtls_params.l = ccm->l;
+
+  if (aad) {
+    laad = *aad;
+  } else {
+    laad.s = NULL;
+    laad.length = 0;
+  }
+
+  num_bytes = dtls_decrypt_params(&dtls_params,
+                                  data->s, data->length,
+                                  result,
+                                  ccm->key.s, ccm->key.length,
+                                  laad.s, laad.length);
+  if (num_bytes < 0) {
+    return 0;
+  }
+  *max_result_len = num_bytes;
+  return 1;
+}
+
+int
+coap_crypto_hmac(cose_hmac_alg_t hmac_alg, coap_bin_const_t *key,
+                 coap_bin_const_t *data, coap_bin_const_t **hmac)
+{
+  dtls_hmac_context_t hmac_context;
+  int num_bytes;
+  coap_binary_t *dummy;
+
+  if (data == NULL)
+    return 0;
+
+  if (get_hmac_alg(hmac_alg) == 0) {
+    coap_log_debug(
+             "coap_crypto_hmac: algorithm %d not supported\n", hmac_alg);
+    return 0;
+  }
+
+  dummy = coap_new_binary(DTLS_SHA256_DIGEST_LENGTH);
+  if (dummy == NULL)
+    return 0;
+
+  dtls_hmac_init(&hmac_context, key->s, key->length);
+  dtls_hmac_update(&hmac_context, data->s, data->length);
+  num_bytes = dtls_hmac_finalize(&hmac_context, dummy->s);
+
+  if (num_bytes != DTLS_SHA256_DIGEST_LENGTH) {
+    coap_delete_binary(dummy);
+    return 0;
+  }
+  *hmac = (coap_bin_const_t *)dummy;
+  return 1;
+}
+
+#endif /* HAVE_OSCORE */
+
 #else /* !HAVE_LIBTINYDTLS */
 
 #ifdef __clang__

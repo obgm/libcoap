@@ -173,17 +173,30 @@ coap_delete_pdu(coap_pdu_t *pdu) {
   }
 }
 
+/*
+ * Note: This does not include any data, just the token and options
+ */
 coap_pdu_t *
 coap_pdu_duplicate(const coap_pdu_t *old_pdu,
                    coap_session_t *session,
                    size_t token_length,
                    const uint8_t *token,
                    coap_opt_filter_t *drop_options) {
-  coap_pdu_t *pdu = coap_pdu_init(old_pdu->type,
-                                  old_pdu->code,
-                                  coap_new_message_id(session),
-                                  coap_session_max_pdu_size(session));
+  uint8_t doing_first = session->doing_first;
+  coap_pdu_t *pdu;
 
+  /*
+   * Need to make sure that coap_session_max_pdu_size() immediately
+   * returns, rather than wait for the first CSM response from remote
+   * that indicates BERT size (TCP/TLS only) as this may be called early
+   * the OSCORE logic.
+   */
+  session->doing_first = 0;
+  pdu = coap_pdu_init(old_pdu->type, old_pdu->code,
+                      coap_new_message_id(session),
+                      coap_session_max_pdu_size(session));
+  /* Restore any pending waits */
+  session->doing_first = doing_first;
   if (pdu == NULL)
     return NULL;
 
@@ -333,7 +346,7 @@ coap_update_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
     pdu->data += len - pdu->token_length;
   }
   pdu->token_length = (uint8_t)len;
-  if (len)
+  if (len && memcmp(pdu->token, data, len) != 0)
     memcpy(pdu->token, data, len);
 
   return 1;

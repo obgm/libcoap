@@ -64,8 +64,9 @@ man-page-start: man-page-prepare
 	@echo '   <table class="directory">' >> $(top_builddir)/doc/man_tmp/upgrading.dox
 
 man-page-build: upg-page-build man-page-start
-	@MAN_FILES=`find $(top_srcdir)/man/ -type f -name "coap.txt.in" ; find $(top_srcdir)/man/ -type f -name "coap_*.in" | ALL=C sort ; find $(top_srcdir)/man/ -type f -name "coap-*.in" | LC_ALL=C sort` ;\
-	UPG_FILES=`find $(top_srcdir)/doc/ -type f -name "upgrade_*.txt" | ALL=C sort` ;\
+	@MAN_FILES=`find $(top_srcdir)/man/ -type f -name "coap.txt.in" ; find $(top_srcdir)/man/ -type f -name "coap_*.in" | LC_ALL=C sort ; find $(top_srcdir)/man/ -type f -name "coap-*.in" | LC_ALL=C sort` ;\
+	MAN3_FILES=`find $(top_srcdir)/man/ -type f -name "coap_*.in" | LC_ALL=C sort` ;\
+	UPG_FILES=`find $(top_srcdir)/doc/ -type f -name "upgrade_*.txt" | LC_ALL=C sort` ;\
 	HTML_FILES=`find $(top_builddir)/man/ -type f -name "*.html"` ;\
 	COUNT_MAN_FILES=`echo $${MAN_FILES} | wc -w` ;\
 	COUNT_HTML_FILES=`echo $${HTML_FILES} | wc -w` ;\
@@ -80,6 +81,9 @@ man-page-build: upg-page-build man-page-start
 		BASE=`basename $${FILE} | cut -d. -f 1` ;\
 		MANUAL=`egrep -B 1 "^====" $${FILE} | head -1` ;\
 		SUMMARY=`egrep -B 2 "^SYNOPSIS" $${FILE} | ${SED} 's/coap-//g' | cut -d\- -f2 | cut -c2- | head -1` ;\
+		if [ -z "$${SUMMARY}" ] ; then \
+			SUMMARY=`egrep -B 2 "^DESCRIPTION" $${FILE} | ${SED} 's/coap-//g' | cut -d\- -f2 | cut -c2- | head -1` ;\
+		fi ;\
 		##
 		## Fix and copy .html file across
 		##
@@ -117,7 +121,7 @@ man-page-build: upg-page-build man-page-start
 	## Build the individual man pages
 	##
 	echo '     <tab  type="usergroup" visible="yes" url="@ref man_individual" title="Individual Man Pages">' >> $(top_builddir)/doc/insert_file ;\
-	for FILE in $${MAN_FILES} ; do \
+	for FILE in $${MAN3_FILES} ; do \
 		BASE=`basename $${FILE} | cut -d. -f 1` ;\
 		LIST=`${SED} -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $${FILE} | ${SED} -ne '/coap_/{ s/ *, *//g ; p }' | egrep -v "^$${BASE}$$"` ;\
 		for ENTRY in $${LIST} ; do \
@@ -134,7 +138,7 @@ man-page-build: upg-page-build man-page-start
 	##
 	## Process the (sorted) list of individual man pages
 	##
-	for ENTRY in `cat $(top_builddir)/doc/scratch_insert_file | ALL=C sort -u` ; do \
+	for ENTRY in `cat $(top_builddir)/doc/scratch_insert_file | LC_ALL=C sort -u` ; do \
 		## Update the individual man page
 		MANUAL="$${ENTRY}(3)" ;\
 		echo "      <tab type=\"user\" visible=\"yes\" url=\"@ref man_$${ENTRY}\" title=\"$${MANUAL}\" intro=\"\"/>" >> $(top_builddir)/doc/insert_file ;\

@@ -293,6 +293,67 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
+#if HAVE_OSCORE
+
+int
+coap_oscore_is_supported(void) {
+  return 0;
+}
+
+int
+coap_crypto_check_cipher_alg(cose_alg_t alg) {
+  (void)alg;
+  return 0;
+}
+
+int
+coap_crypto_check_hkdf_alg(cose_hkdf_alg_t hkdf_alg) {
+  (void)hkdf_alg;
+  return 0;
+}
+
+int
+coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
+                         coap_bin_const_t *data,
+                         coap_bin_const_t *aad,
+                         uint8_t *result,
+                         size_t *max_result_len) {
+  (void)params;
+  (void)data;
+  (void)aad;
+  (void)result;
+  *max_result_len = 0;
+  return 0;
+}
+
+int
+coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
+                         coap_bin_const_t *data,
+                         coap_bin_const_t *aad,
+                         uint8_t *result,
+                         size_t *max_result_len) {
+  (void)params;
+  (void)data;
+  (void)aad;
+  (void)result;
+  *max_result_len = 0;
+  return 0;
+}
+
+int
+coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
+                 coap_bin_const_t *key,
+                 coap_bin_const_t *data,
+                 coap_bin_const_t **hmac) {
+  (void)hmac_alg;
+  (void)key;
+  (void)data;
+  (void)hmac;
+  return 0;
+}
+
+#endif /* HAVE_OSCORE */
+
 #else /* !HAVE_LIBTINYDTLS && !HAVE_OPENSSL && !HAVE_LIBGNUTLS */
 
 #ifdef __clang__

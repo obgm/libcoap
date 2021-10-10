@@ -52,6 +52,7 @@
     <ClCompile Include="..\src\coap_notls.c" />
     <ClCompile Include="..\src\coap_openssl.c" />
     <ClCompile Include="..\src\coap_option.c" />
+    <ClCompile Include="..\src\coap_oscore.c" />
     <ClCompile Include="..\src\coap_prng.c" />
     <ClCompile Include="..\src\coap_session.c" />
     <ClCompile Include="..\src\coap_subscribe.c" />
@@ -65,6 +66,11 @@
     <ClCompile Include="..\src\resource.c" />
     <ClCompile Include="..\src\str.c" />
     <ClCompile Include="..\src\uri.c" />
+    <ClCompile Include="..\src\oscore\oscore.c" />
+    <ClCompile Include="..\src\oscore\oscore_cbor.c" />
+    <ClCompile Include="..\src\oscore\oscore_context.c" />
+    <ClCompile Include="..\src\oscore\oscore_cose.c" />
+    <ClCompile Include="..\src\oscore\oscore_crypto.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\coap_config.h" />
@@ -76,6 +82,7 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_block_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_crypto_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_debug.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_dtls.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_encode.h" />
@@ -89,6 +96,8 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_mutex_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_option.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\pdu.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_oscore.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_oscore_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_prng.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\resource.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_resource_internal.h" />
@@ -102,6 +111,11 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\uri.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uthash_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_utlist_internal.h" />
+    <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscore.h" />
+    <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscore_cbor.h" />
+    <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscore_context.h" />
+    <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscore_cose.h" />
+    <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscore_crypto.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\libcoap-3.sym">
