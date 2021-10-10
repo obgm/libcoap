@@ -78,8 +78,10 @@ coap_binary_t *coap_resize_binary(coap_binary_t *s, size_t size) {
   /* Unlikely to work as strings will not be large enough */
   coap_binary_t *new = coap_new_binary(size);
   if (new) {
-    memcpy(new->s, s->s, s->length);
-    coap_delete_binary(s);
+    if (s) {
+      memcpy(new->s, s->s, s->length);
+      coap_delete_binary(s);
+    }
   }
 #else /* ! RIOT_VERSION && ! WITH_CONTIKI && ! WITH_LWIP */
   coap_binary_t *new = coap_realloc_type(COAP_STRING,

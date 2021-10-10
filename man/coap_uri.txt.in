@@ -187,6 +187,7 @@ parse_and_send_uri(coap_session_t *session, const char *do_uri) {
   /* Proxy support only */
   case COAP_URI_SCHEME_HTTP:
   case COAP_URI_SCHEME_HTTPS:
+  case COAP_URI_SCHEME_LAST:
   default:
     return 0;
   }

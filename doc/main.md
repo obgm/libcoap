@@ -38,6 +38,8 @@ The following RFCs are supported
 
 * RFC8516: "Too Many Requests" Response Code for the Constrained Application Protocol
 
+* RFC8613: Object Security for Constrained RESTful Environments (OSCORE)
+
 * RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option
 
 * RFC9175: CoAP: Echo, Request-Tag, and Token Processing

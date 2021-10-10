@@ -42,6 +42,7 @@ coap_context_get_csm_timeout
 coap_context_get_max_handshake_sessions
 coap_context_get_max_idle_sessions
 coap_context_get_session_timeout
+coap_context_oscore_server
 coap_context_set_block_mode
 coap_context_set_csm_max_message_size
 coap_context_set_csm_timeout
@@ -62,6 +63,8 @@ coap_delete_bin_const
 coap_delete_cache_entry
 coap_delete_cache_key
 coap_delete_optlist
+coap_delete_oscore_conf
+coap_delete_oscore_recipient
 coap_delete_pdu
 coap_delete_resource
 coap_delete_str_const
@@ -108,8 +111,6 @@ coap_io_process_with_fds
 coap_is_mcast
 coap_join_mcast_group_intf
 coap_log_impl
-coap_lwip_dump_memory_pools
-coap_lwip_set_input_wait_handler
 coap_make_str_const
 coap_malloc_type
 coap_mcast_per_resource
@@ -119,6 +120,9 @@ coap_new_binary
 coap_new_bin_const
 coap_new_cache_entry
 coap_new_client_session
+coap_new_client_session_oscore
+coap_new_client_session_oscore_pki
+coap_new_client_session_oscore_psk
 coap_new_client_session_pki
 coap_new_client_session_psk
 coap_new_client_session_psk2
@@ -127,6 +131,8 @@ coap_new_endpoint
 coap_new_error_response
 coap_new_message_id
 coap_new_optlist
+coap_new_oscore_conf
+coap_new_oscore_recipient
 coap_new_pdu
 coap_new_str_const
 coap_new_string
@@ -145,6 +151,7 @@ coap_opt_parse
 coap_opt_setheader
 coap_opt_size
 coap_opt_value
+coap_oscore_is_supported
 coap_package_build
 coap_package_name
 coap_package_version

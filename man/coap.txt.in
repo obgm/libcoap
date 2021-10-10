@@ -42,7 +42,7 @@ SEE ALSO
 *coap_context*(3), *coap_encryption*(3), *coap_endpoint_client*(3),
 *coap_endpoint_server*(3), *coap_handler*(3), *coap_io*(3),
 *coap_keepalive*(3), *coap_logging*(3), *coap_lwip*(3), *coap_observe*(3),
-*coap_pdu_access*(3), *coap_pdu_setup*(3), *coap_recovery*(3),
+*coap_oscore*(3), *coap_pdu_access*(3), *coap_pdu_setup*(3), *coap_recovery*(3),
 *coap_resource*(3), *coap_session*(3), *coap_string*(3), *coap_tls_library*(3)
 and *coap_uri*(3)
 

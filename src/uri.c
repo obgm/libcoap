@@ -51,6 +51,15 @@ typedef enum coap_uri_check_t {
   COAP_URI_CHECK_PROXY
 } coap_uri_check_t;
 
+const char *coap_uri_scheme[] = {
+  "coap",      /* COAP_URI_SCHEME_COAP */
+  "coaps",     /* COAP_URI_SCHEME_COAPS */
+  "coap+tcp",  /* COAP_URI_SCHEME_COAP_TCP */
+  "coaps+tcp", /* COAP_URI_SCHEME_COAPS_TCP */
+  "http",      /* COAP_URI_SCHEME_HTTP */
+  "https"      /* COAP_URI_SCHEME_HTTPS */
+};
+
 static int
 coap_split_uri_sub(const uint8_t *str_var,
                    size_t len,

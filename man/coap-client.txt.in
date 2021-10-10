@@ -22,9 +22,10 @@ SYNOPSIS
 *coap-client* [*-a* addr] [*-b* [num,]size] [*-e* text] [*-f* file] [*-l* loss]
               [*-m* method] [*-o* file] [*-p* port] [*-r*] [*-s duration*]
               [*-t* type] [*-v* num] [*-w*] [*-A* type] [*-B* seconds]
-              [*-G* count] [*-H* hoplimit] [*-K* interval] [*-L* value] [*-N*]
-              [*-O* num,text] [*-P* scheme://addr[:port]] [*-T* token] [*-U*]
-              [*-V* num] [*-X* size]
+              [*-E* oscore_conf_file[,seq_file]] [*-G* count] [*-H* hoplimit]
+              [*-K* interval] [*-L* value] [*-N*] [*-O* num,text]
+              [*-P* scheme://addr[:port]] [*-T* token] [*-U*] [*-V* num]
+              [*-X* size]
               [[*-h* match_hint_file] [*-k* key] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [-n] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]] URI
@@ -126,6 +127,13 @@ OPTIONS - General
 
 *-B* seconds::
    Break operation after waiting given seconds (default is 90).
+
+*-E* oscore_conf_file[,seq_file]::
+   'oscore_conf_file' contains OSCORE configuration. See *coap-oscore-conf*(5)
+   for definitions. Optional 'seq_file' (which is created if needed) is used to
+   save the current transmit sequence number, so on client restart sequence
+   numbers continue to increase and are not reset to prevent anti-replay
+   mechanisms being triggered.
 
 *-G* count ::
    Repeat the Request 'count' times with a second delay between each one.
@@ -292,6 +300,11 @@ EXIT STATUS
 *1*::
    Failure (syntax or usage error; configuration error; document
    processing failure; unexpected error)
+
+SEE ALSO
+--------
+
+*coap-server*(5) and *coap-oscore-conf*(5)
 
 BUGS
 -----

@@ -10,6 +10,11 @@
  * of use.
  */
 
+/**
+ * @file coap.h
+ * @brief Primary include file
+ */
+
 #ifndef COAP_H_
 #define COAP_H_
 
@@ -50,6 +55,7 @@ extern "C" {
 #include "coap@LIBCOAP_API_VERSION@/mem.h"
 #include "coap@LIBCOAP_API_VERSION@/net.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_option.h"
+#include "coap@LIBCOAP_API_VERSION@/coap_oscore.h"
 #include "coap@LIBCOAP_API_VERSION@/pdu.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_prng.h"
 #include "coap@LIBCOAP_API_VERSION@/resource.h"

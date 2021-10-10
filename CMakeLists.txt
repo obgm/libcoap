@@ -24,6 +24,7 @@ option(
   OFF)
 
 add_library(${COAP_LIBRARY_NAME})
+set_property(TARGET ${COAP_LIBRARY_NAME} PROPERTY C_STANDARD 99)
 
 #
 # options to tweak the library
@@ -64,6 +65,10 @@ option(
 option(
   ENABLE_SERVER_MODE
   "compile with support for server mode code"
+  ON)
+option(
+  ENABLE_OSCORE
+  "compile with support for OSCORE"
   ON)
 option(
   WITH_EPOLL
@@ -188,6 +193,13 @@ if(${ENABLE_SERVER_MODE})
   message(STATUS "compiling with server support")
 else()
   message(STATUS "compiling without server support")
+endif()
+
+if(${ENABLE_OSCORE})
+  set(HAVE_OSCORE "1")
+  message(STATUS "compiling with OSCORE support")
+else()
+  message(STATUS "compiling without OSCORE support")
 endif()
 
 if(${WITH_EPOLL}
@@ -412,6 +424,7 @@ message(STATUS "ENABLE_DTLS:.....................${ENABLE_DTLS}")
 message(STATUS "ENABLE_TCP:......................${ENABLE_TCP}")
 message(STATUS "ENABLE_CLIENT_MODE:..............${ENABLE_CLIENT_MODE}")
 message(STATUS "ENABLE_SERVER_MODE:..............${ENABLE_SERVER_MODE}")
+message(STATUS "ENABLE_OSCORE:...................${ENABLE_OSCORE}")
 message(STATUS "ENABLE_DOCS:.....................${ENABLE_DOCS}")
 message(STATUS "ENABLE_EXAMPLES:.................${ENABLE_EXAMPLES}")
 message(STATUS "DTLS_BACKEND:....................${DTLS_BACKEND}")
@@ -464,6 +477,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_io.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_notls.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_option.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_oscore.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_prng.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_session.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_subscribe.c
@@ -482,6 +496,12 @@ target_sources(
           $<$<BOOL:${HAVE_LIBTINYDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tinydtls.c>
           $<$<BOOL:${HAVE_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
           $<$<BOOL:${HAVE_MBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
+          # needed for OSCORE is enabled
+          $<$<BOOL:${HAVE_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore.c>
+          $<$<BOOL:${HAVE_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cbor.c>
+          $<$<BOOL:${HAVE_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_context.c>
+          $<$<BOOL:${HAVE_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cose.c>
+          $<$<BOOL:${HAVE_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_crypto.c>
           # headers
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/libcoap.h
@@ -584,6 +604,8 @@ if(ENABLE_TESTS)
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_error_response.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_options.c
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_options.h
+    ${CMAKE_CURRENT_LIST_DIR}/tests/test_oscore.c
+    ${CMAKE_CURRENT_LIST_DIR}/tests/test_oscore.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_pdu.c
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_pdu.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_sendqueue.c
@@ -713,7 +735,8 @@ install(
   PATTERN "*.h"
   PATTERN "coap.h" EXCLUDE
   PATTERN "coap_riot.h" EXCLUDE
-  PATTERN "*_internal.h" EXCLUDE)
+  PATTERN "*_internal.h" EXCLUDE
+  PATTERN "oscore*" EXCLUDE)
 install(
   DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

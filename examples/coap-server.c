@@ -68,6 +68,9 @@ strndup(const char* s1, size_t n) {
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+static coap_oscore_conf_t *oscore_conf;
+static int doing_oscore = 0;
+
 /* set to 1 to request clean server shutdown */
 static int quit = 0;
 
@@ -762,6 +765,7 @@ verify_proxy_scheme_supported(coap_uri_scheme_t scheme) {
       return 0;
     }
     break;
+  case COAP_URI_SCHEME_LAST:
   default:
       coap_log_warn(
         "%d URI scheme not supported\n", scheme);
@@ -976,6 +980,7 @@ get_ongoing_proxy_session(coap_session_t *session,
     break;
   case COAP_URI_SCHEME_HTTP:
   case COAP_URI_SCHEME_HTTPS:
+  case COAP_URI_SCHEME_LAST:
   default:
     assert(0);
     break;
@@ -1576,6 +1581,12 @@ proxy_event_handler(coap_session_t *session,
   case COAP_EVENT_DTLS_CLOSED:
   case COAP_EVENT_TCP_CLOSED:
   case COAP_EVENT_SESSION_CLOSED:
+  case COAP_EVENT_OSCORE_DECRYPTION_FAILURE:
+  case COAP_EVENT_OSCORE_NOT_ENABLED:
+  case COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD:
+  case COAP_EVENT_OSCORE_NO_SECURITY:
+  case COAP_EVENT_OSCORE_INTERNAL_ERROR:
+  case COAP_EVENT_OSCORE_DECODE_ERROR:
     /* Need to remove any proxy associations */
     remove_proxy_association(session, 0);
     break;
@@ -1834,7 +1845,8 @@ verify_cn_callback(const char *cn,
   return 1;
 }
 
-static uint8_t *read_file_mem(const char* file, size_t *length) {
+static uint8_t *
+read_file_mem(const char* file, size_t *length) {
   FILE *f;
   uint8_t *buf;
   struct stat statbuf;
@@ -2121,7 +2133,7 @@ fill_keystore(coap_context_t *ctx) {
 static void
 usage( const char *program, const char *version) {
   const char *p;
-  char buffer[72];
+  char buffer[120];
   const char *lib_build = coap_package_build();
 
   p = strrchr( program, '/' );
@@ -2136,9 +2148,10 @@ usage( const char *program, const char *version) {
     coap_string_tls_version(buffer, sizeof(buffer)));
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
-     "Usage: %s [-d max] [-e] [-g group] [-G group_if] [-l loss] [-p port]\n"
-     "\t\t[-r] [-v num] [-A address] [-L value] [-N]\n"
-     "\t\t[-P scheme://address[:port],[name1[,name2..]]] [-V num] [-X size]\n"
+     "Usage: %s [-d max] [-e] [-g group] [-l loss] [-p port] [-r] [-v num]\n"
+     "\t\t[-A address] [-E oscore_conf_file[,seq_file]] [-G group_if]\n"
+     "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
+     "\t\t[-V num] [-X size]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
      "\t\t[-s match_psk_sni_file] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
@@ -2151,9 +2164,6 @@ usage( const char *program, const char *version) {
      "\t-e     \t\tEcho back the data sent with a PUT\n"
      "\t-g group\tJoin the given multicast group\n"
      "\t       \t\tNote: DTLS over multicast is not currently supported\n"
-     "\t-G group_if\tUse this interface for listening for the multicast\n"
-     "\t       \t\tgroup. This can be different from the implied interface\n"
-     "\t       \t\tif the -A option is used\n"
      "\t-l list\t\tFail to send some datagrams specified by a comma\n"
      "\t       \t\tseparated list of numbers or number ranges\n"
      "\t       \t\t(for debugging only)\n"
@@ -2170,6 +2180,14 @@ usage( const char *program, const char *version) {
      "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
      "\t       \t\tCoAP logging\n"
      "\t-A address\tInterface address to bind to\n"
+     "\t-E oscore_conf_file[,seq_file]\n"
+     "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
+     "\t       \t\tcoap-oscore-conf(5) for definitions.\n"
+     "\t       \t\tOptional seq_file is used to save the current transmit\n"
+     "\t       \t\tsequence number, so on restart sequence numbers continue\n"
+     "\t-G group_if\tUse this interface for listening for the multicast\n"
+     "\t       \t\tgroup. This can be different from the implied interface\n"
+     "\t       \t\tif the -A option is used\n"
      "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
      "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
      "\t       \t\t(Sum of one or more of 1,2 and 4)\n"
@@ -2260,7 +2278,8 @@ usage( const char *program, const char *version) {
      "\t       \t\tcontains both PUBLIC KEY and PRIVATE KEY or just\n"
      "\t       \t\tEC PRIVATE KEY. (GnuTLS and TinyDTLS(PEM) support only).\n"
      "\t       \t\t'-C cafile' or '-R trust_casfile' are not required\n"
-     "\t-R trust_casfile\tPEM file containing the set of trusted root CAs\n"
+     "\t-R trust_casfile\n"
+     "\t       \t\tPEM file containing the set of trusted root CAs\n"
      "\t       \t\tthat are to be used to validate the client certificate.\n"
      "\t       \t\tAlternatively, this can point to a directory containing\n"
      "\t       \t\ta set of CA PEM files.\n"
@@ -2416,6 +2435,82 @@ cmdline_read_user(char *arg, unsigned char **buf, size_t maxlen) {
   return len;
 }
 #endif /* SERVER_CAN_PROXY */
+
+static FILE *oscore_seq_num_fp = NULL;
+static const char* oscore_conf_file = NULL;
+static const char* oscore_seq_save_file = NULL;
+
+static int
+oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
+  if (oscore_seq_num_fp) {
+    rewind(oscore_seq_num_fp);
+    fprintf(oscore_seq_num_fp, "%ju\n", sender_seq_num);
+    fflush(oscore_seq_num_fp);
+  }
+  return 1;
+}
+
+static coap_oscore_conf_t *
+get_oscore_conf(coap_context_t *context) {
+  uint8_t *buf;
+  size_t length;
+  coap_str_const_t file_mem;
+  uint64_t start_seq_num = 0;
+
+  /* Need a rw var to free off later and file_mem.s is a const */
+  buf = read_file_mem(oscore_conf_file, &length);
+  if (buf == NULL) {
+    fprintf(stderr, "OSCORE configuraton file error: %s\n", oscore_conf_file);
+    return NULL;
+  }
+  file_mem.s = buf;
+  file_mem.length = length;
+  if (oscore_seq_save_file) {
+    oscore_seq_num_fp = fopen(oscore_seq_save_file, "r+");
+    if (oscore_seq_num_fp == NULL) {
+      /* Try creating it */
+      oscore_seq_num_fp = fopen(oscore_seq_save_file, "w+");
+      if (oscore_seq_num_fp == NULL) {
+        fprintf(stderr, "OSCORE save restart info file error: %s\n",
+                oscore_seq_save_file);
+        return NULL;
+      }
+    }
+    if (fscanf(oscore_seq_num_fp, "%ju", &start_seq_num) != 1) {
+      /* Must be empty */
+      start_seq_num = 0;
+    }
+  }
+  oscore_conf = coap_new_oscore_conf(file_mem,
+                                     oscore_save_seq_num,
+                                     NULL, start_seq_num);
+  coap_free(buf);
+  if (oscore_conf == NULL) {
+    fprintf(stderr, "OSCORE configuraton file error: %s\n", oscore_conf_file);
+    return NULL;
+  }
+  coap_context_oscore_server(context, oscore_conf);
+  return oscore_conf;
+}
+
+static int
+cmdline_oscore(char *arg) {
+  if (coap_oscore_is_supported()) {
+    char *sep = strchr(arg, ',');
+
+    if (sep)
+      *sep = '\000';
+    oscore_conf_file = arg;
+
+    if (sep) {
+      sep++;
+      oscore_seq_save_file = sep;
+    }
+    return 1;
+  }
+  fprintf(stderr, "OSCORE support not enabled\n");
+  return 0;
+}
 
 static ssize_t
 cmdline_read_key(char *arg, unsigned char **buf, size_t maxlen) {
@@ -2615,7 +2710,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:u:v:A:C:L:M:NP:R:S:V:X:")) != -1) {
+  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:u:v:A:C:E:L:M:NP:R:S:V:X:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -2632,6 +2727,12 @@ main(int argc, char **argv) {
       break;
     case 'e':
       echo_back = 1;
+      break;
+    case 'E':
+      doing_oscore = cmdline_oscore(optarg);
+      if (!doing_oscore) {
+        exit(1);
+      }
       break;
     case 'g' :
       group = optarg;
@@ -2776,6 +2877,10 @@ main(int argc, char **argv) {
   coap_context_set_block_mode(ctx, block_mode);
   if (csm_max_message_size)
     coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
+  if (doing_oscore) {
+    if (get_oscore_conf(ctx) == NULL)
+      goto finish;
+  }
 
   /* Define the options to ignore when setting up cache-keys */
   coap_cache_ignore_options(ctx, cache_ignore_options,
@@ -2871,6 +2976,8 @@ main(int argc, char **argv) {
     }
   }
 
+finish:
+
   coap_free(ca_mem);
   coap_free(cert_mem);
   coap_free(key_mem);
@@ -2920,6 +3027,8 @@ main(int argc, char **argv) {
 #endif
   coap_free(proxy_host_name_list);
 #endif /* SERVER_CAN_PROXY */
+  if (oscore_seq_num_fp)
+    fclose(oscore_seq_num_fp);
 
   coap_free_context(ctx);
   coap_cleanup();

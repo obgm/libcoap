@@ -1,0 +1,232 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc tw=0
+
+coap-oscore-conf(5)
+===================
+:doctype: manpage
+:man source:   coap-oscore-conf
+:man version:  @PACKAGE_VERSION@
+:man manual:   Coap OSCORE configuration file format
+
+NAME
+-----
+coap-oscore-conf
+- CoAP OSCORE configuration file format
+
+DESCRIPTION
+-----------
+The OSCORE configuration file is read in when using the _*-E* oscore_conf_file_
+option for the *coap-client*(5) or *coap-server*(5) executables. This then
+allows a client or server to use OSCORE to protect the CoAP information
+between endpoints (https://rfc-editor.org/rfc/rfc8613[RFC8613]).
+
+It is also read in and parsed by *coap_new_oscore_conf*(3).
+
+This configuration file can be a configuration held in memory, the formatting
+of the memory region is same as that for a file as if the file was mapped
+into memory. The *coap_new_oscore_conf*(3) function uses the memory
+version of the file.
+
+The configuration file complises of a set of keywords, the value of the
+keyword encoding type and the keyword value, one per line, comma separated.
+
+keyword,encoding,value
+
+The keywords are case sensitive.  If a line starts with a *#*, then it is
+treated as a comment line and so is ignored. Empty lines are also valid
+and ignored.
+
+The possible encodings are:
+
+*ascii* ::
+    The value is encoded as a binary representation of the ascii string. This
+    string can optionally be enclosed in _"_.
+
+*bool* ::
+    The textual string is either true or false and is subsequently encoded as
+    an integer number.
+
+*hex* ::
+    The value is encoded as a binary representation of the hex string. This
+    string can optionally be enclosed in _"_.
+
+*integer* ::
+    The value is encoded as an integer number.
+
+*text* ::
+    The string value is mapped and then encoded as an integer number. This
+    string can optionally be enclosed in _"_. A subset of the Names from
+    https://www.iana.org/assignments/cose/cose.xhtml#algorithms or
+    https://www.iana.org/assignments/cose/cose.xhtml#elliptic-curves are
+    supported.
+
+The valid keywords are:
+
+*master_secret* ::
+    (*hex* or *ascii*) (*Required*) (No default) +
+    "https://rfc-editor.org/rfc/rfc8613#section-3.1[RFC8613 Section 3.1.
+    Security Context Definition]".
+    Master Secret. Variable length. Must be the same for both client and
+    server.
+
+*master_salt* ::
+    (*hex* or *ascii*) (*Optional*) (No default) +
+    "https://rfc-editor.org/rfc/rfc8613#section-3.1[RFC8613 Section 3.1.
+    Security Context Definition]".
+    Master Salt. Variable length. Must be the same for both client and
+    server.
+
+*id_context* ::
+    (*hex* or *ascii*) (*Optional*) (No default) +
+    "https://rfc-editor.org/rfc/rfc8613#section-3.1[RFC8613 Section 3.1.
+    Security Context Definition]".
+    ID Context. Variable length. Must be the same for both client and
+    server.
+
+*sender_id* ::
+    (*hex* or *ascii*) (*Required*) (No default) +
+    "https://rfc-editor.org/rfc/rfc8613#section-3.1[RFC8613 Section 3.1.
+    Security Context Definition]".
+    Sender ID.  This is the local application ID.
+    Maximum length is determined by the AEAD Algorithm (typically 7 bytes).
+
+*recipient_id* ::
+    (*hex* or *ascii*) (*Required* for client, else *Optional*) (No default) +
+    "https://rfc-editor.org/rfc/rfc8613#section-3.1[RFC8613 Section 3.1.
+    Security Context Definition]".
+    Recipient ID. This is the remote peer application ID.
+    Maximum length is determined by the AEAD Algorithm (typically 7 bytes).
+    For servers, there can be zero or more (unique) recipient_ids.
+    Additional recipient_ids can be added programmatically to the OSCORE
+    configuration - see *coap_new_oscore_recipient*(3).
+    For clients, there should only be one recipient_id (only the first is used).
+
+*replay_window* ::
+    (*integer*) (*Optional*) (Default is 32) +
+    "https://rfc-editor.org/rfc/rfc8613#section-3.1[RFC8613 Section 3.1.
+    Security Context Definition]".
+    Recipient Replay Window (Server Only). Supported values are 1 - 63.
+
+*aead_alg* ::
+    (*integer* or *text*) (*Optional*) (Default is 10 or "AES-CCM-16-64-128") +
+    "https://rfc-editor.org/rfc/rfc8613#section-3.1[RFC8613 Section 3.1.
+    Security Context Definition]".
+    AEAD Algorithm. Only the mandatory and a small subset of the algorithms
+    are supported depending on the TLS library.
+
+*hkdf_alg* ::
+    (*integer* or *text*) (*Optional*) (Default is -10 or "direct+HKDF-SHA-256") +
+    "https://rfc-editor.org/rfc/rfc8613#section-3.1[RFC8613 Section 3.1.
+    Security Context Definition]".
+    HDKF Algorithm. Only the mandatory and a small subset of the algorithms
+    are supported depending on the TLS library.
+
+*rfc8613_b_1_2* ::
+    (*bool*) (*Optional*) (Default is true) +
+    "https://rfc-editor.org/rfc/rfc8613#appendix-B.1.2[RFC8613 Appendix B.1.2.
+    Replay Window]".
+    Enable server rebooting Replay Window.
+
+*rfc8613_b_2* ::
+    (*bool*) (*Optional*) (Default is false) +
+    "https://rfc-editor.org/rfc/rfc8613#appendix-B.2[RFC8613 Appendix B.2.
+    Security Context Derived Multiple Times]".
+    Enable Security Context protocol.
+
+*ssn_freq* ::
+    (*integer*) (*Optional*) (Default is 1) +
+    "https://rfc-editor.org/rfc/rfc8613#appendix-B.1.1[RFC8613 Appendix B.1.1.
+    Sender Sequence Number]".
+    Sender Sequence Number frequency non-volatile storage update rate. Has
+    to be a positive number.
+
+Diagnostic testing options
+
+*break_sender_key* ::
+    (*bool*) (*Optional*) (Default is false) +
+    Enable random breaking of the derived sender key.
+
+*break_recipient_key* ::
+    (*bool*) (*Optional*) (Default is false) +
+    Enable random breaking of the derived recipient key.
+
+EXAMPLE SERVER OSCORE CONFIGURATION FILE
+----------------------------------------
+
+[source, c]
+----
+
+# Master Secret (same for both client and server)
+master_secret,hex,"0102030405060708090a0b0c0d0e0f10"
+
+# Master Salt (same for both client and server)
+master_salt,hex,"9e7ca92223786340"
+
+# Sender ID
+sender_id,ascii,"server"
+
+# Recipient ID
+recipient_id,ascii,"client"
+
+# Replay Window (usually 32)
+replay_window,integer,32
+
+# AEAD COSE Cipher Algorithm (usually 10)
+aead_alg,integer,10
+
+# HKDF COSE Algorithm (usually -10)
+hkdf_alg,integer,-10
+
+----
+
+EXAMPLE CLIENT OSCORE CONFIGURATION FILE
+----------------------------------------
+
+[source, c]
+----
+
+# Master Secret (same for both client and server)
+master_secret,hex,"0102030405060708090a0b0c0d0e0f10"
+
+# Master Salt (same for both client and server)
+master_salt,hex,"9e7ca92223786340"
+
+# Sender ID (This is the client who is the Sender)
+sender_id,ascii,"client"
+
+# Recipient ID (It is the server that is remote)
+recipient_id,ascii,"server"
+
+# Replay Window (usually 32)
+replay_window,integer,32
+
+# AEAD COSE Cipher Algorithm (usually 10)
+aead_alg,integer,10
+
+# HKDF COSE Algorithm (usually -10)
+hkdf_alg,integer,-10
+
+----
+
+SEE ALSO
+--------
+
+*coap-client*(5), *coap-server*(5) and *coap_new_oscore_conf*(3)
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://tools.ietf.org/html/rfc8613[RFC8613: Object Security for Constrained RESTful Environments (OSCORE)]"
+
+for further information.
+
+BUGS
+-----
+Please report bugs on the mailing list for libcoap:
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>

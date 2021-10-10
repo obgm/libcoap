@@ -17,6 +17,14 @@ ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
 LIBCOAP_PACKAGE_BUILD = @DOLLAR_SIGN@(shell git describe --tags --dirty --always 2>/dev/null || echo @PACKAGE_VERSION@)
 
+## Source files specifically for OSCORE
+libcoap_OSCORE_sources = \
+  src/oscore/oscore.c \
+  src/oscore/oscore_cbor.c \
+  src/oscore/oscore_context.c \
+  src/oscore/oscore_cose.c \
+  src/oscore/oscore_crypto.c
+
 ## Additional files for the distribution archive
 EXTRA_DIST = \
   BUILDING \
@@ -62,11 +70,13 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_async_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_block_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_cache_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_crypto_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_dtls_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_hashkey_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_io_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_mutex_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_net_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_oscore_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_pdu_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_resource_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
@@ -77,11 +87,17 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.in \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows.in \
+  include/oscore/oscore_cbor.h \
+  include/oscore/oscore_context.h \
+  include/oscore/oscore_cose.h \
+  include/oscore/oscore_crypto.h \
+  include/oscore/oscore.h \
   src/coap_io_lwip.c \
   src/coap_io_riot.c \
   tests/test_error_response.h \
   tests/test_encode.h \
   tests/test_options.h \
+  tests/test_oscore.h \
   tests/test_pdu.h \
   tests/test_sendqueue.h \
   tests/test_session.h \
@@ -100,6 +116,13 @@ EXTRA_DIST = \
   win32/testdriver/testdriver.vcxproj \
   win32/testdriver/testdriver.vcxproj.filters \
   win32/testdriver/testdriver.vcxproj.user
+
+# This is a mirror of files depending on HAVE_OSCORE included in src as per
+# libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES
+if !HAVE_OSCORE
+EXTRA_DIST += $(libcoap_OSCORE_sources)
+
+endif # !HAVE_OSCORE
 
 AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include $(WARNING_CFLAGS) \
             $(DTLS_CFLAGS) -std=c99 $(EXTRA_CFLAGS) \
@@ -138,6 +161,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_notls.c \
   src/coap_openssl.c \
   src/coap_option.c \
+  src/coap_oscore.c \
   src/coap_prng.c \
   src/coap_session.c \
   src/coap_subscribe.c \
@@ -151,6 +175,11 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/resource.c \
   src/str.c \
   src/uri.c
+
+if HAVE_OSCORE
+libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES += $(libcoap_OSCORE_sources)
+
+endif # HAVE_OSCORE
 
 ## Define the list of public header files and their install location.
 ## The API version is appended to the install folder to being able to
@@ -179,6 +208,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/mem.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/net.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_option.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_oscore.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/pdu.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_prng.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/resource.h \
@@ -201,6 +231,8 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_LDFLAGS =					\
 ## libcoap-$(LIBCOAP_API_VERSION).{map,sym} for the linker.
 CTAGS_IGNORE=-I " \
 coap_pdu_from_pbuf \
+coap_lwip_dump_memory_pools \
+coap_lwip_set_input_wait_handler \
 "
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if

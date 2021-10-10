@@ -71,6 +71,10 @@
 #define COAP_DISABLE_TCP 0
 #endif
 
+#ifndef HAVE_OSCORE
+#define HAVE_OSCORE 1
+#endif
+
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"
 

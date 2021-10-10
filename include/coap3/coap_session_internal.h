@@ -42,6 +42,15 @@ struct coap_addr_hash_t {
   coap_proto_t proto;          /**< CoAP protocol */
 };
 
+typedef enum {
+  COAP_OSCORE_B_2_NONE = 0,
+  COAP_OSCORE_B_2_STEP_1,
+  COAP_OSCORE_B_2_STEP_2,
+  COAP_OSCORE_B_2_STEP_3,
+  COAP_OSCORE_B_2_STEP_4,
+  COAP_OSCORE_B_2_STEP_5,
+} COAP_OSCORE_B_2_STEP;
+
 /**
  * Abstraction of virtual session that can be attached to coap_context_t
  * (client) or coap_endpoint_t (server).
@@ -87,7 +96,7 @@ struct coap_session_t {
   uint8_t read_header[8];           /**< storage space for header of incoming
                                          message header */
   size_t partial_read;              /**< if > 0 indicates number of bytes
-                                         already read for an incoming message */
+                                        already read for an incoming message */
   coap_pdu_t *partial_pdu;          /**< incomplete incoming pdu */
   coap_tick_t last_rx_tx;
   coap_tick_t last_tx_rst;
@@ -138,7 +147,8 @@ struct coap_session_t {
                                          respoding (default 1 byte/sec) */
   unsigned int dtls_timeout_count;      /**< dtls setup retry counter */
   int dtls_event;                       /**< Tracking any (D)TLS events on this
-                                             sesison */
+                                             session */
+  uint32_t tx_rtag;               /**< Next Request-Tag number to use */
   uint8_t csm_bert_rem_support;  /**< CSM TCP BERT blocks supported (remote) */
   uint8_t csm_bert_loc_support;  /**< CSM TCP BERT blocks supported (local) */
   uint8_t block_mode;             /**< Zero or more COAP_BLOCK_ or'd options */
@@ -147,7 +157,15 @@ struct coap_session_t {
   uint8_t delay_recursive;        /**< Set if in coap_client_delay_first() */
   uint8_t no_observe_cancel;      /**< Set if do not cancel observe on session
                                        close */
-  uint32_t tx_rtag;               /**< Next Request-Tag number to use */
+#if HAVE_OSCORE
+  uint8_t oscore_encryption;      /**< OSCORE is used for this session  */
+  COAP_OSCORE_B_2_STEP b_2_step;  /**< Appendix B.2 negotiation step */
+  oscore_recipient_ctx_t *recipient_ctx; /**< OSCORE recipient context
+                                              for session */
+  oscore_association_t *associations; /**< OSCORE set of response
+                                           associations */
+  uint64_t oscore_r2;             /**< R2 for RFC8613 Appendix B.2 */
+#endif /* HAVE_OSCORE */
   uint64_t tx_token;              /**< Next token number to use */
   coap_bin_const_t *last_token;   /** last token used to make a request */
   coap_bin_const_t *echo;         /**< Echo value to send with next request */

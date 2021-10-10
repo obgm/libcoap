@@ -146,6 +146,9 @@ int doing_observe = 0;
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+static coap_oscore_conf_t *oscore_conf = NULL;
+static int doing_oscore = 0;
+
 static int quit = 0;
 
 /* SIGINT handler: set quit to 1 for graceful termination */
@@ -344,6 +347,12 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_DTLS_CLOSED:
   case COAP_EVENT_TCP_CLOSED:
   case COAP_EVENT_SESSION_CLOSED:
+  case COAP_EVENT_OSCORE_DECRYPTION_FAILURE:
+  case COAP_EVENT_OSCORE_NOT_ENABLED:
+  case COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD:
+  case COAP_EVENT_OSCORE_NO_SECURITY:
+  case COAP_EVENT_OSCORE_INTERNAL_ERROR:
+  case COAP_EVENT_OSCORE_DECODE_ERROR:
     quit = 1;
     break;
   case COAP_EVENT_DTLS_CONNECTED:
@@ -498,7 +507,7 @@ message_handler(coap_session_t *session COAP_UNUSED,
 static void
 usage(const char *program, const char *version) {
   const char *p;
-  char buffer[72];
+  char buffer[120];
   const char *lib_build = coap_package_build();
 
   p = strrchr( program, '/' );
@@ -515,9 +524,10 @@ usage(const char *program, const char *version) {
   fprintf(stderr, "\n"
      "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-l loss]\n"
      "\t\t[-m method] [-o file] [-p port] [-r] [-s duration] [-t type]\n"
-     "\t\t[-v num] [-w] [-A type] [-B seconds] [G count] [-H hoplimit]\n"
-     "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]]\n"
-     "\t\t[-T token] [-U] [-V num] [-X size]\n"
+     "\t\t[-v num] [-w] [-A type] [-B seconds]\n"
+     "\t\t[-E oscore_conf_file[,seq_file]] [-G count] [-H hoplimit]\n"
+     "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
+     "\t\t[-T token] [-U]  [-V num] [-X size]\n"
      "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
      "\t\t[-J pkcs11_pin] [-M raw_pk] [-R trust_casfile]\n"
@@ -551,6 +561,11 @@ usage(const char *program, const char *version) {
      "\t-A type\t\tAccepted media type\n"
      "\t-B seconds\tBreak operation after waiting given seconds\n"
      "\t       \t\t(default is %d)\n"
+     "\t-E oscore_conf_file[,seq_file]\n"
+     "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
+     "\t       \t\tcoap-oscore-conf(5) for definitions.\n"
+     "\t       \t\tOptional seq_file is used to save the current transmit\n"
+     "\t       \t\tsequence number, so on restart sequence numbers continue\n"
      "\t-G count\tRepeat the Request 'count' times with a second delay\n"
      "\t       \t\tbetween each one. Must have a value between 1 and 255\n"
      "\t       \t\tinclusive. Default is '1'\n"
@@ -565,9 +580,10 @@ usage(const char *program, const char *version) {
      "\t-O num,text\tAdd option num with contents text to request. If the\n"
      "\t       \t\ttext begins with 0x, then the hex text (two [0-9a-f] per\n"
      "\t       \t\tbyte) is converted to binary data\n"
-     "\t-P scheme://address[:port]\tScheme, address and optional port to\n"
-     "\t       \t\tdefine how to connect to a CoAP proxy (automatically adds\n"
-     "\t       \t\tProxy-Uri option to request) to forward the request to.\n"
+     "\t-P scheme://address[:port]\n"
+     "\t       \t\tScheme, address and optional port to define how to\n"
+     "\t       \t\tconnect to a CoAP proxy (automatically adds Proxy-Uri\n"
+     "\t       \t\toption to request) to forward the request to.\n"
      "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
      "\t-T token\tDefine the initial starting token\n"
      "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
@@ -615,7 +631,8 @@ usage(const char *program, const char *version) {
      "\t       \t\tcontains both PUBLIC KEY and PRIVATE KEY or just\n"
      "\t       \t\tEC PRIVATE KEY. (GnuTLS and TinyDTLS(PEM) support only).\n"
      "\t       \t\t'-C cafile' or '-R trust_casfile' are not required\n"
-     "\t-R trust_casfile\tPEM file containing the set of trusted root CAs\n"
+     "\t-R trust_casfile\n"
+     "\t       \t\tPEM file containing the set of trusted root CAs\n"
      "\t       \t\tthat are to be used to validate the server certificate.\n"
      "\t       \t\tAlternatively, this can point to a directory containing\n"
      "\t       \t\ta set of CA PEM files.\n"
@@ -707,6 +724,113 @@ cmdline_hop_limit(char *arg) {
     coap_insert_optlist(&optlist, node);
   }
   return 1;
+}
+
+static uint8_t *
+read_file_mem(const char* filename, size_t *length) {
+  FILE *f;
+  uint8_t *buf;
+  struct stat statbuf;
+
+  *length = 0;
+  if (!filename || !(f = fopen(filename, "r")))
+    return NULL;
+
+  if (fstat(fileno(f), &statbuf) == -1) {
+    fclose(f);
+    return NULL;
+  }
+
+  buf = coap_malloc(statbuf.st_size+1);
+  if (!buf) {
+    fclose(f);
+    return NULL;
+  }
+
+  if (fread(buf, 1, statbuf.st_size, f) != (size_t)statbuf.st_size) {
+    fclose(f);
+    coap_free(buf);
+    return NULL;
+  }
+  buf[statbuf.st_size] = '\000';
+  *length = (size_t)(statbuf.st_size + 1);
+  fclose(f);
+  return buf;
+}
+
+static FILE *oscore_seq_num_fp = NULL;
+static const char* oscore_conf_file = NULL;
+static const char* oscore_seq_save_file = NULL;
+
+static int
+oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
+  if (oscore_seq_num_fp) {
+    rewind(oscore_seq_num_fp);
+    fprintf(oscore_seq_num_fp, "%ju\n", sender_seq_num);
+    fflush(oscore_seq_num_fp);
+  }
+  return 1;
+}
+
+static coap_oscore_conf_t *
+get_oscore_conf(void) {
+  uint8_t *buf;
+  size_t length;
+  coap_str_const_t file_mem;
+  uint64_t start_seq_num = 0;
+
+  /* Need a rw var to free off later and file_mem.s is a const */
+  buf = read_file_mem(oscore_conf_file, &length);
+  if (buf == NULL) {
+    fprintf(stderr, "OSCORE configuraton file error: %s\n", oscore_conf_file);
+    return NULL;
+  }
+  file_mem.s = buf;
+  file_mem.length = length;
+  if (oscore_seq_save_file) {
+    oscore_seq_num_fp = fopen(oscore_seq_save_file, "r+");
+    if (oscore_seq_num_fp == NULL) {
+      /* Try creating it */
+      oscore_seq_num_fp = fopen(oscore_seq_save_file, "w+");
+      if (oscore_seq_num_fp == NULL) {
+        fprintf(stderr, "OSCORE save restart info file error: %s\n",
+                oscore_seq_save_file);
+        return NULL;
+      }
+    }
+    if (fscanf(oscore_seq_num_fp, "%ju", &start_seq_num) != 1) {
+      /* Must be empty */
+      start_seq_num = 0;
+    }
+  }
+  oscore_conf = coap_new_oscore_conf(file_mem,
+                                     oscore_save_seq_num,
+                                     NULL, start_seq_num);
+  coap_free(buf);
+  if (oscore_conf == NULL) {
+    fprintf(stderr, "OSCORE configuraton file error: %s\n", oscore_conf_file);
+    return NULL;
+  }
+  return oscore_conf;
+}
+
+static int
+cmdline_oscore(char *arg) {
+  if (coap_oscore_is_supported()) {
+    char *sep = strchr(arg, ',');
+
+    if (sep)
+      *sep = '\000';
+    oscore_conf_file = arg;
+
+    if (sep) {
+      sep++;
+      oscore_seq_save_file = sep;
+    }
+    return 1;
+  }
+  fprintf(stderr, "OSCORE support not enabled\n");
+  return 0;
 }
 
 /**
@@ -1179,37 +1303,6 @@ static int cmdline_read_hint_check(const char *arg) {
   return valid_ihs.count > 0;
 }
 
-static uint8_t *read_file_mem(const char* filename, size_t *length) {
-  FILE *f;
-  uint8_t *buf;
-  struct stat statbuf;
-
-  *length = 0;
-  if (!filename || !(f = fopen(filename, "r")))
-    return NULL;
-
-  if (fstat(fileno(f), &statbuf) == -1) {
-    fclose(f);
-    return NULL;
-  }
-
-  buf = coap_malloc(statbuf.st_size+1);
-  if (!buf) {
-    fclose(f);
-    return NULL;
-  }
-
-  if (fread(buf, 1, statbuf.st_size, f) != (size_t)statbuf.st_size) {
-    fclose(f);
-    coap_free(buf);
-    return NULL;
-  }
-  buf[statbuf.st_size] = '\000';
-  *length = (size_t)(statbuf.st_size + 1);
-  fclose(f);
-  return buf;
-}
-
 static int
 verify_cn_callback(const char *cn,
                    const uint8_t *asn1_public_cert COAP_UNUSED,
@@ -1381,22 +1474,42 @@ open_session(coap_context_t *ctx,
     if (root_ca_file || ca_file || cert_file) {
       /* Setup PKI session */
       coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
-      session = coap_new_client_session_pki(ctx, bind_addr, dst, proto, dtls_pki);
-    }
-    else if (identity || key) {
+      if (doing_oscore) {
+        session = coap_new_client_session_oscore_pki(ctx, bind_addr, dst,
+                                                     proto, dtls_pki,
+                                                     oscore_conf);
+      } else
+        session = coap_new_client_session_pki(ctx, bind_addr, dst, proto,
+                                              dtls_pki);
+    } else if (identity || key) {
       /* Setup PSK session */
       coap_dtls_cpsk_t *dtls_psk = setup_psk(identity, identity_len,
                                                key, key_len);
-      session = coap_new_client_session_psk2(ctx, bind_addr, dst, proto,
+      if (doing_oscore) {
+        session = coap_new_client_session_oscore_psk(ctx, bind_addr, dst,
+                                                     proto, dtls_psk,
+                                                     oscore_conf);
+      } else
+        session = coap_new_client_session_psk2(ctx, bind_addr, dst, proto,
                                            dtls_psk);
     } else {
       /* No PKI or PSK defined, as encrypted, use PKI */
       coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
-      session = coap_new_client_session_pki(ctx, bind_addr, dst, proto, dtls_pki);
+      if (doing_oscore) {
+        session = coap_new_client_session_oscore_pki(ctx, bind_addr, dst,
+                                                     proto, dtls_pki,
+                                                     oscore_conf);
+      } else
+        session = coap_new_client_session_pki(ctx, bind_addr, dst, proto,
+                                              dtls_pki);
     }
   } else {
     /* Non-encrypted session */
-    session = coap_new_client_session(ctx, bind_addr, dst, proto);
+    if (doing_oscore) {
+      session = coap_new_client_session_oscore(ctx, bind_addr, dst, proto,
+                                               oscore_conf);
+    } else
+      session = coap_new_client_session(ctx, bind_addr, dst, proto);
   }
   return session;
 }
@@ -1489,7 +1602,7 @@ main(int argc, char **argv) {
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:no:p:rs:t:u:v:wA:B:C:G:H:J:K:L:M:NO:P:R:T:UV:X:")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:no:p:rs:t:u:v:wA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1631,6 +1744,12 @@ main(int argc, char **argv) {
     case 'X':
       csm_max_message_size = strtol(optarg, NULL, 10);
       break;
+    case 'E':
+      doing_oscore = cmdline_oscore(optarg);
+      if (!doing_oscore) {
+        exit(1);
+      }
+      break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
       exit(1);
@@ -1691,6 +1810,11 @@ main(int argc, char **argv) {
   if ( !ctx ) {
     coap_log_emerg("cannot create context\n" );
     goto finish;
+  }
+
+  if (doing_oscore) {
+    if (get_oscore_conf() == NULL)
+      goto finish;
   }
 
   coap_context_set_keepalive(ctx, ping_seconds);
@@ -1909,6 +2033,8 @@ main(int argc, char **argv) {
   free(tracked_tokens);
 
   coap_delete_optlist(optlist);
+  if (oscore_seq_num_fp)
+    fclose(oscore_seq_num_fp);
   close_output();
 
   return result;

@@ -307,6 +307,9 @@ void coap_session_mfree(coap_session_t *session) {
     coap_block_delete_lg_srcv(session, sq);
   }
 #endif /* COAP_SERVER_SUPPORT */
+#if HAVE_OSCORE
+  coap_delete_oscore_associations(session);
+#endif /* HAVE_OSCORE */
 }
 
 void coap_session_free(coap_session_t *session) {
@@ -1748,7 +1751,7 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint) {
   return szEndpoint;
 }
 #endif /* COAP_SERVER_SUPPORT */
-#ifdef COAP_CLIENT_SUPPORT
+#if COAP_CLIENT_SUPPORT
 void
 coap_session_set_no_observe_cancel(coap_session_t *session) {
   session->no_observe_cancel = 1;

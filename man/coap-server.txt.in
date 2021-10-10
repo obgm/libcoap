@@ -19,9 +19,11 @@ coap-server-notls
 
 SYNOPSIS
 --------
-*coap-server* [*-d* max] [*-e*] [*-g* group] [*-G* group_if] [*-l* loss]
-              [*-p* port] [-r] [*-v* num] [*-A* address] [*-L* value] [*-N*]
-              [*-P* scheme://addr[:port],[name1[,name2..]]] [*-V* num] [*-X* size]
+*coap-server* [*-d* max] [*-e*] [*-g* group] [*-l* loss] [*-p* port] [-r]
+              [*-v* num] [*-A* address] [*-E* oscore_conf_file[,seq_file]]
+              [*-G* group_if] [*-L* value] [*-N*]
+              [*-P* scheme://addr[:port],[name1[,name2..]]] [*-V* num]
+              [*-X* size]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
               [*-s* match_psk_sni_file] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
@@ -52,10 +54,6 @@ OPTIONS - General
    Join specified multicast 'group' on start up.
    *Note:* DTLS over multicast is not currently supported.
 
-*-G* group_if::
-   Use this interface for listening for the multicast group. This can be
-   different from the implied interface if the *-A* option is used.
-
 *-l* list::
    Fail to send some datagrams specified by a comma separated list of
    numbers or number ranges (debugging only).
@@ -81,6 +79,17 @@ OPTIONS - General
 
 *-A* address::
    The local address of the interface which the server has to listen on.
+
+*-E* oscore_conf_file[,seq_file]::
+   'oscore_conf_file' contains OSCORE configuration. See *coap-oscore-conf*(5)
+   for definitions. Optional 'seq_file' (which is created if needed) is used to
+   save the current transmit sequence number, so on server restart sequence
+   numbers continue to increase and are not reset to prevent anti-replay
+   mechanisms being triggered.
+
+*-G group_if::
+   Use this interface for listening for the multicast group. This can be
+   different from the implied interface if the *-A* option is used.
 
 *-L* value::
    Sum of one or more COAP_BLOCK_* flag values for different block handling
@@ -260,6 +269,11 @@ EXIT STATUS
 *1*::
    Failure (syntax or usage error; configuration error; document
    processing failure; unexpected error)
+
+SEE ALSO
+--------
+
+*coap-client*(5) and *coap-oscore-conf*(5)
 
 BUGS
 -----

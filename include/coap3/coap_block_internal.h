@@ -213,6 +213,10 @@ int coap_handle_response_get_block(coap_context_t *context,
                                    coap_pdu_t *sent,
                                    coap_pdu_t *rcvd,
                                    coap_recurse_t recursive);
+coap_mid_t
+coap_retransmit_oscore_pdu(coap_session_t *session,
+                           coap_pdu_t *pdu,
+                           coap_opt_t *echo);
 #endif /* COAP_CLIENT_SUPPORT */
 
 void coap_block_delete_lg_xmit(coap_session_t *session,

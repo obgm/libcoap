@@ -80,7 +80,8 @@ coap_asn1_tag_t asn1_tag_c(const uint8_t **ptr, int *constructed, int *class);
  * @param tlen The remaining size oof the asn.1 data
  * @param validate Call validate to verify tag data or @c NULL
  *
- * @return The asn.1 tag and data or @c NULL if not found
+ * @return The asn.1 tag and data (to be freed off by caller)
+ *         or @c NULL if not found
  */
 coap_binary_t *get_asn1_tag(coap_asn1_tag_t ltag, const uint8_t *ptr,
                             size_t tlen, asn1_validate validate);

@@ -142,6 +142,17 @@ typedef void (*coap_method_handler_t)
    COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_5_XX)
 
 /**
+ * Force all large traffic to this resource to be presented as a single body
+ * to the request handler.
+ */
+#define COAP_RESOURCE_FLAGS_FORCE_SINGLE_BODY 0x200
+
+/**
+ * Define this resource as an OSCORE enabled access only.
+ */
+#define COAP_RESOURCE_FLAGS_OSCORE_ONLY 0x400
+
+/**
  * Creates a new resource object and initializes the link field to the string
  * @p uri_path. This function returns the new coap_resource_t object.
  *
@@ -155,8 +166,15 @@ typedef void (*coap_method_handler_t)
  * @param flags    Flags for memory management, observe handling and multicast
  *                 support, comprising of zero or more COAP_RESOURCE_FLAGS_*
  *                 ored together.
- *                 If flags is set to 0 then the
- *                 COAP_RESOURCE_FLAGS_NOTIFY_NON is assumed.
+ *
+ *                 If flags does not have COAP_RESOURCE_FLAGS_NOTIFY_CON
+ *                 set, then COAP_RESOURCE_FLAGS_NOTIFY_NON is assumed and
+ *                 observe notifications will be sent as non-confirmable,
+ *                 except that every 5th notification will be confirmable.
+ *
+ *                 If COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS is set,
+ *                 observe notifications will always be sent
+ *                 non-confirmable.
  *
  * @return         A pointer to the new object or @c NULL on error.
  */
