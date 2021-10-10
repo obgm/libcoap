@@ -104,7 +104,7 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\utlist.h" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\libcoap-2.sym">
+    <CustomBuild Include="..\libcoap-3.sym">
       <FileType>Document</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -285,7 +285,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">
-    <TargetName>$(ProjectName)-2$(DbgSuffix)-openssl</TargetName>
+    <TargetName>$(ProjectName)-3$(DbgSuffix)-openssl</TargetName>
     <CustomBuildBeforeTargets />
     <CustomBuildAfterTargets />
     <IncludePath>$(IncludePath)</IncludePath>
@@ -302,13 +302,13 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">
     <CustomBuildBeforeTargets />
     <CustomBuildAfterTargets />
-    <TargetName>$(ProjectName)-2-openssl</TargetName>
+    <TargetName>$(ProjectName)-3-openssl</TargetName>
     <IncludePath>$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">
-    <TargetName>$(ProjectName)-2$(DbgSuffix)-openssl</TargetName>
+    <TargetName>$(ProjectName)-3$(DbgSuffix)-openssl</TargetName>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
@@ -318,7 +318,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">
-    <TargetName>$(ProjectName)-2-openssl</TargetName>
+    <TargetName>$(ProjectName)-3-openssl</TargetName>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
@@ -328,7 +328,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">
-    <TargetName>$(ProjectName)-2</TargetName>
+    <TargetName>$(ProjectName)-3</TargetName>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
