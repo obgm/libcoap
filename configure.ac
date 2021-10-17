@@ -435,7 +435,7 @@ if test "x$build_dtls" = "xyes"; then
         AC_MSG_NOTICE([The use of GnuTLS was explicitly requested with configure option '--with-gnutls'!])
 
         # check for valid GnuTLS version
-        gnutls_version=`pkg-config --modversion gnutls`
+        gnutls_version=`$PKG_CONFIG --modversion gnutls`
         AX_CHECK_GNUTLS_VERSION
         have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
@@ -453,7 +453,7 @@ if test "x$build_dtls" = "xyes"; then
         AC_MSG_NOTICE([The use of OpenSSL was explicitly requested with configure option '--with-openssl'!])
 
         # check for valid OpenSSL version
-        openssl_version=`pkg-config --modversion openssl`
+        openssl_version=`$PKG_CONFIG --modversion openssl`
         AX_CHECK_OPENSSL_VERSION
         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
@@ -495,7 +495,7 @@ if test "x$build_dtls" = "xyes"; then
       # The user hasn't requested the use of a specific cryptography library
       # we try first GnuTLS for usability ...
       if test "x$have_gnutls" = "xyes"; then
-          gnutls_version=`pkg-config --modversion gnutls`
+          gnutls_version=`$PKG_CONFIG --modversion gnutls`
           AX_CHECK_GNUTLS_VERSION
           AC_MSG_NOTICE([Using auto selected library GnuTLS for DTLS support!])
           with_gnutls_auto="yes"
@@ -505,7 +505,7 @@ if test "x$build_dtls" = "xyes"; then
 
       # ... and if not found check OpenSSL is suitable.
       elif test "x$have_openssl" = "xyes"; then
-          openssl_version=`pkg-config --modversion openssl`
+          openssl_version=`$PKG_CONFIG --modversion openssl`
           AX_CHECK_OPENSSL_VERSION
           AC_MSG_NOTICE([Using auto selected library OpenSSL for DTLS support!])
           with_openssl_auto="yes"
