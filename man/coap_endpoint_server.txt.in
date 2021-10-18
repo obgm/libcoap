@@ -557,7 +557,7 @@ setup_client_session_psk (const char *uri,
 SEE ALSO
 --------
 *coap_block*(3), *coap_context*(3), *coap_encryption*(3),
-*coap_endpoint_client*()3), *coap_resource*(3), *coap_session*(3) and
+*coap_endpoint_client*(3), *coap_resource*(3), *coap_session*(3) and
 *coap_tls_library*(3)
 
 FURTHER INFORMATION

@@ -444,7 +444,7 @@ int main(int argc, char *argv[]){
 
 SEE ALSO
 --------
-*coap_block*(3), *coap_context*(3)
+*coap_block*(3) and *coap_context*(3)
 
 FURTHER INFORMATION
 -------------------
