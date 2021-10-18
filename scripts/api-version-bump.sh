@@ -51,5 +51,10 @@ sed -i "s/^\(set(LIBCOAP_API_VERSION \+\)$LIBCOAP_API_VERSION\( *)\)/\1$NEW_VERS
 # Adjust LibCoAPIncludeDir in win32/libcoap.props
 sed -i "s/\(<LibCoAPIncludeDir>include\\\coap\)$LIBCOAP_API_VERSION/\1$NEW_VERSION/" win32/libcoap.props
 
+# Adjust API version in in win32/libcoap.vcxproj
+sed -i "s/\(<CustomBuild Include=\"\.\.\\\libcoap-\)$LIBCOAP_API_VERSION/\1$NEW_VERSION/" win32/libcoap.vcxproj win32/libcoap.vcxproj.filters
+sed -i "s/\(<TargetName>\$(ProjectName)-\)$LIBCOAP_API_VERSION/\1$NEW_VERSION/" win32/libcoap.vcxproj
+sed -i "s/\(libcoap-\)$LIBCOAP_API_VERSION/\1$NEW_VERSION/g" win32/install/install.vcxproj
+
 # Finally, increase LIBCOAP_API_VERSION in configure.ac and re-run autoconf
 sed -i "s/^\(LIBCOAP_API_VERSION=\)$LIBCOAP_API_VERSION/\1$NEW_VERSION/" configure.ac && autoreconf
