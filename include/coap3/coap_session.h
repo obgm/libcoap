@@ -288,6 +288,15 @@ const coap_bin_const_t * coap_session_get_psk_hint(
                                                const coap_session_t *session);
 
 /**
+ * Get the server session's current PSK identity (PSK).
+ *
+ * @param session  The current coap_session_t object.
+ *
+ * @return PSK identity if successful, else @c NULL.
+ */
+const coap_bin_const_t *coap_session_get_psk_identity(
+                                               const coap_session_t *session);
+/**
  * Get the session's current pre-shared key (PSK).
  *
  * @param session  The current coap_session_t object.

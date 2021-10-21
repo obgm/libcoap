@@ -1132,6 +1132,18 @@ coap_session_get_psk_hint(const coap_session_t *session) {
 #endif /* COAP_SERVER_SUPPORT */
 
 const coap_bin_const_t *
+coap_session_get_psk_identity(const coap_session_t *session) {
+  const coap_bin_const_t *psk_identity = NULL;
+  if (session) {
+    psk_identity = session->psk_identity;
+    if (psk_identity == NULL) {
+      psk_identity = &session->cpsk_setup_data.psk_info.identity;
+    }
+  }
+  return psk_identity;
+}
+
+const coap_bin_const_t *
 coap_session_get_psk_key(const coap_session_t *session) {
   if (session)
     return session->psk_key;

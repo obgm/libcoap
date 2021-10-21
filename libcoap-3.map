@@ -188,6 +188,7 @@ global:
   coap_session_get_max_retransmit;
   coap_session_get_proto;
   coap_session_get_psk_hint;
+  coap_session_get_psk_identity;
   coap_session_get_psk_key;
   coap_session_get_state;
   coap_session_get_tls;
