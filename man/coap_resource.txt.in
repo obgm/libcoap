@@ -273,7 +273,7 @@ init_resources(coap_context_t *ctx) {
 
   /* Create a resource to return general information */
   r = coap_resource_init(NULL, 0);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_index);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
   /* Document resource for '.well-known/core' request */
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
@@ -286,9 +286,9 @@ init_resources(coap_context_t *ctx) {
   r = coap_resource_init(coap_make_str_const("time"),
                          COAP_RESOURCE_FLAGS_NOTIFY_CON);
   coap_resource_set_get_observable(r, 1);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
-  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
-  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_time);
+  coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_time);
+  coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
 
   /* Document resource for 'time' request */
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
@@ -439,11 +439,11 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
    */
   r = coap_resource_init((coap_str_const_t*)uri_path,
         COAP_RESOURCE_FLAGS_RELEASE_URI | COAP_RESOURCE_FLAGS_NOTIFY_NON);
-  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put);
-  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete);
+  coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put);
+  coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete);
   /* We possibly want to Observe the GETs */
   coap_resource_set_get_observable(r, 1);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get);
   coap_add_resource(coap_session_get_context(session), r);
 
   /* Do the PUT for this first call */
@@ -464,9 +464,9 @@ init_resources(coap_context_t *ctx) {
   r = coap_resource_unknown_init(hnd_unknown_put);
   /*
    * Additional handlers can be added - for example
-   *  coap_register_handler(r, COAP_REQUEST_POST, hnd_post_unknown);
-   *  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_unknown);
-   *  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_unknown);
+   *  coap_register_request_handler(r, COAP_REQUEST_POST, hnd_post_unknown);
+   *  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_unknown);
+   *  coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete_unknown);
    */
   coap_add_resource(ctx, r);
 

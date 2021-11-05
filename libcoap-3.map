@@ -158,6 +158,7 @@ global:
   coap_register_option;
   coap_register_ping_handler;
   coap_register_pong_handler;
+  coap_register_request_handler;
   coap_register_response_handler;
   coap_resize_binary;
   coap_resource_get_uri_path;
