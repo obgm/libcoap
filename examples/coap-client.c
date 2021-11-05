@@ -1760,7 +1760,18 @@ main(int argc, char **argv) {
 
   /* Send out the request 'n' times (default is 1) */
   for (i = 0; i < repeat_count; i++) {
-    if (! (pdu = coap_new_request(ctx, session, method, &optlist, payload.s, payload.length))) {
+    uint8_t *data = NULL;
+    size_t data_len = 0;
+    if (payload.length) {
+      /* Create some new data to use for this iteration */
+      data = coap_malloc(payload.length);
+      if (data == NULL)
+        goto finish;
+      memcpy(data, payload.s, payload.length);
+      data_len = payload.length;
+    }
+    if (! (pdu = coap_new_request(ctx, session, method, &optlist, data,
+                                  data_len))) {
       goto finish;
     }
 
@@ -1833,6 +1844,7 @@ main(int argc, char **argv) {
   coap_free(ca_mem);
   coap_free(cert_mem);
   coap_free(key_mem);
+  coap_free(payload.s);
   for (i = 0; i < valid_ihs.count; i++) {
     free(valid_ihs.ih_list[i].hint_match);
     coap_delete_bin_const(valid_ihs.ih_list[i].new_identity);
