@@ -72,6 +72,8 @@ static coap_uri_t proxy = { {0, NULL}, 0, {0, NULL}, {0, NULL}, 0 };
 static int proxy_scheme_option = 0;
 static int uri_host_option = 0;
 static unsigned int ping_seconds = 0;
+
+#define REPEAT_DELAY_MS 1000
 static size_t repeat_count = 1;
 
 /* reading is done when this flag is set */
@@ -262,8 +264,10 @@ coap_new_request(coap_context_t *ctx,
   size_t tokenlen;
   (void)ctx;
 
-  if (!(pdu = coap_new_pdu(msgtype, m, session)))
+  if (!(pdu = coap_new_pdu(msgtype, m, session))) {
+    free_xmit_data(session, data);
     return NULL;
+  }
 
   /*
    * Create unique token for this request for handling unsolicited /
@@ -541,8 +545,9 @@ usage( const char *program, const char *version) {
      "\t-A type\t\tAccepted media type\n"
      "\t-B seconds\tBreak operation after waiting given seconds\n"
      "\t       \t\t(default is %d)\n"
-     "\t-G count\tRepeat the Request 'count' times. Must have a value\n"
-     "\t       \t\tbetween 1 and 255 inclusive. Default is '1'\n"
+     "\t-G count\tRepeat the Request 'count' times with a second delay\n"
+     "\t       \t\tbetween each one. Must have a value between 1 and 255\n"
+     "\t       \t\tinclusive. Default is '1'\n"
      "\t-H hoplimit\tSet the Hop Limit count to hoplimit for proxies. Must\n"
      "\t       \t\thave a value between 1 and 255 inclusive.\n"
      "\t       \t\tDefault is '16'\n"
@@ -1514,6 +1519,9 @@ main(int argc, char **argv) {
   int create_uri_opts = 1;
   size_t i;
   coap_uri_scheme_t scheme;
+  uint32_t repeat_ms = REPEAT_DELAY_MS;
+  uint8_t *data = NULL;
+  size_t data_len = 0;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
@@ -1772,18 +1780,26 @@ main(int argc, char **argv) {
   if (flags & FLAGS_BLOCK)
     set_blocksize();
 
-  /* Send out the request 'n' times (default is 1) */
-  for (i = 0; i < repeat_count; i++) {
-    if (! (pdu = coap_new_request(ctx, session, method, &optlist, payload.s, payload.length))) {
+  /* Send the first (and may be only PDU) */
+  if (payload.length) {
+    /* Create some new data to use for this iteration */
+    data = coap_malloc(payload.length);
+    if (data == NULL)
       goto finish;
-    }
-
-    coap_log(LOG_DEBUG, "sending CoAP request:\n");
-    if (coap_get_log_level() < LOG_DEBUG)
-      coap_show_pdu(LOG_INFO, pdu);
-
-    coap_send(session, pdu);
+    memcpy(data, payload.s, payload.length);
+    data_len = payload.length;
   }
+  if (!(pdu = coap_new_request(ctx, session, method, &optlist, data,
+        data_len))) {
+    goto finish;
+  }
+
+  coap_log(LOG_DEBUG, "sending CoAP request:\n");
+  if (coap_get_log_level() < LOG_DEBUG)
+    coap_show_pdu(LOG_INFO, pdu);
+
+  coap_send(session, pdu);
+  repeat_count--;
 
   if (is_mcast && wait_seconds == DEFAULT_WAIT_TIME)
     /* Allow for other servers to respond within DEFAULT_LEISURE RFC7252 8.2 */
@@ -1807,11 +1823,25 @@ main(int argc, char **argv) {
 #endif
 
   while(!quit &&
-        !(ready && !tracked_tokens_count && !is_mcast && coap_can_exit(ctx))) {
+        !(ready && !tracked_tokens_count && !is_mcast && !repeat_count &&
+          coap_can_exit(ctx)) ) {
+    uint32_t timeout_ms;
+    /*
+     * 3 factors determine how long to wait in coap_io_process()
+     *   Remaining overall wait time (wait_ms)
+     *   Remaining overall observe unsolicited response time (obs_ms)
+     *   Delay of up to one second before sending off the next request
+     */
+    if (obs_ms) {
+      timeout_ms = min(wait_ms, obs_ms);
+    } else {
+      timeout_ms = wait_ms;
+    }
+    if (repeat_count) {
+      timeout_ms = min(timeout_ms, repeat_ms);
+    }
 
-    result = coap_io_process( ctx, wait_ms == 0 ?
-                                 obs_ms : obs_ms == 0 ?
-                                 min(wait_ms, 1000) : min( wait_ms, obs_ms ) );
+    result = coap_io_process(ctx, timeout_ms);
 
     if ( result >= 0 ) {
       if ( wait_ms > 0 && !wait_ms_reset ) {
@@ -1840,6 +1870,34 @@ main(int argc, char **argv) {
           obs_ms -= result;
         }
       }
+      if (ready && repeat_count) {
+        /* Send off next request if appropriate */
+        if (repeat_ms > (unsigned)result) {
+          repeat_ms -= (unsigned)result;
+        } else {
+          /* Doing this once a second */
+          repeat_ms = REPEAT_DELAY_MS;
+          if (payload.length) {
+            /* Create some new data to use for this iteration */
+            data = coap_malloc(payload.length);
+            if (data == NULL)
+              goto finish;
+            memcpy(data, payload.s, payload.length);
+            data_len = payload.length;
+          }
+          if (!(pdu = coap_new_request(ctx, session, method, &optlist,
+                                       data, data_len))) {
+            goto finish;
+          }
+          coap_log(LOG_DEBUG, "sending CoAP request:\n");
+          if (coap_get_log_level() < LOG_DEBUG)
+            coap_show_pdu(LOG_INFO, pdu);
+
+          ready = 0;
+          coap_send(session, pdu);
+          repeat_count--;
+        }
+      }
       wait_ms_reset = 0;
       obs_ms_reset = 0;
     }
@@ -1852,6 +1910,7 @@ main(int argc, char **argv) {
   coap_free(ca_mem);
   coap_free(cert_mem);
   coap_free(key_mem);
+  coap_free(payload.s);
   for (i = 0; i < valid_ihs.count; i++) {
     free(valid_ihs.ih_list[i].hint_match);
     coap_delete_bin_const(valid_ihs.ih_list[i].new_identity);
