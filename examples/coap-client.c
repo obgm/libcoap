@@ -90,6 +90,7 @@ static coap_string_t payload = { 0, NULL };       /* optional payload to send */
 static int reliable = 0;
 
 static int add_nl = 0;
+static int is_mcast = 0;
 
 unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
 
@@ -128,8 +129,9 @@ method_t method = 1;                    /* the method we are using in our reques
 coap_block_t block = { .num = 0, .m = 0, .szx = 6 };
 uint16_t last_block1_mid = 0;
 
+#define DEFAULT_WAIT_TIME 90
 
-unsigned int wait_seconds = 90;                /* default timeout in seconds */
+unsigned int wait_seconds = DEFAULT_WAIT_TIME; /* default timeout in seconds */
 unsigned int wait_ms = 0;
 int wait_ms_reset = 0;
 int obs_started = 0;
@@ -474,7 +476,8 @@ message_handler(coap_session_t *session COAP_UNUSED,
     }
 
   }
-  track_flush_token(&token);
+  if (!is_mcast)
+    track_flush_token(&token);
 
   /* our job is done, we can exit at any time */
   ready = doing_observe ? coap_check_option(received,
@@ -1443,6 +1446,7 @@ get_session(
 ) {
   coap_session_t *session = NULL;
 
+  is_mcast = coap_is_mcast(dst);
   if ( local_addr ) {
     int s;
     struct addrinfo hints;
@@ -1771,6 +1775,10 @@ main(int argc, char **argv) {
     coap_send(session, pdu);
   }
 
+  if (is_mcast && wait_seconds == DEFAULT_WAIT_TIME)
+    /* Allow for other servers to respond within DEFAULT_LEISURE RFC7252 8.2 */
+    wait_seconds = COAP_DEFAULT_LEISURE;
+
   wait_ms = wait_seconds * 1000;
   coap_log(LOG_DEBUG, "timeout is set to %u seconds\n", wait_seconds);
 
@@ -1788,7 +1796,8 @@ main(int argc, char **argv) {
   sigaction (SIGPIPE, &sa, NULL);
 #endif
 
-  while(!quit && !(ready && !tracked_tokens_count && coap_can_exit(ctx)) ) {
+  while(!quit &&
+        !(ready && !tracked_tokens_count && !is_mcast && coap_can_exit(ctx))) {
 
     result = coap_io_process( ctx, wait_ms == 0 ?
                                  obs_ms : obs_ms == 0 ?
