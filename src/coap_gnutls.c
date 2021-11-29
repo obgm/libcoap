@@ -2,7 +2,7 @@
  * coap_gnutls.c -- GnuTLS Datagram Transport Layer Support for libcoap
  *
  * Copyright (C) 2017 Dag Bjorklund <dag.bjorklund@comsel.fi>
- * Copyright (C) 2018-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -2374,7 +2374,12 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now) {
   return 0;
 }
 
-void coap_dtls_handle_timeout(coap_session_t *c_session) {
+/*
+ * return 1 timed out
+ *        0 still timing out
+ */
+int
+coap_dtls_handle_timeout(coap_session_t *c_session) {
   coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
 
   assert(g_env != NULL && c_session->state == COAP_SESSION_STATE_HANDSHAKE);
@@ -2384,9 +2389,11 @@ void coap_dtls_handle_timeout(coap_session_t *c_session) {
     /* Too many retries */
     g_env->doing_dtls_timeout = 0;
     coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
+    return 1;
   }
   else {
     g_env->doing_dtls_timeout = 0;
+    return 0;
   }
 }
 

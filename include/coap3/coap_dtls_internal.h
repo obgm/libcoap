@@ -228,8 +228,10 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *coap_session,
  * Handle a DTLS timeout expiration.
  *
  * @param coap_session The CoAP session.
+ *
+ * @return @c 1 timed out or @c 0 still timing out
  */
-void coap_dtls_handle_timeout(coap_session_t *coap_session);
+int coap_dtls_handle_timeout(coap_session_t *coap_session);
 
 /**
  * Handling incoming data from a DTLS peer.

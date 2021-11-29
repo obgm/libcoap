@@ -1,7 +1,8 @@
 /*
  * coap_notls.c -- Stub Datagram Transport Layer Support for libcoap
  *
- * Copyright (C) 2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2016      Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2021-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -150,7 +151,13 @@ coap_dtls_get_timeout(coap_session_t *session COAP_UNUSED, coap_tick_t now COAP_
   return 0;
 }
 
-void coap_dtls_handle_timeout(coap_session_t *session COAP_UNUSED) {
+/*
+ * return 1 timed out
+ *        0 still timing out
+ */
+int
+coap_dtls_handle_timeout(coap_session_t *session COAP_UNUSED) {
+  return 0;
 }
 
 int

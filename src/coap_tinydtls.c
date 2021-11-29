@@ -2,7 +2,7 @@
  * coap_tinydtls.c -- Datagram Transport Layer Support for libcoap with tinydtls
  *
  * Copyright (C) 2016-2020 Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2020 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2020-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -654,9 +654,14 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *session, coap_tick_t now) {
   return 0;
 }
 
-void coap_dtls_handle_timeout(coap_session_t *session) {
+/*
+ * return 1 timed out
+ *        0 still timing out
+ */
+int
+coap_dtls_handle_timeout(coap_session_t *session) {
   (void)session;
-  return;
+  return 0;
 }
 
 int

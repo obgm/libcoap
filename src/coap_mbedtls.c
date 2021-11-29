@@ -1947,7 +1947,12 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now)
   return 0;
 }
 
-void coap_dtls_handle_timeout(coap_session_t *c_session)
+/*
+ * return 1 timed out
+ *        0 still timing out
+ */
+int
+coap_dtls_handle_timeout(coap_session_t *c_session)
 {
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
 
@@ -1957,8 +1962,9 @@ void coap_dtls_handle_timeout(coap_session_t *c_session)
       (do_mbedtls_handshake(c_session, m_env) < 0)) {
     /* Too many retries */
     coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
+    return 1;
   }
-  return;
+  return 0;
 }
 
 /*
