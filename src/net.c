@@ -1487,7 +1487,7 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
 #if !COAP_DISABLE_TCP
         bytes_written = coap_session_write(
           session,
-          q->pdu->token - q->pdu->hdr_size - session->partial_write,
+          q->pdu->token - q->pdu->hdr_size + session->partial_write,
           q->pdu->used_size + q->pdu->hdr_size - session->partial_write
         );
 #endif /* !COAP_DISABLE_TCP */
