@@ -345,13 +345,15 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     node->session = NULL;
     node->t = 0;
   } else {
-    coap_queue_t *q = NULL;
-    /* Check that the same mid is not getting re-used in violation of RFC7252 */
-    LL_FOREACH(session->delayqueue, q) {
-      if (q->id == pdu->mid) {
-        coap_log(LOG_ERR, "**  %s: mid=0x%x: already in-use - dropped\n",
-                 coap_session_str(session), pdu->mid);
-        return COAP_INVALID_MID;
+    if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+      coap_queue_t *q = NULL;
+      /* Check same mid is not getting re-used in violation of RFC7252 */
+      LL_FOREACH(session->delayqueue, q) {
+        if (q->id == pdu->mid) {
+          coap_log(LOG_ERR, "**  %s: mid=0x%x: already in-use - dropped\n",
+                   coap_session_str(session), pdu->mid);
+          return COAP_INVALID_MID;
+        }
       }
     }
     node = coap_new_node();
