@@ -92,17 +92,20 @@ coap_cache_derive_key_w_ignore(const coap_session_t *session,
 
   if (session_based == COAP_CACHE_IS_SESSION_BASED) {
     /* Include the session ptr */
-    if (!coap_digest_update(dctx, (const uint8_t*)session, sizeof(session))) {
-      coap_digest_free(dctx);
-      return NULL;
+    if (!coap_digest_update(dctx, (const uint8_t*)&session, sizeof(session))) {
+      goto update_fail;
     }
   }
   while ((option = coap_option_next(&opt_iter))) {
     if (is_cache_key(opt_iter.number, cache_ignore_count,
                      cache_ignore_options)) {
-      if (!coap_digest_update(dctx, option, coap_opt_size(option))) {
-        coap_digest_free(dctx);
-        return NULL;
+      if (!coap_digest_update(dctx, (const uint8_t *)&opt_iter.number,
+                              sizeof(opt_iter.number))) {
+        goto update_fail;
+      }
+      if (!coap_digest_update(dctx, coap_opt_value(option),
+                              coap_opt_length(option))) {
+        goto update_fail;
       }
     }
   }
@@ -114,8 +117,7 @@ coap_cache_derive_key_w_ignore(const coap_session_t *session,
     const uint8_t *data;
     if (coap_get_data(pdu, &len, &data)) {
       if (!coap_digest_update(dctx, data, len)) {
-        coap_digest_free(dctx);
-        return NULL;
+        goto update_fail;
       }
     }
   }
@@ -129,6 +131,9 @@ coap_cache_derive_key_w_ignore(const coap_session_t *session,
     memcpy(cache_key->key, digest.key, sizeof(cache_key->key));
   }
   return cache_key;
+update_fail:
+  coap_digest_free(dctx);
+  return NULL;
 }
 
 coap_cache_key_t *
