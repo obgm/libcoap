@@ -57,8 +57,7 @@ typedef struct coap_rblock_t {
  */
 typedef struct coap_l_block1_t {
   coap_binary_t *app_token; /**< original PDU token */
-  uint8_t token[8];      /**< last used token */
-  size_t token_length;   /**< length of token */
+  uint64_t state_token;  /**< state token */
   uint32_t count;        /**< the number of packets sent for payload */
 } coap_l_block1_t;
 
@@ -71,6 +70,7 @@ typedef struct coap_l_block2_t {
   coap_string_t *query;  /**< Associated query for the resource */
   uint64_t etag;         /**< ETag value */
   coap_time_t maxage_expire; /**< When this entry expires */
+  coap_pdu_code_t request_method; /**< Method used to request this data */
 } coap_l_block2_t;
 
 /**
@@ -101,27 +101,25 @@ struct coap_lg_xmit_t {
  */
 struct coap_lg_crcv_t {
   struct coap_lg_crcv_t *next;
-  uint8_t observe[3];    /**< Observe data (if set) (only 24 bits) */
+  uint8_t observe[3];    /**< Observe data (if observe_set) (only 24 bits) */
   uint8_t observe_length;/**< Length of observe data */
   uint8_t observe_set;   /**< Set if this is an observe receive PDU */
+  uint8_t szx;           /**< size of individual blocks */
   uint8_t etag_set;      /**< Set if ETag is in receive PDU */
   uint8_t etag_length;   /**< ETag length */
   uint8_t etag[8];       /**< ETag for block checking */
   uint16_t content_format; /**< Content format for the set of blocks */
   uint8_t last_type;     /**< Last request type (CON/NON) */
   uint8_t initial;       /**< If set, has not been used yet */
-  uint8_t szx;           /**< size of individual blocks */
+  uint16_t block_option; /**< Block option in use */
+  uint16_t retry_counter; /**< Retry counter (part of state token) */
   size_t total_len;      /**< Length as indicated by SIZE2 option */
   coap_binary_t *body_data; /**< Used for re-assembling entire body */
   coap_binary_t *app_token; /**< app requesting PDU token */
-  uint8_t base_token[8]; /**< established base PDU token */
-  size_t base_token_length; /**< length of token */
-  uint8_t token[8];      /**< last used token */
-  size_t token_length;   /**< length of token */
+  uint64_t state_token; /**< state token (and observe token) */
   coap_pdu_t pdu;        /**< skeletal PDU */
   coap_rblock_t rec_blocks; /** < list of received blocks */
   coap_tick_t last_used; /**< Last time all data sent or 0 */
-  uint16_t block_option; /**< Block option in use */
 };
 #endif /* COAP_CLIENT_SUPPORT */
 
@@ -207,37 +205,6 @@ coap_tick_t coap_block_check_lg_xmit_timeouts(coap_session_t *session,
                                               coap_tick_t now);
 
 /**
- * The function that does all the work for the coap_add_data_large*()
- * functions.
- *
- * @param session  The session to associate the data with.
- * @param pdu      The PDU to associate the data with.
- * @param resource The resource to associate the data with (BLOCK2).
- * @param query    The query to associate the data with (BLOCK2).
- * @param maxage   The maxmimum life of the data. If @c -1, then there
- *                 is no maxage (BLOCK2).
- * @param etag     ETag to use if not 0 (BLOCK2).
- * @param length   The length of data to transmit.
- * @param data     The data to transmit.
- * @param release_func The function to call to de-allocate @p data or NULL if
- *                 the function is not required.
- * @param app_ptr  A Pointer that the application can provide for when
- *                 release_func() is called.
- *
- * @return @c 1 if transmission initiation is successful, else @c 0.
- */
-int coap_add_data_large_internal(coap_session_t *session,
-                        coap_pdu_t *pdu,
-                        coap_resource_t *resource,
-                        const coap_string_t *query,
-                        int maxage,
-                        uint64_t etag,
-                        size_t length,
-                        const uint8_t *data,
-                        coap_release_large_data_t release_func,
-                        void *app_ptr);
-
-/**
  * The function checks that the code in a newly formed lg_xmit created by
  * coap_add_data_large_response() is updated.
  *
@@ -245,9 +212,11 @@ int coap_add_data_large_internal(coap_session_t *session,
  * @param response The response PDU to to check
  * @param resource The requested resource
  * @param query    The requested query
+ * @param request_method The requested method
  */
 void coap_check_code_lg_xmit(coap_session_t *session, coap_pdu_t *response,
-                             coap_resource_t *resource, coap_string_t *query);
+                             coap_resource_t *resource, coap_string_t *query,
+                             coap_pdu_code_t request_method);
 
 /** @} */
 
