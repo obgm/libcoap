@@ -2690,9 +2690,12 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
        * defined for it
        * Example set up code:-
        *   r = coap_resource_unknown_init(hnd_put_unknown);
-       *   coap_register_handler(r, COAP_REQUEST_POST, hnd_post_unknown);
-       *   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_unknown);
-       *   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_unknown);
+       *   coap_register_request_handler(r, COAP_REQUEST_POST,
+       *                                 hnd_post_unknown);
+       *   coap_register_request_handler(r, COAP_REQUEST_GET,
+       *                                 hnd_get_unknown);
+       *   coap_register_request_handler(r, COAP_REQUEST_DELETE,
+       *                                 hnd_delete_unknown);
        *   coap_add_resource(ctx, r);
        *
        * Note: It is not possible to observe the unknown_resource, a separate

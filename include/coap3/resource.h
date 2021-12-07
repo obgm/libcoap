@@ -247,14 +247,26 @@ void coap_add_resource(coap_context_t *context, coap_resource_t *resource);
 int coap_delete_resource(coap_context_t *context, coap_resource_t *resource);
 
 /**
- * Registers the specified @p handler as message handler for the request type @p
- * method
+ * Registers the specified @p handler as message handler for the request type
+ * @p method
  *
  * @param resource The resource for which the handler shall be registered.
  * @param method   The CoAP request method to handle.
  * @param handler  The handler to register with @p resource.
  */
 void coap_register_handler(coap_resource_t *resource,
+                           coap_request_t method,
+                           coap_method_handler_t handler);
+
+/**
+ * Registers the specified @p handler as message handler for the request type
+ * @p method
+ *
+ * @param resource The resource for which the handler shall be registered.
+ * @param method   The CoAP request method to handle.
+ * @param handler  The handler to register with @p resource.
+ */
+void coap_register_request_handler(coap_resource_t *resource,
                            coap_request_t method,
                            coap_method_handler_t handler);
 

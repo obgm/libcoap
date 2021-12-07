@@ -228,7 +228,7 @@ init_resources(coap_context_t *ctx)
                          COAP_RESOURCE_FLAGS_NOTIFY_CON);
 
   /* We are using a generic GET handler here */
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_generic);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_generic);
 
   coap_resource_set_get_observable(r, 1);
 

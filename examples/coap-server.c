@@ -1566,11 +1566,11 @@ hnd_unknown_put(coap_resource_t *resource COAP_UNUSED,
   r = coap_resource_init((coap_str_const_t*)uri_path,
         COAP_RESOURCE_FLAGS_RELEASE_URI | resource_flags);
   coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Dynamic\""), 0);
-  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put);
-  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete);
+  coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put);
+  coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete);
   /* We possibly want to Observe the GETs */
   coap_resource_set_get_observable(r, 1);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get);
   coap_add_resource(coap_session_get_context(session), r);
 
   /* Do the PUT for this first call */
@@ -1753,7 +1753,7 @@ init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
   r = coap_resource_init(NULL, 0);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_index);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
   coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"General Info\""), 0);
@@ -1763,10 +1763,10 @@ init_resources(coap_context_t *ctx) {
   my_clock_base = clock_offset;
 
   r = coap_resource_init(coap_make_str_const("time"), resource_flags);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_fetch_time);
-  coap_register_handler(r, COAP_REQUEST_FETCH, hnd_get_fetch_time);
-  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
-  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_fetch_time);
+  coap_register_request_handler(r, COAP_REQUEST_FETCH, hnd_get_fetch_time);
+  coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_time);
+  coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
   coap_resource_set_get_observable(r, 1);
 
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
@@ -1785,15 +1785,15 @@ init_resources(coap_context_t *ctx) {
 
   if (coap_async_is_supported()) {
     r = coap_resource_init(coap_make_str_const("async"), 0);
-    coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
+    coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_async);
 
     coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
     coap_add_resource(ctx, r);
   }
 
   r = coap_resource_init(coap_make_str_const("example_data"), 0);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_example_data);
-  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_example_data);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_example_data);
+  coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_example_data);
   coap_resource_set_get_observable(r, 1);
 
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);

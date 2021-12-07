@@ -472,9 +472,9 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
   resource_val.s = loc;
   resource_val.length = loc_size;
   r = coap_resource_init(&resource_val, 0);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
-  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_resource);
-  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_resource);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_resource);
+  coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_resource);
+  coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete_resource);
 
   if (ins.s) {
     buf = (unsigned char *)coap_malloc(ins.length + 2);
@@ -552,8 +552,8 @@ init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
   r = coap_resource_init(coap_make_str_const(RD_ROOT_STR), 0);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_rd);
-  coap_register_handler(r, COAP_REQUEST_POST, hnd_post_rd);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_rd);
+  coap_register_request_handler(r, COAP_REQUEST_POST, hnd_post_rd);
 
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("40"), 0);
   coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("\"core.rd\""), 0);

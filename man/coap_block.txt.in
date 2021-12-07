@@ -437,7 +437,7 @@ int main(int argc, char *argv[]) {
   r = coap_resource_init(coap_make_str_const("time"),
                          COAP_RESOURCE_FLAGS_NOTIFY_CON);
   coap_resource_set_get_observable(r, 1);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_time);
 
   /* Document resource for 'time' request */
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
