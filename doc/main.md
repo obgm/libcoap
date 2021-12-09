@@ -38,6 +38,8 @@ The following RFCs are supported
 
 * RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option
 
+* RFC9175: CoAP: Echo, Request-Tag, and Token Processing
+
 There is (D)TLS support for the following libraries
 
 * OpenSSL (Minimum version 1.1.0) [PKI, PSK and PKCS11]

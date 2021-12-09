@@ -2,8 +2,8 @@
  * coap_block_internal.h -- Structures, Enums & Functions that are not
  * exposed to application programming
  *
- * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2021      Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2021-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -191,7 +191,8 @@ int coap_handle_request_put_block(coap_context_t *context,
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
-int coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *rcvd);
+int coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
+                                    coap_pdu_t *rcvd);
 
 int coap_handle_response_get_block(coap_context_t *context,
                                    coap_session_t *session,

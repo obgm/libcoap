@@ -70,6 +70,8 @@ See
 
 "RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option"
 
+"RFC9175: CoAP: Echo, Request-Tag, and Token Processing"
+
 for further information.
 
 BUGS
