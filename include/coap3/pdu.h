@@ -2,6 +2,7 @@
  * pdu.h -- CoAP message structure
  *
  * Copyright (C) 2010-2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2021-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -130,7 +131,9 @@ typedef enum coap_request_t {
 #define COAP_OPTION_PROXY_URI      35 /* CU-___U, String, 1-1034 B, RFC7252 */
 #define COAP_OPTION_PROXY_SCHEME   39 /* CU-___U, String,  1-255 B, RFC7252 */
 #define COAP_OPTION_SIZE1          60 /* __N_E_U, uint,      0-4 B, RFC7252 */
+#define COAP_OPTION_ECHO          252 /* _N__E_U, opaque,   0-40 B, RFC9175 */
 #define COAP_OPTION_NORESPONSE    258 /* _U-_E_U, uint,      0-1 B, RFC7967 */
+#define COAP_OPTION_RTAG          292 /* ___RE_U, opaque,    0-8 B, RFC9175 */
 
 #define COAP_MAX_OPT            65535 /**< the highest option number we know */
 

@@ -2,6 +2,7 @@
  * coap_event.h -- libcoap Event API
  *
  * Copyright (C) 2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2021-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -54,7 +55,7 @@ typedef enum coap_event_t {
   COAP_EVENT_SESSION_FAILED    = 0x2003,
 
 /**
- * (Q-)BLOCK receive errors
+ * (Q-)Block receive errors
  */
   COAP_EVENT_PARTIAL_BLOCK     = 0x3001,
 

@@ -2,6 +2,7 @@
  * block.h -- block transfer
  *
  * Copyright (C) 2010-2012,2014-2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2022                Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -24,7 +25,7 @@
 /**
  * @ingroup application_api
  * @defgroup block Block Transfer
- * API for handling PDUs using CoAP BLOCK options (RFC7959)
+ * API for handling PDUs using CoAP Block options (RFC7959)
  * @{
  */
 
@@ -239,7 +240,7 @@ coap_block_build_body(coap_binary_t *body_data, size_t length,
 /**
  * Adds the appropriate part of @p data to the @p response pdu.  If blocks are
  * required, then the appropriate block will be added to the PDU and sent.
- * Adds a ETAG option that is the hash of the entire data if the data is to be
+ * Adds a ETag option that is the hash of the entire data if the data is to be
  * split into blocks
  * Used by a request handler.
  *
@@ -287,7 +288,7 @@ typedef void (*coap_release_large_data_t)(coap_session_t *session,
  * Used for a client request.
  *
  * If the data spans multiple PDUs, then the data will get transmitted using
- * BLOCK1 option with the addition of the SIZE1 option.
+ * Block1 option with the addition of the Size1 and Request-Tag options.
  * The underlying library will handle the transmission of the individual blocks.
  * Once the body of data has been transmitted (or a failure occurred), then
  * @p release_func (if not NULL) will get called so the application can
@@ -295,7 +296,7 @@ typedef void (*coap_release_large_data_t)(coap_session_t *session,
  * the application not to change the contents of @p data until the data
  * transfer has completed.
  *
- * There is no need for the application to include the BLOCK1 option in the
+ * There is no need for the application to include the Block1 option in the
  * @p pdu.
  *
  * coap_add_data_large_request() (or the alternative coap_add_data_large_*()
@@ -332,13 +333,13 @@ int coap_add_data_large_request(coap_session_t *session,
  *
  * If all the data can be transmitted in a single PDU, this is functionally
  * the same as coap_add_data() except @p release_func (if not NULL) will get
- * invoked after data transmission. The MEDIA_TYPE, MAXAGE and ETAG options may
- * be added in as appropriate.
+ * invoked after data transmission. The Content-Format, Max-Age and ETag
+ * options may be added in as appropriate.
  *
  * Used by a server request handler to create the response.
  *
  * If the data spans multiple PDUs, then the data will get transmitted using
- * BLOCK2 (response) option with the addition of the SIZE2 and ETAG
+ * Block2 (response) option with the addition of the Size2 and ETag
  * options. The underlying library will handle the transmission of the
  * individual blocks. Once the body of data has been transmitted (or a
  * failure occurred), then @p release_func (if not NULL) will get called so the
@@ -346,7 +347,7 @@ int coap_add_data_large_request(coap_session_t *session,
  * responsibility of the application not to change the contents of @p data
  * until the data transfer has completed.
  *
- * There is no need for the application to include the BLOCK2 option in the
+ * There is no need for the application to include the Block2 option in the
  * @p pdu.
  *
  * coap_add_data_large_response() (or the alternative coap_add_data_large_*()
@@ -361,7 +362,7 @@ int coap_add_data_large_request(coap_session_t *session,
  * @param request    The requesting pdu.
  * @param response   The response pdu.
  * @param query      The query taken from the (original) requesting pdu.
- * @param media_type The format of the data.
+ * @param media_type The content format of the data.
  * @param maxage     The maxmimum life of the data. If @c -1, then there
  *                   is no maxage.
  * @param etag       ETag to use if not 0.

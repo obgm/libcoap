@@ -1,6 +1,7 @@
 /* coap_session.c -- Session management for libcoap
  *
  * Copyright (C) 2017 Jean-Claue Michelou <jcm@spinetix.com>
+ * Copyright (C) 2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -209,8 +210,9 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   session->dtls_event = -1;
   session->last_ping_mid = COAP_INVALID_MID;
 
-  /* initialize message id */
+  /* Randomly initialize */
   coap_prng((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));
+  coap_prng((unsigned char *)&session->tx_rtag, sizeof(session->tx_rtag));
 
   return session;
 }

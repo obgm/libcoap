@@ -364,12 +364,14 @@ msg_option_string(uint8_t code, uint16_t option_type) {
     { COAP_OPTION_PROXY_URI, "Proxy-Uri" },
     { COAP_OPTION_PROXY_SCHEME, "Proxy-Scheme" },
     { COAP_OPTION_SIZE1, "Size1" },
-    { COAP_OPTION_NORESPONSE, "No-Response" }
+    { COAP_OPTION_ECHO, "Echo" },
+    { COAP_OPTION_NORESPONSE, "No-Response" },
+    { COAP_OPTION_RTAG, "Request-Tag" }
   };
 
   static struct option_desc_t options_csm[] = {
     { COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE, "Max-Message-Size" },
-    { COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER, "Block-wise-Transfer" }
+    { COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER, "Block-Wise-Transfer" }
   };
 
   static struct option_desc_t options_pingpong[] = {
@@ -655,6 +657,9 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 
     case COAP_OPTION_IF_MATCH:
     case COAP_OPTION_ETAG:
+    case COAP_OPTION_ECHO:
+    case COAP_OPTION_NORESPONSE:
+    case COAP_OPTION_RTAG:
       opt_len = coap_opt_length(option);
       opt_val = coap_opt_value(option);
       snprintf((char *)buf, sizeof(buf), "0x");

@@ -2,7 +2,7 @@
  * coap_session_internal.h -- Structures, Enums & Functions that are not
  * exposed to application programming
  *
- * Copyright (C) 2010-2019 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -145,8 +145,10 @@ struct coap_session_t {
   uint8_t doing_first;            /**< Set if doing client's first request */
   uint8_t proxy_session;        /**< Set if this is an ongoing proxy session */
   uint8_t delay_recursive;        /**< Set if in coap_client_delay_first() */
+  uint32_t tx_rtag;               /**< Next Request-Tag number to use */
   uint64_t tx_token;              /**< Next token number to use */
   coap_bin_const_t *last_token;   /** last token used to make a request */
+  coap_bin_const_t *echo;         /**< Echo value to send with next request */
 };
 
 #if COAP_SERVER_SUPPORT

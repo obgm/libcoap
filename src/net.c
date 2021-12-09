@@ -1,6 +1,6 @@
 /* net.c -- CoAP context inteface
  *
- * Copyright (C) 2010--2019 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2010--2022 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -1345,6 +1345,14 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
         }
       }
     }
+  }
+
+  if (session->echo) {
+    if (!coap_insert_option(pdu, COAP_OPTION_ECHO, session->echo->length,
+                            session->echo->s))
+      goto error;
+    coap_delete_bin_const(session->echo);
+    session->echo = NULL;
   }
 
   if (!coap_pdu_encode_header(pdu, session->proto)) {
@@ -2928,7 +2936,7 @@ skip_handler:
           if (observe)
             coap_delete_observer(resource, session, &token);
           if (added_block)
-            coap_remove_option(pdu, COAP_OPTION_BLOCK1);
+            coap_remove_option(response, COAP_OPTION_BLOCK1);
         }
 
         /* If original request contained a token, and the registered
@@ -2975,8 +2983,7 @@ fail_response:
 #if COAP_CLIENT_SUPPORT
 static void
 handle_response(coap_context_t *context, coap_session_t *session,
-  coap_pdu_t *sent, coap_pdu_t *rcvd) {
-
+                coap_pdu_t *sent, coap_pdu_t *rcvd) {
   /* In a lossy context, the ACK of a separate response may have
    * been lost, so we need to stop retransmitting requests with the
    * same token.
@@ -2986,7 +2993,7 @@ handle_response(coap_context_t *context, coap_session_t *session,
 
   if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
     /* See if need to send next block to server */
-    if (coap_handle_response_send_block(session, rcvd)) {
+    if (coap_handle_response_send_block(session, sent, rcvd)) {
       /* Next block transmitted, no need to inform app */
       coap_send_ack(session, rcvd);
       return;
