@@ -568,20 +568,20 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
   resource->context = context;
 }
 
-int
+void
 coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
-  if (!context || !resource)
-    return 0;
+  assert(context);
+  assert(resource);
 
   if (resource->is_unknown && (context->unknown_resource == resource)) {
     coap_free_resource(context->unknown_resource);
     context->unknown_resource = NULL;
-    return 1;
+    return;
   }
   if (resource->is_proxy_uri && (context->proxy_uri_resource == resource)) {
     coap_free_resource(context->proxy_uri_resource);
     context->proxy_uri_resource = NULL;
-    return 1;
+    return;
   }
 
   /* remove resource from list */
@@ -589,8 +589,6 @@ coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
 
   /* and free its allocated memory */
   coap_free_resource(resource);
-
-  return 1;
 }
 
 void

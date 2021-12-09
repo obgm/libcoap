@@ -240,11 +240,8 @@ void coap_add_resource(coap_context_t *context, coap_resource_t *resource);
  *
  * @param context  The context where the resources are stored.
  * @param resource The resource to delete.
- *
- * @return         @c 1 if the resource was found (and destroyed),
- *                 @c 0 otherwise.
  */
-int coap_delete_resource(coap_context_t *context, coap_resource_t *resource);
+void coap_delete_resource(coap_context_t *context, coap_resource_t *resource);
 
 /**
  * Registers the specified @p handler as message handler for the request type

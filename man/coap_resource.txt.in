@@ -39,7 +39,7 @@ _proxy_handler_, size_t _host_name_count_, const char *_host_name_list_[]);*
 *void coap_add_resource(coap_context_t *_context_,
 coap_resource_t *_resource_);*
 
-*int coap_delete_resource(coap_context_t *_context_,
+*void coap_delete_resource(coap_context_t *_context_,
 coap_resource_t *_resource_);*
 
 *void coap_resource_set_mode(coap_resource_t *_resource_, int _mode_);*
@@ -144,7 +144,7 @@ _resource_ with the same _uri_path_ before adding in the new _resource_.
 
 The *coap_delete_resource*() function deletes a _resource_ identified by
 _resource_ from _context_. The storage allocated for that _resource_ is freed,
-along with any attrigutes associated with the _resource_.
+along with any attributes associated with the _resource_.
 
 The *coap_resource_set_mode*() changes the notification message type of
 _resource_ to the given _mode_ which must be one of
@@ -175,9 +175,6 @@ RETURN VALUES
 The *coap_resource_init*(), *coap_resource_unknown_init*() and
 *coap_resource_proxy_uri_init*() functions return a newly created resource
 or NULL if there is a malloc failure.
-
-The *coap_delete_resource*() function return 0 on failure (_resource_ not
-found), 1 on success.
 
 The *coap_resource_get_userdata*() function returns the value previously set
 by the *coap_resource_set_userdata*() function or NULL.
