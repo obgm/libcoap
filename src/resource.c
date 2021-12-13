@@ -568,24 +568,28 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
   resource->context = context;
 }
 
+/*
+ * Input context is ignored, but param left there to keep API consistent
+ */
 int
 coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
-  if (!context || !resource)
+  if (!resource)
     return 0;
 
-  if (resource->is_unknown && (context->unknown_resource == resource)) {
-    coap_free_resource(context->unknown_resource);
-    context->unknown_resource = NULL;
-    return 1;
-  }
-  if (resource->is_proxy_uri && (context->proxy_uri_resource == resource)) {
-    coap_free_resource(context->proxy_uri_resource);
-    context->proxy_uri_resource = NULL;
-    return 1;
-  }
+  context = resource->context;
 
-  /* remove resource from list */
-  RESOURCES_DELETE(context->resources, resource);
+  if (resource->is_unknown) {
+    if (context && context->unknown_resource == resource) {
+      context->unknown_resource = NULL;
+    }
+  } else if (resource->is_proxy_uri) {
+    if (context && context->proxy_uri_resource == resource) {
+      context->proxy_uri_resource = NULL;
+    }
+  } else if (context) {
+    /* remove resource from list */
+    RESOURCES_DELETE(context->resources, resource);
+  }
 
   /* and free its allocated memory */
   coap_free_resource(resource);

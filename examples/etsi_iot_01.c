@@ -151,7 +151,7 @@ hnd_delete_resource(coap_resource_t *resource,
   if (payload)
     coap_delete_payload(resource);
 
-  coap_delete_resource(coap_session_get_context(session), resource);
+  coap_delete_resource(NULL, resource);
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }

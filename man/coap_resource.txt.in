@@ -142,9 +142,9 @@ associated with a _context_, *coap_add_resource*() (or
 *coap_add_resource_release*()) will delete any previous
 _resource_ with the same _uri_path_ before adding in the new _resource_.
 
-The *coap_delete_resource*() function deletes a _resource_ identified by
-_resource_ from _context_. The storage allocated for that _resource_ is freed,
-along with any attrigutes associated with the _resource_.
+The *coap_delete_resource*() function deletes a resource identified by
+_resource_. The _context_ parameter is ignored. The storage allocated for that
+_resource_ is freed, along with any attributes associated with the _resource_.
 
 The *coap_resource_set_mode*() changes the notification message type of
 _resource_ to the given _mode_ which must be one of
@@ -325,7 +325,7 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   /* .. code .. */
 
   /* Dynamic resource no longer required - delete it */
-  coap_delete_resource(coap_session_get_context(session), resource);
+  coap_delete_resource(NULL, resource);
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }

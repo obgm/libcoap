@@ -1275,7 +1275,7 @@ hnd_delete(coap_resource_t *resource,
   }
 
   /* Dynamic resource no longer required - delete it */
-  coap_delete_resource(coap_session_get_context(session), resource);
+  coap_delete_resource(NULL, resource);
   coap_delete_string(uri_path);
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }

@@ -238,7 +238,8 @@ void coap_add_resource(coap_context_t *context, coap_resource_t *resource);
  * Deletes a resource identified by @p resource. The storage allocated for that
  * resource is freed, and removed from the context.
  *
- * @param context  The context where the resources are stored.
+ * @param context  This parameter is ignored, but kept for backward
+ *                 compatability.
  * @param resource The resource to delete.
  *
  * @return         @c 1 if the resource was found (and destroyed),
