@@ -1281,8 +1281,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
   }
 
   if (bytes_written < 0) {
-    coap_delete_pdu(pdu);
-    return (coap_mid_t)bytes_written;
+    goto error;
   }
 
 #if !COAP_DISABLE_TCP
