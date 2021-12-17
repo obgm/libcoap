@@ -19,6 +19,7 @@ global:
   coap_async_is_supported;
   coap_async_set_app_data;
   coap_async_set_delay;
+  coap_async_trigger;
   coap_attr_get_value;
   coap_block_build_body;
   coap_cache_derive_key;

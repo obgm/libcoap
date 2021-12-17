@@ -13,6 +13,7 @@ NAME
 coap_async,
 coap_async_is_supported,
 coap_register_async,
+coap_async_trigger,
 coap_async_set_delay,
 coap_find_async,
 coap_free_async,
@@ -28,6 +29,8 @@ SYNOPSIS
 
 *coap_async_t *coap_register_async(coap_session_t *_session_,
 const coap_pdu_t *_request_, coap_tick_t _delay_);*
+
+*void coap_async_trigger(coap_async_t *_async_);*
 
 *void coap_async_set_delay(coap_async_t *_async_, coap_tick_t _delay_);*
 
@@ -68,7 +71,12 @@ The *coap_register_async*() function is used to set up an asynchronous delayed
 request for the _request_ PDU associated with the _session_. The
 application request handler will get called with a copy of _request_ after
 _delay_ ticks which will then cause a response to be sent.  If _delay_ is 0,
-then the application request handler will not get called.
+then the application request handler will not get called until
+*coap_async_trigger*() or *coap_async_set_delay*() is called.
+
+The *coap_async_trigger*() function is used to expire the delay for the
+_async_ definition, so the application request handler is almost
+immediately called.
 
 The *coap_async_set_delay*() function is used to update the remaining _delay_
 before the application request handler is called for the _async_ definition. If
@@ -76,7 +84,8 @@ _delay_ is set to 0, then the application request handler will not get called.
 
 An example of usage here is *coap_register_async*() sets _delay_ to 0, and
 then when the response is ready at an indeterminate point in the future,
-*coap_async_set_delay*() is called setting _delay_ to 1.
+*coap_async_set_delay*() is called setting _delay_ to 1. Alternatively,
+*coap_async_trigger*() can be called.
 
 The *coap_free_async*() function is used to delete an _async_ definition.
 

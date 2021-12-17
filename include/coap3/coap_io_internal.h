@@ -1,7 +1,7 @@
 /*
  * coap_io.h -- Default network I/O functions for libcoap
  *
- * Copyright (C) 2012-2013 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2012-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -96,6 +96,14 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len);
 
 void
 coap_epoll_ctl_mod(coap_socket_t *sock, uint32_t events, const char *func);
+
+/**
+ * Update the epoll timer fd as to when it is to trigger.
+ *
+ * @param context The context to update the epoll timer on.
+ * @param delay The time to delay before the epoll timer fires.
+ */
+void coap_update_epoll_timer(coap_context_t *context, coap_tick_t delay);
 
 #ifdef WITH_LWIP
 ssize_t

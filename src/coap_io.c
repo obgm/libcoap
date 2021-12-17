@@ -1,6 +1,6 @@
 /* coap_io.c -- Default network I/O functions for libcoap
  *
- * Copyright (C) 2012,2014,2016-2019 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2012,2014,2016-2022 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -438,6 +438,45 @@ coap_epoll_ctl_mod(coap_socket_t *sock,
               coap_socket_strerror(), errno);
   }
 }
+
+void
+coap_update_epoll_timer(coap_context_t *context, coap_tick_t delay)
+{
+  if (context->eptimerfd != -1) {
+    coap_tick_t now;
+
+    coap_ticks(&now);
+    if (context->next_timeout == 0 || context->next_timeout > now + delay) {
+      struct itimerspec new_value;
+      int ret;
+
+      context->next_timeout = now + delay;
+      memset(&new_value, 0, sizeof(new_value));
+      if (delay == 0) {
+        new_value.it_value.tv_nsec = 1; /* small but not zero */
+      }
+      else {
+        new_value.it_value.tv_sec = delay / COAP_TICKS_PER_SECOND;
+        new_value.it_value.tv_nsec = (delay % COAP_TICKS_PER_SECOND) *
+                                    1000000;
+      }
+      ret = timerfd_settime(context->eptimerfd, 0, &new_value, NULL);
+      if (ret == -1) {
+        coap_log(LOG_ERR,
+                  "%s: timerfd_settime failed: %s (%d)\n",
+                  "coap_resource_notify_observers",
+                  coap_socket_strerror(), errno);
+      }
+#ifdef COAP_DEBUG_WAKEUP_TIMES
+      else {
+        coap_log(LOG_INFO, "****** Next wakeup time %ld.%09ld\n",
+                 new_value.it_value.tv_sec, new_value.it_value.tv_nsec);
+      }
+#endif /* COAP_DEBUG_WAKEUP_TIMES */
+    }
+  }
+}
+
 #endif /* COAP_EPOLL_SUPPORT */
 
 ssize_t
@@ -1046,7 +1085,7 @@ coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
     coap_ticks(&now);
     if (ctx->next_timeout != 0 && ctx->next_timeout > now) {
       coap_tick_t rem_timeout = ctx->next_timeout - now;
-      /* Need to trigger an event on ctx->epfd in the future */
+      /* Need to trigger an event on ctx->eptimerfd in the future */
       new_value.it_value.tv_sec = rem_timeout / COAP_TICKS_PER_SECOND;
       new_value.it_value.tv_nsec = (rem_timeout % COAP_TICKS_PER_SECOND) *
                                    1000000;

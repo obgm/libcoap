@@ -1,7 +1,7 @@
 /*
  * async.h -- state management for asynchronous messages
  *
- * Copyright (C) 2010-2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -70,6 +70,17 @@ coap_register_async(coap_session_t *session,
  */
 void
 coap_async_set_delay(coap_async_t *async, coap_tick_t delay);
+
+/**
+ * Trigger the registered @p async.
+ *
+ * A copy of the original request will get sent to the appropriate request
+ * handler.
+ *
+ * @param async The async object to trigger.
+ */
+void
+coap_async_trigger(coap_async_t *async);
 
 /**
  * Releases the memory that was allocated by coap_register_async() for the

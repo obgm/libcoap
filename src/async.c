@@ -1,6 +1,6 @@
 /* async.c -- state management for asynchronous messages
  *
- * Copyright (C) 2010,2011,2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011,2021-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -16,6 +16,7 @@
 #include "coap3/coap_internal.h"
 
 #ifndef WITHOUT_ASYNC
+#include <stdio.h>
 
 /* utlist-style macros for searching pairs in linked lists */
 #define SEARCH_PAIR(head,out,field1,val1,field2,val2,field3,val3)   \
@@ -50,8 +51,18 @@ coap_register_async(coap_session_t *session,
               pdu->token, request->token);
 
   if (s != NULL) {
+    size_t i;
+    char outbuf[2*8 + 1];
+    size_t outbuflen;
+    
+    outbuf[0] = '\000';
+    for (i = 0; i < request->token_length; i++) {
+      outbuflen = strlen(outbuf);
+      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
+                "%02x", request->token[i]);
+    }
     coap_log(LOG_DEBUG,
-         "asynchronous state for mid=0x%x already registered\n", request->mid);
+         "asynchronous state for token '%s' already registered\n", outbuf);
     return NULL;
   }
 
@@ -87,22 +98,42 @@ coap_register_async(coap_session_t *session,
 }
 
 void
-coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
+coap_async_trigger(coap_async_t *async) {
   assert(async != NULL);
+  coap_ticks(&async->delay);
 
-  if (delay) {
-    coap_ticks(&async->delay);
-    async->delay += delay;
-  }
-  else
-    async->delay = 0;
-  coap_log(LOG_DEBUG, "   %s: Request for delayed for %u.%03u secs\n",
-           coap_session_str(async->session),
-           (unsigned int)(delay / COAP_TICKS_PER_SECOND),
-           (unsigned int)((delay % COAP_TICKS_PER_SECOND) *
-               1000 / COAP_TICKS_PER_SECOND));
+  coap_log(LOG_DEBUG, "   %s: Async request triggered\n",
+           coap_session_str(async->session));
+#ifdef COAP_EPOLL_SUPPORT
+  coap_update_epoll_timer(async->session->context, 0);
+#endif /* COAP_EPOLL_SUPPORT */
 }
 
+
+void
+coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
+  coap_tick_t now;
+
+  assert(async != NULL);
+  coap_ticks(&now);
+
+  if (delay) {
+    async->delay = now + delay;
+#ifdef COAP_EPOLL_SUPPORT
+    coap_update_epoll_timer(async->session->context, delay);
+#endif /* COAP_EPOLL_SUPPORT */
+    coap_log(LOG_DEBUG, "   %s: Async request delayed for %u.%03u secs\n",
+             coap_session_str(async->session),
+             (unsigned int)(delay / COAP_TICKS_PER_SECOND),
+             (unsigned int)((delay % COAP_TICKS_PER_SECOND) *
+                 1000 / COAP_TICKS_PER_SECOND));
+  }
+  else {
+    async->delay = 0;
+    coap_log(LOG_DEBUG, "   %s: Async request indefinately delayed\n",
+             coap_session_str(async->session));
+  }
+}
 
 coap_async_t *
 coap_find_async(coap_session_t *session, coap_bin_const_t token) {
