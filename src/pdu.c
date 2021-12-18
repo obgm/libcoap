@@ -180,7 +180,7 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
                  old_pdu->used_size - (old_pdu->data - old_pdu->token) +1 : 0);
     if (!coap_pdu_resize(pdu, length + old_pdu->hdr_size))
       goto fail;
-    /* Copy the options and any data across */
+    /* Copy the options but not any data across */
     memcpy(pdu->token + pdu->token_length,
            old_pdu->token + old_pdu->token_length, length);
     pdu->used_size += length;
@@ -296,8 +296,10 @@ coap_update_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
     /* Easy case - just data has changed */
   }
   else if (len > pdu->token_length) {
-    if (!coap_pdu_check_resize(pdu, pdu->used_size + len - pdu->token_length))
+    if (!coap_pdu_check_resize(pdu, pdu->used_size + len - pdu->token_length)) {
+      coap_log(LOG_WARNING, "Failed to update token\n");
       return 0;
+    }
     memmove(&pdu->token[len - pdu->token_length], pdu->token, pdu->used_size);
     pdu->used_size += len - pdu->token_length;
   }
