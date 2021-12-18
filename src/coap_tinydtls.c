@@ -97,11 +97,53 @@ coap_dtls_rpk_is_supported(void) {
 #endif /* ! DTLS_ECC */
 }
 
+static coap_log_t
+dtls_map_logging(log_t d_level) {
+  /* DTLS_LOG_ERR is missing, so account for the gap */
+  switch (d_level) {
+  case DTLS_LOG_EMERG:
+    return COAP_LOG_EMERG;
+    break;
+  case DTLS_LOG_ALERT:
+    return COAP_LOG_ALERT;
+    break;
+  case DTLS_LOG_CRIT:
+    return COAP_LOG_CRIT;
+    break;
+  case DTLS_LOG_WARN:
+    return COAP_LOG_WARN;
+    break;
+  case DTLS_LOG_NOTICE:
+    return COAP_LOG_NOTICE;
+    break;
+  case DTLS_LOG_INFO:
+    return COAP_LOG_INFO;
+    break;
+  case DTLS_LOG_DEBUG:
+  default:
+    return COAP_LOG_DEBUG;
+    break;
+  }
+  return COAP_LOG_DEBUG;
+}
+#ifdef HAVE_DTLS_SET_LOG_HANDLER
+/* Valid after TinyDTLS submodule has been updated */
+static void
+dtls_logging(log_t d_level, const char *message) {
+  coap_log_t c_level = dtls_map_logging(d_level);
+
+  coap_dtls_log(c_level, "%s", message);
+}
+#endif /* HAVE_DTLS_SET_LOG_HANDLER */
 
 void coap_dtls_startup(void) {
   dtls_init();
   dtls_ticks(&dtls_tick_0);
   coap_ticks(&coap_tick_0);
+#ifdef HAVE_DTLS_SET_LOG_HANDLER
+  /* Valid after TinyDTLS submodule has been updated */
+  dtls_set_log_handler(dtls_logging);
+#endif /* HAVE_DTLS_SET_LOG_HANDLER */
 }
 
 void coap_dtls_shutdown(void) {
@@ -122,16 +164,49 @@ coap_dtls_get_tls(const coap_session_t *c_session,
 }
 
 void
-coap_dtls_set_log_level(int level) {
-  dtls_set_log_level(level);
+coap_dtls_set_log_level(coap_log_t c_level) {
+  log_t d_level;
+
+  /* DTLS_LOG_ERR is missing, so account for the gap */
+  switch (c_level) {
+  case COAP_LOG_EMERG:
+    d_level = DTLS_LOG_EMERG;
+    break;
+  case COAP_LOG_ALERT:
+    d_level = DTLS_LOG_ALERT;
+    break;
+  case COAP_LOG_CRIT:
+    d_level = DTLS_LOG_CRIT;
+    break;
+  case COAP_LOG_ERR:
+  case COAP_LOG_WARN:
+    d_level = DTLS_LOG_WARN;
+    break;
+  case COAP_LOG_NOTICE:
+    d_level = DTLS_LOG_NOTICE;
+    break;
+  case COAP_LOG_INFO:
+    d_level = DTLS_LOG_INFO;
+    break;
+  case COAP_LOG_DEBUG:
+  case COAP_LOG_OSCORE:
+  case COAP_LOG_DTLS_BASE:
+  default:
+    d_level = DTLS_LOG_DEBUG;
+    break;
+  }
+  dtls_set_log_level(d_level);
 }
 
-int
+coap_log_t
 coap_dtls_get_log_level(void) {
-  return dtls_get_log_level();
+  log_t d_level = dtls_get_log_level();
+
+  return dtls_map_logging(d_level);
 }
 
-static void get_session_addr(const session_t *s, coap_address_t *a) {
+static void
+get_session_addr(const session_t *s, coap_address_t *a) {
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
   a->addr = s->addr;
   a->port = s->port;
@@ -149,7 +224,8 @@ static void get_session_addr(const session_t *s, coap_address_t *a) {
 #endif /* ! WITH_CONTIKI && ! WITH_LWIP */
 }
 
-static void put_session_addr(const coap_address_t *a, session_t *s) {
+static void
+put_session_addr(const coap_address_t *a, session_t *s) {
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
   s->size = (unsigned char)sizeof(s->addr);
   s->addr = a->addr;

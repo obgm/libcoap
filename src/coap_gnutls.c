@@ -165,7 +165,7 @@ typedef enum coap_free_bye_t {
   G_CHECK(xx, func); \
 } while 0
 
-static int dtls_log_level = 0;
+static coap_log_t dtls_log_level = 0;
 
 #if COAP_SERVER_SUPPORT
 static int post_client_hello_gnutls_pki(gnutls_session_t g_session);
@@ -278,10 +278,12 @@ coap_gnutls_audit_log_func(gnutls_session_t g_session, const char* text)
 static void
 coap_gnutls_log_func(int level, const char* text)
 {
-  /* debug logging in gnutls starts at 2 */
-  if (level > 2)
-    level = 2;
-  coap_log(LOG_DEBUG + level - 2, "%s", text);
+  /* Things get noisy, even at level 1 */
+  if (level > 0)
+    level += COAP_LOG_WARN;
+  if (level > COAP_LOG_DEBUG)
+    level = COAP_LOG_DEBUG;
+  coap_dtls_log(level, "%s", text);
 }
 
 /*
@@ -451,21 +453,15 @@ coap_dtls_get_tls(const coap_session_t *c_session,
 }
 
 void
-coap_dtls_set_log_level(int level) {
+coap_dtls_set_log_level(coap_log_t level) {
   dtls_log_level = level;
-  if (level - LOG_DEBUG >= -2) {
-    /* debug logging in gnutls starts at 2 */
-    gnutls_global_set_log_level(2 + level - LOG_DEBUG);
-  }
-  else {
-    gnutls_global_set_log_level(0);
-  }
+  gnutls_global_set_log_level(dtls_log_level);
 }
 
 /*
  * return current logging level
  */
-int
+coap_log_t
 coap_dtls_get_log_level(void) {
   return dtls_log_level;
 }

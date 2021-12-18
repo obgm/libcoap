@@ -101,6 +101,20 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_context.3" > coap_context_get_session_timeout.3
 	@echo ".so man3/coap_context.3" > coap_context_set_csm_timeout.3
 	@echo ".so man3/coap_context.3" > coap_context_get_csm_timeout.3
+	@echo ".so man3/coap_logging.3" > coap_log_info.3
+	@echo ".so man3/coap_logging.3" > coap_log_debug.3
+	@echo ".so man3/coap_logging.3" > coap_log_oscore.3
+	@echo ".so man3/coap_logging.3" > coap_log_dtls.3
+	@echo ".so man3/coap_logging.3" > coap_get_log_level.3
+	@echo ".so man3/coap_logging.3" > coap_set_log_level.3
+	@echo ".so man3/coap_logging.3" > coap_set_log_handler.3
+	@echo ".so man3/coap_logging.3" > coap_dtls_log.3
+	@echo ".so man3/coap_logging.3" > coap_dtls_get_log_level.3
+	@echo ".so man3/coap_logging.3" > coap_dtls_set_log_level.3
+	@echo ".so man3/coap_logging.3" > coap_package_name.3
+	@echo ".so man3/coap_logging.3" > coap_package_version.3
+	@echo ".so man3/coap_logging.3" > coap_package_build.3
+	@echo ".so man3/coap_logging.3" > coap_set_show_pdu_output.3
 	@echo ".so man3/coap_logging.3" > coap_show_pdu.3
 	@echo ".so man3/coap_logging.3" > coap_endpoint_str.3
 	@echo ".so man3/coap_logging.3" > coap_session_str.3

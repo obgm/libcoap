@@ -113,7 +113,7 @@ coap_dtls_context_check_keys_enabled(coap_context_t *ctx COAP_UNUSED)
   return 0;
 }
 
-static int dtls_log_level = 0;
+static coap_log_t dtls_log_level = COAP_LOG_EMERG;
 
 void coap_dtls_startup(void) {
 }
@@ -130,11 +130,11 @@ void coap_dtls_shutdown(void) {
 }
 
 void
-coap_dtls_set_log_level(int level) {
+coap_dtls_set_log_level(coap_log_t level) {
   dtls_log_level = level;
 }
 
-int
+coap_log_t
 coap_dtls_get_log_level(void) {
   return dtls_log_level;
 }

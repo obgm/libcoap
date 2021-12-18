@@ -12,8 +12,20 @@ NAME
 ----
 coap_logging,
 coap_log,
+coap_log_emerg,
+coap_log_alert,
+coap_log_crit,
+coap_logi_err,
+coap_log_warn,
+coap_log_info,
+coap_log_notice,
+coap_log_debug,
+coap_log_oscore,
 coap_get_log_level,
 coap_set_log_level,
+coap_dtls_log,
+coap_dtls_get_log_level,
+coap_dtls_set_log_level,
 coap_set_log_handler,
 coap_package_name,
 coap_package_version,
@@ -28,15 +40,35 @@ SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*void coap_log(coap_log_t _level_, const char *_format_, ...);*
+*void coap_log(coap_log_t _level_, const char *_format_, _..._);*
+
+*void coap_log_emerg(const char *_format_, _..._);*
+
+*void coap_log_alert(const char *_format_, _..._);*
+
+*void coap_log_crit(const char *_format_, _..._);*
+
+*void coap_log_err(const char *_format_, _..._);*
+
+*void coap_log_warn(const char *_format_, _..._);*
+
+*void coap_log_info(const char *_format_, _..._);*
+
+*void coap_log_notice(const char *_format_, _..._);*
+
+*void coap_log_debug(const char *_format_, _..._);*
+
+*void coap_log_oscore(const char *_format_, _..._);*
 
 *void coap_set_log_level(coap_log_t _level_);*
 
 *coap_log_t coap_get_log_level(void);*
 
-*void coap_dtls_set_log_level(int _level_);*
+*void coap_dtls_log(coap_log_t _level_, const char *_format_, _..._);*
 
-*int coap_dtls_get_log_level(void);*
+*void coap_dtls_set_log_level(coap_log_t _level_);*
+
+*coap_log_t coap_dtls_get_log_level(void);*
 
 *void coap_set_log_handler(coap_log_handler_t _handler_);*
 
@@ -69,54 +101,133 @@ Logging by default is to stderr or stdout depending on the logging level of
 the log entry.  It ia possible to send the logging information to an
 application logging callback handler for processing by the application.
 
+Logging levels (*coap_log_t*) are defined by (initially the same as for
+*syslog*()), which are numerically incrementing in value:
+
+*COAP_LOG_EMERG*::
+Emergency level (0).
+
+*COAP_LOG_ALERT*::
+Alert level (1).
+
+*COAP_LOG_CRIT*::
+Critical level (2).
+
+*COAP_LOG_ERR*::
+Error level (3).
+
+*COAP_LOG_WARN*::
+Warning level (the default) (4).
+
+*COAP_LOG_NOTICE*::
+Notice level (5).
+
+*COAP_LOG_INFO*::
+Information level (6).
+
+*COAP_LOG_DEBUG*::
+Debug level (7).
+
+With an additional level:
+
+*COAP_LOG_OSCORE*::
+Debug OSCORE information (8).
+
+FUNCTIONS
+---------
+
+*Function: coap_log()*
+
 The *coap_log*() function is used to log information at the appropriate _level_.
 The rest of the parameters follow the standard *printf*() function format.
 
-Logging levels (*coap_log_t*) are defined by (the same as for *syslog*()), which
-are numerically incrementing in value:
+*Function: coap_log_emerg()*
 
-*LOG_EMERG*::
-Emergency level (0).
+The *coap_log_emerg*() function provides a wrapper to the *coap_log*() function
+with _level_ set to COAP_LOG_EMERG.
+The parameters follow the standard *printf*() function format.
 
-*LOG_ALERT*::
-Alert level (1).
+*Function: coap_log_alert()*
 
-*LOG_CRIT*::
-Critical level (2).
+The *coap_log_alert*() function provides a wrapper to the *coap_log*() function
+with _level_ set to COAP_LOG_ALERT.
+The parameters follow the standard *printf*() function format.
 
-*LOG_ERR*::
-Error level (3).
+*Function: coap_log_crit()*
 
-*LOG_WARNING*::
-Warning level (the default) (4).
+The *coap_log_crit*() function provides a wrapper to the *coap_log*() function
+with _level_ set to COAP_LOG_CRIT.
+The parameters follow the standard *printf*() function format.
 
-*LOG_NOTICE*::
-Notice level (5).
+*Function: coap_log_err()*
 
-*LOG_INFO*::
-Information level (6).
+The *coap_log_err*() function provides a wrapper to the *coap_log*() function
+with _level_ set to COAP_LOG_ERR.
+The parameters follow the standard *printf*() function format.
 
-*LOG_DEBUG*::
-Debug level (7).
+*Function: coap_log_warn()*
+
+The *coap_log_warn*() function provides a wrapper to the *coap_log*() function
+with _level_ set to COAP_LOG_WARN.
+The parameters follow the standard *printf*() function format.
+
+*Function: coap_log_notice()*
+
+The *coap_log_notice*() function provides a wrapper to the *coap_log*() function
+with _level_ set to COAP_LOG_NOTICE.
+The parameters follow the standard *printf*() function format.
+
+*Function: coap_log_info()*
+
+The *coap_log_info*() function provides a wrapper to the *coap_log*() function
+with _level_ set to COAP_LOG_INFO.
+The parameters follow the standard *printf*() function format.
+
+*Function: coap_log_debug()*
+
+The *coap_log_debug*() function provides a wrapper to the *coap_log*() function
+with _level_ set to COAP_LOG_DEBUG.
+The parameters follow the standard *printf*() function format.
+
+*Function: coap_log_oscore()*
+
+The *coap_log_oscore*() function provides a wrapper to the *coap_log*() function
+with _level_ set to COAP_LOG_OSCORE.
+The parameters follow the standard *printf*() function format.
+
+*Function: coap_set_log_level()*
 
 The *coap_set_log_level*() function is used to set the current logging _level_
 for output by any subsequent *coap_log*() calls.  Output is only logged if the
 *coap_log*() _level_ definition is smaller than or equal to the current logging
 _level_.
 
+*Function: coap_get_log_level()*
+
 The *coap_get_log_level*() function is used to get the current logging level.
 
-The *coap_dtls_set_log_level*() function is used to set the logging _level_
-for output by the DTLS library for specific DTLS information. Usually, both
-*coap_set_log_level*() and *coap_dtls_set_log_level*() would be set to the
-same _level_ value. If the logging level is set to greater than LOG_DEBUG,
-the underlying TLS library may get more verbose in its output.
+*Function: coap_dtls_log()*
+
+The *coap_dtls_log*() function is used to log (D)TLS library information at the
+appropriate _level_.  The rest of the parameters follow the standard *printf*()
+function format.
+
+*Function: coap_dtls_set_log_level()*
+
+The *coap_dtls_set_log_level*() function is used to set the current logging
+_level_ for output by any subsequent *coap_dtls_log*() calls.  Output is only
+logged if the *coap_dtls_log*() _level_ definition is smaller than or equal to
+the current DTLS logging _level_.
+
+*Function: coap_dtls_get_log_level()*
 
 The *coap_dtls_get_log_level*() function is used to get the current logging
 level for the DTLS library.
 
+*Function: coap_set_log_handler()*
+
 The *coap_set_log_handler*()* function can be used to define an alternative
-logging handler for processing the logging messages.  The logging handler
+logging handler for processing any logging messages.  The logging handler
 prototype is defined as:
 
 [source, c]
@@ -124,25 +235,39 @@ prototype is defined as:
 typedef void (*coap_log_handler_t) (coap_log_t level, const char *message);
 ----
 
+*Function: coap_package_name()*
+
 The *coap_package_name*() function returns the name of this library.
 
+*Function: coap_package_version()*
+
 The *coap_package_version*() function returns the version of this library.
+
+*Function: coap_package_build()*
 
 The *coap_package_build*() function returns the git information (as in
 "git describe --tags") for the build of this library or version of this
 library if git is not used.
+
+*Function: coap_set_show_pdu_output()*
 
 The *coap_set_show_pdu_output*() function defines whether the output from
 *coap_show_pdu*() is to be either sent to stdout/stderr, or output using
 *coap_log*().  _use_fprintf_ is set to 1 for stdout/stderr (the default), and
 _use_fprintf_ is set to 0 for *coap_log*().
 
+*Function: coap_show_pdu()*
+
 The *coap_show_pdu*() function is used to decode the _pdu_, outputting as
 appropriate for logging _level_.  Where the output goes is dependent on
 *coap_set_show_pdu_output*().
 
+*Function: coap_endpoint_str()*
+
 The *coap_endpoint_str*() function returns a description string of the
 _endpoint_.
+
+*Function: coap_session_str()*
 
 The *coap_session_str*() function is used to get a string containing the
 information about the _session_.
@@ -171,8 +296,11 @@ SEE ALSO
 
 FURTHER INFORMATION
 -------------------
-See "RFC7252: The Constrained Application Protocol (CoAP)" for further
-information.
+See
+
+"https://tools.ietf.org/html/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
 
 BUGS
 ----

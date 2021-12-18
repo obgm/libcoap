@@ -527,6 +527,8 @@ if test "x$build_dtls" = "xyes"; then
                if test "x$tinydtls_libs_overridden" != "xyes";  then
                    TinyDTLS_LIBS="$auto_TinyDTLS_LIBS"
                fi
+               # 'git submodule update' may be required
+               AC_DEFINE(HAVE_DTLS_SET_LOG_HANDLER, [1], [Define if TinyDTLS has dtls_set_log_handler])
             else
                 AC_MSG_ERROR([==> You want to build libcoap with DTLS support using the TinyDTLS submodule library but no suitable version could be found!
                             Check whether you have updated the TinyDTLS git submodule, use the system-provided version if available (set '--with-submodule-tinydtls=no'),
@@ -538,9 +540,7 @@ if test "x$build_dtls" = "xyes"; then
             AC_MSG_NOTICE([Using system-provided TinyDTLS])
             tinydtls_version=`$PKG_CONFIG --modversion tinydtls`
             AX_CHECK_TINYDTLS_VERSION
-            have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
-            have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
-            have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+            AC_CHECK_LIB(tinydtls,dtls_set_log_handler,AC_DEFINE(HAVE_DTLS_SET_LOG_HANDLER, [1], [Define if TinyDTLS has dtls_set_log_handler]))
         else
             AC_MSG_ERROR([==> You want to build libcoap with DTLS support using the TinyDTLS library but no suitable version could be found!
                         Use the submodule TinyDTLS version (set '--with-submodule-tinydtls=yes' and update the git submodule),

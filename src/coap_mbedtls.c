@@ -1362,8 +1362,10 @@ reset:
 
 static void
 mbedtls_debug_out(void *ctx COAP_UNUSED, int level,
-                  const char *file, int line, const char *str) {
-  int log_level;
+                  const char *file COAP_UNUSED,
+                  int line COAP_UNUSED, const char *str) {
+
+  coap_log_t coap_level = COAP_LOG_DEBUG;
   /*
    *  0 No debug
    *  1 Error
@@ -1372,20 +1374,24 @@ mbedtls_debug_out(void *ctx COAP_UNUSED, int level,
    *  4 Verbose
    */
   switch (level) {
-  case 4:
-  case 3:
-  case 2:
-    log_level = COAP_LOG_CIPHERS;
+  case 0:
+    coap_level = COAP_LOG_EMERG;
     break;
   case 1:
-    log_level = LOG_ERR;
+    coap_level = COAP_LOG_WARN;
     break;
-  case 0:
+  case 2:
+    coap_level = COAP_LOG_NOTICE;
+    break;
+  case 3:
+    coap_level = COAP_LOG_INFO;
+    break;
+  case 4:
   default:
-    log_level = 0;
+    coap_level = COAP_LOG_DEBUG;
     break;
   }
-  coap_log(log_level, "%s:%04d: %s", file, line, str);
+  coap_dtls_log(coap_level, "%s", str);
 }
 
 #if !COAP_DISABLE_TCP
@@ -1429,7 +1435,7 @@ coap_sock_read(void *ctx, unsigned char *out, size_t outl) {
         ret = MBEDTLS_ERR_NET_CONN_RESET;
       }
 #else
-      if (errno == EAGAIN) {
+      if (errno == EAGAIN || errno == EINTR) {
         ret = MBEDTLS_ERR_SSL_WANT_READ;
       }
       else if (errno == EPIPE || errno == ECONNRESET) {
@@ -1660,8 +1666,8 @@ coap_dtls_rpk_is_supported(void) {
   return 0;
 }
 
-void *coap_dtls_new_context(coap_context_t *c_context)
-{
+void *
+coap_dtls_new_context(coap_context_t *c_context) {
   coap_mbedtls_context_t *m_context;
   (void)c_context;
 
@@ -2479,10 +2485,10 @@ coap_dtls_get_tls(const coap_session_t *c_session,
   return NULL;
 }
 
-static int keep_log_level = 0;
+static coap_log_t keep_log_level = COAP_LOG_EMERG;
 
-void coap_dtls_set_log_level(int level)
-{
+void
+coap_dtls_set_log_level(coap_log_t level) {
 #if !defined(ESPIDF_VERSION)
   int use_level;
   /*
@@ -2493,20 +2499,34 @@ void coap_dtls_set_log_level(int level)
    *  3 Informational
    *  4 Verbose
    */
-
-  if (level <= LOG_ERR) {
+  switch ((int)level) {
+  case COAP_LOG_EMERG:
+    use_level = 0;
+    break;
+  case COAP_LOG_ALERT:
+  case COAP_LOG_CRIT:
+  case COAP_LOG_ERR:
+  case COAP_LOG_WARN:
     use_level = 1;
-  }
-  else {
-    use_level = (level >= LOG_DEBUG) ? level - LOG_DEBUG + 2 : 0;
+    break;
+  case COAP_LOG_NOTICE:
+    use_level = 2;
+    break;
+  case COAP_LOG_INFO:
+    use_level = 3;
+    break;
+  case COAP_LOG_DEBUG:
+  default:
+    use_level = 4;
+    break;
   }
   mbedtls_debug_set_threshold(use_level);
 #endif /* !ESPIDF_VERSION) */
   keep_log_level = level;
 }
 
-int coap_dtls_get_log_level(void)
-{
+coap_log_t
+coap_dtls_get_log_level(void) {
   return keep_log_level;
 }
 

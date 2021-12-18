@@ -498,22 +498,4 @@ typedef struct coap_dtls_spsk_t {
 
 /** @} */
 
-/**
- * @ingroup logging
- * Sets the (D)TLS logging level to the specified @p level.
- * Note: coap_log_level() will influence output if at a specified level.
- *
- * @param level The logging level to use - LOG_*
- */
-void coap_dtls_set_log_level(int level);
-
-/**
- * @ingroup logging
- * Get the current (D)TLS logging.
- *
- * @return The current log level (one of LOG_*).
- */
-int coap_dtls_get_log_level(void);
-
-
 #endif /* COAP_DTLS_H */

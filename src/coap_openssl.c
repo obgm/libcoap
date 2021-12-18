@@ -280,13 +280,17 @@ coap_dtls_get_tls(const coap_session_t *c_session,
   return NULL;
 }
 
-static int dtls_log_level = 0;
+/*
+ * Logging levels use the standard CoAP logging levels
+ */
+static coap_log_t dtls_log_level = COAP_LOG_EMERG;
 
-void coap_dtls_set_log_level(int level) {
+void coap_dtls_set_log_level(coap_log_t level) {
   dtls_log_level = level;
 }
 
-int coap_dtls_get_log_level(void) {
+coap_log_t
+coap_dtls_get_log_level(void) {
   return dtls_log_level;
 }
 
@@ -635,45 +639,44 @@ static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
     pstr = "undefined";
 
   if (where & SSL_CB_LOOP) {
-    if (dtls_log_level >= LOG_DEBUG)
-      coap_log(LOG_DEBUG, "*  %s: %s:%s\n",
+    coap_dtls_log(COAP_LOG_DEBUG, "*  %s: %s:%s\n",
                coap_session_str(session), pstr, SSL_state_string_long(ssl));
   } else if (where & SSL_CB_ALERT) {
-    int log_level = LOG_INFO;
+    coap_log_t log_level = COAP_LOG_INFO;
     pstr = (where & SSL_CB_READ) ? "read" : "write";
     if ((where & (SSL_CB_WRITE|SSL_CB_READ)) && (ret >> 8) == SSL3_AL_FATAL) {
       session->dtls_event = COAP_EVENT_DTLS_ERROR;
       if ((ret & 0xff) != SSL3_AD_CLOSE_NOTIFY)
-        log_level = LOG_WARNING;
+        log_level = COAP_LOG_WARN;
     }
-    if (dtls_log_level >= log_level)
-      coap_log(log_level, "*  %s: SSL3 alert %s:%s:%s\n",
-               coap_session_str(session),
-               pstr,
-               SSL_alert_type_string_long(ret),
-               SSL_alert_desc_string_long(ret));
+    /* Need to let CoAP logging know why this session is dying */
+    coap_log(log_level, "*  %s: SSL3 alert %s:%s:%s\n",
+             coap_session_str(session),
+             pstr,
+             SSL_alert_type_string_long(ret),
+             SSL_alert_desc_string_long(ret));
   } else if (where & SSL_CB_EXIT) {
     if (ret == 0) {
-      if (dtls_log_level >= LOG_WARNING) {
+      if (dtls_log_level >= COAP_LOG_WARN) {
         unsigned long e;
-        coap_log(LOG_WARNING, "*  %s: %s:failed in %s\n",
+        coap_dtls_log(COAP_LOG_WARN, "*  %s: %s:failed in %s\n",
                  coap_session_str(session), pstr, SSL_state_string_long(ssl));
         while ((e = ERR_get_error()))
-          coap_log(LOG_WARNING, "*  %s: %s%s\n",
+          coap_dtls_log(COAP_LOG_WARN, "*  %s: %s%s\n",
                    coap_session_str(session), ERR_reason_error_string(e),
                    ssl_function_definition(e));
       }
     } else if (ret < 0) {
-      if (dtls_log_level >= LOG_WARNING) {
+      if (dtls_log_level >= COAP_LOG_WARN) {
         int err = SSL_get_error(ssl, ret);
         if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE &&
             err != SSL_ERROR_WANT_CONNECT && err != SSL_ERROR_WANT_ACCEPT &&
             err != SSL_ERROR_WANT_X509_LOOKUP) {
           long e;
-          coap_log(LOG_WARNING, "*  %s: %s:error in %s\n",
+          coap_dtls_log(COAP_LOG_WARN, "*  %s: %s:error in %s\n",
                    coap_session_str(session), pstr, SSL_state_string_long(ssl));
           while ((e = ERR_get_error()))
-            coap_log(LOG_WARNING, "*  %s: %s%s\n",
+            coap_dtls_log(COAP_LOG_WARN, "*  %s: %s%s\n",
                      coap_session_str(session), ERR_reason_error_string(e),
                      ssl_function_definition(e));
         }
@@ -812,8 +815,7 @@ void *coap_dtls_new_context(coap_context_t *coap_context) {
     coap_set_user_prefs(context->dtls.ctx);
     memset(cookie_secret, 0, sizeof(cookie_secret));
     if (!RAND_bytes(cookie_secret, (int)sizeof(cookie_secret))) {
-      if (dtls_log_level >= LOG_WARNING)
-        coap_log(LOG_WARNING,
+      coap_dtls_log(COAP_LOG_WARN,
                  "Insufficient entropy for random cookie generation");
       coap_prng(cookie_secret, sizeof(cookie_secret));
     }
@@ -2058,7 +2060,7 @@ tls_secret_call_back(SSL *ssl,
     for (ii = 0; ii < sk_SSL_CIPHER_num (peer_ciphers); ii++) {
       const SSL_CIPHER *peer_cipher = sk_SSL_CIPHER_value(peer_ciphers, ii);
 
-      coap_log(COAP_LOG_CIPHERS, "Client cipher: %s\n",
+      coap_dtls_log(COAP_LOG_INFO, "Client cipher: %s\n",
                             SSL_CIPHER_get_name(peer_cipher));
       if (strstr (SSL_CIPHER_get_name (peer_cipher), "PSK")) {
         psk_requested = 1;
@@ -2380,9 +2382,10 @@ tls_client_hello_call_back(SSL *ssl,
       for (ii = 0; ii < sk_SSL_CIPHER_num (peer_ciphers); ii++) {
         const SSL_CIPHER *peer_cipher = sk_SSL_CIPHER_value(peer_ciphers, ii);
 
-        coap_log(COAP_LOG_CIPHERS, "Client cipher: %s (%04x)\n",
-                               SSL_CIPHER_get_name(peer_cipher),
-                               SSL_CIPHER_get_protocol_id(peer_cipher));
+        coap_dtls_log(COAP_LOG_INFO,
+                      "Client cipher: %s (%04x)\n",
+                      SSL_CIPHER_get_name(peer_cipher),
+                      SSL_CIPHER_get_protocol_id(peer_cipher));
         if (strstr (SSL_CIPHER_get_name (peer_cipher), "PSK")) {
           psk_requested = 1;
           break;
@@ -3184,7 +3187,7 @@ int coap_dtls_receive(coap_session_t *session,
     int err = SSL_get_error(ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
       if (in_init && SSL_is_init_finished(ssl)) {
-        coap_log(COAP_LOG_CIPHERS, "*  %s: Using cipher: %s\n",
+        coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                  coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
         coap_session_connected(session);
@@ -3430,7 +3433,7 @@ ssize_t coap_tls_write(coap_session_t *session,
     int err = SSL_get_error(ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
       if (in_init && SSL_is_init_finished(ssl)) {
-        coap_log(COAP_LOG_CIPHERS, "*  %s: Using cipher: %s\n",
+        coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                  coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
         coap_session_send_csm(session);
@@ -3458,7 +3461,7 @@ ssize_t coap_tls_write(coap_session_t *session,
       r = -1;
     }
   } else if (in_init && SSL_is_init_finished(ssl)) {
-    coap_log(COAP_LOG_CIPHERS, "*  %s: Using cipher: %s\n",
+    coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
              coap_session_str(session), SSL_get_cipher_name(ssl));
     coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
     coap_session_send_csm(session);
@@ -3495,7 +3498,7 @@ ssize_t coap_tls_read(coap_session_t *session,
     int err = SSL_get_error(ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
       if (in_init && SSL_is_init_finished(ssl)) {
-        coap_log(COAP_LOG_CIPHERS, "*  %s: Using cipher: %s\n",
+        coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                  coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
         coap_session_send_csm(session);
@@ -3521,7 +3524,7 @@ ssize_t coap_tls_read(coap_session_t *session,
       r = -1;
     }
   } else if (in_init && SSL_is_init_finished(ssl)) {
-    coap_log(COAP_LOG_CIPHERS, "*  %s: Using cipher: %s\n",
+    coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
              coap_session_str(session), SSL_get_cipher_name(ssl));
     coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
     coap_session_send_csm(session);
