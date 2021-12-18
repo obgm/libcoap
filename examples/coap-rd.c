@@ -583,6 +583,7 @@ usage(const char *program, const char *version) {
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
      "Usage: %s [-g group] [-G group_if] [-p port] [-v num] [-A address]\n"
+     "\t       [-V num]\n"
      "\t       [[-h hint] [-k key]]\n"
      "\t       [[-c certfile] [-C cafile] [-n] [-R trust_casfile]]\n"
      "General Options\n"
@@ -592,9 +593,11 @@ usage(const char *program, const char *version) {
      "\t       \t\tgroup. This can be different from the implied interface\n"
      "\t       \t\tif the -A option is used\n"
      "\t-p port\t\tListen on specified port\n"
-     "\t-v num \t\tVerbosity level (default 3, maximum is 9). Above 7,\n"
-     "\t       \t\tthere is increased verbosity in GnuTLS and OpenSSL logging\n"
+     "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
+     "\t       \t\tCoAP logging\n"
      "\t-A address\tInterface address to bind to\n"
+     "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
+     "\t       \t\tlibrary logging\n"
      "PSK Options (if supported by underlying (D)TLS library)\n"
      "\t-h hint\t\tIdentity Hint. Default is CoAP. Zero length is no hint\n"
      "\t-k key \t\tPre-Shared Key. This argument requires (D)TLS with PSK\n"
@@ -781,12 +784,13 @@ main(int argc, char **argv) {
   char *group = NULL;
   char *group_if = NULL;
   int opt;
-  coap_log_t log_level = LOG_WARNING;
+  coap_log_t log_level = COAP_LOG_WARN;
+  coap_log_t dtls_log_level = COAP_LOG_ERR;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "A:c:C:g:G:h:k:n:R:p:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:c:C:g:G:h:k:n:R:p:v:V:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -832,6 +836,9 @@ main(int argc, char **argv) {
     case 'v' :
       log_level = strtol(optarg, NULL, 10);
       break;
+    case 'V':
+      dtls_log_level = strtol(optarg, NULL, 10);
+      break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
       exit( 1 );
@@ -839,8 +846,8 @@ main(int argc, char **argv) {
   }
 
   coap_startup();
-  coap_dtls_set_log_level(log_level);
   coap_set_log_level(log_level);
+  coap_dtls_set_log_level(dtls_log_level);
 
   ctx = get_context(addr_str, port_str);
   if (!ctx)

@@ -59,6 +59,16 @@ const char *define_list[] = {
   "coap_string_equal(",
   "coap_binary_equal(",
   "coap_log(",
+  "coap_log_emerg(",
+  "coap_log_alert(",
+  "coap_log_crit(",
+  "coap_log_err(",
+  "coap_log_warn(",
+  "coap_log_info(",
+  "coap_log_notice(",
+  "coap_log_debug(",
+  "coap_log_oscore(",
+  "coap_dtls_log(",
 };
 
 const char *struct_list[] = {

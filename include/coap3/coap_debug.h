@@ -26,22 +26,46 @@
 
 #ifndef COAP_DEBUG_FD
 /**
- * Used for output for @c LOG_DEBUG to @c LOG_ERR.
+ * Used for output for @c COAP_LOG_OSCORE to @c COAP_LOG_ERR.
  */
 #define COAP_DEBUG_FD stdout
 #endif
 
 #ifndef COAP_ERR_FD
 /**
- * Used for output for @c LOG_CRIT to @c LOG_EMERG.
+ * Used for output for @c COAP_LOG_CRIT to @c COAP_LOG_EMERG.
  */
 #define COAP_ERR_FD stderr
 #endif
 
+#define coap_log_emerg(...) coap_log(COAP_LOG_EMERG, __VA_ARGS__)
+#define coap_log_alert(...) coap_log(COAP_LOG_ALERT, __VA_ARGS__)
+#define coap_log_crit(...) coap_log(COAP_LOG_CRIT, __VA_ARGS__)
+#define coap_log_err(...) coap_log(COAP_LOG_ERR, __VA_ARGS__)
+#define coap_log_warn(...) coap_log(COAP_LOG_WARN, __VA_ARGS__)
+#define coap_log_info(...) coap_log(COAP_LOG_INFO, __VA_ARGS__)
+#define coap_log_notice(...) coap_log(COAP_LOG_NOTICE, __VA_ARGS__)
+#define coap_log_debug(...) coap_log(COAP_LOG_DEBUG, __VA_ARGS__)
+#define coap_log_oscore(...) coap_log(COAP_LOG_OSCORE, __VA_ARGS__)
+
 /**
- * Logging type.  One of LOG_* from @b syslog.
+ * Logging type.  These should be used where possible in the code instead
+ * of the syslog definitions, or alternatively use the coap_log_*() functions
+ * to reduce line length.
  */
-typedef int coap_log_t;
+typedef enum {
+  COAP_LOG_EMERG = 0,
+  COAP_LOG_ALERT,
+  COAP_LOG_CRIT,
+  COAP_LOG_ERR,
+  COAP_LOG_WARN,
+  COAP_LOG_NOTICE,
+  COAP_LOG_INFO,
+  COAP_LOG_DEBUG,
+  COAP_LOG_OSCORE,
+  COAP_LOG_DTLS_BASE,
+#define COAP_LOG_CIPHERS COAP_LOG_DTLS_BASE /* For backward compatability */
+} coap_log_t;
 
 #ifdef HAVE_SYSLOG_H
 #include <syslog.h>
@@ -57,53 +81,63 @@ typedef int coap_log_t;
 #endif /* HAVE_SYSLOG_H */
 
 #ifndef LOG_EMERG
-# define LOG_EMERG  0
+# define LOG_EMERG  COAP_LOG_EMERG
 #endif
 #ifndef LOG_ALERT
-# define LOG_ALERT  1
+# define LOG_ALERT  COAP_LOG_ALERT
 #endif
 #ifndef LOG_CRIT
-# define LOG_CRIT   2
+# define LOG_CRIT   COAP_LOG_CRIT
 #endif
 #ifndef LOG_ERR
-# define LOG_ERR    3
+# define LOG_ERR    COAP_LOG_ERR
 #endif
 #ifndef LOG_WARNING
-# define LOG_WARNING 4
+# define LOG_WARNING COAP_LOG_WARN
 #endif
 #ifndef LOG_NOTICE
-# define LOG_NOTICE 5
+# define LOG_NOTICE COAP_LOG_NOTICE
 #endif
 #ifndef LOG_INFO
-# define LOG_INFO   6
+# define LOG_INFO   COAP_LOG_INFO
 #endif
 #ifndef LOG_DEBUG
-# define LOG_DEBUG  7
+# define LOG_DEBUG  COAP_LOG_DEBUG
 #endif
-/*
-   LOG_DEBUG+2 gives ciphers in GnuTLS
-   Use COAP_LOG_CIPHERS to output Cipher Info in OpenSSL etc.
- */
-#define COAP_LOG_CIPHERS (LOG_DEBUG+2)
 
 /**
  * Get the current logging level.
  *
- * @return One of the LOG_* values.
+ * @return One of the COAP_LOG_* values.
  */
 coap_log_t coap_get_log_level(void);
 
 /**
  * Sets the log level to the specified value.
  *
- * @param level One of the LOG_* values.
+ * @param level One of the COAP_LOG_* values.
  */
 void coap_set_log_level(coap_log_t level);
 
 /**
+ * Sets the (D)TLS logging level to the specified @p level.
+ *
+ * @param level One of the COAP_LOG_* values.
+ */
+void coap_dtls_set_log_level(coap_log_t level);
+
+/**
+ * Get the current (D)TLS logging.
+ *
+ * @return One of the COAP_LOG_* values.
+ */
+coap_log_t coap_dtls_get_log_level(void);
+
+/**
  * Logging callback handler definition.
  *
- * @param level One of the LOG_* values.
+ * @param level One of the COAP_LOG_* values, or if used for (D)TLS logging,
+ *              COAP_LOG_DTLS_BASE + one of the COAP_LOG_* values.
  * @param message Zero-terminated string message to log.
  */
 typedef void (*coap_log_handler_t) (coap_log_t level, const char *message);
@@ -112,6 +146,7 @@ typedef void (*coap_log_handler_t) (coap_log_t level, const char *message);
  * Add a custom log callback handler.
  *
  * @param handler The logging handler to use or @p NULL to use default handler.
+ *                 This handler will be used for both CoAP and (D)TLS logging.
  */
 void coap_set_log_handler(coap_log_handler_t handler);
 
@@ -137,13 +172,14 @@ const char *coap_package_version(void);
 const char *coap_package_build(void);
 
 /**
- * Writes the given text to @c COAP_ERR_FD (for @p level <= @c LOG_CRIT) or @c
- * COAP_DEBUG_FD (for @p level >= @c LOG_ERR). The text is output only when
- * @p level is below or equal to the log level that set by coap_set_log_level().
+ * Writes the given text to @c COAP_ERR_FD (for @p level <= @c COAP_LOG_CRIT) or
+ * @c COAP_DEBUG_FD (for @p level >= @c COAP_LOG_ERR). The text is output only
+ * when @p level is below or equal to the log level that set by
+ * coap_set_log_level().
  *
  * Internal function.
  *
- * @param level One of the LOG_* values.
+ * @param level One of the COAP_LOG_* values.
  & @param format The format string to use.
  */
 #if (defined(__GNUC__))
@@ -156,15 +192,30 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
 #ifndef coap_log
 /**
  * Logging function.
- * Writes the given text to @c COAP_ERR_FD (for @p level <= @c LOG_CRIT) or @c
- * COAP_DEBUG_FD (for @p level >= @c LOG_ERR). The text is output only when
+ * Writes the given text to @c COAP_ERR_FD (for @p level <= @c COAP_LOG_CRIT) or @c
+ * COAP_DEBUG_FD (for @p level >= @c COAP_LOG_ERR). The text is output only when
  * @p level is below or equal to the log level that set by coap_set_log_level().
  *
- * @param level One of the LOG_* values.
+ * @param level One of the COAP_LOG_* values.
  */
 #define coap_log(level, ...) do { \
   if ((int)((level))<=(int)coap_get_log_level()) \
      coap_log_impl((level), __VA_ARGS__); \
+} while(0)
+#endif
+
+#ifndef coap_dtls_log
+/**
+ * Logging function.
+ * Writes the given text to @c COAP_ERR_FD (for @p level <= @c COAP_LOG_CRIT) or @c
+ * COAP_DEBUG_FD (for @p level >= @c COAP_LOG_ERR). The text is output only when
+ * @p level is below or equal to the log level that set by coap_dtls_set_log_level().
+ *
+ * @param level One of the COAP_LOG_* values.
+ */
+#define coap_dtls_log(level, ...) do { \
+  if ((int)((level))<=(int)coap_dtls_get_log_level()) \
+     coap_log_impl((level)+COAP_LOG_DTLS_BASE, __VA_ARGS__); \
 } while(0)
 #endif
 

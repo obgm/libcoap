@@ -2128,7 +2128,7 @@ usage( const char *program, const char *version) {
   fprintf(stderr, "\n"
      "Usage: %s [-d max] [-e] [-g group] [-G group_if] [-l loss] [-p port]\n"
      "\t\t[-r] [-v num] [-A address] [-L value] [-N]\n"
-     "\t\t[-P scheme://address[:port],[name1[,name2..]]] [-X size]\n"
+     "\t\t[-P scheme://address[:port],[name1[,name2..]]] [-V num] [-X size]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
      "\t\t[-s match_psk_sni_file] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
@@ -2157,9 +2157,8 @@ usage( const char *program, const char *version) {
      "\t       \t\tonly '/', '/async' and '/.well-known/core' are enabled\n"
      "\t       \t\tfor multicast requests support, otherwise all\n"
      "\t       \t\tresources are enabled\n"
-     "\t-v num \t\tVerbosity level (default 3, maximum is 9). Above 7,\n"
-     "\t       \t\tthere is increased verbosity in GnuTLS and OpenSSL\n"
-     "\t       \t\tlogging\n"
+     "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
+     "\t       \t\tCoAP logging\n"
      "\t-A address\tInterface address to bind to\n"
      "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
      "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
@@ -2180,6 +2179,8 @@ usage( const char *program, const char *version) {
      "\t       \t\tdefined before the leading , (comma) of the first name,\n"
      "\t       \t\tthen the ongoing connection will be a direct connection.\n"
      "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
+     "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
+     "\t       \t\tlibrary logging\n"
      "\t-X size\t\tMaximum message size to use for TCP based connections\n"
      "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
      "PSK Options (if supported by underlying (D)TLS library)\n"
@@ -2584,7 +2585,8 @@ main(int argc, char **argv) {
   char port_str[NI_MAXSERV] = "5683";
   int opt;
   int mcast_per_resource = 0;
-  coap_log_t log_level = LOG_WARNING;
+  coap_log_t log_level = COAP_LOG_WARN;
+  coap_log_t dtls_log_level = COAP_LOG_ERR;
   unsigned wait_ms;
   coap_time_t t_last = 0;
   int coap_fd;
@@ -2603,7 +2605,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:u:v:A:C:L:M:NP:R:S:X:")) != -1) {
+  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:u:v:A:C:L:M:NP:R:S:V:X:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -2724,6 +2726,9 @@ main(int argc, char **argv) {
     case 'v' :
       log_level = strtol(optarg, NULL, 10);
       break;
+    case 'V':
+      dtls_log_level = strtol(optarg, NULL, 10);
+      break;
     case 'X':
       csm_max_message_size = strtol(optarg, NULL, 10);
       break;
@@ -2748,8 +2753,8 @@ main(int argc, char **argv) {
 #endif
 
   coap_startup();
-  coap_dtls_set_log_level(log_level);
   coap_set_log_level(log_level);
+  coap_dtls_set_log_level(dtls_log_level);
 
   ctx = get_context(addr_str, port_str);
   if (!ctx)

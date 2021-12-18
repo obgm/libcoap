@@ -24,7 +24,7 @@ SYNOPSIS
               [*-t* type] [*-v* num] [*-w*] [*-A* type] [*-B* seconds]
               [*-G* count] [*-H* hoplimit] [*-K* interval] [*-L* value] [*-N*]
               [*-O* num,text] [*-P* scheme://addr[:port]] [*-T* token] [*-U*]
-              [*-X* size]
+              [*-V* num] [*-X* size]
               [[*-h* match_hint_file] [*-k* key] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [-n] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]] URI
@@ -113,8 +113,8 @@ OPTIONS - General
      application/cbor (cbor)
 
 *-v* num::
-   The verbosity level to use (default 3, maximum is 9). Above 7, there is
-   increased verbosity in GnuTLS and OpenSSL logging.
+   The verbosity level to use (default 4, maximum is 8) for general
+   CoAP logging.
 
 *-w*::
    Append a newline to received data.
@@ -165,6 +165,10 @@ OPTIONS - General
 
 *-U* ::
    Never include Uri-Host or Uri-Port options.
+
+*-V* num::
+   The verbosity level to use (default 3, maximum is 7) for (D)TLS
+   library logging.
 
 *-X* size::
    Maximum message size to use for TCP based connections (default is 8388864).

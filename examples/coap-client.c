@@ -512,7 +512,7 @@ usage(const char *program, const char *version) {
      "\t\t[-m method] [-o file] [-p port] [-r] [-s duration] [-t type]\n"
      "\t\t[-v num] [-w] [-A type] [-B seconds] [G count] [-H hoplimit]\n"
      "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]]\n"
-     "\t\t[-T token] [-U] [-X size]\n"
+     "\t\t[-T token] [-U] [-V num] [-X size]\n"
      "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
      "\t\t[-J pkcs11_pin] [-M raw_pk] [-R trust_casfile]\n"
@@ -540,8 +540,8 @@ usage(const char *program, const char *version) {
      "\t-s duration\tSubscribe to / Observe resource for given duration\n"
      "\t       \t\tin seconds\n"
      "\t-t type\t\tContent format for given resource for PUT/POST\n"
-     "\t-v num \t\tVerbosity level (default 3, maximum is 9). Above 7,\n"
-     "\t       \t\tthere is increased verbosity in GnuTLS logging\n"
+     "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
+     "\t       \t\tCoAP logging\n"
      "\t-w     \t\tAppend a newline to received data\n"
      "\t-A type\t\tAccepted media type\n"
      "\t-B seconds\tBreak operation after waiting given seconds\n"
@@ -566,6 +566,8 @@ usage(const char *program, const char *version) {
      "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
      "\t-T token\tDefine the initial starting token\n"
      "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
+     "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
+     "\t       \t\tlibrary logging\n"
      "\t-X size\t\tMaximum message size to use for TCP based connections\n"
      "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
      ,program, wait_seconds);
@@ -1468,7 +1470,8 @@ main(int argc, char **argv) {
   char port_str[NI_MAXSERV] = "0";
   char node_str[NI_MAXHOST] = "";
   int opt, res;
-  coap_log_t log_level = LOG_WARNING;
+  coap_log_t log_level = COAP_LOG_WARN;
+  coap_log_t dtls_log_level = COAP_LOG_ERR;
   unsigned char *user = NULL, *key = NULL;
   ssize_t user_length = -1, key_length = 0;
   int create_uri_opts = 1;
@@ -1481,7 +1484,7 @@ main(int argc, char **argv) {
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:no:p:rs:t:u:v:wA:B:C:G:H:J:K:L:M:NO:P:R:T:UX:")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:no:p:rs:t:u:v:wA:B:C:G:H:J:K:L:M:NO:P:R:T:UV:X:")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1585,6 +1588,9 @@ main(int argc, char **argv) {
     case 'v':
       log_level = strtol(optarg, NULL, 10);
       break;
+    case 'V':
+      dtls_log_level = strtol(optarg, NULL, 10);
+      break;
     case 'l':
       if (!coap_debug_set_packet_loss(optarg)) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
@@ -1641,8 +1647,8 @@ main(int argc, char **argv) {
 #endif
 
   coap_startup();
-  coap_dtls_set_log_level(log_level);
   coap_set_log_level(log_level);
+  coap_dtls_set_log_level(dtls_log_level);
 
   if (optind < argc) {
     if (cmdline_uri(argv[optind], create_uri_opts) < 0) {

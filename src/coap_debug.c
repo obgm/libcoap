@@ -47,7 +47,7 @@
 #include "net/ip/uip-debug.h"
 #endif
 
-static coap_log_t maxlog = LOG_WARNING;        /* default maximum log level */
+static coap_log_t maxlog = COAP_LOG_WARN;  /* default maximum CoAP log level */
 
 static int use_fprintf_for_show_pdu = 1; /* non zero to output with fprintf */
 
@@ -82,9 +82,13 @@ coap_set_log_level(coap_log_t level) {
   maxlog = level;
 }
 
-/* this array has the same order as the type log_t */
+/* this array has the same order as the type coap_log_t with the (D)TLS
+   entries added to the list with a COAP_LOG_DTLS_BASE offset */
 static const char *loglevels[] = {
-  "EMRG", "ALRT", "CRIT", "ERR ", "WARN", "NOTE", "INFO", "DEBG", "????", "CIPH"
+  /* General logging */
+  "EMRG", "ALRT", "CRIT", "ERR ", "WARN", "NOTE", "INFO", "DEBG", "OSC ",
+  /* (D)TLS logging */
+  "Emrg", "Alrt", "Crit", "Err ", "Warn", "Note", "Info", "Debg"
 };
 
 #ifdef HAVE_TIME_H
@@ -505,6 +509,7 @@ print_content_format(unsigned int format_type,
     { COAP_MEDIATYPE_APPLICATION_JSON, "application/json" },
     { COAP_MEDIATYPE_APPLICATION_CBOR, "application/cbor" },
     { COAP_MEDIATYPE_APPLICATION_CWT, "application/cwt" },
+    { COAP_MEDIATYPE_APPLICATION_COAP_GROUP_JSON, "application/coap-group+json" },
     { COAP_MEDIATYPE_APPLICATION_COSE_SIGN, "application/cose; cose-type=\"cose-sign\"" },
     { COAP_MEDIATYPE_APPLICATION_COSE_SIGN1, "application/cose; cose-type=\"cose-sign1\"" },
     { COAP_MEDIATYPE_APPLICATION_COSE_ENCRYPT, "application/cose; cose-type=\"cose-encrypt\"" },
@@ -521,8 +526,8 @@ print_content_format(unsigned int format_type,
     { COAP_MEDIATYPE_APPLICATION_SENSML_EXI, "application/sensml-exi" },
     { COAP_MEDIATYPE_APPLICATION_SENML_XML, "application/senml+xml" },
     { COAP_MEDIATYPE_APPLICATION_SENSML_XML, "application/sensml+xml" },
-    { COAP_MEDIATYPE_APPLICATION_COAP_GROUP_JSON, "application/coap-group+json" },
     { COAP_MEDIATYPE_APPLICATION_DOTS_CBOR, "application/dots+cbor" },
+    { COAP_MEDIATYPE_APPLICATION_ACE_CBOR, "application/ace+cbor" },
     { 75, "application/dcaf+cbor" }
   };
 
@@ -967,9 +972,6 @@ void coap_set_log_handler(coap_log_handler_t handler) {
 void
 coap_log_impl(coap_log_t level, const char *format, ...) {
 
-  if (maxlog < level)
-    return;
-
   if (log_handler) {
 #if COAP_CONSTRAINED_STACK
     static coap_mutex_t static_log_mutex = COAP_MUTEX_INITIALIZER;
@@ -980,7 +982,7 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     va_list ap;
     va_start(ap, format);
 #if COAP_CONSTRAINED_STACK
-  coap_mutex_lock(&static_log_mutex);
+    coap_mutex_lock(&static_log_mutex);
 #endif /* COAP_CONSTRAINED_STACK */
 
     vsnprintf( message, sizeof(message), format, ap);
@@ -1003,8 +1005,11 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     if (len)
       fprintf(log_fd, "%.*s ", (int)len, timebuf);
 
-    if (level <= COAP_LOG_CIPHERS)
+    if (level > sizeof(loglevels)/sizeof(loglevels[0])) {
+      fprintf(log_fd, "%4d ", level);
+    } else {
       fprintf(log_fd, "%s ", loglevels[level]);
+    }
 
     va_start(ap, format);
     vfprintf(log_fd, format, ap);
