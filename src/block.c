@@ -408,7 +408,7 @@ coap_add_data_large_internal(coap_session_t *session,
 
   avail = pdu->max_size - pdu->used_size - pdu->hdr_size;
   /* May need token of length 8, so account for this */
-  avail -= (pdu->token_length <= 8) ? pdu->token_length <= 8 : 0;
+  avail -= (pdu->token_length < 8) ? 8 - pdu->token_length : 0;
   blk_size = coap_flsll((long long)avail) - 4 - 1;
 
   /* see if BLOCKx defined - if so update blk_size as given by app */
@@ -558,11 +558,11 @@ coap_add_data_large_internal(coap_session_t *session,
     /* Check we still have space after adding in some options */
     avail = pdu->max_size - pdu->used_size - pdu->hdr_size;
     /* May need token of length 8, so account for this */
-    avail -= (pdu->token_length <= 8) ? pdu->token_length <= 8 : 0;
+    avail -= (pdu->token_length < 8) ? 8 - pdu->token_length : 0;
     if (avail < (ssize_t)chunk) {
       /* chunk size change down */
       if (avail < 16) {
-        coap_log(LOG_DEBUG,
+        coap_log(LOG_WARNING,
                 "not enough space, even the smallest block does not fit\n");
         goto fail;
       }
@@ -879,7 +879,10 @@ coap_block_new_lg_crcv(coap_session_t *session, coap_pdu_t *pdu) {
   lg_crcv->state_token = state_token;
   length = coap_encode_var_safe8(buf, sizeof(lg_crcv->state_token),
                                  lg_crcv->state_token);
-  coap_update_token(pdu, length, buf);
+  if (!coap_update_token(pdu, length, buf)) {
+    coap_block_delete_lg_crcv(session, lg_crcv);
+    return NULL;
+  }
 
   /* In case it is there - must not be in continuing request PDUs */
   coap_remove_option(&lg_crcv->pdu, COAP_OPTION_BLOCK1);
