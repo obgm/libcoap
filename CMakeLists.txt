@@ -699,3 +699,15 @@ install(
   COMPONENT dev
   FILES_MATCHING
   PATTERN "*.h")
+if(ENABLE_EXAMPLES)
+  install(
+    TARGETS coap-server coap-client coap-rd
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+    COMPONENT dev)
+  if(NOT WIN32)
+    install(
+      TARGETS etsi_iot_01 tiny
+      DESTINATION ${CMAKE_INSTALL_BINDIR}
+      COMPONENT dev)
+  endif()
+endif()
