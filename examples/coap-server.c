@@ -1330,12 +1330,12 @@ hnd_get(coap_resource_t *resource,
 }
 
 /*
- * Regular PUT handler - used by resources created by the
- * Unknown Resource PUT handler
+ * Regular PUT or POST handler - used by resources created by the
+ * Unknown Resource PUT/POST handler
  */
 
 static void
-hnd_put(coap_resource_t *resource,
+hnd_put_post(coap_resource_t *resource,
         coap_session_t *session,
         const coap_pdu_t *request,
         const coap_string_t *query COAP_UNUSED,
@@ -1371,7 +1371,7 @@ hnd_put(coap_resource_t *resource,
   }
   if (i == dynamic_count) {
     if (dynamic_count >= support_dynamic) {
-      /* Should have been caught in hnd_unknown_put() */
+      /* Should have been caught hnd_put_post_unknown() */
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_ACCEPTABLE);
       coap_delete_string(uri_path);
       return;
@@ -1384,7 +1384,6 @@ hnd_put(coap_resource_t *resource,
       dynamic_entry[i].value = NULL;
       dynamic_entry[i].resource = resource;
       dynamic_entry[i].created = 1;
-      coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
       if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
                                       &opt_iter)) != NULL) {
         dynamic_entry[i].media_type =
@@ -1414,7 +1413,6 @@ hnd_put(coap_resource_t *resource,
   } else {
     /* Need to do this as coap_get_uri_path() created it */
     coap_delete_string(uri_path);
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
   }
 
   resource_entry = &dynamic_entry[i];
@@ -1513,8 +1511,32 @@ hnd_put(coap_resource_t *resource,
   resource_entry->value = transient_value;
 
   if (resource_entry->created) {
+    coap_pdu_code_t code = coap_pdu_get_code(request);
+
     resource_entry->created = 0;
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
+    if (code == COAP_REQUEST_CODE_POST) {
+      /* Add in Location-Path / Location-Query Options */
+      coap_option_iterator_init(request, &opt_iter, COAP_OPT_ALL);
+      while ((option = coap_option_next(&opt_iter))) {
+        switch (opt_iter.number) {
+        case COAP_OPTION_URI_PATH:
+          if (!coap_add_option(response, COAP_OPTION_LOCATION_PATH,
+                               coap_opt_length(option),
+                               coap_opt_value(option)))
+            goto fail;
+          break;
+        case COAP_OPTION_URI_QUERY:
+          if (!coap_add_option(response, COAP_OPTION_LOCATION_QUERY,
+                               coap_opt_length(option),
+                               coap_opt_value(option)))
+            goto fail;
+          break;
+        default:
+          break;
+        }
+      }
+    }
   }
   else {
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
@@ -1531,6 +1553,11 @@ hnd_put(coap_resource_t *resource,
                                  body.s,
                                  release_resource_data, resource_entry->value);
   }
+  return;
+
+fail:
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
+  return;
 }
 
 /*
@@ -1538,7 +1565,7 @@ hnd_put(coap_resource_t *resource,
  */
 
 static void
-hnd_unknown_put(coap_resource_t *resource COAP_UNUSED,
+hnd_put_post_unknown(coap_resource_t *resource COAP_UNUSED,
                 coap_session_t *session,
                 const coap_pdu_t *request,
                 const coap_string_t *query,
@@ -1567,15 +1594,16 @@ hnd_unknown_put(coap_resource_t *resource COAP_UNUSED,
   r = coap_resource_init((coap_str_const_t*)uri_path,
         COAP_RESOURCE_FLAGS_RELEASE_URI | resource_flags);
   coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Dynamic\""), 0);
-  coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put);
+  coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_post);
+  coap_register_request_handler(r, COAP_REQUEST_POST, hnd_put_post);
   coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete);
   /* We possibly want to Observe the GETs */
   coap_resource_set_get_observable(r, 1);
   coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get);
   coap_add_resource(coap_session_get_context(session), r);
 
-  /* Do the PUT for this first call */
-  hnd_put(r, session, request, query, response);
+  /* Do the PUT/POST for this first call */
+  hnd_put_post(r, session, request, query, response);
 }
 
 #if SERVER_CAN_PROXY
@@ -1780,7 +1808,9 @@ init_resources(coap_context_t *ctx) {
 
   if (support_dynamic > 0) {
     /* Create a resource to handle PUTs to unknown URIs */
-    r = coap_resource_unknown_init(hnd_unknown_put);
+    r = coap_resource_unknown_init(hnd_put_post_unknown);
+    /* Add in handling POST as well */
+    coap_register_handler(r, COAP_REQUEST_POST, hnd_put_post_unknown);
     coap_add_resource(ctx, r);
   }
 
