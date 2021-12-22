@@ -415,7 +415,8 @@ if test "x$build_dtls" = "xyes"; then
                        return 0;
                      }]])],
                [mbedtls_version=$(./conftest$EXEEXT)],
-               [AC_MSG_ERROR(Failed to determine Mbed TLS version)])
+               [AC_MSG_WARN(Failed to determine Mbed TLS version)
+                have_mbedtls=no])
             LIBS=$local_MbedTLS_save_LIBS
             AC_LANG_POP(C)
         fi
