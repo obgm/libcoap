@@ -992,9 +992,9 @@ coap_handle_request_send_block(coap_session_t *session,
   uint32_t out_blocks[1];
   const char *error_phrase;
 
-  if (coap_get_block(pdu, COAP_OPTION_BLOCK2, &block)) {
-    block_opt = COAP_OPTION_BLOCK2;
-  }
+  if (!coap_get_block(pdu, COAP_OPTION_BLOCK2, &block))
+    return 0;
+  block_opt = COAP_OPTION_BLOCK2;
   LL_FOREACH(session->lg_xmit, p) {
     size_t chunk;
     coap_opt_iterator_t opt_iter;
