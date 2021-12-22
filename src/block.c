@@ -1408,6 +1408,9 @@ coap_handle_request_put_block(coap_context_t *context,
         pdu->body_total = p->total_len;
         coap_log(LOG_DEBUG, "Server app version of updated PDU\n");
         coap_show_pdu(LOG_DEBUG, pdu);
+        coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
+                 (int)resource->uri_path->length,
+                 (int)resource->uri_path->length, resource->uri_path->s);
         /* Need to do this here as we need to free off p */
         h(resource, session, pdu, query, response);
         /* Check if lg_xmit generated and update PDU code if so */
@@ -1433,6 +1436,9 @@ coap_handle_request_put_block(coap_context_t *context,
                              (block.m << 3) |
                              block.szx),
                            buf);
+          coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
+                   (int)resource->uri_path->length,
+                   (int)resource->uri_path->length, resource->uri_path->s);
           h(resource, session, pdu, query, response);
           /* Check if lg_xmit generated and update PDU code if so */
           coap_check_code_lg_xmit(session, response, resource, query,

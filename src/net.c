@@ -2750,9 +2750,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     h = resource->handler[pdu->code - 1];
 
   if (h) {
-     coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
-              (int)resource->uri_path->length, (int)resource->uri_path->length,
-              resource->uri_path->s);
     response = coap_pdu_init(pdu->type == COAP_MESSAGE_CON
       ? COAP_MESSAGE_ACK
       : COAP_MESSAGE_NON,
@@ -2823,6 +2820,9 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       /*
        * Call the request handler with everything set up
        */
+      coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
+               (int)resource->uri_path->length, (int)resource->uri_path->length,
+               resource->uri_path->s);
       h(resource, session, pdu, query, response);
 
       /* Check if lg_xmit generated and update PDU code if so */

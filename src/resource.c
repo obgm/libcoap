@@ -967,6 +967,9 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         query = coap_get_query(obs->pdu);
         coap_log(LOG_DEBUG, "Observe PDU presented to app.\n");
         coap_show_pdu(LOG_DEBUG, obs->pdu);
+        coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
+                 (int)r->uri_path->length, (int)r->uri_path->length,
+                 r->uri_path->s);
         h(r, obs->session, obs->pdu, query, response);
         /* Check if lg_xmit generated and update PDU code if so */
         coap_check_code_lg_xmit(obs->session, response, r, query,
