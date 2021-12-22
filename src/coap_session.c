@@ -325,7 +325,7 @@ ssize_t coap_session_write(coap_session_t *session, const uint8_t *data, size_t 
   if (bytes_written > 0) {
     coap_ticks(&session->last_rx_tx);
     coap_log(LOG_DEBUG, "*  %s: sent %zd bytes\n",
-             coap_session_str(session), datalen);
+             coap_session_str(session), bytes_written);
   } else if (bytes_written < 0) {
     coap_log(LOG_DEBUG,  "*   %s: failed to send %zd bytes\n",
              coap_session_str(session), datalen );
