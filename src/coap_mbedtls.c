@@ -1,7 +1,7 @@
 /*
  * coap_mbedtls.c -- Mbed TLS Datagram Transport Layer Support for libcoap
  *
- * Copyright (C) 2019-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2019-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *               2019 Jitin George <jitin@espressif.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -317,6 +317,25 @@ get_error_string(int ret) {
   return buf;
 }
 
+static int
+self_signed_cert_verify_callback_mbedtls(void *data,
+                                         mbedtls_x509_crt *crt COAP_UNUSED,
+                                         int depth COAP_UNUSED,
+                                         uint32_t *flags)
+{
+  const coap_session_t *c_session = (coap_session_t*)data;
+  const coap_mbedtls_context_t *m_context =
+                   (coap_mbedtls_context_t *)c_session->context->dtls_context;
+  const coap_dtls_pki_t *setup_data = &m_context->setup_data;
+
+  if (*flags & MBEDTLS_X509_BADCERT_EXPIRED) {
+    if (setup_data->allow_expired_certs) {
+      *flags &= ~MBEDTLS_X509_BADCERT_EXPIRED;
+    }
+  }
+  return 0;
+}
+
 /*
  * return 0 All OK
  *        -ve Error Code
@@ -375,7 +394,8 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
   if (*flags & MBEDTLS_X509_BADCERT_NOT_TRUSTED) {
     uint32_t lflags;
     int self_signed = !mbedtls_x509_crt_verify(crt, crt, NULL, NULL, &lflags,
-                                               NULL, NULL);
+                                      self_signed_cert_verify_callback_mbedtls,
+                                               data);
     if (self_signed && depth == 0) {
       if (setup_data->allow_self_signed &&
           !setup_data->check_common_ca) {
@@ -1264,6 +1284,7 @@ static int do_mbedtls_handshake(coap_session_t *c_session,
     goto fail_alert;
 #ifdef MBEDTLS_2_X_COMPAT
   case MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO:
+  case MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO:
     alert = MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE;
     goto fail_alert;
 #endif /* MBEDTLS_2_X_COMPAT */
@@ -1276,6 +1297,8 @@ static int do_mbedtls_handshake(coap_session_t *c_session,
                report_mbedtls_alert(m_env->ssl.in_msg[1]));
     /* Fall through */
   case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+  case MBEDTLS_ERR_SSL_CONN_EOF:
+  case MBEDTLS_ERR_NET_CONN_RESET:
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
     ret = -1;
     break;
@@ -2284,7 +2307,7 @@ ssize_t coap_tls_read(coap_session_t *c_session,
                       size_t data_len
                       )
 {
-  int ret = 1;
+  int ret = -1;
 
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
 
