@@ -1551,8 +1551,9 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
         /* Reset the session back to startup defaults */
         coap_session_disconnected(session, COAP_NACK_ICMP_ISSUE);
       else
-        coap_log(LOG_WARNING, "*  %s: read error\n",
-                 coap_session_str(session));
+        coap_log(LOG_WARNING, "*  %s: read error %d: %s (%d)\n",
+                 coap_session_str(session), (int)bytes_read,
+                 coap_socket_strerror(), errno);
     } else if (bytes_read > 0) {
       session->last_rx_tx = now;
       memcpy(&session->addr_info, &packet->addr_info,
@@ -1579,6 +1580,14 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
         coap_log(LOG_DEBUG, "*  %s: received %zd bytes\n",
                  coap_session_str(session), bytes_read);
         session->last_rx_tx = now;
+      } else if (bytes_read < 0 && errno != EAGAIN) {
+        coap_log(LOG_DEBUG, "*  %s: read error %d: %s (%d)\n",
+                 coap_session_str(session), (int)bytes_read,
+                 coap_socket_strerror(), errno);
+        coap_delete_pdu(session->partial_pdu);
+        session->partial_pdu = NULL;
+        session->partial_read = 0;
+        break;
       }
       p = buf;
       retry = bytes_read == (ssize_t)buf_len;
