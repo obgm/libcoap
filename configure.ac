@@ -137,6 +137,15 @@ m4_define([version_number],
 LIBCOAP_VERSION=version_number
 AC_SUBST(LIBCOAP_VERSION)
 
+# Define a base version string
+m4_define([base_version],
+          [m4_format([%u.%u.%u],
+                     libcoap_major_version,
+                     libcoap_minor_version,
+                     libcoap_micro_version)])
+LIBCOAP_PACKAGE_BASE=base_version
+AC_SUBST(LIBCOAP_PACKAGE_BASE)
+
 # Adding some default warning options for code QS
 # see https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
 # and http://www.gnu.org/software/automake/manual/html_node/Flag-Variables-Ordering.html
@@ -954,6 +963,7 @@ CFLAGS="$CFLAGS $ADDITIONAL_CFLAGS"
 #
 AC_CONFIG_FILES([
 Makefile
+CMakeLists.txt
 coap_config.h.riot
 coap_config.h.windows
 doc/Makefile

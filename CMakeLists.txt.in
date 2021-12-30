@@ -2,7 +2,7 @@
 # [Make changes to CMakeLists.txt.in]
 #
 # Copyright (C) 2020 Carlos Gomes Martinho <carlos.gomes_martinho@siemens.com>
-# Copyright (C) 2020-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2020-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -13,10 +13,10 @@ cmake_minimum_required(VERSION 3.10)
 
 project(
   libcoap
-  VERSION 4.3.1
+  VERSION @LIBCOAP_PACKAGE_BASE@
   LANGUAGES CXX C)
 
-set(LIBCOAP_API_VERSION 3)
+set(LIBCOAP_API_VERSION @LIBCOAP_API_VERSION@)
 set(COAP_LIBRARY_NAME "coap-${LIBCOAP_API_VERSION}")
 
 option(
@@ -90,10 +90,6 @@ option(
   ENABLE_DOCS
   "build also doxygen documentation"
   ON)
-option(
-  WARNING_TO_ERROR
-  "force all compiler warnings to be errors"
-  OFF)
 
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 11)
@@ -235,7 +231,7 @@ function(compile_tinydtls)
 
   externalproject_add_step(
     external_tinydtls autoreconf
-    COMMAND ./autogen.sh
+    COMMAND autoreconf --force --install
     ALWAYS 1
     WORKING_DIRECTORY "${TINYDTLS_SOURCES_DIR}"
     DEPENDERS configure
@@ -390,17 +386,17 @@ execute_process(COMMAND git describe --tags --dirty --always
                 OUTPUT_STRIP_TRAILING_WHITESPACE
                 ERROR_QUIET)
 if(NOT ${USING_GIT} EQUAL 0)
-  set(LIBCOAP_PACKAGE_BUILD "4.3.1rc1")
+  set(LIBCOAP_PACKAGE_BUILD "@PACKAGE_VERSION@")
 else()
   set(LIBCOAP_PACKAGE_BUILD "${LIBCOAP_PACKAGE_BUILD}")
 endif()
 
-set(PACKAGE_URL "https://libcoap.net/")
+set(PACKAGE_URL "@PACKAGE_URL@")
 set(PACKAGE_NAME "${PROJECT_NAME}")
 set(PACKAGE_TARNAME "${PROJECT_NAME}")
-set(PACKAGE_STRING "libcoap 4.3.1rc1")
-set(PACKAGE_VERSION "4.3.1rc1")
-set(PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net")
+set(PACKAGE_STRING "@PACKAGE_STRING@")
+set(PACKAGE_VERSION "@PACKAGE_VERSION@")
+set(PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@")
 set(LIBCOAP_PACKAGE_VERSION "${PACKAGE_VERSION}")
 set(LIBCOAP_PACKAGE_URL "${PACKAGE_URL}")
 set(LIBCOAP_PACKAGE_NAME "${PACKAGE_NAME}")
@@ -429,7 +425,6 @@ message(STATUS "CMAKE_C_COMPILER:................${CMAKE_C_COMPILER}")
 message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
 message(STATUS "CMAKE_BUILD_TYPE:................${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR:..........${CMAKE_SYSTEM_PROCESSOR}")
-message(STATUS "WARNING_TO_ERROR:................${WARNING_TO_ERROR}")
 
 set(top_srcdir "${CMAKE_CURRENT_LIST_DIR}")
 set(top_builddir "${CMAKE_CURRENT_BINARY_DIR}")
@@ -485,27 +480,31 @@ target_sources(
           $<$<BOOL:${HAVE_MBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
           # headers
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/libcoap.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_address.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_async.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_cache.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/block.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_debug.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_dtls.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_encode.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_event.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_hashkey.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_io.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/mem.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/net.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_option.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/pdu.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_prng.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/resource.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_session.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_str.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_subscribe.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_time.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/uri.h)
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/block.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/encode.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/libcoap.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/lwippools.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/mem.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/net.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/pdu.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/resource.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/str.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/uri.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/uthash.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/utlist.h)
 target_include_directories(
   ${COAP_LIBRARY_NAME}
   PUBLIC # config headers are generated during configuration time
@@ -556,19 +555,6 @@ add_compile_options(
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wswitch-enum>
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wunused>
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wwrite-strings>)
-
-if(${WARNING_TO_ERROR})
-add_compile_options(
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Werror>)
-endif()
-
-if(CMAKE_GENERATOR MATCHES "Visual Studio")
-  option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols when compiling to a .dll" ON)
-  # add_compile_options(-Wall -wd4100)
-  if(${WARNING_TO_ERROR})
-    add_compile_options(-WX)
-  endif()
-endif()
 
 #
 # tests
@@ -714,6 +700,9 @@ install(
   PATTERN "*.h"
   PATTERN "coap.h" EXCLUDE
   PATTERN "coap_riot.h" EXCLUDE
+  PATTERN "lwippools.h" EXCLUDE
+  PATTERN "utlist.h" EXCLUDE
+  PATTERN "uthash.h" EXCLUDE
   PATTERN "*_internal.h" EXCLUDE)
 install(
   DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
