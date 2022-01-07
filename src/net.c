@@ -1944,7 +1944,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_mid_t
       (*queue)->t += (*node)->t;
     }
     (*node)->next = NULL;
-    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
+    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed 1\n",
              coap_session_str(session), id);
     return 1;
   }
@@ -1963,7 +1963,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_mid_t
     }
     q->next = NULL;
     *node = q;
-    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
+    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed 2\n",
              coap_session_str(session), id);
     return 1;
   }
@@ -1980,7 +1980,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
   while (context->sendqueue && context->sendqueue->session == session) {
     q = context->sendqueue;
     context->sendqueue = q->next;
-    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
+    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed 3\n",
              coap_session_str(session), q->id);
     if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
       context->nack_handler(session, q->pdu, reason, q->id);
@@ -1996,7 +1996,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
   while (q) {
     if (q->session == session) {
       p->next = q->next;
-      coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
+      coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed 4\n",
                coap_session_str(session), q->id);
       if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
         context->nack_handler(session, q->pdu, reason, q->id);
@@ -2022,7 +2022,7 @@ coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
       context->sendqueue->pdu->token_length)) {
     q = context->sendqueue;
     context->sendqueue = q->next;
-    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
+    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed 5\n",
              coap_session_str(session), q->id);
     coap_delete_node(q);
   }
@@ -2039,7 +2039,7 @@ coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
       token_match(token, token_length,
         q->pdu->token, q->pdu->token_length)) {
       p->next = q->next;
-      coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed\n",
+      coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed 6\n",
                coap_session_str(session), q->id);
       coap_delete_node(q);
       q = p->next;
@@ -2925,7 +2925,8 @@ handle_response(coap_context_t *context, coap_session_t *session,
    * been lost, so we need to stop retransmitting requests with the
    * same token.
    */
-  coap_cancel_all_messages(context, session, rcvd->token, rcvd->token_length);
+  if (rcvd->type == COAP_MESSAGE_ACK)
+    coap_cancel_all_messages(context, session, rcvd->token, rcvd->token_length);
 
   if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
     /* See if need to send next block to server */

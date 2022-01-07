@@ -259,7 +259,8 @@ void coap_session_free(coap_session_t *session) {
       SESSIONS_DELETE(session->context->sessions, session);
   }
 #endif /* COAP_CLIENT_SUPPORT */
-  coap_log(LOG_DEBUG, "***%s: session closed\n", coap_session_str(session));
+  coap_log(LOG_DEBUG, "***%s: session %p: closed\n", coap_session_str(session),
+           (void *)session);
 
   coap_free_type(COAP_SESSION, session);
 }
@@ -711,8 +712,8 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
       session->type = COAP_SESSION_TYPE_HELLO;
     }
     SESSIONS_ADD(endpoint->sessions, session);
-    coap_log(LOG_DEBUG, "***%s: new incoming session\n",
-             coap_session_str(session));
+    coap_log(LOG_DEBUG, "***%s: session %p: new incoming session\n",
+             coap_session_str(session), (void *)session);
   }
   return session;
 }
@@ -818,10 +819,23 @@ coap_session_create_client(
   coap_session_reference(session);
 
   if (proto == COAP_PROTO_UDP || proto == COAP_PROTO_DTLS) {
+    coap_session_t *s, *rtmp;
     if (!coap_socket_connect_udp(&session->sock, local_if, server,
       proto == COAP_PROTO_DTLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
       &session->addr_info.local, &session->addr_info.remote)) {
       goto error;
+    }
+    /* Check that this is not a duplicate 4-tuple */
+    SESSIONS_ITER_SAFE(ctx->sessions, s, rtmp) {
+      if ((s->proto == COAP_PROTO_UDP || s->proto == COAP_PROTO_DTLS) &&
+          coap_address_equals(&session->addr_info.local,
+                              &s->addr_info.local) &&
+          coap_address_equals(&session->addr_info.remote,
+                              &s->addr_info.remote)) {
+        coap_log(LOG_WARNING, "***%s: session %p: duplicate - already exists\n",
+                 coap_session_str(session), (void *)session);
+        goto error;
+      }
     }
 #if !COAP_DISABLE_TCP
   } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
@@ -941,10 +955,11 @@ coap_session_t *coap_new_client_session(
   const coap_address_t *server,
   coap_proto_t proto
 ) {
-  coap_session_t *session = coap_session_create_client(ctx, local_if, server, proto);
+  coap_session_t *session = coap_session_create_client(ctx, local_if, server,
+                                                       proto);
   if (session) {
-    coap_log(LOG_DEBUG, "***%s: new outgoing session\n",
-             coap_session_str(session));
+    coap_log(LOG_DEBUG, "***%s: session %p: created outgoing session\n",
+             coap_session_str(session), (void *)session);
     session = coap_session_connect(session);
   }
   return session;
@@ -1222,8 +1237,8 @@ coap_session_t *coap_new_server_session(
 #endif /* COAP_EPOLL_SUPPORT */
   SESSIONS_ADD(ep->sessions, session);
   if (session) {
-    coap_log(LOG_DEBUG, "***%s: new incoming session\n",
-             coap_session_str(session));
+    coap_log(LOG_DEBUG, "***%s: session %p: new incoming session\n",
+             coap_session_str(session), (void *)session);
     session = coap_session_accept(session);
   }
   return session;
