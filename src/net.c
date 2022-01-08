@@ -2144,9 +2144,9 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
     /* copy all options */
     coap_option_iterator_init(request, &opt_iter, opts);
     while ((option = coap_option_next(&opt_iter))) {
-      coap_add_option(response, opt_iter.number,
-        coap_opt_length(option),
-        coap_opt_value(option));
+      coap_add_option_internal(response, opt_iter.number,
+                               coap_opt_length(option),
+                               coap_opt_value(option));
     }
 
 #if COAP_ERROR_PHRASE_LENGTH > 0
@@ -2271,19 +2271,19 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
   if (need_block2) {
     /* Add in a pseudo etag (use wkc_len) in case .well-known/core
        changes over time */
-    coap_add_option(resp,
-                    COAP_OPTION_ETAG,
-                    coap_encode_var_safe8(buf, sizeof(buf), wkc_len),
-                    buf);
+    coap_add_option_internal(resp,
+                             COAP_OPTION_ETAG,
+                             coap_encode_var_safe8(buf, sizeof(buf), wkc_len),
+                             buf);
   }
 
   /* Add Content-Format. As we have checked for available storage,
    * nothing should go wrong here. */
   assert(coap_encode_var_safe(buf, sizeof(buf),
     COAP_MEDIATYPE_APPLICATION_LINK_FORMAT) == 1);
-  coap_add_option(resp, COAP_OPTION_CONTENT_FORMAT,
-    coap_encode_var_safe(buf, sizeof(buf),
-      COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf);
+  coap_add_option_internal(resp, COAP_OPTION_CONTENT_FORMAT,
+                           coap_encode_var_safe(buf, sizeof(buf),
+                           COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf);
 
 
   /* write Block2 option if necessary */
@@ -2295,10 +2295,10 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
     }
   }
 
-  coap_add_option(resp,
-                  COAP_OPTION_SIZE2,
-                  coap_encode_var_safe8(buf, sizeof(buf), wkc_len),
-                  buf);
+  coap_add_option_internal(resp,
+                           COAP_OPTION_SIZE2,
+                           coap_encode_var_safe8(buf, sizeof(buf), wkc_len),
+                           buf);
 
   len = need_block2 ?
         min(SZX_TO_BYTES(block.szx), wkc_len - (block.num << (block.szx + 4))) :
@@ -2800,10 +2800,10 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
               uint8_t buf[4];
 
               coap_touch_observer(context, session, &token);
-              coap_add_option(response, COAP_OPTION_OBSERVE,
-                              coap_encode_var_safe(buf, sizeof (buf),
-                                                   resource->observe),
-                              buf);
+              coap_add_option_internal(response, COAP_OPTION_OBSERVE,
+                                       coap_encode_var_safe(buf, sizeof (buf),
+                                                            resource->observe),
+                                       buf);
             }
           }
           else if (observe_action == COAP_OBSERVE_CANCEL) {
@@ -2985,7 +2985,7 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
       context->ping_handler(session, pdu, pdu->mid);
     }
     if (pong) {
-      coap_add_option(pong, COAP_SIGNALING_OPTION_CUSTODY, 0, NULL);
+      coap_add_option_internal(pong, COAP_SIGNALING_OPTION_CUSTODY, 0, NULL);
       coap_send_internal(session, pong);
     }
   } else if (pdu->code == COAP_SIGNALING_CODE_PONG) {

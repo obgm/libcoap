@@ -951,18 +951,18 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       switch (deleting) {
       case COAP_NOT_DELETING_RESOURCE:
         /* fill with observer-specific data */
-        coap_add_option(response, COAP_OPTION_OBSERVE,
-                        coap_encode_var_safe(buf, sizeof (buf),
-                                             r->observe),
-                        buf);
+        coap_add_option_internal(response, COAP_OPTION_OBSERVE,
+                                 coap_encode_var_safe(buf, sizeof (buf),
+                                                      r->observe),
+                                 buf);
         if (coap_get_block(obs->pdu, COAP_OPTION_BLOCK2, &block)) {
           /* Will get updated later (e.g. M bit) if appropriate */
-          coap_add_option(response, COAP_OPTION_BLOCK2,
-                          coap_encode_var_safe(buf, sizeof(buf),
-                                               ((0 << 4) |
-                                                (0 << 3) |
-                                                block.szx)),
-                          buf);
+          coap_add_option_internal(response, COAP_OPTION_BLOCK2,
+                                   coap_encode_var_safe(buf, sizeof(buf),
+                                                        ((0 << 4) |
+                                                         (0 << 3) |
+                                                         block.szx)),
+                                   buf);
         }
 
         h = r->handler[obs->pdu->code - 1];

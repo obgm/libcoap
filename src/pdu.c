@@ -195,9 +195,9 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
     while ((option = coap_option_next(&opt_iter))) {
       if (drop_options && coap_option_filter_get(drop_options, opt_iter.number))
         continue;
-      if (!coap_add_option(pdu, opt_iter.number,
-                           coap_opt_length(option),
-                           coap_opt_value(option)))
+      if (!coap_add_option_internal(pdu, opt_iter.number,
+                                    coap_opt_length(option),
+                                    coap_opt_value(option)))
         goto fail;
     }
   }
@@ -429,7 +429,7 @@ coap_insert_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
   size_t shrink = 0;
 
   if (number >= pdu->max_opt)
-    return coap_add_option(pdu, number, len, data);
+    return coap_add_option_internal(pdu, number, len, data);
 
   /* Need to locate where in current options to insert this one */
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
@@ -549,6 +549,16 @@ coap_update_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
 size_t
 coap_add_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
                 const uint8_t *data) {
+  if (pdu->data) {
+    coap_log(LOG_WARNING, "coap_add_optlist_pdu: PDU already contains data\n");
+    return 0;
+  }
+  return coap_add_option_internal(pdu, number, len, data);
+}
+
+size_t
+coap_add_option_internal(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
+                         const uint8_t *data) {
   size_t optsize;
   coap_opt_t *opt;
 
@@ -642,9 +652,10 @@ coap_add_data(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
 uint8_t *
 coap_add_data_after(coap_pdu_t *pdu, size_t len) {
   assert(pdu);
-  assert(pdu->data == NULL);
-
-  pdu->data = NULL;
+  if (pdu->data) {
+    coap_log(LOG_WARNING, "coap_add_data: PDU already contains data\n");
+    return 0;
+  }
 
   if (len == 0)
     return NULL;
