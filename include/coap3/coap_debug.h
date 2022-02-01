@@ -1,7 +1,7 @@
 /*
  * coap_debug.h -- debug utilities
  *
- * Copyright (C) 2010-2011,2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2011,2014-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -128,6 +128,13 @@ const char *coap_package_name(void);
  * @return Zero-terminated string with the library version.
  */
 const char *coap_package_version(void);
+
+/**
+ * Get the library package build.
+ *
+ * @return Zero-terminated string with the library build.
+ */
+const char *coap_package_build(void);
 
 /**
  * Writes the given text to @c COAP_ERR_FD (for @p level <= @c LOG_CRIT) or @c

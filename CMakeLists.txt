@@ -1,7 +1,7 @@
 # CMakeLists.txt for libcoap
 #
 # Copyright (C) 2020 Carlos Gomes Martinho <carlos.gomes_martinho@siemens.com>
-# Copyright (C) 2020-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2020-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -379,6 +379,31 @@ if(ENABLE_DTLS)
 
 endif()
 
+execute_process(COMMAND git describe --tags --dirty --always
+                RESULT_VARIABLE USING_GIT
+                OUTPUT_VARIABLE LIBCOAP_PACKAGE_BUILD
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET)
+if(NOT ${USING_GIT} EQUAL 0)
+  set(LIBCOAP_PACKAGE_BUILD ${PROJECT_VERSION})
+else()
+  set(LIBCOAP_PACKAGE_BUILD "${LIBCOAP_PACKAGE_BUILD}")
+endif()
+
+set(PACKAGE_URL "https://libcoap.net/")
+set(PACKAGE_NAME "${PROJECT_NAME}")
+set(PACKAGE_TARNAME "${PROJECT_NAME}")
+set(PACKAGE_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
+set(PACKAGE_VERSION "${PROJECT_VERSION}")
+set(PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net")
+set(LIBCOAP_PACKAGE_VERSION "${PACKAGE_VERSION}")
+set(LIBCOAP_PACKAGE_URL "${PACKAGE_URL}")
+set(LIBCOAP_PACKAGE_NAME "${PACKAGE_NAME}")
+set(LIBCOAP_PACKAGE_STRING "${PACKAGE_STRING}")
+set(LIBCOAP_PACKAGE_BUGREPORT "${PACKAGE_BUGREPORT}")
+
+message(STATUS "PACKAGE VERSION..................${PACKAGE_VERSION}")
+message(STATUS "PACKAGE BUILD....................${LIBCOAP_PACKAGE_BUILD}")
 message(STATUS "ENABLE_DTLS:.....................${ENABLE_DTLS}")
 message(STATUS "ENABLE_TCP:......................${ENABLE_TCP}")
 message(STATUS "ENABLE_CLIENT_MODE:..............${ENABLE_CLIENT_MODE}")
@@ -400,17 +425,6 @@ message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
 message(STATUS "CMAKE_BUILD_TYPE:................${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR:..........${CMAKE_SYSTEM_PROCESSOR}")
 
-set(PACKAGE_URL "https://libcoap.net/")
-set(PACKAGE_NAME "${PROJECT_NAME}")
-set(PACKAGE_TARNAME "${PROJECT_NAME}")
-set(PACKAGE_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
-set(PACKAGE_VERSION "${PROJECT_VERSION}")
-set(LIBCOAP_PACKAGE_VERSION "${PROJECT_VERSION}")
-set(LIBCOAP_PACKAGE_URL "${PACKAGE_URL}")
-set(LIBCOAP_PACKAGE_NAME "${PROJECT_NAME}")
-set(LIBCOAP_PACKAGE_STRING "TODO")
-set(LIBCOAP_PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net")
-set(PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net")
 set(top_srcdir "${CMAKE_CURRENT_LIST_DIR}")
 set(top_builddir "${CMAKE_CURRENT_BINARY_DIR}")
 if(ENABLE_TCP)
@@ -517,6 +531,10 @@ target_link_libraries(
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDTLS_LIBRARY}>
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDX509_LIBRARY}>
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDCRYPTO_LIBRARY}>)
+
+target_compile_options(
+  ${COAP_LIBRARY_NAME}
+  PUBLIC -DLIBCOAP_PACKAGE_BUILD="${LIBCOAP_PACKAGE_BUILD}")
 
 add_library(
   ${PROJECT_NAME}::${COAP_LIBRARY_NAME}
