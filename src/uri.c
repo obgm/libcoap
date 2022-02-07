@@ -616,6 +616,21 @@ coap_string_t *coap_get_uri_path(const coap_pdu_t *request) {
   size_t length = 0;
   static const uint8_t hex[] = "0123456789ABCDEF";
 
+  q = coap_check_option(request, COAP_OPTION_PROXY_URI, &opt_iter);
+  if (q) {
+    coap_uri_t uri;
+
+    if (coap_split_proxy_uri(coap_opt_value(q),
+                             coap_opt_length(q), &uri) < 0) {
+      return NULL;
+    }
+    uri_path = coap_new_string(uri.path.length);
+    if (uri_path) {
+      memcpy(uri_path->s, uri.path.s, uri.path.length);
+    }
+    return uri_path;
+  }
+
   coap_option_filter_clear(&f);
   coap_option_filter_set(&f, COAP_OPTION_URI_PATH);
   coap_option_iterator_init(request, &opt_iter, &f);

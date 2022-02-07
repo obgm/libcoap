@@ -2589,14 +2589,24 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       if (opt) {
         uri.host.length = coap_opt_length(opt);
         uri.host.s = coap_opt_value(opt);
-      }
+      } else
+        uri.host.length = 0;
     }
+
     resource = context->proxy_uri_resource;
-    if (uri.host.length && resource->proxy_name_count && resource->proxy_name_list) {
+    if (uri.host.length && resource->proxy_name_count &&
+        resource->proxy_name_list) {
       size_t i;
-      for (i = 0; i < resource->proxy_name_count; i++) {
-        if (coap_string_equal(&uri.host, resource->proxy_name_list[i])) {
-          break;
+
+      if (resource->proxy_name_count == 1 &&
+          resource->proxy_name_list[0]->length == 0) {
+        /* If proxy_name_list[0] is zero length, then this is the endpoint */
+        i = 0;
+      } else {
+        for (i = 0; i < resource->proxy_name_count; i++) {
+          if (coap_string_equal(&uri.host, resource->proxy_name_list[i])) {
+            break;
+          }
         }
       }
       if (i != resource->proxy_name_count) {
@@ -2653,10 +2663,10 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
      * unknown resource handler is defined, a PUT or optionally other methods,
      * if configured, for the unknown handler.
      *
-     * if well-known URI generate a default response
-     *
-     * else if a PROXY URI/Scheme request and proxy URI handler defined, call the
+     * if a PROXY URI/Scheme request and proxy URI handler defined, call the
      *  proxy URI handler
+     *
+     * else if well-known URI generate a default response
      *
      * else if unknown URI handler defined, call the unknown
      *  URI handler (to allow for potential generation of resource
@@ -2666,7 +2676,9 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
      *
      * else return 4.04 */
 
-    if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
+    if (is_proxy_uri || is_proxy_scheme) {
+      resource = context->proxy_uri_resource;
+    } else if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
       /* request for .well-known/core */
       if (pdu->code == COAP_REQUEST_CODE_GET) { /* GET */
         coap_log(LOG_INFO, "create default response for %s\n",
@@ -2677,8 +2689,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
         response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(405),
           &opt_filter);
       }
-    } else if (is_proxy_uri || is_proxy_scheme) {
-      resource = context->proxy_uri_resource;
     } else if ((context->unknown_resource != NULL) &&
                ((size_t)pdu->code - 1 <
                 (sizeof(resource->handler) / sizeof(coap_method_handler_t))) &&
@@ -2740,6 +2750,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       if (response) {
         /* Need to delete unused response - it will get re-created further on */
         coap_delete_pdu(response);
+        response = NULL;
       }
     }
   }

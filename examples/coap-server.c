@@ -2170,7 +2170,7 @@ usage( const char *program, const char *version) {
   fprintf(stderr, "\n"
      "Usage: %s [-d max] [-e] [-g group] [-G group_if] [-l loss] [-p port]\n"
      "\t\t[-v num] [-A address] [-L value] [-N]\n"
-     "\t\t[-P scheme://address[:port],name1[,name2..]]\n"
+     "\t\t[-P scheme://address[:port],[name1[,name2..]]]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
      "\t\t[-s match_psk_sni_file] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
@@ -2207,15 +2207,16 @@ usage( const char *program, const char *version) {
      "\t       \t\tresponse (RFC 7641 requirement)\n"
     , program);
   fprintf( stderr,
-     "\t-P scheme://address[:port],name1[,name2[,name3..]]\tScheme, address,\n"
-     "\t       \t\toptional port of how to connect to the next proxy server\n"
-     "\t       \t\tand one or more names (comma separated) that this proxy\n"
-     "\t       \t\tserver is known by. If the hostname of the incoming proxy\n"
-     "\t       \t\trequest matches one of these names, then this server is\n"
-     "\t       \t\tconsidered to be the final endpoint. If\n"
-     "\t       \t\tscheme://address[:port] is not defined before the leading\n"
-     "\t       \t\t, (comma) of the first name, then the ongoing connection\n"
-     "\t       \t\twill be a direct connection.\n"
+     "\t-P scheme://address[:port],[name1[,name2[,name3..]]]\n"
+     "\t       \t\tScheme, address, optional port of how to connect to the\n"
+     "\t       \t\tnext proxy server and zero or more names (comma\n"
+     "\t       \t\tseparated) that this proxy server is known by. The\n"
+     "\t       \t\t, (comma) is required. If there is no name1 or if the\n"
+     "\t       \t\thostname of the incoming proxy request matches one of\n"
+     "\t       \t\tthese names, then this server is considered to be the\n"
+     "\t       \t\tfinal endpoint. If scheme://address[:port] is not\n"
+     "\t       \t\tdefined before the leading , (comma) of the first name,\n"
+     "\t       \t\tthen the ongoing connection will be a direct connection.\n"
      "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
      "PSK Options (if supported by underlying (D)TLS library)\n"
      "\t-h hint\t\tIdentity Hint to send. Default is CoAP. Zero length is\n"
@@ -2398,7 +2399,7 @@ cmdline_proxy(char *arg) {
   size_t ofs;
 
   if (!host_start) {
-    coap_log(LOG_WARNING, "One or more proxy host names not defined\n");
+    coap_log(LOG_WARNING, "Zero or more proxy host names not defined\n");
     return 0;
   }
   *host_start = '\000';

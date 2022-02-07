@@ -21,7 +21,7 @@ SYNOPSIS
 --------
 *coap-server* [*-d* max] [*-e*] [*-g* group] [*-G* group_if] [*-l* loss]
               [*-p* port] [*-v* num] [*-A* address] [*-L* value] [*-N*]
-              [*-P* scheme://addr[:port],name1[,name2..]]
+              [*-P* scheme://addr[:port],[name1[,name2..]]]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
               [*-s* match_psk_sni_file] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
@@ -90,10 +90,11 @@ OPTIONS - General
    fifth response will still be sent as a confirmable response
    (RFC 7641 requirement).
 
-*-P* scheme://address[:port],name1[,name2[,name3..]] ::
+*-P* scheme://address[:port],[name1[,name2[,name3..]]] ::
    Scheme, address, optional port of how to connect to the next proxy server
-   and one or more names (comma separated) that this proxy server is known by.
-   If the hostname of the incoming proxy request matches one of these names,
+   and zero or more names (comma separated) that this proxy server is known by.
+   The , (comma) is required.  If there is no name1 or
+   if the hostname of the incoming proxy request matches one of these names,
    then this server is considered to be the final endpoint. If
    scheme://address[:port] is not defined before the leading , (comma) of the
    first name, then the ongoing connection will be a direct connection.
