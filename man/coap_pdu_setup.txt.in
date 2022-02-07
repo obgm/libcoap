@@ -248,7 +248,7 @@ of the data of the option, and _data_ points to the content of the option.
 
 *NOTE:* Where possible, the option data needs to be stripped of leading zeros
 (big endian) to reduce the amount of data needed in the PDU, as well as in
-some cases the maximum data size of an opton can be exceeded if not stripped
+some cases the maximum data size of an option can be exceeded if not stripped
 and hence be illegal.  This is done by using coap_encode_var_safe() or
 coap_encode_var_safe8().
 
@@ -327,7 +327,7 @@ being the same or greater than the previous option _number_ that was added.
 
 *NOTE:* Where possible, the option data needs to be stripped of leading zeros
 (big endian) to reduce the amount of data needed in the PDU, as well as in
-some cases the maximum data size of an opton can be exceeded if not stripped
+some cases the maximum data size of an option can be exceeded if not stripped
 and hence be illegal.  This is done by using coap_encode_var_safe() or
 coap_encode_var_safe8().
 
@@ -394,10 +394,10 @@ The *coap_add_optlist*() function returns either the length of the option
 or 0 on failure.
 
 The *coap_encode_var_safe*() function returns either the length of bytes
-encoded or 0 on failure.
+encoded (which can be 0 when encoding 0) or 0 on failure.
 
 The *coap_encode_var_safe8*() function returns either the length of bytes
-encoded or 0 on failure.
+encoded (which can be 0 when encoding 0) or 0 on failure.
 
 The *coap_send*() function returns the CoAP message ID on success or
 COAP_INVALID_MID on failure.
