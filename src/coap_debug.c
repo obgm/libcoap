@@ -1,6 +1,6 @@
 /* coap_debug.c -- debug utilities
  *
- * Copyright (C) 2010--2012,2014--2019 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2010--2012,2014--2022 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -57,6 +57,14 @@ const char *coap_package_name(void) {
 
 const char *coap_package_version(void) {
   return PACKAGE_STRING;
+}
+
+const char *coap_package_build(void) {
+#ifdef LIBCOAP_PACKAGE_BUILD
+  return LIBCOAP_PACKAGE_BUILD;
+#else /* !LIBCOAP_PACKAGE_BUILD */
+  return PACKAGE_STRING;
+#endif /* !LIBCOAP_PACKAGE_BUILD */
 }
 
 void

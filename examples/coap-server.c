@@ -3,7 +3,7 @@
 /* coap -- simple implementation of the Constrained Application Protocol (CoAP)
  *         as defined in RFC 7252
  *
- * Copyright (C) 2010--2021 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2010--2022 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -2154,17 +2154,17 @@ static void
 usage( const char *program, const char *version) {
   const char *p;
   char buffer[72];
-  const char *lib_version = coap_package_version();
+  const char *lib_build = coap_package_build();
 
   p = strrchr( program, '/' );
   if ( p )
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-     "(c) 2010,2011,2015-2021 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+     "(c) 2010,2011,2015-2022 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+     "Build: %s\n"
      "%s\n"
-     "%s\n"
-    , program, version, lib_version,
+    , program, version, lib_build,
     coap_string_tls_version(buffer, sizeof(buffer)));
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"

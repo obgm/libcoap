@@ -1,8 +1,8 @@
 # Makefile.am for libcoap
 #
-# Copyright (C) 2010-2021,2021 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
 # Copyright (C) 2015-2017 Carsten Schoenert <c.schoenert@t-online.de>
-# Copyright (C) 2018-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2018-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -14,6 +14,8 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
+
+LIBCOAP_PACKAGE_BUILD = @DOLLAR_SIGN@(shell git describe --tags --dirty --always 2>/dev/null || echo @PACKAGE_VERSION@)
 
 ## Additional files for the distribution archive
 EXTRA_DIST = \
@@ -77,7 +79,9 @@ EXTRA_DIST = \
   win32/testdriver/testdriver.vcxproj.filters \
   win32/testdriver/testdriver.vcxproj.user
 
-AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99 $(EXTRA_CFLAGS)
+AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include $(WARNING_CFLAGS) \
+            $(DTLS_CFLAGS) -std=c99 $(EXTRA_CFLAGS) \
+            -DLIBCOAP_PACKAGE_BUILD='"$(LIBCOAP_PACKAGE_BUILD)"'
 
 SUBDIRS = $(subdirs) . man doc tests examples
 

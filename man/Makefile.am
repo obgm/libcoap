@@ -92,6 +92,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_context.3" > coap_context_get_session_timeout.3
 	@echo ".so man3/coap_context.3" > coap_context_set_csm_timeout.3
 	@echo ".so man3/coap_context.3" > coap_context_get_csm_timeout.3
+	@echo ".so man3/coap_logging.3" > coap_show_pdu.3
 	@echo ".so man3/coap_logging.3" > coap_endpoint_str.3
 	@echo ".so man3/coap_logging.3" > coap_session_str.3
 	@echo ".so man3/coap_pdu_access.3" > coap_option_filter_set.3

@@ -134,6 +134,7 @@ global:
   coap_opt_setheader;
   coap_opt_size;
   coap_opt_value;
+  coap_package_build;
   coap_package_name;
   coap_package_version;
   coap_pdu_duplicate;
