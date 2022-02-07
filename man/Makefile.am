@@ -103,6 +103,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_mid.3
 	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_token.3
 	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_type.3
+	@echo ".so man3/coap_pdu_access.3" > coap_get_uri_path.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_delete_optlist.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe8.3
