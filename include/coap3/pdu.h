@@ -416,10 +416,11 @@ int coap_pdu_parse(coap_proto_t proto,
 
 /**
  * Adds token of length @p len to @p pdu.
- * Adding the token destroys any following contents of the pdu. Hence options
- * and data must be added after coap_add_token() has been called. In @p pdu,
- * length is set to @p len + @c 4, and max_delta is set to @c 0. This function
- * returns @c 0 on error or a value greater than zero on success.
+ *
+ * This function will fail if a token has already been added to the @p pdu.
+ *
+ * Hence options and data must be added after optional coap_add_token() has
+ * been called.
  *
  * @param pdu  The PDU where the token is to be added.
  * @param len  The length of the new token.
@@ -432,12 +433,12 @@ int coap_add_token(coap_pdu_t *pdu,
                   const uint8_t *data);
 
 /**
- * Adds option of given number to pdu that is passed as first
+ * Adds option of given @p number to @p pdu that is passed as first
  * parameter.
- * coap_add_option() destroys the PDU's data, so coap_add_data() must be called
- * after all options have been added. As coap_add_token() destroys the options
- * following the token, the token must be added before coap_add_option() is
- * called. This function returns the number of bytes written or @c 0 on error.
+ *
+ * This function will fail if data has aready been added to the @p pdu.
+ *
+ * Hence data must be added after optional coap_add_option() has been called.
  *
  * Note: Where possible, the option data needs to be stripped of leading zeros
  * (big endian) to reduce the amount of data needed in the PDU, as well as in
@@ -458,9 +459,9 @@ size_t coap_add_option(coap_pdu_t *pdu,
                        const uint8_t *data);
 
 /**
- * Adds given data to the pdu that is passed as first parameter. Note that the
- * PDU's data is destroyed by coap_add_option(). coap_add_data() must be called
- * only once per PDU, otherwise the result is undefined.
+ * Adds given data to the pdu that is passed as first parameter.
+ *
+ * This function will fail if data has aready been added to the @p pdu.
  *
  * @param pdu    The PDU where the data is to be added.
  * @param len    The length of the data.
@@ -474,9 +475,9 @@ int coap_add_data(coap_pdu_t *pdu,
 
 /**
  * Adds given data to the pdu that is passed as first parameter but does not
- * copy it. Note that the PDU's data is destroyed by coap_add_option().
- * coap_add_data() must be have been called once for this PDU, otherwise the
- * result is undefined.
+ *
+ * This function will fail if data has aready been added to the @p pdu.
+ *
  * The actual data must be copied at the returned location.
  *
  * @param pdu    The PDU where the data is to be added.

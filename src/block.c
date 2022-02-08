@@ -183,7 +183,7 @@ coap_add_data_blocked_response(const coap_pdu_t *request,
   /* add etag for the resource */
   memset(etag, 0, sizeof(etag));
   coap_hash(data, length, etag);
-  coap_add_option(response, COAP_OPTION_ETAG, sizeof(etag), etag);
+  coap_add_option_internal(response, COAP_OPTION_ETAG, sizeof(etag), etag);
 
   coap_insert_option(response, COAP_OPTION_CONTENT_FORMAT,
                   coap_encode_var_safe(buf, sizeof(buf),
@@ -215,10 +215,10 @@ coap_add_data_blocked_response(const coap_pdu_t *request,
         ;
     }
 
-    coap_add_option(response,
-                    COAP_OPTION_SIZE2,
-                    coap_encode_var_safe8(buf, sizeof(buf), length),
-                    buf);
+    coap_add_option_internal(response,
+                             COAP_OPTION_SIZE2,
+                             coap_encode_var_safe8(buf, sizeof(buf), length),
+                             buf);
 
     coap_add_block(response, length, data,
                    block2.num, block2.szx);
@@ -238,10 +238,10 @@ coap_add_data_blocked_response(const coap_pdu_t *request,
     block2.szx = 6;
     coap_write_block_opt(&block2, COAP_OPTION_BLOCK2, response, length);
 
-    coap_add_option(response,
-                    COAP_OPTION_SIZE2,
-                    coap_encode_var_safe8(buf, sizeof(buf), length),
-                    buf);
+    coap_add_option_internal(response,
+                             COAP_OPTION_SIZE2,
+                             coap_encode_var_safe8(buf, sizeof(buf), length),
+                             buf);
 
     coap_add_block(response, length, data,
                    block2.num, block2.szx);
@@ -349,6 +349,10 @@ coap_add_data_large_internal(coap_session_t *session,
   uint16_t option;
 
   assert(pdu);
+  if (pdu->data) {
+    coap_log(LOG_WARNING, "coap_add_data_large: PDU already contains data\n");
+    return 0;
+  }
 
   if (!(session->block_mode & COAP_BLOCK_USE_LIBCOAP)) {
     coap_log(LOG_DEBUG,
@@ -1119,9 +1123,9 @@ coap_handle_request_send_block(coap_session_t *session,
         while ((option = coap_option_next(&opt_iter))) {
           if (opt_iter.number == COAP_OPTION_OBSERVE && block.num != 0)
             continue;
-          if (!coap_add_option(response, opt_iter.number,
-                               coap_opt_length(option),
-                               coap_opt_value(option))) {
+          if (!coap_add_option_internal(response, opt_iter.number,
+                                        coap_opt_length(option),
+                                        coap_opt_value(option))) {
             goto internal_issue;
           }
         }

@@ -206,6 +206,8 @@ typedef void (*coap_release_large_data_t)(coap_session_t *session,
 /**
  * Associates given data with the @p pdu that is passed as second parameter.
  *
+ * This function will fail if data has aready been added to the @p pdu.
+ *
  * If all the data can be transmitted in a single PDU, this is functionally
  * the same as coap_add_data() except @p release_func (if not NULL) will get
  * invoked after data transmission.
@@ -254,6 +256,8 @@ int coap_add_data_large_request(coap_session_t *session,
  * Associates given data with the @p response pdu that is passed as fourth
  * parameter.
  *
+ * This function will fail if data has aready been added to the @p pdu.
+ *
  * If all the data can be transmitted in a single PDU, this is functionally
  * the same as coap_add_data() except @p release_func (if not NULL) will get
  * invoked after data transmission. The MEDIA_TYPE, MAXAGE and ETAG options may
@@ -273,7 +277,7 @@ int coap_add_data_large_request(coap_session_t *session,
  * There is no need for the application to include the BLOCK2 option in the
  * @p pdu.
  *
- * coap_add_data_large_response() (or the alternative coap_add_data_large*()
+ * coap_add_data_large_response() (or the alternative coap_add_data_large_*()
  * functions) must be called only once per PDU and must be the last PDU update
  * before returning from the request handler function.
  *

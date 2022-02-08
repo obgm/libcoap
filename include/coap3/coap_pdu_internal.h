@@ -213,6 +213,30 @@ int coap_pdu_parse_opt(coap_pdu_t *pdu);
 void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
 
 /**
+ * Adds option of given @p number to @p pdu that is passed as first
+ * parameter.
+ *
+ * The internal version of coap_add_option() may cause an @p option to be
+ * inserted, even if there is any data in the @p pdu.
+ *
+ * Note: Where possible, the option @p data needs to be stripped of leading
+ * zeros (big endian) to reduce the amount of data needed in the PDU, as well
+ * as in some cases the maximum data size of an option can be exceeded if not
+ * stripped and hence be illegal. This is done by using coap_encode_var_safe()
+ * or coap_encode_var_safe8().
+ *
+ * @param pdu    The PDU where the option is to be added.
+ * @param number The number of the new option.
+ * @param len    The length of the new option.
+ * @param data   The data of the new option.
+ *
+ * @return The overall length of the option or @c 0 on failure.
+ */
+size_t coap_add_option_internal(coap_pdu_t *pdu,
+                                coap_option_num_t number,
+                                size_t len,
+                                const uint8_t *data);
+/**
  * Removes (first) option of given number from the @p pdu.
  *
  * @param pdu   The PDU to remove the option from.

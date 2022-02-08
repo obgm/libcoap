@@ -386,10 +386,10 @@ void coap_session_send_csm(coap_session_t *session) {
     session->mtu = COAP_DEFAULT_MTU;  /* base value */
   pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_CSM, 0, 20);
   if ( pdu == NULL
-    || coap_add_option(pdu, COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE,
+    || coap_add_option_internal(pdu, COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE,
          coap_encode_var_safe(buf, sizeof(buf),
                                 COAP_DEFAULT_MAX_PDU_RX_SIZE), buf) == 0
-    || coap_add_option(pdu, COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER,
+    || coap_add_option_internal(pdu, COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER,
          coap_encode_var_safe(buf, sizeof(buf),
                                 0), buf) == 0
     || coap_pdu_encode_header(pdu, session->proto) == 0
