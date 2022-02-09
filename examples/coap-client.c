@@ -1477,6 +1477,16 @@ get_session(
       }
     }
     freeaddrinfo( result );
+  } else if (local_port) {
+    coap_address_t bind_addr;
+
+    coap_address_init(&bind_addr);
+    bind_addr.size = dst->size;
+    bind_addr.addr.sa.sa_family = dst->addr.sa.sa_family;
+    /* port is in same place for IPv4 and IPv6 */
+    bind_addr.addr.sin.sin_port = ntohs(atoi(local_port));
+    session = open_session(ctx, proto, &bind_addr, dst,
+                               identity, identity_len, key, key_len);
   } else {
     session = open_session(ctx, proto, NULL, dst,
                                identity, identity_len, key, key_len);
