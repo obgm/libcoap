@@ -44,13 +44,23 @@
  */
 
 #include <mbedtls/version.h>
+
+/* Keep forward-compatibility with Mbed TLS 3.x */
+#if (MBEDTLS_VERSION_NUMBER < 0x03000000)
+#define MBEDTLS_2_X_COMPAT
+#else /* !(MBEDTLS_VERSION_NUMBER < 0x03000000) */
+/* Macro wrapper for struct's private members */
+#ifndef MBEDTLS_ALLOW_PRIVATE_ACCESS
+#define MBEDTLS_ALLOW_PRIVATE_ACCESS
+#endif /* MBEDTLS_ALLOW_PRIVATE_ACCESS */
+#endif /* !(MBEDTLS_VERSION_NUMBER < 0x03000000) */
+
 #include <mbedtls/platform.h>
 #include <mbedtls/net_sockets.h>
 #include <mbedtls/ssl.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/error.h>
-#include <mbedtls/certs.h>
 #include <mbedtls/timing.h>
 #include <mbedtls/ssl_cookie.h>
 #include <mbedtls/oid.h>
@@ -147,6 +157,13 @@ typedef enum coap_enc_method_t {
   COAP_ENC_PSK,
   COAP_ENC_PKI,
 } coap_enc_method_t;
+
+#ifndef MBEDTLS_2_X_COMPAT
+static int coap_rng(void *ctx COAP_UNUSED, unsigned char *buf, size_t len)
+{
+  return coap_prng(buf, len);
+}
+#endif /* MBEDTLS_2_X_COMPAT */
 
 static int coap_dgram_read(void *ctx, unsigned char *out, size_t outl)
 {
@@ -267,7 +284,7 @@ static char*
 get_san_or_cn_from_cert(mbedtls_x509_crt *crt)
 {
   if (crt) {
-    mbedtls_asn1_named_data * cn_data;
+    const mbedtls_asn1_named_data * cn_data;
 
     if (crt->ext_types & MBEDTLS_X509_EXT_SUBJECT_ALT_NAME) {
       mbedtls_asn1_sequence *seq = &crt->subject_alt_names;
@@ -491,8 +508,14 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
         return ret;
       }
 
+#ifdef MBEDTLS_2_X_COMPAT
       ret = mbedtls_pk_parse_keyfile(private_key,
                               setup_data->pki_key.key.pem.private_key, NULL);
+#else
+      ret = mbedtls_pk_parse_keyfile(private_key,
+                              setup_data->pki_key.key.pem.private_key,
+                              NULL, coap_rng, (void *)&m_env->ctr_drbg);
+#endif /* MBEDTLS_2_X_COMPAT */
       if (ret < 0) {
         coap_log(LOG_ERR, "mbedtls_pk_parse_keyfile returned -0x%x: '%s'\n",
                  -ret, get_error_string(ret));
@@ -573,13 +596,25 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
         memcpy(buffer, setup_data->pki_key.key.pem_buf.private_key, length);
         buffer[length] = '\000';
         length++;
+#ifdef MBEDTLS_2_X_COMPAT
         ret = mbedtls_pk_parse_key(private_key, buffer, length, NULL, 0);
+#else
+        ret = mbedtls_pk_parse_key(private_key, buffer, length,
+              NULL, 0, coap_rng, (void *)&m_env->ctr_drbg);
+#endif /* MBEDTLS_2_X_COMPAT */
         mbedtls_free(buffer);
       }
       else {
+#ifdef MBEDTLS_2_X_COMPAT
         ret = mbedtls_pk_parse_key(private_key,
               setup_data->pki_key.key.pem_buf.private_key,
               setup_data->pki_key.key.pem_buf.private_key_len, NULL, 0);
+#else
+        ret = mbedtls_pk_parse_key(private_key,
+              setup_data->pki_key.key.pem_buf.private_key,
+              setup_data->pki_key.key.pem_buf.private_key_len,
+              NULL, 0, coap_rng, (void *)&m_env->ctr_drbg);
+#endif /* MBEDTLS_2_X_COMPAT */
       }
       if (ret < 0) {
         coap_log(LOG_ERR, "mbedtls_pk_parse_keyfile returned -0x%x: '%s'\n",
@@ -650,9 +685,16 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
         return ret;
       }
 
+#ifdef MBEDTLS_2_X_COMPAT
       ret = mbedtls_pk_parse_key(private_key,
               (const unsigned char *)setup_data->pki_key.key.asn1.private_key,
               setup_data->pki_key.key.asn1.private_key_len, NULL, 0);
+#else
+      ret = mbedtls_pk_parse_key(private_key,
+              (const unsigned char *)setup_data->pki_key.key.asn1.private_key,
+              setup_data->pki_key.key.asn1.private_key_len, NULL, 0, coap_rng,
+              (void *)&m_env->ctr_drbg);
+#endif /* MBEDTLS_2_X_COMPAT */
       if (ret < 0) {
         coap_log(LOG_ERR, "mbedtls_pk_parse_keyfile returned -0x%x: '%s'\n",
                  -ret, get_error_string(ret));
@@ -1220,9 +1262,11 @@ static int do_mbedtls_handshake(coap_session_t *c_session,
   case MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE:
     alert = MBEDTLS_SSL_ALERT_MSG_NO_CERT;
     goto fail_alert;
+#ifdef MBEDTLS_2_X_COMPAT
   case MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO:
     alert = MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE;
     goto fail_alert;
+#endif /* MBEDTLS_2_X_COMPAT */
   case MBEDTLS_ERR_X509_CERT_VERIFY_FAILED:
     goto fail;
   case MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE:
@@ -2372,7 +2416,13 @@ coap_digest_setup(void) {
 
   if (digest_ctx) {
     mbedtls_sha256_init(digest_ctx);
-    mbedtls_sha256_starts_ret(digest_ctx, 0);
+#ifdef MBEDTLS_2_X_COMPAT
+    if (mbedtls_sha256_starts_ret(digest_ctx, 0) != 0) {
+#else
+    if (mbedtls_sha256_starts(digest_ctx, 0) != 0) {
+#endif /* MBEDTLS_2_X_COMPAT */
+      return NULL;
+    }
   }
   return digest_ctx;
 }
@@ -2387,7 +2437,11 @@ int
 coap_digest_update(coap_digest_ctx_t *digest_ctx,
                    const uint8_t *data,
                    size_t data_len) {
+#ifdef MBEDTLS_2_X_COMPAT
   int ret = mbedtls_sha256_update_ret(digest_ctx, data, data_len);
+#else
+  int ret = mbedtls_sha256_update(digest_ctx, data, data_len);
+#endif /* MBEDTLS_2_X_COMPAT */
 
   return ret == 0;
 }
@@ -2395,7 +2449,11 @@ coap_digest_update(coap_digest_ctx_t *digest_ctx,
 int
 coap_digest_final(coap_digest_ctx_t *digest_ctx,
                          coap_digest_t *digest_buffer) {
+#ifdef MBEDTLS_2_X_COMPAT
   int ret = mbedtls_sha256_finish_ret(digest_ctx, (uint8_t*)digest_buffer);
+#else
+  int ret = mbedtls_sha256_finish(digest_ctx, (uint8_t*)digest_buffer);
+#endif /* MBEDTLS_2_X_COMPAT */
 
   coap_digest_free(digest_ctx);
   return ret == 0;
