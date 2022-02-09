@@ -1,5 +1,8 @@
 #include <coap3/coap.h>
 
+/* Declare prototype for internal function coap_pdu_encode_header() */
+size_t coap_pdu_encode_header(coap_pdu_t *, coap_proto_t);
+
 int
 LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, size);
