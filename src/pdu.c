@@ -1,6 +1,6 @@
 /* pdu.c -- CoAP PDU handling
  *
- * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -464,31 +464,26 @@ coap_insert_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
   }
   assert(option != NULL);
 
-  if (decode.delta <= 12) {
+  if (decode.delta < 13) {
     /* can simply patch in the new delta of next option */
     option[0] = (option[0] & 0x0f) + (coap_opt_t)(opt_delta << 4);
-  }
-  else if (decode.delta <= 269 && opt_delta <= 12) {
+  } else if (decode.delta < 269 && opt_delta < 13) {
     /* option header is going to shrink by one byte */
     option[1] = (option[0] & 0x0f) + (coap_opt_t)(opt_delta << 4);
     shrink = 1;
-  }
-  else if (decode.delta <= 269 && opt_delta <= 269) {
+  } else if (decode.delta < 269 && opt_delta < 269) {
     /* can simply patch in the new delta of next option */
     option[1] = (coap_opt_t)(opt_delta - 13);
-  }
-  else if (opt_delta <= 12) {
+  } else if (opt_delta < 13) {
     /* option header is going to shrink by two bytes */
     option[2] = (option[0] & 0x0f) + (coap_opt_t)(opt_delta << 4);
     shrink = 2;
-  }
-  else if (opt_delta <= 269) {
+  } else if (opt_delta < 269) {
     /* option header is going to shrink by one bytes */
     option[1] = (option[0] & 0x0f) + 0xd0;
     option[2] = (coap_opt_t)(opt_delta - 13);
     shrink = 1;
-  }
-  else {
+  } else {
     /* can simply patch in the new delta of next option */
     option[1] = (coap_opt_t)((opt_delta - 269) >> 8);
     option[2] = (opt_delta - 269) & 0xff;
