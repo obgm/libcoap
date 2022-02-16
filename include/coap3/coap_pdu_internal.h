@@ -103,6 +103,7 @@ struct coap_pdu_t {
   uint8_t hdr_size;         /**< actual size used for protocol-specific
                                  header */
   uint8_t token_length;     /**< length of Token */
+  uint8_t crit_opt;         /**< Set if unknown critical option for proxy */
   uint16_t max_opt;         /**< highest option number in PDU */
   size_t alloc_size;        /**< allocated storage for token, options and
                                  payload */

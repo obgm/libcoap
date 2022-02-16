@@ -49,6 +49,7 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   pdu->code = 0;
   pdu->hdr_size = 0;
   pdu->token_length = 0;
+  pdu->crit_opt = 0;
   pdu->mid = 0;
   pdu->max_opt = 0;
   pdu->max_size = size;

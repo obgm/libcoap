@@ -297,7 +297,7 @@ void coap_dispatch(coap_context_t *context, coap_session_t *session,
   coap_opt_filter_t f = COAP_OPT_NONE;
   coap_opt_iterator_t opt_iter;
 
-  if (coap_option_check_critical(ctx, pdu, f) == 0) {
+  if (coap_option_check_critical(session, pdu, f) == 0) {
     coap_option_iterator_init(pdu, &opt_iter, f);
 
     while (coap_option_next(&opt_iter)) {
@@ -308,14 +308,14 @@ void coap_dispatch(coap_context_t *context, coap_session_t *session,
   }
    @endcode
  *
- * @param ctx      The context where all known options are registered.
+ * @param session  The current session.
  * @param pdu      The PDU to check.
  * @param unknown  The output filter that will be updated to indicate the
  *                 unknown critical options found in @p pdu.
  *
  * @return         @c 1 if everything was ok, @c 0 otherwise.
  */
-int coap_option_check_critical(coap_context_t *ctx,
+int coap_option_check_critical(coap_session_t *session,
                                coap_pdu_t *pdu,
                                coap_opt_filter_t *unknown);
 

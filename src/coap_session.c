@@ -860,6 +860,10 @@ coap_session_create_client(
   if (local_if)
     session->sock.flags |= COAP_SOCKET_BOUND;
   SESSIONS_ADD(ctx->sessions, session);
+#if COAP_SERVER_SUPPORT
+  if (ctx->proxy_uri_resource)
+    session->proxy_session = 1;
+#endif /* COAP_SERVER_SUPPORT */
   return session;
 
 error:
