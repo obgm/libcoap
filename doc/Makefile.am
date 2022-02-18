@@ -17,7 +17,8 @@ CLEANFILES = \
 EXTRA_DIST = \
   docbook.local.css \
   upgrade_4.2.1_4.3.0.txt \
-  main.md
+  main.md \
+  module_api_wrap.h
 
 if HAVE_DOXYGEN
 
