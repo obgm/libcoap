@@ -11,7 +11,7 @@
 if HAVE_CUNIT
 
 # picking up the default warning CFLAGS
-AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include $(WARNING_CFLAGS) $(CUNIT_CFLAGS) $(DTLS_CFLAGS) -std=c99
+AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include $(WARNING_CFLAGS) $(CUNIT_CFLAGS) $(DTLS_CFLAGS) -std=c99 $(EXTRA_CFLAGS)
 
 noinst_PROGRAMS = \
  testdriver

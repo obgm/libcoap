@@ -15,7 +15,7 @@ if BUILD_EXAMPLES
 
 # picking up the default warning CFLAGS into AM_CFLAGS
 AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include \
-            $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
+            $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99 $(EXTRA_CFLAGS)
 
 #
 
