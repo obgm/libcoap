@@ -133,6 +133,7 @@ struct coap_session_t {
   int dtls_event;                       /**< Tracking any (D)TLS events on this
                                              sesison */
   uint8_t block_mode;             /**< Zero or more COAP_BLOCK_ or'd options */
+  uint8_t proxy_session;          /**< Set if this is an ongoing proxy session */
   uint64_t tx_token;              /**< Next token number to use */
 };
 

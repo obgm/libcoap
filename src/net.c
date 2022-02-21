@@ -672,10 +672,11 @@ coap_free_context(coap_context_t *context) {
 }
 
 int
-coap_option_check_critical(coap_context_t *ctx,
+coap_option_check_critical(coap_session_t *session,
   coap_pdu_t *pdu,
   coap_opt_filter_t *unknown) {
 
+  coap_context_t *ctx = session->context;
   coap_opt_iterator_t opt_iter;
   int ok = 1;
 
@@ -690,7 +691,7 @@ coap_option_check_critical(coap_context_t *ctx,
      * bad.
      */
     if (opt_iter.number & 0x01) {
-      /* first check the built-in critical options */
+      /* first check the known built-in critical options */
       switch (opt_iter.number) {
       case COAP_OPTION_IF_MATCH:
       case COAP_OPTION_URI_HOST:
@@ -706,6 +707,21 @@ coap_option_check_critical(coap_context_t *ctx,
         break;
       default:
         if (coap_option_filter_get(&ctx->known_options, opt_iter.number) <= 0) {
+#if COAP_SERVER_SUPPORT
+          if ((opt_iter.number & 0x02) == 0) {
+            coap_opt_iterator_t t_iter;
+
+            /* Safe to forward  - check if proxy pdu */
+            if (session->proxy_session)
+              break;
+            if (COAP_PDU_IS_REQUEST(pdu) && ctx->proxy_uri_resource &&
+                (coap_check_option(pdu, COAP_OPTION_PROXY_URI, &t_iter) ||
+                 coap_check_option(pdu, COAP_OPTION_PROXY_SCHEME, &t_iter))) {
+              pdu->crit_opt = 1;
+              break;
+            }
+          }
+#endif /* COAP_SERVER_SUPPORT */
           coap_log(LOG_DEBUG, "unknown critical option %d\n", opt_iter.number);
           ok = 0;
 
@@ -2092,8 +2108,10 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
    * options must be included as well. */
 
   /* we do not want these */
-  coap_option_filter_unset(opts, COAP_OPTION_CONTENT_TYPE);
+  coap_option_filter_unset(opts, COAP_OPTION_CONTENT_FORMAT);
   coap_option_filter_unset(opts, COAP_OPTION_HOP_LIMIT);
+  /* Unsafe to send this back */
+  coap_option_filter_unset(opts, COAP_OPTION_OSCORE);
 
   coap_option_iterator_init(request, &opt_iter, opts);
 
@@ -2611,6 +2629,12 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       }
       if (i != resource->proxy_name_count) {
         /* This server is hosting the proxy connection endpoint */
+        if (pdu->crit_opt) {
+          /* Cannot handle critical option */
+          pdu->crit_opt = 0;
+          resp = 402;
+          goto fail_response;
+        }
         is_proxy_uri = 0;
         is_proxy_scheme = 0;
         skip_hop_limit_check = 1;
@@ -3034,7 +3058,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
           /* Flush out any entries on session->delayqueue */
           coap_session_connected(session);
       }
-      if (coap_option_check_critical(context, pdu, &opt_filter) == 0)
+      if (coap_option_check_critical(session, pdu, &opt_filter) == 0)
         goto cleanup;
 
 #if COAP_SERVER_SUPPORT
@@ -3115,14 +3139,14 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       /* find transaction in sendqueue in case large response */
       coap_remove_from_queue(&context->sendqueue, session, pdu->mid, &sent);
       /* check for unknown critical options */
-      if (coap_option_check_critical(context, pdu, &opt_filter) == 0) {
+      if (coap_option_check_critical(session, pdu, &opt_filter) == 0) {
         coap_send_rst(session, pdu);
         goto cleanup;
       }
       break;
 
     case COAP_MESSAGE_CON:        /* check for unknown critical options */
-      if (coap_option_check_critical(context, pdu, &opt_filter) == 0) {
+      if (coap_option_check_critical(session, pdu, &opt_filter) == 0) {
 
         if (COAP_PDU_IS_REQUEST(pdu)) {
           response =

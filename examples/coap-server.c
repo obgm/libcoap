@@ -1116,14 +1116,11 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
       goto cleanup;
     }
 
-    if (proxy.host.length) {   /* Use Proxy-Uri */
-      coap_insert_optlist(&optlist,
-                  coap_new_optlist(COAP_OPTION_PROXY_URI,
-                  coap_opt_length(proxy_uri),
-                  coap_opt_value(proxy_uri)));
+    if (proxy.host.length == 0) {
+      /* Use  Uri-Path and Uri-Query - direct session */
+      proxy_uri = NULL;
+      proxy_scheme_option = 0;
 
-    }
-    else {      /* Use  Uri-Path and Uri-Query */
       if (uri.port != (coap_uri_scheme_is_secure(&uri) ?
            COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT)) {
         coap_insert_optlist(&optlist,
@@ -1171,17 +1168,26 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
     while ((option = coap_option_next(&opt_iter))) {
       switch (opt_iter.number) {
       case COAP_OPTION_PROXY_URI:
+        if (proxy_uri) {
+          /* Need to add back in */
+          goto add_in;
+        }
+        break;
       case COAP_OPTION_PROXY_SCHEME:
       case COAP_OPTION_URI_PATH:
       case COAP_OPTION_URI_PORT:
       case COAP_OPTION_URI_QUERY:
-        /* Skip those potentially already added */
+        if (proxy_scheme_option) {
+          /* Need to add back in */
+          goto add_in;
+        }
         break;
       case COAP_OPTION_BLOCK1:
       case COAP_OPTION_BLOCK2:
         /* These are not passed on */
         break;
       default:
+add_in:
         coap_insert_optlist(&optlist,
                     coap_new_optlist(opt_iter.number,
                     coap_opt_length(option),
