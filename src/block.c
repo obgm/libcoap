@@ -699,25 +699,15 @@ coap_add_data_large_response(coap_resource_t *resource,
     default:                        /* everything is good */
         ;
     }
-
-    if (!coap_add_data_large_internal(session, response, resource, query,
-                                      maxage, etag, length, data,
-                                      release_func, app_ptr,
-                                      request->code)) {
-      response->code = COAP_RESPONSE_CODE(500);
-      goto error;
-    }
-
-    return 1;
   }
 
-  /*
-   * BLOCK2 not requested
-   */
-  if (!coap_add_data_large_internal(session, response, resource, query, maxage,
-                                    etag, length, data, release_func,
-                                    app_ptr, request->code)) {
-    response->code = COAP_RESPONSE_CODE(400);
+  /* add data body */
+  if (request &&
+      !coap_add_data_large_internal(session, response, resource, query,
+                                    maxage, etag, length, data,
+                                    release_func, app_ptr,
+                                    request->code)) {
+    response->code = COAP_RESPONSE_CODE(500);
     goto error;
   }
 
