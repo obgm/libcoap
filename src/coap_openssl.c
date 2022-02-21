@@ -421,14 +421,12 @@ coap_dtls_verify_cookie(SSL *ssl,
 
 #if COAP_CLIENT_SUPPORT
 static unsigned int
-coap_dtls_psk_client_callback(
-  SSL *ssl,
-  const char *hint,
-  char *identity,
-  unsigned int max_identity_len,
-  unsigned char *psk,
-  unsigned int max_psk_len
-) {
+coap_dtls_psk_client_callback(SSL *ssl,
+                              const char *hint,
+                              char *identity,
+                              unsigned int max_identity_len,
+                              unsigned char *psk,
+                              unsigned int max_psk_len) {
   coap_session_t *c_session;
   coap_openssl_context_t *o_context;
   coap_dtls_cpsk_t *setup_data;
@@ -491,7 +489,7 @@ coap_dtls_psk_client_callback(
   }
   else {
     /* Reduce to match */
-    max_identity_len = psk_identity->length;
+    max_identity_len = (unsigned int)psk_identity->length;
   }
   memcpy(identity, psk_identity->s, max_identity_len);
   identity[max_identity_len] = '\000';
@@ -503,7 +501,7 @@ coap_dtls_psk_client_callback(
   }
   else {
     /* Reduce to match */
-    max_psk_len = psk_key->length;
+    max_psk_len = (unsigned int)psk_key->length;
   }
   memcpy(psk, psk_key->s, max_psk_len);
   return max_psk_len;
@@ -558,7 +556,7 @@ coap_dtls_psk_server_callback(
   }
   else {
     /* Reduce to match */
-    max_psk_len = psk_key->length;
+    max_psk_len = (unsigned int)psk_key->length;
   }
   memcpy(psk, psk_key->s, max_psk_len);
   return max_psk_len;
@@ -2806,11 +2804,16 @@ void * coap_dtls_new_server_session(coap_session_t *session) {
   /* hint may get updated if/when handling SNI callback */
   psk_hint = coap_get_session_server_psk_hint(session);
   if (psk_hint != NULL && psk_hint->length) {
-    char hint[psk_hint->length+1];
+    char* hint = OPENSSL_malloc(psk_hint->length + 1);
 
-    memcpy (hint, psk_hint->s, psk_hint->length);
-    hint[psk_hint->length] = '\000';
-    SSL_use_psk_identity_hint(ssl, hint);
+    if (hint) {
+      memcpy(hint, psk_hint->s, psk_hint->length);
+      hint[psk_hint->length] = '\000';
+      SSL_use_psk_identity_hint(ssl, hint);
+      OPENSSL_free(hint);
+    } else {
+      coap_log(LOG_WARNING, "hint malloc failure\n");
+    }
   }
 
   r = SSL_accept(ssl);
@@ -3280,11 +3283,16 @@ void *coap_tls_new_server_session(coap_session_t *session, int *connected) {
 
   psk_hint = coap_get_session_server_psk_hint(session);
   if (psk_hint != NULL && psk_hint->length) {
-    char hint[psk_hint->length+1];
+    char* hint = OPENSSL_malloc(psk_hint->length + 1);
 
-    memcpy (hint, psk_hint->s, psk_hint->length);
-    hint[psk_hint->length] = '\000';
-    SSL_use_psk_identity_hint(ssl, hint);
+    if (hint) {
+      memcpy(hint, psk_hint->s, psk_hint->length);
+      hint[psk_hint->length] = '\000';
+      SSL_use_psk_identity_hint(ssl, hint);
+      OPENSSL_free(hint);
+    } else {
+      coap_log(LOG_WARNING, "hint malloc failure\n");
+    }
   }
 
   r = SSL_accept(ssl);
@@ -3467,30 +3475,31 @@ ssize_t coap_tls_read(coap_session_t *session,
 #if COAP_SERVER_SUPPORT
 coap_digest_ctx_t *
 coap_digest_setup(void) {
-  SHA256_CTX *digest_ctx = OPENSSL_malloc(sizeof(SHA256_CTX));
+  EVP_MD_CTX *digest_ctx = EVP_MD_CTX_new();
 
   if (digest_ctx) {
-    SHA256_Init(digest_ctx);
+    EVP_DigestInit_ex(digest_ctx, EVP_sha256(), NULL);
   }
   return digest_ctx;
 }
 
 void
 coap_digest_free(coap_digest_ctx_t *digest_ctx) {
-  OPENSSL_free(digest_ctx);
+  EVP_MD_CTX_free(digest_ctx);
 }
 
 int
 coap_digest_update(coap_digest_ctx_t *digest_ctx,
                    const uint8_t *data,
                    size_t data_len) {
-  return SHA256_Update(digest_ctx, data, data_len);
+  return EVP_DigestUpdate(digest_ctx, data, data_len);
 }
 
 int
 coap_digest_final(coap_digest_ctx_t *digest_ctx,
                   coap_digest_t *digest_buffer) {
-  int ret = SHA256_Final((uint8_t*)digest_buffer, digest_ctx);
+  unsigned int size = sizeof(coap_digest_t);
+  int ret = EVP_DigestFinal_ex(digest_ctx, (uint8_t*)digest_buffer, &size);
 
   coap_digest_free(digest_ctx);
   return ret;
