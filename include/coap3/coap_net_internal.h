@@ -128,10 +128,7 @@ struct coap_context_t {
                                             disabled. */
   unsigned int csm_timeout;           /**< Timeout for waiting for a CSM from
                                            the remote side. 0 means disabled. */
-#if COAP_SERVER_SUPPORT
-  uint8_t observe_pending;         /**< Observe response pending */
-#endif /* COAP_SERVER_SUPPORT */
-  uint8_t block_mode;              /**< Zero or more COAP_BLOCK_ or'd options */
+  uint32_t csm_max_message_size;   /**< Value for CSM Max-Message-Size */
   uint64_t etag;                   /**< Next ETag to use */
 
 #if COAP_SERVER_SUPPORT
@@ -147,6 +144,10 @@ struct coap_context_t {
   int eptimerfd;                   /**< Internal FD for timeout */
   coap_tick_t next_timeout;        /**< When the next timeout is to occur */
 #endif /* COAP_EPOLL_SUPPORT */
+#if COAP_SERVER_SUPPORT
+  uint8_t observe_pending;         /**< Observe response pending */
+#endif /* COAP_SERVER_SUPPORT */
+  uint8_t block_mode;              /**< Zero or more COAP_BLOCK_ or'd options */
 };
 
 /**
@@ -365,6 +366,16 @@ unsigned int coap_calc_timeout(coap_session_t *session, unsigned char r);
  *                  COAP_INVALID_MID on error.
  */
 coap_mid_t coap_send_internal(coap_session_t *session, coap_pdu_t *pdu);
+
+/**
+ * Delay the sending of the first client request until some other negotiation
+ * has completed.
+ *
+ * @param session   The CoAP session.
+ *
+ * @return          @c 1 if everything was ok, @c 0 otherwise.
+ */
+int coap_client_delay_first(coap_session_t *session);
 
 /** @} */
 

@@ -310,6 +310,26 @@ unsigned int
 coap_context_get_csm_timeout(const coap_context_t *context);
 
 /**
+ * Set the CSM max session size value. The largest PDU that can be received.
+ *
+ * @param context    The coap_context_t object.
+ * @param csm_max_message_size The CSM max message size value.
+ */
+void
+coap_context_set_csm_max_message_size(coap_context_t *context,
+                                      uint32_t csm_max_message_size);
+
+/**
+ * Get the CSM max session size  value
+ *
+ * @param context The coap_context_t object.
+ *
+ * @return The CSM max session size  value.
+ */
+uint32_t
+coap_context_get_csm_max_message_size(const coap_context_t *context);
+
+/**
  * Set the maximum number of sessions in (D)TLS handshake value. If this number
  * is exceeded, the least recently used server session in handshake is
  * completely removed.

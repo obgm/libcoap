@@ -93,6 +93,7 @@ static int reliable = 0;
 
 static int add_nl = 0;
 static int is_mcast = 0;
+static uint32_t csm_max_message_size = 0;
 
 unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
 
@@ -513,7 +514,7 @@ usage( const char *program, const char *version) {
      "\t\t[-m method] [-o file] [-p port] [-r] [-s duration] [-t type]\n"
      "\t\t[-v num] [-w] [-A type] [-B seconds] [G count] [-H hoplimit]\n"
      "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]]\n"
-     "\t\t[-T token] [-U]\n"
+     "\t\t[-T token] [-U] [-X size]\n"
      "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
      "\t\t[-J pkcs11_pin] [-M raw_pk] [-R trust_casfile]\n"
@@ -567,6 +568,8 @@ usage( const char *program, const char *version) {
      "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
      "\t-T token\tDefine the initial starting token\n"
      "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
+     "\t-X size\t\tMaximum message size to use for TCP based connections\n"
+     "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
      ,program, wait_seconds);
   fprintf( stderr,
      "PSK Options (if supported by underlying (D)TLS library)\n"
@@ -1528,7 +1531,7 @@ main(int argc, char **argv) {
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:no:p:rs:t:u:v:wA:B:C:G:H:J:K:L:M:NO:P:R:T:U")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:no:p:rs:t:u:v:wA:B:C:G:H:J:K:L:M:NO:P:R:T:UX:")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1664,6 +1667,9 @@ main(int argc, char **argv) {
         repeat_count = 1;
       }
       break;
+    case 'X':
+      csm_max_message_size = strtol(optarg, NULL, 10);
+      break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
       exit( 1 );
@@ -1714,6 +1720,8 @@ main(int argc, char **argv) {
 
   coap_context_set_keepalive(ctx, ping_seconds);
   coap_context_set_block_mode(ctx, block_mode);
+  if (csm_max_message_size)
+    coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
 
   dst.size = res;
   dst.addr.sin.sin_port = htons( port );

@@ -21,7 +21,7 @@ SYNOPSIS
 --------
 *coap-server* [*-d* max] [*-e*] [*-g* group] [*-G* group_if] [*-l* loss]
               [*-p* port] [*-v* num] [*-A* address] [*-L* value] [*-N*]
-              [*-P* scheme://addr[:port],[name1[,name2..]]]
+              [*-P* scheme://addr[:port],[name1[,name2..]]] [*-X* size]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
               [*-s* match_psk_sni_file] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
@@ -100,6 +100,9 @@ OPTIONS - General
    first name, then the ongoing connection will be a direct connection.
    Scheme is one of coap, coaps, coap+tcp and coaps+tcp.
 
+*-X* size::
+   Maximum message size to use for TCP based connections (default is 8388864).
+   Maximum value of 2^32 -1.
 
 OPTIONS - PSK
 -------------

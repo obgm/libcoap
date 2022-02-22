@@ -37,11 +37,13 @@ global:
   coap_clock_init;
   coap_clone_uri;
   coap_context_get_coap_fd;
+  coap_context_get_csm_max_message_size;
   coap_context_get_csm_timeout;
   coap_context_get_max_handshake_sessions;
   coap_context_get_max_idle_sessions;
   coap_context_get_session_timeout;
   coap_context_set_block_mode;
+  coap_context_set_csm_max_message_size;
   coap_context_set_csm_timeout;
   coap_context_set_keepalive;
   coap_context_set_max_handshake_sessions;
