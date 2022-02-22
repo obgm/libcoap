@@ -44,6 +44,19 @@ typedef struct {
   unsigned int szx:3;     /**< block size */
 } coap_block_t;
 
+/**
+ * Structure of Block options with BERT support.
+ */
+typedef struct {
+  unsigned int num;       /**< block number */
+  unsigned int m:1;       /**< 1 if more blocks follow, 0 otherwise */
+  unsigned int szx:3;     /**< block size (0-6) */
+  unsigned int aszx:3;    /**< block size (0-7 including BERT */
+  unsigned int defined:1; /**< Set if block found */
+  unsigned int bert:1;    /**< Operating as BERT */
+  uint32_t chunk_size;    /**< > 1024 if BERT */
+} coap_block_b_t;
+
 #define COAP_BLOCK_USE_LIBCOAP  0x01 /* Use libcoap to do block requests */
 #define COAP_BLOCK_SINGLE_BODY  0x02 /* Deliver the data as a single body */
 
@@ -97,12 +110,31 @@ coap_opt_block_set_m(coap_opt_t *block_opt, int m) {
  * @param pdu    The pdu to search for option @p number.
  * @param number The option number to search for (must be COAP_OPTION_BLOCK1 or
  *               COAP_OPTION_BLOCK2).
- * @param block  The block structure to initilize.
+ * @param block  The block structure to initialize.
  *
  * @return       @c 1 on success, @c 0 otherwise.
  */
 int coap_get_block(const coap_pdu_t *pdu, coap_option_num_t number,
                    coap_block_t *block);
+
+
+/**
+ * Initializes @p block from @p pdu. @p number must be either COAP_OPTION_BLOCK1
+ * or COAP_OPTION_BLOCK2. When option @p number was found in @p pdu, @p block is
+ * initialized with values from this option and the function returns the value
+ * @c 1. Otherwise, @c 0 is returned. BERT information is abstracted as
+ * appropriate.
+ *
+ * @param session THe session that the pdu is associated with,
+ * @param pdu    The pdu to search for option @p number.
+ * @param number The option number to search for (must be COAP_OPTION_BLOCK1 or
+ *               COAP_OPTION_BLOCK2).
+ * @param block  The block structure to initialize.
+ *
+ * @return       @c 1 on success, @c 0 otherwise.
+ */
+int coap_get_block_b(const coap_session_t *session, const coap_pdu_t *pdu,
+                     coap_option_num_t number, coap_block_b_t *block);
 
 /**
  * Writes a block option of type @p number to message @p pdu. If the requested
@@ -128,6 +160,33 @@ int coap_write_block_opt(coap_block_t *block,
                          coap_option_num_t number,
                          coap_pdu_t *pdu,
                          size_t data_length);
+/**
+ * Writes a block option of type @p number to message @p pdu. If the requested
+ * block size is too large to fit in @p pdu, it is reduced accordingly. An
+ * exception is made for the final block when less space is required. The actual
+ * length of the resource is specified in @p data_length.
+ *
+ * This function may change *block to reflect the values written to @p pdu. As
+ * the function takes into consideration the remaining space @p pdu, no more
+ * options should be added after coap_write_block_opt() has returned.
+ *
+ * @param session     The CoAP session.
+ * @param block       The block structure to use. On return, this object is
+ *                    updated according to the values that have been written to
+ *                    @p pdu.
+ * @param number      COAP_OPTION_BLOCK1 or COAP_OPTION_BLOCK2.
+ * @param pdu         The message where the block option should be written.
+ * @param data_length The length of the actual data that will be added the @p
+ *                    pdu by calling coap_add_block().
+ *
+ * @return            @c 1 on success, or a negative value on error.
+ */
+int coap_write_block_b_opt(coap_session_t *session,
+                           coap_block_b_t *block,
+                           coap_option_num_t number,
+                           coap_pdu_t *pdu,
+                           size_t data_length);
+
 
 /**
  * Adds the @p block_num block of size 1 << (@p block_szx + 4) from source @p
@@ -146,6 +205,19 @@ int coap_add_block(coap_pdu_t *pdu,
                    const uint8_t *data,
                    unsigned int block_num,
                    unsigned char block_szx);
+
+/**
+ * Adds the appropriate payload data of the body to the @p pdu.
+ *
+ * @param pdu       The message to add the block.
+ * @param len       The length of @p data.
+ * @param data      The source data to fill the block with.
+ * @param block     The block information (including potentially BERT)
+ *
+ * @return          @c 1 on success, @c 0 otherwise.
+ */
+int coap_add_block_b_data(coap_pdu_t *pdu, size_t len, const uint8_t *data,
+                          coap_block_b_t *block);
 
 /**
  * Re-assemble payloads into a body

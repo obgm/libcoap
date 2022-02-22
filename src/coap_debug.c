@@ -621,10 +621,22 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
     case COAP_OPTION_BLOCK2:
       /* split block option into number/more/size where more is the
        * letter M if set, the _ otherwise */
-      buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
-                         coap_opt_block_num(option), /* block number */
-                         COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
-                         (1 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+      if (COAP_OPT_BLOCK_SZX(option) == 7) {
+        if (coap_get_data(pdu, &data_len, &data))
+          buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/BERT(%zu)",
+                             coap_opt_block_num(option), /* block number */
+                             COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
+                             data_len);
+        else
+          buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/BERT",
+                             coap_opt_block_num(option), /* block number */
+                             COAP_OPT_BLOCK_MORE(option) ? 'M' : '_'); /* M bit */
+      } else {
+        buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
+                           coap_opt_block_num(option), /* block number */
+                           COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
+                     (1 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+      }
 
       break;
 
@@ -726,6 +738,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ">>");
     } else {
       size_t max_length;
+
       outbuflen = strlen(outbuf);
       max_length = sizeof(outbuf)-outbuflen;
       if (max_length > 1) {
@@ -864,7 +877,7 @@ char *coap_string_tls_support(char *buffer, size_t bufsize)
   if (have_dtls == 0 && have_tls == 0) {
     snprintf(buffer, bufsize, "(No DTLS or TLS support)");
     return buffer;
-  } 
+  }
   switch (tls_version->type) {
   case COAP_TLS_LIBRARY_NOTLS:
     snprintf(buffer, bufsize, "(No DTLS or TLS support)");

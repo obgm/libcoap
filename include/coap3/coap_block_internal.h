@@ -58,6 +58,7 @@ typedef struct coap_rblock_t {
 typedef struct coap_l_block1_t {
   coap_binary_t *app_token; /**< original PDU token */
   uint64_t state_token;  /**< state token */
+  size_t bert_size;      /**< size of last BERT block */
   uint32_t count;        /**< the number of packets sent for payload */
 } coap_l_block1_t;
 
