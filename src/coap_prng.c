@@ -22,6 +22,10 @@
 #include <stdlib.h>
 #endif /* !HAVE_GETRANDOM */
 
+#if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
+#include <entropy_poll.h>
+#endif /* MBEDTLS_ENTROPY_HARDWARE_ALT */
+
 #if defined(_WIN32)
 
 errno_t __cdecl rand_s( _Out_ unsigned int* _RandomValue );
@@ -50,6 +54,9 @@ coap_prng_impl( unsigned char *buf, size_t len ) {
 
 static int
 coap_prng_default(void *buf, size_t len) {
+#if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
+  return mbedtls_hardware_poll(NULL, buf, len, NULL);
+#else /* !MBEDTLS_ENTROPY_HARDWARE_ALT */
 #ifdef HAVE_GETRANDOM
   return getrandom(buf, len, 0);
 #else /* !HAVE_GETRANDOM */
@@ -62,6 +69,7 @@ coap_prng_default(void *buf, size_t len) {
   return 1;
 #endif /* !_WIN32 */
 #endif /* !HAVE_GETRANDOM */
+#endif /* !MBEDTLS_ENTROPY_HARDWARE_ALT */
 }
 
 static coap_rand_func_t rand_func = coap_prng_default;
