@@ -1652,8 +1652,8 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
   }
   m_context->psk_pki_enabled |= IS_PSK;
   return 1;
-}
 #endif /* MBEDTLS_SSL_CLI_C */
+}
 #endif /* COAP_CLIENT_SUPPORT */
 
 int coap_dtls_context_set_pki(coap_context_t *c_context,
