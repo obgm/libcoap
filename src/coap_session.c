@@ -635,11 +635,13 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
 
   if (endpoint->context->max_idle_sessions > 0 &&
       num_idle >= endpoint->context->max_idle_sessions) {
+    coap_handle_event(oldest->context, COAP_EVENT_SERVER_SESSION_DEL, oldest);
     coap_session_free(oldest);
   }
   else if (oldest_hs) {
     coap_log(LOG_WARNING, "***%s: Incomplete session timed out\n",
              coap_session_str(oldest_hs));
+    coap_handle_event(oldest_hs->context, COAP_EVENT_SERVER_SESSION_DEL, oldest_hs);
     coap_session_free(oldest_hs);
   }
 
@@ -700,6 +702,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
       return NULL;
     }
   }
+
   session = coap_make_session(endpoint->proto, COAP_SESSION_TYPE_SERVER,
                               &addr_hash, &packet->addr_info.local,
                               &packet->addr_info.remote,
@@ -714,6 +717,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     SESSIONS_ADD(endpoint->sessions, session);
     coap_log(LOG_DEBUG, "***%s: session %p: new incoming session\n",
              coap_session_str(session), (void *)session);
+    coap_handle_event(session->context, COAP_EVENT_SERVER_SESSION_NEW, session);
   }
   return session;
 }
@@ -1251,6 +1255,9 @@ coap_session_t *coap_new_server_session(
              coap_session_str(session), (void *)session);
     /* Returned session may already have been released and is now NULL */
     session = coap_session_accept(session);
+    if(session) {
+      coap_handle_event(session->context, COAP_EVENT_SERVER_SESSION_NEW, session);
+    }
   }
   return session;
 

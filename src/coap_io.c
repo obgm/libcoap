@@ -1121,6 +1121,7 @@ coap_io_prepare_io(coap_context_t *ctx,
           s->delayqueue == NULL &&
           (s->last_rx_tx + session_timeout <= now ||
            s->state == COAP_SESSION_STATE_NONE)) {
+        coap_handle_event(ctx, COAP_EVENT_SERVER_SESSION_DEL, s);
         coap_session_free(s);
       } else {
         if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 && s->delayqueue == NULL) {
