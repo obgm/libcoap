@@ -351,6 +351,8 @@ coap_add_data_large_internal(coap_session_t *session,
   assert(pdu);
   if (pdu->data) {
     coap_log(LOG_WARNING, "coap_add_data_large: PDU already contains data\n");
+    if (release_func)
+      release_func(session, app_ptr);
     return 0;
   }
 
