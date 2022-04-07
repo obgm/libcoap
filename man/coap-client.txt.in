@@ -127,8 +127,8 @@ OPTIONS - General
    Break operation after waiting given seconds (default is 90).
 
 *-G* count ::
-   Repeat the Request 'count' times. Must have a value between 1 and 255
-   inclusive. Default is '1'.
+   Repeat the Request 'count' times with a second delay between each one.
+   Must have a value between 1 and 255 inclusive. Default is '1'.
 
 *-H* hoplimit::
    Set the Hop Limit count to hoplimit for proxies. Must have a value between
