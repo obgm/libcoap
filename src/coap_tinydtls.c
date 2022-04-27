@@ -27,9 +27,9 @@
 #undef PACKAGE_URL
 #undef PACKAGE_VERSION
 
-#include <tinydtls.h>
-#include <dtls.h>
-#include <dtls_debug.h>
+#include <tinydtls/tinydtls.h>
+#include <tinydtls/dtls.h>
+#include <tinydtls/dtls_debug.h>
 
 typedef struct coap_tiny_context_t {
   struct dtls_context_t *dtls_context;

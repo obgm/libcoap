@@ -69,3 +69,16 @@ AC_DEFUN([AX_CHECK_MBEDTLS_VERSION],
           fi
 ]) dnl AX_CHECK_MBEDTLS_VERSION
 
+AC_DEFUN([AX_CHECK_TINYDTLS_VERSION],
+    [AC_MSG_CHECKING([for compatible TinyDTLS version (>= $tinydtls_version_required)])
+    AS_VERSION_COMPARE([$tinydtls_version], [$tinydtls_version_required],
+        [AC_MSG_RESULT([no])
+        TINYDTLSV=""],
+        [AC_MSG_RESULT([yes $tinydtls_version])
+        TINYDTLSV="$tinydtls_version"],
+        [AC_MSG_RESULT([yes $tinydtls_version])
+        TINYDTLSV="$tinydtls_version"])
+    if test "x$TINYDTLSV" = "x"; then
+        AC_MSG_ERROR([==> TinyDTLS $tinydtls_version too old. TinyDTLS >= $tinydtls_version_required required for suitable DTLS support build.])
+    fi
+]) dnl AX_CHECK_TINYDTLS_VERSION
