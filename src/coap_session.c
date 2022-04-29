@@ -859,14 +859,20 @@ coap_session_create_client(
   session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_WANT_READ;
   if (local_if)
     session->sock.flags |= COAP_SOCKET_BOUND;
-  SESSIONS_ADD(ctx->sessions, session);
 #if COAP_SERVER_SUPPORT
   if (ctx->proxy_uri_resource)
     session->proxy_session = 1;
 #endif /* COAP_SERVER_SUPPORT */
+  SESSIONS_ADD(ctx->sessions, session);
   return session;
 
 error:
+  /*
+   * Need to add in the session as coap_session_release()
+   * will call SESSIONS_DELETE in coap_session_free().
+   */
+  if (session)
+    SESSIONS_ADD(ctx->sessions, session);
   coap_session_release(session);
   return NULL;
 }
@@ -1243,11 +1249,17 @@ coap_session_t *coap_new_server_session(
   if (session) {
     coap_log(LOG_DEBUG, "***%s: session %p: new incoming session\n",
              coap_session_str(session), (void *)session);
+    /* Returned session may already have been released and is now NULL */
     session = coap_session_accept(session);
   }
   return session;
 
 error:
+  /*
+   * Need to add in the session as coap_session_release()
+   * will call SESSIONS_DELETE in coap_session_free().
+   */
+  SESSIONS_ADD(ep->sessions, session);
   coap_session_free(session);
   return NULL;
 }
