@@ -56,7 +56,32 @@ typedef enum coap_event_t {
 /**
  * (Q-)BLOCK receive errors
  */
-  COAP_EVENT_PARTIAL_BLOCK     = 0x3001
+  COAP_EVENT_PARTIAL_BLOCK     = 0x3001,
+
+/**
+ * @defgroup srv_sess_state_events Server session state management events
+ * @{
+ */
+
+/**
+ * Called in the CoAP IO loop if a new *server-side* session is created due
+ * to an incoming connection.
+ *
+ * Note that the session might not be a fully established connection yet,
+ * it might also refer to, e.g., a DTLS session in a handshake stage.
+ */
+  COAP_EVENT_SERVER_SESSION_NEW = 0x4001,
+
+/**
+ * Called in the CoAP IO loop if a server session is deleted (e.g., due to
+ * inactivity or because the maximum number of idle sessions was exceeded).
+ *
+ * The session will still contain valid data when the event handler is
+ * called.
+ */
+  COAP_EVENT_SERVER_SESSION_DEL = 0x4002
+
+/** @} */
 } coap_event_t;
 
 /**
