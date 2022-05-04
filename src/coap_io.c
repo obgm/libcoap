@@ -1302,8 +1302,8 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
                          int enfds, fd_set *ereadfds, fd_set *ewritefds,
                          fd_set *eexceptfds) {
 #if COAP_CONSTRAINED_STACK
-  static coap_mutex_t static_mutex = COAP_MUTEX_INITIALIZER;
 # ifndef COAP_EPOLL_SUPPORT
+  static coap_mutex_t static_mutex = COAP_MUTEX_INITIALIZER;
   static fd_set readfds, writefds, exceptfds;
   static coap_socket_t *sockets[64];
   unsigned int num_sockets = 0;
@@ -1324,13 +1324,14 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
   unsigned int i;
 #endif /* ! COAP_EPOLL_SUPPORT */
 
+  coap_ticks(&before);
+
+#ifndef COAP_EPOLL_SUPPORT
+
 #if COAP_CONSTRAINED_STACK
   coap_mutex_lock(&static_mutex);
 #endif /* COAP_CONSTRAINED_STACK */
 
-  coap_ticks(&before);
-
-#ifndef COAP_EPOLL_SUPPORT
   timeout = coap_io_prepare_io(ctx, sockets,
                             (sizeof(sockets) / sizeof(sockets[0])),
                             &num_sockets, before);
@@ -1400,6 +1401,15 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
       return -1;
     }
   }
+  if (ereadfds) {
+    *ereadfds = readfds;
+  }
+  if (ewritefds) {
+    *ewritefds = writefds;
+  }
+  if (eexceptfds) {
+    *eexceptfds = exceptfds;
+  }
 
   if (result > 0) {
     for (i = 0; i < num_sockets; i++) {
@@ -1416,17 +1426,12 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
     }
   }
 
+#if COAP_CONSTRAINED_STACK
+  coap_mutex_unlock(&static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
+
   coap_ticks(&now);
   coap_io_do_io(ctx, now);
-  if (ereadfds) {
-    *ereadfds = readfds;
-  }
-  if (ewritefds) {
-    *ewritefds = writefds;
-  }
-  if (eexceptfds) {
-    *eexceptfds = exceptfds;
-  }
 
 #else /* COAP_EPOLL_SUPPORT */
   (void)ereadfds;
@@ -1488,10 +1493,6 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
   coap_check_async(ctx, now);
   coap_ticks(&now);
 #endif /* WITHOUT_ASYNC */
-
-#if COAP_CONSTRAINED_STACK
-  coap_mutex_unlock(&static_mutex);
-#endif /* COAP_CONSTRAINED_STACK */
 
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
