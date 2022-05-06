@@ -86,9 +86,9 @@ conditions (no input traffic) *coap_io_process*() will then get called every
 _timeout_ms_, but more frequently if there is input / retransmission traffic.
 
 2. Wait on the file descriptor returned by *coap_context_get_coap_fd*()
-using *select*() or an event returned by epoll_wait(). If 'read' is available on
-the file descriptor, call *coap_io_process*() with _timeout_ms_ set to
-COAP_IO_NO_WAIT. +
+using *select*(), *poll*() or an event returned by epoll_wait(). If 'read' is
+available on the CoAP file descriptor, call *coap_io_process*() with
+_timeout_ms_ set to COAP_IO_NO_WAIT. +
 *NOTE*: This second method is only available for environments that support epoll
 (mostly Linux) with libcoap compiled to use *epoll* (the default) as libcoap
 will then be using *epoll* internally to process all the file descriptors of

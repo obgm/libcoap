@@ -1,6 +1,6 @@
 /* resource.c -- generic resource handling
  *
- * Copyright (C) 2010--2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -1037,21 +1037,7 @@ coap_resource_notify_observers(coap_resource_t *r,
   assert(r->context);
   r->context->observe_pending = 1;
 #ifdef COAP_EPOLL_SUPPORT
-  if (r->context->eptimerfd != -1) {
-    /* Need to immediately trigger any epoll_wait() */
-    struct itimerspec new_value;
-    int ret;
-
-    memset(&new_value, 0, sizeof(new_value));
-    new_value.it_value.tv_nsec = 1; /* small that is not zero */
-    ret = timerfd_settime(r->context->eptimerfd, 0, &new_value, NULL);
-    if (ret == -1) {
-      coap_log(LOG_ERR,
-                "%s: timerfd_settime failed: %s (%d)\n",
-                "coap_resource_notify_observers",
-                coap_socket_strerror(), errno);
-    }
-  }
+  coap_update_epoll_timer(r->context, 0);
 #endif /* COAP_EPOLL_SUPPORT */
   return 1;
 }

@@ -1028,28 +1028,7 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
     (unsigned)(node->t * 1000 / COAP_TICKS_PER_SECOND));
 
 #ifdef COAP_EPOLL_SUPPORT
-  if (context->eptimerfd != -1) {
-    coap_ticks(&now);
-    if (context->next_timeout == 0 ||
-        context->next_timeout > now + (node->t * 1000 / COAP_TICKS_PER_SECOND)) {
-      struct itimerspec new_value;
-      int ret;
-
-      context->next_timeout = now + (node->t * 1000 / COAP_TICKS_PER_SECOND);
-      memset(&new_value, 0, sizeof(new_value));
-      coap_tick_t rem_timeout = (node->t * 1000 / COAP_TICKS_PER_SECOND);
-      /* Need to trigger an event on context->epfd in the future */
-      new_value.it_value.tv_sec = rem_timeout / 1000;
-      new_value.it_value.tv_nsec = (rem_timeout % 1000) * 1000000;
-      ret = timerfd_settime(context->eptimerfd, 0, &new_value, NULL);
-      if (ret == -1) {
-        coap_log(LOG_ERR,
-                  "%s: timerfd_settime failed: %s (%d)\n",
-                  "coap_wait_ack",
-                  coap_socket_strerror(), errno);
-      }
-    }
-  }
+  coap_update_epoll_timer(context, node->t);
 #endif /* COAP_EPOLL_SUPPORT */
 
   return node->id;
@@ -2007,10 +1986,10 @@ coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events, size_t nevents
         /* do nothing */;
       }
     }
-    /* And update eptimerfd as to when to next trigger */
-    coap_ticks(&now);
-    coap_io_prepare_epoll(ctx, now);
   }
+  /* And update eptimerfd as to when to next trigger */
+  coap_ticks(&now);
+  coap_io_prepare_epoll(ctx, now);
 #endif /* COAP_EPOLL_SUPPORT */
 }
 
@@ -3371,7 +3350,7 @@ coap_check_async(coap_context_t *context, coap_tick_t now) {
   coap_async_t *async, *tmp;
 
   LL_FOREACH_SAFE(context->async_state, async, tmp) {
-    if (async->delay <= now) {
+    if (async->delay != 0 && async->delay <= now) {
       /* Send off the request to the application */
       handle_request(context, async->session, async->pdu);
 
