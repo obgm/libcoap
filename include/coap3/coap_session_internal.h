@@ -53,7 +53,8 @@ struct coap_session_t {
                                          peer */
   unsigned ref;                     /**< reference count from queues */
   size_t tls_overhead;              /**< overhead of TLS layer */
-  size_t mtu;                       /**< path or CSM mtu */
+  size_t mtu;                       /**< path or CSM mtu (xmt) */
+  size_t csm_rcv_mtu;               /**< CSM mtu (rcv) */
   coap_addr_hash_t addr_hash;  /**< Address hash for server incoming packets */
   UT_hash_handle hh;
   coap_addr_tuple_t addr_info;      /**< key: remote/local address info */
@@ -133,6 +134,7 @@ struct coap_session_t {
   int dtls_event;                       /**< Tracking any (D)TLS events on this
                                              sesison */
   uint8_t block_mode;             /**< Zero or more COAP_BLOCK_ or'd options */
+  uint8_t doing_first;            /**< Set if doing client's first request */
   uint8_t proxy_session;          /**< Set if this is an ongoing proxy session */
   uint64_t tx_token;              /**< Next token number to use */
 };
@@ -283,6 +285,14 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
 coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
   const coap_packet_t *packet, coap_tick_t now);
 #endif /* COAP_SERVER_SUPPORT */
+
+/**
+ * Get maximum acceptable receive PDU size
+ *
+ * @param session The CoAP session.
+ * @return maximum PDU size, not including header (but including token).
+ */
+size_t coap_session_max_pdu_rcv_size(const coap_session_t *session);
 
 /**
  * Create a new DTLS session for the @p session.

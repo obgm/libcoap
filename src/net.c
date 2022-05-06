@@ -448,6 +448,18 @@ coap_context_get_csm_timeout(const coap_context_t *context) {
 }
 
 void
+coap_context_set_csm_max_message_size(coap_context_t *context,
+                                      uint32_t csm_max_message_size) {
+  assert(csm_max_message_size >= 64);
+  context->csm_max_message_size = csm_max_message_size;
+}
+
+uint32_t
+coap_context_get_csm_max_message_size(const coap_context_t *context) {
+  return context->csm_max_message_size;
+}
+
+void
 coap_context_set_session_timeout(coap_context_t *context,
                                  unsigned int session_timeout) {
   context->session_timeout = session_timeout;
@@ -546,8 +558,9 @@ coap_new_context(
     }
   }
 
-  /* set default CSM timeout */
+  /* set default CSM values */
   c->csm_timeout = 30;
+  c->csm_max_message_size = COAP_DEFAULT_MAX_PDU_RX_SIZE;
 
 #if COAP_SERVER_SUPPORT
   if (listen_addr) {
@@ -1046,6 +1059,88 @@ COAP_STATIC_INLINE int
 token_match(const uint8_t *a, size_t alen,
   const uint8_t *b, size_t blen) {
   return alen == blen && (alen == 0 || memcmp(a, b, alen) == 0);
+}
+
+int
+coap_client_delay_first(coap_session_t *session)
+{
+  if (session->type == COAP_SESSION_TYPE_CLIENT && session->doing_first) {
+#ifndef WITH_LWIP
+    if (session->doing_first) {
+      unsigned ref;
+      int timeout_ms = 5000;
+      /*
+       * Need to wait for first request to get out and response back before
+       * continuing.. Response handler has to clear doing_first if not an error.
+       */
+      ref = ++session->ref;
+      while (session->doing_first != 0) {
+        int result = coap_io_process(session->context, 1000);
+
+        if (result < 0) {
+          session->doing_first = 0;
+          coap_session_release(session);
+          return 0;
+        }
+        if (result <= timeout_ms) {
+          timeout_ms -= result;
+        }
+        else {
+          if (session->doing_first == 1 && ref > session->ref) {
+            /* Timeout failure of some sort with first request */
+          }
+          session->doing_first = 0;
+        }
+      }
+      coap_session_release(session);
+    }
+#else /* WITH_LWIP */
+#include <netif/tapif.h>
+    if (session->doing_first) {
+      unsigned ref;
+      int timeout_ms = 5000;
+      struct netif *netif = ip_route(&session->sock.pcb->local_ip,
+                                   &session->addr_info.remote.addr);
+
+      if (netif) {
+        /*
+         * Need to wait for first request to get out and response back before
+         * continuing.. Response handler has to clear doing_first if not an error.
+         */
+        ref = ++session->ref;
+        while (session->doing_first != 0) {
+          int result;
+          coap_tick_t start;
+          coap_tick_t end;
+
+          coap_ticks(&start);
+          result = tapif_select(netif);
+          if (result < 0) {
+            session->doing_first = 0;
+            coap_session_release(session);
+            return 0;
+          }
+          sys_check_timeouts();
+          coap_ticks(&end);
+          result = (end - start) * 1000 / COAP_TICKS_PER_SECOND;
+          if (result <= timeout_ms) {
+            timeout_ms -= result;
+          }
+          else {
+            if (*(&session->doing_first) == 1 && ref > session->ref) {
+              /* Timeout failure of some sort with first request */
+            }
+            session->doing_first = 0;
+          }
+        }
+        coap_session_release(session);
+      } else {
+       session->doing_first = 0;
+      }
+    }
+#endif /* WITH_LWIP */
+  }
+  return 1;
 }
 
 coap_mid_t
@@ -1646,7 +1741,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
             }
             /* Need max space incase PDU is updated with updated token etc. */
             session->partial_pdu = coap_pdu_init(0, 0, 0,
-                                           coap_session_max_pdu_size(session));
+                                           coap_session_max_pdu_rcv_size(session));
             if (session->partial_pdu == NULL) {
               bytes_read = -1;
               break;

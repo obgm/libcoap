@@ -115,6 +115,7 @@ static const char *hint = "CoAP";
 static int support_dynamic = 0;
 static uint32_t block_mode = COAP_BLOCK_USE_LIBCOAP;
 static int echo_back = 0;
+static uint32_t csm_max_message_size = 0;
 
 static coap_dtls_pki_t *
 setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
@@ -426,6 +427,9 @@ hnd_get_async(coap_resource_t *resource,
  * Large Data GET handler
  */
 
+#ifndef INITIAL_EXAMPLE_SIZE
+#define INITIAL_EXAMPLE_SIZE 1500
+#endif
 static void
 hnd_get_example_data(coap_resource_t *resource,
         coap_session_t *session,
@@ -437,10 +441,9 @@ hnd_get_example_data(coap_resource_t *resource,
   if (!example_data_value) {
     /* Initialise for the first time */
     int i;
-    coap_binary_t *value = coap_new_binary(1500);
+    coap_binary_t *value = coap_new_binary(INITIAL_EXAMPLE_SIZE);
     if (value) {
-      value->length = 1500;
-      for (i = 0; i < 1500; i++) {
+      for (i = 0; i < INITIAL_EXAMPLE_SIZE; i++) {
         if ((i % 10) == 0) {
           value->s[i] = 'a' + (i/10) % 26;
         }
@@ -2178,7 +2181,7 @@ usage( const char *program, const char *version) {
   fprintf(stderr, "\n"
      "Usage: %s [-d max] [-e] [-g group] [-G group_if] [-l loss] [-p port]\n"
      "\t\t[-v num] [-A address] [-L value] [-N]\n"
-     "\t\t[-P scheme://address[:port],[name1[,name2..]]]\n"
+     "\t\t[-P scheme://address[:port],[name1[,name2..]]] [-X size]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
      "\t\t[-s match_psk_sni_file] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
@@ -2226,6 +2229,8 @@ usage( const char *program, const char *version) {
      "\t       \t\tdefined before the leading , (comma) of the first name,\n"
      "\t       \t\tthen the ongoing connection will be a direct connection.\n"
      "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
+     "\t-X size\t\tMaximum message size to use for TCP based connections\n"
+     "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
      "PSK Options (if supported by underlying (D)TLS library)\n"
      "\t-h hint\t\tIdentity Hint to send. Default is CoAP. Zero length is\n"
      "\t       \t\tno hint\n"
@@ -2648,7 +2653,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:s:u:v:A:C:L:M:NP:R:S:")) != -1) {
+  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:s:u:v:A:C:L:M:NP:R:S:X:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -2766,6 +2771,9 @@ main(int argc, char **argv) {
     case 'v' :
       log_level = strtol(optarg, NULL, 10);
       break;
+    case 'X':
+      csm_max_message_size = strtol(optarg, NULL, 10);
+      break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
       exit( 1 );
@@ -2782,6 +2790,8 @@ main(int argc, char **argv) {
 
   init_resources(ctx);
   coap_context_set_block_mode(ctx, block_mode);
+  if (csm_max_message_size)
+    coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
 
   /* Define the options to ignore when setting up cache-keys */
   coap_cache_ignore_options(ctx, cache_ignore_options,

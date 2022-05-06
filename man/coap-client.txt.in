@@ -24,6 +24,7 @@ SYNOPSIS
               [*-t* type] [*-v* num] [*-w*] [*-A* type] [*-B* seconds]
               [*-G* count] [*-H* hoplimit] [*-K* interval] [*-L* value] [*-N*]
               [*-O* num,text] [*-P* scheme://addr[:port]] [*-T* token] [*-U*]
+              [*-X* size]
               [[*-h* match_hint_file] [*-k* key] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [-n] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]] URI
@@ -164,6 +165,10 @@ OPTIONS - General
 
 *-U* ::
    Never include Uri-Host or Uri-Port options.
+
+*-X* size::
+   Maximum message size to use for TCP based connections (default is 8388864).
+   Maximum value of 2^32 -1.
 
 OPTIONS - PSK
 -------------

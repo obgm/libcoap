@@ -113,10 +113,12 @@ coap_session_get_app_data(const coap_session_t *session) {
 
 static coap_session_t *
 coap_make_session(coap_proto_t proto, coap_session_type_t type,
-  const coap_addr_hash_t *addr_hash, const coap_address_t *local_addr,
-  const coap_address_t *remote_addr, int ifindex, coap_context_t *context,
-  coap_endpoint_t *endpoint) {
-  coap_session_t *session = (coap_session_t*)coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
+                  const coap_addr_hash_t *addr_hash,
+                  const coap_address_t *local_addr,
+                  const coap_address_t *remote_addr, int ifindex,
+                  coap_context_t *context, coap_endpoint_t *endpoint) {
+  coap_session_t *session = (coap_session_t*)coap_malloc_type(COAP_SESSION,
+                                                     sizeof(coap_session_t));
 #if ! COAP_SERVER_SUPPORT
   (void)endpoint;
 #endif /* ! COAP_SERVER_SUPPORT */
@@ -265,8 +267,9 @@ void coap_session_free(coap_session_t *session) {
   coap_free_type(COAP_SESSION, session);
 }
 
-size_t coap_session_max_pdu_size(const coap_session_t *session) {
-  size_t max_with_header = (size_t)(session->mtu - session->tls_overhead);
+static size_t
+coap_session_max_pdu_size_internal(const coap_session_t *session,
+                                   size_t max_with_header) {
 #if COAP_DISABLE_TCP
   return max_with_header > 4 ? max_with_header - 4 : 0;
 #else /* !COAP_DISABLE_TCP */
@@ -286,11 +289,30 @@ size_t coap_session_max_pdu_size(const coap_session_t *session) {
 #endif /* !COAP_DISABLE_TCP */
 }
 
+size_t
+coap_session_max_pdu_rcv_size(const coap_session_t *session) {
+  if (session->csm_rcv_mtu)
+    return coap_session_max_pdu_size_internal(session,
+                                              (size_t)(session->csm_rcv_mtu));
+
+  return coap_session_max_pdu_size_internal(session,
+                              (size_t)(session->mtu - session->tls_overhead));
+}
+
+size_t
+coap_session_max_pdu_size(const coap_session_t *session) {
+  size_t max_with_header = (size_t)(session->mtu - session->tls_overhead);
+
+  return coap_session_max_pdu_size_internal(session, max_with_header);
+}
+
 void coap_session_set_mtu(coap_session_t *session, unsigned mtu) {
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
   if (mtu > COAP_MAX_MESSAGE_SIZE_TCP16 + 4)
     mtu = COAP_MAX_MESSAGE_SIZE_TCP16 + 4;
 #endif
+  if (mtu < 64)
+    mtu = 64;
   session->mtu = mtu;
   if (session->tls_overhead >= session->mtu) {
     session->tls_overhead = session->mtu;
@@ -389,7 +411,7 @@ void coap_session_send_csm(coap_session_t *session) {
   if ( pdu == NULL
     || coap_add_option_internal(pdu, COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE,
          coap_encode_var_safe(buf, sizeof(buf),
-                                COAP_DEFAULT_MAX_PDU_RX_SIZE), buf) == 0
+                              session->context->csm_max_message_size), buf) == 0
     || coap_add_option_internal(pdu, COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER,
          coap_encode_var_safe(buf, sizeof(buf),
                                 0), buf) == 0
@@ -400,6 +422,8 @@ void coap_session_send_csm(coap_session_t *session) {
     ssize_t bytes_written = coap_session_send_pdu(session, pdu);
     if (bytes_written != (ssize_t)pdu->used_size + pdu->hdr_size)
       coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
+    else
+      session->csm_rcv_mtu = session->context->csm_max_message_size;
   }
   if (pdu)
     coap_delete_pdu(pdu);
@@ -430,6 +454,8 @@ void coap_session_connected(coap_session_t *session) {
              coap_session_str(session));
     if (session->state == COAP_SESSION_STATE_CSM)
       coap_handle_event(session->context, COAP_EVENT_SESSION_CONNECTED, session);
+    if (session->doing_first)
+      session->doing_first = 0;
   }
 
   session->state = COAP_SESSION_STATE_ESTABLISHED;
@@ -567,6 +593,8 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
         state == COAP_SESSION_STATE_ESTABLISHED ?
         COAP_EVENT_SESSION_CLOSED : COAP_EVENT_SESSION_FAILED, session);
     }
+    if (session->doing_first)
+      session->doing_first = 0;
   }
 #endif /* !COAP_DISABLE_TCP */
 }
@@ -903,6 +931,18 @@ coap_session_connect(coap_session_t *session) {
     if (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS) {
       if (session->sock.flags & COAP_SOCKET_WANT_CONNECT) {
         session->state = COAP_SESSION_STATE_CONNECTING;
+        while (session->state != COAP_SESSION_STATE_ESTABLISHED &&
+               session->state != COAP_SESSION_STATE_NONE &&
+               COAP_PROTO_RELIABLE(session->proto) &&
+               session->type == COAP_SESSION_TYPE_CLIENT) {
+          session->doing_first = 1;
+          if (coap_client_delay_first(session) == 0 ||
+              session->state == COAP_SESSION_STATE_NONE) {
+            coap_session_reference(session);
+            coap_session_release(session);
+            return NULL;
+          }
+        }
       } else if (session->proto == COAP_PROTO_TLS) {
         int connected = 0;
         session->tls = coap_tls_new_client_session(session, &connected);
