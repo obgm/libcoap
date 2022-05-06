@@ -1611,7 +1611,13 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
           if (n == len) {
             if (coap_pdu_parse_header(session->partial_pdu, session->proto)
               && coap_pdu_parse_opt(session->partial_pdu)) {
+#if COAP_CONSTRAINED_STACK
+              coap_mutex_unlock(&s_static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
               coap_dispatch(ctx, session, session->partial_pdu);
+#if COAP_CONSTRAINED_STACK
+              coap_mutex_lock(&s_static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
             }
             coap_delete_pdu(session->partial_pdu);
             session->partial_pdu = NULL;
@@ -1655,7 +1661,13 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
             session->partial_read = hdr_size;
             if (size == 0) {
               if (coap_pdu_parse_header(session->partial_pdu, session->proto)) {
+#if COAP_CONSTRAINED_STACK
+                coap_mutex_unlock(&s_static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
                 coap_dispatch(ctx, session, session->partial_pdu);
+#if COAP_CONSTRAINED_STACK
+                coap_mutex_lock(&s_static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
               }
               coap_delete_pdu(session->partial_pdu);
               session->partial_pdu = NULL;
