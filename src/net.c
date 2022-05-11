@@ -2875,6 +2875,11 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       ? COAP_MESSAGE_ACK
       : COAP_MESSAGE_NON,
       0, pdu->mid, coap_session_max_pdu_size(session));
+#ifndef WITHOUT_ASYNC
+    /* If handling a separate response, need CON, not ACK response */
+    if (async && pdu->type == COAP_MESSAGE_CON)
+      response->type = COAP_MESSAGE_CON;
+#endif /* WITHOUT_ASYNC */
 
     /* Implementation detail: coap_add_token() immediately returns 0
        if response == NULL */
