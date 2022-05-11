@@ -4,7 +4,7 @@ libcoap                         {#mainpage}
 A C implementation of the Constrained Application Protocol (RFC 7252)
 =====================================================================
 
-Copyright (C) 2010--2021 by Olaf Bergmann <bergmann@tzi.org> and others
+Copyright (C) 2010--2022 by Olaf Bergmann <bergmann@tzi.org> and others
 
 About libcoap
 =============
