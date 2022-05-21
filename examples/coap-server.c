@@ -2786,6 +2786,20 @@ main(int argc, char **argv) {
     }
   }
 
+#ifdef _WIN32
+  signal(SIGINT, handle_sigint);
+#else
+  memset (&sa, 0, sizeof(sa));
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = handle_sigint;
+  sa.sa_flags = 0;
+  sigaction (SIGINT, &sa, NULL);
+  sigaction (SIGTERM, &sa, NULL);
+  /* So we do not exit on a SIGPIPE */
+  sa.sa_handler = SIG_IGN;
+  sigaction (SIGPIPE, &sa, NULL);
+#endif
+
   coap_startup();
   coap_dtls_set_log_level(log_level);
   coap_set_log_level(log_level);
@@ -2813,20 +2827,6 @@ main(int argc, char **argv) {
     FD_SET(coap_fd, &m_readfds);
     nfds = coap_fd + 1;
   }
-
-#ifdef _WIN32
-  signal(SIGINT, handle_sigint);
-#else
-  memset (&sa, 0, sizeof(sa));
-  sigemptyset(&sa.sa_mask);
-  sa.sa_handler = handle_sigint;
-  sa.sa_flags = 0;
-  sigaction (SIGINT, &sa, NULL);
-  sigaction (SIGTERM, &sa, NULL);
-  /* So we do not exit on a SIGPIPE */
-  sa.sa_handler = SIG_IGN;
-  sigaction (SIGPIPE, &sa, NULL);
-#endif
 
   wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
 
