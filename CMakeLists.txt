@@ -167,7 +167,7 @@ if(WIN32)
   set(HAVE_STRUCT_CMSGHDR 1)
 else()
   check_symbol_exists(
-    cmsghdr
+    CMSG_FIRSTHDR
     sys/socket.h
     HAVE_STRUCT_CMSGHDR)
 endif()
