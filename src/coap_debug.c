@@ -459,6 +459,7 @@ print_content_format(unsigned int format_type,
     { COAP_MEDIATYPE_APPLICATION_SENSML_EXI, "application/sensml-exi" },
     { COAP_MEDIATYPE_APPLICATION_SENML_XML, "application/senml+xml" },
     { COAP_MEDIATYPE_APPLICATION_SENSML_XML, "application/sensml+xml" },
+    { COAP_MEDIATYPE_APPLICATION_COAP_GROUP_JSON, "application/coap-group+json" },
     { COAP_MEDIATYPE_APPLICATION_DOTS_CBOR, "application/dots+cbor" },
     { 75, "application/dcaf+cbor" }
   };

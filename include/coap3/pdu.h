@@ -197,6 +197,9 @@ typedef enum coap_pdu_signaling_proto_t {
 #define COAP_MEDIATYPE_APPLICATION_CBOR          60 /* application/cbor  */
 #define COAP_MEDIATYPE_APPLICATION_CWT           61 /* application/cwt, RFC 8392  */
 
+/* Content formats from RFC 7390 */
+#define COAP_MEDIATYPE_APPLICATION_COAP_GROUP_JSON 256 /* application/coap-group+json */
+
 /* Content formats from RFC 8152 */
 #define COAP_MEDIATYPE_APPLICATION_COSE_SIGN     98 /* application/cose; cose-type="cose-sign"     */
 #define COAP_MEDIATYPE_APPLICATION_COSE_SIGN1    18 /* application/cose; cose-type="cose-sign1"    */
