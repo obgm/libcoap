@@ -90,7 +90,7 @@ _incoming_pdu_'s data must not be used if calling
 taken.
 
 *NOTE:* A request callback handler can be called with a generic resource (i.e.
-set up using *coap_resource_unknown_init*(3)), so
+set up using *coap_resource_unknown_init2*(3)), so
 *coap_resource_get_uri_path*(3) can be used to determine the URI in this case.
 
 The *coap_register_response_handler*() is a client side function that registers

@@ -53,20 +53,21 @@ typedef void (*coap_method_handler_t)
 #define COAP_RESOURCE_FLAGS_RELEASE_URI 0x1
 
 /**
- * Notifications will be sent non-confirmable by default. RFC 7641 Section 4.5
+ * Observe Notifications will be sent non-confirmable by default. RFC 7641
+ * Section 4.5
  * https://tools.ietf.org/html/rfc7641#section-4.5
  * Libcoap will always send every fifth packet as confirmable.
  */
 #define COAP_RESOURCE_FLAGS_NOTIFY_NON  0x0
 
 /**
- * Notifications will be sent confirmable. RFC 7641 Section 4.5
+ * Observe Notifications will be sent confirmable. RFC 7641 Section 4.5
  * https://tools.ietf.org/html/rfc7641#section-4.5
  */
 #define COAP_RESOURCE_FLAGS_NOTIFY_CON  0x2
 
 /**
- * Notifications will always be sent non-confirmable. This is in
+ * Observe Notifications will always be sent non-confirmable. This is in
  * violation of RFC 7641 Section 4.5
  * https://tools.ietf.org/html/rfc7641#section-4.5
  * but required by the DOTS signal channel protocol which needs to operate in
@@ -75,8 +76,70 @@ typedef void (*coap_method_handler_t)
  */
 #define COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS  0x4
 
-/* Place holder for other work - not tested against in this PR */
+/**
+ * This resource has support for multicast requests.
+ * https://datatracker.ietf.org/doc/html/rfc7252#section-11.3
+ * https://datatracker.ietf.org/doc/html/rfc7390#section-2.8
+ * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.6
+ * Note: ".well-known/core" always supports multicast.
+ * Note: Only tested if coap_mcast_per_resource() has been called.
+ */
 #define COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT 0x8
+
+/**
+ * Disable libcoap library from adding in delays to multicast requests before
+ * releasing the response back to the client.  It is then the responsibility of
+ * the app to delay the responses for multicast requests.
+ * https://datatracker.ietf.org/doc/html/rfc7252#section-8.2
+ * https://datatracker.ietf.org/doc/html/rfc7390#section-2.8
+ * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.6
+ * Note: Only tested if coap_mcast_per_resource() has been called.
+ */
+#define COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS 0x10
+
+/**
+ * Enable libcoap library suppression of 205 multicast responses that are empty
+ * (overridden by RFC7969 No-Response option) for multicast requests.
+ * https://datatracker.ietf.org/doc/html/rfc7390#section-2.7
+ * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.1.2
+ * Note: Only tested if coap_mcast_per_resource() has been called.
+ */
+#define COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_05 0x20
+
+/**
+ * Enable libcoap library suppressing 2.xx multicast responses (overridden by
+ * RFC7969 No-Response option) for multicast requests.
+ * https://datatracker.ietf.org/doc/html/rfc7390#section-2.7
+ * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.1.2
+ * Note: Only tested if coap_mcast_per_resource() has been called.
+ */
+#define COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_XX 0x40
+
+/**
+ * Disable libcoap library suppressing 4.xx multicast responses (overridden by
+ * RFC7969 No-Response option) for multicast requests.
+ * https://datatracker.ietf.org/doc/html/rfc7390#section-2.7
+ * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.1.2
+ * Note: Only tested if coap_mcast_per_resource() has been called.
+ */
+#define COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_4_XX 0x80
+
+/**
+ * Disable libcoap library suppressing 5.xx multicast responses (overridden by
+ * RFC7969 No-Response option) for multicast requests.
+ * https://datatracker.ietf.org/doc/html/rfc7390#section-2.7
+ * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.1.2
+ * Note: Only tested if coap_mcast_per_resource() has been called.
+ */
+#define COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_5_XX 0x100
+
+#define COAP_RESOURCE_FLAGS_MCAST_LIST \
+  (COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT | \
+   COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS | \
+   COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_05 | \
+   COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_XX | \
+   COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_4_XX | \
+   COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_5_XX)
 
 /**
  * Creates a new resource object and initializes the link field to the string
@@ -89,30 +152,16 @@ typedef void (*coap_method_handler_t)
  *
  * @param uri_path The string URI path of the new resource. The leading '/' is
  *                 not normally required - e.g. just "full/path/for/resource".
- * @param flags    Flags for memory management (in particular release of
- *                 memory). Possible values:@n
- *
- *                 COAP_RESOURCE_FLAGS_RELEASE_URI
- *                  If this flag is set, the URI passed to
- *                  coap_resource_init() is free'd by
- *                  coap_delete_resource()@n
- *
- *                 COAP_RESOURCE_FLAGS_NOTIFY_CON
- *                  If this flag is set, coap-observe notifications
- *                  will be sent confirmable by default.@n
- *
- *                 COAP_RESOURCE_FLAGS_NOTIFY_NON (default)
- *                  If this flag is set, coap-observe notifications
- *                  will be sent non-confirmable by default.@n
- *
- *                  If flags is set to 0 then the
- *                  COAP_RESOURCE_FLAGS_NOTIFY_NON is considered.
+ * @param flags    Flags for memory management, observe handling and multicast
+ *                 support, comprising of zero or more COAP_RESOURCE_FLAGS_*
+ *                 ored together.
+ *                 If flags is set to 0 then the
+ *                 COAP_RESOURCE_FLAGS_NOTIFY_NON is assumed.
  *
  * @return         A pointer to the new object or @c NULL on error.
  */
 coap_resource_t *coap_resource_init(coap_str_const_t *uri_path,
                                     int flags);
-
 
 /**
  * Creates a new resource object for the unknown resource handler with support
@@ -130,8 +179,8 @@ coap_resource_t *coap_resource_init(coap_str_const_t *uri_path,
  *       a new one overrides the previous definition.
  *
  * Note: It is not possible to observe the unknown resource with a GET request
- *       - a separate resource needs to be reated by the PUT (or POST) handler,
- *       and make that resource observable.
+ *       - a separate resource needs to be created by the PUT (or POST)
+ *       handler, and make that resource observable.
  *
  * This function returns the new coap_resource_t object.
  *
@@ -141,6 +190,37 @@ coap_resource_t *coap_resource_init(coap_str_const_t *uri_path,
  * @return       A pointer to the new object or @c NULL on error.
  */
 coap_resource_t *coap_resource_unknown_init(coap_method_handler_t put_handler);
+
+/**
+ * Creates a new resource object for the unknown resource handler with support
+ * for PUT and configurable control over multicast requests packets.
+ *
+ * In the same way that additional handlers can be added to the resource
+ * created by coap_resource_init() by using coap_register_handler(), POST,
+ * GET, DELETE etc. handlers can be added to this resource. It is the
+ * responsibility of the application to manage the unknown resources by either
+ * creating new resources with coap_resource_init() (which should have a
+ * DELETE handler specified for the resource removal) or by maintaining an
+ * active resource list.
+ *
+ * Note: There can only be one unknown resource handler per context - attaching
+ *       a new one overrides the previous definition.
+ *
+ * Note: It is not possible to observe the unknown resource with a GET request
+ *       - a separate resource needs to be created by the PUT (or POST)
+ *       handler, and make that resource observable.
+ *
+ * This function returns the new coap_resource_t object.
+ *
+ * @param put_handler The PUT handler to register with @p resource for
+ *                    unknown Uri-Path.
+ * @param flags Zero or more COAP_RESOURCE_FLAGS_*MCAST* ored together to
+ *              indicate what to do with multicast packets.
+ *
+ * @return       A pointer to the new object or @c NULL on error.
+ */
+coap_resource_t *coap_resource_unknown_init2(coap_method_handler_t put_handler,
+                                             int flags);
 
 /**
  * Creates a new resource object for handling proxy URIs.
@@ -159,6 +239,29 @@ coap_resource_t *coap_resource_unknown_init(coap_method_handler_t put_handler);
  */
 coap_resource_t *coap_resource_proxy_uri_init(coap_method_handler_t handler,
                       size_t host_name_count, const char *host_name_list[]);
+
+/**
+ * Creates a new resource object for handling proxy URIs with configurable
+ * control over multicast request packets.
+ * This function returns the new coap_resource_t object.
+ *
+ * Note: There can only be one proxy resource handler per context - attaching
+ *       a new one overrides the previous definition.
+ *
+ * @param handler The PUT/POST/GET etc. handler that handles all request types.
+ * @param host_name_count The number of provided host_name_list entries. A
+ *                        minimum of 1 must be provided.
+ * @param host_name_list Array of depth host_name_count names that this proxy
+ *                       is known by.
+ * @param flags Zero or more COAP_RESOURCE_FLAGS_*MCAST* ored together to
+ *              indicate what to do with multicast packets.
+ *
+ * @return         A pointer to the new object or @c NULL on error.
+ */
+coap_resource_t *coap_resource_proxy_uri_init2(coap_method_handler_t handler,
+                                              size_t host_name_count,
+                                              const char *host_name_list[],
+                                              int flags);
 
 /**
  * Returns the resource identified by the unique string @p uri_path. If no

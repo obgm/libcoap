@@ -136,7 +136,6 @@ uint16_t last_block1_mid = 0;
 
 unsigned int wait_seconds = DEFAULT_WAIT_TIME; /* default timeout in seconds */
 unsigned int wait_ms = 0;
-int wait_ms_reset = 0;
 int obs_started = 0;
 unsigned int obs_seconds = 30;          /* default observe time */
 unsigned int obs_ms = 0;                /* timeout for current subscription */
@@ -458,8 +457,6 @@ message_handler(coap_session_t *session COAP_UNUSED,
                                   COAP_OPTION_OBSERVE, &opt_iter) == NULL : 1;
       }
       if(COAP_OPT_BLOCK_MORE(block_opt)) {
-        wait_ms = wait_seconds * 1000;
-        wait_ms_reset = 1;
         doing_getting_block = 1;
       }
       else {
@@ -1819,7 +1816,7 @@ main(int argc, char **argv) {
 
   if (is_mcast && wait_seconds == DEFAULT_WAIT_TIME)
     /* Allow for other servers to respond within DEFAULT_LEISURE RFC7252 8.2 */
-    wait_seconds = coap_session_get_default_leisure(session).integer_part;
+    wait_seconds = coap_session_get_default_leisure(session).integer_part + 1;
 
   wait_ms = wait_seconds * 1000;
   coap_log(LOG_DEBUG, "timeout is set to %u seconds\n", wait_seconds);
@@ -1856,7 +1853,7 @@ main(int argc, char **argv) {
     result = coap_io_process(ctx, timeout_ms);
 
     if ( result >= 0 ) {
-      if ( wait_ms > 0 && !wait_ms_reset ) {
+      if (wait_ms > 0) {
         if ( (unsigned)result >= wait_ms ) {
           coap_log(LOG_INFO, "timeout\n");
           break;
@@ -1913,7 +1910,6 @@ main(int argc, char **argv) {
           repeat_count--;
         }
       }
-      wait_ms_reset = 0;
       obs_ms_reset = 0;
     }
   }

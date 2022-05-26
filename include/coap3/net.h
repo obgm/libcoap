@@ -548,7 +548,7 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *groupname,
  * Function interface for defining the hop count (ttl) for sending
  * multicast traffic
  *
- * @param session The current contexsion.
+ * @param session The current session.
  * @param hops    The number of hops (ttl) to use before the multicast
  *                packet expires.
  *
@@ -556,6 +556,16 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *groupname,
  */
 int
 coap_mcast_set_hops(coap_session_t *session, size_t hops);
+
+/**
+ * Function interface to enable processing mcast requests on a per resource
+ * basis.  This then enables a set of configuration flags set up when
+ * configuring the resources (coap_resource_init()).
+ *
+ * @param context The current context.
+ */
+void
+coap_mcast_per_resource(coap_context_t *context);
 
 /**@}*/
 

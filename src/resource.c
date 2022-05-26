@@ -341,7 +341,7 @@ static const uint8_t coap_unknown_resource_uri[] =
                        "- Unknown -";
 
 coap_resource_t *
-coap_resource_unknown_init(coap_method_handler_t put_handler) {
+coap_resource_unknown_init2(coap_method_handler_t put_handler, int flags) {
   coap_resource_t *r;
 
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
@@ -350,6 +350,7 @@ coap_resource_unknown_init(coap_method_handler_t put_handler) {
     r->is_unknown = 1;
     /* Something unlikely to be used, but it shows up in the logs */
     r->uri_path = coap_new_str_const(coap_unknown_resource_uri, sizeof(coap_unknown_resource_uri)-1);
+    r->flags = flags & COAP_RESOURCE_FLAGS_MCAST_LIST;
     coap_register_handler(r, COAP_REQUEST_PUT, put_handler);
   } else {
     coap_log(LOG_DEBUG, "coap_resource_unknown_init: no memory left\n");
@@ -358,12 +359,18 @@ coap_resource_unknown_init(coap_method_handler_t put_handler) {
   return r;
 }
 
+coap_resource_t *
+coap_resource_unknown_init(coap_method_handler_t put_handler) {
+  return coap_resource_unknown_init2(put_handler, 0);
+}
+
 static const uint8_t coap_proxy_resource_uri[] =
                        "- Proxy URI -";
 
 coap_resource_t *
-coap_resource_proxy_uri_init(coap_method_handler_t handler,
-                      size_t host_name_count, const char *host_name_list[]) {
+coap_resource_proxy_uri_init2(coap_method_handler_t handler,
+                              size_t host_name_count,
+                              const char *host_name_list[], int flags) {
   coap_resource_t *r;
 
   if (host_name_count == 0) {
@@ -403,11 +410,19 @@ coap_resource_proxy_uri_init(coap_method_handler_t handler,
         r->proxy_name_count = i;
       }
     }
+    r->flags = flags & COAP_RESOURCE_FLAGS_MCAST_LIST;
   } else {
-    coap_log(LOG_DEBUG, "coap_resource_proxy_uri_init: no memory left\n");
+    coap_log(LOG_DEBUG, "coap_resource_proxy_uri_init2: no memory left\n");
   }
 
   return r;
+}
+
+coap_resource_t *
+coap_resource_proxy_uri_init(coap_method_handler_t handler,
+                      size_t host_name_count, const char *host_name_list[]) {
+  return coap_resource_proxy_uri_init2(handler, host_name_count,
+                                       host_name_list, 0);
 }
 
 coap_attr_t *

@@ -1460,8 +1460,13 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
       coap_retransmittimer_restart(context);
 #endif
 
-    coap_log(LOG_DEBUG, "** %s: mid=0x%x: retransmission #%d\n",
-             coap_session_str(node->session), node->id, node->retransmit_cnt);
+    if (node->retransmit_cnt == node->session->max_retransmit) {
+      coap_log(LOG_DEBUG, "** %s: mid=0x%x: final retransmission\n",
+               coap_session_str(node->session), node->id);
+    } else {
+      coap_log(LOG_DEBUG, "** %s: mid=0x%x: retransmission #%d\n",
+               coap_session_str(node->session), node->id, node->retransmit_cnt);
+    }
 
     if (node->session->con_active)
       node->session->con_active--;
@@ -2475,7 +2480,7 @@ enum respond_t { RESPONSE_DEFAULT, RESPONSE_DROP, RESPONSE_SEND };
  */
 static enum respond_t
 no_response(coap_pdu_t *request, coap_pdu_t *response,
-            coap_session_t *session) {
+            coap_session_t *session, coap_resource_t *resource) {
   coap_opt_t *nores;
   coap_opt_iterator_t opt_iter;
   unsigned int val = 0;
@@ -2512,6 +2517,27 @@ no_response(coap_pdu_t *request, coap_pdu_t *response,
         /* True for mcast as well RFC7967 2.1 */
         return RESPONSE_SEND;
       }
+    } else if (resource && session->context->mcast_per_resource &&
+               coap_is_mcast(&session->addr_info.local)) {
+      /* Handle any mcast suppression specifics if no NoResponse option */
+      if ((resource->flags &
+                    COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_XX) &&
+                 COAP_RESPONSE_CLASS(response->code) == 2) {
+        return RESPONSE_DROP;
+      } else if ((resource->flags &
+                    COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_05) &&
+          response->code == COAP_RESPONSE_CODE(205)) {
+        if (response->data == NULL)
+          return RESPONSE_DROP;
+      } else if ((resource->flags &
+                    COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_4_XX) == 0 &&
+                 COAP_RESPONSE_CLASS(response->code) == 4) {
+        return RESPONSE_DROP;
+      } else if ((resource->flags &
+                   COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_5_XX) == 0 &&
+                 COAP_RESPONSE_CLASS(response->code) == 5) {
+        return RESPONSE_DROP;
+      }
     }
   }
   else if (COAP_PDU_IS_EMPTY(response) &&
@@ -2531,7 +2557,8 @@ no_response(coap_pdu_t *request, coap_pdu_t *response,
         response->type == COAP_MESSAGE_RST)
       return RESPONSE_DROP;
 
-    if (COAP_RESPONSE_CLASS(response->code) > 2)
+    if ((!resource || session->context->mcast_per_resource == 0) &&
+        COAP_RESPONSE_CLASS(response->code) > 2)
       return RESPONSE_DROP;
   }
 
@@ -2591,22 +2618,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       coap_log(LOG_INFO, "Retransmit async response\n");
       coap_send_ack(session, pdu);
       /* and do not pass on to the upper layers */
-      return;
-    }
-  }
-  else if (coap_is_mcast(&session->addr_info.local)) {
-    uint8_t r;
-    coap_tick_t delay;
-    coap_mid_t mid = pdu->mid;
-
-    /* Need to delay sending mcast request to application layer, so response
-       is not immediate. */
-    coap_prng(&r, sizeof(r));
-    delay = (COAP_DEFAULT_LEISURE_TICKS(session) * r) / 256;
-    /* Register request to be internally re-transmitted after delay */
-    if ((async = coap_register_async(session, pdu, delay))) {
-      /* Need to restore MID so delayed response can be matched up */
-      async->pdu->mid = mid;
       return;
     }
   }
@@ -2734,6 +2745,11 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       (resource->is_proxy_uri == 1)) {
     /* The resource was not found or there is an unexpected match against the
      * resource defined for handling unknown or proxy URIs.
+     */
+    if (resource != NULL)
+      /* Close down unexpected match */
+      resource = NULL;
+    /*
      * Check if the request URI happens to be the well-known URI, or if the
      * unknown resource handler is defined, a PUT or optionally other methods,
      * if configured, for the unknown handler.
@@ -2788,38 +2804,16 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
                           (int)uri_path->length,
                           (int)uri_path->length,
                           uri_path->s);
-      response =
-        coap_new_error_response(pdu, COAP_RESPONSE_CODE(202),
-          &opt_filter);
+      resp = 202;
+      goto fail_response;
     } else { /* request for any another resource, return 4.04 */
 
       coap_log(LOG_DEBUG, "request for unknown resource '%*.*s', return 4.04\n",
                (int)uri_path->length, (int)uri_path->length, uri_path->s);
-      response =
-        coap_new_error_response(pdu, COAP_RESPONSE_CODE(404),
-          &opt_filter);
+      resp = 404;
+      goto fail_response;
     }
 
-    if (!resource) {
-      if (response && (no_response(pdu, response, session) != RESPONSE_DROP)) {
-        coap_mid_t mid = pdu->mid;
-        if (coap_send_internal(session, response) == COAP_INVALID_MID)
-          coap_log(LOG_WARNING, "cannot send response for mid=0x%x\n", mid);
-      } else {
-        coap_delete_pdu(response);
-      }
-
-      response = NULL;
-
-      coap_delete_string(uri_path);
-      return;
-    } else {
-      if (response) {
-        /* Need to delete unused response - it will get re-created further on */
-        coap_delete_pdu(response);
-        response = NULL;
-      }
-    }
   }
 
   /* the resource was found, check if there is a registered handler */
@@ -2828,6 +2822,13 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     h = resource->handler[pdu->code - 1];
 
   if (h) {
+    if (context->mcast_per_resource &&
+        (resource->flags & COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT) == 0 &&
+        coap_is_mcast(&session->addr_info.local)) {
+      resp = 405;
+      goto fail_response;
+    }
+
     response = coap_pdu_init(pdu->type == COAP_MESSAGE_CON
       ? COAP_MESSAGE_ACK
       : COAP_MESSAGE_NON,
@@ -2916,7 +2917,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       coap_check_code_lg_xmit(session, response, resource, query, pdu->code);
 
 skip_handler:
-      respond = no_response(pdu, response, session);
+      respond = no_response(pdu, response, session, resource);
       if (respond != RESPONSE_DROP) {
         coap_mid_t mid = pdu->mid;
         if (COAP_RESPONSE_CLASS(response->code) != 2) {
@@ -2942,12 +2943,53 @@ skip_handler:
           response->used_size = 0;
         }
 
-        if (coap_send_internal(session, response) == COAP_INVALID_MID) {
-          coap_log(LOG_DEBUG, "cannot send response for mid=0x%x\n", mid);
+        if (!coap_is_mcast(&session->addr_info.local) ||
+            (context->mcast_per_resource &&
+              resource &&
+              (resource->flags & COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS))) {
+          if (coap_send_internal(session, response) == COAP_INVALID_MID) {
+            coap_log(LOG_DEBUG, "cannot send response for mid=0x%x\n", mid);
+          }
+        } else {
+          /* Need to delay mcast response */
+          coap_queue_t *node = coap_new_node();
+          uint8_t r;
+          coap_tick_t delay;
+
+          if (!node) {
+            coap_log(LOG_DEBUG, "mcast delay: insufficient memory\n");
+            goto clean_up;
+          }
+          if (!coap_pdu_encode_header(response, session->proto)) {
+            goto clean_up;
+          }
+
+          node->id = response->mid;
+          node->pdu = response;
+          coap_prng(&r, sizeof(r));
+          delay = (COAP_DEFAULT_LEISURE_TICKS(session) * r) / 256;
+          coap_log(LOG_DEBUG,
+                   "   %s: mid=0x%x: mcast response delayed for %u.%03u secs\n",
+                   coap_session_str(session),
+                   response->mid,
+                   (unsigned int)(delay / COAP_TICKS_PER_SECOND),
+                   (unsigned int)((delay % COAP_TICKS_PER_SECOND) *
+                     1000 / COAP_TICKS_PER_SECOND));
+          /* Force only on retransmission */
+          node->retransmit_cnt = session->max_retransmit -1;
+          node->timeout = (unsigned int)(delay) /
+                                        (1 << (session->max_retransmit - 1));
+          /* Use this to delay transmission */
+          coap_wait_ack(session->context, session, node);
         }
       } else {
+        coap_log(LOG_DEBUG, "   %s: mid=0x%x: response dropped\n",
+                 coap_session_str(session),
+                 response->mid);
+        coap_show_pdu(LOG_DEBUG, response);
         coap_delete_pdu(response);
       }
+clean_up:
       if (query)
         coap_delete_string(query);
     } else {
@@ -3615,6 +3657,12 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
 
   return result;
 }
+
+void
+coap_mcast_per_resource(coap_context_t *context) {
+  context->mcast_per_resource = 1;
+}
+
 #endif /* ! COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
@@ -3653,10 +3701,15 @@ coap_join_mcast_group_intf(coap_context_t *ctx COAP_UNUSED,
                            const char *ifname COAP_UNUSED) {
   return -1;
 }
+
 int
 coap_mcast_set_hops(coap_session_t *session COAP_UNUSED,
                     size_t hops COAP_UNUSED) {
   return 0;
+}
+
+void
+coap_mcast_per_resource(coap_context_t *context COAP_UNUSED) {
 }
 #endif /* defined WITH_CONTIKI || defined WITH_LWIP */
 

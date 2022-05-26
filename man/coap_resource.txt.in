@@ -13,7 +13,9 @@ NAME
 coap_resource,
 coap_resource_init,
 coap_resource_unknown_init,
+coap_resource_unknown_init2,
 coap_resource_proxy_uri_init,
+coap_resource_proxy_uri_init2,
 coap_add_resource,
 coap_delete_resource,
 coap_resource_set_mode,
@@ -33,8 +35,15 @@ int _flags_);*
 *coap_resource_t *coap_resource_unknown_init(coap_method_handler_t
 _put_handler_);*
 
+*coap_resource_t *coap_resource_unknown_init2(coap_method_handler_t
+_put_handler_, int _flags_);*
+
 *coap_resource_t *coap_resource_proxy_uri_init(coap_method_handler_t
 _proxy_handler_, size_t _host_name_count_, const char *_host_name_list_[]);*
+
+*coap_resource_t *coap_resource_proxy_uri_init2(coap_method_handler_t
+_proxy_handler_, size_t _host_name_count_, const char *_host_name_list_[],
+int flags);*
 
 *void coap_add_resource(coap_context_t *_context_,
 coap_resource_t *_resource_);*
@@ -69,18 +78,19 @@ When resources are configured on the CoAP server, the URI to match against
 in the request packet is specified.
 
 Callback Handlers are then added to the resource to handle the different
-request methods.
+request methods. See *coap_register_request_handler*(3) for further information.
 
 Adding Attributes allows textual information to be added to the resource
 which can then be reported back to any client doing a "GET .well-known/core"
-request.
+request. See *coap_add_attr*(3) for further information.
 
 If an incoming packet request matches a resource's URI and Method, then
 the appropriate callback resource handler is invoked to process the packet
-which then should update a suitable response packet for sending back to the
+which should then update a suitable response packet for returning back to the
 requester.
 
-There is support for handling incoming packets where the URI is unknown.
+There is support for handling incoming packets where the URI is unknown (no
+specific resource has been created).
 This could, for example, happen when a PUT request is trying to create a new
 resource. It is the responsibility of the unknown resource callback handler
 to either create a new resource for the URI or just manage things separately.
@@ -89,13 +99,21 @@ CoAP Observe (RFC 7641) is not supported for unknown resources, so a new
 resource with GET handler must be created by the unknown resource callback
 handle matching the URI which then can be Observable.
 
+There is support for handling incoming proxy based requests using the Proxy-Uri
+or Proxy-Scheme options.
+
+FUNCTIONS
+---------
+
+*Function: coap_resource_init()*
+
 The *coap_resource_init*() function returns a newly created _resource_ of
 type _coap_resource_t_ * .  _uri_path_ specifies the uri string path to match
 against.  Normally there is no need for the leading '/' - e.g. just
 "full/path/for/resource".  _flags_ is used to define whether the
 _resource_ is of type Confirmable Message or Non-Confirmable Message for
 any "observe" responses.  See *coap_observe*(3).
-_flags_ can be one of the following definitions or'ed together.
+_flags_ can be one of the following definitions ored together.
 
 [horizontal]
 *COAP_RESOURCE_FLAGS_NOTIFY_NON*::
@@ -115,22 +133,81 @@ Set the notification message type to confirmable for any trigggered
 *COAP_RESOURCE_FLAGS_RELEASE_URI*::
 Free off the coap_str_const_t for _uri_path_ when the _resource_ is deleted.
 
+*NOTE:* The following flags are only tested against if
+*coap_mcast_per_resource*() has been called.  If *coap_mcast_per_resource*()
+has not been called, then all resources have multicast support, libcoap adds
+in random delays to the responses, and 4.xx / 5.xx responses are dropped.
+
+[horizontal]
+*COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT*::
+This resource has support for multicast requests.
+
+*COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS*::
+Disable libcoap library from adding in delays to multicast requests before
+releasing the response back to the client.  It is then the responsibility of
+the app to delay the responses for multicast requests. See
+https://datatracker.ietf.org/doc/html/rfc7252#section-8.2.  However, the
+pseudo resource for ".well-known/core" always has multicast support enabled.
+
+*COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_05*::
+Enable libcoap library suppression of 205 multicast responses that are empty
+(overridden by RFC7969 No-Response option) for multicast requests.
+
+*COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_XX*::
+Enable libcoap library suppressing 2.xx multicast responses (overridden by
+RFC7969 No-Response option) for multicast requests.
+
+*COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_4_XX*::
+Disable libcoap library suppressing 4.xx multicast responses (overridden by
+RFC7969 No-Response option) for multicast requests.
+
+*COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_5_XX*::
+Disable libcoap library suppressing 5.xx multicast responses (overridden by
+RFC7969 No-Response option) for multicast requests.
+
 *NOTE:* _uri_path_, if not 7 bit readable ASCII, binary bytes must be hex
 encoded according to the rules defined in RFC3968 Section 2.1.
+
+*Function: coap_resource_unknown_init()*
 
 The *coap_resource_unknown_init*() function returns a newly created _resource_
 of type _coap_resource_t_ *. _put_handler_ is automatically added to the
 _resource_ to handle PUT requests to resources that are unknown. Additional
 handlers can be added to this resource if required.
 
+*Function: coap_resource_unknown_init2()*
+
+The *coap_resource_unknown_init2*() function returns a newly created _resource_
+of type _coap_resource_t_ *. _put_handler_ is automatically added to the
+_resource_ to handle PUT requests to resources that are unknown. Additional
+handlers can be added to this resource if required. _flags_ can be zero or
+more COAP_RESOURCE_FLAGS MCAST definitions.
+
+*Function: coap_resource_proxy_uri_init()*
+
 The *coap_resource_proxy_uri_init*() function returns a newly created
 _resource_ of type _coap_resource_t_ *. _proxy_handler_ is automatically added
-to the _resource_ to handle PUT/POST/GET etc. requests that use the Proxy-Uri:
+to the _resource_ to handle PUT/POST/GET etc. requests that use the Proxy-Uri
 option.  There is no need to add explicit request type handlers. One or more
 names by which the proxy is known by (IP address, DNS name etc.) must be
 supplied in the array defined by _host_name_list_[] which has a count of
 _host_name_count_.  This is used to check whether the current endpoint is
-the proxy target address.
+the proxy target address, or the request has to be passed on to an upstream
+server.
+
+*Function: coap_resource_proxy_uri_init2()*
+
+The *coap_resource_proxy_uri_init2*() function returns a newly created
+_resource_ of type _coap_resource_t_ *. _proxy_handler_ is automatically added
+to the _resource_ to handle PUT/POST/GET etc. requests that use the Proxy-Uri
+option.  There is no need to add explicit request type handlers. One or more
+names by which the proxy is known by (IP address, DNS name etc.) must be
+supplied in the array defined by _host_name_list_[] which has a count of
+_host_name_count_.  This is used to check whether the current endpoint is
+the proxy target address, or the request has to be passed on to an upstream
+server. _flags_ can be zero or more COAP_RESOURCE_FLAGS MCAST definitions.
+
+*Function: coap_add_resource()*
 
 The *coap_add_resource*() function registers the given _resource_ with the
 _context_. The _resource_ must have been created by *coap_resource_init*(),
@@ -142,14 +219,20 @@ associated with a _context_, *coap_add_resource*() (or
 *coap_add_resource_release*()) will delete any previous
 _resource_ with the same _uri_path_ before adding in the new _resource_.
 
+*Function: coap_delete_resource()*
+
 The *coap_delete_resource*() function deletes a resource identified by
 _resource_. The _context_ parameter is ignored. The storage allocated for that
 _resource_ is freed, along with any attributes associated with the _resource_.
+
+*Function: coap_resource_set_mode()*
 
 The *coap_resource_set_mode*() changes the notification message type of
 _resource_ to the given _mode_ which must be one of
 COAP_RESOURCE_FLAGS_NOTIFY_NON, COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS or
 COAP_RESOURCE_FLAGS_NOTIFY_CON.
+
+*Function: coap_resource_set_userdata()*
 
 The *coap_resource_set_userdata*() function allows a pointer to user _data_
 to be associated with a _resource_ that can accessed in any callback that
@@ -157,9 +240,13 @@ includes _resource_ as a parameter.
 
 *NOTE:* _data_ must point to a static, or allocated, block of memory.
 
+*Function: coap_resource_get_userdata()*
+
 The *coap_resource_get_userdata*() function obtains the user data pointer
 from the _resource_ that had previously been set up by
 *coap_resource_set_userdata*().
+
+*Function: coap_resource_release_userdata_handler()*
 
 The *coap_resource_release_userdata_handler*() function defines the _context_
 wide _callback_ handler to call to release the allocated user data that has
@@ -167,13 +254,16 @@ been added to the resource using *coap_resource_set_userdata*() when the
 resource is deleted. _callback_ can be NULL (which is the default) if nothing
 needs to be freed off.
 
+*Function: coap_resource_get_uri_path()*
+
 The *coap_resource_get_uri_path*() function is used to obtain the UriPath of
 the _resource_ definion.
 
 RETURN VALUES
 -------------
-The *coap_resource_init*(), *coap_resource_unknown_init*() and
-*coap_resource_proxy_uri_init*() functions return a newly created resource
+The *coap_resource_init*(), *coap_resource_unknown_init*(),
+*coap_resource_unknown_init2*(), *coap_resource_proxy_uri_init*() and
+*coap_resource_proxy_uri_init2*() functions return a newly created resource
 or NULL if there is a malloc failure.
 
 The *coap_delete_resource*() function return 0 on failure (_resource_ not
@@ -461,7 +551,7 @@ init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
   /* Create a resource to handle PUTs to unknown URIs */
-  r = coap_resource_unknown_init(hnd_put_unknown);
+  r = coap_resource_unknown_init2(hnd_put_unknown, 0);
   /*
    * Additional handlers can be added - for example
    *  coap_register_request_handler(r, COAP_REQUEST_POST, hnd_post_unknown);
@@ -475,7 +565,7 @@ init_resources(coap_context_t *ctx) {
 
 SEE ALSO
 --------
-*coap_attribute*(3), *coap_context*(3), *coap_observe*(3) and *coap_handler*(3)
+*coap_attribute*(3), *coap_context*(3), *coap_handler*(3) and *coap_observe*(3)
 
 FURTHER INFORMATION
 -------------------

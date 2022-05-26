@@ -17,7 +17,8 @@ coap_context_set_psk2,
 coap_new_endpoint,
 coap_free_endpoint,
 coap_endpoint_set_default_mtu,
-coap_join_mcast_group_intf
+coap_join_mcast_group_intf,
+coap_mcast_per_resource
 - Work with CoAP server endpoints
 
 SYNOPSIS
@@ -43,6 +44,8 @@ unsigned _mtu_);*
 
 *int coap_join_mcast_group_intf(coap_context_t *_context_,
 const char *_groupname_, const char *_ifname_);*
+
+*void coap_mcast_per_resource(coap_context_t *_context_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -154,6 +157,11 @@ first appropriate interface. When the endpoint is freed off, the associated
 multicast group will be removed. The registered multicast addresses for CoAP
 are 224.0.1.187, ff0x::fd (Variable-Scope) - i.e. ff02::fd (Link-Local) and
 ff05::fd (Site-Local).
+
+The *coap_mcast_per_resource*() function enables mcast to be controlled on a
+per resource basis giving the server application flexibility in how to respond
+to mcast requests. With this enabled, this is done through additional flag
+definitions when setting up each resource.
 
 RETURN VALUES
 -------------
