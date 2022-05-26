@@ -146,6 +146,8 @@ struct coap_context_t {
 #endif /* COAP_EPOLL_SUPPORT */
 #if COAP_SERVER_SUPPORT
   uint8_t observe_pending;         /**< Observe response pending */
+  uint8_t mcast_per_resource;      /**< Mcast controlled on a per resource
+                                        basis */
 #endif /* COAP_SERVER_SUPPORT */
   uint8_t block_mode;              /**< Zero or more COAP_BLOCK_ or'd options */
 };

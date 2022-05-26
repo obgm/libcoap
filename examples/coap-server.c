@@ -376,7 +376,7 @@ hnd_get_async(coap_resource_t *resource,
               const coap_pdu_t *request,
               const coap_string_t *query,
               coap_pdu_t *response) {
-  unsigned long delay = 5;
+  unsigned long delay = 4; /* Less than COAP_DEFAULT_LEISURE */
   size_t size;
   coap_async_t *async;
   coap_bin_const_t token = coap_pdu_get_token(request);
@@ -1799,7 +1799,7 @@ static void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
-  r = coap_resource_init(NULL, 0);
+  r = coap_resource_init(NULL, COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT);
   coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
@@ -1826,14 +1826,17 @@ init_resources(coap_context_t *ctx) {
 
   if (support_dynamic > 0) {
     /* Create a resource to handle PUTs to unknown URIs */
-    r = coap_resource_unknown_init(hnd_put_post_unknown);
+    r = coap_resource_unknown_init2(hnd_put_post_unknown, 0);
     /* Add in handling POST as well */
     coap_register_handler(r, COAP_REQUEST_POST, hnd_put_post_unknown);
     coap_add_resource(ctx, r);
   }
 
   if (coap_async_is_supported()) {
-    r = coap_resource_init(coap_make_str_const("async"), resource_flags);
+    r = coap_resource_init(coap_make_str_const("async"),
+                           resource_flags |
+                             COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT |
+                             COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS);
     coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_async);
 
     coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
@@ -1851,8 +1854,8 @@ init_resources(coap_context_t *ctx) {
 
 #if SERVER_CAN_PROXY
   if (proxy_host_name_count) {
-    r = coap_resource_proxy_uri_init(hnd_proxy_uri, proxy_host_name_count,
-                                     proxy_host_name_list);
+    r = coap_resource_proxy_uri_init2(hnd_proxy_uri, proxy_host_name_count,
+                                      proxy_host_name_list, 0);
     coap_add_resource(ctx, r);
     coap_register_event_handler(ctx, proxy_event_handler);
     coap_register_response_handler(ctx, proxy_response_handler);
@@ -2187,7 +2190,7 @@ usage( const char *program, const char *version) {
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
      "Usage: %s [-d max] [-e] [-g group] [-G group_if] [-l loss] [-p port]\n"
-     "\t\t[-v num] [-A address] [-L value] [-N]\n"
+     "\t\t[-r] [-v num] [-A address] [-L value] [-N]\n"
      "\t\t[-P scheme://address[:port],[name1[,name2..]]] [-X size]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
      "\t\t[-s match_psk_sni_file] [-u user]]\n"
@@ -2213,6 +2216,10 @@ usage( const char *program, const char *version) {
      "\t-p port\t\tListen on specified port for UDP and TCP. If (D)TLS is\n"
      "\t       \t\tenabled, then the coap-server will also listen on\n"
      "\t       \t\t 'port'+1 for DTLS and TLS.  The default port is 5683\n"
+     "\t-r     \t\tEnable multicast per resource support.  If enabled,\n"
+     "\t       \t\tonly '/', '/async' and '/.well-known/core' are enabled\n"
+     "\t       \t\tfor multicast requests support, otherwise all\n"
+     "\t       \t\tresources are enabled\n"
      "\t-v num \t\tVerbosity level (default 3, maximum is 9). Above 7,\n"
      "\t       \t\tthere is increased verbosity in GnuTLS and OpenSSL\n"
      "\t       \t\tlogging\n"
@@ -2641,6 +2648,7 @@ main(int argc, char **argv) {
   char addr_str[NI_MAXHOST] = "::";
   char port_str[NI_MAXSERV] = "5683";
   int opt;
+  int mcast_per_resource = 0;
   coap_log_t log_level = LOG_WARNING;
   unsigned wait_ms;
   coap_time_t t_last = 0;
@@ -2660,7 +2668,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:s:u:v:A:C:L:M:NP:R:S:X:")) != -1) {
+  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:u:v:A:C:L:M:NP:R:S:X:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -2752,6 +2760,9 @@ main(int argc, char **argv) {
       exit(-1);
 #endif /* ! SERVER_CAN_PROXY */
       break;
+    case 'r' :
+      mcast_per_resource = 1;
+      break;
     case 'R' :
       root_ca_file = optarg;
       break;
@@ -2810,6 +2821,8 @@ main(int argc, char **argv) {
     return -1;
 
   init_resources(ctx);
+  if (mcast_per_resource)
+    coap_mcast_per_resource(ctx);
   coap_context_set_block_mode(ctx, block_mode);
   if (csm_max_message_size)
     coap_context_set_csm_max_message_size(ctx, csm_max_message_size);

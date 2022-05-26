@@ -105,6 +105,7 @@ coap_join_mcast_group_intf
 coap_log_impl
 coap_make_str_const
 coap_malloc_type
+coap_mcast_per_resource
 coap_mcast_set_hops
 coap_memory_init
 coap_new_binary
@@ -170,12 +171,14 @@ coap_resource_get_userdata
 coap_resource_init
 coap_resource_notify_observers
 coap_resource_proxy_uri_init
+coap_resource_proxy_uri_init2
 coap_resource_release_userdata_handler
 coap_resource_set_dirty
 coap_resource_set_get_observable
 coap_resource_set_mode
 coap_resource_set_userdata
 coap_resource_unknown_init
+coap_resource_unknown_init2
 coap_response_phrase
 coap_send
 coap_send_ack

@@ -20,7 +20,7 @@ coap-server-notls
 SYNOPSIS
 --------
 *coap-server* [*-d* max] [*-e*] [*-g* group] [*-G* group_if] [*-l* loss]
-              [*-p* port] [*-v* num] [*-A* address] [*-L* value] [*-N*]
+              [*-p* port] [-r] [*-v* num] [*-A* address] [*-L* value] [*-N*]
               [*-P* scheme://addr[:port],[name1[,name2..]]] [*-X* size]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
               [*-s* match_psk_sni_file] [*-u* user]]
@@ -69,6 +69,11 @@ OPTIONS - General
    If (D)TLS is supported, then 'port' + 1 will also be listened on for
    (D)TLS connections.
    The default port is 5683 if not given any other value.
+
+*-r* ::
+   Enable multicast per resource support.  If enabled, only '/', '/async'
+   and '/.well-known/core' are enabled for multicast requests support,
+   otherwise all resources are enabled.
 
 *-v* num::
    The verbosity level to use (default 3, maximum is 9). Above 7, there is
