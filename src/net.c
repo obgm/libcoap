@@ -2875,6 +2875,11 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       ? COAP_MESSAGE_ACK
       : COAP_MESSAGE_NON,
       0, pdu->mid, coap_session_max_pdu_size(session));
+    if (!response) {
+      coap_log(LOG_ERR, "could not create response PDU\n");
+      resp = 500;
+      goto fail_response;
+    }
 #ifndef WITHOUT_ASYNC
     /* If handling a separate response, need CON, not ACK response */
     if (async && pdu->type == COAP_MESSAGE_CON)
