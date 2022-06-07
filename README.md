@@ -5,7 +5,7 @@
 [![Static Analysis](https://scan.coverity.com/projects/10970/badge.svg?flat=1)](https://scan.coverity.com/projects/obgm-libcoap)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/libcoap.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:libcoap)
 
-Copyright (C) 2010—2021 by Olaf Bergmann <bergmann@tzi.org> and others
+Copyright (C) 2010—2022 by Olaf Bergmann <bergmann@tzi.org> and others
 
 ABOUT LIBCOAP
 =============
@@ -37,6 +37,8 @@ Espressif/ESP-IDF hosted environments.
 The following RFCs are supported
 
 * RFC7252: The Constrained Application Protocol (CoAP)
+
+* RFC7390: Group Communication for the Constrained Application Protocol (CoAP)
 
 * RFC7641: Observing Resources in the Constrained Application Protocol (CoAP)
 

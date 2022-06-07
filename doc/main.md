@@ -23,6 +23,8 @@ The following RFCs are supported
 
 * RFC7252: The Constrained Application Protocol (CoAP)
 
+* RFC7390: Group Communication for the Constrained Application Protocol (CoAP)
+
 * RFC7641: Observing Resources in the Constrained Application Protocol (CoAP)
 
 * RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)
