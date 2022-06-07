@@ -171,11 +171,11 @@ match(const coap_str_const_t *text, const coap_str_const_t *pattern, int match_p
 coap_print_status_t
 coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
                 size_t offset,
-                coap_opt_t *query_filter COAP_UNUSED) {
+                const coap_string_t *query_filter COAP_UNUSED) {
 #else /* not a GCC */
 coap_print_status_t
 coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
-                size_t offset, coap_opt_t *query_filter) {
+                size_t offset, const coap_string_t *query_filter) {
 #endif /* GCC */
   size_t output_length = 0;
   unsigned char *p = buf;
@@ -200,12 +200,12 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
 #ifndef WITHOUT_QUERY_FILTER
   /* split query filter, if any */
   if (query_filter) {
-    resource_param.s = coap_opt_value(query_filter);
-    while (resource_param.length < coap_opt_length(query_filter)
-           && resource_param.s[resource_param.length] != '=')
+    resource_param.s = query_filter->s;
+    while (resource_param.length < query_filter->length &&
+           resource_param.s[resource_param.length] != '=')
       resource_param.length++;
 
-    if (resource_param.length < coap_opt_length(query_filter)) {
+    if (resource_param.length < query_filter->length) {
       const coap_str_const_t *rt_attributes;
       if (resource_param.length == 4 &&
           memcmp(resource_param.s, "href", 4) == 0)
@@ -221,11 +221,11 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
 
       /* rest is query-pattern */
       query_pattern.s =
-        coap_opt_value(query_filter) + resource_param.length + 1;
+        query_filter->s + resource_param.length + 1;
 
-      assert((resource_param.length + 1) <= coap_opt_length(query_filter));
+      assert((resource_param.length + 1) <= query_filter->length);
       query_pattern.length =
-        coap_opt_length(query_filter) - (resource_param.length + 1);
+        query_filter->length - (resource_param.length + 1);
 
      if ((query_pattern.s[0] == '/') && ((flags & MATCH_URI) == MATCH_URI)) {
        query_pattern.s++;
@@ -321,7 +321,7 @@ coap_resource_init(coap_str_const_t *uri_path, int flags) {
         uri_path = coap_new_str_const(null_path->s, null_path->length);
     }
     else if (!uri_path) {
-      /* Do not expecte this, but ... */
+      /* Do not expect this, but ... */
       uri_path = coap_new_str_const(null_path->s, null_path->length);
     }
 

@@ -163,94 +163,30 @@ t_wellknown3(void) {
   CU_ASSERT(COAP_PRINT_OUTPUT_LENGTH(result) > 0);
 }
 
-/* Create wellknown response for request without Block-option. */
 static void
 t_wellknown4(void) {
-  coap_pdu_t *response;
-  coap_block_t block;
+  coap_print_status_t result;
+  coap_string_t *query;
+  unsigned char buf[40];
+  size_t buflen = sizeof(buf);
+  char teststr[] = {  /* ,</abcd>;if="one";obs (21 chars) */
+    '<', '/', 'a', 'b', 'c', 'd', '>', ';',
+    'i', 'f', '=', '"', 'o', 'n', 'e', '"',
+    ';', 'o', 'b', 's'
+  };
 
-  response = coap_wellknown_response(ctx, session, pdu);
-
-  CU_ASSERT_PTR_NOT_NULL(response);
-
-  CU_ASSERT(coap_get_block(response, COAP_OPTION_BLOCK2, &block) != 0);
-
-  CU_ASSERT(block.num == 0);
-  CU_ASSERT(block.m == 1);
-  CU_ASSERT(1 << (block.szx + 4)
-    == response->token + response->used_size - response->data);
-
-  coap_delete_pdu(response);
+  /* Check for the resource added in t_wellknown2 */
+  query = coap_new_string(sizeof("if=one")-1);
+  CU_ASSERT(query != NULL);
+  memcpy(query->s, "if=one", sizeof("if=one")-1);
+  result = coap_print_wellknown(ctx, buf, &buflen, 0, query);
+  CU_ASSERT((result & COAP_PRINT_STATUS_ERROR) == 0 );
+  CU_ASSERT(COAP_PRINT_OUTPUT_LENGTH(result) == sizeof(teststr));
+  CU_ASSERT(buflen == sizeof(teststr));
+  CU_ASSERT(memcmp(buf, teststr, buflen) == 0);
+  coap_delete_string(query);
 }
 
-/* Create wellknown response for request with Block2-option and an szx
- * value smaller than COAP_MAX_BLOCK_SZX.
- */
-static void
-t_wellknown5(void) {
-  coap_pdu_t *response;
-  coap_block_t inblock = { .num = 1, .m = 0, .szx = 1 };
-  coap_block_t block;
-  unsigned char buf[3];
-
-  if (!coap_add_option(pdu, COAP_OPTION_BLOCK2,
-                       coap_encode_var_safe(buf, sizeof(buf),
-                                            ((inblock.num << 4) |
-                                             (inblock.m << 3) |
-                                             inblock.szx)), buf)) {
-    CU_FAIL("cannot add Block2 option");
-    return;
-  }
-
-  response = coap_wellknown_response(ctx, session, pdu);
-
-  CU_ASSERT_PTR_NOT_NULL(response);
-
-  CU_ASSERT(coap_get_block(response, COAP_OPTION_BLOCK2, &block) != 0);
-
-  CU_ASSERT(block.num == inblock.num);
-  CU_ASSERT(block.m == 1);
-  CU_ASSERT(1 << (block.szx + 4)
-    == response->token + response->used_size - response->data);
-
-  coap_delete_pdu(response);
-}
-
-static void
-t_wellknown6(void) {
-  coap_pdu_t *response;
-  coap_block_t block = { .num = 0, .szx = 6 };
-  unsigned char buf[TEST_PDU_SIZE];
-
-
-  do {
-    coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
-
-    pdu->type = COAP_MESSAGE_NON;
-    pdu->code = COAP_REQUEST_CODE_GET;
-    pdu->mid = 0x1234;
-
-    CU_ASSERT_PTR_NOT_NULL(pdu);
-
-    if (!pdu || !coap_add_option(pdu, COAP_OPTION_BLOCK2,
-                                 coap_encode_var_safe(buf, sizeof(buf),
-                                       ((block.num << 4) | block.szx)), buf)) {
-      CU_FAIL("cannot create request");
-      return;
-    }
-
-    response = coap_wellknown_response(ctx, session, pdu);
-
-    CU_ASSERT_PTR_NOT_NULL(response);
-
-    /* coap_show_pdu(LOG_INFO, response); */
-
-    CU_ASSERT(coap_get_block(response, COAP_OPTION_BLOCK2, &block) != 0);
-
-    block.num++;
-    coap_delete_pdu(response);
-  } while (block.m == 1);
-}
 
 static int
 t_wkc_tests_create(void) {
@@ -334,8 +270,6 @@ t_init_wellknown_tests(void) {
   WKC_TEST(suite, t_wellknown2);
   WKC_TEST(suite, t_wellknown3);
   WKC_TEST(suite, t_wellknown4);
-  WKC_TEST(suite, t_wellknown5);
-  WKC_TEST(suite, t_wellknown6);
 
   return suite;
 }
