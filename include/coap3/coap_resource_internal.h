@@ -136,7 +136,7 @@ void coap_delete_attr(coap_attr_t *attr);
 coap_print_status_t coap_print_wellknown(coap_context_t *,
                                          unsigned char *,
                                          size_t *, size_t,
-                                         coap_opt_t *);
+                                         const coap_string_t *);
 
 /** @} */
 

@@ -2286,166 +2286,72 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
  * Quick hack to determine the size of the resource description for
  * .well-known/core.
  */
-COAP_STATIC_INLINE size_t
-get_wkc_len(coap_context_t *context, coap_opt_t *query_filter) {
+COAP_STATIC_INLINE ssize_t
+get_wkc_len(coap_context_t *context, const coap_string_t *query_filter) {
   unsigned char buf[1];
   size_t len = 0;
 
-  if (coap_print_wellknown(context, buf, &len, UINT_MAX, query_filter)
-    & COAP_PRINT_STATUS_ERROR) {
+  if (coap_print_wellknown(context, buf, &len, UINT_MAX, query_filter) &
+        COAP_PRINT_STATUS_ERROR) {
     coap_log(LOG_WARNING, "cannot determine length of /.well-known/core\n");
-    return 0;
+    return -1L;
   }
-
-  coap_log(LOG_DEBUG, "get_wkc_len: coap_print_wellknown() returned %zu\n", len);
 
   return len;
 }
 
 #define SZX_TO_BYTES(SZX) ((size_t)(1 << ((SZX) + 4)))
 
-coap_pdu_t *
-coap_wellknown_response(coap_context_t *context, coap_session_t *session,
-  coap_pdu_t *request) {
-  coap_pdu_t *resp;
-  coap_opt_iterator_t opt_iter;
-  size_t len, wkc_len;
-  uint8_t buf[4];
+static void
+free_wellknown_response(coap_session_t *session COAP_UNUSED, void *app_ptr) {
+  coap_delete_string(app_ptr);
+}
+
+static void
+hnd_get_wellknown(coap_resource_t *resource,
+                  coap_session_t *session,
+                  const coap_pdu_t *request,
+                  const coap_string_t *query,
+                  coap_pdu_t *response) {
+  size_t len = 0;
+  coap_string_t *data_string = NULL;
   int result = 0;
-  int need_block2 = 0;           /* set to 1 if Block2 option is required */
-  coap_block_b_t block;
-  coap_opt_t *query_filter;
-  size_t offset = 0;
-  uint8_t *data;
+  ssize_t wkc_len = get_wkc_len(session->context, query);
 
-  resp = coap_pdu_init(request->type == COAP_MESSAGE_CON
-    ? COAP_MESSAGE_ACK
-    : COAP_MESSAGE_NON,
-    COAP_RESPONSE_CODE(205),
-    request->mid, coap_session_max_pdu_size(session));
-  if (!resp) {
-    coap_log(LOG_DEBUG, "coap_wellknown_response: cannot create PDU\n");
-    return NULL;
-  }
+  if (wkc_len) {
+    if (wkc_len < 0)
+      goto error;
+    data_string = coap_new_string(wkc_len);
+    if (!data_string)
+      goto error;
 
-  if (!coap_add_token(resp, request->token_length, request->token)) {
-    coap_log(LOG_DEBUG, "coap_wellknown_response: cannot add token\n");
-    goto error;
-  }
-
-  query_filter = coap_check_option(request, COAP_OPTION_URI_QUERY, &opt_iter);
-  wkc_len = get_wkc_len(context, query_filter);
-
-  /* The value of some resources is undefined and get_wkc_len will return 0.*/
-  if (wkc_len == 0) {
-    coap_log(LOG_DEBUG, "coap_wellknown_response: undefined resource\n");
-    /* set error code 4.00 Bad Request*/
-    resp->code = COAP_RESPONSE_CODE(400);
-    resp->used_size = resp->token_length;
-    return resp;
-  }
-
-  /* check whether the request contains the Block2 option */
-  if (coap_get_block_b(session, request, COAP_OPTION_BLOCK2, &block)) {
-    coap_log(LOG_DEBUG, "create block\n");
-    offset = block.num << (block.szx + 4);
-    if (block.szx > 6) {  /* invalid, MUST lead to 4.00 Bad Request */
-      resp->code = COAP_RESPONSE_CODE(400);
-      return resp;
-    } else if (block.szx > COAP_MAX_BLOCK_SZX) {
-      block.szx = COAP_MAX_BLOCK_SZX;
-      block.num = (unsigned int)(offset >> (block.szx + 4));
-    }
-
-    need_block2 = 1;
-  }
-
-  /* Check if there is sufficient space to add Content-Format option
-   * and data. We do this before adding the Content-Format option to
-   * avoid sending error responses with that option but no actual
-   * content. */
-  if (resp->max_size && resp->max_size <= resp->used_size + 8) {
-    coap_log(LOG_DEBUG, "coap_wellknown_response: insufficient storage space\n");
-    goto error;
-  }
-
-  /* check if Block2 option is required even if not requested */
-  if (!need_block2 && resp->max_size && resp->max_size - resp->used_size < wkc_len + 1) {
-    assert(resp->used_size <= resp->max_size);
-    const size_t payloadlen = resp->max_size - resp->used_size;
-    /* yes, need block-wise transfer */
-    block.num = 0;
-    block.m = 0;      /* the M bit is set by coap_write_block_opt() */
-    block.szx = COAP_MAX_BLOCK_SZX;
-    while (payloadlen < SZX_TO_BYTES(block.szx) + 6) {
-      if (block.szx == 0) {
-        coap_log(LOG_DEBUG,
-             "coap_wellknown_response: message to small even for szx == 0\n");
-        goto error;
-      } else {
-        block.szx--;
-      }
-    }
-
-    need_block2 = 1;
-  }
-
-  if (need_block2) {
-    /* Add in a pseudo etag (use wkc_len) in case .well-known/core
-       changes over time */
-    coap_add_option_internal(resp,
-                             COAP_OPTION_ETAG,
-                             coap_encode_var_safe8(buf, sizeof(buf), wkc_len),
-                             buf);
-  }
-
-  /* Add Content-Format. As we have checked for available storage,
-   * nothing should go wrong here. */
-  assert(coap_encode_var_safe(buf, sizeof(buf),
-    COAP_MEDIATYPE_APPLICATION_LINK_FORMAT) == 1);
-  coap_add_option_internal(resp, COAP_OPTION_CONTENT_FORMAT,
-                           coap_encode_var_safe(buf, sizeof(buf),
-                           COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf);
-
-
-  /* write Block2 option if necessary */
-  if (need_block2) {
-    if (coap_write_block_b_opt(session, &block, COAP_OPTION_BLOCK2, resp,
-        wkc_len) < 0) {
-      coap_log(LOG_DEBUG,
-               "coap_wellknown_response: cannot add Block2 option\n");
+    len = wkc_len;
+    result = coap_print_wellknown(session->context, data_string->s, &len, 0,
+                                  query);
+    if ((result & COAP_PRINT_STATUS_ERROR) != 0) {
+      coap_log(LOG_DEBUG, "coap_print_wellknown failed\n");
       goto error;
     }
+    assert (len <= (size_t)wkc_len);
+    data_string->length = len;
+
+    if (!coap_add_data_large_response(resource, session, request, response,
+                                      query,
+                                      COAP_MEDIATYPE_APPLICATION_LINK_FORMAT,
+                                      -1, 0, data_string->length,
+                                      data_string->s, free_wellknown_response,
+                                      data_string))
+      goto error;
   }
-
-  coap_add_option_internal(resp,
-                           COAP_OPTION_SIZE2,
-                           coap_encode_var_safe8(buf, sizeof(buf), wkc_len),
-                           buf);
-
-  len = need_block2 ?
-        min(SZX_TO_BYTES(block.szx), wkc_len - (block.num << (block.szx + 4))) :
-        resp->max_size && resp->used_size + wkc_len + 1 > resp->max_size ?
-        resp->max_size - resp->used_size - 1 : wkc_len;
-  data = coap_add_data_after(resp, len);
-  if (!data) {
-    coap_log(LOG_DEBUG, "coap_wellknown_response: coap_add_data failed\n" );
-    goto error;
-  }
-
-  result = coap_print_wellknown(context, data, &len, offset, query_filter);
-  if ((result & COAP_PRINT_STATUS_ERROR) != 0) {
-    coap_log(LOG_DEBUG, "coap_print_wellknown failed\n");
-    goto error;
-  }
-
-  return resp;
+  response->code = COAP_RESPONSE_CODE(205);
+  return;
 
 error:
+  coap_delete_string(data_string);
   /* set error code 5.03 and remove all options and data from response */
-  resp->code = COAP_RESPONSE_CODE(503);
-  resp->used_size = resp->token_length;
-  return resp;
+  response->code = COAP_RESPONSE_CODE(503);
+  response->used_size = response->token_length;
+
 }
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -2605,6 +2511,9 @@ static coap_str_const_t coap_default_uri_wellknown =
           { sizeof(COAP_DEFAULT_URI_WELLKNOWN)-1,
            (const uint8_t *)COAP_DEFAULT_URI_WELLKNOWN };
 
+/* Initialized in coap_startup() */
+static coap_resource_t resource_uri_wellknown;
+
 static void
 handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu) {
   coap_method_handler_t h = NULL;
@@ -2623,6 +2532,9 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   int skip_hop_limit_check = 0;
   int resp;
   coap_binary_t token = { pdu->token_length, pdu->token };
+  coap_string_t *query = NULL;
+  coap_opt_t *observe = NULL;
+  coap_string_t *uri_path = NULL;
 #ifndef WITHOUT_ASYNC
   coap_bin_const_t tokenc = { pdu->token_length, pdu->token };
   coap_async_t *async;
@@ -2774,7 +2686,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     }
   }
 
-  coap_string_t *uri_path = coap_get_uri_path(pdu);
+  uri_path = coap_get_uri_path(pdu);
   if (!uri_path)
     return;
 
@@ -2809,15 +2721,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       resource = context->proxy_uri_resource;
     } else if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
       /* request for .well-known/core */
-      if (pdu->code == COAP_REQUEST_CODE_GET) { /* GET */
-        coap_log(LOG_INFO, "create default response for %s\n",
-                 COAP_DEFAULT_URI_WELLKNOWN);
-        response = coap_wellknown_response(context, session, pdu);
-      } else {
-        coap_log(LOG_DEBUG, "method not allowed for .well-known/core\n");
-        response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(405),
-          &opt_filter);
-      }
+      resource = &resource_uri_wellknown;
     } else if ((context->unknown_resource != NULL) &&
                ((size_t)pdu->code - 1 <
                 (sizeof(resource->handler) / sizeof(coap_method_handler_t))) &&
@@ -2908,12 +2812,11 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     /* Implementation detail: coap_add_token() immediately returns 0
        if response == NULL */
     if (coap_add_token(response, pdu->token_length, pdu->token)) {
-      coap_opt_t *observe = NULL;
       int observe_action = COAP_OBSERVE_CANCEL;
-      coap_string_t *query = coap_get_query(pdu);
       coap_block_b_t block;
       int added_block = 0;
 
+      query = coap_get_query(pdu);
       /* check for Observe option RFC7641 and RFC8132 */
       if (resource->observable &&
           (pdu->code == COAP_REQUEST_CODE_GET ||
@@ -3017,29 +2920,11 @@ skip_handler:
       coap_log(LOG_WARNING, "cannot generate response\r\n");
       coap_delete_pdu(response);
     }
-    response = NULL;
   } else {
-    if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
-      /* request for .well-known/core */
-      coap_log(LOG_DEBUG, "create default response for %s\n",
-               COAP_DEFAULT_URI_WELLKNOWN);
-      response = coap_wellknown_response(context, session, pdu);
-      coap_log(LOG_DEBUG, "have wellknown response %p\n", (void *)response);
-    } else
-      response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(405),
-        &opt_filter);
-
-    if (response && (no_response(pdu, response, session) != RESPONSE_DROP)) {
-      coap_mid_t mid = pdu->mid;
-      if (coap_send_internal(session, response) == COAP_INVALID_MID)
-        coap_log(LOG_DEBUG, "cannot send response for mid=0x%x\n", mid);
-    } else {
-      coap_delete_pdu(response);
-    }
-    response = NULL;
+    resp = 405;
+    goto fail_response;
   }
 
-  assert(response == NULL);
   coap_delete_string(uri_path);
   return;
 
@@ -3047,11 +2932,9 @@ fail_response:
   response =
      coap_new_error_response(pdu, COAP_RESPONSE_CODE(resp),
        &opt_filter);
-  if (response) {
-    coap_mid_t mid = pdu->mid;
-    if (coap_send_internal(session, response) == COAP_INVALID_MID)
-      coap_log(LOG_WARNING, "cannot send response for mid=0x%x\n", mid);
-  }
+  if (response)
+    goto skip_handler;
+  coap_delete_string(uri_path);
 }
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -3407,6 +3290,9 @@ static int coap_started = 0;
 void coap_startup(void) {
   coap_tick_t now;
   uint64_t us;
+ static coap_str_const_t well_known = { sizeof(".well-known/core")-1,
+                                        (const uint8_t *)".well-known/core" };
+
   if (coap_started)
     return;
   coap_started = 1;
@@ -3422,6 +3308,10 @@ void coap_startup(void) {
   coap_prng_init((unsigned int)us);
   coap_memory_init();
   coap_dtls_startup();
+  memset(&resource_uri_wellknown, 0, sizeof(resource_uri_wellknown));
+  resource_uri_wellknown.handler[COAP_REQUEST_GET-1] = hnd_get_wellknown;
+  resource_uri_wellknown.flags = COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT;
+  resource_uri_wellknown.uri_path = &well_known;
 }
 
 void coap_cleanup(void) {

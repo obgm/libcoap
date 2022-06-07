@@ -75,6 +75,9 @@ typedef void (*coap_method_handler_t)
  */
 #define COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS  0x4
 
+/* Place holder for other work - not tested against in this PR */
+#define COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT 0x8
+
 /**
  * Creates a new resource object and initializes the link field to the string
  * @p uri_path. This function returns the new coap_resource_t object.
