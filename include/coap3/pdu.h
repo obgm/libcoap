@@ -40,6 +40,8 @@
 #define COAP_DEFAULT_MTU       1152
 #endif /* COAP_DEFAULT_MTU */
 
+#define COAP_BERT_BASE 1152
+
 #ifndef COAP_DEFAULT_HOP_LIMIT
 #define COAP_DEFAULT_HOP_LIMIT       16
 #endif /* COAP_DEFAULT_HOP_LIMIT */

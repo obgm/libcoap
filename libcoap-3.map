@@ -2,6 +2,7 @@ VER_3 {
 global:
   coap_add_attr;
   coap_add_block;
+  coap_add_block_b_data;
   coap_add_data;
   coap_add_data_after;
   coap_add_data_blocked_response;
@@ -84,6 +85,7 @@ global:
   coap_free_type;
   coap_get_app_data;
   coap_get_block;
+  coap_get_block_b;
   coap_get_data;
   coap_get_data_large;
   coap_get_log_level;
@@ -233,6 +235,7 @@ global:
   coap_ticks_to_rt;
   coap_ticks_to_rt_us;
   coap_tls_is_supported;
+  coap_write_block_b_opt;
   coap_write_block_opt;
 local:
   *;

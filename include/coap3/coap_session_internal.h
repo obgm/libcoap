@@ -133,9 +133,11 @@ struct coap_session_t {
   unsigned int dtls_timeout_count;      /**< dtls setup retry counter */
   int dtls_event;                       /**< Tracking any (D)TLS events on this
                                              sesison */
+  uint8_t csm_bert_rem_support;  /**< CSM TCP BERT blocks supported (remote) */
+  uint8_t csm_bert_loc_support;  /**< CSM TCP BERT blocks supported (local) */
   uint8_t block_mode;             /**< Zero or more COAP_BLOCK_ or'd options */
   uint8_t doing_first;            /**< Set if doing client's first request */
-  uint8_t proxy_session;          /**< Set if this is an ongoing proxy session */
+  uint8_t proxy_session;        /**< Set if this is an ongoing proxy session */
   uint64_t tx_token;              /**< Next token number to use */
 };
 

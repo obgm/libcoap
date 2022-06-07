@@ -1131,7 +1131,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
 #if COAP_CLIENT_SUPPORT
   coap_lg_crcv_t *lg_crcv = NULL;
   coap_opt_iterator_t opt_iter;
-  coap_block_t block = {0, 0, 0};
+  coap_block_b_t block;
   int observe_action = -1;
   int have_block1 = 0;
   coap_opt_t *opt;
@@ -1148,8 +1148,11 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
                                                      coap_opt_length(opt));
     }
 
-    if (coap_get_block(pdu, COAP_OPTION_BLOCK1, &block) && block.m == 1)
+    if (coap_get_block_b(session, pdu, COAP_OPTION_BLOCK1, &block) &&
+        (block.m == 1 || block.bert == 1))
       have_block1 = 1;
+  } else {
+    memset(&block, 0, sizeof(block));
   }
 
   /*
@@ -1344,21 +1347,36 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
 
 #if !COAP_DISABLE_TCP
   if (COAP_PROTO_RELIABLE(session->proto) &&
-      session->state == COAP_SESSION_STATE_ESTABLISHED &&
-      !session->csm_block_supported) {
-    /*
-     * Need to check that this instance is not sending any block options as the
-     * remote end via CSM has not informed us that there is support
-     * https://tools.ietf.org/html/rfc8323#section-5.3.2
-     * Note that this also includes BERT which is application specific.
-     */
-    if (coap_check_option(pdu, COAP_OPTION_BLOCK1, &opt_iter) != NULL) {
-      coap_log(LOG_DEBUG,
-               "Remote end did not indicate CSM support for BLOCK1 enabled\n");
+      session->state == COAP_SESSION_STATE_ESTABLISHED) {
+    if (!session->csm_block_supported) {
+      /*
+       * Need to check that this instance is not sending any block options as
+       * the remote end via CSM has not informed us that there is support
+       * https://tools.ietf.org/html/rfc8323#section-5.3.2
+       * This includes potential BERT blocks.
+       */
+      if (coap_check_option(pdu, COAP_OPTION_BLOCK1, &opt_iter) != NULL) {
+        coap_log(LOG_DEBUG,
+                 "Remote end did not indicate CSM support for Block1 enabled\n");
+      }
+      if (coap_check_option(pdu, COAP_OPTION_BLOCK2, &opt_iter) != NULL) {
+        coap_log(LOG_DEBUG,
+                 "Remote end did not indicate CSM support for Block2 enabled\n");
+      }
     }
-    if (coap_check_option(pdu, COAP_OPTION_BLOCK2, &opt_iter) != NULL) {
-      coap_log(LOG_DEBUG,
-               "Remote end did not indicate CSM support for BLOCK2 enabled\n");
+    else if (!session->csm_bert_rem_support) {
+      coap_opt_t *opt;
+
+      opt = coap_check_option(pdu, COAP_OPTION_BLOCK1, &opt_iter);
+      if (opt && COAP_OPT_BLOCK_SZX(opt) == 7) {
+        coap_log(LOG_DEBUG,
+               "Remote end did not indicate CSM support for BERT Block1\n");
+      }
+      opt = coap_check_option(pdu, COAP_OPTION_BLOCK2, &opt_iter);
+      if (opt && COAP_OPT_BLOCK_SZX(opt) == 7) {
+        coap_log(LOG_DEBUG,
+               "Remote end did not indicate CSM support for BERT Block2\n");
+      }
     }
   }
 #endif /* !COAP_DISABLE_TCP */
@@ -2295,7 +2313,7 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
   uint8_t buf[4];
   int result = 0;
   int need_block2 = 0;           /* set to 1 if Block2 option is required */
-  coap_block_t block;
+  coap_block_b_t block;
   coap_opt_t *query_filter;
   size_t offset = 0;
   uint8_t *data;
@@ -2328,7 +2346,7 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
   }
 
   /* check whether the request contains the Block2 option */
-  if (coap_get_block(request, COAP_OPTION_BLOCK2, &block)) {
+  if (coap_get_block_b(session, request, COAP_OPTION_BLOCK2, &block)) {
     coap_log(LOG_DEBUG, "create block\n");
     offset = block.num << (block.szx + 4);
     if (block.szx > 6) {  /* invalid, MUST lead to 4.00 Bad Request */
@@ -2392,7 +2410,8 @@ coap_wellknown_response(coap_context_t *context, coap_session_t *session,
 
   /* write Block2 option if necessary */
   if (need_block2) {
-    if (coap_write_block_opt(&block, COAP_OPTION_BLOCK2, resp, wkc_len) < 0) {
+    if (coap_write_block_b_opt(session, &block, COAP_OPTION_BLOCK2, resp,
+        wkc_len) < 0) {
       coap_log(LOG_DEBUG,
                "coap_wellknown_response: cannot add Block2 option\n");
       goto error;
@@ -2892,7 +2911,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       coap_opt_t *observe = NULL;
       int observe_action = COAP_OBSERVE_CANCEL;
       coap_string_t *query = coap_get_query(pdu);
-      coap_block_t block;
+      coap_block_b_t block;
       int added_block = 0;
 
       /* check for Observe option RFC7641 and RFC8132 */
@@ -2908,7 +2927,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
           if (observe_action == COAP_OBSERVE_ESTABLISH) {
             coap_subscription_t *subscription;
 
-            if (coap_get_block(pdu, COAP_OPTION_BLOCK2, &block)) {
+            if (coap_get_block_b(session, pdu, COAP_OPTION_BLOCK2, &block)) {
               if (block.num != 0) {
                 response->code = COAP_RESPONSE_CODE(400);
                 goto skip_handler;
@@ -3085,7 +3104,7 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
   coap_pdu_t *pdu) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
-  (void)context;
+  int set_mtu = 0;
 
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
@@ -3094,9 +3113,16 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
       if (opt_iter.number == COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE) {
         coap_session_set_mtu(session, coap_decode_var_bytes(coap_opt_value(option),
           coap_opt_length(option)));
+        set_mtu = 1;
       } else if (opt_iter.number == COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER) {
         session->csm_block_supported = 1;
       }
+    }
+    if (set_mtu) {
+      if (session->mtu > COAP_BERT_BASE && session->csm_block_supported)
+        session->csm_bert_rem_support = 1;
+      else
+        session->csm_bert_rem_support = 0;
     }
     if (session->state == COAP_SESSION_STATE_CSM)
       coap_session_connected(session);

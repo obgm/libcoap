@@ -420,10 +420,15 @@ void coap_session_send_csm(coap_session_t *session) {
     coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
   } else {
     ssize_t bytes_written = coap_session_send_pdu(session, pdu);
-    if (bytes_written != (ssize_t)pdu->used_size + pdu->hdr_size)
+    if (bytes_written != (ssize_t)pdu->used_size + pdu->hdr_size) {
       coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
-    else
+    } else {
       session->csm_rcv_mtu = session->context->csm_max_message_size;
+      if (session->csm_rcv_mtu > COAP_BERT_BASE)
+        session->csm_bert_loc_support = 1;
+      else
+        session->csm_bert_loc_support = 0;
+    }
   }
   if (pdu)
     coap_delete_pdu(pdu);

@@ -889,7 +889,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
   coap_pdu_t *response;
   uint8_t buf[4];
   coap_string_t *query;
-  coap_block_t block;
+  coap_block_b_t block;
 
   if (r->observable && (r->dirty || r->partiallydirty)) {
     r->partiallydirty = 0;
@@ -955,13 +955,14 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                                  coap_encode_var_safe(buf, sizeof (buf),
                                                       r->observe),
                                  buf);
-        if (coap_get_block(obs->pdu, COAP_OPTION_BLOCK2, &block)) {
+        if (coap_get_block_b(obs->session, obs->pdu, COAP_OPTION_BLOCK2,
+                             &block)) {
           /* Will get updated later (e.g. M bit) if appropriate */
           coap_add_option_internal(response, COAP_OPTION_BLOCK2,
                                    coap_encode_var_safe(buf, sizeof(buf),
                                                         ((0 << 4) |
                                                          (0 << 3) |
-                                                         block.szx)),
+                                                         block.aszx)),
                                    buf);
         }
 
