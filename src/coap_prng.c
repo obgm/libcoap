@@ -52,13 +52,18 @@ coap_prng_impl( unsigned char *buf, size_t len ) {
 
 #endif /* _WIN32 */
 
+/*
+ * This, or any user provided alternative, function is expected to
+ * return 0 on failure and 1 on success.
+ */
 static int
 coap_prng_default(void *buf, size_t len) {
 #if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
-  return mbedtls_hardware_poll(NULL, buf, len, NULL);
+  /* mbedtls_hardware_poll() returns 0 on success */
+  return (mbedtls_hardware_poll(NULL, buf, len, NULL) ? 0 : 1);
 #else /* !MBEDTLS_ENTROPY_HARDWARE_ALT */
 #ifdef HAVE_GETRANDOM
-  return getrandom(buf, len, 0);
+  return (getrandom(buf, len, 0) > 0) ? 1 : 0;
 #else /* !HAVE_GETRANDOM */
 #if defined(_WIN32)
   return coap_prng_impl(buf,len);
@@ -102,8 +107,7 @@ coap_prng(void *buf, size_t len) {
     return 0;
   }
 
-  rand_func(buf, len);
-  return 1;
+  return rand_func(buf, len);
 }
 
 #endif

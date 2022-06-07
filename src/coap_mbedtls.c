@@ -159,9 +159,12 @@ typedef enum coap_enc_method_t {
 } coap_enc_method_t;
 
 #ifndef MBEDTLS_2_X_COMPAT
+/*
+ * mbedtls_ callback functions expect 0 on success, -ve on failure.
+ */
 static int coap_rng(void *ctx COAP_UNUSED, unsigned char *buf, size_t len)
 {
-  return coap_prng(buf, len);
+  return coap_prng(buf, len) ? 0 : MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED;
 }
 #endif /* MBEDTLS_2_X_COMPAT */
 
@@ -637,7 +640,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
 #endif /* MBEDTLS_2_X_COMPAT */
       }
       if (ret < 0) {
-        coap_log(LOG_ERR, "mbedtls_pk_parse_keyfile returned -0x%x: '%s'\n",
+        coap_log(LOG_ERR, "mbedtls_pk_parse_key returned -0x%x: '%s'\n",
                  -ret, get_error_string(ret));
         return ret;
       }
@@ -716,7 +719,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
               (void *)&m_env->ctr_drbg);
 #endif /* MBEDTLS_2_X_COMPAT */
       if (ret < 0) {
-        coap_log(LOG_ERR, "mbedtls_pk_parse_keyfile returned -0x%x: '%s'\n",
+        coap_log(LOG_ERR, "mbedtls_pk_parse_key returned -0x%x: '%s'\n",
                  -ret, get_error_string(ret));
         return ret;
       }
