@@ -498,6 +498,9 @@ hnd_put_example_data(coap_resource_t *resource,
      *   o  In a request carrying a Block1 Option, to indicate the current
      *         estimate the client has of the total size of the resource
      *         representation, measured in bytes ("size indication").
+     *
+     * coap_cache_ignore_options() must have previously been called with at
+     * least COAP_OPTION_BLOCK1 set as the option value will change per block.
      */
     coap_cache_entry_t *cache_entry = coap_cache_get_by_pdu(session,
                                                             request,
@@ -1436,6 +1439,9 @@ hnd_put_post(coap_resource_t *resource,
      *   o  In a request carrying a Block1 Option, to indicate the current
      *         estimate the client has of the total size of the resource
      *         representation, measured in bytes ("size indication").
+     *
+     * coap_cache_ignore_options() must have previously been called with at
+     * least COAP_OPTION_BLOCK1 set as the option value will change per block.
      */
     coap_cache_entry_t *cache_entry = coap_cache_get_by_pdu(session,
                                                             request,
