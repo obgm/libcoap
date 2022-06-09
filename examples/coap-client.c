@@ -1676,6 +1676,20 @@ main(int argc, char **argv) {
     }
   }
 
+#ifdef _WIN32
+  signal(SIGINT, handle_sigint);
+#else
+  memset (&sa, 0, sizeof(sa));
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = handle_sigint;
+  sa.sa_flags = 0;
+  sigaction (SIGINT, &sa, NULL);
+  sigaction (SIGTERM, &sa, NULL);
+  /* So we do not exit on a SIGPIPE */
+  sa.sa_handler = SIG_IGN;
+  sigaction (SIGPIPE, &sa, NULL);
+#endif
+
   coap_startup();
   coap_dtls_set_log_level(log_level);
   coap_set_log_level(log_level);
@@ -1742,7 +1756,7 @@ main(int argc, char **argv) {
   );
 
   if ( !session ) {
-    coap_log( LOG_EMERG, "cannot create client session\n" );
+    coap_log( LOG_ERR, "cannot create client session\n" );
     goto finish;
   }
   /*
@@ -1817,20 +1831,6 @@ main(int argc, char **argv) {
 
   wait_ms = wait_seconds * 1000;
   coap_log(LOG_DEBUG, "timeout is set to %u seconds\n", wait_seconds);
-
-#ifdef _WIN32
-  signal(SIGINT, handle_sigint);
-#else
-  memset (&sa, 0, sizeof(sa));
-  sigemptyset(&sa.sa_mask);
-  sa.sa_handler = handle_sigint;
-  sa.sa_flags = 0;
-  sigaction (SIGINT, &sa, NULL);
-  sigaction (SIGTERM, &sa, NULL);
-  /* So we do not exit on a SIGPIPE */
-  sa.sa_handler = SIG_IGN;
-  sigaction (SIGPIPE, &sa, NULL);
-#endif
 
   while(!quit &&
         !(ready && !tracked_tokens_count && !is_mcast && !repeat_count &&

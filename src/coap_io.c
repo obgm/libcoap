@@ -487,7 +487,10 @@ coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
 #ifdef _WIN32
   r = send(sock->fd, (const char *)data, (int)data_len, 0);
 #else
-  r = send(sock->fd, data, data_len, 0);
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif /* MSG_NOSIGNAL */
+  r = send(sock->fd, data, data_len, MSG_NOSIGNAL);
 #endif
   if (r == COAP_SOCKET_ERROR) {
 #ifdef _WIN32

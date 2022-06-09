@@ -2272,7 +2272,7 @@ ssize_t coap_tls_write(coap_session_t *c_session,
         break;
       }
       if (ret == -1) {
-        coap_log(LOG_WARNING, "coap_dtls_send: cannot send PDU\n");
+        coap_log(LOG_WARNING, "coap_tls_write: cannot send PDU\n");
       }
     }
   } else {
