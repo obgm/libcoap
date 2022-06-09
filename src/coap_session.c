@@ -301,7 +301,27 @@ coap_session_max_pdu_rcv_size(const coap_session_t *session) {
 
 size_t
 coap_session_max_pdu_size(const coap_session_t *session) {
-  size_t max_with_header = (size_t)(session->mtu - session->tls_overhead);
+  size_t max_with_header;
+
+#if COAP_CLIENT_SUPPORT
+  /*
+   * Delay if session->doing_first is set.
+   * E.g. Reliable and CSM not in yet for checking block support
+   */
+  coap_session_t *session_rw;
+
+  /*
+   * Need to do this to not get a compiler warning about const parameters
+   * but need to maintain source code backward compatibility
+   */
+  memcpy(&session_rw, &session, sizeof(session_rw));
+  if (coap_client_delay_first(session_rw) == 0) {
+    coap_log(LOG_DEBUG, "coap_client_delay_first: timeout\n");
+    /* Have to go with the defaults */
+  }
+#endif /* COAP_CLIENT_SUPPORT */
+
+  max_with_header = (size_t)(session->mtu - session->tls_overhead);
 
   return coap_session_max_pdu_size_internal(session, max_with_header);
 }
@@ -936,17 +956,11 @@ coap_session_connect(coap_session_t *session) {
     if (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS) {
       if (session->sock.flags & COAP_SOCKET_WANT_CONNECT) {
         session->state = COAP_SESSION_STATE_CONNECTING;
-        while (session->state != COAP_SESSION_STATE_ESTABLISHED &&
+        if (session->state != COAP_SESSION_STATE_ESTABLISHED &&
                session->state != COAP_SESSION_STATE_NONE &&
                COAP_PROTO_RELIABLE(session->proto) &&
                session->type == COAP_SESSION_TYPE_CLIENT) {
           session->doing_first = 1;
-          if (coap_client_delay_first(session) == 0 ||
-              session->state == COAP_SESSION_STATE_NONE) {
-            coap_session_reference(session);
-            coap_session_release(session);
-            return NULL;
-          }
         }
       } else if (session->proto == COAP_PROTO_TLS) {
         int connected = 0;

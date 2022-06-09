@@ -1044,80 +1044,66 @@ int
 coap_client_delay_first(coap_session_t *session)
 {
   if (session->type == COAP_SESSION_TYPE_CLIENT && session->doing_first) {
-#ifndef WITH_LWIP
     if (session->doing_first) {
-      unsigned ref;
       int timeout_ms = 5000;
+#ifdef WITH_LWIP
+#include <netif/tapif.h>
+      struct netif *netif = ip_route(&session->sock.pcb->local_ip,
+                                     &session->addr_info.remote.addr);
+      if (!netif) {
+        session->doing_first = 0;
+        return 1;
+      }
+#endif /* WITH_LWIP */
+
+      if (session->delay_recursive) {
+        assert(0);
+        return 1;
+      } else {
+        session->delay_recursive = 1;
+      }
       /*
        * Need to wait for first request to get out and response back before
        * continuing.. Response handler has to clear doing_first if not an error.
        */
-      ref = ++session->ref;
+      coap_session_reference(session);
       while (session->doing_first != 0) {
+#ifndef WITH_LWIP
         int result = coap_io_process(session->context, 1000);
+#else /* WITH_LWIP */
+        int result;
+        coap_tick_t start;
+        coap_tick_t end;
+
+        coap_ticks(&start);
+        result = tapif_select(netif);
+#endif /* WITH_LWIP */
 
         if (result < 0) {
           session->doing_first = 0;
+          session->delay_recursive = 0;
           coap_session_release(session);
           return 0;
         }
+#ifdef WITH_LWIP
+        sys_check_timeouts();
+        coap_ticks(&end);
+        result = (end - start) * 1000 / COAP_TICKS_PER_SECOND;
+#endif /* WITH_LWIP */
         if (result <= timeout_ms) {
           timeout_ms -= result;
-        }
-        else {
-          if (session->doing_first == 1 && ref > session->ref) {
+        } else {
+          if (session->doing_first == 1) {
             /* Timeout failure of some sort with first request */
+            coap_log(LOG_DEBUG, "** %s: timeout waiting for first response\n",
+                     coap_session_str(session));
+            session->doing_first = 0;
           }
-          session->doing_first = 0;
         }
       }
+      session->delay_recursive = 0;
       coap_session_release(session);
     }
-#else /* WITH_LWIP */
-#include <netif/tapif.h>
-    if (session->doing_first) {
-      unsigned ref;
-      int timeout_ms = 5000;
-      struct netif *netif = ip_route(&session->sock.pcb->local_ip,
-                                   &session->addr_info.remote.addr);
-
-      if (netif) {
-        /*
-         * Need to wait for first request to get out and response back before
-         * continuing.. Response handler has to clear doing_first if not an error.
-         */
-        ref = ++session->ref;
-        while (session->doing_first != 0) {
-          int result;
-          coap_tick_t start;
-          coap_tick_t end;
-
-          coap_ticks(&start);
-          result = tapif_select(netif);
-          if (result < 0) {
-            session->doing_first = 0;
-            coap_session_release(session);
-            return 0;
-          }
-          sys_check_timeouts();
-          coap_ticks(&end);
-          result = (end - start) * 1000 / COAP_TICKS_PER_SECOND;
-          if (result <= timeout_ms) {
-            timeout_ms -= result;
-          }
-          else {
-            if (*(&session->doing_first) == 1 && ref > session->ref) {
-              /* Timeout failure of some sort with first request */
-            }
-            session->doing_first = 0;
-          }
-        }
-        coap_session_release(session);
-      } else {
-       session->doing_first = 0;
-      }
-    }
-#endif /* WITH_LWIP */
   }
   return 1;
 }
