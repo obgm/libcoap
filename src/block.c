@@ -745,6 +745,15 @@ coap_add_data_large_request(coap_session_t *session,
                             const uint8_t *data,
                             coap_release_large_data_t release_func,
                             void *app_ptr) {
+  /*
+   * Delay if session->doing_first is set.
+   * E.g. Reliable and CSM not in yet for checking block support
+   */
+  if (coap_client_delay_first(session) == 0) {
+    if (release_func)
+      release_func(session, app_ptr);
+    return 0;
+  }
   return coap_add_data_large_internal(session, pdu, NULL, NULL, -1, 0, length,
                                       data, release_func, app_ptr, 0);
 }
