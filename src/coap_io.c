@@ -830,14 +830,16 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 #endif
     if (len < 0) {
 #ifdef _WIN32
-      if (WSAGetLastError() == WSAECONNRESET) {
+      if (WSAGetLastError() == WSAECONNRESET ||
+          WSAGetLastError() == WSAECONNREFUSED) {
 #else
-      if (errno == ECONNREFUSED) {
+      if (errno == ECONNREFUSED || errno == EHOSTUNREACH) {
 #endif
         /* client-side ICMP destination unreachable, ignore it */
-        coap_log(LOG_WARNING, "** %s: coap_network_read: unreachable\n",
-                               sock->session ?
-                                  coap_session_str(sock->session) : "");
+        coap_log(LOG_WARNING, "** %s: coap_network_read: ICMP: %s\n",
+                 sock->session ?
+                   coap_session_str(sock->session) : "",
+                 coap_socket_strerror());
         return -2;
       }
       coap_log(LOG_WARNING, "** %s: coap_network_read: %s\n",
