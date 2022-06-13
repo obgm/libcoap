@@ -1977,7 +1977,7 @@ coap_handle_response_get_block(coap_context_t *context,
             p->observe_set = 0;
           }
         }
-        updated_block = 1;
+        updated_block = 0;
         while (offset < saved_offset + length) {
           if (!check_if_received_block(&p->rec_blocks, block.num)) {
             /* Update list of blocks received */
