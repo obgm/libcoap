@@ -54,7 +54,7 @@ coap_register_async(coap_session_t *session,
     size_t i;
     char outbuf[2*8 + 1];
     size_t outbuflen;
-    
+
     outbuf[0] = '\000';
     for (i = 0; i < request->token_length; i++) {
       outbuflen = strlen(outbuf);
