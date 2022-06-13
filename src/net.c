@@ -1114,6 +1114,12 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
 
   assert(pdu);
 
+  if (session->type == COAP_SESSION_TYPE_CLIENT &&
+      session->sock.flags == COAP_SOCKET_EMPTY) {
+    coap_log(LOG_DEBUG, "coap_send: Socket closed\n");
+    coap_delete_pdu(pdu);
+    return COAP_INVALID_MID;
+  }
 #if COAP_CLIENT_SUPPORT
   coap_lg_crcv_t *lg_crcv = NULL;
   coap_opt_iterator_t opt_iter;
@@ -1194,8 +1200,10 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
       }
     }
     lg_crcv = coap_block_new_lg_crcv(session, pdu);
-    if (lg_crcv == NULL)
+    if (lg_crcv == NULL) {
+      coap_delete_pdu(pdu);
       return COAP_INVALID_MID;
+    }
     if (lg_xmit) {
       /* Need to update the token as set up in the session->lg_xmit */
       lg_xmit->b.b1.state_token = lg_crcv->state_token;
@@ -1951,7 +1959,8 @@ coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events, size_t nevents
             (events[j].events & (EPOLLOUT|EPOLLERR|EPOLLHUP|EPOLLRDHUP))) {
           sock->flags |= COAP_SOCKET_CAN_CONNECT;
           coap_connect_session(session->context, session, now);
-          if (!(sock->flags & COAP_SOCKET_WANT_WRITE)) {
+          if (sock->flags != COAP_SOCKET_EMPTY &&
+              !(sock->flags & COAP_SOCKET_WANT_WRITE)) {
             coap_epoll_ctl_mod(sock, EPOLLIN, __func__);
           }
         }

@@ -496,11 +496,12 @@ PDU TRANSMIT
 *Function: coap_send()*
 
 The *coap_send*() function is used to initiate the transmission of the _pdu_
-associated with the _session_.
+associated with the _session_. The caller must not access or delete _pdu_
+after calling *coap_send*() - even if there is a return error.
 
-*NOTE:* This is automatically done, based on the PDU code on the return from
-the calling of a request handler, and so the usage of *coap_send*() is not
-required there for transmission.
+*NOTE:* For request handlers, returning from the request handler will cause
+the response PDU to be transmitted as appropriate and there is no need to call
+*coap_send*() to do this.
 
 RETURN VALUES
 -------------

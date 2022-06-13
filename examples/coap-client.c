@@ -377,6 +377,7 @@ nack_handler(coap_session_t *session COAP_UNUSED,
   case COAP_NACK_NOT_DELIVERABLE:
   case COAP_NACK_RST:
   case COAP_NACK_TLS_FAILED:
+    coap_log(LOG_ERR, "cannot send CoAP pdu\n");
     quit = 1;
     break;
   case COAP_NACK_ICMP_ISSUE:
@@ -1736,6 +1737,9 @@ main(int argc, char **argv) {
   coap_context_set_block_mode(ctx, block_mode);
   if (csm_max_message_size)
     coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
+  coap_register_response_handler(ctx, message_handler);
+  coap_register_event_handler(ctx, event_handler);
+  coap_register_nack_handler(ctx, nack_handler);
 
   dst.size = res;
   dst.addr.sin.sin_port = htons( port );
@@ -1780,11 +1784,6 @@ main(int argc, char **argv) {
     ;
   }
 
-  coap_register_option(ctx, COAP_OPTION_BLOCK2);
-  coap_register_response_handler(ctx, message_handler);
-  coap_register_event_handler(ctx, event_handler);
-  coap_register_nack_handler(ctx, nack_handler);
-
   /* construct CoAP message */
 
   if (!uri_host_option && (!proxy.host.length && addrptr
@@ -1818,19 +1817,22 @@ main(int argc, char **argv) {
     goto finish;
   }
 
-  coap_log(LOG_DEBUG, "sending CoAP request:\n");
-  if (coap_get_log_level() < LOG_DEBUG)
-    coap_show_pdu(LOG_INFO, pdu);
-
-  coap_send(session, pdu);
-  repeat_count--;
-
   if (is_mcast && wait_seconds == DEFAULT_WAIT_TIME)
     /* Allow for other servers to respond within DEFAULT_LEISURE RFC7252 8.2 */
     wait_seconds = COAP_DEFAULT_LEISURE;
 
   wait_ms = wait_seconds * 1000;
   coap_log(LOG_DEBUG, "timeout is set to %u seconds\n", wait_seconds);
+
+  coap_log(LOG_DEBUG, "sending CoAP request:\n");
+  if (coap_get_log_level() < LOG_DEBUG)
+    coap_show_pdu(LOG_INFO, pdu);
+
+  if (coap_send(session, pdu) == COAP_INVALID_MID) {
+    coap_log(LOG_ERR, "cannot send CoAP pdu\n");
+    quit = 1;
+  }
+  repeat_count--;
 
   while(!quit &&
         !(ready && !tracked_tokens_count && !is_mcast && !repeat_count &&
@@ -1904,7 +1906,10 @@ main(int argc, char **argv) {
             coap_show_pdu(LOG_INFO, pdu);
 
           ready = 0;
-          coap_send(session, pdu);
+          if (coap_send(session, pdu) == COAP_INVALID_MID) {
+            coap_log(LOG_ERR, "cannot send CoAP pdu\n");
+            quit = 1;
+          }
           repeat_count--;
         }
       }
