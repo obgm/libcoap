@@ -483,7 +483,7 @@ coap_send_rst(coap_session_t *session, const coap_pdu_t *request) {
 /**
 * Sends a CoAP message to given peer. The memory that is
 * allocated for the pdu will be released by coap_send().
-* The caller must not use the pdu after calling coap_send().
+* The caller must not use or delete the pdu after calling coap_send().
 *
 * @param session         The CoAP session.
 * @param pdu             The CoAP PDU to send.
