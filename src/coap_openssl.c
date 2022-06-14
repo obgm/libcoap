@@ -1,8 +1,8 @@
 /*
  * coap_openssl.c -- Datagram Transport Layer Support for libcoap with openssl
  *
- * Copyright (C) 2017 Jean-Claude Michelou <jcm@spinetix.com>
- * Copyright (C) 2018 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2017      Jean-Claude Michelou <jcm@spinetix.com>
+ * Copyright (C) 2018-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -3036,7 +3036,12 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *session, coap_tick_t now COAP_
   return ssl_data->timeout;
 }
 
-void coap_dtls_handle_timeout(coap_session_t *session) {
+/*
+ * return 1 timed out
+ *        0 still timing out
+ */
+int
+coap_dtls_handle_timeout(coap_session_t *session) {
   SSL *ssl = (SSL *)session->tls;
 
   assert(ssl != NULL && session->state == COAP_SESSION_STATE_HANDSHAKE);
@@ -3044,7 +3049,9 @@ void coap_dtls_handle_timeout(coap_session_t *session) {
       (DTLSv1_handle_timeout(ssl) < 0)) {
     /* Too many retries */
     coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
+    return 1;
   }
+  return 0;
 }
 
 #if COAP_SERVER_SUPPORT
