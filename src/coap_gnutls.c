@@ -2165,6 +2165,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
     log_last_alert(c_session, g_env->g_session);
     /* Fall through */
   case GNUTLS_E_UNEXPECTED_HANDSHAKE_PACKET:
+  case GNUTLS_E_UNEXPECTED_PACKET:
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
     ret = -1;
     break;
