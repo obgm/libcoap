@@ -2799,7 +2799,6 @@ main(int argc, char **argv) {
 
 #ifdef _WIN32
   signal(SIGINT, handle_sigint);
-  signal(SIGUSR1, handle_sigusr1);
 #else
   memset (&sa, 0, sizeof(sa));
   sigemptyset(&sa.sa_mask);
