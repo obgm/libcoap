@@ -71,6 +71,9 @@ static char* strndup(const char* s1, size_t n)
 /* set to 1 to request clean server shutdown */
 static int quit = 0;
 
+/* set to 1 to trigger configuration reload */
+static int reload_config = 0;
+
 /* changeable clock base (see handle_put_time()) */
 static time_t clock_offset;
 static time_t my_clock_base = 0;
@@ -166,6 +169,13 @@ typedef struct transient_value_t {
 /* temporary storage for dynamic resource representations */
 static transient_value_t *example_data_value = NULL;
 static int example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
+
+/* SIGUSR handler: set reload_config to 1 to trigger dynamic update of
+ * the server configuration. */
+static void
+handle_sigusr1(int signum COAP_UNUSED) {
+  reload_config = 1;
+}
 
 /* SIGINT handler: set quit to 1 for graceful termination */
 static void
@@ -2789,6 +2799,7 @@ main(int argc, char **argv) {
 
 #ifdef _WIN32
   signal(SIGINT, handle_sigint);
+  signal(SIGUSR1, handle_sigusr1);
 #else
   memset (&sa, 0, sizeof(sa));
   sigemptyset(&sa.sa_mask);
@@ -2796,6 +2807,9 @@ main(int argc, char **argv) {
   sa.sa_flags = 0;
   sigaction (SIGINT, &sa, NULL);
   sigaction (SIGTERM, &sa, NULL);
+  /* setup handler for SIGUSR1 */
+  sa.sa_handler = handle_sigusr1;
+  sigaction (SIGUSR1, &sa, NULL);
   /* So we do not exit on a SIGPIPE */
   sa.sa_handler = SIG_IGN;
   sigaction (SIGPIPE, &sa, NULL);
@@ -2852,9 +2866,16 @@ main(int argc, char **argv) {
       /* Wait until any i/o takes place or timeout */
       result = select (nfds, &readfds, NULL, NULL, &tv);
       if (result == -1) {
-        if (errno != EAGAIN) {
-          coap_log(LOG_DEBUG, "select: %s (%d)\n", coap_socket_strerror(), errno);
-          break;
+        if (errno == EINTR && reload_config) {
+          /* SIGUSR1 has triggered a configuration reload */
+          coap_log(LOG_NOTICE, "configuration reload\n");
+          fill_keystore(ctx);
+          reload_config = 0;
+        } else {
+          if (errno != EAGAIN) {
+            coap_log(LOG_DEBUG, "select: %s (%d)\n", coap_socket_strerror(), errno);
+            quit = 1;
+          }
         }
       }
       if (result > 0) {
@@ -2876,9 +2897,9 @@ main(int argc, char **argv) {
        */
       result = coap_io_process( ctx, wait_ms );
     }
-    if ( result < 0 ) {
+    if (result < 0 && quit) {
       break;
-    } else if ( result && (unsigned)result < wait_ms ) {
+    } else if (result > 0 && (unsigned)result < wait_ms ) {
       /* decrement if there is a result wait time returned */
       wait_ms -= result;
     } else {
