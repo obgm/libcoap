@@ -3286,8 +3286,6 @@ static int coap_started = 0;
 void coap_startup(void) {
   coap_tick_t now;
   uint64_t us;
- static coap_str_const_t well_known = { sizeof(".well-known/core")-1,
-                                        (const uint8_t *)".well-known/core" };
 
   if (coap_started)
     return;
@@ -3304,10 +3302,14 @@ void coap_startup(void) {
   coap_prng_init((unsigned int)us);
   coap_memory_init();
   coap_dtls_startup();
+#if COAP_SERVER_SUPPORT
+ static coap_str_const_t well_known = { sizeof(".well-known/core")-1,
+                                        (const uint8_t *)".well-known/core" };
   memset(&resource_uri_wellknown, 0, sizeof(resource_uri_wellknown));
   resource_uri_wellknown.handler[COAP_REQUEST_GET-1] = hnd_get_wellknown;
   resource_uri_wellknown.flags = COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT;
   resource_uri_wellknown.uri_path = &well_known;
+#endif /* COAP_SERVER_SUPPORT */
 }
 
 void coap_cleanup(void) {
