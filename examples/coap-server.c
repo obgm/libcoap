@@ -68,7 +68,7 @@ static char* strndup(const char* s1, size_t n)
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
-/* temporary storage for dynamic resource representations */
+/* set to 1 to request clean server shutdown */
 static int quit = 0;
 
 /* changeable clock base (see handle_put_time()) */
@@ -163,6 +163,7 @@ typedef struct transient_value_t {
   size_t ref_cnt;
 } transient_value_t;
 
+/* temporary storage for dynamic resource representations */
 static transient_value_t *example_data_value = NULL;
 static int example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
 
