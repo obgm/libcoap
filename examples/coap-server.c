@@ -79,6 +79,8 @@ static int quit = 0;
 
 /* set to 1 if persist information is to be kept on server shutdown */
 static int keep_persist = 0;
+/* set to 1 to trigger configuration reload */
+static int reload_config = 0;
 
 /* changeable clock base (see handle_put_time()) */
 static time_t clock_offset;
@@ -189,6 +191,15 @@ handle_sigint(int signum COAP_UNUSED) {
 }
 
 #ifndef _WIN32
+/*
+ * SIGUSR1 handler: set reload_config to 1 to trigger dynamic update of
+ * the server PSK/PKI configuration.
+ */
+static void
+handle_sigusr1(int signum COAP_UNUSED) {
+  reload_config = 1;
+}
+
 /*
  * SIGUSR2 handler: set quit to 1 for graceful termination
  * Disable sending out 4.04 for any active observations.
@@ -2265,6 +2276,8 @@ usage( const char *program, const char *version) {
      "\t       \t\tURI. If not, the private key is defined by '-j keyfile'.\n"
      "\t       \t\tNote that both -c and -k need to be defined for both\n"
      "\t       \t\tPSK and PKI to be concurrently supported\n"
+     "\t       \t\tNote: Use 'kill SIGUSR1 <pid>' for reloading the cert\n"
+     "\t       \t\tfiles\n"
      "\t-j keyfile\tPEM file or PKCS11 URI for the private key for the\n"
      "\t       \t\tcertificate in '-c certfile' if the parameter is\n"
      "\t       \t\tdifferent from certfile in '-c certfile'\n"
@@ -2917,6 +2930,10 @@ main(int argc, char **argv) {
   sa.sa_flags = 0;
   sigaction (SIGINT, &sa, NULL);
   sigaction (SIGTERM, &sa, NULL);
+  /* setup handler for SIGUSR1 */
+  sa.sa_handler = handle_sigusr1;
+  sigaction (SIGUSR1, &sa, NULL);
+  /* setup handler for SIGUSR2 */
   sa.sa_handler = handle_sigusr2;
   sigaction (SIGUSR2, &sa, NULL);
   /* So we do not exit on a SIGPIPE */
@@ -2997,14 +3014,23 @@ main(int argc, char **argv) {
       /* Wait until any i/o takes place or timeout */
       result = select (nfds, &readfds, NULL, NULL, &tv);
       if (result == -1) {
-        if (errno != EAGAIN) {
+        if (errno != EAGAIN && errno != EINTR) {
           coap_log_debug("select: %s (%d)\n", coap_socket_strerror(), errno);
           break;
         }
+        result = 0;
       }
       if (result > 0) {
         if (FD_ISSET(coap_fd, &readfds)) {
           result = coap_io_process(ctx, COAP_IO_NO_WAIT);
+          if (result == -1) {
+            if (errno != EAGAIN && errno != EINTR) {
+              coap_log_debug("coap_io_process: %s (%d)\n",
+                             coap_socket_strerror(), errno);
+              break;
+            }
+            result = 0;
+          }
         }
       }
       if (result >= 0) {
@@ -3019,10 +3045,21 @@ main(int argc, char **argv) {
        * result is time spent in coap_io_process()
        */
       result = coap_io_process( ctx, wait_ms );
+      if (result == -1) {
+        if (errno != EAGAIN && errno != EINTR) {
+          coap_log_debug("coap_io_process: %s (%d)\n", coap_socket_strerror(), errno);
+          break;
+        }
+        result = 0;
+      }
     }
-    if ( result < 0 ) {
-      break;
-    } else if ( result && (unsigned)result < wait_ms ) {
+    if (reload_config) {
+      /* SIGUSR1 has triggered a configuration reload */
+      coap_log_notice("configuration reload\n");
+      fill_keystore(ctx);
+      reload_config = 0;
+    }
+    if (result > 0 && (unsigned)result < wait_ms ) {
       /* decrement if there is a result wait time returned */
       wait_ms -= result;
     } else {

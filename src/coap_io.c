@@ -1430,8 +1430,8 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 #endif
     if (errno != EINTR) {
       coap_log_debug("%s", coap_socket_strerror());
-      return -1;
     }
+    return -1;
   }
   if (ereadfds) {
     *ereadfds = ctx->readfds;

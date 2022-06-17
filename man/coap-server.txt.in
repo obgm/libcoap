@@ -77,7 +77,7 @@ OPTIONS - General
 *-t* ::
    Track resource's observe values so observe subscriptions can be
    maintained over a server restart.
-   Note: Use 'kill SIGUSR2 <pid>' for controlled shutdown.
+   Note: Use 'kill SIGUSR2 <pid>` for controlled shutdown.
 
 *-v* num::
    The verbosity level to use (default 4, maximum is 8) for general
@@ -97,7 +97,7 @@ OPTIONS - General
    numbers continue to increase and are not reset to prevent anti-replay
    mechanisms being triggered.
 
-*-G group_if::
+*-G* group_if::
    Use this interface for listening for the multicast group. This can be
    different from the implied interface if the *-A* option is used.
 
@@ -191,7 +191,8 @@ definitions have to be in DER, not PEM, format.  Otherwise all of
   the PEM file, or has the same PKCS11 URI. If not, the private key is defined
   by *-j keyfile*. +
   Note: if *-k key* is defined, you need to define *-c certfile* as well to
-  have the server support both PSK and PKI.
+  have the server support both PSK and PKI. +
+  Note: Use 'kill SIGUSR1 <pid>` for reloading the cert files.
 
 *-j* keyfile::
   PEM file or PKCS11 URI for the private key for the certificate in *-c
