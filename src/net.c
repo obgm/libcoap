@@ -2331,23 +2331,50 @@ hnd_get_wellknown(coap_resource_t *resource,
     assert (len <= (size_t)wkc_len);
     data_string->length = len;
 
-    if (!coap_add_data_large_response(resource, session, request, response,
-                                      query,
+    if (!(session->block_mode & COAP_BLOCK_USE_LIBCOAP)) {
+      uint8_t buf[4];
+
+      if (!coap_insert_option(response, COAP_OPTION_CONTENT_FORMAT,
+                         coap_encode_var_safe(buf, sizeof(buf),
+                         COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf)) {
+        goto error;
+      }
+      if (response->used_size + len + 1 > response->max_size) {
+        /*
+         * Data does not fit into a packet and no libcoap block support
+         * +1 for end of options marker
+         */
+        coap_log(LOG_DEBUG,
+                 ".well-known/core: truncating data length to %zu from %zu\n",
+                 len, response->max_size  - response->used_size - 1);
+        len = response->max_size - response->used_size - 1;
+      }
+      if (!coap_add_data(response, len, data_string->s)) {
+        goto error;
+      }
+      free_wellknown_response(session, data_string);
+    } else if (!coap_add_data_large_response(resource, session, request,
+                                             response, query,
                                       COAP_MEDIATYPE_APPLICATION_LINK_FORMAT,
-                                      -1, 0, data_string->length,
-                                      data_string->s, free_wellknown_response,
-                                      data_string))
-      goto error;
+                                             -1, 0, data_string->length,
+                                             data_string->s,
+                                             free_wellknown_response,
+                                             data_string)) {
+      goto error_released;
+    }
   }
   response->code = COAP_RESPONSE_CODE(205);
   return;
 
 error:
-  coap_delete_string(data_string);
-  /* set error code 5.03 and remove all options and data from response */
-  response->code = COAP_RESPONSE_CODE(503);
-  response->used_size = response->token_length;
-
+  free_wellknown_response(session, data_string);
+error_released:
+  if (response->code == 0) {
+    /* set error code 5.03 and remove all options and data from response */
+    response->code = COAP_RESPONSE_CODE(503);
+    response->used_size = response->token_length;
+    response->data = NULL;
+  }
 }
 #endif /* COAP_SERVER_SUPPORT */
 
