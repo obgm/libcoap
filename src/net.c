@@ -1144,6 +1144,17 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     if (coap_get_block_b(session, pdu, COAP_OPTION_BLOCK1, &block) &&
         (block.m == 1 || block.bert == 1))
       have_block1 = 1;
+    if (observe_action != COAP_OBSERVE_CANCEL) {
+      /* Warn about re-use of tokens */
+      coap_bin_const_t token = coap_pdu_get_token(pdu);
+
+      if (session->last_token &&
+          coap_binary_equal(&token, session->last_token)) {
+        coap_log(LOG_DEBUG, "Token reused - see https://www.rfc-editor.org/rfc/rfc9175.html#section-4.2\n");
+      }
+      coap_delete_bin_const(session->last_token);
+      session->last_token = coap_new_bin_const(token.s, token.length);
+    }
   } else {
     memset(&block, 0, sizeof(block));
   }
@@ -2943,7 +2954,7 @@ handle_response(coap_context_t *context, coap_session_t *session,
    * been lost, so we need to stop retransmitting requests with the
    * same token.
    */
-  if (rcvd->type == COAP_MESSAGE_ACK)
+  if (rcvd->type != COAP_MESSAGE_ACK)
     coap_cancel_all_messages(context, session, rcvd->token, rcvd->token_length);
 
   if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
