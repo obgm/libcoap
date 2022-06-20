@@ -110,7 +110,8 @@ error:
    * https://tools.ietf.org/html/rfc7252#section-4.2 MUST send RST
    * https://tools.ietf.org/html/rfc7252#section-4.3 MAY send RST
    */
-  coap_send_rst(session, pdu);
+  if (session)
+    coap_send_rst(session, pdu);
   coap_delete_pdu(pdu);
   if (packet) {
     packet->pbuf = NULL;

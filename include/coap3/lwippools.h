@@ -66,7 +66,7 @@
 #endif
 
 #ifndef MEMP_LEN_COAPSTRING
-#define MEMP_LEN_COAPSTRING 32
+#define MEMP_LEN_COAPSTRING 40
 #endif
 
 #ifndef MEMP_NUM_COAPCACHE_KEYS
