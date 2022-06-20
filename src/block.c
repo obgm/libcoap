@@ -730,9 +730,9 @@ add_data:
 fail:
   if (lg_xmit) {
     coap_block_delete_lg_xmit(session, lg_xmit);
-  }
-  if (release_func)
+  } else if (release_func) {
     release_func(session, app_ptr);
+  }
   return 0;
 }
 
@@ -836,15 +836,20 @@ coap_add_data_large_response(coap_resource_t *resource,
                                     release_func, app_ptr,
                                     request->code)) {
     response->code = COAP_RESPONSE_CODE(500);
-    goto error;
+    goto error_released;
   }
 
   return 1;
 
 error:
+  if (release_func)
+    release_func(session, app_ptr);
+error_released:
+#if COAP_ERROR_PHRASE_LENGTH > 0
   coap_add_data(response,
                 strlen(coap_response_phrase(response->code)),
                 (const unsigned char *)coap_response_phrase(response->code));
+#endif /* COAP_ERROR_PHRASE_LENGTH > 0 */
   return 0;
 }
 #endif /* ! COAP_SERVER_SUPPORT */
@@ -857,7 +862,7 @@ coap_block_check_lg_xmit_timeouts(coap_session_t *session, coap_tick_t now) {
   coap_tick_t tim_rem = -1;
 
   LL_FOREACH_SAFE(session->lg_xmit, p, q) {
-    if (p->last_all_sent == 0 || p->option == COAP_OPTION_BLOCK2) {
+    if (p->last_all_sent == 0) {
       continue;
     }
     if (p->last_all_sent + idle_timeout <= now) {
@@ -1326,7 +1331,7 @@ internal_issue:
                   (const uint8_t *)error_phrase);
     /* Keep in cache for 4 * ACK_TIMOUT */
     if (p)
-    coap_ticks(&p->last_all_sent);
+      coap_ticks(&p->last_all_sent);
     goto skip_app_handler;
   } /* end of LL_FOREACH() */
   return 0;
@@ -2007,6 +2012,8 @@ coap_handle_response_get_block(coap_context_t *context,
           }
           block.num++;
           offset = block.num << (block.szx + 4);
+          if (!block.bert)
+            break;
         }
         block.num--;
         if (updated_block) {
