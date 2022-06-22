@@ -310,6 +310,7 @@ void coap_session_free(coap_session_t *session) {
       SESSIONS_DELETE(session->context->sessions, session);
   }
 #endif /* COAP_CLIENT_SUPPORT */
+  coap_delete_bin_const(session->last_token);
   coap_log(LOG_DEBUG, "***%s: session %p: closed\n", coap_session_str(session),
            (void *)session);
 
