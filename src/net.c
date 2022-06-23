@@ -2604,6 +2604,9 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_string_t *query = NULL;
   coap_opt_t *observe = NULL;
   coap_string_t *uri_path = NULL;
+  int observe_action = COAP_OBSERVE_CANCEL;
+  coap_block_b_t block;
+  int added_block = 0;
 #ifndef WITHOUT_ASYNC
   coap_bin_const_t tokenc = { pdu->token_length, pdu->token };
   coap_async_t *async;
@@ -2829,195 +2832,188 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     sizeof(resource->handler) / sizeof(coap_method_handler_t))
     h = resource->handler[pdu->code - 1];
 
-  if (h) {
-    if (context->mcast_per_resource &&
-        (resource->flags & COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT) == 0 &&
-        coap_is_mcast(&session->addr_info.local)) {
-      resp = 405;
-      goto fail_response;
-    }
-
-    response = coap_pdu_init(pdu->type == COAP_MESSAGE_CON
-      ? COAP_MESSAGE_ACK
-      : COAP_MESSAGE_NON,
-      0, pdu->mid, coap_session_max_pdu_size(session));
-    if (!response) {
-      coap_log(LOG_ERR, "could not create response PDU\n");
-      resp = 500;
-      goto fail_response;
-    }
-#ifndef WITHOUT_ASYNC
-    /* If handling a separate response, need CON, not ACK response */
-    if (async && pdu->type == COAP_MESSAGE_CON)
-      response->type = COAP_MESSAGE_CON;
-#endif /* WITHOUT_ASYNC */
-
-    /* Implementation detail: coap_add_token() immediately returns 0
-       if response == NULL */
-    if (coap_add_token(response, pdu->token_length, pdu->token)) {
-      int observe_action = COAP_OBSERVE_CANCEL;
-      coap_block_b_t block;
-      int added_block = 0;
-
-      query = coap_get_query(pdu);
-      /* check for Observe option RFC7641 and RFC8132 */
-      if (resource->observable &&
-          (pdu->code == COAP_REQUEST_CODE_GET ||
-           pdu->code == COAP_REQUEST_CODE_FETCH)) {
-        observe = coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter);
-        if (observe) {
-          observe_action =
-            coap_decode_var_bytes(coap_opt_value(observe),
-              coap_opt_length(observe));
-
-          if (observe_action == COAP_OBSERVE_ESTABLISH) {
-            coap_subscription_t *subscription;
-
-            if (coap_get_block_b(session, pdu, COAP_OPTION_BLOCK2, &block)) {
-              if (block.num != 0) {
-                response->code = COAP_RESPONSE_CODE(400);
-                goto skip_handler;
-              }
-            }
-            subscription = coap_add_observer(resource, session, &token,
-                                             pdu);
-            if (subscription) {
-              uint8_t buf[4];
-
-              coap_touch_observer(context, session, &token);
-              coap_add_option_internal(response, COAP_OPTION_OBSERVE,
-                                       coap_encode_var_safe(buf, sizeof (buf),
-                                                            resource->observe),
-                                       buf);
-            }
-          }
-          else if (observe_action == COAP_OBSERVE_CANCEL) {
-            coap_delete_observer(resource, session, &token);
-          }
-          else {
-            coap_log(LOG_INFO, "observe: unexpected action %d\n", observe_action);
-          }
-        }
-      }
-
-      if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
-        if (coap_handle_request_put_block(context, session, pdu, response,
-                                          resource, uri_path, observe,
-                                          query, h, &added_block)) {
-          goto skip_handler;
-        }
-
-        if (coap_handle_request_send_block(session, pdu, response, resource,
-                                           query)) {
-          goto skip_handler;
-        }
-      }
-
-      /*
-       * Call the request handler with everything set up
-       */
-      coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
-               (int)resource->uri_path->length, (int)resource->uri_path->length,
-               resource->uri_path->s);
-      h(resource, session, pdu, query, response);
-
-      /* Check if lg_xmit generated and update PDU code if so */
-      coap_check_code_lg_xmit(session, response, resource, query, pdu->code);
-
-skip_handler:
-      respond = no_response(pdu, response, session, resource);
-      if (respond != RESPONSE_DROP) {
-        coap_mid_t mid = pdu->mid;
-        if (COAP_RESPONSE_CLASS(response->code) != 2) {
-          if (observe) {
-            coap_remove_option(response, COAP_OPTION_OBSERVE);
-          }
-        }
-        if (COAP_RESPONSE_CLASS(response->code) > 2) {
-          if (observe)
-            coap_delete_observer(resource, session, &token);
-          if (added_block)
-            coap_remove_option(response, COAP_OPTION_BLOCK1);
-        }
-
-        /* If original request contained a token, and the registered
-         * application handler made no changes to the response, then
-         * this is an empty ACK with a token, which is a malformed
-         * PDU */
-        if ((response->type == COAP_MESSAGE_ACK)
-          && (response->code == 0)) {
-          /* Remove token from otherwise-empty acknowledgment PDU */
-          response->token_length = 0;
-          response->used_size = 0;
-        }
-
-        if (!coap_is_mcast(&session->addr_info.local) ||
-            (context->mcast_per_resource &&
-              resource &&
-              (resource->flags & COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS))) {
-          if (coap_send_internal(session, response) == COAP_INVALID_MID) {
-            coap_log(LOG_DEBUG, "cannot send response for mid=0x%x\n", mid);
-          }
-        } else {
-          /* Need to delay mcast response */
-          coap_queue_t *node = coap_new_node();
-          uint8_t r;
-          coap_tick_t delay;
-
-          if (!node) {
-            coap_log(LOG_DEBUG, "mcast delay: insufficient memory\n");
-            goto clean_up;
-          }
-          if (!coap_pdu_encode_header(response, session->proto)) {
-            goto clean_up;
-          }
-
-          node->id = response->mid;
-          node->pdu = response;
-          coap_prng(&r, sizeof(r));
-          delay = (COAP_DEFAULT_LEISURE_TICKS(session) * r) / 256;
-          coap_log(LOG_DEBUG,
-                   "   %s: mid=0x%x: mcast response delayed for %u.%03u secs\n",
-                   coap_session_str(session),
-                   response->mid,
-                   (unsigned int)(delay / COAP_TICKS_PER_SECOND),
-                   (unsigned int)((delay % COAP_TICKS_PER_SECOND) *
-                     1000 / COAP_TICKS_PER_SECOND));
-          /* Force only on retransmission */
-          node->retransmit_cnt = session->max_retransmit -1;
-          node->timeout = (unsigned int)(delay) /
-                                        (1 << (session->max_retransmit - 1));
-          /* Use this to delay transmission */
-          coap_wait_ack(session->context, session, node);
-        }
-      } else {
-        coap_log(LOG_DEBUG, "   %s: mid=0x%x: response dropped\n",
-                 coap_session_str(session),
-                 response->mid);
-        coap_show_pdu(LOG_DEBUG, response);
-        coap_delete_pdu(response);
-      }
-clean_up:
-      if (query)
-        coap_delete_string(query);
-    } else {
-      coap_log(LOG_WARNING, "cannot generate response\r\n");
-      coap_delete_pdu(response);
-    }
-  } else {
+  if (h == NULL) {
+    resp = 405;
+    goto fail_response;
+  }
+  if (context->mcast_per_resource &&
+      (resource->flags & COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT) == 0 &&
+      coap_is_mcast(&session->addr_info.local)) {
     resp = 405;
     goto fail_response;
   }
 
+  response = coap_pdu_init(pdu->type == COAP_MESSAGE_CON
+    ? COAP_MESSAGE_ACK
+    : COAP_MESSAGE_NON,
+    0, pdu->mid, coap_session_max_pdu_size(session));
+  if (!response) {
+    coap_log(LOG_ERR, "could not create response PDU\n");
+    resp = 500;
+    goto fail_response;
+  }
+#ifndef WITHOUT_ASYNC
+  /* If handling a separate response, need CON, not ACK response */
+  if (async && pdu->type == COAP_MESSAGE_CON)
+    response->type = COAP_MESSAGE_CON;
+#endif /* WITHOUT_ASYNC */
+
+  if (!coap_add_token(response, pdu->token_length, pdu->token)) {
+    resp = 500;
+    goto fail_response;
+  }
+
+  query = coap_get_query(pdu);
+  /* check for Observe option RFC7641 and RFC8132 */
+  if (resource->observable &&
+      (pdu->code == COAP_REQUEST_CODE_GET ||
+       pdu->code == COAP_REQUEST_CODE_FETCH)) {
+    observe = coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter);
+    if (observe) {
+      observe_action =
+        coap_decode_var_bytes(coap_opt_value(observe),
+          coap_opt_length(observe));
+
+      if (observe_action == COAP_OBSERVE_ESTABLISH) {
+        coap_subscription_t *subscription;
+
+        if (coap_get_block_b(session, pdu, COAP_OPTION_BLOCK2, &block)) {
+          if (block.num != 0) {
+            response->code = COAP_RESPONSE_CODE(400);
+            goto output_check;
+          }
+        }
+        subscription = coap_add_observer(resource, session, &token,
+                                         pdu);
+        if (subscription) {
+          uint8_t buf[4];
+
+          coap_touch_observer(context, session, &token);
+          coap_add_option_internal(response, COAP_OPTION_OBSERVE,
+                                   coap_encode_var_safe(buf, sizeof (buf),
+                                                        resource->observe),
+                                   buf);
+        }
+      }
+      else if (observe_action == COAP_OBSERVE_CANCEL) {
+        coap_delete_observer(resource, session, &token);
+      }
+      else {
+        coap_log(LOG_INFO, "observe: unexpected action %d\n", observe_action);
+      }
+    }
+  }
+
+  if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
+    if (coap_handle_request_put_block(context, session, pdu, response,
+                                      resource, uri_path, observe,
+                                      query, h, &added_block)) {
+      goto output_check;
+    }
+
+    if (coap_handle_request_send_block(session, pdu, response, resource,
+                                       query)) {
+      goto output_check;
+    }
+  }
+
+  /*
+   * Call the request handler with everything set up
+   */
+  coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
+           (int)resource->uri_path->length, (int)resource->uri_path->length,
+           resource->uri_path->s);
+  h(resource, session, pdu, query, response);
+
+  /* Check if lg_xmit generated and update PDU code if so */
+  coap_check_code_lg_xmit(session, response, resource, query, pdu->code);
+
+output_check:
+  respond = no_response(pdu, response, session, resource);
+  if (respond != RESPONSE_DROP) {
+    coap_mid_t mid = pdu->mid;
+    if (COAP_RESPONSE_CLASS(response->code) != 2) {
+      if (observe) {
+        coap_remove_option(response, COAP_OPTION_OBSERVE);
+      }
+    }
+    if (COAP_RESPONSE_CLASS(response->code) > 2) {
+      if (observe)
+        coap_delete_observer(resource, session, &token);
+      if (added_block)
+        coap_remove_option(response, COAP_OPTION_BLOCK1);
+    }
+
+    /* If original request contained a token, and the registered
+     * application handler made no changes to the response, then
+     * this is an empty ACK with a token, which is a malformed
+     * PDU */
+    if ((response->type == COAP_MESSAGE_ACK)
+      && (response->code == 0)) {
+      /* Remove token from otherwise-empty acknowledgment PDU */
+      response->token_length = 0;
+      response->used_size = 0;
+    }
+
+    if (!coap_is_mcast(&session->addr_info.local) ||
+        (context->mcast_per_resource &&
+          resource &&
+          (resource->flags & COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS))) {
+      if (coap_send_internal(session, response) == COAP_INVALID_MID) {
+        coap_log(LOG_DEBUG, "cannot send response for mid=0x%x\n", mid);
+      }
+    } else {
+      /* Need to delay mcast response */
+      coap_queue_t *node = coap_new_node();
+      uint8_t r;
+      coap_tick_t delay;
+
+      if (!node) {
+        coap_log(LOG_DEBUG, "mcast delay: insufficient memory\n");
+        goto clean_up;
+      }
+      if (!coap_pdu_encode_header(response, session->proto)) {
+        goto clean_up;
+      }
+
+      node->id = response->mid;
+      node->pdu = response;
+      coap_prng(&r, sizeof(r));
+      delay = (COAP_DEFAULT_LEISURE_TICKS(session) * r) / 256;
+      coap_log(LOG_DEBUG,
+               "   %s: mid=0x%x: mcast response delayed for %u.%03u secs\n",
+               coap_session_str(session),
+               response->mid,
+               (unsigned int)(delay / COAP_TICKS_PER_SECOND),
+               (unsigned int)((delay % COAP_TICKS_PER_SECOND) *
+                 1000 / COAP_TICKS_PER_SECOND));
+      /* Force only on retransmission */
+      node->retransmit_cnt = session->max_retransmit -1;
+      node->timeout = (unsigned int)(delay) /
+                                    (1 << (session->max_retransmit - 1));
+      /* Use this to delay transmission */
+      coap_wait_ack(session->context, session, node);
+    }
+  } else {
+    coap_log(LOG_DEBUG, "   %s: mid=0x%x: response dropped\n",
+             coap_session_str(session),
+             response->mid);
+    coap_show_pdu(LOG_DEBUG, response);
+    coap_delete_pdu(response);
+  }
+clean_up:
+  if (query)
+    coap_delete_string(query);
   coap_delete_string(uri_path);
   return;
 
 fail_response:
+  coap_delete_pdu(response);
   response =
      coap_new_error_response(pdu, COAP_RESPONSE_CODE(resp),
        &opt_filter);
   if (response)
-    goto skip_handler;
+    goto output_check;
   coap_delete_string(uri_path);
 }
 #endif /* COAP_SERVER_SUPPORT */
