@@ -2265,6 +2265,7 @@ ssize_t coap_tls_write(coap_session_t *c_session,
       case MBEDTLS_ERR_SSL_WANT_WRITE:
         ret = 0;
         break;
+      case MBEDTLS_ERR_NET_CONN_RESET:
       case MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE:
         c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
         ret = -1;
