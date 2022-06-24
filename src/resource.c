@@ -899,7 +899,7 @@ static void
 coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                       coap_deleting_resource_t deleting) {
   coap_method_handler_t h;
-  coap_subscription_t *obs;
+  coap_subscription_t *obs, *otmp;
   coap_binary_t token;
   coap_pdu_t *response;
   uint8_t buf[4];
@@ -910,7 +910,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
   if (r->observable && (r->dirty || r->partiallydirty)) {
     r->partiallydirty = 0;
 
-    LL_FOREACH(r->subscribers, obs) {
+    LL_FOREACH_SAFE(r->subscribers, obs, otmp) {
       if (r->dirty == 0 && obs->dirty == 0) {
         /*
          * running this resource due to partiallydirty, but this observation's
