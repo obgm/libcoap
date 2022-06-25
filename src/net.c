@@ -3033,6 +3033,23 @@ handle_response(coap_context_t *context, coap_session_t *session,
   if (rcvd->type != COAP_MESSAGE_ACK)
     coap_cancel_all_messages(context, session, rcvd->token, rcvd->token_length);
 
+  /* Check for message duplication */
+  if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+    if (rcvd->type == COAP_MESSAGE_CON) {
+      if (rcvd->mid == session->last_con_mid) {
+        /* Duplicate response */
+        return;
+      }
+      session->last_con_mid = rcvd->mid;
+    } else if (rcvd->type == COAP_MESSAGE_ACK) {
+      if (rcvd->mid == session->last_ack_mid) {
+        /* Duplicate response */
+        return;
+      }
+      session->last_ack_mid = rcvd->mid;
+    }
+  }
+
   if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
     /* See if need to send next block to server */
     if (coap_handle_response_send_block(session, sent, rcvd)) {

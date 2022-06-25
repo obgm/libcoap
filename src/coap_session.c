@@ -209,6 +209,8 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   session->probing_rate = COAP_DEFAULT_PROBING_RATE;
   session->dtls_event = -1;
   session->last_ping_mid = COAP_INVALID_MID;
+  session->last_ack_mid = COAP_INVALID_MID;
+  session->last_con_mid = COAP_INVALID_MID;
 
   /* Randomly initialize */
   coap_prng((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));
