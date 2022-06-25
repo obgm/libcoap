@@ -1073,6 +1073,8 @@ set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method)
     pki_ciphers = mbedtls_malloc(pki_count * sizeof(pki_ciphers[0]));
     if (pki_ciphers == NULL) {
       coap_log(LOG_ERR, "set_ciphers: mbedtls_malloc with count %d failed\n", pki_count);
+      mbedtls_free(psk_ciphers);
+      psk_ciphers = NULL;
       return;
     }
 
@@ -2384,6 +2386,13 @@ void coap_dtls_startup(void)
 }
 
 void coap_dtls_shutdown(void) {
+#if COAP_CLIENT_SUPPORT
+  mbedtls_free(psk_ciphers);
+  mbedtls_free(pki_ciphers);
+  psk_ciphers = NULL;
+  pki_ciphers = NULL;
+  processed_ciphers = 0;
+#endif /* COAP_CLIENT_SUPPORT */
 }
 
 void *
