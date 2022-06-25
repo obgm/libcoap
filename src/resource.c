@@ -1032,14 +1032,20 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       mid = coap_send_internal( obs->session, response );
 
       if (COAP_INVALID_MID == mid) {
+        coap_subscription_t *s;
         coap_log(LOG_DEBUG,
                  "coap_check_notify: sending failed, resource stays "
                  "partially dirty\n");
-        obs->dirty = 1;
+        LL_FOREACH(r->subscribers, s) {
+          if (s == obs) {
+            /* obs not deleted during coap_send_internal() */
+            obs->dirty = 1;
+            break;
+          }
+        }
         r->partiallydirty = 1;
         context->observe_pending = 1;
       }
-
     }
   }
   r->dirty = 0;
