@@ -1110,7 +1110,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
      */
     pdu = coap_pdu_init(req_type, req_code,
                         coap_new_message_id(ongoing),
-                        coap_session_max_pdu_size(session));
+                        coap_session_max_pdu_size(ongoing));
     if (!pdu) {
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       goto cleanup;
@@ -1208,7 +1208,7 @@ add_in:
     coap_delete_optlist(optlist);
 
     if (size) {
-      if (!coap_add_data_large_request(session, pdu, size, data,
+      if (!coap_add_data_large_request(ongoing, pdu, size, data,
                                        release_proxy_body_data, body_data)) {
         coap_log(LOG_DEBUG, "cannot add data to proxy request\n");
       }
