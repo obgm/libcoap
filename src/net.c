@@ -2600,6 +2600,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   int is_proxy_scheme = 0;
   int skip_hop_limit_check = 0;
   int resp;
+  int send_early_empty_ack = 0;
   coap_binary_t token = { pdu->token_length, pdu->token };
   coap_string_t *query = NULL;
   coap_opt_t *observe = NULL;
@@ -2900,6 +2901,24 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
         }
       }
 
+      /* TODO for non-proxy requests */
+      if (resource == context->proxy_uri_resource &&
+          COAP_PROTO_NOT_RELIABLE(session->proto) &&
+          pdu->type == COAP_MESSAGE_CON) {
+        /* Make the proxy response separate and fix response later */
+        send_early_empty_ack = 1;
+      }
+      if (send_early_empty_ack) {
+        coap_send_ack(session, pdu);
+        if (pdu->mid == session->last_con_mid) {
+          /* request has already been processed - do not process it again */
+          coap_log(LOG_DEBUG,
+                   "Duplicate request with mid=0x%04x - not processed\n",
+                   pdu->mid);
+          goto drop_it_no_debug;
+        }
+        session->last_con_mid = pdu->mid;
+      }
       if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
         if (coap_handle_request_put_block(context, session, pdu, response,
                                           resource, uri_path, observe,
@@ -2925,6 +2944,15 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       coap_check_code_lg_xmit(session, response, resource, query, pdu->code);
 
 skip_handler:
+      if (send_early_empty_ack &&
+          response->type == COAP_MESSAGE_ACK) {
+        /* Response is now separate - convert to CON as needed */
+        response->type = COAP_MESSAGE_CON;
+        /* Check for empty ACK - need to drop as already sent */
+        if (response->code == 0) {
+          goto drop_it_no_debug;
+        }
+      }
       respond = no_response(pdu, response, session, resource);
       if (respond != RESPONSE_DROP) {
         coap_mid_t mid = pdu->mid;
@@ -2969,6 +2997,7 @@ skip_handler:
             goto clean_up;
           }
           if (!coap_pdu_encode_header(response, session->proto)) {
+            coap_delete_node(node);
             goto clean_up;
           }
 
@@ -2995,6 +3024,7 @@ skip_handler:
                  coap_session_str(session),
                  response->mid);
         coap_show_pdu(LOG_DEBUG, response);
+drop_it_no_debug:
         coap_delete_pdu(response);
       }
 clean_up:
