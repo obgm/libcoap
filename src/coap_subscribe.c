@@ -1,7 +1,7 @@
-/* subscribe.c -- subscription handling for CoAP
- *                see draft-ietf-coap-observe-16
+/* coap_subscribe.c -- subscription handling for CoAP
+ *                see RFC7641
  *
- * Copyright (C) 2010--2019 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2019,2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -10,7 +10,7 @@
  */
 
 /**
- * @file subscribe.c
+ * @file coap_subscribe.c
  * @brief Subscription handling functions
  */
 

@@ -449,36 +449,28 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/tests/test_common.h.in
 
 target_sources(
   ${COAP_LIBRARY_NAME}
-  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/address.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/net.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/coap_debug.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/encode.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/uri.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/subscribe.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/resource.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/str.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/option.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/async.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/block.c
+  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/coap_address.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_asn1.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_async.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_cache.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_debug.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_event.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_io.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_notls.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_option.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_prng.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_session.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_subscribe.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_tcp.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_time.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/block.c
           ${CMAKE_CURRENT_LIST_DIR}/src/encode.c
           ${CMAKE_CURRENT_LIST_DIR}/src/mem.c
           ${CMAKE_CURRENT_LIST_DIR}/src/net.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/option.c
           ${CMAKE_CURRENT_LIST_DIR}/src/pdu.c
           ${CMAKE_CURRENT_LIST_DIR}/src/resource.c
           ${CMAKE_CURRENT_LIST_DIR}/src/str.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/subscribe.c
           ${CMAKE_CURRENT_LIST_DIR}/src/uri.c
           # no need to parse those files if we do not need them
           $<$<BOOL:${HAVE_OPENSSL}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openssl.c>
@@ -486,29 +478,29 @@ target_sources(
           $<$<BOOL:${HAVE_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
           $<$<BOOL:${HAVE_MBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
           # headers
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/address.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/async.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/block.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_address.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_async.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_cache.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_debug.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_dtls.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_event.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_hashkey.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_io.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_option.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_prng.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_session.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_subscribe.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_time.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/block.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/encode.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/libcoap.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/lwippools.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/mem.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/net.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/option.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/pdu.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_prng.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/resource.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/str.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/subscribe.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/uri.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/uthash.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/utlist.h)

@@ -14,7 +14,7 @@
 #include "coap_internal.h"
 #include "net.h"
 #include "resource.h"
-#include "subscribe.h"
+#include "coap_subscribe.h"
 
 #ifndef MEMP_NUM_COAPCONTEXT
 #define MEMP_NUM_COAPCONTEXT 1

@@ -1,7 +1,7 @@
 /*
- * address.h -- representation of network addresses
+ * coap_address.h -- representation of network addresses
  *
- * Copyright (C) 2010-2011,2015-2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2011,2015-2016,2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -10,7 +10,7 @@
  */
 
 /**
- * @file address.h
+ * @file coap_address.h
  * @brief Representation of network addresses
  */
 

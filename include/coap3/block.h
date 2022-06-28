@@ -19,7 +19,7 @@
 #define COAP_BLOCK_H_
 
 #include "encode.h"
-#include "option.h"
+#include "coap_option.h"
 #include "pdu.h"
 
 /**

@@ -45,7 +45,7 @@ CFLAGS += -I$(top_srcdir)/include -I$(coap_include_dir)
 
 vpath %.c $(top_srcdir)/src
 
-COAPOBJS = net.o coap_cache.o coap_debug.o option.o resource.o pdu.o encode.o subscribe.o coap_io_lwip.o block.o uri.o str.o coap_session.o coap_notls.o coap_hashkey.o address.o coap_tcp.o async.o
+COAPOBJS = net.o coap_cache.o coap_debug.o coap_option.o resource.o pdu.o encode.o coap_subscribe.o coap_io_lwip.o block.o uri.o str.o coap_session.o coap_notls.o coap_hashkey.o coap_address.o coap_tcp.o coap_async.o
 
 CFLAGS += -g3 -Wall -Wextra -pedantic -O0
 # not sorted out yet

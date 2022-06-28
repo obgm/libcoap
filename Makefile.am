@@ -102,10 +102,10 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_CFLAGS = \
 ## Note that it is not necessary to list header files which are already listed
 ## elsewhere in a _HEADERS variable assignment.
 libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
-  src/address.c \
-  src/async.c \
   src/block.c \
+  src/coap_address.c \
   src/coap_asn1.c \
+  src/coap_async.c \
   src/coap_cache.c \
   src/coap_debug.c \
   src/coap_event.c \
@@ -115,19 +115,19 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_mbedtls.c \
   src/coap_notls.c \
   src/coap_openssl.c \
+  src/coap_option.c \
   src/coap_prng.c \
   src/coap_session.c \
+  src/coap_subscribe.c \
   src/coap_tcp.c \
   src/coap_time.c \
   src/coap_tinydtls.c \
   src/encode.c \
   src/mem.c \
   src/net.c \
-  src/option.c \
   src/pdu.c \
   src/resource.c \
   src/str.c \
-  src/subscribe.c \
   src/uri.c
 
 ## Define the list of public header files and their install location.
@@ -142,10 +142,10 @@ libcoap_includedir = $(includedir)/coap$(LIBCOAP_API_VERSION)/
 #  $(top_srcdir)/include/coap-$(LIBCOAP_API_VERSION)/*
 
 libcoap_include_HEADERS = \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/address.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/async.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/block.h \
   $(top_builddir)/include/coap$(LIBCOAP_API_VERSION)/coap.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_address.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_async.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_cache.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_debug.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_dtls.h \
@@ -154,18 +154,18 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_hashkey.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_io.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_mutex.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_option.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_session.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_subscribe.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_time.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/encode.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/libcoap.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/mem.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/net.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/option.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/pdu.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_prng.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/resource.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/str.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/subscribe.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/uri.h
 
 ## Instruct libtool to include API version information in the generated shared
