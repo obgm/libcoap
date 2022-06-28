@@ -1,7 +1,7 @@
 /*
  * resource.h -- generic resource handling
  *
- * Copyright (C) 2010,2011,2014-2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011,2014-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -22,12 +22,12 @@
 #define COAP_RESOURCE_CHECK_TIME 2
 #endif /* COAP_RESOURCE_CHECK_TIME */
 
-#include "async.h"
+#include "coap_async.h"
 #include "block.h"
 #include "str.h"
 #include "pdu.h"
 #include "net.h"
-#include "subscribe.h"
+#include "coap_subscribe.h"
 
 /**
  * @ingroup application_api

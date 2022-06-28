@@ -1,5 +1,5 @@
 /*
- * async.h -- state management for asynchronous messages
+ * coap_async.h -- state management for asynchronous messages
  *
  * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -10,7 +10,7 @@
  */
 
 /**
- * @file async.h
+ * @file coap_async.h
  * @brief State management for asynchronous messages
  */
 

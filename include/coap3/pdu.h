@@ -19,7 +19,7 @@
 #define COAP_PDU_H_
 
 #include "uri.h"
-#include "option.h"
+#include "coap_option.h"
 
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
