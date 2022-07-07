@@ -1,7 +1,7 @@
 /*
  * coap_asn1_internal.h -- ASN.1 functions for libcoap
  *
- * Copyright (C) 2020 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2020-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -17,6 +17,11 @@
 #ifndef COAP_ASN1_INTERNAL_H_
 #define COAP_ASN1_INTERNAL_H_
 
+/*
+ * Only include files should be those that are from include/coap3.  If
+ * other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "coap_internal.h"
 
 /**

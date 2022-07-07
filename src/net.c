@@ -58,12 +58,6 @@
 #include <netdb.h>
 #endif
 
-#ifdef WITH_LWIP
-#include <lwip/pbuf.h>
-#include <lwip/udp.h>
-#include <lwip/timeouts.h>
-#endif
-
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 40
 #endif
@@ -99,7 +93,7 @@
 /** creates a Qx.FRAC_BITS from session's 'ack_timeout' */
 #define ACK_TIMEOUT Q(FRAC_BITS, session->ack_timeout)
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_CONTIKI)
 
 COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node(void) {
@@ -110,26 +104,8 @@ COAP_STATIC_INLINE void
 coap_free_node(coap_queue_t *node) {
   coap_free_type(COAP_NODE, node);
 }
-#endif /* !defined(WITH_LWIP) && !defined(WITH_CONTIKI) */
+#endif /* !defined(WITH_CONTIKI) */
 
-#ifdef WITH_LWIP
-
-#include <lwip/memp.h>
-
-static void coap_retransmittimer_execute(void *arg);
-static void coap_retransmittimer_restart(coap_context_t *ctx);
-
-COAP_STATIC_INLINE coap_queue_t *
-coap_malloc_node() {
-  return (coap_queue_t *)memp_malloc(MEMP_COAP_NODE);
-}
-
-COAP_STATIC_INLINE void
-coap_free_node(coap_queue_t *node) {
-  memp_free(MEMP_COAP_NODE, node);
-}
-
-#endif /* WITH_LWIP */
 #ifdef WITH_CONTIKI
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT
@@ -571,10 +547,8 @@ coap_new_context(
   }
 #endif /* COAP_SERVER_SUPPORT */
 
-#if !defined(WITH_LWIP)
   c->network_send = coap_network_send;
   c->network_read = coap_network_read;
-#endif
 
 #ifdef WITH_CONTIKI
   process_start(&coap_retransmit_process, (char *)c);
@@ -618,11 +592,6 @@ coap_free_context(coap_context_t *context) {
 #endif /* COAP_SERVER_SUPPORT */
 
   coap_delete_all(context->sendqueue);
-
-#ifdef WITH_LWIP
-  context->sendqueue = NULL;
-  coap_retransmittimer_restart(context);
-#endif
 
 #ifndef WITHOUT_ASYNC
   coap_delete_all_async(context);
@@ -803,26 +772,6 @@ static ssize_t
 coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
   ssize_t bytes_written;
 
-#ifdef WITH_LWIP
-
-  coap_socket_t *sock = &session->sock;
-  if (sock->flags == COAP_SOCKET_EMPTY) {
-    assert(session->endpoint != NULL);
-    sock = &session->endpoint->sock;
-  }
-
-  bytes_written = coap_socket_send_pdu(sock, session, pdu);
-  if (bytes_written >= 0 && pdu->type == COAP_MESSAGE_CON &&
-      COAP_PROTO_NOT_RELIABLE(session->proto))
-    session->con_active++;
-
-  if (LOG_DEBUG <= coap_get_log_level()) {
-    coap_show_pdu(LOG_DEBUG, pdu);
-  }
-  coap_ticks(&session->last_rx_tx);
-
-#else
-
   if (session->state == COAP_SESSION_STATE_NONE) {
 #if ! COAP_CLIENT_SUPPORT
     return -1;
@@ -901,8 +850,6 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
   if (bytes_written >= 0 && pdu->type == COAP_MESSAGE_CON &&
       COAP_PROTO_NOT_RELIABLE(session->proto))
     session->con_active++;
-
-#endif /* WITH_LWIP */
 
   return bytes_written;
 }
@@ -1005,11 +952,6 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
 
   coap_insert_node(&context->sendqueue, node);
 
-#ifdef WITH_LWIP
-  if (node == context->sendqueue) /* don't bother with timer stuff if there are earlier retransmits */
-    coap_retransmittimer_restart(context);
-#endif
-
 #ifdef WITH_CONTIKI
   {                            /* (re-)initialize retransmission timer */
     coap_queue_t *nextpdu;
@@ -1047,15 +989,6 @@ coap_client_delay_first(coap_session_t *session)
   if (session->type == COAP_SESSION_TYPE_CLIENT && session->doing_first) {
     if (session->doing_first) {
       int timeout_ms = 5000;
-#ifdef WITH_LWIP
-#include <netif/tapif.h>
-      struct netif *netif = ip_route(&session->sock.pcb->local_ip,
-                                     &session->addr_info.remote.addr);
-      if (!netif) {
-        session->doing_first = 0;
-        return 1;
-      }
-#endif /* WITH_LWIP */
 
       if (session->delay_recursive) {
         assert(0);
@@ -1069,16 +1002,7 @@ coap_client_delay_first(coap_session_t *session)
        */
       coap_session_reference(session);
       while (session->doing_first != 0) {
-#ifndef WITH_LWIP
         int result = coap_io_process(session->context, 1000);
-#else /* WITH_LWIP */
-        int result;
-        coap_tick_t start;
-        coap_tick_t end;
-
-        coap_ticks(&start);
-        result = tapif_select(netif);
-#endif /* WITH_LWIP */
 
         if (result < 0) {
           session->doing_first = 0;
@@ -1086,11 +1010,6 @@ coap_client_delay_first(coap_session_t *session)
           coap_session_release(session);
           return 0;
         }
-#ifdef WITH_LWIP
-        sys_check_timeouts();
-        coap_ticks(&end);
-        result = (end - start) * 1000 / COAP_TICKS_PER_SECOND;
-#endif /* WITH_LWIP */
         if (result <= timeout_ms) {
           timeout_ms -= result;
         } else {
@@ -1463,10 +1382,6 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
       node->t = (now - context->sendqueue_basetime) + (node->timeout << node->retransmit_cnt);
     }
     coap_insert_node(&context->sendqueue, node);
-#ifdef WITH_LWIP
-    if (node == context->sendqueue) /* don't bother with timer stuff if there are earlier retransmits */
-      coap_retransmittimer_restart(context);
-#endif
 
     if (node->retransmit_cnt == node->session->max_retransmit) {
       coap_log(LOG_DEBUG, "** %s: mid=0x%x: final retransmission\n",
@@ -1532,14 +1447,6 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   coap_delete_node(node);
   return COAP_INVALID_MID;
 }
-
-#ifdef WITH_LWIP
-/* WITH_LWIP, this is handled by coap_recv in a different way */
-void
-coap_io_do_io(coap_context_t *ctx, coap_tick_t now) {
-  return;
-}
-#else /* WITH_LWIP */
 
 static int
 coap_handle_dgram_for_proto(coap_context_t *ctx, coap_session_t *session, coap_packet_t *packet) {
@@ -1693,7 +1600,6 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
     ssize_t bytes_read = 0;
     const uint8_t *p;
     int retry;
-    /* adjust for LWIP */
     uint8_t *buf = packet->payload;
     size_t buf_len = sizeof(packet->payload);
 
@@ -2066,7 +1972,6 @@ error:
   coap_delete_pdu(pdu);
   return -1;
 }
-#endif /* not WITH_LWIP */
 
 int
 coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_mid_t id, coap_queue_t **node) {
@@ -2608,6 +2513,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_bin_const_t tokenc = { pdu->token_length, pdu->token };
   coap_async_t *async;
 #endif /* WITHOUT_ASYNC */
+  int added_block = 0;
 
   if (coap_is_mcast(&session->addr_info.local)) {
     if (COAP_PROTO_RELIABLE(session->proto) || pdu->type != COAP_MESSAGE_NON) {
@@ -2857,7 +2763,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     if (coap_add_token(response, pdu->token_length, pdu->token)) {
       int observe_action = COAP_OBSERVE_CANCEL;
       coap_block_b_t block;
-      int added_block = 0;
 
       query = coap_get_query(pdu);
       /* check for Observe option RFC7641 and RFC8132 */
@@ -3387,13 +3292,23 @@ coap_check_async(coap_context_t *context, coap_tick_t now) {
 
 static int coap_started = 0;
 
-void coap_startup(void) {
+#ifdef WITH_LWIP
+static void
+coap_lwip_startup(void);
+#endif /* WITH_LWIP */
+
+void
+coap_startup(void) {
   coap_tick_t now;
   uint64_t us;
 
   if (coap_started)
     return;
   coap_started = 1;
+#ifdef WITH_LWIP
+  coap_lwip_startup();
+#endif /* WITH_LWIP */
+
 #if defined(HAVE_WINSOCK2_H)
   WORD wVersionRequested = MAKEWORD(2, 2);
   WSADATA wsaData;
@@ -3457,7 +3372,7 @@ coap_register_option(coap_context_t *ctx, uint16_t type) {
   coap_option_filter_set(&ctx->known_options, type);
 }
 
-#if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION
+#if ! defined WITH_CONTIKI && ! defined RIOT_VERSION
 #if COAP_SERVER_SUPPORT
 int
 coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
@@ -3718,7 +3633,7 @@ coap_mcast_set_hops(coap_session_t *session, size_t hops) {
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
-#else /* defined WITH_CONTIKI || defined WITH_LWIP */
+#else /* defined WITH_CONTIKI */
 int
 coap_join_mcast_group_intf(coap_context_t *ctx COAP_UNUSED,
                            const char *group_name COAP_UNUSED,
@@ -3735,7 +3650,7 @@ coap_mcast_set_hops(coap_session_t *session COAP_UNUSED,
 void
 coap_mcast_per_resource(coap_context_t *context COAP_UNUSED) {
 }
-#endif /* defined WITH_CONTIKI || defined WITH_LWIP */
+#endif /* defined WITH_CONTIKI */
 
 #ifdef WITH_CONTIKI
 
@@ -3781,79 +3696,109 @@ PROCESS_THREAD(coap_retransmit_process, ev, data) {
 #endif /* WITH_CONTIKI */
 
 #ifdef WITH_LWIP
-/* FIXME: retransmits that are not required any more due to incoming packages
- * do *not* get cleared at the moment, the wakeup when the transmission is due
- * is silently accepted. this is mainly due to the fact that the required
- * checks are similar in two places in the code (when receiving ACK and RST)
- * and that they cause more than one patch chunk, as it must be first checked
- * whether the sendqueue item to be dropped is the next one pending, and later
- * the restart function has to be called. nothing insurmountable, but it can
- * also be implemented when things have stabilized, and the performance
- * penality is minimal
- *
- * also, this completely ignores COAP_RESOURCE_CHECK_TIME.
- * */
 
-static void coap_retransmittimer_execute(void *arg) {
-  coap_context_t *ctx = (coap_context_t*)arg;
-  coap_tick_t now;
-  coap_tick_t elapsed;
-  coap_queue_t *nextinqueue;
-
-  ctx->timer_configured = 0;
-
-  coap_ticks(&now);
-
-  elapsed = now - ctx->sendqueue_basetime; /* that's positive for sure, and unless we haven't been called for a complete wrapping cycle, did not wrap */
-
-  nextinqueue = coap_peek_next(ctx);
-  while (nextinqueue != NULL) {
-    if (nextinqueue->t > elapsed) {
-      nextinqueue->t -= elapsed;
-      break;
-    } else {
-      elapsed -= nextinqueue->t;
-      coap_retransmit(ctx, coap_pop_next(ctx));
-      nextinqueue = coap_peek_next(ctx);
-    }
-  }
-
-  ctx->sendqueue_basetime = now;
-
-  coap_retransmittimer_restart(ctx);
-}
-
-static void coap_retransmittimer_restart(coap_context_t *ctx) {
-  coap_tick_t now, elapsed, delay;
-
-  if (ctx->timer_configured) {
-    printf("clearing\n");
-    sys_untimeout(coap_retransmittimer_execute, (void*)ctx);
-    ctx->timer_configured = 0;
-  }
-  if (ctx->sendqueue != NULL) {
-    coap_ticks(&now);
-    elapsed = now - ctx->sendqueue_basetime;
-    if (ctx->sendqueue->t >= elapsed) {
-      delay = ctx->sendqueue->t - elapsed;
-    } else {
-      /* a strange situation, but not completely impossible.
-       *
-       * this happens, for example, right after
-       * coap_retransmittimer_execute, when a retransmission
-       * was *just not yet* due, and the clock ticked before
-       * our coap_ticks was called.
-       *
-       * not trying to retransmit anything now, as it might
-       * cause uncontrollable recursion; let's just try again
-       * with the next main loop run.
-       * */
-      delay = 0;
-    }
-
-    printf("scheduling for %d ticks\n", delay);
-    sys_timeout(delay, coap_retransmittimer_execute, (void*)ctx);
-    ctx->timer_configured = 1;
-  }
-}
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wunused-variable"
 #endif
+
+#include <lwip/init.h>
+#include <netif/etharp.h>
+#include <netif/tapif.h>
+#include <lwip/netif.h>
+static struct netif netif;
+/* No idea as to why this has to be after 'struct netif', but
+ * get compile failures if not */
+#include <lwip/tcpip.h>
+
+static ip4_addr_t ipaddr, netmask, gw;
+
+static void
+coap_lwip_startup(void) {
+
+  /* Initial startup defaults
+   *
+   * Will be updated if endpoint specifies listen address,
+   * or client specifies source address
+   *
+   * If no local address is defined for endpoint or client. then for
+   * tap0 192.168.113.2/30 gw 192.168.113.1
+   * tap1 192.168.113.6/30 gw 192.168.113.5
+   * tap2 192.168.113.10/30 gw 192.168.113.9
+   * etc. will be chosen based on these initial defaults.
+   * tapif_init() will choose the first unused tapN.
+   */
+  IP4_ADDR(&gw, 192,168,113,1);
+  IP4_ADDR(&ipaddr, 192,168,113,2);
+  IP4_ADDR(&netmask, 255,255,255,0);
+
+  tcpip_init(NULL, NULL);
+
+  LOCK_TCPIP_CORE();
+  netif_add(&netif, &ipaddr, &netmask, &gw, NULL, tapif_init, ethernet_input);
+  netif.flags |= NETIF_FLAG_ETHARP;
+  netif_set_default(&netif);
+  netif_set_up(&netif);
+#if LWIP_IPV6
+  netif_create_ip6_linklocal_address(&netif, 1);
+#endif
+  UNLOCK_TCPIP_CORE();
+}
+
+void
+coap_lwip_tapif_update(coap_address_t *listen_addr) {
+  ip6_addr_t ip6_address;
+  int i;
+ static int output = 0;
+
+  if (!coap_address_isany(listen_addr)) {
+    char *preconfigured_tapif = getenv("PRECONFIGURED_TAPIF");
+
+    /* Need to update the tap interface if it is possible */
+    switch (listen_addr->addr.sa.sa_family) {
+    case AF_INET:
+      ipaddr.addr = listen_addr->addr.sin.sin_addr.s_addr;
+      LOCK_TCPIP_CORE();
+      netif_set_ipaddr(&netif, &ipaddr);
+      UNLOCK_TCPIP_CORE();
+      break;
+    case AF_INET6:
+      memset(&ip6_address, 0, sizeof(ip6_address));
+      ip6_address.addr[0] = listen_addr->addr.sin6.sin6_addr.un.u32_addr[0];
+      ip6_address.addr[1] = listen_addr->addr.sin6.sin6_addr.un.u32_addr[1];
+      ip6_address.addr[2] = listen_addr->addr.sin6.sin6_addr.un.u32_addr[2];
+      ip6_address.addr[3] = listen_addr->addr.sin6.sin6_addr.un.u32_addr[3];
+      LOCK_TCPIP_CORE();
+      netif_add_ip6_address(&netif, &ip6_address, NULL);
+      UNLOCK_TCPIP_CORE();
+      break;
+    default:
+      ;;
+    }
+  }
+  if (!output) {
+    output = 1;
+    coap_log(LOG_DEBUG, "IP %d.%d.%d.%d/%d.%d.%d.%d, GW %d.%d.%d.%d,"
+                        " MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
+             ip4_addr1(netif_ip4_addr(&netif)),
+             ip4_addr2(netif_ip4_addr(&netif)),
+             ip4_addr3(netif_ip4_addr(&netif)),
+             ip4_addr4(netif_ip4_addr(&netif)),
+             ip4_addr1(netif_ip4_netmask(&netif)),
+             ip4_addr2(netif_ip4_netmask(&netif)),
+             ip4_addr3(netif_ip4_netmask(&netif)),
+             ip4_addr4(netif_ip4_netmask(&netif)),
+             ip4_addr1(netif_ip4_gw(&netif)),
+             ip4_addr2(netif_ip4_gw(&netif)),
+             ip4_addr3(netif_ip4_gw(&netif)),
+             ip4_addr4(netif_ip4_gw(&netif)),
+             netif.hwaddr[0],
+             netif.hwaddr[1],
+             netif.hwaddr[2],
+             netif.hwaddr[3],
+             netif.hwaddr[4],
+             netif.hwaddr[5]);
+    }
+}
+
+#endif /* WITH_LWIP */
+

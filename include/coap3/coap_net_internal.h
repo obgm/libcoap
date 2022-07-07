@@ -2,7 +2,7 @@
  * coap_net_internal.h -- CoAP context internal information
  * exposed to application programming
  *
- * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -18,6 +18,11 @@
 #ifndef COAP_NET_INTERNAL_H_
 #define COAP_NET_INTERNAL_H_
 
+/*
+ * Only include files should be those that are from include/coap3.  If
+ * other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "coap_internal.h"
 
 /**
@@ -82,12 +87,6 @@ struct coap_context_t {
                                        sent */
   struct etimer notify_timer;     /**< used to check resources periodically */
 #endif /* WITH_CONTIKI */
-
-#ifdef WITH_LWIP
-  uint8_t timer_configured;       /**< Set to 1 when a retransmission is
-                                   *   scheduled using lwIP timers for this
-                                   *   context, otherwise 0. */
-#endif /* WITH_LWIP */
 
 #if COAP_CLIENT_SUPPORT
   coap_response_handler_t response_handler;
@@ -380,6 +379,10 @@ coap_mid_t coap_send_internal(coap_session_t *session, coap_pdu_t *pdu);
 int coap_client_delay_first(coap_session_t *session);
 
 /** @} */
+
+#if WITH_LWIP
+void coap_lwip_tapif_update(coap_address_t *listen_addr);
+#endif /* WITH_LWIP */
 
 #endif /* COAP_NET_INTERNAL_H_ */
 

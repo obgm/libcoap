@@ -10,40 +10,16 @@
  * use.
  */
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#ifdef _WIN32
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
-#define fileno _fileno
-#include "getopt.c"
-#if !defined(S_ISDIR)
-#define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
-#endif
-static char* strndup(const char* s1, size_t n)
-{
-  char* copy = (char*)malloc(n + 1);
-  if (copy) {
-    memcpy(copy, s1, n);
-    copy[n] = 0;
-  }
-  return copy;
-};
-#else
-#include <unistd.h>
-#include <sys/select.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#endif
+/*
+ * If additional system header files are needed, consider updating the
+ * include/coap3/coap_include_*.h files as appropriate depending on your
+ * build environment.  If necessary, submit a PR to add these in.
+ */
 
 #include <coap3/coap.h>
+#ifdef _WIN32
+#include "getopt.c"
+#endif
 
 #define MAX_USER 128 /* Maximum length of a user name (i.e., PSK
                       * identity) in bytes. */

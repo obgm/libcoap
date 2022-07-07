@@ -62,33 +62,6 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   pdu->lg_xmit = NULL;
 }
 
-#ifdef WITH_LWIP
-coap_pdu_t *
-coap_pdu_from_pbuf( struct pbuf *pbuf )
-{
-  coap_pdu_t *pdu;
-
-  if (pbuf == NULL) return NULL;
-
-  LWIP_ASSERT("Can only deal with contiguous PBUFs", pbuf->tot_len == pbuf->len);
-  LWIP_ASSERT("coap_io_do_io needs to receive an exclusive copy of the incoming pbuf", pbuf->ref == 1);
-
-  pdu = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t) );
-  if (!pdu) {
-    pbuf_free(pbuf);
-    return NULL;
-  }
-
-  pdu->max_hdr_size = COAP_PDU_MAX_UDP_HEADER_SIZE;
-  pdu->pbuf = pbuf;
-  pdu->token = (uint8_t *)pbuf->payload + pdu->max_hdr_size;
-  pdu->alloc_size = pbuf->tot_len - pdu->max_hdr_size;
-  coap_pdu_clear(pdu, pdu->alloc_size);
-
-  return pdu;
-}
-#endif
-
 coap_pdu_t *
 coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
               size_t size) {
@@ -110,14 +83,6 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
   pdu->max_hdr_size = COAP_PDU_MAX_TCP_HEADER_SIZE;
 #endif
 
-#ifdef WITH_LWIP
-  pdu->pbuf = pbuf_alloc(PBUF_TRANSPORT, size + pdu->max_hdr_size, PBUF_RAM);
-  if (pdu->pbuf == NULL) {
-    coap_free_type(COAP_PDU, pdu);
-    return NULL;
-  }
-  pdu->token = (uint8_t *)pdu->pbuf->payload + pdu->max_hdr_size;
-#else /* WITH_LWIP */
   uint8_t *buf;
   pdu->alloc_size = min(size, 256);
   buf = coap_malloc_type(COAP_PDU_BUF, pdu->alloc_size + pdu->max_hdr_size);
@@ -126,7 +91,6 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
     return NULL;
   }
   pdu->token = buf + pdu->max_hdr_size;
-#endif /* WITH_LWIP */
   coap_pdu_clear(pdu, size);
   pdu->mid = mid;
   pdu->type = type;
@@ -147,12 +111,8 @@ coap_new_pdu(coap_pdu_type_t type, coap_pdu_code_t code,
 void
 coap_delete_pdu(coap_pdu_t *pdu) {
   if (pdu != NULL) {
-#ifdef WITH_LWIP
-    pbuf_free(pdu->pbuf);
-#else
     if (pdu->token != NULL)
       coap_free_type(COAP_PDU_BUF, pdu->token - pdu->max_hdr_size);
-#endif
     coap_free_type(COAP_PDU, pdu);
   }
 }
@@ -212,7 +172,7 @@ fail:
 int
 coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
   if (new_size > pdu->alloc_size) {
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_CONTIKI)
     uint8_t *new_hdr;
     size_t offset;
 #endif
@@ -220,7 +180,7 @@ coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
       coap_log(LOG_WARNING, "coap_pdu_resize: pdu too big\n");
       return 0;
     }
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_CONTIKI)
     if (pdu->data != NULL) {
       assert(pdu->data > pdu->token);
       offset = pdu->data - pdu->token;
@@ -1165,9 +1125,7 @@ coap_pdu_parse(coap_proto_t proto,
     return 0;
   if (!coap_pdu_resize(pdu, length - hdr_size))
     return 0;
-#ifndef WITH_LWIP
   memcpy(pdu->token - hdr_size, data, length);
-#endif
   pdu->hdr_size = (uint8_t)hdr_size;
   pdu->used_size = length - hdr_size;
   return coap_pdu_parse_header(pdu, proto) && coap_pdu_parse_opt(pdu);

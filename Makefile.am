@@ -43,6 +43,16 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_block_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_cache_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_dtls_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_include_contiki.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_include_contiki_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_include_lwip.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_include_lwip_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_include_posix.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_include_posix_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_include_riot.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_include_riot_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_include_windows.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_include_windows_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_io_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_net_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_pdu_internal.h \
@@ -53,7 +63,6 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.in \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows.in \
-  include/coap$(LIBCOAP_API_VERSION)/lwippools.h \
   include/coap$(LIBCOAP_API_VERSION)/uthash.h \
   include/coap$(LIBCOAP_API_VERSION)/utlist.h \
   src/coap_io_riot.c \
@@ -113,6 +122,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_gnutls.c \
   src/coap_io.c \
   src/coap_mbedtls.c \
+  src/coap_mem.c \
   src/coap_notls.c \
   src/coap_openssl.c \
   src/coap_option.c \
@@ -123,7 +133,6 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_time.c \
   src/coap_tinydtls.c \
   src/encode.c \
-  src/mem.c \
   src/net.c \
   src/pdu.c \
   src/resource.c \
@@ -153,6 +162,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_forward_decls.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_hashkey.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_io.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_mem.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_mutex.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_option.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_session.h \
@@ -160,7 +170,6 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_time.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/encode.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/libcoap.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/mem.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/net.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/pdu.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_prng.h \

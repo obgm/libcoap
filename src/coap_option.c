@@ -515,14 +515,6 @@ coap_new_optlist(uint16_t number,
 ) {
   coap_optlist_t *node;
 
-#ifdef WITH_LWIP
-  if (length > MEMP_LEN_COAPOPTLIST) {
-    coap_log(LOG_CRIT,
-             "coap_new_optlist: size too large (%zu > MEMP_LEN_COAPOPTLIST)\n",
-             length);
-    return NULL;
-  }
-#endif /* WITH_LWIP */
   node = coap_malloc_type(COAP_OPTLIST, sizeof(coap_optlist_t) + length);
 
   if (node) {

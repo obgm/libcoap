@@ -1,6 +1,6 @@
-/* mem.c -- CoAP memory handling
+/* coap_mem.c -- CoAP memory handling
  *
- * Copyright (C) 2014--2015,2019--2020 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2014-2015,2019-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -9,7 +9,7 @@
  */
 
 /**
- * @file mem.c
+ * @file coap_mem.c
  * @brief Memory handling functions
  */
 

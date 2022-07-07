@@ -11,46 +11,6 @@
  * of use.
  */
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <signal.h>
-#ifdef _WIN32
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
-#include "getopt.c"
-#if !defined(S_ISDIR)
-#define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
-#endif
-#ifndef R_OK
-#define R_OK 4
-#endif
-static char* strndup(const char* s1, size_t n)
-{
-  char* copy = (char*)malloc(n + 1);
-  if (copy) {
-    memcpy(copy, s1, n);
-    copy[n] = 0;
-  }
-  return copy;
-};
-#include <io.h>
-#define access _access
-#define fileno _fileno
-#else
-#include <unistd.h>
-#include <sys/select.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <dirent.h>
-#endif
-
 /*
  * SERVER_CAN_PROXY=0 can be set by build system if
  * "./configure --disable-client-mode" is used.
@@ -59,10 +19,16 @@ static char* strndup(const char* s1, size_t n)
 #define SERVER_CAN_PROXY 1
 #endif
 
-/* Need to refresh time once per sec */
-#define COAP_RESOURCE_CHECK_TIME 1
+/*
+ * If additional system header files are needed, consider updating the
+ * include/coap3/coap_include_*.h files as appropriate depending on your
+ * build environment.  If necessary, submit a PR to add these in.
+ */
 
 #include <coap3/coap.h>
+#ifdef _WIN32
+#include "getopt.c"
+#endif
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -2842,7 +2808,7 @@ main(int argc, char **argv) {
     nfds = coap_fd + 1;
   }
 
-  wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+  wait_ms = 1000;
 
   while ( !quit ) {
     int result;
@@ -2901,7 +2867,7 @@ main(int argc, char **argv) {
        * the granularity of the timer in coap_io_process() and hence
        * result == 0)
        */
-      wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+      wait_ms = 1000;
     }
     if (time_resource) {
       coap_time_t t_now;

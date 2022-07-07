@@ -45,6 +45,9 @@
     <ClCompile Include="..\src\coap_mbedtls.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_mem.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_notls.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -70,9 +73,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\encode.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\mem.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\net.c">
@@ -137,6 +137,9 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_io.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_mem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_mutex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -171,9 +174,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\libcoap.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\mem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\net.h">

@@ -1,8 +1,8 @@
 /*
  * coap_dtls.h -- (Datagram) Transport Layer Support for libcoap
  *
- * Copyright (C) 2016 Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2017 Jean-Claude Michelou <jcm@spinetix.com>
+ * Copyright (C) 2016-2022 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2017      Jean-Claude Michelou <jcm@spinetix.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -18,6 +18,11 @@
 #ifndef COAP_DTLS_H_
 #define COAP_DTLS_H_
 
+/*
+ * Only include files should be those that are not internal only from
+ * include/coap3.  If other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "coap_time.h"
 #include "str.h"
 

@@ -1,7 +1,7 @@
 /*
  * net.h -- CoAP context interface
  *
- * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -24,10 +24,6 @@
 #include <sys/time.h>
 #endif
 #include <time.h>
-
-#ifdef WITH_LWIP
-#include <lwip/ip_addr.h>
-#endif
 
 #include "coap_io.h"
 #include "coap_dtls.h"

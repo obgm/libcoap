@@ -17,9 +17,12 @@
 #ifndef COAP_IO_INTERNAL_H_
 #define COAP_IO_INTERNAL_H_
 
+/*
+ * Only include files should be those that are from include/coap3.  If
+ * other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "coap_internal.h"
-#include <sys/types.h>
-
 #include "coap_address.h"
 
 #ifdef RIOT_VERSION
@@ -27,13 +30,11 @@
 #endif /* RIOT_VERSION */
 
 struct coap_socket_t {
-#if defined(WITH_LWIP)
-  struct udp_pcb *pcb;
-#elif defined(WITH_CONTIKI)
+#if defined(WITH_CONTIKI)
   void *conn;
-#else
+#else /* !WITH_CONTIKI */
   coap_fd_t fd;
-#endif /* WITH_LWIP */
+#endif /* !WITH_CONTIKI */
 #if defined(RIOT_VERSION)
   gnrc_pktsnip_t *pkt; /* pointer to received packet for processing */
 #endif /* RIOT_VERSION */
@@ -105,12 +106,6 @@ coap_epoll_ctl_mod(coap_socket_t *sock, uint32_t events, const char *func);
  */
 void coap_update_epoll_timer(coap_context_t *context, coap_tick_t delay);
 
-#ifdef WITH_LWIP
-ssize_t
-coap_socket_send_pdu( coap_socket_t *sock, coap_session_t *session,
-                      coap_pdu_t *pdu );
-#endif
-
 /**
  * Function interface for data transmission. This function returns the number of
  * bytes that have been transmitted, or a value less than zero on error.
@@ -150,37 +145,11 @@ void coap_packet_get_memmapped(coap_packet_t *packet,
                                unsigned char **address,
                                size_t *length);
 
-#ifdef WITH_LWIP
-/**
- * Get the pbuf of a packet. The caller takes over responsibility for freeing
- * the pbuf.
- */
-struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet);
-#endif
-
-#if defined(WITH_LWIP)
-/*
- * This is only included in coap_io.h instead of .c in order to be available for
- * sizeof in lwippools.h.
- * Simple carry-over of the incoming pbuf that is later turned into a node.
- *
- * Source address data is currently side-banded via ip_current_dest_addr & co
- * as the packets have limited lifetime anyway.
- */
-struct coap_packet_t {
-  struct pbuf *pbuf;
-  const coap_endpoint_t *local_interface;
-  coap_addr_tuple_t addr_info; /**< local and remote addresses */
-  int ifindex;                /**< the interface index */
-//  uint16_t srcport;
-};
-#else
 struct coap_packet_t {
   coap_addr_tuple_t addr_info; /**< local and remote addresses */
   int ifindex;                /**< the interface index */
   size_t length;              /**< length of payload */
   unsigned char payload[COAP_RXBUFFER_SIZE]; /**< payload */
 };
-#endif
 
 #endif /* COAP_IO_INTERNAL_H_ */

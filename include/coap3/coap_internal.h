@@ -50,6 +50,23 @@
 #endif /* WITHOUT_ASYNC */
 #endif /* COAP_SERVER_SUPPORT */
 
+/*
+ * Add in the necessary header files for the different build types so
+ * that the correct ones are pulled in when building the libcoap objects.
+ * (Not the App only versions)
+ */
+#if defined(_WIN32)
+#include "coap_include_windows_internal.h"
+#elif defined (WITH_LWIP)
+#include "coap_include_lwip_internal.h"
+#elif defined (WITH_RIOT)
+#include "coap_include_riot_internal.h"
+#elif defined (WITH_CONTIKI)
+#include "coap_include_contiki_internal.h"
+#else
+#include "coap_include_posix_internal.h"
+#endif
+
 #include "coap3/coap.h"
 
 /*

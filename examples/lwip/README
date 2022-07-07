@@ -1,30 +1,58 @@
 Example of libcoap running on lwIP
 ==================================
 
-To run the example, do
+To run the examples, do
+(note that libcoap needs to be set up as per ../../BUILDING)
 
     $ make
-    $ sudo ./server
+    $ sudo ./coap-server
 
-(and in a second terminal)
+(and then in a second terminal)
 
-    $ sudo ip a a dev tap0 192.168.113.1/24
-
-and query `coap://192.168.113.2/time?ticks` with any coap tool,
-or query `coap://[aaaa::1000]/.well-known/core`
+    $ sudo ./coap-client coap://192.168.113.2
 
 This will
 
 * download lwip and lwip-contrib from the upstream git sources
-* build the server application
+* build the server and client applications
 * run the server application, creating a virtual network device tap0 (unless
-  that exists)
-* configure your network interface to make the server accessible.
+  that is in use, in which case it will be the first available tapN interface)
+* configure the tap0 interface to make the server accessible. The default is
+  IP 192.168.113.2/30 GW 192.168.113.1
 
-* return the appropriate response from the server to the client.
+Then on the client side
 
-The server creates a resource for 'time' with a query 'ticks'.  This is
-reported for `.well-known/core`. The work flow for adding more resources does
-not differ from regular libcoap usage. If you seem to run out of memory
-creating the resources, tweak the number of pre-allocated resources
-in `include/coap/lwippools.h`.
+* run the client application, creating a virtual network device tap1 (unless
+  that is in use, in which case it will be the first available tapN interface)
+* configure the tap1 interface to make the client accessible. The default is
+  IP 192.168.113.6/30 GW 192.168.113.5
+* send the appropriate request to the server.
+
+Note.  It is recommended the following command is run on Linux prior to
+running the client and server to make sure traffic is routed as expected.
+
+    $ sudo sysctl -w net.ipv4.conf.default.mc_forwarding=1
+
+It is possible to pre-set up the tap interfaces with an IP address and then
+instruct the server or client application to use a specific tap interface. If
+this is the case, then root privileges are not required. This is done by
+setting the environment variable PRECONFIGURED_TAPIF to tapN.  For example
+
+    $ sudo ip tuntap add mode tap tap0
+    $ sudo ifconfig tap0 192.168.113.1 netmask 255.255.255.252
+    $ PRECONFIGURED_TAPIF=tap0 ./coap-server
+
+The application will use the IP address that is one greater than the tap
+interface IP address.
+
+If the server uses the -A option, or the client the -a option, then the
+application's IP address will get changed (and only accept traffic for that
+IP address).  However, the tapN interface's IP address will be unchanged,
+so local routing on the host must be updated to send traffic to the defined
+IP addres via the tapN interface.
+
+
+Full information on the coap-server and coap-client options can be found at
+https://libcoap.net/doc/reference/develop/man_coap-server.html and
+https://libcoap.net/doc/reference/develop/man_coap-client.html
+

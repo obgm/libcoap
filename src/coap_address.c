@@ -15,7 +15,8 @@
 
 #include "coap3/coap_internal.h"
 
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#if !defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP)
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
@@ -28,6 +29,7 @@
 #ifdef HAVE_WS2TCPIP_H
 #include <ws2tcpip.h>
 #endif
+#endif /* !defined(WITH_LWIP) */
 
 #ifdef RIOT_VERSION
 /* FIXME */
@@ -89,26 +91,26 @@ int coap_is_mcast(const coap_address_t *a) {
   if (!a)
     return 0;
 
- switch (a->addr.sa.sa_family) {
- case AF_INET:
-   return IN_MULTICAST(ntohl(a->addr.sin.sin_addr.s_addr));
- case  AF_INET6:
-   return IN6_IS_ADDR_MULTICAST(&a->addr.sin6.sin6_addr) ||
-       (IN6_IS_ADDR_V4MAPPED(&a->addr.sin6.sin6_addr) &&
-           IN_MULTICAST(ntohl(a->addr.sin6.sin6_addr.s6_addr[12])));
- default:  /* fall through and signal error */
-   ;
+  switch (a->addr.sa.sa_family) {
+  case AF_INET:
+    return IN_MULTICAST(ntohl(a->addr.sin.sin_addr.s_addr));
+  case  AF_INET6:
+    return IN6_IS_ADDR_MULTICAST(&a->addr.sin6.sin6_addr) ||
+        (IN6_IS_ADDR_V4MAPPED(&a->addr.sin6.sin6_addr) &&
+            IN_MULTICAST(ntohl(a->addr.sin6.sin6_addr.s6_addr[12])));
+  default:  /* fall through and signal error */
+    ;
   }
- return 0;
+  return 0;
 }
 
-#endif /* !defined(WITH_CONTIKI) && !defined(WITH_LWIP) */
+#endif /* !defined(WITH_CONTIKI) */
 
 void coap_address_init(coap_address_t *addr) {
   assert(addr);
   memset(addr, 0, sizeof(coap_address_t));
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
-  /* lwip and Contiki have constant address sizes and don't need the .size part */
+#if !defined(WITH_CONTIKI)
+  /* Contiki has constant address sizes and don't need the .size part */
   addr->size = sizeof(addr->addr);
 #endif
 }

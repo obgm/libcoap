@@ -17,47 +17,13 @@
 #ifndef COAP_ADDRESS_H_
 #define COAP_ADDRESS_H_
 
-#include <assert.h>
-#include <stdint.h>
-#include <string.h>
-#include <sys/types.h>
-#include "libcoap.h"
-
-#if defined(WITH_LWIP)
-
-#include <lwip/ip_addr.h>
-
-typedef struct coap_address_t {
-  uint16_t port;
-  ip_addr_t addr;
-} coap_address_t;
-
-/**
- * Returns the port from @p addr in host byte order.
+/*
+ * Only include files should be those that are not internal only from
+ * include/coap3.  If other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
  */
-COAP_STATIC_INLINE uint16_t
-coap_address_get_port(const coap_address_t *addr) {
-  return ntohs(addr->port);
-}
 
-/**
- * Sets the port field of @p addr to @p port (in host byte order).
- */
-COAP_STATIC_INLINE void
-coap_address_set_port(coap_address_t *addr, uint16_t port) {
-  addr->port = htons(port);
-}
-
-#define _coap_address_equals_impl(A, B) \
-        ((A)->port == (B)->port        \
-        && (!!ip_addr_cmp(&(A)->addr,&(B)->addr)))
-
-#define _coap_address_isany_impl(A)  ip_addr_isany(&(A)->addr)
-
-#define _coap_is_mcast_impl(Address) ip_addr_ismulticast(&(Address)->addr)
-
-#elif defined(WITH_CONTIKI)
-
+#if defined(WITH_CONTIKI)
 #include "uip.h"
 
 typedef struct coap_address_t {
@@ -90,7 +56,7 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
 
 #define _coap_is_mcast_impl(Address) uip_is_addr_mcast(&((Address)->addr))
 
-#else /* WITH_LWIP || WITH_CONTIKI */
+#else /* WITH_CONTIKI */
 
  /** multi-purpose address abstraction */
 typedef struct coap_address_t {
@@ -135,7 +101,7 @@ _coap_address_isany_impl(const coap_address_t *a) {
 
   return 0;
 }
-#endif /* WITH_LWIP || WITH_CONTIKI */
+#endif /* WITH_CONTIKI */
 
 /**
  * Resets the given coap_address_t object @p addr to its default values. In
@@ -150,9 +116,9 @@ void coap_address_init(coap_address_t *addr);
 
 COAP_STATIC_INLINE void
 coap_address_copy( coap_address_t *dst, const coap_address_t *src ) {
-#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
+#if defined(WITH_CONTIKI)
   memcpy( dst, src, sizeof( coap_address_t ) );
-#else
+#else /* ! CONTIKI */
   memset( dst, 0, sizeof( coap_address_t ) );
   dst->size = src->size;
   if ( src->addr.sa.sa_family == AF_INET6 ) {
@@ -165,10 +131,10 @@ coap_address_copy( coap_address_t *dst, const coap_address_t *src ) {
   } else {
     memcpy( &dst->addr, &src->addr, src->size );
   }
-#endif
+#endif /* ! CONTIKI */
 }
 
-#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
+#if defined(WITH_CONTIKI)
 /**
  * Compares given address objects @p a and @p b. This function returns @c 1 if
  * addresses are equal, @c 0 otherwise. The parameters @p a and @p b must not be
@@ -179,7 +145,7 @@ coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
   assert(a); assert(b);
   return _coap_address_equals_impl(a, b);
 }
-#endif
+#endif /* WITH_CONTIKI */
 
 /**
  * Checks if given address object @p a denotes the wildcard address. This
@@ -192,14 +158,14 @@ coap_address_isany(const coap_address_t *a) {
   return _coap_address_isany_impl(a);
 }
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_CONTIKI)
 
 /**
  * Checks if given address @p a denotes a multicast address. This function
  * returns @c 1 if @p a is multicast, @c 0 otherwise.
  */
 int coap_is_mcast(const coap_address_t *a);
-#else /* !WITH_LWIP && !WITH_CONTIKI */
+#else /* WITH_CONTIKI */
 /**
  * Checks if given address @p a denotes a multicast address. This function
  * returns @c 1 if @p a is multicast, @c 0 otherwise.
@@ -208,6 +174,6 @@ COAP_STATIC_INLINE int
 coap_is_mcast(const coap_address_t *a) {
   return a && _coap_is_mcast_impl(a);
 }
-#endif /* !WITH_LWIP && !WITH_CONTIKI */
+#endif /* WITH_CONTIKI */
 
 #endif /* COAP_ADDRESS_H_ */

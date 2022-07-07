@@ -19,33 +19,17 @@
  * @see https://tools.ietf.org/html/draft-ietf-core-resource-directory
  */
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <signal.h>
-#ifdef _WIN32
-#define strcasecmp _stricmp
-#include "getopt.c"
-#if !defined(S_ISDIR)
-#define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
-#endif
-#else
-#include <unistd.h>
-#include <sys/select.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <dirent.h>
-#endif
+
+/*
+ * If additional system header files are needed, consider updating the
+ * include/coap3/coap_include_*.h files as appropriate depending on your
+ * build environment.  If necessary, submit a PR to add these in.
+ */
 
 #include <coap3/coap.h>
-
-#define COAP_RESOURCE_CHECK_TIME 2
+#ifdef _WIN32
+#include "getopt.c"
+#endif
 
 #define RD_ROOT_STR   "rd"
 #define RD_ROOT_SIZE  2
@@ -750,15 +734,17 @@ get_context(const char *node, const char *port) {
         coap_log(LOG_CRIT, "cannot create UDP endpoint\n");
         continue;
       }
-      ep_tcp = coap_new_endpoint(ctx, &addr, COAP_PROTO_TCP);
-      if (ep_tcp) {
-        if (coap_tls_is_supported() && (key_defined || cert_file)) {
-          ep_tls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_TLS);
-          if (!ep_tls)
-            coap_log(LOG_CRIT, "cannot create TLS endpoint\n");
+      if (coap_tcp_is_supported()) {
+        ep_tcp = coap_new_endpoint(ctx, &addr, COAP_PROTO_TCP);
+        if (ep_tcp) {
+          if (coap_tls_is_supported() && (key_defined || cert_file)) {
+            ep_tls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_TLS);
+            if (!ep_tls)
+              coap_log(LOG_CRIT, "cannot create TLS endpoint\n");
+          }
+        } else {
+          coap_log(LOG_CRIT, "cannot create TCP endpoint\n");
         }
-      } else {
-        coap_log(LOG_CRIT, "cannot create TCP endpoint\n");
       }
       if (ep_udp)
         goto finish;
@@ -866,7 +852,7 @@ main(int argc, char **argv) {
 #endif
 
   while ( !quit ) {
-    result = coap_io_process( ctx, COAP_RESOURCE_CHECK_TIME * 1000 );
+    result = coap_io_process( ctx, 1000 );
     if ( result >= 0 ) {
       /* coap_check_resource_list( ctx ); */
     }

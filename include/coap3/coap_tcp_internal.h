@@ -1,7 +1,7 @@
 /*
  * coap_tcp_internal.h -- TCP functions for libcoap
  *
- * Copyright (C) 2019--2020 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2019-2022 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -17,6 +17,11 @@
 #ifndef COAP_TCP_INTERNAL_H_
 #define COAP_TCP_INTERNAL_H_
 
+/*
+ * Only include files should be those that are from include/coap3.  If
+ * other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "coap_internal.h"
 #include "coap_io.h"
 

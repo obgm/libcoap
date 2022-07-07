@@ -19,6 +19,11 @@
 #ifndef COAP_BLOCK_INTERNAL_H_
 #define COAP_BLOCK_INTERNAL_H_
 
+/*
+ * Only include files should be those that are from include/coap3.  If
+ * other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "coap_internal.h"
 #include "coap_pdu_internal.h"
 #include "resource.h"

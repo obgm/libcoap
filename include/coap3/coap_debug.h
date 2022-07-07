@@ -17,6 +17,13 @@
 #ifndef COAP_DEBUG_H_
 #define COAP_DEBUG_H_
 
+/*
+ * Only include files should be those that are not internal only from
+ * include/coap3.  If other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
+#include "pdu.h"
+
 /**
  * @ingroup application_api
  * @defgroup logging Logging Support
@@ -167,8 +174,6 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
      coap_log_impl((level), __VA_ARGS__); \
 } while(0)
 #endif
-
-#include "pdu.h"
 
 /**
  * Defines the output mode for the coap_show_pdu() function.

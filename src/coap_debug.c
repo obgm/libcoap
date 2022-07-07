@@ -35,11 +35,6 @@
 #include <time.h>
 #endif
 
-#ifdef WITH_LWIP
-# define fprintf(fd, ...) LWIP_PLATFORM_DIAG((__VA_ARGS__))
-# define fflush(...)
-#endif
-
 #ifdef WITH_CONTIKI
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT
@@ -87,7 +82,7 @@ static const char *loglevels[] = {
   "EMRG", "ALRT", "CRIT", "ERR ", "WARN", "NOTE", "INFO", "DEBG", "????", "CIPH"
 };
 
-#ifdef HAVE_TIME_H
+#if defined(HAVE_TIME_H)
 
 COAP_STATIC_INLINE size_t
 print_timestamp(char *s, size_t len, coap_tick_t t) {
@@ -184,7 +179,7 @@ print_readable( const uint8_t *data, size_t len,
  */
 size_t
 coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
-#if defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )
+#if defined(HAVE_ARPA_INET_H) || defined(HAVE_WS2TCPIP_H) || defined(WITH_LWIP)
   const void *addrptr = NULL;
   in_port_t port;
   unsigned char *p = buf;

@@ -17,6 +17,12 @@
 #ifndef COAP_OPTION_H_
 #define COAP_OPTION_H_
 
+/*
+ * Only include files should be those that are not internal only from
+ * include/coap3.  If other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
+
 typedef uint16_t coap_option_num_t;
 
 /**

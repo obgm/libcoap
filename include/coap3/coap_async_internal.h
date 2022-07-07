@@ -1,7 +1,7 @@
 /*
  * coap_async_internal.h -- state management for asynchronous messages
  *
- * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -17,6 +17,11 @@
 #ifndef COAP_ASYNC_INTERNAL_H_
 #define COAP_ASYNC_INTERNAL_H_
 
+/*
+ * Only include files should be those that are from include/coap3.  If
+ * other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "coap_internal.h"
 #include "net.h"
 

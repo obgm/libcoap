@@ -22,6 +22,11 @@
 #define COAP_RESOURCE_CHECK_TIME 2
 #endif /* COAP_RESOURCE_CHECK_TIME */
 
+/*
+ * Only include files should be those that are not internal only from
+ * include/coap3.  If other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "coap_async.h"
 #include "block.h"
 #include "str.h"

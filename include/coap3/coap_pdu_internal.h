@@ -1,7 +1,7 @@
 /*
  * coap_pdu_internal.h -- CoAP PDU structure
  *
- * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -17,13 +17,12 @@
 #ifndef COAP_COAP_PDU_INTERNAL_H_
 #define COAP_COAP_PDU_INTERNAL_H_
 
+/*
+ * Only include files should be those that are from include/coap3.  If
+ * other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "coap_internal.h"
-
-#ifdef WITH_LWIP
-#include <lwip/pbuf.h>
-#endif
-
-#include <stdint.h>
 
 /**
  * @ingroup internal_api
@@ -113,16 +112,6 @@ struct coap_pdu_t {
                                  or zero for variable size pdu */
   uint8_t *token;           /**< first byte of token, if any, or options */
   uint8_t *data;            /**< first byte of payload, if any */
-#ifdef WITH_LWIP
-  struct pbuf *pbuf;        /**< lwIP PBUF. The package data will always reside
-                             *   inside the pbuf's payload, but this pointer
-                             *   has to be kept because no exact offset can be
-                             *   given. This field must not be accessed from
-                             *   outside, because the pbuf's reference count
-                             *   is checked to be 1 when the pbuf is assigned
-                             *   to the pdu, and the pbuf stays exclusive to
-                             *   this pdu. */
-#endif
   const uint8_t *body_data; /**< Holds ptr to re-assembled data or NULL */
   size_t body_length;       /**< Holds body data length */
   size_t body_offset;       /**< Holds body data offset */

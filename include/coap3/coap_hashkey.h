@@ -17,7 +17,11 @@
 #ifndef COAP_HASHKEY_H_
 #define COAP_HASHKEY_H_
 
-#include "libcoap.h"
+/*
+ * Only include files should be those that are not internal only from
+ * include/coap3.  If other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "uthash.h"
 #include "str.h"
 

@@ -55,10 +55,6 @@
 #endif
 #endif /* COAP_EPOLL_SUPPORT */
 
-#ifdef WITH_CONTIKI
-# include "uip.h"
-#endif
-
 #if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
  /* define generic PKTINFO for IPv4 */
 #if defined(IP_PKTINFO)
@@ -586,11 +582,15 @@ struct in6_pktinfo {
   unsigned int ipi6_ifindex;        /* send/recv interface index */
 };
 
+#if !defined(WITH_LWIP)
 struct in_pktinfo {
   int ipi_ifindex;
   struct in_addr ipi_spec_dst;
   struct in_addr ipi_addr;
 };
+#else /* WITH_LWIP */
+#define ipi_spec_dst ipi_addr
+#endif /* WITH_LWIP */
 #endif
 
 #if !defined(WITH_CONTIKI) && !defined(SOL_IP)

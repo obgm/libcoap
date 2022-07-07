@@ -103,12 +103,14 @@ jobs:
         OS: ["contiki", "lwip"]
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: setup
         run: |
           ./autogen.sh
       - name: configure
         run: |
-          $GITHUB_WORKSPACE/configure --disable-documentation --disable-examples --disable-tests --disable-dtls
+          $GITHUB_WORKSPACE/configure --disable-documentation --disable-examples --disable-tests --with-tinydtls
       - name: compile
         run: |
           make -C examples/${{matrix.OS}}

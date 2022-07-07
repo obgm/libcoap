@@ -17,8 +17,11 @@
 #ifndef COAP_IO_H_
 #define COAP_IO_H_
 
-#include <sys/types.h>
-
+/*
+ * Only include files should be those that are not internal only from
+ * include/coap3.  If other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "coap_address.h"
 
 #ifdef RIOT_VERSION

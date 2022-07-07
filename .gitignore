@@ -11,8 +11,8 @@ Makefile.in
 aclocal.m4
 ar-lib
 autom4te.cache/
-coap_config.h
-coap_config.h.in
+/coap_config.h
+/coap_config.h.in
 compile
 config.*
 !config.yml
@@ -87,6 +87,10 @@ examples/coap-server
 examples/coap-server-*
 examples/coap-tiny
 examples/*.exe
+
+examples/lwip/coap-client
+examples/lwip/coap-rd
+examples/lwip/coap-server
 
 # the include/ folder
 include/coap3/coap.h

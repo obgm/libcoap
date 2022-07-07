@@ -2,6 +2,7 @@
  * libcoap.h -- platform specific header file for CoAP stack
  *
  * Copyright (C) 2015 Carsten Schoenert <c.schoenert@t-online.de>
+ *               2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -16,24 +17,6 @@
 
 #ifndef COAP_LIBCOAP_H_
 #define COAP_LIBCOAP_H_
-
-/* The non posix embedded platforms like Contiki, TinyOS, RIOT, ... doesn't have
- * a POSIX compatible header structure so we have to slightly do some platform
- * related things. Currently there is only Contiki available so we check for a
- * CONTIKI environment and do *not* include the POSIX related network stuff. If
- * there are other platforms in future there need to be analogous environments.
- *
- * The CONTIKI variable is within the Contiki build environment! */
-
-#if defined(_WIN32)
-#pragma comment(lib,"Ws2_32.lib")
-#include <ws2tcpip.h>
-typedef SSIZE_T ssize_t;
-typedef USHORT in_port_t;
-#elif !defined (CONTIKI)
-#include <netinet/in.h>
-#include <sys/socket.h>
-#endif /* CONTIKI */
 
 #ifndef COAP_STATIC_INLINE
 #  if defined(__cplusplus)
@@ -60,6 +43,22 @@ typedef USHORT in_port_t;
 #    define COAP_UNUSED
 #  endif /* __GNUC__ */
 #endif /* COAP_UNUSED */
+
+/*
+ * Add in the necessary header files for the different build types so
+ * that the correct ones are pulled in when building the libcoap objects.
+ */
+#if defined(_WIN32)
+#include "coap_include_windows.h"
+#elif defined (WITH_LWIP)
+#include "coap_include_lwip.h"
+#elif defined (WITH_RIOT)
+#include "coap_include_riot.h"
+#elif defined (WITH_CONTIKI)
+#include "coap_include_contiki.h"
+#else
+#include "coap_include_posix.h"
+#endif
 
 void coap_startup(void);
 

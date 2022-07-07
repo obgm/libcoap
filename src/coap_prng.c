@@ -81,8 +81,6 @@ static coap_rand_func_t rand_func = coap_prng_default;
 
 #if defined(WITH_CONTIKI)
 
-#elif defined(WITH_LWIP) && defined(LWIP_RAND)
-
 #else
 
 void

@@ -24,19 +24,7 @@
 #include <sys/timerfd.h>
 #endif /* COAP_EPOLL_SUPPORT */
 
-#if defined(WITH_LWIP)
-/* mem.h is only needed for the string free calls for
- * COAP_ATTR_FLAGS_RELEASE_NAME / COAP_ATTR_FLAGS_RELEASE_VALUE /
- * COAP_RESOURCE_FLAGS_RELEASE_URI. not sure what those lines should actually
- * do on lwip. */
-
-#include <lwip/memp.h>
-
-#define COAP_MALLOC_TYPE(Type) \
-  ((coap_##Type##_t *)memp_malloc(MEMP_COAP_##Type))
-#define COAP_FREE_TYPE(Type, Object) memp_free(MEMP_COAP_##Type, Object)
-
-#elif defined(WITH_CONTIKI)
+#if defined(WITH_CONTIKI)
 #include "memb.h"
 
 #define COAP_MALLOC_TYPE(Type) \
@@ -494,13 +482,7 @@ coap_delete_attr(coap_attr_t *attr) {
   if (attr->value) {
     coap_delete_str_const(attr->value);
   }
-
-#ifdef WITH_LWIP
-  memp_free(MEMP_COAP_RESOURCEATTR, attr);
-#endif
-#ifndef WITH_LWIP
   coap_free_type(COAP_RESOURCEATTR, attr);
-#endif
 }
 
 typedef enum coap_deleting_resource_t {
@@ -545,13 +527,7 @@ coap_free_resource(coap_resource_t *resource) {
     }
     coap_free(resource->proxy_name_list);
   }
-
-#ifdef WITH_LWIP
-  memp_free(MEMP_COAP_RESOURCE, resource);
-#endif
-#ifndef WITH_LWIP
   coap_free_type(COAP_RESOURCE, resource);
-#endif /* WITH_CONTIKI */
 }
 
 void

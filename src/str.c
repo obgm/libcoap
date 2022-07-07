@@ -19,14 +19,6 @@
 
 coap_string_t *coap_new_string(size_t size) {
   coap_string_t *s;
-#ifdef WITH_LWIP
-  if (size >= MEMP_LEN_COAPSTRING) {
-    coap_log(LOG_CRIT,
-             "coap_new_string: size too large (%zu +1 > MEMP_LEN_COAPSTRING)\n",
-             size);
-    return NULL;
-  }
-#endif /* WITH_LWIP */
   assert(size+1 != 0);
   s = (coap_string_t *)coap_malloc_type(COAP_STRING,
                                         sizeof(coap_string_t) + size + 1);
@@ -74,18 +66,18 @@ coap_binary_t *coap_new_binary(size_t size) {
 }
 
 coap_binary_t *coap_resize_binary(coap_binary_t *s, size_t size) {
-#if defined(RIOT_VERSION) || defined(WITH_CONTIKI) || defined(WITH_LWIP)
+#if defined(RIOT_VERSION) || defined(WITH_CONTIKI)
   /* Unlikely to work as strings will not be large enough */
   coap_binary_t *new = coap_new_binary(size);
   if (new) {
     memcpy(new->s, s->s, s->length);
     coap_delete_binary(s);
   }
-#else /* ! RIOT_VERSION && ! WITH_CONTIKI && ! WITH_LWIP */
+#else /* ! RIOT_VERSION && ! WITH_CONTIKI */
   coap_binary_t *new = coap_realloc_type(COAP_STRING,
                                          s,
                                          sizeof(coap_binary_t) + size);
-#endif /* ! RIOT_VERSION && ! WITH_CONTIKI && ! WITH_LWIP */
+#endif /* ! RIOT_VERSION && ! WITH_CONTIKI */
   if (new) {
     new->length = size;
     new->s = ((unsigned char *)new) + sizeof(coap_string_t);

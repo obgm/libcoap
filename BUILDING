@@ -118,11 +118,12 @@ LwIP
 ====
 
  ./autogen.sh
- ./configure --disable-tests --disable-documentation --disable-examples --disable-dtls
+ ./configure --disable-tests --disable-documentation --disable-examples --with-tinydtls --with-submodule-tinydtls
  cd examples/lwip
  make
 
-Executable is ./server. See examples/lwip/README for further information
+Executables are ./coap-server, ./coap-client or ./coap-rd. See
+examples/lwip/README for further information
 
 Contiki
 =======

@@ -1,7 +1,7 @@
 /*
  * uri.h -- helper functions for URI treatment
  *
- * Copyright (C) 2010-2020 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -17,8 +17,11 @@
 #ifndef COAP_URI_H_
 #define COAP_URI_H_
 
-#include <stdint.h>
-
+/*
+ * Only include files should be those that are not internal only from
+ * include/coap3.  If other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "str.h"
 
 /**

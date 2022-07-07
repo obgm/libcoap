@@ -783,13 +783,8 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
 #define OFF_HANDSHAKE_TYPE   13  /* offset of handshake in dtls_record_handshake_t */
 #define DTLS_HT_CLIENT_HELLO  1  /* Client Hello handshake type */
 
-#ifdef WITH_LWIP
-    const uint8_t *payload = (const uint8_t*)packet->pbuf->payload;
-    size_t length = packet->pbuf->len;
-#else /* ! WITH_LWIP */
     const uint8_t *payload = (const uint8_t*)packet->payload;
     size_t length = packet->length;
-#endif /* ! WITH_LWIP */
     if (length < (OFF_HANDSHAKE_TYPE + 1)) {
       coap_log(LOG_DEBUG,
          "coap_dtls_hello: ContentType %d Short Packet (%zu < %d) dropped\n",
@@ -884,13 +879,13 @@ coap_epoll_ctl_add(coap_socket_t *sock,
 
 #if COAP_CLIENT_SUPPORT
 static coap_session_t *
-coap_session_create_client(
-  coap_context_t *ctx,
-  const coap_address_t *local_if,
-  const coap_address_t *server,
-  coap_proto_t proto
-) {
+coap_session_create_client(coap_context_t *ctx,
+                           const coap_address_t *c_local_if,
+                           const coap_address_t *server,
+                           coap_proto_t proto) {
   coap_session_t *session = NULL;
+  coap_address_t tmp_if;
+  coap_address_t *local_if = NULL;
 
   assert(server);
 
@@ -920,6 +915,16 @@ coap_session_create_client(
     assert(0);
     break;
   }
+
+  if (c_local_if) {
+    tmp_if = *c_local_if;
+    local_if = &tmp_if;
+  }
+#if WITH_LWIP
+  if (local_if)
+    coap_lwip_tapif_update(local_if);
+#endif /* WITH_LWIP */
+
   session = coap_make_session(proto, COAP_SESSION_TYPE_CLIENT, NULL,
     local_if, server, 0, ctx, NULL);
   if (!session)
@@ -1471,14 +1476,16 @@ void *coap_session_get_tls(const coap_session_t *session,
   return NULL;
 }
 
-#ifndef WITH_LWIP
 #if COAP_SERVER_SUPPORT
 coap_endpoint_t *
-coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto) {
+coap_new_endpoint(coap_context_t *context,
+                  const coap_address_t *c_listen_addr,
+                  coap_proto_t proto) {
   coap_endpoint_t *ep = NULL;
+  coap_address_t listen_addr;
 
   assert(context);
-  assert(listen_addr);
+  assert(c_listen_addr);
   assert(proto != COAP_PROTO_NONE);
 
   if (proto == COAP_PROTO_DTLS && !coap_dtls_is_supported()) {
@@ -1505,6 +1512,11 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     }
   }
 
+  listen_addr = *c_listen_addr;
+#if WITH_LWIP
+  coap_lwip_tapif_update(&listen_addr);
+#endif /* WITH_LWIP */
+
   ep = coap_malloc_endpoint();
   if (!ep) {
     coap_log(LOG_WARNING, "coap_new_endpoint: malloc");
@@ -1516,12 +1528,12 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
   ep->proto = proto;
 
   if (proto==COAP_PROTO_UDP || proto==COAP_PROTO_DTLS) {
-    if (!coap_socket_bind_udp(&ep->sock, listen_addr, &ep->bind_addr))
+    if (!coap_socket_bind_udp(&ep->sock, &listen_addr, &ep->bind_addr))
       goto error;
     ep->sock.flags |= COAP_SOCKET_WANT_READ;
 #if !COAP_DISABLE_TCP
   } else if (proto==COAP_PROTO_TCP || proto==COAP_PROTO_TLS) {
-    if (!coap_socket_bind_tcp(&ep->sock, listen_addr, &ep->bind_addr))
+    if (!coap_socket_bind_tcp(&ep->sock, &listen_addr, &ep->bind_addr))
       goto error;
     ep->sock.flags |= COAP_SOCKET_WANT_ACCEPT;
 #endif /* !COAP_DISABLE_TCP */
@@ -1603,7 +1615,6 @@ coap_free_endpoint(coap_endpoint_t *ep) {
   }
 }
 #endif /* COAP_SERVER_SUPPORT */
-#endif /* WITH_LWIP */
 
 coap_session_t *
 coap_session_get_by_peer(const coap_context_t *ctx,

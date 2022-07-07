@@ -18,7 +18,11 @@
 #ifndef COAP_EVENT_H_
 #define COAP_EVENT_H_
 
-#include "libcoap.h"
+/*
+ * Only include files should be those that are not internal only from
+ * include/coap3.  If other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 
 /**
  * @ingroup application_api

@@ -18,14 +18,13 @@
 #ifndef COAP_PDU_H_
 #define COAP_PDU_H_
 
+/*
+ * Only include files should be those that are not internal only from
+ * include/coap3.  If other include files are needed, they should be added
+ * to the appropriate include/coap3/coap_include_*.h files.
+ */
 #include "uri.h"
 #include "coap_option.h"
-
-#ifdef WITH_LWIP
-#include <lwip/pbuf.h>
-#endif
-
-#include <stdint.h>
 
 /**
  * @ingroup application_api
@@ -266,25 +265,6 @@ COAP_DEPRECATED typedef struct {
 #define COAP_OPTION_KEY(option) (option).key
 #define COAP_OPTION_LENGTH(option) (option).length
 #define COAP_OPTION_DATA(option) ((unsigned char *)&(option) + sizeof(coap_option))
-
-#ifdef WITH_LWIP
-/**
- * Creates a CoAP PDU from an lwIP @p pbuf, whose reference is passed on to this
- * function.
- *
- * The pbuf is checked for being contiguous, and for having only one reference.
- * The reference is stored in the PDU and will be freed when the PDU is freed.
- *
- * (For now, these are fatal errors; in future, a new pbuf might be allocated,
- * the data copied and the passed pbuf freed).
- *
- * This behaves like coap_pdu_init(0, 0, 0, pbuf->tot_len), and afterwards
- * copying the contents of the pbuf to the pdu.
- *
- * @return A pointer to the new PDU object or @c NULL on error.
- */
-coap_pdu_t * coap_pdu_from_pbuf(struct pbuf *pbuf);
-#endif
 
 /**
 * CoAP protocol types
