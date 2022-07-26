@@ -1132,7 +1132,9 @@ coap_io_prepare_io(coap_context_t *ctx,
   coap_session_t *s, *rtmp;
   coap_tick_t timeout = 0;
   coap_tick_t s_timeout;
+#if COAP_SERVER_SUPPORT
   int check_dtls_timeouts = 0;
+#endif /* COAP_SERVER_SUPPORT */
 #ifdef COAP_EPOLL_SUPPORT
   (void)sockets;
   (void)max_sockets;
@@ -1173,8 +1175,10 @@ coap_io_prepare_io(coap_context_t *ctx,
         if (timeout == 0 || tls_timeout - now < timeout)
           timeout = tls_timeout - now;
       }
+#if COAP_SERVER_SUPPORT
     } else {
       check_dtls_timeouts = 1;
+#endif /* COAP_SERVER_SUPPORT */
     }
   }
 #if COAP_SERVER_SUPPORT
