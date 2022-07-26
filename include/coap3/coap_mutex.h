@@ -46,6 +46,7 @@ typedef mutex_t coap_mutex_t;
 
 #else
 /* define stub mutex functions */
+#warning "stub mutex functions"
 typedef int coap_mutex_t;
 #define COAP_MUTEX_INITIALIZER 0
 #define coap_mutex_lock(a) *(a) = 1
