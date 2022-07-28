@@ -20,16 +20,16 @@
 #define LIBCOAP_PACKAGE_NAME "libcoap"
 
 /* Define the full name and version of libcoap. */
-#define LIBCOAP_PACKAGE_STRING "libcoap 4.3.0"
+#define LIBCOAP_PACKAGE_STRING "libcoap 4.3.1rc1"
 
 /* Define the home page for libcoap. */
 #define LIBCOAP_PACKAGE_URL "https://libcoap.net/"
 
 /* Define the version of libcoap this file belongs to. */
-#define LIBCOAP_PACKAGE_VERSION "4.3.0"
+#define LIBCOAP_PACKAGE_VERSION "4.3.1rc1"
 
 /* Define the numeric version identifier for libcoap */
-#define LIBCOAP_VERSION (4003000U)
+#define LIBCOAP_VERSION (4003001U)
 
 #ifdef __cplusplus
 extern "C" {
