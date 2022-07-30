@@ -30,6 +30,12 @@
 #endif
 #include <ctype.h>
 
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#else /* ! HAVE_INTTYPES_H */
+#define PRIu32 "u"
+#endif /* ! HAVE_INTTYPES_H */
+
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -1067,7 +1073,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
            !coap_pdu_parse_opt_csm(pdu, len) :
            !coap_pdu_parse_opt_base(pdu, len)) {
         coap_log(LOG_WARNING,
-            "coap_pdu_parse: %d.%02d: offset %u option %u has bad length %u\n",
+    "coap_pdu_parse: %d.%02d: offset %u option %u has bad length %" PRIu32 "\n",
                  pdu->code >> 5, pdu->code & 0x1F,
                  (int)(opt_last - pdu->token - pdu->token_length), pdu->max_opt,
                  len);

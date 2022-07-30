@@ -27,6 +27,12 @@
 #endif /* COAP_EPOLL_SUPPORT */
 #include <errno.h>
 
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#else /* ! HAVE_INTTYPES_H */
+#define PRIu32 "u"
+#endif /* ! HAVE_INTTYPES_H */
+
 void
 coap_session_set_ack_timeout(coap_session_t *session, coap_fixed_point_t value) {
   if (value.integer_part > 0 && value.fractional_part < 1000) {
@@ -81,7 +87,7 @@ void
 coap_session_set_probing_rate(coap_session_t *session, uint32_t value) {
   if (value > 0) {
     session->probing_rate = value;
-    coap_log(LOG_DEBUG, "***%s: session probing_rate set to %u\n",
+    coap_log(LOG_DEBUG, "***%s: session probing_rate set to %" PRIu32 "\n",
            coap_session_str(session), session->probing_rate);
   }
 }
