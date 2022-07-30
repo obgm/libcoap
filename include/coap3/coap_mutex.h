@@ -1,8 +1,8 @@
 /*
  * coap_mutex.h -- mutex utilities
  *
- * Copyright (C) 2019 Jon Shallow <supjps-libcoap@jpshallow.com>
- *               2019 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2019-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
+ *               2019      Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -44,7 +44,29 @@ typedef mutex_t coap_mutex_t;
 #define coap_mutex_trylock(a) mutex_trylock(a)
 #define coap_mutex_unlock(a) mutex_unlock(a)
 
-#else
+#elif defined(WITH_LWIP)
+/* Use LwIP's mutex API */
+
+#if NO_SYS
+/* Single threaded, no-op'd in lwip/sys.h */
+typedef int coap_mutex_t;
+#define COAP_MUTEX_INITIALIZER 0
+#define coap_mutex_lock(a) *(a) = 1
+#define coap_mutex_trylock(a) *(a) = 1
+#define coap_mutex_unlock(a) *(a) = 0
+#else /* !NO SYS */
+#error Need support for LwIP mutex
+#endif /* !NO SYS */
+
+#elif defined(WITH_CONTIKI)
+/* Contiki does not have a mutex API, used as single thread */
+typedef int coap_mutex_t;
+#define COAP_MUTEX_INITIALIZER 0
+#define coap_mutex_lock(a) *(a) = 1
+#define coap_mutex_trylock(a) *(a) = 1
+#define coap_mutex_unlock(a) *(a) = 0
+
+#else /* !WITH_CONTIKI && !WITH_LWIP && !RIOT_VERSION && !HAVE_PTHREAD_H && !HAVE_PTHREAD_MUTEX_LOCK */
 /* define stub mutex functions */
 #warning "stub mutex functions"
 typedef int coap_mutex_t;
@@ -53,7 +75,7 @@ typedef int coap_mutex_t;
 #define coap_mutex_trylock(a) *(a) = 1
 #define coap_mutex_unlock(a) *(a) = 0
 
-#endif /* !RIOT_VERSION && !HAVE_PTHREAD_H && !HAVE_PTHREAD_MUTEX_LOCK */
+#endif /* !WITH_CONTIKI && !WITH_LWIP && !RIOT_VERSION && !HAVE_PTHREAD_H && !HAVE_PTHREAD_MUTEX_LOCK */
 
 #endif /* COAP_CONSTRAINED_STACK */
 
