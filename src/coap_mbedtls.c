@@ -1054,10 +1054,17 @@ set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method)
       const mbedtls_ssl_ciphersuite_t *cur =
                                      mbedtls_ssl_ciphersuite_from_id(*list);
 
+#if MBEDTLS_VERSION_NUMBER >= 0x03020000
+      if (cur) {
+        if (cur->max_tls_version < MBEDTLS_SSL_VERSION_TLS1_2) {
+          /* Minimum of TLS1.2 required - skip */
+        }
+#else
       if (cur) {
         if (cur->max_minor_ver < MBEDTLS_SSL_MINOR_VERSION_3) {
           /* Minimum of TLS1.2 required - skip */
         }
+#endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
         else if (mbedtls_ssl_ciphersuite_uses_psk(cur)) {
           psk_count++;
@@ -1090,10 +1097,17 @@ set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method)
     while (*list) {
       const mbedtls_ssl_ciphersuite_t *cur =
                                      mbedtls_ssl_ciphersuite_from_id(*list);
+#if MBEDTLS_VERSION_NUMBER >= 0x03020000
+      if (cur) {
+        if (cur->max_tls_version < MBEDTLS_SSL_VERSION_TLS1_2) {
+          /* Minimum of TLS1.2 required - skip */
+        }
+#else
       if (cur) {
         if (cur->max_minor_ver < MBEDTLS_SSL_MINOR_VERSION_3) {
           /* Minimum of TLS1.2 required - skip */
         }
+#endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
         else if (mbedtls_ssl_ciphersuite_uses_psk(cur)) {
           *psk_list = *list;
@@ -1543,8 +1557,12 @@ static coap_mbedtls_env_t *coap_dtls_new_mbedtls_env(coap_session_t *c_session,
     goto fail;
   }
 
+#if MBEDTLS_VERSION_NUMBER >= 0x03020000
+  mbedtls_ssl_conf_min_tls_version(&m_env->conf, MBEDTLS_SSL_VERSION_TLS1_2);
+#else
   mbedtls_ssl_conf_min_version(&m_env->conf, MBEDTLS_SSL_MAJOR_VERSION_3,
                                MBEDTLS_SSL_MINOR_VERSION_3);
+#endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
 
   if ((ret = mbedtls_ssl_setup(&m_env->ssl, &m_env->conf)) != 0) {
     goto fail;
