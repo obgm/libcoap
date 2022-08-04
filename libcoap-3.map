@@ -218,6 +218,7 @@ global:
   coap_session_set_default_leisure;
   coap_session_set_max_retransmit;
   coap_session_set_mtu;
+  coap_session_set_no_observe_cancel;
   coap_session_set_nstart;
   coap_session_set_probing_rate;
   coap_session_set_type_client;
