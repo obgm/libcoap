@@ -614,4 +614,11 @@ uint32_t coap_session_get_probing_rate(const coap_session_t *session);
  */
 coap_mid_t coap_session_send_ping(coap_session_t *session);
 
+/**
+ * Disable client automatically sending observe cancel on session close
+ *
+ * @param session The CoAP session.
+ */
+void coap_session_set_no_observe_cancel(coap_session_t *session);
+
 #endif  /* COAP_SESSION_H */

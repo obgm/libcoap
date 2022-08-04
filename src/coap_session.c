@@ -234,7 +234,7 @@ void coap_session_mfree(coap_session_t *session) {
 
   /* Need to do this before (D)TLS and socket is closed down */
   LL_FOREACH_SAFE(session->lg_crcv, cq, etmp) {
-    if (cq->observe_set) {
+    if (cq->observe_set && session->no_observe_cancel == 0) {
       /* Need to close down observe */
       if (coap_cancel_observe(session, cq->app_token, COAP_MESSAGE_NON)) {
         /* Need to delete node we set up for NON */
@@ -1697,5 +1697,11 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint) {
 
   return szEndpoint;
 }
-#endif /* ! COAP_SERVER_SUPPORT */
+#endif /* COAP_SERVER_SUPPORT */
+#ifdef COAP_CLIENT_SUPPORT
+void
+coap_session_set_no_observe_cancel(coap_session_t *session) {
+  session->no_observe_cancel = 1;
+}
+#endif /* COAP_CLIENT_SUPPORT */
 #endif  /* COAP_SESSION_C_ */

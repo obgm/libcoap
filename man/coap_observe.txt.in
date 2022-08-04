@@ -13,7 +13,8 @@ NAME
 coap_observe,
 coap_resource_set_get_observable,
 coap_resource_notify_observers,
-coap_cancel_observe
+coap_cancel_observe,
+coap_session_set_no_observe_cancel
 - work with CoAP observe
 
 SYNOPSIS
@@ -28,6 +29,8 @@ const coap_string_t *_query_);*
 
 *int coap_cancel_observe(coap_session_t *_session_, coap_binary_t *_token_,
 coap_pdu_type_t _message_type_);*
+
+*void coap_session_set_no_observe_cancel(coap_session_t *_session_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -116,6 +119,11 @@ observe request that is being tracked. This will cause the
 appropriate PDU to be sent to the server to cancel the observation, based on
 the _session_ and _token_ used to set up the observe and the PDU is of type
 _message_type_ (use COAP_MESSAGE_NON or COAP_MESSAGE_CON).
+
+The *coap_session_set_no_observe_cancel*() function can be called by the
+client to disable calling *coap_cancel_observe*() when the _session_ is being
+closed down / freed off. *coap_cancel_observe*() can still be called directly
+by the client application.
 
 RETURN VALUES
 -------------
@@ -375,8 +383,8 @@ error:
 
 SEE ALSO
 --------
-*coap_attribute*(3), *coap_block*(3), *coap_context*(3), *coap_handler*(3),
-*coap_pdu_setup*(3) and *coap_resource*(3)
+*coap_block*(3), *coap_context*(3), *coap_handler*(3),
+*coap_pdu_setup*(3), *coap_resource*(3) and *coap_session*(3)
 
 FURTHER INFORMATION
 -------------------
