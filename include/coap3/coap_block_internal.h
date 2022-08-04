@@ -118,7 +118,8 @@ struct coap_lg_crcv_t {
   size_t total_len;      /**< Length as indicated by SIZE2 option */
   coap_binary_t *body_data; /**< Used for re-assembling entire body */
   coap_binary_t *app_token; /**< app requesting PDU token */
-  uint64_t state_token; /**< state token (and observe token) */
+  coap_binary_t *obs_token; /**< Initial Observe response PDU token */
+  uint64_t state_token; /**< state token */
   coap_pdu_t pdu;        /**< skeletal PDU */
   coap_rblock_t rec_blocks; /** < list of received blocks */
   coap_tick_t last_used; /**< Last time all data sent or 0 */

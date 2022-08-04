@@ -396,13 +396,13 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
                      cq->app_token->length))) {
         uint8_t buf[8];
         coap_mid_t mid;
-        size_t size = coap_encode_var_safe8(buf, sizeof(cq->state_token),
-                                            cq->state_token);
+        size_t size;
         const uint8_t *data;
+        coap_binary_t *otoken = cq->obs_token ? cq->obs_token : cq->app_token;
         coap_pdu_t * pdu = coap_pdu_duplicate(&cq->pdu,
                                               session,
-                                              size,
-                                              buf,
+                                              otoken->length,
+                                              otoken->s,
                                               NULL);
 
         cq->observe_set = 0;
@@ -1030,6 +1030,7 @@ coap_block_delete_lg_crcv(coap_session_t *session,
   coap_log(LOG_DEBUG, "** %s: lg_crcv %p released\n",
            coap_session_str(session), (void*)lg_crcv);
   coap_delete_binary(lg_crcv->app_token);
+  coap_delete_binary(lg_crcv->obs_token);
   coap_free_type(COAP_LG_CRCV, lg_crcv);
 }
 #endif /* COAP_CLIENT_SUPPORT */
@@ -2112,6 +2113,13 @@ coap_handle_response_get_block(coap_context_t *context,
             p->observe_length = min(coap_opt_length(obs_opt), 3);
             memcpy(p->observe, coap_opt_value(obs_opt), p->observe_length);
             p->observe_set = 1;
+            /* Need to keep observe response token for later cancellation */
+            coap_delete_binary(p->obs_token);
+            p->obs_token = coap_new_binary(rcvd->token_length);
+            if (!p->obs_token) {
+              goto fail_resp;
+            }
+            memcpy(p->obs_token->s, rcvd->token, rcvd->token_length);
           }
           else {
             p->observe_set = 0;
@@ -2203,8 +2211,10 @@ coap_handle_response_get_block(coap_context_t *context,
             rcvd->body_total = size2;
           }
           if (context->response_handler) {
-            coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
-            coap_show_pdu(LOG_DEBUG, rcvd);
+            if (block.m != 0 || block.num != 0) {
+              coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
+              coap_show_pdu(LOG_DEBUG, rcvd);
+            }
             context->response_handler(session, sent, rcvd, rcvd->mid);
           }
           app_has_response = 1;
@@ -2251,6 +2261,13 @@ block_mode:
           p->observe_length = min(coap_opt_length(obs_opt), 3);
           memcpy(p->observe, coap_opt_value(obs_opt), p->observe_length);
           p->observe_set = 1;
+          /* Need to keep observe response token for later cancellation */
+          coap_delete_binary(p->obs_token);
+          p->obs_token = coap_new_binary(rcvd->token_length);
+          if (!p->obs_token) {
+            goto fail_resp;
+          }
+          memcpy(p->obs_token->s, rcvd->token, rcvd->token_length);
         }
         else {
           p->observe_set = 0;
