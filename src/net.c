@@ -2154,39 +2154,32 @@ coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
   const uint8_t *token, size_t token_length) {
   /* cancel all messages in sendqueue that belong to session
    * and use the specified token */
-  coap_queue_t *p, *q;
-
-  while (context->sendqueue && context->sendqueue->session == session &&
-    token_match(token, token_length,
-      context->sendqueue->pdu->token,
-      context->sendqueue->pdu->token_length)) {
-    q = context->sendqueue;
-    context->sendqueue = q->next;
-    coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed 5\n",
-             coap_session_str(session), q->id);
-    coap_delete_node(q);
-  }
+  coap_queue_t **p, *q;
 
   if (!context->sendqueue)
     return;
 
-  p = context->sendqueue;
-  q = p->next;
+  p = &context->sendqueue;
+  q = *p;
 
-  /* when q is not NULL, it does not match (dst, token), so we can skip it */
   while (q) {
     if (q->session == session &&
       token_match(token, token_length,
         q->pdu->token, q->pdu->token_length)) {
-      p->next = q->next;
+      *p = q->next;
       coap_log(LOG_DEBUG, "** %s: mid=0x%x: removed 6\n",
                coap_session_str(session), q->id);
+      if (q->pdu->type == COAP_MESSAGE_CON && session->con_active) {
+        session->con_active--;
+        if (session->state == COAP_SESSION_STATE_ESTABLISHED)
+          /* Flush out any entries on session->delayqueue */
+          coap_session_connected(session);
+      }
       coap_delete_node(q);
-      q = p->next;
     } else {
-      p = q;
-      q = q->next;
+      p = &(q->next);
     }
+    q = *p;
   }
 }
 
