@@ -83,14 +83,24 @@
 
 /**
  * structure for CoAP PDUs
- * token, if any, follows the fixed size header, then options until
- * payload marker (0xff), then the payload if stored inline.
+ *
+ * Separate COAP_PDU_BUF is allocated with offsets held in coap_pdu_t.
+
+ * token, if any, follows the fixed size header, then optional options until
+ * payload marker (0xff) (if paylooad), then the optional payload.
+ *
  * Memory layout is:
  * <---header--->|<---token---><---options--->0xff<---payload--->
+ *
  * header is addressed with a negative offset to token, its maximum size is
  * max_hdr_size.
- * options starts at token + token_length
- * payload starts at data, its length is used_size - (data - token)
+ *
+ * allocated buffer always starts max_hdr_size before token.
+ *
+ * options starts at token + token_length.
+ * payload starts at data, its length is used_size - (data - token).
+ *
+ * alloc_size, used_size and max_size are the offsets from token.
  */
 
 struct coap_pdu_t {
@@ -101,7 +111,7 @@ struct coap_pdu_t {
                                  order */
   uint8_t max_hdr_size;     /**< space reserved for protocol-specific header */
   uint8_t hdr_size;         /**< actual size used for protocol-specific
-                                 header */
+                                 header (0 until header is encoded) */
   uint8_t token_length;     /**< length of Token */
   uint8_t crit_opt;         /**< Set if unknown critical option for proxy */
   uint16_t max_opt;         /**< highest option number in PDU */

@@ -185,7 +185,7 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
     size_t length = old_pdu->used_size - old_pdu->token_length -
           (old_pdu->data ?
                  old_pdu->used_size - (old_pdu->data - old_pdu->token) +1 : 0);
-    if (!coap_pdu_resize(pdu, length + old_pdu->hdr_size))
+    if (!coap_pdu_resize(pdu, length + pdu->token_length))
       goto fail;
     /* Copy the options but not any data across */
     memcpy(pdu->token + pdu->token_length,
@@ -215,6 +215,10 @@ fail:
   return NULL;
 }
 
+
+/*
+ * The new size does not include the coap header (max_hdr_size)
+ */
 int
 coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
   if (new_size > pdu->alloc_size) {
@@ -233,7 +237,8 @@ coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
     } else {
       offset = 0;
     }
-    new_hdr = (uint8_t*)realloc(pdu->token - pdu->max_hdr_size, new_size + pdu->max_hdr_size);
+    new_hdr = (uint8_t*)realloc(pdu->token - pdu->max_hdr_size,
+                                new_size + pdu->max_hdr_size);
     if (new_hdr == NULL) {
       coap_log(LOG_WARNING, "coap_pdu_resize: realloc failed\n");
       return 0;

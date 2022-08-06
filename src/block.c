@@ -111,7 +111,8 @@ static int
 setup_block_b(coap_session_t *session, coap_pdu_t *pdu, coap_block_b_t *block,
               unsigned int num,
               unsigned int blk_size, size_t total) {
-  size_t avail = pdu->max_size - pdu->used_size - pdu->hdr_size;
+  size_t token_options = pdu->data ? (size_t)(pdu->data - pdu->token) : pdu->used_size;
+  size_t avail = pdu->max_size - token_options;
   unsigned int start = num << (blk_size + 4);
   unsigned int can_use_bert = block->defined == 0 || block->bert;
 
@@ -237,10 +238,12 @@ coap_add_block_b_data(coap_pdu_t *pdu, size_t len, const uint8_t *data,
   if (len <= start)
     return 0;
 
-  if (block->bert)
-    max_size = ((pdu->max_size - pdu->used_size - pdu->hdr_size) /1024) * 1024;
-  else
+  if (block->bert) {
+    size_t token_options = pdu->data ? (size_t)(pdu->data - pdu->token) : pdu->used_size;
+    max_size = ((pdu->max_size - token_options) / 1024) * 1024;
+  } else {
     max_size = (size_t)1 << (block->szx + 4);
+  }
   block->chunk_size = (uint32_t)max_size;
 
   return coap_add_data(pdu,
@@ -450,6 +453,7 @@ coap_add_data_large_internal(coap_session_t *session,
   int have_block_defined = 0;
   uint8_t blk_size;
   uint16_t option;
+  size_t token_options;
 
   assert(pdu);
   if (pdu->data) {
@@ -519,7 +523,8 @@ coap_add_data_large_internal(coap_session_t *session,
     }
   }
 
-  avail = pdu->max_size - pdu->used_size - pdu->hdr_size;
+  token_options = pdu->data ? (size_t)(pdu->data - pdu->token) : pdu->used_size;
+  avail = pdu->max_size - token_options;
   /* There may be a response with Echo option */
   avail -= coap_opt_encode_size(COAP_OPTION_ECHO, 40);
   /* May need token of length 8, so account for this */
@@ -667,19 +672,20 @@ coap_add_data_large_internal(coap_session_t *session,
     /* Set up skeletal PDU to use as a basis for all the subsequent blocks */
     memcpy(&lg_xmit->pdu, pdu, sizeof(lg_xmit->pdu));
     lg_xmit->pdu.token = coap_malloc_type(COAP_PDU_BUF,
-                           8 + lg_xmit->pdu.used_size + lg_xmit->pdu.hdr_size);
+                           lg_xmit->pdu.used_size + lg_xmit->pdu.max_hdr_size);
     if (!lg_xmit->pdu.token)
       goto fail;
 
-    lg_xmit->pdu.alloc_size = 8 + lg_xmit->pdu.used_size +
-                              lg_xmit->pdu.hdr_size;
-    lg_xmit->pdu.token += lg_xmit->pdu.hdr_size;
+    lg_xmit->pdu.alloc_size = lg_xmit->pdu.used_size +
+                              lg_xmit->pdu.max_hdr_size;
+    lg_xmit->pdu.token += lg_xmit->pdu.max_hdr_size;
     memcpy(lg_xmit->pdu.token, pdu->token, lg_xmit->pdu.used_size);
     if (pdu->data)
       lg_xmit->pdu.data = lg_xmit->pdu.token + (pdu->data - pdu->token);
 
     /* Check we still have space after adding in some options */
-    avail = pdu->max_size - pdu->used_size - pdu->hdr_size;
+    token_options = pdu->data ? (size_t)(pdu->data - pdu->token) : pdu->used_size;
+    avail = pdu->max_size - token_options;
     /* There may be a response with Echo option */
     avail -= coap_opt_encode_size(COAP_OPTION_ECHO, 40);
     /* May need token of length 8, so account for this */
@@ -987,12 +993,12 @@ coap_block_new_lg_crcv(coap_session_t *session, coap_pdu_t *pdu) {
   /* Set up skeletal PDU to use as a basis for all the subsequent blocks */
   memcpy(&lg_crcv->pdu, pdu, sizeof(lg_crcv->pdu));
   lg_crcv->pdu.token = coap_malloc_type(COAP_PDU_BUF,
-                            lg_crcv->pdu.alloc_size + lg_crcv->pdu.hdr_size);
+                            lg_crcv->pdu.alloc_size + lg_crcv->pdu.max_hdr_size);
   if (!lg_crcv->pdu.token) {
     coap_block_delete_lg_crcv(session, lg_crcv);
     return NULL;
   }
-  lg_crcv->pdu.token += lg_crcv->pdu.hdr_size;
+  lg_crcv->pdu.token += lg_crcv->pdu.max_hdr_size;
   memcpy(lg_crcv->pdu.token, pdu->token, lg_crcv->pdu.used_size);
   if (lg_crcv->pdu.data)
     lg_crcv->pdu.data = lg_crcv->pdu.token + (pdu->data - pdu->token);
@@ -1025,7 +1031,7 @@ coap_block_delete_lg_crcv(coap_session_t *session,
     return;
 
   if (lg_crcv->pdu.token)
-    coap_free_type(COAP_PDU_BUF, lg_crcv->pdu.token - lg_crcv->pdu.hdr_size);
+    coap_free_type(COAP_PDU_BUF, lg_crcv->pdu.token - lg_crcv->pdu.max_hdr_size);
   coap_free_type(COAP_STRING, lg_crcv->body_data);
   coap_log(LOG_DEBUG, "** %s: lg_crcv %p released\n",
            coap_session_str(session), (void*)lg_crcv);
@@ -1059,7 +1065,7 @@ coap_block_delete_lg_xmit(coap_session_t *session,
     lg_xmit->release_func(session, lg_xmit->app_ptr);
   }
   if (lg_xmit->pdu.token) {
-    coap_free_type(COAP_PDU_BUF, lg_xmit->pdu.token - lg_xmit->pdu.hdr_size);
+    coap_free_type(COAP_PDU_BUF, lg_xmit->pdu.token - lg_xmit->pdu.max_hdr_size);
   }
   if (COAP_PDU_IS_REQUEST(&lg_xmit->pdu))
     coap_delete_binary(lg_xmit->b.b1.app_token);
@@ -1270,8 +1276,9 @@ coap_handle_request_send_block(coap_session_t *session,
       if (pdu->type == COAP_MESSAGE_NON)
         out_pdu->type = COAP_MESSAGE_NON;
       if (block.bert) {
+        size_t token_options = pdu->data ? (size_t)(pdu->data - pdu->token) : pdu->used_size;
         block.m = (p->length - p->offset) >
-         ((out_pdu->max_size - out_pdu->used_size - out_pdu->hdr_size) /1024) * 1024;
+         ((out_pdu->max_size - token_options) /1024) * 1024;
       } else {
         block.m = (p->offset + chunk) < p->length;
       }
@@ -1848,8 +1855,9 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
 
         block.num++;
         if (block.bert) {
+          size_t token_options = pdu->data ? (size_t)(pdu->data - pdu->token) : pdu->used_size;
           block.m = (p->length - p->offset) >
-               ((pdu->max_size - pdu->used_size - pdu->hdr_size) /1024) * 1024;
+               ((pdu->max_size - token_options) /1024) * 1024;
         } else {
           block.m = (p->offset + chunk) < p->length;
         }
