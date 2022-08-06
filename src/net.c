@@ -1468,8 +1468,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
       coap_retransmittimer_restart(context);
 #endif
 
-    if (node->retransmit_cnt == node->session->max_retransmit) {
-      coap_log(LOG_DEBUG, "** %s: mid=0x%x: final retransmission\n",
+    if (node->is_mcast) {
+      coap_log(LOG_DEBUG, "** %s: mid=0x%x: mcast delayed transmission\n",
                coap_session_str(node->session), node->id);
     } else {
       coap_log(LOG_DEBUG, "** %s: mid=0x%x: retransmission #%d\n",
@@ -1480,6 +1480,11 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
       node->session->con_active--;
     bytes_written = coap_send_pdu(node->session, node->pdu, node);
 
+    if (node->is_mcast) {
+      coap_session_connected(node->session);
+      coap_delete_node(node);
+      return COAP_INVALID_MID;
+    }
     if (bytes_written == COAP_PDU_DELAYED) {
       /* PDU was not retransmitted immediately because a new handshake is
          in progress. node was moved to the send queue of the session. */
@@ -2996,6 +3001,7 @@ skip_handler:
 
           node->id = response->mid;
           node->pdu = response;
+          node->is_mcast = 1;
           coap_prng(&r, sizeof(r));
           delay = (COAP_DEFAULT_LEISURE_TICKS(session) * r) / 256;
           coap_log(LOG_DEBUG,
@@ -3005,10 +3011,7 @@ skip_handler:
                    (unsigned int)(delay / COAP_TICKS_PER_SECOND),
                    (unsigned int)((delay % COAP_TICKS_PER_SECOND) *
                      1000 / COAP_TICKS_PER_SECOND));
-          /* Force only on retransmission */
-          node->retransmit_cnt = session->max_retransmit -1;
-          node->timeout = (unsigned int)(delay) /
-                                        (1 << (session->max_retransmit - 1));
+          node->timeout = (unsigned int)delay;
           /* Use this to delay transmission */
           coap_wait_ack(session->context, session, node);
         }
