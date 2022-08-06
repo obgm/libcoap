@@ -1506,8 +1506,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 
 #if COAP_SERVER_SUPPORT
   /* Check if subscriptions exist that should be canceled after
-     COAP_MAX_NOTIFY_FAILURES */
-  if (node->pdu->code >= 64) {
+     COAP_OBS_MAX_FAIL */
+  if (COAP_RESPONSE_CLASS(node->pdu->code) >= 2) {
     coap_binary_t token = { 0, NULL };
 
     token.length = node->pdu->token_length;

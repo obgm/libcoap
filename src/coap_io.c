@@ -469,7 +469,7 @@ coap_update_epoll_timer(coap_context_t *context, coap_tick_t delay)
       }
 #ifdef COAP_DEBUG_WAKEUP_TIMES
       else {
-        coap_log(LOG_INFO, "****** Next wakeup time %ld.%09ld\n",
+        coap_log(LOG_INFO, "****** Next wakeup time %3ld.%09ld\n",
                  new_value.it_value.tv_sec, new_value.it_value.tv_nsec);
       }
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
@@ -1101,7 +1101,7 @@ coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
                                    1000000;
     }
 #ifdef COAP_DEBUG_WAKEUP_TIMES
-    coap_log(LOG_INFO, "****** Next wakeup time %ld.%09ld\n",
+    coap_log(LOG_INFO, "****** Next wakeup time %3ld.%09ld\n",
              new_value.it_value.tv_sec, new_value.it_value.tv_nsec);
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
     /* reset, or specify a future time for eptimerfd to trigger */

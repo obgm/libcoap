@@ -1145,29 +1145,12 @@ coap_remove_failed_observers(coap_context_t *context,
         memcmp(token->s, obs->pdu->token, token->length) == 0) {
 
       /* count failed notifies and remove when
-       * COAP_MAX_FAILED_NOTIFY is reached */
-      if (obs->fail_cnt < COAP_OBS_MAX_FAIL)
-        obs->fail_cnt++;
-      else {
-        LL_DELETE(resource->subscribers, obs);
-        obs->fail_cnt = 0;
-
-        if (LOG_DEBUG <= coap_get_log_level()) {
-#ifndef INET6_ADDRSTRLEN
-#define INET6_ADDRSTRLEN 40
-#endif
-          unsigned char addr[INET6_ADDRSTRLEN+8];
-
-          if (coap_print_addr(&obs->session->addr_info.remote,
-                              addr, INET6_ADDRSTRLEN+8))
-            coap_log(LOG_DEBUG, "** removed observer %s\n", addr);
-        }
+       * COAP_OBS_MAX_FAIL is reached */
+      obs->fail_cnt++;
+      if (obs->fail_cnt >= COAP_OBS_MAX_FAIL) {
         coap_cancel_all_messages(context, obs->session,
                                  obs->pdu->token, obs->pdu->token_length);
-        coap_session_release( obs->session );
-        coap_delete_pdu(obs->pdu);
-        coap_delete_cache_key(obs->cache_key);
-        COAP_FREE_TYPE(subscription, obs);
+        coap_delete_observer(resource, session, token);
       }
       break;                        /* break loop if observer was found */
     }
@@ -1180,7 +1163,7 @@ coap_handle_failed_notify(coap_context_t *context,
                           const coap_binary_t *token) {
 
   RESOURCES_ITER(context->resources, r) {
-        coap_remove_failed_observers(context, r, session, token);
+    coap_remove_failed_observers(context, r, session, token);
   }
 }
 

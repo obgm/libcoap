@@ -101,22 +101,28 @@
 #endif /* COAP_MAX_LG_SRCV */
 
 /**
- * Number of notifications that may be sent non-confirmable before a
- * confirmable message is sent to detect if observers are alive. The
- * maximum allowed value here is @c 15.
+ * Number of notifications that may be sent non-confirmable before a confirmable
+ * message is sent to detect if observers are alive. The maximum allowed value
+ * here is @c 255.
  */
 #ifndef COAP_OBS_MAX_NON
 #define COAP_OBS_MAX_NON   5
 #endif /* COAP_OBS_MAX_NON */
+#if COAP_OBS_MAX_NON > 255
+#error COAP_OBS_MAX_NON is too large
+#endif /* COAP_OBS_MAX_NON > 255 */
 
 /**
- * Number of confirmable notifications that may fail (i.e. time out
- * without being ACKed) before an observer is removed. The maximum
- * value for COAP_OBS_MAX_FAIL is @c 3.
+ * Number of different confirmable notifications that may fail (i.e. those
+ * that have hit MAX_RETRANSMIT multiple times) before an observer is removed. 
+ * The maximum value for COAP_OBS_MAX_FAIL is @c 255.
  */
 #ifndef COAP_OBS_MAX_FAIL
-#define COAP_OBS_MAX_FAIL  3
+#define COAP_OBS_MAX_FAIL  1
 #endif /* COAP_OBS_MAX_FAIL */
+#if COAP_OBS_MAX_FAIL > 255
+#error COAP_OBS_MAX_FAIL is too large
+#endif /* COAP_OBS_MAX_FAIL > 255 */
 
 #ifndef DEBUG
 # define DEBUG DEBUG_PRINT
