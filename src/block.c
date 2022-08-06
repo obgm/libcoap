@@ -497,6 +497,7 @@ coap_add_data_large_internal(coap_session_t *session,
         LL_DELETE(session->lg_xmit, lg_xmit);
         coap_block_delete_lg_xmit(session, lg_xmit);
         lg_xmit = NULL;
+        coap_handle_event(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
         break;
       }
     }
@@ -518,6 +519,7 @@ coap_add_data_large_internal(coap_session_t *session,
         LL_DELETE(session->lg_xmit, lg_xmit);
         coap_block_delete_lg_xmit(session, lg_xmit);
         lg_xmit = NULL;
+        coap_handle_event(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
         break;
       }
     }
@@ -590,6 +592,7 @@ coap_add_data_large_internal(coap_session_t *session,
     lg_xmit->release_func = release_func;
     lg_xmit->app_ptr = app_ptr;
     coap_ticks(&lg_xmit->last_obs);
+    coap_ticks(&lg_xmit->last_sent);
     if (COAP_PDU_IS_REQUEST(pdu)) {
       /* Need to keep original token for updating response PDUs */
       lg_xmit->b.b1.app_token = coap_new_binary(pdu->token_length);
@@ -867,38 +870,69 @@ error_released:
 }
 #endif /* ! COAP_SERVER_SUPPORT */
 
-coap_tick_t
-coap_block_check_lg_xmit_timeouts(coap_session_t *session, coap_tick_t now) {
+/*
+ * return 1 if there is a future expire time, else 0.
+ * update tim_rem with remaining value if return is 1.
+ */
+int
+coap_block_check_lg_xmit_timeouts(coap_session_t *session, coap_tick_t now,
+                                  coap_tick_t *tim_rem) {
   coap_lg_xmit_t *p;
   coap_lg_xmit_t *q;
   coap_tick_t idle_timeout = 8 * COAP_TICKS_PER_SECOND;
-  coap_tick_t tim_rem = -1;
+  coap_tick_t partial_timeout = COAP_MAX_TRANSMIT_WAIT_TICKS(session);
+  int ret = 0;
+
+  *tim_rem = -1;
 
   LL_FOREACH_SAFE(session->lg_xmit, p, q) {
-    if (p->last_all_sent == 0) {
-      continue;
+    if (p->last_all_sent) {
+      if (p->last_all_sent + idle_timeout <= now) {
+        /* Expire this entry */
+        LL_DELETE(session->lg_xmit, p);
+        coap_block_delete_lg_xmit(session, p);
+      }
+      else {
+        /* Delay until the lg_xmit needs to expire */
+        if (*tim_rem > p->last_all_sent + idle_timeout - now) {
+          *tim_rem = p->last_all_sent + idle_timeout - now;
+          ret = 1;
+        }
+      }
     }
-    if (p->last_all_sent + idle_timeout <= now) {
-      /* Expire this entry */
-      LL_DELETE(session->lg_xmit, p);
-      coap_block_delete_lg_xmit(session, p);
-    }
-    else {
-      /* Delay until the lg_xmit needs to expire */
-      if (tim_rem > p->last_all_sent + idle_timeout - now)
-        tim_rem = p->last_all_sent + idle_timeout - now;
+    else if (p->last_sent) {
+      if (p->last_sent + partial_timeout <= now) {
+        /* Expire this entry */
+        LL_DELETE(session->lg_xmit, p);
+        coap_block_delete_lg_xmit(session, p);
+        coap_handle_event(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
+      }
+      else {
+        /* Delay until the lg_xmit needs to expire */
+        if (*tim_rem > p->last_sent + partial_timeout - now) {
+          *tim_rem = p->last_sent + partial_timeout - now;
+          ret = 1;
+        }
+      }
     }
   }
-  return tim_rem;
+  return ret;
 }
 
 #if COAP_CLIENT_SUPPORT
-coap_tick_t
-coap_block_check_lg_crcv_timeouts(coap_session_t *session, coap_tick_t now) {
+/*
+ * return 1 if there is a future expire time, else 0.
+ * update tim_rem with remaining value if return is 1.
+ */
+int
+coap_block_check_lg_crcv_timeouts(coap_session_t *session, coap_tick_t now,
+                                  coap_tick_t *tim_rem) {
   coap_lg_crcv_t *p;
   coap_lg_crcv_t *q;
   coap_tick_t partial_timeout = COAP_EXCHANGE_LIFETIME(session);
-  coap_tick_t tim_rem = -1;
+  int ret = 0;
+
+  *tim_rem = -1;
 
   LL_FOREACH_SAFE(session->lg_crcv, p, q) {
     if (!p->observe_set && p->last_used &&
@@ -909,11 +943,13 @@ coap_block_check_lg_crcv_timeouts(coap_session_t *session, coap_tick_t now) {
     }
     else if (!p->observe_set && p->last_used) {
       /* Delay until the lg_crcv needs to expire */
-      if (tim_rem > p->last_used + partial_timeout - now)
-        tim_rem = p->last_used + partial_timeout - now;
+      if (*tim_rem > p->last_used + partial_timeout - now) {
+        *tim_rem = p->last_used + partial_timeout - now;
+        ret = 1;
+      }
     }
   }
-  return tim_rem;
+  return ret;
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
@@ -949,12 +985,19 @@ check_all_blocks_in(coap_rblock_t *rec_blocks, size_t total_blocks) {
 }
 
 #if COAP_SERVER_SUPPORT
-coap_tick_t
-coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now) {
+/*
+ * return 1 if there is a future expire time, else 0.
+ * update tim_rem with remaining value if return is 1.
+ */
+int
+coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now,
+                                  coap_tick_t *tim_rem) {
   coap_lg_srcv_t *p;
   coap_lg_srcv_t *q;
   coap_tick_t partial_timeout = COAP_EXCHANGE_LIFETIME(session);
-  coap_tick_t tim_rem = -1;
+  int ret = 0;
+
+  *tim_rem = -1;
 
   LL_FOREACH_SAFE(session->lg_srcv, p, q) {
     if (p->last_used && p->last_used + partial_timeout <= now) {
@@ -964,11 +1007,13 @@ coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now) {
     }
     else if (p->last_used) {
       /* Delay until the lg_srcv needs to expire */
-      if (tim_rem > p->last_used + partial_timeout - now)
-        tim_rem = p->last_used + partial_timeout - now;
+      if (*tim_rem > p->last_used + partial_timeout - now) {
+        *tim_rem = p->last_used + partial_timeout - now;
+        ret = 1;
+      }
     }
   }
-  return tim_rem;
+  return ret;
 }
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -1163,6 +1208,7 @@ coap_handle_request_send_block(coap_session_t *session,
         continue;
       }
       out_pdu->code = COAP_RESPONSE_CODE(203);
+      coap_ticks(&p->last_sent);
       goto skip_app_handler;
     }
     else {
@@ -1325,23 +1371,24 @@ coap_handle_request_send_block(coap_session_t *session,
         goto internal_issue;
       }
       if (i + 1 < request_cnt) {
+        coap_ticks(&p->last_sent);
         coap_send_internal(session, out_pdu);
       }
     }
     coap_ticks(&p->last_payload);
     goto skip_app_handler;
 
-internal_issue:
-    response->code = COAP_RESPONSE_CODE(500);
-    error_phrase = coap_response_phrase(response->code);
-    coap_add_data(response, strlen(error_phrase),
-                  (const uint8_t *)error_phrase);
-    /* Keep in cache for 4 * ACK_TIMOUT */
-    if (p)
-      coap_ticks(&p->last_all_sent);
-    goto skip_app_handler;
   } /* end of LL_FOREACH() */
   return 0;
+
+internal_issue:
+  response->code = COAP_RESPONSE_CODE(500);
+  error_phrase = coap_response_phrase(response->code);
+  coap_add_data(response, strlen(error_phrase),
+                (const uint8_t *)error_phrase);
+  /* Keep in cache for 4 * ACK_TIMOUT incase of retry */
+  if (p)
+    coap_ticks(&p->last_all_sent);
 
 skip_app_handler:
   return 1;
@@ -1773,6 +1820,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
   coap_lg_xmit_t *q;
   uint64_t token_match = STATE_TOKEN_BASE(coap_decode_var_bytes8(rcvd->token,
                                                          rcvd->token_length));
+  coap_lg_crcv_t *lg_crcv = NULL;
 
   LL_FOREACH_SAFE(session->lg_xmit, p, q) {
     if (!COAP_PDU_IS_REQUEST(&p->pdu) ||
@@ -1786,7 +1834,6 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
     /* lg_xmit found */
     size_t chunk = (size_t)1 << (p->blk_size + 4);
     coap_block_b_t block;
-    coap_lg_crcv_t *lg_crcv = NULL;
 
     if (COAP_RESPONSE_CLASS(rcvd->code) == 2 &&
         coap_get_block_b(session, rcvd, p->option, &block)) {
@@ -1874,6 +1921,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
                                    &block))
           goto fail_body;
         p->b.b1.bert_size = block.chunk_size;
+        coap_ticks(&p->last_sent);
         if (coap_send_internal(session, pdu) == COAP_INVALID_MID)
           goto fail_body;
         return 1;
@@ -1882,34 +1930,36 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
       if (check_freshness(session, rcvd, sent, p, NULL))
         return 1;
     }
+    goto lg_xmit_finished;
+  } /* end of LL_FOREACH_SAFE */
+  return 0;
+
 fail_body:
-    if (session->lg_crcv) {
-      LL_FOREACH(session->lg_crcv, lg_crcv) {
-        if (STATE_TOKEN_BASE(p->b.b1.state_token) ==
-            STATE_TOKEN_BASE(lg_crcv->state_token)) {
-          /* In case of observe */
-          lg_crcv->state_token = p->b.b1.state_token;
-          break;
-        }
+  coap_handle_event(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
+  /* There has been an internal error of some sort */
+  rcvd->code = COAP_RESPONSE_CODE(500);
+lg_xmit_finished:
+  if (session->lg_crcv) {
+    LL_FOREACH(session->lg_crcv, lg_crcv) {
+      if (STATE_TOKEN_BASE(p->b.b1.state_token) ==
+          STATE_TOKEN_BASE(lg_crcv->state_token)) {
+        /* In case of observe */
+        lg_crcv->state_token = p->b.b1.state_token;
+        break;
       }
     }
-    if (!lg_crcv) {
-      /* need to put back original token into rcvd */
-      if (p->b.b1.app_token)
-        coap_update_token(rcvd, p->b.b1.app_token->length,
-                          p->b.b1.app_token->s);
-      coap_log(LOG_DEBUG, "PDU given to app\n");
-      coap_show_pdu(LOG_DEBUG, rcvd);
-    }
+  }
+  if (!lg_crcv) {
+    /* need to put back original token into rcvd */
+    if (p->b.b1.app_token)
+      coap_update_token(rcvd, p->b.b1.app_token->length,
+                        p->b.b1.app_token->s);
+    coap_log(LOG_DEBUG, "PDU given to app\n");
+    coap_show_pdu(LOG_DEBUG, rcvd);
+  }
 
-    LL_DELETE(session->lg_xmit, p);
-    coap_block_delete_lg_xmit(session, p);
-    /*
-     * There may be a block response after doing the large request
-     * https://tools.ietf.org/html/rfc7959#section-3.3
-     */
-    break;
-  } /* end of LL_FOREACH_SAFE */
+  LL_DELETE(session->lg_xmit, p);
+  coap_block_delete_lg_xmit(session, p);
   return 0;
 }
 #endif /* COAP_CLIENT_SUPPORT */

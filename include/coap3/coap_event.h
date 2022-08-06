@@ -55,9 +55,10 @@ typedef enum coap_event_t {
   COAP_EVENT_SESSION_FAILED    = 0x2003,
 
 /**
- * (Q-)Block receive errors
+ * (Q-)Block errors
  */
   COAP_EVENT_PARTIAL_BLOCK     = 0x3001,
+  COAP_EVENT_XMIT_BLOCK_FAIL   = 0x3002,
 
 /**
  * @defgroup srv_sess_state_events Server session state management events

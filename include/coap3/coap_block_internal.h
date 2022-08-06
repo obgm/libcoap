@@ -91,6 +91,7 @@ struct coap_lg_xmit_t {
   } b;
   coap_pdu_t pdu;        /**< skeletal PDU */
   coap_tick_t last_payload; /**< Last time MAX_PAYLOAD was sent or 0 */
+  coap_tick_t last_sent; /**< Last time any data sent */
   coap_tick_t last_all_sent; /**< Last time all data sent or 0 */
   coap_tick_t last_obs; /**< Last time used (Observe tracking) or 0 */
   coap_release_large_data_t release_func; /**< large data de-alloc function */
@@ -162,16 +163,18 @@ coap_lg_crcv_t * coap_block_new_lg_crcv(coap_session_t *session,
 void coap_block_delete_lg_crcv(coap_session_t *session,
                                coap_lg_crcv_t *lg_crcv);
 
-coap_tick_t coap_block_check_lg_crcv_timeouts(coap_session_t *session,
-                                              coap_tick_t now);
+int coap_block_check_lg_crcv_timeouts(coap_session_t *session,
+                                      coap_tick_t now,
+                                      coap_tick_t *tim_rem);
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
 void coap_block_delete_lg_srcv(coap_session_t *session,
                                coap_lg_srcv_t *lg_srcv);
 
-coap_tick_t coap_block_check_lg_srcv_timeouts(coap_session_t *session,
-                                              coap_tick_t now);
+int coap_block_check_lg_srcv_timeouts(coap_session_t *session,
+                                      coap_tick_t now,
+                                      coap_tick_t *tim_rem);
 
 int coap_handle_request_send_block(coap_session_t *session,
                                    coap_pdu_t *pdu,
@@ -205,8 +208,9 @@ int coap_handle_response_get_block(coap_context_t *context,
 void coap_block_delete_lg_xmit(coap_session_t *session,
                                coap_lg_xmit_t *lg_xmit);
 
-coap_tick_t coap_block_check_lg_xmit_timeouts(coap_session_t *session,
-                                              coap_tick_t now);
+int coap_block_check_lg_xmit_timeouts(coap_session_t *session,
+                                      coap_tick_t now,
+                                      coap_tick_t *tim_rem);
 
 /**
  * The function checks that the code in a newly formed lg_xmit created by

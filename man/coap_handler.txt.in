@@ -208,9 +208,10 @@ COAP_EVENT_SESSION_CONNECTED  0x2001
 COAP_EVENT_SESSION_CLOSED     0x2002
 COAP_EVENT_SESSION_FAILED     0x2003
 /**
- * (Q-)BLOCK receive errors
+ * (Q-)BLOCK errors
  */
 COAP_EVENT_PARTIAL_BLOCK      0x3001
+COAP_EVENT_XMIT_BLOCK_FAIL    0x3002
 /**
  * Server session state management events
  */

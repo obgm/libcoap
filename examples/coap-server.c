@@ -1642,6 +1642,7 @@ proxy_event_handler(coap_session_t *session,
   case COAP_EVENT_SESSION_CONNECTED:
   case COAP_EVENT_SESSION_FAILED:
   case COAP_EVENT_PARTIAL_BLOCK:
+  case COAP_EVENT_XMIT_BLOCK_FAIL:
   case COAP_EVENT_SERVER_SESSION_NEW:
   case COAP_EVENT_SERVER_SESSION_DEL:
   default:
