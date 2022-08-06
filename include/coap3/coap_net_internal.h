@@ -35,6 +35,7 @@ struct coap_queue_t {
   coap_tick_t t;                /**< when to send PDU for the next time */
   unsigned char retransmit_cnt; /**< retransmission counter, will be removed
                                  *    when zero */
+  uint8_t is_mcast;             /**< Set if this is a queued mcast response */
   unsigned int timeout;         /**< the randomized timeout value */
   coap_session_t *session;      /**< the CoAP session */
   coap_mid_t id;                /**< CoAP message id */
