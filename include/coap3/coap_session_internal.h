@@ -374,6 +374,9 @@ void coap_session_mfree(coap_session_t *session);
    (s)->ack_random_factor.fractional_part) \
   / 1000000)
 
+#define COAP_MAX_TRANSMIT_WAIT_TICKS(s) \
+ (COAP_MAX_TRANSMIT_WAIT(s) * COAP_TICKS_PER_SECOND)
+
   /**
    * The PROCESSING_DELAY definition for the session (s).
    *

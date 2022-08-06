@@ -1236,15 +1236,17 @@ coap_io_prepare_io(coap_context_t *ctx,
         }
         /* Check if any server large receives have timed out */
         if (s->lg_srcv) {
-          s_timeout = coap_block_check_lg_srcv_timeouts(s, now);
-          if (timeout == 0 || s_timeout < timeout)
-            timeout = s_timeout;
+          if (coap_block_check_lg_srcv_timeouts(s, now, &s_timeout)) {
+            if (timeout == 0 || s_timeout < timeout)
+              timeout = s_timeout;
+          }
         }
         /* Check if any server large sending have timed out */
         if (s->lg_xmit) {
-          s_timeout = coap_block_check_lg_xmit_timeouts(s, now);
-          if (timeout == 0 || s_timeout < timeout)
-            timeout = s_timeout;
+          if (coap_block_check_lg_xmit_timeouts(s, now, &s_timeout)) {
+            if (timeout == 0 || s_timeout < timeout)
+              timeout = s_timeout;
+          }
         }
 #ifndef COAP_EPOLL_SUPPORT
         if (s->sock.flags & (COAP_SOCKET_WANT_READ|COAP_SOCKET_WANT_WRITE)) {
@@ -1323,9 +1325,17 @@ release_1:
 
     /* Check if any client large receives have timed out */
     if (s->lg_crcv) {
-      s_timeout = coap_block_check_lg_crcv_timeouts(s, now);
-      if (timeout == 0 || s_timeout < timeout)
-        timeout = s_timeout;
+      if (coap_block_check_lg_crcv_timeouts(s, now, &s_timeout)) {
+        if (timeout == 0 || s_timeout < timeout)
+          timeout = s_timeout;
+      }
+    }
+    /* Check if any client large sending have timed out */
+    if (s->lg_xmit) {
+      if (coap_block_check_lg_xmit_timeouts(s, now, &s_timeout)) {
+        if (timeout == 0 || s_timeout < timeout)
+          timeout = s_timeout;
+      }
     }
 
 #ifndef COAP_EPOLL_SUPPORT
