@@ -2605,6 +2605,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_string_t *query = NULL;
   coap_opt_t *observe = NULL;
   coap_string_t *uri_path = NULL;
+  int added_block = 0;
 #ifndef WITHOUT_ASYNC
   coap_bin_const_t tokenc = { pdu->token_length, pdu->token };
   coap_async_t *async;
@@ -2858,7 +2859,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     if (coap_add_token(response, pdu->token_length, pdu->token)) {
       int observe_action = COAP_OBSERVE_CANCEL;
       coap_block_b_t block;
-      int added_block = 0;
 
       query = coap_get_query(pdu);
       /* check for Observe option RFC7641 and RFC8132 */
