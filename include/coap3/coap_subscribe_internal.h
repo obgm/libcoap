@@ -29,34 +29,40 @@
  * @{
  */
 
-#ifndef COAP_OBS_MAX_NON
 /**
  * Number of notifications that may be sent non-confirmable before a confirmable
  * message is sent to detect if observers are alive. The maximum allowed value
- * here is @c 15.
+ * here is @c 255.
  */
+#ifndef COAP_OBS_MAX_NON
 #define COAP_OBS_MAX_NON   5
 #endif /* COAP_OBS_MAX_NON */
+#if COAP_OBS_MAX_NON > 255
+#error COAP_OBS_MAX_NON is too large
+#endif /* COAP_OBS_MAX_NON > 255 */
 
-#ifndef COAP_OBS_MAX_FAIL
 /**
- * Number of confirmable notifications that may fail (i.e. time out without
- * being ACKed) before an observer is removed. The maximum value for
- * COAP_OBS_MAX_FAIL is @c 3.
+ * Number of different confirmable notifications that may fail (i.e. those
+ * that have hit MAX_RETRANSMIT multiple times) before an observer is removed.
+ * The maximum value for COAP_OBS_MAX_FAIL is @c 255.
  */
-#define COAP_OBS_MAX_FAIL  3
+#ifndef COAP_OBS_MAX_FAIL
+#define COAP_OBS_MAX_FAIL  1
 #endif /* COAP_OBS_MAX_FAIL */
+#if COAP_OBS_MAX_FAIL > 255
+#error COAP_OBS_MAX_FAIL is too large
+#endif /* COAP_OBS_MAX_FAIL > 255 */
 
 /** Subscriber information */
 struct coap_subscription_t {
   struct coap_subscription_t *next; /**< next element in linked list */
   struct coap_session_t *session;   /**< subscriber session */
 
-  unsigned int non_cnt:4;  /**< up to 15 non-confirmable notifies allowed */
-  unsigned int fail_cnt:2; /**< up to 3 confirmable notifies can fail */
-  unsigned int dirty:1;    /**< set if the notification temporarily could not be
-                            *   sent (in that case, the resource's partially
-                            *   dirty flag is set too) */
+  uint8_t non_cnt;  /**< up to 255 non-confirmable notifies allowed */
+  uint8_t fail_cnt; /**< up to 255 confirmable notifies can fail */
+  uint8_t dirty;    /**< set if the notification temporarily could not be
+                     *   sent (in that case, the resource's partially
+                     *   dirty flag is set too) */
   coap_cache_key_t *cache_key; /** cache_key to identify requester */
   coap_pdu_t *pdu;         /**< PDU to use for additional requests */
 };
