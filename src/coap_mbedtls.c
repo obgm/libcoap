@@ -74,7 +74,7 @@
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #else /* ! HAVE_INTTYPES_H */
-#define PRIu32 "u"
+#define PRIx32 "x"
 #endif /* ! HAVE_INTTYPES_H */
 
 #define mbedtls_malloc(a) malloc(a)
@@ -484,7 +484,7 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
       while (tcp) {
         *tcp = '\000';
         coap_log(LOG_WARNING,
-                 "   %s: %s: issue 0x%" PRIu32 ": '%s' depth %d\n",
+                 "   %s: %s: issue 0x%" PRIx32 ": '%s' depth %d\n",
                  coap_session_str(c_session),
                  buf, *flags, cn ? cn : "?", depth);
         tcp = strchr(tcp+1, '\n');
