@@ -929,7 +929,7 @@ coap_block_check_lg_crcv_timeouts(coap_session_t *session, coap_tick_t now,
                                   coap_tick_t *tim_rem) {
   coap_lg_crcv_t *p;
   coap_lg_crcv_t *q;
-  coap_tick_t partial_timeout = COAP_EXCHANGE_LIFETIME(session);
+  coap_tick_t partial_timeout = COAP_MAX_TRANSMIT_WAIT_TICKS(session);
   int ret = 0;
 
   *tim_rem = -1;
@@ -994,7 +994,7 @@ coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now,
                                   coap_tick_t *tim_rem) {
   coap_lg_srcv_t *p;
   coap_lg_srcv_t *q;
-  coap_tick_t partial_timeout = COAP_EXCHANGE_LIFETIME(session);
+  coap_tick_t partial_timeout = COAP_MAX_TRANSMIT_WAIT_TICKS(session);
   int ret = 0;
 
   *tim_rem = -1;
@@ -1034,6 +1034,7 @@ coap_block_new_lg_crcv(coap_session_t *session, coap_pdu_t *pdu) {
            STATE_TOKEN_BASE(state_token));
   memset(lg_crcv, 0, sizeof(coap_lg_crcv_t));
   lg_crcv->initial = 1;
+  coap_ticks(&lg_crcv->last_used);
   /* Set up skeletal PDU to use as a basis for all the subsequent blocks */
   memcpy(&lg_crcv->pdu, pdu, sizeof(lg_crcv->pdu));
   lg_crcv->pdu.token = coap_malloc_type(COAP_PDU_BUF,
@@ -1541,6 +1542,7 @@ coap_handle_request_put_block(coap_context_t *context,
       coap_log(LOG_DEBUG, "** %s: lg_srcv %p initialized\n",
                coap_session_str(session), (void*)p);
       memset(p, 0, sizeof(coap_lg_srcv_t));
+      coap_ticks(&p->last_used);
       p->resource = resource;
       if (resource == context->unknown_resource ||
           resource == context->proxy_uri_resource)
@@ -2012,7 +2014,7 @@ coap_block_build_body(coap_binary_t *body_data, size_t length,
 /*
  * Need to see if this is a large body response to a request. If so,
  * need to initiate the request for the next block and not trouble the
- * application.  Note that Token must unique per request/response.
+ * application.  Note that Token must be unique per request/response.
  *
  * This is set up using coap_send()
  * Client receives large data from server (Block2)
@@ -2067,7 +2069,7 @@ coap_handle_response_get_block(coap_context_t *context,
         block_opt = COAP_OPTION_BLOCK2;
       }
       track_echo(session, rcvd);
-      if (have_block) {
+      if (have_block && (block.m || length)) {
         coap_opt_t *fmt_opt = coap_check_option(rcvd,
                                             COAP_OPTION_CONTENT_FORMAT,
                                             &opt_iter);
@@ -2328,23 +2330,25 @@ block_mode:
         }
         else {
           p->observe_set = 0;
-          /* need to put back original token into rcvd */
-          coap_update_token(rcvd, p->app_token->length, p->app_token->s);
           /* Expire this entry */
-          LL_DELETE(session->lg_crcv, p);
-          coap_block_delete_lg_crcv(session, p);
-          goto call_app_handler;
+          goto expire_lg_crcv;
         }
       }
+      coap_ticks(&p->last_used);
     } else if (rcvd->code == COAP_RESPONSE_CODE(401)) {
       if (check_freshness(session, rcvd, sent, NULL, p))
         goto skip_app_handler;
-      goto fail_resp;
+      goto expire_lg_crcv;
+    } else {
+      /* Not 2.xx or 4.01 - assume it is a failure of some sort */
+      goto expire_lg_crcv;
     }
     if (!block.m && !p->observe_set) {
 fail_resp:
-      /* lg_crcv no longer required - cache it */
+      /* lg_crcv no longer required - cache it for 1 sec */
       coap_ticks(&p->last_used);
+      p->last_used = p->last_used - COAP_MAX_TRANSMIT_WAIT_TICKS(session) +
+                     COAP_TICKS_PER_SECOND;
     }
     /* need to put back original token into rcvd */
     coap_update_token(rcvd, p->app_token->length, p->app_token->s);
@@ -2404,6 +2408,13 @@ fail_resp:
     }
   }
   return app_has_response;
+
+expire_lg_crcv:
+    /* need to put back original token into rcvd */
+    coap_update_token(rcvd, p->app_token->length, p->app_token->s);
+    /* Expire this entry */
+    LL_DELETE(session->lg_crcv, p);
+    coap_block_delete_lg_crcv(session, p);
 
 call_app_handler:
   return 0;
