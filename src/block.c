@@ -676,8 +676,7 @@ coap_add_data_large_internal(coap_session_t *session,
     if (!lg_xmit->pdu.token)
       goto fail;
 
-    lg_xmit->pdu.alloc_size = lg_xmit->pdu.used_size +
-                              lg_xmit->pdu.max_hdr_size;
+    lg_xmit->pdu.alloc_size = lg_xmit->pdu.used_size;
     lg_xmit->pdu.token += lg_xmit->pdu.max_hdr_size;
     memcpy(lg_xmit->pdu.token, pdu->token, lg_xmit->pdu.used_size);
     if (pdu->data)
