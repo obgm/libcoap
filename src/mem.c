@@ -330,6 +330,29 @@ coap_free_type(coap_memory_tag_t type, void *object) {
   if (object != NULL)
     memarray_free(get_container(type), object);
 }
+
+void *
+coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
+  memarray_t *container = get_container(type);
+
+  assert(container);
+  /* The fixed container is all we have to work with */
+  if (p) {
+    if (size > container->size) {
+      coap_log(LOG_WARNING,
+               "coap_realloc_type: Requested memory exceeds maximum object "
+               "size (type %d, size %zu, max %d)\n",
+               type, size, container->size);
+      return NULL;
+    }
+    if (size == 0) {
+      coap_free_type(type, p);
+      return NULL;
+    }
+    return p;
+  }
+  return coap_malloc_type(type, size);
+}
 #else /* ! RIOT_VERSION */
 
 #ifdef HAVE_MALLOC
@@ -469,6 +492,29 @@ coap_malloc_type(coap_memory_tag_t type, size_t size) {
 void
 coap_free_type(coap_memory_tag_t type, void *object) {
   memb_free(get_container(type), object);
+}
+
+void *
+coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
+  struct memb *container = get_container(type);
+
+  assert(container);
+  /* The fixed container is all we have to work with */
+  if (p) {
+    if (size > container->size) {
+      coap_log(LOG_WARNING,
+               "coap_realloc_type: Requested memory exceeds maximum object "
+               "size (type %d, size %zu, max %d)\n",
+               type, size, container->size);
+      return NULL;
+    }
+    if (size == 0) {
+      coap_free_type(type, p);
+      return NULL;
+    }
+    return p;
+  }
+  return coap_malloc_type(type, size);
 }
 #endif /* WITH_CONTIKI */
 

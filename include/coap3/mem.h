@@ -131,6 +131,10 @@ COAP_STATIC_INLINE void coap_memory_init(void) {}
                                          memp_malloc(MEMP_ ## type) : NULL)
 #define coap_free_type(type, p) memp_free(MEMP_ ## type, p)
 
+/* As these are fixed size, return value if already defined */
+#define coap_realloc_type(type, p, asize) \
+  ((p) ? ((asize) <= memp_pools[MEMP_ ## type]->size) ? (p) : NULL : coap_malloc_type(type, asize))
+
 /* Those are just here to make uri.c happy where string allocation has not been
  * made conditional.
  */
