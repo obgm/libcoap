@@ -780,6 +780,8 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG };
     return NULL;
   }
   if (coap_get_data(request, &len, &data)) {
+    /* This could be a large bodied FETCH */
+    s->pdu->max_size = 0;
     coap_add_data(s->pdu, len, data);
   }
   if (cache_key == NULL) {

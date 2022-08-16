@@ -1795,6 +1795,7 @@ init_resources(coap_context_t *ctx) {
   r = coap_resource_init(coap_make_str_const("example_data"), resource_flags);
   coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_example_data);
   coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_example_data);
+  coap_register_request_handler(r, COAP_REQUEST_FETCH, hnd_get_example_data);
   coap_resource_set_get_observable(r, 1);
 
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);

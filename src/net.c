@@ -1166,6 +1166,11 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
           /* Need to update token to server's version */
           len = coap_encode_var_safe8(buf, sizeof(lg_crcv->state_token),
                                       lg_crcv->state_token);
+          if (pdu->code == COAP_REQUEST_CODE_FETCH && lg_crcv->obs_token &&
+              lg_crcv->obs_token[0]) {
+            memcpy(buf, lg_crcv->obs_token[0]->s, lg_crcv->obs_token[0]->length);
+            len = lg_crcv->obs_token[0]->length;
+          }
           coap_update_token(pdu, len, buf);
           lg_crcv->initial = 1;
           lg_crcv->observe_set = 0;
@@ -1192,7 +1197,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
         }
       }
     }
-    lg_crcv = coap_block_new_lg_crcv(session, pdu);
+    lg_crcv = coap_block_new_lg_crcv(session, pdu, lg_xmit);
     if (lg_crcv == NULL) {
       coap_delete_pdu(pdu);
       return COAP_INVALID_MID;
@@ -2575,6 +2580,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_opt_t *observe = NULL;
   coap_string_t *uri_path = NULL;
   int added_block = 0;
+  coap_lg_srcv_t *free_lg_srcv = NULL;
 #ifndef WITHOUT_ASYNC
   coap_bin_const_t tokenc = { pdu->token_length, pdu->token };
   coap_async_t *async;
@@ -2808,6 +2814,14 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     h = resource->handler[pdu->code - 1];
 
   if (h) {
+    if (pdu->code == COAP_REQUEST_CODE_FETCH) {
+      opt = coap_check_option(pdu, COAP_OPTION_CONTENT_FORMAT, &opt_iter);
+      if (opt == NULL) {
+        /* RFC 8132 2.3.1 */
+        resp = 415;
+        goto fail_response;
+      }
+    }
     if (context->mcast_per_resource &&
         (resource->flags & COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT) == 0 &&
         coap_is_mcast(&session->addr_info.local)) {
@@ -2837,43 +2851,68 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       coap_block_b_t block;
 
       query = coap_get_query(pdu);
+
       /* check for Observe option RFC7641 and RFC8132 */
       if (resource->observable &&
           (pdu->code == COAP_REQUEST_CODE_GET ||
            pdu->code == COAP_REQUEST_CODE_FETCH)) {
         observe = coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter);
-        if (observe) {
-          observe_action =
-            coap_decode_var_bytes(coap_opt_value(observe),
-              coap_opt_length(observe));
+      }
 
-          if (observe_action == COAP_OBSERVE_ESTABLISH) {
-            coap_subscription_t *subscription;
+      /*
+       * See if blocks need to be aggregated or next requests sent off
+       * before invoking application request handler
+       */
+      if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
+        uint8_t block_mode = session->block_mode;
 
-            if (coap_get_block_b(session, pdu, COAP_OPTION_BLOCK2, &block)) {
-              if (block.num != 0) {
-                response->code = COAP_RESPONSE_CODE(400);
-                goto skip_handler;
-              }
+        if (pdu->code == COAP_REQUEST_CODE_FETCH)
+          session->block_mode |= COAP_BLOCK_SINGLE_BODY;
+        if (coap_handle_request_put_block(context, session, pdu, response,
+                                          resource, uri_path, observe,
+                                          &added_block, &free_lg_srcv)) {
+          session->block_mode = block_mode;
+          goto skip_handler;
+        }
+        session->block_mode = block_mode;
+
+        if (coap_handle_request_send_block(session, pdu, response, resource,
+                                           query)) {
+          goto skip_handler;
+        }
+      }
+
+      if (observe) {
+        observe_action =
+          coap_decode_var_bytes(coap_opt_value(observe),
+            coap_opt_length(observe));
+
+        if (observe_action == COAP_OBSERVE_ESTABLISH) {
+          coap_subscription_t *subscription;
+
+          if (coap_get_block_b(session, pdu, COAP_OPTION_BLOCK2, &block)) {
+            if (block.num != 0) {
+              response->code = COAP_RESPONSE_CODE(400);
+              goto skip_handler;
             }
-            subscription = coap_add_observer(resource, session, &token,
-                                             pdu);
-            if (subscription) {
-              uint8_t buf[4];
+          }
+          subscription = coap_add_observer(resource, session, &token,
+                                           pdu);
+          if (subscription) {
+            uint8_t buf[4];
 
-              coap_touch_observer(context, session, &token);
-              coap_add_option_internal(response, COAP_OPTION_OBSERVE,
-                                       coap_encode_var_safe(buf, sizeof (buf),
-                                                            resource->observe),
-                                       buf);
-            }
+            coap_touch_observer(context, session, &token);
+            coap_add_option_internal(response, COAP_OPTION_OBSERVE,
+                                     coap_encode_var_safe(buf, sizeof (buf),
+                                                          resource->observe),
+                                     buf);
           }
-          else if (observe_action == COAP_OBSERVE_CANCEL) {
-            coap_delete_observer(resource, session, &token);
-          }
-          else {
-            coap_log(LOG_INFO, "observe: unexpected action %d\n", observe_action);
-          }
+        }
+        else if (observe_action == COAP_OBSERVE_CANCEL) {
+          coap_delete_observer(resource, session, &token);
+        }
+        else {
+          coap_log(LOG_INFO, "observe: unexpected action %d\n", observe_action);
         }
       }
 
@@ -2895,18 +2934,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
         }
         session->last_con_mid = pdu->mid;
       }
-      if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
-        if (coap_handle_request_put_block(context, session, pdu, response,
-                                          resource, uri_path, observe,
-                                          query, h, &added_block)) {
-          goto skip_handler;
-        }
-
-        if (coap_handle_request_send_block(session, pdu, response, resource,
-                                           query)) {
-          goto skip_handler;
-        }
-      }
 
       /*
        * Call the request handler with everything set up
@@ -2918,6 +2945,21 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
       /* Check if lg_xmit generated and update PDU code if so */
       coap_check_code_lg_xmit(session, pdu, response, resource, query);
+
+      if (free_lg_srcv) {
+        /* Check to see if the server is doing a 4.01 + Echo response */
+        if (response->code ==  COAP_RESPONSE_CODE(401) &&
+            coap_check_option(response, COAP_OPTION_ECHO, &opt_iter)) {
+          /* Need to keep lg_srcv around for client's response */
+        } else {
+          LL_DELETE(session->lg_srcv, free_lg_srcv);
+          coap_block_delete_lg_srcv(session, free_lg_srcv);
+        }
+      }
+      if (added_block && COAP_RESPONSE_CLASS(response->code) == 2) {
+        /* Just in case, as there are more to go */
+        response->code = COAP_RESPONSE_CODE(231);
+      }
 
 skip_handler:
       if (send_early_empty_ack &&

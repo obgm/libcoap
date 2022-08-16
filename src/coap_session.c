@@ -230,13 +230,13 @@ void coap_session_mfree(coap_session_t *session) {
   coap_lg_xmit_t *lq, *ltmp;
 
 #if COAP_CLIENT_SUPPORT
-  coap_lg_crcv_t *cq, *etmp;
+  coap_lg_crcv_t *lg_crcv, *etmp;
 
   /* Need to do this before (D)TLS and socket is closed down */
-  LL_FOREACH_SAFE(session->lg_crcv, cq, etmp) {
-    if (cq->observe_set && session->no_observe_cancel == 0) {
+  LL_FOREACH_SAFE(session->lg_crcv, lg_crcv, etmp) {
+    if (lg_crcv->observe_set && session->no_observe_cancel == 0) {
       /* Need to close down observe */
-      if (coap_cancel_observe(session, cq->app_token, COAP_MESSAGE_NON)) {
+      if (coap_cancel_observe(session, lg_crcv->app_token, COAP_MESSAGE_NON)) {
         /* Need to delete node we set up for NON */
         coap_queue_t *queue = session->context->sendqueue;
 
@@ -247,10 +247,12 @@ void coap_session_mfree(coap_session_t *session) {
           }
           queue = queue->next;
         }
+        /* lg_crcv will be deleted when coap_cancel_observe() completes */
+        continue;
       }
     }
-    LL_DELETE(session->lg_crcv, cq);
-    coap_block_delete_lg_crcv(session, cq);
+    LL_DELETE(session->lg_crcv, lg_crcv);
+    coap_block_delete_lg_crcv(session, lg_crcv);
   }
 #endif /* COAP_CLIENT_SUPPORT */
 
