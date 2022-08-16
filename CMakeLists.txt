@@ -649,6 +649,11 @@ if(ENABLE_EXAMPLES)
 
     add_executable(tiny ${CMAKE_CURRENT_LIST_DIR}/examples/tiny.c)
     target_link_libraries(tiny PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+
+    add_executable(oscore-interop-server
+                   ${CMAKE_CURRENT_LIST_DIR}/examples/oscore-interop-server.c)
+    target_link_libraries(oscore-interop-server
+                          PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
   endif()
 endif()
 
@@ -750,7 +755,7 @@ if(ENABLE_EXAMPLES)
     COMPONENT dev)
   if(NOT WIN32)
     install(
-      TARGETS etsi_iot_01 tiny
+      TARGETS etsi_iot_01 tiny oscore-interop-server
       DESTINATION ${CMAKE_INSTALL_BINDIR}
       COMPONENT dev)
   endif()

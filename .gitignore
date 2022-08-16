@@ -86,6 +86,7 @@ examples/coap-rd-*
 examples/coap-server
 examples/coap-server-*
 examples/coap-tiny
+examples/oscore-interop-server
 examples/*.exe
 
 # the include/ folder
