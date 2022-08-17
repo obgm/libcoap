@@ -1,6 +1,6 @@
 # man/Makefile.am
 #
-# Copyright (C) 2018-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2018-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.
