@@ -232,7 +232,7 @@ reference_resource_data(transient_value_t *entry) {
 }
 
 #define INDEX "This is a test server made with libcoap (see https://libcoap.net)\n" \
-              "Copyright (C) 2010--2021 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+              "Copyright (C) 2010--2022 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
 
 static void
 hnd_get_index(coap_resource_t *resource,

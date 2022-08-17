@@ -1,7 +1,7 @@
 /*
  * coap_config.h.lwip -- LwIP configuration for libcoap
  *
- * Copyright (C) 2021 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2021-2022 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
