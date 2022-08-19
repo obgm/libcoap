@@ -31,40 +31,50 @@
  * Scalar type to represent different events, e.g. DTLS events or
  * retransmission timeouts.
  */
-typedef enum coap_event_t {
-/**
+typedef enum {
+/*
  * (D)TLS events for COAP_PROTO_DTLS and COAP_PROTO_TLS
  */
+  /** Triggerred when (D)TLS session closed */
   COAP_EVENT_DTLS_CLOSED       = 0x0000,
+  /** Triggered when (D)TLS session connected */
   COAP_EVENT_DTLS_CONNECTED    = 0x01DE,
+  /** Triggered when (D)TLS session renegotiated */
   COAP_EVENT_DTLS_RENEGOTIATE  = 0x01DF,
+  /** Triggered when (D)TLS error occurs */
   COAP_EVENT_DTLS_ERROR        = 0x0200,
 
-/**
+/*
  * TCP events for COAP_PROTO_TCP and COAP_PROTO_TLS
  */
+  /** Triggered when TCP layer connects */
   COAP_EVENT_TCP_CONNECTED     = 0x1001,
+  /** Triggered when TCP layer is closed */
   COAP_EVENT_TCP_CLOSED        = 0x1002,
+  /** Triggered when TCP layer fails for some reason */
   COAP_EVENT_TCP_FAILED        = 0x1003,
 
-/**
+/*
  * CSM exchange events for reliable protocols only
  */
+  /** Triggered when TCP layer completes exchange of CSM information */
   COAP_EVENT_SESSION_CONNECTED = 0x2001,
+  /** Triggered when TCP layer closes following exchange of CSM information */
   COAP_EVENT_SESSION_CLOSED    = 0x2002,
+  /** Triggered when TCP layer fails  following exchange of CSM information */
   COAP_EVENT_SESSION_FAILED    = 0x2003,
 
-/**
+/*
  * (Q-)Block errors
  */
+  /** Triggered when not all of a large body has been received */
   COAP_EVENT_PARTIAL_BLOCK     = 0x3001,
+  /** Triggered when not all of a large body has been transmitted */
   COAP_EVENT_XMIT_BLOCK_FAIL   = 0x3002,
 
-/**
- * @defgroup srv_sess_state_events Server session state management events
- * @{
+/*
+ * Server session events
  */
-
 /**
  * Called in the CoAP IO loop if a new *server-side* session is created due
  * to an incoming connection.
@@ -83,7 +93,6 @@ typedef enum coap_event_t {
  */
   COAP_EVENT_SERVER_SESSION_DEL = 0x4002
 
-/** @} */
 } coap_event_t;
 
 /**
