@@ -244,13 +244,13 @@ _filter_.
 
 The *coap_opt_length*() function returns the length of the option _opt_.
 
-The *coap_opt_val*() function returns a pointer to the start of the data for
+The *coap_opt_value*() function returns a pointer to the start of the data for
 the option.
 
 The *coap_decode_var_bytes*() function will decode an option up to 4 bytes
 long from _buf_ and _length_ into an unsigned 32bit number.
 
-The *coap_decode_var_bytes*8() function will decode an option up to 8 bytes
+The *coap_decode_var_bytes8*() function will decode an option up to 8 bytes
 long from _buf_ and _length_ into an unsigned 64bit number.
 
 The *coap_get_uri_path*() function will abstract the uri path from the

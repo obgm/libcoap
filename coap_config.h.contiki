@@ -114,7 +114,7 @@
 
 /**
  * Number of different confirmable notifications that may fail (i.e. those
- * that have hit MAX_RETRANSMIT multiple times) before an observer is removed. 
+ * that have hit MAX_RETRANSMIT multiple times) before an observer is removed.
  * The maximum value for COAP_OBS_MAX_FAIL is @c 255.
  */
 #ifndef COAP_OBS_MAX_FAIL

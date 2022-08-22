@@ -104,7 +104,7 @@ use them is different depending on whether libcoap has been compiled to use
 *epoll* (Linux systems only) or not.
 
 For *epoll* libcoap, *coap_io_process*() in simple terms calls
-*coap_io_prepare_epoll()*, does an *epoll_wait*() and then calls
+*coap_io_prepare_epoll*(), does an *epoll_wait*() and then calls
 *coap_io_do_epoll*() if needed to make sure that all event based i/o has been
 completed.
 

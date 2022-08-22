@@ -133,7 +133,7 @@ COAP_PROTO_TLS
 
 *coap_tcp_is_supported*(), *coap_dtls_is_supported*() and
 *coap_tls_is_supported*() can be used for checking whether the underlying
-TCP or (D)TLS protocol support is available.  See *coap_tls_library(3)* for
+TCP or (D)TLS protocol support is available.  See *coap_tls_library*(3) for
 further information.
 
 When traffic starts to come in from a client, a server CoAP Session is created
