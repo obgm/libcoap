@@ -167,7 +167,7 @@ RETURN VALUES
 -------------
 *coap_session_get_ack_random_factor*(), *coap_session_get_ack_timeout*(),
 *coap_session_get_default_leisure*(), *coap_session_get_max_retransmit*(),
-*coap_session_get_nstart*() *and coap_session_get_probing_rate*() return their
+*coap_session_get_nstart*() and *coap_session_get_probing_rate*() return their
 respective current values.
 
 *coap_debug_set_packet_loss*() returns 0 if _loss_level_ does not parse

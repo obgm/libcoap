@@ -211,12 +211,13 @@ server. _flags_ can be zero or more COAP_RESOURCE_FLAGS MCAST definitions.
 
 The *coap_add_resource*() function registers the given _resource_ with the
 _context_. The _resource_ must have been created by *coap_resource_init*(),
-*coap_resource_unknown_init*() or *coap_resource_proxy_uri_init*(). The storage
-allocated for the _resource_ will be released by *coap_delete_resource*().
+*coap_resource_unknown_init*(), *coap_resource_unknown_init2*(),
+*coap_resource_proxy_uri_init*() or *coap_resource_proxy_uri_init2*(). The
+storage allocated for the _resource_ will be released by
+*coap_delete_resource*().
 
 As the _uri_path_ of the resource has to be unique across all of the resources
-associated with a _context_, *coap_add_resource*() (or
-*coap_add_resource_release*()) will delete any previous
+associated with a _context_, *coap_add_resource*() will delete any previous
 _resource_ with the same _uri_path_ before adding in the new _resource_.
 
 *Function: coap_delete_resource()*

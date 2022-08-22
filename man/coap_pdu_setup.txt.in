@@ -135,7 +135,7 @@ PDU CREATE AND HEADER
 *Function: coap_new_pdu()*
 
 The *coap_new_pdu*() function returns a newly created PDU of type
-_coap_pdu_t_*.
+_coap_pdu_t_.
 
 The _type_ is one of the following
 
@@ -237,7 +237,7 @@ The *coap_pdu_set_type*() function is used to set the _type_ of the PDU _pdu_.
 back a response.  The libcoap server logic creates the initial PDU with
 COAP_EMPTY_CODE, appropriate message_id, matching token and potentially some
 other options before calling the appropriate request handler (See
-*coap_request_handler*(3)).
+*coap_register_request_handler*(3)).
 
 PDU TOKEN
 ---------
@@ -348,7 +348,7 @@ and hence be illegal.  This is done by using *coap_encode_var_safe*() or
 The *coap_insert_optlist*() function adds the _optlist_ entry onto the
 _optlist_chain_ and then sorts the _optlist_chain_ before returning.
 The initial _optlist_chain_ entry needs to be set to NULL before this function
-is first called.  The coap_delete_optlist() function has to be called to free
+is first called.  The *coap_delete_optlist*() function has to be called to free
 off all the _optlist_chain_ entries.
 
 *Function: coap_delete_optlist()*
@@ -374,8 +374,8 @@ being the same or greater than the previous option _number_ that was added.
 *NOTE:* Where possible, the option data needs to be stripped of leading zeros
 (big endian) to reduce the amount of data needed in the PDU, as well as in
 some cases the maximum data size of an option can be exceeded if not stripped
-and hence be illegal.  This is done by using coap_encode_var_safe() or
-coap_encode_var_safe8().
+and hence be illegal.  This is done by using *coap_encode_var_safe*() or
+*coap_encode_var_safe8*().
 
 *Function: coap_encode_var_safe()*
 
