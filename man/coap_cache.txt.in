@@ -13,7 +13,7 @@ NAME
 coap_cache,
 coap_cache_derive_key,
 coap_cache_derive_key_w_ignore,
-coap_cache_delete_key,
+coap_delete_cache_key,
 coap_cache_ignore_options,
 coap_new_cache_entry,
 coap_delete_cache_entry,
