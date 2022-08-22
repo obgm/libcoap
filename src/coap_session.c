@@ -1383,8 +1383,10 @@ error:
    * Need to add in the session as coap_session_release()
    * will call SESSIONS_DELETE in coap_session_free().
    */
-  SESSIONS_ADD(ep->sessions, session);
-  coap_session_free(session);
+  if (session) {
+    SESSIONS_ADD(ep->sessions, session);
+    coap_session_free(session);
+  }
   return NULL;
 }
 #endif /* COAP_SERVER_SUPPORT */
