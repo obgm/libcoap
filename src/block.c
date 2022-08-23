@@ -2061,7 +2061,8 @@ coap_handle_response_get_block(coap_context_t *context,
                   coap_decode_var_bytes(coap_opt_value(size_opt),
                                         coap_opt_length(size_opt)) : 0;
 
-      coap_get_data(rcvd, &length, &data);
+      /* length and data are cleared on error */
+      (void)coap_get_data(rcvd, &length, &data);
       rcvd->body_offset = 0;
       rcvd->body_total = length;
       if (coap_get_block_b(session, rcvd, COAP_OPTION_BLOCK2, &block)) {
