@@ -1,7 +1,7 @@
 # doc/Makefile.am
 #
 # Copyright (C) 2015-2018 Carsten Schoenert <c.schoenert@t-online.de>
-#                    2018 Jon Shallow <supjps-libcoap@jpshallow.com>
+#               2018-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -40,6 +40,14 @@ man-page-start: man-page-prepare
 	##
 	@echo '/** @page manpage Manual Pages' > $(top_builddir)/doc/man_tmp/manpage.dox
 	@echo '  Here are the libcoap API and Example manual pages:' >> $(top_builddir)/doc/man_tmp/manpage.dox
+	@echo '  <table class="directory">' >> $(top_builddir)/doc/man_tmp/manpage.dox
+	@echo "   <tr>" >> $(top_builddir)/doc/man_tmp/manpage.dox
+	@echo "   <td class=\"entry\" align=\"left\"> @ref man_summary </td><td class=\"desc\" align=\"left\">Man Pages Summary</td>" >> $(top_builddir)/doc/man_tmp/manpage.dox
+	@echo "   </tr>" >> $(top_builddir)/doc/man_tmp/manpage.dox
+	@echo "   <tr class=\"even\">" >> $(top_builddir)/doc/man_tmp/manpage.dox
+	@echo "   <td class=\"entry\" align=\"left\"> @ref man_individual </td><td class=\"desc\" align=\"left\">Individual Man Pages</td>" >> $(top_builddir)/doc/man_tmp/manpage.dox
+	@echo "   </tr>" >> $(top_builddir)/doc/man_tmp/manpage.dox
+	@echo "  </table>" >> $(top_builddir)/doc/man_tmp/manpage.dox
 	@echo ' */' >> $(top_builddir)/doc/man_tmp/manpage.dox
 	##
 	@echo '/** @page man_summary Manual Pages Summary' > $(top_builddir)/doc/man_tmp/man_summary.dox
@@ -93,7 +101,7 @@ man-page-build: upg-page-build man-page-start
 		echo "   <tr$${ROW_EVEN}>" >> $(top_builddir)/doc/man_tmp/man_summary.dox ;\
 		echo "   <td class=\"entry\" align=\"left\"> @ref man_$${BASE} </td><td class=\"desc\" align=\"left\">$${SUMMARY}</td>" >> $(top_builddir)/doc/man_tmp/man_summary.dox ;\
 		echo "   </tr>" >> $(top_builddir)/doc/man_tmp/man_summary.dox ;\
-		if [ -z $${ROW_EVEN} ] ; then \
+		if [ -z "$${ROW_EVEN}" ] ; then \
 			ROW_EVEN=" class=\"even\"" ;\
 		else \
 			ROW_EVEN= ;\
@@ -118,7 +126,7 @@ man-page-build: upg-page-build man-page-start
 			echo "/// @page man_$${ENTRY} $${MANUAL}" > $(top_builddir)/doc/man_tmp/$${MANUAL}.dox ;\
 			echo "/// @htmlinclude $${ENTRY}.html $${MANUAL}" >> $(top_builddir)/doc/man_tmp/$${MANUAL}.dox ;\
 			## Create html file
-			cat $(top_builddir)/man/$${BASE}.html | ${SED} "s/Function: $${ENTRY}(/<a class=\"anchor\" id=\"$${ENTRY}\"><\/a>\0/" | ${SED} "s/\($${ENTRY}\)\([<(\*<]\)/<span class=\"man-highlight\">\1<\/span>\2/g" > $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
+			cat $(top_builddir)/man/$${BASE}.html | ${SED} "s/Function: $${ENTRY}(/<a class=\"anchor\" id=\"$${ENTRY}\"><\/a>\0/" > $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
 			## Update scratch_insert_file for sorting later
 			echo "$${ENTRY}" >> $(top_builddir)/doc/scratch_insert_file ;\
 		done ;\
@@ -133,7 +141,7 @@ man-page-build: upg-page-build man-page-start
 		echo "   <tr$${ROW_EVEN}>" >> $(top_builddir)/doc/man_tmp/man_individual.dox ;\
 		echo "   <td class=\"entry\" align=\"left\"> @ref man_$${ENTRY} </td><td class=\"desc\" align=\"left\"></td>" >> $(top_builddir)/doc/man_tmp/man_individual.dox ;\
 		echo "   </tr>" >> $(top_builddir)/doc/man_tmp/man_individual.dox ;\
-		if [ -z $${ROW_EVEN} ] ; then \
+		if [ -z "$${ROW_EVEN}" ] ; then \
 			ROW_EVEN=" class=\"even\"" ;\
 		else \
 			ROW_EVEN= ;\
@@ -171,7 +179,7 @@ man-page-build: upg-page-build man-page-start
 		echo "   <tr$${ROW_EVEN}>" >> $(top_builddir)/doc/man_tmp/upgrading.dox ;\
 		echo "   <td class=\"entry\" align=\"left\"> @ref upg_$${CUPGRADE} </td><td class=\"desc\" align=\"left\">$${SUMMARY}</td>" >> $(top_builddir)/doc/man_tmp/upgrading.dox ;\
 		echo "   </tr>" >> $(top_builddir)/doc/man_tmp/upgrading.dox ;\
-		if [ -z $${ROW_EVEN} ] ; then \
+		if [ -z "$${ROW_EVEN}" ] ; then \
 			ROW_EVEN=" class=\"even\"" ;\
 		else \
 			ROW_EVEN= ;\
@@ -201,14 +209,22 @@ man-page-build: upg-page-build man-page-start
 	$(SED) -i 's/<tab type="pages" visible="yes" /<tab type="pages" visible="no" /g' $(top_builddir)/doc/DoxygenLayout.xml ;\
 	$(SED) -i '/<tab type="examples" visible=.*/r insert_file' $(top_builddir)/doc/DoxygenLayout.xml ;\
 	##
-	## Fix up man html files, fixing links, UC Name and Synopsis
+	## Fix up man html files, adding links
 	##
-	for FILE in $${MAN_FILES} ; do \
-		BASE=`basename $${FILE} | cut -d . -f1` ;\
-		MANUAL=`egrep -B 1 "^====" $${FILE} | head -1` ;\
-		SECTION=`echo $${MANUAL} | cut -d\( -f2 | cut -d\) -f1` ;\
-		$(SED) -i "s^<span class=\"strong\"><strong>$${BASE}</strong></span>($${SECTION})^<a href=\"man_$${BASE}.html\" target=\"_self\"><span class=\"strong\"><strong>$${BASE}</strong></span>($${SECTION})</a>^g" $(top_builddir)/doc/man_html/$${BASE}.html ;\
-		echo "finalized addition $${BASE}.html" ;\
+	for FILE in $${MAN_FILES} `cat $(top_builddir)/doc/scratch_insert_file` ; do \
+		ENTRY=`basename $${FILE} | cut -d . -f1` ;\
+		$(SED) -i "s^\(<span class=\"strong\"><strong>\)\(coap[_-][0-9a-z_]*\)\(</strong></span>(\|(\)^\1<a class=\"st-desc\" href=\"man_\2.html#\2\" target=\"_self\">\2</a>\3^g" $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
+		## The NAME entries
+		$(SED) -i "s^\(<p><span class=\"strong\"><strong>[a-z0-9_ \*]*\)\(coap_[0-9a-z_]*\)\([(;]\)^\1<a class=\"st-synopsis\" href=\"man_\2.html#\2\" target=\"_self\">\2</a>\3^g" $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
+		$(SED) -i "s^\([ =,] \|[(!>]\|\^\)\(coap_[0-9a-z_]*\)\([(,]\| \-\)^\1<a href=\"man_\2.html#\2\" target=\"_self\">\2</a>\3^g" $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
+		## Do for a second time in case of overlaps
+		$(SED) -i "s^\([ =,] \|[(!>]\|\^\)\(coap_[0-9a-z_]*\)\([(,]\| \-\)^\1<a href=\"man_\2.html#\2\" target=\"_self\">\2</a>\3^g" $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
+	done ;\
+	##
+	## Do the highlighting
+	##
+	for ENTRY in `cat $(top_builddir)/doc/scratch_insert_file` ; do \
+		${SED} -i "s/\($${ENTRY}\)\([<(\*, ]\)/<span class=\"man-highlight\">\1<\/span>\2/g" $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
 	done
 
 if BUILD_MANPAGES
@@ -248,7 +264,7 @@ install-data-hook:
 if HAVE_DOXYGEN
 	@if [ ! -d $(top_builddir)/doc/html ]; then \
 		echo ;\
-		echo "     No install data in '$(top_builddir)/doc/html'found! Please run 'make all' first." ;\
+		echo "     No install data in '$(top_builddir)/doc/html' found! Please run 'make all' first." ;\
 		echo ;\
 		exit 1 ;\
 	fi

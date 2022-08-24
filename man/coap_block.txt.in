@@ -38,9 +38,8 @@ coap_release_large_data_t _release_func_, void *_app_ptr_);*
 *int coap_get_data_large(const coap_pdu_t *_pdu_, size_t *_length,
 const uint8_t **_data_, size_t *_offset_, size_t *_total_);*
 
-*coap_binary_t *
-coap_block_build_body(coap_binary_t *_body_data_, size_t _length_,
-const uint8_t *_data_, size_t _offset_, size_t _total_);*
+*coap_binary_t *coap_block_build_body(coap_binary_t *_body_data_,
+size_t _length_, const uint8_t *_data_, size_t _offset_, size_t _total_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
