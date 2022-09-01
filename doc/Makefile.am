@@ -213,12 +213,14 @@ man-page-build: upg-page-build man-page-start
 	##
 	for FILE in $${MAN_FILES} `cat $(top_builddir)/doc/scratch_insert_file` ; do \
 		ENTRY=`basename $${FILE} | cut -d . -f1` ;\
+		## Functions defined in the body
 		$(SED) -i "s^\(<span class=\"strong\"><strong>\)\(coap[_-][0-9a-z_]*\)\(</strong></span>(\|(\)^\1<a class=\"st-desc\" href=\"man_\2.html#\2\" target=\"_self\">\2</a>\3^g" $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
-		## The NAME entries
+		## The SYNOPSIS entries
 		$(SED) -i "s^\(<p><span class=\"strong\"><strong>[a-z0-9_ \*]*\)\(coap_[0-9a-z_]*\)\([(;]\)^\1<a class=\"st-synopsis\" href=\"man_\2.html#\2\" target=\"_self\">\2</a>\3^g" $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
-		$(SED) -i "s^\([ =,] \|[(!>]\|\^\)\(coap_[0-9a-z_]*\)\([(,]\| \-\)^\1<a href=\"man_\2.html#\2\" target=\"_self\">\2</a>\3^g" $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
+		## Function in NAME and Examples
+		$(SED) -i "s^\([ =,] \|[(!>]\|\^\)\(coap_[0-9a-z_]*\)\([(,]\| \-\| \xe2\x80\x94\)^\1<a href=\"man_\2.html#\2\" target=\"_self\">\2</a>\3^g" $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
 		## Do for a second time in case of overlaps
-		$(SED) -i "s^\([ =,] \|[(!>]\|\^\)\(coap_[0-9a-z_]*\)\([(,]\| \-\)^\1<a href=\"man_\2.html#\2\" target=\"_self\">\2</a>\3^g" $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
+		$(SED) -i "s^\([ =,] \|[(!>]\|\^\)\(coap_[0-9a-z_]*\)\([(,]\| \-\| \xe2\x80\x94\)^\1<a href=\"man_\2.html#\2\" target=\"_self\">\2</a>\3^g" $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
 	done ;\
 	##
 	## Do the highlighting
@@ -237,12 +239,6 @@ upg-page-build:
 
 all: man-page-build
 	$(DOXYGEN) Doxyfile
-	##
-	## Process the list of individual man pages to update html/navtree.js
-	##
-	@for ENTRY in `cat $(top_builddir)/doc/scratch_insert_file` ; do \
-		${SED} -i "s/man_$${ENTRY}.html/\0#$${ENTRY}/" $(top_builddir)/doc/html/navtree.js ;\
-	done
 	@$(RM) $(top_builddir)/doc/insert_file $(top_builddir)/doc/scratch_insert_file
 	@cp -f $(top_srcdir)/doc/docbook.local.css $(top_builddir)/doc/html/docbook-xsl.css
 
