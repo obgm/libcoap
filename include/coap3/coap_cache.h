@@ -1,6 +1,6 @@
 /* coap_cache.h -- Caching of CoAP requests
 *
-* Copyright (C) 2020 Olaf Bergmann <bergmann@tzi.org>
+* Copyright (C) 2020-2022 Olaf Bergmann <bergmann@tzi.org>
 *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -19,8 +19,10 @@
 #include "coap_forward_decls.h"
 
 /**
+ * @ingroup application_api
  * @defgroup cache Cache Support
- * API functions for CoAP Caching
+ * API for Cache-Key and Cache-Entry.
+ * See https://datatracker.ietf.org/doc/html/rfc7252#section-5.4.2
  * @{
  */
 
@@ -44,11 +46,11 @@ typedef enum coap_cache_record_pdu_t {
 
 /**
  * Calculates a cache-key for the given CoAP PDU. See
- * https://tools.ietf.org/html/rfc7252#section-5.6
+ * https://tools.ietf.org/html/rfc7252#section-5.4.2
  * for an explanation of CoAP cache keys.
  *
  * Specific CoAP options can be removed from the cache-key.  Examples of
- * this are the BLOCK1 and BLOCK2 options - which make no real sense including
+ * this are the Block1 and Block2 options - which make no real sense including
  * them in a client or server environment, but should be included in a proxy
  * caching environment where things are cached on a per block basis.
  * This is done globally by calling the coap_cache_ignore_options()
@@ -72,11 +74,11 @@ coap_cache_key_t *coap_cache_derive_key(const coap_session_t *session,
 
 /**
  * Calculates a cache-key for the given CoAP PDU. See
- * https://tools.ietf.org/html/rfc7252#section-5.6
+ * https://tools.ietf.org/html/rfc7252#section-5.4.2
  * for an explanation of CoAP cache keys.
  *
  * Specific CoAP options can be removed from the cache-key.  Examples of
- * this are the BLOCK1 and BLOCK2 options - which make no real sense including
+ * this are the Block1 and Block2 options - which make no real sense including
  * them in a client or server environment, but should be included in a proxy
  * caching environment where things are cached on a per block basis.
  * This is done individually by specifying @p cache_ignore_count and

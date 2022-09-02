@@ -3,7 +3,7 @@
 /* coap -- simple implementation of the Constrained Application Protocol (CoAP)
  *         as defined in RFC 7252
  *
- * Copyright (C) 2010--2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2015,2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -228,7 +228,7 @@ hnd_delete_resource(coap_resource_t *resource,
   }
   /* FIXME: link attributes for resource have been created dynamically
    * using coap_malloc() and must be released. */
-  coap_delete_resource(coap_session_get_context(session), resource);
+  coap_delete_resource(NULL, resource);
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
@@ -472,9 +472,9 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
   resource_val.s = loc;
   resource_val.length = loc_size;
   r = coap_resource_init(&resource_val, 0);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
-  coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_resource);
-  coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_resource);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_resource);
+  coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_resource);
+  coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete_resource);
 
   if (ins.s) {
     buf = (unsigned char *)coap_malloc(ins.length + 2);
@@ -552,8 +552,8 @@ init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
   r = coap_resource_init(coap_make_str_const(RD_ROOT_STR), 0);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_rd);
-  coap_register_handler(r, COAP_REQUEST_POST, hnd_post_rd);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_rd);
+  coap_register_request_handler(r, COAP_REQUEST_POST, hnd_post_rd);
 
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("40"), 0);
   coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("\"core.rd\""), 0);
@@ -568,17 +568,17 @@ static void
 usage( const char *program, const char *version) {
   const char *p;
   char buffer[72];
-  const char *lib_version = coap_package_version();
+  const char *lib_build = coap_package_build();
 
   p = strrchr( program, '/' );
   if ( p )
     program = ++p;
 
   fprintf( stderr, "%s v%s -- CoRE Resource Directory implementation\n"
-     "(c) 2011-2012,2019-2021 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+     "(c) 2011-2012,2019-2022 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+     "Build: %s\n"
      "%s\n"
-     "%s\n"
-    , program, version, lib_version,
+    , program, version, lib_build,
     coap_string_tls_version(buffer, sizeof(buffer)));
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"

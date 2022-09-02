@@ -11,17 +11,18 @@
 
 /**
  * @file coap_asn1_internal.h
- * @brief COAP ASN.1 internal information
+ * @brief CoAP ASN.1 internal information
  */
 
 #ifndef COAP_ASN1_INTERNAL_H_
 #define COAP_ASN1_INTERNAL_H_
 
+#include "coap_internal.h"
 
 /**
- * @defgroup asn1 ASN.1 Support (Internal)
- * CoAP ASN.1 Structures, Enums and Functions that are not exposed to
- * applications
+ * @ingroup internal_api
+ * @defgroup asn1 ASN.1 Support
+ * Internal API for CoAP ASN.1 handling
  * @{
  */
 

@@ -8,6 +8,11 @@
  * README for terms of use.
  */
 
+/**
+ * @file coap_time.c
+ * @brief Clock handling functions
+ */
+
 #include "coap3/coap_internal.h"
 
 #ifdef HAVE_TIME_H

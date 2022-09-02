@@ -2,7 +2,7 @@
  * coap_session_internal.h -- Structures, Enums & Functions that are not
  * exposed to application programming
  *
- * Copyright (C) 2010-2019 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -12,12 +12,13 @@
 
 /**
  * @file coap_session_internal.h
- * @brief COAP session internal information
+ * @brief CoAP session internal information
  */
 
 #ifndef COAP_SESSION_INTERNAL_H_
 #define COAP_SESSION_INTERNAL_H_
 
+#include "coap_internal.h"
 #include "coap_io_internal.h"
 
 #define COAP_DEFAULT_SESSION_TIMEOUT 300
@@ -25,9 +26,9 @@
 #define COAP_DEFAULT_MAX_HANDSHAKE_SESSIONS 100
 
 /**
- * @defgroup session_internal Sessions (Internal)
- * CoAP Session Structures, Enums and Functions that are not exposed to
- * applications
+ * @ingroup internal_api
+ * @defgroup session_internal Sessions
+ * Internal API for handling Sessions
  * @{
  */
 
@@ -52,14 +53,17 @@ struct coap_session_t {
                                          peer */
   unsigned ref;                     /**< reference count from queues */
   size_t tls_overhead;              /**< overhead of TLS layer */
-  size_t mtu;                       /**< path or CSM mtu */
+  size_t mtu;                       /**< path or CSM mtu (xmt) */
+  size_t csm_rcv_mtu;               /**< CSM mtu (rcv) */
   coap_addr_hash_t addr_hash;  /**< Address hash for server incoming packets */
   UT_hash_handle hh;
   coap_addr_tuple_t addr_info;      /**< key: remote/local address info */
   int ifindex;                      /**< interface index */
   coap_socket_t sock;               /**< socket object for the session, if
                                          any */
+#if COAP_SERVER_SUPPORT
   coap_endpoint_t *endpoint;        /**< session's endpoint */
+#endif /* COAP_SERVER_SUPPORT */
   coap_context_t *context;          /**< session's context */
   void *tls;                        /**< security parameters */
   uint16_t tx_mid;                  /**< the last message id that was used in
@@ -71,8 +75,12 @@ struct coap_session_t {
   coap_queue_t *delayqueue;         /**< list of delayed messages waiting to
                                          be sent */
   coap_lg_xmit_t *lg_xmit;          /**< list of large transmissions */
+#if COAP_CLIENT_SUPPORT
   coap_lg_crcv_t *lg_crcv;       /**< Client list of expected large receives */
+#endif /* COAP_CLIENT_SUPPORT */
+#if COAP_SERVER_SUPPORT
   coap_lg_srcv_t *lg_srcv;       /**< Server list of expected large receives */
+#endif /* COAP_SERVER_SUPPORT */
   size_t partial_write;             /**< if > 0 indicates number of bytes
                                          already written from the pdu at the
                                          head of sendqueue */
@@ -116,19 +124,40 @@ struct coap_session_t {
 
                                       Value maintained internally */
   void *app;                        /**< application-specific data */
-  unsigned int max_retransmit;      /**< maximum re-transmit count (default
-                                         4) */
-  coap_fixed_point_t ack_timeout;   /**< timeout waiting for ack (default 2
-                                         secs) */
+  coap_fixed_point_t ack_timeout;   /**< timeout waiting for ack
+                                         (default 2.0 secs) */
   coap_fixed_point_t ack_random_factor; /**< ack random factor backoff (default
                                              1.5) */
+  uint16_t max_retransmit;          /**< maximum re-transmit count
+                                         (default 4) */
+  uint16_t nstart;                  /**< maximum concurrent confirmable xmits
+                                         (default 1) */
+  coap_fixed_point_t default_leisure; /**< Mcast leisure time
+                                           (default 5.0 secs) */
+  uint32_t probing_rate;            /**< Max transfer wait when remote is not
+                                         respoding (default 1 byte/sec) */
   unsigned int dtls_timeout_count;      /**< dtls setup retry counter */
   int dtls_event;                       /**< Tracking any (D)TLS events on this
                                              sesison */
+  uint8_t csm_bert_rem_support;  /**< CSM TCP BERT blocks supported (remote) */
+  uint8_t csm_bert_loc_support;  /**< CSM TCP BERT blocks supported (local) */
   uint8_t block_mode;             /**< Zero or more COAP_BLOCK_ or'd options */
+  uint8_t doing_first;            /**< Set if doing client's first request */
+  uint8_t proxy_session;        /**< Set if this is an ongoing proxy session */
+  uint8_t delay_recursive;        /**< Set if in coap_client_delay_first() */
+  uint8_t no_observe_cancel;      /**< Set if do not cancel observe on session
+                                       close */
+  uint32_t tx_rtag;               /**< Next Request-Tag number to use */
   uint64_t tx_token;              /**< Next token number to use */
+  coap_bin_const_t *last_token;   /** last token used to make a request */
+  coap_bin_const_t *echo;         /**< Echo value to send with next request */
+  coap_mid_t last_ack_mid;        /**< The last ACK mid that has been
+                                       been processed */
+  coap_mid_t last_con_mid;        /**< The last CON mid that has been
+                                       been processed */
 };
 
+#if COAP_SERVER_SUPPORT
 /**
  * Abstraction of virtual endpoint that can be attached to coap_context_t. The
  * keys (port, bind_addr) must uniquely identify this endpoint.
@@ -143,6 +172,7 @@ struct coap_endpoint_t {
   coap_address_t bind_addr;       /**< local interface address */
   coap_session_t *sessions;       /**< hash table or list of active sessions */
 };
+#endif /* COAP_SERVER_SUPPORT */
 
 /**
  * Notify session transport has just connected and CSM exchange can now start.
@@ -177,13 +207,27 @@ int coap_session_refresh_psk_hint(coap_session_t *session,
  *
  * @param session  The current coap_session_t object.
  * @param psk_key  If NULL, the pre-shared key will revert to the
- *                 initial pre-shared key used as session setup.
+ *                 initial pre-shared key used at session setup.
  *
  * @return @c 1 if successful, else @c 0.
  */
 int coap_session_refresh_psk_key(coap_session_t *session,
                                  const coap_bin_const_t *psk_key);
 
+/**
+ * Refresh the session's current pre-shared identity (PSK).
+ * Note: A copy of @p psk_identity is maintained in the session by libcoap.
+ *
+ * @param session  The current coap_session_t object.
+ * @param psk_identity  If NULL, the pre-shared identity will revert to the
+ *                 initial pre-shared key used as session setup.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+int coap_session_refresh_psk_identity(coap_session_t *session,
+                                 const coap_bin_const_t *psk_identity);
+
+#if COAP_SERVER_SUPPORT
 /**
  * Creates a new server session for the specified endpoint.
  * @param ctx The CoAP context.
@@ -196,6 +240,7 @@ coap_session_t *coap_new_server_session(
   coap_context_t *ctx,
   coap_endpoint_t *ep
 );
+#endif /* COAP_SERVER_SUPPORT */
 
 /**
  * Function interface for datagram data transmission. This function returns
@@ -245,6 +290,7 @@ ssize_t
 coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
                        coap_queue_t *node);
 
+#if COAP_SERVER_SUPPORT
 /**
  * Lookup the server session for the packet received on an endpoint, or create
  * a new one.
@@ -256,6 +302,15 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
  */
 coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
   const coap_packet_t *packet, coap_tick_t now);
+#endif /* COAP_SERVER_SUPPORT */
+
+/**
+ * Get maximum acceptable receive PDU size
+ *
+ * @param session The CoAP session.
+ * @return maximum PDU size, not including header (but including token).
+ */
+size_t coap_session_max_pdu_rcv_size(const coap_session_t *session);
 
 /**
  * Create a new DTLS session for the @p session.
@@ -273,6 +328,92 @@ coap_session_t *coap_session_new_dtls_session(coap_session_t *session,
 
 void coap_session_free(coap_session_t *session);
 void coap_session_mfree(coap_session_t *session);
+
+#define COAP_SESSION_REF(s) ((s)->ref
+
+/* RFC7252 */
+#define COAP_ACK_TIMEOUT(s) ((s)->ack_timeout)
+#define COAP_ACK_RANDOM_FACTOR(s) ((s)->ack_random_factor)
+#define COAP_MAX_RETRANSMIT(s) ((s)->max_retransmit)
+#define COAP_NSTART(s) ((s)->nstart)
+#define COAP_DEFAULT_LEISURE(s) ((s)->default_leisure)
+#define COAP_PROBING_RATE(s) ((s)->probing_rate)
+
+  /**
+   * The DEFAULT_LEISURE definition for the session (s).
+   *
+   * RFC 7252, Section 4.8
+   * Initial value 5.0 seconds
+   */
+#define COAP_DEFAULT_LEISURE_TICKS(s) \
+     (COAP_DEFAULT_LEISURE(s).integer_part * COAP_TICKS_PER_SECOND + \
+      COAP_DEFAULT_LEISURE(s).fractional_part * COAP_TICKS_PER_SECOND / 1000)
+  /**
+   * The MAX_TRANSMIT_SPAN definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_SPAN
+   *  ACK_TIMEOUT * ((2 ** (MAX_RETRANSMIT)) - 1) * ACK_RANDOM_FACTOR
+   */
+#define COAP_MAX_TRANSMIT_SPAN(s) \
+ (((s)->ack_timeout.integer_part * 1000 + (s)->ack_timeout.fractional_part) * \
+  ((1 << ((s)->max_retransmit)) -1) * \
+  ((s)->ack_random_factor.integer_part * 1000 + \
+   (s)->ack_random_factor.fractional_part) \
+  / 1000000)
+
+  /**
+   * The MAX_TRANSMIT_WAIT definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_WAIT
+   *  ACK_TIMEOUT * ((2 ** (MAX_RETRANSMIT + 1)) - 1) * ACK_RANDOM_FACTOR
+   */
+#define COAP_MAX_TRANSMIT_WAIT(s) \
+ (((s)->ack_timeout.integer_part * 1000 + (s)->ack_timeout.fractional_part) * \
+  ((1 << ((s)->max_retransmit + 1)) -1) * \
+  ((s)->ack_random_factor.integer_part * 1000 + \
+   (s)->ack_random_factor.fractional_part) \
+  / 1000000)
+
+#define COAP_MAX_TRANSMIT_WAIT_TICKS(s) \
+ (COAP_MAX_TRANSMIT_WAIT(s) * COAP_TICKS_PER_SECOND)
+
+  /**
+   * The PROCESSING_DELAY definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of PROCESSING_DELAY
+   *  PROCESSING_DELAY set to ACK_TIMEOUT
+   */
+#define COAP_PROCESSING_DELAY(s) \
+ (((s)->ack_timeout.integer_part * 1000 + (s)->ack_timeout.fractional_part + \
+   500) / 1000)
+
+  /**
+   * The MAX_RTT definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of MAX_RTT
+   *  (2 * MAX_LATENCY) + PROCESSING_DELAY
+   */
+#define COAP_MAX_RTT(s) \
+ ((2 * COAP_DEFAULT_MAX_LATENCY) + COAP_PROCESSING_DELAY(s))
+
+  /**
+   * The EXCHANGE_LIFETIME definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of EXCHANGE_LIFETIME
+   *  MAX_TRANSMIT_SPAN + (2 * MAX_LATENCY) + PROCESSING_DELAY
+   */
+#define COAP_EXCHANGE_LIFETIME(s) \
+ (COAP_MAX_TRANSMIT_SPAN(s) + (2 * COAP_DEFAULT_MAX_LATENCY) + \
+ COAP_PROCESSING_DELAY(s))
+
+  /**
+   * The NON_LIFETIME definition for the session (s).
+   *
+   * RFC 7252, Section 4.8.2 Calculation of NON_LIFETIME
+   *  MAX_TRANSMIT_SPAN + MAX_LATENCY
+   */
+#define COAP_NON_LIFETIME(s) \
+ (COAP_MAX_TRANSMIT_SPAN(s) + COAP_DEFAULT_MAX_LATENCY)
 
 /** @} */
 

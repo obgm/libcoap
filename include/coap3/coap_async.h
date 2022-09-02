@@ -1,7 +1,7 @@
 /*
- * async.h -- state management for asynchronous messages
+ * coap_async.h -- state management for asynchronous messages
  *
- * Copyright (C) 2010-2011 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -10,7 +10,7 @@
  */
 
 /**
- * @file async.h
+ * @file coap_async.h
  * @brief State management for asynchronous messages
  */
 
@@ -20,9 +20,10 @@
 #include "net.h"
 
 /**
+ * @ingroup application_api
  * @defgroup coap_async Asynchronous Messaging
  * @{
- * API functions for  Async "separate" messages.
+ * API for delayed "separate" messages.
  * A coap_context_t object holds a list of coap_async_t objects that can
  * be used to generate a separate response in the case a result of a request
  * cannot be delivered immediately.
@@ -69,6 +70,17 @@ coap_register_async(coap_session_t *session,
  */
 void
 coap_async_set_delay(coap_async_t *async, coap_tick_t delay);
+
+/**
+ * Trigger the registered @p async.
+ *
+ * A copy of the original request will get sent to the appropriate request
+ * handler.
+ *
+ * @param async The async object to trigger.
+ */
+void
+coap_async_trigger(coap_async_t *async);
 
 /**
  * Releases the memory that was allocated by coap_register_async() for the

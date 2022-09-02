@@ -1,7 +1,7 @@
 /*
  * coap_resource_internal.h -- generic resource handling
  *
- * Copyright (C) 2010,2011,2014-2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011,2014-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -17,11 +17,14 @@
 #ifndef COAP_RESOURCE_INTERNAL_H_
 #define COAP_RESOURCE_INTERNAL_H_
 
+#include "coap_internal.h"
 #include "uthash.h"
 
+#if COAP_SERVER_SUPPORT
 /**
- * @defgroup coap_resource_internal Resources (Internal)
- * Structures, Enums and Functions that are not exposed to applications
+ * @ingroup internal_api
+ * @defgroup coap_resource_internal Resources
+ * Internal API for handling resources
  * @{
  */
 
@@ -133,9 +136,10 @@ void coap_delete_attr(coap_attr_t *attr);
 coap_print_status_t coap_print_wellknown(coap_context_t *,
                                          unsigned char *,
                                          size_t *, size_t,
-                                         coap_opt_t *);
-
+                                         const coap_string_t *);
 
 /** @} */
+
+#endif /* COAP_SERVER_SUPPORT */
 
 #endif /* COAP_RESOURCE_INTERNAL_H_ */

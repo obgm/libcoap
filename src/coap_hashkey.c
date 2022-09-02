@@ -8,6 +8,11 @@
  * README for terms of use.
  */
 
+/**
+ * @file coap_hashkey.c
+ * @brief Hashkey functions
+ */
+
 #include "coap3/coap_internal.h"
 
 void

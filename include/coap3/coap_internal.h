@@ -2,7 +2,7 @@
  * coap_internal.h -- Structures, Enums & Functions that are not exposed to
  * application programming
  *
- * Copyright (C) 2019-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2019-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -34,6 +34,21 @@
 #if defined(HAVE_ASSERT_H) && !defined(assert)
 # include <assert.h>
 #endif
+
+/* By default without either configured, these need to be set */
+#ifndef COAP_SERVER_SUPPORT
+#ifndef COAP_CLIENT_SUPPORT
+#define COAP_SERVER_SUPPORT 1
+#define COAP_CLIENT_SUPPORT 1
+#endif /* COAP_CLIENT_SUPPORT */
+#endif /* COAP_SERVER_SUPPORT */
+
+#if ! COAP_SERVER_SUPPORT
+#ifndef WITHOUT_ASYNC
+/* ASYNC is only there for Server code */
+#define WITHOUT_ASYNC
+#endif /* WITHOUT_ASYNC */
+#endif /* COAP_SERVER_SUPPORT */
 
 #include "coap3/coap.h"
 

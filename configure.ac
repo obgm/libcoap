@@ -1,8 +1,8 @@
 # configure.ac for the libcoap package
 #
-# Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
 # Copyright (C) 2015-2018 Carsten Schoenert <c.schoenert@t-online.de>
-# Copyright (C) 2018-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2018-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -15,7 +15,7 @@
 # defined later.
 m4_define([libcoap_major_version], [4])
 m4_define([libcoap_minor_version], [3])
-m4_define([libcoap_micro_version], [0])
+m4_define([libcoap_micro_version], [1])
 
 # define an appending release state if needed, for example for pre-releases
 # like 'alpha' or 'rc1', for a full release keep the value empty!
@@ -318,6 +318,7 @@ AM_CONDITIONAL(BUILD_MANPAGES, [test "x$build_manpages" = "xyes"])
 gnutls_version_required=3.3.0
 openssl_version_required=1.1.0
 mbedtls_version_required=2.7.10
+tinydtls_version_required=0.8.6
 
 AC_ARG_ENABLE([dtls],
               [AS_HELP_STRING([--enable-dtls],
@@ -349,11 +350,23 @@ AC_ARG_WITH([tinydtls],
            [with_tinydtls="$withval"],
            [with_tinydtls="no"])
 
+AC_ARG_WITH([submodule-tinydtls],
+           [AS_HELP_STRING([--with-submodule-tinydtls],
+                           [Use the TinyDTLS provided in the git submodule over the system-provided version [default=fallback to submodule if --with-tinydtls is explicitly set and no system-provided version was found])])],
+           [with_submodule_tinydtls="$withval"],
+           [with_submodule_tinydtls="explicit_fallback"])
+
 if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes" -o "x$with_mbedtls" = "xyes" -o "x$with_tinydtls" = "xyes"; then
-    if test "x$build_dtls" = "x"; then
+    if test "x$build_dtls" = "xno"; then
         # Give an advice that '--with_gnutls', '--with_openssl', '--with-mbedtls' or '--with-tinydtls' was used but
         # DTLS support isn't configured.
-        AC_MSG_NOTICE([==> Using the configure options '--with-gnutls', '--with-openssl', '--with-mbedtls' or '--with-tinydtls' without '--enable-dtls' is useles and will be ignored.])
+        AC_MSG_WARN([==> Using the configure options '--with-gnutls', '--with-openssl', '--with-mbedtls' or '--with-tinydtls' without '--enable-dtls' is useless and will be ignored.])
+    fi
+fi
+if test "x$with_submodule_tinydtls" = "xyes"; then
+    if test "x$with_tinydtls" = "xno"; then
+        # Give an advice that '--with-submodule-tinydtls' is useless if tinydtls is not also enabled.
+        AC_MSG_WARN([==> Using the configure option '--with-submodule-tinydtls' without '--with-tinydtls' is useless and it will be ignored.])
     fi
 fi
 
@@ -415,13 +428,25 @@ if test "x$build_dtls" = "xyes"; then
                        return 0;
                      }]])],
                [mbedtls_version=$(./conftest$EXEEXT)],
-               [AC_MSG_ERROR(Failed to determine Mbed TLS version)])
+               [AC_MSG_WARN(Failed to determine Mbed TLS version)
+                have_mbedtls=no])
             LIBS=$local_MbedTLS_save_LIBS
             AC_LANG_POP(C)
         fi
     fi
 
-    # TinyDTLS ?
+    if test "${TinyDTLS_CFLAGS+set}" = "set"; then
+        tinydtls_cflags_overridden="yes"
+    fi
+    if test "${TinyDTLS_LIBS+set}" = "set"; then
+        tinydtls_libs_overridden="yes"
+    fi
+    # TinyDTLS
+    PKG_CHECK_MODULES([TinyDTLS],
+                      [tinydtls],
+                      [have_tinydtls="yes"],
+                      [have_tinydtls="no"])
+
     # TBD ?
 
     # The user wants to use explicit GnuTLS if '--with-gnutls' was set.
@@ -480,15 +505,53 @@ if test "x$build_dtls" = "xyes"; then
 
     # The user wants to use explicit TinyDTLS if '--with-tinydtls was set'.
     if test "x$with_tinydtls" = "xyes" ; then
-        if test -d "$srcdir/ext/tinydtls"; then
-           AC_CONFIG_SUBDIRS([ext/tinydtls])
-           have_tinydtls="yes"
-         else
-           have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
-         fi
-         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
-         have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
-         have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+        AC_MSG_NOTICE([The use of TinyDTLS was explicitly requested with configure option '--with-tinydtls'!])
+        if [ test "x$have_tinydtls" = "xno" ] && [ test "x$with_submodule_tinydtls" = "xexplicit_fallback" ]  || [ test "x$with_submodule_tinydtls" = "xyes" ]; then
+            AC_MSG_NOTICE([Using TinyDTLS submodule over system-provided version because either "--with-submodule-tinydtls" was set or no system-provided TinyDTLS was found.])
+            if test -e "$srcdir/ext/tinydtls/dtls.h"; then
+               AC_CONFIG_SUBDIRS([ext/tinydtls])
+               if test "x$enable_shared" = "xyes"; then
+                   auto_TinyDTLS_LIBS="-L\$(top_builddir)/ext/tinydtls -ltinydtls"
+               else
+                   # Needed as TinyDTLS compiling does not recognize --disable-shared
+                   # and still builds libtinydtls.so which gets linked in otherwise
+                   auto_TinyDTLS_LIBS="-L\$(top_builddir)/ext/tinydtls -l:libtinydtls.a"
+               fi
+               have_submodule_tinydtls="yes"
+
+               auto_TinyDTLS_CFLAGS="-I \$(top_srcdir)/ext -I \$(top_srcdir)/ext/tinydtls"
+
+               if test "x$tinydtls_cflags_overridden" != "xyes";  then
+                   TinyDTLS_CFLAGS="$auto_TinyDTLS_CFLAGS"
+               fi
+               if test "x$tinydtls_libs_overridden" != "xyes";  then
+                   TinyDTLS_LIBS="$auto_TinyDTLS_LIBS"
+               fi
+            else
+                AC_MSG_ERROR([==> You want to build libcoap with DTLS support using the TinyDTLS submodule library but no suitable version could be found!
+                            Check whether you have updated the TinyDTLS git submodule, use the system-provided version if available (set '--with-submodule-tinydtls=no'),
+                            select a different TLS library or disable the DTLS support using '--disable-dtls'.])
+                have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+                have_submodule_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+            fi
+        elif test "x$have_tinydtls" = "xyes"; then
+            AC_MSG_NOTICE([Using system-provided TinyDTLS])
+            tinydtls_version=`$PKG_CONFIG --modversion tinydtls`
+            AX_CHECK_TINYDTLS_VERSION
+            have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+            have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+            have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+        else
+            AC_MSG_ERROR([==> You want to build libcoap with DTLS support using the TinyDTLS library but no suitable version could be found!
+                        Use the submodule TinyDTLS version (set '--with-submodule-tinydtls=yes' and update the git submodule),
+                        ensure that you have a system-provided version of TinyDTLS that can be found using pkg-config (older versions can not),
+                        select a different TLS library or disable the DTLS support using '--disable-dtls'.])
+            have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+        fi
+
+        have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
 
     if test "$TLSCOUNT" -eq 0; then
@@ -524,11 +587,21 @@ if test "x$build_dtls" = "xyes"; then
           have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
           have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
 
-      # Note that tinyDTLS is used only when explicitly requested.
+      elif [ test "x$with_tinydtls" = "xyes" ] && [ test "x$have_tinydtls" = "xyes" ]; then
+        AC_MSG_NOTICE([Using auto selected library TinyDTLS for DTLS support!])
+        tinydtls_version=`$PKG_CONFIG --modversion tinydtls`
+        AX_CHECK_TINYDTLS_VERSION
+        with_tinydtls_auto="yes"
+        have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+
+
+      # Note that the TinyDTLS submodule is used only when explicitly requested.
       # Giving out an error message if we haven't found at least one crypto library.
       else
-          AC_MSG_ERROR([==> Option '--enable-dtls' is set but none of the needed cryptography libraries GnuTLS, OpenSSL or Mbed TLS could be found!
-                        Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required), OpenSSL(>= $openssl_version_required), or Mbed TLS(>= $mbedtls_version_required)
+          AC_MSG_ERROR([==> Option '--enable-dtls' is set but none of the needed cryptography libraries GnuTLS, OpenSSL, Mbed TLS or TinyDTLS could be found!
+                        Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required), OpenSSL(>= $openssl_version_required), Mbed TLS(>= $mbedtls_version_required), or TinyDTLS(>= $tinydtls_version_required)
                         or disable the DTLS support using '--disable-dtls'.])
       fi
     fi
@@ -549,15 +622,9 @@ if test "x$build_dtls" = "xyes"; then
         DTLS_LIBS="$MbedTLS_LIBS"
         AC_DEFINE(HAVE_MBEDTLS, [1], [Define if the system has libmbedtls2.7.10])
     fi
-    if test "x$with_tinydtls" = "xyes"; then
-        DTLS_CFLAGS="-I \$(top_srcdir)/ext/tinydtls"
-        if test "x$enable_shared" = "xyes"; then
-            DTLS_LIBS="-L\$(top_builddir)/ext/tinydtls -ltinydtls"
-        else
-            # Needed as TinyDTLS compiling does not recognize --disable-shared
-            # and still builds libtinydtls.so which gets linked in otherwise
-            DTLS_LIBS="-L\$(top_builddir)/ext/tinydtls -l:libtinydtls.a"
-        fi
+    if test "x$with_tinydtls" = "xyes" -o "x$with_tinydtls_auto" = "xyes"; then
+        DTLS_CFLAGS="$TinyDTLS_CFLAGS"
+        DTLS_LIBS="$TinyDTLS_LIBS"
         AC_DEFINE(HAVE_LIBTINYDTLS, [1], [Define if the system has libtinydtls])
     fi
     AC_SUBST(DTLS_CFLAGS)
@@ -766,6 +833,31 @@ if test "x$enable_small_stack" = "xyes"; then
     AC_DEFINE(COAP_CONSTRAINED_STACK, 1, [Define if the system has small stack size])
 fi
 
+AC_ARG_ENABLE([server-mode],
+        [AS_HELP_STRING([--enable-server-mode],
+                        [Enable CoAP server mode supporting code [default=yes]])],
+        [enable_server_mode="$enableval"],
+        [enable_server_mode="yes"])
+
+if test "x$enable_server_mode" = "xyes"; then
+    AC_DEFINE(COAP_SERVER_SUPPORT, 1, [Define if libcoap supports server mode code])
+fi
+AM_CONDITIONAL(HAVE_SERVER_SUPPORT, [test "x$enable_server_mode" = "xyes"])
+
+AC_ARG_ENABLE([client-mode],
+        [AS_HELP_STRING([--enable-client-mode],
+                        [Enable CoAP client mode supporting code [default=yes]])],
+        [enable_client_mode="$enableval"],
+        [enable_client_mode="yes"])
+
+if test "x$enable_client_mode" = "xyes"; then
+    AC_DEFINE(COAP_CLIENT_SUPPORT, 1, [Define if libcoap supports client mode code])
+fi
+AM_CONDITIONAL(HAVE_CLIENT_SUPPORT, [test "x$enable_client_mode" = "xyes"])
+if test "x$enable_server_mode" != "xyes" -a "x$enable_client_mode" != "xyes" ; then
+    AC_MSG_ERROR([==> One or both of '--enable-server-mode' and '--enable-client-mode' need to be set!])
+fi
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
@@ -904,6 +996,16 @@ libcoap configuration summary:
       libcoap API version      : "$LIBCOAP_API_VERSION"
       libcoap DTLS lib extn    : "$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
       host system              : "$host"]);
+if test "x$enable_server_mode" = "xyes"; then
+    AC_MSG_RESULT([      build with server support: "yes"])
+else
+    AC_MSG_RESULT([      build with server support: "no"])
+fi
+if test "x$enable_client_mode" = "xyes"; then
+    AC_MSG_RESULT([      build with client support: "yes"])
+else
+    AC_MSG_RESULT([      build with client support: "no"])
+fi
 if test "x$build_tcp" != "xno"; then
     AC_MSG_RESULT([      build with TCP support   : "yes"])
 else
@@ -929,9 +1031,13 @@ if test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
 fi
 if test "x$with_tinydtls" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support       : "yes"])
-    AC_MSG_RESULT([         -->  tinyDTLS around  : "yes"])
-    AC_MSG_RESULT([              TINYDTLS_CFLAGS  : "$DTLS_CFLAGS"])
-    AC_MSG_RESULT([              TINYDTLS_LIBS    : "$DTLS_LIBS"])
+    if test "x$have_submodule_tinydtls" = "xyes"; then
+        AC_MSG_RESULT([         -->  TinyDTLS around  : "yes" (submodule)])
+    else
+        AC_MSG_RESULT([         -->  TinyDTLS around  : "yes (found TinyDTLS $tinydtls_version)"])
+    fi
+    AC_MSG_RESULT([              TinyDTLS_CFLAGS  : "$DTLS_CFLAGS"])
+    AC_MSG_RESULT([              TinyDTLS_LIBS    : "$DTLS_LIBS"])
 fi
 if test "x$build_dtls" != "xyes"; then
     AC_MSG_RESULT([      build DTLS support       : "no"])

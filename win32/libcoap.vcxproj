@@ -39,9 +39,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\address.c" />
-    <ClCompile Include="..\src\async.c" />
     <ClCompile Include="..\src\block.c" />
+    <ClCompile Include="..\src\coap_address.c" />
+    <ClCompile Include="..\src\coap_async.c" />
     <ClCompile Include="..\src\coap_cache.c" />
     <ClCompile Include="..\src\coap_debug.c" />
     <ClCompile Include="..\src\coap_event.c" />
@@ -51,27 +51,27 @@
     <ClCompile Include="..\src\coap_mbedtls.c" />
     <ClCompile Include="..\src\coap_notls.c" />
     <ClCompile Include="..\src\coap_openssl.c" />
+    <ClCompile Include="..\src\coap_option.c" />
     <ClCompile Include="..\src\coap_prng.c" />
     <ClCompile Include="..\src\coap_session.c" />
+    <ClCompile Include="..\src\coap_subscribe.c" />
     <ClCompile Include="..\src\coap_time.c" />
     <ClCompile Include="..\src\coap_tcp.c" />
     <ClCompile Include="..\src\coap_tinydtls.c" />
     <ClCompile Include="..\src\encode.c" />
     <ClCompile Include="..\src\mem.c" />
     <ClCompile Include="..\src\net.c" />
-    <ClCompile Include="..\src\option.c" />
     <ClCompile Include="..\src\pdu.c" />
     <ClCompile Include="..\src\resource.c" />
     <ClCompile Include="..\src\str.c" />
-    <ClCompile Include="..\src\subscribe.c" />
     <ClCompile Include="..\src\uri.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\coap_config.h" />
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\address.h" />
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\async.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\block.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_address.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_async.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_block_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache_internal.h" />
@@ -83,10 +83,12 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_io.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_mutex.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_option.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_prng.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_resource_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_session.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_session_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_tcp_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_time.h" />
@@ -94,17 +96,15 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\libcoap.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\mem.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\net.h" />
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\option.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\pdu.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\resource.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\str.h" />
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\subscribe.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\uri.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\uthash.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\utlist.h" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\libcoap-2.sym">
+    <CustomBuild Include="..\libcoap-3.sym">
       <FileType>Document</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -285,7 +285,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">
-    <TargetName>$(ProjectName)-2$(DbgSuffix)-openssl</TargetName>
+    <TargetName>$(ProjectName)-3$(DbgSuffix)-openssl</TargetName>
     <CustomBuildBeforeTargets />
     <CustomBuildAfterTargets />
     <IncludePath>$(IncludePath)</IncludePath>
@@ -302,13 +302,13 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release DLL|Win32'">
     <CustomBuildBeforeTargets />
     <CustomBuildAfterTargets />
-    <TargetName>$(ProjectName)-2-openssl</TargetName>
+    <TargetName>$(ProjectName)-3-openssl</TargetName>
     <IncludePath>$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">
-    <TargetName>$(ProjectName)-2$(DbgSuffix)-openssl</TargetName>
+    <TargetName>$(ProjectName)-3$(DbgSuffix)-openssl</TargetName>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
@@ -318,7 +318,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">
-    <TargetName>$(ProjectName)-2-openssl</TargetName>
+    <TargetName>$(ProjectName)-3-openssl</TargetName>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
@@ -328,7 +328,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoTLS|x64'">
-    <TargetName>$(ProjectName)-2</TargetName>
+    <TargetName>$(ProjectName)-3</TargetName>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)lib</LibraryPath>
   </PropertyGroup>

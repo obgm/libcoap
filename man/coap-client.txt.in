@@ -14,15 +14,17 @@ coap-client,
 coap-client-gnutls,
 coap-client-mbedtls,
 coap-client-openssl,
-coap-client-notls - CoAP Client based on libcoap
+coap-client-notls
+- CoAP Client based on libcoap
 
 SYNOPSIS
 --------
 *coap-client* [*-a* addr] [*-b* [num,]size] [*-e* text] [*-f* file] [*-l* loss]
               [*-m* method] [*-o* file] [*-p* port] [*-r*] [*-s duration*]
               [*-t* type] [*-v* num] [*-w*] [*-A* type] [*-B* seconds]
-              [*-H* hoplimit] [*-K* interval] [*-L* value] [*-N*]
+              [*-G* count] [*-H* hoplimit] [*-K* interval] [*-L* value] [*-N*]
               [*-O* num,text] [*-P* scheme://addr[:port]] [*-T* token] [*-U*]
+              [*-X* size]
               [[*-h* match_hint_file] [*-k* key] [*-u* user]]
               [[*-c* certfile] [*-j* keyfile] [-n] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]] URI
@@ -40,7 +42,7 @@ command line. The URI must have the scheme 'coap', 'coap+tcp', 'coaps' or
 'coaps+tcp'. 'coaps' and 'coaps+tcp' are only supported when coap-client is
 built with support for secure (D)TLS communication.
 
-If 'coaps' or 'coap+tcp' is being used, provided the CoAP server supports PKI
+If 'coaps' or 'coaps+tcp' is being used, provided the CoAP server supports PKI
 and is configured with a certificate and private key, the coap-client does not
 need to have a Pre-Shared Key (-k) or certificate (-c) configured.
 
@@ -125,6 +127,10 @@ OPTIONS - General
 *-B* seconds::
    Break operation after waiting given seconds (default is 90).
 
+*-G* count ::
+   Repeat the Request 'count' times with a second delay between each one.
+   Must have a value between 1 and 255 inclusive. Default is '1'.
+
 *-H* hoplimit::
    Set the Hop Limit count to hoplimit for proxies. Must have a value between
    1 and 255 inclusive. Default is '16'.
@@ -159,6 +165,10 @@ OPTIONS - General
 
 *-U* ::
    Never include Uri-Host or Uri-Port options.
+
+*-X* size::
+   Maximum message size to use for TCP based connections (default is 8388864).
+   Maximum value of 2^32 -1.
 
 OPTIONS - PSK
 -------------

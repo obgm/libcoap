@@ -14,7 +14,7 @@
 #include "coap_internal.h"
 #include "net.h"
 #include "resource.h"
-#include "subscribe.h"
+#include "coap_subscribe.h"
 
 #ifndef MEMP_NUM_COAPCONTEXT
 #define MEMP_NUM_COAPCONTEXT 1
@@ -66,7 +66,7 @@
 #endif
 
 #ifndef MEMP_LEN_COAPSTRING
-#define MEMP_LEN_COAPSTRING 32
+#define MEMP_LEN_COAPSTRING 40
 #endif
 
 #ifndef MEMP_NUM_COAPCACHE_KEYS

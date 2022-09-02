@@ -1,7 +1,7 @@
 # CMakeLists.txt for libcoap
 #
 # Copyright (C) 2020 Carlos Gomes Martinho <carlos.gomes_martinho@siemens.com>
-# Copyright (C) 2020-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2020-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -12,7 +12,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(
   libcoap
-  VERSION 4.3.0
+  VERSION 4.3.1
   LANGUAGES CXX C)
 
 set(LIBCOAP_API_VERSION 3)
@@ -58,6 +58,14 @@ option(
   "compile with the tinydtls project in the submodule if on, otherwise try to find the compiled lib with find_package"
   ON)
 option(
+  ENABLE_CLIENT_MODE
+  "compile with support for client mode code"
+  ON)
+option(
+  ENABLE_SERVER_MODE
+  "compile with support for server mode code"
+  ON)
+option(
   WITH_EPOLL
   "compile with epoll support"
   ON)
@@ -94,6 +102,10 @@ if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
+if(APPLE)
+  add_definitions(-D__APPLE_USE_RFC_3542=1)
+endif()
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_BINARY_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -123,7 +135,6 @@ check_include_file(netdb.h HAVE_NETDB_H)
 check_include_file(pthread.h HAVE_PTHREAD_H)
 check_include_file(stdlib.h HAVE_STDINT_H)
 check_include_file(stdint.h HAVE_STDLIB_H)
-check_include_file(inttypes.h HAVE_INTTYPES_H)
 check_include_file(syslog.h HAVE_SYSLOG_H)
 check_include_file(sys/ioctl.h HAVE_SYS_IOCTL_H)
 check_include_file(sys/socket.h HAVE_SYS_SOCKET_H)
@@ -149,15 +160,30 @@ check_function_exists(getaddrinfo HAVE_GETADDRINFO)
 check_function_exists(strnlen HAVE_STRNLEN)
 check_function_exists(strrchr HAVE_STRRCHR)
 check_function_exists(getrandom HAVE_GETRANDOM)
+check_function_exists(if_nametoindex HAVE_IF_NAMETOINDEX)
 
 # check for symbols
 if(WIN32)
   set(HAVE_STRUCT_CMSGHDR 1)
 else()
   check_symbol_exists(
-    cmsghdr
+    CMSG_FIRSTHDR
     sys/socket.h
     HAVE_STRUCT_CMSGHDR)
+endif()
+
+if(${ENABLE_CLIENT_MODE})
+  set(COAP_CLIENT_SUPPORT "1")
+  message(STATUS "compiling with client support")
+else()
+  message(STATUS "compiling without client support")
+endif()
+
+if(${ENABLE_SERVER_MODE})
+  set(COAP_SERVER_SUPPORT "1")
+  message(STATUS "compiling with server support")
+else()
+  message(STATUS "compiling without server support")
 endif()
 
 if(${WITH_EPOLL}
@@ -353,8 +379,35 @@ if(ENABLE_DTLS)
 
 endif()
 
+execute_process(COMMAND git describe --tags --dirty --always
+                RESULT_VARIABLE USING_GIT
+                OUTPUT_VARIABLE LIBCOAP_PACKAGE_BUILD
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET)
+if(NOT ${USING_GIT} EQUAL 0)
+  set(LIBCOAP_PACKAGE_BUILD ${PROJECT_VERSION})
+else()
+  set(LIBCOAP_PACKAGE_BUILD "${LIBCOAP_PACKAGE_BUILD}")
+endif()
+
+set(PACKAGE_URL "https://libcoap.net/")
+set(PACKAGE_NAME "${PROJECT_NAME}")
+set(PACKAGE_TARNAME "${PROJECT_NAME}")
+set(PACKAGE_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
+set(PACKAGE_VERSION "${PROJECT_VERSION}")
+set(PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net")
+set(LIBCOAP_PACKAGE_VERSION "${PACKAGE_VERSION}")
+set(LIBCOAP_PACKAGE_URL "${PACKAGE_URL}")
+set(LIBCOAP_PACKAGE_NAME "${PACKAGE_NAME}")
+set(LIBCOAP_PACKAGE_STRING "${PACKAGE_STRING}")
+set(LIBCOAP_PACKAGE_BUGREPORT "${PACKAGE_BUGREPORT}")
+
+message(STATUS "PACKAGE VERSION..................${PACKAGE_VERSION}")
+message(STATUS "PACKAGE BUILD....................${LIBCOAP_PACKAGE_BUILD}")
 message(STATUS "ENABLE_DTLS:.....................${ENABLE_DTLS}")
 message(STATUS "ENABLE_TCP:......................${ENABLE_TCP}")
+message(STATUS "ENABLE_CLIENT_MODE:..............${ENABLE_CLIENT_MODE}")
+message(STATUS "ENABLE_SERVER_MODE:..............${ENABLE_SERVER_MODE}")
 message(STATUS "ENABLE_DOCS:.....................${ENABLE_DOCS}")
 message(STATUS "ENABLE_EXAMPLES:.................${ENABLE_EXAMPLES}")
 message(STATUS "DTLS_BACKEND:....................${DTLS_BACKEND}")
@@ -366,23 +419,12 @@ message(STATUS "HAVE_LIBTINYDTLS:................${HAVE_LIBTINYDTLS}")
 message(STATUS "HAVE_LIBGNUTLS:..................${HAVE_LIBGNUTLS}")
 message(STATUS "HAVE_OPENSSL:....................${HAVE_OPENSSL}")
 message(STATUS "HAVE_MBEDTLS:....................${HAVE_MBEDTLS}")
-message(STATUS "COAP_EPOLL_SUPPORT:..............${COAP_EPOLL_SUPPORT}")
+message(STATUS "WITH_EPOLL:......................${WITH_EPOLL}")
 message(STATUS "CMAKE_C_COMPILER:................${CMAKE_C_COMPILER}")
 message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
 message(STATUS "CMAKE_BUILD_TYPE:................${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR:..........${CMAKE_SYSTEM_PROCESSOR}")
 
-set(PACKAGE_URL "https://libcoap.net/")
-set(PACKAGE_NAME "${PROJECT_NAME}")
-set(PACKAGE_TARNAME "${PROJECT_NAME}")
-set(PACKAGE_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
-set(PACKAGE_VERSION "${PROJECT_VERSION}")
-set(LIBCOAP_PACKAGE_VERSION "${PROJECT_VERSION}")
-set(LIBCOAP_PACKAGE_URL "${PACKAGE_URL}")
-set(LIBCOAP_PACKAGE_NAME "${PROJECT_NAME}")
-set(LIBCOAP_PACKAGE_STRING "TODO")
-set(LIBCOAP_PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net")
-set(PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net")
 set(top_srcdir "${CMAKE_CURRENT_LIST_DIR}")
 set(top_builddir "${CMAKE_CURRENT_BINARY_DIR}")
 if(ENABLE_TCP)
@@ -407,36 +449,28 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/tests/test_common.h.in
 
 target_sources(
   ${COAP_LIBRARY_NAME}
-  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/address.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/net.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/coap_debug.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/encode.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/uri.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/subscribe.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/resource.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/str.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/option.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/async.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/block.c
+  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/coap_address.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_asn1.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_async.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_cache.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_debug.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_event.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_io.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_notls.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_option.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_prng.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_session.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_subscribe.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_tcp.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_time.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/block.c
           ${CMAKE_CURRENT_LIST_DIR}/src/encode.c
           ${CMAKE_CURRENT_LIST_DIR}/src/mem.c
           ${CMAKE_CURRENT_LIST_DIR}/src/net.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/option.c
           ${CMAKE_CURRENT_LIST_DIR}/src/pdu.c
           ${CMAKE_CURRENT_LIST_DIR}/src/resource.c
           ${CMAKE_CURRENT_LIST_DIR}/src/str.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/subscribe.c
           ${CMAKE_CURRENT_LIST_DIR}/src/uri.c
           # no need to parse those files if we do not need them
           $<$<BOOL:${HAVE_OPENSSL}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openssl.c>
@@ -444,30 +478,29 @@ target_sources(
           $<$<BOOL:${HAVE_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
           $<$<BOOL:${HAVE_MBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
           # headers
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/address.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/async.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/block.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_address.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_async.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_cache.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_debug.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_dtls.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_event.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_hashkey.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h.in
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_io.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_option.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_prng.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_session.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_subscribe.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_time.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/block.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/encode.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/libcoap.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/lwippools.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/mem.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/net.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/option.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/pdu.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_prng.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/resource.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/str.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/subscribe.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/uri.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/uthash.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/utlist.h)
@@ -480,7 +513,7 @@ target_include_directories(
          $<INSTALL_INTERFACE:include/>
          $<$<AND:$<BOOL:${HAVE_LIBTINYDTLS}>,$<BOOL:${USE_VENDORED_TINYDTLS}>>:${CMAKE_BINARY_DIR}/include/tinydtls>
          $<$<BOOL:${HAVE_LIBGNUTLS}>:${GNUTLS_INCLUDE_DIR}>
-         $<$<BOOL:${HAVE_LIBGNUTLS}>:${MBEDTLS_INCLUDE_DIRS}>)
+         $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDTLS_INCLUDE_DIRS}>)
 target_link_libraries(
   ${COAP_LIBRARY_NAME}
   PUBLIC $<$<BOOL:${HAVE_OPENSSL}>:OpenSSL::SSL>
@@ -490,6 +523,10 @@ target_link_libraries(
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDTLS_LIBRARY}>
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDX509_LIBRARY}>
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDCRYPTO_LIBRARY}>)
+
+target_compile_options(
+  ${COAP_LIBRARY_NAME}
+  PUBLIC -DLIBCOAP_PACKAGE_BUILD="${LIBCOAP_PACKAGE_BUILD}")
 
 add_library(
   ${PROJECT_NAME}::${COAP_LIBRARY_NAME}
@@ -664,6 +701,7 @@ install(
   PATTERN "coap_riot.h" EXCLUDE
   PATTERN "lwippools.h" EXCLUDE
   PATTERN "utlist.h" EXCLUDE
+  PATTERN "uthash.h" EXCLUDE
   PATTERN "*_internal.h" EXCLUDE)
 install(
   DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
@@ -671,3 +709,15 @@ install(
   COMPONENT dev
   FILES_MATCHING
   PATTERN "*.h")
+if(ENABLE_EXAMPLES)
+  install(
+    TARGETS coap-server coap-client coap-rd
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+    COMPONENT dev)
+  if(NOT WIN32)
+    install(
+      TARGETS etsi_iot_01 tiny
+      DESTINATION ${CMAKE_INSTALL_BINDIR}
+      COMPONENT dev)
+  endif()
+endif()

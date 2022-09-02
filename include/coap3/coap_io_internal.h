@@ -1,7 +1,7 @@
 /*
  * coap_io.h -- Default network I/O functions for libcoap
  *
- * Copyright (C) 2012-2013 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2012-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -9,12 +9,18 @@
  * of use.
  */
 
+/**
+ * @file coap_io_internal.h
+ * @brief Internal network I/O functions
+ */
+
 #ifndef COAP_IO_INTERNAL_H_
 #define COAP_IO_INTERNAL_H_
 
+#include "coap_internal.h"
 #include <sys/types.h>
 
-#include "address.h"
+#include "coap_address.h"
 
 #ifdef RIOT_VERSION
 #include "net/gnrc.h"
@@ -54,11 +60,14 @@ struct coap_socket_t {
 #define COAP_SOCKET_CAN_CONNECT  0x0800  /**< non blocking client socket can now connect without blocking */
 #define COAP_SOCKET_MULTICAST    0x1000  /**< socket is used for multicast communication */
 
+#if COAP_SERVER_SUPPORT
 coap_endpoint_t *coap_malloc_endpoint( void );
 void coap_mfree_endpoint( coap_endpoint_t *ep );
+#endif /* COAP_SERVER_SUPPORT */
 
 const char *coap_socket_format_errno(int error);
 
+#if COAP_CLIENT_SUPPORT
 int
 coap_socket_connect_udp(coap_socket_t *sock,
                         const coap_address_t *local_if,
@@ -66,6 +75,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
                         int default_port,
                         coap_address_t *local_addr,
                         coap_address_t *remote_addr);
+#endif /* COAP_CLIENT_SUPPORT */
 
 int
 coap_socket_bind_udp(coap_socket_t *sock,
@@ -86,6 +96,14 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len);
 
 void
 coap_epoll_ctl_mod(coap_socket_t *sock, uint32_t events, const char *func);
+
+/**
+ * Update the epoll timer fd as to when it is to trigger.
+ *
+ * @param context The context to update the epoll timer on.
+ * @param delay The time to delay before the epoll timer fires.
+ */
+void coap_update_epoll_timer(coap_context_t *context, coap_tick_t delay);
 
 #ifdef WITH_LWIP
 ssize_t

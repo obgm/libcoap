@@ -38,10 +38,12 @@ examples directory.
 
 SEE ALSO
 --------
-*coap_attribute*(3), *coap_cache*(3), *coap_context*(3), *coap_encryption*(3),
-*coap_endpoint_client*(3), *coap_handler*(3), *coap_io*(3),
-*coap_keepalive*(3), *coap_logging*(3), *coap_observe*(3), *coap_pdu_setup*(3),
-*coap_recovery*(3), *coap_resource*(3), *coap_session*(3), *coap_string*(3) and
+*coap_async*(3), *coap_attribute*(3), *coap_block*(3), *coap_cache*(3),
+*coap_context*(3), *coap_encryption*(3), *coap_endpoint_client*(3),
+*coap_endpoint_server*(3), *coap_handler*(3), *coap_io*(3),
+*coap_keepalive*(3), *coap_logging*(3), *coap_observe*(3),
+*coap_pdu_access*(3), *coap_pdu_setup*(3), *coap_recovery*(3),
+*coap_resource*(3), *coap_session*(3), *coap_string*(3) and
 *coap_tls_library*(3)
 
 For example executables, see *coap-client*(5), *coap-rd*(5) and *coap-server*(5)
@@ -51,6 +53,8 @@ FURTHER INFORMATION
 See
 
 "RFC7252: The Constrained Application Protocol (CoAP)"
+
+"RFC7390: Group Communication for the Constrained Application Protocol (CoAP)"
 
 "RFC7641: Observing Resources in the Constrained Application Protocol (CoAP)"
 
@@ -62,9 +66,13 @@ See
 
 "RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets"
 
+"RFC8516: "Too Many Requests" Response Code for the Constrained Application Protocol"
+
 "RFC8613: Object Security for Constrained RESTful Environments (OSCORE)"
 
 "RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option"
+
+"RFC9175: CoAP: Echo, Request-Tag, and Token Processing"
 
 for further information.
 

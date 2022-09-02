@@ -2,12 +2,17 @@
  * coap_gnutls.c -- GnuTLS Datagram Transport Layer Support for libcoap
  *
  * Copyright (C) 2017 Dag Bjorklund <dag.bjorklund@comsel.fi>
- * Copyright (C) 2018-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
+ */
+
+/**
+ * @file coap_gnutls.c
+ * @brief GndTLS interafe functions
  */
 
 /*
@@ -67,6 +72,10 @@
                             GNUTLS_KEY_KEY_AGREEMENT | \
                             GNUTLS_KEY_KEY_CERT_SIGN
 #endif /* GNUTLS_VERSION_NUMBER >= 0x030606 */
+
+#ifndef GNUTLS_CRT_RAW
+#define GNUTLS_CRT_RAW GNUTLS_CRT_RAWPK
+#endif /* GNUTLS_CRT_RAW */
 
 #ifdef _WIN32
 #define strcasecmp _stricmp
@@ -158,11 +167,13 @@ typedef enum coap_free_bye_t {
 
 static int dtls_log_level = 0;
 
+#if COAP_SERVER_SUPPORT
 static int post_client_hello_gnutls_pki(gnutls_session_t g_session);
 static int post_client_hello_gnutls_psk(gnutls_session_t g_session);
 static int psk_server_callback(gnutls_session_t g_session,
                                const char *identity,
                                gnutls_datum_t *key);
+#endif /* COAP_SERVER_SUPPORT */
 
 /*
  * return 0 failed
@@ -326,6 +337,7 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *c_context,
   return 1;
 }
 
+#if COAP_SERVER_SUPPORT
 /*
  * return 0 failed
  *        1 passed
@@ -343,7 +355,9 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
   g_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 /*
  * return 0 failed
  *        1 passed
@@ -361,6 +375,7 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
   g_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 /*
  * return 0 failed
@@ -498,6 +513,7 @@ coap_dtls_free_context(void *handle) {
   gnutls_free(g_context);
 }
 
+#if COAP_CLIENT_SUPPORT
 /*
  * gnutls_psk_client_credentials_function return values
  * (see gnutls_psk_set_client_credentials_function())
@@ -512,25 +528,18 @@ psk_client_callback(gnutls_session_t g_session,
                   (coap_session_t *)gnutls_transport_get_ptr(g_session);
   coap_gnutls_context_t *g_context;
   coap_dtls_cpsk_t *setup_data;
-  uint8_t identity[64];
-  size_t identity_len;
-  uint8_t psk[64];
-  size_t psk_len;
   const char *hint = gnutls_psk_client_get_hint(g_session);
-  size_t hint_len = 0;
-
-  /* Constant passed to get_client_psk callback. The final byte is
-   * reserved for a terminating 0. */
-  const size_t max_identity_len = sizeof(identity) - 1;
+  coap_bin_const_t temp;
+  const coap_bin_const_t *psk_key;
+  const coap_bin_const_t *psk_identity;
+  const coap_dtls_cpsk_info_t *cpsk_info;
 
   /* Initialize result parameters. */
   *username = NULL;
   key->data = NULL;
 
-  if (c_session == NULL || c_session->context == NULL ||
-      c_session->context->get_client_psk == NULL) {
+  if (c_session == NULL)
     return -1;
-  }
 
   g_context = (coap_gnutls_context_t *)c_session->context->dtls_context;
   if (g_context == NULL)
@@ -538,71 +547,58 @@ psk_client_callback(gnutls_session_t g_session,
 
   setup_data = &c_session->cpsk_setup_data;
 
-  if (hint)
-    hint_len = strlen(hint);
-  else
-    hint = "";
+  temp.s = hint ? (const uint8_t*)hint : (const uint8_t*)"";
+  temp.length = strlen((const char*)temp.s);
+  coap_session_refresh_psk_hint(c_session, &temp);
 
-  coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)hint_len, hint);
+  coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)temp.length,
+             (const char *)temp.s);
 
   if (setup_data->validate_ih_call_back) {
     coap_str_const_t lhint;
-    lhint.length = hint_len;
-    lhint.s = (const uint8_t*)hint;
-    const coap_dtls_cpsk_info_t *psk_info =
+
+    lhint.length = temp.length;
+    lhint.s = temp.s;
+    cpsk_info =
              setup_data->validate_ih_call_back(&lhint,
                                                c_session,
                                                setup_data->ih_call_back_arg);
 
-    if (psk_info == NULL)
+    if (cpsk_info == NULL)
       return -1;
 
-    *username = gnutls_malloc(psk_info->identity.length+1);
-    if (*username == NULL)
-      return -1;
-    memcpy(*username, psk_info->identity.s, psk_info->identity.length);
-    (*username)[psk_info->identity.length] = '\000';
-
-    key->data = gnutls_malloc(psk_info->key.length);
-    if (key->data == NULL) {
-      gnutls_free(*username);
-      *username = NULL;
-      return -1;
-    }
-    memcpy(key->data, psk_info->key.s, psk_info->key.length);
-    key->size = psk_info->key.length;
-    return 0;
+    coap_session_refresh_psk_identity(c_session, &cpsk_info->identity);
+    coap_session_refresh_psk_key(c_session, &cpsk_info->key);
+    psk_identity = &cpsk_info->identity;
+    psk_key = &cpsk_info->key;
+  }
+  else {
+    psk_identity = coap_get_session_client_psk_identity(c_session);
+    psk_key = coap_get_session_client_psk_key(c_session);
   }
 
-  psk_len = c_session->context->get_client_psk(c_session,
-                                               NULL,
-                                               0,
-                                               identity,
-                                               &identity_len,
-                                               max_identity_len,
-                                               psk,
-                                               sizeof(psk));
-  assert(identity_len < sizeof(identity));
+  if (psk_identity == NULL || psk_key == NULL) {
+    coap_log(LOG_WARNING, "no PSK available\n");
+    return -1;
+  }
 
-  /* Reserve dynamic memory to hold the identity and a terminating
-   * zero. */
-  *username = gnutls_malloc(identity_len+1);
+  *username = gnutls_malloc(psk_identity->length+1);
   if (*username == NULL)
     return -1;
-  memcpy(*username, identity, identity_len);
-  (*username)[identity_len] = '\0';
+  memcpy(*username, psk_identity->s, psk_identity->length);
+  (*username)[psk_identity->length] = '\000';
 
-  key->data = gnutls_malloc(psk_len);
+  key->data = gnutls_malloc(psk_key->length);
   if (key->data == NULL) {
     gnutls_free(*username);
     *username = NULL;
     return -1;
   }
-  memcpy(key->data, psk, psk_len);
-  key->size = psk_len;
-
+  memcpy(key->data, psk_key->s, psk_key->length);
+  key->size = psk_key->length;
   return 0;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 typedef struct {
   gnutls_certificate_type_t certificate_type;
@@ -1429,6 +1425,7 @@ fail:
   return ret;
 }
 
+#if COAP_SERVER_SUPPORT
 /*
  * return 0   Success (GNUTLS_E_SUCCESS)
  *        neg GNUTLS_E_* error code
@@ -1457,7 +1454,6 @@ setup_psk_credentials(gnutls_psk_server_credentials_t *psk_credentials,
 fail:
   return ret;
 }
-
 
 /*
  * return 0   Success (GNUTLS_E_SUCCESS)
@@ -1684,7 +1680,9 @@ end:
 fail:
   return ret;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 /*
  * return 0   Success (GNUTLS_E_SUCCESS)
  *        neg GNUTLS_E_* error code
@@ -1776,7 +1774,9 @@ setup_client_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
 fail:
   return ret;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 /*
  * gnutls_psk_server_credentials_function return values
  * (see gnutls_psk_set_server_credentials_function())
@@ -1793,12 +1793,10 @@ psk_server_callback(gnutls_session_t g_session,
                 (coap_session_t *)gnutls_transport_get_ptr(g_session);
   coap_gnutls_context_t *g_context;
   coap_dtls_spsk_t *setup_data;
-  size_t identity_len = 0;
-  uint8_t buf[64];
-  size_t psk_len;
+  coap_bin_const_t lidentity;
+  const coap_bin_const_t *psk_key;
 
-  if (c_session == NULL || c_session->context == NULL ||
-      c_session->context->get_server_psk == NULL)
+  if (c_session == NULL)
     return -1;
 
   g_context = (coap_gnutls_context_t *)c_session->context->dtls_context;
@@ -1806,47 +1804,34 @@ psk_server_callback(gnutls_session_t g_session,
     return -1;
   setup_data = &c_session->context->spsk_setup_data;
 
-  if (identity)
-    identity_len = strlen(identity);
-  else
-    identity = "";
 
   /* Track the Identity being used */
-  if (c_session->psk_identity)
-    coap_delete_bin_const(c_session->psk_identity);
-  c_session->psk_identity = coap_new_bin_const((const uint8_t *)identity,
-                                               identity_len);
+  lidentity.s = identity ? (const uint8_t*)identity : (const uint8_t*)"";
+  lidentity.length = strlen((const char*)lidentity.s);
+  coap_session_refresh_psk_identity(c_session, &lidentity);
 
   coap_log(LOG_DEBUG, "got psk_identity: '%.*s'\n",
-                      (int)identity_len, identity);
+                      (int)lidentity.length, (const char *)lidentity.s);
 
   if (setup_data->validate_id_call_back) {
-    coap_bin_const_t lidentity;
-    lidentity.length = identity_len;
-    lidentity.s = (const uint8_t*)identity;
-    const coap_bin_const_t *psk_key =
-             setup_data->validate_id_call_back(&lidentity,
-                                               c_session,
-                                               setup_data->id_call_back_arg);
+    psk_key = setup_data->validate_id_call_back(&lidentity,
+                                                c_session,
+                                                setup_data->id_call_back_arg);
 
-    if (psk_key == NULL)
-      return -1;
-    key->data = gnutls_malloc(psk_key->length);
-    if (key->data == NULL)
-      return -1;
-    memcpy(key->data, psk_key->s, psk_key->length);
-    key->size = psk_key->length;
     coap_session_refresh_psk_key(c_session, psk_key);
-    return 0;
+  }
+  else {
+    psk_key = coap_get_session_server_psk_key(c_session);
   }
 
-  psk_len = c_session->context->get_server_psk(c_session,
-                               (const uint8_t*)identity,
-                               identity_len,
-                               (uint8_t*)buf, sizeof(buf));
-  key->data = gnutls_malloc(psk_len);
-  memcpy(key->data, buf, psk_len);
-  key->size = psk_len;
+  if (psk_key == NULL)
+    return -1;
+
+  key->data = gnutls_malloc(psk_key->length);
+  if (key->data == NULL)
+    return -1;
+  memcpy(key->data, psk_key->s, psk_key->length);
+  key->size = psk_key->length;
   return 0;
 }
 
@@ -1908,6 +1893,7 @@ setup_server_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
 fail:
   return ret;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 /*
  * return +ve data amount
@@ -2049,12 +2035,20 @@ coap_dtls_new_gnutls_env(coap_session_t *c_session, int type)
           "gnutls_priority_set");
 
   if (type == GNUTLS_SERVER) {
+#if COAP_SERVER_SUPPORT
     G_CHECK(setup_server_ssl_session(c_session, g_env),
             "setup_server_ssl_session");
+#else /* ! COAP_SERVER_SUPPORT */
+    goto fail;
+#endif /* ! COAP_SERVER_SUPPORT */
   }
   else {
+#if COAP_CLIENT_SUPPORT
     G_CHECK(setup_client_ssl_session(c_session, g_env),
             "setup_client_ssl_session");
+#else /* COAP_CLIENT_SUPPORT */
+    goto fail;
+#endif /* COAP_CLIENT_SUPPORT */
   }
 
   gnutls_handshake_set_timeout(g_env->g_session,
@@ -2110,6 +2104,7 @@ coap_dtls_free_gnutls_env(coap_gnutls_context_t *g_context,
   }
 }
 
+#if COAP_SERVER_SUPPORT
 void *coap_dtls_new_server_session(coap_session_t *c_session) {
   coap_gnutls_env_t *g_env =
          (coap_gnutls_env_t *)c_session->tls;
@@ -2118,6 +2113,7 @@ void *coap_dtls_new_server_session(coap_session_t *c_session) {
 
   return g_env;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 static void log_last_alert(coap_session_t *c_session,
                            gnutls_session_t g_session) {
@@ -2169,6 +2165,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
     log_last_alert(c_session, g_env->g_session);
     /* Fall through */
   case GNUTLS_E_UNEXPECTED_HANDSHAKE_PACKET:
+  case GNUTLS_E_UNEXPECTED_PACKET:
     c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
     ret = -1;
     break;
@@ -2241,6 +2238,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
   return ret;
 }
 
+#if COAP_CLIENT_SUPPORT
 void *coap_dtls_new_client_session(coap_session_t *c_session) {
   coap_gnutls_env_t *g_env = coap_dtls_new_gnutls_env(c_session, GNUTLS_CLIENT);
   int ret;
@@ -2257,6 +2255,7 @@ void *coap_dtls_new_client_session(coap_session_t *c_session) {
   }
   return g_env;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 void coap_dtls_free_session(coap_session_t *c_session) {
   if (c_session && c_session->context && c_session->tls) {
@@ -2376,7 +2375,12 @@ coap_tick_t coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now) {
   return 0;
 }
 
-void coap_dtls_handle_timeout(coap_session_t *c_session) {
+/*
+ * return 1 timed out
+ *        0 still timing out
+ */
+int
+coap_dtls_handle_timeout(coap_session_t *c_session) {
   coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
 
   assert(g_env != NULL && c_session->state == COAP_SESSION_STATE_HANDSHAKE);
@@ -2386,9 +2390,11 @@ void coap_dtls_handle_timeout(coap_session_t *c_session) {
     /* Too many retries */
     g_env->doing_dtls_timeout = 0;
     coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
+    return 1;
   }
   else {
     g_env->doing_dtls_timeout = 0;
+    return 0;
   }
 }
 
@@ -2491,6 +2497,7 @@ coap_dtls_receive(coap_session_t *c_session,
   return ret;
 }
 
+#if COAP_SERVER_SUPPORT
 /*
  * return -1  failure
  *         0  not completed
@@ -2572,6 +2579,7 @@ coap_dtls_hello(coap_session_t *c_session,
   }
   return ret;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 unsigned int coap_dtls_get_overhead(coap_session_t *c_session COAP_UNUSED) {
   return 37;
@@ -2658,6 +2666,7 @@ coap_sock_write(gnutls_transport_ptr_t context, const void *in, size_t inl) {
   return ret;
 }
 
+#if COAP_CLIENT_SUPPORT
 void *coap_tls_new_client_session(coap_session_t *c_session, int *connected) {
   coap_gnutls_env_t *g_env = gnutls_malloc(sizeof(coap_gnutls_env_t));
   coap_gnutls_context_t *g_context =
@@ -2702,7 +2711,9 @@ fail:
     gnutls_free(g_env);
   return NULL;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 void *coap_tls_new_server_session(coap_session_t *c_session, int *connected) {
   coap_gnutls_env_t *g_env = gnutls_malloc(sizeof(coap_gnutls_env_t));
   coap_gnutls_context_t *g_context =
@@ -2743,6 +2754,7 @@ void *coap_tls_new_server_session(coap_session_t *c_session, int *connected) {
 fail:
   return NULL;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 void coap_tls_free_session(coap_session_t *c_session) {
   coap_dtls_free_session(c_session);
@@ -2899,6 +2911,7 @@ ssize_t coap_tls_read(coap_session_t *c_session,
 }
 #endif /* !COAP_DISABLE_TCP */
 
+#if COAP_SERVER_SUPPORT
 coap_digest_ctx_t *
 coap_digest_setup(void) {
   gnutls_hash_hd_t digest_ctx;
@@ -2931,6 +2944,7 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
   coap_digest_free(digest_ctx);
   return 1;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 #else /* !HAVE_LIBGNUTLS */
 

@@ -855,6 +855,7 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = @top_srcdir@/doc/main.md \
+                         @top_srcdir@/doc/module_api_wrap.h \
                          @top_srcdir@/src \
                          @top_srcdir@/include/coap@LIBCOAP_API_VERSION@ \
                          @top_builddir@/doc/man_tmp

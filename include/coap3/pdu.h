@@ -2,6 +2,7 @@
  * pdu.h -- CoAP message structure
  *
  * Copyright (C) 2010-2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2021-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -18,7 +19,7 @@
 #define COAP_PDU_H_
 
 #include "uri.h"
-#include "option.h"
+#include "coap_option.h"
 
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
@@ -27,8 +28,9 @@
 #include <stdint.h>
 
 /**
+ * @ingroup application_api
  * @defgroup pdu PDU
- * API functions for PDUs
+ * API for PDUs
  * @{
  */
 
@@ -38,6 +40,8 @@
 #ifndef COAP_DEFAULT_MTU
 #define COAP_DEFAULT_MTU       1152
 #endif /* COAP_DEFAULT_MTU */
+
+#define COAP_BERT_BASE 1152
 
 #ifndef COAP_DEFAULT_HOP_LIMIT
 #define COAP_DEFAULT_HOP_LIMIT       16
@@ -127,7 +131,9 @@ typedef enum coap_request_t {
 #define COAP_OPTION_PROXY_URI      35 /* CU-___U, String, 1-1034 B, RFC7252 */
 #define COAP_OPTION_PROXY_SCHEME   39 /* CU-___U, String,  1-255 B, RFC7252 */
 #define COAP_OPTION_SIZE1          60 /* __N_E_U, uint,      0-4 B, RFC7252 */
+#define COAP_OPTION_ECHO          252 /* _N__E_U, opaque,   0-40 B, RFC9175 */
 #define COAP_OPTION_NORESPONSE    258 /* _U-_E_U, uint,      0-1 B, RFC7967 */
+#define COAP_OPTION_RTAG          292 /* ___RE_U, opaque,    0-8 B, RFC9175 */
 
 #define COAP_MAX_OPT            65535 /**< the highest option number we know */
 
@@ -196,6 +202,9 @@ typedef enum coap_pdu_signaling_proto_t {
 #define COAP_MEDIATYPE_APPLICATION_CBOR          60 /* application/cbor  */
 #define COAP_MEDIATYPE_APPLICATION_CWT           61 /* application/cwt, RFC 8392  */
 
+/* Content formats from RFC 7390 */
+#define COAP_MEDIATYPE_APPLICATION_COAP_GROUP_JSON 256 /* application/coap-group+json */
+
 /* Content formats from RFC 8152 */
 #define COAP_MEDIATYPE_APPLICATION_COSE_SIGN     98 /* application/cose; cose-type="cose-sign"     */
 #define COAP_MEDIATYPE_APPLICATION_COSE_SIGN1    18 /* application/cose; cose-type="cose-sign1"    */
@@ -219,6 +228,9 @@ typedef enum coap_pdu_signaling_proto_t {
 
 /* Content formats from RFC 8782 */
 #define COAP_MEDIATYPE_APPLICATION_DOTS_CBOR    271 /* application/dots+cbor */
+
+/* Content formats from RFC 9200 */
+#define COAP_MEDIATYPE_APPLICATION_ACE_CBOR      19 /* application/ace+cbor  */
 
 /* Note that identifiers for registered media types are in the range 0-65535. We
  * use an unallocated type here and hope for the best. */
@@ -299,7 +311,6 @@ typedef enum coap_pdu_code_t {
   COAP_REQUEST_CODE_PATCH  = COAP_REQUEST_PATCH,
   COAP_REQUEST_CODE_IPATCH = COAP_REQUEST_IPATCH,
 
-  COAP_RESPONSE_CODE_OK                         = COAP_RESPONSE_CODE(200),
   COAP_RESPONSE_CODE_CREATED                    = COAP_RESPONSE_CODE(201),
   COAP_RESPONSE_CODE_DELETED                    = COAP_RESPONSE_CODE(202),
   COAP_RESPONSE_CODE_VALID                      = COAP_RESPONSE_CODE(203),
@@ -396,11 +407,31 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
                    coap_opt_filter_t *drop_options);
 
 /**
+ * Parses @p data into the CoAP PDU structure given in @p result.
+ * The target pdu must be large enough to hold the token, options and data.
+ * This function returns @c 0 on error or a number greater than zero on success.
+ *
+ * @param proto   Session's protocol
+ * @param data    The raw data to parse as CoAP PDU.
+ * @param length  The actual size of @p data.
+ * @param pdu     The PDU structure to fill. Note that the structure must
+ *                provide space to hold the token, optional options and
+ *                optional data.
+ *
+ * @return       1 on success or @c 0 on error.
+ */
+int coap_pdu_parse(coap_proto_t proto,
+                   const uint8_t *data,
+                   size_t length,
+                   coap_pdu_t *pdu);
+
+/**
  * Adds token of length @p len to @p pdu.
- * Adding the token destroys any following contents of the pdu. Hence options
- * and data must be added after coap_add_token() has been called. In @p pdu,
- * length is set to @p len + @c 4, and max_delta is set to @c 0. This function
- * returns @c 0 on error or a value greater than zero on success.
+ *
+ * This function will fail if a token has already been added to the @p pdu.
+ *
+ * Hence options and data must be added after optional coap_add_token() has
+ * been called.
  *
  * @param pdu  The PDU where the token is to be added.
  * @param len  The length of the new token.
@@ -413,12 +444,12 @@ int coap_add_token(coap_pdu_t *pdu,
                   const uint8_t *data);
 
 /**
- * Adds option of given number to pdu that is passed as first
+ * Adds option of given @p number to @p pdu that is passed as first
  * parameter.
- * coap_add_option() destroys the PDU's data, so coap_add_data() must be called
- * after all options have been added. As coap_add_token() destroys the options
- * following the token, the token must be added before coap_add_option() is
- * called. This function returns the number of bytes written or @c 0 on error.
+ *
+ * This function will fail if data has aready been added to the @p pdu.
+ *
+ * Hence data must be added after optional coap_add_option() has been called.
  *
  * Note: Where possible, the option data needs to be stripped of leading zeros
  * (big endian) to reduce the amount of data needed in the PDU, as well as in
@@ -439,9 +470,9 @@ size_t coap_add_option(coap_pdu_t *pdu,
                        const uint8_t *data);
 
 /**
- * Adds given data to the pdu that is passed as first parameter. Note that the
- * PDU's data is destroyed by coap_add_option(). coap_add_data() must be called
- * only once per PDU, otherwise the result is undefined.
+ * Adds given data to the pdu that is passed as first parameter.
+ *
+ * This function will fail if data has aready been added to the @p pdu.
  *
  * @param pdu    The PDU where the data is to be added.
  * @param len    The length of the data.
@@ -455,9 +486,9 @@ int coap_add_data(coap_pdu_t *pdu,
 
 /**
  * Adds given data to the pdu that is passed as first parameter but does not
- * copy it. Note that the PDU's data is destroyed by coap_add_option().
- * coap_add_data() must be have been called once for this PDU, otherwise the
- * result is undefined.
+ *
+ * This function will fail if data has aready been added to the @p pdu.
+ *
  * The actual data must be copied at the returned location.
  *
  * @param pdu    The PDU where the data is to be added.

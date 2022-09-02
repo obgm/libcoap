@@ -1,8 +1,8 @@
 /*
- * subscribe.h -- subscription handling for CoAP
+ * coap_subscribe.h -- subscription handling for CoAP
  *                see RFC7641
  *
- * Copyright (C) 2010-2012,2014-2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2012,2014-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -11,7 +11,7 @@
  */
 
 /**
- * @file subscribe.h
+ * @file coap_subscribe.h
  * @brief Defines the application visible subscribe information
  */
 
@@ -19,8 +19,9 @@
 #define COAP_SUBSCRIBE_H_
 
 /**
+ * @ingroup application_api
  * @defgroup observe Resource Observation
- * API functions for interfacing with the observe handling (RFC7641)
+ * API for interfacing with the observe handling (RFC7641)
  * @{
  */
 

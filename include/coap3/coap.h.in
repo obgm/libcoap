@@ -1,7 +1,7 @@
 /*
  * coap.h -- main header file for CoAP stack of libcoap
  *
- * Copyright (C) 2010-2012,2015-2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2012,2015-2022 Olaf Bergmann <bergmann@tzi.org>
  *               2015 Carsten Schoenert <c.schoenert@t-online.de>
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -38,24 +38,24 @@ extern "C" {
 #include "coap@LIBCOAP_API_VERSION@/libcoap.h"
 
 #include "coap@LIBCOAP_API_VERSION@/coap_forward_decls.h"
-#include "coap@LIBCOAP_API_VERSION@/address.h"
-#include "coap@LIBCOAP_API_VERSION@/async.h"
 #include "coap@LIBCOAP_API_VERSION@/block.h"
+#include "coap@LIBCOAP_API_VERSION@/coap_address.h"
+#include "coap@LIBCOAP_API_VERSION@/coap_async.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_cache.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_debug.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_dtls.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_event.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_io.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_prng.h"
+#include "coap@LIBCOAP_API_VERSION@/coap_option.h"
+#include "coap@LIBCOAP_API_VERSION@/coap_subscribe.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_time.h"
 #include "coap@LIBCOAP_API_VERSION@/encode.h"
 #include "coap@LIBCOAP_API_VERSION@/mem.h"
 #include "coap@LIBCOAP_API_VERSION@/net.h"
-#include "coap@LIBCOAP_API_VERSION@/option.h"
 #include "coap@LIBCOAP_API_VERSION@/pdu.h"
 #include "coap@LIBCOAP_API_VERSION@/resource.h"
 #include "coap@LIBCOAP_API_VERSION@/str.h"
-#include "coap@LIBCOAP_API_VERSION@/subscribe.h"
 #include "coap@LIBCOAP_API_VERSION@/uri.h"
 
 #ifdef __cplusplus

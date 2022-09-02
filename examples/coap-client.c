@@ -2,7 +2,7 @@
 
 /* coap-client -- simple CoAP client
  *
- * Copyright (C) 2010--2019 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2010--2022 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -52,7 +52,15 @@ static char* strndup(const char* s1, size_t n)
 int flags = 0;
 
 static unsigned char _token_data[8];
-coap_binary_t the_token = { 0, _token_data };
+coap_binary_t base_token = { 0, _token_data };
+
+typedef struct {
+  coap_binary_t *token;
+  int observe;
+} track_token;
+
+track_token *tracked_tokens = NULL;
+size_t tracked_tokens_count = 0;
 
 #define FLAGS_BLOCK 0x01
 
@@ -64,6 +72,9 @@ static coap_uri_t proxy = { {0, NULL}, 0, {0, NULL}, {0, NULL}, 0 };
 static int proxy_scheme_option = 0;
 static int uri_host_option = 0;
 static unsigned int ping_seconds = 0;
+
+#define REPEAT_DELAY_MS 1000
+static size_t repeat_count = 1;
 
 /* reading is done when this flag is set */
 static int ready = 0;
@@ -81,6 +92,8 @@ static coap_string_t payload = { 0, NULL };       /* optional payload to send */
 static int reliable = 0;
 
 static int add_nl = 0;
+static int is_mcast = 0;
+static uint32_t csm_max_message_size = 0;
 
 unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
 
@@ -119,10 +132,10 @@ method_t method = 1;                    /* the method we are using in our reques
 coap_block_t block = { .num = 0, .m = 0, .szx = 6 };
 uint16_t last_block1_mid = 0;
 
+#define DEFAULT_WAIT_TIME 90
 
-unsigned int wait_seconds = 90;                /* default timeout in seconds */
+unsigned int wait_seconds = DEFAULT_WAIT_TIME; /* default timeout in seconds */
 unsigned int wait_ms = 0;
-int wait_ms_reset = 0;
 int obs_started = 0;
 unsigned int obs_seconds = 30;          /* default observe time */
 unsigned int obs_ms = 0;                /* timeout for current subscription */
@@ -185,6 +198,60 @@ free_xmit_data(coap_session_t *session COAP_UNUSED, void *app_ptr) {
   return;
 }
 
+static void
+track_new_token(size_t tokenlen, uint8_t *token)
+{
+  track_token *new_list =  realloc(tracked_tokens,
+                      (tracked_tokens_count + 1) * sizeof(tracked_tokens[0]));
+  if (!new_list) {
+    coap_log(LOG_INFO, "Unable to track new token\n");
+    return;
+  }
+  tracked_tokens = new_list;
+  tracked_tokens[tracked_tokens_count].token = coap_new_binary(tokenlen);
+  if (!tracked_tokens[tracked_tokens_count].token)
+    return;
+  memcpy(tracked_tokens[tracked_tokens_count].token->s, token, tokenlen);
+  tracked_tokens[tracked_tokens_count].observe = doing_observe;
+  tracked_tokens_count++;
+}
+
+static int
+track_check_token(coap_bin_const_t *token)
+{
+  size_t i;
+
+  for (i = 0; i < tracked_tokens_count; i++) {
+    if (coap_binary_equal(token, tracked_tokens[i].token)) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static void
+track_flush_token(coap_bin_const_t *token)
+{
+  size_t i;
+
+  for (i = 0; i < tracked_tokens_count; i++) {
+    if (coap_binary_equal(token, tracked_tokens[i].token)) {
+      if (!tracked_tokens[i].observe || !obs_started) {
+        /* Only remove if not Observing */
+        coap_delete_binary(tracked_tokens[i].token);
+        if (tracked_tokens_count-i > 1) {
+           memmove (&tracked_tokens[i],
+                    &tracked_tokens[i+1],
+                   (tracked_tokens_count-i-1) * sizeof (tracked_tokens[0]));
+        }
+        tracked_tokens_count--;
+      }
+      break;
+    }
+  }
+}
+
+
 static coap_pdu_t *
 coap_new_request(coap_context_t *ctx,
                  coap_session_t *session,
@@ -193,12 +260,22 @@ coap_new_request(coap_context_t *ctx,
                  unsigned char *data,
                  size_t length) {
   coap_pdu_t *pdu;
+  uint8_t token[8];
+  size_t tokenlen;
   (void)ctx;
 
-  if (!(pdu = coap_new_pdu(msgtype, m, session)))
+  if (!(pdu = coap_new_pdu(msgtype, m, session))) {
+    free_xmit_data(session, data);
     return NULL;
+  }
 
-  if ( !coap_add_token(pdu, the_token.length, the_token.s)) {
+  /*
+   * Create unique token for this request for handling unsolicited /
+   * delayed responses
+   */
+  coap_session_new_token(session, &tokenlen, token);
+  track_new_token(tokenlen, token);
+  if (!coap_add_token(pdu, tokenlen, token)) {
     coap_log(LOG_DEBUG, "cannot add token to request\n");
   }
 
@@ -262,14 +339,6 @@ resolve_address(const coap_str_const_t *server, struct sockaddr *dst) {
    ((Pdu)->hdr->code == COAP_RESPONSE_CODE_CREATED ||                \
     (Pdu)->hdr->code == COAP_RESPONSE_CODE_CHANGED))
 
-static inline int
-check_token(const coap_pdu_t *received) {
-  coap_bin_const_t token = coap_pdu_get_token(received);
-
-  return token.length == the_token.length &&
-    memcmp(token.s, the_token.s, the_token.length) == 0;
-}
-
 static int
 event_handler(coap_session_t *session COAP_UNUSED,
               const coap_event_t event) {
@@ -280,6 +349,17 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_SESSION_CLOSED:
     quit = 1;
     break;
+  case COAP_EVENT_DTLS_CONNECTED:
+  case COAP_EVENT_DTLS_RENEGOTIATE:
+  case COAP_EVENT_DTLS_ERROR:
+  case COAP_EVENT_TCP_CONNECTED:
+  case COAP_EVENT_TCP_FAILED:
+  case COAP_EVENT_SESSION_CONNECTED:
+  case COAP_EVENT_SESSION_FAILED:
+  case COAP_EVENT_PARTIAL_BLOCK:
+  case COAP_EVENT_XMIT_BLOCK_FAIL:
+  case COAP_EVENT_SERVER_SESSION_NEW:
+  case COAP_EVENT_SERVER_SESSION_DEL:
   default:
     break;
   }
@@ -297,6 +377,7 @@ nack_handler(coap_session_t *session COAP_UNUSED,
   case COAP_NACK_NOT_DELIVERABLE:
   case COAP_NACK_RST:
   case COAP_NACK_TLS_FAILED:
+    coap_log(LOG_ERR, "cannot send CoAP pdu\n");
     quit = 1;
     break;
   case COAP_NACK_ICMP_ISSUE:
@@ -323,6 +404,7 @@ message_handler(coap_session_t *session COAP_UNUSED,
   size_t total;
   coap_pdu_code_t rcv_code = coap_pdu_get_code(received);
   coap_pdu_type_t rcv_type = coap_pdu_get_type(received);
+  coap_bin_const_t token = coap_pdu_get_token(received);
 
   coap_log(LOG_DEBUG, "** process incoming %d.%02d response:\n",
            COAP_RESPONSE_CLASS(rcv_code), rcv_code & 0x1F);
@@ -330,7 +412,7 @@ message_handler(coap_session_t *session COAP_UNUSED,
     coap_show_pdu(LOG_INFO, received);
 
   /* check if this is a response to our original request */
-  if (!check_token(received)) {
+  if (!track_check_token(&token)) {
     /* drop if this was just some message, or send RST in case of notification */
     if (!sent && (rcv_type == COAP_MESSAGE_CON ||
                   rcv_type == COAP_MESSAGE_NON)) {
@@ -376,12 +458,11 @@ message_handler(coap_session_t *session COAP_UNUSED,
                                   COAP_OPTION_OBSERVE, &opt_iter) == NULL : 1;
       }
       if(COAP_OPT_BLOCK_MORE(block_opt)) {
-        wait_ms = wait_seconds * 1000;
-        wait_ms_reset = 1;
         doing_getting_block = 1;
       }
       else {
         doing_getting_block = 0;
+        track_flush_token(&token);
       }
       return COAP_RESPONSE_OK;
     }
@@ -401,6 +482,8 @@ message_handler(coap_session_t *session COAP_UNUSED,
     }
 
   }
+  if (!is_mcast)
+    track_flush_token(&token);
 
   /* our job is done, we can exit at any time */
   ready = doing_observe ? coap_check_option(received,
@@ -412,24 +495,25 @@ static void
 usage( const char *program, const char *version) {
   const char *p;
   char buffer[72];
-  const char *lib_version = coap_package_version();
+  const char *lib_build = coap_package_build();
 
   p = strrchr( program, '/' );
   if ( p )
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-     "Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+     "Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+     "Build: %s\n"
      "%s\n"
-     "%s\n"
-    , program, version, lib_version,
+    , program, version, lib_build,
     coap_string_tls_version(buffer, sizeof(buffer)));
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
      "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-l loss]\n"
      "\t\t[-m method] [-o file] [-p port] [-r] [-s duration] [-t type]\n"
-     "\t\t[-v num] [-w] [-A type] [-B seconds] [-H hoplimit] [-K interval]\n"
-     "\t\t[-N] [-O num,text] [-P scheme://address[:port]] [-T token] [-U]\n"
+     "\t\t[-v num] [-w] [-A type] [-B seconds] [G count] [-H hoplimit]\n"
+     "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]]\n"
+     "\t\t[-T token] [-U] [-X size]\n"
      "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
      "\t\t[-J pkcs11_pin] [-M raw_pk] [-R trust_casfile]\n"
@@ -463,6 +547,9 @@ usage( const char *program, const char *version) {
      "\t-A type\t\tAccepted media type\n"
      "\t-B seconds\tBreak operation after waiting given seconds\n"
      "\t       \t\t(default is %d)\n"
+     "\t-G count\tRepeat the Request 'count' times with a second delay\n"
+     "\t       \t\tbetween each one. Must have a value between 1 and 255\n"
+     "\t       \t\tinclusive. Default is '1'\n"
      "\t-H hoplimit\tSet the Hop Limit count to hoplimit for proxies. Must\n"
      "\t       \t\thave a value between 1 and 255 inclusive.\n"
      "\t       \t\tDefault is '16'\n"
@@ -480,6 +567,8 @@ usage( const char *program, const char *version) {
      "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
      "\t-T token\tDefine the initial starting token\n"
      "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
+     "\t-X size\t\tMaximum message size to use for TCP based connections\n"
+     "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
      ,program, wait_seconds);
   fprintf( stderr,
      "PSK Options (if supported by underlying (D)TLS library)\n"
@@ -796,9 +885,9 @@ cmdline_proxy(char *arg) {
 
 static inline void
 cmdline_token(char *arg) {
-  the_token.length = min(sizeof(_token_data), strlen(arg));
-  if (the_token.length > 0) {
-    memcpy((char *)the_token.s, arg, the_token.length);
+  base_token.length = min(sizeof(_token_data), strlen(arg));
+  if (base_token.length > 0) {
+    memcpy((char *)base_token.s, arg, base_token.length);
   }
 }
 
@@ -1366,6 +1455,7 @@ get_session(
 ) {
   coap_session_t *session = NULL;
 
+  is_mcast = coap_is_mcast(dst);
   if ( local_addr ) {
     int s;
     struct addrinfo hints;
@@ -1396,6 +1486,16 @@ get_session(
       }
     }
     freeaddrinfo( result );
+  } else if (local_port) {
+    coap_address_t bind_addr;
+
+    coap_address_init(&bind_addr);
+    bind_addr.size = dst->size;
+    bind_addr.addr.sa.sa_family = dst->addr.sa.sa_family;
+    /* port is in same place for IPv4 and IPv6 */
+    bind_addr.addr.sin.sin_port = ntohs(atoi(local_port));
+    session = open_session(ctx, proto, &bind_addr, dst,
+                               identity, identity_len, key, key_len);
   } else {
     session = open_session(ctx, proto, NULL, dst,
                                identity, identity_len, key, key_len);
@@ -1423,11 +1523,14 @@ main(int argc, char **argv) {
   int create_uri_opts = 1;
   size_t i;
   coap_uri_scheme_t scheme;
+  uint32_t repeat_ms = REPEAT_DELAY_MS;
+  uint8_t *data = NULL;
+  size_t data_len = 0;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:no:p:rs:t:u:v:wA:B:C:H:J:K:L:M:NO:P:R:T:U")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:c:e:f:h:j:k:l:m:no:p:rs:t:u:v:wA:B:C:G:H:J:K:L:M:NO:P:R:T:UX:")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1556,11 +1659,35 @@ main(int argc, char **argv) {
     case 'n':
       verify_peer_cert = 0;
       break;
+    case 'G':
+      repeat_count = atoi(optarg);
+      if (!repeat_count || repeat_count > 255) {
+        fprintf(stderr, "'-G count' has to be > 0 and < 256\n");
+        repeat_count = 1;
+      }
+      break;
+    case 'X':
+      csm_max_message_size = strtol(optarg, NULL, 10);
+      break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
       exit( 1 );
     }
   }
+
+#ifdef _WIN32
+  signal(SIGINT, handle_sigint);
+#else
+  memset (&sa, 0, sizeof(sa));
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = handle_sigint;
+  sa.sa_flags = 0;
+  sigaction (SIGINT, &sa, NULL);
+  sigaction (SIGTERM, &sa, NULL);
+  /* So we do not exit on a SIGPIPE */
+  sa.sa_handler = SIG_IGN;
+  sigaction (SIGPIPE, &sa, NULL);
+#endif
 
   coap_startup();
   coap_dtls_set_log_level(log_level);
@@ -1606,6 +1733,11 @@ main(int argc, char **argv) {
 
   coap_context_set_keepalive(ctx, ping_seconds);
   coap_context_set_block_mode(ctx, block_mode);
+  if (csm_max_message_size)
+    coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
+  coap_register_response_handler(ctx, message_handler);
+  coap_register_event_handler(ctx, event_handler);
+  coap_register_nack_handler(ctx, nack_handler);
 
   dst.size = res;
   dst.addr.sin.sin_port = htons( port );
@@ -1626,10 +1758,15 @@ main(int argc, char **argv) {
   );
 
   if ( !session ) {
-    coap_log( LOG_EMERG, "cannot create client session\n" );
+    coap_log( LOG_ERR, "cannot create client session\n" );
     goto finish;
   }
-  coap_session_init_token(session, the_token.length, the_token.s);
+  /*
+   * Prime the base token value, which coap_session_new_token() will increment
+   * every time it is called to get an unique token.
+   * [Option '-T token' is used to seed a different value]
+   */
+  coap_session_init_token(session, base_token.length, base_token.s);
 
   /* add Uri-Host if server address differs from uri.host */
 
@@ -1644,11 +1781,6 @@ main(int argc, char **argv) {
   default:
     ;
   }
-
-  coap_register_option(ctx, COAP_OPTION_BLOCK2);
-  coap_register_response_handler(ctx, message_handler);
-  coap_register_event_handler(ctx, event_handler);
-  coap_register_nack_handler(ctx, nack_handler);
 
   /* construct CoAP message */
 
@@ -1669,41 +1801,60 @@ main(int argc, char **argv) {
   if (flags & FLAGS_BLOCK)
     set_blocksize();
 
-  if (! (pdu = coap_new_request(ctx, session, method, &optlist, payload.s, payload.length))) {
+  /* Send the first (and may be only PDU) */
+  if (payload.length) {
+    /* Create some new data to use for this iteration */
+    data = coap_malloc(payload.length);
+    if (data == NULL)
+      goto finish;
+    memcpy(data, payload.s, payload.length);
+    data_len = payload.length;
+  }
+  if (!(pdu = coap_new_request(ctx, session, method, &optlist, data,
+        data_len))) {
     goto finish;
   }
+
+  if (is_mcast && wait_seconds == DEFAULT_WAIT_TIME)
+    /* Allow for other servers to respond within DEFAULT_LEISURE RFC7252 8.2 */
+    wait_seconds = coap_session_get_default_leisure(session).integer_part + 1;
+
+  wait_ms = wait_seconds * 1000;
+  coap_log(LOG_DEBUG, "timeout is set to %u seconds\n", wait_seconds);
 
   coap_log(LOG_DEBUG, "sending CoAP request:\n");
   if (coap_get_log_level() < LOG_DEBUG)
     coap_show_pdu(LOG_INFO, pdu);
 
-  coap_send(session, pdu);
+  if (coap_send(session, pdu) == COAP_INVALID_MID) {
+    coap_log(LOG_ERR, "cannot send CoAP pdu\n");
+    quit = 1;
+  }
+  repeat_count--;
 
-  wait_ms = wait_seconds * 1000;
-  coap_log(LOG_DEBUG, "timeout is set to %u seconds\n", wait_seconds);
+  while(!quit &&
+        !(ready && !tracked_tokens_count && !is_mcast && !repeat_count &&
+          coap_can_exit(ctx)) ) {
+    uint32_t timeout_ms;
+    /*
+     * 3 factors determine how long to wait in coap_io_process()
+     *   Remaining overall wait time (wait_ms)
+     *   Remaining overall observe unsolicited response time (obs_ms)
+     *   Delay of up to one second before sending off the next request
+     */
+    if (obs_ms) {
+      timeout_ms = min(wait_ms, obs_ms);
+    } else {
+      timeout_ms = wait_ms;
+    }
+    if (repeat_count) {
+      timeout_ms = min(timeout_ms, repeat_ms);
+    }
 
-#ifdef _WIN32
-  signal(SIGINT, handle_sigint);
-#else
-  memset (&sa, 0, sizeof(sa));
-  sigemptyset(&sa.sa_mask);
-  sa.sa_handler = handle_sigint;
-  sa.sa_flags = 0;
-  sigaction (SIGINT, &sa, NULL);
-  sigaction (SIGTERM, &sa, NULL);
-  /* So we do not exit on a SIGPIPE */
-  sa.sa_handler = SIG_IGN;
-  sigaction (SIGPIPE, &sa, NULL);
-#endif
-
-  while (!quit && !(ready && !doing_getting_block && coap_can_exit(ctx)) ) {
-
-    result = coap_io_process( ctx, wait_ms == 0 ?
-                                 obs_ms : obs_ms == 0 ?
-                                 min(wait_ms, 1000) : min( wait_ms, obs_ms ) );
+    result = coap_io_process(ctx, timeout_ms);
 
     if ( result >= 0 ) {
-      if ( wait_ms > 0 && !wait_ms_reset ) {
+      if (wait_ms > 0) {
         if ( (unsigned)result >= wait_ms ) {
           coap_log(LOG_INFO, "timeout\n");
           break;
@@ -1714,7 +1865,11 @@ main(int argc, char **argv) {
       if ( obs_ms > 0 && !obs_ms_reset ) {
         if ( (unsigned)result >= obs_ms ) {
           coap_log(LOG_DEBUG, "clear observation relationship\n" );
-          coap_cancel_observe(session, &the_token, msgtype);
+          for (i = 0; i < tracked_tokens_count; i++) {
+            if (tracked_tokens[i].observe) {
+              coap_cancel_observe(session, tracked_tokens[i].token, msgtype);
+            }
+          }
           doing_observe = 0;
           quit = 1;
 
@@ -1725,7 +1880,37 @@ main(int argc, char **argv) {
           obs_ms -= result;
         }
       }
-      wait_ms_reset = 0;
+      if (ready && repeat_count) {
+        /* Send off next request if appropriate */
+        if (repeat_ms > (unsigned)result) {
+          repeat_ms -= (unsigned)result;
+        } else {
+          /* Doing this once a second */
+          repeat_ms = REPEAT_DELAY_MS;
+          if (payload.length) {
+            /* Create some new data to use for this iteration */
+            data = coap_malloc(payload.length);
+            if (data == NULL)
+              goto finish;
+            memcpy(data, payload.s, payload.length);
+            data_len = payload.length;
+          }
+          if (!(pdu = coap_new_request(ctx, session, method, &optlist,
+                                       data, data_len))) {
+            goto finish;
+          }
+          coap_log(LOG_DEBUG, "sending CoAP request:\n");
+          if (coap_get_log_level() < LOG_DEBUG)
+            coap_show_pdu(LOG_INFO, pdu);
+
+          ready = 0;
+          if (coap_send(session, pdu) == COAP_INVALID_MID) {
+            coap_log(LOG_ERR, "cannot send CoAP pdu\n");
+            quit = 1;
+          }
+          repeat_count--;
+        }
+      }
       obs_ms_reset = 0;
     }
   }
@@ -1737,6 +1922,7 @@ main(int argc, char **argv) {
   coap_free(ca_mem);
   coap_free(cert_mem);
   coap_free(key_mem);
+  coap_free(payload.s);
   for (i = 0; i < valid_ihs.count; i++) {
     free(valid_ihs.ih_list[i].hint_match);
     coap_delete_bin_const(valid_ihs.ih_list[i].new_identity);
@@ -1744,6 +1930,10 @@ main(int argc, char **argv) {
   }
   if (valid_ihs.count)
     free(valid_ihs.ih_list);
+  for (i = 0; i < tracked_tokens_count; i++) {
+    coap_delete_binary(tracked_tokens[i].token);
+  }
+  free(tracked_tokens);
   coap_delete_optlist(optlist);
   coap_session_release( session );
   coap_free_context( ctx );

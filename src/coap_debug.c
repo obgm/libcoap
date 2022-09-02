@@ -1,11 +1,16 @@
-/* debug.c -- debug utilities
+/* coap_debug.c -- debug utilities
  *
- * Copyright (C) 2010--2012,2014--2019 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2010--2012,2014--2022 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
+ */
+
+/**
+ * @file coap_debug.c
+ * @brief Debug utilities
  */
 
 #include "coap3/coap_internal.h"
@@ -52,6 +57,14 @@ const char *coap_package_name(void) {
 
 const char *coap_package_version(void) {
   return PACKAGE_STRING;
+}
+
+const char *coap_package_build(void) {
+#ifdef LIBCOAP_PACKAGE_BUILD
+  return LIBCOAP_PACKAGE_BUILD;
+#else /* !LIBCOAP_PACKAGE_BUILD */
+  return PACKAGE_STRING;
+#endif /* !LIBCOAP_PACKAGE_BUILD */
 }
 
 void
@@ -351,12 +364,14 @@ msg_option_string(uint8_t code, uint16_t option_type) {
     { COAP_OPTION_PROXY_URI, "Proxy-Uri" },
     { COAP_OPTION_PROXY_SCHEME, "Proxy-Scheme" },
     { COAP_OPTION_SIZE1, "Size1" },
-    { COAP_OPTION_NORESPONSE, "No-Response" }
+    { COAP_OPTION_ECHO, "Echo" },
+    { COAP_OPTION_NORESPONSE, "No-Response" },
+    { COAP_OPTION_RTAG, "Request-Tag" }
   };
 
   static struct option_desc_t options_csm[] = {
     { COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE, "Max-Message-Size" },
-    { COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER, "Block-wise-Transfer" }
+    { COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER, "Block-Wise-Transfer" }
   };
 
   static struct option_desc_t options_pingpong[] = {
@@ -446,6 +461,7 @@ print_content_format(unsigned int format_type,
     { COAP_MEDIATYPE_APPLICATION_SENSML_EXI, "application/sensml-exi" },
     { COAP_MEDIATYPE_APPLICATION_SENML_XML, "application/senml+xml" },
     { COAP_MEDIATYPE_APPLICATION_SENSML_XML, "application/sensml+xml" },
+    { COAP_MEDIATYPE_APPLICATION_COAP_GROUP_JSON, "application/coap-group+json" },
     { COAP_MEDIATYPE_APPLICATION_DOTS_CBOR, "application/dots+cbor" },
     { 75, "application/dcaf+cbor" }
   };
@@ -608,10 +624,22 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
     case COAP_OPTION_BLOCK2:
       /* split block option into number/more/size where more is the
        * letter M if set, the _ otherwise */
-      buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
-                         coap_opt_block_num(option), /* block number */
-                         COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
-                         (1 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+      if (COAP_OPT_BLOCK_SZX(option) == 7) {
+        if (coap_get_data(pdu, &data_len, &data))
+          buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/BERT(%zu)",
+                             coap_opt_block_num(option), /* block number */
+                             COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
+                             data_len);
+        else
+          buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/BERT",
+                             coap_opt_block_num(option), /* block number */
+                             COAP_OPT_BLOCK_MORE(option) ? 'M' : '_'); /* M bit */
+      } else {
+        buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
+                           coap_opt_block_num(option), /* block number */
+                           COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
+                     (1 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+      }
 
       break;
 
@@ -629,6 +657,9 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 
     case COAP_OPTION_IF_MATCH:
     case COAP_OPTION_ETAG:
+    case COAP_OPTION_ECHO:
+    case COAP_OPTION_NORESPONSE:
+    case COAP_OPTION_RTAG:
       opt_len = coap_opt_length(option);
       opt_val = coap_opt_value(option);
       snprintf((char *)buf, sizeof(buf), "0x");
@@ -713,6 +744,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ">>");
     } else {
       size_t max_length;
+
       outbuflen = strlen(outbuf);
       max_length = sizeof(outbuf)-outbuflen;
       if (max_length > 1) {
@@ -845,30 +877,46 @@ char *coap_string_tls_version(char *buffer, size_t bufsize)
 char *coap_string_tls_support(char *buffer, size_t bufsize)
 {
   coap_tls_version_t *tls_version = coap_get_tls_library_version();
+  const int have_tls = coap_tls_is_supported();
+  const int have_dtls = coap_dtls_is_supported();
 
+  if (have_dtls == 0 && have_tls == 0) {
+    snprintf(buffer, bufsize, "(No DTLS or TLS support)");
+    return buffer;
+  }
   switch (tls_version->type) {
   case COAP_TLS_LIBRARY_NOTLS:
     snprintf(buffer, bufsize, "(No DTLS or TLS support)");
     break;
   case COAP_TLS_LIBRARY_TINYDTLS:
     snprintf(buffer, bufsize,
-             "(DTLS and no TLS support; PSK and RPK support)");
+             "(%sDTLS and%s TLS support; PSK, no PKI, no PKCS11, and RPK support)",
+             have_dtls ? "" : " no",
+             have_tls ? "" : " no");
     break;
   case COAP_TLS_LIBRARY_OPENSSL:
     snprintf(buffer, bufsize,
-             "(DTLS and TLS support; PSK, PKI, PKCS11 and no RPK support)");
+             "(%sDTLS and%s TLS support; PSK, PKI, PKCS11, and no RPK support)",
+             have_dtls ? "" : " no",
+             have_tls ? "" : " no");
     break;
   case COAP_TLS_LIBRARY_GNUTLS:
     if (tls_version->version >= 0x030606)
       snprintf(buffer, bufsize,
-               "(DTLS and TLS support; PSK, PKI, PKCS11 and RPK support)");
+               "(%sDTLS and%s TLS support; PSK, PKI, PKCS11, and RPK support)",
+               have_dtls ? "" : " no",
+               have_tls ? "" : " no");
     else
       snprintf(buffer, bufsize,
-               "(DTLS and TLS support; PSK, PKI, PKCS11 and no RPK support)");
+               "(%sDTLS and%s TLS support; PSK, PKI, PKCS11, and no RPK support)",
+               have_dtls ? "" : " no",
+               have_tls ? "" : " no");
     break;
   case COAP_TLS_LIBRARY_MBEDTLS:
     snprintf(buffer, bufsize,
-             "(DTLS and no TLS support; PSK, PKI and no RPK support)");
+             "(%sDTLS and%s TLS support; PSK, PKI, no PKCS11, and no RPK support)",
+             have_dtls ? "" : " no",
+             have_tls ? "" : " no");
     break;
   default:
     buffer[0] = '\000';

@@ -5,7 +5,7 @@
 [![Static Analysis](https://scan.coverity.com/projects/10970/badge.svg?flat=1)](https://scan.coverity.com/projects/obgm-libcoap)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/libcoap.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:libcoap)
 
-Copyright (C) 2010—2021 by Olaf Bergmann <bergmann@tzi.org> and others
+Copyright (C) 2010—2022 by Olaf Bergmann <bergmann@tzi.org> and others
 
 ABOUT LIBCOAP
 =============
@@ -38,6 +38,8 @@ The following RFCs are supported
 
 * RFC7252: The Constrained Application Protocol (CoAP)
 
+* RFC7390: Group Communication for the Constrained Application Protocol (CoAP)
+
 * RFC7641: Observing Resources in the Constrained Application Protocol (CoAP)
 
 * RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)
@@ -49,7 +51,11 @@ The following RFCs are supported
 * RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets
   [No WebSockets support]
 
+* RFC8516: "Too Many Requests" Response Code for the Constrained Application Protocol
+
 * RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option
+
+* RFC9175: CoAP: Echo, Request-Tag, and Token Processing
 
 There is (D)TLS support for the following libraries
 
@@ -57,7 +63,7 @@ There is (D)TLS support for the following libraries
 
 * GnuTLS (Minimum version 3.3.0) [PKI, PSK, RPK(3.6.6+) and PKCS11]
 
-* Mbed TLS (Minimum version 2.7.10) [PKI and PSK] [Currently only DTLS]
+* Mbed TLS (Minimum version 2.7.10) [PKI and PSK]
 
 * TinyDTLS [PSK and RPK] [DTLS Only]
 

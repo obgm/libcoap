@@ -17,7 +17,8 @@ coap_context_set_psk2,
 coap_new_endpoint,
 coap_free_endpoint,
 coap_endpoint_set_default_mtu,
-coap_join_mcast_group_intf
+coap_join_mcast_group_intf,
+coap_mcast_per_resource
 - Work with CoAP server endpoints
 
 SYNOPSIS
@@ -43,6 +44,8 @@ unsigned _mtu_);*
 
 *int coap_join_mcast_group_intf(coap_context_t *_context_,
 const char *_groupname_, const char *_ifname_);*
+
+*void coap_mcast_per_resource(coap_context_t *_context_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -130,7 +133,7 @@ COAP_PROTO_TLS
 
 *coap_tcp_is_supported*(), *coap_dtls_is_supported*() and
 *coap_tls_is_supported*() can be used for checking whether the underlying
-TCP or (D)TLS protocol support is available.  See *coap_tls_library(3)* for
+TCP or (D)TLS protocol support is available.  See *coap_tls_library*(3) for
 further information.
 
 When traffic starts to come in from a client, a server CoAP Session is created
@@ -154,6 +157,11 @@ first appropriate interface. When the endpoint is freed off, the associated
 multicast group will be removed. The registered multicast addresses for CoAP
 are 224.0.1.187, ff0x::fd (Variable-Scope) - i.e. ff02::fd (Link-Local) and
 ff05::fd (Site-Local).
+
+The *coap_mcast_per_resource*() function enables mcast to be controlled on a
+per resource basis giving the server application flexibility in how to respond
+to mcast requests. With this enabled, this is done through additional flag
+definitions when setting up each resource.
 
 RETURN VALUES
 -------------
@@ -557,7 +565,7 @@ setup_client_session_psk (const char *uri,
 SEE ALSO
 --------
 *coap_block*(3), *coap_context*(3), *coap_encryption*(3),
-*coap_endpoint_client*()3), *coap_resource*(3), *coap_session*(3) and
+*coap_endpoint_client*(3), *coap_resource*(3), *coap_session*(3) and
 *coap_tls_library*(3)
 
 FURTHER INFORMATION

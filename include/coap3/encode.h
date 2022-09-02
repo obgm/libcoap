@@ -9,6 +9,11 @@
  * of use.
  */
 
+/**
+ * @file encode.h
+ * @brief Encoding and decoding of CoAP data types
+ */
+
 #ifndef COAP_ENCODE_H_
 #define COAP_ENCODE_H_
 
@@ -35,8 +40,9 @@ extern int coap_flsll(long long i);
 #endif
 
 /**
+ * @ingroup application_api
  * @defgroup encode Encode / Decode API
- * API functions for endoding/decoding CoAP options.
+ * API for endoding/decoding CoAP options.
  * @{
  */
 
@@ -72,7 +78,8 @@ uint64_t coap_decode_var_bytes8(const uint8_t *buf, size_t length);
  * @param length The output buffer size to encode into (must be sufficient)
  * @param value  The value to encode into the buffer
  *
- * @return       The number of bytes used to encode @p value or @c 0 on error.
+ * @return       The number of bytes used to encode @p value (which can be 0
+ *               when encoding value of 0) or @c 0 on error.
  */
 unsigned int coap_encode_var_safe(uint8_t *buf,
                                   size_t length,
@@ -88,7 +95,8 @@ unsigned int coap_encode_var_safe(uint8_t *buf,
  * @param length The output buffer size to encode into (must be sufficient)
  * @param value  The value to encode into the buffer
  *
- * @return       The number of bytes used to encode @p value or @c 0 on error.
+ * @return       The number of bytes used to encode @p value (which can be 0
+ *               when encoding value of 0) or @c 0 on error.
  */
 unsigned int coap_encode_var_safe8(uint8_t *buf,
                                   size_t length,

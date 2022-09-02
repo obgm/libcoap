@@ -17,6 +17,7 @@ coap_set_log_level,
 coap_set_log_handler,
 coap_package_name,
 coap_package_version,
+coap_package_build,
 coap_set_show_pdu_output,
 coap_show_pdu,
 coap_endpoint_str,
@@ -42,6 +43,8 @@ SYNOPSIS
 *const char *coap_package_name(void);*
 
 *const char *coap_package_version(void);*
+
+*const char *coap_package_build(void);*
 
 *void coap_set_show_pdu_output(int _use_fprintf_);*
 
@@ -125,6 +128,10 @@ The *coap_package_name*() function returns the name of this library.
 
 The *coap_package_version*() function returns the version of this library.
 
+The *coap_package_build*() function returns the git information (as in
+"git describe --tags") for the build of this library or version of this
+library if git is not used.
+
 The *coap_set_show_pdu_output*() function defines whether the output from
 *coap_show_pdu*() is to be either sent to stdout/stderr, or output using
 *coap_log*().  _use_fprintf_ is set to 1 for stdout/stderr (the default), and
@@ -143,8 +150,9 @@ information about the _session_.
 RETURN VALUES
 -------------
 
-The *coap_package_name*() and *coap_package_version*() return the appropriate
-zero-terminated character string.
+The *coap_package_name*(), *coap_package_version*() and
+*coap_package_build*() return the appropriate zero-terminated character
+string.
 
 The *coap_get_log_level*() function returns the current logging level.
 

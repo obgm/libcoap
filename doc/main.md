@@ -4,7 +4,7 @@ libcoap                         {#mainpage}
 A C implementation of the Constrained Application Protocol (RFC 7252)
 =====================================================================
 
-Copyright (C) 2010--2021 by Olaf Bergmann <bergmann@tzi.org> and others
+Copyright (C) 2010--2022 by Olaf Bergmann <bergmann@tzi.org> and others
 
 About libcoap
 =============
@@ -23,6 +23,8 @@ The following RFCs are supported
 
 * RFC7252: The Constrained Application Protocol (CoAP)
 
+* RFC7390: Group Communication for the Constrained Application Protocol (CoAP)
+
 * RFC7641: Observing Resources in the Constrained Application Protocol (CoAP)
 
 * RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)
@@ -34,7 +36,11 @@ The following RFCs are supported
 * RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets
   [No WebSockets support]
 
+* RFC8516: "Too Many Requests" Response Code for the Constrained Application Protocol
+
 * RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option
+
+* RFC9175: CoAP: Echo, Request-Tag, and Token Processing
 
 There is (D)TLS support for the following libraries
 
@@ -42,7 +48,7 @@ There is (D)TLS support for the following libraries
 
 * GnuTLS (Minimum version 3.3.0) [PKI, PSK, RPK(3.6.6+) and PKCS11]
 
-* Mbed TLS (Minimum version 2.7.10) [PKI and PSK] [Currently only DTLS]
+* Mbed TLS (Minimum version 2.7.10) [PKI and PSK]
 
 * TinyDTLS [PSK and RPK] [DTLS Only]
 
@@ -58,4 +64,6 @@ This library is published as open-source software without any warranty
 of any kind. Use is permitted under the terms of the simplified BSD
 license. It includes public domain software. libcoap binaries may also
 include open-source software with their respective licensing terms.
-Please refer to LICENSE for further details in the source.
+Please refer to
+[LICENSE](https://raw.githubusercontent.com/obgm/libcoap/develop/LICENSE)
+for further details in the source.

@@ -48,7 +48,9 @@ DESCRIPTION
 -----------
 This man page focuses on the setting up of a CoAP client endpoint and hence
 creation of a CoAP Session used to connect to a server.  For a CoAP server
-endpoint, see *coap_endpoint_server*(3).
+endpoint, see *coap_endpoint_server*(3). There is no need to call
+*coap_new_endpoint*(3) for a client as well as one of the
+*coap_new_client_server**() functions.
 
 The CoAP stack's global state is stored in a coap_context_t Context object.
 Resources, Endpoints and Sessions are associated with this context object.
@@ -400,7 +402,7 @@ setup_client_session_dtls (struct in_addr ip_address) {
 SEE ALSO
 --------
 *coap_block*(3), *coap_context*(3), *coap_encryption*(3),
-*coap_endpoint_server*()3), *coap_resource*(3), *coap_session*(3) and
+*coap_endpoint_server*(3), *coap_resource*(3), *coap_session*(3) and
 *coap_tls_library*(3)
 
 FURTHER INFORMATION

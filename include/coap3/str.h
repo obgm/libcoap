@@ -9,6 +9,11 @@
  * of use.
  */
 
+/**
+ * @file str.h
+ * @brief Strings to be used in the CoAP library
+ */
+
 #ifndef COAP_STR_H_
 #define COAP_STR_H_
 
@@ -16,8 +21,9 @@
 
 
 /**
+ * @ingroup application_api
  * @defgroup string String handling support
- * API functions for handling strings and binary data
+ * API for handling strings and binary data
  * @{
  */
 

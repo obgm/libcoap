@@ -1,11 +1,16 @@
-/* address.c -- representation of network addresses
+/* coap_address.c -- representation of network addresses
  *
- * Copyright (C) 2015-2016,2019 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2015-2016,2019-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
+ */
+
+/**
+ * @file coap_address.c
+ * @brief Handling of network addresses
  */
 
 #include "coap3/coap_internal.h"

@@ -11,18 +11,19 @@
 
 /**
  * @file coap_tcp_internal.h
- * @brief COAP tcp internal information
+ * @brief CoAP TCP internal information
  */
 
 #ifndef COAP_TCP_INTERNAL_H_
 #define COAP_TCP_INTERNAL_H_
 
+#include "coap_internal.h"
 #include "coap_io.h"
 
 /**
- * @defgroup tcp TCP Support (Internal)
- * CoAP TCP Structures, Enums and Functions that are not exposed to
- * applications
+ * @ingroup internal_api
+ * @defgroup tcp TCP Support
+ * Internal API for handling CoAP TCP (RFC8283)
  * @{
  */
 

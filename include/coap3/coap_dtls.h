@@ -10,6 +10,11 @@
  * of use.
  */
 
+/**
+ * @file coap_dtls.h
+ * @brief CoAP DTLS support
+ */
+
 #ifndef COAP_DTLS_H_
 #define COAP_DTLS_H_
 
@@ -17,8 +22,9 @@
 #include "str.h"
 
 /**
+ * @ingroup application_api
  * @defgroup dtls DTLS Support
- * API functions for interfacing with DTLS libraries.
+ * API for interfacing with DTLS libraries.
  * @{
  */
 
@@ -26,6 +32,12 @@ typedef struct coap_dtls_pki_t coap_dtls_pki_t;
 
 #ifndef COAP_DTLS_HINT_LENGTH
 #define COAP_DTLS_HINT_LENGTH 128
+#endif
+#ifndef COAP_DTLS_MAX_PSK_IDENTITY
+#define COAP_DTLS_MAX_PSK_IDENTITY 64
+#endif
+#ifndef COAP_DTLS_MAX_PSK
+#define COAP_DTLS_MAX_PSK 64
 #endif
 
 typedef enum coap_dtls_role_t {

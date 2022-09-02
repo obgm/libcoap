@@ -1,7 +1,7 @@
 /*
  * coap_io.h -- Default network I/O functions for libcoap
  *
- * Copyright (C) 2012-2013 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2012-2013,2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -9,12 +9,17 @@
  * of use.
  */
 
+/**
+ * @file coap_io.h
+ * @brief Default network I/O functions
+ */
+
 #ifndef COAP_IO_H_
 #define COAP_IO_H_
 
 #include <sys/types.h>
 
-#include "address.h"
+#include "coap_address.h"
 
 #ifdef RIOT_VERSION
 #include "net/gnrc.h"

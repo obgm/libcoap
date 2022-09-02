@@ -3,7 +3,7 @@
 # This script creates a libcoap archive, unpacks it and does an
 # out-of-tree build and installation afterwards.
 #
-# Copyright (C) 2021 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2021-2022 Olaf Bergmann <bergmann@tzi.org>
 #
 # This file is part of the CoAP C library libcoap. Please see README
 # and COPYING for terms of use.
@@ -17,7 +17,7 @@ if test $err = 0 -a "x$ARCHIVE" != "x"; then
     DIR=`pwd`/`tar taf $ARCHIVE |cut -d/ -f1|head -1`
     tar xaf $ARCHIVE && cd $DIR && \
         $DIR/configure $PREFIX --enable-tests  --enable-silent-rules --enable-documentation --enable-examples --disable-dtls && \
-        make && make install
+        make EXTRA_CFLAGS=-Werror && make install EXTRA_CFLAGS=-Werror
     err=$?
 fi
 

@@ -2,8 +2,8 @@
  * coap_block_internal.h -- Structures, Enums & Functions that are not
  * exposed to application programming
  *
- * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2021      Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2021-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -13,18 +13,20 @@
 
 /**
  * @file coap_block_internal.h
- * @brief COAP block internal information
+ * @brief CoAP block internal information
  */
 
 #ifndef COAP_BLOCK_INTERNAL_H_
 #define COAP_BLOCK_INTERNAL_H_
 
+#include "coap_internal.h"
 #include "coap_pdu_internal.h"
 #include "resource.h"
 
 /**
- * @defgroup block_internal Block (Internal)
- * Structures, Enums and Functions that are not exposed to applications
+ * @ingroup internal_api
+ * @defgroup block_internal Block Transfer
+ * Internal API for Block Transfer (RC7959)
  * @{
  */
 
@@ -55,8 +57,8 @@ typedef struct coap_rblock_t {
  */
 typedef struct coap_l_block1_t {
   coap_binary_t *app_token; /**< original PDU token */
-  uint8_t token[8];      /**< last used token */
-  size_t token_length;   /**< length of token */
+  uint64_t state_token;  /**< state token */
+  size_t bert_size;      /**< size of last BERT block */
   uint32_t count;        /**< the number of packets sent for payload */
 } coap_l_block1_t;
 
@@ -69,6 +71,7 @@ typedef struct coap_l_block2_t {
   coap_string_t *query;  /**< Associated query for the resource */
   uint64_t etag;         /**< ETag value */
   coap_time_t maxage_expire; /**< When this entry expires */
+  coap_pdu_code_t request_method; /**< Method used to request this data */
 } coap_l_block2_t;
 
 /**
@@ -88,39 +91,43 @@ struct coap_lg_xmit_t {
   } b;
   coap_pdu_t pdu;        /**< skeletal PDU */
   coap_tick_t last_payload; /**< Last time MAX_PAYLOAD was sent or 0 */
-  coap_tick_t last_used; /**< Last time all data sent or 0 */
+  coap_tick_t last_sent; /**< Last time any data sent */
+  coap_tick_t last_all_sent; /**< Last time all data sent or 0 */
+  coap_tick_t last_obs; /**< Last time used (Observe tracking) or 0 */
   coap_release_large_data_t release_func; /**< large data de-alloc function */
   void *app_ptr;         /**< applicaton provided ptr for de-alloc function */
 };
 
+#if COAP_CLIENT_SUPPORT
 /**
  * Structure to hold large body (many blocks) client receive information
  */
 struct coap_lg_crcv_t {
   struct coap_lg_crcv_t *next;
-  uint8_t observe[3];    /**< Observe data (if set) (only 24 bits) */
+  uint8_t observe[3];    /**< Observe data (if observe_set) (only 24 bits) */
   uint8_t observe_length;/**< Length of observe data */
   uint8_t observe_set;   /**< Set if this is an observe receive PDU */
+  uint8_t szx;           /**< size of individual blocks */
   uint8_t etag_set;      /**< Set if ETag is in receive PDU */
   uint8_t etag_length;   /**< ETag length */
   uint8_t etag[8];       /**< ETag for block checking */
   uint16_t content_format; /**< Content format for the set of blocks */
   uint8_t last_type;     /**< Last request type (CON/NON) */
   uint8_t initial;       /**< If set, has not been used yet */
-  uint8_t szx;           /**< size of individual blocks */
+  uint16_t block_option; /**< Block option in use */
+  uint16_t retry_counter; /**< Retry counter (part of state token) */
   size_t total_len;      /**< Length as indicated by SIZE2 option */
   coap_binary_t *body_data; /**< Used for re-assembling entire body */
   coap_binary_t *app_token; /**< app requesting PDU token */
-  uint8_t base_token[8]; /**< established base PDU token */
-  size_t base_token_length; /**< length of token */
-  uint8_t token[8];      /**< last used token */
-  size_t token_length;   /**< length of token */
+  coap_binary_t *obs_token; /**< Initial Observe response PDU token */
+  uint64_t state_token; /**< state token */
   coap_pdu_t pdu;        /**< skeletal PDU */
   coap_rblock_t rec_blocks; /** < list of received blocks */
   coap_tick_t last_used; /**< Last time all data sent or 0 */
-  uint16_t block_option; /**< Block option in use */
 };
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 /**
  * Structure to hold large body (many blocks) server receive information
  */
@@ -147,21 +154,27 @@ struct coap_lg_srcv_t {
   coap_tick_t last_used; /**< Last time data sent or 0 */
   uint16_t block_option; /**< Block option in use */
 };
+#endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 coap_lg_crcv_t * coap_block_new_lg_crcv(coap_session_t *session,
                                         coap_pdu_t *pdu);
 
 void coap_block_delete_lg_crcv(coap_session_t *session,
                                coap_lg_crcv_t *lg_crcv);
 
-coap_tick_t coap_block_check_lg_crcv_timeouts(coap_session_t *session,
-                                              coap_tick_t now);
+int coap_block_check_lg_crcv_timeouts(coap_session_t *session,
+                                      coap_tick_t now,
+                                      coap_tick_t *tim_rem);
+#endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 void coap_block_delete_lg_srcv(coap_session_t *session,
                                coap_lg_srcv_t *lg_srcv);
 
-coap_tick_t coap_block_check_lg_srcv_timeouts(coap_session_t *session,
-                                              coap_tick_t now);
+int coap_block_check_lg_srcv_timeouts(coap_session_t *session,
+                                      coap_tick_t now,
+                                      coap_tick_t *tim_rem);
 
 int coap_handle_request_send_block(coap_session_t *session,
                                    coap_pdu_t *pdu,
@@ -179,48 +192,25 @@ int coap_handle_request_put_block(coap_context_t *context,
                                   coap_string_t *query,
                                   coap_method_handler_t h,
                                   int *added_block);
+#endif /* COAP_SERVER_SUPPORT */
 
-int coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *rcvd);
+#if COAP_CLIENT_SUPPORT
+int coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
+                                    coap_pdu_t *rcvd);
 
 int coap_handle_response_get_block(coap_context_t *context,
                                    coap_session_t *session,
                                    coap_pdu_t *sent,
                                    coap_pdu_t *rcvd,
                                    coap_recurse_t recursive);
+#endif /* COAP_CLIENT_SUPPORT */
 
 void coap_block_delete_lg_xmit(coap_session_t *session,
                                coap_lg_xmit_t *lg_xmit);
 
-/**
- * The function that does all the work for the coap_add_data_large*()
- * functions.
- *
- * @param session  The session to associate the data with.
- * @param pdu      The PDU to associate the data with.
- * @param resource The resource to associate the data with (BLOCK2).
- * @param query    The query to associate the data with (BLOCK2).
- * @param maxage   The maxmimum life of the data. If @c -1, then there
- *                 is no maxage (BLOCK2).
- * @param etag     ETag to use if not 0 (BLOCK2).
- * @param length   The length of data to transmit.
- * @param data     The data to transmit.
- * @param release_func The function to call to de-allocate @p data or NULL if
- *                 the function is not required.
- * @param app_ptr  A Pointer that the application can provide for when
- *                 release_func() is called.
- *
- * @return @c 1 if transmission initiation is successful, else @c 0.
- */
-int coap_add_data_large_internal(coap_session_t *session,
-                        coap_pdu_t *pdu,
-                        coap_resource_t *resource,
-                        const coap_string_t *query,
-                        int maxage,
-                        uint64_t etag,
-                        size_t length,
-                        const uint8_t *data,
-                        coap_release_large_data_t release_func,
-                        void *app_ptr);
+int coap_block_check_lg_xmit_timeouts(coap_session_t *session,
+                                      coap_tick_t now,
+                                      coap_tick_t *tim_rem);
 
 /**
  * The function checks that the code in a newly formed lg_xmit created by
@@ -230,9 +220,11 @@ int coap_add_data_large_internal(coap_session_t *session,
  * @param response The response PDU to to check
  * @param resource The requested resource
  * @param query    The requested query
+ * @param request_method The requested method
  */
 void coap_check_code_lg_xmit(coap_session_t *session, coap_pdu_t *response,
-                             coap_resource_t *resource, coap_string_t *query);
+                             coap_resource_t *resource, coap_string_t *query,
+                             coap_pdu_code_t request_method);
 
 /** @} */
 

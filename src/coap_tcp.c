@@ -9,6 +9,11 @@
  * of use.
  */
 
+/**
+ * @file coap_tcp.c
+ * @brief CoAP TCP handling functions
+ */
+
 #include "coap3/coap_internal.h"
 
 #include <errno.h>

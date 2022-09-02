@@ -1,7 +1,7 @@
 /*
  * coap_debug.h -- debug utilities
  *
- * Copyright (C) 2010-2011,2014 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2011,2014-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -9,12 +9,18 @@
  * of use.
  */
 
+/**
+ * @file coap_debug.h
+ * @brief CoAP Logging support
+ */
+
 #ifndef COAP_DEBUG_H_
 #define COAP_DEBUG_H_
 
 /**
+ * @ingroup application_api
  * @defgroup logging Logging Support
- * API functions for logging support
+ * API for logging support
  * @{
  */
 
@@ -32,53 +38,53 @@
 #define COAP_ERR_FD stderr
 #endif
 
-#ifdef HAVE_SYSLOG_H
-#include <syslog.h>
 /**
  * Logging type.  One of LOG_* from @b syslog.
  */
-typedef short coap_log_t;
-/*
-   LOG_DEBUG+2 gives ciphers in GnuTLS
-   Use COAP_LOG_CIPHERS to output Cipher Info in OpenSSL etc.
- */
-#define COAP_LOG_CIPHERS (LOG_DEBUG+2)
-#else /* !HAVE_SYSLOG_H */
-/** Pre-defined log levels akin to what is used in \b syslog
-    with LOG_CIPHERS added. */
+typedef int coap_log_t;
 
-#if !defined(RIOT_VERSION)
-typedef enum {
-  LOG_EMERG=0, /**< Emergency */
-  LOG_ALERT,   /**< Alert */
-  LOG_CRIT,    /**< Critical */
-  LOG_ERR,     /**< Error */
-  LOG_WARNING, /**< Warning */
-  LOG_NOTICE,  /**< Notice */
-  LOG_INFO,    /**< Information */
-  LOG_DEBUG,   /**< Debug */
-  COAP_LOG_CIPHERS=LOG_DEBUG+2 /**< CipherInfo */
-} coap_log_t;
-#else /* RIOT_VERSION */
+#ifdef HAVE_SYSLOG_H
+#include <syslog.h>
+#else
+#if defined(RIOT_VERSION)
 /* RIOT defines a subset of the syslog levels in log.h with different
  * numeric values. The remaining levels are defined here. Note that
  * output granularity differs from what would be expected when
  * adhering to the syslog levels.
  */
 #include <log.h>
-typedef short coap_log_t;
-#define LOG_EMERG  (0)
-#define LOG_ALERT  (1)
-#define LOG_CRIT   (2)
-#define LOG_ERR    (3)
-/*  LOG_WARNING    (4) */
-#define LOG_NOTICE (5)
-/*  LOG_INFO       (6) */
-/*  LOG_DEBUG      (7) */
-#define COAP_LOG_CIPHERS (9)
 #endif /* RIOT_VERSION */
+#endif /* HAVE_SYSLOG_H */
 
-#endif /* !HAVE_SYSLOG_H */
+#ifndef LOG_EMERG
+# define LOG_EMERG  0
+#endif
+#ifndef LOG_ALERT
+# define LOG_ALERT  1
+#endif
+#ifndef LOG_CRIT
+# define LOG_CRIT   2
+#endif
+#ifndef LOG_ERR
+# define LOG_ERR    3
+#endif
+#ifndef LOG_WARNING
+# define LOG_WARNING 4
+#endif
+#ifndef LOG_NOTICE
+# define LOG_NOTICE 5
+#endif
+#ifndef LOG_INFO
+# define LOG_INFO   6
+#endif
+#ifndef LOG_DEBUG
+# define LOG_DEBUG  7
+#endif
+/*
+   LOG_DEBUG+2 gives ciphers in GnuTLS
+   Use COAP_LOG_CIPHERS to output Cipher Info in OpenSSL etc.
+ */
+#define COAP_LOG_CIPHERS (LOG_DEBUG+2)
 
 /**
  * Get the current logging level.
@@ -122,6 +128,13 @@ const char *coap_package_name(void);
  * @return Zero-terminated string with the library version.
  */
 const char *coap_package_version(void);
+
+/**
+ * Get the library package build.
+ *
+ * @return Zero-terminated string with the library build.
+ */
+const char *coap_package_build(void);
 
 /**
  * Writes the given text to @c COAP_ERR_FD (for @p level <= @c LOG_CRIT) or @c

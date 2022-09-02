@@ -1,8 +1,8 @@
 /*
- * coap_context_internal.h -- Structures, Enums & Functions that are not
+ * coap_net_internal.h -- CoAP context internal information
  * exposed to application programming
  *
- * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -12,16 +12,18 @@
 
 /**
  * @file coap_net_internal.h
- * @brief COAP net internal information
+ * @brief CoAP context internal information
  */
 
 #ifndef COAP_NET_INTERNAL_H_
 #define COAP_NET_INTERNAL_H_
 
+#include "coap_internal.h"
+
 /**
- * @defgroup context_internal Context Handling (Internal)
- * CoAP Context Structures, Enums and Functions that are not exposed to
- * applications
+ * @ingroup internal_api
+ * @defgroup context_internal Context Handling
+ * Internal API for Context Handling
  * @{
  */
 
@@ -33,6 +35,7 @@ struct coap_queue_t {
   coap_tick_t t;                /**< when to send PDU for the next time */
   unsigned char retransmit_cnt; /**< retransmission counter, will be removed
                                  *    when zero */
+  uint8_t is_mcast;             /**< Set if this is a queued mcast response */
   unsigned int timeout;         /**< the randomized timeout value */
   coap_session_t *session;      /**< the CoAP session */
   coap_mid_t id;                /**< CoAP message id */
@@ -44,6 +47,7 @@ struct coap_queue_t {
  */
 struct coap_context_t {
   coap_opt_filter_t known_options;
+#if COAP_SERVER_SUPPORT
   coap_resource_t *resources; /**< hash table or list of known
                                    resources */
   coap_resource_t *unknown_resource; /**< can be used for handling
@@ -53,6 +57,7 @@ struct coap_context_t {
   coap_resource_release_userdata_handler_t release_userdata;
                                         /**< function to  release user_data
                                              when resource is deleted */
+#endif /* COAP_SERVER_SUPPORT */
 
 #ifndef WITHOUT_ASYNC
   /**
@@ -65,8 +70,12 @@ struct coap_context_t {
    * to sendqueue_basetime. */
   coap_tick_t sendqueue_basetime;
   coap_queue_t *sendqueue;
+#if COAP_SERVER_SUPPORT
   coap_endpoint_t *endpoint;      /**< the endpoints used for listening  */
+#endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
   coap_session_t *sessions;       /**< client sessions */
+#endif /* COAP_CLIENT_SUPPORT */
 
 #ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;      /**< uIP connection object */
@@ -81,7 +90,9 @@ struct coap_context_t {
                                    *   context, otherwise 0. */
 #endif /* WITH_LWIP */
 
+#if COAP_CLIENT_SUPPORT
   coap_response_handler_t response_handler;
+#endif /* COAP_CLIENT_SUPPORT */
   coap_nack_handler_t nack_handler;
   coap_ping_handler_t ping_handler;
   coap_pong_handler_t pong_handler;
@@ -97,20 +108,12 @@ struct coap_context_t {
 
   ssize_t (*network_read)(coap_socket_t *sock, coap_packet_t *packet);
 
-  size_t(*get_client_psk)(const coap_session_t *session, const uint8_t *hint,
-                          size_t hint_len, uint8_t *identity,
-                          size_t *identity_len, size_t max_identity_len,
-                          uint8_t *psk, size_t max_psk_len);
-  size_t(*get_server_psk)(const coap_session_t *session,
-                          const uint8_t *identity, size_t identity_len,
-                          uint8_t *psk, size_t max_psk_len);
-  size_t(*get_server_hint)(const coap_session_t *session, uint8_t *hint,
-                          size_t max_hint_len);
-
   void *dtls_context;
 
+#if COAP_SERVER_SUPPORT
   coap_dtls_spsk_t spsk_setup_data;  /**< Contains the initial PSK server setup
                                           data */
+#endif /* COAP_SERVER_SUPPORT */
 
   unsigned int session_timeout;    /**< Number of seconds of inactivity after
                                         which an unused session will be closed.
@@ -126,21 +129,28 @@ struct coap_context_t {
                                             disabled. */
   unsigned int csm_timeout;           /**< Timeout for waiting for a CSM from
                                            the remote side. 0 means disabled. */
-  uint8_t observe_pending;         /**< Observe response pending */
-  uint8_t block_mode;              /**< Zero or more COAP_BLOCK_ or'd options */
+  uint32_t csm_max_message_size;   /**< Value for CSM Max-Message-Size */
   uint64_t etag;                   /**< Next ETag to use */
 
+#if COAP_SERVER_SUPPORT
   coap_cache_entry_t *cache;       /**< CoAP cache-entry cache */
   uint16_t *cache_ignore_options;  /**< CoAP options to ignore when creating a
                                         cache-key */
   size_t cache_ignore_count;       /**< The number of CoAP options to ignore
                                         when creating a cache-key */
+#endif /* COAP_SERVER_SUPPORT */
   void *app;                       /**< application-specific data */
 #ifdef COAP_EPOLL_SUPPORT
   int epfd;                        /**< External FD for epoll */
   int eptimerfd;                   /**< Internal FD for timeout */
   coap_tick_t next_timeout;        /**< When the next timeout is to occur */
 #endif /* COAP_EPOLL_SUPPORT */
+#if COAP_SERVER_SUPPORT
+  uint8_t observe_pending;         /**< Observe response pending */
+  uint8_t mcast_per_resource;      /**< Mcast controlled on a per resource
+                                        basis */
+#endif /* COAP_SERVER_SUPPORT */
+  uint8_t block_mode;              /**< Zero or more COAP_BLOCK_ or'd options */
 };
 
 /**
@@ -291,7 +301,7 @@ void coap_dispatch(coap_context_t *context, coap_session_t *session,
   coap_opt_filter_t f = COAP_OPT_NONE;
   coap_opt_iterator_t opt_iter;
 
-  if (coap_option_check_critical(ctx, pdu, f) == 0) {
+  if (coap_option_check_critical(session, pdu, f) == 0) {
     coap_option_iterator_init(pdu, &opt_iter, f);
 
     while (coap_option_next(&opt_iter)) {
@@ -302,14 +312,14 @@ void coap_dispatch(coap_context_t *context, coap_session_t *session,
   }
    @endcode
  *
- * @param ctx      The context where all known options are registered.
+ * @param session  The current session.
  * @param pdu      The PDU to check.
  * @param unknown  The output filter that will be updated to indicate the
  *                 unknown critical options found in @p pdu.
  *
  * @return         @c 1 if everything was ok, @c 0 otherwise.
  */
-int coap_option_check_critical(coap_context_t *ctx,
+int coap_option_check_critical(coap_session_t *session,
                                coap_pdu_t *pdu,
                                coap_opt_filter_t *unknown);
 
@@ -359,6 +369,16 @@ unsigned int coap_calc_timeout(coap_session_t *session, unsigned char r);
  *                  COAP_INVALID_MID on error.
  */
 coap_mid_t coap_send_internal(coap_session_t *session, coap_pdu_t *pdu);
+
+/**
+ * Delay the sending of the first client request until some other negotiation
+ * has completed.
+ *
+ * @param session   The CoAP session.
+ *
+ * @return          @c 1 if everything was ok, @c 0 otherwise.
+ */
+int coap_client_delay_first(coap_session_t *session);
 
 /** @} */
 

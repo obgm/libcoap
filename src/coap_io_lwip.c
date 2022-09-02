@@ -1,4 +1,4 @@
-/* coap_io_lwip.h -- Network I/O functions for libcoap on lwIP
+/* coap_io_lwip.c -- Network I/O functions for libcoap on lwIP
  *
  * Copyright (C) 2012,2014 Olaf Bergmann <bergmann@tzi.org>
  *               2014 chrysn <chrysn@fsfe.org>
@@ -7,6 +7,11 @@
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
+ */
+
+/**
+ * @file coap_io_lwip.c
+ * @brief LwIP specific functions
  */
 
 #include "coap3/coap_internal.h"
@@ -105,7 +110,8 @@ error:
    * https://tools.ietf.org/html/rfc7252#section-4.2 MUST send RST
    * https://tools.ietf.org/html/rfc7252#section-4.3 MAY send RST
    */
-  coap_send_rst(session, pdu);
+  if (session)
+    coap_send_rst(session, pdu);
   coap_delete_pdu(pdu);
   if (packet) {
     packet->pbuf = NULL;

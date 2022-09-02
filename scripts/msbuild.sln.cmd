@@ -8,7 +8,8 @@ if exist NoTLS rd /s /q NoTLS
 
 cd ..
 
-"%programfiles(x86)%\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\msbuild.exe" ./win32/libcoap.sln /p:Configuration=NoTLS /p:Platform=x64 /warnaserror
+rem MSBuild.exe ./win32/libcoap.sln /p:Configuration=NoTLS /p:Platform=x64 /warnaserror
+MSBuild.exe ./win32/libcoap.sln /p:Platform=x64 /warnaserror
 
 :exit
 popd

@@ -9,6 +9,11 @@
  * for terms of use.
  */
 
+/**
+ * @file coap_prng.c
+ * @brief Pseudo Random Number functions
+ */
+
 #include "coap3/coap_internal.h"
 
 #ifdef HAVE_GETRANDOM
@@ -16,6 +21,10 @@
 #else /* !HAVE_GETRANDOM */
 #include <stdlib.h>
 #endif /* !HAVE_GETRANDOM */
+
+#if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
+#include <entropy_poll.h>
+#endif /* MBEDTLS_ENTROPY_HARDWARE_ALT */
 
 #if defined(_WIN32)
 
@@ -43,10 +52,18 @@ coap_prng_impl( unsigned char *buf, size_t len ) {
 
 #endif /* _WIN32 */
 
+/*
+ * This, or any user provided alternative, function is expected to
+ * return 0 on failure and 1 on success.
+ */
 static int
 coap_prng_default(void *buf, size_t len) {
+#if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
+  /* mbedtls_hardware_poll() returns 0 on success */
+  return (mbedtls_hardware_poll(NULL, buf, len, NULL) ? 0 : 1);
+#else /* !MBEDTLS_ENTROPY_HARDWARE_ALT */
 #ifdef HAVE_GETRANDOM
-  return getrandom(buf, len, 0);
+  return (getrandom(buf, len, 0) > 0) ? 1 : 0;
 #else /* !HAVE_GETRANDOM */
 #if defined(_WIN32)
   return coap_prng_impl(buf,len);
@@ -57,6 +74,7 @@ coap_prng_default(void *buf, size_t len) {
   return 1;
 #endif /* !_WIN32 */
 #endif /* !HAVE_GETRANDOM */
+#endif /* !MBEDTLS_ENTROPY_HARDWARE_ALT */
 }
 
 static coap_rand_func_t rand_func = coap_prng_default;
@@ -89,8 +107,7 @@ coap_prng(void *buf, size_t len) {
     return 0;
   }
 
-  rand_func(buf, len);
-  return 1;
+  return rand_func(buf, len);
 }
 
 #endif

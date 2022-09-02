@@ -1,7 +1,7 @@
 /*
  * coap_pdu_internal.h -- CoAP PDU structure
  *
- * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -17,6 +17,8 @@
 #ifndef COAP_COAP_PDU_INTERNAL_H_
 #define COAP_COAP_PDU_INTERNAL_H_
 
+#include "coap_internal.h"
+
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
 #endif
@@ -24,9 +26,9 @@
 #include <stdint.h>
 
 /**
- * @defgroup pdu_internal PDU (Internal)
- * CoAP PDU Structures, Enums and Functions that are not exposed to
- * applications
+ * @ingroup internal_api
+ * @defgroup pdu_internal PDU
+ * Internal API for PDUs
  * @{
  */
 
@@ -81,14 +83,24 @@
 
 /**
  * structure for CoAP PDUs
- * token, if any, follows the fixed size header, then options until
- * payload marker (0xff), then the payload if stored inline.
+ *
+ * Separate COAP_PDU_BUF is allocated with offsets held in coap_pdu_t.
+
+ * token, if any, follows the fixed size header, then optional options until
+ * payload marker (0xff) (if paylooad), then the optional payload.
+ *
  * Memory layout is:
  * <---header--->|<---token---><---options--->0xff<---payload--->
+ *
  * header is addressed with a negative offset to token, its maximum size is
  * max_hdr_size.
- * options starts at token + token_length
- * payload starts at data, its length is used_size - (data - token)
+ *
+ * allocated buffer always starts max_hdr_size before token.
+ *
+ * options starts at token + token_length.
+ * payload starts at data, its length is used_size - (data - token).
+ *
+ * alloc_size, used_size and max_size are the offsets from token.
  */
 
 struct coap_pdu_t {
@@ -99,8 +111,9 @@ struct coap_pdu_t {
                                  order */
   uint8_t max_hdr_size;     /**< space reserved for protocol-specific header */
   uint8_t hdr_size;         /**< actual size used for protocol-specific
-                                 header */
+                                 header (0 until header is encoded) */
   uint8_t token_length;     /**< length of Token */
+  uint8_t crit_opt;         /**< Set if unknown critical option for proxy */
   uint16_t max_opt;         /**< highest option number in PDU */
   size_t alloc_size;        /**< allocated storage for token, options and
                                  payload */
@@ -200,25 +213,6 @@ int coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto);
 int coap_pdu_parse_opt(coap_pdu_t *pdu);
 
 /**
-* Parses @p data into the CoAP PDU structure given in @p result.
-* The target pdu must be large enough to
-* This function returns @c 0 on error or a number greater than zero on success.
-*
-* @param proto   Session's protocol
-* @param data    The raw data to parse as CoAP PDU.
-* @param length  The actual size of @p data.
-* @param pdu     The PDU structure to fill. Note that the structure must
-*                provide space to hold at least the token and options
-*                part of the message.
-*
-* @return       1 on success or @c 0 on error.
-*/
-int coap_pdu_parse(coap_proto_t proto,
-                   const uint8_t *data,
-                   size_t length,
-                   coap_pdu_t *pdu);
-
-/**
  * Clears any contents from @p pdu and resets @c used_size,
  * and @c data pointers. @c max_size is set to @p size, any
  * other field is set to @c 0. Note that @p pdu must be a valid
@@ -229,6 +223,30 @@ int coap_pdu_parse(coap_proto_t proto,
  */
 void coap_pdu_clear(coap_pdu_t *pdu, size_t size);
 
+/**
+ * Adds option of given @p number to @p pdu that is passed as first
+ * parameter.
+ *
+ * The internal version of coap_add_option() may cause an @p option to be
+ * inserted, even if there is any data in the @p pdu.
+ *
+ * Note: Where possible, the option @p data needs to be stripped of leading
+ * zeros (big endian) to reduce the amount of data needed in the PDU, as well
+ * as in some cases the maximum data size of an option can be exceeded if not
+ * stripped and hence be illegal. This is done by using coap_encode_var_safe()
+ * or coap_encode_var_safe8().
+ *
+ * @param pdu    The PDU where the option is to be added.
+ * @param number The number of the new option.
+ * @param len    The length of the new option.
+ * @param data   The data of the new option.
+ *
+ * @return The overall length of the option or @c 0 on failure.
+ */
+size_t coap_add_option_internal(coap_pdu_t *pdu,
+                                coap_option_num_t number,
+                                size_t len,
+                                const uint8_t *data);
 /**
  * Removes (first) option of given number from the @p pdu.
  *

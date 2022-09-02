@@ -1,6 +1,6 @@
 # man/Makefile.am
 #
-# Copyright (C) 2018-2021 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2018-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.
@@ -8,7 +8,7 @@
 # picking up the default warning CFLAGS into AM_CFLAGS
 AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include \
             -I$(top_srcdir)/include/coap$(LIBCOAP_API_VERSION) \
-            $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
+            $(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99 $(EXTRA_CFLAGS)
 
 # Build, not install
 noinst_PROGRAMS = examples-code-check
@@ -59,7 +59,14 @@ man7_MANS = $(MAN7)
 
 .txt.3:
 	$(A2X) --doctype manpage --format manpage $<
+	@NEWLIST=`${SED} -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $< | ${SED} 's/^- /\\\\\\\- /g' | egrep -v 'NAME|----|SYNOPSIS|^\$$' | tr '\n' ' '` ;\
+	NAME=`echo $< | ${SED} -ne 's/^\(coap_[a-zA-Z_0-9]\+\).*$$/\1.3/p'` ;\
+	${SED} -i '/.SH "NAME"/{n;d;}' $${NAME} ;\
+	${SED} -i "/\.SH \"NAME\"/a $${NEWLIST}" $${NAME}
 	$(A2X) --doctype manpage --format xhtml $<
+	@NEWLIST=`${SED} -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $< | ${SED} 's^/^\\\\/^g' | egrep -v 'NAME|----|SYNOPSIS|^\$$' | tr '\n' ' '` ;\
+	NAME=`echo $< | ${SED} -ne 's/^\(coap_[a-zA-Z_0-9]\+\).*$$/\1.html/p'` ;\
+	${SED} -i "s^Name</h2><p>.*</p></div>^Name</h2><p>$${NEWLIST}</p></div>^" $${NAME}
 
 .txt.5:
 	$(A2X) --doctype manpage --format manpage $<
@@ -92,6 +99,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_context.3" > coap_context_get_session_timeout.3
 	@echo ".so man3/coap_context.3" > coap_context_set_csm_timeout.3
 	@echo ".so man3/coap_context.3" > coap_context_get_csm_timeout.3
+	@echo ".so man3/coap_logging.3" > coap_show_pdu.3
 	@echo ".so man3/coap_logging.3" > coap_endpoint_str.3
 	@echo ".so man3/coap_logging.3" > coap_session_str.3
 	@echo ".so man3/coap_pdu_access.3" > coap_option_filter_set.3
@@ -102,6 +110,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_mid.3
 	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_token.3
 	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_type.3
+	@echo ".so man3/coap_pdu_access.3" > coap_get_uri_path.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_delete_optlist.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe8.3
@@ -115,6 +124,13 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_mid.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_code.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_type.3
+	@echo ".so man3/coap_recovery.3" > coap_session_set_nstart.3
+	@echo ".so man3/coap_recovery.3" > coap_session_get_nstart.3
+	@echo ".so man3/coap_recovery.3" > coap_session_set_probing_wait.3
+	@echo ".so man3/coap_recovery.3" > coap_session_get_probing_wait.3
+	@echo ".so man3/coap_recovery.3" > coap_debug_set_packet_loss.3
+	@echo ".so man3/coap_resource.3" > coap_resource_set_mode.3
+	@echo ".so man3/coap_resource.3" > coap_resource_set_userdata.3
 	@echo ".so man3/coap_resource.3" > coap_resource_get_userdata.3
 	@echo ".so man3/coap_resource.3" > coap_resource_release_userdata_handler.3
 	@echo ".so man3/coap_resource.3" > coap_resource_get_uri_path.3

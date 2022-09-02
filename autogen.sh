@@ -128,6 +128,11 @@ test -n "$srcdir" || srcdir=.
 # not struggle with old versions of aclocal.
 mkdir -p $srcdir/m4
 
+# create ar-lib if not present to avoid autoreconf throwing an error
+# when the file is missing. As autoreconf is called with --force
+# the file will get updated with the proper contents afterwards.
+touch ar-lib
+
 echo "Generating needed autotools files for $PROJECT by running autoreconf ..."
 autoreconf --force --install --verbose "$srcdir"
 

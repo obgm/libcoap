@@ -26,7 +26,8 @@ coap_option_next,
 coap_pdu_get_code,
 coap_pdu_get_mid,
 coap_pdu_get_token,
-coap_pdu_get_type
+coap_pdu_get_type,
+coap_get_uri_path
 - Accessing CoAP PDUs
 
 SYNOPSIS
@@ -70,6 +71,8 @@ coap_opt_iterator_t *_oi_, const coap_opt_filter_t *_filter_);*
 *coap_bin_const_t coap_pdu_get_token(const coap_pdu_t *_pdu_);*
 
 *coap_pdu_type_t coap_pdu_get_type(const coap_pdu_t *_pdu_);*
+
+*coap_string_t *coap_get_uri_path(const coap_pdu_t *_pdu_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -241,14 +244,18 @@ _filter_.
 
 The *coap_opt_length*() function returns the length of the option _opt_.
 
-The *coap_opt_val*() function returns a pointer to the start of the data for
+The *coap_opt_value*() function returns a pointer to the start of the data for
 the option.
 
 The *coap_decode_var_bytes*() function will decode an option up to 4 bytes
 long from _buf_ and _length_ into an unsigned 32bit number.
 
-The *coap_decode_var_bytes*8() function will decode an option up to 8 bytes
+The *coap_decode_var_bytes8*() function will decode an option up to 8 bytes
 long from _buf_ and _length_ into an unsigned 64bit number.
+
+The *coap_get_uri_path*() function will abstract the uri path from the
+specified _pdu_. The returned uri path will need to be freed off when no
+longer required.
 
 *Payload:*
 
@@ -258,6 +265,36 @@ data available, and _data_ with a pointer to where the data is located.
 
 *NOTE:* This function has been updated by *coap_get_data_large*() when large
 transfers may take place.  See coap_block(3).
+
+RETURN VALUES
+-------------
+
+*coap_check_option*() and *coap_option_next*() returns a coap_opt_t* or
+NULL if not found.
+
+*coap_decode_var_bytes*() and *coap_decode_var_bytes8*() return the decoded
+value.
+
+*coap_pdu_get_code*(), *coap_pdu_get_mid*(), *coap_pdu_get_type*() return
+the appropriate value.
+
+*coap_option_filter_set*(), *coap_option_filter_set*() and
+*coap_option_filter_unset*() return 1 on success or 0 on failure.
+
+*coap_get_data*() returns 1 if data, else 0.
+
+*coap_opt_length*() returns the option length.
+
+*coap_opt_value*() returns a pointer to the start of the option value or
+NULL if error.
+
+*coap_option_iterator_init*() returns ap pointer to the provided interator
+or NULL on error.
+
+*coap_pdu_get_token*() returns a pointer to the token in the pdu.
+
+*coap_get_uri_path*() returns an allocated pointer to the uri path in the
+pdu or NULL on error.  This pointer will need to be freed off.
 
 EXAMPLES
 --------

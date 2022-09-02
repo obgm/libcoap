@@ -1,3 +1,28 @@
+2022-08-17  Olaf Bergmann  <bergmann@tzi.org>
+
+	Change summary for version 4.3.1:
+
+        * Support for Server only and Client only libcoap builds.
+        * Add support for repeating requests in coap-client.
+        * Add in support for defining resources that support multicast.
+        * Add in more support for async delayed requests.
+        * Add in support for not closing down Observe when closing session.
+        * Support for RFC7390, RFC8516 and RFC9175.
+        * Warn when Tokens are re-used.
+        * Warn when Options are repeated that are not defined as being
+          repeatable.
+        * Support for TLS when using Mbed TLS library.
+        * support for Mbed TLS 3.1
+        * Add in BERT support for block handling.
+        * More rigorous error handling for Block transfers.
+        * Support for using external or submodule TinyDTLS.
+        * Cmake - add in Apple build support.
+        * Source files renamed to be more consistent in naming.
+        * Update native Windows VC builds to use libcoap-3 instead of libcoap-2.
+        * Reported bugs fixed.
+        * Example applications Help report include build version.
+        * Documentation added and updated (Doxygen and man).
+
 2021-05-04  Olaf Bergmann  <bergmann@tzi.org>
 
 	Change summary for version 4.3.0:

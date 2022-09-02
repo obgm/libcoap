@@ -15,13 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\address.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\async.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\block.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_address.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_async.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\coap_cache.c">
@@ -51,7 +51,13 @@
     <ClCompile Include="..\src\coap_openssl.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_option.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_session.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_subscribe.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\coap_tcp.c">
@@ -72,9 +78,6 @@
     <ClCompile Include="..\src\net.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\option.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\pdu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -82,9 +85,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\str.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\subscribe.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\uri.c">
@@ -95,16 +95,16 @@
     <ClInclude Include="..\coap_config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\address.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\async.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\block.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_address.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_async.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache.h">
@@ -140,6 +140,9 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_mutex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_option.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_prng.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -150,6 +153,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_session_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe_internal.h">
@@ -173,9 +179,6 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\net.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\option.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\pdu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -183,9 +186,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\str.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\subscribe.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\uri.h">
@@ -199,6 +199,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\libcoap-2.sym" />
+    <CustomBuild Include="..\libcoap-3.sym" />
   </ItemGroup>
 </Project>

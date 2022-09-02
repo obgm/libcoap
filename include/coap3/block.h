@@ -2,6 +2,7 @@
  * block.h -- block transfer
  *
  * Copyright (C) 2010-2012,2014-2015 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2022                Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -9,16 +10,22 @@
  * of use.
  */
 
+/**
+ * @file block.h
+ * @brief CoAP Block information
+ */
+
 #ifndef COAP_BLOCK_H_
 #define COAP_BLOCK_H_
 
 #include "encode.h"
-#include "option.h"
+#include "coap_option.h"
 #include "pdu.h"
 
 /**
+ * @ingroup application_api
  * @defgroup block Block Transfer
- * API functions for handling PDUs using CoAP BLOCK options
+ * API for handling PDUs using CoAP Block options (RFC7959)
  * @{
  */
 
@@ -37,6 +44,19 @@ typedef struct {
   unsigned int m:1;       /**< 1 if more blocks follow, 0 otherwise */
   unsigned int szx:3;     /**< block size */
 } coap_block_t;
+
+/**
+ * Structure of Block options with BERT support.
+ */
+typedef struct {
+  unsigned int num;       /**< block number */
+  unsigned int m:1;       /**< 1 if more blocks follow, 0 otherwise */
+  unsigned int szx:3;     /**< block size (0-6) */
+  unsigned int aszx:3;    /**< block size (0-7 including BERT */
+  unsigned int defined:1; /**< Set if block found */
+  unsigned int bert:1;    /**< Operating as BERT */
+  uint32_t chunk_size;    /**< > 1024 if BERT */
+} coap_block_b_t;
 
 #define COAP_BLOCK_USE_LIBCOAP  0x01 /* Use libcoap to do block requests */
 #define COAP_BLOCK_SINGLE_BODY  0x02 /* Deliver the data as a single body */
@@ -91,12 +111,31 @@ coap_opt_block_set_m(coap_opt_t *block_opt, int m) {
  * @param pdu    The pdu to search for option @p number.
  * @param number The option number to search for (must be COAP_OPTION_BLOCK1 or
  *               COAP_OPTION_BLOCK2).
- * @param block  The block structure to initilize.
+ * @param block  The block structure to initialize.
  *
  * @return       @c 1 on success, @c 0 otherwise.
  */
 int coap_get_block(const coap_pdu_t *pdu, coap_option_num_t number,
                    coap_block_t *block);
+
+
+/**
+ * Initializes @p block from @p pdu. @p number must be either COAP_OPTION_BLOCK1
+ * or COAP_OPTION_BLOCK2. When option @p number was found in @p pdu, @p block is
+ * initialized with values from this option and the function returns the value
+ * @c 1. Otherwise, @c 0 is returned. BERT information is abstracted as
+ * appropriate.
+ *
+ * @param session THe session that the pdu is associated with,
+ * @param pdu    The pdu to search for option @p number.
+ * @param number The option number to search for (must be COAP_OPTION_BLOCK1 or
+ *               COAP_OPTION_BLOCK2).
+ * @param block  The block structure to initialize.
+ *
+ * @return       @c 1 on success, @c 0 otherwise.
+ */
+int coap_get_block_b(const coap_session_t *session, const coap_pdu_t *pdu,
+                     coap_option_num_t number, coap_block_b_t *block);
 
 /**
  * Writes a block option of type @p number to message @p pdu. If the requested
@@ -122,6 +161,33 @@ int coap_write_block_opt(coap_block_t *block,
                          coap_option_num_t number,
                          coap_pdu_t *pdu,
                          size_t data_length);
+/**
+ * Writes a block option of type @p number to message @p pdu. If the requested
+ * block size is too large to fit in @p pdu, it is reduced accordingly. An
+ * exception is made for the final block when less space is required. The actual
+ * length of the resource is specified in @p data_length.
+ *
+ * This function may change *block to reflect the values written to @p pdu. As
+ * the function takes into consideration the remaining space @p pdu, no more
+ * options should be added after coap_write_block_opt() has returned.
+ *
+ * @param session     The CoAP session.
+ * @param block       The block structure to use. On return, this object is
+ *                    updated according to the values that have been written to
+ *                    @p pdu.
+ * @param number      COAP_OPTION_BLOCK1 or COAP_OPTION_BLOCK2.
+ * @param pdu         The message where the block option should be written.
+ * @param data_length The length of the actual data that will be added the @p
+ *                    pdu by calling coap_add_block().
+ *
+ * @return            @c 1 on success, or a negative value on error.
+ */
+int coap_write_block_b_opt(coap_session_t *session,
+                           coap_block_b_t *block,
+                           coap_option_num_t number,
+                           coap_pdu_t *pdu,
+                           size_t data_length);
+
 
 /**
  * Adds the @p block_num block of size 1 << (@p block_szx + 4) from source @p
@@ -140,6 +206,19 @@ int coap_add_block(coap_pdu_t *pdu,
                    const uint8_t *data,
                    unsigned int block_num,
                    unsigned char block_szx);
+
+/**
+ * Adds the appropriate payload data of the body to the @p pdu.
+ *
+ * @param pdu       The message to add the block.
+ * @param len       The length of @p data.
+ * @param data      The source data to fill the block with.
+ * @param block     The block information (including potentially BERT)
+ *
+ * @return          @c 1 on success, @c 0 otherwise.
+ */
+int coap_add_block_b_data(coap_pdu_t *pdu, size_t len, const uint8_t *data,
+                          coap_block_b_t *block);
 
 /**
  * Re-assemble payloads into a body
@@ -161,7 +240,7 @@ coap_block_build_body(coap_binary_t *body_data, size_t length,
 /**
  * Adds the appropriate part of @p data to the @p response pdu.  If blocks are
  * required, then the appropriate block will be added to the PDU and sent.
- * Adds a ETAG option that is the hash of the entire data if the data is to be
+ * Adds a ETag option that is the hash of the entire data if the data is to be
  * split into blocks
  * Used by a request handler.
  *
@@ -200,6 +279,8 @@ typedef void (*coap_release_large_data_t)(coap_session_t *session,
 /**
  * Associates given data with the @p pdu that is passed as second parameter.
  *
+ * This function will fail if data has aready been added to the @p pdu.
+ *
  * If all the data can be transmitted in a single PDU, this is functionally
  * the same as coap_add_data() except @p release_func (if not NULL) will get
  * invoked after data transmission.
@@ -207,7 +288,7 @@ typedef void (*coap_release_large_data_t)(coap_session_t *session,
  * Used for a client request.
  *
  * If the data spans multiple PDUs, then the data will get transmitted using
- * BLOCK1 option with the addition of the SIZE1 option.
+ * Block1 option with the addition of the Size1 and Request-Tag options.
  * The underlying library will handle the transmission of the individual blocks.
  * Once the body of data has been transmitted (or a failure occurred), then
  * @p release_func (if not NULL) will get called so the application can
@@ -215,7 +296,7 @@ typedef void (*coap_release_large_data_t)(coap_session_t *session,
  * the application not to change the contents of @p data until the data
  * transfer has completed.
  *
- * There is no need for the application to include the BLOCK1 option in the
+ * There is no need for the application to include the Block1 option in the
  * @p pdu.
  *
  * coap_add_data_large_request() (or the alternative coap_add_data_large_*()
@@ -248,15 +329,17 @@ int coap_add_data_large_request(coap_session_t *session,
  * Associates given data with the @p response pdu that is passed as fourth
  * parameter.
  *
+ * This function will fail if data has aready been added to the @p pdu.
+ *
  * If all the data can be transmitted in a single PDU, this is functionally
  * the same as coap_add_data() except @p release_func (if not NULL) will get
- * invoked after data transmission. The MEDIA_TYPE, MAXAGE and ETAG options may
- * be added in as appropriate.
+ * invoked after data transmission. The Content-Format, Max-Age and ETag
+ * options may be added in as appropriate.
  *
  * Used by a server request handler to create the response.
  *
  * If the data spans multiple PDUs, then the data will get transmitted using
- * BLOCK2 (response) option with the addition of the SIZE2 and ETAG
+ * Block2 (response) option with the addition of the Size2 and ETag
  * options. The underlying library will handle the transmission of the
  * individual blocks. Once the body of data has been transmitted (or a
  * failure occurred), then @p release_func (if not NULL) will get called so the
@@ -264,10 +347,10 @@ int coap_add_data_large_request(coap_session_t *session,
  * responsibility of the application not to change the contents of @p data
  * until the data transfer has completed.
  *
- * There is no need for the application to include the BLOCK2 option in the
+ * There is no need for the application to include the Block2 option in the
  * @p pdu.
  *
- * coap_add_data_large_response() (or the alternative coap_add_data_large*()
+ * coap_add_data_large_response() (or the alternative coap_add_data_large_*()
  * functions) must be called only once per PDU and must be the last PDU update
  * before returning from the request handler function.
  *
@@ -279,7 +362,7 @@ int coap_add_data_large_request(coap_session_t *session,
  * @param request    The requesting pdu.
  * @param response   The response pdu.
  * @param query      The query taken from the (original) requesting pdu.
- * @param media_type The format of the data.
+ * @param media_type The content format of the data.
  * @param maxage     The maxmimum life of the data. If @c -1, then there
  *                   is no maxage.
  * @param etag       ETag to use if not 0.

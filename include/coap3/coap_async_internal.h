@@ -1,7 +1,7 @@
 /*
  * coap_async_internal.h -- state management for asynchronous messages
  *
- * Copyright (C) 2010-2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -17,15 +17,17 @@
 #ifndef COAP_ASYNC_INTERNAL_H_
 #define COAP_ASYNC_INTERNAL_H_
 
-#include "coap3/net.h"
+#include "coap_internal.h"
+#include "net.h"
 
+/* Note that if COAP_SERVER_SUPPORT is not set, then WITHOUT_ASYNC undefined */
 #ifndef WITHOUT_ASYNC
 
 /**
- * @defgroup coap_async_internal Asynchronous Messaging (Internal)
+ * @ingroup internal_api
+ * @defgroup coap_async_internal Asynchronous Messaging
  * @{
- * CoAP Async Structures, Enums and Functions that are not exposed to
- * applications.
+ * Internal API for CoAP Asynchronous processing.
  * A coap_context_t object holds a list of coap_async_t objects that can be
  * used to generate a separate response in the case a result of a request cannot
  * be delivered immediately.

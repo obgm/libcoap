@@ -1,11 +1,16 @@
-/* pdu.c -- CoAP message structure
+/* pdu.c -- CoAP PDU handling
  *
- * Copyright (C) 2010--2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
  * This file is part of the CoAP library libcoap. Please see
  * README for terms of use.
+ */
+
+/**
+ * @file pdu.c
+ * @brief CoAP PDU handling
  */
 
 #include "coap3/coap_internal.h"
@@ -24,6 +29,12 @@
 #include <winsock2.h>
 #endif
 #include <ctype.h>
+
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#else /* ! HAVE_INTTYPES_H */
+#define PRIu32 "u"
+#endif /* ! HAVE_INTTYPES_H */
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -44,6 +55,7 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   pdu->code = 0;
   pdu->hdr_size = 0;
   pdu->token_length = 0;
+  pdu->crit_opt = 0;
   pdu->mid = 0;
   pdu->max_opt = 0;
   pdu->max_size = size;
@@ -173,9 +185,9 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
     size_t length = old_pdu->used_size - old_pdu->token_length -
           (old_pdu->data ?
                  old_pdu->used_size - (old_pdu->data - old_pdu->token) +1 : 0);
-    if (!coap_pdu_resize(pdu, length + old_pdu->hdr_size))
+    if (!coap_pdu_resize(pdu, length + pdu->token_length))
       goto fail;
-    /* Copy the options and any data across */
+    /* Copy the options but not any data across */
     memcpy(pdu->token + pdu->token_length,
            old_pdu->token + old_pdu->token_length, length);
     pdu->used_size += length;
@@ -190,9 +202,9 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
     while ((option = coap_option_next(&opt_iter))) {
       if (drop_options && coap_option_filter_get(drop_options, opt_iter.number))
         continue;
-      if (!coap_add_option(pdu, opt_iter.number,
-                           coap_opt_length(option),
-                           coap_opt_value(option)))
+      if (!coap_add_option_internal(pdu, opt_iter.number,
+                                    coap_opt_length(option),
+                                    coap_opt_value(option)))
         goto fail;
     }
   }
@@ -203,6 +215,10 @@ fail:
   return NULL;
 }
 
+
+/*
+ * The new size does not include the coap header (max_hdr_size)
+ */
 int
 coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
   if (new_size > pdu->alloc_size) {
@@ -221,7 +237,8 @@ coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
     } else {
       offset = 0;
     }
-    new_hdr = (uint8_t*)realloc(pdu->token - pdu->max_hdr_size, new_size + pdu->max_hdr_size);
+    new_hdr = (uint8_t*)realloc(pdu->token - pdu->max_hdr_size,
+                                new_size + pdu->max_hdr_size);
     if (new_hdr == NULL) {
       coap_log(LOG_WARNING, "coap_pdu_resize: realloc failed\n");
       return 0;
@@ -291,8 +308,10 @@ coap_update_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
     /* Easy case - just data has changed */
   }
   else if (len > pdu->token_length) {
-    if (!coap_pdu_check_resize(pdu, pdu->used_size + len - pdu->token_length))
+    if (!coap_pdu_check_resize(pdu, pdu->used_size + len - pdu->token_length)) {
+      coap_log(LOG_WARNING, "Failed to update token\n");
       return 0;
+    }
     memmove(&pdu->token[len - pdu->token_length], pdu->token, pdu->used_size);
     pdu->used_size += len - pdu->token_length;
   }
@@ -410,6 +429,50 @@ coap_remove_option(coap_pdu_t *pdu, coap_option_num_t number) {
   return 1;
 }
 
+static int
+check_repeatable(coap_option_num_t number) {
+  /* Validate that the option is repeatable */
+  switch (number) {
+  /* Ignore list of genuine repeatable */
+  case COAP_OPTION_IF_MATCH:
+  case COAP_OPTION_ETAG:
+  case COAP_OPTION_LOCATION_PATH:
+  case COAP_OPTION_URI_PATH:
+  case COAP_OPTION_URI_QUERY:
+  case COAP_OPTION_LOCATION_QUERY:
+  case COAP_OPTION_RTAG:
+    break;
+  /* Protest at the known non-repeatable options and ignore them */
+  case COAP_OPTION_URI_HOST:
+  case COAP_OPTION_IF_NONE_MATCH:
+  case COAP_OPTION_OBSERVE:
+  case COAP_OPTION_URI_PORT:
+  case COAP_OPTION_OSCORE:
+  case COAP_OPTION_CONTENT_FORMAT:
+  case COAP_OPTION_MAXAGE:
+  case COAP_OPTION_HOP_LIMIT:
+  case COAP_OPTION_ACCEPT:
+  case COAP_OPTION_BLOCK2:
+  case COAP_OPTION_BLOCK1:
+  case COAP_OPTION_SIZE2:
+  case COAP_OPTION_PROXY_URI:
+  case COAP_OPTION_PROXY_SCHEME:
+  case COAP_OPTION_SIZE1:
+  case COAP_OPTION_ECHO:
+  case COAP_OPTION_NORESPONSE:
+    coap_log(LOG_INFO,
+             "Option number %d is not defined as repeatable - dropped\n",
+             number);
+    return 0;
+  default:
+    coap_log(LOG_INFO, "Option number %d is not defined as repeatable\n",
+             number);
+    /* Accepting it after warning as there may be user defineable options */
+    break;
+  }
+  return 1;
+}
+
 size_t
 coap_insert_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
                    const uint8_t *data) {
@@ -422,7 +485,7 @@ coap_insert_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
   size_t shrink = 0;
 
   if (number >= pdu->max_opt)
-    return coap_add_option(pdu, number, len, data);
+    return coap_add_option_internal(pdu, number, len, data);
 
   /* Need to locate where in current options to insert this one */
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
@@ -441,6 +504,10 @@ coap_insert_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
   if (!coap_opt_parse(option, pdu->used_size - (option - pdu->token), &decode))
     return 0;
   opt_delta = opt_iter.number - number;
+  if (opt_delta == 0) {
+    if (!check_repeatable(number))
+      return 0;
+  }
 
   if (!coap_pdu_check_resize(pdu,
                          pdu->used_size + shift - shrink))
@@ -457,31 +524,26 @@ coap_insert_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
   }
   assert(option != NULL);
 
-  if (decode.delta <= 12) {
+  if (decode.delta < 13) {
     /* can simply patch in the new delta of next option */
     option[0] = (option[0] & 0x0f) + (coap_opt_t)(opt_delta << 4);
-  }
-  else if (decode.delta <= 269 && opt_delta <= 12) {
+  } else if (decode.delta < 269 && opt_delta < 13) {
     /* option header is going to shrink by one byte */
     option[1] = (option[0] & 0x0f) + (coap_opt_t)(opt_delta << 4);
     shrink = 1;
-  }
-  else if (decode.delta <= 269 && opt_delta <= 269) {
+  } else if (decode.delta < 269 && opt_delta < 269) {
     /* can simply patch in the new delta of next option */
     option[1] = (coap_opt_t)(opt_delta - 13);
-  }
-  else if (opt_delta <= 12) {
+  } else if (opt_delta < 13) {
     /* option header is going to shrink by two bytes */
     option[2] = (option[0] & 0x0f) + (coap_opt_t)(opt_delta << 4);
     shrink = 2;
-  }
-  else if (opt_delta <= 269) {
+  } else if (opt_delta < 269) {
     /* option header is going to shrink by one bytes */
     option[1] = (option[0] & 0x0f) + 0xd0;
     option[2] = (coap_opt_t)(opt_delta - 13);
     shrink = 1;
-  }
-  else {
+  } else {
     /* can simply patch in the new delta of next option */
     option[1] = (coap_opt_t)((opt_delta - 269) >> 8);
     option[2] = (opt_delta - 269) & 0xff;
@@ -542,28 +604,24 @@ coap_update_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
 size_t
 coap_add_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
                 const uint8_t *data) {
+  if (pdu->data) {
+    coap_log(LOG_WARNING, "coap_add_optlist_pdu: PDU already contains data\n");
+    return 0;
+  }
+  return coap_add_option_internal(pdu, number, len, data);
+}
+
+size_t
+coap_add_option_internal(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
+                         const uint8_t *data) {
   size_t optsize;
   coap_opt_t *opt;
 
   assert(pdu);
 
   if (number == pdu->max_opt) {
-    /* Validate that the option is repeatable */
-    switch (number) {
-    /* Ignore list of genuine repeatable */
-    case COAP_OPTION_IF_MATCH:
-    case COAP_OPTION_ETAG:
-    case COAP_OPTION_LOCATION_PATH:
-    case COAP_OPTION_URI_PATH:
-    case COAP_OPTION_URI_QUERY:
-    case COAP_OPTION_LOCATION_QUERY:
-      break;
-    default:
-      coap_log(LOG_INFO, "Option number %d is not defined as repeatable\n",
-               number);
-      /* Accepting it after warning as there may be user defineable options */
-      break;
-    }
+    if (!check_repeatable(number))
+      return 0;
   }
 
   if (COAP_PDU_IS_REQUEST(pdu) &&
@@ -635,9 +693,10 @@ coap_add_data(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
 uint8_t *
 coap_add_data_after(coap_pdu_t *pdu, size_t len) {
   assert(pdu);
-  assert(pdu->data == NULL);
-
-  pdu->data = NULL;
+  if (pdu->data) {
+    coap_log(LOG_WARNING, "coap_add_data: PDU already contains data\n");
+    return 0;
+  }
 
   if (len == 0)
     return NULL;
@@ -933,7 +992,9 @@ coap_pdu_parse_opt_base(coap_pdu_t *pdu, uint16_t len) {
   case COAP_OPTION_PROXY_URI:     if (len < 1 || len > 1034) res = 0; break;
   case COAP_OPTION_PROXY_SCHEME:  if (len < 1 || len > 255) res = 0;  break;
   case COAP_OPTION_SIZE1:         if (len > 4) res = 0;               break;
+  case COAP_OPTION_ECHO:          if (len > 40) res = 0;              break;
   case COAP_OPTION_NORESPONSE:    if (len > 1) res = 0;               break;
+  case COAP_OPTION_RTAG:          if (len > 8) res = 0;               break;
   default:
     ;
   }
@@ -1017,7 +1078,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
            !coap_pdu_parse_opt_csm(pdu, len) :
            !coap_pdu_parse_opt_base(pdu, len)) {
         coap_log(LOG_WARNING,
-            "coap_pdu_parse: %d.%02d: offset %u option %u has bad length %u\n",
+    "coap_pdu_parse: %d.%02d: offset %u option %u has bad length %" PRIu32 "\n",
                  pdu->code >> 5, pdu->code & 0x1F,
                  (int)(opt_last - pdu->token - pdu->token_length), pdu->max_opt,
                  len);

@@ -151,7 +151,7 @@ hnd_delete_resource(coap_resource_t *resource,
   if (payload)
     coap_delete_payload(resource);
 
-  coap_delete_resource(coap_session_get_context(session), resource);
+  coap_delete_resource(NULL, resource);
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
@@ -194,8 +194,8 @@ hnd_post_test(coap_resource_t *resource COAP_UNUSED,
     memcpy(test_payload->data, data, len);
 
     r = coap_resource_init(uri, COAP_RESOURCE_FLAGS_RELEASE_URI);
-    coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
-    coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_resource);
+    coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_resource);
+    coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete_resource);
 
     /* set media_type if available */
     option = coap_check_option(request, COAP_OPTION_CONTENT_TYPE, &opt_iter);
@@ -445,10 +445,10 @@ init_resources(coap_context_t *ctx) {
     /* test_payload->media_type is 0 anyway */
 
     r = coap_resource_init(coap_make_str_const("test"), 0);
-    coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
-    coap_register_handler(r, COAP_REQUEST_POST, hnd_post_test);
-    coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_test);
-    coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_test);
+    coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_resource);
+    coap_register_request_handler(r, COAP_REQUEST_POST, hnd_post_test);
+    coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_test);
+    coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete_test);
 
     coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
     coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("test"), 0);
@@ -468,7 +468,7 @@ init_resources(coap_context_t *ctx) {
     coap_log(LOG_CRIT, "cannot allocate resource /large\n");
   else {
     r = coap_resource_init(coap_make_str_const("large"), 0);
-    coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
+    coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_resource);
 
     coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("41"), 0);
     coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("large"), 0);
@@ -489,7 +489,7 @@ init_resources(coap_context_t *ctx) {
     /* test_payload->media_type is 0 anyway */
 
     r = coap_resource_init(coap_make_str_const("seg1/seg2/seg3"), 0);
-    coap_register_handler(r, COAP_REQUEST_GET, hnd_get_resource);
+    coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_resource);
 
     coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
     coap_add_resource(ctx, r);
@@ -499,14 +499,14 @@ init_resources(coap_context_t *ctx) {
 
   /* For TD_COAP_CORE_13 */
   r = coap_resource_init(coap_make_str_const("query"), 0);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_query);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_query);
 
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
   coap_add_resource(ctx, r);
 
   /* For TD_COAP_CORE_16 */
   r = coap_resource_init(coap_make_str_const("separate"), 0);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_separate);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_separate);
 
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
   coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("seperate"), 0);

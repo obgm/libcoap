@@ -1,6 +1,6 @@
 /* resource.c -- generic resource handling
  *
- * Copyright (C) 2010--2021 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2022 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -8,8 +8,14 @@
  * README for terms of use.
  */
 
+/**
+ * @file resource.c
+ * @brief Server resource handling functions
+ */
+
 #include "coap3/coap_internal.h"
 
+#if COAP_SERVER_SUPPORT
 #include <stdio.h>
 #include <errno.h>
 
@@ -165,11 +171,11 @@ match(const coap_str_const_t *text, const coap_str_const_t *pattern, int match_p
 coap_print_status_t
 coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
                 size_t offset,
-                coap_opt_t *query_filter COAP_UNUSED) {
+                const coap_string_t *query_filter COAP_UNUSED) {
 #else /* not a GCC */
 coap_print_status_t
 coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
-                size_t offset, coap_opt_t *query_filter) {
+                size_t offset, const coap_string_t *query_filter) {
 #endif /* GCC */
   size_t output_length = 0;
   unsigned char *p = buf;
@@ -194,12 +200,12 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
 #ifndef WITHOUT_QUERY_FILTER
   /* split query filter, if any */
   if (query_filter) {
-    resource_param.s = coap_opt_value(query_filter);
-    while (resource_param.length < coap_opt_length(query_filter)
-           && resource_param.s[resource_param.length] != '=')
+    resource_param.s = query_filter->s;
+    while (resource_param.length < query_filter->length &&
+           resource_param.s[resource_param.length] != '=')
       resource_param.length++;
 
-    if (resource_param.length < coap_opt_length(query_filter)) {
+    if (resource_param.length < query_filter->length) {
       const coap_str_const_t *rt_attributes;
       if (resource_param.length == 4 &&
           memcmp(resource_param.s, "href", 4) == 0)
@@ -215,11 +221,11 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
 
       /* rest is query-pattern */
       query_pattern.s =
-        coap_opt_value(query_filter) + resource_param.length + 1;
+        query_filter->s + resource_param.length + 1;
 
-      assert((resource_param.length + 1) <= coap_opt_length(query_filter));
+      assert((resource_param.length + 1) <= query_filter->length);
       query_pattern.length =
-        coap_opt_length(query_filter) - (resource_param.length + 1);
+        query_filter->length - (resource_param.length + 1);
 
      if ((query_pattern.s[0] == '/') && ((flags & MATCH_URI) == MATCH_URI)) {
        query_pattern.s++;
@@ -315,7 +321,7 @@ coap_resource_init(coap_str_const_t *uri_path, int flags) {
         uri_path = coap_new_str_const(null_path->s, null_path->length);
     }
     else if (!uri_path) {
-      /* Do not expecte this, but ... */
+      /* Do not expect this, but ... */
       uri_path = coap_new_str_const(null_path->s, null_path->length);
     }
 
@@ -323,6 +329,7 @@ coap_resource_init(coap_str_const_t *uri_path, int flags) {
       r->uri_path = uri_path;
 
     r->flags = flags;
+    r->observe = 2;
   } else {
     coap_log(LOG_DEBUG, "coap_resource_init: no memory left\n");
   }
@@ -334,7 +341,7 @@ static const uint8_t coap_unknown_resource_uri[] =
                        "- Unknown -";
 
 coap_resource_t *
-coap_resource_unknown_init(coap_method_handler_t put_handler) {
+coap_resource_unknown_init2(coap_method_handler_t put_handler, int flags) {
   coap_resource_t *r;
 
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
@@ -343,6 +350,7 @@ coap_resource_unknown_init(coap_method_handler_t put_handler) {
     r->is_unknown = 1;
     /* Something unlikely to be used, but it shows up in the logs */
     r->uri_path = coap_new_str_const(coap_unknown_resource_uri, sizeof(coap_unknown_resource_uri)-1);
+    r->flags = flags & COAP_RESOURCE_FLAGS_MCAST_LIST;
     coap_register_handler(r, COAP_REQUEST_PUT, put_handler);
   } else {
     coap_log(LOG_DEBUG, "coap_resource_unknown_init: no memory left\n");
@@ -351,12 +359,18 @@ coap_resource_unknown_init(coap_method_handler_t put_handler) {
   return r;
 }
 
+coap_resource_t *
+coap_resource_unknown_init(coap_method_handler_t put_handler) {
+  return coap_resource_unknown_init2(put_handler, 0);
+}
+
 static const uint8_t coap_proxy_resource_uri[] =
                        "- Proxy URI -";
 
 coap_resource_t *
-coap_resource_proxy_uri_init(coap_method_handler_t handler,
-                      size_t host_name_count, const char *host_name_list[]) {
+coap_resource_proxy_uri_init2(coap_method_handler_t handler,
+                              size_t host_name_count,
+                              const char *host_name_list[], int flags) {
   coap_resource_t *r;
 
   if (host_name_count == 0) {
@@ -396,11 +410,19 @@ coap_resource_proxy_uri_init(coap_method_handler_t handler,
         r->proxy_name_count = i;
       }
     }
+    r->flags = flags & COAP_RESOURCE_FLAGS_MCAST_LIST;
   } else {
-    coap_log(LOG_DEBUG, "coap_resource_proxy_uri_init: no memory left\n");
+    coap_log(LOG_DEBUG, "coap_resource_proxy_uri_init2: no memory left\n");
   }
 
   return r;
+}
+
+coap_resource_t *
+coap_resource_proxy_uri_init(coap_method_handler_t handler,
+                      size_t host_name_count, const char *host_name_list[]) {
+  return coap_resource_proxy_uri_init2(handler, host_name_count,
+                                       host_name_list, 0);
 }
 
 coap_attr_t *
@@ -561,24 +583,28 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
   resource->context = context;
 }
 
+/*
+ * Input context is ignored, but param left there to keep API consistent
+ */
 int
 coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
-  if (!context || !resource)
+  if (!resource)
     return 0;
 
-  if (resource->is_unknown && (context->unknown_resource == resource)) {
-    coap_free_resource(context->unknown_resource);
-    context->unknown_resource = NULL;
-    return 1;
-  }
-  if (resource->is_proxy_uri && (context->proxy_uri_resource == resource)) {
-    coap_free_resource(context->proxy_uri_resource);
-    context->proxy_uri_resource = NULL;
-    return 1;
-  }
+  context = resource->context;
 
-  /* remove resource from list */
-  RESOURCES_DELETE(context->resources, resource);
+  if (resource->is_unknown) {
+    if (context && context->unknown_resource == resource) {
+      context->unknown_resource = NULL;
+    }
+  } else if (resource->is_proxy_uri) {
+    if (context && context->proxy_uri_resource == resource) {
+      context->proxy_uri_resource = NULL;
+    }
+  } else if (context) {
+    /* remove resource from list */
+    RESOURCES_DELETE(context->resources, resource);
+  }
 
   /* and free its allocated memory */
   coap_free_resource(resource);
@@ -677,8 +703,16 @@ void
 coap_register_handler(coap_resource_t *resource,
                       coap_request_t method,
                       coap_method_handler_t handler) {
+  coap_register_request_handler(resource, method, handler);
+}
+
+void
+coap_register_request_handler(coap_resource_t *resource,
+                              coap_request_t method,
+                              coap_method_handler_t handler) {
   assert(resource);
-  assert(method > 0 && (size_t)(method-1) < sizeof(resource->handler)/sizeof(coap_method_handler_t));
+  assert(method > 0 && (size_t)(method-1) <
+                       sizeof(resource->handler)/sizeof(coap_method_handler_t));
   resource->handler[method-1] = handler;
 }
 
@@ -710,7 +744,7 @@ coap_find_observer_cache_key(coap_resource_t *resource, coap_session_t *session,
 
   LL_FOREACH(resource->subscribers, s) {
     if (s->session == session
-        && (memcmp(cache_key, &s->cache_key, sizeof(s->cache_key)) == 0))
+        && (memcmp(cache_key, s->cache_key, sizeof(coap_cache_key_t)) == 0))
       return s;
   }
 
@@ -743,12 +777,14 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG };
                                                COAP_CACHE_IS_SESSION_BASED,
                                                cache_ignore_options,
                   sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
-    s = coap_find_observer_cache_key(resource, session, cache_key);
-    if (s) {
-      /* Delete old entry with old token */
-      coap_binary_t tmp_token = { s->pdu->token_length, s->pdu->token };
-      coap_delete_observer(resource, session, &tmp_token);
-      s = NULL;
+    if (cache_key) {
+      s = coap_find_observer_cache_key(resource, session, cache_key);
+      if (s) {
+        /* Delete old entry with old token */
+        coap_binary_t tmp_token = { s->pdu->token_length, s->pdu->token };
+        coap_delete_observer(resource, session, &tmp_token);
+        s = NULL;
+      }
     }
   }
 
@@ -794,7 +830,9 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG };
   /* add subscriber to resource */
   LL_PREPEND(resource->subscribers, s);
 
-  coap_log(LOG_DEBUG, "create new subscription\n");
+  coap_log(LOG_DEBUG, "create new subscription %p key 0x%02x%02x%02x%02x\n",
+           (void*)s, s->cache_key->key[0], s->cache_key->key[1],
+           s->cache_key->key[2], s->cache_key->key[3]);
 
   return s;
 }
@@ -824,7 +862,10 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
     unsigned int i;
     for ( i = 0; i < s->pdu->token_length; i++ )
       snprintf( &outbuf[2 * i], 3, "%02x", s->pdu->token[i] );
-    coap_log(LOG_DEBUG, "removed observer with token '%s'\n", outbuf);
+    coap_log(LOG_DEBUG,
+             "removed subscription %p with token '%s' key 0x%02x%02x%02x%02x\n",
+             (void*)s, outbuf, s->cache_key->key[0], s->cache_key->key[1],
+             s->cache_key->key[2], s-> cache_key->key[3]);
   }
 
   if (resource->subscribers && s) {
@@ -858,17 +899,18 @@ static void
 coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                       coap_deleting_resource_t deleting) {
   coap_method_handler_t h;
-  coap_subscription_t *obs;
+  coap_subscription_t *obs, *otmp;
   coap_binary_t token;
   coap_pdu_t *response;
   uint8_t buf[4];
   coap_string_t *query;
-  coap_block_t block;
+  coap_block_b_t block;
+  coap_tick_t now;
 
   if (r->observable && (r->dirty || r->partiallydirty)) {
     r->partiallydirty = 0;
 
-    LL_FOREACH(r->subscribers, obs) {
+    LL_FOREACH_SAFE(r->subscribers, obs, otmp) {
       if (r->dirty == 0 && obs->dirty == 0) {
         /*
          * running this resource due to partiallydirty, but this observation's
@@ -877,9 +919,20 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         context->observe_pending = 1;
         continue;
       }
-      if (obs->session->con_active >= COAP_DEFAULT_NSTART &&
+      if (obs->session->con_active >= COAP_NSTART(obs->session) &&
           ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) ||
            (obs->non_cnt >= COAP_OBS_MAX_NON))) {
+        /* Waiting for the previous unsolicited response to finish */
+        r->partiallydirty = 1;
+        obs->dirty = 1;
+        context->observe_pending = 1;
+        continue;
+      }
+      coap_ticks(&now);
+      if (obs->session->lg_xmit && obs->session->lg_xmit->last_all_sent == 0 &&
+          obs->session->lg_xmit->last_obs &&
+          (obs->session->lg_xmit->last_obs + 2*COAP_TICKS_PER_SECOND) > now) {
+        /* Waiting for the previous blocked unsolicited response to finish */
         r->partiallydirty = 1;
         obs->dirty = 1;
         context->observe_pending = 1;
@@ -925,27 +978,34 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       switch (deleting) {
       case COAP_NOT_DELETING_RESOURCE:
         /* fill with observer-specific data */
-        coap_add_option(response, COAP_OPTION_OBSERVE,
-                        coap_encode_var_safe(buf, sizeof (buf),
-                                             r->observe),
-                        buf);
-        if (coap_get_block(obs->pdu, COAP_OPTION_BLOCK2, &block)) {
+        coap_add_option_internal(response, COAP_OPTION_OBSERVE,
+                                 coap_encode_var_safe(buf, sizeof (buf),
+                                                      r->observe),
+                                 buf);
+        if (coap_get_block_b(obs->session, obs->pdu, COAP_OPTION_BLOCK2,
+                             &block)) {
           /* Will get updated later (e.g. M bit) if appropriate */
-          coap_add_option(response, COAP_OPTION_BLOCK2,
-                          coap_encode_var_safe(buf, sizeof(buf),
-                                               ((0 << 4) |
-                                                (0 << 3) |
-                                                block.szx)),
-                          buf);
+          coap_add_option_internal(response, COAP_OPTION_BLOCK2,
+                                   coap_encode_var_safe(buf, sizeof(buf),
+                                                        ((0 << 4) |
+                                                         (0 << 3) |
+                                                         block.aszx)),
+                                   buf);
         }
 
         h = r->handler[obs->pdu->code - 1];
         assert(h);      /* we do not allow subscriptions if no
                          * GET/FETCH handler is defined */
         query = coap_get_query(obs->pdu);
+        coap_log(LOG_DEBUG, "Observe PDU presented to app.\n");
+        coap_show_pdu(LOG_DEBUG, obs->pdu);
+        coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
+                 (int)r->uri_path->length, (int)r->uri_path->length,
+                 r->uri_path->s);
         h(r, obs->session, obs->pdu, query, response);
         /* Check if lg_xmit generated and update PDU code if so */
-        coap_check_code_lg_xmit(obs->session, response, r, query);
+        coap_check_code_lg_xmit(obs->session, response, r, query,
+                                obs->pdu->code);
         coap_delete_string(query);
         if (COAP_RESPONSE_CLASS(response->code) != 2) {
           coap_remove_option(response, COAP_OPTION_OBSERVE);
@@ -956,6 +1016,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         break;
       case COAP_DELETING_RESOURCE:
       default:
+        /* Don't worry if it does not get there */
         response->type = COAP_MESSAGE_NON;
         response->code = COAP_RESPONSE_CODE(404);
         break;
@@ -971,14 +1032,20 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       mid = coap_send_internal( obs->session, response );
 
       if (COAP_INVALID_MID == mid) {
+        coap_subscription_t *s;
         coap_log(LOG_DEBUG,
                  "coap_check_notify: sending failed, resource stays "
                  "partially dirty\n");
-        obs->dirty = 1;
+        LL_FOREACH(r->subscribers, s) {
+          if (s == obs) {
+            /* obs not deleted during coap_send_internal() */
+            obs->dirty = 1;
+            break;
+          }
+        }
         r->partiallydirty = 1;
         context->observe_pending = 1;
       }
-
     }
   }
   r->dirty = 0;
@@ -1004,21 +1071,7 @@ coap_resource_notify_observers(coap_resource_t *r,
   assert(r->context);
   r->context->observe_pending = 1;
 #ifdef COAP_EPOLL_SUPPORT
-  if (r->context->eptimerfd != -1) {
-    /* Need to immediately trigger any epoll_wait() */
-    struct itimerspec new_value;
-    int ret;
-
-    memset(&new_value, 0, sizeof(new_value));
-    new_value.it_value.tv_nsec = 1; /* small that is not zero */
-    ret = timerfd_settime(r->context->eptimerfd, 0, &new_value, NULL);
-    if (ret == -1) {
-      coap_log(LOG_ERR,
-                "%s: timerfd_settime failed: %s (%d)\n",
-                "coap_resource_notify_observers",
-                coap_socket_strerror(), errno);
-    }
-  }
+  coap_update_epoll_timer(r->context, 0);
 #endif /* COAP_EPOLL_SUPPORT */
   return 1;
 }
@@ -1092,29 +1145,12 @@ coap_remove_failed_observers(coap_context_t *context,
         memcmp(token->s, obs->pdu->token, token->length) == 0) {
 
       /* count failed notifies and remove when
-       * COAP_MAX_FAILED_NOTIFY is reached */
-      if (obs->fail_cnt < COAP_OBS_MAX_FAIL)
-        obs->fail_cnt++;
-      else {
-        LL_DELETE(resource->subscribers, obs);
-        obs->fail_cnt = 0;
-
-        if (LOG_DEBUG <= coap_get_log_level()) {
-#ifndef INET6_ADDRSTRLEN
-#define INET6_ADDRSTRLEN 40
-#endif
-          unsigned char addr[INET6_ADDRSTRLEN+8];
-
-          if (coap_print_addr(&obs->session->addr_info.remote,
-                              addr, INET6_ADDRSTRLEN+8))
-            coap_log(LOG_DEBUG, "** removed observer %s\n", addr);
-        }
+       * COAP_OBS_MAX_FAIL is reached */
+      obs->fail_cnt++;
+      if (obs->fail_cnt >= COAP_OBS_MAX_FAIL) {
         coap_cancel_all_messages(context, obs->session,
                                  obs->pdu->token, obs->pdu->token_length);
-        coap_session_release( obs->session );
-        coap_delete_pdu(obs->pdu);
-        coap_delete_cache_key(obs->cache_key);
-        COAP_FREE_TYPE(subscription, obs);
+        coap_delete_observer(resource, session, token);
       }
       break;                        /* break loop if observer was found */
     }
@@ -1127,6 +1163,8 @@ coap_handle_failed_notify(coap_context_t *context,
                           const coap_binary_t *token) {
 
   RESOURCES_ITER(context->resources, r) {
-        coap_remove_failed_observers(context, r, session, token);
+    coap_remove_failed_observers(context, r, session, token);
   }
 }
+
+#endif /* ! COAP_SERVER_SUPPORT */
