@@ -1,5 +1,5 @@
 /*
- * server-coap.h -- LwIP example
+ * server-coap.c -- LwIP example
  *
  * Copyright (C) 2013-2016 Christian Amsüss <chrysn@fsfe.org>
  * Copyright (C) 2018-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
@@ -12,6 +12,7 @@
 
 #include "coap_config.h"
 #include <coap3/coap.h>
+#include "server-coap.h"
 
 coap_context_t *main_coap_context;
 
@@ -111,7 +112,8 @@ init_coap_resources(coap_context_t *ctx) {
   coap_log(LOG_CRIT, "cannot create resource\n");
 }
 
-void server_coap_init(void)
+void server_coap_init(coap_lwip_input_wait_handler_t input_wait,
+                      void *input_arg, int log_level)
 {
   coap_address_t listenaddress;
 
@@ -121,12 +123,21 @@ void server_coap_init(void)
   listenaddress.addr = *(IP_ANY_TYPE);
   listenaddress.port = COAP_DEFAULT_PORT;
 
-  coap_set_log_level(LOG_DEBUG);
+  coap_set_log_level(log_level);
   main_coap_context = coap_new_context(&listenaddress);
-
   LWIP_ASSERT("Failed to initialize context", main_coap_context != NULL);
+
+  /* Limit the number of idle sessions to save RAM (MEMP_NUM_COAPSESSION) */
+  coap_context_set_max_idle_sessions(main_coap_context, MEMP_NUM_COAPSESSION);
   clock_offset = 1; /* Need a non-zero value */
   init_coap_resources(main_coap_context);
+  coap_lwip_set_input_wait_handler(main_coap_context, input_wait, input_arg);
+}
+
+void
+server_coap_finished(void) {
+  coap_free_context(main_coap_context);
+  main_coap_context = NULL;
 }
 
 void server_coap_poll(void)
@@ -135,6 +146,7 @@ void server_coap_poll(void)
   coap_tick_t ticks_now;
   coap_time_t time_now;
 
+  coap_io_process(main_coap_context, 1000);
   coap_ticks(&ticks_now);
   time_now = coap_ticks_to_rt(ticks_now);
 

@@ -45,9 +45,7 @@ typedef enum {
   COAP_PDU_BUF,
   COAP_RESOURCE,
   COAP_RESOURCEATTR,
-#ifdef HAVE_LIBTINYDTLS
   COAP_DTLS_SESSION,
-#endif
   COAP_SESSION,
   COAP_OPTLIST,
   COAP_CACHE_KEY,
@@ -55,6 +53,7 @@ typedef enum {
   COAP_LG_XMIT,
   COAP_LG_CRCV,
   COAP_LG_SRCV,
+  COAP_DIGEST_CTX,
 } coap_memory_tag_t;
 
 #ifndef WITH_LWIP

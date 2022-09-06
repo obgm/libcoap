@@ -1,7 +1,7 @@
 Example of libcoap running on lwIP
 ==================================
 
-To run the example, do
+To run the server example, do
 
     $ make
     $ sudo ./server
@@ -11,7 +11,7 @@ To run the example, do
     $ sudo ip a a dev tap0 192.168.113.1/24
 
 and query `coap://192.168.113.2/time?ticks` with any coap tool,
-or query `coap://[aaaa::1000]/.well-known/core`
+or query `coap://192.168.113.2/.well-known/core`
 
 This will
 
@@ -23,8 +23,31 @@ This will
 
 * return the appropriate response from the server to the client.
 
+The server supports the "-v level" option where logging "level" can be 0 to 7.
+
 The server creates a resource for 'time' with a query 'ticks'.  This is
 reported for `.well-known/core`. The work flow for adding more resources does
 not differ from regular libcoap usage. If you seem to run out of memory
 creating the resources, tweak the number of pre-allocated resources
-in `include/coap/lwippools.h`.
+in `config/lwippools.h`.
+
+To run the client example
+
+    $ make
+    $ sudo ./client
+
+As this tries to connect to coap://libcoap.net/, the tap0 interface will need IP
+forwarding enabled
+
+    $ sudo sysctl -w net.ipv4.conf.default.forwarding=1
+
+As well as the interface connecting to the internet will need a NAT rule to
+masquerade the internal IP address (192.168.114.2) to the IP of the outgoing
+interface (where eth0 is replaced by your public facing interface name)
+
+    $ iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+The client supports the "-v level" option where logging "level" can be 0 to 7.
+The client supports an optional parameter which is the CoAP URI to connect to
+.e.g "coap://libcoap.net/.well-known/core".  The default
+is "coap://libcoap.net/".

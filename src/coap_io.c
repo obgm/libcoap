@@ -59,7 +59,7 @@
 # include "uip.h"
 #endif
 
-#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
+#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION) && !(WITH_LWIP)
  /* define generic PKTINFO for IPv4 */
 #if defined(IP_PKTINFO)
 #  define GEN_IP_PKTINFO IP_PKTINFO
@@ -144,6 +144,8 @@ void coap_socket_close(coap_socket_t *sock) {
 }
 
 #else
+
+#ifndef WITH_LWIP
 
 #if COAP_SERVER_SUPPORT
 coap_endpoint_t *
@@ -575,8 +577,10 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
   return r;
 }
 
-#endif  /* WITH_CONTIKI */
+#endif /* ! WITH_LWIP */
+#endif  /* ! WITH_CONTIKI */
 
+#if !defined(WITH_LWIP)
 #if (!defined(WITH_CONTIKI)) != ( defined(HAVE_NETINET_IN_H) || defined(HAVE_WS2TCPIP_H) )
 /* define struct in6_pktinfo and struct in_pktinfo if not available
    FIXME: check with configure
@@ -592,6 +596,7 @@ struct in_pktinfo {
   struct in_addr ipi_addr;
 };
 #endif
+#endif /* ! WITH_LWIP */
 
 #if !defined(WITH_CONTIKI) && !defined(SOL_IP)
 /* Solaris expects level IPPROTO_IP for ancillary data. */
@@ -625,7 +630,7 @@ static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
 #define ipi_spec_dst ipi_addr
 #endif
 
-#ifndef RIOT_VERSION
+#if !defined(RIOT_VERSION) && !defined(WITH_LWIP)
 ssize_t
 coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen) {
   ssize_t bytes_written = 0;
@@ -796,17 +801,19 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 
   return bytes_written;
 }
-#endif /* RIOT_VERSION */
+#endif /* ! RIOT_VERSION && ! WITH_LWIP */
 
 #define SIN6(A) ((struct sockaddr_in6 *)(A))
 
+#ifndef WITH_LWIP
 void
 coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length) {
   *address = packet->payload;
   *length = packet->length;
 }
+#endif /* ! WITH_LWIP */
 
-#ifndef RIOT_VERSION
+#if !defined(RIOT_VERSION) && !defined(WITH_LWIP)
 ssize_t
 coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   ssize_t len = -1;
@@ -1123,11 +1130,10 @@ coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
  */
 unsigned int
 coap_io_prepare_io(coap_context_t *ctx,
-           coap_socket_t *sockets[],
-           unsigned int max_sockets,
-           unsigned int *num_sockets,
-           coap_tick_t now)
-{
+                   coap_socket_t *sockets[],
+                   unsigned int max_sockets,
+                   unsigned int *num_sockets,
+                   coap_tick_t now) {
   coap_queue_t *nextpdu;
   coap_session_t *s, *rtmp;
   coap_tick_t timeout = 0;
@@ -1135,10 +1141,10 @@ coap_io_prepare_io(coap_context_t *ctx,
 #if COAP_SERVER_SUPPORT
   int check_dtls_timeouts = 0;
 #endif /* COAP_SERVER_SUPPORT */
-#ifdef COAP_EPOLL_SUPPORT
+#if defined(COAP_EPOLL_SUPPORT) || defined(WITH_LWIP)
   (void)sockets;
   (void)max_sockets;
-#endif /* COAP_EPOLL_SUPPORT */
+#endif /* COAP_EPOLL_SUPPORT || WITH_LWIP */
 
   *num_sockets = 0;
 
@@ -1191,12 +1197,12 @@ coap_io_prepare_io(coap_context_t *ctx,
     session_timeout = COAP_DEFAULT_SESSION_TIMEOUT * COAP_TICKS_PER_SECOND;
 
   LL_FOREACH(ctx->endpoint, ep) {
-#ifndef COAP_EPOLL_SUPPORT
+#if !defined(COAP_EPOLL_SUPPORT) && !defined(WITH_LWIP)
     if (ep->sock.flags & (COAP_SOCKET_WANT_READ | COAP_SOCKET_WANT_WRITE | COAP_SOCKET_WANT_ACCEPT)) {
       if (*num_sockets < max_sockets)
         sockets[(*num_sockets)++] = &ep->sock;
     }
-#endif /* ! COAP_EPOLL_SUPPORT */
+#endif /* ! COAP_EPOLL_SUPPORT i && ! WITH_LWIP */
     SESSIONS_ITER_SAFE(ep->sessions, s, rtmp) {
       /* Check whether any idle server sessions should be released */
       if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 &&
@@ -1248,12 +1254,12 @@ coap_io_prepare_io(coap_context_t *ctx,
               timeout = s_timeout;
           }
         }
-#ifndef COAP_EPOLL_SUPPORT
+#if !defined(COAP_EPOLL_SUPPORT) && !defined(WITH_LWIP)
         if (s->sock.flags & (COAP_SOCKET_WANT_READ|COAP_SOCKET_WANT_WRITE)) {
           if (*num_sockets < max_sockets)
             sockets[(*num_sockets)++] = &s->sock;
         }
-#endif /* ! COAP_EPOLL_SUPPORT */
+#endif /* ! COAP_EPOLL_SUPPORT && ! WITH_LWIP */
 release_1:
         coap_session_release(s);
       }
@@ -1338,7 +1344,7 @@ release_1:
       }
     }
 
-#ifndef COAP_EPOLL_SUPPORT
+#if !defined(COAP_EPOLL_SUPPORT) && !defined(WITHLWIP)
     assert(s->ref > 1);
     if (s->sock.flags & (COAP_SOCKET_WANT_READ |
                          COAP_SOCKET_WANT_WRITE |
@@ -1346,7 +1352,7 @@ release_1:
       if (*num_sockets < max_sockets)
         sockets[(*num_sockets)++] = &s->sock;
     }
-#endif /* ! COAP_EPOLL_SUPPORT */
+#endif /* ! COAP_EPOLL_SUPPORT && ! WITH_LWIP */
 release_2:
     coap_session_release(s);
   }
@@ -1355,7 +1361,7 @@ release_2:
   return (unsigned int)((timeout * 1000 + COAP_TICKS_PER_SECOND - 1) / COAP_TICKS_PER_SECOND);
 }
 
-#ifndef RIOT_VERSION
+#if !defined(RIOT_VERSION) && !defined(WITH_LWIP)
 int
 coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   return coap_io_process_with_fds(ctx, timeout_ms, 0, NULL, NULL, NULL);
@@ -1560,7 +1566,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
-#endif /* RIOT_VERSION */
+#endif /* ! RIOT_VERSION  && ! WITH_LWIP */
 
 #else /* WITH_CONTIKI */
 int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
@@ -1606,10 +1612,12 @@ const char *coap_socket_strerror(void) {
 }
 #endif /* _WIN32 */
 
+#if !defined(WITH_LWIP)
 ssize_t
 coap_socket_send(coap_socket_t *sock, coap_session_t *session,
   const uint8_t *data, size_t data_len) {
   return session->context->network_send(sock, session, data, data_len);
 }
+#endif /* ! WITH_LWIP */
 
 #undef SIN6

@@ -34,6 +34,7 @@
 #include "coap_event.h"
 #include "pdu.h"
 #include "coap_session.h"
+#include "coap_debug.h"
 
 /**
  * @ingroup application_api
@@ -746,6 +747,52 @@ struct epoll_event;
  */
 void coap_io_do_epoll(coap_context_t *ctx, struct epoll_event* events,
                       size_t nevents);
+
+/**@}*/
+
+/**
+ * @ingroup application_api
+ * @defgroup lwip LwIP specific API
+ * API for LwIP interface
+ * @{
+ */
+
+/**
+ * Dump the current state of the LwIP memory pools.
+ *
+ * Requires both MEMP_STATS and LWIP_STATS_DISPLAY to be defined as 1
+ * in lwipopts.h
+ *
+ * @param log_level The logging level to use.
+ *
+ */
+void coap_lwip_dump_memory_pools(coap_log_t log_level);
+
+/**
+ * LwIP callback handler that can be used to wait / timeout for the
+ * next input packet.
+ *
+ * @param arg The argument passed to the coap_lwip_set_input_wait_handler()
+ *            function.
+ * @param milli_secs Suggested number of milli secs to wait before returning
+ *                   if no input.
+ *
+ * @return @c 1 if packet received, @c 0 for timeout, else @c -1 on error.
+ */
+typedef int (*coap_lwip_input_wait_handler_t)(void* arg, uint32_t milli_secs);
+
+/**
+ * Set up a wait / timeout callback handler for use when
+ * the application calls coap_io_process().
+ *
+ * @param context   The coap context to associate this handler with.
+ * @param handler   The handler to call while waiting for input.
+ * @param input_arg The argument to pass into handler().
+ *
+ */
+void coap_lwip_set_input_wait_handler(coap_context_t *context,
+                                      coap_lwip_input_wait_handler_t handler,
+                                      void *input_arg);
 
 /**@}*/
 

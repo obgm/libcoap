@@ -47,7 +47,8 @@ typedef struct {
   uint16_t port;          /**< The port in host byte order */
   coap_str_const_t path;  /**< Beginning of the first path segment.
                            Use coap_split_path() to create Uri-Path options */
-  coap_str_const_t query; /**<  The query part if present */
+  coap_str_const_t query; /**<  The query part if present
+                           Use coap_split_query() to create Uri-Query options */
 
   /** The parsed scheme specifier. */
   enum coap_uri_scheme_t scheme;

@@ -28,7 +28,7 @@ EXTRA_DIST = \
   cmake/Config.cmake.in \
   cmake/FindMbedTLS.cmake \
   cmake/FindTinyDTLS.cmake \
-  coap_config.h.lwip \
+  coap_config.h.contiki \
   coap_config.h.riot \
   coap_config.h.windows \
   libcoap-$(LIBCOAP_API_VERSION).pc.in \
@@ -36,6 +36,26 @@ EXTRA_DIST = \
   libcoap-$(LIBCOAP_API_VERSION).sym \
   examples/coap_list.h \
   examples/getopt.c \
+  examples/contiki/coap_config.h \
+  examples/contiki/coap-observer.c \
+  examples/contiki/Makefile \
+  examples/contiki/Makefile.contiki \
+  examples/contiki/radvd.conf.sample \
+  examples/contiki/README \
+  examples/contiki/server.c \
+  examples/lwip/client.c \
+  examples/lwip/client-coap.c \
+  examples/lwip/client-coap.h \
+  examples/lwip/Makefile \
+  examples/lwip/README \
+  examples/lwip/server.c \
+  examples/lwip/server-coap.c \
+  examples/lwip/server-coap.h \
+  examples/lwip/config/coap_config.h \
+  examples/lwip/config/coap_config.h.in \
+  examples/lwip/config/lwipopts.h \
+  examples/lwip/config/lwippools.h \
+  Makefile.libcoap \
   include/coap$(LIBCOAP_API_VERSION)/coap_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_riot.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_asn1_internal.h \
@@ -53,9 +73,9 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.in \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows.in \
-  include/coap$(LIBCOAP_API_VERSION)/lwippools.h \
   include/coap$(LIBCOAP_API_VERSION)/uthash.h \
   include/coap$(LIBCOAP_API_VERSION)/utlist.h \
+  src/coap_io_lwip.c \
   src/coap_io_riot.c \
   tests/test_error_response.h \
   tests/test_encode.h \

@@ -1,17 +1,29 @@
-top_srcdir = ../..
-include_dir = $(top_srcdir)/include
+# Makefile
+#
+#  Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org> and others
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# This file is part of the CoAP C library libcoap. Please see README and
+# COPYING for terms of use.
 
-LIBCOAP_API_VERSION = $(shell sed -ne 's/^LIBCOAP_API_VERSION=\([0-9]\+\).*$$/\1/p' $(top_srcdir)/configure.ac)
+libcoap_dir = ../../
 
-coap_include_dir = $(include_dir)/coap$(LIBCOAP_API_VERSION)
+LIBCOAP_API_VERSION = $(shell if [ -f $(libcoap_dir)/configure.ac ];  then \
+          sed -ne 's/^LIBCOAP_API_VERSION=\([0-9]\+\).*$$/\1/p' $(libcoap_dir)/configure.ac; \
+	  else echo -n "3"; fi)
 
-WITH_LWIP_BRANCH=STABLE-2_0_3_RELEASE
-WITH_LWIP_CONTRIB_BRANCH=STABLE-2_0_1_RELEASE
+coap_include_dir = $(libcoap_dir)/include/coap$(LIBCOAP_API_VERSION)
+
+WITH_LWIP_BRANCH=STABLE-2_1_3_RELEASE
+WITH_LWIP_CONTRIB_BRANCH=STABLE-2_1_0_RELEASE
 
 # Need to determine which library clock_gettime() resides in (as found by ./autogen.sh)
-LDLIBS := $(shell if [ ../../config.log ] ; then grep ac_cv_search_clock_gettime=- ../../config.log|cut -d= -f2 ; fi)
+LDLIBS := $(shell if [ -f $(libcoap_dir)/config.log ] ; then \
+          grep ac_cv_search_clock_gettime=- $(libcoap_dir)/config.log|cut -d= -f2 ; fi)
 
-all: server
+all: lib-server lib-client lwip lwip-contrib check-version \
+     $(coap_include_dir)/coap.h server client
 
 lwip:
 	git clone --depth 1 git://git.savannah.nongnu.org/lwip.git -b $(WITH_LWIP_BRANCH)
@@ -23,47 +35,119 @@ lwip-contrib:
 	(cd lwip-contrib ; git checkout $(WITH_LWIP_CONTRIB_BRANCH))
 	$(MAKE)
 
+check-version:
+	@(if [ -d lwip ] ; then \
+		cd lwip ; \
+		TAG=`git describe --tags --all`; \
+		if [ "$$TAG" != ${WITH_LWIP_BRANCH} ] ; then \
+			if [ "$$TAG" != "tags/${WITH_LWIP_BRANCH}" ] ; then \
+				echo "Updating lwip to ${WITH_LWIP_BRANCH}" ; \
+				cd .. ; \
+				rm -rf lwip ; \
+				${MAKE}; \
+			fi ; \
+		fi ; \
+	fi)
+	@(if [ -d lwip-contrib ] ; then \
+		cd lwip-contrib ; \
+		TAG=`git describe --tags`; \
+		if [ "$$TAG" != ${WITH_LWIP_CONTRIB_BRANCH} ] ; then \
+			if [ "$$TAG" != "tags/${WITH_LWIP_CONTRIB_BRANCH}" ] ; then \
+				echo "Updating lwip-contib to ${WITH_LWIP_CONTRIB_BRANCH}" ; \
+				cd .. ; \
+				rm -rf lwip-contrib ; \
+				${MAKE}; \
+			fi ; \
+		fi ; \
+	fi)
+
 # lwip and coap opts (include early to shadow the lwip-contrib/ports/unix/proj/minimal/ file and any ../../config.h)
-CFLAGS += -DWITH_LWIP -iquote.
+CFLAGS += -DWITH_LWIP -iquote./config
 
 # lwip library
 
-LWIPOBJS = def.o init.o tapif.o etharp.o netif.o timeouts.o stats.o mem.o memp.o udp.o tcp.o pbuf.o ip4_addr.o ip4.o inet_chksum.o tcp_in.o tcp_out.o icmp.o raw.o ip4_frag.o sys_arch.o ethernet.o ip.o
-vpath %.c lwip/src/core/ lwip-contrib/ports/unix/proj/minimal/ lwip/src/netif/ lwip/src/core/ipv4/ lwip-contrib/ports/unix/port/ lwip-contrib/ports/unix/port/netif/
+LWIP_SRC = def.c init.c tapif.c etharp.c netif.c timeouts.c stats.c udp.c \
+	   tcp.c pbuf.c ip4_addr.c ip4.c inet_chksum.c tcp_in.c tcp_out.c \
+	   icmp.c raw.c ip4_frag.c sys_arch.c ethernet.c ip.c mem.c memp.c
+vpath %.c lwip/src/core/ lwip-contrib/ports/unix/proj/minimal/ \
+	  lwip/src/netif/ lwip/src/core/ipv4/ lwip-contrib/ports/unix/port/ \
+	  lwip-contrib/ports/unix/port/netif/
 # CFLAGS += -DLWIP_UNIX_LINUX
 
 # if ipv6 is used
 vpath %.c lwip/src/core/ipv6/
-LWIPOBJS += mld6.o ip6.o icmp6.o ethip6.o nd6.o ip6_addr.o ip6_frag.o
+LWIP_SRC += mld6.c ip6.c icmp6.c ethip6.c nd6.c ip6_addr.c ip6_frag.c
 
+C_LWIP_OBJ =$(patsubst %.c,lib-client/%.o,$(LWIP_SRC))
+S_LWIP_OBJ =$(patsubst %.c,lib-server/%.o,$(LWIP_SRC))
 # coap library
 
 CFLAGS += -std=gnu99
 
-# set path to coap_include_dir for lwippools.h
-CFLAGS += -I$(top_srcdir)/include -I$(coap_include_dir)
+CFLAGS += -I$(libcoap_dir)/include
 
-vpath %.c $(top_srcdir)/src
+vpath %.c $(libcoap_dir)/src
 
-COAPOBJS = net.o coap_cache.o coap_debug.o coap_option.o resource.o pdu.o encode.o coap_subscribe.o coap_io_lwip.o block.o uri.o str.o coap_session.o coap_notls.o coap_hashkey.o coap_address.o coap_tcp.o coap_async.o
+COAP_SRC = coap_address.c \
+	   coap_async.c \
+	   block.c \
+	   coap_cache.c \
+	   coap_debug.c \
+	   encode.c \
+	   coap_hashkey.c \
+	   coap_io.c \
+	   coap_io_lwip.c \
+	   net.c \
+	   coap_notls.c \
+	   coap_option.c \
+	   pdu.c \
+	   resource.c \
+	   coap_session.c \
+	   coap_subscribe.c \
+	   str.c \
+	   coap_tcp.c \
+	   uri.c
+
+C_COAP_OBJ =$(patsubst %.c,lib-client/%.o,$(COAP_SRC))
+S_COAP_OBJ =$(patsubst %.c,lib-server/%.o,$(COAP_SRC))
 
 CFLAGS += -g3 -Wall -Wextra -pedantic -O0
 # not sorted out yet
 CFLAGS += -Wno-unused-parameter
 
-CFLAGS += -Ilwip/src/include/ -Ilwip/src/include/ipv4/ -Ilwip-contrib/ports/unix/port/include/ -Ilwip-contrib/ports/unix/proj/minimal/
+CFLAGS += -Ilwip/src/include/ -Ilwip/src/include/ipv4/ \
+	  -Ilwip-contrib/ports/unix/port/include/ \
+	  -Ilwip-contrib/ports/unix/proj/minimal/
 
-OBJS = server.o server-coap.o ${LWIPOBJS} ${COAPOBJS}
+SOBJS = server.o server-coap.o ${S_LWIP_OBJ} ${S_COAP_OBJ}
+
+COBJS = client.o client-coap.o ${C_LWIP_OBJ} ${C_COAP_OBJ}
 
 $(coap_include_dir)/coap.h:
 	@echo "Error: $@ not present. Run the autotools chain (\`./autogen.sh && ./configure\`) in the project root directory to build the required coap.h file."
 	@exit 1
 
-${OBJS}: lwip lwip-contrib $(coap_include_dir)/coap.h
+${SOBJS}: $(coap_include_dir)/coap.h server-coap.h
 
-server: ${OBJS}
+server: ${SOBJS}
+
+${COBJS}: $(coap_include_dir)/coap.h client-coap.h
+
+client: ${COBJS}
+
+lib-server:
+	@mkdir -p $@
+
+lib-server/%.o: %.c config/lwipopts.h config/lwippools.h config/coap_config.h
+	$(CC) ${CFLAGS} -DCOAP_SERVER_SUPPORT -c $< -o $@
+
+lib-client:
+	@mkdir -p $@
+
+lib-client/%.o: %.c config/lwipopts.h config/lwippools.h config/coap_config.h
+	$(CC) ${CFLAGS} -DCOAP_CLIENT_SUPPORT -c $< -o $@
 
 clean:
-	rm -f ${OBJS}
+	rm -rf server client ${COBJS} ${SOBJS} lib-server lib-client
 
-.PHONY: clean
+.PHONY: all clean

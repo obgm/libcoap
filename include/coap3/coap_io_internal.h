@@ -38,9 +38,11 @@ struct coap_socket_t {
   gnrc_pktsnip_t *pkt; /* pointer to received packet for processing */
 #endif /* RIOT_VERSION */
   coap_socket_flags_t flags;
-  coap_session_t *session; /* Used by the epoll logic for an active session. */
+  coap_session_t *session; /* Used to determine session owner. */
+#if COAP_SERVER_SUPPORT
   coap_endpoint_t *endpoint; /* Used by the epoll logic for a listening
                                 endpoint. */
+#endif /* COAP_SERVER_SUPPORT */
 };
 
 /**
@@ -156,12 +158,14 @@ void coap_packet_get_memmapped(coap_packet_t *packet,
  * the pbuf.
  */
 struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet);
+
+void coap_io_process_timeout(void *arg);
 #endif
 
 #if defined(WITH_LWIP)
 /*
  * This is only included in coap_io.h instead of .c in order to be available for
- * sizeof in lwippools.h.
+ * sizeof in config/lwippools.h.
  * Simple carry-over of the incoming pbuf that is later turned into a node.
  *
  * Source address data is currently side-banded via ip_current_dest_addr & co

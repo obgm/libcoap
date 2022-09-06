@@ -240,9 +240,9 @@ EXAMPLES
 --------
 * Example
 ----
-coap-client coap://coap.me
+coap-client coap://libcoap.net
 ----
-Query the resource '/' from server 'coap.me' (using the GET method).
+Query the resource '/' from server 'libcoap.net' (using the GET method).
 
 * Example
 ----

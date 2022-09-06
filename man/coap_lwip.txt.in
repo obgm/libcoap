@@ -1,0 +1,108 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc,tw=0:
+
+coap_lwip(3)
+============
+:doctype: manpage
+:man source:   coap_lwip
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_lwip,
+coap_coap_lwip_dump_memory_pools,
+coap_lwip_set_input_wait_handler
+- Work with CoAP lwip specific API handler
+
+SYNOPSIS
+--------
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*void coap_lwip_set_input_wait_handler(coap_context_t *_context_,
+coap_lwip_input_wait_handler_t _handler_, void *_input_arg_);*
+
+*void coap_lwip_dump_memory_pools(coap_log_t _log_level_);*
+
+DESCRIPTION
+-----------
+This man page describes the additional libcoap functions that are available
+for working with LwIP implementations.
+
+*NOTE:* If the following line is defined in lwipopts.h, then libcoap will
+reserve space for one response PDU when allocating coap_pdu_t structures.
+
+[source, c]
+----
+#define MEMP_STATS 1
+----
+
+CALLBACK HANDLER
+----------------
+
+*Callback Type: coap_lwip_input_wait_handler_t*
+
+[source, c]
+----
+/**
+ * LwIP callback handler that can be used to wait / timeout for the
+ * next input packet.
+ *
+ * @param arg The argument passed to the coap_lwip_set_input_wait_handler()
+ *            function.
+ * @param milli_secs Suggested number of milli secs to wait before returning
+ *                   if no input.
+ *
+ * @return @c 1 if packet received, @c 0 for timeout, else @c -1 on error.
+ */
+typedef int (*coap_lwip_input_wait_handler_t)(void* arg, uint32_t milli_secs);
+----
+
+FUNCTIONS
+---------
+
+*Function: coap_lwip_set_input_wait_handler()*
+
+
+The *coap_lwip_set_input_wait_handler*() function is used to define a callback
+_handler_ that is invoked by *coap_io_process*(3) which passes in the
+_input_arg_ parameter along with a suggested milli-sec wait time parameter
+in case there is no input.  This callback _handler_ is used to wait for
+(and probably times out) the next input packet.  This allows the application
+to define whatever mechanism it wants use for this process.
+
+*Function: coap_lwip_dump_memory_pools()*
+
+The *coap_lwip_dump_memory_pools*() function is used to dump out the current
+state of the LwIP memory pools at logging level _log_level_.
+
+This function is always invoked by *coap_free_context*(3) with a _log_level_ of
+LOG_DEBUG.
+
+*NOTE:* For information to be printed out, you need the following two lines in
+lwipopts.h
+
+[source, c]
+----
+#define MEMP_STATS         1
+#define LWIP_STATS_DISPLAY 1
+----
+
+SEE ALSO
+--------
+*coap_context*(3) and *coap_io*(3)
+
+FURTHER INFORMATION
+-------------------
+See "RFC7252: The Constrained Application Protocol (CoAP)" for further
+information.
+
+BUGS
+----
+Please report bugs on the mailing list for libcoap:
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>

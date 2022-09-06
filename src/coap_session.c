@@ -428,7 +428,7 @@ ssize_t coap_session_write(coap_session_t *session, const uint8_t *data, size_t 
     coap_log(LOG_DEBUG, "*  %s: sent %zd bytes\n",
              coap_session_str(session), bytes_written);
   } else if (bytes_written < 0) {
-    coap_log(LOG_DEBUG,  "*   %s: failed to send %zd bytes\n",
+    coap_log(LOG_DEBUG, "*  %s: failed to send %zd bytes\n",
              coap_session_str(session), datalen );
   }
   return bytes_written;
@@ -566,7 +566,18 @@ void coap_session_connected(coap_session_t *session) {
 
     coap_log(LOG_DEBUG, "** %s: mid=0x%x: transmitted after delay\n",
              coap_session_str(session), (int)q->pdu->mid);
+#ifdef WITH_LWIP
+    coap_socket_t *sock = &session->sock;
+#if COAP_SERVER_SUPPORT
+    if (sock->flags == COAP_SOCKET_EMPTY) {
+      assert(session->endpoint != NULL);
+      sock = &session->endpoint->sock;
+    }
+#endif /* COAP_SERVER_SUPPORT */
+    bytes_written = coap_socket_send_pdu(sock, session, q->pdu);
+#else /* WITH_LWIP */
     bytes_written = coap_session_send_pdu(session, q->pdu);
+#endif /* WITH_LWIP */
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (coap_wait_ack(session->context, session, q) >= 0)
         q = NULL;
@@ -932,6 +943,7 @@ coap_session_create_client(
     goto error;
 
   coap_session_reference(session);
+  session->sock.session = session;
 
   if (proto == COAP_PROTO_UDP || proto == COAP_PROTO_DTLS) {
     coap_session_t *s, *rtmp;
@@ -1092,6 +1104,7 @@ coap_session_t *coap_new_client_session(
     coap_log(LOG_DEBUG, "***%s: session %p: created outgoing session\n",
              coap_session_str(session), (void *)session);
     session = coap_session_connect(session);
+    session->context = ctx;
   }
   return session;
 }
@@ -1615,8 +1628,8 @@ coap_free_endpoint(coap_endpoint_t *ep) {
 
 coap_session_t *
 coap_session_get_by_peer(const coap_context_t *ctx,
-  const coap_address_t *remote_addr,
-  int ifindex) {
+                         const coap_address_t *remote_addr,
+                         int ifindex) {
   coap_session_t *s, *rtmp;
 #if COAP_CLIENT_SUPPORT
   SESSIONS_ITER(ctx->sessions, s, rtmp) {
@@ -1639,6 +1652,9 @@ coap_session_get_by_peer(const coap_context_t *ctx,
   return NULL;
 }
 
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN 46
+#endif
 const char *coap_session_str(const coap_session_t *session) {
   static char szSession[2 * (INET6_ADDRSTRLEN + 8) + 24];
   char *p = szSession, *end = szSession + sizeof(szSession);

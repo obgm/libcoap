@@ -85,6 +85,8 @@ struct coap_context_t {
 #endif /* WITH_CONTIKI */
 
 #ifdef WITH_LWIP
+  coap_lwip_input_wait_handler_t input_wait; /** Input wait / timeout handler if set */
+  void *input_arg;                /** argument to pass it input handler */
   uint8_t timer_configured;       /**< Set to 1 when a retransmission is
                                    *   scheduled using lwIP timers for this
                                    *   context, otherwise 0. */

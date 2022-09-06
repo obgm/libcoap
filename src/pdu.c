@@ -93,7 +93,7 @@ coap_pdu_from_pbuf( struct pbuf *pbuf )
 
   return pdu;
 }
-#endif
+#endif /* LWIP */
 
 coap_pdu_t *
 coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
@@ -104,6 +104,16 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
   assert(code <= 0xff);
   assert(mid >= 0 && mid <= 0xffff);
 
+#ifdef WITH_LWIP
+#if MEMP_STATS
+  /* Reserve 1 PDU for a response packet */
+  if (memp_pools[MEMP_COAP_PDU]->stats->used + 1 >=
+      memp_pools[MEMP_COAP_PDU]->stats->avail) {
+    memp_pools[MEMP_COAP_PDU]->stats->err++;
+    return NULL;
+  }
+#endif /* MEMP_STATS */
+#endif /* LWIP */
   pdu = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
   if (!pdu) return NULL;
 

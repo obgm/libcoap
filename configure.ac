@@ -949,11 +949,11 @@ CFLAGS="$CFLAGS $ADDITIONAL_CFLAGS"
 #
 AC_CONFIG_FILES([
 Makefile
-coap_config.h.lwip
 coap_config.h.riot
 coap_config.h.windows
 doc/Makefile
 examples/Makefile
+examples/lwip/config/coap_config.h
 include/coap$LIBCOAP_API_VERSION/coap.h
 include/coap$LIBCOAP_API_VERSION/coap.h.windows
 man/coap.txt
@@ -969,6 +969,7 @@ man/coap_handler.txt
 man/coap_io.txt
 man/coap_keepalive.txt
 man/coap_logging.txt
+man/coap_lwip.txt
 man/coap_observe.txt
 man/coap_pdu_access.txt
 man/coap_pdu_setup.txt
