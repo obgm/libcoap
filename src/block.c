@@ -2385,16 +2385,9 @@ fail_resp:
         coap_lg_crcv_t *lg_crcv = coap_block_new_lg_crcv(session, sent);
 
         if (lg_crcv) {
-          uint8_t buf[8];
-          size_t length = coap_encode_var_safe8(buf,
-                                                sizeof(lg_crcv->state_token),
-                                                lg_crcv->state_token);
-          if (coap_update_token(rcvd, length, buf)) {
-            LL_PREPEND(session->lg_crcv, lg_crcv);
-            return coap_handle_response_get_block(context, session, sent, rcvd,
+          LL_PREPEND(session->lg_crcv, lg_crcv);
+          return coap_handle_response_get_block(context, session, sent, rcvd,
                                                 COAP_RECURSE_NO);
-          }
-          coap_block_delete_lg_crcv(session, lg_crcv);
         }
       }
       track_echo(session, rcvd);

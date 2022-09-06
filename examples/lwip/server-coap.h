@@ -12,6 +12,13 @@
 #include "coap_config.h"
 #include <coap3/coap.h>
 
-void server_coap_init(void);
+/* Start up the CoAP Server */
+void server_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
+                      coap_log_t log_level);
+
+/* Close down CoAP activity */
+
+void server_coap_finished(void);
+
 /* call this when you think that resources could be dirty */
 void server_coap_poll(void);

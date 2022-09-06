@@ -219,7 +219,7 @@ typedef struct coap_local_hash_t {
 
 coap_digest_ctx_t *
 coap_digest_setup(void) {
-  coap_key_t *digest_ctx = coap_malloc(sizeof(coap_local_hash_t));
+  coap_key_t *digest_ctx = coap_malloc_type(COAP_DIGEST_CTX, sizeof(coap_local_hash_t));
 
   if (digest_ctx) {
     memset(digest_ctx, 0, sizeof(coap_local_hash_t));
@@ -230,7 +230,7 @@ coap_digest_setup(void) {
 
 void
 coap_digest_free(coap_digest_ctx_t *digest_ctx) {
-  coap_free(digest_ctx);
+  coap_free_type(COAP_DIGEST_CTX, digest_ctx);
 }
 
 int

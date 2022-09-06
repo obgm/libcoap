@@ -19,6 +19,14 @@ if test $err = 0 -a "x$ARCHIVE" != "x"; then
         $DIR/configure $PREFIX --enable-tests  --enable-silent-rules --enable-documentation --enable-examples --disable-dtls && \
         make EXTRA_CFLAGS=-Werror && make install EXTRA_CFLAGS=-Werror
     err=$?
+    if [ $err = 0 ] ; then
+        make -C $DIR/examples/lwip
+        err=$?
+    fi
+    if [ $err = 0 ] ; then
+        make -C $DIR/examples/contiki
+        err=$?
+    fi
 fi
 
 exit $err

@@ -10,8 +10,6 @@
  * of use.
  */
 
-typedef unsigned int sys_prot_t;
-
 #define NO_SYS                     1
 #define LWIP_SOCKET                (NO_SYS==0)
 #define LWIP_NETCONN               (NO_SYS==0)
@@ -28,10 +26,14 @@ typedef unsigned int sys_prot_t;
 #define netif_get_index(netif)      ((u8_t)((netif)->num + 1))
 #endif
 
-#if NO_SYS
-#include <pthread.h>
-extern pthread_mutex_t lwprot_mutex;
-extern pthread_t lwprot_thread;
-extern int lwprot_count;
-#endif
 #define MEMP_USE_CUSTOM_POOLS 1
+#define MEM_SIZE (4 * 1024)
+
+/* Set if space is to be reserved for a response PDU */
+#define MEMP_STATS                      1
+
+/*
+ * Set to display (with LOG_DEBUG) custom pools information
+ * (Needs MEMP_STATS set) when coap_free_context() is called.
+ */
+#define LWIP_STATS_DISPLAY              1

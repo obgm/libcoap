@@ -116,9 +116,6 @@ coap_free_node(coap_queue_t *node) {
 
 #include <lwip/memp.h>
 
-static void coap_retransmittimer_execute(void *arg);
-static void coap_retransmittimer_restart(coap_context_t *ctx);
-
 COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node() {
   return (coap_queue_t *)memp_malloc(MEMP_COAP_NODE);
@@ -621,8 +618,11 @@ coap_free_context(coap_context_t *context) {
 
 #ifdef WITH_LWIP
   context->sendqueue = NULL;
-  coap_retransmittimer_restart(context);
-#endif
+  if (context->timer_configured) {
+    sys_untimeout(coap_io_process_timeout, (void*)context);
+    context->timer_configured = 0;
+  }
+#endif /* WITH_LWIP */
 
 #ifndef WITHOUT_ASYNC
   coap_delete_all_async(context);
@@ -682,6 +682,9 @@ coap_free_context(coap_context_t *context) {
   memset(&the_coap_context, 0, sizeof(coap_context_t));
   initialized = 0;
 #endif /* WITH_CONTIKI */
+#ifdef WITH_LWIP
+  coap_lwip_dump_memory_pools(LOG_DEBUG);
+#endif /* WITH_LWIP */
 }
 
 int
@@ -806,9 +809,17 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
 #ifdef WITH_LWIP
 
   coap_socket_t *sock = &session->sock;
+#if COAP_SERVER_SUPPORT
   if (sock->flags == COAP_SOCKET_EMPTY) {
     assert(session->endpoint != NULL);
     sock = &session->endpoint->sock;
+  }
+#endif /* COAP_SERVER_SUPPORT */
+
+  if (session->state != COAP_SESSION_STATE_ESTABLISHED ||
+      (pdu->type == COAP_MESSAGE_CON &&
+       session->con_active >= COAP_NSTART(session))) {
+    return coap_session_delay_pdu(session, pdu, node);
   }
 
   bytes_written = coap_socket_send_pdu(sock, session, pdu);
@@ -1005,11 +1016,6 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
 
   coap_insert_node(&context->sendqueue, node);
 
-#ifdef WITH_LWIP
-  if (node == context->sendqueue) /* don't bother with timer stuff if there are earlier retransmits */
-    coap_retransmittimer_restart(context);
-#endif
-
 #ifdef WITH_CONTIKI
   {                            /* (re-)initialize retransmission timer */
     coap_queue_t *nextpdu;
@@ -1044,68 +1050,45 @@ token_match(const uint8_t *a, size_t alen,
 int
 coap_client_delay_first(coap_session_t *session)
 {
+#if COAP_CLIENT_SUPPORT
   if (session->type == COAP_SESSION_TYPE_CLIENT && session->doing_first) {
-    if (session->doing_first) {
-      int timeout_ms = 5000;
-#ifdef WITH_LWIP
-#include <netif/tapif.h>
-      struct netif *netif = ip_route(&session->sock.pcb->local_ip,
-                                     &session->addr_info.remote.addr);
-      if (!netif) {
-        session->doing_first = 0;
-        return 1;
-      }
-#endif /* WITH_LWIP */
+    int timeout_ms = 5000;
 
-      if (session->delay_recursive) {
-        assert(0);
-        return 1;
-      } else {
-        session->delay_recursive = 1;
-      }
-      /*
-       * Need to wait for first request to get out and response back before
-       * continuing.. Response handler has to clear doing_first if not an error.
-       */
-      coap_session_reference(session);
-      while (session->doing_first != 0) {
-#ifndef WITH_LWIP
-        int result = coap_io_process(session->context, 1000);
-#else /* WITH_LWIP */
-        int result;
-        coap_tick_t start;
-        coap_tick_t end;
-
-        coap_ticks(&start);
-        result = tapif_select(netif);
-#endif /* WITH_LWIP */
-
-        if (result < 0) {
-          session->doing_first = 0;
-          session->delay_recursive = 0;
-          coap_session_release(session);
-          return 0;
-        }
-#ifdef WITH_LWIP
-        sys_check_timeouts();
-        coap_ticks(&end);
-        result = (end - start) * 1000 / COAP_TICKS_PER_SECOND;
-#endif /* WITH_LWIP */
-        if (result <= timeout_ms) {
-          timeout_ms -= result;
-        } else {
-          if (session->doing_first == 1) {
-            /* Timeout failure of some sort with first request */
-            coap_log(LOG_DEBUG, "** %s: timeout waiting for first response\n",
-                     coap_session_str(session));
-            session->doing_first = 0;
-          }
-        }
-      }
-      session->delay_recursive = 0;
-      coap_session_release(session);
+    if (session->delay_recursive) {
+      assert(0);
+      return 1;
+    } else {
+      session->delay_recursive = 1;
     }
+    /*
+     * Need to wait for first request to get out and response back before
+     * continuing.. Response handler has to clear doing_first if not an error.
+     */
+    coap_session_reference(session);
+    while (session->doing_first != 0) {
+      int result = coap_io_process(session->context, 1000);
+
+      if (result < 0) {
+        session->doing_first = 0;
+        session->delay_recursive = 0;
+        coap_session_release(session);
+        return 0;
+      }
+      if (result <= timeout_ms) {
+        timeout_ms -= result;
+      } else {
+        if (session->doing_first == 1) {
+          /* Timeout failure of some sort with first request */
+          coap_log(LOG_DEBUG, "** %s: timeout waiting for first response\n",
+                   coap_session_str(session));
+          session->doing_first = 0;
+        }
+      }
+    }
+    session->delay_recursive = 0;
+    coap_session_release(session);
   }
+#endif /* COAP_CLIENT_SUPPORT */
   return 1;
 }
 
@@ -1463,10 +1446,6 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
       node->t = (now - context->sendqueue_basetime) + (node->timeout << node->retransmit_cnt);
     }
     coap_insert_node(&context->sendqueue, node);
-#ifdef WITH_LWIP
-    if (node == context->sendqueue) /* don't bother with timer stuff if there are earlier retransmits */
-      coap_retransmittimer_restart(context);
-#endif
 
     if (node->is_mcast) {
       coap_log(LOG_DEBUG, "** %s: mid=0x%x: mcast delayed transmission\n",
@@ -1537,14 +1516,6 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   coap_delete_node(node);
   return COAP_INVALID_MID;
 }
-
-#ifdef WITH_LWIP
-/* WITH_LWIP, this is handled by coap_recv in a different way */
-void
-coap_io_do_io(coap_context_t *ctx, coap_tick_t now) {
-  return;
-}
-#else /* WITH_LWIP */
 
 static int
 coap_handle_dgram_for_proto(coap_context_t *ctx, coap_session_t *session, coap_packet_t *packet) {
@@ -2072,7 +2043,6 @@ error:
   coap_delete_pdu(pdu);
   return -1;
 }
-#endif /* not WITH_LWIP */
 
 int
 coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_mid_t id, coap_queue_t **node) {
@@ -3822,81 +3792,3 @@ PROCESS_THREAD(coap_retransmit_process, ev, data) {
 /*---------------------------------------------------------------------------*/
 
 #endif /* WITH_CONTIKI */
-
-#ifdef WITH_LWIP
-/* FIXME: retransmits that are not required any more due to incoming packages
- * do *not* get cleared at the moment, the wakeup when the transmission is due
- * is silently accepted. this is mainly due to the fact that the required
- * checks are similar in two places in the code (when receiving ACK and RST)
- * and that they cause more than one patch chunk, as it must be first checked
- * whether the sendqueue item to be dropped is the next one pending, and later
- * the restart function has to be called. nothing insurmountable, but it can
- * also be implemented when things have stabilized, and the performance
- * penality is minimal
- *
- * also, this completely ignores COAP_RESOURCE_CHECK_TIME.
- * */
-
-static void coap_retransmittimer_execute(void *arg) {
-  coap_context_t *ctx = (coap_context_t*)arg;
-  coap_tick_t now;
-  coap_tick_t elapsed;
-  coap_queue_t *nextinqueue;
-
-  ctx->timer_configured = 0;
-
-  coap_ticks(&now);
-
-  elapsed = now - ctx->sendqueue_basetime; /* that's positive for sure, and unless we haven't been called for a complete wrapping cycle, did not wrap */
-
-  nextinqueue = coap_peek_next(ctx);
-  while (nextinqueue != NULL) {
-    if (nextinqueue->t > elapsed) {
-      nextinqueue->t -= elapsed;
-      break;
-    } else {
-      elapsed -= nextinqueue->t;
-      coap_retransmit(ctx, coap_pop_next(ctx));
-      nextinqueue = coap_peek_next(ctx);
-    }
-  }
-
-  ctx->sendqueue_basetime = now;
-
-  coap_retransmittimer_restart(ctx);
-}
-
-static void coap_retransmittimer_restart(coap_context_t *ctx) {
-  coap_tick_t now, elapsed, delay;
-
-  if (ctx->timer_configured) {
-    printf("clearing\n");
-    sys_untimeout(coap_retransmittimer_execute, (void*)ctx);
-    ctx->timer_configured = 0;
-  }
-  if (ctx->sendqueue != NULL) {
-    coap_ticks(&now);
-    elapsed = now - ctx->sendqueue_basetime;
-    if (ctx->sendqueue->t >= elapsed) {
-      delay = ctx->sendqueue->t - elapsed;
-    } else {
-      /* a strange situation, but not completely impossible.
-       *
-       * this happens, for example, right after
-       * coap_retransmittimer_execute, when a retransmission
-       * was *just not yet* due, and the clock ticked before
-       * our coap_ticks was called.
-       *
-       * not trying to retransmit anything now, as it might
-       * cause uncontrollable recursion; let's just try again
-       * with the next main loop run.
-       * */
-      delay = 0;
-    }
-
-    printf("scheduling for %d ticks\n", delay);
-    sys_timeout(delay, coap_retransmittimer_execute, (void*)ctx);
-    ctx->timer_configured = 1;
-  }
-}
-#endif

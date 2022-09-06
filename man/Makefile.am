@@ -30,6 +30,7 @@ TXT3 = coap_async.txt \
 	coap_io.txt \
 	coap_keepalive.txt \
 	coap_logging.txt \
+	coap_lwip.txt \
 	coap_observe.txt \
 	coap_pdu_access.txt \
 	coap_pdu_setup.txt \

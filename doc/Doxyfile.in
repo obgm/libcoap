@@ -904,7 +904,6 @@ RECURSIVE              = NO
 
 EXCLUDE                = @top_srcdir@/src/coap_io_lwip.c \
                          @top_srcdir@/src/coap_io_riot.c \
-                         @top_srcdir@/include/coap@LIBCOAP_API_VERSION@/lwippools.h \
                          @top_srcdir@/include/coap@LIBCOAP_API_VERSION@/uthash.h \
                          @top_srcdir@/include/coap@LIBCOAP_API_VERSION@/utlist.h
 

@@ -34,7 +34,7 @@
  * lwip adaptions: chrysn <chrysn@fsfe.org>
  * also, https://savannah.nongnu.org/bugs/?40245 was applied */
 
-#include "server-coap.h"
+#include "client-coap.h"
 
 #include <lwip/init.h>
 #include <lwip/timeouts.h>
@@ -45,13 +45,18 @@
 #include <signal.h>
 
 static ip4_addr_t ipaddr, netmask, gw;
+static int quit = 0;
 
-void
+#ifndef COAP_URI
+#define COAP_URI "coap://libcoap.net"
+#endif /* COAP_URI */
+
+static void
 handle_sigint(int signum) {
   (void)signum;
 
-  server_coap_finished();
-  printf("Server Application finished.\n");
+  client_coap_finished();
+  printf("Client Application finished.\n");
   exit(0);
 }
 
@@ -74,8 +79,10 @@ main(int argc, char **argv)
 #ifndef _WIN32
   struct sigaction sa;
 #endif
+  int no_more = 0;
   int opt;
   int log_level = 4; /* LOG_WARNING */
+  const char *use_uri = COAP_URI;
 
   while ((opt = getopt(argc, argv, "v:")) != -1) {
     switch (opt) {
@@ -87,12 +94,16 @@ main(int argc, char **argv)
     }
   }
 
+  if (optind < argc) {
+    use_uri = argv[optind];
+  }
+
   /* startup defaults (may be overridden by one or more opts). this is
    * hard-coded v4 even in presence of v6, which does auto-discovery and
    * should thus wind up with an address of fe80::12:34ff:fe56:78ab%tap0
    * */
-  IP4_ADDR(&gw, 192,168,113,1);
-  IP4_ADDR(&ipaddr, 192,168,113,2);
+  IP4_ADDR(&gw, 192,168,114,1);
+  IP4_ADDR(&ipaddr, 192,168,114,2);
   IP4_ADDR(&netmask, 255,255,255,0);
 
   lwip_init();
@@ -123,11 +134,11 @@ main(int argc, char **argv)
   sigaction (SIGPIPE, &sa, NULL);
 #endif
 
-  server_coap_init(wait_for_input, &netif, log_level);
+  client_coap_init(wait_for_input, &netif, log_level, use_uri);
 
-  printf("Server Application started.\n");
+  printf("Client Application started.\n");
 
-  while (1) {
+  while (!quit && !no_more) {
     /*
      * Poll netif, pass any read packet to lwIP
      * Has internal timeout of 100 msec (sometimes less) based on
@@ -137,8 +148,10 @@ main(int argc, char **argv)
 
     sys_check_timeouts();
 
-    server_coap_poll();
+    no_more = client_coap_poll();
   }
 
+  client_coap_finished();
+  printf("Client Application finished.\n");
   return 0;
 }
