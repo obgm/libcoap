@@ -651,6 +651,30 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
       coap_delete_node(q);
   }
   if (reason != COAP_NACK_ICMP_ISSUE) {
+    coap_lg_xmit_t *lq, *ltmp;
+#if COAP_SERVER_SUPPORT
+    coap_lg_srcv_t *sq, *stmp;
+#endif /* COAP_SERVER_SUPPORT */
+
+#if COAP_CLIENT_SUPPORT
+    coap_lg_crcv_t *cq, *etmp;
+
+    /* Need to do this before (D)TLS and socket is closed down */
+    LL_FOREACH_SAFE(session->lg_crcv, cq, etmp) {
+      LL_DELETE(session->lg_crcv, cq);
+      coap_block_delete_lg_crcv(session, cq);
+    }
+#endif /* COAP_CLIENT_SUPPORT */
+    LL_FOREACH_SAFE(session->lg_xmit, lq, ltmp) {
+      LL_DELETE(session->lg_xmit, lq);
+      coap_block_delete_lg_xmit(session, lq);
+    }
+#if COAP_SERVER_SUPPORT
+    LL_FOREACH_SAFE(session->lg_srcv, sq, stmp) {
+      LL_DELETE(session->lg_srcv, sq);
+      coap_block_delete_lg_srcv(session, sq);
+    }
+#endif /* COAP_SERVER_SUPPORT */
     coap_cancel_session_messages(session->context, session, reason);
   }
   else if (session->context->nack_handler) {
