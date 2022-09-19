@@ -360,6 +360,7 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_XMIT_BLOCK_FAIL:
   case COAP_EVENT_SERVER_SESSION_NEW:
   case COAP_EVENT_SERVER_SESSION_DEL:
+  case COAP_EVENT_BAD_PACKET:
   default:
     break;
   }
@@ -381,6 +382,7 @@ nack_handler(coap_session_t *session COAP_UNUSED,
     quit = 1;
     break;
   case COAP_NACK_ICMP_ISSUE:
+  case COAP_NACK_BAD_RESPONSE:
   default:
     ;
   }

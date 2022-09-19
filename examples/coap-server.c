@@ -1645,6 +1645,7 @@ proxy_event_handler(coap_session_t *session,
   case COAP_EVENT_XMIT_BLOCK_FAIL:
   case COAP_EVENT_SERVER_SESSION_NEW:
   case COAP_EVENT_SERVER_SESSION_DEL:
+  case COAP_EVENT_BAD_PACKET:
   default:
     break;
   }
@@ -1788,6 +1789,7 @@ proxy_nack_handler(coap_session_t *session,
     remove_proxy_association(session, 1);
     break;
   case COAP_NACK_ICMP_ISSUE:
+  case COAP_NACK_BAD_RESPONSE:
   default:
     break;
   }

@@ -2054,6 +2054,7 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
     goto error;
 
   if (!coap_pdu_parse(session->proto, msg, msg_len, pdu)) {
+    coap_handle_event(session->context, COAP_EVENT_BAD_PACKET, session);
     coap_log(LOG_WARNING, "discard malformed PDU\n");
     goto error;
   }
@@ -3163,6 +3164,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   coap_pdu_t *response;
   coap_opt_filter_t opt_filter;
   int is_ping_rst;
+  int packet_is_bad = 0;
 
   if (LOG_DEBUG <= coap_get_log_level()) {
     /* FIXME: get debug to work again **
@@ -3189,8 +3191,10 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
           /* Flush out any entries on session->delayqueue */
           coap_session_connected(session);
       }
-      if (coap_option_check_critical(session, pdu, &opt_filter) == 0)
+      if (coap_option_check_critical(session, pdu, &opt_filter) == 0) {
+        packet_is_bad = 1;
         goto cleanup;
+      }
 
 #if COAP_SERVER_SUPPORT
       /* if sent code was >= 64 the message might have been a
@@ -3271,6 +3275,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       coap_remove_from_queue(&context->sendqueue, session, pdu->mid, &sent);
       /* check for unknown critical options */
       if (coap_option_check_critical(session, pdu, &opt_filter) == 0) {
+        packet_is_bad = 1;
         coap_send_rst(session, pdu);
         goto cleanup;
       }
@@ -3278,7 +3283,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
     case COAP_MESSAGE_CON:        /* check for unknown critical options */
       if (coap_option_check_critical(session, pdu, &opt_filter) == 0) {
-
+        packet_is_bad = 1;
         if (COAP_PDU_IS_REQUEST(pdu)) {
           response =
             coap_new_error_response(pdu, COAP_RESPONSE_CODE(402), &opt_filter);
@@ -3322,6 +3327,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       if (context->ping_handler) {
         context->ping_handler(session, pdu, pdu->mid);
       }
+    } else {
+      packet_is_bad = 1;
     }
     coap_log(LOG_DEBUG, "dropped message with invalid code (%d.%02d)\n",
              COAP_RESPONSE_CLASS(pdu->code),
@@ -3345,6 +3352,16 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   }
 
 cleanup:
+  if (packet_is_bad) {
+    if (sent) {
+      if (context->nack_handler) {
+        context->nack_handler(session, sent->pdu, COAP_NACK_BAD_RESPONSE, sent->id);
+      }
+    }
+    else {
+      coap_handle_event(context, COAP_EVENT_BAD_PACKET, session);
+    }
+  }
   coap_delete_node(sent);
 }
 

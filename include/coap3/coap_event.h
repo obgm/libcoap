@@ -91,7 +91,13 @@ typedef enum {
  * The session will still contain valid data when the event handler is
  * called.
  */
-  COAP_EVENT_SERVER_SESSION_DEL = 0x4002
+  COAP_EVENT_SERVER_SESSION_DEL = 0x4002,
+
+/*
+ * Received packet formatting errors
+ */
+  /** Triggered when badly formatted packet received */
+  COAP_EVENT_BAD_PACKET         = 0x5001
 
 } coap_event_t;
 
