@@ -144,6 +144,7 @@ COAP_NACK_NOT_DELIVERABLE
 COAP_NACK_RST
 COAP_NACK_TLS_FAILED
 COAP_NACK_ICMP_ISSUE
+COAP_NACK_BAD_RESPONSE
 ----
 
 _sent_ can be NULL.  _mid_ can be used for determing which is the transmitting
@@ -217,6 +218,10 @@ COAP_EVENT_XMIT_BLOCK_FAIL    0x3002
  */
 COAP_EVENT_SERVER_SESSION_NEW 0x4001
 COAP_EVENT_SERVER_SESSION_DEL 0x4002
+/**
+ * Unrecognizable received packet events
+ */
+COAP_EVENT_BAD_PACKET         0x5001
 ----
 
 EXAMPLES
