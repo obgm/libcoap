@@ -1399,10 +1399,6 @@ setup_psk(
   return &dtls_psk;
 }
 
-#ifdef _WIN32
-#define S_ISDIR(x) (((x) & S_IFMT) == S_IFDIR)
-#endif
-
 static coap_session_t*
 open_session(
   coap_context_t *ctx,

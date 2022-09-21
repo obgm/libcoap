@@ -89,6 +89,10 @@ option(
   ENABLE_DOCS
   "build also doxygen documentation"
   ON)
+option(
+  WARNING_TO_ERROR
+  "force all compiler warnings to be errors"
+  OFF)
 
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 11)
@@ -424,6 +428,7 @@ message(STATUS "CMAKE_C_COMPILER:................${CMAKE_C_COMPILER}")
 message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
 message(STATUS "CMAKE_BUILD_TYPE:................${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR:..........${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "WARNING_TO_ERROR:................${WARNING_TO_ERROR}")
 
 set(top_srcdir "${CMAKE_CURRENT_LIST_DIR}")
 set(top_builddir "${CMAKE_CURRENT_BINARY_DIR}")
@@ -553,6 +558,19 @@ add_compile_options(
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wswitch-enum>
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wunused>
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wwrite-strings>)
+
+if(${WARNING_TO_ERROR})
+add_compile_options(
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Werror>)
+endif()
+
+if(CMAKE_GENERATOR MATCHES "Visual Studio")
+  option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols when compiling to a .dll" ON)
+  # add_compile_options(-Wall -wd4100)
+  if(${WARNING_TO_ERROR})
+    add_compile_options(-WX)
+  endif()
+endif()
 
 #
 # tests

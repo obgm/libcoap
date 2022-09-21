@@ -86,16 +86,32 @@ jobs:
         if: matrix.TLS == 'no'
         run: |
           cd $GITHUB_WORKSPACE}/build-${{matrix.TLS}}-cmake
-          cmake $GITHUB_WORKSPACE -DENABLE_EXAMPLES=ON -DENABLE_TESTS=ON -DENABLE_DTLS=OFF -DENABLE_DOCS=OFF
+          cmake $GITHUB_WORKSPACE -DENABLE_EXAMPLES=ON -DENABLE_TESTS=ON -DENABLE_DTLS=OFF -DENABLE_DOCS=OFF -DWARNING_TO_ERROR=ON
       - name: configure TLS
         if: matrix.TLS != 'no'
         run: |
           cd $GITHUB_WORKSPACE}/build-${{matrix.TLS}}-cmake
-          cmake $GITHUB_WORKSPACE -DENABLE_EXAMPLES=ON -DENABLE_TESTS=ON -DENABLE_DTLS=ON -DENABLE_DOCS=OFF -DDTLS_BACKEND=${{matrix.TLS}}
+          cmake $GITHUB_WORKSPACE -DENABLE_EXAMPLES=ON -DENABLE_TESTS=ON -DENABLE_DTLS=ON -DENABLE_DOCS=OFF -DDTLS_BACKEND=${{matrix.TLS}} -DWARNING_TO_ERROR=ON
       - name: build
         run: |
           cd $GITHUB_WORKSPACE}/build-${{matrix.TLS}}-cmake
           cmake --build .
+  cmake-macos:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: macOS CMake setup
+      run: |
+        cmake -E make_directory build_test
+    - name: macOS CMake configure
+      run: |
+        cd build_test
+        cmake .. -DWARNING_TO_ERROR=ON -DENABLE_TESTS=NO -DENABLE_DTLS=NO
+    - name: macOS CMake build
+      run: |
+        cd build_test
+        cmake --build .
   other-build:
     runs-on: ubuntu-latest
     strategy:
@@ -129,6 +145,27 @@ jobs:
       - name: Build sln
         shell: cmd
         run: call .\scripts\msbuild.sln.cmd
+  ms-cmake:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install OpenSSL on Windows (choco)
+      run: |
+        choco install openssl
+      shell: cmd
+
+    - name: MS CMake setup
+      run: |
+        cmake -E make_directory build_test
+    - name: MS CMake configure
+      run: |
+        cd build_test
+        cmake .. -DWARNING_TO_ERROR=ON -DWITH_OPENSSL=YES
+    - name: MS CMake build
+      run: |
+        cd build_test
+        cmake --build .
 
   additional-tests:
     runs-on: ubuntu-latest
