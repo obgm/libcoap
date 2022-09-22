@@ -28,6 +28,8 @@
 
 #define MEMP_USE_CUSTOM_POOLS 1
 #define MEM_SIZE (4 * 1024)
+/* Support a 1500 MTU packet */
+#define PBUF_POOL_BUFSIZE LWIP_MEM_ALIGN_SIZE(2*6 + 2 + 1500)
 
 /* Set if space is to be reserved for a response PDU */
 #define MEMP_STATS                      1
