@@ -76,7 +76,7 @@ coap_pdu_from_pbuf( struct pbuf *pbuf )
 
   if (pbuf == NULL) return NULL;
 
-  LWIP_ASSERT("Can only deal with contiguous PBUFs", pbuf->tot_len == pbuf->len);
+  LWIP_ASSERT("Can only deal with contiguous PBUFs (increase PBUF_POOL_BUFSIZE)", pbuf->tot_len == pbuf->len);
   LWIP_ASSERT("coap_io_do_io needs to receive an exclusive copy of the incoming pbuf", pbuf->ref == 1);
 
   pdu = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t) );
