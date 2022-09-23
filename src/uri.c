@@ -61,7 +61,7 @@ coap_split_uri_sub(const uint8_t *str_var,
   int is_http_proxy_scheme = 0;
   size_t keep_len = len;
 
-  if (!str_var || !uri)
+  if (!str_var || !uri || len == 0)
     return -1;
 
   memset(uri, 0, sizeof(coap_uri_t));
