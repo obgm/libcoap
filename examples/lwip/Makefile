@@ -7,7 +7,7 @@
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.
 
-libcoap_dir = ../../
+libcoap_dir = ../..
 
 LIBCOAP_API_VERSION = $(shell if [ -f $(libcoap_dir)/configure.ac ];  then \
           sed -ne 's/^LIBCOAP_API_VERSION=\([0-9]\+\).*$$/\1/p' $(libcoap_dir)/configure.ac; \

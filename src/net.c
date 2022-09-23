@@ -1088,7 +1088,9 @@ coap_client_delay_first(coap_session_t *session)
     session->delay_recursive = 0;
     coap_session_release(session);
   }
-#endif /* COAP_CLIENT_SUPPORT */
+#else /* ! COAP_CLIENT_SUPPORT */
+  (void)session;
+#endif /* ! COAP_CLIENT_SUPPORT */
   return 1;
 }
 
