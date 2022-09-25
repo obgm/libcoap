@@ -22,8 +22,23 @@ WITH_LWIP_CONTRIB_BRANCH=STABLE-2_1_0_RELEASE
 LDLIBS := $(shell if [ -f $(libcoap_dir)/config.log ] ; then \
           grep ac_cv_search_clock_gettime=- $(libcoap_dir)/config.log|cut -d= -f2 ; fi)
 
-all: lib-server lib-client lwip lwip-contrib check-version \
-     $(coap_include_dir)/coap.h server client
+#
+# Remove the 4 -dtls checks from "all" if you do not want DTLS included in
+# some of the built objects.
+#
+all: lwip \
+     lwip-contrib \
+     check-version \
+     check-tinydtls \
+     $(coap_include_dir)/coap.h \
+     lib-server \
+     server \
+     lib-client \
+     client \
+     lib-server-dtls \
+     server-dtls \
+     lib-client-dtls \
+     client-dtls
 
 lwip:
 	git clone --depth 1 git://git.savannah.nongnu.org/lwip.git -b $(WITH_LWIP_BRANCH)
@@ -61,10 +76,36 @@ check-version:
 		fi ; \
 	fi)
 
+# base libcoap git has empty ext/tinydtls
+check-tinydtls:
+	@(if [ ! -d $(libcoap_dir)/ext/tinydtls ] ; then \
+		mkdir -p $(libcoap_dir)/ext ; \
+		(cd $(libcoap_dir)/ext ; git clone https://github.com/eclipse/tinydtls.git) ; \
+	fi ; \
+	if [ ! -f $(libcoap_dir)/ext/tinydtls/dtls.c ] ; then \
+		IN_GIT=`git rev-parse --is-inside-work-tree` ; \
+		if [ "$$IN_GIT" = "true" ] ; then \
+			(cd $(libcoap_dir) ; git submodule init ; git submodule update) ; \
+		else \
+			(cd $(libcoap_dir)/ext ; git clone https://github.com/eclipse/tinydtls.git) ; \
+		fi ; \
+		if [ ! -f $(libcoap_dir)/ext/tinydtls/dtls.c ] ; then \
+			exit 1 ; \
+		fi ; \
+	fi ; \
+	if [ ! -f $(libcoap_dir)/ext/tinydtls/dtls_config.h ] ; then \
+		(cd $(libcoap_dir)/ext/tinydtls ; ./autogen.sh ; ./configure) ; \
+		${MAKE} ; \
+	fi)
+
 # lwip and coap opts (include early to shadow the lwip-contrib/ports/unix/proj/minimal/ file and any ../../config.h)
-CFLAGS += -DWITH_LWIP -iquote./config
+CFLAGS += -DWITH_LWIP -iquote./config $(EXTRA_CFLAGS)
 
 # lwip library
+
+CFLAGS += -Ilwip/src/include/ -Ilwip/src/include/ipv4/ \
+	  -Ilwip-contrib/ports/unix/port/include/ \
+	  -Ilwip-contrib/ports/unix/proj/minimal/
 
 LWIP_SRC = def.c init.c tapif.c etharp.c netif.c timeouts.c stats.c udp.c \
 	   tcp.c pbuf.c ip4_addr.c ip4.c inet_chksum.c tcp_in.c tcp_out.c \
@@ -78,8 +119,11 @@ vpath %.c lwip/src/core/ lwip-contrib/ports/unix/proj/minimal/ \
 vpath %.c lwip/src/core/ipv6/
 LWIP_SRC += mld6.c ip6.c icmp6.c ethip6.c nd6.c ip6_addr.c ip6_frag.c
 
-C_LWIP_OBJ =$(patsubst %.c,lib-client/%.o,$(LWIP_SRC))
-S_LWIP_OBJ =$(patsubst %.c,lib-server/%.o,$(LWIP_SRC))
+CN_LWIP_OBJ =$(patsubst %.c,lib-client/%.o,$(LWIP_SRC))
+SN_LWIP_OBJ =$(patsubst %.c,lib-server/%.o,$(LWIP_SRC))
+CD_LWIP_OBJ =$(patsubst %.c,lib-client-dtls/%.o,$(LWIP_SRC))
+SD_LWIP_OBJ =$(patsubst %.c,lib-server-dtls/%.o,$(LWIP_SRC))
+
 # coap library
 
 CFLAGS += -std=gnu99
@@ -89,6 +133,7 @@ CFLAGS += -I$(libcoap_dir)/include
 vpath %.c $(libcoap_dir)/src
 
 COAP_SRC = coap_address.c \
+	   coap_asn1.c \
 	   coap_async.c \
 	   block.c \
 	   coap_cache.c \
@@ -104,34 +149,76 @@ COAP_SRC = coap_address.c \
 	   resource.c \
 	   coap_session.c \
 	   coap_subscribe.c \
+	   coap_tinydtls.c \
 	   str.c \
 	   coap_tcp.c \
 	   uri.c
 
-C_COAP_OBJ =$(patsubst %.c,lib-client/%.o,$(COAP_SRC))
-S_COAP_OBJ =$(patsubst %.c,lib-server/%.o,$(COAP_SRC))
+CN_COAP_OBJ =$(patsubst %.c,lib-client/%.o,$(COAP_SRC))
+SN_COAP_OBJ =$(patsubst %.c,lib-server/%.o,$(COAP_SRC))
+CD_COAP_OBJ =$(patsubst %.c,lib-client-dtls/%.o,$(COAP_SRC))
+SD_COAP_OBJ =$(patsubst %.c,lib-server-dtls/%.o,$(COAP_SRC))
+
+# tinydtls library
+
+vpath %.c $(libcoap_dir)/ext/tinydtls $(libcoap_dir)/ext/tinydtls/sha2 $(libcoap_dir)/ext/tinydtls/aes $(libcoap_dir)/ext/tinydtls/ecc
+
+TINYDTLS_CFLAGS = -I. -I$(libcoap_dir)/ext -I$(libcoap_dir)/ext/tinydtls -DDTLSv12 -DWITH_SHA256 -DSHA2_USE_INTTYPES_H -DDTLS_CHECK_CONTENTTYPE -DHAVE_LIBTINYDTLS -DHAVE_DTLS_SET_LOG_HANDLER=1
+
+DTLS_SRC = dtls.c \
+           dtls_debug.c \
+           crypto.c \
+           dtls_time.c \
+           hmac.c \
+           sha2.c \
+           session.c \
+           peer.c \
+           netq.c \
+           rijndael_wrap.c \
+           rijndael.c \
+           ecc.c \
+           ccm.c \
+           dtls_prng.c
+
+CN_DTLS_OBJ =$(patsubst %.c,lib-client/%.o,$(DTLS_SRC))
+SN_DTLS_OBJ =$(patsubst %.c,lib-server/%.o,$(DTLS_SRC))
+CD_DTLS_OBJ =$(patsubst %.c,lib-client-dtls/%.o,$(DTLS_SRC))
+SD_DTLS_OBJ =$(patsubst %.c,lib-server-dtls/%.o,$(DTLS_SRC))
 
 CFLAGS += -g3 -Wall -Wextra -pedantic -O0
 
-CFLAGS += -Ilwip/src/include/ -Ilwip/src/include/ipv4/ \
-	  -Ilwip-contrib/ports/unix/port/include/ \
-	  -Ilwip-contrib/ports/unix/proj/minimal/
+CN_APP_OBJ =$(patsubst %.c,lib-client/%.o,client.c client-coap.c)
+SN_APP_OBJ =$(patsubst %.c,lib-server/%.o,server.c server-coap.c)
+CD_APP_OBJ =$(patsubst %.c,lib-client-dtls/%.o,client.c client-coap.c)
+SD_APP_OBJ =$(patsubst %.c,lib-server-dtls/%.o,server.c server-coap.c)
 
-SOBJS = server.o server-coap.o ${S_LWIP_OBJ} ${S_COAP_OBJ}
 
-COBJS = client.o client-coap.o ${C_LWIP_OBJ} ${C_COAP_OBJ}
+CN_OBJS = ${CN_APP_OBJ} ${CN_LWIP_OBJ} ${CN_COAP_OBJ}
+SN_OBJS = ${SN_APP_OBJ} ${SN_LWIP_OBJ} ${SN_COAP_OBJ}
+CD_OBJS = ${CD_APP_OBJ} ${CD_LWIP_OBJ} ${CD_COAP_OBJ} ${CD_DTLS_OBJ}
+SD_OBJS = ${SD_APP_OBJ} ${SD_LWIP_OBJ} ${SD_COAP_OBJ} ${SD_DTLS_OBJ}
 
 $(coap_include_dir)/coap.h:
-	@echo "Error: $@ not present. Run the autotools chain (\`./autogen.sh && ./configure\`) in the project root directory to build the required coap.h file."
-	@exit 1
+	@(if [ ! -f $(coap_include_dir)/coap.h  ] ; then \
+		(cd $(libcoap_dir) ; ./autogen.sh ; ./configure --disable-dtls --disable-man) ; \
+		${MAKE}; \
+	fi)
 
-${SOBJS}: $(coap_include_dir)/coap.h server-coap.h
+${SN_OBJS} ${SD_OBJS}: $(coap_include_dir)/coap.h server-coap.h
 
-server: ${SOBJS}
+server: ${SN_OBJS}
+	$(CC) $(CFLAGS) ${SN_OBJS} -o server ${LDLIBS}
 
-${COBJS}: $(coap_include_dir)/coap.h client-coap.h
+server-dtls: ${SD_OBJS}
+	$(CC) $(CFLAGS) ${SD_OBJS} -o server-dtls ${LDLIBS}
 
-client: ${COBJS}
+${CN_OBJS} ${CD_OBJS}: $(coap_include_dir)/coap.h client-coap.h
+
+client: ${CN_OBJS}
+	$(CC) $(CFLAGS) ${CN_OBJS} -o client ${LDLIBS}
+
+client-dtls: ${CD_OBJS}
+	$(CC) $(CFLAGS) ${CD_OBJS} -o client-dtls ${LDLIBS}
 
 lib-server:
 	@mkdir -p $@
@@ -139,13 +226,27 @@ lib-server:
 lib-server/%.o: %.c config/lwipopts.h config/lwippools.h config/coap_config.h
 	$(CC) ${CFLAGS} -DCOAP_SERVER_SUPPORT -c $< -o $@
 
+lib-server-dtls:
+	@mkdir -p $@
+
+lib-server-dtls/%.o: %.c config/lwipopts.h config/lwippools.h config/coap_config.h
+	$(CC) ${CFLAGS} ${TINYDTLS_CFLAGS} -DCOAP_SERVER_SUPPORT -c $< -o $@
+
 lib-client:
 	@mkdir -p $@
 
 lib-client/%.o: %.c config/lwipopts.h config/lwippools.h config/coap_config.h
 	$(CC) ${CFLAGS} -DCOAP_CLIENT_SUPPORT -c $< -o $@
 
+lib-client-dtls:
+	@mkdir -p $@
+
+lib-client-dtls/%.o: %.c config/lwipopts.h config/lwippools.h config/coap_config.h
+	$(CC) ${CFLAGS} ${TINYDTLS_CFLAGS} -DCOAP_CLIENT_SUPPORT -c $< -o $@
+
 clean:
-	rm -rf server client ${COBJS} ${SOBJS} lib-server lib-client
+	rm -rf server server-dtls client client-dtls \
+	${CN_OBJS} ${SN_OBJS} ${CD_OBJS} ${SD_OBJS} \
+	lib-server lib-server-dtls lib-client lib-client-dtls
 
 .PHONY: all clean

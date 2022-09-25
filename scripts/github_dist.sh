@@ -20,7 +20,7 @@ if test $err = 0 -a "x$ARCHIVE" != "x"; then
         make EXTRA_CFLAGS=-Werror && make install EXTRA_CFLAGS=-Werror
     err=$?
     if [ $err = 0 ] ; then
-        make -C $DIR/examples/lwip
+        make -C $DIR/examples/lwip EXTRA_CFLAGS=-Werror
         err=$?
     fi
     if [ $err = 0 ] ; then

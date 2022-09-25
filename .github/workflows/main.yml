@@ -127,7 +127,7 @@ jobs:
           $GITHUB_WORKSPACE/configure --disable-documentation --disable-examples --disable-tests --disable-dtls
       - name: compile
         run: |
-          make -C examples/${{matrix.OS}}
+          make -C examples/${{matrix.OS}} EXTRA_CFLAGS=-Werror
   ms-build:
     runs-on: windows-latest
 

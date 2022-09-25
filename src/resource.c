@@ -24,24 +24,8 @@
 #include <sys/timerfd.h>
 #endif /* COAP_EPOLL_SUPPORT */
 
-#if defined(WITH_LWIP)
-/* mem.h is only needed for the string free calls for
- * COAP_ATTR_FLAGS_RELEASE_NAME / COAP_ATTR_FLAGS_RELEASE_VALUE /
- * COAP_RESOURCE_FLAGS_RELEASE_URI. not sure what those lines should actually
- * do on lwip. */
-
-#include <lwip/memp.h>
-
-#define COAP_MALLOC_TYPE(Type) \
-  ((coap_##Type##_t *)memp_malloc(MEMP_COAP_##Type))
-#define COAP_FREE_TYPE(Type, Object) memp_free(MEMP_COAP_##Type, Object)
-
-#elif defined(WITH_CONTIKI)
+#if defined(WITH_CONTIKI)
 #include "memb.h"
-
-#define COAP_MALLOC_TYPE(Type) \
-  ((coap_##Type##_t *)memb_alloc(&(Type##_storage)))
-#define COAP_FREE_TYPE(Type, Object) memb_free(&(Type##_storage), (Object))
 
 MEMB(subscription_storage, coap_subscription_t, COAP_MAX_SUBSCRIBERS);
 
@@ -60,10 +44,6 @@ coap_free_subscription(coap_subscription_t *subscription) {
   memb_free(&subscription_storage, subscription);
 }
 
-#else
-#define COAP_MALLOC_TYPE(Type) \
-  ((coap_##Type##_t *)coap_malloc(sizeof(coap_##Type##_t)))
-#define COAP_FREE_TYPE(Type, Object) coap_free(Object)
 #endif
 
 #define COAP_PRINT_STATUS_MAX (~COAP_PRINT_STATUS_MASK)
@@ -530,7 +510,7 @@ coap_free_resource(coap_resource_t *resource) {
     coap_session_release( obs->session );
     coap_delete_pdu(obs->pdu);
     coap_delete_cache_key(obs->cache_key);
-    COAP_FREE_TYPE( subscription, obs );
+    coap_free_type(COAP_SUBSCRIPTION, obs);
   }
   if (resource->proxy_name_count && resource->proxy_name_list) {
     size_t i;
@@ -784,7 +764,7 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG };
   }
 
   /* Create a new subscription */
-  s = COAP_MALLOC_TYPE(subscription);
+  s = coap_malloc_type(COAP_SUBSCRIPTION, sizeof(coap_subscription_t));
 
   if (!s) {
     coap_delete_cache_key(cache_key);
@@ -796,7 +776,7 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG };
                               request->token, NULL);
   if (s->pdu == NULL) {
     coap_delete_cache_key(cache_key);
-    COAP_FREE_TYPE(subscription, s);
+    coap_free_type(COAP_SUBSCRIPTION, s);
     return NULL;
   }
   if (coap_get_data(request, &len, &data)) {
@@ -810,7 +790,7 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG };
     if (cache_key == NULL) {
       coap_delete_pdu(s->pdu);
       coap_delete_cache_key(cache_key);
-      COAP_FREE_TYPE(subscription, s);
+      coap_free_type(COAP_SUBSCRIPTION, s);
       return NULL;
     }
   }
@@ -863,7 +843,7 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
     coap_session_release( session );
     coap_delete_pdu(s->pdu);
     coap_delete_cache_key(s->cache_key);
-    COAP_FREE_TYPE(subscription,s);
+    coap_free_type(COAP_SUBSCRIPTION, s);
   }
 
   return s != NULL;
@@ -879,7 +859,7 @@ coap_delete_observers(coap_context_t *context, coap_session_t *session) {
         coap_session_release(session);
         coap_delete_pdu(s->pdu);
         coap_delete_cache_key(s->cache_key);
-        COAP_FREE_TYPE(subscription, s);
+        coap_free_type(COAP_SUBSCRIPTION, s);
       }
     }
   }

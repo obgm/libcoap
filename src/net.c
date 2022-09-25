@@ -99,7 +99,7 @@
 /** creates a Qx.FRAC_BITS from session's 'ack_timeout' */
 #define ACK_TIMEOUT Q(FRAC_BITS, session->ack_timeout)
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_CONTIKI)
 
 COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node(void) {
@@ -110,23 +110,8 @@ COAP_STATIC_INLINE void
 coap_free_node(coap_queue_t *node) {
   coap_free_type(COAP_NODE, node);
 }
-#endif /* !defined(WITH_LWIP) && !defined(WITH_CONTIKI) */
+#endif /* ! WITH_CONTIKI */
 
-#ifdef WITH_LWIP
-
-#include <lwip/memp.h>
-
-COAP_STATIC_INLINE coap_queue_t *
-coap_malloc_node() {
-  return (coap_queue_t *)memp_malloc(MEMP_COAP_NODE);
-}
-
-COAP_STATIC_INLINE void
-coap_free_node(coap_queue_t *node) {
-  memp_free(MEMP_COAP_NODE, node);
-}
-
-#endif /* WITH_LWIP */
 #ifdef WITH_CONTIKI
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT
@@ -806,34 +791,6 @@ static ssize_t
 coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
   ssize_t bytes_written;
 
-#ifdef WITH_LWIP
-
-  coap_socket_t *sock = &session->sock;
-#if COAP_SERVER_SUPPORT
-  if (sock->flags == COAP_SOCKET_EMPTY) {
-    assert(session->endpoint != NULL);
-    sock = &session->endpoint->sock;
-  }
-#endif /* COAP_SERVER_SUPPORT */
-
-  if (session->state != COAP_SESSION_STATE_ESTABLISHED ||
-      (pdu->type == COAP_MESSAGE_CON &&
-       session->con_active >= COAP_NSTART(session))) {
-    return coap_session_delay_pdu(session, pdu, node);
-  }
-
-  bytes_written = coap_socket_send_pdu(sock, session, pdu);
-  if (bytes_written >= 0 && pdu->type == COAP_MESSAGE_CON &&
-      COAP_PROTO_NOT_RELIABLE(session->proto))
-    session->con_active++;
-
-  if (LOG_DEBUG <= coap_get_log_level()) {
-    coap_show_pdu(LOG_DEBUG, pdu);
-  }
-  coap_ticks(&session->last_rx_tx);
-
-#else
-
   if (session->state == COAP_SESSION_STATE_NONE) {
 #if ! COAP_CLIENT_SUPPORT
     return -1;
@@ -912,8 +869,6 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
   if (bytes_written >= 0 && pdu->type == COAP_MESSAGE_CON &&
       COAP_PROTO_NOT_RELIABLE(session->proto))
     session->con_active++;
-
-#endif /* WITH_LWIP */
 
   return bytes_written;
 }

@@ -116,9 +116,29 @@ init_coap_resources(coap_context_t *ctx) {
 }
 
 void server_coap_init(coap_lwip_input_wait_handler_t input_wait,
-                      void *input_arg, int log_level)
-{
+                      void *input_arg, int argc, char **argv) {
   coap_address_t listenaddress;
+  int opt;
+  coap_log_t log_level = LOG_WARNING;
+  coap_log_t dtls_log_level = LOG_ERR;
+  const char *use_psk = "secretPSK";
+
+  while ((opt = getopt(argc, argv, ":k:v:V:")) != -1) {
+    switch (opt) {
+    case 'k':
+      use_psk = optarg;
+      break;
+    case 'v':
+      log_level = atoi(optarg);
+      break;
+    case 'V':
+      dtls_log_level = atoi(optarg);
+      break;
+    default:
+      printf("%s [-k PSK] [-v level] [ -V level]\n", argv[0]);
+      exit(1);
+    }
+  }
 
   coap_address_init(&listenaddress);
 
@@ -127,11 +147,27 @@ void server_coap_init(coap_lwip_input_wait_handler_t input_wait,
   listenaddress.port = COAP_DEFAULT_PORT;
 
   coap_set_log_level(log_level);
+  coap_dtls_set_log_level(dtls_log_level);
   main_coap_context = coap_new_context(&listenaddress);
   LWIP_ASSERT("Failed to initialize context", main_coap_context != NULL);
 
+  if (coap_dtls_is_supported()) {
+    coap_dtls_spsk_t setup_data;
+    coap_endpoint_t *ep;
+
+    listenaddress.port = COAP_DEFAULT_PORT + 1;
+    ep = coap_new_endpoint(main_coap_context, &listenaddress, COAP_PROTO_DTLS);
+    LWIP_ASSERT("Failed to initialize dtls endpoint", ep != NULL);
+    memset(&setup_data, 0, sizeof(setup_data));
+    setup_data.version = COAP_DTLS_SPSK_SETUP_VERSION;
+    setup_data.psk_info.key.s = (const uint8_t *)use_psk;
+    setup_data.psk_info.key.length = strlen(use_psk);
+    coap_context_set_psk2(main_coap_context, &setup_data);
+  }
+
   /* Limit the number of idle sessions to save RAM (MEMP_NUM_COAPSESSION) */
-  coap_context_set_max_idle_sessions(main_coap_context, MEMP_NUM_COAPSESSION);
+  LWIP_ASSERT("Need a minimum of 2 for MEMP_NUM_COAPSESSION", MEMP_NUM_COAPSESSION > 1);
+  coap_context_set_max_idle_sessions(main_coap_context, MEMP_NUM_COAPSESSION -1);
   clock_offset = 1; /* Need a non-zero value */
   init_coap_resources(main_coap_context);
   coap_lwip_set_input_wait_handler(main_coap_context, input_wait, input_arg);
@@ -143,8 +179,7 @@ server_coap_finished(void) {
   main_coap_context = NULL;
 }
 
-void server_coap_poll(void)
-{
+void server_coap_poll(void) {
   static coap_time_t last_time = 0;
   coap_tick_t ticks_now;
   coap_time_t time_now;

@@ -4,14 +4,17 @@ Example of libcoap running on lwIP
 To run the server example, do
 
     $ make
-    $ sudo ./server
+    $ sudo ./server                 # No TinyDTLS support
+       or
+    $ sudo ./server-dtls            # With TinyDTLS support
 
 (and in a second terminal)
 
     $ sudo ip a a dev tap0 192.168.113.1/24
 
 and query `coap://192.168.113.2/time?ticks` with any coap tool,
-or query `coap://192.168.113.2/.well-known/core`
+or query `coap://192.168.113.2/.well-known/core`.
+(If server-dtls is running, you can use coaps:// as appropriate.)
 
 This will
 
@@ -23,7 +26,12 @@ This will
 
 * return the appropriate response from the server to the client.
 
-The server supports the "-v level" option where logging "level" can be 0 to 7.
+The server supports the following options
+"-k PSK" option where PSK defines the DTLS PSK to use (default is "secretPSK").
+         (Only works for server-dtls.)
+"-v level" option where logging "level" can be 0 to 7 (default is 4).
+"-V level" option where DTLS logging "level" can be 0 to 7 (default is 3).
+           (Only works for server-dtls.)
 
 The server creates a resource for 'time' with a query 'ticks'.  This is
 reported for `.well-known/core`. The work flow for adding more resources does
@@ -34,12 +42,20 @@ in `config/lwippools.h`.
 To run the client example
 
     $ make
-    $ sudo ./client
+    $ sudo ./client                 # No TinyDTLS support
+       or
+    $ sudo ./client-dtls            # With TinyDTLS support
 
-As this tries to connect to coap://libcoap.net/, the tap0 interface will need IP
-forwarding enabled
+As client (or client-dtls) tries to connect to coap://libcoap.net/, the tap0
+interface will need IP forwarding enabled
 
     $ sudo sysctl -w net.ipv4.conf.default.forwarding=1
+
+Then you will need IP forwarding enabled on your public interface
+(where eth0 is replaced by your public facing interface name)
+for response packets
+
+    $ sudo sysctl -w net.eth0.conf.default.forwarding=1
 
 As well as the interface connecting to the internet will need a NAT rule to
 masquerade the internal IP address (192.168.114.2) to the IP of the outgoing
@@ -47,7 +63,17 @@ interface (where eth0 is replaced by your public facing interface name)
 
     $ iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 
-The client supports the "-v level" option where logging "level" can be 0 to 7.
+The client supports the following options
+"-k PSK" option where PSK defines the DTLS PSK to use (default is "secretPSK").
+         (Only works for client-dtls.)
+"-u id" option where id defines the DTLS id to use (default is "abc").
+         (Only works for client-dtls.)
+"-v level" option where logging "level" can be 0 to 7 (default is 4).
+"-V level" option where DTLS logging "level" can be 0 to 7 (default is 3).
+           (Only works for client-dtls.)
+
 The client supports an optional parameter which is the CoAP URI to connect to
 .e.g "coap://libcoap.net/.well-known/core".  The default
-is "coap://libcoap.net/".
+is "coap://libcoap.net/" for client and client-dtls.
+Using "coaps://libcoap.net" will establish a DTLS session if there is
+DTLS support compiled in (client-dtls).
