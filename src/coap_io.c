@@ -145,8 +145,6 @@ void coap_socket_close(coap_socket_t *sock) {
 
 #else
 
-#ifndef WITH_LWIP
-
 #if COAP_SERVER_SUPPORT
 coap_endpoint_t *
   coap_malloc_endpoint(void) {
@@ -158,6 +156,8 @@ coap_mfree_endpoint(coap_endpoint_t *ep) {
   coap_free_type(COAP_ENDPOINT, ep);
 }
 #endif /* COAP_SERVER_SUPPORT */
+
+#ifndef WITH_LWIP
 
 int
 coap_socket_bind_udp(coap_socket_t *sock,

@@ -2,7 +2,7 @@
  * lwipopts.h -- LwIP example
  *
  * Copyright (C) 2013-2016 Christian Amsüss <chrysn@fsfe.org>
- * Copyright (C) 2018 John Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -17,6 +17,9 @@
 
 #define LWIP_IPV6                       1
 #define LWIP_IPV6_REASS                 0
+
+#define LWIP_IPV6_MLD                   0
+#define LWIP_ICMP6                      1
 
 #ifndef LWIP_RAND
 #define LWIP_RAND() ((u32_t)rand())

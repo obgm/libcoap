@@ -83,10 +83,10 @@ coap_dtls_get_log_level(void) {
 }
 
 static void get_session_addr(const session_t *s, coap_address_t *a) {
-#ifdef WITH_CONTIKI
+#if defined(WITH_CONTIKI) || defined(WITH_LWIP)
   a->addr = s->addr;
   a->port = s->port;
-#else
+#else /* ! WITH_CONTIKI && ! WITH_LWIP */
   if (s->addr.sa.sa_family == AF_INET6) {
     a->size = (socklen_t)sizeof(a->addr.sin6);
     a->addr.sin6 = s->addr.sin6;
@@ -97,15 +97,15 @@ static void get_session_addr(const session_t *s, coap_address_t *a) {
     a->size = (socklen_t)s->size;
     a->addr.sa = s->addr.sa;
   }
-#endif
+#endif /* ! WITH_CONTIKI && ! WITH_LWIP */
 }
 
 static void put_session_addr(const coap_address_t *a, session_t *s) {
-#ifdef WITH_CONTIKI
+#if defined(WITH_CONTIKI) || defined(WITH_LWIP)
   s->size = (unsigned char)sizeof(s->addr);
   s->addr = a->addr;
   s->port = a->port;
-#else
+#else /* ! WITH_CONTIKI && ! WITH_LWIP */
   if (a->addr.sa.sa_family == AF_INET6) {
     s->size = (socklen_t)sizeof(s->addr.sin6);
     s->addr.sin6 = a->addr.sin6;
@@ -116,7 +116,7 @@ static void put_session_addr(const coap_address_t *a, session_t *s) {
     s->size = (socklen_t)a->size;
     s->addr.sa = a->addr.sa;
   }
-#endif
+#endif /* ! WITH_CONTIKI && ! WITH_LWIP */
 }
 
 static int
@@ -481,7 +481,7 @@ static dtls_handler_t psk_cb = {
 
 void *
 coap_dtls_new_context(coap_context_t *coap_context) {
-  coap_tiny_context_t *t_context = coap_malloc(sizeof(coap_tiny_context_t));
+  coap_tiny_context_t *t_context = coap_malloc_type(COAP_DTLS_CONTEXT, sizeof(coap_tiny_context_t));
   struct dtls_context_t *dtls_context = t_context ? dtls_new_context(t_context) : NULL;
   if (!dtls_context)
     goto error;
@@ -492,7 +492,7 @@ coap_dtls_new_context(coap_context_t *coap_context) {
   return t_context;
 error:
   if (t_context)
-    coap_free(t_context);
+    coap_free_type(COAP_DTLS_CONTEXT, t_context);
   if (dtls_context)
     coap_dtls_free_context(dtls_context);
   return NULL;
@@ -514,7 +514,7 @@ coap_dtls_free_context(void *handle) {
 #endif /* DTLS_ECC */
     if (t_context->dtls_context)
       dtls_free_context(t_context->dtls_context);
-    coap_free(t_context);
+    coap_free_type(COAP_DTLS_CONTEXT, t_context);
   }
 }
 
@@ -609,7 +609,6 @@ coap_dtls_send(coap_session_t *session,
   dtls_context_t *dtls_context = t_context ? t_context->dtls_context : NULL;
 
   assert(dtls_context);
-  coap_log(LOG_DEBUG, "call dtls_write\n");
 
   coap_event_dtls = -1;
   /* Need to do this to not get a compiler warning about const parameters */

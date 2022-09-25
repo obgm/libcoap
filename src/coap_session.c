@@ -265,11 +265,11 @@ void coap_session_mfree(coap_session_t *session) {
   if (session->sock.flags != COAP_SOCKET_EMPTY)
     coap_socket_close(&session->sock);
   if (session->psk_identity)
-    coap_free(session->psk_identity);
+    coap_delete_bin_const(session->psk_identity);
   if (session->psk_key)
-    coap_free(session->psk_key);
+    coap_delete_bin_const(session->psk_key);
   if (session->psk_hint)
-    coap_free(session->psk_hint);
+    coap_delete_bin_const(session->psk_hint);
 
 #if COAP_SERVER_SUPPORT
   coap_cache_entry_t *cp, *ctmp;
@@ -567,18 +567,7 @@ void coap_session_connected(coap_session_t *session) {
 
     coap_log(LOG_DEBUG, "** %s: mid=0x%x: transmitted after delay\n",
              coap_session_str(session), (int)q->pdu->mid);
-#ifdef WITH_LWIP
-    coap_socket_t *sock = &session->sock;
-#if COAP_SERVER_SUPPORT
-    if (sock->flags == COAP_SOCKET_EMPTY) {
-      assert(session->endpoint != NULL);
-      sock = &session->endpoint->sock;
-    }
-#endif /* COAP_SERVER_SUPPORT */
-    bytes_written = coap_socket_send_pdu(sock, session, q->pdu);
-#else /* WITH_LWIP */
     bytes_written = coap_session_send_pdu(session, q->pdu);
-#endif /* WITH_LWIP */
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (coap_wait_ack(session->context, session, q) >= 0)
         q = NULL;
@@ -1517,7 +1506,6 @@ void *coap_session_get_tls(const coap_session_t *session,
   return NULL;
 }
 
-#ifndef WITH_LWIP
 #if COAP_SERVER_SUPPORT
 coap_endpoint_t *
 coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto) {
@@ -1560,6 +1548,7 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
   memset(ep, 0, sizeof(coap_endpoint_t));
   ep->context = context;
   ep->proto = proto;
+  ep->sock.endpoint = ep;
 
   if (proto==COAP_PROTO_UDP || proto==COAP_PROTO_DTLS) {
     if (!coap_socket_bind_udp(&ep->sock, listen_addr, &ep->bind_addr))
@@ -1649,7 +1638,6 @@ coap_free_endpoint(coap_endpoint_t *ep) {
   }
 }
 #endif /* COAP_SERVER_SUPPORT */
-#endif /* WITH_LWIP */
 
 coap_session_t *
 coap_session_get_by_peer(const coap_context_t *ctx,

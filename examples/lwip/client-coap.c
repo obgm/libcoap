@@ -17,6 +17,14 @@
 #include <netdb.h>
 #include "client-coap.h"
 
+#ifndef COAP_URI
+#define COAP_URI "coap://libcoap.net"
+#endif /* COAP_URI */
+
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
 static coap_context_t *main_coap_context = NULL;
 static coap_optlist_t *optlist = NULL;
 
@@ -115,8 +123,7 @@ resolve_address(const char *host, const char *service, coap_address_t *dst) {
 
 void
 client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
-                 int log_level, const char* do_uri)
-{
+                 int argc, char **argv) {
   coap_session_t *session = NULL;
   coap_pdu_t *pdu;
   coap_address_t dst;
@@ -127,13 +134,45 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
 #define BUFSIZE 100
   unsigned char buf[BUFSIZE];
   int res;
+  const char *use_uri = COAP_URI;
+  int opt;
+  coap_log_t log_level = LOG_WARNING;
+  coap_log_t dtls_log_level = LOG_ERR;
+  const char *use_psk = "secretPSK";
+  const char *use_id = "abc";
+
+  while ((opt = getopt(argc, argv, ":k:u:v:V:")) != -1) {
+    switch (opt) {
+    case 'k':
+      use_psk = optarg;
+      break;
+    case 'u':
+      use_id = optarg;
+      break;
+    case 'v':
+      log_level = atoi(optarg);
+      break;
+    case 'V':
+      dtls_log_level = atoi(optarg);
+      break;
+    default:
+      printf("%s [-k PSK] [-u id] [-v level] [ -V level] [URI]\n", argv[0]);
+      exit(1);
+    }
+  }
+
+  if (optind < argc) {
+    use_uri = argv[optind];
+  }
 
   coap_set_log_level(log_level);
+  coap_dtls_set_log_level(dtls_log_level);
 
   /* Parse the URI */
-  len = coap_split_uri((const unsigned char *)do_uri, strlen(do_uri), &uri);
+  len = coap_split_uri((const unsigned char *)use_uri, strlen(use_uri), &uri);
   LWIP_ASSERT("Failed to parse uri", len == 0);
-  LWIP_ASSERT("Unsupported URI type", uri.scheme == COAP_URI_SCHEME_COAP);
+  LWIP_ASSERT("Unsupported URI type", uri.scheme == COAP_URI_SCHEME_COAP ||
+                                      uri.scheme == COAP_URI_SCHEME_COAPS);
 
   snprintf(portbuf, sizeof(portbuf), "%d", uri.port);
   snprintf((char *)buf, sizeof(buf), "%*.*s", (int)uri.host.length,
@@ -148,8 +187,30 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
   coap_context_set_block_mode(main_coap_context, COAP_BLOCK_USE_LIBCOAP);
   coap_lwip_set_input_wait_handler(main_coap_context, input_wait, input_arg);
 
-  session = coap_new_client_session(main_coap_context, NULL, &dst,
-                                    COAP_PROTO_UDP);
+  if (uri.scheme == COAP_URI_SCHEME_COAP) {
+    session = coap_new_client_session(main_coap_context, NULL, &dst,
+                                      COAP_PROTO_UDP);
+  } else {
+    static coap_dtls_cpsk_t dtls_psk;
+    static char client_sni[256];
+
+    memset(client_sni, 0, sizeof(client_sni));
+    memset (&dtls_psk, 0, sizeof(dtls_psk));
+    dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
+    if (uri.host.length)
+      memcpy(client_sni, uri.host.s,
+             min(uri.host.length, sizeof(client_sni) - 1));
+    else
+      memcpy(client_sni, "localhost", 9);
+    dtls_psk.client_sni = client_sni;
+    dtls_psk.psk_info.identity.s = (const uint8_t *)use_id;
+    dtls_psk.psk_info.identity.length = strlen(use_id);
+    dtls_psk.psk_info.key.s = (const uint8_t *)use_psk;
+    dtls_psk.psk_info.key.length = strlen(use_psk);
+
+    session = coap_new_client_session_psk2(main_coap_context, NULL, &dst,
+                                           COAP_PROTO_DTLS, &dtls_psk);
+  }
 
   LWIP_ASSERT("Failed to create session", session != NULL);
 
@@ -185,8 +246,7 @@ client_coap_finished(void) {
 }
 
 int
-client_coap_poll(void)
-{
+client_coap_poll(void) {
   coap_io_process(main_coap_context, 1000);
   return quit;
 }

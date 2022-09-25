@@ -100,10 +100,11 @@ coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
   coap_log(LOG_INFO, "****** Next wakeup msecs %u (2)\n",
            timeout);
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
+  sys_timeout(timeout, coap_io_process_timeout, context);
+  context->timer_configured = 1;
   if (context->input_wait) {
     context->input_wait(context->input_arg, timeout);
   }
-  context->timer_configured = 1;
   sys_check_timeouts();
   coap_ticks(&now);
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
@@ -151,8 +152,10 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   coap_pdu_t *pdu = NULL;
   coap_session_t *session = (coap_session_t*)arg;
   coap_packet_t *packet;
+  int result = -1;
 
   assert(session);
+  LWIP_ASSERT("Proto not supported for LWIP", COAP_PROTO_NOT_RELIABLE(session->proto));
 
   if (p->len < 4) {
     /* Minimum size of CoAP header - ignore runt */
@@ -161,7 +164,8 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
 
   packet = coap_malloc_type(COAP_PACKET, sizeof(coap_packet_t));
 
-  /* this is fatal because due to the short life of the packet, never should there be more than one coap_packet_t required */
+  /* this is fatal because due to the short life of the packet, never should
+   * there be more than one coap_packet_t required */
   LWIP_ASSERT("Insufficient coap_packet_t resources.", packet != NULL);
   packet->pbuf = p;
   /* Need to do this as there may be holes in addr_info */
@@ -172,17 +176,25 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   packet->addr_info.local.addr = *ip_current_dest_addr();
   packet->ifindex = netif_get_index(ip_current_netif());
 
-  pdu = coap_pdu_from_pbuf(p);
-  if (!pdu)
-    goto error;
+  coap_log(LOG_DEBUG, "*  %s: received %d bytes\n",
+           coap_session_str(session), p->len);
+  if (session->proto == COAP_PROTO_DTLS) {
+    if (session->tls) {
+      result = coap_dtls_receive(session, p->payload, p->len);
+      if (result < 0)
+        goto error;
+    }
+    pbuf_free(p);
+  } else {
+    pdu = coap_pdu_from_pbuf(p);
+    if (!pdu)
+      goto error;
 
-  if (!coap_pdu_parse(session->proto, p->payload, p->len, pdu)) {
-    goto error;
+    if (!coap_pdu_parse(session->proto, p->payload, p->len, pdu)) {
+      goto error;
+    }
+    coap_dispatch(session->context, session, pdu);
   }
-
-  LWIP_ASSERT("Proto not supported for LWIP", COAP_PROTO_NOT_RELIABLE(session->proto));
-  coap_dispatch(session->context, session, pdu);
-
   coap_delete_pdu(pdu);
   packet->pbuf = NULL;
   coap_free_packet(packet);
@@ -221,6 +233,7 @@ coap_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   coap_session_t *session = NULL;
   coap_tick_t now;
   coap_packet_t *packet;
+  int result = -1;
 
   if (p->len < 4) {
     /* Minimum size of CoAP header - ignore runt */
@@ -229,7 +242,8 @@ coap_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
 
   packet = coap_malloc_type(COAP_PACKET, sizeof(coap_packet_t));
 
-  /* this is fatal because due to the short life of the packet, never should there be more than one coap_packet_t required */
+  /* this is fatal because due to the short life of the packet, never should
+     there be more than one coap_packet_t required */
   LWIP_ASSERT("Insufficient coap_packet_t resources.", packet != NULL);
   packet->pbuf = p;
   /* Need to do this as there may be holes in addr_info */
@@ -240,28 +254,34 @@ coap_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   packet->addr_info.local.addr = *ip_current_dest_addr();
   packet->ifindex = netif_get_index(ip_current_netif());
 
-  pdu = coap_pdu_from_pbuf(p);
-  if (!pdu)
-    goto error;
-
-  if (!coap_pdu_parse(ep->proto, p->payload, p->len, pdu)) {
-    goto error;
-  }
-
   coap_ticks(&now);
-  if ((upcb->local_port == COAP_DEFAULT_PORT) ||
-      (upcb->local_port == COAPS_DEFAULT_PORT)) {
-      /* packet for local server */
-    session = coap_endpoint_get_session(ep, packet, now);
-  } else {
-    session = coap_session_get_by_peer(ep->context, &packet->addr_info.remote,
-                                       packet->ifindex);
-  }
 
+  session = coap_endpoint_get_session(ep, packet, now);
   if (!session)
     goto error;
   LWIP_ASSERT("Proto not supported for LWIP", COAP_PROTO_NOT_RELIABLE(session->proto));
-  coap_dispatch(ep->context, session, pdu);
+
+  coap_log(LOG_DEBUG, "*  %s: received %d bytes\n",
+           coap_session_str(session), p->len);
+
+  if (session->proto == COAP_PROTO_DTLS) {
+    if (session->type == COAP_SESSION_TYPE_HELLO)
+      result = coap_dtls_hello(session, p->payload, p->len);
+    else if (session->tls)
+      result = coap_dtls_receive(session, p->payload, p->len);
+    if (session->type == COAP_SESSION_TYPE_HELLO && result == 1)
+        coap_session_new_dtls_session(session, now);
+    pbuf_free(p);
+  } else {
+    pdu = coap_pdu_from_pbuf(p);
+    if (!pdu)
+      goto error;
+
+    if (!coap_pdu_parse(ep->proto, p->payload, p->len, pdu)) {
+      goto error;
+    }
+    coap_dispatch(ep->context, session, pdu);
+  }
 
   coap_delete_pdu(pdu);
   packet->pbuf = NULL;
@@ -283,42 +303,6 @@ error:
   return;
 }
 
-coap_endpoint_t *
-coap_new_endpoint(coap_context_t *context, const coap_address_t *addr, coap_proto_t proto) {
-        coap_endpoint_t *result;
-        err_t err;
-
-        LWIP_ASSERT("Proto not supported for LWIP endpoints", proto == COAP_PROTO_UDP);
-
-        result = coap_malloc_type(COAP_ENDPOINT, sizeof(coap_endpoint_t));
-        if (!result) return NULL;
-
-        result->sock.pcb = udp_new_ip_type(IPADDR_TYPE_ANY);
-        if (result->sock.pcb == NULL) goto error;
-
-        udp_recv(result->sock.pcb, coap_recvs, (void*)result);
-        err = udp_bind(result->sock.pcb, &addr->addr, addr->port);
-        if (err) {
-                udp_remove(result->sock.pcb);
-                goto error;
-        }
-
-        result->default_mtu = COAP_DEFAULT_MTU;
-        result->context = context;
-        result->proto = proto;
-
-        return result;
-
-error:
-        coap_free_type(COAP_ENDPOINT, result);
-        return NULL;
-}
-
-void coap_free_endpoint(coap_endpoint_t *ep)
-{
-        udp_remove(ep->sock.pcb);
-        coap_free_type(COAP_ENDPOINT, ep);
-}
 #endif /* ! COAP_SERVER_SUPPORT */
 
 ssize_t
@@ -328,6 +312,7 @@ coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
   * should actually check that the pdu is not held by anyone but us. the
   * respective pbuf is already exclusively owned by the pdu. */
   struct pbuf *pbuf;
+  int err;
 
   pbuf_realloc(pdu->pbuf, pdu->used_size + coap_pdu_parse_header_size(session->proto, pdu->pbuf->payload));
 
@@ -336,35 +321,57 @@ coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
     pbuf = pbuf_clone(PBUF_TRANSPORT, PBUF_RAM, pdu->pbuf);
     if (pbuf == NULL)
       return -1;
-    udp_sendto(sock->pcb, pbuf, &session->addr_info.remote.addr,
-      session->addr_info.remote.port);
-
+    err = udp_sendto(sock->pcb, pbuf, &session->addr_info.remote.addr,
+                     session->addr_info.remote.port);
     pbuf_free(pbuf);
+    if (err < 0)
+      return -1;
   }
   return pdu->used_size;
 }
 
 ssize_t
 coap_socket_send(coap_socket_t *sock, coap_session_t *session,
-  const uint8_t *data, size_t data_len ) {
+                 const uint8_t *data, size_t data_len ) {
+  struct pbuf *pbuf;
+  int err;
 
-  (void)sock;
-  (void)session;
-  (void)data;
-  (void)data_len;
-  /* Not implemented, use coap_socket_send_pdu instead */
-  return -1;
+  if (coap_debug_send_packet()) {
+    pbuf = pbuf_alloc(PBUF_TRANSPORT, data_len, PBUF_RAM);
+    if (pbuf == NULL)
+      return -1;
+    memcpy(pbuf->payload, data, data_len);
+    err = udp_sendto(sock->pcb, pbuf, &session->addr_info.remote.addr,
+                     session->addr_info.remote.port);
+
+    pbuf_free(pbuf);
+    if (err < 0)
+      return -1;
+  }
+  return data_len;
 }
 
+#if COAP_SERVER_SUPPORT
 int
 coap_socket_bind_udp(coap_socket_t *sock,
-  const coap_address_t *listen_addr,
-  coap_address_t *bound_addr) {
-  (void)sock;
-  (void)listen_addr;
-  (void)bound_addr;
-  return 0;
+                     const coap_address_t *listen_addr,
+                     coap_address_t *bound_addr) {
+  int err;
+
+  sock->pcb = udp_new_ip_type(IPADDR_TYPE_ANY);
+  if (sock->pcb == NULL)
+    return 0;
+
+  udp_recv(sock->pcb, coap_recvs, (void*)sock->endpoint);
+  err = udp_bind(sock->pcb, &listen_addr->addr, listen_addr->port);
+  if (err) {
+          udp_remove(sock->pcb);
+          sock->pcb = NULL;
+  }
+  *bound_addr = *listen_addr;
+  return err ? 0 : 1;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
 int

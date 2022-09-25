@@ -55,6 +55,10 @@ handle_sigint(int signum) {
   exit(0);
 }
 
+/*
+ * This function is called internally by coap_io_process() to check
+ * for input.
+ */
 static int
 wait_for_input(void *arg, uint32_t milli_secs) {
   struct netif *netif = (struct netif *)arg;
@@ -68,24 +72,11 @@ wait_for_input(void *arg, uint32_t milli_secs) {
 }
 
 int
-main(int argc, char **argv)
-{
+main(int argc, char **argv) {
   struct netif netif;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
-  int opt;
-  int log_level = 4; /* LOG_WARNING */
-
-  while ((opt = getopt(argc, argv, "v:")) != -1) {
-    switch (opt) {
-    case 'v':
-      log_level = atoi(optarg);
-      break;
-    default:
-      exit(1);
-    }
-  }
 
   /* startup defaults (may be overridden by one or more opts). this is
    * hard-coded v4 even in presence of v6, which does auto-discovery and
@@ -103,8 +94,10 @@ main(int argc, char **argv)
   netif.flags |= NETIF_FLAG_ETHARP;
   netif_set_default(&netif);
   netif_set_up(&netif);
+  printf("IP4 %s\n", ip4addr_ntoa(&netif.ip_addr.u_addr.ip4));
 #if LWIP_IPV6
   netif_create_ip6_linklocal_address(&netif, 1);
+  printf("IP6 [%s]\n", ip6addr_ntoa(&netif.ip6_addr[0].u_addr.ip6));
 #endif
 
   /* start applications here */
@@ -123,7 +116,7 @@ main(int argc, char **argv)
   sigaction (SIGPIPE, &sa, NULL);
 #endif
 
-  server_coap_init(wait_for_input, &netif, log_level);
+  server_coap_init(wait_for_input, &netif, argc, argv);
 
   printf("Server Application started.\n");
 

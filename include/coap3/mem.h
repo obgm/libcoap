@@ -54,6 +54,8 @@ typedef enum {
   COAP_LG_CRCV,
   COAP_LG_SRCV,
   COAP_DIGEST_CTX,
+  COAP_SUBSCRIPTION,
+  COAP_DTLS_CONTEXT,
 } coap_memory_tag_t;
 
 #ifndef WITH_LWIP
@@ -124,7 +126,9 @@ COAP_STATIC_INLINE void coap_memory_init(void) {}
  * declaration, but i currently don't see a standard way to check that without
  * sourcing the custom memp pools and becoming dependent of its syntax
  */
-#define coap_malloc_type(type, size) memp_malloc(MEMP_ ## type)
+#define coap_malloc_type(type, asize) \
+ (((asize) <= memp_pools[MEMP_ ## type]->size) ? \
+                                         memp_malloc(MEMP_ ## type) : NULL)
 #define coap_free_type(type, p) memp_free(MEMP_ ## type, p)
 
 /* Those are just here to make uri.c happy where string allocation has not been

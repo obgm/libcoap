@@ -47,10 +47,6 @@
 static ip4_addr_t ipaddr, netmask, gw;
 static int quit = 0;
 
-#ifndef COAP_URI
-#define COAP_URI "coap://libcoap.net"
-#endif /* COAP_URI */
-
 static void
 handle_sigint(int signum) {
   (void)signum;
@@ -60,6 +56,10 @@ handle_sigint(int signum) {
   exit(0);
 }
 
+/*
+ * This function is called internally by coap_io_process() to check
+ * for input.
+ */
 static int
 wait_for_input(void *arg, uint32_t milli_secs) {
   struct netif *netif = (struct netif *)arg;
@@ -73,30 +73,12 @@ wait_for_input(void *arg, uint32_t milli_secs) {
 }
 
 int
-main(int argc, char **argv)
-{
+main(int argc, char **argv) {
   struct netif netif;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
   int no_more = 0;
-  int opt;
-  int log_level = 4; /* LOG_WARNING */
-  const char *use_uri = COAP_URI;
-
-  while ((opt = getopt(argc, argv, "v:")) != -1) {
-    switch (opt) {
-    case 'v':
-      log_level = atoi(optarg);
-      break;
-    default:
-      exit(1);
-    }
-  }
-
-  if (optind < argc) {
-    use_uri = argv[optind];
-  }
 
   /* startup defaults (may be overridden by one or more opts). this is
    * hard-coded v4 even in presence of v6, which does auto-discovery and
@@ -134,7 +116,7 @@ main(int argc, char **argv)
   sigaction (SIGPIPE, &sa, NULL);
 #endif
 
-  client_coap_init(wait_for_input, &netif, log_level, use_uri);
+  client_coap_init(wait_for_input, &netif, argc, argv);
 
   printf("Client Application started.\n");
 

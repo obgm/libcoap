@@ -15,7 +15,7 @@
 
 /* Start up the CoAP Client */
 void client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
-                      coap_log_t log_level, const char* do_uri);
+                      int argc, char **argv);
 
 /* Close down CoAP activity */
 
