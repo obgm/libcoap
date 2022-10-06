@@ -247,6 +247,63 @@ coap_split_proxy_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
   return coap_split_uri_sub(str_var, len, uri, COAP_URI_CHECK_PROXY);
 }
 
+int
+coap_uri_into_options(coap_uri_t *uri,
+                      coap_optlist_t **optlist_chain, int create_port_opt,
+                      uint8_t *_buf, size_t _buflen) {
+  int res;
+  unsigned char *buf = _buf;
+  size_t buflen = _buflen;
+
+  if (uri->port != (coap_uri_scheme_is_secure(uri) ?
+        COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT) && create_port_opt) {
+    coap_insert_optlist(optlist_chain,
+                        coap_new_optlist(COAP_OPTION_URI_PORT,
+                                         coap_encode_var_safe(buf, 4,
+                                         (uri->port & 0xffff)),
+                        buf));
+  }
+
+  if (uri->path.length) {
+    if (uri->path.length > buflen)
+      coap_log(LOG_WARNING, "URI path will be truncated (max buffer %zu)\n",
+               buflen);
+    res = coap_split_path(uri->path.s, uri->path.length, buf, &buflen);
+    if (res < 0)
+      return -1;
+
+    while (res--) {
+      coap_insert_optlist(optlist_chain,
+                  coap_new_optlist(COAP_OPTION_URI_PATH,
+                  coap_opt_length(buf),
+                  coap_opt_value(buf)));
+
+      buf += coap_opt_size(buf);
+    }
+  }
+
+  if (uri->query.length) {
+    buflen = _buflen;
+    buf = _buf;
+    if (uri->query.length > buflen)
+      coap_log(LOG_WARNING, "URI query will be truncated (max buffer %zu)\n",
+               buflen);
+    res = coap_split_query(uri->query.s, uri->query.length, buf, &buflen);
+    if (res < 0)
+      return -1;
+
+    while (res--) {
+      coap_insert_optlist(optlist_chain,
+                  coap_new_optlist(COAP_OPTION_URI_QUERY,
+                  coap_opt_length(buf),
+                  coap_opt_value(buf)));
+
+      buf += coap_opt_size(buf);
+    }
+  }
+  return 0;
+}
+
 /**
  * Calculates decimal value from hexadecimal ASCII character given in
  * @p c. The caller must ensure that @p c actually represents a valid
@@ -542,6 +599,11 @@ coap_clone_uri(const coap_uri_t *uri) {
   }
 
   return result;
+}
+
+void
+coap_delete_uri(coap_uri_t *uri) {
+  coap_free(uri);
 }
 
 COAP_STATIC_INLINE int

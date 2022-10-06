@@ -346,7 +346,7 @@ and hence be illegal.  This is done by using *coap_encode_var_safe*() or
 *Function: coap_insert_optlist()*
 
 The *coap_insert_optlist*() function adds the _optlist_ entry onto the
-_optlist_chain_ and then sorts the _optlist_chain_ before returning.
+end of the _optlist_chain_.
 The initial _optlist_chain_ entry needs to be set to NULL before this function
 is first called.  The *coap_delete_optlist*() function has to be called to free
 off all the _optlist_chain_ entries.
@@ -699,11 +699,11 @@ FURTHER INFORMATION
 -------------------
 See
 
-"RFC7252: The Constrained Application Protocol (CoAP)"
+"https://tools.ietf.org/html/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
 
-"RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)"
+"https://tools.ietf.org/html/rfc7959[RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)]"
 
-"RFC9175: CoAP: Echo, Request-Tag, and Token Processing"
+"https://tools.ietf.org/html/rfc9175[RFC9175: CoAP: Echo, Request-Tag, and Token Processing]"
 
 for further information.
 

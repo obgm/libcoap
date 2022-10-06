@@ -68,6 +68,7 @@ global:
   coap_delete_resource;
   coap_delete_str_const;
   coap_delete_string;
+  coap_delete_uri;
   coap_dtls_get_log_level;
   coap_dtls_is_supported;
   coap_dtls_set_log_level;
@@ -247,6 +248,7 @@ global:
   coap_ticks_to_rt;
   coap_ticks_to_rt_us;
   coap_tls_is_supported;
+  coap_uri_into_options;
   coap_write_block_b_opt;
   coap_write_block_opt;
 local:

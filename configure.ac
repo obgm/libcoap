@@ -978,6 +978,7 @@ man/coap_resource.txt
 man/coap_session.txt
 man/coap_string.txt
 man/coap_tls_library.txt
+man/coap_uri.txt
 man/coap-client.txt
 man/coap-server.txt
 man/coap-rd.txt

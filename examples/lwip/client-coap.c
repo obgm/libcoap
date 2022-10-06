@@ -122,9 +122,7 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
   coap_uri_t uri;
   char portbuf[8];
 #define BUFSIZE 100
-  unsigned char _buf[BUFSIZE];
-  unsigned char *buf = _buf;
-  size_t buflen;
+  unsigned char buf[BUFSIZE];
   int res;
 
   coap_set_log_level(log_level);
@@ -135,10 +133,10 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
   LWIP_ASSERT("Unsupported URI type", uri.scheme == COAP_URI_SCHEME_COAP);
 
   snprintf(portbuf, sizeof(portbuf), "%d", uri.port);
-  snprintf((char *)_buf, sizeof(_buf), "%*.*s", (int)uri.host.length,
+  snprintf((char *)buf, sizeof(buf), "%*.*s", (int)uri.host.length,
            (int)uri.host.length, (const char *)uri.host.s);
   /* resolve destination address where server should be sent */
-  len = resolve_address((const char*)_buf, portbuf, &dst);
+  len = resolve_address((const char*)buf, portbuf, &dst);
   LWIP_ASSERT("Failed to resolve address", len > 0);
 
   main_coap_context = coap_new_context(NULL);
@@ -162,45 +160,10 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
                       coap_session_max_pdu_size(session));
   LWIP_ASSERT("Failed to create PDU", pdu != NULL);
 
-  if (uri.port != COAP_DEFAULT_PORT) {
-    coap_insert_optlist(&optlist,
-                        coap_new_optlist(COAP_OPTION_URI_PORT,
-                                         coap_encode_var_safe(_buf, 4,
-                                         (uri.port & 0xffff)),
-                        _buf));
-  }
-  if (uri.path.length) {
-    buflen = BUFSIZE;
-    if (uri.path.length > BUFSIZE)
-      coap_log(LOG_WARNING, "URI path will be truncated (max buffer %d)\n", BUFSIZE);
-    res = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
+  len = coap_uri_into_options(&uri, &optlist, 1, buf, sizeof(buf));
+  LWIP_ASSERT("Failed to create options", len == 0);
 
-    while (res--) {
-      coap_insert_optlist(&optlist,
-                  coap_new_optlist(COAP_OPTION_URI_PATH,
-                  coap_opt_length(buf),
-                  coap_opt_value(buf)));
-
-      buf += coap_opt_size(buf);
-    }
-  }
-
-  if (uri.query.length) {
-    buflen = BUFSIZE;
-    buf = _buf;
-    res = coap_split_query(uri.query.s, uri.query.length, buf, &buflen);
-
-    while (res--) {
-      coap_insert_optlist(&optlist,
-                  coap_new_optlist(COAP_OPTION_URI_QUERY,
-                  coap_opt_length(buf),
-                  coap_opt_value(buf)));
-
-      buf += coap_opt_size(buf);
-    }
-  }
-
-  /* Add option list (sorted) to the PDU */
+  /* Add option list (which will be sorted) to the PDU */
   if (optlist) {
     res = coap_add_optlist_pdu(pdu, &optlist);
     LWIP_ASSERT("Failed to add options to PDU", res == 1);
