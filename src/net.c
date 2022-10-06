@@ -1105,6 +1105,8 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   }
 
   if (COAP_PDU_IS_REQUEST(pdu)) {
+    uint8_t buf[4];
+
     opt = coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter);
 
     if (opt) {
@@ -1126,6 +1128,14 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
       coap_delete_bin_const(session->last_token);
       session->last_token = coap_new_bin_const(token.s, token.length);
     }
+    if (!coap_check_option(pdu, COAP_OPTION_RTAG, &opt_iter) &&
+        (session->block_mode & COAP_BLOCK_NO_PREEMPTIVE_RTAG) == 0 &&
+        pdu->code != COAP_REQUEST_CODE_DELETE)
+      coap_insert_option(pdu,
+                         COAP_OPTION_RTAG,
+                         coap_encode_var_safe(buf, sizeof(buf),
+                                               ++session->tx_rtag),
+                         buf);
   } else {
     memset(&block, 0, sizeof(block));
   }
@@ -2907,7 +2917,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       h(resource, session, pdu, query, response);
 
       /* Check if lg_xmit generated and update PDU code if so */
-      coap_check_code_lg_xmit(session, response, resource, query, pdu->code);
+      coap_check_code_lg_xmit(session, pdu, response, resource, query);
 
 skip_handler:
       if (send_early_empty_ack &&

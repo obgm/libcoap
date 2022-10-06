@@ -556,7 +556,7 @@ usage(const char *program, const char *version) {
      "\t-K interval\tSend a ping after interval seconds of inactivity\n"
      "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
      "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
-     "\t       \t\t(Sum of one or more of 1,2,4 and 8)\n"
+     "\t       \t\t(Sum of one or more of 1,2 and 16)\n"
      "\t-N     \t\tSend NON-confirmable message\n"
      "\t-O num,text\tAdd option num with contents text to request. If the\n"
      "\t       \t\ttext begins with 0x, then the hex text (two [0-9a-f] per\n"

@@ -143,8 +143,9 @@ OPTIONS - General
    Sum of one or more COAP_BLOCK_* flag values for different block handling
    methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP).
 
-     COAP_BLOCK_USE_LIBCOAP  1
-     COAP_BLOCK_SINGLE_BODY  2
+     COAP_BLOCK_USE_LIBCOAP         1
+     COAP_BLOCK_SINGLE_BODY         2
+     COAP_BLOCK_NO_PREEMPTIVE_RTAG 16
 
 *-N* ::
    Send NON-confirmable message. If option *-N* is not specified, a

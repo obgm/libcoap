@@ -70,8 +70,11 @@ typedef struct coap_l_block2_t {
   coap_resource_t *resource; /**< associated resource */
   coap_string_t *query;  /**< Associated query for the resource */
   uint64_t etag;         /**< ETag value */
-  coap_time_t maxage_expire; /**< When this entry expires */
   coap_pdu_code_t request_method; /**< Method used to request this data */
+  uint8_t rtag_set;      /**< Set if RTag is in receive PDU */
+  uint8_t rtag_length;   /**< RTag length */
+  uint8_t rtag[8];       /**< RTag for block checking */
+  coap_time_t maxage_expire; /**< When this entry expires */
 } coap_l_block2_t;
 
 /**
@@ -192,6 +195,11 @@ int coap_handle_request_put_block(coap_context_t *context,
                                   coap_string_t *query,
                                   coap_method_handler_t h,
                                   int *added_block);
+
+coap_lg_xmit_t * coap_find_lg_xmit_response(const coap_session_t *session,
+                                            const coap_pdu_t *request,
+                                            const coap_resource_t *resource,
+                                            const coap_string_t *query);
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
@@ -216,15 +224,17 @@ int coap_block_check_lg_xmit_timeouts(coap_session_t *session,
  * The function checks that the code in a newly formed lg_xmit created by
  * coap_add_data_large_response() is updated.
  *
- * @param session  The session
- * @param response The response PDU to to check
- * @param resource The requested resource
- * @param query    The requested query
- * @param request_method The requested method
+ * @param session  The session.
+ * @param request  The request PDU to to check.
+ * @param response The response PDU to to update with response->code.
+ * @param resource The requested resource.
+ * @param query    The requested query.
  */
-void coap_check_code_lg_xmit(coap_session_t *session, coap_pdu_t *response,
-                             coap_resource_t *resource, coap_string_t *query,
-                             coap_pdu_code_t request_method);
+void coap_check_code_lg_xmit(const coap_session_t *session,
+                             const coap_pdu_t *request,
+                             coap_pdu_t *response,
+                             const coap_resource_t *resource,
+                             const coap_string_t *query);
 
 /** @} */
 
