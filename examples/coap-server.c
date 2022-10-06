@@ -1021,12 +1021,9 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
   coap_pdu_t *pdu;
   coap_optlist_t *optlist = NULL;
   coap_opt_t *option;
-  unsigned char portbuf[2];
 #define BUFSIZE 100
   unsigned char _buf[BUFSIZE];
   unsigned char *buf = _buf;
-  size_t buflen;
-  int res;
   coap_bin_const_t token = coap_pdu_get_token(request);
 
   memset(&uri, 0, sizeof(uri));
@@ -1128,45 +1125,10 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
       proxy_uri = NULL;
       proxy_scheme_option = 0;
 
-      if (uri.port != (coap_uri_scheme_is_secure(&uri) ?
-           COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT)) {
-        coap_insert_optlist(&optlist,
-                    coap_new_optlist(COAP_OPTION_URI_PORT,
-                             coap_encode_var_safe(portbuf, sizeof(portbuf),
-                                                  (uri.port & 0xffff)),
-                    portbuf));
-      }
-
-      if (uri.path.length) {
-        buflen = BUFSIZE;
-        if (uri.path.length > BUFSIZE)
-          coap_log(LOG_WARNING,
-                   "URI path will be truncated (max buffer %d)\n", BUFSIZE);
-        res = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
-
-        while (res--) {
-          coap_insert_optlist(&optlist,
-                      coap_new_optlist(COAP_OPTION_URI_PATH,
-                      coap_opt_length(buf),
-                      coap_opt_value(buf)));
-
-          buf += coap_opt_size(buf);
-        }
-      }
-
-      if (uri.query.length) {
-        buflen = BUFSIZE;
-        buf = _buf;
-        res = coap_split_query(uri.query.s, uri.query.length, buf, &buflen);
-
-        while (res--) {
-          coap_insert_optlist(&optlist,
-                      coap_new_optlist(COAP_OPTION_URI_QUERY,
-                      coap_opt_length(buf),
-                      coap_opt_value(buf)));
-
-          buf += coap_opt_size(buf);
-        }
+      if (coap_uri_into_options(&uri, &optlist, 1,
+                                buf, sizeof(buf)) < 0) {
+        coap_log(LOG_ERR, "Failed to create options for URI\n");
+        goto cleanup;
       }
     }
 

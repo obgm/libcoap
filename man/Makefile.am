@@ -38,7 +38,8 @@ TXT3 = coap_async.txt \
 	coap_resource.txt \
 	coap_session.txt \
 	coap_string.txt \
-	coap_tls_library.txt
+	coap_tls_library.txt \
+	coap_uri.txt
 
 MAN3 = $(TXT3:%.txt=%.3)
 

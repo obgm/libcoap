@@ -1,0 +1,238 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc,tw=0:
+
+coap_uri(3)
+============
+:doctype: manpage
+:man source:   coap_uri
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_uri,
+coap_split_uri,
+coap_split_proxy_uri
+- Work with CoAP URIs
+
+SYNOPSIS
+--------
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*int coap_split_uri(const uint8_t *_uri_def_, size_t _length_,
+coap_uri_t *_uri_);*
+
+*int coap_split_proxy_uri(const uint8_t *_uri_def_, size_t _length_,
+coap_uri_t *_uri_);*
+
+*coap_uri_t *coap_new_uri(const uint8_t *_uri_def_, unsigned int _length_);*
+
+*coap_uri_t *coap_clone_uri(const coap_uri_t *_uri_);*
+
+*void coap_delete_uri(coap_uri_t *_uri_);*
+
+*int coap_uri_into_options(coap_uri_t *_uri_,
+coap_optlist_t **_optlist_chain_, int _create_port_opt_,
+uint8_t *_buf_, size_t _buflen_);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
+
+DESCRIPTION
+-----------
+This man page describes the functionality available to work with CoAP URIs and
+break them down into the component parts.
+
+A CoAP URI is of the form
+
+<scheme><host><(optional):port><(optional)path><(optional)?query>
+
+where scheme can be one of coap://, coaps://, coap+tcp:// and coaps+tcp://.
+
+The parsed uri structure is of the form
+
+[source, c]
+----
+typedef struct {
+  coap_str_const_t host;  /* host part of the URI */
+  uint16_t port;          /* The port in host byte order */
+  coap_str_const_t path;  /* Beginning of the path if present.
+                          Use coap_split_path() to create Uri-Path options */
+  coap_str_const_t query; /* Beginning of the query if present
+                          Use coap_split_query() to create Uri-Query options */
+  enum coap_uri_scheme_t scheme; /* The parsed scheme specifier. */
+} coap_uri_t;
+----
+
+FUNCTIONS
+---------
+
+*Function: coap_split_uri()*
+
+The *coap_split_uri*() function is used to parse the provided _uri_def_ of
+length _length_ into the component parts held in the _uri_ structure.  These
+component parts are the host, port, path and query and the CoAP URI scheme.
+
+*Function: coap_split_proxy_uri()*
+
+The *coap_split_proxy_uri*() function is used to parse the provided _uri_def_ of
+length _length_ into the component parts held in the _uri_ structure.  These
+component parts are the host, port, path and query and the URI scheme.  The
+schemes also includes support for http:// and https:// as the proxy may need to
+be a coap-to-http proxy.
+
+*Function: coap_new_uri()*
+
+The *coap_new_uri*() function creates a new coap_uri_t structure and populates
+it using *coap_split_uri*() with _uri_def_ and _length_ as input. The returned
+coap_uri_t structure needs to be freed off using *coap_delete_uri*().
+
+*Function: coap_clone_uri()*
+
+The *coap_clone_uri*() function duplicates a _uri_ coap_uri_t structure.
+The returned coap_uri_t structure needs to be freed off using
+*coap_delete_uri*().
+
+*Function: coap_delete_uri()*
+
+The *coap_delete_uri*() function frees off a previously created _uri_
+coap_uri_t structure.
+
+*Function: coap_uri_into_options()*
+
+The *coap_uri_into_options*() function takes the _uri_ structure and then adds
+CoAP options derived from this information and adds them to _optlist_chain_.
+The initial _optlist_chain_ entry should be set to NULL before
+this function is called (unless *coap_insert_optlist*(3) has been previously
+used).
+
+If the port is not the default port and _create_port_opt_ is not 0, then
+the Port option is added to _optlist_chain_.
+
+If there is a path, then this is broken down into individual Path options for
+each segment which are then added to _optlist_chain_.
+
+Likewise, if
+there is a query, individual Query options for each segment are then added to
+_optlist_chain_.
+
+_buf_ provides a scratch buffer to use, of size _buflen_ bytes.  _buf_ needs
+to be as big as the path or query lengths.
+
+*NOTE:* It is the responsibility of the application to free off the entries
+added to _optlist_chain_ using *coap_delete_optlist*(3).
+
+RETURN VALUES
+-------------
+*coap_split_uri*(), *coap_split_proxy_uri*(), and
+*coap_uri_into_options*() return 0 on success, else < 0 on failure.
+
+*coap_new_uri*() and *coap_clone_uri*() return a newly allocated coap_uri_t
+structure or NULL on failure.
+
+EXAMPLES
+--------
+*Setup PDU and Transmit*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+/*
+ * Returns 0 failure, 1 success
+ */
+static int
+parse_and_send_uri(coap_session_t *session, const char *do_uri) {
+  coap_uri_t uri;
+  coap_optlist_t *optlist = NULL;
+  coap_pdu_t *pdu;
+  coap_proto_t proto = coap_session_get_proto(session);
+  int res;
+  coap_mid_t mid;
+#define BUFSIZE 100
+  unsigned char buf[BUFSIZE];
+
+  /* Parse the URI */
+  res = coap_split_uri((const uint8_t*)do_uri, strlen(do_uri), &uri);
+  if (res != 0)
+    return 0;
+
+  /* Check the scheme matches the session type */
+  switch (uri.scheme) {
+  case COAP_URI_SCHEME_COAP:
+    if (proto != COAP_PROTO_UDP)
+      return 0;
+    break;
+  case COAP_URI_SCHEME_COAPS:
+    if (proto != COAP_PROTO_DTLS)
+      return 0;
+    break;
+  case COAP_URI_SCHEME_COAP_TCP:
+    if (proto != COAP_PROTO_TCP)
+      return 0;
+    break;
+  case COAP_URI_SCHEME_COAPS_TCP:
+    if (proto != COAP_PROTO_TLS)
+      return 0;
+    break;
+  /* Proxy support only */
+  case COAP_URI_SCHEME_HTTP:
+  case COAP_URI_SCHEME_HTTPS:
+  default:
+    return 0;
+  }
+
+  /* construct CoAP message */
+  pdu = coap_pdu_init(COAP_MESSAGE_CON,
+                      COAP_REQUEST_CODE_GET,
+                      coap_new_message_id(session),
+                      coap_session_max_pdu_size(session));
+  if (pdu == NULL)
+    return 0;
+
+  /* Create all the necessary options from the URI */
+  res = coap_uri_into_options(&uri, &optlist, 1, buf, sizeof(buf));
+  if (res != 0)
+    return 0;
+
+  /* Add option list (which will get sorted) to the PDU */
+  if (optlist) {
+    res = coap_add_optlist_pdu(pdu, &optlist);
+    coap_delete_optlist(optlist);
+    if (res != 1)
+      return 0;
+  }
+
+  /* and send the PDU */
+  mid = coap_send(session, pdu);
+  if (mid == COAP_INVALID_MID)
+    return 0;
+  return 1;
+}
+
+----
+
+SEE ALSO
+--------
+*coap_endpoint_client*(3) and *coap_pdu_setup*(3).
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://tools.ietf.org/html/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
+
+BUGS
+----
+Please report bugs on the mailing list for libcoap:
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>

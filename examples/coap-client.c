@@ -705,12 +705,6 @@ cmdline_hop_limit(char *arg) {
   return 1;
 }
 
-
-static uint16_t
-get_default_port(const coap_uri_t *u) {
-  return coap_uri_scheme_is_secure(u) ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT;
-}
-
 /**
  * Sets global URI options according to the URI passed as @p arg.
  * This function returns 0 on success or -1 on error.
@@ -722,18 +716,15 @@ get_default_port(const coap_uri_t *u) {
  */
 static int
 cmdline_uri(char *arg, int create_uri_opts) {
-  unsigned char portbuf[2];
 #define BUFSIZE 100
-  unsigned char _buf[BUFSIZE];
-  unsigned char *buf = _buf;
-  size_t buflen;
-  int res;
+  unsigned char buf[BUFSIZE];
 
   if (!proxy_scheme_option && proxy.host.length) {
     /* create Proxy-Uri from argument */
     size_t len = strlen(arg);
     if (len > 1034) {
-      coap_log(LOG_ERR, "Absolute URI length must be <= 1034 bytes for a proxy\n");
+      coap_log(LOG_ERR,
+               "Absolute URI length must be <= 1034 bytes for a proxy\n");
       return -1;
     }
 
@@ -748,13 +739,16 @@ cmdline_uri(char *arg, int create_uri_opts) {
       return -1;
     }
 
-    if (uri.scheme==COAP_URI_SCHEME_COAPS && !reliable && !coap_dtls_is_supported()) {
+    if (uri.scheme==COAP_URI_SCHEME_COAPS && !reliable &&
+        !coap_dtls_is_supported()) {
       coap_log(LOG_EMERG,
                "coaps URI scheme not supported in this version of libcoap\n");
       return -1;
     }
 
-    if ((uri.scheme==COAP_URI_SCHEME_COAPS_TCP || (uri.scheme==COAP_URI_SCHEME_COAPS && reliable)) && !coap_tls_is_supported()) {
+    if ((uri.scheme==COAP_URI_SCHEME_COAPS_TCP ||
+        (uri.scheme==COAP_URI_SCHEME_COAPS && reliable)) &&
+       !coap_tls_is_supported()) {
       coap_log(LOG_EMERG,
             "coaps+tcp URI scheme not supported in this version of libcoap\n");
       return -1;
@@ -767,46 +761,12 @@ cmdline_uri(char *arg, int create_uri_opts) {
       return -1;
     }
 
-    if (uri.port != get_default_port(&uri) && create_uri_opts) {
-      coap_insert_optlist(&optlist,
-                  coap_new_optlist(COAP_OPTION_URI_PORT,
-                                   coap_encode_var_safe(portbuf, sizeof(portbuf),
-                                                        (uri.port & 0xffff)),
-                  portbuf));
-    }
-
-    if (uri.path.length) {
-      buflen = BUFSIZE;
-      if (uri.path.length > BUFSIZE)
-        coap_log(LOG_WARNING, "URI path will be truncated (max buffer %d)\n", BUFSIZE);
-      res = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
-
-      while (res--) {
-        coap_insert_optlist(&optlist,
-                    coap_new_optlist(COAP_OPTION_URI_PATH,
-                    coap_opt_length(buf),
-                    coap_opt_value(buf)));
-
-        buf += coap_opt_size(buf);
-      }
-    }
-
-    if (uri.query.length) {
-      buflen = BUFSIZE;
-      buf = _buf;
-      res = coap_split_query(uri.query.s, uri.query.length, buf, &buflen);
-
-      while (res--) {
-        coap_insert_optlist(&optlist,
-                    coap_new_optlist(COAP_OPTION_URI_QUERY,
-                    coap_opt_length(buf),
-                    coap_opt_value(buf)));
-
-        buf += coap_opt_size(buf);
-      }
+    if (coap_uri_into_options(&uri, &optlist, create_uri_opts,
+                              buf, sizeof(buf)) < 0) {
+      coap_log(LOG_ERR, "Failed to create options for URI\n");
+      return -1;
     }
   }
-
   return 0;
 }
 

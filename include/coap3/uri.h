@@ -62,7 +62,7 @@ coap_uri_scheme_is_secure(const coap_uri_t *uri) {
 /**
  * Creates a new coap_uri_t object from the specified URI. Returns the new
  * object or NULL on error. The memory allocated by the new coap_uri_t
- * must be released using coap_free().
+ * should be released using coap_delete_uri().
  *
  * @param uri The URI path to copy.
  * @param length The length of uri.
@@ -72,10 +72,22 @@ coap_uri_scheme_is_secure(const coap_uri_t *uri) {
 coap_uri_t *coap_new_uri(const uint8_t *uri, unsigned int length);
 
 /**
- * Clones the specified coap_uri_t object. Thie function allocates sufficient
- * memory to hold the coap_uri_t structure and its contents. The object must
- * be released with coap_free(). */
+ * Clones the specified coap_uri_t object. This function allocates sufficient
+ * memory to hold the coap_uri_t structure and its contents. The object should
+ * be released with delete_uri().
+ *
+ * @param uri The coap_uri_t structure to copy.
+ *
+ * @return New URI object or NULL on error.
+ */
 coap_uri_t *coap_clone_uri(const coap_uri_t *uri);
+
+/**
+ * Removes the specified coap_uri_t object.
+ *
+ * @param uri The coap_uri_t structure to remove.
+ */
+void coap_delete_uri(coap_uri_t *uri);
 
 /**
  * @ingroup application_api
@@ -109,7 +121,7 @@ int coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri);
  * port which is set to default port for the protocol. This function returns
  * @p 0 if parsing succeeded, a value less than zero otherwise.
  * Note: This function enforces that the given string is in Proxy-Uri format
- *       as well as supports different schema such as http.
+ *       as well as supports different schema such as http and https.
  *
  * @param str_var The string to split up.
  * @param len     The actual length of @p str_var
@@ -119,6 +131,26 @@ int coap_split_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri);
  *
  */
 int coap_split_proxy_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri);
+
+/**
+ * Takes a coap_uri_t and then adds CoAP options into the @p optlist_chain.
+ * If the port is not the default port and create_port_opt is not 0, then
+ * the Port option is added in.  Any path or query are broken down into the
+ * individual segment Path or Query options and added to the @p optlist_chain.
+ *
+ * @param uri     The coap_uri_t object.
+ * @param optlist_chain Where to store the chain of options.
+ * @param buf     Scratch buffer area (needs to be bigger than
+ *                uri->path.length and uri->query.length)
+ * @param buflen  Size of scratch buffer.
+ * @param create_port_opt @c 1 if port option to be added (if non-default)
+ *                        else @c 0
+ *
+ * @return        @c 0 on success, or < 0 on error.
+ *
+ */
+int coap_uri_into_options(coap_uri_t *uri, coap_optlist_t **optlist_chain,
+                          int create_port_opt, uint8_t *buf, size_t buflen);
 
 /**
  * Splits the given URI path into segments. Each segment is preceded
