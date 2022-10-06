@@ -60,6 +60,7 @@ typedef struct {
 
 #define COAP_BLOCK_USE_LIBCOAP  0x01 /* Use libcoap to do block requests */
 #define COAP_BLOCK_SINGLE_BODY  0x02 /* Deliver the data as a single body */
+#define COAP_BLOCK_NO_PREEMPTIVE_RTAG 0x10 /* Don't use pre-emptive Request-Tags */
 
 /**
  * Returns the value of the least significant byte of a Block option @p opt.

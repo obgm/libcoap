@@ -138,39 +138,48 @@ session _block_mode_.
 
 [source, c]
 ----
-#define COAP_BLOCK_USE_LIBCOAP  0x01 /* Use libcoap to do block requests */
-#define COAP_BLOCK_SINGLE_BODY  0x02 /* Deliver the data as a single body */
+#define COAP_BLOCK_USE_LIBCOAP        0x01 /* Use libcoap to do block requests */
+#define COAP_BLOCK_SINGLE_BODY        0x02 /* Deliver the data as a single body */
+#define COAP_BLOCK_NO_PREEMPTIVE_RTAG 0x10 /* Don't use pre-emptive Request-Tags */
 ----
 _block_mode_ is an or'd set of zero or more COAP_BLOCK_* definitions.
 
-If COAP_BLOCK_USE_LIBCOAP is not set, then everything works as per Option 1
+If *COAP_BLOCK_USE_LIBCOAP* is not set, then everything works as per Option 1
 above.
 
-If COAP_BLOCK_SINGLE_BODY is set, then the entire body of data is presented to
+If *COAP_BLOCK_SINGLE_BODY* is set, then the entire body of data is presented to
 the receiving handler, otherwise each individual block is presented on arrival.
 To obtain the data, length and current offset, *coap_get_data_large*() must
 be used instead of *coap_get_data*().  It may be appropriate not to set
-COAP_BLOCK_SINGLE_BODY if there are RAM limitations.
+*COAP_BLOCK_SINGLE_BODY* if there are RAM limitations.
 
 *NOTE:* It is the responsibility of the receiving application to re-assemble
 the _data_ as appropriate (e.g., using *coap_block_build_body*()) if
-COAP_BLOCK_SINGLE_BODY is not set.
+*COAP_BLOCK_SINGLE_BODY* is not set.
 
-*NOTE:* If COAP_BLOCK_SINGLE_BODY is not set, then the CoAP server on receiving
+*NOTE:* If *COAP_BLOCK_SINGLE_BODY* is not set, then the CoAP server on
+receiving
 request data that is split over multiple data blocks must respond with
 COAP_RESPONSE_CODE_CONTINUE 2.31 (Continue) response code if the received data
 is not for the final block, otherwise a COAP_RESPONSE_CODE_CREATED 2.01
 (Created) or COAP_RESPONSE_CODE_CHANGED 2.04 (Changed) should be returned.
 
-If COAP_BLOCK_USE_LIBCOAP is set, then any PDUs presented to the application
+If *COAP_BLOCK_USE_LIBCOAP* is set, then any PDUs presented to the application
 handlers will get the tokens set back to the initiating token so that requests
 can be matched with responses even if different tokens had to be used for the
-series of packet interchanges.  Furthermore, if COAP_BLOCK_SINGLE_BODY is set,
+series of packet interchanges.  Furthermore, if *COAP_BLOCK_SINGLE_BODY* is set,
 then the PDU that presents the entire body will have any BlockX option removed.
 
-*NOTE:* COAP_BLOCK_USE_LIBCOAP must be set if libcoap is to do all the
+*NOTE:* *COAP_BLOCK_USE_LIBCOAP* must be set if libcoap is to do all the
 block tracking and requesting, otherwise the application will have to do all
 of this work (the default if *coap_context_set_block_mode*() is not called).
+
+If *COAP_BLOCK_NO_PREEMPTIVE_RTAG* is set, then Request-Tag options are only
+sent when a large amount of data is being sent to the server using the Block1
+option.  Otherwise, a Request-Tag option is sent with any request (apart from
+DELETE) on the off chance that there may be multiple Block2 based
+responses for multiple requests to the same resource that need to be
+differentiated between.
 
 *Function: coap_add_data_large_request()*
 
@@ -517,9 +526,9 @@ FURTHER INFORMATION
 -------------------
 See
 
-"RFC7252: The Constrained Application Protocol (CoAP)"
+"https://tools.ietf.org/html/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
 
-"RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)"
+"https://tools.ietf.org/html/rfc7959[RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)]"
 
 for further information.
 
