@@ -217,6 +217,9 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   session->last_ping_mid = COAP_INVALID_MID;
   session->last_ack_mid = COAP_INVALID_MID;
   session->last_con_mid = COAP_INVALID_MID;
+  session->max_token_size = context->max_token_size; /* RFC8974 */
+  if (session->type != COAP_SESSION_TYPE_CLIENT)
+    session->max_token_checked = COAP_EXT_T_CHECKED;
 
   /* Randomly initialize */
   /* TCP/TLS have no notion of mid */
@@ -507,6 +510,12 @@ void coap_session_send_csm(coap_session_t *session) {
     || coap_add_option_internal(pdu, COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER,
          coap_encode_var_safe(buf, sizeof(buf),
                                 0), buf) == 0
+    || (session->max_token_size > COAP_TOKEN_DEFAULT_MAX &&
+        coap_add_option_internal(pdu,
+                                 COAP_SIGNALING_OPTION_EXTENDED_TOKEN_LENGTH,
+                                 coap_encode_var_safe(buf, sizeof(buf),
+                                   session->max_token_size),
+                                 buf) == 0)
     || coap_pdu_encode_header(pdu, session->proto) == 0
   ) {
     coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
@@ -549,10 +558,11 @@ void coap_session_connected(coap_session_t *session) {
   if (session->state != COAP_SESSION_STATE_ESTABLISHED) {
     coap_log_debug("***%s: session connected\n",
              coap_session_str(session));
-    if (session->state == COAP_SESSION_STATE_CSM)
+    if (session->state == COAP_SESSION_STATE_CSM) {
       coap_handle_event(session->context, COAP_EVENT_SESSION_CONNECTED, session);
-    if (session->doing_first)
-      session->doing_first = 0;
+      if (session->doing_first)
+        session->doing_first = 0;
+    }
   }
 
   session->state = COAP_SESSION_STATE_ESTABLISHED;
@@ -651,7 +661,8 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
       /* Make sure that we try a re-transmit later on ICMP error */
       if (coap_wait_ack(session->context, session, q) >= 0) {
         if (session->context->nack_handler) {
-          coap_bin_const_t token = coap_pdu_get_token(q->pdu);
+          coap_bin_const_t token = q->pdu->actual_token;
+
           coap_check_update_token(session, q->pdu);
           session->context->nack_handler(session, q->pdu, reason, q->id);
           coap_update_token(q->pdu, token.length, token.s);
@@ -698,7 +709,8 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     coap_queue_t *q = session->context->sendqueue;
     while (q) {
       if (q->session == session) {
-        coap_bin_const_t token = coap_pdu_get_token(q->pdu);
+        coap_bin_const_t token = q->pdu->actual_token;
+
         coap_check_update_token(session, q->pdu);
         session->context->nack_handler(session, q->pdu, reason, q->id);
         coap_update_token(q->pdu, token.length, token.s);

@@ -258,6 +258,9 @@ PDU TOKEN FUNCTIONS
 The *coap_session_init_token*() function is used to initialize the starting
 _token_ of _length_ for the _session_.
 
+*NOTE:* this only takes the first 8 bytes of the token if extended tokens
+are being used (https://rfc-editor.org/rfc/rfc8974[RFC8974]).
+
 *Function: coap_session_new_token()*
 
 The *coap_session_new_token*() function is used to obtain the next available
@@ -266,13 +269,18 @@ for doing an observe cancellation that was used for doing the observe
 registration.  Otherwise tokens should be unique for each request/response so
 that they can be correctly matched.
 
+*NOTE:* Only a token of up to 8 bytes is returned.
+
 *Function: coap_add_token()*
 
 The *coap_add_token*() function adds in the specified token's _data_ of length
-_length_ to the PDU _pdu_.  The maximum length of the token is 8 bytes.
+_length_ to the PDU _pdu_.  The maximum (but impractical due to PDU sizes)
+length of the token is 65804 bytes.  If anything more than 8, the remote peer
+needs to support extended tokens for this to work.
 Adding the token must be done before any options or data are added.
 This function must only be called once per _pdu_, and must not be called
-in the appropriate request handler.
+in the appropriate request handler as the token has already been added into
+the skeletal response PDU.
 
 If a token is not added, then the token in the PDU is zero length, but still a
 valid token which is used for matching.  The exception is an empty ACK packet.
@@ -724,6 +732,8 @@ See
 "https://rfc-editor.org/rfc/rfc7959[RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)]"
 
 "https://rfc-editor.org/rfc/rfc8613[RFC8613: Object Security for Constrained RESTful Environments (OSCORE)]"
+
+"https://rfc-editor.org/rfc/rfc8974[RFC8974: Extended Tokens and Stateless Clients in the Constrained Application Protocol (CoAP)]"
 
 for further information.
 

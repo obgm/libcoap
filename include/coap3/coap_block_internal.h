@@ -122,7 +122,7 @@ struct coap_lg_crcv_t {
   size_t total_len;      /**< Length as indicated by SIZE2 option */
   coap_binary_t *body_data; /**< Used for re-assembling entire body */
   coap_binary_t *app_token; /**< app requesting PDU token */
-  coap_binary_t **obs_token; /**< Tokens used in setting up Observe
+  coap_bin_const_t **obs_token; /**< Tokens used in setting up Observe
                                   (to handle large FETCH) */
   size_t obs_token_cnt; /**< number of tokens used to set up Observe */
   uint64_t state_token; /**< state token */
@@ -153,8 +153,6 @@ struct coap_lg_srcv_t {
   coap_resource_t *resource; /**< associated resource */
   coap_str_const_t *uri_path; /** set to uri_path if unknown resource */
   coap_rblock_t rec_blocks; /** < list of received blocks */
-  uint8_t last_token[8]; /**< last used token */
-  size_t last_token_length; /**< length of token */
   coap_mid_t last_mid;   /**< Last received mid for this set of packets */
   coap_tick_t last_used; /**< Last time data sent or 0 */
   uint16_t block_option; /**< Block option in use */

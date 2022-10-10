@@ -234,6 +234,16 @@ coap_context_set_pki_root_cas(coap_context_t *context,
 void coap_context_set_keepalive(coap_context_t *context, unsigned int seconds);
 
 /**
+ * Set the maximum token size (RFC8974).
+ *
+ * @param context        The coap_context_t object.
+ * @param max_token_size The maximum token size.  A value between 8 and 65804
+ *                       inclusive.
+ */
+void coap_context_set_max_token_size(coap_context_t *context,
+                                     size_t max_token_size);
+
+/**
  * Get the libcoap internal file descriptor for using in an application's
  * select() or returned as an event in an application's epoll_wait() call.
  *

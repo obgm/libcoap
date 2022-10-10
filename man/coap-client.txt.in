@@ -170,7 +170,7 @@ OPTIONS - General
    Scheme is one of coap, coaps, coap+tcp and coaps+tcp.
 
 *-T* token::
-   Define the initial starting 'token' for the request.
+   Define the initial starting 'token' for the request (up to 24 characters).
 
 *-U* ::
    Never include Uri-Host or Uri-Port options.

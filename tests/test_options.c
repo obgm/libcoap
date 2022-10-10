@@ -497,7 +497,7 @@ t_iterate_option2(void) {
 
   coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
-    .token_length = 3,
+    .e_token_length = 3,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -524,7 +524,7 @@ t_iterate_option3(void) {
 
   coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
-    .token_length = 3,
+    .e_token_length = 3,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -567,7 +567,7 @@ t_iterate_option4(void) {
 
   coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
-    .token_length = 3,
+    .e_token_length = 3,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -609,7 +609,7 @@ t_iterate_option5(void) {
 
   coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
-    .token_length = 0,
+    .e_token_length = 0,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -642,7 +642,7 @@ t_iterate_option6(void) {
 
   coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
-    .token_length = 0,
+    .e_token_length = 0,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -687,7 +687,7 @@ t_iterate_option7(void) {
 
   coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
-    .token_length = 0,
+    .e_token_length = 0,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -734,7 +734,7 @@ t_iterate_option8(void) {
 
   coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
-    .token_length = 0,
+    .e_token_length = 0,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -765,7 +765,7 @@ t_iterate_option9(void) {
 
   coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
-    .token_length = 0,
+    .e_token_length = 0,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -796,7 +796,7 @@ t_iterate_option10(void) {
 
   coap_pdu_t pdu = {
     .max_size = TEST_MAX_SIZE,
-    .token_length = 0,
+    .e_token_length = 0,
     .token = teststr,
     .used_size = sizeof(teststr)
   };

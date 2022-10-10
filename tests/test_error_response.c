@@ -45,7 +45,7 @@ t_error_response1(void) {
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
-  CU_ASSERT(response->token_length == 0);
+  CU_ASSERT(response->e_token_length == 0);
   CU_ASSERT(response->code == 0x80);
   CU_ASSERT(response->mid == 0x1234);
   CU_ASSERT(coap_pdu_encode_header(response, COAP_PROTO_UDP) == 4);
@@ -75,7 +75,7 @@ t_error_response2(void) {
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_NON);
-  CU_ASSERT(response->token_length == 5);
+  CU_ASSERT(response->e_token_length == 5);
   CU_ASSERT(response->code == 0x84);
   CU_ASSERT(coap_pdu_encode_header(response, COAP_PROTO_UDP) == 4);
   CU_ASSERT(memcmp(response->token - 4, teststr, sizeof(teststr)) == 0);
@@ -108,7 +108,7 @@ t_error_response3(void) {
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
-  CU_ASSERT(response->token_length == 5);
+  CU_ASSERT(response->e_token_length == 5);
   CU_ASSERT(response->code == code);
   CU_ASSERT(coap_pdu_encode_header(response, COAP_PROTO_UDP) == 4);
   CU_ASSERT(memcmp(response->token - 4, teststr, sizeof(teststr)) == 0);
@@ -147,7 +147,7 @@ t_error_response4(void) {
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
-  CU_ASSERT(response->token_length == 5);
+  CU_ASSERT(response->e_token_length == 5);
   CU_ASSERT(response->code == code);
   CU_ASSERT(coap_pdu_encode_header(response, COAP_PROTO_UDP) == 4);
   CU_ASSERT(memcmp(response->token - 4, teststr, sizeof(teststr)) == 0);
@@ -188,7 +188,7 @@ t_error_response5(void) {
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
-  CU_ASSERT(response->token_length == 5);
+  CU_ASSERT(response->e_token_length == 5);
   CU_ASSERT(response->code == code);
   CU_ASSERT(coap_pdu_encode_header(response, COAP_PROTO_UDP) == 4);
   CU_ASSERT(memcmp(response->token - 4, teststr, sizeof(teststr)) == 0);
@@ -229,7 +229,7 @@ t_error_response6(void) {
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
-  CU_ASSERT(response->token_length == 5);
+  CU_ASSERT(response->e_token_length == 5);
   CU_ASSERT(response->code == code);
   CU_ASSERT(coap_pdu_encode_header(response, COAP_PROTO_UDP) == 4);
   CU_ASSERT(memcmp(response->token - 4, teststr, sizeof(teststr)) == 0);
@@ -271,7 +271,7 @@ t_error_response7(void) {
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
-  CU_ASSERT(response->token_length == 5);
+  CU_ASSERT(response->e_token_length == 5);
   CU_ASSERT(response->code == code);
   CU_ASSERT(coap_pdu_encode_header(response, COAP_PROTO_UDP) == 4);
   CU_ASSERT(memcmp(response->token - 4, teststr, sizeof(teststr)) == 0);
@@ -312,7 +312,7 @@ t_error_response8(void) {
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
-  CU_ASSERT(response->token_length == 5);
+  CU_ASSERT(response->e_token_length == 5);
   CU_ASSERT(response->code == code);
   CU_ASSERT(coap_pdu_encode_header(response, COAP_PROTO_UDP) == 4);
   CU_ASSERT(memcmp(response->token - 4, teststr, sizeof(teststr)) == 0);

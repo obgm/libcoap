@@ -1306,7 +1306,8 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   }
 
   /* Account for 1 byte 'code' used as token */
-  plain_pdu->token_length = 1;
+  plain_pdu->e_token_length = 1;
+  plain_pdu->actual_token.length = 1;
   /* Account for the decrypted data */
   plain_pdu->used_size = encrypt_len - tag_len;
 
@@ -1396,8 +1397,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
 
     coap_cancel_all_messages(session->context,
                              session,
-                             pdu->token,
-                             pdu->token_length);
+                             &pdu->actual_token);
     if (session->con_active)
       session->con_active--;
     coap_send_ack(session, pdu);
@@ -1546,8 +1546,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
     /* Server is requesting Echo refresh check */
     coap_cancel_all_messages(session->context,
                              session,
-                             pdu->token,
-                             pdu->token_length);
+                             &pdu->actual_token);
     if (session->con_active)
       session->con_active--;
     if (sent_pdu) {

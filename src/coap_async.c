@@ -47,8 +47,8 @@ coap_register_async(coap_session_t *session,
 
   SEARCH_PAIR(session->context->async_state, s,
               session, session,
-              pdu->token_length, request->token_length,
-              pdu->token, request->token);
+              pdu->actual_token.length, request->actual_token.length,
+              pdu->actual_token.s, request->actual_token.s);
 
   if (s != NULL) {
     size_t i;
@@ -56,7 +56,8 @@ coap_register_async(coap_session_t *session,
     size_t outbuflen;
 
     outbuf[0] = '\000';
-    for (i = 0; i < request->token_length; i++) {
+    for (i = 0; i < request->actual_token.length; i++) {
+      /* Output maybe truncated */
       outbuflen = strlen(outbuf);
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
                 "%02x", request->token[i]);
@@ -73,11 +74,12 @@ coap_register_async(coap_session_t *session,
     return NULL;
   }
 
+  LL_PREPEND(session->context->async_state, s);
   memset(s, 0, sizeof(coap_async_t));
 
   /* Note that this generates a new MID */
-  s->pdu = coap_pdu_duplicate(request, session, request->token_length,
-                              request->token, NULL);
+  s->pdu = coap_pdu_duplicate(request, session, request->actual_token.length,
+                              request->actual_token.s, NULL);
   if (s->pdu == NULL) {
     coap_free_async(session, s);
     coap_log_crit("coap_register_async: insufficient memory\n");
@@ -91,8 +93,6 @@ coap_register_async(coap_session_t *session,
   s->session = coap_session_reference( session );
 
   coap_async_set_delay(s, delay);
-
-  LL_PREPEND(session->context->async_state, s);
 
   return s;
 }
@@ -138,10 +138,11 @@ coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
 coap_async_t *
 coap_find_async(coap_session_t *session, coap_bin_const_t token) {
   coap_async_t *tmp;
+
   SEARCH_PAIR(session->context->async_state, tmp,
               session, session,
-              pdu->token_length, token.length,
-              pdu->token, token.s);
+              pdu->actual_token.length, token.length,
+              pdu->actual_token.s, token.s);
   return tmp;
 }
 

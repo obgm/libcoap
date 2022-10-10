@@ -42,6 +42,8 @@ The following RFCs are supported
 
 * RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option
 
+* RFC8974: Extended Tokens and Stateless Clients in the Constrained Application Protocol (CoAP)
+
 * RFC9175: CoAP: Echo, Request-Tag, and Token Processing
 
 There is (D)TLS support for the following libraries

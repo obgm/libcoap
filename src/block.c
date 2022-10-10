@@ -397,16 +397,16 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
   LL_FOREACH_SAFE(session->lg_crcv, lg_crcv, q) {
     if (lg_crcv->observe_set) {
       if ((!token && !lg_crcv->app_token->length) || (token &&
-          full_match(token->s, token->length, lg_crcv->app_token->s,
-                     lg_crcv->app_token->length))) {
+          coap_binary_equal(token, lg_crcv->app_token))) {
         uint8_t buf[8];
         coap_mid_t mid;
         size_t size;
         const uint8_t *data;
-        coap_binary_t *otoken = lg_crcv->obs_token ? lg_crcv->obs_token[0] ?
-                                                     lg_crcv->obs_token[0] :
-                                                     lg_crcv->app_token :
-                                                     lg_crcv->app_token;
+        coap_bin_const_t *otoken = lg_crcv->obs_token ?
+                                     lg_crcv->obs_token[0] ?
+                                       lg_crcv->obs_token[0] :
+                                       (coap_bin_const_t *)lg_crcv->app_token :
+                                     (coap_bin_const_t *)lg_crcv->app_token;
         coap_pdu_t * pdu = coap_pdu_duplicate(&lg_crcv->pdu,
                                               session,
                                               otoken->length,
@@ -450,8 +450,9 @@ coap_retransmit_oscore_pdu(coap_session_t *session,
                            coap_opt_t* echo)
 {
   coap_lg_crcv_t *lg_crcv;
-  uint64_t token_match = STATE_TOKEN_BASE(coap_decode_var_bytes8(pdu->token,
-                                                       pdu->token_length));
+  uint64_t token_match =
+      STATE_TOKEN_BASE(coap_decode_var_bytes8(pdu->actual_token.s,
+                                              pdu->actual_token.length));
   uint8_t ltoken[8];
   size_t ltoken_len;
   uint64_t token;
@@ -462,8 +463,7 @@ coap_retransmit_oscore_pdu(coap_session_t *session,
 
   LL_FOREACH(session->lg_crcv, lg_crcv) {
     if (token_match != STATE_TOKEN_BASE(lg_crcv->state_token) &&
-      !full_match(pdu->token, pdu->token_length,
-                  lg_crcv->app_token->s, lg_crcv->app_token->length)) {
+      !coap_binary_equal(&pdu->actual_token, lg_crcv->app_token)) {
       /* try out the next one */
       continue;
     }
@@ -609,9 +609,7 @@ coap_add_data_large_internal(coap_session_t *session,
 
     /* See if this token is already in use for large bodies (unlikely) */
     LL_FOREACH_SAFE(session->lg_xmit, lg_xmit, q) {
-      if (full_match(pdu->token, pdu->token_length,
-                     lg_xmit->b.b1.app_token->s,
-                     lg_xmit->b.b1.app_token->length)) {
+      if (coap_binary_equal(&pdu->actual_token, lg_xmit->b.b1.app_token)) {
         /* Unfortunately need to free this off as potential size change */
         LL_DELETE(session->lg_xmit, lg_xmit);
         coap_block_delete_lg_xmit(session, lg_xmit);
@@ -656,7 +654,7 @@ coap_add_data_large_internal(coap_session_t *session,
   avail -= coap_oscore_overhead(session, pdu);
 #endif /* HAVE_OSCORE */
   /* May need token of length 8, so account for this */
-  avail -= (pdu->token_length < 8) ? 8 - pdu->token_length : 0;
+  avail -= (pdu->actual_token.length < 8) ? 8 - pdu->actual_token.length : 0;
   blk_size = coap_flsll((long long)avail) - 4 - 1;
   if (blk_size > 6)
     blk_size = 6;
@@ -722,10 +720,11 @@ coap_add_data_large_internal(coap_session_t *session,
     coap_ticks(&lg_xmit->last_sent);
     if (COAP_PDU_IS_REQUEST(pdu)) {
       /* Need to keep original token for updating response PDUs */
-      lg_xmit->b.b1.app_token = coap_new_binary(pdu->token_length);
+      lg_xmit->b.b1.app_token = coap_new_binary(pdu->actual_token.length);
       if (!lg_xmit->b.b1.app_token)
         goto fail;
-      memcpy(lg_xmit->b.b1.app_token->s, pdu->token, pdu->token_length);
+      memcpy(lg_xmit->b.b1.app_token->s, pdu->actual_token.s,
+             pdu->actual_token.length);
       /*
        * Need to set up new token for use during transmits
        */
@@ -828,7 +827,7 @@ coap_add_data_large_internal(coap_session_t *session,
     /* There may be a response with Echo option */
     avail -= coap_opt_encode_size(COAP_OPTION_ECHO, 40);
     /* May need token of length 8, so account for this */
-    avail -= (pdu->token_length < 8) ? 8 - pdu->token_length : 0;
+    avail -= (pdu->actual_token.length < 8) ? 8 - pdu->actual_token.length : 0;
 #if HAVE_OSCORE
     avail -= coap_oscore_overhead(session, pdu);
 #endif /* HAVE_OSCORE */
@@ -1162,9 +1161,14 @@ coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now,
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
-static void
+/*
+ * If Observe = 0, save the token away and return NULL
+ * Else If Observe = 1, return the saved token for this block
+ * Else, return NULL
+ */
+static coap_bin_const_t *
 track_fetch_observe(coap_pdu_t *pdu, coap_lg_crcv_t *lg_crcv,
-                    uint32_t block_num, uint8_t *buf, size_t len) {
+                    uint32_t block_num, coap_bin_const_t *token) {
   /* Need to handle Observe for large FETCH */
   coap_opt_iterator_t opt_iter;
   coap_opt_t *opt = coap_check_option(pdu, COAP_OPTION_OBSERVE,
@@ -1172,7 +1176,7 @@ track_fetch_observe(coap_pdu_t *pdu, coap_lg_crcv_t *lg_crcv,
 
   if (opt) {
     int observe_action = -1;
-    coap_binary_t **tmp;
+    coap_bin_const_t **tmp;
 
     observe_action = coap_decode_var_bytes(coap_opt_value(opt),
                                            coap_opt_length(opt));
@@ -1181,25 +1185,26 @@ track_fetch_observe(coap_pdu_t *pdu, coap_lg_crcv_t *lg_crcv,
       tmp = coap_realloc_type(COAP_STRING, lg_crcv->obs_token,
                               (block_num + 1) * sizeof(lg_crcv->obs_token[0]));
       if (tmp == NULL)
-        return;
+        return NULL;
       lg_crcv->obs_token = tmp;
       if (block_num + 1 == lg_crcv->obs_token_cnt)
-        coap_delete_binary(lg_crcv->obs_token[block_num]);
+        coap_delete_bin_const(lg_crcv->obs_token[block_num]);
 
       lg_crcv->obs_token_cnt = block_num + 1;
-      lg_crcv->obs_token[block_num] = coap_new_binary(len);
+      lg_crcv->obs_token[block_num] = coap_new_bin_const(token->s,
+                                                         token->length);
       if (lg_crcv->obs_token[block_num] == NULL)
-        return;
-      memcpy(lg_crcv->obs_token[block_num]->s, buf, len);
+        return NULL;
     } else if (observe_action == COAP_OBSERVE_CANCEL) {
       /* Use the token in lg_crcv */
       if (block_num < lg_crcv->obs_token_cnt) {
         if (lg_crcv->obs_token[block_num]) {
-          memcpy(buf, lg_crcv->obs_token[block_num]->s, len);
+          return lg_crcv->obs_token[block_num];
         }
       }
     }
   }
+  return NULL;
 }
 
 coap_lg_crcv_t *
@@ -1244,20 +1249,24 @@ coap_block_new_lg_crcv(coap_session_t *session, coap_pdu_t *pdu,
   }
 
   /* Need to keep original token for updating response PDUs */
-  lg_crcv->app_token = coap_new_binary(pdu->token_length);
+  lg_crcv->app_token = coap_new_binary(pdu->actual_token.length);
   if (!lg_crcv->app_token) {
     coap_block_delete_lg_crcv(session, lg_crcv);
     return NULL;
   }
-  memcpy(lg_crcv->app_token->s, pdu->token, pdu->token_length);
+  memcpy(lg_crcv->app_token->s, pdu->actual_token.s, pdu->actual_token.length);
 
   /* Need to set up a base token for actual communications if retries needed */
   lg_crcv->retry_counter = 1;
   lg_crcv->state_token = state_token;
 
   if (pdu->code == COAP_REQUEST_CODE_FETCH) {
-    /* Need to handle Observe for large FETCH */
-    track_fetch_observe(pdu, lg_crcv, 0, pdu->token, pdu->token_length);
+    coap_bin_const_t *new_token;
+
+    /* Need to save/restore Observe Token for large FETCH */
+    new_token = track_fetch_observe(pdu, lg_crcv, 0, &pdu->actual_token);
+    if (new_token)
+      coap_update_token(pdu, new_token->length, new_token->s);
   }
 
   /* In case it is there - must not be in continuing request PDUs */
@@ -1281,7 +1290,7 @@ coap_block_delete_lg_crcv(coap_session_t *session,
            coap_session_str(session), (void*)lg_crcv);
   coap_delete_binary(lg_crcv->app_token);
   for (i = 0; i < lg_crcv->obs_token_cnt; i++) {
-    coap_delete_binary(lg_crcv->obs_token[i]);
+    coap_delete_bin_const(lg_crcv->obs_token[i]);
   }
   coap_free_type(COAP_STRING, lg_crcv->obs_token);
   coap_free_type(COAP_LG_CRCV, lg_crcv);
@@ -1491,8 +1500,8 @@ coap_handle_request_send_block(coap_session_t *session,
       memset(&drop_options, 0, sizeof(coap_opt_filter_t));
       if (block.num != 0)
         coap_option_filter_set(&drop_options, COAP_OPTION_OBSERVE);
-      out_pdu = coap_pdu_duplicate(&p->pdu, session, pdu->token_length,
-                                   pdu->token, &drop_options);
+      out_pdu = coap_pdu_duplicate(&p->pdu, session, pdu->actual_token.length,
+                                   pdu->actual_token.s, &drop_options);
       if (!out_pdu) {
         goto internal_issue;
       }
@@ -1778,8 +1787,6 @@ coap_handle_request_put_block(coap_context_t *context,
       }
       p->last_mid = pdu->mid;
       p->last_type = pdu->type;
-      memcpy(p->last_token, pdu->token, pdu->token_length);
-      p->last_token_length = pdu->token_length;
       if ((session->block_mode & COAP_BLOCK_SINGLE_BODY) || block.bert) {
         size_t chunk = (size_t)1 << (block.szx + 4);
         int update_data = 0;
@@ -1952,8 +1959,7 @@ check_freshness(coap_session_t *session, coap_pdu_t *rcvd, coap_pdu_t *sent,
         coap_add_data(echo_pdu, data_len, data);
       }
       /* Need to track Observe token change if Observe */
-      track_fetch_observe(echo_pdu, lg_crcv, 0, echo_pdu->token,
-                          echo_pdu->token_length);
+      track_fetch_observe(echo_pdu, lg_crcv, 0, &echo_pdu->actual_token);
 #if HAVE_OSCORE
       if (session->oscore_encryption &&
           (opt = coap_check_option(echo_pdu, COAP_OPTION_OBSERVE, &opt_iter)) &&
@@ -2013,8 +2019,9 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
                                 coap_pdu_t *rcvd) {
   coap_lg_xmit_t *p;
   coap_lg_xmit_t *q;
-  uint64_t token_match = STATE_TOKEN_BASE(coap_decode_var_bytes8(rcvd->token,
-                                                         rcvd->token_length));
+  uint64_t token_match =
+          STATE_TOKEN_BASE(coap_decode_var_bytes8(rcvd->actual_token.s,
+                                                  rcvd->actual_token.length));
   coap_lg_crcv_t *lg_crcv = NULL;
 
   LL_FOREACH_SAFE(session->lg_xmit, p, q) {
@@ -2095,9 +2102,17 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
           /* Need to handle Observe for large FETCH */
           LL_FOREACH(session->lg_crcv, lg_crcv) {
             if (coap_binary_equal(p->b.b1.app_token, lg_crcv->app_token)) {
-              /* In case of observe */
-              track_fetch_observe(&p->pdu, lg_crcv, block.num + 1,
-                                  buf, len);
+              coap_bin_const_t *new_token;
+              coap_bin_const_t ctoken = { len, buf };
+
+              /* Need to save/restore Observe Token for large FETCH */
+              new_token = track_fetch_observe(&p->pdu, lg_crcv, block.num + 1,
+                                              &ctoken);
+              if (new_token) {
+                assert(len <= sizeof(buf));
+                len = new_token->length;
+                memcpy(buf, new_token->s, len);
+              }
               break;
             }
           }
@@ -2238,8 +2253,9 @@ coap_handle_response_get_block(coap_context_t *context,
   uint16_t block_opt = 0;
   size_t offset;
   int ack_rst_sent = 0;
-  uint64_t token_match = STATE_TOKEN_BASE(coap_decode_var_bytes8(rcvd->token,
-                                                         rcvd->token_length));
+  uint64_t token_match =
+          STATE_TOKEN_BASE(coap_decode_var_bytes8(rcvd->actual_token.s,
+                                                  rcvd->actual_token.length));
 
   memset(&block, 0, sizeof(block));
   LL_FOREACH(session->lg_crcv, p) {
@@ -2248,8 +2264,7 @@ coap_handle_response_get_block(coap_context_t *context,
     coap_opt_iterator_t opt_iter;
 
     if (token_match != STATE_TOKEN_BASE(p->state_token) &&
-      !full_match(rcvd->token, rcvd->token_length,
-                  p->app_token->s, p->app_token->length)) {
+      !coap_binary_equal(&rcvd->actual_token, p->app_token)) {
       /* try out the next one */
       continue;
     }
@@ -2448,6 +2463,8 @@ coap_handle_response_get_block(coap_context_t *context,
             coap_update_token(rcvd, p->app_token->length, p->app_token->s);
             rcvd->body_offset = saved_offset;
             rcvd->body_total = size2;
+            coap_log_debug("Client app version of updated PDU\n");
+            coap_show_pdu(COAP_LOG_DEBUG, rcvd);
             goto call_app_handler;
           }
           /* need to put back original token into rcvd */
@@ -2508,6 +2525,12 @@ coap_handle_response_get_block(coap_context_t *context,
           p->observe_set = 1;
         } else {
           p->observe_set = 0;
+          if (!coap_binary_equal(&rcvd->actual_token, p->app_token)) {
+            /* need to put back original token into rcvd */
+            coap_update_token(rcvd, p->app_token->length, p->app_token->s);
+            coap_log_debug("PDU presented to app.\n");
+            coap_show_pdu(COAP_LOG_DEBUG, rcvd);
+          }
           /* Expire this entry */
           goto expire_lg_crcv;
         }
@@ -2535,8 +2558,7 @@ fail_resp:
                      COAP_TICKS_PER_SECOND;
     }
     /* need to put back original token into rcvd */
-    if (!full_match(rcvd->token, rcvd->token_length,
-                    p->app_token->s, p->app_token->length)) {
+    if (!coap_binary_equal(&rcvd->actual_token, p->app_token)) {
       coap_update_token(rcvd, p->app_token->length, p->app_token->s);
       coap_log_debug("Client app version of updated PDU (3)\n");
       coap_show_pdu(COAP_LOG_DEBUG, rcvd);
@@ -2592,8 +2614,7 @@ fail_resp:
 
 expire_lg_crcv:
   /* need to put back original token into rcvd */
-  if (!full_match(rcvd->token, rcvd->token_length,
-                  p->app_token->s, p->app_token->length)) {
+  if (!coap_binary_equal(&rcvd->actual_token, p->app_token)) {
     coap_update_token(rcvd, p->app_token->length, p->app_token->s);
     coap_log_debug("Client app version of updated PDU\n");
     coap_show_pdu(COAP_LOG_DEBUG, rcvd);
@@ -2634,15 +2655,15 @@ coap_check_code_lg_xmit(const coap_session_t *session,
 #if COAP_CLIENT_SUPPORT
 void
 coap_check_update_token(coap_session_t *session, coap_pdu_t *pdu) {
-  uint64_t token_match = STATE_TOKEN_BASE(coap_decode_var_bytes8(pdu->token,
-                                                         pdu->token_length));
+  uint64_t token_match =
+      STATE_TOKEN_BASE(coap_decode_var_bytes8(pdu->actual_token.s,
+                                              pdu->actual_token.length));
   coap_lg_xmit_t *lg_xmit;
   coap_lg_crcv_t *lg_crcv;
 
   if (session->lg_crcv) {
     LL_FOREACH(session->lg_crcv, lg_crcv) {
-      if (full_match(pdu->token, pdu->token_length, lg_crcv->app_token->s,
-                     lg_crcv->app_token->length))
+      if (coap_binary_equal(&pdu->actual_token, lg_crcv->app_token))
         return;
       if (token_match == STATE_TOKEN_BASE(lg_crcv->state_token)) {
         coap_update_token(pdu, lg_crcv->app_token->length,
@@ -2655,8 +2676,7 @@ coap_check_update_token(coap_session_t *session, coap_pdu_t *pdu) {
   }
   if (COAP_PDU_IS_REQUEST(pdu) && session->lg_xmit) {
     LL_FOREACH(session->lg_xmit, lg_xmit) {
-      if (full_match(pdu->token, pdu->token_length, lg_xmit->b.b1.app_token->s,
-                     lg_xmit->b.b1.app_token->length))
+      if (coap_binary_equal(&pdu->actual_token, lg_xmit->b.b1.app_token))
         return;
       if (token_match == STATE_TOKEN_BASE(lg_xmit->b.b1.state_token)) {
         coap_update_token(pdu, lg_xmit->b.b1.app_token->length,

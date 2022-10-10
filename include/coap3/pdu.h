@@ -52,6 +52,10 @@
 /** well-known resources URI */
 #define COAP_DEFAULT_URI_WELLKNOWN ".well-known/core"
 
+/* Extended Token constants */
+#define COAP_TOKEN_DEFAULT_MAX 8
+#define COAP_TOKEN_EXT_MAX 65804 /* 13 + 256 + 65535 */
+
 /* CoAP message types */
 
 /**
@@ -182,11 +186,15 @@ typedef enum coap_pdu_signaling_proto_t {
 /* Applies to COAP_SIGNALING_CSM */
 #define COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE 2
 #define COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER 4
+#define COAP_SIGNALING_OPTION_EXTENDED_TOKEN_LENGTH 6
+
 /* Applies to COAP_SIGNALING_PING / COAP_SIGNALING_PONG */
 #define COAP_SIGNALING_OPTION_CUSTODY 2
+
 /* Applies to COAP_SIGNALING_RELEASE */
 #define COAP_SIGNALING_OPTION_ALTERNATIVE_ADDRESS 2
 #define COAP_SIGNALING_OPTION_HOLD_OFF 4
+
 /* Applies to COAP_SIGNALING_ABORT */
 #define COAP_SIGNALING_OPTION_BAD_CSM_OPTION 2
 

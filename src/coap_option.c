@@ -121,13 +121,13 @@ coap_option_iterator_init(const coap_pdu_t *pdu, coap_opt_iterator_t *oi,
 
   memset(oi, 0, sizeof(coap_opt_iterator_t));
 
-  oi->next_option = pdu->token + pdu->token_length;
+  oi->next_option = pdu->token + pdu->e_token_length;
   if (pdu->token + pdu->used_size <= oi->next_option) {
     oi->bad = 1;
     return NULL;
   }
 
-  oi->length = pdu->used_size - pdu->token_length;
+  oi->length = pdu->used_size - pdu->e_token_length;
 
   if (filter) {
     memcpy(&oi->filter, filter, sizeof(coap_opt_filter_t));
