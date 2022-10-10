@@ -436,7 +436,8 @@ msg_option_string(uint8_t code, uint16_t option_type) {
 
   static struct option_desc_t options_csm[] = {
     { COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE, "Max-Message-Size" },
-    { COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER, "Block-Wise-Transfer" }
+    { COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER, "Block-Wise-Transfer" },
+    { COAP_SIGNALING_OPTION_EXTENDED_TOKEN_LENGTH, "Extended-Token-Length" }
   };
 
   static struct option_desc_t options_pingpong[] = {
@@ -599,7 +600,8 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   char outbuf[COAP_DEBUG_BUF_SIZE];
 #endif /* ! COAP_CONSTRAINED_STACK */
   size_t buf_len = 0; /* takes the number of bytes written to buf */
-  int encode = 0, have_options = 0, i;
+  int encode = 0, have_options = 0;
+  uint32_t i;
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
   int content_format = -1;
@@ -622,10 +624,10 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
           COAP_DEFAULT_VERSION, msg_type_string(pdu->type),
           msg_code_string(pdu->code), pdu->mid);
 
-  for (i = 0; i < pdu->token_length; i++) {
+  for (i = 0; i < pdu->actual_token.length; i++) {
     outbuflen = strlen(outbuf);
     snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-              "%02x", pdu->token[i]);
+              "%02x", pdu->actual_token.s[i]);
   }
   outbuflen = strlen(outbuf);
   snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "}");
@@ -645,6 +647,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
     }
 
     if (pdu->code == COAP_SIGNALING_CODE_CSM) switch(opt_iter.number) {
+    case COAP_SIGNALING_OPTION_EXTENDED_TOKEN_LENGTH:
     case COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE:
       buf_len = snprintf((char *)buf, sizeof(buf), "%u",
                          coap_decode_var_bytes(coap_opt_value(option),

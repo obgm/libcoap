@@ -333,7 +333,7 @@ t_parse_uri13(void) {
 
   coap_pdu_t pdu = {
     .max_size = sizeof(teststr),
-    .token_length = 0,
+    .e_token_length = 0,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -434,7 +434,7 @@ t_parse_uri18(void) {
   uint8_t token[1] = "";
   coap_pdu_t pdu = {
     .max_size = 0,
-    .token_length = 0,
+    .e_token_length = 0,
     .token = token,
     .used_size = 0
   };
@@ -459,7 +459,7 @@ t_parse_uri19(void) {
 
   coap_pdu_t pdu = {
     .max_size = sizeof(teststr),
-    .token_length = 0,
+    .e_token_length = 0,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -479,7 +479,7 @@ t_parse_uri20(void) {
 
   coap_pdu_t pdu = {
     .max_size = sizeof(teststr),
-    .token_length = 0,
+    .e_token_length = 0,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -500,7 +500,7 @@ t_parse_uri21(void) {
 
   coap_pdu_t pdu = {
     .max_size = sizeof(teststr),
-    .token_length = 0,
+    .e_token_length = 0,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -523,7 +523,7 @@ t_parse_uri22(void) {
 
   coap_pdu_t pdu = {
     .max_size = sizeof(teststr),
-    .token_length = 0,
+    .e_token_length = 0,
     .token = teststr,
     .used_size = sizeof(teststr)
   };
@@ -544,7 +544,7 @@ t_parse_uri23(void) {
 
   coap_pdu_t pdu = {
     .max_size = sizeof(teststr),
-    .token_length = 0,
+    .e_token_length = 0,
     .token = teststr,
     .used_size = sizeof(teststr)
   };

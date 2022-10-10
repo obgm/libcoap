@@ -79,7 +79,7 @@ void coap_subscription_init(coap_subscription_t *);
 void
 coap_handle_failed_notify(coap_context_t *context,
                           coap_session_t *session,
-                          const coap_binary_t *token);
+                          const coap_bin_const_t *token);
 
 /**
  * Checks all known resources to see if they are dirty and then notifies
@@ -105,7 +105,7 @@ void coap_check_notify(coap_context_t *context);
  */
 coap_subscription_t *coap_add_observer(coap_resource_t *resource,
                                        coap_session_t *session,
-                                       const coap_binary_t *token,
+                                       const coap_bin_const_t *token,
                                        const coap_pdu_t *pdu);
 
 /**
@@ -119,7 +119,7 @@ coap_subscription_t *coap_add_observer(coap_resource_t *resource,
  */
 coap_subscription_t *coap_find_observer(coap_resource_t *resource,
                                         coap_session_t *session,
-                                        const coap_binary_t *token);
+                                        const coap_bin_const_t *token);
 
 /**
  * Flags that data is ready to be sent to observers.
@@ -131,7 +131,7 @@ coap_subscription_t *coap_find_observer(coap_resource_t *resource,
  */
 void coap_touch_observer(coap_context_t *context,
                          coap_session_t *session,
-                         const coap_binary_t *token);
+                         const coap_bin_const_t *token);
 
 /**
  * Removes any subscription for @p observer from @p resource and releases the
@@ -146,7 +146,7 @@ void coap_touch_observer(coap_context_t *context,
  */
 int coap_delete_observer(coap_resource_t *resource,
                          coap_session_t *session,
-                         const coap_binary_t *token);
+                         const coap_bin_const_t *token);
 
 /**
  * Removes any subscription for @p session and releases the allocated storage.

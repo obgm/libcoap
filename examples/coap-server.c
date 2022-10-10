@@ -119,6 +119,7 @@ static int support_dynamic = 0;
 static uint32_t block_mode = COAP_BLOCK_USE_LIBCOAP;
 static int echo_back = 0;
 static uint32_t csm_max_message_size = 0;
+static size_t extended_token_size = COAP_TOKEN_DEFAULT_MAX;
 
 static coap_dtls_pki_t *
 setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
@@ -2108,7 +2109,7 @@ usage( const char *program, const char *version) {
      "Usage: %s [-d max] [-e] [-g group] [-l loss] [-p port] [-r] [-v num]\n"
      "\t\t[-A address] [-E oscore_conf_file[,seq_file]] [-G group_if]\n"
      "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
-     "\t\t[-V num] [-X size]\n"
+     "\t\t[-T max_token_size] [-V num] [-X size]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
      "\t\t[-s match_psk_sni_file] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
@@ -2164,6 +2165,7 @@ usage( const char *program, const char *version) {
      "\t       \t\tdefined before the leading , (comma) of the first name,\n"
      "\t       \t\tthen the ongoing connection will be a direct connection.\n"
      "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
+     "\t-T max_token_length\tSet the maximum token length (8-65804)\n"
      "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
      "\t       \t\tlibrary logging\n"
      "\t-X size\t\tMaximum message size to use for TCP based connections\n"
@@ -2626,6 +2628,20 @@ cmdline_read_pki_sni_check(char *arg) {
   return valid_pki_snis.count > 0;
 }
 
+static int
+cmdline_read_extended_token_size(char *arg) {
+  extended_token_size = strtoul(arg, NULL, 0);
+  if (extended_token_size < COAP_TOKEN_DEFAULT_MAX) {
+    coap_log_err("Extended Token Length must be 8 or greater\n");
+    return 0;
+  }
+  else if (extended_token_size > COAP_TOKEN_EXT_MAX) {
+    coap_log_err("Extended Token Length must be 65804 or less\n");
+    return 0;
+  }
+  return 1;
+}
+
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
@@ -2656,7 +2672,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:u:v:A:C:E:L:M:NP:R:S:V:X:")) != -1) {
+  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:u:v:A:C:E:L:M:NP:R:S:T:V:X:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -2762,13 +2778,16 @@ main(int argc, char **argv) {
       break;
     case 's':
       if (!cmdline_read_psk_sni_check(optarg)) {
-        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
         exit(1);
       }
       break;
     case 'S':
       if (!cmdline_read_pki_sni_check(optarg)) {
-        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+        exit(1);
+      }
+      break;
+    case 'T':
+      if (!cmdline_read_extended_token_size(optarg)) {
         exit(1);
       }
       break;
@@ -2827,6 +2846,8 @@ main(int argc, char **argv) {
     if (get_oscore_conf(ctx) == NULL)
       goto finish;
   }
+  if (extended_token_size > COAP_TOKEN_DEFAULT_MAX)
+    coap_context_set_max_token_size(ctx, extended_token_size);
 
   /* Define the options to ignore when setting up cache-keys */
   coap_cache_ignore_options(ctx, cache_ignore_options,

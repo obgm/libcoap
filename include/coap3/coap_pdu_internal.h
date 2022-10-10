@@ -50,6 +50,12 @@
 #define OSCORE_CRYPTO_BUFFER_SIZE (COAP_MAX_CHUNK_SIZE+16)
 #endif /* HAVE_OSCORE  */
 
+/* Extended Token constants */
+#define COAP_TOKEN_EXT_1B_TKL 13
+#define COAP_TOKEN_EXT_2B_TKL 14
+#define COAP_TOKEN_EXT_1B_BIAS 13
+#define COAP_TOKEN_EXT_2B_BIAS 269 /* 13 + 256 */
+
 #ifndef COAP_DEBUG_BUF_SIZE
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
 #define COAP_DEBUG_BUF_SIZE 128
@@ -102,7 +108,7 @@
  *
  * allocated buffer always starts max_hdr_size before token.
  *
- * options starts at token + token_length.
+ * options starts at token + e_token_length.
  * payload starts at data, its length is used_size - (data - token).
  *
  * alloc_size, used_size and max_size are the offsets from token.
@@ -117,16 +123,19 @@ struct coap_pdu_t {
   uint8_t max_hdr_size;     /**< space reserved for protocol-specific header */
   uint8_t hdr_size;         /**< actual size used for protocol-specific
                                  header (0 until header is encoded) */
-  uint8_t token_length;     /**< length of Token */
   uint8_t crit_opt;         /**< Set if unknown critical option for proxy */
   uint16_t max_opt;         /**< highest option number in PDU */
+  uint32_t e_token_length;  /**< length of Token space (includes leading
+                                 extended bytes */
+  coap_bin_const_t actual_token; /**< Actual token in pdu */
   size_t alloc_size;        /**< allocated storage for token, options and
                                  payload */
   size_t used_size;         /**< used bytes of storage for token, options and
                                  payload */
   size_t max_size;          /**< maximum size for token, options and payload,
                                  or zero for variable size pdu */
-  uint8_t *token;           /**< first byte of token, if any, or options */
+  uint8_t *token;           /**< first byte of token (or extended length bytes
+                                 prefix), if any, or options */
   uint8_t *data;            /**< first byte of payload, if any */
 #ifdef WITH_LWIP
   struct pbuf *pbuf;        /**< lwIP PBUF. The package data will always reside

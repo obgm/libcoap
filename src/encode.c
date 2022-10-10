@@ -65,7 +65,7 @@ uint64_t
 coap_decode_var_bytes8(const uint8_t *buf, size_t len) {
   unsigned int i;
   uint64_t n = 0;
-  for (i = 0; i < len; ++i)
+  for (i = 0; i < len && i < sizeof(uint64_t); ++i)
     n = (n << 8) + buf[i];
 
   return n;

@@ -397,6 +397,14 @@ void coap_context_set_keepalive(coap_context_t *context, unsigned int seconds) {
 }
 
 void
+coap_context_set_max_token_size(coap_context_t *context,
+                                size_t max_token_size) {
+  assert(max_token_size >= COAP_TOKEN_DEFAULT_MAX &&
+         max_token_size <= COAP_TOKEN_EXT_MAX);
+  context->max_token_size = (uint32_t)max_token_size;
+}
+
+void
 coap_context_set_max_idle_sessions(coap_context_t *context,
                                    unsigned int max_idle_sessions) {
   context->max_idle_sessions = max_idle_sessions;
@@ -567,6 +575,7 @@ coap_new_context(
   etimer_set(&the_coap_context.retransmit_timer, 0xFFFF);
   PROCESS_CONTEXT_END(&coap_retransmit_process);
 #endif /* WITH_CONTIKI */
+  c->max_token_size = COAP_TOKEN_DEFAULT_MAX; /* RFC8974 */
 
   return c;
 
@@ -800,6 +809,7 @@ ssize_t
 coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
   ssize_t bytes_written = -1;
   assert(pdu->hdr_size > 0);
+
   switch(session->proto) {
     case COAP_PROTO_UDP:
       bytes_written = coap_session_send(session, pdu->token - pdu->hdr_size,
@@ -1039,11 +1049,45 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
   return node->id;
 }
 
-COAP_STATIC_INLINE int
-token_match(const uint8_t *a, size_t alen,
-  const uint8_t *b, size_t blen) {
-  return alen == blen && (alen == 0 || memcmp(a, b, alen) == 0);
+#if COAP_CLIENT_SUPPORT
+/*
+ * Sent out a test PDU for Extended Token
+ */
+static coap_mid_t
+coap_send_test_extended_token(coap_session_t *session) {
+  coap_pdu_t *pdu;
+  coap_mid_t mid = COAP_INVALID_MID;
+  size_t i;
+  coap_binary_t *token;
+
+  coap_log_debug("Testing for Extended Token support\n");
+  /* https://rfc-editor.org/rfc/rfc8974#section-2.2.2 */
+  pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_CODE_GET,
+                      coap_new_message_id(session),
+                      coap_session_max_pdu_size(session));
+  if (!pdu)
+    return COAP_INVALID_MID;
+
+  token = coap_new_binary(session->max_token_size);
+  if (token == NULL) {
+    coap_delete_pdu(pdu);
+    return COAP_INVALID_MID;
+  }
+  for (i = 0; i < session->max_token_size; i++) {
+    token->s[i] = (uint8_t)(i + 1);
+  }
+  coap_add_token(pdu, session->max_token_size, token->s);
+  coap_delete_binary(token);
+
+  coap_insert_option(pdu, COAP_OPTION_IF_NONE_MATCH, 0 , NULL);
+
+  session->max_token_checked = COAP_EXT_T_CHECKING; /* Checking out this one */
+  if ((mid = coap_send_internal(session, pdu)) == COAP_INVALID_MID)
+    return COAP_INVALID_MID;
+  session->max_token_mid = mid;
+  return mid;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 int
 coap_client_delay_first(coap_session_t *session)
@@ -1095,6 +1139,14 @@ coap_client_delay_first(coap_session_t *session)
 coap_mid_t
 coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   coap_mid_t mid = COAP_INVALID_MID;
+#if COAP_CLIENT_SUPPORT
+  coap_lg_crcv_t *lg_crcv = NULL;
+  coap_opt_iterator_t opt_iter;
+  coap_block_b_t block;
+  int observe_action = -1;
+  int have_block1 = 0;
+  coap_opt_t *opt;
+#endif /* COAP_CLIENT_SUPPORT */
 
   assert(pdu);
 
@@ -1104,13 +1156,54 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     coap_delete_pdu(pdu);
     return COAP_INVALID_MID;
   }
+  /*
+   * If this is not the first client request and are waiting for a response
+   * to the first client request, then delay sending out this next request
+   * untill all is properly established.
+   */
+  if (!coap_client_delay_first(session))
+    return COAP_INVALID_MID;
+
 #if COAP_CLIENT_SUPPORT
-  coap_lg_crcv_t *lg_crcv = NULL;
-  coap_opt_iterator_t opt_iter;
-  coap_block_b_t block;
-  int observe_action = -1;
-  int have_block1 = 0;
-  coap_opt_t *opt;
+  assert(pdu);
+
+  /* Indicate support for Extended Tokens if appropriate */
+  if (session->max_token_checked == COAP_EXT_T_NOT_CHECKED &&
+      session->max_token_size > COAP_TOKEN_DEFAULT_MAX &&
+      session->type == COAP_SESSION_TYPE_CLIENT &&
+      COAP_PDU_IS_REQUEST(pdu)) {
+    if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+      /*
+       * When the pass / fail response for Extended Token is received, this PDU
+       * will get transmitted.
+       */
+      if (coap_send_test_extended_token(session) == COAP_INVALID_MID) {
+        coap_delete_pdu(pdu);
+        return COAP_INVALID_MID;
+      }
+    }
+    /*
+     * For reliable protocols, this will get cleared after CSM exchanged
+     * in coap_session_connected()
+     */
+    session->doing_first = 1;
+  }
+
+  if (coap_client_delay_first(session) == 0) {
+    return COAP_INVALID_MID;
+  }
+
+  /*
+   * Check validity of token length
+   */
+  if (COAP_PDU_IS_REQUEST(pdu) &&
+      pdu->actual_token.length > session->max_token_size) {
+    coap_log_warn(
+             "coap_send: PDU dropped as token too long (%ld > %d)\n",
+             pdu->actual_token.length, session->max_token_size);
+    coap_delete_pdu(pdu);
+    return COAP_INVALID_MID;
+  }
 
   /* A lot of the reliable code assumes type is CON */
   if (COAP_PROTO_RELIABLE(session->proto) && pdu->type == COAP_MESSAGE_NON)
@@ -1159,14 +1252,13 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
       have_block1 = 1;
     if (observe_action != COAP_OBSERVE_CANCEL) {
       /* Warn about re-use of tokens */
-      coap_bin_const_t token = coap_pdu_get_token(pdu);
-
       if (session->last_token &&
-          coap_binary_equal(&token, session->last_token)) {
+          coap_binary_equal(&pdu->actual_token, session->last_token)) {
         coap_log_debug("Token reused - see https://rfc-editor.org/rfc/rfc9175.html#section-4.2\n");
       }
       coap_delete_bin_const(session->last_token);
-      session->last_token = coap_new_bin_const(token.s, token.length);
+      session->last_token = coap_new_bin_const(pdu->actual_token.s,
+                                               pdu->actual_token.length);
     }
     if (!coap_check_option(pdu, COAP_OPTION_RTAG, &opt_iter) &&
         (session->block_mode & COAP_BLOCK_NO_PREEMPTIVE_RTAG) == 0 &&
@@ -1194,14 +1286,13 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
        COAP_PDU_IS_REQUEST(pdu) && pdu->code != COAP_REQUEST_CODE_DELETE)) {
     coap_lg_xmit_t *lg_xmit = NULL;
 
-    if (!session->lg_xmit) {
+    if (!session->lg_xmit && have_block1) {
       coap_log_debug("PDU presented by app\n");
       coap_show_pdu(COAP_LOG_DEBUG, pdu);
     }
     /* See if this token is already in use for large body responses */
     LL_FOREACH(session->lg_crcv, lg_crcv) {
-      if (token_match(pdu->token, pdu->token_length,
-                      lg_crcv->app_token->s, lg_crcv->app_token->length)) {
+      if (coap_binary_equal(&pdu->actual_token, lg_crcv->app_token)) {
 
         if (observe_action == COAP_OBSERVE_CANCEL) {
           uint8_t buf[8];
@@ -1234,9 +1325,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
       LL_FOREACH(session->lg_xmit, lg_xmit) {
         if (COAP_PDU_IS_REQUEST(&lg_xmit->pdu) &&
             lg_xmit->b.b1.app_token &&
-            token_match(pdu->token, pdu->token_length,
-                        lg_xmit->b.b1.app_token->s,
-                        lg_xmit->b.b1.app_token->length)) {
+            coap_binary_equal(&pdu->actual_token, lg_xmit->b.b1.app_token)) {
           break;
         }
       }
@@ -1558,12 +1647,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   /* Check if subscriptions exist that should be canceled after
      COAP_OBS_MAX_FAIL */
   if (COAP_RESPONSE_CLASS(node->pdu->code) >= 2) {
-    coap_binary_t token = { 0, NULL };
-
-    token.length = node->pdu->token_length;
-    token.s = node->pdu->token;
-
-    coap_handle_failed_notify(context, node->session, &token);
+    coap_handle_failed_notify(context, node->session, &node->pdu->actual_token);
   }
 #endif /* COAP_SERVER_SUPPORT */
   if (node->session->con_active) {
@@ -1787,14 +1871,17 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
         } else if (session->partial_read > 0) {
           size_t hdr_size = coap_pdu_parse_header_size(session->proto,
             session->read_header);
-          size_t len = hdr_size - session->partial_read;
+          size_t tkl = session->read_header[0] & 0x0f;
+          size_t tok_ext_bytes = tkl == COAP_TOKEN_EXT_1B_TKL ? 1 :
+                                 tkl == COAP_TOKEN_EXT_2B_TKL ? 2 : 0;
+          size_t len = hdr_size + tok_ext_bytes - session->partial_read;
           size_t n = min(len, (size_t)bytes_read);
           memcpy(session->read_header + session->partial_read, p, n);
           p += n;
           bytes_read -= n;
           if (n == len) {
             size_t size = coap_pdu_parse_size(session->proto, session->read_header,
-              hdr_size);
+              hdr_size + tok_ext_bytes);
             if (size > COAP_DEFAULT_MAX_PDU_RX_SIZE) {
               coap_log_warn(
                        "** %s: incoming PDU length too large (%zu > %lu)\n",
@@ -1816,8 +1903,8 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
             }
             session->partial_pdu->hdr_size = (uint8_t)hdr_size;
             session->partial_pdu->used_size = size;
-            memcpy(session->partial_pdu->token - hdr_size, session->read_header, hdr_size);
-            session->partial_read = hdr_size;
+            memcpy(session->partial_pdu->token - hdr_size, session->read_header, hdr_size + tok_ext_bytes);
+            session->partial_read = hdr_size + tok_ext_bytes;
             if (size == 0) {
               if (coap_pdu_parse_header(session->partial_pdu, session->proto)) {
 #if COAP_CONSTRAINED_STACK
@@ -2202,7 +2289,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
 
 void
 coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
-  const uint8_t *token, size_t token_length) {
+                         coap_bin_const_t *token) {
   /* cancel all messages in sendqueue that belong to session
    * and use the specified token */
   coap_queue_t **p, *q;
@@ -2215,8 +2302,7 @@ coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
 
   while (q) {
     if (q->session == session &&
-      token_match(token, token_length,
-        q->pdu->token, q->pdu->token_length)) {
+        coap_binary_equal(&q->pdu->actual_token, token)) {
       *p = q->next;
       coap_log_debug("** %s: mid=0x%x: removed (6)\n",
                coap_session_str(session), q->id);
@@ -2239,7 +2325,7 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
                         coap_opt_filter_t *opts) {
   coap_opt_iterator_t opt_iter;
   coap_pdu_t *response;
-  size_t size = request->token_length;
+  size_t size = request->e_token_length;
   unsigned char type;
   coap_opt_t *option;
   coap_option_num_t opt_num = 0;        /* used for calculating delta-storage */
@@ -2320,8 +2406,8 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
   response = coap_pdu_init(type, code, request->mid, size);
   if (response) {
     /* copy token */
-    if (!coap_add_token(response, request->token_length,
-      request->token)) {
+    if (!coap_add_token(response, request->actual_token.length,
+                        request->actual_token.s)) {
       coap_log_debug("cannot add token to error response\n");
       coap_delete_pdu(response);
       return NULL;
@@ -2440,7 +2526,7 @@ error_released:
   if (response->code == 0) {
     /* set error code 5.03 and remove all options and data from response */
     response->code = COAP_RESPONSE_CODE(503);
-    response->used_size = response->token_length;
+    response->used_size = response->e_token_length;
     response->data = NULL;
   }
 }
@@ -2458,20 +2544,20 @@ error_released:
  */
 static int
 coap_cancel(coap_context_t *context, const coap_queue_t *sent) {
-  coap_binary_t token = { 0, NULL };
   int num_cancelled = 0;    /* the number of observers cancelled */
 
+#ifndef COAP_SERVER_SUPPORT
+  (void)sent;
+#endif /* ! COAP_SERVER_SUPPORT */
   (void)context;
-  /* remove observer for this resource, if any
-   * get token from sent and try to find a matching resource. Uh!
-   */
-
-  COAP_SET_STR(&token, sent->pdu->token_length, sent->pdu->token);
 
 #if COAP_SERVER_SUPPORT
+  /* remove observer for this resource, if any
+   * Use token from sent and try to find a matching resource. Uh!
+   */
   RESOURCES_ITER(context->resources, r) {
-    coap_cancel_all_messages(context, sent->session, token.s, token.length);
-    num_cancelled += coap_delete_observer(r, sent->session, &token);
+    coap_cancel_all_messages(context, sent->session, &sent->pdu->actual_token);
+    num_cancelled += coap_delete_observer(r, sent->session, &sent->pdu->actual_token);
   }
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -2558,7 +2644,8 @@ no_response(coap_pdu_t *request, coap_pdu_t *response,
           /* Still need to ACK the request */
           response->code = 0;
           /* Remove token/data from piggybacked acknowledgment PDU */
-          response->token_length = 0;
+          response->actual_token.length = 0;
+          response->e_token_length = 0;
           response->used_size = 0;
           return RESPONSE_SEND;
         }
@@ -2645,7 +2732,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   int skip_hop_limit_check = 0;
   int resp;
   int send_early_empty_ack = 0;
-  coap_binary_t token = { pdu->token_length, pdu->token };
   coap_string_t *query = NULL;
   coap_opt_t *observe = NULL;
   coap_string_t *uri_path = NULL;
@@ -2654,7 +2740,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   int added_block = 0;
   coap_lg_srcv_t *free_lg_srcv = NULL;
 #ifndef WITHOUT_ASYNC
-  coap_bin_const_t tokenc = { pdu->token_length, pdu->token };
   coap_async_t *async;
 #endif /* WITHOUT_ASYNC */
 
@@ -2665,7 +2750,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     }
   }
 #ifndef WITHOUT_ASYNC
-  async = coap_find_async(session, tokenc);
+  async = coap_find_async(session, pdu->actual_token);
   if (async) {
     coap_tick_t now;
 
@@ -2936,7 +3021,8 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     response->type = COAP_MESSAGE_CON;
 #endif /* WITHOUT_ASYNC */
 
-  if (!coap_add_token(response, pdu->token_length, pdu->token)) {
+  if (!coap_add_token(response, pdu->actual_token.length,
+                      pdu->actual_token.s)) {
     resp = 500;
     goto fail_response;
   }
@@ -2988,12 +3074,12 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
           goto skip_handler;
         }
       }
-      subscription = coap_add_observer(resource, session, &token,
+      subscription = coap_add_observer(resource, session, &pdu->actual_token,
                                        pdu);
       if (subscription) {
         uint8_t buf[4];
 
-        coap_touch_observer(context, session, &token);
+        coap_touch_observer(context, session, &pdu->actual_token);
         coap_add_option_internal(response, COAP_OPTION_OBSERVE,
                                  coap_encode_var_safe(buf, sizeof (buf),
                                                       resource->observe),
@@ -3001,7 +3087,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       }
     }
     else if (observe_action == COAP_OBSERVE_CANCEL) {
-      coap_delete_observer(resource, session, &token);
+      coap_delete_observer(resource, session, &pdu->actual_token);
     }
     else {
       coap_log_info("observe: unexpected action %d\n", observe_action);
@@ -3073,7 +3159,7 @@ skip_handler:
     }
     if (COAP_RESPONSE_CLASS(response->code) > 2) {
       if (observe)
-        coap_delete_observer(resource, session, &token);
+        coap_delete_observer(resource, session, &pdu->actual_token);
       if (added_block)
         coap_remove_option(response, COAP_OPTION_BLOCK1);
     }
@@ -3085,7 +3171,8 @@ skip_handler:
     if ((response->type == COAP_MESSAGE_ACK)
       && (response->code == 0)) {
       /* Remove token from otherwise-empty acknowledgment PDU */
-      response->token_length = 0;
+      response->actual_token.length = 0;
+      response->e_token_length = 0;
       response->used_size = 0;
     }
 
@@ -3156,12 +3243,13 @@ fail_response:
 static void
 handle_response(coap_context_t *context, coap_session_t *session,
                 coap_pdu_t *sent, coap_pdu_t *rcvd) {
+
   /* In a lossy context, the ACK of a separate response may have
    * been lost, so we need to stop retransmitting requests with the
-   * same token.
+   * same token. Matching on token potentially containing ext length bytes.
    */
   if (rcvd->type != COAP_MESSAGE_ACK)
-    coap_cancel_all_messages(context, session, rcvd->token, rcvd->token_length);
+    coap_cancel_all_messages(context, session, &rcvd->actual_token);
 
   /* Check for message duplication */
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
@@ -3178,6 +3266,23 @@ handle_response(coap_context_t *context, coap_session_t *session,
       }
       session->last_ack_mid = rcvd->mid;
     }
+  }
+  /* Check to see if checking out extended token support */
+  if (session->max_token_checked == COAP_EXT_T_CHECKING &&
+      session->max_token_mid == rcvd->mid) {
+
+    if (rcvd->actual_token.length != session->max_token_size ||
+        rcvd->code == COAP_RESPONSE_CODE(400) ||
+        rcvd->code == COAP_RESPONSE_CODE(503)) {
+      coap_log_debug("Extended Token requested size support not available\n");
+      session->max_token_size = COAP_TOKEN_DEFAULT_MAX;
+    }
+    else {
+      coap_log_debug("Extended Token support available\n");
+    }
+    session->max_token_checked = COAP_EXT_T_CHECKED;
+    session->doing_first = 0;
+    return;
   }
 
   if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
@@ -3223,6 +3328,9 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
   if (pdu->code == COAP_SIGNALING_CODE_CSM) {
+    if (session->max_token_checked == COAP_EXT_T_NOT_CHECKED) {
+      session->max_token_size = COAP_TOKEN_DEFAULT_MAX;
+    }
     while ((option = coap_option_next(&opt_iter))) {
       if (opt_iter.number == COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE) {
         coap_session_set_mtu(session, coap_decode_var_bytes(coap_opt_value(option),
@@ -3230,6 +3338,16 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
         set_mtu = 1;
       } else if (opt_iter.number == COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER) {
         session->csm_block_supported = 1;
+      }
+      else if (opt_iter.number == COAP_SIGNALING_OPTION_EXTENDED_TOKEN_LENGTH) {
+        session->max_token_size =
+                               coap_decode_var_bytes(coap_opt_value(option),
+                                                     coap_opt_length(option));
+        if (session->max_token_size < COAP_TOKEN_DEFAULT_MAX)
+          session->max_token_size = COAP_TOKEN_DEFAULT_MAX;
+        else if (session->max_token_size > COAP_TOKEN_EXT_MAX)
+          session->max_token_size = COAP_TOKEN_EXT_MAX;
+        session->max_token_checked = COAP_EXT_T_CHECKED;
       }
     }
     if (set_mtu) {
@@ -3261,6 +3379,42 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
 }
 #endif /* !COAP_DISABLE_TCP */
 
+static int
+check_token_size(coap_session_t *session, const coap_pdu_t *pdu) {
+  if (COAP_PDU_IS_REQUEST(pdu) &&
+      pdu->actual_token.length >
+       (session->type == COAP_SESSION_TYPE_CLIENT ?
+                session->max_token_size : session->context->max_token_size)) {
+    /* https://rfc-editor.org/rfc/rfc8974#section-2.2.2 */
+    if (session->max_token_size > COAP_TOKEN_DEFAULT_MAX) {
+      coap_opt_filter_t opt_filter;
+      coap_pdu_t *response;
+
+      memset(&opt_filter, 0, sizeof(coap_opt_filter_t));
+      response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(400),
+                                         &opt_filter);
+      if (!response) {
+        coap_log_warn(
+                 "coap_dispatch: cannot create error response\n");
+      }
+      else {
+        /*
+         * Note - have to leave in oversize token as per
+         * https://rfc-editor.org/rfc/rfc7252#section-5.3.1
+         */
+        if (coap_send_internal(session, response) == COAP_INVALID_MID)
+          coap_log_warn("coap_dispatch: error sending response\n");
+      }
+    }
+    else {
+      /* Indicate no extended token support */
+      coap_send_rst(session, pdu);
+    }
+    return 0;
+  }
+  return 1;
+}
+
 void
 coap_dispatch(coap_context_t *context, coap_session_t *session,
               coap_pdu_t *pdu) {
@@ -3273,6 +3427,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   coap_opt_iterator_t opt_iter;
   coap_pdu_t *dec_pdu = NULL;
 #endif /* HAVE_OSCORE */
+  int is_ext_token_rst;
 
   coap_show_pdu(COAP_LOG_DEBUG, pdu);
 
@@ -3379,9 +3534,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
        * notification. Then, we must flag the observer to be alive
        * by setting obs->fail_cnt = 0. */
       if (sent && COAP_RESPONSE_CLASS(sent->pdu->code) == 2) {
-        const coap_binary_t token =
-        { sent->pdu->token_length, sent->pdu->token };
-        coap_touch_observer(context, sent->session, &token);
+        coap_touch_observer(context, sent->session, &sent->pdu->actual_token);
       }
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -3401,7 +3554,17 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
           context->ping_timeout && session->last_ping > 0)
         is_ping_rst = 1;
 
-      if (!is_ping_rst)
+      /* Check to see if checking out extended token support */
+      is_ext_token_rst = 0;
+      if (session->max_token_checked == COAP_EXT_T_CHECKING &&
+          session->max_token_mid == pdu->mid) {
+        coap_log_debug("Extended Token support not available\n");
+        session->max_token_size = COAP_TOKEN_DEFAULT_MAX;
+        session->max_token_checked = COAP_EXT_T_CHECKED;
+        session->doing_first = 0;
+        is_ext_token_rst = 1;
+      }
+      if (!is_ping_rst && !is_ext_token_rst)
         coap_log_alert("got RST for mid=0x%x\n", pdu->mid);
 
       if (session->con_active) {
@@ -3417,14 +3580,14 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       if (sent) {
         coap_cancel(context, sent);
 
-        if (!is_ping_rst) {
+        if (!is_ping_rst && !is_ext_token_rst) {
           if(sent->pdu->type==COAP_MESSAGE_CON && context->nack_handler) {
             coap_check_update_token(sent->session, sent->pdu);
             context->nack_handler(sent->session, sent->pdu,
                                   COAP_NACK_RST, sent->id);
           }
         }
-        else {
+        else if (is_ping_rst) {
           if (context->pong_handler) {
             context->pong_handler(session, pdu, pdu->mid);
           }
@@ -3439,9 +3602,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
           coap_subscription_t *obs, *tmp;
           LL_FOREACH_SAFE(r->subscribers, obs, tmp) {
             if (obs->pdu->mid == pdu->mid && obs->session == session) {
-              coap_binary_t token = { 0, NULL };
-              COAP_SET_STR(&token, obs->pdu->token_length, obs->pdu->token);
-              coap_delete_observer(r, session, &token);
+              coap_delete_observer(r, session, &obs->pdu->actual_token);
               goto cleanup;
             }
           }
@@ -3457,6 +3618,9 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       if (coap_option_check_critical(session, pdu, &opt_filter) == 0) {
         packet_is_bad = 1;
         coap_send_rst(session, pdu);
+        goto cleanup;
+      }
+      if (!check_token_size(session, pdu)) {
         goto cleanup;
       }
       break;
@@ -3481,6 +3645,10 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         }
         goto cleanup;
       }
+      if (!check_token_size(session, pdu)) {
+        goto cleanup;
+      }
+      break;
     default: break;
   }
 

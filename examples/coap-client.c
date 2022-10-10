@@ -51,8 +51,8 @@ strndup(const char* s1, size_t n) {
 
 int flags = 0;
 
-static unsigned char _token_data[8];
-coap_binary_t base_token = { 0, _token_data };
+static unsigned char _token_data[24]; /* With support for RFC8974 */
+coap_binary_t the_token = { 0, _token_data };
 
 typedef struct {
   coap_binary_t *token;
@@ -271,11 +271,19 @@ coap_new_request(coap_context_t *ctx,
 
   /*
    * Create unique token for this request for handling unsolicited /
-   * delayed responses
+   * delayed responses.
+   * Note that only up to 8 bytes are returned
    */
-  coap_session_new_token(session, &tokenlen, token);
-  track_new_token(tokenlen, token);
-  if (!coap_add_token(pdu, tokenlen, token)) {
+  if (the_token.length > COAP_TOKEN_DEFAULT_MAX) {
+    coap_session_new_token(session, &tokenlen, token);
+    /* Update the last part 8 bytes of the large token */
+    memcpy(&the_token.s[the_token.length - tokenlen], token, tokenlen);
+  }
+  else {
+    coap_session_new_token(session, &the_token.length, the_token.s);
+  }
+  track_new_token(the_token.length, the_token.s);
+  if (!coap_add_token(pdu, the_token.length, the_token.s)) {
     coap_log_debug("cannot add token to request\n");
   }
 
@@ -537,7 +545,7 @@ usage(const char *program, const char *version) {
      "\t       \t\tconnect to a CoAP proxy (automatically adds Proxy-Uri\n"
      "\t       \t\toption to request) to forward the request to.\n"
      "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
-     "\t-T token\tDefine the initial starting token\n"
+     "\t-T token\tDefine the initial starting token (up to 24 characters)\n"
      "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
      "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
      "\t       \t\tlibrary logging\n"
@@ -936,9 +944,9 @@ cmdline_proxy(char *arg) {
 
 static inline void
 cmdline_token(char *arg) {
-  base_token.length = min(sizeof(_token_data), strlen(arg));
-  if (base_token.length > 0) {
-    memcpy((char *)base_token.s, arg, base_token.length);
+  the_token.length = min(sizeof(_token_data), strlen(arg));
+  if (the_token.length > 0) {
+    memcpy((char *)the_token.s, arg, the_token.length);
   }
 }
 
@@ -1812,6 +1820,8 @@ main(int argc, char **argv) {
   coap_register_response_handler(ctx, message_handler);
   coap_register_event_handler(ctx, event_handler);
   coap_register_nack_handler(ctx, nack_handler);
+  if (the_token.length > COAP_TOKEN_DEFAULT_MAX)
+    coap_context_set_max_token_size(ctx, the_token.length);
 
   session = get_session(ctx,
                         node_str[0] ? node_str : NULL,
@@ -1832,8 +1842,9 @@ main(int argc, char **argv) {
    * Prime the base token value, which coap_session_new_token() will increment
    * every time it is called to get an unique token.
    * [Option '-T token' is used to seed a different value]
+   * Note that only the first 8 bytes of the token are used as the prime.
    */
-  coap_session_init_token(session, base_token.length, base_token.s);
+  coap_session_init_token(session, the_token.length, the_token.s);
 
   /* add Uri-Host if server address differs from uri.host */
 

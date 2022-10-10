@@ -59,6 +59,7 @@ static uint8_t key[MAX_KEY];
 static ssize_t key_length = 0;
 static int key_defined = 0;
 static const char *hint = "CoAP";
+static size_t extended_token_size = COAP_TOKEN_DEFAULT_MAX;
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -583,7 +584,7 @@ usage(const char *program, const char *version) {
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
      "Usage: %s [-g group] [-G group_if] [-p port] [-v num] [-A address]\n"
-     "\t       [-V num]\n"
+     "\t       [-T max_token_size] [-V num]\n"
      "\t       [[-h hint] [-k key]]\n"
      "\t       [[-c certfile] [-C cafile] [-n] [-R trust_casfile]]\n"
      "General Options\n"
@@ -596,6 +597,7 @@ usage(const char *program, const char *version) {
      "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
      "\t       \t\tCoAP logging\n"
      "\t-A address\tInterface address to bind to\n"
+     "\t-T max_token_length\tSet the maximum token length (8-65804)\n"
      "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
      "\t       \t\tlibrary logging\n"
      "PSK Options (if supported by underlying (D)TLS library)\n"
@@ -775,6 +777,20 @@ finish:
   return ctx;
 }
 
+static int
+cmdline_read_extended_token_size(char *arg) {
+  extended_token_size = strtoul(arg, NULL, 0);
+  if (extended_token_size < COAP_TOKEN_DEFAULT_MAX) {
+    coap_log_err("Extended Token Length must be 8 or greater\n");
+    return 0;
+  }
+  else if (extended_token_size > COAP_TOKEN_EXT_MAX) {
+    coap_log_err("Extended Token Length must be 65804 or less\n");
+    return 0;
+  }
+  return 1;
+}
+
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
@@ -790,7 +806,7 @@ main(int argc, char **argv) {
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "A:c:C:g:G:h:k:n:R:p:v:V:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:c:C:g:G:h:k:n:R:p:v:T:V:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -826,12 +842,17 @@ main(int argc, char **argv) {
     case 'n':
       verify_peer_cert = 0;
       break;
-    case 'R' :
-      root_ca_file = optarg;
-      break;
     case 'p' :
       strncpy(port_str, optarg, NI_MAXSERV-1);
       port_str[NI_MAXSERV - 1] = '\0';
+      break;
+    case 'R' :
+      root_ca_file = optarg;
+      break;
+    case 'T':
+      if (!cmdline_read_extended_token_size(optarg)) {
+        exit(1);
+      }
       break;
     case 'v' :
       log_level = strtol(optarg, NULL, 10);
@@ -857,6 +878,8 @@ main(int argc, char **argv) {
     coap_join_mcast_group_intf(ctx, group, group_if);
 
   init_resources(ctx);
+  if (extended_token_size > COAP_TOKEN_DEFAULT_MAX)
+    coap_context_set_max_token_size(ctx, extended_token_size);
 
 #ifdef _WIN32
   signal(SIGINT, handle_sigint);

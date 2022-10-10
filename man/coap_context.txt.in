@@ -20,7 +20,8 @@ coap_context_get_max_handshake_sessions,
 coap_context_set_session_timeout,
 coap_context_get_session_timeout,
 coap_context_set_csm_timeout,
-coap_context_get_csm_timeout
+coap_context_get_csm_timeout,
+coap_context_set_max_token_size
 - Work with CoAP contexts
 
 SYNOPSIS
@@ -53,6 +54,9 @@ const coap_context_t *_context_);*
 unsigned int _csm_timeout_);*
 
 *unsigned int coap_context_get_csm_timeout(const coap_context_t *_context_);*
+
+*void coap_context_set_max_token_size(coap_context_t *_context_,
+size_t _max_token_size_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -135,6 +139,18 @@ _context_.  0 (the default) means wait forever.
 The *coap_context_get_csm_timeout*() function returns the seconds to wait for
 a (TCP) CSM negotiation response from the peer for _context_,
 
+*Function: coap_context_set_max_token_size()*
+
+The *coap_context_set_max_token_size*() function sets the _max_token_size_
+for _context_.  _max_token_size_ must be greater than 8 to indicate
+support for https://rfc-editor.org/rfc/rfc8974[RFC8974] up to _max_token_size_
+bytes, else 8 to disable https://rfc-editor.org/rfc/rfc8974[RFC8974]
+(if previously set).
+
+*NOTE:* For the client, it will send an initial PDU to test the server
+supports the requested extended token size as per
+"https://rfc-editor.org/rfc/rfc8974.html#section-2.2.2[RFC8794 Section 2.2.2]"
+
 RETURN VALUES
 -------------
 *coap_new_context*() function returns a newly created context or
@@ -161,6 +177,8 @@ FURTHER INFORMATION
 See
 
 "https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+"https://rfc-editor.org/rfc/rfc8974[RFC8974: Extended Tokens and Stateless Clients in the Constrained Application Protocol (CoAP)]"
 
 for further information.
 

@@ -145,6 +145,7 @@ struct coap_context_t {
                                         when creating a cache-key */
 #endif /* COAP_SERVER_SUPPORT */
   void *app;                       /**< application-specific data */
+  uint32_t max_token_size;         /**< Largest token size supported RFC8974 */
 #ifdef COAP_EPOLL_SUPPORT
   int epfd;                        /**< External FD for epoll */
   int eptimerfd;                   /**< Internal FD for timeout */
@@ -274,12 +275,10 @@ coap_wait_ack( coap_context_t *context, coap_session_t *session,
  * @param context      The context in use.
  * @param session      Session of the messages to remove.
  * @param token        Message token.
- * @param token_length Actual length of @p token.
  */
 void coap_cancel_all_messages(coap_context_t *context,
                               coap_session_t *session,
-                              const uint8_t *token,
-                              size_t token_length);
+                              coap_bin_const_t *token);
 
 /**
 * Cancels all outstanding messages for session @p session.

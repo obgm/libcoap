@@ -52,6 +52,15 @@ typedef enum {
 } COAP_OSCORE_B_2_STEP;
 
 /**
+ * coap_ext_token_check_t values
+ */
+typedef enum coap_ext_token_check_t {
+  COAP_EXT_T_NOT_CHECKED = 0, /**< Not checked */
+  COAP_EXT_T_CHECKED,         /**< Token size valid */
+  COAP_EXT_T_CHECKING,        /**< Token size check request sent */
+} coap_ext_token_check_t;
+
+/**
  * Abstraction of virtual session that can be attached to coap_context_t
  * (client) or coap_endpoint_t (server).
  */
@@ -166,6 +175,11 @@ struct coap_session_t {
                                            associations */
   uint64_t oscore_r2;             /**< R2 for RFC8613 Appendix B.2 */
 #endif /* HAVE_OSCORE */
+  volatile uint8_t max_token_checked; /**< Check for max token size
+                                           coap_ext_token_check_t */
+  uint16_t max_token_mid;         /**< mid used for checking ext token
+                                       support */
+  uint32_t max_token_size;        /**< Largest token size supported RFC8974 */
   uint64_t tx_token;              /**< Next token number to use */
   coap_bin_const_t *last_token;   /** last token used to make a request */
   coap_bin_const_t *echo;         /**< Echo value to send with next request */
