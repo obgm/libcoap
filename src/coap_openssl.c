@@ -1078,12 +1078,12 @@ setup_pki_server(SSL_CTX *ctx,
       }
 
       for (;;) {
-        if (PEM_read_bio_X509(in, &x, NULL, NULL) == NULL)
-            break;
+        if ((x = PEM_read_bio_X509(in, NULL, NULL, NULL)) == NULL)
+          break;
         add_ca_to_cert_store(st, x);
+        X509_free(x);
       }
       BIO_free(in);
-      X509_free(x);
     }
     break;
 
@@ -1468,17 +1468,16 @@ setup_pki_ssl(SSL *ssl,
       memcpy(&rw_var, &setup_data->pki_key.key.pem.ca_file, sizeof (rw_var));
       if (!BIO_read_filename(in, rw_var)) {
         BIO_free(in);
-        X509_free(x);
         break;
       }
       st = SSL_CTX_get_cert_store(ctx);
       for (;;) {
-        if (PEM_read_bio_X509(in, &x, NULL, NULL) == NULL)
-            break;
+        if ((x = PEM_read_bio_X509(in, NULL, NULL, NULL)) == NULL)
+          break;
         add_ca_to_cert_store(st, x);
+        X509_free(x);
       }
       BIO_free(in);
-      X509_free(x);
     }
     break;
 
