@@ -1102,6 +1102,8 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
 
     ongoing = get_ongoing_proxy_session(session, response, &token,
                                         query, req_code, req_type, &uri);
+    if (!ongoing)
+      goto cleanup;
     /*
      * Build up the ongoing PDU that we are going to send
      */
