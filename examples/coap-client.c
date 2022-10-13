@@ -1826,6 +1826,7 @@ main(int argc, char **argv) {
           for (i = 0; i < tracked_tokens_count; i++) {
             if (tracked_tokens[i].observe) {
               coap_cancel_observe(session, tracked_tokens[i].token, msgtype);
+              coap_io_process(ctx, COAP_IO_NO_WAIT);
             }
           }
           doing_observe = 0;
@@ -1834,6 +1835,10 @@ main(int argc, char **argv) {
           /* make sure that the obs timer does not fire again */
           obs_ms = 0;
           obs_seconds = 0;
+          for (i = 0; i < 5 ; i++) {
+            /* Make sure all is flushed out */
+            coap_io_process(ctx, 100);
+          }
         } else {
           obs_ms -= result;
         }
