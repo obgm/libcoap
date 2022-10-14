@@ -51,7 +51,7 @@ handle_sigint(int signum COAP_UNUSED) {
 }
 
 static coap_pdu_t *
-make_pdu( coap_session_t *session, unsigned int value ) {
+make_pdu(coap_session_t *session, unsigned int value) {
   coap_pdu_t *pdu;
   unsigned char enc;
   static unsigned char buf[20];
@@ -70,7 +70,7 @@ make_pdu( coap_session_t *session, unsigned int value ) {
 }
 
 static void
-usage( const char *program ) {
+usage(const char *program) {
   const char *p;
 
   p = strrchr( program, '/' );

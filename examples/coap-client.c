@@ -25,8 +25,8 @@
 #if !defined(S_ISDIR)
 #define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
 #endif
-static char* strndup(const char* s1, size_t n)
-{
+static char *
+strndup(const char* s1, size_t n) {
   char* copy = (char*)malloc(n + 1);
   if (copy) {
     memcpy(copy, s1, n);
@@ -159,9 +159,9 @@ append_to_output(const uint8_t *data, size_t len) {
   size_t written;
 
   if (!file) {
-    if (!output_file.s || (output_file.length && output_file.s[0] == '-'))
+    if (!output_file.s || (output_file.length && output_file.s[0] == '-')) {
       file = stdout;
-    else {
+    } else {
       if (!(file = fopen((char *)output_file.s, "w"))) {
         perror("fopen");
         return -1;
@@ -199,8 +199,7 @@ free_xmit_data(coap_session_t *session COAP_UNUSED, void *app_ptr) {
 }
 
 static void
-track_new_token(size_t tokenlen, uint8_t *token)
-{
+track_new_token(size_t tokenlen, uint8_t *token) {
   track_token *new_list =  realloc(tracked_tokens,
                       (tracked_tokens_count + 1) * sizeof(tracked_tokens[0]));
   if (!new_list) {
@@ -217,8 +216,7 @@ track_new_token(size_t tokenlen, uint8_t *token)
 }
 
 static int
-track_check_token(coap_bin_const_t *token)
-{
+track_check_token(coap_bin_const_t *token) {
   size_t i;
 
   for (i = 0; i < tracked_tokens_count; i++) {
@@ -230,8 +228,7 @@ track_check_token(coap_bin_const_t *token)
 }
 
 static void
-track_flush_token(coap_bin_const_t *token)
-{
+track_flush_token(coap_bin_const_t *token) {
   size_t i;
 
   for (i = 0; i < tracked_tokens_count; i++) {
@@ -461,8 +458,7 @@ message_handler(coap_session_t *session COAP_UNUSED,
       }
       if(COAP_OPT_BLOCK_MORE(block_opt)) {
         doing_getting_block = 1;
-      }
-      else {
+      } else {
         doing_getting_block = 0;
         track_flush_token(&token);
       }
@@ -494,7 +490,7 @@ message_handler(coap_session_t *session COAP_UNUSED,
 }
 
 static void
-usage( const char *program, const char *version) {
+usage(const char *program, const char *version) {
   const char *p;
   char buffer[72];
   const char *lib_build = coap_package_build();
@@ -807,8 +803,7 @@ set_blocksize(void) {
   if (method != COAP_REQUEST_DELETE) {
     if (method == COAP_REQUEST_GET || method == COAP_REQUEST_FETCH) {
       opt = COAP_OPTION_BLOCK2;
-    }
-    else {
+    } else {
       opt = COAP_OPTION_BLOCK1;
     }
 
@@ -937,8 +932,7 @@ cmdline_option(char *arg) {
     else if (strcasecmp(arg, "coap") == 0) {
       proxy.scheme = COAP_URI_SCHEME_COAP;
       proxy.port = COAP_DEFAULT_PORT;
-    }
-    else {
+    } else {
       coap_log(LOG_WARNING, "%s is not a supported CoAP Proxy-Scheme\n", arg);
     }
   }
@@ -1157,8 +1151,7 @@ static int cmdline_read_hint_check(const char *arg) {
         valid_ihs.ih_list[valid_ihs.count].new_key =
                            coap_new_bin_const((const uint8_t *)cp, strlen(cp));
         valid_ihs.count++;
-      }
-      else {
+      } else {
         /* Badly formatted */
         free(valid_ihs.ih_list[valid_ihs.count].hint_match);
       }
@@ -1206,8 +1199,7 @@ verify_cn_callback(const char *cn,
                    coap_session_t *session COAP_UNUSED,
                    unsigned depth,
                    int validated COAP_UNUSED,
-                   void *arg COAP_UNUSED
-) {
+                   void *arg COAP_UNUSED) {
   coap_log(LOG_INFO, "CN '%s' presented by server (%s)\n",
            cn, depth ? "CA" : "Certificate");
   return 1;
@@ -1216,8 +1208,7 @@ verify_cn_callback(const char *cn,
 static const coap_dtls_cpsk_info_t *
 verify_ih_callback(coap_str_const_t *hint,
                    coap_session_t *c_session COAP_UNUSED,
-                   void *arg
-) {
+                   void *arg) {
   coap_dtls_cpsk_info_t *psk_info = (coap_dtls_cpsk_info_t *)arg;
   char lhint[COAP_DTLS_HINT_LENGTH];
   static coap_dtls_cpsk_info_t psk_identity_info;
@@ -1311,8 +1302,7 @@ setup_pki(coap_context_t *ctx) {
     dtls_pki.pki_key.key.pem.public_cert = cert_file;
     dtls_pki.pki_key.key.pem.private_key = key_file ? key_file : cert_file;
     dtls_pki.pki_key.key.pem.ca_file = ca_file;
-  }
-  else {
+  } else {
     /* Map file into memory */
     if (ca_mem == 0 && cert_mem == 0 && key_mem == 0) {
       ca_mem = read_file_mem(ca_file, &ca_mem_len);
@@ -1332,12 +1322,10 @@ setup_pki(coap_context_t *ctx) {
 }
 
 static coap_dtls_cpsk_t *
-setup_psk(
-  const uint8_t *identity,
-  size_t identity_len,
-  const uint8_t *key,
-  size_t key_len
-) {
+setup_psk(const uint8_t *identity,
+          size_t identity_len,
+          const uint8_t *key,
+          size_t key_len) {
   static coap_dtls_cpsk_t dtls_psk;
   static char client_sni[256];
 
@@ -1360,16 +1348,14 @@ setup_psk(
 }
 
 static coap_session_t*
-open_session(
-  coap_context_t *ctx,
-  coap_proto_t proto,
-  coap_address_t *bind_addr,
-  coap_address_t *dst,
-  const uint8_t *identity,
-  size_t identity_len,
-  const uint8_t *key,
-  size_t key_len
-) {
+open_session(coap_context_t *ctx,
+             coap_proto_t proto,
+             coap_address_t *bind_addr,
+             coap_address_t *dst,
+             const uint8_t *identity,
+             size_t identity_len,
+             const uint8_t *key,
+             size_t key_len) {
   coap_session_t *session;
 
   if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
@@ -1385,14 +1371,12 @@ open_session(
                                                key, key_len);
       session = coap_new_client_session_psk2(ctx, bind_addr, dst, proto,
                                            dtls_psk);
-    }
-    else {
+    } else {
       /* No PKI or PSK defined, as encrypted, use PKI */
       coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
       session = coap_new_client_session_pki(ctx, bind_addr, dst, proto, dtls_pki);
     }
-  }
-  else {
+  } else {
     /* Non-encrypted session */
     session = coap_new_client_session(ctx, bind_addr, dst, proto);
   }
@@ -1400,17 +1384,15 @@ open_session(
 }
 
 static coap_session_t *
-get_session(
-  coap_context_t *ctx,
-  const char *local_addr,
-  const char *local_port,
-  coap_proto_t proto,
-  coap_address_t *dst,
-  const uint8_t *identity,
-  size_t identity_len,
-  const uint8_t *key,
-  size_t key_len
-) {
+get_session(coap_context_t *ctx,
+            const char *local_addr,
+            const char *local_port,
+            coap_proto_t proto,
+            coap_address_t *dst,
+            const uint8_t *identity,
+            size_t identity_len,
+            const uint8_t *key,
+            size_t key_len) {
   coap_session_t *session = NULL;
 
   is_mcast = coap_is_mcast(dst);

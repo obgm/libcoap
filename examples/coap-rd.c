@@ -565,7 +565,7 @@ init_resources(coap_context_t *ctx) {
 }
 
 static void
-usage( const char *program, const char *version) {
+usage(const char *program, const char *version) {
   const char *p;
   char buffer[72];
   const char *lib_build = coap_package_build();

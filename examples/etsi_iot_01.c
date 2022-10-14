@@ -437,9 +437,9 @@ init_resources(coap_context_t *ctx) {
   coap_payload_t *test_payload;
 
   test_payload = coap_new_payload(200);
-  if (!test_payload)
+  if (!test_payload) {
     coap_log(LOG_CRIT, "cannot allocate resource /test");
-  else {
+  } else {
     test_payload->length = 13;
     memcpy(test_payload->data, "put data here", test_payload->length);
     /* test_payload->media_type is 0 anyway */
@@ -464,9 +464,9 @@ init_resources(coap_context_t *ctx) {
   /* TD_COAP_BLOCK_01
    * TD_COAP_BLOCK_02 */
   test_payload = make_large("etsi_iot_01_largedata.txt");
-  if (!test_payload)
+  if (!test_payload) {
     coap_log(LOG_CRIT, "cannot allocate resource /large\n");
-  else {
+  } else {
     r = coap_resource_init(coap_make_str_const("large"), 0);
     coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_resource);
 
@@ -481,9 +481,9 @@ init_resources(coap_context_t *ctx) {
 
   /* For TD_COAP_CORE_12 */
   test_payload = coap_new_payload(20);
-  if (!test_payload)
+  if (!test_payload) {
     coap_log(LOG_CRIT, "cannot allocate resource /seg1/seg2/seg3\n");
-  else {
+  } else {
     test_payload->length = 10;
     memcpy(test_payload->data, "segsegseg!", test_payload->length);
     /* test_payload->media_type is 0 anyway */
