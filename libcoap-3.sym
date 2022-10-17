@@ -100,6 +100,7 @@ coap_handle_event
 coap_insert_optlist
 coap_io_do_epoll
 coap_io_do_io
+coap_io_pending
 coap_io_prepare_epoll
 coap_io_prepare_io
 coap_io_process

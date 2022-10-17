@@ -18,7 +18,8 @@ coap_io_prepare_io,
 coap_io_do_io,
 coap_io_prepare_epoll,
 coap_io_do_epoll,
-coap_io_can_exit
+coap_io_pending,
+coap_can_exit
 - Work with CoAP I/O to do the packet send and receives
 
 SYNOPSIS
@@ -45,6 +46,8 @@ coap_tick_t _now_)*;
 *void coap_io_do_epoll(coap_context_t *_context_, struct epoll_event *_events_,
 size_t _nevents_)*;
 
+*int coap_io_pending(coap_context_t *_context_)*;
+
 *int coap_can_exit(coap_context_t *_context_)*;
 
 For specific (D)TLS library support, link with
@@ -58,6 +61,29 @@ DESCRIPTION
 After setting up all the contexts, resources, endpoints sessions etc., the
 underlying CoAP and (D)TLS need to send (and possible re-send) created packets
 as well as receive packets for processing.
+
+The *coap_io_process*() function is the primary function applications should
+use. There are internal functions that *coap_io_process*() calls which are
+available to use if absolutely necessary.  These internal functions and how to
+use them is different depending on whether libcoap has been compiled to use
+*epoll* (Linux systems only) or not.
+
+For *epoll* libcoap, *coap_io_process*() in simple terms calls
+*coap_io_prepare_epoll*(), does an *epoll_wait*() and then calls
+*coap_io_do_epoll*() if needed to make sure that all event based i/o has been
+completed.
+
+For *non-epoll* libcoap, *coap_io_process*() in simple terms calls
+*coap_io_prepare_io*() to set up sockets[], sets up all of the *select*()
+parameters based on the COAP_SOCKET_WANT* values in the sockets[], does a
+*select*(), updates the sockets[] with COAP_SOCKET_CAN_* as appropriate and
+then calls *coap_io_do_io*() to make sure that all current i/o has been
+completed.
+
+FUNCTIONS
+---------
+
+*Function: coap_io_process()*
 
 The *coap_io_process*() function will process any outstanding packets to send
 for the specified _context_, process any available input packets and then wait
@@ -97,23 +123,7 @@ the different sessions.
 
 See EXAMPLES below.
 
-The *coap_io_process*() function is the primary function applications should
-use. There are internal functions that *coap_io_process*() calls which are
-available to use if absolutely necessary.  These internal functions and how to
-use them is different depending on whether libcoap has been compiled to use
-*epoll* (Linux systems only) or not.
-
-For *epoll* libcoap, *coap_io_process*() in simple terms calls
-*coap_io_prepare_epoll*(), does an *epoll_wait*() and then calls
-*coap_io_do_epoll*() if needed to make sure that all event based i/o has been
-completed.
-
-For *non-epoll* libcoap, *coap_io_process*() in simple terms calls
-*coap_io_prepare_io*() to set up sockets[], sets up all of the *select*()
-parameters based on the COAP_SOCKET_WANT* values in the sockets[], does a
-*select*(), updates the sockets[] with COAP_SOCKET_CAN_* as appropriate and
-then calls *coap_io_do_io*() to make sure that all current i/o has been
-completed.
+*Function: coap_io_prepare_epoll()*
 
 The *coap_io_prepare_epoll*() function for the specified _context_ will
 iterate through the endpoints and sessions to transmit any triggered observer
@@ -122,11 +132,15 @@ based on _now_, is the number of milli-secs needed to delay until the next
 time that *coap_io_prepare_epoll*() needs to get called.  After this call an
 *epoll_wait*() should done.
 
+*Function: coap_io_do_epoll()*
+
 The *coap_io_do_epoll*() function for the specified _context_ will
 iterate through the _nevents_ of _events_ returned by *epoll_wait*() and
 execute the appropriate low level i/o function to send / receive / process the
 packets. Where appropriate, structure information (endpoints, sessions etc.)
 is updated with the value of _now_ in the lower level functions.
+
+*Function: coap_io_prepare_io()*
 
 The *coap_io_prepare_io*() function for the specified _context_ will iterate
 through the endpoints and sessions to add all of sockets waiting for network
@@ -140,12 +154,16 @@ done on all the file descriptors (COAP_WANT_READ for readfds etc.), and any
 that are returned active should set the appropriate COAP_SOCKET_CAN_* in the
 _sockets_.
 
+*Function: coap_io_do_io()*
+
 The *coap_io_do_io*() function for the specified _context_ will
 iterate through the endpoints and sessions to find all of sockets that have
 COAP_SOCKET_CAN_* set and then execute the appropriate low level i/o function
 to send / receive / process the packets. Where appropriate, structure
 information (endpoints, sessions etc.) is updated with the value of _now_ in
 the lower level functions.
+
+*Function: coap_io_process_with_fds()*
 
 The *coap_io_process_with_fds*() function is the same as *coap_process_io*()
 but supports additional select() style parameters _nfds_, _readfds_,
@@ -157,16 +175,26 @@ structure or NULL if not required. _nfds_ needs to be set to the maximum FD to
 test for in _readfds_, _writefds_ or _exceptfds_ if any of them are set plus 1.
 If none of them are set, then _nfds_ should be set to 0.
 
-NOTE: The additional parameters for *coap_io_process_with_fds*() are only used
+*NOTE:* The additional parameters for *coap_io_process_with_fds*() are only used
 if there is no epoll support in libcoap. If there is epoll support, then
 *coap_context_get_coap_fd*() should be used and this returned FD along with
 other non libcoap FDs can separately be monitored using method 2 above.
+
+*Function: coap_context_get_coap_fd()*
 
 The *coap_context_get_coap_fd*() function obtains from the specified
 _context_ a single file descriptor that can be monitored by a *select*() or
 as an event returned from a *epoll_wait*() call.  This file descriptor will get
 updated with information (read, write etc. available) whenever any of the
 internal to libcoap file descriptors (sockets) change state.
+
+*Function: coap_io_pending()*
+
+The *coap_io_pending*() function checks to see if there are any outstanding
+i/o requests / responses associated with _context_ as well as if Observe has
+been set up (client only) and large transfers are in process.
+
+*Function: coap_can_exit()*
 
 The *coap_can_exit*() function checks to see if there are any outstanding
 PDUs to transmit associated with _context_ and returns 1 if there is nothing
@@ -184,6 +212,8 @@ descriptor to monitor, or -1 if epoll is not configured in libcoap.
 
 *coap_io_prepare_io*() and *coap_io_prepare_epoll*() returns the number of
 milli-seconds that need to be waited before the function should next be called.
+
+*coap_io_pending*() returns 1 if there is outstanding i/o else returns 0.
 
 *coap_can_exit*() returns 1 if there is nothing outstanding to transmit else
 returns 0.
@@ -449,8 +479,11 @@ SEE ALSO
 
 FURTHER INFORMATION
 -------------------
-See "RFC7252: The Constrained Application Protocol (CoAP)" for further
-information.
+See
+
+"https://tools.ietf.org/html/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
 
 BUGS
 ----

@@ -643,6 +643,20 @@ int coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
                              fd_set *exceptfds);
 #endif /* !RIOT_VERSION */
 
+/**
+ * Check to see if there is any i/o pending for the @p context.
+ *
+ * This includes Observe active (client) and partial large block transfers.
+ *
+ * coap_io_process() is called internally to try to send outstanding
+ * data as well as process any packets just received.
+ *
+ * @param context The CoAP context.
+ *
+ * @return @c 1 I/O still pending, @c 0 no I/O pending.
+ */
+int coap_io_pending(coap_context_t *context);
+
 /**@}*/
 
 /**
