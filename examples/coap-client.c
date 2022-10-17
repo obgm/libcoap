@@ -1791,7 +1791,7 @@ main(int argc, char **argv) {
 
   while(!quit &&
         !(ready && !tracked_tokens_count && !is_mcast && !repeat_count &&
-          coap_can_exit(ctx)) ) {
+          !coap_io_pending(ctx)) ) {
     uint32_t timeout_ms;
     /*
      * 3 factors determine how long to wait in coap_io_process()

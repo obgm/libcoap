@@ -3018,8 +3018,7 @@ handle_response(coap_context_t *context, coap_session_t *session,
     /* Need to see if needing to request next block */
     if (coap_handle_response_get_block(context, session, sent, rcvd,
                                        COAP_RECURSE_OK)) {
-      /* Next block requested, no need to inform app */
-      coap_send_ack(session, rcvd);
+      /* Next block transmitted, ack sent no need to inform app */
       return;
     }
   }

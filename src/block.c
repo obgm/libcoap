@@ -2029,11 +2029,11 @@ coap_handle_response_get_block(coap_context_t *context,
                                coap_pdu_t *rcvd,
                                coap_recurse_t recursive) {
   coap_lg_crcv_t *p;
-  int app_has_response = 0;
   coap_block_b_t block;
   int have_block = 0;
   uint16_t block_opt = 0;
   size_t offset;
+  int ack_rst_sent = 0;
   uint64_t token_match = STATE_TOKEN_BASE(coap_decode_var_bytes8(rcvd->token,
                                                          rcvd->token_length));
 
@@ -2097,6 +2097,10 @@ coap_handle_response_get_block(coap_context_t *context,
 
         if (p->initial) {
           p->initial = 0;
+          if (p->body_data) {
+            coap_free_type(COAP_STRING, p->body_data);
+            p->body_data = NULL;
+          }
           if (etag_opt) {
             p->etag_length = coap_opt_length(etag_opt);
             memcpy(p->etag, coap_opt_value(etag_opt), p->etag_length);
@@ -2275,20 +2279,31 @@ coap_handle_response_get_block(coap_context_t *context,
               coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
               coap_show_pdu(LOG_DEBUG, rcvd);
             }
-            context->response_handler(session, sent, rcvd, rcvd->mid);
+            if (context->response_handler(session, sent, rcvd,
+                                          rcvd->mid) == COAP_RESPONSE_FAIL)
+              coap_send_rst(session, rcvd);
+            else
+              coap_send_ack(session, rcvd);
           }
-          app_has_response = 1;
-          /* Set up for the next data body if observing */
+          else {
+            coap_send_ack(session, rcvd);
+          }
+          ack_rst_sent = 1;
+          if (p->observe_set == 0) {
+            /* Expire this entry */
+            LL_DELETE(session->lg_crcv, p);
+            coap_block_delete_lg_crcv(session, p);
+            goto skip_app_handler;
+          }
+          /* Set up for the next data body as observing */
           p->initial = 1;
           if (p->body_data) {
             coap_free_type(COAP_STRING, p->body_data);
             p->body_data = NULL;
           }
-          else {
-            goto skip_app_handler;
-          }
-        }
-        else {
+          coap_ticks(&p->last_used);
+          goto skip_app_handler;
+        } else {
 block_mode:
           /* need to put back original token into rcvd */
           coap_update_token(rcvd, p->app_token->length, p->app_token->s);
@@ -2299,8 +2314,7 @@ block_mode:
               rcvd->body_total = size2;
             else
               rcvd->body_total = saved_offset + length + block.m;
-          }
-          else {
+          } else {
             rcvd->body_total = saved_offset + length;
             /* Set up for the next data body if observing */
             p->initial = 1;
@@ -2308,9 +2322,17 @@ block_mode:
           if (context->response_handler) {
             coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
             coap_show_pdu(LOG_DEBUG, rcvd);
-            context->response_handler(session, sent, rcvd, rcvd->mid);
+            if (context->response_handler(session, sent, rcvd,
+                                          rcvd->mid) == COAP_RESPONSE_FAIL)
+              coap_send_rst(session, rcvd);
+            else
+              coap_send_ack(session, rcvd);
+          } else {
+            coap_send_ack(session, rcvd);
           }
-          app_has_response = 1;
+          ack_rst_sent = 1;
+          coap_ticks(&p->last_used);
+          goto skip_app_handler;
         }
       }
       else {
@@ -2328,8 +2350,7 @@ block_mode:
             goto fail_resp;
           }
           memcpy(p->obs_token->s, rcvd->token, rcvd->token_length);
-        }
-        else {
+        } else {
           p->observe_set = 0;
           /* Expire this entry */
           goto expire_lg_crcv;
@@ -2401,7 +2422,7 @@ fail_resp:
       }
     }
   }
-  return app_has_response;
+  return 0;
 
 expire_lg_crcv:
     /* need to put back original token into rcvd */
@@ -2414,6 +2435,8 @@ call_app_handler:
   return 0;
 
 skip_app_handler:
+  if (!ack_rst_sent)
+    coap_send_ack(session, rcvd);
   return 1;
 }
 #endif /* COAP_CLIENT_SUPPORT */

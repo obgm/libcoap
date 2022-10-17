@@ -1460,10 +1460,11 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 
   if (result < 0) {   /* error */
 #ifdef _WIN32
-    if (WSAGetLastError() != WSAEINVAL) { /* May happen because of ICMP */
+    if (WSAGetLastError() != WSAEINVAL) /* May happen because of ICMP */
 #else
-    if (errno != EINTR) {
+    if (errno != EINTR)
 #endif
+    {
       coap_log(LOG_DEBUG, "%s", coap_socket_strerror());
 #if COAP_CONSTRAINED_STACK
       coap_mutex_unlock(&static_mutex);
@@ -1571,13 +1572,15 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 #else /* WITH_CONTIKI */
 int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   coap_tick_t now;
+  coap_tick_t after;
 
   coap_ticks(&now);
   /* There is something to read on the endpoint */
   ctx->endpoint->sock.flags |= COAP_SOCKET_CAN_READ;
   /* read in, and send off any responses */
   coap_io_do_io(ctx, now);  /* read received data */
-  return -1;
+  coap_ticks(&after);
+  return (int)(((after - now) * 1000) / COAP_TICKS_PER_SECOND);
 }
 
 unsigned int
@@ -1591,6 +1594,49 @@ coap_io_prepare(coap_context_t *ctx,
   return 0;
 }
 #endif /* WITH_CONTIKI */
+
+/*
+ * return 1  I/O pending
+ *        0  No I/O pending
+ */
+int
+coap_io_pending(coap_context_t *context) {
+  coap_session_t *s, *rtmp;
+#if COAP_SERVER_SUPPORT
+  coap_endpoint_t *ep;
+#endif /* COAP_SERVER_SUPPORT */
+
+  if (!context)
+    return 0;
+  if (coap_io_process(context, COAP_IO_NO_WAIT) < 0)
+    return 0;
+
+  if (context->sendqueue)
+    return 1;
+#if COAP_SERVER_SUPPORT
+  LL_FOREACH(context->endpoint, ep) {
+    SESSIONS_ITER(ep->sessions, s, rtmp) {
+      if (s->delayqueue)
+        return 1;
+      if (s->lg_xmit)
+        return 1;
+      if (s->lg_srcv)
+        return 1;
+    }
+  }
+#endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
+  SESSIONS_ITER(context->sessions, s, rtmp) {
+    if (s->delayqueue)
+      return 1;
+    if (s->lg_xmit)
+      return 1;
+    if (s->lg_crcv)
+      return 1;
+  }
+#endif /* COAP_CLIENT_SUPPORT */
+  return 0;
+}
 
 #ifdef _WIN32
 const char *coap_socket_format_errno(int error) {
