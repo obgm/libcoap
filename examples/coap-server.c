@@ -1582,6 +1582,7 @@ proxy_event_handler(coap_session_t *session,
   case COAP_EVENT_SERVER_SESSION_NEW:
   case COAP_EVENT_SERVER_SESSION_DEL:
   case COAP_EVENT_BAD_PACKET:
+  case COAP_EVENT_MSG_RETRANSMITTED:
   default:
     break;
   }

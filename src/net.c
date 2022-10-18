@@ -1439,6 +1439,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     coap_tick_t now;
 
     node->retransmit_cnt++;
+    coap_handle_event(context, COAP_EVENT_MSG_RETRANSMITTED, node->session);
+
     coap_ticks(&now);
     if (context->sendqueue == NULL) {
       node->t = node->timeout << node->retransmit_cnt;

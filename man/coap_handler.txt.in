@@ -219,9 +219,10 @@ COAP_EVENT_XMIT_BLOCK_FAIL    0x3002
 COAP_EVENT_SERVER_SESSION_NEW 0x4001
 COAP_EVENT_SERVER_SESSION_DEL 0x4002
 /**
- * Unrecognizable received packet events
+ * Message receive and transmit events
  */
 COAP_EVENT_BAD_PACKET         0x5001
+COAP_EVENT_MSG_RETRANSMITTED  0x5002
 ----
 
 EXAMPLES
