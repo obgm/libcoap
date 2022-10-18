@@ -94,10 +94,12 @@ typedef enum {
   COAP_EVENT_SERVER_SESSION_DEL = 0x4002,
 
 /*
- * Received packet formatting errors
+ * Message receive and transmit events
  */
   /** Triggered when badly formatted packet received */
-  COAP_EVENT_BAD_PACKET         = 0x5001
+  COAP_EVENT_BAD_PACKET         = 0x5001,
+  /** Triggered when a message is retransmitted */
+  COAP_EVENT_MSG_RETRANSMITTED  = 0x5002
 
 } coap_event_t;
 
