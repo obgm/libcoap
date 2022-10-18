@@ -785,6 +785,16 @@ cmdline_blocksize(char *arg) {
     goto again;
   }
 
+  if (size < 16) {
+    coap_log(LOG_WARNING, "Minimum block size is 16\n");
+    return 0;
+  } else if (size > 1024) {
+    coap_log(LOG_WARNING, "Maximum block size is 1024\n");
+    return 0;
+  } else if ((size % 16) != 0 ){
+    coap_log(LOG_WARNING, "Block size %u is not a multiple of 16\n", size);
+    return 0;
+  }
   if (size)
     block.szx = (coap_fls(size >> 4) - 1) & 0x07;
 
