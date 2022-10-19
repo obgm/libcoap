@@ -10,16 +10,16 @@
  */
 
 /**
- * @file coap_hashkey.h
+ * @file coap_hashkey_internal.h
  * @brief Definition of hash key type and helper functions
  */
 
-#ifndef COAP_HASHKEY_H_
-#define COAP_HASHKEY_H_
+#ifndef COAP_HASHKEY_INTERNAL_H_
+#define COAP_HASHKEY_INTERNAL_H_
 
 #include "libcoap.h"
-#include "uthash.h"
-#include "str.h"
+#include "coap_uthash_internal.h"
+#include "coap_str.h"
 
 typedef unsigned char coap_key_t[4];
 
@@ -58,4 +58,4 @@ void coap_hash_impl(const unsigned char *s, size_t len, coap_key_t h);
     coap_hash((Str)->s, (Str)->length, (H)); \
   }
 
-#endif /* COAP_HASHKEY_H_ */
+#endif /* COAP_HASHKEY_INTERNAL_H_ */

@@ -24,7 +24,7 @@
 
 #include "coap_async.h"
 #include "block.h"
-#include "str.h"
+#include "coap_str.h"
 #include "pdu.h"
 #include "net.h"
 #include "coap_subscribe.h"

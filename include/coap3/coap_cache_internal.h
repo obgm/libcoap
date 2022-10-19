@@ -19,6 +19,7 @@
 
 #include "coap_internal.h"
 #include "coap_io.h"
+#include "coap_uthash_internal.h"
 
 #if COAP_SERVER_SUPPORT
 /**

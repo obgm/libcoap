@@ -18,7 +18,7 @@
 #define COAP_RESOURCE_INTERNAL_H_
 
 #include "coap_internal.h"
-#include "uthash.h"
+#include "coap_uthash_internal.h"
 
 #if COAP_SERVER_SUPPORT
 /**

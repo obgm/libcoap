@@ -19,7 +19,7 @@
 
 #include <stdint.h>
 
-#include "str.h"
+#include "coap_str.h"
 
 /**
  * The scheme specifiers. Secure schemes have an odd numeric value,

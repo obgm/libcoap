@@ -56,19 +56,14 @@
  * Include all the header files that are for internal use only.
  */
 
-/* Not defined in coap.h - internal usage .h files */
-#include "utlist.h"
-#include "uthash.h"
-#include "coap_hashkey.h"
-#include "coap_mutex.h"
-
-/* Specifically defined internal .h files */
 #include "coap_asn1_internal.h"
 #include "coap_async_internal.h"
 #include "coap_block_internal.h"
 #include "coap_cache_internal.h"
 #include "coap_dtls_internal.h"
+#include "coap_hashkey_internal.h"
 #include "coap_io_internal.h"
+#include "coap_mutex_internal.h"
 #include "coap_net_internal.h"
 #include "coap_pdu_internal.h"
 #include "coap_session_internal.h"
@@ -76,5 +71,7 @@
 #include "coap_session_internal.h"
 #include "coap_subscribe_internal.h"
 #include "coap_tcp_internal.h"
+#include "coap_utlist_internal.h"
+#include "coap_uthash_internal.h"
 
 #endif /* COAP_INTERNAL_H_ */

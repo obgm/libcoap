@@ -51,7 +51,9 @@ uthash
 libcoap uses uthash.h and utlist.h from Troy D. Hanson
 (https://troydhanson.github.io/uthash/). These files use the revised
 BSD license (BSD-1-Clause license) as included in these two source
-files.
+files.  These files are named coap_uthash_internal.h and
+coap_utlist_internal.h respectively to make sure the correct versions
+are included.
 
 ========================================================================
 OpenSSL
