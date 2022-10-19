@@ -18,7 +18,7 @@
 #ifndef COAP_BLOCK_H_
 #define COAP_BLOCK_H_
 
-#include "encode.h"
+#include "coap_encode.h"
 #include "coap_option.h"
 #include "pdu.h"
 

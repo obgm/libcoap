@@ -93,7 +93,6 @@ coap_get_resource_from_uri_path
 coap_get_tls_library_version
 coap_get_uri_path
 coap_handle_event
-coap_hash_impl
 coap_insert_optlist
 coap_io_do_epoll
 coap_io_do_io

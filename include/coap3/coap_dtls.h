@@ -19,7 +19,7 @@
 #define COAP_DTLS_H_
 
 #include "coap_time.h"
-#include "str.h"
+#include "coap_str.h"
 
 /**
  * @ingroup application_api

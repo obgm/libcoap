@@ -63,18 +63,20 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_block_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_cache_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_dtls_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_hashkey_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_io_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_mutex_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_net_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_pdu_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_resource_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_uthash_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_utlist_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.in \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows.in \
-  include/coap$(LIBCOAP_API_VERSION)/uthash.h \
-  include/coap$(LIBCOAP_API_VERSION)/utlist.h \
   src/coap_io_lwip.c \
   src/coap_io_riot.c \
   tests/test_error_response.h \
@@ -162,30 +164,28 @@ libcoap_includedir = $(includedir)/coap$(LIBCOAP_API_VERSION)/
 #  $(top_srcdir)/include/coap-$(LIBCOAP_API_VERSION)/*
 
 libcoap_include_HEADERS = \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/block.h \
   $(top_builddir)/include/coap$(LIBCOAP_API_VERSION)/coap.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/libcoap.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_address.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_async.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/block.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_cache.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_debug.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_dtls.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_encode.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_event.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_forward_decls.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_hashkey.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_io.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_mutex.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_option.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_session.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_subscribe.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_time.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/encode.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/libcoap.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/mem.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/net.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_option.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/pdu.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_prng.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/resource.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/str.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_session.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_str.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_subscribe.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_time.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/uri.h
 
 ## Instruct libtool to include API version information in the generated shared

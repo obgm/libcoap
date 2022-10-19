@@ -904,8 +904,8 @@ RECURSIVE              = NO
 
 EXCLUDE                = @top_srcdir@/src/coap_io_lwip.c \
                          @top_srcdir@/src/coap_io_riot.c \
-                         @top_srcdir@/include/coap@LIBCOAP_API_VERSION@/uthash.h \
-                         @top_srcdir@/include/coap@LIBCOAP_API_VERSION@/utlist.h
+                         @top_srcdir@/include/coap@LIBCOAP_API_VERSION@/coap_uthash_internal.h \
+                         @top_srcdir@/include/coap@LIBCOAP_API_VERSION@/coap_utlist_internal.h
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded

@@ -10,7 +10,7 @@
  */
 
 /**
- * @file encode.h
+ * @file coap_encode.h
  * @brief Encoding and decoding of CoAP data types
  */
 

@@ -10,7 +10,7 @@
  */
 
 /**
- * @file str.h
+ * @file coap_str.h
  * @brief Strings to be used in the CoAP library
  */
 

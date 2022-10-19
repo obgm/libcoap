@@ -11,12 +11,12 @@
  */
 
 /**
- * @file coap_mutex.h
+ * @file coap_mutex_internal.h
  * @brief CoAP mutex mechanism wrapper
  */
 
-#ifndef COAP_MUTEX_H_
-#define COAP_MUTEX_H_
+#ifndef COAP_MUTEX_INTERNAL_H_
+#define COAP_MUTEX_INTERNAL_H_
 
 /*
  * Mutexes are currently only used if there is a constrained stack,
@@ -79,4 +79,4 @@ typedef int coap_mutex_t;
 
 #endif /* COAP_CONSTRAINED_STACK */
 
-#endif /* COAP_MUTEX_H_ */
+#endif /* COAP_MUTEX_INTERNAL_H_ */
