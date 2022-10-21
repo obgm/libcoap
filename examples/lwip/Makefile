@@ -112,8 +112,6 @@ C_COAP_OBJ =$(patsubst %.c,lib-client/%.o,$(COAP_SRC))
 S_COAP_OBJ =$(patsubst %.c,lib-server/%.o,$(COAP_SRC))
 
 CFLAGS += -g3 -Wall -Wextra -pedantic -O0
-# not sorted out yet
-CFLAGS += -Wno-unused-parameter
 
 CFLAGS += -Ilwip/src/include/ -Ilwip/src/include/ipv4/ \
 	  -Ilwip-contrib/ports/unix/port/include/ \

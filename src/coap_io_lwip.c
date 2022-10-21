@@ -347,6 +347,11 @@ coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
 ssize_t
 coap_socket_send(coap_socket_t *sock, coap_session_t *session,
   const uint8_t *data, size_t data_len ) {
+
+  (void)sock;
+  (void)session;
+  (void)data;
+  (void)data_len;
   /* Not implemented, use coap_socket_send_pdu instead */
   return -1;
 }
@@ -355,6 +360,9 @@ int
 coap_socket_bind_udp(coap_socket_t *sock,
   const coap_address_t *listen_addr,
   coap_address_t *bound_addr) {
+  (void)sock;
+  (void)listen_addr;
+  (void)bound_addr;
   return 0;
 }
 
@@ -369,6 +377,10 @@ coap_socket_connect_udp(coap_socket_t *sock,
   err_t err;
   struct udp_pcb *pcb;
 
+  (void)local_if;
+  (void)default_port;
+  (void)local_addr;
+  (void)remote_addr;
   pcb = udp_new();
 
   if (!pcb) {
@@ -397,6 +409,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
 }
 #endif /* ! COAP_CLIENT_SUPPORT */
 
+#if ! COAP_DISABLE_TCP
 int
 coap_socket_connect_tcp1(coap_socket_t *sock,
                          const coap_address_t *local_if,
@@ -404,6 +417,12 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
                          int default_port,
                          coap_address_t *local_addr,
                          coap_address_t *remote_addr) {
+  (void)sock;
+  (void)local_if;
+  (void)server;
+  (void)default_port;
+  (void)local_addr;
+  (void)remote_addr;
   return 0;
 }
 
@@ -411,6 +430,9 @@ int
 coap_socket_connect_tcp2(coap_socket_t *sock,
                          coap_address_t *local_addr,
                          coap_address_t *remote_addr) {
+  (void)sock;
+  (void)local_addr;
+  (void)remote_addr;
   return 0;
 }
 
@@ -418,6 +440,9 @@ int
 coap_socket_bind_tcp(coap_socket_t *sock,
                      const coap_address_t *listen_addr,
                      coap_address_t *bound_addr) {
+  (void)sock;
+  (void)listen_addr;
+  (void)bound_addr;
   return 0;
 }
 
@@ -426,16 +451,27 @@ coap_socket_accept_tcp(coap_socket_t *server,
                         coap_socket_t *new_client,
                         coap_address_t *local_addr,
                         coap_address_t *remote_addr) {
+  (void)server;
+  (void)new_client;
+  (void)local_addr;
+  (void)remote_addr;
   return 0;
 }
+#endif /* !COAP_DISABLE_TCP */
 
 ssize_t
 coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
+  (void)sock;
+  (void)data;
+  (void)data_len;
   return -1;
 }
 
 ssize_t
 coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
+  (void)sock;
+  (void)data;
+  (void)data_len;
   return -1;
 }
 

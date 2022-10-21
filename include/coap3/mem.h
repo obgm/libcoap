@@ -131,10 +131,12 @@ COAP_STATIC_INLINE void coap_memory_init(void) {}
  * made conditional.
  */
 COAP_STATIC_INLINE void *coap_malloc(size_t size) {
+  (void)size;
   LWIP_ASSERT("coap_malloc must not be used in lwIP", 0);
 }
 
 COAP_STATIC_INLINE void coap_free(void *pointer) {
+  (void)pointer;
   LWIP_ASSERT("coap_free must not be used in lwIP", 0);
 }
 
