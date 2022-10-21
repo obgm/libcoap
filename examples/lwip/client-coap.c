@@ -32,6 +32,9 @@ message_handler(coap_session_t *session,
   size_t offset;
   size_t total;
 
+  (void)session;
+  (void)sent;
+  (void)id;
   if (coap_get_data_large(received, &len, &data, &offset, &total)) {
     printf("%*.*s", (int)len, (int)len, (const char*)data);
     if (len + offset == total) {

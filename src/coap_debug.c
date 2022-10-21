@@ -289,6 +289,8 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
 
   return strlen((char *)p);
 # else /* WITH_CONTIKI */
+  (void)addr;
+  (void)len;
   /* TODO: output addresses manually */
 #   warning "inet_ntop() not available, network addresses will not be included in debug output"
 # endif /* WITH_CONTIKI */

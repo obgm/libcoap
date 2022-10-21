@@ -34,6 +34,9 @@ hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
   coap_tick_t now;
   coap_tick_t t;
 
+  (void)resource;
+  (void)session;
+  (void)request;
   /* FIXME: return time, e.g. in human-readable by default and ticks
    * when query ?ticks is given. */
 

@@ -329,6 +329,7 @@ static size_t
 coap_session_max_pdu_size_internal(const coap_session_t *session,
                                    size_t max_with_header) {
 #if COAP_DISABLE_TCP
+  (void)session;
   return max_with_header > 4 ? max_with_header - 4 : 0;
 #else /* !COAP_DISABLE_TCP */
   if (COAP_PROTO_NOT_RELIABLE(session->proto))
