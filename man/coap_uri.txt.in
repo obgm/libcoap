@@ -12,7 +12,11 @@ NAME
 ----
 coap_uri,
 coap_split_uri,
-coap_split_proxy_uri
+coap_split_proxy_uri,
+coap_new_uri,
+coap_clone_uri,
+coap_delete_uri,
+coap_uri_into_options
 - Work with CoAP URIs
 
 SYNOPSIS
@@ -57,12 +61,14 @@ The parsed uri structure is of the form
 [source, c]
 ----
 typedef struct {
-  coap_str_const_t host;  /* host part of the URI */
+  coap_str_const_t host;  /* The host part of the URI */
   uint16_t port;          /* The port in host byte order */
-  coap_str_const_t path;  /* Beginning of the path if present.
-                          Use coap_split_path() to create Uri-Path options */
-  coap_str_const_t query; /* Beginning of the query if present
-                          Use coap_split_query() to create Uri-Query options */
+  coap_str_const_t path;  /* The complete path if present or {0, NULL}.
+                             Needs to be split using coap_split_path()
+                             or coap_uri_into_options(). */
+  coap_str_const_t query; /* The complete query if present or {0, NULL}.
+                             Needs to be split using coap_split_query()
+                             or coap_uri_into_options(). */
   enum coap_uri_scheme_t scheme; /* The parsed scheme specifier. */
 } coap_uri_t;
 ----
@@ -74,13 +80,13 @@ FUNCTIONS
 
 The *coap_split_uri*() function is used to parse the provided _uri_def_ of
 length _length_ into the component parts held in the _uri_ structure.  These
-component parts are the host, port, path and query and the CoAP URI scheme.
+component parts are the host, port, path, query and the CoAP URI scheme.
 
 *Function: coap_split_proxy_uri()*
 
 The *coap_split_proxy_uri*() function is used to parse the provided _uri_def_ of
 length _length_ into the component parts held in the _uri_ structure.  These
-component parts are the host, port, path and query and the URI scheme.  The
+component parts are the host, port, path, query and the URI scheme.  The
 schemes also includes support for http:// and https:// as the proxy may need to
 be a coap-to-http proxy.
 
@@ -103,7 +109,7 @@ coap_uri_t structure.
 
 *Function: coap_uri_into_options()*
 
-The *coap_uri_into_options*() function takes the _uri_ structure and then adds
+The *coap_uri_into_options*() function takes the _uri_ structure and then takes
 CoAP options derived from this information and adds them to _optlist_chain_.
 The initial _optlist_chain_ entry should be set to NULL before
 this function is called (unless *coap_insert_optlist*(3) has been previously
