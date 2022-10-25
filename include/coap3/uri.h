@@ -40,16 +40,18 @@ typedef enum coap_uri_scheme_t {
 /**
  * Representation of parsed URI. Components may be filled from a string with
  * coap_split_uri() or coap_split_proxy_uri() and can be used as input for
- * option-creation functions.
+ * option-creation functions. Alternatively, coap_uri_into_options() can
+ * be used to convert coap_uri_t into CoAP options.
  */
 typedef struct {
-  coap_str_const_t host;  /**< host part of the URI */
+  coap_str_const_t host;  /**< The host part of the URI */
   uint16_t port;          /**< The port in host byte order */
-  coap_str_const_t path;  /**< Beginning of the first path segment.
-                           Use coap_split_path() to create Uri-Path options */
-  coap_str_const_t query; /**<  The query part if present
-                           Use coap_split_query() to create Uri-Query options */
-
+  coap_str_const_t path;  /**< The complete path if present or {0, NULL}.
+                               Needs to be split using coap_split_path()
+                               or coap_uri_into_options(). */
+  coap_str_const_t query; /**< The complete query if present or {0, NULL}.
+                               Needs to be split using coap_split_query()
+                               or coap_uri_into_options(). */
   /** The parsed scheme specifier. */
   enum coap_uri_scheme_t scheme;
 } coap_uri_t;
