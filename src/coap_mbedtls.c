@@ -1599,7 +1599,8 @@ fail:
   return NULL;
 }
 
-int coap_dtls_is_supported(void) {
+int
+coap_dtls_is_supported(void) {
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
   return 1;
 #else /* !MBEDTLS_SSL_PROTO_DTLS */
@@ -1614,13 +1615,49 @@ int coap_dtls_is_supported(void) {
 #endif /* !MBEDTLS_SSL_PROTO_DTLS */
 }
 
-int coap_tls_is_supported(void)
-{
+int
+coap_tls_is_supported(void) {
 #if !COAP_DISABLE_TCP
   return 1;
 #else /* COAP_DISABLE_TCP */
   return 0;
 #endif /* COAP_DISABLE_TCP */
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_psk_is_supported(void) {
+  return 1;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_pki_is_supported(void) {
+  return 1;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_pkcs11_is_supported(void) {
+  return 0;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_rpk_is_supported(void) {
+  return 0;
 }
 
 void *coap_dtls_new_context(coap_context_t *c_context)

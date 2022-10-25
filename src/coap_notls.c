@@ -29,6 +29,42 @@ coap_tls_is_supported(void) {
   return 0;
 }
 
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_psk_is_supported(void) {
+  return 0;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_pki_is_supported(void) {
+  return 0;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_pkcs11_is_supported(void) {
+  return 0;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_rpk_is_supported(void) {
+  return 0;
+}
+
 coap_tls_version_t *
 coap_get_tls_library_version(void) {
   static coap_tls_version_t version;

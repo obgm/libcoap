@@ -2083,7 +2083,7 @@ fill_keystore(coap_context_t *ctx) {
   if (cert_file == NULL && key_defined == 0) {
     if (coap_dtls_is_supported() || coap_tls_is_supported()) {
       coap_log(LOG_DEBUG,
-               "(D)TLS not enabled as neither -k or -c options specified\n");
+           "(D)TLS not enabled as none of -k, -c or -M options specified\n");
     }
     return;
   }
@@ -2100,7 +2100,11 @@ fill_keystore(coap_context_t *ctx) {
   if (key_defined) {
     coap_dtls_spsk_t *dtls_spsk = setup_spsk();
 
-    coap_context_set_psk2(ctx, dtls_spsk);
+    if (!coap_context_set_psk2(ctx, dtls_spsk)) {
+      coap_log(LOG_INFO, "Unable to set up PSK\n");
+      /* So we do not set up DTLS */
+      key_defined = 0;
+    }
   }
 }
 

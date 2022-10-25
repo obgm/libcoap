@@ -148,6 +148,9 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_string.3" > coap_make_str_const.3
 	@echo ".so man3/coap_string.3" > coap_string_equal.3
 	@echo ".so man3/coap_string.3" > coap_binary_equal.3
+	@echo ".so man3/coap_tls_library.3" > coap_string_tls_support.3
+	@echo ".so man3/coap_tls_library.3" > coap_string_tls_version.3
+	@echo ".so man3/coap_tls_library.3" > coap_show_tls_version.3
 	$(INSTALL_DATA) $(A2X_EXTRA_PAGES_3) "$(DESTDIR)$(man3dir)"
 	$(INSTALL_DATA) $(A2X_EXTRA_PAGES_5) "$(DESTDIR)$(man5dir)"
 

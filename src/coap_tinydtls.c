@@ -41,6 +41,10 @@ typedef struct coap_tiny_context_t {
 #endif /* DTLS_ECC */
 } coap_tiny_context_t;
 
+#if ! defined(DTLS_PSK) && ! defined(DTLS_ECC)
+#error Neither DTLS_PSK or DTLS_ECC defined
+#endif /* ! DTLS_PSK && ! DTLS_ECC */
+
 static dtls_tick_t dtls_tick_0 = 0;
 static coap_tick_t coap_tick_0 = 0;
 
@@ -48,6 +52,51 @@ int
 coap_dtls_is_supported(void) {
   return 1;
 }
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_psk_is_supported(void) {
+#ifdef DTLS_PSK
+  return 1;
+#else /* ! DTLS_PSK */
+  return 0;
+#endif /* ! DTLS_PSK */
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_pki_is_supported(void) {
+  return 0;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_pkcs11_is_supported(void) {
+  return 0;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_rpk_is_supported(void) {
+#ifdef DTLS_ECC
+  return 1;
+#else /* ! DTLS_ECC */
+  return 0;
+#endif /* ! DTLS_ECC */
+}
+
 
 void coap_dtls_startup(void) {
   dtls_init();
@@ -196,6 +245,7 @@ dtls_event(struct dtls_context_t *dtls_context,
   return 0;
 }
 
+#ifdef DTLS_PSK
 /* This function is the "key store" for tinyDTLS. It is called to
  * retrieve a key for the given identity within this particular
  * session. */
@@ -383,6 +433,7 @@ get_psk_info(struct dtls_context_t *dtls_context,
 error:
   return dtls_alert_fatal_create(fatal_error);
 }
+#endif /* DTLS_PSK */
 
 #ifdef DTLS_ECC
 static int
@@ -462,7 +513,9 @@ static dtls_handler_t ec_cb = {
   .write = dtls_send_to_peer,
   .read = dtls_application_data,
   .event = dtls_event,
+#ifdef DTLS_PSK
   .get_psk_info = NULL,
+#endif /* DTLS_PSK */
   .get_ecdsa_key = get_ecdsa_key,
   .verify_ecdsa_key = verify_ecdsa_key
 };
@@ -472,11 +525,13 @@ static dtls_handler_t psk_cb = {
   .write = dtls_send_to_peer,
   .read = dtls_application_data,
   .event = dtls_event,
+#ifdef DTLS_PSK
   .get_psk_info = get_psk_info,
+#endif /* DTLS_PSK */
 #ifdef DTLS_ECC
   .get_ecdsa_key = NULL,
   .verify_ecdsa_key = NULL
-#endif
+#endif /* DTLS_ECC */
 };
 
 void *
@@ -1027,8 +1082,7 @@ pem_decode_mem_asn1(const char *begstr, const uint8_t *str)
 int
 coap_dtls_context_set_pki(coap_context_t *ctx,
                           const coap_dtls_pki_t* setup_data,
-                          const coap_dtls_role_t role COAP_UNUSED
-) {
+                          const coap_dtls_role_t role COAP_UNUSED) {
 #ifdef DTLS_ECC
   coap_tiny_context_t *t_context;
   coap_binary_t *asn1_priv;
@@ -1182,6 +1236,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
   (void)ctx;
   (void)setup_data;
 #endif /* ! DTLS_ECC */
+  coap_log(LOG_WARNING, "TinyDTLS not compiled with ECC support\n");
   return 0;
 }
 
@@ -1202,7 +1257,12 @@ coap_dtls_context_set_cpsk(coap_context_t *coap_context COAP_UNUSED,
   if (!setup_data)
     return 0;
 
+#ifdef DTLS_PSK
   return 1;
+#else /* ! DTLS_PSK */
+  coap_log(LOG_WARNING, "TinyDTLS not compiled with PSK support\n");
+  return 0;
+#endif /* ! DTLS_PSK */
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
@@ -1214,12 +1274,17 @@ coap_dtls_context_set_spsk(coap_context_t *coap_context COAP_UNUSED,
   if (!setup_data)
     return 0;
 
+#ifdef DTLS_PSK
   if (setup_data->validate_sni_call_back) {
     coap_log(LOG_WARNING,
         "CoAP Server with TinyDTLS does not support SNI selection\n");
   }
 
   return 1;
+#else /* ! DTLS_PSK */
+  coap_log(LOG_WARNING, "TinyDTLS not compiled with PSK support\n");
+  return 0;
+#endif /* ! DTLS_PSK */
 }
 #endif /* COAP_SERVER_SUPPORT */
 

@@ -165,7 +165,8 @@ static int psk_tls_client_hello_call_back(SSL *ssl, int *al, void *arg);
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
 #endif /* COAP_SERVER_SUPPORT */
 
-int coap_dtls_is_supported(void) {
+int
+coap_dtls_is_supported(void) {
   if (SSLeay() < 0x10100000L) {
     coap_log(LOG_WARNING, "OpenSSL version 1.1.0 or later is required\n");
     return 0;
@@ -186,7 +187,8 @@ int coap_dtls_is_supported(void) {
   return 1;
 }
 
-int coap_tls_is_supported(void) {
+int
+coap_tls_is_supported(void) {
 #if !COAP_DISABLE_TCP
   if (SSLeay() < 0x10100000L) {
     coap_log(LOG_WARNING, "OpenSSL version 1.1.0 or later is required\n");
@@ -202,6 +204,42 @@ int coap_tls_is_supported(void) {
 #else /* COAP_DISABLE_TCP */
   return 0;
 #endif /* COAP_DISABLE_TCP */
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_psk_is_supported(void) {
+  return 1;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_pki_is_supported(void) {
+  return 1;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_pkcs11_is_supported(void) {
+  return 1;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_rpk_is_supported(void) {
+  return 0;
 }
 
 coap_tls_version_t *
