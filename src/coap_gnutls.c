@@ -205,6 +205,46 @@ coap_tls_is_supported(void) {
 #endif /* COAP_DISABLE_TCP */
 }
 
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_psk_is_supported(void) {
+  return 1;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_pki_is_supported(void) {
+  return 1;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_pkcs11_is_supported(void) {
+  return 1;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_rpk_is_supported(void) {
+#if (GNUTLS_VERSION_NUMBER >= 0x030606)
+  return 1;
+#else /* GNUTLS_VERSION_NUMBER < 0x030606 */
+  return 0;
+#endif /* GNUTLS_VERSION_NUMBER < 0x030606 */
+}
+
 coap_tls_version_t *
 coap_get_tls_library_version(void) {
   static coap_tls_version_t version;

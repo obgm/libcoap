@@ -936,52 +936,25 @@ char *coap_string_tls_version(char *buffer, size_t bufsize)
 
 char *coap_string_tls_support(char *buffer, size_t bufsize)
 {
-  coap_tls_version_t *tls_version = coap_get_tls_library_version();
   const int have_tls = coap_tls_is_supported();
   const int have_dtls = coap_dtls_is_supported();
+  const int have_psk = coap_dtls_psk_is_supported();
+  const int have_pki = coap_dtls_pki_is_supported();
+  const int have_pkcs11 = coap_dtls_pkcs11_is_supported();
+  const int have_rpk = coap_dtls_rpk_is_supported();
 
   if (have_dtls == 0 && have_tls == 0) {
     snprintf(buffer, bufsize, "(No DTLS or TLS support)");
     return buffer;
   }
-  switch (tls_version->type) {
-  case COAP_TLS_LIBRARY_NOTLS:
-    snprintf(buffer, bufsize, "(No DTLS or TLS support)");
-    break;
-  case COAP_TLS_LIBRARY_TINYDTLS:
-    snprintf(buffer, bufsize,
-             "(%sDTLS and%s TLS support; PSK, no PKI, no PKCS11, and RPK support)",
-             have_dtls ? "" : " no",
-             have_tls ? "" : " no");
-    break;
-  case COAP_TLS_LIBRARY_OPENSSL:
-    snprintf(buffer, bufsize,
-             "(%sDTLS and%s TLS support; PSK, PKI, PKCS11, and no RPK support)",
-             have_dtls ? "" : " no",
-             have_tls ? "" : " no");
-    break;
-  case COAP_TLS_LIBRARY_GNUTLS:
-    if (tls_version->version >= 0x030606)
-      snprintf(buffer, bufsize,
-               "(%sDTLS and%s TLS support; PSK, PKI, PKCS11, and RPK support)",
-               have_dtls ? "" : " no",
-               have_tls ? "" : " no");
-    else
-      snprintf(buffer, bufsize,
-               "(%sDTLS and%s TLS support; PSK, PKI, PKCS11, and no RPK support)",
-               have_dtls ? "" : " no",
-               have_tls ? "" : " no");
-    break;
-  case COAP_TLS_LIBRARY_MBEDTLS:
-    snprintf(buffer, bufsize,
-             "(%sDTLS and%s TLS support; PSK, PKI, no PKCS11, and no RPK support)",
-             have_dtls ? "" : " no",
-             have_tls ? "" : " no");
-    break;
-  default:
-    buffer[0] = '\000';
-    break;
-  }
+  snprintf(buffer, bufsize,
+           "(%sDTLS and %sTLS support; %sPSK, %sPKI, %sPKCS11, and %sRPK support)",
+           have_dtls ? "" : "No ",
+           have_tls ? "" : "no ",
+           have_psk ? "" : "no ",
+           have_pki ? "" : "no ",
+           have_pkcs11 ? "" : "no ",
+           have_rpk ? "" : "no ");
   return buffer;
 }
 
