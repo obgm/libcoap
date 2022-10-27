@@ -70,6 +70,13 @@
 #include <openssl/hmac.h>
 #include <openssl/x509v3.h>
 
+#if OPENSSL_VERSION_NUMBER > 0x30000000L
+#ifdef __GNUC__
+/* Ignore OpenSSL 3.0 deprecated warnings for now */
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#endif /* OPENSSL_VERSION_NUMBER > 0x30000000L */
+
 #ifdef COAP_EPOLL_SUPPORT
 # include <sys/epoll.h>
 #endif /* COAP_EPOLL_SUPPORT */
