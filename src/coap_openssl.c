@@ -70,12 +70,12 @@
 #include <openssl/hmac.h>
 #include <openssl/x509v3.h>
 
-#if OPENSSL_VERSION_NUMBER > 0x30000000L
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
 #ifdef __GNUC__
 /* Ignore OpenSSL 3.0 deprecated warnings for now */
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
-#endif /* OPENSSL_VERSION_NUMBER > 0x30000000L */
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
 
 #ifdef COAP_EPOLL_SUPPORT
 # include <sys/epoll.h>
@@ -570,6 +570,20 @@ coap_dtls_psk_server_callback(
 }
 #endif /* COAP_SERVER_SUPPORT */
 
+static const char *
+ssl_function_definition(unsigned long e) {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  (void)e;
+  return "";
+#else /* OPENSSL_VERSION_NUMBER < 0x30000000L */
+  static char buff[80];
+
+  snprintf(buff, sizeof(buff), " at %s:%s",
+           ERR_lib_error_string(e), ERR_func_error_string(e));
+  return buff;
+#endif /* OPENSSL_VERSION_NUMBER < 0x30000000L */
+}
+
 static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
   coap_session_t *session = (coap_session_t*)SSL_get_app_data(ssl);
   const char *pstr;
@@ -607,21 +621,23 @@ static void coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
         coap_log(LOG_WARNING, "*  %s: %s:failed in %s\n",
                  coap_session_str(session), pstr, SSL_state_string_long(ssl));
         while ((e = ERR_get_error()))
-          coap_log(LOG_WARNING, "*  %s: %s at %s:%s\n",
+          coap_log(LOG_WARNING, "*  %s: %s%s\n",
                    coap_session_str(session), ERR_reason_error_string(e),
-                   ERR_lib_error_string(e), ERR_func_error_string(e));
+                   ssl_function_definition(e));
       }
     } else if (ret < 0) {
       if (dtls_log_level >= LOG_WARNING) {
         int err = SSL_get_error(ssl, ret);
-        if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE && err != SSL_ERROR_WANT_CONNECT && err != SSL_ERROR_WANT_ACCEPT && err != SSL_ERROR_WANT_X509_LOOKUP) {
+        if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE &&
+            err != SSL_ERROR_WANT_CONNECT && err != SSL_ERROR_WANT_ACCEPT &&
+            err != SSL_ERROR_WANT_X509_LOOKUP) {
           long e;
           coap_log(LOG_WARNING, "*  %s: %s:error in %s\n",
                    coap_session_str(session), pstr, SSL_state_string_long(ssl));
           while ((e = ERR_get_error()))
-            coap_log(LOG_WARNING, "*  %s: %s at %s:%s\n",
+            coap_log(LOG_WARNING, "*  %s: %s%s\n",
                      coap_session_str(session), ERR_reason_error_string(e),
-                     ERR_lib_error_string(e), ERR_func_error_string(e));
+                     ssl_function_definition(e));
         }
       }
     }
@@ -985,10 +1001,9 @@ add_ca_to_cert_store(X509_STORE *st, X509 *x509)
       int r = ERR_GET_REASON(e);
       if (r != X509_R_CERT_ALREADY_IN_HASH_TABLE) {
         /* Not already added */
-        coap_log(LOG_WARNING, "***setup_pki: (D)TLS: %s at %s:%s\n",
+        coap_log(LOG_WARNING, "***setup_pki: (D)TLS: %s%s\n",
                  ERR_reason_error_string(e),
-                 ERR_lib_error_string(e),
-                 ERR_func_error_string(e));
+                 ssl_function_definition(e));
       }
     }
   }
