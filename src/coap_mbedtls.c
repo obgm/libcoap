@@ -1269,6 +1269,7 @@ report_mbedtls_alert(unsigned char alert) {
   case MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE: return ": Handshake failure";
   case MBEDTLS_SSL_ALERT_MSG_NO_CERT: return ": No Certificate provided";
   case MBEDTLS_SSL_ALERT_MSG_BAD_CERT: return ": Certificate is bad";
+  case MBEDTLS_SSL_ALERT_MSG_CERT_UNKNOWN: return ": Certificate is unknown";
   case MBEDTLS_SSL_ALERT_MSG_UNKNOWN_CA: return ": CA is unknown";
   case MBEDTLS_SSL_ALERT_MSG_ACCESS_DENIED: return ": Access was denied";
   case MBEDTLS_SSL_ALERT_MSG_DECRYPT_ERROR: return ": Decrypt error";
@@ -1303,6 +1304,8 @@ static int do_mbedtls_handshake(coap_session_t *c_session,
     coap_log(LOG_DEBUG, "hello verification requested\n");
     goto reset;
   case MBEDTLS_ERR_SSL_INVALID_MAC:
+    goto fail;
+  case MBEDTLS_ERR_SSL_UNKNOWN_CIPHER:
     goto fail;
   case MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE:
     alert = MBEDTLS_SSL_ALERT_MSG_NO_CERT;
