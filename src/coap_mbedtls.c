@@ -1305,7 +1305,11 @@ static int do_mbedtls_handshake(coap_session_t *c_session,
     goto reset;
   case MBEDTLS_ERR_SSL_INVALID_MAC:
     goto fail;
+#ifdef MBEDTLS_2_X_COMPAT
   case MBEDTLS_ERR_SSL_UNKNOWN_CIPHER:
+#else /* ! MBEDTLS_2_X_COMPAT */
+  case MBEDTLS_ERR_SSL_DECODE_ERROR:
+#endif /* ! MBEDTLS_2_X_COMPAT */
     goto fail;
   case MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE:
     alert = MBEDTLS_SSL_ALERT_MSG_NO_CERT;

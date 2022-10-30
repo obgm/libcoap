@@ -1922,6 +1922,7 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
       break;
     case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
     case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE:
+    case X509_V_ERR_AKID_SKID_MISMATCH:
       if (!setup_data->verify_peer_cert)
         preverify_ok = 1;
       break;
