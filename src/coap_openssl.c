@@ -786,6 +786,9 @@ void *coap_dtls_new_context(coap_context_t *coap_context) {
     SSL_CTX_set_cookie_verify_cb(context->dtls.ctx, coap_dtls_verify_cookie);
     SSL_CTX_set_info_callback(context->dtls.ctx, coap_dtls_info_callback);
     SSL_CTX_set_options(context->dtls.ctx, SSL_OP_NO_QUERY_MTU);
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    SSL_CTX_set_options(context->dtls.ctx, SSL_OP_LEGACY_SERVER_CONNECT );
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
     context->dtls.meth = BIO_meth_new(BIO_TYPE_DGRAM, "coapdgram");
     if (!context->dtls.meth)
       goto error;
