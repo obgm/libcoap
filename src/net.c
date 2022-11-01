@@ -987,7 +987,8 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
 
   coap_log(LOG_DEBUG, "** %s: mid=0x%x: added to retransmit queue (%ums)\n",
     coap_session_str(node->session), node->id,
-    (unsigned)(node->t * 1000 / COAP_TICKS_PER_SECOND));
+    (unsigned)((node->timeout << node->retransmit_cnt) * 1000 /
+                                                         COAP_TICKS_PER_SECOND));
 
 #ifdef COAP_EPOLL_SUPPORT
   coap_update_epoll_timer(context, node->t);
