@@ -461,7 +461,8 @@ message_handler(coap_session_t *session COAP_UNUSED,
         doing_getting_block = 1;
       } else {
         doing_getting_block = 0;
-        track_flush_token(&token);
+        if (!is_mcast)
+          track_flush_token(&token);
       }
       return COAP_RESPONSE_OK;
     }
@@ -1789,9 +1790,11 @@ main(int argc, char **argv) {
   }
   repeat_count--;
 
-  while(!quit &&
-        !(ready && !tracked_tokens_count && !is_mcast && !repeat_count &&
-          !coap_io_pending(ctx)) ) {
+  while(!quit &&                 /* immediate quit not required .. and .. */
+        (tracked_tokens_count || /* token not responded to or still observe */
+         is_mcast ||             /* mcast active */
+         repeat_count ||         /* more repeat transmissions to go */
+         coap_io_pending(ctx))) { /* i/o not yet complete */
     uint32_t timeout_ms;
     /*
      * 3 factors determine how long to wait in coap_io_process()
@@ -1825,19 +1828,15 @@ main(int argc, char **argv) {
           for (i = 0; i < tracked_tokens_count; i++) {
             if (tracked_tokens[i].observe) {
               coap_cancel_observe(session, tracked_tokens[i].token, msgtype);
+              tracked_tokens[i].observe = 0;
               coap_io_process(ctx, COAP_IO_NO_WAIT);
             }
           }
           doing_observe = 0;
-          quit = 1;
 
           /* make sure that the obs timer does not fire again */
           obs_ms = 0;
           obs_seconds = 0;
-          for (i = 0; i < 5 ; i++) {
-            /* Make sure all is flushed out */
-            coap_io_process(ctx, 100);
-          }
         } else {
           obs_ms -= result;
         }
