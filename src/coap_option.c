@@ -153,7 +153,6 @@ coap_option_next(coap_opt_iterator_t *oi) {
   coap_option_t option;
   coap_opt_t *current_opt = NULL;
   size_t optsize;
-  int b;                   /* to store result of coap_option_getb() */
 
   assert(oi);
 
@@ -161,13 +160,15 @@ coap_option_next(coap_opt_iterator_t *oi) {
     return NULL;
 
   while (1) {
-    /* oi->option always points to the next option to deliver; as
+    /* oi->next_option always points to the next option to deliver; as
      * opt_finished() filters out any bad conditions, we can assume that
-     * oi->option is valid. */
+     * oi->next_option is valid. */
     current_opt = oi->next_option;
 
-    /* Advance internal pointer to next option, skipping any option that
-     * is not included in oi->filter. */
+    /*
+     * Advance internal pointer to next option.
+     * optsize will be 0 when no more options
+     */
     optsize = coap_opt_parse(oi->next_option, oi->length, &option);
     if (optsize) {
       assert(optsize <= oi->length);
@@ -184,15 +185,10 @@ coap_option_next(coap_opt_iterator_t *oi) {
     /* Exit the while loop when:
      *   - no filtering is done at all
      *   - the filter matches for the current option
-     *   - the filter is too small for the current option number
      */
     if (!oi->filtered ||
-        (b = coap_option_filter_get(&oi->filter, oi->number)) > 0)
+        coap_option_filter_get(&oi->filter, oi->number) > 0)
       break;
-    else if (b < 0) {                /* filter too small, cannot proceed */
-      oi->bad = 1;
-      return NULL;
-    }
   }
 
   return current_opt;
