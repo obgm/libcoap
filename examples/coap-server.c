@@ -386,11 +386,20 @@ hnd_get_async(coap_resource_t *resource,
   if (!async) {
     /* Set up an async request to trigger delay in the future */
     if (query) {
+      /* Expect the query to just be the number of seconds to delay */
       const uint8_t *p = query->s;
 
-      delay = 0;
-      for (size = query->length; size; --size, ++p)
-        delay = delay * 10 + (*p - '0');
+      if (isdigit(*p)) {
+        delay = 0;
+        for (size = query->length; size; --size, ++p) {
+          if (!isdigit(*p))
+            break;
+          delay = delay * 10 + (*p - '0');
+        }
+      } else {
+        coap_log_debug(
+                "async: query is just a number of seconds to alter delay\n");
+      }
       if (delay == 0) {
         coap_log(LOG_INFO, "async: delay of 0 not supported\n");
         coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
