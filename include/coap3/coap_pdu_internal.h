@@ -299,7 +299,7 @@ size_t coap_update_option(coap_pdu_t *pdu,
 
 size_t coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto);
 
- /**
+/**
  * Updates token in @p pdu with length @p len and @p data.
  * This function returns @c 0 on error or a value greater than zero on success.
  *
@@ -312,6 +312,16 @@ size_t coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto);
 int coap_update_token(coap_pdu_t *pdu,
                       size_t len,
                       const uint8_t *data);
+
+/**
+ * Check whether the option is allowed to be repeated or not.
+ * This function returns @c 0 if not repeatable or @c 1 if repeatable
+ *
+ * @param number The option number to check for repeatability.
+ *
+ * @return     @c 0 if not repeatable or @c 1 if repeatable.
+ */
+int coap_option_check_repeatable(coap_option_num_t number);
 
 /** @} */
 

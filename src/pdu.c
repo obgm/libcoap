@@ -439,8 +439,8 @@ coap_remove_option(coap_pdu_t *pdu, coap_option_num_t number) {
   return 1;
 }
 
-static int
-check_repeatable(coap_option_num_t number) {
+int
+coap_option_check_repeatable(coap_option_num_t number) {
   /* Validate that the option is repeatable */
   switch (number) {
   /* Ignore list of genuine repeatable */
@@ -515,7 +515,7 @@ coap_insert_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
     return 0;
   opt_delta = opt_iter.number - number;
   if (opt_delta == 0) {
-    if (!check_repeatable(number))
+    if (!coap_option_check_repeatable(number))
       return 0;
   }
 
@@ -630,7 +630,7 @@ coap_add_option_internal(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
   assert(pdu);
 
   if (number == pdu->max_opt) {
-    if (!check_repeatable(number))
+    if (!coap_option_check_repeatable(number))
       return 0;
   }
 

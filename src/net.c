@@ -674,12 +674,12 @@ coap_free_context(coap_context_t *context) {
 
 int
 coap_option_check_critical(coap_session_t *session,
-  coap_pdu_t *pdu,
-  coap_opt_filter_t *unknown) {
-
+                           coap_pdu_t *pdu,
+                           coap_opt_filter_t *unknown) {
   coap_context_t *ctx = session->context;
   coap_opt_iterator_t opt_iter;
   int ok = 1;
+  coap_option_num_t last_number = -1;
 
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
@@ -735,6 +735,43 @@ coap_option_check_critical(coap_session_t *session,
         }
       }
     }
+    if (last_number == opt_iter.number) {
+      /* Check for duplicated option RFC 5272 5.4.5 */
+      if (!coap_option_check_repeatable(opt_iter.number)) {
+        ok = 0;
+        if (coap_option_filter_set(unknown, opt_iter.number) == 0) {
+            break;
+        }
+      }
+    } else if (opt_iter.number == COAP_OPTION_BLOCK2 &&
+               COAP_PDU_IS_REQUEST(pdu)) {
+      /* Check the M Bit is not set on a GET request RFC 7959 2.2 */
+      coap_block_b_t block;
+
+      if (coap_get_block_b(session, pdu, opt_iter.number, &block)) {
+        if (block.m) {
+          size_t used_size = pdu->used_size;
+          unsigned char buf[4];
+
+          coap_log(LOG_DEBUG,
+                   "Option Block2 has invalid set M bit - cleared\n");
+          block.m = 0;
+          coap_update_option(pdu, opt_iter.number,
+                             coap_encode_var_safe(buf, sizeof(buf),
+                                                  ((block.num << 4) |
+                                                   (block.m << 3) |
+                                                   block.aszx)),
+                             buf);
+          if (used_size != pdu->used_size) {
+            /* Unfortunately need to restart the scan */
+            coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
+            last_number = -1;
+            continue;
+          }
+        }
+      }
+    }
+    last_number = opt_iter.number;
   }
 
   return ok;
@@ -2121,7 +2158,7 @@ coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
 
 coap_pdu_t *
 coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
-  coap_opt_filter_t *opts) {
+                        coap_opt_filter_t *opts) {
   coap_opt_iterator_t opt_iter;
   coap_pdu_t *response;
   size_t size = request->token_length;
@@ -2564,8 +2601,15 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
   coap_option_filter_clear(&opt_filter);
   opt = coap_check_option(pdu, COAP_OPTION_PROXY_SCHEME, &opt_iter);
-  if (opt)
+  if (opt) {
+    opt = coap_check_option(pdu, COAP_OPTION_URI_HOST, &opt_iter);
+    if (!opt) {
+      coap_log(LOG_DEBUG, "Proxy-Scheme requires Uri-Host\n");
+      resp = 402;
+      goto fail_response;
+    }
     is_proxy_scheme = 1;
+  }
 
   opt = coap_check_option(pdu, COAP_OPTION_PROXY_URI, &opt_iter);
   if (opt)
