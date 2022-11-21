@@ -876,11 +876,13 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
   coap_string_t *query;
   coap_block_b_t block;
   coap_tick_t now;
+  coap_session_t *obs_session;
 
   if (r->observable && (r->dirty || r->partiallydirty)) {
     r->partiallydirty = 0;
 
     LL_FOREACH_SAFE(r->subscribers, obs, otmp) {
+      obs_session = obs->session;
       if (r->dirty == 0 && obs->dirty == 0) {
         /*
          * running this resource due to partiallydirty, but this observation's
@@ -982,6 +984,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         }
         if (COAP_RESPONSE_CLASS(response->code) > 2) {
           coap_delete_observer(r, obs->session, &token);
+          obs = NULL;
         }
         break;
       case COAP_DELETING_RESOURCE:
@@ -992,16 +995,18 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         break;
       }
 
-      if (response->type == COAP_MESSAGE_CON ||
-          (r->flags & COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS)) {
-        obs->non_cnt = 0;
-      } else {
-        obs->non_cnt++;
+      if (obs) {
+        if (response->type == COAP_MESSAGE_CON ||
+            (r->flags & COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS)) {
+          obs->non_cnt = 0;
+        } else {
+          obs->non_cnt++;
+        }
       }
 
-      mid = coap_send_internal( obs->session, response );
+      mid = coap_send_internal(obs_session, response);
 
-      if (COAP_INVALID_MID == mid) {
+      if (COAP_INVALID_MID == mid && obs) {
         coap_subscription_t *s;
         coap_log(LOG_DEBUG,
                  "coap_check_notify: sending failed, resource stays "
