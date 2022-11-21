@@ -684,13 +684,6 @@ coap_option_check_critical(coap_session_t *session,
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
   while (coap_option_next(&opt_iter)) {
-
-    /* The following condition makes use of the fact that
-     * coap_option_getb() returns -1 if type exceeds the bit-vector
-     * filter. As the vector is supposed to be large enough to hold
-     * the largest known option, we know that everything beyond is
-     * bad.
-     */
     if (opt_iter.number & 0x01) {
       /* first check the known built-in critical options */
       switch (opt_iter.number) {
@@ -726,10 +719,10 @@ coap_option_check_critical(coap_session_t *session,
           coap_log(LOG_DEBUG, "unknown critical option %d\n", opt_iter.number);
           ok = 0;
 
-          /* When opt_iter.number is beyond our known option range,
-           * coap_option_filter_set() will return -1 and we are safe to leave
-           * this loop. */
-          if (coap_option_filter_set(unknown, opt_iter.number) == -1) {
+          /* When opt_iter.number cannot be set in unknown, all of the appropriate
+           * slots have been used up and no more options can be tracked.
+           * Safe to break out of this loop as ok is already set. */
+          if (coap_option_filter_set(unknown, opt_iter.number) == 0) {
             break;
           }
         }
