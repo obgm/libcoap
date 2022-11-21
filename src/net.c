@@ -3095,17 +3095,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   int is_ping_rst;
   int packet_is_bad = 0;
 
-  if (LOG_DEBUG <= coap_get_log_level()) {
-    /* FIXME: get debug to work again **
-    unsigned char addr[INET6_ADDRSTRLEN+8], localaddr[INET6_ADDRSTRLEN+8];
-    if (coap_print_addr(remote, addr, INET6_ADDRSTRLEN+8) &&
-        coap_print_addr(&packet->dst, localaddr, INET6_ADDRSTRLEN+8) )
-      coap_log(LOG_DEBUG, "** received %d bytes from %s on interface %s:\n",
-            (int)msg_len, addr, localaddr);
-
-            */
-    coap_show_pdu(LOG_DEBUG, pdu);
-  }
+  coap_show_pdu(LOG_DEBUG, pdu);
 
   memset(&opt_filter, 0, sizeof(coap_opt_filter_t));
 
