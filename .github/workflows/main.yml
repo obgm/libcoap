@@ -81,20 +81,20 @@ jobs:
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev
-          cmake -E make_directory $GITHUB_WORKSPACE}/build-${{matrix.TLS}}-cmake
+          cmake -E make_directory $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
       - name: configure no-TLS
         if: matrix.TLS == 'no'
         run: |
-          cd $GITHUB_WORKSPACE}/build-${{matrix.TLS}}-cmake
+          cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
           cmake $GITHUB_WORKSPACE -DENABLE_EXAMPLES=ON -DENABLE_TESTS=ON -DENABLE_DTLS=OFF -DENABLE_DOCS=OFF -DWARNING_TO_ERROR=ON
       - name: configure TLS
         if: matrix.TLS != 'no'
         run: |
-          cd $GITHUB_WORKSPACE}/build-${{matrix.TLS}}-cmake
+          cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
           cmake $GITHUB_WORKSPACE -DENABLE_EXAMPLES=ON -DENABLE_TESTS=ON -DENABLE_DTLS=ON -DENABLE_DOCS=OFF -DDTLS_BACKEND=${{matrix.TLS}} -DWARNING_TO_ERROR=ON
       - name: build
         run: |
-          cd $GITHUB_WORKSPACE}/build-${{matrix.TLS}}-cmake
+          cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
           cmake --build .
   cmake-macos:
     runs-on: macos-latest
