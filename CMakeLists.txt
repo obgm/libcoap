@@ -234,7 +234,7 @@ function(compile_tinydtls)
 
   externalproject_add_step(
     external_tinydtls autoreconf
-    COMMAND autoreconf --force --install
+    COMMAND ./autogen.sh
     ALWAYS 1
     WORKING_DIRECTORY "${TINYDTLS_SOURCES_DIR}"
     DEPENDERS configure

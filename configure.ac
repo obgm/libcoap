@@ -164,6 +164,11 @@ AX_CHECK_COMPILE_FLAG([-Wlogical-op], [WARNING_CFLAGS="$WARNING_CFLAGS -Wlogical
 AX_CHECK_COMPILE_FLAG([-fdiagnostics-color], [CFLAGS="$CFLAGS -fdiagnostics-color"],,[-Werror])
 AX_CHECK_COMPILE_FLAG([-Wunused-result], [WARNING_CFLAGS="$WARNING_CFLAGS -Wunused-result"])
 
+# clang 14+ generates dwarf-5, which is not currently supported by valgrind
+if test "x$CC" = "xclang"; then
+    WARNING_CFLAGS="$WARNING_CFLAGS -gdwarf-4"
+fi
+
 AC_SUBST([WARNING_CFLAGS])
 
 AX_CHECK_LINK_FLAG([-Wl,--version-script=${srcdir}/libcoap-${LIBCOAP_API_VERSION}.map],
