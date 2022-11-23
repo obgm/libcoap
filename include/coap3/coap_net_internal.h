@@ -146,7 +146,13 @@ struct coap_context_t {
   int epfd;                        /**< External FD for epoll */
   int eptimerfd;                   /**< Internal FD for timeout */
   coap_tick_t next_timeout;        /**< When the next timeout is to occur */
-#endif /* COAP_EPOLL_SUPPORT */
+#else /* ! COAP_EPOLL_SUPPORT */
+  fd_set readfds, writefds, exceptfds; /**< Used for select call
+                                            in coap_io_process_with_fds() */
+  coap_socket_t *sockets[64];      /**< Track different socket information
+                                        in coap_io_process_with_fds */
+  unsigned int num_sockets;        /**< Number of sockets being tracked */
+#endif /* ! COAP_EPOLL_SUPPORT */
 #if COAP_SERVER_SUPPORT
   uint8_t observe_pending;         /**< Observe response pending */
   uint8_t mcast_per_resource;      /**< Mcast controlled on a per resource
