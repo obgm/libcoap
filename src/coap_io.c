@@ -1371,20 +1371,6 @@ int
 coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
                          int enfds, fd_set *ereadfds, fd_set *ewritefds,
                          fd_set *eexceptfds) {
-#if COAP_CONSTRAINED_STACK
-# ifndef COAP_EPOLL_SUPPORT
-  static coap_mutex_t static_mutex = COAP_MUTEX_INITIALIZER;
-  static fd_set readfds, writefds, exceptfds;
-  static coap_socket_t *sockets[64];
-  unsigned int num_sockets = 0;
-# endif /* ! COAP_EPOLL_SUPPORT */
-#else /* ! COAP_CONSTRAINED_STACK */
-# ifndef COAP_EPOLL_SUPPORT
-  fd_set readfds, writefds, exceptfds;
-  coap_socket_t *sockets[64];
-  unsigned int num_sockets = 0;
-# endif /* ! COAP_EPOLL_SUPPORT */
-#endif /* ! COAP_CONSTRAINED_STACK */
   coap_fd_t nfds = 0;
   coap_tick_t before, now;
   unsigned int timeout;
@@ -1398,50 +1384,46 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 
 #ifndef COAP_EPOLL_SUPPORT
 
-#if COAP_CONSTRAINED_STACK
-  coap_mutex_lock(&static_mutex);
-#endif /* COAP_CONSTRAINED_STACK */
-
-  timeout = coap_io_prepare_io(ctx, sockets,
-                            (sizeof(sockets) / sizeof(sockets[0])),
-                            &num_sockets, before);
+  timeout = coap_io_prepare_io(ctx, ctx->sockets,
+                            (sizeof(ctx->sockets) / sizeof(ctx->sockets[0])),
+                            &ctx->num_sockets, before);
   if (timeout == 0 || timeout_ms < timeout)
     timeout = timeout_ms;
 
   if (ereadfds) {
-    readfds = *ereadfds;
+    ctx->readfds = *ereadfds;
     nfds = enfds;
   }
   else {
-    FD_ZERO(&readfds);
+    FD_ZERO(&ctx->readfds);
   }
   if (ewritefds) {
-    writefds = *ewritefds;
+    ctx->writefds = *ewritefds;
     nfds = enfds;
   }
   else {
-    FD_ZERO(&writefds);
+    FD_ZERO(&ctx->writefds);
   }
   if (eexceptfds) {
-    exceptfds = *eexceptfds;
+    ctx->exceptfds = *eexceptfds;
     nfds = enfds;
   }
   else {
-    FD_ZERO(&exceptfds);
+    FD_ZERO(&ctx->exceptfds);
   }
-  for (i = 0; i < num_sockets; i++) {
-    if (sockets[i]->fd + 1 > nfds)
-      nfds = sockets[i]->fd + 1;
-    if (sockets[i]->flags & COAP_SOCKET_WANT_READ)
-      FD_SET(sockets[i]->fd, &readfds);
-    if (sockets[i]->flags & COAP_SOCKET_WANT_WRITE)
-      FD_SET(sockets[i]->fd, &writefds);
+  for (i = 0; i < ctx->num_sockets; i++) {
+    if (ctx->sockets[i]->fd + 1 > nfds)
+      nfds = ctx->sockets[i]->fd + 1;
+    if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_READ)
+      FD_SET(ctx->sockets[i]->fd, &ctx->readfds);
+    if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_WRITE)
+      FD_SET(ctx->sockets[i]->fd, &ctx->writefds);
 #if !COAP_DISABLE_TCP
-    if (sockets[i]->flags & COAP_SOCKET_WANT_ACCEPT)
-      FD_SET(sockets[i]->fd, &readfds);
-    if (sockets[i]->flags & COAP_SOCKET_WANT_CONNECT) {
-      FD_SET(sockets[i]->fd, &writefds);
-      FD_SET(sockets[i]->fd, &exceptfds);
+    if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_ACCEPT)
+      FD_SET(ctx->sockets[i]->fd, &ctx->readfds);
+    if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_CONNECT) {
+      FD_SET(ctx->sockets[i]->fd, &ctx->writefds);
+      FD_SET(ctx->sockets[i]->fd, &ctx->exceptfds);
     }
 #endif /* !COAP_DISABLE_TCP */
   }
@@ -1456,7 +1438,8 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
     tv.tv_sec = (long)(timeout / 1000);
   }
 
-  result = select((int)nfds, &readfds, &writefds, &exceptfds, timeout > 0 ? &tv : NULL);
+  result = select((int)nfds, &ctx->readfds, &ctx->writefds, &ctx->exceptfds,
+                  timeout > 0 ? &tv : NULL);
 
   if (result < 0) {   /* error */
 #ifdef _WIN32
@@ -1466,40 +1449,38 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 #endif
     {
       coap_log(LOG_DEBUG, "%s", coap_socket_strerror());
-#if COAP_CONSTRAINED_STACK
-      coap_mutex_unlock(&static_mutex);
-#endif /* COAP_CONSTRAINED_STACK */
       return -1;
     }
   }
   if (ereadfds) {
-    *ereadfds = readfds;
+    *ereadfds = ctx->readfds;
   }
   if (ewritefds) {
-    *ewritefds = writefds;
+    *ewritefds = ctx->writefds;
   }
   if (eexceptfds) {
-    *eexceptfds = exceptfds;
+    *eexceptfds = ctx->exceptfds;
   }
 
   if (result > 0) {
-    for (i = 0; i < num_sockets; i++) {
-      if ((sockets[i]->flags & COAP_SOCKET_WANT_READ) && FD_ISSET(sockets[i]->fd, &readfds))
-        sockets[i]->flags |= COAP_SOCKET_CAN_READ;
+    for (i = 0; i < ctx->num_sockets; i++) {
+      if ((ctx->sockets[i]->flags & COAP_SOCKET_WANT_READ) &&
+          FD_ISSET(ctx->sockets[i]->fd, &ctx->readfds))
+        ctx->sockets[i]->flags |= COAP_SOCKET_CAN_READ;
 #if !COAP_DISABLE_TCP
-      if ((sockets[i]->flags & COAP_SOCKET_WANT_ACCEPT) && FD_ISSET(sockets[i]->fd, &readfds))
-        sockets[i]->flags |= COAP_SOCKET_CAN_ACCEPT;
-      if ((sockets[i]->flags & COAP_SOCKET_WANT_WRITE) && FD_ISSET(sockets[i]->fd, &writefds))
-        sockets[i]->flags |= COAP_SOCKET_CAN_WRITE;
-      if ((sockets[i]->flags & COAP_SOCKET_WANT_CONNECT) && (FD_ISSET(sockets[i]->fd, &writefds) || FD_ISSET(sockets[i]->fd, &exceptfds)))
-        sockets[i]->flags |= COAP_SOCKET_CAN_CONNECT;
+      if ((ctx->sockets[i]->flags & COAP_SOCKET_WANT_ACCEPT) &&
+          FD_ISSET(ctx->sockets[i]->fd, &ctx->readfds))
+        ctx->sockets[i]->flags |= COAP_SOCKET_CAN_ACCEPT;
+      if ((ctx->sockets[i]->flags & COAP_SOCKET_WANT_WRITE) &&
+          FD_ISSET(ctx->sockets[i]->fd, &ctx->writefds))
+        ctx->sockets[i]->flags |= COAP_SOCKET_CAN_WRITE;
+      if ((ctx->sockets[i]->flags & COAP_SOCKET_WANT_CONNECT) &&
+          (FD_ISSET(ctx->sockets[i]->fd, &ctx->writefds) ||
+           FD_ISSET(ctx->sockets[i]->fd, &ctx->exceptfds)))
+        ctx->sockets[i]->flags |= COAP_SOCKET_CAN_CONNECT;
 #endif /* !COAP_DISABLE_TCP */
     }
   }
-
-#if COAP_CONSTRAINED_STACK
-  coap_mutex_unlock(&static_mutex);
-#endif /* COAP_CONSTRAINED_STACK */
 
   coap_ticks(&now);
   coap_io_do_io(ctx, now);
