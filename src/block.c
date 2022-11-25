@@ -2160,14 +2160,12 @@ coap_handle_response_get_block(coap_context_t *context,
         else if (p->etag_set) {
           /* Cannot handle this change in ETag to not being there */
           coap_log(LOG_WARNING, "Not all blocks have ETag option\n");
-          session->block_mode &= ~(COAP_BLOCK_SINGLE_BODY);
-          goto block_mode;
+          goto fail_resp;
         }
 
         if (fmt != p->content_format) {
           coap_log(LOG_WARNING, "Content-Format option mismatch\n");
-          session->block_mode &= ~(COAP_BLOCK_SINGLE_BODY);
-          goto block_mode;
+          goto fail_resp;
         }
         if (block.num == 0) {
           coap_opt_t *obs_opt = coap_check_option(rcvd,
@@ -2205,14 +2203,13 @@ coap_handle_response_get_block(coap_context_t *context,
             break;
         }
         block.num--;
+        /* Only process if not duplicate block */
         if (updated_block) {
           if ((session->block_mode & COAP_BLOCK_SINGLE_BODY) || block.bert) {
             p->body_data = coap_block_build_body(p->body_data, length, data,
                                                  saved_offset, size2);
             if (p->body_data == NULL) {
-              /* Need to do it block by block */
-              session->block_mode &= ~(COAP_BLOCK_SINGLE_BODY);
-              goto block_mode;
+              goto fail_resp;
             }
           }
           if (block.m || !check_all_blocks_in(&p->rec_blocks,
@@ -2301,41 +2298,10 @@ coap_handle_response_get_block(coap_context_t *context,
             coap_free_type(COAP_STRING, p->body_data);
             p->body_data = NULL;
           }
-          coap_ticks(&p->last_used);
-          goto skip_app_handler;
-        } else {
-block_mode:
-          /* need to put back original token into rcvd */
-          coap_update_token(rcvd, p->app_token->length, p->app_token->s);
-          rcvd->body_offset = saved_offset;
-          /* slightly oversize if there is more data */
-          if (block.m) {
-            if(size2 > saved_offset + length + block.m)
-              rcvd->body_total = size2;
-            else
-              rcvd->body_total = saved_offset + length + block.m;
-          } else {
-            rcvd->body_total = saved_offset + length;
-            /* Set up for the next data body if observing */
-            p->initial = 1;
-          }
-          if (context->response_handler) {
-            coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
-            coap_show_pdu(LOG_DEBUG, rcvd);
-            if (context->response_handler(session, sent, rcvd,
-                                          rcvd->mid) == COAP_RESPONSE_FAIL)
-              coap_send_rst(session, rcvd);
-            else
-              coap_send_ack(session, rcvd);
-          } else {
-            coap_send_ack(session, rcvd);
-          }
-          ack_rst_sent = 1;
-          coap_ticks(&p->last_used);
-          goto skip_app_handler;
         }
-      }
-      else {
+        coap_ticks(&p->last_used);
+        goto skip_app_handler;
+      } else {
         coap_opt_t *obs_opt = coap_check_option(rcvd,
                                                 COAP_OPTION_OBSERVE,
                                                 &opt_iter);
@@ -2373,7 +2339,12 @@ fail_resp:
                      COAP_TICKS_PER_SECOND;
     }
     /* need to put back original token into rcvd */
-    coap_update_token(rcvd, p->app_token->length, p->app_token->s);
+    if (!full_match(rcvd->token, rcvd->token_length,
+                    p->app_token->s, p->app_token->length)) {
+      coap_update_token(rcvd, p->app_token->length, p->app_token->s);
+      coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
+      coap_show_pdu(LOG_DEBUG, rcvd);
+    }
     break;
   } /* LL_FOREACH() */
 
@@ -2425,11 +2396,16 @@ fail_resp:
   return 0;
 
 expire_lg_crcv:
-    /* need to put back original token into rcvd */
+  /* need to put back original token into rcvd */
+  if (!full_match(rcvd->token, rcvd->token_length,
+                  p->app_token->s, p->app_token->length)) {
     coap_update_token(rcvd, p->app_token->length, p->app_token->s);
-    /* Expire this entry */
-    LL_DELETE(session->lg_crcv, p);
-    coap_block_delete_lg_crcv(session, p);
+    coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
+    coap_show_pdu(LOG_DEBUG, rcvd);
+  }
+  /* Expire this entry */
+  LL_DELETE(session->lg_crcv, p);
+  coap_block_delete_lg_crcv(session, p);
 
 call_app_handler:
   return 0;
