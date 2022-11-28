@@ -345,7 +345,7 @@ void coap_add_resource(coap_context_t *context, coap_resource_t *resource);
  * resource is freed, and removed from the context.
  *
  * @param context  This parameter is ignored, but kept for backward
- *                 compatability.
+ *                 compatibility.
  * @param resource The resource to delete.
  *
  * @return         @c 1 if the resource was found (and destroyed),

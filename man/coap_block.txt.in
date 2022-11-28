@@ -64,7 +64,7 @@ payloads (blocks).
 It is the responsibility of the application to analyze each block transmission
 at receipt and then generate the next request as per RFC 7959.  In this case,
 *coap_context_set_block_mode*() function must not be called to maintain
-backward compatability with applications that did the block handling within the
+backward compatibility with applications that did the block handling within the
 application.
 
 2. Application sees individual blocks +
