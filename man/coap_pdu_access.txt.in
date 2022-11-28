@@ -288,7 +288,7 @@ the appropriate value.
 *coap_opt_value*() returns a pointer to the start of the option value or
 NULL if error.
 
-*coap_option_iterator_init*() returns ap pointer to the provided interator
+*coap_option_iterator_init*() returns ap pointer to the provided iterator
 or NULL on error.
 
 *coap_pdu_get_token*() returns a pointer to the token in the pdu.
