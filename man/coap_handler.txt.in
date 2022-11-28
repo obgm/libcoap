@@ -147,7 +147,7 @@ COAP_NACK_ICMP_ISSUE
 COAP_NACK_BAD_RESPONSE
 ----
 
-_sent_ can be NULL.  _mid_ can be used for determing which is the transmitting
+_sent_ can be NULL.  _mid_ can be used for determining which is the transmitting
 request.
 
 The *coap_register_ping_handler*() function registers a callback _handler_ for
