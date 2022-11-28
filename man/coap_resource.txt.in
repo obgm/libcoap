@@ -437,7 +437,7 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   (void)query;
 
   /*
-   * Get the specific resouce being requested to determine what the response is
+   * Get the specific resource being requested to determine what the response is
    * The uri_path string is a const pointer
    */
 
