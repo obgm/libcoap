@@ -2324,8 +2324,9 @@ ssize_t coap_tls_write(coap_session_t *c_session,
                        size_t data_len
                        )
 {
-  int ret;
+  int ret = 0;
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
+  size_t amount_sent = 0;
 
   assert(m_env != NULL);
 
@@ -2334,29 +2335,35 @@ ssize_t coap_tls_write(coap_session_t *c_session,
   }
   c_session->dtls_event = -1;
   if (m_env->established) {
-    ret = mbedtls_ssl_write(&m_env->ssl, (const unsigned char*) data, data_len);
-    if (ret <= 0) {
-      switch (ret) {
-      case MBEDTLS_ERR_SSL_WANT_READ:
-      case MBEDTLS_ERR_SSL_WANT_WRITE:
-        ret = 0;
-        break;
-      case MBEDTLS_ERR_NET_CONN_RESET:
-      case MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE:
-        c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
-        ret = -1;
-        break;
-      default:
-        coap_log(LOG_WARNING,
-                 "coap_tls_write: "
-                 "returned -0x%x: '%s'\n",
-                 -ret, get_error_string(ret));
-        ret = -1;
+    while (amount_sent < data_len) {
+      ret = mbedtls_ssl_write(&m_env->ssl,
+                              (const unsigned char*)&data[amount_sent],
+                              data_len - amount_sent);
+      if (ret <= 0) {
+        switch (ret) {
+        case MBEDTLS_ERR_SSL_WANT_READ:
+        case MBEDTLS_ERR_SSL_WANT_WRITE:
+          ret = 0;
+          break;
+        case MBEDTLS_ERR_NET_CONN_RESET:
+        case MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE:
+          c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+          ret = -1;
+          break;
+        default:
+          coap_log(LOG_WARNING,
+                   "coap_tls_write: "
+                   "returned -0x%x: '%s'\n",
+                   -ret, get_error_string(ret));
+          ret = -1;
+          break;
+        }
+        if (ret == -1) {
+          coap_log(LOG_WARNING, "coap_tls_write: cannot send PDU\n");
+        }
         break;
       }
-      if (ret == -1) {
-        coap_log(LOG_WARNING, "coap_tls_write: cannot send PDU\n");
-      }
+      amount_sent += ret;
     }
   } else {
     ret = do_mbedtls_handshake(c_session, m_env);
