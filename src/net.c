@@ -1027,6 +1027,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
 
   assert(pdu);
 
+  pdu->session = session;
 #if COAP_CLIENT_SUPPORT
   if (session->type == COAP_SESSION_TYPE_CLIENT &&
       !coap_netif_available(session)) {
@@ -1236,6 +1237,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
   ssize_t bytes_written;
   coap_opt_iterator_t opt_iter;
 
+  pdu->session = session;
   if (pdu->code == COAP_RESPONSE_CODE(508)) {
     /*
      * Need to prepend our IP identifier to the data as per
@@ -2909,6 +2911,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     resp = 500;
     goto fail_response;
   }
+  response->session = session;
 #if COAP_ASYNC_SUPPORT
   /* If handling a separate response, need CON, not ACK response */
   if (async && pdu->type == COAP_MESSAGE_CON)
@@ -3333,6 +3336,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 #endif /* COAP_OSCORE_SUPPORT */
   int is_ext_token_rst;
 
+  pdu->session = session;
   coap_show_pdu(COAP_LOG_DEBUG, pdu);
 
   memset(&opt_filter, 0, sizeof(coap_opt_filter_t));

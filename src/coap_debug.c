@@ -724,9 +724,22 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   coap_mutex_lock(&static_show_pdu_mutex);
 #endif /* COAP_CONSTRAINED_STACK */
 
-  snprintf(outbuf, sizeof(outbuf), "v:%d t:%s c:%s i:%04x {",
-          COAP_DEFAULT_VERSION, msg_type_string(pdu->type),
-          msg_code_string(pdu->code), pdu->mid);
+  if (!pdu->session || COAP_PROTO_NOT_RELIABLE(pdu->session->proto)) {
+    snprintf(outbuf, sizeof(outbuf), "v:%d t:%s c:%s i:%04x {",
+             COAP_DEFAULT_VERSION, msg_type_string(pdu->type),
+             msg_code_string(pdu->code), pdu->mid);
+  } else if (pdu->session->proto == COAP_PROTO_WS ||
+             pdu->session->proto == COAP_PROTO_WSS) {
+    if (pdu->type != COAP_MESSAGE_CON)
+      coap_log_alert("WebSocket: type != CON\n");
+    snprintf(outbuf, sizeof(outbuf), "v:WebSocket c:%s {",
+             msg_code_string(pdu->code));
+  } else {
+    if (pdu->type != COAP_MESSAGE_CON)
+      coap_log_alert("Reliable: type != CON\n");
+    snprintf(outbuf, sizeof(outbuf), "v:Reliable c:%s {",
+             msg_code_string(pdu->code));
+  }
 
   for (i = 0; i < pdu->actual_token.length; i++) {
     outbuflen = strlen(outbuf);

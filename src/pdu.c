@@ -61,6 +61,7 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   pdu->body_offset = 0;
   pdu->body_total = 0;
   pdu->lg_xmit = NULL;
+  pdu->session = NULL;
 }
 
 #ifdef WITH_LWIP

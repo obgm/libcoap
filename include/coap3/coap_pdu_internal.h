@@ -155,6 +155,7 @@ struct coap_pdu_t {
   size_t body_total;        /**< Holds body data total size */
   coap_lg_xmit_t *lg_xmit;  /**< Holds ptr to lg_xmit if sending a set of
                                  blocks */
+  coap_session_t *session;  /**< Session responsible for PDU or NULL */
 };
 
 /**
