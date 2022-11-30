@@ -275,6 +275,10 @@ The *coap_show_pdu*() function is used to decode the _pdu_, outputting as
 appropriate for logging _level_.  Where the output goes is dependent on
 *coap_set_show_pdu_output*().
 
+*NOTE:* If _pdu_ has not been associated with a CoAP session (i.e. not a
+received PDU or coap_send() not yet called), then the output assumes that
+this _pdu_ is of type unreliable.
+
 *Function: coap_endpoint_str()*
 
 The *coap_endpoint_str*() function returns a description string of the

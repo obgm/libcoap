@@ -479,7 +479,10 @@ coap_session_send_csm(coap_session_t *session) {
   ) {
     coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
   } else {
-    ssize_t bytes_written = coap_session_send_pdu(session, pdu);
+    ssize_t bytes_written;
+
+    pdu->session = session;
+    bytes_written = coap_session_send_pdu(session, pdu);
     if (bytes_written != (ssize_t)pdu->used_size + pdu->hdr_size) {
       coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
     } else {
