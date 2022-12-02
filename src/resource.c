@@ -942,7 +942,9 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       token.s = obs->pdu->token;
 
       obs->pdu->mid = response->mid = coap_new_message_id(obs->session);
-      if ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) == 0 &&
+      /* A lot of the reliable code assumes type is CON */
+      if (COAP_PROTO_NOT_RELIABLE(obs->session->proto) &&
+          (r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) == 0 &&
           ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS) ||
            obs->non_cnt < COAP_OBS_MAX_NON)) {
         response->type = COAP_MESSAGE_NON;

@@ -529,6 +529,10 @@ coap_add_data_large_internal(coap_session_t *session,
     goto add_data;
   }
 
+  /* A lot of the reliable code assumes type is CON */
+  if (COAP_PROTO_RELIABLE(session->proto) && pdu->type == COAP_MESSAGE_NON)
+    pdu->type = COAP_MESSAGE_CON;
+
   /* Block NUM max 20 bits and block size is "2**(SZX + 4)"
      and using SZX max of 6 gives maximum size = 1,073,740,800
      CSM Max-Message-Size theoretical maximum = 4,294,967,295
