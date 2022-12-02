@@ -219,7 +219,9 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   session->last_con_mid = COAP_INVALID_MID;
 
   /* Randomly initialize */
-  coap_prng((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));
+  /* TCP/TLS have no notion of mid */
+  if (COAP_PROTO_NOT_RELIABLE(session->proto))
+    coap_prng((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));
   coap_prng((unsigned char *)&session->tx_rtag, sizeof(session->tx_rtag));
 
   return session;
@@ -1434,7 +1436,10 @@ void coap_session_new_token(coap_session_t *session, size_t *len,
 
 uint16_t
 coap_new_message_id(coap_session_t *session) {
-  return ++session->tx_mid;
+  if (COAP_PROTO_NOT_RELIABLE(session->proto))
+    return ++session->tx_mid;
+  /* TCP/TLS have no notion of mid */
+  return 0;
 }
 
 const coap_address_t *

@@ -927,7 +927,7 @@ coap_send_message_type(coap_session_t *session, const coap_pdu_t *request,
   coap_pdu_t *response;
   coap_mid_t result = COAP_INVALID_MID;
 
-  if (request) {
+  if (request && COAP_PROTO_NOT_RELIABLE(session->proto)) {
     response = coap_pdu_init(type, 0, request->mid, 0);
     if (response)
       result = coap_send_internal(session, response);
@@ -1099,6 +1099,10 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   int observe_action = -1;
   int have_block1 = 0;
   coap_opt_t *opt;
+
+  /* A lot of the reliable code assumes type is CON */
+  if (COAP_PROTO_RELIABLE(session->proto) && pdu->type == COAP_MESSAGE_NON)
+    pdu->type = COAP_MESSAGE_CON;
 
   if (!(session->block_mode & COAP_BLOCK_USE_LIBCOAP)) {
     return coap_send_internal(session, pdu);
