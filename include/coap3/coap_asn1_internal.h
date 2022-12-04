@@ -64,11 +64,11 @@ size_t asn1_len(const uint8_t **ptr);
  *
  * @param ptr  The current asn.1 object tag pointer
  * @param constructed  1 if current tag is constructed
- * @param class  The current class of the tag
+ * @param cls  The current class of the tag
  *
  * @return The tag value.@p ptr is updated to be after the tag.
  */
-coap_asn1_tag_t asn1_tag_c(const uint8_t **ptr, int *constructed, int *class);
+coap_asn1_tag_t asn1_tag_c(const uint8_t **ptr, int *constructed, int *cls);
 
 /**
  * Get the asn1 tag and data from the current @p ptr.
