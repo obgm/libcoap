@@ -309,16 +309,17 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
   if (len < 42)
     return 0;
 
-  switch (addr->addr.type) {
+  switch (IP_GET_TYPE(addr->addr)) {
   case IPADDR_TYPE_V4:
 #ifdef HAVE_SNPRINTF
-    p += snprintf((char *)p, len, "%s", ip4addr_ntoa(&addr->addr.u_addr.ip4));
+    p += snprintf((char *)p, len, "%s", ip4addr_ntoa(&ip_2_ip4(addr->addr)));
 #endif /* HAVE_SNPRINTF */
     break;
+#if LWIP_IPV6
   case IPADDR_TYPE_V6:
   case IPADDR_TYPE_ANY:
 #ifdef HAVE_SNPRINTF
-    p+= snprintf((char *)p, len, "[%s]", ip6addr_ntoa(&addr->addr.u_addr.ip6));
+    p+= snprintf((char *)p, len, "[%s]", ip6addr_ntoa(&ip_2_ip6(addr->addr.u_addr.ip6)));
 #else /* ! HAVE_SNPRINTF */
     *p++ = '[';
     for (i=0; i < 16; i += 2) {
@@ -336,6 +337,7 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
       return p - buf;
     }
 #endif /* ! HAVE_SNPRINTF */
+#endif /* LWIP_IPV6 */
     break;
   }
 
