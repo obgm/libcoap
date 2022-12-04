@@ -605,7 +605,9 @@ coap_free_context(coap_context_t *context) {
 #ifdef WITH_LWIP
   context->sendqueue = NULL;
   if (context->timer_configured) {
+    LOCK_TCPIP_CORE();
     sys_untimeout(coap_io_process_timeout, (void*)context);
+    UNLOCK_TCPIP_CORE();
     context->timer_configured = 0;
   }
 #endif /* WITH_LWIP */
