@@ -14,6 +14,7 @@
  */
 
 #include "coap3/coap_internal.h"
+#include "coap3/coap_debug_macros.h"
 
 #ifdef HAVE_STDIO_H
 #  include <stdio.h>

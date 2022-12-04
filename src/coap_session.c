@@ -15,6 +15,7 @@
  */
 
 #include "coap3/coap_internal.h"
+#include "coap3/coap_debug_macros.h"
 
 #ifndef COAP_SESSION_C_
 #define COAP_SESSION_C_

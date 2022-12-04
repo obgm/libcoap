@@ -14,6 +14,7 @@
  */
 
 #include "coap3/coap_internal.h"
+#include <coap3/coap_debug_macros.h>
 
 #ifndef WITHOUT_ASYNC
 #include <stdio.h>

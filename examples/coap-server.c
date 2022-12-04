@@ -63,6 +63,7 @@ strndup(const char* s1, size_t n) {
 #define COAP_RESOURCE_CHECK_TIME 1
 
 #include <coap3/coap.h>
+#include <coap3/coap_debug_macros.h>
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))

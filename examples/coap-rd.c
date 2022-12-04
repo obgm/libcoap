@@ -44,6 +44,7 @@
 #endif
 
 #include <coap3/coap.h>
+#include <coap3/coap_debug_macros.h>
 
 #define COAP_RESOURCE_CHECK_TIME 2
 

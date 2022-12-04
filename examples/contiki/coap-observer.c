@@ -36,6 +36,7 @@
 #include <string.h>
 
 #include "coap3/coap.h"
+#include "coap3/coap_debug_macros.h"
 
 static coap_context_t *coap_context;
 

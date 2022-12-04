@@ -14,6 +14,7 @@
  */
 
 #include "coap3/coap_internal.h"
+#include <coap3/coap_debug_macros.h>
 
 #if COAP_SERVER_SUPPORT
 /* Determines if the given option_type denotes an option type that can

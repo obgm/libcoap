@@ -12,6 +12,7 @@
 
 #include "coap_config.h"
 #include <coap3/coap.h>
+#include <coap3/coap_debug_macros.h>
 #include "server-coap.h"
 
 coap_context_t *main_coap_context;

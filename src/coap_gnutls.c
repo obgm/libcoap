@@ -49,6 +49,7 @@
  */
 
 #include "coap3/coap_internal.h"
+#include <coap3/coap_debug_macros.h>
 
 #ifdef HAVE_LIBGNUTLS
 

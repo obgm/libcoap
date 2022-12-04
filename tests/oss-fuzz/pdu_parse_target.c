@@ -1,4 +1,5 @@
 #include <coap3/coap.h>
+#include <coap3/coap_debug_macros.h>
 
 /* Declare prototype for internal function coap_pdu_encode_header() */
 size_t coap_pdu_encode_header(coap_pdu_t *, coap_proto_t);

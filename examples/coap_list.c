@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include <coap3/coap.h>
+#include <coap3/coap_debug_macros.h>
 
 int
 coap_insert(coap_list_t **head, coap_list_t *node) {

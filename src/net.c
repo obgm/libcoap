@@ -14,6 +14,7 @@
  */
 
 #include "coap3/coap_internal.h"
+#include "coap3/coap_debug_macros.h"
 
 #include <ctype.h>
 #include <stdio.h>

@@ -14,6 +14,7 @@
  */
 
 #include "coap3/coap_internal.h"
+#include "coap3/coap_debug_macros.h"
 
 #if defined(RIOT_VERSION) && defined(MODULE_MEMARRAY)
 #include <memarray.h>
