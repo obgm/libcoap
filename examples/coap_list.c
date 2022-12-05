@@ -35,7 +35,7 @@
 int
 coap_insert(coap_list_t **head, coap_list_t *node) {
   if (!node) {
-    coap_log(LOG_WARNING, "cannot create option Proxy-Uri\n");
+    coap_log_warn("cannot create option Proxy-Uri\n");
   } else {
     /* must append at the list end to avoid re-ordering of
      * options during sort */

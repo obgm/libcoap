@@ -339,12 +339,12 @@ get_pdu_information(coap_pdu_t *pdu) {
   if (option) {
     uint32_t value = coap_decode_var_bytes(coap_opt_value(option),
                                            coap_opt_length(option));
-    coap_log(LOG_INFO, "Option OBSERVE, value %u\n", value);
+    coap_log_info("Option OBSERVE, value %u\n", value);
   }
   /* Iterate through all options */
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
   while ((option = coap_option_next(&opt_iter))) {
-    coap_log(LOG_INFO, "A: Option %d, Length %u\n",
+    coap_log_info("A: Option %d, Length %u\n",
              opt_iter.number, coap_opt_length(option));
   }
   /* Iterate through options, some ignored */
@@ -352,7 +352,7 @@ get_pdu_information(coap_pdu_t *pdu) {
   coap_option_filter_set(&ignore_options, COAP_OPTION_OBSERVE);
   coap_option_iterator_init(pdu, &opt_iter, &ignore_options);
   while ((option = coap_option_next(&opt_iter))) {
-    coap_log(LOG_INFO, "I: Option %d, Length %u\n",
+    coap_log_info("I: Option %d, Length %u\n",
              opt_iter.number, coap_opt_length(option));
   }
 

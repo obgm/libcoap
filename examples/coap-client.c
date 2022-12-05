@@ -203,7 +203,7 @@ track_new_token(size_t tokenlen, uint8_t *token) {
   track_token *new_list =  realloc(tracked_tokens,
                       (tracked_tokens_count + 1) * sizeof(tracked_tokens[0]));
   if (!new_list) {
-    coap_log(LOG_INFO, "Unable to track new token\n");
+    coap_log_info("Unable to track new token\n");
     return;
   }
   tracked_tokens = new_list;
@@ -273,7 +273,7 @@ coap_new_request(coap_context_t *ctx,
   coap_session_new_token(session, &tokenlen, token);
   track_new_token(tokenlen, token);
   if (!coap_add_token(pdu, tokenlen, token)) {
-    coap_log(LOG_DEBUG, "cannot add token to request\n");
+    coap_log_debug("cannot add token to request\n");
   }
 
   if (options)
@@ -376,7 +376,7 @@ nack_handler(coap_session_t *session COAP_UNUSED,
   case COAP_NACK_NOT_DELIVERABLE:
   case COAP_NACK_RST:
   case COAP_NACK_TLS_FAILED:
-    coap_log(LOG_ERR, "cannot send CoAP pdu\n");
+    coap_log_err("cannot send CoAP pdu\n");
     quit = 1;
     break;
   case COAP_NACK_ICMP_ISSUE:
@@ -406,7 +406,7 @@ message_handler(coap_session_t *session COAP_UNUSED,
   coap_pdu_type_t rcv_type = coap_pdu_get_type(received);
   coap_bin_const_t token = coap_pdu_get_token(received);
 
-  coap_log(LOG_DEBUG, "** process incoming %d.%02d response:\n",
+  coap_log_debug("** process incoming %d.%02d response:\n",
            COAP_RESPONSE_CLASS(rcv_code), rcv_code & 0x1F);
   if (coap_get_log_level() < LOG_DEBUG)
     coap_show_pdu(LOG_INFO, received);
@@ -423,7 +423,7 @@ message_handler(coap_session_t *session COAP_UNUSED,
   }
 
   if (rcv_type == COAP_MESSAGE_RST) {
-    coap_log(LOG_INFO, "got RST\n");
+    coap_log_info("got RST\n");
     return COAP_RESPONSE_OK;
   }
 
@@ -433,7 +433,7 @@ message_handler(coap_session_t *session COAP_UNUSED,
     /* set obs timer if we have successfully subscribed a resource */
     if (doing_observe && !obs_started &&
         coap_check_option(received, COAP_OPTION_OBSERVE, &opt_iter)) {
-      coap_log(LOG_DEBUG,
+      coap_log_debug(
                "observation relationship established, set timeout to %d\n",
                obs_seconds);
       obs_started = 1;
@@ -677,7 +677,7 @@ cmdline_content_type(char *arg, uint16_t key) {
     if (content_types[i].media_type) {
       value = content_types[i].code;
     } else {
-      coap_log(LOG_WARNING, "W: unknown content-format '%s'\n",arg);
+      coap_log_warn("W: unknown content-format '%s'\n",arg);
       return;
     }
   }
@@ -723,7 +723,7 @@ cmdline_uri(char *arg, int create_uri_opts) {
     /* create Proxy-Uri from argument */
     size_t len = strlen(arg);
     if (len > 1034) {
-      coap_log(LOG_ERR,
+      coap_log_err(
                "Absolute URI length must be <= 1034 bytes for a proxy\n");
       return -1;
     }
@@ -735,13 +735,13 @@ cmdline_uri(char *arg, int create_uri_opts) {
 
   } else {      /* split arg into Uri-* options */
     if (coap_split_uri((unsigned char *)arg, strlen(arg), &uri) < 0) {
-      coap_log(LOG_ERR, "invalid CoAP URI\n");
+      coap_log_err("invalid CoAP URI\n");
       return -1;
     }
 
     if (uri.scheme==COAP_URI_SCHEME_COAPS && !reliable &&
         !coap_dtls_is_supported()) {
-      coap_log(LOG_EMERG,
+      coap_log_emerg(
                "coaps URI scheme not supported in this version of libcoap\n");
       return -1;
     }
@@ -749,21 +749,21 @@ cmdline_uri(char *arg, int create_uri_opts) {
     if ((uri.scheme==COAP_URI_SCHEME_COAPS_TCP ||
         (uri.scheme==COAP_URI_SCHEME_COAPS && reliable)) &&
        !coap_tls_is_supported()) {
-      coap_log(LOG_EMERG,
+      coap_log_emerg(
             "coaps+tcp URI scheme not supported in this version of libcoap\n");
       return -1;
     }
 
     if (uri.scheme==COAP_URI_SCHEME_COAP_TCP && !coap_tcp_is_supported()) {
       /* coaps+tcp caught above */
-      coap_log(LOG_EMERG,
+      coap_log_emerg(
             "coap+tcp URI scheme not supported in this version of libcoap\n");
       return -1;
     }
 
     if (coap_uri_into_options(&uri, &optlist, create_uri_opts,
                               buf, sizeof(buf)) < 0) {
-      coap_log(LOG_ERR, "Failed to create options for URI\n");
+      coap_log_err("Failed to create options for URI\n");
       return -1;
     }
   }
@@ -790,13 +790,13 @@ cmdline_blocksize(char *arg) {
   }
 
   if (size < 16) {
-    coap_log(LOG_WARNING, "Minimum block size is 16\n");
+    coap_log_warn("Minimum block size is 16\n");
     return 0;
   } else if (size > 1024) {
-    coap_log(LOG_WARNING, "Maximum block size is 1024\n");
+    coap_log_warn("Maximum block size is 1024\n");
     return 0;
   } else if ((size % 16) != 0 ){
-    coap_log(LOG_WARNING, "Block size %u is not a multiple of 16\n", size);
+    coap_log_warn("Block size %u is not a multiple of 16\n", size);
     return 0;
   }
   if (size)
@@ -848,7 +848,7 @@ static int
 cmdline_proxy(char *arg) {
   if (coap_split_uri((unsigned char *)arg, strlen(arg), &proxy) < 0 ||
       proxy.path.length != 0 || proxy.query.length != 0) {
-    coap_log(LOG_ERR, "invalid CoAP Proxy definition\n");
+    coap_log_err("invalid CoAP Proxy definition\n");
     return 0;
   }
   return 1;
@@ -900,7 +900,7 @@ convert_hex_string(const char *src, uint8_t *dst) {
     src += 2;
   }
   if (src[0] != '\0') { /* error in hex input */
-    coap_log(LOG_WARNING, "invalid hex string in option '%s'\n", src);
+    coap_log_warn("invalid hex string in option '%s'\n", src);
   }
   return p - dst;
 }
@@ -947,7 +947,7 @@ cmdline_option(char *arg) {
       proxy.scheme = COAP_URI_SCHEME_COAP;
       proxy.port = COAP_DEFAULT_PORT;
     } else {
-      coap_log(LOG_WARNING, "%s is not a supported CoAP Proxy-Scheme\n", arg);
+      coap_log_warn("%s is not a supported CoAP Proxy-Scheme\n", arg);
     }
   }
   if (num == COAP_OPTION_URI_HOST) {
@@ -1126,7 +1126,7 @@ cmdline_read_key(char *arg, unsigned char **buf, size_t maxlen) {
     return len;
   }
   /* Need at least one byte for the pre-shared key */
-  coap_log( LOG_CRIT, "Invalid Pre-Shared Key specified\n" );
+  coap_log_crit("Invalid Pre-Shared Key specified\n" );
   return -1;
 }
 
@@ -1134,7 +1134,7 @@ static int cmdline_read_hint_check(const char *arg) {
   FILE *fp = fopen(arg, "r");
   static char tmpbuf[256];
   if (fp == NULL) {
-    coap_log(LOG_ERR, "Hint file: %s: Unable to open\n", arg);
+    coap_log_err("Hint file: %s: Unable to open\n", arg);
     return 0;
   }
   while (fgets(tmpbuf, sizeof(tmpbuf), fp) != NULL) {
@@ -1214,7 +1214,7 @@ verify_cn_callback(const char *cn,
                    unsigned depth,
                    int validated COAP_UNUSED,
                    void *arg COAP_UNUSED) {
-  coap_log(LOG_INFO, "CN '%s' presented by server (%s)\n",
+  coap_log_info("CN '%s' presented by server (%s)\n",
            cn, depth ? "CA" : "Certificate");
   return 1;
 }
@@ -1229,7 +1229,7 @@ verify_ih_callback(coap_str_const_t *hint,
   size_t i;
 
   snprintf(lhint, sizeof(lhint), "%.*s", (int)hint->length, hint->s);
-  coap_log(LOG_INFO, "Identity Hint '%s' provided\n", lhint);
+  coap_log_info("Identity Hint '%s' provided\n", lhint);
 
   /* Test for hint to possibly change identity + key */
   for (i = 0; i < valid_ihs.count; i++) {
@@ -1242,7 +1242,7 @@ verify_ih_callback(coap_str_const_t *hint,
       if (valid_ihs.ih_list[i].new_identity) {
         psk_identity_info.identity = *valid_ihs.ih_list[i].new_identity;
       }
-      coap_log(LOG_INFO, "Switching to using '%s' identity + '%s' key\n",
+      coap_log_info("Switching to using '%s' identity + '%s' key\n",
                psk_identity_info.identity.s, psk_identity_info.key.s);
       return &psk_identity_info;
     }
@@ -1661,7 +1661,7 @@ main(int argc, char **argv) {
   }
 
   if (key_length < 0) {
-    coap_log( LOG_CRIT, "Invalid pre-shared key specified\n" );
+    coap_log_crit("Invalid pre-shared key specified\n" );
     goto finish;
   }
 
@@ -1685,7 +1685,7 @@ main(int argc, char **argv) {
 
   ctx = coap_new_context( NULL );
   if ( !ctx ) {
-    coap_log( LOG_EMERG, "cannot create context\n" );
+    coap_log_emerg("cannot create context\n" );
     goto finish;
   }
 
@@ -1716,7 +1716,7 @@ main(int argc, char **argv) {
   );
 
   if ( !session ) {
-    coap_log( LOG_ERR, "cannot create client session\n" );
+    coap_log_err("cannot create client session\n" );
     goto finish;
   }
   /*
@@ -1778,14 +1778,14 @@ main(int argc, char **argv) {
     wait_seconds = coap_session_get_default_leisure(session).integer_part + 1;
 
   wait_ms = wait_seconds * 1000;
-  coap_log(LOG_DEBUG, "timeout is set to %u seconds\n", wait_seconds);
+  coap_log_debug("timeout is set to %u seconds\n", wait_seconds);
 
-  coap_log(LOG_DEBUG, "sending CoAP request:\n");
+  coap_log_debug("sending CoAP request:\n");
   if (coap_get_log_level() < LOG_DEBUG)
     coap_show_pdu(LOG_INFO, pdu);
 
   if (coap_send(session, pdu) == COAP_INVALID_MID) {
-    coap_log(LOG_ERR, "cannot send CoAP pdu\n");
+    coap_log_err("cannot send CoAP pdu\n");
     quit = 1;
   }
   repeat_count--;
@@ -1816,7 +1816,7 @@ main(int argc, char **argv) {
     if ( result >= 0 ) {
       if (wait_ms > 0) {
         if ( (unsigned)result >= wait_ms ) {
-          coap_log(LOG_INFO, "timeout\n");
+          coap_log_info("timeout\n");
           break;
         } else {
           wait_ms -= result;
@@ -1824,7 +1824,7 @@ main(int argc, char **argv) {
       }
       if ( obs_ms > 0 && !obs_ms_reset ) {
         if ( (unsigned)result >= obs_ms ) {
-          coap_log(LOG_DEBUG, "clear observation relationship\n" );
+          coap_log_debug("clear observation relationship\n" );
           for (i = 0; i < tracked_tokens_count; i++) {
             if (tracked_tokens[i].observe) {
               coap_cancel_observe(session, tracked_tokens[i].token, msgtype);
@@ -1860,13 +1860,13 @@ main(int argc, char **argv) {
                                        data, data_len))) {
             goto finish;
           }
-          coap_log(LOG_DEBUG, "sending CoAP request:\n");
+          coap_log_debug("sending CoAP request:\n");
           if (coap_get_log_level() < LOG_DEBUG)
             coap_show_pdu(LOG_INFO, pdu);
 
           ready = 0;
           if (coap_send(session, pdu) == COAP_INVALID_MID) {
-            coap_log(LOG_ERR, "cannot send CoAP pdu\n");
+            coap_log_err("cannot send CoAP pdu\n");
             quit = 1;
           }
           repeat_count--;

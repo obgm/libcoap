@@ -303,7 +303,7 @@ verify_ih_callback(coap_str_const_t *hint,
   /* Remove (void) definition if variable is used */
   (void)c_session;
 
-  coap_log(LOG_INFO, "Identity Hint '%.*s' provided\n", (int)hint->length, hint->s);
+  coap_log_info("Identity Hint '%.*s' provided\n", (int)hint->length, hint->s);
 
   /* Just use the defined information for now as passed in by arg */
   return psk_info;

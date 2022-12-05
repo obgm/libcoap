@@ -81,7 +81,7 @@ init_coap_server(coap_context_t **ctx) {
   *ctx = coap_new_context(&listen_addr);
 
   if (!*ctx) {
-    coap_log(LOG_CRIT, "cannot create CoAP context\r\n");
+    coap_log_crit("cannot create CoAP context\r\n");
   }
 }
 
@@ -177,7 +177,7 @@ init_coap_resources(coap_context_t *ctx) {
 
   return;
  error:
-  coap_log(LOG_CRIT, "cannot create resource\n");
+  coap_log_crit("cannot create resource\n");
 }
 
 /* struct etimer notify_timer; */
@@ -192,14 +192,14 @@ PROCESS_THREAD(coap_server_process, ev, data)
   init_coap_server(&coap_context);
 
   if (!coap_context) {
-    coap_log(LOG_EMERG, "cannot create context\n");
+    coap_log_emerg("cannot create context\n");
     PROCESS_EXIT();
   }
 
   init_coap_resources(coap_context);
 
   if (!coap_context) {
-    coap_log(LOG_EMERG, "cannot create context\n");
+    coap_log_emerg("cannot create context\n");
     PROCESS_EXIT();
   }
 

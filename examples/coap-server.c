@@ -401,7 +401,7 @@ hnd_get_async(coap_resource_t *resource,
                 "async: query is just a number of seconds to alter delay\n");
       }
       if (delay == 0) {
-        coap_log(LOG_INFO, "async: delay of 0 not supported\n");
+        coap_log_info("async: delay of 0 not supported\n");
         coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
         return;
       }
@@ -531,9 +531,9 @@ hnd_put_example_data(coap_resource_t *resource,
     }
     if (!cache_entry) {
       if (offset == 0) {
-        coap_log(LOG_WARNING, "Unable to create a new cache entry\n");
+        coap_log_warn("Unable to create a new cache entry\n");
       } else {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
                  "No cache entry available for the non-first BLOCK\n");
       }
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
@@ -698,7 +698,7 @@ get_uri_proxy_scheme_info(const coap_pdu_t *request,
     uri->scheme = COAP_URI_SCHEME_COAP;
     uri->port = COAP_DEFAULT_PORT;
   } else {
-    coap_log(LOG_WARNING, "Unsupported Proxy Scheme '%*.*s'\n",
+    coap_log_warn("Unsupported Proxy Scheme '%*.*s'\n",
              opt_len, opt_len, opt_val);
     return 0;
   }
@@ -708,7 +708,7 @@ get_uri_proxy_scheme_info(const coap_pdu_t *request,
     uri->host.length = coap_opt_length(opt);
     uri->host.s = coap_opt_value(opt);
   } else {
-    coap_log(LOG_WARNING, "Proxy Scheme requires Uri-Host\n");
+    coap_log_warn("Proxy Scheme requires Uri-Host\n");
     return 0;
   }
   opt = coap_check_option(request, COAP_OPTION_URI_PORT, &opt_iter);
@@ -737,33 +737,33 @@ verify_proxy_scheme_supported(coap_uri_scheme_t scheme) {
   switch (scheme) {
   case COAP_URI_SCHEME_HTTP:
   case COAP_URI_SCHEME_HTTPS:
-  coap_log(LOG_WARNING, "Proxy URI http or https not supported\n");
+  coap_log_warn("Proxy URI http or https not supported\n");
     return 0;
   case COAP_URI_SCHEME_COAP:
     break;
   case COAP_URI_SCHEME_COAPS:
     if (!coap_dtls_is_supported()) {
-      coap_log(LOG_WARNING,
+      coap_log_warn(
         "coaps URI scheme not supported for proxy\n");
       return 0;
     }
     break;
   case COAP_URI_SCHEME_COAP_TCP:
     if (!coap_tcp_is_supported()) {
-      coap_log(LOG_WARNING,
+      coap_log_warn(
         "coap+tcp URI scheme not supported for proxy\n");
       return 0;
     }
     break;
   case COAP_URI_SCHEME_COAPS_TCP:
     if (!coap_tls_is_supported()) {
-      coap_log(LOG_WARNING,
+      coap_log_warn(
         "coaps+tcp URI scheme not supported for proxy\n");
       return 0;
     }
     break;
   default:
-      coap_log(LOG_WARNING,
+      coap_log_warn(
         "%d URI scheme not supported\n", scheme);
     break;
   }
@@ -858,20 +858,20 @@ remove_proxy_association(coap_session_t *session, int send_failure) {
                                coap_new_message_id(proxy_list[i].incoming),
                           coap_session_max_pdu_size(proxy_list[i].incoming));
       if (!response) {
-        coap_log(LOG_INFO, "PDU creation issue\n");
+        coap_log_info("PDU creation issue\n");
         return;
       }
 
       if (proxy_list[i].token &&
           !coap_add_token(response, proxy_list[i].token->length,
                           proxy_list[i].token->s)) {
-        coap_log(LOG_DEBUG,
+        coap_log_debug(
                        "Cannot add token to incoming proxy response PDU\n");
       }
 
       if (coap_send(proxy_list[i].incoming, response) ==
                                                           COAP_INVALID_MID) {
-        coap_log(LOG_INFO, "Failed to send PDU with 5.02 gateway issue\n");
+        coap_log_info("Failed to send PDU with 5.02 gateway issue\n");
       }
       break;
     }
@@ -1040,14 +1040,14 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
    */
   proxy_uri = coap_check_option(request, COAP_OPTION_PROXY_URI, &opt_iter);
   if (proxy_uri) {
-    coap_log(LOG_INFO, "Proxy URI '%.*s'\n",
+    coap_log_info("Proxy URI '%.*s'\n",
              coap_opt_length(proxy_uri),
              (const char*)coap_opt_value(proxy_uri));
     if (coap_split_proxy_uri(coap_opt_value(proxy_uri),
                              coap_opt_length(proxy_uri),
                              &uri) < 0) {
       /* Need to return a 5.05 RFC7252 Section 5.7.2 */
-      coap_log(LOG_WARNING, "Proxy URI not decodable\n");
+      coap_log_warn("Proxy URI not decodable\n");
       coap_pdu_set_code(response,
                              COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
       goto cleanup;
@@ -1086,7 +1086,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
       assert(size == total);
       body_data = coap_new_binary(total);
       if (!body_data) {
-        coap_log(LOG_DEBUG, "body build memory error\n");
+        coap_log_debug("body build memory error\n");
         goto cleanup;
       }
       memcpy(body_data->s, data, size);
@@ -1111,7 +1111,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
     }
 
     if (!coap_add_token(pdu, token.length, token.s)) {
-      coap_log(LOG_DEBUG, "cannot add token to proxy request\n");
+      coap_log_debug("cannot add token to proxy request\n");
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       coap_delete_pdu(pdu);
       goto cleanup;
@@ -1124,7 +1124,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
 
       if (coap_uri_into_options(&uri, &optlist, 1,
                                 buf, sizeof(buf)) < 0) {
-        coap_log(LOG_ERR, "Failed to create options for URI\n");
+        coap_log_err("Failed to create options for URI\n");
         goto cleanup;
       }
     }
@@ -1169,7 +1169,7 @@ add_in:
     if (size) {
       if (!coap_add_data_large_request(ongoing, pdu, size, data,
                                        release_proxy_body_data, body_data)) {
-        coap_log(LOG_DEBUG, "cannot add data to proxy request\n");
+        coap_log_debug("cannot add data to proxy request\n");
       } else {
         body_data = NULL;
       }
@@ -1186,7 +1186,7 @@ add_in:
     goto cleanup;
   } else {
     /* TODO http & https */
-    coap_log(LOG_ERR, "Proxy-Uri scheme %d unknown\n", uri.scheme);
+    coap_log_err("Proxy-Uri scheme %d unknown\n", uri.scheme);
   }
 cleanup:
   coap_delete_string(uri_path);
@@ -1417,9 +1417,9 @@ hnd_put_post(coap_resource_t *resource,
     }
     if (!cache_entry) {
       if (offset == 0) {
-        coap_log(LOG_WARNING, "Unable to create a new cache entry\n");
+        coap_log_warn("Unable to create a new cache entry\n");
       } else {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
                  "No cache entry available for the non-first BLOCK\n");
       }
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
@@ -1630,11 +1630,11 @@ proxy_response_handler(coap_session_t *session,
     }
   }
   if (i == proxy_list_count) {
-    coap_log(LOG_DEBUG, "Unknown proxy ongoing session response received\n");
+    coap_log_debug("Unknown proxy ongoing session response received\n");
     return COAP_RESPONSE_OK;
   }
 
-  coap_log(LOG_DEBUG, "** process upstream incoming %d.%02d response:\n",
+  coap_log_debug("** process upstream incoming %d.%02d response:\n",
            COAP_RESPONSE_CLASS(rcv_code), rcv_code & 0x1F);
   if (coap_get_log_level() < LOG_DEBUG)
     coap_show_pdu(LOG_INFO, received);
@@ -1644,7 +1644,7 @@ proxy_response_handler(coap_session_t *session,
     assert(size == total);
     body_data = coap_new_binary(total);
     if (!body_data) {
-      coap_log(LOG_DEBUG, "body build memory error\n");
+      coap_log_debug("body build memory error\n");
       return COAP_RESPONSE_OK;
     }
     memcpy(body_data->s, data, size);
@@ -1659,12 +1659,12 @@ proxy_response_handler(coap_session_t *session,
                       coap_new_message_id(incoming),
                       coap_session_max_pdu_size(incoming));
   if (!pdu) {
-    coap_log(LOG_DEBUG, "Failed to create ongoing proxy response PDU\n");
+    coap_log_debug("Failed to create ongoing proxy response PDU\n");
     return COAP_RESPONSE_OK;
   }
 
   if (!coap_add_token(pdu, rcv_token.length, rcv_token.s)) {
-    coap_log(LOG_DEBUG, "cannot add token to ongoing proxy response PDU\n");
+    coap_log_debug("cannot add token to ongoing proxy response PDU\n");
   }
 
   /*
@@ -1828,7 +1828,7 @@ verify_cn_callback(const char *cn,
     void *v;
   } role = { .v = arg };
 
-  coap_log(LOG_INFO, "CN '%s' presented by %s (%s)\n",
+  coap_log_info("CN '%s' presented by %s (%s)\n",
            cn, role.r == COAP_DTLS_ROLE_SERVER ? "client" : "server",
            depth ? "CA" : "Certificate");
   return 1;
@@ -1912,11 +1912,11 @@ verify_pki_sni_callback(const char *sni,
 
   if (sni[0]) {
     size_t i;
-    coap_log(LOG_INFO, "SNI '%s' requested\n", sni);
+    coap_log_info("SNI '%s' requested\n", sni);
     for (i = 0; i < valid_pki_snis.count; i++) {
       /* Test for SNI to change cert + ca */
       if (strcasecmp(sni, valid_pki_snis.pki_sni_list[i].sni_match) == 0) {
-        coap_log(LOG_INFO, "Switching to using cert '%s' + ca '%s'\n",
+        coap_log_info("Switching to using cert '%s' + ca '%s'\n",
                  valid_pki_snis.pki_sni_list[i].new_cert,
                  valid_pki_snis.pki_sni_list[i].new_ca);
         update_pki_key(&dtls_key, valid_pki_snis.pki_sni_list[i].new_cert,
@@ -1926,7 +1926,7 @@ verify_pki_sni_callback(const char *sni,
       }
     }
   } else {
-    coap_log(LOG_DEBUG, "SNI not requested\n");
+    coap_log_debug("SNI not requested\n");
   }
   return &dtls_key;
 }
@@ -1945,12 +1945,12 @@ verify_psk_sni_callback(const char *sni,
   psk_info.key.length = key_length;
   if (sni) {
     size_t i;
-    coap_log(LOG_INFO, "SNI '%s' requested\n", sni);
+    coap_log_info("SNI '%s' requested\n", sni);
     for (i = 0; i < valid_psk_snis.count; i++) {
       /* Test for identity match to change key */
       if (strcasecmp(sni,
                  valid_psk_snis.psk_sni_list[i].sni_match) == 0) {
-        coap_log(LOG_INFO, "Switching to using '%.*s' hint + '%.*s' key\n",
+        coap_log_info("Switching to using '%.*s' hint + '%.*s' key\n",
                  (int)valid_psk_snis.psk_sni_list[i].new_hint->length,
                  valid_psk_snis.psk_sni_list[i].new_hint->s,
                  (int)valid_psk_snis.psk_sni_list[i].new_key->length,
@@ -1961,7 +1961,7 @@ verify_psk_sni_callback(const char *sni,
       }
     }
   } else {
-    coap_log(LOG_DEBUG, "SNI not requested\n");
+    coap_log_debug("SNI not requested\n");
   }
   return &psk_info;
 }
@@ -1975,7 +1975,7 @@ verify_id_callback(coap_bin_const_t *identity,
   const coap_bin_const_t *s_psk_key;
   size_t i;
 
-  coap_log(LOG_INFO, "Identity '%.*s' requested, current hint '%.*s'\n", (int)identity->length,
+  coap_log_info("Identity '%.*s' requested, current hint '%.*s'\n", (int)identity->length,
            identity->s,
            s_psk_hint ? (int)s_psk_hint->length : 0,
            s_psk_hint ? (const char *)s_psk_hint->s : "");
@@ -1989,7 +1989,7 @@ verify_id_callback(coap_bin_const_t *identity,
     }
     /* Test for identity match to change key */
     if (coap_binary_equal(identity, valid_ids.id_list[i].identity_match)) {
-      coap_log(LOG_INFO, "Switching to using '%.*s' key\n",
+      coap_log_info("Switching to using '%.*s' key\n",
                (int)valid_ids.id_list[i].new_key->length,
                valid_ids.id_list[i].new_key->s);
       return valid_ids.id_list[i].new_key;
@@ -2092,7 +2092,7 @@ fill_keystore(coap_context_t *ctx) {
 
   if (cert_file == NULL && key_defined == 0) {
     if (coap_dtls_is_supported() || coap_tls_is_supported()) {
-      coap_log(LOG_DEBUG,
+      coap_log_debug(
            "(D)TLS not enabled as none of -k, -c or -M options specified\n");
     }
     return;
@@ -2101,7 +2101,7 @@ fill_keystore(coap_context_t *ctx) {
     coap_dtls_pki_t *dtls_pki = setup_pki(ctx,
                                           COAP_DTLS_ROLE_SERVER, NULL);
     if (!coap_context_set_pki(ctx, dtls_pki)) {
-      coap_log(LOG_INFO, "Unable to set up %s keys\n",
+      coap_log_info("Unable to set up %s keys\n",
                is_rpk_not_cert ? "RPK" : "PKI");
       /* So we do not set up DTLS */
       cert_file = NULL;
@@ -2111,7 +2111,7 @@ fill_keystore(coap_context_t *ctx) {
     coap_dtls_spsk_t *dtls_spsk = setup_spsk();
 
     if (!coap_context_set_psk2(ctx, dtls_spsk)) {
-      coap_log(LOG_INFO, "Unable to set up PSK\n");
+      coap_log_info("Unable to set up PSK\n");
       /* So we do not set up DTLS */
       key_defined = 0;
     }
@@ -2332,10 +2332,10 @@ get_context(const char *node, const char *port) {
         if (coap_dtls_is_supported() && (key_defined || cert_file)) {
           ep_dtls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_DTLS);
           if (!ep_dtls)
-            coap_log(LOG_CRIT, "cannot create DTLS endpoint\n");
+            coap_log_crit("cannot create DTLS endpoint\n");
         }
       } else {
-        coap_log(LOG_CRIT, "cannot create UDP endpoint\n");
+        coap_log_crit("cannot create UDP endpoint\n");
         continue;
       }
       if (coap_tcp_is_supported()) {
@@ -2346,10 +2346,10 @@ get_context(const char *node, const char *port) {
             coap_endpoint_t *ep_tls;
             ep_tls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_TLS);
             if (!ep_tls)
-              coap_log(LOG_CRIT, "cannot create TLS endpoint\n");
+              coap_log_crit("cannot create TLS endpoint\n");
           }
         } else {
-          coap_log(LOG_CRIT, "cannot create TCP endpoint\n");
+          coap_log_crit("cannot create TCP endpoint\n");
         }
       }
       if (ep_udp)
@@ -2374,7 +2374,7 @@ cmdline_proxy(char *arg) {
   size_t ofs;
 
   if (!host_start) {
-    coap_log(LOG_WARNING, "Zero or more proxy host names not defined\n");
+    coap_log_warn("Zero or more proxy host names not defined\n");
     return 0;
   }
   *host_start = '\000';
@@ -2383,7 +2383,7 @@ cmdline_proxy(char *arg) {
     /* Next upstream proxy is defined */
     if (coap_split_uri((unsigned char *)arg, strlen(arg), &proxy) < 0 ||
         proxy.path.length != 0 || proxy.query.length != 0) {
-      coap_log(LOG_ERR, "invalid CoAP Proxy definition\n");
+      coap_log_err("invalid CoAP Proxy definition\n");
       return 0;
     }
   }
@@ -2425,7 +2425,7 @@ cmdline_read_key(char *arg, unsigned char **buf, size_t maxlen) {
     return len;
   }
   /* Need at least one byte for the pre-shared key */
-  coap_log( LOG_CRIT, "Invalid Pre-Shared Key specified\n" );
+  coap_log_crit("Invalid Pre-Shared Key specified\n" );
   return -1;
 }
 
@@ -2433,7 +2433,7 @@ static int cmdline_read_psk_sni_check(char *arg) {
   FILE *fp = fopen(arg, "r");
   static char tmpbuf[256];
   if (fp == NULL) {
-    coap_log(LOG_ERR, "SNI file: %s: Unable to open\n", arg);
+    coap_log_err("SNI file: %s: Unable to open\n", arg);
     return 0;
   }
   while (fgets(tmpbuf, sizeof(tmpbuf), fp) != NULL) {
@@ -2478,7 +2478,7 @@ cmdline_read_identity_check(char *arg) {
   FILE *fp = fopen(arg, "r");
   static char tmpbuf[256];
   if (fp == NULL) {
-    coap_log(LOG_ERR, "Identity file: %s: Unable to open\n", arg);
+    coap_log_err("Identity file: %s: Unable to open\n", arg);
     return 0;
   }
   while (fgets(tmpbuf, sizeof(tmpbuf), fp) != NULL) {
@@ -2523,7 +2523,7 @@ cmdline_read_pki_sni_check(char *arg) {
   FILE *fp = fopen(arg, "r");
   static char tmpbuf[256];
   if (fp == NULL) {
-    coap_log(LOG_ERR, "SNI file: %s: Unable to open\n", arg);
+    coap_log_err("SNI file: %s: Unable to open\n", arg);
     return 0;
   }
   while (fgets(tmpbuf, sizeof(tmpbuf), fp) != NULL) {
@@ -2557,13 +2557,13 @@ cmdline_read_pki_sni_check(char *arg) {
                              strndup(cp, strlen(cp));
         if (access(valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_cert,
             R_OK)) {
-          coap_log(LOG_ERR, "SNI file: Cert File: %s: Unable to access\n",
+          coap_log_err("SNI file: Cert File: %s: Unable to access\n",
                    valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_cert);
           fail = 1;
         }
         if (access(valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_ca,
             R_OK)) {
-          coap_log(LOG_ERR, "SNI file: CA File: %s: Unable to access\n",
+          coap_log_err("SNI file: CA File: %s: Unable to access\n",
                    valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_ca);
           fail = 1;
         }
@@ -2575,7 +2575,7 @@ cmdline_read_pki_sni_check(char *arg) {
           valid_pki_snis.count++;
         }
       } else {
-        coap_log(LOG_ERR,
+        coap_log_err(
                 "SNI file: SNI_match,Use_Cert_file,Use_CA_file not defined\n");
         free(valid_pki_snis.pki_sni_list[valid_pki_snis.count].sni_match);
       }
@@ -2816,7 +2816,7 @@ main(int argc, char **argv) {
       result = select (nfds, &readfds, NULL, NULL, &tv);
       if (result == -1) {
         if (errno != EAGAIN) {
-          coap_log(LOG_DEBUG, "select: %s (%d)\n", coap_socket_strerror(), errno);
+          coap_log_debug("select: %s (%d)\n", coap_socket_strerror(), errno);
           break;
         }
       }

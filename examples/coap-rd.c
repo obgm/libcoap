@@ -169,7 +169,7 @@ hnd_put_resource(coap_resource_t *resource COAP_UNUSED,
 
         tmp.s = (unsigned char *)coap_malloc(tmp.length);
         if (!tmp.s) {
-          coap_log(LOG_DEBUG,
+          coap_log_debug(
                    "hnd_put_rd: cannot allocate storage for new rd\n");
           code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
           goto finish;
@@ -200,7 +200,7 @@ hnd_put_resource(coap_resource_t *resource COAP_UNUSED,
   response = coap_pdu_init(type, code, request->hdr->id, size);
 
   if (!response) {
-    coap_log(LOG_DEBUG, "cannot create response for mid=0x%x\n",
+    coap_log_debug("cannot create response for mid=0x%x\n",
              request->hdr->id);
     return;
   }
@@ -209,7 +209,7 @@ hnd_put_resource(coap_resource_t *resource COAP_UNUSED,
     coap_add_token(response, request->hdr->token_length, request->hdr->token);
 
   if (coap_send(ctx, peer, response) == COAP_INVALID_MID) {
-    coap_log(LOG_DEBUG, "hnd_get_rd: cannot send response for mid=0x%x\n",
+    coap_log_debug("hnd_get_rd: cannot send response for mid=0x%x\n",
     request->hdr->id);
   }
 #endif
@@ -374,14 +374,14 @@ make_rd(const coap_pdu_t *pdu) {
   rd = rd_new();
 
   if (!rd) {
-    coap_log(LOG_DEBUG, "hnd_get_rd: cannot allocate storage for rd\n");
+    coap_log_debug("hnd_get_rd: cannot allocate storage for rd\n");
     return NULL;
   }
 
   if (coap_get_data(pdu, &rd->data.length, &data)) {
     rd->data.s = (unsigned char *)coap_malloc(rd->data.length);
     if (!rd->data.s) {
-      coap_log(LOG_DEBUG, "hnd_get_rd: cannot allocate storage for rd->data\n");
+      coap_log_debug("hnd_get_rd: cannot allocate storage for rd->data\n");
       rd_delete(rd);
       return NULL;
     }
@@ -639,7 +639,7 @@ static void
 fill_keystore(coap_context_t *ctx) {
   if (cert_file == NULL && key_defined == 0) {
     if (coap_dtls_is_supported() || coap_tls_is_supported()) {
-      coap_log(LOG_DEBUG,
+      coap_log_debug(
                "(D)TLS not enabled as neither -k or -c options specified\n");
     }
   }
@@ -747,10 +747,10 @@ get_context(const char *node, const char *port) {
         if (coap_dtls_is_supported() && (key_defined || cert_file)) {
           ep_dtls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_DTLS);
           if (!ep_dtls)
-            coap_log(LOG_CRIT, "cannot create DTLS endpoint\n");
+            coap_log_crit("cannot create DTLS endpoint\n");
         }
       } else {
-        coap_log(LOG_CRIT, "cannot create UDP endpoint\n");
+        coap_log_crit("cannot create UDP endpoint\n");
         continue;
       }
       ep_tcp = coap_new_endpoint(ctx, &addr, COAP_PROTO_TCP);
@@ -758,10 +758,10 @@ get_context(const char *node, const char *port) {
         if (coap_tls_is_supported() && (key_defined || cert_file)) {
           ep_tls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_TLS);
           if (!ep_tls)
-            coap_log(LOG_CRIT, "cannot create TLS endpoint\n");
+            coap_log_crit("cannot create TLS endpoint\n");
         }
       } else {
-        coap_log(LOG_CRIT, "cannot create TCP endpoint\n");
+        coap_log_crit("cannot create TCP endpoint\n");
       }
       if (ep_udp)
         goto finish;
@@ -818,7 +818,7 @@ main(int argc, char **argv) {
     case 'k' :
       key_length = cmdline_read_key(optarg, key, MAX_KEY);
       if (key_length < 0) {
-        coap_log( LOG_CRIT, "Invalid Pre-Shared Key specified\n" );
+        coap_log_crit("Invalid Pre-Shared Key specified\n" );
         break;
       }
       key_defined = 1;

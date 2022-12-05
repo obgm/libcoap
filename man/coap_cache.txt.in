@@ -283,10 +283,10 @@ hnd_put_example_data(coap_context_t *ctx,
     }
     if (!cache_entry) {
       if (offset == 0) {
-        coap_log(LOG_WARNING, "Unable to create a new cache entry\n");
+        coap_log_warn("Unable to create a new cache entry\n");
       }
       else {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
                  "No cache entry available for the non-first BLOCK\n");
       }
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);

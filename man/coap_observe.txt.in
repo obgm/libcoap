@@ -347,7 +347,7 @@ coap_optlist_t **options, unsigned char *data, size_t length, int observe) {
    */
   token++;
   if (!coap_add_token(pdu, sizeof(token), (unsigned char*)&token)) {
-    coap_log(LOG_DEBUG, "cannot add token to request\n");
+    coap_log_debug("cannot add token to request\n");
     goto error;
   }
 
