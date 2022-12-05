@@ -564,7 +564,7 @@ unsigned char *data, size_t length, int observe) {
    */
   coap_session_new_token(session, &buflen, buf);
   if (!coap_add_token(pdu, buflen, buf)) {
-    coap_log(LOG_DEBUG, "cannot add token to request\n");
+    coap_log_debug("cannot add token to request\n");
     goto error;
   }
 

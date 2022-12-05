@@ -319,7 +319,7 @@ coap_pdu_t *sent, coap_pdu_t *received, const coap_mid_t mid) {
   }
 
   if (rcv_type == COAP_MESSAGE_RST) {
-    coap_log(LOG_INFO, "got RST\n");
+    coap_log_info("got RST\n");
     return COAP_RESPONSE_OK;
   }
 

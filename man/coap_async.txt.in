@@ -147,7 +147,7 @@ hnd_get_with_delay(coap_session_t *session,
       for (size = query->length; size; --size, ++p)
         delay = delay * 10 + (*p - '0');
       if (delay == 0) {
-        coap_log(LOG_INFO, "async: delay of 0 not supported\n");
+        coap_log_info("async: delay of 0 not supported\n");
         coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
         return;
       }

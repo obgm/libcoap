@@ -182,7 +182,7 @@ hnd_post_test(coap_resource_t *resource COAP_UNUSED,
   snprintf((char *)buf, buflen, "test/%p", (void *)test_payload);
   uri = coap_new_str_const(buf, strlen((char *)buf));
   if (!(test_payload && uri)) {
-    coap_log(LOG_CRIT, "cannot allocate new resource under /test");
+    coap_log_crit("cannot allocate new resource under /test");
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
     coap_free(test_payload);
     coap_free(uri);
@@ -271,7 +271,7 @@ hnd_put_test(coap_resource_t *resource,
 
   return;
  error:
-  coap_log(LOG_WARNING, "cannot modify resource\n");
+  coap_log_warn("cannot modify resource\n");
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
 }
 
@@ -373,7 +373,7 @@ hnd_get_separate(coap_resource_t *resource COAP_UNUSED,
           delay = d < COAP_RESOURCE_CHECK_TIME_SEC
             ? COAP_RESOURCE_CHECK_TIME_SEC
             : d;
-          coap_log(LOG_DEBUG, "set delay to %lu\n", delay);
+          coap_log_debug("set delay to %lu\n", delay);
           break;
         }
       }
@@ -408,7 +408,7 @@ make_large(const char *filename) {
 
   /* read from specified input file */
   if (stat(filename, &statbuf) < 0) {
-    coap_log(LOG_WARNING, "cannot stat file %s\n", filename);
+    coap_log_warn("cannot stat file %s\n", filename);
     return NULL;
   }
 
@@ -418,7 +418,7 @@ make_large(const char *filename) {
 
   inputfile = fopen(filename, "r");
   if ( !inputfile ) {
-    coap_log(LOG_WARNING, "cannot read file %s\n", filename);
+    coap_log_warn("cannot read file %s\n", filename);
     coap_free(payload);
     return NULL;
   }
@@ -438,7 +438,7 @@ init_resources(coap_context_t *ctx) {
 
   test_payload = coap_new_payload(200);
   if (!test_payload) {
-    coap_log(LOG_CRIT, "cannot allocate resource /test");
+    coap_log_crit("cannot allocate resource /test");
   } else {
     test_payload->length = 13;
     memcpy(test_payload->data, "put data here", test_payload->length);
@@ -465,7 +465,7 @@ init_resources(coap_context_t *ctx) {
    * TD_COAP_BLOCK_02 */
   test_payload = make_large("etsi_iot_01_largedata.txt");
   if (!test_payload) {
-    coap_log(LOG_CRIT, "cannot allocate resource /large\n");
+    coap_log_crit("cannot allocate resource /large\n");
   } else {
     r = coap_resource_init(coap_make_str_const("large"), 0);
     coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_resource);
@@ -482,7 +482,7 @@ init_resources(coap_context_t *ctx) {
   /* For TD_COAP_CORE_12 */
   test_payload = coap_new_payload(20);
   if (!test_payload) {
-    coap_log(LOG_CRIT, "cannot allocate resource /seg1/seg2/seg3\n");
+    coap_log_crit("cannot allocate resource /seg1/seg2/seg3\n");
   } else {
     test_payload->length = 10;
     memcpy(test_payload->data, "segsegseg!", test_payload->length);

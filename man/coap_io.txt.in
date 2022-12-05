@@ -362,7 +362,7 @@ int main(int argc, char *argv[]){
     result = select (nfds, &readfds, NULL, NULL, NULL);
     if (result == -1) {
       if (errno != EAGAIN) {
-        coap_log(LOG_DEBUG, "select: %s (%d)\n", coap_socket_strerror(), errno);
+        coap_log_debug("select: %s (%d)\n", coap_socket_strerror(), errno);
         break;
       }
     }
@@ -442,7 +442,7 @@ int main(int argc, char *argv[]){
     nevents = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
     if (nevents == -1) {
       if (errno != EAGAIN) {
-        coap_log(LOG_DEBUG, "epoll_wait: %s (%d)\n", coap_socket_strerror(), errno);
+        coap_log_debug("epoll_wait: %s (%d)\n", coap_socket_strerror(), errno);
         break;
       }
     }
@@ -462,7 +462,7 @@ int main(int argc, char *argv[]){
   }
 
   if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, coap_fd, &ev) == -1) {
-    coap_log(LOG_DEBUG, "epoll_ctl: %s (%d)\n", coap_socket_strerror(), errno);
+    coap_log_debug("epoll_ctl: %s (%d)\n", coap_socket_strerror(), errno);
   }
   coap_free_context(ctx);
 

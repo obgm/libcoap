@@ -112,7 +112,7 @@ init_coap_resources(coap_context_t *ctx) {
 
   return;
  error:
-  coap_log(LOG_CRIT, "cannot create resource\n");
+  coap_log_crit("cannot create resource\n");
 }
 
 void server_coap_init(coap_lwip_input_wait_handler_t input_wait,
