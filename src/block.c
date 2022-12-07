@@ -1206,7 +1206,8 @@ coap_block_delete_lg_crcv(coap_session_t *session,
   for (i = 0; i < lg_crcv->obs_token_cnt; i++) {
     coap_delete_binary(lg_crcv->obs_token[i]);
   }
-  coap_free(lg_crcv->obs_token);
+
+  coap_free_type(COAP_STRING, lg_crcv->obs_token);
   coap_free_type(COAP_LG_CRCV, lg_crcv);
 }
 #endif /* COAP_CLIENT_SUPPORT */
