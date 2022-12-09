@@ -1520,8 +1520,10 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
  }
 
   /* And finally delete the node */
-  if (node->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
+  if (node->pdu->type == COAP_MESSAGE_CON && context->nack_handler) {
+    coap_check_update_token(node->session, node->pdu);
     context->nack_handler(node->session, node->pdu, COAP_NACK_TOO_MANY_RETRIES, node->id);
+  }
   coap_delete_node(node);
   return COAP_INVALID_MID;
 }
@@ -2107,8 +2109,10 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
     context->sendqueue = q->next;
     coap_log_debug("** %s: mid=0x%x: removed 3\n",
              coap_session_str(session), q->id);
-    if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
+    if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler) {
+      coap_check_update_token(session, q->pdu);
       context->nack_handler(session, q->pdu, reason, q->id);
+    }
     coap_delete_node(q);
   }
 
@@ -2123,8 +2127,10 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
       p->next = q->next;
       coap_log_debug("** %s: mid=0x%x: removed 4\n",
                coap_session_str(session), q->id);
-      if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler)
+      if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler) {
+        coap_check_update_token(session, q->pdu);
         context->nack_handler(session, q->pdu, reason, q->id);
+      }
       coap_delete_node(q);
       q = p->next;
     } else {
@@ -3252,9 +3258,11 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         coap_cancel(context, sent);
 
         if (!is_ping_rst) {
-          if(sent->pdu->type==COAP_MESSAGE_CON && context->nack_handler)
+          if(sent->pdu->type==COAP_MESSAGE_CON && context->nack_handler) {
+            coap_check_update_token(sent->session, sent->pdu);
             context->nack_handler(sent->session, sent->pdu,
                                   COAP_NACK_RST, sent->id);
+          }
         }
         else {
           if (context->pong_handler) {
@@ -3367,6 +3375,7 @@ cleanup:
   if (packet_is_bad) {
     if (sent) {
       if (context->nack_handler) {
+        coap_check_update_token(session, sent->pdu);
         context->nack_handler(session, sent->pdu, COAP_NACK_BAD_RESPONSE, sent->id);
       }
     }
