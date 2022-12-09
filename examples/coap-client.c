@@ -200,7 +200,7 @@ free_xmit_data(coap_session_t *session COAP_UNUSED, void *app_ptr) {
 
 static void
 track_new_token(size_t tokenlen, uint8_t *token) {
-  track_token *new_list =  realloc(tracked_tokens,
+  track_token *new_list = realloc(tracked_tokens,
                       (tracked_tokens_count + 1) * sizeof(tracked_tokens[0]));
   if (!new_list) {
     coap_log_info("Unable to track new token\n");
@@ -367,9 +367,13 @@ event_handler(coap_session_t *session COAP_UNUSED,
 
 static void
 nack_handler(coap_session_t *session COAP_UNUSED,
-             const coap_pdu_t *sent COAP_UNUSED,
+             const coap_pdu_t *sent,
              const coap_nack_reason_t reason,
              const coap_mid_t id COAP_UNUSED) {
+  coap_bin_const_t token = coap_pdu_get_token(sent);
+  if (!track_check_token(&token)) {
+    coap_log_err("nack_handler: Unexpected token\n");
+  }
 
   switch(reason) {
   case COAP_NACK_TOO_MANY_RETRIES:
@@ -1880,10 +1884,17 @@ main(int argc, char **argv) {
 
  finish:
 
+  /* Clean up library usage */
+  coap_session_release(session);
+  coap_free_context(ctx);
+  coap_cleanup();
+
+  /* Clean up local usage */
   coap_free(ca_mem);
   coap_free(cert_mem);
   coap_free(key_mem);
   coap_free(payload.s);
+
   for (i = 0; i < valid_ihs.count; i++) {
     free(valid_ihs.ih_list[i].hint_match);
     coap_delete_bin_const(valid_ihs.ih_list[i].new_identity);
@@ -1891,14 +1902,13 @@ main(int argc, char **argv) {
   }
   if (valid_ihs.count)
     free(valid_ihs.ih_list);
+
   for (i = 0; i < tracked_tokens_count; i++) {
     coap_delete_binary(tracked_tokens[i].token);
   }
   free(tracked_tokens);
+
   coap_delete_optlist(optlist);
-  coap_session_release( session );
-  coap_free_context( ctx );
-  coap_cleanup();
   close_output();
 
   return result;

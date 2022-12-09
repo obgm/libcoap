@@ -238,6 +238,19 @@ void coap_check_code_lg_xmit(const coap_session_t *session,
                              const coap_resource_t *resource,
                              const coap_string_t *query);
 
+#if COAP_CLIENT_SUPPORT
+/**
+ * The function checks if the token needs to be updated before PDU is
+ * presented to the application (only relevant to clients).
+ *
+ * @param session The session.
+ * @param pdu     The PDU to to check for updating.
+ */
+void coap_check_update_token(coap_session_t *session, coap_pdu_t *pdu);
+#else /* ! COAP_CLIENT_SUPPORT */
+#define coap_check_update_token(a,b)
+#endif /* ! COAP_CLIENT_SUPPORT */
+
 /** @} */
 
 #endif /* COAP_BLOCK_INTERNAL_H_ */

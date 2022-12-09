@@ -2537,3 +2537,42 @@ coap_check_code_lg_xmit(const coap_session_t *session,
   }
 }
 #endif /* COAP_SERVER_SUPPORT */
+
+#if COAP_CLIENT_SUPPORT
+void
+coap_check_update_token(coap_session_t *session, coap_pdu_t *pdu) {
+  uint64_t token_match = STATE_TOKEN_BASE(coap_decode_var_bytes8(pdu->token,
+                                                         pdu->token_length));
+  coap_lg_xmit_t *lg_xmit;
+  coap_lg_crcv_t *lg_crcv;
+
+  if (session->lg_crcv) {
+    LL_FOREACH(session->lg_crcv, lg_crcv) {
+      if (full_match(pdu->token, pdu->token_length, lg_crcv->app_token->s,
+                     lg_crcv->app_token->length))
+        return;
+      if (token_match == STATE_TOKEN_BASE(lg_crcv->state_token)) {
+        coap_update_token(pdu, lg_crcv->app_token->length,
+                          lg_crcv->app_token->s);
+        coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
+        coap_show_pdu(LOG_DEBUG, pdu);
+        return;
+      }
+    }
+  }
+  if (COAP_PDU_IS_REQUEST(pdu) && session->lg_xmit) {
+    LL_FOREACH(session->lg_xmit, lg_xmit) {
+      if (full_match(pdu->token, pdu->token_length, lg_xmit->b.b1.app_token->s,
+                     lg_xmit->b.b1.app_token->length))
+        return;
+      if (token_match == STATE_TOKEN_BASE(lg_xmit->b.b1.state_token)) {
+        coap_update_token(pdu, lg_xmit->b.b1.app_token->length,
+                          lg_xmit->b.b1.app_token->s);
+        coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
+        coap_show_pdu(LOG_DEBUG, pdu);
+        return;
+      }
+    }
+  }
+}
+#endif /* ! COAP_CLIENT_SUPPORT */

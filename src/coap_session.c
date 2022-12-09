@@ -285,8 +285,14 @@ void coap_session_mfree(coap_session_t *session) {
   }
 #endif /* COAP_SERVER_SUPPORT */
   LL_FOREACH_SAFE(session->delayqueue, q, tmp) {
-    if (q->pdu->type==COAP_MESSAGE_CON && session->context && session->context->nack_handler)
-      session->context->nack_handler(session, q->pdu, session->proto == COAP_PROTO_DTLS ? COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE, q->id);
+    if (q->pdu->type==COAP_MESSAGE_CON && session->context &&
+        session->context->nack_handler) {
+      coap_check_update_token(session, q->pdu);
+      session->context->nack_handler(session, q->pdu,
+                                     session->proto == COAP_PROTO_DTLS ?
+                                       COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE,
+                                     q->id);
+    }
     coap_delete_node(q);
   }
   LL_FOREACH_SAFE(session->lg_xmit, lq, ltmp) {
@@ -642,14 +648,17 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
       /* Make sure that we try a re-transmit later on ICMP error */
       if (coap_wait_ack(session->context, session, q) >= 0) {
         if (session->context->nack_handler) {
+          coap_bin_const_t token = coap_pdu_get_token(q->pdu);
+          coap_check_update_token(session, q->pdu);
           session->context->nack_handler(session, q->pdu, reason, q->id);
+          coap_update_token(q->pdu, token.length, token.s);
         }
         q = NULL;
       }
     }
     if (q && q->pdu->type == COAP_MESSAGE_CON
-      && session->context->nack_handler)
-    {
+      && session->context->nack_handler) {
+      coap_check_update_token(session, q->pdu);
       session->context->nack_handler(session, q->pdu, reason, q->id);
     }
     if (q)
@@ -686,7 +695,10 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
     coap_queue_t *q = session->context->sendqueue;
     while (q) {
       if (q->session == session) {
+        coap_bin_const_t token = coap_pdu_get_token(q->pdu);
+        coap_check_update_token(session, q->pdu);
         session->context->nack_handler(session, q->pdu, reason, q->id);
+        coap_update_token(q->pdu, token.length, token.s);
       }
       q = q->next;
     }
