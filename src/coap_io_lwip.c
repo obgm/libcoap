@@ -68,7 +68,7 @@ coap_io_process_timeout(void *arg) {
     timeout = 1000;
   }
 #ifdef COAP_DEBUG_WAKEUP_TIMES
-  coap_log(LOG_INFO, "****** Next wakeup msecs %u (1)\n",
+  coap_log_info("****** Next wakeup msecs %u (1)\n",
            timeout);
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
   sys_timeout(timeout, coap_io_process_timeout, context);
@@ -97,7 +97,7 @@ coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
     timeout = 1000;
   }
 #ifdef COAP_DEBUG_WAKEUP_TIMES
-  coap_log(LOG_INFO, "****** Next wakeup msecs %u (2)\n",
+  coap_log_info("****** Next wakeup msecs %u (2)\n",
            timeout);
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
   sys_timeout(timeout, coap_io_process_timeout, context);
@@ -176,7 +176,7 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   packet->addr_info.local.addr = *ip_current_dest_addr();
   packet->ifindex = netif_get_index(ip_current_netif());
 
-  coap_log(LOG_DEBUG, "*  %s: received %d bytes\n",
+  coap_log_debug("*  %s: received %d bytes\n",
            coap_session_str(session), p->len);
   if (session->proto == COAP_PROTO_DTLS) {
     if (session->tls) {
@@ -261,7 +261,7 @@ coap_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     goto error;
   LWIP_ASSERT("Proto not supported for LWIP", COAP_PROTO_NOT_RELIABLE(session->proto));
 
-  coap_log(LOG_DEBUG, "*  %s: received %d bytes\n",
+  coap_log_debug("*  %s: received %d bytes\n",
            coap_session_str(session), p->len);
 
   if (session->proto == COAP_PROTO_DTLS) {

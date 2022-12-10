@@ -155,7 +155,7 @@ typedef enum coap_free_bye_t {
 
 #define G_CHECK(xx,func) do { \
   if ((ret = (xx)) < 0) { \
-    coap_log(LOG_WARNING, "%s: '%s'\n", func, gnutls_strerror(ret)); \
+    coap_log_warn("%s: '%s'\n", func, gnutls_strerror(ret)); \
     goto fail; \
   } \
 } while (0)
@@ -182,7 +182,7 @@ static int psk_server_callback(gnutls_session_t g_session,
 int
 coap_dtls_is_supported(void) {
   if (gnutls_check_version(MIN_GNUTLS_VERSION) == NULL) {
-    coap_log(LOG_ERR, "GnuTLS " MIN_GNUTLS_VERSION " or later is required\n");
+    coap_log_err("GnuTLS " MIN_GNUTLS_VERSION " or later is required\n");
     return 0;
   }
   return 1;
@@ -196,7 +196,7 @@ int
 coap_tls_is_supported(void) {
 #if !COAP_DISABLE_TCP
   if (gnutls_check_version(MIN_GNUTLS_VERSION) == NULL) {
-    coap_log(LOG_ERR, "GnuTLS " MIN_GNUTLS_VERSION " or later is required\n");
+    coap_log_err("GnuTLS " MIN_GNUTLS_VERSION " or later is required\n");
     return 0;
   }
   return 1;
@@ -268,10 +268,10 @@ coap_gnutls_audit_log_func(gnutls_session_t g_session, const char* text)
   if (g_session) {
     coap_session_t *c_session =
       (coap_session_t *)gnutls_transport_get_ptr(g_session);
-    coap_log(LOG_WARNING, "** %s: %s",
+    coap_log_warn("** %s: %s",
              coap_session_str(c_session), text);
   } else {
-    coap_log(LOG_WARNING, "** (null): %s", text);
+    coap_log_warn("** (null): %s", text);
   }
 }
 
@@ -346,14 +346,14 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *c_context,
   coap_gnutls_context_t *g_context =
                          ((coap_gnutls_context_t *)c_context->dtls_context);
   if (!g_context) {
-    coap_log(LOG_WARNING,
+    coap_log_warn(
              "coap_context_set_pki_root_cas: (D)TLS environment "
              "not set up\n");
     return 0;
   }
 
   if (ca_file == NULL && ca_path == NULL) {
-    coap_log(LOG_WARNING,
+    coap_log_warn(
              "coap_context_set_pki_root_cas: ca_file and/or ca_path "
              "not defined\n");
     return 0;
@@ -373,7 +373,7 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *c_context,
 #if (GNUTLS_VERSION_NUMBER >= 0x030306)
     g_context->root_ca_path = gnutls_strdup(ca_path);
 #else
-    coap_log(LOG_ERR, "ca_path not supported in GnuTLS < 3.3.6\n");
+    coap_log_err("ca_path not supported in GnuTLS < 3.3.6\n");
 #endif
   }
   return 1;
@@ -502,10 +502,10 @@ coap_dtls_new_context(coap_context_t *c_context COAP_UNUSED) {
     ret = gnutls_priority_init(&g_context->priority_cache, priority, &err);
     if (ret != GNUTLS_E_SUCCESS) {
       if (ret == GNUTLS_E_INVALID_REQUEST)
-        coap_log(LOG_WARNING,
+        coap_log_warn(
                  "gnutls_priority_init: Syntax error at: %s\n", err);
       else
-        coap_log(LOG_WARNING,
+        coap_log_warn(
                  "gnutls_priority_init: %s\n", gnutls_strerror(ret));
       goto fail;
     }
@@ -587,7 +587,7 @@ psk_client_callback(gnutls_session_t g_session,
   temp.length = strlen((const char*)temp.s);
   coap_session_refresh_psk_hint(c_session, &temp);
 
-  coap_log(LOG_DEBUG, "got psk_identity_hint: '%.*s'\n", (int)temp.length,
+  coap_log_debug("got psk_identity_hint: '%.*s'\n", (int)temp.length,
              (const char *)temp.s);
 
   if (setup_data->validate_ih_call_back) {
@@ -614,7 +614,7 @@ psk_client_callback(gnutls_session_t g_session,
   }
 
   if (psk_identity == NULL || psk_key == NULL) {
-    coap_log(LOG_WARNING, "no PSK available\n");
+    coap_log_warn("no PSK available\n");
     return -1;
   }
 
@@ -813,7 +813,7 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
     if (status & (GNUTLS_CERT_NOT_ACTIVATED|GNUTLS_CERT_EXPIRED)) {
       status &= ~(GNUTLS_CERT_NOT_ACTIVATED|GNUTLS_CERT_EXPIRED);
       if (g_context->setup_data.allow_expired_certs) {
-        coap_log(LOG_INFO,
+        coap_log_info(
                  "   %s: %s: overridden: '%s'\n",
                  coap_session_str(c_session),
                  "The certificate has an invalid usage date",
@@ -821,7 +821,7 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
       }
       else {
         fail = 1;
-        coap_log(LOG_WARNING,
+        coap_log_warn(
                  "   %s: %s: '%s'\n",
                  coap_session_str(c_session),
                  "The certificate has an invalid usage date",
@@ -833,7 +833,7 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
       status &= ~(GNUTLS_CERT_REVOCATION_DATA_SUPERSEDED|
                   GNUTLS_CERT_REVOCATION_DATA_ISSUED_IN_FUTURE);
       if (g_context->setup_data.allow_expired_crl) {
-        coap_log(LOG_INFO,
+        coap_log_info(
                  "   %s: %s: overridden: '%s'\n",
                  coap_session_str(c_session),
                  "The certificate's CRL entry has an invalid usage date",
@@ -841,7 +841,7 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
       }
       else {
         fail = 1;
-        coap_log(LOG_WARNING,
+        coap_log_warn(
                  "   %s: %s: '%s'\n",
                  coap_session_str(c_session),
                  "The certificate's CRL entry has an invalid usage date",
@@ -853,7 +853,7 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
       if (cert_info.self_signed) {
         if (g_context->setup_data.allow_self_signed &&
             !g_context->setup_data.check_common_ca) {
-          coap_log(LOG_INFO,
+          coap_log_info(
                    "   %s: %s: overridden: '%s'\n",
                    coap_session_str(c_session),
                    "Self-signed",
@@ -862,7 +862,7 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
         else {
           fail = 1;
           alert = GNUTLS_A_UNKNOWN_CA;
-          coap_log(LOG_WARNING,
+          coap_log_warn(
                    "   %s: %s: '%s'\n",
                    coap_session_str(c_session),
                    "Self-signed",
@@ -871,7 +871,7 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
       }
       else {
         if (!g_context->setup_data.verify_peer_cert) {
-          coap_log(LOG_INFO,
+          coap_log_info(
                    "   %s: %s: overridden: '%s'\n",
                    coap_session_str(c_session),
                    "The peer certificate's CA is unknown",
@@ -880,7 +880,7 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
         else {
           fail = 1;
           alert = GNUTLS_A_UNKNOWN_CA;
-          coap_log(LOG_WARNING,
+          coap_log_warn(
                    "   %s: %s: '%s'\n",
                    coap_session_str(c_session),
                    "The peer certificate's CA is unknown",
@@ -891,7 +891,7 @@ static int cert_verify_gnutls(gnutls_session_t g_session)
 
     if (status) {
         fail = 1;
-        coap_log(LOG_WARNING,
+        coap_log_warn(
                  "   %s: gnutls_certificate_verify_peers() status 0x%x: '%s'\n",
                  coap_session_str(c_session),
                  status, OUTPUT_CERT_NAME);
@@ -1073,7 +1073,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
         setup_data->pki_key.key.pem.private_key &&
         setup_data->pki_key.key.pem.private_key[0]) {
       if (setup_data->is_rpk_not_cert) {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
                  "RPK keys cannot be in COAP_PKI_KEY_PEM format\n");
         return GNUTLS_E_INSUFFICIENT_CREDENTIALS;
       }
@@ -1086,7 +1086,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
       }
     }
     else if (role == COAP_DTLS_ROLE_SERVER) {
-      coap_log(LOG_ERR,
+      coap_log_err(
                "***setup_pki: (D)TLS: No %s Certificate + Private "
                "Key defined\n",
                role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
@@ -1098,11 +1098,11 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
                            setup_data->pki_key.key.pem.ca_file,
                            GNUTLS_X509_FMT_PEM);
       if (ret == 0) {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
          "gnutls_certificate_set_x509_trust_file: No certificates found\n");
       }
       else if (ret < 0) {
-        coap_log(LOG_WARNING, "%s: '%s'\n",
+        coap_log_warn("%s: '%s'\n",
                  "gnutls_certificate_set_x509_trust_file",
                  gnutls_strerror(ret));
         goto fail;
@@ -1126,7 +1126,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
         alloced_cert_memory = 1;
         cert.data = gnutls_malloc(cert.size + 1);
         if (!cert.data) {
-          coap_log(LOG_ERR, "gnutls_malloc failure\n");
+          coap_log_err("gnutls_malloc failure\n");
           return GNUTLS_E_MEMORY_ERROR;
         }
         memcpy(cert.data, setup_data->pki_key.key.pem_buf.public_cert,
@@ -1145,7 +1145,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
         alloced_key_memory = 1;
         key.data = gnutls_malloc(key.size + 1);
         if (!key.data) {
-          coap_log(LOG_ERR, "gnutls_malloc failure\n");
+          coap_log_err("gnutls_malloc failure\n");
           if (alloced_cert_memory) gnutls_free(cert.data);
           return GNUTLS_E_MEMORY_ERROR;
         }
@@ -1194,7 +1194,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
                    "gnutls_certificate_set_rawpk_key_mem");
         }
 #else /* GNUTLS_VERSION_NUMBER < 0x030606 */
-        coap_log(LOG_ERR,
+        coap_log_err(
               "RPK Support not available (needs gnutls 3.6.6 or later)\n");
         if (alloced_cert_memory) gnutls_free(cert.data);
         if (alloced_key_memory) gnutls_free(key.data);
@@ -1212,7 +1212,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
       if (alloced_key_memory) gnutls_free(key.data);
     }
     else if (role == COAP_DTLS_ROLE_SERVER) {
-      coap_log(LOG_ERR,
+      coap_log_err(
                "***setup_pki: (D)TLS: No Server Certificate + Private "
                "Key defined\n");
       return GNUTLS_E_INSUFFICIENT_CREDENTIALS;
@@ -1228,7 +1228,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
         alloced_ca_memory = 1;
         ca.data = gnutls_malloc(ca.size + 1);
         if (!ca.data) {
-          coap_log(LOG_ERR, "gnutls_malloc failure\n");
+          coap_log_err("gnutls_malloc failure\n");
           return GNUTLS_E_MEMORY_ERROR;
         }
         memcpy(ca.data, setup_data->pki_key.key.pem_buf.ca_cert, ca.size);
@@ -1244,11 +1244,11 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
                            &ca,
                            GNUTLS_X509_FMT_PEM);
       if (ret == 0) {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
          "gnutls_certificate_set_x509_trust_mem: No certificates found\n");
       }
       else if (ret < 0) {
-        coap_log(LOG_WARNING, "%s: '%s'\n",
+        coap_log_warn("%s: '%s'\n",
                  "gnutls_certificate_set_x509_trust_mem",
                  gnutls_strerror(ret));
         if (alloced_ca_memory) gnutls_free(ca.data);
@@ -1304,7 +1304,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
                  "gnutls_certificate_set_rawpk_key_mem");
         }
 #else /* GNUTLS_VERSION_NUMBER < 0x030606 */
-        coap_log(LOG_ERR,
+        coap_log_err(
               "RPK Support not available (needs gnutls 3.6.6 or later)\n");
       return GNUTLS_E_INSUFFICIENT_CREDENTIALS;
 #endif /* GNUTLS_VERSION_NUMBER < 0x030606 */
@@ -1318,7 +1318,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
       }
     }
     else if (role == COAP_DTLS_ROLE_SERVER) {
-      coap_log(LOG_ERR,
+      coap_log_err(
                "***setup_pki: (D)TLS: No %s Certificate + Private "
                "Key defined\n",
                role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
@@ -1336,11 +1336,11 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
                            &ca_cert,
                            GNUTLS_X509_FMT_DER);
       if (ret == 0) {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
          "gnutls_certificate_set_x509_trust_mem: No certificates found\n");
       }
       else if (ret < 0) {
-        coap_log(LOG_WARNING, "%s: '%s'\n",
+        coap_log_warn("%s: '%s'\n",
                  "gnutls_certificate_set_x509_trust_mem",
                  gnutls_strerror(ret));
         goto fail;
@@ -1365,7 +1365,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
                                    NULL, 0, GNUTLS_PKCS_PLAIN, 0),
                  "gnutls_certificate_set_rawpk_key_file");
 #else /* GNUTLS_VERSION_NUMBER < 0x030606 */
-        coap_log(LOG_ERR,
+        coap_log_err(
               "RPK Support not available (needs gnutls 3.6.6 or later)\n");
       return GNUTLS_E_INSUFFICIENT_CREDENTIALS;
 #endif /* GNUTLS_VERSION_NUMBER < 0x030606 */
@@ -1379,7 +1379,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
       }
     }
     else if (role == COAP_DTLS_ROLE_SERVER) {
-      coap_log(LOG_ERR,
+      coap_log_err(
                "***setup_pki: (D)TLS: No %s Certificate + Private "
                "Key defined\n",
                role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
@@ -1391,11 +1391,11 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
                            setup_data->pki_key.key.pkcs11.ca,
                            GNUTLS_X509_FMT_DER);
       if (ret == 0) {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
          "gnutls_certificate_set_x509_trust_file: No certificates found\n");
       }
       else if (ret < 0) {
-        coap_log(LOG_WARNING, "%s: '%s'\n",
+        coap_log_warn("%s: '%s'\n",
                  "gnutls_certificate_set_x509_trust_file",
                  gnutls_strerror(ret));
         goto fail;
@@ -1404,7 +1404,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
     break;
 
   default:
-    coap_log(LOG_ERR,
+    coap_log_err(
              "***setup_pki: (D)TLS: Unknown key type %d\n",
              setup_data->pki_key.key_type);
     return GNUTLS_E_INSUFFICIENT_CREDENTIALS;
@@ -1415,7 +1415,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
                          g_context->root_ca_file,
                          GNUTLS_X509_FMT_PEM);
     if (ret == 0) {
-      coap_log(LOG_WARNING,
+      coap_log_warn(
        "gnutls_certificate_set_x509_trust_file: Root CA: No certificates found\n");
     }
   }
@@ -1765,10 +1765,10 @@ setup_client_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env)
               priority, &err);
         if (ret < 0) {
           if (ret == GNUTLS_E_INVALID_REQUEST)
-            coap_log(LOG_WARNING,
+            coap_log_warn(
                      "gnutls_priority_set_direct: Syntax error at: %s\n", err);
           else
-            coap_log(LOG_WARNING,
+            coap_log_warn(
                      "gnutls_priority_set_direct: %s\n", gnutls_strerror(ret));
           goto fail;
         }
@@ -1846,7 +1846,7 @@ psk_server_callback(gnutls_session_t g_session,
   lidentity.length = strlen((const char*)lidentity.s);
   coap_session_refresh_psk_identity(c_session, &lidentity);
 
-  coap_log(LOG_DEBUG, "got psk_identity: '%.*s'\n",
+  coap_log_debug("got psk_identity: '%.*s'\n",
                       (int)lidentity.length, (const char *)lidentity.s);
 
   if (setup_data->validate_id_call_back) {
@@ -1990,7 +1990,7 @@ coap_dgram_write(gnutls_transport_ptr_t context, const void *send_buffer,
   if (c_session) {
     result = coap_session_send(c_session, send_buffer, send_buffer_length);
     if (result != (int)send_buffer_length) {
-      coap_log(LOG_WARNING, "coap_network_send failed\n");
+      coap_log_warn("coap_network_send failed\n");
       result = 0;
     }
   } else {
@@ -2156,11 +2156,11 @@ static void log_last_alert(coap_session_t *c_session,
   int last_alert = gnutls_alert_get(g_session);
 
   if (last_alert == GNUTLS_A_CLOSE_NOTIFY)
-    coap_log(LOG_DEBUG, "***%s: Alert '%d': %s\n",
+    coap_log_debug("***%s: Alert '%d': %s\n",
                          coap_session_str(c_session),
                          last_alert, gnutls_alert_get_name(last_alert));
   else
-    coap_log(LOG_WARNING, "***%s: Alert '%d': %s\n",
+    coap_log_warn("***%s: Alert '%d': %s\n",
                           coap_session_str(c_session),
                           last_alert, gnutls_alert_get_name(last_alert));
 }
@@ -2178,7 +2178,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
   switch (ret) {
   case GNUTLS_E_SUCCESS:
     g_env->established = 1;
-    coap_log(LOG_DEBUG, "*  %s: GnuTLS established\n",
+    coap_log_debug("*  %s: GnuTLS established\n",
                                             coap_session_str(c_session));
     ret = 1;
     break;
@@ -2191,7 +2191,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
     ret = 0;
     break;
   case GNUTLS_E_INSUFFICIENT_CREDENTIALS:
-    coap_log(LOG_WARNING,
+    coap_log_warn(
              "Insufficient credentials provided.\n");
     ret = -1;
     break;
@@ -2214,7 +2214,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
 #if (GNUTLS_VERSION_NUMBER > 0x030606)
   case GNUTLS_E_CERTIFICATE_REQUIRED:
 #endif /* GNUTLS_VERSION_NUMBER > 0x030606 */
-    coap_log(LOG_WARNING,
+    coap_log_warn(
              "Client Certificate requested and required, but not provided\n"
              );
     G_ACTION(gnutls_alert_send(g_env->g_session, GNUTLS_AL_FATAL,
@@ -2224,7 +2224,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
     ret = -1;
     break;
   case GNUTLS_E_DECRYPTION_FAILED:
-    coap_log(LOG_WARNING,
+    coap_log_warn(
              "do_gnutls_handshake: session establish "
              "returned '%s'\n",
              gnutls_strerror(ret));
@@ -2244,7 +2244,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
   case GNUTLS_E_UNKNOWN_CIPHER_SUITE:
   case GNUTLS_E_NO_CIPHER_SUITES:
   case GNUTLS_E_INVALID_SESSION:
-    coap_log(LOG_WARNING,
+    coap_log_warn(
              "do_gnutls_handshake: session establish "
              "returned '%s'\n",
              gnutls_strerror(ret));
@@ -2264,7 +2264,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
     ret = -1;
     break;
   default:
-    coap_log(LOG_WARNING,
+    coap_log_warn(
              "do_gnutls_handshake: session establish "
              "returned %d: '%s'\n",
              ret, gnutls_strerror(ret));
@@ -2345,7 +2345,7 @@ int coap_dtls_send(coap_session_t *c_session,
         ret = -1;
         break;
       default:
-        coap_log(LOG_DEBUG,
+        coap_log_debug(
                  "coap_dtls_send: gnutls_record_send "
                  "returned %d: '%s'\n",
                  ret, gnutls_strerror(ret));
@@ -2353,7 +2353,7 @@ int coap_dtls_send(coap_session_t *c_session,
         break;
       }
       if (ret == -1) {
-        coap_log(LOG_WARNING, "coap_dtls_send: cannot send PDU\n");
+        coap_log_warn("coap_dtls_send: cannot send PDU\n");
       }
     }
   }
@@ -2453,7 +2453,7 @@ coap_dtls_receive(coap_session_t *c_session,
   assert(g_env != NULL);
 
   if (ssl_data->pdu_len)
-    coap_log(LOG_ERR, "** %s: Previous data not read %u bytes\n",
+    coap_log_err("** %s: Previous data not read %u bytes\n",
              coap_session_str(c_session), ssl_data->pdu_len);
   ssl_data->pdu = data;
   ssl_data->pdu_len = data_len;
@@ -2488,7 +2488,7 @@ coap_dtls_receive(coap_session_t *c_session,
         ret = 0;
         break;
       default:
-        coap_log(LOG_WARNING,
+        coap_log_warn(
                  "coap_dtls_receive: gnutls_record_recv returned %d\n", ret);
         ret = -1;
         break;
@@ -2526,7 +2526,7 @@ coap_dtls_receive(coap_session_t *c_session,
   }
   if (ssl_data && ssl_data->pdu_len) {
     /* pdu data is held on stack which will not stay there */
-    coap_log(LOG_DEBUG, "coap_dtls_receive: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
+    coap_log_debug("coap_dtls_receive: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
     ssl_data->pdu_len = 0;
     ssl_data->pdu = NULL;
   }
@@ -2573,7 +2573,7 @@ coap_dtls_hello(coap_session_t *c_session,
                                      data_rw, data_len,
                                      &prestate);
     if (ret < 0) {  /* cookie not valid */
-      coap_log(LOG_DEBUG, "Invalid Cookie - sending Hello Verify\n");
+      coap_log_debug("Invalid Cookie - sending Hello Verify\n");
       gnutls_dtls_cookie_send(&g_env->coap_ssl_data.cookie_key,
                               &c_session->addr_info,
                               sizeof(c_session->addr_info),
@@ -2609,7 +2609,7 @@ coap_dtls_hello(coap_session_t *c_session,
 
   if (ssl_data && ssl_data->pdu_len) {
     /* pdu data is held on stack which will not stay there */
-    coap_log(LOG_DEBUG, "coap_dtls_hello: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
+    coap_log_debug("coap_dtls_hello: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
      ssl_data->pdu_len = 0;
      ssl_data->pdu = NULL;
   }
@@ -2639,10 +2639,10 @@ coap_sock_read(gnutls_transport_ptr_t context, void *out, size_t outl) {
     ret = recv(c_session->sock.fd, out, outl, 0);
 #endif
     if (ret > 0) {
-      coap_log(LOG_DEBUG, "*  %s: received %d bytes\n",
+      coap_log_debug("*  %s: received %d bytes\n",
                coap_session_str(c_session), ret);
     } else if (ret < 0 && errno != EAGAIN) {
-      coap_log(LOG_DEBUG,  "*  %s: failed to receive any bytes (%s)\n",
+      coap_log_debug( "*  %s: failed to receive any bytes (%s)\n",
                coap_session_str(c_session), coap_socket_strerror());
     }
     if (ret == 0) {
@@ -2670,7 +2670,7 @@ coap_sock_write(gnutls_transport_ptr_t context, const void *in, size_t inl) {
 
   ret = (int)coap_socket_write(&c_session->sock, in, inl);
   if (ret > 0) {
-    coap_log(LOG_DEBUG, "*  %s: sent %d bytes\n",
+    coap_log_debug("*  %s: sent %d bytes\n",
              coap_session_str(c_session), ret);
   } else if (ret < 0) {
     if ((c_session->state == COAP_SESSION_STATE_CSM ||
@@ -2690,7 +2690,7 @@ coap_sock_write(gnutls_transport_ptr_t context, const void *in, size_t inl) {
       ret = inl;
     }
     else {
-      coap_log(LOG_DEBUG,  "*  %s: failed to send %zd bytes (%s) state %d\n",
+      coap_log_debug( "*  %s: failed to send %zd bytes (%s) state %d\n",
                coap_session_str(c_session), inl, coap_socket_strerror(),
                c_session->state);
     }
@@ -2834,7 +2834,7 @@ ssize_t coap_tls_write(coap_session_t *c_session,
         ret = -1;
         break;
       default:
-        coap_log(LOG_WARNING,
+        coap_log_warn(
                  "coap_tls_write: gnutls_record_send "
                  "returned %d: '%s'\n",
                  ret, gnutls_strerror(ret));
@@ -2842,7 +2842,7 @@ ssize_t coap_tls_write(coap_session_t *c_session,
         break;
       }
       if (ret == -1) {
-        coap_log(LOG_INFO, "coap_tls_write: cannot send PDU\n");
+        coap_log_info("coap_tls_write: cannot send PDU\n");
       }
     }
   }
@@ -2923,7 +2923,7 @@ ssize_t coap_tls_read(coap_session_t *c_session,
         ret = 0;
         break;
       default:
-        coap_log(LOG_WARNING,
+        coap_log_warn(
                  "coap_tls_read: gnutls_record_recv "
                  "returned %d: '%s'\n",
                  ret, gnutls_strerror(ret));

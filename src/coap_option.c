@@ -20,7 +20,7 @@
 #include <string.h>
 
 #define ADVANCE_OPT(o,e,step) if ((e) < step) {           \
-    coap_log(LOG_DEBUG, "cannot advance opt past end\n"); \
+    coap_log_debug("cannot advance opt past end\n"); \
     return 0;                                             \
   } else {                                                \
     (e) -= step;                                          \
@@ -53,7 +53,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
   switch(result->delta) {
   case 15:
     if (*opt != COAP_PAYLOAD_START) {
-      coap_log(LOG_DEBUG, "ignored reserved option delta 15\n");
+      coap_log_debug("ignored reserved option delta 15\n");
     }
     return 0;
   case 14:
@@ -63,7 +63,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
     ADVANCE_OPT_CHECK(opt,length,1);
     result->delta = ((*opt & 0xff) << 8) + 269;
     if (result->delta < 269) {
-      coap_log(LOG_DEBUG, "delta too large\n");
+      coap_log_debug("delta too large\n");
       return 0;
     }
     /* fall through */
@@ -78,7 +78,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 
   switch(result->length) {
   case 15:
-    coap_log(LOG_DEBUG, "found reserved option length 15\n");
+    coap_log_debug("found reserved option length 15\n");
     return 0;
   case 14:
     /* Handle two-byte value: First, the MSB + 269 is stored as delta value.
@@ -102,7 +102,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 
   result->value = opt;
   if (length < result->length) {
-    coap_log(LOG_DEBUG, "invalid option length\n");
+    coap_log_debug("invalid option length\n");
     return 0;
   }
 
@@ -214,7 +214,7 @@ coap_opt_length(const coap_opt_t *opt) {
   length = *opt & 0x0f;
   switch (*opt & 0xf0) {
   case 0xf0:
-    coap_log(LOG_DEBUG, "illegal option delta\n");
+    coap_log_debug("illegal option delta\n");
     return 0;
   case 0xe0:
     ++opt;
@@ -230,7 +230,7 @@ coap_opt_length(const coap_opt_t *opt) {
 
   switch (length) {
   case 0x0f:
-    coap_log(LOG_DEBUG, "illegal option length\n");
+    coap_log_debug("illegal option length\n");
     return 0;
   case 0x0e:
     length = (*opt++ << 8) + 269;
@@ -250,7 +250,7 @@ coap_opt_value(const coap_opt_t *opt) {
 
   switch (*opt & 0xf0) {
   case 0xf0:
-    coap_log(LOG_DEBUG, "illegal option delta\n");
+    coap_log_debug("illegal option delta\n");
     return 0;
   case 0xe0:
     ++ofs;
@@ -264,7 +264,7 @@ coap_opt_value(const coap_opt_t *opt) {
 
   switch (*opt & 0x0f) {
   case 0x0f:
-    coap_log(LOG_DEBUG, "illegal option length\n");
+    coap_log_debug("illegal option length\n");
     return 0;
   case 0x0e:
     ++ofs;
@@ -301,7 +301,7 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
     opt[0] = (coap_opt_t)(delta << 4);
   } else if (delta < 269) {
     if (maxlen < 2) {
-      coap_log(LOG_DEBUG, "insufficient space to encode option delta %d\n",
+      coap_log_debug("insufficient space to encode option delta %d\n",
                delta);
       return 0;
     }
@@ -310,7 +310,7 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
     opt[++skip] = (coap_opt_t)(delta - 13);
   } else {
     if (maxlen < 3) {
-      coap_log(LOG_DEBUG, "insufficient space to encode option delta %d\n",
+      coap_log_debug("insufficient space to encode option delta %d\n",
                delta);
       return 0;
     }
@@ -324,7 +324,7 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
     opt[0] |= length & 0x0f;
   } else if (length < 269) {
     if (maxlen < skip + 2) {
-      coap_log(LOG_DEBUG, "insufficient space to encode option length %zu\n",
+      coap_log_debug("insufficient space to encode option length %zu\n",
                length);
       return 0;
     }
@@ -333,7 +333,7 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
     opt[++skip] = (coap_opt_t)(length - 13);
   } else {
     if (maxlen < skip + 3) {
-      coap_log(LOG_DEBUG, "insufficient space to encode option delta %d\n",
+      coap_log_debug("insufficient space to encode option delta %d\n",
                delta);
       return 0;
     }
@@ -376,7 +376,7 @@ coap_opt_encode(coap_opt_t *opt, size_t maxlen, uint16_t delta,
   assert(l <= maxlen);
 
   if (!l) {
-    coap_log(LOG_DEBUG, "coap_opt_encode: cannot set option header\n");
+    coap_log_debug("coap_opt_encode: cannot set option header\n");
     return 0;
   }
 
@@ -384,7 +384,7 @@ coap_opt_encode(coap_opt_t *opt, size_t maxlen, uint16_t delta,
   opt += l;
 
   if (maxlen < length) {
-    coap_log(LOG_DEBUG, "coap_opt_encode: option too large for buffer\n");
+    coap_log_debug("coap_opt_encode: option too large for buffer\n");
     return 0;
   }
 
@@ -513,7 +513,7 @@ coap_new_optlist(uint16_t number,
 
 #ifdef WITH_LWIP
   if (length > MEMP_LEN_COAPOPTLIST) {
-    coap_log(LOG_CRIT,
+    coap_log_crit(
              "coap_new_optlist: size too large (%zu > MEMP_LEN_COAPOPTLIST)\n",
              length);
     return NULL;
@@ -528,7 +528,7 @@ coap_new_optlist(uint16_t number,
     node->data = (uint8_t *)&node[1];
     memcpy(node->data, data, length);
   } else {
-    coap_log(LOG_WARNING, "coap_new_optlist: malloc failure\n");
+    coap_log_warn("coap_new_optlist: malloc failure\n");
   }
 
   return node;
@@ -551,7 +551,7 @@ coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t** options) {
 
   if (options && *options) {
     if (pdu->data) {
-      coap_log(LOG_WARNING,
+      coap_log_warn(
                "coap_add_optlist_pdu: PDU already contains data\n");
       return 0;
     }
@@ -569,7 +569,7 @@ coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t** options) {
 int
 coap_insert_optlist(coap_optlist_t **head, coap_optlist_t *node) {
   if (!node) {
-    coap_log(LOG_DEBUG, "optlist not provided\n");
+    coap_log_debug("optlist not provided\n");
   } else {
     /* must append at the list end to avoid re-ordering of
      * options during sort */

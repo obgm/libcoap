@@ -61,7 +61,7 @@ coap_register_async(coap_session_t *session,
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
                 "%02x", request->token[i]);
     }
-    coap_log(LOG_DEBUG,
+    coap_log_debug(
          "asynchronous state for token '%s' already registered\n", outbuf);
     return NULL;
   }
@@ -69,7 +69,7 @@ coap_register_async(coap_session_t *session,
   /* store information for handling the asynchronous task */
   s = (coap_async_t *)coap_malloc(sizeof(coap_async_t));
   if (!s) {
-    coap_log(LOG_CRIT, "coap_register_async: insufficient memory\n");
+    coap_log_crit("coap_register_async: insufficient memory\n");
     return NULL;
   }
 
@@ -80,7 +80,7 @@ coap_register_async(coap_session_t *session,
                               request->token, NULL);
   if (s->pdu == NULL) {
     coap_free_async(session, s);
-    coap_log(LOG_CRIT, "coap_register_async: insufficient memory\n");
+    coap_log_crit("coap_register_async: insufficient memory\n");
     return NULL;
   }
 
@@ -102,7 +102,7 @@ coap_async_trigger(coap_async_t *async) {
   assert(async != NULL);
   coap_ticks(&async->delay);
 
-  coap_log(LOG_DEBUG, "   %s: Async request triggered\n",
+  coap_log_debug("   %s: Async request triggered\n",
            coap_session_str(async->session));
 #ifdef COAP_EPOLL_SUPPORT
   coap_update_epoll_timer(async->session->context, 0);
@@ -122,7 +122,7 @@ coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
 #ifdef COAP_EPOLL_SUPPORT
     coap_update_epoll_timer(async->session->context, delay);
 #endif /* COAP_EPOLL_SUPPORT */
-    coap_log(LOG_DEBUG, "   %s: Async request delayed for %u.%03u secs\n",
+    coap_log_debug("   %s: Async request delayed for %u.%03u secs\n",
              coap_session_str(async->session),
              (unsigned int)(delay / COAP_TICKS_PER_SECOND),
              (unsigned int)((delay % COAP_TICKS_PER_SECOND) *
@@ -130,7 +130,7 @@ coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
   }
   else {
     async->delay = 0;
-    coap_log(LOG_DEBUG, "   %s: Async request indefinately delayed\n",
+    coap_log_debug("   %s: Async request indefinately delayed\n",
              coap_session_str(async->session));
   }
 }

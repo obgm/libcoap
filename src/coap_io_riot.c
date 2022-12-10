@@ -63,7 +63,7 @@ coap_network_send(coap_socket_t *sock,
   }
 
   if (bytes_written < 0)
-    coap_log(LOG_CRIT, "coap_network_send: %s\n", coap_socket_strerror());
+    coap_log_crit("coap_network_send: %s\n", coap_socket_strerror());
 
   return bytes_written;
 }
@@ -87,7 +87,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   assert(packet);
 
   if ((sock->flags & COAP_SOCKET_CAN_READ) == 0) {
-    coap_log(LOG_DEBUG, "coap_network_read: COAP_SOCKET_CAN_READ not set\n");
+    coap_log_debug("coap_network_read: COAP_SOCKET_CAN_READ not set\n");
     return -1;
   } else {
     /* clear has-data flag */
@@ -100,15 +100,15 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   ipv6_hdr = gnrc_ipv6_get_header(sock->pkt);
 
   if (!ipv6_hdr || !udp || !(udp_hdr = (udp_hdr_t *)udp->data)) {
-    coap_log(LOG_DEBUG, "no UDP header found in packet\n");
+    coap_log_debug("no UDP header found in packet\n");
     return -EFAULT;
   }
   udp_hdr_print(udp_hdr);
 
   len = (size_t)gnrc_pkt_len_upto(sock->pkt, type) - sizeof(udp_hdr_t);
-  coap_log(LOG_DEBUG, "coap_network_read: recvfrom got %zd bytes\n", len);
+  coap_log_debug("coap_network_read: recvfrom got %zd bytes\n", len);
   if (len > COAP_RXBUFFER_SIZE) {
-    coap_log(LOG_WARNING, "packet exceeds buffer size, truncated\n");
+    coap_log_warn("packet exceeds buffer size, truncated\n");
     len = COAP_RXBUFFER_SIZE;
   }
   packet->ifindex = sock->fd;
@@ -138,7 +138,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
     unsigned char addr_str[INET6_ADDRSTRLEN + 8];
 
     if (coap_print_addr(&packet->addr_info.remote, addr_str, INET6_ADDRSTRLEN + 8)) {
-      coap_log(LOG_DEBUG, "received %zd bytes from %s\n", len, addr_str);
+      coap_log_debug("received %zd bytes from %s\n", len, addr_str);
     }
   }
 
@@ -212,7 +212,7 @@ coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   xtimer_msg_receive_timeout(&msg, timeout_ms * US_PER_SEC);
   switch (msg.type) {
   case GNRC_NETAPI_MSG_TYPE_RCV: {
-    coap_log(LOG_DEBUG, "coap_run_once: GNRC_NETAPI_MSG_TYPE_RCV\n");
+    coap_log_debug("coap_run_once: GNRC_NETAPI_MSG_TYPE_RCV\n");
 
     coap_session_t *s, *rtmp;
     udp_hdr_t *udp_hdr = get_udp_header((gnrc_pktsnip_t *)msg.content.ptr);
@@ -220,12 +220,12 @@ coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
       gnrc_ipv6_get_header((gnrc_pktsnip_t *)msg.content.ptr);
     if (!udp_hdr || !ip6_hdr)
       break;
-    coap_log(LOG_DEBUG, "coap_run_once: found UDP header\n");
+    coap_log_debug("coap_run_once: found UDP header\n");
 
     /* Traverse all sessions and set COAP_SOCKET_CAN_READ if the
      * received packet's destination address matches. */
     SESSIONS_ITER(ctx->sessions, s, rtmp) {
-      coap_log(LOG_DEBUG, "coap_run_once: check ctx->sessions %u == %u\n",
+      coap_log_debug("coap_run_once: check ctx->sessions %u == %u\n",
                ntohs(get_port(&s->addr_info.local)),
                ntohs(udp_hdr->dst_port.u16));
       if ((get_port(&s->addr_info.local) == udp_hdr->dst_port.u16) &&
@@ -233,7 +233,7 @@ coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
         coap_socket_t *sock = find_socket(s->sock.fd, sockets, num_sockets);
 
         if (sock && (sock->flags & (COAP_SOCKET_WANT_READ))) {
-          coap_log(LOG_DEBUG, "fd %d on port %u can read\n",
+          coap_log_debug("fd %d on port %u can read\n",
                    sock->fd, ntohs(get_port(&s->addr_info.local)));
           sock->flags |= COAP_SOCKET_CAN_READ;
           sock->pkt = msg.content.ptr;
@@ -254,7 +254,7 @@ coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
           coap_socket_t *sock = find_socket(ep->sock.fd, sockets, num_sockets);
 
           if (sock && (sock->flags & (COAP_SOCKET_WANT_READ))) {
-              coap_log(LOG_DEBUG, "fd %d on port %u can read\n",
+              coap_log_debug("fd %d on port %u can read\n",
                        sock->fd, ntohs(get_port(&ep->bind_addr)));
               sock->flags |= COAP_SOCKET_CAN_READ;
               sock->pkt = msg.content.ptr;

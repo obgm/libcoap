@@ -311,7 +311,7 @@ coap_resource_init(coap_str_const_t *uri_path, int flags) {
     r->flags = flags;
     r->observe = 2;
   } else {
-    coap_log(LOG_DEBUG, "coap_resource_init: no memory left\n");
+    coap_log_debug("coap_resource_init: no memory left\n");
   }
 
   return r;
@@ -333,7 +333,7 @@ coap_resource_unknown_init2(coap_method_handler_t put_handler, int flags) {
     r->flags = flags & COAP_RESOURCE_FLAGS_MCAST_LIST;
     coap_register_handler(r, COAP_REQUEST_PUT, put_handler);
   } else {
-    coap_log(LOG_DEBUG, "coap_resource_unknown_init: no memory left\n");
+    coap_log_debug("coap_resource_unknown_init: no memory left\n");
   }
 
   return r;
@@ -354,7 +354,7 @@ coap_resource_proxy_uri_init2(coap_method_handler_t handler,
   coap_resource_t *r;
 
   if (host_name_count == 0) {
-    coap_log(LOG_ERR,
+    coap_log_err(
           "coap_resource_proxy_uri_init: Must have one or more host names defined\n");
     return NULL;
   }
@@ -378,7 +378,7 @@ coap_resource_proxy_uri_init2(coap_method_handler_t handler,
               coap_new_str_const((const uint8_t*)host_name_list[i],
                                  strlen(host_name_list[i]));
           if (!r->proxy_name_list[i]) {
-            coap_log(LOG_ERR,
+            coap_log_err(
                      "coap_resource_proxy_uri_init: unable to add host name\n");
             if (i == 0) {
               coap_free(r->proxy_name_list);
@@ -392,7 +392,7 @@ coap_resource_proxy_uri_init2(coap_method_handler_t handler,
     }
     r->flags = flags & COAP_RESOURCE_FLAGS_MCAST_LIST;
   } else {
-    coap_log(LOG_DEBUG, "coap_resource_proxy_uri_init2: no memory left\n");
+    coap_log_debug("coap_resource_proxy_uri_init2: no memory left\n");
   }
 
   return r;
@@ -436,7 +436,7 @@ coap_add_attr(coap_resource_t *resource,
     /* add attribute to resource list */
     LL_PREPEND(resource->link_attr, attr);
   } else {
-    coap_log(LOG_DEBUG, "coap_add_attr: no memory left\n");
+    coap_log_debug("coap_add_attr: no memory left\n");
   }
 
   return attr;
@@ -541,7 +541,7 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
                                                          resource->uri_path);
 
     if (r) {
-      coap_log(LOG_WARNING,
+      coap_log_warn(
         "coap_add_resource: Duplicate uri_path '%*.*s', old resource deleted\n",
               (int)resource->uri_path->length, (int)resource->uri_path->length,
               resource->uri_path->s);
@@ -802,7 +802,7 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG };
   /* add subscriber to resource */
   LL_PREPEND(resource->subscribers, s);
 
-  coap_log(LOG_DEBUG, "create new subscription %p key 0x%02x%02x%02x%02x\n",
+  coap_log_debug("create new subscription %p key 0x%02x%02x%02x%02x\n",
            (void*)s, s->cache_key->key[0], s->cache_key->key[1],
            s->cache_key->key[2], s->cache_key->key[3]);
 
@@ -834,7 +834,7 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
     unsigned int i;
     for ( i = 0; i < s->pdu->token_length; i++ )
       snprintf( &outbuf[2 * i], 3, "%02x", s->pdu->token[i] );
-    coap_log(LOG_DEBUG,
+    coap_log_debug(
              "removed subscription %p with token '%s' key 0x%02x%02x%02x%02x\n",
              (void*)s, outbuf, s->cache_key->key[0], s->cache_key->key[1],
              s->cache_key->key[2], s-> cache_key->key[3]);
@@ -921,7 +921,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         obs->dirty = 1;
         r->partiallydirty = 1;
         context->observe_pending = 1;
-        coap_log(LOG_DEBUG,
+        coap_log_debug(
                  "coap_check_notify: pdu init failed, resource stays "
                  "partially dirty\n");
         continue;
@@ -931,7 +931,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         obs->dirty = 1;
         r->partiallydirty = 1;
         context->observe_pending = 1;
-        coap_log(LOG_DEBUG,
+        coap_log_debug(
                  "coap_check_notify: cannot add token, resource stays "
                  "partially dirty\n");
         coap_delete_pdu(response);
@@ -973,9 +973,9 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         assert(h);      /* we do not allow subscriptions if no
                          * GET/FETCH handler is defined */
         query = coap_get_query(obs->pdu);
-        coap_log(LOG_DEBUG, "Observe PDU presented to app.\n");
+        coap_log_debug("Observe PDU presented to app.\n");
         coap_show_pdu(LOG_DEBUG, obs->pdu);
-        coap_log(LOG_DEBUG, "call custom handler for resource '%*.*s'\n",
+        coap_log_debug("call custom handler for resource '%*.*s'\n",
                  (int)r->uri_path->length, (int)r->uri_path->length,
                  r->uri_path->s);
         h(r, obs->session, obs->pdu, query, response);
@@ -1011,7 +1011,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
 
       if (COAP_INVALID_MID == mid && obs) {
         coap_subscription_t *s;
-        coap_log(LOG_DEBUG,
+        coap_log_debug(
                  "coap_check_notify: sending failed, resource stays "
                  "partially dirty\n");
         LL_FOREACH(r->subscribers, s) {

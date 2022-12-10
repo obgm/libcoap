@@ -310,7 +310,7 @@ coap_malloc_type(coap_memory_tag_t type, size_t size) {
   assert(container);
 
   if (size > container->size) {
-    coap_log(LOG_WARNING,
+    coap_log_warn(
              "coap_malloc_type: Requested memory exceeds maximum object "
              "size (type %d, size %zu, max %d)\n",
              type, size, container->size);
@@ -319,7 +319,7 @@ coap_malloc_type(coap_memory_tag_t type, size_t size) {
 
   ptr = memarray_alloc(container);
   if (!ptr)
-    coap_log(LOG_WARNING,
+    coap_log_warn(
              "coap_malloc_type: Failure (no free blocks) for type %d\n",
              type);
   return ptr;
@@ -339,7 +339,7 @@ coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
   /* The fixed container is all we have to work with */
   if (p) {
     if (size > container->size) {
-      coap_log(LOG_WARNING,
+      coap_log_warn(
                "coap_realloc_type: Requested memory exceeds maximum object "
                "size (type %d, size %zu, max %d)\n",
                type, size, container->size);
@@ -474,7 +474,7 @@ coap_malloc_type(coap_memory_tag_t type, size_t size) {
   assert(container);
 
   if (size > container->size) {
-    coap_log(LOG_WARNING,
+    coap_log_warn(
              "coap_malloc_type: Requested memory exceeds maximum object "
              "size (type %d, size %d, max %d)\n",
              type, (int)size, container->size);
@@ -483,7 +483,7 @@ coap_malloc_type(coap_memory_tag_t type, size_t size) {
 
   ptr = memb_alloc(container);
   if (!ptr)
-    coap_log(LOG_WARNING,
+    coap_log_warn(
              "coap_malloc_type: Failure (no free blocks) for type %d\n",
              type);
   return ptr;
@@ -502,7 +502,7 @@ coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
   /* The fixed container is all we have to work with */
   if (p) {
     if (size > container->size) {
-      coap_log(LOG_WARNING,
+      coap_log_warn(
                "coap_realloc_type: Requested memory exceeds maximum object "
                "size (type %d, size %zu, max %d)\n",
                type, size, container->size);

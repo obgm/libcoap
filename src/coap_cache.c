@@ -59,7 +59,7 @@ coap_cache_ignore_options(coap_context_t *ctx,
       ctx->cache_ignore_count = count;
     }
     else {
-      coap_log(LOG_WARNING, "Unable to create cache_ignore_options\n");
+      coap_log_warn("Unable to create cache_ignore_options\n");
       return 0;
     }
   }
