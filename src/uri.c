@@ -544,7 +544,7 @@ coap_uri_t *
 coap_new_uri(const uint8_t *uri, unsigned int length) {
   unsigned char *result;
 
-  result = (unsigned char*)coap_malloc(length + 1 + sizeof(coap_uri_t));
+  result = (unsigned char*)coap_malloc_type(COAP_STRING, length + 1 + sizeof(coap_uri_t));
 
   if (!result)
     return NULL;
@@ -553,7 +553,7 @@ coap_new_uri(const uint8_t *uri, unsigned int length) {
   URI_DATA(result)[length] = '\0'; /* make it zero-terminated */
 
   if (coap_split_uri(URI_DATA(result), length, (coap_uri_t *)result) < 0) {
-    coap_free(result);
+    coap_free_type(COAP_STRING, result);
     return NULL;
   }
   return (coap_uri_t *)result;
@@ -567,7 +567,7 @@ coap_clone_uri(const coap_uri_t *uri) {
   if ( !uri )
     return  NULL;
 
-  result = (coap_uri_t *)coap_malloc( uri->query.length + uri->host.length +
+  result = (coap_uri_t *)coap_malloc_type(COAP_STRING,  uri->query.length + uri->host.length +
                                       uri->path.length + sizeof(coap_uri_t) + 1);
 
   if ( !result )
@@ -603,7 +603,7 @@ coap_clone_uri(const coap_uri_t *uri) {
 
 void
 coap_delete_uri(coap_uri_t *uri) {
-  coap_free(uri);
+  coap_free_type(COAP_STRING, uri);
 }
 
 COAP_STATIC_INLINE int

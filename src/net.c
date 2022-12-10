@@ -619,7 +619,7 @@ coap_free_context(coap_context_t *context) {
     coap_delete_cache_entry(context, cp);
   }
   if (context->cache_ignore_count) {
-    coap_free(context->cache_ignore_options);
+    coap_free_type(COAP_STRING, context->cache_ignore_options);
   }
 
   coap_endpoint_t *ep, *tmp;

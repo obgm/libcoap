@@ -67,7 +67,7 @@ coap_register_async(coap_session_t *session,
   }
 
   /* store information for handling the asynchronous task */
-  s = (coap_async_t *)coap_malloc(sizeof(coap_async_t));
+  s = (coap_async_t *)coap_malloc_type(COAP_STRING, sizeof(coap_async_t));
   if (!s) {
     coap_log(LOG_CRIT, "coap_register_async: insufficient memory\n");
     return NULL;
@@ -156,7 +156,7 @@ coap_free_async_sub(coap_context_t *context, coap_async_t *s) {
       coap_delete_pdu(s->pdu);
       s->pdu = NULL;
     }
-    coap_free(s);
+    coap_free_type(COAP_STRING, s);
   }
 }
 

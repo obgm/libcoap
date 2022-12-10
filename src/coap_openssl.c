@@ -799,7 +799,7 @@ void *coap_dtls_new_context(coap_context_t *coap_context) {
   coap_openssl_context_t *context;
   (void)coap_context;
 
-  context = (coap_openssl_context_t *)coap_malloc(sizeof(coap_openssl_context_t));
+  context = (coap_openssl_context_t *)coap_malloc_type(COAP_STRING, sizeof(coap_openssl_context_t));
   if (context) {
     uint8_t cookie_secret[32];
 
@@ -2837,7 +2837,7 @@ void coap_dtls_free_context(void *handle) {
   }
   if (context->psk_sni_count)
     OPENSSL_free(context->psk_sni_entry_list);
-  coap_free(context);
+  coap_free_type(COAP_STRING, context);
 }
 
 #if COAP_SERVER_SUPPORT

@@ -49,11 +49,11 @@ coap_cache_ignore_options(coap_context_t *ctx,
                           const uint16_t *options,
                           size_t count) {
   if (ctx->cache_ignore_options) {
-    coap_free(ctx->cache_ignore_options);
+    coap_free_type(COAP_STRING, ctx->cache_ignore_options);
   }
   if (count) {
     assert(options);
-    ctx->cache_ignore_options = coap_malloc(count * sizeof(options[0]));
+    ctx->cache_ignore_options = coap_malloc_type(COAP_STRING, count * sizeof(options[0]));
     if (ctx->cache_ignore_options) {
       memcpy(ctx->cache_ignore_options, options, count * sizeof(options[0]));
       ctx->cache_ignore_count = count;
