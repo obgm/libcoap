@@ -921,7 +921,7 @@ static const uint8_t b64_6[256] =
 static coap_binary_t *
 pem_base64_decode (const uint8_t *data, size_t size)
 {
-  uint8_t *tbuf = coap_malloc(size);
+  uint8_t *tbuf = coap_malloc_type(COAP_STRING, size);
   size_t nbytesdecoded;
   size_t i;
   coap_binary_t *decoded;
@@ -973,7 +973,7 @@ end:
   }
 
   decoded->length = nbytesdecoded - ((4 - nb64bytes) & 3);
-  coap_free(tbuf);
+  coap_free_type(COAP_STRING, tbuf);
   return decoded;
 }
 
@@ -1404,7 +1404,7 @@ ssize_t coap_tls_read(coap_session_t *session COAP_UNUSED,
 #if COAP_SERVER_SUPPORT
 coap_digest_ctx_t *
 coap_digest_setup(void) {
-  dtls_sha256_ctx *digest_ctx = coap_malloc(sizeof(dtls_sha256_ctx));
+  dtls_sha256_ctx *digest_ctx = coap_malloc_type(COAP_STRING, sizeof(dtls_sha256_ctx));
 
   if (digest_ctx) {
     dtls_sha256_init(digest_ctx);
@@ -1415,7 +1415,7 @@ coap_digest_setup(void) {
 
 void
 coap_digest_free(coap_digest_ctx_t *digest_ctx) {
-  coap_free(digest_ctx);
+  coap_free_type(COAP_STRING, digest_ctx);
 }
 
 int

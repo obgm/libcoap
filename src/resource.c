@@ -370,7 +370,7 @@ coap_resource_proxy_uri_init2(coap_method_handler_t handler,
       r->handler[i] = handler;
     }
     if (host_name_count) {
-      r->proxy_name_list = coap_malloc(host_name_count *
+      r->proxy_name_list = coap_malloc_type(COAP_STRING, host_name_count *
                                        sizeof(coap_str_const_t*));
       if (r->proxy_name_list) {
         for (i = 0; i < host_name_count; i++) {
@@ -381,7 +381,7 @@ coap_resource_proxy_uri_init2(coap_method_handler_t handler,
             coap_log(LOG_ERR,
                      "coap_resource_proxy_uri_init: unable to add host name\n");
             if (i == 0) {
-              coap_free(r->proxy_name_list);
+              coap_free_type(COAP_STRING, r->proxy_name_list);
               r->proxy_name_list = NULL;
             }
             break;
@@ -518,7 +518,7 @@ coap_free_resource(coap_resource_t *resource) {
     for (i = 0; i < resource->proxy_name_count; i++) {
       coap_delete_str_const(resource->proxy_name_list[i]);
     }
-    coap_free(resource->proxy_name_list);
+    coap_free_type(COAP_STRING, resource->proxy_name_list);
   }
 
   coap_free_type(COAP_RESOURCE, resource);
