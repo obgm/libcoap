@@ -156,7 +156,7 @@ coap_new_pdu(coap_pdu_type_t type, coap_pdu_code_t code,
   coap_pdu_t *pdu = coap_pdu_init(type, code, coap_new_message_id(session),
                                   coap_session_max_pdu_size(session));
   if (!pdu)
-    coap_log(LOG_CRIT, "coap_new_pdu: cannot allocate memory for new PDU\n");
+    coap_log_crit("coap_new_pdu: cannot allocate memory for new PDU\n");
   return pdu;
 }
 
@@ -237,7 +237,7 @@ coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
     size_t offset;
 #endif
     if (pdu->max_size && new_size > pdu->max_size) {
-      coap_log(LOG_WARNING, "coap_pdu_resize: pdu too big\n");
+      coap_log_warn("coap_pdu_resize: pdu too big\n");
       return 0;
     }
 #if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
@@ -250,7 +250,7 @@ coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
     new_hdr = (uint8_t*)realloc(pdu->token - pdu->max_hdr_size,
                                 new_size + pdu->max_hdr_size);
     if (new_hdr == NULL) {
-      coap_log(LOG_WARNING, "coap_pdu_resize: realloc failed\n");
+      coap_log_warn("coap_pdu_resize: realloc failed\n");
       return 0;
     }
     pdu->token = new_hdr + pdu->max_hdr_size;
@@ -288,7 +288,7 @@ coap_add_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
     return 0;
 
   if (pdu->used_size) {
-    coap_log(LOG_WARNING,
+    coap_log_warn(
              "coap_add_token: The token must defined first. Token ignored\n");
     return 0;
   }
@@ -319,7 +319,7 @@ coap_update_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
   }
   else if (len > pdu->token_length) {
     if (!coap_pdu_check_resize(pdu, pdu->used_size + len - pdu->token_length)) {
-      coap_log(LOG_WARNING, "Failed to update token\n");
+      coap_log_warn("Failed to update token\n");
       return 0;
     }
     memmove(&pdu->token[len - pdu->token_length], pdu->token, pdu->used_size);
@@ -470,12 +470,12 @@ coap_option_check_repeatable(coap_option_num_t number) {
   case COAP_OPTION_SIZE1:
   case COAP_OPTION_ECHO:
   case COAP_OPTION_NORESPONSE:
-    coap_log(LOG_INFO,
+    coap_log_info(
              "Option number %d is not defined as repeatable - dropped\n",
              number);
     return 0;
   default:
-    coap_log(LOG_INFO, "Option number %d is not defined as repeatable\n",
+    coap_log_info("Option number %d is not defined as repeatable\n",
              number);
     /* Accepting it after warning as there may be user defineable options */
     break;
@@ -615,7 +615,7 @@ size_t
 coap_add_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
                 const uint8_t *data) {
   if (pdu->data) {
-    coap_log(LOG_WARNING, "coap_add_optlist_pdu: PDU already contains data\n");
+    coap_log_warn("coap_add_optlist_pdu: PDU already contains data\n");
     return 0;
   }
   return coap_add_option_internal(pdu, number, len, data);
@@ -651,7 +651,7 @@ coap_add_option_internal(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
   }
 
   if (number < pdu->max_opt) {
-    coap_log(LOG_DEBUG,
+    coap_log_debug(
              "coap_add_option: options are not in correct order\n");
     return coap_insert_option(pdu, number, len, data);
   }
@@ -677,7 +677,7 @@ coap_add_option_internal(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
                             number - pdu->max_opt, data, len);
 
   if (!optsize) {
-    coap_log(LOG_WARNING, "coap_add_option: cannot add option\n");
+    coap_log_warn("coap_add_option: cannot add option\n");
     /* error */
     return 0;
   } else {
@@ -704,7 +704,7 @@ uint8_t *
 coap_add_data_after(coap_pdu_t *pdu, size_t len) {
   assert(pdu);
   if (pdu->data) {
-    coap_log(LOG_WARNING, "coap_add_data: PDU already contains data\n");
+    coap_log_warn("coap_add_data: PDU already contains data\n");
     return 0;
   }
 
@@ -896,7 +896,7 @@ coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
   if (proto == COAP_PROTO_UDP || proto == COAP_PROTO_DTLS) {
     assert(pdu->hdr_size == 4);
     if ((hdr[0] >> 6) != COAP_DEFAULT_VERSION) {
-      coap_log(LOG_DEBUG, "coap_pdu_parse: UDP version not supported\n");
+      coap_log_debug("coap_pdu_parse: UDP version not supported\n");
       return 0;
     }
     pdu->type = (hdr[0] >> 4) & 0x03;
@@ -910,12 +910,12 @@ coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
     pdu->code = hdr[pdu->hdr_size-1];
     pdu->mid = 0;
   } else {
-    coap_log(LOG_DEBUG, "coap_pdu_parse: unsupported protocol\n");
+    coap_log_debug("coap_pdu_parse: unsupported protocol\n");
     return 0;
   }
   if (pdu->token_length > pdu->alloc_size) {
     /* Invalid PDU provided - not wise to assert here though */
-    coap_log(LOG_DEBUG, "coap_pdu_parse: PDU header token size broken\n");
+    coap_log_debug("coap_pdu_parse: PDU header token size broken\n");
     pdu->token_length = (uint8_t)pdu->alloc_size;
     return 0;
   }
@@ -1051,13 +1051,13 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
   /* sanity checks */
   if (pdu->code == 0) {
     if (pdu->used_size != 0 || pdu->token_length) {
-      coap_log(LOG_DEBUG, "coap_pdu_parse: empty message is not empty\n");
+      coap_log_debug("coap_pdu_parse: empty message is not empty\n");
       return 0;
     }
   }
 
   if (pdu->token_length > pdu->used_size || pdu->token_length > 8) {
-    coap_log(LOG_DEBUG, "coap_pdu_parse: invalid Token\n");
+    coap_log_debug("coap_pdu_parse: invalid Token\n");
     return 0;
   }
 
@@ -1077,7 +1077,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
       const uint32_t len =
         optsize ? coap_opt_length((const uint8_t *)opt - optsize) : 0;
       if (optsize == 0) {
-        coap_log(LOG_DEBUG,
+        coap_log_debug(
             "coap_pdu_parse: %d.%02d: offset %u malformed option\n",
                pdu->code >> 5, pdu->code & 0x1F,
                (int)(opt_last - pdu->token - pdu->token_length));
@@ -1087,7 +1087,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
       if (COAP_PDU_IS_SIGNALING(pdu) ?
            !coap_pdu_parse_opt_csm(pdu, len) :
            !coap_pdu_parse_opt_base(pdu, len)) {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
     "coap_pdu_parse: %d.%02d: offset %u option %u has bad length %" PRIu32 "\n",
                  pdu->code >> 5, pdu->code & 0x1F,
                  (int)(opt_last - pdu->token - pdu->token_length), pdu->max_opt,
@@ -1146,7 +1146,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
         }
         /* write_*() always leaves a spare byte to null terminate */
         *obp = '\000';
-        coap_log(LOG_DEBUG, "%s\n", outbuf);
+        coap_log_debug("%s\n", outbuf);
       }
     }
 
@@ -1155,7 +1155,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
       opt++; length--;
 
       if (length == 0) {
-        coap_log(LOG_DEBUG,
+        coap_log_debug(
                  "coap_pdu_parse: message ending in payload start marker\n");
         return 0;
       }
@@ -1198,7 +1198,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
   if (proto == COAP_PROTO_UDP || proto == COAP_PROTO_DTLS) {
     assert(pdu->max_hdr_size >= 4);
     if (pdu->max_hdr_size < 4) {
-      coap_log(LOG_WARNING,
+      coap_log_warn(
            "coap_pdu_encode_header: not enough space for UDP-style header\n");
       return 0;
     }
@@ -1213,14 +1213,14 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
     size_t len;
     assert(pdu->used_size >= pdu->token_length);
     if (pdu->used_size < pdu->token_length) {
-      coap_log(LOG_WARNING, "coap_pdu_encode_header: corrupted PDU\n");
+      coap_log_warn("coap_pdu_encode_header: corrupted PDU\n");
       return 0;
     }
     len = pdu->used_size - pdu->token_length;
     if (len <= COAP_MAX_MESSAGE_SIZE_TCP0) {
       assert(pdu->max_hdr_size >= 2);
       if (pdu->max_hdr_size < 2) {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
               "coap_pdu_encode_header: not enough space for TCP0 header\n");
         return 0;
       }
@@ -1231,7 +1231,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
     } else if (len <= COAP_MAX_MESSAGE_SIZE_TCP8) {
       assert(pdu->max_hdr_size >= 3);
       if (pdu->max_hdr_size < 3) {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
               "coap_pdu_encode_header: not enough space for TCP8 header\n");
         return 0;
       }
@@ -1242,7 +1242,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
     } else if (len <= COAP_MAX_MESSAGE_SIZE_TCP16) {
       assert(pdu->max_hdr_size >= 4);
       if (pdu->max_hdr_size < 4) {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
               "coap_pdu_encode_header: not enough space for TCP16 header\n");
         return 0;
       }
@@ -1254,7 +1254,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
     } else {
       assert(pdu->max_hdr_size >= 6);
       if (pdu->max_hdr_size < 6) {
-        coap_log(LOG_WARNING,
+        coap_log_warn(
               "coap_pdu_encode_header: not enough space for TCP32 header\n");
         return 0;
       }
@@ -1267,7 +1267,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
       pdu->hdr_size = 6;
     }
   } else {
-    coap_log(LOG_WARNING, "coap_pdu_encode_header: unsupported protocol\n");
+    coap_log_warn("coap_pdu_encode_header: unsupported protocol\n");
   }
   return pdu->hdr_size;
 }

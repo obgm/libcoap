@@ -21,7 +21,7 @@ coap_string_t *coap_new_string(size_t size) {
   coap_string_t *s;
 #ifdef WITH_LWIP
   if (size >= MEMP_LEN_COAPSTRING) {
-    coap_log(LOG_CRIT,
+    coap_log_crit(
              "coap_new_string: size too large (%zu +1 > MEMP_LEN_COAPSTRING)\n",
              size);
     return NULL;
@@ -31,7 +31,7 @@ coap_string_t *coap_new_string(size_t size) {
   s = (coap_string_t *)coap_malloc_type(COAP_STRING,
                                         sizeof(coap_string_t) + size + 1);
   if ( !s ) {
-    coap_log(LOG_CRIT, "coap_new_string: malloc: failed\n");
+    coap_log_crit("coap_new_string: malloc: failed\n");
     return NULL;
   }
 

@@ -266,7 +266,7 @@ coap_uri_into_options(coap_uri_t *uri,
 
   if (uri->path.length) {
     if (uri->path.length > buflen)
-      coap_log(LOG_WARNING, "URI path will be truncated (max buffer %zu)\n",
+      coap_log_warn("URI path will be truncated (max buffer %zu)\n",
                buflen);
     res = coap_split_path(uri->path.s, uri->path.length, buf, &buflen);
     if (res < 0)
@@ -286,7 +286,7 @@ coap_uri_into_options(coap_uri_t *uri,
     buflen = _buflen;
     buf = _buf;
     if (uri->query.length > buflen)
-      coap_log(LOG_WARNING, "URI query will be truncated (max buffer %zu)\n",
+      coap_log_warn("URI query will be truncated (max buffer %zu)\n",
                buflen);
     res = coap_split_query(uri->query.s, uri->query.length, buf, &buflen);
     if (res < 0)
@@ -396,7 +396,7 @@ make_decoded_option(const uint8_t *s, size_t length,
   size_t written;
 
   if (!buflen) {
-    coap_log(LOG_DEBUG, "make_decoded_option(): buflen is 0!\n");
+    coap_log_debug("make_decoded_option(): buflen is 0!\n");
     return -1;
   }
 
@@ -416,7 +416,7 @@ make_decoded_option(const uint8_t *s, size_t length,
   buflen -= written;
 
   if (buflen < segmentlen) {
-    coap_log(LOG_DEBUG, "buffer too small for option\n");
+    coap_log_debug("buffer too small for option\n");
     return -1;
   }
 

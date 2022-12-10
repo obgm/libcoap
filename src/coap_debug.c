@@ -1036,7 +1036,7 @@ int coap_debug_set_packet_loss(const char *loss_level) {
     if (n > 100)
       n = 100;
     packet_loss_level = n * 65536 / 100;
-    coap_log(LOG_DEBUG, "packet loss level set to %d%%\n", n);
+    coap_log_debug("packet loss level set to %d%%\n", n);
   } else {
     if (n <= 0)
       return 0;
@@ -1073,7 +1073,7 @@ int coap_debug_send_packet(void) {
     for (i = 0; i < num_packet_loss_intervals; i++) {
       if (send_packet_count >= packet_loss_intervals[i].start
         && send_packet_count <= packet_loss_intervals[i].end) {
-        coap_log(LOG_DEBUG, "Packet %u dropped\n", send_packet_count);
+        coap_log_debug("Packet %u dropped\n", send_packet_count);
         return 0;
       }
     }
@@ -1082,7 +1082,7 @@ int coap_debug_send_packet(void) {
     uint16_t r = 0;
     coap_prng( (uint8_t*)&r, 2 );
     if ( r < packet_loss_level ) {
-      coap_log(LOG_DEBUG, "Packet %u dropped\n", send_packet_count);
+      coap_log_debug("Packet %u dropped\n", send_packet_count);
       return 0;
     }
   }
