@@ -114,6 +114,39 @@ void coap_address_init(coap_address_t *addr) {
 }
 
 #ifndef WITH_CONTIKI
+int
+coap_address_set_unix_domain(coap_address_t *addr,
+                              const uint8_t *host, size_t host_len) {
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+  size_t i;
+  size_t ofs = 0;
+
+  coap_address_init(addr);
+  addr->addr.cun.sun_family = AF_UNIX;
+  for (i = 0; i < host_len; i++) {
+    if ((host_len - i) >= 3 && host[i] == '%' && host[i+1] == '2' &&
+        (host[i+2] == 'F' || host[i+2] == 'f')) {
+      addr->addr.cun.sun_path[ofs++] = '/';
+      i += 2;
+    } else {
+      addr->addr.cun.sun_path[ofs++] = host[i];
+    }
+    if (ofs == COAP_UNIX_PATH_MAX)
+      break;
+  }
+  if (ofs < COAP_UNIX_PATH_MAX)
+    addr->addr.cun.sun_path[ofs] = '\000';
+  else
+    addr->addr.cun.sun_path[ofs-1] = '\000';
+  return 1;
+#else /* defined(WITH_LWIP) || defined(WITH_CONTIKI) */
+  (void)addr;
+  (void)host;
+  (void)host_len;
+  return 0;
+#endif /* defined(WITH_LWIP) || defined(WITH_CONTIKI) */
+}
+
 static void
 update_port(coap_address_t *addr, uint16_t port, uint16_t default_port) {
   if (port == 0)
@@ -149,6 +182,35 @@ coap_resolve_address_info(const coap_str_const_t *server,
   coap_addr_info_t *info_prev = NULL;
   coap_addr_info_t *info_list = NULL;
   coap_uri_scheme_t scheme;
+
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+  if (server && coap_host_is_unix_domain(server)) {
+    /* There can only be one unique filename entry for AF_UNIX */
+    if (server->length >= COAP_UNIX_PATH_MAX) {
+      coap_log_err("Unix Domain host too long\n");
+      return NULL;
+    }
+    info = coap_malloc_type(COAP_STRING, sizeof(coap_addr_info_t));
+    if (info == NULL)
+      return NULL;
+    info->next = NULL;
+
+    /* Need to chose the first defined one  in scheme_hint_bits */
+    for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
+      if (scheme_hint_bits & (1 << scheme)) {
+        info->scheme = scheme;
+        break;
+      }
+    }
+    if (scheme == COAP_URI_SCHEME_LAST)
+      return NULL;
+
+    coap_address_init(&info->addr);
+    coap_address_set_unix_domain(&info->addr, server->s,
+                                 server->length);
+    return info;
+  }
+#endif /* ! WITH_LWIP && ! WITH_CONTIKI */
 
   memset(addrstr, 0, sizeof(addrstr));
   if (server && server->length)

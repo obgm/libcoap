@@ -56,6 +56,13 @@ A CoAP URI is of the form
 
 where _scheme_ can be one of coap://, coaps://, coap+tcp:// and coaps+tcp://.
 
+_host_ can be an IPv4 or IPv6 (enclosed in []) address, a DNS resolvable name or
+a Unix domain socket name which is encoded as a unix file name with %2F
+replacing each / of the file name so that the start of the _path_ can easily be
+determined.
+
+'(optional):port' is ignored for Unix domain socket's _host_ definitions.
+
 The parsed uri structure is of the form
 
 [source, c]

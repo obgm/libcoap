@@ -94,6 +94,17 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
 
 #else /* WITH_LWIP || WITH_CONTIKI */
 
+#ifdef _WIN32
+#define sa_family_t short
+#endif /* _WIN32 */
+
+#define COAP_UNIX_PATH_MAX   (sizeof(struct sockaddr_in6) - sizeof(sa_family_t))
+
+struct coap_sockaddr_un {
+        sa_family_t sun_family; /* AF_UNIX */
+        char sun_path[COAP_UNIX_PATH_MAX];   /* pathname max 26 with NUL byte */
+};
+
 /** Multi-purpose address abstraction */
 typedef struct coap_address_t {
   socklen_t size;           /**< size of addr */
@@ -101,6 +112,7 @@ typedef struct coap_address_t {
     struct sockaddr         sa;
     struct sockaddr_in      sin;
     struct sockaddr_in6     sin6;
+    struct coap_sockaddr_un cun; /* CoAP shortened special */
   } addr;
 } coap_address_t;
 
@@ -181,6 +193,20 @@ void coap_free_address_info(coap_addr_info_t *info_list);
  * @param addr The coap_address_t object to initialize.
  */
 void coap_address_init(coap_address_t *addr);
+
+/**
+ * Copy the parsed unix domain host into coap_address_t structure
+ * translating %2F into / on the way. All other fields set as appropriate.
+ *
+ * @param addr coap_address_t to update.
+ * @param host The parsed host from the CoAP URI with potential %2F encoding.
+ * @param host_len The length of the parsed host from the CoAP URI with
+ *                 potential %2F encoding.
+ *
+ * @return @c 1 success, @c 0 failure.
+ */
+int coap_address_set_unix_domain(coap_address_t *addr,
+                                 const uint8_t *host, size_t host_len);
 
 /* Convenience function to copy IPv6 addresses without garbage. */
 

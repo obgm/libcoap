@@ -65,6 +65,7 @@ coap_split_uri_sub(const uint8_t *str_var,
   const uint8_t *p, *q;
   int res = 0;
   size_t i;
+  int is_unix_domain = 0;
 
   if (!str_var || !uri || len == 0)
     return -1;
@@ -131,7 +132,13 @@ coap_split_uri_sub(const uint8_t *str_var,
     COAP_SET_STR(&uri->host, q - p, p);
     ++q; --len;
   } else {
-    /* IPv4 address or FQDN */
+    /* IPv4 address, FQDN or Unix domain socket */
+    if (len >= 3 && p[0] == '%' && p[1] == '2' &&
+        (p[2] == 'F' || p[2] == 'f')) {
+      /* Unix domain definition */
+      uri->port = 0;
+      is_unix_domain = 1;
+    }
     while (len && *q != ':' && *q != '/' && *q != '?') {
       ++q;
       --len;
@@ -145,8 +152,12 @@ coap_split_uri_sub(const uint8_t *str_var,
     COAP_SET_STR(&uri->host, q - p, p);
   }
 
-  /* check for Uri-Port */
+  /* check for Uri-Port (invalid for Unix) */
   if (len && *q == ':') {
+    if (is_unix_domain) {
+      res = -5;
+      goto error;
+    }
     p = ++q;
     --len;
 
@@ -224,8 +235,10 @@ coap_uri_into_options(coap_uri_t *uri,
   unsigned char *buf = _buf;
   size_t buflen = _buflen;
 
-  if (uri->port != (coap_uri_scheme_is_secure(uri) ?
-        COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT) && create_port_opt) {
+  if (create_port_opt &&
+      !coap_host_is_unix_domain(&uri->host) &&
+      uri->port != (coap_uri_scheme_is_secure(uri) ?
+                                   COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT)) {
     coap_insert_optlist(optlist_chain,
                         coap_new_optlist(COAP_OPTION_URI_PORT,
                                          coap_encode_var_safe(buf, 4,
@@ -270,6 +283,18 @@ coap_uri_into_options(coap_uri_t *uri,
       buf += coap_opt_size(buf);
     }
   }
+  return 0;
+}
+
+int
+coap_host_is_unix_domain(const coap_str_const_t *host) {
+  if (host->length >= 3 && host->s[0] == '%' &&
+      host->s[1] == '2' &&
+      (host->s[2] == 'F' || host->s[2] == 'f')) {
+    return 1;
+  }
+  if (host->length >= 1 && host->s[0] == '/')
+    return 1;
   return 0;
 }
 

@@ -15,6 +15,7 @@ global:
   coap_address_get_port;
   coap_address_init;
   coap_address_set_port;
+  coap_address_set_unix_domain;
   coap_add_token;
   coap_async_get_app_data;
   coap_async_is_supported;
@@ -104,6 +105,7 @@ global:
   coap_get_tls_library_version;
   coap_get_uri_path;
   coap_handle_event;
+  coap_host_is_unix_domain;
   coap_insert_optlist;
   coap_io_do_epoll;
   coap_io_do_io;

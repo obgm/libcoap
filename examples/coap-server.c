@@ -120,6 +120,7 @@ static uint32_t block_mode = COAP_BLOCK_USE_LIBCOAP;
 static int echo_back = 0;
 static uint32_t csm_max_message_size = 0;
 static size_t extended_token_size = COAP_TOKEN_DEFAULT_MAX;
+static coap_proto_t use_unix_proto = COAP_PROTO_NONE;
 
 static coap_dtls_pki_t *
 setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
@@ -2109,7 +2110,7 @@ usage( const char *program, const char *version) {
      "Usage: %s [-d max] [-e] [-g group] [-l loss] [-p port] [-r] [-v num]\n"
      "\t\t[-A address] [-E oscore_conf_file[,seq_file]] [-G group_if]\n"
      "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
-     "\t\t[-T max_token_size] [-V num] [-X size]\n"
+     "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
      "\t\t[-s match_psk_sni_file] [-u user]]\n"
      "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
@@ -2130,7 +2131,7 @@ usage( const char *program, const char *version) {
      "\t       \t\t(for debugging only)\n"
      "\t-p port\t\tListen on specified port for UDP and TCP. If (D)TLS is\n"
      "\t       \t\tenabled, then the coap-server will also listen on\n"
-     "\t       \t\t 'port'+1 for DTLS and TLS.  The default port is 5683\n"
+     "\t       \t\t'port'+1 for DTLS and TLS.  The default port is 5683\n"
      "\t-r     \t\tEnable multicast per resource support.  If enabled,\n"
      "\t       \t\tonly '/', '/async' and '/.well-known/core' are enabled\n"
      "\t       \t\tfor multicast requests support, otherwise all\n"
@@ -2166,6 +2167,8 @@ usage( const char *program, const char *version) {
      "\t       \t\tthen the ongoing connection will be a direct connection.\n"
      "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
      "\t-T max_token_length\tSet the maximum token length (8-65804)\n"
+     "\t-U type\t\tTreat address defined by -A as a Unix socket address.\n"
+     "\t       \t\ttype is 'coap', 'coaps', 'coap+tcp' or 'coaps+tcp'\n"
      "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
      "\t       \t\tlibrary logging\n"
      "\t-X size\t\tMaximum message size to use for TCP based connections\n"
@@ -2290,6 +2293,16 @@ get_context(const char *node, const char *port) {
 
   if (cert_file == NULL && key_defined == 0)
     scheme_hint_bits = COAP_URI_SCHEME_COAP_BIT | COAP_URI_SCHEME_COAP_TCP_BIT;
+
+  switch (use_unix_proto) {
+  case COAP_PROTO_UDP:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP; break;
+  case COAP_PROTO_TCP:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP_TCP; break;
+  case COAP_PROTO_DTLS: scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS; break;
+  case COAP_PROTO_TLS:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS_TCP; break;
+  case COAP_PROTO_NONE:
+  default:
+    break;
+  }
 
   info_list = coap_resolve_address_info(node ? &local : NULL, u_s_port, s_port,
                                         AI_PASSIVE | AI_NUMERICHOST,
@@ -2562,6 +2575,36 @@ cmdline_read_identity_check(char *arg) {
 }
 
 static int
+cmdline_unix(char *arg) {
+  if (!strcmp("coap", arg)) {
+    use_unix_proto = COAP_PROTO_UDP;
+    return 1;
+  } else if (!strcmp("coaps", arg)) {
+    if (!coap_dtls_is_supported()) {
+      coap_log_err("unix with dtls is not supported\n");
+      return 0;
+    }
+    use_unix_proto = COAP_PROTO_DTLS;
+    return 1;
+  } else if (!strcmp("coap+tcp", arg)) {
+    if (!coap_tcp_is_supported()) {
+      coap_log_err("unix with stream is not supported\n");
+      return 0;
+    }
+    use_unix_proto = COAP_PROTO_TCP;
+    return 1;
+  } else if (!strcmp("coaps+tcp", arg)) {
+    if (!coap_tls_is_supported()) {
+      coap_log_err("unix with tls is not supported\n");
+      return 0;
+    }
+    use_unix_proto = COAP_PROTO_TLS;
+    return 1;
+  }
+  return 0;
+}
+
+static int
 cmdline_read_pki_sni_check(char *arg) {
   FILE *fp = fopen(arg, "r");
   static char tmpbuf[256];
@@ -2672,7 +2715,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:u:v:A:C:E:L:M:NP:R:S:T:V:X:")) != -1) {
+  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:u:v:A:C:E:L:M:NP:R:S:T:U:V:X:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -2798,6 +2841,12 @@ main(int argc, char **argv) {
       fprintf(stderr, "Proxy support not available as no Client mode code\n");
       exit(1);
 #endif /* ! SERVER_CAN_PROXY */
+      break;
+    case 'U':
+      if (!cmdline_unix(optarg)) {
+        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+        exit(1);
+      }
       break;
     case 'v' :
       log_level = strtol(optarg, NULL, 10);

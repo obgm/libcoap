@@ -60,7 +60,8 @@ the application to manage each one accordingly.
 A CoAP _session_ maintains the state of an ongoing connection between a Client
 and Server which is stored in a coap_session_t _session_ object. A CoAP
 _session_ is tracked by local port, CoAP protocol, remote IP address and
-remote port.
+remote port, or in the case of Unix Domain sockets, the local path and the
+remote path.
 
 The _session_ network traffic can be encrypted or un-encrypted if there is an
 underlying TLS library.
@@ -104,20 +105,25 @@ COAP_PROTO_TLS
 TCP or (D)TLS protocol support is available.  See *coap_tls_library(3)* for
 further information.
 
-Libcoap supports 2 different socket types:
+Libcoap supports 3 different socket types:
 
 [source, c]
 ----
 AF_INET  IPv4 IP addresses and ports
 AF_INET6 IPv6 IP addresses and ports and can be dual IPv4/IPv6 stacked
+AF_UNIX  Unix Domain using file path names
 ----
 
 For AF_INET and AF_INET6, the client does not need to specify a local IP
-address and/or port as default values will get filled in.
+address and/or port as default values will get filled in. However for AF_UNIX,
+the local pathname must be provided and must be unique per client session. This
+unique local pathname will get deleted on the session being properly closed at
+application exit.
 
 The client must specify IP and port when defining the *coap_address_t* (see
-*coap_address_t*(3)) for the remote end of the session for AF_INET or AF_INET6.
-If port is 0, then the default CoAP port is used instead.
+*coap_address_t*(3)) for the remote end of the session if AF_INET or AF_INET6.
+If port is 0, then the default CoAP port is used instead.  If AF_UNIX, the
+unix domain path to connect to must be specified.
 
 FUNCTIONS
 ---------
@@ -131,9 +137,10 @@ to 0 in _server_ (for AF_INET or AF_INET6), then the default CoAP port is used.
 
 Normally _local_if_ would be set to NULL, but by specifying
 _local_if_ the source of the network session can be bound to a specific IP
-address or port. If _local_if_ is defined, the address families for _local_if_
-and _server_ must be identical. The session will initially have a reference
-count of 1.
+address or port. For AF_UNIX, _local_if_ must be specified pointing to an
+appropriate *coap_address_t*.  If _local_if_ is defined, the address families
+for _local_if_ and _server_ must be identical. The session will initially have
+a reference count of 1.
 
 To stop using a client session, the reference count must be decremented to 0
 by calling *coap_session_release*(3). See *coap_session*(3). This will remove
@@ -150,9 +157,10 @@ _server_ (for AF_INET or AF_INET6), then the default CoAP port is used.
 
 Normally _local_if_ would be set to NULL, but by specifying
 _local_if_ the source of the network session can be bound to a specific IP
-address or port. If _local_if_ is defined, the address families for _local_if_
-and _server_ must be identical. The session will initially have a reference
-count of 1.
+address or port. For AF_UNIX, _local_if_ must be specified pointing to an
+appropriate *coap_address_t*.  If _local_if_ is defined, the address families
+for _local_if_ and _server_ must be identical. The session will initially have
+a reference count of 1.
 
 To stop using a client session, the reference count must be decremented to 0
 by calling *coap_session_release*(3). See *coap_session*(3). This will remove
@@ -169,9 +177,10 @@ _server_ (for AF_INET or AF_INET6), then the default CoAP port is used.
 
 Normally _local_if_ would be set to NULL, but by specifying
 _local_if_ the source of the network session can be bound to a specific IP
-address or port. If _local_if_ is defined, the address families for _local_if_
-and _server_ must be identical. The session will initially have a reference
-count of 1.
+address or port. For AF_UNIX, _local_if_ must be specified pointing to an
+appropriate *coap_address_t*.  If _local_if_ is defined, the address families
+for _local_if_ and _server_ must be identical. The session will initially have
+a reference count of 1.
 
 To stop using a client session, the reference count must be decremented to 0
 by calling *coap_session_release*(3). See *coap_session*(3). This will remove
@@ -227,6 +236,54 @@ setup_client_session (struct in_addr ip_address) {
   server.addr.sin.sin_port = htons (5683);
 
   session = coap_new_client_session(context, NULL, &server, COAP_PROTO_UDP);
+  if (!session) {
+    coap_free_context(context);
+    return NULL;
+  }
+  /* The context is in session->context */
+  return session;
+}
+----
+
+*CoAP Client Non-Encrypted Unix Domain Setup*
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+static coap_session_t *
+setup_client_session (const char *server_ud) {
+  coap_session_t *session;
+  coap_address_t server;
+  coap_address_t local;
+  /* See coap_context(3) */
+  coap_context_t *context = coap_new_context(NULL);
+
+  if (!context)
+    return NULL;
+  /* See coap_block(3) */
+  coap_context_set_block_mode(context,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
+
+  /* See coap_address(3) */
+  coap_address_init(&server);
+  server.addr.sa.sa_family = AF_UNIX;
+  snprintf(server.addr.cun.sun_path, sizeof(server.addr.cun.sun_path),
+           "%s", server_ud);
+
+  /* Need to have a uniquely named local address */
+  coap_address_init(&local);
+  local.addr.sa.sa_family = AF_UNIX;
+  snprintf(local.addr.cun.sun_path, sizeof(server.addr.cun.sun_path),
+           "/tmp/client.%d", getpid());
+  /* Only do this if you know it is safe to do so */
+  unlink(local.addr.cun.sun_path);
+
+  session = coap_new_client_session(context, &local, &server, COAP_PROTO_UDP);
   if (!session) {
     coap_free_context(context);
     return NULL;
