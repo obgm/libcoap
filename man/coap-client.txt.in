@@ -40,15 +40,19 @@ DESCRIPTION
 *coap-client* is a CoAP client to communicate with 6LoWPAN devices via
 the protocol CoAP (RFC 7252) using the URI given as argument on the
 command line. The URI must have the scheme 'coap', 'coap+tcp', 'coaps' or
-'coaps+tcp'. 'coaps' and 'coaps+tcp' are only supported when coap-client is
-built with support for secure (D)TLS communication.
+'coaps+tcp'.
+
+'coaps' and 'coaps+tcp' are only supported when
+coap-client is built with support for secure (D)TLS communication.
 
 If 'coaps' or 'coaps+tcp' is being used, provided the CoAP server supports PKI
 and is configured with a certificate and private key, the coap-client does not
 need to have a Pre-Shared Key (-k) or certificate (-c) configured.
 
-The URI's host part may be a DNS name or a literal IP address. Note that, for
-IPv6 address references, angle brackets are required (c.f. EXAMPLES).
+The URI's host part may be a DNS name, a literal IP address or a Unix domain
+name. For Unix domain names, %2F is used as the / seperator to differentiate
+between the host and patch definitions. For IPv6 address references, angle
+brackets are required (c.f. EXAMPLES) to delimit the host portion of the URI.
 
 OPTIONS - General
 -----------------
@@ -262,7 +266,17 @@ Query the resource '/' from server 'libcoap.net' (using the GET method).
 coap-client -m get coap://[::1]/
 ----
 Query the resource '/' on localhost using the 'GET' method to get back the
-summary defined attributes.
+summary information.
+
+* Example
+----
+coap-client -m get coap://%2Fsome%2Funix%2Fdomain%2Fpath/time
+----
+Query the resource '/time' on server listening on datagram Unix domain
+'/some/unix/domain/path' using the 'GET' method to get back the
+current time. The %2F is the hex encoding for / and indicates
+which is the 'host' definition seperator and the simple / is for the path
+definition seperator.
 
 * Example
 ----

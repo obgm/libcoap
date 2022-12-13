@@ -11,7 +11,8 @@ coap_address(3)
 NAME
 ----
 coap_address,
-coap_address_t
+coap_address_t,
+coap_address_init
 - Work with CoAP Socket Address Types
 
 SYNOPSIS
@@ -30,6 +31,9 @@ int _scheme_hint_bits_);*
 
 *void coap_free_address_info(coap_addr_info_t *_info_list_);*
 
+*int coap_address_set_unix_domain(coap_address_t *_addr_,
+const uint8_t *_host_, size_t _host_len_);*
+
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
@@ -42,12 +46,13 @@ This man page focuses on setting up CoAP endpoint address definitions.
 
 *Supported Socket Types*
 
-Libcoap supports 2 different socket types that can be used:
+Libcoap supports 3 different socket types that can be used:
 
 [source, c]
 ----
 AF_INET  IPv4 IP addresses and ports
 AF_INET6 IPv6 IP addresses and ports and can be dual IPv4/IPv6 stacked
+AF_UNIX  Unix Domain using file path names
 ----
 
 which are all handled by the *coap_address_t* structure.
@@ -63,9 +68,9 @@ typedef struct coap_address_t {
     struct sockaddr         sa;
     struct sockaddr_in      sin;
     struct sockaddr_in6     sin6;
+    struct coap_sockaddr_un cun; /* CoAP shortened special */
   } addr;
 } coap_address_t;
-----
 
 which is used in the *coap_addr_info_t* structure as returned by
 *coap_resolve_address_info()*.
@@ -81,6 +86,23 @@ typedef struct coap_addr_info_t {
   coap_address_t addr;           /* The address to connect / bind to */
 } coap_addr_info_t;
 ----
+
+*Structure coap_sockaddr_un*
+
+[source, c]
+----
+#define COAP_UNIX_PATH_MAX   (sizeof(struct sockaddr_in6) - sizeof(sa_family_t))
+
+struct coap_sockaddr_un {
+        sa_family_t sun_family; /* AF_UNIX */
+        char sun_path[COAP_UNIX_PATH_MAX];   /* pathname max 26 with NUL byte */
+};
+----
+
+The *coap_sockaddr_un* structure is modeled on the *sockaddr_un* structure
+(see *unix*(7)) but has a smaller sun_path so that the overall size of
+*coap_address_t* is not changed by its inclusion. COAP_UNIX_MAX_PATH includes
+the trailing zero terminator of a domain unix file name.
 
 FUNCTIONS
 ---------
@@ -112,10 +134,19 @@ caller using *coap_free_address_info*().
 The *coap_free_address_info*() function frees off all the _info_list_
 linked entries.
 
+*Function: coap_address_set_unix_domain()*
+
+The *coap_address_set_unix_domain*() function initializes _addr_ and then
+populates _addr_ with all the appropriate information for a Unix Domain Socket.
+The _host_ information with length _host_len_ abstracted from a CoAP URI
+is copied into _addr_'s _sun_path_ translating any %2F encoding to /.
+
 RETURN VALUES
 -------------
 *coap_resolve_address_info*() returns a linked list of addresses that can be
 used for session setup or NULL if there is a failure.
+
+*coap_address_set_unix_domain*() function returns 1 on success or 0 on failure.
 
 EXAMPLES
 --------

@@ -95,6 +95,8 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
                coap_socket_strerror());
 #endif /* RIOT_VERSION */
     break;
+  case AF_UNIX:
+    break;
   default:
     coap_log_alert("coap_socket_connect_tcp1: unsupported sa_family\n");
     break;
@@ -248,6 +250,8 @@ coap_socket_bind_tcp(coap_socket_t *sock,
                "coap_socket_bind_tcp: setsockopt IPV6_V6ONLY: %s\n",
                coap_socket_strerror());
 #endif /* RIOT_VERSION */
+    break;
+  case AF_UNIX:
     break;
   default:
     coap_log_alert("coap_socket_bind_tcp: unsupported sa_family\n");

@@ -66,7 +66,8 @@ the application to manage each one accordingly.
 A CoAP _session_ maintains the state of an ongoing connection between a Client
 and Server which is stored in a coap_session_t _session_ object. A CoAP
 _session_ is tracked by local port, CoAP protocol, remote IP address and
-remote port.
+remote port, or in the case of Unix Domain sockets, the local path and the
+remote path.
 
 The _session_ network traffic can be encrypted or un-encrypted if there is an
 underlying TLS library.
@@ -92,7 +93,8 @@ coap_new_endpoint()
 ----
 
 Multiple endpoints can be set up per _context_, each listening for a new traffic
-flow with different TCP/UDP protocols, (D)TLS protocols, port numbers etc. When
+flow with different TCP/UDP protocols, (D)TLS protocols, port numbers, Unix
+pathnames etc. When
 a new traffic flow is started, then the CoAP library will create and start a new
 server _session_.
 
@@ -133,7 +135,10 @@ The *coap_new_endpoint*() function creates a new endpoint for _context_ that
 is listening for new traffic as defined in _listen_addr_
 (see *coap_address_t*(3)). If the address family is AF_INET or AF_INET6, then it
 listens on the IP address and port number defined by _listen_addr_. If the
-port number is 0, then the default CoAP port is used.
+port number is 0, then the default CoAP port is used. If the address family is
+AF_UNIX, then it listens on the defined unix domain path which has to be
+unique per endpoint. This unique unix domain path will get deleted on
+clean application exit.
 
 Different CoAP protocols can be defined for _proto_ - the current supported
 list is:
@@ -161,7 +166,8 @@ then it will get completely freed off.  See *coap_session_reference*(3) and
 
 The *coap_free_endpoint*() function must be used to free off the _endpoint_.
 It clears out all the sessions associated with this endpoint along with
-any data associated with the sessions.
+any data associated with the sessions as well as
+deleting the unix domain path if the address family is AF_UNIX.
 
 *Function: coap_endpoint_set_default_mtu()*
 
@@ -179,6 +185,8 @@ first appropriate interface. When the endpoint is freed off, the associated
 multicast group will be removed. The registered multicast addresses for CoAP
 are 224.0.1.187, ff0x::fd (Variable-Scope) - i.e. ff02::fd (Link-Local) and
 ff05::fd (Site-Local).
+
+*NOTE:* multicast is not supported for address family type AF_UNIX.
 
 *Function: coap_mcast_per_resource()*
 
@@ -222,6 +230,50 @@ setup_server_context (void) {
   coap_address_init(&listen_addr);
   listen_addr.addr.sa.sa_family = AF_INET;
   listen_addr.addr.sin.sin_port = htons (5683);
+
+  endpoint = coap_new_endpoint(context, &listen_addr, COAP_PROTO_UDP);
+  if (!endpoint) {
+    coap_free_context(context);
+    return NULL;
+  }
+
+  /* Initialize resources - See coap_resource(3) init_resources() example */
+
+  return context;
+}
+----
+
+*CoAP Server Non-Encrypted Unix Domain Setup*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <stdio.h>
+#include <unistd.h>
+
+/* This need to be unique per endpoint */
+#define UNIX_DOMAIN_LISTEN_DGRAM "/tmp/server.dgram"
+
+static coap_context_t *
+setup_server_context (void) {
+  coap_endpoint_t *endpoint;
+  coap_address_t listen_addr;
+  coap_context_t *context = coap_new_context(NULL);
+
+  if (!context)
+    return NULL;
+  /* See coap_block(3) */
+  coap_context_set_block_mode(context,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
+
+  /* See coap_address(3) */
+  coap_address_set_unix_domain(&listen_addr,
+                        (const uint8_t *)UNIX_DOMAIN_LISTEN_DGRAM,
+                         strlen(UNIX_DOMAIN_LISTEN_DGRAM));
+  /* Only do this if you know it is safe to do so */
+  unlink(listen_addr.addr.cun.sun_path);
 
   endpoint = coap_new_endpoint(context, &listen_addr, COAP_PROTO_UDP);
   if (!endpoint) {

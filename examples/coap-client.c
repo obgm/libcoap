@@ -21,6 +21,7 @@
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #define fileno _fileno
+#define getpid GetCurrentProcessId
 #include "getopt.c"
 #if !defined(S_ISDIR)
 #define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
@@ -608,8 +609,12 @@ usage(const char *program, const char *version) {
      "\tcoap-client -m get coap://[::1]/\n"
      "\tcoap-client -m get coap://[::1]/.well-known/core\n"
      "\tcoap-client -m get coap+tcp://[::1]/.well-known/core\n"
+     "\tcoap-client -m get coap://%%2Funix%%2Fdomain%%2Fpath%%2Fdgram/.well-known/core\n"
+     "\tcoap-client -m get coap+tcp://%%2Funix%%2Fdomain%%2Fpath%%2Fstream/.well-known/core\n"
      "\tcoap-client -m get coaps://[::1]/.well-known/core\n"
      "\tcoap-client -m get coaps+tcp://[::1]/.well-known/core\n"
+     "\tcoap-client -m get coaps://%%2Funix%%2Fdomain%%2Fpath%%2Fdtls/.well-known/core\n"
+     "\tcoap-client -m get coaps+tcp://%%2Funix%%2Fdomain%%2Fpath%%2Ftls/.well-known/core\n"
      "\tcoap-client -m get -T cafe coap://[::1]/time\n"
      "\techo -n 1000 | coap-client -m put -T cafe coap://[::1]/time -f -\n"
      );
@@ -1508,8 +1513,25 @@ get_session(coap_context_t *ctx,
     coap_log_err("http:// or https:// not supported\n");
     return NULL;
   }
-  if (local_addr) {
-    {
+  if (local_addr || dst->addr.sa.sa_family == AF_UNIX) {
+    if (dst->addr.sa.sa_family == AF_UNIX) {
+      coap_address_t bind_addr;
+
+      if (local_addr) {
+        coap_address_set_unix_domain(&bind_addr,
+                                     (const uint8_t *)local_addr, strlen(local_addr));
+      } else {
+        char buf[COAP_UNIX_PATH_MAX];
+
+        /* Need a unique address */
+        snprintf(buf, COAP_UNIX_PATH_MAX,
+                 "/tmp/coap-client.%d", getpid());
+        coap_address_set_unix_domain(&bind_addr, (const uint8_t *)buf, strlen(buf));
+        remove(bind_addr.addr.cun.sun_path);
+      }
+      session = open_session(ctx, proto, &bind_addr, dst,
+                             identity, identity_len, key, key_len);
+    } else {
       coap_addr_info_t *info_list = NULL;
       coap_addr_info_t *info;
       coap_str_const_t local;
@@ -1570,7 +1592,7 @@ main(int argc, char **argv) {
   coap_pdu_t  *pdu;
   static coap_str_const_t server;
   uint16_t port = COAP_DEFAULT_PORT;
-  char port_str[NI_MAXSERV] = "0";
+  char port_str[NI_MAXSERV] = "";
   char node_str[NI_MAXHOST] = "";
   int opt;
   coap_log_t log_level = COAP_LOG_WARN;
@@ -1862,7 +1884,8 @@ main(int argc, char **argv) {
 
   /* construct CoAP message */
 
-  if (!uri_host_option && (!proxy.host.length && uri.host.length && addrptr
+  if (!uri_host_option && dst.addr.sa.sa_family != AF_UNIX &&
+      (!proxy.host.length && uri.host.length && addrptr
       && (inet_ntop(dst.addr.sa.sa_family, addrptr, addr, sizeof(addr)) != 0)
       && (strlen(addr) != uri.host.length
       || memcmp(addr, uri.host.s, uri.host.length) != 0)

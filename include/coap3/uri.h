@@ -75,6 +75,17 @@ coap_uri_scheme_is_secure(const coap_uri_t *uri) {
 }
 
 /**
+ * Determines from the @p host whether this is a Unix Domain socket
+ * request.
+ *
+ * @param host    The host object.
+ *
+ * @return        @c 0 on failure, or @c 1 on success.
+ *
+ */
+int coap_host_is_unix_domain(const coap_str_const_t *host);
+
+/**
  * Creates a new coap_uri_t object from the specified URI. Returns the new
  * object or NULL on error. The memory allocated by the new coap_uri_t
  * should be released using coap_delete_uri().

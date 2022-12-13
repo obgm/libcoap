@@ -237,6 +237,9 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
     need_buf = INET6_ADDRSTRLEN;
 
     break;
+  case AF_UNIX:
+    snprintf((char *)p, len, "'%s'", addr->addr.cun.sun_path);
+    return strlen((char *)buf);
   default:
     /* Include trailing NULL if possible */
     memcpy(buf, "(unknown address type)", min(22+1, len));

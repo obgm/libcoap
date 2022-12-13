@@ -145,6 +145,8 @@ coap_socket_bind_udp(coap_socket_t *sock,
     /* ignore error, because likely cause is that IPv4 is disabled at the os
        level */
     break;
+  case AF_UNIX:
+    break;
   default:
     coap_log_alert("coap_socket_bind_udp: unsupported sa_family\n");
     break;
@@ -230,12 +232,19 @@ coap_socket_connect_udp(coap_socket_t *sock,
                coap_socket_strerror());
 #endif /* RIOT_VERSION */
     break;
+  case AF_UNIX:
+    break;
   default:
     coap_log_alert("coap_socket_connect_udp: unsupported sa_family\n");
     break;
   }
 
   if (local_if && local_if->addr.sa.sa_family) {
+    if (local_if->addr.sa.sa_family != connect_addr.addr.sa.sa_family) {
+      coap_log_warn("coap_socket_connect_udp: local address family !="
+                    " remote address family\n");
+      goto error;
+    }
 #ifndef RIOT_VERSION
     if (setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log_warn(
@@ -250,6 +259,10 @@ coap_socket_connect_udp(coap_socket_t *sock,
                coap_socket_strerror());
       goto error;
     }
+  } else if (connect_addr.addr.sa.sa_family == AF_UNIX) {
+    /* Need to bind to a local address for clarity over endpoints */
+    coap_log_warn("coap_socket_connect_udp: local address required\n");
+    goto error;
   }
 
   /* special treatment for sockets that are used for multicast communication */
@@ -280,8 +293,14 @@ coap_socket_connect_udp(coap_socket_t *sock,
   }
 
   if (connect(sock->fd, &connect_addr.addr.sa, connect_addr.size) == COAP_SOCKET_ERROR) {
-    coap_log_warn("coap_socket_connect_udp: connect: %s\n",
-             coap_socket_strerror());
+    if (connect_addr.addr.sa.sa_family == AF_UNIX) {
+      coap_log_warn("coap_socket_connect_udp: connect: %s: %s\n",
+               connect_addr.addr.cun.sun_path, coap_socket_strerror());
+    }
+    else {
+      coap_log_warn("coap_socket_connect_udp: connect: %s\n",
+               coap_socket_strerror());
+    }
     goto error;
   }
 
@@ -304,7 +323,8 @@ error:
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
-void coap_socket_close(coap_socket_t *sock) {
+void
+coap_socket_close(coap_socket_t *sock) {
   if (sock->fd != COAP_INVALID_SOCKET) {
 #ifdef COAP_EPOLL_SUPPORT
 #if COAP_SERVER_SUPPORT
@@ -319,7 +339,7 @@ void coap_socket_close(coap_socket_t *sock) {
 
       /* Kernels prior to 2.6.9 expect non NULL event parameter */
       ret = epoll_ctl(context->epfd, EPOLL_CTL_DEL, sock->fd, &event);
-      if (ret == -1) {
+      if (ret == -1 && errno != ENOENT) {
          coap_log_err(
                   "%s: epoll_ctl DEL failed: %s (%d)\n",
                   "coap_socket_close",
@@ -327,8 +347,20 @@ void coap_socket_close(coap_socket_t *sock) {
       }
     }
 #if COAP_SERVER_SUPPORT
+    if (sock->endpoint &&
+        sock->endpoint->bind_addr.addr.sa.sa_family == AF_UNIX) {
+      /* Clean up Unix endpoint */
+      unlink(sock->endpoint->bind_addr.addr.cun.sun_path);
+    }
     sock->endpoint = NULL;
 #endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
+    if (sock->session && sock->session->type == COAP_SESSION_TYPE_CLIENT &&
+        sock->session->addr_info.local.addr.sa.sa_family == AF_UNIX) {
+      /* Clean up Unix endpoint */
+      unlink(sock->session->addr_info.local.addr.cun.sun_path);
+    }
+#endif /* COAP_CLIENT_SUPPORT */
     sock->session = NULL;
 #endif /* COAP_EPOLL_SUPPORT */
     coap_closesocket(sock->fd);
@@ -690,6 +722,8 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 #endif /* IP_PKTINFO */
       break;
     }
+    case AF_UNIX:
+      break;
     default:
       /* error */
       coap_log_warn("protocol not supported\n");
