@@ -1531,7 +1531,7 @@ main(int argc, char **argv) {
       block_mode = strtoul(optarg, NULL, 0);
       if (!(block_mode & COAP_BLOCK_USE_LIBCOAP)) {
         fprintf(stderr, "Block mode must include COAP_BLOCK_USE_LIBCOAP (1)\n");
-        exit(-1);
+        exit(1);
       }
       break;
     case 'p':
@@ -1556,7 +1556,7 @@ main(int argc, char **argv) {
 
       if (!output_file.s) {
         fprintf(stderr, "cannot set output file: insufficient memory\n");
-        exit(-1);
+        exit(1);
       } else {
         /* copy filename including trailing zero */
         memcpy(output_file.s, optarg, output_file.length + 1);
@@ -1578,7 +1578,7 @@ main(int argc, char **argv) {
     case 'P':
       if (!cmdline_proxy(optarg)) {
         fprintf(stderr, "error specifying proxy address\n");
-        exit(-1);
+        exit(1);
       }
       break;
     case 'T':
@@ -1633,7 +1633,7 @@ main(int argc, char **argv) {
       break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
-      exit( 1 );
+      exit(1);
     }
   }
 
@@ -1661,7 +1661,7 @@ main(int argc, char **argv) {
     }
   } else {
     usage( argv[0], LIBCOAP_PACKAGE_VERSION );
-    exit( 1 );
+    exit(1);
   }
 
   if (key_length < 0) {
@@ -1684,7 +1684,7 @@ main(int argc, char **argv) {
 
   if (res < 0) {
     fprintf(stderr, "failed to resolve address\n");
-    exit(-1);
+    exit(1);
   }
 
   ctx = coap_new_context( NULL );

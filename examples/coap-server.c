@@ -2675,7 +2675,7 @@ main(int argc, char **argv) {
       block_mode = strtoul(optarg, NULL, 0);
       if (!(block_mode & COAP_BLOCK_USE_LIBCOAP)) {
         fprintf(stderr, "Block mode must include COAP_BLOCK_USE_LIBCOAP (1)\n");
-        exit(-1);
+        exit(1);
       }
       break;
     case 'm':
@@ -2699,12 +2699,12 @@ main(int argc, char **argv) {
 #if SERVER_CAN_PROXY
       if (!cmdline_proxy(optarg)) {
         fprintf(stderr, "error specifying proxy address or host names\n");
-        exit(-1);
+        exit(1);
       }
       block_mode |= COAP_BLOCK_SINGLE_BODY;
 #else /* ! SERVER_CAN_PROXY */
       fprintf(stderr, "Proxy support not available as no Client mode code\n");
-      exit(-1);
+      exit(1);
 #endif /* ! SERVER_CAN_PROXY */
       break;
     case 'r' :
@@ -2730,7 +2730,7 @@ main(int argc, char **argv) {
       user_length = cmdline_read_user(optarg, &user, MAX_USER);
 #else /* ! SERVER_CAN_PROXY */
       fprintf(stderr, "Proxy support not available as no Client mode code\n");
-      exit(-1);
+      exit(1);
 #endif /* ! SERVER_CAN_PROXY */
       break;
     case 'v' :
@@ -2744,7 +2744,7 @@ main(int argc, char **argv) {
       break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
-      exit( 1 );
+      exit(1);
     }
   }
 
