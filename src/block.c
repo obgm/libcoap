@@ -2554,7 +2554,7 @@ coap_check_update_token(coap_session_t *session, coap_pdu_t *pdu) {
       if (token_match == STATE_TOKEN_BASE(lg_crcv->state_token)) {
         coap_update_token(pdu, lg_crcv->app_token->length,
                           lg_crcv->app_token->s);
-        coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
+        coap_log_debug("Client app version of updated PDU\n");
         coap_show_pdu(LOG_DEBUG, pdu);
         return;
       }
@@ -2568,7 +2568,7 @@ coap_check_update_token(coap_session_t *session, coap_pdu_t *pdu) {
       if (token_match == STATE_TOKEN_BASE(lg_xmit->b.b1.state_token)) {
         coap_update_token(pdu, lg_xmit->b.b1.app_token->length,
                           lg_xmit->b.b1.app_token->s);
-        coap_log(LOG_DEBUG, "Client app version of updated PDU\n");
+        coap_log_debug("Client app version of updated PDU\n");
         coap_show_pdu(LOG_DEBUG, pdu);
         return;
       }
