@@ -75,13 +75,15 @@ tracking requests and responses.
 
 The first is the ability to derive a Cache Key from the cacheable parts of a
 CoAP PDU as defined in
-https://tools.ietf.org/html/rfc7252#section-5.6 updated by
-https://tools.ietf.org/html/rfc7641#section-2 and
-https://tools.ietf.org/html/rfc8132#section-2 .
+"https://rfc-editor.org/rfc/rfc7252#section-5.6[RFC7252 5.6. Caching]"
+updated by
+"https://rfc-editor.org/rfc/rfc7641#section-2[RFC7641 2. The Observe Option]"
+and
+"https://rfc-editor.org/rfc/rfc8132#section-2[RFC8132 2. Fetch Method]".
 
 The Cache Key is a SHA256 digest if libcoap was built with TLS support,
-otherwise it uses the coap_hash() function, using the information abstracted
-from the PDU and (optionally) the CoAP session.
+otherwise it uses the internal coap_hash() function, using the information
+abstracted from the PDU and (optionally) the CoAP session.
 
 This Cache Key can then be used to match against incoming PDUs and then
 appropriate action logic can take place.
@@ -113,12 +115,19 @@ typedef enum coap_cache_record_pdu_t {
 } coap_cache_record_pdu_t;
 ----
 
+FUNCTIONS
+---------
+
+*Function: coap_cache_derive_key()*
+
 The *coap_cache_derive_key*() function abstracts all the non NoCacheKey CoAP
 options, ignores the CoAP Observer option and includes a FETCH body from _pdu_.
 If _session_based_ is COAP_CACHE_IS_SESSION_BASED, then _session_ pointer is
 also included. CoAP options can be specifically ignored by the use of
 *coap_cache_ignore_options*().  A digest is then built from all of the
 information and returned. NULL is returned on error.
+
+*Function: coap_cache_derive_key_w_ignore()*
 
 The *coap_cache_derive_key_w_ignore*() function abstracts all the non
 NoCacheKey CoAP options, ignores the CoAP Observer option and includes a FETCH
@@ -127,12 +136,18 @@ of _ignore_options_.  If _session_based_ is COAP_CACHE_IS_SESSION_BASED, then
 _session_ pointer is also included. A digest is then built from all of the
 information and returned. NULL is returned on error.
 
+*Function: coap_delete_cache_key()*
+
 The *coap_delete_cache_key*() function deletes the _cache_key_ that was
 returned from a *coap_cache_derive_key*() call.
+
+*Function: coap_cache_ignore_options()*
 
 The *coap_cache_ignore_options*() function is used to store in _context_ a
 list of _count_ options held in _options_.  The specified _options_ will not
 be included in the data used for the *coap_cache_derive_key*() function.
+
+*Function: coap_new_cache_entry()*
 
 The *coap_new_cache_entry*() function will create a new Cache Entry based on
 the Cache Key derived from the _pdu_, _session_based_ and _session_. If
@@ -144,6 +159,8 @@ time not being used before it gets deleted.  If _idle_timeout_ is set to
 0, then the Cache Entry will not get idle expired. The created Cache
 Entry is returned, or NULL on error.
 
+*Function: coap_delete_cache_entry()*
+
 The *coap_delete_cache_entry*() function can be used to delete the Cache Entry
 _cache_entry_ held within _context_.  This will remove the Cache Entry from
 the hash lookup list and
@@ -151,9 +168,13 @@ free off any internally held data.  If the Cache Entry is session based, then
 it will automatically get deleted when the session is freed off or when the
 idle timeout expires.
 
+*Function: coap_cache_get_by_key()*
+
 The *coap_cache_get_by_key*() function will locate the Cache Entry held in the
 _context_ environment that has Cache Key _cache_key_.  Returns NULL if the
 Cache Key was not found.
+
+*Function: coap_cache_get_by_pdu()*
 
 The *coap_cache_get_by_pdu*() function will locate the Cache Entry held in the
 _session_ environment that has a Cache Key derived from the _pdu_ and
@@ -162,12 +183,16 @@ internally, and so normally *coap_cache_ignore_options*() would have
 previously been called with COAP_OPTION_BLOCK1 or COAP_OPTION_BLOCK2 to
 ignore the values held within these options.
 
+*Function: coap_cache_get_pdu()*
+
 The *coap_cache_get_pdu*() function returns the PDU that was stored with the
 Cache Entry when it was created with *coap_new_cache_entry*() and _record_pdu_
 was set to COAP_CACHE_RECORD_PDU.  If a PDU was not initially stored, NULL is
 returned. +
 *NOTE:* A copy of the returned PDU must be taken for using in sending a CoAP
 packet using *coap_pdu_duplicate*().
+
+*Function: coap_cache_set_app_data()*
 
 The *coap_cache_set_app_data*() function is used to associate _data_ with the
 _cache_entry_.  If _callback_ is not NULL, it points to a function to free off
@@ -182,6 +207,8 @@ typedef void (*coap_cache_app_data_free_callback_t)(void *data);
 ----
 where _data_ is passed into the callback function whenever the Cache Entry is
 deleted.
+
+*Function: coap_cache_get_app_data()*
 
 The *coap_cache_get_app_data*() function is used to get the previously stored
 _data_ in the _cache_entry_.
@@ -249,7 +276,7 @@ hnd_put_example_data(coap_context_t *ctx,
      * A part of the data has been received (COAP_BLOCK_SINGLE_BODY not set).
      * However, total unfortunately is only an indication, so it is not safe to
      * allocate a block based on total.  As per
-     * https://tools.ietf.org/html/rfc7959#section-4
+     * https://rfc-editor.org/rfc/rfc7959#section-4
      *   o  In a request carrying a Block1 Option, to indicate the current
      *         estimate the client has of the total size of the resource
      *         representation, measured in bytes ("size indication").
@@ -373,9 +400,9 @@ FURTHER INFORMATION
 -------------------
 See
 
-"RFC7252: The Constrained Application Protocol (CoAP)"
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
 
-"RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)"
+"https://rfc-editor.org/rfc/rfc7959[RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)]"
 
 for further information.
 

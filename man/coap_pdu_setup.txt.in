@@ -13,6 +13,7 @@ NAME
 coap_pdu_setup,
 coap_new_pdu,
 coap_pdu_init,
+coap_new_message_id,
 coap_session_init_token,
 coap_session_new_token,
 coap_add_token,
@@ -42,6 +43,8 @@ coap_session_t *_session_);*
 
 *coap_pdu_t *coap_pdu_init(coap_pdu_type_t _type_, coap_pdu_code_t _code_,
 coap_mid_t _message_id_, size_t _max_size_);*
+
+*uint16_t coap_new_message_id(coap_session_t *_session_);*
 
 *void coap_session_init_token(coap_session_t *_session_, size_t _length_,
 const uint8_t *_token_);*
@@ -104,7 +107,7 @@ The CoAP PDU is of the form
 --header--|--optional token--|--optional options--|--optional payload--
 
 The terminology used is taken mainly from
-https://tools.ietf.org/html/rfc7252#section-1.2
+"https://rfc-editor.org/rfc/rfc7252#section-1.2[RFC7252 1.2. Terminology]".
 
 The PDU must be built in the correct order, from left to right.  In particular,
 the options need to be added in the correct numerical option order as they are
@@ -129,8 +132,8 @@ packet. The response pdu is always freed off by the underlying library.
 For handling situations where the data to be transmitted does not fit into a
 single packet, see *coap_block*(3).
 
-PDU CREATE AND HEADER
----------------------
+PDU CREATE AND HEADER FUNCTIONS
+-------------------------------
 
 *Function: coap_new_pdu()*
 
@@ -219,6 +222,14 @@ back a "separate" response).
 The _max_size_ parameter defines the maximum size of a _PDU_ and is usually
 determined by calling coap_session_max_pdu_size(session);
 
+*Function: coap_new_message_id()*
+
+The *coap_new_message_id*() function returns the next message id to use for
+sending a new request message.
+
+*NOTE:* For reliable messages https://rfc-editor.org/rfc/rfc8323[RFC8323],
+this will always return 0.
+
 *Function: coap_pdu_set_mid()*
 
 The *coap_pdu_set_mid*() function is used to set the message id _mid_ in the
@@ -239,8 +250,8 @@ COAP_EMPTY_CODE, appropriate message_id, matching token and potentially some
 other options before calling the appropriate request handler (See
 *coap_register_request_handler*(3)).
 
-PDU TOKEN
----------
+PDU TOKEN FUNCTIONS
+-------------------
 
 *Function: coap_session_init_token()*
 
@@ -272,8 +283,8 @@ the body of data is spread over multiple payloads (see *coap_block*(3)).
 However, when the data transfers complete, the application will receive the
 corrected token in the response PDU.
 
-PDU OPTIONS
------------
+PDU OPTIONS FUNCTIONS
+---------------------
 
 The following is the current list of options with their numeric value
 ----
@@ -281,19 +292,19 @@ The following is the current list of options with their numeric value
  * The C, U, and N flags indicate the properties
  * Critical, Unsafe, and NoCacheKey, respectively.
  * If U is set, then N has no meaning as per
- * https://tools.ietf.org/html/rfc7252#section-5.10
+ * https://rfc-editor.org/rfc/rfc7252#section-5.10
  * and is set to a -.
  * Separately, R is for the options that can be repeated
  *
  * The least significant byte of the option is set as followed
- * as per https://tools.ietf.org/html/rfc7252#section-5.4.6
+ * as per https://rfc-editor.org/rfc/rfc7252#section-5.4.6
  *
  *   0   1   2   3   4   5   6   7
  * --+---+---+---+---+---+---+---+
  *           | NoCacheKey| U | C |
  * --+---+---+---+---+---+---+---+
  *
- * https://tools.ietf.org/html/rfc8613#section-4 goes on to define E, I and U
+ * https://rfc-editor.org/rfc/rfc8613#section-4 goes on to define E, I and U
  * properties Encrypted and Integrity Protected, Integrity Protected Only and
  * Unprotected respectively.  Integrity Protected Only is not currently used.
  *
@@ -461,8 +472,8 @@ libcoap client logic, Size2 by libcoap server logic) indication to the
 recipient of the size of the large body that is to be transferred. See
 *coap_block*(3).
 
-PDU PAYLOAD DATA
-----------------
+PDU PAYLOAD FUNCTIONS
+---------------------
 
 *Function: coap_add_data()*
 
@@ -490,8 +501,8 @@ by this function.
 *NOTE:* This function has been superseded by *coap_add_data_large_response*().
 See *coap_block*(3).
 
-PDU TRANSMIT
-------------
+PDU TRANSMIT FUNCTIONS
+----------------------
 
 *Function: coap_send()*
 
@@ -699,11 +710,11 @@ FURTHER INFORMATION
 -------------------
 See
 
-"https://tools.ietf.org/html/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
 
-"https://tools.ietf.org/html/rfc7959[RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)]"
+"https://rfc-editor.org/rfc/rfc7959[RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)]"
 
-"https://tools.ietf.org/html/rfc9175[RFC9175: CoAP: Echo, Request-Tag, and Token Processing]"
+"https://rfc-editor.org/rfc/rfc9175[RFC9175: CoAP: Echo, Request-Tag, and Token Processing]"
 
 for further information.
 

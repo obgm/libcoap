@@ -51,8 +51,10 @@ or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
 
 DESCRIPTION
 -----------
-CoAP server responses can be piggybacked (RFC7252 5.2.1) or separate
-(RFC7252 5.2.2).
+CoAP server responses can be piggybacked
+("https://rfc-editor.org/rfc/rfc7252#section-5.2.1[RFC7252 5.2.1. Piggybacked]")
+or separate
+("https://rfc-editor.org/rfc/rfc7252#section-5.2.2[RFC7252 5.2.2. Separate]").
 
 For piggybacked responses, the response packet contains both the status and
 any data.
@@ -64,8 +66,15 @@ by the packet containing the status and any data.
 Usually responses are piggybacked, but this man page focuses on separate
 (async) support.
 
-The function *coap_async_is_supported*() is used to determine if there is
+FUNCTIONS
+---------
+
+*Function: coap_async_is_supported()*
+
+The *coap_async_is_supported*() function is used to determine if there is
 async support or not.
+
+*Function: coap_register_async()*
 
 The *coap_register_async*() function is used to set up an asynchronous delayed
 request for the _request_ PDU associated with the _session_. The
@@ -74,9 +83,13 @@ _delay_ ticks which will then cause a response to be sent.  If _delay_ is 0,
 then the application request handler will not get called until
 *coap_async_trigger*() or *coap_async_set_delay*() is called.
 
+*Function: coap_async_trigger()*
+
 The *coap_async_trigger*() function is used to expire the delay for the
 _async_ definition, so the application request handler is almost
 immediately called.
+
+*Function: coap_async_set_delay()*
 
 The *coap_async_set_delay*() function is used to update the remaining _delay_
 before the application request handler is called for the _async_ definition. If
@@ -87,15 +100,23 @@ then when the response is ready at an indeterminate point in the future,
 *coap_async_set_delay*() is called setting _delay_ to 1. Alternatively,
 *coap_async_trigger*() can be called.
 
+*Function: coap_free_async()*
+
 The *coap_free_async*() function is used to delete an _async_ definition.
+
+*Function: coap_find_async()*
 
 The *coap_find_async*() function is used to determine if there is an async
 definition based on the _session_ and token _token_.
+
+*Function: coap_async_ser_app_data()*
 
 The *coap_async_set_app_data*() function is used to add in user defined
 _app_data_ to the _async_ definition.  It is the responsibility of the
 application to release this data if appropriate.  This would usually be done
 when the application request handler is called under 'async' control.
+
+*Function: coap_async_get_app_data()*
 
 The *coap_async_get_app_data*() function is used to retrieve any defined
 application data from the  _async_ definition.
@@ -188,7 +209,7 @@ FURTHER INFORMATION
 -------------------
 See
 
-"RFC7252: The Constrained Application Protocol (CoAP)"
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
 
 for further information.
 

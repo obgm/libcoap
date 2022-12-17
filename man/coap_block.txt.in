@@ -52,7 +52,8 @@ DESCRIPTION
 Regular setting up of a PDU and transmission is covered in *coap_pdu_setup*(3)
 where all the payload data can fit in a single packet.  This man page covers
 how to work with PDUs where the overall body of information may need to be
-split across several packets by using CoAP Block-Wise Transfers (RFC 7959).
+split across several packets by using CoAP Block-Wise Transfers
+(https://rfc-editor.org/rfc/rfc7959[RFC7959]).
 
 The block-wise transfers can be controlled by the application, or libcoap is
 instructed to do all the requests for the next blocks and only present the
@@ -62,7 +63,8 @@ payloads (blocks).
 
 1. Application does all the work +
 It is the responsibility of the application to analyze each block transmission
-at receipt and then generate the next request as per RFC 7959.  In this case,
+at receipt and then generate the next request as per
+https://rfc-editor.org/rfc/rfc7959[RFC7959].  In this case,
 *coap_context_set_block_mode*() function must not be called to maintain
 backward compatibility with applications that did the block handling within the
 application.
@@ -131,7 +133,8 @@ FUNCTIONS
 *Function: coap_context_set_block_mode()*
 
 The *coap_context_set_block_mode*() function is used to set up the _context_
-level _block_mode_ block handling bits for supporting RFC7959. _block_mode_
+level _block_mode_ block handling bits for supporting
+https://rfc-editor.org/rfc/rfc7959[RFC7959] _block_mode_
 flows down to a session when a session is created and if the peer does not
 support the respective block mode, an appropriate bit may get disabled in the
 session _block_mode_.
@@ -234,7 +237,9 @@ be generated, else is the ETag value to use.
 The _media_type_ is for the format of the _data_ and _maxage_ defines the
 lifetime of the response.  If _maxage_ is set to -1,  then the Max-Age option
 does not get included (which indicates the default value of 60 seconds
-according to RFC 7252).
+according to
+"https://rfc-editor.org/rfc/rfc7252#section-5.6.1[RFC7252 5.6.1. Freshness
+Model]").
 
 The application request handler for the resource is only called once instead of
 potentially multiple times.
@@ -526,9 +531,9 @@ FURTHER INFORMATION
 -------------------
 See
 
-"https://tools.ietf.org/html/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
 
-"https://tools.ietf.org/html/rfc7959[RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)]"
+"https://rfc-editor.org/rfc/rfc7959[RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)]"
 
 for further information.
 

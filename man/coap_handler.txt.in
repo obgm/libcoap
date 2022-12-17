@@ -50,6 +50,14 @@ or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
 DESCRIPTION
 -----------
 
+This documents the different callback handlers that can optionally be invoked
+on receipt of a packet or when a timeout occurs.
+
+FUNCTIONS
+---------
+
+*Function: coap_register_request_handler()*
+
 The *coap_register_request_handler*() is a server side function that registers
 a callback handler _handler_ that is called when there is an incoming request
 PDU and there is a URI match against the _resource_ and there is a _method_
@@ -93,6 +101,8 @@ taken.
 set up using *coap_resource_unknown_init2*(3)), so
 *coap_resource_get_uri_path*(3) can be used to determine the URI in this case.
 
+*Function: coap_register_response_handler()*
+
 The *coap_register_response_handler*() is a client side function that registers
 a request's response callback _handler_ for traffic associated with the
 _context_.  The application can use this for handling any response packets,
@@ -125,6 +135,8 @@ Request and then matching up based on the Token in _received_ Response.
 will get sent to the server by libcoap.  The returned value of COAP_RESPONSE_OK
 indicates that all is OK.
 
+*Function: coap_register_nack_handler()*
+
 The *coap_register_nack_handler*() is a client side function that registers a
 request's negative response callback _handler_ for traffic associated with the
 _context_.  If _handler_ is NULL, then the handler is de-registered.
@@ -149,6 +161,8 @@ COAP_NACK_BAD_RESPONSE
 
 _sent_ can be NULL.  _mid_ can be used for determining which is the transmitting
 request.
+
+*Function: coap_register_ping_handler()*
 
 The *coap_register_ping_handler*() function registers a callback _handler_ for
 tracking receipt of CoAP ping traffic associated with the _context_. If
@@ -175,6 +189,8 @@ typedef void (*coap_pong_handler_t)(coap_session_t *session,
                                     const coap_pdu_t *received,
                                     const coap_mid_t mid);
 ----
+
+*Function: coap_register_event_handler()*
 
 The *coap_register_event_handler*() function registers a callback _handler_
 for tracking network events associated with the _context_. If _handler_ is
@@ -340,8 +356,11 @@ and *coap_resource*(3)
 
 FURTHER INFORMATION
 -------------------
-See "RFC7252: The Constrained Application Protocol (CoAP)" for further
-information.
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
 
 BUGS
 ----

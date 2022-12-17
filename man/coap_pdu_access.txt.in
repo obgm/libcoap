@@ -87,14 +87,18 @@ The CoAP PDU is of the form
 --header--|--optional token--|--optional options--|--optional payload--
 
 The terminology used is taken mainly from
-https://tools.ietf.org/html/rfc7252#section-1.2
+"https://rfc-editor.org/rfc/rfc7252#section-1.2[RFC7252 1.2. Terminology]".
 
-The following functions provide access to the information held within a PDU.
+The following functions provide access to the information held within
+different parts of a PDU.
 
-*Header:*
+PDU HEADER FUNCTIONS
+--------------------
+
+*Function: coap_pdu_get_type()*
 
 The *coap_pdu_get_type*() function returns one of the messages types below from
-the PDU _pdu_.
+the PDU _pdu_ header.
 
 [source, c]
 ----
@@ -104,8 +108,13 @@ COAP_MESSAGE_ACK  Type acknowledge
 COAP_MESSAGE_RST  Type reset.
 ----
 
+*NOTE:* For reliable messages https://rfc-editor.org/rfc/rfc8323[RFC8323],
+this will always return COAP_MESSAGE_CON.
+
+*Function: coap_pdu_get_code()*
+
 The *coap_pdu_get_code*() function returns one of the codes below from the
-PDU _pdu_. It is possible that new codes are added in over time.
+PDU _pdu_ header. It is possible that new codes are added in over time.
 
 [source, c]
 ----
@@ -152,14 +161,26 @@ COAP_SIGNALING_CODE_RELEASE                   7.04
 COAP_SIGNALING_CODE_ABORT                     7.05
 ----
 
-The *coap_pdu_get_mid*() returns the message id from the PDU _pdu_.
+*NOTE:* For reliable messages "ttps://rfc-editor.org/rfc/rfc8323[RFC8323],
+this will always return COAP_EMPTY_CODE.
 
-*Token:*
+*Function: coap_pdu_get_mid()*
+
+The *coap_pdu_get_mid*() returns the message id from the PDU _pdu_ header.
+
+*NOTE:* For reliable messages https://rfc-editor.org/rfc/rfc8323[RFC8323],
+this will always return 0.
+
+PDU TOKEN FUNCTIONS
+-------------------
+
+*Function: coap_pdu_get_token()*
 
 The *coap_pdu_get_token*() returns the token information held in the PDU _pdu_
-which may be zero length.
+token which may be zero length.
 
-*Options:*
+PDU OPTIONS FUNCTIONS
+---------------------
 
 The following is the current list of options with their numeric value
 ----
@@ -167,19 +188,19 @@ The following is the current list of options with their numeric value
  * The C, U, and N flags indicate the properties
  * Critical, Unsafe, and NoCacheKey, respectively.
  * If U is set, then N has no meaning as per
- * https://tools.ietf.org/html/rfc7252#section-5.10
+ * https://rfc-editor.org/rfc/rfc7252#section-5.10
  * and is set to a -.
  * Separately, R is for the options that can be repeated
  *
  * The least significant byte of the option is set as followed
- * as per https://tools.ietf.org/html/rfc7252#section-5.4.6
+ * as per https://rfc-editor.org/rfc/rfc7252#section-5.4.6
  *
  *   0   1   2   3   4   5   6   7
  * --+---+---+---+---+---+---+---+
  *           | NoCacheKey| U | C |
  * --+---+---+---+---+---+---+---+
  *
- * https://tools.ietf.org/html/rfc8613#section-4 goes on to define E, I and U
+ * https://rfc-editor.org/rfc/rfc8613#section-4 goes on to define E, I and U
  * properties Encrypted and Integrity Protected, Integrity Protected Only and
  * Unprotected respectively.  Integrity Protected Only is not currently used.
  *
@@ -214,52 +235,81 @@ COAP_OPTION_NORESPONSE    258 /* _U-_E_U, uint,      0-1 B, RFC7967 */
 ----
 See FURTHER INFORMATION as to how to get the latest list.
 
+*Function: coap_check_option()*
+
 The *coap_check_option*() function is used to check whether the specified option
-_number_ is in the PDU _pdu_.  The option iterator _oi_ is used as an internal
+_number_ is in the PDU _pdu_ options.  The option iterator _oi_ is used as a
+scratch (does not need to be initialized) internal
 storage location while iterating through the options looking for the specific
 _number_.  If the _number_ is repeated in the _pdu_, only the first occurrence
 will be returned.  If the option is not found, NULL is returned.
 
-Alternatively, the *coap_option_iterator_init*() function can be used to
+*Function: coap_option_iterator_init()*
+
+The *coap_option_iterator_init*() function can be used to
 initialize option iterator _oi_, applying a filter _filter_ to indicate which
 options are to be ignored when iterating through the options.  The _filter_ can
-be NULL (or COAP_OPT_ALL) if all of the options are required. Then this is
-followed by using the *coap_option_next*() function in a loop to return all
-the appropriate options until NULL is returned -  indicating the end of
-available the options. See EXAMPLES below for further information.
+be NULL (or COAP_OPT_ALL) if all of the options are required.
+To set up the filter otherwise, the following 4 functions are available.
 
-To set up the filter, the following 4 functions are available.
+*Function: coap_option_filter_clear()*
 
 The *coap_option_filter_clear*() function initializes _filter_ to have no
 options set.
 
+*Function: coap_option_filter_get()*
+
 The *coap_option_filter_get*() function is used to check whether option _number_
 is set in _filter_.
+
+*Function: coap_option_filter_set()*
 
 The *coap_option_filter_set*() function is used to set option _number_ in
 _filter_.
 
+*Function: coap_option_filter_unset()*
+
 The *coap_option_filter_unset*() function is used to remove option _number_ in
 _filter_.
 
-The *coap_opt_length*() function returns the length of the option _opt_.
+*Function: coap_option_next()*
+
+The *coap_option_next*() function is then used following
+*coap_option_iterator_init*() in a loop to return all
+the appropriate options until NULL is returned - indicating the end of
+the available options. See EXAMPLES below for further information.
+
+*Function: coap_opt_length()*
+
+The *coap_opt_length*() function returns the length of the option _opt_
+(as returned by *coap_check_option*() or *coap_option_next*()).
+
+*Function: coap_opt_value()*
 
 The *coap_opt_value*() function returns a pointer to the start of the data for
-the option.
+the option _opt_ (as returned by *coap_check_option*() or *coap_option_next*()).
 
-The *coap_decode_var_bytes*() function will decode an option up to 4 bytes
+*Function: coap_decode_var_bytes()*
+
+The *coap_decode_var_bytes*() function will decode an option value up to 4 bytes
 long from _buf_ and _length_ into an unsigned 32bit number.
 
-The *coap_decode_var_bytes8*() function will decode an option up to 8 bytes
-long from _buf_ and _length_ into an unsigned 64bit number.
+*Function: coap_decode_var_bytes8()*
+
+The *coap_decode_var_bytes8*() function will decode an option value up to 8
+bytes long from _buf_ and _length_ into an unsigned 64bit number.
+
+*Function: coap_get_uri_path()*
 
 The *coap_get_uri_path*() function will abstract the uri path from the
-specified _pdu_. The returned uri path will need to be freed off when no
-longer required.
+specified _pdu_ options. The returned uri path will need to be freed off when no longer required.
 
-*Payload:*
+PDU PAYLOAD FUNCTIONS
+---------------------
 
-The *coap_get_data*() function is used abstract from the _pdu_
+*Function: coap_get_data()*
+
+The *coap_get_data*() function is used abstract from the _pdu_ payload
 information about the received data by updating _length_ with the length of
 data available, and _data_ with a pointer to where the data is located.
 
@@ -373,13 +423,14 @@ FURTHER INFORMATION
 -------------------
 See
 
-"RFC7252: The Constrained Application Protocol (CoAP)"
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
 
-"RFC8613: Object Security for Constrained RESTful Environments (OSCORE)"
+"https://rfc-editor.org/rfc/rfc8613[RFC8613: Object Security for Constrained RESTful Environments (OSCORE)]"
 
 for further information.
 
-See https://www.iana.org/assignments/core-parameters/core-parameters.xhtml#option-numbers
+See
+https://www.iana.org/assignments/core-parameters/core-parameters.xhtml#option-numbers
 for the current set of defined CoAP Options.
 
 BUGS

@@ -95,7 +95,8 @@ This could, for example, happen when a PUT request is trying to create a new
 resource. It is the responsibility of the unknown resource callback handler
 to either create a new resource for the URI or just manage things separately.
 
-CoAP Observe (RFC 7641) is not supported for unknown resources, so a new
+CoAP Observe (https://rfc-editor.org/rfc/rfc7641[RFC7641]) is not supported
+for unknown resources, so a new
 resource with GET handler must be created by the unknown resource callback
 handle matching the URI which then can be Observable.
 
@@ -119,7 +120,7 @@ _flags_ can be one of the following definitions ored together.
 *COAP_RESOURCE_FLAGS_NOTIFY_NON*::
 Set the notification message type to non-confirmable for any trigggered
 "observe" responses with type set to confirmable every 5 packets as required by
-RFC7641 section-4.5.
+"https://rfc-editor.org/rfc/rfc7641#section-4.5[RFC7641 4.5. Transmission]".
 
 *COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS*::
 Set the notification message type to always non-confirmable for any trigggered
@@ -146,27 +147,34 @@ This resource has support for multicast requests.
 Disable libcoap library from adding in delays to multicast requests before
 releasing the response back to the client.  It is then the responsibility of
 the app to delay the responses for multicast requests. See
-https://datatracker.ietf.org/doc/html/rfc7252#section-8.2.  However, the
-pseudo resource for ".well-known/core" always has multicast support enabled.
+"https://rfc-editor.org/rfc/rfc7252#section-8.2[RFC7252 8.2. Request/Response
+Layer]".
+ However, the pseudo resource for ".well-known/core" always has multicast
+support enabled.
 
 *COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_05*::
 Enable libcoap library suppression of 205 multicast responses that are empty
-(overridden by RFC7969 No-Response option) for multicast requests.
+(overridden by https://rfc-editor.org/rfc/rfc7967[RFC7967] No-Response option)
+for multicast requests.
 
 *COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_XX*::
 Enable libcoap library suppressing 2.xx multicast responses (overridden by
-RFC7969 No-Response option) for multicast requests.
+https://rfc-editor.org/rfc/rfc7967[RFC7967] No-Response option) for multicast
+requests.
 
 *COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_4_XX*::
 Disable libcoap library suppressing 4.xx multicast responses (overridden by
-RFC7969 No-Response option) for multicast requests.
+https://rfc-editor.org/rfc/rfc7967[RFC7967] No-Response option) for multicast
+requests.
 
 *COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_5_XX*::
 Disable libcoap library suppressing 5.xx multicast responses (overridden by
-RFC7969 No-Response option) for multicast requests.
+https://rfc-editor.org/rfc/rfc7967[RFC7967] No-Response option) for multicast
+requests.
 
 *NOTE:* _uri_path_, if not 7 bit readable ASCII, binary bytes must be hex
-encoded according to the rules defined in RFC3968 Section 2.1.
+encoded according to the rules defined in
+"https://rfc-editor.org/rfc/rfc3986#section-2.1[RFC3986 2.1. Percent-Encoding]".
 
 *Function: coap_resource_unknown_init()*
 
@@ -570,8 +578,13 @@ SEE ALSO
 
 FURTHER INFORMATION
 -------------------
-See "RFC7252: The Constrained Application Protocol (CoAP)" for further
-information.
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+"https://rfc-editor.org/rfc/rfc3986[RFC3986: Uniform Resource Identifier (URI): Generic Syntax]"
+
+for further information.
 
 BUGS
 ----

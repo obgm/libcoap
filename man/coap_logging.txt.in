@@ -2,7 +2,7 @@
 // vim: set syntax=asciidoc tw=0
 
 coap_logging(3)
-=================
+===============
 :doctype: manpage
 :man source:   coap_logging
 :man version:  @PACKAGE_VERSION@
@@ -298,7 +298,7 @@ FURTHER INFORMATION
 -------------------
 See
 
-"https://tools.ietf.org/html/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
 
 for further information.
 

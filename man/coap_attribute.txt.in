@@ -48,11 +48,17 @@ request methods.
 Adding Attributes allows textual information to be added to the resource
 which can then be reported back to any client doing a Resource Discovery using
 a "GET /.well-known/core" request with an optional query.
-See https://tools.ietf.org/html/rfc6690#section-5 for some examples of
+See "https://rfc-editor.org/rfc/rfc6690#section-5[RFC6690 5. Examples] for
+some examples of
 resource discovery usage.  Common attribute names are rt, if, sz, ct, obs, rel,
 anchor, rev, hreflang, media, title and type. href cannot be an attribute name.
 
 Attributes are automatically deleted when a Resource is deleted.
+
+FUNCTIONS
+---------
+
+*Function: coap_add_attr()*
 
 The *coap_add_attr*() function
 registers a new attribute called _name_ for the _resource_.
@@ -69,8 +75,12 @@ Free off _name_ when attribute is deleted with *coap_delete_resource*().
 *COAP_ATTR_FLAGS_RELEASE_VALUE*::
 Free off _value_ when attribute is deleted with *coap_delete_resource*().
 
+*Function: coap_find_attr()*
+
 The *coap_find_attr*() function returns the attribute with the _name_,
 if found, associated with _resource_.
+
+*Function: coap_attr_get_value()*
 
 The *coap_attr_get_value*() function returns the _value_ associated with the
 specified _attribute_.
@@ -141,9 +151,9 @@ FURTHER INFORMATION
 -------------------
 See
 
-"RFC7252: The Constrained Application Protocol (CoAP)"
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
 
-"RFC6690: Constrained RESTful Environments (CoRE) Link Format"
+"https://rfc-editor.org/rfc/rfc6690[RFC6690: Constrained RESTful Environments (CoRE) Link Format]"
 
 for further information.
 

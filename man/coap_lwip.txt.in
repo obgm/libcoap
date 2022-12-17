@@ -63,7 +63,6 @@ FUNCTIONS
 
 *Function: coap_lwip_set_input_wait_handler()*
 
-
 The *coap_lwip_set_input_wait_handler*() function is used to define a callback
 _handler_ that is invoked by *coap_io_process*(3) which passes in the
 _input_arg_ parameter along with a suggested milli-sec wait time parameter
@@ -77,7 +76,7 @@ The *coap_lwip_dump_memory_pools*() function is used to dump out the current
 state of the LwIP memory pools at logging level _log_level_.
 
 This function is always invoked by *coap_free_context*(3) with a _log_level_ of
-LOG_DEBUG.
+COAP_LOG_DEBUG.
 
 *NOTE:* For information to be printed out, you need the following two lines in
 lwipopts.h
@@ -94,8 +93,11 @@ SEE ALSO
 
 FURTHER INFORMATION
 -------------------
-See "RFC7252: The Constrained Application Protocol (CoAP)" for further
-information.
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
 
 BUGS
 ----
