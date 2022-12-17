@@ -579,7 +579,7 @@ main(int argc, char **argv) {
   char addr_str[NI_MAXHOST] = "::";
   char port_str[NI_MAXSERV] = "5683";
   int opt;
-  coap_log_t log_level = LOG_WARNING;
+  coap_log_t log_level = COAP_LOG_WARN;
   struct sigaction sa;
 
   while ((opt = getopt(argc, argv, "A:p:v:")) != -1) {

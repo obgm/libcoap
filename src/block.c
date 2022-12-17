@@ -636,7 +636,7 @@ coap_add_data_large_internal(coap_session_t *session,
     pdu->body_data = data;
     pdu->body_length = length;
     coap_log_debug("PDU presented by app.\n");
-    coap_show_pdu(LOG_DEBUG, pdu);
+    coap_show_pdu(COAP_LOG_DEBUG, pdu);
     pdu->body_data = NULL;
     pdu->body_length = 0;
 
@@ -1771,7 +1771,7 @@ coap_handle_request_put_block(coap_context_t *context,
         pdu->body_offset = 0;
         pdu->body_total = p->total_len;
         coap_log_debug("Server app version of updated PDU\n");
-        coap_show_pdu(LOG_DEBUG, pdu);
+        coap_show_pdu(COAP_LOG_DEBUG, pdu);
         *pfree_lg_srcv = p;
         goto call_app_handler;
       }
@@ -2074,7 +2074,7 @@ lg_xmit_finished:
       coap_update_token(rcvd, p->b.b1.app_token->length,
                         p->b.b1.app_token->s);
     coap_log_debug("Client app version of updated PDU\n");
-    coap_show_pdu(LOG_DEBUG, rcvd);
+    coap_show_pdu(COAP_LOG_DEBUG, rcvd);
   }
 
   LL_DELETE(session->lg_xmit, p);
@@ -2383,7 +2383,7 @@ coap_handle_response_get_block(coap_context_t *context,
           if (context->response_handler) {
             if (block.m != 0 || block.num != 0) {
               coap_log_debug("Client app version of updated PDU\n");
-              coap_show_pdu(LOG_DEBUG, rcvd);
+              coap_show_pdu(COAP_LOG_DEBUG, rcvd);
             }
             if (context->response_handler(session, sent, rcvd,
                                           rcvd->mid) == COAP_RESPONSE_FAIL)
@@ -2445,7 +2445,7 @@ fail_resp:
                     p->app_token->s, p->app_token->length)) {
       coap_update_token(rcvd, p->app_token->length, p->app_token->s);
       coap_log_debug("Client app version of updated PDU\n");
-      coap_show_pdu(LOG_DEBUG, rcvd);
+      coap_show_pdu(COAP_LOG_DEBUG, rcvd);
     }
     break;
   } /* LL_FOREACH() */
@@ -2503,7 +2503,7 @@ expire_lg_crcv:
                   p->app_token->s, p->app_token->length)) {
     coap_update_token(rcvd, p->app_token->length, p->app_token->s);
     coap_log_debug("Client app version of updated PDU\n");
-    coap_show_pdu(LOG_DEBUG, rcvd);
+    coap_show_pdu(COAP_LOG_DEBUG, rcvd);
   }
   /* Expire this entry */
   LL_DELETE(session->lg_crcv, p);
@@ -2555,7 +2555,7 @@ coap_check_update_token(coap_session_t *session, coap_pdu_t *pdu) {
         coap_update_token(pdu, lg_crcv->app_token->length,
                           lg_crcv->app_token->s);
         coap_log_debug("Client app version of updated PDU\n");
-        coap_show_pdu(LOG_DEBUG, pdu);
+        coap_show_pdu(COAP_LOG_DEBUG, pdu);
         return;
       }
     }
@@ -2569,7 +2569,7 @@ coap_check_update_token(coap_session_t *session, coap_pdu_t *pdu) {
         coap_update_token(pdu, lg_xmit->b.b1.app_token->length,
                           lg_xmit->b.b1.app_token->s);
         coap_log_debug("Client app version of updated PDU\n");
-        coap_show_pdu(LOG_DEBUG, pdu);
+        coap_show_pdu(COAP_LOG_DEBUG, pdu);
         return;
       }
     }

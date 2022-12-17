@@ -119,8 +119,8 @@ void server_coap_init(coap_lwip_input_wait_handler_t input_wait,
                       void *input_arg, int argc, char **argv) {
   coap_address_t listenaddress;
   int opt;
-  coap_log_t log_level = LOG_WARNING;
-  coap_log_t dtls_log_level = LOG_ERR;
+  coap_log_t log_level = COAP_LOG_WARN;
+  coap_log_t dtls_log_level = COAP_LOG_ERR;
   const char *use_psk = "secretPSK";
 
   while ((opt = getopt(argc, argv, ":k:v:V:")) != -1) {

@@ -1030,7 +1030,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       }
 
       ((char *)uip_appdata)[len] = 0;
-      if (LOG_DEBUG <= coap_get_log_level()) {
+      if (COAP_LOG_DEBUG <= coap_get_log_level()) {
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 40
 #endif
@@ -1053,7 +1053,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
     packet->src.size = sizeof(packet->src.addr);
     len = recvfrom (sock->fd, packet->payload, COAP_RXBUFFER_SIZE,
                     0, &packet->src.addr.sa, &packet->src.size);
-    if (LOG_DEBUG <= coap_get_log_level()) {
+    if (COAP_LOG_DEBUG <= coap_get_log_level()) {
       unsigned char addr_str[INET6_ADDRSTRLEN + 8];
 
       if (coap_print_addr(&packet->src, addr_str, INET6_ADDRSTRLEN + 8)) {
@@ -1516,7 +1516,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
     nfds = epoll_wait(ctx->epfd, events, COAP_MAX_EPOLL_EVENTS, etimeout);
     if (nfds < 0) {
       if (errno != EINTR) {
-        coap_log (LOG_ERR, "epoll_wait: unexpected error: %s (%d)\n",
+        coap_log (COAP_LOG_ERR, "epoll_wait: unexpected error: %s (%d)\n",
                             coap_socket_strerror(), nfds);
       }
       break;

@@ -428,7 +428,7 @@ t_access_option6(void) {
   const uint8_t teststr[] = { 0xf2, 'a', 'b' };
   coap_option_t opt;
 
-  coap_set_log_level(LOG_CRIT);
+  coap_set_log_level(COAP_LOG_CRIT);
 
   CU_ASSERT(0 == coap_opt_parse((const coap_opt_t *)teststr,
                                 sizeof(teststr), &opt));

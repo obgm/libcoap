@@ -1584,7 +1584,7 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     goto error;
   }
 
-  if (LOG_DEBUG <= coap_get_log_level()) {
+  if (COAP_LOG_DEBUG <= coap_get_log_level()) {
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 40
 #endif

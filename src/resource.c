@@ -829,7 +829,7 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
 
   s = coap_find_observer(resource, session, token);
 
-  if ( s && coap_get_log_level() >= LOG_DEBUG ) {
+  if ( s && coap_get_log_level() >= COAP_LOG_DEBUG ) {
     char outbuf[2 * 8 + 1] = "";
     unsigned int i;
     for ( i = 0; i < s->pdu->token_length; i++ )
@@ -974,7 +974,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                          * GET/FETCH handler is defined */
         query = coap_get_query(obs->pdu);
         coap_log_debug("Observe PDU presented to app.\n");
-        coap_show_pdu(LOG_DEBUG, obs->pdu);
+        coap_show_pdu(COAP_LOG_DEBUG, obs->pdu);
         coap_log_debug("call custom handler for resource '%*.*s'\n",
                  (int)r->uri_path->length, (int)r->uri_path->length,
                  r->uri_path->s);

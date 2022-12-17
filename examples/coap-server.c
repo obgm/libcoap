@@ -1175,8 +1175,8 @@ add_in:
       }
     }
 
-    if (coap_get_log_level() < LOG_DEBUG)
-      coap_show_pdu(LOG_INFO, pdu);
+    if (coap_get_log_level() < COAP_LOG_DEBUG)
+      coap_show_pdu(COAP_LOG_INFO, pdu);
 
     coap_send(ongoing, pdu);
     /*
@@ -1636,8 +1636,8 @@ proxy_response_handler(coap_session_t *session,
 
   coap_log_debug("** process upstream incoming %d.%02d response:\n",
            COAP_RESPONSE_CLASS(rcv_code), rcv_code & 0x1F);
-  if (coap_get_log_level() < LOG_DEBUG)
-    coap_show_pdu(LOG_INFO, received);
+  if (coap_get_log_level() < COAP_LOG_DEBUG)
+    coap_show_pdu(COAP_LOG_INFO, received);
 
   if (coap_get_data_large(received, &size, &data, &offset, &total)) {
     /* COAP_BLOCK_SINGLE_BODY is set, so single body should be given */
@@ -1713,8 +1713,8 @@ proxy_response_handler(coap_session_t *session,
     coap_delete_pdu(dummy_pdu);
   }
 
-  if (coap_get_log_level() < LOG_DEBUG)
-    coap_show_pdu(LOG_INFO, pdu);
+  if (coap_get_log_level() < COAP_LOG_DEBUG)
+    coap_show_pdu(COAP_LOG_INFO, pdu);
 
   coap_send(incoming, pdu);
   return COAP_RESPONSE_OK;

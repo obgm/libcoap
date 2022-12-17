@@ -136,8 +136,8 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
   int res;
   const char *use_uri = COAP_URI;
   int opt;
-  coap_log_t log_level = LOG_WARNING;
-  coap_log_t dtls_log_level = LOG_ERR;
+  coap_log_t log_level = COAP_LOG_WARN;
+  coap_log_t dtls_log_level = COAP_LOG_ERR;
   const char *use_psk = "secretPSK";
   const char *use_id = "abc";
 

@@ -85,7 +85,7 @@ init_coap() {
 
   coap_context = coap_new_context(&listen_addr);
 
-  coap_set_log_level(LOG_DEBUG);
+  coap_set_log_level(COAP_LOG_DEBUG);
 
   if (!coap_context)
     coap_log_crit("cannot create CoAP context\r\n");
@@ -102,7 +102,7 @@ message_handler(coap_context_t  *ctx,
 
   coap_log_debug("** process incoming %d.%02d response:\n",
         (received->hdr->code >> 5), received->hdr->code & 0x1F);
-  coap_show_pdu(LOG_WARNING, received);
+  coap_show_pdu(COAP_LOG_WARN, received);
 
   coap_ticks(&last_seen);
 }

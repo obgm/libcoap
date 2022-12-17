@@ -412,8 +412,8 @@ message_handler(coap_session_t *session COAP_UNUSED,
 
   coap_log_debug("** process incoming %d.%02d response:\n",
            COAP_RESPONSE_CLASS(rcv_code), rcv_code & 0x1F);
-  if (coap_get_log_level() < LOG_DEBUG)
-    coap_show_pdu(LOG_INFO, received);
+  if (coap_get_log_level() < COAP_LOG_DEBUG)
+    coap_show_pdu(COAP_LOG_INFO, received);
 
   /* check if this is a response to our original request */
   if (!track_check_token(&token)) {
@@ -1785,8 +1785,8 @@ main(int argc, char **argv) {
   coap_log_debug("timeout is set to %u seconds\n", wait_seconds);
 
   coap_log_debug("sending CoAP request:\n");
-  if (coap_get_log_level() < LOG_DEBUG)
-    coap_show_pdu(LOG_INFO, pdu);
+  if (coap_get_log_level() < COAP_LOG_DEBUG)
+    coap_show_pdu(COAP_LOG_INFO, pdu);
 
   if (coap_send(session, pdu) == COAP_INVALID_MID) {
     coap_log_err("cannot send CoAP pdu\n");
@@ -1865,8 +1865,8 @@ main(int argc, char **argv) {
             goto finish;
           }
           coap_log_debug("sending CoAP request:\n");
-          if (coap_get_log_level() < LOG_DEBUG)
-            coap_show_pdu(LOG_INFO, pdu);
+          if (coap_get_log_level() < COAP_LOG_DEBUG)
+            coap_show_pdu(COAP_LOG_INFO, pdu);
 
           ready = 0;
           if (coap_send(session, pdu) == COAP_INVALID_MID) {
