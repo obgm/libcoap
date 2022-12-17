@@ -63,6 +63,9 @@ initial "observe" request. Alternatively, "observe" can be cancelled using
 The underlying library adds in and removes "subscribers" to "observe" the
 resource as appropriate in the server side logic.
 
+*NOTE:* COAP_RESOURCE_MAX_SUBSCRIBER may have been defined to limit the number
+of subscribers to a resource when libcoap was built.
+
 Within the server application, it needs to determine that there is a change of
 state of the resource under observation, and then cause the CoAP library
 layer to initiate a "fake GET/FETCH request" so that an observe GET/FETCH
@@ -77,10 +80,12 @@ requests".
 
 Whenever the server sends a copy of the state of the "observed" resource to
 the client, it will use the same token used by the client when the client
-requested the "observe".  The client will receive this observe response
-in the handler defined by *coap_register_response_handler*(3).  It is the
-responsibility of the client application to match the supplied token and
-update the appropriate internal information.
+requested the "observe" (or the last token used for a FETCH that spans
+multiple blocks).  The client will receive this observe response
+in the handler defined by *coap_register_response_handler*(3) (with the token
+updated to the initial token used by the client application for a large FETCH).
+It is the responsibility of the client application to match the supplied token
+and update the appropriate internal information.
 
 FUNCTIONS
 ---------

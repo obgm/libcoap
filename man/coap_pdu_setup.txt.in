@@ -220,7 +220,7 @@ _message_id_ just happens to match (but unsafe in case the server is sending
 back a "separate" response).
 
 The _max_size_ parameter defines the maximum size of a _PDU_ and is usually
-determined by calling coap_session_max_pdu_size(session);
+determined by calling *coap_session_max_pdu_size*(session);
 
 *Function: coap_new_message_id()*
 

@@ -193,7 +193,7 @@ Alternatively, it is possible to specify which packets of a packet sequence
 are dropped.  A definition of "1,5-9,11-20,101" means that packets 1, 5
 through 9, 11 through 20 and 101 will get dropped. A maximum of 10 different
 packet sets is supported.  The packet count is reset to 0 when
-coap_debug_set_packet_loss() is called.
+*coap_debug_set_packet_loss*() is called.
 To remove any packet losses, set the _loss_level_ to "0%".
 
 RETURN VALUES
@@ -213,18 +213,19 @@ The libcoap recovery/re-transmit logic will only work for confirmable requests.
 
 To see what is happening (other than by sniffing the network traffic), the
 logging level needs to be set to COAP_LOG_DEBUG in the client by using
-coap_set_log_level(COAP_LOG_DEBUG) and coap_dtls_set_log_level(COAP_LOG_DEBUG).
+*coap_set_log_level*(COAP_LOG_DEBUG) and
+*coap_dtls_set_log_level*(COAP_LOG_DEBUG).
 
 The client needs to be sending confirmable requests during the test.
 
 The server can either be stopped, or if packet loss levels are set to 100% by
-using coap_debug_set_packet_loss("100%") when receiving the client requests.
+using *coap_debug_set_packet_loss*("100%") when receiving the client requests.
 
 *NOTE:* If the server end of the connection is returning ICMP unreachable
 packets after being turned off, you will get a debug message of the form
 "coap_network_read: unreachable", so libcoap will stop doing the retries.  If
 this is the case, then you need to make use of (on the server)
-coap_debug_set_packet_loss("100%") or put in some packet filtering to drop the
+*coap_debug_set_packet_loss*("100%") or put in some packet filtering to drop the
 packets.
 
 The client should then restart transmitting the requests based on the

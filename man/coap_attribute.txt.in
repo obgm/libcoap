@@ -48,7 +48,7 @@ request methods.
 Adding Attributes allows textual information to be added to the resource
 which can then be reported back to any client doing a Resource Discovery using
 a "GET /.well-known/core" request with an optional query.
-See "https://rfc-editor.org/rfc/rfc6690#section-5[RFC6690 5. Examples] for
+See "https://rfc-editor.org/rfc/rfc6690#section-5[RFC6690 5. Examples]" for
 some examples of
 resource discovery usage.  Common attribute names are rt, if, sz, ct, obs, rel,
 anchor, rev, hreflang, media, title and type. href cannot be an attribute name.
@@ -64,8 +64,8 @@ The *coap_add_attr*() function
 registers a new attribute called _name_ for the _resource_.
 The value of the attribute is _value_ which can be NULL.
 
-_flags_ can be one or more of the following, which, if set, defines what is
-to be internally freed off when the attribute is deleted with
+_flags_ can be zero or more of the following or'd together, which, if set,
+defines what is to be internally freed off when the attribute is deleted with
 *coap_delete_resource*().
 
 [horizontal]

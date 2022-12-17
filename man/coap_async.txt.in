@@ -61,10 +61,15 @@ any data.
 
 For separate responses, there is an initial empty ACK response (Confirmable
 only - to stop the client re-transmitting the request) followed at a later time
-by the packet containing the status and any data.
+by a packet containing the status and any data.
 
-Usually responses are piggybacked, but this man page focuses on separate
-(async) support.
+Usually responses are piggybacked, but this man page focuses on a mechanism
+for providing separate (async) support.
+
+*NOTE:* If a server is providing Proxy support, then the server code should
+return from the request handler with no response code set (i.e. respond with
+empty ACK) and then send back the response as provided by the upstream server
+when received, so no need to use the async support.
 
 FUNCTIONS
 ---------
@@ -72,7 +77,7 @@ FUNCTIONS
 *Function: coap_async_is_supported()*
 
 The *coap_async_is_supported*() function is used to determine if there is
-async support or not.
+async support or not compiled into libcoap.
 
 *Function: coap_register_async()*
 
@@ -109,7 +114,7 @@ The *coap_free_async*() function is used to delete an _async_ definition.
 The *coap_find_async*() function is used to determine if there is an async
 definition based on the _session_ and token _token_.
 
-*Function: coap_async_ser_app_data()*
+*Function: coap_async_set_app_data()*
 
 The *coap_async_set_app_data*() function is used to add in user defined
 _app_data_ to the _async_ definition.  It is the responsibility of the

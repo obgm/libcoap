@@ -11,7 +11,7 @@ coap_lwip(3)
 NAME
 ----
 coap_lwip,
-coap_coap_lwip_dump_memory_pools,
+coap_lwip_dump_memory_pools,
 coap_lwip_set_input_wait_handler
 - Work with CoAP lwip specific API handler
 

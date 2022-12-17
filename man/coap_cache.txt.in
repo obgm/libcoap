@@ -121,7 +121,7 @@ FUNCTIONS
 *Function: coap_cache_derive_key()*
 
 The *coap_cache_derive_key*() function abstracts all the non NoCacheKey CoAP
-options, ignores the CoAP Observer option and includes a FETCH body from _pdu_.
+options, ignores the CoAP Observe option and includes a FETCH body from _pdu_.
 If _session_based_ is COAP_CACHE_IS_SESSION_BASED, then _session_ pointer is
 also included. CoAP options can be specifically ignored by the use of
 *coap_cache_ignore_options*().  A digest is then built from all of the
@@ -130,7 +130,7 @@ information and returned. NULL is returned on error.
 *Function: coap_cache_derive_key_w_ignore()*
 
 The *coap_cache_derive_key_w_ignore*() function abstracts all the non
-NoCacheKey CoAP options, ignores the CoAP Observer option and includes a FETCH
+NoCacheKey CoAP options, ignores the CoAP Observe option and includes a FETCH
 body from _pdu_. Further options to ignore are specified by the _ignore_count_
 of _ignore_options_.  If _session_based_ is COAP_CACHE_IS_SESSION_BASED, then
 _session_ pointer is also included. A digest is then built from all of the
@@ -139,7 +139,8 @@ information and returned. NULL is returned on error.
 *Function: coap_delete_cache_key()*
 
 The *coap_delete_cache_key*() function deletes the _cache_key_ that was
-returned from a *coap_cache_derive_key*() call.
+returned from a *coap_cache_derive_key*() or
+*coap_cache_derive_key_w_ignore*() call.
 
 *Function: coap_cache_ignore_options()*
 
@@ -189,7 +190,7 @@ The *coap_cache_get_pdu*() function returns the PDU that was stored with the
 Cache Entry when it was created with *coap_new_cache_entry*() and _record_pdu_
 was set to COAP_CACHE_RECORD_PDU.  If a PDU was not initially stored, NULL is
 returned. +
-*NOTE:* A copy of the returned PDU must be taken for using in sending a CoAP
+*NOTE:* A copy of the returned PDU must be taken for use in sending a CoAP
 packet using *coap_pdu_duplicate*().
 
 *Function: coap_cache_set_app_data()*

@@ -38,7 +38,7 @@
 #define MEMP_STATS                      1
 
 /*
- * Set to display (with LOG_DEBUG) custom pools information
+ * Set to display (with COAP_LOG_DEBUG) custom pools information
  * (Needs MEMP_STATS set) when coap_free_context() is called.
  */
 #define LWIP_STATS_DISPLAY              1
