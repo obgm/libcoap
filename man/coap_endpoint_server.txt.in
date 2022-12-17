@@ -101,8 +101,8 @@ FUNCTIONS
 *Function: coap_context_set_pki()*
 
 The *coap_context_set_pki*() function, for a specific _context_, is used to
-configure the TLS context using the _setup_data_ variables as defined in the
-coap_dtls_pki_t structure  - see *coap_encryption*(3).
+configure the TLS context using the _setup_data_ PKI variables as defined in
+the coap_dtls_pki_t structure  - see *coap_encryption*(3).
 
 *Function: coap_context_set_pki_root_cas()*
 
@@ -121,7 +121,7 @@ _setup_data_ variable. See *coap_encryption*(3).
 *Function: coap_context_set_psk2()*
 
 The *coap_context_set_psk2*() function is used to configure the TLS context
-using the _setup_data_ variables as defined in the
+using the _setup_data_ PSK variables as defined in the
 coap_dtls_spsk_t structure  - see *coap_encryption*(3).
 This function can only be used for servers as _setup_data_ provides
 a _hint_, not an _identity_.
@@ -150,13 +150,14 @@ further information.
 When traffic starts to come in from a client, a server CoAP Session is created
 associated with this endpoint. This CoAP Session is created with a reference
 count of 0. This means that if the server session is not used for 5 minutes,
-then it will get completely freed off.  See coap_session_reference(3) and
-coap_session_release(3) for further information.
+then it will get completely freed off.  See *coap_session_reference*(3) and
+*coap_session_release*(3) for further information.
 
 *Function: coap_free_endpoint()*
 
 The *coap_free_endpoint*() function must be used to free off the _endpoint_.
-It clears out all the sessions associated with this endpoint.
+It clears out all the sessions associated with this endpoint along with
+any data associated with the sessions.
 
 *Function: coap_endpoint_set_default_mtu()*
 
@@ -180,7 +181,7 @@ ff05::fd (Site-Local).
 The *coap_mcast_per_resource*() function enables mcast to be controlled on a
 per resource basis giving the server application flexibility in how to respond
 to mcast requests. With this enabled, this is done through additional flag
-definitions when setting up each resource.
+definitions when setting up each resource. See *coap_resource*(3).
 
 RETURN VALUES
 -------------

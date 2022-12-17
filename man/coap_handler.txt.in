@@ -60,7 +60,7 @@ FUNCTIONS
 
 The *coap_register_request_handler*() is a server side function that registers
 a callback handler _handler_ that is called when there is an incoming request
-PDU and there is a URI match against the _resource_ and there is a _method_
+PDU, there is a URI match against the _resource_ and there is a _method_
 (e.g. PUT, POST etc.) match. _method_ can be one of the following.
 ----
 COAP_REQUEST_GET
@@ -83,11 +83,12 @@ typedef void (*coap_method_handler_t)(coap_resource_t *resource,
 ----
 
 In _handler_, data from _incoming_pdu_ can be abstracted as described in
-*coap_pdu_access*(3) for analysis and then updates _response_pdu_ as
+*coap_pdu_access*(3) for analysis and then the _handler_ updates
+_response_pdu_ as
 appropriate as described in *coap_pdu_setup*(3).  _response_pdu_ is already
 pre-populated with the _incoming_pdu_'s token and the PDU type.  If this
 handler is called as a result of an unsolicited Observe trigger, then the
-option OBSERVE (and potentially option BLOCK2) are also added in.  The
+Observe option (and potentially Block2 option) are also added in.  The
  _response_pdu_'s response code should always be updated.
 
 *NOTE:* Any data associated with _incoming_pdu_ is no longer be available after
@@ -176,6 +177,8 @@ typedef void (*coap_ping_handler_t)(coap_session_t *session,
                                     const coap_pdu_t *received,
                                     const coap_mid_t mid);
 ----
+
+*Function: coap_register_pong_handler()*
 
 The *coap_register_pong_handler*() function registers a callback _handler_ for
 tracking receipt of CoAP ping response traffic associated with the _context_.
