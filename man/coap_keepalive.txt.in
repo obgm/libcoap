@@ -39,6 +39,11 @@ For UDP/DTLS, this is done with the confirmable CoAP (0.00) Ping packet, which
 solicits a CoAP RST response.  For TCP/TLS, this is done with CoAP (7.02) Ping
 packet, which solicits a CoAP (7.03) Pong response, all handled by libcoap.
 
+FUNCTIONS
+---------
+
+*Function: coap_context_set_keepalive()*
+
 The *coap_context_set_keepalive*() function needs to be called to update the
 _context_ with the keepalive for idle traffic timeout of _seconds_.  If
 _seconds_ is set to 0 (the default), then the sending of keepalives is
@@ -63,9 +68,13 @@ SEE ALSO
 
 FURTHER INFORMATION
 -------------------
-"RFC7252: The Constrained Application Protocol (CoAP)"
+See
 
-"RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets"
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+"https://rfc-editor.org/rfc/rfc8323[RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets]"
+
+for further information.
 
 BUGS
 ----

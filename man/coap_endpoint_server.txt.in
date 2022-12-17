@@ -95,9 +95,16 @@ flow with different TCP/UDP protocols, TLS protocols, port numbers etc. When a
 new traffic flow is started, then the CoAP library will create and start a new
 server session.
 
+FUNCTIONS
+---------
+
+*Function: coap_context_set_pki()*
+
 The *coap_context_set_pki*() function, for a specific _context_, is used to
 configure the TLS context using the _setup_data_ variables as defined in the
 coap_dtls_pki_t structure  - see *coap_encryption*(3).
+
+*Function: coap_context_set_pki_root_cas()*
 
 The *coap_context_set_pki_root_cas*() function is used to define a set of
 root CAs to be used instead of the default set of root CAs provided as a part
@@ -111,11 +118,15 @@ single CA using the _ca_file_ definition in _pki_key_ in _setup_data_ variable
 when calling *coap_context_set_pki*(), or set _check_common_ca to 0 in
 _setup_data_ variable. See *coap_encryption*(3).
 
+*Function: coap_context_set_psk2()*
+
 The *coap_context_set_psk2*() function is used to configure the TLS context
 using the _setup_data_ variables as defined in the
 coap_dtls_spsk_t structure  - see *coap_encryption*(3).
 This function can only be used for servers as _setup_data_ provides
 a _hint_, not an _identity_.
+
+*Function: coap_new_endpoint()*
 
 The *coap_new_endpoint*() function creates a new endpoint for _context_ that
 is listening for new traffic on the IP address and port number defined by
@@ -142,12 +153,18 @@ count of 0. This means that if the server session is not used for 5 minutes,
 then it will get completely freed off.  See coap_session_reference(3) and
 coap_session_release(3) for further information.
 
+*Function: coap_free_endpoint()*
+
 The *coap_free_endpoint*() function must be used to free off the _endpoint_.
 It clears out all the sessions associated with this endpoint.
+
+*Function: coap_endpoint_set_default_mtu()*
 
 The *coap_endpoint_set_default_mtu*() function is used to set the MTU size
 (the maximum message size) of the data in a packet, excluding any IP or
 TCP/UDP overhead to _mtu_ for the _endpoint_.  A sensible default is 1280.
+
+*Function: coap_join_mcast_group_intf()*
 
 The *coap_join_mcast_group_intf*() function is used to join the currently
 defined endpoints that are UDP, associated with _context_, to the defined
@@ -157,6 +174,8 @@ first appropriate interface. When the endpoint is freed off, the associated
 multicast group will be removed. The registered multicast addresses for CoAP
 are 224.0.1.187, ff0x::fd (Variable-Scope) - i.e. ff02::fd (Link-Local) and
 ff05::fd (Site-Local).
+
+*Function: coap_mcast_per_resource()*
 
 The *coap_mcast_per_resource*() function enables mcast to be controlled on a
 per resource basis giving the server application flexibility in how to respond
@@ -570,8 +589,11 @@ SEE ALSO
 
 FURTHER INFORMATION
 -------------------
-See "RFC7252: The Constrained Application Protocol (CoAP)" for further
-information.
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
 
 BUGS
 ----

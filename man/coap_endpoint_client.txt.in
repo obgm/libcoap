@@ -102,6 +102,11 @@ COAP_PROTO_TLS
 TCP or (D)TLS protocol support is available.  See *coap_tls_library(3)* for
 further information.
 
+FUNCTIONS
+---------
+
+*Function: coap_new_client_session()*
+
 The *coap_new_client_session*() function creates a client endpoint for a
 specific _context_ and initiates a new client session to the specified _server_
 using the CoAP protocol
@@ -109,6 +114,8 @@ _proto_.  If the port is set to 0 in _server_, then the default CoAP
 port is used.  Normally _local_if_ would be set to NULL, but by specifying
 _local_if_ the source of the network session can be bound to a specific IP
 address or port.  The session will initially have a reference count of 1.
+
+*Function: coap_new_client_session_pki()*
 
 The *coap_new_client_session_pki*() function, for a specific _context_, is
 used to configure the TLS context using the _setup_data_ variables as defined
@@ -119,6 +126,8 @@ default CoAP port is used.  Normally _local_if_ would be set to NULL, but by
 specifying _local_if_ the source of the network session can be bound to a
 specific IP address or port. The session will initially have a reference count
 of 1.
+
+*Function: coap_new_client_session_psk2()*
 
 The *coap_new_client_session_psk2*() function, for a specific _context_, is
 used to configure the TLS context using the _setup_data_ variables as defined
@@ -134,10 +143,14 @@ To stop using a client session, the reference count must be decremented to 0
 by calling *coap_session_release*(). See *coap_session*(3). This will remove
 the client endpoint.
 
+*Function: coap_sesson_set_default_mtu()*
+
 The *coap_sesson_set_default_mtu*() function is used to set the MTU size
 (the maximum message size) of the data in a packet, excluding any IP or
 TCP/UDP overhead to _mtu_ for the client endpoint's _session_.  The default
 MTU is 1152.
+
+*Function: coap_session_max_pdu_size()*
 
 The *coap_session_max_pdu_size*() function is used to get the maximum MTU
 size of the data for the client endpoint's _session_.
@@ -407,8 +420,11 @@ SEE ALSO
 
 FURTHER INFORMATION
 -------------------
-See "RFC7252: The Constrained Application Protocol (CoAP)" for further
-information.
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
 
 BUGS
 ----

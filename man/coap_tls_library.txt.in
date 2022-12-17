@@ -192,9 +192,9 @@ FURTHER INFORMATION
 -------------------
 See
 
-"https://tools.ietf.org/html/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
 
-"https://tools.ietf.org/html/rfc8323[RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets]"
+"https://rfc-editor.org/rfc/rfc8323[RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets]"
 
 for further information.
 

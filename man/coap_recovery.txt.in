@@ -2,7 +2,7 @@
 // vim: set syntax=asciidoc tw=0
 
 coap_recovery(3)
-=================
+================
 :doctype: manpage
 :man source:   coap_recovery
 :man version:  @PACKAGE_VERSION@
@@ -74,8 +74,11 @@ DESCRIPTION
 -----------
 For CoAP Confirmable messages, it is possible to define the retry counts,
 repeat rate etc. for error recovery.  Further information can be found in
-"RFC7272: 4.2. Messages Transmitted Reliably", with the default values
-defined in "RFC7272: 4.8 Transmission Parameters".
+"https://rfc-editor.org/rfc/rfc7252#section-4.2[RFC7272 4.2. Messages
+Transmitted Reliably]",
+with the default values defined in
+"https://rfc-editor.org/rfc/rfc7252#section-4.8[RFC7272 4.8. Transmission
+Parameters]".
 
 It is not recommended that the suggested default setting are changed, but
 there may be some special requirements that need different values and the
@@ -101,7 +104,8 @@ The CoAP message retry rules are (with the default values to compute the time)
 
 As max_retransmit (by default) is 4, then the 5th retransmit does not get sent,
 but at that point COAP_NACK_TOO_MANY_RETRIES gets raised in the nack_handler
-(if defined). Note that the sum of the seconds is 93 matching RFC7252.
+(if defined). Note that the sum of the seconds is 93 matching RFC7252 4.8.2.
+MAX_TRANSMIT_WAIT.
 ----
 
 It should be noted that these retries are separate from the DTLS or TLS
@@ -116,42 +120,71 @@ transmission recovery as well as application handling of lossy networks.
 The following functions reflect the RFC7252 uppercase names in lowercase
 following the coap_session[sg]_ function prefix.
 
+FUNCTIONS
+---------
+
+*Function: coap_session_set_ack_random_factor()*
+
 The *coap_session_set_ack_random_factor*() function updates the _session_ ack
 random wait factor, used to randomize re-transmissions, with the new _value_.
 The default value is 1.5.
 
+*Function: coap_session_get_ack_random_factor()*
+
 The *coap_session_get_ack_random_factor*() function returns the current
 _session_ ack random wait factor.
+
+*Function: coap_session_set_ack_timeout()*
 
 The *coap_session_set_ack_timeout*() function updates the _session_ initial
 ack or response timeout with the new _value_.  The default value is 2.0.
 
+*Function: coap_session_get_ack_timeout()*
+
 The *coap_session_get_ack_timeout*() function returns the current _session_
 initial ack or response timeout.
+
+*Function: coap_session_set_default_leisure()*
 
 The *coap_session_set_default_leisure*() function updates the _session_
 default leisure time with the new _value_.  The initial default value is 5.0.
 
+*Function: coap_session_get_default_leisure()*
+
 The *coap_session_get_default_leisure*() function returns the current _session_
 default leisure time.
+
+*Function: coap_session_set_max_retransmit()*
 
 The *coap_session_set_max_retransmit*() function updates the _session_ maximum
 retransmit count with the new _value_.  The default value is 4.
 
+*Function: coap_session_get_max_retransmit()*
+
 The *coap_session_get_max_retransmit*() function returns the current _session_
 maximum retransmit count.
+
+*Function: coap_session_set_nstart()*
 
 The *coap_session_set_nstart*() function updates the _session_ nstart
 with the new _value_.  The default value is 1.
 
+*Function: coap_session_set_probing_rate()*
+
 The *coap_session_get_nstart*() function returns the current _session_
+
+*Function: coap_session_set_probing_rate()*
 nstart value.
 
 The *coap_session_set_probing_rate*() function updates the _session_ probing
 rate with the new _value_.  The default value is 1 byte per second.
 
+*Function: coap_session_get_probing_rate()*
+
 The *coap_session_get_probing_rate*() function returns the current _session_
 probing rate value.
+
+*Function: coap_debug_set_packet_loss()*
 
 The *coap_debug_set_packet_loss*() function is uses to set the packet loss
 levels as defined in _loss_level_.  _loss_level_ can be set as a percentage
@@ -179,8 +212,8 @@ TESTING
 The libcoap recovery/re-transmit logic will only work for confirmable requests.
 
 To see what is happening (other than by sniffing the network traffic), the
-logging level needs to be set to LOG_DEBUG in the client by using
-coap_set_log_level(LOG_DEBUG) and coap_dtls_set_log_level(LOG_DEBUG).
+logging level needs to be set to COAP_LOG_DEBUG in the client by using
+coap_set_log_level(COAP_LOG_DEBUG) and coap_dtls_set_log_level(COAP_LOG_DEBUG).
 
 The client needs to be sending confirmable requests during the test.
 
@@ -202,8 +235,11 @@ confirmable request cannot be successfully transmitted.
 
 FURTHER INFORMATION
 -------------------
-See "RFC7252: The Constrained Application Protocol (CoAP)" for further
-information.
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
 
 BUGS
 ----

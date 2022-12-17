@@ -22,7 +22,7 @@ DESCRIPTION
 libcoap is a C implementation of a lightweight application-protocol for
 devices that are constrained by their resources such as computing power, RF
 range, memory, bandwidth, or network packet sizes. This protocol, CoAP, is
-standardized by the IETF as https://tools.ietf.org/html/rfc7252[RFC7252].
+standardized by the IETF as https://rfc-editor.org/rfc/rfc7252[RFC7252].
 For further information related to CoAP, see http://coap.technology.
 
 Documentation for the specific library calls with examples can be found in the
@@ -52,27 +52,27 @@ FURTHER INFORMATION
 -------------------
 See
 
-"https://tools.ietf.org/html/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
 
-"https://tools.ietf.org/html/rfc7390[RFC7390: Group Communication for the Constrained Application Protocol (CoAP)]"
+"https://rfc-editor.org/rfc/rfc7390[RFC7390: Group Communication for the Constrained Application Protocol (CoAP)]"
 
-"https://tools.ietf.org/html/rfc7641[RFC7641: Observing Resources in the Constrained Application Protocol (CoAP)]"
+"https://rfc-editor.org/rfc/rfc7641[RFC7641: Observing Resources in the Constrained Application Protocol (CoAP)]"
 
-"https://tools.ietf.org/html/rfc7959[RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)]"
+"https://rfc-editor.org/rfc/rfc7959[RFC7959: Block-Wise Transfers in the Constrained Application Protocol (CoAP)]"
 
-"https://tools.ietf.org/html/rfc7967[RFC7967: Constrained Application Protocol (CoAP) Option for No Server Response]"
+"https://rfc-editor.org/rfc/rfc7967[RFC7967: Constrained Application Protocol (CoAP) Option for No Server Response]"
 
-"https://tools.ietf.org/html/rfc8132[RFC8132: PATCH and FETCH Methods for the Constrained Application Protocol (CoAP)]"
+"https://rfc-editor.org/rfc/rfc8132[RFC8132: PATCH and FETCH Methods for the Constrained Application Protocol (CoAP)]"
 
-"https://tools.ietf.org/html/rfc8323[RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets]"
+"https://rfc-editor.org/rfc/rfc8323[RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets]"
 
-"https://tools.ietf.org/html/rfc8516[RFC8516: "Too Many Requests" Response Code for the Constrained Application Protocol]"
+"https://rfc-editor.org/rfc/rfc8516[RFC8516: "Too Many Requests" Response Code for the Constrained Application Protocol]"
 
-"https://tools.ietf.org/html/rfc8613[RFC8613: Object Security for Constrained RESTful Environments (OSCORE)]"
+"https://rfc-editor.org/rfc/rfc8613[RFC8613: Object Security for Constrained RESTful Environments (OSCORE)]"
 
-"https://tools.ietf.org/html/rfc8768[RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option]"
+"https://rfc-editor.org/rfc/rfc8768[RFC8768: Constrained Application Protocol (CoAP) Hop-Limit Option]"
 
-"https://tools.ietf.org/html/rfc9175[RFC9175: CoAP: Echo, Request-Tag, and Token Processing]"
+"https://rfc-editor.org/rfc/rfc9175[RFC9175: CoAP: Echo, Request-Tag, and Token Processing]"
 
 for further information.
 
