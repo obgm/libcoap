@@ -101,8 +101,8 @@ Logging by default is to stderr or stdout depending on the logging level of
 the log entry.  It ia possible to send the logging information to an
 application logging callback handler for processing by the application.
 
-Logging levels (*coap_log_t*) are defined by (initially the same as for
-*syslog*()), which are numerically incrementing in value:
+Logging levels (*coap_log_t*) are defined as follows (based on the *syslog*()
+names and values):
 
 *COAP_LOG_EMERG*::
 Emergency level (0).

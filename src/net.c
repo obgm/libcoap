@@ -668,7 +668,7 @@ coap_free_context(coap_context_t *context) {
   initialized = 0;
 #endif /* WITH_CONTIKI */
 #ifdef WITH_LWIP
-  coap_lwip_dump_memory_pools(LOG_DEBUG);
+  coap_lwip_dump_memory_pools(COAP_LOG_DEBUG);
 #endif /* WITH_LWIP */
 }
 
@@ -813,7 +813,7 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
     default:
       break;
   }
-  coap_show_pdu(LOG_DEBUG, pdu);
+  coap_show_pdu(COAP_LOG_DEBUG, pdu);
   return bytes_written;
 }
 
@@ -1156,7 +1156,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
 
     if (!session->lg_xmit) {
       coap_log_debug("PDU presented by app\n");
-      coap_show_pdu(LOG_DEBUG, pdu);
+      coap_show_pdu(COAP_LOG_DEBUG, pdu);
     }
     /* See if this token is already in use for large body responses */
     LL_FOREACH(session->lg_crcv, lg_crcv) {
@@ -3049,7 +3049,7 @@ skip_handler:
         coap_log_debug("   %s: mid=0x%x: response dropped\n",
                  coap_session_str(session),
                  response->mid);
-        coap_show_pdu(LOG_DEBUG, response);
+        coap_show_pdu(COAP_LOG_DEBUG, response);
 drop_it_no_debug:
         coap_delete_pdu(response);
       }
@@ -3194,7 +3194,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   int is_ping_rst;
   int packet_is_bad = 0;
 
-  coap_show_pdu(LOG_DEBUG, pdu);
+  coap_show_pdu(COAP_LOG_DEBUG, pdu);
 
   memset(&opt_filter, 0, sizeof(coap_opt_filter_t));
 

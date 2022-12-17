@@ -57,7 +57,7 @@ init_coap_server(coap_context_t **ctx) {
 
   assert(ctx);
 
-  coap_set_log_level(LOG_DEBUG);
+  coap_set_log_level(COAP_LOG_DEBUG);
 
   coap_address_init(&listen_addr);
   listen_addr.port = UIP_HTONS(COAP_DEFAULT_PORT);

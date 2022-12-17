@@ -134,7 +134,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   packet->ifindex = sock->fd;
   packet->length = (len > 0) ? len : 0;
   memcpy(packet->payload, (uint8_t*)udp_hdr + sizeof(udp_hdr_t), len);
-  if (LOG_DEBUG <= coap_get_log_level()) {
+  if (COAP_LOG_DEBUG <= coap_get_log_level()) {
     unsigned char addr_str[INET6_ADDRSTRLEN + 8];
 
     if (coap_print_addr(&packet->addr_info.remote, addr_str, INET6_ADDRSTRLEN + 8)) {

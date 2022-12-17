@@ -998,7 +998,7 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     FILE *log_fd;
     size_t len;
 
-    log_fd = level <= LOG_CRIT ? COAP_ERR_FD : COAP_DEBUG_FD;
+    log_fd = level <= COAP_LOG_CRIT ? COAP_ERR_FD : COAP_DEBUG_FD;
 
     coap_ticks(&now);
     len = print_timestamp(timebuf,sizeof(timebuf), now);

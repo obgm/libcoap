@@ -302,7 +302,7 @@ t_parse_pdu16(void) {
 
   coap_set_show_pdu_output(0);
   coap_set_log_handler(log_handler);
-  coap_show_pdu(LOG_ERR, testpdu);        /* display PDU */
+  coap_show_pdu(COAP_LOG_ERR, testpdu);        /* display PDU */
   coap_set_log_handler(NULL);
 
   coap_delete_pdu(testpdu);
@@ -690,7 +690,7 @@ t_encode_pdu11(void) {
   coap_pdu_clear(pdu, 8);        /* clear PDU, with small maximum */
 
   CU_ASSERT(pdu->data == NULL);
-  coap_set_log_level(LOG_CRIT);
+  coap_set_log_level(COAP_LOG_CRIT);
   result = coap_add_data(pdu, 10, (const uint8_t *)"0123456789");
   coap_set_log_level(level);
 
