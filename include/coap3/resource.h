@@ -55,31 +55,31 @@ typedef void (*coap_method_handler_t)
 /**
  * Observe Notifications will be sent non-confirmable by default. RFC 7641
  * Section 4.5
- * https://tools.ietf.org/html/rfc7641#section-4.5
+ * https://rfc-editor.org/rfc/rfc7641#section-4.5
  * Libcoap will always send every fifth packet as confirmable.
  */
 #define COAP_RESOURCE_FLAGS_NOTIFY_NON  0x0
 
 /**
  * Observe Notifications will be sent confirmable. RFC 7641 Section 4.5
- * https://tools.ietf.org/html/rfc7641#section-4.5
+ * https://rfc-editor.org/rfc/rfc7641#section-4.5
  */
 #define COAP_RESOURCE_FLAGS_NOTIFY_CON  0x2
 
 /**
  * Observe Notifications will always be sent non-confirmable. This is in
  * violation of RFC 7641 Section 4.5
- * https://tools.ietf.org/html/rfc7641#section-4.5
+ * https://rfc-editor.org/rfc/rfc7641#section-4.5
  * but required by the DOTS signal channel protocol which needs to operate in
  * lossy DDoS attack environments.
- * https://tools.ietf.org/html/rfc8782#section-4.4.2.1
+ * https://rfc-editor.org/rfc/rfc8782#section-4.4.2.1
  */
 #define COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS  0x4
 
 /**
  * This resource has support for multicast requests.
- * https://datatracker.ietf.org/doc/html/rfc7252#section-11.3
- * https://datatracker.ietf.org/doc/html/rfc7390#section-2.8
+ * https://rfc-editor.org/rfc/rfc7252#section-11.3
+ * https://rfc-editor.org/rfc/rfc7390#section-2.8
  * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.6
  * Note: ".well-known/core" always supports multicast.
  * Note: Only tested if coap_mcast_per_resource() has been called.
@@ -90,8 +90,8 @@ typedef void (*coap_method_handler_t)
  * Disable libcoap library from adding in delays to multicast requests before
  * releasing the response back to the client.  It is then the responsibility of
  * the app to delay the responses for multicast requests.
- * https://datatracker.ietf.org/doc/html/rfc7252#section-8.2
- * https://datatracker.ietf.org/doc/html/rfc7390#section-2.8
+ * https://rfc-editor.org/rfc/rfc7252#section-8.2
+ * https://rfc-editor.org/rfc/rfc7390#section-2.8
  * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.6
  * Note: Only tested if coap_mcast_per_resource() has been called.
  */
@@ -100,7 +100,7 @@ typedef void (*coap_method_handler_t)
 /**
  * Enable libcoap library suppression of 205 multicast responses that are empty
  * (overridden by RFC7969 No-Response option) for multicast requests.
- * https://datatracker.ietf.org/doc/html/rfc7390#section-2.7
+ * https://rfc-editor.org/rfc/rfc7390#section-2.7
  * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.1.2
  * Note: Only tested if coap_mcast_per_resource() has been called.
  */
@@ -109,7 +109,7 @@ typedef void (*coap_method_handler_t)
 /**
  * Enable libcoap library suppressing 2.xx multicast responses (overridden by
  * RFC7969 No-Response option) for multicast requests.
- * https://datatracker.ietf.org/doc/html/rfc7390#section-2.7
+ * https://rfc-editor.org/rfc/rfc7390#section-2.7
  * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.1.2
  * Note: Only tested if coap_mcast_per_resource() has been called.
  */
@@ -118,7 +118,7 @@ typedef void (*coap_method_handler_t)
 /**
  * Disable libcoap library suppressing 4.xx multicast responses (overridden by
  * RFC7969 No-Response option) for multicast requests.
- * https://datatracker.ietf.org/doc/html/rfc7390#section-2.7
+ * https://rfc-editor.org/rfc/rfc7390#section-2.7
  * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.1.2
  * Note: Only tested if coap_mcast_per_resource() has been called.
  */
@@ -127,7 +127,7 @@ typedef void (*coap_method_handler_t)
 /**
  * Disable libcoap library suppressing 5.xx multicast responses (overridden by
  * RFC7969 No-Response option) for multicast requests.
- * https://datatracker.ietf.org/doc/html/rfc7390#section-2.7
+ * https://rfc-editor.org/rfc/rfc7390#section-2.7
  * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.1.2
  * Note: Only tested if coap_mcast_per_resource() has been called.
  */

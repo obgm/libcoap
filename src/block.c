@@ -2104,7 +2104,7 @@ coap_block_build_body(coap_binary_t *body_data, size_t length,
   else {
     /*
      * total may be inaccurate as per
-     * https://tools.ietf.org/html/rfc7959#section-4
+     * https://rfc-editor.org/rfc/rfc7959#section-4
      * o In a request carrying a Block1 Option, to indicate the current
      *   estimate the client has of the total size of the resource
      *   representation, measured in bytes ("size indication").

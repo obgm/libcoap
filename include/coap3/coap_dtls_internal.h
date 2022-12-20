@@ -27,7 +27,7 @@
  * @{
  */
 
-/* https://tools.ietf.org/html/rfc6347#section-4.2.4.1 */
+/* https://rfc-editor.org/rfc/rfc6347#section-4.2.4.1 */
 #ifndef COAP_DTLS_RETRANSMIT_MS
 #define COAP_DTLS_RETRANSMIT_MS 1000
 #endif

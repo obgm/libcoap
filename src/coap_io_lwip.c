@@ -202,8 +202,8 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
 
 error:
   /*
-   * https://tools.ietf.org/html/rfc7252#section-4.2 MUST send RST
-   * https://tools.ietf.org/html/rfc7252#section-4.3 MAY send RST
+   * https://rfc-editor.org/rfc/rfc7252#section-4.2 MUST send RST
+   * https://rfc-editor.org/rfc/rfc7252#section-4.3 MAY send RST
    */
   if (session)
     coap_send_rst(session, pdu);
@@ -290,8 +290,8 @@ coap_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
 
 error:
   /*
-   * https://tools.ietf.org/html/rfc7252#section-4.2 MUST send RST
-   * https://tools.ietf.org/html/rfc7252#section-4.3 MAY send RST
+   * https://rfc-editor.org/rfc/rfc7252#section-4.2 MUST send RST
+   * https://rfc-editor.org/rfc/rfc7252#section-4.3 MAY send RST
    */
   if (session)
     coap_send_rst(session, pdu);

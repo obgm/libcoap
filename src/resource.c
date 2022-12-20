@@ -730,7 +730,7 @@ coap_add_observer(coap_resource_t *resource,
   coap_cache_key_t *cache_key = NULL;
   size_t len;
   const uint8_t *data;
-/* https://tools.ietf.org/html/rfc7641#section-3.6 */
+/* https://rfc-editor.org/rfc/rfc7641#section-3.6 */
 static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG };
 
   assert( session );

@@ -401,7 +401,7 @@ coap_session_t *coap_session_get_by_peer(const coap_context_t *ctx,
   * API for updating transmission parameters for CoAP rate control.
   * The transmission parameters for CoAP rate control ("Congestion
   * Control" in stream-oriented protocols) are defined in
-  * https://tools.ietf.org/html/rfc7252#section-4.8
+  * https://rfc-editor.org/rfc/rfc7252#section-4.8
   * @{
   */
 
