@@ -24,11 +24,11 @@ is_cache_key(uint16_t option_type, size_t cache_ignore_count,
              const uint16_t *cache_ignore_options) {
   size_t i;
 
-  /* https://tools.ietf.org/html/rfc7252#section-5.4.6 Nocachekey definition */
+  /* https://rfc-editor.org/rfc/rfc7252#section-5.4.6 Nocachekey definition */
   if ((option_type & 0x1e) == 0x1c)
     return 0;
   /*
-   * https://tools.ietf.org/html/rfc7641#section-2 Observe is not a
+   * https://rfc-editor.org/rfc/rfc7641#section-2 Observe is not a
    * part of the cache-key.
    */
   if (option_type == COAP_OPTION_OBSERVE)
@@ -111,7 +111,7 @@ coap_cache_derive_key_w_ignore(const coap_session_t *session,
   }
 
   /* The body of a FETCH payload is part of the cache key,
-   * see https://tools.ietf.org/html/rfc8132#section-2 */
+   * see https://rfc-editor.org/rfc/rfc8132#section-2 */
   if (pdu->code == COAP_REQUEST_CODE_FETCH) {
     size_t len;
     const uint8_t *data;

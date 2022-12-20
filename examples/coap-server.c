@@ -498,7 +498,7 @@ hnd_put_example_data(coap_resource_t *resource,
      * A part of the data has been received (COAP_BLOCK_SINGLE_BODY not set).
      * However, total unfortunately is only an indication, so it is not safe to
      * allocate a block based on total.  As per
-     * https://tools.ietf.org/html/rfc7959#section-4
+     * https://rfc-editor.org/rfc/rfc7959#section-4
      *   o  In a request carrying a Block1 Option, to indicate the current
      *         estimate the client has of the total size of the resource
      *         representation, measured in bytes ("size indication").
@@ -1389,7 +1389,7 @@ hnd_put_post(coap_resource_t *resource,
      * A part of the data has been received (COAP_BLOCK_SINGLE_BODY not set).
      * However, total unfortunately is only an indication, so it is not safe to
      * allocate a block based on total.  As per
-     * https://tools.ietf.org/html/rfc7959#section-4
+     * https://rfc-editor.org/rfc/rfc7959#section-4
      *   o  In a request carrying a Block1 Option, to indicate the current
      *         estimate the client has of the total size of the resource
      *         representation, measured in bytes ("size indication").
@@ -2605,9 +2605,9 @@ main(int argc, char **argv) {
   size_t i;
   uint16_t cache_ignore_options[] = { COAP_OPTION_BLOCK1,
                                       COAP_OPTION_BLOCK2,
-                    /* See https://tools.ietf.org/html/rfc7959#section-2.10 */
+                    /* See https://rfc-editor.org/rfc/rfc7959#section-2.10 */
                                       COAP_OPTION_MAXAGE,
-                    /* See https://tools.ietf.org/html/rfc7959#section-2.10 */
+                    /* See https://rfc-editor.org/rfc/rfc7959#section-2.10 */
                                       COAP_OPTION_IF_NONE_MATCH };
 #ifndef _WIN32
   struct sigaction sa;

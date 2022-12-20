@@ -1127,7 +1127,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
 
       if (session->last_token &&
           coap_binary_equal(&token, session->last_token)) {
-        coap_log_debug("Token reused - see https://www.rfc-editor.org/rfc/rfc9175.html#section-4.2\n");
+        coap_log_debug("Token reused - see https://rfc-editor.org/rfc/rfc9175.html#section-4.2\n");
       }
       coap_delete_bin_const(session->last_token);
       session->last_token = coap_new_bin_const(token.s, token.length);
@@ -1237,7 +1237,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
   if (pdu->code == COAP_RESPONSE_CODE(508)) {
     /*
      * Need to prepend our IP identifier to the data as per
-     * https://www.rfc-editor.org/rfc/rfc8768.html#section-4
+     * https://rfc-editor.org/rfc/rfc8768.html#section-4
      */
     char addr_str[INET6_ADDRSTRLEN + 8 + 1];
     coap_opt_t *opt;
@@ -1356,7 +1356,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
       /*
        * Need to check that this instance is not sending any block options as
        * the remote end via CSM has not informed us that there is support
-       * https://tools.ietf.org/html/rfc8323#section-5.3.2
+       * https://rfc-editor.org/rfc/rfc8323#section-5.3.2
        * This includes potential BERT blocks.
        */
       if (coap_check_option(pdu, COAP_OPTION_BLOCK1, &opt_iter) != NULL) {
@@ -2047,8 +2047,8 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
 
 error:
   /*
-   * https://tools.ietf.org/html/rfc7252#section-4.2 MUST send RST
-   * https://tools.ietf.org/html/rfc7252#section-4.3 MAY send RST
+   * https://rfc-editor.org/rfc/rfc7252#section-4.2 MUST send RST
+   * https://rfc-editor.org/rfc/rfc7252#section-4.3 MAY send RST
    */
   coap_send_rst(session, pdu);
   coap_delete_pdu(pdu);
@@ -2197,7 +2197,7 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
     /*
      * Need space for IP for 5.08 response which is filled in in
      * coap_send_internal()
-     * https://www.rfc-editor.org/rfc/rfc8768.html#section-4
+     * https://rfc-editor.org/rfc/rfc8768.html#section-4
      */
     phrase = NULL;
     size += INET6_ADDRSTRLEN;

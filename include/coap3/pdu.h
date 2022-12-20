@@ -86,20 +86,20 @@ typedef enum coap_request_t {
  * The C, U, and N flags indicate the properties
  * Critical, Unsafe, and NoCacheKey, respectively.
  * If U is set, then N has no meaning as per
- * https://tools.ietf.org/html/rfc7252#section-5.10
+ * https://rfc-editor.org/rfc/rfc7252#section-5.10
  * and is set to a -.
  *
  * Separately, R is for the options that can be repeated
  *
  * The least significant byte of the option is set as followed
- * as per https://tools.ietf.org/html/rfc7252#section-5.4.6
+ * as per https://rfc-editor.org/rfc/rfc7252#section-5.4.6
  *
  *   0   1   2   3   4   5   6   7
  * --+---+---+---+---+---+---+---+
  *           | NoCacheKey| U | C |
  * --+---+---+---+---+---+---+---+
  *
- * https://tools.ietf.org/html/rfc8613#section-4 goes on to define E, I and U
+ * https://rfc-editor.org/rfc/rfc8613#section-4 goes on to define E, I and U
  * properties Encrypted and Integrity Protected, Integrity Protected Only, and
  * Unprotected respectively.  Integrity Protected Only is not currently used.
  *
