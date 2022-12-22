@@ -50,6 +50,7 @@ strndup(const char* s1, size_t n) {
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <dirent.h>
+#include <syslog.h>
 #endif
 
 /*

@@ -65,7 +65,7 @@ PROCESS_THREAD(libcoap_io_process, ev, data) {
     if (ev == tcpip_event) {
       coap_socket = (struct coap_socket_t *)data;
       if (!coap_socket) {
-        coap_log(LOG_CRIT, "libcoap_io_process: data should never be NULL\n");
+        coap_log_crit("libcoap_io_process: data should never be NULL\n");
         continue;
       }
       if (uip_newdata()) {
@@ -87,14 +87,14 @@ coap_socket_bind_udp(coap_socket_t *sock,
 
   addr = uip_ds6_get_global(ADDR_PREFERRED);
   if (!addr) {
-    coap_log(LOG_ERR, "coap_socket_bind_udp: called before getting an IPv6 address\n");
+    coap_log_err("coap_socket_bind_udp: called before getting an IPv6 address\n");
     return 0;
   }
   PROCESS_CONTEXT_BEGIN(&libcoap_io_process);
   sock->udp_conn = udp_new(NULL, 0, sock);
   PROCESS_CONTEXT_END();
   if (!sock->udp_conn) {
-    coap_log(LOG_ERR, "coap_socket_bind_udp: udp_new returned NULL\n");
+    coap_log_err("coap_socket_bind_udp: udp_new returned NULL\n");
     return 0;
   }
   udp_bind(sock->udp_conn, listen_addr->port);
@@ -113,18 +113,18 @@ coap_socket_connect_udp(coap_socket_t *sock,
   uip_ds6_addr_t *addr;
 
   if (local_if) {
-    coap_log(LOG_WARNING, "coap_socket_connect_udp: ignoring local_if parameter\n");
+    coap_log_warn("coap_socket_connect_udp: ignoring local_if parameter\n");
   }
   addr = uip_ds6_get_global(ADDR_PREFERRED);
   if (!addr) {
-    coap_log(LOG_ERR, "coap_socket_connect_udp: called before getting an IPv6 address\n");
+    coap_log_err("coap_socket_connect_udp: called before getting an IPv6 address\n");
     return 0;
   }
   PROCESS_CONTEXT_BEGIN(&libcoap_io_process);
   sock->udp_conn = udp_new(&server->addr, server->port ? server->port : default_port, sock);
   PROCESS_CONTEXT_END();
   if (!sock->udp_conn) {
-    coap_log(LOG_ERR, "coap_socket_connect_udp: udp_new returned NULL\n");
+    coap_log_err("coap_socket_connect_udp: udp_new returned NULL\n");
     return 0;
   }
   uip_ipaddr_copy(&local_addr->addr, &addr->ipaddr);
@@ -169,7 +169,7 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session, const uint8
   }
 
   if (bytes_written < 0) {
-    coap_log(LOG_CRIT, "coap_socket_send: %s\n", coap_socket_strerror());
+    coap_log_crit("coap_socket_send: %s\n", coap_socket_strerror());
   }
 
   return bytes_written;
@@ -202,7 +202,7 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
   len = uip_datalen();
 
   if (len > COAP_RXBUFFER_SIZE) {
-    coap_log(LOG_WARNING, "Received message does not fit within buffer\n");
+    coap_log_warn("Received message does not fit within buffer\n");
     return -1;
   }
   packet->length = len;

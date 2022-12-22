@@ -43,6 +43,7 @@ strndup(const char* s1, size_t n) {
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <syslog.h>
 #endif
 
 #include <coap3/coap.h>
