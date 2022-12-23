@@ -103,6 +103,25 @@ option(
   WARNING_TO_ERROR
   "force all compiler warnings to be errors"
   OFF)
+set(MAX_LOGGING_LEVEL
+    "8"
+    CACHE
+      STRING
+      "\
+Only build logging code up to and including the specified logging level (0 - 8)[default=8]]
+    ")
+set_property(
+  CACHE DTLS_BACKEND
+  PROPERTY STRINGS
+           "0"
+           "1"
+           "2"
+           "3"
+           "4"
+           "5"
+           "6"
+           "7"
+           "8")
 
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 11)
@@ -227,6 +246,13 @@ endif()
 if(ENABLE_SMALL_STACK)
   set(ENABLE_SMALL_STACK "${ENABLE_SMALL_STACK}")
   message(STATUS "compiling with small stack support")
+endif()
+
+if(${MAX_LOGGING_LEVEL} MATCHES "[0-7]")
+  set(COAP_AX_LOGGING_LEVEL ${MAX_LOGGING_LEVEL})
+  message(STATUS "compiling with max logging level set to ${MAX_LOGGING_LEVEL}")
+else()
+  message(STATUS "compiling with max logging level set to none")
 endif()
 
 set(WITH_GNUTLS OFF)
@@ -455,6 +481,7 @@ message(STATUS "CMAKE_C_COMPILER:................${CMAKE_C_COMPILER}")
 message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
 message(STATUS "CMAKE_BUILD_TYPE:................${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR:..........${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "MAX_LOGGING_LEVEL:...............${MAX_LOGGING_LEVEL}")
 message(STATUS "WARNING_TO_ERROR:................${WARNING_TO_ERROR}")
 
 set(top_srcdir "${CMAKE_CURRENT_LIST_DIR}")

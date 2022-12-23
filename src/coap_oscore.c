@@ -241,6 +241,10 @@ error:
 
 static void
 dump_cose(cose_encrypt0_t *cose, const char *message) {
+#if COAP_MAX_LOGGING_LEVEL < _COAP_LOG_OSCORE
+  (void)cose;
+  (void)message;
+#else /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_OSCORE */
   if (coap_get_log_level() >= COAP_LOG_OSCORE) {
     char buffer[30];
 
@@ -258,6 +262,7 @@ dump_cose(cose_encrypt0_t *cose, const char *message) {
     oscore_log_hex_value(COAP_LOG_OSCORE, "external_aad", &cose->external_aad);
     oscore_log_hex_value(COAP_LOG_OSCORE, "aad", &cose->aad);
   }
+#endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_OSCORE */
 }
 
 /*

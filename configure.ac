@@ -897,6 +897,29 @@ if test "x$enable_server_mode" != "xyes" -a "x$enable_client_mode" != "xyes" ; t
     AC_MSG_ERROR([==> One or both of '--enable-server-mode' and '--enable-client-mode' need to be set!])
 fi
 
+AC_ARG_ENABLE([max-logging-level],
+        [AS_HELP_STRING([--enable-max-logging-level],
+                        [Only build logging code up to and including the specified logging level [default=8]])],
+        [enable_max_logging_level="$enableval"],
+        [enable_max_logging_level="8"])
+
+if test "x$enable_max_logging_level" != "x8"; then
+    case x$enable_max_logging_level in
+        x0) ;;
+        x1) ;;
+        x2) ;;
+        x3) ;;
+        x4) ;;
+        x5) ;;
+        x6) ;;
+        x7) ;;
+        *)
+        AC_MSG_ERROR([--emable-max-logging-level must have a value of 0 through 8 inclusive])
+        ;;
+    esac
+    AC_DEFINE_UNQUOTED([COAP_MAX_LOGGING_LEVEL], [$enable_max_logging_level], [Define if max logging level is not 8])
+fi
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
@@ -1104,6 +1127,11 @@ if test "x$build_oscore" != "xno"; then
     AC_MSG_RESULT([      enable OSCORE support    : "yes"])
 else
     AC_MSG_RESULT([      enable OSCORE support    : "no"])
+fi
+if test "x$enable_max_logging_level" != "x8"; then
+    AC_MSG_RESULT([      enable max logging level : "$enable_max_logging_level"])
+else
+    AC_MSG_RESULT([      enable max logging level : "none"])
 fi
 if test "x$build_doxygen" = "xyes"; then
     AC_MSG_RESULT([      build doxygen pages      : "yes"])

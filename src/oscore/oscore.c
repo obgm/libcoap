@@ -399,8 +399,7 @@ oscore_validate_sender_seq(oscore_recipient_ctx_t *ctx, cose_encrypt0_t *cose) {
     uint64_t pattern;
 
     if (shift > ctx->osc_ctx->replay_window_size || shift > 63) {
-      coap_log(
-          COAP_LOG_WARN,
+      coap_log_warn(
           "OSCORE: Replay protection, SEQ outside of replay window (%"
             PRIu64 " %" PRIu64 ")\n",
           ctx->last_seq,

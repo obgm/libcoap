@@ -472,6 +472,10 @@ coap_epoll_ctl_add(coap_socket_t *sock,
   struct epoll_event event;
   coap_context_t *context;
 
+#if COAP_MAX_LOGGING_LEVEL < _COAP_LOG_ERR
+  (void)func;
+#endif
+
   if (sock == NULL)
     return;
 
@@ -506,6 +510,10 @@ coap_epoll_ctl_mod(coap_socket_t *sock,
   struct epoll_event event;
   coap_context_t *context;
 
+#if COAP_MAX_LOGGING_LEVEL < _COAP_LOG_ERR
+  (void)func;
+#endif
+
   if (sock == NULL)
     return;
 
@@ -523,6 +531,9 @@ coap_epoll_ctl_mod(coap_socket_t *sock,
 
   ret = epoll_ctl(context->epfd, EPOLL_CTL_MOD, sock->fd, &event);
   if (ret == -1) {
+#if (COAP_MAX_LOGGING_LEVEL < COAP_LOG_ERR)
+    (void)func;
+#endif
      coap_log_err(
               "%s: epoll_ctl MOD failed: %s (%d)\n",
               func,

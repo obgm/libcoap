@@ -3020,7 +3020,9 @@ skip_handler:
   }
   respond = no_response(pdu, response, session, resource);
   if (respond != RESPONSE_DROP) {
+#if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG)
     coap_mid_t mid = pdu->mid;
+#endif
     if (COAP_RESPONSE_CLASS(response->code) != 2) {
       if (observe) {
         coap_remove_option(response, COAP_OPTION_OBSERVE);
@@ -3587,6 +3589,7 @@ cleanup:
 #endif /* HAVE_OSCORE */
 }
 
+#if COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG
 static const char*
 coap_event_name(coap_event_t event) {
   switch (event) {
@@ -3644,6 +3647,7 @@ coap_event_name(coap_event_t event) {
     return "???";
   }
 }
+#endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG */
 
 int
 coap_handle_event(coap_context_t *context, coap_event_t event, coap_session_t *session) {

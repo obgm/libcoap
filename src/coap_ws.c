@@ -155,6 +155,10 @@ coap_base64_decode_buffer(const char *bufcoded, size_t *len, uint8_t *bufplain,
 
 static void
 coap_ws_log_header(const coap_session_t *session, const uint8_t *header) {
+#if COAP_MAX_LOGGING_LEVEL < _COAP_LOG_DEBUG
+  (void)session;
+  (void)header;
+#else /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG */
   char buf[3*COAP_MAX_FS + 1];
   int i;
   ssize_t bytes_size;
@@ -173,6 +177,7 @@ coap_ws_log_header(const coap_session_t *session, const uint8_t *header) {
     snprintf(&buf[i*3], 4, " %02x", header[i]);
   }
   coap_log_debug("*  %s: WS header:%s\n", coap_session_str(session), buf);
+#endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG */
 }
 
 static void

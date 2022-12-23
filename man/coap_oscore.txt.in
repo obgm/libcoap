@@ -269,7 +269,7 @@ setup_client_session (struct in_addr ip_address) {
         /* Try creating it */
         oscore_seq_num_fp = fopen(oscore_seq_save_file, "w+");
         if (oscore_seq_num_fp == NULL) {
-          coap_log(COAP_LOG_ERR, "OSCORE save restart info file error: %s\n",
+          coap_log_err("OSCORE save restart info file error: %s\n",
                    oscore_seq_save_file);
           return NULL;
         }
@@ -349,7 +349,7 @@ setup_context (void) {
         /* Try creating it */
         oscore_seq_num_fp = fopen(oscore_seq_save_file, "w+");
         if (oscore_seq_num_fp == NULL) {
-          coap_log(COAP_LOG_ERR, "OSCORE save restart info file error: %s\n",
+          coap_log_err("OSCORE save restart info file error: %s\n",
                    oscore_seq_save_file);
           return 0;
         }
