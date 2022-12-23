@@ -763,6 +763,15 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG };
     return s;
   }
 
+  /* Check if there is already maximum number of subscribers present */
+#if (COAP_RESOURCE_MAX_SUBSCRIBER > 0)
+  uint32_t subscriber_count = 0;
+  LL_COUNT(resource->subscribers, s, subscriber_count);
+  if (subscriber_count >= COAP_RESOURCE_MAX_SUBSCRIBER) {
+    return NULL; /* Signal error */
+  }
+#endif /* COAP_RESOURCE_MAX_SUBSCRIBER */
+
   /* Create a new subscription */
   s = coap_malloc_type(COAP_SUBSCRIPTION, sizeof(coap_subscription_t));
 

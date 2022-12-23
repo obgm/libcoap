@@ -29,6 +29,14 @@
  */
 
 /**
+ * Limits the number of subscribers for each resource that this server support.
+ * Zero means there is no maximum.
+ */
+#ifndef COAP_RESOURCE_MAX_SUBSCRIBER
+#define COAP_RESOURCE_MAX_SUBSCRIBER 0
+#endif /* COAP_RESOURCE_MAX_SUBSCRIBER */
+
+/**
 * Abstraction of attribute associated with a resource.
 */
 struct coap_attr_t {
