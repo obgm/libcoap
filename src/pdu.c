@@ -1218,7 +1218,9 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
     size_t length = pdu->used_size - pdu->e_token_length;
 
     while (length > 0 && *opt != COAP_PAYLOAD_START) {
+#if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_WARN)
       coap_opt_t *opt_last = opt;
+#endif
       size_t optsize = next_option_safe(&opt, &length, &pdu->max_opt);
       const uint32_t len =
         optsize ? coap_opt_length((const uint8_t *)opt - optsize) : 0;

@@ -3649,6 +3649,9 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
 #if COAP_WS_SUPPORT || HAVE_OSCORE
 static void
 coap_crypto_output_errors(const char *prefix) {
+#if COAP_MAX_LOGGING_LEVEL < _COAP_LOG_WARN
+  (void)prefix;
+#else /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_WARN */
   unsigned long e;
 
   while ((e = ERR_get_error()))
@@ -3657,6 +3660,7 @@ coap_crypto_output_errors(const char *prefix) {
              prefix,
              ERR_reason_error_string(e),
              ssl_function_definition(e));
+#endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_WARN */
 }
 #endif /* COAP_WS_SUPPORT || HAVE_OSCORE */
 

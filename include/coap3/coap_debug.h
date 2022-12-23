@@ -38,15 +38,9 @@
 #define COAP_ERR_FD stderr
 #endif
 
-#define coap_log_emerg(...) coap_log(COAP_LOG_EMERG, __VA_ARGS__)
-#define coap_log_alert(...) coap_log(COAP_LOG_ALERT, __VA_ARGS__)
-#define coap_log_crit(...) coap_log(COAP_LOG_CRIT, __VA_ARGS__)
-#define coap_log_err(...) coap_log(COAP_LOG_ERR, __VA_ARGS__)
-#define coap_log_warn(...) coap_log(COAP_LOG_WARN, __VA_ARGS__)
-#define coap_log_info(...) coap_log(COAP_LOG_INFO, __VA_ARGS__)
-#define coap_log_notice(...) coap_log(COAP_LOG_NOTICE, __VA_ARGS__)
-#define coap_log_debug(...) coap_log(COAP_LOG_DEBUG, __VA_ARGS__)
-#define coap_log_oscore(...) coap_log(COAP_LOG_OSCORE, __VA_ARGS__)
+#ifndef COAP_MAX_LOGGING_LEVEL
+#define COAP_MAX_LOGGING_LEVEL 8
+#endif /* ! COAP_MAX_LOGGING_LEVEL */
 
 /**
  * Logging type.  These should be used where possible in the code instead
@@ -54,18 +48,84 @@
  * to reduce line length.
  */
 typedef enum {
-  COAP_LOG_EMERG = 0,
-  COAP_LOG_ALERT,
-  COAP_LOG_CRIT,
-  COAP_LOG_ERR,
-  COAP_LOG_WARN,
-  COAP_LOG_NOTICE,
-  COAP_LOG_INFO,
-  COAP_LOG_DEBUG,
-  COAP_LOG_OSCORE,
+  COAP_LOG_EMERG = 0,  /* 0 */
+  COAP_LOG_ALERT,      /* 1 */
+  COAP_LOG_CRIT,       /* 2 */
+  COAP_LOG_ERR,        /* 3 */
+  COAP_LOG_WARN,       /* 4 */
+  COAP_LOG_NOTICE,     /* 5 */
+  COAP_LOG_INFO,       /* 6 */
+  COAP_LOG_DEBUG,      /* 7 */
+  COAP_LOG_OSCORE,     /* 8 */
   COAP_LOG_DTLS_BASE,
 #define COAP_LOG_CIPHERS COAP_LOG_DTLS_BASE /* For backward compatability */
 } coap_log_t;
+
+/*
+ * These have the same values, but can be used in #if tests for better
+ * readability
+ */
+#define _COAP_LOG_EMERG  0
+#define _COAP_LOG_ALERT  1
+#define _COAP_LOG_CRIT   2
+#define _COAP_LOG_ERR    3
+#define _COAP_LOG_WARN   4
+#define _COAP_LOG_NOTICE 5
+#define _COAP_LOG_INFO   6
+#define _COAP_LOG_DEBUG  7
+#define _COAP_LOG_OSCORE 8
+
+COAP_STATIC_INLINE void coap_no_log(void) { }
+
+#define coap_log_emerg(...) coap_log(COAP_LOG_EMERG, __VA_ARGS__)
+
+#if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_ALERT)
+#define coap_log_alert(...) coap_log(COAP_LOG_ALERT, __VA_ARGS__)
+#else
+#define coap_log_alert(...) coap_no_log()
+#endif
+
+#if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_CRIT)
+#define coap_log_crit(...) coap_log(COAP_LOG_CRIT, __VA_ARGS__)
+#else
+#define coap_log_crit(...) coap_no_log()
+#endif
+
+#if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_ERR)
+#define coap_log_err(...) coap_log(COAP_LOG_ERR, __VA_ARGS__)
+#else
+#define coap_log_err(...) coap_no_log()
+#endif
+
+#if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_WARN)
+#define coap_log_warn(...) coap_log(COAP_LOG_WARN, __VA_ARGS__)
+#else
+#define coap_log_warn(...) coap_no_log()
+#endif
+
+#if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_INFO)
+#define coap_log_info(...) coap_log(COAP_LOG_INFO, __VA_ARGS__)
+#else
+#define coap_log_info(...) coap_no_log()
+#endif
+
+#if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_NOTICE)
+#define coap_log_notice(...) coap_log(COAP_LOG_NOTICE, __VA_ARGS__)
+#else
+#define coap_log_notice(...) coap_no_log()
+#endif
+
+#if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG)
+#define coap_log_debug(...) coap_log(COAP_LOG_DEBUG, __VA_ARGS__)
+#else
+#define coap_log_debug(...) coap_no_log()
+#endif
+
+#if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_OSCORE)
+#define coap_log_oscore(...) coap_log(COAP_LOG_OSCORE, __VA_ARGS__)
+#else
+#define coap_log_oscore(...) coap_no_log()
+#endif
 
 /*
  * These entries are left here for backward compatability in applications

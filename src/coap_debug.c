@@ -91,6 +91,8 @@ coap_get_log_level(void) {
 
 void
 coap_set_log_level(coap_log_t level) {
+  if (level > COAP_MAX_LOGGING_LEVEL)
+    level = COAP_MAX_LOGGING_LEVEL;
   maxlog = level;
 }
 

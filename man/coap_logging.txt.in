@@ -133,6 +133,10 @@ With additional level:
 *COAP_LOG_OSCORE*::
 Debug OSCORE information (8).
 
+*NOTE:* The maximum logging level in the libcoap library may have been updated
+by the use of './configure --enable-max-logging-level=X' (where X is 0 to 8 inclusive)
+which may disable some of the higher logging levels to save code space.
+
 FUNCTIONS
 ---------
 
@@ -140,6 +144,7 @@ FUNCTIONS
 
 The *coap_log*() function is used to log information at the appropriate _level_.
 The rest of the parameters follow the standard *printf*() function format.
+Where possible, the coap_log_*() functions should be used instead.
 
 *Function: coap_log_emerg()*
 

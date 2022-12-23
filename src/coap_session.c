@@ -574,6 +574,7 @@ coap_session_connected(coap_session_t *session) {
   }
 }
 
+#if COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG
 static const char*
 coap_nack_name(coap_nack_reason_t reason) {
   switch (reason) {
@@ -599,6 +600,7 @@ coap_nack_name(coap_nack_reason_t reason) {
     return "???";
   }
 }
+#endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG */
 
 void
 coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {

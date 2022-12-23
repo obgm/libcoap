@@ -1283,6 +1283,9 @@ coap_block_delete_lg_crcv(coap_session_t *session,
                                coap_lg_crcv_t *lg_crcv) {
   size_t i;
 
+#if (COAP_MAX_LOGGING_LEVEL < _COAP_LOG_DEBUG)
+  (void)session;
+#endif
   if (lg_crcv == NULL)
     return;
 
@@ -1304,6 +1307,9 @@ coap_block_delete_lg_crcv(coap_session_t *session,
 void
 coap_block_delete_lg_srcv(coap_session_t *session,
                                coap_lg_srcv_t *lg_srcv) {
+#if (COAP_MAX_LOGGING_LEVEL < _COAP_LOG_DEBUG)
+  (void)session;
+#endif
   if (lg_srcv == NULL)
     return;
 
