@@ -1746,7 +1746,7 @@ main(int argc, char **argv) {
 
   /* construct CoAP message */
 
-  if (!uri_host_option && (!proxy.host.length && addrptr
+  if (!uri_host_option && (!proxy.host.length && uri.host.length && addrptr
       && (inet_ntop(dst.addr.sa.sa_family, addrptr, addr, sizeof(addr)) != 0)
       && (strlen(addr) != uri.host.length
       || memcmp(addr, uri.host.s, uri.host.length) != 0)
