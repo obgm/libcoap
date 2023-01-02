@@ -2,7 +2,7 @@
  * block.h -- block transfer
  *
  * Copyright (C) 2010-2012,2014-2015 Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2022                Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2022-2023           Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

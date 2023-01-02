@@ -1,6 +1,6 @@
 /* coap_io.c -- Default network I/O functions for libcoap
  *
- * Copyright (C) 2012,2014,2016-2022 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2012,2014,2016-2023 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

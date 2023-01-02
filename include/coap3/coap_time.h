@@ -1,7 +1,7 @@
 /*
  * coap_time.h -- Clock Handling
  *
- * Copyright (C) 2010-2019 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2023 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

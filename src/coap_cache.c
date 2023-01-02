@@ -1,6 +1,6 @@
 /* coap_cache.c -- Caching of CoAP requests
 *
-* Copyright (C) 2020 Olaf Bergmann <bergmann@tzi.org>
+* Copyright (C) 2020-2023 Olaf Bergmann <bergmann@tzi.org>
 *
  * SPDX-License-Identifier: BSD-2-Clause
  *

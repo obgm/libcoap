@@ -1,7 +1,7 @@
 /* coap_session.c -- Session management for libcoap
  *
  * Copyright (C) 2017 Jean-Claue Michelou <jcm@spinetix.com>
- * Copyright (C) 2022 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2022-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

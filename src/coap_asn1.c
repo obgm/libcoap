@@ -1,6 +1,6 @@
 /* coap_asn1.c -- ASN.1 handling functions
 *
-* Copyright (C) 2020 Jon Shallow <supjps-libcoap@jpshallow.com>
+* Copyright (C) 2020-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
 *
  * SPDX-License-Identifier: BSD-2-Clause
  *

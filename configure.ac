@@ -1,8 +1,8 @@
 # configure.ac for the libcoap package
 #
-# Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2010-2023 Olaf Bergmann <bergmann@tzi.org>
 # Copyright (C) 2015-2018 Carsten Schoenert <c.schoenert@t-online.de>
-# Copyright (C) 2018-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2018-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #

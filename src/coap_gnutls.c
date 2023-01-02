@@ -2,7 +2,7 @@
  * coap_gnutls.c -- GnuTLS Datagram Transport Layer Support for libcoap
  *
  * Copyright (C) 2017 Dag Bjorklund <dag.bjorklund@comsel.fi>
- * Copyright (C) 2018-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
