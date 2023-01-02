@@ -1,7 +1,7 @@
 /*
  * resource.h -- generic resource handling
  *
- * Copyright (C) 2010,2011,2014-2022 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011,2014-2023 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

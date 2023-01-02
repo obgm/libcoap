@@ -3,7 +3,7 @@
 /* coap -- simple implementation of the Constrained Application Protocol (CoAP)
  *         as defined in RFC 7252
  *
- * Copyright (C) 2010--2022 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2010--2023 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -231,7 +231,7 @@ reference_resource_data(transient_value_t *entry) {
 }
 
 #define INDEX "This is a test server made with libcoap (see https://libcoap.net)\n" \
-              "Copyright (C) 2010--2022 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+              "Copyright (C) 2010--2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
 
 static void
 hnd_get_index(coap_resource_t *resource,
@@ -2129,7 +2129,7 @@ usage( const char *program, const char *version) {
     program = ++p;
 
   fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-     "(c) 2010,2011,2015-2022 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+     "(c) 2010,2011,2015-2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
      "Build: %s\n"
      "%s\n"
     , program, version, lib_build,

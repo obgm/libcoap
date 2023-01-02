@@ -2,8 +2,8 @@
  * coap_block_internal.h -- Structures, Enums & Functions that are not
  * exposed to application programming
  *
- * Copyright (C) 2010-2022 Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2021-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2010-2023 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2021-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

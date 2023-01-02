@@ -1,7 +1,7 @@
 # CMakeLists.txt for libcoap
 #
 # Copyright (C) 2020 Carlos Gomes Martinho <carlos.gomes_martinho@siemens.com>
-# Copyright (C) 2020-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2020-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #

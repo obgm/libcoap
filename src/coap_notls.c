@@ -2,7 +2,7 @@
  * coap_notls.c -- Stub Datagram Transport Layer Support for libcoap
  *
  * Copyright (C) 2016      Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2021-2022 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2021-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

@@ -1,6 +1,6 @@
 /* libcoap unit tests
  *
- * Copyright (C) 2019 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2019-2023 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

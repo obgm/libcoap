@@ -3,7 +3,7 @@
 # This script creates a libcoap archive, unpacks it and does an
 # out-of-tree build and installation afterwards.
 #
-# Copyright (C) 2021-2022 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2021-2023 Olaf Bergmann <bergmann@tzi.org>
 #
 # This file is part of the CoAP C library libcoap. Please see README
 # and COPYING for terms of use.
