@@ -70,7 +70,17 @@ typedef int coap_mutex_t;
 #define coap_mutex_trylock(a) *(a) = 1
 #define coap_mutex_unlock(a) *(a) = 0
 
-#else /* !WITH_CONTIKI && !WITH_LWIP && !RIOT_VERSION && !HAVE_PTHREAD_H && !HAVE_PTHREAD_MUTEX_LOCK */
+#elif defined(__ZEPHYR__)
+#include <zephyr/sys/mutex.h>
+
+typedef struct k_mutex coap_mutex_t;
+#define COAP_MUTEX_DEFINE(_name)			\
+	static SYS_MUTEX_DEFINE(_name)
+#define coap_mutex_lock(a) sys_mutex_lock(a, K_FOREVER)
+#define coap_mutex_trylock(a) sys_mutex_lock(a, K_NO_WAIT)
+#define coap_mutex_unlock(a) sys_mutex_unlock(a)
+
+#else /* !__ZEPYR__ && !WITH_CONTIKI && !WITH_LWIP && !RIOT_VERSION && !HAVE_PTHREAD_H && !HAVE_PTHREAD_MUTEX_LOCK */
 /* define stub mutex functions */
 #warning "stub mutex functions"
 typedef int coap_mutex_t;
