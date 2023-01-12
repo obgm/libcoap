@@ -1721,7 +1721,7 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
 static void
 coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
 #if COAP_CONSTRAINED_STACK
-  static coap_mutex_t s_static_mutex = COAP_MUTEX_INITIALIZER;
+  COAP_MUTEX_DEFINE(s_static_mutex);
   static unsigned char payload[COAP_RXBUFFER_SIZE];
   static coap_packet_t s_packet;
 #else /* ! COAP_CONSTRAINED_STACK */
@@ -1886,7 +1886,7 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
   ssize_t bytes_read = -1;
   int result = -1;                /* the value to be returned */
 #if COAP_CONSTRAINED_STACK
-  static coap_mutex_t e_static_mutex = COAP_MUTEX_INITIALIZER;
+  COAP_MUTEX_DEFINE(e_static_mutex);
   static unsigned char payload[COAP_RXBUFFER_SIZE];
   static coap_packet_t e_packet;
 #else /* ! COAP_CONSTRAINED_STACK */

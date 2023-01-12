@@ -2073,7 +2073,7 @@ int coap_dtls_receive(coap_session_t *c_session,
 
   if (m_env->established) {
 #if COAP_CONSTRAINED_STACK
-    static coap_mutex_t b_static_mutex = COAP_MUTEX_INITIALIZER;
+    COAP_MUTEX_DEFINE(b_static_mutex);
     static uint8_t pdu[COAP_RXBUFFER_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
     uint8_t pdu[COAP_RXBUFFER_SIZE];
