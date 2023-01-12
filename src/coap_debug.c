@@ -602,7 +602,7 @@ is_binary(int content_format) {
 void
 coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 #if COAP_CONSTRAINED_STACK
-  static coap_mutex_t static_show_pdu_mutex = COAP_MUTEX_INITIALIZER;
+  COAP_MUTEX_DEFINE(static_show_pdu_mutex);
   /* Proxy-Uri: can be 1034 bytes long */
   static unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1035)];
   static char outbuf[COAP_DEBUG_BUF_SIZE];
@@ -1062,7 +1062,7 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
 
   if (log_handler) {
 #if COAP_CONSTRAINED_STACK
-    static coap_mutex_t static_log_mutex = COAP_MUTEX_INITIALIZER;
+    COAP_MUTEX_DEFINE(static_log_mutex);
     static char message[COAP_DEBUG_BUF_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
     char message[COAP_DEBUG_BUF_SIZE];

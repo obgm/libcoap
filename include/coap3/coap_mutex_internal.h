@@ -29,7 +29,8 @@
 #include <pthread.h>
 
 typedef pthread_mutex_t coap_mutex_t;
-#define COAP_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
+#define COAP_MUTEX_DEFINE(_name)			\
+	static coap_mutex_t _name = PTHREAD_MUTEX_INITIALIZER
 #define coap_mutex_lock(a) pthread_mutex_lock(a)
 #define coap_mutex_trylock(a) pthread_mutex_trylock(a)
 #define coap_mutex_unlock(a) pthread_mutex_unlock(a)
@@ -39,7 +40,8 @@ typedef pthread_mutex_t coap_mutex_t;
 #include <mutex.h>
 
 typedef mutex_t coap_mutex_t;
-#define COAP_MUTEX_INITIALIZER MUTEX_INIT
+#define COAP_MUTEX_DEFINE(_name)			\
+	static coap_mutex_t _name = MUTEX_INIT
 #define coap_mutex_lock(a) mutex_lock(a)
 #define coap_mutex_trylock(a) mutex_trylock(a)
 #define coap_mutex_unlock(a) mutex_unlock(a)
@@ -50,7 +52,8 @@ typedef mutex_t coap_mutex_t;
 #if NO_SYS
 /* Single threaded, no-op'd in lwip/sys.h */
 typedef int coap_mutex_t;
-#define COAP_MUTEX_INITIALIZER 0
+#define COAP_MUTEX_DEFINE(_name)			\
+	static coap_mutex_t _name
 #define coap_mutex_lock(a) *(a) = 1
 #define coap_mutex_trylock(a) *(a) = 1
 #define coap_mutex_unlock(a) *(a) = 0
@@ -61,7 +64,8 @@ typedef int coap_mutex_t;
 #elif defined(WITH_CONTIKI)
 /* Contiki does not have a mutex API, used as single thread */
 typedef int coap_mutex_t;
-#define COAP_MUTEX_INITIALIZER 0
+#define COAP_MUTEX_DEFINE(_name)			\
+	static coap_mutex_t _name
 #define coap_mutex_lock(a) *(a) = 1
 #define coap_mutex_trylock(a) *(a) = 1
 #define coap_mutex_unlock(a) *(a) = 0
@@ -70,7 +74,8 @@ typedef int coap_mutex_t;
 /* define stub mutex functions */
 #warning "stub mutex functions"
 typedef int coap_mutex_t;
-#define COAP_MUTEX_INITIALIZER 0
+#define COAP_MUTEX_DEFINE(_name)			\
+	static coap_mutex_t _name
 #define coap_mutex_lock(a) *(a) = 1
 #define coap_mutex_trylock(a) *(a) = 1
 #define coap_mutex_unlock(a) *(a) = 0
