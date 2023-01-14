@@ -740,6 +740,8 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
         }
         if (opt_val[0] & 0x10) {
           /* kid context */
+          if (ofs >= opt_len)
+            goto no_more;
           cnt = opt_val[ofs];
           if (cnt > opt_len - ofs - 1)
             goto no_more;
@@ -756,9 +758,9 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
         }
         if (opt_val[0] & 0x08) {
           /* kid */
-          cnt = opt_len - ofs;
-          if (cnt > opt_len - ofs)
+          if (ofs >= opt_len)
             goto no_more;
+          cnt = opt_len - ofs;
           buf_len = strlen((char *)buf);
           snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len, "%skid=0x",
                    buf_len ? "," : "");

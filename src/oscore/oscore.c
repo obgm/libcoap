@@ -278,6 +278,8 @@ oscore_decode_option_value(const uint8_t *opt_value,
   if ((opt_value[0] & 0x10) != 0) {
     coap_bin_const_t kid_context;
 
+    if (offset >= option_len)
+      return 0;
     kid_context.length = opt_value[offset];
     offset++;
     if (offset + kid_context.length > option_len) {
