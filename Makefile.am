@@ -82,6 +82,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_uri_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_uthash_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_utlist_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.in \

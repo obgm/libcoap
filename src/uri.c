@@ -43,21 +43,18 @@ strnchr(const uint8_t *s, size_t len, unsigned char c) {
   return len ? s : NULL;
 }
 
-#define ISEQUAL_CI(a,b) \
-  ((a) == (b) || (islower(b) && ((a) == ((b) - 0x20))))
-
 typedef enum coap_uri_check_t {
   COAP_URI_CHECK_URI,
   COAP_URI_CHECK_PROXY
 } coap_uri_check_t;
 
-const char *coap_uri_scheme[] = {
-  "coap",      /* COAP_URI_SCHEME_COAP */
-  "coaps",     /* COAP_URI_SCHEME_COAPS */
-  "coap+tcp",  /* COAP_URI_SCHEME_COAP_TCP */
-  "coaps+tcp", /* COAP_URI_SCHEME_COAPS_TCP */
-  "http",      /* COAP_URI_SCHEME_HTTP */
-  "https"      /* COAP_URI_SCHEME_HTTPS */
+coap_uri_info_t coap_uri_scheme[COAP_URI_SCHEME_LAST] = {
+  { "coap",       5683, 0, COAP_URI_SCHEME_COAP },
+  { "coaps",      5684, 0, COAP_URI_SCHEME_COAPS },
+  { "coap+tcp",   5683, 0, COAP_URI_SCHEME_COAP_TCP },
+  { "coaps+tcp",  5684, 0, COAP_URI_SCHEME_COAPS_TCP },
+  { "http",         80, 1, COAP_URI_SCHEME_HTTP },
+  { "https",       443, 1, COAP_URI_SCHEME_HTTPS }
 };
 
 static int
@@ -67,8 +64,7 @@ coap_split_uri_sub(const uint8_t *str_var,
                    coap_uri_check_t check_proxy) {
   const uint8_t *p, *q;
   int res = 0;
-  int is_http_proxy_scheme = 0;
-  size_t keep_len = len;
+  size_t i;
 
   if (!str_var || !uri || len == 0)
     return -1;
@@ -79,85 +75,48 @@ coap_split_uri_sub(const uint8_t *str_var,
   /* search for scheme */
   p = str_var;
   if (*p == '/') {
-    if (check_proxy == COAP_URI_CHECK_PROXY)
+    /* no scheme, host or port */
+    if (check_proxy == COAP_URI_CHECK_PROXY) {
+      /* Must have ongoing host if proxy definition */
       return -1;
+    }
     q = p;
     goto path;
   }
 
-  q = (const uint8_t *)COAP_DEFAULT_SCHEME;
-  while (len && *q && ISEQUAL_CI(*p, *q)) {
-    ++p; ++q; --len;
+  /* find scheme terminating :// */
+  while (len >= 3 && !(p[0] == ':' && p[1] == '/' && p[2] == '/')) {
+    ++p;
+    --len;
   }
-  if (*q && check_proxy == COAP_URI_CHECK_PROXY) {
-    /* Scheme could be something other than coap */
-    len = keep_len;
-    p = str_var;
-    q = (const uint8_t *)"http";
-    while (len && *q && ISEQUAL_CI(*p, *q)) {
-      ++p; ++q; --len;
-    }
-    if (*q == 0) {
-      if (len && ISEQUAL_CI(*p, 's')) {
-        /* https:// */
-        ++p; --len;
-        uri->scheme = COAP_URI_SCHEME_HTTPS;
-        uri->port = 443;
-      }
-      else {
-        /* http:// */
-        uri->scheme = COAP_URI_SCHEME_HTTP;
-        uri->port = 80;
-      }
-    }
-    else {
-      /* Unknown scheme */
-      res = -1;
-      goto error;
-    }
-    is_http_proxy_scheme = 1;
-  }
-
-  /* If q does not point to the string end marker '\0', the schema
-   * identifier is wrong. */
-  if (*q) {
-    res = -1;
-    goto error;
-  }
-
-  if (is_http_proxy_scheme == 0) {
-    /* There might be an additional 's', indicating the secure version: */
-    if (len && (*p == 's')) {
-      ++p; --len;
-      uri->scheme = COAP_URI_SCHEME_COAPS;
-      uri->port = COAPS_DEFAULT_PORT;
-    } else {
-      uri->scheme = COAP_URI_SCHEME_COAP;
-    }
-
-    /* There might be an addition "+tcp", indicating reliable transport: */
-    if (len>=4 && p[0] == '+' && p[1] == 't' && p[2] == 'c' && p[3] == 'p' ) {
-      p += 4;
-      len -= 4;
-      if (uri->scheme == COAP_URI_SCHEME_COAPS)
-        uri->scheme = COAP_URI_SCHEME_COAPS_TCP;
-      else
-        uri->scheme = COAP_URI_SCHEME_COAP_TCP;
-    }
-  }
-  q = (const uint8_t *)"://";
-  while (len && *q && *p == *q) {
-    ++p; ++q; --len;
-  }
-
-  if (*q) {
+  if (len < 3) {
+    /* scheme not defined with a :// terminator */
     res = -2;
     goto error;
   }
+  for (i = 0; i < COAP_URI_SCHEME_LAST; i++) {
+    if ((p - str_var) == (int)strlen(coap_uri_scheme[i].name) &&
+        memcmp(str_var, coap_uri_scheme[i].name, p - str_var) == 0) {
+      if (check_proxy != COAP_URI_CHECK_PROXY && coap_uri_scheme[i].proxy_only)
+        return -1;
+      uri->scheme = coap_uri_scheme[i].scheme;
+      uri->port = coap_uri_scheme[i].port;
+      break;
+    }
+  }
+  if (i == COAP_URI_SCHEME_LAST) {
+    /* scheme unknown */
+    res = -1;
+    goto error;
+  }
+  /* skip :// */
+  p += 3;
+  len -= 3;
 
   /* p points to beginning of Uri-Host */
   q = p;
-  if (len && *p == '[') {        /* IPv6 address reference */
+  if (len && *p == '[') {
+    /* IPv6 address reference */
     ++p;
 
     while (len && *q != ']') {
@@ -171,7 +130,8 @@ coap_split_uri_sub(const uint8_t *str_var,
 
     COAP_SET_STR(&uri->host, q - p, p);
     ++q; --len;
-  } else {                        /* IPv4 address or FQDN */
+  } else {
+    /* IPv4 address or FQDN */
     while (len && *q != ':' && *q != '/' && *q != '?') {
       ++q;
       --len;
@@ -199,19 +159,19 @@ coap_split_uri_sub(const uint8_t *str_var,
       int uri_port = 0;
 
       while ((p < q) && (uri_port <= UINT16_MAX))
-              uri_port = uri_port * 10 + (*p++ - '0');
+        uri_port = uri_port * 10 + (*p++ - '0');
 
       /* check if port number is in allowed range */
       if (uri_port > UINT16_MAX) {
-              res = -4;
-              goto error;
+        res = -4;
+        goto error;
       }
 
       uri->port = (uint16_t)uri_port;
     }
   }
 
- path:                 /* at this point, p must point to an absolute path */
+path:                 /* at this point, p must point to an absolute path */
 
   if (!len)
     goto end;
@@ -239,10 +199,10 @@ coap_split_uri_sub(const uint8_t *str_var,
     len = 0;
   }
 
-  end:
+end:
   return len ? -1 : 0;
 
-  error:
+error:
   return res;
 }
 
