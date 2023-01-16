@@ -35,8 +35,6 @@ typedef enum coap_uri_scheme_t {
   COAP_URI_SCHEME_LAST       /* 6 Size of scheme */
 } coap_uri_scheme_t;
 
-extern const char *coap_uri_scheme[COAP_URI_SCHEME_LAST];
-
 /** This mask can be used to check if a parsed URI scheme is secure. */
 #define COAP_URI_SCHEME_SECURE_MASK 0x01
 

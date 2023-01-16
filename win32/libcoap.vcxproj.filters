@@ -218,6 +218,9 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\uri.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uri_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uthash_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>

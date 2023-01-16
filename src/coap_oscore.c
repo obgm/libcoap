@@ -228,8 +228,8 @@ coap_rebuild_pdu_for_proxy(coap_pdu_t *pdu) {
   }
   if (!coap_insert_option(pdu,
                           COAP_OPTION_PROXY_SCHEME,
-                          strlen(coap_uri_scheme[uri.scheme]),
-                          (const uint8_t *)coap_uri_scheme[uri.scheme]))
+                          strlen(coap_uri_scheme[uri.scheme].name),
+                          (const uint8_t *)coap_uri_scheme[uri.scheme].name))
     goto error;
   coap_free_type(COAP_STRING, keep_proxy_uri);
   return 1;
