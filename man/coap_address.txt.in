@@ -1,0 +1,96 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc tw=0
+
+coap_address(3)
+===============
+:doctype: manpage
+:man source:   coap_address
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_address,
+coap_address_t,
+- Work with CoAP Socket Address Types
+
+SYNOPSIS
+--------
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*struct coap_address_t;*
+
+*struct coap_sockaddr_un;*
+
+*void coap_address_init(coap_address_t *_addr_);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
+
+DESCRIPTION
+-----------
+This man page focuses on setting up CoAP endpoint address definitions.
+
+*Supported Socket Types*
+
+Libcoap supports 2 different socket types that can be used:
+
+[source, c]
+----
+AF_INET  IPv4 IP addresses and ports
+AF_INET6 IPv6 IP addresses and ports and can be dual IPv4/IPv6 stacked
+----
+
+which are all handled by the *coap_address_t* structure.
+
+*Structure coap_address_t*
+
+[source, c]
+----
+ /** multi-purpose address abstraction */
+typedef struct coap_address_t {
+  socklen_t size;           /* size of addr */
+  union {
+    struct sockaddr         sa;
+    struct sockaddr_in      sin;
+    struct sockaddr_in6     sin6;
+  } addr;
+} coap_address_t;
+----
+
+FUNCTIONS
+---------
+
+*Function: coap_address_init()*
+
+The *coap_address_init*() function initializes _addr_ for later use.  In
+particular it sets the _size_ variable and sets all other values to be 0.
+
+It is then the responsibility of the application to set the address family
+in addr.sa.sa_family and then fill in the the appropriate union structure
+based on the address family before the coap_address_t _addr_ is used.
+
+SEE ALSO
+--------
+*coap_endpoint_client*(3) and *coap_endpoint_server*(3)
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
+
+BUGS
+----
+Please report bugs on the mailing list for libcoap:
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>

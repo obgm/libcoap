@@ -984,6 +984,7 @@ examples/lwip/config/coap_config.h
 include/coap$LIBCOAP_API_VERSION/coap.h
 include/coap$LIBCOAP_API_VERSION/coap.h.windows
 man/coap.txt
+man/coap_address.txt
 man/coap_async.txt
 man/coap_attribute.txt
 man/coap_block.txt

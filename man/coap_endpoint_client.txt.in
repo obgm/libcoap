@@ -47,44 +47,46 @@ or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
 DESCRIPTION
 -----------
 This man page focuses on the setting up of a CoAP client endpoint and hence
-creation of a CoAP Session used to connect to a server.  For a CoAP server
+creation of a CoAP _session_ used to connect to a server.  For a CoAP server
 endpoint, see *coap_endpoint_server*(3). There is no need to call
 *coap_new_endpoint*(3) for a client as well as one of the
 *coap_new_client_server**() functions.
 
-The CoAP stack's global state is stored in a coap_context_t Context object.
-Resources, Endpoints and Sessions are associated with this context object.
+The CoAP stack's global state is stored in a coap_context_t _context_ object.
+Resources, Endpoints and Sessions are associated with this _context_ object.
 There can be more than one coap_context_t object per application, it is up to
 the application to manage each one accordingly.
 
-A CoAP Ssssion maintains the state of an ongoing connection between a Client
-and Server which is stored in a coap_session_t Session object. A CoAP session
-is tracked by local port, CoAP protocol, remote IP address and remote port.
+A CoAP _session_ maintains the state of an ongoing connection between a Client
+and Server which is stored in a coap_session_t _session_ object. A CoAP
+_session_ is tracked by local port, CoAP protocol, remote IP address and
+remote port.
 
-The Session network traffic can be encrypted or un-encrypted if there is an
+The _session_ network traffic can be encrypted or un-encrypted if there is an
 underlying TLS library.
 
-If TLS is going to be used for encrypting the network traffic, then the TLS
+If (D)TLS is going to be used for encrypting the network traffic, then the
+(D)TLS
 information for Pre-Shared Keys (PSK) or Public Key Infrastructure (PKI) needs
-to be configured before any network traffic starts to flow. For Servers, this
-has to be done before the Endpoint is created, for Clients, this is done
-during the Client Endpoint/Session set up.
+to be configured before any network traffic starts to flow. For Clients, this
+is done during the Client _session_ set up.
 
-For Clients, all the encryption information can be held at the TLS Context and
-CoAP Context levels, or at the TLS Session and CoAP Session levels.  If
-defined at the Context level, then when Sessions are created, they will
-inherit the Context definitions, unless they have separately been defined for
-the Session level, in which case the Session version will get used.
-Typically the information will be configured at the Session level for Clients.
+For Clients, all the encryption information can be held at the (D)TLS
+context and CoAP _context_ levels, or at the (D)TLS session and CoAP
+_session_ levels.  If defined at the _context_ level, then when a _session_ is
+created, it will inherit the _context_ definitions, unless they have separately
+been defined for the _session_ level, in which case the _session_ version will
+get used.  Typically the information will be configured at the _session_ level
+for Clients.
 
 In principle the set-up sequence for CoAP client endpoints looks like
 ----
 coap_new_context()
-coap_context_set_pki_root_cas() if the root CAs need to be updated and PKI
+coap_context_set_pki_root_cas() - if the root CAs need to be updated and using PKI
 coap_new_client_session(), coap_new_client_session_pki() or coap_new_client_session_psk2()
 ----
 
-Multiple client endpoints and hence sessions are supported per Context.
+Multiple client endpoints and hence sessions are supported per _context_.
 
 Different CoAP protocols can be defined for _proto_ - the current supported
 list is:
@@ -97,10 +99,25 @@ COAP_PROTO_TCP
 COAP_PROTO_TLS
 ----
 
-*coap_tcp_is_supported*(), *coap_dtls_is_supported*() and
-*coap_tls_is_supported*() can be used for checking whether the underlying
+*coap_tcp_is_supported*(3), *coap_dtls_is_supported*(3) and
+*coap_tls_is_supported*(3) can be used for checking whether the underlying
 TCP or (D)TLS protocol support is available.  See *coap_tls_library(3)* for
 further information.
+
+Libcoap supports 2 different socket types:
+
+[source, c]
+----
+AF_INET  IPv4 IP addresses and ports
+AF_INET6 IPv6 IP addresses and ports and can be dual IPv4/IPv6 stacked
+----
+
+For AF_INET and AF_INET6, the client does not need to specify a local IP
+address and/or port as default values will get filled in.
+
+The client must specify IP and port when defining the *coap_address_t* (see
+*coap_address_t*(3)) for the remote end of the session for AF_INET or AF_INET6.
+If port is 0, then the default CoAP port is used instead.
 
 FUNCTIONS
 ---------
@@ -108,40 +125,57 @@ FUNCTIONS
 *Function: coap_new_client_session()*
 
 The *coap_new_client_session*() function creates a client endpoint for a
-specific _context_ and initiates a new client session to the specified _server_
-using the CoAP protocol
-_proto_.  If the port is set to 0 in _server_, then the default CoAP
-port is used.  Normally _local_if_ would be set to NULL, but by specifying
+specific _context_ and initiates a new client session to the specified
+_server_ using the CoAP protocol _proto_ as defined above. If the port is set
+to 0 in _server_ (for AF_INET or AF_INET6), then the default CoAP port is used.
+
+Normally _local_if_ would be set to NULL, but by specifying
 _local_if_ the source of the network session can be bound to a specific IP
-address or port.  The session will initially have a reference count of 1.
+address or port. If _local_if_ is defined, the address families for _local_if_
+and _server_ must be identical. The session will initially have a reference
+count of 1.
+
+To stop using a client session, the reference count must be decremented to 0
+by calling *coap_session_release*(3). See *coap_session*(3). This will remove
+the client endpoint's _session_ and all its associated information.
 
 *Function: coap_new_client_session_pki()*
 
 The *coap_new_client_session_pki*() function, for a specific _context_, is
-used to configure the TLS context using the _setup_data_ variables as defined
+used to configure the (D)TLS context using the _setup_data_ variables as defined
 in the coap_dtls_pki_t structure in the newly created endpoint session -
 see *coap_encryption*(3). The connection is to the specified _server_ using
-the CoAP protocol _proto_.  If the port is set to 0 in _server_, then the
-default CoAP port is used.  Normally _local_if_ would be set to NULL, but by
-specifying _local_if_ the source of the network session can be bound to a
-specific IP address or port. The session will initially have a reference count
-of 1.
+the CoAP protocol _proto_ as defined above.  If the port is set to 0 in
+_server_ (for AF_INET or AF_INET6), then the default CoAP port is used.
+
+Normally _local_if_ would be set to NULL, but by specifying
+_local_if_ the source of the network session can be bound to a specific IP
+address or port. If _local_if_ is defined, the address families for _local_if_
+and _server_ must be identical. The session will initially have a reference
+count of 1.
+
+To stop using a client session, the reference count must be decremented to 0
+by calling *coap_session_release*(3). See *coap_session*(3). This will remove
+the client endpoint's _session_ and all its associated information.
 
 *Function: coap_new_client_session_psk2()*
 
 The *coap_new_client_session_psk2*() function, for a specific _context_, is
-used to configure the TLS context using the _setup_data_ variables as defined
+used to configure the (D)TLS context using the _setup_data_ variables as defined
 in the coap_dtls_cpsk_t structure in the newly created endpoint session -
 see *coap_encryption*(3). The connection is to the specified _server_ using
-the CoAP protocol _proto_.  If the port is set to 0 in _server_, then the
-default CoAP port is used.  Normally _local_if_ would be set to NULL, but by
-specifying _local_if_ the source of the network session can be bound to a
-specific IP address or port. The session will initially have a reference count
-of 1.
+the CoAP protocol _proto_ as defined above.  If the port is set to 0 in
+_server_ (for AF_INET or AF_INET6), then the default CoAP port is used.
+
+Normally _local_if_ would be set to NULL, but by specifying
+_local_if_ the source of the network session can be bound to a specific IP
+address or port. If _local_if_ is defined, the address families for _local_if_
+and _server_ must be identical. The session will initially have a reference
+count of 1.
 
 To stop using a client session, the reference count must be decremented to 0
-by calling *coap_session_release*(). See *coap_session*(3). This will remove
-the client endpoint.
+by calling *coap_session_release*(3). See *coap_session*(3). This will remove
+the client endpoint's _session_ and all its associated information.
 
 *Function: coap_session_set_mtu()*
 
@@ -186,6 +220,7 @@ setup_client_session (struct in_addr ip_address) {
                               COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
 
 
+  /* See coap_address(3) */
   coap_address_init(&server);
   server.addr.sa.sa_family = AF_INET;
   server.addr.sin.sin_addr = ip_address;
@@ -252,6 +287,7 @@ setup_client_session_pki (struct in_addr ip_address,
                               COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
 
 
+  /* See coap_address(3) */
   coap_address_init(&server);
   server.addr.sa.sa_family = AF_INET;
   server.addr.sin.sin_addr = ip_address;
@@ -345,6 +381,7 @@ setup_client_session_psk (const char *uri,
                               COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
 
 
+  /* See coap_address(3) */
   coap_address_init(&server);
   server.addr.sa.sa_family = AF_INET;
   server.addr.sin.sin_addr = ip_address;
@@ -396,6 +433,7 @@ setup_client_session_dtls (struct in_addr ip_address) {
                               COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
 
 
+  /* See coap_address(3) */
   coap_address_init(&server);
   server.addr.sa.sa_family = AF_INET;
   server.addr.sin.sin_addr = ip_address;
@@ -414,7 +452,7 @@ setup_client_session_dtls (struct in_addr ip_address) {
 
 SEE ALSO
 --------
-*coap_block*(3), *coap_context*(3), *coap_encryption*(3),
+*coap_address*(3), *coap_block*(3), *coap_context*(3), *coap_encryption*(3),
 *coap_endpoint_server*(3), *coap_resource*(3), *coap_session*(3) and
 *coap_tls_library*(3)
 
@@ -423,6 +461,8 @@ FURTHER INFORMATION
 See
 
 "https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+"https://rfc-editor.org/rfc/rfc8323[RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets]"
 
 for further information.
 
