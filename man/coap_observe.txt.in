@@ -15,7 +15,7 @@ coap_resource_set_get_observable,
 coap_resource_notify_observers,
 coap_cancel_observe,
 coap_session_set_no_observe_cancel
-- work with CoAP observe
+- Work with CoAP observe
 
 SYNOPSIS
 --------

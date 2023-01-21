@@ -38,6 +38,7 @@ examples directory.
 
 SEE ALSO
 --------
+*coap_address*(3),
 *coap_async*(3), *coap_attribute*(3), *coap_block*(3), *coap_cache*(3),
 *coap_context*(3), *coap_encryption*(3), *coap_endpoint_client*(3),
 *coap_endpoint_server*(3), *coap_handler*(3), *coap_io*(3),

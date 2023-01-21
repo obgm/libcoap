@@ -54,7 +54,7 @@ A CoAP URI is of the form
 
 <scheme><host><(optional):port><(optional)path><(optional)?query>
 
-where scheme can be one of coap://, coaps://, coap+tcp:// and coaps+tcp://.
+where _scheme_ can be one of coap://, coaps://, coap+tcp:// and coaps+tcp://.
 
 The parsed uri structure is of the form
 

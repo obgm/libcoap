@@ -19,8 +19,8 @@ coap_delete_oscore_recipient,
 coap_new_client_session_oscore,
 coap_new_client_session_oscore_pki,
 coap_new_client_session_oscore_psk,
-coap_context_oscore_server,
-- Configuring and using OSCORE
+coap_context_oscore_server
+- Work with CoAP OSCORE
 
 SYNOPSIS
 --------
