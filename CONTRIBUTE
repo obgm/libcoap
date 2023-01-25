@@ -24,9 +24,9 @@ Please refer also to the libcoap website for additional information
 
   https://libcoap.net/
 
-The build environment is grounded on the classical autotools, the GNU GCC and
-the LLVM C-compiler (CLang) are supported. The Windows systems are not
-currently supported (until someone is creating support for it).
+The build environment is grounded on the classical autotools or CMake, the
+GNU GCC and the LLVM C-compiler (CLang) are supported. The Windows VS build
+systems are supported.
 
 Doxygen is used for creating a HTML based online documentation of the
 libcoap library.
@@ -35,6 +35,7 @@ libcoap library.
 ~~~~~~~~~~~~~~~~~
 The main discussion and development platform for libcoap is the mailing list
 on Sourceforge.
+
 No matter if you just have a simple question, some specific problem or
 want to discuss some patches, please write it to the mailing list. Please
 avoid personal mailings to the maintainer (or some other contributor) if
@@ -47,13 +48,17 @@ The archive of the list can be found on:
 
   https://sourceforge.net/p/libcoap/mailman/libcoap-developers
 
+Alternatively, Issues can be raised at https://github.com/obgm/libcoap/issues
+
 3. Starting contributing
 ~~~~~~~~~~~~~~~~~~~~~~~~
-As written above libcoap is maintained with the Git tools so you should be
+As written above, libcoap is maintained with the Git tools so you should be
 familiar with the various git commands.
+
 The libcoap project is using just two main branches, the 'main' branch is
 holding the point releases, all the development process is going on in the
 'develop' branch.
+
 To start any contributing you first have to clone the git tree from the main
 repository on GitHub:
 
@@ -75,17 +80,32 @@ against the the upstream development branch:
 
   git checkout -b my-develop
 
-At this point you can now work as known with git, modify the source, commit
+At this point you can now work with git, modify the source, commit
 the changes, amend if needed and test your work.
+
 At some point you will have to generate patches to post them on the mailing
-list (and/or push your changes into your public Git tree). It's a good idea to
-post your patch series on the mailing list so other contributors will see your
-work and give further suggestions or discuss your work.
+list (and/or push your changes into your public Git tree). Multiple commits
+for your branch should be squash'ed into a single commit. This can be done
+one of two ways.
+
+Way One: Push your changes to the github repository.
+
+  git push origin my-develop
+
+Then go to https://github.com/obgm/libcoap/pulls and create your pull request
+for others to review.  If changes are needed, then commit and squash changes
+and push the (forced) changes again.
+
+  git push -f origin my-develop
+
+Way Two: Post your patch series on the mailing list so other contributors
+will see your work and give further suggestions or discuss your work.
 
 To be able to send a patch series you will now create the series itself as
 single patches, this will be going easy with the 'git format-patch' command
-against the 'develop' branch, remind this is the upstream main development
-branch.
+against the 'develop' branch, remember this is the upstream primary
+development branch.
+
 To not mix up your series with probably unrelated patches let git place the
 patches within a defined directory. Also, while create the patches, tell git to
 create a cover letter patch so you can append some introducing words that will
@@ -103,7 +123,7 @@ your patches to libcoap-developers@lists.sourceforge.net
 5. Coding rules
 ~~~~~~~~~~~~~~~
 As every FOSS project the libcoap project needs also some rules for coding.
-There are loss but the main of them are important!
+There are lots but the main ones following are important!
 
 5.1 License and Copyright
 -------------------------
@@ -115,7 +135,8 @@ file(s).
 ---------------------------
 * For better reading the indentation is set to 2 characters as spaces, this
   is depended on the often used nested functions like 'if-else'. Don't use
-  TABs any there! Avoid trailing white spaces at the end of a line.
+  TABs any where (apart from Makefile's indenting where TABs are mandatory)!
+  Avoid trailing white spaces at the end of a line.
   It's appropriate to set up a modline like this one at first line within
   the source file:
 
@@ -123,12 +144,18 @@ file(s).
 /* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 --->8--
 
+* For functions defined in *.h files, the function return type should be
+  defined on the same line as the function name declaration. For functions
+  defined in *.c files, the function return type should be defined on the
+  previous line (for both declarations and implementations).
+
 * Single lines within the source code should not be longer then 78
   characters.
 
-* If there a functions with a lot of parameters that do not fit into the above
+* If there are functions with a lot of parameters that do not fit into the above
   rule split the declaration (in the *.h) and the implementation (in the *.c)
-  into single lines per parameter. For example like this (from src/block.c):
+  into single lines per parameter. Each parameter should be aligned with the
+  first defined parameter.  For example like this (from src/block.c):
 
 --8<----
 int
@@ -136,7 +163,7 @@ coap_add_block(coap_pdu_t *pdu,
                unsigned int len,
                const unsigned char *data,
                unsigned int block_num,
-               unsigned char block_szx);
+               unsigned char block_szx) {
 --->8--
 
 5.3 Source Code Documentation
@@ -162,8 +189,8 @@ coap_add_block(coap_pdu_t *pdu,
 -----------------------
 * Git commits must be atomic and contain a declarative subject line (max 50
   characters if possible) and a body for a statement if needed.
-  Use the possibility to write a good explanation why your patch/commit is
-  handle the changes in the way you have done. Remind that other user can
+  Use the opportunity to write a good explanation why your patch/commit is to
+  handle the changes in the way you have done. Remember that other users can
   read your code but not necessary understand why the code is written this
   way. Don't use something to generic like "bugfix commit".
 
@@ -176,41 +203,49 @@ coap_add_block(coap_pdu_t *pdu,
   above. If your subject line become much larger than 50 characters then
   typically your patch is to big for one single commit.
 
-* Commit message should begin with a submodule or unit the commit is for. By
-  this your commit message helps to find thematic other changes. If you have
-  to search and find something with 'git log | grep [foo]' you will see why
-  this is useful. Examples:
+* Commit message should begin with a submodule or unit the commit is for.
+  Doing this in your commit message helps to find thematic other changes. If
+  you have to search and find something with 'git log | grep [foo]' you will
+  see why this is useful. Examples:
 
     rd.c: Fixed type-specifier warning
-    Makefile.am: Added missing src/address.c
+    Makefile.am: Added missing src/coap_address.c
     address.[hc]: make coap_address_equals() not inline on POSIX
 
 6. Where to start contributing?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 There are various things you could starting on to contribute, the best
-is you simply pick up an issue you blindly see and just improve the
+is you simply pick up an issue you can easily see and just improve the
 situation. Please take also a look into the file TODO and choose a point
 from there or point the maintainer to add other things here too.
 
 * Documentation
-We are always lacking on a better documentation on the source code, so
-maybe you can improve the doxygen documentation.
-Also a good documentation on the usage of the libcoap and the example
-binaries is always improvable. So we appreciate any help on this.
+We always need better documentation on the source code, as well as improving
+the doxygen documentation in the header files.  Updating the man pages for
+missing functions helps.
+Also updated documentation on the usage of the libcoap and the example
+binaries is always useful. So we appreciate any help on this.
 
-* Manual Pages
-The source is providing some example binaries which originally just should show
-how the libcoap can be used. Right now these binaries are fully usable and
-quite more than simple examples on a system. There are man pages for these
-binaries available, if you found there is a improvement needed please do so and
-write to the mailing list explained in section 2.
-Maybe you can write up some good HowTo's on the usage for these binaries.
+* Manual Pages for example binaries
+Manual pages are provided for the example binaries which have become more
+complex over time with a variety of configuration options.  It is possible
+to work out how to use particular application functionality by reading the
+examples source code. Improving documentation for usage would be useful.
+
+* Manual Pages for public API
+As well as the doxygen documentation, manual pages are being written for the
+public licoap API where functions are defined, what the parameters mean as
+well as providing simple coding examples.  These manual pages are also
+embedded in the doxygen output, the latest copy of which can be seen at
+https://libcoap.net/doc/reference/develop/
+Updating these manual pages for the missing functions, correcting errors
+or providing simple examples of function usage would be helpful.
 
 * HowTo's
 The libcoap library has now a lot of functions you can use.
 Unfortunately there is no good user guide on how to use the libcoap in
 any external project. This means there is no HowTo or CheatSheet for a
-programming person available. You want to write up something?
+programming person available. Do you want to write up something?
 
 * Missing functionality
 There are some features that are still missing inside the libcoap. For
