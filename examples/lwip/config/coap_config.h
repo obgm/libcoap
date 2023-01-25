@@ -39,6 +39,8 @@
 
 #define HAVE_LIMITS_H
 
+#define HAVE_NETDB_H
+
 #define HAVE_SNPRINTF
 
 #endif /* COAP_CONFIG_H_ */

@@ -606,47 +606,6 @@ hnd_put_example_data(coap_resource_t *resource,
 }
 
 #if SERVER_CAN_PROXY
-static int
-resolve_address(const coap_str_const_t *server, struct sockaddr *dst) {
-
-  struct addrinfo *res, *ainfo;
-  struct addrinfo hints;
-  static char addrstr[256];
-  int error, len=-1;
-
-  memset(addrstr, 0, sizeof(addrstr));
-  if (server->length)
-    memcpy(addrstr, server->s, server->length);
-  else
-    memcpy(addrstr, "localhost", 9);
-
-  memset ((char *)&hints, 0, sizeof(hints));
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_family = AF_UNSPEC;
-
-  error = getaddrinfo(addrstr, NULL, &hints, &res);
-
-  if (error != 0) {
-    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(error));
-    return error;
-  }
-
-  for (ainfo = res; ainfo != NULL; ainfo = ainfo->ai_next) {
-    switch (ainfo->ai_family) {
-    case AF_INET6:
-    case AF_INET:
-      len = (int)ainfo->ai_addrlen;
-      memcpy(dst, ainfo->ai_addr, len);
-      goto finish;
-    default:
-      ;
-    }
-  }
-
- finish:
-  freeaddrinfo(res);
-  return len;
-}
 
 #define MAX_USER 128 /* Maximum length of a user name (i.e., PSK
                       * identity) in bytes. */
@@ -903,7 +862,8 @@ get_ongoing_proxy_session(coap_session_t *session,
   coap_uri_scheme_t scheme;
   static char client_sni[256];
   coap_str_const_t server;
-  uint16_t port = COAP_DEFAULT_PORT;
+  uint16_t port;
+  coap_addr_info_t *info_list = NULL;
   proxy_list_t *new_proxy_list;
   coap_context_t *context = coap_session_get_context(session);
 
@@ -915,8 +875,6 @@ get_ongoing_proxy_session(coap_session_t *session,
   if (new_proxy_list->ongoing)
     return new_proxy_list->ongoing;
 
-  coap_address_init(&dst);
-
   if (proxy.host.length) {
     server = proxy.host;
     port = proxy.port;
@@ -926,21 +884,20 @@ get_ongoing_proxy_session(coap_session_t *session,
     port = uri->port;
     scheme = uri->scheme;
   }
-  if (resolve_address(&server, &dst.addr.sa) < 0) {
+
+  /* resolve destination address where data should be sent */
+  info_list = coap_resolve_address_info(&server, port, port,
+                                        0,
+                                        1 << scheme);
+
+  if (info_list == NULL) {
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_GATEWAY);
     remove_proxy_association(session, 0);
     return NULL;
   }
-  switch (dst.addr.sa.sa_family) {
-  case AF_INET:
-    dst.addr.sin.sin_port = ntohs(port);
-    break;
-  case AF_INET6:
-    dst.addr.sin6.sin6_port = ntohs(port);
-    break;
-  default:
-    break;
-  }
+  memcpy(&dst, &info_list->addr, sizeof(dst));
+  coap_free_address_info(info_list);
+
   switch (scheme) {
   case COAP_URI_SCHEME_COAP:
   case COAP_URI_SCHEME_COAP_TCP:
@@ -2303,85 +2260,74 @@ usage( const char *program, const char *version) {
 static coap_context_t *
 get_context(const char *node, const char *port) {
   coap_context_t *ctx = NULL;
-  int s;
-  struct addrinfo hints;
-  struct addrinfo *result, *rp;
+  coap_addr_info_t *info = NULL;
+  coap_addr_info_t *info_list = NULL;
+  coap_str_const_t local;
+  int have_ep = 0;
+  uint16_t u_s_port = 5683;
+  uint16_t s_port = 5684;
+  int scheme_hint_bits = COAP_URI_SCHEME_ALL_COAP_BITS;
 
   ctx = coap_new_context(NULL);
   if (!ctx) {
     return NULL;
   }
+
   /* Need PKI/RPK/PSK set up before we set up (D)TLS endpoints */
   fill_keystore(ctx);
 
-  memset(&hints, 0, sizeof(struct addrinfo));
-  hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
-  hints.ai_socktype = SOCK_DGRAM; /* Coap uses UDP */
-  hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST;
+  if (node) {
+    local.s = (const uint8_t *)node;
+    local.length = strlen(node);
+  }
 
-  s = getaddrinfo(node, port, &hints, &result);
-  if ( s != 0 ) {
-    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
+  if (port) {
+    u_s_port = atoi(port);
+    s_port = u_s_port + 1;
+  }
+
+  if (cert_file == NULL && key_defined == 0)
+    scheme_hint_bits = COAP_URI_SCHEME_COAP_BIT | COAP_URI_SCHEME_COAP_TCP_BIT;
+
+  info_list = coap_resolve_address_info(node ? &local : NULL, u_s_port, s_port,
+                                        AI_PASSIVE | AI_NUMERICHOST,
+                                        scheme_hint_bits);
+  for (info = info_list; info != NULL; info = info->next) {
+    coap_endpoint_t *ep;
+    coap_proto_t proto = COAP_PROTO_UDP;
+
+    switch (info->scheme) {
+    case COAP_URI_SCHEME_COAP:
+      proto = COAP_PROTO_UDP;
+      break;
+    case COAP_URI_SCHEME_COAPS:
+      proto = COAP_PROTO_DTLS;
+      break;
+    case COAP_URI_SCHEME_COAP_TCP:
+      proto = COAP_PROTO_TCP;
+      break;
+    case COAP_URI_SCHEME_COAPS_TCP:
+      proto = COAP_PROTO_TLS;
+      break;
+    case COAP_URI_SCHEME_HTTP:
+    case COAP_URI_SCHEME_HTTPS:
+    case COAP_URI_SCHEME_LAST:
+    default:
+      continue;
+    }
+    ep = coap_new_endpoint(ctx, &info->addr, proto);
+    if (!ep) {
+      coap_log_warn("cannot create endpoint for proto %u\n",
+                     proto);
+    } else {
+      have_ep = 1;
+    }
+  }
+  coap_free_address_info(info_list);
+  if (!have_ep) {
     coap_free_context(ctx);
     return NULL;
   }
-
-  /* iterate through results until success */
-  for (rp = result; rp != NULL; rp = rp->ai_next) {
-    coap_address_t addr, addrs;
-    coap_endpoint_t *ep_udp = NULL, *ep_dtls = NULL;
-
-    if (rp->ai_addrlen <= (socklen_t)sizeof(addr.addr)) {
-      coap_address_init(&addr);
-      addr.size = (socklen_t)rp->ai_addrlen;
-      memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
-      addrs = addr;
-      if (addr.addr.sa.sa_family == AF_INET) {
-        uint16_t temp = ntohs(addr.addr.sin.sin_port) + 1;
-        addrs.addr.sin.sin_port = htons(temp);
-      } else if (addr.addr.sa.sa_family == AF_INET6) {
-        uint16_t temp = ntohs(addr.addr.sin6.sin6_port) + 1;
-        addrs.addr.sin6.sin6_port = htons(temp);
-      } else {
-        goto finish;
-      }
-
-      ep_udp = coap_new_endpoint(ctx, &addr, COAP_PROTO_UDP);
-      if (ep_udp) {
-        if (coap_dtls_is_supported() && (key_defined || cert_file)) {
-          ep_dtls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_DTLS);
-          if (!ep_dtls)
-            coap_log_crit("cannot create DTLS endpoint\n");
-        }
-      } else {
-        coap_log_crit("cannot create UDP endpoint\n");
-        continue;
-      }
-      if (coap_tcp_is_supported()) {
-        coap_endpoint_t *ep_tcp;
-        ep_tcp = coap_new_endpoint(ctx, &addr, COAP_PROTO_TCP);
-        if (ep_tcp) {
-          if (coap_tls_is_supported() && (key_defined || cert_file)) {
-            coap_endpoint_t *ep_tls;
-            ep_tls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_TLS);
-            if (!ep_tls)
-              coap_log_crit("cannot create TLS endpoint\n");
-          }
-        } else {
-          coap_log_crit("cannot create TCP endpoint\n");
-        }
-      }
-      if (ep_udp)
-        goto finish;
-    }
-  }
-
-  fprintf(stderr, "no context available for interface '%s'\n", node);
-  coap_free_context(ctx);
-  ctx = NULL;
-
-finish:
-  freeaddrinfo(result);
   return ctx;
 }
 

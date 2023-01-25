@@ -11,7 +11,7 @@ coap_address(3)
 NAME
 ----
 coap_address,
-coap_address_t,
+coap_address_t
 - Work with CoAP Socket Address Types
 
 SYNOPSIS
@@ -23,6 +23,12 @@ SYNOPSIS
 *struct coap_sockaddr_un;*
 
 *void coap_address_init(coap_address_t *_addr_);*
+
+*coap_addr_info_t *coap_resolve_address_info(const coap_str_const_t *_server_,
+uint16_t _port_, uint16_t _secure_port_, int _ai_hints_flags_,
+int _scheme_hint_bits_);*
+
+*void coap_free_address_info(coap_addr_info_t *_info_list_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -50,7 +56,7 @@ which are all handled by the *coap_address_t* structure.
 
 [source, c]
 ----
- /** multi-purpose address abstraction */
+/* Multi-purpose address abstraction */
 typedef struct coap_address_t {
   socklen_t size;           /* size of addr */
   union {
@@ -59,6 +65,21 @@ typedef struct coap_address_t {
     struct sockaddr_in6     sin6;
   } addr;
 } coap_address_t;
+----
+
+which is used in the *coap_addr_info_t* structure as returned by
+*coap_resolve_address_info()*.
+
+*Structure coap_addr_info_t*
+
+[source, c]
+----
+/* Resolved addresses information */
+typedef struct coap_addr_info_t {
+  struct coap_addr_info_t *next; /* Next entry in the chain */
+  coap_uri_scheme_t scheme;      /* CoAP scheme to use */
+  coap_address_t addr;           /* The address to connect / bind to */
+} coap_addr_info_t;
 ----
 
 FUNCTIONS
@@ -73,9 +94,53 @@ It is then the responsibility of the application to set the address family
 in addr.sa.sa_family and then fill in the the appropriate union structure
 based on the address family before the coap_address_t _addr_ is used.
 
+*Function: coap_resolve_address_info()*
+
+The *coap_resolve_address_info*() function resolves the address _server_ into
+a set of one or more coap_addr_info_t structures. Depending on the scheme as
+abstracted from _scheme_hint_bits_ either _port_ or _secure_port_ is used to
+update the addr variable of coap_addr_info_t. If _port_ (or _secure_port_) is
+0, then the default port for the scheme is used.  _ai_hints_flags_ is used for
+the internally called getaddrinfo(3) function. _scheme_hint_bits_ is a set of
+one or more COAP_URI_SCHEME_*_BIT or'd together.
+
+The returned set of coap_addr_info_t structures must be freed off by the
+caller using *coap_free_address_info*().
+
+*Function: coap_free_address_info()*
+
+The *coap_free_address_info*() function frees off all the _info_list_
+linked entries.
+
+RETURN VALUES
+-------------
+*coap_resolve_address_info*() returns a linked list of addresses that can be
+used for session setup or NULL if there is a failure.
+
+EXAMPLES
+--------
+*Get target address from uri*
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+static int
+get_address(coap_uri_t *uri, coap_address_t *dst) {
+  coap_addr_info_t *info_list;
+
+   info_list = coap_resolve_address_info(&uri->host, uri->port, uri->port, 0,
+                                         1 << uri->scheme);
+   if (info_list == NULL)
+     return 0;
+   memcpy(dst, &info_list->addr, sizeof(*dst));
+   coap_free_address_info(info_list);
+   return 1;
+}
+----
+
 SEE ALSO
 --------
-*coap_endpoint_client*(3) and *coap_endpoint_server*(3)
+*coap_endpoint_client*(3), *coap_endpoint_server*(3) and *coap_uri*(3)
 
 FURTHER INFORMATION
 -------------------

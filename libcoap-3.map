@@ -87,6 +87,7 @@ global:
   coap_find_attr;
   coap_fls;
   coap_flsll;
+  coap_free_address_info;
   coap_free_async;
   coap_free_context;
   coap_free_endpoint;
@@ -182,6 +183,7 @@ global:
   coap_register_request_handler;
   coap_register_response_handler;
   coap_resize_binary;
+  coap_resolve_address_info;
   coap_resource_get_uri_path;
   coap_resource_get_userdata;
   coap_resource_init;

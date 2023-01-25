@@ -23,6 +23,8 @@
 #include <sys/types.h>
 #include "libcoap.h"
 
+#include "coap3/pdu.h"
+
 #if defined(WITH_LWIP)
 
 #include <lwip/ip_addr.h>
@@ -92,7 +94,7 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
 
 #else /* WITH_LWIP || WITH_CONTIKI */
 
- /** multi-purpose address abstraction */
+/** Multi-purpose address abstraction */
 typedef struct coap_address_t {
   socklen_t size;           /**< size of addr */
   union {
@@ -136,6 +138,40 @@ _coap_address_isany_impl(const coap_address_t *a) {
   return 0;
 }
 #endif /* WITH_LWIP || WITH_CONTIKI */
+
+/** Resolved addresses information */
+typedef struct coap_addr_info_t {
+  struct coap_addr_info_t *next; /**< Next entry in the chain */
+  coap_uri_scheme_t scheme;      /**< CoAP scheme to use */
+  coap_address_t addr;           /**< The address to connect / bind to */
+} coap_addr_info_t;
+
+/**
+ * Resolve the specified @p server into a set of coap_address_t that can
+ * be used to bind() or connect() to.
+ *
+ * @param server The Address to resolve.
+ * @param port   The unsecured protocol port to use.
+ * @param secure_port The secured protocol port to use.
+ * @param ai_hints_flags AI_* Hint flags to use for internal getaddrinfo().
+ * @param scheme_hint_bits Which schemes to return information for. One or
+ *                         more of COAP_URI_SCHEME_*_BIT or'd together.
+ *
+ * @return One or more linked sets of coap_addr_info_t or @c NULL if error.
+ */
+coap_addr_info_t *coap_resolve_address_info(const coap_str_const_t *server,
+                                            uint16_t port,
+                                            uint16_t secure_port,
+                                            int ai_hints_flags,
+                                            int scheme_hint_bits);
+
+/**
+ * Free off the one or more linked sets of coap_addr_info_t returned from
+ * coap_resolve_address_info().
+ *
+ * @param info_list The set of coap_addr_info_t to free off.
+ */
+void coap_free_address_info(coap_addr_info_t *info_list);
 
 /**
  * Resets the given coap_address_t object @p addr to its default values. In

@@ -75,50 +75,26 @@ nack_handler(coap_session_t *session COAP_UNUSED,
 }
 
 static int
-resolve_address(const char *host, const char *service, coap_address_t *dst) {
+resolve_address(const char *host, const char *service, coap_address_t *dst,
+                int scheme_hint_bits) {
 
-  struct addrinfo *res, *ainfo;
-  struct addrinfo hints;
-  int error, len=-1;
-  struct sockaddr_in *sock4;
-  struct sockaddr_in6 *sock6;
+  coap_addr_info_t *addr_info;
+  coap_str_const_t str_host;
+  uint16_t port = service ? atoi(service) : 0;
+  int ret = 0;
 
-  memset(&hints, 0, sizeof(hints));
-  memset(dst, 0, sizeof(*dst));
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_family = AF_UNSPEC;
+  str_host.s = (const uint8_t *)host;
+  str_host.length = strlen(host);
 
-  error = getaddrinfo(host, service, &hints, &res);
-
-  if (error != 0) {
-    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(error));
-    return error;
+  addr_info = coap_resolve_address_info(&str_host, port, port, AF_UNSPEC,
+                                        scheme_hint_bits);
+  if (addr_info) {
+    ret = 1;
+    *dst = addr_info->addr;
   }
 
-  for (ainfo = res; ainfo != NULL; ainfo = ainfo->ai_next) {
-    switch (ainfo->ai_family) {
-    case AF_INET:
-      sock4 = (struct sockaddr_in *)ainfo->ai_addr;
-      dst->port = ntohs(sock4->sin_port);
-      len = ainfo->ai_addrlen;
-      memcpy(&dst->addr, &sock4->sin_addr, 4);
-      dst->addr.type = IPADDR_TYPE_V4;
-      goto finish;
-    case AF_INET6:
-      sock6 = (struct sockaddr_in6 *)ainfo->ai_addr;
-      dst->port = ntohs(sock6->sin6_port);
-      len = ainfo->ai_addrlen;
-      memcpy(&dst->addr, &sock6->sin6_addr, 16);
-      dst->addr.type = IPADDR_TYPE_V6;
-      goto finish;
-    default:
-      ;
-    }
-  }
-
- finish:
-  freeaddrinfo(res);
-  return len;
+  coap_free_address_info(addr_info);
+  return ret;
 }
 
 void
@@ -173,12 +149,15 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
   LWIP_ASSERT("Failed to parse uri", len == 0);
   LWIP_ASSERT("Unsupported URI type", uri.scheme == COAP_URI_SCHEME_COAP ||
                                       uri.scheme == COAP_URI_SCHEME_COAPS);
+  if (uri.scheme == COAP_URI_SCHEME_COAPS) {
+    LWIP_ASSERT("DTLS not supported", coap_dtls_is_supported());
+  }
 
   snprintf(portbuf, sizeof(portbuf), "%d", uri.port);
   snprintf((char *)buf, sizeof(buf), "%*.*s", (int)uri.host.length,
            (int)uri.host.length, (const char *)uri.host.s);
   /* resolve destination address where server should be sent */
-  len = resolve_address((const char*)buf, portbuf, &dst);
+  len = resolve_address((const char*)buf, portbuf, &dst, 1 << uri.scheme);
   LWIP_ASSERT("Failed to resolve address", len > 0);
 
   main_coap_context = coap_new_context(NULL);
