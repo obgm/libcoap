@@ -131,6 +131,7 @@
 #define HAVE_STRNLEN 1
 #define HAVE_SNPRINTF 1
 #define HAVE_STRINGS_H 1
+#define HAVE_NETDB_H 1
 
 /* there is no file-oriented output */
 #define COAP_DEBUG_FD NULL

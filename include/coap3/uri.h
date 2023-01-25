@@ -38,6 +38,18 @@ typedef enum coap_uri_scheme_t {
 /** This mask can be used to check if a parsed URI scheme is secure. */
 #define COAP_URI_SCHEME_SECURE_MASK 0x01
 
+#define COAP_URI_SCHEME_COAP_BIT       (1 << COAP_URI_SCHEME_COAP)
+#define COAP_URI_SCHEME_COAPS_BIT      (1 << COAP_URI_SCHEME_COAPS)
+#define COAP_URI_SCHEME_COAP_TCP_BIT   (1 << COAP_URI_SCHEME_COAP_TCP)
+#define COAP_URI_SCHEME_COAPS_TCP_BIT  (1 << COAP_URI_SCHEME_COAPS_TCP)
+#define COAP_URI_SCHEME_HTTP_BIT       (1 << COAP_URI_SCHEME_HTTP)
+#define COAP_URI_SCHEME_HTTPS_BIT      (1 << COAP_URI_SCHEME_HTTPS)
+
+#define COAP_URI_SCHEME_ALL_COAP_BITS (COAP_URI_SCHEME_COAP_BIT | \
+                                       COAP_URI_SCHEME_COAPS_BIT | \
+                                       COAP_URI_SCHEME_COAP_TCP_BIT | \
+                                       COAP_URI_SCHEME_COAPS_TCP_BIT)
+
 /**
  * Representation of parsed URI. Components may be filled from a string with
  * coap_split_uri() or coap_split_proxy_uri() and can be used as input for

@@ -292,54 +292,6 @@ coap_new_request(coap_context_t *ctx,
 }
 
 static int
-resolve_address(const coap_str_const_t *server, struct sockaddr *dst) {
-
-  struct addrinfo *res, *ainfo;
-  struct addrinfo hints;
-  static char addrstr[256];
-  int error, len=-1;
-
-  memset(addrstr, 0, sizeof(addrstr));
-  if (server->length)
-    memcpy(addrstr, server->s, server->length);
-  else
-    memcpy(addrstr, "localhost", 9);
-
-  memset ((char *)&hints, 0, sizeof(hints));
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_family = AF_UNSPEC;
-
-  error = getaddrinfo(addrstr, NULL, &hints, &res);
-
-  if (error != 0) {
-    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(error));
-    return error;
-  }
-
-  for (ainfo = res; ainfo != NULL; ainfo = ainfo->ai_next) {
-    switch (ainfo->ai_family) {
-    case AF_INET6:
-    case AF_INET:
-      len = (int)ainfo->ai_addrlen;
-      memcpy(dst, ainfo->ai_addr, len);
-      goto finish;
-    default:
-      ;
-    }
-  }
-
- finish:
-  freeaddrinfo(res);
-  return len;
-}
-
-#define HANDLE_BLOCK1(Pdu)                                        \
-  ((method == COAP_REQUEST_PUT || method == COAP_REQUEST_POST) && \
-   ((flags & FLAGS_BLOCK) == 0) &&                                \
-   ((Pdu)->hdr->code == COAP_RESPONSE_CODE_CREATED ||                \
-    (Pdu)->hdr->code == COAP_RESPONSE_CODE_CHANGED))
-
-static int
 event_handler(coap_session_t *session COAP_UNUSED,
               const coap_event_t event) {
 
@@ -1518,45 +1470,70 @@ static coap_session_t *
 get_session(coap_context_t *ctx,
             const char *local_addr,
             const char *local_port,
-            coap_proto_t proto,
+            coap_uri_scheme_t scheme,
             coap_address_t *dst,
             const uint8_t *identity,
             size_t identity_len,
             const uint8_t *key,
             size_t key_len) {
   coap_session_t *session = NULL;
+  coap_proto_t proto;
 
   is_mcast = coap_is_mcast(dst);
-  if ( local_addr ) {
-    int s;
-    struct addrinfo hints;
-    struct addrinfo *result = NULL, *rp;
+  switch(scheme) {
+  case COAP_URI_SCHEME_COAP:
+    proto = COAP_PROTO_UDP;
+    break;
+  case COAP_URI_SCHEME_COAPS:
+    proto = COAP_PROTO_DTLS;
+    break;
+  case COAP_URI_SCHEME_COAP_TCP:
+    proto = COAP_PROTO_TCP;
+    break;
+  case COAP_URI_SCHEME_COAPS_TCP:
+    proto = COAP_PROTO_TLS;
+    break;
+  case COAP_URI_SCHEME_LAST:
+  default:
+  case COAP_URI_SCHEME_HTTP:
+  case COAP_URI_SCHEME_HTTPS:
+    coap_log_err("http:// or https:// not supported\n");
+    return NULL;
+  }
+  if (local_addr) {
+    {
+      coap_addr_info_t *info_list = NULL;
+      coap_addr_info_t *info;
+      coap_str_const_t local;
+      uint16_t port = local_port ? atoi(local_port) : 0;
 
-    memset( &hints, 0, sizeof( struct addrinfo ) );
-    hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
-    hints.ai_socktype = COAP_PROTO_RELIABLE(proto) ? SOCK_STREAM : SOCK_DGRAM; /* Coap uses UDP */
-    hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL;
+      local.s = (const uint8_t*)local_addr;
+      local.length = strlen(local_addr);
+      /* resolve local address where data should be sent from */
+      info_list = coap_resolve_address_info(&local, port, port,
+                         AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL,
+                                            1 << scheme);
+      if (!info_list) {
+        fprintf(stderr, "coap_resolve_address_info: %s: failed\n", local_addr);
+        return NULL;
+      }
 
-    s = getaddrinfo( local_addr, local_port, &hints, &result );
-    if ( s != 0 ) {
-      fprintf( stderr, "getaddrinfo: %s\n", gai_strerror( s ) );
-      return NULL;
-    }
-
-    /* iterate through results until success */
-    for ( rp = result; rp != NULL; rp = rp->ai_next ) {
-      coap_address_t bind_addr;
-      if ( rp->ai_addrlen <= (socklen_t)sizeof( bind_addr.addr ) ) {
-        coap_address_init( &bind_addr );
-        bind_addr.size = (socklen_t)rp->ai_addrlen;
-        memcpy( &bind_addr.addr, rp->ai_addr, rp->ai_addrlen );
-        session = open_session(ctx, proto, &bind_addr, dst,
+      /* iterate through results until success */
+      for (info = info_list; info != NULL; info = info->next ) {
+        if (!local_port) {
+          /* Need to reset port back to 0 rather than the default */
+          if (info->addr.addr.sa.sa_family == AF_INET)
+            info->addr.addr.sin.sin_port = htons(port);
+          else if (info->addr.addr.sa.sa_family == AF_INET6)
+            info->addr.addr.sin6.sin6_port = htons(port);
+        }
+        session = open_session(ctx, proto, &info->addr, dst,
                                identity, identity_len, key, key_len);
-        if ( session )
+        if (session)
           break;
       }
+      coap_free_address_info(info_list);
     }
-    freeaddrinfo( result );
   } else if (local_port) {
     coap_address_t bind_addr;
 
@@ -1587,7 +1564,7 @@ main(int argc, char **argv) {
   uint16_t port = COAP_DEFAULT_PORT;
   char port_str[NI_MAXSERV] = "0";
   char node_str[NI_MAXHOST] = "";
-  int opt, res;
+  int opt;
   coap_log_t log_level = COAP_LOG_WARN;
   coap_log_t dtls_log_level = COAP_LOG_ERR;
   unsigned char *user = NULL, *key = NULL;
@@ -1598,6 +1575,7 @@ main(int argc, char **argv) {
   uint32_t repeat_ms = REPEAT_DELAY_MS;
   uint8_t *data = NULL;
   size_t data_len = 0;
+  coap_addr_info_t *info_list = NULL;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
@@ -1797,14 +1775,24 @@ main(int argc, char **argv) {
     port = proxy_scheme_option ? proxy.port : uri.port;
     scheme = proxy_scheme_option ? proxy.scheme : uri.scheme;
   }
+  if (reliable) {
+    if (scheme == COAP_URI_SCHEME_COAP)
+      scheme = COAP_URI_SCHEME_COAP_TCP;
+    if (scheme == COAP_URI_SCHEME_COAPS)
+      scheme = COAP_URI_SCHEME_COAPS_TCP;
+  }
 
-  /* resolve destination address where server should be sent */
-  res = resolve_address(&server, &dst.addr.sa);
+  /* resolve destination address where data should be sent */
+  info_list = coap_resolve_address_info(&server, port, port,
+                                        0,
+                                        1 << scheme);
 
-  if (res < 0) {
-    fprintf(stderr, "failed to resolve address\n");
+  if (info_list == NULL) {
+    coap_log_err("failed to resolve address\n");
     exit(1);
   }
+  memcpy(&dst, &info_list->addr, sizeof(dst));
+  coap_free_address_info(info_list);
 
   ctx = coap_new_context( NULL );
   if ( !ctx ) {
@@ -1825,22 +1813,15 @@ main(int argc, char **argv) {
   coap_register_event_handler(ctx, event_handler);
   coap_register_nack_handler(ctx, nack_handler);
 
-  dst.size = res;
-  dst.addr.sin.sin_port = htons( port );
-
-  session = get_session(
-    ctx,
-    node_str[0] ? node_str : NULL, port_str,
-    scheme==COAP_URI_SCHEME_COAP_TCP ? COAP_PROTO_TCP :
-    scheme==COAP_URI_SCHEME_COAPS_TCP ? COAP_PROTO_TLS :
-    (reliable ?
-        scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_TLS : COAP_PROTO_TCP
-      : scheme==COAP_URI_SCHEME_COAPS ? COAP_PROTO_DTLS : COAP_PROTO_UDP),
-    &dst,
-    user_length >= 0 ? user : NULL,
-    user_length >= 0 ? user_length : 0,
-    key_length > 0 ? key : NULL,
-    key_length > 0 ? key_length : 0
+  session = get_session(ctx,
+                        node_str[0] ? node_str : NULL,
+                        port_str[0] ? port_str : NULL,
+                        scheme,
+                        &dst,
+                        user_length >= 0 ? user : NULL,
+                        user_length >= 0 ? user_length : 0,
+                        key_length > 0 ? key : NULL,
+                        key_length > 0 ? key_length : 0
   );
 
   if ( !session ) {

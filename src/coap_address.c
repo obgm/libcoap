@@ -113,3 +113,195 @@ void coap_address_init(coap_address_t *addr) {
 #endif
 }
 
+static void
+update_port(coap_address_t *addr, uint16_t port, uint16_t default_port) {
+  if (port == 0)
+    port = default_port;
+
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+ if (addr->addr.sa.sa_family == AF_INET)
+   addr->addr.sin.sin_port = htons(port);
+ else if (addr->addr.sa.sa_family == AF_INET6)
+   addr->addr.sin6.sin6_port = htons(port);
+#else /* defined(WITH_LWIP) || defined(WITH_CONTIKI) */
+  addr->port = port;
+#endif /* defined(WITH_LWIP) || defined(WITH_CONTIKI) */
+  return;
+}
+
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
+
+coap_addr_info_t *
+coap_resolve_address_info(const coap_str_const_t *server,
+                          uint16_t port,
+                          uint16_t secure_port,
+                          int ai_hints_flags,
+                          int scheme_hint_bits) {
+
+  struct addrinfo *res, *ainfo;
+  struct addrinfo hints;
+  static char addrstr[256];
+  int error;
+  coap_addr_info_t *info = NULL;
+  coap_addr_info_t *info_prev = NULL;
+  coap_addr_info_t *info_list = NULL;
+  coap_uri_scheme_t scheme;
+
+  memset(addrstr, 0, sizeof(addrstr));
+  if (server && server->length)
+    memcpy(addrstr, server->s, server->length);
+  else
+    memcpy(addrstr, "localhost", 9);
+
+  memset ((char *)&hints, 0, sizeof(hints));
+  hints.ai_socktype = 0;
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_flags = ai_hints_flags;
+
+  error = getaddrinfo(addrstr, NULL, &hints, &res);
+
+  if (error != 0) {
+    coap_log_warn("getaddrinfo: %s\n", gai_strerror(error));
+    return NULL;
+  }
+
+  for (ainfo = res; ainfo != NULL; ainfo = ainfo->ai_next) {
+    if (ainfo->ai_addrlen > (socklen_t)sizeof(info->addr.addr))
+      continue;
+
+    switch (ainfo->ai_family) {
+    case AF_INET6:
+    case AF_INET:
+      for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
+        if (scheme_hint_bits & (1 << scheme)) {
+          switch (scheme) {
+          case COAP_URI_SCHEME_COAP:
+            if (ainfo->ai_socktype != SOCK_DGRAM)
+              continue;
+            break;
+          case COAP_URI_SCHEME_COAPS:
+            if (!coap_dtls_is_supported())
+              continue;
+            if (ainfo->ai_socktype != SOCK_DGRAM)
+              continue;
+            break;
+          case COAP_URI_SCHEME_COAP_TCP:
+            if (!coap_tcp_is_supported())
+              continue;
+            if (ainfo->ai_socktype != SOCK_STREAM)
+              continue;
+            break;
+          case COAP_URI_SCHEME_COAPS_TCP:
+            if (!coap_tls_is_supported())
+              continue;
+            if (ainfo->ai_socktype != SOCK_STREAM)
+              continue;
+            break;
+          case COAP_URI_SCHEME_HTTP:
+            if (!coap_tcp_is_supported())
+              continue;
+            if (ainfo->ai_socktype != SOCK_STREAM)
+              continue;
+            break;
+          case COAP_URI_SCHEME_HTTPS:
+            if (!coap_tls_is_supported())
+              continue;
+            if (ainfo->ai_socktype != SOCK_STREAM)
+              continue;
+            break;
+          case COAP_URI_SCHEME_LAST:
+          default:
+            continue;
+          }
+
+          info = coap_malloc_type(COAP_STRING, sizeof(coap_addr_info_t));
+          if (info == NULL) {
+            /* malloc failure - return what we have so far */
+            return info_list;
+          }
+          info->next = NULL;
+          /* Need to return in same order as getaddrinfo() */
+          if (!info_prev) {
+            info_list = info;
+            info_prev = info;
+          } else {
+            info_prev->next = info;
+            info_prev = info;
+          }
+
+          info->scheme = scheme;
+          coap_address_init(&info->addr);
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+          info->addr.size = (socklen_t)ainfo->ai_addrlen;
+          memcpy(&info->addr.addr, ainfo->ai_addr, ainfo->ai_addrlen);
+#else /* defined(WITH_LWIP) || defined(WITH_CONTIKI) */
+          memset(&info->addr, 0, sizeof(info->addr));
+          switch (ainfo->ai_family) {
+            struct sockaddr_in *sock4;
+            struct sockaddr_in6 *sock6;
+          case AF_INET:
+            sock4 = (struct sockaddr_in *)ainfo->ai_addr;
+            info->addr.port = ntohs(sock4->sin_port);
+            memcpy(&info->addr.addr, &sock4->sin_addr, 4);
+#ifdef WITH_LWIP
+            info->addr.addr.type = IPADDR_TYPE_V4;
+#endif /* WITH_LWIP */
+            break;
+          case AF_INET6:
+            sock6 = (struct sockaddr_in6 *)ainfo->ai_addr;
+            info->addr.port = ntohs(sock6->sin6_port);
+            memcpy(&info->addr.addr, &sock6->sin6_addr, 16);
+#ifdef WITH_LWIP
+            info->addr.addr.type = IPADDR_TYPE_V6;
+#endif /* WITH_LWIP */
+            break;
+          default:
+            ;
+          }
+#endif /* defined(WITH_LWIP) || defined(WITH_CONTIKI) */
+          switch (scheme) {
+          case COAP_URI_SCHEME_COAP:
+            update_port(&info->addr, port, 5683);
+            break;
+          case COAP_URI_SCHEME_COAPS:
+            update_port(&info->addr, secure_port, 5684);
+            break;
+          case COAP_URI_SCHEME_COAP_TCP:
+            update_port(&info->addr, port, 5683);
+            break;
+          case COAP_URI_SCHEME_COAPS_TCP:
+            update_port(&info->addr, secure_port, 5684);
+            break;
+          case COAP_URI_SCHEME_HTTP:
+            update_port(&info->addr, port, 80);
+            break;
+          case COAP_URI_SCHEME_HTTPS:
+            update_port(&info->addr, secure_port, 443);
+            break;
+          case COAP_URI_SCHEME_LAST:
+          default:
+            break;
+          }
+        }
+      }
+      break;
+    default:
+      break;
+    }
+  }
+
+  freeaddrinfo(res);
+  return info_list;
+}
+
+void
+coap_free_address_info(coap_addr_info_t *info) {
+  while (info) {
+    coap_addr_info_t *info_next = info->next;
+
+    coap_free_type(COAP_STRING, info);
+    info = info_next;
+  }
+}
