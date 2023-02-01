@@ -156,6 +156,13 @@ int coap_delete_observer(coap_resource_t *resource,
  */
 void coap_delete_observers(coap_context_t *context, coap_session_t *session);
 
+/**
+ * Close down persist tracking, releasing any memory used.
+ *
+ * @param context The current CoAP context.
+ */
+void coap_persist_cleanup(coap_context_t *context);
+
 /** @} */
 
 #endif /* COAP_SERVER_SUPPORT */

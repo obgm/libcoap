@@ -240,9 +240,9 @@ void oscore_log_char_value(coap_log_t level, const char *name,
  *
  * return The OSCORE context and @p recipient_ctx updated, or NULL is error.
  */
-oscore_ctx_t *oscore_find_context(coap_context_t *c_context,
-                                  coap_bin_const_t rcpkey_id,
-                                  coap_bin_const_t *ctxkey_id,
+oscore_ctx_t *oscore_find_context(const coap_context_t *c_context,
+                                  const coap_bin_const_t rcpkey_id,
+                                  const coap_bin_const_t *ctxkey_id,
                                   uint8_t *oscore_r2,
                                   oscore_recipient_ctx_t **recipient_ctx);
 

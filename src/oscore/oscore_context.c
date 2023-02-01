@@ -181,9 +181,9 @@ oscore_remove_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx) {
  * Updates recipient_ctx.
  */
 oscore_ctx_t *
-oscore_find_context(coap_context_t *c_context,
-                    coap_bin_const_t rcpkey_id,
-                    coap_bin_const_t *ctxkey_id,
+oscore_find_context(const coap_context_t *c_context,
+                    const coap_bin_const_t rcpkey_id,
+                    const coap_bin_const_t *ctxkey_id,
                     uint8_t *oscore_r2,
                     oscore_recipient_ctx_t **recipient_ctx) {
   oscore_ctx_t *pt = c_context->p_osc_ctx;

@@ -27,7 +27,7 @@ SYNOPSIS
               [*-P* scheme://addr[:port]] [*-T* token] [*-U*] [*-V* num]
               [*-X* size]
               [[*-h* match_hint_file] [*-k* key] [*-u* user]]
-              [[*-c* certfile] [*-j* keyfile] [-n] [*-C* cafile]
+              [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]] URI
 
 For *coap-client* versions that use libcoap compiled for different

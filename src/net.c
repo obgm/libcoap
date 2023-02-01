@@ -560,7 +560,7 @@ coap_free_context(coap_context_t *context) {
     return;
 
 #if COAP_SERVER_SUPPORT
-  /* Removing a resource may cause a CON observe to be sent */
+  /* Removing a resource may cause a NON unsolicited observe to be sent */
   coap_delete_all_resources(context);
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -630,6 +630,11 @@ coap_free_context(coap_context_t *context) {
     context->epfd = -1;
   }
 #endif /* COAP_EPOLL_SUPPORT */
+#if COAP_SERVER_SUPPORT
+#if COAP_WITH_OBSERVE_PERSIST
+  coap_persist_cleanup(context);
+#endif /* COAP_WITH_OBSERVE_PERSIST */
+#endif /* COAP_SERVER_SUPPORT */
 
   coap_free_type(COAP_CONTEXT, context);
 #ifdef WITH_LWIP
@@ -2981,6 +2986,14 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     }
     session->last_con_mid = pdu->mid;
   }
+#if COAP_WITH_OBSERVE_PERSIST
+  /* If we are maintaining Observe persist */
+  if (resource == context->unknown_resource) {
+    context->unknown_pdu = pdu;
+    context->unknown_session = session;
+  } else
+    context->unknown_pdu = NULL;
+#endif /* COAP_WITH_OBSERVE_PERSIST */
 
   /*
    * Call the request handler with everything set up

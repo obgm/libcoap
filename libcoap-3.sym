@@ -170,6 +170,11 @@ coap_pdu_parse
 coap_pdu_set_code
 coap_pdu_set_mid
 coap_pdu_set_type
+coap_persist_observe_add
+coap_persist_set_observe_num
+coap_persist_startup
+coap_persist_stop
+coap_persist_track_funcs
 coap_print_addr
 coap_print_link
 coap_prng

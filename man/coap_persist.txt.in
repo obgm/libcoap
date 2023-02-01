@@ -1,0 +1,418 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc tw=0
+
+coap_persist(3)
+===============
+:doctype: manpage
+:man source:   coap_persist
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_persist,
+coap_persist_startup,
+coap_persist_stop,
+coap_persist_track_funcs,
+coap_persist_observe_add,
+coap_persist_set_observe_num
+- Work with CoAP persist support
+
+SYNOPSIS
+--------
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*int coap_persist_startup(coap_context_t *_context_,
+const char *_dyn_resource_save_file_, const char *_observe_save_file_,
+const char *_obs_cnt_save_file_, uint32_t _save_freq_);*
+
+*void coap_persist_stop(coap_context_t *_context_);*
+
+*void coap_persist_track_funcs(coap_context_t *_context_,
+coap_observe_added_t _observe_added_, coap_observe_deleted_t _observe_deleted_,
+coap_track_observe_value_t _track_observe_value_,
+coap_dyn_resource_added_t _dyn_resource_added_,
+coap_resource_deleted_t _resource_deleted_,
+uint32_t _save_freq_, void *_user_data_);*
+
+*coap_subscription_t *coap_persist_observe_add(coap_context_t *_context_,
+coap_proto_t _e_proto_, const coap_address_t *_e_listen_addr_,
+const coap_addr_tuple_t *_s_addr_info_, const coap_bin_const_t *_raw_packet_,
+const coap_bin_const_t *_oscore_info_);*
+
+*void coap_persist_set_observe_num(coap_resource_t *_resource_,
+uint32_t _start_observe_no_);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
+
+DESCRIPTION
+-----------
+When a coap-server is restarted, state information does not usually persist
+over the restart.  libcoap has optional compiled in support for maintaining
+resources that were dynamically created, tracking ongoing observe subscriptions
+and maintaining OSCORE protection.
+
+There are callbacks provided to support doing this as an alternative persist
+storage in the coap-server application.
+
+*NOTE:* The observe persist support is only available for UDP sessions.
+
+When using the libcoap compiled in support, only two functions need to be
+called by the application. *coap_persist_startup*() defines the file names to
+use for maintaining the persist information over an application restart, and
+*coap_persist_stop*() is called to preserve any persist information over the
+server restart.
+
+FUNCTIONS
+---------
+
+*Function: coap_persist_startup()*
+
+The *coap_persist_startup*() function is used to enable persist tracking for
+_context_ so when a coap-server is restarted, the persist tracked information
+can be added back in for the server logic.
+_dyn_resource_save_file_ is used to save the current list of resources created
+from a request to the unknown resource.
+_observe_save_file_ is used to save the current list of active observe
+subscriptions.
+_obs_cnt_save_file_ is used to save the current observe counter used when
+sending an observe unsolicited response.  _obs_cnt_save_file_ only gets
+updated every _save_freq_ updates.
+
+If any of the files exist and are not empty, when *coap_persist_startup*() is
+called, the information is loaded back into the server logic, and for the
+active observe subscriptions a new server session is created for sending out
+the ongoing observe updates (UDP only supported).
+
+If a file is defined as NULL, then that particular persist information is not
+tracked by the libcoap module.  This allows a combination of
+*coap_persist_track_funcs*() for customized persist tracking followed by a
+call to *coap_persist_startup*().
+
+*Function: coap_persist_stop()*
+
+The *coap_persist_stop*() function is used to disable any current persist
+tracking as set up by *coap_persist_startup*() for _context_ and preserve the
+tracking for when the coap-server application restarts.
+
+If using *coap_persist_track_funcs*(), then calling *coap_persist_stop*()
+will stop any 4.04 unsolicited response messages being sent when a
+resource that has an active observe subscription is deleted (as happens
+when *coap_free_context*() is subsequentially called).
+
+*Function: coap_persist_track_funcs()*
+
+The *coap_persist_track_funcs*() function is used to setup callback functions
+associated with _context_ that track information so that the current tracked
+information state can be rebuilt following a server application restart. It is
+the responsibility of the server application to track the appropriate
+information.
+
+The _observe_added_ callback function prototype, called when a client
+subscribes to a resource for observation, is defined as:
+[source, c]
+----
+typedef int (*coap_observe_added_t)(coap_session_t *session,
+                                    coap_subscription_t *observe_key,
+                                    coap_proto_t e_proto,
+                                    coap_address_t *e_listen_addr,
+                                    coap_addr_tuple_t *s_addr_info,
+                                    coap_bin_const_t *raw_packet,
+                                    coap_bin_const_t *oscore_info,
+                                    void *user_data);
+----
+
+The _observe_deleted_ callback function prototype, called when a client
+removes the subscription to a resource for observation, is defined as:
+[source, c]
+----
+typedef int (*coap_observe_deleted_t)(coap_session_t *session,
+                                      coap_subscription_t *observe_key,
+                                      void *user_data);
+----
+
+The _track_observe_value_ callback function prototype, called when a new
+unsolicited observe response is went (every _save_freq_), is defined as:
+[source, c]
+----
+typedef int (*coap_track_observe_value_t)(coap_context_t *context,
+                                          coap_str_const_t *resource_name,
+                                          uint32_t observe_num,
+                                          void *user_data);
+----
+
+The _dyn_resource_added_ callback function prototype, called whenever a
+resource is created from a request that is calling the resource unknown
+handler, is defined as:
+[source, c]
+----
+typedef int (*coap_dyn_resource_added_t)(coap_session_t *session,
+                                         coap_str_const_t *resource_name,
+                                         coap_bin_const_t *raw_packet,
+                                         void *user_data);
+----
+
+The _resource_deleted_ callback function prototype, called whenever a
+resource is deleted, is defined as:
+[source, c]
+----
+typedef int (*coap_resource_deleted_t)(coap_context_t *context,
+                                       coap_str_const_t *resource_name,
+                                       void *user_data);
+----
+
+_save_freq_ defines the frequency of the update to the observe value when
+libcoap calls _track_observe_value_. _user_data_ is application defined and
+is passed into all of the callback handlers.
+
+*Function: coap_persist_observe_add()*
+
+The *coap_persist_observe_add*() function is used to set up a session and a
+observe subscription request (typically following a server reboot) so that a
+client can continue to receive unsolicited observe responses without having
+to establish a new session and issue a new observe subscription request. The
+new session is associated with the endpoint defined by _e_proto_ and
+_e_listen_address_.  The session has the IP addresses as defined by
+_s_addr_info_. _raw_packet_ contains the layer 7 of the IP packet that was
+originally used to request the observe subscription. Optional _oscore_info_
+defines the OSCORE information if packets are protected by OSCORE.
+ _e_proto_, _e_listen_addr_, _s_addr_info_, _raw_packet_ and _oscore_info_
+are the same as passed into the _coap_observe_added_t_ callback.
+
+*Function: coap_persist_set_observe_num()*
+
+The *coap_persist_set_observe_num*() function is used to update the
+_resource_'s current observe counter to start from _start_observe_no_
+instead of 0,
+
+RETURN VALUES
+-------------
+The *coap_persist_startup*() returns 1 on success else 0.
+
+The *coap_persist_observe_add*() function returns a newly created observe
+subscription or NULL on failure.
+
+EXAMPLES
+--------
+*Simple Time Server*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <stdio.h>
+
+coap_resource_t *time_resource = NULL;
+
+/* specific GET "time" handler, called from hnd_get_generic() */
+
+static void
+hnd_get_time(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+
+  unsigned char buf[40];
+  size_t len;
+  time_t now;
+  (void)resource;
+  (void)session;
+
+  /* ... Additional analysis code for resource, request pdu etc.  ... */
+
+  /* After analysis, generate a suitable response */
+
+  /* Note that token, if set, is already in the response pdu */
+
+  now = time(NULL);
+
+  if (query != NULL && coap_string_equal(query, coap_make_str_const("secs"))) {
+    /* Output secs since Jan 1 1970 */
+    len = snprintf((char *)buf, sizeof(buf), "%lu", now);
+  }
+  else {
+    /* Output human-readable time */
+    struct tm *tmp;
+    tmp = gmtime(&now);
+    if (!tmp) {
+      /* If 'now' is not valid */
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
+      return;
+    }
+    len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
+  }
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+  /*
+   * Invoke coap_add_data_large_response() to do all the hard work.
+   *
+   * Define the format - COAP_MEDIATYPE_TEXT_PLAIN - to add in
+   * Define how long this response is valid for (secs) - 1 - to add in.
+   * ETAG Option added internally with unique value as param set to 0
+   *
+   * OBSERVE Option added internally if needed within the function
+   * BLOCK2 Option added internally if output too large
+   * SIZE2 Option added internally
+   */
+  coap_add_data_large_response(resource, session, request, response,
+                               query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
+                               len,
+                               buf, NULL, NULL);
+}
+
+/* Generic GET handler */
+
+static void
+hnd_get_generic(coap_resource_t *resource, coap_session_t *session,
+const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+
+  coap_str_const_t *uri_path = coap_resource_get_uri_path(resource);
+
+  if (!uri_path) {
+    /* Unexpected Failure */
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
+    return;
+  }
+
+  /* Is this the "time" resource" ? */
+  if (coap_string_equal(uri_path, coap_make_str_const("time"))) {
+    hnd_get_time(resource, session, request, query, response);
+    return;
+  }
+
+  /* Other resources code */
+
+  /* Failure response */
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
+}
+
+/* Initialize generic GET handler */
+
+static void
+init_resources(coap_context_t *ctx)
+{
+
+  coap_resource_t *r;
+
+  /* Create a resource to return return or update time */
+  r = coap_resource_init(coap_make_str_const("time"),
+                         COAP_RESOURCE_FLAGS_NOTIFY_CON);
+
+  /* We are using a generic GET handler here */
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_generic);
+
+  coap_resource_set_get_observable(r, 1);
+
+  coap_add_resource(ctx, r);
+  time_resource = r;
+
+}
+
+int main(int argc, char *argv[]){
+
+  coap_context_t *ctx = NULL;
+  coap_endpoint_t *ep = NULL;
+  coap_address_t addr;
+  unsigned wait_ms;
+  struct timeval tv_last = {0, 0};
+  /* Remove (void) definition if variable is used */
+  (void)argc;
+  (void)argv;
+
+  memset (&tv_last, 0, sizeof(tv_last));
+
+  /* Create the libcoap context */
+  ctx = coap_new_context(NULL);
+  if (!ctx) {
+    exit(1);
+  }
+  /* See coap_block(3) */
+  coap_context_set_block_mode(ctx,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
+  coap_address_init(&addr);
+  addr.addr.sa.sa_family = AF_INET;
+  addr.addr.sin.sin_port = ntohs(COAP_DEFAULT_PORT);
+  ep = coap_new_endpoint(ctx, &addr, COAP_PROTO_UDP);
+
+  /* Other Set up Code */
+
+  init_resources(ctx);
+
+  if (!coap_persist_startup(ctx,
+                            "/tmp/coap_dyn_resource_save_file",
+                            "/tmp/coap_observe_save_file",
+                            "/tmp/coap_obs_cnt_save_file", 10)) {
+    fprintf(stderr, "Unable to set up persist logic\n");
+    exit(1);
+  }
+
+  wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+
+  while (1) {
+    int result = coap_io_process( ctx, wait_ms );
+    if ( result < 0 ) {
+      break;
+    } else if ( result && (unsigned)result < wait_ms ) {
+      /* decrement if there is a result wait time returned */
+      wait_ms -= result;
+    } else {
+      /*
+       * result == 0, or result >= wait_ms
+       * (wait_ms could have decremented to a small value, below
+       * the granularity of the timer in coap_io_process() and hence
+       * result == 0)
+       */
+      wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+    }
+    if (time_resource) {
+      struct timeval tv_now;
+      if (gettimeofday (&tv_now, NULL) == 0) {
+        if (tv_last.tv_sec != tv_now.tv_sec) {
+          /* Happens once per second */
+          tv_last = tv_now;
+          coap_resource_notify_observers(time_resource, NULL);
+        }
+        /* need to wait until next second starts if wait_ms is too large */
+        unsigned next_sec_ms = 1000 - (tv_now.tv_usec / 1000);
+
+        if (next_sec_ms && next_sec_ms < wait_ms)
+          wait_ms = next_sec_ms;
+      }
+    }
+  }
+  coap_persist_stop(ctx);
+  coap_free_context(ctx);
+  exit(0);
+
+}
+----
+
+SEE ALSO
+--------
+*coap_block*(3), *coap_context*(3), *coap_handler*(3), *coap_observe*(3),
+*coap_pdu_setup*(3), *coap_resource*(3) and *coap_session*(3)
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+"https://rfc-editor.org/rfc/rfc7641[RFC7641: Observing Resources in the Constrained Application Protocol (CoAP)]"
+
+"https://rfc-editor.org/rfc/rfc8613[RFC8613: Object Security for Constrained RESTful Environments (OSCORE)]"
+
+for further information.
+
+
+BUGS
+----
+Please report bugs on the mailing list for libcoap:
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>
