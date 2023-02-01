@@ -19,6 +19,7 @@
 #define COAP_NET_INTERNAL_H_
 
 #include "coap_internal.h"
+#include "coap_subscribe.h"
 
 /**
  * @ingroup internal_api
@@ -95,11 +96,40 @@ struct coap_context_t {
 #endif /* HAVE_OSCORE */
 
 #if COAP_CLIENT_SUPPORT
-  coap_response_handler_t response_handler;
+  coap_response_handler_t response_handler; /**< Called when a response is
+                                                 received */
 #endif /* COAP_CLIENT_SUPPORT */
-  coap_nack_handler_t nack_handler;
-  coap_ping_handler_t ping_handler;
-  coap_pong_handler_t pong_handler;
+  coap_nack_handler_t nack_handler; /**< Called when a response issue has
+                                         occurred */
+  coap_ping_handler_t ping_handler; /**< Called when a CoAP ping is received */
+  coap_pong_handler_t pong_handler; /**< Called when a ping response
+                                         is received */
+
+#if COAP_SERVER_SUPPORT
+  coap_observe_added_t observe_added; /**< Called when there is a new observe
+                                           subscription request */
+  coap_observe_deleted_t observe_deleted; /**< Called when there is a observe
+                                           subscription de-register request */
+  void *observe_user_data; /**< App provided data for use in observe_added or
+                                observe_deleted */
+  uint32_t observe_save_freq; /**< How frequently to update observe value */
+  coap_track_observe_value_t track_observe_value; /**< Callback to save observe
+                                                       value when updated */
+  coap_dyn_resource_added_t dyn_resource_added; /**< Callback to save dynamic
+                                                     resource when created */
+  coap_resource_deleted_t resource_deleted; /**< Invoked when resource
+                                                 is deleted */
+#if COAP_WITH_OBSERVE_PERSIST
+  coap_bin_const_t *dyn_resource_save_file; /** Where dynamic resource requests
+                                                that create resources are
+                                                tracked */
+  coap_bin_const_t *obs_cnt_save_file; /** Where resource observe counters are
+                                            tracked */
+  coap_bin_const_t *observe_save_file; /** Where observes are tracked */
+  coap_pdu_t *unknown_pdu;        /** PDU used for unknown resource request */
+  coap_session_t *unknown_session; /** Session used for unknown resource request */
+#endif /* COAP_WITH_OBSERVE_PERSIST */
+#endif /* COAP_SERVER_SUPPORT */
 
   /**
    * Callback function that is used to signal events to the
@@ -153,6 +183,8 @@ struct coap_context_t {
 #endif /* ! COAP_EPOLL_SUPPORT */
 #if COAP_SERVER_SUPPORT
   uint8_t observe_pending;         /**< Observe response pending */
+  uint8_t observe_no_clear;        /**< Observe 4.04 not to be sent on deleting
+                                        resource */
   uint8_t mcast_per_resource;      /**< Mcast controlled on a per resource
                                         basis */
 #endif /* COAP_SERVER_SUPPORT */

@@ -469,8 +469,14 @@ coap_free_resource(coap_resource_t *resource) {
 
   assert(resource);
 
-  coap_resource_notify_observers(resource, NULL);
-  coap_notify_observers(resource->context, resource, COAP_DELETING_RESOURCE);
+  if (!resource->context->observe_no_clear) {
+    coap_resource_notify_observers(resource, NULL);
+    coap_notify_observers(resource->context, resource, COAP_DELETING_RESOURCE);
+  }
+
+  if (resource->context->resource_deleted)
+    resource->context->resource_deleted(resource->context, resource->uri_path,
+                                        resource->context->observe_user_data);
 
   if (resource->context->release_userdata && resource->user_data)
     resource->context->release_userdata(resource->user_data);
@@ -483,7 +489,10 @@ coap_free_resource(coap_resource_t *resource) {
 
   /* free all elements from resource->subscribers */
   LL_FOREACH_SAFE( resource->subscribers, obs, otmp ) {
-    coap_session_release( obs->session );
+    if (resource->context->observe_deleted)
+      resource->context->observe_deleted(obs->session, obs,
+                                         resource->context->observe_user_data);
+    coap_session_release(obs->session);
     coap_delete_pdu(obs->pdu);
     coap_delete_cache_key(obs->cache_key);
     coap_free_type(COAP_SUBSCRIPTION, obs);
@@ -524,6 +533,19 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
       coap_delete_resource(context, r);
     }
     RESOURCES_ADD(context->resources, resource);
+#if COAP_WITH_OBSERVE_PERSIST
+    if (context->unknown_pdu && context->dyn_resource_save_file &&
+        context->dyn_resource_added && resource->observable) {
+      coap_bin_const_t raw_packet;
+
+      raw_packet.s = context->unknown_pdu->token -
+                     context->unknown_pdu->hdr_size;
+      raw_packet.length = context->unknown_pdu->used_size +
+                          context->unknown_pdu->hdr_size;
+      context->dyn_resource_added(context->unknown_session, resource->uri_path,
+                                  &raw_packet, context->observe_user_data);
+    }
+#endif /* COAP_WITH_OBSERVE_PERSIST */
   }
   assert(resource->context == NULL);
   resource->context = context;
@@ -796,6 +818,93 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG,
            (void*)s, s->cache_key->key[0], s->cache_key->key[1],
            s->cache_key->key[2], s->cache_key->key[3]);
 
+  if (session->context->observe_added && session->proto == COAP_PROTO_UDP) {
+    coap_bin_const_t raw_packet;
+    coap_bin_const_t *oscore_info = NULL;
+#if HAVE_OSCORE
+    oscore_association_t *association;
+
+    if (session->recipient_ctx && session->recipient_ctx->recipient_id) {
+      /*
+       * Need to track the association used for tracking this observe, done as
+       * a CBOR array. Read in coap_persist_observe_add().
+       *
+       * If an entry is null, then use nil, else a set of bytes
+       *
+       * Currently tracking 4 items
+       *  recipient_id
+       *  id_context
+       *  aad        (from oscore_association_t)
+       *  partial_iv (from oscore_association_t)
+       */
+      uint8_t info_buffer[60];
+      uint8_t *info_buf = info_buffer;
+      size_t info_len = sizeof(info_buffer);
+      size_t ret = 0;
+      coap_bin_const_t ctoken = { token->length, token->s };
+
+      ret += oscore_cbor_put_array(&info_buf, &info_len, 4);
+      ret += oscore_cbor_put_bytes(&info_buf,
+                                   &info_len,
+                                   session->recipient_ctx->recipient_id->s,
+                                 session->recipient_ctx->recipient_id->length);
+      if (session->recipient_ctx->osc_ctx &&
+          session->recipient_ctx->osc_ctx->id_context) {
+        ret += oscore_cbor_put_bytes(&info_buf,
+                                     &info_len,
+                           session->recipient_ctx->osc_ctx->id_context->s,
+                           session->recipient_ctx->osc_ctx->id_context->length);
+      } else {
+        ret += oscore_cbor_put_nil(&info_buf, &info_len);
+      }
+      association = oscore_find_association(session, &ctoken);
+      if (association) {
+        if (association->aad) {
+          ret += oscore_cbor_put_bytes(&info_buf,
+                                       &info_len,
+                                       association->aad->s,
+                                       association->aad->length);
+        } else {
+          ret += oscore_cbor_put_nil(&info_buf, &info_len);
+        }
+        if (association->partial_iv) {
+          ret += oscore_cbor_put_bytes(&info_buf,
+                                       &info_len,
+                                       association->partial_iv->s,
+                                       association->partial_iv->length);
+        } else {
+          ret += oscore_cbor_put_nil(&info_buf, &info_len);
+        }
+      } else {
+        ret += oscore_cbor_put_nil(&info_buf, &info_len);
+        ret += oscore_cbor_put_nil(&info_buf, &info_len);
+      }
+      oscore_info = coap_new_bin_const(info_buffer, ret);
+    }
+#endif /* HAVE_OSCORE */
+
+    /* s->pdu header is not currently encoded */
+    memcpy(s->pdu->token - request->hdr_size,
+           request->token - request->hdr_size, request->hdr_size);
+    raw_packet.s = s->pdu->token - request->hdr_size;
+    raw_packet.length = s->pdu->used_size + request->hdr_size;
+    session->context->observe_added(session, s, session->proto,
+                                    &session->endpoint->bind_addr,
+                                    &session->addr_info,
+                                    &raw_packet,
+                                    oscore_info,
+                                    session->context->observe_user_data);
+#if HAVE_OSCORE
+    coap_delete_bin_const(oscore_info);
+#endif /* HAVE_OSCORE */
+  }
+  if (resource->context->track_observe_value) {
+    /* Track last used observe value (as app handler is called) */
+    resource->context->track_observe_value(resource->context,resource->uri_path,
+                                           resource->observe,
+                                           resource->context->observe_user_data);
+  }
+
   return s;
 }
 
@@ -834,6 +943,9 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
              (void*)s, outbuf, s->cache_key->key[0], s->cache_key->key[1],
              s->cache_key->key[2], s-> cache_key->key[3]);
   }
+  if (s && session->context->observe_deleted)
+    session->context->observe_deleted(session, s,
+                                      session->context->observe_user_data);
 
   if (resource->subscribers && s) {
     LL_DELETE(resource->subscribers, s);
@@ -852,6 +964,8 @@ coap_delete_observers(coap_context_t *context, coap_session_t *session) {
     coap_subscription_t *s, *tmp;
     LL_FOREACH_SAFE(resource->subscribers, s, tmp) {
       if (s->session == session) {
+        if (context->observe_deleted)
+          context->observe_deleted(session, s, context->observe_user_data);
         LL_DELETE(resource->subscribers, s);
         coap_session_release(session);
         coap_delete_pdu(s->pdu);
@@ -1039,6 +1153,15 @@ coap_resource_notify_observers(coap_resource_t *r,
   r->observe = (r->observe + 1) & 0xFFFFFF;
 
   assert(r->context);
+
+  if (r->context->track_observe_value) {
+    /* Track last used observe value */
+    if ((r->observe % r->context->observe_save_freq) == 0)
+      r->context->track_observe_value(r->context, r->uri_path,
+                                      r->observe,
+                                      r->context->observe_user_data);
+  }
+
   r->context->observe_pending = 1;
 #ifdef COAP_EPOLL_SUPPORT
   coap_update_epoll_timer(r->context, 0);
@@ -1090,6 +1213,15 @@ coap_check_notify(coap_context_t *context) {
       coap_notify_observers(context, r, COAP_NOT_DELETING_RESOURCE);
     }
   }
+}
+
+void
+coap_persist_set_observe_num(coap_resource_t *resource,
+                             uint32_t start_observe_no) {
+  if (!resource)
+    return;
+
+  resource->observe = start_observe_no & 0xffffff;
 }
 
 /**

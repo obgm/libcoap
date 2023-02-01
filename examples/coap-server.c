@@ -77,6 +77,9 @@ static int doing_oscore = 0;
 /* set to 1 to request clean server shutdown */
 static int quit = 0;
 
+/* set to 1 if persist information is to be kept on server shutdown */
+static int keep_persist = 0;
+
 /* changeable clock base (see handle_put_time()) */
 static time_t clock_offset;
 static time_t my_clock_base = 0;
@@ -84,6 +87,7 @@ static time_t my_clock_base = 0;
 coap_resource_t *time_resource = NULL;
 
 static int resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_CON;
+static int track_observes = 0;
 
 /*
  * For PKI, if one or more of cert_file, key_file and ca_file is in PKCS11 URI
@@ -183,6 +187,19 @@ static void
 handle_sigint(int signum COAP_UNUSED) {
   quit = 1;
 }
+
+#ifndef _WIN32
+/*
+ * SIGUSR2 handler: set quit to 1 for graceful termination
+ * Disable sending out 4.04 for any active observations.
+ * Note: coap_*() functions should not be called at sig interrupt.
+ */
+static void
+handle_sigusr2(int signum COAP_UNUSED) {
+  quit = 1;
+  keep_persist = 1;
+}
+#endif /* ! _WIN32 */
 
 /*
  * This will return a correctly formed transient_value_t *, or NULL.
@@ -1446,6 +1463,7 @@ hnd_put_post(coap_resource_t *resource,
   }
   /* Need to de-reference as value may be in use elsewhere */
   release_resource_data(session, resource_entry->value);
+  resource_entry->value = NULL;
   transient_value = alloc_resource_data(data_so_far);
   if (!transient_value) {
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
@@ -1538,6 +1556,7 @@ hnd_put_post_unknown(coap_resource_t *resource COAP_UNUSED,
   coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_post);
   coap_register_request_handler(r, COAP_REQUEST_POST, hnd_put_post);
   coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete);
+  coap_register_request_handler(r, COAP_REQUEST_FETCH, hnd_get);
   /* We possibly want to Observe the GETs */
   coap_resource_set_get_observable(r, 1);
   coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get);
@@ -2159,6 +2178,9 @@ usage( const char *program, const char *version) {
      "\t       \t\tonly '/', '/async' and '/.well-known/core' are enabled\n"
      "\t       \t\tfor multicast requests support, otherwise all\n"
      "\t       \t\tresources are enabled\n"
+     "\t-t     \t\tTrack resource's observe values so observe\n"
+     "\t       \t\tsubscriptions can be maintained over a server restart.\n"
+     "\t       \t\tNote: Use 'kill SIGUSR2 <pid>' for controlled shutdown\n"
      "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
      "\t       \t\tCoAP logging\n"
      "\t-w [port][,secure_port]\n"
@@ -2728,7 +2750,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:u:v:w:A:C:E:L:M:NP:R:S:T:U:V:X:")) != -1) {
+  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:tu:v:w:A:C:E:L:M:NP:R:S:T:U:V:X:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -2846,6 +2868,9 @@ main(int argc, char **argv) {
         goto failed;
       }
       break;
+    case 't':
+      track_observes = 1;
+      break;
     case 'u':
 #if SERVER_CAN_PROXY
       user_length = cmdline_read_user(optarg, &user, MAX_USER);
@@ -2891,6 +2916,8 @@ main(int argc, char **argv) {
   sa.sa_flags = 0;
   sigaction (SIGINT, &sa, NULL);
   sigaction (SIGTERM, &sa, NULL);
+  sa.sa_handler = handle_sigusr2;
+  sigaction (SIGUSR2, &sa, NULL);
   /* So we do not exit on a SIGPIPE */
   sa.sa_handler = SIG_IGN;
   sigaction (SIGPIPE, &sa, NULL);
@@ -2923,6 +2950,20 @@ main(int argc, char **argv) {
   /* join multicast group if requested at command line */
   if (group)
     coap_join_mcast_group_intf(ctx, group, group_if);
+
+  if (track_observes) {
+    /*
+     * Read in and set up appropriate persist information.
+     * Note that this should be done after ctx is properly set up.
+     */
+    if (!coap_persist_startup(ctx,
+                              "/tmp/coap_dyn_resource_save_file",
+                              "/tmp/coap_observe_save_file",
+                              "/tmp/coap_obs_cnt_save_file", 10)) {
+      fprintf(stderr, "Unable to set up persist logic\n");
+      goto finish;
+    }
+  }
 
   coap_fd = coap_context_get_coap_fd(ctx);
   if (coap_fd != -1) {
@@ -3014,6 +3055,9 @@ main(int argc, char **argv) {
 
 finish:
   /* Clean up local usage */
+  if (keep_persist)
+    coap_persist_stop(ctx);
+
   coap_free(ca_mem);
   coap_free(cert_mem);
   coap_free(key_mem);

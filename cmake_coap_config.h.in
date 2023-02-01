@@ -32,6 +32,9 @@
 /* Define if the library has server support */
 #cmakedefine COAP_SERVER_SUPPORT @COAP_SERVER_SUPPORT@
 
+/* Define if the library is to have observe persistence */
+#cmakedefine COAP_WITH_OBSERVE_PERSIST @COAP_WITH_OBSERVE_PERSIST@
+
 /* Define if the system has epoll support */
 #cmakedefine COAP_EPOLL_SUPPORT @COAP_EPOLL_SUPPORT@
 

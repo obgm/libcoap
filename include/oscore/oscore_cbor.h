@@ -69,6 +69,7 @@
 
 #define CBOR_FALSE 20
 #define CBOR_TRUE  21
+#define CBOR_NULL  22
 
 size_t oscore_cbor_put_nil(uint8_t **buffer, size_t *buf_size);
 

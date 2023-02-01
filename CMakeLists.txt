@@ -72,6 +72,10 @@ option(
   "compile with support for OSCORE"
   ON)
 option(
+  WITH_OBSERVE_PERSIST
+  "compile with observe persist support for server restarts"
+  ON)
+option(
   WITH_EPOLL
   "compile with epoll support"
   ON)
@@ -236,6 +240,13 @@ if(${ENABLE_WS})
   message(STATUS "compiling with WebSockets support")
 else()
   message(STATUS "compiling without WebSockets support")
+endif()
+
+if(${WITH_OBSERVE_PERSIST})
+  set(COAP_WITH_OBSERVE_PERSIST "1")
+  message(STATUS "compiling with observe persistence support")
+else()
+  message(STATUS "compiling without observe persistence support")
 endif()
 
 if(${WITH_EPOLL}

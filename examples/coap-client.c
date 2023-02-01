@@ -235,12 +235,12 @@ track_check_token(coap_bin_const_t *token) {
 }
 
 static void
-track_flush_token(coap_bin_const_t *token) {
+track_flush_token(coap_bin_const_t *token, int force) {
   size_t i;
 
   for (i = 0; i < tracked_tokens_count; i++) {
     if (coap_binary_equal(token, tracked_tokens[i].token)) {
-      if (!tracked_tokens[i].observe || !obs_started) {
+      if (force || !tracked_tokens[i].observe || !obs_started) {
         /* Only remove if not Observing */
         coap_delete_binary(tracked_tokens[i].token);
         if (tracked_tokens_count-i > 1) {
@@ -445,7 +445,7 @@ message_handler(coap_session_t *session COAP_UNUSED,
       } else {
         doing_getting_block = 0;
         if (!is_mcast)
-          track_flush_token(&token);
+          track_flush_token(&token, 0);
       }
       return COAP_RESPONSE_OK;
     }
@@ -462,11 +462,12 @@ message_handler(coap_session_t *session COAP_UNUSED,
         }
       }
       fprintf(stderr, "\n");
+      track_flush_token(&token, 1);
     }
 
   }
   if (!is_mcast)
-    track_flush_token(&token);
+    track_flush_token(&token, 0);
 
   /* our job is done, we can exit at any time */
   ready = doing_observe ? coap_check_option(received,

@@ -2025,6 +2025,7 @@ coap_new_oscore_conf(coap_str_const_t conf_mem,
   oscore_conf->save_seq_num_func = save_seq_num_func;
   oscore_conf->save_seq_num_func_param = save_seq_num_func_param;
   oscore_conf->start_seq_num = start_seq_num;
+  coap_log_oscore("Start Seq no %" PRIu64 "\n", start_seq_num);
   return oscore_conf;
 }
 

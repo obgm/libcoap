@@ -788,6 +788,17 @@ AS_IF([test "x$build_async" != "xyes"],
       [AC_DEFINE(WITHOUT_ASYNC, [1], [Define to build without support for separate responses.])])
 
 # configure options
+# __observe_persist__
+AC_ARG_ENABLE([async],
+              [AS_HELP_STRING([--enable-observe-persist],
+                              [Enable building with support for persisting observes over a server restart [default=yes]])],
+              [build_observe_persist="$enableval"],
+              [build_observe_persist="yes"])
+
+AS_IF([test "x$build_observe_persist" = "xyes"],
+      [AC_DEFINE(COAP_WITH_OBSERVE_PERSIST, [1], [Define to build support for persisting observes.])])
+
+# configure options
 # __add_default_names__
 AC_ARG_ENABLE([add-default-names],
               [AS_HELP_STRING([--enable-add-default-names],
@@ -1043,6 +1054,7 @@ man/coap_observe.txt
 man/coap_oscore.txt
 man/coap_pdu_access.txt
 man/coap_pdu_setup.txt
+man/coap_persist.txt
 man/coap_recovery.txt
 man/coap_resource.txt
 man/coap_session.txt
@@ -1119,6 +1131,11 @@ if test "x$build_add_default_names" = "xyes"; then
     AC_MSG_RESULT([      add default names        : "yes"])
 else
     AC_MSG_RESULT([      add default names        : "no"])
+fi
+if test "x$build_observe_persist" = "xyes"; then
+    AC_MSG_RESULT([      build Observe Persist    : "yes"])
+else
+    AC_MSG_RESULT([      build Observe Persist    : "no"])
 fi
 if test "x$have_epoll" = "xyes"; then
     AC_MSG_RESULT([      build using epoll        : "$with_epoll"])

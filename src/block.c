@@ -428,7 +428,7 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
 
         /*
          * Need to fix lg_xmit stateless token as using tokens from
-           observe setup
+         * observe setup
          */
         if (pdu->lg_xmit)
           pdu->lg_xmit->b.b1.state_token = lg_crcv->state_token;
@@ -1177,7 +1177,7 @@ track_fetch_observe(coap_pdu_t *pdu, coap_lg_crcv_t *lg_crcv,
   coap_opt_t *opt = coap_check_option(pdu, COAP_OPTION_OBSERVE,
                                       &opt_iter);
 
-  if (opt) {
+  if (opt && lg_crcv) {
     int observe_action = -1;
     coap_bin_const_t **tmp;
 
