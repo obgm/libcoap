@@ -512,7 +512,7 @@ get_oscore_conf(coap_context_t *context) {
 
   buf = read_file_mem(oscore_conf_file, &length);
   if (buf == NULL) {
-    fprintf(stderr, "OSCORE configuraton file error: %s\n", oscore_conf_file);
+    fprintf(stderr, "OSCORE configuration file error: %s\n", oscore_conf_file);
     return NULL;
   }
   file_mem.s = buf;
@@ -538,7 +538,7 @@ get_oscore_conf(coap_context_t *context) {
                                      NULL, start_seq_num);
   coap_free(buf);
   if (oscore_conf == NULL) {
-    fprintf(stderr, "OSCORE configuraton file error: %s\n", oscore_conf_file);
+    fprintf(stderr, "OSCORE configuration file error: %s\n", oscore_conf_file);
     return NULL;
   }
   coap_context_oscore_server(context, oscore_conf);
