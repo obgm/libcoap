@@ -591,6 +591,12 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
   ciphertext_len = cose_encrypt0_encrypt(cose,
                                          ciphertext_buffer,
                                          plain_pdu->used_size + AES_CCM_TAG);
+  if ((int)ciphertext_len <= 0) {
+    coap_log_warn(
+             "OSCORE: Encryption Failure, result code: %d \n",
+             (int)ciphertext_len);
+    goto error;
+  }
   assert(ciphertext_len < OSCORE_CRYPTO_BUFFER_SIZE);
 
   /* Add in OSCORE option (previously computed) */
