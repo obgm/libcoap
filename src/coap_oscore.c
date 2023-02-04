@@ -914,6 +914,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
     if (!osc_ctx) {
       if (cose->kid_context.length > 0) {
         const uint8_t *ptr;
+        size_t length;
         /* Appendix B.2 protocol check - Is the recipient key_id known */
         osc_ctx = oscore_find_context(
             session->context,
@@ -922,13 +923,14 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
             session->oscore_r2 != 0 ? (uint8_t *)&session->oscore_r2 : NULL,
             &rcp_ctx);
         ptr = cose->kid_context.s;
+        length = cose->kid_context.length;
         if (ptr && osc_ctx && osc_ctx->rfc8613_b_2 &&
             osc_ctx->mode == OSCORE_MODE_SINGLE) {
           /* Processing Appendix B.2 protocol */
           /* Need to CBOR unwrap kid_context */
           coap_bin_const_t kid_context;
 
-          kid_context.length = oscore_cbor_get_element_size(&ptr);
+          kid_context.length = oscore_cbor_get_element_size(&ptr, &length);
           kid_context.s = ptr;
           cose_encrypt0_set_kid_context(cose, (coap_bin_const_t *)&kid_context);
 
@@ -1029,12 +1031,13 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       sent_pdu = association->sent_pdu;
       if (session->b_2_step != COAP_OSCORE_B_2_NONE) {
         const uint8_t *ptr = cose->kid_context.s;
+        size_t length = cose->kid_context.length;
 
         if (ptr) {
           /* Need to CBOR unwrap kid_context */
           coap_bin_const_t kid_context;
 
-          kid_context.length = oscore_cbor_get_element_size(&ptr);
+          kid_context.length = oscore_cbor_get_element_size(&ptr, &length);
           kid_context.s = ptr;
           cose_encrypt0_set_kid_context(cose, &kid_context);
         }
