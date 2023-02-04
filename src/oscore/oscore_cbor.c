@@ -208,13 +208,21 @@ oscore_cbor_put_unsigned(uint8_t **buffer, size_t *buf_size, uint64_t value) {
 }
 
 static inline uint8_t
-get_byte(const uint8_t *buffer) {
-  return *buffer;
+get_byte(const uint8_t **buffer, size_t *buf_len) {
+  assert((*buf_len) > 0);
+  return (*buffer)[0];
+}
+
+static inline uint8_t
+get_byte_inc(const uint8_t **buffer, size_t *buf_len) {
+  assert((*buf_len) > 0);
+  (*buf_len)--;
+  return((*buffer)++)[0];
 }
 
 uint8_t
-oscore_cbor_get_next_element(const uint8_t **buffer) {
-  uint8_t element = get_byte(*buffer);
+oscore_cbor_get_next_element(const uint8_t **buffer, size_t *buf_len) {
+  uint8_t element = get_byte(buffer, buf_len);
   return element >> 5;
 }
 
@@ -226,9 +234,10 @@ oscore_cbor_get_next_element(const uint8_t **buffer) {
  */
 
 uint64_t
-oscore_cbor_get_element_size(const uint8_t **buffer) {
-  uint8_t control = get_byte((*buffer)) & 0x1f;
-  uint64_t size = get_byte((*buffer)++);
+oscore_cbor_get_element_size(const uint8_t **buffer, size_t *buf_len) {
+  uint8_t control = get_byte(buffer, buf_len) & 0x1f;
+  uint64_t size = get_byte_inc(buffer, buf_len);
+
   if (control < 0x18) {
     size = (uint64_t)control;
   } else {
@@ -237,7 +246,7 @@ oscore_cbor_get_element_size(const uint8_t **buffer) {
     size = 0;
     uint64_t getal;
     for (int i = 0; i < num; i++) {
-      getal = (uint64_t)get_byte((*buffer)++);
+      getal = (uint64_t)get_byte_inc(buffer, buf_len);
       size = (size << 8) + getal;
     }
   }
@@ -245,9 +254,9 @@ oscore_cbor_get_element_size(const uint8_t **buffer) {
 }
 
 uint8_t
-oscore_cbor_elem_contained(const uint8_t *data, uint8_t *end) {
+oscore_cbor_elem_contained(const uint8_t *data, size_t *buf_len, uint8_t *end) {
   const uint8_t *buf = data;
-  const uint8_t *last = data + oscore_cbor_get_element_size(&buf);
+  const uint8_t *last = data + oscore_cbor_get_element_size(&buf, buf_len);
   if (last > end) {
     coap_log_err("oscore_cbor_elem_contained returns 1 \n");
     return 1;
@@ -256,13 +265,13 @@ oscore_cbor_elem_contained(const uint8_t *data, uint8_t *end) {
 }
 
 int64_t
-oscore_cbor_get_negative_integer(const uint8_t **buffer) {
-  return -(int64_t)(oscore_cbor_get_element_size(buffer) + 1);
+oscore_cbor_get_negative_integer(const uint8_t **buffer, size_t *buf_len) {
+  return -(int64_t)(oscore_cbor_get_element_size(buffer, buf_len) + 1);
 }
 
 uint64_t
-oscore_cbor_get_unsigned_integer(const uint8_t **buffer) {
-  return oscore_cbor_get_element_size(buffer);
+oscore_cbor_get_unsigned_integer(const uint8_t **buffer, size_t *buf_len) {
+  return oscore_cbor_get_element_size(buffer, buf_len);
 }
 
 /*
@@ -272,13 +281,13 @@ oscore_cbor_get_unsigned_integer(const uint8_t **buffer) {
  * OK: return 0 ; NOK: return 1
  */
 uint8_t
-oscore_cbor_get_number(const uint8_t **data, int64_t *value) {
-  uint8_t elem = oscore_cbor_get_next_element(data);
+oscore_cbor_get_number(const uint8_t **data, size_t *buf_len, int64_t *value) {
+  uint8_t elem = oscore_cbor_get_next_element(data, buf_len);
   if (elem == CBOR_UNSIGNED_INTEGER) {
-    *value = oscore_cbor_get_unsigned_integer(data);
+    *value = oscore_cbor_get_unsigned_integer(data, buf_len);
     return 0;
   } else if (elem == CBOR_NEGATIVE_INTEGER) {
-    *value = oscore_cbor_get_negative_integer(data);
+    *value = oscore_cbor_get_negative_integer(data, buf_len);
     return 0;
   } else
     return 1;
@@ -291,26 +300,28 @@ oscore_cbor_get_number(const uint8_t **data, int64_t *value) {
  * OK: return 0 ; NOK: return 1
  */
 uint8_t
-oscore_cbor_get_simple_value(const uint8_t **data, uint8_t *value) {
-  uint8_t elem = oscore_cbor_get_next_element(data);
+oscore_cbor_get_simple_value(const uint8_t **data, size_t *buf_len, uint8_t *value) {
+  uint8_t elem = oscore_cbor_get_next_element(data, buf_len);
   if (elem == CBOR_SIMPLE_VALUE) {
-    *value = get_byte((*data)++) & 0x1f;
+    *value = get_byte_inc(data, buf_len) & 0x1f;
     return 0;
   } else
     return 1;
 }
 
 void
-oscore_cbor_get_string(const uint8_t **buffer, char *str, uint64_t size) {
+oscore_cbor_get_string(const uint8_t **buffer, size_t *buf_len, char *str, uint64_t size) {
+  (void)buf_len;
   for (uint64_t i = 0; i < size; i++) {
-    *str++ = (char)get_byte((*buffer)++);
+    *str++ = (char)get_byte_inc(buffer, buf_len);
   }
 }
 
 void
-oscore_cbor_get_array(const uint8_t **buffer, uint8_t *arr, uint64_t size) {
+oscore_cbor_get_array(const uint8_t **buffer, size_t *buf_len, uint8_t *arr, uint64_t size) {
+  (void)buf_len;
   for (uint64_t i = 0; i < size; i++) {
-    *arr++ = get_byte((*buffer)++);
+    *arr++ = get_byte_inc(buffer, buf_len);
   }
 }
 
@@ -318,20 +329,20 @@ oscore_cbor_get_array(const uint8_t **buffer, uint8_t *arr, uint64_t size) {
  * fills the the size and the array from the cbor element
  */
 uint8_t
-oscore_cbor_get_string_array(const uint8_t **data,
+oscore_cbor_get_string_array(const uint8_t **data, size_t *buf_len,
                              uint8_t **result,
                              size_t *len) {
 
-  uint8_t elem = oscore_cbor_get_next_element(data);
-  *len = oscore_cbor_get_element_size(data);
+  uint8_t elem = oscore_cbor_get_next_element(data, buf_len);
+  *len = oscore_cbor_get_element_size(data, buf_len);
   *result = NULL;
   void *rs = coap_malloc_type(COAP_STRING, *len);
   *result = (uint8_t *)rs;
   if (elem == CBOR_TEXT_STRING) {
-    oscore_cbor_get_string(data, (char *)*result, *len);
+    oscore_cbor_get_string(data, buf_len, (char *)*result, *len);
     return 0;
   } else if (elem == CBOR_BYTE_STRING) {
-    oscore_cbor_get_array(data, *result, *len);
+    oscore_cbor_get_array(data, buf_len, *result, *len);
     return 0; /* all is well */
   } else {
     free(*result);
@@ -344,9 +355,9 @@ oscore_cbor_get_string_array(const uint8_t **data,
  *  returns number of CBOR bytes
  */
 static size_t
-oscore_cbor_skip_value(const uint8_t **data) {
-  uint8_t elem = oscore_cbor_get_next_element(data);
-  uint8_t control = get_byte((*data)) & 0x1f;
+oscore_cbor_skip_value(const uint8_t **data, size_t *buf_len) {
+  uint8_t elem = oscore_cbor_get_next_element(data, buf_len);
+  uint8_t control = get_byte(data, buf_len) & 0x1f;
   size_t nb = 0;   /* number of elements in array or map */
   size_t num = 0;  /* number of bytes of length or number */
   size_t size = 0; /* size of value to be skipped */
@@ -359,30 +370,36 @@ oscore_cbor_skip_value(const uint8_t **data) {
   switch (elem) {
   case CBOR_UNSIGNED_INTEGER:
   case CBOR_NEGATIVE_INTEGER:
+    assert((*buf_len) >= num);
+    *buf_len -= num;
     *data = *data + num;
     size = num;
     break;
   case CBOR_BYTE_STRING:
   case CBOR_TEXT_STRING:
     size = num;
-    size += oscore_cbor_get_element_size(data);
+    size += oscore_cbor_get_element_size(data, buf_len);
+    assert((*buf_len) >= (size - num));
+    *buf_len -= (size - num);
     (*data) = (*data) + size - num;
     break;
   case CBOR_ARRAY:
-    nb = oscore_cbor_get_element_size(data);
+    nb = oscore_cbor_get_element_size(data, buf_len);
     size = num;
     for (uint16_t qq = 0; qq < nb; qq++)
-      size += oscore_cbor_skip_value(data);
+      size += oscore_cbor_skip_value(data, buf_len);
     break;
   case CBOR_MAP:
-    nb = oscore_cbor_get_element_size(data);
+    nb = oscore_cbor_get_element_size(data, buf_len);
     size = num;
     for (uint16_t qq = 0; qq < nb; qq++) {
-      size += oscore_cbor_skip_value(data);
-      size += oscore_cbor_skip_value(data);
+      size += oscore_cbor_skip_value(data, buf_len);
+      size += oscore_cbor_skip_value(data, buf_len);
     }
     break;
   case CBOR_TAG:
+    assert((*buf_len) >= 1);
+    *buf_len -= 1;
     (*data)++;
     size = 1;
     break;
@@ -398,9 +415,9 @@ oscore_cbor_skip_value(const uint8_t **data) {
  *  and returns size
  */
 uint8_t
-oscore_cbor_strip_value(const uint8_t **data, uint8_t **result, size_t *len) {
+oscore_cbor_strip_value(const uint8_t **data, size_t *buf_len, uint8_t **result, size_t *len) {
   const uint8_t *st_data = *data;
-  size_t size = oscore_cbor_skip_value(data);
+  size_t size = oscore_cbor_skip_value(data, buf_len);
   *result = coap_malloc_type(COAP_STRING, size);
   for (uint16_t qq = 0; qq < size; qq++)
     (*result)[qq] = st_data[qq];
