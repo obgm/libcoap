@@ -125,6 +125,12 @@
 /* Define to 1 if you have the `strrchr' function. */
 #cmakedefine HAVE_STRRCHR @HAVE_STRRCHR@
 
+/* Define to 1 if you have the `getrandom' function. */
+#cmakedefine HAVE_GETRANDOM @HAVE_GETRANDOM@
+
+/* Define to 1 if you have the `randon' function. */
+#cmakedefine HAVE_RANDOM @HAVE_RANDOM@
+
 /* Define to 1 if the system has the type `struct cmsghdr'. */
 #cmakedefine HAVE_STRUCT_CMSGHDR @HAVE_STRUCT_CMSGHDR@
 

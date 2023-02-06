@@ -169,6 +169,7 @@ check_function_exists(getaddrinfo HAVE_GETADDRINFO)
 check_function_exists(strnlen HAVE_STRNLEN)
 check_function_exists(strrchr HAVE_STRRCHR)
 check_function_exists(getrandom HAVE_GETRANDOM)
+check_function_exists(random HAVE_RANDOM)
 check_function_exists(if_nametoindex HAVE_IF_NAMETOINDEX)
 
 # check for symbols
