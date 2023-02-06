@@ -1150,6 +1150,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
 
   assert(pdu);
 
+#if COAP_CLIENT_SUPPORT
   if (session->type == COAP_SESSION_TYPE_CLIENT &&
       session->sock.flags == COAP_SOCKET_EMPTY) {
     coap_log_debug("coap_send: Socket closed\n");
@@ -1158,14 +1159,13 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   }
   /*
    * If this is not the first client request and are waiting for a response
-   * to the first client request, then delay sending out this next request
-   * untill all is properly established.
+   * to the first client request, then drop sending out this next request
+   * until all is properly established.
    */
-  if (!coap_client_delay_first(session))
+  if (!coap_client_delay_first(session)) {
+    coap_delete_pdu(pdu);
     return COAP_INVALID_MID;
-
-#if COAP_CLIENT_SUPPORT
-  assert(pdu);
+  }
 
   /* Indicate support for Extended Tokens if appropriate */
   if (session->max_token_checked == COAP_EXT_T_NOT_CHECKED &&
@@ -1187,10 +1187,10 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
      * in coap_session_connected()
      */
     session->doing_first = 1;
-  }
-
-  if (coap_client_delay_first(session) == 0) {
-    return COAP_INVALID_MID;
+    if (!coap_client_delay_first(session)) {
+      coap_delete_pdu(pdu);
+      return COAP_INVALID_MID;
+    }
   }
 
   /*
@@ -1209,27 +1209,21 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   if (COAP_PROTO_RELIABLE(session->proto) && pdu->type == COAP_MESSAGE_NON)
     pdu->type = COAP_MESSAGE_CON;
 
-  /*
-   * If this is not the first client request and are waiting for a response
-   * to the first client request, then delay sending out this next request
-   * untill all is properly established.
-   */
-  if (!coap_client_delay_first(session))
-    return COAP_INVALID_MID;
-
 #if HAVE_OSCORE
   if (session->oscore_encryption) {
     if (session->recipient_ctx->initial_state == 1) {
       /*
        * Not sure if remote supports OSCORE, or is going to send us a
        * "4.01 + ECHO" etc. so need to hold off future coap_send()s until all
-       * is OK.
+       * is OK. Continue sending current pdu to test things.
        */
       session->doing_first = 1;
     }
     /* Need to convert Proxy-Uri to Proxy-Scheme option if needed */
-    if (COAP_PDU_IS_REQUEST(pdu) && !coap_rebuild_pdu_for_proxy(pdu))
-      return mid;
+    if (COAP_PDU_IS_REQUEST(pdu) && !coap_rebuild_pdu_for_proxy(pdu)) {
+      coap_delete_pdu(pdu);
+      return COAP_INVALID_MID;
+    }
   }
 #endif /* HAVE_OSCORE */
 
