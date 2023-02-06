@@ -820,6 +820,9 @@ coap_add_data_large_internal(coap_session_t *session,
     memcpy(lg_xmit->pdu.token, pdu->token, lg_xmit->pdu.used_size);
     if (pdu->data)
       lg_xmit->pdu.data = lg_xmit->pdu.token + (pdu->data - pdu->token);
+    lg_xmit->pdu.actual_token.s = lg_xmit->pdu.token + pdu->e_token_length -
+                                                       pdu->actual_token.length;
+    lg_xmit->pdu.actual_token.length = pdu->actual_token.length;
 
     /* Check we still have space after adding in some options */
     token_options = pdu->data ? (size_t)(pdu->data - pdu->token) : pdu->used_size;
