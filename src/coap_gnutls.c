@@ -3081,7 +3081,7 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-#if COAP_WS_SUPPORT
+#if COAP_WS_SUPPORT || COAP_OSCORE_GROUP_SUPPORT
 /*
  * The struct hash_algs and the function get_hash_alg() are used to
  * determine which hash type to use for creating the required hash object.
@@ -3146,12 +3146,30 @@ error:
   gnutls_hash_deinit(digest_ctx, NULL);
   return 0;
 }
-#endif /* COAP_WS_SUPPORT */
+#endif /* COAP_WS_SUPPORT || COAP_OSCORE_GROUP_SUPPORT */
 
 #if COAP_OSCORE_SUPPORT
 int
 coap_oscore_is_supported(void) {
   return 1;
+}
+
+int
+coap_oscore_group_is_supported(void) {
+#if COAP_OSCORE_GROUP_SUPPORT
+  return 1;
+#else  /* !COAP_OSCORE_GROUP_SUPPORT */
+  return 0;
+#endif /* !COAP_OSCORE_GROUP_SUPPORT */
+}
+
+int
+coap_oscore_pairwise_is_supported(void) {
+#if COAP_OSCORE_GROUP_SUPPORT
+  return 0;
+#else  /* !COAP_OSCORE_GROUP_SUPPORT */
+  return 0;
+#endif /* !COAP_OSCORE_GROUP_SUPPORT */
 }
 
 /*
@@ -3202,6 +3220,73 @@ get_hmac_alg(cose_hmac_alg_t hmac_alg) {
   coap_log_debug("get_hmac_alg: COSE HMAC %d not supported\n", hmac_alg);
   return 0;
 }
+
+#if COAP_OSCORE_GROUP_SUPPORT
+
+/*
+ * The struct curve_algs and the function get_curve_alg() are used to
+ * determine which curve type to use for creating the required curve
+ * output object.
+ */
+static struct curve_algs {
+  cose_curve_t alg;
+  gnutls_ecc_curve_t curve;
+} curves[] = {
+  {COSE_CURVE_P_256, GNUTLS_ECC_CURVE_SECP256R1},
+  {COSE_CURVE_X25519, GNUTLS_ECC_CURVE_X25519},
+  {COSE_CURVE_X448, GNUTLS_ECC_CURVE_X448},
+  {COSE_CURVE_ED25519, GNUTLS_ECC_CURVE_ED25519},
+  {COSE_CURVE_ED448, GNUTLS_ECC_CURVE_ED448},
+};
+
+static gnutls_ecc_curve_t
+get_curve_alg(cose_curve_t alg) {
+  size_t idx;
+
+  for (idx = 0; idx < sizeof(curves) / sizeof(struct curve_algs); idx++) {
+    if (curves[idx].alg == alg)
+      return curves[idx].curve;
+  }
+  coap_log_debug("get_curve_alg: COSE curve %d not supported\n", alg);
+  return 0;
+}
+
+static cose_curve_t
+get_alg_curve(gnutls_ecc_curve_t curve) {
+  size_t idx;
+
+  for (idx = 0; idx < sizeof(curves) / sizeof(struct curve_algs); idx++) {
+    if (curves[idx].curve == curve)
+      return curves[idx].alg;
+  }
+  coap_log_debug("get_alg_curve: GnuTLS curve %d not supported\n", curve);
+  return 0;
+}
+
+static cose_alg_t
+get_alg_hash(gnutls_digest_algorithm_t dig_type) {
+  size_t idx;
+
+  for (idx = 0; idx < sizeof(hashes) / sizeof(struct hash_algs); idx++) {
+    if (hashes[idx].dig_type == dig_type)
+      return hashes[idx].alg;
+  }
+  coap_log_debug("get_alg_hash: GnuTLS hash %d not supported\n", dig_type);
+  return 0;
+}
+
+int
+coap_crypto_check_curve_alg(cose_curve_t alg) {
+  return get_curve_alg(alg) != 0;
+}
+
+int
+coap_crypto_check_hash_alg(cose_alg_t alg) {
+  size_t hash_length;
+
+  return get_hash_alg(alg, &hash_length) != 0;
+}
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 
 int
 coap_crypto_check_cipher_alg(cose_alg_t alg) {
@@ -3381,6 +3466,509 @@ fail:
   gnutls_hmac_deinit(ctx, NULL);
   return ret == 1 ? 1 : 0;
 }
+
+#if COAP_OSCORE_GROUP_SUPPORT
+int
+coap_crypto_read_pem_private_key(const char *filename,
+                                 coap_crypto_pri_key_t **private) {
+  gnutls_privkey_t priv_key = NULL;
+  gnutls_x509_privkey_t priv_x509 = NULL;
+  coap_crypto_pri_key_t *local = gnutls_malloc(sizeof(coap_crypto_pri_key_t));
+  int ret = 0;
+  gnutls_datum_t data = {NULL, 0};
+  gnutls_datum_t key = {NULL, 0};
+
+  if (local == NULL)
+    goto fail;
+
+  memset(local, 0, sizeof(coap_crypto_pri_key_t));
+  G_CHECK(gnutls_privkey_init(&priv_key), "gnutls_privkey_init");
+  G_CHECK(gnutls_load_file(filename, &data), "gnutls_load_file");
+  G_CHECK(gnutls_privkey_import_x509_raw(priv_key,
+                                         &data,
+                                         GNUTLS_X509_FMT_PEM,
+                                         NULL,
+                                         GNUTLS_PRIVKEY_IMPORT_AUTO_RELEASE),
+          "gnutls_privkey_import_x509_raw");
+  G_CHECK(gnutls_privkey_verify_params(priv_key),
+          "gnutls_privkey_verify_params");
+  G_CHECK(gnutls_privkey_export_x509(priv_key, &priv_x509),
+          "gnutls_privkey_export_x509");
+  G_CHECK(gnutls_x509_privkey_export2_pkcs8(priv_x509,
+                                            GNUTLS_X509_FMT_DER,
+                                            NULL,
+                                            GNUTLS_PKCS_PLAIN,
+                                            &key),
+          "gnutls_x509_privkey_export2_pkcs8");
+  local->pri_der = coap_new_bin_const(key.data, key.size);
+  if (local->pri_der == NULL)
+    goto fail;
+  local->key_tls = priv_key;
+  priv_key = NULL;
+  *private = local;
+  local = NULL;
+  ret = 1;
+
+fail:
+  if (priv_key)
+    gnutls_privkey_deinit(priv_key);
+  if (priv_x509)
+    gnutls_x509_privkey_deinit(priv_x509);
+  gnutls_free(local);
+  gnutls_free(data.data);
+  gnutls_free(key.data);
+  return ret == 1 ? 1 : 0;
+}
+
+int
+coap_crypto_read_asn1_private_key(coap_bin_const_t *binary,
+                                  coap_crypto_pri_key_t **private) {
+  gnutls_privkey_t priv_key = NULL;
+  coap_crypto_pri_key_t *local;
+  int ret = 0;
+  gnutls_datum_t data = {NULL, 0};
+
+  local = gnutls_malloc(sizeof(coap_crypto_pri_key_t));
+  if (local == NULL)
+    goto fail;
+
+  memset(local, 0, sizeof(coap_crypto_pri_key_t));
+  G_CHECK(gnutls_privkey_init(&priv_key), "gnutls_privkey_init");
+  data.size = binary->length;
+  /* Need to do this to not get a compiler warning about const parameters */
+  memcpy(&data.data, &binary->s, sizeof(data.data));
+  G_CHECK(gnutls_privkey_import_x509_raw(priv_key,
+                                         &data,
+                                         GNUTLS_X509_FMT_DER,
+                                         NULL,
+                                         GNUTLS_PRIVKEY_IMPORT_AUTO_RELEASE),
+          "gnutls_privkey_import_x509_raw");
+  G_CHECK(gnutls_privkey_verify_params(priv_key),
+          "gnutls_privkey_verify_params");
+  local->pri_der = (coap_bin_const_t *)binary;
+  binary = NULL;
+  local->key_tls = priv_key;
+  priv_key = NULL;
+  *private = local;
+  local = NULL;
+  ret = 1;
+
+fail:
+  if (priv_key)
+    gnutls_privkey_deinit(priv_key);
+  coap_delete_bin_const(binary);
+  gnutls_free(local);
+  return ret == 1 ? 1 : 0;
+}
+
+int
+coap_crypto_read_raw_private_key(cose_curve_t curve,
+                                 coap_bin_const_t *binary,
+                                 coap_crypto_pri_key_t **private) {
+  (void)curve;
+  (void)private;
+
+  coap_delete_bin_const(binary);
+  return 0;
+}
+
+coap_crypto_pri_key_t *
+coap_crypto_duplicate_private_key(coap_crypto_pri_key_t *key) {
+  if (key) {
+    gnutls_x509_privkey_t priv_x509 = NULL;
+    int ret = 0;
+    coap_crypto_pri_key_t *new_key =
+        gnutls_malloc(sizeof(coap_crypto_pri_key_t));
+    if (new_key == NULL)
+      goto fail;
+
+    memcpy(new_key, key, sizeof(coap_crypto_pri_key_t));
+    new_key->pri_der =
+        coap_new_bin_const(key->pri_der->s, key->pri_der->length);
+    if (new_key->pri_der == NULL)
+      goto fail;
+    G_CHECK(gnutls_privkey_export_x509(new_key->key_tls, &priv_x509),
+            "gnutls_privkey_export_x509");
+    G_CHECK(gnutls_privkey_import_x509(key->key_tls,
+                                       priv_x509,
+                                       GNUTLS_PRIVKEY_IMPORT_COPY),
+            "gnutls_privkey_import_x509");
+    return new_key;
+
+fail:
+    if (priv_x509)
+      gnutls_x509_privkey_deinit(priv_x509);
+    gnutls_free(new_key);
+  }
+  return NULL;
+}
+
+void
+coap_crypto_delete_private_key(coap_crypto_pri_key_t *key) {
+  if (key) {
+    gnutls_privkey_deinit(key->key_tls);
+    coap_delete_bin_const(key->pri_der);
+    gnutls_free(key);
+  }
+}
+
+int
+coap_crypto_read_pem_public_cred(const char *filename,
+                                 coap_crypto_cred_t **public) {
+  gnutls_pubkey_t pub_key = NULL;
+  gnutls_privkey_t priv_key = NULL;
+  coap_crypto_cred_t *local = gnutls_malloc(sizeof(coap_crypto_cred_t));
+  int ret = 0;
+  gnutls_datum_t data = {NULL, 0};
+  gnutls_datum_t key = {NULL, 0};
+  gnutls_digest_algorithm_t hash;
+  unsigned int mand = 0;
+  gnutls_ecc_curve_t curve = 0;
+
+  if (local == NULL)
+    goto fail;
+
+  memset(local, 0, sizeof(coap_crypto_cred_t));
+  G_CHECK(gnutls_pubkey_init(&pub_key), "gnutls_pubkey_init");
+  G_CHECK(gnutls_load_file(filename, &data), "gnutls_load_file");
+  if (strstr((char *)data.data, "PUBLIC KEY") == NULL) {
+    G_CHECK(gnutls_privkey_init(&priv_key), "gnutls_privkey_init");
+    G_CHECK(gnutls_privkey_import_x509_raw(priv_key,
+                                           &data,
+                                           GNUTLS_X509_FMT_PEM,
+                                           NULL,
+                                           GNUTLS_PRIVKEY_IMPORT_AUTO_RELEASE),
+            "gnutls_privkey_import_x509_raw");
+    G_CHECK(gnutls_privkey_verify_params(priv_key),
+            "gnutls_privkey_verify_params");
+    G_CHECK(gnutls_pubkey_import_privkey(pub_key, priv_key, 0, 0),
+            "gnutls_pubkey_import_privkey");
+  } else {
+    G_CHECK(
+        gnutls_pubkey_import_x509_raw(pub_key, &data, GNUTLS_X509_FMT_PEM, 0),
+        "gnutls_pubkey_import_x509_raw");
+  }
+  G_CHECK(gnutls_pubkey_verify_params(pub_key), "gnutls_pubkey_verify_params");
+  G_CHECK(gnutls_pubkey_export2(pub_key, GNUTLS_X509_FMT_DER, &key),
+          "gnutls_pubkey_export2");
+  local->pub_der = coap_new_bin_const(key.data, key.size);
+  if (local->pub_der == NULL)
+    goto fail;
+  G_CHECK(gnutls_pubkey_get_preferred_hash_algorithm(pub_key, &hash, &mand),
+          "gnutls_pubkey_get_preferred_hash_algorithm");
+  local->sign_hash = get_alg_hash(hash);
+  local->wire_sign_size = cose_hash_len(local->sign_hash);
+  switch (gnutls_pubkey_get_pk_algorithm(pub_key, NULL)) {
+  case GNUTLS_PK_EDDSA_ED25519:
+    break;
+  case GNUTLS_PK_ECDSA:
+    local->wire_sign_size *= 2;
+    break;
+  default:
+    break;
+  }
+  G_CHECK(gnutls_pubkey_export_ecc_raw2(pub_key, &curve, NULL, NULL, 0),
+          "gnutls_pubkey_export_ecc_raw2");
+  local->sign_curve = get_alg_curve(curve);
+  local->key_tls = pub_key;
+  pub_key = NULL;
+  *public = local;
+  local = NULL;
+
+  ret = 1;
+fail:
+  if (priv_key)
+    gnutls_privkey_deinit(priv_key);
+  if (pub_key)
+    gnutls_pubkey_deinit(pub_key);
+  gnutls_free(local);
+  gnutls_free(data.data);
+  gnutls_free(key.data);
+  return ret == 1 ? 1 : 0;
+}
+
+int
+coap_crypto_read_asn1_public_cred(coap_bin_const_t *binary,
+                                  coap_crypto_cred_t **public) {
+  gnutls_pubkey_t pub_key = NULL;
+  gnutls_privkey_t priv_key = NULL;
+  coap_crypto_cred_t *local = gnutls_malloc(sizeof(coap_crypto_cred_t));
+  int ret = 0;
+  gnutls_datum_t data = {NULL, 0};
+  gnutls_datum_t key = {NULL, 0};
+  gnutls_digest_algorithm_t hash;
+  unsigned int mand = 0;
+  gnutls_ecc_curve_t curve = 0;
+
+  if (local == NULL)
+    goto fail;
+
+  memset(local, 0, sizeof(coap_crypto_cred_t));
+  G_CHECK(gnutls_pubkey_init(&pub_key), "gnutls_pubkey_init");
+  data.size = binary->length;
+  /* Need to do this to not get a compiler warning about const parameters */
+  memcpy(&data.data, &binary->s, sizeof(data.data));
+  if (data.data[2] == 0x02) {
+    /* Is an Integer, not a Sequence, hence private key */
+    G_CHECK(gnutls_privkey_init(&priv_key), "gnutls_privkey_init");
+    G_CHECK(gnutls_privkey_import_x509_raw(priv_key,
+                                           &data,
+                                           GNUTLS_X509_FMT_DER,
+                                           NULL,
+                                           GNUTLS_PRIVKEY_IMPORT_AUTO_RELEASE),
+            "gnutls_privkey_import_x509_raw");
+    G_CHECK(gnutls_privkey_verify_params(priv_key),
+            "gnutls_privkey_verify_params");
+    G_CHECK(gnutls_pubkey_import_privkey(pub_key, priv_key, 0, 0),
+            "gnutls_pubkey_import_privkey");
+  } else {
+    G_CHECK(gnutls_pubkey_import(pub_key, &data, GNUTLS_X509_FMT_DER),
+            "gnutls_pubkey_import");
+  }
+  G_CHECK(gnutls_pubkey_verify_params(pub_key), "gnutls_pubkey_verify_params");
+  G_CHECK(gnutls_pubkey_export2(pub_key, GNUTLS_X509_FMT_DER, &key),
+          "gnutls_pubkey_export2");
+  local->pub_der = coap_new_bin_const(key.data, key.size);
+  if (local->pub_der == NULL)
+    goto fail;
+  G_CHECK(gnutls_pubkey_get_preferred_hash_algorithm(pub_key, &hash, &mand),
+          "gnutls_pubkey_get_preferred_hash_algorithm");
+  local->sign_hash = get_alg_hash(hash);
+  local->wire_sign_size = cose_hash_len(local->sign_hash);
+  switch (gnutls_pubkey_get_pk_algorithm(pub_key, NULL)) {
+  case GNUTLS_PK_EDDSA_ED25519:
+    break;
+  case GNUTLS_PK_ECDSA:
+    local->wire_sign_size *= 2;
+    break;
+  default:
+    break;
+  }
+  G_CHECK(gnutls_pubkey_export_ecc_raw2(pub_key, &curve, NULL, NULL, 0),
+          "gnutls_pubkey_export_ecc_raw2");
+  local->sign_curve = get_alg_curve(curve);
+  local->key_tls = pub_key;
+  pub_key = NULL;
+  *public = local;
+  local = NULL;
+
+  ret = 1;
+fail:
+  if (priv_key)
+    gnutls_privkey_deinit(priv_key);
+  if (pub_key)
+    gnutls_pubkey_deinit(pub_key);
+  gnutls_free(binary);
+  gnutls_free(key.data);
+  gnutls_free(local);
+  return ret == 1 ? 1 : 0;
+}
+
+int
+coap_crypto_read_raw_public_cred(cose_curve_t curve,
+                                 coap_bin_const_t *binary,
+                                 coap_crypto_cred_t **public) {
+  (void)curve;
+  (void)public;
+
+  coap_delete_bin_const(binary);
+  return 0;
+}
+
+coap_crypto_cred_t *
+coap_crypto_duplicate_public_cred(coap_crypto_cred_t *key) {
+  if (key) {
+    gnutls_pubkey_t pub_key = NULL;
+    int ret = 0;
+    gnutls_datum_t data = {NULL, 0};
+    coap_crypto_cred_t *new_key =
+        gnutls_malloc(sizeof(coap_crypto_cred_t));
+
+    if (new_key == NULL)
+      goto fail;
+
+    memcpy(new_key, key, sizeof(coap_crypto_cred_t));
+    new_key->pub_der =
+        coap_new_bin_const(key->pub_der->s, key->pub_der->length);
+    if (new_key->pub_der == NULL)
+      goto fail;
+    G_CHECK(gnutls_pubkey_init(&pub_key), "gnutls_pubkey_init");
+    data.size = new_key->pub_der->length;
+    /* Need to do this to not get a compiler warning about const parameters */
+    memcpy(&data.data, &new_key->pub_der->s, sizeof(data.data));
+    G_CHECK(
+        gnutls_pubkey_import_x509_raw(pub_key, &data, GNUTLS_X509_FMT_DER, 0),
+        "gnutls_pubkey_import_x509_raw");
+    G_CHECK(gnutls_pubkey_verify_params(pub_key),
+            "gnutls_pubkey_verify_params");
+    new_key->key_tls = pub_key;
+    return new_key;
+
+fail:
+    if (pub_key)
+      gnutls_pubkey_deinit(pub_key);
+    gnutls_free(new_key);
+  }
+  return NULL;
+}
+
+void
+coap_crypto_delete_public_cred(coap_crypto_cred_t *key) {
+  if (key) {
+    gnutls_pubkey_deinit(key->key_tls);
+    coap_delete_bin_const(key->pub_der);
+    coap_delete_bin_const(key->auth_cred);
+    gnutls_free(key);
+  }
+}
+
+int
+coap_crypto_hash_sign(cose_alg_t hash,
+                      coap_binary_t *signature,
+                      coap_bin_const_t *text,
+                      coap_crypto_pri_key_t *private_key) {
+  size_t hash_length;
+  gnutls_digest_algorithm_t gnutls_dig = get_hash_alg(hash, &hash_length);
+  int ret = 0;
+  gnutls_privkey_t priv_key = private_key->key_tls;
+  gnutls_datum_t data;
+  gnutls_datum_t sign;
+  coap_binary_t sign_b;
+  coap_binary_t *sign_bp = NULL;
+
+  if (gnutls_dig == 0)
+    goto fail;
+
+  data.size = text->length;
+  /* Need to do this to not get a compiler warning about const parameters */
+  memcpy(&data.data, &text->s, sizeof(data.data));
+  sign.size = signature->length;
+  sign.data = signature->s;
+  G_CHECK(
+      gnutls_privkey_sign_data(priv_key, gnutls_dig, 0, &data, &sign),
+      "gnutls_privkey_sign_data");
+  switch (gnutls_privkey_get_pk_algorithm(priv_key, NULL)) {
+  case GNUTLS_PK_ECDSA:
+    sign_b.s = sign.data;
+    sign_b.length = sign.size;
+    oscore_log_hex_value(COAP_LOG_OSCORE,
+                         "ASN.1 Sign",
+                         (coap_bin_const_t *)&sign_b);
+    /* Need to convert asn.1 to 64 bytes */
+    sign_bp = coap_asn1_split_r_s(&sign_b, 64);
+    gnutls_free(sign.data);
+    if (sign_bp) {
+      memcpy(signature->s, sign_bp->s, sign_bp->length);
+      signature->length = sign_bp->length;
+    }
+    break;
+  default:
+    coap_log_debug("check id %d\n",
+                   gnutls_privkey_get_pk_algorithm(priv_key, NULL));
+  /* Fall Through */
+  case GNUTLS_PK_EDDSA_ED25519:
+    assert(signature->length >= sign.size);
+    memcpy(signature->s, sign.data, sign.size);
+    signature->length = sign.size;
+    gnutls_free(sign.data);
+    break;
+  }
+  ret = signature->length;
+
+fail:
+  coap_delete_binary(sign_bp);
+  return ret;
+}
+
+int
+coap_crypto_hash_verify(cose_alg_t hash,
+                        coap_binary_t *signature,
+                        coap_bin_const_t *text,
+                        coap_crypto_cred_t *public_cred) {
+  size_t hash_length;
+  gnutls_digest_algorithm_t gnutls_dig = get_hash_alg(hash, &hash_length);
+  int ret = 0;
+  gnutls_pubkey_t pub_key = public_cred->key_tls;
+  gnutls_datum_t data;
+  gnutls_datum_t sign;
+  coap_binary_t *sign_bp = NULL;
+
+  if (gnutls_dig == 0)
+    goto fail;
+
+  (void)signature;
+  (void)text;
+  (void)public_cred;
+  data.size = text->length;
+  /* Need to do this to not get a compiler warning about const parameters */
+  memcpy(&data.data, &text->s, sizeof(data.data));
+  switch (gnutls_pubkey_get_pk_algorithm(pub_key, NULL)) {
+  case GNUTLS_PK_ECDSA:
+    /* Need to convert r + s to ASN.1 */
+    sign_bp = coap_asn1_r_s_join(signature);
+    if (sign_bp == NULL) {
+      coap_log_warn("Unable to create ASN.1 for r + s\n");
+      goto fail;
+    }
+    oscore_log_hex_value(COAP_LOG_OSCORE,
+                         "ASN.1 Sign",
+                         (coap_bin_const_t *)sign_bp);
+    sign.size = sign_bp->length;
+    sign.data = sign_bp->s;
+    break;
+  default:
+    coap_log_debug("check id %d\n",
+                   gnutls_pubkey_get_pk_algorithm(pub_key, NULL));
+  /* Fall Through */
+  case GNUTLS_PK_EDDSA_ED25519:
+    sign.size = signature->length;
+    sign.data = signature->s;
+    break;
+  }
+#if 1
+  G_CHECK(gnutls_pubkey_get_pk_algorithm(pub_key, NULL),
+          "gnutls_pubkey_get_pk_algorithm");
+  G_CHECK(gnutls_pubkey_verify_data2(pub_key, gnutls_pk_to_sign(ret,
+                                     gnutls_dig), 0, &data, &sign),
+          "gnutls_pubkey_verify_data2");
+#else
+  G_CHECK(gnutls_pubkey_verify_data2(pub_key,
+                                     GNUTLS_SIGN_EDDSA_ED25519,
+                                     0,
+                                     &data,
+                                     &sign),
+          "gnutls_pubkey_verify_data2");
+#endif
+  ret = 1;
+
+fail:
+  coap_delete_binary(sign_bp);
+  return ret == 1 ? 1 : 0;
+}
+
+int
+coap_crypto_gen_pkey(cose_curve_t curve,
+                     coap_bin_const_t **private,
+                     coap_bin_const_t **public) {
+  (void)curve;
+  (void)private;
+  (void)public;
+  return 0;
+}
+
+int
+coap_crypto_derive_shared_secret(cose_alg_t alg_pairwise,
+                                 coap_bin_const_t *raw_local_private,
+                                 coap_bin_const_t *raw_peer_public,
+                                 coap_bin_const_t **shared_secret) {
+  (void)alg_pairwise;
+  (void)raw_local_private;
+  (void)raw_peer_public;
+  (void)shared_secret;
+  return 0;
+}
+
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 
 #endif /* COAP_OSCORE_SUPPORT */
 

@@ -145,6 +145,26 @@ OSCORE
     Security Context Derived Multiple Times]".
     Enable Security Context protocol.
 
+*pub_file_pem* ::
+    The public key is read from the specified .pem file and is encoded
+    internally as a binary representation of the value. This .pem file can
+    optionally be enclosed in _"_.
+
+*pri_file_pem* ::
+    The private key is read from the specified .pem file and is encoded
+    internally as a binary representation of the value. This .pem file can
+    optionally be enclosed in _"_.
+
+*pub_asn1* ::
+    The public key (encoded as ASN1(DER)) is read from the binary
+    representation of the hex string. This string can optionally be enclosed
+    in _"_.
+
+*pri_asn1* ::
+    The private key (encoded as ASN1(DER)) is read from the binary
+    representation of the hex string. This string can optionally be enclosed
+    in _"_.
+
 OSCORE COMPLEX
 --------------
 
@@ -176,6 +196,14 @@ OSCORE COMPLEX SENDER
     Sender ID.  This is the local application ID.
     Maximum length is determined by the AEAD Algorithm (typically 7 bytes).
 
+*sender_private_key* ::
+    (*pri_file_pem* or *pri_asn1*) (*Required if Group or Pairwise*) (No default) +
+    This is the local application private key.
+
+*sender_public_key* ::
+    (*pub_file_pem* or *pub_asn1*) (*Required if Group or Pairwise*) (No default) +
+    This is the local application public key.
+
 OSCORE COMPLEX RECIPIENT
 ------------------------
 
@@ -192,7 +220,14 @@ OSCORE COMPLEX RECIPIENT
     (*bool*) (*Optional*) (Default is false) +
     The remote server normally does not send any response if set.
 
-The following 3 entries are used for external credential stores to restore
+*recipient_public_key* ::
+    (*pub_file_pem* or *pub_asn1*) (*Required if Group or Pairwise*) (No default) +
+    This is the remote application public key.
+    For servers, there can be multiple (unique) recipient_public_keys.
+    For clients, there should only be one recipient_public_keys (only the
+    first is used).
+
+The following 2 entries are used for external credential stores to restore
 replay-protection state across restarts as per RFC8613 Appenxix B.
 Setting either *last_seq* or *sliding_window* marks the replay window as
 initialized.
@@ -205,6 +240,51 @@ initialized.
     (*unsigned64*) (*Optional*) (Default is 0) +
     The sliding replay-window bitmask for this recipient.
     Used together with *last_seq* to restore the full replay-protection state.
+
+OSCORE GROUP
+------------
+
+*group_mode* ::
+    (*bool*) (*Required if Group*) (Default is false) +
+    Enable OSCORE Group mode if true.
+
+*pairwise_mode* ::
+    (*bool*) (*Required if Pairwise*) (Default is false) +
+    Enable OSCORE Pairwise mode if true.
+
+*alg_group_enc* ::
+    (*integer* or *text*) (*Required if Group or Pairwise*) (Default is 10 or "AES-CCM-16-64-128") +
+    "https://rfc-editor.org/rfc/rfc10021#section-2[RFC 10021 Section 2.
+    Security Context]".
+    Group Encryption Algorithm. Only the mandatory and a small subset of the algorithms
+    are supported depending on the TLS library.
+
+*alg_signature* ::
+    (*integer* or *text*) (*Required if Group or Pairwise*) (Default is -8 or "EdDSA") +
+    "https://rfc-editor.org/rfc/rfc10021#section-2[RFC 10021 Section 2.
+    Security Context]".
+    Only the mandatory and a small subset of the algorithms are supported.
+
+*sign_enc_alg* ::
+    (*integer* or *text*) (*Required if Group or Pairwise*) (Default is 10 or "AES-CCM-16-64-128") +
+    "https://rfc-editor.org/rfc/rfc10021#section-2[RFC 10021 Section 2.
+    Security Context]".
+    Only the mandatory and a small subset of the algorithms are supported.
+
+*alg_pairwise_key_agreement* ::
+    (*integer* or *text*) (*Required if Pairwise*) (Default is 6 or "Ed25519") +
+    "https://rfc-editor.org/rfc/rfc10021#section-2[RFC 10021 Section 2.
+    Security Context]".
+    Pairwise Key Agreement Algorithm. Only the mandatory and a small subset of the algorithms
+    are supported depending on the TLS library.
+
+*sign_curve* ::
+    (*integer* or *text*) (*Optional*) (Default is 6 or "Ed25519") +
+    Only the mandatory and a small subset of the curves are supported.
+
+*gm_public_key* ::
+    (*pub_file_pem* or *pub_asn1*) (*Optional*) (No default) +
+    Group Manager public key.
 
 GENERAL
 -------
@@ -297,9 +377,6 @@ master_secret,hex,"0102030405060708090a0b0c0d0e0f10"
 # Master Salt (same for both client and server)
 master_salt,hex,"9e7ca92223786340"
 
-# Sender ID (This is the client who is the Sender)
-sender_id,ascii,"client"
-
 # Replay Window (usually 32)
 replay_window,integer,32
 
@@ -309,17 +386,39 @@ aead_alg,integer,10
 # HKDF COSE Algorithm (usually -10)
 hkdf_alg,integer,-10
 
+# Set up complex sender definition
+complex_sender,config,'
+
+# Sender ID (This is the client who is the Sender)
+sender_id,ascii,"client"
+
+# Sender Keys (This is the server who is the Sender)
+sender_private_key,pri_asn1,"302e020100300506032b657004220420475c40ff2a0ff59290a6e815cf9233a186722bfa9e3f5a5aac9cdc6b50b571af"
+sender_public_key,pub_asn1,"302a300506032b65700321002de63a7f1a003de75debce4b33f02b8efd5dc39a58e59db56d1975ccdc23eae1"
+
+# Closing ' for complex_sender
+'
+
 # Set up complex recipient definition
 complex_recipient,config,'
 
 # Recipient ID (It is the server that is remote)
 recipient_id,ascii,"server"
 
+# Recipient Key (It is the client that is remote)
+recipient_public_key,pub_asn1,"302a300506032b6570032100cca3677a114856e5a0e605c13796178fad7c3329a980bc32cb406b928fa23f30"
+
 # Remote server is silent
 silent_server,bool,true
 
 # Closing ' for complex_recipient
 '
+
+# Configure as Group Mode
+group_mode,bool,true
+
+# ID Context (same for both client and server)
+id_context,hex,"120406"
 
 ----
 

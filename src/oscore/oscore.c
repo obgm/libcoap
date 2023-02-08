@@ -87,6 +87,47 @@ oscore_cs_key_params(cose_curve_t param, int8_t param_type, size_t *len) {
   return result;
 }
 
+#if COAP_OSCORE_GROUP_SUPPORT
+/* extract_param
+ * extract algorithm parameter from [type, param]
+ */
+static int
+extract_param(const uint8_t **oscore_cbor_array, size_t *array_len) {
+  int64_t mm = 0;
+  uint8_t elem = oscore_cbor_get_next_element(oscore_cbor_array, array_len);
+  if (elem == CBOR_ARRAY) {
+    uint64_t arr_size = oscore_cbor_get_element_size(oscore_cbor_array, array_len);
+    if (arr_size != 2)
+      return 0;
+    for (uint16_t i = 0; i < arr_size; i++) {
+      int8_t ok = oscore_cbor_get_number(oscore_cbor_array, array_len, &mm);
+      if (ok != 0)
+        return 0;
+    }
+    return (int)mm;
+  }
+  return 0;
+}
+
+/* extract_type
+ * extract algorithm parameter from [type, param]
+ */
+static int
+extract_type(const uint8_t **oscore_cbor_array, size_t *array_len) {
+  int64_t mm = 0;
+  uint8_t elem = oscore_cbor_get_next_element(oscore_cbor_array, array_len);
+  if (elem == CBOR_ARRAY) {
+    uint64_t arr_size = oscore_cbor_get_element_size(oscore_cbor_array, array_len);
+    if (arr_size != 2)
+      return 0;
+    if (oscore_cbor_get_number(oscore_cbor_array, array_len, &mm) == 1)
+      return 0;
+    return (int)mm;
+  }
+  return 0;
+}
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
+
 /*
  * Build the CBOR for external_aad
  *
@@ -95,7 +136,7 @@ oscore_cs_key_params(cose_curve_t param, int8_t param_type, size_t *len) {
  * No group mode
  * aad_array = [
  *   oscore_version : uint,
- *   algorithms : [ alg_aead : int / tstr ],
+ *   algorithms : [ aead_alg : int / tstr ],
  *   request_kid : bstr,
  *   request_piv : bstr,
  *   options : bstr,
@@ -104,8 +145,8 @@ oscore_cs_key_params(cose_curve_t param, int8_t param_type, size_t *len) {
  * Group mode
  * aad_array = [
  *   oscore_version : uint,
- *   algorithms : [alg_aead : int / tstr / null,
- *                 alg_signature_enc : int / tstr / null,
+ *   algorithms : [aead_alg : int / tstr / null,
+ *                 alg_group_enc : int / tstr / null,
  *                 alg_signature : int / tstr / null,
  *                 alg_pairwise_key_agreement : int / tstr / null],
  *   request_kid : bstr,
@@ -113,8 +154,8 @@ oscore_cs_key_params(cose_curve_t param, int8_t param_type, size_t *len) {
  *   options : bstr,
  *   request_kid_context : bstr,
  *   OSCORE_option: bstr,
- *   sender_public_key: bstr,        (initiator's key)
- *   gm_public_key: bstr / null
+ *   sender_cred: bstr,        (initiator's key)
+ *   gm_cred: bstr / null
  * ]
  */
 size_t
@@ -122,35 +163,108 @@ oscore_prepare_e_aad(oscore_ctx_t *ctx,
                      cose_encrypt0_t *cose,
                      const uint8_t *oscore_option,
                      size_t oscore_option_len,
-                     coap_bin_const_t *sender_public_key,
+                     coap_crypto_cred_t *sender_cred,
+#if COAP_OSCORE_GROUP_SUPPORT
+                     oscore_mode_t mode,
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
                      uint8_t *external_aad_ptr,
                      size_t external_aad_size) {
   size_t external_aad_len = 0;
   size_t rem_size = external_aad_size;
   size_t len;
 
+#if ! COAP_OSCORE_GROUP_SUPPORT
   (void)oscore_option;
   (void)oscore_option_len;
-  (void)sender_public_key;
+  (void)sender_cred;
+#endif /* ! COAP_OSCORE_GROUP_SUPPORT */
 
-  if ((len = oscore_cbor_put_array(&external_aad_ptr, &rem_size, 5)) == 0)
-    goto fail;
-  external_aad_len += len;
+#if COAP_OSCORE_GROUP_SUPPORT
+  if (mode != OSCORE_MODE_SINGLE) {
+    if ((len = oscore_cbor_put_array(&external_aad_ptr, &rem_size, 9)) == 0)
+      goto fail;
+    external_aad_len += len;
+  } else {
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
+    if ((len = oscore_cbor_put_array(&external_aad_ptr, &rem_size, 5)) == 0)
+      goto fail;
+    external_aad_len += len;
+#if COAP_OSCORE_GROUP_SUPPORT
+  }
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 
   /* oscore_version, always "1" */
   if ((len = oscore_cbor_put_unsigned(&external_aad_ptr, &rem_size, 1)) == 0)
     goto fail;
   external_aad_len += len;
 
-  /* Algorithms array with one item*/
-  if ((len = oscore_cbor_put_array(&external_aad_ptr, &rem_size, 1)) == 0)
-    goto fail;
-  external_aad_len += len;
+#if COAP_OSCORE_GROUP_SUPPORT
+  if (mode == OSCORE_MODE_SINGLE) {
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
+    /* Algorithms array with one item*/
+    if ((len = oscore_cbor_put_array(&external_aad_ptr, &rem_size, 1)) == 0)
+      goto fail;
+    external_aad_len += len;
 
-  /* Encryption Algorithm   */
-  if ((len = oscore_cbor_put_number(&external_aad_ptr, &rem_size, ctx->aead_alg)) == 0)
-    goto fail;
-  external_aad_len += len;
+    /* Encryption Algorithm   */
+    if ((len = oscore_cbor_put_number(&external_aad_ptr, &rem_size, ctx->aead_alg)) == 0)
+      goto fail;
+    external_aad_len += len;
+#if COAP_OSCORE_GROUP_SUPPORT
+  } else {
+    /* Algorithms array with 4 items */
+    if ((len = oscore_cbor_put_array(&external_aad_ptr, &rem_size, 4)) == 0)
+      goto fail;
+    external_aad_len += len;
+
+    if (mode == OSCORE_MODE_GROUP) {
+      /* alg_aead */
+      if ((len = oscore_cbor_put_number(&external_aad_ptr, &rem_size, ctx->aead_alg)) == 0)
+        goto fail;
+      external_aad_len += len;
+
+      /* alg_group_enc */
+      if ((len = oscore_cbor_put_number(&external_aad_ptr,
+                                        &rem_size,
+                                        ctx->alg_group_enc)) == 0)
+        goto fail;
+      external_aad_len += len;
+
+      /* alg_signature */
+      if ((len = oscore_cbor_put_number(&external_aad_ptr, &rem_size, ctx->alg_signature)) == 0)
+        goto fail;
+      external_aad_len += len;
+
+      /* alg_pairwise_key_agreement */
+      if ((len = oscore_cbor_put_nil(&external_aad_ptr, &rem_size)) == 0)
+        goto fail;
+      external_aad_len += len;
+    } else {
+      /* OSCORE_MODE_PAIRWISE */
+      /* alg_aead */
+      if ((len = oscore_cbor_put_number(&external_aad_ptr, &rem_size, ctx->aead_alg)) == 0)
+        goto fail;
+      external_aad_len += len;
+
+      /* alg_group_enc */
+      if ((len = oscore_cbor_put_nil(&external_aad_ptr, &rem_size)) == 0)
+        goto fail;
+      external_aad_len += len;
+
+      /* alg_signature */
+      if ((len = oscore_cbor_put_nil(&external_aad_ptr, &rem_size)) == 0)
+        goto fail;
+      external_aad_len += len;
+
+      /* alg_pairwise_key_agreement */
+      if ((len =oscore_cbor_put_number(&external_aad_ptr,
+                                       &rem_size,
+                                       ctx->alg_pairwise_key_agreement)) == 0)
+        goto fail;
+      external_aad_len += len;
+    }
+  }
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 
   /* request_kid */
   if ((len = oscore_cbor_put_bytes(&external_aad_ptr,
@@ -174,6 +288,48 @@ oscore_prepare_e_aad(oscore_ctx_t *ctx,
     goto fail;
   external_aad_len += len;
 
+#if COAP_OSCORE_GROUP_SUPPORT
+  if (mode != OSCORE_MODE_SINGLE) {
+    /* request_kid_context */
+    external_aad_len += oscore_cbor_put_bytes(&external_aad_ptr,
+                                              &rem_size,
+                                              ctx->id_context->s,
+                                              ctx->id_context->length);
+    /* OSCORE_option */
+    external_aad_len += oscore_cbor_put_bytes(&external_aad_ptr,
+                                              &rem_size,
+                                              oscore_option,
+                                              oscore_option_len);
+    /* sender_cred */
+    if (sender_cred->cred_type == OSCORE_AUTH_CRED_CCS) {
+      external_aad_len += oscore_cbor_put_bytes(&external_aad_ptr,
+                                                &rem_size,
+                                                sender_cred->auth_cred->s,
+                                                sender_cred->auth_cred->length);
+    } else {
+      external_aad_len += oscore_cbor_put_bytes(&external_aad_ptr,
+                                                &rem_size,
+                                                sender_cred->pub_der->s,
+                                                sender_cred->pub_der->length);
+    }
+    /* gm_cred */
+    if (ctx->gm_cred)
+      if (ctx->gm_cred->cred_type == OSCORE_AUTH_CRED_CCS) {
+        external_aad_len +=
+            oscore_cbor_put_bytes(&external_aad_ptr,
+                                  &rem_size,
+                                  ctx->gm_cred->auth_cred->s,
+                                  ctx->gm_cred->auth_cred->length);
+      } else {
+        external_aad_len +=
+            oscore_cbor_put_bytes(&external_aad_ptr,
+                                  &rem_size,
+                                  ctx->gm_cred->pub_der->s,
+                                  ctx->gm_cred->pub_der->length);
+      } else
+      external_aad_len += oscore_cbor_put_nil(&external_aad_ptr, &rem_size);
+  }
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
   return external_aad_len;
 
 fail:
@@ -193,13 +349,21 @@ oscore_encode_option_value(uint8_t *option_buffer,
   size_t offset;
   size_t rem_space;
 
+#if ! COAP_OSCORE_GROUP_SUPPORT
   (void)group_flag;
+#endif /* ! COAP_OSCORE_GROUP_SUPPORT */
   if (cose->partial_iv.length > 5 || option_buf_len == 0) {
     return -1;
   }
   if (option_buf_len > 255)
     option_buf_len = 255;
-  option_buffer[0] = 0;
+#if COAP_OSCORE_GROUP_SUPPORT
+  if (group_flag == 1) {
+    option_buffer[0] = 0x20;
+    cose->group_flag = 1;
+  } else
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
+    option_buffer[0] = 0;
   offset = 1;
   rem_space = option_buf_len - 1;
 
@@ -291,7 +455,13 @@ oscore_decode_option_value(const uint8_t *opt_value,
   }
 
   if ((opt_value[0] & 0x20) != 0) {
+#if COAP_OSCORE_GROUP_SUPPORT
+    cose->group_flag = 1;
+  } else {
+    cose->group_flag = 0;
+#else  /* ! COAP_OSCORE_GROUP_SUPPORT */
     return 0;
+#endif /* ! COAP_OSCORE_GROUP_SUPPORT */
   }
 
   if (partial_iv_len != 0) {
@@ -332,6 +502,63 @@ oscore_decode_option_value(const uint8_t *opt_value,
   }
   return 1;
 }
+
+#if COAP_OSCORE_GROUP_SUPPORT
+/* Sets alg and keys in COSE SIGN  */
+void
+oscore_populate_sign(cose_sign1_t *sign,
+                     oscore_ctx_t *ctx,
+                     coap_crypto_cred_t *cred,
+                     coap_crypto_pri_key_t *private_key) {
+  coap_bin_const_t sign_param = *ctx->sign_params;
+  coap_bin_const_t sign_type = *ctx->sign_params;
+
+  cose_sign1_set_alg(sign,
+                     ctx->alg_signature,
+                     extract_param(&sign_param.s, &sign_param.length),
+                     extract_type(&sign_type.s, &sign_type.length));
+
+  if (private_key)
+    cose_sign1_set_private_key(sign, private_key);
+
+  cose_sign1_set_public_cred(sign, cred);
+}
+
+/*
+ * oscore_prepare_sig_structure
+ *
+ * creates and sets structure to be signed
+ */
+size_t
+oscore_prepare_sig_structure(uint8_t *sig_ptr,
+                             size_t sig_size,
+                             const uint8_t *e_aad_buffer,
+                             uint16_t e_aad_len,
+                             const uint8_t *text,
+                             uint16_t text_len) {
+  size_t sig_len = 0;
+  size_t rem_size = sig_size;
+  char countersig0[] = "CounterSignature0";
+
+  (void)sig_size;
+  sig_len += oscore_cbor_put_array(&sig_ptr, &rem_size, 5);
+  /* 1. "CounterSignature0" */
+  sig_len += oscore_cbor_put_text(&sig_ptr,
+                                  &rem_size,
+                                  countersig0,
+                                  strlen(countersig0));
+  /* 2. Protected attributes from target structure */
+  sig_len += oscore_cbor_put_bytes(&sig_ptr, &rem_size, NULL, 0);
+  /* 3. Protected attributes from signer structure */
+  sig_len += oscore_cbor_put_bytes(&sig_ptr, &rem_size, NULL, 0);
+  /* 4. External AAD */
+  sig_len +=
+      oscore_cbor_put_bytes(&sig_ptr, &rem_size, e_aad_buffer, e_aad_len);
+  /* 5. Payload */
+  sig_len += oscore_cbor_put_bytes(&sig_ptr, &rem_size, text, text_len);
+  return sig_len;
+}
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 
 /*
  * oscore_prepare_aad

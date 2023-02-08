@@ -187,3 +187,160 @@ get_asn1_spki(const uint8_t *data, size_t size) {
     coap_delete_binary(prime);
   return spki;
 }
+
+coap_binary_t *
+coap_asn1_split_r_s(coap_binary_t *asn1, size_t size) {
+  int constructed;
+  int class;
+  const uint8_t *acp = asn1->s;
+  coap_asn1_tag_t tag;
+  size_t len;
+  coap_binary_t *sign;
+
+  if (asn1->s[0] != 0x30)
+    return NULL;
+
+  tag = asn1_tag_c(&acp, &size, &constructed, &class);
+  if (tag == COAP_ASN1_FAIL)
+    return NULL;
+  len = asn1_len(&acp, &size);
+  if (len == 0)
+    return NULL;
+
+  tag = asn1_tag_c(&acp, &size, &constructed, &class);
+  if (tag == COAP_ASN1_FAIL)
+    return NULL;
+  len = asn1_len(&acp, &size);
+  if (tag != COAP_ASN1_INTEGER)
+    return NULL;
+  sign = coap_new_binary(size);
+  if (sign == NULL)
+    return NULL;
+  if (len < size/2) {
+    /* pad with leading 0s */
+    memset(&sign->s[0], 0, size/2 - len);
+    memcpy(&sign->s[size/2 - len], acp, len);
+  } else {
+    /* drop leading 0s if needed */
+    memcpy(&sign->s[0], acp + len - size/2, len);
+  }
+
+  acp += len;
+  tag = asn1_tag_c(&acp, &size, &constructed, &class);
+  if (tag == COAP_ASN1_FAIL) {
+    coap_delete_binary(sign);
+    return NULL;
+  }
+  len = asn1_len(&acp, &size);
+  if (tag != COAP_ASN1_INTEGER) {
+    coap_delete_binary(sign);
+    return NULL;
+  }
+  if (len < size/2) {
+    /* pad with leading 0s */
+    memset(&sign->s[size/2], 0, size/2 - len);
+    memcpy(&sign->s[size/2 + size/2 - len], acp, len);
+  } else {
+    /* drop leading 0s if needed */
+    memcpy(&sign->s[size/2], acp + len - size/2, len);
+  }
+  return sign;
+}
+
+static void
+asn1_add_integer(uint8_t **cp, uint8_t *integer, size_t int_len) {
+  size_t i;
+
+  *((*cp)++) = (uint8_t)COAP_ASN1_INTEGER;
+  if (integer[0] & 0x80) {
+    *((*cp)++) = (uint8_t)(int_len + 1);
+    *((*cp)++) = 0x00;
+    i = 0;
+  } else {
+    /* drop leading 0s if needed */
+    for (i = 0; i < int_len - 1; i++) {
+      if (integer[i] != 0)
+        break;
+    }
+    *((*cp)++) = (uint8_t)(int_len - i);
+  }
+  memcpy(*cp, &integer[i], int_len - i);
+  *cp += int_len - i;
+}
+
+coap_binary_t *
+coap_asn1_r_s_join(coap_binary_t *r_s) {
+  coap_binary_t *sign = coap_new_binary(r_s->length + 8);
+  uint8_t *cp;
+
+  if (sign == NULL)
+    return NULL;
+
+  cp = sign->s;
+  *(cp++) = 0x30; /* SEQUENCE */
+  *(cp++) = 0x00; /* Length - to be filled in later */
+
+  asn1_add_integer(&cp, r_s->s, r_s->length/2);
+
+  asn1_add_integer(&cp, &r_s->s[r_s->length/2], r_s->length/2);
+
+  sign->s[1] = (uint8_t)(cp - sign->s - 2);
+  sign->length = cp - sign->s;
+  return sign;
+}
+
+#if COAP_OSCORE_GROUP_SUPPORT
+static void
+asn1_add_seq_bin_oid(uint8_t **cp, const uint8_t *oid, size_t oid_len) {
+  uint8_t *keep_cp = *cp;
+
+  *((*cp)++) = 0x30; /* SEQUENCE */
+  *((*cp)++) = 0x00; /* Length - to be filled in later */
+
+  *((*cp)++) = COAP_ASN1_IDENTIFIER;
+  *((*cp)++) = oid_len;
+  memcpy(*cp, oid, oid_len);
+  *cp += oid_len;
+  keep_cp[1] = *cp - keep_cp - 2;
+}
+
+static void
+asn1_add_octet_string(uint8_t **cp, const uint8_t *octet, size_t octet_len) {
+  *((*cp)++) = COAP_ASN1_OCTETSTRING;
+  *((*cp)++) = octet_len;
+  memcpy(*cp, octet, octet_len);
+  *cp += octet_len;
+}
+
+
+coap_binary_t *
+coap_asn1_pri_key(cose_curve_t curve, coap_bin_const_t *raw) {
+  coap_bin_const_t *oid = cose_get_curve_bin_oid(curve);
+  coap_binary_t *pri_der;
+  uint8_t *cp;
+  uint8_t val0 = 0;
+
+  if (oid == NULL)
+    return NULL;
+
+  pri_der = coap_new_binary(13 + oid->length + raw->length);
+  if (pri_der == NULL)
+    return NULL;
+
+  cp = pri_der->s;
+  *(cp++) = 0x30; /* SEQUENCE */
+  *(cp++) = 0x00; /* Length - to be filled in later */
+
+  asn1_add_integer(&cp, &val0, 1);
+
+  asn1_add_seq_bin_oid(&cp, oid->s, oid->length);
+  *(cp++) = COAP_ASN1_OCTETSTRING;
+  *(cp++) = raw->length + 2;
+  asn1_add_octet_string(&cp, raw->s, raw->length);
+
+  pri_der->s[1] = cp - pri_der->s - 2;
+  assert(pri_der->length >= (size_t)(cp - pri_der->s));
+  pri_der->length = cp - pri_der->s;
+  return pri_der;
+}
+#endif /* COAP_OSCORE_GROUP_SUPPORT */

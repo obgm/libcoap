@@ -209,7 +209,11 @@ coap_print_wellknown_lkd(coap_context_t *context, unsigned char *buf,
 #if COAP_OSCORE_SUPPORT
                           ((r->flags & COAP_RESOURCE_FLAGS_OSCORE_ONLY) &&
                            resource_param.length == 3 && memcmp(resource_param.s, "osc", 3) == 0) ||
-#endif
+#if COAP_OSCORE_GROUP_SUPPORT
+                          ((r->flags & COAP_RESOURCE_FLAGS_OSCORE_ONLY) &&
+                           resource_param.length == 4 && memcmp(resource_param.s, "gosc", 4) == 0) ||
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
+#endif /* COAP_OSCORE_SUPPORT */
                           coap_find_attr(r, &resource_param);
             if (!present)
               continue;
@@ -797,8 +801,13 @@ coap_print_link(const coap_resource_t *resource,
   }
 
 #if COAP_OSCORE_SUPPORT
-  if (resource->flags & COAP_RESOURCE_FLAGS_OSCORE_ONLY)
+  if (resource->flags & COAP_RESOURCE_FLAGS_OSCORE_ONLY) {
+#if COAP_OSCORE_GROUP_SUPPORT
+    COPY_COND_WITH_OFFSET(p, bufend, *offset, ";gosc;osc", 9, *len);
+#else /* ! COAP_OSCORE_GROUP_SUPPORT */
     COPY_COND_WITH_OFFSET(p, bufend, *offset, ";osc", 4, *len);
+#endif /* ! COAP_OSCORE_GROUP_SUPPORT */
+  }
 #endif /* COAP_OSCORE_SUPPORT */
 
   output_length = (coap_print_status_t)(p - buf);

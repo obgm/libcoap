@@ -134,6 +134,8 @@ typedef enum {
    * still references the previous recipient when the handler runs.
    */
   COAP_EVENT_OSCORE_RECIPIENT_CHANGED,
+  /** Triggered when there is an OSCORE signature failure */
+  COAP_EVENT_OSCORE_SIGNATURE_FAILURE,
   /*
    * WebSocket events
    */

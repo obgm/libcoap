@@ -177,6 +177,10 @@ option(
   "compile with support for OSCORE"
   ON)
 option(
+  ENABLE_OSCORE_GROUP
+  "compile with support for OSCORE Group"
+  OFF)
+option(
   WITH_OBSERVE_PERSIST
   "compile with observe persist support for server restarts"
   ON)
@@ -420,8 +424,18 @@ if((${ENABLE_OSCORE}) OR (${WITH_MBEDTLS_OSCORE}))
   set(COAP_OSCORE_SUPPORT "1")
   set(ENABLE_OSCORE ON)
   message(STATUS "compiling with OSCORE support")
+  if(${ENABLE_OSCORE_GROUP})
+    set(COAP_OSCORE_GROUP_SUPPORT "1")
+    message(STATUS "compiling with OSCORE Group support")
+  else()
+    message(STATUS "compiling without OSCORE Group support")
+  endif()
+
 else()
   message(STATUS "compiling without OSCORE support")
+  if(${ENABLE_OSCORE_GROUP})
+    message(STATUS "compiling with OSCORE Group support ignored - Need OSCORE support")
+  endif()
 endif()
 
 if(${ENABLE_WS} AND ${ENABLE_TCP})
@@ -750,6 +764,7 @@ message(STATUS "ENABLE_Q_BLOCK:..................${ENABLE_Q_BLOCK}")
 message(STATUS "ENABLE_CLIENT_MODE:..............${ENABLE_CLIENT_MODE}")
 message(STATUS "ENABLE_SERVER_MODE:..............${ENABLE_SERVER_MODE}")
 message(STATUS "ENABLE_OSCORE:...................${ENABLE_OSCORE}")
+message(STATUS "ENABLE_OSCORE_GROUP:.............${ENABLE_OSCORE_GROUP}")
 message(STATUS "ENABLE_ASYNC:....................${ENABLE_ASYNC}")
 message(STATUS "ENABLE_THREAD_SAFE:..............${ENABLE_THREAD_SAFE}")
 message(STATUS "ENABLE_THREAD_RECURSIVE_CHECK....${ENABLE_THREAD_RECURSIVE_LOCK_CHECK}")

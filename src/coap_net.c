@@ -1319,7 +1319,6 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
   if (bytes_written >= 0 && pdu->type == COAP_MESSAGE_CON &&
       COAP_PROTO_NOT_RELIABLE(session->proto))
     session->con_active++;
-
   return bytes_written;
 }
 
@@ -1774,6 +1773,14 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
     pdu->type = COAP_MESSAGE_CON;
 
 #if COAP_OSCORE_SUPPORT
+  /*
+   * If this is not the first client request and are waiting for a response
+   * to the first client request, then delay sending out this next request
+   * until all is properly established.
+   */
+  if (!coap_client_delay_first(session))
+    return COAP_INVALID_MID;
+
   if (session->oscore_encryption) {
     if (session->recipient_ctx->initial_state == 1 &&
         !session->recipient_ctx->silent_server) {
@@ -5478,6 +5485,8 @@ coap_event_name(coap_event_t event) {
     return "COAP_EVENT_OSCORE_DECODE_ERROR";
   case COAP_EVENT_OSCORE_RECIPIENT_CHANGED:
     return "COAP_EVENT_OSCORE_RECIPIENT_CHANGED";
+  case COAP_EVENT_OSCORE_SIGNATURE_FAILURE:
+    return "COAP_EVENT_OSCORE_SIGNATURE_FAILURE";
   case COAP_EVENT_WS_PACKET_SIZE:
     return "COAP_EVENT_WS_PACKET_SIZE";
   case COAP_EVENT_WS_CONNECTED:
@@ -5536,6 +5545,7 @@ coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
     case COAP_EVENT_OSCORE_NO_SECURITY:
     case COAP_EVENT_OSCORE_INTERNAL_ERROR:
     case COAP_EVENT_OSCORE_DECODE_ERROR:
+    case COAP_EVENT_OSCORE_SIGNATURE_FAILURE:
     case COAP_EVENT_WS_PACKET_SIZE:
     case COAP_EVENT_WS_CLOSED:
     case COAP_EVENT_BAD_PACKET:

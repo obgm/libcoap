@@ -63,6 +63,14 @@ typedef struct coap_lg_srcv_t coap_lg_srcv_t;
 typedef struct coap_cache_entry_t coap_cache_entry_t;
 typedef struct coap_cache_key_t coap_cache_key_t;
 
+/* ************* coap_crypto_internal.h ***************** */
+
+/*
+ * Crypto information.
+ */
+typedef struct coap_crypto_cred_t coap_crypto_cred_t;
+typedef struct coap_crypto_pri_key_t coap_crypto_pri_key_t;
+
 /* ************* coap_io_internal.h ***************** */
 
 /**

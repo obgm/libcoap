@@ -285,9 +285,15 @@ t_wellknown_presence_filter(void) {
     { "flag=*", root_link },
     { "empty=*", root_link },
 #if COAP_OSCORE_SUPPORT
+#if COAP_OSCORE_GROUP_SUPPORT
+    { "osc=*", "</other>;rt=sensor;gosc;osc" },
+    { "rt=*", "</other>;rt=sensor;gosc;osc" },
+    { "href=*", "</>;empty=\"\";flag;obs,</other>;rt=sensor;gosc;osc" },
+#else /* ! COAP_OSCORE_GROUP_SUPPORT */
     { "osc=*", "</other>;rt=sensor;osc" },
     { "rt=*", "</other>;rt=sensor;osc" },
     { "href=*", "</>;empty=\"\";flag;obs,</other>;rt=sensor;osc" },
+#endif /* ! COAP_OSCORE_GROUP_SUPPORT */
 #else
     { "osc=*", "" },
     { "rt=*", "</other>;rt=sensor" },
@@ -315,7 +321,7 @@ t_wellknown_presence_filter(void) {
 
   for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
     coap_string_t query = { strlen(cases[i].filter), (uint8_t *)cases[i].filter };
-    unsigned char buf[80];
+    unsigned char buf[100];
     size_t len = sizeof(buf);
     size_t expected_len = strlen(cases[i].expected);
     coap_print_status_t result = coap_print_wellknown(context, buf, &len, 0, &query);

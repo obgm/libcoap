@@ -118,6 +118,7 @@ oscore_hkdf_expand(cose_hkdf_alg_t hkdf_alg,
 
   if (!cose_get_hmac_alg_for_hkdf(hkdf_alg, &hmac_alg))
     goto fail;
+
   /* Compose T(1) */
   memcpy(aggregate_buffer, info, info_len);
   aggregate_buffer[info_len] = 0x01;
@@ -174,6 +175,33 @@ oscore_hkdf(cose_hkdf_alg_t hkdf_alg,
   coap_delete_bin_const(hkdf_extract);
   return ret;
 }
+
+#if COAP_OSCORE_GROUP_SUPPORT
+/* Return 0 if key pair generation failure. Key lengths are derived from ed25519
+ * values. No check is done to ensure that buffers are of the correct length. */
+
+#if 0
+int
+oscore_edDSA_keypair(cose_alg_t alg, cose_curve_t alg_param,
+                     uint8_t *private_key,
+                     uint8_t *public_key, uint8_t *ed25519_seed) {
+  if (alg != COSE_Algorithm_EdDSA || alg_param != COSE_Elliptic_Curve_Ed25519) {
+    return 0;
+  }
+  ed25519_create_keypair(public_key, private_key, ed25519_seed);
+
+  if (coap_get_log_level() >= COAP_LOG_OSCORE) {
+    coap_log(COAP_LOG_OSCORE, "Key Pair\n");
+    oscore_log_hex_value(COAP_LOG_OSCORE, "Public Key", public_key);
+    oscore_log_hex_value(COAP_LOG_OSCORE, "Private Key", private_key);
+    oscore_log_hex_value(COAP_LOG_OSCORE, "Seed", ed25519_seed);
+  }
+
+  return 1;
+}
+#endif
+
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 
 #else /* ! COAP_OSCORE_SUPPORT */
 

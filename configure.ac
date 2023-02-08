@@ -961,6 +961,23 @@ fi
 AM_CONDITIONAL(COAP_OSCORE_SUPPORT, [test "x$build_oscore" = "xyes"])
 
 # configure options
+# __OSCORE_GROUP_
+# Support for Object Security according to RFC 10021.
+AC_ARG_ENABLE([oscore-group],
+              [AS_HELP_STRING([--enable-oscore-group],
+                              [Enable building with Group OSCORE support (Experimental) [default=no]])],
+              [build_oscore_group="$enableval"],
+              [build_oscore_group="yes"])
+
+if test "x$build_oscore_group" = "xyes"; then
+    if test "x$build_oscore" = "xno"; then
+        AC_MSG_ERROR([--enable-oscore-group requires --enable-oscore])
+    fi
+    AC_DEFINE(COAP_OSCORE_GROUP_SUPPORT, [1], [Define to build with Group OSCORE support])
+fi
+AM_CONDITIONAL(COAP_OSCORE_GROUP_SUPPORT, [test "x$build_oscore_group" = "xyes"])
+
+# configure options
 # __tests__
 AC_ARG_ENABLE([tests],
               [AS_HELP_STRING([--enable-tests],
@@ -1679,6 +1696,11 @@ if test "x$build_oscore" != "xno"; then
     AC_MSG_RESULT([      enable OSCORE support          : "yes"])
 else
     AC_MSG_RESULT([      enable OSCORE support          : "no"])
+fi
+if test "x$build_oscore_group" != "xno"; then
+    AC_MSG_RESULT([      enable Group OSCORE            : "yes"])
+else
+    AC_MSG_RESULT([      enable Group OSCORE            : "no"])
 fi
 if test "x$build_ws" != "xno"; then
     AC_MSG_RESULT([      enable WebSockets support      : "yes"])

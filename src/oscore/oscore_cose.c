@@ -84,6 +84,48 @@ cose_get_curve_id(const char *name) {
   return 0;
 }
 
+struct cose_curve_type {
+  cose_curve_t curve;
+  cose_key_type_t type;
+};
+
+static struct cose_curve_type curve_type[] = {
+  { COSE_CURVE_P_256, COSE_KTY_EC2 },
+  { COSE_CURVE_X25519, COSE_KTY_OKP },
+  { COSE_CURVE_X448, COSE_KTY_OKP },
+  { COSE_CURVE_ED25519, COSE_KTY_OKP },
+  { COSE_CURVE_ED448, COSE_KTY_OKP },
+  { COSE_CURVE_SECP256K1, COSE_KTY_EC2 },
+};
+
+cose_key_type_t
+cose_get_curve_key_type(cose_curve_t curve) {
+  for (size_t i = 0; i < sizeof(curve_type)/sizeof(curve_type[0]); i++) {
+    if (curve_type[i].curve == curve)
+      return curve_type[i].type;
+  }
+  return COSE_KTY_UNKNOWN;
+}
+
+struct cose_curve_bin_oid {
+  cose_curve_t curve;
+  coap_bin_const_t bin_oid;
+};
+
+static u_char Ed25519[] = { 0x2b, 0x65, 0x70 };
+static struct cose_curve_bin_oid curve_bin_oid[] = {
+  { COSE_CURVE_ED25519, {3, Ed25519 } },
+};
+
+coap_bin_const_t *
+cose_get_curve_bin_oid(cose_curve_t curve) {
+  for (size_t i = 0; i < sizeof(curve_bin_oid)/sizeof(curve_bin_oid[0]); i++) {
+    if (curve_bin_oid[i].curve == curve)
+      return &curve_bin_oid[i].bin_oid;
+  }
+  return NULL;
+}
+
 struct cose_alg_desc {
   const char *name;
   cose_alg_t id;
@@ -501,6 +543,104 @@ cose_encrypt0_decrypt(cose_encrypt0_t *ptr,
   ret_len = (int)max_result_len;
   return ret_len;
 }
+
+#if COAP_OSCORE_GROUP_SUPPORT
+/* ed25519 signature functions    */
+
+void
+cose_sign1_init(cose_sign1_t *ptr) {
+  memset(ptr, 0, sizeof(cose_sign1_t));
+}
+
+void
+cose_sign1_set_alg(cose_sign1_t *ptr, int alg, int alg_param, int alg_kty) {
+  ptr->alg = alg;
+  ptr->alg_param = alg_param;
+  ptr->alg_kty = alg_kty;
+}
+
+void
+cose_sign1_set_ciphertext(cose_sign1_t *ptr, uint8_t *buffer, size_t size) {
+  ptr->ciphertext.s = buffer;
+  ptr->ciphertext.length = size;
+}
+
+/* Return length */
+int
+cose_sign1_get_signature(cose_sign1_t *ptr, const uint8_t **buffer) {
+  *buffer = ptr->signature.s;
+  return ptr->signature.length;
+}
+
+void
+cose_sign1_set_signature(cose_sign1_t *ptr, uint8_t *buffer, size_t size) {
+  ptr->signature.s = buffer;
+  ptr->signature.length = size;
+}
+
+void
+cose_sign1_set_sigstructure(cose_sign1_t *ptr, uint8_t *buffer, size_t size) {
+  ptr->sigstructure.s = buffer;
+  ptr->sigstructure.length = size;
+}
+
+void
+cose_sign1_set_public_cred(cose_sign1_t *ptr, coap_crypto_cred_t *buffer) {
+  ptr->public_cred = buffer;
+}
+
+void
+cose_sign1_set_private_key(cose_sign1_t *ptr, coap_crypto_pri_key_t *buffer) {
+  ptr->private_key = buffer;
+}
+
+int
+cose_sign1_sign(cose_sign1_t *ptr) {
+  coap_binary_t *signature = &ptr->signature;
+  coap_bin_const_t *text = &ptr->ciphertext;
+  int res;
+
+  if ((res = coap_crypto_hash_sign(ptr->public_cred->sign_hash,
+                                   signature,
+                                   text,
+                                   ptr->private_key)) == 0)
+    return 0;
+
+  if (coap_get_log_level() >= COAP_LOG_OSCORE) {
+    coap_log(COAP_LOG_OSCORE, "Sign\n");
+    oscore_log_hex_value(COAP_LOG_OSCORE,
+                         "Signature",
+                         (coap_bin_const_t *)signature);
+    oscore_log_hex_value(COAP_LOG_OSCORE, "Text", text);
+    oscore_log_hex_value(COAP_LOG_OSCORE,
+                         "Private Key",
+                         ptr->private_key->pri_der);
+    oscore_log_hex_value(COAP_LOG_OSCORE,
+                         "Public Cred",
+                         ptr->public_cred->pub_der);
+  }
+
+  return res;
+}
+
+int
+cose_sign1_verify(cose_sign1_t *ptr) {
+  coap_binary_t *signature = &ptr->signature;
+  coap_bin_const_t *text = &ptr->ciphertext;
+
+  if (coap_get_log_level() >= COAP_LOG_OSCORE) {
+    coap_log(COAP_LOG_OSCORE, "Verify\n");
+    oscore_log_hex_value(COAP_LOG_OSCORE,
+                         "Signature",
+                         (coap_bin_const_t *)signature);
+    oscore_log_hex_value(COAP_LOG_OSCORE, "Text", text);
+    oscore_log_hex_value(COAP_LOG_OSCORE,
+                         "Public Cred",
+                         ptr->public_cred->pub_der);
+  }
+  return coap_crypto_hash_verify(ptr->alg, signature, text, ptr->public_cred);
+}
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 
 #else /* ! COAP_OSCORE_SUPPORT */
 

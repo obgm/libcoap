@@ -101,6 +101,26 @@ int oscore_decode_option_value(const uint8_t *option_value,
                                size_t option_len,
                                cose_encrypt0_t *cose);
 
+#if COAP_OSCORE_GROUP_SUPPORT
+/* Sets alg and keys in COSE SIGN  */
+void oscore_populate_sign(cose_sign1_t *sign,
+                          oscore_ctx_t *ctx,
+                          coap_crypto_cred_t *public_cred,
+                          coap_crypto_pri_key_t *private_key);
+
+/*
+ * oscore_prepare_sig_structure
+ *
+ * creates and sets structure to be signed
+ */
+size_t oscore_prepare_sig_structure(uint8_t *sigptr,
+                                    size_t sig_size,
+                                    const uint8_t *e_aad_buffer,
+                                    uint16_t e_aad_len,
+                                    const uint8_t *text,
+                                    uint16_t text_len);
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
+
 /* Creates AAD, creates External AAD and serializes it into the complete AAD
  * structure. Returns serialized size. */
 size_t oscore_prepare_aad(const uint8_t *external_aad_buffer,
@@ -112,7 +132,10 @@ size_t oscore_prepare_e_aad(oscore_ctx_t *ctx,
                             cose_encrypt0_t *cose,
                             const uint8_t *oscore_option,
                             size_t oscore_option_len,
-                            coap_bin_const_t *sender_public_key,
+                            coap_crypto_cred_t *sender_cred,
+#if COAP_OSCORE_GROUP_SUPPORT
+                            oscore_mode_t mode,
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
                             uint8_t *external_aad_ptr,
                             size_t external_aad_size);
 

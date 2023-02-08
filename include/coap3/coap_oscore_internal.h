@@ -37,6 +37,16 @@ extern "C" {
  */
 struct coap_oscore_snd_conf_t {
   coap_bin_const_t *sender_id;     /**< Sender ID (i.e. local our id) */
+#if COAP_OSCORE_GROUP_SUPPORT
+  /* Group */
+  int group_mode;          /**< 1 if group mode supported else 0 */
+  /* Pair Wise */
+  int pairwise_mode;       /**< 1 if pairwise mode supported else 0 */
+  coap_crypto_cred_t *gs_public_cred;  /**< Sender Public Cred (i.e.
+                                            local our Cred) */
+  coap_crypto_pri_key_t *gs_private_key; /**< Private Key for
+                                              gs_public_cred */
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 };
 
 /**
@@ -54,6 +64,15 @@ struct coap_oscore_rcp_conf_t {
                                    @c 1 if initialized, @c 0 otherwise */
   uint64_t last_seq; /**< Highest sequence number used for this recipient */
   uint64_t sliding_window; /**< bitfield sequence counter window */
+#if COAP_OSCORE_GROUP_SUPPORT
+  coap_crypto_cred_t *gr_public_cred; /**< Recipient Public Credential
+                                           (i.e. remote peer Credential) */
+  cose_curve_t sign_curve; /**< Set to one of COSE_curve_* */
+  /* Group */
+  int group_mode;          /**< 1 if group mode supported else 0 */
+  /* Pair Wise */
+  int pairwise_mode;       /**< 1 if pairwise mode supported else 0 */
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 };
 
 /**
@@ -72,6 +91,18 @@ struct coap_oscore_conf_t {
   cose_hkdf_alg_t hkdf_alg;        /**< Set to one of COSE_HKDF_ALG_* */
   uint32_t rfc8613_b_1_2;          /**< 1 if rfc8613 B.1.2 enabled else 0 */
   uint32_t rfc8613_b_2;            /**< 1 if rfc8613 B.2 protocol else 0 */
+
+#if COAP_OSCORE_GROUP_SUPPORT
+  oscore_auth_cred_t cred_type; /**< One of OSCORE_AUTH_CRED_* */
+  coap_crypto_cred_t *gm_cred;     /**< Group Manager Credentials */
+  cose_curve_t ecdh_alg;   /**< Set to one of COSE_curve_* */
+  int cred_fmt;            /**< Credentials type format */
+  cose_alg_t alg_group_enc; /**< Group Encryption Algorithm */
+  cose_alg_t alg_signature;      /**< Signature Algorithm */
+  cose_curve_t sign_curve; /**< Set to one of COSE_curve_* */
+  coap_bin_const_t *sign_enc_key; /**< Signature Encryption Key */
+  cose_alg_t alg_pairwise_key_agreement; /**< Pairwise Agreement Algorithm */
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 
   /* General Testing */
   uint32_t break_sender_key;     /**< 1 if sender key to be broken, else 0 */

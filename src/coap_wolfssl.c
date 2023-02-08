@@ -3066,7 +3066,7 @@ coap_crypto_output_errors(const char *prefix) {
 }
 #endif /* COAP_WS_SUPPORT || COAP_OSCORE_SUPPORT */
 
-#if COAP_WS_SUPPORT
+#if COAP_WS_SUPPORT || COAP_OSCORE_GROUP_SUPPORT
 /*
  * The struct hash_algs and the function get_hash_alg() are used to
  * determine which hash type to use for creating the required hash object.
@@ -3138,7 +3138,7 @@ error:
     wolfSSL_EVP_MD_CTX_free(evp_ctx);
   return 0;
 }
-#endif /* COAP_WS_SUPPORT */
+#endif /* COAP_WS_SUPPORT || COAP_OSCORE_GROUP_SUPPORT */
 
 #if COAP_OSCORE_SUPPORT
 #if LIBWOLFSSL_VERSION_HEX < 0x05006000
@@ -3156,6 +3156,16 @@ EVP_aes_256_ccm(void) {
 int
 coap_oscore_is_supported(void) {
   return 1;
+}
+
+int
+coap_oscore_group_is_supported(void) {
+  return 0;
+}
+
+int
+coap_oscore_pairwise_is_supported(void) {
+  return 0;
 }
 
 /*
@@ -3384,6 +3394,139 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
   coap_crypto_output_errors("coap_crypto_hmac");
   return 0;
 }
+
+#if COAP_OSCORE_GROUP_SUPPORT
+int
+coap_crypto_check_curve_alg(cose_curve_t alg) {
+  (void)alg;
+  return 0;
+}
+
+int
+coap_crypto_read_pem_private_key(const char *filename,
+                                 coap_crypto_pri_key_t **private) {
+  (void)filename;
+  (void)private;
+  return 0;
+}
+
+int
+coap_crypto_read_asn1_private_key(coap_bin_const_t *binary,
+                                  coap_crypto_pri_key_t **private) {
+  (void)private;
+
+  coap_delete_bin_const(binary);
+  return 0;
+}
+
+int
+coap_crypto_read_raw_private_key(cose_curve_t curve,
+                                 coap_bin_const_t *binary,
+                                 coap_crypto_pri_key_t **private) {
+  (void)curve;
+  (void)private;
+
+  coap_delete_bin_const(binary);
+  return 0;
+}
+
+coap_crypto_pri_key_t *
+coap_crypto_duplicate_private_key(coap_crypto_pri_key_t *key) {
+  (void)key;
+  return NULL;
+}
+
+void
+coap_crypto_delete_private_key(coap_crypto_pri_key_t *key) {
+  (void)key;
+}
+
+int
+coap_crypto_read_pem_public_cred(const char *filename,
+                                 coap_crypto_cred_t **public) {
+  (void)filename;
+  (void)public;
+  return 0;
+}
+
+int
+coap_crypto_read_asn1_public_cred(coap_bin_const_t *binary,
+                                  coap_crypto_cred_t **public) {
+  (void)public;
+
+  coap_delete_bin_const(binary);
+  return 0;
+}
+
+int
+coap_crypto_read_raw_public_cred(cose_curve_t curve,
+                                 coap_bin_const_t *binary,
+                                 coap_crypto_cred_t **public) {
+  (void)curve;
+  (void)public;
+
+  coap_delete_bin_const(binary);
+  return 0;
+}
+
+coap_crypto_cred_t *
+coap_crypto_duplicate_public_cred(coap_crypto_cred_t *key) {
+  (void)key;
+  return NULL;
+}
+
+void
+coap_crypto_delete_public_cred(coap_crypto_cred_t *key) {
+  (void)key;
+}
+
+int
+coap_crypto_hash_sign(cose_alg_t hash,
+                      coap_binary_t *signature,
+                      coap_bin_const_t *text,
+                      coap_crypto_pri_key_t *private_key) {
+  (void)hash;
+  (void)signature;
+  (void)text;
+  (void)private_key;
+  return 0;
+}
+
+int
+coap_crypto_hash_verify(cose_alg_t hash,
+                        coap_binary_t *signature,
+                        coap_bin_const_t *text,
+                        coap_crypto_cred_t *public_cred) {
+  (void)hash;
+  (void)signature;
+  (void)text;
+  (void)public_cred;
+  return 0;
+}
+
+int
+coap_crypto_gen_pkey(cose_curve_t curve,
+                     coap_bin_const_t **private,
+                     coap_bin_const_t **public) {
+  (void)curve;
+  (void)private;
+  (void)public;
+  return 0;
+}
+
+int
+coap_crypto_derive_shared_secret(cose_alg_t alg_pairwise,
+                                 coap_bin_const_t *raw_local_private,
+                                 coap_bin_const_t *raw_peer_public,
+                                 coap_bin_const_t **shared_secret) {
+  (void)alg_pairwise;
+  (void)raw_local_private;
+  (void)raw_peer_public;
+  (void)shared_secret;
+  return 0;
+}
+
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 
 #endif /* COAP_OSCORE_SUPPORT */
 
