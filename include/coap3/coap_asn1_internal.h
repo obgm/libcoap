@@ -106,6 +106,46 @@ coap_binary_t *get_asn1_tag(coap_asn1_tag_t ltag, const uint8_t *ptr,
  */
 coap_binary_t *get_asn1_spki(const uint8_t *data, size_t size);
 
+/**
+ * Split the ASN.1 signature into the r and s components.
+ *
+ * Internal function.
+ *
+ * @param asn1 The asn.1 to split
+ * @param size The size of the split out r and s.
+ *
+ * @return The combined r + s with leading 0s if needed (to be freed off
+ *         by caller) or @c NULL if error.
+ */
+coap_binary_t *coap_asn1_split_r_s(coap_binary_t *asn1, size_t size);
+
+/**
+ * Join the r and s components into ASN1. signature.
+ *
+ * Internal function.
+ *
+ * @param r_s The r and s combined to create ASN.1
+ *
+ * @return The ASN.1 equivalent of r + s (to be freed off
+ *         by caller) or @c NULL if error.
+ */
+coap_binary_t *coap_asn1_r_s_join(coap_binary_t *r_s);
+
+#if COAP_OSCORE_GROUP_SUPPORT
+/**
+ * Add ASN1 wrapper to a raw private key
+ *
+ * Internal function.
+ *
+ * @curve The curve to be used for the private key.
+ * @raw The raw private key information.
+ *
+ * @return The ASN.1 equivalent of @praw (to be freed off
+ *         by caller) or @c NULL if error.
+ */
+coap_binary_t *coap_asn1_pri_key(cose_curve_t curve, coap_bin_const_t *raw);
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
+
 /** @} */
 
 #ifdef __cplusplus

@@ -82,7 +82,7 @@ typedef void (*coap_method_handler_t)(coap_resource_t *resource,
  * This resource has support for multicast requests.
  * https://rfc-editor.org/rfc/rfc7252#section-11.3
  * https://rfc-editor.org/rfc/rfc7390#section-2.8
- * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.6
+ * https://rfc-editor.org/rfc/rfc10020#section-3.6
  * Note: ".well-known/core" always supports multicast.
  * Note: Only tested if coap_mcast_per_resource() has been called.
  */
@@ -94,7 +94,7 @@ typedef void (*coap_method_handler_t)(coap_resource_t *resource,
  * the app to delay the responses for multicast requests.
  * https://rfc-editor.org/rfc/rfc7252#section-8.2
  * https://rfc-editor.org/rfc/rfc7390#section-2.8
- * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.6
+ * https://rfc-editor.org/rfc/rfc10020#section-3.6
  * Note: Only tested if coap_mcast_per_resource() has been called.
  */
 #define COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS 0x10
@@ -103,7 +103,7 @@ typedef void (*coap_method_handler_t)(coap_resource_t *resource,
  * Enable libcoap library suppression of 205 multicast responses that are empty
  * (overridden by RFC7969 No-Response option) for multicast requests.
  * https://rfc-editor.org/rfc/rfc7390#section-2.7
- * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.1.2
+ * https://rfc-editor.org/rfc/rfc10020#section-3.1.2
  * Note: Only tested if coap_mcast_per_resource() has been called.
  */
 #define COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_05 0x20
@@ -112,7 +112,7 @@ typedef void (*coap_method_handler_t)(coap_resource_t *resource,
  * Enable libcoap library suppressing 2.xx multicast responses (overridden by
  * RFC7969 No-Response option) for multicast requests.
  * https://rfc-editor.org/rfc/rfc7390#section-2.7
- * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.1.2
+ * https://rfc-editor.org/rfc/rfc10020#section-3.1.2
  * Note: Only tested if coap_mcast_per_resource() has been called.
  */
 #define COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_XX 0x40
@@ -121,7 +121,7 @@ typedef void (*coap_method_handler_t)(coap_resource_t *resource,
  * Disable libcoap library suppressing 4.xx multicast responses (overridden by
  * RFC7969 No-Response option) for multicast requests.
  * https://rfc-editor.org/rfc/rfc7390#section-2.7
- * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.1.2
+ * https://rfc-editor.org/rfc/rfc10020#section-3.1.2
  * Note: Only tested if coap_mcast_per_resource() has been called.
  */
 #define COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_4_XX 0x80
@@ -130,7 +130,7 @@ typedef void (*coap_method_handler_t)(coap_resource_t *resource,
  * Disable libcoap library suppressing 5.xx multicast responses (overridden by
  * RFC7969 No-Response option) for multicast requests.
  * https://rfc-editor.org/rfc/rfc7390#section-2.7
- * https://datatracker.ietf.org/doc/html/draft-ietf-core-groupcomm-bis-06.txt#section-3.1.2
+ * https://rfc-editor.org/rfc/rfc10020#section-3.1.2
  * Note: Only tested if coap_mcast_per_resource() has been called.
  */
 #define COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_SUPPRESS_5_XX 0x100

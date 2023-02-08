@@ -389,6 +389,8 @@ typedef enum {
   COAP_EVENT_OSCORE_DECODE_ERROR,
   /** Triggered when the OSCORE recipient context bound to a session is replaced */
   COAP_EVENT_OSCORE_RECIPIENT_CHANGED,
+  /** Triggered when there is an OSCORE signature failure */
+  COAP_EVENT_OSCORE_SIGNATURE_FAILURE,
 
   /*
    * WebSocket events

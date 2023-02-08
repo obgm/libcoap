@@ -87,6 +87,52 @@ compose_info(uint8_t *buffer,
   return ret;
 }
 
+#if COAP_OSCORE_GROUP_SUPPORT
+int
+oscore_derive_keystream(oscore_ctx_t *osc_ctx,
+                        cose_encrypt0_t *cose,
+                        uint8_t coap_request,
+                        coap_bin_const_t *sender_id,
+                        coap_bin_const_t *id_context,
+                        size_t cs_size,
+                        uint8_t *keystream,
+                        size_t keystream_size) {
+  uint8_t info_buffer[30];
+  uint8_t *buffer = info_buffer;
+  size_t info_len = 0;
+  size_t rem_size = sizeof(info_buffer);
+  ;
+
+  info_len += oscore_cbor_put_array(&buffer, &rem_size, 4);
+  /* 1. id */
+  info_len += oscore_cbor_put_bytes(&buffer,
+                                    &rem_size,
+                                    sender_id->s,
+                                    sender_id->length);
+  /* 2. id_context */
+  info_len += oscore_cbor_put_bytes(&buffer,
+                                    &rem_size,
+                                    id_context->s,
+                                    id_context->length);
+  /* 3. type */
+  if (coap_request)
+    info_len += oscore_cbor_put_true(&buffer, &rem_size);
+  else
+    info_len += oscore_cbor_put_false(&buffer, &rem_size);
+  /* 4. L */
+  info_len += oscore_cbor_put_unsigned(&buffer, &rem_size, cs_size);
+
+  oscore_hkdf(osc_ctx->hkdf_alg,
+              &cose->partial_iv,
+              osc_ctx->sign_enc_key,
+              info_buffer,
+              info_len,
+              keystream,
+              keystream_size);
+  return 1;
+}
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
+
 uint8_t
 oscore_bytes_equal(uint8_t *a_ptr,
                    uint8_t a_len,
@@ -103,7 +149,7 @@ oscore_bytes_equal(uint8_t *a_ptr,
   }
 }
 
-static void
+void
 oscore_enter_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx) {
   if (!osc_ctx)
     return;
@@ -159,16 +205,35 @@ oscore_free_recipient_ctx(oscore_recipient_ctx_t *rcp_ctx) {
 
   coap_delete_bin_const(rcp_ctx->recipient_key);
   coap_delete_bin_const(rcp_ctx->recipient_id);
+#if COAP_OSCORE_GROUP_SUPPORT
+  coap_crypto_delete_public_cred(rcp_ctx->rem_cred);
+  coap_delete_bin_const(rcp_ctx->pw_rem_recipient_key);
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
   coap_free_type(COAP_OSCORE_REC, rcp_ctx);
 }
 
 void
 oscore_free_sender(oscore_sender_ctx_t *snd_ctx) {
+#if COAP_OSCORE_GROUP_SUPPORT
+  oscore_pw_chain_t *next;
+  oscore_pw_chain_t *chain;
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 
   if (snd_ctx == NULL)
     return;
   coap_delete_bin_const(snd_ctx->sender_id);
   coap_delete_bin_const(snd_ctx->sender_key);
+#if COAP_OSCORE_GROUP_SUPPORT
+  coap_crypto_delete_private_key(snd_ctx->my_private_key);
+  coap_crypto_delete_public_cred(snd_ctx->sender_cred);
+  chain = snd_ctx->pw_sender_key_chain;
+  while (chain) {
+    next = chain->next;
+    coap_delete_bin_const(chain->pw_sender_key);
+    coap_free_type(COAP_STRING, chain);
+    chain = next;
+  }
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
   coap_free_type(COAP_OSCORE_SEN, snd_ctx);
 }
 
@@ -190,6 +255,11 @@ oscore_free_context(oscore_ctx_t *osc_ctx) {
   coap_delete_bin_const(osc_ctx->master_salt);
   coap_delete_bin_const(osc_ctx->id_context);
   coap_delete_bin_const(osc_ctx->common_iv);
+#if COAP_OSCORE_GROUP_SUPPORT
+  coap_delete_bin_const(osc_ctx->sign_params);
+  coap_delete_bin_const(osc_ctx->sign_enc_key);
+  coap_crypto_delete_public_cred(osc_ctx->gm_cred);
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
   coap_free_type(COAP_OSCORE_COM, osc_ctx);
 }
 
@@ -606,6 +676,11 @@ oscore_log_context(oscore_ctx_t *osc_ctx, const char *heading) {
                          osc_ctx->master_secret);
     oscore_log_hex_value(COAP_LOG_OSCORE, "Master Salt", osc_ctx->master_salt);
     oscore_log_hex_value(COAP_LOG_OSCORE, "Common IV", osc_ctx->common_iv);
+#if COAP_OSCORE_GROUP_SUPPORT
+    oscore_log_hex_value(COAP_LOG_OSCORE,
+                         "Sign Enc Key",
+                         osc_ctx->sign_enc_key);
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
     oscore_log_hex_value(COAP_LOG_OSCORE,
                          "Sender ID",
                          osc_ctx->sender_context->sender_id);
@@ -675,6 +750,22 @@ oscore_update_ctx(oscore_ctx_t *osc_ctx, coap_bin_const_t *id_context) {
     osc_ctx->common_iv = temp;
   else
     coap_delete_bin_const(temp);
+#if COAP_OSCORE_GROUP_SUPPORT
+  /* Signature Encryption Key */
+  temp = osc_ctx->sign_enc_key;
+  osc_ctx->sign_enc_key =
+      oscore_build_key(osc_ctx,
+                       osc_ctx->master_salt,
+                       osc_ctx->master_secret,
+                       osc_ctx->alg_group_enc,
+                       NULL,
+                       coap_make_str_const("SEKey"),
+                       cose_key_len(osc_ctx->alg_group_enc));
+  if (!osc_ctx->sign_enc_key)
+    osc_ctx->sign_enc_key = temp;
+  else
+    coap_delete_bin_const(temp);
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
 
   oscore_log_context(osc_ctx, "Updated Common context");
 }
@@ -741,6 +832,19 @@ oscore_duplicate_ctx(coap_context_t *c_context,
     if (!osc_ctx->common_iv)
       goto error;
 
+#if COAP_OSCORE_GROUP_SUPPORT
+    /* Signature Encryption Key */
+    osc_ctx->sign_enc_key =
+        oscore_build_key(osc_ctx,
+                         osc_ctx->master_salt,
+                         osc_ctx->master_secret,
+                         osc_ctx->alg_group_enc,
+                         NULL,
+                         coap_make_str_const("SEKey"),
+                         cose_key_len(osc_ctx->alg_group_enc));
+    if (!osc_ctx->sign_enc_key)
+      goto error;
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
   }
 
   /*
@@ -802,6 +906,9 @@ oscore_derive_ctx_from_conf(coap_oscore_conf_t *oscore_conf) {
   osc_ctx->replay_window_size = oscore_conf->replay_window ?
                                 oscore_conf->replay_window :
                                 COAP_OSCORE_DEFAULT_REPLAY_WINDOW;
+#if COAP_OSCORE_GROUP_SUPPORT
+  OSC_MOVE_PTR(osc_ctx->gm_cred, oscore_conf->gm_cred);
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
   osc_ctx->rfc8613_b_1_2 = oscore_conf->rfc8613_b_1_2;
   osc_ctx->rfc8613_b_2 = oscore_conf->rfc8613_b_2;
   osc_ctx->save_seq_num_func = oscore_conf->save_seq_num_func;
@@ -840,6 +947,35 @@ oscore_derive_ctx_from_conf(coap_oscore_conf_t *oscore_conf) {
     if (!osc_ctx->common_iv)
       goto error;
 
+#if COAP_OSCORE_GROUP_SUPPORT
+    if (oscore_conf->sender->group_mode || oscore_conf->sender->pairwise_mode) {
+      size_t counter_signature_parameters_len = 0;
+      uint8_t *counter_signature_parameters =
+          oscore_cs_key_params(oscore_conf->sign_curve,
+                               COSE_KTY_OKP,
+                               &counter_signature_parameters_len);
+      osc_ctx->alg_group_enc = oscore_conf->alg_group_enc;
+      osc_ctx->alg_signature = oscore_conf->alg_signature;
+      osc_ctx->alg_pairwise_key_agreement = oscore_conf->alg_pairwise_key_agreement;
+      osc_ctx->sign_params = coap_new_bin_const(counter_signature_parameters,
+                                                counter_signature_parameters_len);
+      if (oscore_conf->sender->group_mode && coap_get_log_level() >= COAP_LOG_OSCORE) {
+        oscore_log_hex_value(COAP_LOG_OSCORE, "Sign Params", osc_ctx->sign_params);
+      }
+      coap_free_type(COAP_STRING, counter_signature_parameters);
+      /* signature Encryption Key */
+      osc_ctx->sign_enc_key =
+          oscore_build_key(osc_ctx,
+                           osc_ctx->master_salt,
+                           osc_ctx->master_secret,
+                           osc_ctx->alg_group_enc,
+                           NULL,
+                           coap_make_str_const("SEKey"),
+                           cose_key_len(osc_ctx->alg_group_enc));
+      if (!osc_ctx->sign_enc_key)
+        goto error;
+    }
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
   }
 
   /*
@@ -854,6 +990,45 @@ oscore_derive_ctx_from_conf(coap_oscore_conf_t *oscore_conf) {
   sender_ctx->seq = oscore_conf->start_seq_num;
   if (oscore_conf->sender) {
     OSC_MOVE_PTR(sender_ctx->sender_id, oscore_conf->sender->sender_id);
+#if COAP_OSCORE_GROUP_SUPPORT
+    sender_ctx->group_mode = oscore_conf->sender->group_mode;
+    sender_ctx->pairwise_mode = oscore_conf->sender->pairwise_mode;
+    OSC_MOVE_PTR(sender_ctx->sender_cred, oscore_conf->sender->gs_public_cred);
+    OSC_MOVE_PTR(sender_ctx->my_private_key, oscore_conf->sender->gs_private_key);
+    if (sender_ctx->group_mode && coap_get_log_level() >= COAP_LOG_OSCORE) {
+      char buffer[30];
+
+      oscore_log_hex_value(COAP_LOG_OSCORE,
+                           "Sender Priv DER",
+                           sender_ctx->my_private_key->pri_der);
+      oscore_log_hex_value(COAP_LOG_OSCORE,
+                           "Sender Priv RAW",
+                           sender_ctx->my_private_key->pri_raw);
+      oscore_log_int_value(COAP_LOG_OSCORE,
+                           "  Sig Wire Size",
+                           sender_ctx->my_private_key->wire_sign_size);
+      oscore_log_hex_value(COAP_LOG_OSCORE,
+                           "Sender Pub DER",
+                           sender_ctx->sender_cred->pub_der);
+      oscore_log_hex_value(COAP_LOG_OSCORE,
+                           "Sender Pub RAW",
+                           sender_ctx->sender_cred->pub_raw);
+      oscore_log_hex_value(COAP_LOG_OSCORE,
+                           "Sender Auth Cred",
+                           sender_ctx->sender_cred->auth_cred);
+      oscore_log_int_value(COAP_LOG_OSCORE,
+                           "  Sig Wire Size",
+                           sender_ctx->sender_cred->wire_sign_size);
+      oscore_log_char_value(COAP_LOG_OSCORE,
+                            "  Sig COSE Curve",
+                            cose_get_curve_name(sender_ctx->sender_cred->sign_curve,
+                                                buffer, sizeof(buffer)));
+      oscore_log_char_value(COAP_LOG_OSCORE,
+                            "  Sig COSE Hash",
+                            cose_get_alg_name(sender_ctx->sender_cred->sign_hash,
+                                              buffer, sizeof(buffer)));
+    }
+#endif /* COAP_OSCORE_GROUP_SUPPORT */
     coap_free_type(COAP_STRING, oscore_conf->sender);
     oscore_conf->sender = NULL;
   }
@@ -949,11 +1124,147 @@ oscore_add_recipient(oscore_ctx_t *osc_ctx, coap_oscore_rcp_conf_t *rcp_conf,
     }
   }
   rcp_ctx->silent_server = rcp_conf->silent_server;
-  OSC_MOVE_PTR(rcp_ctx->recipient_id, rcp_conf->recipient_id);
   if (rcp_conf->window_initialized) {
     rcp_ctx->last_seq = rcp_conf->last_seq;
     rcp_ctx->sliding_window = rcp_conf->sliding_window;
   }
+#if COAP_OSCORE_GROUP_SUPPORT
+  if (osc_ctx->sender_context->group_mode) {
+    if (osc_ctx->sender_context->pairwise_mode) {
+      if (rcp_conf->group_mode) {
+        rcp_ctx->mode = OSCORE_MODE_GROUP;
+      } else {
+        rcp_ctx->mode = OSCORE_MODE_PAIRWISE;
+      }
+    } else {
+      rcp_ctx->mode = OSCORE_MODE_GROUP;
+    }
+  } else if (osc_ctx->sender_context->pairwise_mode) {
+    if (rcp_conf->pairwise_mode) {
+      rcp_ctx->mode = OSCORE_MODE_PAIRWISE;
+    } else {
+      rcp_ctx->mode = OSCORE_MODE_SINGLE;
+    }
+  } else {
+    rcp_ctx->mode = OSCORE_MODE_SINGLE;
+  }
+
+  OSC_MOVE_PTR(rcp_ctx->recipient_id, rcp_conf->recipient_id);
+  OSC_MOVE_PTR(rcp_ctx->rem_cred, rcp_conf->gr_public_cred);
+
+  if (rcp_ctx->mode == OSCORE_MODE_GROUP &&
+      !coap_oscore_group_is_supported()) {
+    coap_log_warn("OSCORE Group not supported by underlying TLS library\n");
+    goto free_rcp_conf;
+  }
+  if (rcp_ctx->mode == OSCORE_MODE_PAIRWISE &&
+      !coap_oscore_pairwise_is_supported()) {
+    coap_log_warn("OSCORE Pairwise not supported by underlying TLS library\n");
+    goto free_rcp_conf;
+  }
+
+  if (rcp_ctx->mode == OSCORE_MODE_GROUP &&
+      coap_get_log_level() >= COAP_LOG_OSCORE) {
+    char buffer[30];
+
+    if (rcp_ctx->rem_cred != NULL) {
+      oscore_log_hex_value(COAP_LOG_OSCORE,
+                           "Rcpt Pub DER",
+                           rcp_ctx->rem_cred->pub_der);
+      oscore_log_hex_value(COAP_LOG_OSCORE,
+                           "Rcpt Pub RAW",
+                           rcp_ctx->rem_cred->pub_raw);
+      oscore_log_hex_value(COAP_LOG_OSCORE,
+                           "Rcpt Auth Cred",
+                           rcp_ctx->rem_cred->auth_cred);
+    }
+    oscore_log_int_value(COAP_LOG_OSCORE,
+                         "  Sig Wire Size",
+                         rcp_ctx->rem_cred->wire_sign_size);
+    oscore_log_char_value(COAP_LOG_OSCORE,
+                          "  Sig COSE Curve",
+                          cose_get_curve_name(rcp_ctx->rem_cred->sign_curve,
+                                              buffer, sizeof(buffer)));
+    oscore_log_char_value(COAP_LOG_OSCORE,
+                          "  Sig COSE Hash",
+                          cose_get_alg_name(rcp_ctx->rem_cred->sign_hash,
+                                            buffer, sizeof(buffer)));
+  }
+  if (rcp_ctx->mode == OSCORE_MODE_PAIRWISE) {
+    oscore_sender_ctx_t *snd_ctx = osc_ctx->sender_context;
+    coap_bin_const_t *shared_secret = NULL;
+    coap_binary_t *ikm = NULL;
+    if (coap_crypto_derive_shared_secret(osc_ctx->alg_pairwise_key_agreement,
+                                         snd_ctx->my_private_key->pri_raw,
+                                         rcp_ctx->rem_cred->pub_raw,
+                                         &shared_secret)) {
+      oscore_log_hex_value(COAP_LOG_OSCORE,
+                           "Shared Secret",
+                           shared_secret);
+      ikm = coap_new_binary(snd_ctx->sender_cred->pub_der->length +
+                            rcp_ctx->rem_cred->pub_der->length +
+                            shared_secret->length);
+      if (!ikm)
+        goto fail;
+
+      /* Do the Pairwise Sender Key */
+      coap_delete_bin_const(rcp_ctx->pw_rem_recipient_key);
+      memcpy(&ikm->s[0], snd_ctx->sender_cred->pub_der->s,
+             snd_ctx->sender_cred->pub_der->length);
+      memcpy(&ikm->s[snd_ctx->sender_cred->pub_der->length],
+             rcp_ctx->rem_cred->pub_der->s,
+             rcp_ctx->rem_cred->pub_der->length);
+      memcpy(&ikm->s[snd_ctx->sender_cred->pub_der->length +
+                                                           rcp_ctx->rem_cred->pub_der->length],
+             shared_secret->s,
+             shared_secret->length);
+      rcp_ctx->pw_rem_recipient_key =
+          oscore_build_key(osc_ctx,
+                           snd_ctx->sender_key,
+                           (coap_bin_const_t *)ikm,
+                           osc_ctx->aead_alg,
+                           rcp_ctx->recipient_id,
+                           coap_make_str_const("Key"),
+                           cose_key_len(osc_ctx->aead_alg));
+      if (!rcp_ctx->pw_rem_recipient_key)
+        goto fail;
+      oscore_log_hex_value(COAP_LOG_OSCORE,
+                           "Recipient Key",
+                           rcp_ctx->pw_rem_recipient_key);
+      /* Do the Pairwise Recipient Credentials */
+      coap_delete_bin_const(rcp_ctx->pw_rem_recipient_key);
+      memcpy(&ikm->s[0], rcp_ctx->rem_cred->pub_der->s,
+             rcp_ctx->rem_cred->pub_der->length);
+      memcpy(&ikm->s[rcp_ctx->rem_cred->pub_der->length],
+             snd_ctx->sender_cred->pub_der->s,
+             snd_ctx->sender_cred->pub_der->length);
+      memcpy(&ikm->s[rcp_ctx->rem_cred->pub_der->length +
+                                                        snd_ctx->sender_cred->pub_der->length],
+             shared_secret->s,
+             shared_secret->length);
+      rcp_ctx->pw_rem_recipient_key =
+          oscore_build_key(osc_ctx,
+                           rcp_ctx->recipient_key,
+                           (coap_bin_const_t *)ikm,
+                           osc_ctx->aead_alg,
+                           snd_ctx->sender_id,
+                           coap_make_str_const("Key"),
+                           cose_key_len(osc_ctx->aead_alg));
+      coap_delete_binary(ikm);
+      coap_delete_bin_const(shared_secret);
+    } else {
+fail:
+      coap_delete_binary(ikm);
+      coap_delete_bin_const(shared_secret);
+      oscore_free_recipient_ctx(rcp_ctx);
+      coap_free_type(COAP_STRING, rcp_conf);
+      return NULL;
+    }
+  }
+#else /* ! COAP_OSCORE_GROUP_SUPPORT */
+  rcp_ctx->mode = OSCORE_MODE_SINGLE;
+  OSC_MOVE_PTR(rcp_ctx->recipient_id, rcp_conf->recipient_id);
+#endif /* ! COAP_OSCORE_GROUP_SUPPORT */
 
   rcp_ctx->initial_state = 1;
   rcp_ctx->osc_ctx = osc_ctx;

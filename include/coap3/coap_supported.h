@@ -127,6 +127,20 @@ int coap_observe_persist_is_supported(void);
 int coap_oscore_is_supported(void);
 
 /**
+ * Check whether OSCORE Group support is available.
+ *
+ * @return @c 1 if support for OSCORE Group is enabled, or @c 0 otherwise.
+ */
+int coap_oscore_group_is_supported(void);
+
+/**
+ * Check whether OSCORE Pairwise support is available.
+ *
+ * @return @c 1 if support for OSCORE Pairwise is enabled, or @c 0 otherwise.
+ */
+int coap_oscore_pairwise_is_supported(void);
+
+/**
  * Check whether Proxy code is available.
  *
  * @return @c 1 if support for Proxy code is enabled, or @c 0 otherwise.

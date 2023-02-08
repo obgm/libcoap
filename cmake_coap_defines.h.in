@@ -50,6 +50,9 @@
 /* Define to 1 if the library has OSCORE support. */
 #cmakedefine COAP_OSCORE_SUPPORT @COAP_OSCORE_SUPPORT@
 
+/* Define to 1 if the library has OSCORE Group support. */
+#cmakedefine COAP_OSCORE_GROUP_SUPPORT @COAP_OSCORE_GROUP_SUPPORT@
+
 /* Define to 1 if the library has proxy support. */
 #cmakedefine COAP_PROXY_SUPPORT @COAP_PROXY_SUPPORT@
 
