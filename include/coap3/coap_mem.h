@@ -1,5 +1,5 @@
 /*
- * mem.h -- CoAP memory handling
+ * coap_mem.h -- CoAP memory handling
  *
  * Copyright (C) 2010-2011,2014-2015 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -10,7 +10,7 @@
  */
 
 /**
- * @file mem.h
+ * @file coap_mem.h
  * @brief CoAP memory handling
  */
 

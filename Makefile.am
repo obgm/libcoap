@@ -154,27 +154,27 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_async.c \
   src/coap_cache.c \
   src/coap_debug.c \
+  src/coap_encode.c \
   src/coap_event.c \
   src/coap_hashkey.c \
   src/coap_gnutls.c \
   src/coap_io.c \
   src/coap_mbedtls.c \
+  src/coap_mem.c \
   src/coap_notls.c \
   src/coap_openssl.c \
   src/coap_option.c \
   src/coap_oscore.c \
   src/coap_prng.c \
   src/coap_session.c \
+  src/coap_str.c \
   src/coap_subscribe.c \
   src/coap_tcp.c \
   src/coap_time.c \
   src/coap_tinydtls.c \
-  src/encode.c \
-  src/mem.c \
   src/net.c \
   src/pdu.c \
   src/resource.c \
-  src/str.c \
   src/uri.c
 
 if HAVE_OSCORE
@@ -206,8 +206,8 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_event.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_forward_decls.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_io.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/mem.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/net.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_mem.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_net.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_option.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_oscore.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/pdu.h \

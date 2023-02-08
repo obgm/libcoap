@@ -18,7 +18,7 @@
 #define COAP_ASYNC_INTERNAL_H_
 
 #include "coap_internal.h"
-#include "net.h"
+#include "coap_net.h"
 
 /* Note that if COAP_SERVER_SUPPORT is not set, then WITHOUT_ASYNC undefined */
 #ifndef WITHOUT_ASYNC

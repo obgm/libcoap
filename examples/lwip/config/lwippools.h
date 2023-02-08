@@ -12,7 +12,7 @@
  * MEMP_USE_CUSTOM_POOLS has to be set in lwipopts.h. */
 
 #include "coap3/coap_internal.h"
-#include "coap3/net.h"
+#include "coap3/coap_net.h"
 #include "coap3/resource.h"
 #include "coap3/coap_subscribe.h"
 #ifdef HAVE_LIBTINYDTLS
