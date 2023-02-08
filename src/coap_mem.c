@@ -1,4 +1,4 @@
-/* mem.c -- CoAP memory handling
+/* coap_mem.c -- CoAP memory handling
  *
  * Copyright (C) 2014--2015,2019--2023 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -9,7 +9,7 @@
  */
 
 /**
- * @file mem.c
+ * @file coap_mem.c
  * @brief Memory handling functions
  */
 

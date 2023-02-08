@@ -26,7 +26,7 @@
 #include "block.h"
 #include "coap_str.h"
 #include "pdu.h"
-#include "net.h"
+#include "coap_net.h"
 #include "coap_subscribe.h"
 
 /**

@@ -1,4 +1,4 @@
-/* encode.c -- encoding and decoding of CoAP data types
+/* coap_encode.c -- encoding and decoding of CoAP data types
  *
  * Copyright (C) 2010,2011 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -9,7 +9,7 @@
  */
 
 /**
- * @file encode.c
+ * @file coap_encode.c
  * @brief Encoding and decoding Coap data types functions
  */
 

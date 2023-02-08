@@ -17,7 +17,7 @@
 #ifndef COAP_ASYNC_H_
 #define COAP_ASYNC_H_
 
-#include "net.h"
+#include "coap_net.h"
 
 /**
  * @ingroup application_api

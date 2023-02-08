@@ -1,5 +1,5 @@
 /*
- * net.h -- CoAP context interface
+ * coap_net.h -- CoAP context interface
  *
  * Copyright (C) 2010-2023 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -10,7 +10,7 @@
  */
 
 /**
- * @file net.h
+ * @file coap_net.h
  * @brief CoAP context interface
  */
 

@@ -1,4 +1,4 @@
-/* str.c -- strings to be used in the CoAP library
+/* coap_str.c -- strings to be used in the CoAP library
  *
  * Copyright (C) 2010,2011,2022-2023 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -9,7 +9,7 @@
  */
 
 /**
- * @file str.c
+ * @file coap_str.c
  * @brief String handling functions
  */
 
@@ -111,4 +111,3 @@ coap_bin_const_t *coap_new_bin_const(const uint8_t *data, size_t size) {
 void coap_delete_bin_const(coap_bin_const_t *s) {
   coap_free_type(COAP_STRING, s);
 }
-
