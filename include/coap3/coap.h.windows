@@ -57,7 +57,7 @@ extern "C" {
 #include "coap3/coap_subscribe.h"
 #include "coap3/coap_time.h"
 #include "coap3/coap_str.h"
-#include "coap3/uri.h"
+#include "coap3/coap_uri.h"
 
 #ifdef __cplusplus
 }

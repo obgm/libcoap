@@ -1,4 +1,4 @@
-/* uri.c -- helper functions for URI treatment
+/* coap_uri.c -- helper functions for URI treatment
  *
  * Copyright (C) 2010--2012,2015-2016,2022-2023 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -9,7 +9,7 @@
  */
 
 /**
- * @file uri.c
+ * @file coap_uri.c
  * @brief URI handling functions
  */
 
@@ -732,4 +732,3 @@ coap_string_t *coap_get_uri_path(const coap_pdu_t *request) {
   }
   return uri_path;
 }
-

@@ -62,10 +62,10 @@
     <ClCompile Include="..\src\coap_time.c" />
     <ClCompile Include="..\src\coap_tcp.c" />
     <ClCompile Include="..\src\coap_tinydtls.c" />
+    <ClCompile Include="..\src\coap_uri.c" />
     <ClCompile Include="..\src\net.c" />
     <ClCompile Include="..\src\pdu.c" />
     <ClCompile Include="..\src\resource.c" />
-    <ClCompile Include="..\src\uri.c" />
     <ClCompile Include="..\src\oscore\oscore.c" />
     <ClCompile Include="..\src\oscore\oscore_cbor.c" />
     <ClCompile Include="..\src\oscore\oscore_context.c" />
@@ -108,7 +108,7 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_tcp_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_time.h" />
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\uri.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uri.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uri_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uthash_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_utlist_internal.h" />

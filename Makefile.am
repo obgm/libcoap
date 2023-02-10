@@ -172,10 +172,10 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_tcp.c \
   src/coap_time.c \
   src/coap_tinydtls.c \
+  src/coap_uri.c \
   src/net.c \
   src/pdu.c \
-  src/resource.c \
-  src/uri.c
+  src/resource.c
 
 if HAVE_OSCORE
 libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES += $(libcoap_OSCORE_sources)
@@ -217,7 +217,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_str.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_subscribe.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_time.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/uri.h
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_uri.h
 
 ## Instruct libtool to include API version information in the generated shared
 ## library file (.so). The library ABI version will later defined in configure.ac,
