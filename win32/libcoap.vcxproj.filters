@@ -81,6 +81,9 @@
     <ClCompile Include="..\src\coap_tinydtls.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_uri.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\net.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -88,9 +91,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\resource.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\uri.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\oscore\oscore.c">
@@ -215,7 +215,7 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_time.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\uri.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uri.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uri_internal.h">

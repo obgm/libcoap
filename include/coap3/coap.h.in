@@ -62,7 +62,7 @@ extern "C" {
 #include "coap@LIBCOAP_API_VERSION@/coap_str.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_subscribe.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_time.h"
-#include "coap@LIBCOAP_API_VERSION@/uri.h"
+#include "coap@LIBCOAP_API_VERSION@/coap_uri.h"
 
 #ifdef __cplusplus
 }

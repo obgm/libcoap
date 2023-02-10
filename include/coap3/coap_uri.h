@@ -1,5 +1,5 @@
 /*
- * uri.h -- helper functions for URI treatment
+ * coap_uri.h -- helper functions for URI treatment
  *
  * Copyright (C) 2010-2023 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -10,7 +10,7 @@
  */
 
 /**
- * @file uri.h
+ * @file coap_uri.h
  * @brief Helper functions for URI treatment
  */
 

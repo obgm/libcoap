@@ -487,11 +487,11 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_subscribe.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_tcp.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_time.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_uri.c
           ${CMAKE_CURRENT_LIST_DIR}/src/block.c
           ${CMAKE_CURRENT_LIST_DIR}/src/net.c
           ${CMAKE_CURRENT_LIST_DIR}/src/pdu.c
           ${CMAKE_CURRENT_LIST_DIR}/src/resource.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/uri.c
           # no need to parse those files if we do not need them
           $<$<BOOL:${HAVE_OPENSSL}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openssl.c>
           $<$<BOOL:${HAVE_LIBTINYDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tinydtls.c>
@@ -525,7 +525,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_str.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_subscribe.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_time.h
-          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/uri.h)
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_uri.h)
 target_include_directories(
   ${COAP_LIBRARY_NAME}
   PUBLIC # config headers are generated during configuration time
