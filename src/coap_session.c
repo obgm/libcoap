@@ -300,6 +300,10 @@ coap_session_mfree(coap_session_t *session) {
 #if HAVE_OSCORE
   coap_delete_oscore_associations(session);
 #endif /* HAVE_OSCORE */
+#if COAP_WS_SUPPORT
+  coap_free_type(COAP_STRING, session->ws);
+  coap_delete_str_const(session->ws_host);
+#endif /* COAP_WS_SUPPORT */
 }
 
 void coap_session_free(coap_session_t *session) {
@@ -587,6 +591,10 @@ coap_nack_name(coap_nack_reason_t reason) {
     return "COAP_NACK_BAD_RESPONSE";
   case COAP_NACK_TLS_LAYER_FAILED:
     return "COAP_NACK_TLS_LAYER_FAILED";
+  case COAP_NACK_WS_LAYER_FAILED:
+    return "COAP_NACK_WS_LAYER_FAILED";
+  case COAP_NACK_WS_FAILED:
+    return "COAP_NACK_WS_FAILED";
   default:
     return "???";
   }
@@ -902,6 +910,20 @@ coap_session_create_client(coap_context_t *ctx,
       return NULL;
     }
     default_port = COAPS_DEFAULT_PORT;
+    break;
+  case COAP_PROTO_WS:
+    if (!coap_ws_is_supported()) {
+      coap_log_crit("coap_new_client_session*: WS not supported\n");
+      return NULL;
+    }
+    default_port = 80;
+    break;
+  case COAP_PROTO_WSS:
+    if (!coap_wss_is_supported()) {
+      coap_log_crit("coap_new_client_session*: WSS not supported\n");
+      return NULL;
+    }
+    default_port = 443;
     break;
   case COAP_PROTO_NONE:
   case COAP_PROTO_LAST:
@@ -1412,6 +1434,8 @@ coap_proto_name(coap_proto_t proto) {
   case COAP_PROTO_DTLS: return "DTLS";
   case COAP_PROTO_TCP:  return "TCP ";
   case COAP_PROTO_TLS:  return "TLS ";
+  case COAP_PROTO_WS:   return "WS  ";
+  case COAP_PROTO_WSS:  return "WSS ";
   case COAP_PROTO_NONE:
   case COAP_PROTO_LAST:
   default: return "????" ; break;
@@ -1443,7 +1467,18 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     goto error;
   }
 
-  if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
+  if (proto == COAP_PROTO_WS && !coap_ws_is_supported()) {
+    coap_log_crit("coap_new_endpoint: WS not supported\n");
+    goto error;
+  }
+
+  if (proto == COAP_PROTO_WSS && !coap_wss_is_supported()) {
+    coap_log_crit("coap_new_endpoint: WSS not supported\n");
+    goto error;
+  }
+
+  if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS ||
+      proto == COAP_PROTO_WSS) {
     if (!coap_dtls_context_check_keys_enabled(context)) {
       coap_log_info(
                "coap_new_endpoint: one of coap_context_set_psk() or "

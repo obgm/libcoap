@@ -942,6 +942,8 @@ coap_pdu_parse_header_size(coap_proto_t proto,
       header_size = 4;
     else
       header_size = 6;
+  } else if (proto == COAP_PROTO_WS || proto==COAP_PROTO_WSS) {
+      header_size = 2;
   } else if (proto == COAP_PROTO_UDP || proto==COAP_PROTO_DTLS) {
     header_size = 4;
   }
@@ -949,12 +951,18 @@ coap_pdu_parse_header_size(coap_proto_t proto,
   return header_size;
 }
 
+/*
+ * strm
+ * return +ve  PDU size including token
+ *          0  PDU does not parse
+ */
 size_t
 coap_pdu_parse_size(coap_proto_t proto,
                     const uint8_t *data,
                     size_t length) {
   assert(data);
-  assert(proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS);
+  assert(proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS ||
+         proto == COAP_PROTO_WS || proto == COAP_PROTO_WSS);
   assert(coap_pdu_parse_header_size(proto, data) <= length );
 
   size_t size = 0;
@@ -1017,6 +1025,11 @@ coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
     pdu->mid = (uint16_t)hdr[2] << 8 | hdr[3];
   } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
     assert(pdu->hdr_size >= 2 && pdu->hdr_size <= 6);
+    pdu->type = COAP_MESSAGE_CON;
+    pdu->code = hdr[pdu->hdr_size-1];
+    pdu->mid = 0;
+  } else if (proto == COAP_PROTO_WS || proto == COAP_PROTO_WSS) {
+    assert(pdu->hdr_size == 2);
     pdu->type = COAP_MESSAGE_CON;
     pdu->code = hdr[pdu->hdr_size-1];
     pdu->mid = 0;
@@ -1362,7 +1375,10 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
       coap_log_warn("coap_pdu_encode_header: corrupted PDU\n");
       return 0;
     }
-    len = pdu->used_size - pdu->e_token_length;
+    if (proto == COAP_PROTO_WS || proto == COAP_PROTO_WSS)
+      len = 0;
+    else
+      len = pdu->used_size - pdu->e_token_length;
     if (len <= COAP_MAX_MESSAGE_SIZE_TCP0) {
       assert(pdu->max_hdr_size >= 2);
       if (pdu->max_hdr_size < 2) {

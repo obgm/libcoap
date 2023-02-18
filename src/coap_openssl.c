@@ -3646,6 +3646,20 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_WS_SUPPORT || HAVE_OSCORE
+static void
+coap_crypto_output_errors(const char *prefix) {
+  unsigned long e;
+
+  while ((e = ERR_get_error()))
+    coap_log_warn(
+             "%s: %s%s\n",
+             prefix,
+             ERR_reason_error_string(e),
+             ssl_function_definition(e));
+}
+#endif /* COAP_WS_SUPPORT || HAVE_OSCORE */
+
 #if COAP_WS_SUPPORT
 /*
  * The struct hash_algs and the function get_hash_alg() are used to
@@ -3796,18 +3810,6 @@ coap_crypto_check_hkdf_alg(cose_hkdf_alg_t hkdf_alg) {
   if (1 != (Func)) {                                                           \
     goto error;                                                                \
   }
-
-static void
-coap_crypto_output_errors(const char *prefix) {
-  unsigned long e;
-
-  while ((e = ERR_get_error()))
-    coap_log_warn(
-             "%s: %s%s\n",
-             prefix,
-             ERR_reason_error_string(e),
-             ssl_function_definition(e));
-}
 
 int
 coap_crypto_aead_encrypt(const coap_crypto_param_t *params,

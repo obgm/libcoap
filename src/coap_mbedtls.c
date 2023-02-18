@@ -1214,7 +1214,8 @@ static int setup_client_ssl_session(coap_session_t *c_session,
       return ret;
     }
 #if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_ALPN)
-    if (c_session->proto == COAP_PROTO_TLS) {
+    if (c_session->proto == COAP_PROTO_TLS ||
+        c_session->proto == COAP_PROTO_WSS) {
       static const char *alpn_list[] = { "coap", NULL };
 
       ret = mbedtls_ssl_conf_alpn_protocols(&m_env->conf, alpn_list);

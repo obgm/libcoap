@@ -32,6 +32,7 @@ struct uip_udp_conn;
 
 typedef enum {
   COAP_LAYER_SESSION,
+  COAP_LAYER_WS,
   COAP_LAYER_TLS,
   COAP_LAYER_LAST
 } coap_layer_t;

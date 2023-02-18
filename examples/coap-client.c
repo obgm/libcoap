@@ -316,6 +316,8 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_OSCORE_NO_SECURITY:
   case COAP_EVENT_OSCORE_INTERNAL_ERROR:
   case COAP_EVENT_OSCORE_DECODE_ERROR:
+  case COAP_EVENT_WS_PACKET_SIZE:
+  case COAP_EVENT_WS_CLOSED:
     quit = 1;
     break;
   case COAP_EVENT_DTLS_CONNECTED:
@@ -331,6 +333,7 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_SERVER_SESSION_DEL:
   case COAP_EVENT_BAD_PACKET:
   case COAP_EVENT_MSG_RETRANSMITTED:
+  case COAP_EVENT_WS_CONNECTED:
   default:
     break;
   }
@@ -352,7 +355,9 @@ nack_handler(coap_session_t *session COAP_UNUSED,
   case COAP_NACK_NOT_DELIVERABLE:
   case COAP_NACK_RST:
   case COAP_NACK_TLS_FAILED:
+  case COAP_NACK_WS_FAILED:
   case COAP_NACK_TLS_LAYER_FAILED:
+  case COAP_NACK_WS_LAYER_FAILED:
     coap_log_err("cannot send CoAP pdu\n");
     quit = 1;
     break;
@@ -854,6 +859,18 @@ cmdline_uri(char *arg, int create_uri_opts) {
       /* coaps+tcp caught above */
       coap_log_emerg(
             "coap+tcp URI scheme not supported in this version of libcoap\n");
+      return -1;
+    }
+
+    if (uri.scheme==COAP_URI_SCHEME_COAP_WS && !coap_ws_is_supported()) {
+      coap_log_emerg(
+            "coap+ws URI scheme not supported in this version of libcoap\n");
+      return -1;
+    }
+
+    if (uri.scheme==COAP_URI_SCHEME_COAPS_WS && !coap_wss_is_supported()) {
+      coap_log_emerg(
+            "coaps+ws URI scheme not supported in this version of libcoap\n");
       return -1;
     }
 
@@ -1437,7 +1454,8 @@ open_session(coap_context_t *ctx,
              size_t key_len) {
   coap_session_t *session;
 
-  if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS) {
+  if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS ||
+      proto == COAP_PROTO_WSS) {
     /* Encrypted session */
     if (root_ca_file || ca_file || cert_file) {
       /* Setup PKI session */
@@ -1479,6 +1497,9 @@ open_session(coap_context_t *ctx,
     } else
       session = coap_new_client_session(ctx, bind_addr, dst, proto);
   }
+  if (session && (proto == COAP_PROTO_WS || proto == COAP_PROTO_WSS)) {
+    coap_ws_set_host_request(session, &uri.host);
+  }
   return session;
 }
 
@@ -1508,6 +1529,12 @@ get_session(coap_context_t *ctx,
     break;
   case COAP_URI_SCHEME_COAPS_TCP:
     proto = COAP_PROTO_TLS;
+    break;
+  case COAP_URI_SCHEME_COAP_WS:
+    proto = COAP_PROTO_WS;
+    break;
+  case COAP_URI_SCHEME_COAPS_WS:
+    proto = COAP_PROTO_WSS;
     break;
   case COAP_URI_SCHEME_LAST:
   default:

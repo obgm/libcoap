@@ -765,6 +765,18 @@ AS_IF([test "x$build_tcp" != "xyes"], [AC_DEFINE(COAP_DISABLE_TCP, [1])])
 AC_SUBST(COAP_DISABLE_TCP)
 
 # configure options
+# __websockets__
+AC_ARG_ENABLE([websockets],
+              [AS_HELP_STRING([--enable-websockets],
+                              [Enable building with WebSockets support [default=yes]])],
+              [build_ws="$enableval"],
+              [build_ws="yes"])
+
+AC_DEFINE(COAP_WS_SUPPORT, [1], [Define to 1 to build with WebScockets support.])
+AS_IF([test "x$build_ws" = "xyes"], [AC_DEFINE(COAP_WS_SUPPORT, [1])])
+AC_SUBST(COAP_WS_SUPPORT)
+
+# configure options
 # __async__
 AC_ARG_ENABLE([async],
               [AS_HELP_STRING([--enable-async],

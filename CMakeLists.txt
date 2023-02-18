@@ -84,6 +84,10 @@ option(
   "Enable building with TCP support"
   ON)
 option(
+  ENABLE_WS
+  "Enable building with WebSockets support"
+  ON)
+option(
   ENABLE_TESTS
   "build also tests"
   OFF)
@@ -202,6 +206,13 @@ if(${ENABLE_OSCORE})
   message(STATUS "compiling with OSCORE support")
 else()
   message(STATUS "compiling without OSCORE support")
+endif()
+
+if(${ENABLE_WS})
+  set(COAP_WS_SUPPORT "1")
+  message(STATUS "compiling with WebSockets support")
+else()
+  message(STATUS "compiling without WebSockets support")
 endif()
 
 if(${WITH_EPOLL}
@@ -424,6 +435,7 @@ message(STATUS "PACKAGE VERSION..................${PACKAGE_VERSION}")
 message(STATUS "PACKAGE BUILD....................${LIBCOAP_PACKAGE_BUILD}")
 message(STATUS "ENABLE_DTLS:.....................${ENABLE_DTLS}")
 message(STATUS "ENABLE_TCP:......................${ENABLE_TCP}")
+message(STATUS "ENABLE_WEBSOCKETS:...............${ENABLE_WS}")
 message(STATUS "ENABLE_CLIENT_MODE:..............${ENABLE_CLIENT_MODE}")
 message(STATUS "ENABLE_SERVER_MODE:..............${ENABLE_SERVER_MODE}")
 message(STATUS "ENABLE_OSCORE:...................${ENABLE_OSCORE}")

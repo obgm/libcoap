@@ -761,6 +761,7 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
   ssize_t bytes_written = -1;
   assert(pdu->hdr_size > 0);
 
+  /* Caller handles partial writes */
   bytes_written = session->sock.lfunc[COAP_LAYER_SESSION].write(session,
                                         pdu->token - pdu->hdr_size,
                                         pdu->used_size + pdu->hdr_size);
@@ -1646,6 +1647,46 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       coap_handle_dgram_for_proto(ctx, session, packet);
     }
 #if !COAP_DISABLE_TCP
+  } else if (session->proto == COAP_PROTO_WS ||
+             session->proto == COAP_PROTO_WSS) {
+    ssize_t bytes_read = 0;
+
+    /* WebSocket layer passes us the whole packet */
+    bytes_read = session->sock.lfunc[COAP_LAYER_SESSION].read(session,
+                                                           packet->payload,
+                                                           packet->length);
+    if (bytes_read < 0) {
+      coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
+    } else if (bytes_read > 2) {
+      coap_pdu_t *pdu;
+
+      session->last_rx_tx = now;
+      /* Need max space incase PDU is updated with updated token etc. */
+      pdu = coap_pdu_init(0, 0, 0, coap_session_max_pdu_rcv_size(session));
+      if (!pdu) {
+#if COAP_CONSTRAINED_STACK
+        coap_mutex_unlock(&s_static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
+        return;
+      }
+
+      if (!coap_pdu_parse(session->proto, packet->payload, bytes_read, pdu)) {
+        coap_handle_event(session->context, COAP_EVENT_BAD_PACKET, session);
+        coap_log_warn("discard malformed PDU\n");
+        coap_delete_pdu(pdu);
+#if COAP_CONSTRAINED_STACK
+        coap_mutex_unlock(&s_static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
+        return;
+      }
+
+#if COAP_CONSTRAINED_STACK
+      coap_mutex_unlock(&s_static_mutex);
+#endif /* COAP_CONSTRAINED_STACK */
+      coap_dispatch(ctx, session, pdu);
+      coap_delete_pdu(pdu);
+      return;
+    }
   } else {
     ssize_t bytes_read = 0;
     const uint8_t *p;
@@ -3593,6 +3634,12 @@ coap_event_name(coap_event_t event) {
     return "COAP_EVENT_OSCORE_INTERNAL_ERROR";
   case COAP_EVENT_OSCORE_DECODE_ERROR:
     return "COAP_EVENT_OSCORE_DECODE_ERROR";
+  case COAP_EVENT_WS_PACKET_SIZE:
+    return "COAP_EVENT_WS_PACKET_SIZE";
+  case COAP_EVENT_WS_CONNECTED:
+    return "COAP_EVENT_WS_CONNECTED";
+  case COAP_EVENT_WS_CLOSED:
+    return "COAP_EVENT_WS_CLOSED";
   default:
     return "???";
   }
