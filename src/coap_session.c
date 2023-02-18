@@ -845,13 +845,8 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
 #define OFF_HANDSHAKE_TYPE   13  /* offset of handshake in dtls_record_handshake_t */
 #define DTLS_HT_CLIENT_HELLO  1  /* Client Hello handshake type */
 
-#ifdef WITH_LWIP
-    const uint8_t *payload = (const uint8_t*)packet->pbuf->payload;
-    size_t length = packet->pbuf->len;
-#else /* ! WITH_LWIP */
     const uint8_t *payload = (const uint8_t*)packet->payload;
     size_t length = packet->length;
-#endif /* ! WITH_LWIP */
     if (length < (OFF_HANDSHAKE_TYPE + 1)) {
       coap_log_debug(
          "coap_dtls_hello: ContentType %d Short Packet (%zu < %d) dropped\n",
