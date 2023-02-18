@@ -123,6 +123,9 @@ static int echo_back = 0;
 static uint32_t csm_max_message_size = 0;
 static size_t extended_token_size = COAP_TOKEN_DEFAULT_MAX;
 static coap_proto_t use_unix_proto = COAP_PROTO_NONE;
+static int enable_ws = 0;
+static int ws_port = 80;
+static int wss_port = 443;
 
 static coap_dtls_pki_t *
 setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
@@ -728,6 +731,20 @@ verify_proxy_scheme_supported(coap_uri_scheme_t scheme) {
       return 0;
     }
     break;
+  case COAP_URI_SCHEME_COAP_WS:
+    if (!coap_ws_is_supported()) {
+      coap_log_warn(
+        "coap+ws URI scheme not supported for proxy\n");
+      return 0;
+    }
+    break;
+  case COAP_URI_SCHEME_COAPS_WS:
+    if (!coap_wss_is_supported()) {
+      coap_log_warn(
+        "coaps+ws URI scheme not supported for proxy\n");
+      return 0;
+    }
+    break;
   case COAP_URI_SCHEME_LAST:
   default:
       coap_log_warn(
@@ -903,6 +920,12 @@ get_ongoing_proxy_session(coap_session_t *session,
   case COAP_URI_SCHEME_COAPS_TCP:
     proto = COAP_PROTO_TLS;
     break;
+  case COAP_URI_SCHEME_COAP_WS:
+    proto = COAP_PROTO_WS;
+    break;
+  case COAP_URI_SCHEME_COAPS_WS:
+    proto = COAP_PROTO_WSS;
+    break;
   case COAP_URI_SCHEME_LAST:
   default:
   case COAP_URI_SCHEME_HTTP:
@@ -927,11 +950,13 @@ get_ongoing_proxy_session(coap_session_t *session,
   switch (scheme) {
   case COAP_URI_SCHEME_COAP:
   case COAP_URI_SCHEME_COAP_TCP:
+  case COAP_URI_SCHEME_COAP_WS:
     new_proxy_list->ongoing =
        coap_new_client_session(context, NULL, &dst, proto);
     break;
   case COAP_URI_SCHEME_COAPS:
   case COAP_URI_SCHEME_COAPS_TCP:
+  case COAP_URI_SCHEME_COAPS_WS:
     memset(client_sni, 0, sizeof(client_sni));
     if ((server.length == 3 && memcmp(server.s, "::1", 3) != 0) ||
         (server.length == 9 && memcmp(server.s, "127.0.0.1", 9) != 0))
@@ -1562,6 +1587,8 @@ proxy_event_handler(coap_session_t *session,
   case COAP_EVENT_OSCORE_NO_SECURITY:
   case COAP_EVENT_OSCORE_INTERNAL_ERROR:
   case COAP_EVENT_OSCORE_DECODE_ERROR:
+  case COAP_EVENT_WS_PACKET_SIZE:
+  case COAP_EVENT_WS_CLOSED:
     /* Need to remove any proxy associations */
     remove_proxy_association(session, 0);
     break;
@@ -1578,6 +1605,7 @@ proxy_event_handler(coap_session_t *session,
   case COAP_EVENT_SERVER_SESSION_DEL:
   case COAP_EVENT_BAD_PACKET:
   case COAP_EVENT_MSG_RETRANSMITTED:
+  case COAP_EVENT_WS_CONNECTED:
   default:
     break;
   }
@@ -1717,7 +1745,9 @@ proxy_nack_handler(coap_session_t *session,
   case COAP_NACK_NOT_DELIVERABLE:
   case COAP_NACK_RST:
   case COAP_NACK_TLS_FAILED:
+  case COAP_NACK_WS_FAILED:
   case COAP_NACK_TLS_LAYER_FAILED:
+  case COAP_NACK_WS_LAYER_FAILED:
     /* Need to remove any proxy associations */
     remove_proxy_association(session, 1);
     break;
@@ -2125,8 +2155,9 @@ usage( const char *program, const char *version) {
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
      "Usage: %s [-d max] [-e] [-g group] [-l loss] [-p port] [-r] [-v num]\n"
-     "\t\t[-A address] [-E oscore_conf_file[,seq_file]] [-G group_if]\n"
-     "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
+     "\t\t[-w [port][,secure_port]] [-A address]\n"
+     "\t\t[-E oscore_conf_file[,seq_file]] [-G group_if] [-L value] [-N]\n"
+     "\t\t[-P scheme://address[:port],[name1[,name2..]]]\n"
      "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
      "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
      "\t\t[-s match_psk_sni_file] [-u user]]\n"
@@ -2155,6 +2186,9 @@ usage( const char *program, const char *version) {
      "\t       \t\tresources are enabled\n"
      "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
      "\t       \t\tCoAP logging\n"
+     "\t-w [port][,secure_port]\n"
+     "\t       \t\tEnable WebSockets support on port (WS) and/or secure_port\n"
+     "\t       \t\t(WSS), comma separated\n"
      "\t-A address\tInterface address to bind to\n"
      "\t-E oscore_conf_file[,seq_file]\n"
      "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
@@ -2286,10 +2320,10 @@ get_context(const char *node, const char *port) {
   coap_addr_info_t *info_list = NULL;
   coap_str_const_t local;
   int have_ep = 0;
-  uint16_t u_s_port = 5683;
-  uint16_t s_port = 5684;
-  coap_uri_scheme_t scheme;
+  uint16_t u_s_port = 0;
+  uint16_t s_port = 0;
   int scheme_hint_bits = 0;
+  coap_uri_scheme_t scheme;
 
   ctx = coap_new_context(NULL);
   if (!ctx) {
@@ -2328,6 +2362,16 @@ get_context(const char *node, const char *port) {
         continue;
       scheme_hint_bits |= 1 << scheme;
       break;
+    case COAP_URI_SCHEME_COAP_WS:
+      if (!enable_ws || !coap_ws_is_supported())
+        continue;
+      scheme_hint_bits |= 1 << scheme;
+      break;
+    case COAP_URI_SCHEME_COAPS_WS:
+      if (!enable_ws || !coap_wss_is_supported() || (cert_file == NULL && key_defined == 0))
+        continue;
+      scheme_hint_bits |= 1 << scheme;
+      break;
     case COAP_URI_SCHEME_HTTP:
     case COAP_URI_SCHEME_HTTPS:
     case COAP_URI_SCHEME_LAST:
@@ -2342,6 +2386,8 @@ get_context(const char *node, const char *port) {
   case COAP_PROTO_TCP:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP_TCP; break;
   case COAP_PROTO_DTLS: scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS; break;
   case COAP_PROTO_TLS:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS_TCP; break;
+  case COAP_PROTO_WS:   scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP_WS; break;
+  case COAP_PROTO_WSS:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS_WS; break;
   case COAP_PROTO_NONE: /* If -U was not defined */
   case COAP_PROTO_LAST:
   default:
@@ -2367,6 +2413,14 @@ get_context(const char *node, const char *port) {
       break;
     case COAP_URI_SCHEME_COAPS_TCP:
       proto = COAP_PROTO_TLS;
+      break;
+    case COAP_URI_SCHEME_COAP_WS:
+      proto = COAP_PROTO_WS;
+      coap_address_set_port(&info->addr, ws_port);
+      break;
+    case COAP_URI_SCHEME_COAPS_WS:
+      proto = COAP_PROTO_WSS;
+      coap_address_set_port(&info->addr, wss_port);
       break;
     case COAP_URI_SCHEME_HTTP:
     case COAP_URI_SCHEME_HTTPS:
@@ -2649,6 +2703,22 @@ cmdline_unix(char *arg) {
 }
 
 static int
+cmdline_ws(char *arg) {
+  char *cp = strchr(arg, ',');
+
+  if (cp) {
+    if (cp != arg)
+      ws_port = atoi(arg);
+    cp++;
+    if (*cp != '\000')
+      wss_port = atoi(cp);
+  } else {
+    ws_port = atoi(arg);
+  }
+  return 1;
+}
+
+static int
 cmdline_read_pki_sni_check(char *arg) {
   FILE *fp = fopen(arg, "r");
   static char tmpbuf[256];
@@ -2760,7 +2830,7 @@ main(int argc, char **argv) {
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:u:v:A:C:E:L:M:NP:R:S:T:U:V:X:")) != -1) {
+  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:u:v:w:A:C:E:L:M:NP:R:S:T:U:V:X:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -2897,6 +2967,13 @@ main(int argc, char **argv) {
       break;
     case 'V':
       dtls_log_level = strtol(optarg, NULL, 10);
+      break;
+    case 'w':
+      if (!coap_ws_is_supported() || !cmdline_ws(optarg)) {
+        fprintf(stderr, "WebSckets not enabled in libcoap\n");
+        exit(1);
+      }
+      enable_ws = 1;
       break;
     case 'X':
       csm_max_message_size = strtol(optarg, NULL, 10);

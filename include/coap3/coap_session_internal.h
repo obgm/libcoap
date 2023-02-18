@@ -176,6 +176,10 @@ struct coap_session_t {
                                            associations */
   uint64_t oscore_r2;             /**< R2 for RFC8613 Appendix B.2 */
 #endif /* HAVE_OSCORE */
+#if COAP_WS_SUPPORT
+  coap_ws_state_t *ws;            /**< WS state */
+  coap_str_const_t *ws_host;      /**< Host to use in WS Request */
+#endif /* COAP_WS_SUPPORT */
   volatile uint8_t max_token_checked; /**< Check for max token size
                                            coap_ext_token_check_t */
   uint16_t max_token_mid;         /**< mid used for checking ext token

@@ -191,6 +191,14 @@ parse_and_send_uri(coap_session_t *session, const char *do_uri) {
     if (proto != COAP_PROTO_TLS)
       return 0;
     break;
+  case COAP_URI_SCHEME_COAP_WS:
+    if (proto != COAP_PROTO_WS)
+      return 0;
+    break;
+  case COAP_URI_SCHEME_COAPS_WS:
+    if (proto != COAP_PROTO_WSS)
+      return 0;
+    break;
   /* Proxy support only */
   case COAP_URI_SCHEME_HTTP:
   case COAP_URI_SCHEME_HTTPS:

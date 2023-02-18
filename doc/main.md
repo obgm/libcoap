@@ -34,7 +34,6 @@ The following RFCs are supported
 * RFC8132: PATCH and FETCH Methods for the Constrained Application Protocol (CoAP)
 
 * RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets
-  [No WebSockets support]
 
 * RFC8516: "Too Many Requests" Response Code for the Constrained Application Protocol
 

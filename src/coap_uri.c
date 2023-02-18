@@ -54,7 +54,9 @@ coap_uri_info_t coap_uri_scheme[COAP_URI_SCHEME_LAST] = {
   { "coap+tcp",   5683, 0, COAP_URI_SCHEME_COAP_TCP },
   { "coaps+tcp",  5684, 0, COAP_URI_SCHEME_COAPS_TCP },
   { "http",         80, 1, COAP_URI_SCHEME_HTTP },
-  { "https",       443, 1, COAP_URI_SCHEME_HTTPS }
+  { "https",       443, 1, COAP_URI_SCHEME_HTTPS },
+  { "coap+ws",      80, 0, COAP_URI_SCHEME_COAP_WS },
+  { "coaps+ws",    443, 0, COAP_URI_SCHEME_COAPS_WS }
 };
 
 static int
@@ -236,14 +238,30 @@ coap_uri_into_options(coap_uri_t *uri,
   size_t buflen = _buflen;
 
   if (create_port_opt &&
-      !coap_host_is_unix_domain(&uri->host) &&
-      uri->port != (coap_uri_scheme_is_secure(uri) ?
-                                   COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT)) {
-    coap_insert_optlist(optlist_chain,
-                        coap_new_optlist(COAP_OPTION_URI_PORT,
-                                         coap_encode_var_safe(buf, 4,
-                                         (uri->port & 0xffff)),
-                        buf));
+      !coap_host_is_unix_domain(&uri->host)) {
+    int add_option = 0;
+    switch ((int)uri->scheme) {
+    case COAP_URI_SCHEME_HTTP:
+    case COAP_URI_SCHEME_COAP_WS:
+      if (uri->port != 80)
+        add_option = 1;
+      break;
+    case COAP_URI_SCHEME_HTTPS:
+    case COAP_URI_SCHEME_COAPS_WS:
+      if (uri->port != 443)
+        add_option = 1;
+      break;
+    default:
+      if (uri->port != coap_uri_scheme_is_secure(uri))
+        add_option = 1;
+      break;
+    }
+    if (add_option)
+      coap_insert_optlist(optlist_chain,
+                          coap_new_optlist(COAP_OPTION_URI_PORT,
+                                           coap_encode_var_safe(buf, 4,
+                                           (uri->port & 0xffff)),
+                          buf));
   }
 
   if (uri->path.length) {

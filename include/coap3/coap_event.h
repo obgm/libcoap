@@ -115,7 +115,16 @@ typedef enum {
   /** Triggered when there is an OSCORE internal error i.e malloc failed */
   COAP_EVENT_OSCORE_INTERNAL_ERROR,
   /** Triggered when there is an OSCORE decode of OSCORE option failure */
-  COAP_EVENT_OSCORE_DECODE_ERROR
+  COAP_EVENT_OSCORE_DECODE_ERROR,
+/*
+ * WebSocket events
+ */
+  /** Triggered when there is an oversize WebSockets packet */
+  COAP_EVENT_WS_PACKET_SIZE = 0x7001,
+  /** Triggered when the WebSockets layer is up */
+  COAP_EVENT_WS_CONNECTED,
+  /** Triggered when the WebSockets layer is closed */
+  COAP_EVENT_WS_CLOSED,
 } coap_event_t;
 
 /**

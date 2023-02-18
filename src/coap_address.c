@@ -274,6 +274,18 @@ coap_resolve_address_info(const coap_str_const_t *server,
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
             break;
+          case COAP_URI_SCHEME_COAP_WS:
+            if (!coap_ws_is_supported())
+              continue;
+            if (ainfo->ai_socktype != SOCK_STREAM)
+              continue;
+            break;
+          case COAP_URI_SCHEME_COAPS_WS:
+            if (!coap_wss_is_supported())
+              continue;
+            if (ainfo->ai_socktype != SOCK_STREAM)
+              continue;
+            break;
           case COAP_URI_SCHEME_LAST:
           default:
             continue;
@@ -341,6 +353,12 @@ coap_resolve_address_info(const coap_str_const_t *server,
             update_port(&info->addr, port, 80);
             break;
           case COAP_URI_SCHEME_HTTPS:
+            update_port(&info->addr, secure_port, 443);
+            break;
+          case COAP_URI_SCHEME_COAP_WS:
+            update_port(&info->addr, port, 80);
+            break;
+          case COAP_URI_SCHEME_COAPS_WS:
             update_port(&info->addr, secure_port, 443);
             break;
           case COAP_URI_SCHEME_LAST:
