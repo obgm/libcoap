@@ -110,33 +110,6 @@ coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
 
-#if 0
-void coap_packet_copy_source(coap_packet_t *packet, coap_address_t *target)
-{
-        target->port = packet->srcport;
-        memcpy(&target->addr, ip_current_src_addr(), sizeof(ip_addr_t));
-}
-#endif
-void coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length)
-{
-        LWIP_ASSERT("Can only deal with contiguous PBUFs to read the initial details", packet->pbuf->tot_len == packet->pbuf->len);
-        *address = packet->pbuf->payload;
-        *length = packet->pbuf->tot_len;
-}
-void coap_free_packet(coap_packet_t *packet)
-{
-        if (packet->pbuf)
-                pbuf_free(packet->pbuf);
-        coap_free_type(COAP_PACKET, packet);
-}
-
-struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet)
-{
-        struct pbuf *ret = packet->pbuf;
-        packet->pbuf = NULL;
-        return ret;
-}
-
 #if COAP_CLIENT_SUPPORT
 /** Callback from lwIP when a package was received for a client.
  *
@@ -151,8 +124,10 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
            const ip_addr_t *addr, u16_t port) {
   coap_pdu_t *pdu = NULL;
   coap_session_t *session = (coap_session_t*)arg;
-  coap_packet_t *packet;
   int result = -1;
+  (void)upcb;
+  (void)addr;
+  (void)port;
 
   assert(session);
   LWIP_ASSERT("Proto not supported for LWIP", COAP_PROTO_NOT_RELIABLE(session->proto));
@@ -161,20 +136,6 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     /* Minimum size of CoAP header - ignore runt */
     return;
   }
-
-  packet = coap_malloc_type(COAP_PACKET, sizeof(coap_packet_t));
-
-  /* this is fatal because due to the short life of the packet, never should
-   * there be more than one coap_packet_t required */
-  LWIP_ASSERT("Insufficient coap_packet_t resources.", packet != NULL);
-  packet->pbuf = p;
-  /* Need to do this as there may be holes in addr_info */
-  memset(&packet->addr_info, 0, sizeof(packet->addr_info));
-  packet->addr_info.remote.port = port;
-  packet->addr_info.remote.addr = *addr;
-  packet->addr_info.local.port = upcb->local_port;
-  packet->addr_info.local.addr = *ip_current_dest_addr();
-  packet->ifindex = netif_get_index(ip_current_netif());
 
   coap_log_debug("*  %s: received %d bytes\n",
            coap_session_str(session), p->len);
@@ -196,8 +157,6 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     coap_dispatch(session->context, session, pdu);
   }
   coap_delete_pdu(pdu);
-  packet->pbuf = NULL;
-  coap_free_packet(packet);
   return;
 
 error:
@@ -208,15 +167,18 @@ error:
   if (session)
     coap_send_rst(session, pdu);
   coap_delete_pdu(pdu);
-  if (packet) {
-    packet->pbuf = NULL;
-    coap_free_packet(packet);
-  }
   return;
 }
 #endif /* ! COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
+
+static void
+coap_free_packet(coap_packet_t *packet)
+{
+  coap_free_type(COAP_PACKET, packet);
+}
+
 /** Callback from lwIP when a package was received for a server.
  *
  * The current implementation deals this to coap_dispatch immediately, but
@@ -245,9 +207,10 @@ coap_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   /* this is fatal because due to the short life of the packet, never should
      there be more than one coap_packet_t required */
   LWIP_ASSERT("Insufficient coap_packet_t resources.", packet != NULL);
-  packet->pbuf = p;
   /* Need to do this as there may be holes in addr_info */
   memset(&packet->addr_info, 0, sizeof(packet->addr_info));
+  packet->length = p->len;
+  packet->payload = p->payload;
   packet->addr_info.remote.port = port;
   packet->addr_info.remote.addr = *addr;
   packet->addr_info.local.port = upcb->local_port;
@@ -284,7 +247,6 @@ coap_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   }
 
   coap_delete_pdu(pdu);
-  packet->pbuf = NULL;
   coap_free_packet(packet);
   return;
 
@@ -296,10 +258,7 @@ error:
   if (session)
     coap_send_rst(session, pdu);
   coap_delete_pdu(pdu);
-  if (packet) {
-    packet->pbuf = NULL;
-    coap_free_packet(packet);
-  }
+  coap_free_packet(packet);
   return;
 }
 

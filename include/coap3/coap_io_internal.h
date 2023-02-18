@@ -158,39 +158,16 @@ void coap_packet_get_memmapped(coap_packet_t *packet,
                                size_t *length);
 
 #ifdef WITH_LWIP
-/**
- * Get the pbuf of a packet. The caller takes over responsibility for freeing
- * the pbuf.
- */
-struct pbuf *coap_packet_extract_pbuf(coap_packet_t *packet);
-
 void coap_io_process_timeout(void *arg);
 #endif
 
-#if defined(WITH_LWIP)
-/*
- * This is only included in coap_io.h instead of .c in order to be available for
- * sizeof in config/lwippools.h.
- * Simple carry-over of the incoming pbuf that is later turned into a node.
- *
- * Source address data is currently side-banded via ip_current_dest_addr & co
- * as the packets have limited lifetime anyway.
- */
-struct coap_packet_t {
-  struct pbuf *pbuf;
-  const coap_endpoint_t *local_interface;
-  coap_addr_tuple_t addr_info; /**< local and remote addresses */
-  int ifindex;                /**< the interface index */
-//  uint16_t srcport;
-};
-#else
 struct coap_packet_t {
   coap_addr_tuple_t addr_info; /**< local and remote addresses */
   int ifindex;                /**< the interface index */
-  size_t length;              /**< length of payload */
-  unsigned char payload[COAP_RXBUFFER_SIZE]; /**< payload */
+  size_t length;             /**< length of payload */
+  unsigned char *payload;    /**< payload */
 };
-#endif
+
 #ifdef WITH_CONTIKI
 void coap_start_io_process(void);
 void coap_stop_io_process(void);

@@ -75,7 +75,7 @@ struct coap_session_t {
   size_t csm_rcv_mtu;               /**< CSM mtu (rcv) */
   coap_addr_hash_t addr_hash;  /**< Address hash for server incoming packets */
   UT_hash_handle hh;
-  coap_addr_tuple_t addr_info;      /**< key: remote/local address info */
+  coap_addr_tuple_t addr_info;      /**< remote/local address info */
   int ifindex;                      /**< interface index */
   coap_socket_t sock;               /**< socket object for the session, if
                                          any */

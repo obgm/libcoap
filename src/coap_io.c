@@ -757,13 +757,11 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
 
 #define SIN6(A) ((struct sockaddr_in6 *)(A))
 
-#ifndef WITH_LWIP
 void
 coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length) {
   *address = packet->payload;
   *length = packet->length;
 }
-#endif /* ! WITH_LWIP */
 
 #if !defined(RIOT_VERSION) && !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 ssize_t

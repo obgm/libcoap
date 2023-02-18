@@ -1722,8 +1722,10 @@ static void
 coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
 #if COAP_CONSTRAINED_STACK
   static coap_mutex_t s_static_mutex = COAP_MUTEX_INITIALIZER;
+  static unsigned char payload[COAP_RXBUFFER_SIZE];
   static coap_packet_t s_packet;
 #else /* ! COAP_CONSTRAINED_STACK */
+  unsigned char payload[COAP_RXBUFFER_SIZE];
   coap_packet_t s_packet;
 #endif /* ! COAP_CONSTRAINED_STACK */
   coap_packet_t *packet = &s_packet;
@@ -1733,6 +1735,9 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 #endif /* COAP_CONSTRAINED_STACK */
 
   assert(session->sock.flags & (COAP_SOCKET_CONNECTED | COAP_SOCKET_MULTICAST));
+
+  packet->length = sizeof(payload);
+  packet->payload = payload;
 
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
     ssize_t bytes_read;
@@ -1759,22 +1764,20 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
     ssize_t bytes_read = 0;
     const uint8_t *p;
     int retry;
-    /* adjust for LWIP */
-    uint8_t *buf = packet->payload;
-    size_t buf_len = sizeof(packet->payload);
 
     do {
       if (session->proto == COAP_PROTO_TCP)
-        bytes_read = coap_socket_read(&session->sock, buf, buf_len);
+        bytes_read = coap_socket_read(&session->sock, packet->payload,
+                                      packet->length);
       else if (session->proto == COAP_PROTO_TLS)
-        bytes_read = coap_tls_read(session, buf, buf_len);
+        bytes_read = coap_tls_read(session, packet->payload, packet->length);
       if (bytes_read > 0) {
         coap_log_debug("*  %s: received %zd bytes\n",
                  coap_session_str(session), bytes_read);
         session->last_rx_tx = now;
       }
-      p = buf;
-      retry = bytes_read == (ssize_t)buf_len;
+      p = packet->payload;
+      retry = bytes_read == (ssize_t)packet->length;
       while (bytes_read > 0) {
         if (session->partial_pdu) {
           size_t len = session->partial_pdu->used_size
@@ -1884,8 +1887,10 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
   int result = -1;                /* the value to be returned */
 #if COAP_CONSTRAINED_STACK
   static coap_mutex_t e_static_mutex = COAP_MUTEX_INITIALIZER;
+  static unsigned char payload[COAP_RXBUFFER_SIZE];
   static coap_packet_t e_packet;
 #else /* ! COAP_CONSTRAINED_STACK */
+  unsigned char payload[COAP_RXBUFFER_SIZE];
   coap_packet_t e_packet;
 #endif /* ! COAP_CONSTRAINED_STACK */
   coap_packet_t *packet = &e_packet;
@@ -1899,8 +1904,11 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
 
   /* Need to do this as there may be holes in addr_info */
   memset(&packet->addr_info, 0, sizeof(packet->addr_info));
+  packet->length = sizeof(payload);
+  packet->payload = payload;
   coap_address_init(&packet->addr_info.remote);
   coap_address_copy(&packet->addr_info.local, &endpoint->bind_addr);
+
   bytes_read = ctx->network_read(&endpoint->sock, packet);
   if (bytes_read < 0) {
     coap_log_warn("*  %s: read failed\n", coap_endpoint_str(endpoint));
