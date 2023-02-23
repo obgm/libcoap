@@ -13,11 +13,11 @@
  * @brief Debug utilities
  */
 
-#include "coap3/coap_internal.h"
-
-#if defined(HAVE_STRNLEN) && defined(__GNUC__) && !defined(_GNU_SOURCE)
-#define _GNU_SOURCE 1
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
 #endif
+
+#include "coap3/coap_internal.h"
 
 #include <stdarg.h>
 #include <stdio.h>
