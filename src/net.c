@@ -1142,7 +1142,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   if (COAP_PDU_IS_REQUEST(pdu) &&
       pdu->actual_token.length > session->max_token_size) {
     coap_log_warn(
-             "coap_send: PDU dropped as token too long (%ld > %d)\n",
+             "coap_send: PDU dropped as token too long (%zu > %" PRIu32 ")\n",
              pdu->actual_token.length, session->max_token_size);
     coap_delete_pdu(pdu);
     return COAP_INVALID_MID;
