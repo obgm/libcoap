@@ -195,7 +195,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
     return -1;
   }
   packet->length = len;
-  memcpy(&packet->payload, uip_appdata, len);
+  packet->payload = uip_appdata;
 
   return len;
 }
