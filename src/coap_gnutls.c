@@ -54,7 +54,6 @@
 
 #define MIN_GNUTLS_VERSION "3.3.0"
 
-#include <inttypes.h>
 #include <stdio.h>
 #include <errno.h>
 #include <gnutls/gnutls.h>

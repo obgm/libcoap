@@ -30,12 +30,6 @@
 #endif
 #include <ctype.h>
 
-#ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
-#else /* ! HAVE_INTTYPES_H */
-#define PRIu32 "u"
-#endif /* ! HAVE_INTTYPES_H */
-
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
