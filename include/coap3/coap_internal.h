@@ -35,6 +35,14 @@
 # include <assert.h>
 #endif
 
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#else /* ! HAVE_INTTYPES_H */
+#ifndef PRIx32
+#define PRIx32 "x"
+#endif /* ! PRIx32 */
+#endif /* ! HAVE_INTTYPES_H */
+
 /* By default without either configured, these need to be set */
 #ifndef COAP_SERVER_SUPPORT
 #ifndef COAP_CLIENT_SUPPORT

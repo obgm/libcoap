@@ -27,12 +27,6 @@
 #endif /* COAP_EPOLL_SUPPORT */
 #include <errno.h>
 
-#ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
-#else /* ! HAVE_INTTYPES_H */
-#define PRIu32 "u"
-#endif /* ! HAVE_INTTYPES_H */
-
 void
 coap_session_set_ack_timeout(coap_session_t *session, coap_fixed_point_t value) {
   if (value.integer_part > 0 && value.fractional_part < 1000) {

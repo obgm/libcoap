@@ -71,12 +71,6 @@
 #endif /* ESPIDF_VERSION && CONFIG_MBEDTLS_DEBUG */
 #include <errno.h>
 
-#ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
-#else /* ! HAVE_INTTYPES_H */
-#define PRIx32 "x"
-#endif /* ! HAVE_INTTYPES_H */
-
 #define mbedtls_malloc(a) malloc(a)
 #define mbedtls_realloc(a,b) realloc(a,b)
 #define mbedtls_strdup(a) strdup(a)
