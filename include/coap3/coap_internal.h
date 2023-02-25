@@ -41,6 +41,9 @@
 #ifndef PRIx32
 #define PRIx32 "x"
 #endif /* ! PRIx32 */
+#ifndef PRIu32
+#define PRIu32 "u"
+#endif /* ! PRIu32 */
 #endif /* ! HAVE_INTTYPES_H */
 
 /* By default without either configured, these need to be set */
