@@ -17,7 +17,6 @@
 
 #include <ctype.h>
 #include <stdio.h>
-#include <errno.h>
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
@@ -532,11 +531,6 @@ coap_new_context(
   }
 #endif /* COAP_SERVER_SUPPORT */
 
-#if !defined(WITH_LWIP)
-  c->network_send = coap_network_send;
-  c->network_read = coap_network_read;
-#endif
-
   c->max_token_size = COAP_TOKEN_DEFAULT_MAX; /* RFC8974 */
 
   return c;
@@ -769,8 +763,8 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
 
   switch(session->proto) {
     case COAP_PROTO_UDP:
-      bytes_written = coap_session_send(session, pdu->token - pdu->hdr_size,
-                                        pdu->used_size + pdu->hdr_size);
+      bytes_written = coap_netif_dgrm_write(session, pdu->token - pdu->hdr_size,
+                                            pdu->used_size + pdu->hdr_size);
       break;
     case COAP_PROTO_DTLS:
       bytes_written = coap_dtls_send(session, pdu->token - pdu->hdr_size,
@@ -1742,7 +1736,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
     ssize_t bytes_read;
     memcpy(&packet->addr_info, &session->addr_info, sizeof(packet->addr_info));
-    bytes_read = ctx->network_read(&session->sock, packet);
+    bytes_read = coap_netif_dgrm_read(session, packet);
 
     if (bytes_read < 0) {
       if (bytes_read == -2)
@@ -1909,7 +1903,7 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
   coap_address_init(&packet->addr_info.remote);
   coap_address_copy(&packet->addr_info.local, &endpoint->bind_addr);
 
-  bytes_read = ctx->network_read(&endpoint->sock, packet);
+  bytes_read = coap_netif_dgrm_read_ep(endpoint, packet);
   if (bytes_read < 0) {
     coap_log_warn("*  %s: read failed\n", coap_endpoint_str(endpoint));
   } else if (bytes_read > 0) {

@@ -36,7 +36,6 @@
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif
-#include <errno.h>
 
 #include "net/gnrc.h"
 #include "net/gnrc/ipv6.h"
@@ -45,6 +44,11 @@
 
 #include "coap_riot.h"
 
+/*
+ * dgram
+ * return +ve Number of bytes written.
+ *         -1 Error error in errno).
+ */
 ssize_t
 coap_network_send(coap_socket_t *sock,
                   const coap_session_t *session,
@@ -74,6 +78,12 @@ get_udp_header(gnrc_pktsnip_t *pkt) {
   return udp ? (udp_hdr_t *)udp->data : NULL;
 }
 
+/*
+ * dgram
+ * return +ve Number of bytes written.
+ *         -1 Error error in errno).
+ *         -2 ICMP error response
+ */
 ssize_t
 coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   size_t len;

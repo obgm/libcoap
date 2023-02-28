@@ -46,6 +46,10 @@
 #endif /* ! PRIu32 */
 #endif /* ! HAVE_INTTYPES_H */
 
+#if defined(HAVE_ERRNO_H)
+# include <errno.h>
+#endif
+
 /* By default without either configured, these need to be set */
 #ifndef COAP_SERVER_SUPPORT
 #ifndef COAP_CLIENT_SUPPORT
@@ -90,6 +94,7 @@ typedef struct oscore_ctx_t oscore_ctx_t;
 #include "coap_io_internal.h"
 #include "coap_mutex_internal.h"
 #include "coap_net_internal.h"
+#include "coap_netif_internal.h"
 #if HAVE_OSCORE
 #include "coap_oscore_internal.h"
 #endif /* HAVE_OSCORE */

@@ -129,6 +129,7 @@ include(TestBigEndian)
 # check for headers
 check_include_file(byteswap.h HAVE_BYTESWAP_H)
 check_include_file(inttypes.h HAVE_INTTYPES_H)
+check_include_file(errno.h HAVE_ERRNO_H)
 check_include_file(limits.h HAVE_LIMITS_H)
 check_include_file(memory.h HAVE_MEMORY_H)
 check_include_file(strings.h HAVE_STRINGS_H)
@@ -478,6 +479,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_io.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_mem.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_netif.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_notls.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_option.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_oscore.c

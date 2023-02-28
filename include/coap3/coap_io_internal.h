@@ -91,9 +91,21 @@ coap_socket_bind_udp(coap_socket_t *sock,
 
 void coap_socket_close(coap_socket_t *sock);
 
+/**
+ * Function interface for data transmission. This function returns the number of
+ * bytes that have been transmitted, or a value less than zero on error.
+ *
+ * @param sock             Socket to send data with
+ * @param session          Addressing information for unconnected sockets, or NULL
+ * @param data             The data to send.
+ * @param datalen          The actual length of @p data.
+ *
+ * @return                 The number of bytes written on success, or a value
+ *                         less than zero on error.
+ */
 ssize_t
-coap_socket_send( coap_socket_t *sock, coap_session_t *session,
-                  const uint8_t *data, size_t data_len );
+coap_socket_send(coap_socket_t *sock, coap_session_t *session,
+                 const uint8_t *data, size_t datalen);
 
 ssize_t
 coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len);
@@ -130,7 +142,8 @@ coap_socket_send_pdu( coap_socket_t *sock, coap_session_t *session,
  * @return                 The number of bytes written on success, or a value
  *                         less than zero on error.
  */
-ssize_t coap_network_send( coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen );
+ssize_t coap_network_send(coap_socket_t *sock, const coap_session_t *session,
+                          const uint8_t *data, size_t datalen);
 
 /**
  * Function interface for reading data. This function returns the number of

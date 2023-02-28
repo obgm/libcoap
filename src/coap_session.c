@@ -25,7 +25,6 @@
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
 #endif /* COAP_EPOLL_SUPPORT */
-#include <errno.h>
 
 void
 coap_session_set_ack_timeout(coap_session_t *session, coap_fixed_point_t value) {
@@ -407,29 +406,6 @@ void coap_session_set_mtu(coap_session_t *session, unsigned mtu) {
     session->tls_overhead = session->mtu;
     coap_log_err("DTLS overhead exceeds MTU\n");
   }
-}
-
-ssize_t coap_session_send(coap_session_t *session, const uint8_t *data, size_t datalen) {
-  ssize_t bytes_written;
-
-  coap_socket_t *sock = &session->sock;
-#if COAP_SERVER_SUPPORT
-  if (sock->flags == COAP_SOCKET_EMPTY) {
-    assert(session->endpoint != NULL);
-    sock = &session->endpoint->sock;
-  }
-#endif /* COAP_SERVER_SUPPORT */
-
-  bytes_written = coap_socket_send(sock, session, data, datalen);
-  if (bytes_written == (ssize_t)datalen) {
-    coap_ticks(&session->last_rx_tx);
-    coap_log_debug("*  %s: sent %zd bytes\n",
-             coap_session_str(session), datalen);
-  } else {
-    coap_log_debug("*  %s: failed to send %zd bytes\n",
-             coap_session_str(session), datalen);
-  }
-  return bytes_written;
 }
 
 ssize_t coap_session_write(coap_session_t *session, const uint8_t *data, size_t datalen) {

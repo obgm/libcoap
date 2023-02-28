@@ -17,7 +17,6 @@
 
 #if COAP_SERVER_SUPPORT
 #include <stdio.h>
-#include <errno.h>
 
 #ifdef COAP_EPOLL_SUPPORT
 #include <sys/epoll.h>

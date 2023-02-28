@@ -69,7 +69,6 @@
 #if defined(ESPIDF_VERSION) && defined(CONFIG_MBEDTLS_DEBUG)
 #include <mbedtls/esp_debug.h>
 #endif /* ESPIDF_VERSION && CONFIG_MBEDTLS_DEBUG */
-#include <errno.h>
 
 #define mbedtls_malloc(a) malloc(a)
 #define mbedtls_realloc(a,b) realloc(a,b)
@@ -220,10 +219,21 @@ coap_dgram_write(void *ctx, const unsigned char *send_buffer,
 
   if (c_session) {
     coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
-    result = coap_session_send(c_session, send_buffer, send_buffer_length);
+
+    if (!coap_netif_available(c_session)
+#if COAP_SERVER_SUPPORT
+        && c_session->endpoint == NULL
+#endif /* COAP_SERVER_SUPPORT */
+                                      ) {
+      /* socket was closed on client due to error */
+      errno = ECONNRESET;
+      return -1;
+    }
+    result = (int)coap_netif_dgrm_write(c_session,
+                                        send_buffer, send_buffer_length);
     if (result != (ssize_t)send_buffer_length) {
-      coap_log_warn("coap_network_send failed (%zd != %zu)\n",
-               result, send_buffer_length);
+      coap_log_warn("coap_netif_dgrm_write failed (%zd != %zu)\n",
+                    result, send_buffer_length);
       result = 0;
     }
     else if (m_env) {
@@ -1912,10 +1922,9 @@ void coap_dtls_session_update_mtu(coap_session_t *c_session)
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 }
 
-int coap_dtls_send(coap_session_t *c_session,
-                   const uint8_t *data,
-                   size_t data_len)
-{
+ssize_t
+coap_dtls_send(coap_session_t *c_session,
+               const uint8_t *data, size_t data_len) {
   int ret;
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
 

@@ -16,7 +16,6 @@
 
 #include "coap3/coap_internal.h"
 
-#include <errno.h>
 #include <sys/types.h>
 #ifdef HAVE_SYS_SOCKET_H
 # include <sys/socket.h>

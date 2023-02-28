@@ -107,11 +107,6 @@ struct coap_context_t {
    */
   coap_event_handler_t handle_event;
 
-  ssize_t (*network_send)(coap_socket_t *sock, const coap_session_t *session,
-                          const uint8_t *data, size_t datalen);
-
-  ssize_t (*network_read)(coap_socket_t *sock, coap_packet_t *packet);
-
   void *dtls_context;
 
 #if COAP_SERVER_SUPPORT

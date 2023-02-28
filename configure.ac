@@ -824,7 +824,7 @@ fi
 
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
-                  pthread.h \
+                  pthread.h errno.h \
                   stdlib.h string.h strings.h sys/socket.h sys/time.h \
                   time.h unistd.h sys/unistd.h syslog.h sys/ioctl.h net/if.h])
 

@@ -151,6 +151,11 @@ void coap_socket_close(coap_socket_t *sock) {
   sock->flags = COAP_SOCKET_EMPTY;
 }
 
+/*
+ * dgram
+ * return +ve Number of bytes written.
+ *         -1 Error error in errno).
+ */
 ssize_t
 coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen) {
   ssize_t bytes_written = 0;
@@ -170,6 +175,12 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
   return bytes_written;
 }
 
+/*
+ * dgram
+ * return +ve Number of bytes written.
+ *         -1 Error error in errno).
+ *         -2 ICMP error response
+ */
 ssize_t
 coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   ssize_t len;

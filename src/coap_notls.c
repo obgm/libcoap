@@ -166,11 +166,10 @@ void coap_dtls_free_session(coap_session_t *coap_session COAP_UNUSED) {
 void coap_dtls_session_update_mtu(coap_session_t *session COAP_UNUSED) {
 }
 
-int
+ssize_t
 coap_dtls_send(coap_session_t *session COAP_UNUSED,
-  const uint8_t *data COAP_UNUSED,
-  size_t data_len COAP_UNUSED
-) {
+               const uint8_t *data COAP_UNUSED,
+               size_t data_len COAP_UNUSED) {
   return -1;
 }
 

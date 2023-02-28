@@ -110,6 +110,17 @@ coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
 
+/*
+ * Not used for LwIP (done with coap_recvc()), but need dummy function.
+ */
+ssize_t
+coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
+  (void)sock;
+  (void)packet;
+  assert(0);
+  return -1;
+}
+
 #if COAP_CLIENT_SUPPORT
 /** Callback from lwIP when a package was received for a client.
  *
@@ -289,6 +300,11 @@ coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
   return pdu->used_size;
 }
 
+/*
+ * dgram
+ * return +ve Number of bytes written.
+ *         -1 Error error in errno).
+ */
 ssize_t
 coap_socket_send(coap_socket_t *sock, coap_session_t *session,
                  const uint8_t *data, size_t data_len ) {

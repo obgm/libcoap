@@ -51,6 +51,7 @@
     <ClCompile Include="..\src\coap_io.c" />
     <ClCompile Include="..\src\coap_mbedtls.c" />
     <ClCompile Include="..\src\coap_mem.c" />
+    <ClCompile Include="..\src\coap_netif.c" />
     <ClCompile Include="..\src\coap_notls.c" />
     <ClCompile Include="..\src\coap_openssl.c" />
     <ClCompile Include="..\src\coap_option.c" />
@@ -92,8 +93,9 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_io.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_mem.h" />
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_net.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_mutex_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_net.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_netif_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_option.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\pdu.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_oscore.h" />
