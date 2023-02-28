@@ -55,7 +55,6 @@
 #define MIN_GNUTLS_VERSION "3.3.0"
 
 #include <stdio.h>
-#include <errno.h>
 #include <gnutls/gnutls.h>
 #include <gnutls/x509.h>
 #include <gnutls/dtls.h>
@@ -1987,9 +1986,19 @@ coap_dgram_write(gnutls_transport_ptr_t context, const void *send_buffer,
   coap_session_t *c_session = (coap_session_t *)context;
 
   if (c_session) {
-    result = coap_session_send(c_session, send_buffer, send_buffer_length);
+    if (!coap_netif_available(c_session)
+#if COAP_SERVER_SUPPORT
+        && c_session->endpoint == NULL
+#endif /* COAP_SERVER_SUPPORT */
+                                      ) {
+      /* socket was closed on client due to error */
+      errno = ECONNRESET;
+      return -1;
+    }
+    result = (int)coap_netif_dgrm_write(c_session, send_buffer, send_buffer_length);
     if (result != (int)send_buffer_length) {
-      coap_log_warn("coap_network_send failed\n");
+      coap_log_warn("coap_netif_dgrm_write failed (%zd != %zu)\n",
+                    result, send_buffer_length);
       result = 0;
     }
   } else {
@@ -2320,8 +2329,9 @@ fail:
  *        0   no more
  *        -1  error
  */
-int coap_dtls_send(coap_session_t *c_session,
-  const uint8_t *data, size_t data_len) {
+ssize_t
+coap_dtls_send(coap_session_t *c_session,
+               const uint8_t *data, size_t data_len) {
   int ret;
   coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
 

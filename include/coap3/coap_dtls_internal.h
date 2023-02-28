@@ -192,9 +192,9 @@ void coap_dtls_session_update_mtu(coap_session_t *coap_session);
  * @return @c 0 if this would be blocking, @c -1 if there is an error or the
  *         number of cleartext bytes sent.
  */
-int coap_dtls_send(coap_session_t *coap_session,
-                   const uint8_t *data,
-                   size_t data_len);
+ssize_t coap_dtls_send(coap_session_t *coap_session,
+                       const uint8_t *data,
+                       size_t data_len);
 
 /**
  * Check if timeout is handled per CoAP session or per CoAP context.

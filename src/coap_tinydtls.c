@@ -260,7 +260,7 @@ dtls_send_to_peer(struct dtls_context_t *dtls_context,
     coap_log_warn("dtls_send_to_peer: cannot find local interface\n");
     return -3;
   }
-  return (int)coap_session_send(coap_session, data, len);
+  return (int)coap_netif_dgrm_write(coap_session, data, len);
 }
 
 static int
@@ -729,11 +729,10 @@ coap_dtls_free_session(coap_session_t *coap_session) {
   }
 }
 
-int
+ssize_t
 coap_dtls_send(coap_session_t *session,
-  const uint8_t *data,
-  size_t data_len
-) {
+               const uint8_t *data,
+               size_t data_len) {
   int res;
   uint8_t *data_rw;
   coap_tiny_context_t *t_context = (coap_tiny_context_t *)session->context->dtls_context;

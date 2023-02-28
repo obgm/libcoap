@@ -53,6 +53,9 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H @HAVE_INTTYPES_H@
 
+/* Define to 1 if you have the <erno.h> header file. */
+#cmakedefine HAVE_ERRNO_H @HAVE_ERRNO_H@
+
 /* Define if the system has openssl */
 #cmakedefine HAVE_OPENSSL @HAVE_OPENSSL@
 

@@ -43,4 +43,6 @@
 
 #define HAVE_SNPRINTF
 
+#define HAVE_ERRNO_H
+
 #endif /* COAP_CONFIG_H_ */

@@ -351,19 +351,25 @@ static int coap_dgram_read(BIO *a, char *out, int outl) {
   return ret;
 }
 
-static int coap_dgram_write(BIO *a, const char *in, int inl) {
+static int
+coap_dgram_write(BIO *a, const char *in, int inl) {
   int ret = 0;
   coap_ssl_data *data = (coap_ssl_data *)BIO_get_data(a);
 
   if (data->session) {
+    if (!coap_netif_available(data->session)
 #if COAP_SERVER_SUPPORT
-    if (data->session->sock.flags == COAP_SOCKET_EMPTY && data->session->endpoint == NULL) {
+        && data->session->endpoint == NULL
+#endif /* COAP_SERVER_SUPPORT */
+                                          ) {
       /* socket was closed on client due to error */
       BIO_clear_retry_flags(a);
+      errno = ECONNRESET;
       return -1;
     }
-#endif /* COAP_SERVER_SUPPORT */
-    ret = (int)coap_session_send(data->session, (const uint8_t *)in, (size_t)inl);
+    ret = (int)coap_netif_dgrm_write(data->session,
+                                        (const uint8_t *)in,
+                                        inl);
     BIO_clear_retry_flags(a);
     if (ret <= 0)
       BIO_set_retry_write(a);
@@ -3047,8 +3053,9 @@ void coap_dtls_free_session(coap_session_t *session) {
   }
 }
 
-int coap_dtls_send(coap_session_t *session,
-  const uint8_t *data, size_t data_len) {
+ssize_t
+coap_dtls_send(coap_session_t *session,
+               const uint8_t *data, size_t data_len) {
   int r;
   SSL *ssl = (SSL *)session->tls;
 

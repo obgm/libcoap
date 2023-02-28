@@ -46,7 +46,6 @@
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif
-#include <errno.h>
 #ifdef COAP_EPOLL_SUPPORT
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
@@ -592,6 +591,11 @@ static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
 #endif
 
 #if !defined(RIOT_VERSION) && !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+/*
+ * dgram
+ * return +ve Number of bytes written.
+ *         -1 Error error in errno).
+ */
 ssize_t
 coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen) {
   ssize_t bytes_written = 0;
@@ -764,6 +768,12 @@ coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t
 }
 
 #if !defined(RIOT_VERSION) && !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+/*
+ * dgram
+ * return +ve Number of bytes written.
+ *         -1 Error error in errno).
+ *         -2 ICMP error response
+ */
 ssize_t
 coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   ssize_t len = -1;
@@ -1503,10 +1513,15 @@ const char *coap_socket_strerror(void) {
 #endif /* _WIN32 */
 
 #if !defined(WITH_LWIP)
+/*
+ * dgram
+ * return +ve Number of bytes written.
+ *         -1 Error error in errno).
+ */
 ssize_t
 coap_socket_send(coap_socket_t *sock, coap_session_t *session,
   const uint8_t *data, size_t data_len) {
-  return session->context->network_send(sock, session, data, data_len);
+  return coap_network_send(sock, session, data, data_len);
 }
 #endif /* ! WITH_LWIP */
 
