@@ -262,8 +262,8 @@ void coap_session_mfree(coap_session_t *session) {
   else if (session->proto == COAP_PROTO_TLS)
     coap_tls_free_session(session);
 #endif /* !COAP_DISABLE_TCP */
-  if (session->sock.flags != COAP_SOCKET_EMPTY)
-    coap_socket_close(&session->sock);
+  if (coap_netif_available(session))
+    coap_netif_close(session);
   if (session->psk_identity)
     coap_delete_bin_const(session->psk_identity);
   if (session->psk_key)
@@ -678,8 +678,8 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
 
 #if !COAP_DISABLE_TCP
   if (COAP_PROTO_RELIABLE(session->proto)) {
-    if (session->sock.flags != COAP_SOCKET_EMPTY) {
-      coap_socket_close(&session->sock);
+    if (coap_netif_available(session)) {
+      coap_netif_close(session);
       coap_handle_event(session->context,
         state == COAP_SESSION_STATE_CONNECTING ?
         COAP_EVENT_TCP_FAILED : COAP_EVENT_TCP_CLOSED, session);
@@ -1579,7 +1579,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
         coap_session_free(session);
       }
     }
-    if (ep->sock.flags != COAP_SOCKET_EMPTY) {
+    if (coap_netif_available_ep(ep)) {
       /*
        * ep->sock.endpoint is set in coap_new_endpoint().
        * ep->sock.session is never set.
@@ -1587,13 +1587,13 @@ coap_free_endpoint(coap_endpoint_t *ep) {
        * session->sock.session is set for both clients and servers (when a
        * new session is accepted), but does not affect the endpoint.
        *
-       * So, it is safe to call coap_socket_close() after all the sessions
+       * So, it is safe to call coap_netif_close_ep() after all the sessions
        * have been freed above as we are only working with the endpoint sock.
        */
 #ifdef COAP_EPOLL_SUPPORT
        assert(ep->sock.session == NULL);
 #endif /* COAP_EPOLL_SUPPORT */
-      coap_socket_close(&ep->sock);
+      coap_netif_close_ep(ep);
     }
 
     if (ep->context && ep->context->endpoint) {
