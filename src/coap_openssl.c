@@ -706,12 +706,20 @@ static int coap_sock_destroy(BIO *a) {
   return 1;
 }
 
-static int coap_sock_read(BIO *a, char *out, int outl) {
+/*
+ * strm
+ * return +ve data amount
+ *        0   no more
+ *        -1  error
+ */
+static int
+coap_sock_read(BIO *a, char *out, int outl) {
   int ret = 0;
   coap_session_t *session = (coap_session_t *)BIO_get_data(a);
 
   if (out != NULL) {
-    ret = (int)coap_socket_read(&session->sock, (uint8_t*)out, (size_t)outl);
+    ret = (int)coap_netif_strm_read(session, (u_char *)out, outl);
+    /* Translate layer returns into what OpenSSL expects */
     if (ret == 0) {
       BIO_set_retry_read(a);
       ret = -1;
@@ -722,11 +730,19 @@ static int coap_sock_read(BIO *a, char *out, int outl) {
   return ret;
 }
 
-static int coap_sock_write(BIO *a, const char *in, int inl) {
+/*
+ * strm
+ * return +ve data amount
+ *        0   no more
+ *        -1  error (error in errno)
+ */
+static int
+coap_sock_write(BIO *a, const char *in, int inl) {
   int ret = 0;
   coap_session_t *session = (coap_session_t *)BIO_get_data(a);
 
-  ret = (int)coap_socket_write(&session->sock, (const uint8_t*)in, (size_t)inl);
+  ret = (int)coap_netif_strm_write(session, (const uint8_t *)in, inl);
+  /* Translate layer what returns into what OpenSSL expects */
   BIO_clear_retry_flags(a);
   if (ret == 0) {
     BIO_set_retry_read(a);
@@ -749,11 +765,6 @@ static int coap_sock_write(BIO *a, const char *in, int inl) {
          * alert can be read (which effectively is what happens with DTLS).
          */
         ret = inl;
-      }
-      else {
-        coap_log_debug( "*  %s: failed to send %d bytes (%s) state %d\n",
-                 coap_session_str(session), inl, coap_socket_strerror(),
-                 session->state);
       }
     }
   }
@@ -3344,7 +3355,8 @@ error:
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
-void *coap_tls_new_server_session(coap_session_t *session, int *connected) {
+void *
+coap_tls_new_server_session(coap_session_t *session, int *connected) {
   BIO *bio = NULL;
   SSL *ssl = NULL;
   coap_tls_context_t *tls = &((coap_openssl_context_t *)session->context->dtls_context)->tls;
@@ -3423,10 +3435,13 @@ void coap_tls_free_session(coap_session_t *session) {
   }
 }
 
-ssize_t coap_tls_write(coap_session_t *session,
-                       const uint8_t *data,
-                       size_t data_len
-) {
+/*
+ * strm
+ * return +ve Number of bytes written.
+ *         -1 Error (error in errno).
+ */
+ssize_t
+coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
   SSL *ssl = (SSL *)session->tls;
   int r, in_init;
 
@@ -3448,7 +3463,7 @@ ssize_t coap_tls_write(coap_session_t *session,
       }
       if (err == SSL_ERROR_WANT_READ)
         session->sock.flags |= COAP_SOCKET_WANT_READ;
-      if (err == SSL_ERROR_WANT_WRITE) {
+      else if (err == SSL_ERROR_WANT_WRITE) {
         session->sock.flags |= COAP_SOCKET_WANT_WRITE;
 #ifdef COAP_EPOLL_SUPPORT
         coap_epoll_ctl_mod(&session->sock,
@@ -3489,15 +3504,20 @@ ssize_t coap_tls_write(coap_session_t *session,
   return r;
 }
 
-ssize_t coap_tls_read(coap_session_t *session,
-                      uint8_t *data,
-                      size_t data_len
-) {
+/*
+ * strm
+ * return >=0 Number of bytes read.
+ *         -1 Error (error in errno).
+ */
+ssize_t
+coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
   SSL *ssl = (SSL *)session->tls;
   int r, in_init;
 
-  if (ssl == NULL)
+  if (ssl == NULL) {
+    errno = ENXIO;
     return -1;
+  }
 
   in_init = !SSL_is_init_finished(ssl);
   session->dtls_event = -1;

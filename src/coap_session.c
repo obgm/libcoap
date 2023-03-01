@@ -408,19 +408,6 @@ void coap_session_set_mtu(coap_session_t *session, unsigned mtu) {
   }
 }
 
-ssize_t coap_session_write(coap_session_t *session, const uint8_t *data, size_t datalen) {
-  ssize_t bytes_written = coap_socket_write(&session->sock, data, datalen);
-  if (bytes_written > 0) {
-    coap_ticks(&session->last_rx_tx);
-    coap_log_debug("*  %s: sent %zd bytes\n",
-             coap_session_str(session), bytes_written);
-  } else if (bytes_written < 0) {
-    coap_log_debug("*  %s: failed to send %zd bytes\n",
-             coap_session_str(session), datalen );
-  }
-  return bytes_written;
-}
-
 ssize_t
 coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
                        coap_queue_t *node)

@@ -118,3 +118,54 @@ coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet) {
   }
   return bytes_read;
 }
+
+#if !COAP_DISABLE_TCP
+/*
+ * strm
+ * return >=0 Number of bytes read.
+ *         -1 Error (error in errno).
+ */
+ssize_t
+coap_netif_strm_read(coap_session_t *session, uint8_t *data, size_t datalen) {
+  ssize_t bytes_read = coap_socket_read(&session->sock, data, datalen);
+  int keep_errno = errno;
+
+  if (bytes_read >= 0) {
+    coap_log_debug("*  %s: received %zd bytes\n",
+             coap_session_str(session), bytes_read);
+  } else if (bytes_read == -1 && errno != EAGAIN) {
+    coap_log_debug( "*  %s: failed to receive any bytes (%s)\n",
+             coap_session_str(session), coap_socket_strerror());
+    errno = keep_errno;
+  }
+  return bytes_read;
+}
+
+/*
+ * strm
+ * return +ve Number of bytes written.
+ *         -1 Error (error in errno).
+ */
+ssize_t
+coap_netif_strm_write(coap_session_t *session, const uint8_t *data,
+                      size_t datalen) {
+  ssize_t bytes_written = coap_socket_write(&session->sock, data, datalen);
+  int keep_errno = errno;
+
+  if (bytes_written <= 0) {
+    coap_log_debug( "*  %s: failed to send %zd bytes (%s) state %d\n",
+                   coap_session_str(session), datalen,
+                   coap_socket_strerror(), session->state);
+  } else if (bytes_written == (ssize_t)datalen) {
+    coap_ticks(&session->last_rx_tx);
+    coap_log_debug("*  %s: sent %zd bytes\n",
+             coap_session_str(session), datalen);
+  } else {
+    coap_ticks(&session->last_rx_tx);
+    coap_log_debug("*  %s: sent %zd bytes of %zd\n",
+             coap_session_str(session), bytes_written, datalen);
+    errno = keep_errno;
+  }
+  return bytes_written;
+}
+#endif /* COAP_DISABLE_TCP */

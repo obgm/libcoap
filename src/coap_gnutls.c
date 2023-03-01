@@ -2632,8 +2632,9 @@ unsigned int coap_dtls_get_overhead(coap_session_t *c_session COAP_UNUSED) {
 
 #if !COAP_DISABLE_TCP
 /*
+ * strm
  * return +ve data amount
- *        0   no more
+ *        0   connection closed
  *        -1  error (error in errno)
  */
 static ssize_t
@@ -2642,32 +2643,23 @@ coap_sock_read(gnutls_transport_ptr_t context, void *out, size_t outl) {
   coap_session_t *c_session = (coap_session_t *)context;
 
   if (out != NULL) {
-#ifdef _WIN32
-    ret = recv(c_session->sock.fd, (char *)out, (int)outl, 0);
-#else
-    ret = recv(c_session->sock.fd, out, outl, 0);
-#endif
-    if (ret > 0) {
-      coap_log_debug("*  %s: received %d bytes\n",
-               coap_session_str(c_session), ret);
-    } else if (ret < 0 && errno != EAGAIN) {
-      coap_log_debug( "*  %s: failed to receive any bytes (%s)\n",
-               coap_session_str(c_session), coap_socket_strerror());
+    ret = (int)coap_netif_strm_read(c_session, out, outl);
+    /* Translate layer returns into what GnuTLS expects */
+    if (ret == -1) {
+      if (errno == ECONNRESET) {
+        /* graceful shutdown */
+        return 0;
+      }
+    } else if (ret == 0) {
+      errno = EAGAIN;
+      ret = -1;
     }
-    if (ret == 0) {
-      /* graceful shutdown */
-      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
-      return 0;
-    } else if (ret == COAP_SOCKET_ERROR)
-      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
-    else if (ret < (ssize_t)outl)
-      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
-    return ret;
   }
   return ret;
 }
 
 /*
+ * strm
  * return +ve data amount
  *        0   no more
  *        -1  error (error in errno)
@@ -2677,11 +2669,9 @@ coap_sock_write(gnutls_transport_ptr_t context, const void *in, size_t inl) {
   int ret = 0;
   coap_session_t *c_session = (coap_session_t *)context;
 
-  ret = (int)coap_socket_write(&c_session->sock, in, inl);
-  if (ret > 0) {
-    coap_log_debug("*  %s: sent %d bytes\n",
-             coap_session_str(c_session), ret);
-  } else if (ret < 0) {
+  ret = (int)coap_netif_strm_write(c_session, in, inl);
+  /* Translate layer what returns into what GnuTLS expects */
+  if (ret < 0) {
     if ((c_session->state == COAP_SESSION_STATE_CSM ||
          c_session->state == COAP_SESSION_STATE_HANDSHAKE) &&
         (errno == EPIPE || errno == ECONNRESET)) {
@@ -2807,14 +2797,13 @@ void coap_tls_free_session(coap_session_t *c_session) {
 }
 
 /*
- * return +ve data amount
- *        0   no more
- *        -1  error (error in errno)
+ * strm
+ * return +ve Number of bytes written.
+ *         -1 Error (error in errno).
  */
-ssize_t coap_tls_write(coap_session_t *c_session,
-                       const uint8_t *data,
-                       size_t data_len
-) {
+ssize_t
+coap_tls_write(coap_session_t *c_session, const uint8_t *data,
+               size_t data_len) {
   int ret;
   coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
 
@@ -2833,14 +2822,12 @@ ssize_t coap_tls_write(coap_session_t *c_session,
       case GNUTLS_E_PULL_ERROR:
       case GNUTLS_E_PREMATURE_TERMINATION:
         c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
-        ret = -1;
         break;
       case GNUTLS_E_FATAL_ALERT_RECEIVED:
         /* Stop the sending of an alert on closedown */
         g_env->sent_alert = 1;
         log_last_alert(c_session, g_env->g_session);
         c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
-        ret = -1;
         break;
       default:
         coap_log_warn(
@@ -2882,19 +2869,19 @@ ssize_t coap_tls_write(coap_session_t *c_session,
 }
 
 /*
- * return +ve data amount
- *        0   no more
- *        -1  error (error in errno)
+ * strm
+ * return >=0 Number of bytes read.
+ *         -1 Error (error in errno).
  */
-ssize_t coap_tls_read(coap_session_t *c_session,
-                      uint8_t *data,
-                      size_t data_len
-) {
+ssize_t
+coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
   coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
   int ret = -1;
 
-  if (!g_env)
+  if (!g_env) {
+    errno = ENXIO;
     return -1;
+  }
 
   c_session->dtls_event = -1;
   if (!g_env->established && !g_env->sent_alert) {
@@ -2924,12 +2911,10 @@ ssize_t coap_tls_read(coap_session_t *c_session,
         g_env->sent_alert = 1;
         log_last_alert(c_session, g_env->g_session);
         c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
-        ret = -1;
         break;
       case GNUTLS_E_WARNING_ALERT_RECEIVED:
         log_last_alert(c_session, g_env->g_session);
         c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
-        ret = 0;
         break;
       default:
         coap_log_warn(

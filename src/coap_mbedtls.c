@@ -1400,65 +1400,36 @@ mbedtls_debug_out(void *ctx COAP_UNUSED, int level,
 
 #if !COAP_DISABLE_TCP
 /*
+ * strm
  * return +ve data amount
  *        0   no more
  *        -ve  Mbed TLS error
  */
 static int
 coap_sock_read(void *ctx, unsigned char *out, size_t outl) {
-  ssize_t ret = MBEDTLS_ERR_SSL_CONN_EOF;
+  int ret = MBEDTLS_ERR_SSL_CONN_EOF;
   coap_session_t *c_session = (coap_session_t *)ctx;
 
   if (out != NULL) {
-#ifdef _WIN32
-    ret = recv(c_session->sock.fd, (char *)out, (int)outl, 0);
-#else
-    ret = recv(c_session->sock.fd, out, outl, 0);
-#endif
-    if (ret > 0) {
-      coap_log_debug("*  %s: received %zd bytes\n",
-               coap_session_str(c_session), ret);
-    } else if (ret < 0 && errno != EAGAIN) {
-      coap_log_debug( "*  %s: failed to receive any bytes (%s)\n",
-               coap_session_str(c_session), coap_socket_strerror());
-    }
-
-    if (ret == 0) {
-      /* graceful shutdown */
-      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
-      ret = MBEDTLS_ERR_SSL_CONN_EOF;
-    }
-    else if (ret == COAP_SOCKET_ERROR) {
-#ifdef _WIN32
-      int lasterror = WSAGetLastError();
-
-      if (lasterror == WSAEWOULDBLOCK) {
-        ret = MBEDTLS_ERR_SSL_WANT_READ;
-      }
-      else if (lasterror == WSAECONNRESET) {
-        ret = MBEDTLS_ERR_NET_CONN_RESET;
-      }
-#else
-      if (errno == EAGAIN || errno == EINTR) {
-        ret = MBEDTLS_ERR_SSL_WANT_READ;
-      }
-      else if (errno == EPIPE || errno == ECONNRESET) {
-        ret = MBEDTLS_ERR_NET_CONN_RESET;
-      }
-#endif
-      else {
+    ret = (int)coap_netif_strm_read(c_session, out, outl);
+    /* Translate layer returns into what MbedTLS expects */
+    if (ret == -1) {
+      if (errno == ECONNRESET) {
+        /* graceful shutdown */
+        ret = MBEDTLS_ERR_SSL_CONN_EOF;
+      } else {
         ret = MBEDTLS_ERR_NET_RECV_FAILED;
       }
-      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
-    }
-    else if (ret < (ssize_t)outl) {
-      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
+    } else if (ret == 0) {
+      errno = EAGAIN;
+      ret = MBEDTLS_ERR_SSL_WANT_READ;
     }
   }
-  return (int)ret;
+  return ret;
 }
 
 /*
+ * strm
  * return +ve data amount
  *        0   no more
  *        -ve  Mbed TLS error
@@ -1468,11 +1439,9 @@ coap_sock_write(void *context, const unsigned char *in, size_t inl) {
   int ret = 0;
   coap_session_t *c_session = (coap_session_t *)context;
 
-  ret = (int)coap_socket_write(&c_session->sock, in, inl);
-  if (ret > 0) {
-    coap_log_debug("*  %s: sent %d bytes\n",
-             coap_session_str(c_session), ret);
-  } else if (ret < 0) {
+  ret = (int)coap_netif_strm_write(c_session, (const uint8_t *)in, inl);
+  /* Translate layer what returns into what MbedTLS expects */
+  if (ret < 0) {
     if ((c_session->state == COAP_SESSION_STATE_CSM ||
          c_session->state == COAP_SESSION_STATE_HANDSHAKE) &&
         (errno == EPIPE || errno == ECONNRESET)) {
@@ -2286,11 +2255,12 @@ void *coap_tls_new_client_session(coap_session_t *c_session,
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
-void *coap_tls_new_server_session(coap_session_t *c_session COAP_UNUSED,
-                                  int *connected COAP_UNUSED)
-{
+void *
+coap_tls_new_server_session(coap_session_t *c_session, int *connected) {
 #if !defined(MBEDTLS_SSL_SRV_C)
   (void)c_session;
+  (void)connected;
+
   coap_log_emerg("coap_tls_new_server_session:"
            " libcoap not compiled for Server Mode for Mbed TLS"
            " - update Mbed TLS to include Server Mode\n");
@@ -2300,6 +2270,10 @@ void *coap_tls_new_server_session(coap_session_t *c_session COAP_UNUSED,
                                                        COAP_DTLS_ROLE_SERVER,
                                                        COAP_PROTO_TLS);
   int ret;
+
+  *connected = 0;
+  if (!m_env)
+    return NULL;
 
   c_session->tls = m_env;
   ret = do_mbedtls_handshake(c_session, m_env);
@@ -2318,15 +2292,13 @@ void coap_tls_free_session(coap_session_t *c_session)
 }
 
 /*
- * return +ve data amount
- *        0   no more
- *        -1  error (error in errno)
+ * strm
+ * return +ve Number of bytes written.
+ *         -1 Error (error in errno).
  */
-ssize_t coap_tls_write(coap_session_t *c_session,
-                       const uint8_t *data,
-                       size_t data_len
-                       )
-{
+ssize_t
+coap_tls_write(coap_session_t *c_session, const uint8_t *data,
+               size_t data_len) {
   int ret = 0;
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
   size_t amount_sent = 0;
@@ -2334,24 +2306,27 @@ ssize_t coap_tls_write(coap_session_t *c_session,
   assert(m_env != NULL);
 
   if (!m_env) {
+      errno = ENXIO;
       return -1;
   }
   c_session->dtls_event = -1;
   if (m_env->established) {
     while (amount_sent < data_len) {
-      ret = mbedtls_ssl_write(&m_env->ssl,
-                              (const unsigned char*)&data[amount_sent],
+      ret = mbedtls_ssl_write(&m_env->ssl, &data[amount_sent],
                               data_len - amount_sent);
       if (ret <= 0) {
         switch (ret) {
         case MBEDTLS_ERR_SSL_WANT_READ:
         case MBEDTLS_ERR_SSL_WANT_WRITE:
-          ret = 0;
+          if (amount_sent)
+            ret = amount_sent;
+          else
+            ret = 0;
+          c_session->sock.flags |= COAP_SOCKET_WANT_WRITE;
           break;
         case MBEDTLS_ERR_NET_CONN_RESET:
         case MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE:
           c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
-          ret = -1;
           break;
         default:
           coap_log_warn(
@@ -2394,21 +2369,21 @@ ssize_t coap_tls_write(coap_session_t *c_session,
 }
 
 /*
- * return +ve data amount
- *        0   no more
- *        -1  error (error in errno)
+ * strm
+ * return >=0 Number of bytes read.
+ *         -1 Error (error in errno).
  */
-ssize_t coap_tls_read(coap_session_t *c_session,
-                      uint8_t *data,
-                      size_t data_len
-                      )
+ssize_t
+coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len)
 {
   int ret = -1;
 
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
 
-  if (!m_env)
+  if (!m_env) {
+    errno = ENXIO;
     return -1;
+  }
 
   c_session->dtls_event = -1;
 
@@ -2434,7 +2409,6 @@ ssize_t coap_tls_read(coap_session_t *c_session,
         /* Stop the sending of an alert on closedown */
         m_env->sent_alert = 1;
         c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
-        ret = -1;
         break;
       case MBEDTLS_ERR_SSL_WANT_READ:
         errno = EAGAIN;
@@ -2448,6 +2422,8 @@ ssize_t coap_tls_read(coap_session_t *c_session,
         ret = -1;
         break;
       }
+    } else if (ret < (int)data_len) {
+      c_session->sock.flags &= ~COAP_SOCKET_CAN_READ;
     }
   }
 
