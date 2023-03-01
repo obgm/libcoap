@@ -367,7 +367,7 @@ coap_dgram_write(BIO *a, const char *in, int inl) {
       errno = ECONNRESET;
       return -1;
     }
-    ret = (int)coap_netif_dgrm_write(data->session,
+    ret = (int)data->session->sock.lfunc[COAP_LAYER_TLS].write(data->session,
                                         (const uint8_t *)in,
                                         inl);
     BIO_clear_retry_flags(a);
@@ -718,7 +718,8 @@ coap_sock_read(BIO *a, char *out, int outl) {
   coap_session_t *session = (coap_session_t *)BIO_get_data(a);
 
   if (out != NULL) {
-    ret = (int)coap_netif_strm_read(session, (u_char *)out, outl);
+    ret =(int)session->sock.lfunc[COAP_LAYER_TLS].read(session, (u_char *)out,
+                                                       outl);
     /* Translate layer returns into what OpenSSL expects */
     if (ret == 0) {
       BIO_set_retry_read(a);
@@ -741,7 +742,9 @@ coap_sock_write(BIO *a, const char *in, int inl) {
   int ret = 0;
   coap_session_t *session = (coap_session_t *)BIO_get_data(a);
 
-  ret = (int)coap_netif_strm_write(session, (const uint8_t *)in, inl);
+  ret = (int)session->sock.lfunc[COAP_LAYER_TLS].write(session,
+                                                       (const uint8_t *)in,
+                                                       inl);
   /* Translate layer what returns into what OpenSSL expects */
   BIO_clear_retry_flags(a);
   if (ret == 0) {
@@ -3215,7 +3218,7 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
         coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                  coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-        coap_session_establish(session);
+        session->sock.lfunc[COAP_LAYER_TLS].establish(session);
       }
       r = 0;
     } else {
@@ -3470,7 +3473,7 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
         coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                  coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-        coap_session_establish(session);
+        session->sock.lfunc[COAP_LAYER_TLS].establish(session);
       }
       if (err == SSL_ERROR_WANT_READ)
         session->sock.flags |= COAP_SOCKET_WANT_READ;
@@ -3498,7 +3501,7 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
     coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
              coap_session_str(session), SSL_get_cipher_name(ssl));
     coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-    coap_session_establish(session);
+    session->sock.lfunc[COAP_LAYER_TLS].establish(session);
   }
 
   if (session->dtls_event >= 0) {
@@ -3544,7 +3547,7 @@ coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
         coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                  coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-        coap_session_establish(session);
+        session->sock.lfunc[COAP_LAYER_TLS].establish(session);
       }
       if (err == SSL_ERROR_WANT_READ)
         session->sock.flags |= COAP_SOCKET_WANT_READ;
@@ -3570,7 +3573,7 @@ coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
     coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
              coap_session_str(session), SSL_get_cipher_name(ssl));
     coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-    coap_session_establish(session);
+    session->sock.lfunc[COAP_LAYER_TLS].establish(session);
   }
 
   if (session->dtls_event >= 0) {

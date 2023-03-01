@@ -761,31 +761,9 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
   ssize_t bytes_written = -1;
   assert(pdu->hdr_size > 0);
 
-  switch(session->proto) {
-    case COAP_PROTO_UDP:
-      bytes_written = coap_netif_dgrm_write(session, pdu->token - pdu->hdr_size,
-                                            pdu->used_size + pdu->hdr_size);
-      break;
-    case COAP_PROTO_DTLS:
-      bytes_written = coap_dtls_send(session, pdu->token - pdu->hdr_size,
-                                     pdu->used_size + pdu->hdr_size);
-      break;
-    case COAP_PROTO_TCP:
-#if !COAP_DISABLE_TCP
-      bytes_written = coap_netif_strm_write(session, pdu->token - pdu->hdr_size,
-                                            pdu->used_size + pdu->hdr_size);
-#endif /* !COAP_DISABLE_TCP */
-      break;
-    case COAP_PROTO_TLS:
-#if !COAP_DISABLE_TCP
-      bytes_written = coap_tls_write(session, pdu->token - pdu->hdr_size,
-                                     pdu->used_size + pdu->hdr_size);
-#endif /* !COAP_DISABLE_TCP */
-      break;
-    case COAP_PROTO_NONE:
-    default:
-      break;
-  }
+  bytes_written = session->sock.lfunc[COAP_LAYER_SESSION].write(session,
+                                        pdu->token - pdu->hdr_size,
+                                        pdu->used_size + pdu->hdr_size);
   coap_show_pdu(COAP_LOG_DEBUG, pdu);
   return bytes_written;
 }
@@ -798,54 +776,8 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
 #if ! COAP_CLIENT_SUPPORT
     return -1;
 #else /* COAP_CLIENT_SUPPORT */
-    if (session->proto == COAP_PROTO_DTLS && !session->tls) {
-      session->tls = coap_dtls_new_client_session(session);
-      if (session->tls) {
-        session->state = COAP_SESSION_STATE_HANDSHAKE;
-        return coap_session_delay_pdu(session, pdu, node);
-      }
-      coap_handle_event(session->context, COAP_EVENT_DTLS_ERROR, session);
+    if (session->type != COAP_SESSION_TYPE_CLIENT)
       return -1;
-#if !COAP_DISABLE_TCP
-    } else if(COAP_PROTO_RELIABLE(session->proto)) {
-      if (!coap_netif_strm_connect1(session, &session->addr_info.local,
-                                    &session->addr_info.remote,
-                                    session->proto == COAP_PROTO_TLS ?
-                                           COAPS_DEFAULT_PORT :
-                                           COAP_DEFAULT_PORT)) {
-        coap_handle_event(session->context, COAP_EVENT_TCP_FAILED, session);
-        return -1;
-      }
-      session->last_ping = 0;
-      session->last_pong = 0;
-      session->csm_tx = 0;
-      coap_ticks( &session->last_rx_tx );
-      if ((session->sock.flags & COAP_SOCKET_WANT_CONNECT) != 0) {
-        session->state = COAP_SESSION_STATE_CONNECTING;
-        return coap_session_delay_pdu(session, pdu, node);
-      }
-      coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
-      if (session->proto == COAP_PROTO_TLS) {
-        int connected = 0;
-        session->state = COAP_SESSION_STATE_HANDSHAKE;
-        session->tls = coap_tls_new_client_session(session, &connected);
-        if (session->tls) {
-          if (connected) {
-            coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-            coap_session_establish(session);
-          }
-          return coap_session_delay_pdu(session, pdu, node);
-        }
-        coap_handle_event(session->context, COAP_EVENT_DTLS_ERROR, session);
-        coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
-        return -1;
-      } else {
-        coap_session_establish(session);
-      }
-#endif /* !COAP_DISABLE_TCP */
-    } else {
-      return -1;
-    }
 #endif /* COAP_CLIENT_SUPPORT */
   }
 
@@ -1624,34 +1556,16 @@ coap_handle_dgram_for_proto(coap_context_t *ctx, coap_session_t *session, coap_p
 
 #if COAP_CLIENT_SUPPORT
 static void
-coap_connect_session(coap_context_t *ctx,
-                          coap_session_t *session,
-                          coap_tick_t now) {
-  (void)ctx;
+coap_connect_session(coap_session_t *session, coap_tick_t now) {
 #if COAP_DISABLE_TCP
-  (void)session;
   (void)now;
+
+  session->sock.flags &= ~(COAP_SOCKET_WANT_CONNECT | COAP_SOCKET_CAN_CONNECT);
 #else /* !COAP_DISABLE_TCP */
   if (coap_netif_strm_connect2(session)) {
     session->last_rx_tx = now;
     coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
-    if (session->proto == COAP_PROTO_TCP) {
-      coap_session_establish(session);
-    } else if (session->proto == COAP_PROTO_TLS) {
-      int connected = 0;
-      session->state = COAP_SESSION_STATE_HANDSHAKE;
-      session->tls = coap_tls_new_client_session(session, &connected);
-      if (session->tls) {
-        if (connected) {
-          coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED,
-                            session);
-          coap_session_establish(session);
-        }
-      } else {
-        coap_handle_event(session->context, COAP_EVENT_DTLS_ERROR, session);
-        coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
-      }
-    }
+    session->sock.lfunc[COAP_LAYER_SESSION].establish(session);
   } else {
     coap_handle_event(session->context, COAP_EVENT_TCP_FAILED, session);
     coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
@@ -1671,32 +1585,9 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
     coap_log_debug("** %s: mid=0x%x: transmitted after delay\n",
              coap_session_str(session), (int)q->pdu->mid);
     assert(session->partial_write < q->pdu->used_size + q->pdu->hdr_size);
-    switch (session->proto) {
-      case COAP_PROTO_TCP:
-#if !COAP_DISABLE_TCP
-        bytes_written = coap_netif_strm_write(
-          session,
+    bytes_written = session->sock.lfunc[COAP_LAYER_SESSION].write(session,
           q->pdu->token - q->pdu->hdr_size + session->partial_write,
-          q->pdu->used_size + q->pdu->hdr_size - session->partial_write
-        );
-#endif /* !COAP_DISABLE_TCP */
-        break;
-      case COAP_PROTO_TLS:
-#if !COAP_DISABLE_TCP
-        bytes_written = coap_tls_write(
-          session,
-          q->pdu->token - q->pdu->hdr_size - session->partial_write,
-          q->pdu->used_size + q->pdu->hdr_size - session->partial_write
-        );
-#endif /* !COAP_DISABLE_TCP */
-        break;
-      case COAP_PROTO_NONE:
-      case COAP_PROTO_UDP:
-      case COAP_PROTO_DTLS:
-      default:
-        bytes_written = -1;
-        break;
-    }
+          q->pdu->used_size + q->pdu->hdr_size - session->partial_write);
     if (bytes_written > 0)
       session->last_rx_tx = now;
     if (bytes_written <= 0 || (size_t)bytes_written < q->pdu->used_size + q->pdu->hdr_size - session->partial_write) {
@@ -1753,14 +1644,10 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
     int retry;
 
     do {
-      if (session->proto == COAP_PROTO_TCP)
-        bytes_read = coap_netif_strm_read(session, packet->payload,
-                                          packet->length);
-      else if (session->proto == COAP_PROTO_TLS)
-        bytes_read = coap_tls_read(session, packet->payload, packet->length);
+      bytes_read = session->sock.lfunc[COAP_LAYER_SESSION].read(session,
+                                                             packet->payload,
+                                                             packet->length);
       if (bytes_read > 0) {
-        coap_log_debug("*  %s: received %zd bytes\n",
-                 coap_session_str(session), bytes_read);
         session->last_rx_tx = now;
       }
       p = packet->payload;
@@ -1975,7 +1862,7 @@ coap_io_do_io(coap_context_t *ctx, coap_tick_t now) {
     /* Make sure the session object is not deleted in one of the callbacks  */
     coap_session_reference(s);
     if ((s->sock.flags & COAP_SOCKET_CAN_CONNECT) != 0) {
-      coap_connect_session(ctx, s, now);
+      coap_connect_session(s, now);
     }
     if ((s->sock.flags & COAP_SOCKET_CAN_READ) != 0 && s->ref > 1) {
       coap_read_session(ctx, s, now);
@@ -2050,7 +1937,7 @@ coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events, size_t nevents
         if ((sock->flags & COAP_SOCKET_WANT_CONNECT) &&
             (events[j].events & (EPOLLOUT|EPOLLERR|EPOLLHUP|EPOLLRDHUP))) {
           sock->flags |= COAP_SOCKET_CAN_CONNECT;
-          coap_connect_session(session->context, session, now);
+          coap_connect_session(session, now);
           if (coap_netif_available(session) &&
               !(sock->flags & COAP_SOCKET_WANT_WRITE)) {
             coap_epoll_ctl_mod(sock, EPOLLIN, __func__);

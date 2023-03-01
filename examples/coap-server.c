@@ -2303,6 +2303,7 @@ get_context(const char *node, const char *port) {
   case COAP_PROTO_DTLS: scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS; break;
   case COAP_PROTO_TLS:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS_TCP; break;
   case COAP_PROTO_NONE:
+  case COAP_PROTO_LAST:
   default:
     break;
   }

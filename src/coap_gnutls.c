@@ -1995,7 +1995,8 @@ coap_dgram_write(gnutls_transport_ptr_t context, const void *send_buffer,
       errno = ECONNRESET;
       return -1;
     }
-    result = (int)coap_netif_dgrm_write(c_session, send_buffer, send_buffer_length);
+    result = c_session->sock.lfunc[COAP_LAYER_TLS].write(c_session,
+                                           send_buffer, send_buffer_length);
     if (result != (int)send_buffer_length) {
       coap_log_warn("coap_netif_dgrm_write failed (%zd != %zu)\n",
                     result, send_buffer_length);
@@ -2478,7 +2479,7 @@ coap_dtls_receive(coap_session_t *c_session, const uint8_t *data,
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
                         c_session);
       gnutls_transport_set_ptr(g_env->g_session, c_session);
-      coap_session_establish(c_session);
+      c_session->sock.lfunc[COAP_LAYER_TLS].establish(c_session);
     }
     ret = gnutls_record_recv(g_env->g_session, pdu, (int)sizeof(pdu));
     if (ret > 0) {
@@ -2652,7 +2653,7 @@ coap_sock_read(gnutls_transport_ptr_t context, void *out, size_t outl) {
   coap_session_t *c_session = (coap_session_t *)context;
 
   if (out != NULL) {
-    ret = (int)coap_netif_strm_read(c_session, out, outl);
+    ret = (int)c_session->sock.lfunc[COAP_LAYER_TLS].read(c_session, out, outl);
     /* Translate layer returns into what GnuTLS expects */
     if (ret == 0) {
       errno = EAGAIN;
@@ -2673,7 +2674,7 @@ coap_sock_write(gnutls_transport_ptr_t context, const void *in, size_t inl) {
   int ret = 0;
   coap_session_t *c_session = (coap_session_t *)context;
 
-  ret = (int)coap_netif_strm_write(c_session, in, inl);
+  ret = (int)c_session->sock.lfunc[COAP_LAYER_TLS].write(c_session, in, inl);
   /* Translate layer what returns into what GnuTLS expects */
   if (ret < 0) {
     if ((c_session->state == COAP_SESSION_STATE_CSM ||
@@ -2742,7 +2743,7 @@ coap_tls_new_client_session(coap_session_t *c_session, int *connected) {
   if (ret == 1) {
     *connected = 1;
     coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
-    coap_session_establish(c_session);
+    c_session->sock.lfunc[COAP_LAYER_TLS].establish(c_session);
   }
   return g_env;
 
@@ -2854,7 +2855,7 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
     if (ret == 1) {
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
                         c_session);
-      coap_session_establish(c_session);
+      c_session->sock.lfunc[COAP_LAYER_TLS].establish(c_session);
     } else {
       ret = -1;
     }
@@ -2899,7 +2900,7 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
     if (ret == 1) {
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
                         c_session);
-      coap_session_establish(c_session);
+      c_session->sock.lfunc[COAP_LAYER_TLS].establish(c_session);
     }
   }
   if (c_session->state != COAP_SESSION_STATE_NONE && g_env->established) {

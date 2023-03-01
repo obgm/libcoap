@@ -1341,7 +1341,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
              "coap_add_token: Token size too large. PDU ignored\n");
     return 0;
   }
-  if (proto == COAP_PROTO_UDP || proto == COAP_PROTO_DTLS) {
+  if (COAP_PROTO_NOT_RELIABLE(proto)) {
     assert(pdu->max_hdr_size >= 4);
     if (pdu->max_hdr_size < 4) {
       coap_log_warn(
@@ -1355,7 +1355,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
     pdu->token[-2] = (uint8_t)(pdu->mid >> 8);
     pdu->token[-1] = (uint8_t)(pdu->mid);
     pdu->hdr_size = 4;
-  } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
+  } else if (COAP_PROTO_RELIABLE(proto)) {
     size_t len;
     assert(pdu->used_size >= pdu->e_token_length);
     if (pdu->used_size < pdu->e_token_length) {
