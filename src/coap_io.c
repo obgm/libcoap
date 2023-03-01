@@ -179,11 +179,11 @@ error:
 #if COAP_CLIENT_SUPPORT
 int
 coap_socket_connect_udp(coap_socket_t *sock,
-  const coap_address_t *local_if,
-  const coap_address_t *server,
-  int default_port,
-  coap_address_t *local_addr,
-  coap_address_t *remote_addr) {
+                        const coap_address_t *local_if,
+                        const coap_address_t *server,
+                        int default_port,
+                        coap_address_t *local_addr,
+                        coap_address_t *remote_addr) {
 #ifndef RIOT_VERSION
   int on = 1;
   int off = 0;

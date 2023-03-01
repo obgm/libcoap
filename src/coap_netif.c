@@ -26,6 +26,86 @@ coap_netif_available(coap_session_t *session) {
   return session->sock.flags != COAP_SOCKET_EMPTY;
 }
 
+#if COAP_SERVER_SUPPORT
+int
+coap_netif_dgrm_listen(coap_endpoint_t *endpoint,
+                       const coap_address_t *listen_addr) {
+  if (!coap_socket_bind_udp(&endpoint->sock, listen_addr,
+                            &endpoint->bind_addr)) {
+    return 0;
+  }
+  endpoint->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_BOUND | COAP_SOCKET_WANT_READ;
+  return 1;
+}
+#endif /* COAP_SERVER_SUPPORT */
+
+#if COAP_CLIENT_SUPPORT
+int
+coap_netif_dgrm_connect(coap_session_t *session, const coap_address_t *local_if,
+                        const coap_address_t *server, int default_port) {
+  if (!coap_socket_connect_udp(&session->sock, local_if, server,
+                               default_port,
+                               &session->addr_info.local,
+                               &session->addr_info.remote)) {
+    return 0;
+  }
+  return 1;
+}
+#endif /* COAP_CLIENT_SUPPORT */
+
+/*
+ * dgram
+ * return +ve Number of bytes written.
+ *         -1 Error error in errno).
+ *         -2 ICMP error response
+ */
+ssize_t
+coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet) {
+  ssize_t bytes_read;
+  int keep_errno;
+
+  bytes_read = coap_socket_recv(&session->sock, packet);
+  keep_errno = errno;
+  if (bytes_read == -1) {
+    coap_log_debug( "*  %s: failed to read %zd bytes (%s) state %d\n",
+                   coap_session_str(session), packet->length,
+                   coap_socket_strerror(), session->state);
+    errno = keep_errno;
+  } else if (bytes_read > 0) {
+    coap_ticks(&session->last_rx_tx);
+    coap_log_debug("*  %s: read %zd bytes\n",
+             coap_session_str(session), bytes_read);
+  }
+  return bytes_read;
+}
+
+#if COAP_SERVER_SUPPORT
+/*
+ * dgram
+ * return +ve Number of bytes written.
+ *         -1 Error error in errno).
+ *         -2 ICMP error response
+ */
+ssize_t
+coap_netif_dgrm_read_ep(coap_endpoint_t *endpoint, coap_packet_t *packet) {
+  ssize_t bytes_read;
+  int keep_errno;
+
+  bytes_read = coap_socket_recv(&endpoint->sock, packet);
+  keep_errno = errno;
+  if (bytes_read == -1) {
+    coap_log_debug( "*  %s: failed to read %zd bytes (%s)\n",
+                   coap_endpoint_str(endpoint), packet->length,
+                   coap_socket_strerror());
+    errno = keep_errno;
+  } else if (bytes_read > 0) {
+    coap_log_debug("*  %s: read %zd bytes\n",
+             coap_endpoint_str(endpoint), bytes_read);
+  }
+  return bytes_read;
+}
+#endif /* COAP_SERVER_SUPPORT */
+
 /*
  * dgram
  * return +ve Number of bytes written.
@@ -62,59 +142,6 @@ coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
              coap_session_str(session), bytes_written, datalen);
   }
   return bytes_written;
-}
-
-#if COAP_SERVER_SUPPORT
-/*
- * dgram
- * return +ve Number of bytes written.
- *         -1 Error error in errno).
- *         -2 ICMP error response
- */
-ssize_t
-coap_netif_dgrm_read_ep(coap_endpoint_t *endpoint, coap_packet_t *packet) {
-  ssize_t bytes_read;
-  int keep_errno;
-
-  bytes_read = coap_socket_recv(&endpoint->sock, packet);
-  keep_errno = errno;
-  if (bytes_read == -1) {
-    coap_log_debug( "*  %s: failed to read %zd bytes (%s)\n",
-                   coap_endpoint_str(endpoint), packet->length,
-                   coap_socket_strerror());
-    errno = keep_errno;
-  } else if (bytes_read > 0) {
-    coap_log_debug("*  %s: read %zd bytes\n",
-             coap_endpoint_str(endpoint), bytes_read);
-  }
-  return bytes_read;
-}
-#endif /* COAP_SERVER_SUPPORT */
-
-/*
- * dgram
- * return +ve Number of bytes written.
- *         -1 Error error in errno).
- *         -2 ICMP error response
- */
-ssize_t
-coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet) {
-  ssize_t bytes_read;
-  int keep_errno;
-
-  bytes_read = coap_socket_recv(&session->sock, packet);
-  keep_errno = errno;
-  if (bytes_read == -1) {
-    coap_log_debug( "*  %s: failed to read %zd bytes (%s) state %d\n",
-                   coap_session_str(session), packet->length,
-                   coap_socket_strerror(), session->state);
-    errno = keep_errno;
-  } else if (bytes_read > 0) {
-    coap_ticks(&session->last_rx_tx);
-    coap_log_debug("*  %s: read %zd bytes\n",
-             coap_session_str(session), bytes_read);
-  }
-  return bytes_read;
 }
 
 #if !COAP_DISABLE_TCP

@@ -22,7 +22,8 @@
 /**
  * @ingroup internal_api
  * @defgroup netif_internal Netif Support
- * Internal API for Netif Support
+ * Internal API for Netif Support.
+ * This provides a layer that sits between CoAP/DTLS and Sockets.
  * @{
  */
 
@@ -34,6 +35,44 @@
  * @return 1                If netif is available, else 0.
  */
 int coap_netif_available(coap_session_t *session);
+
+/**
+ * Layer function interface for Netif datagram listem (udp).
+ *
+ * @param endpoint  Endpoint to do the listen on.
+ * @param listen_addr The local address to bind.
+ *
+ * @return                 @c 1 OK, 0 on failure.
+ */
+int coap_netif_dgrm_listen(coap_endpoint_t *endpoint,
+                             const coap_address_t *listen_addr);
+
+/**
+ * Layer function interface for Netif datagram connect (udp).
+ *
+ * @param session  Session to do the connect on.
+ * @param local_if The local interface to bind to or NULL.
+ * @param server   The server to connect to.
+ * @param default_port The Port to connect to if not defined.
+ *
+ * @return                 @c 1 OK, 0 on failure.
+ */
+int coap_netif_dgrm_connect(coap_session_t *session,
+                            const coap_address_t *local_if,
+                            const coap_address_t *server, int default_port);
+
+/**
+ * Function interface for layer data datagram receiving for sessions. This
+ * function returns the number of bytes that have been read, or -1 on error.
+ *
+ * @param session  Session to receive data on.
+ * @param packet   Where to put the received information
+ *
+ * @return                 >=0 Number of bytes read.
+ *                          -1 Error of some sort (see errno).
+ *                          -2 ICMP error response
+ */
+ssize_t coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet);
 
 /**
  * Function interface for layer data datagram receiving for endpoints. This
@@ -48,19 +87,6 @@ int coap_netif_available(coap_session_t *session);
  */
 ssize_t coap_netif_dgrm_read_ep(coap_endpoint_t *endpoint,
                                 coap_packet_t *packet);
-
-/**
- * Function interface for layer data datagram receiving for sessions. This
- * function returns the number of bytes that have been read, or -1 on error.
- *
- * @param session  Session to receive data on.
- * @param packet   Where to put the received information
- *
- * @return                 >=0 Number of bytes read.
- *                          -1 Error of some sort (see errno).
- *                          -2 ICMP error response
- */
-ssize_t coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet);
 
 /**
  * Function interface for netif datagram data transmission. This function
