@@ -232,17 +232,27 @@ void *coap_tls_new_server_session(coap_session_t *session COAP_UNUSED, int *conn
 void coap_tls_free_session(coap_session_t *coap_session COAP_UNUSED) {
 }
 
-ssize_t coap_tls_write(coap_session_t *session COAP_UNUSED,
+/*
+ * strm
+ * return +ve Number of bytes written.
+ *         -1 Error (error in errno).
+ */
+ssize_t
+coap_tls_write(coap_session_t *session COAP_UNUSED,
                        const uint8_t *data COAP_UNUSED,
-                       size_t data_len COAP_UNUSED
-) {
+                       size_t data_len COAP_UNUSED) {
   return -1;
 }
 
-ssize_t coap_tls_read(coap_session_t *session COAP_UNUSED,
-                      uint8_t *data COAP_UNUSED,
-                      size_t data_len COAP_UNUSED
-) {
+/*
+ * strm
+ * return >=0 Number of bytes read.
+ *         -1 Error (error in errno).
+ */
+ssize_t
+coap_tls_read(coap_session_t *session COAP_UNUSED,
+              uint8_t *data COAP_UNUSED,
+              size_t data_len COAP_UNUSED) {
   return -1;
 }
 

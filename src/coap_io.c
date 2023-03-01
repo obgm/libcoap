@@ -491,6 +491,12 @@ coap_win_error_to_errno(void) {
 }
 #endif /* _WIN32 */
 
+/*
+ * strm
+ * return +ve Number of bytes written.
+ *          0 No data written.
+ *         -1 Error (error in errno).
+ */
 ssize_t
 coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
   ssize_t r;
@@ -547,6 +553,11 @@ coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
   return r;
 }
 
+/*
+ * strm
+ * return >=0 Number of bytes read.
+ *         -1 Error (error in errno).
+ */
 ssize_t
 coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
   ssize_t r;

@@ -772,8 +772,8 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
       break;
     case COAP_PROTO_TCP:
 #if !COAP_DISABLE_TCP
-      bytes_written = coap_session_write(session, pdu->token - pdu->hdr_size,
-                                         pdu->used_size + pdu->hdr_size);
+      bytes_written = coap_netif_strm_write(session, pdu->token - pdu->hdr_size,
+                                            pdu->used_size + pdu->hdr_size);
 #endif /* !COAP_DISABLE_TCP */
       break;
     case COAP_PROTO_TLS:
@@ -1676,7 +1676,7 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
     switch (session->proto) {
       case COAP_PROTO_TCP:
 #if !COAP_DISABLE_TCP
-        bytes_written = coap_session_write(
+        bytes_written = coap_netif_strm_write(
           session,
           q->pdu->token - q->pdu->hdr_size + session->partial_write,
           q->pdu->used_size + q->pdu->hdr_size - session->partial_write
@@ -1742,15 +1742,10 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       if (bytes_read == -2)
         /* Reset the session back to startup defaults */
         coap_session_disconnected(session, COAP_NACK_ICMP_ISSUE);
-      else
-        coap_log_warn("*  %s: read error\n",
-                 coap_session_str(session));
     } else if (bytes_read > 0) {
       session->last_rx_tx = now;
       memcpy(&session->addr_info, &packet->addr_info,
              sizeof(session->addr_info));
-      coap_log_debug("*  %s: received %zd bytes\n",
-               coap_session_str(session), bytes_read);
       coap_handle_dgram_for_proto(ctx, session, packet);
     }
 #if !COAP_DISABLE_TCP
@@ -1761,8 +1756,8 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 
     do {
       if (session->proto == COAP_PROTO_TCP)
-        bytes_read = coap_socket_read(&session->sock, packet->payload,
-                                      packet->length);
+        bytes_read = coap_netif_strm_read(session, packet->payload,
+                                          packet->length);
       else if (session->proto == COAP_PROTO_TLS)
         bytes_read = coap_tls_read(session, packet->payload, packet->length);
       if (bytes_read > 0) {

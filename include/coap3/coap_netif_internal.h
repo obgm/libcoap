@@ -77,6 +77,36 @@ ssize_t coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet);
 ssize_t coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
                               size_t datalen);
 
+/**
+ * Function interface for layer data stream receiving. This function returns
+ * the number of bytes that have been read, or -1 on error.
+ *
+ * @param session          Session to receive data on.
+ * @param data             The data to receive.
+ * @param datalen          The maximum length of @p data.
+ *
+ * @return                 >=0 Number of bytes read.
+ *                         -1  Error of some sort (see errno).
+ */
+ssize_t coap_netif_strm_read(coap_session_t *session, uint8_t *data,
+                             size_t datalen);
+
+/**
+ * Function interface for netif stream data transmission. This function returns
+ * the number of bytes that have been transmitted, or a value less than zero
+ * on error. The number of bytes written may be less than datalen because of
+ * congestion control.
+ *
+ * @param session          Session to send data on.
+ * @param data             The data to send.
+ * @param datalen          The actual length of @p data.
+ *
+ * @return                 The number of bytes written on success, or a value
+ *                         less than zero on error.
+ */
+ssize_t coap_netif_strm_write(coap_session_t *session,
+                              const uint8_t *data, size_t datalen);
+
 /** @} */
 
 #endif /* COAP_NETIF_INTERNAL_H */
