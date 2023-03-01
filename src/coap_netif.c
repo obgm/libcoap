@@ -27,6 +27,15 @@ coap_netif_available(coap_session_t *session) {
 }
 
 #if COAP_SERVER_SUPPORT
+/*
+ * return 1 netif still in use.
+ *        0 netif no longer available.
+ */
+int
+coap_netif_available_ep(coap_endpoint_t *endpoint) {
+  return endpoint->sock.flags != COAP_SOCKET_EMPTY;
+}
+
 int
 coap_netif_dgrm_listen(coap_endpoint_t *endpoint,
                        const coap_address_t *listen_addr) {
@@ -194,3 +203,16 @@ coap_netif_strm_write(coap_session_t *session, const uint8_t *data,
   return bytes_written;
 }
 #endif /* COAP_DISABLE_TCP */
+
+void
+coap_netif_close(coap_session_t *session) {
+  coap_socket_close(&session->sock);
+}
+
+#if COAP_SERVER_SUPPORT
+void
+coap_netif_close_ep(coap_endpoint_t *endpoint) {
+  coap_socket_close(&endpoint->sock);
+}
+
+#endif /* COAP_SERVER_SUPPORT */

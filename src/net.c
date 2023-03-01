@@ -1089,7 +1089,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
 
 #if COAP_CLIENT_SUPPORT
   if (session->type == COAP_SESSION_TYPE_CLIENT &&
-      session->sock.flags == COAP_SOCKET_EMPTY) {
+      !coap_netif_available(session)) {
     coap_log_debug("coap_send: Socket closed\n");
     coap_delete_pdu(pdu);
     return COAP_INVALID_MID;
@@ -2049,7 +2049,7 @@ coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events, size_t nevents
             (events[j].events & (EPOLLOUT|EPOLLERR|EPOLLHUP|EPOLLRDHUP))) {
           sock->flags |= COAP_SOCKET_CAN_CONNECT;
           coap_connect_session(session->context, session, now);
-          if (sock->flags != COAP_SOCKET_EMPTY &&
+          if (coap_netif_available(session) &&
               !(sock->flags & COAP_SOCKET_WANT_WRITE)) {
             coap_epoll_ctl_mod(sock, EPOLLIN, __func__);
           }

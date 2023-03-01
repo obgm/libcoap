@@ -37,6 +37,15 @@
 int coap_netif_available(coap_session_t *session);
 
 /**
+ * Function interface to check whether netif for endpoint is still available.
+ *
+ *  @param endpoint         Endpoint to check against.
+ *
+ * @return 1                If netif is available, else 0.
+ */
+int coap_netif_available_ep(coap_endpoint_t *endpoint);
+
+/**
  * Layer function interface for Netif datagram listem (udp).
  *
  * @param endpoint  Endpoint to do the listen on.
@@ -132,6 +141,20 @@ ssize_t coap_netif_strm_read(coap_session_t *session, uint8_t *data,
  */
 ssize_t coap_netif_strm_write(coap_session_t *session,
                               const uint8_t *data, size_t datalen);
+
+/**
+ * Layer function interface for Netif close for a session.
+ *
+ * @param session  Session to do the netif close on.
+ */
+void coap_netif_close(coap_session_t *session);
+
+/**
+ * Layer function interface for Netif close for a endpoint.
+ *
+ * @param endpoint  Endpoint to do the netif close on.
+ */
+void coap_netif_close_ep(coap_endpoint_t *endpoint);
 
 /** @} */
 
