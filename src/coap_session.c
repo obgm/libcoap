@@ -861,36 +861,39 @@ coap_session_new_dtls_session(coap_session_t *session,
 
 #if COAP_CLIENT_SUPPORT
 static coap_session_t *
-coap_session_create_client(
-  coap_context_t *ctx,
-  const coap_address_t *local_if,
-  const coap_address_t *server,
-  coap_proto_t proto
-) {
+coap_session_create_client(coap_context_t *ctx,
+                           const coap_address_t *local_if,
+                           const coap_address_t *server,
+                           coap_proto_t proto) {
   coap_session_t *session = NULL;
+  int default_port = COAP_DEFAULT_PORT;
 
   assert(server);
 
   switch(proto) {
   case COAP_PROTO_UDP:
+    default_port = COAP_DEFAULT_PORT;
     break;
   case COAP_PROTO_DTLS:
     if (!coap_dtls_is_supported()) {
       coap_log_crit("coap_new_client_session*: DTLS not supported\n");
       return NULL;
     }
+    default_port = COAPS_DEFAULT_PORT;
     break;
   case COAP_PROTO_TCP:
     if (!coap_tcp_is_supported()) {
       coap_log_crit("coap_new_client_session*: TCP not supported\n");
       return NULL;
     }
+    default_port = COAP_DEFAULT_PORT;
     break;
   case COAP_PROTO_TLS:
     if (!coap_tls_is_supported()) {
       coap_log_crit("coap_new_client_session*: TLS not supported\n");
       return NULL;
     }
+    default_port = COAPS_DEFAULT_PORT;
     break;
   case COAP_PROTO_NONE:
   default:
@@ -905,16 +908,14 @@ coap_session_create_client(
   coap_session_reference(session);
   session->sock.session = session;
 
-  if (proto == COAP_PROTO_UDP || proto == COAP_PROTO_DTLS) {
+  if (COAP_PROTO_NOT_RELIABLE(proto)) {
     coap_session_t *s, *rtmp;
-    if (!coap_socket_connect_udp(&session->sock, local_if, server,
-      proto == COAP_PROTO_DTLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
-      &session->addr_info.local, &session->addr_info.remote)) {
+    if (!coap_netif_dgrm_connect(session, local_if, server, default_port)) {
       goto error;
     }
     /* Check that this is not a duplicate 4-tuple */
     SESSIONS_ITER_SAFE(ctx->sessions, s, rtmp) {
-      if ((s->proto == COAP_PROTO_UDP || s->proto == COAP_PROTO_DTLS) &&
+      if (COAP_PROTO_NOT_RELIABLE(s->proto) &&
           coap_address_equals(&session->addr_info.local,
                               &s->addr_info.local) &&
           coap_address_equals(&session->addr_info.remote,
@@ -1458,6 +1459,19 @@ void *coap_session_get_tls(const coap_session_t *session,
   return NULL;
 }
 
+static const char *
+coap_proto_name(coap_proto_t proto) {
+  switch (proto) {
+  case COAP_PROTO_UDP:  return "UDP ";
+  case COAP_PROTO_DTLS: return "DTLS";
+  case COAP_PROTO_TCP:  return "TCP ";
+  case COAP_PROTO_TLS:  return "TLS ";
+  case COAP_PROTO_NONE:
+  default: return "????" ; break;
+  }
+  return NULL;
+}
+
 #if COAP_SERVER_SUPPORT
 coap_endpoint_t *
 coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto) {
@@ -1502,13 +1516,12 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
   ep->proto = proto;
   ep->sock.endpoint = ep;
 
-  if (proto==COAP_PROTO_UDP || proto==COAP_PROTO_DTLS) {
-    if (!coap_socket_bind_udp(&ep->sock, listen_addr, &ep->bind_addr))
+  if (COAP_PROTO_NOT_RELIABLE(proto)) {
+    if (!coap_netif_dgrm_listen(ep, listen_addr))
       goto error;
 #ifdef WITH_CONTIKI
     ep->sock.context = context;
 #endif /* WITH_CONTIKI */
-    ep->sock.flags |= COAP_SOCKET_WANT_READ;
 #if !COAP_DISABLE_TCP
   } else if (proto==COAP_PROTO_TCP || proto==COAP_PROTO_TLS) {
     if (!coap_socket_bind_tcp(&ep->sock, listen_addr, &ep->bind_addr))
@@ -1527,10 +1540,7 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     unsigned char addr_str[INET6_ADDRSTRLEN + 8];
 
     if (coap_print_addr(&ep->bind_addr, addr_str, INET6_ADDRSTRLEN + 8)) {
-      coap_log_debug("created %s endpoint %s\n",
-          ep->proto == COAP_PROTO_TLS ? "TLS "
-        : ep->proto == COAP_PROTO_TCP ? "TCP "
-        : ep->proto == COAP_PROTO_DTLS ? "DTLS" : "UDP ",
+      coap_log_debug("created %s endpoint %s\n", coap_proto_name(ep->proto),
         addr_str);
     }
   }
@@ -1641,22 +1651,9 @@ const char *coap_session_str(const coap_session_t *session) {
   if (session->ifindex > 0 && p + 1 < end)
     p += snprintf(p, end - p, " (if%d)", session->ifindex);
   if (p + 6 < end) {
-    if (session->proto == COAP_PROTO_UDP) {
-      strcpy(p, " UDP ");
-      p += 4;
-    } else if (session->proto == COAP_PROTO_DTLS) {
-      strcpy(p, " DTLS");
-      p += 5;
-    } else if (session->proto == COAP_PROTO_TCP) {
-      strcpy(p, " TCP ");
-      p += 4;
-    } else if (session->proto == COAP_PROTO_TLS) {
-      strcpy(p, " TLS ");
-      p += 4;
-    } else {
-      strcpy(p, " NONE");
-      p += 5;
-    }
+    strcpy(p, " ");
+    p++;
+    strcpy(p, coap_proto_name(session->proto));
   }
 
   return szSession;
