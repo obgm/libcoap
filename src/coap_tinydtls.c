@@ -260,7 +260,8 @@ dtls_send_to_peer(struct dtls_context_t *dtls_context,
     coap_log_warn("dtls_send_to_peer: cannot find local interface\n");
     return -3;
   }
-  return (int)coap_netif_dgrm_write(coap_session, data, len);
+  return (int)coap_session->sock.lfunc[COAP_LAYER_TLS].write(coap_session,
+                                                             data, len);
 }
 
 static int

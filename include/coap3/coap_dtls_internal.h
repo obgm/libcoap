@@ -271,7 +271,7 @@ int coap_dtls_hello(coap_session_t *coap_session,
  *
  * If this layer is properly established on invocation, then the next layer
  * must get called by calling
- *   coap_session_establish(session)
+ *   session->lfunc[COAP_LAYER_TLS].establish(session)
  * (or done at any point when DTLS is established).
  *
  * @param session Session that the lower layer connect was done on.
@@ -367,7 +367,7 @@ ssize_t coap_tls_read(coap_session_t *coap_session,
  *
  * If this layer is properly established on invocation, then the next layer
  * must get called by calling
- *   coap_session_establish(session)
+ *   session->lfunc[COAP_LAYER_TLS].establish(session)
  * (or done at any point when TLS is established).
  *
  * @param session Session that the lower layer accept/connect was done on.

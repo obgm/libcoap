@@ -305,6 +305,7 @@ typedef enum coap_proto_t {
   COAP_PROTO_DTLS,
   COAP_PROTO_TCP,
   COAP_PROTO_TLS,
+  COAP_PROTO_LAST
 } coap_proto_t;
 
 /**

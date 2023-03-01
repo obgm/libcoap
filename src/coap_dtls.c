@@ -19,7 +19,6 @@
 
 void
 coap_dtls_establish(coap_session_t *session) {
-  assert(session->proto == COAP_PROTO_DTLS);
 #if COAP_CLIENT_SUPPORT
   if (session->type == COAP_SESSION_TYPE_CLIENT)
     session->tls = coap_dtls_new_client_session(session);
@@ -36,15 +35,15 @@ coap_dtls_establish(coap_session_t *session) {
     return;
   }
   coap_ticks(&session->last_rx_tx);
-  return;
 }
 
 void
 coap_dtls_close(coap_session_t *session) {
-  if (session->tls)
+  if (session->tls) {
     coap_dtls_free_session(session);
-  if (coap_netif_available(session))
-    coap_netif_close(session);
+    session->tls = NULL;
+  }
+  session->sock.lfunc[COAP_LAYER_TLS].close(session);
 }
 
 #if !COAP_DISABLE_TCP
@@ -52,7 +51,6 @@ void
 coap_tls_establish(coap_session_t *session) {
   int connected = 0;
 
-  assert(session->proto == COAP_PROTO_TLS);
 #if COAP_CLIENT_SUPPORT
   if (session->type == COAP_SESSION_TYPE_CLIENT)
     session->tls = coap_tls_new_client_session(session, &connected);
@@ -66,21 +64,21 @@ coap_tls_establish(coap_session_t *session) {
     session->state = COAP_SESSION_STATE_HANDSHAKE;
     if (connected) {
       coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-      coap_session_establish(session);
+      session->sock.lfunc[COAP_LAYER_TLS].establish(session);
     }
   } else {
     coap_session_disconnected(session, COAP_NACK_TLS_LAYER_FAILED);
     return;
   }
   coap_ticks(&session->last_rx_tx);
-  return;
 }
 
 void
 coap_tls_close(coap_session_t *session) {
-  if (session->tls)
+  if (session->tls) {
     coap_tls_free_session(session);
-  if (coap_netif_available(session))
-    coap_netif_close(session);
+    session->tls = NULL;
+  }
+  session->sock.lfunc[COAP_LAYER_TLS].close(session);
 }
-#endif /* COAP_DISABLE_TCP */
+#endif /* !COAP_DISABLE_TCP */
