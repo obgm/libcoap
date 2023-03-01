@@ -114,7 +114,7 @@ coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
  * Not used for LwIP (done with coap_recvc()), but need dummy function.
  */
 ssize_t
-coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
+coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
   (void)sock;
   (void)packet;
   assert(0);
@@ -306,7 +306,7 @@ coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
  *         -1 Error error in errno).
  */
 ssize_t
-coap_socket_send(coap_socket_t *sock, coap_session_t *session,
+coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
                  const uint8_t *data, size_t data_len ) {
   struct pbuf *pbuf;
   int err;

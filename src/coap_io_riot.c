@@ -50,7 +50,7 @@
  *         -1 Error error in errno).
  */
 ssize_t
-coap_network_send(coap_socket_t *sock,
+coap_socket_send(coap_socket_t *sock,
                   const coap_session_t *session,
                   const uint8_t *data,
                   size_t datalen) {
@@ -67,7 +67,7 @@ coap_network_send(coap_socket_t *sock,
   }
 
   if (bytes_written < 0)
-    coap_log_crit("coap_network_send: %s\n", coap_socket_strerror());
+    coap_log_crit("coap_socket_send: %s\n", coap_socket_strerror());
 
   return bytes_written;
 }
@@ -85,7 +85,7 @@ get_udp_header(gnrc_pktsnip_t *pkt) {
  *         -2 ICMP error response
  */
 ssize_t
-coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
+coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
   size_t len;
   ipv6_hdr_t *ipv6_hdr;
   /* The GNRC API currently only supports UDP. */
@@ -97,7 +97,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   assert(packet);
 
   if ((sock->flags & COAP_SOCKET_CAN_READ) == 0) {
-    coap_log_debug("coap_network_read: COAP_SOCKET_CAN_READ not set\n");
+    coap_log_debug("coap_socket_recv: COAP_SOCKET_CAN_READ not set\n");
     return -1;
   } else {
     /* clear has-data flag */
@@ -116,7 +116,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
   udp_hdr_print(udp_hdr);
 
   len = (size_t)gnrc_pkt_len_upto(sock->pkt, type) - sizeof(udp_hdr_t);
-  coap_log_debug("coap_network_read: recvfrom got %zd bytes\n", len);
+  coap_log_debug("coap_socket_recv: recvfrom got %zd bytes\n", len);
   if (len > COAP_RXBUFFER_SIZE) {
     coap_log_warn("packet exceeds buffer size, truncated\n");
     len = COAP_RXBUFFER_SIZE;

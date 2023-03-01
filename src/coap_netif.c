@@ -76,7 +76,7 @@ coap_netif_dgrm_read_ep(coap_endpoint_t *endpoint, coap_packet_t *packet) {
   ssize_t bytes_read;
   int keep_errno;
 
-  bytes_read = coap_network_read(&endpoint->sock, packet);
+  bytes_read = coap_socket_recv(&endpoint->sock, packet);
   keep_errno = errno;
   if (bytes_read == -1) {
     coap_log_debug( "*  %s: failed to read %zd bytes (%s)\n",
@@ -103,7 +103,7 @@ coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet) {
   ssize_t bytes_read;
   int keep_errno;
 
-  bytes_read = coap_network_read(&session->sock, packet);
+  bytes_read = coap_socket_recv(&session->sock, packet);
   keep_errno = errno;
   if (bytes_read == -1) {
     coap_log_debug( "*  %s: failed to read %zd bytes (%s) state %d\n",

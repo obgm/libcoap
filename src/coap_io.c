@@ -370,10 +370,43 @@ coap_socket_close(coap_socket_t *sock) {
 
 #ifdef COAP_EPOLL_SUPPORT
 void
+coap_epoll_ctl_add(coap_socket_t *sock,
+                   uint32_t events,
+                   const char *func) {
+  int ret;
+  struct epoll_event event;
+  coap_context_t *context;
+
+  if (sock == NULL)
+    return;
+
+#if COAP_SERVER_SUPPORT
+  context = sock->session ? sock->session->context :
+                            sock->endpoint ? sock->endpoint->context : NULL;
+#else /* ! COAP_SERVER_SUPPORT */
+  context = sock->session ? sock->session->context : NULL;
+#endif /* ! COAP_SERVER_SUPPORT */
+  if (context == NULL)
+    return;
+
+  /* Needed if running 32bit as ptr is only 32bit */
+  memset(&event, 0, sizeof(event));
+  event.events = events;
+  event.data.ptr = sock;
+
+  ret = epoll_ctl(context->epfd, EPOLL_CTL_ADD, sock->fd, &event);
+  if (ret == -1) {
+     coap_log_err(
+              "%s: epoll_ctl ADD failed: %s (%d)\n",
+              func,
+              coap_socket_strerror(), errno);
+  }
+}
+
+void
 coap_epoll_ctl_mod(coap_socket_t *sock,
                    uint32_t events,
-                   const char *func
-) {
+                   const char *func) {
   int ret;
   struct epoll_event event;
   coap_context_t *context;
@@ -597,7 +630,7 @@ static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
  *         -1 Error error in errno).
  */
 ssize_t
-coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen) {
+coap_socket_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen) {
   ssize_t bytes_written = 0;
 
   if (!coap_debug_send_packet()) {
@@ -753,7 +786,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
   }
 
   if (bytes_written < 0)
-    coap_log_crit("coap_network_send: %s\n", coap_socket_strerror());
+    coap_log_crit("coap_socket_send: %s\n", coap_socket_strerror());
 
   return bytes_written;
 }
@@ -775,7 +808,7 @@ coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t
  *         -2 ICMP error response
  */
 ssize_t
-coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
+coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
   ssize_t len = -1;
 
   assert(sock);
@@ -802,13 +835,13 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       if (errno == ECONNREFUSED || errno == EHOSTUNREACH) {
 #endif
         /* client-side ICMP destination unreachable, ignore it */
-        coap_log_warn("** %s: coap_network_read: ICMP: %s\n",
+        coap_log_warn("** %s: coap_socket_recv: ICMP: %s\n",
                  sock->session ?
                    coap_session_str(sock->session) : "",
                  coap_socket_strerror());
         return -2;
       }
-      coap_log_warn("** %s: coap_network_read: %s\n",
+      coap_log_warn("** %s: coap_socket_recv: %s\n",
                              sock->session ?
                                 coap_session_str(sock->session) : "",
                              coap_socket_strerror());
@@ -853,7 +886,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
       GUID wsaid = WSAID_WSARECVMSG;
       DWORD cbBytesReturned = 0;
       if (WSAIoctl(sock->fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &wsaid, sizeof(wsaid), &lpWSARecvMsg, sizeof(lpWSARecvMsg), &cbBytesReturned, NULL, NULL) != 0) {
-        coap_log_warn("coap_network_read: no WSARecvMsg\n");
+        coap_log_warn("coap_socket_recv: no WSARecvMsg\n");
         return -1;
       }
     }
@@ -879,7 +912,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
         /* server-side ICMP destination unreachable, ignore it. The destination address is in msg_name. */
         return 0;
       }
-      coap_log_warn("coap_network_read: %s\n", coap_socket_strerror());
+      coap_log_warn("coap_socket_recv: %s\n", coap_socket_strerror());
       goto error;
     } else {
 #ifdef HAVE_STRUCT_CMSGHDR
@@ -1511,18 +1544,5 @@ const char *coap_socket_strerror(void) {
   return coap_socket_format_errno(errno);
 }
 #endif /* _WIN32 */
-
-#if !defined(WITH_LWIP)
-/*
- * dgram
- * return +ve Number of bytes written.
- *         -1 Error error in errno).
- */
-ssize_t
-coap_socket_send(coap_socket_t *sock, coap_session_t *session,
-  const uint8_t *data, size_t data_len) {
-  return coap_network_send(sock, session, data, data_len);
-}
-#endif /* ! WITH_LWIP */
 
 #undef SIN6

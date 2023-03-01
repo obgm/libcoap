@@ -91,30 +91,33 @@ coap_socket_bind_udp(coap_socket_t *sock,
 
 void coap_socket_close(coap_socket_t *sock);
 
-/**
- * Function interface for data transmission. This function returns the number of
- * bytes that have been transmitted, or a value less than zero on error.
- *
- * @param sock             Socket to send data with
- * @param session          Addressing information for unconnected sockets, or NULL
- * @param data             The data to send.
- * @param datalen          The actual length of @p data.
- *
- * @return                 The number of bytes written on success, or a value
- *                         less than zero on error.
- */
-ssize_t
-coap_socket_send(coap_socket_t *sock, coap_session_t *session,
-                 const uint8_t *data, size_t datalen);
-
 ssize_t
 coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len);
 
 ssize_t
 coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len);
 
-void
-coap_epoll_ctl_mod(coap_socket_t *sock, uint32_t events, const char *func);
+/**
+ * Epoll specific function to add the state of events that epoll is to track
+ * for the appropriate file descriptor.
+ *
+ * @param sock    Socket information.
+ * @param events  The Epoll events to update
+ * @param func    Function that this function was called from.
+ *
+ */
+void coap_epoll_ctl_add(coap_socket_t *sock, uint32_t events, const char *func);
+
+/**
+ * Epoll specific function to modify the state of events that epoll is tracking
+ * on the appropriate file descriptor.
+ *
+ * @param sock    Socket information.
+ * @param events  The Epoll events to update
+ * @param func    Function that this function was called from.
+ *
+ */
+void coap_epoll_ctl_mod(coap_socket_t *sock, uint32_t events, const char *func);
 
 /**
  * Update the epoll timer fd as to when it is to trigger.
@@ -134,29 +137,30 @@ coap_socket_send_pdu( coap_socket_t *sock, coap_session_t *session,
  * Function interface for data transmission. This function returns the number of
  * bytes that have been transmitted, or a value less than zero on error.
  *
- * @param sock             Socket to send data with
- * @param session          Addressing information for unconnected sockets, or NULL
- * @param data             The data to send.
- * @param datalen          The actual length of @p data.
+ * @param sock          Socket to send data over.
+ * @param session       Addressing information for unconnected sockets, or NULL
+ * @param data          The data to send.
+ * @param datalen       The actual length of @p data.
  *
- * @return                 The number of bytes written on success, or a value
- *                         less than zero on error.
+ * @return              The number of bytes written on success, or a value
+ *                      less than zero on error.
  */
-ssize_t coap_network_send(coap_socket_t *sock, const coap_session_t *session,
-                          const uint8_t *data, size_t datalen);
+ssize_t coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
+                         const uint8_t *data, size_t datalen);
 
 /**
  * Function interface for reading data. This function returns the number of
  * bytes that have been read, or a value less than zero on error. In case of an
  * error, @p *packet is set to NULL.
  *
- * @param sock   Socket to read data from
- * @param packet Received packet metadata and payload. src and dst should be preset.
+ * @param sock   Socket to read data from.
+ * @param packet Received packet metadata and payload. src and dst
+ *               should be preset.
  *
  * @return       The number of bytes received on success, or a value less than
  *               zero on error.
  */
-ssize_t coap_network_read( coap_socket_t *sock, coap_packet_t *packet );
+ssize_t coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet);
 
 #ifndef coap_mcast_interface
 # define coap_mcast_interface(Local) 0
