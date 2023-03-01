@@ -157,7 +157,7 @@ void coap_socket_close(coap_socket_t *sock) {
  *         -1 Error error in errno).
  */
 ssize_t
-coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen) {
+coap_socket_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen) {
   ssize_t bytes_written = 0;
 
   if (!coap_debug_send_packet()) {
@@ -169,7 +169,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
   }
 
   if (bytes_written < 0) {
-    coap_log(LOG_CRIT, "coap_network_send: %s\n", coap_socket_strerror());
+    coap_log(LOG_CRIT, "coap_socket_send: %s\n", coap_socket_strerror());
   }
 
   return bytes_written;
@@ -182,7 +182,7 @@ coap_network_send(coap_socket_t *sock, const coap_session_t *session, const uint
  *         -2 ICMP error response
  */
 ssize_t
-coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
+coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
   ssize_t len;
 
   assert(sock);

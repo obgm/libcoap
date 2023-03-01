@@ -872,43 +872,6 @@ coap_session_new_dtls_session(coap_session_t *session,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-#ifdef COAP_EPOLL_SUPPORT
-static void
-coap_epoll_ctl_add(coap_socket_t *sock,
-                   uint32_t events,
-                   const char *func
-) {
-  int ret;
-  struct epoll_event event;
-  coap_context_t *context;
-
-  if (sock == NULL)
-    return;
-
-#if COAP_SERVER_SUPPORT
-  context = sock->session ? sock->session->context :
-                            sock->endpoint ? sock->endpoint->context : NULL;
-#else /* ! COAP_SERVER_SUPPORT */
-  context = sock->session ? sock->session->context : NULL;
-#endif /* ! COAP_SERVER_SUPPORT */
-  if (context == NULL)
-    return;
-
-  /* Needed if running 32bit as ptr is only 32bit */
-  memset(&event, 0, sizeof(event));
-  event.events = events;
-  event.data.ptr = sock;
-
-  ret = epoll_ctl(context->epfd, EPOLL_CTL_ADD, sock->fd, &event);
-  if (ret == -1) {
-     coap_log_err(
-              "%s: epoll_ctl ADD failed: %s (%d)\n",
-              func,
-              coap_socket_strerror(), errno);
-  }
-}
-#endif /* COAP_EPOLL_SUPPORT */
-
 #if COAP_CLIENT_SUPPORT
 static coap_session_t *
 coap_session_create_client(
