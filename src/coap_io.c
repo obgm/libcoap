@@ -442,6 +442,22 @@ coap_update_epoll_timer(coap_context_t *context, coap_tick_t delay)
 
 #endif /* COAP_EPOLL_SUPPORT */
 
+#ifdef _WIN32
+static void
+coap_win_error_to_errno(void) {
+  int error = WSAGetLastError();
+  switch (error) {
+  case WSAEWOULDBLOCK:  errno = EWOULDBLOCK; break;
+  case WSAECONNRESET:   errno = ECONNRESET; break;
+  case WSAECONNREFUSED: errno = ECONNREFUSED; break;
+  case WSAEINVAL:       errno = EINVAL; break;
+  default:
+    coap_log_debug("WSAGetLastError: %d mapping to errno undefined\n", error);
+    break;
+  }
+}
+#endif /* _WIN32 */
+
 ssize_t
 coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
   ssize_t r;
@@ -457,12 +473,14 @@ coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
 #endif
   if (r == COAP_SOCKET_ERROR) {
 #ifdef _WIN32
-    if (WSAGetLastError() == WSAEWOULDBLOCK) {
+    coap_win_error_to_errno();
+    if (WSAGetLastError() == WSAEWOULDBLOCK)
 #elif EAGAIN != EWOULDBLOCK
-    if (errno==EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+    if (errno==EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
 #else
-    if (errno==EAGAIN || errno == EINTR) {
+    if (errno==EAGAIN || errno == EINTR)
 #endif
+    {
       sock->flags |= COAP_SOCKET_WANT_WRITE;
 #ifdef COAP_EPOLL_SUPPORT
       coap_epoll_ctl_mod(sock,
@@ -511,17 +529,20 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
   if (r == 0) {
     /* graceful shutdown */
     sock->flags &= ~COAP_SOCKET_CAN_READ;
+    errno = ECONNRESET;
     return -1;
   } else if (r == COAP_SOCKET_ERROR) {
     sock->flags &= ~COAP_SOCKET_CAN_READ;
 #ifdef _WIN32
+    coap_win_error_to_errno();
     error = WSAGetLastError();
-    if (error == WSAEWOULDBLOCK) {
+    if (error == WSAEWOULDBLOCK)
 #elif EAGAIN != EWOULDBLOCK
-    if (errno==EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+    if (errno==EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
 #else
-    if (errno==EAGAIN || errno == EINTR) {
+    if (errno==EAGAIN || errno == EINTR)
 #endif
+    {
       return 0;
     }
 #ifdef _WIN32
@@ -796,6 +817,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 #endif
     if (len < 0) {
 #ifdef _WIN32
+      coap_win_error_to_errno();
       if (WSAGetLastError() == WSAECONNRESET ||
           WSAGetLastError() == WSAECONNREFUSED) {
 #else
@@ -872,6 +894,7 @@ coap_network_read(coap_socket_t *sock, coap_packet_t *packet) {
 
     if (len < 0) {
 #ifdef _WIN32
+      coap_win_error_to_errno();
       if (WSAGetLastError() == WSAECONNRESET) {
 #else
       if (errno == ECONNREFUSED) {
@@ -1342,6 +1365,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 
   if (result < 0) {   /* error */
 #ifdef _WIN32
+    coap_win_error_to_errno();
     if (WSAGetLastError() != WSAEINVAL) /* May happen because of ICMP */
 #else
     if (errno != EINTR)
