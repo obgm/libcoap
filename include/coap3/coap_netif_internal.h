@@ -113,6 +113,52 @@ ssize_t coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
                               size_t datalen);
 
 /**
+ * Layer function interface for Netif stream listem (tcp).
+ *
+ * @param endpoint  Endpoint to do the listen on.
+ * @param listen_addr The local address to bind.
+ *
+ * @return                 @c 1 OK, 0 on failure.
+ */
+int coap_netif_strm_listen(coap_endpoint_t *endpoint,
+                             const coap_address_t *listen_addr);
+
+/**
+ * Layer function interface for Netif stream accept.
+ *
+ * @param endpoint Endpoint to to do the accept on.
+ * @param session  Session to to do the accept update on.
+ *
+ * @return                 @c 1 OK, 0 on failure.
+ */
+int coap_netif_strm_accept(coap_endpoint_t *endpoint, coap_session_t *session);
+
+/**
+ * Layer function interface for Netif stream connect (tcp).
+ * Step 1 - initiate the connection.
+ *
+ * @param session  Session to do the connect on.
+ * @param local_if The local interface to bind to or NULL.
+ * @param server   The server to connect to.
+ * @param default_port The Port to connect to if not defined.
+ *
+ * @return                 @c 1 OK, 0 on failure.
+ */
+int coap_netif_strm_connect1(coap_session_t *session,
+                             const coap_address_t *local_if,
+                             const coap_address_t *server, int default_port);
+
+/**
+ * Layer function interface for Netif stream connect (tcp).
+ * Step 2 - complete the connection.
+ *
+ * @param session  Session to do the connect complete on.
+ *
+ * @return                 @c 1 OK, 0 on failure.
+ */
+int coap_netif_strm_connect2(coap_session_t *session);
+
+/**
  * Function interface for layer data stream receiving. This function returns
  * the number of bytes that have been read, or -1 on error.
  *

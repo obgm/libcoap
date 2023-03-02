@@ -154,6 +154,57 @@ coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
 }
 
 #if !COAP_DISABLE_TCP
+#if COAP_SERVER_SUPPORT
+int
+coap_netif_strm_listen(coap_endpoint_t *endpoint,
+                       const coap_address_t *listen_addr) {
+  if (!coap_socket_bind_tcp(&endpoint->sock, listen_addr,
+                              &endpoint->bind_addr)) {
+    return 0;
+  }
+  endpoint->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_BOUND |
+                          COAP_SOCKET_WANT_ACCEPT;
+  return 1;
+}
+
+int
+coap_netif_strm_accept(coap_endpoint_t *endpoint, coap_session_t *session) {
+  if (!coap_socket_accept_tcp(&endpoint->sock, &session->sock,
+                              &session->addr_info.local,
+                              &session->addr_info.remote)) {
+    return 0;
+  }
+  session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED |
+                 COAP_SOCKET_WANT_READ;
+  return 1;
+}
+#endif /* COAP_SERVER_SUPPORT */
+
+#if COAP_CLIENT_SUPPORT
+int
+coap_netif_strm_connect1(coap_session_t *session,
+                         const coap_address_t *local_if,
+                         const coap_address_t *server, int default_port) {
+  if (!coap_socket_connect_tcp1(&session->sock, local_if, server,
+                                default_port,
+                                &session->addr_info.local,
+                                &session->addr_info.remote)) {
+    return 0;
+  }
+  return 1;
+}
+
+int
+coap_netif_strm_connect2(coap_session_t *session) {
+  if (!coap_socket_connect_tcp2(&session->sock,
+                                &session->addr_info.local,
+                                &session->addr_info.remote)) {
+    return 0;
+  }
+  return 1;
+}
+#endif /* COAP_CLIENT_SUPPORT */
+
 /*
  * strm
  * return >=0 Number of bytes read.
