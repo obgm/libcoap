@@ -808,12 +808,11 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
       return -1;
 #if !COAP_DISABLE_TCP
     } else if(COAP_PROTO_RELIABLE(session->proto)) {
-      if (!coap_socket_connect_tcp1(
-        &session->sock, &session->addr_info.local, &session->addr_info.remote,
-        session->proto == COAP_PROTO_TLS ? COAPS_DEFAULT_PORT :
-                                           COAP_DEFAULT_PORT,
-        &session->addr_info.local, &session->addr_info.remote
-      )) {
+      if (!coap_netif_strm_connect1(session, &session->addr_info.local,
+                                    &session->addr_info.remote,
+                                    session->proto == COAP_PROTO_TLS ?
+                                           COAPS_DEFAULT_PORT :
+                                           COAP_DEFAULT_PORT)) {
         coap_handle_event(session->context, COAP_EVENT_TCP_FAILED, session);
         return -1;
       }
@@ -1633,8 +1632,7 @@ coap_connect_session(coap_context_t *ctx,
   (void)session;
   (void)now;
 #else /* !COAP_DISABLE_TCP */
-  if (coap_socket_connect_tcp2(&session->sock, &session->addr_info.local,
-                               &session->addr_info.remote)) {
+  if (coap_netif_strm_connect2(session)) {
     session->last_rx_tx = now;
     coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
     if (session->proto == COAP_PROTO_TCP) {
@@ -1925,14 +1923,16 @@ coap_write_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t 
   return 0;
 }
 
+#if !COAP_DISABLE_TCP
 static int
 coap_accept_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint,
-  coap_tick_t now) {
+                     coap_tick_t now) {
   coap_session_t *session = coap_new_server_session(ctx, endpoint);
   if (session)
     session->last_rx_tx = now;
   return session != NULL;
 }
+#endif /* !COAP_DISABLE_TCP */
 #endif /* COAP_SERVER_SUPPORT */
 
 void
@@ -1952,8 +1952,10 @@ coap_io_do_io(coap_context_t *ctx, coap_tick_t now) {
       coap_read_endpoint(ctx, ep, now);
     if ((ep->sock.flags & COAP_SOCKET_CAN_WRITE) != 0)
       coap_write_endpoint(ctx, ep, now);
+#if !COAP_DISABLE_TCP
     if ((ep->sock.flags & COAP_SOCKET_CAN_ACCEPT) != 0)
       coap_accept_endpoint(ctx, ep, now);
+#endif /* !COAP_DISABLE_TCP */
     SESSIONS_ITER_SAFE(ep->sessions, s, rtmp) {
       /* Make sure the session object is not deleted in one of the callbacks  */
       coap_session_reference(s);

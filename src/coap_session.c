@@ -898,10 +898,10 @@ coap_session_create_client(coap_context_t *ctx,
   case COAP_PROTO_NONE:
   default:
     assert(0);
-    break;
+    return NULL;
   }
   session = coap_make_session(proto, COAP_SESSION_TYPE_CLIENT, NULL,
-    local_if, server, 0, ctx, NULL);
+                              local_if, server, 0, ctx, NULL);
   if (!session)
     goto error;
 
@@ -929,10 +929,8 @@ coap_session_create_client(coap_context_t *ctx,
     session->sock.context = ctx;
 #endif /* WITH_CONTIKI */
 #if !COAP_DISABLE_TCP
-  } else if (proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) {
-    if (!coap_socket_connect_tcp1(&session->sock, local_if, server,
-      proto == COAP_PROTO_TLS ? COAPS_DEFAULT_PORT : COAP_DEFAULT_PORT,
-      &session->addr_info.local, &session->addr_info.remote)) {
+  } else if (COAP_PROTO_RELIABLE(proto)) {
+    if (!coap_netif_strm_connect1(session, local_if, server, default_port)) {
       goto error;
     }
 #endif /* !COAP_DISABLE_TCP */
@@ -1024,9 +1022,9 @@ coap_session_connect(coap_session_t *session) {
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
+#if !COAP_DISABLE_TCP
 static coap_session_t *
 coap_session_accept(coap_session_t *session) {
-#if !COAP_DISABLE_TCP
   if (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS)
     coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
   if (session->proto == COAP_PROTO_TCP) {
@@ -1050,9 +1048,9 @@ coap_session_accept(coap_session_t *session) {
       session = NULL;
     }
   }
-#endif /* COAP_DISABLE_TCP */
   return session;
 }
+#endif /* COAP_DISABLE_TCP */
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
@@ -1156,7 +1154,7 @@ coap_session_t *coap_new_client_session_psk2(
            coap_session_str(session));
   return coap_session_connect(session);
 }
-#endif /* ! COAP_CLIENT_SUPPORT */
+#endif /* COAP_CLIENT_SUPPORT */
 
 int
 coap_session_refresh_psk_hint(coap_session_t *session,
@@ -1317,26 +1315,20 @@ coap_session_t *coap_new_client_session_pki(
 #endif /* ! COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
-coap_session_t *coap_new_server_session(
-  coap_context_t *ctx,
-  coap_endpoint_t *ep
-) {
+#if !COAP_DISABLE_TCP
+coap_session_t *
+coap_new_server_session(coap_context_t *ctx, coap_endpoint_t *ep) {
   coap_session_t *session;
   session = coap_make_session( ep->proto, COAP_SESSION_TYPE_SERVER,
                                NULL, NULL, NULL, 0, ctx, ep );
   if (!session)
     goto error;
 
-#if !COAP_DISABLE_TCP
-  if (!coap_socket_accept_tcp(&ep->sock, &session->sock,
-                              &session->addr_info.local,
-                              &session->addr_info.remote))
+  if (!coap_netif_strm_accept(ep, session))
     goto error;
+
   coap_make_addr_hash(&session->addr_hash, session->proto, &session->addr_info);
 
-#endif /* !COAP_DISABLE_TCP */
-  session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED
-                       | COAP_SOCKET_WANT_READ;
 #ifdef COAP_EPOLL_SUPPORT
   session->sock.session = session;
   coap_epoll_ctl_add(&session->sock,
@@ -1366,6 +1358,7 @@ error:
   }
   return NULL;
 }
+#endif /* !COAP_DISABLE_TCP */
 #endif /* COAP_SERVER_SUPPORT */
 
 void
@@ -1523,10 +1516,9 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
     ep->sock.context = context;
 #endif /* WITH_CONTIKI */
 #if !COAP_DISABLE_TCP
-  } else if (proto==COAP_PROTO_TCP || proto==COAP_PROTO_TLS) {
-    if (!coap_socket_bind_tcp(&ep->sock, listen_addr, &ep->bind_addr))
+  } else if (COAP_PROTO_RELIABLE(proto)) {
+    if (!coap_netif_strm_listen(ep, listen_addr))
       goto error;
-    ep->sock.flags |= COAP_SOCKET_WANT_ACCEPT;
 #endif /* !COAP_DISABLE_TCP */
   } else {
     coap_log_crit("coap_new_endpoint: protocol not supported\n");
@@ -1544,8 +1536,6 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
         addr_str);
     }
   }
-
-  ep->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_BOUND;
 
   ep->default_mtu = COAP_DEFAULT_MTU;
 

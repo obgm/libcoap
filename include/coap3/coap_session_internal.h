@@ -275,22 +275,6 @@ coap_session_t *coap_new_server_session(
 #endif /* COAP_SERVER_SUPPORT */
 
 /**
- * Function interface for stream data transmission. This function returns
- * the number of bytes that have been transmitted, or a value less than zero
- * on error. The number of bytes written may be less than datalen because of
- * congestion control.
- *
- * @param session          Session to send data on.
- * @param data             The data to send.
- * @param datalen          The actual length of @p data.
- *
- * @return                 The number of bytes written on success, or a value
- *                         less than zero on error.
- */
-ssize_t coap_session_write(coap_session_t *session,
-  const uint8_t *data, size_t datalen);
-
-/**
  * Send a pdu according to the session's protocol. This function returns
  * the number of bytes that have been transmitted, or a value less than zero
  * on error.
