@@ -1568,7 +1568,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   }
 
   /* no more retransmissions, remove node from system */
-  coap_log_debug("** %s: mid=0x%x: give up after %d attempts\n",
+  coap_log_warn("** %s: mid=0x%x: give up after %d attempts\n",
            coap_session_str(node->session), node->id, node->retransmit_cnt);
 
 #if COAP_SERVER_SUPPORT
