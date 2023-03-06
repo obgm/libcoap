@@ -51,6 +51,7 @@ coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
     coap_log_debug( "*  %s: failed to send %zd bytes (%s) state %d\n",
                    coap_session_str(session), datalen,
                    coap_socket_strerror(), session->state);
+    errno = keep_errno;
   } else if (bytes_written == (ssize_t)datalen) {
     coap_ticks(&session->last_rx_tx);
     coap_log_debug("*  %s: sent %zd bytes\n",
@@ -59,7 +60,6 @@ coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
     coap_ticks(&session->last_rx_tx);
     coap_log_debug("*  %s: sent %zd bytes of %zd\n",
              coap_session_str(session), bytes_written, datalen);
-    errno = keep_errno;
   }
   return bytes_written;
 }
@@ -86,7 +86,6 @@ coap_netif_dgrm_read_ep(coap_endpoint_t *endpoint, coap_packet_t *packet) {
   } else if (bytes_read > 0) {
     coap_log_debug("*  %s: read %zd bytes\n",
              coap_endpoint_str(endpoint), bytes_read);
-    errno = keep_errno;
   }
   return bytes_read;
 }
@@ -114,7 +113,6 @@ coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet) {
     coap_ticks(&session->last_rx_tx);
     coap_log_debug("*  %s: read %zd bytes\n",
              coap_session_str(session), bytes_read);
-    errno = keep_errno;
   }
   return bytes_read;
 }
@@ -156,6 +154,7 @@ coap_netif_strm_write(coap_session_t *session, const uint8_t *data,
     coap_log_debug( "*  %s: failed to send %zd bytes (%s) state %d\n",
                    coap_session_str(session), datalen,
                    coap_socket_strerror(), session->state);
+    errno = keep_errno;
   } else if (bytes_written == (ssize_t)datalen) {
     coap_ticks(&session->last_rx_tx);
     coap_log_debug("*  %s: sent %zd bytes\n",
@@ -164,7 +163,6 @@ coap_netif_strm_write(coap_session_t *session, const uint8_t *data,
     coap_ticks(&session->last_rx_tx);
     coap_log_debug("*  %s: sent %zd bytes of %zd\n",
              coap_session_str(session), bytes_written, datalen);
-    errno = keep_errno;
   }
   return bytes_written;
 }

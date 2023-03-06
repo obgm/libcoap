@@ -2265,6 +2265,7 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
     ret = -1;
     break;
   case GNUTLS_E_SESSION_EOF:
+  case GNUTLS_E_PREMATURE_TERMINATION:
   case GNUTLS_E_TIMEDOUT:
   case GNUTLS_E_PULL_ERROR:
   case GNUTLS_E_PUSH_ERROR:
@@ -2645,12 +2646,7 @@ coap_sock_read(gnutls_transport_ptr_t context, void *out, size_t outl) {
   if (out != NULL) {
     ret = (int)coap_netif_strm_read(c_session, out, outl);
     /* Translate layer returns into what GnuTLS expects */
-    if (ret == -1) {
-      if (errno == ECONNRESET) {
-        /* graceful shutdown */
-        return 0;
-      }
-    } else if (ret == 0) {
+    if (ret == 0) {
       errno = EAGAIN;
       ret = -1;
     }
