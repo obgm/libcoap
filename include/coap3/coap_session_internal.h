@@ -67,7 +67,7 @@ typedef enum coap_ext_token_check_t {
 struct coap_session_t {
   coap_proto_t proto;               /**< protocol used */
   coap_session_type_t type;         /**< client or server side socket */
-  coap_session_state_t state;       /**< current state of relationaship with
+  coap_session_state_t state;       /**< current state of relationship with
                                          peer */
   unsigned ref;                     /**< reference count from queues */
   size_t tls_overhead;              /**< overhead of TLS layer */
@@ -273,6 +273,16 @@ coap_session_t *coap_new_server_session(
   coap_endpoint_t *ep
 );
 #endif /* COAP_SERVER_SUPPORT */
+
+/**
+ * Layer function interface for layer below session accept/connect being
+ * established. This function initiates a CSM request for reliable protocols,
+ * or coap_session_connect() for un-reliable protocols.
+ *
+ * @param session Session that the lower layer accept/connect was done on.
+ *
+ */
+void coap_session_establish(coap_session_t *session);
 
 /**
  * Send a pdu according to the session's protocol. This function returns

@@ -223,7 +223,8 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   return session;
 }
 
-void coap_session_mfree(coap_session_t *session) {
+void
+coap_session_mfree(coap_session_t *session) {
   coap_queue_t *q, *tmp;
   coap_lg_xmit_t *lq, *ltmp;
 
@@ -257,12 +258,12 @@ void coap_session_mfree(coap_session_t *session) {
   if (session->partial_pdu)
     coap_delete_pdu(session->partial_pdu);
   if (session->proto == COAP_PROTO_DTLS)
-    coap_dtls_free_session(session);
+    coap_dtls_close(session);
 #if !COAP_DISABLE_TCP
   else if (session->proto == COAP_PROTO_TLS)
-    coap_tls_free_session(session);
+    coap_tls_close(session);
 #endif /* !COAP_DISABLE_TCP */
-  if (coap_netif_available(session))
+  else if (coap_netif_available(session))
     coap_netif_close(session);
   if (session->psk_identity)
     coap_delete_bin_const(session->psk_identity);
@@ -450,7 +451,8 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
 }
 
 #if !COAP_DISABLE_TCP
-void coap_session_send_csm(coap_session_t *session) {
+void
+coap_session_send_csm(coap_session_t *session) {
   coap_pdu_t *pdu;
   uint8_t buf[4];
   assert(COAP_PROTO_RELIABLE(session->proto));
@@ -571,7 +573,8 @@ void coap_session_connected(coap_session_t *session) {
   }
 }
 
-void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
+void
+coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
 #if !COAP_DISABLE_TCP
   coap_session_state_t state = session->state;
 #endif /* !COAP_DISABLE_TCP */
@@ -581,16 +584,6 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
 #if COAP_SERVER_SUPPORT
   coap_delete_observers( session->context, session );
 #endif /* COAP_SERVER_SUPPORT */
-
-  if ( session->tls) {
-    if (session->proto == COAP_PROTO_DTLS)
-      coap_dtls_free_session(session);
-#if !COAP_DISABLE_TCP
-    else if (session->proto == COAP_PROTO_TLS)
-      coap_tls_free_session(session);
-#endif /* !COAP_DISABLE_TCP */
-    session->tls = NULL;
-  }
 
   if (session->proto == COAP_PROTO_UDP)
     session->state = COAP_SESSION_STATE_ESTABLISHED;
@@ -679,7 +672,6 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
 #if !COAP_DISABLE_TCP
   if (COAP_PROTO_RELIABLE(session->proto)) {
     if (coap_netif_available(session)) {
-      coap_netif_close(session);
       coap_handle_event(session->context,
         state == COAP_SESSION_STATE_CONNECTING ?
         COAP_EVENT_TCP_FAILED : COAP_EVENT_TCP_CLOSED, session);
@@ -693,6 +685,17 @@ void coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reaso
       session->doing_first = 0;
   }
 #endif /* !COAP_DISABLE_TCP */
+  if (session->tls) {
+    if (session->proto == COAP_PROTO_DTLS)
+      coap_dtls_close(session);
+#if !COAP_DISABLE_TCP
+    else if (session->proto == COAP_PROTO_TLS)
+      coap_tls_close(session);
+#endif /* !COAP_DISABLE_TCP */
+    session->tls = NULL;
+  } else if (coap_netif_available(session)) {
+    coap_netif_close(session);
+  }
 }
 
 #if COAP_SERVER_SUPPORT
@@ -847,13 +850,7 @@ coap_session_new_dtls_session(coap_session_t *session,
   if (session) {
     session->last_rx_tx = now;
     session->type = COAP_SESSION_TYPE_SERVER;
-    session->tls = coap_dtls_new_server_session(session);
-    if (session->tls) {
-      session->state = COAP_SESSION_STATE_HANDSHAKE;
-    } else {
-      coap_session_free(session);
-      session = NULL;
-    }
+    coap_dtls_establish(session);
   }
   return session;
 }
@@ -971,18 +968,7 @@ coap_session_connect(coap_session_t *session) {
   if (session->proto == COAP_PROTO_UDP) {
     session->state = COAP_SESSION_STATE_ESTABLISHED;
   } else if (session->proto == COAP_PROTO_DTLS) {
-    session->tls = coap_dtls_new_client_session(session);
-    if (session->tls) {
-      session->state = COAP_SESSION_STATE_HANDSHAKE;
-    } else {
-      /* Need to free session object. As a new session may not yet
-       * have been referenced, we call coap_session_reference() first
-       * before trying to release the object.
-       */
-      coap_session_reference(session);
-      coap_session_release(session);
-      return NULL;
-    }
+    coap_dtls_establish(session);
 #if !COAP_DISABLE_TCP
   } else {
     if (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS) {
@@ -995,23 +981,9 @@ coap_session_connect(coap_session_t *session) {
           session->doing_first = 1;
         }
       } else if (session->proto == COAP_PROTO_TLS) {
-        int connected = 0;
-        session->tls = coap_tls_new_client_session(session, &connected);
-        if (session->tls) {
-          session->state = COAP_SESSION_STATE_HANDSHAKE;
-          if (connected)
-            coap_session_send_csm(session);
-        } else {
-          /* Need to free session object. As a new session may not yet
-           * have been referenced, we call coap_session_reference()
-           * first before trying to release the object.
-           */
-          coap_session_reference(session);
-          coap_session_release(session);
-          return NULL;
-        }
+        coap_tls_establish(session);
       } else {
-        coap_session_send_csm(session);
+        coap_session_establish(session);
       }
     }
 #endif /* !COAP_DISABLE_TCP */
@@ -1021,6 +993,16 @@ coap_session_connect(coap_session_t *session) {
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
+void
+coap_session_establish(coap_session_t *session) {
+  if (COAP_PROTO_NOT_RELIABLE(session->proto))
+    coap_session_connected(session);
+#if !COAP_DISABLE_TCP
+  if (COAP_PROTO_RELIABLE(session->proto))
+    coap_session_send_csm(session);
+#endif /* !COAP_DISABLE_TCP */
+}
+
 #if COAP_SERVER_SUPPORT
 #if !COAP_DISABLE_TCP
 static coap_session_t *
@@ -1028,29 +1010,13 @@ coap_session_accept(coap_session_t *session) {
   if (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS)
     coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
   if (session->proto == COAP_PROTO_TCP) {
-    coap_session_send_csm(session);
+    coap_session_establish(session);
   } else if (session->proto == COAP_PROTO_TLS) {
-    int connected = 0;
-    session->tls = coap_tls_new_server_session(session, &connected);
-    if (session->tls) {
-      session->state = COAP_SESSION_STATE_HANDSHAKE;
-      if (connected) {
-        coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-        coap_session_send_csm(session);
-      }
-    } else {
-      /* Need to free session object. As a new session may not yet
-       * have been referenced, we call coap_session_reference() first
-       * before trying to release the object.
-       */
-      coap_session_reference(session);
-      coap_session_release(session);
-      session = NULL;
-    }
+    coap_tls_establish(session);
   }
   return session;
 }
-#endif /* COAP_DISABLE_TCP */
+#endif /* !COAP_DISABLE_TCP */
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
@@ -1066,7 +1032,8 @@ coap_session_t *coap_new_client_session(
     coap_log_debug("***%s: session %p: created outgoing session\n",
              coap_session_str(session), (void *)session);
     session = coap_session_connect(session);
-    session->context = ctx;
+    if (session)
+      session->context = ctx;
   }
   return session;
 }

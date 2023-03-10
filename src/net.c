@@ -832,7 +832,7 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
         if (session->tls) {
           if (connected) {
             coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-            coap_session_send_csm(session);
+            coap_session_establish(session);
           }
           return coap_session_delay_pdu(session, pdu, node);
         }
@@ -840,7 +840,7 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
         coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
         return -1;
       } else {
-        coap_session_send_csm(session);
+        coap_session_establish(session);
       }
 #endif /* !COAP_DISABLE_TCP */
     } else {
@@ -1636,7 +1636,7 @@ coap_connect_session(coap_context_t *ctx,
     session->last_rx_tx = now;
     coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
     if (session->proto == COAP_PROTO_TCP) {
-      coap_session_send_csm(session);
+      coap_session_establish(session);
     } else if (session->proto == COAP_PROTO_TLS) {
       int connected = 0;
       session->state = COAP_SESSION_STATE_HANDSHAKE;
@@ -1645,7 +1645,7 @@ coap_connect_session(coap_context_t *ctx,
         if (connected) {
           coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED,
                             session);
-          coap_session_send_csm(session);
+          coap_session_establish(session);
         }
       } else {
         coap_handle_event(session->context, COAP_EVENT_DTLS_ERROR, session);

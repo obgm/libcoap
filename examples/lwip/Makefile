@@ -138,6 +138,7 @@ COAP_SRC = coap_address.c \
 	   block.c \
 	   coap_cache.c \
 	   coap_debug.c \
+	   coap_dtls.c \
 	   coap_encode.c \
 	   coap_hashkey.c \
 	   coap_io.c \

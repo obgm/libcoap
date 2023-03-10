@@ -155,6 +155,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_async.c \
   src/coap_cache.c \
   src/coap_debug.c \
+  src/coap_dtls.c \
   src/coap_encode.c \
   src/coap_event.c \
   src/coap_hashkey.c \

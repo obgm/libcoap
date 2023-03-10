@@ -2999,7 +2999,8 @@ setup_client_ssl_session(coap_session_t *session, SSL *ssl
   return 1;
 }
 
-void *coap_dtls_new_client_session(coap_session_t *session) {
+void *
+coap_dtls_new_client_session(coap_session_t *session) {
   BIO *bio = NULL;
   SSL *ssl = NULL;
   coap_ssl_data *data;
@@ -3050,7 +3051,8 @@ void coap_dtls_session_update_mtu(coap_session_t *session) {
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
-void coap_dtls_free_session(coap_session_t *session) {
+void
+coap_dtls_free_session(coap_session_t *session) {
   SSL *ssl = (SSL *)session->tls;
   if (ssl) {
     if (!SSL_in_init(ssl) && !(SSL_get_shutdown(ssl) & SSL_SENT_SHUTDOWN)) {
@@ -3177,8 +3179,8 @@ int coap_dtls_hello(coap_session_t *session,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-int coap_dtls_receive(coap_session_t *session,
-  const uint8_t *data, size_t data_len) {
+int
+coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len) {
   coap_ssl_data *ssl_data;
   SSL *ssl = (SSL *)session->tls;
   int r;
@@ -3209,7 +3211,7 @@ int coap_dtls_receive(coap_session_t *session,
         coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                  coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-        coap_session_connected(session);
+        coap_session_establish(session);
       }
       r = 0;
     } else {
@@ -3421,7 +3423,8 @@ error:
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-void coap_tls_free_session(coap_session_t *session) {
+void
+coap_tls_free_session(coap_session_t *session) {
   SSL *ssl = (SSL *)session->tls;
   if (ssl) {
     if (!SSL_in_init(ssl) && !(SSL_get_shutdown(ssl) & SSL_SENT_SHUTDOWN)) {
@@ -3459,7 +3462,7 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
         coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                  coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-        coap_session_send_csm(session);
+        coap_session_establish(session);
       }
       if (err == SSL_ERROR_WANT_READ)
         session->sock.flags |= COAP_SOCKET_WANT_READ;
@@ -3487,7 +3490,7 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
     coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
              coap_session_str(session), SSL_get_cipher_name(ssl));
     coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-    coap_session_send_csm(session);
+    coap_session_establish(session);
   }
 
   if (session->dtls_event >= 0) {
@@ -3529,7 +3532,7 @@ coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
         coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                  coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-        coap_session_send_csm(session);
+        coap_session_establish(session);
       }
       if (err == SSL_ERROR_WANT_READ)
         session->sock.flags |= COAP_SOCKET_WANT_READ;
@@ -3555,7 +3558,7 @@ coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
     coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
              coap_session_str(session), SSL_get_cipher_name(ssl));
     coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-    coap_session_send_csm(session);
+    coap_session_establish(session);
   }
 
   if (session->dtls_event >= 0) {

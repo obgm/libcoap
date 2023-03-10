@@ -30,6 +30,8 @@
     <ClCompile Include="..\src\coap_debug.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_dtls.c">
+      <Filter>Source Files</Filter>
     <ClCompile Include="..\src\coap_encode.c">
       <Filter>Source Files</Filter>
     </ClCompile>

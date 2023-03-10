@@ -149,21 +149,25 @@ coap_dtls_free_context(void *handle COAP_UNUSED) {
 }
 
 #if COAP_SERVER_SUPPORT
-void *coap_dtls_new_server_session(coap_session_t *session COAP_UNUSED) {
+void *
+coap_dtls_new_server_session(coap_session_t *session COAP_UNUSED) {
   return NULL;
 }
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
-void *coap_dtls_new_client_session(coap_session_t *session COAP_UNUSED) {
+void *
+coap_dtls_new_client_session(coap_session_t *session COAP_UNUSED) {
   return NULL;
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
-void coap_dtls_free_session(coap_session_t *coap_session COAP_UNUSED) {
+void
+coap_dtls_free_session(coap_session_t *coap_session COAP_UNUSED) {
 }
 
-void coap_dtls_session_update_mtu(coap_session_t *session COAP_UNUSED) {
+void
+coap_dtls_session_update_mtu(coap_session_t *session COAP_UNUSED) {
 }
 
 ssize_t
