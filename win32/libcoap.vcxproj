@@ -44,6 +44,7 @@
     <ClCompile Include="..\src\coap_async.c" />
     <ClCompile Include="..\src\coap_cache.c" />
     <ClCompile Include="..\src\coap_debug.c" />
+    <ClCompile Include="..\src\coap_dtls.c" />
     <ClCompile Include="..\src\coap_encode.c" />
     <ClCompile Include="..\src\coap_event.c" />
     <ClCompile Include="..\src\coap_hashkey.c" />

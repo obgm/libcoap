@@ -266,6 +266,27 @@ int coap_dtls_hello(coap_session_t *coap_session,
 #endif /* COAP_SERVER_SUPPORT */
 
 /**
+ * Layer function interface for layer below DTLS connect being
+ * established.
+ *
+ * If this layer is properly established on invocation, then the next layer
+ * must get called by calling
+ *   coap_session_establish(session)
+ * (or done at any point when DTLS is established).
+ *
+ * @param session Session that the lower layer connect was done on.
+ *
+ */
+void coap_dtls_establish(coap_session_t *session);
+
+/**
+ * Layer function interface for DTLS close for a session.
+ *
+ * @param session  Session to do the DTLS close on.
+ */
+void coap_dtls_close(coap_session_t *session);
+
+/**
  * Get DTLS overhead over cleartext PDUs.
  *
  * @param coap_session The CoAP session.
@@ -339,6 +360,27 @@ ssize_t coap_tls_read(coap_session_t *coap_session,
                       uint8_t *data,
                       size_t data_len
                       );
+
+/**
+ * Layer function interface for layer below TLS accept/connect being
+ *  established. This function initiates an accept/connect at the TLS layer.
+ *
+ * If this layer is properly established on invocation, then the next layer
+ * must get called by calling
+ *   coap_session_establish(session)
+ * (or done at any point when TLS is established).
+ *
+ * @param session Session that the lower layer accept/connect was done on.
+ *
+ */
+void coap_tls_establish(coap_session_t *session);
+
+/**
+ * Layer function interface for TLS close for a session.
+ *
+ * @param session  Session to do the TLS close on.
+ */
+void coap_tls_close(coap_session_t *session);
 
 /**
  * Get the current client's PSK key.

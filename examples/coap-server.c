@@ -1706,6 +1706,8 @@ proxy_nack_handler(coap_session_t *session,
     break;
   case COAP_NACK_ICMP_ISSUE:
   case COAP_NACK_BAD_RESPONSE:
+  case COAP_NACK_TLS_LAYER_FAILED:
+  case COAP_NACK_SESSION_LAYER_FAILED:
   default:
     break;
   }

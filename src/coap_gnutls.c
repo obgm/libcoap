@@ -2284,7 +2284,8 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
 }
 
 #if COAP_CLIENT_SUPPORT
-void *coap_dtls_new_client_session(coap_session_t *c_session) {
+void *
+coap_dtls_new_client_session(coap_session_t *c_session) {
   coap_gnutls_env_t *g_env = coap_dtls_new_gnutls_env(c_session, GNUTLS_CLIENT);
   int ret;
 
@@ -2302,7 +2303,8 @@ void *coap_dtls_new_client_session(coap_session_t *c_session) {
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
-void coap_dtls_free_session(coap_session_t *c_session) {
+void
+coap_dtls_free_session(coap_session_t *c_session) {
   if (c_session && c_session->context && c_session->tls) {
     coap_dtls_free_gnutls_env(c_session->context->dtls_context,
                 c_session->tls,
@@ -2450,10 +2452,8 @@ coap_dtls_handle_timeout(coap_session_t *c_session) {
  *        -1  error
  */
 int
-coap_dtls_receive(coap_session_t *c_session,
-  const uint8_t *data,
-  size_t data_len
-) {
+coap_dtls_receive(coap_session_t *c_session, const uint8_t *data,
+                  size_t data_len) {
   coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
   int ret = 0;
   coap_ssl_t *ssl_data = &g_env->coap_ssl_data;
@@ -2474,7 +2474,7 @@ coap_dtls_receive(coap_session_t *c_session,
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
                         c_session);
       gnutls_transport_set_ptr(g_env->g_session, c_session);
-      coap_session_connected(c_session);
+      coap_session_establish(c_session);
     }
     ret = gnutls_record_recv(g_env->g_session, pdu, (int)sizeof(pdu));
     if (ret > 0) {
@@ -2698,7 +2698,8 @@ coap_sock_write(gnutls_transport_ptr_t context, const void *in, size_t inl) {
 }
 
 #if COAP_CLIENT_SUPPORT
-void *coap_tls_new_client_session(coap_session_t *c_session, int *connected) {
+void *
+coap_tls_new_client_session(coap_session_t *c_session, int *connected) {
   coap_gnutls_env_t *g_env = gnutls_malloc(sizeof(coap_gnutls_env_t));
   coap_gnutls_context_t *g_context =
                 ((coap_gnutls_context_t *)c_session->context->dtls_context);
@@ -2733,7 +2734,7 @@ void *coap_tls_new_client_session(coap_session_t *c_session, int *connected) {
   if (ret == 1) {
     *connected = 1;
     coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
-    coap_session_send_csm(c_session);
+    coap_session_establish(c_session);
   }
   return g_env;
 
@@ -2745,7 +2746,8 @@ fail:
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
-void *coap_tls_new_server_session(coap_session_t *c_session, int *connected) {
+void *
+coap_tls_new_server_session(coap_session_t *c_session, int *connected) {
   coap_gnutls_env_t *g_env = gnutls_malloc(sizeof(coap_gnutls_env_t));
   coap_gnutls_context_t *g_context =
              ((coap_gnutls_context_t *)c_session->context->dtls_context);
@@ -2787,7 +2789,8 @@ fail:
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-void coap_tls_free_session(coap_session_t *c_session) {
+void
+coap_tls_free_session(coap_session_t *c_session) {
   coap_dtls_free_session(c_session);
   return;
 }
@@ -2842,10 +2845,9 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
     ret = do_gnutls_handshake(c_session, g_env);
     if (ret == 1) {
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                                     c_session);
-      coap_session_send_csm(c_session);
-    }
-    else {
+                        c_session);
+      coap_session_establish(c_session);
+    } else {
       ret = -1;
     }
   }
@@ -2884,8 +2886,8 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
     ret = do_gnutls_handshake(c_session, g_env);
     if (ret == 1) {
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                                                               c_session);
-      coap_session_send_csm(c_session);
+                        c_session);
+      coap_session_establish(c_session);
     }
   }
   if (c_session->state != COAP_SESSION_STATE_NONE && g_env->established) {

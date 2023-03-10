@@ -1843,8 +1843,8 @@ void *coap_dtls_new_client_session(coap_session_t *c_session)
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
-void *coap_dtls_new_server_session(coap_session_t *c_session)
-{
+void *
+coap_dtls_new_server_session(coap_session_t *c_session) {
 #if !defined(MBEDTLS_SSL_SRV_C)
   (void)c_session;
   coap_log_emerg("coap_dtls_new_server_session:"
@@ -1866,8 +1866,8 @@ void *coap_dtls_new_server_session(coap_session_t *c_session)
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-void coap_dtls_free_session(coap_session_t *c_session)
-{
+void
+coap_dtls_free_session(coap_session_t *c_session) {
   if (c_session && c_session->context && c_session->tls) {
     coap_dtls_free_mbedtls_env(c_session->tls);
     c_session->tls = NULL;
@@ -1876,8 +1876,8 @@ void coap_dtls_free_session(coap_session_t *c_session)
   return;
 }
 
-void coap_dtls_session_update_mtu(coap_session_t *c_session)
-{
+void
+coap_dtls_session_update_mtu(coap_session_t *c_session) {
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
   coap_mbedtls_env_t *m_env =
          (coap_mbedtls_env_t *)c_session->tls;
@@ -2023,10 +2023,10 @@ coap_dtls_handle_timeout(coap_session_t *c_session)
  *          0 no more
  *         -1 error
  */
-int coap_dtls_receive(coap_session_t *c_session,
-                      const uint8_t *data,
-                      size_t data_len)
-{
+int
+coap_dtls_receive(coap_session_t *c_session,
+                  const uint8_t *data,
+                  size_t data_len) {
   int ret = 1;
 
   c_session->dtls_event = -1;
@@ -2058,7 +2058,7 @@ int coap_dtls_receive(coap_session_t *c_session,
     if (c_session->state == COAP_SESSION_STATE_HANDSHAKE) {
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
                         c_session);
-      coap_session_connected(c_session);
+      coap_session_establish(c_session);
     }
 
     ret = mbedtls_ssl_read(&m_env->ssl, pdu, sizeof(pdu));
@@ -2247,7 +2247,7 @@ void *coap_tls_new_client_session(coap_session_t *c_session,
   if (ret == 1) {
     *connected = 1;
     coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
-    coap_session_send_csm(c_session);
+    coap_session_establish(c_session);
   }
   return m_env;
 #endif /* MBEDTLS_SSL_CLI_C */
@@ -2285,7 +2285,8 @@ coap_tls_new_server_session(coap_session_t *c_session, int *connected) {
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-void coap_tls_free_session(coap_session_t *c_session)
+void
+coap_tls_free_session(coap_session_t *c_session)
 {
   coap_dtls_free_session(c_session);
   return;
@@ -2347,8 +2348,8 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
     ret = do_mbedtls_handshake(c_session, m_env);
     if (ret == 1) {
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                                     c_session);
-      coap_session_send_csm(c_session);
+                        c_session);
+      coap_session_establish(c_session);
     }
     else {
       ret = -1;
@@ -2391,8 +2392,8 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len)
     ret = do_mbedtls_handshake(c_session, m_env);
     if (ret == 1) {
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                                                               c_session);
-      coap_session_send_csm(c_session);
+                        c_session);
+      coap_session_establish(c_session);
     }
   }
 
