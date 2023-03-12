@@ -25,6 +25,7 @@ option(
 
 add_library(${COAP_LIBRARY_NAME})
 set_property(TARGET ${COAP_LIBRARY_NAME} PROPERTY C_STANDARD 99)
+set(CMAKE_POLICY_DEFAULT_CMP0115 OLD) # Supresses libcoap configuration warning
 
 #
 # options to tweak the library
@@ -581,7 +582,8 @@ add_compile_options(
 
 if(${WARNING_TO_ERROR})
 add_compile_options(
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Werror>)
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Werror>
+  $<$<CXX_COMPILER_ID:AppleClang>:-Werror>)
 endif()
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio")

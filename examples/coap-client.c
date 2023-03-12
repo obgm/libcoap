@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #ifdef _WIN32
@@ -731,7 +732,7 @@ static int
 oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
   if (oscore_seq_num_fp) {
     rewind(oscore_seq_num_fp);
-    fprintf(oscore_seq_num_fp, "%ju\n", sender_seq_num);
+    fprintf(oscore_seq_num_fp, "%" PRIu64 "\n", sender_seq_num);
     fflush(oscore_seq_num_fp);
   }
   return 1;
@@ -763,7 +764,7 @@ get_oscore_conf(void) {
         return NULL;
       }
     }
-    if (fscanf(oscore_seq_num_fp, "%ju", &start_seq_num) != 1) {
+    if (fscanf(oscore_seq_num_fp, "%" PRIu64, &start_seq_num) != 1) {
       /* Must be empty */
       start_seq_num = 0;
     }
