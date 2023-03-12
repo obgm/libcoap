@@ -44,6 +44,12 @@
 #ifndef PRIu32
 #define PRIu32 "u"
 #endif /* ! PRIu32 */
+#ifndef PRIx64
+#define PRIx64 "lx"
+#endif /* ! PRIx64 */
+#ifndef PRIu64
+#define PRIu64 "lu"
+#endif /* ! PRIu64 */
 #endif /* ! HAVE_INTTYPES_H */
 
 #if defined(HAVE_ERRNO_H)
