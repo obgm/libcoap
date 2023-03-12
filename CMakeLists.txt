@@ -673,8 +673,8 @@ if(ENABLE_DOCS)
     set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 
     # Make necessary temporary directories
-    file(MAKE_DIRECTORY  ${CMAKE_BINARY_DIR}/doc/man_tmp)
-    file(MAKE_DIRECTORY  ${CMAKE_BINARY_DIR}/doc/man_html)
+    file(MAKE_DIRECTORY  ${CMAKE_CURRENT_BINARY_DIR}/doc/man_tmp)
+    file(MAKE_DIRECTORY  ${CMAKE_CURRENT_BINARY_DIR}/doc/man_html)
 
     # request to configure the file
     configure_file(
@@ -686,6 +686,7 @@ if(ENABLE_DOCS)
     # application
     add_custom_target(
       doc_doxygen ALL
+      COMMAND ${DOXYGEN_EXECUTABLE} -u > /dev/null 2>&1
       COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT "Generating API documentation with Doxygen"

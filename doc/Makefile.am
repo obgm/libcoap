@@ -209,6 +209,7 @@ man-page-build: upg-page-build man-page-start
 	##
 	## Create and Update the DoxygenLayout.xml file
 	##
+	$(DOXYGEN) -u > /dev/null 2>&1 ;\
 	$(DOXYGEN) -l ;\
 	$(SED) -i 's/<tab type="pages" visible="yes" /<tab type="pages" visible="no" /g' $(top_builddir)/doc/DoxygenLayout.xml ;\
 	$(SED) -i '/<tab type="examples" visible=.*/r insert_file' $(top_builddir)/doc/DoxygenLayout.xml ;\
