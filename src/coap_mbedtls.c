@@ -1946,6 +1946,10 @@ coap_dtls_send(coap_session_t *c_session,
       ret = -1;
     }
   }
+  if (ret > 0) {
+    coap_log_debug("*  %s: dtls: sent %d bytes\n",
+                   coap_session_str(c_session), ret);
+  }
   return ret;
 }
 
@@ -2125,6 +2129,10 @@ finish:
     coap_log_debug("coap_dtls_receive: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
     ssl_data->pdu_len = 0;
     ssl_data->pdu = NULL;
+  }
+  if (ret > 0) {
+    coap_log_debug("*  %s: dtls: received %d bytes\n",
+                   coap_session_str(c_session), ret);
   }
   return ret;
 }
@@ -2366,6 +2374,10 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
       ret = -1;
     }
   }
+  if (ret > 0) {
+    coap_log_debug("*  %s: tls: sent %d bytes\n",
+                   coap_session_str(c_session), ret);
+  }
   return ret;
 }
 
@@ -2437,6 +2449,10 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len)
       coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
       ret = -1;
     }
+  }
+  if (ret > 0) {
+    coap_log_debug("*  %s: tls: received %d bytes\n",
+                   coap_session_str(c_session), ret);
   }
   return ret;
 }
