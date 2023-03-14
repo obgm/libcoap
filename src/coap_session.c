@@ -573,14 +573,38 @@ void coap_session_connected(coap_session_t *session) {
   }
 }
 
+static const char*
+coap_nack_name(coap_nack_reason_t reason) {
+  switch (reason) {
+  case COAP_NACK_TOO_MANY_RETRIES:
+    return "COAP_NACK_TOO_MANY_RETRIES";
+  case COAP_NACK_NOT_DELIVERABLE:
+    return "COAP_NACK_NOT_DELIVERABLE";
+  case COAP_NACK_RST:
+    return "COAP_NACK_RST";
+  case COAP_NACK_TLS_FAILED:
+    return "COAP_NACK_TLS_FAILED";
+  case COAP_NACK_ICMP_ISSUE:
+    return "COAP_NACK_ICMP_ISSUE";
+  case COAP_NACK_BAD_RESPONSE:
+    return "COAP_NACK_BAD_RESPONSE";
+  case COAP_NACK_TLS_LAYER_FAILED:
+    return "COAP_NACK_TLS_LAYER_FAILED";
+  case COAP_NACK_SESSION_LAYER_FAILED:
+    return "COAP_NACK_SESSION_LAYER_FAILED";
+  default:
+    return "???";
+  }
+}
+
 void
 coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
 #if !COAP_DISABLE_TCP
   coap_session_state_t state = session->state;
 #endif /* !COAP_DISABLE_TCP */
 
-  coap_log_debug("***%s: session disconnected (reason %d)\n",
-           coap_session_str(session), reason);
+  coap_log_debug("***%s: session disconnected (%s)\n",
+                 coap_session_str(session), coap_nack_name(reason));
 #if COAP_SERVER_SUPPORT
   coap_delete_observers( session->context, session );
 #endif /* COAP_SERVER_SUPPORT */

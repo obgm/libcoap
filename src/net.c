@@ -3649,9 +3649,61 @@ cleanup:
 #endif /* HAVE_OSCORE */
 }
 
+static const char*
+coap_event_name(coap_event_t event) {
+  switch (event) {
+  case COAP_EVENT_DTLS_CLOSED:
+    return "COAP_EVENT_DTLS_CLOSED";
+  case COAP_EVENT_DTLS_CONNECTED:
+    return "COAP_EVENT_DTLS_CONNECTED";
+  case COAP_EVENT_DTLS_RENEGOTIATE:
+    return "COAP_EVENT_DTLS_RENEGOTIATE";
+  case COAP_EVENT_DTLS_ERROR:
+    return "COAP_EVENT_DTLS_ERROR";
+  case COAP_EVENT_TCP_CONNECTED:
+    return "COAP_EVENT_TCP_CONNECTED";
+  case COAP_EVENT_TCP_CLOSED:
+    return "COAP_EVENT_TCP_CLOSED";
+  case COAP_EVENT_TCP_FAILED:
+    return "COAP_EVENT_TCP_FAILED";
+  case COAP_EVENT_SESSION_CONNECTED:
+    return "COAP_EVENT_SESSION_CONNECTED";
+  case COAP_EVENT_SESSION_CLOSED:
+    return "COAP_EVENT_SESSION_CLOSED";
+  case COAP_EVENT_SESSION_FAILED:
+    return "COAP_EVENT_SESSION_FAILED";
+  case COAP_EVENT_PARTIAL_BLOCK:
+    return "COAP_EVENT_PARTIAL_BLOCK";
+  case COAP_EVENT_XMIT_BLOCK_FAIL:
+    return "COAP_EVENT_XMIT_BLOCK_FAIL";
+  case COAP_EVENT_SERVER_SESSION_NEW:
+    return "COAP_EVENT_SERVER_SESSION_NEW";
+  case COAP_EVENT_SERVER_SESSION_DEL:
+    return "COAP_EVENT_SERVER_SESSION_DEL";
+  case COAP_EVENT_BAD_PACKET:
+    return "COAP_EVENT_BAD_PACKET";
+  case COAP_EVENT_MSG_RETRANSMITTED:
+    return "COAP_EVENT_MSG_RETRANSMITTED";
+  case COAP_EVENT_OSCORE_DECRYPTION_FAILURE:
+    return "COAP_EVENT_OSCORE_DECRYPTION_FAILURE";
+  case COAP_EVENT_OSCORE_NOT_ENABLED:
+    return "COAP_EVENT_OSCORE_NOT_ENABLED";
+  case COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD:
+    return "COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD";
+  case COAP_EVENT_OSCORE_NO_SECURITY:
+    return "COAP_EVENT_OSCORE_NO_SECURITY";
+  case COAP_EVENT_OSCORE_INTERNAL_ERROR:
+    return "COAP_EVENT_OSCORE_INTERNAL_ERROR";
+  case COAP_EVENT_OSCORE_DECODE_ERROR:
+    return "COAP_EVENT_OSCORE_DECODE_ERROR";
+  default:
+    return "???";
+  }
+}
+
 int
 coap_handle_event(coap_context_t *context, coap_event_t event, coap_session_t *session) {
-  coap_log_debug("***EVENT: 0x%04x\n", event);
+  coap_log_debug("***EVENT: %s\n", coap_event_name(event));
 
   if (context->handle_event) {
     return context->handle_event(session, event);
