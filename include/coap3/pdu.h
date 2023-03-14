@@ -457,7 +457,7 @@ int coap_add_token(coap_pdu_t *pdu,
  * Adds option of given @p number to @p pdu that is passed as first
  * parameter.
  *
- * This function will fail if data has aready been added to the @p pdu.
+ * This function will fail if data has already been added to the @p pdu.
  *
  * Hence data must be added after optional coap_add_option() has been called.
  *
@@ -482,7 +482,7 @@ size_t coap_add_option(coap_pdu_t *pdu,
 /**
  * Adds given data to the pdu that is passed as first parameter.
  *
- * This function will fail if data has aready been added to the @p pdu.
+ * This function will fail if data has already been added to the @p pdu.
  *
  * @param pdu    The PDU where the data is to be added.
  * @param len    The length of the data.
@@ -497,7 +497,7 @@ int coap_add_data(coap_pdu_t *pdu,
 /**
  * Adds given data to the pdu that is passed as first parameter but does not
  *
- * This function will fail if data has aready been added to the @p pdu.
+ * This function will fail if data has already been added to the @p pdu.
  *
  * The actual data must be copied at the returned location.
  *
