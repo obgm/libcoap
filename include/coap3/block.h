@@ -280,7 +280,7 @@ typedef void (*coap_release_large_data_t)(coap_session_t *session,
 /**
  * Associates given data with the @p pdu that is passed as second parameter.
  *
- * This function will fail if data has aready been added to the @p pdu.
+ * This function will fail if data has already been added to the @p pdu.
  *
  * If all the data can be transmitted in a single PDU, this is functionally
  * the same as coap_add_data() except @p release_func (if not NULL) will get
@@ -330,7 +330,7 @@ int coap_add_data_large_request(coap_session_t *session,
  * Associates given data with the @p response pdu that is passed as fourth
  * parameter.
  *
- * This function will fail if data has aready been added to the @p pdu.
+ * This function will fail if data has already been added to the @p pdu.
  *
  * If all the data can be transmitted in a single PDU, this is functionally
  * the same as coap_add_data() except @p release_func (if not NULL) will get
