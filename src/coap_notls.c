@@ -217,23 +217,27 @@ coap_dtls_hello(coap_session_t *session COAP_UNUSED,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-unsigned int coap_dtls_get_overhead(coap_session_t *session COAP_UNUSED) {
+unsigned int
+coap_dtls_get_overhead(coap_session_t *session COAP_UNUSED) {
   return 0;
 }
 
 #if COAP_CLIENT_SUPPORT
-void *coap_tls_new_client_session(coap_session_t *session COAP_UNUSED, int *connected COAP_UNUSED) {
+void *
+coap_tls_new_client_session(coap_session_t *session COAP_UNUSED) {
   return NULL;
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
-void *coap_tls_new_server_session(coap_session_t *session COAP_UNUSED, int *connected COAP_UNUSED) {
+void *
+coap_tls_new_server_session(coap_session_t *session COAP_UNUSED) {
   return NULL;
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-void coap_tls_free_session(coap_session_t *coap_session COAP_UNUSED) {
+void
+coap_tls_free_session(coap_session_t *coap_session COAP_UNUSED) {
 }
 
 /*

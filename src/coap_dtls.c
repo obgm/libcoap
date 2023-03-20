@@ -19,6 +19,7 @@
 
 void
 coap_dtls_establish(coap_session_t *session) {
+  session->state = COAP_SESSION_STATE_HANDSHAKE;
 #if COAP_CLIENT_SUPPORT
   if (session->type == COAP_SESSION_TYPE_CLIENT)
     session->tls = coap_dtls_new_client_session(session);
@@ -28,9 +29,7 @@ coap_dtls_establish(coap_session_t *session) {
     session->tls = coap_dtls_new_server_session(session);
 #endif /* COAP_SERVER_SUPPORT */
 
-  if (session->tls) {
-    session->state = COAP_SESSION_STATE_HANDSHAKE;
-  } else {
+  if (!session->tls) {
     coap_session_disconnected(session, COAP_NACK_TLS_LAYER_FAILED);
     return;
   }
@@ -49,24 +48,17 @@ coap_dtls_close(coap_session_t *session) {
 #if !COAP_DISABLE_TCP
 void
 coap_tls_establish(coap_session_t *session) {
-  int connected = 0;
-
+  session->state = COAP_SESSION_STATE_HANDSHAKE;
 #if COAP_CLIENT_SUPPORT
   if (session->type == COAP_SESSION_TYPE_CLIENT)
-    session->tls = coap_tls_new_client_session(session, &connected);
+    session->tls = coap_tls_new_client_session(session);
 #endif /* COAP_CLIENT_SUPPORT */
 #if COAP_SERVER_SUPPORT
   if (session->type != COAP_SESSION_TYPE_CLIENT)
-    session->tls = coap_tls_new_server_session(session, &connected);
+    session->tls = coap_tls_new_server_session(session);
 #endif /* COAP_SERVER_SUPPORT */
 
-  if (session->tls) {
-    session->state = COAP_SESSION_STATE_HANDSHAKE;
-    if (connected) {
-      coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
-      session->sock.lfunc[COAP_LAYER_TLS].establish(session);
-    }
-  } else {
+  if (!session->tls) {
     coap_session_disconnected(session, COAP_NACK_TLS_LAYER_FAILED);
     return;
   }

@@ -141,14 +141,14 @@ coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
                    coap_session_str(session), datalen,
                    coap_socket_strerror(), session->state);
     errno = keep_errno;
-  } else if (bytes_written == (ssize_t)datalen) {
-    coap_ticks(&session->last_rx_tx);
-    coap_log_debug("*  %s: netif: sent %zd bytes\n",
-             coap_session_str(session), datalen);
   } else {
     coap_ticks(&session->last_rx_tx);
-    coap_log_debug("*  %s: netif: sent %zd bytes of %zd\n",
-             coap_session_str(session), bytes_written, datalen);
+    if (bytes_written == (ssize_t)datalen)
+      coap_log_debug("*  %s: netif: sent %4zd bytes\n",
+                     coap_session_str(session), bytes_written);
+    else
+      coap_log_debug("*  %s: netif: sent %4zd of %4zd bytes\n",
+                     coap_session_str(session), bytes_written, datalen);
   }
   return bytes_written;
 }
@@ -216,7 +216,7 @@ coap_netif_strm_read(coap_session_t *session, uint8_t *data, size_t datalen) {
   int keep_errno = errno;
 
   if (bytes_read >= 0) {
-    coap_log_debug("*  %s: netif: received %zd bytes\n",
+    coap_log_debug("*  %s: netif: recv %4zd bytes\n",
              coap_session_str(session), bytes_read);
   } else if (bytes_read == -1 && errno != EAGAIN) {
     coap_log_debug( "*  %s: netif: failed to receive any bytes (%s) state %d\n",
@@ -242,14 +242,14 @@ coap_netif_strm_write(coap_session_t *session, const uint8_t *data,
                    coap_session_str(session), datalen,
                    coap_socket_strerror(), session->state);
     errno = keep_errno;
-  } else if (bytes_written == (ssize_t)datalen) {
-    coap_ticks(&session->last_rx_tx);
-    coap_log_debug("*  %s: netif: sent %zd bytes\n",
-             coap_session_str(session), datalen);
   } else {
     coap_ticks(&session->last_rx_tx);
-    coap_log_debug("*  %s: netif: sent %zd bytes of %zd\n",
-             coap_session_str(session), bytes_written, datalen);
+    if (bytes_written == (ssize_t)datalen)
+      coap_log_debug("*  %s: netif: sent %4zd bytes\n",
+                     coap_session_str(session), bytes_written);
+    else
+      coap_log_debug("*  %s: netif: sent %4zd of %4zd bytes\n",
+                     coap_session_str(session), bytes_written, datalen);
   }
   return bytes_written;
 }

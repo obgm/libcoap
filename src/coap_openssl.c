@@ -2862,7 +2862,8 @@ void coap_dtls_free_context(void *handle) {
 }
 
 #if COAP_SERVER_SUPPORT
-void * coap_dtls_new_server_session(coap_session_t *session) {
+void *
+coap_dtls_new_server_session(coap_session_t *session) {
   BIO *nbio = NULL;
   SSL *nssl = NULL, *ssl = NULL;
   coap_ssl_data *data;
@@ -3039,6 +3040,7 @@ coap_dtls_new_client_session(coap_session_t *session) {
   if (r == 0)
     goto error;
 
+  session->tls = ssl;
   return ssl;
 
 error:
@@ -3106,8 +3108,12 @@ coap_dtls_send(coap_session_t *session,
   }
 
   if (r > 0) {
-    coap_log_debug("*  %s: dtls: sent %d bytes\n",
-                   coap_session_str(session), r);
+    if (r == (ssize_t)data_len)
+      coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
+                     coap_session_str(session), r);
+    else
+      coap_log_debug("*  %s: dtls:  sent %4d of %4zd bytes\n",
+                     coap_session_str(session), r, data_len);
   }
   return r;
 }
@@ -3249,7 +3255,7 @@ finished:
     ssl_data->pdu = NULL;
   }
   if (r > 0) {
-    coap_log_debug("*  %s: dtls: received %d bytes\n",
+    coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
                    coap_session_str(session), r);
   }
   return r;
@@ -3313,14 +3319,14 @@ unsigned int coap_dtls_get_overhead(coap_session_t *session) {
 
 #if !COAP_DISABLE_TCP
 #if COAP_CLIENT_SUPPORT
-void *coap_tls_new_client_session(coap_session_t *session, int *connected) {
+void *
+coap_tls_new_client_session(coap_session_t *session) {
   BIO *bio = NULL;
   SSL *ssl = NULL;
   int r;
   coap_openssl_context_t *context = ((coap_openssl_context_t *)session->context->dtls_context);
   coap_tls_context_t *tls = &context->tls;
 
-  *connected = 0;
   ssl = SSL_new(tls->ctx);
   if (!ssl)
     goto error;
@@ -3356,7 +3362,11 @@ void *coap_tls_new_client_session(coap_session_t *session, int *connected) {
   if (r == 0)
     goto error;
 
-  *connected = SSL_is_init_finished(ssl);
+  session->tls = ssl;
+  if (SSL_is_init_finished(ssl)) {
+    coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+    session->sock.lfunc[COAP_LAYER_TLS].establish(session);
+  }
 
   return ssl;
 
@@ -3369,14 +3379,13 @@ error:
 
 #if COAP_SERVER_SUPPORT
 void *
-coap_tls_new_server_session(coap_session_t *session, int *connected) {
+coap_tls_new_server_session(coap_session_t *session) {
   BIO *bio = NULL;
   SSL *ssl = NULL;
   coap_tls_context_t *tls = &((coap_openssl_context_t *)session->context->dtls_context)->tls;
   int r;
   const coap_bin_const_t *psk_hint;
 
-  *connected = 0;
   ssl = SSL_new(tls->ctx);
   if (!ssl)
     goto error;
@@ -3423,7 +3432,11 @@ coap_tls_new_server_session(coap_session_t *session, int *connected) {
   if (r == 0)
     goto error;
 
-  *connected = SSL_is_init_finished(ssl);
+  session->tls = ssl;
+  if (SSL_is_init_finished(ssl)) {
+    coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+    session->sock.lfunc[COAP_LAYER_TLS].establish(session);
+  }
 
   return ssl;
 
@@ -3516,8 +3529,12 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
   }
 
   if (r >= 0) {
-    coap_log_debug("*  %s: tls: sent %d bytes\n",
-                   coap_session_str(session), r);
+    if (r == (ssize_t)data_len)
+      coap_log_debug("*  %s: tls:   sent %4d bytes\n",
+                     coap_session_str(session), r);
+    else
+      coap_log_debug("*  %s: tls:   sent %4d of %4zd bytes\n",
+                     coap_session_str(session), r, data_len);
   }
   return r;
 }
@@ -3588,7 +3605,7 @@ coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
   }
 
   if (r > 0) {
-    coap_log_debug("*  %s: tls: received %d bytes\n",
+    coap_log_debug("*  %s: tls:   recv %4d bytes\n",
                    coap_session_str(session), r);
   }
   return r;

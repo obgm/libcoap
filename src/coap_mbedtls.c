@@ -1949,8 +1949,12 @@ coap_dtls_send(coap_session_t *c_session,
     }
   }
   if (ret > 0) {
-    coap_log_debug("*  %s: dtls: sent %d bytes\n",
-                   coap_session_str(c_session), ret);
+    if (ret == (ssize_t)data_len)
+      coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
+                     coap_session_str(c_session), ret);
+    else
+      coap_log_debug("*  %s: dtls:  sent %4d of %4zd bytes\n",
+                     coap_session_str(c_session), ret, data_len);
   }
   return ret;
 }
@@ -2133,7 +2137,7 @@ finish:
     ssl_data->pdu = NULL;
   }
   if (ret > 0) {
-    coap_log_debug("*  %s: dtls: received %d bytes\n",
+    coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
                    coap_session_str(c_session), ret);
   }
   return ret;
@@ -2229,9 +2233,8 @@ unsigned int coap_dtls_get_overhead(coap_session_t *c_session)
 
 #if !COAP_DISABLE_TCP
 #if COAP_CLIENT_SUPPORT
-void *coap_tls_new_client_session(coap_session_t *c_session,
-                                  int *connected)
-{
+void *
+coap_tls_new_client_session(coap_session_t *c_session) {
 #if !defined(MBEDTLS_SSL_CLI_C)
   (void)c_session;
   *connected = 0;
@@ -2247,7 +2250,6 @@ void *coap_tls_new_client_session(coap_session_t *c_session,
   coap_tick_t now;
   coap_ticks(&now);
 
-  *connected = 0;
   if (!m_env)
     return NULL;
 
@@ -2255,7 +2257,6 @@ void *coap_tls_new_client_session(coap_session_t *c_session,
   c_session->tls = m_env;
   ret = do_mbedtls_handshake(c_session, m_env);
   if (ret == 1) {
-    *connected = 1;
     coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
     c_session->sock.lfunc[COAP_LAYER_TLS].establish(c_session);
   }
@@ -2266,7 +2267,7 @@ void *coap_tls_new_client_session(coap_session_t *c_session,
 
 #if COAP_SERVER_SUPPORT
 void *
-coap_tls_new_server_session(coap_session_t *c_session, int *connected) {
+coap_tls_new_server_session(coap_session_t *c_session) {
 #if !defined(MBEDTLS_SSL_SRV_C)
   (void)c_session;
   (void)connected;
@@ -2281,14 +2282,14 @@ coap_tls_new_server_session(coap_session_t *c_session, int *connected) {
                                                        COAP_PROTO_TLS);
   int ret;
 
-  *connected = 0;
   if (!m_env)
     return NULL;
 
   c_session->tls = m_env;
   ret = do_mbedtls_handshake(c_session, m_env);
   if (ret == 1) {
-    *connected = 1;
+    coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
+    c_session->sock.lfunc[COAP_LAYER_TLS].establish(c_session);
   }
   return m_env;
 #endif /* MBEDTLS_SSL_SRV_C */
@@ -2376,8 +2377,12 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
     }
   }
   if (ret > 0) {
-    coap_log_debug("*  %s: tls: sent %d bytes\n",
-                   coap_session_str(c_session), ret);
+    if (ret == (ssize_t)data_len)
+      coap_log_debug("*  %s: tls:   sent %4d bytes\n",
+                     coap_session_str(c_session), ret);
+    else
+      coap_log_debug("*  %s: tls:   sent %4d of %4zd bytes\n",
+                     coap_session_str(c_session), ret, data_len);
   }
   return ret;
 }
@@ -2452,7 +2457,7 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len)
     }
   }
   if (ret > 0) {
-    coap_log_debug("*  %s: tls: received %d bytes\n",
+    coap_log_debug("*  %s: tls:   recv %4d bytes\n",
                    coap_session_str(c_session), ret);
   }
   return ret;

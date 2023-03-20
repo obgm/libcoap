@@ -1228,11 +1228,12 @@ coap_session_get_psk_key(const coap_session_t *session) {
 }
 
 #if COAP_CLIENT_SUPPORT
-coap_session_t *coap_new_client_session_pki(coap_context_t *ctx,
-                                            const coap_address_t *local_if,
-                                            const coap_address_t *server,
-                                            coap_proto_t proto,
-                                            coap_dtls_pki_t* setup_data) {
+coap_session_t *
+coap_new_client_session_pki(coap_context_t *ctx,
+                            const coap_address_t *local_if,
+                            const coap_address_t *server,
+                            coap_proto_t proto,
+                            coap_dtls_pki_t* setup_data) {
   coap_session_t *session;
 
   if (coap_dtls_is_supported() || coap_tls_is_supported()) {

@@ -300,13 +300,11 @@ unsigned int coap_dtls_get_overhead(coap_session_t *coap_session);
  * Create a new TLS client-side session.
  *
  * @param coap_session The CoAP session.
- * @param connected Updated with whether the connection is connected yet or not.
- *                  @c 0 is not connected, @c 1 is connected.
  *
  * @return Opaque handle to underlying TLS library object containing security
  *         parameters for the session.
 */
-void *coap_tls_new_client_session(coap_session_t *coap_session, int *connected);
+void *coap_tls_new_client_session(coap_session_t *coap_session);
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
@@ -314,13 +312,11 @@ void *coap_tls_new_client_session(coap_session_t *coap_session, int *connected);
  * Create a TLS new server-side session.
  *
  * @param coap_session The CoAP session.
- * @param connected Updated with whether the connection is connected yet or not.
- *                  @c 0 is not connected, @c 1 is connected.
  *
  * @return Opaque handle to underlying TLS library object containing security
  *         parameters for the session.
  */
-void *coap_tls_new_server_session(coap_session_t *coap_session, int *connected);
+void *coap_tls_new_server_session(coap_session_t *coap_session);
 #endif /* COAP_SERVER_SUPPORT */
 
 /**
