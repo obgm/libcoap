@@ -760,6 +760,14 @@ coap_dtls_send(coap_session_t *session,
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
   }
 
+  if (res > 0) {
+    if (res == (ssize_t)data_len)
+      coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
+                     coap_session_str(session), res);
+    else
+      coap_log_debug("*  %s: dtls:  sent %4d of %4zd bytes\n",
+                     coap_session_str(session), res, data_len);
+  }
   return res;
 }
 
@@ -811,7 +819,7 @@ coap_dtls_receive(coap_session_t *session,
   memcpy (&data_rw, &data, sizeof(data_rw));
   err = dtls_handle_message(dtls_context, dtls_session, data_rw, (int)data_len);
 
-  if (err){
+  if (err) {
     coap_event_dtls = COAP_EVENT_DTLS_ERROR;
   }
 
@@ -1372,18 +1380,21 @@ coap_dtls_context_check_keys_enabled(coap_context_t *ctx COAP_UNUSED)
 
 #if !COAP_DISABLE_TCP
 #if COAP_CLIENT_SUPPORT
-void *coap_tls_new_client_session(coap_session_t *session COAP_UNUSED, int *connected COAP_UNUSED) {
+void *
+coap_tls_new_client_session(coap_session_t *session COAP_UNUSED) {
   return NULL;
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
-void *coap_tls_new_server_session(coap_session_t *session COAP_UNUSED, int *connected COAP_UNUSED) {
+void *
+coap_tls_new_server_session(coap_session_t *session COAP_UNUSED) {
   return NULL;
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-void coap_tls_free_session(coap_session_t *coap_session COAP_UNUSED) {
+void
+coap_tls_free_session(coap_session_t *coap_session COAP_UNUSED) {
 }
 
 /*

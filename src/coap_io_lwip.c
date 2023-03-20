@@ -148,7 +148,7 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     return;
   }
 
-  coap_log_debug("*  %s: received %d bytes\n",
+  coap_log_debug("*  %s: lwip:  recv %4d bytes\n",
            coap_session_str(session), p->len);
   if (session->proto == COAP_PROTO_DTLS) {
     if (session->tls) {
@@ -235,7 +235,7 @@ coap_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     goto error;
   LWIP_ASSERT("Proto not supported for LWIP", COAP_PROTO_NOT_RELIABLE(session->proto));
 
-  coap_log_debug("*  %s: received %d bytes\n",
+  coap_log_debug("*  %s: lwip:  recv %4d bytes\n",
            coap_session_str(session), p->len);
 
   if (session->proto == COAP_PROTO_DTLS) {
