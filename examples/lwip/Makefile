@@ -155,7 +155,8 @@ COAP_SRC = coap_address.c \
 	   coap_tinydtls.c \
 	   coap_str.c \
 	   coap_tcp.c \
-	   coap_uri.c
+	   coap_uri.c \
+	   coap_ws.c
 
 CN_COAP_OBJ =$(patsubst %.c,lib-client/%.o,$(COAP_SRC))
 SN_COAP_OBJ =$(patsubst %.c,lib-server/%.o,$(COAP_SRC))

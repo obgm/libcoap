@@ -3646,8 +3646,81 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-#if HAVE_OSCORE
+#if COAP_WS_SUPPORT
+/*
+ * The struct hash_algs and the function get_hash_alg() are used to
+ * determine which hash type to use for creating the required hash object.
+ */
+static struct hash_algs {
+  cose_alg_t alg;
+  const EVP_MD *(*get_hash)(void);
+  size_t length; /* in bytes */
+} hashs[] = {
+    {COSE_ALGORITHM_SHA_1, EVP_sha1, 20},
+    {COSE_ALGORITHM_SHA_256_64, EVP_sha256, 8},
+    {COSE_ALGORITHM_SHA_256_256, EVP_sha256, 32},
+    {COSE_ALGORITHM_SHA_512, EVP_sha512, 64},
+};
 
+static const EVP_MD *
+get_hash_alg(cose_alg_t alg, size_t *length) {
+  size_t idx;
+
+  for (idx = 0; idx < sizeof(hashs) / sizeof(struct hash_algs); idx++) {
+    if (hashs[idx].alg == alg) {
+      *length = hashs[idx].length;
+      return hashs[idx].get_hash();
+    }
+  }
+  coap_log_debug("get_hash_alg: COSE hash %d not supported\n", alg);
+  return NULL;
+}
+
+int
+coap_crypto_hash(cose_alg_t alg,
+                 const coap_bin_const_t *data,
+                 coap_bin_const_t **hash) {
+  unsigned int length;
+  const EVP_MD *evp_md;
+  EVP_MD_CTX *evp_ctx = NULL;
+  coap_binary_t *dummy = NULL;
+  size_t hash_length;
+
+  if ((evp_md = get_hash_alg(alg, &hash_length)) == NULL) {
+    coap_log_debug("coap_crypto_hash: algorithm %d not supported\n", alg);
+    return 0;
+  }
+  evp_ctx = EVP_MD_CTX_new();
+  if (evp_ctx == NULL)
+    goto error;
+  if (EVP_DigestInit_ex(evp_ctx, evp_md, NULL) == 0)
+    goto error;
+  ;
+  if (EVP_DigestUpdate(evp_ctx, data->s, data->length) == 0)
+    goto error;
+  ;
+  dummy = coap_new_binary(EVP_MAX_MD_SIZE);
+  if (dummy == NULL)
+    goto error;
+  if (EVP_DigestFinal_ex(evp_ctx, dummy->s, &length) == 0)
+    goto error;
+  dummy->length = length;
+  if (hash_length < dummy->length)
+    dummy->length = hash_length;
+  *hash = (coap_bin_const_t *)(dummy);
+  EVP_MD_CTX_free(evp_ctx);
+  return 1;
+
+error:
+  coap_crypto_output_errors("coap_crypto_hash");
+  coap_delete_binary(dummy);
+  if (evp_ctx)
+    EVP_MD_CTX_free(evp_ctx);
+  return 0;
+}
+#endif /* COAP_WS_SUPPORT */
+
+#if HAVE_OSCORE
 int
 coap_oscore_is_supported(void) {
   return 1;

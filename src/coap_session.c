@@ -310,6 +310,8 @@ void coap_session_free(coap_session_t *session) {
   assert(session->ref == 0);
   if (session->ref)
     return;
+  /* Make sure nothing gets deleted under our feet */
+  coap_session_reference(session);
   coap_session_mfree(session);
 #if COAP_SERVER_SUPPORT
   if (session->endpoint) {
@@ -327,6 +329,7 @@ void coap_session_free(coap_session_t *session) {
   coap_log_debug("***%s: session %p: closed\n", coap_session_str(session),
            (void *)session);
 
+  assert(session->ref == 1);
   coap_free_type(COAP_SESSION, session);
 }
 
@@ -586,8 +589,6 @@ coap_nack_name(coap_nack_reason_t reason) {
     return "COAP_NACK_BAD_RESPONSE";
   case COAP_NACK_TLS_LAYER_FAILED:
     return "COAP_NACK_TLS_LAYER_FAILED";
-  case COAP_NACK_SESSION_LAYER_FAILED:
-    return "COAP_NACK_SESSION_LAYER_FAILED";
   default:
     return "???";
   }

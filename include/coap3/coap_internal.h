@@ -112,5 +112,6 @@ typedef struct oscore_ctx_t oscore_ctx_t;
 #include "coap_uri_internal.h"
 #include "coap_utlist_internal.h"
 #include "coap_uthash_internal.h"
+#include "coap_ws_internal.h"
 
 #endif /* COAP_INTERNAL_H_ */

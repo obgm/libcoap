@@ -863,6 +863,7 @@ get_ongoing_proxy_session(coap_session_t *session,
 
   coap_address_t dst;
   coap_uri_scheme_t scheme;
+  coap_proto_t proto;
   static char client_sni[256];
   coap_str_const_t server;
   uint16_t port;
@@ -888,6 +889,27 @@ get_ongoing_proxy_session(coap_session_t *session,
     scheme = uri->scheme;
   }
 
+  switch(scheme) {
+  case COAP_URI_SCHEME_COAP:
+    proto = COAP_PROTO_UDP;
+    break;
+  case COAP_URI_SCHEME_COAPS:
+    proto = COAP_PROTO_DTLS;
+    break;
+  case COAP_URI_SCHEME_COAP_TCP:
+    proto = COAP_PROTO_TCP;
+    break;
+  case COAP_URI_SCHEME_COAPS_TCP:
+    proto = COAP_PROTO_TLS;
+    break;
+  case COAP_URI_SCHEME_LAST:
+  default:
+  case COAP_URI_SCHEME_HTTP:
+  case COAP_URI_SCHEME_HTTPS:
+    coap_log_err("http:// or https:// not supported\n");
+    return NULL;
+  }
+
   /* resolve destination address where data should be sent */
   info_list = coap_resolve_address_info(&server, port, port,
                                         0,
@@ -905,9 +927,7 @@ get_ongoing_proxy_session(coap_session_t *session,
   case COAP_URI_SCHEME_COAP:
   case COAP_URI_SCHEME_COAP_TCP:
     new_proxy_list->ongoing =
-       coap_new_client_session(context, NULL, &dst,
-                               scheme == COAP_URI_SCHEME_COAP ?
-                                COAP_PROTO_UDP : COAP_PROTO_TCP);
+       coap_new_client_session(context, NULL, &dst, proto);
     break;
   case COAP_URI_SCHEME_COAPS:
   case COAP_URI_SCHEME_COAPS_TCP:
@@ -923,19 +943,13 @@ get_ongoing_proxy_session(coap_session_t *session,
       coap_dtls_pki_t *dtls_pki = setup_pki(context, COAP_DTLS_ROLE_CLIENT,
                                             client_sni);
       new_proxy_list->ongoing =
-           coap_new_client_session_pki(context, NULL, &dst,
-                 scheme == COAP_URI_SCHEME_COAPS ?
-                  COAP_PROTO_DTLS : COAP_PROTO_TLS,
-                 dtls_pki);
+           coap_new_client_session_pki(context, NULL, &dst, proto, dtls_pki);
     } else {
       /* Use our defined PSK */
       coap_dtls_cpsk_t *dtls_cpsk = setup_cpsk(client_sni);
 
       new_proxy_list->ongoing =
-           coap_new_client_session_psk2(context, NULL, &dst,
-                 scheme == COAP_URI_SCHEME_COAPS ?
-                  COAP_PROTO_DTLS : COAP_PROTO_TLS,
-                 dtls_cpsk);
+           coap_new_client_session_psk2(context, NULL, &dst, proto, dtls_cpsk);
     }
     break;
   case COAP_URI_SCHEME_HTTP:
@@ -1702,13 +1716,12 @@ proxy_nack_handler(coap_session_t *session,
   case COAP_NACK_NOT_DELIVERABLE:
   case COAP_NACK_RST:
   case COAP_NACK_TLS_FAILED:
+  case COAP_NACK_TLS_LAYER_FAILED:
     /* Need to remove any proxy associations */
     remove_proxy_association(session, 1);
     break;
   case COAP_NACK_ICMP_ISSUE:
   case COAP_NACK_BAD_RESPONSE:
-  case COAP_NACK_TLS_LAYER_FAILED:
-  case COAP_NACK_SESSION_LAYER_FAILED:
   default:
     break;
   }
@@ -2274,6 +2287,7 @@ get_context(const char *node, const char *port) {
   int have_ep = 0;
   uint16_t u_s_port = 5683;
   uint16_t s_port = 5684;
+  coap_uri_scheme_t scheme;
   int scheme_hint_bits = COAP_URI_SCHEME_ALL_COAP_BITS;
 
   ctx = coap_new_context(NULL);
@@ -2293,16 +2307,41 @@ get_context(const char *node, const char *port) {
     u_s_port = atoi(port);
     s_port = u_s_port + 1;
   }
-
-  if (cert_file == NULL && key_defined == 0)
-    scheme_hint_bits = COAP_URI_SCHEME_COAP_BIT | COAP_URI_SCHEME_COAP_TCP_BIT;
+  for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
+    switch (scheme) {
+    case COAP_URI_SCHEME_COAP:
+      scheme_hint_bits |= 1 << scheme;
+      break;
+    case COAP_URI_SCHEME_COAPS:
+      if (!coap_dtls_is_supported() || (cert_file == NULL && key_defined == 0))
+        continue;
+      scheme_hint_bits |= 1 << scheme;
+      break;
+    case COAP_URI_SCHEME_COAP_TCP:
+      if (!coap_tcp_is_supported())
+        continue;
+      scheme_hint_bits |= 1 << scheme;
+      break;
+    case COAP_URI_SCHEME_COAPS_TCP:
+      if (!coap_tls_is_supported() || (cert_file == NULL && key_defined == 0))
+        continue;
+      scheme_hint_bits |= 1 << scheme;
+      break;
+    case COAP_URI_SCHEME_HTTP:
+    case COAP_URI_SCHEME_HTTPS:
+    case COAP_URI_SCHEME_LAST:
+    default:
+      continue;
+    }
+  }
 
   switch (use_unix_proto) {
+  /* For AF_UNIX, can only listen on a single endpoint */
   case COAP_PROTO_UDP:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP; break;
   case COAP_PROTO_TCP:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP_TCP; break;
   case COAP_PROTO_DTLS: scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS; break;
   case COAP_PROTO_TLS:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS_TCP; break;
-  case COAP_PROTO_NONE:
+  case COAP_PROTO_NONE: /* If -U was not defined */
   case COAP_PROTO_LAST:
   default:
     break;
@@ -2696,7 +2735,7 @@ main(int argc, char **argv) {
   char *group_if = NULL;
   coap_tick_t now;
   char addr_str[NI_MAXHOST] = "::";
-  char port_str[NI_MAXSERV] = "5683";
+  char *port_str = NULL;
   int opt;
   int mcast_per_resource = 0;
   coap_log_t log_level = COAP_LOG_WARN;
@@ -2802,8 +2841,7 @@ main(int argc, char **argv) {
       resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_NON;
       break;
     case 'p' :
-      strncpy(port_str, optarg, NI_MAXSERV-1);
-      port_str[NI_MAXSERV - 1] = '\0';
+      port_str = optarg;
       break;
     case 'P':
 #if SERVER_CAN_PROXY

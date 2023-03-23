@@ -20,6 +20,7 @@
 
 #include "coap_internal.h"
 #include "coap_io_internal.h"
+#include "coap_ws_internal.h"
 
 #define COAP_DEFAULT_SESSION_TIMEOUT 300
 #define COAP_PARTIAL_SESSION_TIMEOUT_TICKS (30 * COAP_TICKS_PER_SECOND)

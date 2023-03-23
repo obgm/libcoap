@@ -58,6 +58,7 @@ extern "C" {
 #include "coap3/coap_time.h"
 #include "coap3/coap_str.h"
 #include "coap3/coap_uri.h"
+#include "coap3/coap_ws.h"
 
 #ifdef __cplusplus
 }

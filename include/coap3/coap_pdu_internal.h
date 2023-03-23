@@ -200,7 +200,7 @@ size_t coap_pdu_parse_header_size(coap_proto_t proto,
  * @param data   The raw data to parse as CoAP PDU.
  * @param length The actual size of @p data.
  *
- * @return       A value greater than zero on success or @c 0 on error.
+ * @return       PDU size including token on success or @c 0 on error.
  */
 size_t coap_pdu_parse_size(coap_proto_t proto,
                            const uint8_t *data,

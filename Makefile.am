@@ -85,6 +85,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_uri_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_uthash_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_utlist_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_ws_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.in \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows.in \
@@ -176,6 +177,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_time.c \
   src/coap_tinydtls.c \
   src/coap_uri.c \
+  src/coap_ws.c \
   src/net.c \
   src/pdu.c \
   src/resource.c
@@ -220,7 +222,8 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_str.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_subscribe.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_time.h \
-  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_uri.h
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_uri.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_ws.h
 
 ## Instruct libtool to include API version information in the generated shared
 ## library file (.so). The library ABI version will later defined in configure.ac,

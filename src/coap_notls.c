@@ -310,6 +310,18 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_WS_SUPPORT
+int
+coap_crypto_hash(cose_alg_t alg,
+                 const coap_bin_const_t *data,
+                 coap_bin_const_t **hash) {
+  (void)alg;
+  (void)data;
+  (void)hash;
+  return 0;
+}
+#endif /* COAP_WS_SUPPORT */
+
 #if HAVE_OSCORE
 
 int
