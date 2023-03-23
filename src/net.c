@@ -1681,7 +1681,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
           }
         } else if (session->partial_read > 0) {
           size_t hdr_size = coap_pdu_parse_header_size(session->proto,
-            session->read_header);
+                                                       session->read_header);
           size_t tkl = session->read_header[0] & 0x0f;
           size_t tok_ext_bytes = tkl == COAP_TOKEN_EXT_1B_TKL ? 1 :
                                  tkl == COAP_TOKEN_EXT_2B_TKL ? 2 : 0;
@@ -3503,7 +3503,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
     if (!coap_is_mcast(&session->addr_info.local)) {
       if (COAP_PDU_IS_EMPTY(pdu)) {
-        if (session->proto != COAP_PROTO_TCP && session->proto != COAP_PROTO_TLS) {
+        if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
           coap_tick_t now;
           coap_ticks(&now);
           if (session->last_tx_rst + COAP_TICKS_PER_SECOND/4 < now) {

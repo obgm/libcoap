@@ -2599,13 +2599,6 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-#if HAVE_OSCORE
-
-int
-coap_oscore_is_supported(void) {
-  return 1;
-}
-
 #include <mbedtls/cipher.h>
 #include <mbedtls/md.h>
 
@@ -2616,6 +2609,104 @@ coap_oscore_is_supported(void) {
 #ifdef MBEDTLS_ERROR_C
 #include <mbedtls/error.h>
 #endif /* MBEDTLS_ERROR_C */
+
+#ifdef MBEDTLS_ERROR_C
+#define C(Func)                                                                \
+  do {                                                                         \
+    int c_tmp = (int)(Func);                                                   \
+    if (c_tmp != 0) {                                                          \
+      char error_buf[64];                                                      \
+      mbedtls_strerror(c_tmp, error_buf, sizeof(error_buf));                   \
+      coap_log_err("mbedtls: -0x%04x: %s\n", -c_tmp, error_buf);               \
+      goto error;                                                              \
+    }                                                                          \
+  } while (0);
+#else /* !MBEDTLS_ERROR_C */
+#define C(Func)                                                                \
+  do {                                                                         \
+    int c_tmp = (int)(Func);                                                   \
+    if (c_tmp != 0) {                                                          \
+      coap_log_err("mbedtls: %d\n", tmp);                                      \
+      goto error;                                                              \
+    }                                                                          \
+  } while (0);
+#endif /* !MBEDTLS_ERROR_C */
+
+#if COAP_WS_SUPPORT
+/*
+ * The struct hash_algs and the function get_hash_alg() are used to
+ * determine which hash type to use for creating the required hash object.
+ */
+static struct hash_algs {
+  cose_alg_t alg;
+  mbedtls_md_type_t hash_type;
+  size_t hash_size;
+} hashs[] = {
+    {COSE_ALGORITHM_SHA_1,       MBEDTLS_MD_SHA1,   20},
+    {COSE_ALGORITHM_SHA_256_256, MBEDTLS_MD_SHA256, 32},
+    {COSE_ALGORITHM_SHA_512,     MBEDTLS_MD_SHA512, 64},
+};
+
+static mbedtls_md_type_t
+get_hash_alg(cose_alg_t alg, size_t *hash_len) {
+  size_t idx;
+
+  for (idx = 0; idx < sizeof(hashs) / sizeof(struct hash_algs); idx++) {
+    if (hashs[idx].alg == alg) {
+      *hash_len = hashs[idx].hash_size;
+      return hashs[idx].hash_type;
+    }
+  }
+  coap_log_debug("get_hash_alg: COSE hash %d not supported\n", alg);
+  return MBEDTLS_MD_NONE;
+}
+
+int
+coap_crypto_hash(cose_alg_t alg,
+                 const coap_bin_const_t *data,
+                 coap_bin_const_t **hash) {
+  mbedtls_md_context_t ctx;
+  int ret = 0;
+  const mbedtls_md_info_t *md_info;
+  unsigned int len;
+  coap_binary_t *dummy = NULL;
+  size_t hash_length;
+  mbedtls_md_type_t dig_type = get_hash_alg(alg, &hash_length);
+
+  if (dig_type == MBEDTLS_MD_NONE) {
+    coap_log_debug("coap_crypto_hash: algorithm %d not supported\n", alg);
+    return 0;
+  }
+  md_info = mbedtls_md_info_from_type(dig_type);
+
+  len = mbedtls_md_get_size(md_info);
+  if (len == 0) {
+    return 0;
+  }
+
+  mbedtls_md_init(&ctx);
+  C(mbedtls_md_setup(&ctx, md_info, 0));
+
+  C(mbedtls_md_starts(&ctx));
+  C(mbedtls_md_update(&ctx, (const unsigned char *)data->s, data->length));
+  dummy = coap_new_binary(len);
+  if (dummy == NULL)
+    goto error;
+  C(mbedtls_md_finish(&ctx, dummy->s));
+
+  *hash = (coap_bin_const_t *)dummy;
+  ret = 1;
+error:
+  mbedtls_md_free(&ctx);
+  return ret;
+}
+#endif /* COAP_WS_SUPPORT */
+
+#if HAVE_OSCORE
+int
+coap_oscore_is_supported(void) {
+  return 1;
+}
 
 /*
  * The struct cipher_algs and the function get_cipher_alg() are used to
@@ -2679,28 +2770,6 @@ coap_crypto_check_hkdf_alg(cose_hkdf_alg_t hkdf_alg) {
     return 0;
   return get_hmac_alg(hmac_alg) != 0;
 }
-
-#ifdef MBEDTLS_ERROR_C
-#define C(Func)                                                                \
-  do {                                                                         \
-    int c_tmp = (int)(Func);                                                   \
-    if (c_tmp != 0) {                                                          \
-      char error_buf[64];                                                      \
-      mbedtls_strerror(c_tmp, error_buf, sizeof(error_buf));                   \
-      coap_log_err("mbedtls: -0x%04x: %s\n", -c_tmp, error_buf);          \
-      goto error;                                                              \
-    }                                                                          \
-  } while (0);
-#else /* !MBEDTLS_ERROR_C */
-#define C(Func)                                                                \
-  do {                                                                         \
-    int c_tmp = (int)(Func);                                                   \
-    if (c_tmp != 0) {                                                          \
-      coap_log_err("mbedtls: %d\n", tmp);                                 \
-      goto error;                                                              \
-    }                                                                          \
-  } while (0);
-#endif /* !MBEDTLS_ERROR_C */
 
 /**
  * Initializes the cipher context @p ctx. On success, this function

@@ -137,6 +137,21 @@ int coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
                      coap_bin_const_t *data,
                      coap_bin_const_t **hmac);
 
+/**
+ * Create a hash of the provided data.
+ *
+ * @param alg The hash algorithm.
+ * @param data The data to hash.
+ * @param hash Where to put the hash result if successful.
+ *
+ * @return @c 1 if the data was successfully hashed, else @c 0.
+ *         It is the responsibility of the caller to release the
+ *         created hash.
+ */
+int coap_crypto_hash(cose_alg_t alg,
+                     const coap_bin_const_t *data,
+                     coap_bin_const_t **hash);
+
 /** @} */
 
 #endif /* COAP_CRYPTO_INTERNAL_H_ */

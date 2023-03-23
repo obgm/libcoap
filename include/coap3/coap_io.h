@@ -74,7 +74,6 @@ typedef enum {
   COAP_NACK_ICMP_ISSUE,
   COAP_NACK_BAD_RESPONSE,
   COAP_NACK_TLS_LAYER_FAILED,
-  COAP_NACK_SESSION_LAYER_FAILED,
 } coap_nack_reason_t;
 
 #endif /* COAP_IO_H_ */

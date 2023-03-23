@@ -351,13 +351,12 @@ nack_handler(coap_session_t *session COAP_UNUSED,
   case COAP_NACK_NOT_DELIVERABLE:
   case COAP_NACK_RST:
   case COAP_NACK_TLS_FAILED:
+  case COAP_NACK_TLS_LAYER_FAILED:
     coap_log_err("cannot send CoAP pdu\n");
     quit = 1;
     break;
   case COAP_NACK_ICMP_ISSUE:
   case COAP_NACK_BAD_RESPONSE:
-  case COAP_NACK_TLS_LAYER_FAILED:
-  case COAP_NACK_SESSION_LAYER_FAILED:
   default:
     ;
   }

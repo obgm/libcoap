@@ -65,6 +65,7 @@
     <ClCompile Include="..\src\coap_tcp.c" />
     <ClCompile Include="..\src\coap_tinydtls.c" />
     <ClCompile Include="..\src\coap_uri.c" />
+    <ClCompile Include="..\src\coap_ws.c" />
     <ClCompile Include="..\src\net.c" />
     <ClCompile Include="..\src\pdu.c" />
     <ClCompile Include="..\src\resource.c" />
@@ -115,6 +116,8 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uri_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uthash_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_utlist_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_ws.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_ws_internal.h" />
     <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscore.h" />
     <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscore_cbor.h" />
     <ClInclude Include="..\$(LibCoAPOSCOREIncludeDir)\oscore_context.h" />

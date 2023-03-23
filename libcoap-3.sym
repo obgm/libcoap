@@ -265,3 +265,6 @@ coap_tls_is_supported
 coap_uri_into_options
 coap_write_block_b_opt
 coap_write_block_opt
+coap_ws_is_supported
+coap_ws_set_host_request
+coap_wss_is_supported
