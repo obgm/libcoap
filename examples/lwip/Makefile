@@ -41,12 +41,12 @@ all: lwip \
      client-dtls
 
 lwip:
-	git clone --depth 1 git://git.savannah.nongnu.org/lwip.git -b $(WITH_LWIP_BRANCH)
+	git clone --depth 1 https://git.savannah.nongnu.org/git/lwip.git -b $(WITH_LWIP_BRANCH)
 	(cd lwip ; git checkout $(WITH_LWIP_BRANCH))
 	$(MAKE)
 
 lwip-contrib:
-	git clone --depth 1 git://git.savannah.nongnu.org/lwip/lwip-contrib.git -b $(WITH_LWIP_CONTRIB_BRANCH)
+	git clone --depth 1 https://git.savannah.nongnu.org/git/lwip/lwip-contrib.git -b $(WITH_LWIP_CONTRIB_BRANCH)
 	(cd lwip-contrib ; git checkout $(WITH_LWIP_CONTRIB_BRANCH))
 	$(MAKE)
 
