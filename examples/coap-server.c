@@ -2288,7 +2288,7 @@ get_context(const char *node, const char *port) {
   uint16_t u_s_port = 5683;
   uint16_t s_port = 5684;
   coap_uri_scheme_t scheme;
-  int scheme_hint_bits = COAP_URI_SCHEME_ALL_COAP_BITS;
+  int scheme_hint_bits = 0;
 
   ctx = coap_new_context(NULL);
   if (!ctx) {
