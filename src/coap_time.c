@@ -37,7 +37,7 @@ static coap_tick_t coap_clock_offset = 0;
 #define COAP_CLOCK CLOCK_REALTIME
 #endif
 
-#ifdef HAVE_WINSOCK2_H
+#if defined(HAVE_WINSOCK2_H) && !defined(__MINGW32__)
 static int
 gettimeofday(struct timeval *tp, TIME_ZONE_INFORMATION *tzp) {
   (void)tzp;
@@ -56,7 +56,7 @@ gettimeofday(struct timeval *tp, TIME_ZONE_INFORMATION *tzp) {
   tp->tv_usec = (long)(tUsSinceUnicEpoch % 1000000);
   return 0;
 }
-#endif
+#endif /* HAVE_WINSOCK2_H && !__MINGW32__ */
 
 void
 coap_clock_init(void) {

@@ -22,6 +22,9 @@
 
 #ifdef _WIN32
 #define GCC_OPTIONS "-I../include"
+#ifndef WEXITSTATUS
+#define WEXITSTATUS(v) (v & 0xff)
+#endif /* WEXITSTATUS */
 #else /* ! _WIN32 */
 #define GCC_OPTIONS "\
   -I../include \
@@ -154,10 +157,17 @@ int main(int argc, char* argv[])
     fprintf(stderr, "chdir: %s: %s (%d)\n", argv[1], strerror(errno), errno);
     exit(1);
   }
+#if defined(WIN32) || defined(__MINGW32__)
+  if (mkdir("tmp") == -1 && errno != EEXIST) {
+    fprintf(stderr, "mkdir: %s: %s (%d)\n", "tmp", strerror(errno), errno);
+    exit(1);
+  }
+#else /* ! WIN32 && ! __MINGW32__ */
   if (mkdir("tmp", 0777) == -1 && errno != EEXIST) {
     fprintf(stderr, "mkdir: %s: %s (%d)\n", "tmp", strerror(errno), errno);
     exit(1);
   }
+#endif /* ! WIN32 && ! __MINGW32__ */
 
   while ((pdir_ent = readdir (pdir)) != NULL) {
     if (!strncmp(pdir_ent->d_name, "coap_", sizeof ("coap_")-1) &&

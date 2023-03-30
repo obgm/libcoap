@@ -836,7 +836,7 @@ fi
 
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
-                  pthread.h errno.h \
+                  pthread.h errno.h winsock2.h ws2tcpip.h \
                   stdlib.h string.h strings.h sys/socket.h sys/time.h \
                   time.h unistd.h sys/unistd.h sys/ioctl.h net/if.h])
 
@@ -988,6 +988,12 @@ case $host in
     *kfreebsd*)
     AC_MSG_RESULT([kFreeBSD])
     ADDITIONAL_CFLAGS="-D_GNU_SOURCE"
+    ;;
+
+    *mingw*)
+    AC_MSG_RESULT([MinGW])
+    ADDITIONAL_CFLAGS="-D_GNU_SOURCE -Wno-format -Wno-format-security"
+    LIBS="${LIBS} -lws2_32"
     ;;
 
     *)

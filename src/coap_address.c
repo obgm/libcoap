@@ -241,50 +241,66 @@ coap_resolve_address_info(const coap_str_const_t *server,
         if (scheme_hint_bits & (1 << scheme)) {
           switch (scheme) {
           case COAP_URI_SCHEME_COAP:
+#if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_DGRAM)
               continue;
+#endif /* ! __MINGW32__ */
             break;
           case COAP_URI_SCHEME_COAPS:
             if (!coap_dtls_is_supported())
               continue;
+#if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_DGRAM)
               continue;
+#endif /* ! __MINGW32__ */
             break;
           case COAP_URI_SCHEME_COAP_TCP:
             if (!coap_tcp_is_supported())
               continue;
+#if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
+#endif /* ! __MINGW32__ */
             break;
           case COAP_URI_SCHEME_COAPS_TCP:
             if (!coap_tls_is_supported())
               continue;
+#if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
+#endif /* ! __MINGW32__ */
             break;
           case COAP_URI_SCHEME_HTTP:
             if (!coap_tcp_is_supported())
               continue;
+#if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
+#endif /* ! __MINGW32__ */
             break;
           case COAP_URI_SCHEME_HTTPS:
             if (!coap_tls_is_supported())
               continue;
+#if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
+#endif /* ! __MINGW32__ */
             break;
           case COAP_URI_SCHEME_COAP_WS:
             if (!coap_ws_is_supported())
               continue;
+#if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
+#endif /* ! __MINGW32__ */
             break;
           case COAP_URI_SCHEME_COAPS_WS:
             if (!coap_wss_is_supported())
               continue;
+#if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
+#endif /* ! __MINGW32__ */
             break;
           case COAP_URI_SCHEME_LAST:
           default:

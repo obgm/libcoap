@@ -355,7 +355,7 @@ coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
 }
 #else /* ! RIOT_VERSION */
 
-#ifdef HAVE_MALLOC
+#if defined(HAVE_MALLOC) || defined(__MINGW32__)
 #include <stdlib.h>
 
 void
@@ -380,7 +380,7 @@ coap_free_type(coap_memory_tag_t type, void *p) {
   free(p);
 }
 
-#else /* ! HAVE_MALLOC */
+#else /* ! HAVE_MALLOC  && !__MINGW32__ */
 
 #ifdef WITH_CONTIKI
 #include "lib/heapmem.h"

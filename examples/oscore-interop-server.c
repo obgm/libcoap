@@ -40,7 +40,7 @@ strndup(const char* s1, size_t n) {
     copy[n] = 0;
   }
   return copy;
-};
+}
 #include <io.h>
 #define access _access
 #define fileno _fileno

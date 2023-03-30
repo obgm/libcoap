@@ -30,7 +30,8 @@
 #ifndef R_OK
 #define R_OK 4
 #endif
-static char *
+char * strndup(const char* s1, size_t n);
+char *
 strndup(const char* s1, size_t n) {
   char* copy = (char*)malloc(n + 1);
   if (copy) {
@@ -38,7 +39,7 @@ strndup(const char* s1, size_t n) {
     copy[n] = 0;
   }
   return copy;
-};
+}
 #include <io.h>
 #define access _access
 #define fileno _fileno
@@ -3160,7 +3161,7 @@ finish:
   free(proxy_list);
   proxy_list = NULL;
   proxy_list_count = 0;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 #pragma warning( disable : 4090 )
 #endif
   coap_free(proxy_host_name_list);

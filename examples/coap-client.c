@@ -27,7 +27,8 @@
 #if !defined(S_ISDIR)
 #define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
 #endif
-static char *
+char * strndup(const char* s1, size_t n);
+char *
 strndup(const char* s1, size_t n) {
   char* copy = (char*)malloc(n + 1);
   if (copy) {
@@ -35,7 +36,7 @@ strndup(const char* s1, size_t n) {
     copy[n] = 0;
   }
   return copy;
-};
+}
 #else
 #include <unistd.h>
 #include <sys/select.h>
@@ -1555,7 +1556,7 @@ get_session(coap_context_t *ctx,
 
         /* Need a unique address */
         snprintf(buf, COAP_UNIX_PATH_MAX,
-                 "/tmp/coap-client.%d", getpid());
+                 "/tmp/coap-client.%d", (int)getpid());
         coap_address_set_unix_domain(&bind_addr, (const uint8_t *)buf, strlen(buf));
         remove(bind_addr.addr.cun.sun_path);
       }

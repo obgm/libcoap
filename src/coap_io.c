@@ -716,6 +716,7 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
 /* define struct in6_pktinfo and struct in_pktinfo if not available
    FIXME: check with configure
 */
+#if !defined(__MINGW32__)
 struct in6_pktinfo {
   struct in6_addr ipi6_addr;        /* src/dst IPv6 address */
   unsigned int ipi6_ifindex;        /* send/recv interface index */
@@ -726,6 +727,7 @@ struct in_pktinfo {
   struct in_addr ipi_spec_dst;
   struct in_addr ipi_addr;
 };
+#endif /* ! __MINGW32__ */
 #endif
 #endif /* ! WITH_LWIP */
 
@@ -736,7 +738,9 @@ struct in_pktinfo {
 
 #if defined(_WIN32)
 #include <mswsock.h>
+#if !defined(__MINGW32__)
 static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
+#endif /* ! __MINGW32__ */
 /* Map struct WSABUF fields to their posix counterpart */
 #define msghdr _WSAMSG
 #define msg_name name
@@ -752,7 +756,9 @@ static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
 #undef CMSG_DATA
 #define CMSG_DATA WSA_CMSG_DATA
 #define ipi_spec_dst ipi_addr
+#if !defined(__MINGW32__)
 #pragma warning( disable : 4116 )
+#endif /* ! __MINGW32__ */
 #else
 #define iov_len_t size_t
 #endif
@@ -780,10 +786,10 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session, const uint8
     bytes_written = send(sock->fd, data, datalen, 0);
 #endif
   } else {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     DWORD dwNumberOfBytesSent = 0;
     int r;
-#endif
+#endif /* _WIN32 && !__MINGW32__ */
 #ifdef HAVE_STRUCT_CMSGHDR
     /* a buffer large enough to hold all packet info types, ipv6 is the largest */
     char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
@@ -906,21 +912,21 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session, const uint8
     }
 #endif /* HAVE_STRUCT_CMSGHDR */
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     r = WSASendMsg(sock->fd, &mhdr, 0 /*dwFlags*/, &dwNumberOfBytesSent, NULL /*lpOverlapped*/, NULL /*lpCompletionRoutine*/);
     if (r == 0)
       bytes_written = (ssize_t)dwNumberOfBytesSent;
     else
       bytes_written = -1;
-#else
+#else /* !_WIN32 || __MINGW32__ */
 #ifdef HAVE_STRUCT_CMSGHDR
     bytes_written = sendmsg(sock->fd, &mhdr, 0);
 #else /* ! HAVE_STRUCT_CMSGHDR */
-    bytes_written = sendto(sock->fd, data, datalen, 0,
+    bytes_written = sendto(sock->fd, (const void*)data, datalen, 0,
                            &session->addr_info.remote.addr.sa,
                            session->addr_info.remote.size);
 #endif /* ! HAVE_STRUCT_CMSGHDR */
-#endif
+#endif /* !_WIN32 || __MINGW32__ */
   }
 
   if (bytes_written < 0)
@@ -989,10 +995,10 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
       packet->length = (size_t)len;
     }
   } else {
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__MINGW32__)
     DWORD dwNumberOfBytesRecvd = 0;
     int r;
-#endif
+#endif /* _WIN32 && !__MINGW32__ */
 #ifdef HAVE_STRUCT_CMSGHDR
     /* a buffer large enough to hold all packet info types, ipv6 is the largest */
     char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
@@ -1037,7 +1043,7 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
 #endif
 
 #else /* ! HAVE_STRUCT_CMSGHDR */
-    len = recvfrom(sock->fd, packet->payload, COAP_RXBUFFER_SIZE, 0,
+    len = recvfrom(sock->fd, (void *)packet->payload, COAP_RXBUFFER_SIZE, 0,
                    &packet->addr_info.remote.addr.sa,
                    &packet->addr_info.remote.size);
 #endif /* ! HAVE_STRUCT_CMSGHDR */

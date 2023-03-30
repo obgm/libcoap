@@ -26,10 +26,18 @@
  * The CONTIKI variable is within the Contiki-NG build environment! */
 
 #if defined(_WIN32)
-#pragma comment(lib,"Ws2_32.lib")
 #include <ws2tcpip.h>
+#if !defined(__MINGW32__)
+#pragma comment(lib,"Ws2_32.lib")
+#ifndef _SSIZE_T_DECLARED
 typedef SSIZE_T ssize_t;
+#define        _SSIZE_T_DECLARED
+#endif
+#ifndef _IN_PORT_T_DECLARED
 typedef USHORT in_port_t;
+#define        _IN_PORT_T_DECLARED
+#endif
+#endif /* !defined(__MINGW32__) */
 #elif !defined (CONTIKI) && !defined (WITH_LWIP)
 #include <netinet/in.h>
 #include <sys/socket.h>
