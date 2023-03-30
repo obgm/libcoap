@@ -156,6 +156,22 @@ jobs:
       run: |
         cd build_test
         cmake --build .
+  mingw-cmake:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-openssl
+      - name: MinGW build
+        run: |
+          echo 'Running in MSYS2!'
+          scripts/mingw-cmake.sh
 
   additional-tests:
     runs-on: ubuntu-latest

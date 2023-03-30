@@ -145,7 +145,7 @@ print_timestamp(char *s, size_t len, coap_tick_t t) {
 
 #endif /* HAVE_TIME_H */
 
-#ifndef HAVE_STRNLEN
+#if !defined(HAVE_STRNLEN) && !defined(__MINGW32__)
 /**
  * A length-safe strlen() fake.
  *
@@ -161,7 +161,7 @@ strnlen(const char *s, size_t maxlen) {
     ++n;
   return n;
 }
-#endif /* HAVE_STRNLEN */
+#endif /* HAVE_STRNLEN && !__MINGW32__ */
 
 static size_t
 print_readable( const uint8_t *data, size_t len,

@@ -25,7 +25,7 @@ option(
 
 add_library(${COAP_LIBRARY_NAME})
 set_property(TARGET ${COAP_LIBRARY_NAME} PROPERTY C_STANDARD 99)
-set(CMAKE_POLICY_DEFAULT_CMP0115 OLD) # Supresses libcoap configuration warning
+cmake_policy(SET CMP0115 OLD) # Supresses libcoap configuration warning
 
 #
 # options to tweak the library
@@ -151,6 +151,9 @@ include(CheckTypeSize)
 include(TestBigEndian)
 
 # check for headers
+check_include_file(assert.h HAVE_ASSERT_H)
+check_include_file(string.h HAVE_STRING_H)
+check_include_file(strings.h HAVE_STRINGS_H)
 check_include_file(byteswap.h HAVE_BYTESWAP_H)
 check_include_file(inttypes.h HAVE_INTTYPES_H)
 check_include_file(errno.h HAVE_ERRNO_H)
@@ -197,8 +200,9 @@ check_function_exists(random HAVE_RANDOM)
 check_function_exists(if_nametoindex HAVE_IF_NAMETOINDEX)
 
 # check for symbols
-if(WIN32)
+if(WIN32 AND NOT MINGW)
   set(HAVE_STRUCT_CMSGHDR 1)
+  message(STATUS "setting HAVE_STRUCT_CMSGHDR")
 else()
   check_symbol_exists(
     CMSG_FIRSTHDR
@@ -235,8 +239,8 @@ else()
 endif()
 
 if(${WITH_EPOLL}
-   AND ${HAVE_EPOLL_H}
-   AND ${HAVE_TIMERFD_H})
+   AND HAVE_EPOLL_H
+   AND HAVE_TIMERFD_H)
   set(COAP_EPOLL_SUPPORT "1")
   message(STATUS "compiling with epoll support")
 else()
@@ -482,6 +486,7 @@ message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
 message(STATUS "CMAKE_BUILD_TYPE:................${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR:..........${CMAKE_SYSTEM_PROCESSOR}")
 message(STATUS "MAX_LOGGING_LEVEL:...............${MAX_LOGGING_LEVEL}")
+message(STATUS "CMAKE_HOST_SYSTEM_NAME:..........${CMAKE_HOST_SYSTEM_NAME}")
 message(STATUS "WARNING_TO_ERROR:................${WARNING_TO_ERROR}")
 
 set(top_srcdir "${CMAKE_CURRENT_LIST_DIR}")
@@ -588,7 +593,8 @@ target_link_libraries(
          $<$<BOOL:${HAVE_LIBTINYDTLS}>:tinydtls>
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDTLS_LIBRARY}>
          $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDX509_LIBRARY}>
-         $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDCRYPTO_LIBRARY}>)
+         $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDCRYPTO_LIBRARY}>
+         $<$<BOOL:${MINGW}>:ws2_32>)
 
 target_compile_options(
   ${COAP_LIBRARY_NAME}
@@ -688,7 +694,7 @@ if(ENABLE_EXAMPLES)
   target_link_libraries(coap-server
                         PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
 
-  if(NOT WIN32)
+  if(NOT WIN32 AND NOT MINGW)
     add_executable(etsi_iot_01 ${CMAKE_CURRENT_LIST_DIR}/examples/etsi_iot_01.c)
     target_link_libraries(etsi_iot_01
                           PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
@@ -800,7 +806,7 @@ if(ENABLE_EXAMPLES)
     TARGETS coap-server coap-client coap-rd
     DESTINATION ${CMAKE_INSTALL_BINDIR}
     COMPONENT dev)
-  if(NOT WIN32)
+  if(NOT WIN32 AND NOT MINGW)
     install(
       TARGETS etsi_iot_01 tiny oscore-interop-server
       DESTINATION ${CMAKE_INSTALL_BINDIR}

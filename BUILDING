@@ -56,7 +56,7 @@ General Building with cmake for linux/windows/macos/android (not for LwIP or Con
  Note: For Windows, this is supported by Visual Studio Code with CMake extension
  Note: You must use cmake version >=3.10.
 
- Note: you can use cmake's find package after installation: find_package(libcoap-2 REQUIRED),
+ Note: you can use cmake's find package after installation: find_package(libcoap-3 REQUIRED),
  and target_link_libraries(myTarget PRIVATE libcoap::coap-2)
 
  Note: Shared Library support is not currently available for Windows.
@@ -155,3 +155,46 @@ is installed so that the include, lib etc. directories are correctly set up.
 Note: Make sure that you include a trailing \ in the variable definitions.
 
 Alternatively you can build everything in Visual Studio with CMake.
+
+MinGW
+=====
+
+As there are many ways to install MinGW, depending on the different
+installed packages, random failures can occur (usually because of conflicts
+with cygwin based packages).  Below is a way known to work with libcoap
+on a Windows host.
+
+Remove any old copy of MSYS2 using Windows program remove.
+
+Download https://repo.msys2.org/distrib/x86_64/msys2-x86_64-20230318.exe and
+run the executable, accepting the defaults.
+
+In a UCRT64 window, add in the following packages
+
+ pacman -S git
+ pacman -S vim
+ pacman -S mingw-w64-ucrt-x86_64-cmake
+ pacman -S mingw-w64-ucrt-x86_64-gcc
+ pacman -S mingw-w64-ucrt-x86_64-openssl
+
+Alternatively, in a MINGW64 window, add in the following packages
+
+ pacman -S git
+ pacman -S vim
+ pacman -S mingw-w64-x86_64-cmake
+ pacman -S mingw-w64-x86_64-gcc
+ pacman -S mingw-w64-x86_64-openssl
+
+Then clone a copy of the github libcoap repository in a UCRT64 or MINGW64 window
+
+ git clone https://github.com/obgm/libcoap.git
+ cd libcoap
+
+Then build the libcoap library and example executables (which will be in the
+build directory)
+
+ cmake -E remove_directory build
+ cmake -E make_directory build
+ cd build
+ cmake .. -DENABLE_DOCS=OFF -DDTLS_BACKEND=openssl
+ cmake --build .

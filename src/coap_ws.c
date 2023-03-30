@@ -234,10 +234,10 @@ coap_ws_write(coap_session_t *session, const uint8_t *data, size_t datalen) {
     hdr_len += 2;
   } else {
     ws_header[1] = 127;
-    ws_header[2] = (datalen >> 56) & 0xff;
-    ws_header[3] = (datalen >> 48) & 0xff;
-    ws_header[4] = (datalen >> 40) & 0xff;
-    ws_header[5] = (datalen >> 32) & 0xff;
+    ws_header[2] = ((uint64_t)datalen >> 56) & 0xff;
+    ws_header[3] = ((uint64_t)datalen >> 48) & 0xff;
+    ws_header[4] = ((uint64_t)datalen >> 40) & 0xff;
+    ws_header[5] = ((uint64_t)datalen >> 32) & 0xff;
     ws_header[6] = (datalen >> 24) & 0xff;
     ws_header[7] = (datalen >> 16) & 0xff;
     ws_header[8] = (datalen >>  8) & 0xff;
