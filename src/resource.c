@@ -867,7 +867,6 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                       coap_deleting_resource_t deleting) {
   coap_method_handler_t h;
   coap_subscription_t *obs, *otmp;
-  coap_bin_const_t token;
   coap_pdu_t *response;
   uint8_t buf[4];
   coap_string_t *query;
@@ -979,7 +978,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
           coap_remove_option(response, COAP_OPTION_OBSERVE);
         }
         if (COAP_RESPONSE_CLASS(response->code) > 2) {
-          coap_delete_observer(r, obs->session, &token);
+          coap_delete_observer(r, obs->session, &obs->pdu->actual_token);
           obs = NULL;
         }
         break;
