@@ -1286,19 +1286,27 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
 
       /* Need to check that we are not seeing this proxy in the return loop */
       if (pdu->data && opt == NULL) {
-        if (pdu->used_size + 1 <= pdu->max_size) {
-          char *a_match;
-          size_t data_len = pdu->used_size - (pdu->data - pdu->token);
-          pdu->data[data_len] = '\000';
-          a_match = strstr((char*)pdu->data, cp);
-          if (a_match && (a_match == (char*)pdu->data || a_match[-1] == ' ') &&
-              ((size_t)(a_match - (char*)pdu->data + len) == data_len ||
-               a_match[len] == ' ')) {
-            coap_log_warn("Proxy loop detected '%s'\n",
-                     (char*)pdu->data);
-            coap_delete_pdu(pdu);
-            return (coap_mid_t)COAP_DROPPED_RESPONSE;
-          }
+        char *a_match;
+        size_t data_len;
+
+        if (pdu->used_size + 1 > pdu->max_size) {
+          /* No space */
+          return (coap_mid_t)COAP_DROPPED_RESPONSE;
+        }
+        if (!coap_pdu_resize(pdu, pdu->used_size + 1)) {
+          /* Internal error */
+          return (coap_mid_t)COAP_DROPPED_RESPONSE;
+        }
+        data_len = pdu->used_size - (pdu->data - pdu->token);
+        pdu->data[data_len] = '\000';
+        a_match = strstr((char*)pdu->data, cp);
+        if (a_match && (a_match == (char*)pdu->data || a_match[-1] == ' ') &&
+            ((size_t)(a_match - (char*)pdu->data + len) == data_len ||
+             a_match[len] == ' ')) {
+          coap_log_warn("Proxy loop detected '%s'\n",
+                   (char*)pdu->data);
+          coap_delete_pdu(pdu);
+          return (coap_mid_t)COAP_DROPPED_RESPONSE;
         }
       }
       if (pdu->used_size + len + 1 <= pdu->max_size) {
