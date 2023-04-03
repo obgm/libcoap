@@ -3254,7 +3254,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   memset(&opt_filter, 0, sizeof(coap_opt_filter_t));
 
 #if HAVE_OSCORE
-  if (coap_option_check_critical(session, pdu, &opt_filter) == 0) {
+  if (!COAP_PDU_IS_SIGNALING(pdu) &&
+      coap_option_check_critical(session, pdu, &opt_filter) == 0) {
     if (pdu->type == COAP_MESSAGE_NON) {
       coap_send_rst(session, pdu);
       goto cleanup;
@@ -3446,7 +3447,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       break;
 
     case COAP_MESSAGE_CON:        /* check for unknown critical options */
-      if (coap_option_check_critical(session, pdu, &opt_filter) == 0) {
+      if (!COAP_PDU_IS_SIGNALING(pdu) &&
+          coap_option_check_critical(session, pdu, &opt_filter) == 0) {
         packet_is_bad = 1;
         if (COAP_PDU_IS_REQUEST(pdu)) {
           response =
