@@ -1591,6 +1591,7 @@ main(int argc, char **argv) {
   static char addr[INET6_ADDRSTRLEN];
   void *addrptr = NULL;
   int result = -1;
+  int exit_code = 0;
   coap_pdu_t  *pdu;
   static coap_str_const_t server;
   uint16_t port = COAP_DEFAULT_PORT;
@@ -1654,7 +1655,7 @@ main(int argc, char **argv) {
       block_mode = strtoul(optarg, NULL, 0);
       if (!(block_mode & COAP_BLOCK_USE_LIBCOAP)) {
         fprintf(stderr, "Block mode must include COAP_BLOCK_USE_LIBCOAP (1)\n");
-        exit(1);
+        goto failed;
       }
       break;
     case 'p':
@@ -1679,7 +1680,7 @@ main(int argc, char **argv) {
 
       if (!output_file.s) {
         fprintf(stderr, "cannot set output file: insufficient memory\n");
-        exit(1);
+        goto failed;
       } else {
         /* copy filename including trailing zero */
         memcpy(output_file.s, optarg, output_file.length + 1);
@@ -1701,7 +1702,7 @@ main(int argc, char **argv) {
     case 'P':
       if (!cmdline_proxy(optarg)) {
         fprintf(stderr, "error specifying proxy address\n");
-        exit(1);
+        goto failed;
       }
       break;
     case 'T':
@@ -1722,7 +1723,7 @@ main(int argc, char **argv) {
     case 'l':
       if (!coap_debug_set_packet_loss(optarg)) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
-        exit(1);
+        goto failed;
       }
       break;
     case 'r':
@@ -1734,7 +1735,7 @@ main(int argc, char **argv) {
     case 'h':
       if (!cmdline_read_hint_check(optarg)) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
-        exit(1);
+        goto failed;
       }
       break;
     case 'H':
@@ -1757,12 +1758,12 @@ main(int argc, char **argv) {
     case 'E':
       doing_oscore = cmdline_oscore(optarg);
       if (!doing_oscore) {
-        exit(1);
+        goto failed;
       }
       break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
-      exit(1);
+      goto failed;
     }
   }
 
@@ -1786,16 +1787,16 @@ main(int argc, char **argv) {
 
   if (optind < argc) {
     if (cmdline_uri(argv[optind], create_uri_opts) < 0) {
-      exit(1);
+      goto failed;
     }
   } else {
     usage( argv[0], LIBCOAP_PACKAGE_VERSION );
-    exit(1);
+    goto failed;
   }
 
   if (key_length < 0) {
     coap_log_crit("Invalid pre-shared key specified\n" );
-    goto finish;
+    goto failed;
   }
 
   if (proxy.host.length) {
@@ -1821,7 +1822,7 @@ main(int argc, char **argv) {
 
   if (info_list == NULL) {
     coap_log_err("failed to resolve address\n");
-    exit(1);
+    goto failed;
   }
   memcpy(&dst, &info_list->addr, sizeof(dst));
   coap_free_address_info(info_list);
@@ -1829,12 +1830,12 @@ main(int argc, char **argv) {
   ctx = coap_new_context( NULL );
   if ( !ctx ) {
     coap_log_emerg("cannot create context\n" );
-    goto finish;
+    goto failed;
   }
 
   if (doing_oscore) {
     if (get_oscore_conf() == NULL)
-      goto finish;
+      goto failed;
   }
 
   coap_context_set_keepalive(ctx, ping_seconds);
@@ -1860,7 +1861,7 @@ main(int argc, char **argv) {
 
   if ( !session ) {
     coap_log_err("cannot create client session\n" );
-    goto finish;
+    goto failed;
   }
   /*
    * Prime the base token value, which coap_session_new_token() will increment
@@ -1909,13 +1910,13 @@ main(int argc, char **argv) {
     /* Create some new data to use for this iteration */
     data = coap_malloc(payload.length);
     if (data == NULL)
-      goto finish;
+      goto failed;
     memcpy(data, payload.s, payload.length);
     data_len = payload.length;
   }
   if (!(pdu = coap_new_request(ctx, session, method, &optlist, data,
         data_len))) {
-    goto finish;
+    goto failed;
   }
 
   if (is_mcast && wait_seconds == DEFAULT_WAIT_TIME)
@@ -1997,13 +1998,13 @@ main(int argc, char **argv) {
             /* Create some new data to use for this iteration */
             data = coap_malloc(payload.length);
             if (data == NULL)
-              goto finish;
+              goto failed;
             memcpy(data, payload.s, payload.length);
             data_len = payload.length;
           }
           if (!(pdu = coap_new_request(ctx, session, method, &optlist,
                                        data, data_len))) {
-            goto finish;
+            goto failed;
           }
           coap_log_debug("sending CoAP request:\n");
           if (coap_get_log_level() < COAP_LOG_DEBUG)
@@ -2021,7 +2022,7 @@ main(int argc, char **argv) {
     }
   }
 
-  result = 0;
+  exit_code = 0;
 
  finish:
 
@@ -2054,5 +2055,9 @@ main(int argc, char **argv) {
     fclose(oscore_seq_num_fp);
   close_output();
 
-  return result;
+  return exit_code;
+
+failed:
+  exit_code = 1;
+  goto finish;
 }

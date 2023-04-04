@@ -2730,7 +2730,7 @@ cmdline_read_extended_token_size(char *arg) {
 
 int
 main(int argc, char **argv) {
-  coap_context_t  *ctx;
+  coap_context_t *ctx = NULL;
   char *group = NULL;
   char *group_if = NULL;
   coap_tick_t now;
@@ -2746,6 +2746,7 @@ main(int argc, char **argv) {
   fd_set m_readfds;
   int nfds = 0;
   size_t i;
+  int exit_code = 0;
   uint16_t cache_ignore_options[] = { COAP_OPTION_BLOCK1,
                                       COAP_OPTION_BLOCK2,
                     /* See https://rfc-editor.org/rfc/rfc7959#section-2.10 */
@@ -2779,7 +2780,7 @@ main(int argc, char **argv) {
     case 'E':
       doing_oscore = cmdline_oscore(optarg);
       if (!doing_oscore) {
-        exit(1);
+        goto failed;
       }
       break;
     case 'g' :
@@ -2798,7 +2799,7 @@ main(int argc, char **argv) {
     case 'i':
       if (!cmdline_read_identity_check(optarg)) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
-        exit(1);
+        goto failed;
       }
       break;
     case 'j' :
@@ -2817,14 +2818,14 @@ main(int argc, char **argv) {
     case 'l':
       if (!coap_debug_set_packet_loss(optarg)) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
-        exit(1);
+        goto failed;
       }
       break;
     case 'L':
       block_mode = strtoul(optarg, NULL, 0);
       if (!(block_mode & COAP_BLOCK_USE_LIBCOAP)) {
         fprintf(stderr, "Block mode must include COAP_BLOCK_USE_LIBCOAP (1)\n");
-        exit(1);
+        goto failed;
       }
       break;
     case 'm':
@@ -2847,12 +2848,12 @@ main(int argc, char **argv) {
 #if SERVER_CAN_PROXY
       if (!cmdline_proxy(optarg)) {
         fprintf(stderr, "error specifying proxy address or host names\n");
-        exit(1);
+        goto failed;
       }
       block_mode |= COAP_BLOCK_SINGLE_BODY;
 #else /* ! SERVER_CAN_PROXY */
       fprintf(stderr, "Proxy support not available as no Client mode code\n");
-      exit(1);
+      goto failed;
 #endif /* ! SERVER_CAN_PROXY */
       break;
     case 'r' :
@@ -2863,17 +2864,17 @@ main(int argc, char **argv) {
       break;
     case 's':
       if (!cmdline_read_psk_sni_check(optarg)) {
-        exit(1);
+        goto failed;
       }
       break;
     case 'S':
       if (!cmdline_read_pki_sni_check(optarg)) {
-        exit(1);
+        goto failed;
       }
       break;
     case 'T':
       if (!cmdline_read_extended_token_size(optarg)) {
-        exit(1);
+        goto failed;
       }
       break;
     case 'u':
@@ -2881,13 +2882,13 @@ main(int argc, char **argv) {
       user_length = cmdline_read_user(optarg, &user, MAX_USER);
 #else /* ! SERVER_CAN_PROXY */
       fprintf(stderr, "Proxy support not available as no Client mode code\n");
-      exit(1);
+      goto failed;
 #endif /* ! SERVER_CAN_PROXY */
       break;
     case 'U':
       if (!cmdline_unix(optarg)) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
-        exit(1);
+        goto failed;
       }
       break;
     case 'v' :
@@ -2901,7 +2902,7 @@ main(int argc, char **argv) {
       break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );
-      exit(1);
+      goto failed;
     }
   }
 
@@ -2935,7 +2936,7 @@ main(int argc, char **argv) {
     coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
   if (doing_oscore) {
     if (get_oscore_conf(ctx) == NULL)
-      goto finish;
+      goto failed;
   }
   if (extended_token_size > COAP_TOKEN_DEFAULT_MAX)
     coap_context_set_max_token_size(ctx, extended_token_size);
@@ -3033,9 +3034,10 @@ main(int argc, char **argv) {
         wait_ms = next_sec_ms;
     }
   }
+  exit_code = 0;
 
 finish:
-
+  /* Clean up local usage */
   coap_free(ca_mem);
   coap_free(cert_mem);
   coap_free(key_mem);
@@ -3088,8 +3090,13 @@ finish:
   if (oscore_seq_num_fp)
     fclose(oscore_seq_num_fp);
 
+  /* Clean up library usage */
   coap_free_context(ctx);
   coap_cleanup();
 
-  return 0;
+  return exit_code;
+
+failed:
+  exit_code = 1;
+  goto finish;
 }

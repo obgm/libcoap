@@ -92,6 +92,10 @@ _context_.  It clears all entries from the receive queue and send queue and
 deletes the Resources that have been registered with _context_, and frees the
 attached Sessions and Endpoints.
 
+*WARNING:* It is unsafe to call *coap_free_context*() in an atexit() handler
+as other libraries may also call atexit() and clear down some CoAP
+required functionality.
+
 *Function: coap_context_set_max_idle_sessions()*
 
 The *coap_context_set_max_idle_sessions*() function sets the maximum number of
