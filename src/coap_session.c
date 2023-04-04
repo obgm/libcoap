@@ -246,8 +246,6 @@ coap_session_mfree(coap_session_t *session) {
           }
           queue = queue->next;
         }
-        /* lg_crcv will be deleted when coap_cancel_observe() completes */
-        continue;
       }
     }
     LL_DELETE(session->lg_crcv, lg_crcv);
