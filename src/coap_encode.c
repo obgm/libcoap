@@ -23,8 +23,9 @@ int coap_fls(unsigned int i) {
 #endif
 
 #ifndef HAVE_FLSLL
-int coap_flsll(long long i)
+int coap_flsll(long long j)
 {
+  unsigned long long i = (unsigned long long)j;
   int n;
   for (n = 0; i; n++)
     i >>= 1;
