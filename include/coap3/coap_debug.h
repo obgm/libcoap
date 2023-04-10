@@ -67,6 +67,40 @@ typedef enum {
 #define COAP_LOG_CIPHERS COAP_LOG_DTLS_BASE /* For backward compatability */
 } coap_log_t;
 
+/*
+ * These entries are left here for backward compatability in applications
+ * (which should really "#include <syslog.h>").
+ * and MUST NOT be used anywhere within the libcoap code.
+ *
+ * If clashes occur during a particilar OS port, they can be safely deleted.
+ *
+ * In a future update, they will get removed.
+ */
+#ifndef LOG_EMERG
+# define LOG_EMERG  COAP_LOG_EMERG
+#endif
+#ifndef LOG_ALERT
+# define LOG_ALERT  COAP_LOG_ALERT
+#endif
+#ifndef LOG_CRIT
+# define LOG_CRIT   COAP_LOG_CRIT
+#endif
+#ifndef LOG_ERR
+# define LOG_ERR    COAP_LOG_ERR
+#endif
+#ifndef LOG_WARNING
+# define LOG_WARNING COAP_LOG_WARN
+#endif
+#ifndef LOG_NOTICE
+# define LOG_NOTICE COAP_LOG_NOTICE
+#endif
+#ifndef LOG_INFO
+# define LOG_INFO   COAP_LOG_INFO
+#endif
+#ifndef LOG_DEBUG
+# define LOG_DEBUG  COAP_LOG_DEBUG
+#endif
+
 /**
  * Get the current logging level.
  *
