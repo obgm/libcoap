@@ -77,7 +77,7 @@
  * Include all the header files that are for internal use only.
  */
 
-#if HAVE_OSCORE
+#if defined(HAVE_OSCORE) || defined(COAP_WS_SUPPORT)
 /* Specific OSCORE general .h files */
 typedef struct oscore_ctx_t oscore_ctx_t;
 #include "oscore/oscore.h"
@@ -85,16 +85,16 @@ typedef struct oscore_ctx_t oscore_ctx_t;
 #include "oscore/oscore_cose.h"
 #include "oscore/oscore_context.h"
 #include "oscore/oscore_crypto.h"
-#endif /* HAVE_OSCORE */
+#endif /* HAVE_OSCORE || COAP_WS_SUPPORT */
 
 /* Specifically defined internal .h files */
 #include "coap_asn1_internal.h"
 #include "coap_async_internal.h"
 #include "coap_block_internal.h"
 #include "coap_cache_internal.h"
-#if HAVE_OSCORE
+#if defined(HAVE_OSCORE) || defined(COAP_WS_SUPPORT)
 #include "coap_crypto_internal.h"
-#endif /* HAVE_OSCORE */
+#endif /* HAVE_OSCORE || COAP_WS_SUPPORT */
 #include "coap_dtls_internal.h"
 #include "coap_hashkey_internal.h"
 #include "coap_io_internal.h"
