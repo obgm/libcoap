@@ -127,6 +127,8 @@ $SERVER -E $INDIR/interop/b_server.conf -v8 -p $S_PORT_B > /tmp/server_b 2>&1 &
 $SERVER -E $INDIR/interop/d_server.conf -v8 -p $S_PORT_D > /tmp/server_d 2>&1 &
 $SERVER                                 -v8 -p $S_PORT_N > /tmp/server_n 2>&1 &
 
+sleep 1
+
 # Reset sequence number counters
 rm -f /tmp/client_a
 rm -f /tmp/client_c
