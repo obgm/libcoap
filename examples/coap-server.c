@@ -2971,7 +2971,7 @@ main(int argc, char **argv) {
       break;
     case 'w':
       if (!coap_ws_is_supported() || !cmdline_ws(optarg)) {
-        fprintf(stderr, "WebSckets not enabled in libcoap\n");
+        fprintf(stderr, "WebSockets not enabled in libcoap\n");
         exit(1);
       }
       enable_ws = 1;
