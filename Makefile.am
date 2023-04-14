@@ -62,6 +62,27 @@ EXTRA_DIST = \
   examples/lwip/config/coap_config.h.in \
   examples/lwip/config/lwipopts.h \
   examples/lwip/config/lwippools.h \
+  examples/riot/examples_libcoap_client/client-coap.c \
+  examples/riot/examples_libcoap_client/client-coap.h \
+  examples/riot/examples_libcoap_client/Kconfig \
+  examples/riot/examples_libcoap_client/main.c \
+  examples/riot/examples_libcoap_client/Makefile \
+  examples/riot/examples_libcoap_client/Makefile.ci \
+  examples/riot/examples_libcoap_client/README.md \
+  examples/riot/examples_libcoap_server/main.c \
+  examples/riot/examples_libcoap_server/Makefile \
+  examples/riot/examples_libcoap_server/Makefile.ci \
+  examples/riot/examples_libcoap_server/README.md \
+  examples/riot/examples_libcoap_server/server-coap.c \
+  examples/riot/examples_libcoap_server/server-coap.h \
+  examples/riot/examples_libcoap_server/Kconfig \
+  examples/riot/Makefile \
+  examples/riot/pkg_libcoap/Kconfig \
+  examples/riot/pkg_libcoap/Makefile \
+  examples/riot/pkg_libcoap/Makefile.dep \
+  examples/riot/pkg_libcoap/Makefile.include \
+  examples/riot/pkg_libcoap/Makefile.libcoap \
+  examples/riot/README \
   Makefile.libcoap \
   include/coap$(LIBCOAP_API_VERSION)/coap_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_riot.h \
@@ -88,6 +109,8 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_utlist_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_ws_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.in \
+  include/coap$(LIBCOAP_API_VERSION)/coap.h.riot \
+  include/coap$(LIBCOAP_API_VERSION)/coap.h.riot.in \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows.in \
   include/oscore/oscore_cbor.h \

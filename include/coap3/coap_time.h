@@ -92,7 +92,7 @@ COAP_STATIC_INLINE uint64_t coap_ticks_to_rt_us(coap_tick_t t) {
 #ifdef XTIMER_HZ
 #define COAP_TICKS_PER_SECOND (XTIMER_HZ)
 #else /* XTIMER_HZ */
-#define COAP_TICKS_PER_SECOND (XTIMER_HZ_BASE)
+#define COAP_TICKS_PER_SECOND (1000000U)
 #endif /* XTIMER_HZ */
 
 typedef uint64_t coap_tick_t;
@@ -102,7 +102,11 @@ typedef uint32_t coap_time_t;
 static inline void coap_clock_init(void) {}
 
 static inline void coap_ticks(coap_tick_t *t) {
+#ifdef MODULE_ZTIMER64_XTIMER_COMPAT
   *t = xtimer_now_usec64();
+#else /* MODULE_ZTIMER64_XTIMER_COMPAT */
+  *t = xtimer_now_usec();
+#endif /* MODULE_ZTIMER64_XTIMER_COMPAT */
 }
 
 static inline coap_time_t coap_ticks_to_rt(coap_tick_t t) {

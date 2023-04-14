@@ -1,0 +1,10 @@
+USEMODULE += posix_sockets
+USEMODULE += posix_headers
+USEMODULE += posix_inet
+USEMODULE += posix_select
+USEMODULE += sock_udp
+CFLAGS += -DPOSIX_SETSOCKOPT
+
+ifneq (,$(filter libcoap,$(USEPKG)))
+  USEMODULE += libcoap
+endif

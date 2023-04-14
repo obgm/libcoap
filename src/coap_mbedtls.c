@@ -1690,6 +1690,9 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
                           coap_dtls_cpsk_t *setup_data
 ) {
 #if !defined(MBEDTLS_SSL_CLI_C)
+  (void)c_context;
+  (void)setup_data;
+
   coap_log_emerg("coap_context_set_cpsk:"
            " libcoap not compiled for Client Mode for Mbed TLS"
            " - update Mbed TLS to include Client Mode\n");

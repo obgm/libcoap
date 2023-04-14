@@ -1041,6 +1041,7 @@ doc/Makefile
 examples/Makefile
 examples/lwip/config/coap_config.h
 include/coap$LIBCOAP_API_VERSION/coap.h
+include/coap$LIBCOAP_API_VERSION/coap.h.riot
 include/coap$LIBCOAP_API_VERSION/coap.h.windows
 man/coap.txt
 man/coap_address.txt

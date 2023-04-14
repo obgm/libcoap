@@ -90,6 +90,10 @@ coap_prng_default(void *buf, size_t len) {
     }
   }
   return 1;
+#elif defined(RIOT_VERSION)
+#include <random.h>
+  random_bytes(buf, len);
+  return 1;
 
 #elif defined(WITH_CONTIKI)
   size_t i;

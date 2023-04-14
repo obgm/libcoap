@@ -115,3 +115,10 @@ When compiled with Mbed TLS support, this software includes components
 that are licensed under the terms of the Apache 2.0 license
 (http://www.apache.org/licenses/LICENSE-2.0).
 
+========================================================================
+RIOT
+
+When compiled with RIOT support, this software includes components
+that are licensed under the terms of the the GNU Lesser General Public
+License, version 2.1
+(https://raw.githubusercontent.com/RIOT-OS/RIOT/master/LICENSE).

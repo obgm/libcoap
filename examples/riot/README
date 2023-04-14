@@ -1,0 +1,44 @@
+Example of libcoap running on RIOT
+==================================
+
+To build the examples, do
+
+    $ make
+
+This will
+
+* download RIOT from the upstream git sources
+* update the RIOT environment with pkg/libcoap, examples/libcoap-client
+  and examples/libcoap-server taken from pkg_libcoap/, examples_client/
+  and examples_server respectively/.
+* build the client application
+* build the server application
+
+To run the server application
+
+* cd RIOT/examples-libcoap-server
+* make term
+* (at the shell prompt) coaps start
+
+The server creates a resource for 'time' with a query 'ticks'.  This is
+reported for `.well-known/core`. The work flow for adding more resources does
+not differ from regular libcoap usage.
+
+To run the client application
+
+* cd RIOT/examples-libcoap-client
+* make term
+* (at the shell prompt) coapc
+
+The client will try to connect to the URI defined in app.config named
+CONFIG_LIBCOAP_CLIENT_URI (unless overridden by running 'make menuconfig').
+
+Note to developers
+==================
+
+PKG_VERSION= in pkg_libcoap/Makefile needs updating if you need a different
+version of libcoap to get installed into RIOT/pkg/libcoap.
+
+Kconfig support is available. Running make in the libcoap distribution
+examples/riot directory will try to add in a 'rsource "libcoap/Kconfig"'
+entry into RIOT/pkg/Kconfig
