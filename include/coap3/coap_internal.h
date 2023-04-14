@@ -98,6 +98,7 @@ typedef struct oscore_ctx_t oscore_ctx_t;
 #include "coap_dtls_internal.h"
 #include "coap_hashkey_internal.h"
 #include "coap_io_internal.h"
+#include "coap_layers_internal.h"
 #include "coap_mutex_internal.h"
 #include "coap_net_internal.h"
 #include "coap_netif_internal.h"
