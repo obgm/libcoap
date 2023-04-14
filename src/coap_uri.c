@@ -252,7 +252,7 @@ coap_uri_into_options(coap_uri_t *uri,
         add_option = 1;
       break;
     default:
-      if (uri->port != coap_uri_scheme_is_secure(uri))
+      if (uri->port != (coap_uri_scheme_is_secure(uri) ? 5684 : 5683))
         add_option = 1;
       break;
     }
