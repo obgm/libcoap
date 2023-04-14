@@ -94,7 +94,9 @@ coap_socket_bind_udp(coap_socket_t *sock,
   coap_address_t *bound_addr) {
 #ifndef RIOT_VERSION
   int on = 1, off = 0;
-#endif /* RIOT_VERSION */
+#else /* ! RIOT_VERSION */
+  struct timeval timeout = {0, 0};
+#endif /* ! RIOT_VERSION */
 #ifdef _WIN32
   u_long u_on = 1;
 #endif
@@ -150,7 +152,13 @@ coap_socket_bind_udp(coap_socket_t *sock,
     coap_log_alert("coap_socket_bind_udp: unsupported sa_family\n");
     break;
   }
-#endif /* RIOT_VERSION */
+#else /* ! RIOT_VERSION */
+  if (setsockopt(sock->fd, SOL_SOCKET, SO_RCVTIMEO, OPTVAL_T(&timeout),
+             (socklen_t)sizeof(timeout)) == COAP_SOCKET_ERROR)
+      coap_log_alert(
+               "coap_socket_bind_udp: setsockopt SO_RCVTIMEO: %s\n",
+                coap_socket_strerror());
+#endif /* ! RIOT_VERSION */
 
   if (bind(sock->fd, &listen_addr->addr.sa,
            listen_addr->addr.sa.sa_family == AF_INET ?
@@ -168,6 +176,14 @@ coap_socket_bind_udp(coap_socket_t *sock,
               coap_socket_strerror());
     goto error;
   }
+#if defined(RIOT_VERSION) && defined(COAP_SERVER_SUPPORT)
+    if (sock->endpoint &&
+        bound_addr->addr.sa.sa_family == AF_INET6) {
+      bound_addr->addr.sin6.sin6_scope_id =
+                           listen_addr->addr.sin6.sin6_scope_id;
+      bound_addr->addr.sin6.sin6_flowinfo = 0;
+    }
+#endif /* RIOT_VERSION && COAP_SERVER_SUPPORT */
 
   return 1;
 
@@ -187,12 +203,16 @@ coap_socket_connect_udp(coap_socket_t *sock,
 #ifndef RIOT_VERSION
   int on = 1;
   int off = 0;
-#endif /* RIOT_VERSION */
+#else /* ! RIOT_VERSION */
+  struct timeval timeout = {0, 0};
+#endif /* ! RIOT_VERSION */
 #ifdef _WIN32
   u_long u_on = 1;
 #endif
   coap_address_t connect_addr;
+#if !defined(RIOT_VERSION)
   int is_mcast = coap_is_mcast(server);
+#endif /* !defined(RIOT_VERSION) */
   coap_address_copy(&connect_addr, server);
 
   sock->flags &= ~(COAP_SOCKET_CONNECTED | COAP_SOCKET_MULTICAST);
@@ -206,10 +226,11 @@ coap_socket_connect_udp(coap_socket_t *sock,
 
 #ifndef RIOT_VERSION
 #ifdef _WIN32
-  if (ioctlsocket(sock->fd, FIONBIO, &u_on) == COAP_SOCKET_ERROR) {
+  if (ioctlsocket(sock->fd, FIONBIO, &u_on) == COAP_SOCKET_ERROR)
 #else
-  if (ioctl(sock->fd, FIONBIO, &on) == COAP_SOCKET_ERROR) {
+  if (ioctl(sock->fd, FIONBIO, &on) == COAP_SOCKET_ERROR)
 #endif
+  {
     coap_log_warn("coap_socket_connect_udp: ioctl FIONBIO: %s\n",
              coap_socket_strerror());
   }
@@ -234,8 +255,9 @@ coap_socket_connect_udp(coap_socket_t *sock,
   case AF_UNIX:
     break;
   default:
-    coap_log_alert("coap_socket_connect_udp: unsupported sa_family\n");
-    break;
+    coap_log_alert("coap_socket_connect_udp: unsupported sa_family %d\n",
+                   connect_addr.addr.sa.sa_family);
+    goto error;;
   }
 
   if (local_if && local_if->addr.sa.sa_family) {
@@ -265,6 +287,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
   }
 
   /* special treatment for sockets that are used for multicast communication */
+#if !defined(RIOT_VERSION)
   if (is_mcast) {
     if (!(local_if && local_if->addr.sa.sa_family)) {
       /* Bind to a (unused) port to simplify logging */
@@ -291,6 +314,30 @@ coap_socket_connect_udp(coap_socket_t *sock,
     sock->flags |= COAP_SOCKET_MULTICAST;
     return 1;
   }
+#else /* defined(RIOT_VERSION) */
+  if (!(local_if && local_if->addr.sa.sa_family)) {
+    /* Bind to a (unused) port to simplify logging */
+    coap_address_t bind_addr;
+
+    coap_address_init(&bind_addr);
+    bind_addr.addr.sa.sa_family = connect_addr.addr.sa.sa_family;
+    if (bind_addr.addr.sa.sa_family == AF_INET6)
+       bind_addr.addr.sin6.sin6_scope_id = connect_addr.addr.sin6.sin6_scope_id;
+    if (bind(sock->fd, &bind_addr.addr.sa,
+             bind_addr.addr.sa.sa_family == AF_INET ?
+              (socklen_t)sizeof(struct sockaddr_in) :
+              (socklen_t)bind_addr.size) == COAP_SOCKET_ERROR) {
+      coap_log_warn("coap_socket_connect_udp: bind: %s\n",
+               coap_socket_strerror());
+      goto error;
+    }
+  }
+  if (setsockopt(sock->fd, SOL_SOCKET, SO_RCVTIMEO, OPTVAL_T(&timeout),
+             (socklen_t)sizeof(timeout)) == COAP_SOCKET_ERROR)
+      coap_log_alert(
+               "coap_socket_bind_udp: setsockopt SO_RCVTIMEO: %s\n",
+                coap_socket_strerror());
+#endif /* defined(RIOT_VERSION) */
 
   if (connect(sock->fd, &connect_addr.addr.sa, connect_addr.size) == COAP_SOCKET_ERROR) {
     if (connect_addr.addr.sa.sa_family == AF_UNIX) {
@@ -298,8 +345,8 @@ coap_socket_connect_udp(coap_socket_t *sock,
                connect_addr.addr.cun.sun_path, coap_socket_strerror());
     }
     else {
-      coap_log_warn("coap_socket_connect_udp: connect: %s\n",
-               coap_socket_strerror());
+      coap_log_warn("coap_socket_connect_udp: connect: %s (%d)\n",
+               coap_socket_strerror(), connect_addr.addr.sa.sa_family);
     }
     goto error;
   }
@@ -856,7 +903,7 @@ coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t
   *length = packet->length;
 }
 
-#if !defined(RIOT_VERSION) && !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 /*
  * dgram
  * return +ve Number of bytes written.
@@ -955,6 +1002,14 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
     len = recvfrom(sock->fd, (void *)packet->payload, COAP_RXBUFFER_SIZE, 0,
                    &packet->addr_info.remote.addr.sa,
                    &packet->addr_info.remote.size);
+#if defined(RIOT_VERSION) && defined(COAP_SERVER_SUPPORT)
+    if (sock->endpoint &&
+        packet->addr_info.remote.addr.sa.sa_family == AF_INET6) {
+      packet->addr_info.remote.addr.sin6.sin6_scope_id =
+                           sock->endpoint->bind_addr.addr.sin6.sin6_scope_id;
+      packet->addr_info.remote.addr.sin6.sin6_flowinfo = 0;
+    }
+#endif /* RIOT_VERSION && COAP_SERVER_SUPPORT */
 #endif /* ! HAVE_STRUCT_CMSGHDR */
 
     if (len < 0) {
@@ -1050,6 +1105,14 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
          coap_log_debug("Cannot determine local port\n");
          goto error;
       }
+#if defined(RIOT_VERSION) && defined(COAP_SERVER_SUPPORT)
+      if (sock->endpoint &&
+          packet->addr_info.local.addr.sa.sa_family == AF_INET6) {
+        packet->addr_info.local.addr.sin6.sin6_scope_id =
+                             sock->endpoint->bind_addr.addr.sin6.sin6_scope_id;
+        packet->addr_info.local.addr.sin6.sin6_flowinfo = 0;
+      }
+#endif /* RIOT_VERSION && COAP_SERVER_SUPPORT */
 #endif /* ! HAVE_STRUCT_CMSGHDR */
     }
   }
@@ -1059,7 +1122,7 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
 error:
   return -1;
 }
-#endif /* ! RIOT_VERSION && ! WITH_LWIP && ! WITH_CONTIKI */
+#endif /* ! WITH_LWIP && ! WITH_CONTIKI */
 
 unsigned int
 coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
@@ -1344,7 +1407,7 @@ release_2:
   return (unsigned int)((timeout * 1000 + COAP_TICKS_PER_SECOND - 1) / COAP_TICKS_PER_SECOND);
 }
 
-#if !defined(RIOT_VERSION) && !defined(WITH_LWIP) && !defined(CONTIKI)
+#if !defined(WITH_LWIP) && !defined(CONTIKI)
 int
 coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   return coap_io_process_with_fds(ctx, timeout_ms, 0, NULL, NULL, NULL);
@@ -1529,7 +1592,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
-#endif /* ! RIOT_VERSION && ! WITH_LWIP && ! WITH_CONTIKI */
+#endif /* ! WITH_LWIP && ! WITH_CONTIKI */
 
 /*
  * return 1  I/O pending

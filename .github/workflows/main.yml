@@ -116,11 +116,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        OS: ["contiki", "lwip"]
+        OS: ["contiki", "lwip", "riot"]
     steps:
       - uses: actions/checkout@v3
       - name: setup
         run: |
+          sudo apt-get update && sudo apt-get install -y libc6-dev-i386
           ./autogen.sh
       - name: configure
         run: |
@@ -221,7 +222,7 @@ jobs:
           submodules: recursive
       - name: setup
         run: |
-          sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags graphviz doxygen libxml2-utils xsltproc docbook-xml docbook-xsl asciidoc
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags graphviz doxygen libxml2-utils xsltproc docbook-xml docbook-xsl asciidoc libc6-dev-i386
           ./autogen.sh
       - name: configure
         run: |

@@ -27,9 +27,17 @@
 #undef PACKAGE_URL
 #undef PACKAGE_VERSION
 
+#ifndef  RIOT_VERSION
 #include <tinydtls/tinydtls.h>
 #include <tinydtls/dtls.h>
 #include <tinydtls/dtls_debug.h>
+#include <tinydtls/dtls_time.h>
+#else /* RIOT_VERSION */
+#include <tinydtls.h>
+#include <dtls.h>
+#include <dtls_debug.h>
+#include <dtls_time.h>
+#endif /* RIOT_VERSION */
 
 typedef struct coap_tiny_context_t {
   struct dtls_context_t *dtls_context;
@@ -176,9 +184,9 @@ coap_dtls_set_log_level(coap_log_t c_level) {
     d_level = DTLS_LOG_ALERT;
     break;
   case COAP_LOG_CRIT:
+  case COAP_LOG_ERR:
     d_level = DTLS_LOG_CRIT;
     break;
-  case COAP_LOG_ERR:
   case COAP_LOG_WARN:
     d_level = DTLS_LOG_WARN;
     break;
@@ -210,7 +218,22 @@ get_session_addr(const session_t *s, coap_address_t *a) {
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
   a->addr = s->addr;
   a->port = s->port;
-#else /* ! WITH_CONTIKI && ! WITH_LWIP */
+#elif defined(WITH_RIOT_SOCK)
+  if (s->addr.family == AF_INET6) {
+    a->size = (socklen_t)sizeof(a->addr.sin6);
+    a->addr.sa.sa_family = s->addr.family;
+    memcpy(&a->addr.sin6.sin6_addr, &s->addr.ipv6,
+           sizeof(a->addr.sin6.sin6_addr));
+    a->addr.sin6.sin6_port = s->addr.port;
+#ifdef SOCK_HAS_IPV4
+  } else if (s->addr.family == AF_INET) {
+    a->addr.sa.sa_family = s->addr.family;
+    a->size = (socklen_t)sizeof(a->addr.sin);
+    memcpy(&a->addr.sin.sin_addr, &s->addr.ipv4, sizeof(a->addr.sin.sin_addr));
+    a->addr.sin.sin_port = s->addr.port;
+#endif /* SOCK_HAS_IPV4 */
+  }
+#else /* ! WITH_CONTIKI && ! WITH_LWIP && ! WITH_RIOT_SOCK */
   if (s->addr.sa.sa_family == AF_INET6) {
     a->size = (socklen_t)sizeof(a->addr.sin6);
     a->addr.sin6 = s->addr.sin6;
@@ -221,7 +244,7 @@ get_session_addr(const session_t *s, coap_address_t *a) {
     a->size = (socklen_t)s->size;
     a->addr.sa = s->addr.sa;
   }
-#endif /* ! WITH_CONTIKI && ! WITH_LWIP */
+#endif /* ! WITH_CONTIKI && ! WITH_LWIP && ! WITH_RIOT_SOCK */
 }
 
 static void
@@ -230,7 +253,22 @@ put_session_addr(const coap_address_t *a, session_t *s) {
   s->size = (unsigned char)sizeof(s->addr);
   s->addr = a->addr;
   s->port = a->port;
-#else /* ! WITH_CONTIKI && ! WITH_LWIP */
+#elif defined(WITH_RIOT_SOCK)
+  if (a->addr.sa.sa_family == AF_INET6) {
+    s->size = (socklen_t)sizeof(s->addr.ipv6);
+    s->addr.family = a->addr.sa.sa_family;
+    memcpy(&s->addr.ipv6, &a->addr.sin6.sin6_addr,
+           sizeof(s->addr.ipv6));
+    s->addr.port = a->addr.sin6.sin6_port;
+#ifdef SOCK_HAS_IPV4
+  } else if (a->addr.sa.sa_family == AF_INET) {
+    s->size = (socklen_t)sizeof(s->addr.ipv4);
+    s->addr.family = a->addr.sa.sa_family;
+    memcpy(&a->addr.ipv4, &s->addr.sin.sin_addr, sizeof(a->addr.ipv4));
+    s->addr.port = a->addr.sin.sin_port;
+#endif /* SOCK_HAS_IPV4 */
+  }
+#else /* ! WITH_CONTIKI && ! WITH_LWIP && ! WITH_RIOT_SOCK */
   if (a->addr.sa.sa_family == AF_INET6) {
     s->size = (socklen_t)sizeof(s->addr.sin6);
     s->addr.sin6 = a->addr.sin6;
@@ -241,7 +279,7 @@ put_session_addr(const coap_address_t *a, session_t *s) {
     s->size = (socklen_t)a->size;
     s->addr.sa = a->addr.sa;
   }
-#endif /* ! WITH_CONTIKI && ! WITH_LWIP */
+#endif /* ! WITH_CONTIKI && ! WITH_LWIP && ! WITH_RIOT_SOCK */
 }
 
 static int

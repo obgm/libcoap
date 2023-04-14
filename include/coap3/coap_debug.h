@@ -136,6 +136,7 @@ COAP_STATIC_INLINE void coap_no_log(void) { }
  *
  * In a future update, they will get removed.
  */
+#if !defined(RIOT_VERSION)
 #ifndef LOG_EMERG
 # define LOG_EMERG  COAP_LOG_EMERG
 #endif
@@ -160,6 +161,7 @@ COAP_STATIC_INLINE void coap_no_log(void) { }
 #ifndef LOG_DEBUG
 # define LOG_DEBUG  COAP_LOG_DEBUG
 #endif
+#endif /* ! RIOT_VERSION */
 
 /**
  * Get the current logging level.

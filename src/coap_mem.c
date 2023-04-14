@@ -22,16 +22,16 @@
 #undef PACKAGE_STRING
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
-#include <session.h>
+#include <coap3/coap_session.h>
 #undef PACKAGE_NAME
 #undef PACKAGE_STRING
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 
-#include "coap_session.h"
-#include "net.h"
-#include "pdu.h"
-#include "resource.h"
+#include "coap3/coap_session.h"
+#include "coap3/coap_net.h"
+#include "coap3/pdu.h"
+#include "coap3/resource.h"
 
 /**
  * The maximum size of a string on platforms that allocate fixed-size
@@ -175,6 +175,42 @@
 #define COAP_MAX_CACHE_ENTRIES        (2U)
 #endif /* COAP_MAX_CACHE_ENTRIES */
 
+/**
+ * The maximum number lg_crcv entries that allocate
+ * fixed-size memory blocks.
+ */
+#ifndef COAP_MAX_LG_CRCVS
+#if COAP_CLIENT_SUPPORT
+#define COAP_MAX_LG_CRCVS        (1U)
+#else /* ! COAP_CLIENT_SUPPORT */
+#define COAP_MAX_LG_CRCVS        (0U)
+#endif /* ! COAP_CLIENT_SUPPORT */
+#endif /* COAP_MAX_LG_CRCVS */
+
+/**
+ * The maximum number lg_srcv entries that allocate
+ * fixed-size memory blocks.
+ */
+#ifndef COAP_MAX_LG_SRCVS
+#if COAP_SERVER_SUPPORT
+#define COAP_MAX_LG_SRCVS        (2U)
+#else /* ! COAP_SERVER_SUPPORT */
+#define COAP_MAX_LG_SRCVS        (0U)
+#endif /* ! COAP_SERVER_SUPPORT */
+#endif /* COAP_MAX_LG_SRCVS */
+
+/**
+ * The maximum number lg_xmit entries that allocate
+ * fixed-size memory blocks.
+ */
+#ifndef COAP_MAX_LG_XMITS
+#if COAP_SERVER_SUPPORT
+#define COAP_MAX_LG_XMITS        (2U)
+#else /* ! COAP_SERVER_SUPPORT */
+#define COAP_MAX_LG_XMITS        (1U)
+#endif /* ! COAP_SERVER_SUPPORT */
+#endif /* COAP_MAX_LG_XMITS */
+
 /* The memstr is the storage for holding coap_string_t structure
  * together with its contents. */
 union memstr_t {
@@ -193,6 +229,7 @@ union attrstr_t {
 static union memstr_t string_storage_data[COAP_MAX_STRINGS];
 static memarray_t string_storage;
 
+#if COAP_SERVER_SUPPORT
 static coap_endpoint_t endpoint_storage_data[COAP_MAX_ENDPOINTS];
 static memarray_t endpoint_storage;
 
@@ -201,6 +238,7 @@ static memarray_t attr_storage;
 
 static coap_attr_t resattr_storage_data[COAP_MAX_ATTRIBUTES];
 static memarray_t resattr_storage;
+#endif /* COAP_SERVER_SUPPORT */
 
 static coap_packet_t pkt_storage_data[COAP_MAX_PACKETS];
 static memarray_t pkt_storage;
@@ -224,10 +262,14 @@ union pdubuf_t {
 static union pdubuf_t pdubuf_storage_data[COAP_MAX_PDUS];
 static memarray_t pdubuf_storage;
 
+#if COAP_SERVER_SUPPORT
 static coap_resource_t resource_storage_data[COAP_MAX_RESOURCES];
 static memarray_t resource_storage;
+#endif /* COAP_SERVER_SUPPORT */
 
 #ifdef HAVE_LIBTINYDTLS
+#undef PACKAGE_BUGREPORT
+#include <session.h>
 static session_t dtls_storage_data[COAP_MAX_DTLS_SESSIONS];
 static memarray_t dtls_storage;
 #endif /* HAVE_LIBTINYDTLS */
@@ -243,11 +285,26 @@ struct optbuf_t {
 static struct optbuf_t option_storage_data[COAP_MAX_OPTIONS];
 static memarray_t option_storage;
 
+#if COAP_SERVER_SUPPORT
 static coap_cache_key_t cache_key_storage_data[COAP_MAX_CACHE_KEYS];
 static memarray_t cache_key_storage;
 
 static coap_cache_entry_t cache_entry_storage_data[COAP_MAX_CACHE_ENTRIES];
 static memarray_t cache_entry_storage;
+#endif /* COAP_SERVER_SUPPORT */
+
+#if COAP_CLIENT_SUPPORT
+static coap_lg_crcv_t cache_lg_crcv_storage_data[COAP_MAX_LG_CRCVS];
+static memarray_t cache_lg_crcv_storage;
+#endif /* COAP_CLIENT_SUPPORT */
+
+#if COAP_SERVER_SUPPORT
+static coap_lg_srcv_t cache_lg_srcv_storage_data[COAP_MAX_LG_SRCVS];
+static memarray_t cache_lg_srcv_storage;
+
+static coap_lg_xmit_t cache_lg_xmit_storage_data[COAP_MAX_LG_XMITS];
+static memarray_t cache_lg_xmit_storage;
+#endif /* COAP_SERVER_SUPPORT */
 
 #define INIT_STORAGE(Storage, Count)  \
   memarray_init(&(Storage ## _storage), (Storage ## _storage_data), sizeof(Storage ## _storage_data[0]), (Count));
@@ -257,45 +314,73 @@ static memarray_t cache_entry_storage;
 void
 coap_memory_init(void) {
   INIT_STORAGE(string, COAP_MAX_STRINGS);
+#if COAP_SERVER_SUPPORT
   INIT_STORAGE(endpoint, COAP_MAX_ENDPOINTS);
   INIT_STORAGE(attr, COAP_MAX_ATTRIBUTE_STRINGS);
+#endif /* COAP_SERVER_SUPPORT */
   INIT_STORAGE(pkt, COAP_MAX_PACKETS);
   INIT_STORAGE(node, COAP_MAX_NODES);
   INIT_STORAGE(context, COAP_MAX_CONTEXTS);
   INIT_STORAGE(pdu, COAP_MAX_PDUS);
   INIT_STORAGE(pdubuf, COAP_MAX_PDUS);
+#if COAP_SERVER_SUPPORT
   INIT_STORAGE(resource, COAP_MAX_RESOURCES);
   INIT_STORAGE(resattr, COAP_MAX_ATTRIBUTES);
+#endif /* COAP_SERVER_SUPPORT */
 #ifdef HAVE_LIBTINYDTLS
   INIT_STORAGE(dtls, COAP_MAX_DTLS_SESSIONS);
 #endif
   INIT_STORAGE(session, COAP_MAX_SESSIONS);
   INIT_STORAGE(option, COAP_MAX_OPTIONS);
+#if COAP_SERVER_SUPPORT
   INIT_STORAGE(cache_key, COAP_MAX_CACHE_KEYS);
   INIT_STORAGE(cache_entry, COAP_MAX_CACHE_ENTRIES);
+#endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
+  INIT_STORAGE(cache_lg_crcv, COAP_MAX_LG_CRCVS);
+#endif /* COAP_SERVER_SUPPORT */
+#if COAP_SERVER_SUPPORT
+  INIT_STORAGE(cache_lg_srcv, COAP_MAX_LG_SRCVS);
+  INIT_STORAGE(cache_lg_xmit, COAP_MAX_LG_XMITS);
+#endif /* COAP_SERVER_SUPPORT */
 }
 
 static memarray_t *
 get_container(coap_memory_tag_t type) {
   switch(type) {
+#if COAP_SERVER_SUPPORT
   case COAP_ATTRIBUTE_NAME:
     /* fall through */
   case COAP_ATTRIBUTE_VALUE: return &attr_storage;
+#endif /* COAP_SERVER_SUPPORT */
   case COAP_PACKET:          return &pkt_storage;
   case COAP_NODE:            return &node_storage;
   case COAP_CONTEXT:         return STORAGE_PTR(context);
+#if COAP_SERVER_SUPPORT
   case COAP_ENDPOINT:        return &endpoint_storage;
+#endif /* COAP_SERVER_SUPPORT */
   case COAP_PDU:             return &pdu_storage;
   case COAP_PDU_BUF:         return &pdubuf_storage;
+#if COAP_SERVER_SUPPORT
   case COAP_RESOURCE:        return &resource_storage;
   case COAP_RESOURCEATTR:    return &resattr_storage;
+#endif /* COAP_SERVER_SUPPORT */
 #ifdef HAVE_LIBTINYDTLS
   case COAP_DTLS_SESSION:    return &dtls_storage;
 #endif
   case COAP_SESSION:         return &session_storage;
   case COAP_OPTLIST:         return &option_storage;
+#if COAP_SERVER_SUPPORT
   case COAP_CACHE_KEY:       return &cache_key_storage;
-  case COAP_CACHE_ENTRY:     return &cache_key_entry;
+  case COAP_CACHE_ENTRY:     return &cache_entry_storage;
+#endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
+  case COAP_LG_CRCV:         return &cache_lg_crcv_storage;
+#endif /* COAP_CLIENT_SUPPORT */
+#if COAP_SERVER_SUPPORT
+  case COAP_LG_SRCV:         return &cache_lg_srcv_storage;
+  case COAP_LG_XMIT:         return &cache_lg_xmit_storage;
+#endif /* COAP_SERVER_SUPPORT */
   case COAP_STRING:
     /* fall through */
   default:

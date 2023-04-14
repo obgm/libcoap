@@ -27,6 +27,10 @@ if test $err = 0 -a "x$ARCHIVE" != "x"; then
         make -C $DIR/examples/contiki
         err=$?
     fi
+    if [ $err = 0 ] ; then
+        make -C $DIR/examples/riot
+        err=$?
+    fi
 fi
 
 exit $err
