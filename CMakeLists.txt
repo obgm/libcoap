@@ -523,6 +523,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_event.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_io.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_layers.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_mem.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_netif.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_notls.c

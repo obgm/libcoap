@@ -50,6 +50,7 @@
     <ClCompile Include="..\src\coap_hashkey.c" />
     <ClCompile Include="..\src\coap_gnutls.c" />
     <ClCompile Include="..\src\coap_io.c" />
+    <ClCompile Include="..\src\coap_layers.c" />
     <ClCompile Include="..\src\coap_mbedtls.c" />
     <ClCompile Include="..\src\coap_mem.c" />
     <ClCompile Include="..\src\coap_netif.c" />
@@ -94,6 +95,7 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_hashkey_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_io.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_layers_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_mem.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_mutex_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_net.h" />

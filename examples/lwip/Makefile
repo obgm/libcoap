@@ -143,6 +143,7 @@ COAP_SRC = coap_address.c \
 	   coap_hashkey.c \
 	   coap_io.c \
 	   coap_io_lwip.c \
+	   coap_layers.c \
 	   net.c \
 	   coap_netif.c \
 	   coap_notls.c \

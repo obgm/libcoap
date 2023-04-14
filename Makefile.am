@@ -73,6 +73,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_dtls_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_hashkey_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_io_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_layers_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_mutex_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_net_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_netif_internal.h \
@@ -162,6 +163,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_hashkey.c \
   src/coap_gnutls.c \
   src/coap_io.c \
+  src/coap_layers.c \
   src/coap_mbedtls.c \
   src/coap_mem.c \
   src/coap_netif.c \
