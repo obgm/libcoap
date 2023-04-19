@@ -1,5 +1,5 @@
 /*
- * coap.h -- main header file for CoAP stack of libcoap
+ * coap.h -- main header file for CoAP stack of libcoap (Windows)
  *
  * Copyright (C) 2010-2012,2015-2023 Olaf Bergmann <bergmann@tzi.org>
  *               2015 Carsten Schoenert <c.schoenert@t-online.de>
