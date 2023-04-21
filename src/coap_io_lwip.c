@@ -332,18 +332,21 @@ coap_socket_bind_udp(coap_socket_t *sock,
                      const coap_address_t *listen_addr,
                      coap_address_t *bound_addr) {
   int err;
+  coap_address_t l_listen = *listen_addr;
 
   sock->pcb = udp_new_ip_type(IPADDR_TYPE_ANY);
   if (sock->pcb == NULL)
     return 0;
 
+  if (l_listen.addr.type == IPADDR_TYPE_V6)
+    l_listen.addr.type = IPADDR_TYPE_ANY;
   udp_recv(sock->pcb, coap_recvs, (void*)sock->endpoint);
-  err = udp_bind(sock->pcb, &listen_addr->addr, listen_addr->port);
+  err = udp_bind(sock->pcb, &l_listen.addr, l_listen.port);
   if (err) {
           udp_remove(sock->pcb);
           sock->pcb = NULL;
   }
-  *bound_addr = *listen_addr;
+  *bound_addr = l_listen;
   return err ? 0 : 1;
 }
 #endif /* COAP_SERVER_SUPPORT */

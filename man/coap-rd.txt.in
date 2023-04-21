@@ -19,8 +19,8 @@ coap-rd-notls
 
 SYNOPSIS
 --------
-*coap-rd* [*-g* group] [*-G* group_if] [*-p* port] [*-v* num] [*-A* address]
-          [*-T* max_token_size] [*-V* num]
+*coap-rd* [*-g* group] [*-p* port] [*-v* num] [*-w* [port][,secure_port]]
+          [*-A* address] [*-G* group_if] [*-T* max_token_size] [*-V* num]
           [[*-h* hint] [*-k* key]]
           [[*-c* certfile] [*-n*] [*-C* cafile] [*-R* trusted_casfile]]
 
@@ -40,10 +40,6 @@ OPTIONS
    Join specified multicast 'group' on startup.
    *Note:* DTLS over multicast is not currently supported.
 
-*-G* group_if::
-   Use this interface for listening for the multicast group. This can be
-   different from the implied interface if the *-A* option is used.
-
 *-p* port::
    The 'port' on the given address will be listening for incoming connections.
    If (D)TLS is supported, then 'port' + 1 will also be listened on for
@@ -54,8 +50,16 @@ OPTIONS
    The verbosity level to use (default 4, maximum is 8) for general
    CoAP logging.
 
+*-w* [port][,secure_port]::
+   Enable WebSockets support support on port (WS) and/or secure_port (WSS),
+   comma separated.
+
 *-A* address::
    The local address of the interface which the server has to listen on.
+
+*-G* group_if::
+   Use this interface for listening for the multicast group. This can be
+   different from the implied interface if the *-A* option is used.
 
 *-T* max_token_size::
    Set the maximum token length (8-65804).

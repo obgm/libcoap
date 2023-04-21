@@ -93,6 +93,7 @@ coap_free_context
 coap_free_endpoint
 coap_free_type
 coap_get_app_data
+coap_get_available_scheme_hint_bits
 coap_get_block
 coap_get_block_b
 coap_get_data
