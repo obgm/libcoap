@@ -1838,7 +1838,7 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
   } else if (bytes_read > 0) {
     coap_session_t *session = coap_endpoint_get_session(endpoint, packet, now);
     if (session) {
-      coap_log_debug("*  %s: received %zd bytes\n",
+      coap_log_debug("*  %s: netif: recv %4zd bytes\n",
                coap_session_str(session), bytes_read);
       result = coap_handle_dgram_for_proto(ctx, session, packet);
       if (endpoint->proto == COAP_PROTO_DTLS && session->type == COAP_SESSION_TYPE_HELLO && result == 1)
