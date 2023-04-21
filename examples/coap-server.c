@@ -908,33 +908,6 @@ get_ongoing_proxy_session(coap_session_t *session,
     scheme = uri->scheme;
   }
 
-  switch(scheme) {
-  case COAP_URI_SCHEME_COAP:
-    proto = COAP_PROTO_UDP;
-    break;
-  case COAP_URI_SCHEME_COAPS:
-    proto = COAP_PROTO_DTLS;
-    break;
-  case COAP_URI_SCHEME_COAP_TCP:
-    proto = COAP_PROTO_TCP;
-    break;
-  case COAP_URI_SCHEME_COAPS_TCP:
-    proto = COAP_PROTO_TLS;
-    break;
-  case COAP_URI_SCHEME_COAP_WS:
-    proto = COAP_PROTO_WS;
-    break;
-  case COAP_URI_SCHEME_COAPS_WS:
-    proto = COAP_PROTO_WSS;
-    break;
-  case COAP_URI_SCHEME_LAST:
-  default:
-  case COAP_URI_SCHEME_HTTP:
-  case COAP_URI_SCHEME_HTTPS:
-    coap_log_err("http:// or https:// not supported\n");
-    return NULL;
-  }
-
   /* resolve destination address where data should be sent */
   info_list = coap_resolve_address_info(&server, port, port,
                                         0,
@@ -945,6 +918,7 @@ get_ongoing_proxy_session(coap_session_t *session,
     remove_proxy_association(session, 0);
     return NULL;
   }
+  proto = info_list->proto;
   memcpy(&dst, &info_list->addr, sizeof(dst));
   coap_free_address_info(info_list);
 
@@ -2323,8 +2297,7 @@ get_context(const char *node, const char *port) {
   int have_ep = 0;
   uint16_t u_s_port = 0;
   uint16_t s_port = 0;
-  int scheme_hint_bits = 0;
-  coap_uri_scheme_t scheme;
+  uint32_t scheme_hint_bits = 0;
 
   ctx = coap_new_context(NULL);
   if (!ctx) {
@@ -2343,102 +2316,26 @@ get_context(const char *node, const char *port) {
     u_s_port = atoi(port);
     s_port = u_s_port + 1;
   }
-  for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
-    switch (scheme) {
-    case COAP_URI_SCHEME_COAP:
-      scheme_hint_bits |= 1 << scheme;
-      break;
-    case COAP_URI_SCHEME_COAPS:
-      if (!coap_dtls_is_supported() || (cert_file == NULL && key_defined == 0))
-        continue;
-      scheme_hint_bits |= 1 << scheme;
-      break;
-    case COAP_URI_SCHEME_COAP_TCP:
-      if (!coap_tcp_is_supported())
-        continue;
-      scheme_hint_bits |= 1 << scheme;
-      break;
-    case COAP_URI_SCHEME_COAPS_TCP:
-      if (!coap_tls_is_supported() || (cert_file == NULL && key_defined == 0))
-        continue;
-      scheme_hint_bits |= 1 << scheme;
-      break;
-    case COAP_URI_SCHEME_COAP_WS:
-      if (!enable_ws || !coap_ws_is_supported())
-        continue;
-      scheme_hint_bits |= 1 << scheme;
-      break;
-    case COAP_URI_SCHEME_COAPS_WS:
-      if (!enable_ws || !coap_wss_is_supported() || (cert_file == NULL && key_defined == 0))
-        continue;
-      scheme_hint_bits |= 1 << scheme;
-      break;
-    case COAP_URI_SCHEME_HTTP:
-    case COAP_URI_SCHEME_HTTPS:
-    case COAP_URI_SCHEME_LAST:
-    default:
-      continue;
-    }
-  }
-
-  switch (use_unix_proto) {
-  /* For AF_UNIX, can only listen on a single endpoint */
-  case COAP_PROTO_UDP:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP; break;
-  case COAP_PROTO_TCP:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP_TCP; break;
-  case COAP_PROTO_DTLS: scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS; break;
-  case COAP_PROTO_TLS:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS_TCP; break;
-  case COAP_PROTO_WS:   scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP_WS; break;
-  case COAP_PROTO_WSS:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS_WS; break;
-  case COAP_PROTO_NONE: /* If -U was not defined */
-  case COAP_PROTO_LAST:
-  default:
-    break;
-  }
-
+  scheme_hint_bits =
+     coap_get_available_scheme_hint_bits(cert_file != NULL || key_defined != 0,
+                                         enable_ws, use_unix_proto);
   info_list = coap_resolve_address_info(node ? &local : NULL, u_s_port, s_port,
                                         AI_PASSIVE | AI_NUMERICHOST,
                                         scheme_hint_bits);
   for (info = info_list; info != NULL; info = info->next) {
     coap_endpoint_t *ep;
-    coap_proto_t proto = COAP_PROTO_UDP;
 
-    switch (info->scheme) {
-    case COAP_URI_SCHEME_COAP:
-      proto = COAP_PROTO_UDP;
-      break;
-    case COAP_URI_SCHEME_COAPS:
-      proto = COAP_PROTO_DTLS;
-      break;
-    case COAP_URI_SCHEME_COAP_TCP:
-      proto = COAP_PROTO_TCP;
-      break;
-    case COAP_URI_SCHEME_COAPS_TCP:
-      proto = COAP_PROTO_TLS;
-      break;
-    case COAP_URI_SCHEME_COAP_WS:
-      proto = COAP_PROTO_WS;
-      coap_address_set_port(&info->addr, ws_port);
-      break;
-    case COAP_URI_SCHEME_COAPS_WS:
-      proto = COAP_PROTO_WSS;
-      coap_address_set_port(&info->addr, wss_port);
-      break;
-    case COAP_URI_SCHEME_HTTP:
-    case COAP_URI_SCHEME_HTTPS:
-    case COAP_URI_SCHEME_LAST:
-    default:
-      continue;
-    }
-    ep = coap_new_endpoint(ctx, &info->addr, proto);
+    ep = coap_new_endpoint(ctx, &info->addr, info->proto);
     if (!ep) {
       coap_log_warn("cannot create endpoint for proto %u\n",
-                     proto);
+                     info->proto);
     } else {
       have_ep = 1;
     }
   }
   coap_free_address_info(info_list);
   if (!have_ep) {
+    coap_log_err("No context available for interface '%s'\n", node);
     coap_free_context(ctx);
     return NULL;
   }

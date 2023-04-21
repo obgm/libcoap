@@ -60,6 +60,9 @@ static ssize_t key_length = 0;
 static int key_defined = 0;
 static const char *hint = "CoAP";
 static size_t extended_token_size = COAP_TOKEN_DEFAULT_MAX;
+static int enable_ws = 0;
+static int ws_port = 80;
+static int wss_port = 443;
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -82,6 +85,22 @@ cmdline_read_key(char *arg, unsigned char *buf, size_t maxlen) {
     return len;
   }
   return -1;
+}
+
+static int
+cmdline_ws(char *arg) {
+  char *cp = strchr(arg, ',');
+
+  if (cp) {
+    if (cp != arg)
+      ws_port = atoi(arg);
+    cp++;
+    if (*cp != '\000')
+      wss_port = atoi(cp);
+  } else {
+    ws_port = atoi(arg);
+  }
+  return 1;
 }
 
 static inline rd_t *
@@ -584,7 +603,7 @@ usage(const char *program, const char *version) {
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
      "Usage: %s [-g group] [-G group_if] [-p port] [-v num] [-A address]\n"
-     "\t       [-T max_token_size] [-V num]\n"
+     "\t       [-w [port][,secure_port]] [-T max_token_size] [-V num]\n"
      "\t       [[-h hint] [-k key]]\n"
      "\t       [[-c certfile] [-C cafile] [-n] [-R trust_casfile]]\n"
      "General Options\n"
@@ -596,6 +615,9 @@ usage(const char *program, const char *version) {
      "\t-p port\t\tListen on specified port\n"
      "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
      "\t       \t\tCoAP logging\n"
+     "\t-w [port][,secure_port]\n"
+     "\t       \t\tEnable WebSockets support on port (WS) and/or secure_port\n"
+     "\t       \t\t(WSS), comma separated\n"
      "\t-A address\tInterface address to bind to\n"
      "\t-T max_token_length\tSet the maximum token length (8-65804)\n"
      "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
@@ -701,79 +723,54 @@ fill_keystore(coap_context_t *ctx) {
 static coap_context_t *
 get_context(const char *node, const char *port) {
   coap_context_t *ctx = NULL;
-  int s;
-  struct addrinfo hints;
-  struct addrinfo *result, *rp;
+  coap_addr_info_t *info = NULL;
+  coap_addr_info_t *info_list = NULL;
+  coap_str_const_t local;
+  int have_ep = 0;
+  uint16_t u_s_port = 0;
+  uint16_t s_port = 0;
+  int scheme_hint_bits = 0;
 
   ctx = coap_new_context(NULL);
   if (!ctx) {
     return NULL;
   }
-  /* Need PSK set up before we set up (D)TLS endpoints */
+
+  /* Need PKI/RPK/PSK set up before we set up (D)TLS endpoints */
   fill_keystore(ctx);
 
-  memset(&hints, 0, sizeof(struct addrinfo));
-  hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
-  hints.ai_socktype = SOCK_DGRAM; /* Coap uses UDP */
-  hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST;
+  if (node) {
+    local.s = (const uint8_t *)node;
+    local.length = strlen(node);
+  }
 
-  s = getaddrinfo(node, port, &hints, &result);
-  if ( s != 0 ) {
-    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
+  if (port) {
+    u_s_port = atoi(port);
+    s_port = u_s_port + 1;
+  }
+  scheme_hint_bits =
+     coap_get_available_scheme_hint_bits(cert_file != NULL || key_defined != 0,
+                                         enable_ws, COAP_PROTO_NONE);
+  info_list = coap_resolve_address_info(node ? &local : NULL, u_s_port, s_port,
+                                        AI_PASSIVE | AI_NUMERICHOST,
+                                        scheme_hint_bits);
+  for (info = info_list; info != NULL; info = info->next) {
+    coap_endpoint_t *ep;
+
+    ep = coap_new_endpoint(ctx, &info->addr, info->proto);
+    if (!ep) {
+      coap_log_warn("cannot create endpoint for proto %u\n",
+                     info->proto);
+    } else {
+      have_ep = 1;
+    }
+  }
+  coap_free_address_info(info_list);
+  if (!have_ep) {
+    coap_log_err("No context available for interface '%s'\n", node);
     coap_free_context(ctx);
     return NULL;
   }
-
-  /* iterate through results until success */
-  for (rp = result; rp != NULL; rp = rp->ai_next) {
-    coap_address_t addr, addrs;
-    coap_endpoint_t *ep_udp = NULL, *ep_dtls = NULL, *ep_tcp = NULL, *ep_tls = NULL;
-
-    if (rp->ai_addrlen <= (socklen_t)sizeof(addr.addr)) {
-      coap_address_init(&addr);
-      addr.size = (socklen_t)rp->ai_addrlen;
-      memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
-      addrs = addr;
-      if (addr.addr.sa.sa_family == AF_INET) {
-        uint16_t temp = ntohs(addr.addr.sin.sin_port) + 1;
-        addrs.addr.sin.sin_port = htons(temp);
-      } else if (addr.addr.sa.sa_family == AF_INET6) {
-        uint16_t temp = ntohs(addr.addr.sin6.sin6_port) + 1;
-        addrs.addr.sin6.sin6_port = htons(temp);
-      } else {
-        goto finish;
-      }
-
-      ep_udp = coap_new_endpoint(ctx, &addr, COAP_PROTO_UDP);
-      if (ep_udp) {
-        if (coap_dtls_is_supported() && (key_defined || cert_file)) {
-          ep_dtls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_DTLS);
-          if (!ep_dtls)
-            coap_log_crit("cannot create DTLS endpoint\n");
-        }
-      } else {
-        coap_log_crit("cannot create UDP endpoint\n");
-        continue;
-      }
-      ep_tcp = coap_new_endpoint(ctx, &addr, COAP_PROTO_TCP);
-      if (ep_tcp) {
-        if (coap_tls_is_supported() && (key_defined || cert_file)) {
-          ep_tls = coap_new_endpoint(ctx, &addrs, COAP_PROTO_TLS);
-          if (!ep_tls)
-            coap_log_crit("cannot create TLS endpoint\n");
-        }
-      } else {
-        coap_log_crit("cannot create TCP endpoint\n");
-      }
-      if (ep_udp)
-        goto finish;
-    }
-  }
-
-  fprintf(stderr, "no context available for interface '%s'\n", node);
-
-finish:
-  freeaddrinfo(result);
   return ctx;
 }
 
@@ -806,7 +803,7 @@ main(int argc, char **argv) {
   struct sigaction sa;
 #endif
 
-  while ((opt = getopt(argc, argv, "A:c:C:g:G:h:k:n:R:p:v:T:V:")) != -1) {
+  while ((opt = getopt(argc, argv, "A:c:C:g:G:h:k:n:R:p:v:T:V:w:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -859,6 +856,13 @@ main(int argc, char **argv) {
       break;
     case 'V':
       dtls_log_level = strtol(optarg, NULL, 10);
+      break;
+    case 'w':
+      if (!coap_ws_is_supported() || !cmdline_ws(optarg)) {
+        fprintf(stderr, "WebSockets not enabled in libcoap\n");
+        exit(1);
+      }
+      enable_ws = 1;
       break;
     default:
       usage( argv[0], LIBCOAP_PACKAGE_VERSION );

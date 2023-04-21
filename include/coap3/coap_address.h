@@ -155,8 +155,25 @@ _coap_address_isany_impl(const coap_address_t *a) {
 typedef struct coap_addr_info_t {
   struct coap_addr_info_t *next; /**< Next entry in the chain */
   coap_uri_scheme_t scheme;      /**< CoAP scheme to use */
+  coap_proto_t proto;            /**< CoAP protocol to use */
   coap_address_t addr;           /**< The address to connect / bind to */
 } coap_addr_info_t;
+
+/**
+ * Determine and set up scheme_hint_bits for a server that can be used in
+ * a call to coap_resolve_address_info().
+ *
+ * @param have_pki_psk Set to @c 1 if PSK/PKI information is known else @c 0.
+ * @param ws_check Set to @c 1 is WebSockets is to be included in the list
+ *                  else @c 0.
+ * @param use_unix_proto Set to the appropriate protocol to use for Unix
+ *                       sockets, else set to COAP_PROTO_NONE for INET / INET6
+ *                       sockets.
+ * @return A bit mask of the available CoAP protocols (can be @c 0 if none)
+ *         suitable for passing to coap_resolve_address_info().
+ */
+uint32_t coap_get_available_scheme_hint_bits(int have_pki_psk, int ws_check,
+                                             coap_proto_t use_unix_proto);
 
 /**
  * Resolve the specified @p server into a set of coap_address_t that can

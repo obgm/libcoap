@@ -117,11 +117,15 @@ init_coap_resources(coap_context_t *ctx) {
 
 void server_coap_init(coap_lwip_input_wait_handler_t input_wait,
                       void *input_arg, int argc, char **argv) {
-  coap_address_t listenaddress;
   int opt;
   coap_log_t log_level = COAP_LOG_WARN;
   coap_log_t dtls_log_level = COAP_LOG_ERR;
   const char *use_psk = "secretPSK";
+  uint32_t scheme_hint_bits = 0;
+  coap_addr_info_t *info = NULL;
+  coap_addr_info_t *info_list = NULL;
+  int have_ep = 0;
+  coap_str_const_t node;
 
   while ((opt = getopt(argc, argv, ":k:v:V:")) != -1) {
     switch (opt) {
@@ -140,30 +144,44 @@ void server_coap_init(coap_lwip_input_wait_handler_t input_wait,
     }
   }
 
-  coap_address_init(&listenaddress);
-
-  /* looks like a server address, but is used as end point for clients too */
-  listenaddress.addr = *(IP_ANY_TYPE);
-  listenaddress.port = COAP_DEFAULT_PORT;
-
+  coap_startup();
   coap_set_log_level(log_level);
   coap_dtls_set_log_level(dtls_log_level);
-  main_coap_context = coap_new_context(&listenaddress);
+
+  main_coap_context = coap_new_context(NULL);
   LWIP_ASSERT("Failed to initialize context", main_coap_context != NULL);
 
   if (coap_dtls_is_supported()) {
     coap_dtls_spsk_t setup_data;
-    coap_endpoint_t *ep;
 
-    listenaddress.port = COAP_DEFAULT_PORT + 1;
-    ep = coap_new_endpoint(main_coap_context, &listenaddress, COAP_PROTO_DTLS);
-    LWIP_ASSERT("Failed to initialize dtls endpoint", ep != NULL);
     memset(&setup_data, 0, sizeof(setup_data));
     setup_data.version = COAP_DTLS_SPSK_SETUP_VERSION;
     setup_data.psk_info.key.s = (const uint8_t *)use_psk;
     setup_data.psk_info.key.length = strlen(use_psk);
     coap_context_set_psk2(main_coap_context, &setup_data);
   }
+
+  node.s = (const uint8_t*)"::";
+  node.length = 2;
+  scheme_hint_bits =
+     coap_get_available_scheme_hint_bits(use_psk[0],
+                                         0, COAP_PROTO_NONE);
+  info_list = coap_resolve_address_info(&node, 0, 0,
+                                        0,
+                                        scheme_hint_bits);
+  for (info = info_list; info != NULL; info = info->next) {
+    coap_endpoint_t *ep;
+
+    ep = coap_new_endpoint(main_coap_context, &info->addr, info->proto);
+    if (!ep) {
+      coap_log_warn("cannot create endpoint for proto %u\n",
+                     info->proto);
+    } else {
+      have_ep = 1;
+    }
+  }
+  coap_free_address_info(info_list);
+  LWIP_ASSERT("Failed to initialize context", have_ep != 0);
 
   /* Limit the number of idle sessions to save RAM (MEMP_NUM_COAPSESSION) */
   LWIP_ASSERT("Need a minimum of 2 for MEMP_NUM_COAPSESSION", MEMP_NUM_COAPSESSION > 1);

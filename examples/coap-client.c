@@ -1509,41 +1509,15 @@ get_session(coap_context_t *ctx,
             const char *local_addr,
             const char *local_port,
             coap_uri_scheme_t scheme,
+            coap_proto_t proto,
             coap_address_t *dst,
             const uint8_t *identity,
             size_t identity_len,
             const uint8_t *key,
             size_t key_len) {
   coap_session_t *session = NULL;
-  coap_proto_t proto;
 
   is_mcast = coap_is_mcast(dst);
-  switch(scheme) {
-  case COAP_URI_SCHEME_COAP:
-    proto = COAP_PROTO_UDP;
-    break;
-  case COAP_URI_SCHEME_COAPS:
-    proto = COAP_PROTO_DTLS;
-    break;
-  case COAP_URI_SCHEME_COAP_TCP:
-    proto = COAP_PROTO_TCP;
-    break;
-  case COAP_URI_SCHEME_COAPS_TCP:
-    proto = COAP_PROTO_TLS;
-    break;
-  case COAP_URI_SCHEME_COAP_WS:
-    proto = COAP_PROTO_WS;
-    break;
-  case COAP_URI_SCHEME_COAPS_WS:
-    proto = COAP_PROTO_WSS;
-    break;
-  case COAP_URI_SCHEME_LAST:
-  default:
-  case COAP_URI_SCHEME_HTTP:
-  case COAP_URI_SCHEME_HTTPS:
-    coap_log_err("http:// or https:// not supported\n");
-    return NULL;
-  }
   if (local_addr || dst->addr.sa.sa_family == AF_UNIX) {
     if (dst->addr.sa.sa_family == AF_UNIX) {
       coap_address_t bind_addr;
@@ -1634,6 +1608,7 @@ main(int argc, char **argv) {
   int create_uri_opts = 1;
   size_t i;
   coap_uri_scheme_t scheme;
+  coap_proto_t proto;
   uint32_t repeat_ms = REPEAT_DELAY_MS;
   uint8_t *data = NULL;
   size_t data_len = 0;
@@ -1853,6 +1828,7 @@ main(int argc, char **argv) {
     coap_log_err("failed to resolve address\n");
     goto failed;
   }
+  proto = info_list->proto;
   memcpy(&dst, &info_list->addr, sizeof(dst));
   coap_free_address_info(info_list);
 
@@ -1881,6 +1857,7 @@ main(int argc, char **argv) {
                         node_str[0] ? node_str : NULL,
                         port_str[0] ? port_str : NULL,
                         scheme,
+                        proto,
                         &dst,
                         user_length >= 0 ? user : NULL,
                         user_length >= 0 ? user_length : 0,

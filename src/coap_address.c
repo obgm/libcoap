@@ -117,7 +117,7 @@ void coap_address_init(coap_address_t *addr) {
 int
 coap_address_set_unix_domain(coap_address_t *addr,
                               const uint8_t *host, size_t host_len) {
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP)
   size_t i;
   size_t ofs = 0;
 
@@ -139,12 +139,12 @@ coap_address_set_unix_domain(coap_address_t *addr,
   else
     addr->addr.cun.sun_path[ofs-1] = '\000';
   return 1;
-#else /* defined(WITH_LWIP) || defined(WITH_CONTIKI) */
+#else /* WITH_LWIP */
   (void)addr;
   (void)host;
   (void)host_len;
   return 0;
-#endif /* defined(WITH_LWIP) || defined(WITH_CONTIKI) */
+#endif /* WITH_LWIP */
 }
 
 static void
@@ -167,6 +167,66 @@ update_port(coap_address_t *addr, uint16_t port, uint16_t default_port) {
 #include <netdb.h>
 #endif
 
+uint32_t
+coap_get_available_scheme_hint_bits(int have_pki_psk, int ws_check,
+                                    coap_proto_t use_unix_proto) {
+  uint32_t scheme_hint_bits = 0;
+  coap_uri_scheme_t scheme;
+
+  for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
+    switch (scheme) {
+    case COAP_URI_SCHEME_COAP:
+      scheme_hint_bits |= 1 << scheme;
+      break;
+    case COAP_URI_SCHEME_COAPS:
+      if (!(coap_dtls_is_supported() && have_pki_psk))
+        continue;
+      scheme_hint_bits |= 1 << scheme;
+      break;
+    case COAP_URI_SCHEME_COAP_TCP:
+      if (!coap_tcp_is_supported())
+        continue;
+      scheme_hint_bits |= 1 << scheme;
+      break;
+    case COAP_URI_SCHEME_COAPS_TCP:
+      if (!(coap_tls_is_supported() && have_pki_psk))
+        continue;
+      scheme_hint_bits |= 1 << scheme;
+      break;
+    case COAP_URI_SCHEME_COAP_WS:
+      if (!ws_check || !coap_ws_is_supported())
+        continue;
+      scheme_hint_bits |= 1 << scheme;
+      break;
+    case COAP_URI_SCHEME_COAPS_WS:
+      if (!ws_check || !(coap_wss_is_supported() && have_pki_psk))
+        continue;
+      scheme_hint_bits |= 1 << scheme;
+      break;
+    case COAP_URI_SCHEME_HTTP:
+    case COAP_URI_SCHEME_HTTPS:
+    case COAP_URI_SCHEME_LAST:
+    default:
+      continue;
+    }
+  }
+
+  switch (use_unix_proto) {
+  /* For AF_UNIX, can only listen on a single endpoint */
+  case COAP_PROTO_UDP:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP; break;
+  case COAP_PROTO_TCP:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP_TCP; break;
+  case COAP_PROTO_DTLS: scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS; break;
+  case COAP_PROTO_TLS:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS_TCP; break;
+  case COAP_PROTO_WS:   scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP_WS; break;
+  case COAP_PROTO_WSS:  scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS_WS; break;
+  case COAP_PROTO_NONE: /* If use_unix_proto was not defined */
+  case COAP_PROTO_LAST:
+  default:
+    break;
+  }
+  return scheme_hint_bits;
+}
+
 coap_addr_info_t *
 coap_resolve_address_info(const coap_str_const_t *server,
                           uint16_t port,
@@ -182,6 +242,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
   coap_addr_info_t *info_prev = NULL;
   coap_addr_info_t *info_list = NULL;
   coap_uri_scheme_t scheme;
+  coap_proto_t proto;
 
 #if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
   if (server && coap_host_is_unix_domain(server)) {
@@ -190,24 +251,71 @@ coap_resolve_address_info(const coap_str_const_t *server,
       coap_log_err("Unix Domain host too long\n");
       return NULL;
     }
+    /* Need to chose the first defined one  in scheme_hint_bits */
+    for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
+      if (scheme_hint_bits & (1 << scheme)) {
+        break;
+      }
+    }
+    if (scheme == COAP_URI_SCHEME_LAST) {
+      return NULL;
+    }
+    switch (scheme) {
+    case COAP_URI_SCHEME_COAP:
+      proto = COAP_PROTO_UDP;
+      break;
+    case COAP_URI_SCHEME_COAPS:
+      if (!coap_dtls_is_supported())
+        return NULL;
+      proto = COAP_PROTO_DTLS;
+      break;
+    case COAP_URI_SCHEME_COAP_TCP:
+      if (!coap_tcp_is_supported())
+        return NULL;
+      proto = COAP_PROTO_TCP;
+      break;
+    case COAP_URI_SCHEME_COAPS_TCP:
+      if (!coap_tls_is_supported())
+        return NULL;
+      proto = COAP_PROTO_TLS;
+      break;
+    case COAP_URI_SCHEME_HTTP:
+      if (!coap_tcp_is_supported())
+        return NULL;
+      proto = COAP_PROTO_NONE;
+      break;
+    case COAP_URI_SCHEME_HTTPS:
+      if (!coap_tls_is_supported())
+        return NULL;
+      proto = COAP_PROTO_NONE;
+      break;
+    case COAP_URI_SCHEME_COAP_WS:
+      if (!coap_ws_is_supported())
+        return NULL;
+      proto = COAP_PROTO_WS;
+      break;
+    case COAP_URI_SCHEME_COAPS_WS:
+      if (!coap_wss_is_supported())
+        return NULL;
+      proto = COAP_PROTO_WSS;
+      break;
+    case COAP_URI_SCHEME_LAST:
+    default:
+      return NULL;
+    }
     info = coap_malloc_type(COAP_STRING, sizeof(coap_addr_info_t));
     if (info == NULL)
       return NULL;
     info->next = NULL;
-
-    /* Need to chose the first defined one  in scheme_hint_bits */
-    for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
-      if (scheme_hint_bits & (1 << scheme)) {
-        info->scheme = scheme;
-        break;
-      }
-    }
-    if (scheme == COAP_URI_SCHEME_LAST)
-      return NULL;
+    info->proto = proto;
+    info->scheme = scheme;
 
     coap_address_init(&info->addr);
-    coap_address_set_unix_domain(&info->addr, server->s,
-                                 server->length);
+    if (!coap_address_set_unix_domain(&info->addr, server->s,
+                                      server->length)) {
+      coap_free_type(COAP_STRING, info);
+      return NULL;
+    }
     return info;
   }
 #endif /* ! WITH_LWIP && ! WITH_CONTIKI */
@@ -231,8 +339,10 @@ coap_resolve_address_info(const coap_str_const_t *server,
   }
 
   for (ainfo = res; ainfo != NULL; ainfo = ainfo->ai_next) {
+#if !defined(WITH_LWIP)
     if (ainfo->ai_addrlen > (socklen_t)sizeof(info->addr.addr))
       continue;
+#endif /* ! WITH_LWIP */
 
     switch (ainfo->ai_family) {
     case AF_INET6:
@@ -241,6 +351,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
         if (scheme_hint_bits & (1 << scheme)) {
           switch (scheme) {
           case COAP_URI_SCHEME_COAP:
+            proto = COAP_PROTO_UDP;
 #if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_DGRAM)
               continue;
@@ -249,6 +360,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
           case COAP_URI_SCHEME_COAPS:
             if (!coap_dtls_is_supported())
               continue;
+            proto = COAP_PROTO_DTLS;
 #if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_DGRAM)
               continue;
@@ -257,6 +369,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
           case COAP_URI_SCHEME_COAP_TCP:
             if (!coap_tcp_is_supported())
               continue;
+            proto = COAP_PROTO_TCP;
 #if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
@@ -265,6 +378,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
           case COAP_URI_SCHEME_COAPS_TCP:
             if (!coap_tls_is_supported())
               continue;
+            proto = COAP_PROTO_TLS;
 #if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
@@ -273,6 +387,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
           case COAP_URI_SCHEME_HTTP:
             if (!coap_tcp_is_supported())
               continue;
+            proto = COAP_PROTO_NONE;
 #if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
@@ -281,6 +396,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
           case COAP_URI_SCHEME_HTTPS:
             if (!coap_tls_is_supported())
               continue;
+            proto = COAP_PROTO_NONE;
 #if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
@@ -289,6 +405,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
           case COAP_URI_SCHEME_COAP_WS:
             if (!coap_ws_is_supported())
               continue;
+            proto = COAP_PROTO_WS;
 #if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
@@ -297,6 +414,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
           case COAP_URI_SCHEME_COAPS_WS:
             if (!coap_wss_is_supported())
               continue;
+            proto = COAP_PROTO_WSS;
 #if !defined(__MINGW32__)
             if (ainfo->ai_socktype != SOCK_STREAM)
               continue;
@@ -323,6 +441,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
           }
 
           info->scheme = scheme;
+          info->proto = proto;
           coap_address_init(&info->addr);
 #if !defined(WITH_LWIP)
           info->addr.size = (socklen_t)ainfo->ai_addrlen;
