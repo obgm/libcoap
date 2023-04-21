@@ -49,14 +49,14 @@ typedef enum coap_uri_check_t {
 } coap_uri_check_t;
 
 coap_uri_info_t coap_uri_scheme[COAP_URI_SCHEME_LAST] = {
-  { "coap",       5683, 0, COAP_URI_SCHEME_COAP },
-  { "coaps",      5684, 0, COAP_URI_SCHEME_COAPS },
-  { "coap+tcp",   5683, 0, COAP_URI_SCHEME_COAP_TCP },
-  { "coaps+tcp",  5684, 0, COAP_URI_SCHEME_COAPS_TCP },
-  { "http",         80, 1, COAP_URI_SCHEME_HTTP },
-  { "https",       443, 1, COAP_URI_SCHEME_HTTPS },
-  { "coap+ws",      80, 0, COAP_URI_SCHEME_COAP_WS },
-  { "coaps+ws",    443, 0, COAP_URI_SCHEME_COAPS_WS }
+  { "coap",       COAP_DEFAULT_PORT,  0, COAP_URI_SCHEME_COAP },
+  { "coaps",      COAPS_DEFAULT_PORT, 0, COAP_URI_SCHEME_COAPS },
+  { "coap+tcp",   COAP_DEFAULT_PORT,  0, COAP_URI_SCHEME_COAP_TCP },
+  { "coaps+tcp",  COAPS_DEFAULT_PORT, 0, COAP_URI_SCHEME_COAPS_TCP },
+  { "http",         80,               1, COAP_URI_SCHEME_HTTP },
+  { "https",       443,               1, COAP_URI_SCHEME_HTTPS },
+  { "coap+ws",      80,               0, COAP_URI_SCHEME_COAP_WS },
+  { "coaps+ws",    443,               0, COAP_URI_SCHEME_COAPS_WS }
 };
 
 static int
@@ -100,8 +100,11 @@ coap_split_uri_sub(const uint8_t *str_var,
   for (i = 0; i < COAP_URI_SCHEME_LAST; i++) {
     if ((p - str_var) == (int)strlen(coap_uri_scheme[i].name) &&
         memcmp(str_var, coap_uri_scheme[i].name, p - str_var) == 0) {
-      if (check_proxy != COAP_URI_CHECK_PROXY && coap_uri_scheme[i].proxy_only)
+      if (check_proxy != COAP_URI_CHECK_PROXY && coap_uri_scheme[i].proxy_only) {
+        coap_log_err("%.*s URI scheme not enabled (not a proxy)\n",
+                     (int)(p - str_var), str_var);
         return -1;
+      }
       uri->scheme = coap_uri_scheme[i].scheme;
       uri->port = coap_uri_scheme[i].port;
       break;
@@ -109,8 +112,54 @@ coap_split_uri_sub(const uint8_t *str_var,
   }
   if (i == COAP_URI_SCHEME_LAST) {
     /* scheme unknown */
+    coap_log_err("%.*s URI scheme unknown\n", (int)(p - str_var), str_var);
     res = -1;
     goto error;
+  }
+  switch (uri->scheme) {
+  case COAP_URI_SCHEME_COAP:
+    break;
+  case COAP_URI_SCHEME_COAPS:
+    if (!coap_dtls_is_supported()) {
+      coap_log_err(
+             "coaps URI scheme not supported in this version of libcoap\n");
+      return -1;
+    }
+    break;
+  case COAP_URI_SCHEME_COAP_TCP:
+    if (!coap_tcp_is_supported()) {
+      coap_log_err(
+             "coap+tcp URI scheme not supported in this version of libcoap\n");
+      return -1;
+    }
+    break;
+  case COAP_URI_SCHEME_COAPS_TCP:
+    if (!coap_tcp_is_supported()) {
+      coap_log_err(
+             "coaps+tcp URI scheme not supported in this version of libcoap\n");
+      return -1;
+    }
+    break;
+  case COAP_URI_SCHEME_COAP_WS:
+    if (!coap_ws_is_supported()) {
+      coap_log_err(
+             "coap+ws URI scheme not supported in this version of libcoap\n");
+      return -1;
+    }
+    break;
+  case COAP_URI_SCHEME_COAPS_WS:
+    if (!coap_wss_is_supported()) {
+      coap_log_err(
+             "coaps+ws URI scheme not supported in this version of libcoap\n");
+      return -1;
+    }
+    break;
+  case COAP_URI_SCHEME_HTTP:
+  case COAP_URI_SCHEME_HTTPS:
+  case COAP_URI_SCHEME_LAST:
+  default:
+    coap_log_warn("Unsupported URI type %d\n", uri->scheme);
+    return -1;
   }
   /* skip :// */
   p += 3;
@@ -252,7 +301,8 @@ coap_uri_into_options(coap_uri_t *uri,
         add_option = 1;
       break;
     default:
-      if (uri->port != (coap_uri_scheme_is_secure(uri) ? 5684 : 5683))
+      if (uri->port != (coap_uri_scheme_is_secure(uri) ? COAPS_DEFAULT_PORT :
+                                                           COAP_DEFAULT_PORT))
         add_option = 1;
       break;
     }
