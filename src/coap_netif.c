@@ -82,7 +82,7 @@ coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet) {
     errno = keep_errno;
   } else if (bytes_read > 0) {
     coap_ticks(&session->last_rx_tx);
-    coap_log_debug("*  %s: netif: read %zd bytes\n",
+    coap_log_debug("*  %s: netif: recv %4zd bytes\n",
              coap_session_str(session), bytes_read);
   }
   return bytes_read;
@@ -108,8 +108,7 @@ coap_netif_dgrm_read_ep(coap_endpoint_t *endpoint, coap_packet_t *packet) {
                    coap_socket_strerror());
     errno = keep_errno;
   } else if (bytes_read > 0) {
-    coap_log_debug("*  %s: netif: read %zd bytes\n",
-             coap_endpoint_str(endpoint), bytes_read);
+    /* Let the caller do the logging as session available by then */
   }
   return bytes_read;
 }
