@@ -354,16 +354,16 @@ coap_resolve_address_info(const coap_str_const_t *server,
 #endif /* defined(WITH_LWIP) */
           switch (scheme) {
           case COAP_URI_SCHEME_COAP:
-            update_port(&info->addr, port, 5683);
+            update_port(&info->addr, port, COAP_DEFAULT_PORT);
             break;
           case COAP_URI_SCHEME_COAPS:
-            update_port(&info->addr, secure_port, 5684);
+            update_port(&info->addr, secure_port, COAPS_DEFAULT_PORT);
             break;
           case COAP_URI_SCHEME_COAP_TCP:
-            update_port(&info->addr, port, 5683);
+            update_port(&info->addr, port, COAP_DEFAULT_PORT);
             break;
           case COAP_URI_SCHEME_COAPS_TCP:
-            update_port(&info->addr, secure_port, 5684);
+            update_port(&info->addr, secure_port, COAPS_DEFAULT_PORT);
             break;
           case COAP_URI_SCHEME_HTTP:
             update_port(&info->addr, port, 80);
