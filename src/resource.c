@@ -831,11 +831,12 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG,
        *
        * If an entry is null, then use nil, else a set of bytes
        *
-       * Currently tracking 4 items
+       * Currently tracking 5 items
        *  recipient_id
        *  id_context
        *  aad        (from oscore_association_t)
        *  partial_iv (from oscore_association_t)
+       *  nonce      (from oscore_association_t)
        */
       uint8_t info_buffer[60];
       uint8_t *info_buf = info_buffer;
@@ -843,7 +844,7 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG,
       size_t ret = 0;
       coap_bin_const_t ctoken = { token->length, token->s };
 
-      ret += oscore_cbor_put_array(&info_buf, &info_len, 4);
+      ret += oscore_cbor_put_array(&info_buf, &info_len, 5);
       ret += oscore_cbor_put_bytes(&info_buf,
                                    &info_len,
                                    session->recipient_ctx->recipient_id->s,
@@ -872,6 +873,14 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG,
                                        &info_len,
                                        association->partial_iv->s,
                                        association->partial_iv->length);
+        } else {
+          ret += oscore_cbor_put_nil(&info_buf, &info_len);
+        }
+        if (association->nonce) {
+          ret += oscore_cbor_put_bytes(&info_buf,
+                                       &info_len,
+                                       association->nonce->s,
+                                       association->nonce->length);
         } else {
           ret += oscore_cbor_put_nil(&info_buf, &info_len);
         }

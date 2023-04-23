@@ -114,6 +114,7 @@ coap_persist_observe_add(coap_context_t *context,
   if (!coap_pdu_parse(session->proto, data, data_len, pdu)) {
     goto malformed;
   }
+  pdu->max_size = pdu->used_size;
 
   if (pdu->code != COAP_REQUEST_CODE_GET &&
       pdu->code != COAP_REQUEST_CODE_FETCH)
@@ -163,11 +164,12 @@ coap_persist_observe_add(coap_context_t *context,
      *
      * If an entry is null, then use nil, else a set of bytes
      *
-     * Currently tracking 4 items
+     * Currently tracking 5 items
      *  recipient_id
      *  id_context
      *  aad        (from oscore_association_t)
      *  partial_iv (from oscore_association_t)
+     *  nonce      (from oscore_association_t)
      */
     oscore_ctx_t *osc_ctx;
     const uint8_t *info_buf = oscore_info->s;
@@ -177,14 +179,16 @@ coap_persist_observe_add(coap_context_t *context,
     coap_bin_const_t partial_iv;
     coap_bin_const_t aad;
     coap_bin_const_t id_context;
+    coap_bin_const_t nonce;
     int have_aad = 0;
     int have_partial_iv = 0;
     int have_id_context = 0;
+    int have_nonce = 0;
 
     ret = oscore_cbor_get_next_element(&info_buf, &info_buf_len);
     if (ret != CBOR_ARRAY)
       goto oscore_fail;
-    if (oscore_cbor_get_element_size(&info_buf, &info_buf_len) != 4)
+    if (oscore_cbor_get_element_size(&info_buf, &info_buf_len) != 5)
       goto oscore_fail;
 
     /* recipient_id */
@@ -237,6 +241,20 @@ coap_persist_observe_add(coap_context_t *context,
     } else
       goto oscore_fail;
 
+    /* nonce */
+    ret = oscore_cbor_get_next_element(&info_buf, &info_buf_len);
+    if (ret == CBOR_BYTE_STRING) {
+      nonce.length = oscore_cbor_get_element_size(&info_buf,
+                                                       &info_buf_len);
+      nonce.s = info_buf;
+      info_buf += nonce.length;
+      have_nonce = 1;
+    } else if (ret == CBOR_SIMPLE_VALUE &&
+               oscore_cbor_get_element_size(&info_buf,
+                                            &info_buf_len) == CBOR_NULL) {
+    } else
+      goto oscore_fail;
+
     osc_ctx = oscore_find_context(session->context, oscore_key_id,
                                   have_id_context ? &id_context : NULL, NULL,
                                   &session->recipient_ctx);
@@ -244,7 +262,8 @@ coap_persist_observe_add(coap_context_t *context,
       session->oscore_encryption = 1;
       oscore_new_association(session, pdu, &pdu->actual_token,
                              session->recipient_ctx,
-                             have_aad ? &aad : NULL, NULL,
+                             have_aad ? &aad : NULL,
+                             have_nonce ? &nonce : NULL,
                              have_partial_iv ? &partial_iv : NULL,
                              1);
       coap_log_debug("persist: OSCORE association added\n");
