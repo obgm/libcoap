@@ -181,11 +181,14 @@ t_parse_uri7(void) {
 
 static void
 t_parse_uri8(void) {
+  coap_log_t level = coap_get_log_level();
   char teststr[] = "http://example.com/%7E%AB%13";
   int result;
   coap_uri_t uri;
 
+  coap_set_log_level(COAP_LOG_CRIT);
   result = coap_split_uri((unsigned char *)teststr, strlen(teststr), &uri);
+  coap_set_log_level(level);
   if (result < 0) {
     CU_PASS("detected non-coap URI");
   } else {
@@ -195,11 +198,14 @@ t_parse_uri8(void) {
 
 static void
 t_parse_uri9(void) {
+  coap_log_t level = coap_get_log_level();
   char teststr[] = "http://example.com/%x";
   int result;
   coap_uri_t uri;
 
+  coap_set_log_level(COAP_LOG_CRIT);
   result = coap_split_uri((unsigned char *)teststr, strlen(teststr), &uri);
+  coap_set_log_level(level);
   if (result < 0) {
     CU_PASS("detected non-coap URI");
   } else {
