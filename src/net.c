@@ -911,7 +911,7 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
 
   coap_insert_node(&context->sendqueue, node);
 
-  coap_log_debug("** %s: mid=0x%x: added to retransmit queue (%ums)\n",
+  coap_log_debug("** %s: mid=0x%04x: added to retransmit queue (%ums)\n",
     coap_session_str(node->session), node->id,
     (unsigned)((node->timeout << node->retransmit_cnt) * 1000 /
                                                          COAP_TICKS_PER_SECOND));
@@ -1484,10 +1484,10 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     coap_insert_node(&context->sendqueue, node);
 
     if (node->is_mcast) {
-      coap_log_debug("** %s: mid=0x%x: mcast delayed transmission\n",
+      coap_log_debug("** %s: mid=0x%04x: mcast delayed transmission\n",
                coap_session_str(node->session), node->id);
     } else {
-      coap_log_debug("** %s: mid=0x%x: retransmission #%d\n",
+      coap_log_debug("** %s: mid=0x%04x: retransmission #%d\n",
                coap_session_str(node->session), node->id, node->retransmit_cnt);
     }
 
@@ -1513,7 +1513,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   }
 
   /* no more retransmissions, remove node from system */
-  coap_log_warn("** %s: mid=0x%x: give up after %d attempts\n",
+  coap_log_warn("** %s: mid=0x%04x: give up after %d attempts\n",
            coap_session_str(node->session), node->id, node->retransmit_cnt);
 
 #if COAP_SERVER_SUPPORT
@@ -1596,7 +1596,7 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
   while (session->delayqueue) {
     ssize_t bytes_written;
     coap_queue_t *q = session->delayqueue;
-    coap_log_debug("** %s: mid=0x%x: transmitted after delay\n",
+    coap_log_debug("** %s: mid=0x%04x: transmitted after delay\n",
              coap_session_str(session), (int)q->pdu->mid);
     assert(session->partial_write < q->pdu->used_size + q->pdu->hdr_size);
     bytes_written = session->sock.lfunc[COAP_LAYER_SESSION].write(session,
@@ -2092,7 +2092,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_mid_t
       (*queue)->t += (*node)->t;
     }
     (*node)->next = NULL;
-    coap_log_debug("** %s: mid=0x%x: removed (1)\n",
+    coap_log_debug("** %s: mid=0x%04x: removed (1)\n",
              coap_session_str(session), id);
     return 1;
   }
@@ -2111,7 +2111,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_mid_t
     }
     q->next = NULL;
     *node = q;
-    coap_log_debug("** %s: mid=0x%x: removed (2)\n",
+    coap_log_debug("** %s: mid=0x%04x: removed (2)\n",
              coap_session_str(session), id);
     return 1;
   }
@@ -2128,7 +2128,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
   while (context->sendqueue && context->sendqueue->session == session) {
     q = context->sendqueue;
     context->sendqueue = q->next;
-    coap_log_debug("** %s: mid=0x%x: removed (3)\n",
+    coap_log_debug("** %s: mid=0x%04x: removed (3)\n",
              coap_session_str(session), q->id);
     if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler) {
       coap_check_update_token(session, q->pdu);
@@ -2146,7 +2146,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
   while (q) {
     if (q->session == session) {
       p->next = q->next;
-      coap_log_debug("** %s: mid=0x%x: removed (4)\n",
+      coap_log_debug("** %s: mid=0x%04x: removed (4)\n",
                coap_session_str(session), q->id);
       if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler) {
         coap_check_update_token(session, q->pdu);
@@ -2178,7 +2178,7 @@ coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
     if (q->session == session &&
         coap_binary_equal(&q->pdu->actual_token, token)) {
       *p = q->next;
-      coap_log_debug("** %s: mid=0x%x: removed (6)\n",
+      coap_log_debug("** %s: mid=0x%04x: removed (6)\n",
                coap_session_str(session), q->id);
       if (q->pdu->type == COAP_MESSAGE_CON && session->con_active) {
         session->con_active--;
@@ -3065,7 +3065,7 @@ skip_handler:
           resource &&
           (resource->flags & COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS))) {
       if (coap_send_internal(session, response) == COAP_INVALID_MID) {
-        coap_log_debug("cannot send response for mid=0x%x\n", mid);
+        coap_log_debug("cannot send response for mid=0x%04x\n", mid);
       }
     } else {
       /* Need to delay mcast response */
@@ -3088,7 +3088,7 @@ skip_handler:
       coap_prng(&r, sizeof(r));
       delay = (COAP_DEFAULT_LEISURE_TICKS(session) * r) / 256;
       coap_log_debug(
-               "   %s: mid=0x%x: mcast response delayed for %u.%03u secs\n",
+               "   %s: mid=0x%04x: mcast response delayed for %u.%03u secs\n",
                coap_session_str(session),
                response->mid,
                (unsigned int)(delay / COAP_TICKS_PER_SECOND),
@@ -3099,7 +3099,7 @@ skip_handler:
       coap_wait_ack(session->context, session, node);
     }
   } else {
-    coap_log_debug("   %s: mid=0x%x: response dropped\n",
+    coap_log_debug("   %s: mid=0x%04x: response dropped\n",
              coap_session_str(session),
              response->mid);
     coap_show_pdu(COAP_LOG_DEBUG, response);
@@ -3450,7 +3450,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         is_ext_token_rst = 1;
       }
       if (!is_ping_rst && !is_ext_token_rst)
-        coap_log_alert("got RST for mid=0x%x\n", pdu->mid);
+        coap_log_alert("got RST for mid=0x%04x\n", pdu->mid);
 
       if (session->con_active) {
         session->con_active--;
