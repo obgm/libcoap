@@ -189,7 +189,8 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
   session->doing_first = 0;
   pdu = coap_pdu_init(old_pdu->type, old_pdu->code,
                       coap_new_message_id(session),
-                      0);
+                      max(old_pdu->max_size,
+                          coap_session_max_pdu_size(session)));
   /* Restore any pending waits */
   session->doing_first = doing_first;
   if (pdu == NULL)

@@ -135,7 +135,7 @@ setup_block_b(coap_session_t *session, coap_pdu_t *pdu, coap_block_b_t *block,
 
       if (avail < 16) {         /* bad luck, this is the smallest block size */
         coap_log_debug(
-                 "not enough space, even the smallest block does not fit\n");
+                 "not enough space, even the smallest block does not fit (1)\n");
         return 0;
       }
       new_blk_size = coap_flsll((long long)avail) - 5;
@@ -669,7 +669,7 @@ coap_add_data_large_internal(coap_session_t *session,
   if (avail < 16 && ((ssize_t)length > avail || have_block_defined)) {
     /* bad luck, this is the smallest block size */
     coap_log_debug(
-                "not enough space, even the smallest block does not fit\n");
+                "not enough space, even the smallest block does not fit (2)\n");
     goto fail;
   }
 
@@ -838,7 +838,7 @@ coap_add_data_large_internal(coap_session_t *session,
       /* chunk size change down */
       if (avail < 16) {
         coap_log_warn(
-                "not enough space, even the smallest block does not fit\n");
+                "not enough space, even the smallest block does not fit (3)\n");
         goto fail;
       }
       blk_size = coap_flsll((long long)avail) - 4 - 1;
