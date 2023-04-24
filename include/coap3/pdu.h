@@ -242,10 +242,6 @@ typedef enum coap_pdu_signaling_proto_t {
 /* Content formats from RFC 8613 */
 #define COAP_MEDIATYPE_APPLICATION_OSCORE     10001 /* application/oscore */
 
-/* Note that identifiers for registered media types are in the range 0-65535. We
- * use an unallocated type here and hope for the best. */
-#define COAP_MEDIATYPE_ANY                         0xff /* any media type */
-
 /**
  * coap_mid_t is used to store the CoAP Message ID of a CoAP PDU.
  * Valid message ids are 0 to 2^16.  Negative values are error codes.
