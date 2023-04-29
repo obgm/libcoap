@@ -607,7 +607,32 @@ coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
 #if !COAP_DISABLE_TCP
   coap_session_state_t state = session->state;
 #endif /* !COAP_DISABLE_TCP */
+    coap_lg_xmit_t *lq, *ltmp;
+#if COAP_SERVER_SUPPORT
+    coap_lg_srcv_t *sq, *stmp;
+#endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
+    coap_lg_crcv_t *cq, *etmp;
+#endif /* COAP_CLIENT_SUPPORT */
 
+  if (reason == COAP_NACK_ICMP_ISSUE) {
+    if (session->context->nack_handler) {
+      coap_queue_t *q = session->context->sendqueue;
+      while (q) {
+        if (q->session == session) {
+          coap_bin_const_t token = q->pdu->actual_token;
+
+          coap_check_update_token(session, q->pdu);
+          session->context->nack_handler(session, q->pdu, reason, q->id);
+          coap_update_token(q->pdu, token.length, token.s);
+        }
+        q = q->next;
+      }
+    }
+    coap_log_debug("***%s: session issue (%s)\n",
+                   coap_session_str(session), coap_nack_name(reason));
+    return;
+  }
   coap_log_debug("***%s: session disconnected (%s)\n",
                  coap_session_str(session), coap_nack_name(reason));
 #if COAP_SERVER_SUPPORT
@@ -633,22 +658,6 @@ coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
     q->next = NULL;
     coap_log_debug("** %s: mid=0x%04x: not transmitted after disconnect\n",
              coap_session_str(session), q->id);
-    if (q->pdu->type==COAP_MESSAGE_CON
-      && COAP_PROTO_NOT_RELIABLE(session->proto)
-      && reason == COAP_NACK_ICMP_ISSUE)
-    {
-      /* Make sure that we try a re-transmit later on ICMP error */
-      if (coap_wait_ack(session->context, session, q) >= 0) {
-        if (session->context->nack_handler) {
-          coap_bin_const_t token = q->pdu->actual_token;
-
-          coap_check_update_token(session, q->pdu);
-          session->context->nack_handler(session, q->pdu, reason, q->id);
-          coap_update_token(q->pdu, token.length, token.s);
-        }
-        q = NULL;
-      }
-    }
     if (q && q->pdu->type == COAP_MESSAGE_CON
       && session->context->nack_handler) {
       coap_check_update_token(session, q->pdu);
@@ -657,46 +666,25 @@ coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
     if (q)
       coap_delete_node(q);
   }
-  if (reason != COAP_NACK_ICMP_ISSUE) {
-    coap_lg_xmit_t *lq, *ltmp;
-#if COAP_SERVER_SUPPORT
-    coap_lg_srcv_t *sq, *stmp;
-#endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
-    coap_lg_crcv_t *cq, *etmp;
-
-    /* Need to do this before (D)TLS and socket is closed down */
-    LL_FOREACH_SAFE(session->lg_crcv, cq, etmp) {
-      LL_DELETE(session->lg_crcv, cq);
-      coap_block_delete_lg_crcv(session, cq);
-    }
+  /* Need to do this before (D)TLS and socket is closed down */
+  LL_FOREACH_SAFE(session->lg_crcv, cq, etmp) {
+    LL_DELETE(session->lg_crcv, cq);
+    coap_block_delete_lg_crcv(session, cq);
+  }
 #endif /* COAP_CLIENT_SUPPORT */
-    LL_FOREACH_SAFE(session->lg_xmit, lq, ltmp) {
-      LL_DELETE(session->lg_xmit, lq);
-      coap_block_delete_lg_xmit(session, lq);
-    }
+  LL_FOREACH_SAFE(session->lg_xmit, lq, ltmp) {
+    LL_DELETE(session->lg_xmit, lq);
+    coap_block_delete_lg_xmit(session, lq);
+  }
 #if COAP_SERVER_SUPPORT
-    LL_FOREACH_SAFE(session->lg_srcv, sq, stmp) {
-      LL_DELETE(session->lg_srcv, sq);
-      coap_block_delete_lg_srcv(session, sq);
-    }
+  LL_FOREACH_SAFE(session->lg_srcv, sq, stmp) {
+    LL_DELETE(session->lg_srcv, sq);
+    coap_block_delete_lg_srcv(session, sq);
+  }
 #endif /* COAP_SERVER_SUPPORT */
-    coap_cancel_session_messages(session->context, session, reason);
-  }
-  else if (session->context->nack_handler) {
-    coap_queue_t *q = session->context->sendqueue;
-    while (q) {
-      if (q->session == session) {
-        coap_bin_const_t token = q->pdu->actual_token;
-
-        coap_check_update_token(session, q->pdu);
-        session->context->nack_handler(session, q->pdu, reason, q->id);
-        coap_update_token(q->pdu, token.length, token.s);
-      }
-      q = q->next;
-    }
-  }
+  coap_cancel_session_messages(session->context, session, reason);
 
 #if !COAP_DISABLE_TCP
   if (COAP_PROTO_RELIABLE(session->proto)) {
