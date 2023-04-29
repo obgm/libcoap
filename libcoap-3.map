@@ -215,6 +215,7 @@ global:
   coap_session_get_ack_random_factor;
   coap_session_get_ack_timeout;
   coap_session_get_addr_local;
+  coap_session_get_addr_mcast;
   coap_session_get_addr_remote;
   coap_session_get_app_data;
   coap_session_get_by_peer;

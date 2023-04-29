@@ -41,15 +41,18 @@ struct coap_socket_t {
   coap_fd_t fd;
 #endif /* WITH_LWIP */
 #if defined(RIOT_VERSION)
-  gnrc_pktsnip_t *pkt; /* pointer to received packet for processing */
+  gnrc_pktsnip_t *pkt; /**< pointer to received packet for processing */
 #endif /* RIOT_VERSION */
-  coap_socket_flags_t flags;
-  coap_session_t *session; /* Used to determine session owner. */
+  coap_socket_flags_t flags; /**< 1 or more of COAP_SOCKET* flag values */
+  coap_session_t *session; /**< Used to determine session owner. */
 #if COAP_SERVER_SUPPORT
-  coap_endpoint_t *endpoint; /* Used by the epoll logic for a listening
-                                endpoint. */
+  coap_endpoint_t *endpoint; /**< Used by the epoll logic for a listening
+                                  endpoint. */
 #endif /* COAP_SERVER_SUPPORT */
-  coap_layer_func_t lfunc[COAP_LAYER_LAST]; /* Layer functions to use */
+#if COAP_CLIENT_SUPPORT
+  coap_address_t mcast_addr; /**< remote address and port (multicast track) */
+#endif /* COAP_CLIENT_SUPPORT */
+  coap_layer_func_t lfunc[COAP_LAYER_LAST]; /**< Layer functions to use */
 };
 
 /**

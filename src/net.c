@@ -1208,6 +1208,8 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
       lg_xmit->b.b1.state_token = lg_crcv->state_token;
     }
   }
+  if (session->sock.flags & COAP_SOCKET_MULTICAST)
+    coap_address_copy(&session->addr_info.remote, &session->sock.mcast_addr);
 
 send_it:
 #endif /* COAP_CLIENT_SUPPORT */

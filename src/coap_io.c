@@ -287,6 +287,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
               coap_socket_strerror());
     }
     coap_address_copy(remote_addr, &connect_addr);
+    coap_address_copy(&sock->mcast_addr, &connect_addr);
     sock->flags |= COAP_SOCKET_MULTICAST;
     return 1;
   }

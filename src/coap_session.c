@@ -1360,6 +1360,18 @@ coap_session_get_addr_local(const coap_session_t *session) {
   return NULL;
 }
 
+const coap_address_t *
+coap_session_get_addr_mcast(const coap_session_t *session) {
+#if COAP_CLIENT_SUPPORT
+  if (session && session->type == COAP_SESSION_TYPE_CLIENT &&
+      session->sock.flags & COAP_SOCKET_MULTICAST)
+    return &session->sock.mcast_addr;
+#else /* ! COAP_CLIENT_SUPPORT */
+  (void)session;
+#endif /* ! COAP_CLIENT_SUPPORT */
+  return NULL;
+}
+
 coap_context_t *
 coap_session_get_context(const coap_session_t *session) {
   if (session)
@@ -1581,9 +1593,13 @@ coap_session_get_by_peer(const coap_context_t *ctx,
   coap_session_t *s, *rtmp;
 #if COAP_CLIENT_SUPPORT
   SESSIONS_ITER(ctx->sessions, s, rtmp) {
-    if (s->ifindex == ifindex && coap_address_equals(&s->addr_info.remote,
-                                                     remote_addr))
-      return s;
+    if (s->ifindex == ifindex) {
+      if (s->sock.flags & COAP_SOCKET_MULTICAST) {
+        if (coap_address_equals(&s->sock.mcast_addr, remote_addr))
+          return s;
+      } else if (coap_address_equals(&s->addr_info.remote, remote_addr))
+        return s;
+    }
   }
 #endif /* COAP_CLIENT_SUPPORT */
 #if COAP_SERVER_SUPPORT
