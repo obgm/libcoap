@@ -18,6 +18,7 @@ coap_session_set_type_client,
 coap_session_set_app_data,
 coap_session_get_app_data,
 coap_session_get_addr_local,
+coap_session_get_addr_mcast,
 coap_session_get_addr_remote,
 coap_session_get_context,
 coap_session_get_ifindex,
@@ -46,6 +47,9 @@ SYNOPSIS
 *void *coap_session_get_app_data(const coap_session_t *_session_);*
 
 *const coap_address_t *coap_session_get_addr_local(
+const coap_session_t *_session_);*
+
+*const coap_address_t *coap_session_get_addr_mcast(
 const coap_session_t *_session_);*
 
 *const coap_address_t *coap_session_get_addr_remote(
@@ -141,10 +145,19 @@ pointer previously defined by *coap_session_set_app_data*().
 The *coap_session_get_addr_local*() function is used to get the local IP
 address and port information from the _session_.
 
+*Function: coap_session_get_addr_mcast()*
+
+The *coap_session_get_addr_mcast*() function is used to get the remote (peer)
+multicast IP address and port information from the _session_ if the _session_
+was originally set up to send requests to a multicast IP.
+
 *Function: coap_session_get_addr_remote()*
 
 The *coap_session_get_addr_remote*() function is used to get the remote (peer)
-IP address and port information from the _session_.
+IP address and port information from the _session_.  If the _session_ was
+originally set up to send requests to a multicast IP, then the returned IP
+will be that of the unicast response from a peer. The returned IP will get
+set back to the multicast IP when the next *coap_send*(3) is called.
 
 *Function: coap_session_get_context()*
 
@@ -218,6 +231,9 @@ RETURN VALUES
 
 *coap_session_get_addr_local*() and *coap_session_get_addr_remote*() return
 a pointer to the IP address / port or NULL on error.
+
+*coap_session_get_addr_mcast*() returns a pointer to the remote multicast IP
+address / port or NULL on error or this is not a multicast session.
 
 *coap_session_get_context*() returns a pointer to the current CoAP Context or
 NULL on error.

@@ -158,6 +158,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_resource.3" > coap_resource_get_userdata.3
 	@echo ".so man3/coap_resource.3" > coap_resource_release_userdata_handler.3
 	@echo ".so man3/coap_resource.3" > coap_resource_get_uri_path.3
+	@echo ".so man3/coap_session.3" > coap_session_get_addr_remote.3
 	@echo ".so man3/coap_session.3" > coap_session_get_context.3
 	@echo ".so man3/coap_session.3" > coap_session_get_ifindex.3
 	@echo ".so man3/coap_session.3" > coap_session_get_proto.3

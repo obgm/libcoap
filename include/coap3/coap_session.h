@@ -107,7 +107,11 @@ void coap_session_set_app_data(coap_session_t *session, void *data);
 void *coap_session_get_app_data(const coap_session_t *session);
 
 /**
- * Get the remote IP address from the session.
+ * Get the remote IP address and port from the session.
+ *
+ * Note: For clients, this can be the responding IP address for a multicast
+ * request before the next coap_send() is called when the multicast address
+ * is restored.
  *
  * @param session The CoAP session.
  *
@@ -117,7 +121,21 @@ const coap_address_t *coap_session_get_addr_remote(
                                                const coap_session_t *session);
 
 /**
- * Get the local IP address from the session.
+ * Get the remote multicast IP address and port from the session if the
+ * original target IP was multicast.
+ *
+ * Note: This is only available for a client.
+ *
+ * @param session The CoAP session.
+ *
+ * @return The session's remote multicast address or @c NULL on failure or if
+ *         this is not a multicast session.
+ */
+const coap_address_t *coap_session_get_addr_mcast(
+                                               const coap_session_t *session);
+
+/**
+ * Get the local IP address and port from the session.
  *
  * @param session The CoAP session.
  *
@@ -362,25 +380,47 @@ void coap_session_new_token(coap_session_t *session, size_t *length,
 const char *coap_session_str(const coap_session_t *session);
 
 /**
-* Create a new endpoint for communicating with peers.
-*
-* @param context        The coap context that will own the new endpoint
-* @param listen_addr    Address the endpoint will listen for incoming requests on or originate outgoing requests from. Use NULL to specify that no incoming request will be accepted and use a random endpoint.
-* @param proto          Protocol used on this endpoint
-*/
-
+ * Create a new endpoint for communicating with peers.
+ *
+ * @param context     The coap context that will own the new endpoint,
+ * @param listen_addr Address the endpoint will listen for incoming requests
+ *                    on or originate outgoing requests from. Use NULL to
+ *                    specify that no incoming request will be accepted and
+ *                    use a random endpoint.
+ * @param proto       Protocol used on this endpoint,
+ *
+ * @return The new endpoint or @c NULL on failure.
+ */
 coap_endpoint_t *coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto);
 
 /**
-* Set the endpoint's default MTU. This is the maximum message size that can be
-* sent, excluding IP and UDP overhead.
-*
-* @param endpoint The CoAP endpoint.
-* @param mtu maximum message size
-*/
+ * Set the endpoint's default MTU. This is the maximum message size that can be
+ * sent, excluding IP and UDP overhead.
+ *
+ * @param endpoint The CoAP endpoint.
+ * @param mtu maximum message size
+ */
 void coap_endpoint_set_default_mtu(coap_endpoint_t *endpoint, unsigned mtu);
 
-void coap_free_endpoint(coap_endpoint_t *ep);
+/**
+ * Release an endpoint and all the structures associated with it.
+ *
+ * @param endpoint The endpoint to release.
+ */
+void coap_free_endpoint(coap_endpoint_t *endpoint);
+
+/**
+ * Get the session associated with the specified @p remote_addr and @p index.
+ *
+ * @param context The context to search.
+ * @param remote_addr The remote (peer) address to search for.
+ * @param ifindex The Interface index that is used to access remote_addr.
+ *
+ * @return The found session or @c NULL if not found.
+ */
+coap_session_t *coap_session_get_by_peer(const coap_context_t *context,
+                                         const coap_address_t *remote_addr,
+                                         int ifindex);
 
 /** @} */
 
@@ -392,9 +432,6 @@ void coap_free_endpoint(coap_endpoint_t *ep);
 * @return description string.
 */
 const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
-
-coap_session_t *coap_session_get_by_peer(const coap_context_t *ctx,
-  const coap_address_t *remote_addr, int ifindex);
 
  /**
   * @ingroup application_api
