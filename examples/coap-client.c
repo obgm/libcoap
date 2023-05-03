@@ -843,40 +843,28 @@ cmdline_uri(char *arg, int create_uri_opts) {
       return -1;
     }
 
-    if (uri.scheme==COAP_URI_SCHEME_COAPS && !reliable &&
-        !coap_dtls_is_supported()) {
-      coap_log_emerg(
-               "coaps URI scheme not supported in this version of libcoap\n");
-      return -1;
-    }
-
-    if ((uri.scheme==COAP_URI_SCHEME_COAPS_TCP ||
-        (uri.scheme==COAP_URI_SCHEME_COAPS && reliable)) &&
-       !coap_tls_is_supported()) {
-      coap_log_emerg(
+    /* Need to special case use of reliable */
+    if (uri.scheme == COAP_URI_SCHEME_COAPS && reliable) {
+      if (!coap_tls_is_supported()) {
+        coap_log_emerg(
             "coaps+tcp URI scheme not supported in this version of libcoap\n");
-      return -1;
+        return -1;
+      } else {
+        uri.scheme = COAP_URI_SCHEME_COAPS_TCP;
+      }
     }
 
-    if (uri.scheme==COAP_URI_SCHEME_COAP_TCP && !coap_tcp_is_supported()) {
-      /* coaps+tcp caught above */
-      coap_log_emerg(
+    if (uri.scheme == COAP_URI_SCHEME_COAP && reliable) {
+      if (!coap_tcp_is_supported()) {
+        coap_log_emerg(
             "coap+tcp URI scheme not supported in this version of libcoap\n");
-      return -1;
+        return -1;
+      } else {
+        uri.scheme = COAP_URI_SCHEME_COAP_TCP;
+      }
     }
 
-    if (uri.scheme==COAP_URI_SCHEME_COAP_WS && !coap_ws_is_supported()) {
-      coap_log_emerg(
-            "coap+ws URI scheme not supported in this version of libcoap\n");
-      return -1;
-    }
-
-    if (uri.scheme==COAP_URI_SCHEME_COAPS_WS && !coap_wss_is_supported()) {
-      coap_log_emerg(
-            "coaps+ws URI scheme not supported in this version of libcoap\n");
-      return -1;
-    }
-
+    /* COAP_OPTION_URI_HOST will get done later */
     if (coap_uri_into_options(&uri, &optlist, create_uri_opts,
                               buf, sizeof(buf)) < 0) {
       coap_log_err("Failed to create options for URI\n");
@@ -1814,12 +1802,6 @@ main(int argc, char **argv) {
     port = proxy_scheme_option ? proxy.port : uri.port;
     scheme = proxy_scheme_option ? proxy.scheme : uri.scheme;
   }
-  if (reliable) {
-    if (scheme == COAP_URI_SCHEME_COAP)
-      scheme = COAP_URI_SCHEME_COAP_TCP;
-    if (scheme == COAP_URI_SCHEME_COAPS)
-      scheme = COAP_URI_SCHEME_COAPS_TCP;
-  }
 
   /* resolve destination address where data should be sent */
   info_list = coap_resolve_address_info(&server, port, port,
@@ -1881,32 +1863,37 @@ main(int argc, char **argv) {
 
   /* add Uri-Host if server address differs from uri.host */
 
-  switch (dst.addr.sa.sa_family) {
-  case AF_INET:
-    addrptr = &dst.addr.sin.sin_addr;
-    /* create context for IPv4 */
-    break;
-  case AF_INET6:
-    addrptr = &dst.addr.sin6.sin6_addr;
-    break;
-  default:
-    ;
-  }
 
-  /* construct CoAP message */
-
+  /* Add in Uri-Host option if appropriate */
   if (!uri_host_option && dst.addr.sa.sa_family != AF_UNIX &&
-      (!proxy.host.length && uri.host.length && addrptr
-      && (inet_ntop(dst.addr.sa.sa_family, addrptr, addr, sizeof(addr)) != 0)
-      && (strlen(addr) != uri.host.length
-      || memcmp(addr, uri.host.s, uri.host.length) != 0)
-      && create_uri_opts)) {
-        /* add Uri-Host */
+      !proxy.host.length && uri.host.length && create_uri_opts) {
+    size_t uri_host_len = uri.host.length;
+    uint8_t* cp = (uint8_t*)strchr((const char*)uri.host.s, '%');
 
+    if (cp && (size_t)(cp - uri.host.s) < uri_host_len)
+      /* %iface specified in host name */
+      uri_host_len = cp - uri.host.s;
+
+    switch (dst.addr.sa.sa_family) {
+    case AF_INET:
+      addrptr = &dst.addr.sin.sin_addr;
+      break;
+    case AF_INET6:
+      addrptr = &dst.addr.sin6.sin6_addr;
+      break;
+    default:
+      ;
+    }
+    if (addrptr &&
+        (inet_ntop(dst.addr.sa.sa_family, addrptr, addr, sizeof(addr)) != 0) &&
+        (strlen(addr) != uri_host_len ||
+         memcmp(addr, uri.host.s, uri_host_len) != 0)) {
+        /* add Uri-Host */
         coap_insert_optlist(&optlist,
                     coap_new_optlist(COAP_OPTION_URI_HOST,
                     uri.host.length,
                     uri.host.s));
+    }
   }
 
   /* set block option if requested at commandline */
