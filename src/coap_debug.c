@@ -204,6 +204,9 @@ print_readable( const uint8_t *data, size_t len,
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN 46
+#endif
 /*
  * Returned buf is always NULL terminated.
  * Returned size is number of characters, not including NULL terminator.
@@ -211,10 +214,7 @@ print_readable( const uint8_t *data, size_t len,
 size_t
 coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
 #if defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )
-  const void *addrptr = NULL;
-  uint16_t port;
-  unsigned char *p = buf;
-  size_t need_buf;
+  char scratch[INET6_ADDRSTRLEN];
 
   assert(buf);
   assert(len);
@@ -222,68 +222,184 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
 
   switch (addr->addr.sa.sa_family) {
   case AF_INET:
-    if (len < INET_ADDRSTRLEN + 1) /* Include : */
-      return 0;
-    addrptr = &addr->addr.sin.sin_addr;
-    port = ntohs(addr->addr.sin.sin_port);
-    need_buf = INET_ADDRSTRLEN;
+    snprintf((char *)buf, len, "%s:%d",
+             coap_print_ip_addr(addr, scratch, sizeof(scratch)),
+             ntohs(addr->addr.sin.sin_port));
     break;
   case AF_INET6:
-    if (len < INET6_ADDRSTRLEN + 3) /* Include [ ] : */
-      return 0;
-
-    *p++ = '[';
-
-    addrptr = &addr->addr.sin6.sin6_addr;
-    port = ntohs(addr->addr.sin6.sin6_port);
-    need_buf = INET6_ADDRSTRLEN;
-
+    snprintf((char *)buf, len, "[%s]:%d",
+             coap_print_ip_addr(addr, scratch, sizeof(scratch)),
+             ntohs(addr->addr.sin6.sin6_port));
     break;
   case AF_UNIX:
-    snprintf((char *)p, len, "'%s'", addr->addr.cun.sun_path);
-    return strlen((char *)buf);
+    snprintf((char *)buf, len, "'%s'", addr->addr.cun.sun_path);
+    break;
   default:
     /* Include trailing NULL if possible */
     memcpy(buf, "(unknown address type)", min(22+1, len));
     buf[len-1] = '\000';
-    return min(22, len);
+    break;
   }
-
-  /* Cast needed for Windows, since it doesn't have the correct API signature. */
-  if (inet_ntop(addr->addr.sa.sa_family, addrptr, (char *)p,
-                min(len, need_buf)) == 0) {
-    perror("coap_print_addr");
-    buf[0] = '\000';
-    return 0;
-  }
-
-  p += strlen((char *)p);
-
-  if (addr->addr.sa.sa_family == AF_INET6) {
-    if (p + 1 < buf + len) {
-      *p++ = ']';
-    } else
-      return p - buf; /* Already NULL terminated */
-  }
-
-  /* Cannot rely on snprintf() return value for short buffers */
-  snprintf((char *)p, buf + len - p, ":%d", port);
-
   return strlen((char *)buf);
+
 #else /* HAVE_ARPA_INET_H */
+
 # if WITH_CONTIKI
+
+  char scratch[INET6_ADDRSTRLEN];
+#ifdef HAVE_SNPRINTF
+
+  snprintf((char *)buf, len, "[%s]:%d",
+           coap_print_ip_addr(addr, scratch, sizeof(scratch)),
+           coap_address_get_port(addr));
+  return strlen((char *)buf);
+#else /* HAVE_SNPRINTF */
   unsigned char *p = buf;
-  uint8_t i;
 #  if NETSTACK_CONF_WITH_IPV6
-  const uint8_t hex[] = "0123456789ABCDEF";
 
   assert(buf);
   assert(len);
   buf[0] = '\000';
-  if (len < 42)
+  if (len < 40 + 2 + 6)
     return 0;
 
   *p++ = '[';
+  memcpy(p, coap_print_ip_addr(addr, scratch, sizeof(scratch)), 40);
+  p += 40 - 1;
+  *p++ = ']';
+#  else /* WITH_UIP6 */
+#   warning "IPv4 network addresses will not be included in debug output"
+
+  if (len < 21) {
+    *p = '\000';
+    return 0;
+  }
+#  endif /* WITH_UIP6 */
+
+  *p++ = ':';
+  *p++ = '0' + (coap_address_get_port(addr) / 10000) % 10;
+  *p++ = '0' + (coap_address_get_port(addr) / 1000) % 10;
+  *p++ = '0' + (coap_address_get_port(addr) / 100) % 10;
+  *p++ = '0' + (coap_address_get_port(addr) / 10) % 10;
+  *p++ = '0' + coap_address_get_port(addr) % 10;
+  *p = '\000';
+
+  return strlen((char *)buf);
+#endif /* HAVE_SNPRINTF */
+
+# elif WITH_LWIP
+
+  char scratch[INET6_ADDRSTRLEN];
+#ifdef HAVE_SNPRINTF
+
+  snprintf((char *)buf, len, "[%s]:%d",
+           coap_print_ip_addr(addr, scratch, sizeof(scratch)),
+           addr->port);
+  return strlen((char *)buf);
+#else /* HAVE_SNPRINTF */
+  unsigned char *p = buf;
+
+  assert(buf);
+  assert(len);
+  buf[0] = '\000';
+
+  switch (addr->addr.type) {
+  case IPADDR_TYPE_V4:
+    if (len < IP4ADDR_STRLEN_MAX + 6)
+      return 0;
+    memcpy(buf, coap_print_ip_addr(addr, scratch, sizeof(scratch)), IP4ADDR_STRLEN_MAX);
+    p += strlen((char *)buf);
+    break;
+  case IPADDR_TYPE_V6:
+  case IPADDR_TYPE_ANY:
+    if (len < 40 + 2 + 6)
+      return 0;
+    *p++ = '[';
+    memcpy(p, coap_print_ip_addr(addr, scratch, sizeof(scratch)), 40);
+    p += strlen((char *)buf);
+    *p++ = ']';
+    break;
+  }
+
+  *p++ = ':';
+  *p++ = '0' + (addr->port / 10000) % 10;
+  *p++ = '0' + (addr->port / 1000) % 10;
+  *p++ = '0' + (addr->port / 100) % 10;
+  *p++ = '0' + (addr->port / 10) % 10;
+  *p++ = '0' + addr->port % 10;
+  *p = '\000';
+
+  return strlen((char *)buf);
+#endif /* HAVE_SNPRINTF */
+
+# else /* ! WITH_CONTIKI && ! WITH_LWIP */
+
+  (void)addr;
+  (void)len;
+
+  /* TODO: output addresses manually */
+#   warning "inet_ntop() not available, network addresses will not be included in debug output"
+# endif /* ! WITH_CONTIKI  && ! WITH_LWIP */
+  buf[0] = '\000';
+  return 0;
+#endif
+}
+
+/*
+ * Returned buf is always NULL terminated with as much as possible of the
+ * IP address filled in.
+ */
+const char *
+coap_print_ip_addr(const coap_address_t *addr, char *buf, size_t len) {
+#if defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )
+  const void *addrptr = NULL;
+
+  assert(buf);
+  assert(len);
+  buf[0] = '\000';
+
+  switch (addr->addr.sa.sa_family) {
+  case AF_INET:
+    if (len < INET_ADDRSTRLEN)
+      return buf;
+    addrptr = &addr->addr.sin.sin_addr;
+    break;
+  case AF_INET6:
+    if (len < INET6_ADDRSTRLEN)
+      return buf;
+    addrptr = &addr->addr.sin6.sin6_addr;
+    break;
+  case AF_UNIX:
+    snprintf(buf, len, "'%s'", addr->addr.cun.sun_path);
+    return buf;
+  default:
+    /* Include trailing NULL if possible */
+    memcpy(buf, "(unknown address type)", min(22+1, len));
+    buf[len-1] = '\000';
+    return buf;
+  }
+
+  /* Cast needed for Windows, since it doesn't have the correct API signature. */
+  if (inet_ntop(addr->addr.sa.sa_family, addrptr, (char *)buf, len) == 0) {
+    coap_log_err("coap_print_ip_addr: inet_ntop\n");
+    buf[0] = '\000';
+    return buf;
+  }
+  return buf;
+
+#else /* HAVE_ARPA_INET_H */
+
+# if WITH_CONTIKI
+  char *p = buf;
+  uint8_t i;
+#  if NETSTACK_CONF_WITH_IPV6
+  const char hex[] = "0123456789ABCDEF";
+
+  assert(buf);
+  assert(len);
+  buf[0] = '\000';
+  if (len < 40)
+    return 0;
 
   for (i=0; i < 16; i += 2) {
     if (i) {
@@ -294,84 +410,36 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
     *p++ = hex[(addr->addr.u8[i+1] & 0xf0) >> 4];
     *p++ = hex[(addr->addr.u8[i+1] & 0x0f)];
   }
-  *p++ = ']';
+  *p = '\000';
 #  else /* WITH_UIP6 */
 #   warning "IPv4 network addresses will not be included in debug output"
 
   if (len < 21) {
-    *p = '\000';
-    return 0;
+    return buf;
   }
 #  endif /* WITH_UIP6 */
-  if (buf + len - p < 6) {
-    *p = '\000';
-    return p - buf;
-  }
-
-#ifdef HAVE_SNPRINTF
-  /* Cannot rely on snprintf() return value for short buffers */
-  snprintf((char *)p, buf + len - p, ":%d", coap_address_get_port(addr));
-#else /* HAVE_SNPRINTF */
-  /* @todo manual conversion of port number */
-  *p = '\000';
-#endif /* HAVE_SNPRINTF */
-
-  return strlen((char *)p);
+  return buf;
 
 # elif WITH_LWIP
-
-  unsigned char *p = buf;
-#ifndef HAVE_SNPRINTF
-  uint8_t i;
-  const uint8_t hex[] = "0123456789ABCDEF";
-  unsigned char *b = (unsigned char *)addr->addr.u_addr.ip6.addr;
-#endif /* ! HAVE_SNPRINTF */
 
   assert(buf);
   assert(len);
   buf[0] = '\000';
-  if (len < 42)
-    return 0;
 
   switch (addr->addr.type) {
   case IPADDR_TYPE_V4:
-#ifdef HAVE_SNPRINTF
-    p += snprintf((char *)p, len, "%s", ip4addr_ntoa(&addr->addr.u_addr.ip4));
-#endif /* HAVE_SNPRINTF */
+    if (len < IP4ADDR_STRLEN_MAX)
+      return buf;
+    memcpy(buf, ip4addr_ntoa(&addr->addr.u_addr.ip4), IP4ADDR_STRLEN_MAX);
     break;
   case IPADDR_TYPE_V6:
   case IPADDR_TYPE_ANY:
-#ifdef HAVE_SNPRINTF
-    p+= snprintf((char *)p, len, "[%s]", ip6addr_ntoa(&addr->addr.u_addr.ip6));
-#else /* ! HAVE_SNPRINTF */
-    *p++ = '[';
-    for (i=0; i < 16; i += 2) {
-      if (i) {
-        *p++ = ':';
-      }
-      *p++ = hex[(b[i] & 0xf0) >> 4];
-      *p++ = hex[(b[i] & 0x0f)];
-      *p++ = hex[(b[i+1] & 0xf0) >> 4];
-      *p++ = hex[(b[i+1] & 0x0f)];
-    }
-    *p++ = ']';
-    if (buf + len - p < 6) {
-      *p = '\000';
-      return p - buf;
-    }
-#endif /* ! HAVE_SNPRINTF */
+    if (len < 40)
+      return buf;
+    memcpy(buf, ip6addr_ntoa(&addr->addr.u_addr.ip6), 40);
     break;
   }
-
-#ifdef HAVE_SNPRINTF
-  /* Cannot rely on snprintf() return value for short buffers */
-  snprintf((char *)p, buf + len - p, ":%d", addr->port);
-#else /* ! HAVE_SNPRINTF */
-  /* @todo manual conversion of port number */
-  *p = '\000';
-#endif /* ! HAVE_SNPRINTF */
-
-  return strlen((char *)p);
+  return buf;
 
 # else /* ! WITH_CONTIKI && ! WITH_LWIP */
 
@@ -382,7 +450,7 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
 #   warning "inet_ntop() not available, network addresses will not be included in debug output"
 # endif /* WITH_CONTIKI */
   buf[0] = '\000';
-  return 0;
+  return buf;
 #endif
 }
 
