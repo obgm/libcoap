@@ -355,6 +355,21 @@ char *coap_string_tls_support(char *buffer, size_t bufsize);
 size_t coap_print_addr(const coap_address_t *address,
                        unsigned char *buffer, size_t size);
 
+/**
+ * Print the IP address into the defined buffer.
+ *
+ * Internal Function.
+ *
+ * @param address The address to print.
+ * @param buffer The buffer to print into.
+ * @param size The size of the buffer to print into.
+ *
+ * @return The pointer to provided buffer with as much of the IP address added
+ *         as possible.
+ */
+const char* coap_print_ip_addr(const coap_address_t *address,
+                            char *buffer, size_t size);
+
 /** @} */
 
 /**

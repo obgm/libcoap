@@ -176,6 +176,7 @@ coap_persist_startup
 coap_persist_stop
 coap_persist_track_funcs
 coap_print_addr
+coap_print_ip_addr
 coap_print_link
 coap_prng
 coap_prng_init
