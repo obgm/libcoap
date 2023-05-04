@@ -772,7 +772,7 @@ AC_ARG_ENABLE([websockets],
               [build_ws="$enableval"],
               [build_ws="yes"])
 
-AC_DEFINE(COAP_WS_SUPPORT, [1], [Define to 1 to build with WebScockets support.])
+AC_DEFINE(COAP_WS_SUPPORT, [1], [Define to 1 to build with WebSockets support.])
 AS_IF([test "x$build_ws" = "xyes"], [AC_DEFINE(COAP_WS_SUPPORT, [1])])
 AC_SUBST(COAP_WS_SUPPORT)
 
