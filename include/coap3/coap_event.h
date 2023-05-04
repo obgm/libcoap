@@ -125,11 +125,16 @@ typedef enum {
   COAP_EVENT_WS_CONNECTED,
   /** Triggered when the WebSockets layer is closed */
   COAP_EVENT_WS_CLOSED,
+/*
+ * Keepalive events
+ */
+  /** Triggered when no response to a keep alive (ping) packet */
+  COAP_EVENT_KEEPALIVE_FAILURE = 0x8001,
 } coap_event_t;
 
 /**
  * Type for event handler functions that can be registered with a CoAP
- * context using the unction coap_set_event_handler(). When called by
+ * context using the function coap_set_event_handler(). When called by
  * the library, the first argument will be the current coap_session_t object
  * which is associated with the original CoAP context. The second parameter
  * is the event type.

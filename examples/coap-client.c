@@ -335,6 +335,7 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_BAD_PACKET:
   case COAP_EVENT_MSG_RETRANSMITTED:
   case COAP_EVENT_WS_CONNECTED:
+  case COAP_EVENT_KEEPALIVE_FAILURE:
   default:
     break;
   }

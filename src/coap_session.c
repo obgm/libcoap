@@ -497,7 +497,9 @@ coap_session_send_csm(coap_session_t *session) {
 
 coap_mid_t coap_session_send_ping(coap_session_t *session) {
   coap_pdu_t *ping = NULL;
-  if (session->state != COAP_SESSION_STATE_ESTABLISHED)
+
+  if (session->state != COAP_SESSION_STATE_ESTABLISHED ||
+      session->con_active)
     return COAP_INVALID_MID;
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
     uint16_t mid = coap_new_message_id (session);
