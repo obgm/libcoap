@@ -1471,17 +1471,28 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   if (node->retransmit_cnt < node->session->max_retransmit) {
     ssize_t bytes_written;
     coap_tick_t now;
+    coap_tick_t next_delay;
 
     node->retransmit_cnt++;
     coap_handle_event(context, COAP_EVENT_MSG_RETRANSMITTED, node->session);
 
+    next_delay = node->timeout << node->retransmit_cnt;
+    if (context->ping_timeout &&
+        context->ping_timeout * COAP_TICKS_PER_SECOND < next_delay) {
+      uint8_t byte;
+
+      coap_prng(&byte, sizeof(byte));
+      /* Don't exceed the ping timeout value */
+      next_delay = context->ping_timeout * COAP_TICKS_PER_SECOND - 255 + byte;
+    }
+
     coap_ticks(&now);
     if (context->sendqueue == NULL) {
-      node->t = node->timeout << node->retransmit_cnt;
+      node->t = next_delay;
       context->sendqueue_basetime = now;
     } else {
       /* make node->t relative to context->sendqueue_basetime */
-      node->t = (now - context->sendqueue_basetime) + (node->timeout << node->retransmit_cnt);
+      node->t = (now - context->sendqueue_basetime) + next_delay;
     }
     coap_insert_node(&context->sendqueue, node);
 
@@ -1489,8 +1500,10 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
       coap_log_debug("** %s: mid=0x%04x: mcast delayed transmission\n",
                coap_session_str(node->session), node->id);
     } else {
-      coap_log_debug("** %s: mid=0x%04x: retransmission #%d\n",
-               coap_session_str(node->session), node->id, node->retransmit_cnt);
+      coap_log_debug("** %s: mid=0x%04x: retransmission #%d (next %ums)\n",
+                     coap_session_str(node->session), node->id,
+                     node->retransmit_cnt,
+                     (unsigned)(next_delay * 1000 / COAP_TICKS_PER_SECOND));
     }
 
     if (node->session->con_active)
@@ -3658,6 +3671,8 @@ coap_event_name(coap_event_t event) {
     return "COAP_EVENT_WS_CONNECTED";
   case COAP_EVENT_WS_CLOSED:
     return "COAP_EVENT_WS_CLOSED";
+  case COAP_EVENT_KEEPALIVE_FAILURE:
+    return "COAP_EVENT_KEEPALIVE_FAILURE";
   default:
     return "???";
   }

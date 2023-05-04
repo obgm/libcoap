@@ -1256,14 +1256,12 @@ release_1:
         s->state == COAP_SESSION_STATE_ESTABLISHED &&
         ctx->ping_timeout > 0) {
       if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
-        if ((s->last_ping > 0 && s->last_pong < s->last_ping) ||
-            ((s->last_ping_mid = coap_session_send_ping(s)) == COAP_INVALID_MID))
-        {
-          /* Make sure the session object is not deleted in the callback */
-          coap_session_reference(s);
-          coap_session_disconnected(s, COAP_NACK_NOT_DELIVERABLE);
-          coap_session_release(s);
+        /* Time to send a ping */
+        if ((s->last_ping_mid = coap_session_send_ping(s)) == COAP_INVALID_MID)
+          /* Some issue - not safe to continue processing */
           continue;
+        if (s->last_ping > 0 && s->last_pong < s->last_ping) {
+          coap_handle_event(s->context, COAP_EVENT_KEEPALIVE_FAILURE, s);
         }
         s->last_rx_tx = now;
         s->last_ping = now;
