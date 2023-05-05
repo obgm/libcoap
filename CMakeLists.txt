@@ -23,9 +23,57 @@ option(
   "Build shared libs"
   OFF)
 
+#
+# global compiler options
+# (need to do it before add_library())
+#
+
+add_compile_options(
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-pedantic>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wall>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wcast-qual>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wextra>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wformat-security>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Winline>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wmissing-declarations>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wmissing-prototypes>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wnested-externs>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wpointer-arith>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wshadow>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wstrict-prototypes>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wswitch-default>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wswitch-enum>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wunused>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wwrite-strings>)
+
+if(MINGW)
+add_compile_options(
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wno-format>
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wno-format-security>)
+endif()
+
+if(${WARNING_TO_ERROR})
+add_compile_options(
+  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Werror>)
+endif()
+
+if(CMAKE_GENERATOR MATCHES "Visual Studio")
+  option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols when compiling to a .dll" ON)
+  # add_compile_options(/Wall /wd4100 /wd4820 /wd4668 /wd4061)
+  if(${WARNING_TO_ERROR})
+    add_compile_options(/WX)
+  endif()
+endif()
+
+#
+# The libcoap library
+#
+
 add_library(${COAP_LIBRARY_NAME})
 set_property(TARGET ${COAP_LIBRARY_NAME} PROPERTY C_STANDARD 99)
-cmake_policy(SET CMP0115 OLD) # Supresses libcoap configuration warning
+if(${CMAKE_VERSION} VERSION_GREATER "3.20.0")
+  cmake_policy(SET CMP0115 OLD) # Supresses libcoap configuration warning
+endif()
 
 #
 # options to tweak the library
@@ -492,13 +540,15 @@ message(STATUS "HAVE_LIBGNUTLS:..................${HAVE_LIBGNUTLS}")
 message(STATUS "HAVE_OPENSSL:....................${HAVE_OPENSSL}")
 message(STATUS "HAVE_MBEDTLS:....................${HAVE_MBEDTLS}")
 message(STATUS "WITH_EPOLL:......................${WITH_EPOLL}")
-message(STATUS "CMAKE_C_COMPILER:................${CMAKE_C_COMPILER}")
 message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
+message(STATUS "MAX_LOGGING_LEVEL:...............${MAX_LOGGING_LEVEL}")
+message(STATUS "WARNING_TO_ERROR:................${WARNING_TO_ERROR}")
+message(STATUS "CMAKE_C_COMPILER:................${CMAKE_C_COMPILER}")
+message(STATUS "CMAKE_CXX_COMPILER_ID:...........${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "CMAKE_BUILD_TYPE:................${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR:..........${CMAKE_SYSTEM_PROCESSOR}")
-message(STATUS "MAX_LOGGING_LEVEL:...............${MAX_LOGGING_LEVEL}")
 message(STATUS "CMAKE_HOST_SYSTEM_NAME:..........${CMAKE_HOST_SYSTEM_NAME}")
-message(STATUS "WARNING_TO_ERROR:................${WARNING_TO_ERROR}")
+message(STATUS "CMAKE_GENERATOR:.................${CMAKE_GENERATOR}")
 
 set(top_srcdir "${CMAKE_CURRENT_LIST_DIR}")
 set(top_builddir "${CMAKE_CURRENT_BINARY_DIR}")
@@ -616,42 +666,6 @@ add_library(
   ${PROJECT_NAME}::${COAP_LIBRARY_NAME}
   ALIAS
   ${COAP_LIBRARY_NAME})
-
-#
-# compiler options
-#
-
-add_compile_options(
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-pedantic>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wall>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wcast-qual>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wextra>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wformat-security>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Winline>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wmissing-declarations>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wmissing-prototypes>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wnested-externs>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wpointer-arith>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wshadow>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wstrict-prototypes>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wswitch-default>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wswitch-enum>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wunused>
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wwrite-strings>)
-
-if(${WARNING_TO_ERROR})
-add_compile_options(
-  $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Werror>
-  $<$<CXX_COMPILER_ID:AppleClang>:-Werror>)
-endif()
-
-if(CMAKE_GENERATOR MATCHES "Visual Studio")
-  option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols when compiling to a .dll" ON)
-  # add_compile_options(-Wall -wd4100)
-  if(${WARNING_TO_ERROR})
-    add_compile_options(-WX)
-  endif()
-endif()
 
 #
 # tests

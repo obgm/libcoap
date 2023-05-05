@@ -515,7 +515,7 @@ coap_ws_rd_http_header(coap_session_t *session) {
     if (bytes == 0)
       return 1;
 
-    ws->http_ofs += bytes;
+    ws->http_ofs += (uint32_t)bytes;
     ws->http_hdr[ws->http_ofs] = '\000';
     /* Force at least one check */
     cp = (char *)ws->http_hdr;
@@ -560,12 +560,12 @@ coap_ws_rd_http_header(coap_session_t *session) {
             }
           }
           ws->up = 1;
-          ws->hdr_ofs = rem;
+          ws->hdr_ofs = (int)rem;
           if (rem > 0)
             memcpy(ws->rd_header, cp + 1, rem);
           return 1;
         }
-        ws->http_ofs = rem;
+        ws->http_ofs = (uint32_t)rem;
         memmove(ws->http_hdr, cp + 1, rem);
         ws->http_hdr[ws->http_ofs] = '\000';
       }
@@ -641,7 +641,7 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
                          sizeof(session->ws->rd_header) - session->ws->hdr_ofs);
     if (ret < 0)
       return ret;
-    session->ws->hdr_ofs += ret;
+    session->ws->hdr_ofs += (int)ret;
     /* Enough of the header in ? */
     if (session->ws->hdr_ofs < 2)
       return 0;
@@ -748,7 +748,7 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
                 &session->ws->rd_header[2 + extra_hdr_len + bytes_size],
                 ret - bytes_size);
         session->ws->all_hdr_in = 0;
-        session->ws->hdr_ofs = ret - bytes_size;
+        session->ws->hdr_ofs = (int)(ret - bytes_size);
         return bytes_size;
       }
     } else {
@@ -900,7 +900,7 @@ coap_ws_close(coap_session_t *session) {
       FD_SET(session->sock.fd, &readfds);
       tv.tv_sec = 0;
       tv.tv_usec = 1000;
-      result = select(session->sock.fd+1, &readfds, NULL, NULL, &tv);
+      result = select((int)(session->sock.fd+1), &readfds, NULL, NULL, &tv);
 
       if (result < 0) {
         break;
