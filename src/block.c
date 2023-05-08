@@ -1820,6 +1820,9 @@ coap_handle_request_put_block(coap_context_t *context,
         block.num--;
         if (update_data) {
           /* Update saved data */
+          if (p->total_len < saved_offset + length) {
+            p->total_len = saved_offset + length;
+          }
           p->body_data = coap_block_build_body(p->body_data, length, data,
                                                saved_offset, p->total_len);
           if (!p->body_data)
@@ -2427,6 +2430,9 @@ coap_handle_response_get_block(coap_context_t *context,
         /* Only process if not duplicate block */
         if (updated_block) {
           if ((session->block_mode & COAP_BLOCK_SINGLE_BODY) || block.bert) {
+            if (size2 < saved_offset + length) {
+              size2 = saved_offset + length;
+            }
             p->body_data = coap_block_build_body(p->body_data, length, data,
                                                  saved_offset, size2);
             if (p->body_data == NULL) {
