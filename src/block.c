@@ -39,7 +39,7 @@ coap_opt_block_num(const coap_opt_t *block_opt) {
                                 coap_opt_length(block_opt) - 1);
   }
 
-  return (num << 4) | ((*COAP_OPT_BLOCK_LAST(block_opt) & 0xF0) >> 4);
+  return (num << 4) | ((COAP_OPT_BLOCK_END_BYTE(block_opt) & 0xF0) >> 4);
 }
 
 int

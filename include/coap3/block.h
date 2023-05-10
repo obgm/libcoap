@@ -70,13 +70,18 @@ typedef struct {
 #define COAP_OPT_BLOCK_LAST(opt) \
   (coap_opt_length(opt) ? (coap_opt_value(opt) + (coap_opt_length(opt)-1)) : 0)
 
+/** Returns the value of the last byte of @p opt. */
+#define COAP_OPT_BLOCK_END_BYTE(opt) \
+  ((coap_opt_length(opt) && coap_opt_value(opt)) ? \
+                         *(coap_opt_value(opt) + (coap_opt_length(opt)-1)) : 0)
+
 /** Returns the value of the More-bit of a Block option @p opt. */
 #define COAP_OPT_BLOCK_MORE(opt) \
-  (coap_opt_length(opt) ? (*COAP_OPT_BLOCK_LAST(opt) & 0x08) : 0)
+  (coap_opt_length(opt) ? (COAP_OPT_BLOCK_END_BYTE(opt) & 0x08) : 0)
 
 /** Returns the value of the SZX-field of a Block option @p opt. */
 #define COAP_OPT_BLOCK_SZX(opt)  \
-  (coap_opt_length(opt) ? (*COAP_OPT_BLOCK_LAST(opt) & 0x07) : 0)
+  (coap_opt_length(opt) ? (COAP_OPT_BLOCK_END_BYTE(opt) & 0x07) : 0)
 
 /**
  * Returns the value of field @c num in the given block option @p block_opt.
