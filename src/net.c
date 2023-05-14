@@ -1987,11 +1987,13 @@ coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events, size_t nevents
           coap_write_endpoint(endpoint->context, endpoint, now);
         }
 
+#if !COAP_DISABLE_TCP
         if ((sock->flags & COAP_SOCKET_WANT_ACCEPT) &&
             (events[j].events & EPOLLIN)) {
           sock->flags |= COAP_SOCKET_CAN_ACCEPT;
           coap_accept_endpoint(endpoint->context, endpoint, now);
         }
+#endif /* !COAP_DISABLE_TCP */
 
       }
       else
