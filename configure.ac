@@ -772,8 +772,15 @@ AC_ARG_ENABLE([websockets],
               [build_ws="$enableval"],
               [build_ws="yes"])
 
-AC_DEFINE(COAP_WS_SUPPORT, [1], [Define to 1 to build with WebSockets support.])
-AS_IF([test "x$build_ws" = "xyes"], [AC_DEFINE(COAP_WS_SUPPORT, [1])])
+if test "x$build_ws" = "xyes"; then
+    if test "x$build_tcp" != "xyes"; then
+        build_ws=no
+        AC_MSG_WARN([--enable-websockets requires --enable-tcp, so --enable-websockets ignored.])
+    fi
+fi
+
+AS_IF([test "x$build_ws" = "xyes"],
+      [AC_DEFINE(COAP_WS_SUPPORT, [1], [Define to 1 to build with WebSockets support.])])
 AC_SUBST(COAP_WS_SUPPORT)
 
 # configure options
