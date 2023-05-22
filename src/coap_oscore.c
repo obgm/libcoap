@@ -1760,7 +1760,8 @@ bad_entry:
 
 #undef CONFIG_ENTRY
 #define CONFIG_ENTRY(n, e, t)                                                  \
-  { #n, e, offsetof(coap_oscore_conf_t, n), t }
+  { { sizeof(#n)-1, (const uint8_t *)#n }, e, \
+    offsetof(coap_oscore_conf_t, n), t }
 
 typedef struct oscore_text_mapping_t {
   const char *text;
@@ -1777,7 +1778,7 @@ static oscore_text_mapping_t text_hkdf_alg[] = {
     {"direct+HKDF-SHA-256", COSE_HKDF_ALG_HKDF_SHA_256}, {NULL, 0}};
 
 static struct oscore_config_t {
-  const char *keyword;
+  coap_str_const_t str_keyword;
   coap_oscore_coding_t encoding;
   size_t offset;
   oscore_text_mapping_t *text_mapping;
@@ -1846,9 +1847,9 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
     size_t j;
 
     for (i = 0; i < sizeof(oscore_config) / sizeof(oscore_config[0]); i++) {
-      if (memcmp(oscore_config[i].keyword, keyword.s, keyword.length) == 0 &&
+      if (coap_string_equal(&oscore_config[i].str_keyword, &keyword) != 0 &&
           value.encoding & oscore_config[i].encoding) {
-        if (memcmp(keyword.s, "recipient_id", keyword.length) == 0) {
+        if (coap_string_equal(coap_make_str_const("recipient_id"), &keyword)) {
           if (value.u.value_bin->length > 7) {
             coap_log_warn(
                      "oscore_conf: Maximum size of recipient_id is 7 bytes\n");
