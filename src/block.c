@@ -54,6 +54,8 @@ coap_get_block_b(const coap_session_t *session, const coap_pdu_t *pdu,
   if (pdu && (option = coap_check_option(pdu, number, &opt_iter)) != NULL) {
     unsigned int num;
 
+    if (COAP_OPT_BLOCK_MORE(option))
+      block->m = 1;
     block->aszx = block->szx = COAP_OPT_BLOCK_SZX(option);
     if (block->szx == 7) {
       size_t length;
@@ -66,16 +68,19 @@ coap_get_block_b(const coap_session_t *session, const coap_pdu_t *pdu,
 
       block->szx = 6; /* BERT is 1024 block chunks */
       block->bert = 1;
-      if (coap_get_data(pdu, &length, &data))
+      if (coap_get_data(pdu, &length, &data)) {
+        if (block->m && (length % 1024) != 0) {
+          coap_log_debug("block: Oversized packet - reduced to %zu from %zu\n",
+                         length - (length % 1024), length);
+          length -= length % 1024;
+        }
         block->chunk_size = (uint32_t)length;
-      else
+      } else
         block->chunk_size = 0;
     } else {
       block->chunk_size = (size_t)1 << (block->szx + 4);
     }
     block->defined = 1;
-    if (COAP_OPT_BLOCK_MORE(option))
-      block->m = 1;
 
     /* The block number is at most 20 bits, so values above 2^20 - 1
      * are illegal. */
@@ -1725,6 +1730,11 @@ coap_handle_request_put_block(coap_context_t *context,
     size_t rtag_length = rtag_opt ? coap_opt_length(rtag_opt) : 0;
     const uint8_t *rtag = rtag_opt ? coap_opt_value(rtag_opt) : NULL;
 
+    if (length > block.chunk_size) {
+      coap_log_debug("block: Oversized packet - reduced to %u from %zu\n",
+                     block.chunk_size, length);
+      length = block.chunk_size;
+    }
     total = size_opt ? coap_decode_var_bytes(coap_opt_value(size_opt),
                                         coap_opt_length(size_opt)) : 0;
     offset = block.num << (block.szx + 4);
@@ -2315,6 +2325,11 @@ coap_handle_response_get_block(coap_context_t *context,
         size_t saved_offset;
         int updated_block;
 
+        if (length > block.chunk_size) {
+          coap_log_debug("block: Oversized packet - reduced to %u from %zu\n",
+                         block.chunk_size, length);
+          length = block.chunk_size;
+        }
         /* Possibility that Size2 not sent, or is too small */
         chunk = (size_t)1 << (block.szx + 4);
         offset = block.num * chunk;
