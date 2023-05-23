@@ -220,7 +220,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
 
   if (sock->fd == COAP_INVALID_SOCKET) {
     coap_log_warn("coap_socket_connect_udp: socket: %s\n",
-             coap_socket_strerror());
+                  coap_socket_strerror());
     goto error;
   }
 
@@ -232,7 +232,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
 #endif
   {
     coap_log_warn("coap_socket_connect_udp: ioctl FIONBIO: %s\n",
-             coap_socket_strerror());
+                  coap_socket_strerror());
   }
 #endif /* RIOT_VERSION */
 
@@ -247,9 +247,8 @@ coap_socket_connect_udp(coap_socket_t *sock,
 #ifndef RIOT_VERSION
     /* Configure the socket as dual-stacked */
     if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY, OPTVAL_T(&off), sizeof(off)) == COAP_SOCKET_ERROR)
-      coap_log_warn(
-               "coap_socket_connect_udp: setsockopt IPV6_V6ONLY: %s\n",
-               coap_socket_strerror());
+      coap_log_warn("coap_socket_connect_udp: setsockopt IPV6_V6ONLY: %s\n",
+                    coap_socket_strerror());
 #endif /* RIOT_VERSION */
     break;
   case AF_UNIX:
@@ -262,22 +261,21 @@ coap_socket_connect_udp(coap_socket_t *sock,
 
   if (local_if && local_if->addr.sa.sa_family) {
     if (local_if->addr.sa.sa_family != connect_addr.addr.sa.sa_family) {
-      coap_log_warn("coap_socket_connect_udp: local address family !="
-                    " remote address family\n");
+      coap_log_warn("coap_socket_connect_udp: local address family != "
+                    "remote address family\n");
       goto error;
     }
 #ifndef RIOT_VERSION
     if (setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
-      coap_log_warn(
-               "coap_socket_connect_udp: setsockopt SO_REUSEADDR: %s\n",
-               coap_socket_strerror());
+      coap_log_warn("coap_socket_connect_udp: setsockopt SO_REUSEADDR: %s\n",
+                    coap_socket_strerror());
 #endif /* RIOT_VERSION */
     if (bind(sock->fd, &local_if->addr.sa,
              local_if->addr.sa.sa_family == AF_INET ?
               (socklen_t)sizeof(struct sockaddr_in) :
               (socklen_t)local_if->size) == COAP_SOCKET_ERROR) {
       coap_log_warn("coap_socket_connect_udp: bind: %s\n",
-               coap_socket_strerror());
+                    coap_socket_strerror());
       goto error;
     }
   } else if (connect_addr.addr.sa.sa_family == AF_UNIX) {
@@ -300,18 +298,22 @@ coap_socket_connect_udp(coap_socket_t *sock,
                 (socklen_t)sizeof(struct sockaddr_in) :
                 (socklen_t)bind_addr.size) == COAP_SOCKET_ERROR) {
         coap_log_warn("coap_socket_connect_udp: bind: %s\n",
-                 coap_socket_strerror());
+                      coap_socket_strerror());
         goto error;
       }
     }
     if (getsockname(sock->fd, &local_addr->addr.sa, &local_addr->size) == COAP_SOCKET_ERROR) {
-      coap_log_warn(
-              "coap_socket_connect_udp: getsockname for multicast socket: %s\n",
-              coap_socket_strerror());
+      coap_log_warn("coap_socket_connect_udp: getsockname for multicast socket: %s\n",
+                    coap_socket_strerror());
     }
     coap_address_copy(remote_addr, &connect_addr);
     coap_address_copy(&sock->mcast_addr, &connect_addr);
     sock->flags |= COAP_SOCKET_MULTICAST;
+    if (coap_is_bcast(server) &&
+        setsockopt(sock->fd, SOL_SOCKET, SO_BROADCAST, OPTVAL_T(&on),
+                   sizeof(on)) == COAP_SOCKET_ERROR)
+      coap_log_warn("coap_socket_connect_udp: setsockopt SO_BROADCAST: %s\n",
+                    coap_socket_strerror());
     return 1;
   }
 #else /* defined(RIOT_VERSION) */
@@ -342,23 +344,23 @@ coap_socket_connect_udp(coap_socket_t *sock,
   if (connect(sock->fd, &connect_addr.addr.sa, connect_addr.size) == COAP_SOCKET_ERROR) {
     if (connect_addr.addr.sa.sa_family == AF_UNIX) {
       coap_log_warn("coap_socket_connect_udp: connect: %s: %s\n",
-               connect_addr.addr.cun.sun_path, coap_socket_strerror());
+                    connect_addr.addr.cun.sun_path, coap_socket_strerror());
     }
     else {
       coap_log_warn("coap_socket_connect_udp: connect: %s (%d)\n",
-               coap_socket_strerror(), connect_addr.addr.sa.sa_family);
+                    coap_socket_strerror(), connect_addr.addr.sa.sa_family);
     }
     goto error;
   }
 
   if (getsockname(sock->fd, &local_addr->addr.sa, &local_addr->size) == COAP_SOCKET_ERROR) {
     coap_log_warn("coap_socket_connect_udp: getsockname: %s\n",
-             coap_socket_strerror());
+                  coap_socket_strerror());
   }
 
   if (getpeername(sock->fd, &remote_addr->addr.sa, &remote_addr->size) == COAP_SOCKET_ERROR) {
     coap_log_warn("coap_socket_connect_udp: getpeername: %s\n",
-             coap_socket_strerror());
+                  coap_socket_strerror());
   }
 
   sock->flags |= COAP_SOCKET_CONNECTED;

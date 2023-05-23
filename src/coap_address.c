@@ -85,22 +85,118 @@ coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
  return 0;
 }
 
-int coap_is_mcast(const coap_address_t *a) {
+int
+coap_is_mcast(const coap_address_t *a) {
   if (!a)
     return 0;
 
- switch (a->addr.sa.sa_family) {
- case AF_INET:
-   return IN_MULTICAST(ntohl(a->addr.sin.sin_addr.s_addr));
- case  AF_INET6:
-   return IN6_IS_ADDR_MULTICAST(&a->addr.sin6.sin6_addr) ||
-       (IN6_IS_ADDR_V4MAPPED(&a->addr.sin6.sin6_addr) &&
-           IN_MULTICAST(ntohl(a->addr.sin6.sin6_addr.s6_addr[12])));
- default:  /* fall through and signal error */
-   ;
+  /* Treat broadcast in same way as multicast */
+  if (coap_is_bcast(a))
+    return 1;
+
+  switch (a->addr.sa.sa_family) {
+  case AF_INET:
+    return IN_MULTICAST(ntohl(a->addr.sin.sin_addr.s_addr));
+  case  AF_INET6:
+    return IN6_IS_ADDR_MULTICAST(&a->addr.sin6.sin6_addr) ||
+        (IN6_IS_ADDR_V4MAPPED(&a->addr.sin6.sin6_addr) &&
+            IN_MULTICAST(ntohl(a->addr.sin6.sin6_addr.s6_addr[12])));
+  default:  /* fall through and signal not multicast */
+    ;
   }
- return 0;
+  return 0;
 }
+
+#if !defined(WIN32)
+
+#ifndef COAP_BCST_CNT
+#define COAP_BCST_CNT 6
+#endif /* COAP_BCST_CNT */
+
+/* How frequently to refresh the list of valid IPv4 broadcast addresses */
+#ifndef COAP_BCST_REFRESH_SECS
+#define COAP_BCST_REFRESH_SECS 30
+#endif /* COAP_BCST_REFRESH_SECS */
+
+static int bcst_cnt = -1;
+static coap_tick_t last_refresh;
+static struct in_addr b_ipv4[COAP_BCST_CNT];
+
+#include <net/if.h>
+#include <ifaddrs.h>
+
+
+#ifndef s6_addr32
+#define	s6_addr32 __u6_addr.__u6_addr32
+#endif /* s6_addr32 */
+
+int
+coap_is_bcast(const coap_address_t *a) {
+  struct in_addr ipv4;
+  int i;
+  coap_tick_t now;
+
+  if (!a)
+    return 0;
+
+  switch (a->addr.sa.sa_family) {
+  case AF_INET:
+    ipv4.s_addr = a->addr.sin.sin_addr.s_addr;
+    break;
+  case  AF_INET6:
+    if (IN6_IS_ADDR_V4MAPPED(&a->addr.sin6.sin6_addr)) {
+      ipv4.s_addr = a->addr.sin6.sin6_addr.s6_addr32[3];
+      break;
+    }
+    /* IPv6 does not support broadcast */
+    return 0;
+    break;
+  default:
+    return 0;
+  }
+  if (ipv4.s_addr == INADDR_BROADCAST)
+    return 1;
+
+  coap_ticks(&now);
+  if (bcst_cnt == -1 ||
+      (now - last_refresh) > (COAP_BCST_REFRESH_SECS * COAP_TICKS_PER_SECOND)) {
+    /* Determine the list of broadcast interfaces */
+    struct ifaddrs *ifa = NULL;
+    struct ifaddrs *ife;
+
+    if (getifaddrs(&ifa) != 0) {
+      coap_log_warn("coap_is_bcst: Cannot determine any broadcast addresses\n");
+      return 0;
+    }
+    bcst_cnt = 0;
+    last_refresh = now;
+    ife = ifa;
+    while (ife && bcst_cnt < COAP_BCST_CNT) {
+      if (ife->ifa_addr->sa_family == AF_INET &&
+          ife->ifa_flags & IFF_BROADCAST) {
+        b_ipv4[bcst_cnt].s_addr = ((struct sockaddr_in *)ife->ifa_broadaddr)->sin_addr.s_addr;
+        bcst_cnt++;
+      }
+      ife = ife->ifa_next;
+    }
+    if (ife) {
+      coap_log_warn("coap_is_bcst: Insufficient space for broadcast addresses\n");
+    }
+    freeifaddrs(ifa);
+  }
+  for (i = 0; i < bcst_cnt; i++) {
+    if (ipv4.s_addr == b_ipv4[i].s_addr)
+      return 1;
+  }
+  return 0;
+}
+#else /* WIN32 */
+int
+coap_is_bcast(const coap_address_t *a) {
+  (void)a;
+  return 0;
+}
+#endif /* WIN32 */
 
 #endif /* !defined(WITH_CONTIKI) && !defined(WITH_LWIP) */
 
