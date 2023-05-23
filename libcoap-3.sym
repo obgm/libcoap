@@ -113,6 +113,7 @@ coap_io_prepare_epoll
 coap_io_prepare_io
 coap_io_process
 coap_io_process_with_fds
+coap_is_bcast
 coap_is_mcast
 coap_join_mcast_group_intf
 coap_log_impl

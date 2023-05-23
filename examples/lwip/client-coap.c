@@ -116,8 +116,9 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
   coap_log_t dtls_log_level = COAP_LOG_ERR;
   const char *use_psk = "secretPSK";
   const char *use_id = "abc";
+  coap_pdu_type_t pdu_type = COAP_MESSAGE_CON;
 
-  while ((opt = getopt(argc, argv, ":k:u:v:V:")) != -1) {
+  while ((opt = getopt(argc, argv, ":k:Nu:v:V:")) != -1) {
     switch (opt) {
     case 'k':
       use_psk = optarg;
@@ -127,6 +128,9 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
       break;
     case 'v':
       log_level = atoi(optarg);
+      break;
+    case 'N':
+      pdu_type = COAP_MESSAGE_NON;
       break;
     case 'V':
       dtls_log_level = atoi(optarg);
@@ -197,7 +201,7 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
   coap_register_nack_handler(main_coap_context, nack_handler);
 
   /* construct CoAP message */
-  pdu = coap_pdu_init(COAP_MESSAGE_CON,
+  pdu = coap_pdu_init(pdu_type,
                       COAP_REQUEST_CODE_GET,
                       coap_new_message_id(session),
                       coap_session_max_pdu_size(session));
