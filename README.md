@@ -15,7 +15,7 @@ libcoap is a C implementation of a lightweight application-protocol
 for devices that are constrained their resources such as computing
 power, RF range, memory, bandwidth, or network packet sizes. This
 protocol, CoAP, is standardized by the IETF as RFC 7252. For further
-information related to CoAP, see <http://coap.space> or
+information related to CoAP, see <https://coap.space> or
 [CoAP Wiki](https://en.wikipedia.org/wiki/Constrained_Application_Protocol).
 
 You might want to check out
