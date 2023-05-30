@@ -356,10 +356,10 @@ coap_socket_bind_udp(coap_socket_t *sock,
   if (sock->pcb == NULL)
     return 0;
 
-#if LWIP_IPV6
+#if LWIP_IPV6 && LWIP_IPV4
   if (l_listen.addr.type == IPADDR_TYPE_V6)
     l_listen.addr.type = IPADDR_TYPE_ANY;
-#endif /* LWIP_IPV6 */
+#endif /* LWIP_IPV6 && LWIP_IPV4 */
   udp_recv(sock->pcb, coap_recvs, (void*)sock->endpoint);
   err = udp_bind(sock->pcb, &l_listen.addr, l_listen.port);
   if (err) {
@@ -409,9 +409,9 @@ coap_socket_connect_udp(coap_socket_t *sock,
     goto err_udp_unbind;
   }
 
-#if LWIP_IPV6
+#if LWIP_IPV6 && LWIP_IPV4
   pcb->local_ip.type = pcb->remote_ip.type;
-#endif /* LWIP_IPV6 */
+#endif /* LWIP_IPV6 && LWIP_IPV4 */
 
   sock->pcb = pcb;
 

@@ -18,6 +18,14 @@
 
 #define WITH_LWIP 1
 
+#if LWIP_IPV4
+#define COAP_IPV4_SUPPORT 1
+#endif /* LWIP_IPV4 */
+
+#if LWIP_IPV6
+#define COAP_IPV6_SUPPORT 1
+#endif /* LWIP_IPV6 */
+
 #ifndef COAP_CONSTRAINED_STACK
 #define COAP_CONSTRAINED_STACK 1
 #endif

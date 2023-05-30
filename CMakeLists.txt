@@ -136,6 +136,18 @@ option(
   "enable building with TCP support"
   ON)
 option(
+  ENABLE_IPV4
+  "Enable building with IPv4 support"
+  ON)
+option(
+  ENABLE_IPV6
+  "Enable building with IPv6 support"
+  ON)
+option(
+  ENABLE_AF_UNIX
+  "Enable building with Unix socket support"
+  ON)
+option(
   ENABLE_WS
   "enable building with WebSockets support"
   ON)
@@ -292,6 +304,27 @@ else()
     message(STATUS "WebSockets disabled as TCP not enabled")
   endif()
   message(STATUS "compiling without WebSockets support")
+endif()
+
+if(${ENABLE_IPV4})
+  set(COAP_IPV4_SUPPORT "1")
+  message(STATUS "compiling with IPv4 support")
+else()
+  message(STATUS "compiling without IPv4 support")
+endif()
+
+if(${ENABLE_IPV6})
+  set(COAP_IPV6_SUPPORT "1")
+  message(STATUS "compiling with IPv6 support")
+else()
+  message(STATUS "compiling without IPv6 support")
+endif()
+
+if(${ENABLE_AF_UNIX})
+  set(COAP_AF_UNIX_SUPPORT "1")
+  message(STATUS "compiling with Unix socket support")
+else()
+  message(STATUS "compiling without Unix socket support")
 endif()
 
 if(${WITH_OBSERVE_PERSIST})
@@ -532,6 +565,9 @@ message(STATUS "PACKAGE VERSION..................${PACKAGE_VERSION}")
 message(STATUS "PACKAGE BUILD....................${LIBCOAP_PACKAGE_BUILD}")
 message(STATUS "ENABLE_DTLS:.....................${ENABLE_DTLS}")
 message(STATUS "ENABLE_TCP:......................${ENABLE_TCP}")
+message(STATUS "ENABLE_IPV4:.....................${ENABLE_IPV4}")
+message(STATUS "ENABLE_IPV6:.....................${ENABLE_IPV6}")
+message(STATUS "ENABLE_AF_UNIX:..................${ENABLE_AF_UNIX}")
 message(STATUS "ENABLE_WEBSOCKETS:...............${ENABLE_WS}")
 message(STATUS "ENABLE_CLIENT_MODE:..............${ENABLE_CLIENT_MODE}")
 message(STATUS "ENABLE_SERVER_MODE:..............${ENABLE_SERVER_MODE}")

@@ -10,6 +10,7 @@ coap_add_option
 coap_add_optlist_pdu
 coap_add_resource
 coap_add_token
+coap_address_copy
 coap_address_equals
 coap_address_get_port
 coap_address_init

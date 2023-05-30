@@ -124,12 +124,14 @@ coap_socket_bind_udp(coap_socket_t *sock,
               coap_socket_strerror());
 
   switch (listen_addr->addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
   case AF_INET:
     if (setsockopt(sock->fd, IPPROTO_IP, GEN_IP_PKTINFO, OPTVAL_T(&on), sizeof(on)) == COAP_SOCKET_ERROR)
       coap_log_alert(
                "coap_socket_bind_udp: setsockopt IP_PKTINFO: %s\n",
                 coap_socket_strerror());
     break;
+#endif /* COAP_IPV4_SUPPORT */
   case AF_INET6:
     /* Configure the socket as dual-stacked */
     if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY, OPTVAL_T(&off), sizeof(off)) == COAP_SOCKET_ERROR)
@@ -146,8 +148,10 @@ coap_socket_bind_udp(coap_socket_t *sock,
     /* ignore error, because likely cause is that IPv4 is disabled at the os
        level */
     break;
+#if COAP_AF_UNIX_SUPPORT
   case AF_UNIX:
     break;
+#endif /* COAP_AF_UNIX_SUPPORT */
   default:
     coap_log_alert("coap_socket_bind_udp: unsupported sa_family\n");
     break;
@@ -161,8 +165,10 @@ coap_socket_bind_udp(coap_socket_t *sock,
 #endif /* ! RIOT_VERSION */
 
   if (bind(sock->fd, &listen_addr->addr.sa,
+#if COAP_IPV4_SUPPORT
            listen_addr->addr.sa.sa_family == AF_INET ?
             (socklen_t)sizeof(struct sockaddr_in) :
+#endif /* COAP_IPV4_SUPPORT */
             (socklen_t)listen_addr->size) == COAP_SOCKET_ERROR) {
     coap_log_warn("coap_socket_bind_udp: bind: %s\n",
              coap_socket_strerror());
@@ -202,7 +208,9 @@ coap_socket_connect_udp(coap_socket_t *sock,
                         coap_address_t *remote_addr) {
 #ifndef RIOT_VERSION
   int on = 1;
+#if COAP_IPV6_SUPPORT
   int off = 0;
+#endif /* COAP_IPV6_SUPPORT */
 #else /* ! RIOT_VERSION */
   struct timeval timeout = {0, 0};
 #endif /* ! RIOT_VERSION */
@@ -237,10 +245,13 @@ coap_socket_connect_udp(coap_socket_t *sock,
 #endif /* RIOT_VERSION */
 
   switch (connect_addr.addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
   case AF_INET:
     if (connect_addr.addr.sin.sin_port == 0)
       connect_addr.addr.sin.sin_port = htons(default_port);
     break;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
   case AF_INET6:
     if (connect_addr.addr.sin6.sin6_port == 0)
       connect_addr.addr.sin6.sin6_port = htons(default_port);
@@ -250,9 +261,12 @@ coap_socket_connect_udp(coap_socket_t *sock,
       coap_log_warn("coap_socket_connect_udp: setsockopt IPV6_V6ONLY: %s\n",
                     coap_socket_strerror());
 #endif /* RIOT_VERSION */
+#endif /* COAP_IPV6_SUPPORT */
     break;
+#if COAP_AF_UNIX_SUPPORT
   case AF_UNIX:
     break;
+#endif /* COAP_AF_UNIX_SUPPORT */
   default:
     coap_log_alert("coap_socket_connect_udp: unsupported sa_family %d\n",
                    connect_addr.addr.sa.sa_family);
@@ -271,17 +285,21 @@ coap_socket_connect_udp(coap_socket_t *sock,
                     coap_socket_strerror());
 #endif /* RIOT_VERSION */
     if (bind(sock->fd, &local_if->addr.sa,
+#if COAP_IPV4_SUPPORT
              local_if->addr.sa.sa_family == AF_INET ?
               (socklen_t)sizeof(struct sockaddr_in) :
+#endif /* COAP_IPV4_SUPPORT */
               (socklen_t)local_if->size) == COAP_SOCKET_ERROR) {
       coap_log_warn("coap_socket_connect_udp: bind: %s\n",
                     coap_socket_strerror());
       goto error;
     }
+#if COAP_AF_UNIX_SUPPORT
   } else if (connect_addr.addr.sa.sa_family == AF_UNIX) {
     /* Need to bind to a local address for clarity over endpoints */
     coap_log_warn("coap_socket_connect_udp: local address required\n");
     goto error;
+#endif /* COAP_AF_UNIX_SUPPORT */
   }
 
   /* special treatment for sockets that are used for multicast communication */
@@ -294,8 +312,10 @@ coap_socket_connect_udp(coap_socket_t *sock,
       coap_address_init(&bind_addr);
       bind_addr.addr.sa.sa_family = connect_addr.addr.sa.sa_family;
       if (bind(sock->fd, &bind_addr.addr.sa,
+#if COAP_IPV4_SUPPORT
                bind_addr.addr.sa.sa_family == AF_INET ?
                 (socklen_t)sizeof(struct sockaddr_in) :
+#endif /* COAP_IPV4_SUPPORT */
                 (socklen_t)bind_addr.size) == COAP_SOCKET_ERROR) {
         coap_log_warn("coap_socket_connect_udp: bind: %s\n",
                       coap_socket_strerror());
@@ -323,8 +343,10 @@ coap_socket_connect_udp(coap_socket_t *sock,
 
     coap_address_init(&bind_addr);
     bind_addr.addr.sa.sa_family = connect_addr.addr.sa.sa_family;
+#if COAP_IPV6_SUPPORT
     if (bind_addr.addr.sa.sa_family == AF_INET6)
        bind_addr.addr.sin6.sin6_scope_id = connect_addr.addr.sin6.sin6_scope_id;
+#endif /* COAP_IPV6_SUPPORT */
     if (bind(sock->fd, &bind_addr.addr.sa,
              bind_addr.addr.sa.sa_family == AF_INET ?
               (socklen_t)sizeof(struct sockaddr_in) :
@@ -342,11 +364,14 @@ coap_socket_connect_udp(coap_socket_t *sock,
 #endif /* defined(RIOT_VERSION) */
 
   if (connect(sock->fd, &connect_addr.addr.sa, connect_addr.size) == COAP_SOCKET_ERROR) {
+#if COAP_AF_UNIX_SUPPORT
     if (connect_addr.addr.sa.sa_family == AF_UNIX) {
       coap_log_warn("coap_socket_connect_udp: connect: %s: %s\n",
                     connect_addr.addr.cun.sun_path, coap_socket_strerror());
     }
-    else {
+    else
+#endif /* COAP_AF_UNIX_SUPPORT */
+    {
       coap_log_warn("coap_socket_connect_udp: connect: %s (%d)\n",
                     coap_socket_strerror(), connect_addr.addr.sa.sa_family);
     }
@@ -396,19 +421,23 @@ coap_socket_close(coap_socket_t *sock) {
       }
     }
 #if COAP_SERVER_SUPPORT
+#if COAP_AF_UNIX_SUPPORT
     if (sock->endpoint &&
         sock->endpoint->bind_addr.addr.sa.sa_family == AF_UNIX) {
       /* Clean up Unix endpoint */
       unlink(sock->endpoint->bind_addr.addr.cun.sun_path);
     }
+#endif /* COAP_AF_UNIX_SUPPORT */
     sock->endpoint = NULL;
 #endif /* COAP_SERVER_SUPPORT */
 #if COAP_CLIENT_SUPPORT
+#if COAP_AF_UNIX_SUPPORT
     if (sock->session && sock->session->type == COAP_SESSION_TYPE_CLIENT &&
         sock->session->addr_info.local.addr.sa.sa_family == AF_UNIX) {
       /* Clean up Unix endpoint */
       unlink(sock->session->addr_info.local.addr.cun.sun_path);
     }
+#endif /* COAP_AF_UNIX_SUPPORT */
 #endif /* COAP_CLIENT_SUPPORT */
     sock->session = NULL;
 #endif /* COAP_EPOLL_SUPPORT */
@@ -783,10 +812,12 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
     if (!coap_address_isany(&session->addr_info.local) &&
         !coap_is_mcast(&session->addr_info.local))
     switch (session->addr_info.local.addr.sa.sa_family) {
+#if COAP_IPV6_SUPPORT
     case AF_INET6:
     {
       struct cmsghdr *cmsg;
 
+#if COAP_IPV4_SUPPORT
       if (IN6_IS_ADDR_V4MAPPED(&session->addr_info.local.addr.sin6.sin6_addr)) {
 #if defined(IP_PKTINFO)
         struct in_pktinfo *pktinfo;
@@ -818,6 +849,7 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
                sizeof(struct in_addr));
 #endif /* IP_PKTINFO */
       } else {
+#endif /* COAP_IPV4_SUPPORT */
         struct in6_pktinfo *pktinfo;
         mhdr.msg_control = buf;
         mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
@@ -833,9 +865,13 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
         memcpy(&pktinfo->ipi6_addr,
                &session->addr_info.local.addr.sin6.sin6_addr,
                sizeof(pktinfo->ipi6_addr));
+#if COAP_IPV4_SUPPORT
       }
+#endif /* COAP_IPV4_SUPPORT */
       break;
     }
+#endif /* COAP_IPV6_SUPPORT */
+#if COAP_IPV4_SUPPORT
     case AF_INET:
     {
 #if defined(IP_PKTINFO)
@@ -872,8 +908,11 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
 #endif /* IP_PKTINFO */
       break;
     }
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_AF_UNIX_SUPPORT
     case AF_UNIX:
       break;
+#endif /* COAP_AF_UNIX_SUPPORT */
     default:
       /* error */
       coap_log_warn("protocol not supported\n");
@@ -1016,14 +1055,14 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
     len = recvfrom(sock->fd, (void *)packet->payload, COAP_RXBUFFER_SIZE, 0,
                    &packet->addr_info.remote.addr.sa,
                    &packet->addr_info.remote.size);
-#if defined(RIOT_VERSION) && defined(COAP_SERVER_SUPPORT)
+#if defined(RIOT_VERSION) && defined(COAP_SERVER_SUPPORT) && COAP_IPV6_SUPPORT
     if (sock->endpoint &&
         packet->addr_info.remote.addr.sa.sa_family == AF_INET6) {
       packet->addr_info.remote.addr.sin6.sin6_scope_id =
                            sock->endpoint->bind_addr.addr.sin6.sin6_scope_id;
       packet->addr_info.remote.addr.sin6.sin6_flowinfo = 0;
     }
-#endif /* RIOT_VERSION && COAP_SERVER_SUPPORT */
+#endif /* RIOT_VERSION && COAP_SERVER_SUPPORT && COAP_IPV6_SUPPORT */
 #endif /* ! HAVE_STRUCT_CMSGHDR */
 
     if (len < 0) {
@@ -1051,6 +1090,7 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
        * is found where the data was received. */
       for (cmsg = CMSG_FIRSTHDR(&mhdr); cmsg; cmsg = CMSG_NXTHDR(&mhdr, cmsg)) {
 
+#if COAP_IPV6_SUPPORT
         /* get the local interface for IPv6 */
         if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
           union {
@@ -1064,7 +1104,9 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
           dst_found = 1;
           break;
         }
+#endif /* COAP_IPV6_SUPPORT */
 
+#if COAP_IPV4_SUPPORT
         /* local interface for IPv4 */
 #if defined(IP_PKTINFO)
         if (cmsg->cmsg_level == COAP_SOL_IP && cmsg->cmsg_type == IP_PKTINFO) {
@@ -1074,13 +1116,16 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
           } u;
           u.c = CMSG_DATA(cmsg);
           packet->ifindex = u.p->ipi_ifindex;
+#if COAP_IPV6_SUPPORT
           if (packet->addr_info.local.addr.sa.sa_family == AF_INET6) {
             memset(packet->addr_info.local.addr.sin6.sin6_addr.s6_addr, 0, 10);
             packet->addr_info.local.addr.sin6.sin6_addr.s6_addr[10] = 0xff;
             packet->addr_info.local.addr.sin6.sin6_addr.s6_addr[11] = 0xff;
             memcpy(packet->addr_info.local.addr.sin6.sin6_addr.s6_addr + 12,
                    &u.p->ipi_addr, sizeof(struct in_addr));
-          } else {
+          } else
+#endif /* COAP_IPV6_SUPPORT */
+          {
             memcpy(&packet->addr_info.local.addr.sin.sin_addr,
                    &u.p->ipi_addr, sizeof(struct in_addr));
           }
@@ -1097,6 +1142,7 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
           break;
         }
 #endif /* IP_RECVDSTADDR */
+#endif /* COAP_IPV4_SUPPORT */
         if (!dst_found) {
           /* cmsg_level / cmsg_type combination we do not understand
              (ignore preset case for bad recvmsg() not updating cmsg) */
@@ -1123,14 +1169,14 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
          coap_log_debug("Cannot determine local port\n");
          goto error;
       }
-#if defined(RIOT_VERSION) && defined(COAP_SERVER_SUPPORT)
+#if defined(RIOT_VERSION) && defined(COAP_SERVER_SUPPORT) && COAP_IPV6_SUPPORT
       if (sock->endpoint &&
           packet->addr_info.local.addr.sa.sa_family == AF_INET6) {
         packet->addr_info.local.addr.sin6.sin6_scope_id =
                              sock->endpoint->bind_addr.addr.sin6.sin6_scope_id;
         packet->addr_info.local.addr.sin6.sin6_flowinfo = 0;
       }
-#endif /* RIOT_VERSION && COAP_SERVER_SUPPORT */
+#endif /* RIOT_VERSION && COAP_SERVER_SUPPORT && COAP_IPV6_SUPPORT */
 #endif /* ! HAVE_STRUCT_CMSGHDR */
     }
   }

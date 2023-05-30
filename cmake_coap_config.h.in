@@ -50,6 +50,15 @@
 /* Define to 1 to build without TCP support. */
 #cmakedefine01 COAP_DISABLE_TCP
 
+/* Define to 1 to build with IPv4 support. */
+#cmakedefine COAP_IPV4_SUPPORT @COAP_IPV4_SUPPORT@
+
+/* Define to 1 to build with IPv6 support. */
+#cmakedefine COAP_IPV6_SUPPORT @COAP_IPV6_SUPPORT@
+
+/* Define to 1 to build with Unix socket support. */
+#cmakedefine COAP_AF_UNIX_SUPPORT @COAP_AF_UNIX_SUPPORT@
+
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #cmakedefine HAVE_ARPA_INET_H @HAVE_ARPA_INET_H@
 

@@ -83,6 +83,21 @@
 #define COAP_DISABLE_TCP 0
 #endif
 
+#ifndef COAP_IPV4_SUPPORT
+/* Define to 1 to build with IPv4 support. */
+#define COAP_IPV4_SUPPORT 1
+#endif
+
+#ifndef COAP_IPV6_SUPPORT
+/* Define to 1 to build with IPv6 support. */
+#define COAP_IPV6_SUPPORT 1
+#endif
+
+#ifndef COAP_AF_UNIX_SUPPORT
+/* Define to 1 to build with Unix socket support. */
+#define COAP_AF_UNIX_SUPPORT 0
+#endif
+
 #ifndef COAP_CLIENT_SUPPORT
 /* Define if libcoap supports client mode code. */
 #define COAP_CLIENT_SUPPORT 1

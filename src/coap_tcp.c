@@ -47,9 +47,9 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
                          coap_address_t *local_addr,
                          coap_address_t *remote_addr) {
   int on = 1;
-#ifndef RIOT_VERSION
+#if !defined(RIOT_VERSION) && COAP_IPV6_SUPPORT
   int off = 0;
-#endif /* RIOT_VERSION */
+#endif /* ! RIOT_VERSION && COAP_IPV6_SUPPORT */
 #ifdef _WIN32
   u_long u_on = 1;
 #endif
@@ -79,10 +79,13 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
 #endif /* RIOT_VERSION */
 
   switch (server->addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
   case AF_INET:
     if (connect_addr.addr.sin.sin_port == 0)
       connect_addr.addr.sin.sin_port = htons(default_port);
     break;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
   case AF_INET6:
     if (connect_addr.addr.sin6.sin6_port == 0)
       connect_addr.addr.sin6.sin6_port = htons(default_port);
@@ -94,8 +97,11 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
                coap_socket_strerror());
 #endif /* RIOT_VERSION */
     break;
+#endif /* COAP_IPV6_SUPPORT */
+#if COAP_AF_UNIX_SUPPORT
   case AF_UNIX:
     break;
+#endif /* COAP_AF_UNIX_SUPPORT */
   default:
     coap_log_alert("coap_socket_connect_tcp1: unsupported sa_family\n");
     break;
@@ -108,8 +114,10 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
                "coap_socket_connect_tcp1: setsockopt SO_REUSEADDR: %s\n",
                coap_socket_strerror());
     if (bind(sock->fd, &local_if->addr.sa,
+#if COAP_IPV4_SUPPORT
              local_if->addr.sa.sa_family == AF_INET ?
               (socklen_t)sizeof(struct sockaddr_in) :
+#endif /* COAP_IPV4_SUPPORT */
               (socklen_t)local_if->size) == COAP_SOCKET_ERROR) {
       coap_log_warn("coap_socket_connect_tcp1: bind: %s\n",
                coap_socket_strerror());
@@ -201,9 +209,9 @@ coap_socket_bind_tcp(coap_socket_t *sock,
                      const coap_address_t *listen_addr,
                      coap_address_t *bound_addr) {
   int on = 1;
-#ifndef RIOT_VERSION
+#if !defined(RIOT_VERSION) && COAP_IPV6_SUPPORT
   int off = 0;
-#endif /* RIOT_VERSION */
+#endif /* ! RIOT_VERSION && COAP_IPV6_SUPPORT */
 #ifdef _WIN32
   u_long u_on = 1;
 #endif
@@ -239,8 +247,11 @@ coap_socket_bind_tcp(coap_socket_t *sock,
              coap_socket_strerror());
 
   switch (listen_addr->addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
   case AF_INET:
     break;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
   case AF_INET6:
 #ifndef RIOT_VERSION
     /* Configure the socket as dual-stacked */
@@ -250,15 +261,20 @@ coap_socket_bind_tcp(coap_socket_t *sock,
                coap_socket_strerror());
 #endif /* RIOT_VERSION */
     break;
+#endif /* COAP_IPV6_SUPPORT */
+#if COAP_AF_UNIX_SUPPORT
   case AF_UNIX:
     break;
+#endif /* COAP_AF_UNIX_SUPPORT */
   default:
     coap_log_alert("coap_socket_bind_tcp: unsupported sa_family\n");
   }
 
   if (bind(sock->fd, &listen_addr->addr.sa,
+#if COAP_IPV4_SUPPORT
            listen_addr->addr.sa.sa_family == AF_INET ?
             (socklen_t)sizeof(struct sockaddr_in) :
+#endif /* COAP_IPV4_SUPPORT */
             (socklen_t)listen_addr->size) == COAP_SOCKET_ERROR) {
     coap_log_alert("coap_socket_bind_tcp: bind: %s\n",
              coap_socket_strerror());

@@ -44,7 +44,9 @@
 
 #include <signal.h>
 
+#if LWIP_IPV4
 static ip4_addr_t ipaddr, netmask, gw;
+#endif /* LWIP_IPV4 */
 static int quit = 0;
 
 static void
@@ -84,15 +86,19 @@ main(int argc, char **argv) {
    * hard-coded v4 even in presence of v6, which does auto-discovery and
    * should thus wind up with an address of fe80::12:34ff:fe56:78ab%tap0
    * */
+#if LWIP_IPV4
   IP4_ADDR(&gw, 192,168,114,1);
   IP4_ADDR(&ipaddr, 192,168,114,2);
   IP4_ADDR(&netmask, 255,255,255,0);
+#endif /* LWIP_IPV4 */
 
   lwip_init();
 
   printf("TCP/IP initialized.\n");
 
+#if LWIP_IPV4
   netif_add(&netif, &ipaddr, &netmask, &gw, NULL, tapif_init, ethernet_input);
+#endif /* LWIP_IPV4 */
   netif.flags |= NETIF_FLAG_ETHARP;
   netif_set_default(&netif);
   netif_set_up(&netif);
