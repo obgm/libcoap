@@ -39,7 +39,7 @@ struct coap_address_t {
  */
 COAP_STATIC_INLINE uint16_t
 coap_address_get_port(const coap_address_t *addr) {
-  return ntohs(addr->port);
+  return addr->port;
 }
 
 /**
@@ -47,7 +47,7 @@ coap_address_get_port(const coap_address_t *addr) {
  */
 COAP_STATIC_INLINE void
 coap_address_set_port(coap_address_t *addr, uint16_t port) {
-  addr->port = htons(port);
+  addr->port = port;
 }
 
 #define _coap_address_equals_impl(A, B) \
@@ -133,23 +133,8 @@ void coap_address_set_port(coap_address_t *addr, uint16_t port);
  */
 int coap_address_equals(const coap_address_t *a, const coap_address_t *b);
 
-COAP_STATIC_INLINE int
-_coap_address_isany_impl(const coap_address_t *a) {
-  /* need to compare only relevant parts of sockaddr_in6 */
-  switch (a->addr.sa.sa_family) {
-  case AF_INET:
-    return a->addr.sin.sin_addr.s_addr == INADDR_ANY;
-  case AF_INET6:
-    return memcmp(&in6addr_any,
-                  &a->addr.sin6.sin6_addr,
-                  sizeof(in6addr_any)) == 0;
-  default:
-    ;
-  }
-
-  return 0;
-}
-#endif /* WITH_LWIP || WITH_CONTIKI */
+int _coap_address_isany_impl(const coap_address_t *a);
+#endif /* ! WITH_LWIP && ! WITH_CONTIKI */
 
 /** Resolved addresses information */
 typedef struct coap_addr_info_t {
@@ -236,26 +221,14 @@ int coap_address_set_unix_domain(coap_address_t *addr,
                                  const uint8_t *host, size_t host_len);
 
 /* Convenience function to copy IPv6 addresses without garbage. */
-
+#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
 COAP_STATIC_INLINE void
 coap_address_copy( coap_address_t *dst, const coap_address_t *src ) {
-#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
-  memcpy( dst, src, sizeof( coap_address_t ) );
-#else
-  memset( dst, 0, sizeof( coap_address_t ) );
-  dst->size = src->size;
-  if ( src->addr.sa.sa_family == AF_INET6 ) {
-    dst->addr.sin6.sin6_family = src->addr.sin6.sin6_family;
-    dst->addr.sin6.sin6_addr = src->addr.sin6.sin6_addr;
-    dst->addr.sin6.sin6_port = src->addr.sin6.sin6_port;
-    dst->addr.sin6.sin6_scope_id = src->addr.sin6.sin6_scope_id;
-  } else if ( src->addr.sa.sa_family == AF_INET ) {
-    dst->addr.sin = src->addr.sin;
-  } else {
-    memcpy( &dst->addr, &src->addr, src->size );
-  }
-#endif
+  memcpy(dst, src, sizeof(coap_address_t));
 }
+#else /* ! WITH_LWIP && ! WITH_CONTIKI */
+void coap_address_copy(coap_address_t *dst, const coap_address_t *src);
+#endif /* ! WITH_LWIP && ! WITH_CONTIKI */
 
 #if defined(WITH_LWIP) || defined(WITH_CONTIKI)
 /**

@@ -50,6 +50,22 @@ config LIBCOAP_MAX_LOGGING_LEVEL
     default 7 if LIBCOAP_LOG_DEBUG
     default 8 if LIBCOAP_LOG_OSCORE
 
+config LIBCOAP_IPV4_SUPPORT
+    bool "Enable IPv4 support within CoAP"
+    default n
+    help
+        Enable IPv4 functionality for CoAP.
+
+        If this option is disabled, redundent CoAP IPv4 code is removed.
+
+config LIBCOAP_IPV6_SUPPORT
+    bool "Enable IPv6 support within CoAP"
+    default y
+    help
+        Enable IPv6 functionality for CoAP.
+
+        If this option is disabled, redundent CoAP IPv6 code is removed.
+
 config LIBCOAP_TCP_SUPPORT
     bool "Enable TCP support within CoAP"
     default n

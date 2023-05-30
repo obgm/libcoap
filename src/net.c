@@ -3832,7 +3832,9 @@ coap_register_option(coap_context_t *ctx, uint16_t type) {
 int
 coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
                            const char *ifname) {
+#if COAP_IPV4_SUPPORT
   struct ip_mreq mreq4;
+#endif /* COAP_IPV4_SUPPORT */
   struct ipv6_mreq mreq6;
   struct addrinfo *resmulti = NULL, hints, *ainfo;
   int result = -1;
@@ -3846,7 +3848,9 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
 
   /* Default is let the kernel choose */
   mreq6.ipv6mr_interface = 0;
+#if COAP_IPV4_SUPPORT
   mreq4.imr_interface.s_addr = INADDR_ANY;
+#endif /* COAP_IPV4_SUPPORT */
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_socktype = SOCK_DGRAM;
@@ -3871,7 +3875,9 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
 #if defined(ESPIDF_VERSION)
     struct netif *netif;
 #else /* !ESPIDF_VERSION */
+#if COAP_IPV4_SUPPORT
     int ip4fd;
+#endif /* COAP_IPV4_SUPPORT */
     struct ifreq ifr;
 #endif /* !ESPIDF_VERSION */
 
@@ -3879,6 +3885,7 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
     for (ainfo = resmulti; ainfo != NULL && !(done_ip4 == 1 && done_ip6 == 1);
          ainfo = ainfo->ai_next) {
       switch (ainfo->ai_family) {
+#if COAP_IPV6_SUPPORT
       case AF_INET6:
         if (done_ip6)
           break;
@@ -3917,7 +3924,9 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
         }
 #endif /* !HAVE_IF_NAMETOINDEX */
 #endif /* !ESPIDF_VERSION */
+#endif /* COAP_IPV6_SUPPORT */
         break;
+#if COAP_IPV4_SUPPORT
       case AF_INET:
         if (done_ip4)
           break;
@@ -3960,6 +3969,7 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
         close(ip4fd);
 #endif /* !ESPIDF_VERSION */
         break;
+#endif /* COAP_IPV4_SUPPORT */
       default:
         break;
       }
@@ -3975,6 +3985,7 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
         coap_address_t gaddr;
 
         coap_address_init(&gaddr);
+#if COAP_IPV6_SUPPORT
         if (ainfo->ai_family == AF_INET6) {
           if (!ifname) {
             if(endpoint->bind_addr.addr.sa.sa_family == AF_INET6) {
@@ -3996,7 +4007,12 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
           result = setsockopt(endpoint->sock.fd, IPPROTO_IPV6, IPV6_JOIN_GROUP,
                               (char *)&mreq6, sizeof(mreq6));
         }
-        else if (ainfo->ai_family == AF_INET) {
+#endif /* COAP_IPV6_SUPPORT */
+#if COAP_IPV4_SUPPORT && COAP_IPV6_SUPPORT
+        else
+#endif /* COAP_IPV4_SUPPORT && COAP_IPV6_SUPPORT */
+#if COAP_IPV4_SUPPORT
+        if (ainfo->ai_family == AF_INET) {
           if (!ifname) {
             if(endpoint->bind_addr.addr.sa.sa_family == AF_INET) {
               /*
@@ -4016,6 +4032,7 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
           result = setsockopt(endpoint->sock.fd, IPPROTO_IP, IP_ADD_MEMBERSHIP,
                               (char *)&mreq4, sizeof(mreq4));
         }
+#endif /* COAP_IPV4_SUPPORT */
         else {
           continue;
         }
@@ -4064,6 +4081,7 @@ int
 coap_mcast_set_hops(coap_session_t *session, size_t hops) {
   if (session && coap_is_mcast(&session->addr_info.remote)) {
     switch (session->addr_info.remote.addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
     case AF_INET:
       if (setsockopt(session->sock.fd, IPPROTO_IP, IP_MULTICAST_TTL,
           (const char *)&hops, sizeof(hops)) < 0) {
@@ -4072,6 +4090,7 @@ coap_mcast_set_hops(coap_session_t *session, size_t hops) {
         return 0;
       }
       return 1;
+#endif /* COAP_IPV4_SUPPORT */
     case AF_INET6:
       if (setsockopt(session->sock.fd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
           (const char *)&hops, sizeof(hops)) < 0) {

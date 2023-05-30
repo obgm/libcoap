@@ -221,19 +221,25 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
   buf[0] = '\000';
 
   switch (addr->addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
   case AF_INET:
     snprintf((char *)buf, len, "%s:%d",
              coap_print_ip_addr(addr, scratch, sizeof(scratch)),
              ntohs(addr->addr.sin.sin_port));
     break;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
   case AF_INET6:
     snprintf((char *)buf, len, "[%s]:%d",
              coap_print_ip_addr(addr, scratch, sizeof(scratch)),
              ntohs(addr->addr.sin6.sin6_port));
     break;
+#endif /* COAP_IPV6_SUPPORT */
+#if COAP_AF_UNIX_SUPPORT
   case AF_UNIX:
     snprintf((char *)buf, len, "'%s'", addr->addr.cun.sun_path);
     break;
+#endif /* COAP_AF_UNIX_SUPPORT */
   default:
     /* Include trailing NULL if possible */
     memcpy(buf, "(unknown address type)", min(22+1, len));
@@ -361,19 +367,25 @@ coap_print_ip_addr(const coap_address_t *addr, char *buf, size_t len) {
   buf[0] = '\000';
 
   switch (addr->addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
   case AF_INET:
     if (len < INET_ADDRSTRLEN)
       return buf;
     addrptr = &addr->addr.sin.sin_addr;
     break;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
   case AF_INET6:
     if (len < INET6_ADDRSTRLEN)
       return buf;
     addrptr = &addr->addr.sin6.sin6_addr;
     break;
+#endif /* COAP_IPV6_SUPPORT */
+#if COAP_AF_UNIX_SUPPORT
   case AF_UNIX:
     snprintf(buf, len, "'%s'", addr->addr.cun.sun_path);
     return buf;
+#endif /* COAP_AF_UNIX_SUPPORT */
   default:
     /* Include trailing NULL if possible */
     memcpy(buf, "(unknown address type)", min(22+1, len));
@@ -429,17 +441,23 @@ coap_print_ip_addr(const coap_address_t *addr, char *buf, size_t len) {
   buf[0] = '\000';
 
   switch (IP_GET_TYPE(&addr->addr)) {
+#if LWIP_IPV4
   case IPADDR_TYPE_V4:
     if (len < IP4ADDR_STRLEN_MAX)
       return buf;
     memcpy(buf, ip4addr_ntoa(ip_2_ip4(&addr->addr)), IP4ADDR_STRLEN_MAX);
     break;
+#endif /* LWIP_IPV4 */
 #if LWIP_IPV6
   case IPADDR_TYPE_V6:
   case IPADDR_TYPE_ANY:
     if (len < 40)
       return buf;
+#if LWIP_IPV4
     memcpy(buf, ip6addr_ntoa(&addr->addr.u_addr.ip6), 40);
+#else /* LWIP_IPV4 */
+    memcpy(buf, ip6addr_ntoa(&addr->addr), 40);
+#endif /* LWIP_IPV4 */
     break;
 #endif /* LWIP_IPV6 */
   }

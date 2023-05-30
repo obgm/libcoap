@@ -753,6 +753,39 @@ AC_ARG_ENABLE([license-install],
 AM_CONDITIONAL(BUILD_LICENSE_INSTALL, [test "x$build_license_install" = "xyes"])
 
 # configure options
+# __ipv4__
+AC_ARG_ENABLE([ipv4],
+              [AS_HELP_STRING([--enable-ipv4-support],
+                              [Enable building with support for IPv4 packets [default=yes]])],
+              [build_ipv4_support="$enableval"],
+              [build_ipv4_support="yes"])
+
+AS_IF([test "x$build_ipv4_support" = "xyes"],
+      [AC_DEFINE(COAP_IPV4_SUPPORT, [1], [Define to build support for IPv4 packets.])])
+
+# configure options
+# __ipv6__
+AC_ARG_ENABLE([ipv6],
+              [AS_HELP_STRING([--enable-ipv6-support],
+                              [Enable building with support for IPv6 packets [default=yes]])],
+              [build_ipv6_support="$enableval"],
+              [build_ipv6_support="yes"])
+
+AS_IF([test "x$build_ipv6_support" = "xyes"],
+      [AC_DEFINE(COAP_IPV6_SUPPORT, [1], [Define to build support for IPv6 packets.])])
+
+# configure options
+# __af_unix__
+AC_ARG_ENABLE([af_unix],
+              [AS_HELP_STRING([--enable-af-unix-support],
+                              [Enable building with support for Unix socket packets [default=yes]])],
+              [build_af_unix_support="$enableval"],
+              [build_af_unix_support="yes"])
+
+AS_IF([test "x$build_af_unix_support" = "xyes"],
+      [AC_DEFINE(COAP_AF_UNIX_SUPPORT, [1], [Define to build support for Unix socket packets.])])
+
+# configure options
 # __tcp__
 AC_ARG_ENABLE([tcp],
               [AS_HELP_STRING([--enable-tcp],
@@ -1098,6 +1131,21 @@ if test "x$enable_client_mode" = "xyes"; then
     AC_MSG_RESULT([      build with client support: "yes"])
 else
     AC_MSG_RESULT([      build with client support: "no"])
+fi
+if test "x$build_ipv4" != "xno"; then
+    AC_MSG_RESULT([      build with IPv4 support   : "yes"])
+else
+    AC_MSG_RESULT([      build with IPv4 support   : "no"])
+fi
+if test "x$build_ipv6" != "xno"; then
+    AC_MSG_RESULT([      build with IPv6 support   : "yes"])
+else
+    AC_MSG_RESULT([      build with IPv6 support   : "no"])
+fi
+if test "x$build_af_unix" != "xno"; then
+    AC_MSG_RESULT([      build with Unix socket support   : "yes"])
+else
+    AC_MSG_RESULT([      build with Unix socket support   : "no"])
 fi
 if test "x$build_tcp" != "xno"; then
     AC_MSG_RESULT([      build with TCP support   : "yes"])

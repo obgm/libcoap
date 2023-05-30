@@ -64,6 +64,14 @@
 #endif /* COAP_CLIENT_SUPPORT */
 #endif /* COAP_SERVER_SUPPORT */
 
+/* By default without either configured, these need to be set */
+#ifndef COAP_IPV4_SUPPORT
+#ifndef COAP_IPV6_SUPPORT
+#define COAP_IPV4_SUPPORT 1
+#define COAP_IPV6_SUPPORT 1
+#endif /* COAP_IPV6_SUPPORT */
+#endif /* COAP_IPV4_SUPPORT */
+
 #if ! COAP_SERVER_SUPPORT
 #ifndef WITHOUT_ASYNC
 /* ASYNC is only there for Server code */

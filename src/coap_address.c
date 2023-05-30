@@ -38,8 +38,12 @@ uint16_t
 coap_address_get_port(const coap_address_t *addr) {
   assert(addr != NULL);
   switch (addr->addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
   case AF_INET: return ntohs(addr->addr.sin.sin_port);
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
   case AF_INET6: return ntohs(addr->addr.sin6.sin6_port);
+#endif /* COAP_IPV6_SUPPORT */
   default: /* undefined */
     ;
   }
@@ -50,12 +54,16 @@ void
 coap_address_set_port(coap_address_t *addr, uint16_t port) {
   assert(addr != NULL);
   switch (addr->addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
   case AF_INET:
     addr->addr.sin.sin_port = htons(port);
     break;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
   case AF_INET6:
     addr->addr.sin6.sin6_port = htons(port);
     break;
+#endif /* COAP_IPV6_SUPPORT */
   default: /* undefined */
     ;
   }
@@ -70,15 +78,19 @@ coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
 
   /* need to compare only relevant parts of sockaddr_in6 */
  switch (a->addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
  case AF_INET:
    return
      a->addr.sin.sin_port == b->addr.sin.sin_port &&
      memcmp(&a->addr.sin.sin_addr, &b->addr.sin.sin_addr,
             sizeof(struct in_addr)) == 0;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
  case AF_INET6:
    return a->addr.sin6.sin6_port == b->addr.sin6.sin6_port &&
      memcmp(&a->addr.sin6.sin6_addr, &b->addr.sin6.sin6_addr,
             sizeof(struct in6_addr)) == 0;
+#endif /* COAP_IPV6_SUPPORT */
  default: /* fall through and signal error */
    ;
  }
@@ -95,12 +107,20 @@ coap_is_mcast(const coap_address_t *a) {
     return 1;
 
   switch (a->addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
   case AF_INET:
     return IN_MULTICAST(ntohl(a->addr.sin.sin_addr.s_addr));
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
   case  AF_INET6:
+#if COAP_IPV4_SUPPORT
     return IN6_IS_ADDR_MULTICAST(&a->addr.sin6.sin6_addr) ||
         (IN6_IS_ADDR_V4MAPPED(&a->addr.sin6.sin6_addr) &&
             IN_MULTICAST(ntohl(a->addr.sin6.sin6_addr.s6_addr[12])));
+#else /* ! COAP_IPV4_SUPPORT */
+    return a->addr.sin6.sin6_addr.s6_addr[0] == 0xff;
+#endif /* ! COAP_IPV4_SUPPORT */
+#endif /* COAP_IPV6_SUPPORT */
   default:  /* fall through and signal not multicast */
     ;
   }
@@ -118,37 +138,47 @@ coap_is_mcast(const coap_address_t *a) {
 #define COAP_BCST_REFRESH_SECS 30
 #endif /* COAP_BCST_REFRESH_SECS */
 
+#if COAP_IPV4_SUPPORT
 static int bcst_cnt = -1;
 static coap_tick_t last_refresh;
 static struct in_addr b_ipv4[COAP_BCST_CNT];
+#endif /* COAP_IPV4_SUPPORT */
 
 #include <net/if.h>
 #include <ifaddrs.h>
 
 int
 coap_is_bcast(const coap_address_t *a) {
+#if COAP_IPV4_SUPPORT
   struct in_addr ipv4;
   int i;
   coap_tick_t now;
+#endif /* COAP_IPV4_SUPPORT */
 
   if (!a)
     return 0;
 
   switch (a->addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
   case AF_INET:
     ipv4.s_addr = a->addr.sin.sin_addr.s_addr;
     break;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
   case  AF_INET6:
+#if COAP_IPV4_SUPPORT
     if (IN6_IS_ADDR_V4MAPPED(&a->addr.sin6.sin6_addr)) {
       memcpy(&ipv4, &a->addr.sin6.sin6_addr.s6_addr[12], sizeof(ipv4));
       break;
     }
+#endif /* COAP_IPV4_SUPPORT */
     /* IPv6 does not support broadcast */
     return 0;
-    break;
+#endif /* COAP_IPV6_SUPPORT */
   default:
     return 0;
   }
+#if COAP_IPV4_SUPPORT
   if (ipv4.s_addr == INADDR_BROADCAST)
     return 1;
 
@@ -184,6 +214,7 @@ coap_is_bcast(const coap_address_t *a) {
       return 1;
   }
   return 0;
+#endif /* COAP_IPV4_SUPPORT */
 }
 #else /* WIN32 */
 int
@@ -207,7 +238,7 @@ void coap_address_init(coap_address_t *addr) {
 int
 coap_address_set_unix_domain(coap_address_t *addr,
                               const uint8_t *host, size_t host_len) {
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
+#if COAP_AF_UNIX_SUPPORT
   size_t i;
   size_t ofs = 0;
 
@@ -229,12 +260,12 @@ coap_address_set_unix_domain(coap_address_t *addr,
   else
     addr->addr.cun.sun_path[ofs-1] = '\000';
   return 1;
-#else /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */
+#else /* ! COAP_AF_UNIX_SUPPORT */
   (void)addr;
   (void)host;
   (void)host_len;
   return 0;
-#endif /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */
+#endif /* ! COAP_AF_UNIX_SUPPORT */
 }
 
 #if !defined(WITH_CONTIKI)
@@ -245,14 +276,7 @@ update_port(coap_address_t *addr, uint16_t port, uint16_t default_port,
   if (port == 0 && update_port0)
     port = default_port;
 
-#if !defined(WITH_LWIP)
- if (addr->addr.sa.sa_family == AF_INET)
-   addr->addr.sin.sin_port = htons(port);
- else if (addr->addr.sa.sa_family == AF_INET6)
-   addr->addr.sin6.sin6_port = htons(port);
-#else /* defined(WITH_LWIP) */
-  addr->port = port;
-#endif /* defined(WITH_LWIP) */
+  coap_address_set_port(addr, port);
   return;
 }
 
@@ -339,7 +363,7 @@ coap_resolve_address_info(const coap_str_const_t *address,
   coap_uri_scheme_t scheme;
   coap_proto_t proto = 0;
 
-#if !defined(WITH_LWIP)
+#if COAP_AF_UNIX_SUPPORT
   if (address && coap_host_is_unix_domain(address)) {
     /* There can only be one unique filename entry for AF_UNIX */
     if (address->length >= COAP_UNIX_PATH_MAX) {
@@ -413,7 +437,7 @@ coap_resolve_address_info(const coap_str_const_t *address,
     }
     return info;
   }
-#endif /* ! WITH_LWIP */
+#endif /* COAP_AF_UNIX_SUPPORT */
 
   memset(addrstr, 0, sizeof(addrstr));
   if (address && address->length)
@@ -440,8 +464,12 @@ coap_resolve_address_info(const coap_str_const_t *address,
 #endif /* ! WITH_LWIP */
 
     switch (ainfo->ai_family) {
-    case AF_INET6:
+#if COAP_IPV4_SUPPORT
     case AF_INET:
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
+    case AF_INET6:
+#endif /* COAP_IPV6_SUPPORT */
       for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
         if (scheme_hint_bits & (1 << scheme)) {
           switch (scheme) {
@@ -544,8 +572,11 @@ coap_resolve_address_info(const coap_str_const_t *address,
 #else /* WITH_LWIP */
           memset(&info->addr, 0, sizeof(info->addr));
           switch (ainfo->ai_family) {
-            struct sockaddr_in *sock4;
+#if COAP_IPV6_SUPPORT
             struct sockaddr_in6 *sock6;
+#endif /* COAP_IPV6_SUPPORT */
+#if COAP_IPV4_SUPPORT
+            struct sockaddr_in *sock4;
           case AF_INET:
             sock4 = (struct sockaddr_in *)ainfo->ai_addr;
             info->addr.port = ntohs(sock4->sin_port);
@@ -554,14 +585,17 @@ coap_resolve_address_info(const coap_str_const_t *address,
             info->addr.addr.type = IPADDR_TYPE_V4;
 #endif /* LWIP_IPV6 */
             break;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
           case AF_INET6:
             sock6 = (struct sockaddr_in6 *)ainfo->ai_addr;
             info->addr.port = ntohs(sock6->sin6_port);
             memcpy(&info->addr.addr, &sock6->sin6_addr, 16);
-#if LWIP_IPV6
+#if LWIP_IPV6 && LWIP_IPV4
             info->addr.addr.type = IPADDR_TYPE_V6;
-#endif /* LWIP_IPV6 */
+#endif /* LWIP_IPV6 && LWIP_IPV4 */
             break;
+#endif /* COAP_IPV6_SUPPORT */
           default:
             ;
           }
@@ -614,6 +648,7 @@ coap_resolve_address_info(const coap_str_const_t *address,
   freeaddrinfo(res);
   return info_list;
 #else /* RIOT_VERSION */
+#if COAP_IPV6_SUPPORT
 #include "net/utils.h"
   ipv6_addr_t addr_ipv6;
   netif_t *netif = NULL;
@@ -727,6 +762,7 @@ coap_resolve_address_info(const coap_str_const_t *address,
     }
     return info_list;
   }
+#endif /* COAP_IPV6_SUPPORT */
   return NULL;
 #endif /* RIOT_VERSION */
 }
@@ -741,3 +777,55 @@ coap_free_address_info(coap_addr_info_t *info) {
     info = info_next;
   }
 }
+
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+void
+coap_address_copy(coap_address_t *dst, const coap_address_t *src) {
+#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
+  memcpy( dst, src, sizeof( coap_address_t ) );
+#else
+  memset( dst, 0, sizeof( coap_address_t ) );
+  dst->size = src->size;
+#if COAP_IPV6_SUPPORT
+  if ( src->addr.sa.sa_family == AF_INET6 ) {
+    dst->addr.sin6.sin6_family = src->addr.sin6.sin6_family;
+    dst->addr.sin6.sin6_addr = src->addr.sin6.sin6_addr;
+    dst->addr.sin6.sin6_port = src->addr.sin6.sin6_port;
+    dst->addr.sin6.sin6_scope_id = src->addr.sin6.sin6_scope_id;
+  }
+#endif /* COAP_IPV6_SUPPORT */
+#if COAP_IPV4_SUPPORT && COAP_IPV6_SUPPORT
+  else
+#endif /* COAP_IPV4_SUPPORT && COAP_IPV6_SUPPORT */
+#if COAP_IPV4_SUPPORT
+  if ( src->addr.sa.sa_family == AF_INET ) {
+    dst->addr.sin = src->addr.sin;
+  }
+#endif /* COAP_IPV4_SUPPORT */
+  else {
+    memcpy( &dst->addr, &src->addr, src->size );
+  }
+#endif
+}
+
+int
+_coap_address_isany_impl(const coap_address_t *a) {
+  /* need to compare only relevant parts of sockaddr_in6 */
+  switch (a->addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
+  case AF_INET:
+    return a->addr.sin.sin_addr.s_addr == INADDR_ANY;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
+  case AF_INET6:
+    return memcmp(&in6addr_any,
+                  &a->addr.sin6.sin6_addr,
+                  sizeof(in6addr_any)) == 0;
+#endif /* COAP_IPV6_SUPPORT */
+  default:
+    ;
+  }
+
+  return 0;
+}
+#endif /* ! WITH_LWIP && ! WITH_CONTIKI */

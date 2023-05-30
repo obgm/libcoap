@@ -13,6 +13,15 @@
 /* Define to 1 to build without TCP support. */
 #define COAP_DISABLE_TCP 1
 
+/* Define to 1 to build support for IPv4 packets. */
+/* #undef COAP_IPV4_SUPPORT 1 */
+
+/* Define to 1 to build support for IPv6 packets. */
+#define COAP_IPV6_SUPPORT 1
+
+/* Define to 1 to build support for Unix socket packets. */
+/* #undef COAP_AF_UNIX_SUPPORT 1 */
+
 /* Define to 1 if you have the <assert.h> header file. */
 #define HAVE_ASSERT_H 1
 

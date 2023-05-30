@@ -1504,15 +1504,26 @@ get_session(coap_context_t *ctx,
       coap_address_t bind_addr;
 
       if (local_addr) {
-        coap_address_set_unix_domain(&bind_addr,
-                                     (const uint8_t *)local_addr, strlen(local_addr));
+        if (!coap_address_set_unix_domain(&bind_addr,
+                                          (const uint8_t *)local_addr,
+                                           strlen(local_addr))) {
+          fprintf(stderr, "coap_address_set_unix_domain: %s: failed\n",
+                  local_addr);
+          return NULL;
+        }
       } else {
         char buf[COAP_UNIX_PATH_MAX];
 
         /* Need a unique address */
         snprintf(buf, COAP_UNIX_PATH_MAX,
                  "/tmp/coap-client.%d", (int)getpid());
-        coap_address_set_unix_domain(&bind_addr, (const uint8_t *)buf, strlen(buf));
+        if (!coap_address_set_unix_domain(&bind_addr, (const uint8_t *)buf,
+                                          strlen(buf))) {
+          fprintf(stderr, "coap_address_set_unix_domain: %s: failed\n",
+                  buf);
+          remove(buf);
+          return NULL;
+        }
         remove(buf);
       }
       session = open_session(ctx, proto, &bind_addr, dst,

@@ -15,11 +15,13 @@
 #define LWIP_NETCONN               (NO_SYS==0)
 #define LWIP_NETIF_API             (NO_SYS==0)
 
+#define LWIP_IPV4                       1
+
 #define LWIP_IPV6                       1
 #define LWIP_IPV6_REASS                 0
 
 #define LWIP_IPV6_MLD                   0
-#define LWIP_ICMP6                      1
+#define LWIP_ICMP6                 (LWIP_IPV6==1)
 
 #ifndef LWIP_RAND
 #define LWIP_RAND() ((u32_t)rand())
