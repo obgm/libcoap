@@ -29,10 +29,10 @@
 
 #include <lwip/ip_addr.h>
 
-typedef struct coap_address_t {
+struct coap_address_t {
   uint16_t port;
   ip_addr_t addr;
-} coap_address_t;
+};
 
 /**
  * Returns the port from @p addr in host byte order.
@@ -62,10 +62,10 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
 
 #include "uip.h"
 
-typedef struct coap_address_t {
+struct coap_address_t {
   uip_ipaddr_t addr;
   uint16_t port;
-} coap_address_t;
+};
 
 /**
  * Returns the port from @p addr in host byte order.
@@ -92,7 +92,7 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
 
 #define _coap_is_mcast_impl(Address) uip_is_addr_mcast(&((Address)->addr))
 
-#else /* WITH_LWIP || WITH_CONTIKI */
+#else /* ! WITH_LWIP && ! WITH_CONTIKI */
 
 #ifdef _WIN32
 #define sa_family_t short
@@ -106,7 +106,7 @@ struct coap_sockaddr_un {
 };
 
 /** Multi-purpose address abstraction */
-typedef struct coap_address_t {
+struct coap_address_t {
   socklen_t size;           /**< size of addr */
   union {
     struct sockaddr         sa;
@@ -114,7 +114,7 @@ typedef struct coap_address_t {
     struct sockaddr_in6     sin6;
     struct coap_sockaddr_un cun; /* CoAP shortened special */
   } addr;
-} coap_address_t;
+};
 
 /**
  * Returns the port from @p addr in host byte order.
@@ -176,23 +176,33 @@ uint32_t coap_get_available_scheme_hint_bits(int have_pki_psk, int ws_check,
                                              coap_proto_t use_unix_proto);
 
 /**
- * Resolve the specified @p server into a set of coap_address_t that can
- * be used to bind() or connect() to.
+ * coap_resolve_type_t values
+ */
+typedef enum coap_resolve_type_t {
+  COAP_RESOLVE_TYPE_LOCAL,   /**< local side of session */
+  COAP_RESOLVE_TYPE_REMOTE,  /**< remote side of session */
+} coap_resolve_type_t;
+
+/**
+ * Resolve the specified @p address into a set of coap_address_t that can
+ * be used to bind() (local) or connect() (remote) to.
  *
- * @param server The Address to resolve.
- * @param port   The unsecured protocol port to use.
+ * @param address The Address to resolve.
+ * @param port    The unsecured protocol port to use.
  * @param secure_port The secured protocol port to use.
  * @param ai_hints_flags AI_* Hint flags to use for internal getaddrinfo().
  * @param scheme_hint_bits Which schemes to return information for. One or
  *                         more of COAP_URI_SCHEME_*_BIT or'd together.
+ * @param type COAP_ADDRESS_TYPE_LOCAL or COAP_ADDRESS_TYPE_REMOTE
  *
  * @return One or more linked sets of coap_addr_info_t or @c NULL if error.
  */
-coap_addr_info_t *coap_resolve_address_info(const coap_str_const_t *server,
+coap_addr_info_t *coap_resolve_address_info(const coap_str_const_t *address,
                                             uint16_t port,
                                             uint16_t secure_port,
                                             int ai_hints_flags,
-                                            int scheme_hint_bits);
+                                            int scheme_hint_bits,
+                                            coap_resolve_type_t type);
 
 /**
  * Free off the one or more linked sets of coap_addr_info_t returned from

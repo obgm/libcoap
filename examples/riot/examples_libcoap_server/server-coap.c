@@ -167,7 +167,8 @@ init_coap_context_endpoints(const char *use_psk) {
   info_list = coap_resolve_address_info(&local, COAP_DEFAULT_PORT,
                                         COAPS_DEFAULT_PORT,
                                         0,
-                                        scheme_hint_bits);
+                                        scheme_hint_bits,
+                                        COAP_RESOLVE_TYPE_REMOTE);
   for (info = info_list; info != NULL; info = info->next) {
     coap_endpoint_t *ep;
 

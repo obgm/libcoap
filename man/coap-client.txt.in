@@ -93,7 +93,7 @@ OPTIONS - General
    A filename to store data retrieved with GET.
 
 *-p* port::
-   The port to listen on.
+   The port to send from.
 
 *-r*::
    Use reliable protocol (TCP or TLS).

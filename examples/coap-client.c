@@ -522,7 +522,7 @@ usage(const char *program, const char *version) {
      "\t-m method\tRequest method (get|put|post|delete|fetch|patch|ipatch),\n"
      "\t       \t\tdefault is 'get'\n"
      "\t-o file\t\tOutput received data to this file (use '-' for STDOUT)\n"
-     "\t-p port\t\tListen on specified port\n"
+     "\t-p port\t\tSend from the specified port\n"
      "\t-r     \t\tUse reliable protocol (TCP or TLS); requires TCP support\n"
      "\t-s duration\tSubscribe to / Observe resource for given duration\n"
      "\t       \t\tin seconds\n"
@@ -819,9 +819,7 @@ cmdline_oscore(char *arg) {
  * @return 0 on success, -1 otherwise
  */
 static int
-cmdline_uri(char *arg, int create_uri_opts) {
-#define BUFSIZE 100
-  unsigned char buf[BUFSIZE];
+cmdline_uri(char *arg) {
 
   if (!proxy_scheme_option && proxy.host.length) {
     /* create Proxy-Uri from argument */
@@ -862,13 +860,6 @@ cmdline_uri(char *arg, int create_uri_opts) {
       } else {
         uri.scheme = COAP_URI_SCHEME_COAP_TCP;
       }
-    }
-
-    /* COAP_OPTION_URI_HOST will get done later */
-    if (coap_uri_into_options(&uri, &optlist, create_uri_opts,
-                              buf, sizeof(buf)) < 0) {
-      coap_log_err("Failed to create options for URI\n");
-      return -1;
     }
   }
   return 0;
@@ -1522,7 +1513,7 @@ get_session(coap_context_t *ctx,
         snprintf(buf, COAP_UNIX_PATH_MAX,
                  "/tmp/coap-client.%d", (int)getpid());
         coap_address_set_unix_domain(&bind_addr, (const uint8_t *)buf, strlen(buf));
-        remove(bind_addr.addr.cun.sun_path);
+        remove(buf);
       }
       session = open_session(ctx, proto, &bind_addr, dst,
                              identity, identity_len, key, key_len);
@@ -1537,7 +1528,8 @@ get_session(coap_context_t *ctx,
       /* resolve local address where data should be sent from */
       info_list = coap_resolve_address_info(&local, port, port,
                          AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL,
-                                            1 << scheme);
+                                            1 << scheme,
+                                            COAP_RESOLVE_TYPE_LOCAL);
       if (!info_list) {
         fprintf(stderr, "coap_resolve_address_info: %s: failed\n", local_addr);
         return NULL;
@@ -1545,13 +1537,6 @@ get_session(coap_context_t *ctx,
 
       /* iterate through results until success */
       for (info = info_list; info != NULL; info = info->next ) {
-        if (!local_port) {
-          /* Need to reset port back to 0 rather than the default */
-          if (info->addr.addr.sa.sa_family == AF_INET)
-            info->addr.addr.sin.sin_port = htons(port);
-          else if (info->addr.addr.sa.sa_family == AF_INET6)
-            info->addr.addr.sin6.sin6_port = htons(port);
-        }
         session = open_session(ctx, proto, &info->addr, dst,
                                identity, identity_len, key, key_len);
         if (session)
@@ -1565,8 +1550,7 @@ get_session(coap_context_t *ctx,
     coap_address_init(&bind_addr);
     bind_addr.size = dst->size;
     bind_addr.addr.sa.sa_family = dst->addr.sa.sa_family;
-    /* port is in same place for IPv4 and IPv6 */
-    bind_addr.addr.sin.sin_port = ntohs(atoi(local_port));
+    coap_address_set_port(&bind_addr, atoi(local_port));
     session = open_session(ctx, proto, &bind_addr, dst,
                                identity, identity_len, key, key_len);
   } else {
@@ -1581,8 +1565,6 @@ main(int argc, char **argv) {
   coap_context_t  *ctx = NULL;
   coap_session_t *session = NULL;
   coap_address_t dst;
-  static char addr[INET6_ADDRSTRLEN];
-  void *addrptr = NULL;
   int result = -1;
   int exit_code = 0;
   coap_pdu_t  *pdu;
@@ -1603,6 +1585,8 @@ main(int argc, char **argv) {
   uint8_t *data = NULL;
   size_t data_len = 0;
   coap_addr_info_t *info_list = NULL;
+#define BUFSIZE 100
+  static unsigned char buf[BUFSIZE];
 #ifndef _WIN32
   struct sigaction sa;
 #endif
@@ -1780,7 +1764,7 @@ main(int argc, char **argv) {
   coap_dtls_set_log_level(dtls_log_level);
 
   if (optind < argc) {
-    if (cmdline_uri(argv[optind], create_uri_opts) < 0) {
+    if (cmdline_uri(argv[optind]) < 0) {
       goto failed;
     }
   } else {
@@ -1806,7 +1790,8 @@ main(int argc, char **argv) {
   /* resolve destination address where data should be sent */
   info_list = coap_resolve_address_info(&server, port, port,
                                         0,
-                                        1 << scheme);
+                                        1 << scheme,
+                                        COAP_RESOLVE_TYPE_REMOTE);
 
   if (info_list == NULL) {
     coap_log_err("failed to resolve address\n");
@@ -1861,39 +1846,13 @@ main(int argc, char **argv) {
    */
   coap_session_init_token(session, the_token.length, the_token.s);
 
-  /* add Uri-Host if server address differs from uri.host */
-
-
-  /* Add in Uri-Host option if appropriate */
-  if (!uri_host_option && dst.addr.sa.sa_family != AF_UNIX &&
-      !proxy.host.length && uri.host.length && create_uri_opts) {
-    size_t uri_host_len = uri.host.length;
-    uint8_t* cp = (uint8_t*)strchr((const char*)uri.host.s, '%');
-
-    if (cp && (size_t)(cp - uri.host.s) < uri_host_len)
-      /* %iface specified in host name */
-      uri_host_len = cp - uri.host.s;
-
-    switch (dst.addr.sa.sa_family) {
-    case AF_INET:
-      addrptr = &dst.addr.sin.sin_addr;
-      break;
-    case AF_INET6:
-      addrptr = &dst.addr.sin6.sin6_addr;
-      break;
-    default:
-      ;
-    }
-    if (addrptr &&
-        (inet_ntop(dst.addr.sa.sa_family, addrptr, addr, sizeof(addr)) != 0) &&
-        (strlen(addr) != uri_host_len ||
-         memcmp(addr, uri.host.s, uri_host_len) != 0)) {
-        /* add Uri-Host */
-        coap_insert_optlist(&optlist,
-                    coap_new_optlist(COAP_OPTION_URI_HOST,
-                    uri.host.length,
-                    uri.host.s));
-    }
+  /* Convert provided uri into CoAP options */
+  if (coap_uri_into_options(&uri, !uri_host_option && !proxy.host.length ?
+                                  &dst : NULL,
+                            &optlist, create_uri_opts,
+                            buf, sizeof(buf)) < 0) {
+    coap_log_err("Failed to create options for URI\n");
+      goto failed;
   }
 
   /* set block option if requested at commandline */

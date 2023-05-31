@@ -928,7 +928,8 @@ get_ongoing_proxy_session(coap_session_t *session,
   /* resolve destination address where data should be sent */
   info_list = coap_resolve_address_info(&server, port, port,
                                         0,
-                                        1 << scheme);
+                                        1 << scheme,
+                                        COAP_RESOLVE_TYPE_REMOTE);
 
   if (info_list == NULL) {
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_GATEWAY);
@@ -1118,8 +1119,9 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
       /* Use  Uri-Path and Uri-Query - direct session */
       proxy_uri = NULL;
       proxy_scheme_option = 0;
+      const coap_address_t *dst = coap_session_get_addr_remote(ongoing);
 
-      if (coap_uri_into_options(&uri, &optlist, 1,
+      if (coap_uri_into_options(&uri, dst, &optlist, 1,
                                 buf, sizeof(buf)) < 0) {
         coap_log_err("Failed to create options for URI\n");
         goto cleanup;
@@ -2344,7 +2346,8 @@ get_context(const char *node, const char *port) {
                                          enable_ws, use_unix_proto);
   info_list = coap_resolve_address_info(node ? &local : NULL, u_s_port, s_port,
                                         AI_PASSIVE | AI_NUMERICHOST,
-                                        scheme_hint_bits);
+                                        scheme_hint_bits,
+                                        COAP_RESOLVE_TYPE_LOCAL);
   for (info = info_list; info != NULL; info = info->next) {
     coap_endpoint_t *ep;
 

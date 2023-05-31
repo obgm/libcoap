@@ -35,9 +35,9 @@ coap_uri_t *_uri_);*
 
 *void coap_delete_uri(coap_uri_t *_uri_);*
 
-*int coap_uri_into_options(coap_uri_t *_uri_,
-coap_optlist_t **_optlist_chain_, int _create_port_opt_,
-uint8_t *_buf_, size_t _buflen_);*
+*int coap_uri_into_options(const coap_uri_t *_uri_,
+const coap_address_t *_dst_, coap_optlist_t **_optlist_chain_,
+int _create_port_host_opt_, uint8_t *_buf_, size_t _buflen_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -122,7 +122,11 @@ The initial _optlist_chain_ entry should be set to NULL before
 this function is called (unless *coap_insert_optlist*(3) has been previously
 used).
 
-If the port is not the default port and _create_port_opt_ is not 0, then
+If _dst_ is not NULL and _create_port_host_opt_ is not 0, then the Uri-Host
+option is added in if the _uri_ host definition is not an exact match with the
+ascii readable version of _dst.
+
+If the port is not the default port and _create_port_host_opt_ is not 0, then
 the Port option is added to _optlist_chain_.
 
 If there is a path, then this is broken down into individual Path options for
@@ -163,6 +167,7 @@ parse_and_send_uri(coap_session_t *session, const char *do_uri) {
   coap_optlist_t *optlist = NULL;
   coap_pdu_t *pdu;
   coap_proto_t proto = coap_session_get_proto(session);
+  const coap_address_t *dst = coap_session_get_addr_remote(session);
   int res;
   coap_mid_t mid;
 #define BUFSIZE 100
@@ -216,7 +221,7 @@ parse_and_send_uri(coap_session_t *session, const char *do_uri) {
     return 0;
 
   /* Create all the necessary options from the URI */
-  res = coap_uri_into_options(&uri, &optlist, 1, buf, sizeof(buf));
+  res = coap_uri_into_options(&uri, dst, &optlist, 1, buf, sizeof(buf));
   if (res != 0)
     return 0;
 

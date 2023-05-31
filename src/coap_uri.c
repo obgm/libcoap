@@ -279,16 +279,42 @@ coap_split_proxy_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
 }
 
 int
-coap_uri_into_options(coap_uri_t *uri,
-                      coap_optlist_t **optlist_chain, int create_port_opt,
+coap_uri_into_options(const coap_uri_t *uri, const coap_address_t *dst,
+                      coap_optlist_t **optlist_chain, int create_port_host_opt,
                       uint8_t *_buf, size_t _buflen) {
   int res;
   unsigned char *buf = _buf;
   size_t buflen = _buflen;
 
-  if (create_port_opt &&
-      !coap_host_is_unix_domain(&uri->host)) {
+  if (create_port_host_opt && !coap_host_is_unix_domain(&uri->host)) {
     int add_option = 0;
+
+    if (dst && uri->host.length) {
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+      char addr[INET6_ADDRSTRLEN];
+#else /* WITH_LWIP || WITH_CONTIKI */
+      char addr[40];
+#endif /* WITH_LWIP || WITH_CONTIKI */
+
+      /* Add in UriHost if not match (need to strip off &iface) */
+      size_t uri_host_len = uri->host.length;
+      uint8_t* cp = (uint8_t*)strchr((const char*)uri->host.s, '%');
+
+      if (cp && (size_t)(cp - uri->host.s) < uri_host_len)
+        /* %iface specified in host name */
+        uri_host_len = cp - uri->host.s;
+
+      if (coap_print_ip_addr(dst, addr, sizeof(addr)) &&
+          (strlen(addr) != uri_host_len ||
+           memcmp(addr, uri->host.s, uri_host_len) != 0)) {
+          /* add Uri-Host */
+          coap_insert_optlist(optlist_chain,
+                      coap_new_optlist(COAP_OPTION_URI_HOST,
+                                       uri->host.length,
+                                       uri->host.s));
+      }
+    }
+    /* Add in UriPort if not default */
     switch ((int)uri->scheme) {
     case COAP_URI_SCHEME_HTTP:
     case COAP_URI_SCHEME_COAP_WS:
@@ -302,7 +328,7 @@ coap_uri_into_options(coap_uri_t *uri,
       break;
     default:
       if (uri->port != (coap_uri_scheme_is_secure(uri) ? COAPS_DEFAULT_PORT :
-                                                           COAP_DEFAULT_PORT))
+                                                         COAP_DEFAULT_PORT))
         add_option = 1;
       break;
     }
