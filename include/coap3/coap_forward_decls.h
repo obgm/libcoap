@@ -29,6 +29,8 @@ struct coap_dtls_pki_t;
 struct coap_str_const_t;
 struct coap_string_t;
 
+typedef struct coap_address_t coap_address_t;
+
 /*
  * typedef all the opaque structures that are defined in coap_*_internal.h
  */

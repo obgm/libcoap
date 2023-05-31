@@ -87,7 +87,8 @@ resolve_address(const char *host, const char *service, coap_address_t *dst,
   str_host.length = strlen(host);
 
   addr_info = coap_resolve_address_info(&str_host, port, port, AF_UNSPEC,
-                                        scheme_hint_bits);
+                                        scheme_hint_bits,
+                                        COAP_RESOLVE_TYPE_REMOTE);
   if (addr_info) {
     ret = 1;
     *dst = addr_info->addr;
@@ -207,7 +208,7 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
                       coap_session_max_pdu_size(session));
   LWIP_ASSERT("Failed to create PDU", pdu != NULL);
 
-  len = coap_uri_into_options(&uri, &optlist, 1, buf, sizeof(buf));
+  len = coap_uri_into_options(&uri, &dst, &optlist, 1, buf, sizeof(buf));
   LWIP_ASSERT("Failed to create options", len == 0);
 
   /* Add option list (which will be sorted) to the PDU */

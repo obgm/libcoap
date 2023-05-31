@@ -106,7 +106,8 @@ resolve_address(const char *host, const char *service, coap_address_t *dst,
   str_host.s = (const uint8_t *)host;
   str_host.length = strlen(host);
   addr_info = coap_resolve_address_info(&str_host, port, port, AF_UNSPEC,
-                                        scheme_hint_bits);
+                                        scheme_hint_bits,
+                                        COAP_RESOLVE_TYPE_REMOTE);
   if (addr_info) {
     ret = 1;
     *dst = addr_info->addr;
@@ -212,7 +213,7 @@ client_coap_init(int argc, char **argv) {
     goto fail;
   }
 
-  len = coap_uri_into_options(&uri, &optlist, 1, buf, sizeof(buf));
+  len = coap_uri_into_options(&uri, &dst, &optlist, 1, buf, sizeof(buf));
   if (len) {
     coap_log_warn("Failed to create options\n");
     goto fail;

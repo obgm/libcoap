@@ -166,23 +166,29 @@ int coap_split_proxy_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri);
 
 /**
  * Takes a coap_uri_t and then adds CoAP options into the @p optlist_chain.
- * If the port is not the default port and create_port_opt is not 0, then
- * the Port option is added in.  Any path or query are broken down into the
- * individual segment Path or Query options and added to the @p optlist_chain.
+ * If the port is not the default port and create_port_host_opt is not 0, then
+ * the Port option is added to the @p optlist_chain.
+ * If the dst defines an address that does not match the host in uri->host and
+ * is not 0, then the Host option is added to the @p optlist_chain.
+ * Any path or query are broken down into the individual segment Path or Query
+ * options and added to the @p optlist_chain.
  *
  * @param uri     The coap_uri_t object.
+ * @param dst     The destination, or NULL if URI_HOST not to be added.
  * @param optlist_chain Where to store the chain of options.
  * @param buf     Scratch buffer area (needs to be bigger than
  *                uri->path.length and uri->query.length)
  * @param buflen  Size of scratch buffer.
- * @param create_port_opt @c 1 if port option to be added (if non-default)
- *                        else @c 0
+ * @param create_port_host_opt @c 1 if port/host option to be added
+ *                             (if non-default) else @c 0
  *
  * @return        @c 0 on success, or < 0 on error.
  *
  */
-int coap_uri_into_options(coap_uri_t *uri, coap_optlist_t **optlist_chain,
-                          int create_port_opt, uint8_t *buf, size_t buflen);
+int coap_uri_into_options(const coap_uri_t *uri, const coap_address_t *dst,
+                          coap_optlist_t **optlist_chain,
+                          int create_port_host_opt,
+                          uint8_t *buf, size_t buflen);
 
 /**
  * Splits the given URI path into segments. Each segment is preceded

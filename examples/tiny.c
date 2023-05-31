@@ -117,7 +117,7 @@ get_session(coap_context_t *ctx, const char *group) {
     if (!session)
       continue;
 
-    if (IN6_IS_ADDR_MULTICAST(&addr.addr.sin6.sin6_addr) ) {
+    if (coap_is_mcast(&addr)) {
       /* set socket options for multicast */
       if (!coap_mcast_set_hops(session, hops))
         perror("setsockopt: IPV6_MULTICAST_HOPS");

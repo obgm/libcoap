@@ -12,7 +12,12 @@ NAME
 ----
 coap_address,
 coap_address_t,
-coap_address_init
+coap_address_un,
+coap_address_init,
+coap_get_available_scheme_hint_bits,
+coap_resolve_address_info,
+coap_free_address_info,
+coap_address_set_unix_domain
 - Work with CoAP Socket Address Types
 
 SYNOPSIS
@@ -28,9 +33,9 @@ SYNOPSIS
 *uint32_t coap_get_available_scheme_hint_bits(int _have_pki_psk_,
 int _ws_check_, coap_proto_t _use_unix_proto_);*
 
-*coap_addr_info_t *coap_resolve_address_info(const coap_str_const_t *_server_,
+*coap_addr_info_t *coap_resolve_address_info(const coap_str_const_t *_address_,
 uint16_t _port_, uint16_t _secure_port_, int _ai_hints_flags_,
-int _scheme_hint_bits_);*
+int _scheme_hint_bits_, coap_resolve_type_t _type_);*
 
 *void coap_free_address_info(coap_addr_info_t *_info_list_);*
 
@@ -109,6 +114,19 @@ The *coap_sockaddr_un* structure is modeled on the *sockaddr_un* structure
 *coap_address_t* is not changed by its inclusion. COAP_UNIX_MAX_PATH includes
 the trailing zero terminator of a domain unix file name.
 
+*Enum coap_resolve_type_t*
+
+[source, c]
+----
+typedef enum coap_resolve_type_t {
+  COAP_RESOLVE_TYPE_LOCAL,   /**< local side of session */
+  COAP_RESOLVE_TYPE_REMOTE,  /**< remote side of session */
+} coap_resolve_type_t;
+----
+
+Used when determining how to do an address lookup when calling
+*coap_resolve_address_info()*.
+
 FUNCTIONS
 ---------
 
@@ -133,11 +151,12 @@ protocol to use over a Unix socket. The output is suitable for input for the
 
 *Function: coap_resolve_address_info()*
 
-The *coap_resolve_address_info*() function resolves the address _server_ into
+The *coap_resolve_address_info*() function resolves the address _address_ into
 a set of one or more coap_addr_info_t structures. Depending on the scheme as
 abstracted from _scheme_hint_bits_ either _port_ or _secure_port_ is used to
 update the addr variable of coap_addr_info_t. If _port_ (or _secure_port_) is
-0, then the default port for the scheme is used.  _ai_hints_flags_ is used for
+0, then the default port for the scheme is used if _type is set to
+COAP_RESOLVE_TYPE_LOCAL.  _ai_hints_flags_ is used for
 the internally called getaddrinfo(3) function. _scheme_hint_bits_ is a set of
 one or more COAP_URI_SCHEME_*_BIT or'd together. _scheme_hint_bits_ can also
 (for servers) be the output from *coap_get_available_scheme_hint_bits*().
@@ -179,7 +198,7 @@ get_address(coap_uri_t *uri, coap_address_t *dst) {
   coap_addr_info_t *info_list;
 
    info_list = coap_resolve_address_info(&uri->host, uri->port, uri->port, 0,
-                                         1 << uri->scheme);
+                                         1 << uri->scheme, COAP_RESOLVE_TYPE_LOCAL);
    if (info_list == NULL)
      return 0;
    memcpy(dst, &info_list->addr, sizeof(*dst));

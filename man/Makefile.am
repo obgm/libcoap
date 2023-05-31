@@ -124,6 +124,8 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_logging.3" > coap_show_pdu.3
 	@echo ".so man3/coap_logging.3" > coap_endpoint_str.3
 	@echo ".so man3/coap_logging.3" > coap_session_str.3
+	@echo ".so man3/coap_logging.3" > coap_print_addr.3
+	@echo ".so man3/coap_logging.3" > coap_print_ip_addr.3
 	@echo ".so man3/coap_oscore.3" > coap_context_oscore_server.3
 	@echo ".so man3/coap_pdu_access.3" > coap_option_filter_set.3
 	@echo ".so man3/coap_pdu_access.3" > coap_option_filter_unset.3

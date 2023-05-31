@@ -33,7 +33,9 @@ coap_package_build,
 coap_set_show_pdu_output,
 coap_show_pdu,
 coap_endpoint_str,
-coap_session_str
+coap_session_str,
+coap_print_addr,
+coap_print_ip_addr
 - Work with CoAP logging
 
 SYNOPSIS
@@ -85,6 +87,12 @@ SYNOPSIS
 *const char *coap_endpoint_str(const coap_endpoint_t *_endpoint_);*
 
 *const char *coap_session_str(const coap_session_t *_session_);*
+
+*size_t coap_print_addr(const coap_address_t *_address_,
+unsigned char *_buffer_, size_t _length_);*
+
+*const char *coap_print_ip_addr(const coap_address_t *_address_,
+char *_buffer_, size_t _length_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -277,6 +285,18 @@ _endpoint_.
 The *coap_session_str*() function is used to get a string containing the
 information about the _session_.
 
+*Function: coap_print_addr()*
+
+The *coap_print_addr*() function returns the length of the  description string
+containing the IP address and port from _address_, updating _buffer_ which has a
+maximum length _length_.
+
+*Function: coap_print_ip_addr()*
+
+The *coap_print_ip_addr*() function returns a description string of the
+IP address only for _address_. _buffer_ is updated, which has a maximum length of
+_length_.
+
 RETURN VALUES
 -------------
 
@@ -294,6 +314,12 @@ _endpoint_.
 
 The *coap_session_str*() function returns a description string of the
 _session_.
+
+The *coap_print_addr*() function returns the length of _buffer_ that has been
+updated with an ascii readable IP address and port for _address_.
+
+The *coap_print_ip_addr*() function returns a pointer to the ascii readable
+IP address only for _address_.
 
 SEE ALSO
 --------

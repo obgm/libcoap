@@ -333,46 +333,9 @@ add_source_address(coap_resource_t *resource,
   if (!buf)
     return;
 
-  buf[0] = '"';
-
-  switch(peer->addr.sa.sa_family) {
-
-  case AF_INET:
-    /* FIXME */
-    break;
-
-  case AF_INET6:
-    n += snprintf(buf + n, BUFSIZE - n,
-      "[%02x%02x:%02x%02x:%02x%02x:%02x%02x" \
-      ":%02x%02x:%02x%02x:%02x%02x:%02x%02x]",
-      peer->addr.sin6.sin6_addr.s6_addr[0],
-      peer->addr.sin6.sin6_addr.s6_addr[1],
-      peer->addr.sin6.sin6_addr.s6_addr[2],
-      peer->addr.sin6.sin6_addr.s6_addr[3],
-      peer->addr.sin6.sin6_addr.s6_addr[4],
-      peer->addr.sin6.sin6_addr.s6_addr[5],
-      peer->addr.sin6.sin6_addr.s6_addr[6],
-      peer->addr.sin6.sin6_addr.s6_addr[7],
-      peer->addr.sin6.sin6_addr.s6_addr[8],
-      peer->addr.sin6.sin6_addr.s6_addr[9],
-      peer->addr.sin6.sin6_addr.s6_addr[10],
-      peer->addr.sin6.sin6_addr.s6_addr[11],
-      peer->addr.sin6.sin6_addr.s6_addr[12],
-      peer->addr.sin6.sin6_addr.s6_addr[13],
-      peer->addr.sin6.sin6_addr.s6_addr[14],
-      peer->addr.sin6.sin6_addr.s6_addr[15]);
-
-    if (peer->addr.sin6.sin6_port != htons(COAP_DEFAULT_PORT)) {
-      n +=
-      snprintf(buf + n, BUFSIZE - n, ":%d", peer->addr.sin6.sin6_port);
-    }
-    break;
-    default:
-    ;
-  }
-
-  if (n < BUFSIZE)
-    buf[n++] = '"';
+  n = coap_print_addr(peer, (uint8_t *)buf, BUFSIZE);
+  if (!n)
+    return;
 
   attr_val.s = (const uint8_t *)buf;
   attr_val.length = n;
@@ -753,7 +716,8 @@ get_context(const char *node, const char *port) {
                                          enable_ws, COAP_PROTO_NONE);
   info_list = coap_resolve_address_info(node ? &local : NULL, u_s_port, s_port,
                                         AI_PASSIVE | AI_NUMERICHOST,
-                                        scheme_hint_bits);
+                                        scheme_hint_bits,
+                                        COAP_RESOLVE_TYPE_LOCAL);
   for (info = info_list; info != NULL; info = info->next) {
     coap_endpoint_t *ep;
 

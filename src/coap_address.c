@@ -125,11 +125,6 @@ static struct in_addr b_ipv4[COAP_BCST_CNT];
 #include <net/if.h>
 #include <ifaddrs.h>
 
-
-#ifndef s6_addr32
-#define	s6_addr32 __u6_addr.__u6_addr32
-#endif /* s6_addr32 */
-
 int
 coap_is_bcast(const coap_address_t *a) {
   struct in_addr ipv4;
@@ -145,7 +140,7 @@ coap_is_bcast(const coap_address_t *a) {
     break;
   case  AF_INET6:
     if (IN6_IS_ADDR_V4MAPPED(&a->addr.sin6.sin6_addr)) {
-      ipv4.s_addr = a->addr.sin6.sin6_addr.s6_addr32[3];
+      memcpy(&ipv4, &a->addr.sin6.sin6_addr.s6_addr[12], sizeof(ipv4));
       break;
     }
     /* IPv6 does not support broadcast */
@@ -244,8 +239,10 @@ coap_address_set_unix_domain(coap_address_t *addr,
 
 #if !defined(WITH_CONTIKI)
 static void
-update_port(coap_address_t *addr, uint16_t port, uint16_t default_port) {
-  if (port == 0)
+update_port(coap_address_t *addr, uint16_t port, uint16_t default_port,
+            int update_port0) {
+  /* Client target port must be set if default of 0 */
+  if (port == 0 && update_port0)
     port = default_port;
 
 #if !defined(WITH_LWIP)
@@ -324,12 +321,14 @@ coap_get_available_scheme_hint_bits(int have_pki_psk, int ws_check,
 }
 
 coap_addr_info_t *
-coap_resolve_address_info(const coap_str_const_t *server,
+coap_resolve_address_info(const coap_str_const_t *address,
                           uint16_t port,
                           uint16_t secure_port,
                           int ai_hints_flags,
-                          int scheme_hint_bits) {
+                          int scheme_hint_bits,
+                          coap_resolve_type_t type) {
 #if !defined(RIOT_VERSION)
+
   struct addrinfo *res, *ainfo;
   struct addrinfo hints;
   static char addrstr[256];
@@ -341,9 +340,9 @@ coap_resolve_address_info(const coap_str_const_t *server,
   coap_proto_t proto = 0;
 
 #if !defined(WITH_LWIP)
-  if (server && coap_host_is_unix_domain(server)) {
+  if (address && coap_host_is_unix_domain(address)) {
     /* There can only be one unique filename entry for AF_UNIX */
-    if (server->length >= COAP_UNIX_PATH_MAX) {
+    if (address->length >= COAP_UNIX_PATH_MAX) {
       coap_log_err("Unix Domain host too long\n");
       return NULL;
     }
@@ -407,8 +406,8 @@ coap_resolve_address_info(const coap_str_const_t *server,
     info->scheme = scheme;
 
     coap_address_init(&info->addr);
-    if (!coap_address_set_unix_domain(&info->addr, server->s,
-                                      server->length)) {
+    if (!coap_address_set_unix_domain(&info->addr, address->s,
+                                      address->length)) {
       coap_free_type(COAP_STRING, info);
       return NULL;
     }
@@ -417,8 +416,8 @@ coap_resolve_address_info(const coap_str_const_t *server,
 #endif /* ! WITH_LWIP */
 
   memset(addrstr, 0, sizeof(addrstr));
-  if (server && server->length)
-    memcpy(addrstr, server->s, server->length);
+  if (address && address->length)
+    memcpy(addrstr, address->s, address->length);
   else
     memcpy(addrstr, "localhost", 9);
 
@@ -569,28 +568,36 @@ coap_resolve_address_info(const coap_str_const_t *server,
 #endif /* WITH_LWIP */
           switch (scheme) {
           case COAP_URI_SCHEME_COAP:
-            update_port(&info->addr, port, COAP_DEFAULT_PORT);
+            update_port(&info->addr, port, COAP_DEFAULT_PORT,
+                        type == COAP_RESOLVE_TYPE_LOCAL);
             break;
           case COAP_URI_SCHEME_COAPS:
-            update_port(&info->addr, secure_port, COAPS_DEFAULT_PORT);
+            update_port(&info->addr, secure_port, COAPS_DEFAULT_PORT,
+                        type == COAP_RESOLVE_TYPE_LOCAL);
             break;
           case COAP_URI_SCHEME_COAP_TCP:
-            update_port(&info->addr, port, COAP_DEFAULT_PORT);
+            update_port(&info->addr, port, COAP_DEFAULT_PORT,
+                        type == COAP_RESOLVE_TYPE_LOCAL);
             break;
           case COAP_URI_SCHEME_COAPS_TCP:
-            update_port(&info->addr, secure_port, COAPS_DEFAULT_PORT);
+            update_port(&info->addr, secure_port, COAPS_DEFAULT_PORT,
+                        type == COAP_RESOLVE_TYPE_LOCAL);
             break;
           case COAP_URI_SCHEME_HTTP:
-            update_port(&info->addr, port, 80);
+            update_port(&info->addr, port, 80,
+                        type == COAP_RESOLVE_TYPE_LOCAL);
             break;
           case COAP_URI_SCHEME_HTTPS:
-            update_port(&info->addr, secure_port, 443);
+            update_port(&info->addr, secure_port, 443,
+                        type == COAP_RESOLVE_TYPE_LOCAL);
             break;
           case COAP_URI_SCHEME_COAP_WS:
-            update_port(&info->addr, port, 80);
+            update_port(&info->addr, port, 80,
+                        type == COAP_RESOLVE_TYPE_LOCAL);
             break;
           case COAP_URI_SCHEME_COAPS_WS:
-            update_port(&info->addr, secure_port, 443);
+            update_port(&info->addr, secure_port, 443,
+                        type == COAP_RESOLVE_TYPE_LOCAL);
             break;
           case COAP_URI_SCHEME_LAST:
           default:
@@ -617,7 +624,7 @@ coap_resolve_address_info(const coap_str_const_t *server,
   coap_proto_t proto = 0;
   (void)ai_hints_flags;
 
-  if (netutils_get_ipv6(&addr_ipv6, &netif, (const char *)server->s) >= 0) {
+  if (netutils_get_ipv6(&addr_ipv6, &netif, (const char *)address->s) >= 0) {
     for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
       if (scheme_hint_bits & (1 << scheme)) {
         switch (scheme) {
@@ -689,22 +696,28 @@ coap_resolve_address_info(const coap_str_const_t *server,
         info->addr.addr.sin6.sin6_scope_id = (uint32_t)netif_get_id(netif);
         switch (scheme) {
         case COAP_URI_SCHEME_COAP:
-          update_port(&info->addr, port, COAP_DEFAULT_PORT);
+          update_port(&info->addr, port, COAP_DEFAULT_PORT,
+                      type == COAP_RESOLVE_TYPE_LOCAL);
           break;
         case COAP_URI_SCHEME_COAPS:
-          update_port(&info->addr, secure_port, COAPS_DEFAULT_PORT);
+          update_port(&info->addr, secure_port, COAPS_DEFAULT_PORT,
+                      type == COAP_RESOLVE_TYPE_LOCAL);
           break;
         case COAP_URI_SCHEME_COAP_TCP:
-          update_port(&info->addr, port, COAP_DEFAULT_PORT);
+          update_port(&info->addr, port, COAP_DEFAULT_PORT,
+                      type == COAP_RESOLVE_TYPE_LOCAL);
           break;
         case COAP_URI_SCHEME_COAPS_TCP:
-          update_port(&info->addr, secure_port, COAPS_DEFAULT_PORT);
+          update_port(&info->addr, secure_port, COAPS_DEFAULT_PORT,
+                      type == COAP_RESOLVE_TYPE_LOCAL);
           break;
         case COAP_URI_SCHEME_HTTP:
-          update_port(&info->addr, port, 80);
+          update_port(&info->addr, port, 80,
+                      type == COAP_RESOLVE_TYPE_LOCAL);
           break;
         case COAP_URI_SCHEME_HTTPS:
-          update_port(&info->addr, secure_port, 443);
+          update_port(&info->addr, secure_port, 443,
+                      type == COAP_RESOLVE_TYPE_LOCAL);
           break;
         case COAP_URI_SCHEME_LAST:
         default:

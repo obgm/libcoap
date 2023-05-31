@@ -168,7 +168,8 @@ void server_coap_init(coap_lwip_input_wait_handler_t input_wait,
                                          0, COAP_PROTO_NONE);
   info_list = coap_resolve_address_info(&node, 0, 0,
                                         0,
-                                        scheme_hint_bits);
+                                        scheme_hint_bits,
+                                        COAP_RESOLVE_TYPE_LOCAL);
   for (info = info_list; info != NULL; info = info->next) {
     coap_endpoint_t *ep;
 
