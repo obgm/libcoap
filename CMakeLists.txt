@@ -129,15 +129,15 @@ option(
   ON)
 option(
   ENABLE_SMALL_STACK
-  "Define if the system has small stack size"
+  "enable if the system has small stack size"
   OFF)
 option(
   ENABLE_TCP
-  "Enable building with TCP support"
+  "enable building with TCP support"
   ON)
 option(
   ENABLE_WS
-  "Enable building with WebSockets support"
+  "enable building with WebSockets support"
   ON)
 option(
   ENABLE_TESTS
@@ -320,7 +320,7 @@ if(ENABLE_SMALL_STACK)
 endif()
 
 if(${MAX_LOGGING_LEVEL} MATCHES "[0-7]")
-  set(COAP_AX_LOGGING_LEVEL ${MAX_LOGGING_LEVEL})
+  set(COAP_MAX_LOGGING_LEVEL ${MAX_LOGGING_LEVEL})
   message(STATUS "compiling with max logging level set to ${MAX_LOGGING_LEVEL}")
 else()
   message(STATUS "compiling with max logging level set to none")

@@ -1,14 +1,17 @@
 #ifndef COAP_CONFIG_H_
 #define COAP_CONFIG_H_
 
-/* Define to 1 if libcoap supports client mode code */
+/* Define to 1 if libcoap supports client mode code. */
 #define COAP_CLIENT_SUPPORT 1
 
-/* Define to 1 if libcoap supports server mode code */
+/* Define to 1 if libcoap supports server mode code. */
 #define COAP_SERVER_SUPPORT 1
 
-/* Define if the system has small stack size */
+/* Define to 1 if the system has small stack size. */
 #define COAP_CONSTRAINED_STACK 1
+
+/* Define to 1 to build without TCP support. */
+#define COAP_DISABLE_TCP 1
 
 /* Define to 1 if you have the <assert.h> header file. */
 #define HAVE_ASSERT_H 1
@@ -18,9 +21,6 @@
 
 /* Define to 1 if you have the <errno.h> header file. */
 #define HAVE_ERRNO_H 1
-
-/* Define to 1 to build without TCP support. */
-#define COAP_DISABLE_TCP 1
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
