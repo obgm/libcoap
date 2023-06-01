@@ -20,29 +20,35 @@
 /* Define to 1 if you have <ws2tcpip.h> header file. */
 #cmakedefine HAVE_WS2TCPIP_H @HAVE_WS2TCPIP_H@
 
-/* Define if the system has small stack size */
+/* Define to 1 if the system has small stack size. */
 #cmakedefine COAP_CONSTRAINED_STACK @COAP_CONSTRAINED_STACK@
 
 /* Define to 1 if you have <winsock2.h> header file. */
 #cmakedefine HAVE_WINSOCK2_H @HAVE_WINSOCK2_H@
 
-/* Define if the library has client support */
+/* Define to 1 if the library has client support. */
 #cmakedefine COAP_CLIENT_SUPPORT @COAP_CLIENT_SUPPORT@
 
-/* Define if the library has server support */
+/* Define to 1 if the library has server support. */
 #cmakedefine COAP_SERVER_SUPPORT @COAP_SERVER_SUPPORT@
 
-/* Define if the library is to have observe persistence */
+/* Define to 1 if the library is to have observe persistence. */
 #cmakedefine COAP_WITH_OBSERVE_PERSIST @COAP_WITH_OBSERVE_PERSIST@
 
-/* Define if the system has epoll support */
+/* Define to 1 if the system has epoll support. */
 #cmakedefine COAP_EPOLL_SUPPORT @COAP_EPOLL_SUPPORT@
 
-/* Define if the library has OSCORE support */
+/* Define to 1 if the library has OSCORE support. */
 #cmakedefine HAVE_OSCORE @HAVE_OSCORE@
 
-/* Define if the library has WebSockets support */
+/* Define to 1 if the library has WebSockets support. */
 #cmakedefine COAP_WS_SUPPORT @COAP_WS_SUPPORT@
+
+/* Define to 0-8 for maximum logging level. */
+#cmakedefine COAP_MAX_LOGGING_LEVEL @COAP_MAX_LOGGING_LEVEL@
+
+/* Define to 1 to build without TCP support. */
+#cmakedefine01 COAP_DISABLE_TCP
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #cmakedefine HAVE_ARPA_INET_H @HAVE_ARPA_INET_H@
@@ -62,20 +68,17 @@
 /* Define to 1 if you have the <erno.h> header file. */
 #cmakedefine HAVE_ERRNO_H @HAVE_ERRNO_H@
 
-/* Define if the system has openssl */
+/* Define to 1 if the system has openssl */
 #cmakedefine HAVE_OPENSSL @HAVE_OPENSSL@
 
-/* Define if the system has libgnutls28 */
+/* Define to 1 if the system has libgnutls28 */
 #cmakedefine HAVE_LIBGNUTLS @HAVE_LIBGNUTLS@
 
-/* Define if the system has libtinydtls */
+/* Define to 1 if the system has libtinydtls */
 #cmakedefine HAVE_LIBTINYDTLS @HAVE_LIBTINYDTLS@
 
-/* Define if the system has libmbedtls */
+/* Define to 1 if the system has libmbedtls */
 #cmakedefine HAVE_MBEDTLS @HAVE_MBEDTLS@
-
-/* Define to 1 to build without TCP support. */
-#cmakedefine01 COAP_DISABLE_TCP
 
 /* Define to 1 if you have the <limits.h> header file. */
 #cmakedefine HAVE_LIMITS_H @HAVE_LIMITS_H@

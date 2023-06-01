@@ -79,10 +79,37 @@
 #endif
 
 #ifndef COAP_DISABLE_TCP
+/* Define to 1 to build without TCP support. */
 #define COAP_DISABLE_TCP 0
 #endif
 
+#ifndef COAP_CLIENT_SUPPORT
+/* Define if libcoap supports client mode code. */
+#define COAP_CLIENT_SUPPORT 1
+#endif
+
+#ifndef COAP_SERVER_SUPPORT
+/* Define if libcoap supports server mode code. */
+#define COAP_SERVER_SUPPORT 1
+#endif
+
+#ifndef COAP_WITH_OBSERVE_PERSIST
+/* Define to build support for persisting observes. */
+#define COAP_WITH_OBSERVE_PERSIST 0
+#endif
+
+#ifndef COAP_WS_SUPPORT
+/* Define to 1 to build with WebSockets support. */
+#define COAP_WS_SUPPORT 0
+#endif
+
+#ifndef COAP_MAX_LOGGING_LEVEL
+/* Define to 0-8 for maximum logging level. */
+#define COAP_MAX_LOGGING_LEVEL 8
+#endif
+
 #ifndef HAVE_OSCORE
+/* Define to 1 to build with OSCORE support. */
 #define HAVE_OSCORE 1
 #endif
 

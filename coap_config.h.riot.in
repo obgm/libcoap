@@ -26,24 +26,28 @@
 
 #ifdef CONFIG_LIBCOAP_TCP_SUPPORT
 #ifndef COAP_DISABLE_TCP
+/* Define to 1 to build without TCP support. */
 #define COAP_DISABLE_TCP 0
 #endif /* COAP_DISABLE_TCP */
 #endif /* CONFIG_LIBCOAP_TCP_SUPPORT */
 
 #ifdef CONFIG_LIBCOAP_OSCORE_SUPPORT
 #ifndef COAP_OSCORE_SUPPORT
+/* Define to 1 if the library has OSCORE support. */
 #define COAP_OSCORE_SUPPORT 1
 #endif /* COAP_OSCORE_SUPPORT */
 #endif /* CONFIG_LIBCOAP_OSCORE_SUPPORT */
 
 #ifdef CONFIG_LIBCOAP_CLIENT_SUPPORT
 #ifndef COAP_CLIENT_SUPPORT
+/* Define to 1 if the library has client support. */
 #define COAP_CLIENT_SUPPORT 1
 #endif /* COAP_CLIENT_SUPPORT */
 #endif /* CONFIG_LIBCOAP_CLIENT_SUPPORT */
 
 #ifdef CONFIG_LIBCOAP_SERVER_SUPPORT
 #ifndef COAP_SERVER_SUPPORT
+/* Define to 1 if the library has server support. */
 #define COAP_SERVER_SUPPORT 1
 #endif /* COAP_SERVER_SUPPORT */
 #endif /* CONFIG_LIBCOAP_SERVER_SUPPORT */

@@ -533,7 +533,7 @@ if test "x$build_dtls" = "xyes"; then
                    TinyDTLS_LIBS="$auto_TinyDTLS_LIBS"
                fi
                # 'git submodule update' may be required
-               AC_DEFINE(HAVE_DTLS_SET_LOG_HANDLER, [1], [Define if TinyDTLS has dtls_set_log_handler])
+               AC_DEFINE(HAVE_DTLS_SET_LOG_HANDLER, [1], [Define to 1 if TinyDTLS has dtls_set_log_handler.])
             else
                 AC_MSG_ERROR([==> You want to build libcoap with DTLS support using the TinyDTLS submodule library but no suitable version could be found!
                             Check whether you have updated the TinyDTLS git submodule, use the system-provided version if available (set '--with-submodule-tinydtls=no'),
@@ -545,7 +545,7 @@ if test "x$build_dtls" = "xyes"; then
             AC_MSG_NOTICE([Using system-provided TinyDTLS])
             tinydtls_version=`$PKG_CONFIG --modversion tinydtls`
             AX_CHECK_TINYDTLS_VERSION
-            AC_CHECK_LIB(tinydtls,dtls_set_log_handler,AC_DEFINE(HAVE_DTLS_SET_LOG_HANDLER, [1], [Define if TinyDTLS has dtls_set_log_handler]))
+            AC_CHECK_LIB(tinydtls,dtls_set_log_handler,AC_DEFINE(HAVE_DTLS_SET_LOG_HANDLER, [1], [Define to 1 if TinyDTLS has dtls_set_log_handler.]))
         else
             AC_MSG_ERROR([==> You want to build libcoap with DTLS support using the TinyDTLS library but no suitable version could be found!
                         Use the submodule TinyDTLS version (set '--with-submodule-tinydtls=yes' and update the git submodule),
@@ -615,22 +615,22 @@ if test "x$build_dtls" = "xyes"; then
     if test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
         DTLS_CFLAGS="$GnuTLS_CFLAGS"
         DTLS_LIBS="$GnuTLS_LIBS"
-        AC_DEFINE(HAVE_LIBGNUTLS, [1], [Define if the system has libgnutls28])
+        AC_DEFINE(HAVE_LIBGNUTLS, [1], [Define to 1 if the system has libgnutls28.])
     fi
     if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
         DTLS_CFLAGS="$OpenSSL_CFLAGS"
         DTLS_LIBS="$OpenSSL_LIBS"
-        AC_DEFINE(HAVE_OPENSSL, [1], [Define if the system has libssl1.1])
+        AC_DEFINE(HAVE_OPENSSL, [1], [Define to 1 if the system has libssl1.1.])
     fi
     if test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
         DTLS_CFLAGS="$MbedTLS_CFLAGS"
         DTLS_LIBS="$MbedTLS_LIBS"
-        AC_DEFINE(HAVE_MBEDTLS, [1], [Define if the system has libmbedtls2.7.10])
+        AC_DEFINE(HAVE_MBEDTLS, [1], [Define to 1 if the system has libmbedtls2.7.10.])
     fi
     if test "x$with_tinydtls" = "xyes" -o "x$with_tinydtls_auto" = "xyes"; then
         DTLS_CFLAGS="$TinyDTLS_CFLAGS"
         DTLS_LIBS="$TinyDTLS_LIBS"
-        AC_DEFINE(HAVE_LIBTINYDTLS, [1], [Define if the system has libtinydtls])
+        AC_DEFINE(HAVE_LIBTINYDTLS, [1], [Define to 1 if the system has libtinydtls.])
     fi
     AC_SUBST(DTLS_CFLAGS)
     AC_SUBST(DTLS_LIBS)
@@ -647,7 +647,7 @@ elif test "x$with_tinydtls" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-tinydtls
 else
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-notls
-    AC_DEFINE(HAVE_NOTLS, [1], [Define if libcoap has no tls library support])
+    AC_DEFINE(HAVE_NOTLS, [1], [Define to 1 if libcoap has no tls library support.])
 fi
 AM_CONDITIONAL(HAVE_NOTLS, [test "x$LIBCOAP_DTLS_LIB_EXTENSION_NAME" = "x-notls"])
 
@@ -673,7 +673,7 @@ if test "x$build_oscore" = "xyes"; then
 fi
 
 if test "x$build_oscore" = "xyes"; then
-        AC_DEFINE(HAVE_OSCORE, [1], [Define to build with OSCORE support])
+        AC_DEFINE(HAVE_OSCORE, [1], [Define to 1 to build with OSCORE support.])
 fi
 AM_CONDITIONAL(HAVE_OSCORE, [test "x$build_oscore" = "xyes"])
 
@@ -689,7 +689,7 @@ if test "x$build_tests" = "xyes"; then
     PKG_CHECK_MODULES([CUNIT],
                       [cunit],
                       [have_cunit=yes
-                       AC_DEFINE(HAVE_LIBCUNIT, [1], [Define if the system has libcunit])],
+                       AC_DEFINE(HAVE_LIBCUNIT, [1], [Define to 1 if the system has libcunit.])],
                       [have_cunit=no
                        AC_MSG_WARN([==> You want to build the testing binary but the pkg-config file cunit.pc could not be found or installed CUnit version is too old!])
                        AC_MSG_ERROR([==> Install the package(s) that contains the development files for CUnit or disable the testing binary using '--disable-tests'.])
@@ -792,7 +792,7 @@ AC_ARG_ENABLE([async],
               [build_async="yes"])
 
 AS_IF([test "x$build_async" != "xyes"],
-      [AC_DEFINE(WITHOUT_ASYNC, [1], [Define to build without support for separate responses.])])
+      [AC_DEFINE(WITHOUT_ASYNC, [1], [Define to 1 to build without support for separate responses.])])
 
 # configure options
 # __observe_persist__
@@ -803,7 +803,7 @@ AC_ARG_ENABLE([async],
               [build_observe_persist="yes"])
 
 AS_IF([test "x$build_observe_persist" = "xyes"],
-      [AC_DEFINE(COAP_WITH_OBSERVE_PERSIST, [1], [Define to build support for persisting observes.])])
+      [AC_DEFINE(COAP_WITH_OBSERVE_PERSIST, [1], [Define to 1 to build support for persisting observes.])])
 
 # configure options
 # __add_default_names__
@@ -877,7 +877,7 @@ else
 fi
 
 if test "x$with_epoll" = "xyes"; then
-    AC_DEFINE(COAP_EPOLL_SUPPORT, 1, [Define if the system has epoll support])
+    AC_DEFINE(COAP_EPOLL_SUPPORT, 1, [Define to 1 if the system has epoll support.])
 fi
 
 AC_ARG_ENABLE([small-stack],
@@ -887,7 +887,7 @@ AC_ARG_ENABLE([small-stack],
         [enable_small_stack="no"])
 
 if test "x$enable_small_stack" = "xyes"; then
-    AC_DEFINE(COAP_CONSTRAINED_STACK, 1, [Define if the system has small stack size])
+    AC_DEFINE(COAP_CONSTRAINED_STACK, 1, [Define to 1 if the system has small stack size.])
 fi
 
 AC_ARG_ENABLE([server-mode],
@@ -897,7 +897,7 @@ AC_ARG_ENABLE([server-mode],
         [enable_server_mode="yes"])
 
 if test "x$enable_server_mode" = "xyes"; then
-    AC_DEFINE(COAP_SERVER_SUPPORT, 1, [Define if libcoap supports server mode code])
+    AC_DEFINE(COAP_SERVER_SUPPORT, 1, [Define to 1 if libcoap supports server mode code.])
 fi
 AM_CONDITIONAL(HAVE_SERVER_SUPPORT, [test "x$enable_server_mode" = "xyes"])
 
@@ -908,7 +908,7 @@ AC_ARG_ENABLE([client-mode],
         [enable_client_mode="yes"])
 
 if test "x$enable_client_mode" = "xyes"; then
-    AC_DEFINE(COAP_CLIENT_SUPPORT, 1, [Define if libcoap supports client mode code])
+    AC_DEFINE(COAP_CLIENT_SUPPORT, 1, [Define to 1 if libcoap supports client mode code.])
 fi
 AM_CONDITIONAL(HAVE_CLIENT_SUPPORT, [test "x$enable_client_mode" = "xyes"])
 if test "x$enable_server_mode" != "xyes" -a "x$enable_client_mode" != "xyes" ; then
@@ -935,7 +935,7 @@ if test "x$enable_max_logging_level" != "x8"; then
         AC_MSG_ERROR([--emable-max-logging-level must have a value of 0 through 8 inclusive])
         ;;
     esac
-    AC_DEFINE_UNQUOTED([COAP_MAX_LOGGING_LEVEL], [$enable_max_logging_level], [Define if max logging level is not 8])
+    AC_DEFINE_UNQUOTED([COAP_MAX_LOGGING_LEVEL], [$enable_max_logging_level], [Define to level if max logging level is not 8])
 fi
 
 # Checks for typedefs, structures, and compiler characteristics.
