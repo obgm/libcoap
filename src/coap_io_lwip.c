@@ -17,6 +17,7 @@
 #include "coap3/coap_internal.h"
 #include <lwip/udp.h>
 #include <lwip/timeouts.h>
+#include <lwip/tcpip.h>
 
 void
 coap_lwip_dump_memory_pools(coap_log_t log_level) {
@@ -88,6 +89,9 @@ coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
       timeout > timeout_ms) {
     timeout = timeout_ms;
   }
+
+  LOCK_TCPIP_CORE();
+
   if (context->timer_configured) {
     sys_untimeout(coap_io_process_timeout, (void*)context);
     context->timer_configured = 0;
@@ -102,10 +106,19 @@ coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
   sys_timeout(timeout, coap_io_process_timeout, context);
   context->timer_configured = 1;
+
+  UNLOCK_TCPIP_CORE();
+
   if (context->input_wait) {
     context->input_wait(context->input_arg, timeout);
   }
+
+  LOCK_TCPIP_CORE();
+
   sys_check_timeouts();
+
+  UNLOCK_TCPIP_CORE();
+
   coap_ticks(&now);
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
@@ -316,8 +329,13 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
     if (pbuf == NULL)
       return -1;
     memcpy(pbuf->payload, data, data_len);
+
+    LOCK_TCPIP_CORE();
+
     err = udp_sendto(sock->pcb, pbuf, &session->addr_info.remote.addr,
                      session->addr_info.remote.port);
+
+    UNLOCK_TCPIP_CORE();
 
     pbuf_free(pbuf);
     if (err < 0)
@@ -338,8 +356,10 @@ coap_socket_bind_udp(coap_socket_t *sock,
   if (sock->pcb == NULL)
     return 0;
 
+#if LWIP_IPV6
   if (l_listen.addr.type == IPADDR_TYPE_V6)
     l_listen.addr.type = IPADDR_TYPE_ANY;
+#endif /* LWIP_IPV6 */
   udp_recv(sock->pcb, coap_recvs, (void*)sock->endpoint);
   err = udp_bind(sock->pcb, &l_listen.addr, l_listen.port);
   if (err) {
@@ -366,31 +386,47 @@ coap_socket_connect_udp(coap_socket_t *sock,
   (void)default_port;
   (void)local_addr;
   (void)remote_addr;
+
+  LOCK_TCPIP_CORE();
+
   pcb = udp_new();
 
   if (!pcb) {
-     return 0;
+     goto err_unlock;
   }
 
   err = udp_bind(pcb, &pcb->local_ip, pcb->local_port);
   if (err) {
     LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_SERIOUS,
                 ("coap_socket_connect_udp: port bind failed\n"));
-    return 0;
+    goto err_udp_remove;
   }
 
   sock->session->addr_info.local.port = pcb->local_port;
 
   err = udp_connect(pcb, &server->addr, server->port);
   if (err) {
-    return 0;
+    goto err_udp_unbind;
   }
+
+#if LWIP_IPV6
+  pcb->local_ip.type = pcb->remote_ip.type;
+#endif /* LWIP_IPV6 */
 
   sock->pcb = pcb;
 
   udp_recv(sock->pcb, coap_recvc, (void*)sock->session);
 
+  UNLOCK_TCPIP_CORE();
+
   return 1;
+
+err_udp_unbind:
+err_udp_remove:
+  udp_remove(pcb);
+err_unlock:
+  UNLOCK_TCPIP_CORE();
+  return 0;
 }
 #endif /* ! COAP_CLIENT_SUPPORT */
 
@@ -461,8 +497,10 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
 }
 
 void coap_socket_close(coap_socket_t *sock) {
-  if (sock->pcb){
+  if (sock->pcb) {
+    LOCK_TCPIP_CORE();
     udp_remove(sock->pcb);
+    UNLOCK_TCPIP_CORE();
   }
   sock->pcb = NULL;
   return;

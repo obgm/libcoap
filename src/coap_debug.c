@@ -303,13 +303,14 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
   assert(len);
   buf[0] = '\000';
 
-  switch (addr->addr.type) {
+  switch (IP_GET_TYPE(addr->addr)) {
   case IPADDR_TYPE_V4:
     if (len < IP4ADDR_STRLEN_MAX + 6)
       return 0;
     memcpy(buf, coap_print_ip_addr(addr, scratch, sizeof(scratch)), IP4ADDR_STRLEN_MAX);
     p += strlen((char *)buf);
     break;
+#if LWIP_IPV6
   case IPADDR_TYPE_V6:
   case IPADDR_TYPE_ANY:
     if (len < 40 + 2 + 6)
@@ -319,6 +320,7 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
     p += strlen((char *)buf);
     *p++ = ']';
     break;
+#endif /* LWIP_IPV6 */
   }
 
   *p++ = ':';
@@ -426,18 +428,20 @@ coap_print_ip_addr(const coap_address_t *addr, char *buf, size_t len) {
   assert(len);
   buf[0] = '\000';
 
-  switch (addr->addr.type) {
+  switch (IP_GET_TYPE(&addr->addr)) {
   case IPADDR_TYPE_V4:
     if (len < IP4ADDR_STRLEN_MAX)
       return buf;
-    memcpy(buf, ip4addr_ntoa(&addr->addr.u_addr.ip4), IP4ADDR_STRLEN_MAX);
+    memcpy(buf, ip4addr_ntoa(ip_2_ip4(&addr->addr)), IP4ADDR_STRLEN_MAX);
     break;
+#if LWIP_IPV6
   case IPADDR_TYPE_V6:
   case IPADDR_TYPE_ANY:
     if (len < 40)
       return buf;
     memcpy(buf, ip6addr_ntoa(&addr->addr.u_addr.ip6), 40);
     break;
+#endif /* LWIP_IPV6 */
   }
   return buf;
 

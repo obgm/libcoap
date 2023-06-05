@@ -94,11 +94,11 @@ main(int argc, char **argv) {
   netif.flags |= NETIF_FLAG_ETHARP;
   netif_set_default(&netif);
   netif_set_up(&netif);
-  printf("IP4 %s\n", ip4addr_ntoa(&netif.ip_addr.u_addr.ip4));
+  printf("IP4 %s\n", ip4addr_ntoa(ip_2_ip4(&netif.ip_addr)));
 #if LWIP_IPV6
   netif_create_ip6_linklocal_address(&netif, 1);
   printf("IP6 [%s]\n", ip6addr_ntoa(&netif.ip6_addr[0].u_addr.ip6));
-#endif
+#endif /* LWIP_IPV6 */
 
   /* start applications here */
 

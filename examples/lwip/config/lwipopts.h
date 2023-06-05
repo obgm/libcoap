@@ -29,6 +29,11 @@
 #define netif_get_index(netif)      ((u8_t)((netif)->num + 1))
 #endif
 
+#if NO_SYS
+#define LOCK_TCPIP_CORE()
+#define UNLOCK_TCPIP_CORE()
+#endif
+
 #define MEMP_USE_CUSTOM_POOLS 1
 #define MEM_SIZE (4 * 1024)
 /* Support a 1500 MTU packet */

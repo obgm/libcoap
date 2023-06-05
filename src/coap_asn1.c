@@ -37,14 +37,14 @@ asn1_len(const uint8_t **ptr)
 }
 
 coap_asn1_tag_t
-asn1_tag_c(const uint8_t **ptr, int *constructed, int *class)
+asn1_tag_c(const uint8_t **ptr, int *constructed, int *cls)
 {
   coap_asn1_tag_t tag = 0;
   uint8_t byte;
 
   byte = (**ptr);
   *constructed = (byte & 0x20) ? 1 : 0;
-  *class = byte >> 6;
+  *cls = byte >> 6;
   tag = byte & 0x1F;
   (*ptr)++;
   if (tag < 0x1F)
