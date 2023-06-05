@@ -455,13 +455,17 @@ coap_resolve_address_info(const coap_str_const_t *server,
             sock4 = (struct sockaddr_in *)ainfo->ai_addr;
             info->addr.port = ntohs(sock4->sin_port);
             memcpy(&info->addr.addr, &sock4->sin_addr, 4);
+#if LWIP_IPV6
             info->addr.addr.type = IPADDR_TYPE_V4;
+#endif /* LWIP_IPV6 */
             break;
           case AF_INET6:
             sock6 = (struct sockaddr_in6 *)ainfo->ai_addr;
             info->addr.port = ntohs(sock6->sin6_port);
             memcpy(&info->addr.addr, &sock6->sin6_addr, 16);
+#if LWIP_IPV6
             info->addr.addr.type = IPADDR_TYPE_V6;
+#endif /* LWIP_IPV6 */
             break;
           default:
             ;

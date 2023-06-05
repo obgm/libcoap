@@ -98,6 +98,7 @@ main(int argc, char **argv) {
   netif_set_up(&netif);
 #if LWIP_IPV6
   netif_create_ip6_linklocal_address(&netif, 1);
+  netif_ip6_addr_set_state(&netif, 0, IP6_ADDR_PREFERRED);
 #endif
 
   /* start applications here */
