@@ -180,6 +180,9 @@ coap_string_t or NULL if there was a failure.
 The *coap_new_str_const*() function returns a pointer to an allocated
 coap_str_const_t or NULL if there was a failure.
 
+The *coap_make_str_const*() function returns a pointer to a structure in
+static memory that has a pointer to the provided string.
+
 The *coap_new_binary*() function returns a pointer to an allocated
 coap_binary_t or NULL if there was a failure.
 
@@ -188,6 +191,9 @@ coap_binary_t or NULL if there was a failure.
 
 The *coap_new_bin_const*() function returns a pointer to an allocated
 coap_bin_const_t or NULL if there was a failure.
+
+The *coap_string_equal*() and *coap_binary_equal*() functions return 1 on
+a precise match, else 0.
 
 SEE ALSO
 --------
