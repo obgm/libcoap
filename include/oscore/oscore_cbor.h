@@ -80,18 +80,18 @@ size_t oscore_cbor_put_false(uint8_t **buffer, size_t *buf_size);
 size_t oscore_cbor_put_text(uint8_t **buffer,
                             size_t *buf_size,
                             const char *text,
-                            uint64_t text_len);
+                            size_t text_len);
 
 size_t
-oscore_cbor_put_array(uint8_t **buffer, size_t *buf_size, uint64_t elements);
+oscore_cbor_put_array(uint8_t **buffer, size_t *buf_size, size_t elements);
 
 size_t oscore_cbor_put_bytes(uint8_t **buffer,
                              size_t *buf_size,
                              const uint8_t *bytes,
-                             uint64_t bytes_len);
+                             size_t bytes_len);
 
 size_t
-oscore_cbor_put_map(uint8_t **buffer, size_t *buf_size, uint64_t elements);
+oscore_cbor_put_map(uint8_t **buffer, size_t *buf_size, size_t elements);
 
 size_t
 oscore_cbor_put_number(uint8_t **buffer, size_t *buf_size, int64_t value);
@@ -109,7 +109,7 @@ oscore_cbor_put_negative(uint8_t **buffer, size_t *buf_size, int64_t value);
 
 uint8_t oscore_cbor_get_next_element(const uint8_t **buffer, size_t *buf_size);
 
-uint64_t oscore_cbor_get_element_size(const uint8_t **buffer, size_t *buf_size);
+size_t oscore_cbor_get_element_size(const uint8_t **buffer, size_t *buf_size);
 
 uint8_t oscore_cbor_elem_contained(const uint8_t *data, size_t *buf_size,
                                    uint8_t *end);
@@ -127,10 +127,10 @@ uint64_t oscore_cbor_get_unsigned_integer(const uint8_t **buffer,
                                           size_t *buf_size);
 
 void oscore_cbor_get_string(const uint8_t **buffer, size_t *buf_size,
-                           char *str, uint64_t size);
+                           char *str, size_t size);
 
 void oscore_cbor_get_array(const uint8_t **buffer, size_t *buf_size,
-                           uint8_t *arr, uint64_t size);
+                           uint8_t *arr, size_t size);
 
 /* oscore_cbor_get_string_array
  * fills the the size and the array from the cbor element
