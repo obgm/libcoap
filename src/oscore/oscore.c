@@ -384,7 +384,7 @@ oscore_validate_sender_seq(oscore_recipient_ctx_t *ctx, cose_encrypt0_t *cose) {
     ctx->last_seq = incoming_seq;
   } else if (incoming_seq > ctx->last_seq) {
     /* Update the replay window */
-    size_t shift = incoming_seq - ctx->last_seq;
+    uint64_t shift = incoming_seq - ctx->last_seq;
     ctx->sliding_window = ctx->sliding_window << shift;
     /* bitfield. B0 biggest seq seen.  B1 seq-1 seen, B2 seq-2 seen etc. */
     ctx->sliding_window |= 1;
@@ -395,7 +395,7 @@ oscore_validate_sender_seq(oscore_recipient_ctx_t *ctx, cose_encrypt0_t *cose) {
              incoming_seq);
     return 0;
   } else { /* incoming_seq < last_seq */
-    size_t shift = ctx->last_seq - incoming_seq - 1;
+    uint64_t shift = ctx->last_seq - incoming_seq - 1;
     uint64_t pattern;
 
     if (shift > ctx->osc_ctx->replay_window_size || shift > 63) {

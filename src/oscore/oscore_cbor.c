@@ -77,7 +77,7 @@ size_t
 oscore_cbor_put_text(uint8_t **buffer,
                      size_t *buf_size,
                      const char *text,
-                     uint64_t text_len) {
+                     size_t text_len) {
   uint8_t *pt = *buffer;
   size_t nb = oscore_cbor_put_unsigned(buffer, buf_size, text_len);
   assert(*buf_size >= text_len);
@@ -89,7 +89,7 @@ oscore_cbor_put_text(uint8_t **buffer,
 }
 
 size_t
-oscore_cbor_put_array(uint8_t **buffer, size_t *buf_size, uint64_t elements) {
+oscore_cbor_put_array(uint8_t **buffer, size_t *buf_size, size_t elements) {
   uint8_t *pt = *buffer;
   size_t nb = oscore_cbor_put_unsigned(buffer, buf_size, elements);
   *pt = (*pt | 0x80);
@@ -100,7 +100,7 @@ size_t
 oscore_cbor_put_bytes(uint8_t **buffer,
                       size_t *buf_size,
                       const uint8_t *bytes,
-                      uint64_t bytes_len) {
+                      size_t bytes_len) {
   uint8_t *pt = *buffer;
   size_t nb = oscore_cbor_put_unsigned(buffer, buf_size, bytes_len);
   assert(*buf_size >= bytes_len);
@@ -112,7 +112,7 @@ oscore_cbor_put_bytes(uint8_t **buffer,
 }
 
 size_t
-oscore_cbor_put_map(uint8_t **buffer, size_t *buf_size, uint64_t elements) {
+oscore_cbor_put_map(uint8_t **buffer, size_t *buf_size, size_t elements) {
   uint8_t *pt = *buffer;
   size_t nb = oscore_cbor_put_unsigned(buffer, buf_size, elements);
   *pt = (*pt | 0xa0);
@@ -233,10 +233,10 @@ oscore_cbor_get_next_element(const uint8_t **buffer, size_t *buf_len) {
  *   - value of unsigned integer
  */
 
-uint64_t
+size_t
 oscore_cbor_get_element_size(const uint8_t **buffer, size_t *buf_len) {
   uint8_t control = get_byte(buffer, buf_len) & 0x1f;
-  uint64_t size = get_byte_inc(buffer, buf_len);
+  size_t size = get_byte_inc(buffer, buf_len);
 
   if (control < 0x18) {
     size = (uint64_t)control;
@@ -244,9 +244,9 @@ oscore_cbor_get_element_size(const uint8_t **buffer, size_t *buf_len) {
     control = control & 0x3;
     int num = 1 << control;
     size = 0;
-    uint64_t getal;
+    size_t getal;
     for (int i = 0; i < num; i++) {
-      getal = (uint64_t)get_byte_inc(buffer, buf_len);
+      getal = get_byte_inc(buffer, buf_len);
       size = (size << 8) + getal;
     }
   }
@@ -310,17 +310,17 @@ oscore_cbor_get_simple_value(const uint8_t **data, size_t *buf_len, uint8_t *val
 }
 
 void
-oscore_cbor_get_string(const uint8_t **buffer, size_t *buf_len, char *str, uint64_t size) {
+oscore_cbor_get_string(const uint8_t **buffer, size_t *buf_len, char *str, size_t size) {
   (void)buf_len;
-  for (uint64_t i = 0; i < size; i++) {
+  for (size_t i = 0; i < size; i++) {
     *str++ = (char)get_byte_inc(buffer, buf_len);
   }
 }
 
 void
-oscore_cbor_get_array(const uint8_t **buffer, size_t *buf_len, uint8_t *arr, uint64_t size) {
+oscore_cbor_get_array(const uint8_t **buffer, size_t *buf_len, uint8_t *arr, size_t size) {
   (void)buf_len;
-  for (uint64_t i = 0; i < size; i++) {
+  for (size_t i = 0; i < size; i++) {
     *arr++ = get_byte_inc(buffer, buf_len);
   }
 }
