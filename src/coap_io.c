@@ -64,7 +64,7 @@
 #  error "Need IP_PKTINFO or IP_RECVDSTADDR to request ancillary data from OS."
 #endif /* IP_PKTINFO */
 
-/* define generic KTINFO for IPv6 */
+/* define generic PKTINFO for IPv6 */
 #ifdef IPV6_RECVPKTINFO
 #  define GEN_IPV6_PKTINFO IPV6_RECVPKTINFO
 #elif defined(IPV6_PKTINFO)
@@ -90,8 +90,8 @@ coap_mfree_endpoint(coap_endpoint_t *ep) {
 
 int
 coap_socket_bind_udp(coap_socket_t *sock,
-  const coap_address_t *listen_addr,
-  coap_address_t *bound_addr) {
+                     const coap_address_t *listen_addr,
+                     coap_address_t *bound_addr) {
 #ifndef RIOT_VERSION
   int on = 1, off = 0;
 #else /* ! RIOT_VERSION */
@@ -735,7 +735,8 @@ static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
  *         -1 Error error in errno).
  */
 ssize_t
-coap_socket_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen) {
+coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
+                 const uint8_t *data, size_t datalen) {
   ssize_t bytes_written = 0;
 
   if (!coap_debug_send_packet()) {
@@ -767,7 +768,9 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session, const uint8
 
     memset(&mhdr, 0, sizeof(struct msghdr));
     memcpy (&mhdr.msg_name, &addr, sizeof (mhdr.msg_name));
-    mhdr.msg_namelen = session->addr_info.remote.size;
+    mhdr.msg_namelen = session->addr_info.remote.addr.sa.sa_family == AF_INET ?
+                                     (socklen_t)sizeof(struct sockaddr_in) :
+                                     session->addr_info.remote.size;
 
     mhdr.msg_iov = iov;
     mhdr.msg_iovlen = 1;
@@ -877,8 +880,10 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session, const uint8
     r = WSASendMsg(sock->fd, &mhdr, 0 /*dwFlags*/, &dwNumberOfBytesSent, NULL /*lpOverlapped*/, NULL /*lpCompletionRoutine*/);
     if (r == 0)
       bytes_written = (ssize_t)dwNumberOfBytesSent;
-    else
+    else {
       bytes_written = -1;
+      coap_win_error_to_errno();
+    }
 #else /* !_WIN32 || __MINGW32__ */
 #ifdef HAVE_STRUCT_CMSGHDR
     bytes_written = sendmsg(sock->fd, &mhdr, 0);
@@ -936,7 +941,7 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
 #ifdef _WIN32
       coap_win_error_to_errno();
 #endif /* _WIN32 */
-      if (errno == ECONNREFUSED || errno == EHOSTUNREACH) {
+      if (errno == ECONNREFUSED || errno == EHOSTUNREACH || errno == ECONNRESET) {
         /* client-side ICMP destination unreachable, ignore it */
         coap_log_warn("** %s: coap_socket_recv: ICMP: %s\n",
                  sock->session ?
@@ -996,6 +1001,8 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
     r = lpWSARecvMsg(sock->fd, &mhdr, &dwNumberOfBytesRecvd, NULL /* LPWSAOVERLAPPED */, NULL /* LPWSAOVERLAPPED_COMPLETION_ROUTINE */);
     if (r == 0)
       len = (ssize_t)dwNumberOfBytesRecvd;
+    else if (r == COAP_SOCKET_ERROR)
+      coap_win_error_to_errno();
 #else
     len = recvmsg(sock->fd, &mhdr, 0);
 #endif
@@ -1018,8 +1025,12 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
 #ifdef _WIN32
       coap_win_error_to_errno();
 #endif /* _WIN32 */
-      if (errno == ECONNREFUSED) {
+      if (errno == ECONNREFUSED || errno == EHOSTUNREACH || errno == ECONNRESET) {
         /* server-side ICMP destination unreachable, ignore it. The destination address is in msg_name. */
+        coap_log_warn("** %s: coap_socket_recv: ICMP: %s\n",
+                 sock->session ?
+                   coap_session_str(sock->session) : "",
+                 coap_socket_strerror());
         return 0;
       }
       coap_log_warn("coap_socket_recv: %s\n", coap_socket_strerror());
@@ -1071,22 +1082,22 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
           dst_found = 1;
           break;
         }
-#elif defined(IP_RECVDSTADDR)
+#endif /* IP_PKTINFO */
+#if defined(IP_RECVDSTADDR)
         if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR) {
-          packet->ifindex = sock->fd;
+          packet->ifindex = (int)sock->fd;
           memcpy(&packet->addr_info.local.addr.sin.sin_addr,
                  CMSG_DATA(cmsg), sizeof(struct in_addr));
           dst_found = 1;
           break;
         }
-#endif /* IP_PKTINFO */
+#endif /* IP_RECVDSTADDR */
         if (!dst_found) {
           /* cmsg_level / cmsg_type combination we do not understand
              (ignore preset case for bad recvmsg() not updating cmsg) */
           if (cmsg->cmsg_level != -1 && cmsg->cmsg_type != -1) {
-            coap_log_debug(
-                     "cmsg_level = %d and cmsg_type = %d not supported - fix\n",
-                     cmsg->cmsg_level, cmsg->cmsg_type);
+            coap_log_debug("cmsg_level = %d and cmsg_type = %d not supported - fix\n",
+                           cmsg->cmsg_level, cmsg->cmsg_type);
           }
         }
       }
