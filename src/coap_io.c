@@ -696,6 +696,11 @@ struct in_pktinfo {
 /* Solaris expects level IPPROTO_IP for ancillary data. */
 #define SOL_IP IPPROTO_IP
 #endif
+#ifdef _WIN32
+#define COAP_SOL_IP IPPROTO_IP
+#else /* ! _WIN32 */
+#define COAP_SOL_IP SOL_IP
+#endif /* ! _WIN32 */
 
 #if defined(_WIN32)
 #include <mswsock.h>
@@ -789,7 +794,7 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
         mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
 
         cmsg = CMSG_FIRSTHDR(&mhdr);
-        cmsg->cmsg_level = SOL_IP;
+        cmsg->cmsg_level = COAP_SOL_IP;
         cmsg->cmsg_type = IP_PKTINFO;
         cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 
@@ -841,7 +846,7 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
       mhdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
 
       cmsg = CMSG_FIRSTHDR(&mhdr);
-      cmsg->cmsg_level = SOL_IP;
+      cmsg->cmsg_level = COAP_SOL_IP;
       cmsg->cmsg_type = IP_PKTINFO;
       cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 
@@ -1062,7 +1067,7 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
 
         /* local interface for IPv4 */
 #if defined(IP_PKTINFO)
-        if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_PKTINFO) {
+        if (cmsg->cmsg_level == COAP_SOL_IP && cmsg->cmsg_type == IP_PKTINFO) {
           union {
             uint8_t *c;
             struct in_pktinfo *p;
