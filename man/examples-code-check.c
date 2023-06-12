@@ -576,7 +576,7 @@ int main(int argc, char* argv[])
                     i, (int)(sizeof(name_list)/sizeof(name_list[0])));
             continue;
           }
-          snprintf(name_list[i], sizeof(name_list[i]), "%s", buffer);
+          memcpy(name_list[i], buffer, sizeof(name_list[i])-1);
           name_cnt++;
         }
 
