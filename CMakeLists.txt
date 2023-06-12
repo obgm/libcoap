@@ -81,7 +81,7 @@ endif()
 
 option(
   ENABLE_DTLS
-  "Enable building with DTLS support"
+  "enable building with DTLS support"
   ON)
 set(DTLS_BACKEND
     "default"
@@ -137,15 +137,15 @@ option(
   ON)
 option(
   ENABLE_IPV4
-  "Enable building with IPv4 support"
+  "enable building with IPv4 support"
   ON)
 option(
   ENABLE_IPV6
-  "Enable building with IPv6 support"
+  "enable building with IPv6 support"
   ON)
 option(
   ENABLE_AF_UNIX
-  "Enable building with Unix socket support"
+  "enable building with Unix socket support"
   ON)
 option(
   ENABLE_WS
@@ -591,11 +591,12 @@ message(STATUS "WITH_GNUTLS:.....................${WITH_GNUTLS}")
 message(STATUS "WITH_TINYDTLS:...................${WITH_TINYDTLS}")
 message(STATUS "WITH_OPENSSL:....................${WITH_OPENSSL}")
 message(STATUS "WITH_MBEDTLS:....................${WITH_MBEDTLS}")
-message(STATUS "COAP_WITH_LIBTINYDTLS:................${COAP_WITH_LIBTINYDTLS}")
-message(STATUS "COAP_WITH_LIBGNUTLS:..................${COAP_WITH_LIBGNUTLS}")
-message(STATUS "COAP_WITH_LIBOPENSSL:....................${COAP_WITH_LIBOPENSSL}")
-message(STATUS "COAP_WITH_LIBMBEDTLS:....................${COAP_WITH_LIBMBEDTLS}")
+message(STATUS "HAVE_LIBTINYDTLS:................${COAP_WITH_LIBTINYDTLS}")
+message(STATUS "HAVE_LIBGNUTLS:..................${COAP_WITH_LIBGNUTLS}")
+message(STATUS "HAVE_LIBOPENSSL:.................${COAP_WITH_LIBOPENSSL}")
+message(STATUS "HAVE_LIBMBEDTLS:.................${COAP_WITH_LIBMBEDTLS}")
 message(STATUS "WITH_EPOLL:......................${WITH_EPOLL}")
+message(STATUS "WITH_OBSERVE_PERSIST:............${WITH_OBSERVE_PERSIST}")
 message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
 message(STATUS "MAX_LOGGING_LEVEL:...............${MAX_LOGGING_LEVEL}")
 message(STATUS "WARNING_TO_ERROR:................${WARNING_TO_ERROR}")
