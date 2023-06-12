@@ -15,7 +15,7 @@ coap_log,
 coap_log_emerg,
 coap_log_alert,
 coap_log_crit,
-coap_logi_err,
+coap_log_err,
 coap_log_warn,
 coap_log_info,
 coap_log_notice,
@@ -300,25 +300,25 @@ _length_.
 RETURN VALUES
 -------------
 
-The *coap_package_name*(), *coap_package_version*() and
+*coap_package_name*(), *coap_package_version*() and
 *coap_package_build*() return the appropriate zero-terminated character
 string.
 
-The *coap_get_log_level*() function returns the current logging level.
+*coap_get_log_level*() returns the current logging level.
 
-The *coap_dtls_get_log_level*() function returns the current logging level
+*coap_dtls_get_log_level*() returns the current logging level
 for the DTLS library specifics.
 
-The *coap_endpoint_str*() function returns a description string of the
+*coap_endpoint_str*() returns a description string of the
 _endpoint_.
 
-The *coap_session_str*() function returns a description string of the
+*coap_session_str*() returns a description string of the
 _session_.
 
-The *coap_print_addr*() function returns the length of _buffer_ that has been
+*coap_print_addr*() returns the length of _buffer_ that has been
 updated with an ascii readable IP address and port for _address_.
 
-The *coap_print_ip_addr*() function returns a pointer to the ascii readable
+*coap_print_ip_addr*() returns a pointer to the ascii readable
 IP address only for _address_.
 
 SEE ALSO

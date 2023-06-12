@@ -173,16 +173,17 @@ RETURN VALUES
 -------------
 *coap_dtls_is_supported*(), *coap_tls_is_supported*(),
 *coap_dtls_psk_is_supported*(), *coap_dtls_pki_is_supported*(),
-*coap_dtls_pkcs11_is_supported*() and *coap_dtls_rpk_is_supported*() functions
+*coap_dtls_pkcs11_is_supported*() and *coap_dtls_rpk_is_supported*()
 return 0 if there is no support, 1 if support is available.
 
-*coap_get_tls_library_version*() function returns the TLS implementation type
+*coap_get_tls_library_version*() returns the TLS implementation type
 and library version in a coap_tls_version_t* structure.
 
-*coap_tcp_is_supported*() function returns 1 if support for TCP is
+*coap_tcp_is_supported*() returns 1 if support for TCP is
 available, otherwise 0.
 
-*coap_string_tls_version*() function returns a pointer to the provided buffer.
+*coap_string_tls_version*() and *coap_string_tls_support*() return
+a pointer to the provided buffer.
 
 SEE ALSO
 --------

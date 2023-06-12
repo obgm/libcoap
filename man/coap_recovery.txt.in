@@ -21,8 +21,8 @@ coap_session_set_max_retransmit,
 coap_session_get_max_retransmit,
 coap_session_set_nstart,
 coap_session_get_nstart,
-coap_session_set_probing_wait,
-coap_session_get_probing_wait,
+coap_session_set_probing_rate,
+coap_session_get_probing_rate,
 coap_debug_set_packet_loss
 - Work with CoAP packet transmissions
 

@@ -280,10 +280,10 @@ body dropped.
 
 RETURN VALUES
 -------------
-The *coap_add_data_large_request*(), *coap_add_data_large_response*(), and
-*coap_get_data_large*() functions return 0 on failure, 1 on success.
+*coap_add_data_large_request*(), *coap_add_data_large_response*(), and
+*coap_get_data_large*() return 0 on failure, 1 on success.
 
-The  *coap_block_build_body*() returns the current state of the body's data
+*coap_block_build_body*() returns the current state of the body's data
 (which may have some missing gaps) or NULL on error.
 
 EXAMPLES

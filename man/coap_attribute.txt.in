@@ -87,13 +87,13 @@ specified _attribute_.
 
 RETURN VALUES
 -------------
-*coap_add_attr*() function returns a pointer to
+*coap_add_attr*() returns a pointer to
 the attribute that was created or NULL if there is a malloc failure.
 
-*coap_find_attr*() function returns a pointer to the first matching
+*coap_find_attr*() returns a pointer to the first matching
 attribute or NULL if the _name_ was not found.
 
-*coap_attr_get_value*() function returns a pointer to the value held within
+*coap_attr_get_value*() returns a pointer to the value held within
 the attribute. The pointer can be NULL if the _value_ id NULL, or NULL if
 _attribute_ does not exist.
 

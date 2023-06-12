@@ -157,7 +157,7 @@ supports the requested extended token size as per
 
 RETURN VALUES
 -------------
-*coap_new_context*() function returns a newly created context or
+*coap_new_context*() returns a newly created context or
 NULL if there is a creation failure.
 
 *coap_context_get_max_idle_sessions*() returns the maximum number of idle

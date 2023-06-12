@@ -146,10 +146,10 @@ by the client application.
 
 RETURN VALUES
 -------------
-The *coap_resource_set_get_observable*() function return 0 on failure, 1 on
-success.
+*coap_resource_notify_observers*() returns 0 if not observable or
+no observers, 1 on success.
 
-The *coap_cancel_observe*() function return 0 on failure, 1 on success.
+*coap_cancel_observe*() returns 0 on failure, 1 on success.
 
 EXAMPLES
 --------

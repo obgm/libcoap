@@ -328,7 +328,7 @@ value.
 *coap_pdu_get_code*(), *coap_pdu_get_mid*(), *coap_pdu_get_type*() return
 the appropriate value.
 
-*coap_option_filter_set*(), *coap_option_filter_set*() and
+*coap_option_filter_get*(), *coap_option_filter_set*() and
 *coap_option_filter_unset*() return 1 on success or 0 on failure.
 
 *coap_get_data*() returns 1 if data, else 0.

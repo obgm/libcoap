@@ -530,30 +530,31 @@ the response PDU to be transmitted as appropriate and there is no need to call
 
 RETURN VALUES
 -------------
-The *coap_new_pdu*() and *coap_pdu_init*() function returns a newly created
+*coap_new_pdu*() and *coap_pdu_init*() return a newly created
 _PDU_ or NULL if there is a malloc or parameter failure.
 
-The *coap_new_optlist*() function returns a newly created _optlist_ or NULL
+*coap_new_optlist*() returns a newly created _optlist_ or NULL
 if there is a malloc failure.
 
-The *coap_add_token*(), *coap_insert_optlist*(), *coap_delete_optlist*(),
-*coap_add_optlist_pdu*() and *coap_add_data*()
-functions return 0 on failure, 1 on success.
+*coap_add_token*(), *coap_insert_optlist*(), *coap_add_optlist_pdu*()
+and *coap_add_data*() return 0 on failure, 1 on success.
 
-The *coap_add_optlist*() function returns either the length of the option
-or 0 on failure.
-
-The *coap_encode_var_safe*() function returns either the length of bytes
+*coap_encode_var_safe*() returns either the length of bytes
 encoded (which can be 0 when encoding 0) or 0 on failure.
 
-The *coap_encode_var_safe8*() function returns either the length of bytes
+*coap_encode_var_safe8*() returns either the length of bytes
 encoded (which can be 0 when encoding 0) or 0 on failure.
 
-The *coap_send*() function returns the CoAP message ID on success or
+*coap_add_option*() returns the size of option added, or 0 on
+failure.
+
+*coap_send*() returns the CoAP message ID on success or
 COAP_INVALID_MID on failure.
 
-The *coap_split_path*() and *coap_split_query*() functions return the number
+*coap_split_path*() and *coap_split_query*() return the number
 of components found.
+
+*coap_new_message_id*() returns the next CoAP message ID to use.
 
 EXAMPLES
 --------

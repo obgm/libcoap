@@ -223,11 +223,11 @@ _session_'s pre-shared-key key information.
 RETURN VALUES
 -------------
 
-*coap_session_reference*() function returns a pointer to the session.
+*coap_session_reference*() returns a pointer to the session.
 
-*coap_session_set_type_client*() function returns 1 on success, otherwise 0.
+*coap_session_set_type_client*() returns 1 on success, otherwise 0.
 
-*coap_session_get_app_data*() function return a previously defined pointer.
+*coap_session_get_app_data*() returns a previously defined pointer.
 
 *coap_session_get_addr_local*() and *coap_session_get_addr_remote*() return
 a pointer to the IP address / port or NULL on error.
