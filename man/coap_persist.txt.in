@@ -191,9 +191,9 @@ instead of 0,
 
 RETURN VALUES
 -------------
-The *coap_persist_startup*() returns 1 on success else 0.
+*coap_persist_startup*() returns 1 on success else 0.
 
-The *coap_persist_observe_add*() function returns a newly created observe
+*coap_persist_observe_add*() returns a newly created observe
 subscription or NULL on failure.
 
 EXAMPLES

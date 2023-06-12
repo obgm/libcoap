@@ -284,18 +284,18 @@ the _resource_ definion.
 
 RETURN VALUES
 -------------
-The *coap_resource_init*(), *coap_resource_unknown_init*(),
+*coap_resource_init*(), *coap_resource_unknown_init*(),
 *coap_resource_unknown_init2*(), *coap_resource_proxy_uri_init*() and
-*coap_resource_proxy_uri_init2*() functions return a newly created resource
+*coap_resource_proxy_uri_init2*() return a newly created resource
 or NULL if there is a malloc failure.
 
-The *coap_delete_resource*() function return 0 on failure (_resource_ not
+*coap_delete_resource*() returns 0 on failure (_resource_ not
 found), 1 on success.
 
-The *coap_resource_get_userdata*() function returns the value previously set
+*coap_resource_get_userdata*() returns the value previously set
 by the *coap_resource_set_userdata*() function or NULL.
 
-The *coap_resource_get_uri_path*() function returns the uri_path or NULL if
+*coap_resource_get_uri_path*() returns the uri_path or NULL if
 there was a failure.
 
 EXAMPLES

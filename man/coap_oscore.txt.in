@@ -193,16 +193,16 @@ configure _oscore_conf_ (which is freed off by this call).
 
 RETURN VALUES
 -------------
-The *coap_new_client_session_oscore*(), *coap_new_client_session_oscore_psk*()
-and *coap_new_client_session_oscore_pki*() functions return a newly created
+*coap_new_client_session_oscore*(), *coap_new_client_session_oscore_psk*()
+and *coap_new_client_session_oscore_pki*() return a newly created
 client session or NULL if there is a malloc or parameter failure.
 
-The *coap_new_oscore_conf*() function returns a _coap_oscore_conf_t_
+*coap_new_oscore_conf*() returns a _coap_oscore_conf_t_
 or NULL on failure.
 
-The *coap_oscore_is_supported*(), *coap_context_oscore_server*(),
-*coap_delete_oscore_conf*(), *coap_add_oscore_recipient*() and
-*coap_delete_oscore_context*() functions return 0 on failure, 1 on success.
+*coap_oscore_is_supported*(), *coap_context_oscore_server*(),
+*coap_delete_oscore_conf*(), *coap_new_oscore_recipient*() and
+*coap_delete_oscore_recipient*() return 0 on failure, 1 on success.
 
 EXAMPLES
 --------

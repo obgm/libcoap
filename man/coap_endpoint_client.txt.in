@@ -201,10 +201,10 @@ size of the data for the client endpoint's _session_.
 RETURN VALUES
 -------------
 *coap_new_client_session*(), *coap_new_client_session_psk2*(),
-*coap_new_client_session_pki*() functions returns a newly created client
+*coap_new_client_session_pki*() return a newly created client.
 session or NULL if there is a creation failure.
 
-*coap_session_max_pdu_size*() function returns the MTU size.
+*coap_session_max_pdu_size*() returns the MTU size.
 
 EXAMPLES
 --------

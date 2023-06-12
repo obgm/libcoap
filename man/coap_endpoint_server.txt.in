@@ -198,9 +198,9 @@ definitions when setting up each resource. See *coap_resource*(3).
 RETURN VALUES
 -------------
 *coap_context_set_pki*(), *coap_context_set_pki_root_cas*() and
-*coap_context_set_psk2*() functions return 1 on success, 0 on failure.
+*coap_context_set_psk2*() return 1 on success, 0 on failure.
 
-*coap_new_endpoint*() function returns a newly created endpoint or
+*coap_new_endpoint*() returns a newly created endpoint or
 NULL if there is a creation failure.
 
 *coap_join_mcast_group_intf*() returns 0 on success, -1 on failure.

@@ -12,11 +12,11 @@ NAME
 ----
 coap_address,
 coap_address_t,
-coap_address_un,
 coap_address_init,
 coap_get_available_scheme_hint_bits,
 coap_resolve_address_info,
 coap_free_address_info,
+coap_sockaddr_un,
 coap_address_set_unix_domain
 - Work with CoAP Socket Address Types
 
@@ -184,7 +184,7 @@ or'd together based on the supported libcoap functionality.
 *coap_resolve_address_info*() returns a linked list of addresses that can be
 used for session setup or NULL if there is a failure.
 
-*coap_address_set_unix_domain*() function returns 1 on success or 0 on failure.
+*coap_address_set_unix_domain*() returns 1 on success or 0 on failure.
 
 EXAMPLES
 --------

@@ -203,14 +203,14 @@ have been responded to.
 
 RETURN VALUES
 -------------
-*coap_io_process*() and *coap_io_process_with_fds*() returns the time, in
+*coap_io_process*() and *coap_io_process_with_fds*() return the time, in
 milli-seconds, that was spent in the function. If -1 is returned, there was
 an unexpected error.
 
 *coap_context_get_coap_fd*() returns a non-negative number as the file
 descriptor to monitor, or -1 if epoll is not configured in libcoap.
 
-*coap_io_prepare_io*() and *coap_io_prepare_epoll*() returns the number of
+*coap_io_prepare_io*() and *coap_io_prepare_epoll*() return the number of
 milli-seconds that need to be waited before the function should next be called.
 
 *coap_io_pending*() returns 1 if there is outstanding i/o else returns 0.
