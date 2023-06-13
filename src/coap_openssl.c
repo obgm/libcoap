@@ -3646,7 +3646,7 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-#if COAP_WS_SUPPORT || HAVE_OSCORE
+#if COAP_WS_SUPPORT || COAP_OSCORE_SUPPORT
 static void
 coap_crypto_output_errors(const char *prefix) {
 #if COAP_MAX_LOGGING_LEVEL < _COAP_LOG_WARN
@@ -3662,7 +3662,7 @@ coap_crypto_output_errors(const char *prefix) {
              ssl_function_definition(e));
 #endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_WARN */
 }
-#endif /* COAP_WS_SUPPORT || HAVE_OSCORE */
+#endif /* COAP_WS_SUPPORT || COAP_OSCORE_SUPPORT */
 
 #if COAP_WS_SUPPORT
 /*
@@ -3738,7 +3738,7 @@ error:
 }
 #endif /* COAP_WS_SUPPORT */
 
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
 int
 coap_oscore_is_supported(void) {
   return 1;
@@ -3974,7 +3974,7 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
   return 0;
 }
 
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
 
 #else /* !HAVE_OPENSSL */
 

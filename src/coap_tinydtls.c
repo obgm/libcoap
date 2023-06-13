@@ -1510,7 +1510,7 @@ coap_crypto_hash(cose_alg_t alg,
 }
 #endif /* COAP_WS_SUPPORT */
 
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
 
 int
 coap_oscore_is_supported(void) {
@@ -1717,7 +1717,7 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg, coap_bin_const_t *key,
   return 1;
 }
 
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
 
 #else /* !HAVE_LIBTINYDTLS */
 

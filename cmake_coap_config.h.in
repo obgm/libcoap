@@ -39,7 +39,7 @@
 #cmakedefine COAP_EPOLL_SUPPORT @COAP_EPOLL_SUPPORT@
 
 /* Define to 1 if the library has OSCORE support. */
-#cmakedefine HAVE_OSCORE @HAVE_OSCORE@
+#cmakedefine COAP_OSCORE_SUPPORT @COAP_OSCORE_SUPPORT@
 
 /* Define to 1 if the library has WebSockets support. */
 #cmakedefine COAP_WS_SUPPORT @COAP_WS_SUPPORT@

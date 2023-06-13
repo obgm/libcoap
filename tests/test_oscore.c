@@ -12,7 +12,7 @@
 
 #include "test_common.h"
 
-#if HAVE_OSCORE && COAP_SERVER_SUPPORT
+#if COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT
 #include "test_oscore.h"
 #include "oscore/oscore.h"
 #include "oscore/oscore_context.h"
@@ -995,7 +995,7 @@ t_init_oscore_tests(void) {
   return suite[0];
 }
 
-#else /* HAVE_OSCORE && COAP_SERVER_SUPPORT  */
+#else /* COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT  */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -1006,4 +1006,4 @@ t_init_oscore_tests(void) {
 static inline void dummy(void) {
 }
 
-#endif /* HAVE_OSCORE && COAP_SERVER_SUPPORT  */
+#endif /* COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT  */

@@ -448,7 +448,7 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
   return 0;
 }
 
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
 coap_mid_t
 coap_retransmit_oscore_pdu(coap_session_t *session,
                            coap_pdu_t *pdu,
@@ -502,7 +502,7 @@ coap_retransmit_oscore_pdu(coap_session_t *session,
 error:
   return COAP_INVALID_MID;
 }
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
@@ -643,21 +643,21 @@ coap_add_data_large_internal(coap_session_t *session,
     }
 #endif /* COAP_SERVER_SUPPORT */
   }
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
   if (session->oscore_encryption) {
     /* Need to convert Proxy-Uri to Proxy-Scheme option if needed */
     if (COAP_PDU_IS_REQUEST(pdu) && !coap_rebuild_pdu_for_proxy(pdu))
       goto fail;
   }
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
 
   token_options = pdu->data ? (size_t)(pdu->data - pdu->token) : pdu->used_size;
   avail = pdu->max_size - token_options;
   /* There may be a response with Echo option */
   avail -= coap_opt_encode_size(COAP_OPTION_ECHO, 40);
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
   avail -= coap_oscore_overhead(session, pdu);
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
   /* May need token of length 8, so account for this */
   avail -= (pdu->actual_token.length < 8) ? 8 - pdu->actual_token.length : 0;
   blk_size = coap_flsll((long long)avail) - 4 - 1;
@@ -836,9 +836,9 @@ coap_add_data_large_internal(coap_session_t *session,
     avail -= coap_opt_encode_size(COAP_OPTION_ECHO, 40);
     /* May need token of length 8, so account for this */
     avail -= (pdu->actual_token.length < 8) ? 8 - pdu->actual_token.length : 0;
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
     avail -= coap_oscore_overhead(session, pdu);
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
     if (avail < (ssize_t)chunk) {
       /* chunk size change down */
       if (avail < 16) {
@@ -1982,7 +1982,7 @@ check_freshness(coap_session_t *session, coap_pdu_t *rcvd, coap_pdu_t *sent,
       }
       /* Need to track Observe token change if Observe */
       track_fetch_observe(echo_pdu, lg_crcv, 0, &echo_pdu->actual_token);
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
       if (session->oscore_encryption &&
           (opt = coap_check_option(echo_pdu, COAP_OPTION_OBSERVE, &opt_iter)) &&
           coap_decode_var_bytes(coap_opt_value(opt), coap_opt_length(opt) == 0)) {
@@ -1993,7 +1993,7 @@ check_freshness(coap_session_t *session, coap_pdu_t *rcvd, coap_pdu_t *sent,
           lg_crcv->state_token = token;
         }
       }
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
       mid = coap_send_internal(session, echo_pdu);
       if (mid == COAP_INVALID_MID)
         goto not_sent;
@@ -2567,13 +2567,13 @@ coap_handle_response_get_block(coap_context_t *context,
       }
       coap_ticks(&p->last_used);
     } else if (rcvd->code == COAP_RESPONSE_CODE(401)) {
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
       if (check_freshness(session, rcvd,
                           (session->oscore_encryption == 0) ? sent : NULL,
                           NULL, p))
-#else /* !HAVE_OSCORE */
+#else /* !COAP_OSCORE_SUPPORT */
       if (check_freshness(session, rcvd, sent, NULL, p))
-#endif /* !HAVE_OSCORE */
+#endif /* !COAP_OSCORE_SUPPORT */
         goto skip_app_handler;
       goto expire_lg_crcv;
     } else {

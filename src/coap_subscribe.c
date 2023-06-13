@@ -155,7 +155,7 @@ coap_persist_observe_add(coap_context_t *context,
   if (s == NULL)
     goto fail;
 
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
   if (oscore_info) {
     coap_log_debug("persist: OSCORE association being updated\n");
     /*
@@ -272,9 +272,9 @@ coap_persist_observe_add(coap_context_t *context,
     }
   }
 oscore_fail:
-#else /* ! HAVE_OSCORE */
+#else /* ! COAP_OSCORE_SUPPORT */
   (void)oscore_info;
-#endif /* ! HAVE_OSCORE */
+#endif /* ! COAP_OSCORE_SUPPORT */
   coap_delete_pdu(pdu);
 #if COAP_CONSTRAINED_STACK
   coap_mutex_unlock(&e_static_mutex);
