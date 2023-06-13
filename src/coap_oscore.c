@@ -20,7 +20,7 @@
 
 #include "coap3/coap_internal.h"
 
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
 #include <ctype.h>
 
 #define AAD_BUF_LEN 200 /* length of aad_buffer */
@@ -2095,7 +2095,7 @@ coap_delete_oscore_recipient(coap_context_t *context,
 
 /** @} */
 
-#else /* !HAVE_OSCORE */
+#else /* !COAP_OSCORE_SUPPORT */
 int
 coap_oscore_is_supported(void) {
   return 0;
@@ -2189,4 +2189,4 @@ coap_delete_oscore_recipient(coap_context_t *context,
   return 0;
 }
 
-#endif /* !HAVE_OSCORE */
+#endif /* !COAP_OSCORE_SUPPORT */

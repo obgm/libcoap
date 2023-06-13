@@ -167,7 +167,7 @@ struct coap_session_t {
   uint8_t delay_recursive;        /**< Set if in coap_client_delay_first() */
   uint8_t no_observe_cancel;      /**< Set if do not cancel observe on session
                                        close */
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
   uint8_t oscore_encryption;      /**< OSCORE is used for this session  */
   COAP_OSCORE_B_2_STEP b_2_step;  /**< Appendix B.2 negotiation step */
   oscore_recipient_ctx_t *recipient_ctx; /**< OSCORE recipient context
@@ -175,7 +175,7 @@ struct coap_session_t {
   oscore_association_t *associations; /**< OSCORE set of response
                                            associations */
   uint64_t oscore_r2;             /**< R2 for RFC8613 Appendix B.2 */
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
 #if COAP_WS_SUPPORT
   coap_ws_state_t *ws;            /**< WS state */
   coap_str_const_t *ws_host;      /**< Host to use in WS Request */

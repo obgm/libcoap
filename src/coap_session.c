@@ -297,9 +297,9 @@ coap_session_mfree(coap_session_t *session) {
     coap_block_delete_lg_srcv(session, sq);
   }
 #endif /* COAP_SERVER_SUPPORT */
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
   coap_delete_oscore_associations(session);
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
 #if COAP_WS_SUPPORT
   coap_free_type(COAP_STRING, session->ws);
   coap_delete_str_const(session->ws_host);

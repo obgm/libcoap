@@ -123,9 +123,9 @@
 #define COAP_MAX_LOGGING_LEVEL 8
 #endif
 
-#ifndef HAVE_OSCORE
+#ifndef COAP_OSCORE_SUPPORT
 /* Define to 1 to build with OSCORE support. */
-#define HAVE_OSCORE 1
+#define COAP_OSCORE_SUPPORT 1
 #endif
 
 /* Define to the address where bug reports for this package should be sent. */

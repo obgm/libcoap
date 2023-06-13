@@ -289,7 +289,7 @@ else()
 endif()
 
 if(${ENABLE_OSCORE})
-  set(HAVE_OSCORE "1")
+  set(COAP_OSCORE_SUPPORT "1")
   message(STATUS "compiling with OSCORE support")
 else()
   message(STATUS "compiling without OSCORE support")
@@ -652,11 +652,11 @@ target_sources(
           $<$<BOOL:${HAVE_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
           $<$<BOOL:${HAVE_MBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
           # needed for OSCORE is enabled
-          $<$<BOOL:${HAVE_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore.c>
-          $<$<BOOL:${HAVE_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cbor.c>
-          $<$<BOOL:${HAVE_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_context.c>
-          $<$<BOOL:${HAVE_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cose.c>
-          $<$<BOOL:${HAVE_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_crypto.c>
+          $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore.c>
+          $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cbor.c>
+          $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_context.c>
+          $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cose.c>
+          $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_crypto.c>
           # headers
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/libcoap.h

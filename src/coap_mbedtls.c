@@ -2706,7 +2706,7 @@ error:
 }
 #endif /* COAP_WS_SUPPORT */
 
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
 int
 coap_oscore_is_supported(void) {
   return 1;
@@ -3034,7 +3034,7 @@ error:
   return ret;
 }
 
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
 
 #else /* !HAVE_MBEDTLS */
 

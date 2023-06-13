@@ -652,11 +652,11 @@ coap_print_link(const coap_resource_t *resource,
     COPY_COND_WITH_OFFSET(p, bufend, *offset, ";obs", 4, *len);
   }
 
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
   /* If oscore is enabled */
   if (resource->flags & COAP_RESOURCE_FLAGS_OSCORE_ONLY)
     COPY_COND_WITH_OFFSET(p, bufend, *offset, ";osc", 4, *len);
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
 
   output_length = p - buf;
 
@@ -821,7 +821,7 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG,
   if (session->context->observe_added && session->proto == COAP_PROTO_UDP) {
     coap_bin_const_t raw_packet;
     coap_bin_const_t *oscore_info = NULL;
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
     oscore_association_t *association;
 
     if (session->recipient_ctx && session->recipient_ctx->recipient_id) {
@@ -890,7 +890,7 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG,
       }
       oscore_info = coap_new_bin_const(info_buffer, ret);
     }
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
 
     /* s->pdu header is not currently encoded */
     memcpy(s->pdu->token - request->hdr_size,
@@ -903,9 +903,9 @@ static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG,
                                     &raw_packet,
                                     oscore_info,
                                     session->context->observe_user_data);
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
     coap_delete_bin_const(oscore_info);
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
   }
   if (resource->context->track_observe_value) {
     /* Track last used observe value (as app handler is called) */

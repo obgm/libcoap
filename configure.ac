@@ -673,9 +673,9 @@ if test "x$build_oscore" = "xyes"; then
 fi
 
 if test "x$build_oscore" = "xyes"; then
-        AC_DEFINE(HAVE_OSCORE, [1], [Define to 1 to build with OSCORE support.])
+        AC_DEFINE(COAP_OSCORE_SUPPORT, [1], [Define to 1 to build with OSCORE support.])
 fi
-AM_CONDITIONAL(HAVE_OSCORE, [test "x$build_oscore" = "xyes"])
+AM_CONDITIONAL(COAP_OSCORE_SUPPORT, [test "x$build_oscore" = "xyes"])
 
 # configure options
 # __tests__

@@ -3067,7 +3067,7 @@ error:
 }
 #endif /* COAP_WS_SUPPORT */
 
-#if HAVE_OSCORE
+#if COAP_OSCORE_SUPPORT
 int
 coap_oscore_is_supported(void) {
   return 1;
@@ -3302,7 +3302,7 @@ fail:
   return ret == 1 ? 1 : 0;
 }
 
-#endif /* HAVE_OSCORE */
+#endif /* COAP_OSCORE_SUPPORT */
 
 #else /* !HAVE_LIBGNUTLS */
 
