@@ -577,9 +577,9 @@ coap_free_context(coap_context_t *context) {
   }
 #endif /* WITH_LWIP */
 
-#ifndef WITHOUT_ASYNC
+#if COAP_ASYNC_SUPPORT
   coap_delete_all_async(context);
-#endif /* WITHOUT_ASYNC */
+#endif /* COAP_ASYNC_SUPPORT */
 
 #if COAP_OSCORE_SUPPORT
   coap_delete_all_oscore(context);
@@ -2633,9 +2633,9 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_block_b_t block;
   int added_block = 0;
   coap_lg_srcv_t *free_lg_srcv = NULL;
-#ifndef WITHOUT_ASYNC
+#if COAP_ASYNC_SUPPORT
   coap_async_t *async;
-#endif /* WITHOUT_ASYNC */
+#endif /* COAP_ASYNC_SUPPORT */
 
   if (coap_is_mcast(&session->addr_info.local)) {
     if (COAP_PROTO_RELIABLE(session->proto) || pdu->type != COAP_MESSAGE_NON) {
@@ -2643,7 +2643,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       return;
     }
   }
-#ifndef WITHOUT_ASYNC
+#if COAP_ASYNC_SUPPORT
   async = coap_find_async(session, pdu->actual_token);
   if (async) {
     coap_tick_t now;
@@ -2657,7 +2657,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       return;
     }
   }
-#endif /* WITHOUT_ASYNC */
+#endif /* COAP_ASYNC_SUPPORT */
 
   coap_option_filter_clear(&opt_filter);
   opt = coap_check_option(pdu, COAP_OPTION_PROXY_SCHEME, &opt_iter);
@@ -2909,11 +2909,11 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     resp = 500;
     goto fail_response;
   }
-#ifndef WITHOUT_ASYNC
+#if COAP_ASYNC_SUPPORT
   /* If handling a separate response, need CON, not ACK response */
   if (async && pdu->type == COAP_MESSAGE_CON)
     response->type = COAP_MESSAGE_CON;
-#endif /* WITHOUT_ASYNC */
+#endif /* COAP_ASYNC_SUPPORT */
 
   if (!coap_add_token(response, pdu->actual_token.length,
                       pdu->actual_token.s)) {
@@ -3724,7 +3724,8 @@ coap_can_exit(coap_context_t *context) {
 #endif /* COAP_CLIENT_SUPPORT */
   return 1;
 }
-#ifndef WITHOUT_ASYNC
+#if COAP_SERVER_SUPPORT
+#if COAP_ASYNC_SUPPORT
 coap_tick_t
 coap_check_async(coap_context_t *context, coap_tick_t now) {
   coap_tick_t next_due = 0;
@@ -3745,7 +3746,8 @@ coap_check_async(coap_context_t *context, coap_tick_t now) {
   }
   return next_due;
 }
-#endif /* WITHOUT_ASYNC */
+#endif /* COAP_ASYNC_SUPPORT */
+#endif /* COAP_SERVER_SUPPORT */
 
 static int coap_started = 0;
 

@@ -128,6 +128,11 @@
 #define COAP_OSCORE_SUPPORT 1
 #endif
 
+#ifndef COAP_ASYNC_SUPPORT
+/* Define to 1 to build with support for async separate responses. */
+#define COAP_ASYNC_SUPPORT 1
+#endif
+
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"
 

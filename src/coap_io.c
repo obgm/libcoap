@@ -1263,12 +1263,12 @@ coap_io_prepare_io(coap_context_t *ctx,
 #if COAP_SERVER_SUPPORT
   /* Check to see if we need to send off any Observe requests */
   coap_check_notify(ctx);
-#endif /* COAP_SERVER_SUPPORT */
 
-#ifndef WITHOUT_ASYNC
+#if COAP_ASYNC_SUPPORT
   /* Check to see if we need to send off any Async requests */
   timeout = coap_check_async(ctx, now);
-#endif /* WITHOUT_ASYNC */
+#endif /* COAP_ASYNC_SUPPORT */
+#endif /* COAP_SERVER_SUPPORT */
 
   /* Check to see if we need to send off any retransmit request */
   nextpdu = coap_peek_next(ctx);
@@ -1647,12 +1647,12 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
   coap_expire_cache_entries(ctx);
 #endif /* COAP_SERVER_SUPPORT */
   coap_ticks(&now);
-#ifndef WITHOUT_ASYNC
+#if COAP_ASYNC_SUPPORT
   /* Check to see if we need to send off any Async requests as delay might
      have been updated */
   coap_check_async(ctx, now);
   coap_ticks(&now);
-#endif /* WITHOUT_ASYNC */
+#endif /* COAP_ASYNC_SUPPORT */
 
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
