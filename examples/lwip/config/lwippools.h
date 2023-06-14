@@ -15,7 +15,7 @@
 #include "coap3/coap_net.h"
 #include "coap3/resource.h"
 #include "coap3/coap_subscribe.h"
-#ifdef HAVE_LIBTINYDTLS
+#ifdef COAP_WITH_LIBTINYDTLS
 #ifndef LWIP_TINYDTLS_LOCAL_FIX
 #define LWIP_TINYDTLS_LOCAL_FIX
 #include <lwip/ip_addr.h>
@@ -36,18 +36,18 @@ typedef struct l_coap_tiny_context_t {
 } l_coap_tiny_context_t;
 
 #endif /* LWIP_TINYDTLS_LOCAL_FIX */
-#endif /* HAVE_LIBTINYDTLS */
+#endif /* COAP_WITH_LIBTINYDTLS */
 
 #ifndef MEMP_NUM_COAPCONTEXT
 #define MEMP_NUM_COAPCONTEXT 1
 #endif
 
 #ifndef MEMP_NUM_COAPENDPOINT
-#ifdef HAVE_LIBTINYDTLS
+#ifdef COAP_WITH_LIBTINYDTLS
 #define MEMP_NUM_COAPENDPOINT 2
-#else /* ! HAVE_LIBTINYDTLS */
+#else /* ! COAP_WITH_LIBTINYDTLS */
 #define MEMP_NUM_COAPENDPOINT 1
-#endif /* ! HAVE_LIBTINYDTLS */
+#endif /* ! COAP_WITH_LIBTINYDTLS */
 #endif
 
 /* 1 is sufficient as this is very short-lived */
@@ -163,7 +163,7 @@ LWIP_MEMPOOL(COAP_LG_CRCV, MEMP_NUM_COAPLGCRCV, sizeof(coap_lg_crcv_t), "COAP_LG
 LWIP_MEMPOOL(COAP_LG_SRCV, MEMP_NUM_COAPLGSRCV, sizeof(coap_lg_srcv_t), "COAP_LG_SRCV")
 LWIP_MEMPOOL(COAP_DIGEST_CTX, MEMP_NUM_COAPDIGESTCTX, sizeof(coap_digest_t) + sizeof(size_t), "COAP_DIGEST_CTX")
 #endif /* COAP_SERVER_SUPPORT */
-#ifdef HAVE_LIBTINYDTLS
+#ifdef COAP_WITH_LIBTINYDTLS
 LWIP_MEMPOOL(COAP_DTLS_SESSION, MEMP_NUM_COAPDTLS_SESSION, sizeof(l_session_t), "COAP_DTLS_SESSION")
 LWIP_MEMPOOL(COAP_DTLS_CONTEXT, MEMP_NUM_COAPDTLS_CONTEXT, sizeof(l_coap_tiny_context_t), "COAP_DTLS_CONTEXT")
-#endif /* HAVE_LIBTINYDTLS */
+#endif /* COAP_WITH_LIBTINYDTLS */

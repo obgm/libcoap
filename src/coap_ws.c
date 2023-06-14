@@ -36,12 +36,12 @@
 
 int
 coap_ws_is_supported(void) {
-#if defined(HAVE_OPENSSL) || defined(HAVE_LIBGNUTLS) || defined(HAVE_MBEDTLS)
+#if defined(COAP_WITH_LIBOPENSSL) || defined(COAP_WITH_LIBGNUTLS) || defined(COAP_WITH_LIBMBEDTLS)
   /* Have SHA1 hash support */
   return coap_tcp_is_supported();
-#else /* !HAVE_OPENSSL && !HAVE_LIBGNUTLS && !HAVE_MBEDTLS */
+#else /* !COAP_WITH_LIBOPENSSL && !COAP_WITH_LIBGNUTLS && !COAP_WITH_LIBMBEDTLS */
   return 0;
-#endif /* !HAVE_OPENSSL && !HAVE_LIBGNUTLS && !HAVE_MBEDTLS */
+#endif /* !COAP_WITH_LIBOPENSSL && !COAP_WITH_LIBGNUTLS && !COAP_WITH_LIBMBEDTLS */
 }
 
 int

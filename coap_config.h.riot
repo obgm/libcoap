@@ -194,9 +194,9 @@
 #endif /* COAP_DISABLE_TCP */
 
 #ifdef MODULE_TINYDTLS
-#ifndef HAVE_LIBTINYDTLS
-#define HAVE_LIBTINYDTLS 1
-#endif /* ! HAVE_LIBTINYDTLS */
+#ifndef COAP_WITH_LIBTINYDTLS
+#define COAP_WITH_LIBTINYDTLS 1
+#endif /* ! COAP_WITH_LIBTINYDTLS */
 #endif /* MODULE_TINYDTLS */
 
 /* Define if building universal (internal helper macro) */

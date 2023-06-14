@@ -615,22 +615,22 @@ if test "x$build_dtls" = "xyes"; then
     if test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
         DTLS_CFLAGS="$GnuTLS_CFLAGS"
         DTLS_LIBS="$GnuTLS_LIBS"
-        AC_DEFINE(HAVE_LIBGNUTLS, [1], [Define to 1 if the system has libgnutls28.])
+        AC_DEFINE(COAP_WITH_LIBGNUTLS, [1], [Define to 1 if the system has libgnutls28.])
     fi
     if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
         DTLS_CFLAGS="$OpenSSL_CFLAGS"
         DTLS_LIBS="$OpenSSL_LIBS"
-        AC_DEFINE(HAVE_OPENSSL, [1], [Define to 1 if the system has libssl1.1.])
+        AC_DEFINE(COAP_WITH_LIBOPENSSL, [1], [Define to 1 if the system has libssl1.1.])
     fi
     if test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
         DTLS_CFLAGS="$MbedTLS_CFLAGS"
         DTLS_LIBS="$MbedTLS_LIBS"
-        AC_DEFINE(HAVE_MBEDTLS, [1], [Define to 1 if the system has libmbedtls2.7.10.])
+        AC_DEFINE(COAP_WITH_LIBMBEDTLS, [1], [Define to 1 if the system has libmbedtls2.7.10.])
     fi
     if test "x$with_tinydtls" = "xyes" -o "x$with_tinydtls_auto" = "xyes"; then
         DTLS_CFLAGS="$TinyDTLS_CFLAGS"
         DTLS_LIBS="$TinyDTLS_LIBS"
-        AC_DEFINE(HAVE_LIBTINYDTLS, [1], [Define to 1 if the system has libtinydtls.])
+        AC_DEFINE(COAP_WITH_LIBTINYDTLS, [1], [Define to 1 if the system has libtinydtls.])
     fi
     AC_SUBST(DTLS_CFLAGS)
     AC_SUBST(DTLS_LIBS)

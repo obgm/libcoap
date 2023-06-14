@@ -360,7 +360,7 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;COAP_WITH_LIBOPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
@@ -399,7 +399,7 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;COAP_WITH_LIBOPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
@@ -442,7 +442,7 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;COAP_WITH_LIBOPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
@@ -464,7 +464,7 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;COAP_WITH_LIBOPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDirDbg)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
@@ -491,7 +491,7 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;COAP_WITH_LIBOPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <CompileAs>CompileAsC</CompileAs>
@@ -532,7 +532,7 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;COAP_WITH_LIBOPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
       <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
@@ -577,7 +577,7 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;COAP_WITH_LIBOPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <CompileAs>CompileAsC</CompileAs>
@@ -601,7 +601,7 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;HAVE_OPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;COAP_WITH_LIBOPENSSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../include;..;$(OpenSSLIncludeDir)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <CompileAs>CompileAsC</CompileAs>
