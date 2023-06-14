@@ -448,14 +448,14 @@ if(ENABLE_DTLS)
     if(GnuTLS_FOUND)
       set(WITH_GNUTLS ON)
       message(STATUS "compiling with gnutls support")
-      set(HAVE_LIBGNUTLS 1)
+      set(COAP_WITH_LIBGNUTLS 1)
     else()
       # gnutls not found
       find_package(OpenSSL)
       if(OpenSSL_FOUND)
         set(WITH_OPENSSL ON)
         message(STATUS "compiling with openssl support")
-        set(HAVE_OPENSSL 1)
+        set(COAP_WITH_LIBOPENSSL 1)
       else()
         # openssl not found
         # libmbedtls (e.g. debian libmbedtls-dev)
@@ -463,7 +463,7 @@ if(ENABLE_DTLS)
         if(MbedTLS_FOUND)
           set(WITH_MBEDTLS ON)
           message(STATUS "compiling with mbedtls support")
-          set(HAVE_MBEDTLS 1)
+          set(COAP_WITH_LIBMBEDTLS 1)
         else()
           # mbedtls not found
           if(USE_VENDORED_TINYDTLS)
@@ -484,7 +484,7 @@ if(ENABLE_DTLS)
 
           set(WITH_TINYDTLS ON)
           message(STATUS "compiling with tinydtls support")
-          set(HAVE_LIBTINYDTLS 1)
+          set(COAP_WITH_LIBTINYDTLS 1)
 
         endif()
 
@@ -506,7 +506,7 @@ if(ENABLE_DTLS)
       find_package(GnuTLS REQUIRED)
       set(WITH_GNUTLS ON)
       message(STATUS "compiling with gnutls support")
-      set(HAVE_LIBGNUTLS 1)
+      set(COAP_WITH_LIBGNUTLS 1)
     endif()
 
     if(DTLS_BACKEND
@@ -516,7 +516,7 @@ if(ENABLE_DTLS)
       find_package(OpenSSL REQUIRED)
       set(WITH_OPENSSL ON)
       message(STATUS "compiling with openssl support")
-      set(HAVE_OPENSSL 1)
+      set(COAP_WITH_LIBOPENSSL 1)
     endif()
 
     if(DTLS_BACKEND
@@ -526,7 +526,7 @@ if(ENABLE_DTLS)
       find_package(MbedTLS REQUIRED)
       set(WITH_MBEDTLS ON)
       message(STATUS "compiling with mbedtls support")
-      set(HAVE_MBEDTLS 1)
+      set(COAP_WITH_LIBMBEDTLS 1)
     endif()
 
     if(DTLS_BACKEND
@@ -541,7 +541,7 @@ if(ENABLE_DTLS)
 
       message(STATUS "compiling with tinydtls support")
       set(WITH_TINYDTLS ON)
-      set(HAVE_LIBTINYDTLS 1)
+      set(COAP_WITH_LIBTINYDTLS 1)
 
     endif()
 
@@ -591,10 +591,10 @@ message(STATUS "WITH_GNUTLS:.....................${WITH_GNUTLS}")
 message(STATUS "WITH_TINYDTLS:...................${WITH_TINYDTLS}")
 message(STATUS "WITH_OPENSSL:....................${WITH_OPENSSL}")
 message(STATUS "WITH_MBEDTLS:....................${WITH_MBEDTLS}")
-message(STATUS "HAVE_LIBTINYDTLS:................${HAVE_LIBTINYDTLS}")
-message(STATUS "HAVE_LIBGNUTLS:..................${HAVE_LIBGNUTLS}")
-message(STATUS "HAVE_OPENSSL:....................${HAVE_OPENSSL}")
-message(STATUS "HAVE_MBEDTLS:....................${HAVE_MBEDTLS}")
+message(STATUS "COAP_WITH_LIBTINYDTLS:................${COAP_WITH_LIBTINYDTLS}")
+message(STATUS "COAP_WITH_LIBGNUTLS:..................${COAP_WITH_LIBGNUTLS}")
+message(STATUS "COAP_WITH_LIBOPENSSL:....................${COAP_WITH_LIBOPENSSL}")
+message(STATUS "COAP_WITH_LIBMBEDTLS:....................${COAP_WITH_LIBMBEDTLS}")
 message(STATUS "WITH_EPOLL:......................${WITH_EPOLL}")
 message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
 message(STATUS "MAX_LOGGING_LEVEL:...............${MAX_LOGGING_LEVEL}")
@@ -659,10 +659,10 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/pdu.c
           ${CMAKE_CURRENT_LIST_DIR}/src/resource.c
           # no need to parse those files if we do not need them
-          $<$<BOOL:${HAVE_OPENSSL}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openssl.c>
-          $<$<BOOL:${HAVE_LIBTINYDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tinydtls.c>
-          $<$<BOOL:${HAVE_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
-          $<$<BOOL:${HAVE_MBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
+          $<$<BOOL:${COAP_WITH_LIBOPENSSL}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openssl.c>
+          $<$<BOOL:${COAP_WITH_LIBTINYDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tinydtls.c>
+          $<$<BOOL:${COAP_WITH_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
+          $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
           # needed for OSCORE is enabled
           $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore.c>
           $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cbor.c>
@@ -700,18 +700,18 @@ target_include_directories(
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
          $<INSTALL_INTERFACE:include/>
-         $<$<AND:$<BOOL:${HAVE_LIBTINYDTLS}>,$<BOOL:${USE_VENDORED_TINYDTLS}>>:${CMAKE_BINARY_DIR}/include/tinydtls>
-         $<$<BOOL:${HAVE_LIBGNUTLS}>:${GNUTLS_INCLUDE_DIR}>
-         $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDTLS_INCLUDE_DIRS}>)
+         $<$<AND:$<BOOL:${COAP_WITH_LIBTINYDTLS}>,$<BOOL:${USE_VENDORED_TINYDTLS}>>:${CMAKE_BINARY_DIR}/include/tinydtls>
+         $<$<BOOL:${COAP_WITH_LIBGNUTLS}>:${GNUTLS_INCLUDE_DIR}>
+         $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDTLS_INCLUDE_DIRS}>)
 target_link_libraries(
   ${COAP_LIBRARY_NAME}
-  PUBLIC $<$<BOOL:${HAVE_OPENSSL}>:OpenSSL::SSL>
-         $<$<BOOL:${HAVE_OPENSSL}>:OpenSSL::Crypto>
-         $<$<BOOL:${HAVE_LIBGNUTLS}>:${GNUTLS_LIBRARIES}>
-         $<$<BOOL:${HAVE_LIBTINYDTLS}>:tinydtls>
-         $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDTLS_LIBRARY}>
-         $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDX509_LIBRARY}>
-         $<$<BOOL:${HAVE_MBEDTLS}>:${MBEDCRYPTO_LIBRARY}>
+  PUBLIC $<$<BOOL:${COAP_WITH_LIBOPENSSL}>:OpenSSL::SSL>
+         $<$<BOOL:${COAP_WITH_LIBOPENSSL}>:OpenSSL::Crypto>
+         $<$<BOOL:${COAP_WITH_LIBGNUTLS}>:${GNUTLS_LIBRARIES}>
+         $<$<BOOL:${COAP_WITH_LIBTINYDTLS}>:tinydtls>
+         $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDTLS_LIBRARY}>
+         $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDX509_LIBRARY}>
+         $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDCRYPTO_LIBRARY}>
          $<$<BOOL:${MINGW}>:ws2_32>)
 
 target_compile_options(

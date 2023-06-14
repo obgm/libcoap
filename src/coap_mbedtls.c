@@ -27,7 +27,7 @@
 
 #include "coap3/coap_internal.h"
 
-#ifdef HAVE_MBEDTLS
+#ifdef COAP_WITH_LIBMBEDTLS
 
 /*
  * This code can be conditionally compiled to remove some components if
@@ -3036,7 +3036,7 @@ error:
 
 #endif /* COAP_OSCORE_SUPPORT */
 
-#else /* !HAVE_MBEDTLS */
+#else /* !COAP_WITH_LIBMBEDTLS */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -3047,4 +3047,4 @@ error:
 static inline void dummy(void) {
 }
 
-#endif /* HAVE_MBEDTLS */
+#endif /* COAP_WITH_LIBMBEDTLS */

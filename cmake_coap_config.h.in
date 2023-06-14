@@ -81,16 +81,16 @@
 #cmakedefine HAVE_ERRNO_H @HAVE_ERRNO_H@
 
 /* Define to 1 if the system has openssl */
-#cmakedefine HAVE_OPENSSL @HAVE_OPENSSL@
+#cmakedefine COAP_WITH_LIBOPENSSL @COAP_WITH_LIBOPENSSL@
 
 /* Define to 1 if the system has libgnutls28 */
-#cmakedefine HAVE_LIBGNUTLS @HAVE_LIBGNUTLS@
+#cmakedefine COAP_WITH_LIBGNUTLS @COAP_WITH_LIBGNUTLS@
 
 /* Define to 1 if the system has libtinydtls */
-#cmakedefine HAVE_LIBTINYDTLS @HAVE_LIBTINYDTLS@
+#cmakedefine COAP_WITH_LIBTINYDTLS @COAP_WITH_LIBTINYDTLS@
 
 /* Define to 1 if the system has libmbedtls */
-#cmakedefine HAVE_MBEDTLS @HAVE_MBEDTLS@
+#cmakedefine COAP_WITH_LIBMBEDTLS @COAP_WITH_LIBMBEDTLS@
 
 /* Define to 1 if you have the <limits.h> header file. */
 #cmakedefine HAVE_LIMITS_H @HAVE_LIMITS_H@

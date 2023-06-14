@@ -17,7 +17,7 @@
 
 #include "coap3/coap_internal.h"
 
-#ifdef HAVE_OPENSSL
+#ifdef COAP_WITH_LIBOPENSSL
 
 /*
  * OpenSSL 1.1.0 has support for making decisions during receipt of
@@ -3976,7 +3976,7 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
 
 #endif /* COAP_OSCORE_SUPPORT */
 
-#else /* !HAVE_OPENSSL */
+#else /* !COAP_WITH_LIBOPENSSL */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -3987,4 +3987,4 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
 static inline void dummy(void) {
 }
 
-#endif /* HAVE_OPENSSL */
+#endif /* COAP_WITH_LIBOPENSSL */

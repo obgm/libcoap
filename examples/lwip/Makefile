@@ -168,7 +168,7 @@ SD_COAP_OBJ =$(patsubst %.c,lib-server-dtls/%.o,$(COAP_SRC))
 
 vpath %.c $(libcoap_dir)/ext/tinydtls $(libcoap_dir)/ext/tinydtls/sha2 $(libcoap_dir)/ext/tinydtls/aes $(libcoap_dir)/ext/tinydtls/ecc
 
-TINYDTLS_CFLAGS = -I. -I$(libcoap_dir)/ext -I$(libcoap_dir)/ext/tinydtls -DDTLSv12 -DWITH_SHA256 -DSHA2_USE_INTTYPES_H -DDTLS_CHECK_CONTENTTYPE -DHAVE_LIBTINYDTLS -DHAVE_DTLS_SET_LOG_HANDLER=1
+TINYDTLS_CFLAGS = -I. -I$(libcoap_dir)/ext -I$(libcoap_dir)/ext/tinydtls -DDTLSv12 -DWITH_SHA256 -DSHA2_USE_INTTYPES_H -DDTLS_CHECK_CONTENTTYPE -DCOAP_WITH_LIBTINYDTLS -DHAVE_DTLS_SET_LOG_HANDLER=1
 
 DTLS_SRC = dtls.c \
            dtls_debug.c \

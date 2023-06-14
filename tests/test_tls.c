@@ -13,7 +13,7 @@
 
 #undef HAVE_DTLS
 
-#ifdef HAVE_LIBTINYDTLS
+#ifdef COAP_WITH_LIBTINYDTLS
 #define HAVE_DTLS 1
 
 /* Need to #undef these to stop compiler warnings when tinydtls.h is included */
@@ -27,22 +27,22 @@
 #include <tinydtls.h>
 #include <dtls.h>
 #include <dtls_debug.h>
-#endif /* HAVE_LIBTINYDTLS */
+#endif /* COAP_WITH_LIBTINYDTLS */
 
-#ifdef HAVE_OPENSSL
+#ifdef COAP_WITH_LIBOPENSSL
 #define HAVE_DTLS 1
 #include <openssl/ssl.h>
-#endif /* HAVE_OPENSSL */
+#endif /* COAP_WITH_LIBOPENSSL */
 
-#ifdef HAVE_LIBGNUTLS
+#ifdef COAP_WITH_LIBGNUTLS
 #define HAVE_DTLS 1
 #include <gnutls/gnutls.h>
-#endif /* HAVE_LIBGNUTLS */
+#endif /* COAP_WITH_LIBGNUTLS */
 
-#ifdef HAVE_MBEDTLS
+#ifdef COAP_WITH_LIBMBEDTLS
 #define HAVE_DTLS 1
 #include <mbedtls/version.h>
-#endif /* HAVE_MBEDTLS */
+#endif /* COAP_WITH_LIBMBEDTLS */
 
 static void
 t_tls1(void) {
@@ -61,10 +61,10 @@ t_tls2(void) {
 
   memset(&version, 0, sizeof(coap_tls_version_t));
 
-#if defined(HAVE_OPENSSL)
+#if defined(COAP_WITH_LIBOPENSSL)
   version.version = SSLeay();
   version.type = COAP_TLS_LIBRARY_OPENSSL;
-#elif defined(HAVE_LIBTINYDTLS)
+#elif defined(COAP_WITH_LIBTINYDTLS)
   const char *vers = dtls_package_version();
   version.version = 0;
   if (vers) {
@@ -81,16 +81,16 @@ t_tls2(void) {
     version.version = (p1 << 16) | (p2 << 8) | p3;
   }
   version.type = COAP_TLS_LIBRARY_TINYDTLS;
-#elif defined(HAVE_LIBGNUTLS)
+#elif defined(COAP_WITH_LIBGNUTLS)
   version.version = GNUTLS_VERSION_NUMBER;
   version.type = COAP_TLS_LIBRARY_GNUTLS;
-#elif defined(HAVE_MBEDTLS)
+#elif defined(COAP_WITH_LIBMBEDTLS)
   version.version = MBEDTLS_VERSION_NUMBER;
   version.type = COAP_TLS_LIBRARY_MBEDTLS;
 #else /* no DTLS */
   version.version = 0;
   version.type = COAP_TLS_LIBRARY_NOTLS;
-#endif /* HAVE_OPENSSL || HAVE_LIBTINYDTLS */
+#endif /* COAP_WITH_LIBOPENSSL || COAP_WITH_LIBTINYDTLS */
 
   CU_ASSERT_PTR_NOT_NULL_FATAL(v);
   CU_ASSERT(version.version == v->version);

@@ -267,12 +267,12 @@ static coap_resource_t resource_storage_data[COAP_MAX_RESOURCES];
 static memarray_t resource_storage;
 #endif /* COAP_SERVER_SUPPORT */
 
-#ifdef HAVE_LIBTINYDTLS
+#ifdef COAP_WITH_LIBTINYDTLS
 #undef PACKAGE_BUGREPORT
 #include <session.h>
 static session_t dtls_storage_data[COAP_MAX_DTLS_SESSIONS];
 static memarray_t dtls_storage;
-#endif /* HAVE_LIBTINYDTLS */
+#endif /* COAP_WITH_LIBTINYDTLS */
 
 static coap_session_t session_storage_data[COAP_MAX_SESSIONS];
 static memarray_t session_storage;
@@ -327,7 +327,7 @@ coap_memory_init(void) {
   INIT_STORAGE(resource, COAP_MAX_RESOURCES);
   INIT_STORAGE(resattr, COAP_MAX_ATTRIBUTES);
 #endif /* COAP_SERVER_SUPPORT */
-#ifdef HAVE_LIBTINYDTLS
+#ifdef COAP_WITH_LIBTINYDTLS
   INIT_STORAGE(dtls, COAP_MAX_DTLS_SESSIONS);
 #endif
   INIT_STORAGE(session, COAP_MAX_SESSIONS);
@@ -365,7 +365,7 @@ get_container(coap_memory_tag_t type) {
   case COAP_RESOURCE:        return &resource_storage;
   case COAP_RESOURCEATTR:    return &resattr_storage;
 #endif /* COAP_SERVER_SUPPORT */
-#ifdef HAVE_LIBTINYDTLS
+#ifdef COAP_WITH_LIBTINYDTLS
   case COAP_DTLS_SESSION:    return &dtls_storage;
 #endif
   case COAP_SESSION:         return &session_storage;
