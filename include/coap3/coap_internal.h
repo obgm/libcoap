@@ -61,23 +61,24 @@
 #ifndef COAP_CLIENT_SUPPORT
 #define COAP_SERVER_SUPPORT 1
 #define COAP_CLIENT_SUPPORT 1
-#endif /* COAP_CLIENT_SUPPORT */
-#endif /* COAP_SERVER_SUPPORT */
+#endif /* ! COAP_CLIENT_SUPPORT */
+#endif /* ! COAP_SERVER_SUPPORT */
 
 /* By default without either configured, these need to be set */
 #ifndef COAP_IPV4_SUPPORT
 #ifndef COAP_IPV6_SUPPORT
 #define COAP_IPV4_SUPPORT 1
 #define COAP_IPV6_SUPPORT 1
-#endif /* COAP_IPV6_SUPPORT */
-#endif /* COAP_IPV4_SUPPORT */
+#endif /* ! COAP_IPV6_SUPPORT */
+#endif /* ! COAP_IPV4_SUPPORT */
 
 #if ! COAP_SERVER_SUPPORT
-#ifndef WITHOUT_ASYNC
+#if COAP_ASYNC_SUPPORT
 /* ASYNC is only there for Server code */
-#define WITHOUT_ASYNC
-#endif /* WITHOUT_ASYNC */
-#endif /* COAP_SERVER_SUPPORT */
+#undef COAP_ASYNC_SUPPORT
+#define COAP_ASYNC_SUPPORT 0
+#endif /* COAP_ASYNC_SUPPORT */
+#endif /* ! COAP_SERVER_SUPPORT */
 
 #include "coap3/coap.h"
 

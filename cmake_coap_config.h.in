@@ -44,6 +44,9 @@
 /* Define to 1 if the library has WebSockets support. */
 #cmakedefine COAP_WS_SUPPORT @COAP_WS_SUPPORT@
 
+/* Define to 1 if the library has async separate response support. */
+#cmakedefine COAP_ASYNC_SUPPORT @COAP_ASYNC_SUPPORT@
+
 /* Define to 0-8 for maximum logging level. */
 #cmakedefine COAP_MAX_LOGGING_LEVEL @COAP_MAX_LOGGING_LEVEL@
 

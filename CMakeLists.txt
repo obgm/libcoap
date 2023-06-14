@@ -152,6 +152,10 @@ option(
   "enable building with WebSockets support"
   ON)
 option(
+  ENABLE_ASYNC
+  "enable building with async separate response support"
+  ON)
+option(
   ENABLE_TESTS
   "build also tests"
   OFF)
@@ -304,6 +308,13 @@ else()
     message(STATUS "WebSockets disabled as TCP not enabled")
   endif()
   message(STATUS "compiling without WebSockets support")
+endif()
+
+if(${ENABLE_ASYNC})
+  set(COAP_ASYNC_SUPPORT "1")
+  message(STATUS "compiling with async separate response support")
+else()
+  message(STATUS "compiling without async separate response support")
 endif()
 
 if(${ENABLE_IPV4})
@@ -572,6 +583,7 @@ message(STATUS "ENABLE_WEBSOCKETS:...............${ENABLE_WS}")
 message(STATUS "ENABLE_CLIENT_MODE:..............${ENABLE_CLIENT_MODE}")
 message(STATUS "ENABLE_SERVER_MODE:..............${ENABLE_SERVER_MODE}")
 message(STATUS "ENABLE_OSCORE:...................${ENABLE_OSCORE}")
+message(STATUS "ENABLE_ASYNC:....................${ENABLE_ASYNC}")
 message(STATUS "ENABLE_DOCS:.....................${ENABLE_DOCS}")
 message(STATUS "ENABLE_EXAMPLES:.................${ENABLE_EXAMPLES}")
 message(STATUS "DTLS_BACKEND:....................${DTLS_BACKEND}")

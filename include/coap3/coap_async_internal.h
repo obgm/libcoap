@@ -20,8 +20,8 @@
 #include "coap_internal.h"
 #include "coap_net.h"
 
-/* Note that if COAP_SERVER_SUPPORT is not set, then WITHOUT_ASYNC undefined */
-#ifndef WITHOUT_ASYNC
+/* Note that if COAP_SERVER_SUPPORT is not set, then COAP_ASYNC_SUPPORT undefined */
+#if COAP_ASYNC_SUPPORT
 
 /**
  * @ingroup internal_api
@@ -64,6 +64,6 @@ coap_delete_all_async(coap_context_t *context);
 
 /** @} */
 
-#endif /*  WITHOUT_ASYNC */
+#endif /* COAP_ASYNC_SUPPORT */
 
 #endif /* COAP_ASYNC_INTERNAL_H_ */

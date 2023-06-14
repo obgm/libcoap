@@ -107,13 +107,13 @@ init_coap_resources(coap_context_t *ctx) {
 
   coap_add_resource(ctx, r);
 #if 0
-#ifndef WITHOUT_ASYNC
-  r = coap_resource_init(coap_make_str_const("async"), 0);
-  coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
+  if (coap_async_is_supported()) {
+    r = coap_resource_init(coap_make_str_const("async"), 0);
+    coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
 
-  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
-  coap_add_resource(ctx, r);
-#endif /* WITHOUT_ASYNC */
+    coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+    coap_add_resource(ctx, r);
+  }
 #endif
 
   return;

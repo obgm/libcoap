@@ -27,11 +27,18 @@
 #endif /* LWIP_IPV6 */
 
 #ifndef COAP_CONSTRAINED_STACK
+/* Define to 1 to minimize stack usage. */
 #define COAP_CONSTRAINED_STACK 1
 #endif
 
 #ifndef COAP_DISABLE_TCP
+/* Define to 1 to build without TCP support. */
 #define COAP_DISABLE_TCP 1
+#endif
+
+#ifndef COAP_ASYNC_SUPPORT
+/* Define to 1 to build with support for async separate responses. */
+#define COAP_ASYNC_SUPPORT 1
 #endif
 
 #define PACKAGE_NAME "@PACKAGE_NAME@"

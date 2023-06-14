@@ -22,6 +22,9 @@
 /* Define to 1 to build support for Unix socket packets. */
 /* #undef COAP_AF_UNIX_SUPPORT 1 */
 
+/* Define to 1 to build with support for async separate responses. */
+#define COAP_ASYNC_SUPPORT 1
+
 /* Define to 1 if you have the <assert.h> header file. */
 #define HAVE_ASSERT_H 1
 

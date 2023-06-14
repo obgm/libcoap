@@ -60,11 +60,11 @@ struct coap_context_t {
                                              when resource is deleted */
 #endif /* COAP_SERVER_SUPPORT */
 
-#ifndef WITHOUT_ASYNC
+#if COAP_ASYNC_SUPPORT
   /**
    * list of asynchronous message ids */
   coap_async_t *async_state;
-#endif /* WITHOUT_ASYNC */
+#endif /* COAP_ASYNC_SUPPORT */
 
   /**
    * The time stamp in the first element of the sendqeue is relative

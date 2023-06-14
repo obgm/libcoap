@@ -15,7 +15,7 @@
 
 #include "coap3/coap_internal.h"
 
-#ifndef WITHOUT_ASYNC
+#if COAP_ASYNC_SUPPORT
 #include <stdio.h>
 
 /* utlist-style macros for searching pairs in linked lists */
@@ -186,7 +186,7 @@ coap_async_get_app_data(const coap_async_t *async) {
   return async->appdata;
 }
 
-#else /* WITHOUT_ASYNC */
+#else /* ! COAP_ASYNC_SUPPORT */
 
 int
 coap_async_is_supported(void) {
@@ -235,4 +235,4 @@ coap_async_get_app_data(const coap_async_t *async) {
   return NULL;
 }
 
-#endif /* WITHOUT_ASYNC */
+#endif /* ! COAP_ASYNC_SUPPORT */

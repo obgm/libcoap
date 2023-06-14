@@ -820,12 +820,12 @@ AC_SUBST(COAP_WS_SUPPORT)
 # __async__
 AC_ARG_ENABLE([async],
               [AS_HELP_STRING([--enable-async],
-                              [Enable building with support for separate responses [default=yes]])],
+                              [Enable building with support for async separate responses [default=yes]])],
               [build_async="$enableval"],
               [build_async="yes"])
 
-AS_IF([test "x$build_async" != "xyes"],
-      [AC_DEFINE(WITHOUT_ASYNC, [1], [Define to 1 to build without support for separate responses.])])
+AS_IF([test "x$build_async" = "xyes"],
+      [AC_DEFINE(COAP_ASYNC_SUPPORT, [1], [Define to 1 to build with support for async separate responses.])])
 
 # configure options
 # __observe_persist__

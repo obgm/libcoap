@@ -83,6 +83,14 @@ config LIBCOAP_OSCORE_SUPPORT
 
         If this option is disabled, redundent CoAP OSCORE code is removed.
 
+config LIBCOAP_ASYNC_SUPPORT
+    bool "Enable separate responses support within CoAP"
+    default y
+    help
+        Enable async separate responses functionality for CoAP.
+
+        If this option is disabled, redundent CoAP async separate responses code is removed.
+
 config LIBCOAP_CLIENT_SUPPORT
     bool "Enable Client functionality within CoAP"
     default n
