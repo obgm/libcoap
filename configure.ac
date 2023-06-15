@@ -1117,146 +1117,146 @@ AC_OUTPUT
 
 AC_MSG_RESULT([
 libcoap configuration summary:
-      libcoap package version  : "$PACKAGE_VERSION"
-      libcoap library version  : "$LIBCOAP_SO_VERSION"
-      libcoap API version      : "$LIBCOAP_API_VERSION"
-      libcoap DTLS lib extn    : "$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
-      host system              : "$host"]);
+      libcoap package version        : "$PACKAGE_VERSION"
+      libcoap library version        : "$LIBCOAP_SO_VERSION"
+      libcoap API version            : "$LIBCOAP_API_VERSION"
+      libcoap DTLS lib extn          : "$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
+      host system                    : "$host"]);
 if test "x$enable_server_mode" = "xyes"; then
-    AC_MSG_RESULT([      build with server support: "yes"])
+    AC_MSG_RESULT([      build with server support      : "yes"])
 else
-    AC_MSG_RESULT([      build with server support: "no"])
+    AC_MSG_RESULT([      build with server support      : "no"])
 fi
 if test "x$enable_client_mode" = "xyes"; then
-    AC_MSG_RESULT([      build with client support: "yes"])
+    AC_MSG_RESULT([      build with client support      : "yes"])
 else
-    AC_MSG_RESULT([      build with client support: "no"])
+    AC_MSG_RESULT([      build with client support      : "no"])
 fi
 if test "x$build_ipv4" != "xno"; then
-    AC_MSG_RESULT([      build with IPv4 support   : "yes"])
+    AC_MSG_RESULT([      build with IPv4 support        : "yes"])
 else
-    AC_MSG_RESULT([      build with IPv4 support   : "no"])
+    AC_MSG_RESULT([      build with IPv4 support        : "no"])
 fi
 if test "x$build_ipv6" != "xno"; then
-    AC_MSG_RESULT([      build with IPv6 support   : "yes"])
+    AC_MSG_RESULT([      build with IPv6 support        : "yes"])
 else
-    AC_MSG_RESULT([      build with IPv6 support   : "no"])
+    AC_MSG_RESULT([      build with IPv6 support        : "no"])
 fi
 if test "x$build_af_unix" != "xno"; then
-    AC_MSG_RESULT([      build with Unix socket support   : "yes"])
+    AC_MSG_RESULT([      build with Unix socket support : "yes"])
 else
-    AC_MSG_RESULT([      build with Unix socket support   : "no"])
+    AC_MSG_RESULT([      build with Unix socket support : "no"])
 fi
 if test "x$build_tcp" != "xno"; then
-    AC_MSG_RESULT([      build with TCP support   : "yes"])
+    AC_MSG_RESULT([      build with TCP support         : "yes"])
 else
-    AC_MSG_RESULT([      build with TCP support   : "no"])
+    AC_MSG_RESULT([      build with TCP support         : "no"])
 fi
 if test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
-    AC_MSG_RESULT([      build DTLS support       : "yes"])
-    AC_MSG_RESULT([          -->  GnuTLS around   : "yes" (found GnuTLS $gnutls_version)])
-    AC_MSG_RESULT([               GNUTLS_CFLAGS   : "$GnuTLS_CFLAGS"])
-    AC_MSG_RESULT([               GNUTLS_LIBS     : "$GnuTLS_LIBS"])
+    AC_MSG_RESULT([      build DTLS support             : "yes"])
+    AC_MSG_RESULT([          -->  GnuTLS around         : "yes" (found GnuTLS $gnutls_version)])
+    AC_MSG_RESULT([               GNUTLS_CFLAGS         : "$GnuTLS_CFLAGS"])
+    AC_MSG_RESULT([               GNUTLS_LIBS           : "$GnuTLS_LIBS"])
 fi
 if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
-    AC_MSG_RESULT([      build DTLS support       : "yes"])
-    AC_MSG_RESULT([         -->  OpenSSL around   : "yes" (found OpenSSL $openssl_version)])
-    AC_MSG_RESULT([              OPENSSL_CFLAGS   : "$OpenSSL_CFLAGS"])
-    AC_MSG_RESULT([              OPENSSL_LIBS     : "$OpenSSL_LIBS"])
+    AC_MSG_RESULT([      build DTLS support             : "yes"])
+    AC_MSG_RESULT([         -->  OpenSSL around         : "yes" (found OpenSSL $openssl_version)])
+    AC_MSG_RESULT([              OPENSSL_CFLAGS         : "$OpenSSL_CFLAGS"])
+    AC_MSG_RESULT([              OPENSSL_LIBS           : "$OpenSSL_LIBS"])
 fi
 if test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
-    AC_MSG_RESULT([      build DTLS support       : "yes"])
-    AC_MSG_RESULT([         -->  Mbed TLS around  : "yes" (found Mbed TLS $mbedtls_version)])
-    AC_MSG_RESULT([              MBEDTLS_CFLAGS   : "$MbedTLS_CFLAGS"])
-    AC_MSG_RESULT([              MBEDTLS_LIBS     : "$MbedTLS_LIBS"])
+    AC_MSG_RESULT([      build DTLS support             : "yes"])
+    AC_MSG_RESULT([         -->  Mbed TLS around        : "yes" (found Mbed TLS $mbedtls_version)])
+    AC_MSG_RESULT([              MBEDTLS_CFLAGS         : "$MbedTLS_CFLAGS"])
+    AC_MSG_RESULT([              MBEDTLS_LIBS           : "$MbedTLS_LIBS"])
 fi
 if test "x$with_tinydtls" = "xyes"; then
-    AC_MSG_RESULT([      build DTLS support       : "yes"])
+    AC_MSG_RESULT([      build DTLS support             : "yes"])
     if test "x$have_submodule_tinydtls" = "xyes"; then
-        AC_MSG_RESULT([         -->  TinyDTLS around  : "yes" (submodule)])
+        AC_MSG_RESULT([         -->  TinyDTLS around        : "yes" (submodule)])
     else
-        AC_MSG_RESULT([         -->  TinyDTLS around  : "yes (found TinyDTLS $tinydtls_version)"])
+        AC_MSG_RESULT([         -->  TinyDTLS around        : "yes (found TinyDTLS $tinydtls_version)"])
     fi
-    AC_MSG_RESULT([              TinyDTLS_CFLAGS  : "$DTLS_CFLAGS"])
-    AC_MSG_RESULT([              TinyDTLS_LIBS    : "$DTLS_LIBS"])
+    AC_MSG_RESULT([              TinyDTLS_CFLAGS        : "$DTLS_CFLAGS"])
+    AC_MSG_RESULT([              TinyDTLS_LIBS          : "$DTLS_LIBS"])
 fi
 if test "x$build_dtls" != "xyes"; then
-    AC_MSG_RESULT([      build DTLS support       : "no"])
+    AC_MSG_RESULT([      build DTLS support             : "no"])
 fi
 if test "x$build_add_default_names" = "xyes"; then
-    AC_MSG_RESULT([      add default names        : "yes"])
+    AC_MSG_RESULT([      add default names              : "yes"])
 else
-    AC_MSG_RESULT([      add default names        : "no"])
+    AC_MSG_RESULT([      add default names              : "no"])
 fi
 if test "x$build_observe_persist" = "xyes"; then
-    AC_MSG_RESULT([      build Observe Persist    : "yes"])
+    AC_MSG_RESULT([      build Observe Persist          : "yes"])
 else
-    AC_MSG_RESULT([      build Observe Persist    : "no"])
+    AC_MSG_RESULT([      build Observe Persist          : "no"])
 fi
 if test "x$have_epoll" = "xyes"; then
-    AC_MSG_RESULT([      build using epoll        : "$with_epoll"])
+    AC_MSG_RESULT([      build using epoll              : "$with_epoll"])
 fi
-AC_MSG_RESULT([      enable small stack size  : "$enable_small_stack"])
+AC_MSG_RESULT([      enable small stack size        : "$enable_small_stack"])
 if test "x$build_async" != "xno"; then
-    AC_MSG_RESULT([      enable separate responses: "yes"])
+    AC_MSG_RESULT([      enable separate responses      : "yes"])
 else
-    AC_MSG_RESULT([      enable separate responses: "no"])
+    AC_MSG_RESULT([      enable separate responses      : "no"])
 fi
 if test "x$build_oscore" != "xno"; then
-    AC_MSG_RESULT([      enable OSCORE support    : "yes"])
+    AC_MSG_RESULT([      enable OSCORE support          : "yes"])
 else
-    AC_MSG_RESULT([      enable OSCORE support    : "no"])
+    AC_MSG_RESULT([      enable OSCORE support          : "no"])
 fi
 if test "x$enable_max_logging_level" != "x8"; then
-    AC_MSG_RESULT([      enable max logging level : "$enable_max_logging_level"])
+    AC_MSG_RESULT([      enable max logging level       : "$enable_max_logging_level"])
 else
-    AC_MSG_RESULT([      enable max logging level : "none"])
+    AC_MSG_RESULT([      enable max logging level       : "none"])
 fi
 if test "x$build_doxygen" = "xyes"; then
-    AC_MSG_RESULT([      build doxygen pages      : "yes"])
-    AC_MSG_RESULT([          --> Doxygen around   : "yes" ($DOXYGEN $doxygen_version)])
+    AC_MSG_RESULT([      build doxygen pages            : "yes"])
+    AC_MSG_RESULT([          --> Doxygen around         : "yes" ($DOXYGEN $doxygen_version)])
     if test "x$DOT" = "x"; then
-        AC_MSG_RESULT([             -->  dot around   : "no" (DOT not found!)])
+        AC_MSG_RESULT([             -->  dot around         : "no" (DOT not found!)])
     else
-        AC_MSG_RESULT([             -->  dot around   : "yes" ($DOT $dot_version)])
+        AC_MSG_RESULT([             -->  dot around         : "yes" ($DOT $dot_version)])
     fi
 else
     if test "x$build_doxygen" = "xno"; then
-        AC_MSG_RESULT([      build doxygen pages      : "no"])
+        AC_MSG_RESULT([      build doxygen pages            : "no"])
     fi
 fi
 if test "x$build_manpages" = "xyes"; then
-    AC_MSG_RESULT([      build man pages          : "yes"])
+    AC_MSG_RESULT([      build man pages                : "yes"])
 else
-    AC_MSG_RESULT([      build man pages          : "no"])
+    AC_MSG_RESULT([      build man pages                : "no"])
 fi
 if test "x$build_tests" = "xyes"; then
-    AC_MSG_RESULT([      build unit test binary   : "yes"])
+    AC_MSG_RESULT([      build unit test binary         : "yes"])
 else
-    AC_MSG_RESULT([      build unit test binary   : "no"])
+    AC_MSG_RESULT([      build unit test binary         : "no"])
 fi
 if test "x$build_examples" = "xyes"; then
-    AC_MSG_RESULT([      build examples           : "yes"])
+    AC_MSG_RESULT([      build examples                 : "yes"])
 else
-    AC_MSG_RESULT([      build examples           : "no"])
+    AC_MSG_RESULT([      build examples                 : "no"])
 fi
 if test "x$build_examples_source" = "xyes"; then
-    AC_MSG_RESULT([      install examples source  : "yes"])
+    AC_MSG_RESULT([      install examples source        : "yes"])
 else
-    AC_MSG_RESULT([      install examples source  : "no"])
+    AC_MSG_RESULT([      install examples source        : "no"])
 fi
 if test "x$build_gcov" = "xyes"; then
-    AC_MSG_RESULT([      build with gcov support  : "yes"])
+    AC_MSG_RESULT([      build with gcov support        : "yes"])
 else
-    AC_MSG_RESULT([      build with gcov support  : "no"])
+    AC_MSG_RESULT([      build with gcov support        : "no"])
 fi
 if test "x$enable_shared" = "xyes"; then
-    AC_MSG_RESULT([      build shared library     : "yes"])
+    AC_MSG_RESULT([      build shared library           : "yes"])
 else
-    AC_MSG_RESULT([      build shared library     : "no"])
+    AC_MSG_RESULT([      build shared library           : "no"])
 fi
 if test "x$enable_static" = "xyes"; then
-    AC_MSG_RESULT([      build static library     : "yes"])
+    AC_MSG_RESULT([      build static library           : "yes"])
 else
-    AC_MSG_RESULT([      build static library     : "no"])
+    AC_MSG_RESULT([      build static library           : "no"])
 fi
