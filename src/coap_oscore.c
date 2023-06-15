@@ -1213,7 +1213,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       cose_encrypt0_set_nonce(cose, &nonce);
     }
 #ifdef OSCORE_EXTRA_DEBUG
-    dump_cose(cose, "!req post nonce");
+    dump_cose(cose, "!req post set nonce");
 #endif /* OSCORE_EXTRA_DEBUG */
     /*
      * 8.4 Step 3.
@@ -1265,7 +1265,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
     assert(aad.length < AAD_BUF_LEN);
     cose_encrypt0_set_aad(cose, &aad);
 #ifdef OSCORE_EXTRA_DEBUG
-    dump_cose(cose, "!req pre nonce");
+    dump_cose(cose, "!req post set aad");
 #endif /* OSCORE_EXTRA_DEBUG */
   }
 

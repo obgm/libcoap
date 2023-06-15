@@ -339,10 +339,10 @@ oscore_build_key(oscore_ctx_t *osc_ctx,
 
 static void
 oscore_log_context(oscore_ctx_t *osc_ctx, const char *heading) {
-#if COAP_MAX_LOG_LEVEL < _COAP_LOG_OSCORE
+#if COAP_MAX_LOGGING_LEVEL < _COAP_LOG_OSCORE
   (void)osc_ctx;
   (void)heading;
-#else /* COAP_MAX_LOG_LEVEL >= _COAP_LOG_OSCORE */
+#else /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_OSCORE */
   if (coap_get_log_level() >= COAP_LOG_OSCORE) {
     char buffer[30];
     oscore_recipient_ctx_t *next = osc_ctx->recipient_chain;
@@ -380,7 +380,7 @@ oscore_log_context(oscore_ctx_t *osc_ctx, const char *heading) {
       next = next->next_recipient;
     }
   }
-#endif /* COAP_MAX_LOG_LEVEL >= _COAP_LOG_OSCORE */
+#endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_OSCORE */
 }
 
 void
