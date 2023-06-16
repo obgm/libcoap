@@ -1041,10 +1041,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
           kid_context.s = ptr;
           cose_encrypt0_set_kid_context(cose, &kid_context);
         }
-        if (ptr && (osc_ctx->id_context->length != cose->kid_context.length ||
-                    memcmp(osc_ctx->id_context->s,
-                           cose->kid_context.s,
-                           cose->kid_context.length) != 0)) {
+        if (ptr && !coap_binary_equal(osc_ctx->id_context, &cose->kid_context)) {
           /* If Appendix B.2 step 3 is in operation */
           /* Need to update Security Context with new (R2 || ID1) ID Context */
           coap_binary_t *kc = coap_new_binary(cose->kid_context.length +
@@ -1384,6 +1381,23 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   }
 #if COAP_CLIENT_SUPPORT
   if (session->b_2_step == COAP_OSCORE_B_2_STEP_3) {
+    coap_log_oscore("Appendix B.2 client step 3 (R2 || R3)\n");
+    coap_pdu_encode_header(plain_pdu, session->proto);
+    plain_pdu->actual_token.s = plain_pdu->token;
+    plain_pdu->code = plain_pdu->token[0];
+    if (plain_pdu->code != COAP_RESPONSE_CODE(401)) {
+      coap_log_warn("OSCORE Appendix B.2: Expected 4.01 response\n");
+    }
+    /* Skip the options */
+    coap_option_iterator_init(plain_pdu, &opt_iter, COAP_OPT_ALL);
+    while ((opt = coap_option_next(&opt_iter))) {
+    }
+    if (opt_iter.length > 0 && opt_iter.next_option &&
+        opt_iter.next_option[0] == COAP_PAYLOAD_START) {
+      plain_pdu->data = &opt_iter.next_option[1];
+    }
+    coap_log_oscore("Inner Response PDU (plaintext)\n");
+    coap_show_pdu(COAP_LOG_OSCORE, plain_pdu);
     /*
      * Need to update Security Context with new (R2 || R3) ID Context
      * and retransmit the request
@@ -1400,7 +1414,6 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
     memcpy(kc->s, cose->kid_context.s, cose->kid_context.length);
     coap_prng(&kc->s[cose->kid_context.length], 8);
 
-    coap_log_oscore("Appendix B.2 client step 3 (R2 || R3)\n");
     oscore_update_ctx(osc_ctx, (coap_bin_const_t *)kc);
 
     coap_cancel_all_messages(session->context,
@@ -1592,15 +1605,20 @@ typedef enum {
   COAP_ENC_LAST
 } coap_oscore_coding_t;
 
+#undef TEXT_MAPPING
+#define TEXT_MAPPING(t, v)                     \
+  { { sizeof(#t)-1, (const uint8_t *)#t }, v }
+
 static struct coap_oscore_encoding_t {
-  const char *name;
+  coap_str_const_t name;
   coap_oscore_coding_t encoding;
-} oscore_encoding[] = {{"ascii", COAP_ENC_ASCII},
-                       {"hex", COAP_ENC_HEX},
-                       {"integer", COAP_ENC_INTEGER},
-                       {"text", COAP_ENC_TEXT},
-                       {"bool", COAP_ENC_BOOL},
-                       {NULL, COAP_ENC_LAST}};
+} oscore_encoding[] = {
+    TEXT_MAPPING(ascii, COAP_ENC_ASCII),
+    TEXT_MAPPING(hex, COAP_ENC_HEX),
+    TEXT_MAPPING(integer, COAP_ENC_INTEGER),
+    TEXT_MAPPING(text, COAP_ENC_TEXT),
+    TEXT_MAPPING(bool, COAP_ENC_BOOL),
+    {{0, NULL}, COAP_ENC_LAST}};
 
 typedef struct {
   coap_oscore_coding_t encoding;
@@ -1697,14 +1715,16 @@ retry:
   if (split == NULL)
     goto bad_entry;
 
-  for (i = 0; oscore_encoding[i].name; i++) {
-    if (memcmp(begin, oscore_encoding[i].name, split - begin) == 0) {
+  for (i = 0; oscore_encoding[i].name.s; i++) {
+    coap_str_const_t temp = { split - begin, (const uint8_t*)begin };
+
+    if (coap_string_equal(&temp, &oscore_encoding[i].name)) {
       value->encoding = oscore_encoding[i].encoding;
-      value->encoding_name = oscore_encoding[i].name;
+      value->encoding_name = (const char *)oscore_encoding[i].name.s;
       break;
     }
   }
-  if (oscore_encoding[i].name == NULL)
+  if (oscore_encoding[i].name.s == NULL)
     goto bad_entry;
 
   begin = split + 1;
@@ -1764,18 +1784,19 @@ bad_entry:
     offsetof(coap_oscore_conf_t, n), t }
 
 typedef struct oscore_text_mapping_t {
-  const char *text;
+  coap_str_const_t text;
   int value;
 } oscore_text_mapping_t;
 
 /* Naming as per https://www.iana.org/assignments/cose/cose.xhtml#algorithms */
 static oscore_text_mapping_t text_aead_alg[] = {
-    {"AES-CCM-16-64-128", COSE_ALGORITHM_AES_CCM_16_64_128},
-    {"AES-CCM-16-64-256", COSE_ALGORITHM_AES_CCM_16_64_256},
-    {NULL, 0}};
+    TEXT_MAPPING(AES-CCM-16-64-128, COSE_ALGORITHM_AES_CCM_16_64_128),
+    TEXT_MAPPING(AES-CCM-16-64-256, COSE_ALGORITHM_AES_CCM_16_64_256),
+    {{0, NULL}, 0}};
 
 static oscore_text_mapping_t text_hkdf_alg[] = {
-    {"direct+HKDF-SHA-256", COSE_HKDF_ALG_HKDF_SHA_256}, {NULL, 0}};
+    TEXT_MAPPING(direct+HKDF-SHA-256, COSE_HKDF_ALG_HKDF_SHA_256),
+    {{0, NULL}, 0}};
 
 static struct oscore_config_t {
   coap_str_const_t str_keyword;
@@ -1893,17 +1914,16 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
                    sizeof(value.u.value_int));
             break;
           case COAP_ENC_TEXT:
-            for (j = 0; oscore_config[i].text_mapping[j].text != NULL; j++) {
-              if (memcmp(value.u.value_str.s,
-                         oscore_config[i].text_mapping[j].text,
-                         value.u.value_str.length) == 0) {
+            for (j = 0; oscore_config[i].text_mapping[j].text.s != NULL; j++) {
+              if (coap_string_equal(&value.u.value_str,
+                         &oscore_config[i].text_mapping[j].text)) {
                 memcpy(&(((char *)oscore_conf)[oscore_config[i].offset]),
                        &oscore_config[i].text_mapping[j].value,
                        sizeof(oscore_config[i].text_mapping[j].value));
                 break;
               }
             }
-            if (oscore_config[i].text_mapping[j].text == NULL) {
+            if (oscore_config[i].text_mapping[j].text.s == NULL) {
               coap_log_warn(
                        "oscore_conf: Keyword '%.*s': value '%.*s' unknown\n",
                        (int)keyword.length,
