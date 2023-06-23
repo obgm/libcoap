@@ -179,8 +179,8 @@ coap_resource_t *coap_resource_init(coap_str_const_t *uri_path,
  * for PUT.
  *
  * In the same way that additional handlers can be added to the resource
- * created by coap_resource_init() by using coap_register_handler(), POST,
- * GET, DELETE etc. handlers can be added to this resource. It is the
+ * created by coap_resource_init() by using coap_register_request_handler(),
+ * POST, GET, DELETE etc. handlers can be added to this resource. It is the
  * responsibility of the application to manage the unknown resources by either
  * creating new resources with coap_resource_init() (which should have a
  * DELETE handler specified for the resource removal) or by maintaining an
@@ -207,8 +207,8 @@ coap_resource_t *coap_resource_unknown_init(coap_method_handler_t put_handler);
  * for PUT and configurable control over multicast requests packets.
  *
  * In the same way that additional handlers can be added to the resource
- * created by coap_resource_init() by using coap_register_handler(), POST,
- * GET, DELETE etc. handlers can be added to this resource. It is the
+ * created by coap_resource_init() by using coap_register_request_handler(),
+ * POST, GET, DELETE etc. handlers can be added to this resource. It is the
  * responsibility of the application to manage the unknown resources by either
  * creating new resources with coap_resource_init() (which should have a
  * DELETE handler specified for the resource removal) or by maintaining an
@@ -367,6 +367,8 @@ int coap_delete_resource(coap_context_t *context, coap_resource_t *resource);
 /**
  * Registers the specified @p handler as message handler for the request type
  * @p method
+ *
+ * @deprecated use coap_register_request_handler() instead.
  *
  * @param resource The resource for which the handler shall be registered.
  * @param method   The CoAP request method to handle.

@@ -24,6 +24,7 @@ TXT3 = coap_address.txt \
 	coap_block.txt \
 	coap_cache.txt \
 	coap_context.txt \
+	coap_deprecated.txt \
 	coap_endpoint_server.txt \
 	coap_encryption.txt \
 	coap_endpoint_client.txt \
@@ -106,6 +107,11 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_context.3" > coap_context_set_csm_timeout.3
 	@echo ".so man3/coap_context.3" > coap_context_get_csm_timeout.3
 	@echo ".so man3/coap_context.3" > coap_context_set_max_token_size.3
+	@echo ".so man3/coap_deprecated.3" > coap_register_handler.3
+	@echo ".so man3/coap_deprecated.3" > coap_resource_set_dirty.3
+	@echo ".so man3/coap_deprecated.3" > coap_run_once.3
+	@echo ".so man3/coap_deprecated.3" > coap_set_event_handler.3
+	@echo ".so man3/coap_deprecated.3" > coap_write.3
 	@echo ".so man3/coap_io.3" > coap_can_exit.3
 	@echo ".so man3/coap_logging.3" > coap_log_info.3
 	@echo ".so man3/coap_logging.3" > coap_log_debug.3

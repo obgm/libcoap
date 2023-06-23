@@ -162,6 +162,8 @@ coap_context_t *coap_new_context(const coap_address_t *listen_addr);
 /**
  * Set the context's default PSK hint and/or key for a server.
  *
+ * @deprecated Use coap_context_set_psk2() instead.
+ *
  * @param context The current coap_context_t object.
  * @param hint    The default PSK server hint sent to a client. If NULL, PSK
  *                authentication is disabled. Empty string is a valid hint.

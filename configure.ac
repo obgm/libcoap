@@ -1083,6 +1083,7 @@ man/coap_attribute.txt
 man/coap_block.txt
 man/coap_cache.txt
 man/coap_context.txt
+man/coap_deprecated.txt
 man/coap_encryption.txt
 man/coap_endpoint_client.txt
 man/coap_endpoint_server.txt
