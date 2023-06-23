@@ -142,6 +142,8 @@ static char name_list[100][100];
 static unsigned int name_cnt = 0;
 static char return_list[100][100];
 static unsigned int return_cnt = 0;
+static char man_list[400][100];
+static unsigned int man_cnt = 0;
 
 static void
 check_synopsis(const char* file) {
@@ -386,16 +388,18 @@ cleanup:
   return;
 }
 
-int main(int argc, char* argv[])
-{
+int
+main(int argc, char* argv[]) {
   DIR *pdir;
   struct dirent *pdir_ent;
   char buffer[1024];
   char man_name[1024];
   int  status;
+  size_t i;
+  int man_missing_first = 1;
 
-  if (argc != 2) {
-    fprintf(stderr, "usage: %s man_directory\n", argv[0]);
+  if (argc != 2 && argc != 3) {
+    fprintf(stderr, "usage: %s man_directory [libcoap-3.sym_file]\n", argv[0]);
     exit (1);
   }
 
@@ -403,6 +407,31 @@ int main(int argc, char* argv[])
   if (pdir == NULL) {
     fprintf(stderr, "opendir: %s: %s (%d)\n", argv[1], strerror(errno), errno);
     exit(1);
+  }
+  if (argc == 3) {
+    FILE *fp = fopen(argv[2], "r");
+    char tmp_name[100];
+
+    if (fp == NULL) {
+      fprintf(stderr, "fopen: %s: %s (%d)\n", argv[2], strerror(errno), errno);
+      exit(1);
+    }
+    while (fgets(tmp_name, sizeof(tmp_name), fp) != NULL) {
+      char *cp = strchr(tmp_name, '\n');
+
+      if (cp)
+        *cp = '\000';
+      if (tmp_name[0]) {
+        strncpy(man_list[man_cnt], tmp_name, sizeof(man_list[man_cnt]));
+        man_cnt++;
+      }
+      if (man_cnt == sizeof(man_list) / sizeof(name_list[0])) {
+        fprintf(stderr, "man_list[] too small (%zd) for entries from %s\n",
+                sizeof(man_list) / sizeof(name_list[0]), argv[2]);
+        exit(1);
+      }
+    }
+    fclose(fp);
   }
   if (chdir(argv[1]) == -1) {
     fprintf(stderr, "chdir: %s: %s (%d)\n", argv[1], strerror(errno), errno);
@@ -436,7 +465,6 @@ int main(int argc, char* argv[])
       FILE* fpheader = NULL;
       char file_name[300];
       char *cp;
-      unsigned int i;
 
       fprintf(stderr, "Processing: %s\n", pdir_ent->d_name);
 
@@ -581,12 +609,18 @@ int main(int argc, char* argv[])
           if (i != name_cnt)
             continue;
           if (i >= (int)(sizeof(name_list)/sizeof(name_list[0]))) {
-            fprintf(stderr, "NAME: %s insufficient space (%u >= %u)\n", buffer,
+            fprintf(stderr, "NAME: %s insufficient space (%zu >= %u)\n", buffer,
                     i, (int)(sizeof(name_list)/sizeof(name_list[0])));
             continue;
           }
           memcpy(name_list[i], buffer, sizeof(name_list[i])-1);
           name_cnt++;
+          for (i = 0; i < man_cnt; i++) {
+            if (strcmp(man_list[i], buffer) == 0) {
+              man_list[i][0] = '\000';
+              break;
+            }
+          }
         }
 
         if (in_synopsis) {
@@ -755,5 +789,14 @@ bad:
     }
   }
   closedir (pdir);
+  for (i = 0; i < man_cnt; i++) {
+    if (man_list[i][0]) {
+      if (man_missing_first) {
+        man_missing_first = 0;
+        fprintf(stderr, "\nMissing man pages (for reference only)\n");
+      }
+      fprintf(stderr, "%s\n", man_list[i]);
+    }
+  }
   exit(exit_code);
 }
