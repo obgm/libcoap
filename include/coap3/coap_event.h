@@ -173,7 +173,7 @@ void coap_set_event_handler(coap_context_t *context,
 /**
  * Clears the event handler registered with @p context.
  *
- * @deprecated Use coap_register_event_handler() instead with NULL for hnd.
+ * @deprecated Use coap_register_event_handler() instead with NULL for handler.
  *
  * @param context The CoAP context whose event handler is to be removed.
  */

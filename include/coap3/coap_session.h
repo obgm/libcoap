@@ -253,6 +253,9 @@ coap_session_t *coap_new_client_session(
 
 /**
 * Creates a new client session to the designated server with PSK credentials
+ *
+ * @deprecated Use coap_new_client_session_psk2() instead.
+ *
 * @param ctx The CoAP context.
 * @param local_if Address of local interface. It is recommended to use NULL to let the operating system choose a suitable local interface. If an address is specified, the port number should be zero, which means that a free port is automatically selected.
 * @param server The server's address. If the port number is zero, the default port for the protocol will be used.

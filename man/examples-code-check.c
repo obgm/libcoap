@@ -54,8 +54,15 @@
 #endif /* ! _WIN32 */
 
 const char *inline_list[] = {
-  "coap_malloc(",
   "coap_free(",
+  "coap_malloc(",
+  "coap_encode_var_bytes(",
+  "coap_option_clrb(",
+  "coap_option_getb(",
+  "coap_option_setb(",
+  "coap_read(",
+  "coap_run_once(",
+  "coap_write(",
 };
 
 const char *define_list[] = {

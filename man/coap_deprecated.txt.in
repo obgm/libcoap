@@ -1,0 +1,194 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc tw=0
+
+coap_deprecated(3)
+==================
+:doctype: manpage
+:man source:   coap_deprecated
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_deprecated,
+coap_clear_event_handler,
+coap_context_set_psk,
+coap_encode_var_bytes,
+coap_new_client_session_psk,
+coap_option_clrb,
+coap_option_getb,
+coap_option_setb,
+coap_read,
+coap_register_handler,
+coap_resource_set_dirty,
+coap_run_once,
+coap_set_event_handler,
+coap_write
+- Work with CoAP deprecated functions
+
+SYNOPSIS
+--------
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*void coap_clear_event_handler(coap_context_t *_context_);*
+
+*int coap_context_set_psk(coap_context_t *_context_, const char *_hint_,
+const uint8_t *_key_, size_t _key_len_);*
+
+*int coap_encode_var_bytes(uint8_t *_buffer_, unsigned int _value_);*
+
+*coap_session_t *coap_new_client_session_psk(coap_context_t *_context_,
+const coap_address_t *_local_if_, const coap_address_t *_server_,
+coap_proto_t _proto_, const char *_identity_, const uint8_t *_key_,
+unsigned _key_len_);*
+
+*int coap_option_clrb(coap_opt_filter_t *_filter_, uint16_t _type_);*
+
+*int coap_option_getb(coap_opt_filter_t *_filter_, uint16_t _type_);*
+
+*int coap_option_setb(coap_opt_filter_t *_filter_, uint16_t _type_);*
+
+*void coap_read(coap_context_t *_context_, coap_tick_t _now_);*
+
+*void coap_register_handler(coap_resource_t *_resource_,
+coap_request_t _method_, coap_method_handler_t _handler_);*
+
+*int coap_resource_set_dirty(coap_resource_t *_resource_,
+const coap_string_t *_query_);*
+
+*int coap_run_once(coap_context_t *_context_, uint32_t _timeout_ms_);*
+
+*void coap_set_event_handler(coap_context_t *_context_,
+coap_event_handler_t _handler_);*
+
+*unsigned int coap_write(coap_context_t *_context_, coap_socket_t *_sockets_[],
+unsigned int _max_sockets_, unsigned int *_num_sockets_, coap_tick_t _now_);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
+
+DESCRIPTION
+-----------
+
+Several of the existing CoAP API functions have been deprecated.  These are
+listed here, along with the functions that should now be used instead.
+
+FUNCTIONS
+---------
+
+*Function: coap_clear_event_handler()*
+
+The *coap_clear_event_handler*() function is replaced by
+*coap_register_event_handler*(3), using NULL for _handler_.
+
+*Function: coap_context_set_psk()*
+
+The *coap_context_set_psk*() function is replaced by
+*coap_context_set_psk2*(3) which gives additional PSK configuration capability
+by the use of the coap_dtls_spsk_t structure.
+
+*Function: coap_encode_var_bytes()*
+
+The *coap_encode_var_bytes*() function is replaced by
+*coap_encode_var_safe*(3).
+
+*Function: coap_new_client_session_psk()*
+
+The *coap_new_client_session_psk*() function is replaced by
+*coap_new_client_session_psk2*(3) which gives additional PSK configuration capability
+by the use of the coap_dtls_cpsk_t structure.
+
+*Function: coap_option_clrb()*
+
+The *coap_option_clrb*() function is replaced by
+*coap_option_filter_unset*(3).
+
+*Function: coap_option_getb()*
+
+The *coap_option_getb*() function is replaced by
+*coap_option_filter_get*(3).
+
+*Function: coap_option_setb()*
+
+The *coap_option_setb*() function is replaced by
+*coap_option_filter_set*(3).
+
+*Function: coap_read()*
+
+The *coap_read*() function is replaced by
+*coap_io_do_io*(3).
+
+*Function: coap_register_handler()*
+
+The *coap_register_handler*() function is replaced by
+*coap_register_request_handler*(3).
+
+*Function: coap_resource_set_dirty()*
+
+The *coap_resource_set_dirty*() function is replaced by
+*coap_resource_notify_observers*(3).
+
+*Function: coap_run_once()*
+
+The *coap_run_once*() function is replaced by
+*coap_io_process*(3).
+
+*Function: coap_set_event_handler()*
+
+The *coap_set_event_handler*() function is replaced by
+*coap_register_event_handler*(3).
+
+*Function: coap_clear_event_handler()*
+
+The *coap_write*() function is replaced by
+*coap_io_prepare_io*(3).
+
+RETURN VALUES
+-------------
+*coap_context_set_psk*() returns 1 if success, 0 on failure.
+
+*coap_encode_var_bytes*() returns either the length of bytes encoded (which can
+be 0 when encoding 0) or 0 on failure.
+
+*coap_new_client_session_psk*() returns a new session if success, NULL on
+failure.
+
+*coap_option_clrb*() returns  1 if bit was set, -1 otherwise.
+
+*coap_option_getb*() returns  1 if bit was set, 0 if not.
+
+*coap_option_setb*() returns  1 if bit was set, -1 otherwise.
+
+*coap_resource_set_dirty*() returns 1 if success, 0 on failure.
+
+*coap_run_once*() returns number of milliseconds spent in function or -1
+if there was an error.
+
+*coap_write*() returns the number of milli-seconds that need to be waited
+before the function should next be called.
+
+SEE ALSO
+--------
+*coap_endpoint_client*(3), *coap_endpoint_server*(3), *coap_handler*(3),
+*coap_io*(3), *coap_observe*(3), *coap_pdu_access*(3) and *coap_pdu_setup*(3).
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
+
+BUGS
+----
+Please report bugs on the mailing list for libcoap:
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>
