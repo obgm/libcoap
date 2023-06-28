@@ -363,4 +363,3 @@ t_init_error_response_tests(void) {
 
   return suite[0];
 }
-

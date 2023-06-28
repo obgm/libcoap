@@ -1334,4 +1334,3 @@ t_init_pdu_tests(void) {
 
   return suite[0];
 }
-

@@ -1046,4 +1046,3 @@ t_init_option_tests(void) {
 
   return suite[0];
 }
-

@@ -419,4 +419,3 @@ int coap_client_delay_first(coap_session_t *session);
 /** @} */
 
 #endif /* COAP_NET_INTERNAL_H_ */
-
