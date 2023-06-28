@@ -50,7 +50,7 @@
   -Wno-unused-function \
   -Wno-unused-but-set-variable \
   -Werror \
-  "
+"
 #endif /* ! _WIN32 */
 
 const char *inline_list[] = {
@@ -146,13 +146,13 @@ static char man_list[400][100];
 static unsigned int man_cnt = 0;
 
 static void
-check_synopsis(const char* file) {
+check_synopsis(const char *file) {
   char buffer[1024];
   char file_name[300];
   FILE *fpcode;
   int  status;
 
-  snprintf(file_name, sizeof (file_name), "tmp/%s-header.c", file);
+  snprintf(file_name, sizeof(file_name), "tmp/%s-header.c", file);
   fpcode = fopen(file_name, "w");
   if (!fpcode) {
     fprintf(stderr, "fopen: %s: %s (%d)\n", file_name, strerror(errno), errno);
@@ -169,7 +169,7 @@ check_synopsis(const char* file) {
   fprintf(fpcode, "#include \"%s.h\"\n", file);
   fclose(fpcode);
   file_name[strlen(file_name)-1] = '\000';
-  snprintf (buffer, sizeof (buffer),
+  snprintf(buffer, sizeof(buffer),
            "gcc " GCC_OPTIONS " -c %sc -o %so",
            file_name, file_name);
   status = system(buffer);
@@ -226,8 +226,7 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
   if (strncmp(buffer, "*void ", sizeof("*void ")-1) == 0) {
     if (strncmp(buffer, "*void *", sizeof("*void *")-1) == 0) {
       func_start = &buffer[sizeof("*void *")-1];
-    }
-    else {
+    } else {
       is_void_func = 1;
       func_start = &buffer[sizeof("*void ")-1];
     }
@@ -238,8 +237,7 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
                 strlen(number_list[i])) == 0) {
       if (buffer[1 + strlen(number_list[i])] == '*') {
         func_start = &buffer[2 + strlen(number_list[i])];
-      }
-      else {
+      } else {
         is_number_func = 1;
         func_start = &buffer[1 + strlen(number_list[i])];
       }
@@ -252,8 +250,7 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
                 strlen(pointer_list[i])) == 0) {
       if (buffer[1 + strlen(pointer_list[i])] == '*') {
         func_start = &buffer[2 + strlen(pointer_list[i])];
-      }
-      else {
+      } else {
         is_struct_func = i + 1;
         func_start = &buffer[1 + strlen(pointer_list[i])];
       }
@@ -288,22 +285,23 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
   /* Need to include use of U for unused parameters just before comma */
   cp = buffer;
   ecp = strchr(cp, ',');
-  if (!ecp) ecp = strchr(cp, ')');
+  if (!ecp)
+    ecp = strchr(cp, ')');
   outbuf[0] = '\000';
   while (ecp) {
     len = strlen(outbuf);
     if (strncmp(cp, "void", ecp-cp) == 0)
       snprintf(&outbuf[len], sizeof(outbuf)-len, "%*.*s%c",
-              (int)(ecp-cp), (int)(ecp-cp), cp, *ecp);
+               (int)(ecp-cp), (int)(ecp-cp), cp, *ecp);
     else
       snprintf(&outbuf[len], sizeof(outbuf)-len, "%*.*s U%c",
-              (int)(ecp-cp), (int)(ecp-cp), cp, *ecp);
+               (int)(ecp-cp), (int)(ecp-cp), cp, *ecp);
     cp = ecp+1;
-    if(*cp) {
+    if (*cp) {
       ecp = strchr(cp, ',');
-      if (!ecp) ecp = strchr(cp, ')');
-    }
-    else {
+      if (!ecp)
+        ecp = strchr(cp, ')');
+    } else {
       ecp = NULL;
     }
   }
@@ -321,31 +319,26 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
     /* Replace ;* or *; with simple function definition */
     else if (is_void_func) {
       strcpy(&outbuf[len-3], "{}\n");
-    }
-    else if (is_number_func) {
+    } else if (is_number_func) {
       strcpy(&outbuf[len-3], "{return 0;}\n");
-    }
-    else if (is_struct_func) {
+    } else if (is_struct_func) {
       snprintf(&outbuf[len-3], sizeof(outbuf)-(len-3),
-             "{%s v; memset(&v, 0, sizeof(v)); return v;}\n",
-             pointer_list[is_struct_func - 1]);
-    }
-    else if (is_struct) {
+               "{%s v; memset(&v, 0, sizeof(v)); return v;}\n",
+               pointer_list[is_struct_func - 1]);
+    } else if (is_struct) {
       strcpy(&outbuf[len-3], ";\n");
-    }
-    else {
+    } else {
       strcpy(&outbuf[len-3], "{return NULL;}\n");
     }
   }
   if (outbuf[0] == '*') {
     fprintf(fpheader, "%s", &outbuf[1]);
-  }
-  else {
+  } else {
     fprintf(fpheader, "%s", outbuf);
   }
 cleanup:
   if (in_synopsis && func_start) {
-    char* wcp = strchr(func_start, '(');
+    char *wcp = strchr(func_start, '(');
 
     if (!wcp && is_struct)
       wcp = strchr(func_start, ';');
@@ -389,7 +382,7 @@ cleanup:
 }
 
 int
-main(int argc, char* argv[]) {
+main(int argc, char *argv[]) {
   DIR *pdir;
   struct dirent *pdir_ent;
   char buffer[1024];
@@ -400,7 +393,7 @@ main(int argc, char* argv[]) {
 
   if (argc != 2 && argc != 3) {
     fprintf(stderr, "usage: %s man_directory [libcoap-3.sym_file]\n", argv[0]);
-    exit (1);
+    exit(1);
   }
 
   pdir = opendir(argv[1]);
@@ -449,10 +442,10 @@ main(int argc, char* argv[]) {
   }
 #endif /* ! WIN32 && ! __MINGW32__ */
 
-  while ((pdir_ent = readdir (pdir)) != NULL) {
-    if (!strncmp(pdir_ent->d_name, "coap_", sizeof ("coap_")-1) &&
-        strstr (pdir_ent->d_name, ".txt.in")) {
-      FILE*  fp;
+  while ((pdir_ent = readdir(pdir)) != NULL) {
+    if (!strncmp(pdir_ent->d_name, "coap_", sizeof("coap_")-1) &&
+        strstr(pdir_ent->d_name, ".txt.in")) {
+      FILE  *fp;
       int skip = 1;
       int in_examples = 0;
       int in_synopsis = 0;
@@ -461,14 +454,14 @@ main(int argc, char* argv[]) {
       int in_return = 0;
       int count = 1;
       char keep_line[1024] = {0};
-      FILE* fpcode = NULL;
-      FILE* fpheader = NULL;
+      FILE *fpcode = NULL;
+      FILE *fpheader = NULL;
       char file_name[300];
       char *cp;
 
       fprintf(stderr, "Processing: %s\n", pdir_ent->d_name);
 
-      snprintf(man_name, sizeof (man_name), "%s", pdir_ent->d_name);
+      snprintf(man_name, sizeof(man_name), "%s", pdir_ent->d_name);
       fp = fopen(man_name, "r");
       if (fp == NULL) {
         fprintf(stderr, "fopen: %s: %s (%d)\n", man_name, strerror(errno), errno);
@@ -478,7 +471,7 @@ main(int argc, char* argv[]) {
       if (cp)
         *cp = '\000';
       name_cnt = 0;
-      while (fgets(buffer, sizeof (buffer), fp) != NULL) {
+      while (fgets(buffer, sizeof(buffer), fp) != NULL) {
         if (strncmp(buffer, "NAME", sizeof("NAME")-1) == 0) {
           in_name = 1;
           continue;
@@ -486,7 +479,7 @@ main(int argc, char* argv[]) {
         if (strncmp(buffer, "SYNOPSIS", sizeof("SYNOPSIS")-1) == 0) {
           in_name = 0;
           in_synopsis = 1;
-          snprintf(file_name, sizeof (file_name), "tmp/%s.h",
+          snprintf(file_name, sizeof(file_name), "tmp/%s.h",
                    pdir_ent->d_name);
           fpheader = fopen(file_name, "w");
           if (!fpheader) {
@@ -500,7 +493,7 @@ main(int argc, char* argv[]) {
           in_synopsis = 0;
           dump_name_synopsis_mismatch();
           in_functions = 1;
-          snprintf(file_name, sizeof (file_name), "tmp/%s.h",
+          snprintf(file_name, sizeof(file_name), "tmp/%s.h",
                    pdir_ent->d_name);
           fpheader = fopen(file_name, "w");
           if (!fpheader) {
@@ -631,7 +624,7 @@ main(int argc, char* argv[]) {
           if (buffer[0] == '*' && buffer[1] != '#') {
             /* Start of a new entry */
             snprintf(outbuf, sizeof(outbuf), "%s", buffer);
-            while (fgets(buffer, sizeof (buffer), fp) != NULL) {
+            while (fgets(buffer, sizeof(buffer), fp) != NULL) {
               if (buffer[0] == '\n') {
                 break;
               }
@@ -666,7 +659,7 @@ main(int argc, char* argv[]) {
             /* Start of a new entry */
             outbuf[0] = '*';
             outbuf[1] = '\000';
-            while (fgets(buffer, sizeof (buffer), fp) != NULL) {
+            while (fgets(buffer, sizeof(buffer), fp) != NULL) {
               if (buffer[0] == '\n') {
                 break;
               }
@@ -727,27 +720,25 @@ main(int argc, char* argv[]) {
             /* Found start of code */
             if (strcmp(buffer, "----\n")) {
               fprintf(stderr,
-                     "Unexpected start of code '%.*s' - expected ----\n",
-                     (int)strlen(buffer)-1, buffer);
+                      "Unexpected start of code '%.*s' - expected ----\n",
+                      (int)strlen(buffer)-1, buffer);
             }
-            snprintf(file_name, sizeof (file_name), "tmp/%s-%d.c",
+            snprintf(file_name, sizeof(file_name), "tmp/%s-%d.c",
                      pdir_ent->d_name, count++);
             fpcode = fopen(file_name, "w");
             if (!fpcode) {
               fprintf(stderr, "fopen: %s: %s (%d)\n", file_name,
                       strerror(errno), errno);
               goto bad;
-            }
-            else {
+            } else {
               fprintf(fpcode, "/* %s */\n", keep_line);
             }
             skip = 0;
             fprintf(stderr, "Processing: %s EXAMPLE - '%d'\n",
                     pdir_ent->d_name,
                     count-1);
-          }
-          else if (buffer[0] == '*') {
-            snprintf(keep_line, sizeof (keep_line), "%s", buffer);
+          } else if (buffer[0] == '*') {
+            snprintf(keep_line, sizeof(keep_line), "%s", buffer);
           }
           continue;
         }
@@ -757,10 +748,11 @@ main(int argc, char* argv[]) {
           /* Found end of code */
 
           skip = 1;
-          if (fpcode) fclose(fpcode);
+          if (fpcode)
+            fclose(fpcode);
           keep_line[0] = '\000';
           file_name[strlen(file_name)-1] = '\000';
-          snprintf (buffer, sizeof (buffer),
+          snprintf(buffer, sizeof(buffer),
                    "gcc " GCC_OPTIONS " -c %sc -o %so",
                    file_name, file_name);
           status = system(buffer);
@@ -770,7 +762,7 @@ main(int argc, char* argv[]) {
           continue;
         }
         if (fpcode) {
-          if (strstr (buffer, "LIBCOAP_API_VERSION")) {
+          if (strstr(buffer, "LIBCOAP_API_VERSION")) {
             fprintf(fpcode, "#include <coap3/coap.h>\n");
             fprintf(fpcode, "#ifdef __GNUC__\n");
             fprintf(fpcode, "#define U __attribute__ ((unused))\n");
@@ -788,7 +780,7 @@ bad:
       fclose(fp);
     }
   }
-  closedir (pdir);
+  closedir(pdir);
   for (i = 0; i < man_cnt; i++) {
     if (man_list[i][0]) {
       if (man_missing_first) {

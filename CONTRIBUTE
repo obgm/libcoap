@@ -125,13 +125,23 @@ your patches to libcoap-developers@lists.sourceforge.net
 As every FOSS project the libcoap project needs also some rules for coding.
 There are lots but the main ones following are important!
 
-5.1 License and Copyright
+5.1 pre-commit
+--------------
+pre-commit is used to check the the syntax of *.c and *.h files according to
+the libcoap coding rules. The files are checked on github for every 'git push',
+and can be locally checked if pre-commit is installed for every 'git commit'.
+
+$ cd libcoap
+$ pip install pre-commit
+$ pre-commit install --allow-missing-config
+
+5.2 License and Copyright
 -------------------------
 Every new file must contain a license and the copyright holder(s). Please
 take a look into existing files and adopt the needed changes to your new
 file(s).
 
-5.2 Source Code Indentation
+5.3 Source Code Indentation
 ---------------------------
 * For better reading the indentation is set to 2 characters as spaces, this
   is depended on the often used nested functions like 'if-else'. Don't use
@@ -166,7 +176,7 @@ coap_add_block(coap_pdu_t *pdu,
                unsigned char block_szx) {
 --->8--
 
-5.3 Source Code Documentation
+5.4 Source Code Documentation
 -----------------------------
 * A useful source code documentation is mandatory. Mostly to be done within the
   source code files, but more complex description should be done in extra
@@ -177,7 +187,7 @@ coap_add_block(coap_pdu_t *pdu,
   header files as they are the public part of the libcoap and only use the
   @-syntax for doxygen commands (akin to javadoc).
 
-5.4 API Changes
+5.5 API Changes
 ---------------
 * Never break the API!
   Don't remove old functions and if there some changes are needed in some kind
@@ -185,7 +195,7 @@ coap_add_block(coap_pdu_t *pdu,
   compatible and mark the old function as @deprecated in the doxygen comment.
   Please discuss needed changes on the mailing list.
 
-5.5 Patches and Commits
+5.6 Patches and Commits
 -----------------------
 * Git commits must be atomic and contain a declarative subject line (max 50
   characters if possible) and a body for a statement if needed.
