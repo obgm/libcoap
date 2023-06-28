@@ -491,7 +491,8 @@ int main(int argc, char* argv[])
           check_synopsis(pdir_ent->d_name);
           continue;
         }
-        if (strncmp(buffer, "RETURN VALUES", sizeof("RETURN VALUES")-1) == 0) {
+        if (strncmp(buffer, "RETURN VALUES", sizeof("RETURN VALUES")-1) == 0 ||
+            strncmp(buffer, "RETURN VALUE", sizeof("RETURN VALUE")-1) == 0) {
           if (in_functions) {
             if (fpheader)
               fclose(fpheader);
@@ -518,7 +519,8 @@ int main(int argc, char* argv[])
           in_return = 0;
           continue;
         }
-        if (strncmp(buffer, "EXAMPLES", sizeof("EXAMPLES")-1) == 0) {
+        if (strncmp(buffer, "EXAMPLES", sizeof("EXAMPLES")-1) == 0 ||
+            strncmp(buffer, "EXAMPLE", sizeof("EXAMPLE")-1) == 0) {
           if (in_functions) {
             if (fpheader)
               fclose(fpheader);
