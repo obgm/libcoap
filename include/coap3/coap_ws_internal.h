@@ -36,7 +36,7 @@
  */
 typedef struct coap_ws_state_t {
   coap_session_type_t state; /**< Client or Server */
-  uint8_t up;           /**< Websockets established */
+  uint8_t up;           /**< WebSockets established */
   uint8_t seen_first;   /**< Seen first request/response HTTP header */
   uint8_t seen_host;    /**< Seen Host: HTTP header (server) */
   uint8_t seen_upg;     /**< Seen Upgrade: HTTP header */
@@ -131,7 +131,7 @@ ssize_t coap_ws_read(coap_session_t *session, uint8_t *data,
 
 /**
  * Layer function interface for layer below WebSockets accept/connect being
- * established. This function initiates the Websockets layer.
+ * established. This function initiates the WebSockets layer.
  *
  * If this layer is properly established on invocation, then the next layer
  * must get called by calling
@@ -144,9 +144,9 @@ ssize_t coap_ws_read(coap_session_t *session, uint8_t *data,
 void coap_ws_establish(coap_session_t *session);
 
 /**
- * Layer function interface for Websockets close for a session.
+ * Layer function interface for WebSockets close for a session.
  *
- * @param session  Session to do the Websockets close on.
+ * @param session  Session to do the WebSockets close on.
  */
 void coap_ws_close(coap_session_t *session);
 

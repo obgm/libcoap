@@ -634,7 +634,7 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
       return 0;
   }
 
-  /* Get Websockets frame if not already completely in */
+  /* Get WebSockets frame if not already completely in */
   if (!session->ws->all_hdr_in) {
     ret = session->sock.lfunc[COAP_LAYER_WS].read(session,
                          &session->ws->rd_header[session->ws->hdr_ofs],
@@ -685,7 +685,7 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
 
     session->ws->all_hdr_in = 1;
 
-    /* Get Websockets frame size */
+    /* Get WebSockets frame size */
     if (bytes_size == 127) {
       bytes_size = ((uint64_t)session->ws->rd_header[2] << 56) +
                    ((uint64_t)session->ws->rd_header[3] << 48) +

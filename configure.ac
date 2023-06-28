@@ -1103,6 +1103,7 @@ man/coap_session.txt
 man/coap_string.txt
 man/coap_tls_library.txt
 man/coap_uri.txt
+man/coap_websockets.txt
 man/coap-client.txt
 man/coap-oscore-conf.txt
 man/coap-server.txt
