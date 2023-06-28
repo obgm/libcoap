@@ -598,4 +598,3 @@ coap_delete_optlist(coap_optlist_t *queue) {
     coap_internal_delete(elt);
   }
 }
-

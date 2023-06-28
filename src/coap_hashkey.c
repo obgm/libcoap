@@ -30,4 +30,3 @@ coap_hash_impl(const unsigned char *s, size_t len, coap_key_t h) {
     h[0] = (h[0] << 7) + h[0] + *s++;
   }
 }
-

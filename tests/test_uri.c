@@ -626,4 +626,3 @@ t_init_uri_tests(void) {
 
   return suite;
 }
-

@@ -364,4 +364,3 @@ t_init_sendqueue_tests(void) {
   return suite;
 }
 #endif /* COAP_CLIENT_SUPPORT */
-

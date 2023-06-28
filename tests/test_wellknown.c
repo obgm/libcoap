@@ -275,4 +275,3 @@ t_init_wellknown_tests(void) {
 }
 #endif /* COAP_CLIENT_SUPPORT */
 #endif /* COAP_SERVER_SUPPORT */
-

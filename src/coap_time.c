@@ -138,4 +138,3 @@ COAP_STATIC_INLINE void dummy(void)
 }
 
 #endif /* not HAVE_TIME_H */
-

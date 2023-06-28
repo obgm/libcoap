@@ -104,4 +104,3 @@ get_asn1_tag(coap_asn1_tag_t ltag, const uint8_t *ptr, size_t tlen,
   }
   return NULL;
 }
-

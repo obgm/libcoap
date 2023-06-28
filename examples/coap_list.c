@@ -64,4 +64,3 @@ coap_delete_list(coap_list_t *queue) {
     coap_delete(elt);
   }
 }
-

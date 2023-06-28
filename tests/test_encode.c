@@ -263,4 +263,3 @@ t_init_encode_tests(void) {
 
   return suite[0];
 }
-
