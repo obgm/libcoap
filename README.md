@@ -5,6 +5,7 @@
 [![Static Analysis](https://scan.coverity.com/projects/10970/badge.svg?flat=1)](https://scan.coverity.com/projects/obgm-libcoap)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/libcoap.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:libcoap)
 [![CIFuzz Status](https://github.com/obgm/libcoap/actions/workflows/cifuzz.yml/badge.svg?branch=develop)](https://github.com/obgm/libcoap/actions/workflows/cifuzz.yml)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
 Copyright (C) 2010—2023 by Olaf Bergmann <bergmann@tzi.org> and others
 

@@ -1,0 +1,32 @@
+repos:
+-   repo: https://github.com/igrr/astyle_py.git
+    rev: v0.9.0
+    hooks:
+    -   id: astyle_py
+        files: '^(man).*\.(c|cpp|cxx|h|h.in|h.riot|h.riot.in|h.windows|h.windows.in|h.contiki|hpp|inc)$'
+        exclude: '^.*/(coap_uthash_internal.h|coap_utlist_internal.h)$'
+        args: ['--style=google',
+               '--align-pointer=name',
+               '--align-reference=name',
+               '--attach-closing-while',
+               '--attach-return-type-decl',
+               '--break-after-logical',
+               '--break-one-line-headers',
+               '--break-return-type',
+               '--convert-tabs',
+               '--indent-preproc-define',
+               '--indent=spaces=2',
+               '--max-code-length=120',
+               '--max-continuation-indent=60',
+               '--min-conditional-indent=0',
+               '--pad-header',
+               '--unpad-paren']
+
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+    -   id: trailing-whitespace
+        types_or: [c, c++]
+    -   id: end-of-file-fixer
+        types_or: [c, c++]
+    -   id: check-merge-conflict
