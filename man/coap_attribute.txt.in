@@ -102,8 +102,28 @@ EXAMPLE
 *Initialize Resources*
 
 [source, c]
---
+----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+void hnd_get_index(coap_resource_t *resource, coap_session_t *session,
+                   const coap_pdu_t *request,
+                   const coap_string_t *query,
+                   coap_pdu_t *response);
+
+void hnd_get_time(coap_resource_t *resource, coap_session_t *session,
+                  const coap_pdu_t *request,
+                  const coap_string_t *query,
+                  coap_pdu_t *response);
+
+void hnd_put_time(coap_resource_t *resource, coap_session_t *session,
+                  const coap_pdu_t *request,
+                  const coap_string_t *query,
+                  coap_pdu_t *response);
+
+void hnd_delete_time(coap_resource_t *resource, coap_session_t *session,
+                     const coap_pdu_t *request,
+                     const coap_string_t *query,
+                     coap_pdu_t *response);
 
 static void
 init_resources(coap_context_t *ctx) {
@@ -141,7 +161,7 @@ init_resources(coap_context_t *ctx) {
   coap_add_resource(ctx, r);
 
 }
---
+----
 
 SEE ALSO
 --------
