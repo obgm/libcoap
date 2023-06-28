@@ -98,12 +98,16 @@ COAP_PROTO_UDP
 COAP_PROTO_DTLS
 COAP_PROTO_TCP
 COAP_PROTO_TLS
+COAP_PROTO_WS
+COAP_PROTO_WSS
 ----
 
-*coap_tcp_is_supported*(3), *coap_dtls_is_supported*(3) and
-*coap_tls_is_supported*(3) can be used for checking whether the underlying
-TCP or (D)TLS protocol support is available.  See *coap_tls_library(3)* for
-further information.
+*coap_tcp_is_supported*(3), *coap_dtls_is_supported*(3),
+*coap_tls_is_supported*(3), *coap_ws_is_supported*(3) and
+*coap_wss_is_supported*(3) can be used for checking whether the underlying
+TCP, (D)TLS or WebSocket protocol support is available.
+See *coap_tls_library(3)* for further information on the types of (D)TLS
+sessions supported.
 
 Libcoap supports 3 different socket types:
 

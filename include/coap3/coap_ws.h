@@ -26,7 +26,7 @@
  */
 
 /**
- * Check whether Websockets is available.
+ * Check whether WebSockets is available.
  *
  * @return @c 1 if support for WebSockets is available, or @c 0 otherwise.
  */

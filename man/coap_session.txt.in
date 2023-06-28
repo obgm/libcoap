@@ -175,6 +175,8 @@ COAP_PROTO_UDP
 COAP_PROTO_DTLS
 COAP_PROTO_TCP
 COAP_PROTO_TLS
+COAP_PROTO_WS
+COAP_PROTO_WSS
 ----
 
 The *coap_session_get_proto*() function is used to get the CoAP protocol from

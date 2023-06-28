@@ -43,7 +43,8 @@ TXT3 = coap_address.txt \
 	coap_session.txt \
 	coap_string.txt \
 	coap_tls_library.txt \
-	coap_uri.txt
+	coap_uri.txt \
+	coap_websockets.txt
 
 MAN3 = $(TXT3:%.txt=%.3)
 
