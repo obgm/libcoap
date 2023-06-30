@@ -199,8 +199,8 @@ oscore_encode_option_value(uint8_t *option_buffer,
 
       option_buffer[0] |= 0x10;
       option_buffer[offset] = (uint8_t)oscore_cbor_put_bytes(&ptr, &rem_space,
-                                                    cose->kid_context.s,
-                                                    cose->kid_context.length);
+                                                             cose->kid_context.s,
+                                                             cose->kid_context.length);
       offset += option_buffer[offset] + 1;
     } else {
       option_buffer[0] |= 0x10;
@@ -368,8 +368,7 @@ oscore_validate_sender_seq(oscore_recipient_ctx_t *ctx, cose_encrypt0_t *cose) {
       coap_decode_var_bytes8(cose->partial_iv.s, cose->partial_iv.length);
 
   if (incoming_seq >= OSCORE_SEQ_MAX) {
-    coap_log_warn(
-             "OSCORE Replay protection, SEQ larger than SEQ_MAX.\n");
+    coap_log_warn("OSCORE Replay protection, SEQ larger than SEQ_MAX.\n");
     return 0;
   }
 
@@ -390,35 +389,32 @@ oscore_validate_sender_seq(oscore_recipient_ctx_t *ctx, cose_encrypt0_t *cose) {
     ctx->sliding_window |= 1;
     ctx->last_seq = incoming_seq;
   } else if (incoming_seq == ctx->last_seq) {
-    coap_log_warn(
-             "OSCORE: Replay protection, replayed SEQ (%" PRIu64 ")\n",
-             incoming_seq);
+    coap_log_warn("OSCORE: Replay protection, replayed SEQ (%" PRIu64 ")\n",
+                  incoming_seq);
     return 0;
   } else { /* incoming_seq < last_seq */
     uint64_t shift = ctx->last_seq - incoming_seq - 1;
     uint64_t pattern;
 
     if (shift > ctx->osc_ctx->replay_window_size || shift > 63) {
-      coap_log_warn(
-          "OSCORE: Replay protection, SEQ outside of replay window (%"
-            PRIu64 " %" PRIu64 ")\n",
-          ctx->last_seq,
-          incoming_seq);
+      coap_log_warn("OSCORE: Replay protection, SEQ outside of replay window (%"
+                    PRIu64 " %" PRIu64 ")\n",
+                    ctx->last_seq,
+                    incoming_seq);
       return 0;
     }
     /* seq + replay_window_size > last_seq */
     pattern = 1ULL << shift;
     if (ctx->sliding_window & pattern) {
-      coap_log_warn(
-               "OSCORE: Replay protection, replayed SEQ (%" PRIu64 ")\n",
-               incoming_seq);
+      coap_log_warn("OSCORE: Replay protection, replayed SEQ (%" PRIu64 ")\n",
+                    incoming_seq);
       return 0;
     }
     /* bitfield. B0 biggest seq seen.  B1 seq-1 seen, B2 seq-2 seen etc. */
     ctx->sliding_window |= pattern;
   }
   coap_log_oscore("OSCORE: window 0x%" PRIx64 " seq-B0 %" PRIu64 " SEQ %"
-                    PRIu64 "\n",
+                  PRIu64 "\n",
                   ctx->sliding_window,
                   ctx->last_seq,
                   incoming_seq);

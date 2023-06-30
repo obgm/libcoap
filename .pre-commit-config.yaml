@@ -3,7 +3,7 @@ repos:
     rev: v0.9.0
     hooks:
     -   id: astyle_py
-        files: '^(man).*\.(c|cpp|cxx|h|h.in|h.riot|h.riot.in|h.windows|h.windows.in|h.contiki|hpp|inc)$'
+        files: '^(man|include/oscore|src/oscore|src/coap_oscore).*\.(c|cpp|cxx|h|h.in|h.riot|h.riot.in|h.windows|h.windows.in|h.contiki|hpp|inc)$'
         exclude: '^.*/(coap_uthash_internal.h|coap_utlist_internal.h)$'
         args: ['--style=google',
                '--align-pointer=name',
@@ -14,9 +14,10 @@ repos:
                '--break-one-line-headers',
                '--break-return-type',
                '--convert-tabs',
+               '--indent-continuation=2',
                '--indent-preproc-define',
                '--indent=spaces=2',
-               '--max-code-length=120',
+               '--max-code-length=100',
                '--max-continuation-indent=60',
                '--min-conditional-indent=0',
                '--pad-header',

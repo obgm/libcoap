@@ -196,7 +196,7 @@ oscore_cbor_put_unsigned(uint8_t **buffer, size_t *buf_size, uint64_t value) {
     *buffer = (*buffer) + 5;
     put_b_f(buffer, value, 3);
     return 5;
-  } else /*if(value > 0xffffffff)*/ {
+  } else { /*if(value > 0xffffffff)*/
     /* 8 bytes uint64_t  */
     assert(*buf_size >= 9);
     (*buf_size) -= 9;
@@ -217,7 +217,7 @@ static inline uint8_t
 get_byte_inc(const uint8_t **buffer, size_t *buf_len) {
   assert((*buf_len) > 0);
   (*buf_len)--;
-  return((*buffer)++)[0];
+  return ((*buffer)++)[0];
 }
 
 uint8_t
