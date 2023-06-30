@@ -249,9 +249,8 @@ oscore_log_hex_value(coap_log_t level,
       char number[3 * OSCORE_LOG_SIZE + 4];
 
       oscore_convert_to_hex(&value->s[i],
-                            value->length - i > OSCORE_LOG_SIZE
-                                ? OSCORE_LOG_SIZE
-                                : value->length - i,
+                            value->length - i > OSCORE_LOG_SIZE ?
+                            OSCORE_LOG_SIZE : value->length - i,
                             number,
                             sizeof(number));
       coap_log(level, "    %-16s %s\n", i == 0 ? name : "", number);
@@ -312,9 +311,9 @@ oscore_build_key(oscore_ctx_t *osc_ctx,
                  size_t out_len) {
   uint8_t info_buffer[60];
   size_t info_len;
-  uint8_t hkdf_tmp[CONTEXT_KEY_LEN > CONTEXT_INIT_VECT_LEN
-                       ? CONTEXT_KEY_LEN
-                       : CONTEXT_INIT_VECT_LEN];
+  uint8_t hkdf_tmp[CONTEXT_KEY_LEN > CONTEXT_INIT_VECT_LEN ?
+                                   CONTEXT_KEY_LEN :
+                                   CONTEXT_INIT_VECT_LEN];
 
   info_len = compose_info(info_buffer,
                           sizeof(info_buffer),
@@ -354,7 +353,7 @@ oscore_log_context(oscore_ctx_t *osc_ctx, const char *heading) {
                                             sizeof(buffer)));
     oscore_log_char_value(COAP_LOG_OSCORE, "HKDF alg",
                           cose_get_hkdf_alg_name(osc_ctx->hkdf_alg, buffer,
-                                            sizeof(buffer)));
+                                                 sizeof(buffer)));
     oscore_log_hex_value(COAP_LOG_OSCORE, "ID Context", osc_ctx->id_context);
     oscore_log_hex_value(COAP_LOG_OSCORE,
                          "Master Secret",
@@ -532,9 +531,9 @@ oscore_derive_ctx(coap_context_t *c_context, coap_oscore_conf_t *oscore_conf) {
   osc_ctx->hkdf_alg = oscore_conf->hkdf_alg;
   osc_ctx->id_context = oscore_conf->id_context;
   osc_ctx->ssn_freq = oscore_conf->ssn_freq ? oscore_conf->ssn_freq : 1;
-  osc_ctx->replay_window_size = oscore_conf->replay_window
-                                    ? oscore_conf->replay_window
-                                    : COAP_OSCORE_DEFAULT_REPLAY_WINDOW;
+  osc_ctx->replay_window_size = oscore_conf->replay_window ?
+                                oscore_conf->replay_window :
+                                COAP_OSCORE_DEFAULT_REPLAY_WINDOW;
   osc_ctx->rfc8613_b_1_2 = oscore_conf->rfc8613_b_1_2;
   osc_ctx->rfc8613_b_2 = oscore_conf->rfc8613_b_2;
   osc_ctx->save_seq_num_func = oscore_conf->save_seq_num_func;
@@ -603,8 +602,7 @@ oscore_add_recipient(oscore_ctx_t *osc_ctx, coap_bin_const_t *rid,
   oscore_recipient_ctx_t *recipient_ctx = NULL;
 
   if (rid->length > 7) {
-    coap_log_warn(
-             "oscore_add_recipient: Maximum size of recipient_id is 7 bytes\n");
+    coap_log_warn("oscore_add_recipient: Maximum size of recipient_id is 7 bytes\n");
     return NULL;
   }
   /* Check this is not a duplicate recipient id */
@@ -617,8 +615,8 @@ oscore_add_recipient(oscore_ctx_t *osc_ctx, coap_bin_const_t *rid,
     rcp_ctx = rcp_ctx->next_recipient;
   }
   recipient_ctx = (oscore_recipient_ctx_t *)coap_malloc_type(
-      COAP_OSCORE_REC,
-      sizeof(oscore_recipient_ctx_t));
+                      COAP_OSCORE_REC,
+                      sizeof(oscore_recipient_ctx_t));
   if (recipient_ctx == NULL)
     return NULL;
   memset(recipient_ctx, 0, sizeof(oscore_recipient_ctx_t));

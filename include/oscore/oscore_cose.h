@@ -167,13 +167,13 @@ typedef enum {
   COSE_HKDF_ALG_HKDF_SHA_256 = -10,
 } cose_hkdf_alg_t;
 
-const char* cose_get_curve_name(cose_curve_t id, char* buffer, size_t buflen);
+const char *cose_get_curve_name(cose_curve_t id, char *buffer, size_t buflen);
 cose_curve_t cose_get_curve_id(const char *name);
 
-const char* cose_get_alg_name(cose_alg_t id, char* buffer, size_t buflen);
+const char *cose_get_alg_name(cose_alg_t id, char *buffer, size_t buflen);
 cose_alg_t cose_get_alg_id(const char *name);
 
-const char* cose_get_hkdf_alg_name(cose_hkdf_alg_t id, char* buffer,
+const char *cose_get_hkdf_alg_name(cose_hkdf_alg_t id, char *buffer,
                                    size_t buflen);
 
 int cose_get_hmac_alg_for_hkdf(cose_hkdf_alg_t hkdf_alg,
@@ -221,8 +221,7 @@ void cose_encrypt0_init(cose_encrypt0_t *ptr);
 
 void cose_encrypt0_set_alg(cose_encrypt0_t *ptr, uint8_t alg);
 
-void
-cose_encrypt0_set_plaintext(cose_encrypt0_t *ptr, uint8_t *buffer, size_t size);
+void cose_encrypt0_set_plaintext(cose_encrypt0_t *ptr, uint8_t *buffer, size_t size);
 
 void cose_encrypt0_set_ciphertext(cose_encrypt0_t *ptr,
                                   uint8_t *buffer,

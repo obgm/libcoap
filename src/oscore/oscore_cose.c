@@ -60,8 +60,8 @@ static struct cose_curve_desc curve_mapping[] = {
   { "secp256k1", COSE_CURVE_SECP256K1 },
 };
 
-const char*
-cose_get_curve_name(cose_curve_t id, char* buffer, size_t buflen) {
+const char *
+cose_get_curve_name(cose_curve_t id, char *buffer, size_t buflen) {
   for (size_t i = 0; i < sizeof(curve_mapping)/sizeof(curve_mapping[0]); i++) {
     if (id == curve_mapping[i].id) {
       snprintf(buffer, buflen, "%s (%d)", curve_mapping[i].name, id);
@@ -116,8 +116,8 @@ static struct cose_alg_desc alg_mapping[] = {
   { "AES-CCM-64-128-256", COSE_ALGORITHM_AES_CCM_64_128_256 },
 };
 
-const char*
-cose_get_alg_name(cose_alg_t id, char* buffer, size_t buflen) {
+const char *
+cose_get_alg_name(cose_alg_t id, char *buffer, size_t buflen) {
   for (size_t i = 0; i < sizeof(alg_mapping)/sizeof(alg_mapping[0]); i++) {
     if (id == alg_mapping[i].id) {
       snprintf(buffer, buflen, "%s (%d)", alg_mapping[i].name, id);
@@ -147,8 +147,8 @@ static struct cose_hkdf_alg_desc hkdf_alg_mapping[] = {
   { "direct+HKDF-SHA-256", COSE_HKDF_ALG_HKDF_SHA_256 },
 };
 
-const char*
-cose_get_hkdf_alg_name(cose_hkdf_alg_t id, char* buffer, size_t buflen) {
+const char *
+cose_get_hkdf_alg_name(cose_hkdf_alg_t id, char *buffer, size_t buflen) {
   for (size_t i = 0; i < sizeof(hkdf_alg_mapping)/sizeof(hkdf_alg_mapping[0]); i++) {
     if (id == hkdf_alg_mapping[i].id) {
       snprintf(buffer, buflen, "%s (%d)", hkdf_alg_mapping[i].name, id);
@@ -167,8 +167,8 @@ static struct hkdf_hmac_algs {
   cose_hkdf_alg_t hkdf_alg;
   cose_hmac_alg_t hmac_alg;
 } hkdf_hmacs[] = {
-    {COSE_HKDF_ALG_HKDF_SHA_256, COSE_HMAC_ALG_HMAC256_256},
-    {COSE_HKDF_ALG_HKDF_SHA_512, COSE_HMAC_ALG_HMAC512_512},
+  {COSE_HKDF_ALG_HKDF_SHA_256, COSE_HMAC_ALG_HMAC256_256},
+  {COSE_HKDF_ALG_HKDF_SHA_512, COSE_HMAC_ALG_HMAC512_512},
 };
 
 /*
@@ -187,7 +187,7 @@ cose_get_hmac_alg_for_hkdf(cose_hkdf_alg_t hkdf_alg, cose_hmac_alg_t *hmac_alg) 
     }
   }
   coap_log_debug("cose_get_hmac_alg_for_hkdf: COSE HKDF %d not supported\n",
-           hkdf_alg);
+                 hkdf_alg);
   return 0;
 }
 

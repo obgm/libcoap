@@ -72,8 +72,7 @@ uint8_t *oscore_cs_params(int8_t param, int8_t param_type, size_t *len);
 /* oscore_cs_key_params
  * returns cbor array [paramtype, param]
  */
-uint8_t *
-oscore_cs_key_params(cose_curve_t param, int8_t param_type, size_t *len);
+uint8_t *oscore_cs_key_params(cose_curve_t param, int8_t param_type, size_t *len);
 
 /*
  * oscore_encode_option_value
