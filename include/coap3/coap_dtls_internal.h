@@ -37,6 +37,11 @@
 
 #define COAP_DTLS_RETRANSMIT_COAP_TICKS (COAP_DTLS_RETRANSMIT_MS * COAP_TICKS_PER_SECOND / 1000)
 
+/* For RFC9146 Connection ID support */
+#ifndef COAP_DTLS_CID_LENGTH
+#define COAP_DTLS_CID_LENGTH 6
+#endif
+
 /**
  * Creates a new DTLS context for the given @p coap_context. This function
  * returns a pointer to a new DTLS context object or @c NULL on error.

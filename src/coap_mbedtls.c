@@ -25,6 +25,13 @@
  * m_env      A coap_mbedtls_env_t * (held in c_session->tls)
  */
 
+/*
+ * Notes
+ *
+ * Version 3.2.0 or later is needed to provide Connection ID support (RFC9146).
+ *
+ */
+
 #include "coap3/coap_internal.h"
 
 #ifdef COAP_WITH_LIBMBEDTLS
@@ -1033,6 +1040,16 @@ static int setup_server_ssl_session(coap_session_t *c_session,
   mbedtls_ssl_set_mtu(&m_env->ssl, (uint16_t)c_session->mtu);
 #endif /* MBEDTLS_VERSION_NUMBER >= 0x02100100 */
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
+#ifdef MBEDTLS_SSL_DTLS_CONNECTION_ID
+  /*
+   * Configure CID max length.
+   *
+   * Note: Set MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT to 0 (the default)
+   * to use RFC9146 extension ID of 54, rather than the draft version -05
+   * value of 254.
+   */
+  mbedtls_ssl_conf_cid(&m_env->conf, COAP_DTLS_CID_LENGTH, MBEDTLS_SSL_UNEXPECTED_CID_IGNORE);
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 fail:
   return ret;
 }
@@ -1559,6 +1576,22 @@ static coap_mbedtls_env_t *coap_dtls_new_mbedtls_env(coap_session_t *c_session,
   if (proto == COAP_PROTO_DTLS) {
     mbedtls_ssl_set_bio(&m_env->ssl, c_session, coap_dgram_write,
                         coap_dgram_read, NULL);
+#ifdef MBEDTLS_SSL_DTLS_CONNECTION_ID
+    if (role != COAP_DTLS_ROLE_CLIENT &&
+        COAP_PROTO_NOT_RELIABLE(c_session->proto)) {
+      u_char cid[COAP_DTLS_CID_LENGTH];
+      /*
+       * Enable server DTLS CID support.
+       *
+       * Note: Set MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT to 0 (the default)
+       * to use RFC9146 extension ID of 54, rather than the draft version -05
+       * value of 254.
+       */
+      coap_prng(cid, sizeof(cid));
+      mbedtls_ssl_set_cid(&m_env->ssl, MBEDTLS_SSL_CID_ENABLED, cid,
+                          sizeof(cid));
+    }
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
   }
 #if !COAP_DISABLE_TCP
   else {
@@ -1835,6 +1868,18 @@ void *coap_dtls_new_client_session(coap_session_t *c_session)
 
   if (m_env) {
     coap_tick_t now;
+#ifdef MBEDTLS_SSL_DTLS_CONNECTION_ID
+    if (COAP_PROTO_NOT_RELIABLE(c_session->proto)) {
+      /*
+       * Enable passive DTLS CID support.
+       *
+       * Note: Set MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT to 0 (the default)
+       * to use RFC9146 extension ID of 54, rather than the draft version -05
+       * value of 254.
+       */
+      mbedtls_ssl_set_cid(&m_env->ssl, MBEDTLS_SSL_CID_ENABLED, NULL, 0);
+    }
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
     coap_ticks(&now);
     m_env->last_timeout = now;
     ret = do_mbedtls_handshake(c_session, m_env);
