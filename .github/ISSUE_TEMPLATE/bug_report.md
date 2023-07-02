@@ -36,14 +36,15 @@ quick and effective fashion.
 
 1. Fill in all the fields under **Environment** marked with [ ] by picking the
 correct option for you in each case and deleting the others.
-2. Describe your problem.
-3. Include any debug logs (running the application with verbose logging).
-4. Providing as much information as possible under **Other items if possible**
+2. Fill in the reported information about your environment.
+3. Describe your problem.
+4. Include any debug logs (running the application with verbose logging).
+5. Providing as much information as possible under **Other items if possible**
 will help us locate and fix the problem.
-5. Use [Markdown](https://guides.github.com/features/mastering-markdown/) (see
+6. Use [Markdown](https://guides.github.com/features/mastering-markdown/) (see
 formatting buttons above) and the Preview tab to check what the issue will look
 like.
-6. Delete these instructions from the `Delete Below` to the `Delete Above`
+7. Delete these instructions from the `Delete Below` to the `Delete Above`
 marker lines before submitting this issue.
 
 **IMPORTANT: If you do not follow these instructions and provide the necessary
@@ -53,13 +54,19 @@ details, it may not be possible to resolve your issue.**
 
 ## Environment
 
-- libcoap version (run ``git describe --tags`` to find it):
-
-    // v4.3.0-rc3-41-g25fe796
-- Build System:             [Make|CMake]
+- Build System:             [Make|CMake|Other (which?)]
 - Operating System:         [Windows|Linux|macOS|FreeBSD|Cygwin|Solaris|RIOT|Other (which?)]
 - Operating System Version: [ ]
-- Hosted Environment:       [None|Contiki|LwIP|ESP-IDF|Other (which?)]
+- Hosted Environment:       [None|Contiki|LwIP|ESP-IDF|RIOT|Other (which?)]
+
+## libcoap Configuration Summary
+
+Copy the "libcoap Configuration Summary" output lines here after running
+`./configure` (with any options that you have specified)
+  or
+`cmake ..` (with any -D options that you have specified)
+  or if neither of the above two methods is used (do from within the libcoap directory)
+`git describe --tags`
 
 ## Problem Description
 
