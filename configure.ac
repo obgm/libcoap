@@ -1117,9 +1117,15 @@ libcoap-$LIBCOAP_NAME_SUFFIX.pc:libcoap-$LIBCOAP_API_VERSION.pc.in
 
 AC_OUTPUT
 
+LIBCOAP_BUILD=`git describe --tags --dirty --always`
+if test "x$LIBCOAP_BUILD" = "x"; then
+    LIBCOAP_BUILD=$PACKAGE_VERSION
+fi
+
 AC_MSG_RESULT([
-libcoap configuration summary:
+libcoap Configuration Summary:
       libcoap package version        : "$PACKAGE_VERSION"
+      libcoap package source         : "$LIBCOAP_BUILD"
       libcoap library version        : "$LIBCOAP_SO_VERSION"
       libcoap API version            : "$LIBCOAP_API_VERSION"
       libcoap DTLS lib extn          : "$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
