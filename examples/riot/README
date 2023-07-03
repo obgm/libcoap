@@ -14,9 +14,10 @@ This will
 * build the client application
 * build the server application
 
-To run the server application
+To run (and/or rebuild) the server application
 
 * cd RIOT/examples-libcoap-server
+* make RIOT_CI_BUILD=1
 * make term
 * (at the shell prompt) coaps start
 
@@ -24,9 +25,10 @@ The server creates a resource for 'time' with a query 'ticks'.  This is
 reported for `.well-known/core`. The work flow for adding more resources does
 not differ from regular libcoap usage.
 
-To run the client application
+To run (and/or rebuild) the client application
 
 * cd RIOT/examples-libcoap-client
+* make RIOT_CI_BUILD=1
 * make term
 * (at the shell prompt) coapc
 

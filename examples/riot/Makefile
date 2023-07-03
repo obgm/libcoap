@@ -30,10 +30,10 @@ examples:
 	cd examples_libcoap_server && cp -r * ../RIOT/examples/libcoap-server
 
 client:	RIOT pkg examples
-	$(MAKE) -C RIOT/examples/libcoap-client/
+	$(MAKE) -C RIOT/examples/libcoap-client/ RIOT_CI_BUILD=1
 
 server:	RIOT pkg examples
-	$(MAKE) -C RIOT/examples/libcoap-server/
+	$(MAKE) -C RIOT/examples/libcoap-server/ RIOT_CI_BUILD=1
 
 clean:
 	rm -rf RIOT/pkg/libcoap
