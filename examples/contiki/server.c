@@ -84,8 +84,8 @@ hnd_get_time(coap_resource_t *resource, coap_session_t *session,
 
     if (query != NULL
         && coap_string_equal(query, coap_make_str_const("ticks"))) {
-          /* output ticks */
-          len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
+      /* output ticks */
+      len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
 
     } else {      /* output human-readable time */
       struct tm *tmp;
@@ -95,8 +95,7 @@ hnd_get_time(coap_resource_t *resource, coap_session_t *session,
         /* If 'tnow' is not valid */
         coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
         return;
-      }
-      else {
+      } else {
         len = strftime((char *)buf, sizeof(buf), "%b %d %H:%M:%S", tmp);
       }
     }
@@ -104,8 +103,7 @@ hnd_get_time(coap_resource_t *resource, coap_session_t *session,
                                    COAP_MEDIATYPE_TEXT_PLAIN, 1,
                                    len,
                                    buf);
-  }
-  else {
+  } else {
     /* if my_clock_base was deleted, we pretend to have no such resource */
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
   }
@@ -153,7 +151,7 @@ init_coap_resources(coap_context_t *ctx) {
 #endif
 
   return;
- error:
+error:
   coap_log_crit("cannot create resource\n");
 }
 
@@ -161,8 +159,7 @@ init_coap_resources(coap_context_t *ctx) {
 struct etimer dirty_timer;
 
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(coap_server_process, ev, data)
-{
+PROCESS_THREAD(coap_server_process, ev, data) {
   PROCESS_BEGIN();
 
   clock_offset = clock_time();
@@ -178,7 +175,7 @@ PROCESS_THREAD(coap_server_process, ev, data)
   /* etimer_set(&notify_timer, 5 * CLOCK_SECOND); */
   etimer_set(&dirty_timer, 30 * CLOCK_SECOND);
 
-  while(1) {
+  while (1) {
     PROCESS_YIELD();
     if (ev == PROCESS_EVENT_TIMER && etimer_expired(&dirty_timer)) {
       coap_resource_notify_observers(time_resource, NULL);
