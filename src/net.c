@@ -2543,6 +2543,7 @@ no_response(coap_pdu_t *request, coap_pdu_t *response,
           response->actual_token.length = 0;
           response->e_token_length = 0;
           response->used_size = 0;
+          response->data = NULL;
           return RESPONSE_SEND;
         }
         else {
