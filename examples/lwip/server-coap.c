@@ -42,16 +42,16 @@ hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
 
   /* if my_clock_base was deleted, we pretend to have no such resource */
   response->code =
-    my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
+      my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
 
   if (my_clock_base)
     coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
                     coap_encode_var_safe(buf, sizeof(buf),
-                    COAP_MEDIATYPE_TEXT_PLAIN),
+                                         COAP_MEDIATYPE_TEXT_PLAIN),
                     buf);
 
   coap_add_option(response, COAP_OPTION_MAXAGE,
-          coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
+                  coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
 
   if (my_clock_base) {
 
@@ -111,12 +111,13 @@ init_coap_resources(coap_context_t *ctx) {
 #endif
 
   return;
- error:
+error:
   coap_log_crit("cannot create resource\n");
 }
 
-void server_coap_init(coap_lwip_input_wait_handler_t input_wait,
-                      void *input_arg, int argc, char **argv) {
+void
+server_coap_init(coap_lwip_input_wait_handler_t input_wait,
+                 void *input_arg, int argc, char **argv) {
   int opt;
   coap_log_t log_level = COAP_LOG_WARN;
   coap_log_t dtls_log_level = COAP_LOG_ERR;
@@ -161,11 +162,11 @@ void server_coap_init(coap_lwip_input_wait_handler_t input_wait,
     coap_context_set_psk2(main_coap_context, &setup_data);
   }
 
-  node.s = (const uint8_t*)"::";
+  node.s = (const uint8_t *)"::";
   node.length = 2;
   scheme_hint_bits =
-     coap_get_available_scheme_hint_bits(use_psk[0],
-                                         0, COAP_PROTO_NONE);
+      coap_get_available_scheme_hint_bits(use_psk[0],
+                                          0, COAP_PROTO_NONE);
   info_list = coap_resolve_address_info(&node, 0, 0,
                                         0,
                                         scheme_hint_bits,
@@ -176,7 +177,7 @@ void server_coap_init(coap_lwip_input_wait_handler_t input_wait,
     ep = coap_new_endpoint(main_coap_context, &info->addr, info->proto);
     if (!ep) {
       coap_log_warn("cannot create endpoint for proto %u\n",
-                     info->proto);
+                    info->proto);
     } else {
       have_ep = 1;
     }
@@ -198,7 +199,8 @@ server_coap_finished(void) {
   main_coap_context = NULL;
 }
 
-void server_coap_poll(void) {
+void
+server_coap_poll(void) {
   static coap_time_t last_time = 0;
   coap_tick_t ticks_now;
   coap_time_t time_now;

@@ -44,7 +44,7 @@ message_handler(coap_session_t *session,
   (void)sent;
   (void)id;
   if (coap_get_data_large(received, &len, &data, &offset, &total)) {
-    printf("%*.*s", (int)len, (int)len, (const char*)data);
+    printf("%*.*s", (int)len, (int)len, (const char *)data);
     if (len + offset == total) {
       printf("\n");
       quit = 1;
@@ -59,7 +59,7 @@ nack_handler(coap_session_t *session COAP_UNUSED,
              const coap_nack_reason_t reason,
              const coap_mid_t id COAP_UNUSED) {
 
-  switch(reason) {
+  switch (reason) {
   case COAP_NACK_TOO_MANY_RETRIES:
   case COAP_NACK_NOT_DELIVERABLE:
   case COAP_NACK_RST:
@@ -153,7 +153,7 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
   len = coap_split_uri((const unsigned char *)use_uri, strlen(use_uri), &uri);
   LWIP_ASSERT("Failed to parse uri", len == 0);
   LWIP_ASSERT("Unsupported URI type", uri.scheme == COAP_URI_SCHEME_COAP ||
-                                      uri.scheme == COAP_URI_SCHEME_COAPS);
+              uri.scheme == COAP_URI_SCHEME_COAPS);
   if (uri.scheme == COAP_URI_SCHEME_COAPS) {
     LWIP_ASSERT("DTLS not supported", coap_dtls_is_supported());
   }
@@ -162,7 +162,7 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
   snprintf((char *)buf, sizeof(buf), "%*.*s", (int)uri.host.length,
            (int)uri.host.length, (const char *)uri.host.s);
   /* resolve destination address where server should be sent */
-  len = resolve_address((const char*)buf, portbuf, &dst, 1 << uri.scheme);
+  len = resolve_address((const char *)buf, portbuf, &dst, 1 << uri.scheme);
   LWIP_ASSERT("Failed to resolve address", len > 0);
 
   main_coap_context = coap_new_context(NULL);
@@ -179,7 +179,7 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
     static char client_sni[256];
 
     memset(client_sni, 0, sizeof(client_sni));
-    memset (&dtls_psk, 0, sizeof(dtls_psk));
+    memset(&dtls_psk, 0, sizeof(dtls_psk));
     dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
     if (uri.host.length)
       memcpy(client_sni, uri.host.s,
