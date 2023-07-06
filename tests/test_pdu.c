@@ -68,7 +68,8 @@ static void
 t_parse_pdu4(void) {
   /* illegal token length (token only 8 bytes) */
   uint8_t teststr[] = {  0x59, 0x69, 0x12, 0x34,
-                      't', 'o', 'k', 'e', 'n', '1', '2', '3' };
+                         't', 'o', 'k', 'e', 'n', '1', '2', '3'
+                      };
   int result;
 
   result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
@@ -85,8 +86,8 @@ static void
 t_parse_pdu5(void) {
   /* PDU with options */
   uint8_t teststr[] = {  0x55, 0x73, 0x12, 0x34, 't', 'o', 'k', 'e',
-                      'n',  0x00, 0xc1, 0x00
-  };
+                         'n',  0x00, 0xc1, 0x00
+                      };
   int result;
 
   result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
@@ -107,8 +108,8 @@ static void
 t_parse_pdu6(void) {
   /* PDU with options that exceed the PDU */
   uint8_t teststr[] = {  0x55, 0x73, 0x12, 0x34, 't', 'o', 'k', 'e',
-                      'n',  0x00, 0xc1, 0x00, 0xae, 0xf0, 0x03
-  };
+                         'n',  0x00, 0xc1, 0x00, 0xae, 0xf0, 0x03
+                      };
   int result;
 
   result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
@@ -119,9 +120,9 @@ static void
 t_parse_pdu7(void) {
   /* PDU with options and payload */
   uint8_t teststr[] = {  0x55, 0x73, 0x12, 0x34, 't', 'o', 'k', 'e',
-                      'n',  0x00, 0xc1, 0x00, 0xff, 'p', 'a', 'y',
-                      'l', 'o', 'a', 'd'
-  };
+                         'n',  0x00, 0xc1, 0x00, 0xff, 'p', 'a', 'y',
+                         'l', 'o', 'a', 'd'
+                      };
   int result;
 
   result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
@@ -144,9 +145,9 @@ static void
 t_parse_pdu8(void) {
   /* PDU without options but with payload */
   uint8_t teststr[] = {  0x50, 0x73, 0x12, 0x34,
-                      0xff, 'p', 'a', 'y', 'l', 'o', 'a',
-                      'd'
-  };
+                         0xff, 'p', 'a', 'y', 'l', 'o', 'a',
+                         'd'
+                      };
   int result;
 
   result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
@@ -178,8 +179,8 @@ static void
 t_parse_pdu10(void) {
   /* PDU without payload but with options and payload start marker */
   uint8_t teststr[] = {  0x53, 0x73, 0x12, 0x34, 't', 'o', 'k',
-                      0x31, 'a', 0xc1, 0x00, 0xff
-  };
+                         0x31, 'a', 0xc1, 0x00, 0xff
+                      };
   int result;
 
   result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
@@ -221,8 +222,8 @@ static void
 t_parse_pdu13(void) {
   /* RST with content */
   uint8_t teststr[] = {  0x70, 0x00, 0x12, 0x34,
-                      0xff, 'c', 'o', 'n', 't', 'e', 'n', 't'
-  };
+                         0xff, 'c', 'o', 'n', 't', 'e', 'n', 't'
+                      };
   int result;
 
   result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
@@ -233,8 +234,8 @@ static void
 t_parse_pdu14(void) {
   /* ACK with content */
   uint8_t teststr[] = {  0x60, 0x00, 0x12, 0x34,
-                      0xff, 'c', 'o', 'n', 't', 'e', 'n', 't'
-  };
+                         0xff, 'c', 'o', 'n', 't', 'e', 'n', 't'
+                      };
   int result;
 
   result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
@@ -251,23 +252,24 @@ static void
 t_parse_pdu15(void) {
   int result;
   uint8_t teststr[] = {
-  64,  91,  91,  91, 139,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,   0,
-   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,  91,  91, 224, 224, 224,
- 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224,
- 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224,   1,   0,   0,   0,
-   0,   0,   0,   0, 224, 192, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224,
- 224, 224, 224, 224, 224, 224, 224, 224, 228, 224, 224, 224, 224, 224, 224, 224,
- 224, 224, 224, 224, 224, 224, 224, 224, 224,  91,  91,  91,  91,  91,  91,  91,
-  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,
-  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,
-  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,
-  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,
-  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,
-  91,  91,  91,  91,  91,  91,  91, 224, 224, 224, 224, 224, 224, 224, 224, 224,
- 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224,
- 224, 224, 224, 224, 224, 224,   1,   0,   0,   0,   0,   0,   0,   0, 224, 224,
- 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224,
- 224, 224, 224, 224, 224};
+    64,  91,  91,  91, 139,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,   0,
+    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,  91,  91, 224, 224, 224,
+    224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224,
+    224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224,   1,   0,   0,   0,
+    0,   0,   0,   0, 224, 192, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224,
+    224, 224, 224, 224, 224, 224, 224, 224, 228, 224, 224, 224, 224, 224, 224, 224,
+    224, 224, 224, 224, 224, 224, 224, 224, 224,  91,  91,  91,  91,  91,  91,  91,
+    91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,
+    91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,
+    91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,
+    91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,
+    91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,  91,
+    91,  91,  91,  91,  91,  91,  91, 224, 224, 224, 224, 224, 224, 224, 224, 224,
+    224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224,
+    224, 224, 224, 224, 224, 224,   1,   0,   0,   0,   0,   0,   0,   0, 224, 224,
+    224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224,
+    224, 224, 224, 224, 224
+  };
 
   coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
@@ -277,8 +279,8 @@ t_parse_pdu15(void) {
   CU_ASSERT(result == 0);
 }
 
-static void log_handler(coap_log_t level, const char *message)
-{
+static void
+log_handler(coap_log_t level, const char *message) {
   (void)level;
   (void)message;
 }
@@ -389,12 +391,12 @@ static void
 t_encode_pdu4(void) {
   /* PDU with options */
   uint8_t teststr[] = { 0x60, 0x99, 0x12, 0x34, 0x3d, 0x05, 0x66, 0x61,
-                     0x6e, 0x63, 0x79, 0x70, 0x72, 0x6f, 0x78, 0x79,
-                     0x2e, 0x63, 0x6f, 0x61, 0x70, 0x2e, 0x6d, 0x65,
-                     0x84, 0x70, 0x61, 0x74, 0x68, 0x00, 0xe8, 0x1e,
-                     0x28, 0x66, 0x61, 0x6e, 0x63, 0x79, 0x6f, 0x70,
-                     0x74
-  };
+                        0x6e, 0x63, 0x79, 0x70, 0x72, 0x6f, 0x78, 0x79,
+                        0x2e, 0x63, 0x6f, 0x61, 0x70, 0x2e, 0x6d, 0x65,
+                        0x84, 0x70, 0x61, 0x74, 0x68, 0x00, 0xe8, 0x1e,
+                        0x28, 0x66, 0x61, 0x6e, 0x63, 0x79, 0x6f, 0x70,
+                        0x74
+                      };
   int result;
 
   coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
@@ -406,7 +408,7 @@ t_encode_pdu4(void) {
   CU_ASSERT(pdu->used_size == 0);
 
   result = coap_add_option(pdu, COAP_OPTION_URI_HOST,
-       18, (const uint8_t *)"fancyproxy.coap.me");
+                           18, (const uint8_t *)"fancyproxy.coap.me");
 
   CU_ASSERT(result == 20);
   CU_ASSERT(pdu->max_opt == 3);
@@ -443,9 +445,9 @@ static void
 t_encode_pdu5(void) {
   /* PDU with token and options */
   uint8_t teststr[] = { 0x68, 0x84, 0x12, 0x34, '1',  '2',  '3',  '4',
-                     '5',  '6',  '7',  '8',  0x18, 0x41, 0x42, 0x43,
-                     0x44, 0x45, 0x46, 0x47, 0x48, 0xd1, 0x03, 0x12
-  };
+                        '5',  '6',  '7',  '8',  0x18, 0x41, 0x42, 0x43,
+                        0x44, 0x45, 0x46, 0x47, 0x48, 0xd1, 0x03, 0x12
+                      };
   int result;
 
   coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
@@ -484,8 +486,8 @@ static void
 t_encode_pdu6(void) {
   /* PDU with data */
   uint8_t teststr[] = { 0x50, 0x02, 0x12, 0x34, 0xff, '1',  '2',  '3',
-                     '4', '5',  '6',  '7',  '8'
-  };
+                        '4', '5',  '6',  '7',  '8'
+                      };
   coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
   pdu->type = COAP_MESSAGE_NON;
@@ -556,11 +558,11 @@ static void
 t_encode_pdu9(void) {
   /* PDU with options and data */
   uint8_t teststr[] = { 0x60, 0x44, 0x12, 0x34, 0x48, 's',  'o',  'm',
-                     'e',  'e',  't',  'a',  'g',  0x10, 0xdd, 0x11,
-                     0x04, 's',  'o',  'm',  'e',  'r',  'a',  't',
-                     'h',  'e',  'r',  'l',  'o',  'n',  'g',  'u',
-                     'r',  'i',  0xff, 'd',  'a',  't',  'a'
-  };
+                        'e',  'e',  't',  'a',  'g',  0x10, 0xdd, 0x11,
+                        0x04, 's',  'o',  'm',  'e',  'r',  'a',  't',
+                        'h',  'e',  'r',  'l',  'o',  'n',  'g',  'u',
+                        'r',  'i',  0xff, 'd',  'a',  't',  'a'
+                      };
   int result;
 
   coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
@@ -607,42 +609,42 @@ static void
 t_encode_pdu10(void) {
   /* PDU with token, options and data */
   uint8_t teststr[] = { 0x62, 0x44, 0x12, 0x34, 0x00, 0x00, 0x8d, 0xf2,
-                     'c',  'o',  'a',  'p',  ':',  '/',  '/',  'e',
-                     'x',  'a',  'm',  'p',  'l',  'e',  '.',  'c',
-                     'o',  'm',  '/',  '1',  '2',  '3',  '4',  '5',
-                     '/',  '%',  '3',  'F',  'x',  'y',  'z',  '/',
-                     '3',  '0',  '4',  '8',  '2',  '3',  '4',  '2',
-                     '3',  '4',  '/',  '2',  '3',  '4',  '0',  '2',
-                     '3',  '4',  '8',  '2',  '3',  '4',  '/',  '2',
-                     '3',  '9',  '0',  '8',  '4',  '2',  '3',  '4',
-                     '-',  '2',  '3',  '/',  '%',  'A',  'B',  '%',
-                     '3',  '0',  '%',  'a',  'f',  '/',  '+',  '1',
-                     '2',  '3',  '/',  'h',  'f',  'k',  's',  'd',
-                     'h',  '/',  '2',  '3',  '4',  '8',  '0',  '-',
-                     '2',  '3',  '4',  '-',  '9',  '8',  '2',  '3',
-                     '5',  '/',  '1',  '2',  '0',  '4',  '/',  '2',
-                     '4',  '3',  '5',  '4',  '6',  '3',  '4',  '5',
-                     '3',  '4',  '5',  '2',  '4',  '3',  '/',  '0',
-                     '1',  '9',  '8',  's',  'd',  'n',  '3',  '-',
-                     'a',  '-',  '3',  '/',  '/',  '/',  'a',  'f',
-                     'f',  '0',  '9',  '3',  '4',  '/',  '9',  '7',
-                     'u',  '2',  '1',  '4',  '1',  '/',  '0',  '0',
-                     '0',  '2',  '/',  '3',  '9',  '3',  '2',  '4',
-                     '2',  '3',  '5',  '3',  '2',  '/',  '5',  '6',
-                     '2',  '3',  '4',  '0',  '2',  '3',  '/',  '-',
-                     '-',  '-',  '-',  '/',  '=',  '1',  '2',  '3',
-                     '4',  '=',  '/',  '0',  '9',  '8',  '1',  '4',
-                     '1',  '-',  '9',  '5',  '6',  '4',  '6',  '4',
-                     '3',  '/',  '2',  '1',  '9',  '7',  '0',  '-',
-                     '-',  '-',  '-',  '-',  '/',  '8',  '2',  '3',
-                     '6',  '4',  '9',  '2',  '3',  '4',  '7',  '2',
-                     'w',  'e',  'r',  'e',  'r',  'e',  'w',  'r',
-                     '0',  '-',  '9',  '2',  '1',  '-',  '3',  '9',
-                     '1',  '2',  '3',  '-',  '3',  '4',  '/',  0x0d,
-                     0x01, '/',  '/',  '4',  '9',  '2',  '4',  '0',
-                     '3',  '-',  '-',  '0',  '9',  '8',  '/',  0xc1,
-                     '*',  0xff, 'd',  'a',  't',  'a'
-  };
+                        'c',  'o',  'a',  'p',  ':',  '/',  '/',  'e',
+                        'x',  'a',  'm',  'p',  'l',  'e',  '.',  'c',
+                        'o',  'm',  '/',  '1',  '2',  '3',  '4',  '5',
+                        '/',  '%',  '3',  'F',  'x',  'y',  'z',  '/',
+                        '3',  '0',  '4',  '8',  '2',  '3',  '4',  '2',
+                        '3',  '4',  '/',  '2',  '3',  '4',  '0',  '2',
+                        '3',  '4',  '8',  '2',  '3',  '4',  '/',  '2',
+                        '3',  '9',  '0',  '8',  '4',  '2',  '3',  '4',
+                        '-',  '2',  '3',  '/',  '%',  'A',  'B',  '%',
+                        '3',  '0',  '%',  'a',  'f',  '/',  '+',  '1',
+                        '2',  '3',  '/',  'h',  'f',  'k',  's',  'd',
+                        'h',  '/',  '2',  '3',  '4',  '8',  '0',  '-',
+                        '2',  '3',  '4',  '-',  '9',  '8',  '2',  '3',
+                        '5',  '/',  '1',  '2',  '0',  '4',  '/',  '2',
+                        '4',  '3',  '5',  '4',  '6',  '3',  '4',  '5',
+                        '3',  '4',  '5',  '2',  '4',  '3',  '/',  '0',
+                        '1',  '9',  '8',  's',  'd',  'n',  '3',  '-',
+                        'a',  '-',  '3',  '/',  '/',  '/',  'a',  'f',
+                        'f',  '0',  '9',  '3',  '4',  '/',  '9',  '7',
+                        'u',  '2',  '1',  '4',  '1',  '/',  '0',  '0',
+                        '0',  '2',  '/',  '3',  '9',  '3',  '2',  '4',
+                        '2',  '3',  '5',  '3',  '2',  '/',  '5',  '6',
+                        '2',  '3',  '4',  '0',  '2',  '3',  '/',  '-',
+                        '-',  '-',  '-',  '/',  '=',  '1',  '2',  '3',
+                        '4',  '=',  '/',  '0',  '9',  '8',  '1',  '4',
+                        '1',  '-',  '9',  '5',  '6',  '4',  '6',  '4',
+                        '3',  '/',  '2',  '1',  '9',  '7',  '0',  '-',
+                        '-',  '-',  '-',  '-',  '/',  '8',  '2',  '3',
+                        '6',  '4',  '9',  '2',  '3',  '4',  '7',  '2',
+                        'w',  'e',  'r',  'e',  'r',  'e',  'w',  'r',
+                        '0',  '-',  '9',  '2',  '1',  '-',  '3',  '9',
+                        '1',  '2',  '3',  '-',  '3',  '4',  '/',  0x0d,
+                        0x01, '/',  '/',  '4',  '9',  '2',  '4',  '0',
+                        '3',  '-',  '-',  '0',  '9',  '8',  '/',  0xc1,
+                        '*',  0xff, 'd',  'a',  't',  'a'
+                      };
   int result;
 
   coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
@@ -657,7 +659,8 @@ t_encode_pdu10(void) {
 
   CU_ASSERT(result > 0);
   result = coap_add_option(pdu, COAP_OPTION_LOCATION_PATH, 255,
-                           (const uint8_t *)"coap://example.com/12345/%3Fxyz/3048234234/23402348234/239084234-23/%AB%30%af/+123/hfksdh/23480-234-98235/1204/243546345345243/0198sdn3-a-3///aff0934/97u2141/0002/3932423532/56234023/----/=1234=/098141-9564643/21970-----/82364923472wererewr0-921-39123-34/");
+                           (const uint8_t *)
+                           "coap://example.com/12345/%3Fxyz/3048234234/23402348234/239084234-23/%AB%30%af/+123/hfksdh/23480-234-98235/1204/243546345345243/0198sdn3-a-3///aff0934/97u2141/0002/3932423532/56234023/----/=1234=/098141-9564643/21970-----/82364923472wererewr0-921-39123-34/");
 
   CU_ASSERT(result == 257);
   CU_ASSERT(pdu->max_opt == 8);
@@ -727,7 +730,7 @@ t_encode_pdu12(void) {
 
   for (n = 0; n < (int)sizeof(opt_num); n++) {
     coap_insert_optlist(&optlist, coap_new_optlist(opt_num[n],
-                     sizeof(opt_val[n]), &opt_val[n]));
+                                                   sizeof(opt_val[n]), &opt_val[n]));
   }
   coap_add_optlist_pdu(pdu, &optlist);
 
@@ -762,7 +765,7 @@ t_encode_pdu13(void) {
 
   for (n = 0; n < (int)sizeof(opt_num); n++) {
     coap_insert_optlist(&optlist, coap_new_optlist(opt_num[n],
-                     sizeof(opt_val[n]), &opt_val[n]));
+                                                   sizeof(opt_val[n]), &opt_val[n]));
   }
   coap_add_optlist_pdu(pdu, &optlist);
 
@@ -797,7 +800,7 @@ t_encode_pdu14(void) {
 
   for (n = 0; n < (int)sizeof(opt_num); n++) {
     coap_insert_optlist(&optlist, coap_new_optlist(opt_num[n],
-                     sizeof(opt_val[n]), &opt_val[n]));
+                                                   sizeof(opt_val[n]), &opt_val[n]));
   }
   coap_add_optlist_pdu(pdu, &optlist);
 
@@ -833,7 +836,7 @@ t_encode_pdu15(void) {
 
   for (n = 0; n < (sizeof(opt_num)/sizeof(opt_num[0])); n++) {
     coap_insert_option(pdu, opt_num[n],
-                     sizeof(opt_val[n]), &opt_val[n]);
+                       sizeof(opt_val[n]), &opt_val[n]);
   }
 
   /* Check options in pdu are in right order */
@@ -858,13 +861,17 @@ t_encode_pdu16(void) {
   uint8_t  opt_val[] = {  53,  51,  50 };
   uint8_t  data[] = { 'd', 'a', 't', 'a' };
   uint8_t  data1[] = { 0x71, 0x32, 0x31, 0x33, 0xe1, 0x00, 0x15, 0x35,
-                       0xff, 0x64, 0x61, 0x74, 0x61 };
+                       0xff, 0x64, 0x61, 0x74, 0x61
+                     };
   uint8_t  data2[] = { 0x71, 0x32, 0x33, 0x01, 0x23, 0x45, 0xe1, 0x00,
-                       0x15, 0x35, 0xff, 0x64, 0x61, 0x74, 0x61 };
+                       0x15, 0x35, 0xff, 0x64, 0x61, 0x74, 0x61
+                     };
   uint8_t  data3[] = { 0x70, 0x31, 0x33, 0xe1, 0x00, 0x15, 0x35, 0xff,
-                       0x64, 0x61, 0x74, 0x61 };
+                       0x64, 0x61, 0x74, 0x61
+                     };
   uint8_t  data4[] = { 0x71, 0x32, 0x31, 0x33, 0xe4, 0x00, 0x15, 0x06,
-                       0x54, 0x32, 0x10, 0xff, 0x64, 0x61, 0x74, 0x61 };
+                       0x54, 0x32, 0x10, 0xff, 0x64, 0x61, 0x74, 0x61
+                     };
   int new_val;
   unsigned char buf[4];
 
@@ -874,7 +881,7 @@ t_encode_pdu16(void) {
 
   for (n = 0; n < (sizeof(opt_num)/sizeof(opt_num[0])); n++) {
     coap_add_option(pdu, opt_num[n],
-                     sizeof(opt_val[n]), &opt_val[n]);
+                    sizeof(opt_val[n]), &opt_val[n]);
   }
   coap_add_data(pdu, sizeof(data), data);
   CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
@@ -918,12 +925,15 @@ t_encode_pdu17(void) {
   uint16_t opt_num[] = { 300,  10,   7 };
   uint8_t  opt_val[] = {  53,  51,  50 };
   uint8_t  data1[] = { 0x74, 0x71, 0x32, 0x31, 0x33, 0xe1, 0x00, 0x15,
-                       0x35 };
+                       0x35
+                     };
   uint8_t  data2[] = { 0x74, 0x71, 0x32, 0x33, 0x01, 0x23, 0x45, 0xe1,
-                       0x00, 0x15, 0x35 };
+                       0x00, 0x15, 0x35
+                     };
   uint8_t  data3[] = { 0x74, 0x70, 0x31, 0x33, 0xe1, 0x00, 0x15, 0x35 };
   uint8_t  data4[] = { 0x74, 0x71, 0x32, 0x31, 0x33, 0xe4, 0x00, 0x15,
-                       0x06, 0x54, 0x32, 0x10 };
+                       0x06, 0x54, 0x32, 0x10
+                     };
   int new_val;
   unsigned char buf[4];
 
@@ -934,7 +944,7 @@ t_encode_pdu17(void) {
   coap_add_token(pdu, sizeof(token), token);
   for (n = 0; n < (sizeof(opt_num)/sizeof(opt_num[0])); n++) {
     coap_add_option(pdu, opt_num[n],
-                     sizeof(opt_val[n]), &opt_val[n]);
+                    sizeof(opt_val[n]), &opt_val[n]);
   }
   CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
   /* Now update an option in the middle */
@@ -973,42 +983,42 @@ static void
 t_encode_pdu18(void) {
   /* PDU with token, options and data */
   uint8_t teststr[] = { 0x62, 0x44, 0x12, 0x34, 0x00, 0x00, 0x8d, 0xf2,
-                     'c',  'o',  'a',  'p',  ':',  '/',  '/',  'e',
-                     'x',  'a',  'm',  'p',  'l',  'e',  '.',  'c',
-                     'o',  'm',  '/',  '1',  '2',  '3',  '4',  '5',
-                     '/',  '%',  '3',  'F',  'x',  'y',  'z',  '/',
-                     '3',  '0',  '4',  '8',  '2',  '3',  '4',  '2',
-                     '3',  '4',  '/',  '2',  '3',  '4',  '0',  '2',
-                     '3',  '4',  '8',  '2',  '3',  '4',  '/',  '2',
-                     '3',  '9',  '0',  '8',  '4',  '2',  '3',  '4',
-                     '-',  '2',  '3',  '/',  '%',  'A',  'B',  '%',
-                     '3',  '0',  '%',  'a',  'f',  '/',  '+',  '1',
-                     '2',  '3',  '/',  'h',  'f',  'k',  's',  'd',
-                     'h',  '/',  '2',  '3',  '4',  '8',  '0',  '-',
-                     '2',  '3',  '4',  '-',  '9',  '8',  '2',  '3',
-                     '5',  '/',  '1',  '2',  '0',  '4',  '/',  '2',
-                     '4',  '3',  '5',  '4',  '6',  '3',  '4',  '5',
-                     '3',  '4',  '5',  '2',  '4',  '3',  '/',  '0',
-                     '1',  '9',  '8',  's',  'd',  'n',  '3',  '-',
-                     'a',  '-',  '3',  '/',  '/',  '/',  'a',  'f',
-                     'f',  '0',  '9',  '3',  '4',  '/',  '9',  '7',
-                     'u',  '2',  '1',  '4',  '1',  '/',  '0',  '0',
-                     '0',  '2',  '/',  '3',  '9',  '3',  '2',  '4',
-                     '2',  '3',  '5',  '3',  '2',  '/',  '5',  '6',
-                     '2',  '3',  '4',  '0',  '2',  '3',  '/',  '-',
-                     '-',  '-',  '-',  '/',  '=',  '1',  '2',  '3',
-                     '4',  '=',  '/',  '0',  '9',  '8',  '1',  '4',
-                     '1',  '-',  '9',  '5',  '6',  '4',  '6',  '4',
-                     '3',  '/',  '2',  '1',  '9',  '7',  '0',  '-',
-                     '-',  '-',  '-',  '-',  '/',  '8',  '2',  '3',
-                     '6',  '4',  '9',  '2',  '3',  '4',  '7',  '2',
-                     'w',  'e',  'r',  'e',  'r',  'e',  'w',  'r',
-                     '0',  '-',  '9',  '2',  '1',  '-',  '3',  '9',
-                     '1',  '2',  '3',  '-',  '3',  '4',  '/',  0x0d,
-                     0x01, '/',  '/',  '4',  '9',  '2',  '4',  '0',
-                     '3',  '-',  '-',  '0',  '9',  '8',  '/',  0xc1,
-                     '*',  0xff, 'd',  'a',  't',  'a'
-  };
+                        'c',  'o',  'a',  'p',  ':',  '/',  '/',  'e',
+                        'x',  'a',  'm',  'p',  'l',  'e',  '.',  'c',
+                        'o',  'm',  '/',  '1',  '2',  '3',  '4',  '5',
+                        '/',  '%',  '3',  'F',  'x',  'y',  'z',  '/',
+                        '3',  '0',  '4',  '8',  '2',  '3',  '4',  '2',
+                        '3',  '4',  '/',  '2',  '3',  '4',  '0',  '2',
+                        '3',  '4',  '8',  '2',  '3',  '4',  '/',  '2',
+                        '3',  '9',  '0',  '8',  '4',  '2',  '3',  '4',
+                        '-',  '2',  '3',  '/',  '%',  'A',  'B',  '%',
+                        '3',  '0',  '%',  'a',  'f',  '/',  '+',  '1',
+                        '2',  '3',  '/',  'h',  'f',  'k',  's',  'd',
+                        'h',  '/',  '2',  '3',  '4',  '8',  '0',  '-',
+                        '2',  '3',  '4',  '-',  '9',  '8',  '2',  '3',
+                        '5',  '/',  '1',  '2',  '0',  '4',  '/',  '2',
+                        '4',  '3',  '5',  '4',  '6',  '3',  '4',  '5',
+                        '3',  '4',  '5',  '2',  '4',  '3',  '/',  '0',
+                        '1',  '9',  '8',  's',  'd',  'n',  '3',  '-',
+                        'a',  '-',  '3',  '/',  '/',  '/',  'a',  'f',
+                        'f',  '0',  '9',  '3',  '4',  '/',  '9',  '7',
+                        'u',  '2',  '1',  '4',  '1',  '/',  '0',  '0',
+                        '0',  '2',  '/',  '3',  '9',  '3',  '2',  '4',
+                        '2',  '3',  '5',  '3',  '2',  '/',  '5',  '6',
+                        '2',  '3',  '4',  '0',  '2',  '3',  '/',  '-',
+                        '-',  '-',  '-',  '/',  '=',  '1',  '2',  '3',
+                        '4',  '=',  '/',  '0',  '9',  '8',  '1',  '4',
+                        '1',  '-',  '9',  '5',  '6',  '4',  '6',  '4',
+                        '3',  '/',  '2',  '1',  '9',  '7',  '0',  '-',
+                        '-',  '-',  '-',  '-',  '/',  '8',  '2',  '3',
+                        '6',  '4',  '9',  '2',  '3',  '4',  '7',  '2',
+                        'w',  'e',  'r',  'e',  'r',  'e',  'w',  'r',
+                        '0',  '-',  '9',  '2',  '1',  '-',  '3',  '9',
+                        '1',  '2',  '3',  '-',  '3',  '4',  '/',  0x0d,
+                        0x01, '/',  '/',  '4',  '9',  '2',  '4',  '0',
+                        '3',  '-',  '-',  '0',  '9',  '8',  '/',  0xc1,
+                        '*',  0xff, 'd',  'a',  't',  'a'
+                      };
   int result;
 
   coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
@@ -1023,7 +1033,8 @@ t_encode_pdu18(void) {
 
   CU_ASSERT(result > 0);
   result = coap_add_option(pdu, COAP_OPTION_LOCATION_PATH, 255,
-                           (const uint8_t *)"coap://example.com/12345/%3Fxyz/3048234234/23402348234/239084234-23/%AB%30%af/+123/hfksdh/23480-234-98235/1204/243546345345243/0198sdn3-a-3///aff0934/97u2141/0002/3932423532/56234023/----/=1234=/098141-9564643/21970-----/82364923472wererewr0-921-39123-34/");
+                           (const uint8_t *)
+                           "coap://example.com/12345/%3Fxyz/3048234234/23402348234/239084234-23/%AB%30%af/+123/hfksdh/23480-234-98235/1204/243546345345243/0198sdn3-a-3///aff0934/97u2141/0002/3932423532/56234023/----/=1234=/098141-9564643/21970-----/82364923472wererewr0-921-39123-34/");
 
   CU_ASSERT(result == 257);
   CU_ASSERT(pdu->max_opt == 8);
@@ -1063,9 +1074,11 @@ t_encode_pdu19(void) {
   uint16_t opt_num[] = { 300,   7,  21,  25 };
   uint8_t  opt_val[] = {  54,  50,  52,  53 };
   uint8_t  data1[] = { 0x74, 0x71, 0x32, 0xd1, 0x01, 0x34, 0x41, 0x35,
-                       0xe1, 0x00, 0x06, 0x36 };
+                       0xe1, 0x00, 0x06, 0x36
+                     };
   uint8_t  data2[] = { 0x74, 0x71, 0x32, 0xd1, 0x05, 0x35, 0xe1, 0x00,
-                       0x06, 0x36 };
+                       0x06, 0x36
+                     };
   uint8_t  data3[] = { 0x74, 0xd1, 0x0c, 0x35, 0xe1, 0x00, 0x06, 0x36 };
   uint8_t  data4[] = { 0x74, 0xd1, 0x0c, 0x35 };
   uint8_t  data5[] = { 0x74 };
@@ -1080,7 +1093,7 @@ t_encode_pdu19(void) {
   coap_add_token(pdu, sizeof(token), token);
   for (n = 0; n < (sizeof(opt_num)/sizeof(opt_num[0])); n++) {
     coap_add_option(pdu, opt_num[n],
-                     sizeof(opt_val[n]), &opt_val[n]);
+                    sizeof(opt_val[n]), &opt_val[n]);
   }
   CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
 
@@ -1117,16 +1130,21 @@ t_encode_pdu20(void) {
   uint8_t  data[] = { 'd', 'a', 't', 'a' };
   uint8_t  data1[] = { 0x74, 0x71, 0x32, 0xd1, 0x01, 0x34, 0x41, 0x35,
                        0xe1, 0x00, 0x06, 0x36, 0xff, 0x64, 0x61, 0x74,
-                       0x61 };
+                       0x61
+                     };
   uint8_t  data2[] = { 0x74, 0x71, 0x32, 0xd1, 0x05, 0x35, 0xe1, 0x00,
-                       0x06, 0x36, 0xff, 0x64, 0x61, 0x74, 0x61 };
+                       0x06, 0x36, 0xff, 0x64, 0x61, 0x74, 0x61
+                     };
   uint8_t  data3[] = { 0x74, 0xd1, 0x0c, 0x35, 0xe1, 0x00, 0x06, 0x36,
-                       0xff, 0x64, 0x61, 0x74, 0x61 };
+                       0xff, 0x64, 0x61, 0x74, 0x61
+                     };
   uint8_t  data4[] = { 0x74, 0xd1, 0x0c, 0x35, 0xff, 0x64, 0x61, 0x74,
-                       0x61 };
+                       0x61
+                     };
   uint8_t  data5[] = { 0x74, 0xff, 0x64, 0x61, 0x74, 0x61 };
   uint8_t  data6[] = { 0x74, 0xd1, 0x0c, 0x0a, 0xff, 0x64, 0x61, 0x74,
-                       0x61 };
+                       0x61
+                     };
   int new_val;
   unsigned char buf[4];
 
@@ -1137,7 +1155,7 @@ t_encode_pdu20(void) {
   coap_add_token(pdu, sizeof(token), token);
   for (n = 0; n < (sizeof(opt_num)/sizeof(opt_num[0])); n++) {
     coap_add_option(pdu, opt_num[n],
-                     sizeof(opt_val[n]), &opt_val[n]);
+                    sizeof(opt_val[n]), &opt_val[n]);
   }
   coap_add_data(pdu, sizeof(data), data);
   CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
@@ -1176,13 +1194,16 @@ t_encode_pdu21(void) {
   uint8_t  data[] = { 'd', 'a', 't', 'a' };
   uint8_t  data1[] = { 0x74, 0x71, 0x32, 0x31, 0x33, 0xb1, 0x34, 0x41,
                        0x35, 0xe1, 0x00, 0x06, 0x36, 0xff, 0x64, 0x61,
-                       0x74, 0x61 };
+                       0x74, 0x61
+                     };
   uint8_t  data2[] = { 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x71, 0x32, 0x31,
                        0x33, 0xb1, 0x34, 0x41, 0x35, 0xe1, 0x00, 0x06,
-                       0x36, 0xff, 0x64, 0x61, 0x74, 0x61 };
+                       0x36, 0xff, 0x64, 0x61, 0x74, 0x61
+                     };
   uint8_t  data3[] = { 0x71, 0x32, 0x31, 0x33, 0xb1, 0x34, 0x41, 0x35,
                        0xe1, 0x00, 0x06, 0x36, 0xff, 0x64, 0x61, 0x74,
-                       0x61 };
+                       0x61
+                     };
 
   coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
 
@@ -1191,7 +1212,7 @@ t_encode_pdu21(void) {
   coap_add_token(pdu, sizeof(token), token);
   for (n = 0; n < (sizeof(opt_num)/sizeof(opt_num[0])); n++) {
     coap_add_option(pdu, opt_num[n],
-                     sizeof(opt_val[n]), &opt_val[n]);
+                    sizeof(opt_val[n]), &opt_val[n]);
   }
   coap_add_data(pdu, sizeof(data), data);
   CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
@@ -1218,18 +1239,26 @@ t_encode_pdu22(void) {
   uint16_t opt_num[] = { 28,  28,    28,      28 };
   uint32_t opt_val[] = { 0x1, 0x100, 0x10000, 0x1000000 };
   uint8_t data1[][8] = {
-                        { 0x74, 0xd1, 0x0f, 0x01 },
-                        { 0x74, 0xd2, 0x0f, 0x01, 0x00 },
-                        { 0x74, 0xd3, 0x0f, 0x01, 0x00, 0x00 },
-                        { 0x74, 0xd4, 0x0f, 0x01, 0x00, 0x00, 0x00 }};
+    { 0x74, 0xd1, 0x0f, 0x01 },
+    { 0x74, 0xd2, 0x0f, 0x01, 0x00 },
+    { 0x74, 0xd3, 0x0f, 0x01, 0x00, 0x00 },
+    { 0x74, 0xd4, 0x0f, 0x01, 0x00, 0x00, 0x00 }
+  };
   uint8_t  data2[][16] = {
-                        { 0x74, 0xd3, 0x0a, 0xff, 0xff, 0xf6, 0x51, 0x01 },
-                        { 0x74, 0xd3, 0x0a, 0xff, 0xff, 0xf6, 0x52, 0x01,
-                          0x00 },
-                        { 0x74, 0xd3, 0x0a, 0xff, 0xff, 0xf6, 0x53, 0x01,
-                          0x00, 0x00 },
-                        { 0x74, 0xd3, 0x0a, 0xff, 0xff, 0xf6, 0x54, 0x01,
-                          0x00, 0x00, 0x00 }};
+    { 0x74, 0xd3, 0x0a, 0xff, 0xff, 0xf6, 0x51, 0x01 },
+    {
+      0x74, 0xd3, 0x0a, 0xff, 0xff, 0xf6, 0x52, 0x01,
+      0x00
+    },
+    {
+      0x74, 0xd3, 0x0a, 0xff, 0xff, 0xf6, 0x53, 0x01,
+      0x00, 0x00
+    },
+    {
+      0x74, 0xd3, 0x0a, 0xff, 0xff, 0xf6, 0x54, 0x01,
+      0x00, 0x00, 0x00
+    }
+  };
 
   for (n = 0; n < (sizeof(opt_num)/sizeof(opt_num[0])); n++) {
     coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */

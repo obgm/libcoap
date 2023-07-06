@@ -69,7 +69,7 @@ t_tls2(void) {
   version.version = 0;
   if (vers) {
     long int p1, p2 = 0, p3 = 0;
-    char* endptr;
+    char *endptr;
 
     p1 = strtol(vers, &endptr, 10);
     if (*endptr == '.') {

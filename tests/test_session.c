@@ -34,7 +34,7 @@ static coap_session_t *session; /* Holds a reference-counted session object */
 COAP_STATIC_INLINE int
 fpeq(const coap_fixed_point_t a, const coap_fixed_point_t b) {
   return (a.integer_part == b.integer_part) &&
-    (a.fractional_part == b.fractional_part);
+         (a.fractional_part == b.fractional_part);
 }
 
 static void

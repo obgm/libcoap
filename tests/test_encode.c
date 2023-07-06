@@ -242,10 +242,10 @@ t_init_encode_tests(void) {
 
   if ((suite[1] = CU_add_suite("byte value encoder", NULL, NULL))) {
 #define ENCODE_TEST(n,s)                                          \
-    if (!CU_add_test(suite[1], s, t_encode##n)) {                 \
-      fprintf(stderr, "W: cannot add encoder test (%s)\n",        \
-              CU_get_error_msg());                                \
-    }
+  if (!CU_add_test(suite[1], s, t_encode##n)) {                 \
+    fprintf(stderr, "W: cannot add encoder test (%s)\n",        \
+            CU_get_error_msg());                                \
+  }
 
     ENCODE_TEST(1, "encode value #1");
     ENCODE_TEST(2, "encode value #2");
