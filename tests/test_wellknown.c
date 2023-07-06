@@ -67,7 +67,7 @@ t_wellknown1(void) {
   result = coap_print_link(r, buf, &buflen, &ofs);
 
   CU_ASSERT(result == 0);
-    CU_ASSERT(buflen == sizeof(teststr));
+  CU_ASSERT(buflen == sizeof(teststr));
 
   /* offset exceeds buffer */
   buflen = sizeof(buf);
@@ -159,7 +159,7 @@ t_wellknown3(void) {
    */
   offset = num_resources * (TEST_URI_LEN + 4);
   result = coap_print_wellknown(ctx, buf, &buflen, offset, NULL);
-  CU_ASSERT((result & COAP_PRINT_STATUS_ERROR) == 0 );
+  CU_ASSERT((result & COAP_PRINT_STATUS_ERROR) == 0);
   CU_ASSERT(COAP_PRINT_OUTPUT_LENGTH(result) > 0);
 }
 
@@ -180,7 +180,7 @@ t_wellknown4(void) {
   CU_ASSERT(query != NULL);
   memcpy(query->s, "if=one", sizeof("if=one")-1);
   result = coap_print_wellknown(ctx, buf, &buflen, 0, query);
-  CU_ASSERT((result & COAP_PRINT_STATUS_ERROR) == 0 );
+  CU_ASSERT((result & COAP_PRINT_STATUS_ERROR) == 0);
   CU_ASSERT(COAP_PRINT_OUTPUT_LENGTH(result) == sizeof(teststr));
   CU_ASSERT(buflen == sizeof(teststr));
   CU_ASSERT(memcmp(buf, teststr, buflen) == 0);

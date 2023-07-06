@@ -54,7 +54,8 @@ static void
 t_parse_option3(void) {
   /* delta == 3, length == 12, value == 0 */
   coap_str_const_t teststr = { 13, (const uint8_t *)"\x3c\x00\x01\x02\x03\x04"
-                                       "\x05\x06\x07\x08\x09\x0a\x0b" };
+                               "\x05\x06\x07\x08\x09\x0a\x0b"
+                             };
 
   size_t result;
   coap_option_t option;
@@ -383,9 +384,9 @@ t_access_option2(void) {
 static void
 t_access_option3(void) {
   const uint8_t teststr[] = { 0xed, 0x18, 0x0a, 0x00, 'a', 'b', 'c', 'd',
-                           'e',  'f',  'g',  'h',  'i', 'j', 'k', 'l',
-                           'm'
-  };
+                              'e',  'f',  'g',  'h',  'i', 'j', 'k', 'l',
+                              'm'
+                            };
   coap_option_t opt;
 
   CU_ASSERT(sizeof(teststr) == coap_opt_parse((const coap_opt_t *)teststr,
@@ -965,10 +966,10 @@ t_init_option_tests(void) {
 
   if ((suite[1] = CU_add_suite("option encoder", NULL, NULL))) {
 #define OPTION_ENCODER_TEST(n,s)                                  \
-    if (!CU_add_test(suite[1], s, t_encode_option##n)) {          \
-      fprintf(stderr, "W: cannot add option encoder test (%s)\n", \
-              CU_get_error_msg());                                \
-    }
+  if (!CU_add_test(suite[1], s, t_encode_option##n)) {          \
+    fprintf(stderr, "W: cannot add option encoder test (%s)\n", \
+            CU_get_error_msg());                                \
+  }
 
     OPTION_ENCODER_TEST(1, "encode option #1");
     OPTION_ENCODER_TEST(2, "encode option #2");
@@ -987,10 +988,10 @@ t_init_option_tests(void) {
 
   if ((suite[2] = CU_add_suite("option accessors", NULL, NULL))) {
 #define OPTION_ACCESSOR_TEST(n,s)                                           \
-    if (!CU_add_test(suite[2], s, t_access_option##n)) {                    \
-      fprintf(stderr, "W: cannot add option accessor function test (%s)\n", \
-              CU_get_error_msg());                                          \
-    }
+  if (!CU_add_test(suite[2], s, t_access_option##n)) {                    \
+    fprintf(stderr, "W: cannot add option accessor function test (%s)\n", \
+            CU_get_error_msg());                                          \
+  }
 
     OPTION_ACCESSOR_TEST(1, "access option #1");
     OPTION_ACCESSOR_TEST(2, "access option #2");
@@ -1007,10 +1008,10 @@ t_init_option_tests(void) {
 
   if ((suite[3] = CU_add_suite("option iterator", NULL, NULL))) {
 #define OPTION_ITERATOR_TEST(n,s)                                  \
-    if (!CU_add_test(suite[3], s, t_iterate_option##n)) {          \
-      fprintf(stderr, "W: cannot add option iterator test (%s)\n", \
-              CU_get_error_msg());                                 \
-    }
+  if (!CU_add_test(suite[3], s, t_iterate_option##n)) {          \
+    fprintf(stderr, "W: cannot add option iterator test (%s)\n", \
+            CU_get_error_msg());                                 \
+  }
 
     OPTION_ITERATOR_TEST(1, "option iterator #1");
     OPTION_ITERATOR_TEST(2, "option iterator #2");
@@ -1030,10 +1031,10 @@ t_init_option_tests(void) {
 
   if ((suite[4] = CU_add_suite("option filter", NULL, NULL))) {
 #define OPTION_FILTER_TEST(n,s)                                  \
-    if (!CU_add_test(suite[4], s, t_filter_option##n)) {         \
-      fprintf(stderr, "W: cannot add option filter test (%s)\n", \
-              CU_get_error_msg());                               \
-    }
+  if (!CU_add_test(suite[4], s, t_filter_option##n)) {         \
+    fprintf(stderr, "W: cannot add option filter test (%s)\n", \
+            CU_get_error_msg());                               \
+  }
 
     OPTION_FILTER_TEST(1, "option filter #1");
     OPTION_FILTER_TEST(2, "option filter #2");

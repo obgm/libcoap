@@ -239,7 +239,7 @@ t_parse_uri10(void) {
 static void
 t_parse_uri11(void) {
   char teststr[] =
-    "coap://xn--18j4d.example/%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF";
+      "coap://xn--18j4d.example/%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF";
   int result;
   coap_uri_t uri;
   unsigned char buf[40];
@@ -349,13 +349,13 @@ t_parse_uri13(void) {
   CU_ASSERT(uri_path->length == sizeof(COAP_DEFAULT_URI_WELLKNOWN)-1);
   CU_ASSERT_NSTRING_EQUAL(uri_path->s, COAP_DEFAULT_URI_WELLKNOWN,
                           sizeof(COAP_DEFAULT_URI_WELLKNOWN)-1);
-  coap_delete_string (uri_path);
+  coap_delete_string(uri_path);
 }
 
 static void
 t_parse_uri14(void) {
   char teststr[] =
-    "longerthan13lessthan270=0123456789012345678901234567890123456789";
+      "longerthan13lessthan270=0123456789012345678901234567890123456789";
   int result;
 
   /* buf is large enough to hold sizeof(teststr) - 1 bytes content and
@@ -378,7 +378,7 @@ t_parse_uri14(void) {
 static void
 t_parse_uri15(void) {
   char teststr[] =
-    "longerthan13lessthan270=0123456789012345678901234567890123456789";
+      "longerthan13lessthan270=0123456789012345678901234567890123456789";
   int result;
 
   /* buf is too small to hold sizeof(teststr) - 1 bytes content and 2
@@ -394,7 +394,7 @@ t_parse_uri15(void) {
 static void
 t_parse_uri16(void) {
   char teststr[] =
-    "longerthan13lessthan270=0123456789012345678901234567890123456789";
+      "longerthan13lessthan270=0123456789012345678901234567890123456789";
   int result;
 
   /* buf is too small to hold the option header. */
@@ -409,12 +409,12 @@ t_parse_uri16(void) {
 static void
 t_parse_uri17(void) {
   char teststr[] =
-    "thisislongerthan269="
-    "01234567890123456789012345678901234567890123456789"
-    "01234567890123456789012345678901234567890123456789"
-    "01234567890123456789012345678901234567890123456789"
-    "01234567890123456789012345678901234567890123456789"
-    "01234567890123456789012345678901234567890123456789";
+      "thisislongerthan269="
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789";
   int result;
 
   /* buf is large enough to hold sizeof(teststr) - 1 bytes content and
@@ -453,7 +453,7 @@ t_parse_uri18(void) {
   /* strings are stored with terminating zero */
   CU_ASSERT_NSTRING_EQUAL(uri_path->s, "", 1);
 #endif
-  coap_delete_string (uri_path);
+  coap_delete_string(uri_path);
 }
 
 static void
@@ -474,7 +474,7 @@ t_parse_uri19(void) {
 
   CU_ASSERT(uri_path->length == 4);
   CU_ASSERT_NSTRING_EQUAL(uri_path->s, "foo/", 4);
-  coap_delete_string (uri_path);
+  coap_delete_string(uri_path);
 }
 
 static void
@@ -495,7 +495,7 @@ t_parse_uri20(void) {
   /* The leading '/' is stripped hence only one '/' remains. */
   CU_ASSERT(uri_path->length == 1);
   CU_ASSERT_NSTRING_EQUAL(uri_path->s, "/", 1);
-  coap_delete_string (uri_path);
+  coap_delete_string(uri_path);
 }
 
 static void
@@ -516,7 +516,7 @@ t_parse_uri21(void) {
   /* The leading '/' is stripped hence only one '/' remains. */
   CU_ASSERT(uri_path->length == 4);
   CU_ASSERT_NSTRING_EQUAL(uri_path->s, "/foo", 4);
-  coap_delete_string (uri_path);
+  coap_delete_string(uri_path);
 }
 
 static void
@@ -538,7 +538,7 @@ t_parse_uri22(void) {
 
   CU_ASSERT(uri_path->length == 16);
   CU_ASSERT_NSTRING_EQUAL(uri_path->s, "-._~!$&'()/*+,;=", 16);
-  coap_delete_string (uri_path);
+  coap_delete_string(uri_path);
 }
 
 static void
@@ -559,7 +559,7 @@ t_parse_uri23(void) {
 
   CU_ASSERT(uri_path->length == 15);
   CU_ASSERT_NSTRING_EQUAL(uri_path->s, "%25%20%23%5B%5D", 15);
-  coap_delete_string (uri_path);
+  coap_delete_string(uri_path);
 }
 
 /*
