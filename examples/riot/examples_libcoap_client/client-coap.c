@@ -61,7 +61,7 @@ message_handler(coap_session_t *session,
   (void)sent;
   (void)id;
   if (coap_get_data_large(received, &len, &data, &offset, &total)) {
-    printf("%*.*s", (int)len, (int)len, (const char*)data);
+    printf("%*.*s", (int)len, (int)len, (const char *)data);
     if (len + offset == total) {
       printf("\n");
       quit = 1;
@@ -76,7 +76,7 @@ nack_handler(coap_session_t *session COAP_UNUSED,
              const coap_nack_reason_t reason,
              const coap_mid_t id COAP_UNUSED) {
 
-  switch(reason) {
+  switch (reason) {
   case COAP_NACK_TOO_MANY_RETRIES:
   case COAP_NACK_NOT_DELIVERABLE:
   case COAP_NACK_RST:
@@ -147,10 +147,10 @@ client_coap_init(int argc, char **argv) {
   snprintf((char *)buf, sizeof(buf), "%*.*s", (int)uri.host.length,
            (int)uri.host.length, (const char *)uri.host.s);
   /* resolve destination address where packet should be sent */
-  len = resolve_address((const char*)buf, portbuf, &dst, 1 << uri.scheme);
+  len = resolve_address((const char *)buf, portbuf, &dst, 1 << uri.scheme);
   if (len <= 0) {
     coap_log_warn("Failed to resolve address %*.*s\n", (int)uri.host.length,
-           (int)uri.host.length, (const char *)uri.host.s);
+                  (int)uri.host.length, (const char *)uri.host.s);
     goto fail;
   }
 
@@ -174,7 +174,7 @@ client_coap_init(int argc, char **argv) {
     static char client_sni[256];
 
     memset(client_sni, 0, sizeof(client_sni));
-    memset (&dtls_psk, 0, sizeof(dtls_psk));
+    memset(&dtls_psk, 0, sizeof(dtls_psk));
     dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
     if (uri.host.length)
       memcpy(client_sni, uri.host.s,

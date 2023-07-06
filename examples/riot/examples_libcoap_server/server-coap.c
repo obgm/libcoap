@@ -50,15 +50,15 @@ hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
 
   /* if my_clock_base was deleted, we pretend to have no such resource */
   coap_pdu_set_code(response, my_clock_base ? COAP_RESPONSE_CODE_CONTENT :
-                                                COAP_RESPONSE_CODE_NOT_FOUND);
+                    COAP_RESPONSE_CODE_NOT_FOUND);
   if (my_clock_base)
     coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
                     coap_encode_var_safe(buf, sizeof(buf),
-                    COAP_MEDIATYPE_TEXT_PLAIN),
+                                         COAP_MEDIATYPE_TEXT_PLAIN),
                     buf);
 
   coap_add_option(response, COAP_OPTION_MAXAGE,
-          coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
+                  coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
 
   if (my_clock_base) {
 
@@ -117,7 +117,7 @@ init_coap_resources(coap_context_t *ctx) {
 #endif
 
   return;
- error:
+error:
   coap_log_crit("cannot create resource\n");
 }
 
@@ -175,7 +175,7 @@ init_coap_context_endpoints(const char *use_psk) {
     ep = coap_new_endpoint(main_coap_context, &info->addr, info->proto);
     if (!ep) {
       coap_log_warn("cannot create endpoint for proto %u\n",
-                     info->proto);
+                    info->proto);
     } else {
       have_ep = 1;
     }
@@ -218,16 +218,17 @@ fail:
 }
 
 static char server_stack[THREAD_STACKSIZE_MAIN +
-                        THREAD_EXTRA_STACKSIZE_PRINTF];
+                                               THREAD_EXTRA_STACKSIZE_PRINTF];
 
 static
-void start_server(void) {
+void
+start_server(void) {
   kernel_pid_t server_pid;
 
   /* Only one instance of the server */
   if (running) {
-      puts("Error: server already running");
-      return;
+    puts("Error: server already running");
+    return;
   }
 
   /* The server is initialized */
@@ -239,13 +240,13 @@ void start_server(void) {
 
   /* Uncommon but better be sure */
   if (server_pid == EINVAL) {
-      puts("ERROR: Thread invalid");
-      return;
+    puts("ERROR: Thread invalid");
+    return;
   }
 
   if (server_pid == EOVERFLOW) {
-      puts("ERROR: Thread overflow!");
-      return;
+    puts("ERROR: Thread overflow!");
+    return;
   }
 
   running = 1;
@@ -253,7 +254,8 @@ void start_server(void) {
 }
 
 static
-void stop_server(void) {
+void
+stop_server(void) {
   /* check if server is running at all */
   if (running == 0) {
     puts("Error: libcoap server is not running");
@@ -273,11 +275,9 @@ server_coap_init(int argc, char **argv) {
   }
   if (strcmp(argv[1], "start") == 0) {
     start_server();
-  }
-  else if (strcmp(argv[1], "stop") == 0) {
+  } else if (strcmp(argv[1], "stop") == 0) {
     stop_server();
-  }
-  else {
+  } else {
     printf("Error: invalid command. Usage: %s start|stop\n", argv[0]);
   }
   return;
