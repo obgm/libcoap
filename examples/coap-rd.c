@@ -149,7 +149,7 @@ hnd_get_resource(coap_resource_t *resource,
                   COAP_OPTION_CONTENT_TYPE,
                   coap_encode_var_safe(buf, sizeof(buf),
                                        COAP_MEDIATYPE_APPLICATION_LINK_FORMAT),
-                                       buf);
+                  buf);
 
   if (rd && rd->etag_len)
     coap_add_option(response, COAP_OPTION_ETAG, rd->etag_len, rd->etag);
@@ -172,7 +172,7 @@ hnd_put_resource(coap_resource_t *resource COAP_UNUSED,
   coap_pdu_t *response;
   size_t size = sizeof(coap_hdr_t);
   int type = (request->hdr->type == COAP_MESSAGE_CON)
-    ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
+             ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
   rd_t *rd = NULL;
   unsigned char code;     /* result code */
   const uint8_t *data;
@@ -189,8 +189,7 @@ hnd_put_resource(coap_resource_t *resource COAP_UNUSED,
 
         tmp.s = (unsigned char *)coap_malloc(tmp.length);
         if (!tmp.s) {
-          coap_log_debug(
-                   "hnd_put_rd: cannot allocate storage for new rd\n");
+          coap_log_debug("hnd_put_rd: cannot allocate storage for new rd\n");
           code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
           goto finish;
         }
@@ -210,18 +209,18 @@ hnd_put_resource(coap_resource_t *resource COAP_UNUSED,
     code = COAP_RESPONSE_CODE_CHANGED;
     /* FIXME: update lifetime */
 
-    } else {
+  } else {
 
     code = COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE;
   }
 
-  finish:
+finish:
   /* FIXME: do not create a new response but use the old one instead */
   response = coap_pdu_init(type, code, request->hdr->id, size);
 
   if (!response) {
     coap_log_debug("cannot create response for mid=0x%x\n",
-             request->hdr->id);
+                   request->hdr->id);
     return;
   }
 
@@ -230,7 +229,7 @@ hnd_put_resource(coap_resource_t *resource COAP_UNUSED,
 
   if (coap_send(ctx, peer, response) == COAP_INVALID_MID) {
     coap_log_debug("hnd_get_rd: cannot send response for mid=0x%x\n",
-    request->hdr->id);
+                   request->hdr->id);
   }
 #endif
 }
@@ -267,7 +266,7 @@ hnd_get_rd(coap_resource_t *resource COAP_UNUSED,
                   COAP_OPTION_CONTENT_TYPE,
                   coap_encode_var_safe(buf, sizeof(buf),
                                        COAP_MEDIATYPE_APPLICATION_LINK_FORMAT),
-                                       buf);
+                  buf);
 
   coap_add_option(response,
                   COAP_OPTION_MAXAGE,
@@ -297,7 +296,8 @@ parse_param(const uint8_t *search,
       /* key is only valid if we are at end of string or delimiter follows */
       if (!data_len || *data == '=' || *data == '&') {
         while (data_len && *data != '=') {
-          ++data; --data_len;
+          ++data;
+          --data_len;
         }
 
         if (data_len > 1 && result) {
@@ -305,7 +305,8 @@ parse_param(const uint8_t *search,
 
           result->s = ++data;
           while (--data_len && *data != '&') {
-            ++data; result->length++;
+            ++data;
+            result->length++;
           }
         }
 
@@ -420,21 +421,21 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
     if (ins.length && loc_size > 1) {
       loc[loc_size++] = '-';
       memcpy((char *)(loc + loc_size),
-      ins.s, min(ins.length, LOCSIZE - loc_size - 1));
+             ins.s, min(ins.length, LOCSIZE - loc_size - 1));
       loc_size += min(ins.length, LOCSIZE - loc_size - 1);
     }
 
   } else {      /* generate node identifier */
     loc_size +=
-      snprintf((char *)(loc + loc_size), LOCSIZE - loc_size - 1,
-               "%x", coap_pdu_get_mid(request));
+        snprintf((char *)(loc + loc_size), LOCSIZE - loc_size - 1,
+                 "%x", coap_pdu_get_mid(request));
 
     if (loc_size > 1) {
       if (ins.length) {
         loc[loc_size++] = '-';
         memcpy((char *)(loc + loc_size),
-                ins.s,
-                min(ins.length, LOCSIZE - loc_size - 1));
+               ins.s,
+               min(ins.length, LOCSIZE - loc_size - 1));
         loc_size += min(ins.length, LOCSIZE - loc_size - 1);
       } else {
         coap_tick_t now;
@@ -512,7 +513,8 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
 
-  { /* split path into segments and add Location-Path options */
+  {
+    /* split path into segments and add Location-Path options */
     unsigned char _b[LOCSIZE];
     unsigned char *b = _b;
     size_t buflen = sizeof(_b);
@@ -553,86 +555,85 @@ usage(const char *program, const char *version) {
   char buffer[120];
   const char *lib_build = coap_package_build();
 
-  p = strrchr( program, '/' );
-  if ( p )
+  p = strrchr(program, '/');
+  if (p)
     program = ++p;
 
-  fprintf( stderr, "%s v%s -- CoRE Resource Directory implementation\n"
-     "(c) 2011-2012,2019-2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
-     "Build: %s\n"
-     "%s\n"
-    , program, version, lib_build,
-    coap_string_tls_version(buffer, sizeof(buffer)));
+  fprintf(stderr, "%s v%s -- CoRE Resource Directory implementation\n"
+          "(c) 2011-2012,2019-2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+          "Build: %s\n"
+          "%s\n"
+          , program, version, lib_build,
+          coap_string_tls_version(buffer, sizeof(buffer)));
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
-     "Usage: %s [-g group] [-G group_if] [-p port] [-v num] [-A address]\n"
-     "\t       [-w [port][,secure_port]] [-T max_token_size] [-V num]\n"
-     "\t       [[-h hint] [-k key]]\n"
-     "\t       [[-c certfile] [-C cafile] [-n] [-R trust_casfile]]\n"
-     "General Options\n"
-     "\t-g group\tJoin the given multicast group.\n"
-     "\t       \t\tNote: DTLS over multicast is not currently supported\n"
-     "\t-G group_if\tUse this interface for listening for the multicast\n"
-     "\t       \t\tgroup. This can be different from the implied interface\n"
-     "\t       \t\tif the -A option is used\n"
-     "\t-p port\t\tListen on specified port\n"
-     "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
-     "\t       \t\tCoAP logging\n"
-     "\t-w [port][,secure_port]\n"
-     "\t       \t\tEnable WebSockets support on port (WS) and/or secure_port\n"
-     "\t       \t\t(WSS), comma separated\n"
-     "\t-A address\tInterface address to bind to\n"
-     "\t-T max_token_length\tSet the maximum token length (8-65804)\n"
-     "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
-     "\t       \t\tlibrary logging\n"
-     "PSK Options (if supported by underlying (D)TLS library)\n"
-     "\t-h hint\t\tIdentity Hint. Default is CoAP. Zero length is no hint\n"
-     "\t-k key \t\tPre-Shared Key. This argument requires (D)TLS with PSK\n"
-     "\t       \t\tto be available. This cannot be empty if defined.\n"
-     "\t       \t\tNote that both -c and -k need to be defined\n"
-     "\t       \t\tfor both PSK and PKI to be concurrently supported\n"
-     "PKI Options (if supported by underlying (D)TLS library)\n"
-     "\t-c certfile\tPEM file containing both CERTIFICATE and PRIVATE KEY\n"
-     "\t       \t\tThis argument requires (D)TLS with PKI to be available\n"
-     "\t-n     \t\tDisable remote peer certificate checking. This gives\n"
-     "\t       \t\tclients the ability to use PKI, but without any defined\n"
-     "\t       \t\tcertificates\n"
-     "\t-C cafile\tPEM file that contains a list of one or\n"
-     "\t       \t\tmore CAs that are to be passed to the client for the\n"
-     "\t       \t\tclient to determine what client certificate to use.\n"
-     "\t       \t\tNormally, this list of CAs would be the root CA and and\n"
-     "\t       \t\tany intermediate CAs. Ideally the server certificate\n"
-     "\t       \t\tshould be signed by the same CA so that mutual\n"
-     "\t       \t\tauthentication can take place. The contents of cafile\n"
-     "\t       \t\tare added to the trusted store of root CAs.\n"
-     "\t       \t\tUsing the -C or -R options will will trigger the\n"
-     "\t       \t\tvalidation of the client certificate unless overridden\n"
-     "\t       \t\tby the -n option\n"
-     "\t-R trust_casfile\tPEM file containing the set of trusted root CAs\n"
-     "\t       \t\tthat are to be used to validate the client certificate.\n"
-     "\t       \t\tAlternatively, this can point to a directory containing\n"
-     "\t       \t\ta set of CA PEM files.\n"
-     "\t       \t\tUsing '-R trust_casfile' disables common CA mutual\n"
-     "\t       \t\tauthentication which can only be done by using\n"
-     "\t       \t\t'-C cafile'.\n"
-     "\t       \t\tUsing the -C or -R options will will trigger the\n"
-     "\t       \t\tvalidation of the client certificate unless overridden\n"
-     "\t       \t\tby the -n option\n"
-     ,
-     program);
+          "Usage: %s [-g group] [-G group_if] [-p port] [-v num] [-A address]\n"
+          "\t       [-w [port][,secure_port]] [-T max_token_size] [-V num]\n"
+          "\t       [[-h hint] [-k key]]\n"
+          "\t       [[-c certfile] [-C cafile] [-n] [-R trust_casfile]]\n"
+          "General Options\n"
+          "\t-g group\tJoin the given multicast group.\n"
+          "\t       \t\tNote: DTLS over multicast is not currently supported\n"
+          "\t-G group_if\tUse this interface for listening for the multicast\n"
+          "\t       \t\tgroup. This can be different from the implied interface\n"
+          "\t       \t\tif the -A option is used\n"
+          "\t-p port\t\tListen on specified port\n"
+          "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
+          "\t       \t\tCoAP logging\n"
+          "\t-w [port][,secure_port]\n"
+          "\t       \t\tEnable WebSockets support on port (WS) and/or secure_port\n"
+          "\t       \t\t(WSS), comma separated\n"
+          "\t-A address\tInterface address to bind to\n"
+          "\t-T max_token_length\tSet the maximum token length (8-65804)\n"
+          "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
+          "\t       \t\tlibrary logging\n"
+          "PSK Options (if supported by underlying (D)TLS library)\n"
+          "\t-h hint\t\tIdentity Hint. Default is CoAP. Zero length is no hint\n"
+          "\t-k key \t\tPre-Shared Key. This argument requires (D)TLS with PSK\n"
+          "\t       \t\tto be available. This cannot be empty if defined.\n"
+          "\t       \t\tNote that both -c and -k need to be defined\n"
+          "\t       \t\tfor both PSK and PKI to be concurrently supported\n"
+          "PKI Options (if supported by underlying (D)TLS library)\n"
+          "\t-c certfile\tPEM file containing both CERTIFICATE and PRIVATE KEY\n"
+          "\t       \t\tThis argument requires (D)TLS with PKI to be available\n"
+          "\t-n     \t\tDisable remote peer certificate checking. This gives\n"
+          "\t       \t\tclients the ability to use PKI, but without any defined\n"
+          "\t       \t\tcertificates\n"
+          "\t-C cafile\tPEM file that contains a list of one or\n"
+          "\t       \t\tmore CAs that are to be passed to the client for the\n"
+          "\t       \t\tclient to determine what client certificate to use.\n"
+          "\t       \t\tNormally, this list of CAs would be the root CA and and\n"
+          "\t       \t\tany intermediate CAs. Ideally the server certificate\n"
+          "\t       \t\tshould be signed by the same CA so that mutual\n"
+          "\t       \t\tauthentication can take place. The contents of cafile\n"
+          "\t       \t\tare added to the trusted store of root CAs.\n"
+          "\t       \t\tUsing the -C or -R options will will trigger the\n"
+          "\t       \t\tvalidation of the client certificate unless overridden\n"
+          "\t       \t\tby the -n option\n"
+          "\t-R trust_casfile\tPEM file containing the set of trusted root CAs\n"
+          "\t       \t\tthat are to be used to validate the client certificate.\n"
+          "\t       \t\tAlternatively, this can point to a directory containing\n"
+          "\t       \t\ta set of CA PEM files.\n"
+          "\t       \t\tUsing '-R trust_casfile' disables common CA mutual\n"
+          "\t       \t\tauthentication which can only be done by using\n"
+          "\t       \t\t'-C cafile'.\n"
+          "\t       \t\tUsing the -C or -R options will will trigger the\n"
+          "\t       \t\tvalidation of the client certificate unless overridden\n"
+          "\t       \t\tby the -n option\n"
+          ,
+          program);
 }
 
 static void
 fill_keystore(coap_context_t *ctx) {
   if (cert_file == NULL && key_defined == 0) {
     if (coap_dtls_is_supported() || coap_tls_is_supported()) {
-      coap_log_debug(
-               "(D)TLS not enabled as neither -k or -c options specified\n");
+      coap_log_debug("(D)TLS not enabled as neither -k or -c options specified\n");
     }
   }
   if (cert_file) {
     coap_dtls_pki_t dtls_pki;
-    memset (&dtls_pki, 0, sizeof(dtls_pki));
+    memset(&dtls_pki, 0, sizeof(dtls_pki));
     dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
     if (ca_file || root_ca_file) {
       /*
@@ -671,7 +672,7 @@ fill_keystore(coap_context_t *ctx) {
   }
   if (key_defined) {
     coap_dtls_spsk_t dtls_psk;
-    memset (&dtls_psk, 0, sizeof(dtls_psk));
+    memset(&dtls_psk, 0, sizeof(dtls_psk));
     dtls_psk.version = COAP_DTLS_SPSK_SETUP_VERSION;
     dtls_psk.validate_id_call_back = NULL;
     dtls_psk.validate_sni_call_back = NULL;
@@ -712,8 +713,8 @@ get_context(const char *node, const char *port) {
     s_port = u_s_port + 1;
   }
   scheme_hint_bits =
-     coap_get_available_scheme_hint_bits(cert_file != NULL || key_defined != 0,
-                                         enable_ws, COAP_PROTO_NONE);
+      coap_get_available_scheme_hint_bits(cert_file != NULL || key_defined != 0,
+                                          enable_ws, COAP_PROTO_NONE);
   info_list = coap_resolve_address_info(node ? &local : NULL, u_s_port, s_port,
                                         AI_PASSIVE | AI_NUMERICHOST,
                                         scheme_hint_bits,
@@ -724,7 +725,7 @@ get_context(const char *node, const char *port) {
     ep = coap_new_endpoint(ctx, &info->addr, info->proto);
     if (!ep) {
       coap_log_warn("cannot create endpoint for proto %u\n",
-                     info->proto);
+                    info->proto);
     } else {
       have_ep = 1;
     }
@@ -744,8 +745,7 @@ cmdline_read_extended_token_size(char *arg) {
   if (extended_token_size < COAP_TOKEN_DEFAULT_MAX) {
     coap_log_err("Extended Token Length must be 8 or greater\n");
     return 0;
-  }
-  else if (extended_token_size > COAP_TOKEN_EXT_MAX) {
+  } else if (extended_token_size > COAP_TOKEN_EXT_MAX) {
     coap_log_err("Extended Token Length must be 65804 or less\n");
     return 0;
   }
@@ -795,7 +795,7 @@ main(int argc, char **argv) {
     case 'k' :
       key_length = cmdline_read_key(optarg, key, MAX_KEY);
       if (key_length < 0) {
-        coap_log_crit("Invalid Pre-Shared Key specified\n" );
+        coap_log_crit("Invalid Pre-Shared Key specified\n");
         break;
       }
       key_defined = 1;
@@ -829,8 +829,8 @@ main(int argc, char **argv) {
       enable_ws = 1;
       break;
     default:
-      usage( argv[0], LIBCOAP_PACKAGE_VERSION );
-      exit( 1 );
+      usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+      exit(1);
     }
   }
 
@@ -852,25 +852,25 @@ main(int argc, char **argv) {
 #ifdef _WIN32
   signal(SIGINT, handle_sigint);
 #else
-  memset (&sa, 0, sizeof(sa));
+  memset(&sa, 0, sizeof(sa));
   sigemptyset(&sa.sa_mask);
   sa.sa_handler = handle_sigint;
   sa.sa_flags = 0;
-  sigaction (SIGINT, &sa, NULL);
-  sigaction (SIGTERM, &sa, NULL);
+  sigaction(SIGINT, &sa, NULL);
+  sigaction(SIGTERM, &sa, NULL);
   /* So we do not exit on a SIGPIPE */
   sa.sa_handler = SIG_IGN;
-  sigaction (SIGPIPE, &sa, NULL);
+  sigaction(SIGPIPE, &sa, NULL);
 #endif
 
-  while ( !quit ) {
-    result = coap_io_process( ctx, COAP_RESOURCE_CHECK_TIME * 1000 );
-    if ( result >= 0 ) {
+  while (!quit) {
+    result = coap_io_process(ctx, COAP_RESOURCE_CHECK_TIME * 1000);
+    if (result >= 0) {
       /* coap_check_resource_list( ctx ); */
     }
   }
 
-  coap_free_context( ctx );
+  coap_free_context(ctx);
   coap_cleanup();
 
   return 0;
