@@ -73,26 +73,24 @@ struct coap_socket_t {
 #define COAP_SOCKET_MULTICAST    0x1000  /**< socket is used for multicast communication */
 
 #if COAP_SERVER_SUPPORT
-coap_endpoint_t *coap_malloc_endpoint( void );
-void coap_mfree_endpoint( coap_endpoint_t *ep );
+coap_endpoint_t *coap_malloc_endpoint(void);
+void coap_mfree_endpoint(coap_endpoint_t *ep);
 #endif /* COAP_SERVER_SUPPORT */
 
 const char *coap_socket_format_errno(int error);
 
 #if COAP_CLIENT_SUPPORT
-int
-coap_socket_connect_udp(coap_socket_t *sock,
-                        const coap_address_t *local_if,
-                        const coap_address_t *server,
-                        int default_port,
-                        coap_address_t *local_addr,
-                        coap_address_t *remote_addr);
+int coap_socket_connect_udp(coap_socket_t *sock,
+                            const coap_address_t *local_if,
+                            const coap_address_t *server,
+                            int default_port,
+                            coap_address_t *local_addr,
+                            coap_address_t *remote_addr);
 #endif /* COAP_CLIENT_SUPPORT */
 
-int
-coap_socket_bind_udp(coap_socket_t *sock,
-                     const coap_address_t *listen_addr,
-                     coap_address_t *bound_addr );
+int coap_socket_bind_udp(coap_socket_t *sock,
+                         const coap_address_t *listen_addr,
+                         coap_address_t *bound_addr);
 
 /**
  * Function interface to close off a socket.
@@ -157,9 +155,8 @@ void coap_epoll_ctl_mod(coap_socket_t *sock, uint32_t events, const char *func);
 void coap_update_epoll_timer(coap_context_t *context, coap_tick_t delay);
 
 #ifdef WITH_LWIP
-ssize_t
-coap_socket_send_pdu( coap_socket_t *sock, coap_session_t *session,
-                      coap_pdu_t *pdu );
+ssize_t coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
+                             coap_pdu_t *pdu);
 #endif
 
 /**

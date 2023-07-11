@@ -51,8 +51,8 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
 }
 
 #define _coap_address_equals_impl(A, B) \
-        ((A)->port == (B)->port        \
-        && (!!ip_addr_cmp(&(A)->addr,&(B)->addr)))
+  ((A)->port == (B)->port &&        \
+   (!!ip_addr_cmp(&(A)->addr,&(B)->addr)))
 
 #define _coap_address_isany_impl(A)  ip_addr_isany(&(A)->addr)
 
@@ -84,8 +84,8 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
 }
 
 #define _coap_address_equals_impl(A,B) \
-        ((A)->port == (B)->port        \
-        && uip_ipaddr_cmp(&((A)->addr),&((B)->addr)))
+  ((A)->port == (B)->port &&     \
+   uip_ipaddr_cmp(&((A)->addr),&((B)->addr)))
 
 /** @todo implementation of _coap_address_isany_impl() for Contiki */
 #define _coap_address_isany_impl(A)  0
@@ -101,8 +101,8 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
 #define COAP_UNIX_PATH_MAX   (sizeof(struct sockaddr_in6) - sizeof(sa_family_t))
 
 struct coap_sockaddr_un {
-        sa_family_t sun_family; /* AF_UNIX */
-        char sun_path[COAP_UNIX_PATH_MAX];   /* pathname max 26 with NUL byte */
+  sa_family_t sun_family; /* AF_UNIX */
+  char sun_path[COAP_UNIX_PATH_MAX];   /* pathname max 26 with NUL byte */
 };
 
 /** Multi-purpose address abstraction */
@@ -223,7 +223,7 @@ int coap_address_set_unix_domain(coap_address_t *addr,
 /* Convenience function to copy IPv6 addresses without garbage. */
 #if defined(WITH_LWIP) || defined(WITH_CONTIKI)
 COAP_STATIC_INLINE void
-coap_address_copy( coap_address_t *dst, const coap_address_t *src ) {
+coap_address_copy(coap_address_t *dst, const coap_address_t *src) {
   memcpy(dst, src, sizeof(coap_address_t));
 }
 #else /* ! WITH_LWIP && ! WITH_CONTIKI */
@@ -238,7 +238,8 @@ void coap_address_copy(coap_address_t *dst, const coap_address_t *src);
  */
 COAP_STATIC_INLINE int
 coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
-  assert(a); assert(b);
+  assert(a);
+  assert(b);
   return _coap_address_equals_impl(a, b);
 }
 #endif

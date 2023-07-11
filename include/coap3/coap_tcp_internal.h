@@ -45,13 +45,12 @@
  *
  * @return @c 1 if succesful, @c 0 if failure of some sort
 */
-int
-coap_socket_connect_tcp1(coap_socket_t *sock,
-                         const coap_address_t *local_if,
-                         const coap_address_t *server,
-                         int default_port,
-                         coap_address_t *local_addr,
-                         coap_address_t *remote_addr);
+int coap_socket_connect_tcp1(coap_socket_t *sock,
+                             const coap_address_t *local_if,
+                             const coap_address_t *server,
+                             int default_port,
+                             coap_address_t *local_addr,
+                             coap_address_t *remote_addr);
 
 /**
  * Complete the TCP Connection
@@ -64,10 +63,9 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
  *
  * @return @c 1 if succesful, @c 0 if failure of some sort
 */
-int
-coap_socket_connect_tcp2(coap_socket_t *sock,
-                         coap_address_t *local_addr,
-                         coap_address_t *remote_addr);
+int coap_socket_connect_tcp2(coap_socket_t *sock,
+                             coap_address_t *local_addr,
+                             coap_address_t *remote_addr);
 
 /**
  * Create a new TCP socket and then listen for new incoming TCP sessions
@@ -81,10 +79,9 @@ coap_socket_connect_tcp2(coap_socket_t *sock,
  *
  * @return @c 1 if succesful, @c 0 if failure of some sort
 */
-int
-coap_socket_bind_tcp(coap_socket_t *sock,
-                     const coap_address_t *listen_addr,
-                     coap_address_t *bound_addr);
+int coap_socket_bind_tcp(coap_socket_t *sock,
+                         const coap_address_t *listen_addr,
+                         coap_address_t *bound_addr);
 
 /**
  * Accept a new incoming TCP session
@@ -99,11 +96,10 @@ coap_socket_bind_tcp(coap_socket_t *sock,
  *
  * @return @c 1 if succesful, @c 0 if failure of some sort
 */
-int
-coap_socket_accept_tcp(coap_socket_t *server,
-                       coap_socket_t *new_client,
-                       coap_address_t *local_addr,
-                       coap_address_t *remote_addr);
+int coap_socket_accept_tcp(coap_socket_t *server,
+                           coap_socket_t *new_client,
+                           coap_address_t *local_addr,
+                           coap_address_t *remote_addr);
 
 #endif /* !COAP_DISABLE_TCP */
 

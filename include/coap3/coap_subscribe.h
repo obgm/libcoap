@@ -207,10 +207,10 @@ void coap_persist_track_funcs(coap_context_t *context,
  */
 coap_subscription_t *coap_persist_observe_add(coap_context_t *context,
                                               coap_proto_t e_proto,
-                                          const coap_address_t *e_listen_addr,
-                                          const coap_addr_tuple_t *s_addr_info,
-                                          const coap_bin_const_t *raw_packet,
-                                          const coap_bin_const_t *oscore_info);
+                                              const coap_address_t *e_listen_addr,
+                                              const coap_addr_tuple_t *s_addr_info,
+                                              const coap_bin_const_t *raw_packet,
+                                              const coap_bin_const_t *oscore_info);
 
 /**
  * Start up persist tracking using the libcoap module. If the files already

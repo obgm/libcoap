@@ -30,7 +30,7 @@
 
 typedef pthread_mutex_t coap_mutex_t;
 #define COAP_MUTEX_DEFINE(_name)                        \
-        static coap_mutex_t _name = PTHREAD_MUTEX_INITIALIZER
+  static coap_mutex_t _name = PTHREAD_MUTEX_INITIALIZER
 #define coap_mutex_lock(a) pthread_mutex_lock(a)
 #define coap_mutex_trylock(a) pthread_mutex_trylock(a)
 #define coap_mutex_unlock(a) pthread_mutex_unlock(a)
@@ -41,7 +41,7 @@ typedef pthread_mutex_t coap_mutex_t;
 
 typedef mutex_t coap_mutex_t;
 #define COAP_MUTEX_DEFINE(_name)                        \
-        static coap_mutex_t _name = MUTEX_INIT
+  static coap_mutex_t _name = MUTEX_INIT
 #define coap_mutex_lock(a) mutex_lock(a)
 #define coap_mutex_trylock(a) mutex_trylock(a)
 #define coap_mutex_unlock(a) mutex_unlock(a)
@@ -53,7 +53,7 @@ typedef mutex_t coap_mutex_t;
 /* Single threaded, no-op'd in lwip/sys.h */
 typedef int coap_mutex_t;
 #define COAP_MUTEX_DEFINE(_name)                        \
-        static coap_mutex_t _name
+  static coap_mutex_t _name
 #define coap_mutex_lock(a) *(a) = 1
 #define coap_mutex_trylock(a) *(a) = 1
 #define coap_mutex_unlock(a) *(a) = 0
@@ -71,7 +71,7 @@ typedef sys_mutex_t *coap_mutex_t;
 /* Contiki does not have a mutex API, used as single thread */
 typedef int coap_mutex_t;
 #define COAP_MUTEX_DEFINE(_name)                        \
-        static coap_mutex_t _name
+  static coap_mutex_t _name
 #define coap_mutex_lock(a) *(a) = 1
 #define coap_mutex_trylock(a) *(a) = 1
 #define coap_mutex_unlock(a) *(a) = 0
@@ -81,7 +81,7 @@ typedef int coap_mutex_t;
 
 typedef struct k_mutex coap_mutex_t;
 #define COAP_MUTEX_DEFINE(_name)                        \
-        static SYS_MUTEX_DEFINE(_name)
+  static SYS_MUTEX_DEFINE(_name)
 #define coap_mutex_lock(a) sys_mutex_lock(a, K_FOREVER)
 #define coap_mutex_trylock(a) sys_mutex_lock(a, K_NO_WAIT)
 #define coap_mutex_unlock(a) sys_mutex_unlock(a)
@@ -91,7 +91,7 @@ typedef struct k_mutex coap_mutex_t;
 #warning "stub mutex functions"
 typedef int coap_mutex_t;
 #define COAP_MUTEX_DEFINE(_name)                        \
-        static coap_mutex_t _name
+  static coap_mutex_t _name
 #define coap_mutex_lock(a) *(a) = 1
 #define coap_mutex_trylock(a) *(a) = 1
 #define coap_mutex_unlock(a) *(a) = 0

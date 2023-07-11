@@ -33,11 +33,11 @@
  * Definition of message handler function
  */
 typedef void (*coap_method_handler_t)
-  (coap_resource_t *,
-   coap_session_t *,
-   const coap_pdu_t * /* request */,
-   const coap_string_t * /* query string */,
-   coap_pdu_t * /* response */);
+(coap_resource_t *,
+ coap_session_t *,
+ const coap_pdu_t * /* request */,
+ const coap_string_t * /* query string */,
+ coap_pdu_t * /* response */);
 
 #define COAP_ATTR_FLAGS_RELEASE_NAME  0x1
 #define COAP_ATTR_FLAGS_RELEASE_VALUE 0x2
@@ -249,7 +249,7 @@ coap_resource_t *coap_resource_unknown_init2(coap_method_handler_t put_handler,
  * @return         A pointer to the new object or @c NULL on error.
  */
 coap_resource_t *coap_resource_proxy_uri_init(coap_method_handler_t handler,
-                      size_t host_name_count, const char *host_name_list[]);
+                                              size_t host_name_count, const char *host_name_list[]);
 
 /**
  * Creates a new resource object for handling proxy URIs with configurable
@@ -270,9 +270,9 @@ coap_resource_t *coap_resource_proxy_uri_init(coap_method_handler_t handler,
  * @return         A pointer to the new object or @c NULL on error.
  */
 coap_resource_t *coap_resource_proxy_uri_init2(coap_method_handler_t handler,
-                                              size_t host_name_count,
-                                              const char *host_name_list[],
-                                              int flags);
+                                               size_t host_name_count,
+                                               const char *host_name_list[],
+                                               int flags);
 
 /**
  * Returns the resource identified by the unique string @p uri_path. If no
@@ -284,7 +284,7 @@ coap_resource_t *coap_resource_proxy_uri_init2(coap_method_handler_t handler,
  * @return         A pointer to the resource or @c NULL if not found.
  */
 coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
-                                                coap_str_const_t *uri_path);
+                                                 coap_str_const_t *uri_path);
 
 /**
  * Get the uri_path from a @p resource.
@@ -293,7 +293,7 @@ coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
  *
  * @return         The uri_path if it exists or @c NULL otherwise.
  */
-coap_str_const_t* coap_resource_get_uri_path(coap_resource_t *resource);
+coap_str_const_t *coap_resource_get_uri_path(coap_resource_t *resource);
 
 /**
  * Sets the notification message type of resource @p resource to given
@@ -339,7 +339,7 @@ typedef void (*coap_resource_release_userdata_handler_t)(void *user_data);
  *
  */
 void coap_resource_release_userdata_handler(coap_context_t *context,
-                          coap_resource_release_userdata_handler_t callback);
+                                            coap_resource_release_userdata_handler_t callback);
 
 /**
  * Registers the given @p resource for @p context. The resource must have been
@@ -387,8 +387,8 @@ void coap_register_handler(coap_resource_t *resource,
  * @param handler  The handler to register with @p resource.
  */
 void coap_register_request_handler(coap_resource_t *resource,
-                           coap_request_t method,
-                           coap_method_handler_t handler);
+                                   coap_request_t method,
+                                   coap_method_handler_t handler);
 
 /**
  * Registers a new attribute with the given @p resource. As the
@@ -500,13 +500,12 @@ coap_print_status_t coap_print_link(const coap_resource_t *resource,
  * @return         A pointer to the resource or @c NULL if not found.
  */
 coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
-                                                coap_str_const_t *uri_path);
+                                                 coap_str_const_t *uri_path);
 
 /**
  * @deprecated use coap_resource_notify_observers() instead.
  */
-COAP_DEPRECATED int
-coap_resource_set_dirty(coap_resource_t *r,
-                        const coap_string_t *query);
+COAP_DEPRECATED int coap_resource_set_dirty(coap_resource_t *r,
+                                            const coap_string_t *query);
 
 #endif /* COAP_RESOURCE_H_ */

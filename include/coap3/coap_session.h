@@ -118,7 +118,7 @@ void *coap_session_get_app_data(const coap_session_t *session);
  * @return The session's remote address or @c NULL on failure.
  */
 const coap_address_t *coap_session_get_addr_remote(
-                                               const coap_session_t *session);
+    const coap_session_t *session);
 
 /**
  * Get the remote multicast IP address and port from the session if the
@@ -132,7 +132,7 @@ const coap_address_t *coap_session_get_addr_remote(
  *         this is not a multicast session.
  */
 const coap_address_t *coap_session_get_addr_mcast(
-                                               const coap_session_t *session);
+    const coap_session_t *session);
 
 /**
  * Get the local IP address and port from the session.
@@ -142,7 +142,7 @@ const coap_address_t *coap_session_get_addr_mcast(
  * @return The session's local address or @c NULL on failure.
  */
 const coap_address_t *coap_session_get_addr_local(
-                                               const coap_session_t *session);
+    const coap_session_t *session);
 
 /**
  * Get the session protocol type
@@ -245,10 +245,10 @@ size_t coap_session_max_pdu_size(const coap_session_t *session);
 * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
 */
 coap_session_t *coap_new_client_session(
-  coap_context_t *ctx,
-  const coap_address_t *local_if,
-  const coap_address_t *server,
-  coap_proto_t proto
+    coap_context_t *ctx,
+    const coap_address_t *local_if,
+    const coap_address_t *server,
+    coap_proto_t proto
 );
 
 /**
@@ -267,13 +267,13 @@ coap_session_t *coap_new_client_session(
 * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
 */
 coap_session_t *coap_new_client_session_psk(
-  coap_context_t *ctx,
-  const coap_address_t *local_if,
-  const coap_address_t *server,
-  coap_proto_t proto,
-  const char *identity,
-  const uint8_t *key,
-  unsigned key_len
+    coap_context_t *ctx,
+    const coap_address_t *local_if,
+    const coap_address_t *server,
+    coap_proto_t proto,
+    const char *identity,
+    const uint8_t *key,
+    unsigned key_len
 );
 
 /**
@@ -292,11 +292,11 @@ coap_session_t *coap_new_client_session_psk(
 *         to free.
 */
 coap_session_t *coap_new_client_session_psk2(
-  coap_context_t *ctx,
-  const coap_address_t *local_if,
-  const coap_address_t *server,
-  coap_proto_t proto,
-  coap_dtls_cpsk_t *setup_data
+    coap_context_t *ctx,
+    const coap_address_t *local_if,
+    const coap_address_t *server,
+    coap_proto_t proto,
+    coap_dtls_cpsk_t *setup_data
 );
 
 /**
@@ -306,8 +306,8 @@ coap_session_t *coap_new_client_session_psk2(
  *
  * @return @c hint if successful, else @c NULL.
  */
-const coap_bin_const_t * coap_session_get_psk_hint(
-                                               const coap_session_t *session);
+const coap_bin_const_t *coap_session_get_psk_hint(
+    const coap_session_t *session);
 
 /**
  * Get the server session's current PSK identity (PSK).
@@ -317,7 +317,7 @@ const coap_bin_const_t * coap_session_get_psk_hint(
  * @return PSK identity if successful, else @c NULL.
  */
 const coap_bin_const_t *coap_session_get_psk_identity(
-                                               const coap_session_t *session);
+    const coap_session_t *session);
 /**
  * Get the session's current pre-shared key (PSK).
  *
@@ -325,8 +325,8 @@ const coap_bin_const_t *coap_session_get_psk_identity(
  *
  * @return @c psk_key if successful, else @c NULL.
  */
-const coap_bin_const_t * coap_session_get_psk_key(
-                                               const coap_session_t *session);
+const coap_bin_const_t *coap_session_get_psk_key(
+    const coap_session_t *session);
 
 /**
 * Creates a new client session to the designated server with PKI credentials
@@ -344,11 +344,11 @@ const coap_bin_const_t * coap_session_get_psk_key(
 *         to free.
 */
 coap_session_t *coap_new_client_session_pki(
-  coap_context_t *ctx,
-  const coap_address_t *local_if,
-  const coap_address_t *server,
-  coap_proto_t proto,
-  coap_dtls_pki_t *setup_data
+    coap_context_t *ctx,
+    const coap_address_t *local_if,
+    const coap_address_t *server,
+    coap_proto_t proto,
+    coap_dtls_pki_t *setup_data
 );
 
 /**
@@ -371,7 +371,7 @@ void coap_session_init_token(coap_session_t *session, size_t length,
  *
  */
 void coap_session_new_token(coap_session_t *session, size_t *length,
-                                      uint8_t *token);
+                            uint8_t *token);
 
 /**
  * @ingroup logging
@@ -394,7 +394,8 @@ const char *coap_session_str(const coap_session_t *session);
  *
  * @return The new endpoint or @c NULL on failure.
  */
-coap_endpoint_t *coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto);
+coap_endpoint_t *coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr,
+                                   coap_proto_t proto);
 
 /**
  * Set the endpoint's default MTU. This is the maximum message size that can be
@@ -436,108 +437,108 @@ coap_session_t *coap_session_get_by_peer(const coap_context_t *context,
 */
 const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
 
- /**
-  * @ingroup application_api
-  * @defgroup cc Rate Control
-  * API for updating transmission parameters for CoAP rate control.
-  * The transmission parameters for CoAP rate control ("Congestion
-  * Control" in stream-oriented protocols) are defined in
-  * https://rfc-editor.org/rfc/rfc7252#section-4.8 and
-  * https://rfc-editor.org/rfc/rfc9177#section-6.2
-  * @{
-  */
+/**
+ * @ingroup application_api
+ * @defgroup cc Rate Control
+ * API for updating transmission parameters for CoAP rate control.
+ * The transmission parameters for CoAP rate control ("Congestion
+ * Control" in stream-oriented protocols) are defined in
+ * https://rfc-editor.org/rfc/rfc7252#section-4.8 and
+ * https://rfc-editor.org/rfc/rfc9177#section-6.2
+ * @{
+ */
 
-  /**
-   * Number of seconds when to expect an ACK or a response to an
-   * outstanding CON message.
-   * RFC 7252, Section 4.8 Default value of ACK_TIMEOUT is 2
-   *
-   * Configurable using coap_session_set_ack_timeout()
-   */
+/**
+ * Number of seconds when to expect an ACK or a response to an
+ * outstanding CON message.
+ * RFC 7252, Section 4.8 Default value of ACK_TIMEOUT is 2
+ *
+ * Configurable using coap_session_set_ack_timeout()
+ */
 #define COAP_DEFAULT_ACK_TIMEOUT ((coap_fixed_point_t){2,0})
 
-  /**
-   * A factor that is used to randomize the wait time before a message
-   * is retransmitted to prevent synchronization effects.
-   * RFC 7252, Section 4.8 Default value of ACK_RANDOM_FACTOR is 1.5
-   *
-   * Configurable using coap_session_set_ack_random_factor()
-   */
+/**
+ * A factor that is used to randomize the wait time before a message
+ * is retransmitted to prevent synchronization effects.
+ * RFC 7252, Section 4.8 Default value of ACK_RANDOM_FACTOR is 1.5
+ *
+ * Configurable using coap_session_set_ack_random_factor()
+ */
 #define COAP_DEFAULT_ACK_RANDOM_FACTOR ((coap_fixed_point_t){1,500})
 
-  /**
-   * Number of message retransmissions before message sending is stopped.
-   * RFC 7252, Section 4.8 Default value of MAX_RETRANSMIT is 4
-   *
-   * Configurable using coap_session_set_max_retransmit()
-   */
+/**
+ * Number of message retransmissions before message sending is stopped.
+ * RFC 7252, Section 4.8 Default value of MAX_RETRANSMIT is 4
+ *
+ * Configurable using coap_session_set_max_retransmit()
+ */
 #define COAP_DEFAULT_MAX_RETRANSMIT  (4U)
 
-  /**
-   * The number of simultaneous outstanding interactions that a client
-   * maintains to a given server.
-   * RFC 7252, Section 4.8 Default value of NSTART is 1
-   *
-   * Configurable using coap_session_set_nstart()
-   */
+/**
+ * The number of simultaneous outstanding interactions that a client
+ * maintains to a given server.
+ * RFC 7252, Section 4.8 Default value of NSTART is 1
+ *
+ * Configurable using coap_session_set_nstart()
+ */
 #define COAP_DEFAULT_NSTART (1U)
 
-  /**
-   * The number of seconds to use as bounds for multicast traffic
-   * RFC 7252, Section 4.8 Default value of DEFAULT_LEISURE is 5.0
-   *
-   * Configurable using coap_session_set_default_leisure()
-   */
+/**
+ * The number of seconds to use as bounds for multicast traffic
+ * RFC 7252, Section 4.8 Default value of DEFAULT_LEISURE is 5.0
+ *
+ * Configurable using coap_session_set_default_leisure()
+ */
 #define COAP_DEFAULT_DEFAULT_LEISURE ((coap_fixed_point_t){5,0})
 
-  /**
-   * The number of bytes/second allowed when there is no response
-   * RFC 7252, Section 4.8 Default value of PROBING_RATE is 1
-   *
-   * Configurable using coap_session_set_probing_rate()
-   */
+/**
+ * The number of bytes/second allowed when there is no response
+ * RFC 7252, Section 4.8 Default value of PROBING_RATE is 1
+ *
+ * Configurable using coap_session_set_probing_rate()
+ */
 #define COAP_DEFAULT_PROBING_RATE (1U)
 
-  /**
-   * Number of Q-Block1 or Q-Block2 payloads that can be sent in a burst
-   * before a delay has to kick in.
-   * RFC9177 Section 6.2 Default value of MAX_PAYLOAD is 10
-   *
-   * Configurable using coap_session_set_max_payloads()
-   */
+/**
+ * Number of Q-Block1 or Q-Block2 payloads that can be sent in a burst
+ * before a delay has to kick in.
+ * RFC9177 Section 6.2 Default value of MAX_PAYLOAD is 10
+ *
+ * Configurable using coap_session_set_max_payloads()
+ */
 #define COAP_DEFAULT_MAX_PAYLOADS (10U)
 
-  /**
-   * The number of times for requests for re-transmission of missing Q-Block1
-   * when no response has been received.
-   * RFC9177 Section 6.2 Default value of NON_MAX_RETRANSMIT is 4
-   *
-   * Configurable using coap_session_set_non_max_retransmit()
-   */
+/**
+ * The number of times for requests for re-transmission of missing Q-Block1
+ * when no response has been received.
+ * RFC9177 Section 6.2 Default value of NON_MAX_RETRANSMIT is 4
+ *
+ * Configurable using coap_session_set_non_max_retransmit()
+ */
 #define COAP_DEFAULT_NON_MAX_RETRANSMIT (4U)
 
-  /**
-   * The delay (+ ACK_RANDOM_FACTOR) to introduce once NON MAX_PAYLOADS
-   * Q-Block1 or Q-Block2 have been sent to reduce congestion control.
-   * RFC9177 Section 6.2 Default value of NON_TIMEOUT is 2.
-   *
-   * Configurable using coap_session_set_non_timeout()
-   */
+/**
+ * The delay (+ ACK_RANDOM_FACTOR) to introduce once NON MAX_PAYLOADS
+ * Q-Block1 or Q-Block2 have been sent to reduce congestion control.
+ * RFC9177 Section 6.2 Default value of NON_TIMEOUT is 2.
+ *
+ * Configurable using coap_session_set_non_timeout()
+ */
 #define COAP_DEFAULT_NON_TIMEOUT ((coap_fixed_point_t){2,0})
 
-  /**
-   * The time to wait for any missing Q-Block1 or Q-Block2 packets before
-   * requesting re-transmission of missing packets.
-   * RFC9177 Section 6.2 Default value of NON_RECEIVE_TIMEOUT is 4.
-   *
-   * Configurable using coap_session_set_non_receive_timeout()
-   */
+/**
+ * The time to wait for any missing Q-Block1 or Q-Block2 packets before
+ * requesting re-transmission of missing packets.
+ * RFC9177 Section 6.2 Default value of NON_RECEIVE_TIMEOUT is 4.
+ *
+ * Configurable using coap_session_set_non_receive_timeout()
+ */
 #define COAP_DEFAULT_NON_RECEIVE_TIMEOUT ((coap_fixed_point_t){4,0})
 
-  /**
-   * The MAX_LATENCY definition.
-   * RFC 7252, Section 4.8.2 MAX_LATENCY is 100.
-   */
+/**
+ * The MAX_LATENCY definition.
+ * RFC 7252, Section 4.8.2 MAX_LATENCY is 100.
+ */
 #define COAP_DEFAULT_MAX_LATENCY (100U)
 
 /**
@@ -593,7 +594,7 @@ void coap_session_set_ack_random_factor(coap_session_t *session,
 * @return Current ack randomize value
 */
 coap_fixed_point_t coap_session_get_ack_random_factor(
-                                               const coap_session_t *session);
+    const coap_session_t *session);
 
 /**
 * Set the CoAP maximum retransmit count before failure
@@ -661,7 +662,7 @@ void coap_session_set_default_leisure(coap_session_t *session,
 * @return Current default_leisure value
 */
 coap_fixed_point_t coap_session_get_default_leisure(
-                                               const coap_session_t *session);
+    const coap_session_t *session);
 
 /**
 * Set the CoAP probing rate when there is no response
@@ -693,7 +694,7 @@ uint32_t coap_session_get_probing_rate(const coap_session_t *session);
 *              get changed.
 */
 void coap_session_set_max_payloads(coap_session_t *session,
-                                     uint16_t value);
+                                   uint16_t value);
 
 /**
 * Get the CoAP maximum payloads count of Q-Block1 or Q-Block2 before delay
@@ -716,7 +717,7 @@ uint16_t coap_session_get_max_payloads(const coap_session_t *session);
 *              get changed.
 */
 void coap_session_set_non_max_retransmit(coap_session_t *session,
-                                     uint16_t value);
+                                         uint16_t value);
 
 /**
 * Get the CoAP NON maximum retransmit count of missing Q-Block1 or Q-Block2
@@ -780,9 +781,9 @@ void coap_session_set_non_receive_timeout(coap_session_t *session,
 * @return NON_RECEIVE_TIMEOUT delay
 */
 coap_fixed_point_t coap_session_get_non_receive_timeout(
-                                               const coap_session_t *session);
+    const coap_session_t *session);
 
-      /** @} */
+/** @} */
 /**
  * Send a ping message for the session.
  * @param session The CoAP session.

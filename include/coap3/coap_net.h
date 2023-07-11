@@ -106,9 +106,8 @@ typedef void (*coap_pong_handler_t)(coap_session_t *session,
  * @param context The context to register the handler for.
  * @param handler The response handler to register.
  */
-void
-coap_register_response_handler(coap_context_t *context,
-                               coap_response_handler_t handler);
+void coap_register_response_handler(coap_context_t *context,
+                                    coap_response_handler_t handler);
 
 /**
  * Registers a new message handler that is called whenever a confirmable
@@ -119,9 +118,8 @@ coap_register_response_handler(coap_context_t *context,
  * @param context The context to register the handler for.
  * @param handler The nack handler to register.
  */
-void
-coap_register_nack_handler(coap_context_t *context,
-                           coap_nack_handler_t handler);
+void coap_register_nack_handler(coap_context_t *context,
+                                coap_nack_handler_t handler);
 
 /**
  * Registers a new message handler that is called whenever a CoAP Ping
@@ -130,9 +128,8 @@ coap_register_nack_handler(coap_context_t *context,
  * @param context The context to register the handler for.
  * @param handler The ping handler to register.
  */
-void
-coap_register_ping_handler(coap_context_t *context,
-                           coap_ping_handler_t handler);
+void coap_register_ping_handler(coap_context_t *context,
+                                coap_ping_handler_t handler);
 
 /**
  * Registers a new message handler that is called whenever a CoAP Pong
@@ -141,9 +138,8 @@ coap_register_ping_handler(coap_context_t *context,
  * @param context The context to register the handler for.
  * @param handler The pong handler to register.
  */
-void
-coap_register_pong_handler(coap_context_t *context,
-                           coap_pong_handler_t handler);
+void coap_register_pong_handler(coap_context_t *context,
+                                coap_pong_handler_t handler);
 
 /**
  * Registers the option type @p type with the given context object @p ctx.
@@ -151,8 +147,7 @@ coap_register_pong_handler(coap_context_t *context,
  * @param ctx  The context to use.
  * @param type The option type to register.
  */
-void
-coap_register_option(coap_context_t *ctx, uint16_t type);
+void coap_register_option(coap_context_t *ctx, uint16_t type);
 
 /**
  * Creates a new coap_context_t object that will hold the CoAP stack status.
@@ -173,8 +168,8 @@ coap_context_t *coap_new_context(const coap_address_t *listen_addr);
  *
  * @return @c 1 if successful, else @c 0.
  */
-int coap_context_set_psk( coap_context_t *context, const char *hint,
-                           const uint8_t *key, size_t key_len );
+int coap_context_set_psk(coap_context_t *context, const char *hint,
+                         const uint8_t *key, size_t key_len);
 
 /**
  * Set the context's default PSK hint and/or key for a server.
@@ -197,9 +192,8 @@ int coap_context_set_psk2(coap_context_t *context,
  *
  * @return @c 1 if successful, else @c 0.
  */
-int
-coap_context_set_pki(coap_context_t *context,
-                     const coap_dtls_pki_t *setup_data);
+int coap_context_set_pki(coap_context_t *context,
+                         const coap_dtls_pki_t *setup_data);
 
 /**
  * Set the context's default Root CA information for a client or server.
@@ -212,10 +206,9 @@ coap_context_set_pki(coap_context_t *context,
  *
  * @return @c 1 if successful, else @c 0.
  */
-int
-coap_context_set_pki_root_cas(coap_context_t *context,
-                              const char *ca_file,
-                              const char *ca_dir);
+int coap_context_set_pki_root_cas(coap_context_t *context,
+                                  const char *ca_file,
+                                  const char *ca_dir);
 
 /**
  * Set the context keepalive timer for sessions.
@@ -264,9 +257,8 @@ int coap_context_get_coap_fd(const coap_context_t *context);
  * @param context           The coap_context_t object.
  * @param max_idle_sessions The maximum idle session count.
  */
-void
-coap_context_set_max_idle_sessions(coap_context_t *context,
-                                   unsigned int max_idle_sessions);
+void coap_context_set_max_idle_sessions(coap_context_t *context,
+                                        unsigned int max_idle_sessions);
 
 /**
  * Get the maximum idle sessions count.
@@ -275,8 +267,7 @@ coap_context_set_max_idle_sessions(coap_context_t *context,
  *
  * @return The count of max idle sessions.
  */
-unsigned int
-coap_context_get_max_idle_sessions(const coap_context_t *context);
+unsigned int coap_context_get_max_idle_sessions(const coap_context_t *context);
 
 /**
  * Set the session timeout value. The number of seconds of inactivity after
@@ -286,9 +277,8 @@ coap_context_get_max_idle_sessions(const coap_context_t *context);
  * @param context         The coap_context_t object.
  * @param session_timeout The session timeout value.
  */
-void
-coap_context_set_session_timeout(coap_context_t *context,
-                                   unsigned int session_timeout);
+void coap_context_set_session_timeout(coap_context_t *context,
+                                      unsigned int session_timeout);
 
 /**
  * Get the session timeout value
@@ -297,8 +287,7 @@ coap_context_set_session_timeout(coap_context_t *context,
  *
  * @return The session timeout value.
  */
-unsigned int
-coap_context_get_session_timeout(const coap_context_t *context);
+unsigned int coap_context_get_session_timeout(const coap_context_t *context);
 
 /**
  * Set the CSM timeout value. The number of seconds to wait for a (TCP) CSM
@@ -308,9 +297,8 @@ coap_context_get_session_timeout(const coap_context_t *context);
  * @param context    The coap_context_t object.
  * @param csm_tmeout The CSM timeout value.
  */
-void
-coap_context_set_csm_timeout(coap_context_t *context,
-                             unsigned int csm_tmeout);
+void coap_context_set_csm_timeout(coap_context_t *context,
+                                  unsigned int csm_tmeout);
 
 /**
  * Get the CSM timeout value
@@ -319,8 +307,7 @@ coap_context_set_csm_timeout(coap_context_t *context,
  *
  * @return The CSM timeout value.
  */
-unsigned int
-coap_context_get_csm_timeout(const coap_context_t *context);
+unsigned int coap_context_get_csm_timeout(const coap_context_t *context);
 
 /**
  * Set the CSM max session size value. The largest PDU that can be received.
@@ -328,9 +315,8 @@ coap_context_get_csm_timeout(const coap_context_t *context);
  * @param context    The coap_context_t object.
  * @param csm_max_message_size The CSM max message size value.
  */
-void
-coap_context_set_csm_max_message_size(coap_context_t *context,
-                                      uint32_t csm_max_message_size);
+void coap_context_set_csm_max_message_size(coap_context_t *context,
+                                           uint32_t csm_max_message_size);
 
 /**
  * Get the CSM max session size  value
@@ -339,8 +325,7 @@ coap_context_set_csm_max_message_size(coap_context_t *context,
  *
  * @return The CSM max session size  value.
  */
-uint32_t
-coap_context_get_csm_max_message_size(const coap_context_t *context);
+uint32_t coap_context_get_csm_max_message_size(const coap_context_t *context);
 
 /**
  * Set the maximum number of sessions in (D)TLS handshake value. If this number
@@ -351,9 +336,8 @@ coap_context_get_csm_max_message_size(const coap_context_t *context);
  * @param context         The coap_context_t object.
  * @param max_handshake_sessions The maximum number of sessions in handshake.
  */
-void
-coap_context_set_max_handshake_sessions(coap_context_t *context,
-                                        unsigned int max_handshake_sessions);
+void coap_context_set_max_handshake_sessions(coap_context_t *context,
+                                             unsigned int max_handshake_sessions);
 
 /**
  * Get the session timeout value
@@ -362,8 +346,7 @@ coap_context_set_max_handshake_sessions(coap_context_t *context,
  *
  * @return The maximim number of sessions in (D)TLS handshake value.
  */
-unsigned int
-coap_context_get_max_handshake_sessions(const coap_context_t *context);
+unsigned int coap_context_get_max_handshake_sessions(const coap_context_t *context);
 
 /**
  * Returns a new message id and updates @p session->tx_mid accordingly. The
@@ -460,9 +443,8 @@ coap_mid_t coap_send_error(coap_session_t *session,
  * @return                message id on success or @c COAP_INVALID_MID
  *                        otherwise.
  */
-coap_mid_t
-coap_send_message_type(coap_session_t *session, const coap_pdu_t *request,
-                       coap_pdu_type_t type);
+coap_mid_t coap_send_message_type(coap_session_t *session, const coap_pdu_t *request,
+                                  coap_pdu_type_t type);
 
 /**
  * Sends an ACK message with code @c 0 for the specified @p request to @p dst.
@@ -504,7 +486,7 @@ coap_send_rst(coap_session_t *session, const coap_pdu_t *request) {
 * @return                The message id of the sent message or @c
 *                        COAP_INVALID_MID on error.
 */
-coap_mid_t coap_send( coap_session_t *session, coap_pdu_t *pdu );
+coap_mid_t coap_send(coap_session_t *session, coap_pdu_t *pdu);
 
 #define coap_send_large(session, pdu) coap_send(session, pdu)
 
@@ -550,12 +532,11 @@ void coap_ticks(coap_tick_t *);
  *
  * @return       0 on success, -1 on error
  */
-int
-coap_join_mcast_group_intf(coap_context_t *ctx, const char *groupname,
-                           const char *ifname);
+int coap_join_mcast_group_intf(coap_context_t *ctx, const char *groupname,
+                               const char *ifname);
 
 #define coap_join_mcast_group(ctx, groupname) \
-            (coap_join_mcast_group_intf(ctx, groupname, NULL))
+  (coap_join_mcast_group_intf(ctx, groupname, NULL))
 
 /**
  * Function interface for defining the hop count (ttl) for sending
@@ -567,8 +548,7 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *groupname,
  *
  * @return       1 on success, 0 on error
  */
-int
-coap_mcast_set_hops(coap_session_t *session, size_t hops);
+int coap_mcast_set_hops(coap_session_t *session, size_t hops);
 
 /**
  * Function interface to enable processing mcast requests on a per resource
@@ -577,8 +557,7 @@ coap_mcast_set_hops(coap_session_t *session, size_t hops);
  *
  * @param context The current context.
  */
-void
-coap_mcast_per_resource(coap_context_t *context);
+void coap_mcast_per_resource(coap_context_t *context);
 
 /**@}*/
 
@@ -709,13 +688,12 @@ int coap_io_pending(coap_context_t *context);
 *                 select() to wait for network events or 0 if wait should be
 *                 forever.
 */
-unsigned int
-coap_io_prepare_io(coap_context_t *ctx,
-  coap_socket_t *sockets[],
-  unsigned int max_sockets,
-  unsigned int *num_sockets,
-  coap_tick_t now
-);
+unsigned int coap_io_prepare_io(coap_context_t *ctx,
+                                coap_socket_t *sockets[],
+                                unsigned int max_sockets,
+                                unsigned int *num_sockets,
+                                coap_tick_t now
+                               );
 
 /**
  * Processes any outstanding read, write, accept or connect I/O as indicated
@@ -751,8 +729,7 @@ void coap_io_do_io(coap_context_t *ctx, coap_tick_t now);
  *                 epoll_wait() to wait for network events or 0 if wait should be
  *                 forever.
  */
-unsigned int
-coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now);
+unsigned int coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now);
 
 struct epoll_event;
 
@@ -769,7 +746,7 @@ struct epoll_event;
  * @param nevents The number of events.
  *
  */
-void coap_io_do_epoll(coap_context_t *ctx, struct epoll_event* events,
+void coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events,
                       size_t nevents);
 
 /**@}*/
@@ -803,7 +780,7 @@ void coap_lwip_dump_memory_pools(coap_log_t log_level);
  *
  * @return @c 1 if packet received, @c 0 for timeout, else @c -1 on error.
  */
-typedef int (*coap_lwip_input_wait_handler_t)(void* arg, uint32_t milli_secs);
+typedef int (*coap_lwip_input_wait_handler_t)(void *arg, uint32_t milli_secs);
 
 /**
  * Set up a wait / timeout callback handler for use when
@@ -840,8 +817,7 @@ void coap_lwip_set_input_wait_handler(coap_context_t *context,
  *         an error
  */
 COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_run_once(coap_context_t *ctx, uint32_t timeout_ms)
-{
+coap_run_once(coap_context_t *ctx, uint32_t timeout_ms) {
   return coap_io_process(ctx, timeout_ms);
 }
 
@@ -865,11 +841,11 @@ coap_run_once(coap_context_t *ctx, uint32_t timeout_ms)
 */
 COAP_STATIC_INLINE COAP_DEPRECATED unsigned int
 coap_write(coap_context_t *ctx,
-  coap_socket_t *sockets[],
-  unsigned int max_sockets,
-  unsigned int *num_sockets,
-  coap_tick_t now
-) {
+           coap_socket_t *sockets[],
+           unsigned int max_sockets,
+           unsigned int *num_sockets,
+           coap_tick_t now
+          ) {
   return coap_io_prepare_io(ctx, sockets, max_sockets, num_sockets, now);
 }
 
@@ -885,7 +861,7 @@ coap_write(coap_context_t *ctx,
  */
 COAP_STATIC_INLINE COAP_DEPRECATED void
 coap_read(coap_context_t *ctx, coap_tick_t now
-) {
+         ) {
   coap_io_do_io(ctx, now);
 }
 

@@ -76,10 +76,9 @@ void coap_subscription_init(coap_subscription_t *);
  * @param session The session that the observe notify failed on.
  * @param token The token used when the observe notify failed.
  */
-void
-coap_handle_failed_notify(coap_context_t *context,
-                          coap_session_t *session,
-                          const coap_bin_const_t *token);
+void coap_handle_failed_notify(coap_context_t *context,
+                               coap_session_t *session,
+                               const coap_bin_const_t *token);
 
 /**
  * Checks all known resources to see if they are dirty and then notifies

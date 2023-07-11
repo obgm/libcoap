@@ -32,9 +32,9 @@
  * retransmission timeouts.
  */
 typedef enum {
-/*
- * (D)TLS events for COAP_PROTO_DTLS and COAP_PROTO_TLS
- */
+  /*
+   * (D)TLS events for COAP_PROTO_DTLS and COAP_PROTO_TLS
+   */
   /** Triggerred when (D)TLS session closed */
   COAP_EVENT_DTLS_CLOSED       = 0x0000,
   /** Triggered when (D)TLS session connected */
@@ -44,9 +44,9 @@ typedef enum {
   /** Triggered when (D)TLS error occurs */
   COAP_EVENT_DTLS_ERROR        = 0x0200,
 
-/*
- * TCP events for COAP_PROTO_TCP and COAP_PROTO_TLS
- */
+  /*
+   * TCP events for COAP_PROTO_TCP and COAP_PROTO_TLS
+   */
   /** Triggered when TCP layer connects */
   COAP_EVENT_TCP_CONNECTED     = 0x1001,
   /** Triggered when TCP layer is closed */
@@ -54,9 +54,9 @@ typedef enum {
   /** Triggered when TCP layer fails for some reason */
   COAP_EVENT_TCP_FAILED        = 0x1003,
 
-/*
- * CSM exchange events for reliable protocols only
- */
+  /*
+   * CSM exchange events for reliable protocols only
+   */
   /** Triggered when TCP layer completes exchange of CSM information */
   COAP_EVENT_SESSION_CONNECTED = 0x2001,
   /** Triggered when TCP layer closes following exchange of CSM information */
@@ -64,46 +64,46 @@ typedef enum {
   /** Triggered when TCP layer fails  following exchange of CSM information */
   COAP_EVENT_SESSION_FAILED    = 0x2003,
 
-/*
- * (Q-)Block errors
- */
+  /*
+   * (Q-)Block errors
+   */
   /** Triggered when not all of a large body has been received */
   COAP_EVENT_PARTIAL_BLOCK     = 0x3001,
   /** Triggered when not all of a large body has been transmitted */
   COAP_EVENT_XMIT_BLOCK_FAIL   = 0x3002,
 
-/*
- * Server session events
- */
-/**
- * Called in the CoAP IO loop if a new *server-side* session is created due
- * to an incoming connection.
- *
- * Note that the session might not be a fully established connection yet,
- * it might also refer to, e.g., a DTLS session in a handshake stage.
- */
+  /*
+   * Server session events
+   */
+  /**
+   * Called in the CoAP IO loop if a new *server-side* session is created due
+   * to an incoming connection.
+   *
+   * Note that the session might not be a fully established connection yet,
+   * it might also refer to, e.g., a DTLS session in a handshake stage.
+   */
   COAP_EVENT_SERVER_SESSION_NEW = 0x4001,
 
-/**
- * Called in the CoAP IO loop if a server session is deleted (e.g., due to
- * inactivity or because the maximum number of idle sessions was exceeded).
- *
- * The session will still contain valid data when the event handler is
- * called.
- */
+  /**
+   * Called in the CoAP IO loop if a server session is deleted (e.g., due to
+   * inactivity or because the maximum number of idle sessions was exceeded).
+   *
+   * The session will still contain valid data when the event handler is
+   * called.
+   */
   COAP_EVENT_SERVER_SESSION_DEL = 0x4002,
 
-/*
- * Message receive and transmit events
- */
+  /*
+   * Message receive and transmit events
+   */
   /** Triggered when badly formatted packet received */
   COAP_EVENT_BAD_PACKET         = 0x5001,
   /** Triggered when a message is retransmitted */
   COAP_EVENT_MSG_RETRANSMITTED  = 0x5002,
 
-/*
- * OSCORE events
- */
+  /*
+   * OSCORE events
+   */
   /** Triggered when there is an OSCORE decryption failure */
   COAP_EVENT_OSCORE_DECRYPTION_FAILURE = 0x6001,
   /** Triggered when trying to use OSCORE to decrypt, but it is not enabled */
@@ -116,18 +116,18 @@ typedef enum {
   COAP_EVENT_OSCORE_INTERNAL_ERROR,
   /** Triggered when there is an OSCORE decode of OSCORE option failure */
   COAP_EVENT_OSCORE_DECODE_ERROR,
-/*
- * WebSocket events
- */
+  /*
+   * WebSocket events
+   */
   /** Triggered when there is an oversize WebSockets packet */
   COAP_EVENT_WS_PACKET_SIZE = 0x7001,
   /** Triggered when the WebSockets layer is up */
   COAP_EVENT_WS_CONNECTED,
   /** Triggered when the WebSockets layer is closed */
   COAP_EVENT_WS_CLOSED,
-/*
- * Keepalive events
- */
+  /*
+   * Keepalive events
+   */
   /** Triggered when no response to a keep alive (ping) packet */
   COAP_EVENT_KEEPALIVE_FAILURE = 0x8001,
 } coap_event_t;
@@ -152,7 +152,7 @@ typedef int (*coap_event_handler_t)(coap_session_t *session,
  *                de-registered.
  */
 void coap_register_event_handler(coap_context_t *context,
-                            coap_event_handler_t hnd);
+                                 coap_event_handler_t hnd);
 
 /** @} */
 

@@ -101,7 +101,7 @@ struct coap_resource_t {
   /**
    * Array valid names this host is known by (proxy support)
    */
-  coap_str_const_t ** proxy_name_list;
+  coap_str_const_t **proxy_name_list;
 
   /**
    * This pointer is under user control. It can be used to store context for

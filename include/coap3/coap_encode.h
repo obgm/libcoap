@@ -33,7 +33,7 @@ extern int coap_fls(unsigned int i);
 #endif
 
 #ifndef HAVE_FLSLL
- /* include this only if flsll() is not available */
+/* include this only if flsll() is not available */
 extern int coap_flsll(long long i);
 #else
 #define coap_flsll(i) flsll(i)
@@ -99,8 +99,8 @@ unsigned int coap_encode_var_safe(uint8_t *buf,
  *               when encoding value of 0) or @c 0 on error.
  */
 unsigned int coap_encode_var_safe8(uint8_t *buf,
-                                  size_t length,
-                                  uint64_t value);
+                                   size_t length,
+                                   uint64_t value);
 
 /** @} */
 
@@ -120,8 +120,7 @@ unsigned int coap_encode_var_safe8(uint8_t *buf,
  * would catch this error at run-time and should be used instead.
  */
 COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_encode_var_bytes(uint8_t *buf, unsigned int value
-) {
+coap_encode_var_bytes(uint8_t *buf, unsigned int value) {
   return (int)coap_encode_var_safe(buf, sizeof(value), value);
 }
 

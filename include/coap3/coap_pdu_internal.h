@@ -190,7 +190,7 @@ int coap_pdu_check_resize(coap_pdu_t *pdu, size_t new_size);
 * @return       A value greater than zero on success or @c 0 on error.
 */
 size_t coap_pdu_parse_header_size(coap_proto_t proto,
-                                 const uint8_t *data);
+                                  const uint8_t *data);
 
 /**
  * Parses @p data to extract the message size.

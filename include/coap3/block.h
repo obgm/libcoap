@@ -82,7 +82,7 @@ int coap_q_block_is_supported(void);
 /** Returns the value of the last byte of @p opt. */
 #define COAP_OPT_BLOCK_END_BYTE(opt) \
   ((coap_opt_length(opt) && coap_opt_value(opt)) ? \
-                         *(coap_opt_value(opt) + (coap_opt_length(opt)-1)) : 0)
+   *(coap_opt_value(opt) + (coap_opt_length(opt)-1)) : 0)
 
 /** Returns the value of the More-bit of a Block option @p opt. */
 #define COAP_OPT_BLOCK_MORE(opt) \
@@ -248,9 +248,8 @@ int coap_add_block_b_data(coap_pdu_t *pdu, size_t len, const uint8_t *data,
  * @return          The current representation of the body or @c NULL if error.
  *                  If NULL, @p body_data will have been de-allocated.
  */
-coap_binary_t *
-coap_block_build_body(coap_binary_t *body_data, size_t length,
-                      const uint8_t *data, size_t offset, size_t total);
+coap_binary_t *coap_block_build_body(coap_binary_t *body_data, size_t length,
+                                     const uint8_t *data, size_t offset, size_t total);
 
 /**
  * Adds the appropriate part of @p data to the @p response pdu.  If blocks are
@@ -271,13 +270,12 @@ coap_block_build_body(coap_binary_t *body_data, size_t length,
  * @param data       The entire data block to transmit.
  *
  */
-void
-coap_add_data_blocked_response(const coap_pdu_t *request,
-                               coap_pdu_t *response,
-                               uint16_t media_type,
-                               int maxage,
-                               size_t length,
-                               const uint8_t* data);
+void coap_add_data_blocked_response(const coap_pdu_t *request,
+                                    coap_pdu_t *response,
+                                    uint16_t media_type,
+                                    int maxage,
+                                    size_t length,
+                                    const uint8_t *data);
 
 /**
  * Callback handler for de-allocating the data based on @p app_ptr provided to
@@ -390,19 +388,18 @@ int coap_add_data_large_request(coap_session_t *session,
  *
  * @return @c 1 if addition is successful, else @c 0.
  */
-int
-coap_add_data_large_response(coap_resource_t *resource,
-                             coap_session_t *session,
-                             const coap_pdu_t *request,
-                             coap_pdu_t *response,
-                             const coap_string_t *query,
-                             uint16_t media_type,
-                             int maxage,
-                             uint64_t etag,
-                             size_t length,
-                             const uint8_t *data,
-                             coap_release_large_data_t release_func,
-                             void *app_ptr);
+int coap_add_data_large_response(coap_resource_t *resource,
+                                 coap_session_t *session,
+                                 const coap_pdu_t *request,
+                                 coap_pdu_t *response,
+                                 const coap_string_t *query,
+                                 uint16_t media_type,
+                                 int maxage,
+                                 uint64_t etag,
+                                 size_t length,
+                                 const uint8_t *data,
+                                 coap_release_large_data_t release_func,
+                                 void *app_ptr);
 
 /**
  * Set the context level CoAP block handling bits for handling RFC7959.
@@ -423,7 +420,7 @@ coap_add_data_large_response(coap_resource_t *resource,
  * @param block_mode     Zero or more COAP_BLOCK_ or'd options
  */
 void coap_context_set_block_mode(coap_context_t *context,
-                                  uint8_t block_mode);
+                                 uint8_t block_mode);
 
 /**
  * Cancel an observe that is being tracked by the client large receive logic.
@@ -439,7 +436,7 @@ void coap_context_set_block_mode(coap_context_t *context,
  *         else @c 0.
  */
 int coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
-                    coap_pdu_type_t message_type);
+                        coap_pdu_type_t message_type);
 
 /**@}*/
 

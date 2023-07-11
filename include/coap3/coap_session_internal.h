@@ -235,7 +235,7 @@ coap_fixed_point_t coap_multi_fixed_uint(coap_fixed_point_t fp1,
                                          uint32_t u2);
 
 coap_fixed_point_t coap_add_fixed_fixed(coap_fixed_point_t fp1,
-                                       coap_fixed_point_t fp2);
+                                        coap_fixed_point_t fp2);
 
 coap_fixed_point_t coap_add_fixed_uint(coap_fixed_point_t fp1,
                                        uint32_t u2);
@@ -301,7 +301,7 @@ int coap_session_refresh_psk_key(coap_session_t *session,
  * @return @c 1 if successful, else @c 0.
  */
 int coap_session_refresh_psk_identity(coap_session_t *session,
-                                 const coap_bin_const_t *psk_identity);
+                                      const coap_bin_const_t *psk_identity);
 
 #if COAP_SERVER_SUPPORT
 /**
@@ -313,8 +313,8 @@ int coap_session_refresh_psk_identity(coap_session_t *session,
  * add to unused queue.
  */
 coap_session_t *coap_new_server_session(
-  coap_context_t *ctx,
-  coap_endpoint_t *ep
+    coap_context_t *ctx,
+    coap_endpoint_t *ep
 );
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -341,9 +341,8 @@ void coap_session_establish(coap_session_t *session);
  */
 ssize_t coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu);
 
-ssize_t
-coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
-                       coap_queue_t *node);
+ssize_t coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
+                               coap_queue_t *node);
 
 #if COAP_SERVER_SUPPORT
 /**
@@ -356,7 +355,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
  * @return The CoAP session or @c NULL if error.
  */
 coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
-  const coap_packet_t *packet, coap_tick_t now);
+                                          const coap_packet_t *packet, coap_tick_t now);
 #endif /* COAP_SERVER_SUPPORT */
 
 /**
@@ -379,7 +378,7 @@ size_t coap_session_max_pdu_rcv_size(const coap_session_t *session);
  * @return CoAP session or @c NULL if error.
  */
 coap_session_t *coap_session_new_dtls_session(coap_session_t *session,
-  coap_tick_t now);
+                                              coap_tick_t now);
 
 void coap_session_free(coap_session_t *session);
 void coap_session_mfree(coap_session_t *session);
@@ -398,132 +397,132 @@ void coap_session_mfree(coap_session_t *session);
 #define COAP_NON_MAX_RETRANSMIT(s) ((s)->non_max_retransmit)
 #define COAP_NON_TIMEOUT(s) ((s)->non_timeout)
 #define COAP_NON_TIMEOUT_TICKS(s) \
-   (COAP_NON_TIMEOUT(s).integer_part * COAP_TICKS_PER_SECOND + \
-    COAP_NON_TIMEOUT(s).fractional_part * COAP_TICKS_PER_SECOND / 1000)
+  (COAP_NON_TIMEOUT(s).integer_part * COAP_TICKS_PER_SECOND + \
+   COAP_NON_TIMEOUT(s).fractional_part * COAP_TICKS_PER_SECOND / 1000)
 #define COAP_NON_RECEIVE_TIMEOUT(s) ((s)->non_receive_timeout)
 #define COAP_NON_PROBING_WAIT_BASE(s) ((s)->non_probing_wait_base)
 #define COAP_NON_PARTIAL_TIMEOUT(s) ((s)->non_partial_timeout)
 
-  /**
-   * The DEFAULT_LEISURE definition for the session (s).
-   *
-   * RFC 7252, Section 4.8
-   * Initial value 5.0 seconds
-   */
+/**
+ * The DEFAULT_LEISURE definition for the session (s).
+ *
+ * RFC 7252, Section 4.8
+ * Initial value 5.0 seconds
+ */
 #define COAP_DEFAULT_LEISURE_TICKS(s) \
-     (COAP_DEFAULT_LEISURE(s).integer_part * COAP_TICKS_PER_SECOND + \
-      COAP_DEFAULT_LEISURE(s).fractional_part * COAP_TICKS_PER_SECOND / 1000)
-  /**
-   * The MAX_TRANSMIT_SPAN definition for the session (s).
-   *
-   * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_SPAN
-   *  ACK_TIMEOUT * ((2 ** (MAX_RETRANSMIT)) - 1) * ACK_RANDOM_FACTOR
-   */
+  (COAP_DEFAULT_LEISURE(s).integer_part * COAP_TICKS_PER_SECOND + \
+   COAP_DEFAULT_LEISURE(s).fractional_part * COAP_TICKS_PER_SECOND / 1000)
+/**
+ * The MAX_TRANSMIT_SPAN definition for the session (s).
+ *
+ * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_SPAN
+ *  ACK_TIMEOUT * ((2 ** (MAX_RETRANSMIT)) - 1) * ACK_RANDOM_FACTOR
+ */
 #define COAP_MAX_TRANSMIT_SPAN(s) \
- (((s)->ack_timeout.integer_part * 1000 + (s)->ack_timeout.fractional_part) * \
-  ((1 << ((s)->max_retransmit)) -1) * \
-  ((s)->ack_random_factor.integer_part * 1000 + \
-   (s)->ack_random_factor.fractional_part) \
-  / 1000000)
+  (((s)->ack_timeout.integer_part * 1000 + (s)->ack_timeout.fractional_part) * \
+   ((1 << ((s)->max_retransmit)) -1) * \
+   ((s)->ack_random_factor.integer_part * 1000 + \
+    (s)->ack_random_factor.fractional_part) \
+   / 1000000)
 
-  /**
-   * The MAX_TRANSMIT_WAIT definition for the session (s).
-   *
-   * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_WAIT
-   *  ACK_TIMEOUT * ((2 ** (MAX_RETRANSMIT + 1)) - 1) * ACK_RANDOM_FACTOR
-   */
+/**
+ * The MAX_TRANSMIT_WAIT definition for the session (s).
+ *
+ * RFC 7252, Section 4.8.2 Calculation of MAX_TRAMSMIT_WAIT
+ *  ACK_TIMEOUT * ((2 ** (MAX_RETRANSMIT + 1)) - 1) * ACK_RANDOM_FACTOR
+ */
 #define COAP_MAX_TRANSMIT_WAIT(s) \
- (((s)->ack_timeout.integer_part * 1000 + (s)->ack_timeout.fractional_part) * \
-  ((1 << ((s)->max_retransmit + 1)) -1) * \
-  ((s)->ack_random_factor.integer_part * 1000 + \
-   (s)->ack_random_factor.fractional_part) \
-  / 1000000)
+  (((s)->ack_timeout.integer_part * 1000 + (s)->ack_timeout.fractional_part) * \
+   ((1 << ((s)->max_retransmit + 1)) -1) * \
+   ((s)->ack_random_factor.integer_part * 1000 + \
+    (s)->ack_random_factor.fractional_part) \
+   / 1000000)
 
 #define COAP_MAX_TRANSMIT_WAIT_TICKS(s) \
- (COAP_MAX_TRANSMIT_WAIT(s) * COAP_TICKS_PER_SECOND)
+  (COAP_MAX_TRANSMIT_WAIT(s) * COAP_TICKS_PER_SECOND)
 
-  /**
-   * The PROCESSING_DELAY definition for the session (s).
-   *
-   * RFC 7252, Section 4.8.2 Calculation of PROCESSING_DELAY
-   *  PROCESSING_DELAY set to ACK_TIMEOUT
-   */
+/**
+ * The PROCESSING_DELAY definition for the session (s).
+ *
+ * RFC 7252, Section 4.8.2 Calculation of PROCESSING_DELAY
+ *  PROCESSING_DELAY set to ACK_TIMEOUT
+ */
 #define COAP_PROCESSING_DELAY(s) \
- (((s)->ack_timeout.integer_part * 1000 + (s)->ack_timeout.fractional_part + \
-   500) / 1000)
+  (((s)->ack_timeout.integer_part * 1000 + (s)->ack_timeout.fractional_part + \
+    500) / 1000)
 
-  /**
-   * The MAX_RTT definition for the session (s).
-   *
-   * RFC 7252, Section 4.8.2 Calculation of MAX_RTT
-   *  (2 * MAX_LATENCY) + PROCESSING_DELAY
-   */
+/**
+ * The MAX_RTT definition for the session (s).
+ *
+ * RFC 7252, Section 4.8.2 Calculation of MAX_RTT
+ *  (2 * MAX_LATENCY) + PROCESSING_DELAY
+ */
 #define COAP_MAX_RTT(s) \
- ((2 * COAP_DEFAULT_MAX_LATENCY) + COAP_PROCESSING_DELAY(s))
+  ((2 * COAP_DEFAULT_MAX_LATENCY) + COAP_PROCESSING_DELAY(s))
 
-  /**
-   * The EXCHANGE_LIFETIME definition for the session (s).
-   *
-   * RFC 7252, Section 4.8.2 Calculation of EXCHANGE_LIFETIME
-   *  MAX_TRANSMIT_SPAN + (2 * MAX_LATENCY) + PROCESSING_DELAY
-   */
+/**
+ * The EXCHANGE_LIFETIME definition for the session (s).
+ *
+ * RFC 7252, Section 4.8.2 Calculation of EXCHANGE_LIFETIME
+ *  MAX_TRANSMIT_SPAN + (2 * MAX_LATENCY) + PROCESSING_DELAY
+ */
 #define COAP_EXCHANGE_LIFETIME(s) \
- (COAP_MAX_TRANSMIT_SPAN(s) + (2 * COAP_DEFAULT_MAX_LATENCY) + \
- COAP_PROCESSING_DELAY(s))
+  (COAP_MAX_TRANSMIT_SPAN(s) + (2 * COAP_DEFAULT_MAX_LATENCY) + \
+   COAP_PROCESSING_DELAY(s))
 
-  /**
-   * The NON_LIFETIME definition for the session (s).
-   *
-   * RFC 7252, Section 4.8.2 Calculation of NON_LIFETIME
-   *  MAX_TRANSMIT_SPAN + MAX_LATENCY
-   */
+/**
+ * The NON_LIFETIME definition for the session (s).
+ *
+ * RFC 7252, Section 4.8.2 Calculation of NON_LIFETIME
+ *  MAX_TRANSMIT_SPAN + MAX_LATENCY
+ */
 #define COAP_NON_LIFETIME(s) \
- (COAP_MAX_TRANSMIT_SPAN(s) + COAP_DEFAULT_MAX_LATENCY)
+  (COAP_MAX_TRANSMIT_SPAN(s) + COAP_DEFAULT_MAX_LATENCY)
 
-  /**
-   * The NON_RECEIVE_TIMEOUT definition for the session (s).
-   *
-   * RFC9177 Section 6.2
-   * 2 * NON_TIMEOUT
-   */
+/**
+ * The NON_RECEIVE_TIMEOUT definition for the session (s).
+ *
+ * RFC9177 Section 6.2
+ * 2 * NON_TIMEOUT
+ */
 #define COAP_NON_RECEIVE_TIMEOUT_TICKS(s) ( \
-   COAP_NON_RECEIVE_TIMEOUT(s).integer_part * COAP_TICKS_PER_SECOND + \
-   COAP_NON_RECEIVE_TIMEOUT(s).fractional_part * COAP_TICKS_PER_SECOND / 1000)
+                                            COAP_NON_RECEIVE_TIMEOUT(s).integer_part * COAP_TICKS_PER_SECOND + \
+                                            COAP_NON_RECEIVE_TIMEOUT(s).fractional_part * COAP_TICKS_PER_SECOND / 1000)
 
-  /**
-   * The NON_PROBING_WAIT definition for the session (s).
-   *
-   * RFC9177 Section 6.2
-   *  NON_PROBING_WAIT = NON_TIMEOUT * ((2 ** NON_MAX_RETRANSMIT) - 1) *
-   *  ACK_RANDOM_FACTOR + (2 * MAX_LATENCY) + NON_TIMEOUT_RANDOM
-   * Default is 247-248 seconds
-   */
+/**
+ * The NON_PROBING_WAIT definition for the session (s).
+ *
+ * RFC9177 Section 6.2
+ *  NON_PROBING_WAIT = NON_TIMEOUT * ((2 ** NON_MAX_RETRANSMIT) - 1) *
+ *  ACK_RANDOM_FACTOR + (2 * MAX_LATENCY) + NON_TIMEOUT_RANDOM
+ * Default is 247-248 seconds
+ */
 #define COAP_NON_PROBING_WAIT(s) \
-   coap_add_fixed_fixed(COAP_NON_PROBING_WAIT_BASE(s), \
-                        COAP_NON_TIMEOUT_RANDOM(s))
+  coap_add_fixed_fixed(COAP_NON_PROBING_WAIT_BASE(s), \
+                       COAP_NON_TIMEOUT_RANDOM(s))
 
 #define COAP_NON_PROBING_WAIT_TICKS(s) \
-     (COAP_NON_PROBING_WAIT(s).integer_part * COAP_TICKS_PER_SECOND + \
-      COAP_NON_PROBING_WAIT(s).fractional_part * COAP_TICKS_PER_SECOND / 1000)
+  (COAP_NON_PROBING_WAIT(s).integer_part * COAP_TICKS_PER_SECOND + \
+   COAP_NON_PROBING_WAIT(s).fractional_part * COAP_TICKS_PER_SECOND / 1000)
 
-  /**
-   * The NON_PARTIAL_TIMEOUT definition for the session (s).
-   *
-   * RFC9177 Section 6.2
-   * Initial value EXCHANGE_LIFETIME (247 seconds)
-   */
+/**
+ * The NON_PARTIAL_TIMEOUT definition for the session (s).
+ *
+ * RFC9177 Section 6.2
+ * Initial value EXCHANGE_LIFETIME (247 seconds)
+ */
 #define COAP_NON_PARTIAL_TIMEOUT_TICKS(s) \
-     (COAP_NON_PARTIAL_TIMEOUT(s).integer_part * COAP_TICKS_PER_SECOND + \
+  (COAP_NON_PARTIAL_TIMEOUT(s).integer_part * COAP_TICKS_PER_SECOND + \
    COAP_NON_PARTIAL_TIMEOUT(s).fractional_part * COAP_TICKS_PER_SECOND / 1000)
 
-  /**
-   * The NON_TIMEOUT_RANDOM definition for the session (s).
-   *
-   * RFC9177 Section 6.2
-   * Default is 2-3 seconds
-   */
+/**
+ * The NON_TIMEOUT_RANDOM definition for the session (s).
+ *
+ * RFC9177 Section 6.2
+ * Default is 2-3 seconds
+ */
 #define COAP_NON_TIMEOUT_RANDOM(s) \
-   coap_get_non_timeout_random(s)
+  coap_get_non_timeout_random(s)
 
 /** @} */
 
@@ -537,7 +536,7 @@ void coap_session_mfree(coap_session_t *session);
   HASH_ITER(hh, (e), el, rtmp)
 
 #define SESSIONS_ITER_SAFE(e, el, rtmp) \
-for ((el) = (e); (el) && ((rtmp) = (el)->hh.next, 1); (el) = (rtmp))
+  for ((el) = (e); (el) && ((rtmp) = (el)->hh.next, 1); (el) = (rtmp))
 
 #define SESSIONS_FIND(e, k, res) {                     \
     HASH_FIND(hh, (e), &(k), sizeof(k), (res)); \

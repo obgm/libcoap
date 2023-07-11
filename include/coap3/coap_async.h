@@ -53,10 +53,9 @@ int coap_async_is_supported(void);
  * @return         A pointer to the registered coap_async_t object or @c
  *                 NULL in case of an error.
  */
-coap_async_t *
-coap_register_async(coap_session_t *session,
-                    const coap_pdu_t *request,
-                    coap_tick_t delay);
+coap_async_t *coap_register_async(coap_session_t *session,
+                                  const coap_pdu_t *request,
+                                  coap_tick_t delay);
 
 /**
  * Update the delay timeout, so changing when the registered @p async triggers.
@@ -68,8 +67,7 @@ coap_register_async(coap_session_t *session,
  * @param delay    The amount of time to delay before sending response, 0 means
  *                 wait forever.
  */
-void
-coap_async_set_delay(coap_async_t *async, coap_tick_t delay);
+void coap_async_set_delay(coap_async_t *async, coap_tick_t delay);
 
 /**
  * Trigger the registered @p async.
@@ -79,8 +77,7 @@ coap_async_set_delay(coap_async_t *async, coap_tick_t delay);
  *
  * @param async The async object to trigger.
  */
-void
-coap_async_trigger(coap_async_t *async);
+void coap_async_trigger(coap_async_t *async);
 
 /**
  * Releases the memory that was allocated by coap_register_async() for the
@@ -89,8 +86,7 @@ coap_async_trigger(coap_async_t *async);
  * @param session  The session to use.
  * @param async The object to delete.
  */
-void
-coap_free_async(coap_session_t *session, coap_async_t *async);
+void coap_free_async(coap_session_t *session, coap_async_t *async);
 
 /**
  * Retrieves the object identified by @p token from the list of asynchronous
