@@ -1228,9 +1228,9 @@ else
     AC_MSG_RESULT([      enable OSCORE support          : "no"])
 fi
 if test "x$build_q_block" != "xno"; then
-    AC_MSG_RESULT([      enable Q-Block support   : "yes"])
+    AC_MSG_RESULT([      enable Q-Block support         : "yes"])
 else
-    AC_MSG_RESULT([      enable Q-Block support   : "no"])
+    AC_MSG_RESULT([      enable Q-Block support         : "no"])
 fi
 if test "x$enable_max_logging_level" != "x8"; then
     AC_MSG_RESULT([      enable max logging level       : "$enable_max_logging_level"])
