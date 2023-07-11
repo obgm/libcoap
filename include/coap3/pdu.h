@@ -295,7 +295,7 @@ COAP_DEPRECATED typedef struct {
  *
  * @return A pointer to the new PDU object or @c NULL on error.
  */
-coap_pdu_t * coap_pdu_from_pbuf(struct pbuf *pbuf);
+coap_pdu_t *coap_pdu_from_pbuf(struct pbuf *pbuf);
 #endif
 
 /**
@@ -414,12 +414,11 @@ void coap_delete_pdu(coap_pdu_t *pdu);
  *
  * @return The duplicated PDU or @c NULL if failure.
  */
-coap_pdu_t *
-coap_pdu_duplicate(const coap_pdu_t *old_pdu,
-                   coap_session_t *session,
-                   size_t token_length,
-                   const uint8_t *token,
-                   coap_opt_filter_t *drop_options);
+coap_pdu_t *coap_pdu_duplicate(const coap_pdu_t *old_pdu,
+                               coap_session_t *session,
+                               size_t token_length,
+                               const uint8_t *token,
+                               coap_opt_filter_t *drop_options);
 
 /**
  * Parses @p data into the CoAP PDU structure given in @p result.
@@ -455,8 +454,8 @@ int coap_pdu_parse(coap_proto_t proto,
  * @return     A value greater than zero on success, or @c 0 on error.
  */
 int coap_add_token(coap_pdu_t *pdu,
-                  size_t len,
-                  const uint8_t *data);
+                   size_t len,
+                   const uint8_t *data);
 
 /**
  * Adds option of given @p number to @p pdu that is passed as first

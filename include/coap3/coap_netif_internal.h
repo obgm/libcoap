@@ -54,7 +54,7 @@ int coap_netif_available_ep(coap_endpoint_t *endpoint);
  * @return                 @c 1 OK, 0 on failure.
  */
 int coap_netif_dgrm_listen(coap_endpoint_t *endpoint,
-                             const coap_address_t *listen_addr);
+                           const coap_address_t *listen_addr);
 
 /**
  * Layer function interface for Netif datagram connect (udp).
@@ -121,7 +121,7 @@ ssize_t coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
  * @return                 @c 1 OK, 0 on failure.
  */
 int coap_netif_strm_listen(coap_endpoint_t *endpoint,
-                             const coap_address_t *listen_addr);
+                           const coap_address_t *listen_addr);
 
 /**
  * Layer function interface for Netif stream accept.

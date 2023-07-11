@@ -112,8 +112,7 @@ typedef struct coap_opt_filter_t {
  *
  * @param filter The filter to clear.
  */
-void
-coap_option_filter_clear(coap_opt_filter_t *filter);
+void coap_option_filter_clear(coap_opt_filter_t *filter);
 
 /**
  * Sets the corresponding entry for @p number in @p filter. This
@@ -358,7 +357,7 @@ coap_optlist_t *coap_new_optlist(uint16_t number,
  *
  * @return     @c 1 if succesful or @c 0 if failure;
  */
-int coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t** optlist_chain);
+int coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t **optlist_chain);
 
 /**
  * Adds @p optlist to the given @p optlist_chain. The optlist_chain variable

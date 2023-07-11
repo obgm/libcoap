@@ -70,7 +70,7 @@ typedef enum coap_cache_record_pdu_t {
  */
 coap_cache_key_t *coap_cache_derive_key(const coap_session_t *session,
                                         const coap_pdu_t *pdu,
-                                   coap_cache_session_based_t session_based);
+                                        coap_cache_session_based_t session_based);
 
 /**
  * Calculates a cache-key for the given CoAP PDU. See
@@ -99,10 +99,10 @@ coap_cache_key_t *coap_cache_derive_key(const coap_session_t *session,
  * @return        The returned cache-key or @c NULL if failure.
  */
 coap_cache_key_t *coap_cache_derive_key_w_ignore(const coap_session_t *session,
-                                      const coap_pdu_t *pdu,
-                                      coap_cache_session_based_t session_based,
-                                      const uint16_t *ignore_options,
-                                      size_t ignore_count);
+                                                 const coap_pdu_t *pdu,
+                                                 coap_cache_session_based_t session_based,
+                                                 const uint16_t *ignore_options,
+                                                 size_t ignore_count);
 
 /**
  * Delete the cache-key.
@@ -150,10 +150,10 @@ int coap_cache_ignore_options(coap_context_t *context,
  * @return          The returned cache-key or @c NULL if failure.
  */
 coap_cache_entry_t *coap_new_cache_entry(coap_session_t *session,
-                                 const coap_pdu_t *pdu,
-                                 coap_cache_record_pdu_t record_pdu,
-                                 coap_cache_session_based_t session_based,
-                                 unsigned int idle_time);
+                                         const coap_pdu_t *pdu,
+                                         coap_cache_record_pdu_t record_pdu,
+                                         coap_cache_session_based_t session_based,
+                                         unsigned int idle_time);
 
 /**
  * Remove a cache-entry from the hash list and free off all the appropriate
@@ -192,7 +192,7 @@ coap_cache_entry_t *coap_cache_get_by_key(coap_context_t *context,
  */
 coap_cache_entry_t *coap_cache_get_by_pdu(coap_session_t *session,
                                           const coap_pdu_t *pdu,
-                                   coap_cache_session_based_t session_based);
+                                          coap_cache_session_based_t session_based);
 
 /**
  * Returns the PDU information stored in the @p coap_cache entry.

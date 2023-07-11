@@ -57,7 +57,7 @@ typedef struct coap_addr_tuple_t {
   coap_address_t local;        /**< local address and port */
 } coap_addr_tuple_t;
 
-const char *coap_socket_strerror( void );
+const char *coap_socket_strerror(void);
 
 /**
  * Check whether TCP is available.

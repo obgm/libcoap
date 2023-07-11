@@ -56,8 +56,8 @@ struct coap_context_t {
   coap_resource_t *proxy_uri_resource; /**< can be used for handling
                                             proxy URI resources */
   coap_resource_release_userdata_handler_t release_userdata;
-                                        /**< function to  release user_data
-                                             when resource is deleted */
+  /**< function to  release user_data
+       when resource is deleted */
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_ASYNC_SUPPORT
@@ -236,12 +236,12 @@ unsigned int coap_adjust_basetime(coap_context_t *ctx, coap_tick_t now);
 /**
  * Returns the next pdu to send without removing from sendqeue.
  */
-coap_queue_t *coap_peek_next( coap_context_t *context );
+coap_queue_t *coap_peek_next(coap_context_t *context);
 
 /**
  * Returns the next pdu to send and removes it from the sendqeue.
  */
-coap_queue_t *coap_pop_next( coap_context_t *context );
+coap_queue_t *coap_pop_next(coap_context_t *context);
 
 /**
  * Handles retransmissions of confirmable messages
@@ -290,9 +290,8 @@ int coap_remove_from_queue(coap_queue_t **queue,
                            coap_mid_t id,
                            coap_queue_t **node);
 
-coap_mid_t
-coap_wait_ack( coap_context_t *context, coap_session_t *session,
-               coap_queue_t *node);
+coap_mid_t coap_wait_ack(coap_context_t *context, coap_session_t *session,
+                         coap_queue_t *node);
 
 /**
  * Cancels all outstanding messages for session @p session that have the specified
@@ -313,10 +312,9 @@ void coap_cancel_all_messages(coap_context_t *context,
 * @param session      Session of the messages to remove.
 * @param reason       The reasion for the session cancellation
 */
-void
-coap_cancel_session_messages(coap_context_t *context,
-                             coap_session_t *session,
-                             coap_nack_reason_t reason);
+void coap_cancel_session_messages(coap_context_t *context,
+                                  coap_session_t *session,
+                                  coap_nack_reason_t reason);
 
 /**
  * Dispatches the PDUs from the receive queue in given context.

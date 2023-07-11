@@ -36,21 +36,25 @@ typedef uint32_t coap_tick_t;
 typedef uint32_t coap_time_t;
 typedef int32_t coap_tick_diff_t;
 
-COAP_STATIC_INLINE void coap_ticks_impl(coap_tick_t *t) {
+COAP_STATIC_INLINE void
+coap_ticks_impl(coap_tick_t *t) {
   *t = sys_now();
 }
 
-COAP_STATIC_INLINE void coap_clock_init_impl(void) {
+COAP_STATIC_INLINE void
+coap_clock_init_impl(void) {
 }
 
 #define coap_clock_init coap_clock_init_impl
 #define coap_ticks coap_ticks_impl
 
-COAP_STATIC_INLINE coap_time_t coap_ticks_to_rt(coap_tick_t t) {
+COAP_STATIC_INLINE coap_time_t
+coap_ticks_to_rt(coap_tick_t t) {
   return t / COAP_TICKS_PER_SECOND;
 }
 
-COAP_STATIC_INLINE uint64_t coap_ticks_to_rt_us(coap_tick_t t) {
+COAP_STATIC_INLINE uint64_t
+coap_ticks_to_rt_us(coap_tick_t t) {
   return (uint64_t)t * 1000000 / COAP_TICKS_PER_SECOND;
 }
 
@@ -70,19 +74,23 @@ typedef int coap_tick_diff_t;
 
 #define COAP_TICKS_PER_SECOND CLOCK_SECOND
 
-COAP_STATIC_INLINE void coap_clock_init(void) {
+COAP_STATIC_INLINE void
+coap_clock_init(void) {
   clock_init();
 }
 
-COAP_STATIC_INLINE void coap_ticks(coap_tick_t *t) {
+COAP_STATIC_INLINE void
+coap_ticks(coap_tick_t *t) {
   *t = clock_time();
 }
 
-COAP_STATIC_INLINE coap_time_t coap_ticks_to_rt(coap_tick_t t) {
+COAP_STATIC_INLINE coap_time_t
+coap_ticks_to_rt(coap_tick_t t) {
   return t / COAP_TICKS_PER_SECOND;
 }
 
-COAP_STATIC_INLINE uint64_t coap_ticks_to_rt_us(coap_tick_t t) {
+COAP_STATIC_INLINE uint64_t
+coap_ticks_to_rt_us(coap_tick_t t) {
   return (uint64_t)t * 1000000 / COAP_TICKS_PER_SECOND;
 }
 
@@ -99,9 +107,11 @@ typedef uint64_t coap_tick_t;
 typedef int64_t coap_tick_diff_t;
 typedef uint32_t coap_time_t;
 
-static inline void coap_clock_init(void) {}
+static inline void
+coap_clock_init(void) {}
 
-static inline void coap_ticks(coap_tick_t *t) {
+static inline void
+coap_ticks(coap_tick_t *t) {
 #ifdef MODULE_ZTIMER64_XTIMER_COMPAT
   *t = xtimer_now_usec64();
 #else /* MODULE_ZTIMER64_XTIMER_COMPAT */
@@ -109,15 +119,18 @@ static inline void coap_ticks(coap_tick_t *t) {
 #endif /* MODULE_ZTIMER64_XTIMER_COMPAT */
 }
 
-static inline coap_time_t coap_ticks_to_rt(coap_tick_t t) {
+static inline coap_time_t
+coap_ticks_to_rt(coap_tick_t t) {
   return t / 1000000UL;
 }
 
-static inline uint64_t coap_ticks_to_rt_us(coap_tick_t t) {
+static inline uint64_t
+coap_ticks_to_rt_us(coap_tick_t t) {
   return t;
 }
 
-static inline coap_tick_t coap_ticks_from_rt_us(uint64_t t) {
+static inline coap_tick_t
+coap_ticks_from_rt_us(uint64_t t) {
   return t / 1000000UL;
 }
 #else /* !WITH_LWIP && !WITH_CONTIKI && !RIOT_VERSION */
@@ -191,7 +204,8 @@ coap_tick_t coap_ticks_from_rt_us(uint64_t t);
  * Returns @c 1 if and only if @p a is less than @p b where less is defined on a
  * signed data type.
  */
-COAP_STATIC_INLINE int coap_time_lt(coap_tick_t a, coap_tick_t b) {
+COAP_STATIC_INLINE int
+coap_time_lt(coap_tick_t a, coap_tick_t b) {
   return ((coap_tick_diff_t)(a - b)) < 0;
 }
 
@@ -199,7 +213,8 @@ COAP_STATIC_INLINE int coap_time_lt(coap_tick_t a, coap_tick_t b) {
  * Returns @c 1 if and only if @p a is less than or equal @p b where less is
  * defined on a signed data type.
  */
-COAP_STATIC_INLINE int coap_time_le(coap_tick_t a, coap_tick_t b) {
+COAP_STATIC_INLINE int
+coap_time_le(coap_tick_t a, coap_tick_t b) {
   return a == b || coap_time_lt(a,b);
 }
 

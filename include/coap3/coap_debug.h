@@ -75,7 +75,8 @@ typedef enum {
 #define _COAP_LOG_DEBUG  7
 #define _COAP_LOG_OSCORE 8
 
-COAP_STATIC_INLINE void coap_no_log(void) { }
+COAP_STATIC_INLINE void
+coap_no_log(void) { }
 
 #define coap_log_emerg(...) coap_log(COAP_LOG_EMERG, __VA_ARGS__)
 
@@ -198,7 +199,7 @@ coap_log_t coap_dtls_get_log_level(void);
  *              COAP_LOG_DTLS_BASE + one of the COAP_LOG_* values.
  * @param message Zero-terminated string message to log.
  */
-typedef void (*coap_log_handler_t) (coap_log_t level, const char *message);
+typedef void (*coap_log_handler_t)(coap_log_t level, const char *message);
 
 /**
  * Add a custom log callback handler.
@@ -242,7 +243,7 @@ const char *coap_package_build(void);
  */
 #if (defined(__GNUC__))
 void coap_log_impl(coap_log_t level,
-              const char *format, ...) __attribute__ ((format(printf, 2, 3)));
+                   const char *format, ...) __attribute__((format(printf, 2, 3)));
 #else
 void coap_log_impl(coap_log_t level, const char *format, ...);
 #endif
@@ -258,12 +259,12 @@ void coap_log_impl(coap_log_t level, const char *format, ...);
 void coap_print_contiki_prefix(coap_log_t level);
 
 #define coap_log(level, ...) do { \
-  if (LOG_CONF_LEVEL_COAP \
-       && ((int)((level)) <= (int)coap_get_log_level())) { \
-     coap_print_contiki_prefix(level); \
-     printf(__VA_ARGS__); \
-  } \
-} while(0)
+    if (LOG_CONF_LEVEL_COAP && \
+        ((int)((level)) <= (int)coap_get_log_level())) { \
+      coap_print_contiki_prefix(level); \
+      printf(__VA_ARGS__); \
+    } \
+  } while(0)
 #else /* !WITH_CONTIKI */
 /**
  * Logging function.
@@ -274,9 +275,9 @@ void coap_print_contiki_prefix(coap_log_t level);
  * @param level One of the COAP_LOG_* values.
  */
 #define coap_log(level, ...) do { \
-  if ((int)((level))<=(int)coap_get_log_level()) \
-     coap_log_impl((level), __VA_ARGS__); \
-} while(0)
+    if ((int)((level))<=(int)coap_get_log_level()) \
+      coap_log_impl((level), __VA_ARGS__); \
+  } while(0)
 #endif /* !WITH_CONTIKI */
 #endif
 
@@ -290,9 +291,9 @@ void coap_print_contiki_prefix(coap_log_t level);
  * @param level One of the COAP_LOG_* values.
  */
 #define coap_dtls_log(level, ...) do { \
-  if ((int)((level))<=(int)coap_dtls_get_log_level()) \
-     coap_log_impl((level)+COAP_LOG_DTLS_BASE, __VA_ARGS__); \
-} while(0)
+    if ((int)((level))<=(int)coap_dtls_get_log_level()) \
+      coap_log_impl((level)+COAP_LOG_DTLS_BASE, __VA_ARGS__); \
+  } while(0)
 #endif
 
 #include "pdu.h"
@@ -369,8 +370,8 @@ size_t coap_print_addr(const coap_address_t *address,
  * @return The pointer to provided buffer with as much of the IP address added
  *         as possible.
  */
-const char* coap_print_ip_addr(const coap_address_t *address,
-                            char *buffer, size_t size);
+const char *coap_print_ip_addr(const coap_address_t *address,
+                               char *buffer, size_t size);
 
 /** @} */
 

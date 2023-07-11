@@ -43,7 +43,7 @@ struct coap_cache_entry_t {
   coap_cache_key_t *cache_key;
   coap_session_t *session;
   coap_pdu_t *pdu;
-  void* app_data;
+  void *app_data;
   coap_tick_t expire_ticks;
   unsigned int idle_timeout;
   coap_cache_app_data_free_callback_t callback;
@@ -91,8 +91,8 @@ void coap_digest_free(coap_digest_ctx_t *digest_ctx);
  * @return           @c 1 success, @c 0 failure.
  */
 int coap_digest_update(coap_digest_ctx_t *digest_ctx,
-                      const uint8_t *data,
-                      size_t data_len
+                       const uint8_t *data,
+                       size_t data_len
                       );
 
 /**

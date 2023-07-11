@@ -79,13 +79,12 @@ coap_session_t *coap_new_client_session_oscore(coap_context_t *ctx,
  * @return A new CoAP session or NULL if failed. Call coap_session_release()
  *         to free.
  */
-coap_session_t *
-coap_new_client_session_oscore_psk(coap_context_t *ctx,
-                                   const coap_address_t *local_if,
-                                   const coap_address_t *server,
-                                   coap_proto_t proto,
-                                   coap_dtls_cpsk_t *psk_data,
-                                   coap_oscore_conf_t *oscore_conf);
+coap_session_t *coap_new_client_session_oscore_psk(coap_context_t *ctx,
+                                                   const coap_address_t *local_if,
+                                                   const coap_address_t *server,
+                                                   coap_proto_t proto,
+                                                   coap_dtls_cpsk_t *psk_data,
+                                                   coap_oscore_conf_t *oscore_conf);
 
 /**
  * Creates a new client session to the designated server with PKI credentials
@@ -106,13 +105,12 @@ coap_new_client_session_oscore_psk(coap_context_t *ctx,
  * @return A new CoAP session or NULL if failed. Call coap_session_release()
  *         to free.
  */
-coap_session_t *
-coap_new_client_session_oscore_pki(coap_context_t *ctx,
-                                   const coap_address_t *local_if,
-                                   const coap_address_t *server,
-                                   coap_proto_t proto,
-                                   coap_dtls_pki_t *pki_data,
-                                   coap_oscore_conf_t *oscore_conf);
+coap_session_t *coap_new_client_session_oscore_pki(coap_context_t *ctx,
+                                                   const coap_address_t *local_if,
+                                                   const coap_address_t *server,
+                                                   coap_proto_t proto,
+                                                   coap_dtls_pki_t *pki_data,
+                                                   coap_oscore_conf_t *oscore_conf);
 
 /**
  * Set the context's default OSCORE configuration for a server.
@@ -154,11 +152,10 @@ typedef int (*coap_oscore_save_seq_num_t)(uint64_t sender_seq_num, void *param);
  *         off with coap_delete_oscore_conf() when no longer required,
  *         otherwise it is freed off when coap_free_context() is called.
  */
-coap_oscore_conf_t *
-coap_new_oscore_conf(coap_str_const_t conf_mem,
-                     coap_oscore_save_seq_num_t save_seq_num_func,
-                     void *save_seq_num_func_param,
-                     uint64_t start_seq_num);
+coap_oscore_conf_t *coap_new_oscore_conf(coap_str_const_t conf_mem,
+                                         coap_oscore_save_seq_num_t save_seq_num_func,
+                                         void *save_seq_num_func_param,
+                                         uint64_t start_seq_num);
 
 /**
  * Release all the information associated with the OSCORE configuration.

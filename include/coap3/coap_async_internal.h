@@ -38,7 +38,7 @@ struct coap_async_t {
                              0 indicates never trigger */
   coap_session_t *session;         /**< transaction session */
   coap_pdu_t *pdu;                 /**< copy of request pdu */
-  void* appdata;                   /** User definable data pointer */
+  void *appdata;                   /**< User definable data pointer */
 };
 
 /**
@@ -59,8 +59,7 @@ coap_tick_t coap_check_async(coap_context_t *context, coap_tick_t now);
  *
  * @param context The context to remove all async entries from.
  */
-void
-coap_delete_all_async(coap_context_t *context);
+void coap_delete_all_async(coap_context_t *context);
 
 /** @} */
 

@@ -208,9 +208,9 @@ typedef enum {
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
-coap_lg_crcv_t * coap_block_new_lg_crcv(coap_session_t *session,
-                                        coap_pdu_t *pdu,
-                                        coap_lg_xmit_t *lg_xmit);
+coap_lg_crcv_t *coap_block_new_lg_crcv(coap_session_t *session,
+                                       coap_pdu_t *pdu,
+                                       coap_lg_xmit_t *lg_xmit);
 
 void coap_block_delete_lg_crcv(coap_session_t *session,
                                coap_lg_crcv_t *lg_crcv);
@@ -278,10 +278,10 @@ int coap_handle_request_put_block(coap_context_t *context,
                                   int *added_block,
                                   coap_lg_srcv_t **free_lg_srcv);
 
-coap_lg_xmit_t * coap_find_lg_xmit_response(const coap_session_t *session,
-                                            const coap_pdu_t *request,
-                                            const coap_resource_t *resource,
-                                            const coap_string_t *query);
+coap_lg_xmit_t *coap_find_lg_xmit_response(const coap_session_t *session,
+                                           const coap_pdu_t *request,
+                                           const coap_resource_t *resource,
+                                           const coap_string_t *query);
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
@@ -293,10 +293,9 @@ int coap_handle_response_get_block(coap_context_t *context,
                                    coap_pdu_t *sent,
                                    coap_pdu_t *rcvd,
                                    coap_recurse_t recursive);
-coap_mid_t
-coap_retransmit_oscore_pdu(coap_session_t *session,
-                           coap_pdu_t *pdu,
-                           coap_opt_t *echo);
+coap_mid_t coap_retransmit_oscore_pdu(coap_session_t *session,
+                                      coap_pdu_t *pdu,
+                                      coap_opt_t *echo);
 #endif /* COAP_CLIENT_SUPPORT */
 
 void coap_block_delete_lg_xmit(coap_session_t *session,

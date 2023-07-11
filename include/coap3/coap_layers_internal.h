@@ -50,7 +50,7 @@ typedef enum {
  *                 -2  Recieved ICMP unreachable.
  */
 typedef ssize_t (*coap_layer_read_t)(coap_session_t *session,
-                                      uint8_t *data, size_t datalen);
+                                     uint8_t *data, size_t datalen);
 
 /**
  * Function write interface for layer data sending.

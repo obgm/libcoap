@@ -187,9 +187,9 @@ coap_str_const_t *coap_make_str_const(const char *string);
  *                 @c 0 otherwise.
  */
 #define coap_string_equal(string1,string2) \
-        ((string1)->length == (string2)->length && ((string1)->length == 0 || \
-         ((string1)->s && (string2)->s && \
-          memcmp((string1)->s, (string2)->s, (string1)->length) == 0)))
+  ((string1)->length == (string2)->length && ((string1)->length == 0 || \
+                                              ((string1)->s && (string2)->s && \
+                                               memcmp((string1)->s, (string2)->s, (string1)->length) == 0)))
 
 /**
  * Compares the two binary data for equality
@@ -201,9 +201,9 @@ coap_str_const_t *coap_make_str_const(const char *string);
  *                 @c 0 otherwise.
  */
 #define coap_binary_equal(binary1,binary2) \
-        ((binary1)->length == (binary2)->length && ((binary1)->length == 0 || \
-         ((binary1)->s && (binary2)->s && \
-          memcmp((binary1)->s, (binary2)->s, (binary1)->length) == 0)))
+  ((binary1)->length == (binary2)->length && ((binary1)->length == 0 || \
+                                              ((binary1)->s && (binary2)->s && \
+                                               memcmp((binary1)->s, (binary2)->s, (binary1)->length) == 0)))
 
 /** @} */
 

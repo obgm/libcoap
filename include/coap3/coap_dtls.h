@@ -129,7 +129,7 @@ coap_tls_version_t *coap_get_tls_library_version(void);
  *
  * @return @c 1 if successful, else @c 0.
  */
-typedef int (*coap_dtls_security_setup_t)(void* tls_session,
+typedef int (*coap_dtls_security_setup_t)(void *tls_session,
                                           coap_dtls_pki_t *setup_data);
 
 /**
@@ -153,12 +153,12 @@ typedef int (*coap_dtls_security_setup_t)(void* tls_session,
  * @return @c 1 if accepted, else @c 0 if to be rejected.
  */
 typedef int (*coap_dtls_cn_callback_t)(const char *cn,
-             const uint8_t *asn1_public_cert,
-             size_t asn1_length,
-             coap_session_t *coap_session,
-             unsigned int depth,
-             int validated,
-             void *arg);
+                                       const uint8_t *asn1_public_cert,
+                                       size_t asn1_length,
+                                       coap_session_t *coap_session,
+                                       unsigned int depth,
+                                       int validated,
+                                       void *arg);
 
 /**
  * The enum used for determining the provided PKI ASN.1 (DER) Private Key
@@ -273,7 +273,7 @@ typedef struct coap_dtls_key_t {
  * @return New set of certificates to use, or @c NULL if SNI is to be rejected.
  */
 typedef coap_dtls_key_t *(*coap_dtls_pki_sni_callback_t)(const char *sni,
-             void* arg);
+                                                         void *arg);
 
 
 #define COAP_DTLS_PKI_SETUP_VERSION 1 /**< Latest PKI setup version */
@@ -304,13 +304,13 @@ struct coap_dtls_pki_t {
                                    *     COAP_PKI_KEY_PEM */
   uint8_t reserved[3];             /**< Reserved - must be set to 0 for
                                         future compatibility */
-                                   /* Size of 3 chosen to align to next
-                                    * parameter, so if newly defined option
-                                    * it can use one of the reserved slots so
-                                    * no need to change
-                                    * COAP_DTLS_PKI_SETUP_VERSION and just
-                                    * decrement the reserved[] count.
-                                    */
+  /* Size of 3 chosen to align to next
+   * parameter, so if newly defined option
+   * it can use one of the reserved slots so
+   * no need to change
+   * COAP_DTLS_PKI_SETUP_VERSION and just
+   * decrement the reserved[] count.
+   */
 
   /** CN check callback function.
    * If not NULL, is called when the TLS connection has passed the configured
@@ -334,7 +334,7 @@ struct coap_dtls_pki_t {
    */
   coap_dtls_security_setup_t additional_tls_setup_call_back;
 
-  char* client_sni;    /**<  If not NULL, SNI to use in client TLS setup.
+  char *client_sni;    /**<  If not NULL, SNI to use in client TLS setup.
                              Owned by the client app and must remain valid
                              during the call to coap_new_client_session_pki() */
 
@@ -366,9 +366,9 @@ typedef struct coap_dtls_cpsk_info_t {
  * @return New coap_dtls_cpsk_info_t object or @c NULL on error.
  */
 typedef const coap_dtls_cpsk_info_t *(*coap_dtls_ih_callback_t)(
-                                      coap_str_const_t *hint,
-                                      coap_session_t *coap_session,
-                                      void *arg);
+    coap_str_const_t *hint,
+    coap_session_t *coap_session,
+    void *arg);
 
 #define COAP_DTLS_CPSK_SETUP_VERSION 1 /**< Latest CPSK setup version */
 
@@ -382,13 +382,13 @@ typedef struct coap_dtls_cpsk_t {
   /* Options to enable different TLS functionality in libcoap */
   uint8_t reserved[7];             /**< Reserved - must be set to 0 for
                                         future compatibility */
-                                   /* Size of 7 chosen to align to next
-                                    * parameter, so if newly defined option
-                                    * it can use one of the reserverd slot so
-                                    * no need to change
-                                    * COAP_DTLS_CPSK_SETUP_VERSION and just
-                                    * decrement the reserved[] count.
-                                    */
+  /* Size of 7 chosen to align to next
+   * parameter, so if newly defined option
+   * it can use one of the reserverd slot so
+   * no need to change
+   * COAP_DTLS_CPSK_SETUP_VERSION and just
+   * decrement the reserved[] count.
+   */
 
   /** Identity Hint check callback function.
    * If not NULL, is called when the Identity Hint (TLS1.2 or earlier) is
@@ -399,7 +399,7 @@ typedef struct coap_dtls_cpsk_t {
   void *ih_call_back_arg;  /**< Passed in to the Identity Hint callback
                                 function */
 
-  char* client_sni;    /**< If not NULL, SNI to use in client TLS setup.
+  char *client_sni;    /**< If not NULL, SNI to use in client TLS setup.
                             Owned by the client app and must remain valid
                             during the call to coap_new_client_session_psk2()
                             Note: Not supported by TinyDTLS. */
@@ -435,9 +435,9 @@ typedef struct coap_dtls_spsk_info_t {
  *               structure.
  */
 typedef const coap_bin_const_t *(*coap_dtls_id_callback_t)(
-                                 coap_bin_const_t *identity,
-                                 coap_session_t *coap_session,
-                                 void *arg);
+    coap_bin_const_t *identity,
+    coap_session_t *coap_session,
+    void *arg);
 /**
  * PSK SNI callback that can be set up by coap_context_set_psk2().
  * Invoked when libcoap has done the validation checks at the TLS level
@@ -453,9 +453,9 @@ typedef const coap_bin_const_t *(*coap_dtls_id_callback_t)(
  * @return New coap_dtls_spsk_info_t object or @c NULL on error.
  */
 typedef const coap_dtls_spsk_info_t *(*coap_dtls_psk_sni_callback_t)(
-                                 const char *sni,
-                                 coap_session_t *coap_session,
-                                 void *arg);
+    const char *sni,
+    coap_session_t *coap_session,
+    void *arg);
 
 #define COAP_DTLS_SPSK_SETUP_VERSION 1 /**< Latest SPSK setup version */
 
@@ -469,13 +469,13 @@ typedef struct coap_dtls_spsk_t {
   /* Options to enable different TLS functionality in libcoap */
   uint8_t reserved[7];             /**< Reserved - must be set to 0 for
                                         future compatibility */
-                                   /* Size of 7 chosen to align to next
-                                    * parameter, so if newly defined option
-                                    * it can use one of the reserverd slot so
-                                    * no need to change
-                                    * COAP_DTLS_SPSK_SETUP_VERSION and just
-                                    * decrement the reserved[] count.
-                                    */
+  /* Size of 7 chosen to align to next
+   * parameter, so if newly defined option
+   * it can use one of the reserverd slot so
+   * no need to change
+   * COAP_DTLS_SPSK_SETUP_VERSION and just
+   * decrement the reserved[] count.
+   */
 
   /** Identity check callback function.
    * If not @p NULL, is called when the Identity is provided by the client.
