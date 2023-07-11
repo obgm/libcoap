@@ -32,7 +32,7 @@
 #include "coap_io.h"
 #include "coap_dtls.h"
 #include "coap_event.h"
-#include "pdu.h"
+#include "coap_pdu.h"
 #include "coap_session.h"
 #include "coap_debug.h"
 

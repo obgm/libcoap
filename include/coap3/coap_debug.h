@@ -296,7 +296,7 @@ void coap_print_contiki_prefix(coap_log_t level);
   } while(0)
 #endif
 
-#include "pdu.h"
+#include "coap_pdu.h"
 
 /**
  * Defines the output mode for the coap_show_pdu() function.

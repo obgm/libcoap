@@ -1,4 +1,4 @@
-/* resource.c -- generic resource handling
+/* coap_resource.c -- generic resource handling
  *
  * Copyright (C) 2010--2023 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -9,7 +9,7 @@
  */
 
 /**
- * @file resource.c
+ * @file coap_resource.c
  * @brief Server resource handling functions
  */
 

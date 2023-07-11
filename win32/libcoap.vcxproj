@@ -39,9 +39,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\block.c" />
     <ClCompile Include="..\src\coap_address.c" />
     <ClCompile Include="..\src\coap_async.c" />
+    <ClCompile Include="..\src\coap_block.c" />
     <ClCompile Include="..\src\coap_cache.c" />
     <ClCompile Include="..\src\coap_debug.c" />
     <ClCompile Include="..\src\coap_dtls.c" />
@@ -53,12 +53,15 @@
     <ClCompile Include="..\src\coap_layers.c" />
     <ClCompile Include="..\src\coap_mbedtls.c" />
     <ClCompile Include="..\src\coap_mem.c" />
+    <ClCompile Include="..\src\coap_net.c" />
     <ClCompile Include="..\src\coap_netif.c" />
     <ClCompile Include="..\src\coap_notls.c" />
     <ClCompile Include="..\src\coap_openssl.c" />
     <ClCompile Include="..\src\coap_option.c" />
     <ClCompile Include="..\src\coap_oscore.c" />
+    <ClCompile Include="..\src\coap_pdu.c" />
     <ClCompile Include="..\src\coap_prng.c" />
+    <ClCompile Include="..\src\coap_resource.c" />
     <ClCompile Include="..\src\coap_session.c" />
     <ClCompile Include="..\src\coap_str.c" />
     <ClCompile Include="..\src\coap_subscribe.c" />
@@ -67,9 +70,6 @@
     <ClCompile Include="..\src\coap_tinydtls.c" />
     <ClCompile Include="..\src\coap_uri.c" />
     <ClCompile Include="..\src\coap_ws.c" />
-    <ClCompile Include="..\src\net.c" />
-    <ClCompile Include="..\src\pdu.c" />
-    <ClCompile Include="..\src\resource.c" />
     <ClCompile Include="..\src\oscore\oscore.c" />
     <ClCompile Include="..\src\oscore\oscore_cbor.c" />
     <ClCompile Include="..\src\oscore\oscore_context.c" />
@@ -82,7 +82,7 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\libcoap.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_address.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_async.h" />
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\block.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_block.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_block_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache_internal.h" />
@@ -101,11 +101,11 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_net.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_netif_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_option.h" />
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\pdu.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_pdu.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_oscore.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_oscore_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_prng.h" />
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\resource.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_resource.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_resource_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_session.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_session_internal.h" />

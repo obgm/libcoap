@@ -30,8 +30,8 @@
 
 #include "coap3/coap_session.h"
 #include "coap3/coap_net.h"
-#include "coap3/pdu.h"
-#include "coap3/resource.h"
+#include "coap3/coap_pdu.h"
+#include "coap3/coap_resource.h"
 
 /**
  * The maximum size of a string on platforms that allocate fixed-size

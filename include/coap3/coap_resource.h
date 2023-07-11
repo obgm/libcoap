@@ -1,5 +1,5 @@
 /*
- * resource.h -- generic resource handling
+ * coap_resource.h -- generic resource handling
  *
  * Copyright (C) 2010,2011,2014-2023 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -10,7 +10,7 @@
  */
 
 /**
- * @file resource.h
+ * @file coap_resource.h
  * @brief Generic resource handling
  */
 

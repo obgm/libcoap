@@ -21,7 +21,7 @@
 
 #include "coap_internal.h"
 #include "coap_pdu_internal.h"
-#include "resource.h"
+#include "coap_resource.h"
 
 /**
  * @ingroup internal_api
