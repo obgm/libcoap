@@ -165,7 +165,7 @@ file(s).
 * If there are functions with a lot of parameters that do not fit into the above
   rule split the declaration (in the *.h) and the implementation (in the *.c)
   into single lines per parameter. Each parameter should be aligned with the
-  first defined parameter.  For example like this (from src/block.c):
+  first defined parameter.  For example like this (from src/coap_block.c):
 
 --8<----
 int

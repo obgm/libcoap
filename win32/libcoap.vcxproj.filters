@@ -15,13 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\block.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\coap_address.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\coap_async.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_block.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\coap_cache.c">
@@ -56,6 +56,9 @@
     <ClCompile Include="..\src\coap_mem.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_net.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_netif.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -69,6 +72,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\coap_oscore.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_pdu.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_resource.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\coap_session.c">
@@ -93,15 +102,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\coap_ws.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\net.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\pdu.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\resource.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\oscore\oscore.c">
@@ -136,7 +136,7 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_async.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\block.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_block.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_cache.h">
@@ -199,13 +199,13 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_oscore_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_pdu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_prng.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\pdu.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\resource.h">
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_resource_internal.h">

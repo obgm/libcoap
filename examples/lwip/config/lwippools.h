@@ -13,7 +13,7 @@
 
 #include "coap3/coap_internal.h"
 #include "coap3/coap_net.h"
-#include "coap3/resource.h"
+#include "coap3/coap_resource.h"
 #include "coap3/coap_subscribe.h"
 #ifdef COAP_WITH_LIBTINYDTLS
 #ifndef LWIP_TINYDTLS_LOCAL_FIX

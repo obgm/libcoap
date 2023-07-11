@@ -1,5 +1,5 @@
 /*
- * pdu.h -- CoAP message structure
+ * coap_pdu.h -- CoAP message structure
  *
  * Copyright (C) 2010-2014 Olaf Bergmann <bergmann@tzi.org>
  * Copyright (C) 2021-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
@@ -11,7 +11,7 @@
  */
 
 /**
- * @file pdu.h
+ * @file coap_pdu.h
  * @brief Pre-defined constants that reflect defaults for CoAP
  */
 

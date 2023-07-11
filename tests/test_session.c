@@ -24,7 +24,7 @@
 
 /* The maximum number of bits for fixed point integer representation.
  * This number must be identical to the definition of MAX_BITS in
- * net.c
+ * coap_net.c
  */
 #define MAX_BITS 8
 

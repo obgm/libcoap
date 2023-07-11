@@ -3,7 +3,7 @@ MODULE := libcoap
 SRC := coap_address.c \
   coap_asn1.c \
   coap_async.c \
-  block.c \
+  coap_block.c \
   coap_cache.c \
   coap_debug.c \
   coap_dtls.c \
@@ -16,15 +16,15 @@ SRC := coap_address.c \
   coap_layers.c\
   coap_mbedtls.c\
   coap_mem.c \
-  net.c \
+  coap_net.c \
   coap_netif.c \
   coap_notls.c \
   coap_openssl.c\
   coap_option.c \
   coap_oscore.c \
-  pdu.c \
+  coap_pdu.c \
   coap_prng.c \
-  resource.c \
+  coap_resource.c \
   coap_session.c \
   coap_str.c \
   coap_subscribe.c \

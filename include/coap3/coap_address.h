@@ -23,7 +23,7 @@
 #include <sys/types.h>
 #include "libcoap.h"
 
-#include "coap3/pdu.h"
+#include "coap3/coap_pdu.h"
 
 #if defined(WITH_LWIP)
 

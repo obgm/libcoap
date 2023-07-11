@@ -135,7 +135,7 @@ vpath %.c $(libcoap_dir)/src
 COAP_SRC = coap_address.c \
 	   coap_asn1.c \
 	   coap_async.c \
-	   block.c \
+	   coap_block.c \
 	   coap_cache.c \
 	   coap_debug.c \
 	   coap_dtls.c \
@@ -144,13 +144,13 @@ COAP_SRC = coap_address.c \
 	   coap_io.c \
 	   coap_io_lwip.c \
 	   coap_layers.c \
-	   net.c \
+	   coap_net.c \
 	   coap_netif.c \
 	   coap_notls.c \
 	   coap_option.c \
 	   coap_oscore.c \
-	   pdu.c \
-	   resource.c \
+	   coap_pdu.c \
+	   coap_resource.c \
 	   coap_session.c \
 	   coap_subscribe.c \
 	   coap_tinydtls.c \

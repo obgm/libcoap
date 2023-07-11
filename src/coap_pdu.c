@@ -1,4 +1,4 @@
-/* pdu.c -- CoAP PDU handling
+/* coap_pdu.c -- CoAP PDU handling
  *
  * Copyright (C) 2010--2023 Olaf Bergmann <bergmann@tzi.org>
  *
@@ -9,7 +9,7 @@
  */
 
 /**
- * @file pdu.c
+ * @file coap_pdu.c
  * @brief CoAP PDU handling
  */
 

@@ -1,5 +1,5 @@
 /*
- * block.h -- block transfer
+ * coap_block.h -- block transfer
  *
  * Copyright (C) 2010-2012,2014-2015 Olaf Bergmann <bergmann@tzi.org>
  * Copyright (C) 2022-2023           Jon Shallow <supjps-libcoap@jpshallow.com>
@@ -11,7 +11,7 @@
  */
 
 /**
- * @file block.h
+ * @file coap_block.h
  * @brief CoAP Block information
  */
 
@@ -20,7 +20,7 @@
 
 #include "coap_encode.h"
 #include "coap_option.h"
-#include "pdu.h"
+#include "coap_pdu.h"
 
 /**
  * @ingroup application_api

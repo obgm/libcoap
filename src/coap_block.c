@@ -1,4 +1,4 @@
-/* block.c -- block transfer
+/* coap_block.c -- block transfer
  *
  * Copyright (C) 2010--2012,2015-2023 Olaf Bergmann <bergmann@tzi.org> and others
  *
@@ -9,7 +9,7 @@
  */
 
 /**
- * @file block.c
+ * @file coap_block.c
  * @brief CoAP Block handling
  */
 
