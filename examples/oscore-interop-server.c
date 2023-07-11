@@ -32,9 +32,9 @@
 #ifndef R_OK
 #define R_OK 4
 #endif
-static char*
-strndup(const char* s1, size_t n) {
-  char* copy = (char*)malloc(n + 1);
+static char *
+strndup(const char *s1, size_t n) {
+  char *copy = (char *)malloc(n + 1);
   if (copy) {
     memcpy(copy, s1, n);
     copy[n] = 0;
@@ -81,9 +81,9 @@ handle_sigint(int signum COAP_UNUSED) {
 }
 
 #define INDEX "This is a OSCORE test server made with libcoap " \
-              "(see https://libcoap.net)\n" \
-              "Copyright (C) 2023 Olaf Bergmann <bergmann@tzi.org> " \
-              "and others\n\n"
+  "(see https://libcoap.net)\n" \
+  "Copyright (C) 2023 Olaf Bergmann <bergmann@tzi.org> " \
+  "and others\n\n"
 
 static void
 hnd_get_index(coap_resource_t *resource,
@@ -185,8 +185,8 @@ hnd_put_hello_7(coap_resource_t *resource,
 
   if ((option = coap_check_option(request, COAP_OPTION_IF_MATCH,
                                   &opt_iter)) != NULL) {
-    etag = coap_decode_var_bytes8 (coap_opt_value (option),
-                                   coap_opt_length (option));
+    etag = coap_decode_var_bytes8(coap_opt_value(option),
+                                  coap_opt_length(option));
     if (etag != 0x7b) {
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_PRECONDITION_FAILED);
       return;
@@ -207,7 +207,7 @@ hnd_get_observe1(coap_resource_t *resource,
                  const coap_pdu_t *request,
                  const coap_string_t *query,
                  coap_pdu_t *response) {
- static int count = 0;
+  static int count = 0;
 
   count++;
   switch (count) {
@@ -242,7 +242,7 @@ hnd_get_observe2(coap_resource_t *resource,
                  const coap_pdu_t *request,
                  const coap_string_t *query,
                  coap_pdu_t *response) {
- static int count = 0;
+  static int count = 0;
 
   count++;
   switch (count) {
@@ -337,7 +337,7 @@ init_resources(coap_context_t *ctx) {
 }
 
 static uint8_t *
-read_file_mem(const char* file, size_t *length) {
+read_file_mem(const char *file, size_t *length) {
   FILE *f;
   uint8_t *buf;
   struct stat statbuf;
@@ -369,65 +369,65 @@ read_file_mem(const char* file, size_t *length) {
 }
 
 static void
-usage( const char *program, const char *version) {
+usage(const char *program, const char *version) {
   const char *p;
   char buffer[120];
   const char *lib_build = coap_package_build();
 
-  p = strrchr( program, '/' );
-  if ( p )
+  p = strrchr(program, '/');
+  if (p)
     program = ++p;
 
-  fprintf( stderr, "%s v%s -- OSCORE interop implementation\n"
-     "(c) 2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
-     "Build: %s\n"
-     "%s\n"
-    , program, version, lib_build,
-    coap_string_tls_version(buffer, sizeof(buffer)));
+  fprintf(stderr, "%s v%s -- OSCORE interop implementation\n"
+          "(c) 2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+          "Build: %s\n"
+          "%s\n"
+          , program, version, lib_build,
+          coap_string_tls_version(buffer, sizeof(buffer)));
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
-     "Usage: %s [-d max] [-g group] [-l loss] [-p port] [-r] [-v num]\n"
-     "\t\t[-A address] [-E oscore_conf_file[,seq_file]] [-G group_if]\n"
-     "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
-     "\t\t[-X size]\n"
-     "General Options\n"
-     "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
-     "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
-     "\t       \t\tuntil one of the dynamic resources has been deleted\n"
-     "\t-g group\tJoin the given multicast group\n"
-     "\t       \t\tNote: DTLS over multicast is not currently supported\n"
-     "\t-l list\t\tFail to send some datagrams specified by a comma\n"
-     "\t       \t\tseparated list of numbers or number ranges\n"
-     "\t       \t\t(for debugging only)\n"
-     "\t-l loss%%\tRandomly fail to send datagrams with the specified\n"
-     "\t       \t\tprobability - 100%% all datagrams, 0%% no datagrams\n"
-     "\t       \t\t(for debugging only)\n"
-     "\t-p port\t\tListen on specified port for UDP and TCP. If (D)TLS is\n"
-     "\t       \t\tenabled, then the coap-server will also listen on\n"
-     "\t       \t\t 'port'+1 for DTLS and TLS.  The default port is 5683\n"
-     "\t-r     \t\tEnable multicast per resource support.  If enabled,\n"
-     "\t       \t\tonly '/', '/async' and '/.well-known/core' are enabled\n"
-     "\t       \t\tfor multicast requests support, otherwise all\n"
-     "\t       \t\tresources are enabled\n"
-     "\t-v num \t\tVerbosity level (default 3, maximum is 9). Above 7,\n"
-     "\t       \t\tthere is increased verbosity in GnuTLS and OpenSSL\n"
-     "\t       \t\tlogging\n"
-     "\t-A address\tInterface address to bind to\n"
-     "\t-E oscore_conf_file[,seq_file]\n"
-     "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
-     "\t       \t\tcoap-oscore-conf(5) for definitions.\n"
-     "\t       \t\tOptional seq_file is used to save the current transmit\n"
-     "\t       \t\tsequence number, so on restart sequence numbers continue\n"
-     "\t-G group_if\tUse this interface for listening for the multicast\n"
-     "\t       \t\tgroup. This can be different from the implied interface\n"
-     "\t       \t\tif the -A option is used\n"
-     "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
-     "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
-     "\t       \t\t(Sum of one or more of 1,2 and 4)\n"
-     "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
-     "\t       \t\tevery fifth response will still be sent as a confirmable\n"
-     "\t       \t\tresponse (RFC 7641 requirement)\n"
-    , program);
+          "Usage: %s [-d max] [-g group] [-l loss] [-p port] [-r] [-v num]\n"
+          "\t\t[-A address] [-E oscore_conf_file[,seq_file]] [-G group_if]\n"
+          "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
+          "\t\t[-X size]\n"
+          "General Options\n"
+          "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
+          "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
+          "\t       \t\tuntil one of the dynamic resources has been deleted\n"
+          "\t-g group\tJoin the given multicast group\n"
+          "\t       \t\tNote: DTLS over multicast is not currently supported\n"
+          "\t-l list\t\tFail to send some datagrams specified by a comma\n"
+          "\t       \t\tseparated list of numbers or number ranges\n"
+          "\t       \t\t(for debugging only)\n"
+          "\t-l loss%%\tRandomly fail to send datagrams with the specified\n"
+          "\t       \t\tprobability - 100%% all datagrams, 0%% no datagrams\n"
+          "\t       \t\t(for debugging only)\n"
+          "\t-p port\t\tListen on specified port for UDP and TCP. If (D)TLS is\n"
+          "\t       \t\tenabled, then the coap-server will also listen on\n"
+          "\t       \t\t 'port'+1 for DTLS and TLS.  The default port is 5683\n"
+          "\t-r     \t\tEnable multicast per resource support.  If enabled,\n"
+          "\t       \t\tonly '/', '/async' and '/.well-known/core' are enabled\n"
+          "\t       \t\tfor multicast requests support, otherwise all\n"
+          "\t       \t\tresources are enabled\n"
+          "\t-v num \t\tVerbosity level (default 3, maximum is 9). Above 7,\n"
+          "\t       \t\tthere is increased verbosity in GnuTLS and OpenSSL\n"
+          "\t       \t\tlogging\n"
+          "\t-A address\tInterface address to bind to\n"
+          "\t-E oscore_conf_file[,seq_file]\n"
+          "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
+          "\t       \t\tcoap-oscore-conf(5) for definitions.\n"
+          "\t       \t\tOptional seq_file is used to save the current transmit\n"
+          "\t       \t\tsequence number, so on restart sequence numbers continue\n"
+          "\t-G group_if\tUse this interface for listening for the multicast\n"
+          "\t       \t\tgroup. This can be different from the implied interface\n"
+          "\t       \t\tif the -A option is used\n"
+          "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
+          "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
+          "\t       \t\t(Sum of one or more of 1,2 and 4)\n"
+          "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
+          "\t       \t\tevery fifth response will still be sent as a confirmable\n"
+          "\t       \t\tresponse (RFC 7641 requirement)\n"
+          , program);
 }
 
 static coap_context_t *
@@ -448,7 +448,7 @@ get_context(const char *node, const char *port) {
   hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST;
 
   s = getaddrinfo(node, port, &hints, &result);
-  if ( s != 0 ) {
+  if (s != 0) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
     coap_free_context(ctx);
     return NULL;
@@ -491,8 +491,8 @@ finish:
 }
 
 static FILE *oscore_seq_num_fp = NULL;
-static const char* oscore_conf_file = NULL;
-static const char* oscore_seq_save_file = NULL;
+static const char *oscore_conf_file = NULL;
+static const char *oscore_seq_save_file = NULL;
 
 static int
 oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
@@ -584,10 +584,11 @@ main(int argc, char **argv) {
   int nfds = 0;
   uint16_t cache_ignore_options[] = { COAP_OPTION_BLOCK1,
                                       COAP_OPTION_BLOCK2,
-                    /* See https://rfc-editor.org/rfc/rfc7959#section-2.10 */
+                                      /* See https://rfc-editor.org/rfc/rfc7959#section-2.10 */
                                       COAP_OPTION_MAXAGE,
-                    /* See https://rfc-editor.org/rfc/rfc7959#section-2.10 */
-                                      COAP_OPTION_IF_NONE_MATCH };
+                                      /* See https://rfc-editor.org/rfc/rfc7959#section-2.10 */
+                                      COAP_OPTION_IF_NONE_MATCH
+                                    };
 #ifndef _WIN32
   struct sigaction sa;
 #endif
@@ -639,23 +640,23 @@ main(int argc, char **argv) {
       csm_max_message_size = strtol(optarg, NULL, 10);
       break;
     default:
-      usage( argv[0], LIBCOAP_PACKAGE_VERSION );
-      exit( 1 );
+      usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+      exit(1);
     }
   }
 
 #ifdef _WIN32
   signal(SIGINT, handle_sigint);
 #else
-  memset (&sa, 0, sizeof(sa));
+  memset(&sa, 0, sizeof(sa));
   sigemptyset(&sa.sa_mask);
   sa.sa_handler = handle_sigint;
   sa.sa_flags = 0;
-  sigaction (SIGINT, &sa, NULL);
-  sigaction (SIGTERM, &sa, NULL);
+  sigaction(SIGINT, &sa, NULL);
+  sigaction(SIGTERM, &sa, NULL);
   /* So we do not exit on a SIGPIPE */
   sa.sa_handler = SIG_IGN;
-  sigaction (SIGPIPE, &sa, NULL);
+  sigaction(SIGPIPE, &sa, NULL);
 #endif
 
   coap_startup();
@@ -679,7 +680,7 @@ main(int argc, char **argv) {
 
   /* Define the options to ignore when setting up cache-keys */
   coap_cache_ignore_options(ctx, cache_ignore_options,
-             sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
+                            sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
   /* join multicast group if requested at command line */
   if (group)
     coap_join_mcast_group_intf(ctx, group, group_if);
@@ -694,7 +695,7 @@ main(int argc, char **argv) {
 
   wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
 
-  while ( !quit ) {
+  while (!quit) {
     int result;
 
     if (coap_fd != -1) {
@@ -713,11 +714,11 @@ main(int argc, char **argv) {
       tv.tv_sec = wait_ms / 1000;
       tv.tv_usec = (wait_ms % 1000) * 1000;
       /* Wait until any i/o takes place or timeout */
-      result = select (nfds, &readfds, NULL, NULL, &tv);
+      result = select(nfds, &readfds, NULL, NULL, &tv);
       if (result == -1) {
         if (errno != EAGAIN) {
           coap_log_debug("select: %s (%d)\n", coap_socket_strerror(),
-                   errno);
+                         errno);
           break;
         }
       }
@@ -737,11 +738,11 @@ main(int argc, char **argv) {
        *
        * result is time spent in coap_io_process()
        */
-      result = coap_io_process( ctx, wait_ms );
+      result = coap_io_process(ctx, wait_ms);
     }
-    if ( result < 0 ) {
+    if (result < 0) {
       break;
-    } else if ( result && (unsigned)result < wait_ms ) {
+    } else if (result && (unsigned)result < wait_ms) {
       /* decrement if there is a result wait time returned */
       wait_ms -= result;
     } else {
@@ -769,7 +770,7 @@ main(int argc, char **argv) {
       }
       /* need to wait until next second starts if wait_ms is too large */
       next_sec_ms = 1000 - (now % COAP_TICKS_PER_SECOND) *
-                           1000 / COAP_TICKS_PER_SECOND;
+                    1000 / COAP_TICKS_PER_SECOND;
       if (next_sec_ms && next_sec_ms < wait_ms)
         wait_ms = next_sec_ms;
     }

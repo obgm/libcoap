@@ -36,7 +36,8 @@
 /* #define COAP_PSEUDOFP_ENCODE_8_4_DOWN(v,ls) (v < HIBIT ? v : (ls = coap_fls(v) - Nn, (v >> ls) & MMASK) + ls) */
 COAP_STATIC_INLINE unsigned char
 COAP_PSEUDOFP_ENCODE_8_4_DOWN(unsigned int v, int *ls) {
-  if (v < HIBIT) return v;
+  if (v < HIBIT)
+    return v;
   *ls = coap_fls(v) - Nn;
   return ((v >> *ls) & MMASK) + *ls;
 }
@@ -64,7 +65,7 @@ make_pdu(coap_session_t *session, unsigned int value) {
   enc = COAP_PSEUDOFP_ENCODE_8_4_DOWN(value, &ls);
 
   len = sprintf((char *)buf, "%c%u", enc, COAP_PSEUDOFP_DECODE_8_4(enc));
-  coap_add_data( pdu, len, buf );
+  coap_add_data(pdu, len, buf);
 
   return pdu;
 }
@@ -73,15 +74,15 @@ static void
 usage(const char *program) {
   const char *p;
 
-  p = strrchr( program, '/' );
-  if ( p )
+  p = strrchr(program, '/');
+  if (p)
     program = ++p;
 
-  fprintf( stderr, "%s -- tiny fake sensor\n"
-           "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
-           "usage: %s [group address]\n"
-           "\n\nSends some fake sensor values to specified multicast group\n",
-           program, program );
+  fprintf(stderr, "%s -- tiny fake sensor\n"
+          "(c) 2010 Olaf Bergmann <bergmann@tzi.org>\n\n"
+          "usage: %s [group address]\n"
+          "\n\nSends some fake sensor values to specified multicast group\n",
+          program, program);
 }
 
 static coap_session_t *
@@ -101,7 +102,7 @@ get_session(coap_context_t *ctx, const char *group) {
   hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL;
 
   s = getaddrinfo(group, NULL, &hints, &result);
-  if ( s != 0 ) {
+  if (s != 0) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
     return NULL;
   }
@@ -140,9 +141,9 @@ main(int argc, char **argv) {
   struct sigaction sa;
   coap_context_t *ctx;
 
-  if ( argc > 1 && strncmp(argv[1], "-h", 2) == 0 ) {
-    usage( argv[0] );
-    exit( 1 );
+  if (argc > 1 && strncmp(argv[1], "-h", 2) == 0) {
+    usage(argv[0]);
+    exit(1);
   }
 
   ctx = coap_new_context(NULL);
@@ -151,29 +152,30 @@ main(int argc, char **argv) {
 
   session = get_session(ctx, argc > 1 ? argv[1] : "::1");
 
-  if ( !session )
+  if (!session)
     return -1;
 
-  memset (&sa, 0, sizeof(sa));
+  memset(&sa, 0, sizeof(sa));
   sigemptyset(&sa.sa_mask);
   sa.sa_handler = handle_sigint;
   sa.sa_flags = 0;
-  sigaction (SIGINT, &sa, NULL);
-  sigaction (SIGTERM, &sa, NULL);
+  sigaction(SIGINT, &sa, NULL);
+  sigaction(SIGTERM, &sa, NULL);
   /* So we do not exit on a SIGPIPE */
   sa.sa_handler = SIG_IGN;
-  sigaction (SIGPIPE, &sa, NULL);
+  sigaction(SIGPIPE, &sa, NULL);
 
-  while ( !quit ) {
+  while (!quit) {
 
-    if (! (pdu = make_pdu( session, rand() & 0xfff ) ) )
+    if (!(pdu = make_pdu(session, rand() & 0xfff)))
       break;
 
     coap_send(session, pdu);
 
-    tv.tv_sec = 5; tv.tv_usec = 0;
+    tv.tv_sec = 5;
+    tv.tv_usec = 0;
 
-    select( 0, 0, 0, 0, &tv );
+    select(0, 0, 0, 0, &tv);
 
   }
 

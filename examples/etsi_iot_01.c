@@ -53,7 +53,7 @@ handle_sigint(int signum COAP_UNUSED) {
 }
 
 #define INDEX "libcoap server for ETSI CoAP Plugtest, March 2012, Paris\n" \
-                 "Copyright (C) 2012 Olaf Bergmann <bergmann@tzi.org>\n\n"
+  "Copyright (C) 2012 Olaf Bergmann <bergmann@tzi.org>\n\n"
 
 static coap_payload_t *
 coap_new_payload(size_t size) {
@@ -73,7 +73,7 @@ coap_find_payload(coap_resource_t *resource) {
 }
 
 static void
-coap_add_payload(coap_resource_t *resource, coap_payload_t *payload){
+coap_add_payload(coap_resource_t *resource, coap_payload_t *payload) {
   assert(payload);
 
   coap_resource_set_userdata(resource, payload);
@@ -107,7 +107,7 @@ hnd_get_index(coap_resource_t *resource COAP_UNUSED,
                   buf);
 
   coap_add_option(response, COAP_OPTION_MAXAGE,
-          coap_encode_var_safe(buf, sizeof(buf), 0x2ffff), buf);
+                  coap_encode_var_safe(buf, sizeof(buf), 0x2ffff), buf);
 
   coap_add_data(response, strlen(INDEX), (const uint8_t *)INDEX);
 }
@@ -201,7 +201,7 @@ hnd_post_test(coap_resource_t *resource COAP_UNUSED,
     option = coap_check_option(request, COAP_OPTION_CONTENT_TYPE, &opt_iter);
     if (option) {
       test_payload->media_type =
-        coap_decode_var_bytes(coap_opt_value(option), coap_opt_length(option));
+          coap_decode_var_bytes(coap_opt_value(option), coap_opt_length(option));
     }
 
     coap_add_resource(coap_session_get_context(session), r);
@@ -260,7 +260,7 @@ hnd_put_test(coap_resource_t *resource,
   if (option) {
     /* set media type given in request */
     payload->media_type =
-      coap_decode_var_bytes(coap_opt_value(option), coap_opt_length(option));
+        coap_decode_var_bytes(coap_opt_value(option), coap_opt_length(option));
   } else {
     /* set default value */
     payload->media_type = COAP_MEDIATYPE_TEXT_PLAIN;
@@ -270,7 +270,7 @@ hnd_put_test(coap_resource_t *resource,
   */
 
   return;
- error:
+error:
   coap_log_warn("cannot modify resource\n");
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
 }
@@ -371,8 +371,8 @@ hnd_get_separate(coap_resource_t *resource COAP_UNUSED,
 
           /* don't allow delay to be less than COAP_RESOURCE_CHECK_TIME*/
           delay = d < COAP_RESOURCE_CHECK_TIME_SEC
-            ? COAP_RESOURCE_CHECK_TIME_SEC
-            : d;
+                  ? COAP_RESOURCE_CHECK_TIME_SEC
+                  : d;
           coap_log_debug("set delay to %lu\n", delay);
           break;
         }
@@ -417,7 +417,7 @@ make_large(const char *filename) {
     return NULL;
 
   inputfile = fopen(filename, "r");
-  if ( !inputfile ) {
+  if (!inputfile) {
     coap_log_warn("cannot read file %s\n", filename);
     coap_free(payload);
     return NULL;
@@ -514,20 +514,20 @@ init_resources(coap_context_t *ctx) {
 }
 
 static void
-usage( const char *program, const char *version) {
+usage(const char *program, const char *version) {
   const char *p;
 
-  p = strrchr( program, '/' );
-  if ( p )
+  p = strrchr(program, '/');
+  if (p)
     program = ++p;
 
-  fprintf( stderr, "%s v%s -- ETSI CoAP plugtest server\n"
-           "(c) 2012 Olaf Bergmann <bergmann@tzi.org>\n\n"
-           "usage: %s [-A address] [-p port]\n\n"
-           "\t-A address\tinterface address to bind to\n"
-           "\t-p port\t\tlisten on specified port\n"
-           "\t-v num\t\tverbosity level (default: 3)\n",
-           program, version, program );
+  fprintf(stderr, "%s v%s -- ETSI CoAP plugtest server\n"
+          "(c) 2012 Olaf Bergmann <bergmann@tzi.org>\n\n"
+          "usage: %s [-A address] [-p port]\n\n"
+          "\t-A address\tinterface address to bind to\n"
+          "\t-p port\t\tlisten on specified port\n"
+          "\t-v num\t\tverbosity level (default: 3)\n",
+          program, version, program);
 }
 
 static coap_context_t *
@@ -543,7 +543,7 @@ get_context(const char *node, const char *port) {
   hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST;
 
   s = getaddrinfo(node, port, &hints, &result);
-  if ( s != 0 ) {
+  if (s != 0) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
     return NULL;
   }
@@ -567,7 +567,7 @@ get_context(const char *node, const char *port) {
 
   fprintf(stderr, "no context available for interface '%s'\n", node);
 
- finish:
+finish:
   freeaddrinfo(result);
   return ctx;
 }
@@ -596,8 +596,8 @@ main(int argc, char **argv) {
       log_level = strtol(optarg, NULL, 10);
       break;
     default:
-      usage( argv[0], LIBCOAP_PACKAGE_VERSION );
-      exit( 1 );
+      usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+      exit(1);
     }
   }
 
@@ -609,24 +609,24 @@ main(int argc, char **argv) {
 
   init_resources(ctx);
 
-  memset (&sa, 0, sizeof(sa));
+  memset(&sa, 0, sizeof(sa));
   sigemptyset(&sa.sa_mask);
   sa.sa_handler = handle_sigint;
   sa.sa_flags = 0;
-  sigaction (SIGINT, &sa, NULL);
-  sigaction (SIGTERM, &sa, NULL);
+  sigaction(SIGINT, &sa, NULL);
+  sigaction(SIGTERM, &sa, NULL);
   /* So we do not exit on a SIGPIPE */
   sa.sa_handler = SIG_IGN;
-  sigaction (SIGPIPE, &sa, NULL);
+  sigaction(SIGPIPE, &sa, NULL);
 
-  while ( !quit ) {
-    result = coap_io_process( ctx, COAP_RESOURCE_CHECK_TIME * 1000 );
-    if ( result >= 0 ) {
+  while (!quit) {
+    result = coap_io_process(ctx, COAP_RESOURCE_CHECK_TIME * 1000);
+    if (result >= 0) {
       /* coap_check_resource_list( ctx ); */
     }
   }
 
-  coap_free_context( ctx );
+  coap_free_context(ctx);
   coap_cleanup();
 
   return 0;

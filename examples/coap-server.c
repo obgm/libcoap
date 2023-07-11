@@ -30,10 +30,10 @@
 #ifndef R_OK
 #define R_OK 4
 #endif
-char * strndup(const char* s1, size_t n);
+char *strndup(const char *s1, size_t n);
 char *
-strndup(const char* s1, size_t n) {
-  char* copy = (char*)malloc(n + 1);
+strndup(const char *s1, size_t n) {
+  char *copy = (char *)malloc(n + 1);
   if (copy) {
     memcpy(copy, s1, n);
     copy[n] = 0;
@@ -132,11 +132,10 @@ static int enable_ws = 0;
 static int ws_port = 80;
 static int wss_port = 443;
 
-static coap_dtls_pki_t *
-setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
+static coap_dtls_pki_t *setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
 
 typedef struct psk_sni_def_t {
-  char* sni_match;
+  char *sni_match;
   coap_bin_const_t *new_key;
   coap_bin_const_t *new_hint;
 } psk_sni_def_t;
@@ -161,7 +160,7 @@ typedef struct valid_ids_t {
 
 static valid_ids_t valid_ids = {0, NULL};
 typedef struct pki_sni_def_t {
-  char* sni_match;
+  char *sni_match;
   char *new_cert;
   char *new_ca;
 } pki_sni_def_t;
@@ -259,7 +258,7 @@ reference_resource_data(transient_value_t *entry) {
 }
 
 #define INDEX "This is a test server made with libcoap (see https://libcoap.net)\n" \
-              "Copyright (C) 2010--2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+  "Copyright (C) 2010--2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
 
 static void
 hnd_get_index(coap_resource_t *resource,
@@ -304,9 +303,8 @@ hnd_get_fetch_time(coap_resource_t *resource,
         coap_string_equal(query, ticks)) {
       /* parameter is in query, output ticks */
       len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
-    }
-    else if (code == COAP_REQUEST_CODE_FETCH && size == ticks->length &&
-             memcmp(data, ticks->s, ticks->length) == 0) {
+    } else if (code == COAP_REQUEST_CODE_FETCH && size == ticks->length &&
+               memcmp(data, ticks->s, ticks->length) == 0) {
       /* parameter is in data, output ticks */
       len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
     } else {      /* output human-readable time */
@@ -348,7 +346,7 @@ hnd_put_time(coap_resource_t *resource,
 
   /* if my_clock_base was deleted, we pretend to have no such resource */
   coap_pdu_set_code(response, my_clock_base ? COAP_RESPONSE_CODE_CHANGED :
-                                                   COAP_RESPONSE_CODE_CREATED);
+                    COAP_RESPONSE_CODE_CREATED);
 
   coap_resource_notify_observers(resource, NULL);
 
@@ -360,7 +358,7 @@ hnd_put_time(coap_resource_t *resource,
   } else {
     my_clock_base = 0;
     coap_ticks(&t);
-    while(size--)
+    while (size--)
       my_clock_base = my_clock_base * 10 + *data++;
     my_clock_base -= t / COAP_TICKS_PER_SECOND;
 
@@ -371,8 +369,8 @@ hnd_put_time(coap_resource_t *resource,
       coap_add_option(response,
                       COAP_OPTION_CONTENT_FORMAT,
                       coap_encode_var_safe(buf, sizeof(buf),
-                      COAP_MEDIATYPE_TEXT_PLAIN), buf);
-      coap_add_data(response, 22, (const uint8_t*)"Invalid set time value");
+                                           COAP_MEDIATYPE_TEXT_PLAIN), buf);
+      coap_add_data(response, 22, (const uint8_t *)"Invalid set time value");
       /* re-init as value is bad */
       my_clock_base = clock_offset;
     }
@@ -425,8 +423,7 @@ hnd_get_async(coap_resource_t *resource,
           delay = delay * 10 + (*p - '0');
         }
       } else {
-        coap_log_debug(
-                "async: query is just a number of seconds to alter delay\n");
+        coap_log_debug("async: query is just a number of seconds to alter delay\n");
       }
       if (delay == 0) {
         coap_log_info("async: delay of 0 not supported\n");
@@ -438,7 +435,7 @@ hnd_get_async(coap_resource_t *resource,
                                 request,
                                 COAP_TICKS_PER_SECOND * delay);
     if (async == NULL) {
-        coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
       return;
     }
     /*
@@ -467,10 +464,10 @@ hnd_get_async(coap_resource_t *resource,
 #endif
 static void
 hnd_get_example_data(coap_resource_t *resource,
-        coap_session_t *session,
-        const coap_pdu_t *request,
-        const coap_string_t *query,
-        coap_pdu_t *response) {
+                     coap_session_t *session,
+                     const coap_pdu_t *request,
+                     const coap_string_t *query,
+                     coap_pdu_t *response) {
   coap_binary_t body;
   if (!example_data_value) {
     /* Initialise for the first time */
@@ -498,7 +495,7 @@ hnd_get_example_data(coap_resource_t *resource,
 
 static void
 cache_free_app_data(void *data) {
-  coap_binary_t *bdata = (coap_binary_t*)data;
+  coap_binary_t *bdata = (coap_binary_t *)data;
   coap_delete_binary(bdata);
 }
 
@@ -508,10 +505,10 @@ cache_free_app_data(void *data) {
 
 static void
 hnd_put_example_data(coap_resource_t *resource,
-        coap_session_t *session,
-        const coap_pdu_t *request,
-        const coap_string_t *query COAP_UNUSED,
-        coap_pdu_t *response) {
+                     coap_session_t *session,
+                     const coap_pdu_t *request,
+                     const coap_string_t *query COAP_UNUSED,
+                     coap_pdu_t *response) {
   size_t size;
   const uint8_t *data;
   coap_opt_iterator_t opt_iter;
@@ -521,7 +518,7 @@ hnd_put_example_data(coap_resource_t *resource,
   coap_binary_t *data_so_far;
 
   if (coap_get_data_large(request, &size, &data, &offset, &total) &&
-    size != total) {
+      size != total) {
     /*
      * A part of the data has been received (COAP_BLOCK_SINGLE_BODY not set).
      * However, total unfortunately is only an indication, so it is not safe to
@@ -536,7 +533,7 @@ hnd_put_example_data(coap_resource_t *resource,
      */
     coap_cache_entry_t *cache_entry = coap_cache_get_by_pdu(session,
                                                             request,
-                                              COAP_CACHE_IS_SESSION_BASED);
+                                                            COAP_CACHE_IS_SESSION_BASED);
 
     if (offset == 0) {
       if (!cache_entry) {
@@ -546,8 +543,8 @@ hnd_put_example_data(coap_resource_t *resource,
          * the session is deleted as session_based is set here.
          */
         cache_entry = coap_new_cache_entry(session, request,
-                                         COAP_CACHE_NOT_RECORD_PDU,
-                                         COAP_CACHE_IS_SESSION_BASED, 0);
+                                           COAP_CACHE_NOT_RECORD_PDU,
+                                           COAP_CACHE_IS_SESSION_BASED, 0);
       } else {
         data_so_far = coap_cache_get_app_data(cache_entry);
         if (data_so_far) {
@@ -561,8 +558,7 @@ hnd_put_example_data(coap_resource_t *resource,
       if (offset == 0) {
         coap_log_warn("Unable to create a new cache entry\n");
       } else {
-        coap_log_warn(
-                 "No cache entry available for the non-first BLOCK\n");
+        coap_log_warn("No cache entry available for the non-first BLOCK\n");
       }
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       return;
@@ -598,8 +594,7 @@ hnd_put_example_data(coap_resource_t *resource,
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
     /* Need to de-reference as value may be in use elsewhere */
     release_resource_data(session, example_data_value);
-  }
-  else
+  } else
     /* just generated response */
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
 
@@ -611,8 +606,8 @@ hnd_put_example_data(coap_resource_t *resource,
   if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
                                   &opt_iter)) != NULL) {
     example_data_media_type =
-            coap_decode_var_bytes (coap_opt_value (option),
-                                   coap_opt_length (option));
+        coap_decode_var_bytes(coap_opt_value(option),
+                              coap_opt_length(option));
   } else {
     example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
   }
@@ -661,7 +656,7 @@ get_uri_proxy_scheme_info(const coap_pdu_t *request,
                           coap_string_t **uri_path,
                           coap_string_t **uri_query) {
 
-  const char *opt_val = (const char*)coap_opt_value(opt);
+  const char *opt_val = (const char *)coap_opt_value(opt);
   int opt_len = coap_opt_length(opt);
   coap_opt_iterator_t opt_iter;
 
@@ -669,24 +664,21 @@ get_uri_proxy_scheme_info(const coap_pdu_t *request,
       strncasecmp(opt_val, "coaps+tcp", 9) == 0) {
     uri->scheme = COAP_URI_SCHEME_COAPS_TCP;
     uri->port = COAPS_DEFAULT_PORT;
-  }
-  else if (opt_len == 8 &&
-      strncasecmp(opt_val, "coap+tcp", 8) == 0) {
+  } else if (opt_len == 8 &&
+             strncasecmp(opt_val, "coap+tcp", 8) == 0) {
     uri->scheme = COAP_URI_SCHEME_COAP_TCP;
     uri->port = COAP_DEFAULT_PORT;
-  }
-  else if (opt_len == 5 &&
-      strncasecmp(opt_val, "coaps", 5) == 0) {
+  } else if (opt_len == 5 &&
+             strncasecmp(opt_val, "coaps", 5) == 0) {
     uri->scheme = COAP_URI_SCHEME_COAPS;
     uri->port = COAPS_DEFAULT_PORT;
-  }
-  else if (opt_len == 4 &&
-      strncasecmp(opt_val, "coap", 4) == 0) {
+  } else if (opt_len == 4 &&
+             strncasecmp(opt_val, "coap", 4) == 0) {
     uri->scheme = COAP_URI_SCHEME_COAP;
     uri->port = COAP_DEFAULT_PORT;
   } else {
     coap_log_warn("Unsupported Proxy Scheme '%*.*s'\n",
-             opt_len, opt_len, opt_val);
+                  opt_len, opt_len, opt_val);
     return 0;
   }
 
@@ -701,8 +693,8 @@ get_uri_proxy_scheme_info(const coap_pdu_t *request,
   opt = coap_check_option(request, COAP_OPTION_URI_PORT, &opt_iter);
   if (opt) {
     uri->port =
-          coap_decode_var_bytes (coap_opt_value (opt),
-                                 coap_opt_length (opt));
+        coap_decode_var_bytes(coap_opt_value(opt),
+                              coap_opt_length(opt));
   }
   *uri_path = coap_get_uri_path(request);
   if (*uri_path) {
@@ -724,49 +716,43 @@ verify_proxy_scheme_supported(coap_uri_scheme_t scheme) {
   switch (scheme) {
   case COAP_URI_SCHEME_HTTP:
   case COAP_URI_SCHEME_HTTPS:
-  coap_log_warn("Proxy URI http or https not supported\n");
+    coap_log_warn("Proxy URI http or https not supported\n");
     return 0;
   case COAP_URI_SCHEME_COAP:
     break;
   case COAP_URI_SCHEME_COAPS:
     if (!coap_dtls_is_supported()) {
-      coap_log_warn(
-        "coaps URI scheme not supported for proxy\n");
+      coap_log_warn("coaps URI scheme not supported for proxy\n");
       return 0;
     }
     break;
   case COAP_URI_SCHEME_COAP_TCP:
     if (!coap_tcp_is_supported()) {
-      coap_log_warn(
-        "coap+tcp URI scheme not supported for proxy\n");
+      coap_log_warn("coap+tcp URI scheme not supported for proxy\n");
       return 0;
     }
     break;
   case COAP_URI_SCHEME_COAPS_TCP:
     if (!coap_tls_is_supported()) {
-      coap_log_warn(
-        "coaps+tcp URI scheme not supported for proxy\n");
+      coap_log_warn("coaps+tcp URI scheme not supported for proxy\n");
       return 0;
     }
     break;
   case COAP_URI_SCHEME_COAP_WS:
     if (!coap_ws_is_supported()) {
-      coap_log_warn(
-        "coap+ws URI scheme not supported for proxy\n");
+      coap_log_warn("coap+ws URI scheme not supported for proxy\n");
       return 0;
     }
     break;
   case COAP_URI_SCHEME_COAPS_WS:
     if (!coap_wss_is_supported()) {
-      coap_log_warn(
-        "coaps+ws URI scheme not supported for proxy\n");
+      coap_log_warn("coaps+ws URI scheme not supported for proxy\n");
       return 0;
     }
     break;
   case COAP_URI_SCHEME_LAST:
   default:
-      coap_log_warn(
-        "%d URI scheme not supported\n", scheme);
+    coap_log_warn("%d URI scheme not supported\n", scheme);
     break;
   }
   return 1;
@@ -776,7 +762,7 @@ static coap_dtls_cpsk_t *
 setup_cpsk(char *client_sni) {
   static coap_dtls_cpsk_t dtls_cpsk;
 
-  memset (&dtls_cpsk, 0, sizeof(dtls_cpsk));
+  memset(&dtls_cpsk, 0, sizeof(dtls_cpsk));
   dtls_cpsk.version = COAP_DTLS_CPSK_SETUP_VERSION;
   dtls_cpsk.client_sni = client_sni;
   dtls_cpsk.psk_info.identity.s = user;
@@ -817,8 +803,7 @@ get_proxy_session(coap_session_t *session, coap_pdu_t *response,
       return NULL;
     }
     memcpy(proxy_list[i].token->s, token->s, token->length);
-  }
-  else
+  } else
     proxy_list[i].token = NULL;
 
   if (query) {
@@ -828,8 +813,7 @@ get_proxy_session(coap_session_t *session, coap_pdu_t *response,
       return NULL;
     }
     memcpy(proxy_list[i].query->s, query->s, query->length);
-  }
-  else
+  } else
     proxy_list[i].query = NULL;
 
   proxy_list[i].ongoing = NULL;
@@ -858,7 +842,7 @@ remove_proxy_association(coap_session_t *session, int send_failure) {
       response = coap_pdu_init(proxy_list[i].req_type,
                                COAP_RESPONSE_CODE_BAD_GATEWAY,
                                coap_new_message_id(proxy_list[i].incoming),
-                          coap_session_max_pdu_size(proxy_list[i].incoming));
+                               coap_session_max_pdu_size(proxy_list[i].incoming));
       if (!response) {
         coap_log_info("PDU creation issue\n");
         return;
@@ -867,12 +851,11 @@ remove_proxy_association(coap_session_t *session, int send_failure) {
       if (proxy_list[i].token &&
           !coap_add_token(response, proxy_list[i].token->length,
                           proxy_list[i].token->s)) {
-        coap_log_debug(
-                       "Cannot add token to incoming proxy response PDU\n");
+        coap_log_debug("Cannot add token to incoming proxy response PDU\n");
       }
 
       if (coap_send(proxy_list[i].incoming, response) ==
-                                                          COAP_INVALID_MID) {
+          COAP_INVALID_MID) {
         coap_log_info("Failed to send PDU with 5.02 gateway issue\n");
       }
       break;
@@ -882,9 +865,9 @@ remove_proxy_association(coap_session_t *session, int send_failure) {
     coap_delete_binary(proxy_list[i].token);
     coap_delete_string(proxy_list[i].query);
     if (proxy_list_count-i > 1) {
-       memmove (&proxy_list[i],
-                &proxy_list[i+1],
-               (proxy_list_count-i-1) * sizeof (proxy_list[0]));
+      memmove(&proxy_list[i],
+              &proxy_list[i+1],
+              (proxy_list_count-i-1) * sizeof(proxy_list[0]));
     }
     proxy_list_count--;
   }
@@ -945,7 +928,7 @@ get_ongoing_proxy_session(coap_session_t *session,
   case COAP_URI_SCHEME_COAP_TCP:
   case COAP_URI_SCHEME_COAP_WS:
     new_proxy_list->ongoing =
-       coap_new_client_session(context, NULL, &dst, proto);
+        coap_new_client_session(context, NULL, &dst, proto);
     break;
   case COAP_URI_SCHEME_COAPS:
   case COAP_URI_SCHEME_COAPS_TCP:
@@ -962,13 +945,13 @@ get_ongoing_proxy_session(coap_session_t *session,
       coap_dtls_pki_t *dtls_pki = setup_pki(context, COAP_DTLS_ROLE_CLIENT,
                                             client_sni);
       new_proxy_list->ongoing =
-           coap_new_client_session_pki(context, NULL, &dst, proto, dtls_pki);
+          coap_new_client_session_pki(context, NULL, &dst, proto, dtls_pki);
     } else {
       /* Use our defined PSK */
       coap_dtls_cpsk_t *dtls_cpsk = setup_cpsk(client_sni);
 
       new_proxy_list->ongoing =
-           coap_new_client_session_psk2(context, NULL, &dst, proto, dtls_cpsk);
+          coap_new_client_session_psk2(context, NULL, &dst, proto, dtls_cpsk);
     }
     break;
   case COAP_URI_SCHEME_HTTP:
@@ -994,10 +977,10 @@ release_proxy_body_data(coap_session_t *session COAP_UNUSED,
 
 static void
 hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
-                coap_session_t *session,
-                const coap_pdu_t *request,
-                const coap_string_t *query,
-                coap_pdu_t *response) {
+              coap_session_t *session,
+              const coap_pdu_t *request,
+              const coap_string_t *query,
+              coap_pdu_t *response) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *opt;
   coap_opt_t *proxy_uri;
@@ -1028,7 +1011,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
     if (!get_uri_proxy_scheme_info(request, opt, &uri, &uri_path,
                                    &uri_query)) {
       coap_pdu_set_code(response,
-                             COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
+                        COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
       goto cleanup;
     }
     proxy_scheme_option = 1;
@@ -1039,15 +1022,15 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
   proxy_uri = coap_check_option(request, COAP_OPTION_PROXY_URI, &opt_iter);
   if (proxy_uri) {
     coap_log_info("Proxy URI '%.*s'\n",
-             coap_opt_length(proxy_uri),
-             (const char*)coap_opt_value(proxy_uri));
+                  coap_opt_length(proxy_uri),
+                  (const char *)coap_opt_value(proxy_uri));
     if (coap_split_proxy_uri(coap_opt_value(proxy_uri),
                              coap_opt_length(proxy_uri),
                              &uri) < 0) {
       /* Need to return a 5.05 RFC7252 Section 5.7.2 */
       coap_log_warn("Proxy URI not decodable\n");
       coap_pdu_set_code(response,
-                             COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
+                        COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
       goto cleanup;
     }
   }
@@ -1156,9 +1139,9 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
       default:
 add_in:
         coap_insert_optlist(&optlist,
-                    coap_new_optlist(opt_iter.number,
-                    coap_opt_length(option),
-                    coap_opt_value(option)));
+                            coap_new_optlist(opt_iter.number,
+                                             coap_opt_length(option),
+                                             coap_opt_value(option)));
         break;
       }
     }
@@ -1235,9 +1218,9 @@ hnd_delete(coap_resource_t *resource,
       release_resource_data(session, dynamic_entry[i].value);
       coap_delete_string(dynamic_entry[i].uri_path);
       if (dynamic_count-i > 1) {
-         memmove (&dynamic_entry[i],
-                  &dynamic_entry[i+1],
-                 (dynamic_count-i-1) * sizeof (dynamic_entry[0]));
+        memmove(&dynamic_entry[i],
+                &dynamic_entry[i+1],
+                (dynamic_count-i-1) * sizeof(dynamic_entry[0]));
       }
       dynamic_count--;
       break;
@@ -1305,10 +1288,10 @@ hnd_get(coap_resource_t *resource,
 
 static void
 hnd_put_post(coap_resource_t *resource,
-        coap_session_t *session,
-        const coap_pdu_t *request,
-        const coap_string_t *query COAP_UNUSED,
-        coap_pdu_t *response) {
+             coap_session_t *session,
+             const coap_pdu_t *request,
+             const coap_string_t *query COAP_UNUSED,
+             coap_pdu_t *response) {
   coap_string_t *uri_path;
   int i;
   size_t size;
@@ -1345,8 +1328,8 @@ hnd_put_post(coap_resource_t *resource,
       return;
     }
     dynamic_count++;
-    dynamic_entry = realloc (dynamic_entry,
-                             dynamic_count * sizeof(dynamic_entry[0]));
+    dynamic_entry = realloc(dynamic_entry,
+                            dynamic_count * sizeof(dynamic_entry[0]));
     if (dynamic_entry) {
       dynamic_entry[i].uri_path = uri_path;
       dynamic_entry[i].value = NULL;
@@ -1355,8 +1338,8 @@ hnd_put_post(coap_resource_t *resource,
       if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
                                       &opt_iter)) != NULL) {
         dynamic_entry[i].media_type =
-            coap_decode_var_bytes (coap_opt_value (option),
-                                   coap_opt_length (option));
+            coap_decode_var_bytes(coap_opt_value(option),
+                                  coap_opt_length(option));
       } else {
         dynamic_entry[i].media_type = COAP_MEDIATYPE_TEXT_PLAIN;
       }
@@ -1369,7 +1352,7 @@ hnd_put_post(coap_resource_t *resource,
       buf[sizeof(buf) - 1] = '\0';
       coap_add_attr(resource,
                     coap_make_str_const("ct"),
-                    coap_make_str_const((char*)buf),
+                    coap_make_str_const((char *)buf),
                     0);
     } else {
       dynamic_count--;
@@ -1385,7 +1368,7 @@ hnd_put_post(coap_resource_t *resource,
   resource_entry = &dynamic_entry[i];
 
   if (coap_get_data_large(request, &size, &data, &offset, &total) &&
-    size != total) {
+      size != total) {
     /*
      * A part of the data has been received (COAP_BLOCK_SINGLE_BODY not set).
      * However, total unfortunately is only an indication, so it is not safe to
@@ -1400,13 +1383,13 @@ hnd_put_post(coap_resource_t *resource,
      */
     coap_cache_entry_t *cache_entry = coap_cache_get_by_pdu(session,
                                                             request,
-                                              COAP_CACHE_IS_SESSION_BASED);
+                                                            COAP_CACHE_IS_SESSION_BASED);
 
     if (offset == 0) {
       if (!cache_entry) {
         cache_entry = coap_new_cache_entry(session, request,
-                                         COAP_CACHE_NOT_RECORD_PDU,
-                                         COAP_CACHE_IS_SESSION_BASED, 0);
+                                           COAP_CACHE_NOT_RECORD_PDU,
+                                           COAP_CACHE_IS_SESSION_BASED, 0);
       } else {
         data_so_far = coap_cache_get_app_data(cache_entry);
         if (data_so_far) {
@@ -1420,8 +1403,7 @@ hnd_put_post(coap_resource_t *resource,
       if (offset == 0) {
         coap_log_warn("Unable to create a new cache entry\n");
       } else {
-        coap_log_warn(
-                 "No cache entry available for the non-first BLOCK\n");
+        coap_log_warn("No cache entry available for the non-first BLOCK\n");
       }
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
       return;
@@ -1455,7 +1437,7 @@ hnd_put_post(coap_resource_t *resource,
       data_so_far = coap_cache_get_app_data(cache_entry);
       coap_cache_set_app_data(cache_entry, NULL, NULL);
     } else {
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTINUE);
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTINUE);
       return;
     }
   } else {
@@ -1530,10 +1512,10 @@ fail:
 
 static void
 hnd_put_post_unknown(coap_resource_t *resource COAP_UNUSED,
-                coap_session_t *session,
-                const coap_pdu_t *request,
-                const coap_string_t *query,
-                coap_pdu_t *response) {
+                     coap_session_t *session,
+                     const coap_pdu_t *request,
+                     const coap_string_t *query,
+                     coap_pdu_t *response) {
   coap_resource_t *r;
   coap_string_t *uri_path;
 
@@ -1554,8 +1536,8 @@ hnd_put_post_unknown(coap_resource_t *resource COAP_UNUSED,
    * Create a resource to handle the new URI
    * uri_path will get deleted when the resource is removed
    */
-  r = coap_resource_init((coap_str_const_t*)uri_path,
-        COAP_RESOURCE_FLAGS_RELEASE_URI | resource_flags);
+  r = coap_resource_init((coap_str_const_t *)uri_path,
+                         COAP_RESOURCE_FLAGS_RELEASE_URI | resource_flags);
   coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Dynamic\""), 0);
   coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_post);
   coap_register_request_handler(r, COAP_REQUEST_POST, hnd_put_post);
@@ -1573,9 +1555,9 @@ hnd_put_post_unknown(coap_resource_t *resource COAP_UNUSED,
 #if SERVER_CAN_PROXY
 static int
 proxy_event_handler(coap_session_t *session,
-              coap_event_t event) {
+                    coap_event_t event) {
 
-  switch(event) {
+  switch (event) {
   case COAP_EVENT_DTLS_CLOSED:
   case COAP_EVENT_TCP_CLOSED:
   case COAP_EVENT_SESSION_CLOSED:
@@ -1613,9 +1595,9 @@ proxy_event_handler(coap_session_t *session,
 
 static coap_response_t
 proxy_response_handler(coap_session_t *session,
-                const coap_pdu_t *sent COAP_UNUSED,
-                const coap_pdu_t *received,
-                const coap_mid_t id COAP_UNUSED) {
+                       const coap_pdu_t *sent COAP_UNUSED,
+                       const coap_pdu_t *received,
+                       const coap_mid_t id COAP_UNUSED) {
 
   coap_pdu_t *pdu = NULL;
   coap_session_t *incoming = NULL;
@@ -1648,7 +1630,7 @@ proxy_response_handler(coap_session_t *session,
   }
 
   coap_log_debug("** process upstream incoming %d.%02d response:\n",
-           COAP_RESPONSE_CLASS(rcv_code), rcv_code & 0x1F);
+                 COAP_RESPONSE_CLASS(rcv_code), rcv_code & 0x1F);
   if (coap_get_log_level() < COAP_LOG_DEBUG)
     coap_show_pdu(COAP_LOG_INFO, received);
 
@@ -1688,16 +1670,16 @@ proxy_response_handler(coap_session_t *session,
   while ((option = coap_option_next(&opt_iter))) {
     switch (opt_iter.number) {
     case COAP_OPTION_CONTENT_FORMAT:
-      media_type = coap_decode_var_bytes(coap_opt_value (option),
-                                         coap_opt_length (option));
+      media_type = coap_decode_var_bytes(coap_opt_value(option),
+                                         coap_opt_length(option));
       break;
     case COAP_OPTION_MAXAGE:
-      maxage = coap_decode_var_bytes(coap_opt_value (option),
-                                     coap_opt_length (option));
+      maxage = coap_decode_var_bytes(coap_opt_value(option),
+                                     coap_opt_length(option));
       break;
     case COAP_OPTION_ETAG:
-      etag = coap_decode_var_bytes8(coap_opt_value (option),
-                                    coap_opt_length (option));
+      etag = coap_decode_var_bytes8(coap_opt_value(option),
+                                    coap_opt_length(option));
       break;
     case COAP_OPTION_BLOCK2:
     case COAP_OPTION_Q_BLOCK2:
@@ -1705,9 +1687,9 @@ proxy_response_handler(coap_session_t *session,
       break;
     default:
       coap_insert_optlist(&optlist,
-                  coap_new_optlist(opt_iter.number,
-                  coap_opt_length(option),
-                  coap_opt_value(option)));
+                          coap_new_optlist(opt_iter.number,
+                                           coap_opt_length(option),
+                                           coap_opt_value(option)));
       break;
     }
   }
@@ -1736,11 +1718,11 @@ proxy_response_handler(coap_session_t *session,
 
 static void
 proxy_nack_handler(coap_session_t *session,
-             const coap_pdu_t *sent COAP_UNUSED,
-             const coap_nack_reason_t reason,
-             const coap_mid_t id COAP_UNUSED) {
+                   const coap_pdu_t *sent COAP_UNUSED,
+                   const coap_nack_reason_t reason,
+                   const coap_mid_t id COAP_UNUSED) {
 
-  switch(reason) {
+  switch (reason) {
   case COAP_NACK_TOO_MANY_RETRIES:
   case COAP_NACK_NOT_DELIVERABLE:
   case COAP_NACK_RST:
@@ -1801,8 +1783,8 @@ init_resources(coap_context_t *ctx) {
   if (coap_async_is_supported()) {
     r = coap_resource_init(coap_make_str_const("async"),
                            resource_flags |
-                             COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT |
-                             COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS);
+                           COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT |
+                           COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS);
     coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_async);
 
     coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
@@ -1846,13 +1828,13 @@ verify_cn_callback(const char *cn,
   } role = { .v = arg };
 
   coap_log_info("CN '%s' presented by %s (%s)\n",
-           cn, role.r == COAP_DTLS_ROLE_SERVER ? "client" : "server",
-           depth ? "CA" : "Certificate");
+                cn, role.r == COAP_DTLS_ROLE_SERVER ? "client" : "server",
+                depth ? "CA" : "Certificate");
   return 1;
 }
 
 static uint8_t *
-read_file_mem(const char* file, size_t *length) {
+read_file_mem(const char *file, size_t *length) {
   FILE *f;
   uint8_t *buf;
   struct stat statbuf;
@@ -1886,17 +1868,16 @@ read_file_mem(const char* file, size_t *length) {
 static void
 update_pki_key(coap_dtls_key_t *dtls_key, const char *key_name,
                const char *cert_name, const char *ca_name) {
-  memset (dtls_key, 0, sizeof(*dtls_key));
-  if ((key_name && strncasecmp (key_name, "pkcs11:", 7) == 0) ||
-      (cert_name && strncasecmp (cert_name, "pkcs11:", 7) == 0) ||
-      (ca_name && strncasecmp (ca_name, "pkcs11:", 7) == 0)) {
+  memset(dtls_key, 0, sizeof(*dtls_key));
+  if ((key_name && strncasecmp(key_name, "pkcs11:", 7) == 0) ||
+      (cert_name && strncasecmp(cert_name, "pkcs11:", 7) == 0) ||
+      (ca_name && strncasecmp(ca_name, "pkcs11:", 7) == 0)) {
     dtls_key->key_type = COAP_PKI_KEY_PKCS11;
     dtls_key->key.pkcs11.public_cert = cert_name;
     dtls_key->key.pkcs11.private_key = key_name ?  key_name : cert_name;
     dtls_key->key.pkcs11.ca = ca_name;
     dtls_key->key.pkcs11.user_pin = pkcs11_pin;
-  }
-  else if (!use_pem_buf && !is_rpk_not_cert) {
+  } else if (!use_pem_buf && !is_rpk_not_cert) {
     dtls_key->key_type = COAP_PKI_KEY_PEM;
     dtls_key->key.pem.public_cert = cert_name;
     dtls_key->key.pem.private_key = key_name ? key_name : cert_name;
@@ -1917,13 +1898,13 @@ update_pki_key(coap_dtls_key_t *dtls_key, const char *key_name,
     dtls_key->key.pem_buf.ca_cert_len = ca_mem_len;
     dtls_key->key.pem_buf.public_cert_len = cert_mem_len;
     dtls_key->key.pem_buf.private_key_len = key_mem ?
-                                             key_mem_len : cert_mem_len;
+                                            key_mem_len : cert_mem_len;
   }
 }
 
 static coap_dtls_key_t *
 verify_pki_sni_callback(const char *sni,
-                    void *arg COAP_UNUSED) {
+                        void *arg COAP_UNUSED) {
   static coap_dtls_key_t dtls_key;
 
   update_pki_key(&dtls_key, key_file, cert_file, ca_file);
@@ -1935,8 +1916,8 @@ verify_pki_sni_callback(const char *sni,
       /* Test for SNI to change cert + ca */
       if (strcasecmp(sni, valid_pki_snis.pki_sni_list[i].sni_match) == 0) {
         coap_log_info("Switching to using cert '%s' + ca '%s'\n",
-                 valid_pki_snis.pki_sni_list[i].new_cert,
-                 valid_pki_snis.pki_sni_list[i].new_ca);
+                      valid_pki_snis.pki_sni_list[i].new_cert,
+                      valid_pki_snis.pki_sni_list[i].new_ca);
         update_pki_key(&dtls_key, valid_pki_snis.pki_sni_list[i].new_cert,
                        valid_pki_snis.pki_sni_list[i].new_cert,
                        valid_pki_snis.pki_sni_list[i].new_ca);
@@ -1951,12 +1932,12 @@ verify_pki_sni_callback(const char *sni,
 
 static const coap_dtls_spsk_info_t *
 verify_psk_sni_callback(const char *sni,
-                    coap_session_t *c_session COAP_UNUSED,
-                    void *arg COAP_UNUSED) {
+                        coap_session_t *c_session COAP_UNUSED,
+                        void *arg COAP_UNUSED) {
   static coap_dtls_spsk_info_t psk_info;
 
   /* Preset with the defined keys */
-  memset (&psk_info, 0, sizeof(psk_info));
+  memset(&psk_info, 0, sizeof(psk_info));
   psk_info.hint.s = (const uint8_t *)hint;
   psk_info.hint.length = hint ? strlen(hint) : 0;
   psk_info.key.s = key;
@@ -1967,12 +1948,12 @@ verify_psk_sni_callback(const char *sni,
     for (i = 0; i < valid_psk_snis.count; i++) {
       /* Test for identity match to change key */
       if (strcasecmp(sni,
-                 valid_psk_snis.psk_sni_list[i].sni_match) == 0) {
+                     valid_psk_snis.psk_sni_list[i].sni_match) == 0) {
         coap_log_info("Switching to using '%.*s' hint + '%.*s' key\n",
-                 (int)valid_psk_snis.psk_sni_list[i].new_hint->length,
-                 valid_psk_snis.psk_sni_list[i].new_hint->s,
-                 (int)valid_psk_snis.psk_sni_list[i].new_key->length,
-                 valid_psk_snis.psk_sni_list[i].new_key->s);
+                      (int)valid_psk_snis.psk_sni_list[i].new_hint->length,
+                      valid_psk_snis.psk_sni_list[i].new_hint->s,
+                      (int)valid_psk_snis.psk_sni_list[i].new_key->length,
+                      valid_psk_snis.psk_sni_list[i].new_key->s);
         psk_info.hint = *valid_psk_snis.psk_sni_list[i].new_hint;
         psk_info.key = *valid_psk_snis.psk_sni_list[i].new_key;
         break;
@@ -1994,9 +1975,9 @@ verify_id_callback(coap_bin_const_t *identity,
   size_t i;
 
   coap_log_info("Identity '%.*s' requested, current hint '%.*s'\n", (int)identity->length,
-           identity->s,
-           s_psk_hint ? (int)s_psk_hint->length : 0,
-           s_psk_hint ? (const char *)s_psk_hint->s : "");
+                identity->s,
+                s_psk_hint ? (int)s_psk_hint->length : 0,
+                s_psk_hint ? (const char *)s_psk_hint->s : "");
 
   for (i = 0; i < valid_ids.count; i++) {
     /* Check for hint match */
@@ -2008,8 +1989,8 @@ verify_id_callback(coap_bin_const_t *identity,
     /* Test for identity match to change key */
     if (coap_binary_equal(identity, valid_ids.id_list[i].identity_match)) {
       coap_log_info("Switching to using '%.*s' key\n",
-               (int)valid_ids.id_list[i].new_key->length,
-               valid_ids.id_list[i].new_key->s);
+                    (int)valid_ids.id_list[i].new_key->length,
+                    valid_ids.id_list[i].new_key->s);
       return valid_ids.id_list[i].new_key;
     }
   }
@@ -2041,7 +2022,7 @@ setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *client_sni) {
     }
   }
 
-  memset (&dtls_pki, 0, sizeof(dtls_pki));
+  memset(&dtls_pki, 0, sizeof(dtls_pki));
   dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
   if (ca_file || root_ca_file) {
     /*
@@ -2062,13 +2043,12 @@ setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *client_sni) {
     dtls_pki.check_cert_revocation   = 1;
     dtls_pki.allow_no_crl            = 1;
     dtls_pki.allow_expired_crl       = 1;
-  }
-  else if (is_rpk_not_cert) {
+  } else if (is_rpk_not_cert) {
     dtls_pki.verify_peer_cert        = verify_peer_cert;
   }
   dtls_pki.is_rpk_not_cert        = is_rpk_not_cert;
   dtls_pki.validate_cn_call_back  = verify_cn_callback;
-  dtls_pki.cn_call_back_arg       = (void*)role;
+  dtls_pki.cn_call_back_arg       = (void *)role;
   dtls_pki.validate_sni_call_back = role == COAP_DTLS_ROLE_SERVER ?
                                     verify_pki_sni_callback : NULL;
   dtls_pki.sni_call_back_arg      = NULL;
@@ -2092,7 +2072,7 @@ static coap_dtls_spsk_t *
 setup_spsk(void) {
   static coap_dtls_spsk_t dtls_spsk;
 
-  memset (&dtls_spsk, 0, sizeof(dtls_spsk));
+  memset(&dtls_spsk, 0, sizeof(dtls_spsk));
   dtls_spsk.version = COAP_DTLS_SPSK_SETUP_VERSION;
   dtls_spsk.validate_id_call_back = valid_ids.count ?
                                     verify_id_callback : NULL;
@@ -2110,8 +2090,7 @@ fill_keystore(coap_context_t *ctx) {
 
   if (cert_file == NULL && key_defined == 0) {
     if (coap_dtls_is_supported() || coap_tls_is_supported()) {
-      coap_log_debug(
-           "(D)TLS not enabled as none of -k, -c or -M options specified\n");
+      coap_log_debug("(D)TLS not enabled as none of -k, -c or -M options specified\n");
     }
     return;
   }
@@ -2120,7 +2099,7 @@ fill_keystore(coap_context_t *ctx) {
                                           COAP_DTLS_ROLE_SERVER, NULL);
     if (!coap_context_set_pki(ctx, dtls_pki)) {
       coap_log_info("Unable to set up %s keys\n",
-               is_rpk_not_cert ? "RPK" : "PKI");
+                    is_rpk_not_cert ? "RPK" : "PKI");
       /* So we do not set up DTLS */
       cert_file = NULL;
     }
@@ -2137,183 +2116,183 @@ fill_keystore(coap_context_t *ctx) {
 }
 
 static void
-usage( const char *program, const char *version) {
+usage(const char *program, const char *version) {
   const char *p;
   char buffer[120];
   const char *lib_build = coap_package_build();
 
-  p = strrchr( program, '/' );
-  if ( p )
+  p = strrchr(program, '/');
+  if (p)
     program = ++p;
 
-  fprintf( stderr, "%s v%s -- a small CoAP implementation\n"
-     "(c) 2010,2011,2015-2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
-     "Build: %s\n"
-     "%s\n"
-    , program, version, lib_build,
-    coap_string_tls_version(buffer, sizeof(buffer)));
+  fprintf(stderr, "%s v%s -- a small CoAP implementation\n"
+          "(c) 2010,2011,2015-2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+          "Build: %s\n"
+          "%s\n"
+          , program, version, lib_build,
+          coap_string_tls_version(buffer, sizeof(buffer)));
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
-     "Usage: %s [-d max] [-e] [-g group] [-l loss] [-p port] [-r] [-v num]\n"
-     "\t\t[-w [port][,secure_port]] [-A address]\n"
-     "\t\t[-E oscore_conf_file[,seq_file]] [-G group_if] [-L value] [-N]\n"
-     "\t\t[-P scheme://address[:port],[name1[,name2..]]]\n"
-     "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
-     "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
-     "\t\t[-s match_psk_sni_file] [-u user]]\n"
-     "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
-     "\t\t[-J pkcs11_pin] [-M rpk_file] [-R trust_casfile]\n"
-     "\t\t[-S match_pki_sni_file]]\n"
-     "General Options\n"
-     "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
-     "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
-     "\t       \t\tuntil one of the dynamic resources has been deleted\n"
-     "\t-e     \t\tEcho back the data sent with a PUT\n"
-     "\t-g group\tJoin the given multicast group\n"
-     "\t       \t\tNote: DTLS over multicast is not currently supported\n"
-     "\t-l list\t\tFail to send some datagrams specified by a comma\n"
-     "\t       \t\tseparated list of numbers or number ranges\n"
-     "\t       \t\t(for debugging only)\n"
-     "\t-l loss%%\tRandomly fail to send datagrams with the specified\n"
-     "\t       \t\tprobability - 100%% all datagrams, 0%% no datagrams\n"
-     "\t       \t\t(for debugging only)\n"
-     "\t-p port\t\tListen on specified port for UDP and TCP. If (D)TLS is\n"
-     "\t       \t\tenabled, then the coap-server will also listen on\n"
-     "\t       \t\t'port'+1 for DTLS and TLS.  The default port is 5683\n"
-     "\t-r     \t\tEnable multicast per resource support.  If enabled,\n"
-     "\t       \t\tonly '/', '/async' and '/.well-known/core' are enabled\n"
-     "\t       \t\tfor multicast requests support, otherwise all\n"
-     "\t       \t\tresources are enabled\n"
-     "\t-t     \t\tTrack resource's observe values so observe\n"
-     "\t       \t\tsubscriptions can be maintained over a server restart.\n"
-     "\t       \t\tNote: Use 'kill SIGUSR2 <pid>' for controlled shutdown\n"
-     "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
-     "\t       \t\tCoAP logging\n"
-     "\t-w [port][,secure_port]\n"
-     "\t       \t\tEnable WebSockets support on port (WS) and/or secure_port\n"
-     "\t       \t\t(WSS), comma separated\n"
-     "\t-A address\tInterface address to bind to\n"
-     "\t-E oscore_conf_file[,seq_file]\n"
-     "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
-     "\t       \t\tcoap-oscore-conf(5) for definitions.\n"
-     "\t       \t\tOptional seq_file is used to save the current transmit\n"
-     "\t       \t\tsequence number, so on restart sequence numbers continue\n"
-     "\t-G group_if\tUse this interface for listening for the multicast\n"
-     "\t       \t\tgroup. This can be different from the implied interface\n"
-     "\t       \t\tif the -A option is used\n"
-     "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
-     "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
-     "\t       \t\t(Sum of one or more of 1,2 and 4)\n"
-     "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
-     "\t       \t\tevery fifth response will still be sent as a confirmable\n"
-     "\t       \t\tresponse (RFC 7641 requirement)\n"
-    , program);
-  fprintf( stderr,
-     "\t-P scheme://address[:port],[name1[,name2[,name3..]]]\n"
-     "\t       \t\tScheme, address, optional port of how to connect to the\n"
-     "\t       \t\tnext proxy server and zero or more names (comma\n"
-     "\t       \t\tseparated) that this proxy server is known by. The\n"
-     "\t       \t\t, (comma) is required. If there is no name1 or if the\n"
-     "\t       \t\thostname of the incoming proxy request matches one of\n"
-     "\t       \t\tthese names, then this server is considered to be the\n"
-     "\t       \t\tfinal endpoint. If scheme://address[:port] is not\n"
-     "\t       \t\tdefined before the leading , (comma) of the first name,\n"
-     "\t       \t\tthen the ongoing connection will be a direct connection.\n"
-     "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
-     "\t-T max_token_length\tSet the maximum token length (8-65804)\n"
-     "\t-U type\t\tTreat address defined by -A as a Unix socket address.\n"
-     "\t       \t\ttype is 'coap', 'coaps', 'coap+tcp' or 'coaps+tcp'\n"
-     "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
-     "\t       \t\tlibrary logging\n"
-     "\t-X size\t\tMaximum message size to use for TCP based connections\n"
-     "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
-     "PSK Options (if supported by underlying (D)TLS library)\n"
-     "\t-h hint\t\tIdentity Hint to send. Default is CoAP. Zero length is\n"
-     "\t       \t\tno hint\n"
-     "\t-i match_identity_file\n"
-     "\t       \t\tThis is a file that contains one or more lines of\n"
-     "\t       \t\tIdentity Hints and (user) Identities to match for\n"
-     "\t       \t\ta different new Pre-Shared Key (PSK) (comma separated)\n"
-     "\t       \t\tto be used. E.g., per line\n"
-     "\t       \t\t hint_to_match,identity_to_match,use_key\n"
-     "\t       \t\tNote: -k still needs to be defined for the default case\n"
-     "\t       \t\tNote: A match using the -s option may mean that the\n"
-     "\t       \t\tcurrent Identity Hint is different to that defined by -h\n"
-     "\t-k key \t\tPre-Shared Key. This argument requires (D)TLS with PSK\n"
-     "\t       \t\tto be available. This cannot be empty if defined.\n"
-     "\t       \t\tNote that both -c and -k need to be defined for both\n"
-     "\t       \t\tPSK and PKI to be concurrently supported\n"
-     "\t-s match_psk_sni_file\n"
-     "\t       \t\tThis is a file that contains one or more lines of\n"
-     "\t       \t\treceived Subject Name Identifier (SNI) to match to use\n"
-     "\t       \t\ta different Identity Hint and associated Pre-Shared Key\n"
-     "\t       \t\t(PSK) (comma separated) instead of the '-h hint' and\n"
-     "\t       \t\t'-k key' options. E.g., per line\n"
-     "\t       \t\t sni_to_match,use_hint,with_key\n"
-     "\t       \t\tNote: -k still needs to be defined for the default case\n"
-     "\t       \t\tif there is not a match\n"
-     "\t       \t\tNote: The associated Pre-Shared Key will get updated if\n"
-     "\t       \t\tthere is also a -i match.  The update checking order is\n"
-     "\t       \t\t-s followed by -i\n"
-     "\t-u user\t\tUser identity for pre-shared key mode (only used if\n"
-     "\t       \t\toption -P is set)\n"
-     );
+          "Usage: %s [-d max] [-e] [-g group] [-l loss] [-p port] [-r] [-v num]\n"
+          "\t\t[-w [port][,secure_port]] [-A address]\n"
+          "\t\t[-E oscore_conf_file[,seq_file]] [-G group_if] [-L value] [-N]\n"
+          "\t\t[-P scheme://address[:port],[name1[,name2..]]]\n"
+          "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
+          "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
+          "\t\t[-s match_psk_sni_file] [-u user]]\n"
+          "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
+          "\t\t[-J pkcs11_pin] [-M rpk_file] [-R trust_casfile]\n"
+          "\t\t[-S match_pki_sni_file]]\n"
+          "General Options\n"
+          "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
+          "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
+          "\t       \t\tuntil one of the dynamic resources has been deleted\n"
+          "\t-e     \t\tEcho back the data sent with a PUT\n"
+          "\t-g group\tJoin the given multicast group\n"
+          "\t       \t\tNote: DTLS over multicast is not currently supported\n"
+          "\t-l list\t\tFail to send some datagrams specified by a comma\n"
+          "\t       \t\tseparated list of numbers or number ranges\n"
+          "\t       \t\t(for debugging only)\n"
+          "\t-l loss%%\tRandomly fail to send datagrams with the specified\n"
+          "\t       \t\tprobability - 100%% all datagrams, 0%% no datagrams\n"
+          "\t       \t\t(for debugging only)\n"
+          "\t-p port\t\tListen on specified port for UDP and TCP. If (D)TLS is\n"
+          "\t       \t\tenabled, then the coap-server will also listen on\n"
+          "\t       \t\t'port'+1 for DTLS and TLS.  The default port is 5683\n"
+          "\t-r     \t\tEnable multicast per resource support.  If enabled,\n"
+          "\t       \t\tonly '/', '/async' and '/.well-known/core' are enabled\n"
+          "\t       \t\tfor multicast requests support, otherwise all\n"
+          "\t       \t\tresources are enabled\n"
+          "\t-t     \t\tTrack resource's observe values so observe\n"
+          "\t       \t\tsubscriptions can be maintained over a server restart.\n"
+          "\t       \t\tNote: Use 'kill SIGUSR2 <pid>' for controlled shutdown\n"
+          "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
+          "\t       \t\tCoAP logging\n"
+          "\t-w [port][,secure_port]\n"
+          "\t       \t\tEnable WebSockets support on port (WS) and/or secure_port\n"
+          "\t       \t\t(WSS), comma separated\n"
+          "\t-A address\tInterface address to bind to\n"
+          "\t-E oscore_conf_file[,seq_file]\n"
+          "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
+          "\t       \t\tcoap-oscore-conf(5) for definitions.\n"
+          "\t       \t\tOptional seq_file is used to save the current transmit\n"
+          "\t       \t\tsequence number, so on restart sequence numbers continue\n"
+          "\t-G group_if\tUse this interface for listening for the multicast\n"
+          "\t       \t\tgroup. This can be different from the implied interface\n"
+          "\t       \t\tif the -A option is used\n"
+          "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
+          "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
+          "\t       \t\t(Sum of one or more of 1,2 and 4)\n"
+          "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
+          "\t       \t\tevery fifth response will still be sent as a confirmable\n"
+          "\t       \t\tresponse (RFC 7641 requirement)\n"
+          , program);
   fprintf(stderr,
-     "PKI Options (if supported by underlying (D)TLS library)\n"
-     "\tNote: If any one of '-c certfile', '-j keyfile' or '-C cafile' is in\n"
-     "\tPKCS11 URI naming format (pkcs11: prefix), then any remaining non\n"
-     "\tPKCS11 URI file definitions have to be in DER, not PEM, format.\n"
-     "\tOtherwise all of '-c certfile', '-j keyfile' or '-C cafile' are in\n"
-     "\tPEM format.\n\n"
-     "\t-c certfile\tPEM file or PKCS11 URI for the certificate. The private\n"
-     "\t       \t\tkey can also be in the PEM file, or has the same PKCS11\n"
-     "\t       \t\tURI. If not, the private key is defined by '-j keyfile'.\n"
-     "\t       \t\tNote that both -c and -k need to be defined for both\n"
-     "\t       \t\tPSK and PKI to be concurrently supported\n"
-     "\t-j keyfile\tPEM file or PKCS11 URI for the private key for the\n"
-     "\t       \t\tcertificate in '-c certfile' if the parameter is\n"
-     "\t       \t\tdifferent from certfile in '-c certfile'\n"
-     "\t-m     \t\tUse COAP_PKI_KEY_PEM_BUF instead of COAP_PKI_KEY_PEM i/f\n"
-     "\t       \t\tby reading into memory the Cert / CA file (for testing)\n"
-     "\t-n     \t\tDisable remote peer certificate checking. This gives\n"
-     "\t       \t\tclients the ability to use PKI, but without any defined\n"
-     "\t       \t\tcertificates\n"
-     "\t-C cafile\tPEM file or PKCS11 URI that contains a list of one or\n"
-     "\t       \t\tmore CAs that are to be passed to the client for the\n"
-     "\t       \t\tclient to determine what client certificate to use.\n"
-     "\t       \t\tNormally, this list of CAs would be the root CA and and\n"
-     "\t       \t\tany intermediate CAs. Ideally the server certificate\n"
-     "\t       \t\tshould be signed by the same CA so that mutual\n"
-     "\t       \t\tauthentication can take place. The contents of cafile\n"
-     "\t       \t\tare added to the trusted store of root CAs.\n"
-     "\t       \t\tUsing the -C or -R options will will trigger the\n"
-     "\t       \t\tvalidation of the client certificate unless overridden\n"
-     "\t       \t\tby the -n option\n"
-     "\t-J pkcs11_pin\tThe user pin to unlock access to the PKCS11 token\n"
-     "\t-M rpk_file\tRaw Public Key (RPK) PEM file or PKCS11 URI that\n"
-     "\t       \t\tcontains both PUBLIC KEY and PRIVATE KEY or just\n"
-     "\t       \t\tEC PRIVATE KEY. (GnuTLS and TinyDTLS(PEM) support only).\n"
-     "\t       \t\t'-C cafile' or '-R trust_casfile' are not required\n"
-     "\t-R trust_casfile\n"
-     "\t       \t\tPEM file containing the set of trusted root CAs\n"
-     "\t       \t\tthat are to be used to validate the client certificate.\n"
-     "\t       \t\tAlternatively, this can point to a directory containing\n"
-     "\t       \t\ta set of CA PEM files.\n"
-     "\t       \t\tUsing '-R trust_casfile' disables common CA mutual\n"
-     "\t       \t\tauthentication which can only be done by using\n"
-     "\t       \t\t'-C cafile'.\n"
-     "\t       \t\tUsing the -C or -R options will will trigger the\n"
-     "\t       \t\tvalidation of the client certificate unless overridden\n"
-     "\t       \t\tby the -n option\n"
-     "\t-S match_pki_sni_file\n"
-     "\t       \t\tThis option denotes a file that contains one or more\n"
-     "\t       \t\tlines of Subject Name Identifier (SNI) to match for new\n"
-     "\t       \t\tCert file and new CA file (comma separated) to be used.\n"
-     "\t       \t\tE.g., per line\n"
-     "\t       \t\t sni_to_match,new_cert_file,new_ca_file\n"
-     "\t       \t\tNote: -c and -C still need to be defined for the default\n"
-     "\t       \t\tcase\n"
-    );
+          "\t-P scheme://address[:port],[name1[,name2[,name3..]]]\n"
+          "\t       \t\tScheme, address, optional port of how to connect to the\n"
+          "\t       \t\tnext proxy server and zero or more names (comma\n"
+          "\t       \t\tseparated) that this proxy server is known by. The\n"
+          "\t       \t\t, (comma) is required. If there is no name1 or if the\n"
+          "\t       \t\thostname of the incoming proxy request matches one of\n"
+          "\t       \t\tthese names, then this server is considered to be the\n"
+          "\t       \t\tfinal endpoint. If scheme://address[:port] is not\n"
+          "\t       \t\tdefined before the leading , (comma) of the first name,\n"
+          "\t       \t\tthen the ongoing connection will be a direct connection.\n"
+          "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
+          "\t-T max_token_length\tSet the maximum token length (8-65804)\n"
+          "\t-U type\t\tTreat address defined by -A as a Unix socket address.\n"
+          "\t       \t\ttype is 'coap', 'coaps', 'coap+tcp' or 'coaps+tcp'\n"
+          "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
+          "\t       \t\tlibrary logging\n"
+          "\t-X size\t\tMaximum message size to use for TCP based connections\n"
+          "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
+          "PSK Options (if supported by underlying (D)TLS library)\n"
+          "\t-h hint\t\tIdentity Hint to send. Default is CoAP. Zero length is\n"
+          "\t       \t\tno hint\n"
+          "\t-i match_identity_file\n"
+          "\t       \t\tThis is a file that contains one or more lines of\n"
+          "\t       \t\tIdentity Hints and (user) Identities to match for\n"
+          "\t       \t\ta different new Pre-Shared Key (PSK) (comma separated)\n"
+          "\t       \t\tto be used. E.g., per line\n"
+          "\t       \t\t hint_to_match,identity_to_match,use_key\n"
+          "\t       \t\tNote: -k still needs to be defined for the default case\n"
+          "\t       \t\tNote: A match using the -s option may mean that the\n"
+          "\t       \t\tcurrent Identity Hint is different to that defined by -h\n"
+          "\t-k key \t\tPre-Shared Key. This argument requires (D)TLS with PSK\n"
+          "\t       \t\tto be available. This cannot be empty if defined.\n"
+          "\t       \t\tNote that both -c and -k need to be defined for both\n"
+          "\t       \t\tPSK and PKI to be concurrently supported\n"
+          "\t-s match_psk_sni_file\n"
+          "\t       \t\tThis is a file that contains one or more lines of\n"
+          "\t       \t\treceived Subject Name Identifier (SNI) to match to use\n"
+          "\t       \t\ta different Identity Hint and associated Pre-Shared Key\n"
+          "\t       \t\t(PSK) (comma separated) instead of the '-h hint' and\n"
+          "\t       \t\t'-k key' options. E.g., per line\n"
+          "\t       \t\t sni_to_match,use_hint,with_key\n"
+          "\t       \t\tNote: -k still needs to be defined for the default case\n"
+          "\t       \t\tif there is not a match\n"
+          "\t       \t\tNote: The associated Pre-Shared Key will get updated if\n"
+          "\t       \t\tthere is also a -i match.  The update checking order is\n"
+          "\t       \t\t-s followed by -i\n"
+          "\t-u user\t\tUser identity for pre-shared key mode (only used if\n"
+          "\t       \t\toption -P is set)\n"
+         );
+  fprintf(stderr,
+          "PKI Options (if supported by underlying (D)TLS library)\n"
+          "\tNote: If any one of '-c certfile', '-j keyfile' or '-C cafile' is in\n"
+          "\tPKCS11 URI naming format (pkcs11: prefix), then any remaining non\n"
+          "\tPKCS11 URI file definitions have to be in DER, not PEM, format.\n"
+          "\tOtherwise all of '-c certfile', '-j keyfile' or '-C cafile' are in\n"
+          "\tPEM format.\n\n"
+          "\t-c certfile\tPEM file or PKCS11 URI for the certificate. The private\n"
+          "\t       \t\tkey can also be in the PEM file, or has the same PKCS11\n"
+          "\t       \t\tURI. If not, the private key is defined by '-j keyfile'.\n"
+          "\t       \t\tNote that both -c and -k need to be defined for both\n"
+          "\t       \t\tPSK and PKI to be concurrently supported\n"
+          "\t-j keyfile\tPEM file or PKCS11 URI for the private key for the\n"
+          "\t       \t\tcertificate in '-c certfile' if the parameter is\n"
+          "\t       \t\tdifferent from certfile in '-c certfile'\n"
+          "\t-m     \t\tUse COAP_PKI_KEY_PEM_BUF instead of COAP_PKI_KEY_PEM i/f\n"
+          "\t       \t\tby reading into memory the Cert / CA file (for testing)\n"
+          "\t-n     \t\tDisable remote peer certificate checking. This gives\n"
+          "\t       \t\tclients the ability to use PKI, but without any defined\n"
+          "\t       \t\tcertificates\n"
+          "\t-C cafile\tPEM file or PKCS11 URI that contains a list of one or\n"
+          "\t       \t\tmore CAs that are to be passed to the client for the\n"
+          "\t       \t\tclient to determine what client certificate to use.\n"
+          "\t       \t\tNormally, this list of CAs would be the root CA and and\n"
+          "\t       \t\tany intermediate CAs. Ideally the server certificate\n"
+          "\t       \t\tshould be signed by the same CA so that mutual\n"
+          "\t       \t\tauthentication can take place. The contents of cafile\n"
+          "\t       \t\tare added to the trusted store of root CAs.\n"
+          "\t       \t\tUsing the -C or -R options will will trigger the\n"
+          "\t       \t\tvalidation of the client certificate unless overridden\n"
+          "\t       \t\tby the -n option\n"
+          "\t-J pkcs11_pin\tThe user pin to unlock access to the PKCS11 token\n"
+          "\t-M rpk_file\tRaw Public Key (RPK) PEM file or PKCS11 URI that\n"
+          "\t       \t\tcontains both PUBLIC KEY and PRIVATE KEY or just\n"
+          "\t       \t\tEC PRIVATE KEY. (GnuTLS and TinyDTLS(PEM) support only).\n"
+          "\t       \t\t'-C cafile' or '-R trust_casfile' are not required\n"
+          "\t-R trust_casfile\n"
+          "\t       \t\tPEM file containing the set of trusted root CAs\n"
+          "\t       \t\tthat are to be used to validate the client certificate.\n"
+          "\t       \t\tAlternatively, this can point to a directory containing\n"
+          "\t       \t\ta set of CA PEM files.\n"
+          "\t       \t\tUsing '-R trust_casfile' disables common CA mutual\n"
+          "\t       \t\tauthentication which can only be done by using\n"
+          "\t       \t\t'-C cafile'.\n"
+          "\t       \t\tUsing the -C or -R options will will trigger the\n"
+          "\t       \t\tvalidation of the client certificate unless overridden\n"
+          "\t       \t\tby the -n option\n"
+          "\t-S match_pki_sni_file\n"
+          "\t       \t\tThis option denotes a file that contains one or more\n"
+          "\t       \t\tlines of Subject Name Identifier (SNI) to match for new\n"
+          "\t       \t\tCert file and new CA file (comma separated) to be used.\n"
+          "\t       \t\tE.g., per line\n"
+          "\t       \t\t sni_to_match,new_cert_file,new_ca_file\n"
+          "\t       \t\tNote: -c and -C still need to be defined for the default\n"
+          "\t       \t\tcase\n"
+         );
 }
 
 static coap_context_t *
@@ -2345,8 +2324,8 @@ get_context(const char *node, const char *port) {
     s_port = u_s_port + 1;
   }
   scheme_hint_bits =
-     coap_get_available_scheme_hint_bits(cert_file != NULL || key_defined != 0,
-                                         enable_ws, use_unix_proto);
+      coap_get_available_scheme_hint_bits(cert_file != NULL || key_defined != 0,
+                                          enable_ws, use_unix_proto);
   info_list = coap_resolve_address_info(node ? &local : NULL, u_s_port, s_port,
                                         AI_PASSIVE | AI_NUMERICHOST,
                                         scheme_hint_bits,
@@ -2357,7 +2336,7 @@ get_context(const char *node, const char *port) {
     ep = coap_new_endpoint(ctx, &info->addr, info->proto);
     if (!ep) {
       coap_log_warn("cannot create endpoint for proto %u\n",
-                     info->proto);
+                    info->proto);
     } else {
       have_ep = 1;
     }
@@ -2397,7 +2376,7 @@ cmdline_proxy(char *arg) {
     proxy_host_name_count++;
     next_name = strchr(next_name+1, ',');
   }
-  proxy_host_name_list = coap_malloc(proxy_host_name_count * sizeof(char*));
+  proxy_host_name_list = coap_malloc(proxy_host_name_count * sizeof(char *));
   next_name = host_start;
   ofs = 0;
   while (next_name) {
@@ -2423,8 +2402,8 @@ cmdline_read_user(char *arg, unsigned char **buf, size_t maxlen) {
 #endif /* SERVER_CAN_PROXY */
 
 static FILE *oscore_seq_num_fp = NULL;
-static const char* oscore_conf_file = NULL;
-static const char* oscore_seq_save_file = NULL;
+static const char *oscore_conf_file = NULL;
+static const char *oscore_seq_save_file = NULL;
 
 static int
 oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
@@ -2506,11 +2485,12 @@ cmdline_read_key(char *arg, unsigned char **buf, size_t maxlen) {
     return len;
   }
   /* Need at least one byte for the pre-shared key */
-  coap_log_crit("Invalid Pre-Shared Key specified\n" );
+  coap_log_crit("Invalid Pre-Shared Key specified\n");
   return -1;
 }
 
-static int cmdline_read_psk_sni_check(char *arg) {
+static int
+cmdline_read_psk_sni_check(char *arg) {
   FILE *fp = fopen(arg, "r");
   static char tmpbuf[256];
   if (fp == NULL) {
@@ -2530,7 +2510,7 @@ static int cmdline_read_psk_sni_check(char *arg) {
     if (tcp) {
       psk_sni_def_t *new_psk_sni_list;
       new_psk_sni_list = realloc(valid_psk_snis.psk_sni_list,
-              (valid_psk_snis.count + 1)*sizeof (valid_psk_snis.psk_sni_list[0]));
+                                 (valid_psk_snis.count + 1)*sizeof(valid_psk_snis.psk_sni_list[0]));
       if (new_psk_sni_list == NULL) {
         break;
       }
@@ -2540,10 +2520,10 @@ static int cmdline_read_psk_sni_check(char *arg) {
       tcp = strchr(cp, ',');
       if (tcp) {
         valid_psk_snis.psk_sni_list[valid_psk_snis.count].new_hint =
-                             coap_new_bin_const((const uint8_t *)cp, tcp-cp);
+            coap_new_bin_const((const uint8_t *)cp, tcp-cp);
         cp = tcp+1;
         valid_psk_snis.psk_sni_list[valid_psk_snis.count].new_key =
-                             coap_new_bin_const((const uint8_t *)cp, strlen(cp));
+            coap_new_bin_const((const uint8_t *)cp, strlen(cp));
         valid_psk_snis.count++;
       } else {
         free(valid_psk_snis.psk_sni_list[valid_psk_snis.count].sni_match);
@@ -2575,7 +2555,7 @@ cmdline_read_identity_check(char *arg) {
     if (tcp) {
       id_def_t *new_id_list;
       new_id_list = realloc(valid_ids.id_list,
-                          (valid_ids.count + 1)*sizeof (valid_ids.id_list[0]));
+                            (valid_ids.count + 1)*sizeof(valid_ids.id_list[0]));
       if (new_id_list == NULL) {
         break;
       }
@@ -2585,10 +2565,10 @@ cmdline_read_identity_check(char *arg) {
       tcp = strchr(cp, ',');
       if (tcp) {
         valid_ids.id_list[valid_ids.count].identity_match =
-                               coap_new_bin_const((const uint8_t *)cp, tcp-cp);
+            coap_new_bin_const((const uint8_t *)cp, tcp-cp);
         cp = tcp+1;
         valid_ids.id_list[valid_ids.count].new_key =
-                           coap_new_bin_const((const uint8_t *)cp, strlen(cp));
+            coap_new_bin_const((const uint8_t *)cp, strlen(cp));
         valid_ids.count++;
       } else {
         free(valid_ids.id_list[valid_ids.count].hint_match);
@@ -2666,32 +2646,32 @@ cmdline_read_pki_sni_check(char *arg) {
     if (tcp) {
       pki_sni_def_t *new_pki_sni_list;
       new_pki_sni_list = realloc(valid_pki_snis.pki_sni_list,
-            (valid_pki_snis.count + 1)*sizeof (valid_pki_snis.pki_sni_list[0]));
+                                 (valid_pki_snis.count + 1)*sizeof(valid_pki_snis.pki_sni_list[0]));
       if (new_pki_sni_list == NULL) {
         break;
       }
       valid_pki_snis.pki_sni_list = new_pki_sni_list;
       valid_pki_snis.pki_sni_list[valid_pki_snis.count].sni_match =
-                                                           strndup(cp, tcp-cp);
+          strndup(cp, tcp-cp);
       cp = tcp+1;
       tcp = strchr(cp, ',');
       if (tcp) {
         int fail = 0;
         valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_cert =
-                             strndup(cp, tcp-cp);
+            strndup(cp, tcp-cp);
         cp = tcp+1;
         valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_ca =
-                             strndup(cp, strlen(cp));
+            strndup(cp, strlen(cp));
         if (access(valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_cert,
-            R_OK)) {
+                   R_OK)) {
           coap_log_err("SNI file: Cert File: %s: Unable to access\n",
-                   valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_cert);
+                       valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_cert);
           fail = 1;
         }
         if (access(valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_ca,
-            R_OK)) {
+                   R_OK)) {
           coap_log_err("SNI file: CA File: %s: Unable to access\n",
-                   valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_ca);
+                       valid_pki_snis.pki_sni_list[valid_pki_snis.count].new_ca);
           fail = 1;
         }
         if (fail) {
@@ -2702,8 +2682,7 @@ cmdline_read_pki_sni_check(char *arg) {
           valid_pki_snis.count++;
         }
       } else {
-        coap_log_err(
-                "SNI file: SNI_match,Use_Cert_file,Use_CA_file not defined\n");
+        coap_log_err("SNI file: SNI_match,Use_Cert_file,Use_CA_file not defined\n");
         free(valid_pki_snis.pki_sni_list[valid_pki_snis.count].sni_match);
       }
     }
@@ -2718,8 +2697,7 @@ cmdline_read_extended_token_size(char *arg) {
   if (extended_token_size < COAP_TOKEN_DEFAULT_MAX) {
     coap_log_err("Extended Token Length must be 8 or greater\n");
     return 0;
-  }
-  else if (extended_token_size > COAP_TOKEN_EXT_MAX) {
+  } else if (extended_token_size > COAP_TOKEN_EXT_MAX) {
     coap_log_err("Extended Token Length must be 65804 or less\n");
     return 0;
   }
@@ -2747,17 +2725,19 @@ main(int argc, char **argv) {
   int exit_code = 0;
   uint16_t cache_ignore_options[] = { COAP_OPTION_BLOCK1,
                                       COAP_OPTION_BLOCK2,
-                    /* See https://rfc-editor.org/rfc/rfc7959#section-2.10 */
+                                      /* See https://rfc-editor.org/rfc/rfc7959#section-2.10 */
                                       COAP_OPTION_MAXAGE,
-                    /* See https://rfc-editor.org/rfc/rfc7959#section-2.10 */
-                                      COAP_OPTION_IF_NONE_MATCH };
+                                      /* See https://rfc-editor.org/rfc/rfc7959#section-2.10 */
+                                      COAP_OPTION_IF_NONE_MATCH
+                                    };
 #ifndef _WIN32
   struct sigaction sa;
 #endif
 
   clock_offset = time(NULL);
 
-  while ((opt = getopt(argc, argv, "c:d:eg:G:h:i:j:J:k:l:mnp:rs:tu:v:w:A:C:E:L:M:NP:R:S:T:U:V:X:")) != -1) {
+  while ((opt = getopt(argc, argv,
+                       "c:d:eg:G:h:i:j:J:k:l:mnp:rs:tu:v:w:A:C:E:L:M:NP:R:S:T:U:V:X:")) != -1) {
     switch (opt) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
@@ -2909,7 +2889,7 @@ main(int argc, char **argv) {
       csm_max_message_size = strtol(optarg, NULL, 10);
       break;
     default:
-      usage( argv[0], LIBCOAP_PACKAGE_VERSION );
+      usage(argv[0], LIBCOAP_PACKAGE_VERSION);
       goto failed;
     }
   }
@@ -2917,17 +2897,17 @@ main(int argc, char **argv) {
 #ifdef _WIN32
   signal(SIGINT, handle_sigint);
 #else
-  memset (&sa, 0, sizeof(sa));
+  memset(&sa, 0, sizeof(sa));
   sigemptyset(&sa.sa_mask);
   sa.sa_handler = handle_sigint;
   sa.sa_flags = 0;
-  sigaction (SIGINT, &sa, NULL);
-  sigaction (SIGTERM, &sa, NULL);
+  sigaction(SIGINT, &sa, NULL);
+  sigaction(SIGTERM, &sa, NULL);
   sa.sa_handler = handle_sigusr2;
-  sigaction (SIGUSR2, &sa, NULL);
+  sigaction(SIGUSR2, &sa, NULL);
   /* So we do not exit on a SIGPIPE */
   sa.sa_handler = SIG_IGN;
-  sigaction (SIGPIPE, &sa, NULL);
+  sigaction(SIGPIPE, &sa, NULL);
 #endif
 
   coap_startup();
@@ -2953,7 +2933,7 @@ main(int argc, char **argv) {
 
   /* Define the options to ignore when setting up cache-keys */
   coap_cache_ignore_options(ctx, cache_ignore_options,
-             sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
+                            sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
   /* join multicast group if requested at command line */
   if (group)
     coap_join_mcast_group_intf(ctx, group, group_if);
@@ -2982,7 +2962,7 @@ main(int argc, char **argv) {
 
   wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
 
-  while ( !quit ) {
+  while (!quit) {
     int result;
 
     if (coap_fd != -1) {
@@ -3001,7 +2981,7 @@ main(int argc, char **argv) {
       tv.tv_sec = wait_ms / 1000;
       tv.tv_usec = (wait_ms % 1000) * 1000;
       /* Wait until any i/o takes place or timeout */
-      result = select (nfds, &readfds, NULL, NULL, &tv);
+      result = select(nfds, &readfds, NULL, NULL, &tv);
       if (result == -1) {
         if (errno != EAGAIN) {
           coap_log_debug("select: %s (%d)\n", coap_socket_strerror(), errno);
@@ -3024,11 +3004,11 @@ main(int argc, char **argv) {
        *
        * result is time spent in coap_io_process()
        */
-      result = coap_io_process( ctx, wait_ms );
+      result = coap_io_process(ctx, wait_ms);
     }
-    if ( result < 0 ) {
+    if (result < 0) {
       break;
-    } else if ( result && (unsigned)result < wait_ms ) {
+    } else if (result && (unsigned)result < wait_ms) {
       /* decrement if there is a result wait time returned */
       wait_ms -= result;
     } else {
@@ -3053,7 +3033,7 @@ main(int argc, char **argv) {
       }
       /* need to wait until next second starts if wait_ms is too large */
       next_sec_ms = 1000 - (now % COAP_TICKS_PER_SECOND) *
-                           1000 / COAP_TICKS_PER_SECOND;
+                    1000 / COAP_TICKS_PER_SECOND;
       if (next_sec_ms && next_sec_ms < wait_ms)
         wait_ms = next_sec_ms;
     }
