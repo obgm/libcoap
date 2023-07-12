@@ -17,14 +17,15 @@
 
 /* Carsten suggested this when fls() is not available: */
 #ifndef HAVE_FLS
-int coap_fls(unsigned int i) {
+int
+coap_fls(unsigned int i) {
   return coap_flsll(i);
 }
 #endif
 
 #ifndef HAVE_FLSLL
-int coap_flsll(long long j)
-{
+int
+coap_flsll(long long j) {
   unsigned long long i = (unsigned long long)j;
   int n;
   for (n = 0; i; n++)
@@ -50,7 +51,7 @@ coap_encode_var_safe(uint8_t *buf, size_t length, unsigned int val) {
     i >>= 8;
 
   if (n > length) {
-    assert (n <= length);
+    assert(n <= length);
     return 0;
   }
   i = n;
@@ -81,7 +82,7 @@ coap_encode_var_safe8(uint8_t *buf, size_t length, uint64_t val) {
     tval >>= 8;
 
   if (n > length) {
-    assert (n <= length);
+    assert(n <= length);
     return 0;
   }
   i = n;

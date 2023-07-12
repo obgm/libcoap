@@ -57,13 +57,11 @@ coap_cache_ignore_options(coap_context_t *ctx,
     if (ctx->cache_ignore_options) {
       memcpy(ctx->cache_ignore_options, options, count * sizeof(options[0]));
       ctx->cache_ignore_count = count;
-    }
-    else {
+    } else {
       coap_log_warn("Unable to create cache_ignore_options\n");
       return 0;
     }
-  }
-  else {
+  } else {
     ctx->cache_ignore_options = NULL;
     ctx->cache_ignore_count = count;
   }
@@ -92,7 +90,7 @@ coap_cache_derive_key_w_ignore(const coap_session_t *session,
 
   if (session_based == COAP_CACHE_IS_SESSION_BASED) {
     /* Include the session ptr */
-    if (!coap_digest_update(dctx, (const uint8_t*)&session, sizeof(session))) {
+    if (!coap_digest_update(dctx, (const uint8_t *)&session, sizeof(session))) {
       goto update_fail;
     }
   }
@@ -152,9 +150,9 @@ coap_delete_cache_key(coap_cache_key_t *cache_key) {
 
 coap_cache_entry_t *
 coap_new_cache_entry(coap_session_t *session, const coap_pdu_t *pdu,
-               coap_cache_record_pdu_t record_pdu,
-               coap_cache_session_based_t session_based,
-               unsigned int idle_timeout) {
+                     coap_cache_record_pdu_t record_pdu,
+                     coap_cache_session_based_t session_based,
+                     unsigned int idle_timeout) {
   coap_cache_entry_t *entry = coap_malloc_type(COAP_CACHE_ENTRY,
                                                sizeof(coap_cache_entry_t));
   if (!entry) {
@@ -247,7 +245,7 @@ coap_delete_cache_entry(coap_context_t *ctx, coap_cache_entry_t *cache_entry) {
 
 const coap_pdu_t *
 coap_cache_get_pdu(const coap_cache_entry_t *cache_entry) {
-        return cache_entry->pdu;
+  return cache_entry->pdu;
 }
 
 void
