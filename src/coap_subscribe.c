@@ -47,11 +47,11 @@ coap_persist_track_funcs(coap_context_t *context,
 
 coap_subscription_t *
 coap_persist_observe_add(coap_context_t *context,
-                        coap_proto_t e_proto,
-                        const coap_address_t *e_listen_addr,
-                        const coap_addr_tuple_t *s_addr_info,
-                        const coap_bin_const_t *raw_packet,
-                        const coap_bin_const_t *oscore_info) {
+                         coap_proto_t e_proto,
+                         const coap_address_t *e_listen_addr,
+                         const coap_addr_tuple_t *s_addr_info,
+                         const coap_bin_const_t *raw_packet,
+                         const coap_bin_const_t *oscore_info) {
   coap_session_t *session = NULL;
   const uint8_t *data;
   size_t data_len;
@@ -135,15 +135,15 @@ coap_persist_observe_add(coap_context_t *context,
     goto malformed;
 
   r = coap_get_resource_from_uri_path(session->context,
-                                      (coap_str_const_t*)uri_path);
+                                      (coap_str_const_t *)uri_path);
   if (r == NULL) {
     coap_log_warn("coap_persist_observe_add: resource '%s' not defined\n",
-                   uri_path->s);
+                  uri_path->s);
     goto fail;
   }
   if (!r->observable) {
     coap_log_warn("coap_persist_observe_add: resource '%s' not observable\n",
-                   uri_path->s);
+                  uri_path->s);
     goto fail;
   }
   coap_delete_string(uri_path);
@@ -245,7 +245,7 @@ coap_persist_observe_add(coap_context_t *context,
     ret = oscore_cbor_get_next_element(&info_buf, &info_buf_len);
     if (ret == CBOR_BYTE_STRING) {
       nonce.length = oscore_cbor_get_element_size(&info_buf,
-                                                       &info_buf_len);
+                                                  &info_buf_len);
       nonce.s = info_buf;
       info_buf += nonce.length;
       have_nonce = 1;
@@ -300,9 +300,9 @@ fail:
  */
 static int
 coap_op_observe_read(FILE *fp, coap_subscription_t **observe_key,
-                    coap_proto_t *e_proto, coap_address_t *e_listen_addr,
-                    coap_addr_tuple_t *s_addr_info,
-                    coap_bin_const_t **raw_packet, coap_bin_const_t **oscore_info) {
+                     coap_proto_t *e_proto, coap_address_t *e_listen_addr,
+                     coap_addr_tuple_t *s_addr_info,
+                     coap_bin_const_t **raw_packet, coap_bin_const_t **oscore_info) {
   size_t size;
   coap_binary_t *scratch;
 
@@ -324,7 +324,7 @@ coap_op_observe_read(FILE *fp, coap_subscription_t **observe_key,
       goto fail;
     if (fread(scratch->s, scratch->length, 1, fp) != 1)
       goto fail;
-    *raw_packet = (coap_bin_const_t*)scratch;
+    *raw_packet = (coap_bin_const_t *)scratch;
     if (fread(&size, sizeof(size), 1, fp) != 1)
       goto fail;
     if ((ssize_t)size == -1)
@@ -335,7 +335,7 @@ coap_op_observe_read(FILE *fp, coap_subscription_t **observe_key,
         goto fail;
       if (fread(scratch->s, scratch->length, 1, fp) != 1)
         goto fail;
-      *oscore_info = (coap_bin_const_t*)scratch;
+      *oscore_info = (coap_bin_const_t *)scratch;
     }
     return 1;
   }
@@ -388,8 +388,8 @@ fail:
  */
 static void
 coap_op_observe_load_disk(coap_context_t *ctx) {
-  FILE* fp_orig = fopen((const char*)ctx->observe_save_file->s, "r");
-  FILE* fp_new = NULL;
+  FILE *fp_orig = fopen((const char *)ctx->observe_save_file->s, "r");
+  FILE *fp_new = NULL;
   coap_subscription_t *observe_key = NULL;
   coap_proto_t e_proto;
   coap_address_t e_listen_addr;
@@ -467,9 +467,9 @@ coap_op_observe_added(coap_session_t *session,
                       coap_addr_tuple_t *a_s_addr_info,
                       coap_bin_const_t *a_raw_packet,
                       coap_bin_const_t *a_oscore_info, void *user_data) {
-  FILE* fp_orig = fopen((const char*)session->context->observe_save_file->s,
+  FILE *fp_orig = fopen((const char *)session->context->observe_save_file->s,
                         "r");
-  FILE* fp_new = NULL;
+  FILE *fp_new = NULL;
   coap_subscription_t *observe_key = NULL;
   coap_proto_t e_proto;
   coap_address_t e_listen_addr;
@@ -498,8 +498,8 @@ coap_op_observe_added(coap_session_t *session,
       break;
     if (observe_key != a_observe_key) {
       if (!coap_op_observe_write(fp_new, observe_key, e_proto, e_listen_addr,
-                                s_addr_info, raw_packet, oscore_info))
-      goto fail;
+                                 s_addr_info, raw_packet, oscore_info))
+        goto fail;
     }
     coap_delete_bin_const(raw_packet);
     raw_packet = NULL;
@@ -513,8 +513,8 @@ coap_op_observe_added(coap_session_t *session,
 
   /* Add in new entry to the end */
   if (!coap_op_observe_write(fp_new, a_observe_key, a_e_proto, *a_e_listen_addr,
-                                *a_s_addr_info, a_raw_packet, a_oscore_info))
-      goto fail;
+                             *a_s_addr_info, a_raw_packet, a_oscore_info))
+    goto fail;
 
   if (fflush(fp_new) == EOF)
     goto fail;
@@ -544,10 +544,10 @@ fail:
 static int
 coap_op_observe_deleted(coap_session_t *session,
                         coap_subscription_t *d_observe_key,
-                        void* user_data) {
-  FILE* fp_orig = fopen((const char*)session->context->observe_save_file->s,
+                        void *user_data) {
+  FILE *fp_orig = fopen((const char *)session->context->observe_save_file->s,
                         "r");
-  FILE* fp_new = NULL;
+  FILE *fp_new = NULL;
   coap_subscription_t *observe_key = NULL;
   coap_proto_t e_proto;
   coap_address_t e_listen_addr;
@@ -578,9 +578,9 @@ coap_op_observe_deleted(coap_session_t *session,
       break;
     if (observe_key != d_observe_key) {
       if (!coap_op_observe_write(fp_new, observe_key, e_proto, e_listen_addr,
-                                s_addr_info, (coap_bin_const_t*)raw_packet,
-                                (coap_bin_const_t*)oscore_info))
-      goto fail;
+                                 s_addr_info, (coap_bin_const_t *)raw_packet,
+                                 (coap_bin_const_t *)oscore_info))
+        goto fail;
     }
     coap_delete_bin_const(raw_packet);
     raw_packet = NULL;
@@ -621,7 +621,7 @@ fail:
  */
 static void
 coap_op_obs_cnt_load_disk(coap_context_t *context) {
-  FILE* fp = fopen((const char *)context->obs_cnt_save_file->s, "r");
+  FILE *fp = fopen((const char *)context->obs_cnt_save_file->s, "r");
   char buf[1500];
 
   if (fp == NULL)
@@ -645,7 +645,7 @@ coap_op_obs_cnt_load_disk(coap_context_t *context) {
      */
     observe_num = ((observe_num + context->observe_save_freq) /
                    context->observe_save_freq) *
-                   context->observe_save_freq - 1;
+                  context->observe_save_freq - 1;
     resource_key.s = (uint8_t *)buf;
     resource_key.length = strlen(buf);
     r = coap_get_resource_from_uri_path(context, &resource_key);
@@ -667,8 +667,8 @@ coap_op_obs_cnt_track_observe(coap_context_t *context,
                               coap_str_const_t *resource_name,
                               uint32_t n_observe_num,
                               void *user_data) {
-  FILE* fp_orig = fopen((const char*)context->obs_cnt_save_file->s, "r");
-  FILE* fp_new = NULL;
+  FILE *fp_orig = fopen((const char *)context->obs_cnt_save_file->s, "r");
+  FILE *fp_new = NULL;
   char buf[1500];
   char *new = NULL;
 
@@ -704,7 +704,7 @@ coap_op_obs_cnt_track_observe(coap_context_t *context,
     }
   }
   if (fprintf(fp_new, "%s %u\n", resource_name->s, n_observe_num) < 0)
-      goto fail;
+    goto fail;
   if (fflush(fp_new) == EOF)
     goto fail;
   fclose(fp_new);
@@ -731,8 +731,8 @@ fail:
 static int
 coap_op_obs_cnt_deleted(coap_context_t *context,
                         coap_str_const_t *resource_name) {
-  FILE* fp_orig = fopen((const char*)context->obs_cnt_save_file->s, "r");
-  FILE* fp_new = NULL;
+  FILE *fp_orig = fopen((const char *)context->obs_cnt_save_file->s, "r");
+  FILE *fp_new = NULL;
   char buf[1500];
   char *new = NULL;
 
@@ -851,7 +851,7 @@ fail:
  */
 static void
 coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
-  FILE* fp_orig = NULL;
+  FILE *fp_orig = NULL;
   coap_proto_t e_proto;
   coap_string_t *name = NULL;
   coap_binary_t *raw_packet = NULL;
@@ -864,21 +864,21 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
   if (!ctx->unknown_resource)
     return;
 
-  fp_orig = fopen((const char*)ctx->dyn_resource_save_file->s, "r");
+  fp_orig = fopen((const char *)ctx->dyn_resource_save_file->s, "r");
   if (fp_orig == NULL)
     return;
-  session = (coap_session_t*)coap_malloc_type(COAP_SESSION,
-                                              sizeof(coap_session_t));
+  session = (coap_session_t *)coap_malloc_type(COAP_SESSION,
+                                               sizeof(coap_session_t));
   if (!session)
     goto fail;
-  memset (session, 0, sizeof(coap_session_t));
+  memset(session, 0, sizeof(coap_session_t));
   session->context = ctx;
 
   /* Go through and create each dynamic resource if it does not exist*/
   while (1) {
     if (!coap_op_dyn_resource_read(fp_orig, &e_proto, &name, &raw_packet))
       break;
-    r = coap_get_resource_from_uri_path(ctx, (coap_str_const_t*)name);
+    r = coap_get_resource_from_uri_path(ctx, (coap_str_const_t *)name);
     if (!r) {
       /* Create the new resource using the application logic */
 
@@ -936,7 +936,7 @@ coap_op_dyn_resource_added(coap_session_t *session,
                            coap_bin_const_t *packet,
                            void *user_data) {
   FILE *fp_orig;
-  FILE* fp_new = NULL;
+  FILE *fp_new = NULL;
   char *new = NULL;
   coap_context_t *context = session->context;
   coap_string_t *name = NULL;
@@ -966,8 +966,8 @@ coap_op_dyn_resource_added(coap_session_t *session,
       break;
     if (!coap_string_equal(resource_name, name)) {
       /* Copy across non-matching entry */
-      if (!coap_op_dyn_resource_write(fp_new, e_proto, (coap_str_const_t*)name,
-                                      (coap_bin_const_t*)raw_packet))
+      if (!coap_op_dyn_resource_write(fp_new, e_proto, (coap_str_const_t *)name,
+                                      (coap_bin_const_t *)raw_packet))
         break;
     }
     coap_delete_string(name);
@@ -979,7 +979,7 @@ coap_op_dyn_resource_added(coap_session_t *session,
   coap_delete_binary(raw_packet);
   /* Add new entry to the end */
   if (!coap_op_dyn_resource_write(fp_new, session->proto,
-                                 resource_name, packet))
+                                  resource_name, packet))
     goto fail;
 
   if (fflush(fp_new) == EOF)
@@ -1006,10 +1006,10 @@ fail:
  */
 static int
 coap_op_resource_deleted(coap_context_t *context,
-                             coap_str_const_t *resource_name,
-                             void* user_data) {
-  FILE* fp_orig = NULL;
-  FILE* fp_new = NULL;
+                         coap_str_const_t *resource_name,
+                         void *user_data) {
+  FILE *fp_orig = NULL;
+  FILE *fp_new = NULL;
   char *new = NULL;
   coap_proto_t e_proto;
   coap_string_t *name = NULL;
@@ -1039,8 +1039,8 @@ coap_op_resource_deleted(coap_context_t *context,
       break;
     if (!coap_string_equal(resource_name, name)) {
       /* Copy across non-matching entry */
-      if (!coap_op_dyn_resource_write(fp_new, e_proto, (coap_str_const_t*)name,
-                                      (coap_bin_const_t*)raw_packet))
+      if (!coap_op_dyn_resource_write(fp_new, e_proto, (coap_str_const_t *)name,
+                                      (coap_bin_const_t *)raw_packet))
         break;
     }
     coap_delete_string(name);
@@ -1078,8 +1078,8 @@ coap_persist_startup(coap_context_t *context,
                      uint32_t save_freq) {
   if (dyn_resource_save_file) {
     context->dyn_resource_save_file =
-             coap_new_bin_const((const uint8_t *)dyn_resource_save_file,
-                                 strlen(dyn_resource_save_file));
+        coap_new_bin_const((const uint8_t *)dyn_resource_save_file,
+                           strlen(dyn_resource_save_file));
     if (!context->dyn_resource_save_file)
       return 0;
     coap_op_dyn_resource_load_disk(context);
@@ -1088,8 +1088,8 @@ coap_persist_startup(coap_context_t *context,
   }
   if (obs_cnt_save_file) {
     context->obs_cnt_save_file =
-              coap_new_bin_const((const uint8_t *)obs_cnt_save_file,
-                                  strlen(obs_cnt_save_file));
+        coap_new_bin_const((const uint8_t *)obs_cnt_save_file,
+                           strlen(obs_cnt_save_file));
     if (!context->obs_cnt_save_file)
       return 0;
     context->observe_save_freq = save_freq ? save_freq : 1;
@@ -1099,8 +1099,8 @@ coap_persist_startup(coap_context_t *context,
   }
   if (observe_save_file) {
     context->observe_save_file =
-              coap_new_bin_const((const uint8_t *)observe_save_file,
-                               strlen(observe_save_file));
+        coap_new_bin_const((const uint8_t *)observe_save_file,
+                           strlen(observe_save_file));
     if (!context->observe_save_file)
       return 0;
     coap_op_observe_load_disk(context);
