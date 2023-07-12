@@ -347,42 +347,59 @@ coap_memory_init(void) {
 
 static memarray_t *
 get_container(coap_memory_tag_t type) {
-  switch(type) {
+  switch (type) {
 #if COAP_SERVER_SUPPORT
   case COAP_ATTRIBUTE_NAME:
-    /* fall through */
-  case COAP_ATTRIBUTE_VALUE: return &attr_storage;
+  /* fall through */
+  case COAP_ATTRIBUTE_VALUE:
+    return &attr_storage;
 #endif /* COAP_SERVER_SUPPORT */
-  case COAP_PACKET:          return &pkt_storage;
-  case COAP_NODE:            return &node_storage;
-  case COAP_CONTEXT:         return STORAGE_PTR(context);
+  case COAP_PACKET:
+    return &pkt_storage;
+  case COAP_NODE:
+    return &node_storage;
+  case COAP_CONTEXT:
+    return STORAGE_PTR(context);
 #if COAP_SERVER_SUPPORT
-  case COAP_ENDPOINT:        return &endpoint_storage;
+  case COAP_ENDPOINT:
+    return &endpoint_storage;
 #endif /* COAP_SERVER_SUPPORT */
-  case COAP_PDU:             return &pdu_storage;
-  case COAP_PDU_BUF:         return &pdubuf_storage;
+  case COAP_PDU:
+    return &pdu_storage;
+  case COAP_PDU_BUF:
+    return &pdubuf_storage;
 #if COAP_SERVER_SUPPORT
-  case COAP_RESOURCE:        return &resource_storage;
-  case COAP_RESOURCEATTR:    return &resattr_storage;
+  case COAP_RESOURCE:
+    return &resource_storage;
+  case COAP_RESOURCEATTR:
+    return &resattr_storage;
 #endif /* COAP_SERVER_SUPPORT */
 #ifdef COAP_WITH_LIBTINYDTLS
-  case COAP_DTLS_SESSION:    return &dtls_storage;
+  case COAP_DTLS_SESSION:
+    return &dtls_storage;
 #endif
-  case COAP_SESSION:         return &session_storage;
-  case COAP_OPTLIST:         return &option_storage;
+  case COAP_SESSION:
+    return &session_storage;
+  case COAP_OPTLIST:
+    return &option_storage;
 #if COAP_SERVER_SUPPORT
-  case COAP_CACHE_KEY:       return &cache_key_storage;
-  case COAP_CACHE_ENTRY:     return &cache_entry_storage;
+  case COAP_CACHE_KEY:
+    return &cache_key_storage;
+  case COAP_CACHE_ENTRY:
+    return &cache_entry_storage;
 #endif /* COAP_SERVER_SUPPORT */
 #if COAP_CLIENT_SUPPORT
-  case COAP_LG_CRCV:         return &cache_lg_crcv_storage;
+  case COAP_LG_CRCV:
+    return &cache_lg_crcv_storage;
 #endif /* COAP_CLIENT_SUPPORT */
 #if COAP_SERVER_SUPPORT
-  case COAP_LG_SRCV:         return &cache_lg_srcv_storage;
-  case COAP_LG_XMIT:         return &cache_lg_xmit_storage;
+  case COAP_LG_SRCV:
+    return &cache_lg_srcv_storage;
+  case COAP_LG_XMIT:
+    return &cache_lg_xmit_storage;
 #endif /* COAP_SERVER_SUPPORT */
   case COAP_STRING:
-    /* fall through */
+  /* fall through */
   default:
     return &string_storage;
   }
@@ -395,18 +412,16 @@ coap_malloc_type(coap_memory_tag_t type, size_t size) {
   assert(container);
 
   if (size > container->size) {
-    coap_log_warn(
-             "coap_malloc_type: Requested memory exceeds maximum object "
-             "size (type %d, size %zu, max %d)\n",
-             type, size, container->size);
+    coap_log_warn("coap_malloc_type: Requested memory exceeds maximum object "
+                  "size (type %d, size %zu, max %d)\n",
+                  type, size, container->size);
     return NULL;
   }
 
   ptr = memarray_alloc(container);
   if (!ptr)
-    coap_log_warn(
-             "coap_malloc_type: Failure (no free blocks) for type %d\n",
-             type);
+    coap_log_warn("coap_malloc_type: Failure (no free blocks) for type %d\n",
+                  type);
   return ptr;
 }
 
@@ -424,10 +439,9 @@ coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
   /* The fixed container is all we have to work with */
   if (p) {
     if (size > container->size) {
-      coap_log_warn(
-               "coap_realloc_type: Requested memory exceeds maximum object "
-               "size (type %d, size %zu, max %d)\n",
-               type, size, container->size);
+      coap_log_warn("coap_realloc_type: Requested memory exceeds maximum object "
+                    "size (type %d, size %zu, max %d)\n",
+                    type, size, container->size);
       return NULL;
     }
     if (size == 0) {
@@ -454,7 +468,7 @@ coap_malloc_type(coap_memory_tag_t type, size_t size) {
 }
 
 void *
-coap_realloc_type(coap_memory_tag_t type, void* p, size_t size) {
+coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
   (void)type;
   return realloc(p, size);
 }
@@ -471,25 +485,21 @@ coap_free_type(coap_memory_tag_t type, void *p) {
 #include "lib/heapmem.h"
 
 void
-coap_memory_init(void)
-{
+coap_memory_init(void) {
 }
 
 void *
-coap_malloc_type(coap_memory_tag_t type, size_t size)
-{
+coap_malloc_type(coap_memory_tag_t type, size_t size) {
   return heapmem_alloc(size);
 }
 
 void *
-coap_realloc_type(coap_memory_tag_t type, void* p, size_t size)
-{
+coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
   return heapmem_realloc(p, size);
 }
 
 void
-coap_free_type(coap_memory_tag_t type, void *ptr)
-{
+coap_free_type(coap_memory_tag_t type, void *ptr) {
   heapmem_free(ptr);
 }
 #endif /* WITH_CONTIKI */

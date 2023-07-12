@@ -25,7 +25,7 @@
 # define OPTVAL_GT(t)        (t)
 #endif
 #ifdef HAVE_SYS_IOCTL_H
- #include <sys/ioctl.h>
+#include <sys/ioctl.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
@@ -51,9 +51,9 @@
  */
 ssize_t
 coap_socket_send(coap_socket_t *sock,
-                  const coap_session_t *session,
-                  const uint8_t *data,
-                  size_t datalen) {
+                 const coap_session_t *session,
+                 const uint8_t *data,
+                 size_t datalen) {
   ssize_t bytes_written = 0;
 
   if (!coap_debug_send_packet()) {

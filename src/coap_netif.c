@@ -76,14 +76,14 @@ coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet) {
   bytes_read = coap_socket_recv(&session->sock, packet);
   keep_errno = errno;
   if (bytes_read == -1) {
-    coap_log_debug( "*  %s: netif: failed to read %zd bytes (%s) state %d\n",
+    coap_log_debug("*  %s: netif: failed to read %zd bytes (%s) state %d\n",
                    coap_session_str(session), packet->length,
                    coap_socket_strerror(), session->state);
     errno = keep_errno;
   } else if (bytes_read > 0) {
     coap_ticks(&session->last_rx_tx);
     coap_log_debug("*  %s: netif: recv %4zd bytes\n",
-             coap_session_str(session), bytes_read);
+                   coap_session_str(session), bytes_read);
   }
   return bytes_read;
 }
@@ -103,7 +103,7 @@ coap_netif_dgrm_read_ep(coap_endpoint_t *endpoint, coap_packet_t *packet) {
   bytes_read = coap_socket_recv(&endpoint->sock, packet);
   keep_errno = errno;
   if (bytes_read == -1) {
-    coap_log_debug( "*  %s: netif: failed to read %zd bytes (%s)\n",
+    coap_log_debug("*  %s: netif: failed to read %zd bytes (%s)\n",
                    coap_endpoint_str(endpoint), packet->length,
                    coap_socket_strerror());
     errno = keep_errno;
@@ -136,7 +136,7 @@ coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
   bytes_written = coap_socket_send(sock, session, data, datalen);
   keep_errno = errno;
   if (bytes_written <= 0) {
-    coap_log_debug( "*  %s: netif: failed to send %zd bytes (%s) state %d\n",
+    coap_log_debug("*  %s: netif: failed to send %zd bytes (%s) state %d\n",
                    coap_session_str(session), datalen,
                    coap_socket_strerror(), session->state);
     errno = keep_errno;
@@ -158,7 +158,7 @@ int
 coap_netif_strm_listen(coap_endpoint_t *endpoint,
                        const coap_address_t *listen_addr) {
   if (!coap_socket_bind_tcp(&endpoint->sock, listen_addr,
-                              &endpoint->bind_addr)) {
+                            &endpoint->bind_addr)) {
     return 0;
   }
   endpoint->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_BOUND |
@@ -174,7 +174,7 @@ coap_netif_strm_accept(coap_endpoint_t *endpoint, coap_session_t *session) {
     return 0;
   }
   session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED |
-                 COAP_SOCKET_WANT_READ;
+                         COAP_SOCKET_WANT_READ;
   return 1;
 }
 #endif /* COAP_SERVER_SUPPORT */
@@ -216,10 +216,10 @@ coap_netif_strm_read(coap_session_t *session, uint8_t *data, size_t datalen) {
 
   if (bytes_read >= 0) {
     coap_log_debug("*  %s: netif: recv %4zd bytes\n",
-             coap_session_str(session), bytes_read);
+                   coap_session_str(session), bytes_read);
   } else if (bytes_read == -1 && errno != EAGAIN) {
-    coap_log_debug( "*  %s: netif: failed to receive any bytes (%s) state %d\n",
-             coap_session_str(session), coap_socket_strerror(), session->state);
+    coap_log_debug("*  %s: netif: failed to receive any bytes (%s) state %d\n",
+                   coap_session_str(session), coap_socket_strerror(), session->state);
     errno = keep_errno;
   }
   return bytes_read;
@@ -237,7 +237,7 @@ coap_netif_strm_write(coap_session_t *session, const uint8_t *data,
   int keep_errno = errno;
 
   if (bytes_written <= 0) {
-    coap_log_debug( "*  %s: netif: failed to send %zd bytes (%s) state %d\n",
+    coap_log_debug("*  %s: netif: failed to send %zd bytes (%s) state %d\n",
                    coap_session_str(session), datalen,
                    coap_socket_strerror(), session->state);
     errno = keep_errno;
