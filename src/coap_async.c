@@ -28,7 +28,7 @@
       if ((out)->field1 == (val1) && (out)->field2 == (val2) &&         \
           ((val2) == 0 || memcmp((out)->field3, (val3), (val2)) == 0)) break; \
     }                                                                   \
-} while(0)
+  } while(0)
 
 int
 coap_async_is_supported(void) {
@@ -60,10 +60,9 @@ coap_register_async(coap_session_t *session,
       /* Output maybe truncated */
       outbuflen = strlen(outbuf);
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-                "%02x", request->token[i]);
+               "%02x", request->token[i]);
     }
-    coap_log_debug(
-         "asynchronous state for token '%s' already registered\n", outbuf);
+    coap_log_debug("asynchronous state for token '%s' already registered\n", outbuf);
     return NULL;
   }
 
@@ -90,7 +89,7 @@ coap_register_async(coap_session_t *session,
     coap_add_data(s->pdu, len, data);
   }
 
-  s->session = coap_session_reference( session );
+  s->session = coap_session_reference(session);
 
   coap_async_set_delay(s, delay);
 
@@ -103,7 +102,7 @@ coap_async_trigger(coap_async_t *async) {
   coap_ticks(&async->delay);
 
   coap_log_debug("   %s: Async request triggered\n",
-           coap_session_str(async->session));
+                 coap_session_str(async->session));
 #ifdef COAP_EPOLL_SUPPORT
   coap_update_epoll_timer(async->session->context, 0);
 #endif /* COAP_EPOLL_SUPPORT */
@@ -123,15 +122,14 @@ coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
     coap_update_epoll_timer(async->session->context, delay);
 #endif /* COAP_EPOLL_SUPPORT */
     coap_log_debug("   %s: Async request delayed for %u.%03u secs\n",
-             coap_session_str(async->session),
-             (unsigned int)(delay / COAP_TICKS_PER_SECOND),
-             (unsigned int)((delay % COAP_TICKS_PER_SECOND) *
-                 1000 / COAP_TICKS_PER_SECOND));
-  }
-  else {
+                   coap_session_str(async->session),
+                   (unsigned int)(delay / COAP_TICKS_PER_SECOND),
+                   (unsigned int)((delay % COAP_TICKS_PER_SECOND) *
+                                  1000 / COAP_TICKS_PER_SECOND));
+  } else {
     async->delay = 0;
     coap_log_debug("   %s: Async request indefinately delayed\n",
-             coap_session_str(async->session));
+                   coap_session_str(async->session));
   }
 }
 
