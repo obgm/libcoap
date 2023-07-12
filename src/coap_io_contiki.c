@@ -48,9 +48,9 @@ on_prepare_timer_expired(void *ptr) {
     return;
   }
   ctimer_set(&ctx->prepare_timer,
-      CLOCK_SECOND * timeout / 1000,
-      on_prepare_timer_expired,
-      ctx);
+             CLOCK_SECOND * timeout / 1000,
+             on_prepare_timer_expired,
+             ctx);
 }
 
 PROCESS_THREAD(libcoap_io_process, ev, data) {
@@ -59,7 +59,7 @@ PROCESS_THREAD(libcoap_io_process, ev, data) {
   PROCESS_BEGIN();
   while (!was_io_process_stopped) {
     PROCESS_WAIT_EVENT();
-    if(was_io_process_stopped) {
+    if (was_io_process_stopped) {
       break;
     }
     if (ev == tcpip_event) {
@@ -145,7 +145,8 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
   return -1;
 }
 
-void coap_socket_close(coap_socket_t *sock) {
+void
+coap_socket_close(coap_socket_t *sock) {
   uip_udp_remove(sock->udp_conn);
   sock->udp_conn = NULL;
   sock->flags = COAP_SOCKET_EMPTY;
@@ -157,14 +158,15 @@ void coap_socket_close(coap_socket_t *sock) {
  *         -1 Error error in errno).
  */
 ssize_t
-coap_socket_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data, size_t datalen) {
+coap_socket_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data,
+                 size_t datalen) {
   ssize_t bytes_written = 0;
 
   if (!coap_debug_send_packet()) {
     bytes_written = (ssize_t)datalen;
   } else {
     uip_udp_packet_sendto(sock->udp_conn, data, datalen,
-        &session->addr_info.remote.addr, session->addr_info.remote.port);
+                          &session->addr_info.remote.addr, session->addr_info.remote.port);
     bytes_written = datalen;
   }
 
@@ -211,7 +213,8 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
   return len;
 }
 
-int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
+int
+coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   coap_tick_t before, now;
 
   coap_ticks(&before);

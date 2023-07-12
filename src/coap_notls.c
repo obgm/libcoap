@@ -75,9 +75,9 @@ coap_get_tls_library_version(void) {
 
 int
 coap_dtls_context_set_pki(coap_context_t *ctx COAP_UNUSED,
-                          const coap_dtls_pki_t* setup_data COAP_UNUSED,
+                          const coap_dtls_pki_t *setup_data COAP_UNUSED,
                           const coap_dtls_role_t role COAP_UNUSED
-) {
+                         ) {
   return 0;
 }
 
@@ -85,15 +85,15 @@ int
 coap_dtls_context_set_pki_root_cas(coap_context_t *ctx COAP_UNUSED,
                                    const char *ca_file COAP_UNUSED,
                                    const char *ca_path COAP_UNUSED
-) {
+                                  ) {
   return 0;
 }
 
 #if COAP_CLIENT_SUPPORT
 int
 coap_dtls_context_set_cpsk(coap_context_t *ctx COAP_UNUSED,
-                          coap_dtls_cpsk_t* setup_data COAP_UNUSED
-) {
+                           coap_dtls_cpsk_t *setup_data COAP_UNUSED
+                          ) {
   return 0;
 }
 #endif /* COAP_CLIENT_SUPPORT */
@@ -101,21 +101,21 @@ coap_dtls_context_set_cpsk(coap_context_t *ctx COAP_UNUSED,
 #if COAP_SERVER_SUPPORT
 int
 coap_dtls_context_set_spsk(coap_context_t *ctx COAP_UNUSED,
-                          coap_dtls_spsk_t* setup_data COAP_UNUSED
-) {
+                           coap_dtls_spsk_t *setup_data COAP_UNUSED
+                          ) {
   return 0;
 }
 #endif /* COAP_SERVER_SUPPORT */
 
 int
-coap_dtls_context_check_keys_enabled(coap_context_t *ctx COAP_UNUSED)
-{
+coap_dtls_context_check_keys_enabled(coap_context_t *ctx COAP_UNUSED) {
   return 0;
 }
 
 static coap_log_t dtls_log_level = COAP_LOG_EMERG;
 
-void coap_dtls_startup(void) {
+void
+coap_dtls_startup(void) {
 }
 
 void *
@@ -126,7 +126,8 @@ coap_dtls_get_tls(const coap_session_t *c_session COAP_UNUSED,
   return NULL;
 }
 
-void coap_dtls_shutdown(void) {
+void
+coap_dtls_shutdown(void) {
 }
 
 void
@@ -177,11 +178,13 @@ coap_dtls_send(coap_session_t *session COAP_UNUSED,
   return -1;
 }
 
-int coap_dtls_is_context_timeout(void) {
+int
+coap_dtls_is_context_timeout(void) {
   return 1;
 }
 
-coap_tick_t coap_dtls_get_context_timeout(void *dtls_context COAP_UNUSED) {
+coap_tick_t
+coap_dtls_get_context_timeout(void *dtls_context COAP_UNUSED) {
   return 0;
 }
 
@@ -201,18 +204,18 @@ coap_dtls_handle_timeout(coap_session_t *session COAP_UNUSED) {
 
 int
 coap_dtls_receive(coap_session_t *session COAP_UNUSED,
-  const uint8_t *data COAP_UNUSED,
-  size_t data_len COAP_UNUSED
-) {
+                  const uint8_t *data COAP_UNUSED,
+                  size_t data_len COAP_UNUSED
+                 ) {
   return -1;
 }
 
 #if COAP_SERVER_SUPPORT
 int
 coap_dtls_hello(coap_session_t *session COAP_UNUSED,
-  const uint8_t *data COAP_UNUSED,
-  size_t data_len COAP_UNUSED
-) {
+                const uint8_t *data COAP_UNUSED,
+                size_t data_len COAP_UNUSED
+               ) {
   return 0;
 }
 #endif /* COAP_SERVER_SUPPORT */
@@ -247,8 +250,8 @@ coap_tls_free_session(coap_session_t *coap_session COAP_UNUSED) {
  */
 ssize_t
 coap_tls_write(coap_session_t *session COAP_UNUSED,
-                       const uint8_t *data COAP_UNUSED,
-                       size_t data_len COAP_UNUSED) {
+               const uint8_t *data COAP_UNUSED,
+               size_t data_len COAP_UNUSED) {
   return -1;
 }
 
@@ -290,7 +293,7 @@ int
 coap_digest_update(coap_digest_ctx_t *digest_ctx,
                    const uint8_t *data,
                    size_t data_len) {
-  coap_local_hash_t *local = (coap_local_hash_t*)digest_ctx;
+  coap_local_hash_t *local = (coap_local_hash_t *)digest_ctx;
 
   coap_hash(data, data_len, local->key[local->ofs]);
 
@@ -301,7 +304,7 @@ coap_digest_update(coap_digest_ctx_t *digest_ctx,
 int
 coap_digest_final(coap_digest_ctx_t *digest_ctx,
                   coap_digest_t *digest_buffer) {
-  coap_local_hash_t *local = (coap_local_hash_t*)digest_ctx;
+  coap_local_hash_t *local = (coap_local_hash_t *)digest_ctx;
 
   memcpy(digest_buffer, local->key, sizeof(coap_digest_t));
 
@@ -391,7 +394,8 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
  */
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
-static inline void dummy(void) {
+static inline void
+dummy(void) {
 }
 
 #endif /* !COAP_WITH_LIBTINYDTLS && !COAP_WITH_LIBOPENSSL && !COAP_WITH_LIBGNUTLS && !COAP_WITH_LIBMBEDTLS */

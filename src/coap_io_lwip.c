@@ -46,14 +46,14 @@ coap_lwip_dump_memory_pools(coap_log_t log_level) {
 void
 coap_lwip_set_input_wait_handler(coap_context_t *context,
                                  coap_lwip_input_wait_handler_t handler,
-                                  void *input_arg) {
+                                 void *input_arg) {
   context->input_wait = handler;
   context->input_arg = input_arg;
 }
 
 void
 coap_io_process_timeout(void *arg) {
-  coap_context_t *context = (coap_context_t*)arg;
+  coap_context_t *context = (coap_context_t *)arg;
   coap_tick_t before;
   unsigned int num_sockets;
   unsigned int timeout;
@@ -61,7 +61,7 @@ coap_io_process_timeout(void *arg) {
   coap_ticks(&before);
   timeout = coap_io_prepare_io(context, NULL, 0, &num_sockets, before);
   if (context->timer_configured) {
-    sys_untimeout(coap_io_process_timeout, (void*)context);
+    sys_untimeout(coap_io_process_timeout, (void *)context);
     context->timer_configured = 0;
   }
   if (timeout == 0) {
@@ -70,7 +70,7 @@ coap_io_process_timeout(void *arg) {
   }
 #ifdef COAP_DEBUG_WAKEUP_TIMES
   coap_log_info("****** Next wakeup msecs %u (1)\n",
-           timeout);
+                timeout);
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
   sys_timeout(timeout, coap_io_process_timeout, context);
   context->timer_configured = 1;
@@ -93,7 +93,7 @@ coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
   LOCK_TCPIP_CORE();
 
   if (context->timer_configured) {
-    sys_untimeout(coap_io_process_timeout, (void*)context);
+    sys_untimeout(coap_io_process_timeout, (void *)context);
     context->timer_configured = 0;
   }
   if (timeout == 0) {
@@ -102,7 +102,7 @@ coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
   }
 #ifdef COAP_DEBUG_WAKEUP_TIMES
   coap_log_info("****** Next wakeup msecs %u (2)\n",
-           timeout);
+                timeout);
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
   sys_timeout(timeout, coap_io_process_timeout, context);
   context->timer_configured = 1;
@@ -147,7 +147,7 @@ static void
 coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
            const ip_addr_t *addr, u16_t port) {
   coap_pdu_t *pdu = NULL;
-  coap_session_t *session = (coap_session_t*)arg;
+  coap_session_t *session = (coap_session_t *)arg;
   int result = -1;
   (void)upcb;
   (void)addr;
@@ -162,7 +162,7 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   }
 
   coap_log_debug("*  %s: lwip:  recv %4d bytes\n",
-           coap_session_str(session), p->len);
+                 coap_session_str(session), p->len);
   if (session->proto == COAP_PROTO_DTLS) {
     if (session->tls) {
       result = coap_dtls_receive(session, p->payload, p->len);
@@ -198,8 +198,7 @@ error:
 #if COAP_SERVER_SUPPORT
 
 static void
-coap_free_packet(coap_packet_t *packet)
-{
+coap_free_packet(coap_packet_t *packet) {
   coap_free_type(COAP_PACKET, packet);
 }
 
@@ -213,8 +212,8 @@ coap_free_packet(coap_packet_t *packet)
  */
 static void
 coap_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
-          const ip_addr_t *addr, u16_t port) {
-  coap_endpoint_t *ep = (coap_endpoint_t*)arg;
+           const ip_addr_t *addr, u16_t port) {
+  coap_endpoint_t *ep = (coap_endpoint_t *)arg;
   coap_pdu_t *pdu = NULL;
   coap_session_t *session = NULL;
   coap_tick_t now;
@@ -249,7 +248,7 @@ coap_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   LWIP_ASSERT("Proto not supported for LWIP", COAP_PROTO_NOT_RELIABLE(session->proto));
 
   coap_log_debug("*  %s: lwip:  recv %4d bytes\n",
-           coap_session_str(session), p->len);
+                 coap_session_str(session), p->len);
 
   if (session->proto == COAP_PROTO_DTLS) {
     if (session->type == COAP_SESSION_TYPE_HELLO)
@@ -257,7 +256,7 @@ coap_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     else if (session->tls)
       result = coap_dtls_receive(session, p->payload, p->len);
     if (session->type == COAP_SESSION_TYPE_HELLO && result == 1)
-        coap_session_new_dtls_session(session, now);
+      coap_session_new_dtls_session(session, now);
     pbuf_free(p);
   } else {
     pdu = coap_pdu_from_pbuf(p);
@@ -297,7 +296,8 @@ coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
   struct pbuf *pbuf;
   int err;
 
-  pbuf_realloc(pdu->pbuf, pdu->used_size + coap_pdu_parse_header_size(session->proto, pdu->pbuf->payload));
+  pbuf_realloc(pdu->pbuf, pdu->used_size + coap_pdu_parse_header_size(session->proto,
+               pdu->pbuf->payload));
 
   if (coap_debug_send_packet()) {
     /* Need to take a copy as we may be re-using the origin in a retransmit */
@@ -320,7 +320,7 @@ coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
  */
 ssize_t
 coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
-                 const uint8_t *data, size_t data_len ) {
+                 const uint8_t *data, size_t data_len) {
   struct pbuf *pbuf;
   int err;
 
@@ -360,11 +360,11 @@ coap_socket_bind_udp(coap_socket_t *sock,
   if (l_listen.addr.type == IPADDR_TYPE_V6)
     l_listen.addr.type = IPADDR_TYPE_ANY;
 #endif /* LWIP_IPV6 && LWIP_IPV4 */
-  udp_recv(sock->pcb, coap_recvs, (void*)sock->endpoint);
+  udp_recv(sock->pcb, coap_recvs, (void *)sock->endpoint);
   err = udp_bind(sock->pcb, &l_listen.addr, l_listen.port);
   if (err) {
-          udp_remove(sock->pcb);
-          sock->pcb = NULL;
+    udp_remove(sock->pcb);
+    sock->pcb = NULL;
   }
   *bound_addr = l_listen;
   return err ? 0 : 1;
@@ -392,7 +392,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
   pcb = udp_new();
 
   if (!pcb) {
-     goto err_unlock;
+    goto err_unlock;
   }
 
   err = udp_bind(pcb, &pcb->local_ip, pcb->local_port);
@@ -415,7 +415,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
 
   sock->pcb = pcb;
 
-  udp_recv(sock->pcb, coap_recvc, (void*)sock->session);
+  udp_recv(sock->pcb, coap_recvc, (void *)sock->session);
 
   UNLOCK_TCPIP_CORE();
 
@@ -469,9 +469,9 @@ coap_socket_bind_tcp(coap_socket_t *sock,
 
 int
 coap_socket_accept_tcp(coap_socket_t *server,
-                        coap_socket_t *new_client,
-                        coap_address_t *local_addr,
-                        coap_address_t *remote_addr) {
+                       coap_socket_t *new_client,
+                       coap_address_t *local_addr,
+                       coap_address_t *remote_addr) {
   (void)server;
   (void)new_client;
   (void)local_addr;
@@ -496,7 +496,8 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
   return -1;
 }
 
-void coap_socket_close(coap_socket_t *sock) {
+void
+coap_socket_close(coap_socket_t *sock) {
   if (sock->pcb) {
     LOCK_TCPIP_CORE();
     udp_remove(sock->pcb);
