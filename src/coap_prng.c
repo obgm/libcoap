@@ -30,21 +30,21 @@
 
 #if defined(_WIN32)
 
-errno_t __cdecl rand_s( _Out_ unsigned int* _RandomValue );
+errno_t __cdecl rand_s(_Out_ unsigned int *_RandomValue);
 /**
  * Fills \p buf with \p len random bytes. This is the default implementation for
  * coap_prng(). You might want to change coap_prng_impl() to use a better
  * PRNG on your specific platform.
  */
 COAP_STATIC_INLINE int
-coap_prng_impl( unsigned char *buf, size_t len ) {
-  while ( len != 0 ) {
+coap_prng_impl(unsigned char *buf, size_t len) {
+  while (len != 0) {
     uint32_t r = 0;
     size_t i;
 
-    if ( rand_s( &r ) != 0 )
+    if (rand_s(&r) != 0)
       return 0;
-    for ( i = 0; i < len && i < 4; i++ ) {
+    for (i = 0; i < len && i < 4; i++) {
       *buf++ = (uint8_t)r;
       r >>= 8;
     }
@@ -100,9 +100,9 @@ coap_prng_default(void *buf, size_t len) {
   uint_fast8_t j;
   unsigned short r;
 
-  for(i = 0; i < len;) {
+  for (i = 0; i < len;) {
     r = random_rand();
-    for(j = 0; (i < len) && (j < sizeof(r)); i++, j++) {
+    for (j = 0; (i < len) && (j < sizeof(r)); i++, j++) {
       ((uint8_t *)buf)[i] = r & 0xFF;
       r >>= 8;
     }
@@ -114,8 +114,8 @@ coap_prng_default(void *buf, size_t len) {
 
 #else /* !MBEDTLS_ENTROPY_HARDWARE_ALT && !HAVE_GETRANDOM &&
          !HAVE_RANDOM && !_WIN32 */
-  #error "CVE-2021-34430: using rand() for crypto randoms is not secure!"
-  #error "Please update you C-library and rerun the auto-configuration."
+#error "CVE-2021-34430: using rand() for crypto randoms is not secure!"
+#error "Please update you C-library and rerun the auto-configuration."
   unsigned char *dst = (unsigned char *)buf;
   while (len--)
     *dst++ = rand() & 0xFF;

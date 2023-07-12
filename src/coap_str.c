@@ -17,20 +17,20 @@
 
 #include <stdio.h>
 
-coap_string_t *coap_new_string(size_t size) {
+coap_string_t *
+coap_new_string(size_t size) {
   coap_string_t *s;
 #ifdef WITH_LWIP
   if (size >= MEMP_LEN_COAPSTRING) {
-    coap_log_crit(
-             "coap_new_string: size too large (%zu +1 > MEMP_LEN_COAPSTRING)\n",
-             size);
+    coap_log_crit("coap_new_string: size too large (%zu +1 > MEMP_LEN_COAPSTRING)\n",
+                  size);
     return NULL;
   }
 #endif /* WITH_LWIP */
   assert(size+1 != 0);
   s = (coap_string_t *)coap_malloc_type(COAP_STRING,
                                         sizeof(coap_string_t) + size + 1);
-  if ( !s ) {
+  if (!s) {
     coap_log_crit("coap_new_string: malloc: failed\n");
     return NULL;
   }
@@ -42,38 +42,44 @@ coap_string_t *coap_new_string(size_t size) {
   return s;
 }
 
-void coap_delete_string(coap_string_t *s) {
+void
+coap_delete_string(coap_string_t *s) {
   coap_free_type(COAP_STRING, s);
 }
 
-coap_str_const_t *coap_new_str_const(const uint8_t *data, size_t size) {
+coap_str_const_t *
+coap_new_str_const(const uint8_t *data, size_t size) {
   coap_string_t *s = coap_new_string(size);
   if (!s)
     return NULL;
-  memcpy (s->s, data, size);
+  memcpy(s->s, data, size);
   s->length = size;
   return (coap_str_const_t *)s;
 }
 
-void coap_delete_str_const(coap_str_const_t *s) {
+void
+coap_delete_str_const(coap_str_const_t *s) {
   coap_free_type(COAP_STRING, s);
 }
 
-coap_str_const_t *coap_make_str_const(const char *string)
-{
+coap_str_const_t *
+coap_make_str_const(const char *string) {
   static int ofs = 0;
   static coap_str_const_t var[COAP_MAX_STR_CONST_FUNC];
-  if (++ofs == COAP_MAX_STR_CONST_FUNC) ofs = 0;
+  if (++ofs == COAP_MAX_STR_CONST_FUNC)
+    ofs = 0;
   var[ofs].length = strlen(string);
   var[ofs].s = (const uint8_t *)string;
   return &var[ofs];
 }
 
-coap_binary_t *coap_new_binary(size_t size) {
+coap_binary_t *
+coap_new_binary(size_t size) {
   return (coap_binary_t *)coap_new_string(size);
 }
 
-coap_binary_t *coap_resize_binary(coap_binary_t *s, size_t size) {
+coap_binary_t *
+coap_resize_binary(coap_binary_t *s, size_t size) {
 #if defined(RIOT_VERSION) || defined(WITH_LWIP)
   /* Unlikely to work as strings will not be large enough */
   coap_binary_t *new = coap_new_binary(size);
@@ -95,19 +101,22 @@ coap_binary_t *coap_resize_binary(coap_binary_t *s, size_t size) {
   return new;
 }
 
-void coap_delete_binary(coap_binary_t *s) {
+void
+coap_delete_binary(coap_binary_t *s) {
   coap_free_type(COAP_STRING, s);
 }
 
-coap_bin_const_t *coap_new_bin_const(const uint8_t *data, size_t size) {
+coap_bin_const_t *
+coap_new_bin_const(const uint8_t *data, size_t size) {
   coap_string_t *s = coap_new_string(size);
   if (!s)
     return NULL;
-  memcpy (s->s, data, size);
+  memcpy(s->s, data, size);
   s->length = size;
   return (coap_bin_const_t *)s;
 }
 
-void coap_delete_bin_const(coap_bin_const_t *s) {
+void
+coap_delete_bin_const(coap_bin_const_t *s) {
   coap_free_type(COAP_STRING, s);
 }
