@@ -27,12 +27,12 @@
 #endif
 
 #define COAP_WS_RESPONSE \
-"HTTP/1.1 101 Switching Protocols\r\n" \
-"Upgrade: websocket\r\n" \
-"Connection: Upgrade\r\n" \
-"Sec-WebSocket-Accept: %s\r\n" \
-"Sec-WebSocket-Protocol: coap\r\n" \
-"\r\n"
+  "HTTP/1.1 101 Switching Protocols\r\n" \
+  "Upgrade: websocket\r\n" \
+  "Connection: Upgrade\r\n" \
+  "Sec-WebSocket-Accept: %s\r\n" \
+  "Sec-WebSocket-Protocol: coap\r\n" \
+  "\r\n"
 
 int
 coap_ws_is_supported(void) {
@@ -67,20 +67,20 @@ coap_base64_encode_buffer(const uint8_t *string, size_t len, char *encoded,
   for (i = 0; i < len - 2; i += 3) {
     *p++ = basis_64[(string[i] >> 2) & 0x3F];
     *p++ = basis_64[((string[i] & 0x3) << 4) |
-                    ((int) (string[i + 1] & 0xF0) >> 4)];
+                                       ((int)(string[i + 1] & 0xF0) >> 4)];
     *p++ = basis_64[((string[i + 1] & 0xF) << 2) |
-                    ((int) (string[i + 2] & 0xC0) >> 6)];
+                                           ((int)(string[i + 2] & 0xC0) >> 6)];
     *p++ = basis_64[string[i + 2] & 0x3F];
   }
   if (i < len) {
     *p++ = basis_64[(string[i] >> 2) & 0x3F];
     if (i == (len - 1)) {
-            *p++ = basis_64[((string[i] & 0x3) << 4)];
-            *p++ = '=';
+      *p++ = basis_64[((string[i] & 0x3) << 4)];
+      *p++ = '=';
     } else {
-            *p++ = basis_64[((string[i] & 0x3) << 4) |
-                    ((int) (string[i + 1] & 0xF0) >> 4)];
-            *p++ = basis_64[((string[i + 1] & 0xF) << 2)];
+      *p++ = basis_64[((string[i] & 0x3) << 4) |
+                                         ((int)(string[i + 1] & 0xF0) >> 4)];
+      *p++ = basis_64[((string[i + 1] & 0xF) << 2)];
     }
     *p++ = '=';
   }
@@ -128,24 +128,24 @@ coap_base64_decode_buffer(const char *bufcoded, size_t *len, uint8_t *bufplain,
 
   while (nprbytes > 4) {
     *(bufout++) =
-            (uint8_t) (pr2six[*bufin] << 2 | pr2six[bufin[1]] >> 4);
+        (uint8_t)(pr2six[*bufin] << 2 | pr2six[bufin[1]] >> 4);
     *(bufout++) =
-            (uint8_t) (pr2six[bufin[1]] << 4 | pr2six[bufin[2]] >> 2);
+        (uint8_t)(pr2six[bufin[1]] << 4 | pr2six[bufin[2]] >> 2);
     *(bufout++) =
-            (uint8_t) (pr2six[bufin[2]] << 6 | pr2six[bufin[3]]);
+        (uint8_t)(pr2six[bufin[2]] << 6 | pr2six[bufin[3]]);
     bufin += 4;
     nprbytes -= 4;
   }
 
   /* Note: (nprbytes == 1) would be an error, so just ignore that case */
   if (nprbytes > 1) {
-    *(bufout++) = (uint8_t) (pr2six[*bufin] << 2 | pr2six[bufin[1]] >> 4);
+    *(bufout++) = (uint8_t)(pr2six[*bufin] << 2 | pr2six[bufin[1]] >> 4);
   }
   if (nprbytes > 2) {
-    *(bufout++) = (uint8_t) (pr2six[bufin[1]] << 4 | pr2six[bufin[2]] >> 2);
+    *(bufout++) = (uint8_t)(pr2six[bufin[1]] << 4 | pr2six[bufin[2]] >> 2);
   }
   if (nprbytes > 3) {
-    *(bufout++) = (uint8_t) (pr2six[bufin[2]] << 6 | pr2six[bufin[3]]);
+    *(bufout++) = (uint8_t)(pr2six[bufin[2]] << 6 | pr2six[bufin[3]]);
   }
 
   if (len)
@@ -287,17 +287,18 @@ coap_ws_write(coap_session_t *session, const uint8_t *data, size_t datalen) {
 
 static char *
 coap_ws_split_rd_header(coap_session_t *session) {
-  char *cp = strchr((char*)session->ws->http_hdr, ' ');
+  char *cp = strchr((char *)session->ws->http_hdr, ' ');
 
   if (!cp)
-    cp = strchr((char*)session->ws->http_hdr, '\t');
+    cp = strchr((char *)session->ws->http_hdr, '\t');
 
   if (!cp)
     return NULL;
 
   *cp = '\000';
   cp++;
-  while (isblank(*cp)) cp++;
+  while (isblank(*cp))
+    cp++;
   return cp;
 }
 
@@ -307,9 +308,9 @@ coap_ws_rd_http_header_server(coap_session_t *session) {
   char *value;
 
   if (!ws->seen_first) {
-    if (strcasecmp((char*)ws->http_hdr,
-                    "GET /.well-known/coap HTTP/1.1") != 0) {
-      coap_log_info("WS: Invalid GET request %s\n", (char*)ws->http_hdr);
+    if (strcasecmp((char *)ws->http_hdr,
+                   "GET /.well-known/coap HTTP/1.1") != 0) {
+      coap_log_info("WS: Invalid GET request %s\n", (char *)ws->http_hdr);
       return 0;
     }
     ws->seen_first = 1;
@@ -320,14 +321,13 @@ coap_ws_rd_http_header_server(coap_session_t *session) {
   if (!value)
     return 0;
 
-  if (strcasecmp((char*)ws->http_hdr, "Host:") == 0) {
+  if (strcasecmp((char *)ws->http_hdr, "Host:") == 0) {
     if (ws->seen_host) {
       coap_log_debug("WS: Duplicate Host: header\n");
       return 0;
     }
     ws->seen_host = 1;
-  }
-  else if (strcasecmp((char*)ws->http_hdr, "Upgrade:") == 0) {
+  } else if (strcasecmp((char *)ws->http_hdr, "Upgrade:") == 0) {
     if (ws->seen_upg) {
       coap_log_debug("WS: Duplicate Upgrade: header\n");
       return 0;
@@ -337,8 +337,7 @@ coap_ws_rd_http_header_server(coap_session_t *session) {
       return 0;
     }
     ws->seen_upg = 1;
-  }
-  else if (strcasecmp((char*)ws->http_hdr, "Connection:") == 0) {
+  } else if (strcasecmp((char *)ws->http_hdr, "Connection:") == 0) {
     if (ws->seen_conn) {
       coap_log_debug("WS: Duplicate Connection: header\n");
       return 0;
@@ -348,7 +347,7 @@ coap_ws_rd_http_header_server(coap_session_t *session) {
       return 0;
     }
     ws->seen_conn = 1;
-  } else if (strcasecmp((char*)ws->http_hdr, "Sec-WebSocket-Key:") == 0) {
+  } else if (strcasecmp((char *)ws->http_hdr, "Sec-WebSocket-Key:") == 0) {
     size_t len;
 
     if (ws->seen_key) {
@@ -363,7 +362,7 @@ coap_ws_rd_http_header_server(coap_session_t *session) {
     }
     coap_ws_log_key(session);
     ws->seen_key = 1;
-  } else if (strcasecmp((char*)ws->http_hdr, "Sec-WebSocket-Protocol:") == 0) {
+  } else if (strcasecmp((char *)ws->http_hdr, "Sec-WebSocket-Protocol:") == 0) {
     if (ws->seen_proto) {
       coap_log_debug("WS: Duplicate Sec-WebSocket-Protocol: header\n");
       return 0;
@@ -373,7 +372,7 @@ coap_ws_rd_http_header_server(coap_session_t *session) {
       return 0;
     }
     ws->seen_proto = 1;
-  } else if (strcasecmp((char*)ws->http_hdr, "Sec-WebSocket-Version:") == 0) {
+  } else if (strcasecmp((char *)ws->http_hdr, "Sec-WebSocket-Version:") == 0) {
     if (ws->seen_ver) {
       coap_log_debug("WS: Duplicate Sec-WebSocket-Version: header\n");
       return 0;
@@ -425,9 +424,9 @@ coap_ws_rd_http_header_client(coap_session_t *session) {
   if (!ws->seen_first) {
     value = coap_ws_split_rd_header(session);
 
-    if (strcmp((char*)ws->http_hdr, "HTTP/1.1") != 0 ||
+    if (strcmp((char *)ws->http_hdr, "HTTP/1.1") != 0 ||
         atoi(value) != 101) {
-      coap_log_info("WS: Invalid GET response %s\n", (char*)ws->http_hdr);
+      coap_log_info("WS: Invalid GET response %s\n", (char *)ws->http_hdr);
       return 0;
     }
     ws->seen_first = 1;
@@ -438,7 +437,7 @@ coap_ws_rd_http_header_client(coap_session_t *session) {
   if (!value)
     return 0;
 
-  if (strcasecmp((char*)ws->http_hdr, "Upgrade:") == 0) {
+  if (strcasecmp((char *)ws->http_hdr, "Upgrade:") == 0) {
     if (ws->seen_upg) {
       coap_log_debug("WS: Duplicate Upgrade: header\n");
       return 0;
@@ -448,8 +447,7 @@ coap_ws_rd_http_header_client(coap_session_t *session) {
       return 0;
     }
     ws->seen_upg = 1;
-  }
-  else if (strcasecmp((char*)ws->http_hdr, "Connection:") == 0) {
+  } else if (strcasecmp((char *)ws->http_hdr, "Connection:") == 0) {
     if (ws->seen_conn) {
       coap_log_debug("WS: Duplicate Connection: header\n");
       return 0;
@@ -459,7 +457,7 @@ coap_ws_rd_http_header_client(coap_session_t *session) {
       return 0;
     }
     ws->seen_conn = 1;
-  } else if (strcasecmp((char*)ws->http_hdr, "Sec-WebSocket-Accept:") == 0) {
+  } else if (strcasecmp((char *)ws->http_hdr, "Sec-WebSocket-Accept:") == 0) {
     char hash[30];
 
     if (ws->seen_key) {
@@ -473,7 +471,7 @@ coap_ws_rd_http_header_client(coap_session_t *session) {
       return 0;
     }
     ws->seen_key = 1;
-  } else if (strcasecmp((char*)ws->http_hdr, "Sec-WebSocket-Protocol:") == 0) {
+  } else if (strcasecmp((char *)ws->http_hdr, "Sec-WebSocket-Protocol:") == 0) {
     if (ws->seen_proto) {
       coap_log_debug("WS: Duplicate Sec-WebSocket-Protocol: header\n");
       return 0;
@@ -506,7 +504,7 @@ coap_ws_rd_http_header(coap_session_t *session) {
      * some frame info that needs to be subsequently processed
      */
     rem = ws->http_ofs > (sizeof(ws->http_hdr) - 1 - COAP_MAX_FS) ?
-                           sizeof(ws->http_hdr) - ws->http_ofs : COAP_MAX_FS;
+          sizeof(ws->http_hdr) - ws->http_ofs : COAP_MAX_FS;
     bytes = session->sock.lfunc[COAP_LAYER_WS].read(session,
                                                     &ws->http_hdr[ws->http_ofs],
                                                     rem);
@@ -542,7 +540,7 @@ coap_ws_rd_http_header(coap_session_t *session) {
           }
         }
 
-        rem = ws->http_ofs - ((uint8_t*)cp + 1 - ws->http_hdr);
+        rem = ws->http_ofs - ((uint8_t *)cp + 1 - ws->http_hdr);
         if (ws->http_hdr[0] == '\000') {
           /* Found trailing empty header line */
           if (ws->state == COAP_SESSION_TYPE_SERVER) {
@@ -601,7 +599,7 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
       snprintf(buf, sizeof(buf), "HTTP/1.1 400 Invalid request\r\n\r\n");
       coap_log_debug("WS: Response (Fail)\n%s", buf);
       if (coap_netif_available(session)) {
-        session->sock.lfunc[COAP_LAYER_WS].write(session, (uint8_t*)buf,
+        session->sock.lfunc[COAP_LAYER_WS].write(session, (uint8_t *)buf,
                                                  strlen(buf));
       }
       coap_session_disconnected(session, COAP_NACK_WS_LAYER_FAILED);
@@ -619,8 +617,8 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
       }
       snprintf(buf, sizeof(buf), COAP_WS_RESPONSE, hash);
       coap_log_debug("WS: Response\n%s", buf);
-      session->sock.lfunc[COAP_LAYER_WS].write(session, (uint8_t*)buf,
-                                                   strlen(buf));
+      session->sock.lfunc[COAP_LAYER_WS].write(session, (uint8_t *)buf,
+                                               strlen(buf));
 
       coap_handle_event(session->context, COAP_EVENT_WS_CONNECTED, session);
       coap_log_debug("WS: established\n");
@@ -637,8 +635,8 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
   /* Get WebSockets frame if not already completely in */
   if (!session->ws->all_hdr_in) {
     ret = session->sock.lfunc[COAP_LAYER_WS].read(session,
-                         &session->ws->rd_header[session->ws->hdr_ofs],
-                         sizeof(session->ws->rd_header) - session->ws->hdr_ofs);
+                                                  &session->ws->rd_header[session->ws->hdr_ofs],
+                                                  sizeof(session->ws->rd_header) - session->ws->hdr_ofs);
     if (ret < 0)
       return ret;
     session->ws->hdr_ofs += (int)ret;
@@ -648,10 +646,10 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
 
     if (session->ws->state == COAP_SESSION_TYPE_SERVER &&
         !(session->ws->rd_header[1] & WS_B1_MASK_BIT)) {
-        /* Client has failed to mask the data */
-         session->ws->close_reason = 1002;
-        coap_ws_close(session);
-        return 0;
+      /* Client has failed to mask the data */
+      session->ws->close_reason = 1002;
+      coap_ws_close(session);
+      return 0;
     }
 
     bytes_size = session->ws->rd_header[1] & WS_B1_LEN_MASK;
@@ -672,7 +670,7 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
     op_code = session->ws->rd_header[0] & WS_B0_OP_MASK;
     if (op_code != WS_OP_BINARY && op_code != WS_OP_CLOSE) {
       /* Remote has failed to use correct opcode */
-       session->ws->close_reason = 1003;
+      session->ws->close_reason = 1003;
       coap_ws_close(session);
       return 0;
       if (op_code == WS_OP_CLOSE) {
@@ -758,8 +756,8 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
 
   /* Get in (remaining) data */
   ret = session->sock.lfunc[COAP_LAYER_WS].read(session,
-                               &data[session->ws->data_ofs],
-                               session->ws->data_size - session->ws->data_ofs);
+                                                &data[session->ws->data_ofs],
+                                                session->ws->data_size - session->ws->data_ofs);
   if (ret <= 0)
     return ret;
   session->ws->data_ofs += ret;
@@ -782,14 +780,14 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
 }
 
 #define COAP_WS_REQUEST \
-"GET /.well-known/coap HTTP/1.1\r\n" \
-"Host: %s\r\n" \
-"Upgrade: websocket\r\n" \
-"Connection: Upgrade\r\n" \
-"Sec-WebSocket-Key: %s\r\n" \
-"Sec-WebSocket-Protocol: coap\r\n" \
-"Sec-WebSocket-Version: 13\r\n" \
-"\r\n"
+  "GET /.well-known/coap HTTP/1.1\r\n" \
+  "Host: %s\r\n" \
+  "Upgrade: websocket\r\n" \
+  "Connection: Upgrade\r\n" \
+  "Sec-WebSocket-Key: %s\r\n" \
+  "Sec-WebSocket-Protocol: coap\r\n" \
+  "Sec-WebSocket-Version: 13\r\n" \
+  "\r\n"
 
 void
 coap_ws_establish(coap_session_t *session) {
@@ -825,7 +823,7 @@ coap_ws_establish(coap_session_t *session) {
                coap_address_get_port(&session->addr_info.remote) != 443) {
       port = coap_address_get_port(&session->addr_info.remote);
     }
-    if (strchr((const char*)session->ws_host->s, ':')) {
+    if (strchr((const char *)session->ws_host->s, ':')) {
       if (port) {
         snprintf(host, sizeof(host), "[%s]:%d", session->ws_host->s, port);
       } else {
@@ -840,8 +838,8 @@ coap_ws_establish(coap_session_t *session) {
     }
     snprintf(buf, sizeof(buf), COAP_WS_REQUEST, host, base64);
     coap_log_debug("WS Request\n%s", buf);
-    session->sock.lfunc[COAP_LAYER_WS].write(session, (uint8_t*)buf,
-                                                   strlen(buf));
+    session->sock.lfunc[COAP_LAYER_WS].write(session, (uint8_t *)buf,
+                                             strlen(buf));
   } else {
     session->ws->state = COAP_SESSION_TYPE_SERVER;
   }
