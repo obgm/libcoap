@@ -4043,7 +4043,9 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
 #if COAP_IPV4_SUPPORT
   struct ip_mreq mreq4;
 #endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
   struct ipv6_mreq mreq6;
+#endif /* COAP_IPV6_SUPPORT */
   struct addrinfo *resmulti = NULL, hints, *ainfo;
   int result = -1;
   coap_endpoint_t *endpoint;
@@ -4055,7 +4057,9 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
     return -1;
 
   /* Default is let the kernel choose */
+#if COAP_IPV6_SUPPORT
   mreq6.ipv6mr_interface = 0;
+#endif /* COAP_IPV6_SUPPORT */
 #if COAP_IPV4_SUPPORT
   mreq4.imr_interface.s_addr = INADDR_ANY;
 #endif /* COAP_IPV4_SUPPORT */
