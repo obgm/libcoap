@@ -1,3 +1,38 @@
+2023-07-13  Olaf Bergmann  <bergmann@tzi.org>
+
+	Change summary for version 4.3.2:
+
+        * Source files reformatted according to pre-commit rules.
+        * Support for RFC8613 (OSCORE).
+        * Support for RFC8974 (Extended Tokens).
+        * Support for RFC9177 (Q-Block).
+        * Support for latest RIOT code and new examples.
+        * Support for MinGW builds.
+        * Support for AF_UNIX sockets.
+        * Support for WebSockets (RFC8323).
+        * Support for IPv4 only and IPv6 only libcoap builds.
+        * Support for defining maximum logging level.
+        * Support for maintaining Observer requests over server restarts.
+        * Support for Contiki-NG.
+        * Support for latest LwIP, including using TinyDTLS.
+        * libcoap now has protocol layered support, separating out the
+          logical layers. Stack now is:-
+            - Application
+            - libcoap - CoAP
+            - libcoap - CoAP-Session
+            - libcoap - (D)TLS I/F using external (D)TLS Library
+            - libcoap - Netif
+            - libcoap - Sockets
+            - Kernel Network Stack
+        * Fixes CVE-2023-30362 and CVE-2023-35862.
+        * Reported bugs fixed.
+        * Examples now support separate logging levels for libcoap and (D)TLS.
+        * syslog LOG_ logging levels replaced with COAP_LOG_ logging levels.
+        * New public API functions to aid / reduce application coding.
+        * Remove requirement for applications to have sockaddr knowledge.
+        * Support for clients sending IPv4 broadcast requests.
+        * Documentation added and updated (Doxygen and man).
+
 2022-08-17  Olaf Bergmann  <bergmann@tzi.org>
 
 	Change summary for version 4.3.1:
@@ -12,7 +47,7 @@
         * Warn when Options are repeated that are not defined as being
           repeatable.
         * Support for TLS when using Mbed TLS library.
-        * support for Mbed TLS 3.1
+        * Support for Mbed TLS 3.1
         * Add in BERT support for block handling.
         * More rigorous error handling for Block transfers.
         * Support for using external or submodule TinyDTLS.
@@ -61,7 +96,7 @@
         * Support for Cygwin builds.
         * Proxy support for coap-server, enhanced coap-client capabilities
         * Updated async support.
-            * Multicast requests now randomly delayed befor ethe response is
+            * Multicast requests now randomly delayed before the response is
               sent.
         * Additional RFC support - RFC8768.
         * Mbed TLS DTLS library support.
