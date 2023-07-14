@@ -101,6 +101,13 @@ A2X_EXTRA_PAGES_5 = @DOLLAR_SIGN@(shell for fil in $(TXT5) ; do sed -ne '/^NAME/
 # Then all the alternative names as well as the extras defined below need
 # to be cleaned up in a 'make unistall'.
 install-man: install-man3 install-man5 install-man7
+	@echo ".so man3/coap_address.3" > coap_free_address_info.3
+	@echo ".so man3/coap_address.3" > coap_sockaddr_un.3
+	@echo ".so man3/coap_address.3" > coap_address_set_unix_domain.3
+	@echo ".so man3/coap_address.3" > coap_host_is_unix_domain.3
+	@echo ".so man3/coap_address.3" > coap_is_bcast.3
+	@echo ".so man3/coap_address.3" > coap_is_mcast.3
+	@echo ".so man3/coap_address.3" > coap_is_af_unix.3
 	@echo ".so man3/coap_cache.3" > coap_cache_get_pdu.3
 	@echo ".so man3/coap_cache.3" > coap_cache_get_app_data.3
 	@echo ".so man3/coap_cache.3" > coap_cache_set_app_data.3

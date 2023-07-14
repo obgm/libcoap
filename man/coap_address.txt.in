@@ -13,11 +13,19 @@ NAME
 coap_address,
 coap_address_t,
 coap_address_init,
+coap_address_copy,
+coap_address_equals,
+coap_address_get_port,
+coap_address_set_port,
 coap_get_available_scheme_hint_bits,
 coap_resolve_address_info,
 coap_free_address_info,
 coap_sockaddr_un,
-coap_address_set_unix_domain
+coap_address_set_unix_domain,
+coap_host_is_unix_domain,
+coap_is_bcast,
+coap_is_mcast,
+coap_is_af_unix
 - Work with CoAP Socket Address Types
 
 SYNOPSIS
@@ -30,6 +38,14 @@ SYNOPSIS
 
 *void coap_address_init(coap_address_t *_addr_);*
 
+*void coap_address_copy(coap_address_t *_dst_, const coap_address_t *_src_);*
+
+*int coap_address_equals(const coap_address_t *_a_, const coap_address_t *_b_);*
+
+*uint16_t coap_address_get_port(const coap_address_t *_addr_);*
+
+*void coap_address_set_port(coap_address_t *_addr_, uint16_t _port_);*
+
 *uint32_t coap_get_available_scheme_hint_bits(int _have_pki_psk_,
 int _ws_check_, coap_proto_t _use_unix_proto_);*
 
@@ -39,8 +55,16 @@ int _scheme_hint_bits_, coap_resolve_type_t _type_);*
 
 *void coap_free_address_info(coap_addr_info_t *_info_list_);*
 
+*int coap_host_is_unix_domain(const coap_str_const_t *_host_);*
+
 *int coap_address_set_unix_domain(coap_address_t *_addr_,
 const uint8_t *_host_, size_t _host_len_);*
+
+*int coap_is_bcast(const coap_address_t *_addr_);*
+
+*int coap_is_mcast(const coap_address_t *_addr_);*
+
+*int coap_is_af_unix(const coap_address_t *_addr_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -139,6 +163,25 @@ It is then the responsibility of the application to set the address family
 in addr.sa.sa_family and then fill in the the appropriate union structure
 based on the address family before the coap_address_t _addr_ is used.
 
+*Function: coap_address_copy()*
+
+The *coap_address_copy*() function copies the address _src_ into _dst_.
+
+*Function: coap_address_equals()*
+
+The *coap_address_equals*() function checks whether the addresses _a_ and _b_
+are identical.
+
+*Function: coap_address_get_port()*
+
+The *coap_address_get_port*() function gets the the port from _addr_ if
+_addr_ is AF_INET or AF_INET6.
+
+*Function: coap_address_set_port()*
+
+The *coap_address_set_port*() function sets the the _port_ in _addr_ if
+_addr_ is AF_INET or AF_INET6.
+
 *Function: coap_get_available_scheme_hint_bits()*
 
 The *coap_get_available_scheme_hint_bits*() function is used for servers to
@@ -176,8 +219,31 @@ populates _addr_ with all the appropriate information for a Unix Domain Socket.
 The _host_ information with length _host_len_ abstracted from a CoAP URI
 is copied into _addr_'s _sun_path_ translating any %2F encoding to /.
 
+*Function: coap_host_is_unix_domain()*
+
+The *coap_host_is_unix_domain*() function checks whether _host_ is an
+an AF_UNIX file name (encoded using %2F to indicate a /).
+
+*Function: coap_is_mcast()*
+
+The *coap_is_mcast*() function checks whether _addr_ is a multicast
+address.
+
+*Function: coap_is_bcast()*
+
+The *coap_is_mcast*() function checks whether _addr_ is a broadcast
+address.
+
+*Function: coap_is_af_unix()*
+
+The *coap_is_mcast*() function checks whether _addr_ is of the type AF_UNIX.
+
 RETURN VALUES
 -------------
+*coap_address_equals*() returns 1 if the addresses are equal or 0 if not.
+
+*coap_address_get_port*() returns the port in network byte order.
+
 *coap_get_available_scheme_hint_bits*() returns a set of COAP_URI_SCHEME_*_BIT
 or'd together based on the supported libcoap functionality.
 
@@ -185,6 +251,14 @@ or'd together based on the supported libcoap functionality.
 used for session setup or NULL if there is a failure.
 
 *coap_address_set_unix_domain*() returns 1 on success or 0 on failure.
+
+*coap_host_is_unix_domain*() returns 1 if encoded unix path name or 0 if not.
+
+*coap_is_mcast*() returns 1 if address is multicast or 0 if not.
+
+*coap_is_bcast*() returns 1 if address is broadcast or 0 if not.
+
+*coap_is_af_unix*() returns 1 if address is of type AF_UNIX or 0 if not.
 
 EXAMPLES
 --------

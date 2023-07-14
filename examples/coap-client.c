@@ -1500,8 +1500,8 @@ get_session(coap_context_t *ctx,
   coap_session_t *session = NULL;
 
   is_mcast = coap_is_mcast(dst);
-  if (local_addr || dst->addr.sa.sa_family == AF_UNIX) {
-    if (dst->addr.sa.sa_family == AF_UNIX) {
+  if (local_addr || coap_is_af_unix(dst)) {
+    if (coap_is_af_unix(dst)) {
       coap_address_t bind_addr;
 
       if (local_addr) {
