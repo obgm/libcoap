@@ -100,6 +100,16 @@ coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
 }
 
 int
+coap_is_af_unix(const coap_address_t *a) {
+#if COAP_AF_UNIX_SUPPORT
+  return a->addr.sa.sa_family == AF_UNIX;
+#else /* ! COAP_AF_UNIX_SUPPORT */
+  (void)a;
+  return 0;
+#endif /* ! COAP_AF_UNIX_SUPPORT */
+}
+
+int
 coap_is_mcast(const coap_address_t *a) {
   if (!a)
     return 0;

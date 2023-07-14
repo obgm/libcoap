@@ -269,6 +269,12 @@ int coap_is_mcast(const coap_address_t *a);
  */
 int coap_is_bcast(const coap_address_t *a);
 
+/**
+ * Checks if given address @p a denotes a AF_UNIX address. This function
+ * returns @c 1 if @p a is of type AF_UNIX, @c 0 otherwise.
+ */
+int coap_is_af_unix(const coap_address_t *a);
+
 #else /* WITH_LWIP || WITH_CONTIKI */
 
 /**
@@ -278,6 +284,16 @@ int coap_is_bcast(const coap_address_t *a);
 COAP_STATIC_INLINE int
 coap_is_mcast(const coap_address_t *a) {
   return a && _coap_is_mcast_impl(a);
+}
+
+/**
+ * Checks if given address @p a denotes a AF_UNIX address. This function
+ * returns @c 1 if @p a is of type AF_UNIX, @c 0 otherwise.
+ */
+COAP_STATIC_INLINE int
+coap_is_af_unix(const coap_address_t *a) {
+  (void)a;
+  return 0;
 }
 
 #endif /* WITH_LWIP || WITH_CONTIKI */
