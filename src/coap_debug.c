@@ -1220,7 +1220,7 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     if (len)
       fprintf(log_fd, "%.*s ", (int)len, timebuf);
 
-    if (level > sizeof(loglevels)/sizeof(loglevels[0])) {
+    if (level >= sizeof(loglevels)/sizeof(loglevels[0])) {
       fprintf(log_fd, "%4d ", level);
     } else {
       fprintf(log_fd, "%s ", loglevels[level]);
