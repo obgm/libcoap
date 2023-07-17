@@ -1198,6 +1198,22 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
                                               (block.num << 4) | (0 << 3) | block.szx),
                          buf);
       coap_log_debug("Replaced option Q-Block2 with Block2\n");
+      /* Need to update associated lg_xmit */
+      coap_lg_xmit_t *lg_xmit;
+
+      LL_FOREACH(session->lg_xmit, lg_xmit) {
+        if (COAP_PDU_IS_REQUEST(&lg_xmit->pdu) &&
+            lg_xmit->b.b1.app_token &&
+            coap_binary_equal(&pdu->actual_token, lg_xmit->b.b1.app_token)) {
+          /* Update the skeletal PDU with the block1 option */
+          coap_remove_option(&lg_xmit->pdu, COAP_OPTION_Q_BLOCK2);
+          coap_update_option(&lg_xmit->pdu, COAP_OPTION_BLOCK2,
+                             coap_encode_var_safe(buf, sizeof(buf),
+                                                  (block.num << 4) | (0 << 3) | block.szx),
+                             buf);
+          break;
+        }
+      }
     }
     if (coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK1, &block)) {
       coap_remove_option(pdu, COAP_OPTION_Q_BLOCK1);
