@@ -955,12 +955,11 @@ no_more:
         } else {
           encode = 1;
         }
+        buf_len = print_readable(coap_opt_value(option),
+                                 coap_opt_length(option),
+                                 buf, sizeof(buf), encode);
       }
     }
-
-    buf_len = print_readable(coap_opt_value(option),
-                             coap_opt_length(option),
-                             buf, sizeof(buf), encode);
     outbuflen = strlen(outbuf);
     snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
              " %s:%.*s", msg_option_string(pdu->code, opt_iter.number),
