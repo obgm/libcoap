@@ -324,12 +324,14 @@ get_san_or_cn_from_cert(mbedtls_x509_crt *crt) {
   return NULL;
 }
 
+#if COAP_MAX_LOGGING_LEVEL > 0
 static char *
 get_error_string(int ret) {
   static char buf[128] = {0};
   mbedtls_strerror(ret, buf, sizeof(buf)-1);
   return buf;
 }
+#endif /* COAP_MAX_LOGGING_LEVEL */
 
 static int
 self_signed_cert_verify_callback_mbedtls(void *data,
@@ -1245,6 +1247,7 @@ coap_dtls_free_mbedtls_env(coap_mbedtls_env_t *m_env) {
   }
 }
 
+#if COAP_MAX_LOGGING_LEVEL > 0
 static const char *
 report_mbedtls_alert(unsigned char alert) {
   switch (alert) {
@@ -1268,6 +1271,7 @@ report_mbedtls_alert(unsigned char alert) {
     return "";
   }
 }
+#endif /* COAP_MAX_LOGGING_LEVEL */
 
 /*
  * return -1  failure
