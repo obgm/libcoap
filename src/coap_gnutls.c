@@ -262,6 +262,7 @@ coap_get_tls_library_version(void) {
 
 static void
 coap_gnutls_audit_log_func(gnutls_session_t g_session, const char *text) {
+#if COAP_MAX_LOGGING_LEVEL > 0
   if (g_session) {
     coap_session_t *c_session =
         (coap_session_t *)gnutls_transport_get_ptr(g_session);
@@ -270,6 +271,10 @@ coap_gnutls_audit_log_func(gnutls_session_t g_session, const char *text) {
   } else {
     coap_log_warn("** (null): %s", text);
   }
+#else /* COAP_MAX_LOGGING_LEVEL ==  0 */
+  (void)g_session;
+  (void)text;
+#endif /* COAP_MAX_LOGGING_LEVEL ==  0 */
 }
 
 static void
@@ -2098,6 +2103,7 @@ coap_dtls_new_server_session(coap_session_t *c_session) {
 static void
 log_last_alert(coap_session_t *c_session,
                gnutls_session_t g_session) {
+#if COAP_MAX_LOGGING_LEVEL > 0
   int last_alert = gnutls_alert_get(g_session);
 
   if (last_alert == GNUTLS_A_CLOSE_NOTIFY)
@@ -2108,6 +2114,10 @@ log_last_alert(coap_session_t *c_session,
     coap_log_warn("***%s: Alert '%d': %s\n",
                   coap_session_str(c_session),
                   last_alert, gnutls_alert_get_name(last_alert));
+#else /* COAP_MAX_LOGGING_LEVEL ==  0 */
+  (void)c_session;
+  (void)g_session;
+#endif /* COAP_MAX_LOGGING_LEVEL ==  0 */
 }
 
 /*
