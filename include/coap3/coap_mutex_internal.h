@@ -60,6 +60,8 @@ typedef int coap_mutex_t;
 #else /* !NO SYS */
 #include <lwip/sys.h>
 typedef sys_mutex_t *coap_mutex_t;
+#define COAP_MUTEX_DEFINE(_name)                        \
+  static coap_mutex_t _name
 #define TOKENPASTE(x, y) x ## y
 #define TOKENPASTE2(x, y) TOKENPASTE(x, y)
 #define COAP_MUTEX_INITIALIZER (&TOKENPASTE2(coapMutexAt, __LINE__))
