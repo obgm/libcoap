@@ -492,7 +492,7 @@ coap_session_mfree(coap_session_t *session) {
 
   if (session->partial_pdu)
     coap_delete_pdu(session->partial_pdu);
-  session->sock.lfunc[COAP_LAYER_SESSION].close(session);
+  session->sock.lfunc[COAP_LAYER_SESSION].l_close(session);
   if (session->psk_identity)
     coap_delete_bin_const(session->psk_identity);
   if (session->psk_key)
@@ -944,7 +944,7 @@ coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
       session->doing_first = 0;
   }
 #endif /* !COAP_DISABLE_TCP */
-  session->sock.lfunc[COAP_LAYER_SESSION].close(session);
+  session->sock.lfunc[COAP_LAYER_SESSION].l_close(session);
 }
 
 #if COAP_SERVER_SUPPORT
@@ -1229,7 +1229,7 @@ error:
 static void
 coap_session_check_connect(coap_session_t *session) {
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
-    session->sock.lfunc[COAP_LAYER_SESSION].establish(session);
+    session->sock.lfunc[COAP_LAYER_SESSION].l_establish(session);
   }
 #if !COAP_DISABLE_TCP
   if (COAP_PROTO_RELIABLE(session->proto)) {
@@ -1242,7 +1242,7 @@ coap_session_check_connect(coap_session_t *session) {
       }
     } else {
       /* Initial connect worked immediately */
-      session->sock.lfunc[COAP_LAYER_SESSION].establish(session);
+      session->sock.lfunc[COAP_LAYER_SESSION].l_establish(session);
     }
   }
 #endif /* !COAP_DISABLE_TCP */
@@ -1539,7 +1539,7 @@ coap_new_server_session(coap_context_t *ctx, coap_endpoint_t *ep) {
     coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
     coap_handle_event(session->context, COAP_EVENT_SERVER_SESSION_NEW, session);
     session->state = COAP_SESSION_STATE_CONNECTING;
-    session->sock.lfunc[COAP_LAYER_SESSION].establish(session);
+    session->sock.lfunc[COAP_LAYER_SESSION].l_establish(session);
   }
   return session;
 

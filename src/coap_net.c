@@ -782,7 +782,7 @@ coap_session_send_pdu(coap_session_t *session, coap_pdu_t *pdu) {
   assert(pdu->hdr_size > 0);
 
   /* Caller handles partial writes */
-  bytes_written = session->sock.lfunc[COAP_LAYER_SESSION].write(session,
+  bytes_written = session->sock.lfunc[COAP_LAYER_SESSION].l_write(session,
                   pdu->token - pdu->hdr_size,
                   pdu->used_size + pdu->hdr_size);
   coap_show_pdu(COAP_LOG_DEBUG, pdu);
@@ -1734,7 +1734,7 @@ coap_connect_session(coap_session_t *session, coap_tick_t now) {
   if (coap_netif_strm_connect2(session)) {
     session->last_rx_tx = now;
     coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
-    session->sock.lfunc[COAP_LAYER_SESSION].establish(session);
+    session->sock.lfunc[COAP_LAYER_SESSION].l_establish(session);
   } else {
     coap_handle_event(session->context, COAP_EVENT_TCP_FAILED, session);
     coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
@@ -1754,7 +1754,7 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
     coap_log_debug("** %s: mid=0x%04x: transmitted after delay\n",
                    coap_session_str(session), (int)q->pdu->mid);
     assert(session->partial_write < q->pdu->used_size + q->pdu->hdr_size);
-    bytes_written = session->sock.lfunc[COAP_LAYER_SESSION].write(session,
+    bytes_written = session->sock.lfunc[COAP_LAYER_SESSION].l_write(session,
                     q->pdu->token - q->pdu->hdr_size + session->partial_write,
                     q->pdu->used_size + q->pdu->hdr_size - session->partial_write);
     if (bytes_written > 0)
@@ -1813,9 +1813,9 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
     ssize_t bytes_read = 0;
 
     /* WebSocket layer passes us the whole packet */
-    bytes_read = session->sock.lfunc[COAP_LAYER_SESSION].read(session,
-                                                              packet->payload,
-                                                              packet->length);
+    bytes_read = session->sock.lfunc[COAP_LAYER_SESSION].l_read(session,
+                                                                packet->payload,
+                                                                packet->length);
     if (bytes_read < 0) {
       coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
     } else if (bytes_read > 2) {
@@ -1854,9 +1854,9 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
     int retry;
 
     do {
-      bytes_read = session->sock.lfunc[COAP_LAYER_SESSION].read(session,
-                                                                packet->payload,
-                                                                packet->length);
+      bytes_read = session->sock.lfunc[COAP_LAYER_SESSION].l_read(session,
+                                                                  packet->payload,
+                                                                  packet->length);
       if (bytes_read > 0) {
         session->last_rx_tx = now;
       }

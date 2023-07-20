@@ -81,7 +81,7 @@ typedef ssize_t (*coap_layer_write_t)(coap_session_t *session,
  *
  * If this layer is properly established on invocation, then the next layer
  * must get called by calling
- *   session->lfunc[_this_layer_].establish(session)
+ *   session->lfunc[_this_layer_].l_establish(session)
  * (or done at any point when layer is established).
  * If the establishment of a layer fails, then
  *   coap_session_disconnected(session, COAP_NACK_xxx_LAYER_FAILED) must be
@@ -96,7 +96,7 @@ typedef void (*coap_layer_establish_t)(coap_session_t *session);
  *
  * When this layer is properly closed, then the next layer
  * must get called by calling
- *   session->lfunc[_this_layer_].close(session)
+ *   session->lfunc[_this_layer_].l_close(session)
  * (or done at any point when layer is closed).
  *
  * @param session Session being closed.
@@ -104,10 +104,10 @@ typedef void (*coap_layer_establish_t)(coap_session_t *session);
 typedef void (*coap_layer_close_t)(coap_session_t *session);
 
 typedef struct {
-  coap_layer_read_t read;   /* Get data from next layer (TCP) */
-  coap_layer_write_t write; /* Output data to next layer */
-  coap_layer_establish_t establish; /* Layer establish */
-  coap_layer_close_t close; /* Connection close */
+  coap_layer_read_t l_read;   /* Get data from next layer (TCP) */
+  coap_layer_write_t l_write; /* Output data to next layer */
+  coap_layer_establish_t l_establish; /* Layer establish */
+  coap_layer_close_t l_close; /* Connection close */
 } coap_layer_func_t;
 
 extern coap_layer_func_t coap_layers_coap[COAP_PROTO_LAST][COAP_LAYER_LAST];

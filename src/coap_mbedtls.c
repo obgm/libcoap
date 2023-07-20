@@ -233,8 +233,8 @@ coap_dgram_write(void *ctx, const unsigned char *send_buffer,
       errno = ECONNRESET;
       return -1;
     }
-    result = (int)c_session->sock.lfunc[COAP_LAYER_TLS].write(c_session,
-                                                              send_buffer, send_buffer_length);
+    result = (int)c_session->sock.lfunc[COAP_LAYER_TLS].l_write(c_session,
+                                                                send_buffer, send_buffer_length);
     if (result != (ssize_t)send_buffer_length) {
       coap_log_warn("coap_netif_dgrm_write failed (%zd != %zu)\n",
                     result, send_buffer_length);
@@ -1402,7 +1402,7 @@ coap_sock_read(void *ctx, unsigned char *out, size_t outl) {
   coap_session_t *c_session = (coap_session_t *)ctx;
 
   if (out != NULL) {
-    ret = (int)c_session->sock.lfunc[COAP_LAYER_TLS].read(c_session, out, outl);
+    ret = (int)c_session->sock.lfunc[COAP_LAYER_TLS].l_read(c_session, out, outl);
     /* Translate layer returns into what MbedTLS expects */
     if (ret == -1) {
       if (errno == ECONNRESET) {
@@ -1430,9 +1430,9 @@ coap_sock_write(void *context, const unsigned char *in, size_t inl) {
   int ret = 0;
   coap_session_t *c_session = (coap_session_t *)context;
 
-  ret = c_session->sock.lfunc[COAP_LAYER_TLS].write(c_session,
-                                                    (const uint8_t *)in,
-                                                    inl);
+  ret = c_session->sock.lfunc[COAP_LAYER_TLS].l_write(c_session,
+                                                      (const uint8_t *)in,
+                                                      inl);
   /* Translate layer what returns into what MbedTLS expects */
   if (ret < 0) {
     if ((c_session->state == COAP_SESSION_STATE_CSM ||
@@ -2081,7 +2081,7 @@ coap_dtls_receive(coap_session_t *c_session,
     if (c_session->state == COAP_SESSION_STATE_HANDSHAKE) {
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
                         c_session);
-      c_session->sock.lfunc[COAP_LAYER_TLS].establish(c_session);
+      c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
     }
 
     ret = mbedtls_ssl_read(&m_env->ssl, pdu, sizeof(pdu));
@@ -2266,7 +2266,7 @@ coap_tls_new_client_session(coap_session_t *c_session) {
   ret = do_mbedtls_handshake(c_session, m_env);
   if (ret == 1) {
     coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
-    c_session->sock.lfunc[COAP_LAYER_TLS].establish(c_session);
+    c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
   }
   return m_env;
 #endif /* MBEDTLS_SSL_CLI_C */
@@ -2297,7 +2297,7 @@ coap_tls_new_server_session(coap_session_t *c_session) {
   ret = do_mbedtls_handshake(c_session, m_env);
   if (ret == 1) {
     coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
-    c_session->sock.lfunc[COAP_LAYER_TLS].establish(c_session);
+    c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
   }
   return m_env;
 #endif /* MBEDTLS_SSL_SRV_C */
@@ -2366,7 +2366,7 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
     if (ret == 1) {
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
                         c_session);
-      c_session->sock.lfunc[COAP_LAYER_TLS].establish(c_session);
+      c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
     } else {
       ret = -1;
     }
@@ -2416,7 +2416,7 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
     if (ret == 1) {
       coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
                         c_session);
-      c_session->sock.lfunc[COAP_LAYER_TLS].establish(c_session);
+      c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
     }
   }
 

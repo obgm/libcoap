@@ -42,7 +42,7 @@ coap_dtls_close(coap_session_t *session) {
     coap_dtls_free_session(session);
     session->tls = NULL;
   }
-  session->sock.lfunc[COAP_LAYER_TLS].close(session);
+  session->sock.lfunc[COAP_LAYER_TLS].l_close(session);
 }
 
 #if !COAP_DISABLE_TCP
@@ -71,6 +71,6 @@ coap_tls_close(coap_session_t *session) {
     coap_tls_free_session(session);
     session->tls = NULL;
   }
-  session->sock.lfunc[COAP_LAYER_TLS].close(session);
+  session->sock.lfunc[COAP_LAYER_TLS].l_close(session);
 }
 #endif /* !COAP_DISABLE_TCP */

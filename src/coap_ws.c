@@ -253,7 +253,7 @@ coap_ws_write(coap_session_t *session, const uint8_t *data, size_t datalen) {
     hdr_len += 4;
   }
   coap_ws_log_header(session, ws_header);
-  ret = session->sock.lfunc[COAP_LAYER_WS].write(session, ws_header, hdr_len);
+  ret = session->sock.lfunc[COAP_LAYER_WS].l_write(session, ws_header, hdr_len);
   if (ret != hdr_len) {
     return -1;
   }
@@ -268,10 +268,10 @@ coap_ws_write(coap_session_t *session, const uint8_t *data, size_t datalen) {
     session->ws->data_size = datalen;
     memcpy(wdata, data, datalen);
     coap_ws_mask_data(session, wdata, datalen);
-    ret = session->sock.lfunc[COAP_LAYER_WS].write(session, wdata, datalen);
+    ret = session->sock.lfunc[COAP_LAYER_WS].l_write(session, wdata, datalen);
     coap_free_type(COAP_STRING, wdata);
   } else {
-    ret = session->sock.lfunc[COAP_LAYER_WS].write(session, data, datalen);
+    ret = session->sock.lfunc[COAP_LAYER_WS].l_write(session, data, datalen);
   }
   if (ret <= 0) {
     return ret;
@@ -505,9 +505,9 @@ coap_ws_rd_http_header(coap_session_t *session) {
      */
     rem = ws->http_ofs > (sizeof(ws->http_hdr) - 1 - COAP_MAX_FS) ?
           sizeof(ws->http_hdr) - ws->http_ofs : COAP_MAX_FS;
-    bytes = session->sock.lfunc[COAP_LAYER_WS].read(session,
-                                                    &ws->http_hdr[ws->http_ofs],
-                                                    rem);
+    bytes = session->sock.lfunc[COAP_LAYER_WS].l_read(session,
+                                                      &ws->http_hdr[ws->http_ofs],
+                                                      rem);
     if (bytes < 0)
       return 0;
     if (bytes == 0)
@@ -599,8 +599,8 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
       snprintf(buf, sizeof(buf), "HTTP/1.1 400 Invalid request\r\n\r\n");
       coap_log_debug("WS: Response (Fail)\n%s", buf);
       if (coap_netif_available(session)) {
-        session->sock.lfunc[COAP_LAYER_WS].write(session, (uint8_t *)buf,
-                                                 strlen(buf));
+        session->sock.lfunc[COAP_LAYER_WS].l_write(session, (uint8_t *)buf,
+                                                   strlen(buf));
       }
       coap_session_disconnected(session, COAP_NACK_WS_LAYER_FAILED);
       return -1;
@@ -617,8 +617,8 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
       }
       snprintf(buf, sizeof(buf), COAP_WS_RESPONSE, hash);
       coap_log_debug("WS: Response\n%s", buf);
-      session->sock.lfunc[COAP_LAYER_WS].write(session, (uint8_t *)buf,
-                                               strlen(buf));
+      session->sock.lfunc[COAP_LAYER_WS].l_write(session, (uint8_t *)buf,
+                                                 strlen(buf));
 
       coap_handle_event(session->context, COAP_EVENT_WS_CONNECTED, session);
       coap_log_debug("WS: established\n");
@@ -627,16 +627,16 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
 
       coap_handle_event(session->context, COAP_EVENT_WS_CONNECTED, session);
     }
-    session->sock.lfunc[COAP_LAYER_WS].establish(session);
+    session->sock.lfunc[COAP_LAYER_WS].l_establish(session);
     if (session->ws->hdr_ofs == 0)
       return 0;
   }
 
   /* Get WebSockets frame if not already completely in */
   if (!session->ws->all_hdr_in) {
-    ret = session->sock.lfunc[COAP_LAYER_WS].read(session,
-                                                  &session->ws->rd_header[session->ws->hdr_ofs],
-                                                  sizeof(session->ws->rd_header) - session->ws->hdr_ofs);
+    ret = session->sock.lfunc[COAP_LAYER_WS].l_read(session,
+                                                    &session->ws->rd_header[session->ws->hdr_ofs],
+                                                    sizeof(session->ws->rd_header) - session->ws->hdr_ofs);
     if (ret < 0)
       return ret;
     session->ws->hdr_ofs += (int)ret;
@@ -755,9 +755,9 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
   }
 
   /* Get in (remaining) data */
-  ret = session->sock.lfunc[COAP_LAYER_WS].read(session,
-                                                &data[session->ws->data_ofs],
-                                                session->ws->data_size - session->ws->data_ofs);
+  ret = session->sock.lfunc[COAP_LAYER_WS].l_read(session,
+                                                  &data[session->ws->data_ofs],
+                                                  session->ws->data_size - session->ws->data_ofs);
   if (ret <= 0)
     return ret;
   session->ws->data_ofs += ret;
@@ -838,8 +838,8 @@ coap_ws_establish(coap_session_t *session) {
     }
     snprintf(buf, sizeof(buf), COAP_WS_REQUEST, host, base64);
     coap_log_debug("WS Request\n%s", buf);
-    session->sock.lfunc[COAP_LAYER_WS].write(session, (uint8_t *)buf,
-                                             strlen(buf));
+    session->sock.lfunc[COAP_LAYER_WS].l_write(session, (uint8_t *)buf,
+                                               strlen(buf));
   } else {
     session->ws->state = COAP_SESSION_TYPE_SERVER;
   }
@@ -849,7 +849,7 @@ void
 coap_ws_close(coap_session_t *session) {
   if (!coap_netif_available(session) ||
       session->state == COAP_SESSION_STATE_NONE) {
-    session->sock.lfunc[COAP_LAYER_WS].close(session);
+    session->sock.lfunc[COAP_LAYER_WS].l_close(session);
     return;
   }
   if (session->ws && session->ws->up) {
@@ -882,7 +882,7 @@ coap_ws_close(coap_session_t *session) {
       coap_log_debug("*  %s: WS: Close sent (%u)\n",
                      coap_session_str(session),
                      session->ws->close_reason);
-      ret = session->sock.lfunc[COAP_LAYER_WS].write(session, ws_header, hdr_len+2);
+      ret = session->sock.lfunc[COAP_LAYER_WS].l_write(session, ws_header, hdr_len+2);
       if (ret != hdr_len+2) {
         return;
       }
@@ -909,7 +909,7 @@ coap_ws_close(coap_session_t *session) {
     }
     coap_handle_event(session->context, COAP_EVENT_WS_CLOSED, session);
   }
-  session->sock.lfunc[COAP_LAYER_WS].close(session);
+  session->sock.lfunc[COAP_LAYER_WS].l_close(session);
 }
 
 int
