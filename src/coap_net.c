@@ -3722,21 +3722,27 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         session->last_pong = session->last_rx_tx;
         session->last_ping_mid = COAP_INVALID_MID;
       }
-    }
+    } else {
 #if COAP_SERVER_SUPPORT
-    else {
       /* Need to check is there is a subscription active and delete it */
       RESOURCES_ITER(context->resources, r) {
         coap_subscription_t *obs, *tmp;
         LL_FOREACH_SAFE(r->subscribers, obs, tmp) {
           if (obs->pdu->mid == pdu->mid && obs->session == session) {
+            /* Need to do this now as session may get de-referenced */
+            coap_session_reference(session);
             coap_delete_observer(r, session, &obs->pdu->actual_token);
+            if (context->nack_handler)
+              context->nack_handler(session, NULL, COAP_NACK_RST, pdu->mid);
+            coap_session_release(session);
             goto cleanup;
           }
         }
       }
-    }
 #endif /* COAP_SERVER_SUPPORT */
+      if (context->nack_handler)
+        context->nack_handler(session, NULL, COAP_NACK_RST, pdu->mid);
+    }
     goto cleanup;
 
   case COAP_MESSAGE_NON:
