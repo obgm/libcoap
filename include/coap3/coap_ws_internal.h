@@ -23,7 +23,7 @@
 /**
  * @ingroup internal_api
  * @defgroup ws_internal WebSockets Support
- * Internal API for WebSockets Support
+ * Internal API for WebSockets Support (RFC8323)
  * @{
  */
 

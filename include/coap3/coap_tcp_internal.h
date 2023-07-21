@@ -23,7 +23,7 @@
 /**
  * @ingroup internal_api
  * @defgroup tcp TCP Support
- * Internal API for handling CoAP TCP (RFC8283)
+ * Internal API for handling CoAP TCP (RFC8323)
  * @{
  */
 
