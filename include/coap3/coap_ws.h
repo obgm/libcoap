@@ -21,7 +21,7 @@
 /**
  * @ingroup application_api
  * @defgroup ws WebSockets Support
- * API for interfacing with WebSockets
+ * API for interfacing with WebSockets (RFC8323)
  * @{
  */
 
