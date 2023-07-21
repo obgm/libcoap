@@ -345,10 +345,13 @@ static void
 nack_handler(coap_session_t *session COAP_UNUSED,
              const coap_pdu_t *sent,
              const coap_nack_reason_t reason,
-             const coap_mid_t id COAP_UNUSED) {
-  coap_bin_const_t token = coap_pdu_get_token(sent);
-  if (!track_check_token(&token)) {
-    coap_log_err("nack_handler: Unexpected token\n");
+             const coap_mid_t mid COAP_UNUSED) {
+  if (sent) {
+    coap_bin_const_t token = coap_pdu_get_token(sent);
+
+    if (!track_check_token(&token)) {
+      coap_log_err("nack_handler: Unexpected token\n");
+    }
   }
 
   switch (reason) {

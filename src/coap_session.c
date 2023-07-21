@@ -859,16 +859,32 @@ coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
 
   if (reason == COAP_NACK_ICMP_ISSUE) {
     if (session->context->nack_handler) {
+      int sent_nack = 0;
       coap_queue_t *q = session->context->sendqueue;
       while (q) {
         if (q->session == session) {
+          /* Take the first one */
           coap_bin_const_t token = q->pdu->actual_token;
 
           coap_check_update_token(session, q->pdu);
           session->context->nack_handler(session, q->pdu, reason, q->id);
           coap_update_token(q->pdu, token.length, token.s);
+          sent_nack = 1;
+          break;
         }
         q = q->next;
+      }
+#if COAP_CLIENT_SUPPORT
+      if (!sent_nack && session->lg_crcv) {
+        /* Take the first one */
+        session->context->nack_handler(session, &session->lg_crcv->pdu, reason,
+                                       session->lg_crcv->pdu.mid);
+        sent_nack = 1;
+      }
+#endif /* COAP_CLIENT_SUPPORT */
+      if (!sent_nack) {
+        /* Unable to determine which request ICMP issue was for */
+        session->context->nack_handler(session, NULL, reason, 0);
       }
     }
     coap_log_debug("***%s: session issue (%s)\n",
