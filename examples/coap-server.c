@@ -1720,7 +1720,7 @@ static void
 proxy_nack_handler(coap_session_t *session,
                    const coap_pdu_t *sent COAP_UNUSED,
                    const coap_nack_reason_t reason,
-                   const coap_mid_t id COAP_UNUSED) {
+                   const coap_mid_t mid COAP_UNUSED) {
 
   switch (reason) {
   case COAP_NACK_TOO_MANY_RETRIES:
