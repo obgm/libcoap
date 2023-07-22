@@ -702,8 +702,8 @@ is_binary(int content_format) {
 void
 coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 #if COAP_CONSTRAINED_STACK
-  COAP_MUTEX_DEFINE(static_show_pdu_mutex);
   /* Proxy-Uri: can be 1034 bytes long */
+  /* buf and outbuf protected by mutex m_show_pdu */
   static unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1035)];
   static char outbuf[COAP_DEBUG_BUF_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
@@ -729,7 +729,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
     return;
 
 #if COAP_CONSTRAINED_STACK
-  coap_mutex_lock(&static_show_pdu_mutex);
+  coap_mutex_lock(&m_show_pdu);
 #endif /* COAP_CONSTRAINED_STACK */
 
   if (!pdu->session || COAP_PROTO_NOT_RELIABLE(pdu->session->proto)) {
@@ -1045,7 +1045,7 @@ no_more:
   COAP_DO_SHOW_OUTPUT_LINE;
 
 #if COAP_CONSTRAINED_STACK
-  coap_mutex_unlock(&static_show_pdu_mutex);
+  coap_mutex_unlock(&m_show_pdu);
 #endif /* COAP_CONSTRAINED_STACK */
 }
 
@@ -1188,7 +1188,7 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
 
   if (log_handler) {
 #if COAP_CONSTRAINED_STACK
-    COAP_MUTEX_DEFINE(static_log_mutex);
+    /* message protected by mutex m_log_impl */
     static char message[COAP_DEBUG_BUF_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
     char message[COAP_DEBUG_BUF_SIZE];
@@ -1196,14 +1196,14 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     va_list ap;
     va_start(ap, format);
 #if COAP_CONSTRAINED_STACK
-    coap_mutex_lock(&static_log_mutex);
+    coap_mutex_lock(&m_log_impl);
 #endif /* COAP_CONSTRAINED_STACK */
 
     vsnprintf(message, sizeof(message), format, ap);
     va_end(ap);
     log_handler(level, message);
 #if COAP_CONSTRAINED_STACK
-    coap_mutex_unlock(&static_log_mutex);
+    coap_mutex_unlock(&m_log_impl);
 #endif /* COAP_CONSTRAINED_STACK */
   } else {
     char timebuf[32];

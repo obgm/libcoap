@@ -57,7 +57,7 @@ coap_persist_observe_add(coap_context_t *context,
   size_t data_len;
   coap_pdu_t *pdu = NULL;
 #if COAP_CONSTRAINED_STACK
-  COAP_MUTEX_DEFINE(e_static_mutex);
+  /* e_packet protected by mutex m_persist_add */
   static coap_packet_t e_packet;
 #else /* ! COAP_CONSTRAINED_STACK */
   coap_packet_t e_packet;
@@ -88,7 +88,7 @@ coap_persist_observe_add(coap_context_t *context,
   }
 
 #if COAP_CONSTRAINED_STACK
-  coap_mutex_lock(&e_static_mutex);
+  coap_mutex_lock(&m_persist_add);
 #endif /* COAP_CONSTRAINED_STACK */
 
   /* Build up packet */
@@ -277,7 +277,7 @@ oscore_fail:
 #endif /* ! COAP_OSCORE_SUPPORT */
   coap_delete_pdu(pdu);
 #if COAP_CONSTRAINED_STACK
-  coap_mutex_unlock(&e_static_mutex);
+  coap_mutex_unlock(&m_persist_add);
 #endif /* COAP_CONSTRAINED_STACK */
   return s;
 
@@ -285,7 +285,7 @@ malformed:
   coap_log_warn("coap_persist_observe_add: discard malformed PDU\n");
 fail:
 #if COAP_CONSTRAINED_STACK
-  coap_mutex_unlock(&e_static_mutex);
+  coap_mutex_unlock(&m_persist_add);
 #endif /* COAP_CONSTRAINED_STACK */
   coap_delete_string(uri_path);
   coap_delete_pdu(pdu);
