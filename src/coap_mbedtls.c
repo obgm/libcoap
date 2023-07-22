@@ -2068,14 +2068,14 @@ coap_dtls_receive(coap_session_t *c_session,
 
   if (m_env->established) {
 #if COAP_CONSTRAINED_STACK
-    COAP_MUTEX_DEFINE(b_static_mutex);
+    /* pdu protected by mutex m_dtls_recv */
     static uint8_t pdu[COAP_RXBUFFER_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
     uint8_t pdu[COAP_RXBUFFER_SIZE];
 #endif /* ! COAP_CONSTRAINED_STACK */
 
 #if COAP_CONSTRAINED_STACK
-    coap_mutex_lock(&b_static_mutex);
+    coap_mutex_lock(&m_dtls_recv);
 #endif /* COAP_CONSTRAINED_STACK */
 
     if (c_session->state == COAP_SESSION_STATE_HANDSHAKE) {
@@ -2088,7 +2088,7 @@ coap_dtls_receive(coap_session_t *c_session,
     if (ret > 0) {
       ret = coap_handle_dgram(c_session->context, c_session, pdu, (size_t)ret);
 #if COAP_CONSTRAINED_STACK
-      coap_mutex_unlock(&b_static_mutex);
+      coap_mutex_unlock(&m_dtls_recv);
 #endif /* COAP_CONSTRAINED_STACK */
       goto finish;
     }
@@ -2107,7 +2107,7 @@ coap_dtls_receive(coap_session_t *c_session,
       break;
     }
 #if COAP_CONSTRAINED_STACK
-    coap_mutex_unlock(&b_static_mutex);
+    coap_mutex_unlock(&m_dtls_recv);
 #endif /* COAP_CONSTRAINED_STACK */
     ret = -1;
   } else {
