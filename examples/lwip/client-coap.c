@@ -119,6 +119,9 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
   const char *use_id = "abc";
   coap_pdu_type_t pdu_type = COAP_MESSAGE_CON;
 
+  /* Initialize libcoap library */
+  coap_startup();
+
   while ((opt = getopt(argc, argv, ":k:Nu:v:V:")) != -1) {
     switch (opt) {
     case 'k':
@@ -227,6 +230,7 @@ client_coap_finished(void) {
   coap_delete_optlist(optlist);
   coap_free_context(main_coap_context);
   main_coap_context = NULL;
+  coap_cleanup();
 }
 
 int

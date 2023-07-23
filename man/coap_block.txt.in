@@ -404,7 +404,8 @@ error:
 
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[]) {
   coap_context_t *context = NULL;
   coap_session_t *session = NULL;
   unsigned char *data = NULL;
@@ -412,6 +413,9 @@ int main(int argc, char *argv[]) {
 
   (void)argc;
   (void)argv;
+
+  /* Initialize libcoap library */
+  coap_startup();
 
   /* ... Set up context, session etc. ... */
 
@@ -428,6 +432,7 @@ int main(int argc, char *argv[]) {
 
   /* ... Other code etc. ... */
 
+  coap_cleanup();
   return 0;
 }
 ----
@@ -494,11 +499,15 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
    */
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[]) {
   coap_context_t *context = NULL;
   coap_resource_t *r;
   coap_resource_t *time_resource;
   int not_exit = 1;
+
+  /* Initialize libcoap library */
+  coap_startup();
 
   (void)argc;
   (void)argv;
@@ -545,7 +554,7 @@ int main(int argc, char *argv[]) {
 
 SEE ALSO
 --------
-*coap_pdu_setup*(3), *coap_observe*(3), and *coap_resource*(3)
+*coap_init*(3) *coap_pdu_setup*(3), *coap_observe*(3), and *coap_resource*(3)
 
 FURTHER INFORMATION
 -------------------

@@ -133,7 +133,9 @@ client_coap_init(int argc, char **argv) {
   (void)argc;
   (void)argv;
 
+  /* Initialize libcoap library */
   coap_startup();
+
   coap_set_log_level(COAP_MAX_LOGGING_LEVEL);
 
   /* Parse the URI */

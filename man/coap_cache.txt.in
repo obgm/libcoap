@@ -375,11 +375,15 @@ hnd_put_example_data(coap_context_t *ctx,
   coap_resource_notify_observers(resource, NULL);
 }
 
-int main(int argc, char* argv[]){
+int
+main(int argc, char* argv[]) {
   coap_context_t *ctx = NULL;  /* Set up as normal */
   /* ... */
   uint16_t cache_ignore_options[] = { COAP_OPTION_BLOCK1,
                                       COAP_OPTION_BLOCK2 };
+
+  /* Initialize libcoap library */
+  coap_startup();
 
   /* Remove (void) definition if variable is used */
   (void)argc;
@@ -392,13 +396,15 @@ int main(int argc, char* argv[]){
              sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
 
   /* ... */
+  coap_cleanup();
 
 }
 ----
 
 SEE ALSO
 --------
-*coap_block*(3), *coap_pdu_setup*(3), *coap_resource*(3) and *coap_string*(3)
+*coap_block*(3), *coap_init*(3), *coap_pdu_setup*(3), *coap_resource*(3)
+and *coap_string*(3)
 
 FURTHER INFORMATION
 -------------------

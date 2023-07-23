@@ -162,6 +162,9 @@ struct etimer dirty_timer;
 PROCESS_THREAD(coap_server_process, ev, data) {
   PROCESS_BEGIN();
 
+  /* Initialize libcoap library */
+  coap_startup();
+
   clock_offset = clock_time();
   init_coap_server(&coap_context);
 
@@ -182,6 +185,7 @@ PROCESS_THREAD(coap_server_process, ev, data) {
       etimer_reset(&dirty_timer);
     }
   }
+  coap_cleanup();
 
   PROCESS_END();
 }

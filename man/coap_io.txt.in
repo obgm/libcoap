@@ -226,13 +226,17 @@ EXAMPLES
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
-int main(int argc, char *argv[]){
+int
+main(int argc, char *argv[]) {
 
   coap_context_t *ctx = NULL;
   unsigned wait_ms;
   /* Remove (void) definition if variable is used */
   (void)argc;
   (void)argv;
+
+  /* Initialize libcoap library */
+  coap_startup();
 
   /* Create the libcoap context */
   ctx = coap_new_context(NULL);
@@ -257,6 +261,7 @@ int main(int argc, char *argv[]){
     /* Do any other housekeeping */
   }
   coap_free_context(ctx);
+  coap_cleanup();
 
   /* Do any other cleanup */
 
@@ -271,7 +276,8 @@ int main(int argc, char *argv[]){
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
-int main(int argc, char *argv[]){
+int
+main(int argc, char *argv[]) {
 
   coap_context_t *ctx = NULL;
   unsigned wait_ms;
@@ -280,6 +286,9 @@ int main(int argc, char *argv[]){
   /* Remove (void) definition if variable is used */
   (void)argc;
   (void)argv;
+
+  /* Initialize libcoap library */
+  coap_startup();
 
   /* Create the libcoap context */
   ctx = coap_new_context(NULL);
@@ -309,6 +318,7 @@ int main(int argc, char *argv[]){
     /* Do any other housekeeping */
   }
   coap_free_context(ctx);
+  coap_cleanup();
 
   /* Do any other cleanup */
 
@@ -325,7 +335,8 @@ int main(int argc, char *argv[]){
 
 #include <errno.h>
 
-int main(int argc, char *argv[]){
+int
+main(int argc, char *argv[]) {
 
   coap_context_t *ctx = NULL;
   int coap_fd;
@@ -334,6 +345,9 @@ int main(int argc, char *argv[]){
   /* Remove (void) definition if variable is used */
   (void)argc;
   (void)argv;
+
+  /* Initialize libcoap library */
+  coap_startup();
 
   /* Create the libcoap context */
   ctx = coap_new_context(NULL);
@@ -378,6 +392,7 @@ int main(int argc, char *argv[]){
     /* Do any other housekeeping */
   }
   coap_free_context(ctx);
+  coap_cleanup();
 
   /* Do any other cleanup */
 
@@ -398,7 +413,8 @@ int main(int argc, char *argv[]){
 
 #define MAX_EVENTS 10
 
-int main(int argc, char *argv[]){
+int
+main(int argc, char *argv[]) {
 
   coap_context_t *ctx = NULL;
   int coap_fd;
@@ -410,6 +426,9 @@ int main(int argc, char *argv[]){
   /* Remove (void) definition if variable is used */
   (void)argc;
   (void)argv;
+
+  /* Initialize libcoap library */
+  coap_startup();
 
   /* Create the libcoap context */
   ctx = coap_new_context(NULL);
@@ -465,6 +484,7 @@ int main(int argc, char *argv[]){
     coap_log_debug("epoll_ctl: %s (%d)\n", coap_socket_strerror(), errno);
   }
   coap_free_context(ctx);
+  coap_cleanup();
 
   /* Do any other cleanup */
 
@@ -475,7 +495,7 @@ int main(int argc, char *argv[]){
 
 SEE ALSO
 --------
-*coap_block*(3) and *coap_context*(3)
+*coap_block*(3), *coap_context*(3) and *coap_init*(3)
 
 FURTHER INFORMATION
 -------------------

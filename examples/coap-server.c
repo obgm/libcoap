@@ -2734,6 +2734,9 @@ main(int argc, char **argv) {
   struct sigaction sa;
 #endif
 
+  /* Initialize libcoap library */
+  coap_startup();
+
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
@@ -2910,7 +2913,6 @@ main(int argc, char **argv) {
   sigaction(SIGPIPE, &sa, NULL);
 #endif
 
-  coap_startup();
   coap_set_log_level(log_level);
   coap_dtls_set_log_level(dtls_log_level);
 

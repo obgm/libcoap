@@ -1606,6 +1606,9 @@ main(int argc, char **argv) {
   struct sigaction sa;
 #endif
 
+  /* Initialize libcoap library */
+  coap_startup();
+
   while ((opt = getopt(argc, argv,
                        "a:b:c:e:f:h:j:k:l:m:no:p:rs:t:u:v:wA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:")) != -1) {
     switch (opt) {
@@ -1775,7 +1778,6 @@ main(int argc, char **argv) {
   sigaction(SIGPIPE, &sa, NULL);
 #endif
 
-  coap_startup();
   coap_set_log_level(log_level);
   coap_dtls_set_log_level(dtls_log_level);
 

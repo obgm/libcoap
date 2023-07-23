@@ -191,6 +191,9 @@ void *
 server_coap_run(void *arg) {
   (void)arg;
 
+  /* Initialize libcoap library */
+  coap_startup();
+
   coap_set_log_level(COAP_MAX_LOGGING_LEVEL);
 
   if (!init_coap_context_endpoints(COAP_USE_PSK))

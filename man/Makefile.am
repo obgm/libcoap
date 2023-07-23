@@ -29,6 +29,7 @@ TXT3 = coap_address.txt \
 	coap_encryption.txt \
 	coap_endpoint_client.txt \
 	coap_handler.txt \
+	coap_init.txt \
 	coap_io.txt \
 	coap_keepalive.txt \
 	coap_logging.txt \
