@@ -264,13 +264,18 @@ init_resources(coap_context_t *ctx)
 
 }
 
-int main(int argc, char *argv[]){
+int
+main(int argc, char *argv[]) {
 
   coap_context_t *ctx = NULL;
   coap_endpoint_t *ep = NULL;
   coap_address_t addr;
   unsigned wait_ms;
   struct timeval tv_last = {0, 0};
+
+  /* Initialize libcoap library */
+  coap_startup();
+
   /* Remove (void) definition if variable is used */
   (void)argc;
   (void)argv;
@@ -329,6 +334,8 @@ int main(int argc, char *argv[]){
       }
     }
   }
+  coap_free_context(ctx);
+  coap_cleanup();
   exit(0);
 
 }
@@ -402,7 +409,7 @@ error:
 
 SEE ALSO
 --------
-*coap_block*(3), *coap_context*(3), *coap_handler*(3),
+*coap_block*(3), *coap_context*(3), *coap_handler*(3), *coap_init*(3),
 *coap_pdu_setup*(3), *coap_resource*(3) and *coap_session*(3)
 
 FURTHER INFORMATION

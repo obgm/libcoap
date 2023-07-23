@@ -468,7 +468,11 @@ coap_new_context(const coap_address_t *listen_addr) {
   (void)listen_addr;
 #endif /* COAP_SERVER_SUPPORT */
 
-  coap_startup();
+  if (!coap_started) {
+    coap_startup();
+    coap_log_warn("coap_startup() should be called before any other "
+                  "coap_*() functions are called\n");
+  }
 
   c = coap_malloc_type(COAP_CONTEXT, sizeof(coap_context_t));
   if (!c) {
@@ -3974,7 +3978,7 @@ coap_check_async(coap_context_t *context, coap_tick_t now) {
 #endif /* COAP_ASYNC_SUPPORT */
 #endif /* COAP_SERVER_SUPPORT */
 
-static int coap_started = 0;
+int coap_started = 0;
 
 void
 coap_startup(void) {

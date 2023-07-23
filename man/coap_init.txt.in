@@ -1,0 +1,72 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc tw=0
+
+coap_init(3)
+============
+:doctype: manpage
+:man source:   coap_init
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_init,
+coap_startup,
+coap_cleanup
+- Work with CoAP initialization
+
+SYNOPSIS
+--------
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*void coap_startup(void);*
+
+*void coap_cleanup(void);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
+
+DESCRIPTION
+-----------
+
+The CoAP libcoap logic needs to be initialized before there is any use of the
+libcoap public API. This is done by calling *coap_startup*().
+
+FUNCTIONS
+---------
+
+*Function: coap_startup()*
+
+The *coap_startup*() function must be called before any other *coap_**()
+functions are called. It is used to initialize things like mutexes,
+random number gererators, clocks, TLS libraries etc.
+
+*NOTE:* This should be called after any other lower layer is initialized.
+For example, for LwIP, lwip_init() must be called before *coap_startup*().
+
+*Function: coap_cleanup()*
+
+The *coap_cleanup*() function is used to cleanup / free any information set
+up by the *coap_startup*() function and should be the last *coap_**() function
+called.
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
+
+BUGS
+----
+Please report bugs on the mailing list for libcoap:
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>

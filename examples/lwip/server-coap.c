@@ -128,6 +128,9 @@ server_coap_init(coap_lwip_input_wait_handler_t input_wait,
   int have_ep = 0;
   coap_str_const_t node;
 
+  /* Initialize libcoap library */
+  coap_startup();
+
   while ((opt = getopt(argc, argv, ":k:v:V:")) != -1) {
     switch (opt) {
     case 'k':
@@ -197,6 +200,7 @@ void
 server_coap_finished(void) {
   coap_free_context(main_coap_context);
   main_coap_context = NULL;
+  coap_cleanup();
 }
 
 void

@@ -582,6 +582,9 @@ main(int argc, char **argv) {
   coap_log_t log_level = COAP_LOG_WARN;
   struct sigaction sa;
 
+  /* Initialize libcoap library */
+  coap_startup();
+
   while ((opt = getopt(argc, argv, "A:p:v:")) != -1) {
     switch (opt) {
     case 'A' :

@@ -1100,6 +1100,7 @@ man/coap_encryption.txt
 man/coap_endpoint_client.txt
 man/coap_endpoint_server.txt
 man/coap_handler.txt
+man/coap_init.txt
 man/coap_io.txt
 man/coap_keepalive.txt
 man/coap_logging.txt

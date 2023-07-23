@@ -309,7 +309,8 @@ init_resources(coap_context_t *ctx)
 
 }
 
-int main(int argc, char *argv[]){
+int
+main(int argc, char *argv[]) {
 
   coap_context_t *ctx = NULL;
   coap_endpoint_t *ep = NULL;
@@ -319,6 +320,9 @@ int main(int argc, char *argv[]){
   /* Remove (void) definition if variable is used */
   (void)argc;
   (void)argv;
+
+  /* Initialize libcoap library */
+  coap_startup();
 
   memset (&tv_last, 0, sizeof(tv_last));
 
@@ -384,6 +388,7 @@ int main(int argc, char *argv[]){
   }
   coap_persist_stop(ctx);
   coap_free_context(ctx);
+  coap_cleanup();
   exit(0);
 
 }
@@ -391,7 +396,7 @@ int main(int argc, char *argv[]){
 
 SEE ALSO
 --------
-*coap_block*(3), *coap_context*(3), *coap_handler*(3), *coap_observe*(3),
+*coap_block*(3), *coap_context*(3), *coap_handler*(3), *coap_init*(3), *coap_observe*(3),
 *coap_pdu_setup*(3), *coap_resource*(3) and *coap_session*(3)
 
 FURTHER INFORMATION

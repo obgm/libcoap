@@ -141,6 +141,9 @@ main(int argc, char **argv) {
   struct sigaction sa;
   coap_context_t *ctx;
 
+  /* Initialize libcoap library */
+  coap_startup();
+
   if (argc > 1 && strncmp(argv[1], "-h", 2) == 0) {
     usage(argv[0]);
     exit(1);
@@ -180,6 +183,7 @@ main(int argc, char **argv) {
   }
 
   coap_free_context(ctx);
+  coap_cleanup();
 
   return 0;
 }
