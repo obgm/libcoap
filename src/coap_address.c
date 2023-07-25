@@ -385,6 +385,7 @@ coap_resolve_address_info(const coap_str_const_t *address,
   coap_addr_info_t *info = NULL;
   coap_addr_info_t *info_prev = NULL;
   coap_addr_info_t *info_list = NULL;
+  coap_addr_info_t *info_tmp;
   coap_uri_scheme_t scheme;
   coap_proto_t proto = 0;
 
@@ -500,73 +501,41 @@ coap_resolve_address_info(const coap_str_const_t *address,
           switch (scheme) {
           case COAP_URI_SCHEME_COAP:
             proto = COAP_PROTO_UDP;
-#if !defined(__MINGW32__) && !defined(_WIN32)
-            if (ainfo->ai_socktype != SOCK_DGRAM)
-              continue;
-#endif /* ! __MINGW32__ && ! _WIN32 */
             break;
           case COAP_URI_SCHEME_COAPS:
             if (!coap_dtls_is_supported())
               continue;
             proto = COAP_PROTO_DTLS;
-#if !defined(__MINGW32__) && !defined(_WIN32)
-            if (ainfo->ai_socktype != SOCK_DGRAM)
-              continue;
-#endif /* ! __MINGW32__ && ! _WIN32 */
             break;
           case COAP_URI_SCHEME_COAP_TCP:
             if (!coap_tcp_is_supported())
               continue;
             proto = COAP_PROTO_TCP;
-#if !defined(__MINGW32__) && !defined(_WIN32)
-            if (ainfo->ai_socktype != SOCK_STREAM)
-              continue;
-#endif /* ! __MINGW32__ && ! _WIN32 */
             break;
           case COAP_URI_SCHEME_COAPS_TCP:
             if (!coap_tls_is_supported())
               continue;
             proto = COAP_PROTO_TLS;
-#if !defined(__MINGW32__) && !defined(_WIN32)
-            if (ainfo->ai_socktype != SOCK_STREAM)
-              continue;
-#endif /* ! __MINGW32__ && ! _WIN32 */
             break;
           case COAP_URI_SCHEME_HTTP:
             if (!coap_tcp_is_supported())
               continue;
             proto = COAP_PROTO_NONE;
-#if !defined(__MINGW32__) && !defined(_WIN32)
-            if (ainfo->ai_socktype != SOCK_STREAM)
-              continue;
-#endif /* ! __MINGW32__ && ! _WIN32 */
             break;
           case COAP_URI_SCHEME_HTTPS:
             if (!coap_tls_is_supported())
               continue;
             proto = COAP_PROTO_NONE;
-#if !defined(__MINGW32__) && !defined(_WIN32)
-            if (ainfo->ai_socktype != SOCK_STREAM)
-              continue;
-#endif /* ! __MINGW32__ && ! _WIN32 */
             break;
           case COAP_URI_SCHEME_COAP_WS:
             if (!coap_ws_is_supported())
               continue;
             proto = COAP_PROTO_WS;
-#if !defined(__MINGW32__) && !defined(_WIN32)
-            if (ainfo->ai_socktype != SOCK_STREAM)
-              continue;
-#endif /* ! __MINGW32__ && ! _WIN32 */
             break;
           case COAP_URI_SCHEME_COAPS_WS:
             if (!coap_wss_is_supported())
               continue;
             proto = COAP_PROTO_WSS;
-#if !defined(__MINGW32__) && !defined(_WIN32)
-            if (ainfo->ai_socktype != SOCK_STREAM)
-              continue;
-#endif /* ! __MINGW32__ && ! _WIN32 */
             break;
           case COAP_URI_SCHEME_LAST:
           default:
@@ -578,16 +547,8 @@ coap_resolve_address_info(const coap_str_const_t *address,
             /* malloc failure - return what we have so far */
             return info_list;
           }
-          info->next = NULL;
-          /* Need to return in same order as getaddrinfo() */
-          if (!info_prev) {
-            info_list = info;
-            info_prev = info;
-          } else {
-            info_prev->next = info;
-            info_prev = info;
-          }
 
+          info->next = NULL;
           info->scheme = scheme;
           info->proto = proto;
           coap_address_init(&info->addr);
@@ -661,6 +622,31 @@ coap_resolve_address_info(const coap_str_const_t *address,
           case COAP_URI_SCHEME_LAST:
           default:
             break;
+          }
+
+          /* Check there are no duplications */
+          info_tmp = info_list;
+          while (info_tmp) {
+            if (info_tmp->proto == info->proto &&
+                info_tmp->scheme == info->scheme &&
+                coap_address_equals(&info_tmp->addr, &info->addr)) {
+              break;
+            }
+            info_tmp = info_tmp->next;
+          }
+
+          if (info_tmp) {
+            /* Duplicate */
+            coap_free_type(COAP_STRING, info);
+          } else {
+            /* Need to return in same order as getaddrinfo() */
+            if (!info_prev) {
+              info_list = info;
+              info_prev = info;
+            } else {
+              info_prev->next = info;
+              info_prev = info;
+            }
           }
         }
       }
