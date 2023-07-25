@@ -1646,8 +1646,8 @@ parse_hex_bin(const char *begin, const char *end) {
   binary = coap_new_binary((end - begin) / 2);
   if (binary == NULL)
     goto bad_entry;
-  for (i = 0; (i < (size_t)(end - begin)) && isxdigit(begin[i]) &&
-       isxdigit(begin[i + 1]);
+  for (i = 0; (i < (size_t)(end - begin)) && isxdigit((u_char)begin[i]) &&
+       isxdigit((u_char)begin[i + 1]);
        i += 2) {
     binary->s[i / 2] = (hex2char(begin[i]) << 4) + hex2char(begin[i + 1]);
   }
