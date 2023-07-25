@@ -741,6 +741,10 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
         /* more information in header than given data size */
         memcpy(data, &session->ws->rd_header[2 + extra_hdr_len], bytes_size);
         session->ws->data_ofs = bytes_size;
+        if (session->ws->state == COAP_SESSION_TYPE_SERVER) {
+          /* Need to unmask the data */
+          coap_ws_mask_data(session, data, bytes_size);
+        }
         /* set up partial header for the next read */
         memmove(session->ws->rd_header,
                 &session->ws->rd_header[2 + extra_hdr_len + bytes_size],
