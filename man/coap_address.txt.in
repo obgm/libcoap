@@ -50,7 +50,8 @@ SYNOPSIS
 int _ws_check_, coap_proto_t _use_unix_proto_);*
 
 *coap_addr_info_t *coap_resolve_address_info(const coap_str_const_t *_address_,
-uint16_t _port_, uint16_t _secure_port_, int _ai_hints_flags_,
+uint16_t _port_, uint16_t _secure_port_, uint16_t _ws_port_,
+uint16_t _ws_secure_port_, int _ai_hints_flags_,
 int _scheme_hint_bits_, coap_resolve_type_t _type_);*
 
 *void coap_free_address_info(coap_addr_info_t *_info_list_);*
@@ -196,7 +197,8 @@ protocol to use over a Unix socket. The output is suitable for input for the
 
 The *coap_resolve_address_info*() function resolves the address _address_ into
 a set of one or more coap_addr_info_t structures. Depending on the scheme as
-abstracted from _scheme_hint_bits_ either _port_ or _secure_port_ is used to
+abstracted from _scheme_hint_bits_,  _port_, _secure_port_, _ws_port_
+(WebSockets) or _ws_secure_port_ (WebSockets) is used to
 update the addr variable of coap_addr_info_t. If _port_ (or _secure_port_) is
 0, then the default port for the scheme is used if _type_ is set to
 COAP_RESOLVE_TYPE_LOCAL.  _ai_hints_flags_ is used for
@@ -262,7 +264,7 @@ used for session setup or NULL if there is a failure.
 
 EXAMPLES
 --------
-*Get target address from uri*
+*Get client target address from uri*
 [source, c]
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
@@ -271,7 +273,8 @@ static int
 get_address(coap_uri_t *uri, coap_address_t *dst) {
   coap_addr_info_t *info_list;
 
-   info_list = coap_resolve_address_info(&uri->host, uri->port, uri->port, 0,
+   info_list = coap_resolve_address_info(&uri->host, uri->port, uri->port,
+                                         uri->port, uri->port,0,
                                          1 << uri->scheme, COAP_RESOLVE_TYPE_LOCAL);
    if (info_list == NULL)
      return 0;

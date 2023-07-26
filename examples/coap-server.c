@@ -909,7 +909,7 @@ get_ongoing_proxy_session(coap_session_t *session,
   }
 
   /* resolve destination address where data should be sent */
-  info_list = coap_resolve_address_info(&server, port, port,
+  info_list = coap_resolve_address_info(&server, port, port, port, port,
                                         0,
                                         1 << scheme,
                                         COAP_RESOLVE_TYPE_REMOTE);
@@ -2327,6 +2327,7 @@ get_context(const char *node, const char *port) {
       coap_get_available_scheme_hint_bits(cert_file != NULL || key_defined != 0,
                                           enable_ws, use_unix_proto);
   info_list = coap_resolve_address_info(node ? &local : NULL, u_s_port, s_port,
+                                        ws_port, wss_port,
                                         AI_PASSIVE | AI_NUMERICHOST,
                                         scheme_hint_bits,
                                         COAP_RESOLVE_TYPE_LOCAL);

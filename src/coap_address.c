@@ -373,6 +373,8 @@ coap_addr_info_t *
 coap_resolve_address_info(const coap_str_const_t *address,
                           uint16_t port,
                           uint16_t secure_port,
+                          uint16_t ws_port,
+                          uint16_t ws_secure_port,
                           int ai_hints_flags,
                           int scheme_hint_bits,
                           coap_resolve_type_t type) {
@@ -612,11 +614,11 @@ coap_resolve_address_info(const coap_str_const_t *address,
                         type == COAP_RESOLVE_TYPE_LOCAL);
             break;
           case COAP_URI_SCHEME_COAP_WS:
-            update_port(&info->addr, port, 80,
+            update_port(&info->addr, ws_port, 80,
                         type == COAP_RESOLVE_TYPE_LOCAL);
             break;
           case COAP_URI_SCHEME_COAPS_WS:
-            update_port(&info->addr, secure_port, 443,
+            update_port(&info->addr, ws_secure_port, 443,
                         type == COAP_RESOLVE_TYPE_LOCAL);
             break;
           case COAP_URI_SCHEME_LAST:
@@ -758,11 +760,11 @@ coap_resolve_address_info(const coap_str_const_t *address,
                       type == COAP_RESOLVE_TYPE_LOCAL);
           break;
         case COAP_URI_SCHEME_HTTP:
-          update_port(&info->addr, port, 80,
+          update_port(&info->addr, port, ws_port,
                       type == COAP_RESOLVE_TYPE_LOCAL);
           break;
         case COAP_URI_SCHEME_HTTPS:
-          update_port(&info->addr, secure_port, 443,
+          update_port(&info->addr, secure_port, ws_secure_port,
                       type == COAP_RESOLVE_TYPE_LOCAL);
           break;
         case COAP_URI_SCHEME_LAST:

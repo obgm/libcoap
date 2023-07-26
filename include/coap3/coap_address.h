@@ -175,6 +175,8 @@ typedef enum coap_resolve_type_t {
  * @param address The Address to resolve.
  * @param port    The unsecured protocol port to use.
  * @param secure_port The secured protocol port to use.
+ * @param ws_port The unsecured WebSockets port to use.
+ * @param ws_secure_port The secured WebSockets port to use.
  * @param ai_hints_flags AI_* Hint flags to use for internal getaddrinfo().
  * @param scheme_hint_bits Which schemes to return information for. One or
  *                         more of COAP_URI_SCHEME_*_BIT or'd together.
@@ -185,6 +187,8 @@ typedef enum coap_resolve_type_t {
 coap_addr_info_t *coap_resolve_address_info(const coap_str_const_t *address,
                                             uint16_t port,
                                             uint16_t secure_port,
+                                            uint16_t ws_port,
+                                            uint16_t ws_secure_port,
                                             int ai_hints_flags,
                                             int scheme_hint_bits,
                                             coap_resolve_type_t type);

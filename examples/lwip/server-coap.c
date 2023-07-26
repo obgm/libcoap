@@ -171,6 +171,7 @@ server_coap_init(coap_lwip_input_wait_handler_t input_wait,
       coap_get_available_scheme_hint_bits(use_psk[0],
                                           0, COAP_PROTO_NONE);
   info_list = coap_resolve_address_info(&node, 0, 0,
+                                        0, 0,
                                         0,
                                         scheme_hint_bits,
                                         COAP_RESOLVE_TYPE_LOCAL);
