@@ -86,8 +86,8 @@ resolve_address(const char *host, const char *service, coap_address_t *dst,
   str_host.s = (const uint8_t *)host;
   str_host.length = strlen(host);
 
-  addr_info = coap_resolve_address_info(&str_host, port, port, AF_UNSPEC,
-                                        scheme_hint_bits,
+  addr_info = coap_resolve_address_info(&str_host, port, port, port, port,
+                                        AF_UNSPEC, scheme_hint_bits,
                                         COAP_RESOLVE_TYPE_REMOTE);
   if (addr_info) {
     ret = 1;

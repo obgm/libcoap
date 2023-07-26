@@ -716,6 +716,7 @@ get_context(const char *node, const char *port) {
       coap_get_available_scheme_hint_bits(cert_file != NULL || key_defined != 0,
                                           enable_ws, COAP_PROTO_NONE);
   info_list = coap_resolve_address_info(node ? &local : NULL, u_s_port, s_port,
+                                        ws_port, wss_port,
                                         AI_PASSIVE | AI_NUMERICHOST,
                                         scheme_hint_bits,
                                         COAP_RESOLVE_TYPE_LOCAL);

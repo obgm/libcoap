@@ -1541,7 +1541,7 @@ get_session(coap_context_t *ctx,
       local.s = (const uint8_t *)local_addr;
       local.length = strlen(local_addr);
       /* resolve local address where data should be sent from */
-      info_list = coap_resolve_address_info(&local, port, port,
+      info_list = coap_resolve_address_info(&local, port, port, port, port,
                                             AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL,
                                             1 << scheme,
                                             COAP_RESOLVE_TYPE_LOCAL);
@@ -1806,7 +1806,7 @@ main(int argc, char **argv) {
   }
 
   /* resolve destination address where data should be sent */
-  info_list = coap_resolve_address_info(&server, port, port,
+  info_list = coap_resolve_address_info(&server, port, port, port, port,
                                         0,
                                         1 << scheme,
                                         COAP_RESOLVE_TYPE_REMOTE);
