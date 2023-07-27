@@ -169,6 +169,7 @@ oscore_remove_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx) {
       oscore_free_context(next);
       return 1;
     }
+    prev = next;
     next = next->next;
   }
   return 0;
@@ -309,7 +310,7 @@ oscore_build_key(oscore_ctx_t *osc_ctx,
                  coap_bin_const_t *id,
                  coap_str_const_t *type,
                  size_t out_len) {
-  uint8_t info_buffer[60];
+  uint8_t info_buffer[80];
   size_t info_len;
   uint8_t hkdf_tmp[CONTEXT_KEY_LEN > CONTEXT_INIT_VECT_LEN ?
                                    CONTEXT_KEY_LEN :
@@ -322,7 +323,7 @@ oscore_build_key(oscore_ctx_t *osc_ctx,
                           osc_ctx->id_context,
                           type,
                           out_len);
-  if (info_len == 0)
+  if (info_len == 0 || info_len > sizeof(info_buffer))
     return NULL;
 
   if (!oscore_hkdf(osc_ctx->hkdf_alg,
@@ -571,7 +572,7 @@ oscore_derive_ctx(coap_context_t *c_context, coap_oscore_conf_t *oscore_conf) {
    * immediately called on next SSN update.
    */
   sender_ctx->next_seq = oscore_conf->start_seq_num -
-                         (oscore_conf->start_seq_num % oscore_conf->ssn_freq);
+                         (oscore_conf->start_seq_num % (oscore_conf->ssn_freq > 0 ? oscore_conf->ssn_freq : 1));
 
   sender_ctx->sender_id = oscore_conf->sender_id;
   sender_ctx->seq = oscore_conf->start_seq_num;
@@ -663,6 +664,7 @@ oscore_delete_recipient(oscore_ctx_t *osc_ctx, coap_bin_const_t *rid) {
       oscore_free_recipient(next);
       return 1;
     }
+    prev = next;
     next = next->next_recipient;
   }
   return 0;

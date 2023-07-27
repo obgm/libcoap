@@ -665,6 +665,7 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
     if (session->ws->hdr_ofs < 2 + extra_hdr_len)
       return 0;
 
+    /* Header frame is fully in */
     coap_ws_log_header(session, session->ws->rd_header);
 
     op_code = session->ws->rd_header[0] & WS_B0_OP_MASK;
@@ -673,12 +674,12 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
       session->ws->close_reason = 1003;
       coap_ws_close(session);
       return 0;
-      if (op_code == WS_OP_CLOSE) {
-        coap_log_debug("WS: Close received\n");
-        session->ws->recv_close = 1;
-        coap_ws_close(session);
-        return 0;
-      }
+    }
+    if (op_code == WS_OP_CLOSE) {
+      coap_log_debug("WS: Close received\n");
+      session->ws->recv_close = 1;
+      coap_ws_close(session);
+      return 0;
     }
 
     session->ws->all_hdr_in = 1;
@@ -712,6 +713,7 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
     /* Handle any data read in as a part of the header */
     ret = session->ws->hdr_ofs - 2 - extra_hdr_len;
     if (ret > 0) {
+      assert(2 + extra_hdr_len < (ssize_t)sizeof(session->ws->rd_header));
       /* data in latter part of header */
       if (ret <= bytes_size) {
         /* copy across all the available data */

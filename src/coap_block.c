@@ -1631,6 +1631,9 @@ expire:
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_Q_BLOCK_SUPPORT
+/*
+ * pdu is always released before return IF COAP_SEND_INC_PDU
+ */
 coap_mid_t
 coap_send_q_blocks(coap_session_t *session,
                    coap_lg_xmit_t *lg_xmit,
@@ -1949,6 +1952,9 @@ coap_send_q_block1(coap_session_t *session,
 
 #if COAP_SERVER_SUPPORT
 #if COAP_Q_BLOCK_SUPPORT
+/*
+ * response is always released before return IF COAP_SEND_INC_PDU
+ */
 coap_mid_t
 coap_send_q_block2(coap_session_t *session,
                    coap_resource_t *resource,
@@ -2444,32 +2450,25 @@ coap_handle_request_send_block(coap_session_t *session,
       coap_tick_t now;
       coap_time_t rem;
 
-      coap_ticks(&now);
-      rem = coap_ticks_to_rt(now);
-      if (p->b.b2.maxage_expire > rem) {
-        rem = p->b.b2.maxage_expire - rem;
-      }
       if (!(p->offset + chunk < p->length)) {
         /* Last block - keep in cache for 4 * ACK_TIMOUT */
         coap_ticks(&p->last_all_sent);
       }
-      if (p->b.b2.maxage_expire) {
-        coap_ticks(&now);
-        rem = coap_ticks_to_rt(now);
-        if (p->b.b2.maxage_expire > rem) {
-          rem = p->b.b2.maxage_expire - rem;
-        } else {
-          rem = 0;
-          /* Entry needs to be expired */
-          coap_ticks(&p->last_all_sent);
-        }
-        if (!coap_update_option(out_pdu, COAP_OPTION_MAXAGE,
-                                coap_encode_var_safe8(buf,
-                                                      sizeof(buf),
-                                                      rem),
-                                buf)) {
-          goto internal_issue;
-        }
+      coap_ticks(&now);
+      rem = coap_ticks_to_rt(now);
+      if (p->b.b2.maxage_expire > rem) {
+        rem = p->b.b2.maxage_expire - rem;
+      } else {
+        rem = 0;
+        /* Entry needs to be expired */
+        coap_ticks(&p->last_all_sent);
+      }
+      if (!coap_update_option(out_pdu, COAP_OPTION_MAXAGE,
+                              coap_encode_var_safe8(buf,
+                                                    sizeof(buf),
+                                                    rem),
+                              buf)) {
+        goto internal_issue;
       }
     }
 

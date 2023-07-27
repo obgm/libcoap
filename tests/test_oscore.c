@@ -24,7 +24,7 @@
 #define CHECK_SAME(a,b) \
   (sizeof((a)) == (b)->length && memcmp((a), (b)->s, (b)->length) == 0)
 
-#define Return_CU_ASSERT_PTR_NOT_NULL(value) CU_ASSERT_PTR_NOT_NULL(value); if ((void*)value == NULL) return
+#define FailIf_CU_ASSERT_PTR_NOT_NULL(value) CU_ASSERT_PTR_NOT_NULL(value); if ((void*)value == NULL) goto fail
 
 /************************************************************************
  ** RFC8613 tests
@@ -69,9 +69,9 @@ t_oscore_c_1_1(void) {
 
   memset(&ctx, 0, sizeof(ctx));
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   CU_ASSERT(CHECK_SAME(sender_key, ctx->p_osc_ctx->sender_context->sender_key));
   CU_ASSERT(CHECK_SAME(recipient_key,
@@ -90,6 +90,7 @@ t_oscore_c_1_1(void) {
   oscore_generate_nonce(cose, ctx->p_osc_ctx, nonce_buffer, 13);
   CU_ASSERT(CHECK_SAME(sender_nonce, &nonce));
 
+fail:
   oscore_free_contexts(ctx);
 }
 
@@ -132,9 +133,9 @@ t_oscore_c_1_2(void) {
 
   memset(&ctx, 0, sizeof(ctx));
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   CU_ASSERT(CHECK_SAME(sender_key, ctx->p_osc_ctx->sender_context->sender_key));
   CU_ASSERT(CHECK_SAME(recipient_key,
@@ -153,6 +154,7 @@ t_oscore_c_1_2(void) {
   oscore_generate_nonce(cose, ctx->p_osc_ctx, nonce_buffer, 13);
   CU_ASSERT(CHECK_SAME(sender_nonce, &nonce));
 
+fail:
   oscore_free_contexts(ctx);
 }
 
@@ -194,9 +196,9 @@ t_oscore_c_2_1(void) {
 
   memset(&ctx, 0, sizeof(ctx));
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   CU_ASSERT(CHECK_SAME(sender_key, ctx->p_osc_ctx->sender_context->sender_key));
   CU_ASSERT(CHECK_SAME(recipient_key,
@@ -215,6 +217,7 @@ t_oscore_c_2_1(void) {
   oscore_generate_nonce(cose, ctx->p_osc_ctx, nonce_buffer, 13);
   CU_ASSERT(CHECK_SAME(sender_nonce, &nonce));
 
+fail:
   oscore_free_contexts(ctx);
 }
 
@@ -256,9 +259,9 @@ t_oscore_c_2_2(void) {
 
   memset(&ctx, 0, sizeof(ctx));
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   CU_ASSERT(CHECK_SAME(sender_key, ctx->p_osc_ctx->sender_context->sender_key));
   CU_ASSERT(CHECK_SAME(recipient_key,
@@ -277,6 +280,7 @@ t_oscore_c_2_2(void) {
   oscore_generate_nonce(cose, ctx->p_osc_ctx, nonce_buffer, 13);
   CU_ASSERT(CHECK_SAME(sender_nonce, &nonce));
 
+fail:
   oscore_free_contexts(ctx);
 }
 
@@ -320,9 +324,9 @@ t_oscore_c_3_1(void) {
 
   memset(&ctx, 0, sizeof(ctx));
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   CU_ASSERT(CHECK_SAME(sender_key, ctx->p_osc_ctx->sender_context->sender_key));
   CU_ASSERT(CHECK_SAME(recipient_key,
@@ -341,6 +345,7 @@ t_oscore_c_3_1(void) {
   oscore_generate_nonce(cose, ctx->p_osc_ctx, nonce_buffer, 13);
   CU_ASSERT(CHECK_SAME(sender_nonce, &nonce));
 
+fail:
   oscore_free_contexts(ctx);
 }
 
@@ -384,9 +389,9 @@ t_oscore_c_3_2(void) {
 
   memset(&ctx, 0, sizeof(ctx));
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   CU_ASSERT(CHECK_SAME(sender_key, ctx->p_osc_ctx->sender_context->sender_key));
   CU_ASSERT(CHECK_SAME(recipient_key,
@@ -405,6 +410,7 @@ t_oscore_c_3_2(void) {
   oscore_generate_nonce(cose, ctx->p_osc_ctx, nonce_buffer, 13);
   CU_ASSERT(CHECK_SAME(sender_nonce, &nonce));
 
+fail:
   oscore_free_contexts(ctx);
 }
 
@@ -435,30 +441,30 @@ t_oscore_c_4(void) {
   coap_oscore_conf_t *oscore_conf;
   int result;
   coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
-  coap_pdu_t *osc_pdu;
-  coap_session_t *session;
-
-  Return_CU_ASSERT_PTR_NOT_NULL(pdu);
+  coap_pdu_t *osc_pdu = NULL;
+  coap_session_t *session = NULL;
 
   memset(&ctx, 0, sizeof(ctx));
+  FailIf_CU_ASSERT_PTR_NOT_NULL(pdu);
+
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 20);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   result = coap_pdu_parse(COAP_PROTO_UDP, unprotected_coap_request,
                           sizeof(unprotected_coap_request), pdu);
   CU_ASSERT(result > 0);
 
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
-  Return_CU_ASSERT_PTR_NOT_NULL(session);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_CLIENT;
   session->recipient_ctx = ctx->p_osc_ctx->recipient_chain;
 
   osc_pdu = coap_oscore_new_pdu_encrypted(session, pdu, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
 
   result = coap_pdu_encode_header(osc_pdu, session->proto);
   CU_ASSERT(result != 0);
@@ -468,6 +474,7 @@ t_oscore_c_4(void) {
                   osc_pdu->hdr_size + osc_pdu->used_size);
   CU_ASSERT(result == 0);
 
+fail:
   oscore_free_contexts(ctx);
   coap_delete_pdu(pdu);
   coap_delete_pdu(osc_pdu);
@@ -501,30 +508,30 @@ t_oscore_c_5(void) {
   coap_oscore_conf_t *oscore_conf;
   int result;
   coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
-  coap_pdu_t *osc_pdu;
-  coap_session_t *session;
-
-  Return_CU_ASSERT_PTR_NOT_NULL(pdu);
+  coap_pdu_t *osc_pdu = NULL;
+  coap_session_t *session = NULL;
 
   memset(&ctx, 0, sizeof(ctx));
+  FailIf_CU_ASSERT_PTR_NOT_NULL(pdu);
+
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 20);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   result = coap_pdu_parse(COAP_PROTO_UDP, unprotected_coap_request,
                           sizeof(unprotected_coap_request), pdu);
   CU_ASSERT(result > 0);
 
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
-  Return_CU_ASSERT_PTR_NOT_NULL(session);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_CLIENT;
   session->recipient_ctx = ctx->p_osc_ctx->recipient_chain;
 
   osc_pdu = coap_oscore_new_pdu_encrypted(session, pdu, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
 
   result = coap_pdu_encode_header(osc_pdu, session->proto);
   CU_ASSERT(result != 0);
@@ -533,6 +540,7 @@ t_oscore_c_5(void) {
                   osc_pdu->hdr_size + osc_pdu->used_size);
   CU_ASSERT(result == 0);
 
+fail:
   oscore_free_contexts(ctx);
   coap_delete_pdu(pdu);
   coap_delete_pdu(osc_pdu);
@@ -569,30 +577,30 @@ t_oscore_c_6(void) {
   coap_oscore_conf_t *oscore_conf;
   int result;
   coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
-  coap_pdu_t *osc_pdu;
-  coap_session_t *session;
-
-  Return_CU_ASSERT_PTR_NOT_NULL(pdu);
+  coap_pdu_t *osc_pdu = NULL;
+  coap_session_t *session = NULL;
 
   memset(&ctx, 0, sizeof(ctx));
+  FailIf_CU_ASSERT_PTR_NOT_NULL(pdu);
+
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 20);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   result = coap_pdu_parse(COAP_PROTO_UDP, unprotected_coap_request,
                           sizeof(unprotected_coap_request), pdu);
   CU_ASSERT(result > 0);
 
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
-  Return_CU_ASSERT_PTR_NOT_NULL(session);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_CLIENT;
   session->recipient_ctx = ctx->p_osc_ctx->recipient_chain;
 
   osc_pdu = coap_oscore_new_pdu_encrypted(session, pdu, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
 
   result = coap_pdu_encode_header(osc_pdu, session->proto);
   CU_ASSERT(result != 0);
@@ -601,6 +609,7 @@ t_oscore_c_6(void) {
                   osc_pdu->hdr_size + osc_pdu->used_size);
   CU_ASSERT(result == 0);
 
+fail:
   oscore_free_contexts(ctx);
   coap_delete_pdu(pdu);
   coap_delete_pdu(osc_pdu);
@@ -647,17 +656,17 @@ t_oscore_c_7(void) {
   int result;
   coap_pdu_t *incoming_pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
   coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
-  coap_pdu_t *osc_pdu;
-  coap_session_t *session;
-
-  Return_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
-  Return_CU_ASSERT_PTR_NOT_NULL(pdu);
+  coap_pdu_t *osc_pdu = NULL;
+  coap_session_t *session = NULL;
 
   memset(&ctx, 0, sizeof(ctx));
+  FailIf_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(pdu);
+
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   result = coap_pdu_parse(COAP_PROTO_UDP, protected_coap_request,
                           sizeof(protected_coap_request), incoming_pdu);
@@ -668,7 +677,7 @@ t_oscore_c_7(void) {
   CU_ASSERT(result > 0);
 
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
-  Return_CU_ASSERT_PTR_NOT_NULL(session);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_SERVER;
@@ -679,7 +688,7 @@ t_oscore_c_7(void) {
   /* First, decrypt incoming request to set up all variables for
      sending response */
   osc_pdu = coap_oscore_decrypt_pdu(session, incoming_pdu);
-  Return_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
   result = coap_pdu_encode_header(osc_pdu, session->proto);
   CU_ASSERT(result != 0);
   CU_ASSERT(osc_pdu->hdr_size + osc_pdu->used_size ==
@@ -688,11 +697,13 @@ t_oscore_c_7(void) {
                   osc_pdu->hdr_size + osc_pdu->used_size);
   CU_ASSERT(result == 0);
   coap_delete_pdu(osc_pdu);
+  osc_pdu = NULL;
   coap_delete_pdu(incoming_pdu);
+  incoming_pdu = NULL;
 
   /* Now encrypt the server's response */
   osc_pdu = coap_oscore_new_pdu_encrypted(session, pdu, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
 
   result = coap_pdu_encode_header(osc_pdu, session->proto);
   CU_ASSERT(result != 0);
@@ -702,8 +713,10 @@ t_oscore_c_7(void) {
                   osc_pdu->hdr_size + osc_pdu->used_size);
   CU_ASSERT(result == 0);
 
+fail:
   oscore_free_contexts(ctx);
   coap_delete_pdu(pdu);
+  coap_delete_pdu(incoming_pdu);
   coap_delete_pdu(osc_pdu);
   oscore_delete_server_associations(session);
   coap_free(session);
@@ -750,17 +763,17 @@ t_oscore_c_7_2(void) {
   int result;
   coap_pdu_t *outgoing_pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
   coap_pdu_t *incoming_pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
-  coap_pdu_t *osc_pdu;
-  coap_session_t *session;
-
-  Return_CU_ASSERT_PTR_NOT_NULL(outgoing_pdu);
-  Return_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
+  coap_pdu_t *osc_pdu = NULL;
+  coap_session_t *session = NULL;
 
   memset(&ctx, 0, sizeof(ctx));
+  FailIf_CU_ASSERT_PTR_NOT_NULL(outgoing_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
+
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 20);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   result = coap_pdu_parse(COAP_PROTO_UDP, unprotected_coap_request,
                           sizeof(unprotected_coap_request), outgoing_pdu);
@@ -770,7 +783,7 @@ t_oscore_c_7_2(void) {
   CU_ASSERT(result > 0);
 
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
-  Return_CU_ASSERT_PTR_NOT_NULL(session);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_CLIENT;
@@ -781,7 +794,7 @@ t_oscore_c_7_2(void) {
   /* Send request, so that all associations etc. are correctly set up */
 
   osc_pdu = coap_oscore_new_pdu_encrypted(session, outgoing_pdu, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
 
   result = coap_pdu_encode_header(osc_pdu, session->proto);
   CU_ASSERT(result != 0);
@@ -791,12 +804,14 @@ t_oscore_c_7_2(void) {
                   osc_pdu->hdr_size + osc_pdu->used_size);
   CU_ASSERT(result == 0);
   coap_delete_pdu(outgoing_pdu);
+  outgoing_pdu = NULL;
   coap_delete_pdu(osc_pdu);
+  osc_pdu = NULL;
 
   /* Decrypt the encrypted response */
 
   osc_pdu = coap_oscore_decrypt_pdu(session, incoming_pdu);
-  Return_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
 
   result = coap_pdu_encode_header(osc_pdu, session->proto);
   CU_ASSERT(result != 0);
@@ -807,8 +822,10 @@ t_oscore_c_7_2(void) {
                   osc_pdu->hdr_size + osc_pdu->used_size);
   CU_ASSERT(result == 0);
 
+fail:
   oscore_free_contexts(ctx);
   coap_delete_pdu(incoming_pdu);
+  coap_delete_pdu(outgoing_pdu);
   coap_delete_pdu(osc_pdu);
   coap_free(session);
 }
@@ -853,17 +870,17 @@ t_oscore_c_8(void) {
   int result;
   coap_pdu_t *incoming_pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
   coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
-  coap_pdu_t *osc_pdu;
-  coap_session_t *session;
-
-  Return_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
-  Return_CU_ASSERT_PTR_NOT_NULL(pdu);
+  coap_pdu_t *osc_pdu = NULL;
+  coap_session_t *session = NULL;
 
   memset(&ctx, 0, sizeof(ctx));
+  FailIf_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(pdu);
+
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   result = coap_pdu_parse(COAP_PROTO_UDP, protected_coap_request,
                           sizeof(protected_coap_request), incoming_pdu);
@@ -874,7 +891,7 @@ t_oscore_c_8(void) {
   CU_ASSERT(result > 0);
 
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
-  Return_CU_ASSERT_PTR_NOT_NULL(session);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_SERVER;
@@ -885,7 +902,7 @@ t_oscore_c_8(void) {
   /* First, decrypt incoming request to set up all variables for
      sending response */
   osc_pdu = coap_oscore_decrypt_pdu(session, incoming_pdu);
-  Return_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
   result = coap_pdu_encode_header(osc_pdu, session->proto);
   CU_ASSERT(result != 0);
   CU_ASSERT(osc_pdu->hdr_size + osc_pdu->used_size ==
@@ -894,11 +911,13 @@ t_oscore_c_8(void) {
                   osc_pdu->hdr_size + osc_pdu->used_size);
   CU_ASSERT(result == 0);
   coap_delete_pdu(osc_pdu);
+  osc_pdu = NULL;
   coap_delete_pdu(incoming_pdu);
+  incoming_pdu = NULL;
 
   /* Now encrypt the server's response */
   osc_pdu = coap_oscore_new_pdu_encrypted(session, pdu, NULL, 1);
-  Return_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
 
   result = coap_pdu_encode_header(osc_pdu, session->proto);
   CU_ASSERT(result != 0);
@@ -908,8 +927,10 @@ t_oscore_c_8(void) {
                   osc_pdu->hdr_size + osc_pdu->used_size);
   CU_ASSERT(result == 0);
 
+fail:
   oscore_free_contexts(ctx);
   coap_delete_pdu(pdu);
+  coap_delete_pdu(incoming_pdu);
   coap_delete_pdu(osc_pdu);
   oscore_delete_server_associations(session);
   coap_free(session);
@@ -957,17 +978,17 @@ t_oscore_c_8_2(void) {
   int result;
   coap_pdu_t *outgoing_pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
   coap_pdu_t *incoming_pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
-  coap_pdu_t *osc_pdu;
-  coap_session_t *session;
-
-  Return_CU_ASSERT_PTR_NOT_NULL(outgoing_pdu);
-  Return_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
+  coap_pdu_t *osc_pdu = NULL;
+  coap_session_t *session = NULL;
 
   memset(&ctx, 0, sizeof(ctx));
+  FailIf_CU_ASSERT_PTR_NOT_NULL(outgoing_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
+
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 20);
-  Return_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
-  Return_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
 
   result = coap_pdu_parse(COAP_PROTO_UDP, unprotected_coap_request,
                           sizeof(unprotected_coap_request), outgoing_pdu);
@@ -977,7 +998,7 @@ t_oscore_c_8_2(void) {
   CU_ASSERT(result > 0);
 
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
-  Return_CU_ASSERT_PTR_NOT_NULL(session);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_CLIENT;
@@ -987,7 +1008,7 @@ t_oscore_c_8_2(void) {
   /* Send request, so that all associations etc. are correctly set up */
 
   osc_pdu = coap_oscore_new_pdu_encrypted(session, outgoing_pdu, NULL, 0);
-  Return_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
 
   result = coap_pdu_encode_header(osc_pdu, session->proto);
   CU_ASSERT(result != 0);
@@ -997,12 +1018,15 @@ t_oscore_c_8_2(void) {
                   osc_pdu->hdr_size + osc_pdu->used_size);
   CU_ASSERT(result == 0);
   coap_delete_pdu(outgoing_pdu);
+  /* CDI 1566477 */
+  outgoing_pdu = NULL;
   coap_delete_pdu(osc_pdu);
+  osc_pdu = NULL;
 
   /* Decrypt the encrypted response */
 
   osc_pdu = coap_oscore_decrypt_pdu(session, incoming_pdu);
-  Return_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_pdu);
 
   result = coap_pdu_encode_header(osc_pdu, session->proto);
   CU_ASSERT(result != 0);
@@ -1013,8 +1037,10 @@ t_oscore_c_8_2(void) {
                   osc_pdu->hdr_size + osc_pdu->used_size);
   CU_ASSERT(result == 0);
 
+fail:
   oscore_free_contexts(ctx);
   coap_delete_pdu(incoming_pdu);
+  coap_delete_pdu(outgoing_pdu);
   coap_delete_pdu(osc_pdu);
   coap_free(session);
 }

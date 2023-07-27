@@ -974,16 +974,18 @@ coap_pdu_parse_size(coap_proto_t proto,
         }
       }
     }
-    /* account for the token length */
-    if (tkl < COAP_TOKEN_EXT_1B_TKL) {
-      size += tkl;
-    } else if (tkl == COAP_TOKEN_EXT_1B_TKL) {
-      size += token_start[0] + COAP_TOKEN_EXT_1B_BIAS + 1;
-    } else if (tkl == COAP_TOKEN_EXT_2B_TKL) {
-      size += ((uint16_t)token_start[0] << 8) + token_start[1] +
-              COAP_TOKEN_EXT_2B_BIAS + 2;
-    } else {
-      /* Invalid at this point - caught later as undersized */
+    if (token_start) {
+      /* account for the token length */
+      if (tkl < COAP_TOKEN_EXT_1B_TKL) {
+        size += tkl;
+      } else if (tkl == COAP_TOKEN_EXT_1B_TKL) {
+        size += token_start[0] + COAP_TOKEN_EXT_1B_BIAS + 1;
+      } else if (tkl == COAP_TOKEN_EXT_2B_TKL) {
+        size += ((uint16_t)token_start[0] << 8) + token_start[1] +
+                COAP_TOKEN_EXT_2B_BIAS + 2;
+      } else {
+        /* Invalid at this point - caught later as undersized */
+      }
     }
   }
 

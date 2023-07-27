@@ -114,7 +114,7 @@ oscore_hkdf_expand(cose_hkdf_alg_t hkdf_alg,
   cose_hmac_alg_t hmac_alg;
 
   if (!cose_get_hmac_alg_for_hkdf(hkdf_alg, &hmac_alg))
-    return 0;
+    goto fail;
   /* Compose T(1) */
   memcpy(aggregate_buffer, info, info_len);
   aggregate_buffer[info_len] = 0x01;
@@ -122,7 +122,7 @@ oscore_hkdf_expand(cose_hkdf_alg_t hkdf_alg,
   data.s = aggregate_buffer;
   data.length = info_len + 1;
   if (!oscore_hmac_hash(hmac_alg, prk, &data, &hkdf))
-    return 0;
+    goto fail;
   memcpy(&out_buffer[0], hkdf->s, hkdf->length);
   coap_delete_bin_const(hkdf);
 
@@ -134,7 +134,7 @@ oscore_hkdf_expand(cose_hkdf_alg_t hkdf_alg,
     data.s = aggregate_buffer;
     data.length = 32 + info_len + 1;
     if (!oscore_hmac_hash(hmac_alg, prk, &data, &hkdf))
-      return 0;
+      goto fail;
     memcpy(&out_buffer[i * 32], hkdf->s, hkdf->length);
     coap_delete_bin_const(hkdf);
     memcpy(aggregate_buffer, &(out_buffer[i * 32]), 32);
@@ -143,6 +143,11 @@ oscore_hkdf_expand(cose_hkdf_alg_t hkdf_alg,
   coap_free_type(COAP_STRING, out_buffer);
   coap_free_type(COAP_STRING, aggregate_buffer);
   return 1;
+
+fail:
+  coap_free_type(COAP_STRING, out_buffer);
+  coap_free_type(COAP_STRING, aggregate_buffer);
+  return 0;
 }
 
 /*

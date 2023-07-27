@@ -940,7 +940,7 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
       default:
         /* error */
         coap_log_warn("protocol not supported\n");
-        bytes_written = -1;
+        return -1;
       }
     }
 #endif /* HAVE_STRUCT_CMSGHDR */

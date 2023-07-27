@@ -86,6 +86,8 @@ coap_persist_observe_add(coap_context_t *context,
       break;
     ep = ep->next;
   }
+  if (!ep)
+    return NULL;
 
 #if COAP_CONSTRAINED_STACK
   coap_mutex_lock(&m_persist_add);
@@ -94,6 +96,8 @@ coap_persist_observe_add(coap_context_t *context,
   /* Build up packet */
   memcpy(&packet->addr_info, s_addr_info, sizeof(packet->addr_info));
   packet->ifindex = 0;
+  memcpy(&packet->payload, &raw_packet->s, sizeof(packet->payload));
+  packet->length = raw_packet->length;
 
   data = raw_packet->s;
   data_len = raw_packet->length;
@@ -303,8 +307,8 @@ coap_op_observe_read(FILE *fp, coap_subscription_t **observe_key,
                      coap_proto_t *e_proto, coap_address_t *e_listen_addr,
                      coap_addr_tuple_t *s_addr_info,
                      coap_bin_const_t **raw_packet, coap_bin_const_t **oscore_info) {
-  size_t size;
-  coap_binary_t *scratch;
+  ssize_t size;
+  coap_binary_t *scratch = NULL;
 
   *raw_packet = NULL;
   *oscore_info = NULL;
@@ -319,6 +323,8 @@ coap_op_observe_read(FILE *fp, coap_subscription_t **observe_key,
       goto fail;
     if (fread(&size, sizeof(size), 1, fp) != 1)
       goto fail;
+    if (size < 0 || size > 0x10000)
+      goto fail;
     scratch = coap_new_binary(size);
     if ((scratch) == NULL)
       goto fail;
@@ -327,8 +333,10 @@ coap_op_observe_read(FILE *fp, coap_subscription_t **observe_key,
     *raw_packet = (coap_bin_const_t *)scratch;
     if (fread(&size, sizeof(size), 1, fp) != 1)
       goto fail;
-    if ((ssize_t)size == -1)
+    if (size == -1)
       return 1;
+    else if (size < 0 || size > 0x10000)
+      goto fail;
     else {
       scratch = coap_new_binary(size);
       if (scratch == NULL)
@@ -340,6 +348,8 @@ coap_op_observe_read(FILE *fp, coap_subscription_t **observe_key,
     return 1;
   }
 fail:
+  coap_delete_binary(scratch);
+  *raw_packet = NULL;
   return 0;
 }
 
@@ -441,7 +451,7 @@ coap_op_observe_load_disk(coap_context_t *ctx) {
   fclose(fp_new);
   fclose(fp_orig);
   /* Either old or new is in place */
-  rename(new, (const char *)ctx->observe_save_file->s);
+  (void)rename(new, (const char *)ctx->observe_save_file->s);
   coap_free_type(COAP_STRING, new);
   return;
 
@@ -452,7 +462,9 @@ fail:
     fclose(fp_new);
   if (fp_orig)
     fclose(fp_orig);
-  remove(new);
+  if (new) {
+    (void)remove(new);
+  }
   coap_free_type(COAP_STRING, new);
   return;
 }
@@ -522,7 +534,7 @@ coap_op_observe_added(coap_session_t *session,
   if (fp_orig)
     fclose(fp_orig);
   /* Either old or new is in place */
-  rename(new, (const char *)session->context->observe_save_file->s);
+  (void)rename(new, (const char *)session->context->observe_save_file->s);
   coap_free_type(COAP_STRING, new);
   return 1;
 
@@ -533,7 +545,9 @@ fail:
     fclose(fp_new);
   if (fp_orig)
     fclose(fp_orig);
-  remove(new);
+  if (new) {
+    (void)remove(new);
+  }
   coap_free_type(COAP_STRING, new);
   return 0;
 }
@@ -597,7 +611,7 @@ coap_op_observe_deleted(coap_session_t *session,
   fclose(fp_new);
   fclose(fp_orig);
   /* Either old or new is in place */
-  rename(new, (const char *)session->context->observe_save_file->s);
+  (void)rename(new, (const char *)session->context->observe_save_file->s);
   coap_free_type(COAP_STRING, new);
   return 1;
 
@@ -608,7 +622,9 @@ fail:
     fclose(fp_new);
   if (fp_orig)
     fclose(fp_orig);
-  remove(new);
+  if (new) {
+    (void)remove(new);
+  }
   coap_free_type(COAP_STRING, new);
   return 0;
 }
@@ -711,7 +727,7 @@ coap_op_obs_cnt_track_observe(coap_context_t *context,
   if (fp_orig)
     fclose(fp_orig);
   /* Either old or new is in place */
-  rename(new, (const char *)context->obs_cnt_save_file->s);
+  (void)rename(new, (const char *)context->obs_cnt_save_file->s);
   coap_free_type(COAP_STRING, new);
   return 1;
 
@@ -720,7 +736,9 @@ fail:
     fclose(fp_new);
   if (fp_orig)
     fclose(fp_orig);
-  remove(new);
+  if (new) {
+    (void)remove(new);
+  }
   coap_free_type(COAP_STRING, new);
   return 0;
 }
@@ -772,7 +790,7 @@ coap_op_obs_cnt_deleted(coap_context_t *context,
   fclose(fp_new);
   fclose(fp_orig);
   /* Either old or new is in place */
-  rename(new, (const char *)context->obs_cnt_save_file->s);
+  (void)rename(new, (const char *)context->obs_cnt_save_file->s);
   coap_free_type(COAP_STRING, new);
   return 1;
 
@@ -781,7 +799,9 @@ fail:
     fclose(fp_new);
   if (fp_orig)
     fclose(fp_orig);
-  remove(new);
+  if (new) {
+    (void)remove(new);
+  }
   coap_free_type(COAP_STRING, new);
   return 0;
 }
@@ -794,7 +814,7 @@ static int
 coap_op_dyn_resource_read(FILE *fp, coap_proto_t *e_proto,
                           coap_string_t **name,
                           coap_binary_t **raw_packet) {
-  size_t size;
+  ssize_t size;
 
   *name = NULL;
   *raw_packet = NULL;
@@ -803,12 +823,16 @@ coap_op_dyn_resource_read(FILE *fp, coap_proto_t *e_proto,
     /* New record 'proto len resource_name len raw_packet' */
     if (fread(&size, sizeof(size), 1, fp) != 1)
       goto fail;
+    if (size < 0 || size > 0x10000)
+      goto fail;
     *name = coap_new_string(size);
     if (!(*name))
       goto fail;
     if (fread((*name)->s, size, 1, fp) != 1)
       goto fail;
     if (fread(&size, sizeof(size), 1, fp) != 1)
+      goto fail;
+    if (size < 0 || size > 0x10000)
       goto fail;
     *raw_packet = coap_new_binary(size);
     if (!(*raw_packet))
@@ -987,7 +1011,7 @@ coap_op_dyn_resource_added(coap_session_t *session,
   fclose(fp_new);
   fclose(fp_orig);
   /* Either old or new is in place */
-  rename(new, (const char *)context->dyn_resource_save_file->s);
+  (void)rename(new, (const char *)context->dyn_resource_save_file->s);
   coap_free_type(COAP_STRING, new);
   return 1;
 
@@ -996,7 +1020,9 @@ fail:
     fclose(fp_new);
   if (fp_orig)
     fclose(fp_orig);
-  remove(new);
+  if (new) {
+    (void)remove(new);
+  }
   coap_free_type(COAP_STRING, new);
   return 0;
 }
@@ -1056,7 +1082,7 @@ coap_op_resource_deleted(coap_context_t *context,
   fclose(fp_new);
   fclose(fp_orig);
   /* Either old or new is in place */
-  rename(new, (const char *)context->dyn_resource_save_file->s);
+  (void)rename(new, (const char *)context->dyn_resource_save_file->s);
   coap_free_type(COAP_STRING, new);
   return 1;
 
@@ -1065,7 +1091,9 @@ fail:
     fclose(fp_new);
   if (fp_orig)
     fclose(fp_orig);
-  remove(new);
+  if (new) {
+    (void)remove(new);
+  }
   coap_free_type(COAP_STRING, new);
   return 0;
 }
@@ -1126,6 +1154,8 @@ coap_persist_cleanup(coap_context_t *context) {
 
 void
 coap_persist_stop(coap_context_t *context) {
+  if (context == NULL)
+    return;
   context->observe_no_clear = 1;
   coap_persist_cleanup(context);
 }
