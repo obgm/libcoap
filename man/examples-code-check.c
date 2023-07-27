@@ -594,7 +594,7 @@ main(int argc, char *argv[]) {
             continue;
           }
           for (i = 0; i < name_cnt; i++) {
-            if (strcmp(buffer, name_list[i]) == 0) {
+            if (strncmp(buffer, name_list[i], sizeof(name_list[i])) == 0) {
               fprintf(stderr, "NAME: %s duplicated\n", buffer);
               break;
             }
@@ -607,9 +607,10 @@ main(int argc, char *argv[]) {
             continue;
           }
           memcpy(name_list[i], buffer, sizeof(name_list[i])-1);
+          name_list[i][sizeof(name_list[i])-1] = '\000';
           name_cnt++;
           for (i = 0; i < man_cnt; i++) {
-            if (strcmp(man_list[i], buffer) == 0) {
+            if (strncmp(man_list[i], buffer, sizeof(man_list[i])) == 0) {
               man_list[i][0] = '\000';
               break;
             }

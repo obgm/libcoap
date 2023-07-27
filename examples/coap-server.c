@@ -998,8 +998,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
   coap_optlist_t *optlist = NULL;
   coap_opt_t *option;
 #define BUFSIZE 100
-  unsigned char _buf[BUFSIZE];
-  unsigned char *buf = _buf;
+  unsigned char buf[BUFSIZE];
   coap_bin_const_t token = coap_pdu_get_token(request);
 
   memset(&uri, 0, sizeof(uri));

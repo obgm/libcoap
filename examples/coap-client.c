@@ -192,7 +192,7 @@ close_output(void) {
 
     /* add a newline before closing if no option '-o' was specified */
     if (!output_file.s)
-      fwrite("\n", 1, 1, file);
+      (void)fwrite("\n", 1, 1, file);
 
     fflush(file);
     fclose(file);
@@ -1528,7 +1528,7 @@ get_session(coap_context_t *ctx,
           remove(buf);
           return NULL;
         }
-        remove(buf);
+        (void)remove(buf);
       }
       session = open_session(ctx, proto, &bind_addr, dst,
                              identity, identity_len, key, key_len);

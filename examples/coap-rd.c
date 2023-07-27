@@ -335,15 +335,14 @@ add_source_address(coap_resource_t *resource,
     return;
 
   n = coap_print_addr(peer, (uint8_t *)buf, BUFSIZE);
-  if (!n)
-    return;
-
-  attr_val.s = (const uint8_t *)buf;
-  attr_val.length = n;
-  coap_add_attr(resource,
-                coap_make_str_const("A"),
-                &attr_val,
-                0);
+  if (n) {
+    attr_val.s = (const uint8_t *)buf;
+    attr_val.length = n;
+    coap_add_attr(resource,
+                  coap_make_str_const("A"),
+                  &attr_val,
+                  0);
+  }
   coap_free(buf);
 #undef BUFSIZE
 }

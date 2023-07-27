@@ -1620,7 +1620,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     node->retransmit_cnt++;
     coap_handle_event(context, COAP_EVENT_MSG_RETRANSMITTED, node->session);
 
-    next_delay = node->timeout << node->retransmit_cnt;
+    next_delay = (coap_tick_t)node->timeout << node->retransmit_cnt;
     if (context->ping_timeout &&
         context->ping_timeout * COAP_TICKS_PER_SECOND < next_delay) {
       uint8_t byte;
@@ -3256,11 +3256,11 @@ skip_handler:
 
       if (!node) {
         coap_log_debug("mcast delay: insufficient memory\n");
-        goto clean_up;
+        goto drop_it_no_debug;
       }
       if (!coap_pdu_encode_header(response, session->proto)) {
         coap_delete_node(node);
-        goto clean_up;
+        goto drop_it_no_debug;
       }
 
       node->id = response->mid;
@@ -3286,7 +3286,6 @@ skip_handler:
 drop_it_no_debug:
     coap_delete_pdu(response);
   }
-clean_up:
   if (query)
     coap_delete_string(query);
 #if COAP_Q_BLOCK_SUPPORT

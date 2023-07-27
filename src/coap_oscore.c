@@ -670,7 +670,7 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
         goto error;
       association->recipient_ctx = rcp_ctx;
       coap_delete_pdu(association->sent_pdu);
-      if (session->b_2_step != COAP_OSCORE_B_2_NONE && pdu) {
+      if (session->b_2_step != COAP_OSCORE_B_2_NONE) {
         size_t size;
 
         association->sent_pdu = coap_pdu_duplicate(pdu, session,
@@ -713,10 +713,9 @@ build_and_send_error_pdu(coap_session_t *session,
                          uint8_t *echo_data,
                          coap_bin_const_t *kid_context,
                          int encrypt_oscore) {
-  coap_pdu_t *err_pdu;
+  coap_pdu_t *err_pdu = NULL;
   coap_bin_const_t token;
   int oscore_encryption = session->oscore_encryption;
-  coap_mid_t mid = COAP_INVALID_MID;
   unsigned char buf[4];
 
   token = coap_pdu_get_token(rcvd);
@@ -750,15 +749,16 @@ build_and_send_error_pdu(coap_session_t *session,
     if (!osc_pdu)
       goto fail_resp;
     session->oscore_encryption = 0;
-    mid = coap_send_internal(session, osc_pdu);
+    coap_send_internal(session, osc_pdu);
     coap_delete_pdu(err_pdu);
+    err_pdu = NULL;
   } else {
-    mid = coap_send_internal(session, err_pdu);
+    coap_send_internal(session, err_pdu);
+    err_pdu = NULL;
   }
 fail_resp:
   session->oscore_encryption = oscore_encryption;
-  if (mid == COAP_INVALID_MID)
-    return;
+  coap_delete_pdu(err_pdu);
   return;
 }
 
@@ -1568,9 +1568,8 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       coap_log_debug("PDU requesting re-transmit\n");
       coap_show_pdu(COAP_LOG_DEBUG, decrypt_pdu);
       coap_log_oscore("RFC9175 retransmit pdu\n");
-      if (coap_retransmit_oscore_pdu(session, sent_pdu, opt) ==
-          COAP_INVALID_MID)
-        goto error_no_ack;
+      /* Do not care if this fails */
+      coap_retransmit_oscore_pdu(session, sent_pdu, opt);
       goto error_no_ack;
     }
   }

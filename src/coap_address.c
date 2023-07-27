@@ -552,6 +552,7 @@ coap_resolve_address_info(const coap_str_const_t *address,
 
           info = coap_malloc_type(COAP_STRING, sizeof(coap_addr_info_t));
           if (info == NULL) {
+            freeaddrinfo(res);
             /* malloc failure - return what we have so far */
             return info_list;
           }
