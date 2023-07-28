@@ -295,11 +295,16 @@ coap_uri_into_options(const coap_uri_t *uri, const coap_address_t *dst,
 
       /* Add in UriHost if not match (need to strip off &iface) */
       size_t uri_host_len = uri->host.length;
-      uint8_t *cp = (uint8_t *)strchr((const char *)uri->host.s, '%');
+      const uint8_t *cp = uri->host.s;
 
-      if (cp && (size_t)(cp - uri->host.s) < uri_host_len)
-        /* %iface specified in host name */
-        uri_host_len = cp - uri->host.s;
+      /* Unfortunately not null terminated */
+      for (size_t i = 0; i < uri_host_len; i++) {
+        if (cp[i] == '%') {
+          /* %iface specified in host name */
+          uri_host_len = i;
+          break;
+        }
+      }
 
       if (coap_print_ip_addr(dst, addr, sizeof(addr)) &&
           (strlen(addr) != uri_host_len ||
