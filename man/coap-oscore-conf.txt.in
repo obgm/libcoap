@@ -27,7 +27,7 @@ of the memory region is same as that for a file as if the file was mapped
 into memory. The *coap_new_oscore_conf*(3) function uses the memory
 version of the file.
 
-The configuration file complises of a set of keywords, the value of the
+The configuration file comprises of a set of keywords, the value of the
 keyword encoding type and the keyword value, one per line, comma separated.
 
 keyword,encoding,value
