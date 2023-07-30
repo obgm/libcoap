@@ -50,7 +50,7 @@ and is configured with a certificate and private key, the coap-client does not
 need to have a Pre-Shared Key (-k) or certificate (-c) configured.
 
 The URI's host part may be a DNS name, a literal IP address or a Unix domain
-name. For Unix domain names, %2F is used as the / seperator to differentiate
+name. For Unix domain names, %2F is used as the / separator to differentiate
 between the host and patch definitions. For IPv6 address references, angle
 brackets are required (c.f. EXAMPLES) to delimit the host portion of the URI.
 
@@ -277,8 +277,8 @@ coap-client -m get coap://%2Fsome%2Funix%2Fdomain%2Fpath/time
 Query the resource '/time' on server listening on datagram Unix domain
 '/some/unix/domain/path' using the 'GET' method to get back the
 current time. The %2F is the hex encoding for / and indicates
-which is the 'host' definition seperator and the simple / is for the path
-definition seperator.
+which is the 'host' definition separator and the simple / is for the path
+definition separator.
 
 * Example
 ----
