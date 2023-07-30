@@ -225,7 +225,7 @@ static uint8_t oscore_config[] =
   "hkdf_alg,integer,-10\n"
 ;
 static FILE *oscore_seq_num_fp = NULL;
-/* Not a particularily safe place to keep next Sender Sequence NUmber ... */
+/* Not a particularly safe place to keep next Sender Sequence Number ... */
 static const char* oscore_seq_save_file = "/tmp/client.seq";
 
 static int
@@ -313,7 +313,7 @@ static uint8_t oscore_config[] =
   "hkdf_alg,integer,-10\n"
 ;
 static FILE *oscore_seq_num_fp = NULL;
-/* Not a particularily safe place to keep next Sender Sequence NUmber ... */
+/* Not a particularly safe place to keep next Sender Sequence Number ... */
 static const char* oscore_seq_save_file = "/tmp/server.seq";
 
 static int
