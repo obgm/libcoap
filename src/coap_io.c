@@ -93,7 +93,10 @@ coap_socket_bind_udp(coap_socket_t *sock,
                      const coap_address_t *listen_addr,
                      coap_address_t *bound_addr) {
 #ifndef RIOT_VERSION
-  int on = 1, off = 0;
+  int on = 1;
+#if COAP_IPV6_SUPPORT
+  int off = 0;
+#endif /* COAP_IPV6_SUPPORT */
 #else /* ! RIOT_VERSION */
   struct timeval timeout = {0, 0};
 #endif /* ! RIOT_VERSION */
@@ -129,6 +132,7 @@ coap_socket_bind_udp(coap_socket_t *sock,
                      coap_socket_strerror());
     break;
 #endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
   case AF_INET6:
     /* Configure the socket as dual-stacked */
     if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY, OPTVAL_T(&off),
@@ -141,6 +145,7 @@ coap_socket_bind_udp(coap_socket_t *sock,
       coap_log_alert("coap_socket_bind_udp: setsockopt IPV6_PKTINFO: %s\n",
                      coap_socket_strerror());
 #endif /* !defined(ESPIDF_VERSION) */
+#endif /* COAP_IPV6_SUPPORT */
     setsockopt(sock->fd, IPPROTO_IP, GEN_IP_PKTINFO, OPTVAL_T(&on), sizeof(on));
     /* ignore error, because likely cause is that IPv4 is disabled at the os
        level */

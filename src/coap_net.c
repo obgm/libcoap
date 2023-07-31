@@ -4346,6 +4346,7 @@ coap_mcast_set_hops(coap_session_t *session, size_t hops) {
       }
       return 1;
 #endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
     case AF_INET6:
       if (setsockopt(session->sock.fd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
                      (const char *)&hops, sizeof(hops)) < 0) {
@@ -4354,6 +4355,7 @@ coap_mcast_set_hops(coap_session_t *session, size_t hops) {
         return 0;
       }
       return 1;
+#endif /* COAP_IPV6_SUPPORT */
     default:
       break;
     }
