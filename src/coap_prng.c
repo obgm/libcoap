@@ -19,7 +19,7 @@
 #ifdef HAVE_GETRANDOM
 #include <sys/random.h>
 #elif defined(WITH_CONTIKI)
-#include "lib/random.h"
+#include "lib/csprng.h"
 #else /* !WITH_CONTIKI */
 #include <stdlib.h>
 #endif /* !WITH_CONTIKI */
@@ -96,18 +96,7 @@ coap_prng_default(void *buf, size_t len) {
   return 1;
 
 #elif defined(WITH_CONTIKI)
-  size_t i;
-  uint_fast8_t j;
-  unsigned short r;
-
-  for (i = 0; i < len;) {
-    r = random_rand();
-    for (j = 0; (i < len) && (j < sizeof(r)); i++, j++) {
-      ((uint8_t *)buf)[i] = r & 0xFF;
-      r >>= 8;
-    }
-  }
-  return 1;
+  return csprng_rand(buf, len);
 
 #elif defined(_WIN32)
   return coap_prng_impl(buf,len);
