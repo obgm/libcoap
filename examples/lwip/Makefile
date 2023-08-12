@@ -17,8 +17,8 @@ coap_include_dir = $(libcoap_dir)/include/coap$(LIBCOAP_API_VERSION)
 
 WITH_LWIP_BRANCH=STABLE-2_1_3_RELEASE
 WITH_LWIP_CONTRIB_BRANCH=STABLE-2_1_0_RELEASE
-# Update to latest TinyDTLS submodule as supported by libcoap
-WITH_TINYDTLS_BRANCH=c84e36ff60a283ee1953458239828477cd4e98ec
+# Update to latest TinyDTLS submodule as defined for libcoap
+WITH_TINYDTLS_BRANCH=f1d47d533b70ac10e4ff0ae3a088dfe4f265d242
 
 # Need to determine which library clock_gettime() resides in (as found by ./autogen.sh)
 LDLIBS := $(shell if [ -f $(libcoap_dir)/config.log ] ; then \
@@ -99,10 +99,15 @@ check-tinydtls:
 	fi ; \
 	IN_GIT=`git rev-parse --is-inside-work-tree` ; \
 	if [ "$$IN_GIT" = "true" ] ; then \
-		(cd $(libcoap_dir) ; TAG=`git ls-tree HEAD ext/tinydtls | cut -d\  -f3 | cut -f1` ;\
-		 if [ "$$TAG" != ${WITH_TINYDTLS_BRANCH} ] ; then \
-			echo "Update WITH_TINYDTLS_BRANCH in Makefile" >&2 ; \
-		 fi) ;\
+		PWDDIR=`pwd` ; \
+		cd $(libcoap_dir) ; TAG=`git ls-tree HEAD ext/tinydtls | cut -d\  -f3 | cut -f1` ;\
+		if [ ! -z "$$TAG" ] ; then \
+			if [ "$$TAG" != ${WITH_TINYDTLS_BRANCH} ] ; then \
+				echo "Update WITH_TINYDTLS_BRANCH in Makefile to $$TAG" >&2 ; \
+				exit 1 ; \
+			fi ;\
+		fi ;\
+		cd $$PWDDIR ; \
 	fi ;\
 	if [ ! -f $(libcoap_dir)/ext/tinydtls/dtls_config.h ] ; then \
 		(cd $(libcoap_dir)/ext/tinydtls ; ./autogen.sh ; ./configure) ; \
