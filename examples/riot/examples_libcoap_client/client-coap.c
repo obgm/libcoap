@@ -129,9 +129,11 @@ client_coap_init(int argc, char **argv) {
 #define BUFSIZE 100
   unsigned char buf[BUFSIZE];
   int res;
+  const char *coap_uri = COAP_CLIENT_URI;
 
-  (void)argc;
-  (void)argv;
+  if (argc > 1) {
+    coap_uri = argv[1];
+  }
 
   /* Initialize libcoap library */
   coap_startup();
@@ -139,9 +141,9 @@ client_coap_init(int argc, char **argv) {
   coap_set_log_level(COAP_MAX_LOGGING_LEVEL);
 
   /* Parse the URI */
-  len = coap_split_uri((const unsigned char *)COAP_CLIENT_URI, strlen(COAP_CLIENT_URI), &uri);
+  len = coap_split_uri((const unsigned char *)coap_uri, strlen(coap_uri), &uri);
   if (len != 0) {
-    coap_log_warn("Failed to parse uri %s\n", COAP_CLIENT_URI);
+    coap_log_warn("Failed to parse uri %s\n", coap_uri);
     goto fail;
   }
 

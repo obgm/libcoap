@@ -12,7 +12,7 @@ Preparing the logical interfaces:
 For the client:
 
     PORT=tap0 make term
-    coapc
+    coapc coap://[ip6-address]/some/path
 
 The IP address to connect to needs to be that as returned by libcoap_server,
 or that of the tap0 interface, etc.
