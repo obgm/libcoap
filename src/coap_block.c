@@ -1993,6 +1993,9 @@ coap_block_test_q_block(coap_session_t *session, coap_pdu_t *actual) {
   uint8_t buf[4];
   coap_mid_t mid;
 
+#if NDEBUG
+  (void)actual;
+#endif /* NDEBUG */
   assert(session->block_mode & COAP_BLOCK_TRY_Q_BLOCK &&
          session->type == COAP_SESSION_TYPE_CLIENT &&
          COAP_PDU_IS_REQUEST(actual));
