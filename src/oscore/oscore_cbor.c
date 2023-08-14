@@ -209,6 +209,9 @@ oscore_cbor_put_unsigned(uint8_t **buffer, size_t *buf_size, uint64_t value) {
 
 static inline uint8_t
 get_byte(const uint8_t **buffer, size_t *buf_len) {
+#if NDEBUG
+  (void)buf_len;
+#endif /* NDEBUG */
   assert((*buf_len) > 0);
   return (*buffer)[0];
 }
