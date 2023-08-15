@@ -2632,7 +2632,7 @@ coap_handle_request_put_block(coap_context_t *context,
     const uint8_t *rtag = rtag_opt ? coap_opt_value(rtag_opt) : NULL;
 
     if (length > block.chunk_size) {
-      coap_log_debug("block: Oversized packet - reduced to %u from %zu\n",
+      coap_log_debug("block: Oversized packet - reduced to %"PRIu32" from %zu\n",
                      block.chunk_size, length);
       length = block.chunk_size;
     }
@@ -3414,7 +3414,7 @@ coap_handle_response_get_block(coap_context_t *context,
         int updated_block;
 
         if (length > block.chunk_size) {
-          coap_log_debug("block: Oversized packet - reduced to %u from %zu\n",
+          coap_log_debug("block: Oversized packet - reduced to %"PRIu32" from %zu\n",
                          block.chunk_size, length);
           length = block.chunk_size;
         }
