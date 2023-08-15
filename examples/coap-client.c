@@ -661,7 +661,7 @@ cmdline_content_type(char *arg, uint16_t key) {
   coap_optlist_t *node;
   unsigned char i;
   uint16_t value;
-  uint8_t buf[2];
+  uint8_t buf[4];
 
   if (isdigit((int)arg[0])) {
     value = atoi(arg);

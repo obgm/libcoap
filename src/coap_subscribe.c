@@ -72,7 +72,7 @@ coap_persist_observe_add(coap_context_t *context,
   coap_subscription_t *s;
   coap_endpoint_t *ep;
 
-  if (e_listen_addr == NULL || s_addr_info == NULL || packet == NULL)
+  if (e_listen_addr == NULL || s_addr_info == NULL || raw_packet == NULL)
     return NULL;
 
   /* Will be creating a local 'open' session */
@@ -310,6 +310,9 @@ coap_op_observe_read(FILE *fp, coap_subscription_t **observe_key,
   ssize_t size;
   coap_binary_t *scratch = NULL;
 
+  assert(fp && observe_key && e_proto && e_listen_addr && s_addr_info &&
+         raw_packet && oscore_info);
+
   *raw_packet = NULL;
   *oscore_info = NULL;
 
@@ -331,8 +334,10 @@ coap_op_observe_read(FILE *fp, coap_subscription_t **observe_key,
     if (fread(scratch->s, scratch->length, 1, fp) != 1)
       goto fail;
     *raw_packet = (coap_bin_const_t *)scratch;
+    scratch = NULL;
     if (fread(&size, sizeof(size), 1, fp) != 1)
       goto fail;
+    /* If size == -1, then no oscore information */
     if (size == -1)
       return 1;
     else if (size < 0 || size > 0x10000)
@@ -348,7 +353,13 @@ coap_op_observe_read(FILE *fp, coap_subscription_t **observe_key,
     return 1;
   }
 fail:
+  coap_delete_bin_const(*raw_packet);
   coap_delete_binary(scratch);
+
+  *observe_key = NULL;
+  memset(e_proto, 0, sizeof(*e_proto));
+  memset(e_listen_addr, 0, sizeof(*e_listen_addr));
+  memset(s_addr_info, 0, sizeof(*s_addr_info));
   *raw_packet = NULL;
   return 0;
 }
@@ -410,6 +421,7 @@ coap_op_observe_load_disk(coap_context_t *ctx) {
 
   if (fp_orig == NULL)
     goto fail;
+
   new = coap_malloc_type(COAP_STRING, ctx->observe_save_file->length + 5);
   if (!new)
     goto fail;

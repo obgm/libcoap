@@ -319,7 +319,7 @@ t_encode_option7(void) {
 
   CU_ASSERT(result == sizeof(teststr));
 
-  CU_ASSERT(memcmp(buf, teststr, result) == 0);
+  CU_ASSERT(memcmp(buf, teststr, sizeof(teststr)) == 0);
 }
 
 static void

@@ -302,11 +302,11 @@ hnd_get_fetch_time(coap_resource_t *resource,
     if (code == COAP_REQUEST_CODE_GET && query != NULL &&
         coap_string_equal(query, ticks)) {
       /* parameter is in query, output ticks */
-      len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
+      len = snprintf((char *)buf, sizeof(buf), "%" PRIi64, (int64_t)now);
     } else if (code == COAP_REQUEST_CODE_FETCH && size == ticks->length &&
                memcmp(data, ticks->s, ticks->length) == 0) {
       /* parameter is in data, output ticks */
-      len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
+      len = snprintf((char *)buf, sizeof(buf), "%" PRIi64, (int64_t)now);
     } else {      /* output human-readable time */
       struct tm *tmp;
       tmp = gmtime(&now);
