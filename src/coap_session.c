@@ -1756,6 +1756,7 @@ coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, co
   ep->context = context;
   ep->proto = proto;
   ep->sock.endpoint = ep;
+  assert(proto < COAP_PROTO_LAST);
   memcpy(&ep->sock.lfunc, coap_layers_coap[proto], sizeof(ep->sock.lfunc));
 
   if (COAP_PROTO_NOT_RELIABLE(proto)) {
