@@ -30,7 +30,7 @@ static coap_time_t my_clock_base = 0;
 static coap_resource_t *time_resource = NULL; /* just for testing */
 
 #ifndef min
-# define min(a,b) ((a) < (b) ? (a) : (b))
+# define min(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
 static void
@@ -51,11 +51,12 @@ hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
   /* if my_clock_base was deleted, we pretend to have no such resource */
   coap_pdu_set_code(response, my_clock_base ? COAP_RESPONSE_CODE_CONTENT :
                     COAP_RESPONSE_CODE_NOT_FOUND);
-  if (my_clock_base)
+  if (my_clock_base) {
     coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,
                     coap_encode_var_safe(buf, sizeof(buf),
                                          COAP_MEDIATYPE_TEXT_PLAIN),
                     buf);
+  }
 
   coap_add_option(response, COAP_OPTION_MAXAGE,
                   coap_encode_var_safe(buf, sizeof(buf), 0x01), buf);
@@ -90,8 +91,9 @@ init_coap_resources(coap_context_t *ctx) {
   my_clock_base = clock_offset;
 
   r = coap_resource_init(coap_make_str_const("time"), 0);
-  if (!r)
+  if (!r) {
     goto error;
+  }
 
   coap_resource_set_get_observable(r, 1);
   time_resource = r;
@@ -147,8 +149,9 @@ init_coap_context_endpoints(const char *use_psk) {
   coap_log_info("Server IP [%s]\n", addr_str);
 
   main_coap_context = coap_new_context(NULL);
-  if (!main_coap_context)
+  if (!main_coap_context) {
     return 0;
+  }
 
   if (use_psk && coap_dtls_is_supported()) {
     coap_dtls_spsk_t setup_data;
@@ -182,8 +185,9 @@ init_coap_context_endpoints(const char *use_psk) {
     }
   }
   coap_free_address_info(info_list);
-  if (!have_ep)
+  if (!have_ep) {
     return 0;
+  }
 
   return 1;
 }
@@ -197,8 +201,9 @@ server_coap_run(void *arg) {
 
   coap_set_log_level(COAP_MAX_LOGGING_LEVEL);
 
-  if (!init_coap_context_endpoints(COAP_USE_PSK))
+  if (!init_coap_context_endpoints(COAP_USE_PSK)) {
     goto fail;
+  }
 
   /* Limit the number of idle sessions to save RAM */
   coap_context_set_max_idle_sessions(main_coap_context, 2);

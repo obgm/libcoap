@@ -90,7 +90,7 @@ nack_handler(coap_session_t *session COAP_UNUSED,
   case COAP_NACK_ICMP_ISSUE:
   case COAP_NACK_BAD_RESPONSE:
   default:
-    ;
+    break;
   }
   return;
 }
@@ -180,11 +180,13 @@ client_coap_init(int argc, char **argv) {
     memset(client_sni, 0, sizeof(client_sni));
     memset(&dtls_psk, 0, sizeof(dtls_psk));
     dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
-    if (uri.host.length)
+    if (uri.host.length) {
       memcpy(client_sni, uri.host.s,
              min(uri.host.length, sizeof(client_sni) - 1));
-    else
+    }
+    else {
       memcpy(client_sni, "localhost", 9);
+    }
     dtls_psk.client_sni = client_sni;
     dtls_psk.psk_info.identity.s = (const uint8_t *)COAP_USE_PSK_ID;
     dtls_psk.psk_info.identity.length = strlen(COAP_USE_PSK_ID);
