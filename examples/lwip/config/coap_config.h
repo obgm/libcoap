@@ -57,8 +57,8 @@
 #endif
 
 #define PACKAGE_NAME "libcoap"
-#define PACKAGE_VERSION "4.3.2rc2"
-#define PACKAGE_STRING "libcoap 4.3.2rc2"
+#define PACKAGE_VERSION "4.3.2"
+#define PACKAGE_STRING "libcoap 4.3.2"
 
 #define assert(x) LWIP_ASSERT("CoAP assert failed", x)
 
