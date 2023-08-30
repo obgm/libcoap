@@ -73,8 +73,8 @@ coap_register_async(coap_session_t *session,
     return NULL;
   }
 
-  LL_PREPEND(session->context->async_state, s);
   memset(s, 0, sizeof(coap_async_t));
+  LL_PREPEND(session->context->async_state, s);
 
   /* Note that this generates a new MID */
   s->pdu = coap_pdu_duplicate(request, session, request->actual_token.length,
