@@ -139,7 +139,7 @@ coap_is_mcast(const coap_address_t *a) {
   return 0;
 }
 
-#if !defined(WIN32)
+#if !defined(WIN32) && !defined(__ZEPHYR__)
 
 #ifndef COAP_BCST_CNT
 #define COAP_BCST_CNT 15
@@ -234,13 +234,13 @@ coap_is_bcast(const coap_address_t *a) {
   return 0;
 #endif /* COAP_IPV4_SUPPORT */
 }
-#else /* WIN32 */
+#else /* WIN32 || __ZEPHYR__ */
 int
 coap_is_bcast(const coap_address_t *a) {
   (void)a;
   return 0;
 }
-#endif /* WIN32 || ESPIDF_VERSION */
+#endif /* WIN32 || __ZEPHYR__ */
 
 #endif /* !defined(WITH_CONTIKI) && !defined(WITH_LWIP) */
 
