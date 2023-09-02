@@ -62,8 +62,10 @@ typedef struct {
 #define COAP_BLOCK_SINGLE_BODY  0x02 /* Deliver the data as a single body */
 #define COAP_BLOCK_TRY_Q_BLOCK   0x04 /* Try Q-Block method */
 #define COAP_BLOCK_USE_M_Q_BLOCK 0x08 /* Use M bit when recovering Q-Block2 */
-#define COAP_BLOCK_NO_PREEMPTIVE_RTAG 0x10 /* Don't use pre-emptive Request-Tags */
-/* Note 0x40 and 0x80 are internally defined elsewhere */
+#define COAP_BLOCK_NO_PREEMPTIVE_RTAG 0x10 /* (cl) Don't use pre-emptive Request-Tags */
+#define COAP_BLOCK_STLESS_FETCH  0x20 /* (cl) Assume server supports stateless FETCH */
+#define COAP_BLOCK_STLESS_BLOCK2 0x40 /* (svr)Server is stateless for handling Block2 */
+/* Note 0x4000 and 0x8000 are internally defined elsewhere */
 
 /**
  * Returns @c 1 if libcoap was built with option Q-BlockX support,
@@ -420,7 +422,7 @@ int coap_add_data_large_response(coap_resource_t *resource,
  * @param block_mode     Zero or more COAP_BLOCK_ or'd options
  */
 void coap_context_set_block_mode(coap_context_t *context,
-                                 uint8_t block_mode);
+                                 uint32_t block_mode);
 
 /**
  * Cancel an observe that is being tracked by the client large receive logic.

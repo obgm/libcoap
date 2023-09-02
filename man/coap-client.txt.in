@@ -160,6 +160,7 @@ OPTIONS - General
      COAP_BLOCK_TRY_Q_BLOCK         4
      COAP_BLOCK_USE_M_Q_BLOCK       8
      COAP_BLOCK_NO_PREEMPTIVE_RTAG 16
+     COAP_BLOCK_STLESS_FETCH       32
 
 *-N* ::
    Send NON-confirmable message. If option *-N* is not specified, a

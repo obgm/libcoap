@@ -32,8 +32,8 @@
 
 #if COAP_Q_BLOCK_SUPPORT
 /* Internal use only and are dropped when setting block_mode */
-#define COAP_BLOCK_HAS_Q_BLOCK   0x40 /* Set when Q_BLOCK supported */
-#define COAP_BLOCK_PROBE_Q_BLOCK 0x80 /* Set when Q_BLOCK probing */
+#define COAP_BLOCK_HAS_Q_BLOCK   0x4000 /* Set when Q_BLOCK supported */
+#define COAP_BLOCK_PROBE_Q_BLOCK 0x8000 /* Set when Q_BLOCK probing */
 
 #define set_block_mode_probe_q(block_mode) \
   do { \

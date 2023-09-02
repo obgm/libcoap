@@ -176,9 +176,9 @@ struct coap_session_t {
   int dtls_event;                       /**< Tracking any (D)TLS events on this
                                              session */
   uint32_t tx_rtag;               /**< Next Request-Tag number to use */
+  uint32_t block_mode;           /**< Zero or more COAP_BLOCK_ or'd options */
   uint8_t csm_bert_rem_support;  /**< CSM TCP BERT blocks supported (remote) */
   uint8_t csm_bert_loc_support;  /**< CSM TCP BERT blocks supported (local) */
-  uint8_t block_mode;             /**< Zero or more COAP_BLOCK_ or'd options */
   uint8_t doing_first;            /**< Set if doing client's first request */
   uint8_t proxy_session;        /**< Set if this is an ongoing proxy session */
   uint8_t delay_recursive;        /**< Set if in coap_client_delay_first() */

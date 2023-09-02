@@ -377,14 +377,16 @@ error:
 
 void
 coap_context_set_block_mode(coap_context_t *context,
-                            uint8_t block_mode) {
+                            uint32_t block_mode) {
   context->block_mode = (block_mode & (COAP_BLOCK_USE_LIBCOAP |
                                        COAP_BLOCK_SINGLE_BODY |
 #if COAP_Q_BLOCK_SUPPORT
                                        COAP_BLOCK_TRY_Q_BLOCK |
                                        COAP_BLOCK_USE_M_Q_BLOCK |
 #endif /* COAP_Q_BLOCK_SUPPORT */
-                                       COAP_BLOCK_NO_PREEMPTIVE_RTAG));
+                                       COAP_BLOCK_NO_PREEMPTIVE_RTAG |
+                                       COAP_BLOCK_STLESS_FETCH |
+                                       COAP_BLOCK_STLESS_BLOCK2));
   if (!(block_mode & COAP_BLOCK_USE_LIBCOAP))
     context->block_mode = 0;
 #if ! COAP_Q_BLOCK_SUPPORT
@@ -763,12 +765,52 @@ coap_add_data_large_internal(coap_session_t *session,
   }
 
   chunk = (size_t)1 << (blk_size + 4);
-  if (have_block_defined &&
-      (block.num != 0 || single_request)) {
-    /* App is defining a single block to send */
+  if ((have_block_defined && block.num != 0) || single_request ||
+      ((session->block_mode & COAP_BLOCK_STLESS_BLOCK2) && session->type != COAP_SESSION_TYPE_CLIENT)) {
+    /* App is defining a single block to send or we are stateless */
     size_t rem;
 
     if (length >= block.num * chunk) {
+      if (session->block_mode & COAP_BLOCK_STLESS_BLOCK2 && session->type != COAP_SESSION_TYPE_CLIENT) {
+#if COAP_SERVER_SUPPORT
+        /* We are running server stateless */
+        coap_update_option(pdu,
+                           COAP_OPTION_SIZE2,
+                           coap_encode_var_safe(buf, sizeof(buf),
+                                                (unsigned int)length),
+                           buf);
+        if (etag == 0) {
+          coap_digest_t digest;
+          coap_digest_ctx_t *dctx =  coap_digest_setup();
+
+          if (!dctx)
+            goto fail;
+          if (!coap_digest_update(dctx, data, length))
+            goto fail;
+          if (!coap_digest_final(dctx, &digest))
+            goto fail;
+          memcpy(&etag, digest.key, sizeof(etag));
+        }
+        coap_update_option(pdu,
+                           COAP_OPTION_ETAG,
+                           coap_encode_var_safe8(buf, sizeof(buf), etag),
+                           buf);
+        if (request) {
+          if (!coap_get_block_b(session, request, option, &block))
+            block.num = 0;
+        }
+        if (!setup_block_b(session, pdu, &block, block.num,
+                           blk_size, length))
+          goto fail;
+
+        /* Add in with requested block num, more bit and block size */
+        coap_update_option(pdu,
+                           option,
+                           coap_encode_var_safe(buf, sizeof(buf),
+                                                (block.num << 4) | (block.m << 3) | block.aszx),
+                           buf);
+#endif /* COAP_SERVER_SUPPORT */
+      }
       rem = chunk;
       if (chunk > length - block.num * chunk)
         rem = length - block.num * chunk;
@@ -1031,7 +1073,7 @@ coap_add_data_large_response(coap_resource_t *resource,
   int block_requested = 0;
   int single_request = 0;
 #if COAP_Q_BLOCK_SUPPORT
-  uint16_t block_opt = (session->block_mode & COAP_BLOCK_HAS_Q_BLOCK) ?
+  uint32_t block_opt = (session->block_mode & COAP_BLOCK_HAS_Q_BLOCK) ?
                        COAP_OPTION_Q_BLOCK2 : COAP_OPTION_BLOCK2;
 #else /* ! COAP_Q_BLOCK_SUPPORT */
   uint16_t block_opt = COAP_OPTION_BLOCK2;
@@ -3628,6 +3670,10 @@ reinit:
                                                       (block.m << 3) | block.aszx),
                                  buf);
 
+              if (session->block_mode & COAP_BLOCK_STLESS_FETCH && pdu->code == COAP_REQUEST_CODE_FETCH) {
+                (void)coap_get_data(&p->pdu, &length, &data);
+                coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, -1, 0, length, data, NULL, NULL, 0, 0);
+              }
               if (coap_send_internal(session, pdu) == COAP_INVALID_MID)
                 goto fail_resp;
             }
