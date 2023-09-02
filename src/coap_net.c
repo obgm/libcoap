@@ -3069,7 +3069,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
    * before invoking application request handler
    */
   if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
-    uint8_t block_mode = session->block_mode;
+    uint32_t block_mode = session->block_mode;
 
     if (pdu->code == COAP_REQUEST_CODE_FETCH ||
         resource->flags & COAP_RESOURCE_FLAGS_FORCE_SINGLE_BODY)

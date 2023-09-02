@@ -24,7 +24,7 @@ SYNOPSIS
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *void coap_context_set_block_mode(coap_context_t *_context_,
-uint8_t _block_mode_);*
+uint32_t _block_mode_);*
 
 *int coap_add_data_large_request(coap_session_t *_session_,
 coap_pdu_t *_pdu_, size_t _length_, const uint8_t *_data_,
@@ -148,8 +148,10 @@ session _block_mode_.
 #define COAP_BLOCK_USE_LIBCOAP   0x01 /* Use libcoap to do block requests */
 #define COAP_BLOCK_SINGLE_BODY   0x02 /* Deliver the data as a single body */
 #define COAP_BLOCK_TRY_Q_BLOCK   0x04 /* Try Q-Block method */
-#define COAP_BLOCK_USE_M_Q_BLOCK 0x08 /* Use M bit when recovering Q-Block2 */
-#define COAP_BLOCK_NO_PREEMPTIVE_RTAG 0x10 /* Don't use pre-emptive Request-Tags */
+#define COAP_BLOCK_USE_M_Q_BLOCK 0x08 /* (Client) Use M bit when recovering Q-Block2 */
+#define COAP_BLOCK_NO_PREEMPTIVE_RTAG 0x10 /* (Client) Don't use pre-emptive Request-Tags */
+#define COAP_BLOCK_STLESS_FETCH  0x20 /* (Client) Assume server supports stateless FETCH */
+#define COAP_BLOCK_STLESS_BLOCK2 0x40 /* (Server) Server is stateless for Block2 transfers */
 ----
 _block_mode_ is an or'd set of zero or more COAP_BLOCK_* definitions.
 
@@ -196,6 +198,16 @@ option.  Otherwise, a Request-Tag option is sent with any request (apart from
 DELETE) on the off chance that there may be multiple Block2 based
 responses for multiple requests to the same resource that need to be
 differentiated between.
+
+If *COAP_BLOCK_STLESS_FETCH* is set, then it is assumed that the server
+supports stateless support for FETCH requests - in other words, the FETCH
+request always includes the FETCH data when requesting the next block of data
+from the server when using Block2.
+
+If *COAP_BLOCK_STLESS_BLOCK2* is set, then the server does not maintain state
+for any data returned that uses Block2 to split up the data chunks.
+The application is called for every request to get the complete set of data which
+is then split into the separate Block2 responses as appropriate.
 
 *Function: coap_add_data_large_request()*
 
