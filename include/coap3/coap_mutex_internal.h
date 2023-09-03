@@ -85,7 +85,7 @@ typedef int coap_mutex_t;
 #elif defined(__ZEPHYR__)
 #include <zephyr/sys/mutex.h>
 
-typedef struct k_mutex coap_mutex_t;
+typedef struct sys_mutex coap_mutex_t;
 
 #define coap_mutex_init(a)    sys_mutex_init(a)
 #define coap_mutex_destroy(a)
