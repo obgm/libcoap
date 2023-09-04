@@ -11,6 +11,8 @@ This will
 * update the RIOT environment with pkg/libcoap, examples/libcoap-client
   and examples/libcoap-server taken from pkg_libcoap/, examples_client/
   and examples_server respectively/.
+  (updates RIOT's libcoap code to the latest commited version in your 
+   environment).
 * build the client application
 * build the server application
 
@@ -39,7 +41,7 @@ Note to developers
 ==================
 
 PKG_VERSION= in pkg_libcoap/Makefile needs updating if you need a different
-version of libcoap to get installed into RIOT/pkg/libcoap.
+version of libcoap to get initially installed into RIOT/pkg/libcoap.
 
 Kconfig support is available. Running make in the libcoap distribution
 examples/riot directory will try to add in a 'rsource "libcoap/Kconfig"'

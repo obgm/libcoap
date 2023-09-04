@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include "client-coap.h"
+#include "macros/utils.h"
 #include "net/utils.h"
 #include <arpa/inet.h>
 #include <thread.h>
@@ -37,10 +38,6 @@
 #else /* ! CONFIG_LIBCOAP_USE_PSK_ID */
 #define COAP_USE_PSK_ID NULL
 #endif /* ! CONFIG_LIBCOAP_USE_PSK_ID */
-
-#ifndef min
-#define min(a,b) ((a) < (b) ? (a) : (b))
-#endif
 
 static coap_context_t *main_coap_context = NULL;
 static coap_optlist_t *optlist = NULL;
@@ -182,7 +179,7 @@ client_coap_init(int argc, char **argv) {
     dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
     if (uri.host.length) {
       memcpy(client_sni, uri.host.s,
-             min(uri.host.length, sizeof(client_sni) - 1));
+             MIN(uri.host.length, sizeof(client_sni) - 1));
     }
     else {
       memcpy(client_sni, "localhost", 9);

@@ -16,6 +16,16 @@ RIOT:
 	git clone --depth 1 https://github.com/RIOT-OS/RIOT.git $@
 
 pkg:
+	@IN_GIT=`git rev-parse --is-inside-work-tree` ; \
+	if [ "$${IN_GIT}" = "true" ] ; then \
+		rm -rf pkg_libcoap/patches ; \
+		mkdir -p pkg_libcoap/patches ; \
+		RIOT_HASH=`grep PKG_VERSION= pkg_libcoap/Makefile | cut -d= -f2` ; \
+		git pull --unshallow > /dev/null 2>&1 ; \
+		if [ ! -z "$${RIOT_HASH}" ] ; then \
+			(cd pkg_libcoap/patches ; git format-patch -n $${RIOT_HASH}) ; \
+		fi \
+	fi
 	rm -rf RIOT/pkg/libcoap && mkdir RIOT/pkg/libcoap
 	cd pkg_libcoap && cp -r * ../RIOT/pkg/libcoap
 	@HAVE_KCONFIG=`grep libcoap/Kconfig RIOT/pkg/Kconfig | wc -l` ; \
