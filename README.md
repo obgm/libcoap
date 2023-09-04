@@ -34,8 +34,8 @@ PACKAGE CONTENTS
 
 This package contains a protocol parser and basic networking
 functions for platforms with support for malloc() and BSD-style
-sockets. In addition, there is support for Contiki-NG, LwIP and
-Espressif/ESP-IDF hosted environments.
+sockets. In addition, there is support for Contiki-NG,
+Espressif/ESP-IDF, LwIP and RIOT-OS hosted environments.
 
 The following RFCs are supported
 

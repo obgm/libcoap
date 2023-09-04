@@ -12,6 +12,7 @@
 #include "coap_config.h"
 #include <coap3/coap.h>
 #include "server-coap.h"
+#include "macros/utils.h"
 
 #ifdef CONFIG_LIBCOAP_USE_PSK
 #define COAP_USE_PSK CONFIG_LIBCOAP_USE_PSK
@@ -28,10 +29,6 @@ static coap_time_t clock_offset;
 /* changeable clock base (see handle_put_time()) */
 static coap_time_t my_clock_base = 0;
 static coap_resource_t *time_resource = NULL; /* just for testing */
-
-#ifndef min
-# define min(a, b) ((a) < (b) ? (a) : (b))
-#endif
 
 static void
 hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
@@ -103,7 +100,8 @@ init_coap_resources(coap_context_t *ctx) {
   coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
 #endif
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
-  /* coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Internal Clock\""), 0); */
+  /* coap_add_attr(r, coap_make_str_const("title"),
+                   coap_make_str_const("\"Internal Clock\""), 0); */
   coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("\"ticks\""), 0);
   coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"clock\""), 0);
 
