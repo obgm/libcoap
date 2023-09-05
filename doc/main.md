@@ -50,13 +50,13 @@ The following RFCs are supported
 
 There is (D)TLS support for the following libraries
 
-* OpenSSL (Minimum version 1.1.0) [PKI, PSK and PKCS11]
+* [OpenSSL](https://www.openssl.org) (Minimum version 1.1.0) [PKI, PSK and PKCS11]
 
-* GnuTLS (Minimum version 3.3.0) [PKI, PSK, RPK(3.6.6+) and PKCS11]
+* [GnuTLS](https://www.gnutls.org) (Minimum version 3.3.0) [PKI, PSK, RPK(3.6.6+) and PKCS11]
 
-* Mbed TLS (Minimum version 2.7.10) [PKI and PSK]
+* [Mbed TLS](https://www.trustedfirmware.org/projects/mbed-tls/) (Minimum version 2.7.10) [PKI and PSK]
 
-* TinyDTLS [PSK and RPK] [DTLS Only]
+* [TinyDTLS](https://github.com/eclipse/tinydtls) [PSK and RPK] [DTLS Only]
 
 Documentation
 =============
