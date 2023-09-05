@@ -37,8 +37,10 @@ DESCRIPTION
 This man page focuses on setting up CoAP to use encryption.
 
 When the libcoap library was built, it will have been compiled using a
-specific underlying TLS implementation type (e.g. OpenSSL, GnuTLS, Mbed TLS,
-TinyDTLS or noTLS).
+specific underlying TLS implementation type (e.g. https://www.openssl.org[OpenSSL],
+https://www.gnutls.org[GnuTLS],
+https://www.trustedfirmware.org/projects/mbed-tls/[Mbed TLS],
+https://github.com/eclipse/tinydtls[TinyDTLS] or noTLS).
 When the libcoap library is linked into an application, it is possible
 that the application needs to dynamically determine whether DTLS or TLS is
 supported, what type of TLS implementation libcoap was compiled with, as well
