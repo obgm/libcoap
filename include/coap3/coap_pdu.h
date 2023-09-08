@@ -54,7 +54,11 @@
 
 /* Extended Token constants */
 #define COAP_TOKEN_DEFAULT_MAX 8
-#define COAP_TOKEN_EXT_MAX 65804 /* 13 + 256 + 65535 */
+#if (UINT_MAX > 65804UL)
+#define COAP_TOKEN_EXT_MAX 65804UL /* 13 + 256 + 65535 */
+#else /* UINT_MAX < 65804UL */
+#define COAP_TOKEN_EXT_MAX 4096
+#endif /* UINT_MAX < 65804UL */
 
 /* CoAP message types */
 
@@ -141,7 +145,11 @@ typedef enum coap_request_t {
 #define COAP_OPTION_NORESPONSE    258 /* _U-_E_U, uint,      0-1 B, RFC7967 */
 #define COAP_OPTION_RTAG          292 /* ___RE_U, opaque,    0-8 B, RFC9175 */
 
+#if (UINT_MAX > 65535)
 #define COAP_MAX_OPT            65535 /**< the highest option number we know */
+#else /* UINT_MAX <= 65535 */
+#define COAP_MAX_OPT            65534 /**< the highest option number we know */
+#endif /* UINT_MAX <= 65535 */
 
 /* CoAP result codes (HTTP-Code / 100 * 40 + HTTP-Code % 100) */
 

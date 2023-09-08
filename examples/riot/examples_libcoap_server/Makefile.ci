@@ -1,5 +1,15 @@
 BOARD_INSUFFICIENT_MEMORY := \
     airfy-beacon \
+    arduino-duemilanove \
+    arduino-leonardo \
+    arduino-mega2560 \
+    arduino-nano \
+    arduino-uno \
+    atmega256rfr2-xpro \
+    atmega328p \
+    atmega328p-xplained-mini \
+    atmega8 \
+    atxmega-a3bu-xplained \
     b-l072z-lrwan1 \
     blackpill-stm32f103c8 \
     blackpill-stm32f103cb \
@@ -9,6 +19,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     calliope-mini \
     cc2650-launchpad \
     cc2650stk \
+    derfmega128 \
     hifive1 \
     hifive1b \
     i-nucleo-lrwan1 \
@@ -16,6 +27,9 @@ BOARD_INSUFFICIENT_MEMORY := \
     lsn50 \
     maple-mini \
     microbit \
+    microduino-corerf \
+    msb-430 \
+    msb-430h \
     nrf51dk \
     nrf51dongle \
     nrf6310 \
@@ -32,10 +46,13 @@ BOARD_INSUFFICIENT_MEMORY := \
     nucleo-l031k6 \
     nucleo-l053r8 \
     nucleo-l073rz \
+    olimex-msp430-h1611 \
+    olimex-msp430-h2618 \
     opencm904 \
     samd10-xmini \
     saml10-xpro \
     saml11-xpro \
+    samr21-xpro \
     slstk3400a \
     spark-core \
     stk3200 \
@@ -45,5 +62,9 @@ BOARD_INSUFFICIENT_MEMORY := \
     stm32g0316-disco \
     stm32l0538-disco \
     stm32mp157c-dk2 \
+    telosb \
+    waspmote-pro \
     yunjia-nrf51822 \
+    z1 \
+    zigduino \
     #

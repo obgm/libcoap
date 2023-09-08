@@ -282,7 +282,7 @@ void coap_print_contiki_prefix(coap_log_t level);
  * @param level One of the COAP_LOG_* values.
  */
 #define coap_log(level, ...) do { \
-    if ((int)((level))<=(int)coap_get_log_level()) \
+    if ((level) < (coap_get_log_level() + 1)) \
       coap_log_impl((level), __VA_ARGS__); \
   } while(0)
 #endif /* !WITH_CONTIKI */

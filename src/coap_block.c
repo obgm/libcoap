@@ -64,7 +64,7 @@ coap_get_block_b(const coap_session_t *session, const coap_pdu_t *pdu,
   memset(block, 0, sizeof(coap_block_b_t));
 
   if (pdu && (option = coap_check_option(pdu, number, &opt_iter)) != NULL) {
-    unsigned int num;
+    uint32_t num;
 
     if (COAP_OPT_BLOCK_MORE(option))
       block->m = 1;
@@ -645,12 +645,14 @@ coap_add_data_large_internal(coap_session_t *session,
      CSM Max-Message-Size theoretical maximum = 4,294,967,295
      So, if using blocks, we are limited to 1,073,740,800.
    */
-#define MAX_BLK_LEN (((1 << 20) - 1) * (1 << (6 + 4)))
+#define MAX_BLK_LEN (((1UL << 20) - 1) * (1 << (6 + 4)))
 
+#if UINT_MAX > MAX_BLK_LEN
   if (length > MAX_BLK_LEN) {
-    coap_log_warn("Size of large buffer restricted to 0x%x bytes\n", MAX_BLK_LEN);
+    coap_log_warn("Size of large buffer restricted to 0x%lx bytes\n", MAX_BLK_LEN);
     length = MAX_BLK_LEN;
   }
+#endif /* UINT_MAX > MAX_BLK_LEN */
 
   /* Determine the block size to use, adding in sensible options if needed */
   if (COAP_PDU_IS_REQUEST(pdu)) {
@@ -2372,7 +2374,7 @@ coap_handle_request_send_block(coap_session_t *session,
 #endif /* COAP_Q_BLOCK_SUPPORT */
   coap_option_iterator_init(pdu, &opt_b_iter, COAP_OPT_ALL);
   while ((option = coap_option_next(&opt_b_iter))) {
-    unsigned int num;
+    uint32_t num;
     if (opt_b_iter.number != p->option)
       continue;
     num = coap_opt_block_num(option);

@@ -199,7 +199,7 @@ struct coap_session_t {
 #endif /* COAP_WS_SUPPORT */
   volatile uint8_t max_token_checked; /**< Check for max token size
                                            coap_ext_token_check_t */
-  uint16_t remote_test_mid;       /**< mid used for checking remote
+  coap_mid_t remote_test_mid;     /**< mid used for checking remote
                                        support */
   uint32_t max_token_size;        /**< Largest token size supported RFC8974 */
   uint64_t tx_token;              /**< Next token number to use */

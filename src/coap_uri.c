@@ -215,7 +215,7 @@ coap_split_uri_sub(const uint8_t *str_var,
     }
 
     if (p < q) {                /* explicit port number given */
-      int uri_port = 0;
+      long uri_port = 0;
 
       while ((p < q) && (uri_port <= UINT16_MAX))
         uri_port = uri_port * 10 + (*p++ - '0');
@@ -636,21 +636,23 @@ coap_split_query(const uint8_t *s, size_t length,
 
 coap_uri_t *
 coap_new_uri(const uint8_t *uri, unsigned int length) {
-  unsigned char *result;
+  uint8_t *result;
+  coap_uri_t *out_uri;
 
-  result = (unsigned char *)coap_malloc_type(COAP_STRING, length + 1 + sizeof(coap_uri_t));
+  out_uri = (coap_uri_t *)coap_malloc_type(COAP_STRING, length + 1 + sizeof(coap_uri_t));
 
-  if (!result)
+  if (!out_uri)
     return NULL;
 
+  result = (uint8_t *)out_uri;
   memcpy(URI_DATA(result), uri, length);
   URI_DATA(result)[length] = '\0'; /* make it zero-terminated */
 
-  if (coap_split_uri(URI_DATA(result), length, (coap_uri_t *)result) < 0) {
-    coap_free_type(COAP_STRING, result);
+  if (coap_split_uri(URI_DATA(result), length, out_uri) < 0) {
+    coap_free_type(COAP_STRING, out_uri);
     return NULL;
   }
-  return (coap_uri_t *)result;
+  return out_uri;
 }
 
 coap_uri_t *
