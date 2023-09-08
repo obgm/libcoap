@@ -57,9 +57,13 @@ static coap_log_t maxlog = LOG_CONF_LEVEL_COAP == 0 ? /* = LOG_LEVEL_NONE */
                              (LOG_CONF_LEVEL_COAP == 3 ? /* = LOG_LEVEL_INFO */
                               COAP_LOG_INFO :
                               COAP_LOG_DEBUG)));
-#else /* WITH_CONTIKI */
+#else /* !WITH_CONTIKI */
 static coap_log_t maxlog = COAP_LOG_WARN;  /* default maximum CoAP log level */
-#endif /* WITH_CONTIKI */
+#endif /* !WITH_CONTIKI */
+
+#ifdef RIOT_VERSION
+#include "flash_utils.h"
+#endif /* RIOT_VERSION */
 
 static int use_fprintf_for_show_pdu = 1; /* non zero to output with fprintf */
 
@@ -1206,11 +1210,16 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
 #endif /* ! COAP_CONSTRAINED_STACK */
     va_list ap;
     va_start(ap, format);
+
 #if COAP_CONSTRAINED_STACK
     coap_mutex_lock(&m_log_impl);
 #endif /* COAP_CONSTRAINED_STACK */
 
+#ifdef RIOT_VERSION
+    flash_vsnprintf(message, sizeof(message), format, ap);
+#else /* !RIOT_VERSION */
     vsnprintf(message, sizeof(message), format, ap);
+#endif /* !RIOT_VERSION */
     va_end(ap);
     log_handler(level, message);
 #if COAP_CONSTRAINED_STACK
@@ -1233,7 +1242,11 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     fprintf(log_fd, "%s ", coap_log_level_desc(level));
 
     va_start(ap, format);
+#ifdef RIOT_VERSION
+    flash_vfprintf(log_fd, format, ap);
+#else /* !RIOT_VERSION */
     vfprintf(log_fd, format, ap);
+#endif /* !RIOT_VERSION */
     va_end(ap);
     fflush(log_fd);
   }
@@ -1244,7 +1257,7 @@ static struct packet_num_interval {
   int end;
 } packet_loss_intervals[10];
 static int num_packet_loss_intervals = 0;
-static int packet_loss_level = 0;
+static uint16_t packet_loss_level = 0;
 static int send_packet_count = 0;
 
 int

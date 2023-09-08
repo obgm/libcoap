@@ -23,8 +23,6 @@
 #include <sys/timerfd.h>
 #endif /* COAP_EPOLL_SUPPORT */
 
-#define COAP_PRINT_STATUS_MAX (~COAP_PRINT_STATUS_MASK)
-
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -135,7 +133,7 @@ coap_print_status_t
 coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
                      size_t offset, const coap_string_t *query_filter) {
 #endif /* GCC */
-  size_t output_length = 0;
+  coap_print_status_t output_length = 0;
   unsigned char *p = buf;
   const uint8_t *bufend = buf + *buflen;
   size_t left, written = 0;
@@ -248,7 +246,7 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
   }
 
   *buflen = written;
-  output_length = p - buf;
+  output_length = (coap_print_status_t)(p - buf);
 
   if (output_length > COAP_PRINT_STATUS_MAX) {
     return COAP_PRINT_STATUS_ERROR;
@@ -618,7 +616,7 @@ coap_print_link(const coap_resource_t *resource,
   const uint8_t *bufend = buf + *len;
   coap_attr_t *attr;
   coap_print_status_t result = 0;
-  size_t output_length = 0;
+  coap_print_status_t output_length = 0;
   const size_t old_offset = *offset;
 
   *len = 0;
@@ -655,7 +653,7 @@ coap_print_link(const coap_resource_t *resource,
     COPY_COND_WITH_OFFSET(p, bufend, *offset, ";osc", 4, *len);
 #endif /* COAP_OSCORE_SUPPORT */
 
-  output_length = p - buf;
+  output_length = (coap_print_status_t)(p - buf);
 
   if (output_length > COAP_PRINT_STATUS_MAX) {
     return COAP_PRINT_STATUS_ERROR;

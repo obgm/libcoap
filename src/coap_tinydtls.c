@@ -332,7 +332,7 @@ static int
 dtls_event(struct dtls_context_t *dtls_context,
            session_t *dtls_session,
            dtls_alert_level_t level,
-           uint16_t code) {
+           unsigned short code) {
   (void)dtls_context;
   (void)dtls_session;
 

@@ -14,7 +14,7 @@ if KCONFIG_USEPKG_LIBCOAP
 
 choice LIBCOAP_DEBUG_LEVEL
     bool "Set CoAP debugging level"
-    default LIBCOAP_LOG_DEBUG
+    default LIBCOAP_LOG_WARNING
     help
         Set CoAP debugging level
 
@@ -129,6 +129,16 @@ config LIBCOAP_CLIENT_SUPPORT
         If both this option and LIBCOAP_SERVER_SUPPORT are disabled, then
         both are automatically enabled for backwards compatability.
 
+if LIBCOAP_CLIENT_SUPPORT
+
+config LIBCOAP_MAX_LG_CRCVS
+    int "Max number of client large receives supported"
+    default 1
+    help
+        The maximum number of supported client large receives.
+
+endif # LIBCOAP_CLIENT_SUPPORT
+
 config LIBCOAP_SERVER_SUPPORT
     bool "Enable Server functionality within CoAP"
     default n
@@ -141,21 +151,12 @@ config LIBCOAP_SERVER_SUPPORT
         If both this option and LIBCOAP_CLIENT_SUPPORT are disabled, then
         both are automatically enabled for backwards compatability.
 
-config LIBCOAP_MAX_STRING_SIZE
-    int "Max size of string memory allocation"
-    default 64
-    help
-        The maximum size of a supported string.
-
-config LIBCOAP_MAX_STRINGS
-    int "Max number of strings supported"
-    default 16
-    help
-        The maximum number of supported strings.
+if LIBCOAP_SERVER_SUPPORT
 
 config LIBCOAP_MAX_ENDPOINTS
     int "Max number of endpoints supported"
-    default 4
+    default 4 if LIBCOAP_TCP_SUPPORT
+    default 2
     help
         The maximum number of supported endpoints.
 
@@ -177,6 +178,45 @@ config LIBCOAP_MAX_ATTRIBUTES
     help
         The maximum number of supported resource attributes.
 
+config LIBCOAP_MAX_CACHE_KEYS
+    int "Max number of cache keys supported"
+    default 2
+    help
+        The maximum number of supported cache keys.
+
+config LIBCOAP_MAX_CACHE_ENTRIES
+    int "Max number of cache entries supported"
+    default 2
+    help
+        The maximum number of supported cache entries.
+
+config LIBCOAP_MAX_LG_SRCVS
+    int "Max number of server large receives supported"
+    default 2
+    help
+        The maximum number of supported server large receives.
+
+endif # LIBCOAP_SERVER_SUPPORT
+
+config LIBCOAP_MAX_LG_XMITS
+    int "Max number of large transmits supported"
+    default 2 if LIBCOAP_SERVER_SUPPORT
+    default 1
+    help
+        The maximum number of supported large transmits.
+
+config LIBCOAP_MAX_STRING_SIZE
+    int "Max size of string memory allocation"
+    default 64
+    help
+        The maximum size of a supported string.
+
+config LIBCOAP_MAX_STRINGS
+    int "Max number of strings supported"
+    default 16
+    help
+        The maximum number of supported strings.
+
 config LIBCOAP_MAX_PACKETS
     int "Max number of packets supported"
     default 4
@@ -185,7 +225,7 @@ config LIBCOAP_MAX_PACKETS
 
 config LIBCOAP_MAX_NODES
     int "Max number of nodes supported"
-    default 16
+    default 4
     help
         The maximum number of supported nodes.
 
@@ -197,7 +237,7 @@ config LIBCOAP_MAX_CONTEXTS
 
 config LIBCOAP_MAX_PDUS
     int "Max number of PDUs supported"
-    default 16
+    default 4
     help
         The maximum number of supported PDUs.
 
@@ -217,42 +257,12 @@ config LIBCOAP_MAX_OPTION_SIZE
     int "Max size of option memory allocation"
     default 16
     help
-        The maximum size of a supported options.
+        The maximum size of a supported option.
 
 config LIBCOAP_MAX_OPTIONS
     int "Max number of options supported"
     default 16
     help
         The maximum number of supported options.
-
-config LIBCOAP_MAX_CACHE_KEYS
-    int "Max number of cache keys supported"
-    default 2
-    help
-        The maximum number of supported cache keys.
-
-config LIBCOAP_MAX_CACHE_ENTRIES
-    int "Max number of cache entries supported"
-    default 2
-    help
-        The maximum number of supported cache entries.
-
-config LIBCOAP_MAX_LG_CRCVS
-    int "Max number of client large receives supported"
-    default 1
-    help
-        The maximum number of supported client large receives.
-
-config LIBCOAP_MAX_LG_SRCVS
-    int "Max number of server large receives supported"
-    default 2
-    help
-        The maximum number of supported server large receives.
-
-config LIBCOAP_MAX_LG_XMITS
-    int "Max number of large transmits supported"
-    default 2
-    help
-        The maximum number of supported large trqnsmits.
 
 endif # KCONFIG_USEPKG_LIBCOAP

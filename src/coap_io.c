@@ -1029,10 +1029,12 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
                       coap_socket_strerror());
         return -2;
       }
-      coap_log_warn("** %s: coap_socket_recv: %s\n",
-                    sock->session ?
-                    coap_session_str(sock->session) : "",
-                    coap_socket_strerror());
+      if (errno != EAGAIN) {
+        coap_log_warn("** %s: coap_socket_recv: %s\n",
+                      sock->session ?
+                      coap_session_str(sock->session) : "",
+                      coap_socket_strerror());
+      }
       goto error;
     } else if (len > 0) {
       packet->length = (size_t)len;
@@ -1115,7 +1117,9 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
                       coap_socket_strerror());
         return 0;
       }
-      coap_log_warn("coap_socket_recv: %s\n", coap_socket_strerror());
+      if (errno != EAGAIN) {
+        coap_log_warn("coap_socket_recv: %s\n", coap_socket_strerror());
+      }
       goto error;
     } else {
 #ifdef HAVE_STRUCT_CMSGHDR

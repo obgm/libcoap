@@ -23,6 +23,14 @@
 #include <lwip/pbuf.h>
 #endif
 
+#ifdef RIOT_VERSION
+#include <limits.h>
+#endif /* RIOT_VERSION */
+
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif /* HAVE_LIMITS_H */
+
 #include <stdint.h>
 
 /**
@@ -70,6 +78,10 @@
 #define COAP_DEFAULT_MAX_PDU_RX_SIZE (COAP_MAX_MESSAGE_SIZE_TCP16+4UL)
 #elif defined(WITH_CONTIKI)
 #define COAP_DEFAULT_MAX_PDU_RX_SIZE (sizeof(coap_packet_t) + UIP_APPDATA_SIZE)
+#elif (UINT_MAX < (8UL*1024*1024+256))
+#define COAP_DEFAULT_MAX_PDU_RX_SIZE (1500UL)
+#elif defined(RIOT_VERSION) && defined(COAP_DISABLE_TCP)
+#define COAP_DEFAULT_MAX_PDU_RX_SIZE (1500UL)
 #else
 /* 8 MiB max-message-size plus some space for options */
 #define COAP_DEFAULT_MAX_PDU_RX_SIZE (8UL*1024*1024+256)

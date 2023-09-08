@@ -18,12 +18,33 @@
 #define COAP_CONSTRAINED_STACK 1
 #endif
 
+/*
+ * For systems that define int as being 2 bytes, need to make sure the
+ * minimum configuration is set up (overridden if explicitely defined).
+ */
+#include <limits.h>
+
+#if (UINT_MAX <= 65535)
+#define COAP_DISABLE_TCP 1
+#define COAP_AF_UNIX_SUPPORT 0
+#define COAP_OSCORE_SUPPORT 0
+#define COAP_WITH_OBSERVE_PERSIST 0
+#define COAP_WS_SUPPORT 0
+#define COAP_Q_BLOCK_SUPPORT 0
+#define COAP_MAX_LOGGING_LEVEL 0
+#endif /* UINT_MAX < 65536 */
+
 #ifdef CONFIG_LIBCOAP_MAX_LOGGING_LEVEL
 #ifndef COAP_MAX_LOGGING_LEVEL
-/* Define to 1 to build without TCP support. */
+/* Define 0-8 for max logging levels. */
 #define COAP_MAX_LOGGING_LEVEL CONFIG_LIBCOAP_MAX_LOGGING_LEVEL
 #endif /* COAP_MAX_LOGGING_LEVEL */
-#endif /* CONFIG_LIBCOAP_MAX_LOGGING_LEVEL */
+#else /* ! CONFIG_LIBCOAP_MAX_LOGGING_LEVEL */
+#ifndef COAP_MAX_LOGGING_LEVEL
+/* Define 0-8 for max logging levels. */
+#define COAP_MAX_LOGGING_LEVEL 4
+#endif /* COAP_MAX_LOGGING_LEVEL */
+#endif /* ! CONFIG_LIBCOAP_MAX_LOGGING_LEVEL */
 
 #ifdef CONFIG_LIBCOAP_IPV4_SUPPORT
 #ifndef COAP_IPV4_SUPPORT
@@ -51,7 +72,12 @@
 /* Define to 1 to build without TCP support. */
 #define COAP_DISABLE_TCP 0
 #endif /* COAP_DISABLE_TCP */
-#endif /* CONFIG_LIBCOAP_TCP_SUPPORT */
+#else /* ! CONFIG_LIBCOAP_TCP_SUPPORT */
+#ifndef COAP_DISABLE_TCP
+/* Define to 1 to build without TCP support. */
+#define COAP_DISABLE_TCP 1
+#endif /* ! COAP_DISABLE_TCP */
+#endif /* ! CONFIG_LIBCOAP_TCP_SUPPORT */
 
 #ifdef CONFIG_LIBCOAP_OSCORE_SUPPORT
 #ifndef COAP_OSCORE_SUPPORT

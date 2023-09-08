@@ -54,7 +54,11 @@
  * fixed-size memory blocks.
  */
 #ifndef COAP_MAX_ENDPOINTS
+#if !COAP_DISABLE_TCP
 #define COAP_MAX_ENDPOINTS          (4U)
+#else /* COAP_DISABLE_TCP */
+#define COAP_MAX_ENDPOINTS          (2U)
+#endif /* COAP_DISABLE_TCP */
 #endif /* COAP_MAX_ENDPOINTS */
 
 /**
@@ -102,12 +106,10 @@
 
 /**
  * The maximum number of nodes in retransmission queue on platforms
- * that allocate fixed-size memory blocks. The default value is
- * #COAP_MAX_ENDPOINTS * #COAP_MAX_PACKETS.
+ * that allocate fixed-size memory blocks.
  */
 #ifndef COAP_MAX_NODES
-#define COAP_MAX_NODES               \
-  ((COAP_MAX_ENDPOINTS) * (COAP_MAX_PACKETS))
+#define COAP_MAX_NODES           (COAP_MAX_PACKETS)
 #endif /* COAP_MAX_NODES */
 
 /**
@@ -120,11 +122,10 @@
 
 /**
  * The maximum number of CoAP PDUs processed in parallel on platforms
- * that allocate fixed-size memory blocks. Default is
- * #COAP_MAX_ENDPOINTS * 4.
+ * that allocate fixed-size memory blocks.
  */
 #ifndef COAP_MAX_PDUS
-#define COAP_MAX_PDUS               ((COAP_MAX_ENDPOINTS) * 4U)
+#define COAP_MAX_PDUS               (4U)
 #endif /* COAP_MAX_PDUS */
 
 /**
@@ -137,10 +138,10 @@
 
 /**
  * The maximum number of DTLS sessions on platforms that allocate
- * fixed-size memory blocks. Default is #COAP_MAX_ENDPOINTS.
+ * fixed-size memory blocks.
  */
 #ifndef COAP_MAX_SESSIONS
-#define COAP_MAX_SESSIONS           (COAP_MAX_ENDPOINTS)
+#define COAP_MAX_SESSIONS           (4U)
 #endif /* COAP_MAX_CONTEXTS */
 
 /**

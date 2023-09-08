@@ -2033,7 +2033,9 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
 
   bytes_read = coap_netif_dgrm_read_ep(endpoint, packet);
   if (bytes_read < 0) {
-    coap_log_warn("*  %s: read failed\n", coap_endpoint_str(endpoint));
+    if (errno != EAGAIN) {
+      coap_log_warn("*  %s: read failed\n", coap_endpoint_str(endpoint));
+    }
   } else if (bytes_read > 0) {
     coap_session_t *session = coap_endpoint_get_session(endpoint, packet, now);
     if (session) {

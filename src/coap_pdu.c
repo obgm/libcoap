@@ -98,9 +98,11 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
               size_t size) {
   coap_pdu_t *pdu;
 
+#ifndef RIOT_VERSION
   assert(type <= 0x3);
   assert(code <= 0xff);
   assert(mid >= 0 && mid <= 0xffff);
+#endif /* RIOT_VERSION */
 
 #ifdef WITH_LWIP
 #if MEMP_STATS
@@ -935,6 +937,7 @@ coap_pdu_parse_header_size(coap_proto_t proto,
   return header_size;
 }
 
+#if !COAP_DISABLE_TCP
 /*
  * strm
  * return +ve  PDU size including token
@@ -952,7 +955,7 @@ coap_pdu_parse_size(coap_proto_t proto,
   size_t size = 0;
   const uint8_t *token_start = NULL;
 
-  if ((proto == COAP_PROTO_TCP || proto==COAP_PROTO_TLS) && length >= 1) {
+  if ((proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) && length >= 1) {
     uint8_t len = *data >> 4;
     uint8_t tkl = *data & 0x0f;
 
@@ -991,6 +994,7 @@ coap_pdu_parse_size(coap_proto_t proto,
 
   return size;
 }
+#endif /* ! COAP_DISABLE_TCP */
 
 int
 coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
@@ -1235,7 +1239,7 @@ write_prefix(char **obp, size_t *len, const char *prf, size_t prflen) {
 }
 
 static int
-write_char(char **obp, size_t *len, char c, int printable) {
+write_char(char **obp, size_t *len, int c, int printable) {
   /* Make sure space for null terminating byte */
   if (*len < 2 +1) {
     return 0;
@@ -1428,6 +1432,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
     pdu->token[-2] = (uint8_t)(pdu->mid >> 8);
     pdu->token[-1] = (uint8_t)(pdu->mid);
     pdu->hdr_size = 4;
+#if !COAP_DISABLE_TCP
   } else if (COAP_PROTO_RELIABLE(proto)) {
     size_t len;
     assert(pdu->used_size >= pdu->e_token_length);
@@ -1489,6 +1494,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
       pdu->token[-1] = pdu->code;
       pdu->hdr_size = 6;
     }
+#endif /* ! COAP_DISABLE_TCP */
   } else {
     coap_log_warn("coap_pdu_encode_header: unsupported protocol\n");
   }
@@ -1502,7 +1508,9 @@ coap_pdu_get_code(const coap_pdu_t *pdu) {
 
 void
 coap_pdu_set_code(coap_pdu_t *pdu, coap_pdu_code_t code) {
+#ifndef RIOT_VERSION
   assert(code <= 0xff);
+#endif /* RIOT_VERSION */
   pdu->code = code;
 }
 
@@ -1529,6 +1537,8 @@ coap_pdu_get_mid(const coap_pdu_t *pdu) {
 
 void
 coap_pdu_set_mid(coap_pdu_t *pdu, coap_mid_t mid) {
+#if (UINT_MAX > 65535)
   assert(mid >= 0 && mid <= 0xffff);
+#endif /* UINT_MAX > 65535 */
   pdu->mid = mid;
 }

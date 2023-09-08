@@ -455,12 +455,13 @@ coap_str_const_t *coap_attr_get_value(coap_attr_t *attribute);
  * COAP_PRINT_STATUS_TRUNC indicates that the output is truncated, i.e. the
  * printing would have exceeded the current buffer.
  */
-typedef unsigned int coap_print_status_t;
+typedef uint32_t coap_print_status_t;
 
-#define COAP_PRINT_STATUS_MASK  0xF0000000u
-#define COAP_PRINT_OUTPUT_LENGTH(v) ((v) & ~COAP_PRINT_STATUS_MASK)
-#define COAP_PRINT_STATUS_ERROR 0x80000000u
-#define COAP_PRINT_STATUS_TRUNC 0x40000000u
+#define COAP_PRINT_STATUS_MASK  0xF0000000UL
+#define COAP_PRINT_STATUS_MAX   0x0FFFFFFFUL
+#define COAP_PRINT_OUTPUT_LENGTH(v) ((v) & COAP_PRINT_STATUS_MAX)
+#define COAP_PRINT_STATUS_ERROR 0x80000000UL
+#define COAP_PRINT_STATUS_TRUNC 0x40000000UL
 
 /**
  * Writes a description of this resource in link-format to given text buffer. @p
