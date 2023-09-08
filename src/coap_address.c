@@ -216,7 +216,7 @@ coap_is_bcast(const coap_address_t *a) {
     last_refresh = now;
     ife = ifa;
     while (ife && bcst_cnt < COAP_BCST_CNT) {
-      if (ife->ifa_addr->sa_family == AF_INET &&
+      if (ife->ifa_addr && ife->ifa_addr->sa_family == AF_INET &&
           ife->ifa_flags & IFF_BROADCAST) {
         b_ipv4[bcst_cnt].s_addr = ((struct sockaddr_in *)ife->ifa_broadaddr)->sin_addr.s_addr;
         bcst_cnt++;
