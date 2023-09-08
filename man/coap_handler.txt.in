@@ -72,7 +72,7 @@ COAP_REQUEST_PATCH
 COAP_REQUEST_IPATCH
 ----
 
-The method handler function prototype is defined as:
+The request handler function prototype is defined as:
 [source, c]
 ----
 typedef void (*coap_method_handler_t)(coap_resource_t *resource,
@@ -84,12 +84,21 @@ typedef void (*coap_method_handler_t)(coap_resource_t *resource,
 
 In _handler_, data from _incoming_pdu_ can be abstracted as described in
 *coap_pdu_access*(3) for analysis and then the _handler_ updates
-_response_pdu_ as
-appropriate as described in *coap_pdu_setup*(3).  _response_pdu_ is already
-pre-populated with the _incoming_pdu_'s token and the PDU type.  If this
-handler is called as a result of an unsolicited Observe trigger, then the
+_response_pdu_ as appropriate as described in *coap_pdu_setup*(3),
+including the response code.  If _response_pdu_'s code is not updated, then
+_response_pdu_ will not get sent back to the client.
+
+_response_pdu_ is already
+pre-populated with the _incoming_pdu_'s token and the PDU type.  If
+_handler_ is called as a result of an unsolicited Observe trigger, then the
 Observe option (and potentially Block2 option) are also added in.  The
 _response_pdu_'s response code should always be updated.
+
+This _handler_ must not call *coap_send*(3) to send _response_pdu_.
+_response_pdu_ gets sent on return from _handler_, assuming the response
+code has been updated. If the response code was not updated, then an empty
+ACK packet will get sent for CON type requests or nothing for NON type
+requests.
 
 *NOTE:* Any data associated with _incoming_pdu_ is no longer be available after
 exiting this function as _incoming_pdu_ is deleted.  In particular
