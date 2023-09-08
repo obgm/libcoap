@@ -4043,15 +4043,6 @@ coap_cleanup(void) {
   coap_stop_io_process();
 #endif
   coap_dtls_shutdown();
-
-#if COAP_CONSTRAINED_STACK
-  coap_mutex_destroy(&m_show_pdu);
-  coap_mutex_destroy(&m_log_impl);
-  coap_mutex_destroy(&m_dtls_recv);
-  coap_mutex_destroy(&m_read_session);
-  coap_mutex_destroy(&m_read_endpoint);
-  coap_mutex_destroy(&m_persist_add);
-#endif /* COAP_CONSTRAINED_STACK */
 }
 
 void
