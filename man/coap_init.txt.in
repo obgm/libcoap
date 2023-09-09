@@ -47,11 +47,18 @@ random number gererators, clocks, TLS libraries etc.
 *NOTE:* This should be called after any other lower layer is initialized.
 For example, for LwIP, lwip_init() must be called before *coap_startup*().
 
+*NOTE:* After the inital call to *coap_startup*(), subsequent calls are ignored
+until *coap_cleanup*() is called.
+
 *Function: coap_cleanup()*
 
 The *coap_cleanup*() function is used to cleanup / free any information set
 up by the *coap_startup*() function and should be the last *coap_**() function
-called.
+called. It is possible to call *coap_startup*() after *coap_cleanup*() to
+re-initialize the libcoap logic.
+
+*NOTE:* All other libcoap cleanups should called prior to *coap_cleanup*(), e.g.
+*coap_free_context*(3).
 
 FURTHER INFORMATION
 -------------------

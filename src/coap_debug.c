@@ -1304,3 +1304,12 @@ coap_debug_send_packet(void) {
   }
   return 1;
 }
+
+void
+coap_debug_reset(void) {
+  maxlog = COAP_LOG_WARN;
+  use_fprintf_for_show_pdu = 1;
+  num_packet_loss_intervals = 0;
+  packet_loss_level = 0;
+  send_packet_count = 0;
+}

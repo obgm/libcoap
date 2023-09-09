@@ -153,10 +153,12 @@ coap_dtls_startup(void) {
   /* Valid after TinyDTLS submodule has been updated */
   dtls_set_log_handler(dtls_logging);
 #endif /* HAVE_DTLS_SET_LOG_HANDLER */
+  coap_dtls_set_log_level(COAP_LOG_EMERG);
 }
 
 void
 coap_dtls_shutdown(void) {
+  coap_dtls_set_log_level(COAP_LOG_EMERG);
 }
 
 void *

@@ -57,7 +57,6 @@ coap_context_set_pki_root_cas
 coap_context_set_psk
 coap_context_set_psk2
 coap_context_set_session_timeout
-coap_debug_send_packet
 coap_debug_set_packet_loss
 coap_decode_var_bytes
 coap_decode_var_bytes8
