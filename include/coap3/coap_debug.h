@@ -347,8 +347,6 @@ char *coap_string_tls_support(char *buffer, size_t bufsize);
 /**
  * Print the address into the defined buffer.
  *
- * Internal Function.
- *
  * @param address The address to print.
  * @param buffer The buffer to print into.
  * @param size The size of the buffer to print into.
@@ -360,8 +358,6 @@ size_t coap_print_addr(const coap_address_t *address,
 
 /**
  * Print the IP address into the defined buffer.
- *
- * Internal Function.
  *
  * @param address The address to print.
  * @param buffer The buffer to print into.
@@ -389,15 +385,5 @@ const char *coap_print_ip_addr(const coap_address_t *address,
  * @return @c 1 If loss level set, @c 0 if there is an error.
  */
 int coap_debug_set_packet_loss(const char *loss_level);
-
-/**
- * Check to see whether a packet should be sent or not.
- *
- * Internal function
- *
- * @return @c 1 if packet is to be sent, @c 0 if packet is to be dropped.
- */
-int coap_debug_send_packet(void);
-
 
 #endif /* COAP_DEBUG_H_ */

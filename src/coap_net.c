@@ -4052,6 +4052,8 @@ coap_cleanup(void) {
   coap_mutex_destroy(&m_read_endpoint);
   coap_mutex_destroy(&m_persist_add);
 #endif /* COAP_CONSTRAINED_STACK */
+  coap_debug_reset();
+  coap_started = 0;
 }
 
 void

@@ -163,7 +163,7 @@ typedef enum coap_free_bye_t {
     G_CHECK(xx, func); \
   } while 0
 
-static coap_log_t dtls_log_level = 0;
+static coap_log_t dtls_log_level = COAP_LOG_EMERG;
 
 #if COAP_SERVER_SUPPORT
 static int post_client_hello_gnutls_pki(gnutls_session_t g_session);
@@ -434,6 +434,7 @@ coap_dtls_startup(void) {
 
 void
 coap_dtls_shutdown(void) {
+  coap_dtls_set_log_level(COAP_LOG_EMERG);
 }
 
 void *
