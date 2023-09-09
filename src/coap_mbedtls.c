@@ -2481,6 +2481,7 @@ coap_dtls_shutdown(void) {
   pki_ciphers = NULL;
   processed_ciphers = 0;
 #endif /* COAP_CLIENT_SUPPORT */
+  coap_dtls_set_log_level(COAP_LOG_EMERG);
 }
 
 void *

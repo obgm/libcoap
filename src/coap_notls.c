@@ -128,6 +128,7 @@ coap_dtls_get_tls(const coap_session_t *c_session COAP_UNUSED,
 
 void
 coap_dtls_shutdown(void) {
+  coap_dtls_set_log_level(COAP_LOG_EMERG);
 }
 
 void
