@@ -113,7 +113,31 @@ LT_INIT([shared static])
 #
 #  --> Set 'LT_LIBCOAP_AGE' to 0.
 
-LT_LIBCOAP_CURRENT=3
+# The following explanation may help to understand the above rules a bit better:
+# consider that there are three possible kinds of reactions from users of your
+# library to changes in a shared library:
+#
+# 1. Programs using the previous version may use the new version as drop-in
+#    replacement, and programs using the new version can also work with the
+#    previous one. In other words, no recompiling nor relinking is needed. In this
+#    case, bump 'LT_LIBCOAP_REVISION' only, don't touch 'LT_LIBCOAP_CURRENT' nor
+#    'LT_LIBCOAP_AGE'.
+#
+# 2. Programs using the previous version may use the new version
+#    as drop-in replacement, but programs using the new version may use APIs not
+#    present in the previous one. In other words, a program linking against the new
+#    version may fail with 'unresolved symbols' if linking against the old version
+#    at runtime: set 'LT_LIBCOAP_REVISION' to 0, bump 'LT_LIBCOAP_CURRENT' and
+#    'LT_LIBCOAP_AGE'.
+#
+# 3. Programs may need to be changed, recompiled, and relinked in
+#    order to use the new version. Bump 'LT_LIBCOAP_CURRENT',
+#    set 'LT_LIBCOAP_REVISION' and 'LT_LIBCOAP_AGE' to 0.
+
+# To add to the confusion, if LIBCOAP_SO_VERSION is set to 3:0:1 (c:r:a), then the
+# .so version naming ends up as 2.1.0 (c-a:a:r) (as decided by libtool).
+
+LT_LIBCOAP_CURRENT=4
 LT_LIBCOAP_REVISION=0
 LT_LIBCOAP_AGE=1
 LIBCOAP_SO_VERSION=$LT_LIBCOAP_CURRENT.$LT_LIBCOAP_REVISION.$LT_LIBCOAP_AGE
