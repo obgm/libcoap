@@ -1,3 +1,9 @@
+2023-09-12  Olaf Bergmann  <bergmann@tzi.org>
+
+	Change summary for version 4.3.3:
+
+        * Fix ABI version.
+
 2023-07-13  Olaf Bergmann  <bergmann@tzi.org>
 
 	Change summary for version 4.3.2:
