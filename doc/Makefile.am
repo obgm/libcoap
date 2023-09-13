@@ -19,6 +19,7 @@ EXTRA_DIST = \
   upgrade_4.2.1_4.3.0.txt \
   upgrade_4.3.0_4.3.1.txt \
   upgrade_4.3.1_4.3.2.txt \
+  upgrade_4.3.2_4.3.3.txt \
   main.md \
   module_api_wrap.h
 
@@ -238,7 +239,7 @@ man-page-build: upg-page-build man-page-start
 	done
 
 if BUILD_MANPAGES
-UPG_LIST = upgrade_4.2.1_4.3.0.txt upgrade_4.3.0_4.3.1.txt upgrade_4.3.1_4.3.2.txt
+UPG_LIST = upgrade_4.2.1_4.3.0.txt upgrade_4.3.0_4.3.1.txt upgrade_4.3.1_4.3.2.txt upgrade_4.3.2_4.3.3.txt
 
 upg-page-build:
 	@for FILE in $(UPG_LIST) ; do \
