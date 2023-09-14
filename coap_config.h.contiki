@@ -96,8 +96,6 @@
 
 #define WITH_CONTIKI 1
 
-#define ntohs uip_ntohs
-
 #define HASH_NONFATAL_OOM 1
 
 #ifndef HEAPMEM_CONF_ARENA_SIZE

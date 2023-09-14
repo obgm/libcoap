@@ -228,14 +228,14 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
   case AF_INET:
     snprintf((char *)buf, len, "%s:%d",
              coap_print_ip_addr(addr, scratch, sizeof(scratch)),
-             ntohs(addr->addr.sin.sin_port));
+             coap_address_get_port(addr));
     break;
 #endif /* COAP_IPV4_SUPPORT */
 #if COAP_IPV6_SUPPORT
   case AF_INET6:
     snprintf((char *)buf, len, "[%s]:%d",
              coap_print_ip_addr(addr, scratch, sizeof(scratch)),
-             ntohs(addr->addr.sin6.sin6_port));
+             coap_address_get_port(addr));
     break;
 #endif /* COAP_IPV6_SUPPORT */
 #if COAP_AF_UNIX_SUPPORT
