@@ -112,6 +112,23 @@ jobs:
       run: |
         cd build_test
         cmake --build .
+  contiki-build-macos:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: install macOS software
+      run: |
+        brew install make automake
+    - name: setup
+      run: |
+        ./autogen.sh
+    - name: configure
+      run: |
+        ./configure --disable-doxygen --disable-manpages --disable-dtls --without-epoll --disable-examples --disable-examples-source --disable-tcp --disable-oscore --disable-q-block
+    - name: compile
+      run: |
+        gmake -C examples/contiki
   other-build:
     runs-on: ubuntu-latest
     strategy:
