@@ -134,7 +134,12 @@ coap_ticks_from_rt_us(uint64_t t) {
 
 #else /* HAVE_TIME_H */
 
-/* make compilers happy that do not like empty modules */
+#ifdef __clang__
+/* Make compilers happy that do not like empty modules. As this function is
+ * never used, we ignore -Wunused-function at the end of compiling this file
+ */
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 COAP_STATIC_INLINE void
 dummy(void) {
 }
