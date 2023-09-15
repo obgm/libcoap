@@ -868,6 +868,14 @@ cert_verify_gnutls(gnutls_session_t g_session) {
         }
       }
     }
+    if (status & (GNUTLS_CERT_INSECURE_ALGORITHM)) {
+      status &= ~(GNUTLS_CERT_INSECURE_ALGORITHM);
+      fail = 1;
+      coap_log_warn("   %s: %s: '%s'\n",
+                    coap_session_str(c_session),
+                    "The certificate uses an insecure algorithm",
+                    OUTPUT_CERT_NAME);
+    }
 
     if (status) {
       fail = 1;
