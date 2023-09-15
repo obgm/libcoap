@@ -16,6 +16,8 @@ project(
   LANGUAGES CXX C)
 
 set(LIBCOAP_API_VERSION 3)
+set(LIBCOAP_ABI_VERSION 3.1.0)
+
 set(COAP_LIBRARY_NAME "coap-${LIBCOAP_API_VERSION}")
 
 option(
@@ -74,6 +76,9 @@ set_property(TARGET ${COAP_LIBRARY_NAME} PROPERTY C_STANDARD 99)
 if(${CMAKE_VERSION} VERSION_GREATER "3.20.0")
   cmake_policy(SET CMP0115 OLD) # Supresses libcoap configuration warning
 endif()
+
+set_target_properties(${COAP_LIBRARY_NAME} PROPERTIES SOVERSION ${LIBCOAP_API_VERSION})
+set_target_properties(${COAP_LIBRARY_NAME} PROPERTIES VERSION ${LIBCOAP_ABI_VERSION})
 
 #
 # options to tweak the library
@@ -590,6 +595,8 @@ message(STATUS "libcoap Configuration Summary:")
 message(STATUS "")
 message(STATUS "PACKAGE VERSION..................${PACKAGE_VERSION}")
 message(STATUS "PACKAGE SOURCE...................${LIBCOAP_PACKAGE_BUILD}")
+message(STATUS "LIBRARY API VERSION..............${LIBCOAP_API_VERSION}")
+message(STATUS "LIBRARY ABI VERSION..............${LIBCOAP_ABI_VERSION}")
 message(STATUS "ENABLE_DTLS:.....................${ENABLE_DTLS}")
 message(STATUS "ENABLE_TCP:......................${ENABLE_TCP}")
 message(STATUS "ENABLE_IPV4:.....................${ENABLE_IPV4}")

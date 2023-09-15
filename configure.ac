@@ -150,6 +150,16 @@ AC_SUBST(LIBCOAP_SO_VERSION)
 
 # Defining the API Version
 LIBCOAP_API_VERSION=3
+
+# calculate the ABI version
+m4_pattern_allow(LT_TEMP)
+LT_TEMP=$LT_LIBCOAP_CURRENT
+LT_TEMP=`expr $LT_TEMP - $LT_LIBCOAP_AGE`
+if [ "$LT_TEMP" != "LIBCOAP_API_VERSION" ] ; then
+   AC_MSG_ERROR([==> API version does not match base ABI version.])
+fi
+LIBCOAP_ABI_VERSION=$LT_TEMP.$LT_LIBCOAP_AGE.$LT_LIBCOAP_REVISION
+AC_SUBST(LIBCOAP_ABI_VERSION)
 AC_SUBST(LIBCOAP_API_VERSION)
 
 # Define a numeric version string
@@ -1163,8 +1173,9 @@ AC_MSG_RESULT([
 libcoap Configuration Summary:
       libcoap package version        : "$PACKAGE_VERSION"
       libcoap package source         : "$LIBCOAP_BUILD"
-      libcoap library version        : "$LIBCOAP_SO_VERSION"
       libcoap API version            : "$LIBCOAP_API_VERSION"
+      libcoap ABI version            : "$LIBCOAP_ABI_VERSION"
+      libcoap libtool SO version     : "$LIBCOAP_SO_VERSION"
       libcoap DTLS lib extn          : "$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
       host system                    : "$host"]);
 if test "x$enable_server_mode" = "xyes"; then
