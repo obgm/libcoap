@@ -1,3 +1,13 @@
+2023-09-18  Olaf Bergmann  <bergmann@tzi.org>
+
+	Change summary for version 4.3.4:
+
+        * Clean up use of tags.
+        * Support for MacOS with Contiki-NG builds.
+        * Support for Windows with OpenSSL 3.x builds.
+        * Reported bugs fixed.
+        * Documentation updated.
+
 2023-09-12  Olaf Bergmann  <bergmann@tzi.org>
 
 	Change summary for version 4.3.3:
