@@ -15,7 +15,7 @@
 # defined later.
 m4_define([libcoap_major_version], [4])
 m4_define([libcoap_minor_version], [3])
-m4_define([libcoap_micro_version], [3])
+m4_define([libcoap_micro_version], [4])
 
 # define an appending release state if needed, for example for pre-releases
 # like 'alpha' or 'rc1', for a full release keep the value empty!
@@ -137,8 +137,15 @@ LT_INIT([shared static])
 # To add to the confusion, if LIBCOAP_SO_VERSION is set to 3:0:1 (c:r:a), then the
 # .so version naming ends up as 2.1.0 (c-a:a:r) (as decided by libtool).
 
+#
+# CAUTION
+#
+# You will need to manually update VERSION and LIBCOAP_ABI_VERSION in CMakeLists.txt
+# if changes are made to libcoap_xx_version and LT_LIBCOAP_xx respectively.
+#
+
 LT_LIBCOAP_CURRENT=4
-LT_LIBCOAP_REVISION=0
+LT_LIBCOAP_REVISION=1
 LT_LIBCOAP_AGE=1
 LIBCOAP_SO_VERSION=$LT_LIBCOAP_CURRENT.$LT_LIBCOAP_REVISION.$LT_LIBCOAP_AGE
 
@@ -151,12 +158,12 @@ AC_SUBST(LIBCOAP_SO_VERSION)
 # Defining the API Version
 LIBCOAP_API_VERSION=3
 
-# calculate the ABI version
+# calculate the ABI version naming as calculated by libtool
 m4_pattern_allow(LT_TEMP)
 LT_TEMP=$LT_LIBCOAP_CURRENT
 LT_TEMP=`expr $LT_TEMP - $LT_LIBCOAP_AGE`
-if [ "$LT_TEMP" != "LIBCOAP_API_VERSION" ] ; then
-   AC_MSG_ERROR([==> API version does not match base ABI version.])
+if test "$LT_TEMP" != "$LIBCOAP_API_VERSION" ; then
+   AC_MSG_ERROR([==> API version ($LIBCOAP_API_VERSION) does not match base of ABI ($LT_TEMP.$LT_LIBCOAP_AGE.$LT_LIBCOAP_REVISION) version.])
 fi
 LIBCOAP_ABI_VERSION=$LT_TEMP.$LT_LIBCOAP_AGE.$LT_LIBCOAP_REVISION
 AC_SUBST(LIBCOAP_ABI_VERSION)
