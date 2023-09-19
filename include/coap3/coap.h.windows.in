@@ -10,6 +10,11 @@
  * of use.
  */
 
+/**
+ * @file coap.h
+ * @brief Primary include file
+ */
+
 #ifndef COAP_H_
 #define COAP_H_
 

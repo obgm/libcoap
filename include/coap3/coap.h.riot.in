@@ -1,13 +1,18 @@
 /*
  * coap.h -- main header file for CoAP stack of libcoap (RIOT)
  *
- * Copyright (C) 2010-2012,2015-2017 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2012,2015-2023 Olaf Bergmann <bergmann@tzi.org>
  *               2015 Carsten Schoenert <c.schoenert@t-online.de>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
+ */
+
+/**
+ * @file coap.h
+ * @brief Primary include file
  */
 
 #ifndef COAP_H_
