@@ -75,6 +75,11 @@
 /* Ignore OpenSSL 3.0 deprecated warnings for now */
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
+#if defined(_WIN32)
+#if !defined(__MINGW32__)
+#pragma warning(disable : 4996)
+#endif /* ! __MINGW32__ */
+#endif /* _WIN32 */
 #endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
 
 #ifdef COAP_EPOLL_SUPPORT
