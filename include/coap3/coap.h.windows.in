@@ -54,9 +54,9 @@ extern "C" {
 #include "coap@LIBCOAP_API_VERSION@/coap_pdu.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_prng.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_resource.h"
+#include "coap@LIBCOAP_API_VERSION@/coap_str.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_subscribe.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_time.h"
-#include "coap@LIBCOAP_API_VERSION@/coap_str.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_uri.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_ws.h"
 
