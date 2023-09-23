@@ -54,9 +54,9 @@ extern "C" {
 #include "coap3/coap_pdu.h"
 #include "coap3/coap_prng.h"
 #include "coap3/coap_resource.h"
+#include "coap3/coap_str.h"
 #include "coap3/coap_subscribe.h"
 #include "coap3/coap_time.h"
-#include "coap3/coap_str.h"
 #include "coap3/coap_uri.h"
 #include "coap3/coap_ws.h"
 
