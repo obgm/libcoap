@@ -15,7 +15,6 @@ on:
 env:
   PLATFORM: posix
   TESTS: yes
-  OPENSSL_INSTALL_PATH: C:\Program Files\OpenSSL-Win64\
 
 jobs:
   build-linux:
@@ -156,8 +155,7 @@ jobs:
         uses: microsoft/setup-msbuild@v1
 
       - name: Install OpenSSL on Windows (choco)
-        run: |
-          choco install openssl
+        run: call .\scripts\msinstallopenssl.cmd
         shell: cmd
 
       - name: Build sln
@@ -169,8 +167,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Install OpenSSL on Windows (choco)
-      run: |
-        choco install openssl
+      run: call .\scripts\msinstallopenssl.cmd
       shell: cmd
 
     - name: MS CMake setup
