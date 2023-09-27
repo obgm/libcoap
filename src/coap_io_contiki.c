@@ -18,18 +18,15 @@
 #include "contiki-net.h"
 
 PROCESS(libcoap_io_process, "libcoap I/O");
-static int was_io_process_stopped;
 
 void
 coap_start_io_process(void) {
-  was_io_process_stopped = 0;
   process_start(&libcoap_io_process, NULL);
 }
 
 void
 coap_stop_io_process(void) {
-  was_io_process_stopped = 1;
-  process_poll(&libcoap_io_process);
+  process_exit(&libcoap_io_process);
 }
 
 static void
@@ -56,12 +53,11 @@ on_prepare_timer_expired(void *ptr) {
 PROCESS_THREAD(libcoap_io_process, ev, data) {
   coap_socket_t *coap_socket;
 
+  PROCESS_EXITHANDLER(goto exit);
   PROCESS_BEGIN();
-  while (!was_io_process_stopped) {
+
+  while (1) {
     PROCESS_WAIT_EVENT();
-    if (was_io_process_stopped) {
-      break;
-    }
     if (ev == tcpip_event) {
       coap_socket = (struct coap_socket_t *)data;
       if (!coap_socket) {
@@ -76,6 +72,8 @@ PROCESS_THREAD(libcoap_io_process, ev, data) {
       }
     }
   }
+exit:
+  coap_log_info("libcoap_io_process: stopping\n");
   PROCESS_END();
 }
 
