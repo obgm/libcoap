@@ -520,9 +520,14 @@ coap_epoll_ctl_mod(coap_socket_t *sock,
                  coap_socket_strerror(), errno);
   }
 }
+#endif /* COAP_EPOLL_SUPPORT */
 
+#endif /* ! WITH_CONTIKI && ! WITH_LWIP */
+
+#ifndef WITH_CONTIKI
 void
-coap_update_epoll_timer(coap_context_t *context, coap_tick_t delay) {
+coap_update_io_timer(coap_context_t *context, coap_tick_t delay) {
+#if COAP_EPOLL_SUPPORT
   if (context->eptimerfd != -1) {
     coap_tick_t now;
 
@@ -554,9 +559,14 @@ coap_update_epoll_timer(coap_context_t *context, coap_tick_t delay) {
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
     }
   }
-}
-
+#else /* COAP_EPOLL_SUPPORT */
+  (void)context;
+  (void)delay;
 #endif /* COAP_EPOLL_SUPPORT */
+}
+#endif /* ! WITH_CONTIKI */
+
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
 
 #ifdef _WIN32
 static void

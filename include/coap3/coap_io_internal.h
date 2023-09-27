@@ -147,12 +147,13 @@ void coap_epoll_ctl_add(coap_socket_t *sock, uint32_t events, const char *func);
 void coap_epoll_ctl_mod(coap_socket_t *sock, uint32_t events, const char *func);
 
 /**
- * Update the epoll timer fd as to when it is to trigger.
+ * Update when to continue with I/O processing, unless packets come in in the
+ * meantime. Typically, this timeout triggers retransmissions.
  *
- * @param context The context to update the epoll timer on.
- * @param delay The time to delay before the epoll timer fires.
+ * @param context The CoAP context.
+ * @param delay The time to delay before continuing with I/O processing.
  */
-void coap_update_epoll_timer(coap_context_t *context, coap_tick_t delay);
+void coap_update_io_timer(coap_context_t *context, coap_tick_t delay);
 
 #ifdef WITH_LWIP
 ssize_t coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,

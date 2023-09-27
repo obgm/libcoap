@@ -17,6 +17,7 @@
 #include "coap3/coap_internal.h"
 #include "contiki-net.h"
 
+static void prepare_io(coap_context_t *ctx);
 PROCESS(libcoap_io_process, "libcoap I/O");
 
 void
@@ -31,45 +32,65 @@ coap_stop_io_process(void) {
 
 static void
 on_prepare_timer_expired(void *ptr) {
-  coap_context_t *ctx;
+  PROCESS_CONTEXT_BEGIN(&libcoap_io_process);
+  prepare_io((coap_context_t *)ptr);
+  PROCESS_CONTEXT_END(&libcoap_io_process);
+}
+
+void
+coap_update_io_timer(coap_context_t *ctx, coap_tick_t delay) {
+  if (!ctimer_expired(&ctx->prepare_timer)) {
+    ctimer_stop(&ctx->prepare_timer);
+  }
+  if (!delay) {
+    process_post(&libcoap_io_process, PROCESS_EVENT_POLL, ctx);
+  } else {
+    ctimer_set(&ctx->prepare_timer,
+               CLOCK_SECOND * delay / 1000,
+               on_prepare_timer_expired,
+               ctx);
+  }
+}
+
+static void
+prepare_io(coap_context_t *ctx) {
   coap_tick_t now;
   coap_socket_t *sockets[1];
   unsigned int max_sockets = sizeof(sockets)/sizeof(sockets[0]);
   unsigned int num_sockets;
   unsigned timeout;
 
-  ctx = (coap_context_t *)ptr;
   coap_ticks(&now);
   timeout = coap_io_prepare_io(ctx, sockets, max_sockets, &num_sockets, now);
-  if (!timeout) {
-    return;
+  if (timeout) {
+    coap_update_io_timer(ctx, timeout);
   }
-  ctimer_set(&ctx->prepare_timer,
-             CLOCK_SECOND * timeout / 1000,
-             on_prepare_timer_expired,
-             ctx);
 }
 
 PROCESS_THREAD(libcoap_io_process, ev, data) {
-  coap_socket_t *coap_socket;
-
   PROCESS_EXITHANDLER(goto exit);
   PROCESS_BEGIN();
 
   while (1) {
     PROCESS_WAIT_EVENT();
     if (ev == tcpip_event) {
-      coap_socket = (struct coap_socket_t *)data;
+      coap_socket_t *coap_socket = (coap_socket_t *)data;
       if (!coap_socket) {
-        coap_log_crit("libcoap_io_process: data should never be NULL\n");
+        coap_log_crit("libcoap_io_process: coap_socket should never be NULL\n");
         continue;
       }
       if (uip_newdata()) {
         coap_socket->flags |= COAP_SOCKET_CAN_READ;
         coap_io_process(coap_socket->context, 0);
-        ctimer_stop(&coap_socket->context->prepare_timer);
-        on_prepare_timer_expired(coap_socket->context);
       }
+    }
+    if (ev == PROCESS_EVENT_POLL) {
+      coap_context_t *ctx = (coap_context_t *)data;
+      if (!ctx) {
+        coap_log_crit("libcoap_io_process: ctx should never be NULL\n");
+        continue;
+      }
+      prepare_io(ctx);
     }
   }
 exit:
