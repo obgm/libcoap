@@ -103,9 +103,7 @@ coap_async_trigger(coap_async_t *async) {
 
   coap_log_debug("   %s: Async request triggered\n",
                  coap_session_str(async->session));
-#ifdef COAP_EPOLL_SUPPORT
-  coap_update_epoll_timer(async->session->context, 0);
-#endif /* COAP_EPOLL_SUPPORT */
+  coap_update_io_timer(async->session->context, 0);
 }
 
 
@@ -118,9 +116,7 @@ coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
 
   if (delay) {
     async->delay = now + delay;
-#ifdef COAP_EPOLL_SUPPORT
-    coap_update_epoll_timer(async->session->context, delay);
-#endif /* COAP_EPOLL_SUPPORT */
+    coap_update_io_timer(async->session->context, delay);
     coap_log_debug("   %s: Async request delayed for %u.%03u secs\n",
                    coap_session_str(async->session),
                    (unsigned int)(delay / COAP_TICKS_PER_SECOND),

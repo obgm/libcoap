@@ -935,9 +935,7 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
                  (unsigned)((node->timeout << node->retransmit_cnt) * 1000 /
                             COAP_TICKS_PER_SECOND));
 
-#ifdef COAP_EPOLL_SUPPORT
-  coap_update_epoll_timer(context, node->t);
-#endif /* COAP_EPOLL_SUPPORT */
+  coap_update_io_timer(context, node->t);
 
   return node->id;
 }

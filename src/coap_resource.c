@@ -1193,9 +1193,7 @@ coap_resource_notify_observers(coap_resource_t *r,
   }
 
   r->context->observe_pending = 1;
-#ifdef COAP_EPOLL_SUPPORT
-  coap_update_epoll_timer(r->context, 0);
-#endif /* COAP_EPOLL_SUPPORT */
+  coap_update_io_timer(r->context, 0);
   return 1;
 }
 
