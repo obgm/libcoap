@@ -3316,6 +3316,15 @@ lg_xmit_finished:
     coap_show_pdu(COAP_LOG_DEBUG, rcvd);
   }
 
+  if (sent) {
+    /* need to put back original token into sent */
+    if (p->b.b1.app_token)
+      coap_update_token(sent, p->b.b1.app_token->length,
+                        p->b.b1.app_token->s);
+    if (sent->lg_xmit)
+      coap_remove_option(sent, sent->lg_xmit->option);
+    sent->lg_xmit = NULL;
+  }
   LL_DELETE(session->lg_xmit, p);
   coap_block_delete_lg_xmit(session, p);
   return 0;
@@ -3693,6 +3702,14 @@ reinit:
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
             coap_log_debug("Client app version of updated PDU\n");
             coap_show_pdu(COAP_LOG_DEBUG, rcvd);
+
+            if (sent) {
+              /* need to put back original token into sent */
+              if (p->app_token)
+                coap_update_token(sent, p->app_token->length,
+                                  p->app_token->s);
+              coap_remove_option(sent, p->block_option);
+            }
             goto call_app_handler;
           }
 #if COAP_Q_BLOCK_SUPPORT
@@ -3729,6 +3746,13 @@ give_to_app:
               coap_update_token(rcvd, p->app_token->length, p->app_token->s);
               coap_log_debug("Client app version of updated PDU\n");
               coap_show_pdu(COAP_LOG_DEBUG, rcvd);
+            }
+            if (sent) {
+              /* need to put back original token into sent */
+              if (p->app_token)
+                coap_update_token(sent, p->app_token->length,
+                                  p->app_token->s);
+              coap_remove_option(sent, p->block_option);
             }
             if (context->response_handler(session, sent, rcvd,
                                           rcvd->mid) == COAP_RESPONSE_FAIL)
@@ -3878,6 +3902,14 @@ expire_lg_crcv:
     coap_update_token(rcvd, p->app_token->length, p->app_token->s);
     coap_log_debug("Client app version of updated PDU\n");
     coap_show_pdu(COAP_LOG_DEBUG, rcvd);
+  }
+
+  if (sent) {
+    /* need to put back original token into sent */
+    if (p->app_token)
+      coap_update_token(sent, p->app_token->length,
+                        p->app_token->s);
+    coap_remove_option(sent, p->block_option);
   }
   /* Expire this entry */
   LL_DELETE(session->lg_crcv, p);
