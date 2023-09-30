@@ -453,18 +453,18 @@ coap_remove_option(coap_pdu_t *pdu, coap_option_num_t number) {
                         &decode_next))
       return 0;
     opt_delta = decode_this.delta + decode_next.delta;
-    if (opt_delta <= 12) {
+    if (opt_delta < 13) {
       /* can simply update the delta of next option */
       next_option[0] = (next_option[0] & 0x0f) + (coap_opt_t)(opt_delta << 4);
-    } else if (opt_delta <= 269 && decode_next.delta <= 12) {
+    } else if (opt_delta < 269 && decode_next.delta < 13) {
       /* next option delta size increase */
       next_option -= 1;
       next_option[0] = (next_option[1] & 0x0f) + (13 << 4);
       next_option[1] = (coap_opt_t)(opt_delta - 13);
-    } else if (opt_delta <= 269) {
+    } else if (opt_delta < 269) {
       /* can simply update the delta of next option */
       next_option[1] = (coap_opt_t)(opt_delta - 13);
-    } else if (decode_next.delta <= 12) {
+    } else if (decode_next.delta < 13) { /* opt_delta >= 269 */
       /* next option delta size increase */
       if (next_option - option < 2) {
         /* Need to shuffle everything up by 1 before decrement */
@@ -493,13 +493,13 @@ coap_remove_option(coap_pdu_t *pdu, coap_option_num_t number) {
       next_option[0] = (next_option[2] & 0x0f) + (14 << 4);
       next_option[1] = (coap_opt_t)((opt_delta - 269) >> 8);
       next_option[2] = (opt_delta - 269) & 0xff;
-    } else if (decode_next.delta <= 269) {
+    } else if (decode_next.delta < 269) { /* opt_delta >= 269 */
       /* next option delta size increase */
       next_option -= 1;
       next_option[0] = (next_option[1] & 0x0f) + (14 << 4);
       next_option[1] = (coap_opt_t)((opt_delta - 269) >> 8);
       next_option[2] = (opt_delta - 269) & 0xff;
-    } else {
+    } else { /* decode_next.delta >= 269 && opt_delta >= 269 */
       next_option[1] = (coap_opt_t)((opt_delta - 269) >> 8);
       next_option[2] = (opt_delta - 269) & 0xff;
     }

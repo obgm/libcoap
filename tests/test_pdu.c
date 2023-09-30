@@ -1067,6 +1067,11 @@ t_encode_pdu18(void) {
 }
 
 /* Remove an option (no data) */
+/*
+ * Next Delta New Delta
+ *          4        18
+ *         18        25
+ */
 static void
 t_encode_pdu19(void) {
   size_t n;
@@ -1120,9 +1125,94 @@ t_encode_pdu19(void) {
   CU_ASSERT(memcmp(pdu->token, data6, pdu->used_size) == 0);
 }
 
-/* Remove an option (with data) */
+/* Remove an option (no data), but exercise delta boundaries (13 and 269) */
+/*
+ * Next Delta New Delta
+ *         11        12 if (opt_delta < 13) {
+ *          1        13 } else if (opt_delta < 269 && decode_next.delta < 13) {
+ *        254       268 } else if (opt_delta < 269) {
+ *          1       269 } else if (decode_next.delta < 13) { // opt_delta >= 269
+ *         71       350 } else if (decode_next.delta < 269) { // opt_delta >= 269
+ *        320       670 } else { // decode_next.delta >= 269 && opt_delta >= 269
+ */
 static void
 t_encode_pdu20(void) {
+  size_t n;
+  uint8_t  token[] = { 't' };
+  uint16_t opt_num[] = { 1,  12,  13,  268, 269, 350, 670 };
+  uint8_t  opt_val[] = { 50, 51,  52,  53,  54,  55,  56 };
+  uint8_t  data1[] = { 0x74, 0x11, 0x32, 0xb1, 0x33, 0x11, 0x34, 0xd1,
+                       0xf2, 0x35, 0x11, 0x36, 0xd1, 0x44, 0x37, 0xe1,
+                       0x00, 0x33, 0x38
+                     };
+  uint8_t  data2[] = { 0x74, 0xc1, 0x33, 0x11, 0x34, 0xd1, 0xf2, 0x35,
+                       0x11, 0x36, 0xd1, 0x44, 0x37, 0xe1, 0x00, 0x33,
+                       0x38
+                     };
+  uint8_t  data3[] = { 0x74, 0xd1, 0x00, 0x34, 0xd1, 0xf2, 0x35, 0x11,
+                       0x36, 0xd1, 0x44, 0x37, 0xe1, 0x00, 0x33, 0x38
+                     };
+  uint8_t  data4[] = { 0x74, 0xd1, 0xff, 0x35, 0x11, 0x36, 0xd1, 0x44,
+                       0x37, 0xe1, 0x00, 0x33, 0x38
+                     };
+  uint8_t  data5[] = { 0x74, 0xe1, 0x00, 0x00, 0x36, 0xd1, 0x44, 0x37,
+                       0xe1, 0x00, 0x33, 0x38
+                     };
+  uint8_t  data6[] = { 0x74, 0xe1, 0x00, 0x51, 0x37, 0xe1, 0x00, 0x33,
+                       0x38
+                     };
+  uint8_t  data7[] = { 0x74, 0xe1, 0x01, 0x91, 0x38 };
+  uint8_t  data8[] = { 0x74 };
+
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
+
+  CU_ASSERT(pdu->data == NULL);
+
+  coap_add_token(pdu, sizeof(token), token);
+  /* Put the options in in reverse order to test that logic */
+  for (n = sizeof(opt_num)/sizeof(opt_num[0]); n > 0; n--) {
+    coap_insert_option(pdu, opt_num[n-1],
+                       sizeof(opt_val[n-1]), &opt_val[n-1]);
+  }
+  CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 1);
+  CU_ASSERT(memcmp(pdu->token, data2, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 12);
+  CU_ASSERT(memcmp(pdu->token, data3, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 13);
+  CU_ASSERT(memcmp(pdu->token, data4, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 268);
+  CU_ASSERT(memcmp(pdu->token, data5, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 269);
+  CU_ASSERT(memcmp(pdu->token, data6, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 350);
+  CU_ASSERT(memcmp(pdu->token, data7, pdu->used_size) == 0);
+
+  /* Now remove the final option */
+  coap_remove_option(pdu, 670);
+  CU_ASSERT(memcmp(pdu->token, data8, pdu->used_size) == 0);
+}
+
+/* Remove an option (with data) */
+/*
+ * Next Delta New Delta
+ *          4        18
+ *         18        25
+ */
+static void
+t_encode_pdu21(void) {
   size_t n;
   uint8_t  token[] = { 't' };
   uint16_t opt_num[] = { 300,   7,  21,  25 };
@@ -1183,9 +1273,99 @@ t_encode_pdu20(void) {
   CU_ASSERT(memcmp(pdu->token, data6, pdu->used_size) == 0);
 }
 
+/* Remove an option (with data), but exercise delta boundaries (13 and 269) */
+/*
+ * Next Delta New Delta
+ *         11        12 if (opt_delta < 13) {
+ *          1        13 } else if (opt_delta < 269 && decode_next.delta < 13) {
+ *        254       268 } else if (opt_delta < 269) {
+ *          1       269 } else if (decode_next.delta < 13) { // opt_delta >= 269
+ *         71       350 } else if (decode_next.delta < 269) { // opt_delta >= 269
+ *        320       670 } else { // decode_next.delta >= 269 && opt_delta >= 269
+ */
+static void
+t_encode_pdu22(void) {
+  size_t n;
+  uint8_t  token[] = { 't' };
+  uint16_t opt_num[] = { 1,  12,  13,  268, 269, 350, 670 };
+  uint8_t  opt_val[] = { 50, 51,  52,  53,  54,  55,  56 };
+  uint8_t  data[] = { 'd', 'a', 't', 'a' };
+  uint8_t  data1[] = { 0x74, 0x11, 0x32, 0xb1, 0x33, 0x11, 0x34, 0xd1,
+                       0xf2, 0x35, 0x11, 0x36, 0xd1, 0x44, 0x37, 0xe1,
+                       0x00, 0x33, 0x38, 0xff, 0x64, 0x61, 0x74, 0x61
+                     };
+  uint8_t  data2[] = { 0x74, 0xc1, 0x33, 0x11, 0x34, 0xd1, 0xf2, 0x35,
+                       0x11, 0x36, 0xd1, 0x44, 0x37, 0xe1, 0x00, 0x33,
+                       0x38, 0xff, 0x64, 0x61, 0x74, 0x61
+                     };
+  uint8_t  data3[] = { 0x74, 0xd1, 0x00, 0x34, 0xd1, 0xf2, 0x35, 0x11,
+                       0x36, 0xd1, 0x44, 0x37, 0xe1, 0x00, 0x33, 0x38,
+                       0xff, 0x64, 0x61, 0x74, 0x61
+                     };
+  uint8_t  data4[] = { 0x74, 0xd1, 0xff, 0x35, 0x11, 0x36, 0xd1, 0x44,
+                       0x37, 0xe1, 0x00, 0x33, 0x38, 0xff, 0x64, 0x61,
+                       0x74, 0x61
+                     };
+  uint8_t  data5[] = { 0x74, 0xe1, 0x00, 0x00, 0x36, 0xd1, 0x44, 0x37,
+                       0xe1, 0x00, 0x33, 0x38, 0xff, 0x64, 0x61, 0x74,
+                       0x61
+                     };
+  uint8_t  data6[] = { 0x74, 0xe1, 0x00, 0x51, 0x37, 0xe1, 0x00, 0x33,
+                       0x38, 0xff, 0x64, 0x61, 0x74, 0x61
+                     };
+  uint8_t  data7[] = { 0x74, 0xe1, 0x01, 0x91, 0x38, 0xff, 0x64, 0x61,
+                       0x74, 0x61
+                     };
+  uint8_t  data8[] = { 0x74, 0xff, 0x64, 0x61, 0x74, 0x61 };
+
+  coap_pdu_clear(pdu, pdu->max_size);        /* clear PDU */
+
+  CU_ASSERT(pdu->data == NULL);
+
+  coap_add_token(pdu, sizeof(token), token);
+
+  coap_add_data(pdu, sizeof(data), data);
+
+  /* Put the options in in reverse order to test that logic */
+  for (n = sizeof(opt_num)/sizeof(opt_num[0]); n > 0; n--) {
+    coap_insert_option(pdu, opt_num[n-1],
+                       sizeof(opt_val[n-1]), &opt_val[n-1]);
+  }
+  CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 1);
+  CU_ASSERT(memcmp(pdu->token, data2, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 12);
+  CU_ASSERT(memcmp(pdu->token, data3, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 13);
+  CU_ASSERT(memcmp(pdu->token, data4, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 268);
+  CU_ASSERT(memcmp(pdu->token, data5, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 269);
+  CU_ASSERT(memcmp(pdu->token, data6, pdu->used_size) == 0);
+
+  /* Now remove an option from the start */
+  coap_remove_option(pdu, 350);
+  CU_ASSERT(memcmp(pdu->token, data7, pdu->used_size) == 0);
+
+  /* Now remove the final option */
+  coap_remove_option(pdu, 670);
+  CU_ASSERT(memcmp(pdu->token, data8, pdu->used_size) == 0);
+}
+
+
 /* Update token */
 static void
-t_encode_pdu21(void) {
+t_encode_pdu23(void) {
   size_t n;
   uint8_t  token[] = { 't' };
   uint8_t  new_token[] = { 't', 'o', 'k', 'e', 'n' };
@@ -1232,7 +1412,7 @@ t_encode_pdu21(void) {
 
 /* insert option before (large) final one */
 static void
-t_encode_pdu22(void) {
+t_encode_pdu24(void) {
   size_t n;
   uint8_t  token[] = { 't' };
   uint8_t  buf[4];
@@ -1276,7 +1456,6 @@ t_encode_pdu22(void) {
     CU_ASSERT(memcmp(pdu->token, data2[n], pdu->used_size) == 0);
   }
 }
-
 
 static int
 t_pdu_tests_create(void) {
@@ -1356,6 +1535,8 @@ t_init_pdu_tests(void) {
     PDU_ENCODER_TEST(suite[1], t_encode_pdu20);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu21);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu22);
+    PDU_ENCODER_TEST(suite[1], t_encode_pdu23);
+    PDU_ENCODER_TEST(suite[1], t_encode_pdu24);
 
   } else                         /* signal error */
     fprintf(stderr, "W: cannot add pdu parser test suite (%s)\n",
