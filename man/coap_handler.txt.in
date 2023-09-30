@@ -141,6 +141,12 @@ this is an ACK or RST response to the request.  In general, matching of
 Requests and Responses whould be done by generating unique Tokens for each
 Request and then matching up based on the Token in _received_ Response.
 
+*NOTE:* _sent_ (if not NULL) may not contain all or any of the data used for the
+initial request if block transfers are being used. For Block1 requests, the
+complete data will be lost once the data has been successfully transmitted as
+acknowledged by the first response. For Block2 responses, _sent_ gets re-used
+to request the next Block2 and so data information is lost.
+
 *NOTE:* If the returned value is COAP_RESPONSE_FAIL, then a CoAP RST packet
 will get sent to the server by libcoap.  The returned value of COAP_RESPONSE_OK
 indicates that all is OK.
