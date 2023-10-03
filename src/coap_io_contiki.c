@@ -56,7 +56,7 @@ static void
 prepare_io(coap_context_t *ctx) {
   coap_tick_t now;
   coap_socket_t *sockets[1];
-  unsigned int max_sockets = sizeof(sockets)/sizeof(sockets[0]);
+  static const unsigned int max_sockets = sizeof(sockets)/sizeof(sockets[0]);
   unsigned int num_sockets;
   unsigned timeout;
 
