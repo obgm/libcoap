@@ -31,7 +31,7 @@ coap_stop_io_process(void) {
 }
 
 static void
-on_prepare_timer_expired(void *ptr) {
+on_io_timer_expired(void *ptr) {
   PROCESS_CONTEXT_BEGIN(&libcoap_io_process);
   prepare_io((coap_context_t *)ptr);
   PROCESS_CONTEXT_END(&libcoap_io_process);
@@ -39,15 +39,15 @@ on_prepare_timer_expired(void *ptr) {
 
 void
 coap_update_io_timer(coap_context_t *ctx, coap_tick_t delay) {
-  if (!ctimer_expired(&ctx->prepare_timer)) {
-    ctimer_stop(&ctx->prepare_timer);
+  if (!ctimer_expired(&ctx->io_timer)) {
+    ctimer_stop(&ctx->io_timer);
   }
   if (!delay) {
     process_post(&libcoap_io_process, PROCESS_EVENT_POLL, ctx);
   } else {
-    ctimer_set(&ctx->prepare_timer,
+    ctimer_set(&ctx->io_timer,
                CLOCK_SECOND * delay / 1000,
-               on_prepare_timer_expired,
+               on_io_timer_expired,
                ctx);
   }
 }
@@ -58,12 +58,12 @@ prepare_io(coap_context_t *ctx) {
   coap_socket_t *sockets[1];
   static const unsigned int max_sockets = sizeof(sockets)/sizeof(sockets[0]);
   unsigned int num_sockets;
-  unsigned timeout;
+  unsigned next_io;
 
   coap_ticks(&now);
-  timeout = coap_io_prepare_io(ctx, sockets, max_sockets, &num_sockets, now);
-  if (timeout) {
-    coap_update_io_timer(ctx, timeout);
+  next_io = coap_io_prepare_io(ctx, sockets, max_sockets, &num_sockets, now);
+  if (next_io) {
+    coap_update_io_timer(ctx, next_io);
   }
 }
 
