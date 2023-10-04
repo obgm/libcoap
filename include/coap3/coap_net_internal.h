@@ -80,7 +80,7 @@ struct coap_context_t {
 
 #ifdef WITH_CONTIKI
   struct uip_udp_conn *conn;      /**< uIP connection object */
-  struct ctimer prepare_timer;    /**< fires when it's time to call
+  struct ctimer io_timer;         /**< fires when it's time to call
                                        coap_io_prepare_io */
 #endif /* WITH_CONTIKI */
 
