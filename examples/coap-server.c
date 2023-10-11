@@ -2132,8 +2132,8 @@ usage(const char *program, const char *version) {
           coap_string_tls_version(buffer, sizeof(buffer)));
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
-          "Usage: %s [-d max] [-e] [-g group] [-l loss] [-p port] [-r] [-v num]\n"
-          "\t\t[-w [port][,secure_port]] [-A address]\n"
+          "Usage: %s [-a priority] [-d max] [-e] [-g group] [-l loss] [-p port]\n"
+          "\t\t[-r] [-v num] [-w [port][,secure_port]] [-A address]\n"
           "\t\t[-E oscore_conf_file[,seq_file]] [-G group_if] [-L value] [-N]\n"
           "\t\t[-P scheme://address[:port],[name1[,name2..]]]\n"
           "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
@@ -2143,6 +2143,7 @@ usage(const char *program, const char *version) {
           "\t\t[-J pkcs11_pin] [-M rpk_file] [-R trust_casfile]\n"
           "\t\t[-S match_pki_sni_file]]\n"
           "General Options\n"
+          "\t-a priority\tSend logging output to syslog at priority (0-7) level\n"
           "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
           "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
           "\t       \t\tuntil one of the dynamic resources has been deleted\n"
@@ -2704,6 +2705,24 @@ cmdline_read_extended_token_size(char *arg) {
   return 1;
 }
 
+#ifndef _WIN32
+
+uint32_t syslog_pri = 0;
+
+static void
+syslog_handler(coap_log_t level, const char *message) {
+  char *cp = strchr(message, '\n');
+
+  if (cp) {
+    char *lcp = strchr(message, '\r');
+    if (lcp && lcp < cp)
+      cp = lcp;
+  }
+  syslog(syslog_pri, "%s %*.*s", coap_log_level_desc(level), (int)(cp-message),
+         (int)(cp-message), message);
+}
+#endif /* ! _WIN32 */
+
 int
 main(int argc, char **argv) {
   coap_context_t *ctx = NULL;
@@ -2723,6 +2742,9 @@ main(int argc, char **argv) {
   int nfds = 0;
   size_t i;
   int exit_code = 0;
+#ifndef _WIN32
+  int use_syslog = 0;
+#endif /* ! _WIN32 */
   uint16_t cache_ignore_options[] = { COAP_OPTION_BLOCK1,
                                       COAP_OPTION_BLOCK2,
                                       /* See https://rfc-editor.org/rfc/rfc7959#section-2.10 */
@@ -2740,8 +2762,16 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "c:d:eg:G:h:i:j:J:k:l:mnp:rs:tu:v:w:A:C:E:L:M:NP:R:S:T:U:V:X:")) != -1) {
+                       "a:c:d:eg:G:h:i:j:J:k:l:mnp:rs:tu:v:w:A:C:E:L:M:NP:R:S:T:U:V:X:")) != -1) {
     switch (opt) {
+#ifndef _WIN32
+    case 'a':
+      use_syslog = 1;
+      syslog_pri = atoi(optarg);
+      if (syslog_pri > 7)
+        syslog_pri = 7;
+      break;
+#endif /* ! _WIN32 */
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
       addr_str[NI_MAXHOST - 1] = '\0';
@@ -2913,6 +2943,13 @@ main(int argc, char **argv) {
   sigaction(SIGPIPE, &sa, NULL);
 #endif
 
+#ifndef _WIN32
+  if (use_syslog) {
+    openlog("coap-server", 0, LOG_DAEMON);
+    coap_set_show_pdu_output(0);
+    coap_set_log_handler(syslog_handler);
+  }
+#endif /* ! _WIN32 */
   coap_set_log_level(log_level);
   coap_dtls_set_log_level(dtls_log_level);
 

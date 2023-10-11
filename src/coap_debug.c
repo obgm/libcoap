@@ -108,10 +108,21 @@ static const char *loglevels[] = {
   "Emrg", "Alrt", "Crit", "Err ", "Warn", "Note", "Info", "Debg"
 };
 
+const char *
+coap_log_level_desc(coap_log_t level) {
+  static char bad[8];
+  if (level >= sizeof(loglevels)/sizeof(loglevels[0])) {
+    snprintf(bad, sizeof(bad), "%4d", level);
+    return bad;
+  } else {
+    return loglevels[level];
+  }
+}
+
 #ifdef WITH_CONTIKI
 void
 coap_print_contiki_prefix(coap_log_t level) {
-  printf("[%s: COAP      ] ", loglevels[level]);
+  printf("[%s: COAP      ] ", coap_log_level_desc(level));
 }
 #endif /* WITH_CONTIKI */
 
@@ -1219,11 +1230,7 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     if (len)
       fprintf(log_fd, "%.*s ", (int)len, timebuf);
 
-    if (level >= sizeof(loglevels)/sizeof(loglevels[0])) {
-      fprintf(log_fd, "%4d ", level);
-    } else {
-      fprintf(log_fd, "%s ", loglevels[level]);
-    }
+    fprintf(log_fd, "%s ", coap_log_level_desc(level));
 
     va_start(ap, format);
     vfprintf(log_fd, format, ap);

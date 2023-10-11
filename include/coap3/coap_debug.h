@@ -193,6 +193,13 @@ void coap_dtls_set_log_level(coap_log_t level);
 coap_log_t coap_dtls_get_log_level(void);
 
 /**
+ * Get the current logging description.
+ *
+ * @return Ascii representation of logging level.
+ */
+const char *coap_log_level_desc(coap_log_t level);
+
+/**
  * Logging callback handler definition.
  *
  * @param level One of the COAP_LOG_* values, or if used for (D)TLS logging,
