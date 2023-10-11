@@ -120,6 +120,7 @@ global:
   coap_is_mcast;
   coap_join_mcast_group_intf;
   coap_log_impl;
+  coap_log_level_desc;
   coap_make_str_const;
   coap_malloc_type;
   coap_mcast_per_resource;

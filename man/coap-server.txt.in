@@ -19,8 +19,8 @@ coap-server-notls
 
 SYNOPSIS
 --------
-*coap-server* [*-d* max] [*-e*] [*-g* group] [*-l* loss] [*-p* port] [*-r*]
-              [*-t*]  [*-v* num] [*-w* [port][,secure_port]]
+*coap-server* [*-a* priority] [*-d* max] [*-e*] [*-g* group] [*-l* loss] [*-p* port]
+              [*-r*] [*-t*]  [*-v* num] [*-w* [port][,secure_port]]
               [*-A* address] [*-E* oscore_conf_file[,seq_file]]
               [*-G* group_if] [*-L* value] [*-N*]
               [*-P* scheme://addr[:port],[name1[,name2..]]]
@@ -43,6 +43,9 @@ DESCRIPTION
 
 OPTIONS - General
 -----------------
+*-a* priority::
+   Send logging output to syslog at 'priority' (0-7) level.
+
 *-d* max::
    Enable support for creation of dynamic resources when doing a PUT up to a
    limit of 'max'.  If 'max' is reached, a 4.06 code is returned until one of

@@ -27,6 +27,7 @@ coap_dtls_log,
 coap_dtls_get_log_level,
 coap_dtls_set_log_level,
 coap_set_log_handler,
+coap_log_level_desc,
 coap_package_name,
 coap_package_version,
 coap_package_build,
@@ -73,6 +74,8 @@ SYNOPSIS
 *coap_log_t coap_dtls_get_log_level(void);*
 
 *void coap_set_log_handler(coap_log_handler_t _handler_);*
+
+*const char *coap_log_level_desc(coap_log_t _level_);*
 
 *const char *coap_package_name(void);*
 
@@ -248,6 +251,11 @@ prototype is defined as:
 typedef void (*coap_log_handler_t) (coap_log_t level, const char *message);
 ----
 
+*Function: coap_log_level_desc()*
+
+The *coap_log_level_desc*()* function can be used to return a 4 character ascii
+description for the logging _level_.
+
 *Function: coap_package_name()*
 
 The *coap_package_name*() function returns the name of this library.
@@ -312,6 +320,9 @@ string.
 
 *coap_dtls_get_log_level*() returns the current logging level
 for the DTLS library specifics.
+
+*coap_log_level_desc*() returns a description string of the logging
+_level_.
 
 *coap_endpoint_str*() returns a description string of the
 _endpoint_.

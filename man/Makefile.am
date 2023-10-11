@@ -132,6 +132,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_logging.3" > coap_dtls_log.3
 	@echo ".so man3/coap_logging.3" > coap_dtls_get_log_level.3
 	@echo ".so man3/coap_logging.3" > coap_dtls_set_log_level.3
+	@echo ".so man3/coap_logging.3" > coap_log_level_desc.3
 	@echo ".so man3/coap_logging.3" > coap_package_name.3
 	@echo ".so man3/coap_logging.3" > coap_package_version.3
 	@echo ".so man3/coap_logging.3" > coap_package_build.3
