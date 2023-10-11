@@ -175,6 +175,13 @@ check_synopsis(const char *file) {
   status = system(buffer);
   if (WEXITSTATUS(status)) {
     exit_code = WEXITSTATUS(status);
+    snprintf(buffer, sizeof(buffer), "echo %sc ; cat -n %sc", file_name, file_name);
+    status = system(buffer);
+    snprintf(buffer, sizeof(buffer), "echo tmp/%s.h ; cat -n tmp/%s.h", file, file);
+    status = system(buffer);
+    if (WEXITSTATUS(status)) {
+      printf("Issues with system() call\n");
+    }
   }
   return;
 }
@@ -493,14 +500,6 @@ main(int argc, char *argv[]) {
           in_synopsis = 0;
           dump_name_synopsis_mismatch();
           in_functions = 1;
-          snprintf(file_name, sizeof(file_name), "tmp/%s.h",
-                   pdir_ent->d_name);
-          fpheader = fopen(file_name, "w");
-          if (!fpheader) {
-            fprintf(stderr, "fopen: %s: %s (%d)\n", file_name,
-                    strerror(errno), errno);
-            goto bad;
-          }
           continue;
         }
         if (strncmp(buffer, "DESCRIPTION", sizeof("DESCRIPTION")-1) == 0) {
@@ -759,19 +758,18 @@ main(int argc, char *argv[]) {
           status = system(buffer);
           if (WEXITSTATUS(status)) {
             exit_code = WEXITSTATUS(status);
+            snprintf(buffer, sizeof(buffer), "echo %sc ; cat -n %sc", file_name, file_name);
+            status = system(buffer);
+            if (WEXITSTATUS(status)) {
+              printf("Issues with system() call\n");
+            }
           }
           continue;
         }
         if (fpcode) {
           if (strstr(buffer, "LIBCOAP_API_VERSION")) {
             fprintf(fpcode, "#include <coap3/coap.h>\n");
-            fprintf(fpcode, "#ifdef __GNUC__\n");
-            fprintf(fpcode, "#define U __attribute__ ((unused))\n");
-            fprintf(fpcode, "#else /* not a GCC */\n");
-            fprintf(fpcode, "#define U\n");
-            fprintf(fpcode, "#endif /* GCC */\n");
-            fprintf(fpcode, "#include \"%s.h\"\n", pdir_ent->d_name);
-            fprintf(fpcode, "#undef U\n");
+            fprintf(fpcode, "\n");
             continue;
           }
           fprintf(fpcode, "%s", buffer);
