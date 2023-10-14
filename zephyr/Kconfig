@@ -1,0 +1,185 @@
+# zephyr/Kconfig for libcoap
+#
+# Copyright (C) 2023-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# This file is part of the CoAP library libcoap. Please see README for terms
+# of use.
+#
+###############################################################################
+
+menu "libcoap Settings"
+
+config LIBCOAP
+      bool "Enable libcoap"
+      help
+        This option enables libcoap as a Zephyr module.
+
+endmenu
+
+if LIBCOAP
+
+config LIBCOAP_IPV4_SUPPORT
+    bool "Enable IPv4 support within CoAP"
+    default y
+    help
+        Enable IPv4 functionality for CoAP.
+
+        If this option is disabled, redundant CoAP IPv4 code is removed.
+
+config LIBCOAP_IPV6_SUPPORT
+    bool "Enable IPv6 support within CoAP"
+    default y
+    help
+        Enable IPv6 functionality for CoAP.
+
+        If this option is disabled, redundant CoAP IPv6 code is removed.
+
+config LIBCOAP_TCP_SUPPORT
+    bool "Enable TCP support within CoAP"
+    default n
+    help
+        Enable TCP functionality for CoAP. This is required if TLS sessions
+        are to be used. Note that RIOT TCP support also needs to be enabled.
+
+        If this option is disabled, redundant CoAP TCP code is removed.
+
+config LIBCOAP_OSCORE_SUPPORT
+    bool "Enable OSCORE support within CoAP"
+    default n
+    help
+        Enable OSCORE functionality for CoAP.
+
+        If this option is disabled, redundant CoAP OSCORE code is removed.
+
+config LIBCOAP_OBSERVE_PERSIST
+    bool "Enable Observe persist support within CoAP"
+    default n
+    help
+        Enable Observe persist functionality for CoAP.
+
+        If this option is disabled, redundant CoAP Observe persist code is removed.
+
+config LIBCOAP_WS_SOCKET
+    bool "Enable WebSocket support within CoAP"
+    default n
+    help
+        Enable WebSocket functionality for CoAP.
+
+        If this option is disabled, redundant CoAP WebSocket code is removed.
+
+config LIBCOAP_Q_BLOCK_SUPPORT
+    bool "Enable Q-Block (RFC9177) support within CoAP"
+    default n
+    help
+        Enable Q-Block (RFC9177) functionality for CoAP.
+
+        If this option is disabled, redundant CoAP Q-Block code is removed.
+
+config LIBCOAP_ASYNC_SUPPORT
+    bool "Enable separate responses support within CoAP"
+    default y
+    help
+        Enable async separate responses functionality for CoAP.
+
+        If this option is disabled, redundent CoAP async separate responses code is removed.
+
+config LIBCOAP_CLIENT_SUPPORT
+    bool "Enable Client functionality within CoAP"
+    default n
+    help
+        Enable client functionality (ability to make requests and receive
+        responses) for CoAP. If the server is going to act as a proxy, then
+        this needs to be enabled to support the ongoing session going to
+        the next hop.
+
+        If this option is disabled, redundant CoAP client only code is
+        removed.
+        If both this option and LIBCOAP_SERVER_SUPPORT are disabled, then
+        both are automatically enabled for backwards compatability.
+
+config LIBCOAP_SERVER_SUPPORT
+    bool "Enable Server functionality within CoAP"
+    default n
+    help
+        Enable server functionality (ability to receive requests and send
+        responses) for CoAP.
+
+        If this option is disabled, redundant CoAP server only code is
+        removed.
+        If both this option and LIBCOAP_CLIENT_SUPPORT are disabled, then
+        both are automatically enabled for backwards compatability.
+
+if MBEDTLS
+
+config MBEDTLS_CIPHER_CCM_ENABLED
+    bool
+    default y
+config MBEDTLS_DEBUG
+    bool
+    default y
+config MBEDTLS_SERVER_NAME_INDICATION
+    bool
+    default y
+config MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
+    bool
+    default y
+config MBEDTLS_ENTROPY_ENABLED
+    bool
+    default y
+config MBEDTLS_DTLS
+    bool
+    default y
+config MBEDTLS_SSL_DTLS_CONNECTION_ID
+    bool
+    default y
+config MBEDTLS_ZEPHYR_ENTROPY
+    bool
+    default y
+config MBEDTLS_TLS_VERSION_1_2
+    bool
+    default y
+config MBEDTLS_KEY_EXCHANGE_ALL_ENABLED
+    bool
+    default y
+config MBEDTLS_CIPHER_ALL_ENABLED
+    bool
+    default y
+config MBEDTLS_ECP_ALL_ENABLED
+    bool
+    default y
+config MBEDTLS_MAC_ALL_ENABLED
+    bool
+    default y
+config MBEDTLS_GENPRIME_ENABLED
+    bool
+    default y
+config MBEDTLS_HMAC_DRBG_ENABLED
+    bool
+    default y
+config MBEDTLS_ECDH_C
+    bool
+    default y
+config MBEDTLS_ECDSA_C
+    bool
+    default y
+config MBEDTLS_ECJPAKE_C
+    bool
+    default y
+config MBEDTLS_ECP_C
+    bool
+    default y
+config MBEDTLS_PEM_CERTIFICATE_FORMAT
+    bool
+    default y
+config MBEDTLS_SSL_EXTENDED_MASTER_SECRET
+    bool
+    default y
+
+endif # MBEDTLS
+
+module = LIBCOAP
+module-str = libcoap
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
+endif # LIBCOAP

@@ -20,10 +20,14 @@ set(LIBCOAP_ABI_VERSION 3.1.1)
 
 set(COAP_LIBRARY_NAME "coap-${LIBCOAP_API_VERSION}")
 
+if(NOT ZEPHYR_BASE)
 option(
   BUILD_SHARED_LIBS
   "Build shared libs"
   OFF)
+else()
+  # provided by the zephyr build system
+endif()
 
 #
 # global compiler options
@@ -84,6 +88,7 @@ set_target_properties(${COAP_LIBRARY_NAME} PROPERTIES VERSION ${LIBCOAP_ABI_VERS
 # options to tweak the library
 #
 
+if(NOT ZEPHYR_BASE)
 option(
   ENABLE_DTLS
   "enable building with DTLS support"
@@ -207,6 +212,10 @@ set_property(
            "6"
            "7"
            "8")
+
+else() # ! ZEPHYR_BASE
+  # provided by zephyr/CMakeLists.txt and zephyr/Kconfig
+endif() # ! ZEPHYR_BASE
 
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 11)
@@ -766,6 +775,12 @@ target_compile_options(
   ${COAP_LIBRARY_NAME}
   PUBLIC -DLIBCOAP_PACKAGE_BUILD="${LIBCOAP_PACKAGE_BUILD}")
 
+if(ZEPHYR_BASE)
+target_compile_options(
+  ${COAP_LIBRARY_NAME}
+  PUBLIC -DMBEDTLS_CONFIG_FILE="${CONFIG_MBEDTLS_CFG_FILE}" -I${ZEPHYR_MBEDTLS_CMAKE_DIR}/configs)
+endif()
+
 add_library(
   ${PROJECT_NAME}::${COAP_LIBRARY_NAME}
   ALIAS
@@ -895,11 +910,13 @@ install(
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT lib
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT lib)
 
+if(NOT ZEPHYR_BASE)
 install(
   EXPORT ${PROJECT_NAME}Targets
   DESTINATION ${LIBCOAP_CONFIG_INSTALL_DIR}
   NAMESPACE ${PROJECT_NAME}::
   COMPONENT dev)
+endif()
 
 configure_package_config_file(
   cmake/Config.cmake.in

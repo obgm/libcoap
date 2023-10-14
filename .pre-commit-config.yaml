@@ -4,7 +4,7 @@ repos:
     hooks:
     -   id: astyle_py
         files: '^.*\.(c|cpp|cxx|h|h.in|h.riot|h.riot.in|h.windows|h.windows.in|h.contiki|hpp|inc)$'
-        exclude: '^.*/(coap_uthash_internal.h|coap_utlist_internal.h)$|examples/riot/examples_libcoap_.*$|examples/riot/tests_pkg_libcoap/.*$'
+        exclude: '^.*/(coap_uthash_internal.h|coap_utlist_internal.h)$|examples/riot/examples_libcoap_.*$|examples/riot/tests_pkg_libcoap/.*$|zephyr/.*$'
         args: ['--style=google',
                '--align-pointer=name',
                '--align-reference=name',

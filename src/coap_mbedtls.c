@@ -510,6 +510,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
   }
   switch (setup_data->pki_key.key_type) {
   case COAP_PKI_KEY_PEM:
+#if defined(MBEDTLS_FS_IO)
     if (setup_data->pki_key.key.pem.public_cert &&
         setup_data->pki_key.key.pem.public_cert[0] &&
         setup_data->pki_key.key.pem.private_key &&
@@ -564,6 +565,10 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
       }
       mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
     }
+#else /* ! MBEDTLS_FS_IO */
+    (void)m_context;
+    coap_log_err("mbedtls_x509_crt_parse_file: MBEDTLS_FS_IO not set, so cannot handle files\n");
+#endif /* ! MBEDTLS_FS_IO */
     break;
   case COAP_PKI_KEY_PEM_BUF:
     if (setup_data->pki_key.key.pem_buf.public_cert &&
@@ -750,6 +755,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
     return -1;
   }
 
+#if defined(MBEDTLS_FS_IO)
   if (m_context->root_ca_file) {
     ret = mbedtls_x509_crt_parse_file(cacert, m_context->root_ca_file);
     if (ret < 0) {
@@ -768,6 +774,9 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
     }
     mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
   }
+#else /* ! MBEDTLS_FS_IO */
+  coap_log_err("mbedtls_x509_crt_parse_file: MBEDTLS_FS_IO not set, so cannot handle files\n");
+#endif /* ! MBEDTLS_FS_IO */
 
 #if defined(MBEDTLS_SSL_SRV_C)
   mbedtls_ssl_conf_cert_req_ca_list(&m_env->conf,
