@@ -702,7 +702,7 @@ coap_delete_uri(coap_uri_t *uri) {
   coap_free_type(COAP_STRING, uri);
 }
 
-COAP_STATIC_INLINE int
+static int
 is_unescaped_in_path(const uint8_t c) {
   return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
          (c >= '0' && c <= '9') || c == '-' || c == '.' || c == '_' ||
@@ -711,7 +711,7 @@ is_unescaped_in_path(const uint8_t c) {
          c=='=' || c==':' || c=='@' || c == '&';
 }
 
-COAP_STATIC_INLINE int
+static int
 is_unescaped_in_query(const uint8_t c) {
   return is_unescaped_in_path(c) || c=='/' || c=='?';
 }

@@ -47,7 +47,7 @@
 #include "coap3/coap_internal.h"
 #include <string.h>
 
-static inline void
+static void
 util_write_byte(uint8_t **buffer, size_t *buf_size, uint8_t value) {
   assert(*buf_size >= 1);
   (*buf_size)--;
@@ -207,7 +207,7 @@ oscore_cbor_put_unsigned(uint8_t **buffer, size_t *buf_size, uint64_t value) {
   }
 }
 
-static inline uint8_t
+static uint8_t
 get_byte(const uint8_t **buffer, size_t *buf_len) {
 #if NDEBUG
   (void)buf_len;
@@ -216,7 +216,7 @@ get_byte(const uint8_t **buffer, size_t *buf_len) {
   return (*buffer)[0];
 }
 
-static inline uint8_t
+static uint8_t
 get_byte_inc(const uint8_t **buffer, size_t *buf_len) {
   assert((*buf_len) > 0);
   (*buf_len)--;
