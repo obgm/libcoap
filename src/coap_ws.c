@@ -176,6 +176,8 @@ coap_ws_log_header(const coap_session_t *session, const uint8_t *header) {
   for (i = 0; i < extra_hdr_len; i++) {
     snprintf(&buf[i*3], 4, " %02x", header[i]);
   }
+  coap_log_debug("*  %s: ws: h  recv %4d bytes\n",
+                 coap_session_str(session), extra_hdr_len);
   coap_log_debug("*  %s: WS header:%s\n", coap_session_str(session), buf);
 #endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG */
 }
@@ -206,6 +208,7 @@ coap_ws_write(coap_session_t *session, const uint8_t *data, size_t datalen) {
   uint8_t ws_header[COAP_MAX_FS];
   ssize_t hdr_len = 2;
   ssize_t ret;
+  uint8_t *wdata;
 
   /* If lower layer not yet up, return error */
   if (!session->ws) {
@@ -253,35 +256,30 @@ coap_ws_write(coap_session_t *session, const uint8_t *data, size_t datalen) {
     hdr_len += 4;
   }
   coap_ws_log_header(session, ws_header);
-  ret = session->sock.lfunc[COAP_LAYER_WS].l_write(session, ws_header, hdr_len);
-  if (ret != hdr_len) {
+  wdata = coap_malloc_type(COAP_STRING, datalen + hdr_len);
+  if (!wdata) {
+    errno = ENOMEM;
     return -1;
   }
+  memcpy(wdata, ws_header, hdr_len);
+  memcpy(&wdata[hdr_len], data, datalen);
   if (session->ws->state == COAP_SESSION_TYPE_CLIENT) {
     /* Need to mask the data */
-    uint8_t *wdata = coap_malloc_type(COAP_STRING, datalen);
-
-    if (!wdata) {
-      errno = ENOMEM;
-      return -1;
-    }
-    session->ws->data_size = datalen;
-    memcpy(wdata, data, datalen);
-    coap_ws_mask_data(session, wdata, datalen);
-    ret = session->sock.lfunc[COAP_LAYER_WS].l_write(session, wdata, datalen);
-    coap_free_type(COAP_STRING, wdata);
-  } else {
-    ret = session->sock.lfunc[COAP_LAYER_WS].l_write(session, data, datalen);
+    coap_ws_mask_data(session, &wdata[hdr_len], datalen);
   }
-  if (ret <= 0) {
+  ret = session->sock.lfunc[COAP_LAYER_WS].l_write(session, wdata, datalen + hdr_len);
+  coap_free_type(COAP_STRING, wdata);
+  if (ret < hdr_len) {
     return ret;
   }
-  if (ret == (ssize_t)datalen)
+  coap_log_debug("*  %s: ws h:  sent %4zd bytes\n",
+                 coap_session_str(session), hdr_len);
+  if (ret == (ssize_t)(datalen + hdr_len))
     coap_log_debug("*  %s: ws:    sent %4zd bytes\n",
-                   coap_session_str(session), ret);
+                   coap_session_str(session), ret - hdr_len);
   else
     coap_log_debug("*  %s: ws:    sent %4zd of %4zd bytes\n",
-                   coap_session_str(session), ret, datalen);
+                   coap_session_str(session), ret, datalen - hdr_len);
   return datalen;
 }
 
