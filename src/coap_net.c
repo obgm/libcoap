@@ -416,15 +416,34 @@ coap_context_get_max_handshake_sessions(const coap_context_t *context) {
   return context->max_handshake_sessions;
 }
 
+static unsigned int s_csm_timeout = 30;
+
 void
 coap_context_set_csm_timeout(coap_context_t *context,
                              unsigned int csm_timeout) {
-  context->csm_timeout = csm_timeout;
+  s_csm_timeout = csm_timeout;
+  coap_context_set_csm_timeout_ms(context, csm_timeout * 1000);
 }
 
 unsigned int
 coap_context_get_csm_timeout(const coap_context_t *context) {
-  return context->csm_timeout;
+  (void)context;
+  return s_csm_timeout;
+}
+
+void
+coap_context_set_csm_timeout_ms(coap_context_t *context,
+                                unsigned int csm_timeout_ms) {
+  if (csm_timeout_ms < 10)
+    csm_timeout_ms = 10;
+  if (csm_timeout_ms > 10000)
+    csm_timeout_ms = 10000;
+  context->csm_timeout_ms = csm_timeout_ms;
+}
+
+unsigned int
+coap_context_get_csm_timeout_ms(const coap_context_t *context) {
+  return context->csm_timeout_ms;
 }
 
 void
@@ -527,7 +546,7 @@ coap_new_context(const coap_address_t *listen_addr) {
   }
 
   /* set default CSM values */
-  c->csm_timeout = 30;
+  c->csm_timeout_ms = 1000;
   c->csm_max_message_size = COAP_DEFAULT_MAX_PDU_RX_SIZE;
 
 #if COAP_SERVER_SUPPORT
@@ -985,6 +1004,7 @@ coap_client_delay_first(coap_session_t *session) {
 #if COAP_CLIENT_SUPPORT
   if (session->type == COAP_SESSION_TYPE_CLIENT && session->doing_first) {
     int timeout_ms = 5000;
+    coap_session_state_t current_state = session->state;
 
     if (session->delay_recursive) {
       assert(0);
@@ -1006,14 +1026,31 @@ coap_client_delay_first(coap_session_t *session) {
         coap_session_release(session);
         return 0;
       }
-      if (result <= timeout_ms) {
+
+      /* coap_io_process() may have updated session state */
+      if (session->state == COAP_SESSION_STATE_CSM &&
+          current_state != COAP_SESSION_STATE_CSM) {
+        /* Update timeout and restart the clock for CSM timeout */
+        current_state = COAP_SESSION_STATE_CSM;
+        timeout_ms = session->context->csm_timeout_ms;
+        result = 0;
+      }
+
+      if (result < timeout_ms) {
         timeout_ms -= result;
       } else {
         if (session->doing_first == 1) {
           /* Timeout failure of some sort with first request */
-          coap_log_debug("** %s: timeout waiting for first response\n",
-                         coap_session_str(session));
           session->doing_first = 0;
+          if (session->state == COAP_SESSION_STATE_CSM) {
+            coap_log_debug("** %s: timeout waiting for CSM response\n",
+                           coap_session_str(session));
+            session->csm_not_seen = 1;
+            coap_session_connected(session);
+          } else {
+            coap_log_debug("** %s: timeout waiting for first response\n",
+                           coap_session_str(session));
+          }
         }
       }
     }
@@ -3429,6 +3466,17 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
   if (pdu->code == COAP_SIGNALING_CODE_CSM) {
+    if (session->csm_not_seen) {
+      coap_tick_t now;
+
+      coap_ticks(&now);
+      /* CSM timeout before CSM seen */
+      coap_log_warn("***%s: CSM received after CSM timeout\n",
+                    coap_session_str(session));
+      coap_log_warn("***%s: Increase timeout in coap_context_set_csm_timeout_ms() to > %d\n",
+                    coap_session_str(session),
+                    (int)(((now - session->csm_tx) * 1000) / COAP_TICKS_PER_SECOND));
+    }
     if (session->max_token_checked == COAP_EXT_T_NOT_CHECKED) {
       session->max_token_size = COAP_TOKEN_DEFAULT_MAX;
     }

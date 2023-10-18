@@ -19,8 +19,8 @@ coap_context_set_max_handshake_sessions,
 coap_context_get_max_handshake_sessions,
 coap_context_set_session_timeout,
 coap_context_get_session_timeout,
-coap_context_set_csm_timeout,
-coap_context_get_csm_timeout,
+coap_context_set_csm_timeout_ms,
+coap_context_get_csm_timeout_ms,
 coap_context_set_max_token_size
 - Work with CoAP contexts
 
@@ -50,10 +50,10 @@ unsigned int _session_timeout_);*
 *unsigned int coap_context_get_session_timeout(
 const coap_context_t *_context_);*
 
-*void coap_context_set_csm_timeout(coap_context_t *_context_,
-unsigned int _csm_timeout_);*
+*void coap_context_set_csm_timeout_ms(coap_context_t *_context_,
+unsigned int _csm_timeout_ms_);*
 
-*unsigned int coap_context_get_csm_timeout(const coap_context_t *_context_);*
+*unsigned int coap_context_get_csm_timeout_ms(const coap_context_t *_context_);*
 
 *void coap_context_set_max_token_size(coap_context_t *_context_,
 size_t _max_token_size_);*
@@ -132,16 +132,19 @@ removed. 0 (the default) means wait for the default of 300 seconds.
 The *coap_context_get_session_timeout*() function returns the seconds to wait
 before timing out an idle server session for _context_.
 
-*Function: coap_context_set_csm_timeout()*
+*Function: coap_context_set_csm_timeout_ms()*
 
-The *coap_context_set_csm_timeout*() function sets the number of seconds to
-wait for a (TCP) CSM negotiation response from the peer to _csm_timeout_ for
-_context_.  0 (the default) means wait forever.
+The *coap_context_set_csm_timeout_ms*() function sets the number of milliseconds
+to wait for a (TCP) CSM negotiation response from the peer to _csm_timeout_ms_
+for _context_ before timing out and assuming CoAP server is 'broken'. The
+default is 1000 milliseconds. The minimum value for _csm_timeout_ms_ is set to
+10 milliseconds and the maximum value for _csm_timeout_ms_ is set to 10000
+milliseconds.
 
-*Function: coap_context_get_csm_timeout()*
+*Function: coap_context_get_csm_timeout_ms()*
 
-The *coap_context_get_csm_timeout*() function returns the seconds to wait for
-a (TCP) CSM negotiation response from the peer for _context_,
+The *coap_context_get_csm_timeout_ms*() function returns the milliseconds to wait
+for a (TCP) CSM negotiation response from the peer for _context_,
 
 *Function: coap_context_set_max_token_size()*
 
@@ -169,8 +172,8 @@ outstanding server sessions in (D)TLS handshake.
 *coap_context_get_session_timeout*() returns the seconds to wait before timing
 out an idle server session.
 
-*coap_context_get_csm_timeout*() returns the seconds to wait for a (TCP) CSM
-negotiation response from the peer.
+*coap_context_get_csm_timeout_ms*() returns the milliseconds to wait for a
+(TCP) CSM negotiation response from the peer.
 
 SEE ALSO
 --------

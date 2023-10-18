@@ -295,10 +295,12 @@ unsigned int coap_context_get_session_timeout(const coap_context_t *context);
  * 0 (the default) means use wait forever.
  *
  * @param context    The coap_context_t object.
- * @param csm_tmeout The CSM timeout value.
+ * @param csm_timeout The CSM timeout value.
+ *
+ * @deprecated Use coap_context_set_csm_timeout_ms() instead.
  */
-void coap_context_set_csm_timeout(coap_context_t *context,
-                                  unsigned int csm_tmeout);
+COAP_DEPRECATED void coap_context_set_csm_timeout(coap_context_t *context,
+                                                  unsigned int csm_timeout);
 
 /**
  * Get the CSM timeout value
@@ -306,8 +308,31 @@ void coap_context_set_csm_timeout(coap_context_t *context,
  * @param context The coap_context_t object.
  *
  * @return The CSM timeout value.
+ *
+ * @deprecated Use coap_context_get_csm_timeout_ms() instead.
  */
-unsigned int coap_context_get_csm_timeout(const coap_context_t *context);
+COAP_DEPRECATED unsigned int coap_context_get_csm_timeout(const coap_context_t *context);
+
+/**
+ * Set the CSM timeout value. The number of milliseconds to wait for a (TCP) CSM
+ * negotiation response from the peer.
+ * The initial default is 1000 milliseconds.
+ *
+ * @param context        The coap_context_t object.
+ * @param csm_timeout_ms The CSM timeout value in milliseconds (which could get updated
+ *                       to be in the range of 10 - 10000 milliseconds).
+ */
+void coap_context_set_csm_timeout_ms(coap_context_t *context,
+                                     unsigned int csm_timeout_ms);
+
+/**
+ * Get the CSM timeout value
+ *
+ * @param context The coap_context_t object.
+ *
+ * @return The CSM timeout value in millisecs.
+ */
+unsigned int coap_context_get_csm_timeout_ms(const coap_context_t *context);
 
 /**
  * Set the CSM max session size value. The largest PDU that can be received.

@@ -1448,18 +1448,17 @@ release_1:
 
 #if !COAP_DISABLE_TCP
     if (s->type == COAP_SESSION_TYPE_CLIENT && COAP_PROTO_RELIABLE(s->proto) &&
-        s->state == COAP_SESSION_STATE_CSM && ctx->csm_timeout > 0) {
+        s->state == COAP_SESSION_STATE_CSM && ctx->csm_timeout_ms > 0) {
       if (s->csm_tx == 0) {
         s->csm_tx = now;
-      } else if (s->csm_tx + ctx->csm_timeout * COAP_TICKS_PER_SECOND <= now) {
-        /* Make sure the session object is not deleted in the callback */
-        coap_session_reference(s);
-        coap_session_disconnected(s, COAP_NACK_NOT_DELIVERABLE);
-        coap_session_release(s);
-        continue;
+        s_timeout = (ctx->csm_timeout_ms * COAP_TICKS_PER_SECOND) / 1000;
+      } else if (s->csm_tx + (ctx->csm_timeout_ms * COAP_TICKS_PER_SECOND) / 1000 <= now) {
+        /* timed out */
+        s_timeout = 0;
+      } else {
+        s_timeout = (s->csm_tx + (ctx->csm_timeout_ms * COAP_TICKS_PER_SECOND) / 1000) - now;
       }
-      s_timeout = (s->csm_tx + ctx->csm_timeout * COAP_TICKS_PER_SECOND) - now;
-      if (timeout == 0 || s_timeout < timeout)
+      if ((timeout == 0 || s_timeout < timeout) && s_timeout != 0)
         timeout = s_timeout;
     }
 #endif /* !COAP_DISABLE_TCP */

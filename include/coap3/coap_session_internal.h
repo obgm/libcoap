@@ -184,6 +184,7 @@ struct coap_session_t {
   uint8_t delay_recursive;        /**< Set if in coap_client_delay_first() */
   uint8_t no_observe_cancel;      /**< Set if do not cancel observe on session
                                        close */
+  uint8_t csm_not_seen;           /**< Set if timeout waiting for CSM */
 #if COAP_OSCORE_SUPPORT
   uint8_t oscore_encryption;      /**< OSCORE is used for this session  */
   COAP_OSCORE_B_2_STEP b_2_step;  /**< Appendix B.2 negotiation step */

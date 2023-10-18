@@ -156,8 +156,8 @@ struct coap_context_t {
   unsigned int ping_timeout;           /**< Minimum inactivity time before
                                             sending a ping message. 0 means
                                             disabled. */
-  unsigned int csm_timeout;           /**< Timeout for waiting for a CSM from
-                                           the remote side. 0 means disabled. */
+  uint32_t csm_timeout_ms;         /**< Timeout for waiting for a CSM from
+                                           the remote side. */
   uint32_t csm_max_message_size;   /**< Value for CSM Max-Message-Size */
   uint64_t etag;                   /**< Next ETag to use */
 
