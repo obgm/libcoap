@@ -1435,6 +1435,11 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
       coap_log_warn("coap_pdu_encode_header: corrupted PDU\n");
       return 0;
     }
+
+    /* A lot of the reliable code assumes type is CON */
+    if (pdu->type != COAP_MESSAGE_CON)
+      pdu->type = COAP_MESSAGE_CON;
+
     if (proto == COAP_PROTO_WS || proto == COAP_PROTO_WSS)
       len = 0;
     else
