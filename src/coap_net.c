@@ -1096,7 +1096,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   }
 
   /* A lot of the reliable code assumes type is CON */
-  if (COAP_PROTO_RELIABLE(session->proto) && pdu->type == COAP_MESSAGE_NON)
+  if (COAP_PROTO_RELIABLE(session->proto) && pdu->type != COAP_MESSAGE_CON)
     pdu->type = COAP_MESSAGE_CON;
 
 #if COAP_OSCORE_SUPPORT
