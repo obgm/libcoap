@@ -12,6 +12,8 @@ NAME
 ----
 coap_deprecated,
 coap_clear_event_handler,
+coap_context_get_csm_timeout,
+coap_context_set_csm_timeout,
 coap_context_set_psk,
 coap_encode_var_bytes,
 coap_new_client_session_psk,
@@ -31,6 +33,11 @@ SYNOPSIS
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
 *void coap_clear_event_handler(coap_context_t *_context_);*
+
+*unsigned int coap_context_get_csm_timeout(const coap_context_t *_context_);*
+
+*void coap_context_set_csm_timeout(coap_context_t *_context_,
+unsigned int _csm_timeout_);*
 
 *int coap_context_set_psk(coap_context_t *_context_, const char *_hint_,
 const uint8_t *_key_, size_t _key_len_);*
@@ -83,6 +90,17 @@ FUNCTIONS
 
 The *coap_clear_event_handler*() function is replaced by
 *coap_register_event_handler*(3), using NULL for _handler_.
+
+*Function: coap_context_get_csm_timeout()*
+
+The *coap_context_get_csm_timeout*() function returns the seconds to wait for
+a (TCP) CSM negotiation response from the peer for _context_,
+
+*Function: coap_context_set_csm_timeout()*
+
+The *coap_context_set_csm_timeout*() function sets the number of seconds to
+wait for a (TCP) CSM negotiation response from the peer to _csm_timeout_ for
+_context_.  The default is 30 secionds.  0 (the default) means wait forever.
 
 *Function: coap_context_set_psk()*
 
@@ -148,6 +166,9 @@ The *coap_write*() function is replaced by
 
 RETURN VALUES
 -------------
+*coap_context_get_csm_timeout*() returns the seconds to wait for a (TCP) CSM
+negotiation response from the peer.
+
 *coap_context_set_psk*() returns 1 if success, 0 on failure.
 
 *coap_encode_var_bytes*() returns either the length of bytes encoded (which can
