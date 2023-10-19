@@ -218,9 +218,18 @@ coap_is_bcast(const coap_address_t *a) {
     while (ife && bcst_cnt < COAP_BCST_CNT) {
       if (ife->ifa_addr && ife->ifa_addr->sa_family == AF_INET &&
           ife->ifa_flags & IFF_BROADCAST) {
-        b_ipv4[bcst_cnt].s_addr = ((struct sockaddr_in *)ife->ifa_broadaddr)->sin_addr.s_addr;
-        if (b_ipv4[bcst_cnt].s_addr != ipv4.s_addr)
+        struct in_addr netmask;
+
+        /*
+         * Sometimes the broadcast IP is set to the IP address, even though
+         * netmask is not set to 0xffffffff, so unsafe to use ifa_broadaddr.
+         */
+        netmask.s_addr = ((struct sockaddr_in *)ife->ifa_netmask)->sin_addr.s_addr;
+        if (netmask.s_addr != 0xffffffff) {
+          b_ipv4[bcst_cnt].s_addr = ((struct sockaddr_in *)ife->ifa_addr)->sin_addr.s_addr |
+                                    ~netmask.s_addr;
           bcst_cnt++;
+        }
       }
       ife = ife->ifa_next;
     }
