@@ -665,9 +665,7 @@ coap_free_context(coap_context_t *context) {
 #endif /* COAP_SERVER_SUPPORT */
 
   coap_free_type(COAP_CONTEXT, context);
-#ifdef WITH_LWIP
-  coap_lwip_dump_memory_pools(COAP_LOG_DEBUG);
-#endif /* WITH_LWIP */
+  coap_dump_memory_type_counts(COAP_LOG_DEBUG);
 }
 
 int
