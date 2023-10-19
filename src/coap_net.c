@@ -3406,8 +3406,9 @@ handle_response(coap_context_t *context, coap_session_t *session,
 
   /* Call application-specific response handler when available. */
   if (context->response_handler) {
-    if (context->response_handler(session, sent, rcvd,
-                                  rcvd->mid) == COAP_RESPONSE_FAIL)
+    if ((context->response_handler(session, sent, rcvd,
+                                   rcvd->mid) == COAP_RESPONSE_FAIL) &&
+        (rcvd->type != COAP_MESSAGE_ACK))
       coap_send_rst(session, rcvd);
     else
       coap_send_ack(session, rcvd);
