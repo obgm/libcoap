@@ -76,7 +76,6 @@ typedef int coap_tick_diff_t;
 
 COAP_STATIC_INLINE void
 coap_clock_init(void) {
-  clock_init();
 }
 
 COAP_STATIC_INLINE void
