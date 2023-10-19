@@ -57,7 +57,7 @@ typedef enum coap_response_t {
  * @param mid CoAP transaction ID.
 
  * @return @c COAP_RESPONSE_OK if successful, else @c COAP_RESPONSE_FAIL which
- *         triggers sending a RST packet.
+ *         triggers sending a RST packet if the received PDU is a CON or NON.
  */
 typedef coap_response_t (*coap_response_handler_t)(coap_session_t *session,
                                                    const coap_pdu_t *sent,
