@@ -64,6 +64,7 @@ typedef enum {
   COAP_OSCORE_EP,
   COAP_OSCORE_BUF,
   COAP_COSE,
+  COAP_MEM_TAG_LAST
 } coap_memory_tag_t;
 
 #ifndef WITH_LWIP
@@ -105,6 +106,15 @@ void *coap_realloc_type(coap_memory_tag_t type, void *p, size_t size);
  * @param p    A pointer to memory that was allocated by coap_malloc_type().
  */
 void coap_free_type(coap_memory_tag_t type, void *p);
+
+/**
+ * Dumps the current usage of malloc'd memory types.
+ *
+ * Requires COAP_MEMORY_TYPE_TRACK to be defined to 1.
+ *
+ * @param log_level The logging level to use.
+ */
+void coap_dump_memory_type_counts(coap_log_t log_level);
 
 /**
  * Wrapper function to coap_malloc_type() for backwards compatibility.
@@ -160,6 +170,8 @@ coap_free(void *pointer) {
   (void)pointer;
   LWIP_ASSERT("coap_free must not be used in lwIP", 0);
 }
+
+#define coap_dump_memory_type_counts(l) coap_lwip_dump_memory_pools(l)
 
 #endif /* WITH_LWIP */
 
