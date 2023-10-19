@@ -188,7 +188,7 @@ set(MAX_LOGGING_LEVEL
 Only build logging code up to and including the specified logging level (0 - 8)[default=8]]
     ")
 set_property(
-  CACHE DTLS_BACKEND
+  CACHE MAX_LOGGING_LEVEL
   PROPERTY STRINGS
            "0"
            "1"
@@ -309,7 +309,7 @@ else()
   message(STATUS "compiling without OSCORE support")
 endif()
 
-if(${ENABLE_WS} AND $(ENABLE_TCP))
+if(${ENABLE_WS} AND ${ENABLE_TCP})
   set(COAP_WS_SUPPORT "1")
   message(STATUS "compiling with WebSockets support")
 else()
@@ -377,11 +377,11 @@ else()
 endif()
 
 if(ENABLE_SMALL_STACK)
-  set(ENABLE_SMALL_STACK "${ENABLE_SMALL_STACK}")
+  set(COAP_CONSTRAINED_STACK "${ENABLE_SMALL_STACK}")
   message(STATUS "compiling with small stack support")
 endif()
 
-if(${MAX_LOGGING_LEVEL} MATCHES "[0-7]")
+if(${MAX_LOGGING_LEVEL} MATCHES "[0-8]")
   set(COAP_MAX_LOGGING_LEVEL ${MAX_LOGGING_LEVEL})
   message(STATUS "compiling with max logging level set to ${MAX_LOGGING_LEVEL}")
 else()
