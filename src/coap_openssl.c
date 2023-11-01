@@ -3702,7 +3702,7 @@ error:
 }
 #endif /* COAP_WS_SUPPORT */
 
-#if COAP_OSCORE_SUPPORT
+#if COAP_OSCORE_SUPPORT && !defined(WITH_CONTIKI)
 int
 coap_oscore_is_supported(void) {
   return 1;
@@ -3939,7 +3939,7 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
   return 0;
 }
 
-#endif /* COAP_OSCORE_SUPPORT */
+#endif /* COAP_OSCORE_SUPPORT && !WITH_CONTIKI */
 
 #else /* !COAP_WITH_LIBOPENSSL */
 
