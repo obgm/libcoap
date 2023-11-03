@@ -1327,8 +1327,10 @@ coap_debug_send_packet(void) {
 
 void
 coap_debug_reset(void) {
+  log_handler = NULL;
   maxlog = COAP_LOG_WARN;
   use_fprintf_for_show_pdu = 1;
+  memset(&packet_loss_intervals, 0, sizeof(packet_loss_intervals));
   num_packet_loss_intervals = 0;
   packet_loss_level = 0;
   send_packet_count = 0;
