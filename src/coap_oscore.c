@@ -494,7 +494,7 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
   plain_pdu = coap_pdu_init(pdu->type,
                             pdu->code,
                             pdu->mid,
-                            pdu->used_size);
+                            pdu->used_size + 1 /* pseudo-token with actual code */);
   if (plain_pdu == NULL)
     goto error;
 
