@@ -3577,7 +3577,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   pdu->session = session;
   coap_show_pdu(COAP_LOG_DEBUG, pdu);
 
-  memset(&opt_filter, 0, sizeof(coap_opt_filter_t));
+  coap_option_filter_clear(&opt_filter);
 
 #if COAP_OSCORE_SUPPORT
   if (!COAP_PDU_IS_SIGNALING(pdu) &&
