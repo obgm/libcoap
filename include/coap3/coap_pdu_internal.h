@@ -102,6 +102,9 @@
 #define COAP_PDU_IS_REQUEST(pdu)   (!COAP_PDU_IS_EMPTY(pdu) && (pdu)->code < 32)
 #define COAP_PDU_IS_RESPONSE(pdu)  ((pdu)->code >= 64 && (pdu)->code < 224)
 #define COAP_PDU_IS_SIGNALING(pdu) ((pdu)->code >= 224)
+#define COAP_PDU_IS_PING(pdu)      ((COAP_PDU_IS_EMPTY(pdu) && \
+                                     ((pdu)->type == COAP_MESSAGE_CON)) || \
+                                    ((pdu)->code == COAP_SIGNALING_CODE_PING))
 
 #define COAP_PDU_MAX_UDP_HEADER_SIZE 4
 #define COAP_PDU_MAX_TCP_HEADER_SIZE 6

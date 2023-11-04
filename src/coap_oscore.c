@@ -271,7 +271,7 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
                               coap_pdu_t *pdu,
                               coap_bin_const_t *kid_context,
                               oscore_partial_iv_t send_partial_iv) {
-  uint8_t coap_request = COAP_PDU_IS_REQUEST(pdu);
+  uint8_t coap_request = COAP_PDU_IS_REQUEST(pdu) || COAP_PDU_IS_PING(pdu);
   coap_pdu_code_t code =
       coap_request ? COAP_REQUEST_CODE_POST : COAP_RESPONSE_CODE(204);
   coap_pdu_t *osc_pdu;
