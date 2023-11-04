@@ -38,7 +38,7 @@ coap_tcp_is_supported(void) {
   return !COAP_DISABLE_TCP;
 }
 
-#if !COAP_DISABLE_TCP
+#if !COAP_DISABLE_TCP && !defined(WITH_LWIP)
 int
 coap_socket_connect_tcp1(coap_socket_t *sock,
                          const coap_address_t *local_if,
@@ -176,12 +176,12 @@ coap_socket_connect_tcp2(coap_socket_t *sock,
 
   if (getsockopt(sock->fd, SOL_SOCKET, SO_ERROR, OPTVAL_GT(&error),
                  &optlen) == COAP_SOCKET_ERROR) {
-    coap_log_warn("coap_socket_finish_connect_tcp: getsockopt: %s\n",
+    coap_log_warn("coap_socket_connect_tcp2: getsockopt: %s\n",
                   coap_socket_strerror());
   }
 
   if (error) {
-    coap_log_warn("coap_socket_finish_connect_tcp: connect failed: %s\n",
+    coap_log_warn("coap_socket_connect_tcp2: connect failed: %s\n",
                   coap_socket_format_errno(error));
     coap_socket_close(sock);
     return 0;
@@ -299,7 +299,8 @@ int
 coap_socket_accept_tcp(coap_socket_t *server,
                        coap_socket_t *new_client,
                        coap_address_t *local_addr,
-                       coap_address_t *remote_addr) {
+                       coap_address_t *remote_addr,
+                       void *extra) {
 #ifndef RIOT_VERSION
 #ifdef _WIN32
   u_long u_on = 1;
@@ -307,6 +308,7 @@ coap_socket_accept_tcp(coap_socket_t *server,
   int on = 1;
 #endif
 #endif /* RIOT_VERSION */
+  (void)extra;
 
   server->flags &= ~COAP_SOCKET_CAN_ACCEPT;
 

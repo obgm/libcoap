@@ -167,10 +167,10 @@ coap_netif_strm_listen(coap_endpoint_t *endpoint,
 }
 
 int
-coap_netif_strm_accept(coap_endpoint_t *endpoint, coap_session_t *session) {
+coap_netif_strm_accept(coap_endpoint_t *endpoint, coap_session_t *session, void *extra) {
   if (!coap_socket_accept_tcp(&endpoint->sock, &session->sock,
                               &session->addr_info.local,
-                              &session->addr_info.remote)) {
+                              &session->addr_info.remote, extra)) {
     return 0;
   }
   session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_CONNECTED |

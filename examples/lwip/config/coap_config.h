@@ -33,7 +33,11 @@
 
 #ifndef COAP_DISABLE_TCP
 /* Define to 1 to build without TCP support. */
+#if LWIP_TCP
+#define COAP_DISABLE_TCP 0
+#else /* ! LWIP_TCP */
 #define COAP_DISABLE_TCP 1
+#endif /* ! LWIP_TCP */
 #endif
 
 #ifndef COAP_ASYNC_SUPPORT
@@ -56,11 +60,21 @@
 #define COAP_Q_BLOCK_SUPPORT 0
 #endif
 
+#ifndef PACKAGE_NAME
 #define PACKAGE_NAME "libcoap"
-#define PACKAGE_VERSION "4.3.4"
-#define PACKAGE_STRING "libcoap 4.3.4"
+#endif /* PACKAGE_NAME */
 
+#ifndef PACKAGE_VERSION
+#define PACKAGE_VERSION "4.3.4"
+#endif /* PACKAGE_VERSION */
+
+#ifndef PACKAGE_STRING
+#define PACKAGE_STRING "libcoap 4.3.4"
+#endif /* PACKAGE_STRING */
+
+#ifndef assert
 #define assert(x) LWIP_ASSERT("CoAP assert failed", x)
+#endif /* assert */
 
 /* it's just provided by libc. i hope we don't get too many of those, as
  * actually we'd need autotools again to find out what environment we're

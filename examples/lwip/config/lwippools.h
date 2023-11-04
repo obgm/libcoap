@@ -43,11 +43,19 @@ typedef struct l_coap_tiny_context_t {
 #endif
 
 #ifndef MEMP_NUM_COAPENDPOINT
+#if COAP_DISABLE_TCP
 #ifdef COAP_WITH_LIBTINYDTLS
 #define MEMP_NUM_COAPENDPOINT 2
 #else /* ! COAP_WITH_LIBTINYDTLS */
 #define MEMP_NUM_COAPENDPOINT 1
 #endif /* ! COAP_WITH_LIBTINYDTLS */
+#else /* ! COAP_DISABLE_TCP */
+#ifdef COAP_WITH_LIBTINYDTLS
+#define MEMP_NUM_COAPENDPOINT 4
+#else /* ! COAP_WITH_LIBTINYDTLS */
+#define MEMP_NUM_COAPENDPOINT 2
+#endif /* ! COAP_WITH_LIBTINYDTLS */
+#endif /* ! COAP_DISABLE_TCP */
 #endif
 
 /* 1 is sufficient as this is very short-lived */
@@ -92,7 +100,11 @@ typedef struct l_coap_tiny_context_t {
 #endif
 
 #ifndef MEMP_LEN_COAPSTRING
+#ifdef COAP_WITH_LIBTINYDTLS
+#define MEMP_LEN_COAPSTRING 120
+#else /* COAP_WITH_TINYDTLS */
 #define MEMP_LEN_COAPSTRING 40
+#endif /* COAP_WITH_TINYDTLS */
 #endif
 
 #ifndef MEMP_NUM_COAPCACHE_KEYS

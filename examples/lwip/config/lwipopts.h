@@ -23,6 +23,9 @@
 #define LWIP_IPV6_MLD                   0
 #define LWIP_ICMP6                 (LWIP_IPV6==1)
 
+/* Set to 1 if TCP support is required */
+#define LWIP_TCP                        0
+
 #ifndef LWIP_RAND
 #define LWIP_RAND() ((u32_t)rand())
 #endif
@@ -35,6 +38,8 @@
 #define LOCK_TCPIP_CORE()
 #define UNLOCK_TCPIP_CORE()
 #endif
+
+#define MEMP_NUM_SYS_TIMEOUT    10
 
 #define MEMP_USE_CUSTOM_POOLS 1
 #define MEM_SIZE (4 * 1024)

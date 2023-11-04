@@ -128,10 +128,12 @@ int coap_netif_strm_listen(coap_endpoint_t *endpoint,
  *
  * @param endpoint Endpoint to to do the accept on.
  * @param session  Session to to do the accept update on.
+ * @param extra    Available for use by any underlying network stack.
  *
  * @return                 @c 1 OK, 0 on failure.
  */
-int coap_netif_strm_accept(coap_endpoint_t *endpoint, coap_session_t *session);
+int coap_netif_strm_accept(coap_endpoint_t *endpoint, coap_session_t *session,
+                           void *extra);
 
 /**
  * Layer function interface for Netif stream connect (tcp).
