@@ -309,14 +309,14 @@ int coap_session_refresh_psk_identity(coap_session_t *session,
  * Creates a new server session for the specified endpoint.
  * @param ctx The CoAP context.
  * @param ep An endpoint where an incoming connection request is pending.
+ * @param extra Available for use by any underlying network stack.
  *
  * @return A new CoAP session or NULL if failed. Call coap_session_release to
  * add to unused queue.
  */
-coap_session_t *coap_new_server_session(
-    coap_context_t *ctx,
-    coap_endpoint_t *ep
-);
+coap_session_t *coap_new_server_session(coap_context_t *ctx,
+                                        coap_endpoint_t *ep,
+                                        void *extra);
 #endif /* COAP_SERVER_SUPPORT */
 
 /**
@@ -383,6 +383,10 @@ coap_session_t *coap_session_new_dtls_session(coap_session_t *session,
 
 void coap_session_free(coap_session_t *session);
 void coap_session_mfree(coap_session_t *session);
+
+void coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now);
+
+void coap_connect_session(coap_session_t *session, coap_tick_t now);
 
 #define COAP_SESSION_REF(s) ((s)->ref
 

@@ -143,13 +143,26 @@ coap_free(void *object) {
 COAP_STATIC_INLINE void
 coap_memory_init(void) {}
 
+#if MEMP_STATS
+COAP_STATIC_INLINE void *
+coap_malloc_error(uint16_t *err) {
+  (*err)++;
+  return NULL;
+}
+#endif /* MEMP_STATS */
 /* It would be nice to check that size equals the size given at the memp
  * declaration, but i currently don't see a standard way to check that without
  * sourcing the custom memp pools and becoming dependent of its syntax
  */
+#if MEMP_STATS
+#define coap_malloc_type(type, asize) \
+  (((asize) <= memp_pools[MEMP_ ## type]->size) ? \
+   memp_malloc(MEMP_ ## type) : coap_malloc_error(&memp_pools[MEMP_ ## type]->stats->err))
+#else /* ! MEMP_STATS */
 #define coap_malloc_type(type, asize) \
   (((asize) <= memp_pools[MEMP_ ## type]->size) ? \
    memp_malloc(MEMP_ ## type) : NULL)
+#endif /* ! MEMP_STATS */
 #define coap_free_type(type, p) memp_free(MEMP_ ## type, p)
 
 /* As these are fixed size, return value if already defined */

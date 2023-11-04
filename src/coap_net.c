@@ -1761,7 +1761,7 @@ coap_handle_dgram_for_proto(coap_context_t *ctx, coap_session_t *session, coap_p
 }
 
 #if COAP_CLIENT_SUPPORT
-static void
+void
 coap_connect_session(coap_session_t *session, coap_tick_t now) {
 #if COAP_DISABLE_TCP
   (void)now;
@@ -1808,7 +1808,7 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
   }
 }
 
-static void
+void
 coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
 #if COAP_CONSTRAINED_STACK
   /* payload and packet protected by mutex m_read_session */
@@ -2061,8 +2061,8 @@ coap_write_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t 
 #if !COAP_DISABLE_TCP
 static int
 coap_accept_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint,
-                     coap_tick_t now) {
-  coap_session_t *session = coap_new_server_session(ctx, endpoint);
+                     coap_tick_t now, void *extra) {
+  coap_session_t *session = coap_new_server_session(ctx, endpoint, extra);
   if (session)
     session->last_rx_tx = now;
   return session != NULL;
@@ -2088,7 +2088,7 @@ coap_io_do_io(coap_context_t *ctx, coap_tick_t now) {
       coap_write_endpoint(ctx, ep, now);
 #if !COAP_DISABLE_TCP
     if ((ep->sock.flags & COAP_SOCKET_CAN_ACCEPT) != 0)
-      coap_accept_endpoint(ctx, ep, now);
+      coap_accept_endpoint(ctx, ep, now, NULL);
 #endif /* !COAP_DISABLE_TCP */
     SESSIONS_ITER_SAFE(ep->sessions, s, rtmp) {
       /* Make sure the session object is not deleted in one of the callbacks  */
@@ -2168,7 +2168,7 @@ coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events, size_t nevents
         if ((sock->flags & COAP_SOCKET_WANT_ACCEPT) &&
             (events[j].events & EPOLLIN)) {
           sock->flags |= COAP_SOCKET_CAN_ACCEPT;
-          coap_accept_endpoint(endpoint->context, endpoint, now);
+          coap_accept_endpoint(endpoint->context, endpoint, now, NULL);
         }
 #endif /* !COAP_DISABLE_TCP */
 

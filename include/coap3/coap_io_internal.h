@@ -33,7 +33,12 @@ struct uip_udp_conn;
 
 struct coap_socket_t {
 #if defined(WITH_LWIP)
-  struct udp_pcb *pcb;
+  struct pbuf *p;
+  struct udp_pcb *udp_pcb;
+#if ! COAP_DISABLE_TCP
+  struct tcp_pcb *tcp_pcb;
+#endif /* ! COAP_DISABLE_TCP */
+
 #elif defined(WITH_CONTIKI)
   struct uip_udp_conn *udp_conn;
   coap_context_t *context;

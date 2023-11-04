@@ -492,7 +492,8 @@ coap_session_mfree(coap_session_t *session) {
 
   if (session->partial_pdu)
     coap_delete_pdu(session->partial_pdu);
-  session->sock.lfunc[COAP_LAYER_SESSION].l_close(session);
+  if (session->sock.lfunc[COAP_LAYER_SESSION].l_close)
+    session->sock.lfunc[COAP_LAYER_SESSION].l_close(session);
   if (session->psk_identity)
     coap_delete_bin_const(session->psk_identity);
   if (session->psk_key)
@@ -1529,7 +1530,7 @@ coap_new_client_session_pki(coap_context_t *ctx,
 #if COAP_SERVER_SUPPORT
 #if !COAP_DISABLE_TCP
 coap_session_t *
-coap_new_server_session(coap_context_t *ctx, coap_endpoint_t *ep) {
+coap_new_server_session(coap_context_t *ctx, coap_endpoint_t *ep, void *extra) {
   coap_session_t *session;
   session = coap_make_session(ep->proto, COAP_SESSION_TYPE_SERVER,
                               NULL, NULL, NULL, 0, ctx, ep);
@@ -1537,7 +1538,7 @@ coap_new_server_session(coap_context_t *ctx, coap_endpoint_t *ep) {
     goto error;
 
   memcpy(session->sock.lfunc, ep->sock.lfunc, sizeof(session->sock.lfunc));
-  if (!coap_netif_strm_accept(ep, session))
+  if (!coap_netif_strm_accept(ep, session, extra))
     goto error;
 
   coap_make_addr_hash(&session->addr_hash, session->proto, &session->addr_info);
