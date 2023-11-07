@@ -72,6 +72,7 @@ coap_persist_observe_add(coap_context_t *context,
   coap_subscription_t *s;
   coap_endpoint_t *ep;
 
+  coap_lock_check_locked(context);
   if (e_listen_addr == NULL || s_addr_info == NULL || raw_packet == NULL)
     return NULL;
 
@@ -939,9 +940,10 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
         goto fail;
       query = coap_get_query(request);
       /* Call the application handler to set up this dynamic resource */
-      ctx->unknown_resource->handler[request->code-1](ctx->unknown_resource,
-                                                      session, request,
-                                                      query, response);
+      coap_lock_callback(ctx,
+                         ctx->unknown_resource->handler[request->code-1](ctx->unknown_resource,
+                             session, request,
+                             query, response));
       coap_delete_string(query);
       query = NULL;
       coap_delete_pdu(request);
@@ -1116,6 +1118,7 @@ coap_persist_startup(coap_context_t *context,
                      const char *observe_save_file,
                      const char *obs_cnt_save_file,
                      uint32_t save_freq) {
+  coap_lock_check_locked(context);
   if (dyn_resource_save_file) {
     context->dyn_resource_save_file =
         coap_new_bin_const((const uint8_t *)dyn_resource_save_file,
@@ -1168,6 +1171,7 @@ void
 coap_persist_stop(coap_context_t *context) {
   if (context == NULL)
     return;
+  coap_lock_check_locked(context);
   context->observe_no_clear = 1;
   coap_persist_cleanup(context);
 }

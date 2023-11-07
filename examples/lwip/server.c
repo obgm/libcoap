@@ -48,13 +48,13 @@
 static ip4_addr_t ipaddr, netmask, gw;
 #endif /* LWIP_IPV4 */
 
+static int quit = 0;
+
 void
 handle_sigint(int signum) {
   (void)signum;
 
-  server_coap_finished();
-  printf("Server Application finished.\n");
-  exit(0);
+  quit = 1;
 }
 
 /*
@@ -132,7 +132,7 @@ main(int argc, char **argv) {
 
   printf("Server Application started.\n");
 
-  while (1) {
+  while (!quit) {
     /*
      * Poll netif, pass any read packet to lwIP
      * Has internal timeout of 100 msec (sometimes less) based on
@@ -144,6 +144,9 @@ main(int argc, char **argv) {
 
     server_coap_poll();
   }
+  server_coap_finished();
+  printf("Server Application finished.\n");
+  exit(0);
 
   return 0;
 }

@@ -495,10 +495,7 @@ coap_mid_t coap_send_ack(coap_session_t *session, const coap_pdu_t *request);
  * @return                The message id if RST was sent or @c
  *                        COAP_INVALID_MID on error.
  */
-COAP_STATIC_INLINE coap_mid_t
-coap_send_rst(coap_session_t *session, const coap_pdu_t *request) {
-  return coap_send_message_type(session, request, COAP_MESSAGE_RST);
-}
+coap_mid_t coap_send_rst(coap_session_t *session, const coap_pdu_t *request);
 
 /**
 * Sends a CoAP message to given peer. The memory that is

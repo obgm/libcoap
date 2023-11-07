@@ -34,6 +34,12 @@
 /* Define to 1 to build with Q-Block (RFC9177) support. */
 /* #undef COAP_Q_BLOCK_SUPPORT 1 */
 
+/* Define to 1 to build with thread recursive lock detection support. */
+/* #undef COAP_THREAD_RECURSIVE_CHECK 1 */
+
+/* Define to 1 if libcoap has thread safe support. */
+/* #undef COAP_THREAD_SAFE 1 */
+
 /* Define to 1 if you have the <assert.h> header file. */
 #define HAVE_ASSERT_H 1
 

@@ -182,6 +182,7 @@ t_session_tests_create(void) {
   ctx = coap_new_context(&addr);
 
   if (ctx != NULL) {
+    coap_lock_lock(ctx, return 1);
     addr.addr.sin6.sin6_addr = in6addr_loopback;
     session = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
   }

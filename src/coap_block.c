@@ -378,6 +378,7 @@ error:
 void
 coap_context_set_block_mode(coap_context_t *context,
                             uint32_t block_mode) {
+  coap_lock_check_locked(context);
   context->block_mode = (block_mode & (COAP_BLOCK_USE_LIBCOAP |
                                        COAP_BLOCK_SINGLE_BODY |
 #if COAP_Q_BLOCK_SUPPORT
@@ -412,6 +413,7 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
   if (!session)
     return 0;
 
+  coap_lock_check_locked(session->context);
   if (!(session->block_mode & COAP_BLOCK_USE_LIBCOAP)) {
     coap_log_debug("** %s: coap_cancel_observe: COAP_BLOCK_USE_LIBCOAP not enabled\n",
                    coap_session_str(session));
@@ -1378,9 +1380,10 @@ coap_block_check_lg_crcv_timeouts(coap_session_t *session, coap_tick_t now,
       if (p->rec_blocks.retry >= COAP_NON_MAX_RETRANSMIT(session)) {
         /* Done NON_MAX_RETRANSMIT retries */
         coap_update_token(&p->pdu, p->app_token->length, p->app_token->s);
-        session->context->nack_handler(session, &p->pdu,
-                                       COAP_NACK_TOO_MANY_RETRIES,
-                                       p->pdu.mid);
+        coap_lock_callback(session->context,
+                           session->context->nack_handler(session, &p->pdu,
+                                                          COAP_NACK_TOO_MANY_RETRIES,
+                                                          p->pdu.mid));
         goto expire;
       }
       if (p->rec_blocks.last_seen + scaled_timeout <= now) {
@@ -3741,6 +3744,8 @@ give_to_app:
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
           }
           if (context->response_handler) {
+            coap_response_t ret;
+
             /* need to put back original token into rcvd */
             if (!coap_binary_equal(&rcvd->actual_token, p->app_token)) {
               coap_update_token(rcvd, p->app_token->length, p->app_token->s);
@@ -3754,11 +3759,14 @@ give_to_app:
                                   p->app_token->s);
               coap_remove_option(sent, p->block_option);
             }
-            if (context->response_handler(session, sent, rcvd,
-                                          rcvd->mid) == COAP_RESPONSE_FAIL)
+            coap_lock_callback_ret(ret, session->context,
+                                   context->response_handler(session, sent, rcvd,
+                                                             rcvd->mid));
+            if (ret == COAP_RESPONSE_FAIL) {
               coap_send_rst(session, rcvd);
-            else
+            } else {
               coap_send_ack(session, rcvd);
+            }
           } else {
             coap_send_ack(session, rcvd);
           }

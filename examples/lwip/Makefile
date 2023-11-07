@@ -172,6 +172,7 @@ COAP_SRC = coap_address.c \
 	   coap_str.c \
 	   coap_subscribe.c \
 	   coap_tcp.c \
+	   coap_threadsafe.c \
 	   coap_tinydtls.c \
 	   coap_uri.c \
 	   coap_ws.c

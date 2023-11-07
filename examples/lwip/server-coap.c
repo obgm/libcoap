@@ -11,6 +11,18 @@
  */
 
 #include "coap_config.h"
+
+#if COAP_THREAD_SAFE
+/*
+ * Unfortunately, this needs to be set so that locking mapping of coap_
+ * functions does not take place in this file.  coap.h includes coap_mem.h which
+ * includes lwip headers (lwippools.h) which includes coap_internal.h which
+ * includes coap_threadsafe_internal.h which does the mapping unless
+ * COAP_THREAD_IGNORE_LOCKED_MAPPING is set.
+ */
+#define COAP_THREAD_IGNORE_LOCKED_MAPPING
+#endif
+
 #include <coap3/coap.h>
 #include "server-coap.h"
 
@@ -41,8 +53,7 @@ hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
    * when query ?ticks is given. */
 
   /* if my_clock_base was deleted, we pretend to have no such resource */
-  response->code =
-      my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404);
+  coap_pdu_set_code(response, my_clock_base ? COAP_RESPONSE_CODE(205) : COAP_RESPONSE_CODE(404));
 
   if (my_clock_base)
     coap_add_option(response, COAP_OPTION_CONTENT_FORMAT,

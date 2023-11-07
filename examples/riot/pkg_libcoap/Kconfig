@@ -115,6 +115,23 @@ config LIBCOAP_ASYNC_SUPPORT
 
         If this option is disabled, redundent CoAP async separate responses code is removed.
 
+config LIBCOAP_THREAD_SAFE
+    bool "Enable thread safe support within CoAP"
+    default n
+    help
+        Enable thread safe support within CoAP.
+
+        If this option is disabled, libcoap is not thread safe,
+
+config LIBCOAP_THREAD_RECURSIVE_CHECK
+    bool "Enable thread recursive lock detection if thread safe support is enabled"
+    depends on LIBCOAP_THREAD_SAFE
+    default n
+    help
+        Enable thread recursive lock detection if thread safe support is enabled.
+
+        If this option is disabled, there is no multi thread recursive detection.
+
 config LIBCOAP_CLIENT_SUPPORT
     bool "Enable Client functionality within CoAP"
     default n

@@ -81,14 +81,6 @@ void coap_handle_failed_notify(coap_context_t *context,
                                const coap_bin_const_t *token);
 
 /**
- * Checks all known resources to see if they are dirty and then notifies
- * subscribed observers.
- *
- * @param context The context to check for dirty resources.
- */
-void coap_check_notify(coap_context_t *context);
-
-/**
  * Adds the specified peer as observer for @p resource. The subscription is
  * identified by the given @p token. This function returns the registered
  * subscription information if the @p observer has been added, or @c NULL on

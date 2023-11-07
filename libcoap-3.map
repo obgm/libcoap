@@ -35,6 +35,7 @@ global:
   coap_cache_set_app_data;
   coap_can_exit;
   coap_cancel_observe;
+  coap_check_notify;
   coap_check_option;
   coap_cleanup;
   coap_clear_event_handler;
@@ -219,6 +220,7 @@ global:
   coap_send_ack;
   coap_send_error;
   coap_send_message_type;
+  coap_send_rst;
   coap_session_disconnected;
   coap_session_get_ack_random_factor;
   coap_session_get_ack_timeout;

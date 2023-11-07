@@ -138,6 +138,16 @@
 #define COAP_ASYNC_SUPPORT 1
 #endif
 
+#ifndef COAP_THREAD_SAFE
+/* Define to 1 if libcoap has thread safe support. */
+#define COAP_THREAD_SAFE 0
+#endif
+
+#ifndef COAP_THREAD_RECURSIVE_CHECK
+/* Define to 1 to build with thread recursive lock detection support. */
+#define COAP_THREAD_RECURSIVE_CHECK 0
+#endif
+
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"
 

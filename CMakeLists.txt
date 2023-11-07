@@ -133,6 +133,14 @@ option(
   "compile with epoll support"
   ON)
 option(
+  ENABLE_THREAD_SAFE
+  "enable building with thread safe support"
+  ON)
+option(
+  ENABLE_THREAD_RECURSIVE_LOCK_CHECK
+  "enable building with thread recursive lock detection"
+  OFF)
+option(
   ENABLE_SMALL_STACK
   "enable if the system has small stack size"
   OFF)
@@ -376,6 +384,16 @@ else()
   message(STATUS "compiling without epoll support")
 endif()
 
+if(ENABLE_THREAD_SAFE)
+  set(COAP_THREAD_SAFE "${ENABLE_THREAD_SAFE}")
+  message(STATUS "compiling with thread safe support")
+endif()
+
+if(ENABLE_THREAD_RECURSIVE_LOCK_CHECK)
+  set(COAP_THREAD_RECURSIVE_CHECK "${ENABLE_THREAD_DEADLOCK_CHECK}")
+  message(STATUS "compiling with thread recursive lock detection support")
+endif()
+
 if(ENABLE_SMALL_STACK)
   set(COAP_CONSTRAINED_STACK "${ENABLE_SMALL_STACK}")
   message(STATUS "compiling with small stack support")
@@ -608,6 +626,8 @@ message(STATUS "ENABLE_CLIENT_MODE:..............${ENABLE_CLIENT_MODE}")
 message(STATUS "ENABLE_SERVER_MODE:..............${ENABLE_SERVER_MODE}")
 message(STATUS "ENABLE_OSCORE:...................${ENABLE_OSCORE}")
 message(STATUS "ENABLE_ASYNC:....................${ENABLE_ASYNC}")
+message(STATUS "ENABLE_THREAD_SAFE:..............${ENABLE_THREAD_SAFE}")
+message(STATUS "ENABLE_THREAD_RECURSIVE_CHECK....${ENABLE_THREAD_RECURSIVE_LOCK_DETECTION}")
 message(STATUS "ENABLE_DOCS:.....................${ENABLE_DOCS}")
 message(STATUS "ENABLE_EXAMPLES:.................${ENABLE_EXAMPLES}")
 message(STATUS "DTLS_BACKEND:....................${DTLS_BACKEND}")
@@ -682,6 +702,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_str.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_subscribe.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_tcp.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_threadsafe.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_time.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_uri.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_ws.c
