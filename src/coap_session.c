@@ -1583,7 +1583,7 @@ void
 coap_session_new_token(coap_session_t *session, size_t *len,
                        uint8_t *data) {
   *len = coap_encode_var_safe8(data,
-                               sizeof(session->tx_token), ++session->tx_token);
+                               sizeof(session->tx_token), session->tx_token++);
 }
 
 uint16_t
