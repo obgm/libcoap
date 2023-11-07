@@ -1243,6 +1243,7 @@ coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
   unsigned int num_sockets;
   unsigned int timeout;
 
+  coap_lock_check_locked(ctx);
   /* Use the common logic */
   timeout = coap_io_prepare_io(ctx, sockets, max_sockets, &num_sockets, now);
   /* Save when the next expected I/O is to take place */
@@ -1298,6 +1299,7 @@ coap_io_prepare_io(coap_context_t *ctx,
   (void)max_sockets;
 #endif /* COAP_EPOLL_SUPPORT || WITH_LWIP */
 
+  coap_lock_check_locked(ctx);
   *num_sockets = 0;
 
 #if COAP_SERVER_SUPPORT
@@ -1551,6 +1553,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
   unsigned int i;
 #endif /* ! COAP_EPOLL_SUPPORT */
 
+  coap_lock_check_locked(ctx);
   coap_ticks(&before);
 
 #ifndef COAP_EPOLL_SUPPORT
@@ -1605,8 +1608,13 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
     tv.tv_sec = (long)(timeout / 1000);
   }
 
+  /* Unlock so that other threads can lock/update ctx */
+  coap_lock_unlock(ctx);
+
   result = select((int)nfds, &ctx->readfds, &ctx->writefds, &ctx->exceptfds,
                   timeout > 0 ? &tv : NULL);
+
+  coap_lock_lock(ctx, return -1);
 
   if (result < 0) {   /* error */
 #ifdef _WIN32
@@ -1628,6 +1636,12 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
   }
 
   if (result > 0) {
+#if COAP_THREAD_SAFE
+    /* Need to refresh what is available to read / write etc. */
+    tv.tv_usec = 0;
+    tv.tv_sec = 0;
+    select((int)nfds, &ctx->readfds, &ctx->writefds, &ctx->exceptfds, &tv);
+#endif /* COAP_THREAD_SAFE */
     for (i = 0; i < ctx->num_sockets; i++) {
       if ((ctx->sockets[i]->flags & COAP_SOCKET_WANT_READ) &&
           FD_ISSET(ctx->sockets[i]->fd, &ctx->readfds))
@@ -1676,14 +1690,32 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
       etimeout = INT_MAX;
     }
 
+    /* Unlock so that other threads can lock/update ctx */
+    coap_lock_unlock(ctx);
+
     nfds = epoll_wait(ctx->epfd, events, COAP_MAX_EPOLL_EVENTS, etimeout);
     if (nfds < 0) {
       if (errno != EINTR) {
         coap_log_err("epoll_wait: unexpected error: %s (%d)\n",
                      coap_socket_strerror(), nfds);
       }
+      coap_lock_lock(ctx, return -1);
       break;
     }
+
+#if COAP_THREAD_SAFE
+    /* Need to refresh what is available to read / write etc. */
+    nfds = epoll_wait(ctx->epfd, events, COAP_MAX_EPOLL_EVENTS, 0);
+    if (nfds < 0) {
+      if (errno != EINTR) {
+        coap_log_err("epoll_wait: unexpected error: %s (%d)\n",
+                     coap_socket_strerror(), nfds);
+      }
+      coap_lock_lock(ctx, return -1);
+      break;
+    }
+#endif /* COAP_THREAD_SAFE */
+    coap_lock_lock(ctx, return -1);
 
     coap_io_do_epoll(ctx, events, nfds);
 
@@ -1726,6 +1758,7 @@ coap_io_pending(coap_context_t *context) {
 
   if (!context)
     return 0;
+  coap_lock_check_locked(context);
   if (coap_io_process(context, COAP_IO_NO_WAIT) < 0)
     return 0;
 

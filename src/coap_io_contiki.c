@@ -239,6 +239,7 @@ int
 coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   coap_tick_t before, now;
 
+  coap_lock_check_locked(ctx);
   if (timeout_ms != COAP_IO_NO_WAIT) {
     coap_log_err("coap_io_process must be called with COAP_IO_NO_WAIT\n");
     return -1;

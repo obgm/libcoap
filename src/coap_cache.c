@@ -48,6 +48,7 @@ int
 coap_cache_ignore_options(coap_context_t *ctx,
                           const uint16_t *options,
                           size_t count) {
+  coap_lock_check_locked(ctx);
   if (ctx->cache_ignore_options) {
     coap_free_type(COAP_STRING, ctx->cache_ignore_options);
   }
@@ -153,8 +154,11 @@ coap_new_cache_entry(coap_session_t *session, const coap_pdu_t *pdu,
                      coap_cache_record_pdu_t record_pdu,
                      coap_cache_session_based_t session_based,
                      unsigned int idle_timeout) {
-  coap_cache_entry_t *entry = coap_malloc_type(COAP_CACHE_ENTRY,
-                                               sizeof(coap_cache_entry_t));
+  coap_cache_entry_t *entry;
+
+  coap_lock_check_locked(session->context);
+  entry = coap_malloc_type(COAP_CACHE_ENTRY,
+                           sizeof(coap_cache_entry_t));
   if (!entry) {
     return NULL;
   }
@@ -195,6 +199,7 @@ coap_cache_entry_t *
 coap_cache_get_by_key(coap_context_t *ctx, const coap_cache_key_t *cache_key) {
   coap_cache_entry_t *cache_entry = NULL;
 
+  coap_lock_check_locked(ctx);
   assert(cache_key);
   if (cache_key) {
     HASH_FIND(hh, ctx->cache, cache_key, sizeof(coap_cache_key_t), cache_entry);
@@ -216,6 +221,7 @@ coap_cache_get_by_pdu(coap_session_t *session,
   if (!cache_key)
     return NULL;
 
+  coap_lock_check_locked(session->context);
   cache_entry = coap_cache_get_by_key(session->context, cache_key);
   coap_delete_cache_key(cache_key);
   if (cache_entry && cache_entry->idle_timeout > 0) {

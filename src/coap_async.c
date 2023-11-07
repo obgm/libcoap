@@ -42,6 +42,7 @@ coap_register_async(coap_session_t *session,
   size_t len;
   const uint8_t *data;
 
+  coap_lock_check_locked(session->context);
   if (!COAP_PDU_IS_REQUEST(request))
     return NULL;
 
@@ -99,6 +100,7 @@ coap_register_async(coap_session_t *session,
 void
 coap_async_trigger(coap_async_t *async) {
   assert(async != NULL);
+  coap_lock_check_locked(async->session->context);
   coap_ticks(&async->delay);
 
   coap_log_debug("   %s: Async request triggered\n",
@@ -111,6 +113,7 @@ void
 coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
   coap_tick_t now;
 
+  coap_lock_check_locked(async->session->context);
   assert(async != NULL);
   coap_ticks(&now);
 
@@ -133,6 +136,7 @@ coap_async_t *
 coap_find_async(coap_session_t *session, coap_bin_const_t token) {
   coap_async_t *tmp;
 
+  coap_lock_check_locked(session->context);
   SEARCH_PAIR(session->context->async_state, tmp,
               session, session,
               pdu->actual_token.length, token.length,

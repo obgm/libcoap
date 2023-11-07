@@ -37,6 +37,9 @@
 #if NO_SYS
 #define LOCK_TCPIP_CORE()
 #define UNLOCK_TCPIP_CORE()
+#else
+#define COAP_THREAD_SAFE 1
+#define COAP_THREAD_RECURSIVE_CHECK 0
 #endif
 
 #define MEMP_NUM_SYS_TIMEOUT    10

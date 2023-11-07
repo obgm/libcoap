@@ -1,0 +1,181 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc tw=0
+
+coap_locking(3)
+===============
+:doctype: manpage
+:man source:   coap_locking
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_locking,
+coap_lock_init,
+coap_lock_lock,
+coap_lock_unlock,
+coap_lock_being_freed,
+coap_lock_check_locked,
+coap_lock_callback,
+coap_lock_callback_ret,
+coap_lock_invert
+- Work with CoAP thread safe locking
+
+SYNOPSIS
+--------
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*void coap_lock_init(coap_context_t *_context_);*
+
+*void coap_lock_lock(coap_context_t *_context_, coap_code_t _failed_statement_);*
+
+*void coap_lock_unlock(coap_context_t *_context_);*
+
+*void coap_lock_being_freed(coap_context_t *_context_,
+coap_code_t _failed_statement_);*
+
+*void coap_lock_check_locked(coap_context_t *_context_);*
+
+*void coap_lock_callback(coap_context_t *_context_,
+coap_func_t _callback_function_);*
+
+*void coap_lock_callback_ret(void *_return_value_, coap_context_t *_context_,
+coap_func_t _callback_function_, coap_code_t _failed_statement_);*
+
+*void coap_lock_invert(coap_context_t *_context_, coap_func_t _locking_function_,
+coap_code_t _failed_statement_);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
+
+DESCRIPTION
+-----------
+This man page focuses on the locking support provided for making libcoap
+thread safe.  Usage is internal to libcoap.
+
+The functions are actually macros which create different code depending on
+what levels of locking has been configured. Locking uses *coap_mutex_*()
+functions.
+
+So, _failed_statement_ is the C code to execute if the
+locking fails for any reason.
+
+Likewise, _callback_function_ is the callback handler function with all of
+its parameters.
+
+Several definitions can be defined with configure or cmake.  These are
+
+COAP_THREAD_SAFE If set, simply does locking at the appropriate places. If
+not set, then no locking takes place, the code is faster (no locking code), but
+not multi-thread access safe.
+
+COAP_THREAD_RECURSIVE_CHECK If set, and COAP_THREAD_SAFE is set, checks that
+if a lock is locked, it reports that the same lock is being (re-)locked.
+
+Currently, locking is only done at the _context_ level for the public API
+functions where appropriate. Per _session_ was also considered, but things became
+complicated with one thread locking _context_ / _session_ and another thread
+trying to lock _session_ / _context_ in a different order.
+
+In principal, libcoap code internally should only unlock _context_ when waiting
+on a *select*() or equivalent, and then lock up again on function return.
+
+_context_ needs to remain locked whenever a callback handler is called, and it is
+possible / likely that the handler will call a public API which potentially could
+try to re-lock the same lock. By using *coap_lock_callback*() (or
+*coap_lock_callback_ret*()), the locking logic can detect that this lock request
+is from a callback handler and so continue without any deadlocks.
+
+If COAP_THREAD_SAFE is set, then all the necessary public APIs are defined in
+src/coap_threadsafe.c. These public APIs then call the same function after
+locking, but with _locked appended to the function name.  In otherwords,
+*coap_X*() calls *coap_lock_lock*(), then calls *coap_X_locked*(), and finally
+calls *coap_lock_unlock*() before returning.
+
+The internal renaming of *coap_X*() functions to *coap_X_locked*() is done by
+macros in include/coap3/coap_threadsafe_internal.h, which also provides the
+*coap_X_locked*() function definitions.
+
+
+FUNCTIONS
+---------
+
+*Function: coap_lock_init()*
+
+The *coap_lock_init*() function is used to initialize the lock structure
+in the _context_ structure.
+
+*Function: coap_lock_lock()*
+
+The *coap_lock_lock*() function is used to lock _context_ from multiple thread
+access. If the locking fails for any reason, then _failed_statement_ will get
+executed.
+
+*Function: coap_lock_unlock()*
+
+The *coap_lock_unlock*() function is used to unlock _context_ so that another
+thread can access _context_ and the underlying structures.
+
+*Function: coap_lock_being_freed()*
+
+The *coap_lock_being_freed*() function is used to lock _context_ when _context_
+and all the underlying structures are going to be released (called from
+*coap_free_context*(3)).  Any subsequent call to *coap_lock_lock*() by another
+thread will fail. If this locking fails for any reason, then _failed_statement_
+will get executed.
+
+*Function: coap_lock_check_lock()*
+
+The *coap_lock_check_lock*() function is used to check the internal version
+(potentially has __locked_ appended in the name) of a public AP is getting called
+with _context_ locked.
+
+*Function: coap_lock_callback()*
+
+The *coap_lock_callback*() function is used whenever a callback handler is
+getting called, instead of calling the function directly. The lock information
+in _context_ is updated  so that if a public API is called from within the handler,
+recursive locking is enabled for that particular thread.  On return from the
+callback, the lock in _context_ is suitably restored. _callback_function_ is the
+callback handler to be called, along with all of the appropriate parameters.
+
+*Function: coap_lock_callback_ret()*
+
+The *coap_lock_callback_ret*() function is similar to *coap_lock_callback*(),
+but in addition, it updates the return value from the callback handler function
+in _return_value_.
+
+*Function: coap_lock_invert()*
+
+The *coap_lock_invert*() function is used where there are other locking
+mechanisms external to libcoap and the locking order needs to be external lock,
+then libcoap code locked. _context_ already needs to be locked before calling
+*coap_lock_invert*().  If *coap_lock_invert*() is called, then _context_ will
+get unlocked, _locking_function_ with all of its parameters called, and then
+_context_ re-locked.  If for any reason locking fails, then _failed_statement_
+will get executed.
+
+SEE ALSO
+--------
+*coap_context*(3)
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
+
+BUGS
+----
+Please report bugs on the mailing list for libcoap:
+libcoap-developers@lists.sourceforge.net or raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>

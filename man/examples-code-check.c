@@ -79,6 +79,14 @@ const char *define_list[] = {
   "coap_log_debug(",
   "coap_log_oscore(",
   "coap_dtls_log(",
+  "coap_lock_init(",
+  "coap_lock_lock(",
+  "coap_lock_unlock(",
+  "coap_lock_being_freed(",
+  "coap_lock_check_locked(",
+  "coap_lock_callback(",
+  "coap_lock_callback_ret(",
+  "coap_lock_invert(",
 };
 
 /* xxx *function */

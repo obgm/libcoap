@@ -95,6 +95,9 @@
     <ClCompile Include="..\src\coap_tcp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_threadsafe.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_time.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -233,6 +236,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_tcp_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_threadsafe_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_time.h">

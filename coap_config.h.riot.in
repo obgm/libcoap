@@ -128,6 +128,20 @@
 #endif /* COAP_ASYNC_SUPPORT */
 #endif /* CONFIG_LIBCOAP_ASYNC_SUPPORT */
 
+#ifdef CONFIG_LIBCOAP_THREAD_SAFE
+#ifndef COAP_THREAD_SAFE
+/* Define to 1 if libcoap has thread safe support. */
+#define COAP_THREAD_SAFE 1
+#endif /* COAP_THREAD_SAFE */
+#endif /* CONFIG_LIBCOAP_THREAD_SAFE */
+
+#ifdef CONFIG_LIBCOAP_THREAD_RECURSIVE_CHECK
+#ifndef COAP_THREAD_RECURSIVE_CHECK
+/* Define to 1 to build with thread recursive lock detection support. */
+#define COAP_THREAD_RECURSIVE_CHECK 1
+#endif /* COAP_THREAD_RECURSIVE_CHECK */
+#endif /* CONFIG_LIBCOAP_THREAD_RECURSIVE_CHECK */
+
 #ifdef CONFIG_LIBCOAP_MAX_STRING_SIZE
 #ifndef COAP_MAX_STRING_SIZE
 #define COAP_MAX_STRING_SIZE CONFIG_LIBCOAP_MAX_STRING_SIZE

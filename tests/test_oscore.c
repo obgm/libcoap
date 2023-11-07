@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+static coap_context_t *ctx; /* Holds the coap context for most tests */
+
 #define CHECK_SAME(a,b) \
   (sizeof((a)) == (b)->length && memcmp((a), (b)->s, (b)->length) == 0)
 
@@ -61,13 +63,11 @@ t_oscore_c_1_1(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   cose_encrypt0_t cose[1];
   uint8_t nonce_buffer[13];
   coap_bin_const_t nonce = { 13, nonce_buffer };
 
-  memset(&ctx, 0, sizeof(ctx));
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
   FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
@@ -125,13 +125,11 @@ t_oscore_c_1_2(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   cose_encrypt0_t cose[1];
   uint8_t nonce_buffer[13];
   coap_bin_const_t nonce = { 13, nonce_buffer };
 
-  memset(&ctx, 0, sizeof(ctx));
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
   FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
@@ -188,13 +186,11 @@ t_oscore_c_2_1(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   cose_encrypt0_t cose[1];
   uint8_t nonce_buffer[13];
   coap_bin_const_t nonce = { 13, nonce_buffer };
 
-  memset(&ctx, 0, sizeof(ctx));
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
   FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
@@ -251,13 +247,11 @@ t_oscore_c_2_2(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   cose_encrypt0_t cose[1];
   uint8_t nonce_buffer[13];
   coap_bin_const_t nonce = { 13, nonce_buffer };
 
-  memset(&ctx, 0, sizeof(ctx));
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
   FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
@@ -316,13 +310,11 @@ t_oscore_c_3_1(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   cose_encrypt0_t cose[1];
   uint8_t nonce_buffer[13];
   coap_bin_const_t nonce = { 13, nonce_buffer };
 
-  memset(&ctx, 0, sizeof(ctx));
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
   FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
@@ -381,13 +373,11 @@ t_oscore_c_3_2(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   cose_encrypt0_t cose[1];
   uint8_t nonce_buffer[13];
   coap_bin_const_t nonce = { 13, nonce_buffer };
 
-  memset(&ctx, 0, sizeof(ctx));
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
   FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
   coap_context_oscore_server(ctx, oscore_conf);
@@ -437,14 +427,12 @@ t_oscore_c_4(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   int result;
   coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
   coap_pdu_t *osc_pdu = NULL;
   coap_session_t *session = NULL;
 
-  memset(&ctx, 0, sizeof(ctx));
   FailIf_CU_ASSERT_PTR_NOT_NULL(pdu);
 
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 20);
@@ -504,14 +492,12 @@ t_oscore_c_5(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   int result;
   coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
   coap_pdu_t *osc_pdu = NULL;
   coap_session_t *session = NULL;
 
-  memset(&ctx, 0, sizeof(ctx));
   FailIf_CU_ASSERT_PTR_NOT_NULL(pdu);
 
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 20);
@@ -573,14 +559,12 @@ t_oscore_c_6(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   int result;
   coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
   coap_pdu_t *osc_pdu = NULL;
   coap_session_t *session = NULL;
 
-  memset(&ctx, 0, sizeof(ctx));
   FailIf_CU_ASSERT_PTR_NOT_NULL(pdu);
 
   oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 20);
@@ -651,7 +635,6 @@ t_oscore_c_7(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   int result;
   coap_pdu_t *incoming_pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
@@ -659,7 +642,6 @@ t_oscore_c_7(void) {
   coap_pdu_t *osc_pdu = NULL;
   coap_session_t *session = NULL;
 
-  memset(&ctx, 0, sizeof(ctx));
   FailIf_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
   FailIf_CU_ASSERT_PTR_NOT_NULL(pdu);
 
@@ -758,7 +740,6 @@ t_oscore_c_7_2(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   int result;
   coap_pdu_t *outgoing_pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
@@ -766,7 +747,6 @@ t_oscore_c_7_2(void) {
   coap_pdu_t *osc_pdu = NULL;
   coap_session_t *session = NULL;
 
-  memset(&ctx, 0, sizeof(ctx));
   FailIf_CU_ASSERT_PTR_NOT_NULL(outgoing_pdu);
   FailIf_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
 
@@ -865,7 +845,6 @@ t_oscore_c_8(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   int result;
   coap_pdu_t *incoming_pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
@@ -873,7 +852,6 @@ t_oscore_c_8(void) {
   coap_pdu_t *osc_pdu = NULL;
   coap_session_t *session = NULL;
 
-  memset(&ctx, 0, sizeof(ctx));
   FailIf_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
   FailIf_CU_ASSERT_PTR_NOT_NULL(pdu);
 
@@ -973,7 +951,6 @@ t_oscore_c_8_2(void) {
   const coap_str_const_t conf = { sizeof(conf_data)-1,
                                   (const uint8_t *)conf_data
                                 };
-  coap_context_t ctx[1];
   coap_oscore_conf_t *oscore_conf;
   int result;
   coap_pdu_t *outgoing_pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
@@ -981,7 +958,6 @@ t_oscore_c_8_2(void) {
   coap_pdu_t *osc_pdu = NULL;
   coap_session_t *session = NULL;
 
-  memset(&ctx, 0, sizeof(ctx));
   FailIf_CU_ASSERT_PTR_NOT_NULL(outgoing_pdu);
   FailIf_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
 
@@ -1049,11 +1025,29 @@ fail:
  ** initialization
  ************************************************************************/
 
+static int
+t_oscore_tests_create(void) {
+  ctx = coap_new_context(NULL);
+
+  if (ctx != NULL) {
+    coap_lock_lock(ctx, return 1);
+  }
+
+  return (ctx == NULL);
+}
+
+static int
+t_oscore_tests_remove(void) {
+  coap_free_context(ctx);
+  return 0;
+}
+
 CU_pSuite
 t_init_oscore_tests(void) {
   CU_pSuite suite[5];
 
-  suite[0] = CU_add_suite("RFC8613 Appendix C OSCORE tests", NULL, NULL);
+  suite[0] = CU_add_suite("RFC8613 Appendix C OSCORE tests",
+                          t_oscore_tests_create, t_oscore_tests_remove);
   if (!suite[0]) {                        /* signal error */
     fprintf(stderr, "W: cannot add OSCORE test suite (%s)\n",
             CU_get_error_msg());

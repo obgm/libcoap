@@ -966,6 +966,26 @@ if test "x$with_epoll" = "xyes"; then
     AC_DEFINE(COAP_EPOLL_SUPPORT, 1, [Define to 1 if the system has epoll support.])
 fi
 
+AC_ARG_ENABLE([thread-safe],
+        [AS_HELP_STRING([--enable-thread-safe],
+                        [Enable building with thread safe support [default=yes]])],
+        [enable_thread_safe="$enableval"],
+        [enable_thread_safe="yes"])
+
+if test "x$enable_thread_safe" = "xyes"; then
+    AC_DEFINE(COAP_THREAD_SAFE, 1, [Define to 1 if libcoap has thread safe support])
+fi
+
+AC_ARG_ENABLE([thread-recursive-lock-detection],
+        [AS_HELP_STRING([--enable-thread-recursive-lock-detection],
+                        [Enable building with thread recursive locking detection support [default=yes]])],
+        [enable_recursive_detection="$enableval"],
+        [enable_recursive_detection="yes"])
+
+if test "x$enable_recursive_detection" = "xyes"; then
+    AC_DEFINE(COAP_THREAD_RECURSIVE_CHECK, 1, [Define to 1 detect recursive locking detection support])
+fi
+
 AC_ARG_ENABLE([small-stack],
         [AS_HELP_STRING([--enable-small-stack],
                         [Use small-stack if the available stack space is restricted [default=no]])],
@@ -1144,6 +1164,7 @@ man/coap_handler.txt
 man/coap_init.txt
 man/coap_io.txt
 man/coap_keepalive.txt
+man/coap_locking.txt
 man/coap_logging.txt
 man/coap_lwip.txt
 man/coap_observe.txt
@@ -1280,6 +1301,8 @@ if test "x$enable_max_logging_level" != "x8"; then
 else
     AC_MSG_RESULT([      enable max logging level       : "none"])
 fi
+AC_MSG_RESULT([      enable thread safe code  : "$enable_thread_safe"])
+AC_MSG_RESULT([      enable recursive lock chk: "$enable_recursive_detection"])
 if test "x$build_doxygen" = "xyes"; then
     AC_MSG_RESULT([      build doxygen pages            : "yes"])
     AC_MSG_RESULT([          --> Doxygen around         : "yes" ($DOXYGEN $doxygen_version)])

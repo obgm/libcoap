@@ -115,6 +115,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_sha1_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_threadsafe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_uri_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_uthash_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_utlist_internal.h \
@@ -214,6 +215,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_str.c \
   src/coap_subscribe.c \
   src/coap_tcp.c \
+  src/coap_threadsafe.c \
   src/coap_time.c \
   src/coap_tinydtls.c \
   src/coap_uri.c \

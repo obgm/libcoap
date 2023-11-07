@@ -88,8 +88,10 @@ coap_new_client_session_oscore_psk(coap_context_t *ctx,
                                    coap_proto_t proto,
                                    coap_dtls_cpsk_t *psk_data,
                                    coap_oscore_conf_t *oscore_conf) {
-  coap_session_t *session =
-      coap_new_client_session_psk2(ctx, local_if, server, proto, psk_data);
+  coap_session_t *session;
+
+  coap_lock_check_locked(ctx);
+  session = coap_new_client_session_psk2(ctx, local_if, server, proto, psk_data);
 
   if (!session)
     return NULL;
@@ -108,8 +110,10 @@ coap_new_client_session_oscore_pki(coap_context_t *ctx,
                                    coap_proto_t proto,
                                    coap_dtls_pki_t *pki_data,
                                    coap_oscore_conf_t *oscore_conf) {
-  coap_session_t *session =
-      coap_new_client_session_pki(ctx, local_if, server, proto, pki_data);
+  coap_session_t *session;
+
+  coap_lock_check_locked(ctx);
+  session = coap_new_client_session_pki(ctx, local_if, server, proto, pki_data);
 
   if (!session)
     return NULL;
@@ -126,8 +130,10 @@ coap_new_client_session_oscore_pki(coap_context_t *ctx,
 int
 coap_context_oscore_server(coap_context_t *context,
                            coap_oscore_conf_t *oscore_conf) {
-  oscore_ctx_t *osc_ctx = coap_oscore_init(context, oscore_conf);
+  oscore_ctx_t *osc_ctx;
 
+  coap_lock_check_locked(context);
+  osc_ctx = coap_oscore_init(context, oscore_conf);
   /* osc_ctx already added to context->osc_ctx */
   if (osc_ctx)
     return 1;
@@ -2082,6 +2088,7 @@ coap_oscore_overhead(coap_session_t *session, coap_pdu_t *pdu) {
 int
 coap_new_oscore_recipient(coap_context_t *context,
                           coap_bin_const_t *recipient_id) {
+  coap_lock_check_locked(context);
   if (context->p_osc_ctx == NULL)
     return 0;
   if (oscore_add_recipient(context->p_osc_ctx, recipient_id, 0) == NULL)
@@ -2092,6 +2099,7 @@ coap_new_oscore_recipient(coap_context_t *context,
 int
 coap_delete_oscore_recipient(coap_context_t *context,
                              coap_bin_const_t *recipient_id) {
+  coap_lock_check_locked(context);
   if (context->p_osc_ctx == NULL)
     return 0;
   return oscore_delete_recipient(context->p_osc_ctx, recipient_id);

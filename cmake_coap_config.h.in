@@ -47,6 +47,12 @@
 /* Define to 1 if the library has async separate response support. */
 #cmakedefine COAP_ASYNC_SUPPORT @COAP_ASYNC_SUPPORT@
 
+/* Define to 1 if the library has thread safe support. */
+#cmakedefine COAP_THREAD_SAFE @COAP_THREAD_SAFE@
+
+/* Define to 1 if the library has thread deadlock detection support. */
+#cmakedefine COAP_THREAD_RECURSIVE_CHECK @COAP_THREAD_RECURSIVE_CHECK@
+
 /* Define to 0-8 for maximum logging level. */
 #cmakedefine COAP_MAX_LOGGING_LEVEL @COAP_MAX_LOGGING_LEVEL@
 

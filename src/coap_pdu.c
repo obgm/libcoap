@@ -154,8 +154,11 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
 coap_pdu_t *
 coap_new_pdu(coap_pdu_type_t type, coap_pdu_code_t code,
              coap_session_t *session) {
-  coap_pdu_t *pdu = coap_pdu_init(type, code, coap_new_message_id(session),
-                                  coap_session_max_pdu_size(session));
+  coap_pdu_t *pdu;
+
+  coap_lock_check_locked(session->context);
+  pdu = coap_pdu_init(type, code, coap_new_message_id(session),
+                      coap_session_max_pdu_size(session));
   if (!pdu)
     coap_log_crit("coap_new_pdu: cannot allocate memory for new PDU\n");
   return pdu;
@@ -186,6 +189,7 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
   uint8_t doing_first = session->doing_first;
   coap_pdu_t *pdu;
 
+  coap_lock_check_locked(session->context);
   /*
    * Need to make sure that coap_session_max_pdu_size() immediately
    * returns, rather than wait for the first CSM response from remote

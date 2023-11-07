@@ -32,6 +32,7 @@ TXT3 = coap_address.txt \
 	coap_init.txt \
 	coap_io.txt \
 	coap_keepalive.txt \
+	coap_locking.txt \
 	coap_logging.txt \
 	coap_lwip.txt \
 	coap_observe.txt \

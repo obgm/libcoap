@@ -64,6 +64,14 @@ int coap_resource_notify_observers(coap_resource_t *resource,
                                    const coap_string_t *query);
 
 /**
+ * Checks all known resources to see if they are dirty and then notifies
+ * subscribed observers.
+ *
+ * @param context The context to check for dirty resources.
+ */
+void coap_check_notify(coap_context_t *context);
+
+/**
  * Callback handler definition called when a new observe has been set up,
  * as defined in coap_persist_track_funcs().
  *

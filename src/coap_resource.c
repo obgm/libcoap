@@ -509,6 +509,7 @@ coap_free_resource(coap_resource_t *resource) {
 
 void
 coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
+  coap_lock_check_locked(context);
   if (resource->is_unknown) {
     if (context->unknown_resource)
       coap_free_resource(context->unknown_resource);
@@ -554,6 +555,7 @@ coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
   if (!resource)
     return 0;
 
+  coap_lock_check_locked(context);
   context = resource->context;
 
   if (resource->is_unknown) {
@@ -601,8 +603,11 @@ coap_delete_all_resources(coap_context_t *context) {
 }
 
 coap_resource_t *
-coap_get_resource_from_uri_path(coap_context_t *context, coap_str_const_t *uri_path) {
+coap_get_resource_from_uri_path(coap_context_t *context,
+                                coap_str_const_t *uri_path) {
   coap_resource_t *result;
+
+  coap_lock_check_locked(context);
 
   RESOURCES_FIND(context->resources, uri_path, result);
 
@@ -1098,7 +1103,9 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         coap_log_debug("call custom handler for resource '%*.*s' (4)\n",
                        (int)r->uri_path->length, (int)r->uri_path->length,
                        r->uri_path->s);
-        h(r, obs->session, obs->pdu, query, response);
+        coap_lock_callback(obs->session->context,
+                           h(r, obs->session, obs->pdu, query, response));
+
         /* Check if lg_xmit generated and update PDU code if so */
         coap_check_code_lg_xmit(obs->session, obs->pdu, response, r, query);
         coap_delete_string(query);
@@ -1171,6 +1178,7 @@ coap_resource_set_dirty(coap_resource_t *r, const coap_string_t *query) {
 int
 coap_resource_notify_observers(coap_resource_t *r,
                                const coap_string_t *query COAP_UNUSED) {
+  coap_lock_check_locked(r->context);
   if (!r->observable)
     return 0;
   if (!r->subscribers)
@@ -1233,6 +1241,7 @@ coap_resource_get_uri_path(coap_resource_t *resource) {
 void
 coap_check_notify(coap_context_t *context) {
 
+  coap_lock_check_locked(context);
   if (context->observe_pending) {
     context->observe_pending = 0;
     RESOURCES_ITER(context->resources, r) {

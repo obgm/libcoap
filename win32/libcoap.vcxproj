@@ -68,6 +68,7 @@
     <ClCompile Include="..\src\coap_subscribe.c" />
     <ClCompile Include="..\src\coap_time.c" />
     <ClCompile Include="..\src\coap_tcp.c" />
+    <ClCompile Include="..\src\coap_threadsafe.c" />
     <ClCompile Include="..\src\coap_tinydtls.c" />
     <ClCompile Include="..\src\coap_uri.c" />
     <ClCompile Include="..\src\coap_ws.c" />
@@ -115,6 +116,7 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_tcp_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_threadsafe_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_time.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uri.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uri_internal.h" />
