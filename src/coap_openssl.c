@@ -46,21 +46,24 @@
  * exclude code based on whether compiled against 1.1.0 or 1.1.1, as well as
  * have additional run time checks.
  *
- * It is possible to override the Ciphers, define the Algorithms or Groups
- * to use for the SSL negotiations at compile time. This is done by the adding
- * of the appropriate -D option to the CPPFLAGS parameter that is used on the
- * ./configure command line.
- * E.g.  ./configure CPPFLAGS="-DXX=\"YY\" -DUU=\"VV\""
+ * It is possible to override the Ciphers, define the Algorithms or Groups,
+ * and/or define the PKCS11 engine id to to use for the SSL negotiations at
+ * compile time. This is done by the adding of the appropriate -D option to
+ * the CPPFLAGS parameter that is used on the ./configure command line.
+ * E.g.  ./configure CPPFLAGS="-DXX='\"YY\"' -DUU='\"VV\"'"
  * The parameter value is case-sensitive.
  *
  * The ciphers can be overridden with (example)
- *  -DCOAP_OPENSSL_CIPHERS=\"ECDHE-ECDSA-AES256-GCM-SHA384\"
+ *  -DCOAP_OPENSSL_CIPHERS='\"ECDHE-ECDSA-AES256-GCM-SHA384\"'
  *
  * The Algorithms can be defined by (example)
- *  -DCOAP_OPENSSL_SIGALGS=\"ed25519\"
+ *  -DCOAP_OPENSSL_SIGALGS='\"ed25519\"'
  *
  * The Groups (OpenSSL 1.1.1 or later) can be defined by (example)
- *  -DCOAP_OPENSSL_GROUPS=\"X25519\"
+ *  -DCOAP_OPENSSL_GROUPS='\"X25519\"'
+ *
+ * The PKCSLL engine ID can be defined by (example)
+ + -DCOAP_OPENSSL_PKCS11_ENGINE_ID='\"pkcs11\"'
  *
  */
 #include <openssl/ssl.h>
@@ -114,6 +117,10 @@
 #ifndef COAP_OPENSSL_PSK_CIPHERS
 #define COAP_OPENSSL_PSK_CIPHERS "PSK:!NULL"
 #endif /*COAP_OPENSSL_PSK_CIPHERS */
+
+#ifndef COAP_OPENSSL_PKCS11_ENGINE_ID
+#define COAP_OPENSSL_PKCS11_ENGINE_ID "pkcs11"
+#endif /* COAP_OPENSSL_PKCS11_ENGINE_ID */
 
 /* This structure encapsulates the OpenSSL context object. */
 typedef struct coap_dtls_context_t {
@@ -1317,7 +1324,7 @@ setup_pki_server(SSL_CTX *ctx,
 
   case COAP_PKI_KEY_PKCS11:
     if (!ssl_engine) {
-      ssl_engine = ENGINE_by_id("pkcs11");
+      ssl_engine = ENGINE_by_id(COAP_OPENSSL_PKCS11_ENGINE_ID);
       if (!ssl_engine) {
         coap_log_err("*** setup_pki: (D)TLS: No PKCS11 support\nn");
         return 0;
@@ -1691,7 +1698,7 @@ setup_pki_ssl(SSL *ssl,
 
   case COAP_PKI_KEY_PKCS11:
     if (!ssl_engine) {
-      ssl_engine = ENGINE_by_id("pkcs11");
+      ssl_engine = ENGINE_by_id(COAP_OPENSSL_PKCS11_ENGINE_ID);
       if (!ssl_engine) {
         coap_log_err("*** setup_pki: (D)TLS: No PKCS11 support - need OpenSSL pkcs11 engine\n");
         return 0;
