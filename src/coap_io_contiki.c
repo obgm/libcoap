@@ -252,3 +252,66 @@ coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   coap_ticks(&now);
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
+
+#if ! COAP_DISABLE_TCP
+
+#if COAP_CLIENT_SUPPORT
+int
+coap_socket_connect_tcp1(coap_socket_t *sock,
+                         const coap_address_t *local_if,
+                         const coap_address_t *server,
+                         int default_port,
+                         coap_address_t *local_addr,
+                         coap_address_t *remote_addr) {
+  (void)sock;
+  (void)local_if;
+  (void)server;
+  (void)default_port;
+  (void)local_addr;
+  (void)remote_addr;
+
+  return -1;
+}
+
+int
+coap_socket_connect_tcp2(coap_socket_t *sock,
+                         coap_address_t *local_addr,
+                         coap_address_t *remote_addr) {
+  (void)sock;
+  (void)local_addr;
+  (void)remote_addr;
+
+  return -1;
+}
+#endif /* COAP_CLIENT_SUPPORT */
+
+#if COAP_SERVER_SUPPORT
+
+int
+coap_socket_bind_tcp(coap_socket_t *sock,
+                     const coap_address_t *listen_addr,
+                     coap_address_t *bound_addr) {
+  (void)sock;
+  (void)listen_addr;
+  (void)bound_addr;
+
+  return -1;
+}
+
+int
+coap_socket_accept_tcp(coap_socket_t *server,
+                       coap_socket_t *new_client,
+                       coap_address_t *local_addr,
+                       coap_address_t *remote_addr,
+                       void *extra) {
+  (void)server;
+  (void)new_client;
+  (void)local_addr;
+  (void)remote_addr;
+  (void)extra;
+
+  return -1;
+}
+#endif /* COAP_SERVER_SUPPORT */
+
+#endif /* ! COAP_DISABLE_TCP */

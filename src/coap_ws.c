@@ -36,12 +36,7 @@
 
 int
 coap_ws_is_supported(void) {
-#if defined(COAP_WITH_LIBOPENSSL) || defined(COAP_WITH_LIBGNUTLS) || defined(COAP_WITH_LIBMBEDTLS)
-  /* Have SHA1 hash support */
   return coap_tcp_is_supported();
-#else /* !COAP_WITH_LIBOPENSSL && !COAP_WITH_LIBGNUTLS && !COAP_WITH_LIBMBEDTLS */
-  return 0;
-#endif /* !COAP_WITH_LIBOPENSSL && !COAP_WITH_LIBGNUTLS && !COAP_WITH_LIBMBEDTLS */
 }
 
 int
@@ -857,7 +852,9 @@ coap_ws_close(coap_session_t *session) {
     return;
   }
   if (session->ws && session->ws->up) {
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
     int count;
+#endif /* ! WITH_LWIP && ! WITH_CONTIKI */
 
     if (!session->ws->sent_close) {
       size_t hdr_len = 2;
@@ -891,6 +888,7 @@ coap_ws_close(coap_session_t *session) {
         return;
       }
     }
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
     count = 5;
     while (!session->ws->recv_close && count > 0 && coap_netif_available(session)) {
       uint8_t buf[100];
@@ -911,6 +909,7 @@ coap_ws_close(coap_session_t *session) {
       }
       count --;
     }
+#endif /* ! WITH_LWIP && ! WITH_CONTIKI */
     coap_handle_event(session->context, COAP_EVENT_WS_CLOSED, session);
   }
   session->sock.lfunc[COAP_LAYER_WS].l_close(session);

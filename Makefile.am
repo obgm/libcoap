@@ -112,6 +112,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_pdu_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_resource_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_sha1_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_uri_internal.h \
@@ -209,6 +210,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_prng.c \
   src/coap_resource.c \
   src/coap_session.c \
+  src/coap_sha1.c \
   src/coap_str.c \
   src/coap_subscribe.c \
   src/coap_tcp.c \

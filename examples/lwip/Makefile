@@ -168,10 +168,11 @@ COAP_SRC = coap_address.c \
 	   coap_pdu.c \
 	   coap_resource.c \
 	   coap_session.c \
-	   coap_subscribe.c \
-	   coap_tinydtls.c \
+	   coap_sha1.c \
 	   coap_str.c \
+	   coap_subscribe.c \
 	   coap_tcp.c \
+	   coap_tinydtls.c \
 	   coap_uri.c \
 	   coap_ws.c
 
