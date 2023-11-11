@@ -100,11 +100,15 @@ typedef struct l_coap_tiny_context_t {
 #endif
 
 #ifndef MEMP_LEN_COAPSTRING
+#ifdef COAP_WS_SUPPORT
+#define MEMP_LEN_COAPSTRING 176
+#else /* ! COAP_WS_SUPPORT */
 #ifdef COAP_WITH_LIBTINYDTLS
 #define MEMP_LEN_COAPSTRING 120
 #else /* COAP_WITH_TINYDTLS */
 #define MEMP_LEN_COAPSTRING 40
 #endif /* COAP_WITH_TINYDTLS */
+#endif /* ! COAP_WS_SUPPORT */
 #endif
 
 #ifndef MEMP_NUM_COAPCACHE_KEYS

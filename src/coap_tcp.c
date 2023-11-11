@@ -38,7 +38,7 @@ coap_tcp_is_supported(void) {
   return !COAP_DISABLE_TCP;
 }
 
-#if !COAP_DISABLE_TCP && !defined(WITH_LWIP)
+#if !COAP_DISABLE_TCP && !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
 int
 coap_socket_connect_tcp1(coap_socket_t *sock,
                          const coap_address_t *local_if,

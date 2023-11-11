@@ -63,6 +63,7 @@
     <ClCompile Include="..\src\coap_prng.c" />
     <ClCompile Include="..\src\coap_resource.c" />
     <ClCompile Include="..\src\coap_session.c" />
+    <ClCompile Include="..\src\coap_sha1.c" />
     <ClCompile Include="..\src\coap_str.c" />
     <ClCompile Include="..\src\coap_subscribe.c" />
     <ClCompile Include="..\src\coap_time.c" />
@@ -109,6 +110,7 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_resource_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_session.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_session_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_sha1_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_str.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe_internal.h" />

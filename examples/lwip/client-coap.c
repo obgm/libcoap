@@ -199,6 +199,10 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
 
   LWIP_ASSERT("Failed to create session", session != NULL);
 
+  if (proto == COAP_PROTO_WS || proto == COAP_PROTO_WSS) {
+    coap_ws_set_host_request(session, &uri.host);
+  }
+
   coap_register_response_handler(main_coap_context, message_handler);
   coap_register_nack_handler(main_coap_context, nack_handler);
 

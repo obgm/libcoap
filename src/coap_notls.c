@@ -319,10 +319,23 @@ int
 coap_crypto_hash(cose_alg_t alg,
                  const coap_bin_const_t *data,
                  coap_bin_const_t **hash) {
+  SHA1Context sha1_context;
+  coap_binary_t *dummy = NULL;
+
   (void)alg;
-  (void)data;
-  (void)hash;
-  return 0;
+
+  SHA1Reset(&sha1_context);
+  if (SHA1Input(&sha1_context, data->s, data->length) != shaSuccess)
+    return 0;
+  dummy = coap_new_binary(SHA1HashSize);
+  if (!dummy)
+    return 0;
+  if (SHA1Result(&sha1_context, dummy->s) != shaSuccess) {
+    coap_delete_binary(dummy);
+    return 0;
+  }
+  *hash = (coap_bin_const_t *)(dummy);
+  return 1;
 }
 #endif /* COAP_WS_SUPPORT */
 
