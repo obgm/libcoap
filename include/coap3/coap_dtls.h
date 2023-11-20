@@ -196,7 +196,8 @@ typedef enum coap_pki_key_t {
  * The structure that holds the PKI PEM definitions.
  */
 typedef struct coap_pki_key_pem_t {
-  const char *ca_file;       /**< File location of Common CA in PEM format */
+  const char *ca_file;       /**< File location of Common CA (and any
+                                 intermediates) in PEM format */
   const char *public_cert;   /**< File location of Public Cert */
   const char *private_key;   /**< File location of Private Key in PEM format */
 } coap_pki_key_pem_t;
