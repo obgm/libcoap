@@ -209,11 +209,11 @@ definitions have to be in DER, not PEM, format.  Otherwise all of
 *-C* cafile::
   PEM file or PKCS11 URI that contains a list of one or more CAs that are to
   be passed to the client for the client to determine what client certificate
-  to use.  Normally, this list of CAs would be the root CA and and any
+  to use.  Normally, this list of CAs would be the root CA and any
   intermediate CAs. Ideally the server certificate should be signed by the
   same CA so that mutual authentication can take place. The contents of
   *cafile* are added to the trusted store of root CAs.  Using the *-C* or *-R*
-  options will will trigger the validation of the client certificate unless
+  options will trigger the validation of the client certificate unless
   overridden by the *-n* option.
 
 *-J* pkcs11_pin::
@@ -230,7 +230,7 @@ definitions have to be in DER, not PEM, format.  Otherwise all of
   directory containing a set of CA PEM files. The *-C cafile* CA does not have
   to be in this list and is trusted for the validation. Using
   *-R trust_casfile* disables common CA mutual authentication which can only
-  be done by using *-C cafile*. Using the *-C* or *-R* options will will
+  be done by using *-C cafile*. Using the *-C* or *-R* options will
   trigger the validation of the server certificate unless overridden by the
   *-n* option.
 
