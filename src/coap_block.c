@@ -2679,6 +2679,11 @@ coap_handle_request_put_block(coap_context_t *context,
       coap_log_debug("block: Oversized packet - reduced to %"PRIu32" from %zu\n",
                      block.chunk_size, length);
       length = block.chunk_size;
+    } else if (!block.bert && block.m && length != block.chunk_size) {
+      coap_log_info("block: Undersized packet chunk %"PRIu32" got %zu\n",
+                    block.chunk_size, length);
+      response->code = COAP_RESPONSE_CODE(400);
+      goto skip_app_handler;
     }
     total = size_opt ? coap_decode_var_bytes(coap_opt_value(size_opt),
                                              coap_opt_length(size_opt)) : 0;
@@ -3096,7 +3101,11 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
                        1 << (block.szx + 4), block.num);
       }
       if (block.szx != p->blk_size) {
-        if ((p->offset + chunk) % ((size_t)1 << (block.szx + 4)) == 0) {
+        if (block.szx > p->blk_size) {
+          coap_log_info("ignoring request to increase Block size, "
+                        "(%u > %u)\n",
+                        1 << (block.szx + 4), 1 << (p->blk_size + 4));
+        } else if ((p->offset + chunk) % ((size_t)1 << (block.szx + 4)) == 0) {
           /*
            * Recompute the block number of the previous packet given the
            * new block size
