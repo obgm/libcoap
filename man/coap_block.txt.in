@@ -12,6 +12,7 @@ NAME
 ----
 coap_block,
 coap_context_set_block_mode,
+coap_context_set_max_block_size,
 coap_add_data_large_request,
 coap_add_data_large_response,
 coap_get_data_large,
@@ -25,6 +26,9 @@ SYNOPSIS
 
 *void coap_context_set_block_mode(coap_context_t *_context_,
 uint32_t _block_mode_);*
+
+*int coap_context_set_max_block_size(coap_context_t *_context_,
+size_t _max_block_size_);*
 
 *int coap_add_data_large_request(coap_session_t *_session_,
 coap_pdu_t *_pdu_, size_t _length_, const uint8_t *_data_,
@@ -209,6 +213,12 @@ for any data returned that uses Block2 to split up the data chunks.
 The application is called for every request to get the complete set of data which
 is then split into the separate Block2 responses as appropriate.
 
+*Function: coap_context_set_max_block_size()*
+
+The *coap_context_set_max_block_size*() function is used to set the
+_max_block_size_ in the _context_ that a server supports when the Block1 or
+Block2 options are used.  This must be set before a server session is created.
+
 *Function: coap_add_data_large_request()*
 
 The *coap_add_data_large_request*() function is similar to *coap_add_data*(),
@@ -315,6 +325,8 @@ RETURN VALUES
 
 *coap_block_build_body*() returns the current state of the body's data
 (which may have some missing gaps) or NULL on error.
+
+*coap_context_set_max_block_size*() returns 0 on failure, 1 on success.
 
 *coap_q_block_is_supported*() returns 0 on failure, 1 on success.
 

@@ -35,6 +35,7 @@
 #define coap_check_notify(s)                            coap_check_notify_locked(s)
 #define coap_context_oscore_server(c,o)                 coap_context_oscore_server_locked(c,o)
 #define coap_context_set_block_mode(c,b)                coap_context_set_block_mode_locked(c,b)
+#define coap_context_set_max_block_size(c,m)            coap_context_set_max_block_size_locked(c,m)
 #define coap_context_set_pki(c,s)                       coap_context_set_pki_locked(c,s)
 #define coap_context_set_pki_root_cas(c,f,d)            coap_context_set_pki_root_cas_locked(c,f,d)
 #define coap_context_set_psk(c,h,k,l)                   coap_context_set_psk_locked(c,h,k,l)
@@ -125,6 +126,8 @@ int                  coap_context_oscore_server_locked(coap_context_t *context,
                                                        coap_oscore_conf_t *oscore_conf);
 void                 coap_context_set_block_mode_locked(coap_context_t *context,
                                                         uint32_t block_mode);
+int                  coap_context_set_max_block_size_locked(coap_context_t *context,
+                                                            size_t max_block_size);
 int                  coap_context_set_pki_locked(coap_context_t *ctx,
                                                  const coap_dtls_pki_t *setup_data);
 int                  coap_context_set_pki_root_cas_locked(coap_context_t *ctx,

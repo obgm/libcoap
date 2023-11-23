@@ -2132,10 +2132,10 @@ usage(const char *program, const char *version) {
           coap_string_tls_version(buffer, sizeof(buffer)));
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
-          "Usage: %s [-a priority] [-d max] [-e] [-g group] [-l loss] [-p port]\n"
-          "\t\t[-r] [-v num] [-w [port][,secure_port]] [-A address]\n"
-          "\t\t[-E oscore_conf_file[,seq_file]] [-G group_if] [-L value] [-N]\n"
-          "\t\t[-P scheme://address[:port],[name1[,name2..]]]\n"
+          "Usage: %s [-a priority] [-b max_block_size] [-d max] [-e] [-g group]\n"
+          "\t\t[-l loss] [-p port] [-r] [-v num] [-w [port][,secure_port]]\n"
+          "\t\t[-A address] [-E oscore_conf_file[,seq_file]] [-G group_if]\n"
+          "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
           "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
           "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
           "\t\t[-s match_psk_sni_file] [-u user]]\n"
@@ -2144,6 +2144,9 @@ usage(const char *program, const char *version) {
           "\t\t[-S match_pki_sni_file]]\n"
           "General Options\n"
           "\t-a priority\tSend logging output to syslog at priority (0-7) level\n"
+          "\t-b max_block_size\n"
+          "\t       \t\tMaximum block size server supports (16, 32, 64,\n"
+          "\t       \t\t128, 256, 512 or 1024) in bytes\n"
           "\t-d max \t\tAllow dynamic creation of up to a total of max\n"
           "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
           "\t       \t\tuntil one of the dynamic resources has been deleted\n"
@@ -2742,6 +2745,7 @@ main(int argc, char **argv) {
   int nfds = 0;
   size_t i;
   int exit_code = 0;
+  uint32_t max_block_size = 0;
 #ifndef _WIN32
   int use_syslog = 0;
 #endif /* ! _WIN32 */
@@ -2762,7 +2766,7 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:c:d:eg:G:h:i:j:J:k:l:mnp:rs:tu:v:w:A:C:E:L:M:NP:R:S:T:U:V:X:")) != -1) {
+                       "a:b:c:d:eg:G:h:i:j:J:k:l:mnp:rs:tu:v:w:A:C:E:L:M:NP:R:S:T:U:V:X:")) != -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -2775,6 +2779,9 @@ main(int argc, char **argv) {
     case 'A' :
       strncpy(addr_str, optarg, NI_MAXHOST-1);
       addr_str[NI_MAXHOST - 1] = '\0';
+      break;
+    case 'b':
+      max_block_size = atoi(optarg);
       break;
     case 'c' :
       cert_file = optarg;
@@ -2961,6 +2968,7 @@ main(int argc, char **argv) {
   if (mcast_per_resource)
     coap_mcast_per_resource(ctx);
   coap_context_set_block_mode(ctx, block_mode);
+  coap_context_set_max_block_size(ctx, max_block_size);
   if (csm_max_message_size)
     coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
   if (doing_oscore) {

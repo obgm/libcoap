@@ -509,7 +509,7 @@ usage(const char *program, const char *version) {
           "General Options\n"
           "\t-a addr\t\tThe local interface address to use\n"
           "\t-b [num,]size\tBlock size to be used in GET/PUT/POST requests\n"
-          "\t       \t\t(value must be a multiple of 16 not larger than 1024)\n"
+          "\t       \t\t(value must be 16, 32, 64, 128, 256, 512 or 1024)\n"
           "\t       \t\tIf num is present, the request chain will start at\n"
           "\t       \t\tblock num\n"
           "\t-e text\t\tInclude text as payload (use percent-encoding for\n"
@@ -591,7 +591,8 @@ usage(const char *program, const char *version) {
           "\t       \t\tcertificate in '-c certfile' if the parameter is\n"
           "\t       \t\tdifferent from certfile in '-c certfile'\n"
           "\t-n     \t\tDisable remote peer certificate checking\n"
-          "\t-C cafile\tPEM file or PKCS11 URI for the CA certificate that was\n"
+          "\t-C cafile\tPEM file or PKCS11 URI for the CA certificate and any\n"
+          "\t       \t\tintermediate CAs that was\n"
           "\t       \t\tused to sign the server certfile. Ideally the client\n"
           "\t       \t\tcertificate should be signed by the same CA so that\n"
           "\t       \t\tmutual authentication can take place. The contents of\n"
@@ -612,7 +613,7 @@ usage(const char *program, const char *version) {
           "\t       \t\tUsing '-R trust_casfile' disables common CA mutual\n"
           "\t       \t\tauthentication which can only be done by using\n"
           "\t       \t\t'-C cafile'.\n"
-          "\t       \t\tUsing the -C or -R options will will trigger the\n"
+          "\t       \t\tUsing the -C or -R options will trigger the\n"
           "\t       \t\tvalidation of the server certificate unless overridden\n"
           "\t       \t\tby the -n option\n"
          );
@@ -888,8 +889,8 @@ again:
   } else if (size > 1024) {
     coap_log_warn("Maximum block size is 1024\n");
     return 0;
-  } else if ((size % 16) != 0) {
-    coap_log_warn("Block size %u is not a multiple of 16\n", size);
+  } else if (size != ((1 << (coap_fls(size >> 4) - 1) << 4))) {
+    coap_log_warn("Block size %u invalid\n", size);
     return 0;
   }
   if (size)
@@ -1617,7 +1618,8 @@ main(int argc, char **argv) {
       node_str[NI_MAXHOST - 1] = '\0';
       break;
     case 'b':
-      cmdline_blocksize(optarg);
+      if (!cmdline_blocksize(optarg))
+        goto failed;
       break;
     case 'B':
       wait_seconds = atoi(optarg);

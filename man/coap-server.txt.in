@@ -19,7 +19,8 @@ coap-server-notls
 
 SYNOPSIS
 --------
-*coap-server* [*-a* priority] [*-d* max] [*-e*] [*-g* group] [*-l* loss] [*-p* port]
+*coap-server* [*-a* priority] [*-b* max_block_size] [*-d* max] [*-e*]
+              [*-g* group] [*-l* loss] [*-p* port]
               [*-r*] [*-t*]  [*-v* num] [*-w* [port][,secure_port]]
               [*-A* address] [*-E* oscore_conf_file[,seq_file]]
               [*-G* group_if] [*-L* value] [*-N*]
@@ -45,6 +46,10 @@ OPTIONS - General
 -----------------
 *-a* priority::
    Send logging output to syslog at 'priority' (0-7) level.
+
+*-b* max_block_size::
+   Maximum block size server supports (16, 32, 64, 128, 256, 512 or 1024) in
+   bytes.
 
 *-d* max::
    Enable support for creation of dynamic resources when doing a PUT up to a
