@@ -63,9 +63,8 @@ OPTIONS - General
    cause "No such device" errors on transmission.
 
 *-b* [num,]size::
-   The block size to be used in GET/PUT/POST requests (value must be a
-   multiple of 16 not larger than 1024 as libcoap uses a fixed maximum
-   PDU size of 1400 bytes). If 'num' is present, the request
+   The block size to be used in GET/PUT/POST requests (value must be 16, 32,
+   64, 128, 256, 512 or 1024). If 'num' is present, the request
    chain will start at block 'num'. When the server includes a Block2
    option in its response to a GET request, coap-client will automatically
    retrieve the subsequent block from the server until there are no more
@@ -232,7 +231,8 @@ definitions have to be in DER, not PEM, format.  Otherwise all of
   Disable remote peer certificate checking.
 
 *-C* cafile::
-PEM file or PKCS11 URI for the CA certificate that was used to sign the server
+PEM file or PKCS11 URI for the CA certificate and any intermediate CAs that was
+  used to sign the server
   certfile. Ideally the client certificate should be signed by the same CA so
   that mutual authentication can take place. The contents of cafile are added
   to the trusted store of root CAs. Using the *-C* or *-R* options will trigger
@@ -252,7 +252,7 @@ PEM file or PKCS11 URI for the CA certificate that was used to sign the server
   directory containing a set of CA PEM files. The *-C cafile* CA does not have
   to be in this list and is trusted for the validation. Using
   *-R trust_casfile* disables common CA mutual authentication which can only
-  be done by using *-C cafile*. Using the *-C* or *-R* options will will
+  be done by using *-C cafile*. Using the *-C* or *-R* options will
   trigger the validation of the server certificate unless overridden by the
   *-n* option.
 

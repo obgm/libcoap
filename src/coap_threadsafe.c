@@ -458,6 +458,17 @@ coap_context_set_block_mode(coap_context_t *context,
 }
 
 int
+coap_context_set_max_block_size(coap_context_t *context,
+                                size_t max_block_size) {
+  int ret;
+
+  coap_lock_lock(context, return 0);
+  ret = coap_context_set_max_block_size_locked(context, max_block_size);
+  coap_lock_unlock(context);
+  return ret;
+}
+
+int
 coap_context_set_pki_root_cas(coap_context_t *ctx,
                               const char *ca_file,
                               const char *ca_dir) {

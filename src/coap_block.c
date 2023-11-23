@@ -379,21 +379,38 @@ void
 coap_context_set_block_mode(coap_context_t *context,
                             uint32_t block_mode) {
   coap_lock_check_locked(context);
-  context->block_mode = (block_mode & (COAP_BLOCK_USE_LIBCOAP |
-                                       COAP_BLOCK_SINGLE_BODY |
-#if COAP_Q_BLOCK_SUPPORT
-                                       COAP_BLOCK_TRY_Q_BLOCK |
-                                       COAP_BLOCK_USE_M_Q_BLOCK |
-#endif /* COAP_Q_BLOCK_SUPPORT */
-                                       COAP_BLOCK_NO_PREEMPTIVE_RTAG |
-                                       COAP_BLOCK_STLESS_FETCH |
-                                       COAP_BLOCK_STLESS_BLOCK2));
   if (!(block_mode & COAP_BLOCK_USE_LIBCOAP))
-    context->block_mode = 0;
+    block_mode = 0;
+  context->block_mode &= ~COAP_BLOCK_SET_MASK;
+  context->block_mode |= block_mode & COAP_BLOCK_SET_MASK;
 #if ! COAP_Q_BLOCK_SUPPORT
   if (block_mode & (COAP_BLOCK_TRY_Q_BLOCK|COAP_BLOCK_USE_M_Q_BLOCK))
     coap_log_debug("Q-Block support not compiled in - ignored\n");
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
+}
+
+int
+coap_context_set_max_block_size(coap_context_t *context, size_t max_block_size) {
+  switch (max_block_size) {
+  case 0:
+  case 16:
+  case 32:
+  case 64:
+  case 128:
+  case 256:
+  case 512:
+  case 1024:
+    break;
+  default:
+    coap_log_info("coap_context_set_max_block_size: Invalid max block size (%zu)\n",
+                  max_block_size);
+    return 0;
+  }
+  coap_lock_check_locked(context);
+  max_block_size = (coap_fls((uint32_t)max_block_size >> 4) - 1) & 0x07;
+  context->block_mode &= ~COAP_BLOCK_MAX_SIZE_MASK;
+  context->block_mode |= COAP_BLOCK_MAX_SIZE_SET(max_block_size);
+  return 1;
 }
 
 COAP_STATIC_INLINE int
@@ -616,6 +633,7 @@ coap_add_data_large_internal(coap_session_t *session,
   uint8_t buf[8];
   int have_block_defined = 0;
   uint8_t blk_size;
+  uint8_t max_blk_size;
   uint16_t option;
   size_t token_options;
   coap_opt_t *opt;
@@ -738,6 +756,10 @@ coap_add_data_large_internal(coap_session_t *session,
   blk_size = coap_flsll((long long)avail) - 4 - 1;
   if (blk_size > 6)
     blk_size = 6;
+
+  max_blk_size = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
+  if (max_blk_size && blk_size > max_blk_size)
+    blk_size = max_blk_size;
 
   /* see if BlockX defined - if so update blk_size as given by app */
   if (coap_get_block_b(session, pdu, option, &block)) {
@@ -2677,6 +2699,7 @@ coap_handle_request_put_block(coap_context_t *context,
                                              &opt_iter);
     size_t rtag_length = rtag_opt ? coap_opt_length(rtag_opt) : 0;
     const uint8_t *rtag = rtag_opt ? coap_opt_value(rtag_opt) : NULL;
+    uint32_t max_block_szx;
 
     if (length > block.chunk_size) {
       coap_log_debug("block: Oversized packet - reduced to %"PRIu32" from %zu\n",
@@ -2734,7 +2757,14 @@ coap_handle_request_put_block(coap_context_t *context,
         p->uri_path = coap_new_str_const(uri_path->s, uri_path->length);
       p->content_format = fmt;
       p->total_len = total;
-      p->szx = block.szx;
+      p->amount_so_far = length;
+      max_block_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
+      if (!block.bert && block.num == 0 && max_block_szx != 0 &&
+          max_block_szx < block.szx) {
+        p->szx = max_block_szx;
+      } else {
+        p->szx = block.szx;
+      }
       p->block_option = block_option;
       if (observe) {
         p->observe_length = min(coap_opt_length(observe), 3);
@@ -2857,6 +2887,12 @@ coap_handle_request_put_block(coap_context_t *context,
                 goto skip_app_handler;
             }
 #endif /* COAP_Q_BLOCK_SUPPORT */
+            /* Check to see if block size is getting forced down */
+            max_block_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
+            if (!block.bert && saved_num == 0 && max_block_szx != 0 &&
+                max_block_szx < block.aszx) {
+              block.aszx = max_block_szx;
+            }
             /* Ask for the next block */
             coap_insert_option(response, block_option,
                                coap_encode_var_safe(buf, sizeof(buf),
@@ -2912,6 +2948,12 @@ give_app_data:
           else
             pdu->body_total = offset + length + block.m;
 
+          /* Check to see if block size is getting forced down */
+          max_block_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
+          if (!block.bert && block.num == 0 && max_block_szx != 0 &&
+              max_block_szx < block.aszx) {
+            block.aszx = max_block_szx;
+          }
           coap_insert_option(response, block_option,
                              coap_encode_var_safe(buf, sizeof(buf),
                                                   (block.num << 4) |
