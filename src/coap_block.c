@@ -2734,7 +2734,6 @@ coap_handle_request_put_block(coap_context_t *context,
         p->uri_path = coap_new_str_const(uri_path->s, uri_path->length);
       p->content_format = fmt;
       p->total_len = total;
-      p->amount_so_far = length;
       p->szx = block.szx;
       p->block_option = block_option;
       if (observe) {
@@ -2757,6 +2756,19 @@ coap_handle_request_put_block(coap_context_t *context,
         response->code = COAP_RESPONSE_CODE(408);
         goto free_lg_srcv;
       }
+#if COAP_Q_BLOCK_SUPPORT
+      if (block_option != COAP_OPTION_Q_BLOCK1) {
+#endif /* COAP_Q_BLOCK_SUPPORT */
+        if (offset > p->amount_so_far) {
+          coap_add_data(response, sizeof("Missing block")-1,
+                        (const uint8_t *)"Missing block");
+          response->code = COAP_RESPONSE_CODE(408);
+          goto free_lg_srcv;
+        }
+        p->amount_so_far += length;
+#if COAP_Q_BLOCK_SUPPORT
+      }
+#endif /* COAP_Q_BLOCK_SUPPORT */
 #if COAP_Q_BLOCK_SUPPORT
       if (block_option == COAP_OPTION_Q_BLOCK1) {
         if (total != p->total_len) {
@@ -2853,7 +2865,16 @@ coap_handle_request_put_block(coap_context_t *context,
                                                     block.aszx),
                                buf);
             response->code = COAP_RESPONSE_CODE(231);
-            goto skip_app_handler;
+          } else {
+#if COAP_Q_BLOCK_SUPPORT
+            if (block_option != COAP_OPTION_Q_BLOCK1) {
+#endif /* COAP_Q_BLOCK_SUPPORT */
+              coap_add_data(response, sizeof("Missing interim block")-1,
+                            (const uint8_t *)"Missing interim block");
+              response->code = COAP_RESPONSE_CODE(408);
+#if COAP_Q_BLOCK_SUPPORT
+            }
+#endif /* COAP_Q_BLOCK_SUPPORT */
           }
           goto skip_app_handler;
         }
