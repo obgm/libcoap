@@ -61,7 +61,7 @@ details, it may not be possible to resolve your issue.**
 
 ## libcoap Configuration Summary
 
-Copy the "libcoap Configuration Summary" output lines here after running
+Copy all the "libcoap Configuration Summary:" output lines (about 40 lines) here after running
 `./configure` (with any options that you have specified)
   or
 `cmake ..` (with any -D options that you have specified)
