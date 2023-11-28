@@ -1301,8 +1301,8 @@ if test "x$enable_max_logging_level" != "x8"; then
 else
     AC_MSG_RESULT([      enable max logging level       : "none"])
 fi
-AC_MSG_RESULT([      enable thread safe code  : "$enable_thread_safe"])
-AC_MSG_RESULT([      enable recursive lock chk: "$enable_recursive_detection"])
+AC_MSG_RESULT([      enable thread safe code        : "$enable_thread_safe"])
+AC_MSG_RESULT([      enable recursive lock check    : "$enable_recursive_detection"])
 if test "x$build_doxygen" = "xyes"; then
     AC_MSG_RESULT([      build doxygen pages            : "yes"])
     AC_MSG_RESULT([          --> Doxygen around         : "yes" ($DOXYGEN $doxygen_version)])
