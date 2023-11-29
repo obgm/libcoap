@@ -2344,24 +2344,30 @@ coap_handle_request_send_block(coap_session_t *session,
                      1 << (block.szx + 4), block.num, block.m);
     }
     if (block.bert == 0 && block.szx != p->blk_size) {
-      if ((p->offset + chunk) % ((size_t)1 << (block.szx + 4)) == 0) {
-        /*
-         * Recompute the block number of the previous packet given
-         * the new block size
-         */
-        block.num = (uint32_t)(((p->offset + chunk) >> (block.szx + 4)) - 1);
-        p->blk_size = block.szx;
-        chunk = (size_t)1 << (p->blk_size + 4);
-        p->offset = block.num * chunk;
-        coap_log_debug("new Block size is %u, block number %u completed\n",
-                       1 << (block.szx + 4), block.num);
+      if (block.num == 0) {
+        if ((p->offset + chunk) % ((size_t)1 << (block.szx + 4)) == 0) {
+          /*
+           * Recompute the block number of the previous packet given
+           * the new block size
+           */
+          block.num = (uint32_t)(((p->offset + chunk) >> (block.szx + 4)) - 1);
+          p->blk_size = block.szx;
+          chunk = (size_t)1 << (p->blk_size + 4);
+          p->offset = block.num * chunk;
+          coap_log_debug("new Block size is %u, block number %u completed\n",
+                         1 << (block.szx + 4), block.num);
+        } else {
+          coap_log_debug("ignoring request to increase Block size, "
+                         "next block is not aligned on requested block size "
+                         "boundary. (%zu x %u mod %u = %zu (which is not 0)\n",
+                         p->offset/chunk + 1, (1 << (p->blk_size + 4)),
+                         (1 << (block.szx + 4)),
+                         (p->offset + chunk) % ((size_t)1 << (block.szx + 4)));
+        }
       } else {
-        coap_log_debug("ignoring request to increase Block size, "
-                       "next block is not aligned on requested block size "
-                       "boundary. (%zu x %u mod %u = %zu (which is not 0)\n",
-                       p->offset/chunk + 1, (1 << (p->blk_size + 4)),
-                       (1 << (block.szx + 4)),
-                       (p->offset + chunk) % ((size_t)1 << (block.szx + 4)));
+        coap_log_debug("ignoring request to change Block size from %u to %u\n",
+                       (1 << (p->blk_size + 4)), (1 << (block.szx + 4)));
+        block.szx = block.aszx = p->blk_size;
       }
     }
   }
@@ -3503,6 +3509,13 @@ coap_handle_response_get_block(coap_context_t *context,
           coap_log_debug("block: Oversized packet - reduced to %"PRIu32" from %zu\n",
                          block.chunk_size, length);
           length = block.chunk_size;
+        }
+        if (block.m && length != block.chunk_size) {
+          coap_log_warn("block: Undersized packet - expected %"PRIu32", got %zu\n",
+                        block.chunk_size, length);
+          /* Unclear how to properly handle this */
+          rcvd->code = COAP_RESPONSE_CODE(402);
+          goto expire_lg_crcv;
         }
         /* Possibility that Size2 not sent, or is too small */
         chunk = (size_t)1 << (block.szx + 4);
