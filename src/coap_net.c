@@ -3736,6 +3736,13 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 #endif /* COAP_Q_BLOCK_SUPPORT */
       /* an empty ACK needs no further handling */
       goto cleanup;
+    } else if (COAP_PDU_IS_REQUEST(pdu)) {
+      /* This is not legitimate - Request using ACK - ignore */
+      coap_log_debug("dropped ACK with request code (%d.%02d)\n",
+                     COAP_RESPONSE_CLASS(pdu->code),
+                     pdu->code & 0x1f);
+      packet_is_bad = 1;
+      goto cleanup;
     }
 
     break;
