@@ -1076,6 +1076,34 @@ coap_client_delay_first(coap_session_t *session) {
   return 1;
 }
 
+/*
+ * return  0 Invalid
+ *         1 Valid
+ */
+int
+coap_check_code_class(coap_session_t *session, coap_pdu_t *pdu) {
+
+  /* Check validity of sending code */
+  switch (COAP_RESPONSE_CLASS(pdu->code)) {
+  case 0: /* Empty or request */
+  case 2: /* Success */
+  case 3: /* Reserved for future use */
+  case 4: /* Client error */
+  case 5: /* Server error */
+    break;
+  case 7: /* Reliable signalling */
+    if (COAP_PROTO_RELIABLE(session->proto))
+      break;
+  /* Not valid if UDP */
+  /* Fall through */
+  case 1: /* Invalid */
+  case 6: /* Invalid */
+  default:
+    return 0;
+  }
+  return 1;
+}
+
 coap_mid_t
 coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   coap_mid_t mid = COAP_INVALID_MID;
@@ -1091,6 +1119,14 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   assert(pdu);
 
   coap_lock_check_locked(session->context);
+
+  /* Check validity of sending code */
+  if (!coap_check_code_class(session, pdu)) {
+    coap_log_err("coap_send: Invalid PDU code (%d.%02d)\n",
+                 COAP_RESPONSE_CLASS(pdu->code),
+                 pdu->code & 0x1f);
+    goto error;
+  }
   pdu->session = session;
 #if COAP_CLIENT_SUPPORT
   if (session->type == COAP_SESSION_TYPE_CLIENT &&
@@ -1416,11 +1452,9 @@ send_it:
 #endif /* COAP_CLIENT_SUPPORT */
   return mid;
 
-#if COAP_CLIENT_SUPPORT
 error:
   coap_delete_pdu(pdu);
   return COAP_INVALID_MID;
-#endif
 }
 
 coap_mid_t
@@ -3222,6 +3256,14 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_lock_callback(context,
                      h(resource, session, pdu, query, response));
 
+  /* Check validity of response code */
+  if (!coap_check_code_class(session, response)) {
+    coap_log_warn("handle_request: Invalid PDU response code (%d.%02d)\n",
+                  COAP_RESPONSE_CLASS(response->code),
+                  response->code & 0x1f);
+    goto drop_it_no_debug;
+  }
+
   /* Check if lg_xmit generated and update PDU code if so */
   coap_check_code_lg_xmit(session, pdu, response, resource, query);
 
@@ -3603,6 +3645,20 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   pdu->session = session;
   coap_show_pdu(COAP_LOG_DEBUG, pdu);
 
+  /* Check validity of received code */
+  if (!coap_check_code_class(session, pdu)) {
+    coap_log_info("coap_dispatch: Received invalid PDU code (%d.%02d)\n",
+                  COAP_RESPONSE_CLASS(pdu->code),
+                  pdu->code & 0x1f);
+    packet_is_bad = 1;
+    if (pdu->type == COAP_MESSAGE_CON) {
+      coap_send_message_type(session, pdu, COAP_MESSAGE_RST);
+    }
+    /* find message id in sendqueue to stop retransmission */
+    coap_remove_from_queue(&context->sendqueue, session, pdu->mid, &sent);
+    goto cleanup;
+  }
+
   coap_option_filter_clear(&opt_filter);
 
 #if COAP_OSCORE_SUPPORT
@@ -3917,7 +3973,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
               }
             }
           } else {
-            coap_send_message_type(session, pdu, COAP_MESSAGE_RST);
+            if (pdu->type == COAP_MESSAGE_CON)
+              coap_send_message_type(session, pdu, COAP_MESSAGE_RST);
           }
         }
       }

@@ -394,6 +394,16 @@ coap_pdu_t *coap_wellknown_response(coap_context_t *context,
 unsigned int coap_calc_timeout(coap_session_t *session, unsigned char r);
 
 /**
+ * Check whether the pdu contains a valid code class
+ *
+ * @param session The CoAP session.
+ * @param pdu     The PDU to check.
+ *
+ * @return        @c 1 valid, @c 0 invalid.
+ */
+int coap_check_code_class(coap_session_t *session, coap_pdu_t *pdu);
+
+/**
  * Sends a CoAP message to given peer. The memory that is
  * allocated for the pdu will be released by coap_send_internal().
  * The caller must not use the pdu after calling coap_send_internal().

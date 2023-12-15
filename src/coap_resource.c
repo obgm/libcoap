@@ -1108,6 +1108,15 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         coap_lock_callback(obs->session->context,
                            h(r, obs->session, obs->pdu, query, response));
 
+        /* Check validity of response code */
+        if (!coap_check_code_class(obs->session, response)) {
+          coap_log_warn("handle_request: Invalid PDU response code (%d.%02d)\n",
+                        COAP_RESPONSE_CLASS(response->code),
+                        response->code & 0x1f);
+          coap_delete_pdu(response);
+          return;
+        }
+
         /* Check if lg_xmit generated and update PDU code if so */
         coap_check_code_lg_xmit(obs->session, obs->pdu, response, r, query);
         coap_delete_string(query);
