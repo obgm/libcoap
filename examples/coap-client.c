@@ -318,6 +318,7 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_OSCORE_DECODE_ERROR:
   case COAP_EVENT_WS_PACKET_SIZE:
   case COAP_EVENT_WS_CLOSED:
+  case COAP_EVENT_BAD_PACKET:
     quit = 1;
     break;
   case COAP_EVENT_DTLS_CONNECTED:
@@ -331,7 +332,6 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_XMIT_BLOCK_FAIL:
   case COAP_EVENT_SERVER_SESSION_NEW:
   case COAP_EVENT_SERVER_SESSION_DEL:
-  case COAP_EVENT_BAD_PACKET:
   case COAP_EVENT_MSG_RETRANSMITTED:
   case COAP_EVENT_WS_CONNECTED:
   case COAP_EVENT_KEEPALIVE_FAILURE:
@@ -357,7 +357,6 @@ nack_handler(coap_session_t *session COAP_UNUSED,
   switch (reason) {
   case COAP_NACK_TOO_MANY_RETRIES:
   case COAP_NACK_NOT_DELIVERABLE:
-  case COAP_NACK_RST:
   case COAP_NACK_TLS_FAILED:
   case COAP_NACK_WS_FAILED:
   case COAP_NACK_TLS_LAYER_FAILED:
@@ -365,8 +364,15 @@ nack_handler(coap_session_t *session COAP_UNUSED,
     coap_log_err("cannot send CoAP pdu\n");
     quit = 1;
     break;
-  case COAP_NACK_ICMP_ISSUE:
+  case COAP_NACK_RST:
+    coap_log_info("received RST pdu response\n");
+    quit = 1;
+    break;
   case COAP_NACK_BAD_RESPONSE:
+    coap_log_info("received bad response pdu\n");
+    quit = 1;
+    break;
+  case COAP_NACK_ICMP_ISSUE:
   default:
     ;
   }

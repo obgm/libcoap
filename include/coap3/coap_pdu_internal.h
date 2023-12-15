@@ -100,7 +100,8 @@
 
 #define COAP_PDU_IS_EMPTY(pdu)     ((pdu)->code == 0)
 #define COAP_PDU_IS_REQUEST(pdu)   (!COAP_PDU_IS_EMPTY(pdu) && (pdu)->code < 32)
-#define COAP_PDU_IS_RESPONSE(pdu)  ((pdu)->code >= 64 && (pdu)->code < 224)
+/* Code 1.xx (32-63) and 6.xx (192-224) currently invalid */
+#define COAP_PDU_IS_RESPONSE(pdu)  ((pdu)->code >= 64 && (pdu)->code < 192)
 #define COAP_PDU_IS_SIGNALING(pdu) ((pdu)->code >= 224)
 #define COAP_PDU_IS_PING(pdu)      ((COAP_PDU_IS_EMPTY(pdu) && \
                                      ((pdu)->type == COAP_MESSAGE_CON)) || \
