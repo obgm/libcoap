@@ -294,9 +294,17 @@ int
 coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
   int ret;
 
-  coap_lock_lock(context, return 0);
-  ret = coap_delete_resource_locked(context, resource);
-  coap_lock_unlock(context);
+  if (!resource)
+    return 0;
+
+  context = resource->context;
+  if (context) {
+    coap_lock_lock(context, return 0);
+    ret = coap_delete_resource_locked(context, resource);
+    coap_lock_unlock(context);
+  } else {
+    ret = coap_delete_resource_locked(context, resource);
+  }
   return ret;
 }
 
@@ -485,6 +493,8 @@ coap_delete_oscore_recipient(coap_context_t *context,
                              coap_bin_const_t *recipient_id) {
   int ret;
 
+  if (!context || !recipient_id)
+    return 0;
   coap_lock_lock(context, return 0);
   ret = coap_delete_oscore_recipient_locked(context, recipient_id);
   coap_lock_unlock(context);

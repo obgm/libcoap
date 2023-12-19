@@ -337,7 +337,7 @@ int coap_lock_lock_func(coap_lock_t *lock);
     } \
   } while (0)
 
-#define coap_lock_check_locked(s)
+#define coap_lock_check_locked(s) {}
 
 # endif /* ! COAP_THREAD_RECURSIVE_CHECK */
 
@@ -352,7 +352,7 @@ typedef coap_mutex_t coap_lock_t;
 #define coap_lock_unlock(s)
 #define coap_lock_init(s)
 #define coap_lock_being_freed(s,failed)
-#define coap_lock_check_locked(s)
+#define coap_lock_check_locked(s) {}
 #define coap_lock_callback(s,func) func
 #define coap_lock_callback_ret(r,s,func) ret = func
 #define coap_lock_invert(s,func,f) func

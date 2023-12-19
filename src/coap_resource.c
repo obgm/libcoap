@@ -555,8 +555,10 @@ coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
   if (!resource)
     return 0;
 
-  coap_lock_check_locked(context);
   context = resource->context;
+  if (context) {
+    coap_lock_check_locked(context);
+  }
 
   if (resource->is_unknown) {
     if (context && context->unknown_resource == resource) {
