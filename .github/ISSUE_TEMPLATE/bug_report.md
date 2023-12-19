@@ -61,12 +61,22 @@ details, it may not be possible to resolve your issue.**
 
 ## libcoap Configuration Summary
 
-Copy all the "libcoap Configuration Summary:" output lines (about 40 lines) here after running
-`./configure` (with any options that you have specified)
-  or
-`cmake ..` (with any -D options that you have specified)
-  or if neither of the above two methods is used (do from within the libcoap directory)
-`git describe --tags`
+If get_config,sh exists, please copy the output from (do in the top level libcoap directory) :-
+```
+./get_config.sh
+```
+Else if using ./configure, please copy the output from (do in the top level libcoap directory) :-
+```
+cat config.log | egrep "result:   |      libcoap|      host s" | cut -d\  -f3-
+```
+Else if using cmake, please copy the output from (do in the cmake build directory) :-
+```
+cmake -LH . | cut -d\  -f2- | egrep "\.\." | egrep "^[A-Z][A-Z]"
+```
+Else please copy the output from (do from within the libcoap directory) :-
+```
+git describe --tags --dirty --always
+```
 
 ## Problem Description
 
