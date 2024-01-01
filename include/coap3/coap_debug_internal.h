@@ -1,7 +1,7 @@
 /*
  * coap_debug_internal.h -- debug utilities
  *
- * Copyright (C) 2010-2011,2014-2023 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2011,2014-2024 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

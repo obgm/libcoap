@@ -1,7 +1,7 @@
 /*
  * encode.h -- encoding and decoding of CoAP data types
  *
- * Copyright (C) 2010-2012 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2012,2023-2024 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

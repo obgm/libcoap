@@ -1,6 +1,6 @@
 /* coap_str.c -- strings to be used in the CoAP library
  *
- * Copyright (C) 2010,2011,2022-2023 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010,2011,2022-2024 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

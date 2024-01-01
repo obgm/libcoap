@@ -1,7 +1,7 @@
 /*
  * coap_uri.h -- helper functions for URI treatment
  *
- * Copyright (C) 2010-2023 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2024 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

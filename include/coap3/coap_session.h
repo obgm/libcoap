@@ -1,11 +1,12 @@
 /* coap_session.h -- Session management for libcoap
-*
-* Copyright (C) 2017 Jean-Claue Michelou <jcm@spinetix.com>
-*
+ *
+ * Copyright (C) 2017 Jean-Claue Michelou <jcm@spinetix.com>
+ * Copyright (C) 2023-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
+ *
  * SPDX-License-Identifier: BSD-2-Clause
  *
-* This file is part of the CoAP library libcoap. Please see
-* README for terms of use.
+ * This file is part of the CoAP library libcoap. Please see
+ * README for terms of use.
 */
 
 /**

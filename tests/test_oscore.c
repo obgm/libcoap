@@ -2,7 +2,7 @@
 
 /* libcoap unit tests
  *
- * Copyright (C) 2021-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2021-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

@@ -1,7 +1,7 @@
 /*
  * coap_config.h.windows -- Windows configuration for libcoap
  *
- * Copyright (C) 2017-2023 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2017-2024 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

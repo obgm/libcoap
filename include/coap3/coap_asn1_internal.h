@@ -1,7 +1,7 @@
 /*
  * coap_asn1_internal.h -- ASN.1 functions for libcoap
  *
- * Copyright (C) 2020-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2020-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

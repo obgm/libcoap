@@ -1,8 +1,8 @@
 /*
  * coap_ws_internal.h -- WebSockets Transport Layer Support for libcoap
  *
- * Copyright (C) 2023 Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2023 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2023-2024 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2023-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

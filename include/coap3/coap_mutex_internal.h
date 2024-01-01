@@ -1,7 +1,7 @@
 /*
  * coap_mutex.h -- mutex utilities
  *
- * Copyright (C) 2019-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2019-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *               2019      Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause

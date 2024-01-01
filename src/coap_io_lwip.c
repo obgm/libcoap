@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2012,2014 Olaf Bergmann <bergmann@tzi.org>
- *               2014 chrysn <chrysn@fsfe.org>
- *               2022-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
+ *               2014      chrysn <chrysn@fsfe.org>
+ *               2022-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

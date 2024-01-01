@@ -1,8 +1,8 @@
 /*
  * coap_mbedtls.c -- Mbed TLS Datagram Transport Layer Support for libcoap
  *
- * Copyright (C) 2019-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
- *               2019 Jitin George <jitin@espressif.com>
+ * Copyright (C) 2019-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
+ *               2019      Jitin George <jitin@espressif.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

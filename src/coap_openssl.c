@@ -2,7 +2,7 @@
  * coap_openssl.c -- Datagram Transport Layer Support for libcoap with openssl
  *
  * Copyright (C) 2017      Jean-Claude Michelou <jcm@spinetix.com>
- * Copyright (C) 2018-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

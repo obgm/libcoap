@@ -2,7 +2,7 @@
  * coap_subscribe.h -- subscription handling for CoAP
  *                see RFC7641
  *
- * Copyright (C) 2010-2012,2014-2023 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2012,2014-2024 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

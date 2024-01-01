@@ -1,7 +1,7 @@
 /*
  * coap_event.c -- libcoap Event API
  *
- * Copyright (C) 2016 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2016-2024 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

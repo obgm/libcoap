@@ -2,7 +2,7 @@
  * coap_tinydtls.c -- Datagram Transport Layer Support for libcoap with tinydtls
  *
  * Copyright (C) 2016-2020 Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2020-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2020-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
