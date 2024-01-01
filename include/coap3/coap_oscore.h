@@ -4,8 +4,8 @@
  * coap_oscore.h -- Object Security for Constrained RESTful Environments
  *                  (OSCORE) support for libcoap
  *
- * Copyright (C) 2019-2023 Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2021-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2019-2024 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2021-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

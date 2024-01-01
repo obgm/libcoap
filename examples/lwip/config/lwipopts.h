@@ -2,7 +2,7 @@
  * lwipopts.h -- LwIP example
  *
  * Copyright (C) 2013-2016 Christian Amsüss <chrysn@fsfe.org>
- * Copyright (C) 2018-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

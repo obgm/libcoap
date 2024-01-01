@@ -1,7 +1,7 @@
 /*
  * coap_cache_internal.h -- Cache functions for libcoap
  *
- * Copyright (C) 2019--2023 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2019--2024 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

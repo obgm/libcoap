@@ -7,7 +7,7 @@
 [![CIFuzz Status](https://github.com/obgm/libcoap/actions/workflows/cifuzz.yml/badge.svg?branch=develop)](https://github.com/obgm/libcoap/actions/workflows/cifuzz.yml)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
-Copyright (C) 2010—2023 by Olaf Bergmann <bergmann@tzi.org> and others
+Copyright (C) 2010—2024 by Olaf Bergmann <bergmann@tzi.org> and others
 
 ABOUT LIBCOAP
 =============

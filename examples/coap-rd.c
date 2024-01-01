@@ -3,7 +3,7 @@
 /* coap -- simple implementation of the Constrained Application Protocol (CoAP)
  *         as defined in RFC 7252
  *
- * Copyright (C) 2010--2015,2022-2023 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2015,2022-2024 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -559,7 +559,7 @@ usage(const char *program, const char *version) {
     program = ++p;
 
   fprintf(stderr, "%s v%s -- CoRE Resource Directory implementation\n"
-          "(c) 2011-2012,2019-2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+          "(c) 2011-2012,2019-2024 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
           "Build: %s\n"
           "%s\n"
           , program, version, lib_build,

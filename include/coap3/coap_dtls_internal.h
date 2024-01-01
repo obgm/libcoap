@@ -1,8 +1,9 @@
 /*
  * coap_dtls_internal.h -- (Datagram) Transport Layer Support for libcoap
  *
- * Copyright (C) 2016 Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2017 Jean-Claude Michelou <jcm@spinetix.com>
+ * Copyright (C) 2016      Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2017      Jean-Claude Michelou <jcm@spinetix.com>
+ * Copyright (C) 2023-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

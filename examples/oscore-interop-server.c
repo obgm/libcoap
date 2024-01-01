@@ -5,7 +5,7 @@
  * A server for use in the RFC 8613 OSCORE interop testing.
  * https://core-wg.github.io/oscore/test-spec5.html
  *
- * Copyright (C) 2022-2023 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2022-2024 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -82,7 +82,7 @@ handle_sigint(int signum COAP_UNUSED) {
 
 #define INDEX "This is a OSCORE test server made with libcoap " \
   "(see https://libcoap.net)\n" \
-  "Copyright (C) 2023 Olaf Bergmann <bergmann@tzi.org> " \
+  "Copyright (C) 2022-2024 Olaf Bergmann <bergmann@tzi.org> " \
   "and others\n\n"
 
 static void
@@ -379,7 +379,7 @@ usage(const char *program, const char *version) {
     program = ++p;
 
   fprintf(stderr, "%s v%s -- OSCORE interop implementation\n"
-          "(c) 2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+          "(c) 2022-2024 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
           "Build: %s\n"
           "%s\n"
           , program, version, lib_build,

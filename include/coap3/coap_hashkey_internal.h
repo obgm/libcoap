@@ -1,5 +1,5 @@
 /*
- * coap_hashkey.h -- definition of hash key type and helper functions
+ * coap_hashkey_internal.h -- definition of hash key type and helper functions
  *
  * Copyright (C) 2010-2011 Olaf Bergmann <bergmann@tzi.org>
  *

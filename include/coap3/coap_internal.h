@@ -2,7 +2,7 @@
  * coap_internal.h -- Structures, Enums & Functions that are not exposed to
  * application programming
  *
- * Copyright (C) 2019-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2019-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

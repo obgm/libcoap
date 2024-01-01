@@ -1,7 +1,7 @@
 /*
  * coap_threadsafe_internal.h -- Mapping of threadsafe functions
  *
- * Copyright (C) 2023 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2023-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

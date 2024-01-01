@@ -1,6 +1,6 @@
 /* coap_io_riot.c -- Default network I/O functions for libcoap on RIOT
  *
- * Copyright (C) 2019 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2019-2024 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

@@ -1,6 +1,6 @@
 # Makefile for libcoap standalone examples
 #
-# Copyright (C) 2021-2023 Olaf Bergmann <bergmann@tzi.org>
+# Copyright (C) 2021-2024 Olaf Bergmann <bergmann@tzi.org>
 #
 # This file is part of the CoAP C library libcoap. Please see README and
 # COPYING for terms of use.

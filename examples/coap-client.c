@@ -2,7 +2,7 @@
 
 /* coap-client -- simple CoAP client
  *
- * Copyright (C) 2010--2023 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2010--2024 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -494,7 +494,7 @@ usage(const char *program, const char *version) {
     program = ++p;
 
   fprintf(stderr, "%s v%s -- a small CoAP implementation\n"
-          "Copyright (C) 2010-2023 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+          "Copyright (C) 2010-2024 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
           "Build: %s\n"
           "%s\n"
           , program, version, lib_build,

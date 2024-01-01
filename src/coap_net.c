@@ -1,6 +1,6 @@
 /* coap_net.c -- CoAP context inteface
  *
- * Copyright (C) 2010--2023 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2010--2024 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

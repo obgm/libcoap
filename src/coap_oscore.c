@@ -5,7 +5,7 @@
  *                  (OSCORE) support for libcoap
  *
  * Copyright (C) 2019-2021 Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2021      Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2021-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

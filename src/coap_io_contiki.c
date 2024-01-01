@@ -1,7 +1,7 @@
 /* coap_io_contiki.c -- Network I/O functions for libcoap on Contiki-NG
  *
  * Copyright (C) 2012,2014 Olaf Bergmann <bergmann@tzi.org>
- *               2014 chrysn <chrysn@fsfe.org>
+ *               2014      chrysn <chrysn@fsfe.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
