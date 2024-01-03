@@ -126,9 +126,9 @@ timecheck () {
 
 NO_PASS=0
 NO_FAIL=0
-# passfail count egrep-expression
+# passfail count grep-expression
 passfail () {
-  PASS=`cat /tmp/client_out | egrep "$2" | wc -l`
+  PASS=`cat /tmp/client_out | grep -E "$2" | wc -l`
   if [ "$PASS" = "$1" ] ; then
     echo Pass
     let "NO_PASS=$NO_PASS+1"
@@ -139,7 +139,7 @@ passfail () {
   if [ "$FULL_LOGS" = yes ] ; then
     cat /tmp/client_out
   elif [ "$PARTIAL_LOGS" = yes ] ; then
-    cat /tmp/client_out | egrep -v " DEBG | OSC  "
+    cat /tmp/client_out | grep -E -v " DEBG | OSC  "
   fi
 }
 
@@ -155,7 +155,7 @@ fi
 
 if [ "$SERVERS_ONLY" = yes ] ; then
   echo Servers are running, output in /tmp/server_b, /tmp/server_d, and /tmp/server_n
-  ps -ef | grep oscore-interop-server | egrep -v "grep "
+  ps -ef | grep oscore-interop-server | grep -E -v "grep "
   exit 0
 fi
 
@@ -165,7 +165,7 @@ rm -f /tmp/client_c
 
 # Test 0 General checkout
 echo -n "Test 0 - "
-timecheck 10 $CLIENT -w -v8 coap://$TARGET_IP:$S_PORT_B/oscore/hello/coap 2>&1 | egrep -v " DEBG | OSC  " > /tmp/client_out
+timecheck 10 $CLIENT -w -v8 coap://$TARGET_IP:$S_PORT_B/oscore/hello/coap 2>&1 | grep -E -v " DEBG | OSC  " > /tmp/client_out
 passfail 1 "^Hello World"
 
 # Test 1
