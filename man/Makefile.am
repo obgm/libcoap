@@ -69,12 +69,12 @@ man7_MANS = $(MAN7)
 
 .txt.3:
 	$(A2X) --doctype manpage --format manpage $<
-	@NEWLIST=`${SED} -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $< | ${SED} 's/^- /\\\\\\\- /g' | egrep -v 'NAME|----|SYNOPSIS|^\$$' | tr '\n' ' '` ;\
+	@NEWLIST=`${SED} -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $< | ${SED} 's/^- /\\\\\\\- /g' | ${EGREP} -v 'NAME|----|SYNOPSIS|^\$$' | tr '\n' ' '` ;\
 	NAME=`echo $< | ${SED} -ne 's/^\(coap_[a-zA-Z_0-9]\+\).*$$/\1.3/p'` ;\
 	${SED} -i '/.SH "NAME"/{n;d;}' $${NAME} ;\
 	${SED} -i "/\.SH \"NAME\"/a $${NEWLIST}" $${NAME}
 	$(A2X) --doctype manpage --format xhtml $<
-	@NEWLIST=`${SED} -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $< | ${SED} 's^/^\\\\/^g' | egrep -v 'NAME|----|SYNOPSIS|^\$$' | tr '\n' ' '` ;\
+	@NEWLIST=`${SED} -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $< | ${SED} 's^/^\\\\/^g' | ${EGREP} -v 'NAME|----|SYNOPSIS|^\$$' | tr '\n' ' '` ;\
 	NAME=`echo $< | ${SED} -ne 's/^\(coap_[a-zA-Z_0-9]\+\).*$$/\1.html/p'` ;\
 	${SED} -i "s^Name</h2><p>.*</p></div>^Name</h2><p>$${NEWLIST}</p></div>^" $${NAME}
 

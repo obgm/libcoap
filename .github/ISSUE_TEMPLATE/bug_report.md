@@ -67,11 +67,11 @@ If get_config,sh exists, please copy the output from (do in the top level libcoa
 ```
 Else if using ./configure, please copy the output from (do in the top level libcoap directory) :-
 ```
-cat config.log | egrep "result:   |      libcoap|      host s" | cut -d\  -f3-
+cat config.log | grep -E "result:   |      libcoap|      host s" | cut -d\  -f3-
 ```
 Else if using cmake, please copy the output from (do in the cmake build directory) :-
 ```
-cmake -LH . | cut -d\  -f2- | egrep "\.\." | egrep "^[A-Z][A-Z]"
+cmake -LH . | cut -d\  -f2- | grep -E "\.\." | grep -E "^[A-Z][A-Z]"
 ```
 Else please copy the output from (do from within the libcoap directory) :-
 ```

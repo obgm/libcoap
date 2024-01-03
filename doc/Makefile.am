@@ -82,10 +82,10 @@ man-page-build: upg-page-build man-page-start
 	##
 	for FILE in $${MAN_FILES} ; do \
 		BASE=`basename $${FILE} | cut -d. -f 1` ;\
-		MANUAL=`egrep -B 1 "^====" $${FILE} | head -1` ;\
-		SUMMARY=`egrep -B 2 "^SYNOPSIS" $${FILE} | ${SED} 's/coap-//g' | cut -d\- -f2 | cut -c2- | head -1` ;\
+		MANUAL=`${EGREP} -B 1 "^====" $${FILE} | head -1` ;\
+		SUMMARY=`${EGREP} -B 2 "^SYNOPSIS" $${FILE} | ${SED} 's/coap-//g' | cut -d\- -f2 | cut -c2- | head -1` ;\
 		if [ -z "$${SUMMARY}" ] ; then \
-			SUMMARY=`egrep -B 2 "^DESCRIPTION" $${FILE} | ${SED} 's/coap-//g' | cut -d\- -f2 | cut -c2- | head -1` ;\
+			SUMMARY=`${EGREP} -B 2 "^DESCRIPTION" $${FILE} | ${SED} 's/coap-//g' | cut -d\- -f2 | cut -c2- | head -1` ;\
 		fi ;\
 		##
 		## Fix and copy .html file across
@@ -126,7 +126,7 @@ man-page-build: upg-page-build man-page-start
 	echo '     <tab  type="usergroup" visible="yes" url="@ref man_individual" title="Individual Man Pages">' >> $(top_builddir)/doc/insert_file ;\
 	for FILE in $${MAN3_FILES} ; do \
 		BASE=`basename $${FILE} | cut -d. -f 1` ;\
-		LIST=`${SED} -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $${FILE} | ${SED} -ne '/coap_/{ s/ *, *//g ; p }' | egrep -v "^$${BASE}$$"` ;\
+		LIST=`${SED} -ne '/^NAME/,/^SYNOPSIS/p;/^SYNOPSIS/q' $${FILE} | ${SED} -ne '/coap_/{ s/ *, *//g ; p }' | ${EGREP} -v "^$${BASE}$$"` ;\
 		for ENTRY in $${LIST} ; do \
 			MANUAL="$${ENTRY}(3)" ;\
 			## Build the manual insert page
