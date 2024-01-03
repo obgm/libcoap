@@ -210,6 +210,8 @@ struct coap_session_t {
                                        been processed */
   coap_mid_t last_con_mid;        /**< The last CON mid that has been
                                        been processed */
+  coap_response_t last_con_handler_res; /**< The result of calling the response handler
+                                       of the last CON */
 };
 
 #if COAP_SERVER_SUPPORT
