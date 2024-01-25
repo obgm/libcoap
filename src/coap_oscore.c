@@ -1678,11 +1678,12 @@ get_split_entry(const char **start,
                 oscore_value_t *value) {
   const char *begin = *start;
   const char *end;
+  const char *kend;
   const char *split;
   size_t i;
 
 retry:
-  end = memchr(begin, '\n', size);
+  kend = end = memchr(begin, '\n', size);
   if (end == NULL)
     return 0;
 
@@ -1693,7 +1694,7 @@ retry:
 
   if (begin[0] == '#' || (end - begin) == 0) {
     /* Skip comment / blank line */
-    size -= end - begin + 1;
+    size -= kend - begin + 1;
     begin = *start;
     goto retry;
   }
