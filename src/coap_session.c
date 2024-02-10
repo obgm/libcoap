@@ -514,8 +514,7 @@ coap_session_mfree(coap_session_t *session) {
   }
 #endif /* COAP_SERVER_SUPPORT */
   LL_FOREACH_SAFE(session->delayqueue, q, tmp) {
-    if (q->pdu->type==COAP_MESSAGE_CON && session->context &&
-        session->context->nack_handler) {
+    if (q->pdu->type==COAP_MESSAGE_CON && session->context->nack_handler) {
       coap_check_update_token(session, q->pdu);
       coap_lock_callback(session->context,
                          session->context->nack_handler(session, q->pdu,
