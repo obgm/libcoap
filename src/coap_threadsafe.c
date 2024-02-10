@@ -416,6 +416,8 @@ coap_persist_startup(coap_context_t *context,
 
 void
 coap_persist_stop(coap_context_t *context) {
+  if (!context)
+    return;
   coap_lock_lock(context, return);
   coap_persist_stop_locked(context);
   coap_lock_unlock(context);
