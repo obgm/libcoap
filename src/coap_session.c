@@ -1837,7 +1837,8 @@ coap_free_endpoint(coap_endpoint_t *ep) {
   if (ep) {
     coap_session_t *session, *rtmp;
 
-    coap_lock_check_locked(ep->context);
+    if (ep->context)
+      coap_lock_check_locked(ep->context);
     SESSIONS_ITER_SAFE(ep->sessions, session, rtmp) {
       assert(session->ref == 0);
       if (session->ref == 0) {
