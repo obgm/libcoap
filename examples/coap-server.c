@@ -1390,11 +1390,7 @@ hnd_put_post(coap_resource_t *resource,
                                            COAP_CACHE_NOT_RECORD_PDU,
                                            COAP_CACHE_IS_SESSION_BASED, 0);
       } else {
-        data_so_far = coap_cache_get_app_data(cache_entry);
-        if (data_so_far) {
-          coap_delete_binary(data_so_far);
-          data_so_far = NULL;
-        }
+        coap_delete_binary(coap_cache_get_app_data(cache_entry));
         coap_cache_set_app_data(cache_entry, NULL, NULL);
       }
     }
