@@ -1423,9 +1423,9 @@ setup_psk(const uint8_t *identity,
   dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
   dtls_psk.validate_ih_call_back = verify_ih_callback;
   dtls_psk.ih_call_back_arg = &dtls_psk.psk_info;
-  if (uri.host.length)
-    memcpy(client_sni, uri.host.s,
-           min(uri.host.length, sizeof(client_sni) - 1));
+  if ((uri.host.length == 3 && memcmp(uri.host.s, "::1", 3) != 0) ||
+      (uri.host.length == 9 && memcmp(uri.host.s, "127.0.0.1", 9) != 0))
+    memcpy(client_sni, uri.host.s, min(uri.host.length, sizeof(client_sni)-1));
   else
     memcpy(client_sni, "localhost", 9);
   dtls_psk.client_sni = client_sni;
