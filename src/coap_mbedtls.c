@@ -76,6 +76,9 @@
 #if defined(ESPIDF_VERSION) && defined(CONFIG_MBEDTLS_DEBUG)
 #include <mbedtls/esp_debug.h>
 #endif /* ESPIDF_VERSION && CONFIG_MBEDTLS_DEBUG */
+#if defined(MBEDTLS_PSA_CRYPTO_C)
+#include <psa/crypto.h>
+#endif /* MBEDTLS_PSA_CRYPTO_C */
 
 #define mbedtls_malloc(a) malloc(a)
 #define mbedtls_realloc(a,b) realloc(a,b)
@@ -1511,6 +1514,10 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
   mbedtls_ctr_drbg_init(&m_env->ctr_drbg);
   mbedtls_ssl_config_init(&m_env->conf);
   mbedtls_entropy_init(&m_env->entropy);
+
+#if defined(MBEDTLS_PSA_CRYPTO_C)
+  psa_crypto_init();
+#endif /* MBEDTLS_PSA_CRYPTO_C */
 
 #if defined(ESPIDF_VERSION) && defined(CONFIG_MBEDTLS_DEBUG)
   mbedtls_esp_enable_debug_log(&m_env->conf, CONFIG_MBEDTLS_DEBUG_LEVEL);
