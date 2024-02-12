@@ -204,8 +204,6 @@ extern coap_mutex_t m_persist_add;
 #if COAP_THREAD_SAFE
 # if COAP_THREAD_RECURSIVE_CHECK
 
-typedef void (*coap_free_func_t)(void *stucture);
-
 /*
  * Locking, with deadlock detection
  */
@@ -228,16 +226,82 @@ void coap_lock_unlock_func(coap_lock_t *lock, const char *file, int line);
 int coap_lock_lock_func(coap_lock_t *lock, const char *file, int line);
 
 #define coap_lock_lock(s,failed) do { \
+    assert(s); \
     if (!coap_lock_lock_func(&(s)->lock, __FILE__, __LINE__)) { \
       failed; \
     } \
   } while (0)
 
 #define coap_lock_unlock(s) do { \
-    coap_lock_unlock_func(&(s)->lock,  __FILE__, __LINE__); \
+    assert(s); \
+    coap_lock_unlock_func(&(s)->lock, __FILE__, __LINE__); \
   } while (0)
 
+#define coap_lock_callback(s,func) do { \
+    coap_lock_check_locked(s); \
+    (s)->lock.in_callback++; \
+    (s)->lock.callback_file = __FILE__; \
+    (s)->lock.callback_line = __LINE__; \
+    func; \
+    (s)->lock.in_callback--; \
+  } while (0)
+
+#define coap_lock_callback_ret(r,s,func) do { \
+    coap_lock_check_locked(s); \
+    (s)->lock.in_callback++; \
+    (s)->lock.callback_file = __FILE__; \
+    (s)->lock.callback_line = __LINE__; \
+    r = func; \
+    (s)->lock.in_callback--; \
+  } while (0)
+
+# else /* ! COAP_THREAD_RECURSIVE_CHECK */
+
+/*
+ * Locking, but no deadlock detection
+ */
+typedef struct coap_lock_t {
+  coap_mutex_t mutex;
+  coap_thread_pid_t pid;
+  coap_thread_pid_t freeing_pid;
+  uint32_t being_freed;
+  uint32_t in_callback;
+  volatile uint32_t lock_count;
+} coap_lock_t;
+
+void coap_lock_unlock_func(coap_lock_t *lock);
+int coap_lock_lock_func(coap_lock_t *lock);
+
+#define coap_lock_lock(s,failed) do { \
+    assert(s); \
+    if (!coap_lock_lock_func(&(s)->lock)) { \
+      failed; \
+    } \
+  } while (0)
+
+#define coap_lock_unlock(s) do { \
+    assert(s); \
+    coap_lock_unlock_func(&(s)->lock); \
+  } while (0)
+
+#define coap_lock_callback(s,func) do { \
+    coap_lock_check_locked(s); \
+    (s)->lock.in_callback++; \
+    func; \
+    (s)->lock.in_callback--; \
+  } while (0)
+
+#define coap_lock_callback_ret(r,s,func) do { \
+    coap_lock_check_locked(s); \
+    (s)->lock.in_callback++; \
+    r = func; \
+    (s)->lock.in_callback--; \
+  } while (0)
+
+# endif /* ! COAP_THREAD_RECURSIVE_CHECK */
+
 #define coap_lock_init(s) do { \
+    assert(s); \
     memset(&((s)->lock), 0, sizeof((s)->lock)); \
     coap_mutex_init(&(s)->lock.mutex); \
   } while (0)
@@ -250,26 +314,11 @@ int coap_lock_lock_func(coap_lock_t *lock, const char *file, int line);
   } while (0)
 
 #define coap_lock_check_locked(s) do { \
-    assert ((s)->lock.being_freed ? coap_thread_pid == (s)->lock.freeing_pid: coap_thread_pid == (s)->lock.pid); \
-  } while (0)
-
-#define coap_lock_callback(s,func) do { \
-    (s)->lock.in_callback++; \
-    (s)->lock.callback_file = __FILE__; \
-    (s)->lock.callback_line = __LINE__; \
-    func; \
-    (s)->lock.in_callback--; \
-  } while (0)
-
-#define coap_lock_callback_ret(r,s,func) do { \
-    (s)->lock.in_callback++; \
-    (s)->lock.callback_file = __FILE__; \
-    (s)->lock.callback_line = __LINE__; \
-    r = func; \
-    (s)->lock.in_callback--; \
+    assert ((s) && (s)->lock.being_freed ? coap_thread_pid == (s)->lock.freeing_pid: coap_thread_pid == (s)->lock.pid); \
   } while (0)
 
 #define coap_lock_invert(s,func,f) do { \
+    coap_lock_check_locked(s); \
     if (!(s)->lock.being_freed) { \
       coap_lock_unlock(s); \
       func; \
@@ -278,68 +327,6 @@ int coap_lock_lock_func(coap_lock_t *lock, const char *file, int line);
       func; \
     } \
   } while (0)
-
-# else /* ! COAP_THREAD_RECURSIVE_CHECK */
-
-/*
- * Locking, but no deadlock detection
- */
-typedef struct coap_lock_t {
-  coap_mutex_t mutex;
-  uint32_t being_freed;
-  uint32_t in_callback;
-  volatile uint32_t lock_count;
-} coap_lock_t;
-
-void coap_lock_unlock_func(coap_lock_t *lock);
-int coap_lock_lock_func(coap_lock_t *lock);
-
-#define coap_lock_lock(s,failed) do { \
-    if (!coap_lock_lock_func(&(s)->lock)) { \
-      failed; \
-    } \
-  } while (0)
-
-#define coap_lock_unlock(s) do { \
-    coap_lock_unlock_func(&(s)->lock); \
-  } while (0)
-
-#define coap_lock_init(s) do { \
-    memset(&((s)->lock), 0, sizeof((s)->lock)); \
-    coap_mutex_init(&(s)->lock.mutex); \
-  } while (0)
-
-#define coap_lock_being_freed(s,failed) do { \
-    coap_lock_lock(s,failed); \
-    (s)->lock.being_freed = 1; \
-    coap_lock_unlock(s); \
-  } while (0)
-
-#define coap_lock_callback(s,func) do { \
-    (s)->lock.in_callback++; \
-    func; \
-    (s)->lock.in_callback--; \
-  } while (0)
-
-#define coap_lock_callback_ret(r,s,func) do { \
-    (s)->lock.in_callback++; \
-    r = func; \
-    (s)->lock.in_callback--; \
-  } while (0)
-
-#define coap_lock_invert(s,func,f) do { \
-    if (!(s)->lock.being_freed) { \
-      coap_lock_unlock(s); \
-      func; \
-      coap_lock_lock(s,f); \
-    } else { \
-      func; \
-    } \
-  } while (0)
-
-#define coap_lock_check_locked(s) {}
-
-# endif /* ! COAP_THREAD_RECURSIVE_CHECK */
 
 #else /* ! COAP_THREAD_SAFE */
 
