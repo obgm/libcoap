@@ -236,7 +236,7 @@ definitions have to be in DER, not PEM, format.  Otherwise all of
   to be in this list and is trusted for the validation. Using
   *-R trust_casfile* disables common CA mutual authentication which can only
   be done by using *-C cafile*. Using the *-C* or *-R* options will
-  trigger the validation of the server certificate unless overridden by the
+  trigger the validation of the client certificate unless overridden by the
   *-n* option.
 
 *-S* match_pki_sni_file::
