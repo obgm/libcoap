@@ -1421,7 +1421,9 @@ setup_psk(const uint8_t *identity,
   memset(client_sni, 0, sizeof(client_sni));
   memset(&dtls_psk, 0, sizeof(dtls_psk));
   dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
-  dtls_psk.validate_ih_call_back = verify_ih_callback;
+  if (valid_ihs.count) {
+    dtls_psk.validate_ih_call_back = verify_ih_callback;
+  }
   dtls_psk.ih_call_back_arg = &dtls_psk.psk_info;
   if (uri.host.length)
     memcpy(client_sni, uri.host.s,
