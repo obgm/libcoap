@@ -1561,9 +1561,6 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
   timeout = coap_io_prepare_io(ctx, ctx->sockets,
                                (sizeof(ctx->sockets) / sizeof(ctx->sockets[0])),
                                &ctx->num_sockets, before);
-  if (timeout_ms != COAP_IO_NO_WAIT && timeout_ms != COAP_IO_WAIT &&
-      timeout_ms < timeout)
-    timeout = timeout_ms;
 
   if (ereadfds) {
     ctx->readfds = *ereadfds;
@@ -1604,8 +1601,11 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
     tv.tv_usec = 0;
     tv.tv_sec = 0;
     timeout = 1;
-  } else if (timeout > 0) {
-    /* Ignore timeout_ms == COAP_IO_WAIT as there is something coming up */
+  } else if (timeout == 0 && timeout_ms == COAP_IO_WAIT) {
+    ;
+  } else {
+    if (timeout == 0 || timeout_ms < timeout)
+      timeout = timeout_ms;
     tv.tv_usec = (timeout % 1000) * 1000;
     tv.tv_sec = (long)(timeout / 1000);
   }
@@ -1674,13 +1674,9 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 
   timeout = coap_io_prepare_epoll(ctx, before);
 
-  if (timeout_ms != COAP_IO_NO_WAIT && timeout_ms != COAP_IO_WAIT &&
-      timeout_ms < timeout)
-    timeout = timeout_ms;
-
   do {
     struct epoll_event events[COAP_MAX_EPOLL_EVENTS];
-    int etimeout = timeout;
+    int etimeout;
 
     /* Potentially adjust based on what the caller wants */
     if (timeout_ms == COAP_IO_NO_WAIT) {
@@ -1692,12 +1688,17 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
        * so wait forever in epoll_wait().
        */
       etimeout = -1;
-    } else if (etimeout < 0) {
-      /*
-       * If timeout > INT_MAX, epoll_wait() cannot wait longer than this as
-       * it has int timeout parameter
-       */
-      etimeout = INT_MAX;
+    } else {
+      etimeout = timeout;
+      if (timeout == 0 || timeout_ms < timeout)
+        etimeout = timeout_ms;
+      if (etimeout < 0) {
+        /*
+         * If timeout > INT_MAX, epoll_wait() cannot wait longer than this as
+         * it has int timeout parameter
+         */
+        etimeout = INT_MAX;
+      }
     }
 
     /* Unlock so that other threads can lock/update ctx */
