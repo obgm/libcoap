@@ -4334,6 +4334,7 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
                         "cannot get interface index for '%s'\n",
                         ifname);
         }
+#elif defined(__QNXNTO__)
 #else /* !HAVE_IF_NAMETOINDEX */
         result = ioctl(ctx->endpoint->sock.fd, SIOCGIFINDEX, &ifr);
         if (result != 0) {

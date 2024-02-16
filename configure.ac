@@ -1120,6 +1120,11 @@ case $host in
     LIBS="${LIBS} -lws2_32"
     ;;
 
+    *-qnx*)
+    AC_MSG_RESULT([QNX])
+    ADDITIONAL_CFLAGS="-D_QNX_SOURCE"
+    ;;
+
     *)
     AC_MSG_WARN([==> Currently unsupported operating system '${host}' !])
     AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
