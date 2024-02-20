@@ -1596,13 +1596,18 @@ void
 coap_session_init_token(coap_session_t *session, size_t len,
                         const uint8_t *data) {
   session->tx_token = coap_decode_var_bytes8(data, len);
+  /*
+   * Decrement as when first used by coap_session_new_token() it will
+   * get incremented
+   */
+  session->tx_token--;
 }
 
 void
 coap_session_new_token(coap_session_t *session, size_t *len,
                        uint8_t *data) {
   *len = coap_encode_var_safe8(data,
-                               sizeof(session->tx_token), session->tx_token++);
+                               sizeof(session->tx_token), ++session->tx_token);
 }
 
 uint16_t
