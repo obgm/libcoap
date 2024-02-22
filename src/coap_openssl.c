@@ -836,6 +836,19 @@ coap_set_user_prefs(SSL_CTX *ctx) {
 #endif
 }
 
+#if COAP_DTLS_RETRANSMIT_MS != 1000
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+static unsigned int
+timer_cb(SSL *s, unsigned int timer_us) {
+  (void)s;
+  if (timer_us == 0)
+    return COAP_DTLS_RETRANSMIT_MS * 1000;
+  else
+    return 2 * timer_us;
+}
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
+#endif /* COAP_DTLS_RETRANSMIT_MS != 1000 */
+
 void *
 coap_dtls_new_context(coap_context_t *coap_context) {
   coap_openssl_context_t *context;
@@ -2957,6 +2970,13 @@ setup_client_ssl_session(coap_session_t *session, SSL *ssl
       SSL_set_verify_depth(ssl, setup_data->cert_chain_verify_depth + 1);
 
   }
+#if COAP_DTLS_RETRANSMIT_MS != 1000
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+  if (session->proto == COAP_PROTO_DTLS) {
+    DTLS_set_timer_cb(ssl, timer_cb);
+  }
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
+#endif /* COAP_DTLS_RETRANSMIT_MS != 1000 */
   return 1;
 }
 
@@ -3401,6 +3421,14 @@ coap_tls_new_server_session(coap_session_t *session) {
     coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
     session->sock.lfunc[COAP_LAYER_TLS].l_establish(session);
   }
+
+#if COAP_DTLS_RETRANSMIT_MS != 1000
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+  if (session->proto == COAP_PROTO_DTLS) {
+    DTLS_set_timer_cb(ssl, timer_cb);
+  }
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
+#endif /* COAP_DTLS_RETRANSMIT_MS != 1000 */
 
   return ssl;
 

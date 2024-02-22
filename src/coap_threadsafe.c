@@ -760,11 +760,11 @@ coap_session_send_ping(coap_session_t *session) {
 #if COAP_THREAD_RECURSIVE_CHECK
 void
 coap_lock_unlock_func(coap_lock_t *lock, const char *file, int line) {
+  assert(coap_thread_pid == lock->pid);
   if (lock->in_callback) {
     assert(lock->lock_count > 0);
     lock->lock_count--;
   } else {
-    assert(lock->pid != 0);
     lock->pid = 0;
     lock->unlock_file = file;
     lock->unlock_line = line;
@@ -774,53 +774,55 @@ coap_lock_unlock_func(coap_lock_t *lock, const char *file, int line) {
 
 int
 coap_lock_lock_func(coap_lock_t *lock, const char *file, int line) {
-  if (coap_mutex_trylock(&lock->mutex)) {
-    if (lock->in_callback) {
-      if (coap_thread_pid != lock->pid) {
-        coap_mutex_lock(&lock->mutex);
-      } else {
-        lock->lock_count++;
-        assert(lock->in_callback == lock->lock_count);
-      }
-    } else {
+  if (lock->in_callback && coap_thread_pid == lock->pid) {
+    lock->lock_count++;
+    assert(lock->in_callback == lock->lock_count);
+  } else {
+    if (coap_mutex_trylock(&lock->mutex)) {
       if (coap_thread_pid == lock->pid) {
         coap_log_alert("Thread Deadlock: Last %s: %u, this %s: %u\n",
                        lock->lock_file, lock->lock_line, file, line);
         assert(0);
       }
       coap_mutex_lock(&lock->mutex);
-      lock->pid = coap_thread_pid;
-      lock->lock_file = file;
-      lock->lock_line = line;
     }
+    /* Just got the lock, so should not be in a locked callback */
+    assert(!lock->in_callback);
+    lock->pid = coap_thread_pid;
+    lock->lock_file = file;
+    lock->lock_line = line;
     if (lock->being_freed) {
       coap_lock_unlock_func(lock, file, line);
       return 0;
     }
-  } else {
-    lock->pid = coap_thread_pid;
-    lock->lock_file = file;
-    lock->lock_line = line;
   }
   return 1;
 }
-#else /* COAP_THREAD_RECURSIVE_CHECK */
+
+#else /* ! COAP_THREAD_RECURSIVE_CHECK */
+
 void
 coap_lock_unlock_func(coap_lock_t *lock) {
+  assert(coap_thread_pid == lock->pid);
   if (lock->in_callback) {
     assert(lock->lock_count > 0);
     lock->lock_count--;
   } else {
+    lock->pid = 0;
     coap_mutex_unlock(&lock->mutex);
   }
 }
 
 int
 coap_lock_lock_func(coap_lock_t *lock) {
-  if (lock->in_callback) {
+  if (lock->in_callback && coap_thread_pid == lock->pid) {
     lock->lock_count++;
+    assert(lock->in_callback == lock->lock_count);
   } else {
     coap_mutex_lock(&lock->mutex);
+    /* Just got the lock, so should not be in a locked callback */
+    assert(!lock->in_callback);
+    lock->pid = coap_thread_pid;
     if (lock->being_freed) {
       coap_lock_unlock_func(lock);
       return 0;
@@ -828,8 +830,7 @@ coap_lock_lock_func(coap_lock_t *lock) {
   }
   return 1;
 }
-#endif /* COAP_THREAD_RECURSIVE_CHECK */
-
+#endif /* ! COAP_THREAD_RECURSIVE_CHECK */
 
 #else /* ! COAP_THREAD_SAFE */
 
