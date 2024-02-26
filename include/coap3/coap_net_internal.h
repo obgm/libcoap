@@ -91,6 +91,9 @@ struct coap_context_t {
                                    *   scheduled using lwIP timers for this
                                    *   context, otherwise 0. */
 #endif /* WITH_LWIP */
+#ifdef RIOT_VERSION
+  thread_t *selecting_thread;
+#endif /* RIOT_VERSION */
 #if COAP_OSCORE_SUPPORT
   struct oscore_ctx_t *p_osc_ctx; /**< primary oscore context  */
 #endif /* COAP_OSCORE_SUPPORT */
@@ -175,11 +178,13 @@ struct coap_context_t {
   int eptimerfd;                   /**< Internal FD for timeout */
   coap_tick_t next_timeout;        /**< When the next timeout is to occur */
 #else /* ! COAP_EPOLL_SUPPORT */
+#if !defined(RIOT_VERSION)
   fd_set readfds, writefds, exceptfds; /**< Used for select call
                                             in coap_io_process_with_fds() */
   coap_socket_t *sockets[64];      /**< Track different socket information
                                         in coap_io_process_with_fds */
   unsigned int num_sockets;        /**< Number of sockets being tracked */
+#endif /* ! RIOT_VERSION */
 #endif /* ! COAP_EPOLL_SUPPORT */
 #if COAP_SERVER_SUPPORT
   uint8_t observe_pending;         /**< Observe response pending */

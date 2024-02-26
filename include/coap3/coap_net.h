@@ -20,7 +20,9 @@
 #include <stdlib.h>
 #include <string.h>
 #ifndef _WIN32
+#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
+#endif /* HAVE_SYS_SELECT_H */
 #include <sys/time.h>
 #endif
 #include <time.h>
@@ -623,6 +625,7 @@ void coap_mcast_per_resource(coap_context_t *context);
  */
 int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms);
 
+#if !defined(RIOT_VERSION)
 /**
  * The main message processing loop with additional fds for internal select.
  *
@@ -653,6 +656,7 @@ int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms);
 int coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
                              int nfds, fd_set *readfds, fd_set *writefds,
                              fd_set *exceptfds);
+#endif /* ! RIOT_VERSION */
 
 /**
  * Check to see if there is any i/o pending for the @p context.

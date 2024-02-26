@@ -52,7 +52,9 @@
 #define coap_io_prepare_epoll(c,n)                      coap_io_prepare_epoll_locked(c,n)
 #define coap_io_prepare_io(c,s,m,n,t)                   coap_io_prepare_io_locked(c,s,m,n,t)
 #define coap_io_process(s,t)                            coap_io_process_locked(s,t)
+#ifdef HAVE_SYS_SELECT_H
 #define coap_io_process_with_fds(s,t,n,r,w,e)           coap_io_process_with_fds_locked(s,t,n,r,w,e)
+#endif /* HAVE_SYS_SELECT_H */
 #define coap_join_mcast_group_intf(c,g,i)               coap_join_mcast_group_intf_locked(c,g,i)
 #define coap_new_cache_entry(s,p,r,b,i)                 coap_new_cache_entry_locked(s,p,r,b,i)
 #define coap_new_client_session(c,l,s,p)                coap_new_client_session_locked(c,l,s,p)
@@ -169,9 +171,11 @@ int                  coap_persist_startup_locked(coap_context_t *context,
                                                  uint32_t save_freq);
 void                 coap_persist_stop_locked(coap_context_t *context);
 int                  coap_io_process_locked(coap_context_t *ctx, uint32_t timeout_ms);
+#ifdef HAVE_SYS_SELECT_H
 int                  coap_io_process_with_fds_locked(coap_context_t *ctx, uint32_t timeout_ms,
                                                      int nfds, fd_set *readfds, fd_set *writefds,
                                                      fd_set *exceptfds);
+#endif /* HAVE_SYS_SELECT_H */
 coap_async_t        *coap_register_async_locked(coap_session_t *session, const coap_pdu_t *request,
                                                 coap_tick_t delay);
 size_t               coap_session_max_pdu_size_locked(const coap_session_t *session);

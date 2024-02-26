@@ -29,6 +29,10 @@ struct uip_udp_conn;
 
 #ifdef RIOT_VERSION
 #include "net/gnrc.h"
+#include "net/sock/udp.h"
+#if ! COAP_DISABLE_TCP
+#include "net/sock/tcp.h"
+#endif /* ! COAP_DISABLE_TCP */
 #endif /* RIOT_VERSION */
 
 struct coap_socket_t {
@@ -42,12 +46,16 @@ struct coap_socket_t {
 #elif defined(WITH_CONTIKI)
   struct uip_udp_conn *udp_conn;
   coap_context_t *context;
+
+#elif defined(RIOT_VERSION)
+  sock_udp_t udp;
+#if ! COAP_DISABLE_TCP
+  sock_tcp_t tcp;
+#endif /* ! COAP_DISABLE_TCP */
+  coap_fd_t fd;
 #else
   coap_fd_t fd;
-#endif /* WITH_LWIP */
-#if defined(RIOT_VERSION)
-  gnrc_pktsnip_t *pkt; /**< pointer to received packet for processing */
-#endif /* RIOT_VERSION */
+#endif /* ! WITH_LWIP && !WITH_CONTIKI && ! RIOT_VERSION */
   coap_socket_flags_t flags; /**< 1 or more of COAP_SOCKET* flag values */
   coap_session_t *session; /**< Used to determine session owner. */
 #if COAP_SERVER_SUPPORT
@@ -93,9 +101,11 @@ int coap_socket_connect_udp(coap_socket_t *sock,
                             coap_address_t *remote_addr);
 #endif /* COAP_CLIENT_SUPPORT */
 
+#if COAP_SERVER_SUPPORT
 int coap_socket_bind_udp(coap_socket_t *sock,
                          const coap_address_t *listen_addr,
                          coap_address_t *bound_addr);
+#endif /* COAP_SERVER_SUPPORT */
 
 /**
  * Function interface to close off a socket.

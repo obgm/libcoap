@@ -224,17 +224,17 @@ get_session_addr(const session_t *s, coap_address_t *a) {
   a->port = s->port;
 #elif defined(WITH_RIOT_SOCK)
   if (s->addr.family == AF_INET6) {
-    a->size = (socklen_t)sizeof(a->addr.sin6);
-    a->addr.sa.sa_family = s->addr.family;
-    memcpy(&a->addr.sin6.sin6_addr, &s->addr.ipv6,
-           sizeof(a->addr.sin6.sin6_addr));
-    a->addr.sin6.sin6_port = s->addr.port;
+    a->riot.family = s->addr.family;
+    memcpy(&a->riot.addr.ipv6, &s->addr.ipv6,
+           sizeof(a->riot.addr.ipv6));
+    a->riot.port = ntohs(s->addr.port);
+    a->riot.netif = 0;
 #ifdef SOCK_HAS_IPV4
   } else if (s->addr.family == AF_INET) {
-    a->addr.sa.sa_family = s->addr.family;
-    a->size = (socklen_t)sizeof(a->addr.sin);
-    memcpy(&a->addr.sin.sin_addr, &s->addr.ipv4, sizeof(a->addr.sin.sin_addr));
-    a->addr.sin.sin_port = s->addr.port;
+    a->riot.family = s->addr.family;
+    memcpy(&a->riot.addr.ipv4, &s->addr.ipv4, sizeof(a->riot.addr.ipv4));
+    a->riot.port = ntohs(s->addr.port);
+    a->riot.netif = 0;
 #endif /* SOCK_HAS_IPV4 */
   }
 #else /* ! WITH_CONTIKI && ! WITH_LWIP && ! WITH_RIOT_SOCK */
@@ -258,18 +258,18 @@ put_session_addr(const coap_address_t *a, session_t *s) {
   s->addr = a->addr;
   s->port = a->port;
 #elif defined(WITH_RIOT_SOCK)
-  if (a->addr.sa.sa_family == AF_INET6) {
-    s->size = (socklen_t)sizeof(s->addr.ipv6);
-    s->addr.family = a->addr.sa.sa_family;
-    memcpy(&s->addr.ipv6, &a->addr.sin6.sin6_addr,
+  if (a->riot.family == AF_INET6) {
+    s->size = sizeof(s->addr.ipv6);
+    s->addr.family = a->riot.family;
+    memcpy(&s->addr.ipv6, &a->riot.addr.ipv6,
            sizeof(s->addr.ipv6));
-    s->addr.port = a->addr.sin6.sin6_port;
+    s->addr.port = htons(a->riot.port);
 #ifdef SOCK_HAS_IPV4
-  } else if (a->addr.sa.sa_family == AF_INET) {
-    s->size = (socklen_t)sizeof(s->addr.ipv4);
-    s->addr.family = a->addr.sa.sa_family;
-    memcpy(&a->addr.ipv4, &s->addr.sin.sin_addr, sizeof(a->addr.ipv4));
-    s->addr.port = a->addr.sin.sin_port;
+  } else if (a->r.family == AF_INET) {
+    s->size = sizeof(s->addr.ipv4);
+    s->addr.family = a->r.family;
+    memcpy(&a->addr.ipv4, &s->r.addr.ipv4, sizeof(a->addr.ipv4));
+    s->addr.port = htons(a->r.port);
 #endif /* SOCK_HAS_IPV4 */
   }
 #else /* ! WITH_CONTIKI && ! WITH_LWIP && ! WITH_RIOT_SOCK */
