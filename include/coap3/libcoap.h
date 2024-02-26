@@ -38,10 +38,10 @@ typedef USHORT in_port_t;
 #define        _IN_PORT_T_DECLARED
 #endif
 #endif /* !defined(__MINGW32__) */
-#elif !defined (CONTIKI) && !defined (WITH_LWIP)
+#elif !defined (CONTIKI) && !defined (WITH_LWIP) && !defined (RIOT_VERSION)
 #include <netinet/in.h>
 #include <sys/socket.h>
-#endif /* ! CONTIKI && ! WITH_LWIP */
+#endif /* ! CONTIKI && ! WITH_LWIP && ! RIOT_VERSION */
 
 #ifndef COAP_STATIC_INLINE
 #  if defined(__cplusplus)

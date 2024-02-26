@@ -578,6 +578,7 @@ coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
 }
 
 #if !defined(WITH_LWIP)
+#ifdef HAVE_SYS_SELECT_H
 int
 coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
                          int enfds, fd_set *ereadfds, fd_set *ewritefds,
@@ -590,6 +591,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
   coap_lock_unlock(ctx);
   return ret;
 }
+#endif /* HAVE_SYS_SELECT_H */
 #endif /* WITH_LWIP */
 
 uint16_t

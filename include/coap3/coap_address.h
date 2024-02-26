@@ -92,7 +92,46 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
 
 #define _coap_is_mcast_impl(Address) uip_is_addr_mcast(&((Address)->addr))
 
-#else /* ! WITH_LWIP && ! WITH_CONTIKI */
+#elif defined(RIOT_VERSION)
+
+#include "net/sock.h"
+#include "net/af.h"
+
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN IPV6_ADDR_MAX_STR_LEN
+#endif /* !INET6_ADDRSTRLEN */
+
+struct coap_address_t {
+  struct _sock_tl_ep riot;
+};
+
+#define _coap_address_isany_impl(A)  0
+
+#define _coap_address_equals_impl(A, B) \
+  ((A)->riot.family == (B)->riot.family &&        \
+   (A)->riot.port == (B)->riot.port &&        \
+   memcmp(&(A)->riot, &(B)->riot, (A)->riot.family == AF_INET6 ? \
+          sizeof((A)->riot.addr.ipv6) : sizeof((A)->riot.addr.ipv4)) == 0)
+
+#define _coap_is_mcast_impl(Address) ((Address)->riot.addr.ipv6[0] == 0xff)
+
+/**
+ * Returns the port from @p addr in host byte order.
+ */
+COAP_STATIC_INLINE uint16_t
+coap_address_get_port(const coap_address_t *addr) {
+  return addr->riot.port;
+}
+
+/**
+ * Sets the port field of @p addr to @p port (in host byte order).
+ */
+COAP_STATIC_INLINE void
+coap_address_set_port(coap_address_t *addr, uint16_t port) {
+  addr->riot.port = port;
+}
+
+#else /* ! WITH_LWIP && ! WITH_CONTIKI && ! RIOT_VERSION */
 
 #ifdef _WIN32
 #define sa_family_t short
@@ -225,7 +264,7 @@ int coap_address_set_unix_domain(coap_address_t *addr,
                                  const uint8_t *host, size_t host_len);
 
 /* Convenience function to copy IPv6 addresses without garbage. */
-#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
+#if defined(WITH_LWIP) || defined(WITH_CONTIKI) || defined(RIOT_VERSION)
 COAP_STATIC_INLINE void
 coap_address_copy(coap_address_t *dst, const coap_address_t *src) {
   memcpy(dst, src, sizeof(coap_address_t));
@@ -234,7 +273,7 @@ coap_address_copy(coap_address_t *dst, const coap_address_t *src) {
 void coap_address_copy(coap_address_t *dst, const coap_address_t *src);
 #endif /* ! WITH_LWIP && ! WITH_CONTIKI */
 
-#if defined(WITH_LWIP) || defined(WITH_CONTIKI)
+#if defined(WITH_LWIP) || defined(WITH_CONTIKI) || defined(RIOT_VERSION)
 /**
  * Compares given address objects @p a and @p b. This function returns @c 1 if
  * addresses are equal, @c 0 otherwise. The parameters @p a and @p b must not be
@@ -259,7 +298,7 @@ coap_address_isany(const coap_address_t *a) {
   return _coap_address_isany_impl(a);
 }
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
 
 /**
  * Checks if given address @p a denotes a multicast address. This function
@@ -279,7 +318,7 @@ int coap_is_bcast(const coap_address_t *a);
  */
 int coap_is_af_unix(const coap_address_t *a);
 
-#else /* WITH_LWIP || WITH_CONTIKI */
+#else /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */
 
 /**
  * Checks if given address @p a denotes a multicast address. This function
@@ -300,6 +339,6 @@ coap_is_af_unix(const coap_address_t *a) {
   return 0;
 }
 
-#endif /* WITH_LWIP || WITH_CONTIKI */
+#endif /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */
 
 #endif /* COAP_ADDRESS_H_ */

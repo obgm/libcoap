@@ -15,7 +15,7 @@
 
 #include "coap3/coap_internal.h"
 
-#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP)
+#if !defined(WITH_CONTIKI) && !defined(WITH_LWIP) && !defined(RIOT_VERSION)
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
@@ -253,7 +253,7 @@ void
 coap_address_init(coap_address_t *addr) {
   assert(addr);
   memset(addr, 0, sizeof(coap_address_t));
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
   /* lwip and Contiki have constant address sizes and don't need the .size part */
   addr->size = sizeof(addr->addr);
 #endif
@@ -644,48 +644,86 @@ coap_resolve_address_info(const coap_str_const_t *address,
   freeaddrinfo(res);
   return info_list;
 #else /* RIOT_VERSION */
-#if COAP_IPV6_SUPPORT
 #include "net/utils.h"
+#if COAP_IPV6_SUPPORT
   ipv6_addr_t addr_ipv6;
+#endif /* COAP_IPV6_SUPPORT */
+#if COAP_IPV4_SUPPORT
+  ipv4_addr_t addr_ipv4;
+#endif /* COAP_IPV4_SUPPORT */
   netif_t *netif = NULL;
   coap_addr_info_t *info = NULL;
   coap_addr_info_t *info_prev = NULL;
   coap_addr_info_t *info_list = NULL;
   coap_uri_scheme_t scheme;
   (void)ai_hints_flags;
+  int family = AF_UNSPEC;
 
-  if (netutils_get_ipv6(&addr_ipv6, &netif, (const char *)address->s) >= 0) {
-    for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
-      if (scheme_hint_bits & (1 << scheme)) {
-        info = get_coap_addr_info(scheme);
-        if (info == NULL) {
-          continue;
-        }
-
-        /* Need to return in same order as getaddrinfo() */
-        if (!info_prev) {
-          info_list = info;
-          info_prev = info;
-        } else {
-          info_prev->next = info;
-          info_prev = info;
-        }
-
-        info->addr.size = sizeof(struct sockaddr_in6);
-        info->addr.addr.sin6.sin6_family = AF_INET6;
-        memcpy(&info->addr.addr.sin6.sin6_addr, &addr_ipv6,
-               sizeof(info->addr.addr.sin6.sin6_addr));
-        info->addr.addr.sin6.sin6_scope_id =
-            netif ? (uint32_t)netif_get_id(netif) : 0;
-
-        update_coap_addr_port(scheme, info, port, secure_port, ws_port,
-                              ws_secure_port, type);
-      }
+  if (address == NULL || address->length == 0) {
+    memset(&addr_ipv6, 0, sizeof(addr_ipv6));
+#if COAP_IPV6_SUPPORT
+    family = AF_INET6;
+#else /* ! COAP_IPV6_SUPPORT */
+    family = AF_INET;
+#endif /* ! COAP_IPV6_SUPPORT */
+  } else {
+#if COAP_IPV6_SUPPORT
+    if (netutils_get_ipv6(&addr_ipv6, &netif, (const char *)address->s) >= 0) {
+      family = AF_INET6;
     }
-    return info_list;
-  }
 #endif /* COAP_IPV6_SUPPORT */
-  return NULL;
+#if COAP_IPV4_SUPPORT
+    if (family == AF_UNSPEC &&
+        netutils_get_ipv4(&addr_ipv4, (const char *)address->s) >= 0) {
+      family = AF_INET;
+    }
+#endif /* COAP_IPV4_SUPPORT */
+    if (family == AF_UNSPEC) {
+      coap_log_err("coap_resolve_address_info: Unable to parse '%s'\n", address->s);
+      return NULL;
+    }
+  }
+  for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
+    if (scheme_hint_bits & (1 << scheme)) {
+      info = get_coap_addr_info(scheme);
+      if (info == NULL) {
+        continue;
+      }
+
+      /* Need to return in same order as getaddrinfo() */
+      if (!info_prev) {
+        info_list = info;
+        info_prev = info;
+      } else {
+        info_prev->next = info;
+        info_prev = info;
+      }
+
+      switch (family) {
+#if COAP_IPV6_SUPPORT
+      case AF_INET6:
+        info->addr.riot.family = AF_INET6;
+        memcpy(&info->addr.riot.addr.ipv6, &addr_ipv6,
+               sizeof(info->addr.riot.addr.ipv6));
+        info->addr.riot.netif = netif ? (uint32_t)netif_get_id(netif) : 0;
+        break;
+#endif /* ! COAP_IPV6_SUPPORT */
+#if COAP_IPV4_SUPPORT
+      case AF_INET:
+        info->addr.riot.family = AF_INET;
+        memcpy(&info->addr.riot.addr.ipv4, &addr_ipv4,
+               sizeof(info->addr.riot.addr.ipv4));
+        break;
+#endif /* ! COAP_IPV4_SUPPORT */
+      default:
+        break;
+      }
+
+      update_coap_addr_port(scheme, info, port, secure_port, ws_port,
+                            ws_secure_port, type);
+    }
+  }
+  return info_list;
 #endif /* RIOT_VERSION */
 }
 #endif /* !WITH_CONTIKI */
@@ -700,7 +738,7 @@ coap_free_address_info(coap_addr_info_t *info) {
   }
 }
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
 void
 coap_address_copy(coap_address_t *dst, const coap_address_t *src) {
 #if defined(WITH_LWIP) || defined(WITH_CONTIKI)

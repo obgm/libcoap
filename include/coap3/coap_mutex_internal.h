@@ -49,7 +49,7 @@ typedef mutex_t coap_mutex_t;
 #define coap_mutex_trylock(a) mutex_trylock(a)
 #define coap_mutex_unlock(a)  mutex_unlock(a)
 #define coap_thread_pid_t     kernel_pid_t
-#define coap_thread_pid       thread_getpid(void)
+#define coap_thread_pid       thread_getpid()
 
 #elif defined(WITH_LWIP)
 /* Use LwIP's mutex API */
@@ -212,14 +212,14 @@ typedef struct coap_lock_t {
   coap_thread_pid_t pid;
   coap_thread_pid_t freeing_pid;
   const char *lock_file;
-  uint32_t lock_line;
+  unsigned int lock_line;
+  unsigned int unlock_line;
   const char *unlock_file;
-  uint32_t unlock_line;
   const char *callback_file;
-  uint32_t callback_line;
-  uint32_t being_freed;
-  uint32_t in_callback;
-  volatile uint32_t lock_count;
+  unsigned int callback_line;
+  unsigned int being_freed;
+  unsigned int in_callback;
+  volatile unsigned int lock_count;
 } coap_lock_t;
 
 void coap_lock_unlock_func(coap_lock_t *lock, const char *file, int line);

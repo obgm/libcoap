@@ -231,7 +231,7 @@ print_readable(const uint8_t *data, size_t len,
  */
 size_t
 coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
-#if defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )
+#if (defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )) && !defined(RIOT_VERSION)
   char scratch[INET6_ADDRSTRLEN];
 
   assert(buf);
@@ -268,7 +268,37 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
 
 #else /* HAVE_ARPA_INET_H */
 
-# if WITH_CONTIKI
+# if defined(RIOT_VERSION)
+  char scratch[INET6_ADDRSTRLEN];
+
+  assert(buf);
+  assert(len);
+  buf[0] = '\000';
+
+  switch (addr->riot.family) {
+#if COAP_IPV4_SUPPORT
+  case AF_INET:
+    snprintf((char *)buf, len, "%s:%d",
+             coap_print_ip_addr(addr, scratch, sizeof(scratch)),
+             coap_address_get_port(addr));
+    break;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
+  case AF_INET6:
+    snprintf((char *)buf, len, "[%s]:%d",
+             coap_print_ip_addr(addr, scratch, sizeof(scratch)),
+             coap_address_get_port(addr));
+    break;
+#endif /* COAP_IPV6_SUPPORT */
+  default:
+    /* Include trailing NULL if possible */
+    memcpy(buf, "(unknown address type)", min(22+1, len));
+    buf[len-1] = '\000';
+    break;
+  }
+  return strlen((char *)buf);
+
+# elif WITH_CONTIKI
 
   char scratch[INET6_ADDRSTRLEN];
 #ifdef HAVE_SNPRINTF
@@ -377,7 +407,7 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
  */
 const char *
 coap_print_ip_addr(const coap_address_t *addr, char *buf, size_t len) {
-#if defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )
+#if (defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )) && !defined(RIOT_VERSION)
   const void *addrptr = NULL;
 
   assert(buf);
@@ -421,7 +451,37 @@ coap_print_ip_addr(const coap_address_t *addr, char *buf, size_t len) {
 
 #else /* HAVE_ARPA_INET_H */
 
-# if WITH_CONTIKI
+# if defined(RIOT_VERSION)
+  assert(buf);
+  assert(len);
+  buf[0] = '\000';
+
+  switch (addr->riot.family) {
+#if COAP_IPV4_SUPPORT
+  case AF_INET:
+    if (ipv4_addr_to_str(buf, (ipv4_addr_t *)&addr->riot.addr.ipv4, (size_t)len) == NULL) {
+      goto error;
+    }
+    break;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
+  case AF_INET6:
+    if (ipv6_addr_to_str(buf, (ipv6_addr_t *)&addr->riot.addr.ipv6, (size_t)len) == NULL) {
+      goto error;
+    }
+    break;
+#endif /* COAP_IPV6_SUPPORT */
+  default:
+    goto error;
+  }
+  return buf;
+
+error:
+  coap_log_err("coap_print_ip_addr: inet_ntop\n");
+  buf[0] = '\000';
+  return buf;
+
+# elif WITH_CONTIKI
   char *p = buf;
   uint8_t i;
 #  if NETSTACK_CONF_WITH_IPV6
