@@ -82,6 +82,8 @@ coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet) {
     errno = keep_errno;
   } else if (bytes_read > 0) {
     coap_ticks(&session->last_rx_tx);
+    memcpy(&session->addr_info, &packet->addr_info,
+           sizeof(session->addr_info));
     coap_log_debug("*  %s: netif: recv %4zd bytes\n",
                    coap_session_str(session), bytes_read);
   }
