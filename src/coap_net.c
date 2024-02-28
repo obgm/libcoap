@@ -1889,8 +1889,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
         coap_session_disconnected(session, COAP_NACK_ICMP_ISSUE);
     } else if (bytes_read > 0) {
       session->last_rx_tx = now;
-      memcpy(&session->addr_info, &packet->addr_info,
-             sizeof(session->addr_info));
+      /* coap_netif_dgrm_read() updates session->addr_info from packet->addr_info */
       coap_handle_dgram_for_proto(ctx, session, packet);
     }
 #if !COAP_DISABLE_TCP
