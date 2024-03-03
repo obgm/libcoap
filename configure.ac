@@ -1120,6 +1120,11 @@ case $host in
     LIBS="${LIBS} -lws2_32"
     ;;
 
+    *xtensa-esp32-elf*)
+    AC_MSG_RESULT([XtensaEsp32Elf])
+    ADDITIONAL_CFLAGS="-D_GNU_SOURCE -DWITH_POSIX"
+    ;;
+
     *)
     AC_MSG_WARN([==> Currently unsupported operating system '${host}' !])
     AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
