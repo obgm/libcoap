@@ -1,3 +1,10 @@
+2024-03-04  Olaf Bergmann  <bergmann@tzi.org>
+
+	Change summary for version 4.3.4a:
+
+        * Fix for CVE-2024-0962
+        * Support for different OpenSSL PKCS11 engines
+
 2023-09-18  Olaf Bergmann  <bergmann@tzi.org>
 
 	Change summary for version 4.3.4:
