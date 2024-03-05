@@ -71,7 +71,7 @@ LT_INIT([shared static])
 #                                         'revision' (short 'r') = 0
 #                                         'age'      (short 'a') = 0
 #
-# Update the libtool versioning only after the release of a public release of libcoap.
+# Update the libtool versioning only just before the release of a public release of libcoap.
 # Go through the following checklist from top to bottom and check your needs, following
 # the reminded changes if you can say "Yes" for specific check.
 #
