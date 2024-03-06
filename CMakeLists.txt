@@ -298,6 +298,8 @@ check_function_exists(if_nametoindex HAVE_IF_NAMETOINDEX)
 if(WIN32 AND NOT MINGW)
   set(HAVE_STRUCT_CMSGHDR 1)
   message(STATUS "setting HAVE_STRUCT_CMSGHDR")
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL QNX)
+  set(HAVE_STRUCT_CMSGHDR 0)
 else()
   check_symbol_exists(
     CMSG_FIRSTHDR
