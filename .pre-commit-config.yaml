@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/igrr/astyle_py.git
-    rev: v0.9.0
+    rev: v1.0.4
     hooks:
     -   id: astyle_py
         files: '^.*\.(c|cpp|cxx|h|h.in|h.riot|h.riot.in|h.windows|h.windows.in|h.contiki|hpp|inc)$'
