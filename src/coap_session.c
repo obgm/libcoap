@@ -1666,6 +1666,14 @@ coap_session_get_type(const coap_session_t *session) {
   return 0;
 }
 
+bool 
+coap_session_is_encrypted(const coap_session_t *session) {
+  #if COAP_OSCORE_SUPPORT
+    return (session->oscore_encryption != 0);
+  #endif
+  return false;
+}
+
 #if COAP_CLIENT_SUPPORT
 int
 coap_session_set_type_client(coap_session_t *session) {

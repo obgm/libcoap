@@ -187,6 +187,32 @@ oscore_find_context(const coap_context_t *c_context,
                     const coap_bin_const_t *ctxkey_id,
                     uint8_t *oscore_r2,
                     oscore_recipient_ctx_t **recipient_ctx) {
+  oscore_ctx_t *osc_ctx = oscore_find_context_in_ram(c_context, rcpkey_id, ctxkey_id, oscore_r2, recipient_ctx);
+  if( NULL != osc_ctx )
+  {
+    return osc_ctx;
+  }
+
+  /* no context was found in libcoap RAM - call user function to also check external storage (e.g. FLASH) */
+  if (c_context->external_oscore_find_context_handler)
+  {
+    return c_context->external_oscore_find_context_handler(c_context, rcpkey_id, ctxkey_id, oscore_r2, recipient_ctx);
+  }
+  return NULL;
+}
+
+/*
+ * oscore_find_context_in_ram
+ * Finds OSCORE context in RAM for rcpkey_id and optional ctxkey_id
+ * rcpkey_id can be 0 length.
+ * Updates recipient_ctx.
+ */
+oscore_ctx_t *
+oscore_find_context_in_ram(const coap_context_t *c_context,
+                    const coap_bin_const_t rcpkey_id,
+                    const coap_bin_const_t *ctxkey_id,
+                    uint8_t *oscore_r2,
+                    oscore_recipient_ctx_t **recipient_ctx) {
   oscore_ctx_t *pt = c_context->p_osc_ctx;
 
   *recipient_ctx = NULL;

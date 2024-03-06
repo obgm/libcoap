@@ -26,6 +26,7 @@ coap_session_get_proto,
 coap_session_get_state,
 coap_session_get_tls,
 coap_session_get_type,
+coap_session_is_encrypted,
 coap_session_get_psk_hint,
 coap_session_get_psk_key
 - Work with CoAP sessions
@@ -67,6 +68,8 @@ const coap_session_t *_session_);*
 coap_tls_library_t *tls_lib);*
 
 *coap_session_type_t coap_session_get_type(const coap_session_t *_session_);*
+
+*bool coap_session_is_encrypted(const coap_session_t *session);*
 
 *const coap_bin_const_t *coap_session_get_psk_hint(
 const coap_session_t *_session_);*
@@ -216,6 +219,8 @@ COAP_SESSION_TYPE_HELLO  /* Negotiating a (D)TLS session */
 The *coap_session_get_type*() function is used to get the session type from the
 _session_.
 
+The *coap_session_is_encrypted*() function is used to check if incoming _session_ is encrypted.
+
 The *coap_session_get_psk_hint*() function is used to get the current server
 _session_'s pre-shared-key identity hint.
 
@@ -252,6 +257,8 @@ information (TLS library dependent) or NULL if there is none or there is an
 error.
 
 *coap_session_get_type*() returns the current session's type or 0 on error.
+
+*coap_session_is_encrypted*() returns true if the session is using OSCORE encryption, or false if plain CoAP packets are used.
 
 *coap_session_get_psk_hint*() returns the current server session's
 pre-shared-key identity hint, or NULL if not defined.
