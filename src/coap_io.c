@@ -794,7 +794,7 @@ static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
 #define iov_len_t size_t
 #endif
 
-#if defined(_CYGWIN_ENV)
+#if defined(_CYGWIN_ENV) || defined(__QNXNTO__)
 #define ipi_spec_dst ipi_addr
 #endif
 
