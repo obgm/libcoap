@@ -1151,6 +1151,7 @@ CFLAGS="$CFLAGS $ADDITIONAL_CFLAGS"
 #
 AC_CONFIG_FILES([
 Makefile
+coap_config.h.contiki
 coap_config.h.riot
 coap_config.h.windows
 doc/Makefile

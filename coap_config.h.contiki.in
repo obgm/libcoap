@@ -99,32 +99,32 @@
 
 #ifndef PACKAGE_BUGREPORT
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"
+#define PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"
 #endif /* PACKAGE_BUGREPORT */
 
 #ifndef PACKAGE_NAME
 /* Define to the full name of this package. */
-#define PACKAGE_NAME "libcoap"
+#define PACKAGE_NAME "@PACKAGE_NAME@"
 #endif /* PACKAGE_NAME */
 
 #ifndef PACKAGE_STRING
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libcoap 4.3.4"
+#define PACKAGE_STRING "@PACKAGE_STRING@"
 #endif /* PACKAGE_STRING */
 
 #ifndef PACKAGE_TARNAME
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "libcoap"
+#define PACKAGE_TARNAME "@PACKAGE_TARNAME@"
 #endif /* PACKAGE_TARNAME */
 
 #ifndef PACKAGE_URL
 /* Define to the home page for this package. */
-#define PACKAGE_URL "https://libcoap.net/"
+#define PACKAGE_URL "@PACKAGE_URL@"
 #endif /* PACKAGE_URL */
 
 #ifndef PACKAGE_VERSION
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "4.3.4"
+#define PACKAGE_VERSION "@PACKAGE_VERSION@"
 #endif /* PACKAGE_VERSION */
 
 #define WITH_CONTIKI 1

@@ -1,5 +1,9 @@
 /*
- * coap_config.h.lwip -- LwIP configuration for libcoap
+ * coap_config.h -- LwIP configuration for libcoap
+ *
+ * [coap_config.h is re-built from coap_config.h.in by the
+ *  libcoap ./configure command, so make any permanent changes to libcoap's
+ *  examples/lwip/config/coap_config.h.in for a libcoap Pull Request]
  *
  * Copyright (C) 2021-2024 Olaf Bergmann <bergmann@tzi.org> and others
  *
@@ -70,17 +74,35 @@
 #define COAP_THREAD_RECURSIVE_CHECK 0
 #endif
 
+#ifndef PACKAGE_BUGREPORT
+/* Define to the address where bug reports for this package should be sent. */
+#define PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"
+#endif /* PACKAGE_BUGREPORT */
+
 #ifndef PACKAGE_NAME
+/* Define to the full name of this package. */
 #define PACKAGE_NAME "libcoap"
 #endif /* PACKAGE_NAME */
 
-#ifndef PACKAGE_VERSION
-#define PACKAGE_VERSION "4.3.4"
-#endif /* PACKAGE_VERSION */
-
 #ifndef PACKAGE_STRING
+/* Define to the full name and version of this package. */
 #define PACKAGE_STRING "libcoap 4.3.4"
 #endif /* PACKAGE_STRING */
+
+#ifndef PACKAGE_TARNAME
+/* Define to the one symbol short name of this package. */
+#define PACKAGE_TARNAME "libcoap"
+#endif /* PACKAGE_TARNAME */
+
+#ifndef PACKAGE_URL
+/* Define to the home page for this package. */
+#define PACKAGE_URL "https://libcoap.net/"
+#endif /* PACKAGE_URL */
+
+#ifndef PACKAGE_VERSION
+/* Define to the version of this package. */
+#define PACKAGE_VERSION "4.3.4"
+#endif /* PACKAGE_VERSION */
 
 #ifndef assert
 #define assert(x) LWIP_ASSERT("CoAP assert failed", x)
