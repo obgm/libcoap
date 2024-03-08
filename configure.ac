@@ -137,13 +137,6 @@ LT_INIT([shared static])
 # To add to the confusion, if LIBCOAP_SO_VERSION is set to 3:0:1 (c:r:a), then the
 # .so version naming ends up as 2.1.0 (c-a:a:r) (as decided by libtool).
 
-#
-# CAUTION
-#
-# You will need to manually update VERSION and LIBCOAP_ABI_VERSION in CMakeLists.txt
-# if changes are made to libcoap_xx_version and LT_LIBCOAP_xx respectively.
-#
-
 LT_LIBCOAP_CURRENT=4
 LT_LIBCOAP_REVISION=2
 LT_LIBCOAP_AGE=1
@@ -177,6 +170,15 @@ m4_define([version_number],
                      libcoap_micro_version)])
 LIBCOAP_VERSION=version_number
 AC_SUBST(LIBCOAP_VERSION)
+
+# Define a base version string
+m4_define([base_version],
+          [m4_format([%u.%u.%u],
+                     libcoap_major_version,
+                     libcoap_minor_version,
+                     libcoap_micro_version)])
+LIBCOAP_PACKAGE_BASE=base_version
+AC_SUBST(LIBCOAP_PACKAGE_BASE)
 
 # Adding some default warning options for code QS
 # see https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
@@ -1151,6 +1153,7 @@ CFLAGS="$CFLAGS $ADDITIONAL_CFLAGS"
 #
 AC_CONFIG_FILES([
 Makefile
+CMakeLists.txt
 coap_config.h.contiki
 coap_config.h.riot
 coap_config.h.windows
