@@ -278,6 +278,7 @@ static memarray_t resource_storage;
 
 #ifdef COAP_WITH_LIBTINYDTLS
 #undef PACKAGE_BUGREPORT
+#undef PACKAGE_URL
 #include <session.h>
 static session_t dtls_storage_data[COAP_MAX_DTLS_SESSIONS];
 static memarray_t dtls_storage;
