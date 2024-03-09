@@ -52,16 +52,16 @@ interface will need IP forwarding enabled
     $ sudo sysctl -w net.ipv4.conf.default.forwarding=1
 
 Then you will need IP forwarding enabled on your public interface
-(where eth0 is replaced by your public facing interface name)
+(where ens32 is replaced by your public facing interface name)
 for response packets
 
-    $ sudo sysctl -w net.eth0.conf.default.forwarding=1
+    $ sudo sysctl -w net.ipv4.conf.ens32.forwarding=1
 
 As well as the interface connecting to the internet will need a NAT rule to
 masquerade the internal IP address (192.168.114.2) to the IP of the outgoing
-interface (where eth0 is replaced by your public facing interface name)
+interface (where ens32 is replaced by your public facing interface name)
 
-    $ iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+    $ sudo iptables -t nat -A POSTROUTING -o ens32 -j MASQUERADE
 
 The client supports the following options
 "-k PSK" option where PSK defines the DTLS PSK to use (default is "secretPSK").

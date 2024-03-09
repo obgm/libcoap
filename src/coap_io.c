@@ -1553,7 +1553,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
   } else if (timeout == 0 && timeout_ms == COAP_IO_WAIT) {
     ;
   } else {
-    if (timeout == 0 || timeout_ms < timeout)
+    if (timeout == 0 || (timeout_ms != COAP_IO_WAIT && timeout_ms < timeout))
       timeout = timeout_ms;
     tv.tv_usec = (timeout % 1000) * 1000;
     tv.tv_sec = (long)(timeout / 1000);
@@ -1639,7 +1639,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
       etimeout = -1;
     } else {
       etimeout = timeout;
-      if (timeout == 0 || timeout_ms < timeout)
+      if (timeout == 0 || (timeout_ms != COAP_IO_WAIT && timeout_ms < timeout))
         etimeout = timeout_ms;
       if (etimeout < 0) {
         /*
