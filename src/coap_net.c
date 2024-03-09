@@ -3137,6 +3137,9 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   if (async && pdu->type == COAP_MESSAGE_CON)
     response->type = COAP_MESSAGE_CON;
 #endif /* COAP_ASYNC_SUPPORT */
+  /* A lot of the reliable code assumes type is CON */
+  if (COAP_PROTO_RELIABLE(session->proto) && response->type != COAP_MESSAGE_CON)
+    response->type = COAP_MESSAGE_CON;
 
   if (!coap_add_token(response, pdu->actual_token.length,
                       pdu->actual_token.s)) {
