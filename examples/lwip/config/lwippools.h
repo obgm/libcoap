@@ -96,7 +96,7 @@ typedef struct l_coap_tiny_context_t {
 #endif
 
 #ifndef MEMP_NUM_COAPSTRING
-#define MEMP_NUM_COAPSTRING 10
+#define MEMP_NUM_COAPSTRING 12
 #endif
 
 #ifndef MEMP_LEN_COAPSTRING

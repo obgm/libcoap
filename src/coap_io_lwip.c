@@ -53,29 +53,7 @@ coap_lwip_set_input_wait_handler(coap_context_t *context,
 
 void
 coap_io_process_timeout(void *arg) {
-  coap_context_t *context = (coap_context_t *)arg;
-  coap_tick_t before;
-  unsigned int num_sockets;
-  unsigned int timeout;
-
-  coap_lock_lock(context, return);
-  coap_ticks(&before);
-  timeout = coap_io_prepare_io(context, NULL, 0, &num_sockets, before);
-  if (context->timer_configured) {
-    sys_untimeout(coap_io_process_timeout, (void *)context);
-    context->timer_configured = 0;
-  }
-  if (timeout == 0) {
-    /* Garbage collect 1 sec hence */
-    timeout = 1000;
-  }
-#ifdef COAP_DEBUG_WAKEUP_TIMES
-  coap_log_info("****** Next wakeup msecs %u (1)\n",
-                timeout);
-#endif /* COAP_DEBUG_WAKEUP_TIMES */
-  sys_timeout(timeout, coap_io_process_timeout, context);
-  context->timer_configured = 1;
-  coap_lock_unlock(context);
+  (void)arg;
 }
 
 int
@@ -88,10 +66,11 @@ coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
   coap_lock_check_locked(context);
   coap_ticks(&before);
   timeout = coap_io_prepare_io(context, NULL, 0, &num_sockets, before);
-  if (timeout_ms != 0 && timeout_ms != COAP_IO_NO_WAIT &&
-      timeout > timeout_ms) {
+  if (timeout == 0 || (timeout_ms != COAP_IO_WAIT && timeout_ms < timeout))
     timeout = timeout_ms;
-  }
+
+  if (timeout_ms == COAP_IO_NO_WAIT)
+    timeout = 1;
 
   coap_lock_invert(context,
                    LOCK_TCPIP_CORE(),
@@ -101,16 +80,14 @@ coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
     sys_untimeout(coap_io_process_timeout, (void *)context);
     context->timer_configured = 0;
   }
-  if (timeout == 0) {
-    /* Garbage collect 1 sec hence */
-    timeout = 1000;
-  }
 #ifdef COAP_DEBUG_WAKEUP_TIMES
   coap_log_info("****** Next wakeup msecs %u (2)\n",
                 timeout);
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
-  sys_timeout(timeout, coap_io_process_timeout, context);
-  context->timer_configured = 1;
+  if (timeout) {
+    sys_timeout(timeout, coap_io_process_timeout, context);
+    context->timer_configured = 1;
+  }
 
   UNLOCK_TCPIP_CORE();
 

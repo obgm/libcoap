@@ -49,7 +49,7 @@ coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   } else if (timeout == 0 && timeout_ms == COAP_IO_WAIT) {
     timeout = UINT32_MAX/1000;
   } else {
-    if (timeout == 0 || timeout_ms < timeout)
+    if (timeout == 0 || (timeout_ms != COAP_IO_WAIT && timeout_ms < timeout))
       timeout = timeout_ms;
   }
 

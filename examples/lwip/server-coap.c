@@ -230,5 +230,4 @@ server_coap_poll(void) {
     last_time = time_now;
     coap_resource_notify_observers(time_resource, NULL);
   }
-  coap_check_notify(main_coap_context);
 }

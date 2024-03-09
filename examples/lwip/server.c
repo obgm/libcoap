@@ -67,6 +67,11 @@ wait_for_input(void *arg, uint32_t milli_secs) {
   int ret;
 
   (void)milli_secs;
+  /*
+   * Poll netif, pass any read packet to lwIP
+   * Has internal timeout of 1000 msec (sometimes less) based on
+   * sys_timeouts_sleeptime().
+   */
   ret = tapif_select(netif);
 
   sys_check_timeouts();
@@ -133,15 +138,6 @@ main(int argc, char **argv) {
   printf("Server Application started.\n");
 
   while (!quit) {
-    /*
-     * Poll netif, pass any read packet to lwIP
-     * Has internal timeout of 100 msec (sometimes less) based on
-     * sys_timeouts_sleeptime().
-     */
-    tapif_select(&netif);
-
-    sys_check_timeouts();
-
     server_coap_poll();
   }
   server_coap_finished();
