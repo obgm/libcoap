@@ -133,7 +133,11 @@ man-page-build: upg-page-build man-page-start
 			echo "/// @page man_$${ENTRY} $${MANUAL}" > $(top_builddir)/doc/man_tmp/$${MANUAL}.dox ;\
 			echo "/// @htmlinclude $${ENTRY}.html $${MANUAL}" >> $(top_builddir)/doc/man_tmp/$${MANUAL}.dox ;\
 			## Create html file
-			cat $(top_builddir)/man/$${BASE}.html | ${SED} "s/Function: $${ENTRY}(/<a class=\"anchor\" id=\"$${ENTRY}\"><\/a>\0/" > $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
+			cat $(top_builddir)/man/$${BASE}.html |\
+			  ${SED} "s/Function: $${ENTRY}(/<a class=\"anchor\" id=\"$${ENTRY}\"><\/a>\0/" |\
+			  ${SED} "s/Structure $${ENTRY}</<a class=\"anchor\" id=\"$${ENTRY}\"><\/a>\0/" |\
+			  ${SED} "s/SECTION: [A-Za-z /]*: $${ENTRY}</<a class=\"anchor\" id=\"$${ENTRY}\"><\/a>\0/" \
+			  > $(top_builddir)/doc/man_html/$${ENTRY}.html ;\
 			## Update scratch_insert_file for sorting later
 			echo "$${ENTRY}" >> $(top_builddir)/doc/scratch_insert_file ;\
 		done ;\
