@@ -88,6 +88,7 @@ coap_mfree_endpoint(coap_endpoint_t *ep) {
 
 #if !defined(WITH_CONTIKI) && !defined(WITH_LWIP) && !defined(RIOT_VERSION)
 
+#if COAP_SERVER_SUPPORT
 int
 coap_socket_bind_udp(coap_socket_t *sock,
                      const coap_address_t *listen_addr,
@@ -198,6 +199,7 @@ error:
   coap_socket_close(sock);
   return 0;
 }
+#endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
 int
