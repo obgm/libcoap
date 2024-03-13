@@ -776,27 +776,32 @@ coap_lock_unlock_func(coap_lock_t *lock, const char *file, int line) {
 
 int
 coap_lock_lock_func(coap_lock_t *lock, const char *file, int line) {
-  if (lock->in_callback && coap_thread_pid == lock->pid) {
-    lock->lock_count++;
-    assert(lock->in_callback == lock->lock_count);
-  } else {
-    if (coap_mutex_trylock(&lock->mutex)) {
-      if (coap_thread_pid == lock->pid) {
+  if (coap_mutex_trylock(&lock->mutex)) {
+    if (coap_thread_pid == lock->pid) {
+      /* This thread locked the mutex */
+      if (lock->in_callback) {
+        /* This is called from within an app callback */
+        lock->lock_count++;
+        assert(lock->in_callback == lock->lock_count);
+        return 1;
+      } else {
         coap_log_alert("Thread Deadlock: Last %s: %u, this %s: %u\n",
                        lock->lock_file, lock->lock_line, file, line);
         assert(0);
       }
-      coap_mutex_lock(&lock->mutex);
     }
-    /* Just got the lock, so should not be in a locked callback */
-    assert(!lock->in_callback);
-    lock->pid = coap_thread_pid;
-    lock->lock_file = file;
-    lock->lock_line = line;
-    if (lock->being_freed) {
-      coap_lock_unlock_func(lock, file, line);
-      return 0;
-    }
+    /* Wait for the other thread to unlock */
+    coap_mutex_lock(&lock->mutex);
+  }
+  /* Just got the lock, so should not be in a locked callback */
+  assert(!lock->in_callback);
+  lock->pid = coap_thread_pid;
+  lock->lock_file = file;
+  lock->lock_line = line;
+  if (lock->being_freed) {
+    /* context is in the process of being deleted */
+    coap_lock_unlock_func(lock, file, line);
+    return 0;
   }
   return 1;
 }
@@ -817,6 +822,10 @@ coap_lock_unlock_func(coap_lock_t *lock) {
 
 int
 coap_lock_lock_func(coap_lock_t *lock) {
+  /*
+   * Some OS do not have support for coap_mutex_trylock() so
+   * cannot use that here and have to rely on lock-pid being stable
+   */
   if (lock->in_callback && coap_thread_pid == lock->pid) {
     lock->lock_count++;
     assert(lock->in_callback == lock->lock_count);
