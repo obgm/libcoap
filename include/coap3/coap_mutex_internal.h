@@ -219,7 +219,7 @@ typedef struct coap_lock_t {
   unsigned int callback_line;
   unsigned int being_freed;
   unsigned int in_callback;
-  volatile unsigned int lock_count;
+  unsigned int lock_count;
 } coap_lock_t;
 
 void coap_lock_unlock_func(coap_lock_t *lock, const char *file, int line);
