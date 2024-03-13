@@ -200,7 +200,6 @@ t_wkc_tests_create(void) {
   addr.addr.sin6.sin6_port = htons(COAP_DEFAULT_PORT);
 
   ctx = coap_new_context(&addr);
-  coap_lock_lock(ctx, return 1);
 
   addr.addr.sin6.sin6_addr = in6addr_loopback;
   session = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);

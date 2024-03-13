@@ -1029,10 +1029,6 @@ static int
 t_oscore_tests_create(void) {
   ctx = coap_new_context(NULL);
 
-  if (ctx != NULL) {
-    coap_lock_lock(ctx, return 1);
-  }
-
   return (ctx == NULL);
 }
 

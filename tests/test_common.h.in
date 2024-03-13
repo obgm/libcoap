@@ -8,5 +8,8 @@
  * README for terms of use.
  */
 
+/* We need to treat these tests as being an user application */
+#define COAP_THREAD_IGNORE_LOCKED_MAPPING
+
 #include "coap@LIBCOAP_API_VERSION@/coap_internal.h"
 

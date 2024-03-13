@@ -284,7 +284,6 @@ t_sendqueue_tests_create(void) {
   addr.addr.sin6.sin6_port = htons(COAP_DEFAULT_PORT);
 
   ctx = coap_new_context(&addr);
-  coap_lock_lock(ctx, return 1);
 
   addr.addr.sin6.sin6_addr = in6addr_loopback;
   session = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
@@ -308,7 +307,10 @@ t_sendqueue_tests_create(void) {
     /* destroy all test nodes and set entry to zero */
     for (n = 0; n < sizeof(node)/sizeof(coap_queue_t *); n++) {
       if (node[n]) {
+        /* As coap_delete_node() is not in the Public API, need to lock */
+        coap_lock_lock(ctx, continue);
         coap_delete_node(node[n]);
+        coap_lock_unlock(ctx);
         node[n] = NULL;
       }
     }
@@ -324,7 +326,10 @@ t_sendqueue_tests_remove(void) {
   size_t n;
   for (n = 0; n < sizeof(node)/sizeof(coap_queue_t *); n++) {
     if (node[n]) {
+      /* As coap_delete_node() is not in the Public API, need to lock */
+      coap_lock_lock(ctx, continue);
       coap_delete_node(node[n]);
+      coap_lock_unlock(ctx);
       node[n] = NULL;
     }
   }
