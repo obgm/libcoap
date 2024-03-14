@@ -254,6 +254,8 @@ t_sendqueue9(void) {
   CU_ASSERT_PTR_NULL(ctx->sendqueue->next);
 }
 
+static int t_sendqueue_tests_remove(void);
+
 static void
 t_sendqueue10(void) {
   coap_queue_t *tmp_node;
@@ -304,18 +306,7 @@ t_sendqueue_tests_create(void) {
   }
 
   if (error) {
-    /* destroy all test nodes and set entry to zero */
-    for (n = 0; n < sizeof(node)/sizeof(coap_queue_t *); n++) {
-      if (node[n]) {
-        /* As coap_delete_node() is not in the Public API, need to lock */
-        coap_lock_lock(ctx, continue);
-        coap_delete_node(node[n]);
-        coap_lock_unlock(ctx);
-        node[n] = NULL;
-      }
-    }
-    coap_free_context(ctx);
-    ctx = NULL;
+    t_sendqueue_tests_remove();
   }
 
   return error;
@@ -324,16 +315,17 @@ t_sendqueue_tests_create(void) {
 static int
 t_sendqueue_tests_remove(void) {
   size_t n;
+  /* As coap_delete_node() is not in the Public API, need to lock */
+  coap_lock_lock(ctx, return 1);
   for (n = 0; n < sizeof(node)/sizeof(coap_queue_t *); n++) {
     if (node[n]) {
-      /* As coap_delete_node() is not in the Public API, need to lock */
-      coap_lock_lock(ctx, continue);
       coap_delete_node(node[n]);
-      coap_lock_unlock(ctx);
       node[n] = NULL;
     }
   }
+  coap_lock_unlock(ctx);
   coap_free_context(ctx);
+  ctx = NULL;
   return 0;
 }
 
