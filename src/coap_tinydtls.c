@@ -323,6 +323,8 @@ dtls_application_data(struct dtls_context_t *dtls_context,
     return -1;
   }
 
+  coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
+                 coap_session_str(coap_session), (int)len);
   return coap_handle_dgram(coap_context, coap_session, data, len);
 }
 
@@ -773,6 +775,8 @@ coap_dtls_send(coap_session_t *session,
   assert(dtls_context);
 
   coap_event_dtls = -1;
+  coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
+                 coap_session_str(session), (int)data_len);
   /* Need to do this to not get a compiler warning about const parameters */
   memcpy(&data_rw, &data, sizeof(data_rw));
   res = dtls_write(dtls_context,
@@ -791,14 +795,6 @@ coap_dtls_send(coap_session_t *session,
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
   }
 
-  if (res > 0) {
-    if (res == (ssize_t)data_len)
-      coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
-                     coap_session_str(session), res);
-    else
-      coap_log_debug("*  %s: dtls:  sent %4d of %4zd bytes\n",
-                     coap_session_str(session), res, data_len);
-  }
   return res;
 }
 
@@ -864,8 +860,10 @@ coap_dtls_receive(coap_session_t *session,
       coap_handle_event(session->context, coap_event_dtls, session);
     if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
       coap_session_connected(session);
-    else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR)
+    else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR) {
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
+      err = -1;
+    }
   }
 
   return err;
