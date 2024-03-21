@@ -129,12 +129,17 @@ int coap_context_oscore_server(coap_context_t *context,
  *
  * @param sender_seq_num The Sender Sequence Number to save in non-volatile
  *                      memory.
+ * @param recipient_id Recipient ID that could be used to find the corresponding SSN entry.
+ * @param id_context ID Context that could be used to find the corresponding SSN entry.
  * @param param The save_seq_num_func_param provided to
  *              coap_new_oscore_context().
  *
  * @return @c 1 if success, else @c 0 if a failure of some sort.
  */
-typedef int (*coap_oscore_save_seq_num_t)(uint64_t sender_seq_num, void *param);
+typedef int (*coap_oscore_save_seq_num_t)(uint64_t sender_seq_num, 
+                                          const coap_bin_const_t *recipient_id, 
+                                          const coap_bin_const_t *id_context,
+                                          void *param);
 
 /**
  * Parse an OSCORE configuration (held in memory) and populate a OSCORE
@@ -192,6 +197,45 @@ int coap_new_oscore_recipient(coap_context_t *context,
  */
 int coap_delete_oscore_recipient(coap_context_t *context,
                                  coap_bin_const_t *recipient_id);
+
+/**
+ * Opaque pointer for internal oscore_ctx_t type.
+ */
+typedef struct oscore_ctx_t * oscore_ctx_handle_t;
+
+/**
+ * Opaque pointer for internal oscore_recipient_ctx_t type.
+ * 
+ */
+typedef struct oscore_recipient_ctx_t * oscore_recipient_ctx_handle_t;
+
+/**
+ * Optional user callback to be used, when oscore_find_context can't find any context.
+ * Could be used to check external storage (e.g. FLASH).
+ *
+ * @param c_context The CoAP Context to search.
+ * @param rcpkey_id The Recipient kid.
+ * @param ctxkey_id The ID Context to match (or NULL if no check).
+ * @param oscore_r2 Partial id_context to match against or NULL.
+ * @param recipient_ctx The recipient context to update.
+ *
+ * return The OSCORE context and @p recipient_ctx updated, or NULL is error.
+ */
+typedef oscore_ctx_handle_t (*external_oscore_find_context_handler_t)(
+                                    const coap_context_t *c_context,
+                                    const coap_bin_const_t rcpkey_id,
+                                    const coap_bin_const_t *ctxkey_id,
+                                    uint8_t *oscore_r2,
+                                    oscore_recipient_ctx_handle_t *recipient_ctx);
+
+/**
+ * Register optional user callback to be used, when oscore_find_context can't find any context.
+ * Callback could be used to check external storage (e.g. FLASH).
+ * 
+ * @param context   The current coap context to use.
+ * @param handler   User callback.
+ */
+void coap_register_oscore_context_handler(coap_context_t *context, external_oscore_find_context_handler_t handler);
 
 /** @} */
 

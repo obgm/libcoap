@@ -403,6 +403,8 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
         /* Only update at ssn_freq rate */
         osc_ctx->sender_context->next_seq += osc_ctx->ssn_freq;
         osc_ctx->save_seq_num_func(osc_ctx->sender_context->next_seq,
+                                   rcp_ctx->recipient_id,
+                                   osc_ctx->id_context,
                                    osc_ctx->save_seq_num_func_param);
       }
     }
@@ -808,7 +810,10 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   if (opt == NULL)
     return NULL;
 
-  if (session->context->p_osc_ctx == NULL) {
+  /* OSCORE should be processed only if any OSCORE context is available,
+  or the user provided an external handler for finding the context. */
+  if ((session->context->p_osc_ctx == NULL) &&
+      (session->context->external_oscore_find_context_handler == NULL)) {
     coap_log_warn("OSCORE: Not enabled\n");
     if (!coap_request)
       coap_handle_event(session->context,
@@ -2106,6 +2111,13 @@ coap_delete_oscore_recipient(coap_context_t *context,
   return oscore_delete_recipient(context->p_osc_ctx, recipient_id);
 }
 
+void
+coap_register_oscore_context_handler(coap_context_t *context, external_oscore_find_context_handler_t handler)
+{
+  assert(context);
+  context->external_oscore_find_context_handler = handler;
+}
+
 /** @} */
 
 #else /* !COAP_OSCORE_SUPPORT */
@@ -2200,6 +2212,13 @@ coap_delete_oscore_recipient(coap_context_t *context,
   (void)context;
   (void)recipient_id;
   return 0;
+}
+
+void
+coap_register_oscore_context_handler(coap_context_t *context, external_oscore_find_context_handler_t handler)
+{
+  (void)context;
+  (void)handler;
 }
 
 #endif /* !COAP_OSCORE_SUPPORT */

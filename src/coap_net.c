@@ -717,7 +717,9 @@ coap_option_check_critical(coap_session_t *session,
       case COAP_OPTION_OSCORE:
         /* Valid critical if doing OSCORE */
 #if COAP_OSCORE_SUPPORT
-        if (ctx->p_osc_ctx)
+        /* Only accept OSCORE option if any OSCORE context is available,
+           or the user provided an external handler for finding the context. */
+        if ((ctx->p_osc_ctx) || (ctx->external_oscore_find_context_handler))
           break;
 #endif /* COAP_OSCORE_SUPPORT */
       /* Fall Through */

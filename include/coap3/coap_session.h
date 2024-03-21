@@ -24,6 +24,8 @@
  * @{
  */
 
+#include <stdbool.h>
+
 /**
 * Abstraction of a fixed point number that can be used where necessary instead
 * of a float.  1,000 fractional bits equals one integer
@@ -162,6 +164,15 @@ coap_proto_t coap_session_get_proto(const coap_session_t *session);
  * @return The session's type
  */
 coap_session_type_t coap_session_get_type(const coap_session_t *session);
+
+/**
+ * Check if CoAP session is encrypted.
+ *
+ * @param session The CoAP session.
+ *
+ * @return True if session is encrypted, false if session is not encrypted.
+ */
+bool coap_session_is_encrypted(const coap_session_t *session);
 
 /**
  * Get the session state
