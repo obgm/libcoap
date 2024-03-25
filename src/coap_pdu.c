@@ -395,12 +395,15 @@ coap_update_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
     memmove(&pdu->token[(len + bias) - pdu->e_token_length],
             pdu->token, pdu->used_size);
     pdu->used_size += len + bias - pdu->e_token_length;
+    if (pdu->data) {
+      pdu->data += (len + bias) - pdu->e_token_length;
+    }
   } else {
     pdu->used_size -= pdu->e_token_length - (len + bias);
     memmove(pdu->token, &pdu->token[pdu->e_token_length - (len + bias)], pdu->used_size);
-  }
-  if (pdu->data) {
-    pdu->data += (len + bias) - pdu->e_token_length;
+    if (pdu->data) {
+      pdu->data -= pdu->e_token_length - (len + bias);
+    }
   }
 
   pdu->actual_token.length = len;
@@ -647,9 +650,15 @@ coap_insert_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
                        number - prev_number, data, len))
     return 0;
 
-  pdu->used_size += shift - shrink;
-  if (pdu->data)
-    pdu->data += shift - shrink;
+  if (shift >= shrink) {
+    pdu->used_size += shift - shrink;
+    if (pdu->data)
+      pdu->data += shift - shrink;
+  } else {
+    pdu->used_size -= shrink - shift;
+    if (pdu->data)
+      pdu->data -= shrink - shift;
+  }
   return shift;
 }
 
@@ -687,9 +696,15 @@ coap_update_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
                        decode.delta, data, len))
     return 0;
 
-  pdu->used_size += new_length - old_length;
-  if (pdu->data)
-    pdu->data += new_length - old_length;
+  if (new_length >= old_length) {
+    pdu->used_size += new_length - old_length;
+    if (pdu->data)
+      pdu->data += new_length - old_length;
+  } else {
+    pdu->used_size -= old_length - new_length;
+    if (pdu->data)
+      pdu->data -= old_length - new_length;
+  }
   return 1;
 }
 
