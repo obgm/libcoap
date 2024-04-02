@@ -20,9 +20,11 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v3
-    - uses: pre-commit/action@v3.0.0
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: 3.x
+    - uses: pre-commit/action@v3.0.1
   build-linux:
     runs-on: ubuntu-latest
     strategy:
@@ -30,7 +32,7 @@ jobs:
         CC: ["gcc", "clang"]
         TLS: ["no", "openssl", "gnutls", "mbedtls"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libtool libtool-bin exuberant-ctags valgrind
@@ -58,7 +60,7 @@ jobs:
   tinydtls-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: setup
@@ -80,7 +82,7 @@ jobs:
       matrix:
         TLS: ["no", "openssl", "gnutls", "mbedtls", "tinydtls"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: setup
@@ -105,7 +107,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: macOS CMake setup
       run: |
         cmake -E make_directory build_test
@@ -121,7 +123,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: install macOS software
       run: |
         brew install make automake
@@ -140,7 +142,7 @@ jobs:
       matrix:
         OS: ["contiki", "lwip", "riot"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libc6-dev-i386
@@ -155,10 +157,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Add MSBuild to PATH
-        uses: microsoft/setup-msbuild@v1
+        uses: microsoft/setup-msbuild@v2
 
       - name: Install OpenSSL on Windows (choco)
         run: call .\scripts\msinstallopenssl.cmd
@@ -170,7 +172,7 @@ jobs:
   ms-cmake:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install OpenSSL on Windows (choco)
       run: call .\scripts\msinstallopenssl.cmd
@@ -193,7 +195,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
@@ -207,7 +209,7 @@ jobs:
   additional-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: setup
@@ -223,7 +225,7 @@ jobs:
   documentation:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: setup
@@ -247,7 +249,7 @@ jobs:
   distribution:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: setup
