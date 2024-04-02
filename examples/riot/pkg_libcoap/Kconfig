@@ -4,13 +4,8 @@
 # General Public License v2.1. See the file LICENSE in the top level
 # directory for more details.
 #
-menuconfig KCONFIG_USEPKG_LIBCOAP
-    bool "Configure libcoap"
+menu "libcoap"
     depends on USEPKG_LIBCOAP
-    help
-        Configure libcoap package via Kconfig.
-
-if KCONFIG_USEPKG_LIBCOAP
 
 choice LIBCOAP_DEBUG_LEVEL
     bool "Set CoAP debugging level"
@@ -292,4 +287,4 @@ config LIBCOAP_MAX_OPTIONS
     help
         The maximum number of supported options.
 
-endif # KCONFIG_USEPKG_LIBCOAP
+endmenu # libcoap

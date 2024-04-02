@@ -30,7 +30,7 @@ pkg:
 	cd pkg_libcoap && cp -r * ../RIOT/pkg/libcoap
 	@HAVE_KCONFIG=`grep libcoap/Kconfig RIOT/pkg/Kconfig | wc -l` ; \
 	if [ "$${HAVE_KCONFIG}" = 0 ] ; then \
-		sed -i '/rsource "libcose\/Kconfig"/irsource "libcoap\/Kconfig"' RIOT/pkg/Kconfig ; \
+		sed -i '/rsource "flashdb\/Kconfig"/irsource "libcoap\/Kconfig"' RIOT/pkg/Kconfig ; \
 	fi
 
 examples:
