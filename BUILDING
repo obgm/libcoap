@@ -99,6 +99,9 @@ Note: FreeBSD requires gmake instead of make when building TinyDTLS - i.e.
 # With OpenSSL
  ./configure --with-openssl --enable-tests --enable-shared
 
+# With wolfSSL
+ ./configure --with-wolfssl --enable-tests --enable-shared
+
 # With GnuTLS
  ./configure --with-gnutls --enable-tests --enable-shared
 

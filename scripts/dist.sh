@@ -35,6 +35,8 @@ case "x${TLS}" in
                ;;
     xmbedtls)  WITH_TLS="--with-mbedtls"
                ;;
+    xwolfssl)  WITH_TLS="--with-wolfssl"
+               ;;
     xtinydtls) WITH_TLS="--with-tinydtls --disable-shared"
                ;;
     *)         WITH_TLS="--with-gnutls"

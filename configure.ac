@@ -366,6 +366,7 @@ AM_CONDITIONAL(BUILD_MANPAGES, [test "x$build_manpages" = "xyes"])
 gnutls_version_required=3.3.0
 openssl_version_required=1.1.0
 mbedtls_version_required=2.7.10
+wolfssl_version_required=5.2.0
 tinydtls_version_required=0.8.6
 
 AC_ARG_ENABLE([dtls],
@@ -386,6 +387,12 @@ AC_ARG_WITH([openssl],
             [with_openssl="$withval"],
             [with_openssl="no"])
 
+AC_ARG_WITH([wolfssl],
+            [AS_HELP_STRING([--with-wolfssl],
+                            [Use wolfSSL for DTLS functions])],
+            [with_wolfssl="$withval"],
+            [with_wolfssl="no"])
+
 AC_ARG_WITH([mbedtls],
             [AS_HELP_STRING([--with-mbedtls],
                             [Use Mbed TLS for DTLS functions])],
@@ -404,11 +411,11 @@ AC_ARG_WITH([submodule-tinydtls],
            [with_submodule_tinydtls="$withval"],
            [with_submodule_tinydtls="explicit_fallback"])
 
-if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes" -o "x$with_mbedtls" = "xyes" -o "x$with_tinydtls" = "xyes"; then
+if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes" -o "x$with_wolfssl" = "xyes" -o "x$with_mbedtls" = "xyes" -o "x$with_tinydtls" = "xyes"; then
     if test "x$build_dtls" = "xno"; then
-        # Give an advice that '--with_gnutls', '--with_openssl', '--with-mbedtls' or '--with-tinydtls' was used but
+        # Give an advice that '--with_gnutls', '--with_openssl', '--with_wolfssl', '--with-mbedtls' or '--with-tinydtls' was used but
         # DTLS support isn't configured.
-        AC_MSG_WARN([==> Using the configure options '--with-gnutls', '--with-openssl', '--with-mbedtls' or '--with-tinydtls' without '--enable-dtls' is useless and will be ignored.])
+        AC_MSG_WARN([==> Using the configure options '--with-gnutls', '--with-openssl', '--with_wolfssl', '--with-mbedtls' or '--with-tinydtls' without '--enable-dtls' is useless and will be ignored.])
     fi
 fi
 if test "x$with_submodule_tinydtls" = "xyes"; then
@@ -426,6 +433,9 @@ if test "x$build_dtls" = "xyes"; then
         TLSCOUNT=`expr $TLSCOUNT + 1`
     fi
     if test "x$with_openssl" = "xyes"; then
+        TLSCOUNT=`expr $TLSCOUNT + 1`
+    fi
+    if test "x$with_wolfssl" = "xyes"; then
         TLSCOUNT=`expr $TLSCOUNT + 1`
     fi
     if test "x$with_mbedtls" = "xyes"; then
@@ -451,6 +461,12 @@ if test "x$build_dtls" = "xyes"; then
                       [openssl],
                       [have_openssl="yes"],
                       [have_openssl="no"])
+
+    # wolfSSL
+    PKG_CHECK_MODULES([wolfSSL],
+                  [wolfssl],
+                  [have_wolfssl="yes"],
+                  [have_wolfssl="no"])
 
     # Mbed TLS [does not have mbedtls.pc pkg-config file]
     AC_CHECK_LIB(mbedtls, mbedtls_version_get_string,
@@ -511,6 +527,7 @@ if test "x$build_dtls" = "xyes"; then
         gnutls_version=`$PKG_CONFIG --modversion gnutls`
         AX_CHECK_GNUTLS_VERSION
         have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_wolfssl="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
@@ -529,6 +546,26 @@ if test "x$build_dtls" = "xyes"; then
         openssl_version=`$PKG_CONFIG --modversion openssl`
         AX_CHECK_OPENSSL_VERSION
         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_wolfssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+    fi
+
+    # The user wants to use explicit wolfSSL if '--with-wolfssl' was set.
+    if test "x$with_wolfssl" = "xyes"; then
+        # Some more sanity checking.
+        if test "x$have_wolfssl" != "xyes"; then
+            AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the wolfSSL library but pkg-config file 'wolfssl.pc' could not be found!
+                    Install the package(s) that contains the development files for wolfSSL,
+                    or select a different TLS library or disable the DTLS support using '--disable-dtls'.])
+        fi
+        AC_MSG_NOTICE([The use of wolfSSL was explicitly requested with configure option '--with-wolfssl'!])
+
+        # check for valid wolfSSL version
+        wolfssl_version=`$PKG_CONFIG --modversion wolfssl`
+        AX_CHECK_WOLFSSL_VERSION
+        have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
@@ -548,6 +585,7 @@ if test "x$build_dtls" = "xyes"; then
         AX_CHECK_MBEDTLS_VERSION
         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_wolfssl="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
 
@@ -599,6 +637,7 @@ if test "x$build_dtls" = "xyes"; then
 
         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+        have_wolfssl="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
     fi
 
@@ -611,6 +650,7 @@ if test "x$build_dtls" = "xyes"; then
           AC_MSG_NOTICE([Using auto selected library GnuTLS for DTLS support!])
           with_gnutls_auto="yes"
           have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
+          have_wolfssl="no" # don't confuse AC_MSG_RESULT at the end of the script
           have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
           have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
 
@@ -620,7 +660,19 @@ if test "x$build_dtls" = "xyes"; then
           AX_CHECK_OPENSSL_VERSION
           AC_MSG_NOTICE([Using auto selected library OpenSSL for DTLS support!])
           with_openssl_auto="yes"
+          have_wolfssl="no" # don't confuse AC_MSG_RESULT at the end of the script
           have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+          have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+          have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
+
+      # ... and if not found, check if wolfSSL is suitable.
+      elif test "x$have_wolfssl" = "xyes"; then
+          wolfssl_version=`$PKG_CONFIG --modversion wolfssl`
+          AX_CHECK_WOLFSSL_VERSION
+          AC_MSG_NOTICE([Using auto selected library wolfSSL for DTLS support!])
+          with_wolfssl_auto="yes"
+          have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+          have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
           have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
           have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
 
@@ -632,6 +684,7 @@ if test "x$build_dtls" = "xyes"; then
           AC_MSG_NOTICE([Using auto selected library Mbed TLS for DTLS support!])
           with_mbedtls_auto="yes"
           have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
+          have_wolfssl="no" # don't confuse AC_MSG_RESULT at the end of the script
           have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
           have_tinydtls="no" # don't confuse AC_MSG_RESULT at the end of the script
 
@@ -643,13 +696,13 @@ if test "x$build_dtls" = "xyes"; then
         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_mbedtls="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
-
+        have_wolfssl="no" # don't confuse AC_MSG_RESULT at the end of the script
 
       # Note that the TinyDTLS submodule is used only when explicitly requested.
       # Giving out an error message if we haven't found at least one crypto library.
       else
-          AC_MSG_ERROR([==> Option '--enable-dtls' is set but none of the needed cryptography libraries GnuTLS, OpenSSL, Mbed TLS or TinyDTLS could be found!
-                        Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required), OpenSSL(>= $openssl_version_required), Mbed TLS(>= $mbedtls_version_required), or TinyDTLS(>= $tinydtls_version_required)
+          AC_MSG_ERROR([==> Option '--enable-dtls' is set but none of the needed cryptography libraries GnuTLS, OpenSSL, wolfSSL, Mbed TLS or TinyDTLS could be found!
+                        Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required), OpenSSL(>= $openssl_version_required), wolfSSL(>= $wolfssl_version_required), Mbed TLS(>= $mbedtls_version_required), or TinyDTLS(>= $tinydtls_version_required)
                         or disable the DTLS support using '--disable-dtls'.])
       fi
     fi
@@ -664,6 +717,11 @@ if test "x$build_dtls" = "xyes"; then
         DTLS_CFLAGS="$OpenSSL_CFLAGS"
         DTLS_LIBS="$OpenSSL_LIBS"
         AC_DEFINE(COAP_WITH_LIBOPENSSL, [1], [Define to 1 if the system has libssl1.1.])
+    fi
+    if test "x$with_wolfssl" = "xyes" -o "x$with_wolfssl_auto" = "xyes"; then
+        DTLS_CFLAGS="$wolfSSL_CFLAGS"
+        DTLS_LIBS="$wolfSSL_LIBS"
+        AC_DEFINE(COAP_WITH_LIBWOLFSSL, [1], [Define to 1 if the system has libwolfssl.])
     fi
     if test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
         DTLS_CFLAGS="$MbedTLS_CFLAGS"
@@ -682,6 +740,8 @@ fi
 # Define the Library name extension for the TLS the library was linked against
 if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-openssl
+elif test "x$with_wolfssl" = "xyes" -o "x$with_wolfssl_auto" = "xyes"; then
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=-wolfssl
 elif test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-gnutls
 elif test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
@@ -1261,6 +1321,12 @@ if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
     AC_MSG_RESULT([         -->  OpenSSL around         : "yes" (found OpenSSL $openssl_version)])
     AC_MSG_RESULT([              OPENSSL_CFLAGS         : "$OpenSSL_CFLAGS"])
     AC_MSG_RESULT([              OPENSSL_LIBS           : "$OpenSSL_LIBS"])
+fi
+if test "x$with_wolfssl" = "xyes" -o "x$with_wolfssl_auto" = "xyes"; then
+    AC_MSG_RESULT([      build DTLS support             : "yes"])
+    AC_MSG_RESULT([         -->  wolfSSL around         : "yes" (found wolfSSL $wolfssl_version)])
+    AC_MSG_RESULT([              wolfSSL_CFLAGS         : "$wolfSSL_CFLAGS"])
+    AC_MSG_RESULT([              wolfSSL_LIBS           : "$wolfSSL_LIBS"])
 fi
 if test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support             : "yes"])

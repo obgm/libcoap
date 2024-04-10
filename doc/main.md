@@ -56,6 +56,8 @@ There is (D)TLS support for the following libraries
 
 * [Mbed TLS](https://www.trustedfirmware.org/projects/mbed-tls/) (Minimum version 2.7.10) [PKI and PSK]
 
+* [wolfSSL](https://wolfssl.com) (Minimum version 5.2.0) [PKI, PSK and RPK(5.6.4+)]
+
 * [TinyDTLS](https://github.com/eclipse/tinydtls) [PSK and RPK] [DTLS Only]
 
 Documentation

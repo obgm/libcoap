@@ -36,6 +36,7 @@ EXTRA_DIST = \
   cmake/Config.cmake.in \
   cmake/FindMbedTLS.cmake \
   cmake/FindTinyDTLS.cmake \
+  cmake/FindwolfSSL.cmake \
   coap_config.h.contiki \
   coap_config.h.riot \
   coap_config.h.windows \
@@ -219,6 +220,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_time.c \
   src/coap_tinydtls.c \
   src/coap_uri.c \
+  src/coap_wolfssl.c \
   src/coap_ws.c
 
 if COAP_OSCORE_SUPPORT
