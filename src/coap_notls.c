@@ -17,7 +17,7 @@
 
 #include "coap3/coap_internal.h"
 
-#if !defined(COAP_WITH_LIBTINYDTLS) && !defined(COAP_WITH_LIBOPENSSL) && !defined(COAP_WITH_LIBGNUTLS) && !defined(COAP_WITH_LIBMBEDTLS)
+#if !defined(COAP_WITH_LIBTINYDTLS) && !defined(COAP_WITH_LIBOPENSSL) && !defined(COAP_WITH_LIBWOLFSSL) && !defined(COAP_WITH_LIBGNUTLS) && !defined(COAP_WITH_LIBMBEDTLS)
 
 int
 coap_dtls_is_supported(void) {
@@ -400,7 +400,7 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
 
 #endif /* COAP_OSCORE_SUPPORT */
 
-#else /* !COAP_WITH_LIBTINYDTLS && !COAP_WITH_LIBOPENSSL && !COAP_WITH_LIBGNUTLS */
+#else /* !COAP_WITH_LIBTINYDTLS && !COAP_WITH_LIBOPENSSL && !COAP_WITH_LIBWOLFSSL && !COAP_WITH_LIBGNUTLS */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -412,4 +412,4 @@ static inline void
 dummy(void) {
 }
 
-#endif /* !COAP_WITH_LIBTINYDTLS && !COAP_WITH_LIBOPENSSL && !COAP_WITH_LIBGNUTLS && !COAP_WITH_LIBMBEDTLS */
+#endif /* !COAP_WITH_LIBTINYDTLS && !COAP_WITH_LIBOPENSSL && !COAP_WITH_LIBWOLFSSL && !COAP_WITH_LIBGNUTLS && !COAP_WITH_LIBMBEDTLS */

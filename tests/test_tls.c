@@ -34,6 +34,12 @@
 #include <openssl/ssl.h>
 #endif /* COAP_WITH_LIBOPENSSL */
 
+#ifdef COAP_WITH_LIBWOLFSSL
+#define HAVE_DTLS 1
+#include <wolfssl/options.h>
+#include <wolfssl/ssl.h>
+#endif /* COAP_WITH_LIBWOLFSSL */
+
 #ifdef COAP_WITH_LIBGNUTLS
 #define HAVE_DTLS 1
 #include <gnutls/gnutls.h>
@@ -64,6 +70,9 @@ t_tls2(void) {
 #if defined(COAP_WITH_LIBOPENSSL)
   version.version = SSLeay();
   version.type = COAP_TLS_LIBRARY_OPENSSL;
+#elif defined(COAP_WITH_LIBWOLFSSL)
+  version.version = wolfSSL_lib_version_hex();
+  version.type = COAP_TLS_LIBRARY_WOLFSSL;
 #elif defined(COAP_WITH_LIBTINYDTLS)
   const char *vers = dtls_package_version();
   version.version = 0;

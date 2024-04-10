@@ -30,12 +30,12 @@ jobs:
     strategy:
       matrix:
         CC: ["gcc", "clang"]
-        TLS: ["no", "openssl", "gnutls", "mbedtls"]
+        TLS: ["no", "openssl", "gnutls", "mbedtls", "wolfssl"]
     steps:
       - uses: actions/checkout@v4
       - name: setup
         run: |
-          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libtool libtool-bin exuberant-ctags valgrind
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev libtool libtool-bin exuberant-ctags valgrind
           ./autogen.sh
       - name: configure no-TLS
         if: matrix.TLS == 'no'
@@ -80,14 +80,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        TLS: ["no", "openssl", "gnutls", "mbedtls", "tinydtls"]
+        TLS: ["no", "openssl", "gnutls", "mbedtls", "wolfssl", "tinydtls"]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: setup
         run: |
-          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev
           cmake -E make_directory $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
       - name: configure no-TLS
         if: matrix.TLS == 'no'

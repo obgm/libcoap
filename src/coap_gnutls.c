@@ -983,60 +983,6 @@ pin_callback(void *user_data, int attempt,
   }
   return -1;
 }
-#if (GNUTLS_VERSION_NUMBER >= 0x030606)
-/* first part of Raw public key, this is the start of the Subject Public Key */
-static const unsigned char cert_asn1_header1[] = {
-  0x30, 0x59, /* SEQUENCE, length 89 bytes */
-  0x30, 0x13, /* SEQUENCE, length 19 bytes */
-  0x06, 0x07, /* OBJECT IDENTIFIER ecPublicKey (1 2 840 10045 2 1) */
-  0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x02, 0x01,
-};
-/* PrimeX will get inserted */
-#if 0
-0x06, 0x08, /* OBJECT IDENTIFIER prime256v1 (1 2 840 10045 3 1 7) */
-      0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07,
-#endif
-static const unsigned char cert_asn1_header2[] = {
-  0x03, 0x42, /* BIT STRING, length 66 bytes */
-  /* Note: 0 bits (0x00) and no compression (0x04) are already in the certificate */
-};
-
-static gnutls_datum_t *
-get_asn1_spki(const uint8_t *data, size_t size) {
-  coap_binary_t *pub_key = get_asn1_tag(COAP_ASN1_BITSTRING, data, size, NULL);
-  coap_binary_t *prime = get_asn1_tag(COAP_ASN1_IDENTIFIER, data, size, NULL);
-  gnutls_datum_t *spki = NULL;
-
-  if (pub_key && prime) {
-    size_t header_size = sizeof(cert_asn1_header1) +
-                         2 +
-                         prime->length +
-                         sizeof(cert_asn1_header2);
-    uint8_t *tmp = gnutls_malloc(sizeof(gnutls_datum_t) +
-                                 header_size +
-                                 pub_key->length);
-
-    if (tmp) {
-      spki = (gnutls_datum_t *)tmp;
-      spki->data = &tmp[sizeof(gnutls_datum_t)];
-      memcpy(&spki->data[header_size], pub_key->s, pub_key->length);
-      memcpy(spki->data, cert_asn1_header1, sizeof(cert_asn1_header1));
-      spki->data[sizeof(cert_asn1_header1)] = COAP_ASN1_IDENTIFIER;
-      spki->data[sizeof(cert_asn1_header1)+1] = prime->length;
-      memcpy(&spki->data[sizeof(cert_asn1_header1)+2],
-             prime->s, prime->length);
-      memcpy(&spki->data[sizeof(cert_asn1_header1)+2+prime->length],
-             cert_asn1_header2, sizeof(cert_asn1_header2));
-      spki->size = header_size + pub_key->length;
-    }
-  }
-  if (pub_key)
-    coap_delete_binary(pub_key);
-  if (prime)
-    coap_delete_binary(prime);
-  return spki;
-}
-#endif /* GNUTLS_VERSION_NUMBER >= 0x030606 */
 
 /*
  * return 0   Success (GNUTLS_E_SUCCESS)
@@ -1145,12 +1091,16 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
 
           if (gnutls_pem_base64_decode2("EC PRIVATE KEY", &key,
                                         &der_private) == 0) {
-            gnutls_datum_t *spki = get_asn1_spki(der_private.data,
-                                                 der_private.size);
+            coap_binary_t *spki = get_asn1_spki(der_private.data,
+                                                der_private.size);
 
             if (spki) {
+              gnutls_datum_t tspki;
+
+              tspki.data = spki->s;
+              tspki.size = spki->length;
               ret = gnutls_certificate_set_rawpk_key_mem(*pki_credentials,
-                                                         spki,
+                                                         &tspki,
                                                          &der_private,
                                                          GNUTLS_X509_FMT_DER, NULL,
                                                          COAP_GNUTLS_KEY_RPK,
@@ -1158,7 +1108,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
               if (ret >= 0) {
                 have_done_key = 1;
               }
-              gnutls_free(spki);
+              coap_delete_binary(spki);
             }
             gnutls_free(der_private.data);
           }
@@ -1256,12 +1206,16 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
         int have_done_key = 0;
         if (setup_data->pki_key.key.asn1.private_key_type ==
             COAP_ASN1_PKEY_EC) {
-          gnutls_datum_t *spki = get_asn1_spki(key.data,
-                                               key.size);
+          coap_binary_t *spki = get_asn1_spki(key.data,
+                                              key.size);
 
           if (spki) {
+            gnutls_datum_t tspki;
+
+            tspki.data = spki->s;
+            tspki.size = spki->length;
             ret = gnutls_certificate_set_rawpk_key_mem(*pki_credentials,
-                                                       spki,
+                                                       &tspki,
                                                        &key,
                                                        GNUTLS_X509_FMT_DER, NULL,
                                                        COAP_GNUTLS_KEY_RPK,
@@ -1269,7 +1223,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
             if (ret >= 0) {
               have_done_key = 1;
             }
-            gnutls_free(spki);
+            coap_delete_binary(spki);
           }
         }
         if (!have_done_key) {

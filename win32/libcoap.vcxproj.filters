@@ -107,6 +107,9 @@
     <ClCompile Include="..\src\coap_uri.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_wolfssl.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_ws.c">
       <Filter>Source Files</Filter>
     </ClCompile>

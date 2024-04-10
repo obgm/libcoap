@@ -69,6 +69,20 @@ AC_DEFUN([AX_CHECK_MBEDTLS_VERSION],
           fi
 ]) dnl AX_CHECK_MBEDTLS_VERSION
 
+AC_DEFUN([AX_CHECK_WOLFSSL_VERSION],
+         [AC_MSG_CHECKING([for compatible wolfSSL version (>= $wolfssl_version_required)])
+          AS_VERSION_COMPARE([$wolfssl_version], [$wolfssl_version_required],
+                             [AC_MSG_RESULT([no])
+                              WOLFSSLV=""],
+                             [AC_MSG_RESULT([yes $wolfssl_version])
+                              WOLFSSLV="$wolfssl_version"],
+                             [AC_MSG_RESULT([yes $wolfssl_version])
+                              WOLFSSLV="$wolfssl_version"])
+          if test "x$WOLFSSLV" = "x"; then
+              AC_MSG_ERROR([==> wolfSSL $wolfssl_version too old. wolfSSL >= $wolfssl_version_required required for suitable DTLS support build.])
+          fi
+]) dnl AX_CHECK_WOLFSSL_VERSION
+
 AC_DEFUN([AX_CHECK_TINYDTLS_VERSION],
     [AC_MSG_CHECKING([for compatible TinyDTLS version (>= $tinydtls_version_required)])
     AS_VERSION_COMPARE([$tinydtls_version], [$tinydtls_version_required],

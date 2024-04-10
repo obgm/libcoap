@@ -103,17 +103,18 @@ set(DTLS_BACKEND
       STRING
       "\
 Name of the dtls backend, only relevant if `ENABLE_DTLS` is ON which is default. \
-Possible values: default, gnutls, openssl, tinydtls and mbedtls. \
+Possible values: default, gnutls, openssl, wolfssl, tinydtls and mbedtls. \
 If specified then this library will be searched and if found also used. \
 If not found then the cmake configuration will stop with an error. \
 If not specified, then cmake will try to use the first one found in the following order: \
-gnutls, openssl, tinydtls, mbedtls \
+gnutls, openssl, wolfssl, tinydtls, mbedtls \
     ")
 set_property(
   CACHE DTLS_BACKEND
   PROPERTY STRINGS
            default
            openssl
+           wolfssl
            gnutls
            tinydtls
            mbedtls)
@@ -425,6 +426,7 @@ set(WITH_GNUTLS OFF)
 set(WITH_OPENSSL OFF)
 set(WITH_TINYDTLS OFF)
 set(WITH_MBEDTLS OFF)
+set(WITH_WOLFSSL OFF)
 
 function(compile_tinydtls)
   set(TINYDTLS_SOURCES_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/tinydtls)
@@ -509,33 +511,43 @@ if(ENABLE_DTLS)
         set(COAP_WITH_LIBOPENSSL 1)
       else()
         # openssl not found
-        # libmbedtls (e.g. debian libmbedtls-dev)
-        find_package(MbedTLS)
-        if(MbedTLS_FOUND)
-          set(WITH_MBEDTLS ON)
-          message(STATUS "compiling with mbedtls support")
-          set(COAP_WITH_LIBMBEDTLS 1)
+        # wolfSSL
+        find_package(wolfSSL)
+        if(wolfSSL_FOUND)
+          set(WITH_WOLFSSL ON)
+          message(STATUS "compiling with wolfssl support")
+          set(COAP_WITH_LIBWOLFSSL 1)
         else()
-          # mbedtls not found
-          if(USE_VENDORED_TINYDTLS)
-            compile_tinydtls()
+          # wolfssl not found
+          # libmbedtls (e.g. debian libmbedtls-dev)
+          find_package(MbedTLS)
+          if(MbedTLS_FOUND)
+            set(WITH_MBEDTLS ON)
+            message(STATUS "compiling with mbedtls support")
+            set(COAP_WITH_LIBMBEDTLS 1)
           else()
-            find_package(TinyDTLS)
-            if(TINYDTLS_FOUND)
-
+            # mbedtls not found
+            if(USE_VENDORED_TINYDTLS)
+              compile_tinydtls()
             else()
-              # no cryto lib found
-              message(
-                FATAL_ERROR
-                  "cannot find any cryto lib, either install one or compile without DTLS support"
-              )
+              find_package(TinyDTLS)
+              if(TINYDTLS_FOUND)
+
+              else()
+                # no cryto lib found
+                message(
+                  FATAL_ERROR
+                    "cannot find any cryto lib, either install one or compile without DTLS support"
+                )
+              endif()
+
             endif()
 
-          endif()
+            set(WITH_TINYDTLS ON)
+            message(STATUS "compiling with tinydtls support")
+            set(COAP_WITH_LIBTINYDTLS 1)
 
-          set(WITH_TINYDTLS ON)
-          message(STATUS "compiling with tinydtls support")
-          set(COAP_WITH_LIBTINYDTLS 1)
+          endif()
 
         endif()
 
@@ -571,6 +583,15 @@ if(ENABLE_DTLS)
     endif()
 
     if(DTLS_BACKEND
+        STREQUAL
+        "wolfssl")
+      find_package(wolfSSL REQUIRED)
+      set(WITH_WOLFSSL ON)
+      message(STATUS "compiling with wolfssl support")
+      set(COAP_WITH_LIBWOLFSSL 1)
+    endif()
+
+    if(DTLS_BACKEND
        STREQUAL
        "mbedtls")
       # libmbedtls (e.g. debian libmbedtls-dev)
@@ -598,6 +619,16 @@ if(ENABLE_DTLS)
 
   endif()
 
+endif()
+
+if(WITH_WOLFSSL)
+  find_library(WOLFSSL_LIBRARY wolfssl HINTS /usr/local/lib)
+  find_path(WOLFSSL_INCLUDE_DIR wolfssl/wolfcrypt/settings.h HINTS /usr/local/include)
+  if(WOLFSSL_LIBRARY AND WOLFSSL_INCLUDE_DIR)
+    message(STATUS "compiling with wolfssl support")
+  else()
+    message(FATAL_ERROR "WolfSSL not found")
+  endif()
 endif()
 
 execute_process(COMMAND git describe --tags --dirty --always
@@ -649,10 +680,12 @@ message(STATUS "DTLS_BACKEND:....................${DTLS_BACKEND}")
 message(STATUS "WITH_GNUTLS:.....................${WITH_GNUTLS}")
 message(STATUS "WITH_TINYDTLS:...................${WITH_TINYDTLS}")
 message(STATUS "WITH_OPENSSL:....................${WITH_OPENSSL}")
+message(STATUS "WITH_WOLFSSL:....................${WITH_WOLFSSL}")
 message(STATUS "WITH_MBEDTLS:....................${WITH_MBEDTLS}")
 message(STATUS "HAVE_LIBTINYDTLS:................${COAP_WITH_LIBTINYDTLS}")
 message(STATUS "HAVE_LIBGNUTLS:..................${COAP_WITH_LIBGNUTLS}")
 message(STATUS "HAVE_LIBOPENSSL:.................${COAP_WITH_LIBOPENSSL}")
+message(STATUS "HAVE_LIBWOLFSSL:.................${COAP_WITH_LIBWOLFSSL}")
 message(STATUS "HAVE_LIBMBEDTLS:.................${COAP_WITH_LIBMBEDTLS}")
 message(STATUS "WITH_EPOLL:......................${WITH_EPOLL}")
 message(STATUS "WITH_OBSERVE_PERSIST:............${WITH_OBSERVE_PERSIST}")
@@ -723,6 +756,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_ws.c
           # no need to parse those files if we do not need them
           $<$<BOOL:${COAP_WITH_LIBOPENSSL}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openssl.c>
+          $<$<BOOL:${COAP_WITH_LIBWOLFSSL}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_wolfssl.c>
           $<$<BOOL:${COAP_WITH_LIBTINYDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tinydtls.c>
           $<$<BOOL:${COAP_WITH_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
           $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
@@ -765,7 +799,8 @@ target_include_directories(
          $<INSTALL_INTERFACE:include/>
          $<$<AND:$<BOOL:${COAP_WITH_LIBTINYDTLS}>,$<BOOL:${USE_VENDORED_TINYDTLS}>>:${CMAKE_BINARY_DIR}/include/tinydtls>
          $<$<BOOL:${COAP_WITH_LIBGNUTLS}>:${GNUTLS_INCLUDE_DIR}>
-         $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDTLS_INCLUDE_DIRS}>)
+         $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDTLS_INCLUDE_DIRS}>
+         $<$<BOOL:${COAP_WITH_LIBWOLFSSL}>:${WOLFSSL_INCLUDE_DIR}>)
 target_link_libraries(
   ${COAP_LIBRARY_NAME}
   PUBLIC $<$<BOOL:${COAP_WITH_LIBOPENSSL}>:OpenSSL::SSL>
@@ -775,6 +810,7 @@ target_link_libraries(
          $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDTLS_LIBRARY}>
          $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDX509_LIBRARY}>
          $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDCRYPTO_LIBRARY}>
+         $<$<BOOL:${COAP_WITH_LIBWOLFSSL}>:${WOLFSSL_LIBRARY}>
          $<$<BOOL:${MINGW}>:ws2_32>)
 
 target_compile_options(

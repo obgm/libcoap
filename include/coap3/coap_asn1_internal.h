@@ -86,6 +86,19 @@ coap_asn1_tag_t asn1_tag_c(const uint8_t **ptr, int *constructed, int *cls);
 coap_binary_t *get_asn1_tag(coap_asn1_tag_t ltag, const uint8_t *ptr,
                             size_t tlen, asn1_validate validate);
 
+/**
+ * Abstract SPKI public key from the ASN1.
+ *
+ * Internal function.
+ *
+ * @param data Pointer to ASN1 object containing EC Private Key
+ * @param size Length of ASN1 object
+ *
+ * @return The publick key (to be freed off by caller)
+ *         or @c NULL if not found
+ */
+coap_binary_t *get_asn1_spki(const uint8_t *data, size_t size);
+
 /** @} */
 
 #endif /* COAP_ASN1_INTERNAL_H_ */

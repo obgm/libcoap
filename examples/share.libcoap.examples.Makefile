@@ -6,7 +6,8 @@
 # COPYING for terms of use.
 
 # Set external variable LIBCOAP if you need a specific libcoap library.
-# E.g. libcoap-3-openssl, libcoap-3-gnutls, libcoap-3-mbedtls or libcoap-3-notls
+# E.g. libcoap-3-openssl, libcoap-3-gnutls, libcoap-3-mbedtls, libcoap-3-wolfssl
+# or libcoap-3-notls
 #
 LIBCOAP?=libcoap-3
 

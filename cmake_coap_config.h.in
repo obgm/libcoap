@@ -68,6 +68,9 @@
 /* Define to 1 if the system has openssl */
 #cmakedefine COAP_WITH_LIBOPENSSL @COAP_WITH_LIBOPENSSL@
 
+/* Define to 1 if the system has wolfSSL */
+#cmakedefine COAP_WITH_WOLFSSL @COAP_WITH_WOLFSSL@
+
 /* Define to 1 if the system has libgnutls28 */
 #cmakedefine COAP_WITH_LIBGNUTLS @COAP_WITH_LIBGNUTLS@
 

@@ -17,6 +17,8 @@ case "x${TLS}" in
                ;;
     xmbedtls)  WITH_TLS="--with-mbedtls"
                ;;
+    xwolfssl)  WITH_TLS="--with-wolfssl"
+               ;;
     xtinydtls) WITH_TLS="--with-tinydtls"
                # Need this as libtinydtls.so has not been installed
                # as a part of the travis build

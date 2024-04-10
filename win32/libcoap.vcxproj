@@ -71,6 +71,7 @@
     <ClCompile Include="..\src\coap_threadsafe.c" />
     <ClCompile Include="..\src\coap_tinydtls.c" />
     <ClCompile Include="..\src\coap_uri.c" />
+    <ClCompile Include="..\src\coap_wolfssl.c" />
     <ClCompile Include="..\src\coap_ws.c" />
     <ClCompile Include="..\src\oscore\oscore.c" />
     <ClCompile Include="..\src\oscore\oscore_cbor.c" />

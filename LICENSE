@@ -116,6 +116,13 @@ that are licensed under the terms of the Apache 2.0 license
 (http://www.apache.org/licenses/LICENSE-2.0).
 
 ========================================================================
+wolfSSL
+
+When compiled with wolfSSL support, this software includes components
+that are licensed under the terms of the GPLv2 license
+(https://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
+
+========================================================================
 SHA1
 
 SHA1 support is taken from RFC3174 Sections 7.1 and 7.2 for use with
